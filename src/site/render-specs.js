@@ -69,6 +69,7 @@ export function renderSpecializations(container, specs) {
       minorBtn.type = "button";
       minorBtn.className = "trait-btn trait-btn--always";
       minorBtn.disabled = true;
+      minorBtn.dataset.connectorRole = `minor-${tier}`;
       if (minorTrait) {
         minorBtn.dataset.name = escapeHtml(minorTrait.name || "");
         minorBtn.dataset.desc = escapeHtml(minorTrait.description || "");
@@ -95,6 +96,9 @@ export function renderSpecializations(container, specs) {
         traitBtn.type = "button";
         traitBtn.className = isActive ? "trait-btn trait-btn--active" : "trait-btn";
         traitBtn.disabled = true;
+        if (isActive) {
+          traitBtn.dataset.connectorRole = `major-${tier}`;
+        }
         if (!isActive) {
           // Unselected major traits get lower opacity via CSS (.trait-btn:disabled),
           // but we also want non-selected ones visually subdued beyond what --active provides.
@@ -122,4 +126,68 @@ export function renderSpecializations(container, specs) {
   }
 
   container.append(host);
+
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    for (const body of host.querySelectorAll(".spec-card__body")) {
+      drawConnector(body);
+    }
+  }));
+}
+
+function drawConnector(body) {
+  const bodyRect = body.getBoundingClientRect();
+  if (bodyRect.width === 0 || bodyRect.height === 0) return;
+
+  const roles = ["minor-1", "major-1", "minor-2", "major-2", "minor-3", "major-3"];
+  const points = [];
+  for (const role of roles) {
+    const node = body.querySelector(`[data-connector-role="${role}"]`);
+    if (!node) continue;
+    const r = node.getBoundingClientRect();
+    points.push({
+      x: r.left + r.width / 2 - bodyRect.left,
+      y: r.top + r.height / 2 - bodyRect.top,
+    });
+  }
+  if (points.length < 2) return;
+
+  const pathData = `M ${points[0].x} ${points[0].y} ` +
+    points.slice(1).map(p => `L ${p.x} ${p.y}`).join(" ");
+
+  const svgNS = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(svgNS, "svg");
+  svg.setAttribute("class", "spec-connector");
+  svg.setAttribute("viewBox", `0 0 ${Math.max(1, bodyRect.width)} ${Math.max(1, bodyRect.height)}`);
+  svg.setAttribute("preserveAspectRatio", "none");
+  svg.setAttribute("overflow", "hidden");
+
+  const corePath = document.createElementNS(svgNS, "path");
+  corePath.setAttribute("d", pathData);
+  corePath.setAttribute("fill", "none");
+  corePath.setAttribute("stroke", "rgba(180, 235, 255, 0.5)");
+  corePath.setAttribute("stroke-width", "1.5");
+  corePath.setAttribute("stroke-linecap", "round");
+  svg.append(corePath);
+
+  const flowPath = document.createElementNS(svgNS, "path");
+  flowPath.setAttribute("class", "connector-flow");
+  flowPath.setAttribute("d", pathData);
+  flowPath.setAttribute("fill", "none");
+  flowPath.setAttribute("stroke", "rgba(220, 250, 255, 1)");
+  flowPath.setAttribute("stroke-width", "2.5");
+  flowPath.setAttribute("stroke-linecap", "round");
+  flowPath.setAttribute("stroke-dasharray", "10 22");
+  svg.append(flowPath);
+
+  const flowPath2 = document.createElementNS(svgNS, "path");
+  flowPath2.setAttribute("class", "connector-flow2");
+  flowPath2.setAttribute("d", pathData);
+  flowPath2.setAttribute("fill", "none");
+  flowPath2.setAttribute("stroke", "rgba(160, 230, 255, 0.7)");
+  flowPath2.setAttribute("stroke-width", "2.5");
+  flowPath2.setAttribute("stroke-linecap", "round");
+  flowPath2.setAttribute("stroke-dasharray", "10 22");
+  svg.append(flowPath2);
+
+  body.prepend(svg);
 }
