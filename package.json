@@ -47,7 +47,7 @@
   },
   "scripts": {
     "start": "electron .",
-    "dev": "npm run build:site && concurrently -k \"vite\" \"wait-on tcp:5173 && APP_PROFILE=dev VITE_DEV_SERVER_URL=http://localhost:5173 electronmon .\"",
+    "dev": "npm run build:site && concurrently -k \"vite\" \"npx serve dist/site -l 3000\" \"wait-on tcp:5173 && APP_PROFILE=dev VITE_DEV_SERVER_URL=http://localhost:5173 electronmon .\"",
     "dev:clean": "node scripts/dev-clean.mjs",
     "build:site": "vite build --config src/site/vite.config.js",
     "build:renderer": "vite build",
