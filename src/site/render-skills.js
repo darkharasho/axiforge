@@ -243,25 +243,23 @@ function _renderSkillsBar(area, skillData, build, initialAttunement) {
   const utilities = Array.isArray(skills.utility) ? skills.utility : [null, null, null];
   const elite = skills.elite || null;
 
-  const hasSlotSkills = heal || elite || utilities.some(Boolean);
-  if (hasSlotSkills) {
-    const utilCol = document.createElement("div");
-    utilCol.className = "skills-bar__util-col";
+  // Always render utility column — show empty slots if no skills are set (e.g. underwater)
+  const utilCol = document.createElement("div");
+  utilCol.className = "skills-bar__util-col";
 
-    const group = document.createElement("div");
-    group.className = "skill-group skill-group--utilities";
+  const group = document.createElement("div");
+  group.className = "skill-group skill-group--utilities";
 
-    group.append(_makeSkillSlot(heal, "Heal", "6"));
+  group.append(_makeSkillSlot(heal, "Heal", "6"));
 
-    for (let i = 0; i < 3; i++) {
-      group.append(_makeSkillSlot(utilities[i] || null, `Utility ${i + 1}`, String(7 + i)));
-    }
-
-    group.append(_makeSkillSlot(elite, "Elite", "0"));
-
-    utilCol.append(group);
-    bar.append(utilCol);
+  for (let i = 0; i < 3; i++) {
+    group.append(_makeSkillSlot(utilities[i] || null, `Utility ${i + 1}`, String(7 + i)));
   }
+
+  group.append(_makeSkillSlot(elite, "Elite", "0"));
+
+  utilCol.append(group);
+  bar.append(utilCol);
 
   wrapper.append(bar);
 }
