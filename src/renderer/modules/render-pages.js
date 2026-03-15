@@ -702,6 +702,22 @@ export function showPublishResult(url) {
 
   urlInput.addEventListener("click", () => urlInput.select());
 
+  // Dev-only: open local SPA preview (localhost:3000) with the same build hash
+  if (location.port || location.hostname === "localhost") {
+    try {
+      const parsed = new URL(url);
+      const localUrl = `http://localhost:3000/${parsed.hash}`;
+      const localBtn = document.createElement("button");
+      localBtn.className = "btn btn-secondary";
+      localBtn.textContent = "Open Local Preview";
+      localBtn.style.marginTop = "6px";
+      localBtn.addEventListener("click", () => {
+        window.open(localUrl, "_blank");
+      });
+      result.append(localBtn);
+    } catch { /* ignore malformed URL */ }
+  }
+
   container.append(result);
 
   // Poll until the page is actually reachable
