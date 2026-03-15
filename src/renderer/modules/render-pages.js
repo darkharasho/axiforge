@@ -171,7 +171,7 @@ export function renderOnboarding() {
 
   if (target) {
     const setupReady = repoReady && pagesReady;
-    const btn = makeButton(setupReady ? "Re-run Setup" : "Setup Publishing", "primary", async () => {
+    const btn = makeButton(setupReady ? "Re-run Setup" : "Setup Publishing", setupReady ? "secondary" : "primary", async () => {
       try {
         btn.disabled = true;
         btn.style.display = "none";
