@@ -47,13 +47,17 @@ axiforge/
 
 ```css
 @import "../renderer/styles/base.css";
+@import "../renderer/styles/layout.css";
+@import "../renderer/styles/buttons.css";
 @import "../renderer/styles/specializations.css";
 @import "../renderer/styles/skills.css";
 @import "../renderer/styles/equipment.css";
 @import "../renderer/styles/detail-panel.css";
-@import "../renderer/styles/buttons.css";
 
 /* SPA-specific styles (navbar, tabs, landing, error, build header, etc.) */
+/* Intentionally excluded: cards.css (desktop build list UI), forms.css (editor inputs),
+   custom-select.css (dropdown pickers), skeleton.css (loading placeholders),
+   wiki-modal.css, detail-modal.css (desktop-only modals) */
 ```
 
 Vite resolves `@import` at build time and bundles everything into a single CSS file. One source of truth — when the desktop styles change, the site automatically picks them up on next build.
@@ -153,7 +157,7 @@ Calculate total attributes from equipment:
 }
 ```
 
-Uses the stat calculation logic from `stats.js`.
+Uses the pure `computeSlotStats()` helper from `stats.js`. Note: `computeEquipmentStats()` in the renderer depends on the global `state` singleton and cannot be called directly from the main process. The `serializeForPublish()` function should implement stat aggregation by iterating over equipment slots and calling the pure stat lookup functions, not by importing the state-coupled renderer function.
 
 ### Profession Icon SVG
 The SVG string for the profession or elite spec icon:
@@ -257,7 +261,7 @@ export default defineConfig({
   base: "./",                    // Relative paths for GitHub Pages
   build: {
     outDir: "../../dist/site",
-    emptyDirBeforeWrite: true,
+    emptyOutDir: true,
   },
 });
 ```
