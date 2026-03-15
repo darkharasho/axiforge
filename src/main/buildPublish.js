@@ -335,11 +335,14 @@ function serializeForPublish(build, catalog, upgradeCatalog) {
   const flipSkillIds = new Set(skillsArray.flatMap(s => s.flipSkill ? [s.flipSkill] : []));
   const exitLeavePattern = /^(Exit|Leave)\b/i;
 
-  // Filter profession mechanics (F-skills) by slot, endpoint flag, spec lock, and exit/leave names
+  // Filter profession mechanics (F-skills) by slot, spec lock, and exit/leave names.
+  // Accept skills with Profession_ slot that are either in the profession endpoint
+  // or have no flip-skill parent (i.e. they are a base skill, not a flipped variant).
   const filteredMechanics = skillsArray
-    .filter(s => typeof s.slot === "string" && s.slot.startsWith("Profession_") && s.inProfessionEndpoint)
+    .filter(s => typeof s.slot === "string" && s.slot.startsWith("Profession_"))
+    .filter(s => s.inProfessionEndpoint || !flipSkillIds.has(s.id))
     .filter(s => !exitLeavePattern.test(s.name || ""))
-    .filter(s => !flipSkillIds.has(s.id) || s.inProfessionEndpoint || (s.specialization > 0 && s.flipSkill > 0))
+    .filter(s => !flipSkillIds.has(s.id))
     .filter(s => {
       const lockSpec = Number(s.specialization) || 0;
       return !lockSpec || selectedSpecIds.has(lockSpec);

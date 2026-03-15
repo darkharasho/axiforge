@@ -127,12 +127,14 @@ export function renderBuildPage(container, build) {
   buildContent.addEventListener("mouseover", (e) => {
     const target = e.target.closest("[data-name][data-icon]");
     if (!target) return;
+    let facts = [];
+    try { facts = JSON.parse(target.dataset.facts || "[]"); } catch { /* ignore */ }
     updateReferencePanel({
       name: target.dataset.name || "",
       icon: target.dataset.icon || "",
       description: target.dataset.desc || "",
       meta: target.dataset.meta || "",
-      facts: [],
+      facts,
     });
   });
 

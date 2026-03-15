@@ -225,8 +225,8 @@ function _renderSkillsBar(area, skillData, build, initialAttunement) {
 
   const hpSpan = document.createElement("span");
   hpSpan.className = "health-orb__hp";
-  const hpValue = build.computedStats?.Health;
-  hpSpan.textContent = hpValue != null ? Number(hpValue).toLocaleString() : "—";
+  const hpValue = build.computedStats?.Health ?? build.healthPool;
+  hpSpan.textContent = hpValue ? Number(hpValue).toLocaleString() : "—";
 
   const hpLabel = document.createElement("span");
   hpLabel.className = "health-orb__label";
@@ -322,6 +322,9 @@ function _updateWeaponRows(el, set1, set2) {
     icon.dataset.name = escapeHtml(skill.name || "");
     icon.dataset.desc = escapeHtml(skill.description || "");
     icon.dataset.icon = skill.icon || "";
+    if (Array.isArray(skill.facts) && skill.facts.length > 0) {
+      icon.dataset.facts = JSON.stringify(skill.facts.map(_factToString));
+    }
 
     if (skill.icon) {
       const img = document.createElement("img");
@@ -402,6 +405,9 @@ function _updateMechBar(el, professionMechanics, legendDisplay, petDisplay, hasA
     icon.dataset.name = escapeHtml(skill.name || "");
     icon.dataset.desc = escapeHtml(skill.description || "");
     icon.dataset.icon = skill.icon || "";
+    if (Array.isArray(skill.facts) && skill.facts.length > 0) {
+      icon.dataset.facts = JSON.stringify(skill.facts.map(_factToString));
+    }
 
     if (skill.icon) {
       const img = document.createElement("img");
@@ -490,6 +496,9 @@ function _makeSkillSlot(skill, labelText, keybind) {
     icon.dataset.name = escapeHtml(skill.name || "");
     icon.dataset.desc = escapeHtml(skill.description || "");
     icon.dataset.icon = skill.icon || "";
+    if (Array.isArray(skill.facts) && skill.facts.length > 0) {
+      icon.dataset.facts = JSON.stringify(skill.facts.map(_factToString));
+    }
 
     if (skill.icon) {
       const img = document.createElement("img");
@@ -513,4 +522,19 @@ function _makeSkillSlot(skill, labelText, keybind) {
 
   slot.append(icon, slotLabel);
   return slot;
+}
+
+/**
+ * Convert a GW2 API fact object to a human-readable string.
+ * @param {object} fact
+ * @returns {string}
+ */
+function _factToString(fact) {
+  if (typeof fact === "string") return fact;
+  const type = fact.type || "";
+  const text = fact.text || "";
+  if (fact.value !== undefined) return `${text}: ${fact.value}${fact.percent ? "%" : ""}`;
+  if (fact.duration !== undefined) return `${text}: ${fact.duration}s`;
+  if (fact.hit_count !== undefined) return `${text}: ${fact.hit_count}×`;
+  return text || type;
 }

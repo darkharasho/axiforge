@@ -78,6 +78,9 @@ export function renderSpecializations(container, specs) {
         minorBtn.dataset.name = escapeHtml(minorTrait.name || "");
         minorBtn.dataset.desc = escapeHtml(minorTrait.description || "");
         minorBtn.dataset.icon = minorTrait.icon || "";
+        if (Array.isArray(minorTrait.facts) && minorTrait.facts.length > 0) {
+          minorBtn.dataset.facts = JSON.stringify(minorTrait.facts.map(_factToString));
+        }
         if (minorTrait.icon) {
           const img = document.createElement("img");
           img.src = String(minorTrait.icon);
@@ -108,6 +111,9 @@ export function renderSpecializations(container, specs) {
           traitBtn.dataset.name = escapeHtml(trait.name || "");
           traitBtn.dataset.desc = escapeHtml(trait.description || "");
           traitBtn.dataset.icon = trait.icon || "";
+          if (Array.isArray(trait.facts) && trait.facts.length > 0) {
+            traitBtn.dataset.facts = JSON.stringify(trait.facts.map(_factToString));
+          }
           if (trait.icon) {
             const img = document.createElement("img");
             img.src = String(trait.icon);
@@ -133,6 +139,16 @@ export function renderSpecializations(container, specs) {
       drawConnector(body);
     }
   }));
+}
+
+function _factToString(fact) {
+  if (typeof fact === "string") return fact;
+  const type = fact.type || "";
+  const text = fact.text || "";
+  if (fact.value !== undefined) return `${text}: ${fact.value}${fact.percent ? "%" : ""}`;
+  if (fact.duration !== undefined) return `${text}: ${fact.duration}s`;
+  if (fact.hit_count !== undefined) return `${text}: ${fact.hit_count}×`;
+  return text || type;
 }
 
 function drawConnector(body) {

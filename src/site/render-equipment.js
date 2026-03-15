@@ -46,6 +46,10 @@ const STAT_COMBOS = {
   "Celestial": "Power · Precision · Toughness · Vitality · Condition Damage · Ferocity · Healing Power · Expertise · Concentration",
 };
 
+const TWO_HAND_WEAPONS = new Set([
+  "greatsword", "hammer", "longbow", "rifle", "shortbow", "staff", "spear", "trident", "harpoon",
+]);
+
 export function renderEquipment(container, build) {
   container.innerHTML = "";
 
@@ -112,6 +116,8 @@ export function renderEquipment(container, build) {
     }
     if (value) {
       btn.dataset.name = value;
+      btn.dataset.icon = iconUrl || "";
+      btn.dataset.desc = "";
       btn.title = value;
     }
     return btn;
@@ -135,6 +141,9 @@ export function renderEquipment(container, build) {
 
     const wrapper = document.createElement("div");
     wrapper.className = "equip-slot";
+    wrapper.dataset.name = stat || label;
+    wrapper.dataset.icon = iconUrl;
+    wrapper.dataset.desc = STAT_COMBOS[stat] || "";
 
     const iconDiv = document.createElement("div");
     iconDiv.className = "equip-slot__icon" + (iconUrl || stat ? " equip-slot__icon--filled" : "");
@@ -202,14 +211,22 @@ export function renderEquipment(container, build) {
     const weaponName = weapons[key] || "";
     const stat = slots[key] || "";
     const iconUrl = icons[key] || "";
-    const sigilDisplayArr = Array.isArray(displaySigils[key])
+    // Determine max sigil count: 2H weapons get 2 sigils, 1H weapons get 1
+    const weaponType = (weaponName || "").toLowerCase();
+    const isTwoHandWeapon = TWO_HAND_WEAPONS.has(weaponType);
+    const maxSigils = isTwoHandWeapon ? 2 : 1;
+    const rawSigils = Array.isArray(displaySigils[key])
       ? displaySigils[key]
       : displaySigils[key]
         ? [displaySigils[key]]
         : [];
+    const sigilDisplayArr = rawSigils.slice(0, maxSigils);
 
     const wrapper = document.createElement("div");
     wrapper.className = "equip-slot equip-slot--weapon";
+    wrapper.dataset.name = weaponName || slotLabel;
+    wrapper.dataset.icon = iconUrl;
+    wrapper.dataset.desc = stat ? (STAT_COMBOS[stat] || stat) : "";
 
     // Weapon type button (left section with icon + name)
     const weaponBtn = document.createElement("div");
@@ -253,15 +270,28 @@ export function renderEquipment(container, build) {
 
     wrapper.append(weaponBtn, statDiv);
 
-    // Sigil upgrade buttons (resolved names)
-    if (sigilDisplayArr.length > 0) {
-      const upgradeContainer = document.createElement("div");
-      upgradeContainer.className = "equip-upgrade-slots";
-      for (const sigilObj of sigilDisplayArr) {
-        const sigilName = sigilObj?.name || "";
-        const sigilIcon = sigilObj?.icon || "";
-        upgradeContainer.append(makeUpgradeBtn("sigil", sigilName, sigilIcon));
+    // Sigil and infusion upgrade buttons
+    const upgradeContainer = document.createElement("div");
+    upgradeContainer.className = "equip-upgrade-slots";
+
+    for (const sigilObj of sigilDisplayArr) {
+      const sigilName = sigilObj?.name || "";
+      const sigilIcon = sigilObj?.icon || "";
+      upgradeContainer.append(makeUpgradeBtn("sigil", sigilName, sigilIcon));
+    }
+
+    // Weapon infusion badges
+    const weaponInfusion = displayInfusions[key];
+    if (weaponInfusion) {
+      const infArr = Array.isArray(weaponInfusion) ? weaponInfusion : [weaponInfusion];
+      for (const inf of infArr) {
+        if (inf && inf.name) {
+          upgradeContainer.append(makeUpgradeBtn("infusion", inf.name, inf.icon || ""));
+        }
       }
+    }
+
+    if (upgradeContainer.childElementCount > 0) {
       wrapper.append(upgradeContainer);
     }
 
@@ -280,6 +310,11 @@ export function renderEquipment(container, build) {
 
     const wrapper = document.createElement("div");
     wrapper.className = "equip-slot equip-slot--consumable";
+    if (displayObj) {
+      wrapper.dataset.name = displayObj.name || label;
+      wrapper.dataset.icon = displayObj.icon || "";
+      wrapper.dataset.desc = displayObj.description || "";
+    }
 
     const iconDiv = document.createElement("div");
     iconDiv.className =
@@ -467,7 +502,12 @@ export function renderEquipment(container, build) {
     setLabel.className = "equip-set-label";
     setLabel.textContent = set.label;
     weaponSection.append(setLabel);
+    const mainhandKey = set.slots[0].key;
+    const mainhandWeapon = (weapons[mainhandKey] || "").toLowerCase();
+    const isTwoHand = TWO_HAND_WEAPONS.has(mainhandWeapon);
     for (const { key, label } of set.slots) {
+      // Skip offhand slot when mainhand is a two-handed weapon
+      if (isTwoHand && key.startsWith("offhand")) continue;
       weaponSection.append(makeWeaponSlot(key, label));
     }
   }
@@ -478,7 +518,6 @@ export function renderEquipment(container, build) {
   consumeSection.append(
     makeConsumableSlot("Food", display.food || null),
     makeConsumableSlot("Utility", display.utility || null),
-    makeConsumableSlot("Enrichment", display.enrichment || null),
   );
   leftCol.append(consumeSection);
 
@@ -591,13 +630,13 @@ export function renderEquipment(container, build) {
     trinketRow2.append(makeTrinketSlot(key, label));
   }
 
-  // Relic slot — shown in the trinkets section
+  trinketSection.append(trinketRow1, trinketRow2);
+
+  // Relic slot — shown after the trinket grids
   if (display.relic) {
     const relicSlot = makeConsumableSlot("Relic", display.relic);
     trinketSection.append(relicSlot);
   }
-
-  trinketSection.append(trinketRow1, trinketRow2);
   rightCol.append(trinketSection);
 
   // ── Assemble layout ────────────────────────────────────────────────────────
