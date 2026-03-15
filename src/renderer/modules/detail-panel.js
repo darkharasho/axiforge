@@ -3,6 +3,9 @@ import { WEAPON_STRENGTH_MIDPOINT, BOON_CONDITION_ICONS, BUFF_FACT_TYPES, FACT_T
 import { escapeHtml, tierLabel, normalizeText } from "./utils.js";
 import { computeEquipmentStats } from "./stats.js";
 
+let _readOnly = false;
+export function setReadOnly(val) { _readOnly = val; }
+
 /**
  * Check if a skill is aquatic-only (weapon skill for a weapon with the Aquatic flag,
  * and the skill itself does NOT have NoUnderwater — i.e. it's the underwater variant).
@@ -53,16 +56,18 @@ export function initDetailPanel(domRefs, callbacks = {}) {
   _el = { ..._el, ...domRefs };
   _openWikiModal = callbacks.openWikiModal || null;
   _openDetailModal = callbacks.openDetailModal || null;
-  if (_el.detailHost) {
-    _el.detailHost.addEventListener("click", (e) => {
-      const btn = e.target.closest("[data-url]");
-      if (btn && _openWikiModal) _openWikiModal(btn.dataset.url);
-    });
-  }
-  if (_el.expandBtn) {
-    _el.expandBtn.addEventListener("click", () => {
-      if (_openDetailModal) _openDetailModal();
-    });
+  if (!_readOnly) {
+    if (_el.detailHost) {
+      _el.detailHost.addEventListener("click", (e) => {
+        const btn = e.target.closest("[data-url]");
+        if (btn && _openWikiModal) _openWikiModal(btn.dataset.url);
+      });
+    }
+    if (_el.expandBtn) {
+      _el.expandBtn.addEventListener("click", () => {
+        if (_openDetailModal) _openDetailModal();
+      });
+    }
   }
 }
 
@@ -414,6 +419,7 @@ export function hideHoverPreview() {
 }
 
 export async function selectDetail(kind, entity) {
+  if (_readOnly) return;
   if (!entity) return;
   const detail = {
     kind,
