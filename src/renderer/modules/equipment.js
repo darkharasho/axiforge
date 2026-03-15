@@ -570,6 +570,7 @@ export function renderEquipmentPanel() {
           });
         });
       }
+    }
 
     // Upgrade sub-slots for weapons
     if (!lockedByTwoHanded) {

@@ -1,8 +1,8 @@
-import { state } from "../renderer/modules/state.js";
-import { initSkills, renderSkills } from "../renderer/modules/skills.js";
-import { initSpecializations, renderSpecializations } from "../renderer/modules/specializations.js";
-import { initEquipment, renderEquipmentPanel } from "../renderer/modules/equipment.js";
-import { initDetailPanel, bindHoverPreview } from "../renderer/modules/detail-panel.js";
+import { state } from "@renderer/modules/state.js";
+import { initSkills, renderSkills } from "@renderer/modules/skills.js";
+import { initSpecializations, renderSpecializations } from "@renderer/modules/specializations.js";
+import { initEquipment, renderEquipmentPanel } from "@renderer/modules/equipment.js";
+import { initDetailPanel, bindHoverPreview } from "@renderer/modules/detail-panel.js";
 import { initReferencePanel, updateReferencePanel } from "./render-reference.js";
 
 function escapeHtml(s) {

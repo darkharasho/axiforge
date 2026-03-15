@@ -1,9 +1,9 @@
 import "./styles.css";
 import { renderBuildPage } from "./render-build.js";
-import { setReadOnly as setSkillsReadOnly } from "../../renderer/modules/skills.js";
-import { setReadOnly as setEquipmentReadOnly } from "../../renderer/modules/equipment.js";
-import { setReadOnly as setSpecsReadOnly } from "../../renderer/modules/specializations.js";
-import { setReadOnly as setDetailReadOnly } from "../../renderer/modules/detail-panel.js";
+import { setReadOnly as setSkillsReadOnly } from "@renderer/modules/skills.js";
+import { setReadOnly as setEquipmentReadOnly } from "@renderer/modules/equipment.js";
+import { setReadOnly as setSpecsReadOnly } from "@renderer/modules/specializations.js";
+import { setReadOnly as setDetailReadOnly } from "@renderer/modules/detail-panel.js";
 
 const app = document.getElementById("app");
 
