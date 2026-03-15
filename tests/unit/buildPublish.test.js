@@ -351,6 +351,69 @@ describe("serializeForPublish", () => {
     expect(waterMechanics.map(s => s.id)).not.toContain(501); // Fire mechanic not in Water
   });
 
+  // --- Equipment icons ---
+
+  test("equipmentIcons: armor slots use profession weight (Necromancer = light)", () => {
+    const result = serializeForPublish(makeMockBuild(), makeMockCatalog(), null);
+    expect(result.equipmentIcons).toBeDefined();
+    // Necromancer is light armor
+    expect(result.equipmentIcons.head).toContain("1634576");
+    expect(result.equipmentIcons.chest).toContain("1634574");
+  });
+
+  test("equipmentIcons: weapon slots resolve from weapon name", () => {
+    const build = makeMockBuild();
+    build.equipment.weapons = { mainhand1: "Greatsword", offhand1: "", mainhand2: "Dagger", offhand2: "Focus" };
+    const result = serializeForPublish(build, makeMockCatalog(), null);
+    expect(result.equipmentIcons.mainhand1).toContain("Bandit_Sunderer");
+    expect(result.equipmentIcons.mainhand2).toContain("Bandit_Shiv");
+    expect(result.equipmentIcons.offhand2).toContain("Bandit_Focus");
+  });
+
+  test("equipmentIcons: empty weapon slot returns empty string", () => {
+    const build = makeMockBuild();
+    build.equipment.weapons = {};
+    const result = serializeForPublish(build, makeMockCatalog(), null);
+    expect(result.equipmentIcons.mainhand1).toBe("");
+  });
+
+  test("equipmentIcons: trinket slots are always present", () => {
+    const result = serializeForPublish(makeMockBuild(), makeMockCatalog(), null);
+    expect(result.equipmentIcons.amulet).toContain("render.guildwars2.com");
+    expect(result.equipmentIcons.ring1).toContain("render.guildwars2.com");
+    expect(result.equipmentIcons.back).toContain("render.guildwars2.com");
+  });
+
+  test("equipmentIcons: unknown profession falls back to medium armor icons", () => {
+    const build = makeMockBuild();
+    build.profession = "UnknownProf";
+    const result = serializeForPublish(build, makeMockCatalog(), null);
+    // medium head icon contains 1634588
+    expect(result.equipmentIcons.head).toContain("1634588");
+  });
+
+  // --- Computed stats ---
+
+  test("computedStats is present on serialized build", () => {
+    const result = serializeForPublish(makeMockBuild(), makeMockCatalog(), null);
+    expect(result.computedStats).toBeDefined();
+    expect(typeof result.computedStats).toBe("object");
+  });
+
+  test("statModifiers is an array", () => {
+    const result = serializeForPublish(makeMockBuild(), makeMockCatalog(), null);
+    expect(Array.isArray(result.statModifiers)).toBe(true);
+  });
+
+  test("computedStats includes derived fields (CritChance, Health, etc.)", () => {
+    const result = serializeForPublish(makeMockBuild(), makeMockCatalog(), null);
+    expect(result.computedStats).toHaveProperty("CritChance");
+    expect(result.computedStats).toHaveProperty("Health");
+    expect(result.computedStats).toHaveProperty("CritDamage");
+    expect(result.computedStats).toHaveProperty("BoonDuration");
+    expect(result.computedStats).toHaveProperty("ConditionDuration");
+  });
+
   test("waterSkills contains aquatic weapon sets and excludes NoUnderwater mechanics", () => {
     const catalog = makeMockCatalog();
     // Add a NoUnderwater mechanic

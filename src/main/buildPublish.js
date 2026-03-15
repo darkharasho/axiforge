@@ -2,6 +2,90 @@
 
 const fs = require("node:fs");
 const path = require("node:path");
+const { computePublishStats } = require("./statsCompute");
+
+// ---------------------------------------------------------------------------
+// Equipment icon constants
+// ---------------------------------------------------------------------------
+
+const PROFESSION_WEIGHT = {
+  Elementalist: "light", Mesmer: "light", Necromancer: "light",
+  Engineer: "medium", Ranger: "medium", Thief: "medium",
+  Guardian: "heavy", Warrior: "heavy", Revenant: "heavy",
+};
+
+const _R = "https://render.guildwars2.com/file";
+const _WK = "https://wiki.guildwars2.com/images";
+
+const ARMOR_ICONS = {
+  light: {
+    head: `${_R}/06146C9BD029041178F50B5D9ACD0A76E7051408/1634576.png`,
+    shoulders: `${_R}/A77403E5F0EB03E46E686B12297A04707AF50278/1634579.png`,
+    chest: `${_R}/C8FB494379CC98171EFB0F13923CACFD047743B3/1634574.png`,
+    hands: `${_R}/9703DBC0926F6BB4072032E6B55BE593F6B750CD/1634575.png`,
+    legs: `${_R}/65A4D3A41592D10EEABD0BC0D611F13A383B0261/1634577.png`,
+    feet: `${_R}/FD60D4E3986FA46F4FEBB8131B65159195260B19/1634578.png`,
+  },
+  medium: {
+    head: `${_R}/49092A1358E528DEC67EFA1C090546ED034642E2/1634588.png`,
+    shoulders: `${_R}/CF7609512FC6527D805F2B74F26AF4549FF4E808/1634591.png`,
+    chest: `${_R}/57360F35D1210D12010F6AE772382450A07D08F6/1634586.png`,
+    hands: `${_R}/C57E5E5FA69261A2503CBB50080A6C023A155C49/1634587.png`,
+    legs: `${_R}/EBD907C061747927AE062D1B41BC13D0EAF14AD5/1634589.png`,
+    feet: `${_R}/BF4C6A48BA02BD6D6AC32F1E9C3F32A50399E336/1634590.png`,
+  },
+  heavy: {
+    head: `${_R}/2695A8E44B7F07EF15A20857790EFCA91513F5F0/1634565.png`,
+    shoulders: `${_R}/0F0F4BE73C9316BAA4956A3AA622CB0AE84D9CEA/1634567.png`,
+    chest: `${_R}/DACF9B1ACBE8687B6B31ABC0CF295301120D7A67/1634563.png`,
+    hands: `${_R}/A5DD0D661970F02CC26D04B510C7C94259B99520/1634564.png`,
+    legs: `${_R}/EA9294557C175A43567906721E43962EC4B12D34/1634566.png`,
+    feet: `${_R}/E895D40AE0D1A500FFFDB955C27A98FF687AA4C1/1634562.png`,
+  },
+};
+
+const WEAPON_ICONS = {
+  axe: `${_WK}/b/b5/Bandit_Cleaver.png`, dagger: `${_WK}/a/ac/Bandit_Shiv.png`,
+  mace: `${_WK}/b/b3/Bandit_Mallet.png`, pistol: `${_WK}/f/f3/Bandit_Revolver.png`,
+  sword: `${_WK}/e/e1/Bandit_Slicer.png`, scepter: `${_WK}/9/95/Bandit_Baton.png`,
+  focus: `${_WK}/d/da/Bandit_Focus.png`, shield: `${_WK}/7/7c/Bandit_Ward.png`,
+  torch: `${_WK}/7/7e/Bandit_Torch.png`, warhorn: `${_WK}/3/31/Bandit_Bugle.png`,
+  greatsword: `${_WK}/0/0b/Bandit_Sunderer.png`, hammer: `${_WK}/f/fb/Bandit_Demolisher.png`,
+  longbow: `${_WK}/2/2d/Bandit_Longbow.png`, rifle: `${_WK}/3/37/Bandit_Musket.png`,
+  shortbow: `${_WK}/2/2f/Bandit_Short_Bow.png`, staff: `${_WK}/9/98/Bandit_Spire.png`,
+  harpoon: `${_WK}/2/20/Bandit_Harpoon_Gun.png`, spear: `${_WK}/c/c9/Bandit_Spear.png`,
+  trident: `${_WK}/6/66/Bandit_Trident.png`,
+};
+
+const TRINKET_ICONS = {
+  back: `${_R}/5EBEA1A467236237FCBACDC09969647956C4A371/1701118.png`,
+  amulet: `${_R}/4944FD054FD80D805B0BFFB2DA60363A7DD31FDB/1614376.png`,
+  ring1: `${_R}/EAA61AAF9BEF031104FD063C0A301A520EF5F5E6/1614682.png`,
+  ring2: `${_R}/EAA61AAF9BEF031104FD063C0A301A520EF5F5E6/1614682.png`,
+  accessory1: `${_R}/741D3F520D1DFD7BB9A35AD50FC75152D2B3CA6B/1614709.png`,
+  accessory2: `${_R}/741D3F520D1DFD7BB9A35AD50FC75152D2B3CA6B/1614709.png`,
+};
+
+/**
+ * Resolve icon URLs for every equipment slot based on profession weight and weapon types.
+ *
+ * @param {object} build - Serialized build object
+ * @returns {object} - Map of slot name to icon URL
+ */
+function resolveEquipmentIcons(build) {
+  const weight = PROFESSION_WEIGHT[build.profession] || "medium";
+  const weapons = build.equipment?.weapons || {};
+  const icons = {};
+  for (const slot of ["head", "shoulders", "chest", "hands", "legs", "feet"]) {
+    icons[slot] = ARMOR_ICONS[weight]?.[slot] || "";
+  }
+  for (const slot of ["mainhand1", "offhand1", "mainhand2", "offhand2", "aquatic1", "aquatic2"]) {
+    const weaponId = (weapons[slot] || "").toLowerCase();
+    icons[slot] = WEAPON_ICONS[weaponId] || "";
+  }
+  Object.assign(icons, TRINKET_ICONS);
+  return icons;
+}
 
 // Path to gw2-class-icons SVG files
 const ICONS_SVG_DIR = path.join(__dirname, "../../node_modules/gw2-class-icons/wiki/svg");
@@ -351,6 +435,10 @@ function serializeForPublish(build, catalog, upgradeCatalog) {
     });
 
   const equipmentDisplay = resolveEquipmentDisplay(build.equipment, upgradeCatalog);
+  const equipmentIcons = resolveEquipmentIcons(build);
+  const { stats: computedStats, modifiers: statModifiers } = computePublishStats(
+    build.equipment, upgradeCatalog, build.profession
+  );
 
   return {
     ...build,
@@ -366,6 +454,9 @@ function serializeForPublish(build, catalog, upgradeCatalog) {
     petDisplay,
     legendDisplay,
     equipmentDisplay,
+    equipmentIcons,
+    computedStats,
+    statModifiers,
   };
 }
 
