@@ -19,9 +19,11 @@ owner.github.io/axibuilds/<slug>#<fileId>.<key>
 
 The fragment contains everything needed to locate and decrypt the build. No manifest or server-side lookup.
 
-**Examples:**
-- `owner.github.io/axibuilds/power-reaper#a7f3b2c1.xK9mP2qR4sT6uV8w`
-- `owner.github.io/axibuilds/core-necromancer#b8e4c3d2.yL0nQ3rS5tU7vW9x`
+**Examples** (keys abbreviated for readability — actual base64url keys are ~43 characters):
+- `owner.github.io/axibuilds/power-reaper#a7f3b2c1.xK9mP2qR4sT6uV8wAb3cDe...`
+- `owner.github.io/axibuilds/core-necromancer#b8e4c3d2.yL0nQ3rS5tU7vW9xFg4hIj...`
+
+**Slug collisions:** Two builds with the same name produce the same slug path, but since the fragment (fileId + key) is different, each URL is unique. The path is purely cosmetic.
 
 ## Build Name Auto-Population
 
@@ -66,7 +68,7 @@ The app can always decrypt its own builds using this stored metadata.
 4. Encrypt serialized build JSON → base64 blob
 5. Slugify build name → e.g., `power-reaper`
 6. If previously published with a different name (slug changed): delete old `.enc` file from repo
-7. Commit encrypted file to `axibuilds` repo at `builds/<fileId>.enc`
+7. Commit encrypted file to `axibuilds` repo at `site/builds/<fileId>.enc`
 8. Update local publish metadata on the build
 9. Trigger Pages workflow dispatch
 10. Return full URL to the user
@@ -89,14 +91,16 @@ axibuilds/
 │   ├── index.html          # SPA shell
 │   ├── styles.css          # Desktop-matching dark theme
 │   ├── app.js              # Client-side routing, decryption, rendering
-│   └── 404.html            # SPA routing fallback (redirects to index.html)
-├── builds/                 # Encrypted build files
-│   ├── a7f3b2c1.enc
-│   ├── b8e4c3d2.enc
-│   └── ...
+│   ├── 404.html            # SPA routing fallback (redirects to index.html)
+│   └── builds/             # Encrypted build files (inside site/ so Pages serves them)
+│       ├── a7f3b2c1.enc
+│       ├── b8e4c3d2.enc
+│       └── ...
 ├── .nojekyll
 └── .github/workflows/deploy-pages.yml
 ```
+
+Encrypted build files live under `site/builds/` so they are included in the Pages artifact (the workflow uploads `./site`). The app fetches them from `./builds/<fileId>.enc` relative to the site root.
 
 ## Published Build Page
 
@@ -116,7 +120,14 @@ Tabs switch between BUILD and EQUIPMENT panels, matching the desktop app:
 - Specialization rows with spec icon, name, trait grid (3 tiers × 3 options, selected traits highlighted)
 - Skill bar (heal, utilities, elite) with GW2 icons
 - Underwater skills (if applicable)
-- Profession-specific sections (Revenant legends, Ranger pets, etc.)
+- Profession-specific sections rendered from serialized build data:
+  - Revenant: `selectedLegends` (legend swap bar)
+  - Ranger/Soulbeast: `selectedPets` (terrestrial + aquatic pet display)
+  - Elementalist/Weaver: attunement indicator
+  - Engineer: kit/toolbelt bundle expansion
+  - Necromancer/Antiquary: `antiquaryArtifacts` (F-key draws)
+  - Catalyst: `morphSkillIds`
+  - Vindicator: `allianceTacticsForm` (legendary alliance form)
 - Notes section
 
 **EQUIPMENT tab:**
@@ -141,7 +152,11 @@ Tabs switch between BUILD and EQUIPMENT panels, matching the desktop app:
 - `/` → landing page ("AxiForge Builds — publish from the desktop app")
 - Any other path → 404 message
 
-GitHub Pages doesn't support server-side routing. A `404.html` file redirects to `index.html` preserving the original path — standard GitHub Pages SPA pattern.
+GitHub Pages doesn't support server-side routing. The `404.html` file handles this:
+1. When GitHub Pages can't find a path (e.g., `/power-reaper`), it serves `404.html`
+2. `404.html` stores the current path and fragment in `sessionStorage`
+3. `404.html` redirects to `/axibuilds/` (the site root / `index.html`)
+4. `index.html` checks `sessionStorage` on load, restores the original path, and routes accordingly
 
 ### app.js Flow
 1. Parse URL path (slug) and fragment (fileId.key)
@@ -167,7 +182,7 @@ Reuse the desktop app's CSS variables and visual language:
 ## Changes to Existing Code
 
 ### `githubApi.js`
-- Change `TARGET_REPO` from `"axiforge"` to `"axibuilds"`
+- Change `TARGET_REPO` from `"axiforge"` to `"axibuilds"` (replaces the old build library site entirely — the new per-build publishing supersedes the previous "publish all builds" approach)
 - Update repo description to `"AxiForge Builds — published GW2 builds"`
 - Add function to delete a file from the repo (for slug change cleanup)
 
@@ -198,3 +213,6 @@ A standalone web editor at `/axibuilds/editor` for tinkering with builds (no sav
 
 ### Revisions System
 Currently, re-publishing overwrites the previous version. A future revision system would support multiple snapshots of the same build with version history or a revision selector on the published page.
+
+### Unpublish
+No UI for removing a published build from the web. Users can manually delete the `.enc` file from their `axibuilds` repo. A dedicated unpublish flow may be added later.
