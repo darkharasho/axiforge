@@ -56,4 +56,8 @@ contextBridge.exposeInMainWorld("desktopApi", {
     ipcRenderer.removeAllListeners("download-progress");
     ipcRenderer.on("download-progress", (_e, info) => cb(info));
   },
+  onPublishProgress: (cb) => {
+    ipcRenderer.removeAllListeners("publish-progress");
+    ipcRenderer.on("publish-progress", (_e, step) => cb(step));
+  },
 });

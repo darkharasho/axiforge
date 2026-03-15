@@ -251,7 +251,10 @@ app.whenReady().then(async () => {
     return true;
   });
 
-  ipcMain.handle("builds:publish-build", async (_e, buildId) => {
+  ipcMain.handle("builds:publish-build", async (event, buildId) => {
+    const sender = event.sender;
+    const progress = (step) => sender.send("publish-progress", step);
+
     const session = await getSession();
     if (!session) {
       throw new Error("You must log in with GitHub before publishing.");
@@ -262,6 +265,7 @@ app.whenReady().then(async () => {
     const owner = auth?.onboarding?.targetOwner || session.viewer.login;
 
     // Load the build
+    progress("loading");
     const builds = await store.listBuilds();
     const build = builds.find((b) => b.id === buildId);
     if (!build) throw new Error("Build not found.");
@@ -283,6 +287,7 @@ app.whenReady().then(async () => {
     const newSlug = slugifyBuildName(build.title);
 
     // Ensure repo and site infrastructure exist
+    progress("repo");
     await ensureAxiForgeRepo(session.token, owner, "user");
     await ensurePagesWorkflow(session.token, owner, branch, TARGET_REPO);
     await ensurePages(session.token, owner, branch, TARGET_REPO);
@@ -290,15 +295,20 @@ app.whenReady().then(async () => {
     // Deploy SPA files if not already deployed.
     // publishSiteBundle compares SHA hashes and skips unchanged files,
     // so this is effectively a no-op after the first publish.
+    progress("site");
     const spaBundle = buildSpaBundle();
     await publishSiteBundle(session.token, owner, spaBundle, branch, TARGET_REPO);
 
     // Encrypt and commit the build
+    progress("encrypt");
     const encFile = buildEncryptedBuildFile(build, fileId, encKey);
     const encBundle = { [encFile.filePath]: encFile.content };
+
+    progress("upload");
     await publishSiteBundle(session.token, owner, encBundle, branch, TARGET_REPO);
 
     // Trigger Pages rebuild
+    progress("deploy");
     await triggerPagesWorkflow(session.token, owner, branch, TARGET_REPO).catch(() => null);
 
     // Update build with publish metadata

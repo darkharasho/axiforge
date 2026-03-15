@@ -355,18 +355,27 @@ export function renderBuildList() {
       try {
         publishBtn.disabled = true;
         publishBtn.textContent = "Publishing...";
+        showPublishProgress();
+        advancePublishStep("saving");
+
         if (build.id === state.editor.id && state.editorDirty) {
           const serialized = _callbacks.serializeEditorToBuild();
           await window.desktopApi.saveBuild({ ...serialized, id: build.id });
           await _callbacks.reloadBuilds();
         }
+
         const result = await window.desktopApi.publishBuild(build.id);
+
+        completeAllPublishSteps();
+
         if (result?.pagesUrl) {
           await window.desktopApi.writeClipboardText(result.pagesUrl);
-          setPublishStatus(`Published! URL copied: ${result.pagesUrl}`);
+          showPublishResult(result.pagesUrl);
         }
+
         await _callbacks.reloadBuilds();
-        render();
+        renderBuildList();
+        renderEditorMeta();
       } catch (err) {
         showError(err);
       } finally {
@@ -537,6 +546,114 @@ export async function startLoginFlow() {
 // ---------------------------------------------------------------------------
 export function setPublishStatus(message) {
   _el.publishStatus.textContent = message || "";
+}
+
+// ---------------------------------------------------------------------------
+// renderPublishProgress — animated step-by-step publish status
+// ---------------------------------------------------------------------------
+
+const PUBLISH_STEPS = [
+  { key: "saving", label: "Saving build" },
+  { key: "loading", label: "Preparing build data" },
+  { key: "repo", label: "Connecting to repository" },
+  { key: "site", label: "Deploying site infrastructure" },
+  { key: "encrypt", label: "Encrypting build" },
+  { key: "upload", label: "Uploading to GitHub" },
+  { key: "deploy", label: "Triggering Pages deploy" },
+];
+
+export function showPublishProgress() {
+  _el.publishStatus.innerHTML = "";
+  const container = document.createElement("div");
+  container.className = "publish-progress";
+
+  for (const step of PUBLISH_STEPS) {
+    const row = document.createElement("div");
+    row.className = "setup-step setup-step--pending";
+    row.dataset.publishStep = step.key;
+    row.innerHTML = `<span class="setup-step__icon">&#9679;</span><span class="setup-step__label">${escapeHtml(step.label)}</span>`;
+    container.append(row);
+  }
+
+  _el.publishStatus.append(container);
+  return container;
+}
+
+export function advancePublishStep(stepKey) {
+  const container = _el.publishStatus.querySelector(".publish-progress");
+  if (!container) return;
+
+  // Complete all previous steps
+  const rows = container.querySelectorAll(".setup-step");
+  let found = false;
+  for (const row of rows) {
+    if (row.dataset.publishStep === stepKey) {
+      found = true;
+      row.className = "setup-step setup-step--active";
+      row.querySelector(".setup-step__icon").innerHTML = `<span class="setup-step__spinner"></span>`;
+    } else if (!found) {
+      // Mark previous steps as done
+      if (row.classList.contains("setup-step--active") || row.classList.contains("setup-step--pending")) {
+        row.className = "setup-step setup-step--done";
+        row.querySelector(".setup-step__icon").textContent = "\u2713";
+      }
+    }
+  }
+}
+
+export function completeAllPublishSteps() {
+  const container = _el.publishStatus.querySelector(".publish-progress");
+  if (!container) return;
+  for (const row of container.querySelectorAll(".setup-step")) {
+    row.className = "setup-step setup-step--done";
+    row.querySelector(".setup-step__icon").textContent = "\u2713";
+  }
+}
+
+export function failPublishStep(stepKey, message) {
+  const container = _el.publishStatus.querySelector(".publish-progress");
+  if (!container) return;
+  for (const row of container.querySelectorAll(".setup-step")) {
+    if (row.dataset.publishStep === stepKey) {
+      row.className = "setup-step setup-step--error";
+      row.querySelector(".setup-step__icon").textContent = "\u2717";
+      if (message) {
+        const err = document.createElement("span");
+        err.className = "setup-step__error";
+        err.textContent = ` ${message}`;
+        row.append(err);
+      }
+      break;
+    }
+  }
+}
+
+export function showPublishResult(url) {
+  const container = _el.publishStatus.querySelector(".publish-progress");
+  if (!container) return;
+
+  const result = document.createElement("div");
+  result.className = "publish-result";
+  result.innerHTML = `
+    <div class="publish-result__header">Published successfully!</div>
+    <div class="publish-result__url-row">
+      <input type="text" class="publish-result__url" value="${escapeHtml(url)}" readonly />
+      <button class="btn btn-secondary publish-result__copy">Copy URL</button>
+    </div>
+  `;
+
+  const copyBtn = result.querySelector(".publish-result__copy");
+  const urlInput = result.querySelector(".publish-result__url");
+  copyBtn.addEventListener("click", async () => {
+    await window.desktopApi.writeClipboardText(url);
+    copyBtn.textContent = "Copied!";
+    urlInput.select();
+    setTimeout(() => { copyBtn.textContent = "Copy URL"; }, 2000);
+  });
+
+  urlInput.addEventListener("click", () => urlInput.select());
+
+  container.append(result);
 }
 
 // ---------------------------------------------------------------------------
