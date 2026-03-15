@@ -52,12 +52,12 @@ function populateStateFromBuild(build) {
   state.editor.gameMode                = build.gameMode || "pve";
   state.editor.equipment               = build.equipment;
   state.editor.specializations         = build.specializations;
-  state.editor.skills                  = build.landSkills?.skills || {};
-  state.editor.weaponSkills            = build.landSkills?.weaponSkills || {};
-  state.editor.professionMechanics     = build.landSkills?.professionMechanics || [];
-  state.editor.attunements             = build.landSkills?.attunementSkills || null;
+  // build.skills / build.underwaterSkills are the raw { healId, utilityIds, eliteId }
+  // from the editor state (via ...build spread in serializeForPublish).
+  // build.landSkills / build.waterSkills are enriched structures — don't use them for state.editor.
+  state.editor.skills                  = build.skills || {};
+  state.editor.underwaterSkills        = build.underwaterSkills || {};
   state.editor.activeAttunement        = build.activeAttunement || "Fire";
-  state.editor.underwaterSkills        = build.waterSkills || null;
   state.editor.underwaterMode          = false;
   state.editor.activeWeaponSet         = 1;
   state.editor.activeKit               = 0;
@@ -200,9 +200,6 @@ export function renderBuildPage(container, build) {
   skillsSection.append(skillsHost);
   buildContent.append(skillsSection);
 
-  initSkills({ skillsHost });
-  renderSkills();
-
   // Side-by-side layout: specs panel + detail/reference panel
   const specsWithDetail = document.createElement("div");
   specsWithDetail.className = "specs-with-detail";
@@ -221,9 +218,6 @@ export function renderBuildPage(container, build) {
   const specializationsHost = document.createElement("div");
   specializationsHost.className = "specializations-host";
   specsPanel.append(specializationsHost);
-
-  initSpecializations({ specializationsHost });
-  renderSpecializations();
 
   // Detail / reference panel
   const detailPanel = document.createElement("section");
@@ -285,10 +279,18 @@ export function renderBuildPage(container, build) {
   const equipmentPanel = document.createElement("div");
   equipContent.append(equipmentPanel);
 
+  // ── Append to DOM first, then render (renderers need elements in the document
+  //    for getBoundingClientRect to work, e.g. spec connector lines) ──
+  container.append(buildContent, equipContent);
+
+  initSkills({ skillsHost });
+  renderSkills();
+
+  initSpecializations({ specializationsHost });
+  renderSpecializations();
+
   initEquipment({ equipmentPanel });
   renderEquipmentPanel();
-
-  container.append(buildContent, equipContent);
 
   // ── Tab switching logic ─────────────────────────────────────────────────
   buildTab.addEventListener("click", () => {

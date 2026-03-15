@@ -24,7 +24,7 @@
 .site-navbar__link:hover { color: var(--text); }
 
 /* App container */
-#app { width: min(1100px, 94vw); margin: 24px auto 48px; }
+#app { width: min(1400px, 96vw); margin: 24px auto 48px; }
 
 /* Landing */
 .site-landing { text-align: center; padding: 80px 0; }
