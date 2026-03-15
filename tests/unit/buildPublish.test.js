@@ -62,6 +62,60 @@ function makeMockCatalog() {
   };
 }
 
+/** Elementalist-style catalog with attunement weapon skills */
+function makeMockElementalistCatalog() {
+  return {
+    professionWeapons: {
+      Scepter: {
+        flags: ["Mainhand"],
+        skills: [
+          // Fire attunement skills
+          { id: 101, slot: "Weapon_1", attunement: "Fire" },
+          { id: 102, slot: "Weapon_2", attunement: "Fire" },
+          { id: 103, slot: "Weapon_3", attunement: "Fire" },
+          // Water attunement skills
+          { id: 201, slot: "Weapon_1", attunement: "Water" },
+          { id: 202, slot: "Weapon_2", attunement: "Water" },
+          { id: 203, slot: "Weapon_3", attunement: "Water" },
+          // Air attunement skills
+          { id: 301, slot: "Weapon_1", attunement: "Air" },
+          { id: 302, slot: "Weapon_2", attunement: "Air" },
+          { id: 303, slot: "Weapon_3", attunement: "Air" },
+          // Earth attunement skills
+          { id: 401, slot: "Weapon_1", attunement: "Earth" },
+          { id: 402, slot: "Weapon_2", attunement: "Earth" },
+          { id: 403, slot: "Weapon_3", attunement: "Earth" },
+        ],
+      },
+    },
+    weaponSkills: [
+      { id: 101, name: "Fire Auto", icon: "f1.png", slot: "Weapon_1", attunement: "Fire" },
+      { id: 102, name: "Fire 2", icon: "f2.png", slot: "Weapon_2", attunement: "Fire" },
+      { id: 103, name: "Fire 3", icon: "f3.png", slot: "Weapon_3", attunement: "Fire" },
+      { id: 201, name: "Water Auto", icon: "w1.png", slot: "Weapon_1", attunement: "Water" },
+      { id: 202, name: "Water 2", icon: "w2.png", slot: "Weapon_2", attunement: "Water" },
+      { id: 203, name: "Water 3", icon: "w3.png", slot: "Weapon_3", attunement: "Water" },
+      { id: 301, name: "Air Auto", icon: "a1.png", slot: "Weapon_1", attunement: "Air" },
+      { id: 302, name: "Air 2", icon: "a2.png", slot: "Weapon_2", attunement: "Air" },
+      { id: 303, name: "Air 3", icon: "a3.png", slot: "Weapon_3", attunement: "Air" },
+      { id: 401, name: "Earth Auto", icon: "e1.png", slot: "Weapon_1", attunement: "Earth" },
+      { id: 402, name: "Earth 2", icon: "e2.png", slot: "Weapon_2", attunement: "Earth" },
+      { id: 403, name: "Earth 3", icon: "e3.png", slot: "Weapon_3", attunement: "Earth" },
+    ],
+    skills: [
+      // F-skill for Fire (no spec lock)
+      { id: 501, name: "Conjure Flame Axe", icon: "cfa.png", slot: "Profession_1", inProfessionEndpoint: true, attunement: "Fire", specialization: 0 },
+      // F-skill for Water (no spec lock)
+      { id: 502, name: "Cleansing Wave", icon: "cw.png", slot: "Profession_1", inProfessionEndpoint: true, attunement: "Water", specialization: 0 },
+      // F-skill locked to Weaver (spec 68) — only included when Weaver is selected
+      { id: 601, name: "Weaver Fire", icon: "wf.png", slot: "Profession_2", inProfessionEndpoint: true, attunement: "Fire", specialization: 68 },
+    ],
+    legends: [],
+    pets: [],
+    specializations: [],
+  };
+}
+
 function makeMockUpgradeCatalog() {
   return {
     runeById: new Map([[24836, { id: 24836, name: "Superior Rune of the Scholar", icon: "scholar.png" }]]),
@@ -165,5 +219,151 @@ describe("serializeForPublish", () => {
     build.equipment.runes = { head: "99999" };
     const result = serializeForPublish(build, makeMockCatalog(), makeMockUpgradeCatalog());
     expect(result.equipmentDisplay.runes.head).toBeNull();
+  });
+
+  // --- New structured output shape tests ---
+
+  test("non-Elementalist: landSkills and waterSkills are present, attunementSkills is null", () => {
+    const result = serializeForPublish(makeMockBuild(), makeMockCatalog(), null);
+
+    expect(result.landSkills).toBeDefined();
+    expect(result.waterSkills).toBeDefined();
+    expect(result.activeAttunement).toBe("");
+
+    // attunementSkills null for non-attunement professions
+    expect(result.landSkills.attunementSkills).toBeNull();
+    expect(result.waterSkills.attunementSkills).toBeNull();
+
+    // landSkills.weaponSkills should match the flat set1/set2
+    expect(result.landSkills.weaponSkills.set1).toEqual(result.weaponSkills.set1);
+    expect(result.landSkills.weaponSkills.set2).toEqual(result.weaponSkills.set2);
+
+    // landSkills.professionMechanics should match the flat array
+    expect(result.landSkills.professionMechanics).toEqual(result.professionMechanics);
+  });
+
+  test("Elementalist: landSkills.attunementSkills groups weapon skills by attunement", () => {
+    const build = {
+      ...makeMockBuild(),
+      profession: "Elementalist",
+      specializations: [{ id: 31, name: "Fire", elite: false }],
+      equipment: {
+        ...makeMockBuild().equipment,
+        weapons: { mainhand1: "Scepter", offhand1: "" },
+      },
+    };
+    const result = serializeForPublish(build, makeMockElementalistCatalog(), null);
+
+    expect(result.activeAttunement).toBe("Fire");
+    expect(result.landSkills.attunementSkills).not.toBeNull();
+
+    const fireSkills = result.landSkills.attunementSkills.Fire.set1;
+    expect(fireSkills).toHaveLength(3);
+    expect(fireSkills.map(s => s.name)).toEqual(["Fire Auto", "Fire 2", "Fire 3"]);
+
+    const waterSkills = result.landSkills.attunementSkills.Water.set1;
+    expect(waterSkills).toHaveLength(3);
+    expect(waterSkills.map(s => s.name)).toEqual(["Water Auto", "Water 2", "Water 3"]);
+
+    const airSkills = result.landSkills.attunementSkills.Air.set1;
+    expect(airSkills).toHaveLength(3);
+    expect(airSkills[0].name).toBe("Air Auto");
+
+    const earthSkills = result.landSkills.attunementSkills.Earth.set1;
+    expect(earthSkills).toHaveLength(3);
+    expect(earthSkills[0].name).toBe("Earth Auto");
+  });
+
+  test("Elementalist: activeAttunement can be overridden by build.activeAttunement", () => {
+    const build = {
+      ...makeMockBuild(),
+      profession: "Elementalist",
+      specializations: [{ id: 31, name: "Fire", elite: false }],
+      equipment: {
+        ...makeMockBuild().equipment,
+        weapons: { mainhand1: "Scepter", offhand1: "" },
+      },
+      activeAttunement: "Water",
+    };
+    const result = serializeForPublish(build, makeMockElementalistCatalog(), null);
+
+    expect(result.activeAttunement).toBe("Water");
+    // landSkills.weaponSkills should reflect Water attunement
+    expect(result.landSkills.weaponSkills.set1.map(s => s.name)).toEqual(["Water Auto", "Water 2", "Water 3"]);
+  });
+
+  test("F-skill filtering: excludes skills locked to an unselected specialization", () => {
+    const build = {
+      ...makeMockBuild(),
+      profession: "Elementalist",
+      // spec 31 is selected, spec 68 (Weaver) is NOT
+      specializations: [{ id: 31, name: "Fire", elite: false }],
+      equipment: {
+        ...makeMockBuild().equipment,
+        weapons: { mainhand1: "Scepter", offhand1: "" },
+      },
+    };
+    const result = serializeForPublish(build, makeMockElementalistCatalog(), null);
+
+    // filteredMechanics (backward compat) should not include the Weaver skill
+    const mechIds = result.professionMechanics.map(s => s.id);
+    expect(mechIds).not.toContain(601); // Weaver-locked skill excluded
+    expect(mechIds).toContain(501); // Fire mechanic included
+    expect(mechIds).toContain(502); // Water mechanic included
+  });
+
+  test("F-skill filtering: includes skills locked to a selected specialization", () => {
+    const build = {
+      ...makeMockBuild(),
+      profession: "Elementalist",
+      // Weaver (68) IS selected
+      specializations: [{ id: 31, name: "Fire", elite: false }, { id: 68, name: "Weaver", elite: true }],
+      equipment: {
+        ...makeMockBuild().equipment,
+        weapons: { mainhand1: "Scepter", offhand1: "" },
+      },
+    };
+    const result = serializeForPublish(build, makeMockElementalistCatalog(), null);
+
+    const mechIds = result.professionMechanics.map(s => s.id);
+    expect(mechIds).toContain(601); // Weaver-locked skill now included
+    expect(mechIds).toContain(501);
+  });
+
+  test("Elementalist: F-skills grouped by attunement in attunementSkills", () => {
+    const build = {
+      ...makeMockBuild(),
+      profession: "Elementalist",
+      specializations: [{ id: 31, name: "Fire", elite: false }],
+      equipment: {
+        ...makeMockBuild().equipment,
+        weapons: { mainhand1: "Scepter", offhand1: "" },
+      },
+    };
+    const result = serializeForPublish(build, makeMockElementalistCatalog(), null);
+
+    const fireMechanics = result.landSkills.attunementSkills.Fire.professionMechanics;
+    expect(fireMechanics.map(s => s.id)).toContain(501);
+    expect(fireMechanics.map(s => s.id)).not.toContain(502); // Water mechanic not in Fire
+
+    const waterMechanics = result.landSkills.attunementSkills.Water.professionMechanics;
+    expect(waterMechanics.map(s => s.id)).toContain(502);
+    expect(waterMechanics.map(s => s.id)).not.toContain(501); // Fire mechanic not in Water
+  });
+
+  test("waterSkills contains aquatic weapon sets and excludes NoUnderwater mechanics", () => {
+    const catalog = makeMockCatalog();
+    // Add a NoUnderwater mechanic
+    catalog.skills.push({
+      id: 20000, name: "Shroud Skill", icon: "sh.png", slot: "Profession_2",
+      inProfessionEndpoint: true, flags: ["NoUnderwater"],
+    });
+    const result = serializeForPublish(makeMockBuild(), catalog, null);
+
+    expect(result.waterSkills.weaponSkills.aquatic1).toBeDefined();
+    expect(result.waterSkills.weaponSkills.aquatic2).toBeDefined();
+    // NoUnderwater skill should be excluded from waterSkills mechanics
+    const waterMechIds = result.waterSkills.professionMechanics.map(s => s.id);
+    expect(waterMechIds).not.toContain(20000);
   });
 });

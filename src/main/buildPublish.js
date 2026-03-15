@@ -83,6 +83,66 @@ function resolveWeaponSet(mainhandName, offhandName, professionWeapons, weaponSk
   return slots.filter(Boolean);
 }
 
+/**
+ * Resolve weapon skills for a weapon set, filtered to a specific attunement.
+ * Skill refs with no attunement (or "None") are included regardless of the filter.
+ *
+ * @param {string} mainhandName
+ * @param {string} offhandName
+ * @param {object} professionWeapons
+ * @param {Array} weaponSkillsArray
+ * @param {string} attunement - e.g. "Fire", "Water", "Air", "Earth"
+ * @returns {Array}
+ */
+function resolveWeaponSetByAttunement(mainhandName, offhandName, professionWeapons, weaponSkillsArray, attunement) {
+  if (!professionWeapons || !weaponSkillsArray) return [];
+  if (!mainhandName && !offhandName) return [];
+
+  const skillById = new Map();
+  for (const skill of weaponSkillsArray) {
+    skillById.set(skill.id, skill);
+  }
+
+  const slots = [null, null, null, null, null];
+
+  function refMatchesAttunement(ref) {
+    const refAtt = ref.attunement || "";
+    // Include refs with no attunement or "None" (non-attunement skills)
+    if (!refAtt || refAtt === "None") return true;
+    return refAtt.toLowerCase() === attunement.toLowerCase();
+  }
+
+  // Mainhand skills
+  const mhDef = mainhandName ? professionWeapons[mainhandName] : null;
+  if (mhDef) {
+    const isTwoHand = (mhDef.flags || []).includes("TwoHand");
+    const maxSlot = isTwoHand ? 5 : 3;
+    for (const ref of (mhDef.skills || [])) {
+      if (!refMatchesAttunement(ref)) continue;
+      const slotNum = parseSlotNum(ref.slot);
+      if (slotNum >= 1 && slotNum <= maxSlot) {
+        const full = skillById.get(ref.id);
+        if (full) slots[slotNum - 1] = full;
+      }
+    }
+  }
+
+  // Offhand skills (slots 4-5)
+  const ohDef = offhandName ? professionWeapons[offhandName] : null;
+  if (ohDef) {
+    for (const ref of (ohDef.skills || [])) {
+      if (!refMatchesAttunement(ref)) continue;
+      const slotNum = parseSlotNum(ref.slot);
+      if (slotNum >= 4 && slotNum <= 5) {
+        const full = skillById.get(ref.id);
+        if (full) slots[slotNum - 1] = full;
+      }
+    }
+  }
+
+  return slots.filter(Boolean);
+}
+
 function parseSlotNum(slot) {
   const match = /Weapon_(\d)/.exec(slot || "");
   return match ? Number(match[1]) : 0;
@@ -148,8 +208,11 @@ function resolveEquipmentDisplay(equipment, upgradeCatalog) {
  * Enrich a serialized build with all data the SPA needs to render without API calls.
  *
  * Adds:
- *   - weaponSkills: { set1, set2, aquatic1, aquatic2 } — resolved weapon skill arrays
- *   - professionMechanics: Array — F1-F5 profession skills (slot starts with "Profession_")
+ *   - weaponSkills: { set1, set2, aquatic1, aquatic2 } — resolved weapon skill arrays (backward compat)
+ *   - professionMechanics: Array — F1-F5 profession skills filtered by selected specs (backward compat)
+ *   - landSkills: { weaponSkills, professionMechanics, skills, attunementSkills } — land skill data
+ *   - waterSkills: { weaponSkills, professionMechanics, skills, attunementSkills } — water skill data
+ *   - activeAttunement: string — active attunement name (Elementalist only), or ""
  *   - professionIcon: string — SVG for the active elite spec or base profession
  *   - petDisplay: Array — pet name/icon for Ranger
  *   - legendDisplay: Array — legend name/icon for Revenant
@@ -168,7 +231,7 @@ function serializeForPublish(build, catalog, upgradeCatalog) {
   const weaponSkillsArray = catalog?.weaponSkills || [];
   const skillsArray = catalog?.skills || [];
 
-  // Resolve weapon skills for each set (mainhand + offhand merged)
+  // Resolve weapon skills for each set (mainhand + offhand merged) — backward compat flat arrays
   const weaponSkills = {
     set1: resolveWeaponSet(weapons.mainhand1, weapons.offhand1, professionWeapons, weaponSkillsArray),
     set2: resolveWeaponSet(weapons.mainhand2, weapons.offhand2, professionWeapons, weaponSkillsArray),
@@ -176,10 +239,77 @@ function serializeForPublish(build, catalog, upgradeCatalog) {
     aquatic2: resolveWeaponSet(weapons.aquatic2, "", professionWeapons, weaponSkillsArray),
   };
 
-  // Profession mechanics: F1-F5 skills (slot starts with "Profession_", inProfessionEndpoint true)
-  const professionMechanics = skillsArray.filter(
-    (s) => typeof s.slot === "string" && s.slot.startsWith("Profession_") && s.inProfessionEndpoint
+  // Detect if this profession uses attunements (Elementalist)
+  const hasAttunements = weaponSkillsArray.some(s => s.attunement && s.attunement !== "None");
+
+  // Collect selected spec IDs for F-skill filtering
+  const selectedSpecIds = new Set(
+    (build.specializations || []).map(s => Number(s?.id) || 0).filter(Boolean)
   );
+
+  // Build flip-skill ID set: skills that are the "flipped" version of another skill
+  const flipSkillIds = new Set(skillsArray.flatMap(s => s.flipSkill ? [s.flipSkill] : []));
+  const exitLeavePattern = /^(Exit|Leave)\b/i;
+
+  // Filter profession mechanics (F-skills) by slot, endpoint flag, spec lock, and exit/leave names
+  const filteredMechanics = skillsArray
+    .filter(s => typeof s.slot === "string" && s.slot.startsWith("Profession_") && s.inProfessionEndpoint)
+    .filter(s => !exitLeavePattern.test(s.name || ""))
+    .filter(s => !flipSkillIds.has(s.id) || s.inProfessionEndpoint || (s.specialization > 0 && s.flipSkill > 0))
+    .filter(s => {
+      const lockSpec = Number(s.specialization) || 0;
+      return !lockSpec || selectedSpecIds.has(lockSpec);
+    })
+    .sort((a, b) => {
+      const na = parseInt((a.slot || "").replace("Profession_", ""), 10) || 0;
+      const nb = parseInt((b.slot || "").replace("Profession_", ""), 10) || 0;
+      return na - nb;
+    });
+
+  // Build attunement-grouped skills (Elementalist only)
+  let attunementSkills = null;
+  if (hasAttunements) {
+    attunementSkills = {};
+    for (const att of ["Fire", "Water", "Air", "Earth"]) {
+      attunementSkills[att] = {
+        set1: resolveWeaponSetByAttunement(weapons.mainhand1, weapons.offhand1, professionWeapons, weaponSkillsArray, att),
+        set2: resolveWeaponSetByAttunement(weapons.mainhand2, weapons.offhand2, professionWeapons, weaponSkillsArray, att),
+      };
+    }
+    // Group F-skills by attunement
+    for (const att of ["Fire", "Water", "Air", "Earth"]) {
+      attunementSkills[att].professionMechanics = filteredMechanics.filter(
+        s => s.attunement && s.attunement.toLowerCase() === att.toLowerCase()
+      );
+    }
+  }
+
+  // Determine active attunement
+  const activeAttunement = build.activeAttunement || (hasAttunements ? "Fire" : "");
+
+  // Default weapon skills and mechanics for the active attunement (or flat for non-attunement professions)
+  const defaultWeaponSkills = hasAttunements
+    ? (attunementSkills[activeAttunement] || attunementSkills.Fire)
+    : { set1: weaponSkills.set1, set2: weaponSkills.set2 };
+
+  const defaultMechanics = hasAttunements
+    ? (attunementSkills[activeAttunement]?.professionMechanics || filteredMechanics)
+    : filteredMechanics;
+
+  // Structured land and water skill datasets
+  const result_landSkills = {
+    weaponSkills: defaultWeaponSkills,
+    professionMechanics: defaultMechanics,
+    skills: build.skills,
+    attunementSkills: hasAttunements ? attunementSkills : null,
+  };
+
+  const result_waterSkills = {
+    weaponSkills: { aquatic1: weaponSkills.aquatic1, aquatic2: weaponSkills.aquatic2 },
+    professionMechanics: filteredMechanics.filter(s => !(s.flags || []).includes("NoUnderwater")),
+    skills: build.underwaterSkills || build.skills,
+    attunementSkills: null,
+  };
 
   // Determine active elite spec name (last spec with elite: true)
   const eliteSpec = (build.specializations || []).find((s) => s.elite);
@@ -224,8 +354,14 @@ function serializeForPublish(build, catalog, upgradeCatalog) {
 
   return {
     ...build,
+    // Backward-compatible flat fields
     weaponSkills,
-    professionMechanics,
+    professionMechanics: filteredMechanics,
+    // New structured fields
+    landSkills: result_landSkills,
+    waterSkills: result_waterSkills,
+    activeAttunement,
+    // Other enriched fields
     professionIcon,
     petDisplay,
     legendDisplay,
