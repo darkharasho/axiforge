@@ -79,9 +79,10 @@ export function renderEquipment(container, build) {
    *
    * @param {"rune"|"sigil"|"infusion"} type
    * @param {string} value - Display name of the upgrade, or empty string.
+   * @param {string} [iconUrl] - Icon URL for the upgrade, if available.
    * @returns {HTMLElement}
    */
-  function makeUpgradeBtn(type, value) {
+  function makeUpgradeBtn(type, value, iconUrl) {
     const btn = document.createElement("div");
     let modClass;
     let letter;
@@ -97,7 +98,18 @@ export function renderEquipment(container, build) {
     }
     const filledClass = value ? " equip-upgrade-btn--filled" : "";
     btn.className = `equip-upgrade-btn ${modClass}${filledClass}`;
-    btn.textContent = letter;
+    if (iconUrl) {
+      const img = document.createElement("img");
+      img.src = iconUrl;
+      img.alt = letter;
+      img.loading = "lazy";
+      img.style.width = "100%";
+      img.style.height = "100%";
+      img.style.objectFit = "contain";
+      btn.append(img);
+    } else {
+      btn.textContent = letter;
+    }
     if (value) {
       btn.dataset.name = value;
       btn.title = value;
@@ -122,7 +134,7 @@ export function renderEquipment(container, build) {
       : "";
 
     const wrapper = document.createElement("div");
-    wrapper.className = "equip-slot equip-slot--compact";
+    wrapper.className = "equip-slot";
 
     const iconDiv = document.createElement("div");
     iconDiv.className = "equip-slot__icon" + (iconUrl || stat ? " equip-slot__icon--filled" : "");
@@ -167,10 +179,11 @@ export function renderEquipment(container, build) {
     const upgradeContainer = document.createElement("div");
     upgradeContainer.className = "equip-upgrade-slots";
     if (runeName) {
-      upgradeContainer.append(makeUpgradeBtn("rune", runeName));
+      upgradeContainer.append(makeUpgradeBtn("rune", runeName, runeObj?.icon || ""));
     }
     if (infusionName) {
-      upgradeContainer.append(makeUpgradeBtn("infusion", infusionName));
+      const infIcon = Array.isArray(infusionValue) ? (infusionValue[0]?.icon || "") : (infusionValue?.icon || "");
+      upgradeContainer.append(makeUpgradeBtn("infusion", infusionName, infIcon));
     }
     if (upgradeContainer.childElementCount > 0) {
       wrapper.append(upgradeContainer);
@@ -246,7 +259,8 @@ export function renderEquipment(container, build) {
       upgradeContainer.className = "equip-upgrade-slots";
       for (const sigilObj of sigilDisplayArr) {
         const sigilName = sigilObj?.name || "";
-        upgradeContainer.append(makeUpgradeBtn("sigil", sigilName));
+        const sigilIcon = sigilObj?.icon || "";
+        upgradeContainer.append(makeUpgradeBtn("sigil", sigilName, sigilIcon));
       }
       wrapper.append(upgradeContainer);
     }
@@ -350,6 +364,23 @@ export function renderEquipment(container, build) {
     }
 
     wrapper.append(iconDiv, info);
+
+    // Infusion badges for trinket slots
+    const trinketInfusion = displayInfusions[key];
+    if (trinketInfusion) {
+      const upgradeContainer = document.createElement("div");
+      upgradeContainer.className = "equip-upgrade-slots";
+      const infArr = Array.isArray(trinketInfusion) ? trinketInfusion : [trinketInfusion];
+      for (const inf of infArr) {
+        if (inf && inf.name) {
+          upgradeContainer.append(makeUpgradeBtn("infusion", inf.name, inf.icon || ""));
+        }
+      }
+      if (upgradeContainer.childElementCount > 0) {
+        wrapper.append(upgradeContainer);
+      }
+    }
+
     return wrapper;
   }
 
@@ -445,7 +476,6 @@ export function renderEquipment(container, build) {
   // Consumables section — use resolved names from equipmentDisplay
   const consumeSection = makeSection("Consumables");
   consumeSection.append(
-    makeConsumableSlot("Relic", display.relic || null),
     makeConsumableSlot("Food", display.food || null),
     makeConsumableSlot("Utility", display.utility || null),
     makeConsumableSlot("Enrichment", display.enrichment || null),
@@ -561,6 +591,12 @@ export function renderEquipment(container, build) {
     trinketRow2.append(makeTrinketSlot(key, label));
   }
 
+  // Relic slot — shown in the trinkets section
+  if (display.relic) {
+    const relicSlot = makeConsumableSlot("Relic", display.relic);
+    trinketSection.append(relicSlot);
+  }
+
   trinketSection.append(trinketRow1, trinketRow2);
   rightCol.append(trinketSection);
 
@@ -570,13 +606,4 @@ export function renderEquipment(container, build) {
   layout.className = "equip-layout";
   layout.append(leftCol, artCol, rightCol);
   container.append(layout);
-
-  // ── Notes ─────────────────────────────────────────────────────────────────
-
-  if (build.notes) {
-    const notesEl = document.createElement("div");
-    notesEl.className = "site-notes";
-    notesEl.textContent = build.notes;
-    container.append(notesEl);
-  }
 }

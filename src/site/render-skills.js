@@ -108,8 +108,8 @@ function _renderSkillsBar(area, skillData, build, initialAttunement) {
     }
     const ws = skillData.weaponSkills || {};
     return {
-      set1: Array.isArray(ws.set1) ? ws.set1 : [],
-      set2: Array.isArray(ws.set2) ? ws.set2 : [],
+      set1: Array.isArray(ws.set1) ? ws.set1 : (Array.isArray(ws.aquatic1) ? ws.aquatic1 : []),
+      set2: Array.isArray(ws.set2) ? ws.set2 : (Array.isArray(ws.aquatic2) ? ws.aquatic2 : []),
       professionMechanics: Array.isArray(skillData.professionMechanics) ? skillData.professionMechanics : [],
     };
   }
@@ -263,8 +263,12 @@ function _renderSkillsBar(area, skillData, build, initialAttunement) {
   wrapper.append(bar);
 }
 
+// Track active weapon set across updates
+let _activeWeaponSet = 1;
+
 /**
  * Re-renders weapon rows (set1 + set2) inside the given container.
+ * Only shows one weapon set at a time with a swap button to toggle.
  *
  * @param {HTMLElement} el - Container to render into (will be cleared).
  * @param {Array} set1 - First weapon set skill objects.
@@ -276,58 +280,67 @@ function _updateWeaponRows(el, set1, set2) {
   const hasWeapons = set1.length > 0 || set2.length > 0;
   if (!hasWeapons) return;
 
+  // If active set has no skills, fall back to the other
+  if (_activeWeaponSet === 2 && set2.length === 0) _activeWeaponSet = 1;
+  if (_activeWeaponSet === 1 && set1.length === 0) _activeWeaponSet = 2;
+
+  const activeSet = _activeWeaponSet === 2 ? set2 : set1;
+  const hasBothSets = set1.length > 0 && set2.length > 0;
+
   const WEAPON_KEYBINDS = ["1", "2", "3", "4", "5"];
 
-  for (const weaponSet of [set1, set2]) {
-    if (weaponSet.length === 0) continue;
+  const weaponRow = document.createElement("div");
+  weaponRow.className = "skills-bar__weapon-row";
 
-    const weaponRow = document.createElement("div");
-    weaponRow.className = "skills-bar__weapon-row";
-
-    // Weapon swap button (read-only)
-    const swapBtn = document.createElement("button");
-    swapBtn.className = "weapon-swap-btn";
-    swapBtn.disabled = true;
-    swapBtn.innerHTML = `<svg width="16" height="13" viewBox="0 0 16 13" fill="currentColor"><path d="M4 0L0 3.5L4 7V4.5H10V2.5H4V0ZM12 6V8.5H6V10.5H12V13L16 9.5L12 6Z"/></svg>`;
-    weaponRow.append(swapBtn);
-
-    const innerBar = document.createElement("div");
-    innerBar.className = "skills-bar";
-
-    const group = document.createElement("div");
-    group.className = "skill-group skill-group--weapons";
-
-    weaponSet.forEach((skill, idx) => {
-      const slot = document.createElement("div");
-      slot.className = "skill-slot";
-
-      const icon = document.createElement("div");
-      icon.className = "skill-icon-large skill-icon--weapon";
-      icon.dataset.name = escapeHtml(skill.name || "");
-      icon.dataset.desc = escapeHtml(skill.description || "");
-      icon.dataset.icon = skill.icon || "";
-
-      if (skill.icon) {
-        const img = document.createElement("img");
-        img.src = String(skill.icon);
-        img.alt = "";
-        img.loading = "lazy";
-        icon.append(img);
-      }
-
-      const keyLabel = document.createElement("span");
-      keyLabel.className = "skill-icon-large__keylabel";
-      keyLabel.textContent = WEAPON_KEYBINDS[idx] || String(idx + 1);
-      icon.append(keyLabel);
-
-      slot.append(icon);
-      group.append(slot);
+  // Weapon swap button — functional toggle between sets
+  const swapBtn = document.createElement("button");
+  swapBtn.className = "weapon-swap-btn";
+  swapBtn.disabled = !hasBothSets;
+  swapBtn.innerHTML = `<svg width="16" height="13" viewBox="0 0 16 13" fill="currentColor"><path d="M4 0L0 3.5L4 7V4.5H10V2.5H4V0ZM12 6V8.5H6V10.5H12V13L16 9.5L12 6Z"/></svg>`;
+  if (hasBothSets) {
+    swapBtn.addEventListener("click", () => {
+      _activeWeaponSet = _activeWeaponSet === 1 ? 2 : 1;
+      _updateWeaponRows(el, set1, set2);
     });
-
-    innerBar.append(group);
-    weaponRow.append(innerBar);
-    el.append(weaponRow);
   }
+  weaponRow.append(swapBtn);
+
+  const innerBar = document.createElement("div");
+  innerBar.className = "skills-bar";
+
+  const group = document.createElement("div");
+  group.className = "skill-group skill-group--weapons";
+
+  activeSet.forEach((skill, idx) => {
+    const slot = document.createElement("div");
+    slot.className = "skill-slot";
+
+    const icon = document.createElement("div");
+    icon.className = "skill-icon-large skill-icon--weapon";
+    icon.dataset.name = escapeHtml(skill.name || "");
+    icon.dataset.desc = escapeHtml(skill.description || "");
+    icon.dataset.icon = skill.icon || "";
+
+    if (skill.icon) {
+      const img = document.createElement("img");
+      img.src = String(skill.icon);
+      img.alt = "";
+      img.loading = "lazy";
+      icon.append(img);
+    }
+
+    const keyLabel = document.createElement("span");
+    keyLabel.className = "skill-icon-large__keylabel";
+    keyLabel.textContent = WEAPON_KEYBINDS[idx] || String(idx + 1);
+    icon.append(keyLabel);
+
+    slot.append(icon);
+    group.append(slot);
+  });
+
+  innerBar.append(group);
+  weaponRow.append(innerBar);
+  el.append(weaponRow);
 }
 
 /**

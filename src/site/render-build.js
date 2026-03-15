@@ -77,21 +77,22 @@ export function renderBuildPage(container, build) {
   const buildContent = document.createElement("div");
   buildContent.className = "site-tab-content site-tab-content--active";
 
+  // Skills bar — full width, above specs-with-detail
+  const skillsHeading = document.createElement("h2");
+  skillsHeading.className = "site-section-heading";
+  skillsHeading.textContent = "Skills";
+  buildContent.append(skillsHeading);
+
+  const skillsContainer = document.createElement("div");
+  renderSkills(skillsContainer, build);
+  buildContent.append(skillsContainer);
+
   // Side-by-side layout: specs panel + reference panel
   const specsWithDetail = document.createElement("div");
   specsWithDetail.className = "specs-with-detail";
 
   const specsPanel = document.createElement("div");
   specsPanel.className = "specs-panel";
-
-  const skillsHeading = document.createElement("h2");
-  skillsHeading.className = "site-section-heading";
-  skillsHeading.textContent = "Skills";
-  specsPanel.append(skillsHeading);
-
-  const skillsContainer = document.createElement("div");
-  renderSkills(skillsContainer, build);
-  specsPanel.append(skillsContainer);
 
   const specsHeading = document.createElement("h2");
   specsHeading.className = "site-section-heading";
@@ -108,6 +109,19 @@ export function renderBuildPage(container, build) {
 
   specsWithDetail.append(specsPanel, detailPanel);
   buildContent.append(specsWithDetail);
+
+  // Notes — shown at the bottom of the BUILD tab
+  if (build.notes) {
+    const notesHeading = document.createElement("h2");
+    notesHeading.className = "site-section-heading";
+    notesHeading.textContent = "Notes";
+    buildContent.append(notesHeading);
+
+    const notesEl = document.createElement("div");
+    notesEl.className = "site-notes";
+    notesEl.textContent = build.notes;
+    buildContent.append(notesEl);
+  }
 
   // Wire hover on the BUILD tab to update the reference panel
   buildContent.addEventListener("mouseover", (e) => {
