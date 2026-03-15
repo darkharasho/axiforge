@@ -65,7 +65,6 @@ function skillRows(skills) {
 function equipmentTokens(equipment) {
   const tokens = [];
   if (equipment.statPackage) tokens.push(token("Stats: " + equipment.statPackage));
-  if (equipment.runeSet) tokens.push(token("Runes: " + equipment.runeSet));
   if (equipment.relic) tokens.push(token("Relic: " + equipment.relic));
   if (equipment.food) tokens.push(token("Food: " + equipment.food));
   if (equipment.utility) tokens.push(token("Utility: " + equipment.utility));
