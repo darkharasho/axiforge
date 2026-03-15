@@ -703,18 +703,16 @@ export function showPublishResult(url) {
   urlInput.addEventListener("click", () => urlInput.select());
 
   // Dev-only: open local SPA preview (localhost:3000) with the same build hash.
-  // Hidden until the GitHub Pages deploy is confirmed live.
-  let localBtn = null;
+  // Shown immediately after commit — .enc is fetched from deployed GitHub Pages via remoteBase.
   if (location.port || location.hostname === "localhost") {
     try {
       const parsed = new URL(url);
       const remoteBase = `${parsed.origin}${parsed.pathname.replace(/[^/]*$/, "")}`;
       const localUrl = `http://localhost:3000/?remoteBase=${encodeURIComponent(remoteBase)}${parsed.hash}`;
-      localBtn = document.createElement("button");
+      const localBtn = document.createElement("button");
       localBtn.className = "btn btn-secondary";
       localBtn.textContent = "Open Local Preview";
       localBtn.style.marginTop = "6px";
-      localBtn.style.display = "none";
       localBtn.addEventListener("click", () => {
         window.desktopApi.openPreviewWindow(localUrl);
       });
@@ -724,11 +722,11 @@ export function showPublishResult(url) {
 
   container.append(result);
 
-  // Poll until the page is actually reachable, then show the local preview button
-  pollPageLive(url, liveStatus, localBtn);
+  // Poll until the page is actually reachable
+  pollPageLive(url, liveStatus);
 }
 
-async function pollPageLive(url, statusEl, localBtn = null) {
+async function pollPageLive(url, statusEl) {
   let lastStatus = "deploying";
   for (let i = 0; i < 40; i++) {
     try {
@@ -736,7 +734,6 @@ async function pollPageLive(url, statusEl, localBtn = null) {
       if (poll.ready) {
         completeAllPublishSteps();
         statusEl.innerHTML = `<span style="color:var(--accent)">&#10003; Page is live!</span>`;
-        if (localBtn) localBtn.style.display = "";
         return;
       }
       lastStatus = poll.status || "deploying";
