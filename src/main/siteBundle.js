@@ -1,5 +1,22 @@
 "use strict";
+const fs = require("node:fs");
+const path = require("node:path");
 const { encryptBuild } = require("./buildEncryption");
+
+// Read desktop CSS files for the SPA bundle
+const RENDERER_STYLES_DIR = path.join(__dirname, "../renderer/styles");
+function readStyle(name) {
+  return fs.readFileSync(path.join(RENDERER_STYLES_DIR, name), "utf8");
+}
+
+const DESKTOP_CSS = [
+  readStyle("base.css"),
+  readStyle("specializations.css"),
+  readStyle("skills.css"),
+  readStyle("equipment.css"),
+  readStyle("detail-panel.css"),
+  readStyle("buttons.css"),
+].join("\n");
 
 function buildSpaBundle() {
   return {
@@ -68,413 +85,70 @@ const SPA_404_HTML = `<!doctype html>
 </html>
 `;
 
-const SPA_STYLES_CSS = `:root{
-  color-scheme: dark;
-  --bg:#04070f;
-  --panel:#101930;
-  --accent:#4fd897;
-  --accent-2:#48a8ff;
-  --text:#e8f0ff;
-  --muted:#9bb0d9;
-  --line:#1f3157;
-}
-*{box-sizing:border-box;margin:0;padding:0}
-body{
-  min-height:100vh;
-  font-family:'Exo 2','Segoe UI',ui-sans-serif,system-ui,sans-serif;
-  background:var(--bg);
-  color:var(--text);
-}
-h1,h2,h3{font-family:'Cinzel','Exo 2',serif}
-
+const SPA_EXTRA_CSS = `
 /* Navbar */
-.navbar{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  padding:12px 24px;
-  background:var(--panel);
-  border-bottom:1px solid var(--line);
-}
-.navbar-brand{display:flex;align-items:center;gap:10px}
-.navbar-logo{font-size:1.5rem}
-.navbar-title{font-family:'Cinzel',serif;font-size:1.2rem;color:var(--accent);font-weight:700}
-.navbar-links{display:flex;gap:16px}
-.navbar-link{color:var(--accent-2);text-decoration:none;font-size:.9rem}
-.navbar-link:hover{text-decoration:underline}
+.navbar { display:flex; align-items:center; justify-content:space-between; padding:12px 24px; background:var(--panel); border-bottom:1px solid var(--line-soft); }
+.navbar-brand { display:flex; align-items:center; gap:10px; }
+.navbar-logo { font-size:1.5rem; }
+.navbar-title { font-family:'Cinzel',serif; font-size:1.2rem; color:var(--accent); font-weight:700; }
+.navbar-links { display:flex; gap:16px; }
+.navbar-link { color:var(--accent-2); text-decoration:none; font-size:.9rem; }
+.navbar-link:hover { text-decoration:underline; }
 
-/* Main container */
-#app{
-  width:min(960px,94vw);
-  margin:32px auto 48px;
-}
-
-/* Loading & error */
-.loading{text-align:center;padding:48px 0;color:var(--muted);font-size:1.1rem}
-.error-box{
-  background:rgba(255,60,60,.12);
-  border:1px solid rgba(255,60,60,.4);
-  border-radius:10px;
-  padding:20px;
-  color:#ff8888;
-  text-align:center;
-}
+/* SPA container */
+#app { width:min(1100px,94vw); margin:32px auto 48px; }
 
 /* Landing page */
-.landing{text-align:center;padding:80px 0}
-.landing h1{font-size:2rem;color:var(--accent);margin-bottom:12px}
-.landing p{color:var(--muted);font-size:1.05rem}
+.landing { text-align:center; padding:80px 0; }
+.landing h1 { font-size:2rem; color:var(--accent); margin-bottom:12px; }
+.landing p { color:var(--muted); font-size:1.05rem; }
+
+/* Loading & error */
+.loading { text-align:center; padding:48px 0; color:var(--muted); font-size:1.1rem; }
+.error-box { background:rgba(255,60,60,.12); border:1px solid rgba(255,60,60,.4); border-radius:10px; padding:20px; color:#ff8888; text-align:center; }
 
 /* Build header */
-.build-header{margin-bottom:24px}
-.build-header h1{font-size:1.8rem;margin-bottom:6px}
-.build-meta{color:var(--muted);font-size:.9rem;margin-bottom:8px}
-.tag-pills{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-.tag-pill{
-  background:var(--panel);
-  border:1px solid var(--line);
-  border-radius:999px;
-  padding:4px 10px;
-  font-size:.78rem;
-  color:var(--accent-2);
-}
+.build-header { margin-bottom:24px; }
+.build-header h1 { font-size:1.8rem; margin-bottom:6px; }
+.build-meta { color:var(--muted); font-size:.9rem; margin-bottom:8px; }
+.tag-pills { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+.tag-pill { background:var(--panel); border:1px solid var(--line-soft); border-radius:999px; padding:4px 10px; font-size:.78rem; color:var(--accent-2); }
 
 /* Tabs */
-.tab-bar{display:flex;gap:4px;margin-bottom:20px;border-bottom:2px solid var(--line)}
-.tab{
-  background:none;
-  border:none;
-  color:var(--muted);
-  font-family:'Exo 2',sans-serif;
-  font-size:.9rem;
-  font-weight:600;
-  padding:10px 20px;
-  cursor:pointer;
-  border-bottom:2px solid transparent;
-  margin-bottom:-2px;
-  transition:color .15s,border-color .15s;
-}
-.tab:hover{color:var(--text)}
-.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
-.tab-content{display:none}
-.tab-content.active{display:block}
-
-/* Spec row (legacy) */
-.spec-row{
-  display:flex;
-  gap:12px;
-  align-items:center;
-  padding:10px 14px;
-  background:var(--panel);
-  border:1px solid var(--line);
-  border-radius:10px;
-  margin-bottom:8px;
-}
-.spec-row .spec-name{font-weight:600;font-size:1rem}
-.spec-row .spec-traits{color:var(--muted);font-size:.85rem}
-
-/* Spec card (desktop-style) */
-.spec-card{
-  position:relative;
-  border:1px solid rgba(80,132,163,0.48);
-  border-radius:4px;
-  background-color:#070f1d;
-  background-position:center;
-  background-size:cover;
-  background-repeat:no-repeat;
-  min-height:120px;
-  overflow:hidden;
-  margin-bottom:10px;
-}
-.spec-card::after{
-  content:"";
-  position:absolute;
-  inset:0;
-  background:linear-gradient(90deg,rgba(7,15,29,0.85) 0%,rgba(7,15,29,0.5) 40%,rgba(7,15,29,0.3) 100%);
-  pointer-events:none;
-}
-.spec-card>*{position:relative;z-index:1}
-.spec-card--elite{
-  border-color:rgba(210,165,50,0.7);
-  box-shadow:0 0 20px rgba(190,145,30,0.2) inset;
-}
-.spec-card-body{
-  display:flex;
-  gap:16px;
-  align-items:center;
-  padding:14px 18px;
-}
-.spec-emblem{
-  width:72px;height:72px;
-  border-radius:50%;
-  border:2px solid rgba(255,255,255,0.15);
-  object-fit:cover;
-  flex-shrink:0;
-  filter:drop-shadow(0 0 8px rgba(72,168,255,0.3));
-}
-.spec-card--elite .spec-emblem{
-  border-color:rgba(210,165,50,0.5);
-  filter:drop-shadow(0 0 8px rgba(210,165,50,0.35));
-}
-.spec-card .spec-name{font-weight:700;font-size:1.05rem}
-.spec-card .elite-badge{
-  color:rgba(210,165,50,0.9);
-  font-size:.65rem;
-  font-weight:700;
-  letter-spacing:.08em;
-  margin-left:6px;
-  text-shadow:0 0 6px rgba(210,165,50,0.4);
-}
-
-/* Trait grid (desktop-style) */
-.trait-grid{
-  display:flex;
-  gap:6px;
-  align-items:center;
-  margin-top:8px;
-  flex-wrap:wrap;
-}
-.trait-tiers{display:flex;flex-direction:column;gap:6px;flex:1}
-.tier-row{display:flex;gap:4px;align-items:center}
-
-/* Skill bar */
-.skill-bar{
-  display:flex;
-  flex-wrap:wrap;
-  gap:6px;
-  margin-top:12px;
-  align-items:center;
-}
-.skill-bar .skill-slot{
-  display:flex;
-  align-items:center;
-  gap:0;
-  background:none;
-  border:none;
-  padding:0;
-  font-size:.85rem;
-  position:relative;
-  cursor:pointer;
-}
-.skill-bar .skill-slot span{
-  display:none;
-}
-.skill-bar .skill-slot:hover span{
-  display:block;
-  position:absolute;
-  bottom:100%;
-  left:50%;
-  transform:translateX(-50%);
-  background:var(--panel);
-  border:1px solid var(--line);
-  border-radius:4px;
-  padding:4px 8px;
-  white-space:nowrap;
-  font-size:.75rem;
-  color:var(--text);
-  pointer-events:none;
-  z-index:10;
-}
-.skill-bar .skill-slot img{
-  width:40px;height:40px;
-  border-radius:6px;
-  border:1px solid var(--line);
-  background:#0a1020;
-}
-.skill-bar .skill-slot[data-slot="heal"] img{
-  border-color:rgba(79,216,151,0.6);
-}
-.skill-bar .skill-slot[data-slot="elite"] img{
-  border-color:rgba(255,80,80,0.6);
-}
-
-/* Equipment panel */
-.equipment-panel{
-  display:grid;
-  grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
-  gap:10px;
-  margin-top:12px;
-}
-.equipment-panel .equip-field{
-  background:var(--panel);
-  border:1px solid var(--line);
-  border-radius:10px;
-  padding:12px;
-}
-.equipment-panel .equip-label{color:var(--accent-2);font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
-.equipment-panel .equip-value{font-size:.95rem}
-
-/* Spec icon */
-.spec-icon{width:36px;height:36px;border-radius:50%;border:2px solid var(--line);object-fit:cover}
-.spec-info{display:flex;flex-direction:column;gap:4px;flex:1}
-.elite-badge{color:var(--accent);font-size:.65rem;font-weight:700;letter-spacing:.08em;margin-left:6px}
-
-/* Trait icons */
-.tier-group{display:flex;gap:4px;align-items:center}
-.tier-sep{width:1px;height:28px;background:var(--line);margin:0 6px}
-.trait-icon{
-  width:32px;height:32px;
-  border-radius:50%;
-  border:2px solid var(--line);
-  overflow:hidden;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  cursor:pointer;
-  opacity:0.4;
-  transition:opacity .15s,filter .15s;
-}
-.trait-icon--selected{
-  border-color:rgba(103,226,255,0.7);
-  opacity:1;
-  filter:drop-shadow(0 0 5px rgba(103,226,255,0.9));
-}
-.trait-img{width:32px;height:32px;border-radius:50%;object-fit:cover}
-.minorTrait{
-  width:28px;height:28px;
-  clip-path:polygon(25% 5%,75% 5%,96% 50%,75% 95%,25% 95%,4% 50%);
-  border:none;
-  border-radius:0;
-  overflow:hidden;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  margin-right:4px;
-  filter:drop-shadow(0 0 4px rgba(103,226,255,0.5));
-}
-.minorTrait img{width:28px;height:28px;border-radius:0;object-fit:cover}
-
-/* Skill separator & icon */
-.skill-sep{width:2px;height:40px;background:var(--line);margin:0 6px;align-self:center}
-.skill-icon{width:40px;height:40px;border-radius:6px;border:1px solid var(--line);background:#0a1020;cursor:pointer;transition:filter .15s}
-.skill-icon:hover{filter:brightness(1.2)}
-
-/* Underwater section */
-.uw-section{margin-top:12px;padding-top:8px;border-top:1px solid var(--line)}
-.uw-section .section-heading{margin-top:8px}
-
-/* Mechanic section */
-.mechanic-section{
-  display:flex;
-  gap:8px;
-  align-items:center;
-  margin-top:8px;
-  padding:6px 10px;
-  background:var(--panel);
-  border:1px solid var(--line);
-  border-radius:8px;
-  font-size:.85rem;
-  color:var(--muted);
-}
-
-/* Equipment panel (two-column) */
-.eq-panel{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:14px;
-  margin-top:12px;
-}
-@media(max-width:640px){.eq-panel{grid-template-columns:1fr}}
-.eq-col{display:flex;flex-direction:column;gap:8px}
-.eq-card{
-  background:var(--panel);
-  border:1px solid var(--line);
-  border-radius:10px;
-  padding:10px 14px;
-}
-.eq-label{color:var(--accent-2);font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
-.eq-value{font-size:.95rem}
-.eq-slot{
-  display:flex;
-  gap:8px;
-  align-items:center;
-  padding:4px 0;
-  border-bottom:1px solid var(--line);
-  font-size:.85rem;
-}
-.eq-slot:last-child{border-bottom:none}
-.eq-slot-name{font-weight:600;min-width:80px;text-transform:capitalize}
-.eq-slot-stat{color:var(--muted);flex:1}
-.eq-slot-rune{color:var(--accent);font-size:.8rem}
-.eq-weapon-row{
-  display:flex;
-  gap:8px;
-  align-items:center;
-  padding:6px 0;
-  border-bottom:1px solid var(--line);
-  font-size:.85rem;
-}
-.eq-weapon-row:last-child{border-bottom:none}
-.eq-sigils{display:flex;gap:6px;flex-wrap:wrap}
-.eq-sigil{
-  background:rgba(72,168,255,.1);
-  border:1px solid rgba(72,168,255,.3);
-  border-radius:6px;
-  padding:2px 8px;
-  font-size:.78rem;
-  color:var(--accent-2);
-}
-
-/* Tooltip */
-.tooltip{
-  position:absolute;
-  background:var(--panel);
-  border:1px solid var(--line);
-  border-radius:8px;
-  padding:8px 12px;
-  font-size:.82rem;
-  pointer-events:none;
-  z-index:100;
-  max-width:280px;
-  display:none;
-}
-.tooltip.visible{display:block}
-.tooltip__name{font-weight:700;color:var(--accent);margin-bottom:4px}
-.tooltip__desc{color:var(--muted);font-size:.78rem;line-height:1.4}
-
-/* Bundle expansion */
-.bundle-expand{
-  display:none;
-  flex-direction:column;
-  gap:4px;
-  padding:6px 8px;
-  margin-top:4px;
-  background:rgba(16,25,48,.8);
-  border:1px solid var(--line);
-  border-radius:6px;
-}
-.bundle-expand.open{display:flex}
-.bundle-skill{
-  display:flex;
-  align-items:center;
-  gap:6px;
-  font-size:.8rem;
-  color:var(--muted);
-}
-.bundle-skill img{width:24px;height:24px;border-radius:4px}
-
-/* Notes box */
-.notes-box{
-  color:var(--muted);
-  padding:12px 14px;
-  border:1px solid var(--line);
-  border-radius:8px;
-  background:var(--panel);
-  font-size:.88rem;
-  line-height:1.5;
-  margin-top:12px;
-  white-space:pre-wrap;
-}
+.tab-bar { display:flex; gap:4px; margin-bottom:20px; border-bottom:2px solid var(--line-soft); }
+.tab { background:none; border:none; color:var(--muted); font-family:'Exo 2',sans-serif; font-size:.9rem; font-weight:600; padding:10px 20px; cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-2px; transition:color .15s,border-color .15s; }
+.tab:hover { color:var(--text); }
+.tab.active { color:var(--accent); border-bottom-color:var(--accent); }
+.tab-content { display:none; }
+.tab-content.active { display:block; }
 
 /* Section headings */
-.section-heading{
-  color:var(--accent-2);
-  font-size:.78rem;
-  text-transform:uppercase;
-  letter-spacing:.08em;
-  margin:20px 0 8px;
-}
+.section-heading { color:var(--accent-2); font-size:.78rem; text-transform:uppercase; letter-spacing:.08em; margin:20px 0 8px; font-family:'Exo 2',sans-serif; }
+
+/* Notes box */
+.notes-box { color:var(--muted); padding:12px 14px; border:1px solid var(--line-soft); border-radius:8px; background:var(--panel); font-size:.88rem; line-height:1.5; margin-top:12px; white-space:pre-wrap; }
+
+/* Mechanic section */
+.mechanic-section { display:flex; gap:8px; align-items:center; margin-top:8px; padding:6px 10px; background:var(--panel); border:1px solid var(--line-soft); border-radius:8px; font-size:.85rem; color:var(--muted); }
+
+/* Read-only tooltip (reuses desktop .hover-preview) */
+.spa-tooltip { position:fixed; z-index:120; display:none; }
+.spa-tooltip.visible { display:block; }
+
+/* SPA spec card read-only — disable interactive cursor */
+.spec-card { cursor:default; }
+.spec-emblem { cursor:default; }
+.trait-btn { cursor:default; }
+
+/* Underwater section */
+.uw-section { margin-top:12px; padding-top:8px; border-top:1px solid var(--line-soft); }
+.uw-section .section-heading { margin-top:8px; }
+
+/* SPA skill bar legacy compat */
+.skill-sep { width:2px; height:40px; background:var(--line-soft); margin:0 6px; align-self:center; }
 `;
+
+const SPA_STYLES_CSS = DESKTOP_CSS + "\n" + SPA_EXTRA_CSS;
 
 const SPA_APP_JS = `(function() {
 "use strict";
@@ -651,94 +325,131 @@ function onTabClick(e) {
   if (target) target.classList.add("active");
 }
 
+// ---- Specialization Rendering (desktop DOM structure) ----
+
 function renderSpecializations(specs) {
   if (!Array.isArray(specs) || !specs.length) return '<p class="section-heading">No specializations.</p>';
   var html = '<h3 class="section-heading">Specializations</h3>';
+  html += '<div class="specializations-host">';
   for (var i = 0; i < specs.length; i++) {
     var s = specs[i];
     if (!s) continue;
-    var eliteClass = s.elite ? " spec-card--elite" : "";
-    var bgStyle = s.background ? "background-image:url(" + escapeAttr(s.background) + ")" : "";
-    html += '<div class="spec-row spec-card' + eliteClass + '" style="' + bgStyle + '">';
-    html += '<div class="spec-card-body">';
+    var elitePanelClass = s.elite ? " spec-card__panel--elite" : "";
+    var bgStyle = s.background ? 'background-image:url(' + escapeAttr(s.background) + ')' : '';
+
+    html += '<article class="spec-card">';
+    html += '<div class="spec-card__panel' + elitePanelClass + '" style="' + bgStyle + '">';
+    html += '<div class="spec-card__body">';
+
+    // Emblem
+    var emblemClass = s.elite ? "spec-emblem spec-emblem--elite" : "spec-emblem";
+    html += '<div class="' + emblemClass + '">';
     if (s.icon) {
-      html += '<img class="spec-icon spec-emblem" src="' + escapeAttr(s.icon) + '" alt="" loading="lazy" />';
+      html += '<img src="' + escapeAttr(s.icon) + '" alt="' + escapeAttr(s.name || "Specialization") + '" loading="lazy" />';
     }
-    html += '<div class="spec-info">';
-    html += '<span class="spec-name">' + escapeHtml(s.name || "Unknown");
-    if (s.elite) html += '<span class="elite-badge">ELITE</span>';
-    html += '</span>';
-    html += renderTraitGrid(s);
     html += '</div>';
-    html += '</div>';
-    html += '</div>';
+
+    // Trait tiers (1, 2, 3)
+    var tiers = [1, 2, 3];
+    for (var t = 0; t < tiers.length; t++) {
+      var tier = tiers[t];
+      // Minor trait anchor
+      html += '<div class="trait-minor-anchor">';
+      if (s.minorTraits && s.minorTraits[t]) {
+        var mt = s.minorTraits[t];
+        html += '<button type="button" class="trait-btn trait-btn--always" disabled data-name="' + escapeAttr(mt.name || "") + '" data-desc="' + escapeAttr(mt.description || "") + '">';
+        if (mt.icon) html += '<img src="' + escapeAttr(mt.icon) + '" alt="" loading="lazy" />';
+        html += '</button>';
+      }
+      html += '</div>';
+
+      // Major trait column
+      html += '<div class="trait-column trait-column--major">';
+      var majors = (s.majorTraitsByTier && s.majorTraitsByTier[tier]) || [];
+      var selectedId = (s.majorChoices && s.majorChoices[tier]) || null;
+      for (var m = 0; m < majors.length; m++) {
+        var tr = majors[m];
+        var isActive = (tr.id === selectedId);
+        var traitClass = "trait-btn" + (isActive ? " trait-btn--active" : "");
+        html += '<button type="button" class="' + traitClass + '" disabled data-name="' + escapeAttr(tr.name || "") + '" data-desc="' + escapeAttr(tr.description || "") + '">';
+        if (tr.icon) html += '<img src="' + escapeAttr(tr.icon) + '" alt="" loading="lazy" />';
+        html += '</button>';
+      }
+      html += '</div>';
+    }
+
+    html += '</div>'; // spec-card__body
+    html += '</div>'; // spec-card__panel
+    html += '</article>'; // spec-card
   }
+  html += '</div>'; // specializations-host
   return html;
 }
 
-function renderTraitGrid(s) {
-  var html = '<div class="trait-grid"><div class="trait-tiers">';
-  var tiers = [1, 2, 3];
-  for (var t = 0; t < tiers.length; t++) {
-    var tier = tiers[t];
-    html += '<div class="tier-row">';
-    // Minor trait
-    if (s.minorTraits && s.minorTraits[t]) {
-      var mt = s.minorTraits[t];
-      html += '<span class="minorTrait" data-name="' + escapeAttr(mt.name || "") + '" data-desc="' + escapeAttr(mt.description || "") + '">';
-      if (mt.icon) html += '<img src="' + escapeAttr(mt.icon) + '" alt="" loading="lazy" />';
-      html += '</span>';
-    }
-    // Major traits
-    html += '<span class="tier-group">';
-    var majors = (s.majorTraitsByTier && s.majorTraitsByTier[tier]) || [];
-    var selectedId = (s.majorChoices && s.majorChoices[tier]) || null;
-    for (var m = 0; m < majors.length; m++) {
-      var tr = majors[m];
-      var sel = (tr.id === selectedId) ? " trait-icon--selected" : "";
-      html += '<span class="trait-icon' + sel + '" data-name="' + escapeAttr(tr.name || "") + '" data-desc="' + escapeAttr(tr.description || "") + '">';
-      if (tr.icon) html += '<img class="trait-img" src="' + escapeAttr(tr.icon) + '" alt="" loading="lazy" />';
-      html += '</span>';
-    }
-    html += '</span>';
-    html += '</div>';
-  }
-  html += '</div></div>';
-  return html;
-}
+// ---- Skill Rendering (desktop DOM structure) ----
 
 function renderSkills(skills, build) {
   if (!skills) return '';
-  var html = '<h3 class="section-heading">Skills</h3><div class="skill-bar">';
+  var html = '<h3 class="section-heading">Skills</h3>';
+
+  // Weapon skills
+  if (skills.weaponSkills && skills.weaponSkills.length) {
+    html += '<div class="skills-bar__weapon-col">';
+    html += '<div class="skills-bar__weapon-row">';
+    html += '<div class="skills-bar">';
+    html += '<div class="skill-group">';
+    for (var w = 0; w < skills.weaponSkills.length; w++) {
+      var ws = skills.weaponSkills[w];
+      if (!ws) continue;
+      html += '<div class="skill-slot">';
+      html += '<div class="skill-icon-large skill-icon--weapon" data-name="' + escapeAttr(ws.name || "") + '" data-desc="' + escapeAttr(ws.description || "") + '">';
+      if (ws.icon) html += '<img src="' + escapeAttr(ws.icon) + '" alt="" loading="lazy" />';
+      html += '</div>';
+      html += '</div>';
+    }
+    html += '</div>'; // skill-group
+    html += '</div>'; // skills-bar
+    html += '</div>'; // skills-bar__weapon-row
+    html += '</div>'; // skills-bar__weapon-col
+  }
+
+  // Heal / Utility / Elite bar
+  html += '<div class="skills-bar">';
+  html += '<div class="skill-group skill-group--utilities">';
   // Heal
-  if (skills.heal) html += renderSkillSlot(skills.heal, "heal");
-  html += '<span class="skill-sep"></span>';
+  if (skills.heal) {
+    html += renderSkillSlot(skills.heal, "Heal");
+  }
   // Utilities
   if (Array.isArray(skills.utility)) {
-    for (var i = 0; i < skills.utility.length; i++) {
-      if (skills.utility[i]) html += renderSkillSlot(skills.utility[i], "utility");
+    for (var u = 0; u < skills.utility.length; u++) {
+      if (skills.utility[u]) html += renderSkillSlot(skills.utility[u], "Utility");
     }
   }
-  html += '<span class="skill-sep"></span>';
   // Elite
-  if (skills.elite) html += renderSkillSlot(skills.elite, "elite");
-  html += '</div>';
+  if (skills.elite) {
+    html += renderSkillSlot(skills.elite, "Elite");
+  }
+  html += '</div>'; // skill-group--utilities
+  html += '</div>'; // skills-bar
 
   // Underwater skills
   if (build && build.underwaterSkills) {
     var uw = build.underwaterSkills;
     html += '<div class="uw-section">';
-    html += '<h3 class="section-heading">Underwater Skills</h3><div class="skill-bar">';
-    if (uw.heal) html += renderSkillSlot(uw.heal, "heal");
-    html += '<span class="skill-sep"></span>';
+    html += '<h3 class="section-heading">Underwater Skills</h3>';
+    html += '<div class="skills-bar">';
+    html += '<div class="skill-group skill-group--utilities">';
+    if (uw.heal) html += renderSkillSlot(uw.heal, "Heal");
     if (Array.isArray(uw.utility)) {
-      for (var u = 0; u < uw.utility.length; u++) {
-        if (uw.utility[u]) html += renderSkillSlot(uw.utility[u], "utility");
+      for (var uw2 = 0; uw2 < uw.utility.length; uw2++) {
+        if (uw.utility[uw2]) html += renderSkillSlot(uw.utility[uw2], "Utility");
       }
     }
-    html += '<span class="skill-sep"></span>';
-    if (uw.elite) html += renderSkillSlot(uw.elite, "elite");
-    html += '</div></div>';
+    if (uw.elite) html += renderSkillSlot(uw.elite, "Elite");
+    html += '</div>';
+    html += '</div>';
+    html += '</div>';
   }
 
   // Profession mechanics
@@ -759,73 +470,74 @@ function renderSkills(skills, build) {
   return html;
 }
 
-function renderSkillSlot(skill, slotType) {
+function renderSkillSlot(skill, label) {
   var bundleAttr = '';
   if (skill.bundle) {
     bundleAttr = ' data-bundle="' + escapeAttr(JSON.stringify(skill.bundle)) + '"';
   }
-  var icon = skill.icon
-    ? '<img class="skill-icon" src="' + escapeAttr(skill.icon) + '" alt="" loading="lazy" />'
-    : '';
-  return '<div class="skill-slot" data-slot="' + escapeAttr(slotType || "") + '" data-name="' + escapeAttr(skill.name || "") + '" data-desc="' + escapeAttr(skill.description || "") + '"' + bundleAttr + '>'
-    + icon + '<span class="skill-label">' + escapeHtml(skill.name || "Unknown Skill") + '</span>'
-    + '<div class="bundle-expand"></div>'
-    + '</div>';
+  var html = '<div class="skill-slot" data-name="' + escapeAttr(skill.name || "") + '" data-desc="' + escapeAttr(skill.description || "") + '"' + bundleAttr + '>';
+  html += '<div class="skill-icon-large" data-name="' + escapeAttr(skill.name || "") + '" data-desc="' + escapeAttr(skill.description || "") + '">';
+  if (skill.icon) html += '<img src="' + escapeAttr(skill.icon) + '" alt="" loading="lazy" />';
+  html += '</div>';
+  html += '<div class="skill-slot-label">' + escapeHtml(label || "") + '</div>';
+  html += '<div class="bundle-expand"></div>';
+  html += '</div>';
+  return html;
 }
+
+// ---- Equipment Rendering (desktop DOM structure) ----
 
 function renderEquipment(equip) {
   if (!equip || typeof equip !== "object") return '<p class="section-heading">No equipment data.</p>';
-  var html = '<h3 class="section-heading">Equipment</h3><div class="eq-panel">';
+  var html = '<h3 class="section-heading">Equipment</h3>';
+  html += '<div class="equip-layout">';
 
   // Left column
-  html += '<div class="eq-col">';
+  html += '<div class="equip-col equip-col--left">';
 
-  // Stat package card
-  if (equip.statPackage) {
-    html += '<div class="eq-card"><div class="eq-label">Stat Package</div><div class="eq-value">' + escapeHtml(equip.statPackage) + '</div></div>';
-  }
-
-  // Armor slots
+  // Armor section
   var armorSlots = ["head", "shoulders", "chest", "hands", "legs", "feet"];
-  html += '<div class="eq-card"><div class="eq-label">Armor</div>';
+  html += '<section class="equip-section">';
+  html += '<div class="equip-section__head"><span>ARMOR</span></div>';
   for (var a = 0; a < armorSlots.length; a++) {
     var slotName = armorSlots[a];
     var slotStat = (equip.slots && equip.slots[slotName]) || "";
     var slotRune = (equip.runes && equip.runes[slotName]) || "";
-    html += '<div class="eq-slot">';
-    html += '<span class="eq-slot-name">' + escapeHtml(slotName) + '</span>';
-    html += '<span class="eq-slot-stat">' + escapeHtml(slotStat) + '</span>';
-    if (slotRune) html += '<span class="eq-slot-rune">' + escapeHtml(slotRune) + '</span>';
+    var slotIcon = (equip.icons && equip.icons[slotName]) || "";
+    var iconFilledClass = slotIcon ? " equip-slot__icon--filled" : "";
+    html += '<div class="equip-slot equip-slot--compact">';
+    html += '<div class="equip-slot__icon' + iconFilledClass + '">';
+    if (slotIcon) html += '<img src="' + escapeAttr(slotIcon) + '" alt="" loading="lazy" />';
     html += '</div>';
-  }
-  html += '</div>';
-
-  // Trinkets
-  var trinketSlots = ["back", "amulet", "ring1", "ring2", "accessory1", "accessory2"];
-  html += '<div class="eq-card"><div class="eq-label">Trinkets</div>';
-  for (var tr = 0; tr < trinketSlots.length; tr++) {
-    var tName = trinketSlots[tr];
-    var tStat = (equip.slots && equip.slots[tName]) || "";
-    html += '<div class="eq-slot">';
-    html += '<span class="eq-slot-name">' + escapeHtml(tName) + '</span>';
-    html += '<span class="eq-slot-stat">' + escapeHtml(tStat) + '</span>';
+    html += '<div class="equip-slot__info">';
+    html += '<div class="equip-slot__label">' + escapeHtml(slotName.charAt(0).toUpperCase() + slotName.slice(1)) + '</div>';
+    if (slotStat) {
+      html += '<div class="equip-slot__value">' + escapeHtml(slotStat) + '</div>';
+    } else {
+      html += '<div class="equip-slot__value equip-slot__value--empty">Empty</div>';
+    }
     html += '</div>';
+    // Rune upgrade
+    html += '<div class="equip-upgrade-slots">';
+    if (slotRune) {
+      html += '<div class="equip-upgrade-btn equip-upgrade-btn--rune equip-upgrade-btn--filled" data-name="' + escapeAttr(slotRune) + '">R</div>';
+    } else {
+      html += '<div class="equip-upgrade-btn equip-upgrade-btn--rune">R</div>';
+    }
+    html += '</div>';
+    html += '</div>'; // equip-slot
   }
-  html += '</div>';
+  html += '</section>';
 
-  html += '</div>'; // end left col
-
-  // Right column
-  html += '<div class="eq-col">';
-
-  // Weapons
+  // Weapons section
   var weaponSets = [
     { label: "Set 1", slots: ["mainhand1", "offhand1"] },
     { label: "Set 2", slots: ["mainhand2", "offhand2"] },
     { label: "Aquatic 1", slots: ["aquaticMainhand1", "aquaticOffhand1"] },
     { label: "Aquatic 2", slots: ["aquaticMainhand2", "aquaticOffhand2"] }
   ];
-  html += '<div class="eq-card"><div class="eq-label">Weapons</div>';
+  html += '<section class="equip-section">';
+  html += '<div class="equip-section__head"><span>WEAPONS</span></div>';
   for (var ws = 0; ws < weaponSets.length; ws++) {
     var wset = weaponSets[ws];
     var hasWeapon = false;
@@ -833,28 +545,113 @@ function renderEquipment(equip) {
       if (equip.weapons && equip.weapons[wset.slots[wi]]) { hasWeapon = true; break; }
     }
     if (!hasWeapon) continue;
-    html += '<div class="eq-label" style="margin-top:6px">' + escapeHtml(wset.label) + '</div>';
+    html += '<div class="equip-set-label">' + escapeHtml(wset.label) + '</div>';
     for (var wj = 0; wj < wset.slots.length; wj++) {
       var wSlot = wset.slots[wj];
       var wName = (equip.weapons && equip.weapons[wSlot]) || "";
       if (!wName) continue;
-      var wLabel = wSlot.replace(/\\d+$/, "").replace(/([a-z])([A-Z])/g, "$1 $2").replace(/^aquatic\\s*/i, "");
-      html += '<div class="eq-weapon-row">';
-      html += '<span class="eq-slot-name">' + escapeHtml(wLabel) + '</span>';
-      html += '<span>' + escapeHtml(wName) + '</span>';
+      var wIcon = (equip.weaponIcons && equip.weaponIcons[wSlot]) || "";
+      var wIconFilled = wIcon ? " equip-slot__icon--filled equip-slot__icon--weapon" : "";
+      var wStat = (equip.weaponStats && equip.weaponStats[wSlot]) || "";
+      html += '<div class="equip-slot equip-slot--weapon">';
+      html += '<div class="equip-weapon-type-btn">';
+      html += '<div class="equip-slot__icon' + wIconFilled + '">';
+      if (wIcon) html += '<img src="' + escapeAttr(wIcon) + '" alt="" loading="lazy" />';
+      html += '</div>';
+      html += '<span class="equip-weapon-name">' + escapeHtml(wName) + '</span>';
+      html += '</div>';
+      if (wStat) {
+        html += '<div class="equip-stat-pick-btn">' + escapeHtml(wStat) + '</div>';
+      }
       // Sigils
       var sigils = (equip.sigils && equip.sigils[wSlot]) || [];
       if (sigils.length) {
-        html += '<span class="eq-sigils">';
+        html += '<div class="equip-upgrade-slots">';
         for (var si = 0; si < sigils.length; si++) {
-          if (sigils[si]) html += '<span class="eq-sigil">' + escapeHtml(sigils[si]) + '</span>';
+          if (sigils[si]) {
+            html += '<div class="equip-upgrade-btn equip-upgrade-btn--sigil equip-upgrade-btn--filled" data-name="' + escapeAttr(sigils[si]) + '">S</div>';
+          } else {
+            html += '<div class="equip-upgrade-btn equip-upgrade-btn--sigil">S</div>';
+          }
         }
-        html += '</span>';
+        html += '</div>';
       }
-      html += '</div>';
+      html += '</div>'; // equip-slot--weapon
     }
   }
-  html += '</div>';
+  html += '</section>';
+
+  // Consumables section
+  var consumables = [
+    { key: "relic", label: "Relic" },
+    { key: "food", label: "Food" },
+    { key: "utility", label: "Utility" },
+    { key: "enrichment", label: "Enrichment" }
+  ];
+  var hasConsumable = false;
+  for (var ci = 0; ci < consumables.length; ci++) {
+    if (equip[consumables[ci].key]) { hasConsumable = true; break; }
+  }
+  if (hasConsumable) {
+    html += '<section class="equip-section">';
+    html += '<div class="equip-section__head"><span>CONSUMABLES</span></div>';
+    for (var cj = 0; cj < consumables.length; cj++) {
+      var cv = equip[consumables[cj].key];
+      if (!cv) continue;
+      var cIcon = (equip.consumableIcons && equip.consumableIcons[consumables[cj].key]) || "";
+      var cIconFilled = cIcon ? " equip-slot__icon--filled equip-slot__icon--consumable" : "";
+      html += '<div class="equip-slot equip-slot--consumable">';
+      html += '<div class="equip-slot__icon' + cIconFilled + '">';
+      if (cIcon) html += '<img src="' + escapeAttr(cIcon) + '" alt="" loading="lazy" />';
+      html += '</div>';
+      html += '<div class="equip-slot__info">';
+      html += '<div class="equip-slot__label">' + escapeHtml(consumables[cj].label) + '</div>';
+      html += '<div class="equip-slot__consumable-name">' + escapeHtml(cv) + '</div>';
+      html += '</div>';
+      html += '</div>';
+    }
+    html += '</section>';
+  }
+
+  html += '</div>'; // equip-col--left
+
+  // Right column
+  html += '<div class="equip-col equip-col--right">';
+
+  // Stat package
+  if (equip.statPackage) {
+    html += '<section class="equip-section">';
+    html += '<div class="equip-section__head"><span>STAT PACKAGE</span></div>';
+    html += '<div class="equip-slot"><div class="equip-slot__info"><div class="equip-slot__value">' + escapeHtml(equip.statPackage) + '</div></div></div>';
+    html += '</section>';
+  }
+
+  // Trinkets section
+  var trinketSlots = ["back", "amulet", "ring1", "ring2", "accessory1", "accessory2"];
+  html += '<section class="equip-section">';
+  html += '<div class="equip-section__head"><span>TRINKETS</span></div>';
+  html += '<div class="equip-trinket-grid">';
+  for (var tr = 0; tr < trinketSlots.length; tr++) {
+    var tName = trinketSlots[tr];
+    var tStat = (equip.slots && equip.slots[tName]) || "";
+    var tIcon = (equip.trinketIcons && equip.trinketIcons[tName]) || "";
+    var tIconFilled = tIcon ? " equip-slot__icon--filled" : "";
+    html += '<div class="equip-slot equip-slot--compact">';
+    html += '<div class="equip-slot__icon' + tIconFilled + '">';
+    if (tIcon) html += '<img src="' + escapeAttr(tIcon) + '" alt="" loading="lazy" />';
+    html += '</div>';
+    html += '<div class="equip-slot__info">';
+    html += '<div class="equip-slot__label">' + escapeHtml(tName) + '</div>';
+    if (tStat) {
+      html += '<div class="equip-slot__value">' + escapeHtml(tStat) + '</div>';
+    } else {
+      html += '<div class="equip-slot__value equip-slot__value--empty">Empty</div>';
+    }
+    html += '</div>';
+    html += '</div>';
+  }
+  html += '</div>'; // equip-trinket-grid
+  html += '</section>';
 
   // Rune summary
   if (equip.runes) {
@@ -866,25 +663,12 @@ function renderEquipment(equip) {
     }
     var runeNames = Object.keys(runeCounts);
     if (runeNames.length) {
-      html += '<div class="eq-card"><div class="eq-label">Runes</div>';
+      html += '<section class="equip-section">';
+      html += '<div class="equip-section__head"><span>RUNES</span></div>';
       for (var rn = 0; rn < runeNames.length; rn++) {
-        html += '<div class="eq-value">' + runeCounts[runeNames[rn]] + '\\u00d7 ' + escapeHtml(runeNames[rn]) + '</div>';
+        html += '<div class="equip-slot"><div class="equip-slot__info"><div class="equip-slot__value">' + runeCounts[runeNames[rn]] + '\\u00d7 ' + escapeHtml(runeNames[rn]) + '</div></div></div>';
       }
-      html += '</div>';
-    }
-  }
-
-  // Relic, food, utility, enrichment
-  var consumables = [
-    { key: "relic", label: "Relic" },
-    { key: "food", label: "Food" },
-    { key: "utility", label: "Utility" },
-    { key: "enrichment", label: "Enrichment" }
-  ];
-  for (var ci = 0; ci < consumables.length; ci++) {
-    var cv = equip[consumables[ci].key];
-    if (cv) {
-      html += '<div class="eq-card"><div class="eq-label">' + escapeHtml(consumables[ci].label) + '</div><div class="eq-value">' + escapeHtml(cv) + '</div></div>';
+      html += '</section>';
     }
   }
 
@@ -904,16 +688,17 @@ function renderEquipment(equip) {
     }
     var infNames = Object.keys(infCounts);
     if (infNames.length) {
-      html += '<div class="eq-card"><div class="eq-label">Infusions</div>';
+      html += '<section class="equip-section">';
+      html += '<div class="equip-section__head"><span>INFUSIONS</span></div>';
       for (var ink = 0; ink < infNames.length; ink++) {
-        html += '<div class="eq-value">' + infCounts[infNames[ink]] + '\\u00d7 ' + escapeHtml(infNames[ink]) + '</div>';
+        html += '<div class="equip-slot"><div class="equip-slot__info"><div class="equip-slot__value">' + infCounts[infNames[ink]] + '\\u00d7 ' + escapeHtml(infNames[ink]) + '</div></div></div>';
       }
-      html += '</div>';
+      html += '</section>';
     }
   }
 
-  html += '</div>'; // end right col
-  html += '</div>'; // end eq-panel
+  html += '</div>'; // equip-col--right
+  html += '</div>'; // equip-layout
   return html;
 }
 
@@ -921,8 +706,8 @@ function renderEquipment(equip) {
 
 function initTooltip() {
   var tip = document.createElement("div");
-  tip.className = "tooltip";
-  tip.innerHTML = '<div class="tooltip__name"></div><div class="tooltip__desc"></div>';
+  tip.className = "tooltip hover-preview spa-tooltip";
+  tip.innerHTML = '<div class="hover-preview__head"><div class="hover-preview__title tooltip__name"></div></div><div class="hover-preview__desc tooltip__desc"></div>';
   document.body.appendChild(tip);
 
   document.addEventListener("mouseover", function(e) {

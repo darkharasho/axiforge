@@ -54,8 +54,8 @@ describe("buildSpaBundle — styles.css", () => {
 describe("buildSpaBundle — app.js specialization rendering", () => {
   let js;
   beforeEach(() => { js = buildSpaBundle()["site/app.js"]; });
-  test("renders spec icons", () => { expect(js).toContain("spec-icon"); });
-  test("renders trait grid", () => { expect(js).toContain("trait-grid"); });
+  test("renders spec emblems", () => { expect(js).toContain("spec-emblem"); });
+  test("renders trait columns", () => { expect(js).toContain("trait-column"); });
   test("highlights selected traits", () => { expect(js).toContain("majorChoices"); });
   test("shows minor traits", () => { expect(js).toContain("minorTrait"); });
   test("marks elite specs", () => { expect(js).toContain("elite"); });
@@ -66,7 +66,7 @@ describe("buildSpaBundle — app.js skill rendering", () => {
   beforeEach(() => { js = buildSpaBundle()["site/app.js"]; });
   test("renders skill icons", () => { expect(js).toContain("skill-icon"); });
   test("separates skill groups", () => { expect(js).toContain("heal"); expect(js).toContain("elite"); });
-  test("renders underwater skills", () => { expect(js).toContain("underwater"); });
+  test("renders underwater skills", () => { expect(js).toContain("underwaterSkills"); });
 });
 
 describe("buildSpaBundle — app.js equipment rendering", () => {
@@ -97,11 +97,11 @@ describe("buildSpaBundle — app.js bundle expansion", () => {
 describe("buildSpaBundle — styles.css full styles", () => {
   let css;
   beforeEach(() => { css = buildSpaBundle()["site/styles.css"]; });
-  test("includes spec-row styles", () => { expect(css).toContain(".spec-row"); });
-  test("includes trait-grid styles", () => { expect(css).toContain(".trait-grid"); });
-  test("includes skill-bar styles", () => { expect(css).toContain(".skill-bar"); });
-  test("includes equipment panel styles", () => { expect(css).toContain(".eq-panel"); });
-  test("includes tooltip styles", () => { expect(css).toContain(".tooltip"); });
+  test("includes spec-card styles", () => { expect(css).toContain(".spec-card"); });
+  test("includes trait-column styles", () => { expect(css).toContain(".trait-column"); });
+  test("includes skills-bar styles", () => { expect(css).toContain(".skills-bar"); });
+  test("includes equipment layout styles", () => { expect(css).toContain(".equip-layout"); });
+  test("includes hover-preview styles", () => { expect(css).toContain(".hover-preview"); });
 });
 
 describe("buildEncryptedBuildFile", () => {
