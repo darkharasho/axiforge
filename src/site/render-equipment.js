@@ -7,25 +7,52 @@
  *     build.equipment.statPackage  — overall stat package name
  *     build.equipment.weapons      — { mainhand1, offhand1, mainhand2, offhand2 }
  *     build.equipment.slots        — { head, shoulders, ... } stat names per slot
- *     build.equipment.runes        — { head, shoulders, ... } rune names per armor slot
- *     build.equipment.sigils       — { mainhand1: ["Force", "Impact"], ... }
+ *     build.equipment.runes        — { head, shoulders, ... } rune IDs per armor slot
+ *     build.equipment.sigils       — { mainhand1: ["id1", "id2"], ... }
  *     build.equipment.infusions    — infusion data per slot
- *     build.equipment.relic        — relic name
- *     build.equipment.food         — food name
- *     build.equipment.utility      — utility name
- *     build.equipment.enrichment   — enrichment name
+ *     build.equipment.relic        — relic ID
+ *     build.equipment.food         — food ID
+ *     build.equipment.utility      — utility ID
+ *     build.equipment.enrichment   — enrichment ID
+ *     build.equipmentDisplay       — resolved upgrade objects (runes, sigils, infusions, food, utility, relic, enrichment)
  *     build.professionIcon         — SVG string (optional)
  *     build.notes                  — build notes text (optional)
  */
+
+const STAT_COMBOS = {
+  "Berserker's": "Power · Precision · Ferocity",
+  "Marauder's": "Power · Precision · Vitality · Ferocity",
+  "Assassin's": "Precision · Power · Ferocity",
+  "Valkyrie": "Power · Vitality · Ferocity",
+  "Dragon's": "Power · Ferocity · Vitality · Precision",
+  "Viper's": "Power · Condition Damage · Precision · Expertise",
+  "Grieving": "Power · Condition Damage · Ferocity · Precision",
+  "Sinister": "Condition Damage · Power · Precision",
+  "Dire": "Condition Damage · Toughness · Vitality",
+  "Rabid": "Condition Damage · Toughness · Precision",
+  "Carrion": "Condition Damage · Power · Vitality",
+  "Trailblazer's": "Toughness · Condition Damage · Vitality · Expertise",
+  "Knight's": "Toughness · Power · Precision",
+  "Soldier's": "Power · Toughness · Vitality",
+  "Cleric's": "Healing Power · Toughness · Power",
+  "Minstrel's": "Toughness · Healing Power · Vitality · Concentration",
+  "Harrier's": "Power · Healing Power · Concentration",
+  "Ritualist's": "Vitality · Condition Damage · Expertise · Concentration",
+  "Seraph": "Precision · Condition Damage · Healing Power · Concentration",
+  "Zealot's": "Power · Precision · Healing Power",
+  "Celestial": "Power · Precision · Toughness · Vitality · Condition Damage · Ferocity · Healing Power · Expertise · Concentration",
+};
+
 export function renderEquipment(container, build) {
   container.innerHTML = "";
 
   const equip = build.equipment || {};
   const slots = equip.slots || {};
   const weapons = equip.weapons || {};
-  const runes = equip.runes || {};
-  const sigils = equip.sigils || {};
-  const infusions = equip.infusions || {};
+  const display = build.equipmentDisplay || {};
+  const displayRunes = display.runes || {};
+  const displaySigils = display.sigils || {};
+  const displayInfusions = display.infusions || {};
 
   // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -42,36 +69,50 @@ export function renderEquipment(container, build) {
   }
 
   /**
-   * Make a read-only upgrade button (rune or sigil).
+   * Make a read-only upgrade button (rune, sigil, or infusion).
    *
-   * @param {"rune"|"sigil"} type
-   * @param {string} value - Name of the upgrade, or empty string.
+   * @param {"rune"|"sigil"|"infusion"} type
+   * @param {string} value - Display name of the upgrade, or empty string.
    * @returns {HTMLElement}
    */
   function makeUpgradeBtn(type, value) {
     const btn = document.createElement("div");
-    const modClass = type === "rune" ? "equip-upgrade-btn--rune" : "equip-upgrade-btn--sigil";
+    let modClass;
+    let letter;
+    if (type === "rune") {
+      modClass = "equip-upgrade-btn--rune";
+      letter = "R";
+    } else if (type === "sigil") {
+      modClass = "equip-upgrade-btn--sigil";
+      letter = "S";
+    } else {
+      modClass = "equip-upgrade-btn--infusion";
+      letter = "I";
+    }
     const filledClass = value ? " equip-upgrade-btn--filled" : "";
     btn.className = `equip-upgrade-btn ${modClass}${filledClass}`;
+    btn.textContent = letter;
     if (value) {
       btn.dataset.name = value;
-      btn.textContent = type === "rune" ? "R" : "S";
       btn.title = value;
-    } else {
-      btn.textContent = type === "rune" ? "R" : "S";
     }
     return btn;
   }
 
   /**
-   * Make a read-only armor slot (compact).
+   * Make a read-only armor slot (compact, vertical list style).
    *
    * @param {string} key - slot key (e.g. "head")
-   * @param {string} label - slot display label (e.g. "Head")
+   * @param {string} label - slot display label (e.g. "HEAD")
    */
   function makeArmorSlot(key, label) {
     const stat = slots[key] || "";
-    const rune = runes[key] || "";
+    const runeObj = displayRunes[key] || null;
+    const runeName = runeObj?.name || "";
+    const infusionValue = displayInfusions[key];
+    const infusionName = infusionValue
+      ? (Array.isArray(infusionValue) ? (infusionValue[0]?.name || "") : (infusionValue?.name || ""))
+      : "";
 
     const wrapper = document.createElement("div");
     wrapper.className = "equip-slot equip-slot--compact";
@@ -96,13 +137,30 @@ export function renderEquipment(container, build) {
     }
 
     info.append(labelEl, valueEl);
+
+    // Stat combo breakdown
+    const comboStats = STAT_COMBOS[stat];
+    if (comboStats) {
+      const comboEl = document.createElement("div");
+      comboEl.className = "equip-slot__combo-stats";
+      comboEl.textContent = comboStats;
+      info.append(comboEl);
+    }
+
     wrapper.append(iconDiv, info);
 
-    // Upgrade sub-slots
+    // Upgrade sub-slots (rune + infusion)
     const upgradeContainer = document.createElement("div");
     upgradeContainer.className = "equip-upgrade-slots";
-    upgradeContainer.append(makeUpgradeBtn("rune", rune));
-    wrapper.append(upgradeContainer);
+    if (runeName) {
+      upgradeContainer.append(makeUpgradeBtn("rune", runeName));
+    }
+    if (infusionName) {
+      upgradeContainer.append(makeUpgradeBtn("infusion", infusionName));
+    }
+    if (upgradeContainer.childElementCount > 0) {
+      wrapper.append(upgradeContainer);
+    }
 
     return wrapper;
   }
@@ -116,7 +174,11 @@ export function renderEquipment(container, build) {
   function makeWeaponSlot(key, slotLabel) {
     const weaponName = weapons[key] || "";
     const stat = slots[key] || "";
-    const sigilArr = Array.isArray(sigils[key]) ? sigils[key] : (sigils[key] ? [sigils[key]] : []);
+    const sigilDisplayArr = Array.isArray(displaySigils[key])
+      ? displaySigils[key]
+      : displaySigils[key]
+        ? [displaySigils[key]]
+        : [];
 
     const wrapper = document.createElement("div");
     wrapper.className = "equip-slot equip-slot--weapon";
@@ -126,14 +188,15 @@ export function renderEquipment(container, build) {
     weaponBtn.className = "equip-weapon-type-btn";
 
     const iconDiv = document.createElement("div");
-    iconDiv.className = "equip-slot__icon equip-slot__icon--weapon" + (weaponName ? " equip-slot__icon--filled" : "");
+    iconDiv.className =
+      "equip-slot__icon equip-slot__icon--weapon" + (weaponName ? " equip-slot__icon--filled" : "");
 
     const nameSpan = document.createElement("span");
     nameSpan.className = "equip-weapon-name" + (weaponName ? "" : " equip-weapon-name--empty");
     nameSpan.textContent = weaponName || slotLabel;
     weaponBtn.append(iconDiv, nameSpan);
 
-    // Stat section (right)
+    // Stat section
     const statDiv = document.createElement("div");
     statDiv.className = "equip-stat-pick-btn" + (stat ? "" : " equip-stat-pick-btn--empty");
     if (stat) {
@@ -141,18 +204,27 @@ export function renderEquipment(container, build) {
       comboName.className = "equip-slot__combo-name";
       comboName.textContent = stat;
       statDiv.append(comboName);
+
+      const comboStats = STAT_COMBOS[stat];
+      if (comboStats) {
+        const comboStatsEl = document.createElement("span");
+        comboStatsEl.className = "equip-slot__combo-stats";
+        comboStatsEl.textContent = comboStats;
+        statDiv.append(comboStatsEl);
+      }
     } else {
       statDiv.textContent = "—";
     }
 
     wrapper.append(weaponBtn, statDiv);
 
-    // Sigil upgrade buttons
-    if (sigilArr.length > 0) {
+    // Sigil upgrade buttons (resolved names)
+    if (sigilDisplayArr.length > 0) {
       const upgradeContainer = document.createElement("div");
       upgradeContainer.className = "equip-upgrade-slots";
-      for (const sigilName of sigilArr) {
-        upgradeContainer.append(makeUpgradeBtn("sigil", sigilName || ""));
+      for (const sigilObj of sigilDisplayArr) {
+        const sigilName = sigilObj?.name || "";
+        upgradeContainer.append(makeUpgradeBtn("sigil", sigilName));
       }
       wrapper.append(upgradeContainer);
     }
@@ -164,17 +236,24 @@ export function renderEquipment(container, build) {
    * Make a read-only consumable slot.
    *
    * @param {string} label - Slot label (e.g. "Food")
-   * @param {string} value - Item name, or empty string.
+   * @param {object|null} displayObj - Resolved display object with .name, or null.
    */
-  function makeConsumableSlot(label, value) {
+  function makeConsumableSlot(label, displayObj) {
+    const value = displayObj?.name || "";
+
     const wrapper = document.createElement("div");
     wrapper.className = "equip-slot equip-slot--consumable";
 
     const iconDiv = document.createElement("div");
-    iconDiv.className = "equip-slot__icon equip-slot__icon--consumable" + (value ? " equip-slot__icon--filled" : "");
+    iconDiv.className =
+      "equip-slot__icon equip-slot__icon--consumable" + (value ? " equip-slot__icon--filled" : "");
 
     const info = document.createElement("div");
     info.className = "equip-slot__info";
+
+    const labelEl = document.createElement("div");
+    labelEl.className = "equip-slot__label";
+    labelEl.textContent = label;
 
     const nameEl = document.createElement("div");
     if (value) {
@@ -182,12 +261,8 @@ export function renderEquipment(container, build) {
       nameEl.textContent = value;
     } else {
       nameEl.className = "equip-slot__consumable-name equip-slot__value--empty";
-      nameEl.textContent = `${label}: None`;
+      nameEl.textContent = "None";
     }
-
-    const labelEl = document.createElement("div");
-    labelEl.className = "equip-slot__label";
-    labelEl.textContent = label;
 
     info.append(labelEl, nameEl);
     wrapper.append(iconDiv, info);
@@ -226,6 +301,16 @@ export function renderEquipment(container, build) {
     }
 
     info.append(labelEl, valueEl);
+
+    // Stat combo breakdown for trinkets
+    const comboStats = STAT_COMBOS[stat];
+    if (comboStats) {
+      const comboEl = document.createElement("div");
+      comboEl.className = "equip-slot__combo-stats";
+      comboEl.textContent = comboStats;
+      info.append(comboEl);
+    }
+
     wrapper.append(iconDiv, info);
     return wrapper;
   }
@@ -235,24 +320,19 @@ export function renderEquipment(container, build) {
   const leftCol = document.createElement("div");
   leftCol.className = "equip-col equip-col--left";
 
-  // Armor section
+  // Armor section — vertical list (not 2-col grid)
   const armorSection = makeSection("Armor");
   const armorDefs = [
-    { key: "head",      label: "Head" },
-    { key: "shoulders", label: "Shoulders" },
-    { key: "chest",     label: "Chest" },
-    { key: "hands",     label: "Hands" },
-    { key: "legs",      label: "Legs" },
-    { key: "feet",      label: "Feet" },
+    { key: "head",      label: "HEAD" },
+    { key: "shoulders", label: "SHOULDERS" },
+    { key: "chest",     label: "CHEST" },
+    { key: "hands",     label: "HANDS" },
+    { key: "legs",      label: "LEGS" },
+    { key: "feet",      label: "FEET" },
   ];
-  // Use a grid for the 6 armor slots (2 columns)
-  const armorGrid = document.createElement("div");
-  armorGrid.className = "equip-trinket-grid";
-  armorGrid.style.gridTemplateColumns = "1fr 1fr";
   for (const { key, label } of armorDefs) {
-    armorGrid.append(makeArmorSlot(key, label));
+    armorSection.append(makeArmorSlot(key, label));
   }
-  armorSection.append(armorGrid);
   leftCol.append(armorSection);
 
   // Weapons section
@@ -272,13 +352,13 @@ export function renderEquipment(container, build) {
   }
   leftCol.append(weaponSection);
 
-  // Consumables section
+  // Consumables section — use resolved names from equipmentDisplay
   const consumeSection = makeSection("Consumables");
   consumeSection.append(
-    makeConsumableSlot("Relic", equip.relic || ""),
-    makeConsumableSlot("Food", equip.food || ""),
-    makeConsumableSlot("Utility", equip.utility || ""),
-    makeConsumableSlot("Enrichment", equip.enrichment || ""),
+    makeConsumableSlot("Relic", display.relic || null),
+    makeConsumableSlot("Food", display.food || null),
+    makeConsumableSlot("Utility", display.utility || null),
+    makeConsumableSlot("Enrichment", display.enrichment || null),
   );
   leftCol.append(consumeSection);
 
@@ -299,27 +379,10 @@ export function renderEquipment(container, build) {
   const rightCol = document.createElement("div");
   rightCol.className = "equip-col equip-col--right";
 
-  // Stat Package section
-  const statPkgSection = makeSection("Stat Package");
-  const statPkgEl = document.createElement("div");
-  statPkgEl.className = "equip-slot equip-slot--compact";
-  statPkgEl.style.justifyContent = "center";
-  const statPkgValueEl = document.createElement("div");
-  if (equip.statPackage) {
-    statPkgValueEl.className = "equip-slot__value";
-    statPkgValueEl.textContent = equip.statPackage;
-  } else {
-    statPkgValueEl.className = "equip-slot__value equip-slot__value--empty";
-    statPkgValueEl.textContent = "—";
-  }
-  statPkgEl.append(statPkgValueEl);
-  statPkgSection.append(statPkgEl);
-  rightCol.append(statPkgSection);
-
   // Trinkets section
   const trinketSection = makeSection("Trinkets");
 
-  // Row 1: Back, Accessory 1, Accessory 2 (3-col grid)
+  // Row 1: Back, Accessory 1, Accessory 2
   const trinketRow1 = document.createElement("div");
   trinketRow1.className = "equip-trinket-grid";
   for (const { key, label } of [
@@ -344,13 +407,15 @@ export function renderEquipment(container, build) {
   trinketSection.append(trinketRow1, trinketRow2);
   rightCol.append(trinketSection);
 
-  // Rune Summary section
-  const allRunes = Object.values(runes).filter(Boolean);
-  if (allRunes.length > 0) {
+  // Rune Summary section — resolved names from equipmentDisplay
+  const allResolvedRunes = Object.values(displayRunes).filter(Boolean);
+  if (allResolvedRunes.length > 0) {
     const runeSummarySection = makeSection("Runes");
     const runeCounts = new Map();
-    for (const r of allRunes) {
-      runeCounts.set(r, (runeCounts.get(r) || 0) + 1);
+    for (const runeObj of allResolvedRunes) {
+      const name = runeObj.name || "";
+      if (!name) continue;
+      runeCounts.set(name, (runeCounts.get(name) || 0) + 1);
     }
     for (const [runeName, count] of runeCounts) {
       const runeRow = document.createElement("div");
@@ -373,24 +438,29 @@ export function renderEquipment(container, build) {
     rightCol.append(runeSummarySection);
   }
 
-  // Infusion Summary section
-  const allInfusionValues = [];
-  for (const v of Object.values(infusions)) {
+  // Infusion Summary section — resolved names from equipmentDisplay
+  const allResolvedInfusions = [];
+  for (const v of Object.values(displayInfusions)) {
     if (Array.isArray(v)) {
-      for (const item of v) { if (item) allInfusionValues.push(item); }
-    } else if (v) {
-      allInfusionValues.push(v);
+      for (const item of v) {
+        if (item?.name) allResolvedInfusions.push(item.name);
+      }
+    } else if (v?.name) {
+      allResolvedInfusions.push(v.name);
     }
   }
-  if (allInfusionValues.length > 0) {
+  if (allResolvedInfusions.length > 0) {
     const infusionSummarySection = makeSection("Infusions");
     const infusionCounts = new Map();
-    for (const inf of allInfusionValues) {
-      infusionCounts.set(inf, (infusionCounts.get(inf) || 0) + 1);
+    for (const infName of allResolvedInfusions) {
+      infusionCounts.set(infName, (infusionCounts.get(infName) || 0) + 1);
     }
     for (const [infName, count] of infusionCounts) {
       const infRow = document.createElement("div");
       infRow.className = "equip-slot equip-slot--compact";
+      const infUpgradeSlots = document.createElement("div");
+      infUpgradeSlots.className = "equip-upgrade-slots";
+      infUpgradeSlots.append(makeUpgradeBtn("infusion", infName));
       const infInfo = document.createElement("div");
       infInfo.className = "equip-slot__info";
       const infLabel = document.createElement("div");
@@ -400,7 +470,7 @@ export function renderEquipment(container, build) {
       infValue.className = "equip-slot__value";
       infValue.textContent = infName;
       infInfo.append(infLabel, infValue);
-      infRow.append(infInfo);
+      infRow.append(infUpgradeSlots, infInfo);
       infusionSummarySection.append(infRow);
     }
     rightCol.append(infusionSummarySection);
