@@ -99,11 +99,6 @@ export function renderSpecializations(container, specs) {
         if (isActive) {
           traitBtn.dataset.connectorRole = `major-${tier}`;
         }
-        if (!isActive) {
-          // Unselected major traits get lower opacity via CSS (.trait-btn:disabled),
-          // but we also want non-selected ones visually subdued beyond what --active provides.
-          traitBtn.style.opacity = "0.45";
-        }
         if (trait) {
           traitBtn.dataset.name = escapeHtml(trait.name || "");
           traitBtn.dataset.desc = escapeHtml(trait.description || "");
