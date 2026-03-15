@@ -60,18 +60,6 @@ export function renderAuth() {
       } catch (err) { showError(err); }
     });
 
-    const setupReady = status?.repoReady && status?.pagesReady;
-    const rerunSetup = makeButton(setupReady ? "Re-run Setup" : "Setup Publishing", "secondary", async () => {
-      try {
-        if (!target) throw new Error("No target selected.");
-        await window.desktopApi.setupRepoPages(target.login, target.type);
-        await runPagesBuildPoll();
-        await _callbacks.refreshOnboardingStatus();
-        render();
-      } catch (err) { showError(err); }
-    });
-    rerunSetup.disabled = !status?.isAuthenticated || !target;
-
     const logout = makeButton("Log out", "danger", async () => {
       await window.desktopApi.logout();
       state.loginFlow.beginData = null;
@@ -79,7 +67,7 @@ export function renderAuth() {
       render();
     });
 
-    _el.authRow.append(who, reauth, rerunSetup, logout);
+    _el.authRow.append(who, reauth, logout);
     return;
   }
 
@@ -161,40 +149,117 @@ export function renderOnboarding() {
   const repoReady = status.repoReady;
   const pagesReady = status.pagesReady;
 
-  if (!repoReady || !pagesReady) {
-    // Target picker
-    const pickerContainer = document.createElement("div");
-    _el.onboarding.append(pickerContainer);
-    renderTargetPicker(pickerContainer);
+  // Target picker — always show when authenticated
+  const pickerContainer = document.createElement("div");
+  _el.onboarding.append(pickerContainer);
+  renderTargetPicker(pickerContainer);
 
-    // Setup Publishing step card
-    const card = document.createElement("article");
-    card.className = "status-card";
-    const title = document.createElement("h3");
-    title.textContent = "Setup Publishing";
-    const body = document.createElement("p");
-    body.textContent = target ? `Target: ${target.login}` : "Pick a target first.";
-    card.append(title, body);
+  // Setup Publishing card
+  const card = document.createElement("article");
+  card.className = "status-card";
+  const title = document.createElement("h3");
+  title.textContent = "Setup Publishing";
+  const body = document.createElement("p");
+  body.textContent = target ? `Target: ${target.login}` : "Pick a target first.";
+  card.append(title, body);
 
-    if (target) {
-      const btn = makeButton("Setup Publishing", "primary", async () => {
+  // Setup status steps container (hidden until setup starts)
+  const stepsContainer = document.createElement("div");
+  stepsContainer.className = "setup-steps";
+  stepsContainer.style.display = "none";
+  card.append(stepsContainer);
+
+  if (target) {
+    const setupReady = repoReady && pagesReady;
+    const btn = makeButton(setupReady ? "Re-run Setup" : "Setup Publishing", "primary", async () => {
+      try {
+        btn.disabled = true;
+        btn.style.display = "none";
+        stepsContainer.style.display = "";
+
+        const steps = [
+          { label: "Creating repository", key: "repo" },
+          { label: "Configuring GitHub Pages", key: "pages" },
+          { label: "Deploying site files", key: "deploy" },
+          { label: "Triggering first build", key: "trigger" },
+          { label: "Waiting for Pages to go live", key: "poll" },
+        ];
+
+        const stepEls = {};
+        for (const step of steps) {
+          const row = document.createElement("div");
+          row.className = "setup-step setup-step--pending";
+          row.innerHTML = `<span class="setup-step__icon">&#9679;</span><span class="setup-step__label">${escapeHtml(step.label)}</span>`;
+          stepsContainer.append(row);
+          stepEls[step.key] = row;
+        }
+
+        const activate = (key) => {
+          const el = stepEls[key];
+          if (!el) return;
+          el.className = "setup-step setup-step--active";
+          el.querySelector(".setup-step__icon").innerHTML = `<span class="setup-step__spinner"></span>`;
+        };
+        const complete = (key) => {
+          const el = stepEls[key];
+          if (!el) return;
+          el.className = "setup-step setup-step--done";
+          el.querySelector(".setup-step__icon").textContent = "\u2713";
+        };
+        const fail = (key, msg) => {
+          const el = stepEls[key];
+          if (!el) return;
+          el.className = "setup-step setup-step--error";
+          el.querySelector(".setup-step__icon").textContent = "\u2717";
+          if (msg) {
+            const err = document.createElement("span");
+            err.className = "setup-step__error";
+            err.textContent = ` ${msg}`;
+            el.append(err);
+          }
+        };
+
+        // Run setup with animated steps
+        let currentStep = "repo";
         try {
-          btn.disabled = true;
+          activate("repo");
           await window.desktopApi.setupRepoPages(target.login, target.type);
+          complete("repo");
+
+          activate("pages");
+          await delay(400);
+          complete("pages");
+
+          activate("deploy");
+          await delay(400);
+          complete("deploy");
+
+          activate("trigger");
+          await delay(300);
+          complete("trigger");
+
+          activate("poll");
+          currentStep = "poll";
           await runPagesBuildPoll();
+          complete("poll");
+
           await _callbacks.refreshOnboardingStatus();
           render();
         } catch (err) {
-          showError(err);
-        } finally {
+          fail(currentStep, err.message);
+          btn.style.display = "";
           btn.disabled = false;
         }
-      });
-      btn.classList.add("mt-8");
-      card.append(btn);
-    }
-    _el.onboarding.append(card);
+      } catch (err) {
+        showError(err);
+        btn.style.display = "";
+        btn.disabled = false;
+      }
+    });
+    btn.classList.add("mt-8");
+    card.append(btn);
   }
+  _el.onboarding.append(card);
 }
 
 // ---------------------------------------------------------------------------
