@@ -510,13 +510,13 @@ function serializeForPublish(build, catalog, upgradeCatalog) {
     .filter(Boolean)
     .map((legendId) => {
       const legend = legendsArray.find((l) => l.id === legendId);
-      if (!legend) return { id: legendId, name: "", icon: "" };
-      // Get the swap skill icon from skills array
+      if (!legend) return { id: legendId, name: "", icon: "", swap: null };
       const swapSkill = skillsArray.find((s) => s.id === legend.swap);
       return {
         id: legend.id,
         name: legend.name || "",
         icon: swapSkill?.icon || "",
+        swap: swapSkill ? { id: swapSkill.id, name: swapSkill.name, icon: swapSkill.icon } : null,
       };
     });
 
