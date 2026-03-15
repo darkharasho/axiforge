@@ -66,89 +66,6 @@ const TRINKET_ICONS = {
   accessory2: `${_R}/741D3F520D1DFD7BB9A35AD50FC75152D2B3CA6B/1614709.png`,
 };
 
-// Relic data — keyed by label since relics are stored by label string, not numeric ID.
-const RELIC_BY_LABEL = new Map([
-  ["Relic of Akeem",               `${_R}/594C437E9606A167F4F372BCEB0C2B7C7828037B/3122330.png`],
-  ["Relic of Antitoxin",           `${_R}/61C74AAFED48CF9AD4BBCAD89F902654EA02B2AE/3122331.png`],
-  ["Relic of Cerus",               `${_R}/656FCA9408A0FFDB35A3CE20311E0F66423F026B/3122337.png`],
-  ["Relic of Dagda",               `${_R}/CA28F7BFEA1B695DD19204E455BA270D334EE307/3122340.png`],
-  ["Relic of Durability",          `${_R}/A8F61493030863CAB537780398D64D80554D959D/3122345.png`],
-  ["Relic of Dwayna",              `${_R}/CBBD4FAFCC3568ACA04F9901162FE7C0747C1E9B/3122346.png`],
-  ["Relic of Evasion",             `${_R}/19296379D120EF9FF10EE0B0CDD7711DA5E7A9AF/3122347.png`],
-  ["Relic of Febe",                `${_R}/3B063D0B0BA20A0530086595F367F0149D9679F2/3187628.png`],
-  ["Relic of Fireworks",           `${_R}/2999CCF7C94267B2EE3DDA7459050864622927C9/3122349.png`],
-  ["Relic of Isgarren",            `${_R}/5FB808F04E427650A84031E46B632DC292A3583F/3122354.png`],
-  ["Relic of Karakosa",            `${_R}/DD034A0B53355503350F07CCFFE5CC06A90F41D9/3187629.png`],
-  ["Relic of Leadership",          `${_R}/077C30D957D30B0D282BB21199A193A2D74971DF/3122356.png`],
-  ["Relic of Lyhr",                `${_R}/FE580A90C9E4513D062A148045F933C7F3C557E3/3122357.png`],
-  ["Relic of Mabon",               `${_R}/49481C31650D384B68A1BFB53DC1A39F2AE4AD56/3122358.png`],
-  ["Relic of Mercy",               `${_R}/1AA33B5654D3E7F91B9065BA6D0F1EB6AA755AFF/3122359.png`],
-  ["Relic of Nayos",               `${_R}/EA382BAFD541080F71D5530893CC7E069165EA0C/3187631.png`],
-  ["Relic of Nourys",              `${_R}/9B47CEBB551B7C5E7A961AB45361E292074E0823/3187632.png`],
-  ["Relic of Peitha",              `${_R}/949A6A4179F514FCDEF3AC3D9C292B38D5E0047D/3122365.png`],
-  ["Relic of Resistance",          `${_R}/C3A39C916063067E190EE5D42D6CAC2018385F44/3122367.png`],
-  ["Relic of Speed",               `${_R}/15B07C1813B63DFD27A6A8A5E36CF1BC50DB0562/3122369.png`],
-  ["Relic of Surging",             `${_R}/755D9F3BA1C2C42CDAEBF59BBF4564B77ADC105D/3592840.png`],
-  ["Relic of Vampirism",           `${_R}/349D3B9098A1EB445E00C45E70B892E8CFE3762C/3592842.png`],
-  ["Relic of Vass",                `${_R}/21D7FDF1DD4EAD33DBC01F11D80E48AD3370FDE6/3122374.png`],
-  ["Relic of the Adventurer",      `${_R}/9A76D8C27FCAB8F66D0DC531906808B134D80EAD/3122328.png`],
-  ["Relic of the Afflicted",       `${_R}/3B1DA625E3DF0591087E62F12E5301C1D8D6EDC0/3122329.png`],
-  ["Relic of the Aristocracy",     `${_R}/BCC01F0B6616FE26ED4BE159532A6A6FBD0EA2D8/3122332.png`],
-  ["Relic of the Astral Ward",     `${_R}/57A961A8ADFE279BC4F124A40CC4B5646BC8035F/3161446.png`],
-  ["Relic of the Brawler",         `${_R}/2B5297A932F55DA3BDDD0A39C9CB0D9CF70244A1/3122334.png`],
-  ["Relic of the Cavalier",        `${_R}/C3AFC50F654E2749ADD9033CE007033F6F9B0D7A/3122335.png`],
-  ["Relic of the Centaur",         `${_R}/59551CFA6F4AB3D678370651ABF20D5F69B949D5/3122336.png`],
-  ["Relic of the Chronomancer",    `${_R}/C209ABF01D7429EC09354E2E0BBF9DB14EBDD613/3122338.png`],
-  ["Relic of the Citadel",         `${_R}/B21C5A6DFCDB0A729358A22CA76547150E7C541E/3122339.png`],
-  ["Relic of the Daredevil",       `${_R}/29FE690460A037C7FAC3C71903BA1EBECB204012/3122341.png`],
-  ["Relic of the Deadeye",         `${_R}/060151B961CE56CB9546E7B6AF33B0A318426372/3122342.png`],
-  ["Relic of the Defender",        `${_R}/E854AFDE03F40ED335C0A30DE90BD9973612BD75/3122343.png`],
-  ["Relic of the Demon Queen",     `${_R}/D0C6F322473F2A0F6C65FBD3B21733777BB14015/3187627.png`],
-  ["Relic of the Dragonhunter",    `${_R}/F61EEC535059F1FA027049AB4DEFCD5465405DB7/3122344.png`],
-  ["Relic of the Earth",           `${_R}/EBB3060FF2E9A10CECC3F1B2CAC0213AE9D93337/3592833.png`],
-  ["Relic of the Firebrand",       `${_R}/4E4F4AA81DB63D9D9BB4BF3757D0750E935701F7/3122348.png`],
-  ["Relic of the Flock",           `${_R}/2F7AE267BA29B35DEC7F2C0FCE5C30D806E31E0D/3122350.png`],
-  ["Relic of the Fractal",         `${_R}/B2D409644147BF18935A95A52505ABCB9EECE142/3122351.png`],
-  ["Relic of the Golemancer",      `${_R}/13412697BB6AD89F2E6ED97A750873C0BB35AA9A/3592835.png`],
-  ["Relic of the Herald",          `${_R}/DE62250A48F802DD09A1FAFF0D2BA804EA29A3B9/3122352.png`],
-  ["Relic of the Holosmith",       `${_R}/0976F60805023D2F14DA6CC72F55F3D64407C7AF/3592836.png`],
-  ["Relic of the Ice",             `${_R}/5E0E012F921D3D5D364BFEFC04D7BEF1DC5B52F7/3122353.png`],
-  ["Relic of the Krait",           `${_R}/645EFCBFFBB7B1C6630CBB7C0FB268CA27B703AC/3122355.png`],
-  ["Relic of the Lich",            `${_R}/045D16259918EFA90A76B4D1B1400AA8D9CC0D4B/3592837.png`],
-  ["Relic of the Midnight King",   `${_R}/C0602C3D27B10AC815D4B9F0DF0E4C3D23D12E9F/3187630.png`],
-  ["Relic of the Mirage",          `${_R}/5FCA620E77D3D5022ADC70C1191F0B154AB13827/3122360.png`],
-  ["Relic of the Monk",            `${_R}/6C340014C525FEF8089AC6DAD03662637A5B07CA/3122361.png`],
-  ["Relic of the Necromancer",     `${_R}/B20C589B0915915F5AB55BDA6EC52670B29706F2/3122362.png`],
-  ["Relic of the Nightmare",       `${_R}/74940C36779745CBA9DDD56CDF6CBAC1CEA8179F/3122363.png`],
-  ["Relic of the Ogre",            `${_R}/633231B05DC3D1D44003DAA891400C4624180D17/3592838.png`],
-  ["Relic of the Pack",            `${_R}/26503D1FF7BA354058789E371992A7500B3AA89B/3122364.png`],
-  ["Relic of the Privateer",       `${_R}/9CE01CF33B943BCC3FABD8491073DE0AD63F340C/3592839.png`],
-  ["Relic of the Reaper",          `${_R}/AFDAA23D3C61F202225DDFA7C17F420C5368BBB8/3122366.png`],
-  ["Relic of the Scourge",         `${_R}/0802B36898A6EB0C77D20FD4F3DFD0A2270A3ECD/3122368.png`],
-  ["Relic of the Sunless",         `${_R}/CEF1E6DA2DBF143661DF26E668034A621812B61A/3122370.png`],
-  ["Relic of the Thief",           `${_R}/3523AC08EB04347CF371E9A91F4B985D12FB4ED3/3122371.png`],
-  ["Relic of the Trooper",         `${_R}/500CB9B12FED6948EB74FAF299726007002BDFBA/3122372.png`],
-  ["Relic of the Unseen Invasion", `${_R}/0CAF5ACE9D4ABEFF3EF2DE0DB47D57A8AB3CABB3/3122373.png`],
-  ["Relic of the Warrior",         `${_R}/1D3CF82C05450A605921F6EB9D0AC23421C9CFA5/3122375.png`],
-  ["Relic of the Water",           `${_R}/A202CF0CF4314C049B16A89A595CCC9534B0A90E/3122376.png`],
-  ["Relic of the Weaver",          `${_R}/12997110B0509463DD9F1364A92493B2C4309BE1/3122377.png`],
-  ["Relic of the Wizard's Tower",  `${_R}/0C0EE407B9DAA44438ED6C2DCDA4EEB30953DF1B/3122378.png`],
-  ["Relic of the Zephyrite",       `${_R}/070E32046C250E32DA76F2CBDFC504D6C0AB0344/3122379.png`],
-]);
-
-/**
- * Resolve a relic label to a display object { name, icon }.
- * Relics are stored by label string (not numeric ID), so they need a label-based lookup.
- *
- * @param {string} label - Relic label, e.g. "Relic of the Mists"
- * @returns {object|null}
- */
-function resolveRelicByLabel(label) {
-  if (!label) return null;
-  const icon = RELIC_BY_LABEL.get(label);
-  return icon ? { name: label, icon } : { name: label, icon: "" };
-}
-
 /**
  * Resolve icon URLs for every equipment slot based on profession weight and weapon types.
  *
@@ -333,6 +250,11 @@ function resolveEquipmentDisplay(equipment, upgradeCatalog) {
     return item ? { id: item.id, name: item.name, icon: item.icon } : null;
   }
 
+  function resolveByName(label) {
+    if (!label) return null;
+    return { name: label, icon: "" };
+  }
+
   const runes = equipment.runes || {};
   const sigils = equipment.sigils || {};
   const infusions = equipment.infusions || {};
@@ -366,7 +288,7 @@ function resolveEquipmentDisplay(equipment, upgradeCatalog) {
     infusions: resolvedInfusions,
     food: resolveId(equipment.food, upgradeCatalog.foodById),
     utility: resolveId(equipment.utility, upgradeCatalog.utilityById),
-    relic: resolveRelicByLabel(equipment.relic),
+    relic: resolveByName(equipment.relic),
     enrichment: resolveId(equipment.enrichment, upgradeCatalog.enrichmentById),
   };
 }
