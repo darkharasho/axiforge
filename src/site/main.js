@@ -1,7 +1,6 @@
 import "./styles.css";
-import { renderSpecializations } from "./render-specs.js";
-import { renderSkills } from "./render-skills.js";
-import { renderEquipment } from "./render-equipment.js";
+import { renderBuildPage } from "./render-build.js";
+import { initDetailTooltip } from "./render-detail.js";
 
 const app = document.getElementById("app");
 
@@ -79,37 +78,7 @@ function base64urlDecode(str) {
 
 // ── Build renderer ────────────────────────────────────────────────────────
 function renderBuild(build) {
-  // Build header
-  const header = document.createElement("div");
-  header.className = "build-header";
-  header.innerHTML = `<div class="build-header__info"><h1>${escapeHtml(build.title || "Untitled Build")}</h1><p class="build-header__meta">${escapeHtml(build.profession || "")} &middot; ${escapeHtml((build.gameMode || "pve").toUpperCase())}</p></div>`;
-
-  // Specializations section
-  const specsHeading = document.createElement("h2");
-  specsHeading.className = "site-section-heading";
-  specsHeading.textContent = "Specializations";
-
-  const specsContainer = document.createElement("div");
-  renderSpecializations(specsContainer, build.specializations || []);
-
-  // Skills section
-  const skillsHeading = document.createElement("h2");
-  skillsHeading.className = "site-section-heading";
-  skillsHeading.textContent = "Skills";
-
-  const skillsContainer = document.createElement("div");
-  renderSkills(skillsContainer, build);
-
-  // Equipment section
-  const equipHeading = document.createElement("h2");
-  equipHeading.className = "site-section-heading";
-  equipHeading.textContent = "Equipment";
-
-  const equipContainer = document.createElement("div");
-  renderEquipment(equipContainer, build);
-
-  app.innerHTML = "";
-  app.append(header, specsHeading, specsContainer, skillsHeading, skillsContainer, equipHeading, equipContainer);
+  renderBuildPage(app, build);
 }
 
 export function escapeHtml(s) {
@@ -118,3 +87,4 @@ export function escapeHtml(s) {
 
 // ── Start ────────────────────────────────────────────────────────────────
 init();
+initDetailTooltip();

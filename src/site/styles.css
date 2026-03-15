@@ -59,3 +59,7 @@
 
 /* Mechanic section (legends, pets, attunements) */
 .site-mechanic { display: flex; gap: 8px; align-items: center; margin-top: 8px; padding: 6px 10px; background: var(--panel); border: 1px solid var(--line-soft); border-radius: 8px; font-size: 0.85rem; color: var(--muted); }
+
+/* Read-only tooltip (reuses desktop .hover-preview) */
+.spa-tooltip { position: fixed; z-index: 120; display: none; pointer-events: none; }
+.spa-tooltip.visible { display: block; }
