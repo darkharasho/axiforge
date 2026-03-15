@@ -1,6 +1,7 @@
 import "./styles.css";
 import { renderSpecializations } from "./render-specs.js";
 import { renderSkills } from "./render-skills.js";
+import { renderEquipment } from "./render-equipment.js";
 
 const app = document.getElementById("app");
 
@@ -99,8 +100,16 @@ function renderBuild(build) {
   const skillsContainer = document.createElement("div");
   renderSkills(skillsContainer, build);
 
+  // Equipment section
+  const equipHeading = document.createElement("h2");
+  equipHeading.className = "site-section-heading";
+  equipHeading.textContent = "Equipment";
+
+  const equipContainer = document.createElement("div");
+  renderEquipment(equipContainer, build);
+
   app.innerHTML = "";
-  app.append(header, specsHeading, specsContainer, skillsHeading, skillsContainer);
+  app.append(header, specsHeading, specsContainer, skillsHeading, skillsContainer, equipHeading, equipContainer);
 }
 
 export function escapeHtml(s) {
