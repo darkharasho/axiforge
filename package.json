@@ -41,17 +41,18 @@
   },
   "scripts": {
     "start": "electron .",
-    "dev": "concurrently -k \"vite\" \"wait-on tcp:5173 && APP_PROFILE=dev VITE_DEV_SERVER_URL=http://localhost:5173 electronmon .\"",
+    "dev": "npm run build:site && concurrently -k \"vite\" \"wait-on tcp:5173 && APP_PROFILE=dev VITE_DEV_SERVER_URL=http://localhost:5173 electronmon .\"",
     "dev:clean": "node scripts/dev-clean.mjs",
+    "build:site": "vite build --config src/site/vite.config.js",
     "build:renderer": "vite build",
     "seed": "node lib/gw2-balance-splits/scripts/seed.js",
     "crawl": "node lib/gw2-balance-splits/scripts/crawl-patches.js",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "build:app": "npm run build:renderer && electron-builder --publish never",
-    "build:app:linux": "npm run build:renderer && electron-builder --linux --publish never",
-    "build:app:win": "npm run build:renderer && electron-builder --win --publish never"
+    "build:app": "npm run build:site && npm run build:renderer && electron-builder --publish never",
+    "build:app:linux": "npm run build:site && npm run build:renderer && electron-builder --linux --publish never",
+    "build:app:win": "npm run build:site && npm run build:renderer && electron-builder --win --publish never"
   },
   "jest": {
     "testEnvironment": "node",

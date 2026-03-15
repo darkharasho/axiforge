@@ -348,16 +348,15 @@ describe("siteBundle integration — SPA and encrypted build files", () => {
   test("SPA bundle contains expected files", () => {
     const bundle = buildSpaBundle();
     expect(bundle["site/index.html"]).toBeTruthy();
-    expect(bundle["site/styles.css"]).toBeTruthy();
-    expect(bundle["site/app.js"]).toBeTruthy();
     expect(bundle["site/404.html"]).toBeTruthy();
     expect(bundle["site/.nojekyll"]).toBe("\n");
+    const assetKeys = Object.keys(bundle).filter(k => k.startsWith("site/assets/"));
+    expect(assetKeys.length).toBeGreaterThan(0);
   });
 
-  test("SPA bundle HTML references correct script and style paths", () => {
+  test("SPA bundle HTML references Vite asset paths", () => {
     const bundle = buildSpaBundle();
-    expect(bundle["site/index.html"]).toContain("styles.css");
-    expect(bundle["site/index.html"]).toContain("app.js");
+    expect(bundle["site/index.html"]).toContain("assets/");
   });
 
   test("encrypted build file has correct path and is not plaintext", async () => {
