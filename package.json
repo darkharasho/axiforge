@@ -24,6 +24,12 @@
       "lib/**/*",
       "package.json"
     ],
+    "extraResources": [
+      {
+        "from": "dist/site",
+        "to": "site"
+      }
+    ],
     "linux": {
       "target": [
         "AppImage"
