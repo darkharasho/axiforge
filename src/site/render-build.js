@@ -72,9 +72,13 @@ function populateStateFromBuild(build) {
 
   // ── state.activeCatalog ──
   const allSkills = collectAllSkills(build);
-  const allTraits = (build.specializations || []).flatMap(s =>
-    [...(s.minorTraits || []), ...(s.majorTraitsByTier || []).flat()]
-  ).filter(t => t && t.id);
+  const allTraits = (build.specializations || []).flatMap(s => {
+    const minors = Array.isArray(s.minorTraits) ? s.minorTraits : [];
+    const majors = s.majorTraitsByTier
+      ? Object.values(s.majorTraitsByTier).flat()
+      : [];
+    return [...minors, ...majors];
+  }).filter(t => t && t.id);
 
   state.activeCatalog = {
     profession:         { id: build.profession },
