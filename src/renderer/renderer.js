@@ -33,6 +33,8 @@ import {
   initRenderPagesDom, initRenderPagesCallbacks,
   render, renderEditor, renderEditorForm, renderEditorMeta, renderBuildList,
   setPublishStatus, showError, runPagesBuildPoll, getSelectedTarget,
+  showPublishProgress, advancePublishStep, completeAllPublishSteps,
+  failPublishStep, showPublishResult,
 } from "./modules/render-pages.js";
 import { resolveEntityFacts } from "./modules/detail-panel.js";
 import { initWikiModal, openWikiModal } from "./modules/wiki-modal.js";
@@ -497,20 +499,51 @@ function wireEvents() {
     await importBuildJsonFromClipboard();
   });
 
+  // Listen for publish progress events from main process
+  window.desktopApi.onPublishProgress((step) => {
+    advancePublishStep(step);
+  });
+
   el.publishSiteBtn.addEventListener("click", async () => {
+    if (!state.editor.id) {
+      showError(new Error("Save the build first before publishing."));
+      return;
+    }
+    let lastStep = "saving";
     try {
-      if (!state.user) {
-        throw new Error("Log in and complete setup before publishing.");
+      el.publishSiteBtn.disabled = true;
+      showPublishProgress();
+      advancePublishStep("saving");
+
+      if (state.editorDirty) {
+        const serialized = serializeEditorToBuild();
+        await window.desktopApi.saveBuild({ ...serialized, id: state.editor.id });
+        state.builds = await window.desktopApi.listBuilds();
+        captureEditorBaseline();
       }
-      setPublishStatus("Publishing static site to GitHub...");
-      await window.desktopApi.publishSite();
-      await runPagesBuildPoll();
-      await refreshOnboardingStatus();
-      setPublishStatus(`Publish triggered. Pages URL: ${state.onboarding?.pagesUrl || "pending"}`);
-      render();
-      syncGameModeToggleUI(state.editor.gameMode || "pve");
+
+      // The main process sends progress events for loading, repo, site, encrypt, upload, deploy
+      const result = await window.desktopApi.publishBuild(state.editor.id);
+
+      // Mark all upload steps done, advance to Pages polling
+      advancePublishStep("pages");
+
+      if (result?.pagesUrl) {
+        await window.desktopApi.writeClipboardText(result.pagesUrl);
+        // showPublishResult marks "pages" done and polls until live
+        showPublishResult(result.pagesUrl);
+      } else {
+        completeAllPublishSteps();
+      }
+
+      state.builds = await window.desktopApi.listBuilds();
+      renderBuildList();
+      renderEditorMeta();
     } catch (err) {
+      failPublishStep(lastStep, err.message);
       showError(err);
+    } finally {
+      el.publishSiteBtn.disabled = false;
     }
   });
 

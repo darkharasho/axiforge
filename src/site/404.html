@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>AxiForge Builds — Redirecting</title>
+    <script>
+      var seg = location.pathname.split('/').filter(Boolean);
+      var repoName = seg.length > 0 ? seg[0] : '';
+      var buildPath = seg.slice(1).join('/');
+      if (buildPath || location.hash) {
+        sessionStorage.setItem('spa-redirect', JSON.stringify({ path: buildPath, hash: location.hash }));
+        location.replace('/' + repoName + '/');
+      }
+    </script>
+  </head>
+  <body><p>Redirecting&hellip;</p></body>
+</html>

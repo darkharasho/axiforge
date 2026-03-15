@@ -14,9 +14,12 @@ const {
   ensurePagesWorkflow,
   triggerPagesWorkflow,
   publishSiteBundle,
+  deleteFile,
 } = require("./githubApi");
 const { getProfessionList, getProfessionCatalog, getUpgradeCatalog, getWikiSummary, getWikiRelatedData } = require("./gw2Data");
-const { buildSiteBundle } = require("./siteBundle");
+const { slugifyBuildName, generateFileId, generateEncryptionKey, getDefaultBuildName } = require("./buildEncryption");
+const { buildSpaBundle, buildEncryptedBuildFile } = require("./siteBundle");
+const { serializeForPublish } = require("./buildPublish");
 const { initAutoUpdate } = require("./autoUpdate");
 
 const DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL || "";
@@ -249,7 +252,10 @@ app.whenReady().then(async () => {
     return true;
   });
 
-  ipcMain.handle("builds:publish-site", async () => {
+  ipcMain.handle("builds:publish-build", async (event, buildId) => {
+    const sender = event.sender;
+    const progress = (step) => sender.send("publish-progress", step);
+
     const session = await getSession();
     if (!session) {
       throw new Error("You must log in with GitHub before publishing.");
@@ -259,17 +265,70 @@ app.whenReady().then(async () => {
     const branch = auth?.onboarding?.branch || "main";
     const owner = auth?.onboarding?.targetOwner || session.viewer.login;
 
+    // Load the build
+    progress("loading");
+    const builds = await store.listBuilds();
+    const build = builds.find((b) => b.id === buildId);
+    if (!build) throw new Error("Build not found.");
+
+    // Auto-populate build name if empty or default
+    if (!build.title?.trim() || build.title === "Untitled Build") {
+      const defaultName = getDefaultBuildName(build.specializations, build.profession);
+      build.title = defaultName;
+      await store.upsertBuild(build);
+    }
+
+    // Validate
+    if (!build.title) throw new Error("Build name is required for publishing.");
+    if (!build.profession) throw new Error("Build must have a profession selected.");
+
+    // Generate or reuse publish metadata
+    const fileId = build.publishedFileId || generateFileId();
+    const encKey = build.publishedKey || generateEncryptionKey();
+    const newSlug = slugifyBuildName(build.title);
+
+    // Ensure repo and site infrastructure exist
+    progress("repo");
     await ensureAxiForgeRepo(session.token, owner, "user");
     await ensurePagesWorkflow(session.token, owner, branch, TARGET_REPO);
     await ensurePages(session.token, owner, branch, TARGET_REPO);
 
-    const builds = await store.listBuilds();
-    const bundle = buildSiteBundle(builds);
-    const publish = await publishSiteBundle(session.token, owner, bundle, branch, TARGET_REPO);
-    if (!publish.changed) {
-      await triggerPagesWorkflow(session.token, owner, branch, TARGET_REPO).catch(() => null);
+    // Build combined bundle: SPA files + encrypted build in one commit.
+    // publishSiteBundle compares SHA hashes and skips unchanged files,
+    // so SPA files are effectively a no-op after the first publish.
+    progress("site");
+    const spaBundle = buildSpaBundle();
+
+    // Enrich build data for the SPA
+    progress("encrypt");
+    let enrichedBuild = build;
+    try {
+      const catalog = await getProfessionCatalog(build.profession, "en");
+      enrichedBuild = serializeForPublish(build, catalog);
+    } catch {
+      // Fall back to un-enriched build if catalog unavailable
     }
-    const pagesUrl = publish.pagesUrl || `https://${owner}.github.io/${TARGET_REPO}/`;
+    const encFile = buildEncryptedBuildFile(enrichedBuild, fileId, encKey);
+
+    // Merge SPA bundle + encrypted build into a single commit
+    const combinedBundle = { ...spaBundle, [encFile.filePath]: encFile.content };
+
+    progress("upload");
+    await publishSiteBundle(session.token, owner, combinedBundle, branch, TARGET_REPO);
+
+    // Trigger Pages rebuild
+    progress("deploy");
+    await triggerPagesWorkflow(session.token, owner, branch, TARGET_REPO).catch(() => null);
+
+    // Update build with publish metadata
+    await store.upsertBuild({
+      ...build,
+      publishedSlug: newSlug,
+      publishedFileId: fileId,
+      publishedKey: encKey,
+    });
+
+    const pagesUrl = `https://${owner}.github.io/${TARGET_REPO}/${newSlug}#${fileId}.${encKey}`;
 
     await patchAuthRecord({
       onboarding: {
@@ -280,13 +339,18 @@ app.whenReady().then(async () => {
         pagesBuildStatus: "queued",
         pagesBuildUpdatedAt: new Date().toISOString(),
         pagesBuildError: null,
-        pagesUrl,
+        pagesUrl: `https://${owner}.github.io/${TARGET_REPO}/`,
         branch,
         targetOwner: owner,
       },
     });
 
-    return publish;
+    return {
+      pagesUrl,
+      slug: newSlug,
+      fileId,
+      changed: true,
+    };
   });
 
   ipcMain.handle("gw2:list-professions", async () => getProfessionList("en"));
@@ -320,7 +384,7 @@ app.whenReady().then(async () => {
       await ensurePagesWorkflow(session.token, owner, defaultBranch, TARGET_REPO);
       await ensurePages(session.token, owner, defaultBranch, TARGET_REPO);
 
-      const emptySite = buildSiteBundle([]);
+      const emptySite = buildSpaBundle();
       const publish = await publishSiteBundle(
         session.token,
         owner,

@@ -12,7 +12,8 @@ const path = require("node:path");
 const fs = require("node:fs/promises");
 const os = require("node:os");
 const { BuildStore } = require("../../src/main/buildStore");
-const { buildSiteBundle } = require("../../src/main/siteBundle");
+const { buildSpaBundle, buildEncryptedBuildFile } = require("../../src/main/siteBundle");
+const { generateEncryptionKey } = require("../../src/main/buildEncryption");
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -338,85 +339,53 @@ describe("Build library — multi-profession management", () => {
 // siteBundle integration — stored builds → site
 // ---------------------------------------------------------------------------
 
-describe("siteBundle integration — full build library to site", () => {
+describe("siteBundle integration — SPA and encrypted build files", () => {
   let store, dir;
 
   beforeEach(async () => { ({ store, dir } = await makeTempStore()); });
   afterEach(async () => { await cleanup(dir); });
 
-  test("all 9 profession builds appear in site bundle JSON", async () => {
+  test("SPA bundle contains expected files", () => {
+    const bundle = buildSpaBundle();
+    expect(bundle["site/index.html"]).toBeTruthy();
+    expect(bundle["site/404.html"]).toBeTruthy();
+    expect(bundle["site/.nojekyll"]).toBe("\n");
+    const assetKeys = Object.keys(bundle).filter(k => k.startsWith("site/assets/"));
+    expect(assetKeys.length).toBeGreaterThan(0);
+  });
+
+  test("SPA bundle HTML references Vite asset paths", () => {
+    const bundle = buildSpaBundle();
+    expect(bundle["site/index.html"]).toContain("assets/");
+  });
+
+  test("encrypted build file has correct path and is not plaintext", async () => {
+    const warriorBuild = makeRealisticBuild("Warrior");
+    await store.upsertBuild(warriorBuild);
+    const builds = await store.listBuilds();
+    const build = builds[0];
+
+    const key = generateEncryptionKey();
+    const result = buildEncryptedBuildFile(build, "abc12345", key);
+    expect(result.filePath).toBe("site/builds/abc12345.enc");
+    expect(result.content).not.toContain("Warrior");
+    expect(result.content).not.toContain("Mending");
+  });
+
+  test("all 9 profession builds can be encrypted individually", async () => {
     const professions = ["Warrior", "Engineer", "Guardian", "Ranger", "Thief", "Elementalist", "Mesmer", "Necromancer", "Revenant"];
     for (const prof of professions) {
       await store.upsertBuild(makeRealisticBuild(prof));
     }
-
     const builds = await store.listBuilds();
-    const bundle = buildSiteBundle(builds);
-    const data = JSON.parse(bundle["site/data/builds.json"]);
+    expect(builds).toHaveLength(9);
 
-    expect(data.builds).toHaveLength(9);
-    const profs = new Set(data.builds.map((b) => b.profession));
-    for (const prof of professions) {
-      expect(profs.has(prof)).toBe(true);
+    for (const build of builds) {
+      const key = generateEncryptionKey();
+      const result = buildEncryptedBuildFile(build, "file" + build.id.slice(0, 4), key);
+      expect(result.filePath).toMatch(/^site\/builds\/.+\.enc$/);
+      expect(result.content.length).toBeGreaterThan(0);
     }
-  });
-
-  test("site bundle JSON preserves equipment from each profession build", async () => {
-    const guardianBuild = makeRealisticBuild("Guardian");
-    await store.upsertBuild(guardianBuild);
-
-    const builds = await store.listBuilds();
-    const bundle = buildSiteBundle(builds);
-    const data = JSON.parse(bundle["site/data/builds.json"]);
-
-    const guardian = data.builds.find((b) => b.profession === "Guardian");
-    expect(guardian.equipment.statPackage).toBe("Ritualist");
-    expect(guardian.equipment.relic).toBe("Relic of the Fireworks");
-    expect(guardian.equipment.food).toBe("Bowl of Beef Rendang");
-  });
-
-  test("site bundle JSON includes specialization data", async () => {
-    const warriorBuild = makeRealisticBuild("Warrior");
-    await store.upsertBuild(warriorBuild);
-
-    const builds = await store.listBuilds();
-    const bundle = buildSiteBundle(builds);
-    const data = JSON.parse(bundle["site/data/builds.json"]);
-
-    const warrior = data.builds.find((b) => b.profession === "Warrior");
-    expect(warrior.specializations).toHaveLength(3);
-    expect(warrior.specializations[0].name).toBe("Strength");
-    expect(warrior.specializations[2].name).toBe("Berserker");
-    expect(warrior.specializations[2].majorChoices[1]).toBe(1831);
-  });
-
-  test("site bundle JSON preserves skills", async () => {
-    await store.upsertBuild(makeRealisticBuild("Warrior"));
-    const builds = await store.listBuilds();
-    const bundle = buildSiteBundle(builds);
-    const data = JSON.parse(bundle["site/data/builds.json"]);
-
-    const warrior = data.builds.find((b) => b.profession === "Warrior");
-    expect(warrior.skills.heal.id).toBe(14402);
-    expect(warrior.skills.heal.name).toBe("Mending");
-    expect(warrior.skills.utility[0].id).toBe(14516);
-    expect(warrior.skills.elite.id).toBe(14404);
-  });
-
-  test("site bundle HTML references correct script and style paths", async () => {
-    const builds = await store.listBuilds();
-    const bundle = buildSiteBundle(builds);
-    expect(bundle["site/index.html"]).toContain("./styles.css");
-    expect(bundle["site/index.html"]).toContain("./app.js");
-  });
-
-  test("empty library produces valid site bundle with empty builds array", async () => {
-    const builds = await store.listBuilds();
-    expect(builds).toEqual([]);
-    const bundle = buildSiteBundle(builds);
-    const data = JSON.parse(bundle["site/data/builds.json"]);
-    expect(data.builds).toEqual([]);
-    expect(bundle["site/index.html"]).toBeTruthy();
   });
 });
 
@@ -540,12 +509,12 @@ describe("Edge cases — malformed build data", () => {
     expect(result.specializations).toHaveLength(3);
   });
 
-  test("site bundle handles builds with null skills gracefully", async () => {
+  test("encrypted build file handles builds with null skills gracefully", async () => {
     await store.upsertBuild({ title: "No Skills", profession: "Warrior", skills: null });
     const builds = await store.listBuilds();
-    const bundle = buildSiteBundle(builds);
-    expect(() => JSON.parse(bundle["site/data/builds.json"])).not.toThrow();
-    const data = JSON.parse(bundle["site/data/builds.json"]);
-    expect(data.builds[0].skills.heal).toBeNull();
+    const key = generateEncryptionKey();
+    const result = buildEncryptedBuildFile(builds[0], "test1234", key);
+    expect(result.filePath).toBe("site/builds/test1234.enc");
+    expect(result.content.length).toBeGreaterThan(0);
   });
 });

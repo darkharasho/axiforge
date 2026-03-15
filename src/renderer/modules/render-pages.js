@@ -60,18 +60,6 @@ export function renderAuth() {
       } catch (err) { showError(err); }
     });
 
-    const setupReady = status?.repoReady && status?.pagesReady;
-    const rerunSetup = makeButton(setupReady ? "Re-run Setup" : "Setup Publishing", "secondary", async () => {
-      try {
-        if (!target) throw new Error("No target selected.");
-        await window.desktopApi.setupRepoPages(target.login, target.type);
-        await runPagesBuildPoll();
-        await _callbacks.refreshOnboardingStatus();
-        render();
-      } catch (err) { showError(err); }
-    });
-    rerunSetup.disabled = !status?.isAuthenticated || !target;
-
     const logout = makeButton("Log out", "danger", async () => {
       await window.desktopApi.logout();
       state.loginFlow.beginData = null;
@@ -79,7 +67,7 @@ export function renderAuth() {
       render();
     });
 
-    _el.authRow.append(who, reauth, rerunSetup, logout);
+    _el.authRow.append(who, reauth, logout);
     return;
   }
 
@@ -142,10 +130,44 @@ export function renderOnboarding() {
     const card = document.createElement("article");
     card.className = "status-card";
     const heading = document.createElement("h3");
-    heading.textContent = "Waiting For GitHub Pages";
+    heading.innerHTML = `<span class="setup-step__spinner" style="vertical-align:middle;margin-right:8px"></span>Waiting For GitHub Pages`;
     const statusLine = document.createElement("p");
     statusLine.innerHTML = `Current status: <strong>${escapeHtml(formatPagesStatus(state.pagesPoll.status))}</strong>`;
-    card.append(heading, statusLine);
+
+    const steps = document.createElement("div");
+    steps.className = "setup-steps";
+    steps.style.marginTop = "8px";
+
+    const pageSteps = [
+      { key: "queued", label: "Queued for build" },
+      { key: "building", label: "Building site" },
+      { key: "deploying", label: "Deploying to Pages" },
+      { key: "built", label: "Live" },
+    ];
+    const currentStatus = String(state.pagesPoll.status || "queued").toLowerCase();
+    const statusOrder = ["queued", "building", "deploying", "built"];
+    const currentIdx = statusOrder.indexOf(currentStatus);
+
+    for (let i = 0; i < pageSteps.length; i++) {
+      const step = pageSteps[i];
+      const row = document.createElement("div");
+      if (i < currentIdx) {
+        row.className = "setup-step setup-step--done";
+        row.innerHTML = `<span class="setup-step__icon">\u2713</span><span class="setup-step__label">${escapeHtml(step.label)}</span>`;
+      } else if (i === currentIdx && currentStatus !== "built") {
+        row.className = "setup-step setup-step--active";
+        row.innerHTML = `<span class="setup-step__icon"><span class="setup-step__spinner"></span></span><span class="setup-step__label">${escapeHtml(step.label)}</span>`;
+      } else if (currentStatus === "built" && step.key === "built") {
+        row.className = "setup-step setup-step--done";
+        row.innerHTML = `<span class="setup-step__icon">\u2713</span><span class="setup-step__label">${escapeHtml(step.label)}</span>`;
+      } else {
+        row.className = "setup-step setup-step--pending";
+        row.innerHTML = `<span class="setup-step__icon">&#9679;</span><span class="setup-step__label">${escapeHtml(step.label)}</span>`;
+      }
+      steps.append(row);
+    }
+
+    card.append(heading, statusLine, steps);
     if (state.pagesPoll.error) {
       const errLine = document.createElement("p");
       errLine.className = "error-line";
@@ -161,40 +183,117 @@ export function renderOnboarding() {
   const repoReady = status.repoReady;
   const pagesReady = status.pagesReady;
 
-  if (!repoReady || !pagesReady) {
-    // Target picker
-    const pickerContainer = document.createElement("div");
-    _el.onboarding.append(pickerContainer);
-    renderTargetPicker(pickerContainer);
+  // Target picker — always show when authenticated
+  const pickerContainer = document.createElement("div");
+  _el.onboarding.append(pickerContainer);
+  renderTargetPicker(pickerContainer);
 
-    // Setup Publishing step card
-    const card = document.createElement("article");
-    card.className = "status-card";
-    const title = document.createElement("h3");
-    title.textContent = "Setup Publishing";
-    const body = document.createElement("p");
-    body.textContent = target ? `Target: ${target.login}` : "Pick a target first.";
-    card.append(title, body);
+  // Setup Publishing card
+  const card = document.createElement("article");
+  card.className = "status-card";
+  const title = document.createElement("h3");
+  title.textContent = "Setup Publishing";
+  const body = document.createElement("p");
+  body.textContent = target ? `Target: ${target.login}` : "Pick a target first.";
+  card.append(title, body);
 
-    if (target) {
-      const btn = makeButton("Setup Publishing", "primary", async () => {
+  // Setup status steps container (hidden until setup starts)
+  const stepsContainer = document.createElement("div");
+  stepsContainer.className = "setup-steps";
+  stepsContainer.style.display = "none";
+  card.append(stepsContainer);
+
+  if (target) {
+    const setupReady = repoReady && pagesReady;
+    const btn = makeButton(setupReady ? "Re-run Setup" : "Setup Publishing", setupReady ? "secondary" : "primary", async () => {
+      try {
+        btn.disabled = true;
+        btn.style.display = "none";
+        stepsContainer.style.display = "";
+
+        const steps = [
+          { label: "Creating repository", key: "repo" },
+          { label: "Configuring GitHub Pages", key: "pages" },
+          { label: "Deploying site files", key: "deploy" },
+          { label: "Triggering first build", key: "trigger" },
+          { label: "Waiting for Pages to go live", key: "poll" },
+        ];
+
+        const stepEls = {};
+        for (const step of steps) {
+          const row = document.createElement("div");
+          row.className = "setup-step setup-step--pending";
+          row.innerHTML = `<span class="setup-step__icon">&#9679;</span><span class="setup-step__label">${escapeHtml(step.label)}</span>`;
+          stepsContainer.append(row);
+          stepEls[step.key] = row;
+        }
+
+        const activate = (key) => {
+          const el = stepEls[key];
+          if (!el) return;
+          el.className = "setup-step setup-step--active";
+          el.querySelector(".setup-step__icon").innerHTML = `<span class="setup-step__spinner"></span>`;
+        };
+        const complete = (key) => {
+          const el = stepEls[key];
+          if (!el) return;
+          el.className = "setup-step setup-step--done";
+          el.querySelector(".setup-step__icon").textContent = "\u2713";
+        };
+        const fail = (key, msg) => {
+          const el = stepEls[key];
+          if (!el) return;
+          el.className = "setup-step setup-step--error";
+          el.querySelector(".setup-step__icon").textContent = "\u2717";
+          if (msg) {
+            const err = document.createElement("span");
+            err.className = "setup-step__error";
+            err.textContent = ` ${msg}`;
+            el.append(err);
+          }
+        };
+
+        // Run setup with animated steps
+        let currentStep = "repo";
         try {
-          btn.disabled = true;
+          activate("repo");
           await window.desktopApi.setupRepoPages(target.login, target.type);
+          complete("repo");
+
+          activate("pages");
+          await delay(400);
+          complete("pages");
+
+          activate("deploy");
+          await delay(400);
+          complete("deploy");
+
+          activate("trigger");
+          await delay(300);
+          complete("trigger");
+
+          activate("poll");
+          currentStep = "poll";
           await runPagesBuildPoll();
+          complete("poll");
+
           await _callbacks.refreshOnboardingStatus();
           render();
         } catch (err) {
-          showError(err);
-        } finally {
+          fail(currentStep, err.message);
+          btn.style.display = "";
           btn.disabled = false;
         }
-      });
-      btn.classList.add("mt-8");
-      card.append(btn);
-    }
-    _el.onboarding.append(card);
+      } catch (err) {
+        showError(err);
+        btn.style.display = "";
+        btn.disabled = false;
+      }
+    });
+    btn.classList.add("mt-8");
+    card.append(btn);
   }
+  _el.onboarding.append(card);
 }
 
 // ---------------------------------------------------------------------------
@@ -281,7 +380,48 @@ export function renderBuildList() {
       }
       render();
     });
-    actions.append(loadBtn, deleteBtn);
+    const publishBtn = makeButton("Publish", "secondary", async () => {
+      const status = state.onboarding;
+      if (!status?.isAuthenticated || !status?.repoReady) {
+        showError(new Error("Set up publishing in the user menu first."));
+        return;
+      }
+      try {
+        publishBtn.disabled = true;
+        publishBtn.textContent = "Publishing...";
+        showPublishProgress();
+        advancePublishStep("saving");
+
+        if (build.id === state.editor.id && state.editorDirty) {
+          const serialized = _callbacks.serializeEditorToBuild();
+          await window.desktopApi.saveBuild({ ...serialized, id: build.id });
+          await _callbacks.reloadBuilds();
+        }
+
+        const result = await window.desktopApi.publishBuild(build.id);
+
+        advancePublishStep("pages");
+
+        if (result?.pagesUrl) {
+          await window.desktopApi.writeClipboardText(result.pagesUrl);
+          showPublishResult(result.pagesUrl);
+        } else {
+          completeAllPublishSteps();
+        }
+
+        await _callbacks.reloadBuilds();
+        renderBuildList();
+        renderEditorMeta();
+      } catch (err) {
+        showError(err);
+      } finally {
+        publishBtn.disabled = false;
+        publishBtn.textContent = "Publish";
+      }
+    });
+    const canPublish = Boolean(state.onboarding?.isAuthenticated && state.onboarding?.repoReady);
+    publishBtn.disabled = !canPublish;
+    actions.append(loadBtn, publishBtn, deleteBtn);
     card.append(actions);
     _el.buildList.append(card);
   }
@@ -442,6 +582,155 @@ export async function startLoginFlow() {
 // ---------------------------------------------------------------------------
 export function setPublishStatus(message) {
   _el.publishStatus.textContent = message || "";
+}
+
+// ---------------------------------------------------------------------------
+// renderPublishProgress — animated step-by-step publish status
+// ---------------------------------------------------------------------------
+
+const PUBLISH_STEPS = [
+  { key: "saving", label: "Saving build" },
+  { key: "loading", label: "Preparing build data" },
+  { key: "repo", label: "Connecting to repository" },
+  { key: "site", label: "Deploying site infrastructure" },
+  { key: "encrypt", label: "Encrypting build" },
+  { key: "upload", label: "Uploading to GitHub" },
+  { key: "deploy", label: "Triggering Pages deploy" },
+  { key: "pages", label: "Waiting for Pages to go live" },
+];
+
+export function showPublishProgress() {
+  _el.publishStatus.innerHTML = "";
+
+  // Dismiss button
+  const dismiss = document.createElement("button");
+  dismiss.className = "publish-status__dismiss";
+  dismiss.textContent = "\u00d7";
+  dismiss.title = "Dismiss";
+  dismiss.addEventListener("click", () => { _el.publishStatus.innerHTML = ""; });
+  _el.publishStatus.append(dismiss);
+
+  const container = document.createElement("div");
+  container.className = "publish-progress";
+
+  for (const step of PUBLISH_STEPS) {
+    const row = document.createElement("div");
+    row.className = "setup-step setup-step--pending";
+    row.dataset.publishStep = step.key;
+    row.innerHTML = `<span class="setup-step__icon">&#9679;</span><span class="setup-step__label">${escapeHtml(step.label)}</span>`;
+    container.append(row);
+  }
+
+  _el.publishStatus.append(container);
+  return container;
+}
+
+export function advancePublishStep(stepKey) {
+  const container = _el.publishStatus.querySelector(".publish-progress");
+  if (!container) return;
+
+  // Complete all previous steps
+  const rows = container.querySelectorAll(".setup-step");
+  let found = false;
+  for (const row of rows) {
+    if (row.dataset.publishStep === stepKey) {
+      found = true;
+      row.className = "setup-step setup-step--active";
+      row.querySelector(".setup-step__icon").innerHTML = `<span class="setup-step__spinner"></span>`;
+    } else if (!found) {
+      // Mark previous steps as done
+      if (row.classList.contains("setup-step--active") || row.classList.contains("setup-step--pending")) {
+        row.className = "setup-step setup-step--done";
+        row.querySelector(".setup-step__icon").textContent = "\u2713";
+      }
+    }
+  }
+}
+
+export function completeAllPublishSteps() {
+  const container = _el.publishStatus.querySelector(".publish-progress");
+  if (!container) return;
+  for (const row of container.querySelectorAll(".setup-step")) {
+    row.className = "setup-step setup-step--done";
+    row.querySelector(".setup-step__icon").textContent = "\u2713";
+  }
+}
+
+export function failPublishStep(stepKey, message) {
+  const container = _el.publishStatus.querySelector(".publish-progress");
+  if (!container) return;
+  for (const row of container.querySelectorAll(".setup-step")) {
+    if (row.dataset.publishStep === stepKey) {
+      row.className = "setup-step setup-step--error";
+      row.querySelector(".setup-step__icon").textContent = "\u2717";
+      if (message) {
+        const err = document.createElement("span");
+        err.className = "setup-step__error";
+        err.textContent = ` ${message}`;
+        row.append(err);
+      }
+      break;
+    }
+  }
+}
+
+export function showPublishResult(url) {
+  const container = _el.publishStatus.querySelector(".publish-progress");
+  if (!container) return;
+
+  const result = document.createElement("div");
+  result.className = "publish-result";
+  result.innerHTML = `
+    <div class="publish-result__header">Published successfully!</div>
+    <div class="publish-result__url-row">
+      <input type="text" class="publish-result__url" value="${escapeHtml(url)}" readonly />
+      <button class="btn btn-secondary publish-result__copy">Copy URL</button>
+    </div>
+    <div class="publish-result__live-status">Waiting for page to go live...</div>
+  `;
+
+  const copyBtn = result.querySelector(".publish-result__copy");
+  const urlInput = result.querySelector(".publish-result__url");
+  const liveStatus = result.querySelector(".publish-result__live-status");
+
+  copyBtn.addEventListener("click", async () => {
+    await window.desktopApi.writeClipboardText(url);
+    copyBtn.textContent = "Copied!";
+    urlInput.select();
+    setTimeout(() => { copyBtn.textContent = "Copy URL"; }, 2000);
+  });
+
+  urlInput.addEventListener("click", () => urlInput.select());
+
+  container.append(result);
+
+  // Poll until the page is actually reachable
+  pollPageLive(url, liveStatus);
+}
+
+async function pollPageLive(url, statusEl) {
+  let lastStatus = "deploying";
+  for (let i = 0; i < 40; i++) {
+    try {
+      const poll = await window.desktopApi.pollPagesStatus();
+      if (poll.ready) {
+        completeAllPublishSteps();
+        statusEl.innerHTML = `<span style="color:var(--accent)">&#10003; Page is live!</span>`;
+        return;
+      }
+      lastStatus = poll.status || "deploying";
+      const label = formatPagesStatus(lastStatus);
+      statusEl.textContent = `${label}...`;
+      if (poll.error) {
+        statusEl.textContent = `${label} — ${poll.error}`;
+      }
+    } catch {
+      statusEl.textContent = "Checking deploy status...";
+    }
+    await delay(4000);
+  }
+  completeAllPublishSteps();
+  statusEl.innerHTML = `Pages deploy in progress. <a href="${escapeHtml(url)}" target="_blank" rel="noreferrer" style="color:var(--accent-2)">Check link</a>`;
 }
 
 // ---------------------------------------------------------------------------

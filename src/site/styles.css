@@ -1,0 +1,65 @@
+/* Import desktop CSS — one source of truth for component styles */
+@import "../renderer/styles/base.css";
+@import "../renderer/styles/layout.css";
+@import "../renderer/styles/buttons.css";
+@import "../renderer/styles/specializations.css";
+@import "../renderer/styles/skills.css";
+@import "../renderer/styles/equipment.css";
+@import "../renderer/styles/detail-panel.css";
+
+/* ── SPA-specific styles ─────────────────────────────────────────────── */
+
+/* Navbar */
+.site-navbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 24px; background: var(--panel); border-bottom: 1px solid var(--line-soft);
+}
+.site-navbar__left { display: flex; align-items: center; gap: 10px; }
+.site-navbar__logo { font-size: 1.4rem; }
+.site-navbar__title { font-family: 'Cinzel', serif; font-size: 1.1rem; color: var(--accent); font-weight: 700; letter-spacing: 0.04em; }
+.site-navbar__right { display: flex; align-items: center; gap: 16px; }
+.site-navbar__link { color: var(--muted); text-decoration: none; font-size: 0.85rem; display: flex; align-items: center; gap: 6px; transition: color 0.15s; }
+.site-navbar__link:hover { color: var(--text); }
+
+/* App container */
+#app { width: min(1100px, 94vw); margin: 24px auto 48px; }
+
+/* Landing */
+.site-landing { text-align: center; padding: 80px 0; }
+.site-landing h1 { font-family: 'Cinzel', serif; font-size: 2rem; color: var(--accent); margin-bottom: 12px; }
+.site-landing p { color: var(--muted); font-size: 1.05rem; }
+.site-landing a { color: var(--accent-2); }
+
+/* Loading & error */
+.site-loading { text-align: center; padding: 48px 0; color: var(--muted); font-size: 1.1rem; }
+.site-error { background: rgba(255,60,60,.12); border: 1px solid rgba(255,60,60,.4); border-radius: 10px; padding: 20px; color: #ff8888; text-align: center; margin-top: 40px; }
+
+/* Build header */
+.build-header { margin-bottom: 20px; display: flex; align-items: center; gap: 14px; }
+.build-header__icon { width: 48px; height: 48px; color: var(--muted); flex-shrink: 0; }
+.build-header__icon svg { width: 100%; height: 100%; }
+.build-header__info h1 { font-family: 'Cinzel', serif; font-size: 1.6rem; margin: 0; }
+.build-header__meta { color: var(--muted); font-size: 0.85rem; margin-top: 2px; }
+.build-header__tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.build-header__tag { background: var(--panel); border: 1px solid var(--line-soft); border-radius: 999px; padding: 3px 10px; font-size: 0.75rem; color: var(--accent-2); }
+
+/* Tabs */
+.site-tabs { display: flex; gap: 0; border-bottom: 2px solid var(--line-soft); margin-bottom: 16px; }
+.site-tab { background: none; border: none; color: var(--muted); font-family: 'Exo 2', sans-serif; font-size: 0.88rem; font-weight: 600; padding: 10px 20px; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; letter-spacing: 0.04em; transition: color 0.15s, border-color 0.15s; }
+.site-tab:hover { color: var(--text); }
+.site-tab--active { color: var(--accent); border-bottom-color: var(--accent); }
+.site-tab-content { display: none; }
+.site-tab-content--active { display: block; }
+
+/* Section headings used in SPA */
+.site-section-heading { color: var(--accent-2); font-family: 'Exo 2', sans-serif; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; margin: 20px 0 8px; }
+
+/* Notes display */
+.site-notes { color: var(--muted); padding: 12px 14px; border: 1px solid var(--line-soft); border-radius: 8px; background: var(--panel); font-size: 0.88rem; line-height: 1.5; white-space: pre-wrap; }
+
+/* Mechanic section (legends, pets, attunements) */
+.site-mechanic { display: flex; gap: 8px; align-items: center; margin-top: 8px; padding: 6px 10px; background: var(--panel); border: 1px solid var(--line-soft); border-radius: 8px; font-size: 0.85rem; color: var(--muted); }
+
+/* Read-only tooltip (reuses desktop .hover-preview) */
+.spa-tooltip { position: fixed; z-index: 120; display: none; pointer-events: none; }
+.spa-tooltip.visible { display: block; }

@@ -23,6 +23,7 @@ contextBridge.exposeInMainWorld("desktopApi", {
   saveBuild: (build) => ipcRenderer.invoke("builds:save", build),
   deleteBuild: (id) => ipcRenderer.invoke("builds:delete", id),
   publishSite: () => ipcRenderer.invoke("builds:publish-site"),
+  publishBuild: (buildId) => ipcRenderer.invoke("builds:publish-build", buildId),
   listProfessions: () => ipcRenderer.invoke("gw2:list-professions"),
   getProfessionCatalog: (professionId, gameMode) =>
     ipcRenderer.invoke("gw2:get-profession-catalog", professionId, gameMode),
@@ -54,5 +55,9 @@ contextBridge.exposeInMainWorld("desktopApi", {
   onDownloadProgress: (cb) => {
     ipcRenderer.removeAllListeners("download-progress");
     ipcRenderer.on("download-progress", (_e, info) => cb(info));
+  },
+  onPublishProgress: (cb) => {
+    ipcRenderer.removeAllListeners("publish-progress");
+    ipcRenderer.on("publish-progress", (_e, step) => cb(step));
   },
 });
