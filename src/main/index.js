@@ -19,6 +19,7 @@ const {
 const { getProfessionList, getProfessionCatalog, getUpgradeCatalog, getWikiSummary, getWikiRelatedData } = require("./gw2Data");
 const { slugifyBuildName, generateFileId, generateEncryptionKey, getDefaultBuildName } = require("./buildEncryption");
 const { buildSpaBundle, buildEncryptedBuildFile } = require("./siteBundle");
+const { serializeForPublish } = require("./buildPublish");
 const { initAutoUpdate } = require("./autoUpdate");
 
 const DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL || "";
@@ -298,8 +299,16 @@ app.whenReady().then(async () => {
     progress("site");
     const spaBundle = buildSpaBundle();
 
+    // Enrich build data for the SPA
     progress("encrypt");
-    const encFile = buildEncryptedBuildFile(build, fileId, encKey);
+    let enrichedBuild = build;
+    try {
+      const catalog = await getProfessionCatalog(build.profession, "en");
+      enrichedBuild = serializeForPublish(build, catalog);
+    } catch {
+      // Fall back to un-enriched build if catalog unavailable
+    }
+    const encFile = buildEncryptedBuildFile(enrichedBuild, fileId, encKey);
 
     // Merge SPA bundle + encrypted build into a single commit
     const combinedBundle = { ...spaBundle, [encFile.filePath]: encFile.content };
