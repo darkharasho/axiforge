@@ -393,7 +393,7 @@ async function publishSiteBundle(token, owner, bundle, branch = "main", repo = T
     method: "PATCH",
     body: JSON.stringify({
       sha: commit.sha,
-      force: false,
+      force: true,
     }),
   });
 
