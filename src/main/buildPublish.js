@@ -32,33 +32,60 @@ function readProfessionIcon(professionName, eliteSpecName) {
 }
 
 /**
- * Resolve weapon skills for a single weapon name from catalog arrays.
- * Returns an array of skill objects (up to 5 for two-handed, 3 for mainhand, 2 for offhand).
+ * Resolve the full set of weapon skills for a weapon set (mainhand + offhand).
+ * Two-handed weapons produce 5 skills from the mainhand alone.
+ * One-handed mainhand produces skills 1-3, offhand produces skills 4-5.
  *
- * @param {string} weaponName
+ * @param {string} mainhandName
+ * @param {string} offhandName
  * @param {object} professionWeapons - { [weaponName]: { flags, skills } }
  * @param {Array} weaponSkillsArray - flat array of skill objects with { id, name, icon, ... }
  * @returns {Array}
  */
-function resolveWeaponSkills(weaponName, professionWeapons, weaponSkillsArray) {
-  if (!weaponName || !professionWeapons || !weaponSkillsArray) return [];
+function resolveWeaponSet(mainhandName, offhandName, professionWeapons, weaponSkillsArray) {
+  if (!professionWeapons || !weaponSkillsArray) return [];
+  if (!mainhandName && !offhandName) return [];
 
-  const weaponDef = professionWeapons[weaponName];
-  if (!weaponDef) return [];
-
-  // Build a lookup map from id to full skill data
   const skillById = new Map();
   for (const skill of weaponSkillsArray) {
     skillById.set(skill.id, skill);
   }
 
-  // Map skill references to full skill objects, preserving order
-  const resolved = [];
-  for (const ref of (weaponDef.skills || [])) {
-    const fullSkill = skillById.get(ref.id);
-    if (fullSkill) resolved.push(fullSkill);
+  // Slots array: indices 0-4 map to Weapon_1 through Weapon_5
+  const slots = [null, null, null, null, null];
+
+  // Mainhand skills
+  const mhDef = mainhandName ? professionWeapons[mainhandName] : null;
+  if (mhDef) {
+    const isTwoHand = (mhDef.flags || []).includes("TwoHand");
+    const maxSlot = isTwoHand ? 5 : 3;
+    for (const ref of (mhDef.skills || [])) {
+      const slotNum = parseSlotNum(ref.slot);
+      if (slotNum >= 1 && slotNum <= maxSlot) {
+        const full = skillById.get(ref.id);
+        if (full) slots[slotNum - 1] = full;
+      }
+    }
   }
-  return resolved;
+
+  // Offhand skills (slots 4-5)
+  const ohDef = offhandName ? professionWeapons[offhandName] : null;
+  if (ohDef) {
+    for (const ref of (ohDef.skills || [])) {
+      const slotNum = parseSlotNum(ref.slot);
+      if (slotNum >= 4 && slotNum <= 5) {
+        const full = skillById.get(ref.id);
+        if (full) slots[slotNum - 1] = full;
+      }
+    }
+  }
+
+  return slots.filter(Boolean);
+}
+
+function parseSlotNum(slot) {
+  const match = /Weapon_(\d)/.exec(slot || "");
+  return match ? Number(match[1]) : 0;
 }
 
 /**
@@ -83,19 +110,13 @@ function serializeForPublish(build, catalog) {
   const weaponSkillsArray = catalog?.weaponSkills || [];
   const skillsArray = catalog?.skills || [];
 
-  // Resolve weapon skills for each set
+  // Resolve weapon skills for each set (mainhand + offhand merged)
   const weaponSkills = {
-    set1: resolveWeaponSkills(weapons.mainhand1, professionWeapons, weaponSkillsArray),
-    set2: resolveWeaponSkills(weapons.mainhand2, professionWeapons, weaponSkillsArray),
-    aquatic1: resolveWeaponSkills(weapons.aquatic1, professionWeapons, weaponSkillsArray),
-    aquatic2: resolveWeaponSkills(weapons.aquatic2, professionWeapons, weaponSkillsArray),
+    set1: resolveWeaponSet(weapons.mainhand1, weapons.offhand1, professionWeapons, weaponSkillsArray),
+    set2: resolveWeaponSet(weapons.mainhand2, weapons.offhand2, professionWeapons, weaponSkillsArray),
+    aquatic1: resolveWeaponSet(weapons.aquatic1, "", professionWeapons, weaponSkillsArray),
+    aquatic2: resolveWeaponSet(weapons.aquatic2, "", professionWeapons, weaponSkillsArray),
   };
-
-  // For two-handed weapons, the full set of 5 is already in set1/set2.
-  // For one-handed + offhand combos, merge offhand skills (slots 4-5) into the set.
-  // The catalog already provides all skills for the mainhand weapon via professionWeapons,
-  // so offhand skills would come from a separate offhand weapon lookup if needed.
-  // For now the primary resolution covers all slots present in professionWeapons.
 
   // Profession mechanics: F1-F5 skills (slot starts with "Profession_", inProfessionEndpoint true)
   const professionMechanics = skillsArray.filter(

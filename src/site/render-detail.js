@@ -36,6 +36,9 @@ export function initDetailTooltip() {
   document.addEventListener("mouseout", (e) => {
     const target = e.target.closest("[data-name]");
     if (!target) return;
+    // Only hide if the mouse is leaving the [data-name] element entirely,
+    // not just moving between its children (which also fire mouseout).
+    if (target.contains(e.relatedTarget)) return;
     tooltip.classList.remove("visible");
   });
 }

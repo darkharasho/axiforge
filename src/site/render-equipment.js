@@ -1,5 +1,3 @@
-import { escapeHtml } from "./main.js";
-
 /**
  * Renders read-only equipment matching the desktop's equip-layout 3-column grid.
  *

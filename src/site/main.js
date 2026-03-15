@@ -13,7 +13,6 @@ function init() {
   } catch (e) { /* ignore */ }
 
   const hash = redirect ? redirect.hash : location.hash;
-  const path = redirect ? redirect.path : getBuildPath();
 
   if (!hash || hash.length < 2) { showLanding(); return; }
 
@@ -26,10 +25,6 @@ function init() {
 
   showLoading();
   loadBuild(fileId, key);
-}
-
-function getBuildPath() {
-  return location.pathname.split("/").filter(Boolean).slice(1).join("/");
 }
 
 function showLanding() {
