@@ -366,11 +366,13 @@ export function renderBuildList() {
 
         const result = await window.desktopApi.publishBuild(build.id);
 
-        completeAllPublishSteps();
+        advancePublishStep("pages");
 
         if (result?.pagesUrl) {
           await window.desktopApi.writeClipboardText(result.pagesUrl);
           showPublishResult(result.pagesUrl);
+        } else {
+          completeAllPublishSteps();
         }
 
         await _callbacks.reloadBuilds();
@@ -560,10 +562,20 @@ const PUBLISH_STEPS = [
   { key: "encrypt", label: "Encrypting build" },
   { key: "upload", label: "Uploading to GitHub" },
   { key: "deploy", label: "Triggering Pages deploy" },
+  { key: "pages", label: "Waiting for Pages to go live" },
 ];
 
 export function showPublishProgress() {
   _el.publishStatus.innerHTML = "";
+
+  // Dismiss button
+  const dismiss = document.createElement("button");
+  dismiss.className = "publish-status__dismiss";
+  dismiss.textContent = "\u00d7";
+  dismiss.title = "Dismiss";
+  dismiss.addEventListener("click", () => { _el.publishStatus.innerHTML = ""; });
+  _el.publishStatus.append(dismiss);
+
   const container = document.createElement("div");
   container.className = "publish-progress";
 
@@ -640,10 +652,13 @@ export function showPublishResult(url) {
       <input type="text" class="publish-result__url" value="${escapeHtml(url)}" readonly />
       <button class="btn btn-secondary publish-result__copy">Copy URL</button>
     </div>
+    <div class="publish-result__live-status">Waiting for page to go live...</div>
   `;
 
   const copyBtn = result.querySelector(".publish-result__copy");
   const urlInput = result.querySelector(".publish-result__url");
+  const liveStatus = result.querySelector(".publish-result__live-status");
+
   copyBtn.addEventListener("click", async () => {
     await window.desktopApi.writeClipboardText(url);
     copyBtn.textContent = "Copied!";
@@ -654,6 +669,29 @@ export function showPublishResult(url) {
   urlInput.addEventListener("click", () => urlInput.select());
 
   container.append(result);
+
+  // Poll until the page is actually reachable
+  pollPageLive(url, liveStatus);
+}
+
+async function pollPageLive(url, statusEl) {
+  for (let i = 0; i < 60; i++) {
+    try {
+      const poll = await window.desktopApi.pollPagesStatus();
+      if (poll.ready) {
+        completeAllPublishSteps();
+        statusEl.innerHTML = `<span style="color:var(--accent)">&#10003; Page is live!</span>`;
+        return;
+      }
+      const label = formatPagesStatus(poll.status || "deploying");
+      statusEl.textContent = `${label}...`;
+    } catch {
+      // Ignore poll errors, keep trying
+    }
+    await delay(3000);
+  }
+  completeAllPublishSteps();
+  statusEl.textContent = "Page may take a few minutes to go live.";
 }
 
 // ---------------------------------------------------------------------------

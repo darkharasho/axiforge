@@ -525,11 +525,15 @@ function wireEvents() {
       // The main process sends progress events for loading, repo, site, encrypt, upload, deploy
       const result = await window.desktopApi.publishBuild(state.editor.id);
 
-      completeAllPublishSteps();
+      // Mark all upload steps done, advance to Pages polling
+      advancePublishStep("pages");
 
       if (result?.pagesUrl) {
         await window.desktopApi.writeClipboardText(result.pagesUrl);
+        // showPublishResult marks "pages" done and polls until live
         showPublishResult(result.pagesUrl);
+      } else {
+        completeAllPublishSteps();
       }
 
       state.builds = await window.desktopApi.listBuilds();

@@ -250,48 +250,66 @@ label {
   background: rgba(95, 65, 8, 0.5);
 }
 
+/* Publish button wrapper + popover */
+.publish-wrap {
+  position: relative;
+}
+
+.publish-status:empty {
+  display: none;
+}
+
 .publish-status {
-  margin: 0;
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 50;
+  width: 280px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
   font-size: 0.76rem;
   color: #c3d5f8;
 }
 
-/* Publish progress panel */
+/* Publish progress steps inside popover */
 .publish-progress {
-  margin-top: 8px;
   display: grid;
-  gap: 3px;
+  gap: 2px;
 }
 
 .publish-result {
-  margin-top: 10px;
-  padding: 10px 12px;
+  margin-top: 8px;
+  padding: 8px 10px;
   border: 1px solid rgba(79, 216, 151, 0.4);
   border-radius: 8px;
   background: rgba(79, 216, 151, 0.08);
 }
 
 .publish-result__header {
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   font-weight: 600;
   color: var(--accent);
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .publish-result__url-row {
   display: flex;
-  gap: 6px;
+  gap: 4px;
   align-items: center;
 }
 
 .publish-result__url {
   flex: 1;
+  min-width: 0;
   border: 1px solid #2a3f69;
-  border-radius: 6px;
+  border-radius: 5px;
   background: #060d1d;
   color: var(--accent-2);
-  padding: 6px 8px;
-  font-size: 0.75rem;
+  padding: 5px 6px;
+  font-size: 0.68rem;
   font-family: monospace;
   cursor: text;
   outline: none;
@@ -304,6 +322,31 @@ label {
 .publish-result__copy {
   flex-shrink: 0;
   white-space: nowrap;
+  font-size: 0.72rem;
+  padding: 4px 8px;
+}
+
+.publish-status__dismiss {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.9rem;
+  line-height: 1;
+  padding: 0;
+}
+
+.publish-status__dismiss:hover {
+  color: var(--text);
+}
+
+.publish-result__live-status {
+  margin-top: 6px;
+  font-size: 0.72rem;
+  color: var(--muted);
 }
 
 .build-summary-details {
