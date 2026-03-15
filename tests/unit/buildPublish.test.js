@@ -62,43 +62,108 @@ function makeMockCatalog() {
   };
 }
 
+function makeMockUpgradeCatalog() {
+  return {
+    runeById: new Map([[24836, { id: 24836, name: "Superior Rune of the Scholar", icon: "scholar.png" }]]),
+    sigilById: new Map([[24615, { id: 24615, name: "Superior Sigil of Force", icon: "force.png" }]]),
+    infusionById: new Map([[43254, { id: 43254, name: "+9 Agony Infusion", icon: "agony.png" }]]),
+    enrichmentById: new Map([[87417, { id: 87417, name: "Mist Attunement Enrichment", icon: "mist.png" }]]),
+    foodById: new Map([[91805, { id: 91805, name: "Bowl of Soup", icon: "soup.png" }]]),
+    utilityById: new Map([[67528, { id: 67528, name: "Superior Sharpening Stone", icon: "stone.png" }]]),
+  };
+}
+
 describe("serializeForPublish", () => {
   test("includes all base build fields", () => {
-    const result = serializeForPublish(makeMockBuild(), makeMockCatalog());
+    const result = serializeForPublish(makeMockBuild(), makeMockCatalog(), null);
     expect(result.title).toBe("Power Reaper");
     expect(result.profession).toBe("Necromancer");
     expect(result.skills.heal.name).toBe("Well of Blood");
   });
 
   test("adds weaponSkills for equipped weapons", () => {
-    const result = serializeForPublish(makeMockBuild(), makeMockCatalog());
+    const result = serializeForPublish(makeMockBuild(), makeMockCatalog(), null);
     expect(result.weaponSkills).toBeDefined();
     expect(result.weaponSkills.set1).toHaveLength(5);
     expect(result.weaponSkills.set1[0].name).toBe("Dusk Strike");
   });
 
   test("adds professionMechanics (F-skills)", () => {
-    const result = serializeForPublish(makeMockBuild(), makeMockCatalog());
+    const result = serializeForPublish(makeMockBuild(), makeMockCatalog(), null);
     expect(result.professionMechanics).toBeDefined();
     expect(Array.isArray(result.professionMechanics)).toBe(true);
   });
 
   test("adds professionIcon SVG string", () => {
-    const result = serializeForPublish(makeMockBuild(), makeMockCatalog());
+    const result = serializeForPublish(makeMockBuild(), makeMockCatalog(), null);
     expect(typeof result.professionIcon).toBe("string");
   });
 
   test("handles missing weapons gracefully", () => {
     const build = makeMockBuild();
     build.equipment.weapons = {};
-    const result = serializeForPublish(build, makeMockCatalog());
+    const result = serializeForPublish(build, makeMockCatalog(), null);
     expect(result.weaponSkills.set1).toEqual([]);
     expect(result.weaponSkills.set2).toEqual([]);
   });
 
   test("handles null catalog gracefully", () => {
-    const result = serializeForPublish(makeMockBuild(), null);
+    const result = serializeForPublish(makeMockBuild(), null, null);
     expect(result.weaponSkills).toBeDefined();
     expect(result.professionMechanics).toBeDefined();
+  });
+
+  test("resolves rune IDs to names and icons", () => {
+    const build = makeMockBuild();
+    build.equipment.runes = { head: "24836" };
+    const result = serializeForPublish(build, makeMockCatalog(), makeMockUpgradeCatalog());
+    expect(result.equipmentDisplay.runes.head).toEqual({
+      id: 24836,
+      name: "Superior Rune of the Scholar",
+      icon: "scholar.png",
+    });
+  });
+
+  test("resolves sigil IDs in arrays", () => {
+    const build = makeMockBuild();
+    build.equipment.sigils = { mainhand1: ["24615"] };
+    const result = serializeForPublish(build, makeMockCatalog(), makeMockUpgradeCatalog());
+    expect(result.equipmentDisplay.sigils.mainhand1).toEqual([
+      { id: 24615, name: "Superior Sigil of Force", icon: "force.png" },
+    ]);
+  });
+
+  test("resolves infusion IDs", () => {
+    const build = makeMockBuild();
+    build.equipment.infusions = { head: "43254" };
+    const result = serializeForPublish(build, makeMockCatalog(), makeMockUpgradeCatalog());
+    expect(result.equipmentDisplay.infusions.head).toEqual({
+      id: 43254,
+      name: "+9 Agony Infusion",
+      icon: "agony.png",
+    });
+  });
+
+  test("resolves consumable IDs (food, utility, enrichment)", () => {
+    const build = makeMockBuild();
+    build.equipment.food = "91805";
+    build.equipment.utility = "67528";
+    build.equipment.enrichment = "87417";
+    const result = serializeForPublish(build, makeMockCatalog(), makeMockUpgradeCatalog());
+    expect(result.equipmentDisplay.food).toEqual({ id: 91805, name: "Bowl of Soup", icon: "soup.png" });
+    expect(result.equipmentDisplay.utility).toEqual({ id: 67528, name: "Superior Sharpening Stone", icon: "stone.png" });
+    expect(result.equipmentDisplay.enrichment).toEqual({ id: 87417, name: "Mist Attunement Enrichment", icon: "mist.png" });
+  });
+
+  test("handles missing upgrade catalog gracefully", () => {
+    const result = serializeForPublish(makeMockBuild(), makeMockCatalog(), null);
+    expect(result.equipmentDisplay).toEqual({});
+  });
+
+  test("handles unknown IDs gracefully", () => {
+    const build = makeMockBuild();
+    build.equipment.runes = { head: "99999" };
+    const result = serializeForPublish(build, makeMockCatalog(), makeMockUpgradeCatalog());
+    expect(result.equipmentDisplay.runes.head).toBeNull();
   });
 });

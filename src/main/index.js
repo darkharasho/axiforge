@@ -303,8 +303,11 @@ app.whenReady().then(async () => {
     progress("encrypt");
     let enrichedBuild = build;
     try {
-      const catalog = await getProfessionCatalog(build.profession, "en");
-      enrichedBuild = serializeForPublish(build, catalog);
+      const [catalog, upgradeCatalog] = await Promise.all([
+        getProfessionCatalog(build.profession, "en"),
+        getUpgradeCatalog("en"),
+      ]);
+      enrichedBuild = serializeForPublish(build, catalog, upgradeCatalog);
     } catch {
       // Fall back to un-enriched build if catalog unavailable
     }

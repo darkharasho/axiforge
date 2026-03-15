@@ -89,6 +89,62 @@ function parseSlotNum(slot) {
 }
 
 /**
+ * Resolve equipment upgrade IDs (runes, sigils, infusions, consumables) to display objects.
+ *
+ * @param {object|null} equipment - build.equipment
+ * @param {object|null} upgradeCatalog - Catalog returned by getUpgradeCatalog(), or null
+ * @returns {object}
+ */
+function resolveEquipmentDisplay(equipment, upgradeCatalog) {
+  if (!equipment || !upgradeCatalog) return {};
+
+  function resolveId(idStr, byIdMap) {
+    if (!idStr || !byIdMap) return null;
+    const id = Number(idStr);
+    if (!id) return null;
+    const item = byIdMap.get(id);
+    return item ? { id: item.id, name: item.name, icon: item.icon } : null;
+  }
+
+  const runes = equipment.runes || {};
+  const sigils = equipment.sigils || {};
+  const infusions = equipment.infusions || {};
+
+  const resolvedRunes = {};
+  for (const [slot, idStr] of Object.entries(runes)) {
+    resolvedRunes[slot] = resolveId(idStr, upgradeCatalog.runeById);
+  }
+
+  const resolvedSigils = {};
+  for (const [slot, value] of Object.entries(sigils)) {
+    if (Array.isArray(value)) {
+      resolvedSigils[slot] = value.map(id => resolveId(id, upgradeCatalog.sigilById));
+    } else {
+      resolvedSigils[slot] = [resolveId(value, upgradeCatalog.sigilById)];
+    }
+  }
+
+  const resolvedInfusions = {};
+  for (const [slot, value] of Object.entries(infusions)) {
+    if (Array.isArray(value)) {
+      resolvedInfusions[slot] = value.map(id => resolveId(id, upgradeCatalog.infusionById));
+    } else {
+      resolvedInfusions[slot] = resolveId(value, upgradeCatalog.infusionById);
+    }
+  }
+
+  return {
+    runes: resolvedRunes,
+    sigils: resolvedSigils,
+    infusions: resolvedInfusions,
+    food: resolveId(equipment.food, upgradeCatalog.foodById),
+    utility: resolveId(equipment.utility, upgradeCatalog.utilityById),
+    relic: resolveId(equipment.relic, upgradeCatalog.sigilById),
+    enrichment: resolveId(equipment.enrichment, upgradeCatalog.enrichmentById),
+  };
+}
+
+/**
  * Enrich a serialized build with all data the SPA needs to render without API calls.
  *
  * Adds:
@@ -97,14 +153,16 @@ function parseSlotNum(slot) {
  *   - professionIcon: string — SVG for the active elite spec or base profession
  *   - petDisplay: Array — pet name/icon for Ranger
  *   - legendDisplay: Array — legend name/icon for Revenant
+ *   - equipmentDisplay: object — resolved runes, sigils, infusions, consumables
  *
  * All enrichment is best-effort; failures fall back to empty arrays/strings.
  *
  * @param {object} build - Serialized build object from the store
  * @param {object|null} catalog - Catalog returned by getProfessionCatalog(), or null
+ * @param {object|null} upgradeCatalog - Catalog returned by getUpgradeCatalog(), or null
  * @returns {object} - New object with all build fields plus enrichment fields
  */
-function serializeForPublish(build, catalog) {
+function serializeForPublish(build, catalog, upgradeCatalog) {
   const weapons = build.equipment?.weapons || {};
   const professionWeapons = catalog?.professionWeapons || {};
   const weaponSkillsArray = catalog?.weaponSkills || [];
@@ -162,6 +220,8 @@ function serializeForPublish(build, catalog) {
       };
     });
 
+  const equipmentDisplay = resolveEquipmentDisplay(build.equipment, upgradeCatalog);
+
   return {
     ...build,
     weaponSkills,
@@ -169,6 +229,7 @@ function serializeForPublish(build, catalog) {
     professionIcon,
     petDisplay,
     legendDisplay,
+    equipmentDisplay,
   };
 }
 
