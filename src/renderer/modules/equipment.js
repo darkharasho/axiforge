@@ -14,6 +14,9 @@ import { getProfessionSvg } from "./profession-icons.js";
 
 export { computeSlotStats, computeEquipmentStats, computeUpgradeModifiers, computeStatBreakdown } from "./stats.js";
 
+let _readOnly = false;
+export function setReadOnly(val) { _readOnly = val; }
+
 // DOM refs
 let _el = { equipmentPanel: null };
 export function initEquipment(domRefs) { _el = { ..._el, ...domRefs }; }
@@ -234,14 +237,16 @@ function makeUpgradeBtn(type, slotKey, currentValue, onSelect) {
     { key: "wvw", label: "WvW" },
     { key: "pve", label: "PvE" },
   ];
-  btn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    openSlotPicker(btn, currentValue, onSelect, {
-      items: getUpgradePickerItems(pickerType),
-      searchPlaceholder: `Search ${pickerType}…`,
-      ...(type === "infusions" ? { tabs: INFUSION_TABS } : {}),
+  if (!_readOnly) {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      openSlotPicker(btn, currentValue, onSelect, {
+        items: getUpgradePickerItems(pickerType),
+        searchPlaceholder: `Search ${pickerType}…`,
+        ...(type === "infusions" ? { tabs: INFUSION_TABS } : {}),
+      });
     });
-  });
+  }
 
   // Hover preview
   bindHoverPreview(btn, `equip-${typeClass}`, () => {
@@ -341,8 +346,10 @@ export function renderEquipmentPanel() {
       _markEditorChanged();
       renderEquipmentPanel();
     });
-    wrapper.addEventListener("click", doOpen);
-    wrapper.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); doOpen(); } });
+    if (!_readOnly) {
+      wrapper.addEventListener("click", doOpen);
+      wrapper.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); doOpen(); } });
+    }
 
     bindHoverPreview(wrapper, "equip-stat", () => {
       if (!currentCombo) return null;
@@ -503,14 +510,16 @@ export function renderEquipmentPanel() {
             value: w.id, label: w.label, icon: w.icon,
           })),
         ];
-        weaponBtn.addEventListener("click", () => {
-          openSlotPicker(weaponBtn, currentWeapon, (newVal) => {
-            if (!equip.weapons) equip.weapons = {};
-            equip.weapons[slotDef.key] = newVal || "";
-            _markEditorChanged();
-            renderEquipmentPanel();
-          }, { items: aquaticItems, searchPlaceholder: "Search aquatic weapons…" });
-        });
+        if (!_readOnly) {
+          weaponBtn.addEventListener("click", () => {
+            openSlotPicker(weaponBtn, currentWeapon, (newVal) => {
+              if (!equip.weapons) equip.weapons = {};
+              equip.weapons[slotDef.key] = newVal || "";
+              _markEditorChanged();
+              renderEquipmentPanel();
+            }, { items: aquaticItems, searchPlaceholder: "Search aquatic weapons…" });
+          });
+        }
       } else {
         const profWeapons = state.activeCatalog?.professionWeapons || {};
         const weaponItems = [
@@ -529,35 +538,38 @@ export function renderEquipmentPanel() {
             return { value: w.id, label: w.label, subtitle, icon: w.icon };
           }),
         ];
-        weaponBtn.addEventListener("click", () => {
-          openSlotPicker(weaponBtn, currentWeapon, (newVal) => {
-            if (!equip.weapons) equip.weapons = {};
-            equip.weapons[slotDef.key] = newVal || "";
-            const newFlags = profWeapons[newVal]?.flags || [];
-            if (newFlags.includes("TwoHand")) {
-              const ofKey = slotDef.key.replace("mainhand", "offhand");
-              equip.weapons[ofKey] = "";
-              equip.slots[ofKey] = "";
-            }
-            // Clear second sigil on the mainhand when swapping to one-handed
-            if (!newFlags.includes("TwoHand") && equip.sigils?.[slotDef.key]) {
-              equip.sigils[slotDef.key][1] = "";
-            }
-            _markEditorChanged();
-            renderEquipmentPanel();
-            _renderSkills();
-          }, { items: weaponItems, searchPlaceholder: "Search weapons…" });
-        });
+        if (!_readOnly) {
+          weaponBtn.addEventListener("click", () => {
+            openSlotPicker(weaponBtn, currentWeapon, (newVal) => {
+              if (!equip.weapons) equip.weapons = {};
+              equip.weapons[slotDef.key] = newVal || "";
+              const newFlags = profWeapons[newVal]?.flags || [];
+              if (newFlags.includes("TwoHand")) {
+                const ofKey = slotDef.key.replace("mainhand", "offhand");
+                equip.weapons[ofKey] = "";
+                equip.slots[ofKey] = "";
+              }
+              // Clear second sigil on the mainhand when swapping to one-handed
+              if (!newFlags.includes("TwoHand") && equip.sigils?.[slotDef.key]) {
+                equip.sigils[slotDef.key][1] = "";
+              }
+              _markEditorChanged();
+              renderEquipmentPanel();
+              _renderSkills();
+            }, { items: weaponItems, searchPlaceholder: "Search weapons…" });
+          });
+        }
       }
 
-      statBtn.addEventListener("click", () => {
-        openSlotPicker(statBtn, currentCombo, (newVal) => {
-          equip.slots[slotDef.key] = newVal || "";
-          _markEditorChanged();
-          renderEquipmentPanel();
+      if (!_readOnly) {
+        statBtn.addEventListener("click", () => {
+          openSlotPicker(statBtn, currentCombo, (newVal) => {
+            equip.slots[slotDef.key] = newVal || "";
+            _markEditorChanged();
+            renderEquipmentPanel();
+          });
         });
-      });
-    }
+      }
 
     // Upgrade sub-slots for weapons
     if (!lockedByTwoHanded) {
@@ -690,38 +702,40 @@ export function renderEquipmentPanel() {
       fillBtn.type = "button";
       fillBtn.className = "equip-fill-btn" + (fillEntries.length > 1 ? " equip-fill-btn--dropdown" : "");
       fillBtn.textContent = fillEntries.length > 1 ? "Fill \u25BE" : "Fill";
-      fillBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        // If only one entry, trigger it directly
-        if (fillEntries.length === 1) {
-          fillEntries[0].action(fillBtn);
-          return;
-        }
-        // Show fill menu dropdown
-        const existing = document.querySelector(".equip-fill-menu");
-        if (existing) existing.remove();
-        const menu = document.createElement("div");
-        menu.className = "equip-fill-menu";
-        for (const entry of fillEntries) {
-          const item = document.createElement("button");
-          item.type = "button";
-          item.className = "equip-fill-menu__item";
-          item.textContent = entry.label;
-          item.addEventListener("click", (ev) => {
-            ev.stopPropagation();
-            menu.remove();
-            entry.action(fillBtn);
-          });
-          menu.append(item);
-        }
-        document.body.append(menu);
-        const rect = fillBtn.getBoundingClientRect();
-        menu.style.position = "fixed";
-        menu.style.left = `${rect.left}px`;
-        menu.style.top = `${rect.bottom + 2}px`;
-        const closeMenu = (ev) => { if (!menu.contains(ev.target)) { menu.remove(); document.removeEventListener("pointerdown", closeMenu); } };
-        setTimeout(() => document.addEventListener("pointerdown", closeMenu), 0);
-      });
+      if (!_readOnly) {
+        fillBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          // If only one entry, trigger it directly
+          if (fillEntries.length === 1) {
+            fillEntries[0].action(fillBtn);
+            return;
+          }
+          // Show fill menu dropdown
+          const existing = document.querySelector(".equip-fill-menu");
+          if (existing) existing.remove();
+          const menu = document.createElement("div");
+          menu.className = "equip-fill-menu";
+          for (const entry of fillEntries) {
+            const item = document.createElement("button");
+            item.type = "button";
+            item.className = "equip-fill-menu__item";
+            item.textContent = entry.label;
+            item.addEventListener("click", (ev) => {
+              ev.stopPropagation();
+              menu.remove();
+              entry.action(fillBtn);
+            });
+            menu.append(item);
+          }
+          document.body.append(menu);
+          const rect = fillBtn.getBoundingClientRect();
+          menu.style.position = "fixed";
+          menu.style.left = `${rect.left}px`;
+          menu.style.top = `${rect.bottom + 2}px`;
+          const closeMenu = (ev) => { if (!menu.contains(ev.target)) { menu.remove(); document.removeEventListener("pointerdown", closeMenu); } };
+          setTimeout(() => document.addEventListener("pointerdown", closeMenu), 0);
+        });
+      }
       btnGroup.append(fillBtn);
     }
 
@@ -730,12 +744,14 @@ export function renderEquipmentPanel() {
       clearBtn.type = "button";
       clearBtn.className = "equip-fill-btn equip-clear-btn";
       clearBtn.textContent = "Clear";
-      clearBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        onClear();
-        _markEditorChanged();
-        renderEquipmentPanel();
-      });
+      if (!_readOnly) {
+        clearBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          onClear();
+          _markEditorChanged();
+          renderEquipmentPanel();
+        });
+      }
       btnGroup.append(clearBtn);
     }
     head.append(btnGroup);
@@ -752,31 +768,33 @@ export function renderEquipmentPanel() {
   clearAllBtn.type = "button";
   clearAllBtn.className = "equip-fill-btn equip-clear-btn equip-clear-all-btn";
   clearAllBtn.textContent = "Clear All Equipment";
-  clearAllBtn.addEventListener("click", () => {
-    for (const key of Object.keys(equip.slots)) equip.slots[key] = "";
-    for (const key of Object.keys(equip.weapons)) equip.weapons[key] = "";
-    if (equip.runes) for (const key of Object.keys(equip.runes)) equip.runes[key] = "";
-    if (equip.sigils) {
-      for (const key of Object.keys(equip.sigils)) {
-        equip.sigils[key] = key.startsWith("offhand") ? [""] : ["", ""];
-      }
-    }
-    if (equip.infusions) {
-      for (const key of Object.keys(equip.infusions)) {
-        if (Array.isArray(equip.infusions[key])) {
-          equip.infusions[key] = equip.infusions[key].map(() => "");
-        } else {
-          equip.infusions[key] = "";
+  if (!_readOnly) {
+    clearAllBtn.addEventListener("click", () => {
+      for (const key of Object.keys(equip.slots)) equip.slots[key] = "";
+      for (const key of Object.keys(equip.weapons)) equip.weapons[key] = "";
+      if (equip.runes) for (const key of Object.keys(equip.runes)) equip.runes[key] = "";
+      if (equip.sigils) {
+        for (const key of Object.keys(equip.sigils)) {
+          equip.sigils[key] = key.startsWith("offhand") ? [""] : ["", ""];
         }
       }
-    }
-    equip.enrichment = "";
-    equip.relic = "";
-    equip.food = "";
-    equip.utility = "";
-    _markEditorChanged();
-    renderEquipmentPanel();
-  });
+      if (equip.infusions) {
+        for (const key of Object.keys(equip.infusions)) {
+          if (Array.isArray(equip.infusions[key])) {
+            equip.infusions[key] = equip.infusions[key].map(() => "");
+          } else {
+            equip.infusions[key] = "";
+          }
+        }
+      }
+      equip.enrichment = "";
+      equip.relic = "";
+      equip.food = "";
+      equip.utility = "";
+      _markEditorChanged();
+      renderEquipmentPanel();
+    });
+  }
 
   // Armor
   const armorKeys = EQUIP_ARMOR_SLOTS.map((s) => s.key);
@@ -876,8 +894,10 @@ export function renderEquipmentPanel() {
       _markEditorChanged();
       renderEquipmentPanel();
     }, { items, searchPlaceholder, ...(slotTabs ? { tabs: slotTabs } : {}) });
-    wrapper.addEventListener("click", doOpen);
-    wrapper.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); doOpen(); } });
+    if (!_readOnly) {
+      wrapper.addEventListener("click", doOpen);
+      wrapper.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); doOpen(); } });
+    }
 
     bindHoverPreview(wrapper, hoverKind, () => {
       const d = getDef(equip[field] || "");
@@ -911,10 +931,14 @@ export function renderEquipmentPanel() {
   notesTA.rows = 4;
   notesTA.value = state.editor.notes || "";
   notesTA.placeholder = "Combo priorities, matchup notes, rotation...";
-  notesTA.addEventListener("input", () => {
-    state.editor.notes = notesTA.value;
-    _markEditorChanged({ updateBuildList: true });
-  });
+  if (_readOnly) {
+    notesTA.readOnly = true;
+  } else {
+    notesTA.addEventListener("input", () => {
+      state.editor.notes = notesTA.value;
+      _markEditorChanged({ updateBuildList: true });
+    });
+  }
   notesSection.append(notesTA);
   leftCol.append(notesSection);
 
@@ -1040,8 +1064,10 @@ export function renderEquipmentPanel() {
       _markEditorChanged();
       renderEquipmentPanel();
     }, { items: relicItems, searchPlaceholder: "Search relics…" });
-    wrapper.addEventListener("click", doOpen);
-    wrapper.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); doOpen(); } });
+    if (!_readOnly) {
+      wrapper.addEventListener("click", doOpen);
+      wrapper.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); doOpen(); } });
+    }
 
     bindHoverPreview(wrapper, "equip-relic", () => {
       const rDef = GW2_RELICS_BY_LABEL.get(equip.relic || "");
