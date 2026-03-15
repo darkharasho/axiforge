@@ -51,6 +51,59 @@ describe("buildSpaBundle — styles.css", () => {
   test("tab styles", () => { expect(css).toContain(".tab"); });
 });
 
+describe("buildSpaBundle — app.js specialization rendering", () => {
+  let js;
+  beforeEach(() => { js = buildSpaBundle()["site/app.js"]; });
+  test("renders spec icons", () => { expect(js).toContain("spec-icon"); });
+  test("renders trait grid", () => { expect(js).toContain("trait-grid"); });
+  test("highlights selected traits", () => { expect(js).toContain("majorChoices"); });
+  test("shows minor traits", () => { expect(js).toContain("minorTrait"); });
+  test("marks elite specs", () => { expect(js).toContain("elite"); });
+});
+
+describe("buildSpaBundle — app.js skill rendering", () => {
+  let js;
+  beforeEach(() => { js = buildSpaBundle()["site/app.js"]; });
+  test("renders skill icons", () => { expect(js).toContain("skill-icon"); });
+  test("separates skill groups", () => { expect(js).toContain("heal"); expect(js).toContain("elite"); });
+  test("renders underwater skills", () => { expect(js).toContain("underwater"); });
+});
+
+describe("buildSpaBundle — app.js equipment rendering", () => {
+  let js;
+  beforeEach(() => { js = buildSpaBundle()["site/app.js"]; });
+  test("renders armor slots", () => { expect(js).toContain("head"); expect(js).toContain("shoulders"); expect(js).toContain("chest"); });
+  test("renders weapon sets", () => { expect(js).toContain("mainhand"); expect(js).toContain("offhand"); });
+  test("renders runes", () => { expect(js).toContain("rune"); });
+  test("renders sigils", () => { expect(js).toContain("sigil"); });
+  test("renders infusions", () => { expect(js).toContain("infusion"); });
+  test("renders relic and food", () => { expect(js).toContain("relic"); expect(js).toContain("food"); });
+});
+
+describe("buildSpaBundle — app.js tooltips", () => {
+  let js;
+  beforeEach(() => { js = buildSpaBundle()["site/app.js"]; });
+  test("has mouseover handling", () => { expect(js).toContain("mouseover"); expect(js).toContain("mouseout"); });
+  test("renders tooltip content", () => { expect(js).toContain("tooltip"); expect(js).toContain("description"); });
+});
+
+describe("buildSpaBundle — app.js bundle expansion", () => {
+  let js;
+  beforeEach(() => { js = buildSpaBundle()["site/app.js"]; });
+  test("has bundle click handling", () => { expect(js).toContain("data-bundle"); });
+  test("has bundle-expand class", () => { expect(js).toContain("bundle-expand"); });
+});
+
+describe("buildSpaBundle — styles.css full styles", () => {
+  let css;
+  beforeEach(() => { css = buildSpaBundle()["site/styles.css"]; });
+  test("includes spec-row styles", () => { expect(css).toContain(".spec-row"); });
+  test("includes trait-grid styles", () => { expect(css).toContain(".trait-grid"); });
+  test("includes skill-bar styles", () => { expect(css).toContain(".skill-bar"); });
+  test("includes equipment panel styles", () => { expect(css).toContain(".eq-panel"); });
+  test("includes tooltip styles", () => { expect(css).toContain(".tooltip"); });
+});
+
 describe("buildEncryptedBuildFile", () => {
   test("returns filePath and content", () => {
     const result = buildEncryptedBuildFile({ title: "Test" }, "abc12345", "someBase64urlKey_that_is_43_chars_longAAAAA");
