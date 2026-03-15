@@ -1,4 +1,5 @@
 import "./styles.css";
+import { renderSpecializations } from "./render-specs.js";
 
 const app = document.getElementById("app");
 
@@ -74,9 +75,23 @@ function base64urlDecode(str) {
   return bytes.buffer;
 }
 
-// ── Placeholder render (replaced in later tasks) ─────────────────────────
+// ── Build renderer ────────────────────────────────────────────────────────
 function renderBuild(build) {
-  app.innerHTML = `<div class="build-header"><div class="build-header__info"><h1>${escapeHtml(build.title || "Untitled Build")}</h1><p class="build-header__meta">${escapeHtml(build.profession || "")} &middot; ${escapeHtml((build.gameMode || "pve").toUpperCase())}</p></div></div><pre style="color:var(--muted);font-size:0.75rem;max-height:60vh;overflow:auto">${escapeHtml(JSON.stringify(build, null, 2))}</pre>`;
+  // Build header
+  const header = document.createElement("div");
+  header.className = "build-header";
+  header.innerHTML = `<div class="build-header__info"><h1>${escapeHtml(build.title || "Untitled Build")}</h1><p class="build-header__meta">${escapeHtml(build.profession || "")} &middot; ${escapeHtml((build.gameMode || "pve").toUpperCase())}</p></div>`;
+
+  // Specializations section
+  const specsHeading = document.createElement("h2");
+  specsHeading.className = "site-section-heading";
+  specsHeading.textContent = "Specializations";
+
+  const specsContainer = document.createElement("div");
+  renderSpecializations(specsContainer, build.specializations || []);
+
+  app.innerHTML = "";
+  app.append(header, specsHeading, specsContainer);
 }
 
 export function escapeHtml(s) {
