@@ -675,7 +675,8 @@ export function showPublishResult(url) {
 }
 
 async function pollPageLive(url, statusEl) {
-  for (let i = 0; i < 60; i++) {
+  let lastStatus = "deploying";
+  for (let i = 0; i < 40; i++) {
     try {
       const poll = await window.desktopApi.pollPagesStatus();
       if (poll.ready) {
@@ -683,15 +684,19 @@ async function pollPageLive(url, statusEl) {
         statusEl.innerHTML = `<span style="color:var(--accent)">&#10003; Page is live!</span>`;
         return;
       }
-      const label = formatPagesStatus(poll.status || "deploying");
+      lastStatus = poll.status || "deploying";
+      const label = formatPagesStatus(lastStatus);
       statusEl.textContent = `${label}...`;
+      if (poll.error) {
+        statusEl.textContent = `${label} — ${poll.error}`;
+      }
     } catch {
-      // Ignore poll errors, keep trying
+      statusEl.textContent = "Checking deploy status...";
     }
-    await delay(3000);
+    await delay(4000);
   }
   completeAllPublishSteps();
-  statusEl.textContent = "Page may take a few minutes to go live.";
+  statusEl.innerHTML = `Pages deploy in progress. <a href="${escapeHtml(url)}" target="_blank" rel="noreferrer" style="color:var(--accent-2)">Check link</a>`;
 }
 
 // ---------------------------------------------------------------------------

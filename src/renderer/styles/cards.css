@@ -250,7 +250,7 @@ label {
   background: rgba(95, 65, 8, 0.5);
 }
 
-/* Publish button wrapper + popover */
+/* Publish progress — inline panel below toolbar actions */
 .publish-wrap {
   position: relative;
 }
@@ -260,24 +260,30 @@ label {
 }
 
 .publish-status {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  z-index: 50;
-  width: 280px;
-  background: var(--panel);
+  margin-top: 8px;
   border: 1px solid var(--line);
   border-radius: 10px;
+  background: rgba(9, 16, 32, 0.9);
   padding: 10px 12px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
   font-size: 0.76rem;
   color: #c3d5f8;
+  position: relative;
 }
 
-/* Publish progress steps inside popover */
 .publish-progress {
-  display: grid;
-  gap: 2px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+}
+
+.publish-progress .setup-step {
+  padding: 3px 0;
+  font-size: 0.72rem;
+}
+
+.publish-progress .setup-step__icon {
+  width: 14px;
+  font-size: 0.65rem;
 }
 
 .publish-result {
@@ -297,7 +303,7 @@ label {
 
 .publish-result__url-row {
   display: flex;
-  gap: 4px;
+  gap: 6px;
   align-items: center;
 }
 
@@ -308,8 +314,8 @@ label {
   border-radius: 5px;
   background: #060d1d;
   color: var(--accent-2);
-  padding: 5px 6px;
-  font-size: 0.68rem;
+  padding: 5px 8px;
+  font-size: 0.72rem;
   font-family: monospace;
   cursor: text;
   outline: none;
