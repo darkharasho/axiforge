@@ -292,20 +292,20 @@ app.whenReady().then(async () => {
     await ensurePagesWorkflow(session.token, owner, branch, TARGET_REPO);
     await ensurePages(session.token, owner, branch, TARGET_REPO);
 
-    // Deploy SPA files if not already deployed.
+    // Build combined bundle: SPA files + encrypted build in one commit.
     // publishSiteBundle compares SHA hashes and skips unchanged files,
-    // so this is effectively a no-op after the first publish.
+    // so SPA files are effectively a no-op after the first publish.
     progress("site");
     const spaBundle = buildSpaBundle();
-    await publishSiteBundle(session.token, owner, spaBundle, branch, TARGET_REPO);
 
-    // Encrypt and commit the build
     progress("encrypt");
     const encFile = buildEncryptedBuildFile(build, fileId, encKey);
-    const encBundle = { [encFile.filePath]: encFile.content };
+
+    // Merge SPA bundle + encrypted build into a single commit
+    const combinedBundle = { ...spaBundle, [encFile.filePath]: encFile.content };
 
     progress("upload");
-    await publishSiteBundle(session.token, owner, encBundle, branch, TARGET_REPO);
+    await publishSiteBundle(session.token, owner, combinedBundle, branch, TARGET_REPO);
 
     // Trigger Pages rebuild
     progress("deploy");
