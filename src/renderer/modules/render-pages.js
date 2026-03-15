@@ -702,13 +702,12 @@ export function showPublishResult(url) {
 
   urlInput.addEventListener("click", () => urlInput.select());
 
-  // Dev-only: open local SPA preview (localhost:3000) with the same build hash
+  // Dev-only: open local SPA preview (localhost:3000) with the same build hash.
+  // The .enc file is saved to public/builds/ during publish, so the Vite dev server serves it directly.
   if (location.port || location.hostname === "localhost") {
     try {
       const parsed = new URL(url);
-      // Pass the remote origin so the local SPA can fetch .enc files from the deployed site
-      const remoteBase = `${parsed.origin}${parsed.pathname.replace(/[^/]*$/, "")}`;
-      const localUrl = `http://localhost:3000/?remoteBase=${encodeURIComponent(remoteBase)}${parsed.hash}`;
+      const localUrl = `http://localhost:3000/${parsed.hash}`;
       const localBtn = document.createElement("button");
       localBtn.className = "btn btn-secondary";
       localBtn.textContent = "Open Local Preview";
