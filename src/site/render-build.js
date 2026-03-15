@@ -76,15 +76,6 @@ export function renderBuildPage(container, build) {
   const buildContent = document.createElement("div");
   buildContent.className = "site-tab-content site-tab-content--active";
 
-  const specsHeading = document.createElement("h2");
-  specsHeading.className = "site-section-heading";
-  specsHeading.textContent = "Specializations";
-  buildContent.append(specsHeading);
-
-  const specsContainer = document.createElement("div");
-  renderSpecializations(specsContainer, build.specializations || []);
-  buildContent.append(specsContainer);
-
   const skillsHeading = document.createElement("h2");
   skillsHeading.className = "site-section-heading";
   skillsHeading.textContent = "Skills";
@@ -93,6 +84,15 @@ export function renderBuildPage(container, build) {
   const skillsContainer = document.createElement("div");
   renderSkills(skillsContainer, build);
   buildContent.append(skillsContainer);
+
+  const specsHeading = document.createElement("h2");
+  specsHeading.className = "site-section-heading";
+  specsHeading.textContent = "Specializations";
+  buildContent.append(specsHeading);
+
+  const specsContainer = document.createElement("div");
+  renderSpecializations(specsContainer, build.specializations || []);
+  buildContent.append(specsContainer);
 
   // EQUIPMENT tab content
   const equipContent = document.createElement("div");

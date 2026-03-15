@@ -28,7 +28,11 @@ export function renderSpecializations(container, specs) {
       ? "spec-card__panel spec-card__panel--elite"
       : "spec-card__panel";
 
-    const bgUrl = spec.background || "";
+    // Prefer wiki FilePath URL for browser compatibility over GW2 render CDN
+    let bgUrl = spec.background || "";
+    if (spec.name) {
+      bgUrl = `https://wiki.guildwars2.com/wiki/Special:FilePath/${encodeURIComponent(spec.name + " specialization.png")}`;
+    }
     panel.style.backgroundImage = `linear-gradient(0deg, rgba(7, 14, 27, 0.1), rgba(7, 14, 27, 0.1)), url("${bgUrl.replaceAll('"', '\\"')}")`;
     panel.style.backgroundPosition = "center, center";
     panel.style.backgroundSize = "100% 100%, cover";
