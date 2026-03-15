@@ -1,5 +1,5 @@
 const GH_REST = "https://api.github.com";
-const TARGET_REPO = "axiforge";
+const TARGET_REPO = "axibuilds";
 const USER_AGENT = "axiforge-desktop";
 const crypto = require("node:crypto");
 
@@ -68,7 +68,7 @@ async function ensureAxiForgeRepo(token, owner, ownerType = "user") {
       name: TARGET_REPO,
       private: false,
       auto_init: true,
-      description: "AxiForge static site",
+      description: "AxiForge Builds — published GW2 builds",
     }),
   }).catch(async (err) => {
     if (err.status === 422) {
@@ -466,6 +466,23 @@ function computeGitBlobSha(contentBuffer) {
   return crypto.createHash("sha1").update(`blob ${contentBuffer.length}\0`).update(contentBuffer).digest("hex");
 }
 
+async function deleteFile(token, owner, filePath, branch = "main", message = "Remove file", repo = TARGET_REPO) {
+  const encodedPath = filePath.split("/").map((segment) => encodeURIComponent(segment)).join("/");
+  let existingSha;
+  try {
+    const current = await apiFetch(`/repos/${owner}/${repo}/contents/${encodedPath}?ref=${encodeURIComponent(branch)}`, token);
+    existingSha = current?.sha;
+  } catch (err) {
+    if (err.status === 404) return;
+    throw err;
+  }
+  if (!existingSha) return;
+  await apiFetch(`/repos/${owner}/${repo}/contents/${encodedPath}`, token, {
+    method: "DELETE",
+    body: JSON.stringify({ message, sha: existingSha, branch }),
+  });
+}
+
 module.exports = {
   TARGET_REPO,
   getViewer,
@@ -478,4 +495,5 @@ module.exports = {
   ensurePagesWorkflow,
   triggerPagesWorkflow,
   publishSiteBundle,
+  deleteFile,
 };

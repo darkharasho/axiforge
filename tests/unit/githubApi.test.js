@@ -10,6 +10,7 @@ const {
   getPagesBuildStatus,
   ensurePagesWorkflow,
   publishSiteBundle,
+  deleteFile,
 } = require("../../src/main/githubApi");
 
 const { createGithubMockFetch } = require("../helpers/mockFetch");
@@ -20,7 +21,7 @@ const { createGithubMockFetch } = require("../helpers/mockFetch");
 
 const FAKE_TOKEN = "ghs_faketoken123";
 const FAKE_OWNER = "octocat";
-const FAKE_REPO = TARGET_REPO; // "axiforge"
+const FAKE_REPO = TARGET_REPO; // "axibuilds"
 
 function makeHeaders(overrides = {}) {
   return {
@@ -64,8 +65,8 @@ function computeGitBlobSha(content) {
 // ---------------------------------------------------------------------------
 
 describe("TARGET_REPO", () => {
-  test("is 'axiforge'", () => {
-    expect(TARGET_REPO).toBe("axiforge");
+  test("is 'axibuilds'", () => {
+    expect(TARGET_REPO).toBe("axibuilds");
   });
 });
 
@@ -640,5 +641,35 @@ describe("ensurePagesWorkflow", () => {
     const err = await ensurePagesWorkflow(FAKE_TOKEN, FAKE_OWNER).catch((e) => e);
     expect(err.message).toContain("workflow");
     expect(err.message).toContain("Re-authenticate");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// deleteFile
+// ---------------------------------------------------------------------------
+
+describe("deleteFile", () => {
+  afterEach(() => { delete global.fetch; });
+
+  test("calls DELETE on contents API with correct path", async () => {
+    global.fetch = jest.fn()
+      .mockImplementationOnce(() => okRes({ sha: "abc123" }))
+      .mockImplementationOnce(() => okRes({ commit: { sha: "def456" } }));
+
+    await deleteFile(FAKE_TOKEN, FAKE_OWNER, "site/builds/test.enc", "main", "Remove published build");
+
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+    const [deleteUrl, deleteOpts] = global.fetch.mock.calls[1];
+    expect(deleteUrl).toContain("site/builds/test.enc");
+    expect(deleteOpts.method).toBe("DELETE");
+    const body = JSON.parse(deleteOpts.body);
+    expect(body.sha).toBe("abc123");
+    expect(body.message).toBe("Remove published build");
+    expect(body.branch).toBe("main");
+  });
+
+  test("returns silently if file does not exist (404)", async () => {
+    global.fetch = jest.fn(() => failRes(404));
+    await deleteFile(FAKE_TOKEN, FAKE_OWNER, "site/builds/missing.enc", "main", "Remove");
   });
 });
