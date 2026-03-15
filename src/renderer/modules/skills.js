@@ -18,6 +18,9 @@ import { computeEquipmentStats } from "./stats.js";
 import { computeBoonCoverage } from "./boon-coverage.js";
 import { renderCustomSelect } from "./custom-select.js";
 
+let _readOnly = false;
+export function setReadOnly(val) { _readOnly = val; }
+
 // DOM refs injected by the entry point via initSkills() to keep this module
 // importable in Node.js test environments (no document.querySelector at module scope).
 let _el = { skillsHost: null };
@@ -839,121 +842,127 @@ export function makeSkillSlot(slot, catalog, options, utilitySelection, markSkil
 
   // Drag-to-swap: only the three utility slots (index 0–2) are draggable.
   if (slot.index !== undefined) {
-    iconBtn.draggable = true;
+    iconBtn.draggable = !_readOnly;
     slotEl.dataset.utilIdx = String(slot.index);
 
-    iconBtn.addEventListener("dragstart", (e) => {
-      _dragUtilIdx = slot.index;
-      e.dataTransfer.effectAllowed = "move";
-      // Delay the visual dimming so the browser captures the full icon as drag ghost first.
-      requestAnimationFrame(() => slotEl.classList.add("skill-slot--dragging"));
-    });
-
-    iconBtn.addEventListener("dragend", () => {
-      _dragUtilIdx = -1;
-      slotEl.classList.remove("skill-slot--dragging");
-      // Clean up any lingering drop-over highlights in case dragleave didn't fire.
-      _el.skillsHost?.querySelectorAll(".skill-slot--drag-over").forEach((el) => {
-        el.classList.remove("skill-slot--drag-over");
+    if (!_readOnly) {
+      iconBtn.addEventListener("dragstart", (e) => {
+        _dragUtilIdx = slot.index;
+        e.dataTransfer.effectAllowed = "move";
+        // Delay the visual dimming so the browser captures the full icon as drag ghost first.
+        requestAnimationFrame(() => slotEl.classList.add("skill-slot--dragging"));
       });
-    });
 
-    slotEl.addEventListener("dragover", (e) => {
-      if (_dragUtilIdx === -1 || _dragUtilIdx === slot.index) return;
-      e.preventDefault();
-      e.dataTransfer.dropEffect = "move";
-      slotEl.classList.add("skill-slot--drag-over");
-    });
+      iconBtn.addEventListener("dragend", () => {
+        _dragUtilIdx = -1;
+        slotEl.classList.remove("skill-slot--dragging");
+        // Clean up any lingering drop-over highlights in case dragleave didn't fire.
+        _el.skillsHost?.querySelectorAll(".skill-slot--drag-over").forEach((el) => {
+          el.classList.remove("skill-slot--drag-over");
+        });
+      });
 
-    slotEl.addEventListener("dragleave", (e) => {
-      if (!slotEl.contains(e.relatedTarget)) {
+      slotEl.addEventListener("dragover", (e) => {
+        if (_dragUtilIdx === -1 || _dragUtilIdx === slot.index) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        slotEl.classList.add("skill-slot--drag-over");
+      });
+
+      slotEl.addEventListener("dragleave", (e) => {
+        if (!slotEl.contains(e.relatedTarget)) {
+          slotEl.classList.remove("skill-slot--drag-over");
+        }
+      });
+
+      slotEl.addEventListener("drop", (e) => {
+        e.preventDefault();
         slotEl.classList.remove("skill-slot--drag-over");
-      }
-    });
+        const fromIdx = _dragUtilIdx;
+        const toIdx   = slot.index;
+        _dragUtilIdx  = -1;
+        if (fromIdx === -1 || fromIdx === toIdx) return;
 
-    slotEl.addEventListener("drop", (e) => {
-      e.preventDefault();
-      slotEl.classList.remove("skill-slot--drag-over");
-      const fromIdx = _dragUtilIdx;
-      const toIdx   = slot.index;
-      _dragUtilIdx  = -1;
-      if (fromIdx === -1 || fromIdx === toIdx) return;
+        // Capture icon rects BEFORE re-render for the swap animation.
+        const utilSlots = _el.skillsHost?.querySelectorAll('.skill-group--utilities .skill-slot');
+        const fromBtn   = utilSlots?.[fromIdx + 1]?.querySelector('.skill-icon-large');
+        const toBtn     = utilSlots?.[toIdx   + 1]?.querySelector('.skill-icon-large');
+        const swapRects = (fromBtn && toBtn) ? {
+          fromIdx, toIdx,
+          fromRect: fromBtn.getBoundingClientRect(),
+          toRect:   toBtn.getBoundingClientRect(),
+        } : null;
 
-      // Capture icon rects BEFORE re-render for the swap animation.
-      const utilSlots = _el.skillsHost?.querySelectorAll('.skill-group--utilities .skill-slot');
-      const fromBtn   = utilSlots?.[fromIdx + 1]?.querySelector('.skill-icon-large');
-      const toBtn     = utilSlots?.[toIdx   + 1]?.querySelector('.skill-icon-large');
-      const swapRects = (fromBtn && toBtn) ? {
-        fromIdx, toIdx,
-        fromRect: fromBtn.getBoundingClientRect(),
-        toRect:   toBtn.getBoundingClientRect(),
-      } : null;
-
-      const ids = target.utilityIds;
-      [ids[fromIdx], ids[toIdx]] = [ids[toIdx], ids[fromIdx]];
-      _enforceEditorConsistency();
-      state.editor.activeKit = 0;
-      _markEditorChanged({ updateBuildList: true });
-      renderSkills();
-      _animateUtilitySwap(swapRects);
-    });
+        const ids = target.utilityIds;
+        [ids[fromIdx], ids[toIdx]] = [ids[toIdx], ids[fromIdx]];
+        _enforceEditorConsistency();
+        state.editor.activeKit = 0;
+        _markEditorChanged({ updateBuildList: true });
+        renderSkills();
+        _animateUtilitySwap(swapRects);
+      });
+    }
   }
 
   const selectHost = document.createElement("div");
-  renderCustomSelect(selectHost, {
-    value: String(selectedId || ""),
-    className: "cselect--skill-slot",
-    options: skillOptions,
-    placeholder: filteredList.length ? "Select skill" : "No skills available",
-    disabled: !filteredList.length,
-    onChange: (nextValue) => {
-      const nextId = Number(nextValue) || 0;
-      if (!nextId) return;
+  if (!_readOnly) {
+    renderCustomSelect(selectHost, {
+      value: String(selectedId || ""),
+      className: "cselect--skill-slot",
+      options: skillOptions,
+      placeholder: filteredList.length ? "Select skill" : "No skills available",
+      disabled: !filteredList.length,
+      onChange: (nextValue) => {
+        const nextId = Number(nextValue) || 0;
+        if (!nextId) return;
 
-      let swapRects = null;
-      if (slot.index === undefined) {
-        target[slot.key] = nextId;
-      } else {
-        // If the chosen skill is already in another utility slot, swap the two slots.
-        const ids = target[slot.key];
-        const otherIdx = ids.findIndex((id, i) => i !== slot.index && Number(id) === nextId);
-        if (otherIdx !== -1) {
-          // Capture icon positions BEFORE re-render for FLIP animation.
-          // Utility slots are at DOM indices slot.index+1 and otherIdx+1 (heal is index 0).
-          const utilSlots = _el.skillsHost?.querySelectorAll('.skill-group--utilities .skill-slot');
-          const fromBtn = utilSlots?.[slot.index + 1]?.querySelector('.skill-icon-large');
-          const toBtn = utilSlots?.[otherIdx + 1]?.querySelector('.skill-icon-large');
-          if (fromBtn && toBtn) {
-            swapRects = {
-              fromIdx: slot.index,
-              toIdx: otherIdx,
-              fromRect: fromBtn.getBoundingClientRect(),
-              toRect: toBtn.getBoundingClientRect(),
-            };
+        let swapRects = null;
+        if (slot.index === undefined) {
+          target[slot.key] = nextId;
+        } else {
+          // If the chosen skill is already in another utility slot, swap the two slots.
+          const ids = target[slot.key];
+          const otherIdx = ids.findIndex((id, i) => i !== slot.index && Number(id) === nextId);
+          if (otherIdx !== -1) {
+            // Capture icon positions BEFORE re-render for FLIP animation.
+            // Utility slots are at DOM indices slot.index+1 and otherIdx+1 (heal is index 0).
+            const utilSlots = _el.skillsHost?.querySelectorAll('.skill-group--utilities .skill-slot');
+            const fromBtn = utilSlots?.[slot.index + 1]?.querySelector('.skill-icon-large');
+            const toBtn = utilSlots?.[otherIdx + 1]?.querySelector('.skill-icon-large');
+            if (fromBtn && toBtn) {
+              swapRects = {
+                fromIdx: slot.index,
+                toIdx: otherIdx,
+                fromRect: fromBtn.getBoundingClientRect(),
+                toRect: toBtn.getBoundingClientRect(),
+              };
+            }
+            ids[otherIdx] = Number(ids[slot.index]) || 0;
           }
-          ids[otherIdx] = Number(ids[slot.index]) || 0;
+          ids[slot.index] = nextId;
         }
-        ids[slot.index] = nextId;
-      }
-      _enforceEditorConsistency();
-      state.editor.activeKit = 0; // clear kit view when utility selection changes
-      _markEditorChanged({ updateBuildList: true });
-      renderSkills();
+        _enforceEditorConsistency();
+        state.editor.activeKit = 0; // clear kit view when utility selection changes
+        _markEditorChanged({ updateBuildList: true });
+        renderSkills();
 
-      // FLIP animation: after re-render, briefly offset the new icons to their OLD positions
-      // then transition them to their natural (0,0) resting place with a springy easing.
-      _animateUtilitySwap(swapRects);
+        // FLIP animation: after re-render, briefly offset the new icons to their OLD positions
+        // then transition them to their natural (0,0) resting place with a springy easing.
+        _animateUtilitySwap(swapRects);
 
-      const nextSkill = options[resolveSkillSlotType(slot)]?.find((skill) => Number(skill.id) === nextId) || null;
-      if (nextSkill) selectDetail("skill", nextSkill);
-    },
-  });
+        const nextSkill = options[resolveSkillSlotType(slot)]?.find((skill) => Number(skill.id) === nextId) || null;
+        if (nextSkill) selectDetail("skill", nextSkill);
+      },
+    });
+  }
   selectHost.classList.add("skill-select-overlay");
 
-  iconBtn.addEventListener("click", () => {
-    const trigger = selectHost.querySelector(".cselect__trigger");
-    if (trigger instanceof HTMLElement) trigger.click();
-  });
+  if (!_readOnly) {
+    iconBtn.addEventListener("click", () => {
+      const trigger = selectHost.querySelector(".cselect__trigger");
+      if (trigger instanceof HTMLElement) trigger.click();
+    });
+  }
 
   if (selectedSkill?.specialization) {
     const lockSpec = catalog.specializationById.get(Number(selectedSkill.specialization));
@@ -995,7 +1004,8 @@ function _renderUnderwaterToggle() {
     const newMode = btn.dataset.mode === "water";
     if (newMode === state.editor.underwaterMode) return;
     state.editor.underwaterMode = newMode;
-    _renderEditor();
+    if (!_readOnly) _renderEditor();
+    else renderSkills();
   });
   return container;
 }
@@ -1228,7 +1238,7 @@ export function renderSkills() {
       iconBtn.innerHTML = `<img src="${escapeHtml(wSkill.icon)}" alt="${escapeHtml(wSkill.name || "")}" />`;
       iconBtn.title = wSkill.name || "";
       bindHoverPreview(iconBtn, "skill", () => wSkill);
-      iconBtn.addEventListener("click", () => selectDetail("skill", wSkill));
+      if (!_readOnly) iconBtn.addEventListener("click", () => selectDetail("skill", wSkill));
     }
     markSkillIconRendered(iconBtn, `weapon_${i + 1}`, wSkill ? `${wSkill.id}:${wSkill.icon || ""}` : "");
     const wKeyLabel = document.createElement("span");
@@ -1371,11 +1381,13 @@ export function renderSkills() {
         rollBadge.className = "kit-toggle-indicator";
         rollBadge.title = "Draw artifacts";
         rollBadge.textContent = "▸";
-        rollBadge.addEventListener("click", (e) => {
-          e.stopPropagation();
-          randomizeAntiquaryArtifacts(catalog, state.editor);
-          renderSkills();
-        });
+        if (!_readOnly) {
+          rollBadge.addEventListener("click", (e) => {
+            e.stopPropagation();
+            randomizeAntiquaryArtifacts(catalog, state.editor);
+            renderSkills();
+          });
+        }
         iconBtn.append(rollBadge);
       }
 
@@ -1407,48 +1419,50 @@ export function renderSkills() {
       }
 
       if (isSelectable) {
-        iconBtn.addEventListener("click", () => {
-          const otherSelectedIds = new Set(
-            (state.editor.morphSkillIds || [])
-              .map((id, i) => (i !== morphIndex ? Number(id) : 0))
-              .filter(Boolean)
-          );
-          // Morph pool: all Profession-type skills for the elite spec that aren't "Locked"/"Evolve"
-          const allMorphPool = catalog.skills.filter(
-            (s) => s.specialization === eliteSpecId &&
-              (s.type || "").toLowerCase() === "profession" &&
-              s.name.toLowerCase() !== "locked" &&
-              s.name.toLowerCase() !== "evolve"
-          );
-          const morphItems = [
-            { value: "", label: "— None —" },
-            ...allMorphPool
-              .filter((s) => !otherSelectedIds.has(s.id))
-              .map((s) => ({ value: String(s.id), label: s.name, icon: s.icon })),
-          ];
-          _openSlotPicker(iconBtn, String(sourceId || ""), (newVal) => {
-            if (!state.editor.morphSkillIds) state.editor.morphSkillIds = [0, 0, 0];
-            state.editor.morphSkillIds[morphIndex] = Number(newVal) || 0;
-            _markEditorChanged();
-            renderSkills();
-          }, { items: morphItems, searchPlaceholder: "Choose morph skill…" });
-          if (skill) selectDetail("skill", skill);
-        });
+        if (!_readOnly) {
+          iconBtn.addEventListener("click", () => {
+            const otherSelectedIds = new Set(
+              (state.editor.morphSkillIds || [])
+                .map((id, i) => (i !== morphIndex ? Number(id) : 0))
+                .filter(Boolean)
+            );
+            // Morph pool: all Profession-type skills for the elite spec that aren't "Locked"/"Evolve"
+            const allMorphPool = catalog.skills.filter(
+              (s) => s.specialization === eliteSpecId &&
+                (s.type || "").toLowerCase() === "profession" &&
+                s.name.toLowerCase() !== "locked" &&
+                s.name.toLowerCase() !== "evolve"
+            );
+            const morphItems = [
+              { value: "", label: "— None —" },
+              ...allMorphPool
+                .filter((s) => !otherSelectedIds.has(s.id))
+                .map((s) => ({ value: String(s.id), label: s.name, icon: s.icon })),
+            ];
+            _openSlotPicker(iconBtn, String(sourceId || ""), (newVal) => {
+              if (!state.editor.morphSkillIds) state.editor.morphSkillIds = [0, 0, 0];
+              state.editor.morphSkillIds[morphIndex] = Number(newVal) || 0;
+              _markEditorChanged();
+              renderSkills();
+            }, { items: morphItems, searchPlaceholder: "Choose morph skill…" });
+            if (skill) selectDetail("skill", skill);
+          });
+        }
       } else if (!isKit && !isStatic && isToolbelt) {
         // Non-kit toolbelt slot (elixir, gadget, etc.): not interactive, just show skill detail.
-        if (skill) iconBtn.addEventListener("click", () => selectDetail("skill", skill));
+        if (!_readOnly && skill) iconBtn.addEventListener("click", () => selectDetail("skill", skill));
       } else if (isKit && !isStatic && isToolbelt) {
         // Kit toolbelt slot: clicking shows skill detail. Weapon skill toggling is done via the
         // badge on the utility skill slot itself (see makeSkillSlot).
-        if (skill) iconBtn.addEventListener("click", () => selectDetail("skill", skill));
+        if (!_readOnly && skill) iconBtn.addEventListener("click", () => selectDetail("skill", skill));
       } else {
         iconBtn.addEventListener("click", () => {
           if (isAllianceTactics) {
             state.editor.allianceTacticsForm = (Number(state.editor.allianceTacticsForm) || 0) === 0 ? 1 : 0;
             syncRevenantSkillsFromLegend(catalog);
-            _markEditorChanged();
+            if (!_readOnly) _markEditorChanged();
             renderSkills();
-            if (skill) selectDetail("skill", skill);
+            if (!_readOnly && skill) selectDetail("skill", skill);
             return;
           }
           if (isStatic && ((skill?.bundleSkills?.length ?? 0) > 0 || isBeastmodeToggle || isUnleashToggle || isGunsaberToggle || isDragonTriggerToggle)) {
@@ -1464,7 +1478,7 @@ export function renderSkills() {
               state.editor.activeKit = resolvedKit === skill.id ? 0 : skill.id;
             }
             renderSkills();
-            if (skill) selectDetail("skill", skill);
+            if (!_readOnly && skill) selectDetail("skill", skill);
             return;
           } else if (isStatic && !isToolbelt) {
             const attunementNameMatch = /^(\w+)\s+Attunement\b/i.exec(skill?.name || "");
@@ -1482,8 +1496,10 @@ export function renderSkills() {
               renderSkills();
             }
           }
-          const detailTarget = flipSkill || skill;
-          if (detailTarget) selectDetail("skill", detailTarget);
+          if (!_readOnly) {
+            const detailTarget = flipSkill || skill;
+            if (detailTarget) selectDetail("skill", detailTarget);
+          }
         });
       }
 
@@ -1517,7 +1533,7 @@ export function renderSkills() {
       if (activePet?.icon) {
         petBtn.innerHTML = `<img src="${escapeHtml(activePet.icon)}" alt="${escapeHtml(activePet.name || "")}" />`;
       }
-      petBtn.addEventListener("click", () => openPetPicker(petBtn, activeSlotKey, catalog));
+      if (!_readOnly) petBtn.addEventListener("click", () => openPetPicker(petBtn, activeSlotKey, catalog));
 
       const petLabel = document.createElement("span");
       petLabel.className = "pet-slot-btn__label";
@@ -1578,7 +1594,7 @@ export function renderSkills() {
         btn.append(slotLabel);
         btn.addEventListener("click", () => {
           if (isActive || !legendId) {
-            openLegendPicker(btn, slotIdx, catalog);
+            if (!_readOnly) openLegendPicker(btn, slotIdx, catalog);
           } else {
             const legendTarget = isUnderwater ? "selectedUnderwaterLegends" : "selectedLegends";
             if (!state.editor[legendTarget]) state.editor[legendTarget] = ["", ""];
@@ -1586,14 +1602,16 @@ export function renderSkills() {
             // Reset Alliance form when switching to a non-Alliance legend
             if (legendId !== "Legend7") state.editor.allianceTacticsForm = 0;
             syncRevenantSkillsFromLegend(catalog);
-            _markEditorChanged();
+            if (!_readOnly) _markEditorChanged();
             renderSkills();
           }
         });
-        btn.addEventListener("contextmenu", (e) => {
-          e.preventDefault();
-          openLegendPicker(btn, slotIdx, catalog);
-        });
+        if (!_readOnly) {
+          btn.addEventListener("contextmenu", (e) => {
+            e.preventDefault();
+            openLegendPicker(btn, slotIdx, catalog);
+          });
+        }
         legendStack.append(btn);
       }
 
@@ -1617,6 +1635,7 @@ export function renderSkills() {
   swapBtn.addEventListener("click", () => {
     state.editor.activeWeaponSet = activeWeaponSet === 1 ? 2 : 1;
     renderSkills();
+    if (!_readOnly && _markEditorChanged) _markEditorChanged();
   });
 
   const weaponRow = document.createElement("div");
@@ -1689,13 +1708,15 @@ export function openLegendPicker(anchorEl, slotIdx, catalog) {
       return [{ value: l.id, label: swapSkill?.name || l.id, icon: swapSkill?.icon || "", disabled: blocked }];
     }).filter((item) => item.value !== otherLegendId),
   ];
-  _openSlotPicker(anchorEl, legendSlots[slotIdx] || "", (newVal) => {
-    if (!state.editor[legendKey]) state.editor[legendKey] = ["", ""];
-    state.editor[legendKey][slotIdx] = newVal || "";
-    syncRevenantSkillsFromLegend(catalog);
-    _markEditorChanged();
-    renderSkills();
-  }, { items, searchPlaceholder: "Search legends…" });
+  if (!_readOnly) {
+    _openSlotPicker(anchorEl, legendSlots[slotIdx] || "", (newVal) => {
+      if (!state.editor[legendKey]) state.editor[legendKey] = ["", ""];
+      state.editor[legendKey][slotIdx] = newVal || "";
+      syncRevenantSkillsFromLegend(catalog);
+      _markEditorChanged();
+      renderSkills();
+    }, { items, searchPlaceholder: "Search legends…" });
+  }
 }
 
 export function openPetPicker(anchorEl, petKey, catalog) {
@@ -1711,12 +1732,14 @@ export function openPetPicker(anchorEl, petKey, catalog) {
     { value: "", label: "— None —" },
     ...filteredPets.map((p) => ({ value: String(p.id), label: p.name, icon: p.icon })),
   ];
-  _openSlotPicker(anchorEl, currentPetId ? String(currentPetId) : "", (newVal) => {
-    if (!state.editor.selectedPets) state.editor.selectedPets = { terrestrial1: 0, terrestrial2: 0, aquatic1: 0, aquatic2: 0 };
-    state.editor.selectedPets[petKey] = Number(newVal) || 0;
-    _markEditorChanged();
-    renderSkills();
-  }, { items, searchPlaceholder: "Search pets…", className: "slot-picker--pet" });
+  if (!_readOnly) {
+    _openSlotPicker(anchorEl, currentPetId ? String(currentPetId) : "", (newVal) => {
+      if (!state.editor.selectedPets) state.editor.selectedPets = { terrestrial1: 0, terrestrial2: 0, aquatic1: 0, aquatic2: 0 };
+      state.editor.selectedPets[petKey] = Number(newVal) || 0;
+      _markEditorChanged();
+      renderSkills();
+    }, { items, searchPlaceholder: "Search pets…", className: "slot-picker--pet" });
+  }
 }
 
 export function syncRevenantSkillsFromLegend(catalog) {
