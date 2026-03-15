@@ -88,8 +88,20 @@ function populateStateFromBuild(build) {
     skills:             allSkills,
     skillById:          new Map(allSkills.map(s => [s.id, s])),
     weaponSkillById:    new Map(allSkills.filter(s => s.slot?.startsWith("Weapon_")).map(s => [s.id, s])),
-    specializations:    build.specializations || [],
-    specializationById: new Map((build.specializations || []).map(s => [s.id, s])),
+    // Enrich spec objects with majorTraits (flat ID array) derived from majorTraitsByTier.
+    // The renderer's getMajorTraitsByTier reads spec.majorTraits and looks up each via traitById.
+    specializations:    (build.specializations || []).map(s => ({
+      ...s,
+      majorTraits: s.majorTraits || (s.majorTraitsByTier
+        ? Object.values(s.majorTraitsByTier).flat().map(t => typeof t === "object" ? t.id : t)
+        : []),
+    })),
+    specializationById: new Map((build.specializations || []).map(s => [s.id, {
+      ...s,
+      majorTraits: s.majorTraits || (s.majorTraitsByTier
+        ? Object.values(s.majorTraitsByTier).flat().map(t => typeof t === "object" ? t.id : t)
+        : []),
+    }])),
     traits:             allTraits,
     traitById:          new Map(allTraits.map(t => [t.id, t])),
     legends:            (build.legendDisplay || []).map(l => ({
