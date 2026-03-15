@@ -723,6 +723,44 @@ describe("normalizeBuild — underwaterSkills", () => {
 // BuildStore — gameMode normalization
 // ---------------------------------------------------------------------------
 
+describe("BuildStore — publish metadata", () => {
+  let store, dir;
+  beforeEach(async () => { ({ store, dir } = await makeTempStore()); });
+  afterEach(async () => { if (dir) await cleanupDir(dir); });
+
+  test("stores publishedSlug, publishedFileId, publishedKey on a build", async () => {
+    const saved = await store.upsertBuild(makeBuild({
+      publishedSlug: "power-reaper",
+      publishedFileId: "a7f3b2c1",
+      publishedKey: "xK9mP2qR4sT6uV8wAb3cDe",
+    }));
+    expect(saved.publishedSlug).toBe("power-reaper");
+    expect(saved.publishedFileId).toBe("a7f3b2c1");
+    expect(saved.publishedKey).toBe("xK9mP2qR4sT6uV8wAb3cDe");
+  });
+
+  test("publish metadata defaults to empty strings", async () => {
+    const saved = await store.upsertBuild(makeBuild());
+    expect(saved.publishedSlug).toBe("");
+    expect(saved.publishedFileId).toBe("");
+    expect(saved.publishedKey).toBe("");
+  });
+
+  test("publish metadata persists across list/read cycles", async () => {
+    await store.upsertBuild(makeBuild({
+      id: "pub-test",
+      publishedSlug: "reaper",
+      publishedFileId: "abc12345",
+      publishedKey: "somekey",
+    }));
+    const builds = await store.listBuilds();
+    const found = builds.find((b) => b.id === "pub-test");
+    expect(found.publishedSlug).toBe("reaper");
+    expect(found.publishedFileId).toBe("abc12345");
+    expect(found.publishedKey).toBe("somekey");
+  });
+});
+
 describe("BuildStore — gameMode normalization", () => {
   let dir;
 

@@ -111,6 +111,9 @@ function normalizeBuild(input, fallbackCreatedAt) {
     // Keep legacy fields for migration compatibility.
     buildUrl: asString(input.buildUrl, 500),
     gameMode: asString(input.gameMode, 10) || "pve",
+    publishedSlug: asString(input.publishedSlug, 200),
+    publishedFileId: asString(input.publishedFileId, 20),
+    publishedKey: asString(input.publishedKey, 100),
   };
 }
 
