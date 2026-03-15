@@ -703,15 +703,18 @@ export function showPublishResult(url) {
   urlInput.addEventListener("click", () => urlInput.select());
 
   // Dev-only: open local SPA preview (localhost:3000) with the same build hash.
-  // The .enc file is saved to public/builds/ during publish, so the Vite dev server serves it directly.
+  // Hidden until the GitHub Pages deploy is confirmed live.
+  let localBtn = null;
   if (location.port || location.hostname === "localhost") {
     try {
       const parsed = new URL(url);
-      const localUrl = `http://localhost:3000/${parsed.hash}`;
-      const localBtn = document.createElement("button");
+      const remoteBase = `${parsed.origin}${parsed.pathname.replace(/[^/]*$/, "")}`;
+      const localUrl = `http://localhost:3000/?remoteBase=${encodeURIComponent(remoteBase)}${parsed.hash}`;
+      localBtn = document.createElement("button");
       localBtn.className = "btn btn-secondary";
       localBtn.textContent = "Open Local Preview";
       localBtn.style.marginTop = "6px";
+      localBtn.style.display = "none";
       localBtn.addEventListener("click", () => {
         window.desktopApi.openPreviewWindow(localUrl);
       });
@@ -721,11 +724,11 @@ export function showPublishResult(url) {
 
   container.append(result);
 
-  // Poll until the page is actually reachable
-  pollPageLive(url, liveStatus);
+  // Poll until the page is actually reachable, then show the local preview button
+  pollPageLive(url, liveStatus, localBtn);
 }
 
-async function pollPageLive(url, statusEl) {
+async function pollPageLive(url, statusEl, localBtn = null) {
   let lastStatus = "deploying";
   for (let i = 0; i < 40; i++) {
     try {
@@ -733,6 +736,7 @@ async function pollPageLive(url, statusEl) {
       if (poll.ready) {
         completeAllPublishSteps();
         statusEl.innerHTML = `<span style="color:var(--accent)">&#10003; Page is live!</span>`;
+        if (localBtn) localBtn.style.display = "";
         return;
       }
       lastStatus = poll.status || "deploying";

@@ -327,16 +327,6 @@ app.whenReady().then(async () => {
     }
     const encFile = buildEncryptedBuildFile(enrichedBuild, fileId, encKey);
 
-    // Dev: save .enc locally so the Vite dev server on :3000 can serve it immediately.
-    // Vite serves publicDir (public/) at root, so public/builds/foo.enc → /builds/foo.enc.
-    if (IS_DEV_PROFILE) {
-      const localBuildsDir = path.join(__dirname, "../../public/builds");
-      try {
-        fs.mkdirSync(localBuildsDir, { recursive: true });
-        fs.writeFileSync(path.join(localBuildsDir, `${fileId}.enc`), encFile.content, "utf8");
-      } catch { /* ignore */ }
-    }
-
     // Merge SPA bundle + encrypted build into a single commit
     const combinedBundle = { ...spaBundle, [encFile.filePath]: encFile.content };
 
