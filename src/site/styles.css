@@ -51,7 +51,7 @@
 .site-tab:hover { color: var(--text); }
 .site-tab--active { color: var(--accent); border-bottom-color: var(--accent); }
 .site-tab-content { display: none; }
-.site-tab-content--active { display: block; }
+.site-tab-content--active { display: flex; flex-direction: column; gap: 12px; }
 
 /* Section headings used in SPA */
 .site-section-heading { color: var(--accent-2); font-family: 'Exo 2', sans-serif; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; margin: 20px 0 8px; }

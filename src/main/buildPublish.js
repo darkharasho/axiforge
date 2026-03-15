@@ -388,11 +388,29 @@ function serializeForPublish(build, catalog, upgradeCatalog) {
     ? (attunementSkills[activeAttunement]?.professionMechanics || filteredMechanics)
     : filteredMechanics;
 
+  // Resolve heal/utility/elite skill IDs to full skill objects for the SPA catalog
+  const skillById = new Map(skillsArray.map(s => [s.id, s]));
+  function resolveSkillSelection(sel) {
+    if (!sel) return [];
+    const resolved = [];
+    if (sel.healId) { const s = skillById.get(sel.healId); if (s) resolved.push(s); }
+    if (Array.isArray(sel.utilityIds)) {
+      for (const id of sel.utilityIds) { const s = skillById.get(id); if (s) resolved.push(s); }
+    }
+    if (sel.eliteId) { const s = skillById.get(sel.eliteId); if (s) resolved.push(s); }
+    return resolved;
+  }
+  const resolvedSlottedSkills = [
+    ...resolveSkillSelection(build.skills),
+    ...resolveSkillSelection(build.underwaterSkills),
+  ];
+
   // Structured land and water skill datasets
   const result_landSkills = {
     weaponSkills: defaultWeaponSkills,
     professionMechanics: defaultMechanics,
     skills: build.skills,
+    resolvedSkills: resolveSkillSelection(build.skills),
     attunementSkills: hasAttunements ? attunementSkills : null,
   };
 
@@ -400,6 +418,7 @@ function serializeForPublish(build, catalog, upgradeCatalog) {
     weaponSkills: { aquatic1: weaponSkills.aquatic1, aquatic2: weaponSkills.aquatic2 },
     professionMechanics: filteredMechanics.filter(s => !(s.flags || []).includes("NoUnderwater")),
     skills: build.underwaterSkills || build.skills,
+    resolvedSkills: resolveSkillSelection(build.underwaterSkills || build.skills),
     attunementSkills: null,
   };
 

@@ -24,10 +24,8 @@ function collectAllSkills(build) {
       if (Array.isArray(set)) skills.push(...set);
     }
     if (Array.isArray(source.professionMechanics)) skills.push(...source.professionMechanics);
-    const sk = source.skills || {};
-    if (sk.heal) skills.push(sk.heal);
-    if (Array.isArray(sk.utility)) skills.push(...sk.utility.filter(Boolean));
-    if (sk.elite) skills.push(sk.elite);
+    // resolvedSkills contains heal/utility/elite as full skill objects (resolved from IDs)
+    if (Array.isArray(source.resolvedSkills)) skills.push(...source.resolvedSkills);
     if (source.attunementSkills) {
       for (const att of Object.values(source.attunementSkills)) {
         if (Array.isArray(att.set1)) skills.push(...att.set1);
@@ -51,7 +49,12 @@ function populateStateFromBuild(build) {
   state.editor.profession              = build.profession;
   state.editor.gameMode                = build.gameMode || "pve";
   state.editor.equipment               = build.equipment;
-  state.editor.specializations         = build.specializations;
+  // The renderer reads specializationId but the build store uses id.
+  // Normalize so both fields are present.
+  state.editor.specializations         = (build.specializations || []).map(s => ({
+    ...s,
+    specializationId: s.specializationId || s.id || 0,
+  }));
   // build.skills / build.underwaterSkills are the raw { healId, utilityIds, eliteId }
   // from the editor state (via ...build spread in serializeForPublish).
   // build.landSkills / build.waterSkills are enriched structures — don't use them for state.editor.
