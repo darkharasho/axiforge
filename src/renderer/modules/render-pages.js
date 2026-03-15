@@ -130,10 +130,44 @@ export function renderOnboarding() {
     const card = document.createElement("article");
     card.className = "status-card";
     const heading = document.createElement("h3");
-    heading.textContent = "Waiting For GitHub Pages";
+    heading.innerHTML = `<span class="setup-step__spinner" style="vertical-align:middle;margin-right:8px"></span>Waiting For GitHub Pages`;
     const statusLine = document.createElement("p");
     statusLine.innerHTML = `Current status: <strong>${escapeHtml(formatPagesStatus(state.pagesPoll.status))}</strong>`;
-    card.append(heading, statusLine);
+
+    const steps = document.createElement("div");
+    steps.className = "setup-steps";
+    steps.style.marginTop = "8px";
+
+    const pageSteps = [
+      { key: "queued", label: "Queued for build" },
+      { key: "building", label: "Building site" },
+      { key: "deploying", label: "Deploying to Pages" },
+      { key: "built", label: "Live" },
+    ];
+    const currentStatus = String(state.pagesPoll.status || "queued").toLowerCase();
+    const statusOrder = ["queued", "building", "deploying", "built"];
+    const currentIdx = statusOrder.indexOf(currentStatus);
+
+    for (let i = 0; i < pageSteps.length; i++) {
+      const step = pageSteps[i];
+      const row = document.createElement("div");
+      if (i < currentIdx) {
+        row.className = "setup-step setup-step--done";
+        row.innerHTML = `<span class="setup-step__icon">\u2713</span><span class="setup-step__label">${escapeHtml(step.label)}</span>`;
+      } else if (i === currentIdx && currentStatus !== "built") {
+        row.className = "setup-step setup-step--active";
+        row.innerHTML = `<span class="setup-step__icon"><span class="setup-step__spinner"></span></span><span class="setup-step__label">${escapeHtml(step.label)}</span>`;
+      } else if (currentStatus === "built" && step.key === "built") {
+        row.className = "setup-step setup-step--done";
+        row.innerHTML = `<span class="setup-step__icon">\u2713</span><span class="setup-step__label">${escapeHtml(step.label)}</span>`;
+      } else {
+        row.className = "setup-step setup-step--pending";
+        row.innerHTML = `<span class="setup-step__icon">&#9679;</span><span class="setup-step__label">${escapeHtml(step.label)}</span>`;
+      }
+      steps.append(row);
+    }
+
+    card.append(heading, statusLine, steps);
     if (state.pagesPoll.error) {
       const errLine = document.createElement("p");
       errLine.className = "error-line";
