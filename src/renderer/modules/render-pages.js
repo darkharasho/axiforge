@@ -714,7 +714,7 @@ export function showPublishResult(url) {
       localBtn.textContent = "Open Local Preview";
       localBtn.style.marginTop = "6px";
       localBtn.addEventListener("click", () => {
-        window.open(localUrl, "_blank");
+        window.desktopApi.openPreviewWindow(localUrl);
       });
       result.append(localBtn);
     } catch { /* ignore malformed URL */ }

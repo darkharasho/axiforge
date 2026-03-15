@@ -206,6 +206,20 @@ app.whenReady().then(async () => {
     return true;
   });
 
+  ipcMain.handle("window:open-preview", (_event, url) => {
+    const preview = new BrowserWindow({
+      width: 1600,
+      height: 980,
+      minWidth: 1120,
+      minHeight: 740,
+      backgroundColor: "#050910",
+      icon: path.join(__dirname, "../../public/img/build_logo.png"),
+      title: "AxiForge — Local Preview",
+    });
+    preview.loadURL(url);
+    return true;
+  });
+
   ipcMain.handle("clipboard:write-text", (_event, text) => {
     clipboard.writeText(String(text || ""));
     return true;
