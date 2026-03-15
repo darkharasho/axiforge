@@ -14,7 +14,10 @@
  *     build.equipment.food         — food ID
  *     build.equipment.utility      — utility ID
  *     build.equipment.enrichment   — enrichment ID
+ *     build.equipmentIcons         — { head: "URL", shoulders: "URL", ... } icon URLs per slot
  *     build.equipmentDisplay       — resolved upgrade objects (runes, sigils, infusions, food, utility, relic, enrichment)
+ *     build.computedStats          — { Power: 2786, Precision: 2063, ..., CritChance: "60.6%", ... }
+ *     build.statModifiers          — array of modifier strings (optional)
  *     build.professionIcon         — SVG string (optional)
  *     build.notes                  — build notes text (optional)
  */
@@ -53,6 +56,9 @@ export function renderEquipment(container, build) {
   const displayRunes = display.runes || {};
   const displaySigils = display.sigils || {};
   const displayInfusions = display.infusions || {};
+  const icons = build.equipmentIcons || {};
+  const computedStats = build.computedStats || {};
+  const statModifiers = build.statModifiers || [];
 
   // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -100,13 +106,14 @@ export function renderEquipment(container, build) {
   }
 
   /**
-   * Make a read-only armor slot (compact, vertical list style).
+   * Make a read-only armor slot (compact, vertical list style) with icon image.
    *
    * @param {string} key - slot key (e.g. "head")
    * @param {string} label - slot display label (e.g. "HEAD")
    */
   function makeArmorSlot(key, label) {
     const stat = slots[key] || "";
+    const iconUrl = icons[key] || "";
     const runeObj = displayRunes[key] || null;
     const runeName = runeObj?.name || "";
     const infusionValue = displayInfusions[key];
@@ -118,7 +125,14 @@ export function renderEquipment(container, build) {
     wrapper.className = "equip-slot equip-slot--compact";
 
     const iconDiv = document.createElement("div");
-    iconDiv.className = "equip-slot__icon" + (stat ? " equip-slot__icon--filled" : "");
+    iconDiv.className = "equip-slot__icon" + (iconUrl || stat ? " equip-slot__icon--filled" : "");
+    if (iconUrl) {
+      const img = document.createElement("img");
+      img.src = iconUrl;
+      img.alt = "";
+      img.loading = "lazy";
+      iconDiv.append(img);
+    }
 
     const info = document.createElement("div");
     info.className = "equip-slot__info";
@@ -166,7 +180,7 @@ export function renderEquipment(container, build) {
   }
 
   /**
-   * Make a read-only weapon slot.
+   * Make a read-only weapon slot with icon image.
    *
    * @param {string} key - slot key (e.g. "mainhand1")
    * @param {string} slotLabel - display label for the slot (e.g. "Main Hand")
@@ -174,6 +188,7 @@ export function renderEquipment(container, build) {
   function makeWeaponSlot(key, slotLabel) {
     const weaponName = weapons[key] || "";
     const stat = slots[key] || "";
+    const iconUrl = icons[key] || "";
     const sigilDisplayArr = Array.isArray(displaySigils[key])
       ? displaySigils[key]
       : displaySigils[key]
@@ -189,7 +204,14 @@ export function renderEquipment(container, build) {
 
     const iconDiv = document.createElement("div");
     iconDiv.className =
-      "equip-slot__icon equip-slot__icon--weapon" + (weaponName ? " equip-slot__icon--filled" : "");
+      "equip-slot__icon equip-slot__icon--weapon" + ((iconUrl || weaponName) ? " equip-slot__icon--filled" : "");
+    if (iconUrl) {
+      const img = document.createElement("img");
+      img.src = iconUrl;
+      img.alt = "";
+      img.loading = "lazy";
+      iconDiv.append(img);
+    }
 
     const nameSpan = document.createElement("span");
     nameSpan.className = "equip-weapon-name" + (weaponName ? "" : " equip-weapon-name--empty");
@@ -233,20 +255,28 @@ export function renderEquipment(container, build) {
   }
 
   /**
-   * Make a read-only consumable slot.
+   * Make a read-only consumable slot with icon image.
    *
    * @param {string} label - Slot label (e.g. "Food")
-   * @param {object|null} displayObj - Resolved display object with .name, or null.
+   * @param {object|null} displayObj - Resolved display object with .name and .icon, or null.
    */
   function makeConsumableSlot(label, displayObj) {
     const value = displayObj?.name || "";
+    const iconUrl = displayObj?.icon || "";
 
     const wrapper = document.createElement("div");
     wrapper.className = "equip-slot equip-slot--consumable";
 
     const iconDiv = document.createElement("div");
     iconDiv.className =
-      "equip-slot__icon equip-slot__icon--consumable" + (value ? " equip-slot__icon--filled" : "");
+      "equip-slot__icon equip-slot__icon--consumable" + ((iconUrl || value) ? " equip-slot__icon--filled" : "");
+    if (iconUrl) {
+      const img = document.createElement("img");
+      img.src = iconUrl;
+      img.alt = "";
+      img.loading = "lazy";
+      iconDiv.append(img);
+    }
 
     const info = document.createElement("div");
     info.className = "equip-slot__info";
@@ -270,19 +300,27 @@ export function renderEquipment(container, build) {
   }
 
   /**
-   * Make a compact read-only trinket slot.
+   * Make a compact read-only trinket slot with icon image.
    *
    * @param {string} key - slot key (e.g. "back")
    * @param {string} label - display label
    */
   function makeTrinketSlot(key, label) {
     const stat = slots[key] || "";
+    const iconUrl = icons[key] || "";
 
     const wrapper = document.createElement("div");
     wrapper.className = "equip-slot equip-slot--compact";
 
     const iconDiv = document.createElement("div");
-    iconDiv.className = "equip-slot__icon" + (stat ? " equip-slot__icon--filled" : "");
+    iconDiv.className = "equip-slot__icon" + ((iconUrl || stat) ? " equip-slot__icon--filled" : "");
+    if (iconUrl) {
+      const img = document.createElement("img");
+      img.src = iconUrl;
+      img.alt = "";
+      img.loading = "lazy";
+      iconDiv.append(img);
+    }
 
     const info = document.createElement("div");
     info.className = "equip-slot__info";
@@ -313,6 +351,58 @@ export function renderEquipment(container, build) {
 
     wrapper.append(iconDiv, info);
     return wrapper;
+  }
+
+  /**
+   * Make a single stat cell (label + value pair in a flex row).
+   *
+   * @param {string} label - Stat name
+   * @param {number|string} value - Stat value
+   * @param {boolean} derived - Whether to use derived styling
+   */
+  function makeStatCell(label, value, derived = false) {
+    const cell = document.createElement("div");
+    cell.className = "equip-stat-cell" + (derived ? " equip-stat-cell--derived" : "");
+
+    const labelEl = document.createElement("span");
+    labelEl.className = "equip-stat-label";
+    labelEl.textContent = label;
+
+    const valueEl = document.createElement("span");
+    valueEl.className = "equip-stat-value" + (derived ? " equip-stat-value--derived" : "");
+    // Format numeric values with commas; leave strings (e.g. "60.6%") as-is
+    if (typeof value === "number") {
+      valueEl.textContent = value.toLocaleString();
+    } else {
+      valueEl.textContent = value ?? "—";
+    }
+
+    cell.append(labelEl, valueEl);
+    return cell;
+  }
+
+  /**
+   * Make an attributes row with one or two stat cells.
+   *
+   * @param {string} primaryLabel
+   * @param {number|string} primaryValue
+   * @param {string} [derivedLabel]
+   * @param {number|string} [derivedValue]
+   */
+  function makeStatRow(primaryLabel, primaryValue, derivedLabel, derivedValue) {
+    const row = document.createElement("div");
+    row.className = "equip-stat-row";
+
+    // Only render if primary value exists
+    if (primaryValue === undefined || primaryValue === null) return row;
+
+    row.append(makeStatCell(primaryLabel, primaryValue, false));
+
+    if (derivedLabel !== undefined && (derivedValue !== undefined && derivedValue !== null)) {
+      row.append(makeStatCell(derivedLabel, derivedValue, true));
+    }
+
+    return row;
   }
 
   // ── LEFT COLUMN ────────────────────────────────────────────────────────────
@@ -379,6 +469,73 @@ export function renderEquipment(container, build) {
   const rightCol = document.createElement("div");
   rightCol.className = "equip-col equip-col--right";
 
+  // Attributes section (Task 8) — above trinkets
+  if (Object.keys(computedStats).length > 0) {
+    const attrSection = makeSection("Attributes");
+    const statsContainer = document.createElement("div");
+    statsContainer.className = "equip-stats";
+
+    // Stat rows layout:
+    //   Power (standalone)
+    //   Precision | Crit Chance
+    //   Toughness (standalone)
+    //   Vitality | Health
+    //   Ferocity | Crit Damage
+    //   Condition Damage (standalone)
+    //   Expertise | Condition Duration
+    //   Concentration | Boon Duration
+    //   Healing Power (standalone)
+
+    const statRowDefs = [
+      { primary: "Power" },
+      { primary: "Precision",         derived: "Crit Chance",       derivedKey: "CritChance" },
+      { primary: "Toughness" },
+      { primary: "Vitality",          derived: "Health",            derivedKey: "Health" },
+      { primary: "Ferocity",          derived: "Crit Damage",       derivedKey: "CritDamage" },
+      { primary: "Condition Damage",  derivedKey: null },
+      { primary: "Expertise",         derived: "Condition Duration", derivedKey: "ConditionDuration" },
+      { primary: "Concentration",     derived: "Boon Duration",      derivedKey: "BoonDuration" },
+      { primary: "Healing Power" },
+    ];
+
+    for (const def of statRowDefs) {
+      const primaryVal = computedStats[def.primary];
+      if (primaryVal === undefined || primaryVal === null) continue;
+
+      let derivedVal;
+      if (def.derivedKey) {
+        derivedVal = computedStats[def.derivedKey];
+      }
+
+      const row = makeStatRow(
+        def.primary,
+        primaryVal,
+        def.derived,
+        derivedVal,
+      );
+      if (row.childElementCount > 0) {
+        statsContainer.append(row);
+      }
+    }
+
+    attrSection.append(statsContainer);
+
+    // Stat modifiers (colored text lines)
+    if (statModifiers.length > 0) {
+      const modifiersDiv = document.createElement("div");
+      modifiersDiv.className = "equip-modifiers";
+      for (const mod of statModifiers) {
+        const modRow = document.createElement("div");
+        modRow.className = "equip-modifier-row";
+        modRow.textContent = mod;
+        modifiersDiv.append(modRow);
+      }
+      attrSection.append(modifiersDiv);
+    }
+
+    rightCol.append(attrSection);
+  }
+
   // Trinkets section
   const trinketSection = makeSection("Trinkets");
 
@@ -406,75 +563,6 @@ export function renderEquipment(container, build) {
 
   trinketSection.append(trinketRow1, trinketRow2);
   rightCol.append(trinketSection);
-
-  // Rune Summary section — resolved names from equipmentDisplay
-  const allResolvedRunes = Object.values(displayRunes).filter(Boolean);
-  if (allResolvedRunes.length > 0) {
-    const runeSummarySection = makeSection("Runes");
-    const runeCounts = new Map();
-    for (const runeObj of allResolvedRunes) {
-      const name = runeObj.name || "";
-      if (!name) continue;
-      runeCounts.set(name, (runeCounts.get(name) || 0) + 1);
-    }
-    for (const [runeName, count] of runeCounts) {
-      const runeRow = document.createElement("div");
-      runeRow.className = "equip-slot equip-slot--compact";
-      const runeUpgradeSlots = document.createElement("div");
-      runeUpgradeSlots.className = "equip-upgrade-slots";
-      runeUpgradeSlots.append(makeUpgradeBtn("rune", runeName));
-      const runeInfo = document.createElement("div");
-      runeInfo.className = "equip-slot__info";
-      const runeLabel = document.createElement("div");
-      runeLabel.className = "equip-slot__label";
-      runeLabel.textContent = `${count}×`;
-      const runeValue = document.createElement("div");
-      runeValue.className = "equip-slot__value";
-      runeValue.textContent = runeName;
-      runeInfo.append(runeLabel, runeValue);
-      runeRow.append(runeUpgradeSlots, runeInfo);
-      runeSummarySection.append(runeRow);
-    }
-    rightCol.append(runeSummarySection);
-  }
-
-  // Infusion Summary section — resolved names from equipmentDisplay
-  const allResolvedInfusions = [];
-  for (const v of Object.values(displayInfusions)) {
-    if (Array.isArray(v)) {
-      for (const item of v) {
-        if (item?.name) allResolvedInfusions.push(item.name);
-      }
-    } else if (v?.name) {
-      allResolvedInfusions.push(v.name);
-    }
-  }
-  if (allResolvedInfusions.length > 0) {
-    const infusionSummarySection = makeSection("Infusions");
-    const infusionCounts = new Map();
-    for (const infName of allResolvedInfusions) {
-      infusionCounts.set(infName, (infusionCounts.get(infName) || 0) + 1);
-    }
-    for (const [infName, count] of infusionCounts) {
-      const infRow = document.createElement("div");
-      infRow.className = "equip-slot equip-slot--compact";
-      const infUpgradeSlots = document.createElement("div");
-      infUpgradeSlots.className = "equip-upgrade-slots";
-      infUpgradeSlots.append(makeUpgradeBtn("infusion", infName));
-      const infInfo = document.createElement("div");
-      infInfo.className = "equip-slot__info";
-      const infLabel = document.createElement("div");
-      infLabel.className = "equip-slot__label";
-      infLabel.textContent = `${count}×`;
-      const infValue = document.createElement("div");
-      infValue.className = "equip-slot__value";
-      infValue.textContent = infName;
-      infInfo.append(infLabel, infValue);
-      infRow.append(infUpgradeSlots, infInfo);
-      infusionSummarySection.append(infRow);
-    }
-    rightCol.append(infusionSummarySection);
-  }
 
   // ── Assemble layout ────────────────────────────────────────────────────────
 
