@@ -1,6 +1,9 @@
 import "./styles.css";
 import { renderBuildPage } from "./render-build.js";
-import { initDetailTooltip } from "./render-detail.js";
+import { setReadOnly as setSkillsReadOnly } from "../../renderer/modules/skills.js";
+import { setReadOnly as setEquipmentReadOnly } from "../../renderer/modules/equipment.js";
+import { setReadOnly as setSpecsReadOnly } from "../../renderer/modules/specializations.js";
+import { setReadOnly as setDetailReadOnly } from "../../renderer/modules/detail-panel.js";
 
 const app = document.getElementById("app");
 
@@ -73,6 +76,10 @@ function base64urlDecode(str) {
 
 // ── Build renderer ────────────────────────────────────────────────────────
 function renderBuild(build) {
+  setSkillsReadOnly(true);
+  setEquipmentReadOnly(true);
+  setSpecsReadOnly(true);
+  setDetailReadOnly(true);
   renderBuildPage(app, build);
 }
 
@@ -82,4 +89,3 @@ export function escapeHtml(s) {
 
 // ── Start ────────────────────────────────────────────────────────────────
 init();
-initDetailTooltip();
