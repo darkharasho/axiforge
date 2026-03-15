@@ -706,7 +706,9 @@ export function showPublishResult(url) {
   if (location.port || location.hostname === "localhost") {
     try {
       const parsed = new URL(url);
-      const localUrl = `http://localhost:3000/${parsed.hash}`;
+      // Pass the remote origin so the local SPA can fetch .enc files from the deployed site
+      const remoteBase = `${parsed.origin}${parsed.pathname.replace(/[^/]*$/, "")}`;
+      const localUrl = `http://localhost:3000/?remoteBase=${encodeURIComponent(remoteBase)}${parsed.hash}`;
       const localBtn = document.createElement("button");
       localBtn.className = "btn btn-secondary";
       localBtn.textContent = "Open Local Preview";

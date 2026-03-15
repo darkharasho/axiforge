@@ -45,7 +45,13 @@ function showError(msg) {
 // ── Fetch & Decrypt ──────────────────────────────────────────────────────
 async function loadBuild(fileId, base64urlKey) {
   try {
-    const res = await fetch("builds/" + encodeURIComponent(fileId) + ".enc", { cache: "no-store" });
+    // In local dev, ?remoteBase= tells us where to fetch the .enc file from the deployed site
+    const params = new URLSearchParams(location.search);
+    const remoteBase = params.get("remoteBase") || "";
+    const buildUrl = remoteBase
+      ? `${remoteBase}builds/${encodeURIComponent(fileId)}.enc`
+      : `builds/${encodeURIComponent(fileId)}.enc`;
+    const res = await fetch(buildUrl, { cache: "no-store" });
     if (!res.ok) throw new Error("Build not found (HTTP " + res.status + ")");
     const base64Data = await res.text();
     const build = await decrypt(base64Data, base64urlKey);
