@@ -159,7 +159,7 @@ h1,h2,h3{font-family:'Cinzel','Exo 2',serif}
 .tab-content{display:none}
 .tab-content.active{display:block}
 
-/* Spec row */
+/* Spec row (legacy) */
 .spec-row{
   display:flex;
   gap:12px;
@@ -173,36 +173,119 @@ h1,h2,h3{font-family:'Cinzel','Exo 2',serif}
 .spec-row .spec-name{font-weight:600;font-size:1rem}
 .spec-row .spec-traits{color:var(--muted);font-size:.85rem}
 
-/* Trait grid */
-.trait-grid{
-  display:grid;
-  grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
-  gap:8px;
-  margin-top:8px;
+/* Spec card (desktop-style) */
+.spec-card{
+  position:relative;
+  border:1px solid rgba(80,132,163,0.48);
+  border-radius:4px;
+  background-color:#070f1d;
+  background-position:center;
+  background-size:cover;
+  background-repeat:no-repeat;
+  min-height:120px;
+  overflow:hidden;
+  margin-bottom:10px;
 }
+.spec-card::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:linear-gradient(90deg,rgba(7,15,29,0.85) 0%,rgba(7,15,29,0.5) 40%,rgba(7,15,29,0.3) 100%);
+  pointer-events:none;
+}
+.spec-card>*{position:relative;z-index:1}
+.spec-card--elite{
+  border-color:rgba(210,165,50,0.7);
+  box-shadow:0 0 20px rgba(190,145,30,0.2) inset;
+}
+.spec-card-body{
+  display:flex;
+  gap:16px;
+  align-items:center;
+  padding:14px 18px;
+}
+.spec-emblem{
+  width:72px;height:72px;
+  border-radius:50%;
+  border:2px solid rgba(255,255,255,0.15);
+  object-fit:cover;
+  flex-shrink:0;
+  filter:drop-shadow(0 0 8px rgba(72,168,255,0.3));
+}
+.spec-card--elite .spec-emblem{
+  border-color:rgba(210,165,50,0.5);
+  filter:drop-shadow(0 0 8px rgba(210,165,50,0.35));
+}
+.spec-card .spec-name{font-weight:700;font-size:1.05rem}
+.spec-card .elite-badge{
+  color:rgba(210,165,50,0.9);
+  font-size:.65rem;
+  font-weight:700;
+  letter-spacing:.08em;
+  margin-left:6px;
+  text-shadow:0 0 6px rgba(210,165,50,0.4);
+}
+
+/* Trait grid (desktop-style) */
+.trait-grid{
+  display:flex;
+  gap:6px;
+  align-items:center;
+  margin-top:8px;
+  flex-wrap:wrap;
+}
+.trait-tiers{display:flex;flex-direction:column;gap:6px;flex:1}
+.tier-row{display:flex;gap:4px;align-items:center}
 
 /* Skill bar */
 .skill-bar{
   display:flex;
   flex-wrap:wrap;
-  gap:8px;
+  gap:6px;
   margin-top:12px;
+  align-items:center;
 }
 .skill-bar .skill-slot{
   display:flex;
   align-items:center;
-  gap:8px;
+  gap:0;
+  background:none;
+  border:none;
+  padding:0;
+  font-size:.85rem;
+  position:relative;
+  cursor:pointer;
+}
+.skill-bar .skill-slot span{
+  display:none;
+}
+.skill-bar .skill-slot:hover span{
+  display:block;
+  position:absolute;
+  bottom:100%;
+  left:50%;
+  transform:translateX(-50%);
   background:var(--panel);
   border:1px solid var(--line);
-  border-radius:8px;
-  padding:8px 12px;
-  font-size:.85rem;
+  border-radius:4px;
+  padding:4px 8px;
+  white-space:nowrap;
+  font-size:.75rem;
+  color:var(--text);
+  pointer-events:none;
+  z-index:10;
 }
 .skill-bar .skill-slot img{
-  width:32px;height:32px;
+  width:40px;height:40px;
   border-radius:6px;
   border:1px solid var(--line);
   background:#0a1020;
+}
+.skill-bar .skill-slot[data-slot="heal"] img{
+  border-color:rgba(79,216,151,0.6);
+}
+.skill-bar .skill-slot[data-slot="elite"] img{
+  border-color:rgba(255,80,80,0.6);
 }
 
 /* Equipment panel */
@@ -226,18 +309,11 @@ h1,h2,h3{font-family:'Cinzel','Exo 2',serif}
 .spec-info{display:flex;flex-direction:column;gap:4px;flex:1}
 .elite-badge{color:var(--accent);font-size:.65rem;font-weight:700;letter-spacing:.08em;margin-left:6px}
 
-/* Trait grid */
-.trait-grid{
-  display:flex;
-  gap:6px;
-  align-items:center;
-  margin-top:6px;
-  flex-wrap:wrap;
-}
+/* Trait icons */
 .tier-group{display:flex;gap:4px;align-items:center}
-.tier-sep{width:1px;height:24px;background:var(--line);margin:0 4px}
+.tier-sep{width:1px;height:28px;background:var(--line);margin:0 6px}
 .trait-icon{
-  width:24px;height:24px;
+  width:32px;height:32px;
   border-radius:50%;
   border:2px solid var(--line);
   overflow:hidden;
@@ -245,25 +321,33 @@ h1,h2,h3{font-family:'Cinzel','Exo 2',serif}
   align-items:center;
   justify-content:center;
   cursor:pointer;
-  opacity:.5;
+  opacity:0.4;
+  transition:opacity .15s,filter .15s;
 }
-.trait-icon--selected{border-color:var(--accent);opacity:1}
-.trait-img{width:24px;height:24px;border-radius:50%;object-fit:cover}
+.trait-icon--selected{
+  border-color:rgba(103,226,255,0.7);
+  opacity:1;
+  filter:drop-shadow(0 0 5px rgba(103,226,255,0.9));
+}
+.trait-img{width:32px;height:32px;border-radius:50%;object-fit:cover}
 .minorTrait{
-  width:20px;height:20px;
-  border-radius:50%;
-  border:2px solid var(--accent-2);
+  width:28px;height:28px;
+  clip-path:polygon(25% 5%,75% 5%,96% 50%,75% 95%,25% 95%,4% 50%);
+  border:none;
+  border-radius:0;
   overflow:hidden;
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  margin-right:2px;
+  margin-right:4px;
+  filter:drop-shadow(0 0 4px rgba(103,226,255,0.5));
 }
-.minorTrait img{width:20px;height:20px;border-radius:50%;object-fit:cover}
+.minorTrait img{width:28px;height:28px;border-radius:0;object-fit:cover}
 
 /* Skill separator & icon */
-.skill-sep{width:2px;height:36px;background:var(--line);margin:0 4px;align-self:center}
-.skill-icon{width:36px;height:36px;border-radius:6px;border:1px solid var(--line);background:#0a1020;cursor:pointer}
+.skill-sep{width:2px;height:40px;background:var(--line);margin:0 6px;align-self:center}
+.skill-icon{width:40px;height:40px;border-radius:6px;border:1px solid var(--line);background:#0a1020;cursor:pointer;transition:filter .15s}
+.skill-icon:hover{filter:brightness(1.2)}
 
 /* Underwater section */
 .uw-section{margin-top:12px;padding-top:8px;border-top:1px solid var(--line)}
@@ -573,9 +657,12 @@ function renderSpecializations(specs) {
   for (var i = 0; i < specs.length; i++) {
     var s = specs[i];
     if (!s) continue;
-    html += '<div class="spec-row">';
+    var eliteClass = s.elite ? " spec-card--elite" : "";
+    var bgStyle = s.background ? "background-image:url(" + escapeAttr(s.background) + ")" : "";
+    html += '<div class="spec-row spec-card' + eliteClass + '" style="' + bgStyle + '">';
+    html += '<div class="spec-card-body">';
     if (s.icon) {
-      html += '<img class="spec-icon" src="' + escapeAttr(s.icon) + '" alt="" loading="lazy" />';
+      html += '<img class="spec-icon spec-emblem" src="' + escapeAttr(s.icon) + '" alt="" loading="lazy" />';
     }
     html += '<div class="spec-info">';
     html += '<span class="spec-name">' + escapeHtml(s.name || "Unknown");
@@ -584,16 +671,17 @@ function renderSpecializations(specs) {
     html += renderTraitGrid(s);
     html += '</div>';
     html += '</div>';
+    html += '</div>';
   }
   return html;
 }
 
 function renderTraitGrid(s) {
-  var html = '<div class="trait-grid">';
+  var html = '<div class="trait-grid"><div class="trait-tiers">';
   var tiers = [1, 2, 3];
   for (var t = 0; t < tiers.length; t++) {
     var tier = tiers[t];
-    if (t > 0) html += '<span class="tier-sep"></span>';
+    html += '<div class="tier-row">';
     // Minor trait
     if (s.minorTraits && s.minorTraits[t]) {
       var mt = s.minorTraits[t];
@@ -613,8 +701,9 @@ function renderTraitGrid(s) {
       html += '</span>';
     }
     html += '</span>';
+    html += '</div>';
   }
-  html += '</div>';
+  html += '</div></div>';
   return html;
 }
 
@@ -679,7 +768,7 @@ function renderSkillSlot(skill, slotType) {
     ? '<img class="skill-icon" src="' + escapeAttr(skill.icon) + '" alt="" loading="lazy" />'
     : '';
   return '<div class="skill-slot" data-slot="' + escapeAttr(slotType || "") + '" data-name="' + escapeAttr(skill.name || "") + '" data-desc="' + escapeAttr(skill.description || "") + '"' + bundleAttr + '>'
-    + icon + '<span>' + escapeHtml(skill.name || "Unknown Skill") + '</span>'
+    + icon + '<span class="skill-label">' + escapeHtml(skill.name || "Unknown Skill") + '</span>'
     + '<div class="bundle-expand"></div>'
     + '</div>';
 }
@@ -749,8 +838,9 @@ function renderEquipment(equip) {
       var wSlot = wset.slots[wj];
       var wName = (equip.weapons && equip.weapons[wSlot]) || "";
       if (!wName) continue;
+      var wLabel = wSlot.replace(/\\d+$/, "").replace(/([a-z])([A-Z])/g, "$1 $2").replace(/^aquatic\\s*/i, "");
       html += '<div class="eq-weapon-row">';
-      html += '<span class="eq-slot-name">' + escapeHtml(wSlot) + '</span>';
+      html += '<span class="eq-slot-name">' + escapeHtml(wLabel) + '</span>';
       html += '<span>' + escapeHtml(wName) + '</span>';
       // Sigils
       var sigils = (equip.sigils && equip.sigils[wSlot]) || [];
