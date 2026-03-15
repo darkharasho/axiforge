@@ -3,6 +3,9 @@ import { escapeHtml } from "./utils.js";
 import { renderCustomSelect } from "./custom-select.js";
 import { bindHoverPreview, selectDetail } from "./detail-panel.js";
 
+let _readOnly = false;
+export function setReadOnly(val) { _readOnly = val; }
+
 // DOM refs injected by the entry point — keeps module importable in Node.js test environments.
 let _el = { specializationsHost: null };
 // RAF handle for connector redraw (module-scoped to this module only)
@@ -158,6 +161,7 @@ export function renderSpecializations() {
     panel.style.backgroundRepeat = "no-repeat, no-repeat";
 
     const selectHost = document.createElement("div");
+    if (!_readOnly) {
     renderCustomSelect(selectHost, {
       value: String(spec.id),
       className: "cselect--spec",
@@ -244,6 +248,7 @@ export function renderSpecializations() {
         }
       },
     });
+    }
     selectHost.classList.add("spec-select-overlay");
 
     const body = document.createElement("div");
@@ -257,10 +262,13 @@ export function renderSpecializations() {
     } else {
       emblem.textContent = "?";
     }
-    emblem.addEventListener("click", () => {
-      const trigger = selectHost.querySelector(".cselect__trigger");
-      if (trigger instanceof HTMLElement) trigger.click();
-    });
+    emblem.disabled = _readOnly;
+    if (!_readOnly) {
+      emblem.addEventListener("click", () => {
+        const trigger = selectHost.querySelector(".cselect__trigger");
+        if (trigger instanceof HTMLElement) trigger.click();
+      });
+    }
     if (spec.name) {
       bindHoverPreview(emblem, "spec", () => spec);
     }
@@ -275,7 +283,8 @@ export function renderSpecializations() {
       const minorColumn = document.createElement("div");
       minorColumn.className = "trait-minor-anchor";
       const minorTrait = minorTraits[tier - 1];
-      const minorButton = makeTraitButton(minorTrait, false, () => selectDetail("trait", minorTrait), {
+      const minorOnClick = _readOnly ? null : () => selectDetail("trait", minorTrait);
+      const minorButton = makeTraitButton(minorTrait, false, minorOnClick, {
         alwaysSelected: true,
       });
       minorButton.dataset.connectorRole = `minor-${tier}`;
@@ -287,7 +296,7 @@ export function renderSpecializations() {
       const selectedId = Number(selection?.majorChoices?.[tier]) || 0;
       for (const trait of majors[tier] || []) {
         const isSelected = Number(trait.id) === selectedId;
-        const majorButton = makeTraitButton(trait, isSelected, () => {
+        const majorOnClick = _readOnly ? null : () => {
           state.editor.specializations[slotIndex].majorChoices[tier] = Number(trait.id);
           _markEditorChanged({ updateBuildList: true });
           // Surgical update: toggle active class and connector role without full re-render
@@ -301,7 +310,8 @@ export function renderSpecializations() {
           _connectorRafId = requestAnimationFrame(() => drawSpecConnector(body));
           _renderSkills();
           selectDetail("trait", trait);
-        });
+        };
+        const majorButton = makeTraitButton(trait, isSelected, majorOnClick);
         if (isSelected) {
           majorButton.dataset.connectorRole = `major-${tier}`;
         }
