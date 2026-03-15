@@ -110,7 +110,9 @@ function _renderSkillsBar(area, skillData, build, initialAttunement) {
     return {
       set1: Array.isArray(ws.set1) ? ws.set1 : (Array.isArray(ws.aquatic1) ? ws.aquatic1 : []),
       set2: Array.isArray(ws.set2) ? ws.set2 : (Array.isArray(ws.aquatic2) ? ws.aquatic2 : []),
-      professionMechanics: Array.isArray(skillData.professionMechanics) ? skillData.professionMechanics : [],
+      professionMechanics: (Array.isArray(skillData.professionMechanics) && skillData.professionMechanics.length > 0)
+        ? skillData.professionMechanics
+        : (Array.isArray(build.professionMechanics) ? build.professionMechanics : []),
     };
   }
 
@@ -179,6 +181,8 @@ function _renderSkillsBar(area, skillData, build, initialAttunement) {
         const resolved = resolveWeaponData();
         _updateWeaponRows(weaponRowsEl, resolved.set1, resolved.set2);
         _updateMechBar(mechBarEl, resolved.professionMechanics, legendDisplay, petDisplay, hasAttunements);
+        _triggerFlipAnim(weaponRowsEl);
+        _triggerFlipAnim(mechBarEl);
       });
     }
   }
@@ -221,9 +225,8 @@ function _renderSkillsBar(area, skillData, build, initialAttunement) {
 
   const hpSpan = document.createElement("span");
   hpSpan.className = "health-orb__hp";
-  hpSpan.textContent = build.healthPool != null
-    ? Number(build.healthPool).toLocaleString()
-    : "—";
+  const hpValue = build.computedStats?.Health;
+  hpSpan.textContent = hpValue != null ? Number(hpValue).toLocaleString() : "—";
 
   const hpLabel = document.createElement("span");
   hpLabel.className = "health-orb__label";
@@ -235,7 +238,7 @@ function _renderSkillsBar(area, skillData, build, initialAttunement) {
   bar.append(orbCol);
 
   // ── RIGHT: utility column ─────────────────────────────────────────────────
-  const skills = skillData.skills || {};
+  const skills = skillData.skills || build.skills || {};
   const heal = skills.heal || null;
   const utilities = Array.isArray(skills.utility) ? skills.utility : [null, null, null];
   const elite = skills.elite || null;
@@ -301,6 +304,7 @@ function _updateWeaponRows(el, set1, set2) {
     swapBtn.addEventListener("click", () => {
       _activeWeaponSet = _activeWeaponSet === 1 ? 2 : 1;
       _updateWeaponRows(el, set1, set2);
+      _triggerFlipAnim(el);
     });
   }
   weaponRow.append(swapBtn);
@@ -448,6 +452,23 @@ function _updateMechBar(el, professionMechanics, legendDisplay, petDisplay, hasA
   }
 
   el.append(mechBar);
+}
+
+// ── Animation helper ──────────────────────────────────────────────────────
+
+/**
+ * Triggers the skillFlipSwap animation on all skill icons inside the given container.
+ * The class is removed automatically when the animation ends.
+ *
+ * @param {HTMLElement} el - Container element whose descendant icons should animate.
+ */
+function _triggerFlipAnim(el) {
+  requestAnimationFrame(() => {
+    for (const icon of el.querySelectorAll(".skill-icon-large, .skill-icon--profession")) {
+      icon.classList.add("skill-icon--flip-anim");
+      icon.addEventListener("animationend", () => icon.classList.remove("skill-icon--flip-anim"), { once: true });
+    }
+  });
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────

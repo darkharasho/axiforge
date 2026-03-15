@@ -60,6 +60,9 @@
 /* Mechanic section (legends, pets, attunements) */
 .site-mechanic { display: flex; gap: 8px; align-items: center; margin-top: 8px; padding: 6px 10px; background: var(--panel); border: 1px solid var(--line-soft); border-radius: 8px; font-size: 0.85rem; color: var(--muted); }
 
+/* Reference panel sticky positioning */
+.detail-panel { position: sticky; top: 20px; align-self: flex-start; }
+
 /* Read-only tooltip (reuses desktop .hover-preview) */
 .spa-tooltip {
   position: fixed;
