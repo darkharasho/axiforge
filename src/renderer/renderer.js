@@ -498,19 +498,30 @@ function wireEvents() {
   });
 
   el.publishSiteBtn.addEventListener("click", async () => {
+    if (!state.editor.id) {
+      showError(new Error("Save the build first before publishing."));
+      return;
+    }
     try {
-      if (!state.user) {
-        throw new Error("Log in and complete setup before publishing.");
+      el.publishSiteBtn.disabled = true;
+      setPublishStatus("Publishing...");
+      if (state.editorDirty) {
+        const serialized = serializeEditorToBuild();
+        await window.desktopApi.saveBuild({ ...serialized, id: state.editor.id });
+        state.builds = await window.desktopApi.listBuilds();
+        captureEditorBaseline();
       }
-      setPublishStatus("Publishing static site to GitHub...");
-      await window.desktopApi.publishSite();
-      await runPagesBuildPoll();
-      await refreshOnboardingStatus();
-      setPublishStatus(`Publish triggered. Pages URL: ${state.onboarding?.pagesUrl || "pending"}`);
+      const result = await window.desktopApi.publishBuild(state.editor.id);
+      if (result?.pagesUrl) {
+        await window.desktopApi.writeClipboardText(result.pagesUrl);
+        setPublishStatus(`Published! URL copied: ${result.pagesUrl}`);
+      }
+      state.builds = await window.desktopApi.listBuilds();
       render();
-      syncGameModeToggleUI(state.editor.gameMode || "pve");
     } catch (err) {
       showError(err);
+    } finally {
+      el.publishSiteBtn.disabled = false;
     }
   });
 

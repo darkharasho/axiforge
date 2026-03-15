@@ -281,7 +281,37 @@ export function renderBuildList() {
       }
       render();
     });
-    actions.append(loadBtn, deleteBtn);
+    const publishBtn = makeButton("Publish", "secondary", async () => {
+      const status = state.onboarding;
+      if (!status?.isAuthenticated || !status?.repoReady) {
+        showError(new Error("Set up publishing in the user menu first."));
+        return;
+      }
+      try {
+        publishBtn.disabled = true;
+        publishBtn.textContent = "Publishing...";
+        if (build.id === state.editor.id && state.editorDirty) {
+          const serialized = _callbacks.serializeEditorToBuild();
+          await window.desktopApi.saveBuild({ ...serialized, id: build.id });
+          await _callbacks.reloadBuilds();
+        }
+        const result = await window.desktopApi.publishBuild(build.id);
+        if (result?.pagesUrl) {
+          await window.desktopApi.writeClipboardText(result.pagesUrl);
+          setPublishStatus(`Published! URL copied: ${result.pagesUrl}`);
+        }
+        await _callbacks.reloadBuilds();
+        render();
+      } catch (err) {
+        showError(err);
+      } finally {
+        publishBtn.disabled = false;
+        publishBtn.textContent = "Publish";
+      }
+    });
+    const canPublish = Boolean(state.onboarding?.isAuthenticated && state.onboarding?.repoReady);
+    publishBtn.disabled = !canPublish;
+    actions.append(loadBtn, publishBtn, deleteBtn);
     card.append(actions);
     _el.buildList.append(card);
   }
