@@ -2,6 +2,8 @@
 @import "../renderer/styles/base.css";
 @import "../renderer/styles/layout.css";
 @import "../renderer/styles/buttons.css";
+@import "../renderer/styles/forms.css";
+@import "../renderer/styles/cards.css";
 @import "../renderer/styles/specializations.css";
 @import "../renderer/styles/skills.css";
 @import "../renderer/styles/equipment.css";
@@ -15,7 +17,7 @@
   padding: 10px 24px; background: var(--panel); border-bottom: 1px solid var(--line-soft);
 }
 .site-navbar__left { display: flex; align-items: center; gap: 10px; }
-.site-navbar__logo { font-size: 1.4rem; }
+.site-navbar__logo { width: 24px; height: 24px; flex-shrink: 0; color: var(--accent); }
 .site-navbar__title { font-family: 'Cinzel', serif; font-size: 1.1rem; color: var(--accent); font-weight: 700; letter-spacing: 0.04em; }
 .site-navbar__right { display: flex; align-items: center; gap: 16px; }
 .site-navbar__link { color: var(--muted); text-decoration: none; font-size: 0.85rem; display: flex; align-items: center; gap: 6px; transition: color 0.15s; }
@@ -57,23 +59,5 @@
 /* Notes display */
 .site-notes { color: var(--muted); padding: 12px 14px; border: 1px solid var(--line-soft); border-radius: 8px; background: var(--panel); font-size: 0.88rem; line-height: 1.5; white-space: pre-wrap; }
 
-/* Mechanic section (legends, pets, attunements) */
-.site-mechanic { display: flex; gap: 8px; align-items: center; margin-top: 8px; padding: 6px 10px; background: var(--panel); border: 1px solid var(--line-soft); border-radius: 8px; font-size: 0.85rem; color: var(--muted); }
-
 /* Reference panel sticky positioning */
 .detail-panel { position: sticky; top: 20px; align-self: flex-start; }
-
-/* Read-only tooltip (reuses desktop .hover-preview) */
-.spa-tooltip {
-  position: fixed;
-  z-index: 120;
-  display: none;
-  pointer-events: none;
-  max-width: 340px;
-  background: rgba(8, 15, 30, 0.96);
-  border: 1px solid #43679f;
-  border-radius: 10px;
-  padding: 10px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
-}
-.spa-tooltip.visible { display: block; }
