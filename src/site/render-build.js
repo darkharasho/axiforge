@@ -2,6 +2,7 @@ import { escapeHtml } from "./main.js";
 import { renderSpecializations } from "./render-specs.js";
 import { renderSkills } from "./render-skills.js";
 import { renderEquipment } from "./render-equipment.js";
+import { initReferencePanel, updateReferencePanel } from "./render-reference.js";
 
 /**
  * Orchestrates the full build page layout with header, tabs, and content.
@@ -76,23 +77,50 @@ export function renderBuildPage(container, build) {
   const buildContent = document.createElement("div");
   buildContent.className = "site-tab-content site-tab-content--active";
 
+  // Side-by-side layout: specs panel + reference panel
+  const specsWithDetail = document.createElement("div");
+  specsWithDetail.className = "specs-with-detail";
+
+  const specsPanel = document.createElement("div");
+  specsPanel.className = "specs-panel";
+
   const skillsHeading = document.createElement("h2");
   skillsHeading.className = "site-section-heading";
   skillsHeading.textContent = "Skills";
-  buildContent.append(skillsHeading);
+  specsPanel.append(skillsHeading);
 
   const skillsContainer = document.createElement("div");
   renderSkills(skillsContainer, build);
-  buildContent.append(skillsContainer);
+  specsPanel.append(skillsContainer);
 
   const specsHeading = document.createElement("h2");
   specsHeading.className = "site-section-heading";
   specsHeading.textContent = "Specializations";
-  buildContent.append(specsHeading);
+  specsPanel.append(specsHeading);
 
   const specsContainer = document.createElement("div");
   renderSpecializations(specsContainer, build.specializations || []);
-  buildContent.append(specsContainer);
+  specsPanel.append(specsContainer);
+
+  const detailPanel = document.createElement("div");
+  detailPanel.className = "detail-panel";
+  initReferencePanel(detailPanel);
+
+  specsWithDetail.append(specsPanel, detailPanel);
+  buildContent.append(specsWithDetail);
+
+  // Wire hover on the BUILD tab to update the reference panel
+  buildContent.addEventListener("mouseover", (e) => {
+    const target = e.target.closest("[data-name][data-icon]");
+    if (!target) return;
+    updateReferencePanel({
+      name: target.dataset.name || "",
+      icon: target.dataset.icon || "",
+      description: target.dataset.desc || "",
+      meta: target.dataset.meta || "",
+      facts: [],
+    });
+  });
 
   // EQUIPMENT tab content
   const equipContent = document.createElement("div");

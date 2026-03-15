@@ -77,6 +77,7 @@ export function renderSpecializations(container, specs) {
       if (minorTrait) {
         minorBtn.dataset.name = escapeHtml(minorTrait.name || "");
         minorBtn.dataset.desc = escapeHtml(minorTrait.description || "");
+        minorBtn.dataset.icon = minorTrait.icon || "";
         if (minorTrait.icon) {
           const img = document.createElement("img");
           img.src = String(minorTrait.icon);
@@ -106,6 +107,7 @@ export function renderSpecializations(container, specs) {
         if (trait) {
           traitBtn.dataset.name = escapeHtml(trait.name || "");
           traitBtn.dataset.desc = escapeHtml(trait.description || "");
+          traitBtn.dataset.icon = trait.icon || "";
           if (trait.icon) {
             const img = document.createElement("img");
             img.src = String(trait.icon);

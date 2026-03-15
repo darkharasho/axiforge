@@ -305,6 +305,7 @@ function _updateWeaponRows(el, set1, set2) {
       icon.className = "skill-icon-large skill-icon--weapon";
       icon.dataset.name = escapeHtml(skill.name || "");
       icon.dataset.desc = escapeHtml(skill.description || "");
+      icon.dataset.icon = skill.icon || "";
 
       if (skill.icon) {
         const img = document.createElement("img");
@@ -385,6 +386,7 @@ function _updateMechBar(el, professionMechanics, legendDisplay, petDisplay, hasA
     icon.className = "skill-icon--profession";
     icon.dataset.name = escapeHtml(skill.name || "");
     icon.dataset.desc = escapeHtml(skill.description || "");
+    icon.dataset.icon = skill.icon || "";
 
     if (skill.icon) {
       const img = document.createElement("img");
@@ -455,6 +457,7 @@ function _makeSkillSlot(skill, labelText, keybind) {
   if (skill) {
     icon.dataset.name = escapeHtml(skill.name || "");
     icon.dataset.desc = escapeHtml(skill.description || "");
+    icon.dataset.icon = skill.icon || "";
 
     if (skill.icon) {
       const img = document.createElement("img");

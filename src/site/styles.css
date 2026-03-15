@@ -61,5 +61,16 @@
 .site-mechanic { display: flex; gap: 8px; align-items: center; margin-top: 8px; padding: 6px 10px; background: var(--panel); border: 1px solid var(--line-soft); border-radius: 8px; font-size: 0.85rem; color: var(--muted); }
 
 /* Read-only tooltip (reuses desktop .hover-preview) */
-.spa-tooltip { position: fixed; z-index: 120; display: none; pointer-events: none; }
+.spa-tooltip {
+  position: fixed;
+  z-index: 120;
+  display: none;
+  pointer-events: none;
+  max-width: 340px;
+  background: rgba(8, 15, 30, 0.96);
+  border: 1px solid #43679f;
+  border-radius: 10px;
+  padding: 10px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
+}
 .spa-tooltip.visible { display: block; }
