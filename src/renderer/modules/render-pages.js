@@ -1,5 +1,5 @@
 import { state, createEmptyEditor } from "./state.js";
-import { escapeHtml, formatDate, formatShortDate, formatPagesStatus, makeButton, matchesBuildQuery, delay } from "./utils.js";
+import { escapeHtml, formatDate, formatShortDate, formatRelativeTime, formatPagesStatus, makeButton, matchesBuildQuery, delay } from "./utils.js";
 import { renderCustomSelect } from "./custom-select.js";
 import { closeCustomSelect } from "./custom-select.js";
 import { hideHoverPreview } from "./detail-panel.js";
@@ -547,6 +547,17 @@ export function renderEditorMeta() {
     _el.saveDot.classList.remove("hidden");
   } else {
     _el.saveDot.classList.add("hidden");
+  }
+
+  // Save status label: "Draft" or "Last saved: Xm ago"
+  if (_el.saveStatus) {
+    if (!state.editor.id) {
+      _el.saveStatus.textContent = "Draft";
+    } else {
+      const build = state.builds.find((b) => b.id === state.editor.id);
+      const relative = build ? formatRelativeTime(build.updatedAt) : "";
+      _el.saveStatus.textContent = relative ? `Last saved: ${relative}` : "";
+    }
   }
 }
 

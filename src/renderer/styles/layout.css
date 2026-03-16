@@ -227,6 +227,17 @@
   gap: 6px;
 }
 
+.subnav__save-status {
+  font-size: 0.72rem;
+  color: var(--muted);
+  font-style: italic;
+  white-space: nowrap;
+}
+
+.subnav__save-status:empty {
+  display: none;
+}
+
 .subnav__save-btn {
   display: flex;
   align-items: center;

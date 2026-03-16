@@ -64,6 +64,7 @@ const el = {
   newBuildBtn:       q("#newBuildBtn"),
   saveBuildBtn:      q("#saveBuildBtn"),
   saveDot:           q("#saveDot"),
+  saveStatus:        q("#saveStatus"),
   duplicateBuildBtn: q("#duplicateBuildBtn"),
   copyBuildBtn:      q("#copyBuildBtn"),
   pasteBuildBtn:     q("#pasteBuildBtn"),
@@ -304,7 +305,7 @@ async function startNewBuild(profession, { skipDirtyCheck = false } = {}) {
   captureEditorBaseline();
   render();
   syncGameModeToggleUI(state.editor.gameMode || "pve");
-  setPublishStatus("Started a new local build draft.");
+  setPublishStatus("");
 }
 
 async function saveCurrentBuild() {
@@ -317,7 +318,7 @@ async function saveCurrentBuild() {
     else captureEditorBaseline();
     render();
     syncGameModeToggleUI(state.editor.gameMode || "pve");
-    setPublishStatus("Build saved locally.");
+    setPublishStatus("");
   } catch (err) {
     showError(err);
   }
