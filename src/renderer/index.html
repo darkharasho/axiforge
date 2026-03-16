@@ -63,6 +63,7 @@
         <nav id="subnav" class="subnav subnav--visible">
           <button class="subnav__item subnav__item--active" data-subtab="build" type="button"><span class="subnav__icon">&#9876;</span> Build</button>
           <button class="subnav__item" data-subtab="equipment" type="button"><span class="subnav__icon">&#9775;</span> Equipment</button>
+          <button class="subnav__item" data-subtab="notes" type="button"><span class="subnav__icon">&#9998;</span> Notes</button>
           <div class="subnav__actions">
             <span id="saveStatus" class="subnav__save-status"></span>
             <button id="saveBuildBtn" class="btn btn-primary subnav__save-btn" type="button">
@@ -292,11 +293,6 @@
       <div class="skel-equip__slot skel-equip__slot--compact"><div class="skel skel-equip__slot-icon skel-d1"></div><div class="skel-equip__slot-lines"><div class="skel skel-d1" style="height:11px;width:70%"></div><div class="skel skel-d2" style="height:12px;width:50%"></div></div></div>
       <div class="skel-equip__slot skel-equip__slot--compact"><div class="skel skel-equip__slot-icon skel-d2"></div><div class="skel-equip__slot-lines"><div class="skel skel-d2" style="height:11px;width:70%"></div><div class="skel skel-d3" style="height:12px;width:50%"></div></div></div>
     </div>
-    <!-- Notes -->
-    <div class="skel-equip__section">
-      <div class="skel-equip__section-head"><div class="skel skel-d4" style="height:13px;width:50px"></div></div>
-      <div class="skel skel-equip__notes"></div>
-    </div>
   </div>
   <div class="skel-equip__col--art">
     <div class="skel skel-equip__art skel-d2"></div>
@@ -350,6 +346,11 @@
   </div>
 </div>
               </div>
+            </div>
+
+            <!-- Notes subtab -->
+            <div id="subtab-notes" class="subtab hidden">
+              <div id="notesPanel"></div>
             </div>
 
           </main>

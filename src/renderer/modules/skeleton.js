@@ -150,11 +150,6 @@ const skeletonTemplates = {
       ${sectionHead(3)}
       ${compactSlot(1)}${compactSlot(2)}
     </div>
-    <!-- Notes -->
-    <div class="skel-equip__section">
-      ${sectionHead(4)}
-      <div class="skel skel-equip__notes"></div>
-    </div>
   </div>
   <div class="skel-equip__col--art">
     <div class="skel skel-equip__art skel-d2"></div>
