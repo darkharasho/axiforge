@@ -19,18 +19,24 @@ The build summary section in the editor takes up too much vertical space and fee
 - The entire `<details id="buildSummaryDetails">` element and all its contents
 - The `renderEditorMeta()` summary data rows (profession, specs, skills, elite line)
 - The "Unsaved changes" text badge (`#editorDirtyBadge`)
-- All associated CSS: `.build-summary-details`, `.build-summary-toggle`, `.build-summary-content`, `.build-summary-actions`, `.build-summary`, `.build-summary__row`, `.build-summary__label`, `.build-summary__value`
+- All associated CSS: `.build-summary-details`, `.build-summary-toggle`, `.build-summary-content`, `.build-summary-actions`, `.build-summary`, `.build-summary__row`, `.build-summary__label`, `.build-summary__value`, `.dirty-badge`
 
 **Add to subnav bar** (the `Build | Equipment | PvE/WvW` row):
-- **Save button** — primary style, positioned right-aligned before the PvE/WvW toggle. When the editor has unsaved changes, display an orange dot indicator inside the button (left of the text). Button text is always "Save" (no asterisk or "Save Build*" pattern).
+
+All new buttons go inside a `.subnav__actions` wrapper div with `margin-left: auto` and `display: flex; align-items: center; gap: 6px`. The existing `.game-mode-toggle` moves inside this wrapper (removing its own `margin-left: auto`). This keeps all right-aligned items in a single flex group.
+
+- **Save button** — primary style, first item in the actions wrapper. When the editor has unsaved changes, display an orange dot indicator inside the button (left of the text). Button text is always "Save" (no asterisk or "Save Build*" pattern).
 - **Publish button** — primary style, next to Save.
-- **Overflow menu button** (⋯) — between Publish and the game mode toggle. Clicking opens an icon-labeled dropdown with:
+- **Publish status** — the `#publishStatus` element relocates from the removed details block into the subnav actions wrapper, between Publish and the overflow button. It displays publish progress inline.
+- **Overflow menu button** (⋯) — between Publish status and the game mode toggle. Clicking opens an icon-labeled dropdown with:
   - Duplicate (copy icon)
   - Copy JSON (clipboard icon) — hidden unless dev mode
   - Paste JSON (paste icon) — hidden unless dev mode
+- **Game mode toggle** — existing PvE/WvW toggle, moved inside the wrapper (last item)
 
 **Overflow dropdown behavior:**
-- Appears below the ⋯ button on click
+- Appears below the ⋯ button on click, positioned absolutely
+- `z-index: 20` (above subnav's `z-index: 10`) to ensure it renders above all page content
 - Closes on click outside, on item selection, or on Escape
 - Each item has a small icon (CSS/unicode) and label text
 - Uses existing app color palette (dark background, subtle border)
@@ -76,17 +82,17 @@ Skills: Well of Blood · Well of Suffering · Spectral Armor · Suffer! · Ghast
 - `build.skills.heal.name`, `build.skills.utility[].name`, `build.skills.elite.name` — skill names
 - `build.profession`, `build.gameMode` — already displayed today
 
-No additional data fetching or schema changes needed.
+No additional data fetching or schema changes needed. Note: `build.skills.heal`, `.utility[]`, and `.elite` can be `null` when no skill is selected — card rendering must use null-safe access (`build.skills?.heal?.name || ""`).
 
 ## Files to Modify
 
 | File | Changes |
 |------|---------|
 | `src/renderer/index.html` | Remove `<details id="buildSummaryDetails">` block. Add Save, Publish, overflow menu button to `<nav id="subnav">`. |
-| `src/renderer/styles/cards.css` | Remove `.build-summary-*` classes. Add `.build-card__pills`, `.build-card__pill`, `.build-card__pill--elite`, `.build-card__detail` styles. |
-| `src/renderer/styles/layout.css` | Add `.subnav__actions` container styles, `.subnav__overflow` dropdown styles, `.subnav__save-dot` indicator styles. |
-| `src/renderer/modules/render-pages.js` | Rewrite `renderEditorMeta()` to only manage Save button dot state (no summary rows). Enrich `renderBuildList()` card rendering with pills, spec line, skill line. |
-| `src/renderer/renderer.js` | Wire up overflow menu toggle/close behavior. Move Save/Publish/Duplicate click handlers to subnav button references. Update DOM element cache for new button locations. |
+| `src/renderer/styles/cards.css` | Remove `.build-summary-*` and `.dirty-badge` classes. Add `.build-card__pills`, `.build-card__pill`, `.build-card__pill--elite`, `.build-card__detail` styles. |
+| `src/renderer/styles/layout.css` | Add `.subnav__actions` container styles (with `margin-left: auto`), `.subnav__overflow` dropdown styles (with `z-index: 20`), `.subnav__save-dot` indicator styles. Remove `margin-left: auto` from `.game-mode-toggle`. |
+| `src/renderer/modules/render-pages.js` | Rewrite `renderEditorMeta()` to only manage Save button dot state (no summary rows). Update `renderEditorForm()` to reference new subnav button locations for disabled state/tooltip management. Enrich `renderBuildList()` card rendering with pills, spec line, skill line. Update publish handler in `renderBuildList()` to call updated `renderEditorMeta()`. |
+| `src/renderer/renderer.js` | Wire up overflow menu toggle/close behavior. Move Save/Publish/Duplicate click handlers to subnav button references. Update DOM element cache for new button locations. Relocate `#publishStatus` element reference. |
 
 ## Out of Scope
 
