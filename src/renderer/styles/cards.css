@@ -215,6 +215,56 @@
   gap: 6px;
 }
 
+.build-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.build-card__date {
+  font-size: 0.7rem;
+  color: #7a9abf;
+  white-space: nowrap;
+}
+
+.build-card__pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.build-card__pill {
+  background: #1a2844;
+  border: 1px solid #2a3f69;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 0.65rem;
+  color: #c8dff0;
+  font-weight: 500;
+}
+
+.build-card__pill--mode {
+  color: #9eb8e5;
+}
+
+.build-card__pill--elite {
+  background: rgba(78, 168, 255, 0.1);
+  border-color: rgba(78, 168, 255, 0.3);
+  color: #7ab8f5;
+}
+
+.build-card__detail {
+  margin-top: 4px;
+  font-size: 0.68rem;
+  color: #7a9abf;
+  line-height: 1.5;
+}
+
+.build-card__detail-label {
+  color: #9eb8e5;
+}
+
 .empty-line {
   margin: 0;
   color: var(--muted);
