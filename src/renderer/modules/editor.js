@@ -365,6 +365,28 @@ export function captureEditorBaseline() {
   _renderEditorMeta();
 }
 
+export function computeUnsavedChangeSummary() {
+  if (!state.editorBaselineSignature) return [];
+  let baseline;
+  try { baseline = JSON.parse(state.editorBaselineSignature); }
+  catch { return []; }
+  let current;
+  try { current = JSON.parse(computeEditorSignature()); }
+  catch { return []; }
+
+  const changes = [];
+  if (baseline.title !== current.title) changes.push("Title changed");
+  if (JSON.stringify(baseline.specializations) !== JSON.stringify(current.specializations)) changes.push("Specializations modified");
+  if (JSON.stringify(baseline.skills) !== JSON.stringify(current.skills)
+    || JSON.stringify(baseline.underwaterSkills) !== JSON.stringify(current.underwaterSkills)) changes.push("Skills modified");
+  if (JSON.stringify(baseline.equipment) !== JSON.stringify(current.equipment)) changes.push("Equipment modified");
+  if (baseline.notes !== current.notes) changes.push("Notes modified");
+  if (JSON.stringify(baseline.tags) !== JSON.stringify(current.tags)) changes.push("Tags modified");
+  if (baseline.gameMode !== current.gameMode) changes.push("Game mode changed");
+  if (JSON.stringify(baseline.selectedUnderwaterLegends) !== JSON.stringify(current.selectedUnderwaterLegends)) changes.push("Legends modified");
+  return changes;
+}
+
 export function computeEditorSignature() {
   const editor = state.editor || createEmptyEditor();
   const specializations = (editor.specializations || []).slice(0, 3).map((entry) => ({

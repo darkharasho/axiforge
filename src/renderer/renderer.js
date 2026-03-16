@@ -28,6 +28,7 @@ import {
   loadBuildIntoEditor, serializeEditorToBuild, parseBuildImportPayload, confirmDiscardDirty,
   createDefaultSpecializationSelections, createDefaultSkillSelections,
   computeEditorSignature,
+  computeUnsavedChangeSummary,
 } from "./modules/editor.js";
 import {
   initRenderPagesDom, initRenderPagesCallbacks,
