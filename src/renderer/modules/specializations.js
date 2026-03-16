@@ -76,10 +76,12 @@ export function makeTraitButton(trait, active, onClick, options = {}) {
 
 export function drawSpecConnector(body) {
   if (!body) return;
-  body.querySelector(".spec-connector")?.remove();
   const bodyRect = body.getBoundingClientRect();
-  // Skip if the panel is hidden — getBoundingClientRect returns zeros
+  // Skip if the panel is hidden — getBoundingClientRect returns zeros.
+  // Important: do NOT remove the existing connector first, so it survives
+  // re-renders that happen while the build tab is not visible.
   if (bodyRect.width === 0 || bodyRect.height === 0) return;
+  body.querySelector(".spec-connector")?.remove();
   const roles = ["minor-1", "major-1", "minor-2", "major-2", "minor-3", "major-3"];
 
   const points = [];
@@ -328,11 +330,19 @@ export function renderSpecializations() {
     _el.specializationsHost.append(card);
   }
 
+  // Draw connectors synchronously — getBoundingClientRect forces layout reflow,
+  // so dimensions are correct even before the next paint frame.
+  if (_el.specializationsHost) {
+    for (const body of _el.specializationsHost.querySelectorAll(".spec-card__body")) {
+      drawSpecConnector(body);
+    }
+  }
+  // Also schedule a single-rAF refinement pass in case layout shifts after images load.
   cancelAnimationFrame(_connectorRafId);
-  _connectorRafId = requestAnimationFrame(() => requestAnimationFrame(() => {
+  _connectorRafId = requestAnimationFrame(() => {
     if (!_el.specializationsHost) return;
     for (const body of _el.specializationsHost.querySelectorAll(".spec-card__body")) {
       drawSpecConnector(body);
     }
-  }));
+  });
 }

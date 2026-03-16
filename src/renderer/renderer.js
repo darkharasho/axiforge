@@ -175,6 +175,7 @@ initRenderPagesCallbacks({
   runPagesBuildPoll,
   showError,
   setPublishStatus,
+  navigateToPage,
 });
 
 // ── Auto-update titlebar UI ──────────────────────────────────────────────────
@@ -490,6 +491,27 @@ function updateWindowTitle() {
   document.title = name ? `AxiForge — ${name}` : "AxiForge";
 }
 
+// ── Page navigation ─────────────────────────────────────────────────────────
+
+function navigateToPage(page) {
+  if (!page) return;
+  state.activePage = page;
+  document.querySelectorAll(".leftnav__item").forEach((b) => b.classList.remove("leftnav__item--active"));
+  const activeBtn = document.querySelector(`.leftnav__item[data-page="${page}"]`);
+  if (activeBtn) activeBtn.classList.add("leftnav__item--active");
+  document.querySelectorAll(".page").forEach((p) => p.classList.add("hidden"));
+  const target = document.querySelector(`#page-${page}`);
+  if (target) target.classList.remove("hidden");
+  // Show/hide subnav for editor page
+  el.subnav.classList.toggle("subnav--visible", page === "editor");
+  // Redraw spec connectors when editor page becomes visible (they need layout dimensions)
+  if (page === "editor") {
+    requestAnimationFrame(() => {
+      document.querySelectorAll(".spec-card__body").forEach((body) => drawSpecConnector(body));
+    });
+  }
+}
+
 // ── Event wiring ─────────────────────────────────────────────────────────────
 
 function wireEvents() {
@@ -648,19 +670,7 @@ function wireEvents() {
 
   // Left nav page switching
   document.querySelectorAll(".leftnav__item").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const page = btn.dataset.page;
-      if (!page) return;
-      state.activePage = page;
-      document.querySelectorAll(".leftnav__item").forEach((b) => b.classList.remove("leftnav__item--active"));
-      btn.classList.add("leftnav__item--active");
-      document.querySelectorAll(".page").forEach((p) => p.classList.add("hidden"));
-      const target = document.querySelector(`#page-${page}`);
-      if (target) target.classList.remove("hidden");
-      // Show/hide subnav for editor page
-      const showSubnav = page === "editor";
-      el.subnav.classList.toggle("subnav--visible", showSubnav);
-    });
+    btn.addEventListener("click", () => navigateToPage(btn.dataset.page));
   });
 
   // Subnav tab switching

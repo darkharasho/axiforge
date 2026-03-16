@@ -401,6 +401,7 @@ export function renderBuildList() {
     const loadBtn = makeButton("Load", "secondary", async () => {
       if (!_callbacks.confirmDiscardDirty("Load a different build")) return;
       await _callbacks.loadBuildIntoEditor(build);
+      _callbacks.navigateToPage("editor");
       render();
     });
     const deleteBtn = makeButton("Delete", "danger", async () => {
