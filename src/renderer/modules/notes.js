@@ -310,6 +310,15 @@ function searchCatalog(query, maxResults = 8) {
     }
   }
 
+  if (catalog?.weaponSkills) {
+    for (const skill of catalog.weaponSkills) {
+      if (skill.name?.toLowerCase().includes(q)) {
+        results.push({ id: skill.id, name: skill.name, icon: skill.icon, category: "Skill" });
+        if (results.length >= maxResults) return results;
+      }
+    }
+  }
+
   if (catalog?.traits) {
     for (const trait of catalog.traits) {
       if (trait.name?.toLowerCase().includes(q)) {
@@ -489,7 +498,7 @@ function resolveReference(category, id) {
   const catalog = state.activeCatalog;
   const upgrades = state.upgradeCatalog;
   switch (category) {
-    case "skill": return catalog?.skillById?.get(id) || null;
+    case "skill": return catalog?.skillById?.get(id) || catalog?.weaponSkillById?.get(id) || null;
     case "trait": return catalog?.traitById?.get(id) || null;
     case "rune": return upgrades?.runeById?.get(id) || null;
     case "sigil": return upgrades?.sigilById?.get(id) || null;

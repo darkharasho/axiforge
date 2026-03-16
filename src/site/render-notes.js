@@ -25,7 +25,10 @@ export function renderNotes(build) {
   let html = marked.parse(build.notes, { breaks: true, renderer });
 
   // Build lookup maps from enriched catalog data
-  const skillById = new Map((build.catalogSkills || []).map((s) => [s.id, s]));
+  const skillById = new Map([
+    ...(build.catalogSkills || []).map((s) => [s.id, s]),
+    ...(build.catalogWeaponSkills || []).map((s) => [s.id, s]),
+  ]);
   const traitById = new Map((build.catalogTraits || []).map((t) => [t.id, t]));
   const runeById = new Map(Object.values(build.equipmentDisplay?.runes || {}).filter(Boolean).map((r) => [r.id, r]));
   const sigilById = new Map(Object.values(build.equipmentDisplay?.sigils || {}).flat().filter(Boolean).map((s) => [s.id, s]));

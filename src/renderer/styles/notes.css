@@ -183,7 +183,7 @@
 
 .notes-mention {
   display: inline-flex;
-  align-items: center;
+  align-items: baseline;
   gap: 4px;
   padding: 1px 8px;
   background: rgba(72, 168, 255, 0.12);
