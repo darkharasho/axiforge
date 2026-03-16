@@ -6,6 +6,7 @@ import {
   PROFESSION_WEIGHT,
   LEGENDARY_ARMOR_ICONS, _WK,
   PROFESSION_BASE_HP,
+  FURY_CRIT_CHANCE, MIGHT_MAX_STACKS, MIGHT_POWER_PER_STACK, MIGHT_CONDI_PER_STACK, BOON_CONDITION_ICONS,
 } from "./constants.js";
 import { escapeHtml } from "./utils.js";
 import { computeSlotStats, computeEquipmentStats, computeUpgradeModifiers, computeStatBreakdown } from "./stats.js";
@@ -19,6 +20,11 @@ export { computeSlotStats, computeEquipmentStats, computeUpgradeModifiers, compu
 
 let _readOnly = false;
 export function setReadOnly(val) { _readOnly = val; }
+
+// Assumed boons — session-only, not persisted to builds.
+let _assumedBoons = { might: 0, fury: false, alacrity: false };
+export function getAssumedBoons() { return _assumedBoons; }
+export function resetAssumedBoons() { _assumedBoons = { might: 0, fury: false, alacrity: false }; }
 
 // DOM refs
 let _el = { equipmentPanel: null };
