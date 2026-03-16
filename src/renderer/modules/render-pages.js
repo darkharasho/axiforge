@@ -756,16 +756,6 @@ export function showPublishResult(url) {
   const resultSlot = _el.publishStatus.querySelector(".publish-result");
   if (!resultSlot) return;
 
-  // Dev-only: open local preview immediately (before polling)
-  if (location.port || location.hostname === "localhost") {
-    try {
-      const parsed = new URL(url);
-      const remoteBase = `${parsed.origin}${parsed.pathname.replace(/[^/]*$/, "")}`;
-      const localUrl = `http://localhost:3000/?remoteBase=${encodeURIComponent(remoteBase)}${parsed.hash}`;
-      window.desktopApi.openPreviewWindow(localUrl);
-    } catch { /* ignore malformed URL */ }
-  }
-
   // Poll until live, then swap ticker for URL + Copy
   pollPageLive(url, resultSlot);
 }
@@ -792,6 +782,22 @@ function _showUrlResult(url, resultSlot) {
   });
 
   urlInput.addEventListener("click", () => urlInput.select());
+
+  // Dev-only: preview button
+  if (location.port || location.hostname === "localhost") {
+    try {
+      const parsed = new URL(url);
+      const remoteBase = `${parsed.origin}${parsed.pathname.replace(/[^/]*$/, "")}`;
+      const localUrl = `http://localhost:3000/?remoteBase=${encodeURIComponent(remoteBase)}${parsed.hash}`;
+      const localBtn = document.createElement("button");
+      localBtn.className = "btn btn-dev publish-result__preview";
+      localBtn.textContent = "Preview";
+      localBtn.addEventListener("click", () => {
+        window.desktopApi.openPreviewWindow(localUrl);
+      });
+      resultSlot.append(localBtn);
+    } catch { /* ignore malformed URL */ }
+  }
 }
 
 async function pollPageLive(url, resultSlot) {
