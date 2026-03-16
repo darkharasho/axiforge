@@ -390,17 +390,19 @@ export function getHoverMetaLine(kind, entity) {
   if (kind === "spec") return entity?.elite ? "Elite Specialization" : "Specialization";
   const type = String(entity?.type || "").trim();
   const slot = String(entity?.slot || "").trim();
-  // Bundle/shroud skills use Downed_N slots — show parent bundle name + slot number
-  const downedMatch = /^Downed_(\d)$/i.exec(slot);
-  if (downedMatch) {
-    const activeKit = Number(state.editor.activeKit) || 0;
-    const kitSkill = activeKit ? state.activeCatalog?.skillById?.get(activeKit) : null;
-    const bundleName = kitSkill?.name || "Bundle";
-    return `${bundleName} ${downedMatch[1]}`;
+  // When a bundle/shroud/kit is active, show "Skill — BundleName N" for its weapon bar skills
+  const activeKit = Number(state.editor.activeKit) || 0;
+  if (activeKit && entity?.id) {
+    const kitSkill = state.activeCatalog?.skillById?.get(activeKit);
+    if (kitSkill?.bundleSkills?.includes(entity.id)) {
+      const slotMatch = /^(?:Downed|Weapon|Profession)_(\d)$/i.exec(slot);
+      const slotNum = slotMatch ? slotMatch[1] : "";
+      return `Skill \u2014 ${kitSkill.name}${slotNum ? " " + slotNum : ""}`;
+    }
   }
-  const showSlot = slot && !/^(Profession|Weapon)_/i.test(slot) && !/^(Heal|Utility|Elite)$/i.test(slot);
-  if (type && showSlot) return `Skill • ${type} • ${slot}`;
-  if (type) return `Skill • ${type}`;
+  const showSlot = slot && !/^(Profession|Weapon|Downed)_/i.test(slot) && !/^(Heal|Utility|Elite)$/i.test(slot);
+  if (type && showSlot) return `Skill \u2014 ${type} \u2014 ${slot}`;
+  if (type) return `Skill \u2014 ${type}`;
   return "Skill";
 }
 
