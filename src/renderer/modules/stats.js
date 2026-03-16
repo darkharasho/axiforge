@@ -67,11 +67,16 @@ export function computeEquipmentStats() {
         "Vitality": "Vitality", "Ferocity": "Ferocity",
         "Concentration": "Concentration", "Expertise": "Expertise",
       };
-      const re = /\+(\d+)\s+(Condition Damage|Healing Power|Healing|Power|Precision|Toughness|Vitality|Ferocity|Concentration|Expertise)/g;
+      const re = /\+(\d+)\s+(Condition Damage|Healing Power|Healing|Power|Precision|Toughness|Vitality|Ferocity|Concentration|Expertise|to All Attributes)/g;
+      const ALL_STAT_KEYS = ["Power", "Precision", "Toughness", "Vitality", "Ferocity", "ConditionDamage", "HealingPower", "Concentration", "Expertise"];
       let m;
       while ((m = re.exec(foodDef.buff)) !== null) {
-        const key = foodStatMap[m[2]];
-        if (key) totals[key] = (totals[key] || 0) + Number(m[1]);
+        if (m[2] === "to All Attributes") {
+          for (const key of ALL_STAT_KEYS) totals[key] = (totals[key] || 0) + Number(m[1]);
+        } else {
+          const key = foodStatMap[m[2]];
+          if (key) totals[key] = (totals[key] || 0) + Number(m[1]);
+        }
       }
     }
   }
@@ -241,12 +246,16 @@ export function computeStatBreakdown(statKey) {
       const STAT_NAMES = { Power: "Power", Precision: "Precision", Toughness: "Toughness", Vitality: "Vitality",
         Ferocity: "Ferocity", ConditionDamage: "Condition Damage", HealingPower: "Healing Power",
         Concentration: "Concentration", Expertise: "Expertise" };
-      const re = /\+(\d+)\s+(Condition Damage|Healing Power|Healing|Power|Precision|Toughness|Vitality|Ferocity|Concentration|Expertise)/g;
+      const re = /\+(\d+)\s+(Condition Damage|Healing Power|Healing|Power|Precision|Toughness|Vitality|Ferocity|Concentration|Expertise|to All Attributes)/g;
       const MAP = { "Condition Damage": "ConditionDamage", "Healing Power": "HealingPower", "Healing": "HealingPower" };
       let m;
       while ((m = re.exec(foodDef.buff)) !== null) {
-        const key = MAP[m[2]] || m[2];
-        if (key === statKey) entries.push({ source: `Food (${foodDef.name})`, value: Number(m[1]) });
+        if (m[2] === "to All Attributes") {
+          entries.push({ source: `Food (${foodDef.name})`, value: Number(m[1]) });
+        } else {
+          const key = MAP[m[2]] || m[2];
+          if (key === statKey) entries.push({ source: `Food (${foodDef.name})`, value: Number(m[1]) });
+        }
       }
     }
   }
@@ -360,7 +369,7 @@ export function computeUpgradeModifiers() {
   // Regex for percentage bonuses in rune bonus text: "+N% Something"
   const PCT_RE = /\+(\d+)%\s+(.+)/;
   // Regex for flat bonuses we already handle as stats — skip these
-  const FLAT_STAT_RE = /\+\d+\s+(Condition Damage|Healing Power|Healing|Power|Precision|Toughness|Vitality|Ferocity|Concentration|Expertise|to All Stats)/;
+  const FLAT_STAT_RE = /\+\d+\s+(Condition Damage|Healing Power|Healing|Power|Precision|Toughness|Vitality|Ferocity|Concentration|Expertise|to All Stats|to All Attributes)/;
 
   const isUnderwater = Boolean(state.editor.underwaterMode);
   const EXCLUDED_SLOTS = isUnderwater ? LAND_ONLY_SLOTS : AQUATIC_SLOTS;

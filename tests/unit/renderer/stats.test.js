@@ -224,6 +224,25 @@ describe("computeEquipmentStats — food contributions", () => {
     expect(result.Power).toBe(1000 + 134 + 100);
     expect(result.Ferocity).toBe(96 + 70);
   });
+
+  test("food with 'to All Attributes' adds to every stat", () => {
+    state.upgradeCatalog = {
+      foodById: new Map([
+        [91713, { id: 91713, name: "Feast of All-Stat Food", buff: "-10% Incoming Damage | +45 to All Attributes | +10% Karma" }],
+      ]),
+    };
+    state.editor = makeEditor({}, "91713");
+    const result = computeEquipmentStats();
+    expect(result.Power).toBe(1000 + 45);
+    expect(result.Precision).toBe(1000 + 45);
+    expect(result.Toughness).toBe(1000 + 45);
+    expect(result.Vitality).toBe(1000 + 45);
+    expect(result.Ferocity).toBe(45);
+    expect(result.ConditionDamage).toBe(45);
+    expect(result.HealingPower).toBe(45);
+    expect(result.Expertise).toBe(45);
+    expect(result.Concentration).toBe(45);
+  });
 });
 
 describe("computeEquipmentStats — 4-stat combo accumulation", () => {

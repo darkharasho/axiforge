@@ -131,4 +131,27 @@ describe("computePublishStats", () => {
     const result = computePublishStats(makeFullBerserkerEquipment(), null, "Warrior");
     expect(Array.isArray(result.modifiers)).toBe(true);
   });
+
+  test("food with 'to All Attributes' adds to every stat", () => {
+    const equipment = { slots: {}, runes: {}, infusions: {}, food: "91713", utility: "" };
+    const upgradeCatalog = {
+      runeById: new Map(),
+      infusionById: new Map(),
+      enrichmentById: new Map(),
+      foodById: new Map([
+        [91713, { id: 91713, name: "Feast of All-Stat Food", buff: "-10% Incoming Damage | +45 to All Attributes | +10% Karma" }],
+      ]),
+      utilityById: new Map(),
+    };
+    const result = computePublishStats(equipment, upgradeCatalog, "Warrior");
+    expect(result.stats.Power).toBe(1000 + 45);
+    expect(result.stats.Precision).toBe(1000 + 45);
+    expect(result.stats.Toughness).toBe(1000 + 45);
+    expect(result.stats.Vitality).toBe(1000 + 45);
+    expect(result.stats.Ferocity).toBe(45);
+    expect(result.stats.ConditionDamage).toBe(45);
+    expect(result.stats.HealingPower).toBe(45);
+    expect(result.stats.Expertise).toBe(45);
+    expect(result.stats.Concentration).toBe(45);
+  });
 });
