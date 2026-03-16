@@ -16,6 +16,13 @@ export function formatDate(value) {
   return d.toLocaleString();
 }
 
+export function formatShortDate(value) {
+  if (!value) return "unknown";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "unknown";
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
 export function tierLabel(tier) {
   if (tier === 1) return "Adept";
   if (tier === 2) return "Master";
