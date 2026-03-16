@@ -657,7 +657,7 @@ export function advancePublishStep(stepKey) {
   // Mark all previous as done, current as active, rest pending
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
-    row.classList.remove("publish-ticker__row--pending", "publish-ticker__row--active", "publish-ticker__row--done");
+    row.classList.remove("publish-ticker__row--pending", "publish-ticker__row--active", "publish-ticker__row--done", "publish-ticker__row--error");
     if (i < idx) {
       row.classList.add("publish-ticker__row--done");
       row.querySelector(".publish-ticker__icon").textContent = "\u2713";
