@@ -4,6 +4,7 @@ import { initSpecializations, renderSpecializations } from "@renderer/modules/sp
 import { initEquipment, renderEquipmentPanel } from "@renderer/modules/equipment.js";
 import { initDetailPanel, bindHoverPreview, setOnHoverPreview } from "@renderer/modules/detail-panel.js";
 import { initReferencePanel, updateReferencePanel } from "./render-reference.js";
+import { renderNotes } from "./render-notes.js";
 
 function escapeHtml(s) {
   const d = document.createElement("div");
@@ -240,6 +241,16 @@ export function renderBuildPage(container, build) {
   equipTab.textContent = "EQUIPMENT";
 
   tabBar.append(buildTab, equipTab);
+
+  const hasNotes = Boolean(build.notes);
+  let notesTab = null;
+  if (hasNotes) {
+    notesTab = document.createElement("button");
+    notesTab.type = "button";
+    notesTab.className = "site-tab";
+    notesTab.textContent = "NOTES";
+    tabBar.append(notesTab);
+  }
   container.append(tabBar);
 
   // ── Tab content panels ──────────────────────────────────────────────────
@@ -321,19 +332,6 @@ export function renderBuildPage(container, build) {
     }
   });
 
-  // Notes section
-  if (build.notes) {
-    const notesHeading = document.createElement("h2");
-    notesHeading.className = "site-section-heading";
-    notesHeading.textContent = "Notes";
-    buildContent.append(notesHeading);
-
-    const notesEl = document.createElement("div");
-    notesEl.className = "site-notes";
-    notesEl.textContent = build.notes;
-    buildContent.append(notesEl);
-  }
-
   // EQUIPMENT tab content
   const equipContent = document.createElement("div");
   equipContent.className = "site-tab-content";
@@ -341,9 +339,17 @@ export function renderBuildPage(container, build) {
   const equipmentPanel = document.createElement("div");
   equipContent.append(equipmentPanel);
 
+  let notesContent = null;
+  if (hasNotes) {
+    notesContent = document.createElement("div");
+    notesContent.className = "site-tab-content";
+    notesContent.append(renderNotes(build));
+  }
+
   // ── Append to DOM first, then render (renderers need elements in the document
   //    for getBoundingClientRect to work, e.g. spec connector lines) ──
   container.append(buildContent, equipContent);
+  if (notesContent) container.append(notesContent);
 
   initSkills({ skillsHost });
   renderSkills();
@@ -355,17 +361,15 @@ export function renderBuildPage(container, build) {
   renderEquipmentPanel();
 
   // ── Tab switching logic ─────────────────────────────────────────────────
-  buildTab.addEventListener("click", () => {
-    buildTab.classList.add("site-tab--active");
-    equipTab.classList.remove("site-tab--active");
-    buildContent.classList.add("site-tab-content--active");
-    equipContent.classList.remove("site-tab-content--active");
-  });
+  const allTabs = [buildTab, equipTab, notesTab].filter(Boolean);
+  const allContents = [buildContent, equipContent, notesContent].filter(Boolean);
 
-  equipTab.addEventListener("click", () => {
-    equipTab.classList.add("site-tab--active");
-    buildTab.classList.remove("site-tab--active");
-    equipContent.classList.add("site-tab-content--active");
-    buildContent.classList.remove("site-tab-content--active");
+  function activateTab(index) {
+    allTabs.forEach((t, i) => t.classList.toggle("site-tab--active", i === index));
+    allContents.forEach((c, i) => c.classList.toggle("site-tab-content--active", i === index));
+  }
+
+  allTabs.forEach((tab, i) => {
+    tab.addEventListener("click", () => activateTab(i));
   });
 }

@@ -7,6 +7,7 @@
 @import "../renderer/styles/specializations.css";
 @import "../renderer/styles/skills.css";
 @import "../renderer/styles/equipment.css";
+@import "../renderer/styles/notes.css";
 @import "../renderer/styles/detail-panel.css";
 
 /* ── SPA-specific styles ─────────────────────────────────────────────── */
