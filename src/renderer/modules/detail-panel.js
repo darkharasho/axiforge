@@ -420,6 +420,7 @@ export function positionHoverPreview(x, y) {
 
 export function hideHoverPreview() {
   if (_el.hoverPreview) _el.hoverPreview.classList.add("hidden");
+  if (_onHoverPreview) _onHoverPreview(null, null);
 }
 
 export async function selectDetail(kind, entity) {
