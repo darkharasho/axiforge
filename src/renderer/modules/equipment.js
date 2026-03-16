@@ -1015,7 +1015,16 @@ export function renderEquipmentPanel() {
     bindHoverPreview(leftEl, "equip-stat", () => {
       const breakdown = computeStatBreakdown(row.key);
       if (!breakdown.length) return null;
-      const lines = breakdown.map((e) => `+${e.value}  ${e.source}`);
+      // Consolidate duplicate sources (e.g. 18x identical infusions → one line)
+      const grouped = new Map();
+      for (const e of breakdown) {
+        const existing = grouped.get(e.source);
+        if (existing) { existing.value += e.value; existing.count++; }
+        else grouped.set(e.source, { source: e.source, value: e.value, count: 1 });
+      }
+      const lines = [...grouped.values()].map((e) =>
+        e.count > 1 ? `+${e.value}  ${e.source} \u00d7${e.count}` : `+${e.value}  ${e.source}`
+      );
       const total = breakdown.reduce((s, e) => s + e.value, 0);
       lines.push(`——\n${total}  Total ${row.stat}`);
       return { name: row.stat, description: lines.join("\n") };
