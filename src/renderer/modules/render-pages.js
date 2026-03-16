@@ -756,16 +756,33 @@ export function showPublishResult(url) {
   const resultSlot = _el.publishStatus.querySelector(".publish-result");
   if (!resultSlot) return;
 
+  // Dev-only: open local preview immediately (before polling)
+  if (location.port || location.hostname === "localhost") {
+    try {
+      const parsed = new URL(url);
+      const remoteBase = `${parsed.origin}${parsed.pathname.replace(/[^/]*$/, "")}`;
+      const localUrl = `http://localhost:3000/?remoteBase=${encodeURIComponent(remoteBase)}${parsed.hash}`;
+      window.desktopApi.openPreviewWindow(localUrl);
+    } catch { /* ignore malformed URL */ }
+  }
+
+  // Poll until live, then swap ticker for URL + Copy
+  pollPageLive(url, resultSlot);
+}
+
+function _showUrlResult(url, resultSlot) {
+  // Hide the ticker, show URL + Copy in its place
+  const ticker = _el.publishStatus.querySelector(".publish-ticker");
+  if (ticker) ticker.style.display = "none";
+
   resultSlot.innerHTML = `
     <span class="publish-result__label">Published</span>
     <input type="text" class="publish-result__url" value="${escapeHtml(url)}" readonly />
     <button class="btn btn-secondary publish-result__copy">Copy</button>
-    <span class="publish-result__live-status">deploying\u2026</span>
   `;
 
   const copyBtn = resultSlot.querySelector(".publish-result__copy");
   const urlInput = resultSlot.querySelector(".publish-result__url");
-  const liveStatus = resultSlot.querySelector(".publish-result__live-status");
 
   copyBtn.addEventListener("click", async () => {
     await window.desktopApi.writeClipboardText(url);
@@ -775,50 +792,23 @@ export function showPublishResult(url) {
   });
 
   urlInput.addEventListener("click", () => urlInput.select());
-
-  // Dev-only: open local SPA preview
-  if (location.port || location.hostname === "localhost") {
-    try {
-      const parsed = new URL(url);
-      const remoteBase = `${parsed.origin}${parsed.pathname.replace(/[^/]*$/, "")}`;
-      const localUrl = `http://localhost:3000/?remoteBase=${encodeURIComponent(remoteBase)}${parsed.hash}`;
-      const localBtn = document.createElement("button");
-      localBtn.className = "btn btn-dev publish-result__preview";
-      localBtn.textContent = "Preview";
-      localBtn.addEventListener("click", () => {
-        window.desktopApi.openPreviewWindow(localUrl);
-      });
-      resultSlot.insertBefore(localBtn, liveStatus);
-    } catch { /* ignore malformed URL */ }
-  }
-
-  // Poll until the page is actually reachable
-  pollPageLive(url, liveStatus);
 }
 
-async function pollPageLive(url, statusEl) {
-  let lastStatus = "deploying";
+async function pollPageLive(url, resultSlot) {
   for (let i = 0; i < 40; i++) {
     try {
       const poll = await window.desktopApi.pollPagesStatus();
       if (poll.ready) {
         completeAllPublishSteps();
-        statusEl.innerHTML = `<span style="color:var(--accent)">&#10003; Page is live!</span>`;
+        _showUrlResult(url, resultSlot);
         return;
       }
-      lastStatus = poll.status || "deploying";
-      const label = formatPagesStatus(lastStatus);
-      statusEl.textContent = `${label}...`;
-      if (poll.error) {
-        statusEl.textContent = `${label} — ${poll.error}`;
-      }
-    } catch {
-      statusEl.textContent = "Checking deploy status...";
-    }
+    } catch { /* keep polling */ }
     await delay(4000);
   }
+  // Timeout — show URL anyway
   completeAllPublishSteps();
-  statusEl.innerHTML = `Pages deploy in progress. <a href="${escapeHtml(url)}" target="_blank" rel="noreferrer" style="color:var(--accent-2)">Check link</a>`;
+  _showUrlResult(url, resultSlot);
 }
 
 // ---------------------------------------------------------------------------
