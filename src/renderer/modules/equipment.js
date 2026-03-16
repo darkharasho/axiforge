@@ -1104,14 +1104,15 @@ export function renderEquipmentPanel() {
 
   // Attributes
   const statsSection = makeSection("Attributes");
-  const computed = computeEquipmentStats();
+  const computed = computeEquipmentStats(_assumedBoons);
   const professionName = state.editor.profession;
   const baseHP = PROFESSION_BASE_HP[professionName] || 9212;
   const health = baseHP + (computed.Vitality || 0) * 10;
   // Collect upgrade modifiers and apply ones that map to derived stats
   const modifiers = computeUpgradeModifiers();
   const popMod = (key) => { const v = modifiers.get(key) || 0; modifiers.delete(key); return v; };
-  const critChance = Math.min(100, 5 + ((computed.Precision || 1000) - 895) / 21.0 + popMod("Critical Chance"));
+  const furyCrit = _assumedBoons.fury ? FURY_CRIT_CHANCE : 0;
+  const critChance = Math.min(100, 5 + ((computed.Precision || 1000) - 895) / 21.0 + popMod("Critical Chance") + furyCrit);
   const critDamage = 150 + (computed.Ferocity || 0) / 15.0 + popMod("Critical Damage");
   const condDuration = (computed.Expertise || 0) / 15.0 + popMod("Condition Duration");
   const boonDuration = (computed.Concentration || 0) / 15.0 + popMod("Boon Duration");
@@ -1139,7 +1140,7 @@ export function renderEquipmentPanel() {
     leftEl.innerHTML = `<span class="equip-stat-label">${row.stat}</span><span class="equip-stat-value">${(row.value || 0).toLocaleString()}</span>`;
 
     bindHoverPreview(leftEl, "equip-stat", () => {
-      const breakdown = computeStatBreakdown(row.key);
+      const breakdown = computeStatBreakdown(row.key, _assumedBoons);
       if (!breakdown.length) return null;
       // Consolidate duplicate sources (e.g. 18x identical infusions → one line)
       const grouped = new Map();
