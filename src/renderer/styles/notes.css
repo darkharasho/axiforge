@@ -1,0 +1,309 @@
+/* AxiForge — Notes tab styles */
+
+.notes-editor {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 400px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+/* ── Toolbar ──────────────────────────────────────────────────────────── */
+
+.notes-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 12px;
+  background: var(--panel-2);
+  border-bottom: 1px solid var(--line-soft);
+  flex-wrap: wrap;
+}
+
+.notes-toolbar__btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: background 0.12s, color 0.12s;
+}
+
+.notes-toolbar__btn:hover {
+  background: rgba(79, 216, 151, 0.1);
+  color: var(--accent);
+}
+
+.notes-toolbar__btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+  pointer-events: none;
+}
+
+.notes-toolbar__btn svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.notes-toolbar__sep {
+  width: 1px;
+  height: 20px;
+  background: var(--line-soft);
+  margin: 0 6px;
+}
+
+.notes-toolbar__right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.notes-toolbar__preview {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 500;
+  transition: border-color 0.12s, color 0.12s, background 0.12s;
+}
+
+.notes-toolbar__preview:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.notes-toolbar__preview--active {
+  background: rgba(79, 216, 151, 0.1);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.notes-toolbar__preview svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ── Textarea ─────────────────────────────────────────────────────────── */
+
+.notes-textarea {
+  flex: 1;
+  width: 100%;
+  min-height: 350px;
+  padding: 16px 20px;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  resize: vertical;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.notes-textarea::placeholder {
+  color: rgba(166, 187, 222, 0.4);
+}
+
+/* ── Preview ──────────────────────────────────────────────────────────── */
+
+.notes-preview {
+  flex: 1;
+  padding: 20px 24px;
+  min-height: 350px;
+  line-height: 1.7;
+  font-size: 0.9rem;
+  overflow-y: auto;
+}
+
+.notes-preview h1 { font-size: 1.4rem; margin: 0 0 12px; color: var(--text); }
+.notes-preview h2 { font-size: 1.15rem; margin: 16px 0 8px; color: var(--text); }
+.notes-preview h3 { font-size: 1rem; margin: 12px 0 6px; color: var(--text); }
+.notes-preview p { margin: 0 0 12px; color: #c8d8f0; }
+.notes-preview strong { color: var(--text); }
+.notes-preview em { font-style: italic; }
+.notes-preview ul, .notes-preview ol { padding-left: 20px; margin: 0 0 12px; }
+.notes-preview li { margin: 4px 0; color: #c8d8f0; }
+.notes-preview hr {
+  border: none;
+  border-top: 1px solid var(--line);
+  margin: 16px 0;
+}
+.notes-preview a { color: var(--accent-2); text-decoration: none; }
+.notes-preview a:hover { text-decoration: underline; }
+
+.notes-preview table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0;
+}
+
+.notes-preview th,
+.notes-preview td {
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  font-size: 0.85rem;
+}
+
+.notes-preview th {
+  background: var(--panel-2);
+  color: var(--muted);
+  font-weight: 600;
+}
+
+/* ── @ Mention chips ──────────────────────────────────────────────────── */
+
+.notes-mention {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 8px;
+  background: rgba(72, 168, 255, 0.12);
+  border: 1px solid rgba(72, 168, 255, 0.25);
+  border-radius: 4px;
+  color: var(--accent-2);
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  vertical-align: baseline;
+}
+
+.notes-mention:hover {
+  background: rgba(72, 168, 255, 0.2);
+  border-color: rgba(72, 168, 255, 0.4);
+}
+
+.notes-mention__icon {
+  width: 16px;
+  height: 16px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.notes-mention__label {
+  font-size: 0.65rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ── Autocomplete popup ───────────────────────────────────────────────── */
+
+.notes-autocomplete {
+  position: absolute;
+  width: 300px;
+  max-height: 320px;
+  overflow-y: auto;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  z-index: 100;
+}
+
+.notes-autocomplete__header {
+  padding: 8px 12px;
+  font-size: 0.7rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.notes-autocomplete__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.notes-autocomplete__item:hover,
+.notes-autocomplete__item--selected {
+  background: rgba(79, 216, 151, 0.08);
+}
+
+.notes-autocomplete__item-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.notes-autocomplete__item-name {
+  font-size: 0.85rem;
+  color: var(--text);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.notes-autocomplete__item-category {
+  font-size: 0.65rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 6px;
+  background: rgba(166, 187, 222, 0.08);
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+/* ── Feature hint ─────────────────────────────────────────────────────── */
+
+.notes-feature-hint {
+  padding: 10px 14px;
+  margin-top: 8px;
+  background: rgba(72, 168, 255, 0.06);
+  border: 1px solid rgba(72, 168, 255, 0.15);
+  border-radius: 8px;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.notes-feature-hint strong {
+  color: var(--accent-2);
+}
+
+/* ── Mirror div (for caret positioning) ───────────────────────────────── */
+
+.notes-mirror {
+  position: absolute;
+  top: 0;
+  left: 0;
+  visibility: hidden;
+  overflow: hidden;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  pointer-events: none;
+}
