@@ -143,7 +143,6 @@ initEditorCallbacks({
   renderSpecializations,
   renderSkills,
   renderEquipmentPanel,
-  renderNotesPanel,
   syncRevenantSkillsFromLegend,
   getSkillOptionsByType,
   setProfession: (id, opts) => setProfession(id, opts),
@@ -279,6 +278,7 @@ async function init() {
     raw.enrichmentById = new Map((raw.enrichments || []).map((e) => [e.id, e]));
     raw.foodById = new Map((raw.foods || []).map((f) => [f.id, f]));
     raw.utilityById = new Map((raw.utilities || []).map((u) => [u.id, u]));
+    raw.relicById = new Map((raw.relics || []).map((r) => [r.id, r]));
     state.upgradeCatalog = raw;
   }).catch((err) => {
     console.warn("Failed to load upgrade catalog:", err);

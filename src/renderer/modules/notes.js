@@ -13,6 +13,7 @@ let _autocompleteEl = null;
 let _autocompleteItems = [];
 let _autocompleteIndex = 0;
 let _mentionTriggerPos = -1;
+let _activeTextarea = null;
 
 export function initNotes({ notesPanel }, { readOnly = false } = {}) {
   _el = { notesPanel };
@@ -225,8 +226,10 @@ export function renderNotesPanel() {
   if (_readOnly) {
     textarea.readOnly = true;
   } else {
-    textarea.addEventListener("input", () => syncState(textarea));
-    textarea.addEventListener("input", () => detectMentionTrigger(textarea));
+    textarea.addEventListener("input", () => {
+      syncState(textarea);
+      detectMentionTrigger(textarea);
+    });
 
     textarea.addEventListener("keydown", (e) => {
       if (!_autocompleteEl) return;
@@ -418,8 +421,6 @@ function renderAutocompleteItems() {
   });
 }
 
-let _activeTextarea = null;
-
 function insertMention(item, textarea) {
   const ta = textarea || _activeTextarea;
   if (!ta || _mentionTriggerPos < 0) return;
@@ -496,6 +497,7 @@ function resolveReference(category, id) {
     case "utility": return upgrades?.utilityById?.get(id) || null;
     case "infusion": return upgrades?.infusionById?.get(id) || null;
     case "enrichment": return upgrades?.enrichmentById?.get(id) || null;
+    case "relic": return upgrades?.relicById?.get(id) || null;
     default: return null;
   }
 }

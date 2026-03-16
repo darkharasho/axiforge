@@ -478,6 +478,7 @@ export function renderEditor() {
   _callbacks.renderSpecializations();
   _callbacks.renderSkills();
   _callbacks.renderEquipmentPanel();
+  _callbacks.renderNotesPanel();
   _callbacks.renderDetailPanel();
 }
 
