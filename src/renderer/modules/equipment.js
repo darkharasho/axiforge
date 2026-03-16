@@ -461,7 +461,9 @@ export function renderEquipmentPanel() {
     statBtn.type = "button";
     statBtn.className = "equip-stat-pick-btn" + (currentCombo ? "" : " equip-stat-pick-btn--empty");
     statBtn.disabled = lockedByTwoHanded;
-    if (currentCombo) {
+    if (lockedByTwoHanded) {
+      statBtn.style.display = "none";
+    } else if (currentCombo) {
       const combo = STAT_COMBOS_BY_LABEL.get(currentCombo);
       statBtn.innerHTML = `<span class="equip-slot__combo-name">${escapeHtml(currentCombo)}</span>${combo ? `<span class="equip-slot__combo-stats">${combo.stats.join(" · ")}</span>` : ""}`;
     } else {
