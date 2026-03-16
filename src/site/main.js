@@ -9,22 +9,24 @@ const app = document.getElementById("app");
 
 // ── SPA Routing ──────────────────────────────────────────────────────────
 function init() {
-  let redirect = null;
-  try {
-    const stored = sessionStorage.getItem("spa-redirect");
-    if (stored) { redirect = JSON.parse(stored); sessionStorage.removeItem("spa-redirect"); }
-  } catch (e) { /* ignore */ }
+  const params = new URLSearchParams(location.search);
 
-  const hash = redirect ? redirect.hash : location.hash;
+  // New format: ?b=fileId.key&n=slug
+  let buildParam = params.get("b");
 
-  if (!hash || hash.length < 2) { showLanding(); return; }
+  // Legacy format: /slug#fileId.key (via 404.html redirect → ?legacy=fileId.key)
+  if (!buildParam) buildParam = params.get("legacy");
 
-  const fragment = hash.substring(1);
-  const dotIdx = fragment.indexOf(".");
+  // Oldest format: #fileId.key (direct hash, no redirect needed)
+  if (!buildParam && location.hash.length > 1) buildParam = location.hash.substring(1);
+
+  if (!buildParam) { showLanding(); return; }
+
+  const dotIdx = buildParam.indexOf(".");
   if (dotIdx < 1) { showError("Invalid build link."); return; }
 
-  const fileId = fragment.substring(0, dotIdx);
-  const key = fragment.substring(dotIdx + 1);
+  const fileId = buildParam.substring(0, dotIdx);
+  const key = buildParam.substring(dotIdx + 1);
 
   showLoading();
   loadBuild(fileId, key);

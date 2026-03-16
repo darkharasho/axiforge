@@ -160,12 +160,17 @@ export function computeBoonCoverage(catalog, editor, weaponSkills = []) {
       grouped.set(f.name, { sources: [], hasAnyAlly: false });
     }
     const entry = grouped.get(f.name);
-    entry.sources.push({
-      type: f.sourceType,
-      name: f.sourceName,
-      stacks: f.stacks,
-      duration: f.duration,
-    });
+    const dupeKey = `${f.sourceType}|${f.sourceName}|${f.stacks}|${f.duration}`;
+    if (!entry._seen) entry._seen = new Set();
+    if (!entry._seen.has(dupeKey)) {
+      entry._seen.add(dupeKey);
+      entry.sources.push({
+        type: f.sourceType,
+        name: f.sourceName,
+        stacks: f.stacks,
+        duration: f.duration,
+      });
+    }
     if (f.isAlly) entry.hasAnyAlly = true;
   }
 

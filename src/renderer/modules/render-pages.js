@@ -597,7 +597,7 @@ function _getPublishedUrl() {
   const owner = state.onboarding?.targetOwner;
   const repo = state.onboarding?.repoName;
   if (!owner || !repo) return null;
-  return `https://${owner}.github.io/${repo}/${build.publishedSlug}#${build.publishedFileId}.${build.publishedKey}`;
+  return `https://${owner}.github.io/${repo}/?n=${encodeURIComponent(build.publishedSlug)}&b=${build.publishedFileId}.${build.publishedKey}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -791,7 +791,9 @@ export function showPublishResult(url) {
     try {
       const parsed = new URL(url);
       const remoteBase = `${parsed.origin}${parsed.pathname.replace(/[^/]*$/, "")}`;
-      const localUrl = `http://localhost:3000/?remoteBase=${encodeURIComponent(remoteBase)}${parsed.hash}`;
+      const localParams = new URLSearchParams(parsed.search);
+      localParams.set("remoteBase", remoteBase);
+      const localUrl = `http://localhost:3000/?${localParams.toString()}`;
       const localBtn = document.createElement("button");
       localBtn.className = "btn btn-dev publish-result__preview";
       localBtn.textContent = "Preview";
@@ -834,7 +836,9 @@ function _showUrlResult(url, resultSlot) {
     try {
       const parsed = new URL(url);
       const remoteBase = `${parsed.origin}${parsed.pathname.replace(/[^/]*$/, "")}`;
-      const localUrl = `http://localhost:3000/?remoteBase=${encodeURIComponent(remoteBase)}${parsed.hash}`;
+      const localParams = new URLSearchParams(parsed.search);
+      localParams.set("remoteBase", remoteBase);
+      const localUrl = `http://localhost:3000/?${localParams.toString()}`;
       const localBtn = document.createElement("button");
       localBtn.className = "btn btn-dev publish-result__preview";
       localBtn.textContent = "Preview";

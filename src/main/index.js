@@ -345,7 +345,7 @@ app.whenReady().then(async () => {
       publishedKey: encKey,
     });
 
-    const pagesUrl = `https://${owner}.github.io/${TARGET_REPO}/${newSlug}#${fileId}.${encKey}`;
+    const pagesUrl = `https://${owner}.github.io/${TARGET_REPO}/?n=${encodeURIComponent(newSlug)}&b=${fileId}.${encKey}`;
 
     await patchAuthRecord({
       onboarding: {

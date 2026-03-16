@@ -5,11 +5,17 @@
     <title>AxiForge Builds — Redirecting</title>
     <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAQAAADZc7J/AAAAIGNIUk0AAHomAACAhAAA+gAAAIDoAAB1MAAA6mAAADqYAAAXcJy6UTwAAAACYktHRAAAqo0jMgAAAAlwSFlzAAAOwwAADsMBx2+oZAAAAAd0SU1FB+oDEAYxOx9pLS8AAAPhSURBVEjHjdVtbJb1Fcfxz92WQrECaolOcJRBHaZinVU2X0yzLaCbumwhhmwZGhM1kfiKaHxnYsJ8jEYTiZGZmYyJ2ZIFnzBqCDAdwSFhg67GF/JsS6UIAlVKn36+uO779qYw9Vwvrlwn/9/3f87/Ov9zOMNSeebmmfTkpfw0DRXfd7Dy0pm5Px+lsE/zp3RWsePWl04XgzrtrnWRqDfXT8xBn5WedayypDQeUMM935U6XaARX+hzzOWWaBVrPWRMv09rpaUacb0Oi92oTbMSRh00iB6fWKAN6z3oZ3r9w4kaSERKWZAXcigVG0kymoPZkMezIhtzMGNJktXpyJa8k4XFwVYi+KF7/N50DNtln4lmazFoWIPYZrWLLDcTo+500hoDXva0j0pK5C4PmIMRG71pums12uND2+zVoEW7Nv8y4Gmz1dnpNmv8CLs8UXoeWZ8kOZBl+W02ZDj92Z7n8+u0VH9dQ2ZlUq7LjmzIydycVeVE36YBk/Ghe7V6zoXo9aTXHa/5vyP24V2rtPqBTgfK/pMFoFmvZS71lGasdZ/dZxZJ4O+uM8Msu8rOAepQ71Hneqwq31uIT6ux4qvfGz5Qb1rZ2V8AttnsIeehyyqdGsYVaK2d0ueYWWDUxwVgrRtchSFrLNFn6OzackyD+s0DR/UUgL1+B/6nTYut33TRcMSwOUaxU6kAXGWeXoOOuMkmp74hAdjtGsf04VWdBWCRkm5jLjXFjm/Zn8u126jFB/5rUQHocMheTb7vS4fVOWvjaCheM9zuJZcZ9ZgbTCgAM/Q6ooQRkyw4+/7DMNkir+nQ4RHD7vZ6AWh23GegUZNfOu/MGFIJo9tv/MoK//aUz71SAErG7DOEc0zV6qbKJa9e9kI+0c+t1G6Zbs9p9VeLKqlNtcchMzWab7/lNjnslFTjqHO+H1tsjnXet9Cdmr1srqs9WgdmG7MZLNRlnoe1u9XMagW1udl8W71ompWWm2yLi/3BxCKC1ZZY6C9uMdkC0222VKN/ekKXt33shMN2m2C+a3RowrB20wx4tciyKXflrXTmz0mS/+T+HE/SlRfyfnqzNX/LqryYdenK5+XGVqxbnAlfH9MVuTVXZmuS5M2syUhOZiC9OZGz2YH8MZdUD7fcdZoyMVdnZ5JkS7bnaNbn3RwdJ/0yO7Ii7V8PmZLTp0KHZ1yPI84x5DWbTDXPxSYZdMh+3TbrqW03pTOK5XsecIcpZece67ynx6gppunX5bDxwlpEROpzY97JUM2MOJH9WZ1fpOlbR2y1D0/J0ryXU0mSL7Iut1TE32FCVyEtWZbubM/SnPv/xV8BD8c8/KMbZwsAAAAldEVYdGRhdGU6Y3JlYXRlADIwMjYtMDMtMTZUMDE6NDU6MDMrMDA6MDCzgmOiAAAAJXRFWHRkYXRlOm1vZGlmeQAyMDI2LTAzLTEwVDIwOjIwOjIxKzAwOjAwdpC4gQAAACh0RVh0ZGF0ZTp0aW1lc3RhbXAAMjAyNi0wMy0xNlQwNjo0OTo1OSswMDowMB4VTT0AAAAZdEVYdFNvZnR3YXJlAHd3dy5pbmtzY2FwZS5vcmeb7jwaAAAAAElFTkSuQmCC" />
     <script>
+      // Backwards compat: old links like /repo/slug#fileId.key
+      // Redirect to new param format: /repo/?legacy=fileId.key&n=slug
       var seg = location.pathname.split('/').filter(Boolean);
       var repoName = seg.length > 0 ? seg[0] : '';
-      var buildPath = seg.slice(1).join('/');
-      if (buildPath || location.hash) {
-        sessionStorage.setItem('spa-redirect', JSON.stringify({ path: buildPath, hash: location.hash }));
+      var slug = seg.slice(1).join('/');
+      var hash = location.hash.length > 1 ? location.hash.substring(1) : '';
+      if (hash) {
+        var url = '/' + repoName + '/?legacy=' + encodeURIComponent(hash);
+        if (slug) url += '&n=' + encodeURIComponent(slug);
+        location.replace(url);
+      } else if (slug) {
         location.replace('/' + repoName + '/');
       }
     </script>
