@@ -206,7 +206,9 @@
 }
 
 .subnav__icon {
-  font-size: 13px;
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
   opacity: 0.8;
 }
 
@@ -299,9 +301,9 @@
   border-radius: 6px;
   background: transparent;
   color: #7a9abf;
-  font-size: 16px;
   cursor: pointer;
-  letter-spacing: 2px;
+  display: flex;
+  align-items: center;
   transition: background 0.15s, color 0.15s;
 }
 
@@ -345,10 +347,10 @@
 }
 
 .subnav__overflow-icon {
-  font-size: 14px;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
   opacity: 0.7;
-  width: 18px;
-  text-align: center;
 }
 
 .leftnav {
@@ -388,8 +390,9 @@
 }
 
 .leftnav__icon {
-  font-size: 18px;
-  line-height: 1;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
 }
 
 .leftnav__label {

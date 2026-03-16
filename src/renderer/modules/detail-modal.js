@@ -26,7 +26,7 @@ export function initDetailModal() {
         <button class="wiki-modal-btn dm-nav-btn" id="dm-fwd" title="Forward" disabled><svg viewBox="0 0 7 12" width="7" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="1,1 6,6 1,11"/></svg></button>
         <nav class="dm-breadcrumbs" id="dm-breadcrumbs" aria-label="Navigation history"></nav>
         <button class="wiki-modal-btn" id="dm-wiki-btn">Open Wiki Page</button>
-        <button class="wiki-modal-btn wiki-modal-btn--close" id="dm-close">&#x2715;</button>
+        <button class="wiki-modal-btn wiki-modal-btn--close" id="dm-close"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18L18 6M6 6L18 18"/></svg></button>
       </div>
       <div class="detail-modal-body" id="dm-body">
         <div class="dm-hero">

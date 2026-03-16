@@ -16,7 +16,7 @@ export function initWikiModal() {
         <span class="wiki-modal-label">Wiki</span>
         <div class="wiki-modal-url" id="wiki-modal-url"></div>
         <button class="wiki-modal-btn" id="wiki-modal-copy">Copy URL</button>
-        <button class="wiki-modal-btn wiki-modal-btn--close" id="wiki-modal-close">&#x2715;</button>
+        <button class="wiki-modal-btn wiki-modal-btn--close" id="wiki-modal-close"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18L18 6M6 6L18 18"/></svg></button>
       </div>
       <div class="wiki-modal-body">
         <div class="wiki-modal-loading wiki-modal-loading--hidden" id="wiki-modal-loading">

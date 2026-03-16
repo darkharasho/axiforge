@@ -338,7 +338,8 @@
   border-radius: 6px;
   color: var(--muted);
   font-family: inherit;
-  font-size: 1rem;
+  display: flex;
+  align-items: center;
   padding: 3px 8px;
   cursor: pointer;
   flex-shrink: 0;

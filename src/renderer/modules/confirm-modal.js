@@ -16,7 +16,7 @@ export function initConfirmModal() {
     <div class="confirm-modal">
       <div class="confirm-modal__header">
         <h3 class="confirm-modal__title" id="cm-title"></h3>
-        <button class="confirm-modal__close" id="cm-close">&#x2715;</button>
+        <button class="confirm-modal__close" id="cm-close"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18L18 6M6 6L18 18"/></svg></button>
       </div>
       <div class="confirm-modal__body" id="cm-body"></div>
       <div class="confirm-modal__actions">
