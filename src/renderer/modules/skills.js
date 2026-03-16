@@ -1004,6 +1004,17 @@ function _renderUnderwaterToggle() {
     const newMode = btn.dataset.mode === "water";
     if (newMode === state.editor.underwaterMode) return;
     state.editor.underwaterMode = newMode;
+    // Reset weapon set to one that has a weapon equipped in the new mode
+    const weapons = state.editor.equipment?.weapons || {};
+    if (newMode) {
+      // Switching to water — prefer aquatic1, fall back to aquatic2
+      state.editor.activeWeaponSet = weapons.aquatic1 ? 1 : (weapons.aquatic2 ? 2 : 1);
+    } else {
+      // Switching to land — prefer set 1, fall back to set 2
+      const hasSet1 = weapons.mainhand1 || weapons.offhand1;
+      const hasSet2 = weapons.mainhand2 || weapons.offhand2;
+      state.editor.activeWeaponSet = hasSet1 ? 1 : (hasSet2 ? 2 : 1);
+    }
     if (!_readOnly) _renderEditor();
     else renderSkills();
   });
