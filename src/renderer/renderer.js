@@ -39,6 +39,7 @@ import {
 import { resolveEntityFacts } from "./modules/detail-panel.js";
 import { initWikiModal, openWikiModal } from "./modules/wiki-modal.js";
 import { initDetailModal, openDetailModal } from "./modules/detail-modal.js";
+import { initConfirmModal } from "./modules/confirm-modal.js";
 
 // ── DOM element cache ────────────────────────────────────────────────────────
 
@@ -90,6 +91,7 @@ initCustomSelect({ bindHoverPreview, onError: showError });
 
 initWikiModal();
 initDetailModal();
+initConfirmModal();
 initDetailPanel(
   { detailHost: el.detailHost, hoverPreview: el.hoverPreview, expandBtn: el.detailExpandBtn },
   {
