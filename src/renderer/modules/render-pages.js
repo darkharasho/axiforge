@@ -486,48 +486,11 @@ export function renderEditorForm() {
 // renderEditorMeta
 // ---------------------------------------------------------------------------
 export function renderEditorMeta() {
-  _el.saveBuildBtn.textContent = state.editorDirty ? "Save Build*" : "Save Build";
   if (state.editorDirty) {
-    _el.editorDirtyBadge.classList.remove("hidden");
+    _el.saveDot.classList.remove("hidden");
   } else {
-    _el.editorDirtyBadge.classList.add("hidden");
+    _el.saveDot.classList.add("hidden");
   }
-
-  const catalog = state.activeCatalog;
-  const professionName =
-    state.professions.find((entry) => entry.id === state.editor.profession)?.name ||
-    state.editor.profession ||
-    "Not selected";
-  const specNames = (state.editor.specializations || [])
-    .map((entry) => catalog?.specializationById.get(Number(entry.specializationId))?.name || "")
-    .filter(Boolean);
-  const eliteSpec = (state.editor.specializations || [])
-    .map((entry) => catalog?.specializationById.get(Number(entry.specializationId)))
-    .find((entry) => entry?.elite);
-  const skillById = catalog?.skillById || new Map();
-  const utilityNames = (state.editor.skills?.utilityIds || [])
-    .map((id) => skillById.get(Number(id))?.name || "")
-    .filter(Boolean);
-  const skills = [
-    skillById.get(Number(state.editor.skills?.healId))?.name || "",
-    ...utilityNames,
-    skillById.get(Number(state.editor.skills?.eliteId))?.name || "",
-  ].filter(Boolean);
-  const summaryRows = [
-    { label: "Status", value: state.editorDirty ? "Unsaved draft" : "Saved" },
-    { label: "Profession", value: professionName },
-    { label: "Specializations", value: specNames.join(" | ") || "None selected" },
-    { label: "Skills", value: skills.join(" | ") || "None selected" },
-  ];
-  if (eliteSpec) {
-    summaryRows.push({ label: "Elite Line", value: eliteSpec.name });
-  }
-  _el.buildSummary.innerHTML = summaryRows
-    .map(
-      (row) =>
-        `<div class="build-summary__row"><span class="build-summary__label">${escapeHtml(row.label)}</span><span class="build-summary__value">${escapeHtml(row.value)}</span></div>`
-    )
-    .join("");
 }
 
 // ---------------------------------------------------------------------------
@@ -599,6 +562,9 @@ const PUBLISH_STEPS = [
   { key: "pages", label: "Waiting for Pages to go live" },
 ];
 
+// Ticker row height must match CSS --ticker-row-h (20px)
+const TICKER_ROW_H = 20;
+
 export function showPublishProgress() {
   _el.publishStatus.innerHTML = "";
 
@@ -608,65 +574,100 @@ export function showPublishProgress() {
   dismiss.textContent = "\u00d7";
   dismiss.title = "Dismiss";
   dismiss.addEventListener("click", () => { _el.publishStatus.innerHTML = ""; });
-  _el.publishStatus.append(dismiss);
 
-  const container = document.createElement("div");
-  container.className = "publish-progress";
+  // Ticker window — shows 3 rows: prev (done), current (active), next (pending)
+  const ticker = document.createElement("div");
+  ticker.className = "publish-ticker";
+
+  const strip = document.createElement("div");
+  strip.className = "publish-ticker__strip";
+
+  // Leading blank so first step appears in the middle slot
+  const blank = document.createElement("div");
+  blank.className = "publish-ticker__row publish-ticker__row--blank";
+  blank.innerHTML = "&nbsp;";
+  strip.append(blank);
 
   for (const step of PUBLISH_STEPS) {
     const row = document.createElement("div");
-    row.className = "setup-step setup-step--pending";
+    row.className = "publish-ticker__row publish-ticker__row--pending";
     row.dataset.publishStep = step.key;
-    row.innerHTML = `<span class="setup-step__icon">&#9679;</span><span class="setup-step__label">${escapeHtml(step.label)}</span>`;
-    container.append(row);
+    row.innerHTML = `<span class="publish-ticker__icon">\u2022</span>${escapeHtml(step.label)}`;
+    strip.append(row);
   }
 
-  _el.publishStatus.append(container);
-  return container;
+  // Trailing blank so last step can sit in the middle slot
+  const blankEnd = document.createElement("div");
+  blankEnd.className = "publish-ticker__row publish-ticker__row--blank";
+  blankEnd.innerHTML = "&nbsp;";
+  strip.append(blankEnd);
+
+  ticker.append(strip);
+
+  // Result slot (populated on success)
+  const resultSlot = document.createElement("div");
+  resultSlot.className = "publish-result";
+
+  _el.publishStatus.append(dismiss, ticker, resultSlot);
 }
 
 export function advancePublishStep(stepKey) {
-  const container = _el.publishStatus.querySelector(".publish-progress");
-  if (!container) return;
+  const strip = _el.publishStatus.querySelector(".publish-ticker__strip");
+  if (!strip) return;
 
-  // Complete all previous steps
-  const rows = container.querySelectorAll(".setup-step");
-  let found = false;
-  for (const row of rows) {
-    if (row.dataset.publishStep === stepKey) {
-      found = true;
-      row.className = "setup-step setup-step--active";
-      row.querySelector(".setup-step__icon").innerHTML = `<span class="setup-step__spinner"></span>`;
-    } else if (!found) {
-      // Mark previous steps as done
-      if (row.classList.contains("setup-step--active") || row.classList.contains("setup-step--pending")) {
-        row.className = "setup-step setup-step--done";
-        row.querySelector(".setup-step__icon").textContent = "\u2713";
-      }
+  const rows = strip.querySelectorAll("[data-publish-step]");
+  let idx = -1;
+  for (let i = 0; i < rows.length; i++) {
+    if (rows[i].dataset.publishStep === stepKey) { idx = i; break; }
+  }
+  if (idx < 0) return;
+
+  // Mark all previous as done, current as active, rest pending
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    row.classList.remove("publish-ticker__row--pending", "publish-ticker__row--active", "publish-ticker__row--done");
+    if (i < idx) {
+      row.classList.add("publish-ticker__row--done");
+      row.querySelector(".publish-ticker__icon").textContent = "\u2713";
+    } else if (i === idx) {
+      row.classList.add("publish-ticker__row--active");
+      row.querySelector(".publish-ticker__icon").innerHTML = `<span class="publish-ticker__spinner"></span>`;
+    } else {
+      row.classList.add("publish-ticker__row--pending");
+      row.querySelector(".publish-ticker__icon").textContent = "\u2022";
     }
   }
+
+  // Scroll strip so active row is in the middle slot
+  // idx is 0-based among data rows; in the strip, row is at child index idx+1 (leading blank)
+  strip.style.transform = `translateY(${-idx * TICKER_ROW_H}px)`;
 }
 
 export function completeAllPublishSteps() {
-  const container = _el.publishStatus.querySelector(".publish-progress");
-  if (!container) return;
-  for (const row of container.querySelectorAll(".setup-step")) {
-    row.className = "setup-step setup-step--done";
-    row.querySelector(".setup-step__icon").textContent = "\u2713";
+  const strip = _el.publishStatus.querySelector(".publish-ticker__strip");
+  if (!strip) return;
+  const rows = strip.querySelectorAll("[data-publish-step]");
+  for (const row of rows) {
+    row.classList.remove("publish-ticker__row--pending", "publish-ticker__row--active");
+    row.classList.add("publish-ticker__row--done");
+    row.querySelector(".publish-ticker__icon").textContent = "\u2713";
   }
+  // Park on last step
+  strip.style.transform = `translateY(${-(rows.length - 1) * TICKER_ROW_H}px)`;
 }
 
 export function failPublishStep(stepKey, message) {
-  const container = _el.publishStatus.querySelector(".publish-progress");
-  if (!container) return;
-  for (const row of container.querySelectorAll(".setup-step")) {
+  const strip = _el.publishStatus.querySelector(".publish-ticker__strip");
+  if (!strip) return;
+  for (const row of strip.querySelectorAll("[data-publish-step]")) {
     if (row.dataset.publishStep === stepKey) {
-      row.className = "setup-step setup-step--error";
-      row.querySelector(".setup-step__icon").textContent = "\u2717";
+      row.classList.remove("publish-ticker__row--active", "publish-ticker__row--pending");
+      row.classList.add("publish-ticker__row--error");
+      row.querySelector(".publish-ticker__icon").textContent = "\u2717";
       if (message) {
         const err = document.createElement("span");
-        err.className = "setup-step__error";
-        err.textContent = ` ${message}`;
+        err.className = "publish-ticker__error";
+        err.textContent = ` \u2014 ${message}`;
         row.append(err);
       }
       break;
@@ -675,52 +676,44 @@ export function failPublishStep(stepKey, message) {
 }
 
 export function showPublishResult(url) {
-  const container = _el.publishStatus.querySelector(".publish-progress");
-  if (!container) return;
+  const resultSlot = _el.publishStatus.querySelector(".publish-result");
+  if (!resultSlot) return;
 
-  const result = document.createElement("div");
-  result.className = "publish-result";
-  result.innerHTML = `
-    <div class="publish-result__header">Published successfully!</div>
-    <div class="publish-result__url-row">
-      <input type="text" class="publish-result__url" value="${escapeHtml(url)}" readonly />
-      <button class="btn btn-secondary publish-result__copy">Copy URL</button>
-    </div>
-    <div class="publish-result__live-status">Waiting for page to go live...</div>
+  resultSlot.innerHTML = `
+    <span class="publish-result__label">Published</span>
+    <input type="text" class="publish-result__url" value="${escapeHtml(url)}" readonly />
+    <button class="btn btn-secondary publish-result__copy">Copy</button>
+    <span class="publish-result__live-status">deploying\u2026</span>
   `;
 
-  const copyBtn = result.querySelector(".publish-result__copy");
-  const urlInput = result.querySelector(".publish-result__url");
-  const liveStatus = result.querySelector(".publish-result__live-status");
+  const copyBtn = resultSlot.querySelector(".publish-result__copy");
+  const urlInput = resultSlot.querySelector(".publish-result__url");
+  const liveStatus = resultSlot.querySelector(".publish-result__live-status");
 
   copyBtn.addEventListener("click", async () => {
     await window.desktopApi.writeClipboardText(url);
     copyBtn.textContent = "Copied!";
     urlInput.select();
-    setTimeout(() => { copyBtn.textContent = "Copy URL"; }, 2000);
+    setTimeout(() => { copyBtn.textContent = "Copy"; }, 2000);
   });
 
   urlInput.addEventListener("click", () => urlInput.select());
 
-  // Dev-only: open local SPA preview (localhost:3000) with the same build hash.
-  // Shown immediately after commit — .enc is fetched from deployed GitHub Pages via remoteBase.
+  // Dev-only: open local SPA preview
   if (location.port || location.hostname === "localhost") {
     try {
       const parsed = new URL(url);
       const remoteBase = `${parsed.origin}${parsed.pathname.replace(/[^/]*$/, "")}`;
       const localUrl = `http://localhost:3000/?remoteBase=${encodeURIComponent(remoteBase)}${parsed.hash}`;
       const localBtn = document.createElement("button");
-      localBtn.className = "btn btn-secondary";
-      localBtn.textContent = "Open Local Preview";
-      localBtn.style.marginTop = "6px";
+      localBtn.className = "btn btn-dev publish-result__preview";
+      localBtn.textContent = "Preview";
       localBtn.addEventListener("click", () => {
         window.desktopApi.openPreviewWindow(localUrl);
       });
-      result.append(localBtn);
+      resultSlot.insertBefore(localBtn, liveStatus);
     } catch { /* ignore malformed URL */ }
   }
-
-  container.append(result);
 
   // Poll until the page is actually reachable
   pollPageLive(url, liveStatus);
