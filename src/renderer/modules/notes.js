@@ -282,6 +282,13 @@ export function renderNotesPanel() {
 
   _el.notesPanel.innerHTML = "";
   _el.notesPanel.append(container);
+
+  if (!_readOnly) {
+    const hint = document.createElement("div");
+    hint.className = "notes-feature-hint";
+    hint.innerHTML = "Type <strong>@</strong> followed by a skill, trait, rune, sigil, or item name to insert a reference. Hover over references in preview to see details.";
+    _el.notesPanel.append(hint);
+  }
 }
 
 // ── Catalog search (for @ mentions) ──────────────────────────────────────
