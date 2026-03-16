@@ -61,6 +61,12 @@ export function renderNotes(build) {
 
   container.innerHTML = html;
 
+  // Resolve ~img:X tokens to actual data URLs
+  resolveImageTokens(container, build.images);
+
+  // Embed YouTube videos
+  embedYouTubeVideos(container);
+
   // Bind hover tooltips
   container.querySelectorAll(".notes-mention").forEach((chip) => {
     const type = chip.dataset.type;
@@ -81,6 +87,99 @@ export function renderNotes(build) {
   });
 
   return container;
+}
+
+// ── Image token resolution ────────────────────────────────────────────
+
+function resolveImageTokens(container, images) {
+  if (!images) return;
+  container.querySelectorAll("img").forEach((img) => {
+    const m = img.getAttribute("src")?.match(/^~img:(\w+)$/);
+    if (!m) return;
+    const dataUrl = images[m[1]];
+    if (dataUrl) img.src = dataUrl;
+    else img.style.display = "none";
+  });
+}
+
+// ── YouTube embed ─────────────────────────────────────────────────────
+
+function extractYouTubeId(text) {
+  const m = text.match(/^https?:\/\/(?:www\.)?(?:youtube\.com\/(?:watch\?(?:[^&\s]*&)*v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  return m ? m[1] : null;
+}
+
+function embedYouTubeVideos(container) {
+  container.querySelectorAll("p").forEach((p) => {
+    const text = p.textContent.trim();
+    const videoId = extractYouTubeId(text);
+    if (!videoId) return;
+
+    const nodes = [...p.childNodes].filter((n) =>
+      !(n.nodeType === Node.TEXT_NODE && !n.textContent.trim())
+    );
+    const isBareUrl = nodes.length === 1 && nodes[0].nodeType === Node.TEXT_NODE;
+    const isSingleLink = nodes.length === 1 && nodes[0].nodeName === "A";
+    if (!isBareUrl && !isSingleLink) return;
+
+    const embed = document.createElement("div");
+    embed.className = "notes-embed";
+
+    const meta = document.createElement("div");
+    meta.className = "notes-embed__meta";
+    meta.style.display = "none";
+
+    const videoWrap = document.createElement("div");
+    videoWrap.className = "notes-embed__video";
+
+    const thumb = document.createElement("img");
+    thumb.className = "notes-embed__thumb";
+    thumb.src = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+    thumb.alt = "Video thumbnail";
+
+    const playBtn = document.createElement("div");
+    playBtn.className = "notes-embed__play";
+    playBtn.innerHTML = '<svg viewBox="0 0 68 48"><path d="M66.52 7.74c-.78-2.93-2.49-5.41-5.42-6.19C55.79.13 34 0 34 0S12.21.13 6.9 1.55c-2.93.78-4.64 3.26-5.42 6.19C.06 13.05 0 24 0 24s.06 10.95 1.48 16.26c.78 2.93 2.49 5.41 5.42 6.19C12.21 47.87 34 48 34 48s21.79-.13 27.1-1.55c2.93-.78 4.64-3.26 5.42 6.19C67.94 34.95 68 24 68 24s-.06-10.95-1.48-16.26z" fill="red"/><path d="M45 24L27 14v20" fill="#fff"/></svg>';
+
+    videoWrap.append(thumb, playBtn);
+
+    videoWrap.addEventListener("click", () => {
+      videoWrap.innerHTML = "";
+      const iframe = document.createElement("iframe");
+      iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+      iframe.setAttribute("frameborder", "0");
+      iframe.setAttribute("allowfullscreen", "");
+      iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
+      videoWrap.append(iframe);
+    });
+
+    embed.append(meta, videoWrap);
+    p.replaceWith(embed);
+
+    // Fetch video metadata for title bar
+    fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (!data) return;
+        if (data.author_name) {
+          const author = document.createElement("div");
+          author.className = "notes-embed__author";
+          author.textContent = data.author_name;
+          meta.append(author);
+        }
+        if (data.title) {
+          const title = document.createElement("a");
+          title.className = "notes-embed__title";
+          title.textContent = data.title;
+          title.href = `https://www.youtube.com/watch?v=${videoId}`;
+          title.target = "_blank";
+          title.rel = "noopener";
+          meta.append(title);
+        }
+        if (data.author_name || data.title) meta.style.display = "";
+      })
+      .catch(() => {});
+  });
 }
 
 function escapeHtml(str) {

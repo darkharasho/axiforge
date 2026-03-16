@@ -601,6 +601,7 @@ export async function loadBuildIntoEditor(build, options = {}) {
     profession,
     tagsText: Array.isArray(build.tags) ? build.tags.join(", ") : "",
     notes: String(build.notes || ""),
+    images: build.images && typeof build.images === "object" ? { ...build.images } : {},
     equipment: {
       statPackage: String(build.equipment?.statPackage || ""),
       relic: String(build.equipment?.relic || ""),
@@ -840,6 +841,7 @@ export function serializeEditorToBuild() {
     },
     tags: parseTags(state.editor.tagsText),
     notes: String(state.editor.notes || ""),
+    images: state.editor.images && typeof state.editor.images === "object" ? { ...state.editor.images } : {},
     morphSkillIds: Array.isArray(state.editor.morphSkillIds)
       ? state.editor.morphSkillIds.map(Number)
       : [0, 0, 0],

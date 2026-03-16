@@ -40,6 +40,7 @@ export function createEmptyEditor(profession = "", gameMode = "pve") {
     profession,
     tagsText: "",
     notes: "",
+    images: {},
     equipment: {
       statPackage: "",
       relic: "",

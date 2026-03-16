@@ -32,6 +32,7 @@ const ICONS = {
   hr: '<svg viewBox="0 0 16 16"><line x1="1" y1="8" x2="15" y2="8" stroke-width="2.5"/></svg>',
   table: '<svg viewBox="0 0 16 16"><rect x="1" y="2" width="14" height="12" rx="1.5"/><line x1="1" y1="6" x2="15" y2="6"/><line x1="1" y1="10" x2="15" y2="10"/><line x1="6" y1="2" x2="6" y2="14"/><line x1="11" y1="2" x2="11" y2="14"/></svg>',
   link: '<svg viewBox="0 0 16 16"><path d="M6.5 9.5a3 3 0 0 0 4.2.3l2-2a3 3 0 0 0-4.2-4.3L7.3 4.7"/><path d="M9.5 6.5a3 3 0 0 0-4.2-.3l-2 2a3 3 0 0 0 4.2 4.3l1.2-1.2"/></svg>',
+  image: '<svg viewBox="0 0 16 16"><rect x="1" y="2" width="14" height="12" rx="1.5"/><circle cx="5" cy="6" r="1.5" fill="currentColor" stroke="none"/><path d="M1 12l3.5-4 2.5 2.5L10 7.5l5 5.5H2.5A1.5 1.5 0 0 1 1 12z" fill="currentColor" stroke="none"/></svg>',
   eye: '<svg viewBox="0 0 16 16"><path d="M1 8s3-5.5 7-5.5S15 8 15 8s-3 5.5-7 5.5S1 8 1 8z"/><circle cx="8" cy="8" r="2.5"/></svg>',
 };
 
@@ -52,6 +53,7 @@ const TOOLBAR_ITEMS = [
   { type: "button", icon: "hr", action: "hr", title: "Horizontal Rule" },
   { type: "button", icon: "table", action: "table", title: "Table" },
   { type: "button", icon: "link", action: "link", title: "Link" },
+  { type: "button", icon: "image", action: "image", title: "Image" },
   { type: "sep" },
   { type: "button", label: "@", action: "mention", title: "@ Mention", style: "color:var(--accent-2);font-weight:700" },
 ];
@@ -148,6 +150,17 @@ function insertMarkdown(action, textarea) {
       }
       break;
     }
+    case "image": {
+      if (selected) {
+        before = before + "![" + selected + "](";
+        after = ")" + after;
+        cursorOffset = selected.length + 4; // cursor after (
+      } else {
+        before = before + "![description](image url)";
+        cursorOffset = 2; // cursor after ![
+      }
+      break;
+    }
     case "mention": {
       before = before + "@";
       cursorOffset = 1;
@@ -165,6 +178,49 @@ function insertMarkdown(action, textarea) {
 function syncState(textarea) {
   state.editor.notes = textarea.value;
   _markEditorChanged({ updateBuildList: true });
+}
+
+// ── Clipboard image paste ────────────────────────────────────────────────
+
+function compressAndInsertImage(blob, textarea) {
+  const img = new Image();
+  const objectUrl = URL.createObjectURL(blob);
+
+  img.onload = () => {
+    URL.revokeObjectURL(objectUrl);
+
+    const MAX_DIM = 800;
+    let { width, height } = img;
+    if (width > MAX_DIM || height > MAX_DIM) {
+      const scale = MAX_DIM / Math.max(width, height);
+      width = Math.round(width * scale);
+      height = Math.round(height * scale);
+    }
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
+
+    // Store in images map with next available key
+    if (!state.editor.images) state.editor.images = {};
+    const keys = Object.keys(state.editor.images).map(Number).filter((n) => !isNaN(n));
+    const nextKey = keys.length ? Math.max(...keys) + 1 : 1;
+    state.editor.images[nextKey] = dataUrl;
+
+    const start = textarea.selectionStart;
+    const before = textarea.value.slice(0, start);
+    const after = textarea.value.slice(textarea.selectionEnd);
+    const insert = `![image](~img:${nextKey})`;
+    textarea.value = before + insert + after;
+    textarea.selectionStart = textarea.selectionEnd = start + insert.length;
+    textarea.focus();
+    syncState(textarea);
+  };
+
+  img.src = objectUrl;
 }
 
 // ── Build toolbar DOM ────────────────────────────────────────────────────
@@ -246,6 +302,18 @@ export function renderNotesPanel() {
       else if (e.key === "Escape") { e.preventDefault(); hideAutocomplete(); }
     });
 
+    textarea.addEventListener("paste", (e) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (const item of items) {
+        if (!item.type.startsWith("image/")) continue;
+        e.preventDefault();
+        const blob = item.getAsFile();
+        if (blob) compressAndInsertImage(blob, textarea);
+        return;
+      }
+    });
+
     textarea.addEventListener("blur", () => { setTimeout(() => hideAutocomplete(), 150); });
 
     _activeTextarea = textarea;
@@ -296,7 +364,7 @@ export function renderNotesPanel() {
   if (!_readOnly) {
     const hint = document.createElement("div");
     hint.className = "notes-feature-hint";
-    hint.innerHTML = "Type <strong>@</strong> followed by a skill, trait, rune, sigil, or item name to insert a reference. Hover over references in preview to see details.";
+    hint.innerHTML = "Type <strong>@</strong> to reference skills, traits, and items. <strong>Paste</strong> images from your clipboard. YouTube links auto-embed in preview.";
     _el.notesPanel.append(hint);
   }
 }
@@ -492,12 +560,112 @@ function renderPreview(markdown, container) {
 
   container.innerHTML = html;
 
+  // Resolve ~img:X tokens to actual data URLs
+  resolveImageTokens(container, state.editor.images);
+
+  // Embed YouTube videos (bare URLs or link-text-matches-URL links in their own <p>)
+  embedYouTubeVideos(container);
+
   // Bind hover tooltips to mention chips
   container.querySelectorAll(".notes-mention").forEach((chip) => {
     const type = chip.dataset.type;
     const id = Number(chip.dataset.id);
     const kind = type === "trait" ? "trait" : type === "skill" ? "skill" : `equip-${type}`;
     bindHoverPreview(chip, kind, () => resolveReference(type, id));
+  });
+}
+
+// ── Image token resolution ────────────────────────────────────────────
+
+function resolveImageTokens(container, images) {
+  if (!images) return;
+  container.querySelectorAll("img").forEach((img) => {
+    const m = img.getAttribute("src")?.match(/^~img:(\w+)$/);
+    if (!m) return;
+    const dataUrl = images[m[1]];
+    if (dataUrl) img.src = dataUrl;
+    else img.style.display = "none";
+  });
+}
+
+// ── YouTube embed ─────────────────────────────────────────────────────
+
+function extractYouTubeId(text) {
+  const m = text.match(/^https?:\/\/(?:www\.)?(?:youtube\.com\/(?:watch\?(?:[^&\s]*&)*v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  return m ? m[1] : null;
+}
+
+function embedYouTubeVideos(container) {
+  container.querySelectorAll("p").forEach((p) => {
+    const text = p.textContent.trim();
+    const videoId = extractYouTubeId(text);
+    if (!videoId) return;
+
+    // Only embed if the <p> contains just the URL (bare text or a single link)
+    const nodes = [...p.childNodes].filter((n) =>
+      !(n.nodeType === Node.TEXT_NODE && !n.textContent.trim())
+    );
+    const isBareUrl = nodes.length === 1 && nodes[0].nodeType === Node.TEXT_NODE;
+    const isSingleLink = nodes.length === 1 && nodes[0].nodeName === "A";
+    if (!isBareUrl && !isSingleLink) return;
+
+    const embed = document.createElement("div");
+    embed.className = "notes-embed";
+
+    const meta = document.createElement("div");
+    meta.className = "notes-embed__meta";
+    meta.style.display = "none";
+
+    const videoWrap = document.createElement("div");
+    videoWrap.className = "notes-embed__video";
+
+    const thumb = document.createElement("img");
+    thumb.className = "notes-embed__thumb";
+    thumb.src = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+    thumb.alt = "Video thumbnail";
+
+    const playBtn = document.createElement("div");
+    playBtn.className = "notes-embed__play";
+    playBtn.innerHTML = '<svg viewBox="0 0 68 48"><path d="M66.52 7.74c-.78-2.93-2.49-5.41-5.42-6.19C55.79.13 34 0 34 0S12.21.13 6.9 1.55c-2.93.78-4.64 3.26-5.42 6.19C.06 13.05 0 24 0 24s.06 10.95 1.48 16.26c.78 2.93 2.49 5.41 5.42 6.19C12.21 47.87 34 48 34 48s21.79-.13 27.1-1.55c2.93-.78 4.64-3.26 5.42-6.19C67.94 34.95 68 24 68 24s-.06-10.95-1.48-16.26z" fill="red"/><path d="M45 24L27 14v20" fill="#fff"/></svg>';
+
+    videoWrap.append(thumb, playBtn);
+
+    videoWrap.addEventListener("click", () => {
+      videoWrap.innerHTML = "";
+      const iframe = document.createElement("iframe");
+      iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+      iframe.setAttribute("frameborder", "0");
+      iframe.setAttribute("allowfullscreen", "");
+      iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
+      videoWrap.append(iframe);
+    });
+
+    embed.append(meta, videoWrap);
+    p.replaceWith(embed);
+
+    // Fetch video metadata for title bar
+    fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (!data) return;
+        if (data.author_name) {
+          const author = document.createElement("div");
+          author.className = "notes-embed__author";
+          author.textContent = data.author_name;
+          meta.append(author);
+        }
+        if (data.title) {
+          const title = document.createElement("a");
+          title.className = "notes-embed__title";
+          title.textContent = data.title;
+          title.href = `https://www.youtube.com/watch?v=${videoId}`;
+          title.target = "_blank";
+          title.rel = "noopener";
+          meta.append(title);
+        }
+        if (data.author_name || data.title) meta.style.display = "";
+      })
+      .catch(() => {});
   });
 }
 

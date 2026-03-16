@@ -106,6 +106,7 @@ function normalizeBuild(input, fallbackCreatedAt) {
     equipment: normalizeEquipment(input.equipment),
     tags: normalizeTags(input.tags),
     notes: asString(input.notes, 12000),
+    images: normalizeImages(input.images),
     createdAt,
     updatedAt,
     // Keep legacy fields for migration compatibility.
@@ -232,6 +233,17 @@ function normalizeTags(value) {
     .map((entry) => asString(entry, 40))
     .filter(Boolean)
     .slice(0, 20);
+}
+
+function normalizeImages(value) {
+  if (!value || typeof value !== "object") return {};
+  const result = {};
+  for (const [key, val] of Object.entries(value).slice(0, 20)) {
+    if (typeof val === "string" && val.startsWith("data:image/")) {
+      result[String(key)] = val;
+    }
+  }
+  return result;
 }
 
 function asString(value, maxLen) {
