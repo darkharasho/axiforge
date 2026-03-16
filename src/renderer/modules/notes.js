@@ -8,6 +8,10 @@ let _el = {};
 let _markEditorChanged = () => {};
 let _readOnly = false;
 let _previewMode = false;
+let _autocompleteEl = null;
+let _autocompleteItems = [];
+let _autocompleteIndex = 0;
+let _mentionTriggerPos = -1;
 
 export function initNotes({ notesPanel }, { readOnly = false } = {}) {
   _el = { notesPanel };
@@ -221,6 +225,19 @@ export function renderNotesPanel() {
     textarea.readOnly = true;
   } else {
     textarea.addEventListener("input", () => syncState(textarea));
+    textarea.addEventListener("input", () => detectMentionTrigger(textarea));
+
+    textarea.addEventListener("keydown", (e) => {
+      if (!_autocompleteEl) return;
+      if (e.key === "ArrowDown") { e.preventDefault(); _autocompleteIndex = Math.min(_autocompleteIndex + 1, _autocompleteItems.length - 1); renderAutocompleteItems(); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); _autocompleteIndex = Math.max(_autocompleteIndex - 1, 0); renderAutocompleteItems(); }
+      else if (e.key === "Enter" && _autocompleteItems.length) { e.preventDefault(); insertMention(_autocompleteItems[_autocompleteIndex], textarea); }
+      else if (e.key === "Escape") { e.preventDefault(); hideAutocomplete(); }
+    });
+
+    textarea.addEventListener("blur", () => { setTimeout(() => hideAutocomplete(), 150); });
+
+    _activeTextarea = textarea;
   }
 
   const { toolbar, previewBtn } = buildToolbar(textarea);
@@ -314,6 +331,119 @@ function searchCatalog(query, maxResults = 8) {
   }
 
   return results;
+}
+
+// ── Autocomplete popup ────────────────────────────────────────────────────
+
+function getCaretCoords(textarea) {
+  const mirror = document.createElement("div");
+  mirror.className = "notes-mirror";
+  const cs = getComputedStyle(textarea);
+  const props = [
+    "fontFamily", "fontSize", "fontWeight", "lineHeight", "letterSpacing",
+    "wordSpacing", "textIndent", "padding", "border", "boxSizing", "width",
+  ];
+  for (const p of props) mirror.style[p] = cs[p];
+  const textUpToCaret = textarea.value.slice(0, textarea.selectionEnd);
+  mirror.textContent = textUpToCaret;
+  const marker = document.createElement("span");
+  marker.textContent = "\u200b";
+  mirror.append(marker);
+  const rect = textarea.getBoundingClientRect();
+  mirror.style.position = "absolute";
+  mirror.style.top = `${rect.top + window.scrollY - textarea.scrollTop}px`;
+  mirror.style.left = `${rect.left + window.scrollX}px`;
+  document.body.append(mirror);
+  const markerRect = marker.getBoundingClientRect();
+  const coords = { top: markerRect.top + window.scrollY, left: markerRect.left + window.scrollX };
+  mirror.remove();
+  return coords;
+}
+
+function showAutocomplete(textarea, query) {
+  const results = searchCatalog(query);
+  if (!results.length) { hideAutocomplete(); return; }
+  _autocompleteItems = results;
+  _autocompleteIndex = 0;
+  if (!_autocompleteEl) {
+    _autocompleteEl = document.createElement("div");
+    _autocompleteEl.className = "notes-autocomplete";
+    document.body.append(_autocompleteEl);
+  }
+  const coords = getCaretCoords(textarea);
+  _autocompleteEl.style.top = `${coords.top + 20}px`;
+  _autocompleteEl.style.left = `${coords.left}px`;
+  renderAutocompleteItems();
+}
+
+function renderAutocompleteItems() {
+  if (!_autocompleteEl) return;
+  _autocompleteEl.innerHTML = "";
+  const header = document.createElement("div");
+  header.className = "notes-autocomplete__header";
+  header.textContent = `${_autocompleteItems.length} result${_autocompleteItems.length !== 1 ? "s" : ""}`;
+  _autocompleteEl.append(header);
+  _autocompleteItems.forEach((item, i) => {
+    const row = document.createElement("div");
+    row.className = "notes-autocomplete__item" + (i === _autocompleteIndex ? " notes-autocomplete__item--selected" : "");
+    if (item.icon) {
+      const icon = document.createElement("img");
+      icon.className = "notes-autocomplete__item-icon";
+      icon.src = item.icon;
+      icon.alt = "";
+      icon.loading = "lazy";
+      row.append(icon);
+    }
+    const name = document.createElement("span");
+    name.className = "notes-autocomplete__item-name";
+    name.textContent = item.name;
+    row.append(name);
+    const cat = document.createElement("span");
+    cat.className = "notes-autocomplete__item-category";
+    cat.textContent = item.category;
+    row.append(cat);
+    row.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      insertMention(item, _activeTextarea);
+    });
+    _autocompleteEl.append(row);
+  });
+}
+
+let _activeTextarea = null;
+
+function insertMention(item, textarea) {
+  const ta = textarea || _activeTextarea;
+  if (!ta || _mentionTriggerPos < 0) return;
+  const before = ta.value.slice(0, _mentionTriggerPos);
+  const after = ta.value.slice(ta.selectionEnd);
+  const mention = `@[${item.category.toLowerCase()}:${item.id}:${item.name}]`;
+  ta.value = before + mention + " " + after;
+  const newPos = before.length + mention.length + 1;
+  ta.selectionStart = ta.selectionEnd = newPos;
+  ta.focus();
+  syncState(ta);
+  hideAutocomplete();
+}
+
+function hideAutocomplete() {
+  if (_autocompleteEl) { _autocompleteEl.remove(); _autocompleteEl = null; }
+  _autocompleteItems = [];
+  _autocompleteIndex = 0;
+  _mentionTriggerPos = -1;
+}
+
+function detectMentionTrigger(textarea) {
+  const pos = textarea.selectionEnd;
+  const text = textarea.value;
+  let i = pos - 1;
+  while (i >= 0 && text[i] !== "@" && text[i] !== "\n" && text[i] !== " ") i--;
+  if (i >= 0 && text[i] === "@") {
+    if (i > 0 && /\w/.test(text[i - 1])) { hideAutocomplete(); return; }
+    const query = text.slice(i + 1, pos);
+    if (query.length >= 1) { _mentionTriggerPos = i; showAutocomplete(textarea, query); }
+    else hideAutocomplete();
+  } else hideAutocomplete();
 }
 
 // ── Preview rendering ─────────────────────────────────────────────────
