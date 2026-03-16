@@ -970,16 +970,17 @@ async function getUpgradeCatalog(lang = "en") {
   if (_upgradeCatalogPromise) return _upgradeCatalogPromise;
 
   _upgradeCatalogPromise = (async () => {
-    const { RUNE_ITEM_IDS, SIGIL_ITEM_IDS, INFUSION_ITEM_IDS, WVW_INFUSION_IDS, ENRICHMENT_ITEM_IDS, FOOD_ITEM_IDS, UTILITY_ITEM_IDS } = require("./upgradeIds");
+    const { RUNE_ITEM_IDS, SIGIL_ITEM_IDS, INFUSION_ITEM_IDS, WVW_INFUSION_IDS, ENRICHMENT_ITEM_IDS, FOOD_ITEM_IDS, UTILITY_ITEM_IDS, RELIC_ITEM_IDS } = require("./upgradeIds");
     const { FOOD_BUFF_OVERRIDES } = require("./foodOverrides");
 
-    const [runeItems, sigilItems, infusionItems, enrichmentItems, foodItems, utilityItems] = await Promise.all([
+    const [runeItems, sigilItems, infusionItems, enrichmentItems, foodItems, utilityItems, relicItems] = await Promise.all([
       fetchGw2ByIds("items", RUNE_ITEM_IDS, lang),
       fetchGw2ByIds("items", SIGIL_ITEM_IDS, lang),
       fetchGw2ByIds("items", INFUSION_ITEM_IDS, lang),
       fetchGw2ByIds("items", ENRICHMENT_ITEM_IDS, lang),
       fetchGw2ByIds("items", FOOD_ITEM_IDS, lang),
       fetchGw2ByIds("items", UTILITY_ITEM_IDS, lang),
+      fetchGw2ByIds("items", RELIC_ITEM_IDS, lang),
     ]);
 
     const stripGw2Markup = (text) =>
@@ -1025,6 +1026,7 @@ async function getUpgradeCatalog(lang = "en") {
       sigils: sigilItems.map(mapItem).sort((a, b) => a.name.localeCompare(b.name)),
       infusions: infusionItems.map((item) => ({ ...mapItem(item), category: WVW_INFUSION_IDS.has(item.id) ? "wvw" : "pve" })).sort((a, b) => a.name.localeCompare(b.name)),
       enrichments: enrichmentItems.map(mapItem).sort((a, b) => a.name.localeCompare(b.name)),
+      relics: relicItems.map(mapItem).sort((a, b) => a.name.localeCompare(b.name)),
       foods: foodItems.filter((item) => item.details?.type === "Food").map(mapFood).sort((a, b) => a.name.localeCompare(b.name)),
       utilities: utilityItems.filter((item) => item.details?.type === "Utility").map(mapUtility).sort((a, b) => a.name.localeCompare(b.name)),
     };
@@ -1033,6 +1035,7 @@ async function getUpgradeCatalog(lang = "en") {
     catalog.sigilById = new Map(catalog.sigils.map((s) => [s.id, s]));
     catalog.infusionById = new Map(catalog.infusions.map((i) => [i.id, i]));
     catalog.enrichmentById = new Map(catalog.enrichments.map((e) => [e.id, e]));
+    catalog.relicByName = new Map(catalog.relics.map((r) => [r.name, r]));
     catalog.foodById = new Map(catalog.foods.map((f) => [f.id, f]));
     catalog.utilityById = new Map(catalog.utilities.map((u) => [u.id, u]));
 

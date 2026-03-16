@@ -145,4 +145,114 @@ const UTILITY_ITEM_IDS = [
   101651, 101666, 102135,
 ];
 
-module.exports = { RUNE_ITEM_IDS, SIGIL_ITEM_IDS, INFUSION_ITEM_IDS, WVW_INFUSION_IDS, ENRICHMENT_ITEM_IDS, FOOD_ITEM_IDS, UTILITY_ITEM_IDS };
+const RELIC_ITEM_IDS = [
+  // SotO launch relics
+  99997,  // Relic of Isgarren
+  100031, // Relic of the Monk
+  100048, // Relic of the Ice
+  100063, // Relic of Surging
+  100074, // Relic of Cerus
+  100090, // Relic of the Dragonhunter
+  100115, // Relic of Mabon
+  100144, // Relic of the Warrior
+  100148, // Relic of Speed
+  100158, // Relic of the Mirage
+  100165, // Relic of the Necromancer
+  100177, // Relic of Peitha
+  100194, // Relic of the Weaver
+  100219, // Relic of the Herald
+  100230, // Relic of the Krait
+  100238, // Relic of the Lich
+  100248, // Relic of the Citadel
+  100262, // Relic of Fireworks
+  100311, // Relic of the Ogre
+  100345, // Relic of the Daredevil
+  100368, // Relic of the Scourge
+  100385, // Relic of the Centaur
+  100388, // Relic of the Astral Ward
+  100390, // Relic of Antitoxin
+  100400, // Relic of the Sunless
+  100403, // Relic of the Golemancer
+  100411, // Relic of the Trooper
+  100429, // Relic of Mercy
+  100432, // Relic of Akeem
+  100435, // Relic of the Earth
+  100442, // Relic of Dwayna
+  100450, // Relic of the Chronomancer
+  100453, // Relic of the Firebrand
+  100455, // Relic of Durability
+  100461, // Relic of Lyhr
+  100479, // Relic of the Privateer
+  100527, // Relic of the Brawler
+  100531, // Relic of the Water
+  100542, // Relic of the Cavalier
+  100557, // Relic of the Wizard's Tower
+  100561, // Relic of the Adventurer
+  100614, // Relic of Evasion
+  100625, // Relic of Leadership
+  100633, // Relic of the Flock
+  100676, // Relic of Vampirism
+  100693, // Relic of the Afflicted
+  100694, // Relic of the Unseen Invasion
+  100739, // Relic of the Reaper
+  100752, // Relic of the Pack
+  100775, // Relic of Vass
+  100794, // Relic of Resistance
+  100849, // Relic of the Aristocracy
+  100893, // Relic of the Zephyrite
+  100908, // Relic of the Holosmith
+  100916, // Relic of the Thief
+  100924, // Relic of the Deadeye
+  100934, // Relic of the Defender
+  100942, // Relic of Dagda
+  100947, // Relic of Fireworks
+  // SotO updates
+  101116, // Relic of Febe
+  101139, // Relic of the Midnight King
+  101166, // Relic of the Demon Queen
+  101191, // Relic of Nourys
+  101198, // Relic of Nayos
+  101268, // Relic of Karakosa
+  // Janthir Wilds
+  101737, // Relic of the Founding
+  101767, // Relic of the Twin Generals
+  101801, // Relic of Mosyn
+  101863, // Relic of the Sorcerer
+  101955, // Relic of Zakiros
+  102199, // Relic of the Blightbringer
+  102245, // Relic of Atrocity
+  102595, // Relic of the Stormsinger
+  103015, // Relic of Rivers
+  103424, // Relic of Sorrow
+  103574, // Relic of the Claw
+  103763, // Relic of Geysers
+  103872, // Relic of Mount Balrior
+  103901, // Relic of the Mists Tide
+  103977, // Relic of the Beehive
+  103984, // Relic of Reunification
+  104022, // Relic of the Steamshrieker
+  104241, // Relic of the Eagle
+  104256, // Relic of Altruism
+  104424, // Relic of Thorns
+  104501, // Relic of Fire
+  104733, // Relic of the Phenom
+  104800, // Relic of Bloodstone
+  104848, // Relic of Bava Nisos
+  104849, // Relic of Agony
+  104928, // Relic of the Living City
+  104994, // Relic of Mistburn
+  105585, // Relic of the First Revenant
+  105652, // Relic of Castora
+  106206, // Relic of the Mist Stranger
+  106221, // Relic of the Pirate Queen
+  106355, // Relic of the Scoundrel
+  106364, // Relic of the Biomancer
+  106916, // Relic of Shackles
+  106920, // Relic of the Nautical Beast
+  107030, // Relic of Fog
+  107061, // Relic of the Coral Heart
+  107124, // Relic of the Forest Dweller
+  107192, // Relic of the Alliance
+];
+
+module.exports = { RUNE_ITEM_IDS, SIGIL_ITEM_IDS, INFUSION_ITEM_IDS, WVW_INFUSION_IDS, ENRICHMENT_ITEM_IDS, FOOD_ITEM_IDS, UTILITY_ITEM_IDS, RELIC_ITEM_IDS };
