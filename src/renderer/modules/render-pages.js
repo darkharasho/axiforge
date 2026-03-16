@@ -1,5 +1,5 @@
 import { state, createEmptyEditor } from "./state.js";
-import { escapeHtml, formatDate, formatPagesStatus, makeButton, matchesBuildQuery, delay } from "./utils.js";
+import { escapeHtml, formatDate, formatShortDate, formatPagesStatus, makeButton, matchesBuildQuery, delay } from "./utils.js";
 import { renderCustomSelect } from "./custom-select.js";
 import { closeCustomSelect } from "./custom-select.js";
 import { hideHoverPreview } from "./detail-panel.js";
@@ -350,9 +350,41 @@ export function renderBuildList() {
     const active = build.id && build.id === state.editor.id;
     const dirtySuffix = active && state.editorDirty ? " | Unsaved edits" : "";
     card.className = `build-card ${active ? "build-card--active" : ""}`;
+
+    // Extract enriched data from saved build
+    const specNames = (build.specializations || [])
+      .map((s) => s.name)
+      .filter(Boolean);
+    const eliteSpec = (build.specializations || []).find((s) => s.elite);
+    const skillNames = [
+      build.skills?.heal?.name || "",
+      ...((build.skills?.utility || []).map((s) => s?.name || "")),
+      build.skills?.elite?.name || "",
+    ].filter(Boolean);
+
+    // Build pills
+    let pillsHtml = `<span class="build-card__pill">${escapeHtml(build.profession || "Unknown")}</span>`;
+    pillsHtml += `<span class="build-card__pill build-card__pill--mode">${escapeHtml((build.gameMode || "pve").toUpperCase())}</span>`;
+    if (eliteSpec) {
+      pillsHtml += `<span class="build-card__pill build-card__pill--elite">${escapeHtml(eliteSpec.name)}</span>`;
+    }
+
+    // Build detail lines
+    let detailHtml = "";
+    if (specNames.length) {
+      detailHtml += `<div class="build-card__detail"><span class="build-card__detail-label">Specs:</span> ${escapeHtml(specNames.join(" \u00B7 "))}</div>`;
+    }
+    if (skillNames.length) {
+      detailHtml += `<div class="build-card__detail"><span class="build-card__detail-label">Skills:</span> ${escapeHtml(skillNames.join(" \u00B7 "))}</div>`;
+    }
+
     card.innerHTML = `
-      <h3>${escapeHtml(build.title || "Untitled Build")}</h3>
-      <p>${escapeHtml(build.profession || "Unknown Profession")} | ${escapeHtml((build.gameMode || "pve").toUpperCase())} | Updated ${escapeHtml(formatDate(build.updatedAt))}${escapeHtml(dirtySuffix)}</p>
+      <div class="build-card__header">
+        <h3>${escapeHtml(build.title || "Untitled Build")}${escapeHtml(dirtySuffix)}</h3>
+        <span class="build-card__date">${escapeHtml(formatShortDate(build.updatedAt))}</span>
+      </div>
+      <div class="build-card__pills">${pillsHtml}</div>
+      ${detailHtml}
     `;
 
     const actions = document.createElement("div");
