@@ -381,7 +381,8 @@ export function renderBuildList() {
       detailHtml += `<div class="build-card__detail"><span class="build-card__detail-label">Skills:</span> ${escapeHtml(skillNames.join(" \u00B7 "))}</div>`;
     }
 
-    const profSvg = getProfessionSvg(build.profession) || "";
+    const iconName = eliteSpec?.name || build.profession;
+    const profSvg = getProfessionSvg(iconName) || getProfessionSvg(build.profession) || "";
     card.innerHTML = `
       <div class="build-card__icon">${profSvg}</div>
       <div class="build-card__content">
