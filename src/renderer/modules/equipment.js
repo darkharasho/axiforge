@@ -953,25 +953,6 @@ export function renderEquipmentPanel() {
   );
   leftCol.append(consumeSection);
 
-  // Notes
-  const notesSection = makeSection("Notes");
-  const notesTA = document.createElement("textarea");
-  notesTA.id = "notesInput";
-  notesTA.className = "equip-notes";
-  notesTA.rows = 4;
-  notesTA.value = state.editor.notes || "";
-  notesTA.placeholder = "Combo priorities, matchup notes, rotation...";
-  if (_readOnly) {
-    notesTA.readOnly = true;
-  } else {
-    notesTA.addEventListener("input", () => {
-      state.editor.notes = notesTA.value;
-      _markEditorChanged({ updateBuildList: true });
-    });
-  }
-  notesSection.append(notesTA);
-  leftCol.append(notesSection);
-
   // === RIGHT COLUMN ===
   const rightCol = document.createElement("div");
   rightCol.className = "equip-col equip-col--right";

@@ -663,24 +663,6 @@
   border-color: var(--accent-2);
 }
 
-.equip-notes {
-  width: 100%;
-  background: rgba(6, 11, 21, 0.8);
-  border: 1px solid rgba(44, 61, 94, 0.8);
-  border-radius: 6px;
-  color: var(--text);
-  padding: 6px 8px;
-  font: inherit;
-  font-size: 12px;
-  resize: vertical;
-  outline: none;
-  box-sizing: border-box;
-}
-
-.equip-notes:focus {
-  border-color: var(--accent-2);
-}
-
 /* Upgrade sub-slots (rune / sigil / infusion) */
 .equip-upgrade-slots {
   display: flex;
