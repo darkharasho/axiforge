@@ -463,11 +463,12 @@ export function renderEquipmentPanel() {
     weaponNameSpan.textContent = lockedByTwoHanded ? "— Two-Handed —" : (weaponDef?.label || slotDef.label);
     weaponBtn.append(iconDiv, weaponNameSpan);
 
+    const noWeapon = !currentWeapon;
     const statBtn = document.createElement("button");
     statBtn.type = "button";
     statBtn.className = "equip-stat-pick-btn" + (currentCombo ? "" : " equip-stat-pick-btn--empty");
-    statBtn.disabled = lockedByTwoHanded;
-    if (lockedByTwoHanded || (_readOnly && !currentCombo)) {
+    statBtn.disabled = lockedByTwoHanded || noWeapon;
+    if (lockedByTwoHanded || noWeapon || (_readOnly && !currentCombo)) {
       statBtn.style.display = "none";
     } else if (currentCombo) {
       const combo = STAT_COMBOS_BY_LABEL.get(currentCombo);
@@ -585,8 +586,8 @@ export function renderEquipmentPanel() {
       }
     }
 
-    // Upgrade sub-slots for weapons
-    if (!lockedByTwoHanded) {
+    // Upgrade sub-slots for weapons — only when a weapon is equipped
+    if (!lockedByTwoHanded && !noWeapon) {
       const upgradeContainer = document.createElement("div");
       upgradeContainer.className = "equip-upgrade-slots";
 
