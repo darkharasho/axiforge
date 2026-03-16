@@ -14,9 +14,7 @@
 }
 
 .skills-host {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  margin-top: 10px;
 }
 
 #skillSearch {
@@ -24,14 +22,13 @@
 }
 
 .panel--skillbar {
-  padding: 4px 12px 8px;
+  padding: 8px 12px;
 }
 
 .skills-bar__weapon-col {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  justify-content: flex-end;
   gap: 4px;
 }
 
@@ -366,7 +363,7 @@
 
 .skills-bar {
   display: flex;
-  align-items: stretch;
+  align-items: flex-end;
   justify-content: center;
   gap: 12px;
 }
