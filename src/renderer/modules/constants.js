@@ -243,6 +243,16 @@ export const GW2_RELICS = [
   { label: "Relic of the Weaver",         icon: "https://render.guildwars2.com/file/12997110B0509463DD9F1364A92493B2C4309BE1/3122377.png" },
   { label: "Relic of the Wizard's Tower", icon: "https://render.guildwars2.com/file/0C0EE407B9DAA44438ED6C2DCDA4EEB30953DF1B/3122378.png" },
   { label: "Relic of the Zephyrite",      icon: "https://render.guildwars2.com/file/070E32046C250E32DA76F2CBDFC504D6C0AB0344/3122379.png" },
+  { label: "Relic of Atrocity",          icon: "https://render.guildwars2.com/file/F1F3033EA7780C093A651253ACB92E415C0525F6/3375218.png" },
+  { label: "Relic of Mosyn",             icon: "https://render.guildwars2.com/file/CAB064E2F11609D2309E356062BA93107F9F605E/3302017.png" },
+  { label: "Relic of Rivers",            icon: "https://render.guildwars2.com/file/08DED07BF6DF37E69A08D1C49D9C45D81BD8A5CA/3255567.png" },
+  { label: "Relic of Zakiros",           icon: "https://render.guildwars2.com/file/5A5B5D3A4D9DD01F0A115030270A0A6EA353CC65/3302021.png" },
+  { label: "Relic of the Blightbringer", icon: "https://render.guildwars2.com/file/286C60AC6FA239B0070293039091A44476A35E90/3375219.png" },
+  { label: "Relic of the Founding",      icon: "https://render.guildwars2.com/file/FD9FE6B8CBBD44132D6DBCA7C2E92CF4C69D6EDC/3302016.png" },
+  { label: "Relic of the Sorcerer",      icon: "https://render.guildwars2.com/file/AC943ADC1ABD046294600DDBEFE8636FF90C4EEF/3302018.png" },
+  { label: "Relic of the Stormsinger",   icon: "https://render.guildwars2.com/file/53B8A123D07CC679364EF4CF4BD7537624320919/3375223.png" },
+  { label: "Relic of the Twin Generals", icon: "https://render.guildwars2.com/file/CCEC5A2802D7B7D6C891EA730B5733ADD912B902/3302019.png" },
+  { label: "Relic of the Wayfinder",     icon: "https://render.guildwars2.com/file/7D28503433AD96CEA902BBCD0411C9BE1D2505F4/3302020.png" },
 ];
 
 export const GW2_FOOD = [
