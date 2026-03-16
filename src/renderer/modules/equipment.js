@@ -6,6 +6,7 @@ import {
   PROFESSION_WEIGHT,
   LEGENDARY_ARMOR_ICONS, _WK,
   PROFESSION_BASE_HP,
+  FURY_CRIT_CHANCE, MIGHT_MAX_STACKS, MIGHT_POWER_PER_STACK, MIGHT_CONDI_PER_STACK, BOON_CONDITION_ICONS,
 } from "./constants.js";
 import { escapeHtml } from "./utils.js";
 import { computeSlotStats, computeEquipmentStats, computeUpgradeModifiers, computeStatBreakdown } from "./stats.js";
@@ -19,6 +20,11 @@ export { computeSlotStats, computeEquipmentStats, computeUpgradeModifiers, compu
 
 let _readOnly = false;
 export function setReadOnly(val) { _readOnly = val; }
+
+// Assumed boons — session-only, not persisted to builds.
+let _assumedBoons = { might: 0, fury: false, alacrity: false };
+export function getAssumedBoons() { return _assumedBoons; }
+export function resetAssumedBoons() { _assumedBoons = { might: 0, fury: false, alacrity: false }; }
 
 // DOM refs
 let _el = { equipmentPanel: null };
@@ -37,6 +43,8 @@ export function initEquipmentCallbacks({ markEditorChanged, render, renderSkills
 // Module-level slot picker state
 let _slotPickerEl = null;
 let _slotPickerCleanup = null;
+
+let _lastBoonResetBuildId = "";
 
 export function closeSlotPicker() {
   if (_slotPickerEl) { _slotPickerEl.remove(); _slotPickerEl = null; }
@@ -290,6 +298,13 @@ export function renderEquipmentPanel() {
   if (!panel) return;
   closeSlotPicker();
   panel.innerHTML = "";
+
+  // Reset assumed boons when switching builds
+  const currentBuildId = state.editor.id || "";
+  if (currentBuildId !== _lastBoonResetBuildId) {
+    resetAssumedBoons();
+    _lastBoonResetBuildId = currentBuildId;
+  }
 
   const equip = state.editor.equipment;
   const slots = equip.slots || {};
@@ -1096,16 +1111,152 @@ export function renderEquipmentPanel() {
   const rightCol = document.createElement("div");
   rightCol.className = "equip-col equip-col--right";
 
+  // Assumed Boons
+  const boonsSection = document.createElement("div");
+  boonsSection.className = "equip-boons";
+
+  const boonsHeader = document.createElement("div");
+  boonsHeader.className = "equip-section__head";
+
+  const boonsTitle = document.createElement("span");
+  boonsTitle.textContent = "Assumed Boons";
+  boonsHeader.append(boonsTitle);
+
+  // Help icon with tooltip
+  const helpIcon = document.createElement("span");
+  helpIcon.className = "equip-boons__help";
+  helpIcon.textContent = "?";
+  const helpTooltip = document.createElement("div");
+  helpTooltip.className = "equip-boons__help-tooltip";
+  helpTooltip.innerHTML =
+    '<div class="equip-boons__help-section">Add stacks</div>' +
+    '<div class="equip-boons__help-row"><kbd>Click</kbd> <span class="equip-boons__help-up">+1</span></div>' +
+    '<div class="equip-boons__help-row"><kbd>Shift+Click</kbd> <span class="equip-boons__help-up">+5</span></div>' +
+    '<div class="equip-boons__help-row"><kbd>Ctrl+Click</kbd> <span class="equip-boons__help-up">+25</span></div>' +
+    '<div class="equip-boons__help-section">Remove stacks</div>' +
+    '<div class="equip-boons__help-row"><kbd>Right Click</kbd> <span class="equip-boons__help-down">\u22121</span></div>' +
+    '<div class="equip-boons__help-row"><kbd>Shift+Right</kbd> <span class="equip-boons__help-down">\u22125</span></div>' +
+    '<div class="equip-boons__help-row"><kbd>Ctrl+Right</kbd> <span class="equip-boons__help-down">\u221225</span></div>';
+  helpIcon.append(helpTooltip);
+  boonsHeader.append(helpIcon);
+  boonsSection.append(boonsHeader);
+
+  const boonsBar = document.createElement("div");
+  boonsBar.className = "equip-boons__bar";
+
+  const BOON_DEFS = [
+    { key: "might", label: "Might", icon: BOON_CONDITION_ICONS.Might, stackable: true },
+    { key: "fury", label: "Fury", icon: BOON_CONDITION_ICONS.Fury, stackable: false },
+    { key: "alacrity", label: "Alacrity", icon: BOON_CONDITION_ICONS.Alacrity, stackable: false },
+  ];
+
+  function getDelta(event) {
+    if (event.ctrlKey || event.metaKey) return 25;
+    if (event.shiftKey) return 5;
+    return 1;
+  }
+
+  function buildBoonTooltipHTML(def) {
+    const val = _assumedBoons[def.key];
+    if (def.key === "might") {
+      if (val > 0) {
+        const power = val * MIGHT_POWER_PER_STACK;
+        const condi = val * MIGHT_CONDI_PER_STACK;
+        return `<div class="equip-boons__tip-title">Might \u00d7${val}</div>` +
+          `<div class="equip-boons__tip-effect">+${power} Power</div>` +
+          `<div class="equip-boons__tip-effect">+${condi} Condition Damage</div>` +
+          `<div class="equip-boons__tip-note">+${MIGHT_POWER_PER_STACK} Power and +${MIGHT_CONDI_PER_STACK} Condition Damage per stack (max ${MIGHT_MAX_STACKS})</div>`;
+      }
+      return `<div class="equip-boons__tip-title">Might</div>` +
+        `<div class="equip-boons__tip-note">Click to add stacks. +${MIGHT_POWER_PER_STACK} Power and +${MIGHT_CONDI_PER_STACK} Condition Damage per stack (max ${MIGHT_MAX_STACKS}).</div>`;
+    }
+    if (def.key === "fury") {
+      return val
+        ? '<div class="equip-boons__tip-title">Fury</div><div class="equip-boons__tip-effect">+25% Critical Chance</div><div class="equip-boons__tip-note">Added to Crit Chance derived stat</div>'
+        : '<div class="equip-boons__tip-title">Fury</div><div class="equip-boons__tip-note">Click to enable. Grants +25% Critical Chance.</div>';
+    }
+    // alacrity
+    return val
+      ? '<div class="equip-boons__tip-title">Alacrity</div><div class="equip-boons__tip-effect">\u221225% Skill Cooldown</div><div class="equip-boons__tip-note">Cooldown reduction \u2014 not reflected in stat totals</div>'
+      : '<div class="equip-boons__tip-title">Alacrity</div><div class="equip-boons__tip-note">Click to enable. Reduces skill cooldowns by 25%.</div>';
+  }
+
+  for (const def of BOON_DEFS) {
+    const item = document.createElement("div");
+    item.className = "equip-boons__item";
+
+    const iconWrap = document.createElement("div");
+    const isActive = def.stackable ? _assumedBoons[def.key] > 0 : _assumedBoons[def.key];
+    iconWrap.className = "equip-boons__icon" + (isActive ? " equip-boons__icon--on" : "");
+
+    const img = document.createElement("img");
+    img.src = def.icon;
+    img.alt = def.label;
+    img.width = 28;
+    img.height = 28;
+    iconWrap.append(img);
+
+    // Stack badge (Might only)
+    if (def.stackable) {
+      const badge = document.createElement("div");
+      badge.className = "equip-boons__badge";
+      badge.textContent = _assumedBoons[def.key] || "";
+      if (!_assumedBoons[def.key]) badge.style.display = "none";
+      iconWrap.append(badge);
+    }
+
+    // Tooltip
+    const tooltip = document.createElement("div");
+    tooltip.className = "equip-boons__tooltip";
+    tooltip.innerHTML = buildBoonTooltipHTML(def);
+    item.append(tooltip);
+
+    // Click handler
+    if (def.stackable) {
+      iconWrap.addEventListener("click", (e) => {
+        _assumedBoons[def.key] = Math.min(MIGHT_MAX_STACKS, Math.max(0, _assumedBoons[def.key] + getDelta(e)));
+        _render();
+      });
+      iconWrap.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
+        _assumedBoons[def.key] = Math.min(MIGHT_MAX_STACKS, Math.max(0, _assumedBoons[def.key] - getDelta(e)));
+        _render();
+      });
+    } else {
+      iconWrap.addEventListener("click", () => {
+        _assumedBoons[def.key] = !_assumedBoons[def.key];
+        _render();
+      });
+      iconWrap.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
+        _assumedBoons[def.key] = !_assumedBoons[def.key];
+        _render();
+      });
+    }
+
+    item.append(iconWrap);
+
+    const label = document.createElement("div");
+    label.className = "equip-boons__label" + (isActive ? " equip-boons__label--on" : "");
+    label.textContent = def.label;
+    item.append(label);
+
+    boonsBar.append(item);
+  }
+
+  boonsSection.append(boonsBar);
+
   // Attributes
   const statsSection = makeSection("Attributes");
-  const computed = computeEquipmentStats();
+  const computed = computeEquipmentStats(_assumedBoons);
   const professionName = state.editor.profession;
   const baseHP = PROFESSION_BASE_HP[professionName] || 9212;
   const health = baseHP + (computed.Vitality || 0) * 10;
   // Collect upgrade modifiers and apply ones that map to derived stats
   const modifiers = computeUpgradeModifiers();
   const popMod = (key) => { const v = modifiers.get(key) || 0; modifiers.delete(key); return v; };
-  const critChance = Math.min(100, 5 + ((computed.Precision || 1000) - 895) / 21.0 + popMod("Critical Chance"));
+  const furyCrit = _assumedBoons.fury ? FURY_CRIT_CHANCE : 0;
+  const critChance = Math.min(100, 5 + ((computed.Precision || 1000) - 895) / 21.0 + popMod("Critical Chance") + furyCrit);
   const critDamage = 150 + (computed.Ferocity || 0) / 15.0 + popMod("Critical Damage");
   const condDuration = (computed.Expertise || 0) / 15.0 + popMod("Condition Duration");
   const boonDuration = (computed.Concentration || 0) / 15.0 + popMod("Boon Duration");
@@ -1130,10 +1281,11 @@ export function renderEquipmentPanel() {
 
     const leftEl = document.createElement("div");
     leftEl.className = "equip-stat-cell";
-    leftEl.innerHTML = `<span class="equip-stat-label">${row.stat}</span><span class="equip-stat-value">${(row.value || 0).toLocaleString()}</span>`;
+    const isBoosted = (_assumedBoons.might > 0 && (row.key === "Power" || row.key === "ConditionDamage"));
+    leftEl.innerHTML = `<span class="equip-stat-label">${row.stat}</span><span class="equip-stat-value${isBoosted ? " equip-stat-value--boosted" : ""}">${(row.value || 0).toLocaleString()}</span>`;
 
     bindHoverPreview(leftEl, "equip-stat", () => {
-      const breakdown = computeStatBreakdown(row.key);
+      const breakdown = computeStatBreakdown(row.key, _assumedBoons);
       if (!breakdown.length) return null;
       // Consolidate duplicate sources (e.g. 18x identical infusions → one line)
       const grouped = new Map();
@@ -1155,7 +1307,8 @@ export function renderEquipmentPanel() {
     if (row.derived) {
       const rightEl = document.createElement("div");
       rightEl.className = "equip-stat-cell equip-stat-cell--derived";
-      rightEl.innerHTML = `<span class="equip-stat-label">${row.derived}</span><span class="equip-stat-value equip-stat-value--derived">${row.derivedVal}</span>`;
+      const isDerivedBoosted = (_assumedBoons.fury && row.derived === "Crit Chance");
+      rightEl.innerHTML = `<span class="equip-stat-label">${row.derived}</span><span class="equip-stat-value equip-stat-value--derived${isDerivedBoosted ? " equip-stat-value--boosted" : ""}">${row.derivedVal}</span>`;
       rowEl.append(rightEl);
     }
 
@@ -1177,6 +1330,7 @@ export function renderEquipmentPanel() {
   }
 
   rightCol.append(statsSection);
+  rightCol.append(boonsSection);
 
   // Trinkets — row1 (4 cols): Back, Accessory 1, Accessory 2, Relic
   //            row2 (3 cols): Amulet, Ring 1, Ring 2

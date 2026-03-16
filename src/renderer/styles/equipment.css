@@ -954,3 +954,219 @@
   color: #fff;
   pointer-events: none;
 }
+
+/* Assumed Boons bar */
+.equip-boons {
+  margin-bottom: 12px;
+}
+
+.equip-boons__bar {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  margin-top: 8px;
+}
+
+.equip-boons__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  width: 40px;
+  position: relative;
+}
+
+.equip-boons__icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 0.15s, opacity 0.15s, box-shadow 0.15s, filter 0.15s;
+  position: relative;
+  border: 2px solid var(--line-soft);
+  opacity: 0.45;
+  filter: grayscale(0.7);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.equip-boons__icon--on {
+  border-color: #d4aa44;
+  opacity: 1;
+  filter: none;
+  box-shadow: 0 0 8px rgba(212, 170, 68, 0.3);
+}
+
+.equip-boons__icon img {
+  width: 28px;
+  height: 28px;
+  pointer-events: none;
+}
+
+.equip-boons__badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 16px;
+  height: 16px;
+  background: #d4aa44;
+  color: var(--bg);
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3px;
+  line-height: 1;
+  animation: equip-boons-bump 0.15s ease-out;
+}
+
+@keyframes equip-boons-bump {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+
+.equip-boons__label {
+  font-size: 9px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.equip-boons__label--on {
+  color: #d4aa44;
+}
+
+.equip-boons__help {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid var(--muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--muted);
+  cursor: help;
+  position: relative;
+  flex-shrink: 0;
+  line-height: 1;
+  margin-left: 4px;
+}
+
+.equip-boons__help:hover {
+  border-color: var(--text);
+  color: var(--text);
+}
+
+.equip-boons__help-tooltip {
+  display: none;
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 10px 12px;
+  width: 220px;
+  z-index: 10;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+.equip-boons__help:hover .equip-boons__help-tooltip {
+  display: block;
+}
+
+.equip-boons__help-section {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+  padding: 4px 0 2px;
+}
+
+.equip-boons__help-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+  font-size: 10px;
+  color: var(--text);
+}
+
+.equip-boons__help-row + .equip-boons__help-row {
+  border-top: 1px solid var(--line-soft);
+  padding-top: 3px;
+  margin-top: 1px;
+}
+
+.equip-boons__help-row kbd {
+  background: var(--bg-2);
+  color: var(--muted);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 9px;
+  font-family: monospace;
+  border: 1px solid var(--line-soft);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.equip-boons__help-up {
+  color: #88cc88;
+}
+
+.equip-boons__help-down {
+  color: #cc8888;
+}
+
+.equip-boons__tooltip {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px 10px;
+  width: 200px;
+  z-index: 20;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+}
+
+.equip-boons__item:hover .equip-boons__tooltip {
+  display: block;
+}
+
+.equip-boons__tip-title {
+  font-weight: 600;
+  color: #d4aa44;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.equip-boons__tip-effect {
+  color: #88cc88;
+  font-size: 11px;
+  margin-bottom: 2px;
+}
+
+.equip-boons__tip-note {
+  color: var(--muted);
+  font-size: 10px;
+  font-style: italic;
+  margin-top: 4px;
+  line-height: 1.3;
+}
+
+.equip-stat-value--boosted {
+  color: #d4aa44;
+}

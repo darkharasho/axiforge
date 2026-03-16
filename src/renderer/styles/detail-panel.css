@@ -279,3 +279,15 @@ li.fact-item--split {
     min-width: 0;
   }
 }
+
+/* Alacrity-modified recharge values */
+.fact-alacrity {
+  color: #d4aa44;
+}
+
+.fact-alacrity-original {
+  color: var(--muted);
+  text-decoration: line-through;
+  font-size: 0.9em;
+  margin-left: 4px;
+}
