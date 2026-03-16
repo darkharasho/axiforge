@@ -390,7 +390,7 @@ export function getHoverMetaLine(kind, entity) {
   if (kind === "spec") return entity?.elite ? "Elite Specialization" : "Specialization";
   const type = String(entity?.type || "").trim();
   const slot = String(entity?.slot || "").trim();
-  const showSlot = slot && !/^(Profession|Weapon)_/i.test(slot) && !/^(Heal|Utility|Elite)$/i.test(slot);
+  const showSlot = slot && !/^(Profession|Weapon|Downed)_/i.test(slot) && !/^(Heal|Utility|Elite)$/i.test(slot);
   if (type && showSlot) return `Skill • ${type} • ${slot}`;
   if (type) return `Skill • ${type}`;
   return "Skill";
