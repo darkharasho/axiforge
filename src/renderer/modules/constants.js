@@ -490,6 +490,12 @@ export const BOON_CONDITION_ICONS = {
 // Fact types where the icon represents the boon/condition being applied.
 export const BUFF_FACT_TYPES = new Set(["Buff", "ApplyBuffCondition", "PrefixedBuff"]);
 
+// Assumed boon stat effects (per GW2 wiki, level 80)
+export const MIGHT_POWER_PER_STACK = 30;
+export const MIGHT_CONDI_PER_STACK = 30;
+export const MIGHT_MAX_STACKS = 25;
+export const FURY_CRIT_CHANCE = 25; // percentage points
+
 export const BOON_NAMES = new Set([
   "Aegis", "Alacrity", "Fury", "Might", "Protection", "Quickness",
   "Regeneration", "Resistance", "Resolution", "Stability", "Swiftness", "Vigor",
