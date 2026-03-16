@@ -263,7 +263,7 @@ function makeUpgradeBtn(type, slotKey, currentValue, onSelect) {
       const activeCount = Object.values(runes).filter((v) => String(v) === String(currentValue)).length;
       return { name: itemDef.name, icon: itemDef.icon, description: "", bonuses: itemDef.bonuses, activeBonusCount: activeCount };
     }
-    const desc = type === "sigils" && itemDef.buffDescription
+    const desc = (type === "sigils" || type === "infusions" || type === "enrichments") && itemDef.buffDescription
       ? itemDef.buffDescription
       : itemDef.description || "";
     return { name: itemDef.name, icon: itemDef.icon, description: desc };
