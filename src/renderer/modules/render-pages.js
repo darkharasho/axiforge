@@ -3,6 +3,8 @@ import { escapeHtml, formatDate, formatShortDate, formatPagesStatus, makeButton,
 import { renderCustomSelect } from "./custom-select.js";
 import { closeCustomSelect } from "./custom-select.js";
 import { hideHoverPreview } from "./detail-panel.js";
+import { showConfirmModal } from "./confirm-modal.js";
+import { computeUnsavedChangeSummary } from "./editor.js";
 
 // ---------------------------------------------------------------------------
 // DOM refs — injected by the host (renderer.js) after DOM is ready
@@ -489,11 +491,34 @@ export function renderEditorForm() {
     onChange: async (nextProfession) => {
       const professionId = String(nextProfession || "");
       if (!professionId || professionId === state.editor.profession) return;
-      state.editor.profession = professionId;
-      await _callbacks.setProfession(professionId, { preserveSelections: false });
-      state.detail = null;
-      _callbacks.markEditorChanged({ updateBuildList: true });
-      renderEditor();
+
+      if (state.editor.id) {
+        // Saved build — class switch starts a new draft
+        if (state.editorDirty) {
+          const changes = computeUnsavedChangeSummary();
+          const body = changes.length
+            ? `<ul>${changes.map((c) => `<li>${c}</li>`).join("")}</ul>`
+            : "<p>You have unsaved changes that will be lost.</p>";
+          const confirmed = await showConfirmModal({
+            title: "Discard unsaved changes?",
+            body,
+            confirmLabel: "Discard & Switch",
+            cancelLabel: "Cancel",
+          });
+          if (!confirmed) {
+            renderEditorForm();
+            return;
+          }
+        }
+        await _callbacks.startNewBuild(professionId, { skipDirtyCheck: true });
+      } else {
+        // Unsaved draft — swap in-place (current behavior)
+        state.editor.profession = professionId;
+        await _callbacks.setProfession(professionId, { preserveSelections: false });
+        state.detail = null;
+        _callbacks.markEditorChanged({ updateBuildList: true });
+        renderEditor();
+      }
     },
   });
 
