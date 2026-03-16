@@ -335,11 +335,17 @@ export function renderEquipmentPanel() {
       const combo = STAT_COMBOS_BY_LABEL.get(currentCombo);
       valueEl.innerHTML = `<span class="equip-slot__combo-name">${escapeHtml(currentCombo)}</span>${combo ? `<span class="equip-slot__combo-stats">${combo.stats.join(" · ")}</span>` : ""}`;
     } else {
-      valueEl.textContent = "Select stats…";
+      valueEl.textContent = _readOnly ? "—" : "Select stats…";
     }
 
     info.append(labelEl, valueEl);
     wrapper.append(icon, info);
+
+    if (_readOnly) {
+      wrapper.removeAttribute("role");
+      wrapper.style.cursor = "default";
+      wrapper.tabIndex = -1;
+    }
 
     const doOpen = () => openSlotPicker(wrapper, currentCombo, (newVal) => {
       state.editor.equipment.slots[slotDef.key] = newVal || "";
@@ -461,13 +467,18 @@ export function renderEquipmentPanel() {
     statBtn.type = "button";
     statBtn.className = "equip-stat-pick-btn" + (currentCombo ? "" : " equip-stat-pick-btn--empty");
     statBtn.disabled = lockedByTwoHanded;
-    if (lockedByTwoHanded) {
+    if (lockedByTwoHanded || (_readOnly && !currentCombo)) {
       statBtn.style.display = "none";
     } else if (currentCombo) {
       const combo = STAT_COMBOS_BY_LABEL.get(currentCombo);
       statBtn.innerHTML = `<span class="equip-slot__combo-name">${escapeHtml(currentCombo)}</span>${combo ? `<span class="equip-slot__combo-stats">${combo.stats.join(" · ")}</span>` : ""}`;
     } else {
-      statBtn.textContent = "Select stats…";
+      statBtn.textContent = _readOnly ? "—" : "Select stats…";
+    }
+
+    if (_readOnly) {
+      weaponBtn.style.cursor = "default";
+      weaponBtn.disabled = true;
     }
 
     wrapper.append(weaponBtn, statBtn);
@@ -700,7 +711,7 @@ export function renderEquipmentPanel() {
       }
     }
 
-    if (fillEntries.length) {
+    if (fillEntries.length && !_readOnly) {
       const fillBtn = document.createElement("button");
       fillBtn.type = "button";
       fillBtn.className = "equip-fill-btn" + (fillEntries.length > 1 ? " equip-fill-btn--dropdown" : "");
@@ -742,7 +753,7 @@ export function renderEquipmentPanel() {
       btnGroup.append(fillBtn);
     }
 
-    if (onClear) {
+    if (onClear && !_readOnly) {
       const clearBtn = document.createElement("button");
       clearBtn.type = "button";
       clearBtn.className = "equip-fill-btn equip-clear-btn";
@@ -771,6 +782,9 @@ export function renderEquipmentPanel() {
   clearAllBtn.type = "button";
   clearAllBtn.className = "equip-fill-btn equip-clear-btn equip-clear-all-btn";
   clearAllBtn.textContent = "Clear All Equipment";
+  if (_readOnly) {
+    clearAllBtn.style.display = "none";
+  }
   if (!_readOnly) {
     clearAllBtn.addEventListener("click", () => {
       for (const key of Object.keys(equip.slots)) equip.slots[key] = "";
@@ -891,6 +905,12 @@ export function renderEquipmentPanel() {
     buffEl.innerHTML = def ? escapeHtml(def.buff).replace(/ \| /g, "<br>") : "";
     info.append(nameEl, buffEl);
     wrapper.append(iconDiv, info);
+
+    if (_readOnly) {
+      wrapper.removeAttribute("role");
+      wrapper.style.cursor = "default";
+      wrapper.tabIndex = -1;
+    }
 
     const doOpen = () => openSlotPicker(wrapper, current, (newVal) => {
       equip[field] = newVal || "";
@@ -1058,9 +1078,15 @@ export function renderEquipmentPanel() {
     valueEl.style.fontSize = "10px";
     valueEl.textContent = currentRelic
       ? currentRelic.replace("Relic of ", "").replace("Relic of the ", "the ")
-      : "Select…";
+      : (_readOnly ? "—" : "Select…");
     info.append(labelEl, valueEl);
     wrapper.append(iconDiv, info);
+
+    if (_readOnly) {
+      wrapper.removeAttribute("role");
+      wrapper.style.cursor = "default";
+      wrapper.tabIndex = -1;
+    }
 
     const doOpen = () => openSlotPicker(wrapper, currentRelic, (newVal) => {
       equip.relic = newVal || "";
