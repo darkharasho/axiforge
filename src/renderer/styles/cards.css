@@ -98,72 +98,8 @@
   background: rgba(79, 216, 151, 0.12);
 }
 
-/* Setup steps — animated progress during publishing setup */
-.setup-steps {
-  margin-top: 10px;
-  display: grid;
-  gap: 4px;
-}
-
-.setup-step {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
-  border-radius: 6px;
-  font-size: 0.78rem;
-  transition: background 0.3s, color 0.3s, opacity 0.3s;
-}
-
-.setup-step--pending {
-  color: var(--muted);
-  opacity: 0.5;
-}
-
-.setup-step--active {
-  color: var(--accent-2);
-  background: rgba(72, 168, 255, 0.08);
-  opacity: 1;
-}
-
-.setup-step--done {
-  color: var(--accent);
-  opacity: 1;
-}
-
-.setup-step--error {
-  color: var(--danger);
-  opacity: 1;
-}
-
-.setup-step__icon {
-  width: 16px;
-  text-align: center;
-  flex-shrink: 0;
-  font-size: 0.7rem;
-}
-
-.setup-step__label {
-  flex: 1;
-}
-
-.setup-step__error {
-  color: var(--danger);
-  font-size: 0.72rem;
-}
-
 @keyframes spin {
   to { transform: rotate(360deg); }
-}
-
-.setup-step__spinner {
-  display: inline-block;
-  width: 12px;
-  height: 12px;
-  border: 2px solid rgba(72, 168, 255, 0.3);
-  border-top-color: var(--accent-2);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
 }
 
 .section-head {
@@ -452,6 +388,12 @@ label {
   color: var(--danger);
   font-size: 0.68rem;
   font-weight: 400;
+}
+
+/* Card-context ticker — full width for use inside status-card */
+.publish-ticker--card {
+  width: 100%;
+  margin-top: 8px;
 }
 
 /* ── Publish result — compact inline row ──────────────────────────── */

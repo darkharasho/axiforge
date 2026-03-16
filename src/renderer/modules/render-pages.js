@@ -1,5 +1,5 @@
 import { state, createEmptyEditor } from "./state.js";
-import { escapeHtml, formatDate, formatShortDate, formatRelativeTime, formatPagesStatus, makeButton, matchesBuildQuery, delay } from "./utils.js";
+import { escapeHtml, formatDate, formatShortDate, formatRelativeTime, makeButton, matchesBuildQuery, delay } from "./utils.js";
 import { renderCustomSelect } from "./custom-select.js";
 import { closeCustomSelect } from "./custom-select.js";
 import { hideHoverPreview } from "./detail-panel.js";
@@ -87,9 +87,124 @@ export function renderAuth() {
 }
 
 // ---------------------------------------------------------------------------
+// Setup ticker — flag to prevent renderOnboarding from wiping during setup
+// ---------------------------------------------------------------------------
+let _setupInProgress = false;
+
+const SETUP_STEPS = [
+  { key: "repo", label: "Creating repository" },
+  { key: "pages", label: "Configuring GitHub Pages" },
+  { key: "deploy", label: "Deploying site files" },
+  { key: "trigger", label: "Triggering first build" },
+  { key: "poll", label: "Waiting for Pages to go live" },
+];
+
+const PAGES_POLL_STEPS = [
+  { key: "queued", label: "Queued for build" },
+  { key: "building", label: "Building site" },
+  { key: "deploying", label: "Deploying to Pages" },
+  { key: "built", label: "Live" },
+];
+
+/**
+ * Creates a ticker element with scrolling step display.
+ * @param {Array<{key:string,label:string}>} steps
+ * @param {string} [initialActiveKey] — if provided, set to this position without animation
+ * @returns {{ el: HTMLElement, advance(key:string):void, complete():void, fail(key:string, msg?:string):void }}
+ */
+function createTicker(steps, initialActiveKey) {
+  const ROW_H = 20;
+  const ticker = document.createElement("div");
+  ticker.className = "publish-ticker publish-ticker--card";
+
+  const strip = document.createElement("div");
+  strip.className = "publish-ticker__strip";
+
+  const blank = document.createElement("div");
+  blank.className = "publish-ticker__row publish-ticker__row--blank";
+  blank.innerHTML = "&nbsp;";
+  strip.append(blank);
+
+  for (const step of steps) {
+    const row = document.createElement("div");
+    row.className = "publish-ticker__row publish-ticker__row--pending";
+    row.dataset.tickerStep = step.key;
+    row.innerHTML = `<span class="publish-ticker__icon">\u2022</span>${escapeHtml(step.label)}`;
+    strip.append(row);
+  }
+
+  const blankEnd = document.createElement("div");
+  blankEnd.className = "publish-ticker__row publish-ticker__row--blank";
+  blankEnd.innerHTML = "&nbsp;";
+  strip.append(blankEnd);
+
+  ticker.append(strip);
+
+  const _advance = (stepKey, animate) => {
+    const rows = strip.querySelectorAll("[data-ticker-step]");
+    let idx = -1;
+    for (let i = 0; i < rows.length; i++) {
+      if (rows[i].dataset.tickerStep === stepKey) { idx = i; break; }
+    }
+    if (idx < 0) return;
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      row.classList.remove("publish-ticker__row--pending", "publish-ticker__row--active", "publish-ticker__row--done", "publish-ticker__row--error");
+      if (i < idx) {
+        row.classList.add("publish-ticker__row--done");
+        row.querySelector(".publish-ticker__icon").textContent = "\u2713";
+      } else if (i === idx) {
+        row.classList.add("publish-ticker__row--active");
+        row.querySelector(".publish-ticker__icon").innerHTML = `<span class="publish-ticker__spinner"></span>`;
+      } else {
+        row.classList.add("publish-ticker__row--pending");
+        row.querySelector(".publish-ticker__icon").textContent = "\u2022";
+      }
+    }
+    if (!animate) strip.style.transition = "none";
+    strip.style.transform = `translateY(${-idx * ROW_H}px)`;
+    if (!animate) requestAnimationFrame(() => { strip.style.transition = ""; });
+  };
+
+  if (initialActiveKey) _advance(initialActiveKey, false);
+
+  return {
+    el: ticker,
+    advance: (key) => _advance(key, true),
+    complete: () => {
+      const rows = strip.querySelectorAll("[data-ticker-step]");
+      for (const row of rows) {
+        row.classList.remove("publish-ticker__row--pending", "publish-ticker__row--active");
+        row.classList.add("publish-ticker__row--done");
+        row.querySelector(".publish-ticker__icon").textContent = "\u2713";
+      }
+      strip.style.transform = `translateY(${-(rows.length - 1) * ROW_H}px)`;
+    },
+    fail: (stepKey, message) => {
+      for (const row of strip.querySelectorAll("[data-ticker-step]")) {
+        if (row.dataset.tickerStep === stepKey) {
+          row.classList.remove("publish-ticker__row--active", "publish-ticker__row--pending");
+          row.classList.add("publish-ticker__row--error");
+          row.querySelector(".publish-ticker__icon").textContent = "\u2717";
+          if (message) {
+            const err = document.createElement("span");
+            err.className = "publish-ticker__error";
+            err.textContent = ` \u2014 ${message}`;
+            row.append(err);
+          }
+          break;
+        }
+      }
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
 // renderOnboarding
 // ---------------------------------------------------------------------------
 export function renderOnboarding() {
+  if (_setupInProgress) return;
+
   const status = state.onboarding;
   _el.onboarding.innerHTML = "";
   if (!status) return;
@@ -128,58 +243,6 @@ export function renderOnboarding() {
     _el.onboarding.append(card);
   }
 
-  // Pages poll status — shown during active Pages build poll
-  if (state.pagesPoll.active) {
-    const card = document.createElement("article");
-    card.className = "status-card";
-    const heading = document.createElement("h3");
-    heading.innerHTML = `<span class="setup-step__spinner" style="vertical-align:middle;margin-right:8px"></span>Waiting For GitHub Pages`;
-    const statusLine = document.createElement("p");
-    statusLine.innerHTML = `Current status: <strong>${escapeHtml(formatPagesStatus(state.pagesPoll.status))}</strong>`;
-
-    const steps = document.createElement("div");
-    steps.className = "setup-steps";
-    steps.style.marginTop = "8px";
-
-    const pageSteps = [
-      { key: "queued", label: "Queued for build" },
-      { key: "building", label: "Building site" },
-      { key: "deploying", label: "Deploying to Pages" },
-      { key: "built", label: "Live" },
-    ];
-    const currentStatus = String(state.pagesPoll.status || "queued").toLowerCase();
-    const statusOrder = ["queued", "building", "deploying", "built"];
-    const currentIdx = statusOrder.indexOf(currentStatus);
-
-    for (let i = 0; i < pageSteps.length; i++) {
-      const step = pageSteps[i];
-      const row = document.createElement("div");
-      if (i < currentIdx) {
-        row.className = "setup-step setup-step--done";
-        row.innerHTML = `<span class="setup-step__icon">\u2713</span><span class="setup-step__label">${escapeHtml(step.label)}</span>`;
-      } else if (i === currentIdx && currentStatus !== "built") {
-        row.className = "setup-step setup-step--active";
-        row.innerHTML = `<span class="setup-step__icon"><span class="setup-step__spinner"></span></span><span class="setup-step__label">${escapeHtml(step.label)}</span>`;
-      } else if (currentStatus === "built" && step.key === "built") {
-        row.className = "setup-step setup-step--done";
-        row.innerHTML = `<span class="setup-step__icon">\u2713</span><span class="setup-step__label">${escapeHtml(step.label)}</span>`;
-      } else {
-        row.className = "setup-step setup-step--pending";
-        row.innerHTML = `<span class="setup-step__icon">&#9679;</span><span class="setup-step__label">${escapeHtml(step.label)}</span>`;
-      }
-      steps.append(row);
-    }
-
-    card.append(heading, statusLine, steps);
-    if (state.pagesPoll.error) {
-      const errLine = document.createElement("p");
-      errLine.className = "error-line";
-      errLine.textContent = state.pagesPoll.error;
-      card.append(errLine);
-    }
-    _el.onboarding.append(card);
-  }
-
   // Onboarding steps — only show setup step when authenticated but not fully set up
   if (!status.isAuthenticated) return;
 
@@ -200,97 +263,59 @@ export function renderOnboarding() {
   body.textContent = target ? `Target: ${target.login}` : "Pick a target first.";
   card.append(title, body);
 
-  // Setup status steps container (hidden until setup starts)
-  const stepsContainer = document.createElement("div");
-  stepsContainer.className = "setup-steps";
-  stepsContainer.style.display = "none";
-  card.append(stepsContainer);
-
-  if (target) {
+  // Pages poll ticker — shown when poll is active (standalone, not during setup)
+  if (state.pagesPoll.active) {
+    const currentStatus = String(state.pagesPoll.status || "queued").toLowerCase();
+    const { el: tickerEl } = createTicker(PAGES_POLL_STEPS, currentStatus);
+    card.append(tickerEl);
+    if (state.pagesPoll.error) {
+      const errLine = document.createElement("p");
+      errLine.className = "error-line";
+      errLine.textContent = state.pagesPoll.error;
+      card.append(errLine);
+    }
+  } else if (target) {
     const setupReady = repoReady && pagesReady;
     const btn = makeButton(setupReady ? "Re-run Setup" : "Setup Publishing", setupReady ? "secondary" : "primary", async () => {
+      _setupInProgress = true;
+      btn.style.display = "none";
+      const triggeredAt = Date.now();
+
+      const tickerCtrl = createTicker(SETUP_STEPS);
+      card.append(tickerCtrl.el);
+
+      let currentStep = "repo";
       try {
-        btn.disabled = true;
-        btn.style.display = "none";
-        stepsContainer.style.display = "";
+        tickerCtrl.advance("repo");
+        currentStep = "repo";
+        await window.desktopApi.setupRepoPages(target.login, target.type);
 
-        const steps = [
-          { label: "Creating repository", key: "repo" },
-          { label: "Configuring GitHub Pages", key: "pages" },
-          { label: "Deploying site files", key: "deploy" },
-          { label: "Triggering first build", key: "trigger" },
-          { label: "Waiting for Pages to go live", key: "poll" },
-        ];
+        tickerCtrl.advance("pages");
+        currentStep = "pages";
+        await delay(400);
 
-        const stepEls = {};
-        for (const step of steps) {
-          const row = document.createElement("div");
-          row.className = "setup-step setup-step--pending";
-          row.innerHTML = `<span class="setup-step__icon">&#9679;</span><span class="setup-step__label">${escapeHtml(step.label)}</span>`;
-          stepsContainer.append(row);
-          stepEls[step.key] = row;
-        }
+        tickerCtrl.advance("deploy");
+        currentStep = "deploy";
+        await delay(400);
 
-        const activate = (key) => {
-          const el = stepEls[key];
-          if (!el) return;
-          el.className = "setup-step setup-step--active";
-          el.querySelector(".setup-step__icon").innerHTML = `<span class="setup-step__spinner"></span>`;
-        };
-        const complete = (key) => {
-          const el = stepEls[key];
-          if (!el) return;
-          el.className = "setup-step setup-step--done";
-          el.querySelector(".setup-step__icon").textContent = "\u2713";
-        };
-        const fail = (key, msg) => {
-          const el = stepEls[key];
-          if (!el) return;
-          el.className = "setup-step setup-step--error";
-          el.querySelector(".setup-step__icon").textContent = "\u2717";
-          if (msg) {
-            const err = document.createElement("span");
-            err.className = "setup-step__error";
-            err.textContent = ` ${msg}`;
-            el.append(err);
-          }
-        };
+        tickerCtrl.advance("trigger");
+        currentStep = "trigger";
+        await delay(300);
 
-        // Run setup with animated steps
-        let currentStep = "repo";
-        try {
-          activate("repo");
-          await window.desktopApi.setupRepoPages(target.login, target.type);
-          complete("repo");
+        tickerCtrl.advance("poll");
+        currentStep = "poll";
+        await runPagesBuildPoll(triggeredAt);
 
-          activate("pages");
-          await delay(400);
-          complete("pages");
+        tickerCtrl.complete();
+        await delay(600);
 
-          activate("deploy");
-          await delay(400);
-          complete("deploy");
-
-          activate("trigger");
-          await delay(300);
-          complete("trigger");
-
-          activate("poll");
-          currentStep = "poll";
-          await runPagesBuildPoll();
-          complete("poll");
-
-          await _callbacks.refreshOnboardingStatus();
-          render();
-        } catch (err) {
-          fail(currentStep, err.message);
-          btn.style.display = "";
-          btn.disabled = false;
-        }
+        _setupInProgress = false;
+        await _callbacks.refreshOnboardingStatus();
+        render();
       } catch (err) {
-        showError(err);
+        tickerCtrl.fail(currentStep, err.message);
+        _setupInProgress = false;
         btn.style.display = "";
-        btn.disabled = false;
       }
     });
     btn.classList.add("mt-8");
@@ -609,7 +634,12 @@ function _getPublishedUrl() {
 // ---------------------------------------------------------------------------
 // runPagesBuildPoll
 // ---------------------------------------------------------------------------
-export async function runPagesBuildPoll() {
+/**
+ * @param {number} [triggeredAfter] — timestamp (ms) of when the build was triggered.
+ *   If provided, poll results with updatedAt before this time are treated as stale
+ *   (from a previous build) and ignored until a newer build appears.
+ */
+export async function runPagesBuildPoll(triggeredAfter) {
   state.pagesPoll.active = true;
   state.pagesPoll.status = "queued";
   state.pagesPoll.error = null;
@@ -618,12 +648,17 @@ export async function runPagesBuildPoll() {
   try {
     for (let i = 0; i < 120; i += 1) {
       const poll = await window.desktopApi.pollPagesStatus();
-      state.pagesPoll.status = poll.status || "unknown";
+
+      // If a trigger time was provided, ignore stale results from a previous build
+      const buildTime = poll.updatedAt ? new Date(poll.updatedAt).getTime() : 0;
+      const isStale = triggeredAfter && poll.ready && buildTime < triggeredAfter;
+
+      state.pagesPoll.status = isStale ? "queued" : (poll.status || "unknown");
       state.pagesPoll.error = poll.error || null;
       renderOnboarding();
 
-      if (poll.ready && poll.pagesUrl) return;
-      if (poll.status === "errored" || poll.status === "error") {
+      if (poll.ready && !isStale && poll.pagesUrl) return;
+      if (!isStale && (poll.status === "errored" || poll.status === "error")) {
         throw new Error(poll.error || "GitHub Pages build failed.");
       }
       await delay(3000);
