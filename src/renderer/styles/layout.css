@@ -219,6 +219,89 @@
   color: var(--accent, #99e6ff);
 }
 
+.subnav__actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.subnav__save-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.subnav__save-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ffb347;
+  flex-shrink: 0;
+}
+
+.subnav__overflow {
+  position: relative;
+}
+
+.subnav__overflow-btn {
+  padding: 4px 8px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #7a9abf;
+  font-size: 16px;
+  cursor: pointer;
+  letter-spacing: 2px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.subnav__overflow-btn:hover {
+  background: rgba(80, 132, 163, 0.12);
+  color: var(--text, #c8dff0);
+}
+
+.subnav__overflow-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  min-width: 160px;
+  background: rgba(10, 17, 34, 0.98);
+  border: 1px solid #2a3f69;
+  border-radius: 8px;
+  padding: 4px 0;
+  z-index: 20;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.subnav__overflow-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 12px;
+  border: none;
+  background: transparent;
+  color: #c8dff0;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s;
+}
+
+.subnav__overflow-item:hover {
+  background: rgba(80, 132, 163, 0.15);
+}
+
+.subnav__overflow-icon {
+  font-size: 14px;
+  opacity: 0.7;
+  width: 18px;
+  text-align: center;
+}
+
 .leftnav {
   display: flex;
   flex-direction: column;
@@ -287,7 +370,6 @@
 
 /* ── Game mode toggle ─────────────────────────────────────────────────────── */
 .game-mode-toggle {
-  margin-left: auto;
   display: flex;
   border-radius: 4px;
   overflow: hidden;
