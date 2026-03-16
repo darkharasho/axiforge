@@ -1,6 +1,7 @@
 // AxiForge — Notes tab module
 // Toolbar-driven markdown editor with @ mention autocomplete and preview toggle.
 
+import { marked } from "marked";
 import { state } from "./state.js";
 
 let _el = {};
@@ -265,9 +266,13 @@ export function renderNotesPanel() {
   _el.notesPanel.append(container);
 }
 
-// ── Preview rendering (basic for now, @ mentions added in Task 6) ─────
+// ── Preview rendering ─────────────────────────────────────────────────
 
 function renderPreview(markdown, container) {
-  // Placeholder — will use marked in Task 5
-  container.textContent = markdown;
+  if (!markdown) {
+    container.innerHTML = '<p style="color:var(--muted);font-style:italic">No notes yet.</p>';
+    return;
+  }
+  const html = marked.parse(markdown, { breaks: true });
+  container.innerHTML = html;
 }
