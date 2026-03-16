@@ -44,6 +44,8 @@ export function initEquipmentCallbacks({ markEditorChanged, render, renderSkills
 let _slotPickerEl = null;
 let _slotPickerCleanup = null;
 
+let _lastBoonResetBuildId = "";
+
 export function closeSlotPicker() {
   if (_slotPickerEl) { _slotPickerEl.remove(); _slotPickerEl = null; }
   if (_slotPickerCleanup) { _slotPickerCleanup(); _slotPickerCleanup = null; }
@@ -296,6 +298,13 @@ export function renderEquipmentPanel() {
   if (!panel) return;
   closeSlotPicker();
   panel.innerHTML = "";
+
+  // Reset assumed boons when switching builds
+  const currentBuildId = state.editor.id || "";
+  if (currentBuildId !== _lastBoonResetBuildId) {
+    resetAssumedBoons();
+    _lastBoonResetBuildId = currentBuildId;
+  }
 
   const equip = state.editor.equipment;
   const slots = equip.slots || {};
