@@ -516,7 +516,7 @@ export function renderEditorForm() {
         state.editor.profession = professionId;
         await _callbacks.setProfession(professionId, { preserveSelections: false });
         state.detail = null;
-        _callbacks.markEditorChanged({ updateBuildList: true });
+        _callbacks.captureEditorBaseline();
         renderEditor();
       }
     },
