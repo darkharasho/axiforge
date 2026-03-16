@@ -266,6 +266,56 @@ export function renderNotesPanel() {
   _el.notesPanel.append(container);
 }
 
+// ── Catalog search (for @ mentions) ──────────────────────────────────────
+
+function searchCatalog(query, maxResults = 8) {
+  const results = [];
+  const q = query.toLowerCase();
+
+  const catalog = state.activeCatalog;
+  if (catalog?.skills) {
+    for (const skill of catalog.skills) {
+      if (skill.name?.toLowerCase().includes(q)) {
+        results.push({ id: skill.id, name: skill.name, icon: skill.icon, category: "Skill" });
+        if (results.length >= maxResults) return results;
+      }
+    }
+  }
+
+  if (catalog?.traits) {
+    for (const trait of catalog.traits) {
+      if (trait.name?.toLowerCase().includes(q)) {
+        results.push({ id: trait.id, name: trait.name, icon: trait.icon, category: "Trait" });
+        if (results.length >= maxResults) return results;
+      }
+    }
+  }
+
+  const upgrades = state.upgradeCatalog;
+  if (upgrades) {
+    const categories = [
+      { arr: upgrades.runes, label: "Rune" },
+      { arr: upgrades.sigils, label: "Sigil" },
+      { arr: upgrades.foods, label: "Food" },
+      { arr: upgrades.utilities, label: "Utility" },
+      { arr: upgrades.infusions, label: "Infusion" },
+      { arr: upgrades.enrichments, label: "Enrichment" },
+      { arr: upgrades.relics, label: "Relic" },
+    ];
+    for (const { arr, label } of categories) {
+      if (!arr) continue;
+      for (const item of arr) {
+        if (item.name?.toLowerCase().includes(q)) {
+          results.push({ id: item.id, name: item.name, icon: item.icon, category: label });
+          if (results.length >= maxResults) return results;
+        }
+      }
+    }
+  }
+
+  return results;
+}
+
 // ── Preview rendering ─────────────────────────────────────────────────
 
 function renderPreview(markdown, container) {
