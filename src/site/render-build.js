@@ -2,7 +2,7 @@ import { state } from "@renderer/modules/state.js";
 import { initSkills, renderSkills } from "@renderer/modules/skills.js";
 import { initSpecializations, renderSpecializations } from "@renderer/modules/specializations.js";
 import { initEquipment, renderEquipmentPanel } from "@renderer/modules/equipment.js";
-import { initDetailPanel, bindHoverPreview, setOnHoverPreview, resolveEntityFacts } from "@renderer/modules/detail-panel.js";
+import { initDetailPanel, bindHoverPreview, setOnHoverPreview } from "@renderer/modules/detail-panel.js";
 import { initReferencePanel, updateReferencePanel } from "./render-reference.js";
 
 function escapeHtml(s) {
@@ -298,19 +298,20 @@ export function renderBuildPage(container, build) {
   specsWithDetail.append(specsPanel, detailPanel);
   buildContent.append(specsWithDetail);
 
-  // Wire hover preview callback to update the reference panel.
-  // The shared renderers use bindHoverPreview which triggers showHoverPreview —
-  // we hook into that to update the SPA's reference panel with the hovered entity.
+  // Track last hovered entity so clicking selects it into the reference panel.
+  let lastHoveredKind = null;
+  let lastHoveredEntity = null;
+
   setOnHoverPreview((kind, entity) => {
-    if (!entity) return;
-    const facts = resolveEntityFacts(entity);
-    updateReferencePanel({
-      name: entity.name || "",
-      icon: entity.icon || "",
-      description: entity.description || "",
-      meta: kind || "",
-      facts,
-    });
+    lastHoveredKind = kind;
+    lastHoveredEntity = entity;
+  });
+
+  // Click on a skill/trait to pin it in the reference panel (like the app's selectDetail).
+  buildContent.addEventListener("click", () => {
+    if (lastHoveredEntity) {
+      updateReferencePanel(lastHoveredKind, lastHoveredEntity);
+    }
   });
 
   // Notes section
