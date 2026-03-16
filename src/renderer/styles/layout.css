@@ -188,13 +188,13 @@
 }
 
 .subnav__item {
-  padding: 6px 12px;
+  padding: 10px 16px;
   border: none;
   border-radius: 6px;
   background: transparent;
   cursor: pointer;
   color: var(--text-dim, #7a9abf);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
   letter-spacing: 0.03em;
   text-align: left;
