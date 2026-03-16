@@ -194,11 +194,16 @@ function normalizeEquipment(value) {
   };
   const normalizeInfusions = (obj) => {
     if (!obj || typeof obj !== "object") return {};
-    const arraySlots = { back: 2, ring1: 3, ring2: 3 };
+    // Slots that hold multiple infusions: back (2), rings (3), two-handed/aquatic weapons (2)
+    const arraySlots = {
+      back: 2, ring1: 3, ring2: 3,
+      mainhand1: 2, mainhand2: 2, aquatic1: 2, aquatic2: 2,
+      offhand1: 1, offhand2: 1,
+    };
     const out = {};
     for (const [k, v] of Object.entries(obj)) {
       if (arraySlots[k]) {
-        const arr = Array.isArray(v) ? v : [];
+        const arr = Array.isArray(v) ? v : (v ? [v] : []);
         out[k] = Array.from({ length: arraySlots[k] }, (_, i) => asString(arr[i], 40));
       } else {
         out[k] = asString(v, 120);
