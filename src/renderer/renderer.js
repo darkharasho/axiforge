@@ -483,12 +483,20 @@ async function refreshWindowControls() {
   el.winMax.textContent = maximized ? "[] " : "+";
 }
 
+// ── Window title ─────────────────────────────────────────────────────────────
+
+function updateWindowTitle() {
+  const name = state.editor?.title;
+  document.title = name ? `AxiForge — ${name}` : "AxiForge";
+}
+
 // ── Event wiring ─────────────────────────────────────────────────────────────
 
 function wireEvents() {
   el.editorTitle.addEventListener("input", () => {
     state.editor.title = String(el.editorTitle.value || "");
     markEditorChanged({ updateBuildList: true });
+    updateWindowTitle();
   });
 
   el.tagsInput.addEventListener("input", () => {

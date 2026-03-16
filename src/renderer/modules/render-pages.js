@@ -532,6 +532,10 @@ export function renderEditorForm() {
   _el.editorTitle.value = state.editor.title || "";
   _el.tagsInput.value = state.editor.tagsText || "";
 
+  // Update window title to reflect current build name
+  const buildName = state.editor.title;
+  document.title = buildName ? `AxiForge — ${buildName}` : "AxiForge";
+
   const status = state.onboarding;
   const canPublish = Boolean(status?.isAuthenticated && status?.repoReady);
   _el.publishSiteBtn.disabled = !canPublish;
