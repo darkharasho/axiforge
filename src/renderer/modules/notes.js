@@ -3,6 +3,7 @@
 
 import { marked } from "marked";
 import { state } from "./state.js";
+import { bindHoverPreview } from "./detail-panel.js";
 
 let _el = {};
 let _markEditorChanged = () => {};
@@ -453,6 +454,47 @@ function renderPreview(markdown, container) {
     container.innerHTML = '<p style="color:var(--muted);font-style:italic">No notes yet.</p>';
     return;
   }
-  const html = marked.parse(markdown, { breaks: true });
+
+  let html = marked.parse(markdown, { breaks: true });
+
+  // Resolve @[category:id:Name] patterns into mention chips
+  html = html.replace(/@\[(\w+):(\d+):([^\]]+)\]/g, (match, category, id, name) => {
+    const numId = Number(id);
+    const resolved = resolveReference(category, numId);
+    const icon = resolved?.icon || "";
+    const iconHtml = icon ? `<img class="notes-mention__icon" src="${icon}" alt="">` : "";
+    return `<span class="notes-mention" data-type="${category}" data-id="${numId}">${iconHtml}${escapeHtml(name)} <span class="notes-mention__label">${category}</span></span>`;
+  });
+
   container.innerHTML = html;
+
+  // Bind hover tooltips to mention chips
+  container.querySelectorAll(".notes-mention").forEach((chip) => {
+    const type = chip.dataset.type;
+    const id = Number(chip.dataset.id);
+    const kind = type === "trait" ? "trait" : type === "skill" ? "skill" : `equip-${type}`;
+    bindHoverPreview(chip, kind, () => resolveReference(type, id));
+  });
+}
+
+function resolveReference(category, id) {
+  const catalog = state.activeCatalog;
+  const upgrades = state.upgradeCatalog;
+  switch (category) {
+    case "skill": return catalog?.skillById?.get(id) || null;
+    case "trait": return catalog?.traitById?.get(id) || null;
+    case "rune": return upgrades?.runeById?.get(id) || null;
+    case "sigil": return upgrades?.sigilById?.get(id) || null;
+    case "food": return upgrades?.foodById?.get(id) || null;
+    case "utility": return upgrades?.utilityById?.get(id) || null;
+    case "infusion": return upgrades?.infusionById?.get(id) || null;
+    case "enrichment": return upgrades?.enrichmentById?.get(id) || null;
+    default: return null;
+  }
+}
+
+function escapeHtml(str) {
+  const d = document.createElement("div");
+  d.textContent = str;
+  return d.innerHTML;
 }
