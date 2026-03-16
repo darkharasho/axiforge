@@ -71,6 +71,8 @@ function collectAllSkills(build) {
   for (const legend of (build.legendDisplay || [])) {
     if (legend.swap) skills.push(legend.swap);
   }
+  // Full profession catalog — includes bundle skills, flip chains, toolbelt skills, etc.
+  if (Array.isArray(build.catalogSkills)) skills.push(...build.catalogSkills);
   return skills.filter(s => s && s.id);
 }
 
@@ -109,13 +111,16 @@ function populateStateFromBuild(build) {
 
   // ── state.activeCatalog ──
   const allSkills = collectAllSkills(build);
-  const allTraits = (build.specializations || []).flatMap(s => {
-    const minors = Array.isArray(s.minorTraits) ? s.minorTraits : [];
-    const majors = s.majorTraitsByTier
-      ? Object.values(s.majorTraitsByTier).flat()
-      : [];
-    return [...minors, ...majors];
-  }).filter(t => t && t.id);
+  // Use full catalog traits if available (includes facts/traitedFacts), fall back to spec-embedded traits
+  const allTraits = Array.isArray(build.catalogTraits) && build.catalogTraits.length
+    ? build.catalogTraits
+    : (build.specializations || []).flatMap(s => {
+        const minors = Array.isArray(s.minorTraits) ? s.minorTraits : [];
+        const majors = s.majorTraitsByTier
+          ? Object.values(s.majorTraitsByTier).flat()
+          : [];
+        return [...minors, ...majors];
+      }).filter(t => t && t.id);
 
   state.activeCatalog = {
     profession:         { id: build.profession },
