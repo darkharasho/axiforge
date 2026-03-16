@@ -388,37 +388,63 @@ function serializeForPublish(build, catalog, upgradeCatalog) {
     ? (attunementSkills[activeAttunement]?.professionMechanics || filteredMechanics)
     : filteredMechanics;
 
-  // Resolve heal/utility/elite skill IDs to full skill objects for the SPA catalog
+  // Enrich stored skill/trait objects with full API data (facts, traitedFacts, etc.)
+  // The build store strips facts to save space; we restore them from the catalog here.
   const skillById = new Map(skillsArray.map(s => [s.id, s]));
-  function resolveSkillSelection(sel) {
-    if (!sel) return [];
-    const resolved = [];
-    if (sel.healId) { const s = skillById.get(sel.healId); if (s) resolved.push(s); }
-    if (Array.isArray(sel.utilityIds)) {
-      for (const id of sel.utilityIds) { const s = skillById.get(id); if (s) resolved.push(s); }
-    }
-    if (sel.eliteId) { const s = skillById.get(sel.eliteId); if (s) resolved.push(s); }
-    return resolved;
+  const traitById = new Map((catalog?.traits || []).map(t => [t.id, t]));
+
+  function enrichSkillRef(stored) {
+    if (!stored || !stored.id) return stored;
+    const full = skillById.get(stored.id);
+    return full ? { ...stored, facts: full.facts, traitedFacts: full.traitedFacts } : stored;
   }
-  const resolvedSlottedSkills = [
-    ...resolveSkillSelection(build.skills),
-    ...resolveSkillSelection(build.underwaterSkills),
-  ];
+
+  // Enrich specialization trait objects with facts from catalog
+  const enrichedSpecializations = (build.specializations || []).map(spec => ({
+    ...spec,
+    minorTraits: (spec.minorTraits || []).map(t => {
+      if (typeof t === "number") return t; // just an ID ref
+      const full = traitById.get(t.id);
+      return full ? { ...t, facts: full.facts, traitedFacts: full.traitedFacts } : t;
+    }),
+    majorTraitsByTier: Object.fromEntries(
+      Object.entries(spec.majorTraitsByTier || {}).map(([tier, traits]) => [
+        tier,
+        (traits || []).map(t => {
+          const full = traitById.get(t.id);
+          return full ? { ...t, facts: full.facts, traitedFacts: full.traitedFacts } : t;
+        }),
+      ])
+    ),
+  }));
+
+  // Enrich heal/utility/elite skill refs (build store format: { heal: obj, utility: [obj], elite: obj })
+  function enrichSkillSelection(sel) {
+    if (!sel) return sel;
+    return {
+      ...sel,
+      ...(sel.heal ? { heal: enrichSkillRef(sel.heal) } : {}),
+      ...(sel.utility ? { utility: sel.utility.map(s => enrichSkillRef(s)) } : {}),
+      ...(sel.elite ? { elite: enrichSkillRef(sel.elite) } : {}),
+    };
+  }
+
+  // Enriched skill selections with facts restored from catalog
+  const enrichedSkills = enrichSkillSelection(build.skills);
+  const enrichedUnderwaterSkills = enrichSkillSelection(build.underwaterSkills);
 
   // Structured land and water skill datasets
   const result_landSkills = {
     weaponSkills: defaultWeaponSkills,
     professionMechanics: defaultMechanics,
-    skills: build.skills,
-    resolvedSkills: resolveSkillSelection(build.skills),
+    skills: enrichedSkills,
     attunementSkills: hasAttunements ? attunementSkills : null,
   };
 
   const result_waterSkills = {
     weaponSkills: { aquatic1: weaponSkills.aquatic1, aquatic2: weaponSkills.aquatic2 },
     professionMechanics: filteredMechanics.filter(s => !(s.flags || []).includes("NoUnderwater")),
-    skills: build.underwaterSkills || build.skills,
-    resolvedSkills: resolveSkillSelection(build.underwaterSkills || build.skills),
+    skills: enrichedUnderwaterSkills || enrichedSkills,
     attunementSkills: null,
   };
 
@@ -469,6 +495,10 @@ function serializeForPublish(build, catalog, upgradeCatalog) {
 
   return {
     ...build,
+    // Override stored specializations/skills with enriched versions (facts restored)
+    specializations: enrichedSpecializations,
+    skills: enrichedSkills,
+    underwaterSkills: enrichedUnderwaterSkills,
     // Backward-compatible flat fields
     weaponSkills,
     professionMechanics: filteredMechanics,

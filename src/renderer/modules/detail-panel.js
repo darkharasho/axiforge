@@ -6,6 +6,9 @@ import { computeEquipmentStats } from "./stats.js";
 let _readOnly = false;
 export function setReadOnly(val) { _readOnly = val; }
 
+let _onHoverPreview = null;
+export function setOnHoverPreview(cb) { _onHoverPreview = cb; }
+
 /**
  * Check if a skill is aquatic-only (weapon skill for a weapon with the Aquatic flag,
  * and the skill itself does NOT have NoUnderwater — i.e. it's the underwater variant).
@@ -288,6 +291,7 @@ export function buildSkillCard(skill, kind, isChained = false, dmgStats = null) 
 
 export function showHoverPreview(kind, entity, x, y) {
   if (!entity) return;
+  if (_onHoverPreview) _onHoverPreview(kind, entity);
 
   // Compute damage stats from the current build for Damage fact calculations.
   // Formula: Damage = WeaponStrength × EffectivePower × Coefficient × Hits / 2597

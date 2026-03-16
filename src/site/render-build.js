@@ -2,7 +2,7 @@ import { state } from "@renderer/modules/state.js";
 import { initSkills, renderSkills } from "@renderer/modules/skills.js";
 import { initSpecializations, renderSpecializations } from "@renderer/modules/specializations.js";
 import { initEquipment, renderEquipmentPanel } from "@renderer/modules/equipment.js";
-import { initDetailPanel, bindHoverPreview } from "@renderer/modules/detail-panel.js";
+import { initDetailPanel, bindHoverPreview, setOnHoverPreview, resolveEntityFacts } from "@renderer/modules/detail-panel.js";
 import { initReferencePanel, updateReferencePanel } from "./render-reference.js";
 
 function escapeHtml(s) {
@@ -298,17 +298,17 @@ export function renderBuildPage(container, build) {
   specsWithDetail.append(specsPanel, detailPanel);
   buildContent.append(specsWithDetail);
 
-  // Wire hover on the BUILD tab to update the reference panel
-  buildContent.addEventListener("mouseover", (e) => {
-    const target = e.target.closest("[data-name][data-icon]");
-    if (!target) return;
-    let facts = [];
-    try { facts = JSON.parse(target.dataset.facts || "[]"); } catch { /* ignore */ }
+  // Wire hover preview callback to update the reference panel.
+  // The shared renderers use bindHoverPreview which triggers showHoverPreview —
+  // we hook into that to update the SPA's reference panel with the hovered entity.
+  setOnHoverPreview((kind, entity) => {
+    if (!entity) return;
+    const facts = resolveEntityFacts(entity);
     updateReferencePanel({
-      name: target.dataset.name || "",
-      icon: target.dataset.icon || "",
-      description: target.dataset.desc || "",
-      meta: target.dataset.meta || "",
+      name: entity.name || "",
+      icon: entity.icon || "",
+      description: entity.description || "",
+      meta: kind || "",
       facts,
     });
   });
