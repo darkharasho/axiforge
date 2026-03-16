@@ -76,11 +76,16 @@ function computePublishStats(equipment, upgradeCatalog, profession) {
     const foodDef = upgradeCatalog.foodById?.get(Number(equipment.food));
     if (foodDef) {
       const foodStatMap = { "Condition Damage": "ConditionDamage", "Healing Power": "HealingPower", "Healing": "HealingPower" };
-      const re = /\+(\d+)\s+(Condition Damage|Healing Power|Healing|Power|Precision|Toughness|Vitality|Ferocity|Concentration|Expertise)/g;
+      const ALL_STAT_KEYS = ["Power", "Precision", "Toughness", "Vitality", "Ferocity", "ConditionDamage", "HealingPower", "Concentration", "Expertise"];
+      const re = /\+(\d+)\s+(Condition Damage|Healing Power|Healing|Power|Precision|Toughness|Vitality|Ferocity|Concentration|Expertise|to All Attributes)/g;
       let m;
       while ((m = re.exec(foodDef.buff)) !== null) {
-        const key = foodStatMap[m[2]] || m[2];
-        if (totals[key] !== undefined) totals[key] += Number(m[1]);
+        if (m[2] === "to All Attributes") {
+          for (const key of ALL_STAT_KEYS) totals[key] += Number(m[1]);
+        } else {
+          const key = foodStatMap[m[2]] || m[2];
+          if (totals[key] !== undefined) totals[key] += Number(m[1]);
+        }
       }
     }
   }
