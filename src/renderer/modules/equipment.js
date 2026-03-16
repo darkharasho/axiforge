@@ -1245,7 +1245,6 @@ export function renderEquipmentPanel() {
   }
 
   boonsSection.append(boonsBar);
-  rightCol.append(boonsSection);
 
   // Attributes
   const statsSection = makeSection("Attributes");
@@ -1331,6 +1330,7 @@ export function renderEquipmentPanel() {
   }
 
   rightCol.append(statsSection);
+  rightCol.append(boonsSection);
 
   // Trinkets — row1 (4 cols): Back, Accessory 1, Accessory 2, Relic
   //            row2 (3 cols): Amulet, Ring 1, Ring 2
