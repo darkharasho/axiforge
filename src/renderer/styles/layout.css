@@ -128,32 +128,46 @@
 
 .titlebar__controls {
   display: flex;
-  align-items: center;
-  gap: 6px;
+  align-items: stretch;
+  align-self: stretch;
+  gap: 0;
+  margin-right: -10px;
 }
 
 .titlebar__controls #winMin,
 .titlebar__controls #winMax,
 .titlebar__controls #winClose {
-  width: 28px;
-  height: 28px;
-  border: 1px solid #2a395e;
-  border-radius: 8px;
-  background: #111b33;
-  color: var(--text);
+  width: 46px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.75);
   cursor: pointer;
-  font-size: 13px;
   display: grid;
   place-items: center;
+  transition: background 0.15s, color 0.15s;
 }
 
 .titlebar__controls #winMin:hover,
 .titlebar__controls #winMax:hover {
-  background: #182647;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.titlebar__controls #winMin:active,
+.titlebar__controls #winMax:active {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .titlebar__controls #winClose:hover {
-  background: #5d1c2b;
+  background: #e81123;
+  color: #fff;
+}
+
+.titlebar__controls #winClose:active {
+  background: #bf0f1d;
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .layout {

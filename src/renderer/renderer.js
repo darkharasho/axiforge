@@ -489,7 +489,10 @@ function wireWindowControls() {
 
 async function refreshWindowControls() {
   const maximized = await window.desktopApi.isMaximizedWindow();
-  el.winMax.textContent = maximized ? "[] " : "+";
+  el.winMax.title = maximized ? "Restore Down" : "Maximize";
+  el.winMax.innerHTML = maximized
+    ? '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1"><rect x="0.5" y="2.5" width="7" height="7"/><polyline points="2.5,2.5 2.5,0.5 9.5,0.5 9.5,7.5 7.5,7.5"/></svg>'
+    : '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1"><rect x="0.5" y="0.5" width="9" height="9"/></svg>';
 }
 
 // ── Window title ─────────────────────────────────────────────────────────────
