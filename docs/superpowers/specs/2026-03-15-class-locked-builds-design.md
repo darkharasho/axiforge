@@ -26,15 +26,18 @@ No change to current behavior — profession swaps in-place, resets specs/skills
 
 ### `startNewBuild()` change
 
-Accept an optional `profession` argument. When provided, use it instead of defaulting to the current editor's profession.
+Accept an optional `profession` argument and an options object. When `profession` is provided, use it instead of defaulting to the current editor's profession. When `skipDirtyCheck` is true, bypass the `confirmDiscardDirty()` call (because the caller already handled confirmation via the confirm modal).
 
 ```js
-async function startNewBuild(profession) {
+async function startNewBuild(profession, { skipDirtyCheck = false } = {}) {
+  if (!skipDirtyCheck && !confirmDiscardDirty("Start a new build")) return;
   profession = profession || state.editor.profession || state.professions[0]?.id || "";
   state.editor = createEmptyEditor(profession, _lastGameMode);
   // ... rest unchanged
 }
 ```
+
+**Note:** `startNewBuild` already calls `render()` internally, so callers do not need to trigger a re-render afterward.
 
 ## Confirm Modal Module
 
@@ -63,9 +66,9 @@ const confirmed = await showConfirmModal({
 ### Behavior
 
 - Singleton overlay appended to `document.body` on init.
-- Hidden/shown via `--hidden` class toggle (same pattern as detail-modal, wiki-modal).
+- Hidden/shown via `confirm-modal-overlay--hidden` BEM class toggle (same pattern as `detail-modal-overlay--hidden`, `wiki-modal-overlay--hidden`).
 - Escape key dismisses (resolves `false`).
-- Clicking the backdrop dismisses (resolves `false`).
+- Clicking the close button dismisses (resolves `false`). No backdrop-click-to-dismiss, consistent with existing modals.
 - Only one confirm modal at a time — calling `showConfirmModal()` while one is open replaces it.
 
 ### Visual Design
@@ -87,7 +90,9 @@ New export in `editor.js`:
 export function computeUnsavedChangeSummary() → string[]
 ```
 
-Parses `state.editorBaselineSignature` and the current `computeEditorSignature()` as JSON, compares field-by-field, and returns an array of human-readable strings:
+Parses `state.editorBaselineSignature` and the current `computeEditorSignature()` as JSON, compares field-by-field, and returns an array of human-readable strings. If `editorBaselineSignature` is empty (no baseline captured), returns an empty array as a defensive fallback.
+
+Categories:
 
 - `"Title changed"` — if `title` differs
 - `"Specializations modified"` — if `specializations` array differs
@@ -96,8 +101,9 @@ Parses `state.editorBaselineSignature` and the current `computeEditorSignature()
 - `"Notes modified"` — if `notes` differs
 - `"Tags modified"` — if `tags` differs
 - `"Game mode changed"` — if `gameMode` differs
+- `"Legends modified"` — if `selectedUnderwaterLegends` differs (Revenant)
 
-Category-level only — no individual trait/skill names.
+Category-level only — no individual trait/skill names. Profession-specific fields not in the signature (e.g. `selectedLegends`, `selectedPets`) are not tracked by `computeEditorSignature()` and therefore not reported here.
 
 ### Usage
 
@@ -144,7 +150,7 @@ onChange: async (nextProfession) => {
       });
       if (!confirmed) return; // revert dropdown handled by re-render
     }
-    await _callbacks.startNewBuild(professionId);
+    await _callbacks.startNewBuild(professionId, { skipDirtyCheck: true });
   } else {
     // Unsaved draft — swap in-place (current behavior)
     state.editor.profession = professionId;
@@ -168,5 +174,5 @@ The existing `confirmDiscardDirty()` in `editor.js` uses `window.confirm()`. Thi
 | `src/renderer/styles/confirm-modal.css` | **New** — confirm modal styles |
 | `src/renderer/modules/editor.js` | Add `computeUnsavedChangeSummary()` export |
 | `src/renderer/modules/render-pages.js` | Update profession dropdown `onChange` handler |
-| `src/renderer/renderer.js` | Update `startNewBuild()` to accept optional profession arg; import and call `initConfirmModal()` |
-| `src/renderer/index.html` | Add `<link>` for confirm-modal.css |
+| `src/renderer/renderer.js` | Update `startNewBuild()` to accept optional profession arg + `skipDirtyCheck` option; import and call `initConfirmModal()` |
+| `src/renderer/styles.css` | Add `@import "./styles/confirm-modal.css"` (follows existing pattern — no `<link>` in index.html) |
