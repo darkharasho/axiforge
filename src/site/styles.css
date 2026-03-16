@@ -17,8 +17,9 @@
   padding: 10px 24px; background: var(--panel); border-bottom: 1px solid var(--line-soft);
 }
 .site-navbar__left { display: flex; align-items: center; gap: 10px; }
-.site-navbar__logo { width: 24px; height: 24px; flex-shrink: 0; color: var(--accent); }
-.site-navbar__title { font-family: 'Cinzel', serif; font-size: 1.1rem; color: var(--accent); font-weight: 700; letter-spacing: 0.04em; }
+.site-navbar__logo { width: 24px; height: 24px; flex-shrink: 0; color: #ffffff; }
+.site-navbar__title { font-family: 'Cinzel', serif; font-size: 1.1rem; font-weight: 700; letter-spacing: 0.04em; color: #ffffff; }
+.site-navbar__title-accent { color: var(--accent); }
 .site-navbar__right { display: flex; align-items: center; gap: 16px; }
 .site-navbar__link { color: var(--muted); text-decoration: none; font-size: 0.85rem; display: flex; align-items: center; gap: 6px; transition: color 0.15s; }
 .site-navbar__link:hover { color: var(--text); }
