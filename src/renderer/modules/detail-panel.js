@@ -397,12 +397,12 @@ export function getHoverMetaLine(kind, entity) {
     if (kitSkill?.bundleSkills?.includes(entity.id)) {
       const slotMatch = /^(?:Downed|Weapon|Profession)_(\d)$/i.exec(slot);
       const slotNum = slotMatch ? slotMatch[1] : "";
-      return `Skill \u2014 ${kitSkill.name}${slotNum ? " " + slotNum : ""}`;
+      return `Skill • ${kitSkill.name}${slotNum ? " " + slotNum : ""}`;
     }
   }
   const showSlot = slot && !/^(Profession|Weapon|Downed)_/i.test(slot) && !/^(Heal|Utility|Elite)$/i.test(slot);
-  if (type && showSlot) return `Skill \u2014 ${type} \u2014 ${slot}`;
-  if (type) return `Skill \u2014 ${type}`;
+  if (type && showSlot) return `Skill • ${type} • ${slot}`;
+  if (type) return `Skill • ${type}`;
   return "Skill";
 }
 
