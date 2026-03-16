@@ -5,6 +5,7 @@ import { closeCustomSelect } from "./custom-select.js";
 import { hideHoverPreview } from "./detail-panel.js";
 import { showConfirmModal } from "./confirm-modal.js";
 import { computeUnsavedChangeSummary } from "./editor.js";
+import { getProfessionSvg } from "./profession-icons.js";
 
 // ---------------------------------------------------------------------------
 // DOM refs — injected by the host (renderer.js) after DOM is ready
@@ -380,13 +381,17 @@ export function renderBuildList() {
       detailHtml += `<div class="build-card__detail"><span class="build-card__detail-label">Skills:</span> ${escapeHtml(skillNames.join(" \u00B7 "))}</div>`;
     }
 
+    const profSvg = getProfessionSvg(build.profession) || "";
     card.innerHTML = `
-      <div class="build-card__header">
-        <h3>${escapeHtml(build.title || "Untitled Build")}${escapeHtml(dirtySuffix)}</h3>
-        <span class="build-card__date">${escapeHtml(formatShortDate(build.updatedAt))}</span>
+      <div class="build-card__icon">${profSvg}</div>
+      <div class="build-card__content">
+        <div class="build-card__header">
+          <h3>${escapeHtml(build.title || "Untitled Build")}${escapeHtml(dirtySuffix)}</h3>
+          <span class="build-card__date">${escapeHtml(formatShortDate(build.updatedAt))}</span>
+        </div>
+        <div class="build-card__pills">${pillsHtml}</div>
+        ${detailHtml}
       </div>
-      <div class="build-card__pills">${pillsHtml}</div>
-      ${detailHtml}
     `;
 
     const actions = document.createElement("div");
@@ -456,7 +461,7 @@ export function renderBuildList() {
     const canPublish = Boolean(state.onboarding?.isAuthenticated && state.onboarding?.repoReady);
     publishBtn.disabled = !canPublish;
     actions.append(loadBtn, publishBtn, deleteBtn);
-    card.append(actions);
+    card.querySelector(".build-card__content").append(actions);
     _el.buildList.append(card);
   }
 }
