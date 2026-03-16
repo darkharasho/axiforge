@@ -173,6 +173,8 @@
 .equip-slot--compact .equip-slot__info {
   align-items: center;
   gap: 0;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .equip-slot--compact .equip-slot__label {

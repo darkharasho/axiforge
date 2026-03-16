@@ -1088,6 +1088,7 @@ export function renderEquipmentPanel() {
       : (_readOnly ? "—" : "Select…");
     info.append(labelEl, valueEl);
     wrapper.append(iconDiv, info);
+    if (currentRelic) wrapper.title = currentRelic;
 
     if (_readOnly) {
       wrapper.removeAttribute("role");
