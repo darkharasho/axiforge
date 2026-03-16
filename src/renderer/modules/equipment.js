@@ -9,8 +9,11 @@ import {
 } from "./constants.js";
 import { escapeHtml } from "./utils.js";
 import { computeSlotStats, computeEquipmentStats, computeUpgradeModifiers, computeStatBreakdown } from "./stats.js";
-import { bindHoverPreview } from "./detail-panel.js";
+import { bindHoverPreview, selectDetail } from "./detail-panel.js";
 import { getProfessionSvg } from "./profession-icons.js";
+import { resolveEquippedWeaponSkills, getAvailableAttunements, resolveWarriorBurst } from "./equipment-weapon-skills.js";
+import { getSkillOptionsByType } from "./skills.js";
+import { computeBoonCoverage } from "./boon-coverage.js";
 
 export { computeSlotStats, computeEquipmentStats, computeUpgradeModifiers, computeStatBreakdown } from "./stats.js";
 
@@ -865,93 +868,229 @@ export function renderEquipmentPanel() {
   });
   leftCol.append(weaponSection);
 
-  // Consumables
-  const consumeSection = makeSection("Consumables", {
-    onClear: () => { equip.food = ""; equip.utility = ""; },
-  });
+  // Weapon Skills + Boon/Condition Coverage (left column, under Weapons)
+  const catalog = state.activeCatalog;
+  if (catalog) {
+    const weaponSkills = resolveEquippedWeaponSkills(catalog, state.editor);
+    const hasAnyWeaponSkill = weaponSkills.some((s) => s != null);
 
-  const foodCatalog = state.upgradeCatalog?.foods || [];
-  const foodItems = [
-    { value: "", label: "— None —" },
-    ...foodCatalog.map((f) => ({ value: String(f.id), label: f.name, icon: f.icon, subtitle: f.buff.replace(/ \| /g, "\n"), _tab: f.rarity === "Ascended" ? "ascended" : "other" })),
-  ];
-  const FOOD_TABS = [
-    { key: "ascended", label: "Ascended" },
-    { key: "other", label: "Other" },
-  ];
-  const utilityCatalog = state.upgradeCatalog?.utilities || [];
-  const utilityItems = [
-    { value: "", label: "— None —" },
-    ...utilityCatalog.map((u) => ({ value: String(u.id), label: u.name, icon: u.icon, subtitle: u.buff.replace(/ \| /g, "\n") })),
-  ];
+    if (hasAnyWeaponSkill) {
+      const wskillSection = makeSection("Weapon Skills");
 
-  function makeConsumableSlot({ field, label, items, searchPlaceholder, hoverKind, defaultIcon, getDef, tabs: slotTabs }) {
-    const current = equip[field] || "";
-    const def = getDef(current);
-    const wrapper = document.createElement("div");
-    wrapper.className = "equip-slot equip-slot--consumable";
-    wrapper.setAttribute("role", "button");
-    wrapper.tabIndex = 0;
+      // Weapon swap button in the section header
+      const equippedWeapons = state.editor.equipment?.weapons || {};
+      const activeWeaponSet = Number(state.editor.activeWeaponSet) || 1;
+      const isUnderwater = Boolean(state.editor.underwaterMode);
+      const hasWeaponSet2 = isUnderwater
+        ? !!equippedWeapons.aquatic2
+        : !!(equippedWeapons.mainhand2 || equippedWeapons.offhand2);
+      const availableAttunements = getAvailableAttunements(catalog, state.editor);
+      const activeAttunement = state.editor.activeAttunement || "";
 
-    const iconDiv = document.createElement("div");
-    iconDiv.className = "equip-slot__icon equip-slot__icon--consumable" + (current ? " equip-slot__icon--filled" : "");
-    const img = document.createElement("img");
-    img.src = def ? def.icon : defaultIcon;
-    img.alt = def ? def.label : label;
-    img.draggable = false;
-    img.addEventListener("error", () => img.remove());
-    iconDiv.append(img);
+      // Attunement buttons above skill row
+      if (availableAttunements.length > 0) {
+        const attBar = document.createElement("div");
+        attBar.className = "equip-attunement-bar";
+        for (const att of availableAttunements) {
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "equip-attunement-btn"
+            + ` equip-attunement-btn--${att.toLowerCase()}`
+            + (att === activeAttunement ? " equip-attunement-btn--active" : "");
+          btn.title = `${att} Attunement`;
+          btn.textContent = att.charAt(0);
+          btn.addEventListener("click", () => {
+            state.editor.activeAttunement = att;
+            _renderSkills();
+            renderEquipmentPanel();
+            if (!_readOnly) _markEditorChanged();
+          });
+          attBar.append(btn);
+        }
+        wskillSection.append(attBar);
+      }
 
-    const info = document.createElement("div");
-    info.className = "equip-slot__info";
-    const nameEl = document.createElement("div");
-    nameEl.className = "equip-slot__consumable-name" + (current ? "" : " equip-slot__value--empty");
-    nameEl.textContent = (def ? def.label : current) || `${label}: None`;
-    const buffEl = document.createElement("div");
-    buffEl.className = "equip-slot__consumable-buff";
-    buffEl.innerHTML = def ? escapeHtml(def.buff).replace(/ \| /g, "<br>") : "";
-    info.append(nameEl, buffEl);
-    wrapper.append(iconDiv, info);
+      // Warrior: F1 burst + Berserker toggle above skill row (like attunements)
+      const profId = catalog.profession?.id || state.editor.profession || "";
+      const eliteSpecId = (state.editor.specializations || [])
+        .map((s) => Number(s?.specializationId) || 0)
+        .filter((id) => id > 0)
+        .map((id) => catalog.specializationById?.get(id))
+        .find((s) => s?.elite)?.id || 0;
+      const isBerserker = profId === "Warrior" && eliteSpecId === 18;
 
-    if (_readOnly) {
-      wrapper.removeAttribute("role");
-      wrapper.style.cursor = "default";
-      wrapper.tabIndex = -1;
+      if (profId === "Warrior") {
+        const options = getSkillOptionsByType(catalog, state.editor.specializations, isUnderwater);
+        const burstSkill = resolveWarriorBurst(catalog, state.editor, options.profession);
+
+        if (burstSkill || isBerserker) {
+          const mechBar = document.createElement("div");
+          mechBar.className = "equip-attunement-bar";
+
+          if (burstSkill) {
+            const burstBtn = document.createElement("button");
+            burstBtn.type = "button";
+            burstBtn.className = "equip-weapon-skill-icon equip-weapon-skill-icon--burst equip-weapon-skill-icon--small";
+            burstBtn.innerHTML = `<img src="${escapeHtml(burstSkill.icon)}" alt="${escapeHtml(burstSkill.name || "")}" />`;
+            burstBtn.title = burstSkill.name || "";
+            bindHoverPreview(burstBtn, "skill", () => burstSkill);
+            if (!_readOnly) burstBtn.addEventListener("click", () => selectDetail("skill", burstSkill));
+            mechBar.append(burstBtn);
+          }
+
+          if (isBerserker) {
+            const berserkSkillId = (() => {
+              const f2 = (options.profession || []).find((s) => s.slot === "Profession_2" && Number(s.specialization) === 18);
+              return f2?.id || 0;
+            })();
+            const berserkActive = berserkSkillId > 0 && (Number(state.editor.activeKit) || 0) === berserkSkillId;
+            const bBtn = document.createElement("button");
+            bBtn.type = "button";
+            bBtn.className = "equip-attunement-btn equip-attunement-btn--berserk"
+              + (berserkActive ? " equip-attunement-btn--active" : "");
+            bBtn.title = berserkActive ? "Leave Berserk" : "Enter Berserk";
+            bBtn.textContent = "B";
+            bBtn.addEventListener("click", () => {
+              state.editor.activeKit = berserkActive ? 0 : berserkSkillId;
+              _renderSkills();
+              renderEquipmentPanel();
+              if (!_readOnly) _markEditorChanged();
+            });
+            mechBar.append(bBtn);
+          }
+
+          wskillSection.append(mechBar);
+        }
+      }
+
+      const skillRow = document.createElement("div");
+      skillRow.className = "equip-weapon-skills";
+
+      // Weapon swap button, left of skill icons
+      if (hasWeaponSet2) {
+        const swapBtn = document.createElement("button");
+        swapBtn.type = "button";
+        swapBtn.className = "weapon-swap-btn equip-weapon-swap" + (activeWeaponSet === 2 ? " weapon-swap-btn--active" : "");
+        swapBtn.title = `Switch to ${isUnderwater ? "aquatic" : "weapon set"} ${activeWeaponSet === 1 ? 2 : 1}`;
+        swapBtn.innerHTML = `<svg viewBox="0 0 18 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="2,3.5 13,3.5"/><polyline points="10,1 13,3.5 10,6"/>
+          <polyline points="16,10.5 5,10.5"/><polyline points="8,8 5,10.5 8,13"/>
+        </svg>`;
+        swapBtn.addEventListener("click", () => {
+          state.editor.activeWeaponSet = activeWeaponSet === 1 ? 2 : 1;
+          _renderSkills();
+          renderEquipmentPanel();
+          if (!_readOnly) _markEditorChanged();
+        });
+        skillRow.append(swapBtn);
+      }
+
+      for (let i = 0; i < 5; i++) {
+        const wSkill = weaponSkills[i];
+        const iconBtn = document.createElement("button");
+        iconBtn.type = "button";
+        iconBtn.className = "equip-weapon-skill-icon" + (wSkill ? "" : " equip-weapon-skill-icon--empty");
+        iconBtn.disabled = !wSkill;
+        if (wSkill?.icon) {
+          iconBtn.innerHTML = `<img src="${escapeHtml(wSkill.icon)}" alt="${escapeHtml(wSkill.name || "")}" />`;
+          iconBtn.title = wSkill.name || "";
+          bindHoverPreview(iconBtn, "skill", () => wSkill);
+          if (!_readOnly) iconBtn.addEventListener("click", () => selectDetail("skill", wSkill));
+        }
+        skillRow.append(iconBtn);
+      }
+
+      wskillSection.append(skillRow);
+
+      // Boon/condition coverage
+      const coverage = computeBoonCoverage(catalog, state.editor, weaponSkills);
+      const hasBoons = coverage.boons.length > 0;
+      const hasConditions = coverage.conditions.length > 0;
+      if (hasBoons || hasConditions) {
+        const coverageContainer = document.createElement("div");
+        coverageContainer.className = "equip-boon-coverage";
+
+        function makeCoverageRow(items, className) {
+          if (items.length === 0) return null;
+          const row = document.createElement("div");
+          row.className = className;
+          for (const item of items) {
+            const icon = document.createElement("div");
+            icon.className = "equip-boon-coverage__icon";
+            const img = document.createElement("img");
+            img.src = item.icon;
+            img.alt = item.name;
+            img.width = 20;
+            img.height = 20;
+            icon.append(img);
+            if (item.hasAllySource) {
+              const badge = document.createElement("div");
+              badge.className = "equip-boon-coverage__ally-badge";
+              badge.textContent = "\u21E7";
+              icon.append(badge);
+            }
+
+            icon.addEventListener("mouseenter", () => {
+              const tooltip = document.createElement("div");
+              tooltip.className = "boon-coverage__tooltip";
+
+              const title = document.createElement("div");
+              title.className = "boon-coverage__tooltip-title";
+              title.textContent = item.name;
+              tooltip.append(title);
+
+              for (const src of item.sources) {
+                const sourceRow = document.createElement("div");
+                sourceRow.className = "boon-coverage__tooltip-row";
+
+                const tag = document.createElement("span");
+                tag.className = `boon-coverage__tooltip-tag boon-coverage__tooltip-tag--${src.type}`;
+                tag.textContent = src.type === "skill" ? "Skill" : "Trait";
+                sourceRow.append(tag);
+
+                const srcName = document.createElement("span");
+                srcName.className = "boon-coverage__tooltip-name";
+                srcName.textContent = src.name;
+                sourceRow.append(srcName);
+
+                const detail = document.createElement("span");
+                detail.className = "boon-coverage__tooltip-detail";
+                if (src.duration > 0) {
+                  const parts = [];
+                  if (src.stacks > 0) parts.push(`${src.stacks}\u00d7`);
+                  parts.push(`${src.duration}s`);
+                  detail.textContent = parts.join(" ");
+                } else {
+                  detail.textContent = "passive";
+                }
+                sourceRow.append(detail);
+
+                tooltip.append(sourceRow);
+              }
+
+              icon.append(tooltip);
+            });
+
+            icon.addEventListener("mouseleave", () => {
+              const tooltip = icon.querySelector(".boon-coverage__tooltip");
+              if (tooltip) tooltip.remove();
+            });
+
+            row.append(icon);
+          }
+          return row;
+        }
+
+        const boonRow = makeCoverageRow(coverage.boons, "equip-boon-coverage__boons");
+        const condRow = makeCoverageRow(coverage.conditions, "equip-boon-coverage__conditions");
+        if (boonRow) coverageContainer.append(boonRow);
+        if (condRow) coverageContainer.append(condRow);
+        wskillSection.append(coverageContainer);
+      }
+
+      leftCol.append(wskillSection);
     }
-
-    const doOpen = () => openSlotPicker(wrapper, current, (newVal) => {
-      equip[field] = newVal || "";
-      _markEditorChanged();
-      renderEquipmentPanel();
-    }, { items, searchPlaceholder, ...(slotTabs ? { tabs: slotTabs } : {}) });
-    if (!_readOnly) {
-      wrapper.addEventListener("click", doOpen);
-      wrapper.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); doOpen(); } });
-    }
-
-    bindHoverPreview(wrapper, hoverKind, () => {
-      const d = getDef(equip[field] || "");
-      if (!d) return null;
-      return { name: d.label, icon: d.icon, description: (d.buff || "").split(" | ").join("\n") };
-    });
-
-    return wrapper;
   }
-
-  consumeSection.append(
-    makeConsumableSlot({
-      field: "food", label: "Food", items: foodItems, searchPlaceholder: "Search food…",
-      hoverKind: "equip-food", defaultIcon: `${_WK}/6/6b/Nourishment.png`,
-      getDef: (v) => { const f = state.upgradeCatalog?.foodById?.get(Number(v)); return f ? { label: f.name, icon: f.icon, buff: f.buff } : null; },
-      tabs: FOOD_TABS,
-    }),
-    makeConsumableSlot({
-      field: "utility", label: "Utility", items: utilityItems, searchPlaceholder: "Search utility…",
-      hoverKind: "equip-utility", defaultIcon: `${_WK}/d/d6/Enhancement.png`,
-      getDef: (v) => { const u = state.upgradeCatalog?.utilityById?.get(Number(v)); return u ? { label: u.name, icon: u.icon, buff: u.buff } : null; },
-    }),
-  );
-  leftCol.append(consumeSection);
 
   // === RIGHT COLUMN ===
   const rightCol = document.createElement("div");
@@ -1149,6 +1288,92 @@ export function renderEquipmentPanel() {
   trinketSection.append(trinketRow1, trinketRow2);
   rightCol.append(trinketSection);
 
+  // Consumables
+  const consumeSection = makeSection("Consumables", {
+    onClear: () => { equip.food = ""; equip.utility = ""; },
+  });
+
+  const foodCatalog = state.upgradeCatalog?.foods || [];
+  const foodItems = [
+    { value: "", label: "— None —" },
+    ...foodCatalog.map((f) => ({ value: String(f.id), label: f.name, icon: f.icon, subtitle: f.buff.replace(/ \| /g, "\n"), _tab: f.rarity === "Ascended" ? "ascended" : "other" })),
+  ];
+  const FOOD_TABS = [
+    { key: "ascended", label: "Ascended" },
+    { key: "other", label: "Other" },
+  ];
+  const utilityCatalog = state.upgradeCatalog?.utilities || [];
+  const utilityItems = [
+    { value: "", label: "— None —" },
+    ...utilityCatalog.map((u) => ({ value: String(u.id), label: u.name, icon: u.icon, subtitle: u.buff.replace(/ \| /g, "\n") })),
+  ];
+
+  function makeConsumableSlot({ field, label, items, searchPlaceholder, hoverKind, defaultIcon, getDef, tabs: slotTabs }) {
+    const current = equip[field] || "";
+    const def = getDef(current);
+    const wrapper = document.createElement("div");
+    wrapper.className = "equip-slot equip-slot--consumable";
+    wrapper.setAttribute("role", "button");
+    wrapper.tabIndex = 0;
+
+    const iconDiv = document.createElement("div");
+    iconDiv.className = "equip-slot__icon equip-slot__icon--consumable" + (current ? " equip-slot__icon--filled" : "");
+    const img = document.createElement("img");
+    img.src = def ? def.icon : defaultIcon;
+    img.alt = def ? def.label : label;
+    img.draggable = false;
+    img.addEventListener("error", () => img.remove());
+    iconDiv.append(img);
+
+    const info = document.createElement("div");
+    info.className = "equip-slot__info";
+    const nameEl = document.createElement("div");
+    nameEl.className = "equip-slot__consumable-name" + (current ? "" : " equip-slot__value--empty");
+    nameEl.textContent = (def ? def.label : current) || `${label}: None`;
+    const buffEl = document.createElement("div");
+    buffEl.className = "equip-slot__consumable-buff";
+    buffEl.innerHTML = def ? escapeHtml(def.buff).replace(/ \| /g, "<br>") : "";
+    info.append(nameEl, buffEl);
+    wrapper.append(iconDiv, info);
+
+    if (_readOnly) {
+      wrapper.removeAttribute("role");
+      wrapper.style.cursor = "default";
+      wrapper.tabIndex = -1;
+    }
+
+    const doOpen = () => openSlotPicker(wrapper, current, (newVal) => {
+      equip[field] = newVal || "";
+      _markEditorChanged();
+      renderEquipmentPanel();
+    }, { items, searchPlaceholder, ...(slotTabs ? { tabs: slotTabs } : {}) });
+    if (!_readOnly) {
+      wrapper.addEventListener("click", doOpen);
+      wrapper.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); doOpen(); } });
+    }
+
+    bindHoverPreview(wrapper, hoverKind, () => {
+      const d = getDef(equip[field] || "");
+      if (!d) return null;
+      return { name: d.label, icon: d.icon, description: (d.buff || "").split(" | ").join("\n") };
+    });
+
+    return wrapper;
+  }
+
+  consumeSection.append(
+    makeConsumableSlot({
+      field: "food", label: "Food", items: foodItems, searchPlaceholder: "Search food…",
+      hoverKind: "equip-food", defaultIcon: `${_WK}/6/6b/Nourishment.png`,
+      getDef: (v) => { const f = state.upgradeCatalog?.foodById?.get(Number(v)); return f ? { label: f.name, icon: f.icon, buff: f.buff } : null; },
+      tabs: FOOD_TABS,
+    }),
+    makeConsumableSlot({
+      field: "utility", label: "Utility", items: utilityItems, searchPlaceholder: "Search utility…",
+      hoverKind: "equip-utility", defaultIcon: `${_WK}/d/d6/Enhancement.png`,
+      getDef: (v) => { const u = state.upgradeCatalog?.utilityById?.get(Number(v)); return u ? { label: u.name, icon: u.icon, buff: u.buff } : null; },
+    }),
+  );
   // Underwater
   const underwaterKeys = EQUIP_UNDERWATER_SLOTS.map((s) => s.key);
   const underwaterSection = makeSection("Underwater", {
@@ -1177,6 +1402,7 @@ export function renderEquipmentPanel() {
     underwaterSection.append(slotDef.hand === "aquatic" ? makeWeaponSlot(slotDef, { isAquatic: true }) : makeSlot(slotDef));
   }
   rightCol.append(underwaterSection);
+  rightCol.append(consumeSection);
 
   // Center: profession / elite spec class icon
   const artCol = document.createElement("div");
