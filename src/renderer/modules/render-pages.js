@@ -497,7 +497,7 @@ export function renderEditorForm() {
         if (state.editorDirty) {
           const changes = computeUnsavedChangeSummary();
           const body = changes.length
-            ? `<ul>${changes.map((c) => `<li>${c}</li>`).join("")}</ul>`
+            ? `<ul>${changes.map((c) => `<li>${escapeHtml(c)}</li>`).join("")}</ul>`
             : "<p>You have unsaved changes that will be lost.</p>";
           const confirmed = await showConfirmModal({
             title: "Discard unsaved changes?",
