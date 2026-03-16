@@ -61,11 +61,12 @@ const el = {
   equipmentPanel:    q("#equipmentPanel"),
   newBuildBtn:       q("#newBuildBtn"),
   saveBuildBtn:      q("#saveBuildBtn"),
+  saveDot:           q("#saveDot"),
   duplicateBuildBtn: q("#duplicateBuildBtn"),
   copyBuildBtn:      q("#copyBuildBtn"),
   pasteBuildBtn:     q("#pasteBuildBtn"),
-  editorDirtyBadge:  q("#editorDirtyBadge"),
-  buildSummary:      q("#buildSummary"),
+  overflowMenuBtn:   q("#overflowMenuBtn"),
+  overflowMenu:      q("#overflowMenu"),
   publishSiteBtn:    q("#publishSiteBtn"),
   specializationsHost: q("#specializationsHost"),
   skillsHost:        q("#skillsHost"),
@@ -491,12 +492,37 @@ function wireEvents() {
     await duplicateCurrentBuild();
   });
 
+  // Dev-only: show Copy/Paste JSON buttons
+  if (location.port || location.hostname === "localhost") {
+    el.copyBuildBtn.classList.remove("hidden");
+    el.pasteBuildBtn.classList.remove("hidden");
+  }
+
   el.copyBuildBtn.addEventListener("click", async () => {
     await copyBuildJsonToClipboard();
   });
 
   el.pasteBuildBtn.addEventListener("click", async () => {
     await importBuildJsonFromClipboard();
+  });
+
+  // Overflow menu toggle
+  el.overflowMenuBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    el.overflowMenu.classList.toggle("hidden");
+  });
+
+  // Close overflow menu on outside click or Escape
+  document.addEventListener("click", () => {
+    el.overflowMenu.classList.add("hidden");
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") el.overflowMenu.classList.add("hidden");
+  });
+
+  // Close overflow menu when any item is clicked
+  el.overflowMenu.addEventListener("click", () => {
+    el.overflowMenu.classList.add("hidden");
   });
 
   // Listen for publish progress events from main process
