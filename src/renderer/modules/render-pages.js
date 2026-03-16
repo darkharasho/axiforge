@@ -549,15 +549,18 @@ export function renderEditorMeta() {
     _el.saveDot.classList.add("hidden");
   }
 
-  // Save status label: "Draft" or "Last saved: Xm ago"
+  // Save status badge: "Draft" or "Last saved: Xm ago"
   if (_el.saveStatus) {
-    if (!state.editor.id) {
+    const isDraft = !state.editor.id;
+    if (isDraft) {
       _el.saveStatus.textContent = "Draft";
     } else {
       const build = state.builds.find((b) => b.id === state.editor.id);
       const relative = build ? formatRelativeTime(build.updatedAt) : "";
       _el.saveStatus.textContent = relative ? `Last saved: ${relative}` : "";
     }
+    _el.saveStatus.classList.toggle("subnav__save-status--draft", isDraft);
+    _el.saveStatus.classList.toggle("subnav__save-status--saved", !isDraft);
   }
 }
 

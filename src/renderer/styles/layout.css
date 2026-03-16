@@ -228,14 +228,29 @@
 }
 
 .subnav__save-status {
-  font-size: 0.72rem;
-  color: var(--muted);
-  font-style: italic;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
   white-space: nowrap;
+  padding: 3px 10px;
+  border-radius: 20px;
+  border: 1px solid;
 }
 
 .subnav__save-status:empty {
   display: none;
+}
+
+.subnav__save-status--draft {
+  color: #ffb347;
+  background: rgba(255, 179, 71, 0.1);
+  border-color: rgba(255, 179, 71, 0.3);
+}
+
+.subnav__save-status--saved {
+  color: var(--accent);
+  background: rgba(79, 216, 151, 0.1);
+  border-color: rgba(79, 216, 151, 0.3);
 }
 
 .subnav__save-btn {
