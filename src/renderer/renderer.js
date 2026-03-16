@@ -24,6 +24,9 @@ import {
   initEquipment, initEquipmentCallbacks, renderEquipmentPanel, openSlotPicker,
 } from "./modules/equipment.js";
 import {
+  initNotes, initNotesCallbacks, renderNotesPanel,
+} from "./modules/notes.js";
+import {
   initEditorCallbacks, enforceEditorConsistency, markEditorChanged, captureEditorBaseline,
   loadBuildIntoEditor, serializeEditorToBuild, parseBuildImportPayload, confirmDiscardDirty,
   createDefaultSpecializationSelections, createDefaultSkillSelections,
@@ -61,6 +64,7 @@ const el = {
   professionSelect:  q("#professionSelect"),
   tagsInput:         q("#tagsInput"),
   equipmentPanel:    q("#equipmentPanel"),
+  notesPanel:        q("#notesPanel"),
   newBuildBtn:       q("#newBuildBtn"),
   saveBuildBtn:      q("#saveBuildBtn"),
   saveDot:           q("#saveDot"),
@@ -128,12 +132,18 @@ initEquipmentCallbacks({
   renderSkills,
 });
 
+initNotes({ notesPanel: el.notesPanel });
+initNotesCallbacks({
+  markEditorChanged,
+});
+
 initEditorCallbacks({
   render,
   renderEditorMeta,
   renderSpecializations,
   renderSkills,
   renderEquipmentPanel,
+  renderNotesPanel,
   syncRevenantSkillsFromLegend,
   getSkillOptionsByType,
   setProfession: (id, opts) => setProfession(id, opts),
@@ -153,6 +163,7 @@ initRenderPagesCallbacks({
   renderSpecializations,
   renderSkills,
   renderEquipmentPanel,
+  renderNotesPanel,
   renderDetailPanel,
   serializeEditorToBuild,
   parseBuildImportPayload,
