@@ -267,6 +267,38 @@
   height: 100%;
 }
 
+/* ── Twitch embed ────────────────────────────────────────────────────── */
+
+.notes-embed--twitch {
+  background: #18181b;
+}
+
+.notes-embed--twitch .notes-embed__title {
+  color: #bf94ff;
+}
+
+.notes-embed--twitch .notes-embed__title:hover {
+  color: #d4b2ff;
+}
+
+.notes-embed__twitch-placeholder {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #18181b 0%, #2c2c35 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notes-embed__twitch-placeholder svg {
+  width: 96px;
+  height: 100px;
+  opacity: 0.15;
+}
+
 /* ── @ Mention chips ──────────────────────────────────────────────────── */
 
 .notes-mention {

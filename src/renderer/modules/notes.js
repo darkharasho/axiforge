@@ -364,7 +364,7 @@ export function renderNotesPanel() {
   if (!_readOnly) {
     const hint = document.createElement("div");
     hint.className = "notes-feature-hint";
-    hint.innerHTML = "Type <strong>@</strong> to reference skills, traits, and items. <strong>Paste</strong> images from your clipboard. YouTube links auto-embed in preview.";
+    hint.innerHTML = "Type <strong>@</strong> to reference skills, traits, and items. <strong>Paste</strong> images from your clipboard. YouTube &amp; Twitch links auto-embed in preview.";
     _el.notesPanel.append(hint);
   }
 }
@@ -563,8 +563,9 @@ function renderPreview(markdown, container) {
   // Resolve ~img:X tokens to actual data URLs
   resolveImageTokens(container, state.editor.images);
 
-  // Embed YouTube videos (bare URLs or link-text-matches-URL links in their own <p>)
+  // Embed YouTube / Twitch videos (bare URLs or link-text-matches-URL links in their own <p>)
   embedYouTubeVideos(container);
+  embedTwitchVideos(container);
 
   // Bind hover tooltips to mention chips
   container.querySelectorAll(".notes-mention").forEach((chip) => {
@@ -664,6 +665,103 @@ function embedYouTubeVideos(container) {
           meta.append(title);
         }
         if (data.author_name || data.title) meta.style.display = "";
+      })
+      .catch(() => {});
+  });
+}
+
+// ── Twitch embed ──────────────────────────────────────────────────────
+
+function extractTwitchInfo(text) {
+  // VODs: twitch.tv/videos/123456789
+  let m = text.match(/^https?:\/\/(?:www\.)?twitch\.tv\/videos\/(\d+)/);
+  if (m) return { type: "video", id: m[1], url: m[0] };
+  // Clips: twitch.tv/channelname/clip/SlugName
+  m = text.match(/^https?:\/\/(?:www\.)?twitch\.tv\/\w+\/clip\/([a-zA-Z0-9_-]+)/);
+  if (m) return { type: "clip", id: m[1], url: m[0] };
+  // Clips: clips.twitch.tv/SlugName
+  m = text.match(/^https?:\/\/clips\.twitch\.tv\/([a-zA-Z0-9_-]+)/);
+  if (m) return { type: "clip", id: m[1], url: m[0] };
+  return null;
+}
+
+function embedTwitchVideos(container) {
+  const parent = window.location.hostname || "localhost";
+
+  container.querySelectorAll("p").forEach((p) => {
+    const text = p.textContent.trim();
+    const info = extractTwitchInfo(text);
+    if (!info) return;
+
+    const nodes = [...p.childNodes].filter((n) =>
+      !(n.nodeType === Node.TEXT_NODE && !n.textContent.trim())
+    );
+    const isBareUrl = nodes.length === 1 && nodes[0].nodeType === Node.TEXT_NODE;
+    const isSingleLink = nodes.length === 1 && nodes[0].nodeName === "A";
+    if (!isBareUrl && !isSingleLink) return;
+
+    const embed = document.createElement("div");
+    embed.className = "notes-embed notes-embed--twitch";
+
+    const meta = document.createElement("div");
+    meta.className = "notes-embed__meta";
+
+    // Extract channel name from clip URL if possible
+    const channelMatch = info.url.match(/twitch\.tv\/(\w+)\/clip\//);
+    const fallbackChannel = channelMatch ? channelMatch[1] : "Twitch";
+
+    // Always show meta bar with fallback info
+    const authorEl = document.createElement("div");
+    authorEl.className = "notes-embed__author";
+    authorEl.textContent = fallbackChannel;
+    meta.append(authorEl);
+
+    const titleEl = document.createElement("a");
+    titleEl.className = "notes-embed__title";
+    titleEl.textContent = info.type === "video" ? `VOD ${info.id}` : info.id;
+    titleEl.href = info.url;
+    titleEl.target = "_blank";
+    titleEl.rel = "noopener";
+    meta.append(titleEl);
+
+    const videoWrap = document.createElement("div");
+    videoWrap.className = "notes-embed__video";
+
+    // Twitch-branded placeholder (replaced if thumbnail fetched)
+    const placeholder = document.createElement("div");
+    placeholder.className = "notes-embed__twitch-placeholder";
+    placeholder.innerHTML = '<svg viewBox="0 0 256 268" width="48" height="50"><path d="M17.458 0L0 46.556v185.262h63.208v34.934h36.834l34.715-34.934h53.354L256 163.955V0H17.458zm23.259 23.263h192.02v128.029l-45.41 45.415h-63.208L89.57 231.222v-34.515H40.717V23.263zm64.551 84.544h23.263V58.56h-23.263v49.247zm63.208 0h23.263V58.56h-23.263v49.247z" fill="#9146FF"/></svg>';
+
+    const playBtn = document.createElement("div");
+    playBtn.className = "notes-embed__play";
+    playBtn.innerHTML = '<svg viewBox="0 0 68 48"><rect width="68" height="48" rx="8" fill="#9146FF"/><path d="M45 24L27 14v20" fill="#fff"/></svg>';
+
+    videoWrap.append(placeholder, playBtn);
+
+    videoWrap.addEventListener("click", () => {
+      videoWrap.innerHTML = "";
+      const iframe = document.createElement("iframe");
+      if (info.type === "video") {
+        iframe.src = `https://player.twitch.tv/?video=${info.id}&parent=${parent}&autoplay=true`;
+      } else {
+        iframe.src = `https://clips.twitch.tv/embed?clip=${info.id}&parent=${parent}&autoplay=true`;
+      }
+      iframe.setAttribute("frameborder", "0");
+      iframe.setAttribute("allowfullscreen", "");
+      iframe.allow = "autoplay; encrypted-media";
+      videoWrap.append(iframe);
+    });
+
+    embed.append(meta, videoWrap);
+    p.replaceWith(embed);
+
+    // Fetch metadata via Iframely open API
+    fetch(`https://open.iframe.ly/api/oembed?url=${encodeURIComponent(info.url)}&origin=darkharasho`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (!data) return;
+        if (data.author_name) authorEl.textContent = data.author_name;
+        if (data.title) titleEl.textContent = data.title;
       })
       .catch(() => {});
   });
