@@ -306,9 +306,18 @@ label {
   display: flex;
   align-items: center;
   gap: 8px;
-  position: relative;
   font-size: 0.72rem;
   color: #c3d5f8;
+  /* Pop out of subnav flow so it never grows the bar */
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 20;
+  background: rgba(10, 17, 34, 0.98);
+  border: 1px solid #2a3f69;
+  border-radius: 0 0 8px 8px;
+  padding: 6px 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 /* Dismiss × */
