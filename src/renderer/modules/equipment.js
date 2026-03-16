@@ -649,6 +649,8 @@ export function renderEquipmentPanel() {
   function _applyUpgradeFill(fill, newVal) {
     const pickerType = fill.type;
     for (const key of fill.keys) {
+      // Skip weapon slots with no weapon equipped
+      if (weapons[key] !== undefined && !weapons[key]) continue;
       if (pickerType === "sigils") {
         if (!equip.sigils) equip.sigils = {};
         if (!Array.isArray(equip.sigils[key])) {
@@ -687,7 +689,11 @@ export function renderEquipmentPanel() {
       fillEntries.push({ label: "Stats", action: (anchor) => {
         openSlotPicker(anchor, "", (newVal) => {
           if (newVal === "") return;
-          for (const key of fillSlotKeys) state.editor.equipment.slots[key] = newVal;
+          for (const key of fillSlotKeys) {
+            // Skip weapon slots with no weapon equipped
+            if (weapons[key] !== undefined && !weapons[key]) continue;
+            state.editor.equipment.slots[key] = newVal;
+          }
           _markEditorChanged();
           renderEquipmentPanel();
         });
