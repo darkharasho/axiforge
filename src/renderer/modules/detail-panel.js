@@ -2,6 +2,7 @@ import { state } from "./state.js";
 import { WEAPON_STRENGTH_MIDPOINT, BOON_CONDITION_ICONS, BUFF_FACT_TYPES, FACT_TYPE_ICONS } from "./constants.js";
 import { escapeHtml, tierLabel, normalizeText } from "./utils.js";
 import { computeEquipmentStats } from "./stats.js";
+import { getAssumedBoons } from "./equipment.js";
 
 let _readOnly = false;
 export function setReadOnly(val) { _readOnly = val; }
@@ -108,7 +109,7 @@ export function renderDetailPanel() {
     ? facts
         .map((fact) => {
           const cls = fact.type === "NoData" ? "fact-item--section" : fact._splitFact ? "fact-item--split" : fact._newFact ? "fact-item--new-in-mode" : "";
-          return `<li${cls ? ` class="${cls}"` : ""}>${formatFactHtml(fact, detailDmgStats)}</li>`;
+          return `<li${cls ? ` class="${cls}"` : ""}>${formatFactHtml(fact, detailDmgStats, { alacrity: getAssumedBoons().alacrity })}</li>`;
         })
         .join("")
     : "<li>No fact entries.</li>";
@@ -267,7 +268,7 @@ export function buildSkillCard(skill, kind, isChained = false, dmgStats = null) 
   const rawFacts = resolveEntityFacts(skill).slice(0, maxFacts);
   const factsItems = rawFacts
     .map((fact) => {
-      const html = formatFactHtml(fact, dmgStats);
+      const html = formatFactHtml(fact, dmgStats, { alacrity: getAssumedBoons().alacrity });
       if (!html) return null;
       const cls = fact.type === "NoData" ? "fact-item--section" : fact._splitFact ? "fact-item--split" : "";
       return `<li${cls ? ` class="${cls}"` : ""}>${html}</li>`;
@@ -496,7 +497,7 @@ function stripGw2Markup(s) {
   return String(s || "").replace(/<c=[^>]*>(.*?)<\/c>/gi, "$1").trim();
 }
 
-export function formatFactHtml(fact, dmgStats = null) {
+export function formatFactHtml(fact, dmgStats = null, { alacrity = false } = {}) {
   if (!fact || typeof fact !== "object") return "Unknown fact";
   // Normalise GW2 API markup in text/status fields before any rendering.
   fact = fact.text && /<c=/.test(fact.text) ? { ...fact, text: stripGw2Markup(fact.text) } : fact;
@@ -553,6 +554,24 @@ export function formatFactHtml(fact, dmgStats = null) {
     const label = String(fact.text || "Duration");
     const text = `${label}: ${fact.duration}s`;
     const iconUrl = fact.icon || FACT_TYPE_ICONS["Time"] || "";
+    return iconUrl ? `<img class="fact-status-icon" src="${escapeHtml(iconUrl)}" alt="" aria-hidden="true">${escapeHtml(text)}` : escapeHtml(text);
+  }
+  // Recharge facts — apply Alacrity reduction when active
+  if (fact.type === "Recharge" && fact.value != null) {
+    const label = String(fact.text || "Recharge");
+    const base = Number(fact.value);
+    const iconUrl = fact.icon || FACT_TYPE_ICONS[fact.type] || "";
+    if (alacrity && base > 0) {
+      const reduced = +(base * 0.75).toFixed(2);
+      // Show reduced value with original crossed out
+      const text = `${label}: ${reduced}s`;
+      const suffix = ` <span class="fact-alacrity-original">${base}s</span>`;
+      const inner = escapeHtml(text) + suffix;
+      return iconUrl
+        ? `<img class="fact-status-icon" src="${escapeHtml(iconUrl)}" alt="" aria-hidden="true"><span class="fact-alacrity">${inner}</span>`
+        : `<span class="fact-alacrity">${inner}</span>`;
+    }
+    const text = `${label}: ${base}s`;
     return iconUrl ? `<img class="fact-status-icon" src="${escapeHtml(iconUrl)}" alt="" aria-hidden="true">${escapeHtml(text)}` : escapeHtml(text);
   }
   const label = String(fact.text || fact.type || "Fact");
