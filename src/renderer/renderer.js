@@ -183,6 +183,14 @@ initRenderPagesCallbacks({
 (async function initUpdateUI() {
   if (typeof window === "undefined" || !window.desktopApi?.getAppVersion) return;
 
+  if (import.meta.env.DEV) {
+    if (el.updateVersionLabel) {
+      el.updateVersionLabel.textContent = "dev";
+      el.updateVersionLabel.classList.add("titlebar__dev-badge");
+    }
+    return;
+  }
+
   try {
     const version = await window.desktopApi.getAppVersion();
     if (el.updateVersionLabel) el.updateVersionLabel.textContent = `v${version}`;

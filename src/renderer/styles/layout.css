@@ -36,13 +36,22 @@
   align-self: center;
 }
 
-.titlebar__version-badge {
+.titlebar__dev-badge {
   font-family: system-ui, sans-serif;
   font-size: 0.6rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  color: color-mix(in srgb, var(--text-dim, #7a9abf) 60%, transparent);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: 1px solid currentColor;
+  border-radius: 3px;
+  padding: 1px 4px;
+  line-height: 1.4;
   align-self: center;
+}
+
+.titlebar__version.titlebar__dev-badge {
+  color: color-mix(in srgb, #c8a96e 85%, transparent);
+  transition: none;
 }
 
 /* ── Update status (titlebar) ─────────────────────────────────────────────── */
