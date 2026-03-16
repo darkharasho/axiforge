@@ -1,6 +1,9 @@
 // Equipment stat computation — pure logic over state + constants, no DOM deps.
 import { state } from "./state.js";
-import { STAT_COMBOS_BY_LABEL, SLOT_WEIGHTS, LAND_ONLY_SLOTS, AQUATIC_SLOTS } from "./constants.js";
+import {
+  STAT_COMBOS_BY_LABEL, SLOT_WEIGHTS, LAND_ONLY_SLOTS, AQUATIC_SLOTS,
+  MIGHT_POWER_PER_STACK, MIGHT_CONDI_PER_STACK,
+} from "./constants.js";
 
 export function computeSlotStats(comboLabel, slotKey) {
   const combo = STAT_COMBOS_BY_LABEL.get(comboLabel);
@@ -23,7 +26,7 @@ export function computeSlotStats(comboLabel, slotKey) {
   return result;
 }
 
-export function computeEquipmentStats() {
+export function computeEquipmentStats(assumedBoons = null) {
   const slots = state.editor.equipment?.slots || {};
   const totals = {
     Power: 1000, Precision: 1000, Toughness: 1000, Vitality: 1000,
@@ -192,6 +195,12 @@ export function computeEquipmentStats() {
     }
   }
 
+  // Assumed boon contributions (session-only, not persisted)
+  if (assumedBoons) {
+    totals.Power += (assumedBoons.might || 0) * MIGHT_POWER_PER_STACK;
+    totals.ConditionDamage += (assumedBoons.might || 0) * MIGHT_CONDI_PER_STACK;
+  }
+
   return totals;
 }
 
@@ -199,7 +208,7 @@ export function computeEquipmentStats() {
  * Compute a detailed breakdown of all sources contributing to a given stat key.
  * Returns an array of { source: string, value: number } entries.
  */
-export function computeStatBreakdown(statKey) {
+export function computeStatBreakdown(statKey, assumedBoons = null) {
   const entries = [];
   const BASE_STATS = new Set(["Power", "Precision", "Toughness", "Vitality"]);
   if (BASE_STATS.has(statKey)) entries.push({ source: "Base", value: 1000 });
@@ -323,7 +332,7 @@ export function computeStatBreakdown(statKey) {
     if (utilDef) {
       const MAP = { "Condition Damage": "ConditionDamage", "Healing Power": "HealingPower" };
       // Percentage conversions — need current totals for source stats
-      const totals = computeEquipmentStats();
+      const totals = computeEquipmentStats(assumedBoons);
       const convRe = /Gain (Condition Damage|Healing Power|Power|Precision|Toughness|Vitality|Ferocity|Concentration|Expertise) Equal to (\d+(?:\.\d+)?)% of Your (Condition Damage|Healing Power|Power|Precision|Toughness|Vitality|Ferocity|Concentration|Expertise)/g;
       let m;
       while ((m = convRe.exec(utilDef.buff)) !== null) {
@@ -347,6 +356,19 @@ export function computeStatBreakdown(statKey) {
       while ((m = flatRe.exec(utilDef.buff)) !== null) {
         const key = MAP[m[2]] || m[2];
         if (key === statKey) entries.push({ source: `${utilDef.name}`, value: Number(m[1]) });
+      }
+    }
+  }
+
+  // Assumed boon contributions
+  if (assumedBoons) {
+    const mightStacks = assumedBoons.might || 0;
+    if (mightStacks > 0) {
+      if (statKey === "Power") {
+        entries.push({ source: `Boon (Might ×${mightStacks})`, value: mightStacks * MIGHT_POWER_PER_STACK });
+      }
+      if (statKey === "ConditionDamage") {
+        entries.push({ source: `Boon (Might ×${mightStacks})`, value: mightStacks * MIGHT_CONDI_PER_STACK });
       }
     }
   }
