@@ -114,7 +114,7 @@ export const EQUIP_TRINKET_SLOTS = [
 ];
 
 export const EQUIP_UNDERWATER_SLOTS = [
-  { key: "breather", label: "Breather",  icon: "Head_slot.png" },
+  { key: "breather", label: "Breather",  icon: "Head_slot.png", filledIcon: `${_WK}/5/56/Selachimorpha.png` },
   { key: "aquatic1", label: "Weapon 1",  hand: "aquatic" },
   { key: "aquatic2", label: "Weapon 2",  hand: "aquatic" },
 ];
