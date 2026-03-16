@@ -63,9 +63,31 @@
         <nav id="subnav" class="subnav subnav--visible">
           <button class="subnav__item subnav__item--active" data-subtab="build" type="button"><span class="subnav__icon">&#9876;</span> Build</button>
           <button class="subnav__item" data-subtab="equipment" type="button"><span class="subnav__icon">&#9775;</span> Equipment</button>
-          <div class="game-mode-toggle">
-            <button class="game-mode-toggle__btn game-mode-toggle__btn--active" data-mode="pve" type="button">PvE</button>
-            <button class="game-mode-toggle__btn" data-mode="wvw" type="button">WvW</button>
+          <div class="subnav__actions">
+            <button id="saveBuildBtn" class="btn btn-primary subnav__save-btn" type="button">
+              <span id="saveDot" class="subnav__save-dot hidden"></span>
+              Save
+            </button>
+            <button id="publishSiteBtn" class="btn btn-primary" type="button">Publish</button>
+            <div id="publishStatus" class="publish-status"></div>
+            <div class="subnav__overflow">
+              <button id="overflowMenuBtn" class="subnav__overflow-btn" type="button" title="More actions">&#x22EF;</button>
+              <div id="overflowMenu" class="subnav__overflow-menu hidden">
+                <button id="duplicateBuildBtn" class="subnav__overflow-item" type="button">
+                  <span class="subnav__overflow-icon">&#x2398;</span> Duplicate
+                </button>
+                <button id="copyBuildBtn" class="subnav__overflow-item hidden" type="button">
+                  <span class="subnav__overflow-icon">&#x2750;</span> Copy JSON
+                </button>
+                <button id="pasteBuildBtn" class="subnav__overflow-item hidden" type="button">
+                  <span class="subnav__overflow-icon">&#x2709;</span> Paste JSON
+                </button>
+              </div>
+            </div>
+            <div class="game-mode-toggle">
+              <button class="game-mode-toggle__btn game-mode-toggle__btn--active" data-mode="pve" type="button">PvE</button>
+              <button class="game-mode-toggle__btn" data-mode="wvw" type="button">WvW</button>
+            </div>
           </div>
         </nav>
 
@@ -89,21 +111,7 @@
                   <input id="tagsInput" type="text" placeholder="wvw, roaming, sustain" />
                 </label>
               </div>
-              <details id="buildSummaryDetails" class="build-summary-details">
-                <summary class="build-summary-toggle">Build Summary</summary>
-                <div class="build-summary-content">
-                  <div class="build-summary-actions">
-                    <span id="editorDirtyBadge" class="dirty-badge hidden">Unsaved changes</span>
-                    <button id="saveBuildBtn" class="btn btn-primary" type="button">Save Build</button>
-                    <button id="duplicateBuildBtn" class="btn btn-secondary" type="button">Duplicate</button>
-                    <button id="copyBuildBtn" class="btn btn-secondary" type="button">Copy JSON</button>
-                    <button id="pasteBuildBtn" class="btn btn-secondary" type="button">Paste JSON</button>
-                    <button id="publishSiteBtn" class="btn btn-primary" type="button">Publish</button>
-                  </div>
-                  <div id="publishStatus" class="publish-status"></div>
-                  <div id="buildSummary" class="build-summary"></div>
-                </div>
-              </details>
+
             </section>
 
             <!-- Build subtab -->
