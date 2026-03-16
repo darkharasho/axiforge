@@ -65,6 +65,7 @@ const el = {
   saveBuildBtn:      q("#saveBuildBtn"),
   saveDot:           q("#saveDot"),
   saveStatus:        q("#saveStatus"),
+  copyPublishLink:   q("#copyPublishLink"),
   duplicateBuildBtn: q("#duplicateBuildBtn"),
   copyBuildBtn:      q("#copyBuildBtn"),
   pasteBuildBtn:     q("#pasteBuildBtn"),

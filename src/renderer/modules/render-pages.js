@@ -568,6 +568,36 @@ export function renderEditorMeta() {
     _el.saveStatus.classList.toggle("subnav__save-status--draft", isDraft);
     _el.saveStatus.classList.toggle("subnav__save-status--saved", !isDraft);
   }
+
+  // Published link button
+  if (_el.copyPublishLink) {
+    const publishUrl = _getPublishedUrl();
+    if (publishUrl) {
+      _el.copyPublishLink.classList.remove("hidden");
+      _el.copyPublishLink.onclick = async () => {
+        await window.desktopApi.writeClipboardText(publishUrl);
+        _el.copyPublishLink.classList.add("subnav__link-btn--copied");
+        _el.copyPublishLink.title = "Copied!";
+        setTimeout(() => {
+          _el.copyPublishLink.classList.remove("subnav__link-btn--copied");
+          _el.copyPublishLink.title = "Copy published link";
+        }, 2000);
+      };
+    } else {
+      _el.copyPublishLink.classList.add("hidden");
+      _el.copyPublishLink.onclick = null;
+    }
+  }
+}
+
+function _getPublishedUrl() {
+  if (!state.editor.id) return null;
+  const build = state.builds.find((b) => b.id === state.editor.id);
+  if (!build?.publishedSlug || !build?.publishedFileId || !build?.publishedKey) return null;
+  const owner = state.onboarding?.targetOwner;
+  const repo = state.onboarding?.repoName;
+  if (!owner || !repo) return null;
+  return `https://${owner}.github.io/${repo}/${build.publishedSlug}#${build.publishedFileId}.${build.publishedKey}`;
 }
 
 // ---------------------------------------------------------------------------
