@@ -21,6 +21,8 @@ This state is **session-only** — not persisted to saved builds. It resets on p
 | Fury | Duration (toggle) | 1 | +25% Critical Chance (derived stat) |
 | Alacrity | Duration (toggle) | 1 | −25% Skill Cooldown (display only, no stat impact) |
 
+Alacrity is included because builds are often designed around having permanent Alacrity (it affects rotation and DPS uptime). Showing it in the boons bar lets users document this assumption alongside the stat-affecting boons, even though it doesn't change any numbers.
+
 ## UI Design
 
 ### Layout
@@ -79,33 +81,61 @@ Add `assumedBoons` to the module-level state in equipment.js (not in `state.edit
 let _assumedBoons = { might: 0, fury: false, alacrity: false };
 ```
 
-Expose getter/setter functions for the stats module to read boon state. Reset to defaults on build load or profession switch.
+Expose a `getAssumedBoons()` getter and a `resetAssumedBoons()` function. The equipment rendering code passes `getAssumedBoons()` to the stat functions as a parameter.
+
+**Reset hooks:** Call `resetAssumedBoons()` inside `renderEquipmentPanel()` when the profession has changed (compare against a cached value), and at the top of `loadBuildIntoEditor()` in editor.js (which is the entry point for build switching). Since `renderEquipmentPanel` is called on every build load and profession switch, the reset can also be triggered there by detecting a build ID change.
 
 ## Stat Integration
 
-### `computeEquipmentStats()` in stats.js
+### Constants
 
-After computing all equipment/upgrade stats, apply boon contributions:
-- `totals.Power += assumedBoons.might * 30`
-- `totals.ConditionDamage += assumedBoons.might * 30`
-- Fury's +25% crit chance is applied in the derived stat calculation in equipment.js (same place `critChance` is computed), not as a flat stat.
+Define named constants for boon values (in constants.js or at the top of stats.js):
 
-### `computeStatBreakdown()` in stats.js
+```js
+export const MIGHT_POWER_PER_STACK = 30;
+export const MIGHT_CONDI_PER_STACK = 30;
+export const FURY_CRIT_CHANCE = 25; // percentage points
+```
 
-Add boon source entries:
+### `computeEquipmentStats(assumedBoons)` in stats.js
+
+Add an optional `assumedBoons` parameter (defaults to `null`). The function already reads global `state.editor` for equipment data — this follows the same pattern, adding one parameter for the new boon data. After computing all equipment/upgrade stats, apply boon contributions if provided:
+
+```js
+if (assumedBoons) {
+  totals.Power += (assumedBoons.might || 0) * MIGHT_POWER_PER_STACK;
+  totals.ConditionDamage += (assumedBoons.might || 0) * MIGHT_CONDI_PER_STACK;
+}
+```
+
+Fury does not affect flat stats — its +25% crit chance is handled separately.
+
+### `computeStatBreakdown(statKey, assumedBoons)` in stats.js
+
+Add an optional `assumedBoons` parameter. Add boon source entries when applicable:
 - `{ source: "Boon (Might ×N)", value: N * 30 }` for Power and ConditionDamage
 - Fury appears in the crit chance derived stat display, not in breakdown
 
-### Approach
+**Important:** `computeStatBreakdown` calls `computeEquipmentStats()` internally (line 327) for utility percentage conversions. This internal call must also forward the `assumedBoons` parameter so the utility conversion operates on boon-inclusive totals.
 
-Pass assumed boons as a parameter to `computeEquipmentStats()` and `computeStatBreakdown()` rather than reading module-level state directly. This keeps the stat functions pure and testable.
+### Fury crit chance in equipment.js
+
+Fury's +25% is added as a separate addend in the existing `critChance` calculation (equipment.js ~line 1108), after the `popMod("Critical Chance")` call:
+
+```js
+const furyCrit = _assumedBoons.fury ? FURY_CRIT_CHANCE : 0;
+const critChance = Math.min(100, 5 + ((computed.Precision || 1000) - 895) / 21.0
+  + popMod("Critical Chance") + furyCrit);
+```
+
+This keeps it explicit and separate from the upgrade modifier pipeline.
 
 ## Files to Modify
 
 1. **`src/renderer/modules/equipment.js`** — Add boons section rendering above Attributes, manage `_assumedBoons` state, wire click handlers, pass boons to stat functions, reset on build load
 2. **`src/renderer/modules/stats.js`** — Accept optional `assumedBoons` parameter in `computeEquipmentStats()` and `computeStatBreakdown()`, apply Might stat contributions
 3. **`src/renderer/styles/equipment.css`** — Add styles for `.equip-boons` section (icon states, badge, tooltips, help icon)
-4. **`tests/unit/renderer/boons-bar.test.js`** — Test stat computation with boons, stack clamping, toggle behavior
+4. **`tests/unit/renderer/assumed-boons.test.js`** — Test stat computation with boons, stack clamping
 
 ## Files NOT Modified
 
@@ -115,12 +145,13 @@ Pass assumed boons as a parameter to `computeEquipmentStats()` and `computeStatB
 
 ## Testing
 
-Unit tests for:
-- `computeEquipmentStats({ might: 25, fury: false, alacrity: false })` adds +750 Power, +750 ConditionDamage
-- `computeEquipmentStats({ might: 0, fury: false, alacrity: false })` matches baseline (no change)
-- `computeStatBreakdown("Power", { might: 10 })` includes a "Boon (Might ×10)" entry with value 300
-- Fury's crit chance contribution (+25%) is tested via the derived stat calculation in equipment rendering
-- Stack clamping: values stay within 0–25
+Test file: `tests/unit/renderer/assumed-boons.test.js`. Tests set up `state.editor` with known equipment in `beforeEach` (same pattern as existing stats.test.js), then call stat functions with an `assumedBoons` parameter:
+
+- `computeEquipmentStats({ might: 25, fury: false, alacrity: false })` returns Power and ConditionDamage each increased by 750 vs. baseline
+- `computeEquipmentStats(null)` and `computeEquipmentStats({ might: 0, fury: false, alacrity: false })` match baseline (no change)
+- `computeStatBreakdown("Power", { might: 10 })` includes a `{ source: "Boon (Might ×10)", value: 300 }` entry
+- `computeStatBreakdown` internal `computeEquipmentStats` call forwards boons (utility % conversion uses boon-inclusive totals)
+- Stack clamping logic: values stay within 0–25 (tested via the clamp helper or direct state manipulation)
 
 ## Mockup Reference
 
