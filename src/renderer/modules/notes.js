@@ -44,6 +44,7 @@ const TOOLBAR_ITEMS = [
   { type: "sep" },
   { type: "button", label: "<strong>B</strong>", action: "bold", title: "Bold" },
   { type: "button", label: "<em>I</em>", action: "italic", title: "Italic" },
+  { type: "button", label: "<u>U</u>", action: "underline", title: "Underline" },
   { type: "sep" },
   { type: "button", icon: "ul", action: "ul", title: "Unordered List" },
   { type: "button", icon: "ol", action: "ol", title: "Ordered List" },
@@ -86,6 +87,12 @@ function insertMarkdown(action, textarea) {
       before = before + "*";
       after = "*" + after;
       cursorOffset = selected.length ? selected.length + 2 : 1;
+      break;
+    }
+    case "underline": {
+      before = before + "<u>";
+      after = "</u>" + after;
+      cursorOffset = selected.length ? selected.length + 7 : 3;
       break;
     }
     case "ul": {

@@ -211,8 +211,8 @@ export function renderOnboarding() {
 
   const target = getSelectedTarget();
 
-  // Device code display — shown during active login flow regardless of auth state
-  if (state.loginFlow.beginData) {
+  // Device code display — shown during active login flow, hidden once authenticated
+  if (state.loginFlow.beginData && !status.isAuthenticated) {
     const card = document.createElement("article");
     card.className = "status-card";
     const heading = document.createElement("h3");
