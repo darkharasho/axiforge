@@ -466,9 +466,9 @@ export function renderEquipmentPanel() {
     const noWeapon = !currentWeapon;
     const statBtn = document.createElement("button");
     statBtn.type = "button";
-    statBtn.className = "equip-stat-pick-btn" + (currentCombo ? "" : " equip-stat-pick-btn--empty");
+    statBtn.className = "equip-stat-pick-btn" + (currentCombo ? "" : " equip-stat-pick-btn--empty") + (noWeapon ? " equip-slot--no-weapon" : "");
     statBtn.disabled = lockedByTwoHanded || noWeapon;
-    if (lockedByTwoHanded || noWeapon || (_readOnly && !currentCombo)) {
+    if (lockedByTwoHanded || (_readOnly && !currentCombo)) {
       statBtn.style.display = "none";
     } else if (currentCombo) {
       const combo = STAT_COMBOS_BY_LABEL.get(currentCombo);
@@ -586,10 +586,10 @@ export function renderEquipmentPanel() {
       }
     }
 
-    // Upgrade sub-slots for weapons — only when a weapon is equipped
-    if (!lockedByTwoHanded && !noWeapon) {
+    // Upgrade sub-slots for weapons
+    if (!lockedByTwoHanded) {
       const upgradeContainer = document.createElement("div");
-      upgradeContainer.className = "equip-upgrade-slots";
+      upgradeContainer.className = "equip-upgrade-slots" + (noWeapon ? " equip-slot--no-weapon" : "");
 
       // Determine sigil count: two-handed = 2, one-handed/empty = 1
       const weaponId = weapons[slotDef.key] || "";

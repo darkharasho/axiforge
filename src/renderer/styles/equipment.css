@@ -376,6 +376,11 @@
   pointer-events: none;
 }
 
+.equip-slot--no-weapon {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
 .equip-weapon-type-btn {
   display: flex;
   align-items: center;
