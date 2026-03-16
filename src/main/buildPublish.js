@@ -519,6 +519,7 @@ function serializeForPublish(build, catalog, upgradeCatalog) {
     // Includes bundle skills, flip-skill chains, toolbelt skills, etc.
     // that aren't part of weapon/utility/mechanic arrays but are referenced by ID.
     catalogSkills: skillsArray,
+    catalogWeaponSkills: weaponSkillsArray,
     catalogTraits: catalog?.traits || [],
   };
 }

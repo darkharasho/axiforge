@@ -126,7 +126,9 @@ function populateStateFromBuild(build) {
     profession:         { id: build.profession },
     skills:             allSkills,
     skillById:          new Map(allSkills.map(s => [s.id, s])),
-    weaponSkillById:    new Map(allSkills.filter(s => s.slot?.startsWith("Weapon_")).map(s => [s.id, s])),
+    // Weapon skills are a separate catalog from profession skills
+    weaponSkills:       build.catalogWeaponSkills || [],
+    weaponSkillById:    new Map((build.catalogWeaponSkills || []).map(s => [s.id, s])),
     // Enrich spec objects with majorTraits (flat ID array) derived from majorTraitsByTier.
     // The renderer's getMajorTraitsByTier reads spec.majorTraits and looks up each via traitById.
     specializations:    (build.specializations || []).map(s => ({
