@@ -277,7 +277,10 @@ export function renderSpecializations() {
     const majors = getMajorTraitsByTier(spec, catalog);
     const minorTraits = (spec.minorTraits || [])
       .slice(0, 3)
-      .map((traitId) => catalog.traitById.get(Number(traitId)) || null);
+      .map((traitRef) => {
+        const id = typeof traitRef === "object" ? traitRef?.id : Number(traitRef);
+        return catalog.traitById.get(id) || (typeof traitRef === "object" ? traitRef : null);
+      });
     const lanes = [1, 2, 3];
     for (const tier of lanes) {
       const minorColumn = document.createElement("div");

@@ -247,7 +247,15 @@ function resolveEquipmentDisplay(equipment, upgradeCatalog) {
     const id = Number(idStr);
     if (!id) return null;
     const item = byIdMap.get(id);
-    return item ? { id: item.id, name: item.name, icon: item.icon } : null;
+    if (!item) return null;
+    // Include description/buff fields for hover previews in the SPA
+    return {
+      id: item.id, name: item.name, icon: item.icon,
+      ...(item.description ? { description: item.description } : {}),
+      ...(item.buffDescription ? { buffDescription: item.buffDescription } : {}),
+      ...(item.bonuses ? { bonuses: item.bonuses } : {}),
+      ...(item.buff ? { buff: item.buff } : {}),
+    };
   }
 
   function resolveByName(label) {
