@@ -182,6 +182,9 @@ function populateStateFromBuild(build) {
 export function renderBuildPage(container, build) {
   container.innerHTML = "";
 
+  // Update browser tab title with the build name
+  document.title = build.title ? `AxiForge Builds - ${build.title}` : "AxiForge Builds";
+
   // Populate shared state so renderer modules can read from it
   populateStateFromBuild(build);
 

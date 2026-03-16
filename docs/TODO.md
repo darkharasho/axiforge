@@ -5,3 +5,5 @@
 - [x] rename the github page repo to AxiForge instead of gw2builds
 - [x] have the buildSummary collapsed by default and expandable
 - [x] loading states on first load
+- [ ] Lines between skills are missing sometimes (right after publish maybe?)
+- [ ] Build name still isnt showing up in the tab title ()
