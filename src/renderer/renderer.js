@@ -554,7 +554,7 @@ function wireEvents() {
     markEditorChanged();
   });
 
-  el.newBuildBtn.addEventListener("click", async () => {
+  el.newBuildBtn?.addEventListener("click", async () => {
     await startNewBuild();
   });
 
