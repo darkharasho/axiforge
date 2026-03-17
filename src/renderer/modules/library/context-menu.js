@@ -25,6 +25,7 @@ import {
   folderIcon,
   linkIcon,
   arrowDownTrayIcon,
+  scissorsIcon,
 } from "./heroicons.js";
 
 let _callbacks = {};
@@ -108,7 +109,8 @@ function showBuildMenu(x, y, buildId, build) {
     _submenuItem(folderArrowDownIcon, "Move to Folder", _buildMoveToFolderItems(buildId)),
     _item(tagIcon, "Edit Tags", null, () => _callbacks.onEditTags?.(buildId)),
     _sep(),
-    _item(clipboardDocumentIcon, "Copy JSON", "Ctrl+C", () => _callbacks.onCopyJson?.(buildId)),
+    _item(clipboardDocumentIcon, "Copy", "Ctrl+C", () => _callbacks.onCopyJson?.(buildId)),
+    _item(scissorsIcon, "Cut", "Ctrl+X", () => _callbacks.onCutJson?.(buildId)),
     _item(linkIcon, "Copy Chat Link", null, () => _callbacks.onCopyChatLink?.(buildId)),
     _item(globeAltIcon, "Publish", null, () => _callbacks.onPublish?.(buildId)),
     _sep(),
@@ -127,7 +129,8 @@ function showMultiSelectMenu(x, y, ids) {
     _item(tagIcon, "Add Tags", null, () => _callbacks.onEditTags?.(ids)),
     _item(starIcon, "Pin All", null, () => _callbacks.onPinAll?.(ids, true)),
     _sep(),
-    _item(clipboardDocumentIcon, "Export JSON", null, () => _callbacks.onExportJson?.(ids)),
+    _item(clipboardDocumentIcon, "Copy", "Ctrl+C", () => _callbacks.onCopyJson?.(ids)),
+    _item(scissorsIcon, "Cut", "Ctrl+X", () => _callbacks.onCutJson?.(ids)),
     _sep(),
     _item(trashIcon, `Delete ${count} Builds`, null, () => _callbacks.onDelete?.(ids), true),
   ];
@@ -156,7 +159,7 @@ function showEmptyMenu(x, y) {
     _item(plusIcon, "New Build", "Ctrl+N", () => _callbacks.onNewBuild?.()),
     _item(folderPlusIcon, "New Folder", null, () => _callbacks.onNewFolder?.()),
     _sep(),
-    _item(clipboardIcon, "Paste from JSON", "Ctrl+V", () => _callbacks.onPasteJson?.()),
+    _item(clipboardIcon, "Paste", "Ctrl+V", () => _callbacks.onPasteJson?.()),
     _submenuItem(arrowDownTrayIcon, "Import", [
       _item(linkIcon, "Build Link", null, () => _callbacks.onImportChatLink?.()),
       _item(arrowDownTrayIcon, "GW2Skills", null, () => _callbacks.onImportGw2Skills?.()),
