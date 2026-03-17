@@ -696,217 +696,143 @@
   opacity: 0.4;
 }
 
-/* ── Table view ──────────────────────────────────────────────────── */
+/* ── Table / Tree view ───────────────────────────────────────────── */
 
-.lib-table-wrapper {
-  overflow-x: auto;
-  width: 100%;
-}
-
-.lib-table {
-  width: 100%;
-  border-collapse: collapse;
+/* Grid columns shared by header and every row */
+.lib-tv__header,
+.lib-tv__row {
+  display: grid;
+  grid-template-columns: 20px 28px 26px 1fr auto auto auto auto auto auto;
+  align-items: center;
+  gap: 0;
   font-size: 0.85rem;
-  color: #ccd;
 }
 
-.lib-table__head {
+.lib-tv__header {
   position: sticky;
   top: 0;
   background: #0e0e20;
   z-index: 1;
-}
-
-.lib-table__th {
-  padding: 6px 8px;
-  text-align: left;
-  font-size: 0.85rem;
+  padding: 6px 4px;
+  border-bottom: 1px solid #1a1a3a;
+  color: #556;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: #556;
-  border-bottom: 1px solid #1a1a3a;
-  white-space: nowrap;
   user-select: none;
 }
 
-.lib-table__th--pin {
-  width: 28px;
-  padding: 0;
-}
-
-.lib-table__th--icon {
-  width: 28px;
-  padding: 0;
-}
-
-.lib-table__th--active {
-  color: #9090e0;
-}
-
-.lib-table__sort-btn {
-  background: none;
-  border: none;
-  color: inherit;
-  font: inherit;
-  cursor: pointer;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  white-space: nowrap;
-}
-
-.lib-table__sort-btn svg {
-  width: 12px;
-  height: 12px;
-}
-
-.lib-table__th[data-sort-field]:hover {
-  color: #ccd;
-  cursor: pointer;
-}
-
-.lib-table__row {
+.lib-tv__row {
+  padding: 5px 4px;
   border-bottom: 1px solid #13132a;
   cursor: pointer;
   transition: background 0.1s;
   user-select: none;
-}
-
-.lib-table__row:hover {
-  background: #141435;
-}
-
-.lib-table__row--folder {
-  color: #99a;
-}
-
-.lib-table__row--pinned td:first-child {
-  border-left: 2px solid rgba(212, 192, 68, 0.4);
-}
-
-.lib-table__row.lib-selected {
-  background: #1a1a4a;
-}
-
-.lib-table__row.lib-drop-target {
-  background: rgba(72, 168, 255, 0.1);
-}
-
-.lib-table__row.lib-dragging {
-  opacity: 0.4;
-}
-
-.lib-table__td {
-  padding: 6px 8px;
-  font-size: 0.85rem;
   color: #ccd;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 0;
 }
 
-.lib-table__th--tree,
-.lib-table__td--tree {
-  width: 20px;
-  padding: 4px 0 4px 4px;
-  white-space: nowrap;
+.lib-tv__row:hover { background: #141435; }
+.lib-tv__row--folder { color: #99a; }
+.lib-tv__row--pinned { border-left: 2px solid rgba(212, 192, 68, 0.4); }
+.lib-tv__row.lib-selected { background: #1a1a4a; }
+.lib-tv__row.lib-drop-target { background: rgba(72, 168, 255, 0.1); }
+.lib-tv__row.lib-dragging { opacity: 0.4; }
+
+/* Tree nesting — just CSS list indentation */
+.lib-tv__tree,
+.lib-tv__children {
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
 
-.lib-table__td--pin {
-  width: 28px;
-  padding: 4px 0 4px 4px;
+.lib-tv__children {
+  padding-left: 24px;
 }
 
-.lib-table__td--icon {
-  width: 28px;
-  padding: 4px 4px 4px 6px;
-}
-
-.lib-table__td--icon svg {
-  width: 18px;
-  height: 18px;
-  fill: currentColor;
-  display: inline-block;
-  vertical-align: middle;
-}
-
-.lib-table__chevron {
-  display: inline-flex;
+/* Chevron column */
+.lib-tv__chevron {
+  display: flex;
   align-items: center;
+  justify-content: center;
   cursor: pointer;
-  color: #667;
-  vertical-align: middle;
-  float: right;
+  color: #556;
 }
+.lib-tv__chevron:hover { color: #aab; }
+.lib-tv__chevron svg { width: 14px; height: 14px; }
 
-.lib-table__chevron:hover {
-  color: #aab;
-}
+/* Pin column */
+.lib-tv__pin { display: flex; align-items: center; justify-content: center; }
 
-.lib-table__chevron svg {
-  width: 14px;
-  height: 14px;
-}
+/* Icon column */
+.lib-tv__icon { display: flex; align-items: center; justify-content: center; }
+.lib-tv__icon svg { width: 18px; height: 18px; fill: currentColor; }
 
 .lib-table__folder-icon {
   display: inline-flex;
   align-items: center;
   color: #8899bb;
-  vertical-align: middle;
 }
-
 .lib-table__folder-icon svg {
   width: 16px;
   height: 16px;
   fill: currentColor;
 }
 
-.lib-table__inline-icon {
+/* Name column */
+.lib-tv__name {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 8px;
+}
+
+/* Data columns */
+.lib-tv__profession,
+.lib-tv__spec,
+.lib-tv__mode {
+  color: #99a;
+  padding: 0 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 80px;
+}
+
+.lib-tv__tags {
+  color: #778;
+  padding: 0 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 80px;
+}
+
+.lib-tv__created,
+.lib-tv__modified {
+  color: #556;
+  padding: 0 8px;
+  white-space: nowrap;
+  min-width: 70px;
+}
+
+/* Sort buttons */
+.lib-tv__sort-btn {
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  padding: 0;
   display: inline-flex;
   align-items: center;
-  vertical-align: middle;
-  margin-right: 4px;
+  gap: 4px;
+  white-space: nowrap;
 }
-
-.lib-table__inline-icon svg {
-  width: 18px;
-  height: 18px;
-  fill: currentColor;
-}
-
-.lib-table__row--folder {
-  cursor: pointer;
-}
-
-.lib-table__row--folder:hover {
-  background: #151535;
-}
-
-.lib-table__td--name {
-  max-width: 200px;
-  font-weight: 500;
-}
-
-.lib-table__td--profession,
-.lib-table__td--spec,
-.lib-table__td--mode {
-  color: #99a;
-  max-width: 100px;
-}
-
-.lib-table__td--tags {
-  color: #778;
-  max-width: 120px;
-}
-
-.lib-table__td--created,
-.lib-table__td--modified {
-  color: #556;
-  font-size: 0.88rem;
-}
+.lib-tv__sort-btn svg { width: 12px; height: 12px; }
+.lib-tv__sort-btn--active { color: #9090e0; }
+.lib-tv__sort-btn:hover { color: #ccd; }
 
 /* ── Grid view ───────────────────────────────────────────────────── */
 

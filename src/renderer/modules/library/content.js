@@ -174,14 +174,12 @@ function renderTableView(container) {
 
   const { sortField, sortDirection } = state.libraryPrefs;
 
-  function sortHeader(field, label) {
+  function sortHeaderDiv(field, label) {
     const isActive = sortField === field;
     const icon = isActive
       ? (sortDirection === "asc" ? chevronRightIcon : chevronDownIcon)
       : chevronUpDownIcon;
-    return `<th class="lib-table__th ${isActive ? "lib-table__th--active" : ""}" data-sort-field="${field}">
-      <button type="button" class="lib-table__sort-btn">${escapeHtml(label)} ${icon}</button>
-    </th>`;
+    return `<button type="button" class="lib-tv__sort-btn ${isActive ? "lib-tv__sort-btn--active" : ""}" data-sort-field="${field}">${escapeHtml(label)} ${icon}</button>`;
   }
 
   if (folders.length === 0 && builds.length === 0) {
@@ -189,38 +187,15 @@ function renderTableView(container) {
     return;
   }
 
-  // Depth indent as px for the tree column
-  function treeIndent(depth) {
-    return depth * 24;
-  }
-
-  // Render folders as expandable tree rows with children indented
-  function renderTableFolder(folder, depth) {
+  function renderTreeFolder(folder) {
     const isExpanded = _tableExpandedFolders.has(folder.id);
     const chevron = isExpanded ? chevronDownIcon : chevronRightIcon;
-    let rows = `
-      <tr class="lib-table__row lib-table__row--folder" data-folder-id="${escapeHtml(folder.id)}">
-        <td class="lib-table__td lib-table__td--tree" style="padding-left:${4 + treeIndent(depth)}px"><span class="lib-table__chevron" data-toggle-table-folder="${escapeHtml(folder.id)}">${chevron}</span></td>
-        <td class="lib-table__td lib-table__td--pin"></td>
-        <td class="lib-table__td lib-table__td--icon"><span class="lib-table__folder-icon">${folderIcon}</span></td>
-        <td class="lib-table__td lib-table__td--name">${escapeHtml(folder.name)}</td>
-        <td class="lib-table__td lib-table__td--profession"></td>
-        <td class="lib-table__td lib-table__td--spec"></td>
-        <td class="lib-table__td lib-table__td--mode"></td>
-        <td class="lib-table__td lib-table__td--tags"></td>
-        <td class="lib-table__td lib-table__td--created" title="${escapeHtml(folder.createdAt || "")}">${formatDate(folder.createdAt)}</td>
-        <td class="lib-table__td lib-table__td--modified" title="${escapeHtml(folder.updatedAt || "")}">${formatDate(folder.updatedAt)}</td>
-      </tr>
-    `;
 
+    let childrenHtml = "";
     if (isExpanded) {
       const childFolders = state.folders
         .filter((f) => f.parentId === folder.id)
         .sort((a, b) => a.sortOrder - b.sortOrder);
-      for (const child of childFolders) {
-        rows += renderTableFolder(child, depth + 1);
-      }
-
       const folderBuilds = state.builds
         .filter((b) => b.folderId === folder.id)
         .sort((a, b) => {
@@ -233,61 +208,79 @@ function renderTableView(container) {
           if (av > bv) return 1 * dir;
           return 0;
         });
-      for (const b of folderBuilds) {
-        rows += renderTableBuildRow(b, depth + 1);
+
+      const items = childFolders.map((f) => renderTreeFolder(f)).join("")
+        + folderBuilds.map((b) => renderTreeBuild(b)).join("");
+
+      if (items) {
+        childrenHtml = `<ul class="lib-tv__children">${items}</ul>`;
       }
     }
 
-    return rows;
-  }
-
-  function renderTableBuildRow(b, depth = 0) {
-    const eliteSpec = getEliteSpecName(b);
-    const tags = (b.tags || []).map((t) => escapeHtml(t)).join(", ");
     return `
-      <tr class="lib-table__row lib-table__row--build ${b.pinned ? "lib-table__row--pinned" : ""}" data-build-id="${escapeHtml(b.id)}">
-        <td class="lib-table__td lib-table__td--tree" style="padding-left:${4 + treeIndent(depth)}px"></td>
-        <td class="lib-table__td lib-table__td--pin">${pinStarHtml(b)}</td>
-        <td class="lib-table__td lib-table__td--icon ${profClass(b.profession)}">${getSpecIcon(b)}</td>
-        <td class="lib-table__td lib-table__td--name">${escapeHtml(b.title || "Untitled")}</td>
-        <td class="lib-table__td lib-table__td--profession">${escapeHtml(b.profession || "")}</td>
-        <td class="lib-table__td lib-table__td--spec">${escapeHtml(eliteSpec || "")}</td>
-        <td class="lib-table__td lib-table__td--mode">${escapeHtml(gameModeLabel(b.gameMode || "pve"))}</td>
-        <td class="lib-table__td lib-table__td--tags">${tags}</td>
-        <td class="lib-table__td lib-table__td--created" title="${escapeHtml(b.createdAt || "")}">${formatDate(b.createdAt)}</td>
-        <td class="lib-table__td lib-table__td--modified" title="${escapeHtml(b.updatedAt || "")}">${formatDate(b.updatedAt)}</td>
-      </tr>
+      <li class="lib-tv__item" data-folder-id="${escapeHtml(folder.id)}">
+        <div class="lib-tv__row lib-tv__row--folder">
+          <span class="lib-tv__chevron" data-toggle-table-folder="${escapeHtml(folder.id)}">${chevron}</span>
+          <span class="lib-tv__pin"></span>
+          <span class="lib-tv__icon"><span class="lib-table__folder-icon">${folderIcon}</span></span>
+          <span class="lib-tv__name">${escapeHtml(folder.name)}</span>
+          <span class="lib-tv__profession"></span>
+          <span class="lib-tv__spec"></span>
+          <span class="lib-tv__mode"></span>
+          <span class="lib-tv__tags"></span>
+          <span class="lib-tv__created" title="${escapeHtml(folder.createdAt || "")}">${formatDate(folder.createdAt)}</span>
+          <span class="lib-tv__modified" title="${escapeHtml(folder.updatedAt || "")}">${formatDate(folder.updatedAt)}</span>
+        </div>
+        ${childrenHtml}
+      </li>
     `;
   }
 
-  const folderRows = folders.map((f) => renderTableFolder(f, 0)).join("");
-  const buildRows = builds.map((b) => renderTableBuildRow(b, 0)).join("");
+  function renderTreeBuild(b) {
+    const eliteSpec = getEliteSpecName(b);
+    const tags = (b.tags || []).map((t) => escapeHtml(t)).join(", ");
+    return `
+      <li class="lib-tv__item" data-build-id="${escapeHtml(b.id)}">
+        <div class="lib-tv__row lib-tv__row--build ${b.pinned ? "lib-tv__row--pinned" : ""}">
+          <span class="lib-tv__chevron"></span>
+          <span class="lib-tv__pin">${pinStarHtml(b)}</span>
+          <span class="lib-tv__icon ${profClass(b.profession)}">${getSpecIcon(b)}</span>
+          <span class="lib-tv__name">${escapeHtml(b.title || "Untitled")}</span>
+          <span class="lib-tv__profession">${escapeHtml(b.profession || "")}</span>
+          <span class="lib-tv__spec">${escapeHtml(eliteSpec || "")}</span>
+          <span class="lib-tv__mode">${escapeHtml(gameModeLabel(b.gameMode || "pve"))}</span>
+          <span class="lib-tv__tags">${tags}</span>
+          <span class="lib-tv__created" title="${escapeHtml(b.createdAt || "")}">${formatDate(b.createdAt)}</span>
+          <span class="lib-tv__modified" title="${escapeHtml(b.updatedAt || "")}">${formatDate(b.updatedAt)}</span>
+        </div>
+      </li>
+    `;
+  }
+
+  const folderItems = folders.map((f) => renderTreeFolder(f)).join("");
+  const buildItems = builds.map((b) => renderTreeBuild(b)).join("");
 
   container.innerHTML = `
-    <div class="lib-table-wrapper">
-      <table class="lib-table">
-        <thead class="lib-table__head">
-          <tr>
-            <th class="lib-table__th lib-table__th--tree"></th>
-            <th class="lib-table__th lib-table__th--pin" aria-label="Pin"></th>
-            <th class="lib-table__th lib-table__th--icon" aria-label="Icon"></th>
-            ${sortHeader("title", "Name")}
-            ${sortHeader("profession", "Profession")}
-            <th class="lib-table__th">Elite Spec</th>
-            <th class="lib-table__th">Mode</th>
-            <th class="lib-table__th">Tags</th>
-            ${sortHeader("createdAt", "Created")}
-            ${sortHeader("updatedAt", "Modified")}
-          </tr>
-        </thead>
-        <tbody class="lib-table__body">
-          ${folderRows}${buildRows}
-        </tbody>
-      </table>
+    <div class="lib-tv">
+      <div class="lib-tv__header">
+        <span class="lib-tv__chevron"></span>
+        <span class="lib-tv__pin"></span>
+        <span class="lib-tv__icon"></span>
+        <span class="lib-tv__name">${sortHeaderDiv("title", "Name")}</span>
+        <span class="lib-tv__profession">${sortHeaderDiv("profession", "Profession")}</span>
+        <span class="lib-tv__spec">Elite Spec</span>
+        <span class="lib-tv__mode">Mode</span>
+        <span class="lib-tv__tags">Tags</span>
+        <span class="lib-tv__created">${sortHeaderDiv("createdAt", "Created")}</span>
+        <span class="lib-tv__modified">${sortHeaderDiv("updatedAt", "Modified")}</span>
+      </div>
+      <ul class="lib-tv__tree">
+        ${folderItems}${buildItems}
+      </ul>
     </div>
   `;
 
-  // Bind chevron toggle for table folders
+  // Bind chevron toggles
   container.querySelectorAll("[data-toggle-table-folder]").forEach((el) => {
     el.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -401,8 +394,8 @@ function bindContentEvents(container) {
 
   // Double-click folders to navigate (except in table view — those use chevrons)
   container.querySelectorAll("[data-folder-id]").forEach((el) => {
-    // Table rows have a chevron toggle; single-click the row to toggle instead
-    if (el.closest(".lib-table")) {
+    // Tree view rows have a chevron toggle; single-click the row to toggle instead
+    if (el.closest(".lib-tv")) {
       el.addEventListener("click", () => {
         const folderId = el.dataset.folderId;
         if (_tableExpandedFolders.has(folderId)) {
