@@ -380,12 +380,12 @@ function renderIconView(container) {
 // ─── Event binding ─────────────────────────────────────────────────────────────
 
 function bindContentEvents(container) {
-  // Double-click builds to load
+  // Double-click builds to load; stop propagation so folder parents don't toggle
   container.querySelectorAll("[data-build-id]").forEach((el) => {
-    el.addEventListener("dblclick", () => {
-      const buildId = el.dataset.buildId;
-      // Ignore dblclick on pin buttons — those are single-click actions
-      _callbacks.onLoadBuild?.(buildId);
+    el.addEventListener("click", (e) => e.stopPropagation());
+    el.addEventListener("dblclick", (e) => {
+      e.stopPropagation();
+      _callbacks.onLoadBuild?.(el.dataset.buildId);
     });
   });
 
