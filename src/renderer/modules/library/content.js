@@ -9,6 +9,7 @@ import {
   folderIcon,
   starIcon,
   chevronUpDownIcon,
+  chevronUpIcon,
   chevronDownIcon,
   chevronRightIcon,
 } from "./heroicons.js";
@@ -178,7 +179,7 @@ function renderTableView(container) {
   function sortHeaderDiv(field, label) {
     const isActive = sortField === field;
     const icon = isActive
-      ? (sortDirection === "asc" ? chevronRightIcon : chevronDownIcon)
+      ? (sortDirection === "asc" ? chevronUpIcon : chevronDownIcon)
       : chevronUpDownIcon;
     return `<button type="button" class="lib-tv__sort-btn ${isActive ? "lib-tv__sort-btn--active" : ""}" data-sort-field="${field}">${escapeHtml(label)} ${icon}</button>`;
   }
@@ -421,11 +422,13 @@ function bindContentEvents(container) {
 
   // Table column sort headers
   container.querySelectorAll("[data-sort-field]").forEach((th) => {
-    th.addEventListener("click", () => {
+    th.addEventListener("click", (e) => {
+      e.stopPropagation();
       const field = th.dataset.sortField;
       const { sortField, sortDirection } = state.libraryPrefs;
       const newDirection =
         field === sortField && sortDirection === "desc" ? "asc" : "desc";
+      console.log("[sort] clicked", field, "->", newDirection);
       _callbacks.onSortChange?.({ field, direction: newDirection });
     });
   });
