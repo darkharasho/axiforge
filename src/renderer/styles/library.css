@@ -572,7 +572,7 @@
   border: none;
   cursor: pointer;
   padding: 2px;
-  color: #334;
+  color: #445;
   display: inline-flex;
   align-items: center;
   vertical-align: middle;
@@ -811,6 +811,12 @@
 .lib-table__td--pin {
   padding: 4px 0 4px 6px;
   white-space: nowrap;
+}
+
+.lib-table__indent {
+  display: inline-block;
+  height: 1px;
+  vertical-align: middle;
 }
 
 .lib-table__td--icon {

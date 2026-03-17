@@ -193,10 +193,10 @@ function renderTableView(container) {
   function renderTableFolder(folder, depth) {
     const isExpanded = _tableExpandedFolders.has(folder.id);
     const chevron = isExpanded ? chevronDownIcon : chevronRightIcon;
-    const pad = depth ? ` style="padding-left:${6 + depth * 28}px"` : "";
+    const indent = depth ? `<span class="lib-table__indent" style="width:${depth * 28}px"></span>` : "";
     let rows = `
       <tr class="lib-table__row lib-table__row--folder" data-folder-id="${escapeHtml(folder.id)}">
-        <td class="lib-table__td lib-table__td--pin"${pad}><span class="lib-table__chevron" data-toggle-table-folder="${escapeHtml(folder.id)}">${chevron}</span></td>
+        <td class="lib-table__td lib-table__td--pin">${indent}<span class="lib-table__chevron" data-toggle-table-folder="${escapeHtml(folder.id)}">${chevron}</span></td>
         <td class="lib-table__td lib-table__td--icon"><span class="lib-table__folder-icon">${folderIcon}</span></td>
         <td class="lib-table__td lib-table__td--name">${escapeHtml(folder.name)}</td>
         <td class="lib-table__td lib-table__td--profession"></td>
@@ -241,10 +241,10 @@ function renderTableView(container) {
   function renderTableBuildRow(b, depth = 0) {
     const eliteSpec = getEliteSpecName(b);
     const tags = (b.tags || []).map((t) => escapeHtml(t)).join(", ");
-    const pad = depth ? ` style="padding-left:${6 + depth * 28}px"` : "";
+    const indent = depth ? `<span class="lib-table__indent" style="width:${depth * 28}px"></span>` : "";
     return `
       <tr class="lib-table__row lib-table__row--build ${b.pinned ? "lib-table__row--pinned" : ""}" data-build-id="${escapeHtml(b.id)}">
-        <td class="lib-table__td lib-table__td--pin"${pad}>${pinStarHtml(b)}</td>
+        <td class="lib-table__td lib-table__td--pin">${indent}${pinStarHtml(b)}</td>
         <td class="lib-table__td lib-table__td--icon ${profClass(b.profession)}">${getSpecIcon(b)}</td>
         <td class="lib-table__td lib-table__td--name">${escapeHtml(b.title || "Untitled")}</td>
         <td class="lib-table__td lib-table__td--profession">${escapeHtml(b.profession || "")}</td>
