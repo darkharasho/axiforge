@@ -23,9 +23,9 @@ function mapBuildToTemplateInput(build) {
       specializations.push({
         id: Number(spec.id),
         traits: [
-          Number(spec.majorChoices?.[1]) || undefined,
-          Number(spec.majorChoices?.[2]) || undefined,
-          Number(spec.majorChoices?.[3]) || undefined,
+          spec.majorChoices?.[1] ? Number(spec.majorChoices[1]) : undefined,
+          spec.majorChoices?.[2] ? Number(spec.majorChoices[2]) : undefined,
+          spec.majorChoices?.[3] ? Number(spec.majorChoices[3]) : undefined,
         ],
       });
     }

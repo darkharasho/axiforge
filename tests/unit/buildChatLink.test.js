@@ -65,7 +65,7 @@ describe("mapBuildToTemplateInput", () => {
     });
   });
 
-  it("maps aquatic skills with nulls for missing", () => {
+  it("maps aquatic skills with undefined for missing", () => {
     const input = mapBuildToTemplateInput(baseBuild);
     expect(input.skills.aquatic).toEqual({
       heal: 9083,
@@ -124,5 +124,9 @@ describe("mapBuildToTemplateInput", () => {
     const input = mapBuildToTemplateInput(build);
     expect(input.specializations).toHaveLength(3);
     expect(input.skills.terrestrial.heal).toBeUndefined();
+    expect(input.weapons).toBeUndefined();
+    expect(input.skills.aquatic.heal).toBeUndefined();
+    expect(input.revenantLegends).toBeUndefined();
+    expect(input.rangerPets).toBeUndefined();
   });
 });
