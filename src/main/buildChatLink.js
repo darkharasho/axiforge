@@ -35,13 +35,13 @@ function mapBuildToTemplateInput(build) {
   const mapSkillSet = (skillData) => {
     if (!skillData) return { heal: undefined, utilities: [undefined, undefined, undefined], elite: undefined };
     const utilities = Array.isArray(skillData.utility)
-      ? skillData.utility.slice(0, 3).map((s) => (s?.id ? Number(s.id) : undefined))
+      ? skillData.utility.slice(0, 3).map((s) => (s?.id != null ? Number(s.id) : undefined))
       : [undefined, undefined, undefined];
     while (utilities.length < 3) utilities.push(undefined);
     return {
-      heal: skillData.heal?.id ? Number(skillData.heal.id) : undefined,
+      heal: skillData.heal?.id != null ? Number(skillData.heal.id) : undefined,
       utilities,
-      elite: skillData.elite?.id ? Number(skillData.elite.id) : undefined,
+      elite: skillData.elite?.id != null ? Number(skillData.elite.id) : undefined,
     };
   };
 
