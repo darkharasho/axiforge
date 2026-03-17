@@ -702,7 +702,7 @@
 .lib-tv__header,
 .lib-tv__row {
   display: grid;
-  grid-template-columns: 20px 28px 26px 1fr auto auto auto auto auto auto;
+  grid-template-columns: 18px 22px 22px 1fr auto auto auto auto auto auto;
   align-items: center;
   gap: 0;
   font-size: 0.85rem;
