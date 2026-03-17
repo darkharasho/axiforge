@@ -319,6 +319,11 @@ async function init() {
   await refreshWindowControls();
   render();
   syncGameModeToggleUI(state.editor.gameMode || "pve");
+
+  // Render library if it's the default/active page on startup
+  if (state.activePage === "library") {
+    renderLibrary();
+  }
 }
 
 // ── Build operations ─────────────────────────────────────────────────────────
