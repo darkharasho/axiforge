@@ -2,6 +2,7 @@ const path = require("node:path");
 require("dotenv").config({ path: path.resolve(__dirname, "../../.env") });
 const { app, BrowserWindow, ipcMain, dialog, clipboard } = require("electron");
 const { BuildStore } = require("./buildStore");
+const { FolderStore } = require("./folderStore");
 const { beginGitHubDeviceAuth, completeGitHubDeviceAuth } = require("./githubAuth");
 const {
   TARGET_REPO,
@@ -29,7 +30,9 @@ if (IS_DEV_PROFILE) {
   app.setPath("userData", devUserData);
 }
 
-const store = new BuildStore(path.join(app.getPath("userData"), "data"));
+const dataDir = path.join(app.getPath("userData"), "data");
+const store = new BuildStore(dataDir);
+const folderStore = new FolderStore(dataDir);
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -146,6 +149,7 @@ async function getOnboardingStatus() {
 
 app.whenReady().then(async () => {
   await store.init();
+  await folderStore.init();
   const win = createWindow();
   initAutoUpdate(win);
 
@@ -265,6 +269,37 @@ app.whenReady().then(async () => {
     await store.deleteBuild(id);
     return true;
   });
+
+  // Folder CRUD
+  ipcMain.handle("folders:list", () => folderStore.listFolders());
+  ipcMain.handle("folders:save", (_e, folder) =>
+    folderStore.upsertFolder(folder),
+  );
+  ipcMain.handle("folders:delete", async (_e, id) => {
+    const deletedIds = await folderStore.deleteFolder(id);
+    if (deletedIds.length) {
+      await store.clearFolderFromBuilds(deletedIds);
+    }
+    return deletedIds;
+  });
+  ipcMain.handle("folders:reorder", (_e, updates) =>
+    folderStore.reorderFolders(updates),
+  );
+
+  // Build library operations
+  ipcMain.handle("builds:move", async (_e, ids, folderId) => {
+    if (folderId !== null) {
+      const exists = await folderStore.folderExists(folderId);
+      if (!exists) throw new Error(`Folder not found: ${folderId}`);
+    }
+    await store.moveBuilds(ids, folderId);
+  });
+  ipcMain.handle("builds:pin", (_e, ids, pinned) =>
+    store.pinBuilds(ids, pinned),
+  );
+  ipcMain.handle("builds:reorder", (_e, updates) =>
+    store.reorderBuilds(updates),
+  );
 
   ipcMain.handle("builds:publish-build", async (event, buildId) => {
     const sender = event.sender;
