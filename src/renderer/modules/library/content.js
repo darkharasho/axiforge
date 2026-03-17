@@ -197,11 +197,10 @@ function renderTableView(container) {
     let rows = `
       <tr class="lib-table__row lib-table__row--folder" data-folder-id="${escapeHtml(folder.id)}">
         <td class="lib-table__td lib-table__td--pin"></td>
-        <td class="lib-table__td lib-table__td--icon">
-          <span class="lib-table__chevron" data-toggle-table-folder="${escapeHtml(folder.id)}" style="margin-left:${indent}px">${chevron}</span>
-          <span class="lib-table__folder-icon">${folderIcon}</span>
+        <td class="lib-table__td lib-table__td--icon" style="padding-left:${indent}px">
+          <span class="lib-table__chevron" data-toggle-table-folder="${escapeHtml(folder.id)}">${chevron}</span>
         </td>
-        <td class="lib-table__td lib-table__td--name">${escapeHtml(folder.name)}</td>
+        <td class="lib-table__td lib-table__td--name"><span class="lib-table__folder-icon">${folderIcon}</span> ${escapeHtml(folder.name)}</td>
         <td class="lib-table__td lib-table__td--profession"></td>
         <td class="lib-table__td lib-table__td--spec"></td>
         <td class="lib-table__td lib-table__td--mode"></td>
