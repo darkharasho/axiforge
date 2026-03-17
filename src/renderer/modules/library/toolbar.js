@@ -67,11 +67,11 @@ export function renderToolbar() {
       <div class="lib-toolbar__view-toggle" role="group" aria-label="View mode">
         ${renderViewToggle(prefs.viewMode)}
       </div>
-      <button type="button" id="lib-import-btn" class="btn lib-toolbar__import-btn">
+      <button type="button" id="lib-import-btn" class="btn lib-toolbar__new-btn">
         ${arrowDownTrayIcon} Import
       </button>
       <button type="button" id="lib-new-build-btn" class="btn btn-primary lib-toolbar__new-btn">
-        ${plusIcon} New Build
+        ${plusIcon} New
       </button>
     </div>
   `;
