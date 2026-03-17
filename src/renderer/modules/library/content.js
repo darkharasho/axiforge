@@ -220,8 +220,7 @@ function renderTableView(container) {
     return `
       <li class="lib-tv__item" data-folder-id="${escapeHtml(folder.id)}">
         <div class="lib-tv__row lib-tv__row--folder">
-          <span class="lib-tv__chevron" data-toggle-table-folder="${escapeHtml(folder.id)}">${chevron}</span>
-          <span class="lib-tv__pin"></span>
+          <span class="lib-tv__action" data-toggle-table-folder="${escapeHtml(folder.id)}">${chevron}</span>
           <span class="lib-tv__icon"><span class="lib-table__folder-icon">${folderIcon}</span></span>
           <span class="lib-tv__name">${escapeHtml(folder.name)}</span>
           <span class="lib-tv__profession"></span>
@@ -242,8 +241,7 @@ function renderTableView(container) {
     return `
       <li class="lib-tv__item" data-build-id="${escapeHtml(b.id)}">
         <div class="lib-tv__row lib-tv__row--build ${b.pinned ? "lib-tv__row--pinned" : ""}">
-          <span class="lib-tv__chevron"></span>
-          <span class="lib-tv__pin">${pinStarHtml(b)}</span>
+          <span class="lib-tv__action">${pinStarHtml(b)}</span>
           <span class="lib-tv__icon ${profClass(b.profession)}">${getSpecIcon(b)}</span>
           <span class="lib-tv__name">${escapeHtml(b.title || "Untitled")}</span>
           <span class="lib-tv__profession">${escapeHtml(b.profession || "")}</span>
@@ -263,8 +261,7 @@ function renderTableView(container) {
   container.innerHTML = `
     <div class="lib-tv">
       <div class="lib-tv__header">
-        <span class="lib-tv__chevron"></span>
-        <span class="lib-tv__pin"></span>
+        <span class="lib-tv__action"></span>
         <span class="lib-tv__icon"></span>
         <span class="lib-tv__name">${sortHeaderDiv("title", "Name")}</span>
         <span class="lib-tv__profession">${sortHeaderDiv("profession", "Profession")}</span>

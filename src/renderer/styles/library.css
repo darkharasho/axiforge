@@ -702,7 +702,7 @@
 .lib-tv__header,
 .lib-tv__row {
   display: grid;
-  grid-template-columns: 18px 22px 22px 1fr auto auto auto auto auto auto;
+  grid-template-columns: 22px 22px 1fr auto auto auto auto auto auto;
   align-items: center;
   gap: 0;
   font-size: 0.85rem;
@@ -750,19 +750,16 @@
   padding-left: 24px;
 }
 
-/* Chevron column */
-.lib-tv__chevron {
+/* Action column (chevron for folders, pin star for builds) */
+.lib-tv__action {
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
   color: #556;
 }
-.lib-tv__chevron:hover { color: #aab; }
-.lib-tv__chevron svg { width: 14px; height: 14px; }
-
-/* Pin column */
-.lib-tv__pin { display: flex; align-items: center; justify-content: center; }
+.lib-tv__action svg { width: 14px; height: 14px; }
+.lib-tv__row--folder .lib-tv__action { cursor: pointer; }
+.lib-tv__row--folder .lib-tv__action:hover { color: #aab; }
 
 /* Icon column */
 .lib-tv__icon { display: flex; align-items: center; justify-content: center; }
