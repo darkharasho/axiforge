@@ -2,9 +2,13 @@
 
 /* ── Page layout ─────────────────────────────────────────────────── */
 
+#page-library.page {
+  padding: 0;
+}
+
 .lib-page {
   display: flex;
-  height: 100%;
+  height: calc(100vh - 40px);
   min-height: 0;
   overflow: hidden;
 }
