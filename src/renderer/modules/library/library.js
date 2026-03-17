@@ -275,7 +275,7 @@ function handlePublish(buildId) {
   handleLoadBuild(buildId);
 }
 
-function handleBuildInfo(buildId) {
+async function handleBuildInfo(buildId) {
   const build = state.builds.find((b) => b.id === buildId);
   if (!build) return;
   const title = build.title || "Untitled";
