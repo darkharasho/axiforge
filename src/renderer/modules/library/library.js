@@ -281,6 +281,17 @@ async function handleCopyJson(idOrIds) {
   await window.desktopApi.writeClipboardText(json);
 }
 
+async function handleCopyChatLink(buildId) {
+  const build = state.builds.find((b) => b.id === buildId);
+  if (!build) return;
+  try {
+    const link = await window.desktopApi.generateChatLink(build);
+    await window.desktopApi.writeClipboardText(link);
+  } catch (err) {
+    console.error("Failed to generate chat link:", err);
+  }
+}
+
 function handlePasteJson() {
   _app.importBuildJsonFromClipboard?.();
 }
@@ -502,6 +513,7 @@ function _buildSharedCallbacks() {
     onMoveTo: handleMoveTo,
     onDelete: handleDelete,
     onCopyJson: handleCopyJson,
+    onCopyChatLink: handleCopyChatLink,
     onExportJson: handleCopyJson,
     onPasteJson: handlePasteJson,
     onPublish: handlePublish,

@@ -23,6 +23,7 @@ import {
   clipboardIcon,
   homeIcon,
   folderIcon,
+  linkIcon,
 } from "./heroicons.js";
 
 let _callbacks = {};
@@ -107,6 +108,7 @@ function showBuildMenu(x, y, buildId, build) {
     _item(tagIcon, "Edit Tags", null, () => _callbacks.onEditTags?.(buildId)),
     _sep(),
     _item(clipboardDocumentIcon, "Copy JSON", "Ctrl+C", () => _callbacks.onCopyJson?.(buildId)),
+    _item(linkIcon, "Copy Chat Link", null, () => _callbacks.onCopyChatLink?.(buildId)),
     _item(globeAltIcon, "Publish", null, () => _callbacks.onPublish?.(buildId)),
     _sep(),
     _item(informationCircleIcon, "Build Info", null, () => _callbacks.onBuildInfo?.(buildId)),
