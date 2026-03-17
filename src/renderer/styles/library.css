@@ -1439,3 +1439,30 @@
   background: #1a1a4a !important;
   border-left: 2px solid #5555cc;
 }
+
+/* ── Library toast ───────────────────────────────────────────────── */
+
+.lib-toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%) translateY(8px);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 7px 14px;
+  font-size: 0.8rem;
+  color: var(--text);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  opacity: 0;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  pointer-events: none;
+  z-index: 9999;
+  white-space: nowrap;
+}
+.lib-toast--visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+.lib-toast--success { border-color: var(--accent); color: var(--accent); }
+.lib-toast--error   { border-color: var(--danger);  color: var(--danger);  }

@@ -281,14 +281,35 @@ async function handleCopyJson(idOrIds) {
   await window.desktopApi.writeClipboardText(json);
 }
 
+let _toastEl = null;
+let _toastTimer = null;
+function showToast(message, type = "success") {
+  if (!_toastEl) {
+    _toastEl = document.createElement("div");
+    _toastEl.className = "lib-toast";
+    document.body.appendChild(_toastEl);
+  }
+  _toastEl.textContent = message;
+  _toastEl.className = `lib-toast lib-toast--${type}`;
+  // Force reflow so transition fires even if toast is already visible
+  void _toastEl.offsetWidth;
+  _toastEl.classList.add("lib-toast--visible");
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => {
+    _toastEl.classList.remove("lib-toast--visible");
+  }, 2000);
+}
+
 async function handleCopyChatLink(buildId) {
   const build = state.builds.find((b) => b.id === buildId);
   if (!build) return;
   try {
     const link = await window.desktopApi.generateChatLink(build);
     await window.desktopApi.writeClipboardText(link);
+    showToast("Chat link copied!");
   } catch (err) {
     console.error("Failed to generate chat link:", err);
+    showToast("Failed to generate chat link", "error");
   }
 }
 
