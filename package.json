@@ -96,7 +96,8 @@
     "dotenv": "^17.3.1",
     "electron-updater": "^6.8.3",
     "gw2-class-icons": "^0.1.0",
-    "marked": "^17.0.4"
+    "marked": "^17.0.4",
+    "sortablejs": "^1.15.7"
   },
   "devDependencies": {
     "@babel/core": "^7.29.0",

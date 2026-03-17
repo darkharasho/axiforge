@@ -150,7 +150,7 @@ function renderListView(container) {
   const buildRows = builds
     .map(
       (b) => `
-        <div class="lib-list-row lib-list-row--build ${b.pinned ? "lib-list-row--pinned" : ""}" data-build-id="${escapeHtml(b.id)}" draggable="true">
+        <div class="lib-list-row lib-list-row--build ${b.pinned ? "lib-list-row--pinned" : ""}" data-build-id="${escapeHtml(b.id)}">
           <span class="lib-list-row__spec-icon ${profClass(b.profession)}">${getSpecIcon(b)}</span>
           <span class="lib-list-row__title">${escapeHtml(b.title || "Untitled")}</span>
           <span class="lib-list-row__pills">
@@ -214,9 +214,8 @@ function renderTableView(container) {
       const items = childFolders.map((f) => renderTreeFolder(f)).join("")
         + folderBuilds.map((b) => renderTreeBuild(b)).join("");
 
-      if (items) {
-        childrenHtml = `<ul class="lib-tv__children">${items}</ul>`;
-      }
+      // Always render <ul> even if empty so SortableJS can create a drop zone
+      childrenHtml = `<ul class="lib-tv__children">${items}</ul>`;
     }
 
     return `
@@ -241,7 +240,7 @@ function renderTableView(container) {
     const eliteSpec = getEliteSpecName(b);
     const tags = (b.tags || []).map((t) => escapeHtml(t)).join(", ");
     return `
-      <li class="lib-tv__item" data-build-id="${escapeHtml(b.id)}" draggable="true">
+      <li class="lib-tv__item" data-build-id="${escapeHtml(b.id)}">
         <div class="lib-tv__row lib-tv__row--build ${b.pinned ? "lib-tv__row--pinned" : ""}">
           <span class="lib-tv__action">${pinStarHtml(b)}</span>
           <span class="lib-tv__icon ${profClass(b.profession)}">${getSpecIcon(b)}</span>
@@ -321,7 +320,7 @@ function renderGridView(container) {
   const buildCards = builds
     .map(
       (b) => `
-        <div class="lib-grid-card lib-grid-card--build ${b.pinned ? "lib-grid-card--pinned" : ""} ${profClass(b.profession)}" data-build-id="${escapeHtml(b.id)}" draggable="true">
+        <div class="lib-grid-card lib-grid-card--build ${b.pinned ? "lib-grid-card--pinned" : ""} ${profClass(b.profession)}" data-build-id="${escapeHtml(b.id)}">
           <div class="lib-grid-card__header">
             <div class="lib-grid-card__spec-icon ${profClass(b.profession)}">${getSpecIcon(b)}</div>
             ${pinStarHtml(b)}
@@ -366,7 +365,7 @@ function renderIconView(container) {
   const buildItems = builds
     .map(
       (b) => `
-        <div class="lib-icon-item lib-icon-item--build ${b.pinned ? "lib-icon-item--pinned" : ""} ${profClass(b.profession)}" data-build-id="${escapeHtml(b.id)}" draggable="true">
+        <div class="lib-icon-item lib-icon-item--build ${b.pinned ? "lib-icon-item--pinned" : ""} ${profClass(b.profession)}" data-build-id="${escapeHtml(b.id)}">
           <div class="lib-icon-item__icon ${profClass(b.profession)}">${getSpecIcon(b)}</div>
           <div class="lib-icon-item__label">${escapeHtml(b.title || "Untitled")}</div>
         </div>
