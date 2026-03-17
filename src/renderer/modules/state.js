@@ -20,6 +20,17 @@ export const state = {
   professions: [],
   activePage: "editor",
   buildSearch: "",
+  // Library state
+  folders: [],
+  currentFolder: null,      // { type: "smart"|"custom", id: string } or null (root)
+  libraryPrefs: {
+    viewMode: "list",
+    sortField: "updatedAt",
+    sortDirection: "desc",
+    sidebarOpen: true,
+    sidebarExpandedFolders: [],
+    activeFilters: {},
+  },
   skillSearch: "",
   catalogCache: new Map(),
   activeCatalog: null,
