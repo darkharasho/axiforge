@@ -449,19 +449,17 @@ function _buildSharedCallbacks() {
       if (change.clear) {
         state.libraryPrefs.activeFilters = {};
       } else if (change.type) {
-        state.libraryPrefs.activeFilters = {
-          ...state.libraryPrefs.activeFilters,
-          [change.type]: change.value || undefined,
-        };
-        // Remove keys with falsy values
-        for (const k of Object.keys(state.libraryPrefs.activeFilters)) {
-          if (!state.libraryPrefs.activeFilters[k]) {
-            delete state.libraryPrefs.activeFilters[k];
-          }
+        const filters = { ...state.libraryPrefs.activeFilters };
+        if (change.value) {
+          filters[change.type] = change.value;
+        } else {
+          delete filters[change.type];
         }
+        state.libraryPrefs.activeFilters = filters;
       }
       savePrefs();
-      renderLibrary();
+      // Re-render content but keep filter dropdowns open
+      renderContent();
     },
 
     onSortChange({ field, direction } = {}) {

@@ -72,26 +72,26 @@ export function getVisibleBuilds() {
     builds = builds.filter((b) => !b.folderId);
   }
 
-  // Apply filter chips
+  // Apply filter dropdowns (multi-select arrays)
   const filters = state.libraryPrefs.activeFilters;
-  if (filters.profession) {
-    builds = builds.filter((b) => b.profession === filters.profession);
+  if (filters.professions?.length > 0) {
+    builds = builds.filter((b) => filters.professions.includes(b.profession));
   }
-  if (filters.gameMode) {
-    builds = builds.filter(
-      (b) => (b.gameMode || "pve") === filters.gameMode,
-    );
-  }
-  if (filters.eliteSpec) {
+  if (filters.eliteSpecs?.length > 0) {
     builds = builds.filter((b) =>
       (b.specializations || []).some(
-        (s) => s.elite && s.name === filters.eliteSpec,
+        (s) => s.elite && s.name && filters.eliteSpecs.includes(s.name),
       ),
     );
   }
-  if (filters.tag) {
+  if (filters.gameModes?.length > 0) {
+    builds = builds.filter(
+      (b) => filters.gameModes.includes(b.gameMode || "pve"),
+    );
+  }
+  if (filters.tags?.length > 0) {
     builds = builds.filter((b) =>
-      (b.tags || []).includes(filters.tag),
+      filters.tags.some((t) => (b.tags || []).includes(t)),
     );
   }
 

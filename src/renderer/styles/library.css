@@ -158,8 +158,8 @@
 }
 
 .lib-view-btn svg {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
 }
 
 .lib-view-btn:hover {
@@ -249,53 +249,184 @@
   display: none;
 }
 
-.lib-filters__chips {
+.lib-filters__bar {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
+  gap: 6px;
   align-items: center;
 }
 
-.lib-filter-label {
-  font-size: 0.88rem;
-  color: #556;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+/* Filter dropdown container */
+.lib-fd {
+  position: relative;
 }
 
-.lib-filter-chip {
+.lib-fd__trigger {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   background: #0e0e20;
   border: 1px solid #252545;
-  border-radius: 999px;
-  padding: 2px 10px;
-  font-size: 0.88rem;
+  border-radius: 6px;
+  padding: 4px 8px 4px 10px;
+  font-size: 0.85rem;
   color: #99a;
   cursor: pointer;
   font-family: inherit;
   transition: background 0.1s, color 0.1s, border-color 0.1s;
+  white-space: nowrap;
 }
 
-.lib-filter-chip:hover {
+.lib-fd__trigger svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  transition: transform 0.15s;
+}
+
+.lib-fd--open .lib-fd__trigger svg {
+  transform: rotate(180deg);
+}
+
+.lib-fd__trigger:hover {
   background: #141435;
   color: #ccd;
   border-color: #4a4aaa;
 }
 
-.lib-filter-chip--active {
+.lib-fd__trigger--active {
   background: #1a1a4a;
   color: #9090e0;
   border-color: #4a4aaa;
 }
 
-.lib-filter-chip--clear {
-  background: rgba(170, 80, 80, 0.15);
-  border-color: rgba(170, 80, 80, 0.4);
-  color: #c88;
+/* Dropdown menu */
+.lib-fd__menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 180px;
+  max-height: 320px;
+  overflow-y: auto;
+  background: #0e0e22;
+  border: 1px solid #252545;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  z-index: 200;
+  padding: 4px;
 }
 
-.lib-filter-chip--clear:hover {
-  background: rgba(170, 80, 80, 0.25);
-  border-color: rgba(170, 80, 80, 0.6);
+.lib-fd--open .lib-fd__menu {
+  display: block;
+}
+
+/* Dropdown item */
+.lib-fd__item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 5px 8px;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  color: #99a;
+  font-size: 0.85rem;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s, color 0.1s;
+}
+
+.lib-fd__item:hover {
+  background: #151538;
+  color: #ccd;
+}
+
+.lib-fd__item--active {
+  color: #ccd;
+}
+
+.lib-fd__item--indent {
+  padding-left: 28px;
+}
+
+/* Checkmark (hidden until active) */
+.lib-fd__check {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  opacity: 0;
+}
+
+.lib-fd__check svg {
+  width: 14px;
+  height: 14px;
+}
+
+.lib-fd__item--active .lib-fd__check {
+  opacity: 1;
+  color: #9090e0;
+}
+
+/* Icon (profession/spec SVG) */
+.lib-fd__icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lib-fd__icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.lib-fd__icon--spec {
+  width: 16px;
+  height: 16px;
+}
+
+.lib-fd__icon--spec svg {
+  width: 16px;
+  height: 16px;
+}
+
+.lib-fd__label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Clear all button */
+.lib-fd__clear {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  background: none;
+  border: 1px solid rgba(170, 80, 80, 0.3);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 0.85rem;
+  color: #c88;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.1s, color 0.1s, border-color 0.1s;
+  white-space: nowrap;
+}
+
+.lib-fd__clear svg {
+  width: 12px;
+  height: 12px;
+}
+
+.lib-fd__clear:hover {
+  background: rgba(170, 80, 80, 0.15);
+  border-color: rgba(170, 80, 80, 0.5);
   color: #e55;
 }
 
@@ -892,23 +1023,30 @@
 }
 
 .lib-grid-card__header {
+  position: relative;
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  align-items: center;
+  justify-content: center;
+}
+
+.lib-grid-card__header .lib-pin-btn {
+  position: absolute;
+  top: 0;
+  right: 0;
 }
 
 .lib-grid-card__spec-icon {
   display: flex;
-  width: 26px;
-  height: 26px;
+  width: 40px;
+  height: 40px;
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
 }
 
 .lib-grid-card__spec-icon svg {
-  width: 100%;
-  height: 100%;
+  width: 40px;
+  height: 40px;
   fill: currentColor;
 }
 

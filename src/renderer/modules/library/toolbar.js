@@ -2,6 +2,7 @@
 
 import { state } from "../state.js";
 import { escapeHtml, formatRelativeTime } from "../utils.js";
+import { getProfessionSvg } from "../profession-icons.js";
 import {
   magnifyingGlassIcon,
   plusIcon,
@@ -10,7 +11,10 @@ import {
   squaresIcon,
   squaresMiniIcon,
   chevronRightIcon,
+  chevronDownIcon,
   homeIcon,
+  xMarkIcon,
+  checkIcon,
 } from "./heroicons.js";
 
 let _callbacks = {};
@@ -71,7 +75,7 @@ export function renderToolbar() {
 }
 
 /**
- * Render filter chips into #lib-filters.
+ * Render filter dropdowns into #lib-filters.
  */
 export function renderFilters() {
   const container = document.getElementById("lib-filters");
@@ -79,8 +83,16 @@ export function renderFilters() {
 
   const activeFilters = state.libraryPrefs.activeFilters || {};
 
-  // Collect unique values from builds
-  const professions = [...new Set(state.builds.map((b) => b.profession).filter(Boolean))].sort();
+  // Collect unique professions and their elite specs from builds
+  const profMap = new Map(); // profession → Set of elite specs
+  for (const b of state.builds) {
+    if (!b.profession) continue;
+    if (!profMap.has(b.profession)) profMap.set(b.profession, new Set());
+    const spec = _getEliteSpec(b);
+    if (spec) profMap.get(b.profession).add(spec);
+  }
+  const professions = [...profMap.keys()].sort();
+
   const gameModes = [...new Set(state.builds.map((b) => b.gameMode || "pve").filter(Boolean))].sort();
   const tags = [...new Set(state.builds.flatMap((b) => b.tags || []).filter(Boolean))].sort();
 
@@ -89,48 +101,111 @@ export function renderFilters() {
     return;
   }
 
-  const chips = [];
+  const dropdowns = [];
 
-  // Clear all chip (only when filters are active)
-  const hasActiveFilter = Object.values(activeFilters).some(Boolean);
-  if (hasActiveFilter) {
-    chips.push(`<button type="button" class="lib-filter-chip lib-filter-chip--clear" data-filter-clear="1">Clear filters</button>`);
-  }
+  // Profession / Elite Spec dropdown
+  if (professions.length > 0) {
+    const selectedProfs = activeFilters.professions || [];
+    const selectedSpecs = activeFilters.eliteSpecs || [];
+    const count = selectedProfs.length + selectedSpecs.length;
+    const label = count > 0 ? `Class (${count})` : "Class";
 
-  if (professions.length > 1) {
-    chips.push(`<span class="lib-filter-label">Profession:</span>`);
+    let items = "";
     for (const prof of professions) {
-      const active = activeFilters.profession === prof;
-      chips.push(
-        `<button type="button" class="lib-filter-chip ${active ? "lib-filter-chip--active" : ""}" data-filter-type="profession" data-filter-value="${escapeHtml(prof)}">${escapeHtml(prof)}</button>`
-      );
+      const profActive = selectedProfs.includes(prof);
+      const svg = getProfessionSvg(prof) || "";
+      items += `<button type="button" class="lib-fd__item ${profActive ? "lib-fd__item--active" : ""}" data-filter-type="professions" data-filter-value="${escapeHtml(prof)}">
+        <span class="lib-fd__check">${checkIcon}</span>
+        <span class="lib-fd__icon lib-fd__icon--prof">${svg}</span>
+        <span class="lib-fd__label">${escapeHtml(prof)}</span>
+      </button>`;
+
+      // Elite specs under this profession
+      const specs = [...(profMap.get(prof) || [])].sort();
+      for (const spec of specs) {
+        const specActive = selectedSpecs.includes(spec);
+        const specSvg = getProfessionSvg(spec) || "";
+        items += `<button type="button" class="lib-fd__item lib-fd__item--indent ${specActive ? "lib-fd__item--active" : ""}" data-filter-type="eliteSpecs" data-filter-value="${escapeHtml(spec)}">
+          <span class="lib-fd__check">${checkIcon}</span>
+          <span class="lib-fd__icon lib-fd__icon--spec">${specSvg}</span>
+          <span class="lib-fd__label">${escapeHtml(spec)}</span>
+        </button>`;
+      }
     }
+
+    dropdowns.push(_renderDropdown("class-filter", label, items, count > 0));
   }
 
+  // Game Mode dropdown
   if (gameModes.length > 1) {
-    chips.push(`<span class="lib-filter-label">Mode:</span>`);
+    const selectedModes = activeFilters.gameModes || [];
+    const count = selectedModes.length;
+    const label = count > 0 ? `Mode (${count})` : "Mode";
+
+    let items = "";
     for (const mode of gameModes) {
-      const active = activeFilters.gameMode === mode;
-      const label = mode === "pve" ? "PvE" : mode === "pvp" ? "PvP" : mode === "wvw" ? "WvW" : escapeHtml(mode);
-      chips.push(
-        `<button type="button" class="lib-filter-chip ${active ? "lib-filter-chip--active" : ""}" data-filter-type="gameMode" data-filter-value="${escapeHtml(mode)}">${label}</button>`
-      );
+      const active = selectedModes.includes(mode);
+      const modeLabel = mode === "pve" ? "PvE" : mode === "pvp" ? "PvP" : mode === "wvw" ? "WvW" : escapeHtml(mode);
+      items += `<button type="button" class="lib-fd__item ${active ? "lib-fd__item--active" : ""}" data-filter-type="gameModes" data-filter-value="${escapeHtml(mode)}">
+        <span class="lib-fd__check">${checkIcon}</span>
+        <span class="lib-fd__label">${escapeHtml(modeLabel)}</span>
+      </button>`;
     }
+
+    dropdowns.push(_renderDropdown("mode-filter", label, items, count > 0));
   }
 
+  // Tags dropdown
   if (tags.length > 0) {
-    chips.push(`<span class="lib-filter-label">Tags:</span>`);
+    const selectedTags = activeFilters.tags || [];
+    const count = selectedTags.length;
+    const label = count > 0 ? `Tags (${count})` : "Tags";
+
+    let items = "";
     for (const tag of tags) {
-      const active = activeFilters.tag === tag;
-      chips.push(
-        `<button type="button" class="lib-filter-chip ${active ? "lib-filter-chip--active" : ""}" data-filter-type="tag" data-filter-value="${escapeHtml(tag)}">${escapeHtml(tag)}</button>`
-      );
+      const active = selectedTags.includes(tag);
+      items += `<button type="button" class="lib-fd__item ${active ? "lib-fd__item--active" : ""}" data-filter-type="tags" data-filter-value="${escapeHtml(tag)}">
+        <span class="lib-fd__check">${checkIcon}</span>
+        <span class="lib-fd__label">${escapeHtml(tag)}</span>
+      </button>`;
     }
+
+    dropdowns.push(_renderDropdown("tags-filter", label, items, count > 0));
   }
 
-  container.innerHTML = `<div class="lib-filters__chips">${chips.join("")}</div>`;
+  // Clear all button
+  const hasActiveFilter = _hasAnyFilter(activeFilters);
+  const clearBtn = hasActiveFilter
+    ? `<button type="button" class="lib-fd__clear" data-filter-clear="1">${xMarkIcon} Clear</button>`
+    : "";
+
+  container.innerHTML = `<div class="lib-filters__bar">${dropdowns.join("")}${clearBtn}</div>`;
 
   bindFilterEvents(container);
+}
+
+function _renderDropdown(id, label, items, hasActive) {
+  return `<div class="lib-fd" data-dropdown="${id}">
+    <button type="button" class="lib-fd__trigger ${hasActive ? "lib-fd__trigger--active" : ""}">
+      <span>${label}</span>${chevronDownIcon}
+    </button>
+    <div class="lib-fd__menu">${items}</div>
+  </div>`;
+}
+
+function _getEliteSpec(build) {
+  if (!build.specializations) return null;
+  for (const s of build.specializations) {
+    if (s.elite && s.name) return s.name;
+  }
+  return null;
+}
+
+function _hasAnyFilter(filters) {
+  return (filters.professions?.length > 0) ||
+    (filters.eliteSpecs?.length > 0) ||
+    (filters.gameModes?.length > 0) ||
+    (filters.tags?.length > 0);
 }
 
 // ─── Internal helpers ──────────────────────────────────────────────────────────
@@ -275,21 +350,62 @@ function bindToolbarEvents(container) {
 }
 
 function bindFilterEvents(container) {
+  // Dropdown trigger toggle
+  container.querySelectorAll(".lib-fd__trigger").forEach((trigger) => {
+    trigger.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const dropdown = trigger.closest(".lib-fd");
+      const wasOpen = dropdown.classList.contains("lib-fd--open");
+
+      // Close all dropdowns
+      container.querySelectorAll(".lib-fd--open").forEach((d) => d.classList.remove("lib-fd--open"));
+
+      if (!wasOpen) {
+        dropdown.classList.add("lib-fd--open");
+        // Close on outside click
+        const closeHandler = (evt) => {
+          if (!dropdown.contains(evt.target)) {
+            dropdown.classList.remove("lib-fd--open");
+            document.removeEventListener("click", closeHandler);
+          }
+        };
+        // Delay to avoid this click closing it immediately
+        setTimeout(() => document.addEventListener("click", closeHandler), 0);
+      }
+    });
+  });
+
+  // Multi-select items (toggle value in array, keep dropdown open)
+  container.querySelectorAll("[data-filter-type]").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const type = btn.dataset.filterType;
+      const value = btn.dataset.filterValue;
+      const current = state.libraryPrefs.activeFilters[type] || [];
+      const updated = current.includes(value)
+        ? current.filter((v) => v !== value)
+        : [...current, value];
+
+      // Toggle visual state in place
+      btn.classList.toggle("lib-fd__item--active");
+
+      // Update trigger label
+      const dropdown = btn.closest(".lib-fd");
+      const trigger = dropdown?.querySelector(".lib-fd__trigger span");
+      const allItems = dropdown?.querySelectorAll(".lib-fd__item--active") || [];
+      const baseLabel = dropdown?.dataset.dropdown === "class-filter" ? "Class"
+        : dropdown?.dataset.dropdown === "mode-filter" ? "Mode" : "Tags";
+      trigger.textContent = allItems.length > 0 ? `${baseLabel} (${allItems.length})` : baseLabel;
+      dropdown?.querySelector(".lib-fd__trigger")?.classList.toggle("lib-fd__trigger--active", allItems.length > 0);
+
+      _callbacks.onFilterChange?.({ type, value: updated.length > 0 ? updated : null });
+    });
+  });
+
   // Clear all filters
   container.querySelectorAll("[data-filter-clear]").forEach((btn) => {
     btn.addEventListener("click", () => {
       _callbacks.onFilterChange?.({ clear: true });
-    });
-  });
-
-  // Individual filter chips (toggle)
-  container.querySelectorAll("[data-filter-type]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const type = btn.dataset.filterType;
-      const value = btn.dataset.filterValue;
-      const current = state.libraryPrefs.activeFilters[type];
-      // Toggle: click active chip clears it
-      _callbacks.onFilterChange?.({ type, value: current === value ? null : value });
     });
   });
 }
