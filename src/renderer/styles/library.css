@@ -831,7 +831,7 @@
   cursor: pointer;
   color: #667;
   vertical-align: middle;
-  margin-right: 2px;
+  float: right;
 }
 
 .lib-table__chevron:hover {
