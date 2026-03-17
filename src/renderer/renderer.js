@@ -590,6 +590,7 @@ function wireEvents() {
   const chatLinkDefaultHTML = el.chatLinkBtn.innerHTML;
   let chatLinkTimeout = null;
   el.chatLinkBtn.addEventListener("click", async () => {
+    el.chatLinkBtn.classList.remove("title-input-group__btn--success", "title-input-group__btn--error");
     const build = serializeEditorToBuild();
     try {
       const link = await window.desktopApi.generateChatLink(build);
