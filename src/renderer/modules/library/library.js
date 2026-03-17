@@ -13,7 +13,7 @@ import {
 
 import { showConfirmModal } from "../confirm-modal.js";
 import { initToolbar, renderToolbar, renderFilters } from "./toolbar.js";
-import { initSidebar, renderSidebar } from "./sidebar.js";
+import { initSidebar, renderSidebar, insertInlineInput } from "./sidebar.js";
 import { initContent, renderContent } from "./content.js";
 import { initContextMenu, wireContextMenuEvents, closeMenu } from "./context-menu.js";
 import {
@@ -191,8 +191,11 @@ function handleNewBuild() {
 }
 
 async function handleNewFolder() {
-  const name = await showPrompt("New folder name");
-  if (!name) return;
+  // Find the "+" button as anchor for inline input
+  const btn = document.getElementById("lib-new-folder-btn");
+  const anchor = btn?.closest(".lib-sidebar__section-header");
+  const name = await insertInlineInput(anchor, "");
+  if (!name) { renderLibrary(); return; }
   await saveFolder({ name, parentId: null });
   renderLibrary();
 }
@@ -321,15 +324,18 @@ function handleOpenFolder(folderId) {
 async function handleRenameFolder(folderId) {
   const folder = state.folders.find((f) => f.id === folderId);
   if (!folder) return;
-  const newName = await showPrompt("Rename folder", folder.name || "");
-  if (!newName) return;
+  // Find the folder's nav item in sidebar and replace label with inline input
+  const navItem = document.querySelector(`[data-navigate-folder="${folderId}"]`);
+  const newName = await insertInlineInput(navItem, folder.name || "");
+  if (!newName) { renderLibrary(); return; }
   await saveFolder({ ...folder, name: newName });
   renderLibrary();
 }
 
 async function handleNewSubfolder(parentId) {
-  const name = await showPrompt("New sub-folder name");
-  if (!name) return;
+  const navItem = document.querySelector(`[data-navigate-folder="${parentId}"]`);
+  const name = await insertInlineInput(navItem, "");
+  if (!name) { renderLibrary(); return; }
   await saveFolder({ name, parentId });
   renderLibrary();
 }
@@ -361,8 +367,10 @@ async function handleDeleteFolder(folderId) {
 }
 
 async function handleNewFolderAndMove(buildIds) {
-  const name = await showPrompt("New folder name");
-  if (!name) return;
+  const btn = document.getElementById("lib-new-folder-btn");
+  const anchor = btn?.closest(".lib-sidebar__section-header");
+  const name = await insertInlineInput(anchor, "");
+  if (!name) { renderLibrary(); return; }
   const folder = await saveFolder({ name, parentId: null });
   if (!folder?.id) return;
   await moveBuilds(buildIds, folder.id);
@@ -507,7 +515,7 @@ function showPrompt(title, defaultValue = "") {
           <h3 class="confirm-modal__title">${title}</h3>
         </div>
         <div class="confirm-modal__body">
-          <input type="text" class="confirm-modal__input" value="" style="width:100%;padding:6px 8px;background:#151530;border:1px solid #303060;border-radius:4px;color:#ccd;font-size:0.9rem;" />
+          <input type="text" class="confirm-modal__input" value="" style="width:100%;padding:6px 8px;background:#151530;border:1px solid #303060;border-radius:4px;color:#ccd;font-size:0.9rem;outline:none;" />
         </div>
         <div class="confirm-modal__actions">
           <button class="confirm-modal__btn" data-action="cancel">Cancel</button>

@@ -277,6 +277,61 @@ function bindSidebarEvents(container) {
   });
 }
 
+/**
+ * Insert an inline text input into the sidebar for naming a new folder or renaming.
+ * Returns a Promise<string|null> — the entered name, or null if cancelled.
+ * @param {HTMLElement} afterEl - Insert the input after this element (or at end of section)
+ * @param {string} defaultValue - Pre-filled text
+ */
+export function insertInlineInput(afterEl, defaultValue = "") {
+  return new Promise((resolve) => {
+    const row = document.createElement("div");
+    row.className = "lib-nav-item lib-nav-item--editing";
+    row.innerHTML = `
+      <span class="lib-nav-item__icon">${folderIcon}</span>
+      <input type="text" class="lib-inline-input" value="" />
+    `;
+
+    const input = row.querySelector("input");
+    input.value = defaultValue;
+
+    if (afterEl) {
+      afterEl.insertAdjacentElement("afterend", row);
+    } else {
+      // Append to My Folders section
+      const section = document.querySelector(".lib-sidebar__section:last-child");
+      if (section) section.appendChild(row);
+    }
+
+    input.focus();
+    input.select();
+
+    let resolved = false;
+    function finish(value) {
+      if (resolved) return;
+      resolved = true;
+      row.remove();
+      resolve(value);
+    }
+
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        const val = input.value.trim();
+        finish(val || null);
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        finish(null);
+      }
+    });
+    input.addEventListener("blur", () => {
+      const val = input.value.trim();
+      finish(val || null);
+    });
+  });
+}
+
 function toggleExpanded(key) {
   const current = new Set(state.libraryPrefs.sidebarExpandedFolders || []);
   if (current.has(key)) {

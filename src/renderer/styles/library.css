@@ -496,6 +496,26 @@
   /* wrapper for folder item + children */
 }
 
+.lib-inline-input {
+  flex: 1;
+  min-width: 0;
+  background: #151530;
+  border: 1px solid #4a4aaa;
+  border-radius: 3px;
+  color: #ccd;
+  font-size: 0.85rem;
+  padding: 2px 6px;
+  outline: none;
+}
+
+.lib-inline-input:focus {
+  border-color: #6a6aff;
+}
+
+.lib-nav-item--editing {
+  padding: 3px 8px 3px 16px;
+}
+
 /* ── Shared pills ────────────────────────────────────────────────── */
 
 .lib-pill {
