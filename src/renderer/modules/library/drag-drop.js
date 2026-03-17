@@ -124,7 +124,8 @@ function _wireFolderDropTargets() {
 
       try {
         await moveBuilds(ids, null);
-        console.log("[drag] moveBuilds complete");
+        console.log("[drag] moveBuilds complete, calling onRefresh, builds[0].folderId:",
+          (await import("../state.js")).state.builds.find(b => ids.includes(b.id))?.folderId);
         _callbacks.onRefresh?.();
       } catch (err) {
         console.error("[drag] moveBuilds failed:", err);
