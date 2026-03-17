@@ -382,15 +382,19 @@ function renderIconView(container) {
 // ─── Event binding ─────────────────────────────────────────────────────────────
 
 function bindContentEvents(container) {
-  // Click on empty content area (not on a build or folder) clears selection
-  container.addEventListener("click", (e) => {
-    if (!e.target.closest("[data-build-id]") && !e.target.closest("[data-folder-id]")) {
-      clearSelection();
-    }
-  });
+  // Container-level click: only bind once (container persists across renders)
+  if (!container.dataset.contentBound) {
+    container.dataset.contentBound = "1";
+    container.addEventListener("click", (e) => {
+      if (!e.target.closest("[data-build-id]") && !e.target.closest("[data-folder-id]") && !e.target.closest("[data-sort-field]")) {
+        clearSelection();
+      }
+    });
+  }
 
-  // Build click: select + stop propagation so folder parents don't toggle
-  container.querySelectorAll("[data-build-id]").forEach((el) => {
+  // Child elements: use data-bound flag (children are replaced on re-render)
+  container.querySelectorAll("[data-build-id]:not([data-bound])").forEach((el) => {
+    el.dataset.bound = "1";
     el.addEventListener("click", (e) => {
       e.stopPropagation();
       if (!e.target.closest("[data-action]")) {
@@ -403,9 +407,8 @@ function bindContentEvents(container) {
     });
   });
 
-  // Double-click folders to navigate (except in table view — those use chevrons)
-  container.querySelectorAll("[data-folder-id]").forEach((el) => {
-    // Tree view rows have a chevron toggle; single-click the row to toggle instead
+  container.querySelectorAll("[data-folder-id]:not([data-bound])").forEach((el) => {
+    el.dataset.bound = "1";
     if (el.closest(".lib-tv")) {
       el.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -419,21 +422,18 @@ function bindContentEvents(container) {
       });
     } else {
       el.addEventListener("dblclick", () => {
-        const folderId = el.dataset.folderId;
-        _callbacks.onNavigate?.({ type: "custom", id: folderId });
+        _callbacks.onNavigate?.({ type: "custom", id: el.dataset.folderId });
       });
     }
   });
 
-  // Table column sort headers
-  container.querySelectorAll("[data-sort-field]").forEach((th) => {
+  container.querySelectorAll("[data-sort-field]:not([data-bound])").forEach((th) => {
+    th.dataset.bound = "1";
     th.addEventListener("click", (e) => {
       e.stopPropagation();
       const field = th.dataset.sortField;
       const { sortField, sortDirection } = state.libraryPrefs;
-      const newDirection =
-        field === sortField && sortDirection === "desc" ? "asc" : "desc";
-      console.log("[sort] clicked", field, "->", newDirection);
+      const newDirection = field === sortField && sortDirection === "desc" ? "asc" : "desc";
       _callbacks.onSortChange?.({ field, direction: newDirection });
     });
   });

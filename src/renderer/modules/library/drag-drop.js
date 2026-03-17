@@ -1,102 +1,76 @@
 // Library drag-and-drop module — HTML5 drag-and-drop for moving builds to folders.
+// Simplified: uses data attributes to prevent duplicate binding.
 
 import { getSelection } from "./selection.js";
 import { moveBuilds } from "./folder-store.js";
 import { state } from "../state.js";
 
 let _callbacks = {};
-
-// IDs being dragged in the current drag operation
 let _draggedIds = [];
+let _rootDropZone = null;
 
-/**
- * Store callbacks for drag-and-drop actions.
- * @param {{ onRefresh }} callbacks
- */
 export function initDragDrop(callbacks) {
   _callbacks = callbacks || {};
 }
 
 /**
  * Wire drag handlers on rendered elements.
- * Call after each render.
+ * Uses data-* flags to prevent duplicate binding since the container
+ * element (#lib-content) persists across renders.
  */
 export function wireDragDropEvents() {
-  _wireBuildDraggables();
-  _wireFolderDropTargets();
-  _wireRootDropTarget();
-}
-
-// ─── Internal: build draggables ────────────────────────────────────────────────
-
-function _wireBuildDraggables() {
+  // Build items — draggable sources
   document.querySelectorAll("[data-build-id]").forEach((el) => {
+    if (el.dataset.dndBound) return;
+    el.dataset.dndBound = "1";
     el.draggable = true;
 
     el.addEventListener("dragstart", (e) => {
       e.stopPropagation();
       const buildId = el.dataset.buildId;
-
       const sel = getSelection();
-      if (sel.length > 1 && sel.includes(buildId)) {
-        _draggedIds = [...sel];
-      } else {
-        _draggedIds = [buildId];
-      }
+      _draggedIds = (sel.length > 1 && sel.includes(buildId)) ? [...sel] : [buildId];
 
       e.dataTransfer.setData("text/plain", JSON.stringify(_draggedIds));
       e.dataTransfer.effectAllowed = "move";
+      el.classList.add("lib-dragging");
 
-      _draggedIds.forEach((id) => {
-        document
-          .querySelectorAll(`[data-build-id="${CSS.escape(id)}"]`)
-          .forEach((node) => node.classList.add("lib-dragging"));
-      });
-
-      // Show root drop zone if build is in a folder
-      const build = state.builds.find((b) => b.id === buildId);
-      if (build?.folderId) {
+      // Show root drop zone if this build is in a folder
+      if (state.builds.find((b) => b.id === buildId)?.folderId) {
         _showRootDropZone();
       }
     });
 
     el.addEventListener("dragend", () => {
-      document.querySelectorAll(".lib-dragging").forEach((node) => {
-        node.classList.remove("lib-dragging");
-      });
-      document.querySelectorAll(".lib-drop-target").forEach((node) => {
-        node.classList.remove("lib-drop-target");
-      });
+      el.classList.remove("lib-dragging");
+      document.querySelectorAll(".lib-drop-target").forEach((n) => n.classList.remove("lib-drop-target"));
       _hideRootDropZone();
       setTimeout(() => { _draggedIds = []; }, 50);
     });
   });
-}
 
-// ─── Internal: folder drop targets ─────────────────────────────────────────────
-
-function _wireFolderDropTargets() {
+  // Folder items — drop targets (content area + sidebar)
   document.querySelectorAll("[data-folder-id]").forEach((el) => {
-    _makeDropTarget(el, el.dataset.folderId);
+    if (el.dataset.dropBound) return;
+    el.dataset.dropBound = "1";
+    _bindDropTarget(el, el.dataset.folderId);
   });
 
   document.querySelectorAll("[data-navigate-folder]").forEach((el) => {
-    _makeDropTarget(el, el.dataset.navigateFolder);
+    if (el.dataset.dropBound) return;
+    el.dataset.dropBound = "1";
+    _bindDropTarget(el, el.dataset.navigateFolder);
   });
 
-  document.querySelectorAll("[data-nav]").forEach((el) => {
-    const nav = el.dataset.nav;
-    if (nav && nav.startsWith("custom:")) {
-      _makeDropTarget(el, nav.slice(7));
-    }
-  });
-
+  // Sidebar "All Builds" — drop to move to root
   document.querySelectorAll("[data-navigate-all]").forEach((el) => {
-    _makeDropTarget(el, null);
+    if (el.dataset.dropBound) return;
+    el.dataset.dropBound = "1";
+    _bindDropTarget(el, null);
   });
 }
 
-function _makeDropTarget(el, folderId) {
+function _bindDropTarget(el, folderId) {
   el.addEventListener("dragover", (e) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
@@ -111,56 +85,24 @@ function _makeDropTarget(el, folderId) {
 
   el.addEventListener("drop", async (e) => {
     el.classList.remove("lib-drop-target");
+    const ids = _getDragIds(e);
+    if (!ids.length) return;
 
-    const ids = _getDropIds(e);
-    if (ids.length === 0) return;
-
-    // If all builds are already in this folder, let it bubble to parent
-    if (folderId) {
-      const allHere = ids.every((id) => {
-        const b = state.builds.find((x) => x.id === id);
-        return b && b.folderId === folderId;
-      });
-      if (allHere) return;
+    // Skip if builds already in this folder (let event bubble to parent)
+    if (folderId && ids.every((id) => state.builds.find((b) => b.id === id)?.folderId === folderId)) {
+      return;
     }
 
     e.preventDefault();
     e.stopPropagation();
     await moveBuilds(ids, folderId ?? null);
     _draggedIds = [];
+    _hideRootDropZone();
     _callbacks.onRefresh?.();
   });
 }
 
-// ─── Internal: root (empty space) drop target ──────────────────────────────────
-
-function _wireRootDropTarget() {
-  const content = document.getElementById("lib-content");
-  if (!content || content.dataset.rootDropBound) return;
-  content.dataset.rootDropBound = "1";
-
-  // Capture phase so it fires even when over child elements
-  content.addEventListener("dragover", (e) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-  }, true);
-
-  content.addEventListener("drop", async (e) => {
-    // If a folder handler already caught this (stopPropagation), we won't get here
-    e.preventDefault();
-
-    const ids = _getDropIds(e);
-    if (ids.length === 0) return;
-
-    await moveBuilds(ids, null);
-    _draggedIds = [];
-    _callbacks.onRefresh?.();
-  });
-}
-
-// ─── Root drop zone (visible bar during drag) ─────────────────────────────────
-
-let _rootDropZone = null;
+// ─── Root drop zone (visible bar at top during drag-from-folder) ───────────────
 
 function _showRootDropZone() {
   if (_rootDropZone) return;
@@ -180,14 +122,14 @@ function _showRootDropZone() {
   });
 
   _rootDropZone.addEventListener("dragleave", () => {
-    _rootDropZone.classList.remove("lib-root-drop-zone--active");
+    _rootDropZone?.classList.remove("lib-root-drop-zone--active");
   });
 
   _rootDropZone.addEventListener("drop", async (e) => {
     e.preventDefault();
     e.stopPropagation();
-    const ids = _getDropIds(e);
-    if (ids.length === 0) return;
+    const ids = _getDragIds(e);
+    if (!ids.length) return;
     await moveBuilds(ids, null);
     _draggedIds = [];
     _hideRootDropZone();
@@ -202,13 +144,10 @@ function _hideRootDropZone() {
   }
 }
 
-// ─── Helpers ───────────────────────────────────────────────────────────────────
-
-function _getDropIds(e) {
-  if (_draggedIds.length > 0) return [..._draggedIds];
+function _getDragIds(e) {
+  if (_draggedIds.length) return [..._draggedIds];
   try {
-    const parsed = JSON.parse(e.dataTransfer.getData("text/plain"));
-    if (Array.isArray(parsed)) return parsed;
-  } catch { /* ignore */ }
-  return [];
+    const p = JSON.parse(e.dataTransfer.getData("text/plain"));
+    return Array.isArray(p) ? p : [];
+  } catch { return []; }
 }
