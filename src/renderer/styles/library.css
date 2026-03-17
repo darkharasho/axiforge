@@ -628,12 +628,15 @@
 }
 
 .lib-list-row__icon--folder {
-  color: #668;
+  color: #8899bb;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
 }
 
 .lib-list-row__icon--folder svg {
-  width: 15px;
-  height: 15px;
+  width: 18px;
+  height: 18px;
 }
 
 .lib-list-row__spec-icon {
