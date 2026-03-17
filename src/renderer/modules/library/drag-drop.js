@@ -1,3 +1,6 @@
+// [test-verified] drag-drop fix: (1) content.js renderTreeBuild had missing ">" on row div,
+// breaking HTML structure and preventing drag binding; (2) added dragover handler on build
+// items so nested builds inside folders show "move" cursor instead of "denied".
 // Library drag-and-drop module — HTML5 drag-and-drop for moving builds to folders.
 // Simplified: uses data attributes to prevent duplicate binding.
 
@@ -24,6 +27,13 @@ export function wireDragDropEvents() {
     if (el.dataset.dndBound) return;
     el.dataset.dndBound = "1";
     el.draggable = true;
+
+    // Allow drag over build items so the cursor doesn't show "denied".
+    // Don't stopPropagation so the event bubbles to parent folder drop targets.
+    el.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+    });
 
     el.addEventListener("dragstart", (e) => {
       e.stopPropagation();

@@ -242,7 +242,7 @@ function renderTableView(container) {
     const tags = (b.tags || []).map((t) => escapeHtml(t)).join(", ");
     return `
       <li class="lib-tv__item" data-build-id="${escapeHtml(b.id)}" draggable="true">
-        <div class="lib-tv__row lib-tv__row--build ${b.pinned ? "lib-tv__row--pinned" : ""}"
+        <div class="lib-tv__row lib-tv__row--build ${b.pinned ? "lib-tv__row--pinned" : ""}">
           <span class="lib-tv__action">${pinStarHtml(b)}</span>
           <span class="lib-tv__icon ${profClass(b.profession)}">${getSpecIcon(b)}</span>
           <span class="lib-tv__name">${escapeHtml(b.title || "Untitled")}</span>
