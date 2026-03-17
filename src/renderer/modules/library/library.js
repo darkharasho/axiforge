@@ -172,6 +172,17 @@ export function handleLibraryKeydown(e) {
       }
       break;
 
+    case "x":
+    case "X":
+      if (ctrl) {
+        const sel = getSelection();
+        if (sel.length > 0) {
+          e.preventDefault();
+          handleCutJson(sel);
+        }
+      }
+      break;
+
     case "v":
     case "V":
       if (ctrl) {
@@ -273,7 +284,10 @@ async function handleDelete(ids) {
   renderLibrary();
 }
 
+let _cutIds = [];
+
 async function handleCopyJson(idOrIds) {
+  _cutIds = []; // clear any pending cut
   const ids = Array.isArray(idOrIds) ? idOrIds : [idOrIds];
   const builds = ids
     .map((id) => state.builds.find((b) => b.id === id))
@@ -281,6 +295,19 @@ async function handleCopyJson(idOrIds) {
   if (builds.length === 0) return;
   const json = JSON.stringify(builds.length === 1 ? builds[0] : builds, null, 2);
   await window.desktopApi.writeClipboardText(json);
+  showToast(builds.length === 1 ? "Build copied!" : `${builds.length} builds copied!`);
+}
+
+async function handleCutJson(idOrIds) {
+  const ids = Array.isArray(idOrIds) ? idOrIds : [idOrIds];
+  const builds = ids
+    .map((id) => state.builds.find((b) => b.id === id))
+    .filter(Boolean);
+  if (builds.length === 0) return;
+  _cutIds = builds.map((b) => b.id);
+  const json = JSON.stringify(builds.length === 1 ? builds[0] : builds, null, 2);
+  await window.desktopApi.writeClipboardText(json);
+  showToast(builds.length === 1 ? "Build cut!" : `${builds.length} builds cut!`);
 }
 
 let _toastEl = null;
@@ -352,8 +379,82 @@ async function handleImportGw2Skills(targetFolderId) {
   }
 }
 
-function handlePasteJson() {
-  _app.importBuildJsonFromClipboard?.();
+/**
+ * Compute the next copy title by appending or incrementing a numeric suffix.
+ * Given "My Build" and existing titles ["My Build (1)", "My Build (2)"],
+ * returns "My Build (3)".
+ * @param {string} title
+ * @param {string[]} existingTitles
+ * @returns {string}
+ */
+export function nextCopyTitle(title, existingTitles) {
+  // Strip existing numeric suffix to get the base name
+  const base = title.replace(/\s*\(\d+\)$/, "");
+  const pattern = new RegExp(`^${base.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*\\((\\d+)\\)$`);
+  let max = 0;
+  for (const t of existingTitles) {
+    const m = t.match(pattern);
+    if (m) max = Math.max(max, parseInt(m[1], 10));
+  }
+  return `${base} (${max + 1})`;
+}
+
+async function handlePasteJson() {
+  try {
+    const folderId = state.currentFolder?.type === "custom" ? state.currentFolder.id : null;
+
+    // If we have pending cut IDs, move those builds instead of pasting from clipboard
+    if (_cutIds.length > 0) {
+      const idsToMove = _cutIds.filter((id) => state.builds.some((b) => b.id === id));
+      _cutIds = [];
+      if (idsToMove.length === 0) {
+        showToast("Cut builds no longer exist", "error");
+        return;
+      }
+      await moveBuilds(idsToMove, folderId);
+      clearSelection();
+      renderLibrary();
+      showToast(idsToMove.length === 1 ? "Build moved!" : `${idsToMove.length} builds moved!`);
+      return;
+    }
+
+    const text = await window.desktopApi.readClipboardText();
+    if (!text || !String(text).trim()) {
+      showToast("Clipboard is empty", "error");
+      return;
+    }
+    let items;
+    try {
+      const parsed = JSON.parse(String(text));
+      items = Array.isArray(parsed) ? parsed : [parsed];
+    } catch {
+      showToast("Clipboard does not contain valid JSON", "error");
+      return;
+    }
+    const existingTitles = state.builds.map((b) => b.title || "");
+    let savedCount = 0;
+    for (const item of items) {
+      if (!item || typeof item !== "object") continue;
+      const source = item.build && typeof item.build === "object" ? item.build : item;
+      const originalTitle = String(source.title || source.name || "Imported Build");
+      const title = nextCopyTitle(originalTitle, existingTitles);
+      existingTitles.push(title);
+      const copy = { ...source, title, folderId };
+      delete copy.id;
+      await window.desktopApi.saveBuild(copy);
+      savedCount++;
+    }
+    if (savedCount === 0) {
+      showToast("No valid builds found in clipboard", "error");
+      return;
+    }
+    state.builds = await window.desktopApi.listBuilds();
+    renderLibrary();
+    showToast(savedCount === 1 ? "Build pasted!" : `${savedCount} builds pasted!`);
+  } catch (err) {
+    console.error("Paste failed:", err);
+    showToast("Paste failed", "error");
+  }
 }
 
 function handlePublish(buildId) {
@@ -573,10 +674,10 @@ function _buildSharedCallbacks() {
     onMoveTo: handleMoveTo,
     onDelete: handleDelete,
     onCopyJson: handleCopyJson,
+    onCutJson: handleCutJson,
     onCopyChatLink: handleCopyChatLink,
     onImportChatLink: handleImportChatLink,
     onImportGw2Skills: handleImportGw2Skills,
-    onExportJson: handleCopyJson,
     onPasteJson: handlePasteJson,
     onPublish: handlePublish,
     onBuildInfo: handleBuildInfo,
