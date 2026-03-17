@@ -809,8 +809,8 @@
 }
 
 .lib-table__td--pin {
-  width: 28px;
   padding: 4px 0 4px 6px;
+  white-space: nowrap;
 }
 
 .lib-table__td--icon {
