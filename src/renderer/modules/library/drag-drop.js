@@ -113,22 +113,26 @@ function _wireFolderDropTargets() {
     content.addEventListener("dragover", (e) => {
       e.preventDefault();
       e.dataTransfer.dropEffect = "move";
-    });
+    }, true);
 
     content.addEventListener("drop", async (e) => {
       // If a folder drop target already handled this, it will have
       // called stopPropagation. If we get here, no folder caught it.
       e.preventDefault();
-      console.log("[drag] drop on content area (root)");
-
       let ids = _draggedIds;
       if (!ids || ids.length === 0) {
         try { ids = JSON.parse(e.dataTransfer.getData("text/plain")); } catch { ids = []; }
       }
+      console.log("[drag] drop on root, ids:", ids);
       if (ids.length === 0) return;
 
-      await moveBuilds(ids, null);
-      _callbacks.onRefresh?.();
+      try {
+        await moveBuilds(ids, null);
+        console.log("[drag] moveBuilds complete");
+        _callbacks.onRefresh?.();
+      } catch (err) {
+        console.error("[drag] moveBuilds failed:", err);
+      }
     });
   }
 }
