@@ -150,4 +150,84 @@ async function prewarmChatLinks(builds) {
   }
 }
 
-module.exports = { generateChatLink, prewarmChatLinks, mapBuildToTemplateInput };
+async function previewChatLink(link) {
+  const { decodeBuildTemplate } = await import("gw2buildlink");
+  const api = await getApi();
+  const decoded = await decodeBuildTemplate(link, { api });
+  const eliteSpec = decoded.specializations?.[2]?.id !== 0
+    ? decoded.specializations?.[2]?.name || null
+    : null;
+  return { profession: decoded.profession.id, eliteSpec };
+}
+
+async function decodeChatLinkToBuild(link, name, folderId) {
+  const { decodeBuildTemplate } = await import("gw2buildlink");
+  const api = await getApi();
+  const decoded = await decodeBuildTemplate(link, { api });
+
+  const specializations = decoded.specializations
+    .filter((s) => s.id !== 0)
+    .map((s) => ({
+      id: s.id,
+      name: s.name,
+      majorChoices: {
+        1: s.traits[0]?.traitId || 0,
+        2: s.traits[1]?.traitId || 0,
+        3: s.traits[2]?.traitId || 0,
+      },
+    }));
+
+  const mapSkillSet = (set) => ({
+    heal: set?.heal?.skillId ? { id: set.heal.skillId, name: set.heal.name } : null,
+    utility: (set?.utilities ?? []).map((u) =>
+      u?.skillId ? { id: u.skillId, name: u.name } : null
+    ),
+    elite: set?.elite?.skillId ? { id: set.elite.skillId, name: set.elite.name } : null,
+  });
+
+  const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+  const weaponSlotKeys = ["mainhand1", "offhand1", "mainhand2", "offhand2", "aquatic1", "aquatic2"];
+  const weapons = {};
+  (decoded.weapons ?? []).forEach((w, i) => {
+    if (weaponSlotKeys[i] && w?.name) weapons[weaponSlotKeys[i]] = capitalize(w.name);
+  });
+
+  let selectedLegends = ["", ""];
+  let selectedUnderwaterLegends = ["", ""];
+  if (decoded.revenantLegends) {
+    selectedLegends = [
+      decoded.revenantLegends[0]?.code ? `Legend${decoded.revenantLegends[0].code}` : "",
+      decoded.revenantLegends[1]?.code ? `Legend${decoded.revenantLegends[1].code}` : "",
+    ];
+    selectedUnderwaterLegends = [
+      decoded.revenantLegends[2]?.code ? `Legend${decoded.revenantLegends[2].code}` : "",
+      decoded.revenantLegends[3]?.code ? `Legend${decoded.revenantLegends[3].code}` : "",
+    ];
+  }
+
+  let selectedPets = { terrestrial1: 0, terrestrial2: 0, aquatic1: 0, aquatic2: 0 };
+  if (decoded.rangerPets) {
+    selectedPets = {
+      terrestrial1: decoded.rangerPets[0]?.id || 0,
+      terrestrial2: decoded.rangerPets[1]?.id || 0,
+      aquatic1: decoded.rangerPets[2]?.id || 0,
+      aquatic2: decoded.rangerPets[3]?.id || 0,
+    };
+  }
+
+  return {
+    title: name,
+    profession: decoded.profession.id,
+    specializations,
+    skills: mapSkillSet(decoded.skills?.terrestrial),
+    underwaterSkills: mapSkillSet(decoded.skills?.aquatic),
+    equipment: { weapons },
+    selectedLegends,
+    selectedUnderwaterLegends,
+    selectedPets,
+    morphSkillIds: [0, 0, 0],
+    ...(folderId ? { folderId } : {}),
+  };
+}
+
+module.exports = { generateChatLink, prewarmChatLinks, previewChatLink, decodeChatLinkToBuild, mapBuildToTemplateInput };

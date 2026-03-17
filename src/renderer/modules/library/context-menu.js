@@ -24,6 +24,7 @@ import {
   homeIcon,
   folderIcon,
   linkIcon,
+  arrowDownTrayIcon,
 } from "./heroicons.js";
 
 let _callbacks = {};
@@ -152,6 +153,9 @@ function showEmptyMenu(x, y) {
     _item(folderPlusIcon, "New Folder", null, () => _callbacks.onNewFolder?.()),
     _sep(),
     _item(clipboardIcon, "Paste from JSON", "Ctrl+V", () => _callbacks.onPasteJson?.()),
+    _submenuItem(arrowDownTrayIcon, "Import", [
+      _item(linkIcon, "Build Link", null, () => _callbacks.onImportChatLink?.()),
+    ]),
     _sep(),
     _item(null, "Select All", "Ctrl+A", () => _callbacks.onSelectAll?.()),
   ];

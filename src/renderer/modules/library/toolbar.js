@@ -16,6 +16,7 @@ import {
   homeIcon,
   xMarkIcon,
   checkIcon,
+  arrowDownTrayIcon,
 } from "./heroicons.js";
 
 let _callbacks = {};
@@ -66,6 +67,9 @@ export function renderToolbar() {
       <div class="lib-toolbar__view-toggle" role="group" aria-label="View mode">
         ${renderViewToggle(prefs.viewMode)}
       </div>
+      <button type="button" id="lib-import-btn" class="btn lib-toolbar__import-btn">
+        ${arrowDownTrayIcon} Import
+      </button>
       <button type="button" id="lib-new-build-btn" class="btn btn-primary lib-toolbar__new-btn">
         ${plusIcon} New Build
       </button>
@@ -328,6 +332,11 @@ function bindToolbarEvents(container) {
     btn.addEventListener("click", () => {
       _callbacks.onViewChange?.(btn.dataset.view);
     });
+  });
+
+  // Import button
+  container.querySelector("#lib-import-btn")?.addEventListener("click", () => {
+    _callbacks.onImportChatLink?.();
   });
 
   // New build button

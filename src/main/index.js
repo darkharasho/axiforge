@@ -339,6 +339,15 @@ app.whenReady().then(async () => {
     const { prewarmChatLinks } = require("./buildChatLink.js");
     prewarmChatLinks(builds); // fire-and-forget
   });
+  ipcMain.handle("builds:preview-chat-link", async (_e, link) => {
+    const { previewChatLink } = require("./buildChatLink.js");
+    return previewChatLink(link);
+  });
+  ipcMain.handle("builds:import-chat-link", async (_e, link, name, folderId) => {
+    const { decodeChatLinkToBuild } = require("./buildChatLink.js");
+    const build = await decodeChatLinkToBuild(link, name, folderId);
+    return store.upsertBuild(build);
+  });
 
   ipcMain.handle("builds:publish-build", async (event, buildId) => {
     const sender = event.sender;

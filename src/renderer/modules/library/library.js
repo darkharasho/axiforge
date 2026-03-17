@@ -315,6 +315,22 @@ async function handleCopyChatLink(buildId) {
   }
 }
 
+async function handleImportChatLink() {
+  const folderId = state.currentFolder || null;
+  const result = await showImportModal();
+  if (!result) return;
+  try {
+    const saved = await window.desktopApi.importChatLink(result.link, result.name, folderId);
+    state.builds = await window.desktopApi.listBuilds();
+    renderLibrary();
+    window.desktopApi.prewarmChatLinks?.([saved]);
+    showToast(`"${saved.title}" imported`);
+  } catch (err) {
+    console.error("Import failed:", err);
+    showToast("Import failed", "error");
+  }
+}
+
 function handlePasteJson() {
   _app.importBuildJsonFromClipboard?.();
 }
@@ -537,6 +553,7 @@ function _buildSharedCallbacks() {
     onDelete: handleDelete,
     onCopyJson: handleCopyJson,
     onCopyChatLink: handleCopyChatLink,
+    onImportChatLink: handleImportChatLink,
     onExportJson: handleCopyJson,
     onPasteJson: handlePasteJson,
     onPublish: handlePublish,
@@ -604,6 +621,111 @@ function showPrompt(title, defaultValue = "") {
     overlay.querySelector('[data-action="cancel"]').addEventListener("click", () => dismiss(null));
     overlay.querySelector('[data-action="ok"]').addEventListener("click", () => dismiss(input.value.trim() || null));
     overlay.addEventListener("click", (e) => { if (e.target === overlay) dismiss(null); });
+  });
+}
+
+function showImportModal() {
+  return new Promise((resolve) => {
+    const overlay = document.createElement("div");
+    overlay.className = "confirm-modal-overlay";
+    overlay.innerHTML = `
+      <div class="confirm-modal" style="width:420px;max-width:90vw;">
+        <div class="confirm-modal__header">
+          <h3 class="confirm-modal__title">Import Build Link</h3>
+        </div>
+        <div class="confirm-modal__body" style="display:flex;flex-direction:column;gap:10px;">
+          <div>
+            <label style="display:block;font-size:0.8rem;color:#889;margin-bottom:4px;">Build Link</label>
+            <input
+              type="text"
+              id="import-link-input"
+              placeholder="Paste [&amp;...] chat link here"
+              style="width:100%;padding:6px 8px;background:#151530;border:1px solid #303060;border-radius:4px;color:#ccd;font-size:0.9rem;outline:none;box-sizing:border-box;"
+            />
+            <div id="import-link-status" style="font-size:0.75rem;min-height:1.2em;margin-top:3px;color:#556;"></div>
+          </div>
+          <div>
+            <label style="display:block;font-size:0.8rem;color:#889;margin-bottom:4px;">Build Name</label>
+            <input
+              type="text"
+              id="import-name-input"
+              placeholder="Build name"
+              style="width:100%;padding:6px 8px;background:#151530;border:1px solid #303060;border-radius:4px;color:#ccd;font-size:0.9rem;outline:none;box-sizing:border-box;"
+            />
+          </div>
+        </div>
+        <div class="confirm-modal__actions">
+          <button class="confirm-modal__btn" data-action="cancel">Cancel</button>
+          <button class="confirm-modal__btn confirm-modal__btn--confirm" data-action="import" disabled>Import</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    const linkInput = overlay.querySelector("#import-link-input");
+    const nameInput = overlay.querySelector("#import-name-input");
+    const statusEl = overlay.querySelector("#import-link-status");
+    const importBtn = overlay.querySelector('[data-action="import"]');
+    let previewTimer = null;
+    let linkValid = false;
+
+    linkInput.focus();
+
+    function setStatus(msg, color) {
+      statusEl.textContent = msg;
+      statusEl.style.color = color;
+    }
+
+    linkInput.addEventListener("input", () => {
+      const val = linkInput.value.trim();
+      clearTimeout(previewTimer);
+      importBtn.disabled = true;
+      linkValid = false;
+      if (!val) { setStatus("", "#556"); return; }
+      if (!val.startsWith("[&") || !val.endsWith("]")) {
+        setStatus("Not a valid chat link format", "#c55");
+        return;
+      }
+      setStatus("Decoding\u2026", "#889");
+      previewTimer = setTimeout(async () => {
+        try {
+          const { profession, eliteSpec } = await window.desktopApi.previewChatLink(val);
+          const autoName = eliteSpec ? `Imported ${eliteSpec}` : `Imported ${profession}`;
+          if (!nameInput.value || nameInput.dataset.autoFilled === "1") {
+            nameInput.value = autoName;
+            nameInput.dataset.autoFilled = "1";
+          }
+          setStatus(`\u2713 ${profession}${eliteSpec ? ` \u2014 ${eliteSpec}` : ""}`, "#5a5");
+          linkValid = true;
+          importBtn.disabled = false;
+        } catch {
+          setStatus("Could not decode link", "#c55");
+        }
+      }, 400);
+    });
+
+    nameInput.addEventListener("input", () => {
+      nameInput.dataset.autoFilled = "0";
+    });
+
+    function dismiss(result) {
+      document.removeEventListener("keydown", onKey);
+      overlay.remove();
+      resolve(result);
+    }
+
+    function onKey(e) {
+      if (e.key === "Escape") dismiss(null);
+      if (e.key === "Enter" && linkValid) {
+        dismiss({ link: linkInput.value.trim(), name: nameInput.value.trim() || "Imported Build" });
+      }
+    }
+
+    document.addEventListener("keydown", onKey);
+    overlay.querySelector('[data-action="cancel"]').addEventListener("click", () => dismiss(null));
+    importBtn.addEventListener("click", () => {
+      dismiss({ link: linkInput.value.trim(), name: nameInput.value.trim() || "Imported Build" });
+    });
   });
 }
 
