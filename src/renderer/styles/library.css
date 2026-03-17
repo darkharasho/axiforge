@@ -816,7 +816,34 @@
   width: 18px;
   height: 18px;
   fill: currentColor;
-  display: block;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.lib-table__chevron {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  color: #667;
+  vertical-align: middle;
+  margin-right: 2px;
+}
+
+.lib-table__chevron:hover {
+  color: #aab;
+}
+
+.lib-table__chevron svg {
+  width: 14px;
+  height: 14px;
+}
+
+.lib-table__row--folder {
+  cursor: pointer;
+}
+
+.lib-table__row--folder:hover {
+  background: #151535;
 }
 
 .lib-table__td--name {
