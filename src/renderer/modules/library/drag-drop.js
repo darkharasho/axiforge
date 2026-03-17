@@ -29,10 +29,6 @@ export function wireDragDropEvents() {
 
 function _wireBuildDraggables() {
   document.querySelectorAll("[data-build-id]").forEach((el) => {
-    // Avoid double-binding
-    if (el.dataset.dragBound) return;
-    el.dataset.dragBound = "1";
-
     el.draggable = true;
 
     el.addEventListener("dragstart", (e) => {
