@@ -98,6 +98,17 @@ function _wireFolderDropTargets() {
       _makeDropTarget(el, folderId);
     }
   });
+
+  // Sidebar "All Builds" — drop here to move to root
+  document.querySelectorAll("[data-navigate-all]").forEach((el) => {
+    _makeDropTarget(el, null);
+  });
+
+  // Content area itself — drop on empty space to move to root
+  const content = document.getElementById("lib-content");
+  if (content) {
+    _makeDropTarget(content, null);
+  }
 }
 
 function _makeDropTarget(el, folderId) {
