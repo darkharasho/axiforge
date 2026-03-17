@@ -47,6 +47,45 @@ class BuildStore {
     await this.#writeJson(this.buildsPath, filtered);
   }
 
+  async moveBuilds(ids, folderId) {
+    const builds = await this.#readJson(this.buildsPath, []);
+    for (const build of builds) {
+      if (ids.includes(build.id)) {
+        build.folderId = folderId;
+      }
+    }
+    await this.#writeJson(this.buildsPath, builds);
+  }
+
+  async pinBuilds(ids, pinned) {
+    const builds = await this.#readJson(this.buildsPath, []);
+    for (const build of builds) {
+      if (ids.includes(build.id)) {
+        build.pinned = Boolean(pinned);
+      }
+    }
+    await this.#writeJson(this.buildsPath, builds);
+  }
+
+  async reorderBuilds(updates) {
+    const builds = await this.#readJson(this.buildsPath, []);
+    for (const { id, sortOrder } of updates) {
+      const build = builds.find((b) => b.id === id);
+      if (build) build.sortOrder = sortOrder;
+    }
+    await this.#writeJson(this.buildsPath, builds);
+  }
+
+  async clearFolderFromBuilds(folderIds) {
+    const builds = await this.#readJson(this.buildsPath, []);
+    for (const build of builds) {
+      if (folderIds.includes(build.folderId)) {
+        build.folderId = null;
+      }
+    }
+    await this.#writeJson(this.buildsPath, builds);
+  }
+
   async getAuth() {
     return this.#readJson(this.authPath, {});
   }
@@ -115,6 +154,32 @@ function normalizeBuild(input, fallbackCreatedAt) {
     publishedSlug: asString(input.publishedSlug, 200),
     publishedFileId: asString(input.publishedFileId, 20),
     publishedKey: asString(input.publishedKey, 100),
+    // Library organization fields
+    folderId:
+      typeof input.folderId === "string" ? input.folderId : null,
+    pinned: Boolean(input.pinned),
+    sortOrder:
+      typeof input.sortOrder === "number" && Number.isFinite(input.sortOrder)
+        ? input.sortOrder
+        : 0,
+    // Profession-specific fields (Revenant legends, Ranger pets, etc.)
+    selectedLegends: Array.isArray(input.selectedLegends)
+      ? input.selectedLegends.slice(0, 2).map((v) => asString(v, 20))
+      : ["", ""],
+    selectedUnderwaterLegends: Array.isArray(input.selectedUnderwaterLegends)
+      ? input.selectedUnderwaterLegends.slice(0, 2).map((v) => asString(v, 20))
+      : ["", ""],
+    activeLegendSlot:
+      input.activeLegendSlot === 1 ? 1 : 0,
+    selectedPets: {
+      terrestrial1: Number(input.selectedPets?.terrestrial1) || 0,
+      terrestrial2: Number(input.selectedPets?.terrestrial2) || 0,
+      aquatic1: Number(input.selectedPets?.aquatic1) || 0,
+      aquatic2: Number(input.selectedPets?.aquatic2) || 0,
+    },
+    morphSkillIds: Array.isArray(input.morphSkillIds)
+      ? input.morphSkillIds.slice(0, 3).map((v) => Number(v) || 0)
+      : [0, 0, 0],
   };
 }
 

@@ -18,8 +18,19 @@ export const state = {
   },
   builds: [],
   professions: [],
-  activePage: "editor",
+  activePage: "library",
   buildSearch: "",
+  // Library state
+  folders: [],
+  currentFolder: null,      // { type: "smart"|"custom", id: string } or null (root)
+  libraryPrefs: {
+    viewMode: "list",
+    sortField: "sortOrder",
+    sortDirection: "asc",
+    sidebarOpen: true,
+    sidebarExpandedFolders: [],
+    activeFilters: {},
+  },
   skillSearch: "",
   catalogCache: new Map(),
   activeCatalog: null,

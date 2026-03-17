@@ -359,6 +359,9 @@ export function renderTargetPicker(container) {
 // renderBuildList
 // ---------------------------------------------------------------------------
 export function renderBuildList() {
+  // New library module handles rendering when present
+  if (document.getElementById("lib-content")) return;
+
   const query = state.buildSearch;
   const visible = state.builds
     .filter((build) => matchesBuildQuery(build, query))

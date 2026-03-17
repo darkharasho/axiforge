@@ -2,6 +2,7 @@ const path = require("node:path");
 require("dotenv").config({ path: path.resolve(__dirname, "../../.env") });
 const { app, BrowserWindow, ipcMain, dialog, clipboard } = require("electron");
 const { BuildStore } = require("./buildStore");
+const { FolderStore } = require("./folderStore");
 const { beginGitHubDeviceAuth, completeGitHubDeviceAuth } = require("./githubAuth");
 const {
   TARGET_REPO,
@@ -29,7 +30,9 @@ if (IS_DEV_PROFILE) {
   app.setPath("userData", devUserData);
 }
 
-const store = new BuildStore(path.join(app.getPath("userData"), "data"));
+const dataDir = path.join(app.getPath("userData"), "data");
+const store = new BuildStore(dataDir);
+const folderStore = new FolderStore(dataDir);
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -89,8 +92,16 @@ async function getSession() {
   try {
     const viewer = await getViewer(auth.token);
     return { token: auth.token, viewer };
-  } catch {
-    await store.clearAuth();
+  } catch (err) {
+    if (err?.status === 401) {
+      await store.clearAuth();
+      return null;
+    }
+    // Network error or transient GitHub failure — keep the token,
+    // fall back to the cached viewer so the session stays alive.
+    if (auth.viewer) {
+      return { token: auth.token, viewer: auth.viewer };
+    }
     return null;
   }
 }
@@ -146,6 +157,7 @@ async function getOnboardingStatus() {
 
 app.whenReady().then(async () => {
   await store.init();
+  await folderStore.init();
   const win = createWindow();
   initAutoUpdate(win);
 
@@ -260,10 +272,81 @@ app.whenReady().then(async () => {
   });
 
   ipcMain.handle("builds:list", async () => store.listBuilds());
-  ipcMain.handle("builds:save", async (_e, build) => store.upsertBuild(build));
+  ipcMain.handle("builds:save", async (_e, build) => {
+    const saved = await store.upsertBuild(build);
+    // Touch the folder this build belongs to
+    if (saved.folderId) {
+      await folderStore.touchFolders([saved.folderId]);
+    }
+    return saved;
+  });
   ipcMain.handle("builds:delete", async (_e, id) => {
+    // Check which folder this build is in before deleting
+    const builds = await store.listBuilds();
+    const build = builds.find((b) => b.id === id);
+    const folderId = build?.folderId;
     await store.deleteBuild(id);
+    if (folderId) {
+      await folderStore.touchFolders([folderId]);
+    }
     return true;
+  });
+
+  // Folder CRUD
+  ipcMain.handle("folders:list", () => folderStore.listFolders());
+  ipcMain.handle("folders:save", (_e, folder) =>
+    folderStore.upsertFolder(folder),
+  );
+  ipcMain.handle("folders:delete", async (_e, id) => {
+    const deletedIds = await folderStore.deleteFolder(id);
+    if (deletedIds.length) {
+      await store.clearFolderFromBuilds(deletedIds);
+    }
+    return deletedIds;
+  });
+  ipcMain.handle("folders:reorder", (_e, updates) =>
+    folderStore.reorderFolders(updates),
+  );
+
+  // Build library operations
+  ipcMain.handle("builds:move", async (_e, ids, folderId) => {
+    if (folderId !== null) {
+      const exists = await folderStore.folderExists(folderId);
+      if (!exists) throw new Error(`Folder not found: ${folderId}`);
+    }
+    // Collect source folders before move
+    const builds = await store.listBuilds();
+    const sourceFolderIds = [...new Set(
+      builds.filter((b) => ids.includes(b.id) && b.folderId).map((b) => b.folderId)
+    )];
+    await store.moveBuilds(ids, folderId);
+    // Touch source and destination folders
+    const touchIds = [...sourceFolderIds];
+    if (folderId) touchIds.push(folderId);
+    if (touchIds.length) await folderStore.touchFolders([...new Set(touchIds)]);
+  });
+  ipcMain.handle("builds:pin", (_e, ids, pinned) =>
+    store.pinBuilds(ids, pinned),
+  );
+  ipcMain.handle("builds:reorder", (_e, updates) =>
+    store.reorderBuilds(updates),
+  );
+  ipcMain.handle("builds:generate-chat-link", async (_e, build) => {
+    const { generateChatLink } = require("./buildChatLink.js");
+    return generateChatLink(build);
+  });
+  ipcMain.handle("builds:prewarm-chat-links", async (_e, builds) => {
+    const { prewarmChatLinks } = require("./buildChatLink.js");
+    prewarmChatLinks(builds); // fire-and-forget
+  });
+  ipcMain.handle("builds:preview-chat-link", async (_e, link) => {
+    const { previewChatLink } = require("./buildChatLink.js");
+    return previewChatLink(link);
+  });
+  ipcMain.handle("builds:import-chat-link", async (_e, link, name, folderId, gameMode) => {
+    const { decodeChatLinkToBuild } = require("./buildChatLink.js");
+    const build = await decodeChatLinkToBuild(link, name, folderId, gameMode);
+    return store.upsertBuild(build);
   });
 
   ipcMain.handle("builds:publish-build", async (event, buildId) => {

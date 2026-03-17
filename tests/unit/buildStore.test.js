@@ -761,6 +761,187 @@ describe("BuildStore — publish metadata", () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// New library fields
+// ---------------------------------------------------------------------------
+
+describe("BuildStore — library fields", () => {
+  let store, dir;
+  beforeEach(async () => ({ store, dir } = await makeTempStore()));
+  afterEach(async () => cleanupDir(dir));
+
+  test("normalizeBuild adds folderId, pinned, sortOrder defaults", async () => {
+    const saved = await store.upsertBuild(makeBuild());
+    const builds = await store.listBuilds();
+    const build = builds.find((b) => b.id === saved.id);
+    expect(build.folderId).toBe(null);
+    expect(build.pinned).toBe(false);
+    expect(build.sortOrder).toBe(0);
+  });
+
+  test("preserves folderId when set", async () => {
+    const saved = await store.upsertBuild(
+      makeBuild({ folderId: "folder-123" }),
+    );
+    const builds = await store.listBuilds();
+    const build = builds.find((b) => b.id === saved.id);
+    expect(build.folderId).toBe("folder-123");
+  });
+
+  test("preserves pinned when true", async () => {
+    const saved = await store.upsertBuild(makeBuild({ pinned: true }));
+    const builds = await store.listBuilds();
+    const build = builds.find((b) => b.id === saved.id);
+    expect(build.pinned).toBe(true);
+  });
+
+  test("preserves sortOrder when set", async () => {
+    const saved = await store.upsertBuild(makeBuild({ sortOrder: 5 }));
+    const builds = await store.listBuilds();
+    const build = builds.find((b) => b.id === saved.id);
+    expect(build.sortOrder).toBe(5);
+  });
+
+  test("coerces non-boolean pinned to boolean", async () => {
+    const saved = await store.upsertBuild(makeBuild({ pinned: "yes" }));
+    const builds = await store.listBuilds();
+    const build = builds.find((b) => b.id === saved.id);
+    expect(build.pinned).toBe(true);
+  });
+
+  test("coerces non-number sortOrder to 0", async () => {
+    const saved = await store.upsertBuild(makeBuild({ sortOrder: "abc" }));
+    const builds = await store.listBuilds();
+    const build = builds.find((b) => b.id === saved.id);
+    expect(build.sortOrder).toBe(0);
+  });
+});
+
+describe("BuildStore — move builds", () => {
+  let store, dir;
+  beforeEach(async () => ({ store, dir } = await makeTempStore()));
+  afterEach(async () => cleanupDir(dir));
+
+  test("moveBuilds updates folderId for given build ids", async () => {
+    const b1 = await store.upsertBuild(makeBuild({ title: "B1" }));
+    const b2 = await store.upsertBuild(makeBuild({ title: "B2" }));
+    await store.moveBuilds([b1.id, b2.id], "folder-abc");
+    const builds = await store.listBuilds();
+    expect(builds.find((b) => b.id === b1.id).folderId).toBe("folder-abc");
+    expect(builds.find((b) => b.id === b2.id).folderId).toBe("folder-abc");
+  });
+
+  test("moveBuilds with null moves to root", async () => {
+    const b1 = await store.upsertBuild(
+      makeBuild({ title: "B1", folderId: "folder-abc" }),
+    );
+    await store.moveBuilds([b1.id], null);
+    const builds = await store.listBuilds();
+    expect(builds.find((b) => b.id === b1.id).folderId).toBe(null);
+  });
+
+  test("clearFolderFromBuilds sets folderId to null for matching builds", async () => {
+    const b1 = await store.upsertBuild(
+      makeBuild({ title: "B1", folderId: "folder-abc" }),
+    );
+    const b2 = await store.upsertBuild(
+      makeBuild({ title: "B2", folderId: "folder-xyz" }),
+    );
+    await store.clearFolderFromBuilds(["folder-abc"]);
+    const builds = await store.listBuilds();
+    expect(builds.find((b) => b.id === b1.id).folderId).toBe(null);
+    expect(builds.find((b) => b.id === b2.id).folderId).toBe("folder-xyz");
+  });
+});
+
+describe("BuildStore — pin builds", () => {
+  let store, dir;
+  beforeEach(async () => ({ store, dir } = await makeTempStore()));
+  afterEach(async () => cleanupDir(dir));
+
+  test("pinBuilds sets pinned to true", async () => {
+    const b1 = await store.upsertBuild(makeBuild());
+    await store.pinBuilds([b1.id], true);
+    const builds = await store.listBuilds();
+    expect(builds.find((b) => b.id === b1.id).pinned).toBe(true);
+  });
+
+  test("pinBuilds sets pinned to false (unpin)", async () => {
+    const b1 = await store.upsertBuild(makeBuild({ pinned: true }));
+    await store.pinBuilds([b1.id], false);
+    const builds = await store.listBuilds();
+    expect(builds.find((b) => b.id === b1.id).pinned).toBe(false);
+  });
+});
+
+describe("BuildStore — reorder builds", () => {
+  let store, dir;
+  beforeEach(async () => ({ store, dir } = await makeTempStore()));
+  afterEach(async () => cleanupDir(dir));
+
+  test("reorderBuilds updates sortOrder for batch", async () => {
+    const b1 = await store.upsertBuild(makeBuild({ title: "B1" }));
+    const b2 = await store.upsertBuild(makeBuild({ title: "B2" }));
+    await store.reorderBuilds([
+      { id: b1.id, sortOrder: 2 },
+      { id: b2.id, sortOrder: 1 },
+    ]);
+    const builds = await store.listBuilds();
+    expect(builds.find((b) => b.id === b1.id).sortOrder).toBe(2);
+    expect(builds.find((b) => b.id === b2.id).sortOrder).toBe(1);
+  });
+});
+
+describe("BuildStore — profession-specific persistence", () => {
+  let store, dir;
+  beforeEach(async () => ({ store, dir } = await makeTempStore()));
+  afterEach(async () => cleanupDir(dir));
+
+  it("persists selectedLegends on save", async () => {
+    const build = makeBuild({
+      selectedLegends: ["Legend1", "Legend7"],
+      selectedUnderwaterLegends: ["Legend3", "Legend4"],
+      activeLegendSlot: 1,
+    });
+    const saved = await store.upsertBuild(build);
+    expect(saved.selectedLegends).toEqual(["Legend1", "Legend7"]);
+    expect(saved.selectedUnderwaterLegends).toEqual(["Legend3", "Legend4"]);
+    expect(saved.activeLegendSlot).toBe(1);
+
+    const list = await store.listBuilds();
+    const found = list.find((b) => b.id === saved.id);
+    expect(found.selectedLegends).toEqual(["Legend1", "Legend7"]);
+  });
+
+  it("persists selectedPets on save", async () => {
+    const build = makeBuild({
+      selectedPets: { terrestrial1: 1, terrestrial2: 5, aquatic1: 12, aquatic2: 0 },
+    });
+    const saved = await store.upsertBuild(build);
+    expect(saved.selectedPets).toEqual({
+      terrestrial1: 1, terrestrial2: 5, aquatic1: 12, aquatic2: 0,
+    });
+  });
+
+  it("persists morphSkillIds on save", async () => {
+    const build = makeBuild({ morphSkillIds: [123, 456, 0] });
+    const saved = await store.upsertBuild(build);
+    expect(saved.morphSkillIds).toEqual([123, 456, 0]);
+  });
+
+  it("defaults missing profession-specific fields", async () => {
+    const build = makeBuild({});
+    const saved = await store.upsertBuild(build);
+    expect(saved.selectedLegends).toEqual(["", ""]);
+    expect(saved.selectedUnderwaterLegends).toEqual(["", ""]);
+    expect(saved.activeLegendSlot).toBe(0);
+    expect(saved.selectedPets).toEqual({
+      terrestrial1: 0, terrestrial2: 0, aquatic1: 0, aquatic2: 0,
+    });
+    expect(saved.morphSkillIds).toEqual([0, 0, 0]);
+  });
+});
+
 describe("BuildStore — gameMode normalization", () => {
   let dir;
 

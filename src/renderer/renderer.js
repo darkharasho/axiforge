@@ -44,6 +44,7 @@ import { resolveEntityFacts } from "./modules/detail-panel.js";
 import { initWikiModal, openWikiModal } from "./modules/wiki-modal.js";
 import { initDetailModal, openDetailModal } from "./modules/detail-modal.js";
 import { initConfirmModal } from "./modules/confirm-modal.js";
+import { initLibrary, renderLibrary, handleLibraryKeydown } from "./modules/library/library.js";
 
 // ── DOM element cache ────────────────────────────────────────────────────────
 
@@ -61,6 +62,7 @@ const el = {
   buildList:         q("#buildList"),
   buildSearch:       q("#buildSearch"),
   editorTitle:       q("#editorTitle"),
+  chatLinkBtn:       q("#chatLinkBtn"),
   professionSelect:  q("#professionSelect"),
   tagsInput:         q("#tagsInput"),
   equipmentPanel:    q("#equipmentPanel"),
@@ -295,6 +297,18 @@ async function init() {
   renderEditorForm();
   await refreshOnboardingStatus();
 
+  await initLibrary({
+    navigateToPage,
+    loadBuildIntoEditor,
+    startNewBuild,
+    confirmDiscardDirty,
+    saveCurrentBuild,
+    duplicateCurrentBuild,
+    copyBuildJsonToClipboard,
+    importBuildJsonFromClipboard,
+    render,
+  });
+
   if (state.builds.length) {
     await loadBuildIntoEditor(state.builds[0], { captureBaseline: true });
   } else if (state.professions.length) {
@@ -306,6 +320,11 @@ async function init() {
   await refreshWindowControls();
   render();
   syncGameModeToggleUI(state.editor.gameMode || "pve");
+
+  // Render library if it's the default/active page on startup
+  if (state.activePage === "library") {
+    renderLibrary();
+  }
 }
 
 // ── Build operations ─────────────────────────────────────────────────────────
@@ -340,6 +359,7 @@ async function saveCurrentBuild() {
     render();
     syncGameModeToggleUI(state.editor.gameMode || "pve");
     setPublishStatus("");
+    window.desktopApi.prewarmChatLinks?.([saved]);
   } catch (err) {
     showError(err);
   }
@@ -515,6 +535,10 @@ function navigateToPage(page) {
   if (target) target.classList.remove("hidden");
   // Show/hide subnav for editor page
   el.subnav.classList.toggle("subnav--visible", page === "editor");
+  // Render library when navigating to library page
+  if (page === "library") {
+    renderLibrary();
+  }
   // Redraw spec connectors when editor page becomes visible (they need layout dimensions)
   if (page === "editor") {
     requestAnimationFrame(() => {
@@ -537,7 +561,7 @@ function wireEvents() {
     markEditorChanged();
   });
 
-  el.newBuildBtn.addEventListener("click", async () => {
+  el.newBuildBtn?.addEventListener("click", async () => {
     await startNewBuild();
   });
 
@@ -561,6 +585,28 @@ function wireEvents() {
 
   el.pasteBuildBtn.addEventListener("click", async () => {
     await importBuildJsonFromClipboard();
+  });
+
+  // Chat link button
+  const chatLinkDefaultHTML = el.chatLinkBtn.innerHTML;
+  let chatLinkTimeout = null;
+  el.chatLinkBtn.addEventListener("click", async () => {
+    el.chatLinkBtn.classList.remove("title-input-group__btn--success", "title-input-group__btn--error");
+    const build = serializeEditorToBuild();
+    try {
+      const link = await window.desktopApi.generateChatLink(build);
+      await window.desktopApi.writeClipboardText(link);
+      el.chatLinkBtn.classList.add("title-input-group__btn--success");
+      el.chatLinkBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg> Copied!`;
+    } catch (err) {
+      el.chatLinkBtn.classList.add("title-input-group__btn--error");
+      el.chatLinkBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 18L18 6M6 6l12 12"/></svg> Failed`;
+    }
+    clearTimeout(chatLinkTimeout);
+    chatLinkTimeout = setTimeout(() => {
+      el.chatLinkBtn.classList.remove("title-input-group__btn--success", "title-input-group__btn--error");
+      el.chatLinkBtn.innerHTML = chatLinkDefaultHTML;
+    }, 2000);
   });
 
   // Overflow menu toggle
@@ -630,15 +676,21 @@ function wireEvents() {
     }
   });
 
-  el.buildSearch.addEventListener("input", () => {
-    state.buildSearch = String(el.buildSearch.value || "").trim().toLowerCase();
-    renderBuildList();
-  });
+  if (el.buildSearch) {
+    el.buildSearch.addEventListener("input", () => {
+      state.buildSearch = String(el.buildSearch.value || "").trim().toLowerCase();
+      renderBuildList();
+    });
+  }
 
   window.addEventListener("keydown", async (event) => {
     if (event.key === "Escape") {
       closeCustomSelect();
       hideHoverPreview();
+      return;
+    }
+    if (state.activePage === "library") {
+      handleLibraryKeydown(event);
       return;
     }
     const key = String(event.key || "").toLowerCase();
