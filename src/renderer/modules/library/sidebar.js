@@ -292,25 +292,45 @@ function bindSidebarEvents(container) {
 export function insertInlineInput(afterEl, defaultValue = "", options = {}) {
   const { fallbackName = "New Folder", container, className } = options;
 
+  // Detect if we're inserting into a table
+  const isTable = afterEl?.tagName === "TR" || afterEl?.closest("table") || container?.querySelector("table");
+
   return new Promise((resolve) => {
-    const row = document.createElement("div");
-    row.className = `lib-nav-item lib-nav-item--editing${className ? ` ${className}` : ""}`;
-    row.innerHTML = `
-      <span class="lib-nav-item__icon">${folderIcon}</span>
-      <input type="text" class="lib-inline-input" placeholder="${fallbackName}" value="" />
-    `;
+    let row;
+    if (isTable) {
+      // Find the table body to insert into
+      const tbody = afterEl?.closest("tbody") || container?.querySelector("tbody");
+      row = document.createElement("tr");
+      row.className = "lib-table__row lib-table__row--folder";
+      row.innerHTML = `
+        <td class="lib-table__td lib-table__td--pin"></td>
+        <td class="lib-table__td lib-table__td--icon"><span class="lib-table__folder-icon">${folderIcon}</span></td>
+        <td class="lib-table__td lib-table__td--name" colspan="7"><input type="text" class="lib-inline-input" placeholder="${fallbackName}" value="" /></td>
+      `;
+      if (afterEl?.tagName === "TR") {
+        afterEl.insertAdjacentElement("afterend", row);
+      } else if (tbody) {
+        tbody.appendChild(row);
+      }
+    } else {
+      row = document.createElement("div");
+      row.className = `lib-nav-item lib-nav-item--editing${className ? ` ${className}` : ""}`;
+      row.innerHTML = `
+        <span class="lib-nav-item__icon">${folderIcon}</span>
+        <input type="text" class="lib-inline-input" placeholder="${fallbackName}" value="" />
+      `;
+      if (container) {
+        container.appendChild(row);
+      } else if (afterEl) {
+        afterEl.insertAdjacentElement("afterend", row);
+      } else {
+        const section = document.querySelector(".lib-sidebar__section:last-child");
+        if (section) section.appendChild(row);
+      }
+    }
 
     const input = row.querySelector("input");
     input.value = defaultValue;
-
-    if (container) {
-      container.appendChild(row);
-    } else if (afterEl) {
-      afterEl.insertAdjacentElement("afterend", row);
-    } else {
-      const section = document.querySelector(".lib-sidebar__section:last-child");
-      if (section) section.appendChild(row);
-    }
 
     input.focus();
     if (defaultValue) input.select();
