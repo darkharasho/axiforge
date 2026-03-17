@@ -40,6 +40,7 @@ contextBridge.exposeInMainWorld("desktopApi", {
     ipcRenderer.invoke("builds:pin", ids, pinned),
   reorderBuilds: (updates) =>
     ipcRenderer.invoke("builds:reorder", updates),
+  generateChatLink: (build) => ipcRenderer.invoke("builds:generate-chat-link", build),
   listProfessions: () => ipcRenderer.invoke("gw2:list-professions"),
   getProfessionCatalog: (professionId, gameMode) =>
     ipcRenderer.invoke("gw2:get-profession-catalog", professionId, gameMode),

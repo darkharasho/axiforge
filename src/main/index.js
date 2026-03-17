@@ -331,6 +331,10 @@ app.whenReady().then(async () => {
   ipcMain.handle("builds:reorder", (_e, updates) =>
     store.reorderBuilds(updates),
   );
+  ipcMain.handle("builds:generate-chat-link", async (_e, build) => {
+    const { generateChatLink } = require("./buildChatLink.js");
+    return generateChatLink(build);
+  });
 
   ipcMain.handle("builds:publish-build", async (event, buildId) => {
     const sender = event.sender;
