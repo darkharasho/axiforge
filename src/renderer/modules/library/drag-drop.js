@@ -95,21 +95,20 @@ function _wireFolderDropTargets() {
   const content = document.getElementById("lib-content");
   if (!content) return;
 
-  // Use delegation on #lib-content for folder drop targets
+  // Use delegation on #lib-content for folder drop targets + global dragover
   if (content.dataset.folderDropBound) return;
   content.dataset.folderDropBound = "1";
 
+  // Always allow drops on #lib-content so the cursor never shows "denied"
   content.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+
     const folderEl = e.target.closest("[data-folder-id]");
     if (!folderEl) return;
 
-    // Check if this folder already has a SortableJS children container
-    // If so, SortableJS handles it — don't interfere
     const childrenUl = folderEl.querySelector(".lib-tv__children");
     if (childrenUl) return;
-
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
     folderEl.classList.add("lib-drop-target");
 
     // Auto-expand collapsed folders in table view after hovering 500ms
