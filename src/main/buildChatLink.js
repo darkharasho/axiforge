@@ -166,10 +166,12 @@ async function decodeChatLinkToBuild(link, name, folderId) {
   const decoded = await decodeBuildTemplate(link, { api });
 
   const specializations = decoded.specializations
-    .filter((s) => s.id !== 0)
-    .map((s) => ({
+    .map((s, i) => ({ s, i }))
+    .filter(({ s }) => s.id !== 0)
+    .map(({ s, i }) => ({
       id: s.id,
       name: s.name,
+      elite: i === 2,
       majorChoices: {
         1: s.traits[0]?.traitId || 0,
         2: s.traits[1]?.traitId || 0,
