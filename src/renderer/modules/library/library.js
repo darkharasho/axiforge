@@ -657,7 +657,7 @@ function showImportModal() {
         </div>
         <div class="confirm-modal__actions">
           <button class="confirm-modal__btn" data-action="cancel">Cancel</button>
-          <button class="confirm-modal__btn confirm-modal__btn--confirm" data-action="import" disabled>Import</button>
+          <button class="confirm-modal__btn confirm-modal__btn--primary" data-action="import" disabled>Import</button>
         </div>
       </div>
     `;

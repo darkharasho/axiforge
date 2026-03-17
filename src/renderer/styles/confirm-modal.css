@@ -127,3 +127,20 @@
   color: #f0909e;
   border-color: var(--danger);
 }
+
+.confirm-modal__btn--primary {
+  background: rgba(72, 168, 255, 0.15);
+  color: #48a8ff;
+  border-color: rgba(72, 168, 255, 0.4);
+}
+
+.confirm-modal__btn--primary:hover {
+  background: rgba(72, 168, 255, 0.3);
+  color: #7ac0ff;
+  border-color: #48a8ff;
+}
+
+.confirm-modal__btn--primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
