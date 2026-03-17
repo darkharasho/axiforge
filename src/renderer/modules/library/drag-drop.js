@@ -1,4 +1,6 @@
-// Library drag-and-drop module — HTML5 drag-and-drop for moving builds to folders.
+// Library drag-and-drop module.
+// Uses event delegation on #lib-content — a single set of handlers catches
+// all drag events regardless of how/when child elements are rendered.
 
 import { getSelection } from "./selection.js";
 import { moveBuilds } from "./folder-store.js";
@@ -7,108 +9,130 @@ import { state } from "../state.js";
 let _callbacks = {};
 let _draggedIds = [];
 let _rootDropZone = null;
+let _bound = false;
 
 export function initDragDrop(callbacks) {
   _callbacks = callbacks || {};
 }
 
 /**
- * Wire drag handlers on rendered elements.
- * Uses data-* flags to prevent duplicate binding since the container
- * element (#lib-content) persists across renders.
+ * Wire drag-drop via delegation. Only needs to be called once — the
+ * delegated handlers on #lib-content work for any child elements
+ * added later by renderContent().
  */
 export function wireDragDropEvents() {
-  // Build items — draggable sources
-  document.querySelectorAll("[data-build-id]").forEach((el) => {
-    if (el.dataset.dndBound) return;
-    el.dataset.dndBound = "1";
-    el.draggable = true;
+  const content = document.getElementById("lib-content");
+  if (!content || _bound) return;
+  _bound = true;
 
-    // Allow drag over build items so the cursor doesn't show "denied".
-    // Don't stopPropagation so the event bubbles to parent folder drop targets.
-    el.addEventListener("dragover", (e) => {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = "move";
-    });
-
-    el.addEventListener("dragstart", (e) => {
-      e.stopPropagation();
-      const buildId = el.dataset.buildId;
-      const sel = getSelection();
-      _draggedIds = (sel.length > 1 && sel.includes(buildId)) ? [...sel] : [buildId];
-
-      e.dataTransfer.setData("text/plain", JSON.stringify(_draggedIds));
-      e.dataTransfer.effectAllowed = "move";
-      el.classList.add("lib-dragging");
-
-      // Show root drop zone if this build is in a folder
-      if (state.builds.find((b) => b.id === buildId)?.folderId) {
-        _showRootDropZone();
-      }
-    });
-
-    el.addEventListener("dragend", () => {
-      el.classList.remove("lib-dragging");
-      document.querySelectorAll(".lib-drop-target").forEach((n) => n.classList.remove("lib-drop-target"));
-      _hideRootDropZone();
-      setTimeout(() => { _draggedIds = []; }, 50);
-    });
-  });
-
-  // Folder items — drop targets (content area + sidebar)
-  document.querySelectorAll("[data-folder-id]").forEach((el) => {
-    if (el.dataset.dropBound) return;
-    el.dataset.dropBound = "1";
-    _bindDropTarget(el, el.dataset.folderId);
-  });
-
-  document.querySelectorAll("[data-navigate-folder]").forEach((el) => {
-    if (el.dataset.dropBound) return;
-    el.dataset.dropBound = "1";
-    _bindDropTarget(el, el.dataset.navigateFolder);
-  });
-
-  // Sidebar "All Builds" — drop to move to root
-  document.querySelectorAll("[data-navigate-all]").forEach((el) => {
-    if (el.dataset.dropBound) return;
-    el.dataset.dropBound = "1";
-    _bindDropTarget(el, null);
-  });
-}
-
-function _bindDropTarget(el, folderId) {
-  el.addEventListener("dragover", (e) => {
+  // --- DRAGOVER: always allow drops everywhere in #lib-content ---
+  content.addEventListener("dragover", (e) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
-    el.classList.add("lib-drop-target");
-  });
 
-  el.addEventListener("dragleave", (e) => {
-    if (!el.contains(e.relatedTarget)) {
-      el.classList.remove("lib-drop-target");
+    // Highlight the nearest folder drop target
+    const folderEl = e.target.closest("[data-folder-id]");
+    // Remove previous highlights
+    content.querySelectorAll(".lib-drop-target").forEach((n) => n.classList.remove("lib-drop-target"));
+    if (folderEl) {
+      folderEl.classList.add("lib-drop-target");
     }
   });
 
-  el.addEventListener("drop", async (e) => {
-    el.classList.remove("lib-drop-target");
+  // --- DRAGSTART: on any [data-build-id][draggable] ---
+  content.addEventListener("dragstart", (e) => {
+    const buildEl = e.target.closest("[data-build-id]");
+    if (!buildEl) return;
+
+    const buildId = buildEl.dataset.buildId;
+    const sel = getSelection();
+    _draggedIds = (sel.length > 1 && sel.includes(buildId)) ? [...sel] : [buildId];
+
+    e.dataTransfer.setData("text/plain", JSON.stringify(_draggedIds));
+    e.dataTransfer.effectAllowed = "move";
+    buildEl.classList.add("lib-dragging");
+
+    // Show root drop zone if build is in a folder
+    if (state.builds.find((b) => b.id === buildId)?.folderId) {
+      _showRootDropZone();
+    }
+  });
+
+  // --- DRAGEND: clean up ---
+  content.addEventListener("dragend", (e) => {
+    const buildEl = e.target.closest("[data-build-id]");
+    if (buildEl) buildEl.classList.remove("lib-dragging");
+    content.querySelectorAll(".lib-drop-target").forEach((n) => n.classList.remove("lib-drop-target"));
+    _hideRootDropZone();
+    setTimeout(() => { _draggedIds = []; }, 50);
+  });
+
+  // --- DROP: delegate to folder or root ---
+  content.addEventListener("drop", async (e) => {
+    e.preventDefault();
+    content.querySelectorAll(".lib-drop-target").forEach((n) => n.classList.remove("lib-drop-target"));
+
     const ids = _getDragIds(e);
     if (!ids.length) return;
 
-    // Skip if builds already in this folder (let event bubble to parent)
-    if (folderId && ids.every((id) => state.builds.find((b) => b.id === id)?.folderId === folderId)) {
+    // Find the nearest folder drop target
+    const folderEl = e.target.closest("[data-folder-id]");
+    const targetFolderId = folderEl?.dataset.folderId || null;
+
+    // If dropping on the same folder the builds are already in, move to root instead
+    if (targetFolderId && ids.every((id) => state.builds.find((b) => b.id === id)?.folderId === targetFolderId)) {
+      // They're already here — don't do anything (root drop zone handles move-to-root)
       return;
     }
 
+    await moveBuilds(ids, targetFolderId);
+    _draggedIds = [];
+    _hideRootDropZone();
+    _callbacks.onRefresh?.();
+  });
+
+  // --- Also wire sidebar folder drop targets ---
+  _wireSidebarDropTargets();
+}
+
+function _wireSidebarDropTargets() {
+  const sidebar = document.getElementById("lib-sidebar");
+  if (!sidebar || sidebar.dataset.dndBound) return;
+  sidebar.dataset.dndBound = "1";
+
+  sidebar.addEventListener("dragover", (e) => {
+    const target = e.target.closest("[data-navigate-folder], [data-navigate-all]");
+    if (!target) return;
     e.preventDefault();
-    e.stopPropagation();
-    await moveBuilds(ids, folderId ?? null);
+    e.dataTransfer.dropEffect = "move";
+    target.classList.add("lib-drop-target");
+  });
+
+  sidebar.addEventListener("dragleave", (e) => {
+    const target = e.target.closest("[data-navigate-folder], [data-navigate-all]");
+    if (target && !target.contains(e.relatedTarget)) {
+      target.classList.remove("lib-drop-target");
+    }
+  });
+
+  sidebar.addEventListener("drop", async (e) => {
+    const target = e.target.closest("[data-navigate-folder], [data-navigate-all]");
+    if (!target) return;
+    e.preventDefault();
+    target.classList.remove("lib-drop-target");
+
+    const ids = _getDragIds(e);
+    if (!ids.length) return;
+
+    const folderId = target.dataset.navigateFolder || null;
+    await moveBuilds(ids, folderId);
     _draggedIds = [];
     _hideRootDropZone();
     _callbacks.onRefresh?.();
   });
 }
 
-// ─── Root drop zone (visible bar at top during drag-from-folder) ───────────────
+// --- Root drop zone ---
 
 function _showRootDropZone() {
   if (_rootDropZone) return;
