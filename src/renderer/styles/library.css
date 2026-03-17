@@ -856,6 +856,19 @@
   fill: currentColor;
 }
 
+.lib-table__inline-icon {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+
+.lib-table__inline-icon svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+
 .lib-table__row--folder {
   cursor: pointer;
 }

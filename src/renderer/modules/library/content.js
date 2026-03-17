@@ -247,8 +247,12 @@ function renderTableView(container) {
     return `
       <tr class="lib-table__row lib-table__row--build ${b.pinned ? "lib-table__row--pinned" : ""}" data-build-id="${escapeHtml(b.id)}">
         <td class="lib-table__td lib-table__td--pin">${pinStarHtml(b)}</td>
-        <td class="lib-table__td lib-table__td--icon ${profClass(b.profession)}">${getSpecIcon(b)}</td>
-        <td class="lib-table__td lib-table__td--name" ${indent ? `style="padding-left:${indent}px"` : ""}>${escapeHtml(b.title || "Untitled")}</td>
+        ${indent
+          ? `<td class="lib-table__td lib-table__td--icon"></td>
+             <td class="lib-table__td lib-table__td--name" style="padding-left:${indent}px"><span class="lib-table__inline-icon ${profClass(b.profession)}">${getSpecIcon(b)}</span> ${escapeHtml(b.title || "Untitled")}</td>`
+          : `<td class="lib-table__td lib-table__td--icon ${profClass(b.profession)}">${getSpecIcon(b)}</td>
+             <td class="lib-table__td lib-table__td--name">${escapeHtml(b.title || "Untitled")}</td>`
+        }
         <td class="lib-table__td lib-table__td--profession">${escapeHtml(b.profession || "")}</td>
         <td class="lib-table__td lib-table__td--spec">${escapeHtml(eliteSpec || "")}</td>
         <td class="lib-table__td lib-table__td--mode">${escapeHtml(gameModeLabel(b.gameMode || "pve"))}</td>
