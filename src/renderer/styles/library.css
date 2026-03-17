@@ -187,6 +187,50 @@
   height: 13px;
 }
 
+/* Import dropdown */
+.lib-import-dropdown {
+  position: relative;
+}
+.lib-import-dropdown__menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 140px;
+  background: #1a1a3a;
+  border: 1px solid #303060;
+  border-radius: 6px;
+  padding: 4px 0;
+  z-index: 200;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+.lib-import-dropdown--open .lib-import-dropdown__menu {
+  display: block;
+}
+.lib-import-dropdown__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 14px;
+  background: none;
+  border: none;
+  color: #ccd;
+  font-size: 0.85rem;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.lib-import-dropdown__item:hover {
+  background: rgba(255,255,255,0.06);
+}
+.lib-import-dropdown__item svg {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+  color: #889;
+}
+
 /* Breadcrumb */
 .lib-breadcrumb__item {
   background: none;
@@ -1466,3 +1510,22 @@
 }
 .lib-toast--success { border-color: var(--accent); color: var(--accent); }
 .lib-toast--error   { border-color: var(--danger);  color: var(--danger);  }
+.lib-toast--loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted, #889);
+}
+.lib-toast--loading::before {
+  content: "";
+  width: 12px;
+  height: 12px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: lib-toast-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes lib-toast-spin {
+  to { transform: rotate(360deg); }
+}

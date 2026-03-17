@@ -17,6 +17,7 @@ import {
   xMarkIcon,
   checkIcon,
   arrowDownTrayIcon,
+  linkIcon,
 } from "./heroicons.js";
 
 let _callbacks = {};
@@ -67,9 +68,19 @@ export function renderToolbar() {
       <div class="lib-toolbar__view-toggle" role="group" aria-label="View mode">
         ${renderViewToggle(prefs.viewMode)}
       </div>
-      <button type="button" id="lib-import-btn" class="btn lib-toolbar__new-btn">
-        ${arrowDownTrayIcon} Import
-      </button>
+      <div class="lib-import-dropdown" id="lib-import-dropdown">
+        <button type="button" id="lib-import-btn" class="btn lib-toolbar__new-btn lib-import-dropdown__trigger">
+          ${arrowDownTrayIcon} Import
+        </button>
+        <div class="lib-import-dropdown__menu" id="lib-import-menu">
+          <button type="button" class="lib-import-dropdown__item" data-import-type="chatlink">
+            ${linkIcon} Build Link
+          </button>
+          <button type="button" class="lib-import-dropdown__item" data-import-type="gw2skills">
+            ${arrowDownTrayIcon} GW2Skills
+          </button>
+        </div>
+      </div>
       <button type="button" id="lib-new-build-btn" class="btn btn-primary lib-toolbar__new-btn">
         ${plusIcon} New
       </button>
@@ -334,9 +345,28 @@ function bindToolbarEvents(container) {
     });
   });
 
-  // Import button
-  container.querySelector("#lib-import-btn")?.addEventListener("click", () => {
-    _callbacks.onImportChatLink?.();
+  // Import dropdown
+  const importDropdown = container.querySelector("#lib-import-dropdown");
+  const importMenu = container.querySelector("#lib-import-menu");
+  container.querySelector("#lib-import-btn")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const isOpen = importDropdown.classList.toggle("lib-import-dropdown--open");
+    if (isOpen) {
+      const closeHandler = (evt) => {
+        if (!importDropdown.contains(evt.target)) {
+          importDropdown.classList.remove("lib-import-dropdown--open");
+          document.removeEventListener("click", closeHandler);
+        }
+      };
+      setTimeout(() => document.addEventListener("click", closeHandler), 0);
+    }
+  });
+  importMenu?.querySelectorAll("[data-import-type]").forEach((item) => {
+    item.addEventListener("click", () => {
+      importDropdown.classList.remove("lib-import-dropdown--open");
+      if (item.dataset.importType === "chatlink") _callbacks.onImportChatLink?.();
+      else if (item.dataset.importType === "gw2skills") _callbacks.onImportGw2Skills?.();
+    });
   });
 
   // New build button

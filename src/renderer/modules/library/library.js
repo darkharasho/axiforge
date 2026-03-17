@@ -297,9 +297,11 @@ function showToast(message, type = "success") {
   void _toastEl.offsetWidth;
   _toastEl.classList.add("lib-toast--visible");
   clearTimeout(_toastTimer);
-  _toastTimer = setTimeout(() => {
-    _toastEl.classList.remove("lib-toast--visible");
-  }, 2000);
+  if (type !== "loading") {
+    _toastTimer = setTimeout(() => {
+      _toastEl.classList.remove("lib-toast--visible");
+    }, 2000);
+  }
 }
 
 async function handleCopyChatLink(buildId) {
@@ -329,6 +331,24 @@ async function handleImportChatLink() {
   } catch (err) {
     console.error("Import failed:", err);
     showToast("Import failed", "error");
+  }
+}
+
+async function handleImportGw2Skills() {
+  const folderId = state.currentFolder || null;
+  const result = await showGw2SkillsImportModal();
+  if (!result) return;
+  showToast("Importing from GW2Skills\u2026", "loading");
+  try {
+    const gameMode = state.editor?.gameMode || "pve";
+    const saved = await window.desktopApi.importGw2Skills(result.url, result.name, folderId, gameMode);
+    state.builds = await window.desktopApi.listBuilds();
+    renderLibrary();
+    window.desktopApi.prewarmChatLinks?.([saved]);
+    showToast(`"${saved.title}" imported`);
+  } catch (err) {
+    console.error("GW2Skills import failed:", err);
+    showToast("GW2Skills import failed", "error");
   }
 }
 
@@ -555,6 +575,7 @@ function _buildSharedCallbacks() {
     onCopyJson: handleCopyJson,
     onCopyChatLink: handleCopyChatLink,
     onImportChatLink: handleImportChatLink,
+    onImportGw2Skills: handleImportGw2Skills,
     onExportJson: handleCopyJson,
     onPasteJson: handlePasteJson,
     onPublish: handlePublish,
@@ -727,6 +748,97 @@ function showImportModal() {
     importBtn.addEventListener("click", () => {
       dismiss({ link: linkInput.value.trim(), name: nameInput.value.trim() || "Imported Build" });
     });
+  });
+}
+
+function showGw2SkillsImportModal() {
+  return new Promise((resolve) => {
+    const overlay = document.createElement("div");
+    overlay.className = "confirm-modal-overlay";
+    overlay.innerHTML = `
+      <div class="confirm-modal" style="width:460px;max-width:90vw;">
+        <div class="confirm-modal__header">
+          <h3 class="confirm-modal__title">Import from GW2Skills</h3>
+        </div>
+        <div class="confirm-modal__body" style="display:flex;flex-direction:column;gap:10px;">
+          <div>
+            <label style="display:block;font-size:0.8rem;color:#889;margin-bottom:4px;">GW2Skills URL</label>
+            <input
+              type="text"
+              id="gw2s-url-input"
+              placeholder="https://gw2skills.net/editor/?..."
+              style="width:100%;padding:6px 8px;background:#151530;border:1px solid #303060;border-radius:4px;color:#ccd;font-size:0.9rem;outline:none;box-sizing:border-box;"
+            />
+            <div id="gw2s-url-status" style="font-size:0.75rem;min-height:1.2em;margin-top:3px;color:#556;"></div>
+          </div>
+          <div>
+            <label style="display:block;font-size:0.8rem;color:#889;margin-bottom:4px;">Build Name</label>
+            <input
+              type="text"
+              id="gw2s-name-input"
+              placeholder="Build name"
+              style="width:100%;padding:6px 8px;background:#151530;border:1px solid #303060;border-radius:4px;color:#ccd;font-size:0.9rem;outline:none;box-sizing:border-box;"
+            />
+          </div>
+        </div>
+        <div class="confirm-modal__actions">
+          <button class="confirm-modal__btn" data-action="cancel">Cancel</button>
+          <button class="confirm-modal__btn confirm-modal__btn--primary" data-action="import" disabled>Import</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    const urlInput = overlay.querySelector("#gw2s-url-input");
+    const nameInput = overlay.querySelector("#gw2s-name-input");
+    const statusEl = overlay.querySelector("#gw2s-url-status");
+    const importBtn = overlay.querySelector('[data-action="import"]');
+    let urlValid = false;
+
+    urlInput.focus();
+
+    function setStatus(msg, color) {
+      statusEl.textContent = msg;
+      statusEl.style.color = color;
+    }
+
+    urlInput.addEventListener("input", () => {
+      const val = urlInput.value.trim();
+      importBtn.disabled = true;
+      urlValid = false;
+      if (!val) { setStatus("", "#556"); return; }
+      if (!val.includes("gw2skills.net/editor/?") || val.split("?")[1]?.length < 5) {
+        setStatus("Not a valid GW2Skills URL", "#c55");
+        return;
+      }
+      setStatus("\u2713 Valid GW2Skills URL", "#5a5");
+      urlValid = true;
+      importBtn.disabled = false;
+    });
+
+    nameInput.addEventListener("input", () => {
+      nameInput.dataset.autoFilled = "0";
+    });
+
+    function dismiss(result) {
+      document.removeEventListener("keydown", onKey);
+      overlay.remove();
+      resolve(result);
+    }
+
+    function onKey(e) {
+      if (e.key === "Escape") dismiss(null);
+      if (e.key === "Enter" && urlValid) {
+        dismiss({ url: urlInput.value.trim(), name: nameInput.value.trim() || "Imported Build" });
+      }
+    }
+
+    document.addEventListener("keydown", onKey);
+    overlay.querySelector('[data-action="cancel"]').addEventListener("click", () => dismiss(null));
+    importBtn.addEventListener("click", () => {
+      dismiss({ url: urlInput.value.trim(), name: nameInput.value.trim() || "Imported Build" });
+    });
+    overlay.addEventListener("click", (e) => { if (e.target === overlay) dismiss(null); });
   });
 }
 
