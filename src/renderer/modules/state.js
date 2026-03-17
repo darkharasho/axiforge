@@ -25,8 +25,8 @@ export const state = {
   currentFolder: null,      // { type: "smart"|"custom", id: string } or null (root)
   libraryPrefs: {
     viewMode: "list",
-    sortField: "updatedAt",
-    sortDirection: "desc",
+    sortField: "sortOrder",
+    sortDirection: "asc",
     sidebarOpen: true,
     sidebarExpandedFolders: [],
     activeFilters: {},
