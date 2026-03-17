@@ -510,28 +510,27 @@
 
 .lib-pill--prof {
   color: #fff;
-  border: none;
 }
-.lib-pill--prof.lib-prof--guardian     { background: #4a7acc; }
-.lib-pill--prof.lib-prof--warrior      { background: #b36a22; }
-.lib-pill--prof.lib-prof--necromancer  { background: #2e8a52; }
-.lib-pill--prof.lib-prof--engineer     { background: #8a6030; }
-.lib-pill--prof.lib-prof--ranger       { background: #4a8a2e; }
-.lib-pill--prof.lib-prof--thief        { background: #8a3a44; }
-.lib-pill--prof.lib-prof--mesmer       { background: #7a4a99; }
-.lib-pill--prof.lib-prof--elementalist { background: #993333; }
-.lib-pill--prof.lib-prof--revenant     { background: #7a4433; }
-.lib-pill--prof.lib-prof--unknown      { background: #555; }
+.lib-pill--prof.lib-prof--guardian     { background: rgba(110, 168, 255, 0.18); border: 1px solid rgba(110, 168, 255, 0.5); color: #fff; }
+.lib-pill--prof.lib-prof--warrior      { background: rgba(255, 153, 68, 0.18);  border: 1px solid rgba(255, 153, 68, 0.5);  color: #fff; }
+.lib-pill--prof.lib-prof--necromancer  { background: rgba(77, 202, 122, 0.18);  border: 1px solid rgba(77, 202, 122, 0.5);  color: #fff; }
+.lib-pill--prof.lib-prof--engineer     { background: rgba(204, 136, 68, 0.18);  border: 1px solid rgba(204, 136, 68, 0.5);  color: #fff; }
+.lib-pill--prof.lib-prof--ranger       { background: rgba(119, 204, 85, 0.18);  border: 1px solid rgba(119, 204, 85, 0.5);  color: #fff; }
+.lib-pill--prof.lib-prof--thief        { background: rgba(204, 102, 119, 0.18); border: 1px solid rgba(204, 102, 119, 0.5); color: #fff; }
+.lib-pill--prof.lib-prof--mesmer       { background: rgba(176, 122, 204, 0.18); border: 1px solid rgba(176, 122, 204, 0.5); color: #fff; }
+.lib-pill--prof.lib-prof--elementalist { background: rgba(221, 85, 85, 0.18);   border: 1px solid rgba(221, 85, 85, 0.5);   color: #fff; }
+.lib-pill--prof.lib-prof--revenant     { background: rgba(170, 102, 85, 0.18);  border: 1px solid rgba(170, 102, 85, 0.5);  color: #fff; }
+.lib-pill--prof.lib-prof--unknown      { background: rgba(136, 136, 136, 0.18); border: 1px solid rgba(136, 136, 136, 0.5); color: #fff; }
 
 .lib-pill--mode {
-  background: #2a4a7a;
-  border: none;
+  background: rgba(72, 168, 255, 0.15);
+  border: 1px solid rgba(72, 168, 255, 0.45);
   color: #fff;
 }
 
 .lib-pill--spec {
-  background: #5a3580;
-  border: none;
+  background: rgba(160, 100, 220, 0.15);
+  border: 1px solid rgba(160, 100, 220, 0.45);
   color: #fff;
 }
 
