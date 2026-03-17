@@ -393,7 +393,8 @@ function bindContentEvents(container) {
   container.querySelectorAll("[data-folder-id]").forEach((el) => {
     // Tree view rows have a chevron toggle; single-click the row to toggle instead
     if (el.closest(".lib-tv")) {
-      el.addEventListener("click", () => {
+      el.addEventListener("click", (e) => {
+        e.stopPropagation();
         const folderId = el.dataset.folderId;
         if (_tableExpandedFolders.has(folderId)) {
           _tableExpandedFolders.delete(folderId);
