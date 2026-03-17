@@ -17,15 +17,15 @@ function mapBuildToTemplateInput(build) {
   const specializations = [];
   for (let i = 0; i < 3; i++) {
     const spec = specs[i];
-    if (!spec || !spec.id) {
+    if (!spec || spec.id == null) {
       specializations.push({ id: null });
     } else {
       specializations.push({
         id: Number(spec.id),
         traits: [
-          spec.majorChoices?.[1] ? Number(spec.majorChoices[1]) : undefined,
-          spec.majorChoices?.[2] ? Number(spec.majorChoices[2]) : undefined,
-          spec.majorChoices?.[3] ? Number(spec.majorChoices[3]) : undefined,
+          spec.majorChoices?.[1] != null ? Number(spec.majorChoices[1]) : undefined,
+          spec.majorChoices?.[2] != null ? Number(spec.majorChoices[2]) : undefined,
+          spec.majorChoices?.[3] != null ? Number(spec.majorChoices[3]) : undefined,
         ],
       });
     }

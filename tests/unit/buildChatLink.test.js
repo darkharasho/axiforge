@@ -42,6 +42,17 @@ describe("mapBuildToTemplateInput", () => {
     ]);
   });
 
+  it("preserves trait ID 0 as a valid trait", () => {
+    const build = {
+      ...baseBuild,
+      specializations: [
+        { id: 42, majorChoices: { 1: 0, 2: 567, 3: 568 } },
+      ],
+    };
+    const input = mapBuildToTemplateInput(build);
+    expect(input.specializations[0].traits[0]).toBe(0);
+  });
+
   it("pads specializations to 3 when fewer exist", () => {
     const build = { ...baseBuild, specializations: [{ id: 42, majorChoices: { 1: 566, 2: 567, 3: 568 } }] };
     const input = mapBuildToTemplateInput(build);
