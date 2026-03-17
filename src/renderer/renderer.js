@@ -359,6 +359,7 @@ async function saveCurrentBuild() {
     render();
     syncGameModeToggleUI(state.editor.gameMode || "pve");
     setPublishStatus("");
+    window.desktopApi.prewarmChatLinks?.([saved]);
   } catch (err) {
     showError(err);
   }
