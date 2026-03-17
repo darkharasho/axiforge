@@ -363,15 +363,13 @@
 
         <!-- Build Library page -->
         <div id="page-library" class="page hidden">
-          <div class="library-page">
-            <section class="panel">
-              <div class="section-head">
-                <h2>Build Library</h2>
-                <button id="newBuildBtn" class="btn btn-secondary" type="button">New Build</button>
-              </div>
-              <input id="buildSearch" type="search" placeholder="Search local builds..." />
-              <div id="buildList" class="build-list"></div>
-            </section>
+          <div class="lib-page">
+            <div id="lib-sidebar" class="lib-sidebar"></div>
+            <div id="lib-main" class="lib-main">
+              <div id="lib-toolbar" class="lib-toolbar"></div>
+              <div id="lib-filters" class="lib-filters"></div>
+              <div id="lib-content" class="lib-content"></div>
+            </div>
           </div>
         </div>
 
