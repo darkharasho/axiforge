@@ -139,20 +139,40 @@ export function getVisibleBuilds() {
  */
 export function getVisibleFolders() {
   const folder = state.currentFolder;
+  let folders;
+
   // At root or "all builds" smart folder: show top-level custom folders
   if (!folder || folder.type === "all") {
-    return state.folders
+    folders = state.folders
       .filter((f) => f.parentId === null)
       .sort((a, b) => a.sortOrder - b.sortOrder);
-  }
-  // Inside a custom folder: show its children
-  if (folder.type === "custom") {
-    return state.folders
+  } else if (folder.type === "custom") {
+    // Inside a custom folder: show its children
+    folders = state.folders
       .filter((f) => f.parentId === folder.id)
       .sort((a, b) => a.sortOrder - b.sortOrder);
+  } else {
+    // Smart folders don't contain sub-folders
+    return [];
   }
-  // Smart folders don't contain sub-folders
-  return [];
+
+  // Filter folders by search query: hide folders whose name doesn't match
+  // AND that contain no matching builds
+  const query = (state.buildSearch || "").trim().toLowerCase();
+  if (query) {
+    folders = folders.filter((f) => {
+      if (f.name.toLowerCase().includes(query)) return true;
+      // Check if any builds in this folder (recursively) match the search
+      const folderIds = collectFolderIds(f.id);
+      return state.builds.some((b) => {
+        if (!folderIds.includes(b.folderId)) return false;
+        const haystack = [b.title || "", b.profession || "", ...(b.tags || [])].join(" ").toLowerCase();
+        return haystack.includes(query);
+      });
+    });
+  }
+
+  return folders;
 }
 
 /**

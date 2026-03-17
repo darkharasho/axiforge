@@ -441,7 +441,11 @@ function _buildSharedCallbacks() {
     onNewFolderSidebar: handleNewFolder,
 
     onFilterChange(change) {
-      if (!change) return;
+      if (!change) {
+        // No change object = search text updated, just re-render content
+        renderContent();
+        return;
+      }
       if (change.clear) {
         state.libraryPrefs.activeFilters = {};
       } else if (change.type) {
@@ -456,6 +460,7 @@ function _buildSharedCallbacks() {
           }
         }
       }
+      savePrefs();
       renderLibrary();
     },
 
@@ -467,11 +472,13 @@ function _buildSharedCallbacks() {
         state.libraryPrefs.sortDirection =
           state.libraryPrefs.sortDirection === "desc" ? "asc" : "desc";
       }
+      savePrefs();
       renderLibrary();
     },
 
     onViewChange(mode) {
       state.libraryPrefs.viewMode = mode;
+      savePrefs();
       renderLibrary();
     },
 
