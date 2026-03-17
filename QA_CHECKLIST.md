@@ -181,8 +181,25 @@ Manual QA items for alpha testers. Check off items as you test them. Report issu
 - [ ] Drag builds within folder to reorder
 - [ ] Visual feedback during drag (hover states, drop zones)
 
+### Copy / Cut / Paste
+- [ ] Ctrl+C copies selected build to clipboard; "Build copied!" toast appears
+- [ ] Ctrl+C with multiple builds selected copies all; "N builds copied!" toast appears
+- [ ] Ctrl+V pastes clipboard build as new build with "(1)" title suffix
+- [ ] Ctrl+V again increments suffix to "(2)", "(3)", etc.
+- [ ] Ctrl+V pastes into current folder (not always root)
+- [ ] Ctrl+X cuts selected build; "Build cut!" toast appears
+- [ ] Ctrl+V after Ctrl+X moves build to current folder; "Build moved!" toast appears
+- [ ] Ctrl+C after Ctrl+X cancels the cut (paste creates copy, not move)
+- [ ] Ctrl+V with empty clipboard shows "Clipboard is empty" error toast
+- [ ] Ctrl+V with non-JSON clipboard shows "Clipboard does not contain valid JSON" error toast
+- [ ] Ctrl+V with array of builds in clipboard pastes all builds
+- [ ] Copy/Cut/Paste work when inside folders and subfolders
+
 ### Right-Click Context Menu
 - [ ] Open, Duplicate, Delete, Move, Pin/Unpin options for builds
+- [ ] Copy and Cut options appear in single-build context menu
+- [ ] Copy and Cut options appear in multi-select context menu
+- [ ] Paste option appears in empty-area context menu
 - [ ] Edit name, Delete options for folders
 
 ### Chat Link Integration
