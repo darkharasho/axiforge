@@ -892,6 +892,56 @@ describe("BuildStore — reorder builds", () => {
   });
 });
 
+describe("BuildStore — profession-specific persistence", () => {
+  let store, dir;
+  beforeEach(async () => ({ store, dir } = await makeTempStore()));
+  afterEach(async () => cleanupDir(dir));
+
+  it("persists selectedLegends on save", async () => {
+    const build = makeBuild({
+      selectedLegends: ["Legend1", "Legend7"],
+      selectedUnderwaterLegends: ["Legend3", "Legend4"],
+      activeLegendSlot: 1,
+    });
+    const saved = await store.upsertBuild(build);
+    expect(saved.selectedLegends).toEqual(["Legend1", "Legend7"]);
+    expect(saved.selectedUnderwaterLegends).toEqual(["Legend3", "Legend4"]);
+    expect(saved.activeLegendSlot).toBe(1);
+
+    const list = await store.listBuilds();
+    const found = list.find((b) => b.id === saved.id);
+    expect(found.selectedLegends).toEqual(["Legend1", "Legend7"]);
+  });
+
+  it("persists selectedPets on save", async () => {
+    const build = makeBuild({
+      selectedPets: { terrestrial1: 1, terrestrial2: 5, aquatic1: 12, aquatic2: 0 },
+    });
+    const saved = await store.upsertBuild(build);
+    expect(saved.selectedPets).toEqual({
+      terrestrial1: 1, terrestrial2: 5, aquatic1: 12, aquatic2: 0,
+    });
+  });
+
+  it("persists morphSkillIds on save", async () => {
+    const build = makeBuild({ morphSkillIds: [123, 456, 0] });
+    const saved = await store.upsertBuild(build);
+    expect(saved.morphSkillIds).toEqual([123, 456, 0]);
+  });
+
+  it("defaults missing profession-specific fields", async () => {
+    const build = makeBuild({});
+    const saved = await store.upsertBuild(build);
+    expect(saved.selectedLegends).toEqual(["", ""]);
+    expect(saved.selectedUnderwaterLegends).toEqual(["", ""]);
+    expect(saved.activeLegendSlot).toBe(0);
+    expect(saved.selectedPets).toEqual({
+      terrestrial1: 0, terrestrial2: 0, aquatic1: 0, aquatic2: 0,
+    });
+    expect(saved.morphSkillIds).toEqual([0, 0, 0]);
+  });
+});
+
 describe("BuildStore — gameMode normalization", () => {
   let dir;
 

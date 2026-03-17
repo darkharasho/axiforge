@@ -162,6 +162,24 @@ function normalizeBuild(input, fallbackCreatedAt) {
       typeof input.sortOrder === "number" && Number.isFinite(input.sortOrder)
         ? input.sortOrder
         : 0,
+    // Profession-specific fields (Revenant legends, Ranger pets, etc.)
+    selectedLegends: Array.isArray(input.selectedLegends)
+      ? input.selectedLegends.slice(0, 2).map((v) => asString(v, 20))
+      : ["", ""],
+    selectedUnderwaterLegends: Array.isArray(input.selectedUnderwaterLegends)
+      ? input.selectedUnderwaterLegends.slice(0, 2).map((v) => asString(v, 20))
+      : ["", ""],
+    activeLegendSlot:
+      input.activeLegendSlot === 1 ? 1 : 0,
+    selectedPets: {
+      terrestrial1: Number(input.selectedPets?.terrestrial1) || 0,
+      terrestrial2: Number(input.selectedPets?.terrestrial2) || 0,
+      aquatic1: Number(input.selectedPets?.aquatic1) || 0,
+      aquatic2: Number(input.selectedPets?.aquatic2) || 0,
+    },
+    morphSkillIds: Array.isArray(input.morphSkillIds)
+      ? input.morphSkillIds.slice(0, 3).map((v) => Number(v) || 0)
+      : [0, 0, 0],
   };
 }
 
