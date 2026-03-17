@@ -104,11 +104,50 @@ function mapBuildToTemplateInput(build) {
  * @param {Object} build — serialized axiforge build object
  * @returns {Promise<string>} — the [&...] chat link
  */
-async function generateChatLink(build) {
-  const { encodeBuildTemplate, DefaultGw2ApiClient } = await import("gw2buildlink");
-  const input = mapBuildToTemplateInput(build);
-  const api = new DefaultGw2ApiClient();
-  return encodeBuildTemplate(input, { api });
+// Singleton API client — profession/spec/skill data cached across all calls in the session.
+let _gw2Api = null;
+async function getApi() {
+  if (!_gw2Api) {
+    const { DefaultGw2ApiClient } = await import("gw2buildlink");
+    _gw2Api = new DefaultGw2ApiClient();
+  }
+  return _gw2Api;
 }
 
-module.exports = { generateChatLink, mapBuildToTemplateInput };
+// Result cache — keyed by buildId, invalidated when updatedAt changes.
+const _cache = new Map(); // Map<buildId, { updatedAt: string, link: string }>
+
+/**
+ * Generate a GW2 in-game chat link string for the given axiforge build.
+ * Returns instantly from cache if the build hasn't changed since last generation.
+ */
+async function generateChatLink(build) {
+  const cached = _cache.get(build.id);
+  if (cached && cached.updatedAt === build.updatedAt) return cached.link;
+
+  const { encodeBuildTemplate } = await import("gw2buildlink");
+  const api = await getApi();
+  const link = await encodeBuildTemplate(mapBuildToTemplateInput(build), { api });
+
+  if (build.id) _cache.set(build.id, { updatedAt: build.updatedAt, link });
+  return link;
+}
+
+/**
+ * Pre-generate chat links for a list of builds in the background.
+ * Runs sequentially so the shared API client can build up its internal cache
+ * across profession lookups without redundant parallel requests.
+ */
+async function prewarmChatLinks(builds) {
+  for (const build of builds) {
+    const cached = _cache.get(build.id);
+    if (cached && cached.updatedAt === build.updatedAt) continue;
+    try {
+      await generateChatLink(build);
+    } catch {
+      // skip — failures don't block the rest
+    }
+  }
+}
+
+module.exports = { generateChatLink, prewarmChatLinks, mapBuildToTemplateInput };

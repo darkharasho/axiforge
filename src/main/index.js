@@ -335,6 +335,10 @@ app.whenReady().then(async () => {
     const { generateChatLink } = require("./buildChatLink.js");
     return generateChatLink(build);
   });
+  ipcMain.handle("builds:prewarm-chat-links", async (_e, builds) => {
+    const { prewarmChatLinks } = require("./buildChatLink.js");
+    prewarmChatLinks(builds); // fire-and-forget
+  });
 
   ipcMain.handle("builds:publish-build", async (event, buildId) => {
     const sender = event.sender;

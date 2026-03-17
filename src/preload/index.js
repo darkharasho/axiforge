@@ -41,6 +41,7 @@ contextBridge.exposeInMainWorld("desktopApi", {
   reorderBuilds: (updates) =>
     ipcRenderer.invoke("builds:reorder", updates),
   generateChatLink: (build) => ipcRenderer.invoke("builds:generate-chat-link", build),
+  prewarmChatLinks: (builds) => ipcRenderer.invoke("builds:prewarm-chat-links", builds),
   listProfessions: () => ipcRenderer.invoke("gw2:list-professions"),
   getProfessionCatalog: (professionId, gameMode) =>
     ipcRenderer.invoke("gw2:get-profession-catalog", professionId, gameMode),

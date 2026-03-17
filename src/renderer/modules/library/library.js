@@ -76,6 +76,8 @@ export function renderLibrary() {
   renderFilters();
   renderContent();
   wireContextMenuEvents();
+  // Pre-generate chat links in the background so copies are instant.
+  window.desktopApi?.prewarmChatLinks?.(state.builds);
 }
 
 /**
