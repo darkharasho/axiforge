@@ -246,12 +246,12 @@ All menu items use Heroicons. Destructive actions shown in red at bottom of menu
 - `folders:list` — returns all folders
 - `folders:save` — create or update a folder (upsert)
 - `folders:delete` — delete folder by ID (builds with that `folderId` set to `null`)
-- `folders:reorder` — update `sortOrder` for a batch of folders
+- `folders:reorder` — update `sortOrder` for a batch of folders. Payload: `Array<{id: string, sortOrder: number}>`
 
 **Builds (additions):**
 - `builds:move` — update `folderId` for one or more build IDs. Validates that `folderId` exists in `folders.json`; throws if not found (prevents orphaned builds).
 - `builds:pin` — toggle `pinned` for one or more build IDs
-- `builds:reorder` — update `sortOrder` for a batch of builds
+- `builds:reorder` — update `sortOrder` for a batch of builds. Payload: `Array<{id: string, sortOrder: number}>`
 
 ### User Preferences
 
