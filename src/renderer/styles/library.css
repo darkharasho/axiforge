@@ -735,8 +735,10 @@
 .lib-tv__row--folder { color: #99a; }
 .lib-tv__row--pinned { border-left: 2px solid rgba(212, 192, 68, 0.4); }
 .lib-tv__item.lib-selected > .lib-tv__row { background: #1a1a4a; }
-.lib-tv__row.lib-drop-target { background: rgba(72, 168, 255, 0.1); }
-.lib-tv__row.lib-dragging { opacity: 0.4; }
+.lib-tv__item.lib-drop-target > .lib-tv__row,
+.lib-tv__item.lib-drop-target { background: rgba(72, 168, 255, 0.1); }
+.lib-tv__item.lib-dragging > .lib-tv__row,
+.lib-tv__item.lib-dragging { opacity: 0.4; }
 
 /* Tree nesting — just CSS list indentation */
 .lib-tv__tree,
