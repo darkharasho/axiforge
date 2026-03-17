@@ -89,7 +89,7 @@ function pinStarHtml(build) {
   return `<button
     type="button"
     class="lib-pin-btn ${build.pinned ? "lib-pin-btn--active" : ""}"
-    data-build-id="${escapeHtml(build.id)}"
+    data-pin-id="${escapeHtml(build.id)}"
     data-action="pin"
     title="${build.pinned ? "Unpin" : "Pin"}"
     aria-label="${build.pinned ? "Unpin build" : "Pin build"}"

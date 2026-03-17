@@ -1,8 +1,4 @@
-// [test-verified] drag-drop fix: (1) content.js renderTreeBuild had missing ">" on row div,
-// breaking HTML structure and preventing drag binding; (2) added dragover handler on build
-// items so nested builds inside folders show "move" cursor instead of "denied".
 // Library drag-and-drop module — HTML5 drag-and-drop for moving builds to folders.
-// Simplified: uses data attributes to prevent duplicate binding.
 
 import { getSelection } from "./selection.js";
 import { moveBuilds } from "./folder-store.js";
