@@ -1,6 +1,6 @@
 // Library drag-and-drop module — powered by SortableJS.
-// Creates Sortable instances on each container (root list, folder children lists).
-// Items can be dragged between containers to move builds into/out of folders.
+// Re-initializes Sortable instances on every render since content
+// is rebuilt via innerHTML each time.
 
 import Sortable from "sortablejs";
 import { moveBuilds } from "./folder-store.js";
@@ -14,76 +14,76 @@ export function initDragDrop(callbacks) {
 }
 
 /**
- * Initialize SortableJS on all sortable containers in the current view.
- * Call after each render. Destroys previous instances first.
+ * Initialize SortableJS on all sortable containers.
+ * Must be called after every render (renderContent, folder expand, etc.)
+ * because innerHTML replacement destroys the previous DOM + Sortable instances.
  */
 export function wireDragDropEvents() {
-  // Destroy old instances
-  _sortableInstances.forEach((s) => s.destroy());
+  // Destroy old instances (they're on dead DOM nodes anyway)
+  _sortableInstances.forEach((s) => {
+    try { s.destroy(); } catch { /* already gone */ }
+  });
   _sortableInstances = [];
 
-  // Find all sortable containers:
-  // - .lib-list (list view root)
-  // - .lib-tv__tree (table/tree view root)
-  // - .lib-tv__children (expanded folder children in tree view)
-  // - .lib-grid (grid view root)
-  // - .lib-icon-grid (icon view root)
-  const containers = document.querySelectorAll(
-    ".lib-list, .lib-tv__tree, .lib-tv__children, .lib-grid, .lib-icon-grid"
-  );
+  const onEnd = async (evt) => {
+    const buildId = evt.item?.dataset?.buildId;
+    if (!buildId) return;
 
-  console.log("[sortable] found containers:", containers.length, [...containers].map(c => c.className));
-  containers.forEach((container) => {
-    // Determine the folder ID this container belongs to
-    // For .lib-tv__children, the parent <li> has data-folder-id
-    const parentFolderLi = container.closest("[data-folder-id]");
-    const containerId = parentFolderLi?.dataset.folderId || null;
+    // Determine target folder from the container we dropped into
+    const dropContainer = evt.to;
+    const folderLi = dropContainer.closest("[data-folder-id]");
+    const newFolderId = folderLi?.dataset.folderId || null;
 
-    console.log("[sortable] creating on", container.className, "children:", container.children.length);
-    const sortable = Sortable.create(container, {
-      group: "builds",
-      animation: 150,
-      ghostClass: "lib-drag-ghost",
-      chosenClass: "lib-drag-chosen",
-      dragClass: "lib-drag-active",
-      // Only drag elements with data-build-id (not folders)
-      draggable: "[data-build-id]",
-      // Allow dropping even if container is empty
-      emptyInsertThreshold: 20,
+    // Get current folder
+    const build = state.builds.find((b) => b.id === buildId);
+    const oldFolderId = build?.folderId || null;
 
-      onEnd: async (evt) => {
-        const buildId = evt.item?.dataset?.buildId;
-        if (!buildId) return;
+    if (newFolderId !== oldFolderId) {
+      await moveBuilds([buildId], newFolderId);
+    }
 
-        // Figure out where it was dropped
-        const newContainer = evt.to;
-        const newParentLi = newContainer.closest("[data-folder-id]");
-        const newFolderId = newParentLi?.dataset.folderId || null;
+    // Always re-render to restore proper sort order
+    _callbacks.onRefresh?.();
+  };
 
-        // Get the build's current folder
-        const build = state.builds.find((b) => b.id === buildId);
-        const oldFolderId = build?.folderId || null;
+  const sortableOpts = {
+    group: "builds",
+    animation: 150,
+    ghostClass: "lib-drag-ghost",
+    chosenClass: "lib-drag-chosen",
+    dragClass: "lib-drag-active",
+    draggable: "[data-build-id]",
+    emptyInsertThreshold: 20,
+    fallbackOnBody: true,
+    swapThreshold: 0.65,
+    onEnd,
+  };
 
-        // Only move if the folder actually changed
-        if (newFolderId !== oldFolderId) {
-          await moveBuilds([buildId], newFolderId);
-        }
-
-        // Always refresh to restore proper sort order
-        // (SortableJS physically moves the DOM element, but our render
-        // needs to rebuild with correct data)
-        _callbacks.onRefresh?.();
-      },
-    });
-
-    _sortableInstances.push(sortable);
+  // Tree/table view: root list + each expanded folder's children
+  document.querySelectorAll(".lib-tv__tree, .lib-tv__children").forEach((el) => {
+    _sortableInstances.push(Sortable.create(el, sortableOpts));
   });
 
-  // Also make sidebar folders drop targets
+  // List view: the root .lib-list container
+  document.querySelectorAll(".lib-list").forEach((el) => {
+    _sortableInstances.push(Sortable.create(el, sortableOpts));
+  });
+
+  // Grid view
+  document.querySelectorAll(".lib-grid").forEach((el) => {
+    _sortableInstances.push(Sortable.create(el, sortableOpts));
+  });
+
+  // Icon view
+  document.querySelectorAll(".lib-icon-grid").forEach((el) => {
+    _sortableInstances.push(Sortable.create(el, sortableOpts));
+  });
+
+  // Wire sidebar drop targets (delegation, only once)
   _wireSidebarDropTargets();
 }
 
-// ─── Sidebar drop targets ──────────────────────────────────────────────────────
+// ─── Sidebar drop targets (manual — not SortableJS) ────────────────────────────
 
 function _wireSidebarDropTargets() {
   const sidebar = document.getElementById("lib-sidebar");
@@ -111,16 +111,8 @@ function _wireSidebarDropTargets() {
     e.preventDefault();
     target.classList.remove("lib-drop-target");
 
-    // Get the dragged build ID from SortableJS's dataTransfer
-    let ids = [];
-    try {
-      const data = e.dataTransfer.getData("text/plain");
-      // SortableJS doesn't set custom data, so we need to find the currently
-      // dragged element from the DOM
-    } catch { /* ignore */ }
-
-    // Find the element SortableJS is currently dragging
-    const dragging = document.querySelector(".lib-drag-chosen, .lib-drag-active, .sortable-drag");
+    // Find the SortableJS dragged element
+    const dragging = document.querySelector(".sortable-drag, .lib-drag-chosen");
     const buildId = dragging?.dataset?.buildId;
     if (!buildId) return;
 

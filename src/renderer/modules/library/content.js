@@ -5,6 +5,7 @@ import { escapeHtml, formatRelativeTime } from "../utils.js";
 import { getVisibleBuilds, getVisibleFolders } from "./folder-store.js";
 import { getProfessionSvg } from "../profession-icons.js";
 import { clearSelection, handleBuildClick } from "./selection.js";
+import { wireDragDropEvents } from "./drag-drop.js";
 import {
   folderIcon,
   starIcon,
@@ -49,6 +50,9 @@ export function renderContent() {
       renderListView(container);
       break;
   }
+
+  // Re-init SortableJS on the new DOM
+  wireDragDropEvents();
 }
 
 // ─── Shared helpers ────────────────────────────────────────────────────────────
