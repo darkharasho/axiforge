@@ -99,7 +99,7 @@
   border-radius: 6px;
   padding: 4px 8px 4px 26px;
   color: #ccd;
-  font-size: 0.75rem;
+  font-size: 0.85rem;
   font-family: inherit;
   width: 160px;
   outline: none;
@@ -120,7 +120,7 @@
   border-radius: 6px;
   padding: 4px 8px;
   color: #ccd;
-  font-size: 0.75rem;
+  font-size: 0.85rem;
   font-family: inherit;
   cursor: pointer;
   outline: none;
@@ -177,7 +177,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 0.75rem;
+  font-size: 0.85rem;
   padding: 4px 10px;
   white-space: nowrap;
 }
@@ -192,7 +192,7 @@
   background: none;
   border: none;
   color: #99a;
-  font-size: 0.75rem;
+  font-size: 0.85rem;
   font-family: inherit;
   cursor: pointer;
   padding: 2px 4px;
@@ -257,7 +257,7 @@
 }
 
 .lib-filter-label {
-  font-size: 0.68rem;
+  font-size: 0.88rem;
   color: #556;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -268,7 +268,7 @@
   border: 1px solid #252545;
   border-radius: 999px;
   padding: 2px 10px;
-  font-size: 0.68rem;
+  font-size: 0.88rem;
   color: #99a;
   cursor: pointer;
   font-family: inherit;
@@ -367,7 +367,7 @@
 }
 
 .lib-sidebar__section-label {
-  font-size: 0.62rem;
+  font-size: 0.85rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: #445;
@@ -402,7 +402,7 @@
 
 .lib-sidebar__empty {
   padding: 4px 10px;
-  font-size: 0.7rem;
+  font-size: 0.88rem;
   color: #445;
   font-style: italic;
 }
@@ -417,7 +417,7 @@
   background: none;
   border: none;
   color: #99a;
-  font-size: 0.75rem;
+  font-size: 0.85rem;
   font-family: inherit;
   cursor: pointer;
   text-align: left;
@@ -466,7 +466,7 @@
 }
 
 .lib-nav-item__count {
-  font-size: 0.62rem;
+  font-size: 0.85rem;
   color: #445;
   flex-shrink: 0;
   margin-left: auto;
@@ -503,27 +503,36 @@
   align-items: center;
   border-radius: 999px;
   padding: 1px 7px;
-  font-size: 0.62rem;
+  font-size: 0.85rem;
   font-weight: 500;
   white-space: nowrap;
 }
 
 .lib-pill--prof {
-  background: rgba(79, 216, 151, 0.12);
-  border: 1px solid rgba(79, 216, 151, 0.25);
-  color: #7ad4a8;
+  color: #fff;
+  border: none;
 }
+.lib-pill--prof.lib-prof--guardian     { background: #4a7acc; }
+.lib-pill--prof.lib-prof--warrior      { background: #b36a22; }
+.lib-pill--prof.lib-prof--necromancer  { background: #2e8a52; }
+.lib-pill--prof.lib-prof--engineer     { background: #8a6030; }
+.lib-pill--prof.lib-prof--ranger       { background: #4a8a2e; }
+.lib-pill--prof.lib-prof--thief        { background: #8a3a44; }
+.lib-pill--prof.lib-prof--mesmer       { background: #7a4a99; }
+.lib-pill--prof.lib-prof--elementalist { background: #993333; }
+.lib-pill--prof.lib-prof--revenant     { background: #7a4433; }
+.lib-pill--prof.lib-prof--unknown      { background: #555; }
 
 .lib-pill--mode {
-  background: rgba(72, 168, 255, 0.1);
-  border: 1px solid rgba(72, 168, 255, 0.25);
-  color: #7ab8e8;
+  background: #2a4a7a;
+  border: none;
+  color: #fff;
 }
 
 .lib-pill--spec {
-  background: rgba(160, 100, 220, 0.1);
-  border: 1px solid rgba(160, 100, 220, 0.25);
-  color: #c090e0;
+  background: #5a3580;
+  border: none;
+  color: #fff;
 }
 
 .lib-pill--tag {
@@ -575,7 +584,7 @@
   padding: 6px 8px;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 0.78rem;
+  font-size: 0.85rem;
   color: #ccd;
   transition: background 0.1s;
   min-width: 0;
@@ -633,7 +642,7 @@
 }
 
 .lib-list-row__date {
-  font-size: 0.65rem;
+  font-size: 0.85rem;
   color: #556;
   white-space: nowrap;
   flex-shrink: 0;
@@ -667,7 +676,7 @@
 .lib-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.76rem;
+  font-size: 0.85rem;
   color: #ccd;
 }
 
@@ -681,7 +690,7 @@
 .lib-table__th {
   padding: 6px 8px;
   text-align: left;
-  font-size: 0.65rem;
+  font-size: 0.85rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -761,7 +770,7 @@
 
 .lib-table__td {
   padding: 6px 8px;
-  font-size: 0.75rem;
+  font-size: 0.85rem;
   color: #ccd;
   white-space: nowrap;
   overflow: hidden;
@@ -806,7 +815,7 @@
 .lib-table__td--created,
 .lib-table__td--modified {
   color: #556;
-  font-size: 0.68rem;
+  font-size: 0.88rem;
 }
 
 /* ── Grid view ───────────────────────────────────────────────────── */
@@ -888,7 +897,7 @@
 }
 
 .lib-grid-card__title {
-  font-size: 0.8rem;
+  font-size: 0.88rem;
   font-weight: 500;
   color: #ccd;
   overflow: hidden;
@@ -903,7 +912,7 @@
 }
 
 .lib-grid-card__date {
-  font-size: 0.65rem;
+  font-size: 0.85rem;
   color: #556;
   margin-top: auto;
 }
@@ -970,7 +979,7 @@
 }
 
 .lib-icon-item__label {
-  font-size: 0.65rem;
+  font-size: 0.85rem;
   color: #99a;
   text-align: center;
   overflow: hidden;
@@ -1002,7 +1011,7 @@
   gap: 8px;
   padding: 6px 10px;
   cursor: pointer;
-  font-size: 0.76rem;
+  font-size: 0.85rem;
   color: #ccd;
   transition: background 0.1s;
 }
@@ -1024,7 +1033,7 @@
   color: #556;
   cursor: default;
   pointer-events: none;
-  font-size: 0.68rem;
+  font-size: 0.88rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -1053,7 +1062,7 @@
 }
 
 .lib-ctx-item__shortcut {
-  font-size: 0.64rem;
+  font-size: 0.85rem;
   color: #445;
   flex-shrink: 0;
   white-space: nowrap;
@@ -1093,7 +1102,7 @@
   height: 100%;
   min-height: 120px;
   color: #445;
-  font-size: 0.82rem;
+  font-size: 0.88rem;
 }
 
 .lib-empty-state p {

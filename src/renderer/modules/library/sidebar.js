@@ -33,12 +33,12 @@ export function renderSidebar() {
   const { sidebarOpen, sidebarExpandedFolders } = state.libraryPrefs;
 
   if (!sidebarOpen) {
+    container.classList.add("lib-sidebar--collapsed");
+    container.classList.remove("lib-sidebar--open");
     container.innerHTML = `
-      <div class="lib-sidebar lib-sidebar--collapsed">
-        <button type="button" class="lib-sidebar__expand-btn" id="lib-sidebar-expand" title="Expand sidebar" aria-label="Expand sidebar">
-          ${chevronDoubleRightIcon}
-        </button>
-      </div>
+      <button type="button" class="lib-sidebar__expand-btn" id="lib-sidebar-expand" title="Expand sidebar" aria-label="Expand sidebar">
+        ${chevronDoubleRightIcon}
+      </button>
     `;
     container.querySelector("#lib-sidebar-expand")?.addEventListener("click", () => {
       _callbacks.onPrefsChange?.({ sidebarOpen: true });
@@ -50,18 +50,18 @@ export function renderSidebar() {
   const profExpanded = expanded.has("__smart-profession");
   const modeExpanded = expanded.has("__smart-gamemode");
 
+  container.classList.remove("lib-sidebar--collapsed");
+  container.classList.add("lib-sidebar--open");
   container.innerHTML = `
-    <div class="lib-sidebar lib-sidebar--open">
-      <div class="lib-sidebar__header">
-        <button type="button" class="lib-sidebar__collapse-btn" id="lib-sidebar-collapse" title="Collapse sidebar" aria-label="Collapse sidebar">
-          ${chevronDoubleLeftIcon}
-        </button>
-      </div>
-      <nav class="lib-sidebar__nav">
-        ${renderSmartFolders(profExpanded, modeExpanded)}
-        ${renderMyFolders(expanded)}
-      </nav>
+    <div class="lib-sidebar__header">
+      <button type="button" class="lib-sidebar__collapse-btn" id="lib-sidebar-collapse" title="Collapse sidebar" aria-label="Collapse sidebar">
+        ${chevronDoubleLeftIcon}
+      </button>
     </div>
+    <nav class="lib-sidebar__nav">
+      ${renderSmartFolders(profExpanded, modeExpanded)}
+      ${renderMyFolders(expanded)}
+    </nav>
   `;
 
   bindSidebarEvents(container);
