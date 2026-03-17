@@ -9,10 +9,11 @@ Builds and folders currently have no name uniqueness enforcement. Multiple build
 
 ## Requirements
 
-- Build titles must be globally unique across the entire library (not scoped per folder).
-- Folder names must be globally unique across the entire library.
-- **User-initiated** actions (rename, manual create) that produce a duplicate name are **blocked** with an explanatory error message.
-- **System-automated** actions (imports, default "Untitled" names on new creates) **auto-suffix** with `(2)`, `(3)`, etc. to produce a unique name.
+- Build titles must be globally unique across all builds. Folder names must be globally unique across all folders. Build titles and folder names are checked independently — a build named "Warrior" and a folder named "Warrior" may coexist.
+- **User-initiated** actions (rename, new folder with typed name) that produce a duplicate name are **blocked** with an explanatory error message displayed as `showToast("...", "error")`.
+- **System-automated** actions (imports, duplicate) **auto-suffix** with ` (2)`, ` (3)`, etc. (space before parenthesis) to produce a unique name.
+- Names are trimmed on save and on comparison. Comparison is case-insensitive.
+- A case-only rename (e.g., `"my build"` → `"My Build"`) is permitted via the current name exclusion in `isNameTaken`.
 
 ## Approach
 
@@ -22,61 +23,110 @@ Renderer-only validation against `state.builds` and `state.folders`. No changes 
 
 ### Part 1: Shared Utilities (`src/renderer/modules/library/name-utils.js`)
 
-Two exported helper functions:
+Two exported helper functions. Both operate on flat arrays of name strings (the caller maps builds to title strings or folders to name strings before calling).
 
-**`isNameTaken(name, items, currentId = null)`**
-- Checks whether `name` (trimmed, case-insensitive) already exists in `items` array.
-- `items` is either `state.builds` (checked against `title`) or `state.folders` (checked against `name`).
-- `currentId` optionally excludes one item by `id`, so a rename to the same name is not blocked.
+**`isNameTaken(name, takenNames, excludeName = null)`**
+- `name`: string to test (trimmed, lowercased for comparison).
+- `takenNames`: `string[]` — the existing names to check against.
+- `excludeName`: optional string to exclude from the check (used for renames so the current name doesn't block itself — pass the item's current name, not its id).
 - Returns `true` if a duplicate exists, `false` otherwise.
 
-**`makeUniqueName(baseName, items)`**
-- Tries `baseName` first; if taken, tries `baseName (2)`, `baseName (3)`, etc.
-- Uses the same case-insensitive, trimmed comparison as `isNameTaken`.
-- Returns the first available unique name.
+Example call for rename-build:
+```js
+isNameTaken(newTitle, state.builds.map(b => b.title), build.title)
+```
 
-Both functions treat builds and folders uniformly — the caller passes the correct array and the functions are field-agnostic (they receive pre-mapped arrays of name strings).
+**`makeUniqueName(baseName, takenNames)`**
+- `baseName`: the desired name (trimmed).
+- `takenNames`: `string[]` — existing names (comparison is case-insensitive).
+- Tries `baseName` first; if taken, tries `baseName (2)`, `baseName (3)`, etc. (space before parenthesis).
+- Returns the first available name, preserving the original casing of `baseName`.
+- Does not strip existing suffixes — `"My Build (Copy)"` duplicated produces `"My Build (Copy) (2)"`, which is intentional.
 
 ### Part 2: User-initiated flows — block with error
 
-**Rename build** (`handleRename` in `library.js`)
-- After the `showPrompt` modal returns a new title, call `isNameTaken(newTitle, state.builds, build.id)`.
-- If taken: show error `"A build named '[name]' already exists."` and do not save.
+All flows check after the null/cancel guard and before the save call.
 
-**Rename folder** (`handleRename` for folders in `library.js`)
-- After the inline input commits, call `isNameTaken(newName, state.folders, folder.id)`.
-- If taken: restore the original folder name and show error `"A folder named '[name]' already exists."`.
+**Rename build** (`handleRename`, line 225)
+- `showPrompt` already trims and returns `null` for both cancel and empty-submit. The existing `if (!newTitle) return` guard is sufficient; no additional trim is needed.
+- After the guard, call `isNameTaken(newTitle, state.builds.map(b => b.title), build.title)`.
+- If taken: `showToast('A build named "${newTitle}" already exists.', "error")` and `return`.
 
-**New build with a manually entered name**
-- If the creation flow allows the user to type a name, apply the same block check before saving.
+**Rename folder** (`handleRenameFolder`, line 407)
+- `insertInlineInput` returns `null` on Escape only. The call should pass `fallbackName: folder.name` so that blanking the field and pressing Enter/blur restores the original name rather than defaulting to "New Folder". This makes blank-Enter behave like a cancel.
+- Existing guard: `if (!newName) { renderLibrary(); return; }` — fires on Escape only (and on blank-Enter if fallbackName is empty string, but with the recommendation above it fires for blank-Enter too since `folder.name` is truthy).
+- After the guard, call `isNameTaken(newName, state.folders.map(f => f.name), folder.name)`.
+- If taken: `showToast('A folder named "${newName}" already exists.', "error")` then `renderLibrary(); return`.
+
+**New folder — sidebar** (`handleNewFolder`, line 193)
+- `insertInlineInput` returns `null` on Escape, or the typed name (or "New Folder" if blank) otherwise.
+- After the existing null guard, call `isNameTaken(name, state.folders.map(f => f.name))`.
+- If taken: `showToast(...)` then `renderLibrary(); return`.
+
+**New folder — content area** (`handleNewFolderInContent`, line 203)
+- Same pattern as `handleNewFolder`.
+
+**New subfolder** (`handleNewSubfolder`, line 418)
+- Same pattern. The `fallbackName` here is also "New Folder" by default.
+
+**New folder and move** (`handleNewFolderAndMove`, line 455)
+- Same pattern. If taken: show error, `renderLibrary(); return` (no move occurs).
+- Note: the existing guard `if (!folder?.id) return` at line 464 should also call `renderLibrary()` for consistency — fix this alongside the uniqueness check.
 
 ### Part 3: System-automated flows — auto-suffix
 
-All of the following wrap their base name through `makeUniqueName` before saving:
+All of these call `makeUniqueName` before saving.
 
-| Location | Base name |
-|---|---|
-| `handleNewBuild` / `handleNewBuildInFolder` | `"Untitled Build"` |
-| `handleNewFolder` / `handleNewFolderInContent` | `"Untitled Folder"` |
-| `handleImportChatLink` | imported build's title |
-| `handleImportGw2Skills` | imported build's title |
+| Handler | Base name passed to `makeUniqueName` | `takenNames` |
+|---|---|---|
+| `handleDuplicate` (line 235) | `"${build.title \|\| 'Untitled'} (Copy)"` | `state.builds.map(b => b.title)` |
+| `handleImportChatLink` (line 320) | `result.name` | `state.builds.map(b => b.title)` |
+| `handleImportGw2Skills` (line 337) | `result.name` | `state.builds.map(b => b.title)` |
 
-The de-duplicated name is used as the initial value. If the user subsequently renames it, the block behavior from Part 2 applies.
+For the import handlers, the unique name is produced before the IPC call:
+```js
+const safeName = makeUniqueName(result.name, state.builds.map(b => b.title));
+const saved = await window.desktopApi.importChatLink(result.link, safeName, folderId, gameMode);
+```
+
+**UX note:** The user types a name in the import modal, but per the agreed behavior, imports are treated as system-automated — if the typed name is taken, the build is silently saved with a ` (2)` suffix. This is intentional (matching the "imports append (2)" rule) and is accepted UX for this app.
+
+### Part 4: Validation ordering pattern for `insertInlineInput` flows
+
+The check always goes after the cancel guard and before the save:
+
+```js
+const name = await insertInlineInput(...);
+if (!name) { renderLibrary(); return; }           // Escape-cancel only
+if (isNameTaken(name, state.folders.map(f => f.name))) {
+  showToast(`A folder named "${name}" already exists.`, "error");
+  renderLibrary();
+  return;
+}
+await saveFolder({ name, ... });
+renderLibrary();
+```
+
+This does not require changes to `insertInlineInput` itself.
 
 ## Error Messages
 
 - Builds: `A build named "[name]" already exists.`
 - Folders: `A folder named "[name]" already exists.`
 
+All error toasts use `showToast("...", "error")`.
+
 ## Files Affected
 
 | File | Change |
 |---|---|
 | `src/renderer/modules/library/name-utils.js` | **New** — `isNameTaken`, `makeUniqueName` |
-| `src/renderer/modules/library/library.js` | Add uniqueness checks to rename and create handlers |
+| `src/renderer/modules/library/library.js` | Add uniqueness checks to all handlers listed above |
 
 ## Out of Scope
 
 - No changes to `BuildStore`, `FolderStore`, or IPC handlers.
 - No migration of existing duplicate names (existing data is left as-is).
+- **Default "Untitled Build" title** — `handleNewBuild` and `handleNewBuildInFolder` call `_app.startNewBuild?.()` and navigate to the editor; the title is assigned inside the editor module on first save. Uniqueness for the default build title is a follow-up.
+- **`handlePasteJson`** — delegates entirely to `_app.importBuildJsonFromClipboard?.()` in the editor module, which saves via `loadBuildIntoEditor` + mark-dirty flow, not through the library's `saveBuild` IPC path. Out of scope for this spec.
 - No uniqueness enforcement for tags, notes, or other fields.
