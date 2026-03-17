@@ -18,7 +18,7 @@ export const state = {
   },
   builds: [],
   professions: [],
-  activePage: "editor",
+  activePage: "library",
   buildSearch: "",
   // Library state
   folders: [],
