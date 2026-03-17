@@ -27,7 +27,15 @@ Axiforge builds already store the data needed for chat link generation. The mapp
 | `selectedLegends` (e.g. `["Legend1", "Legend7"]`) | `revenantLegends` | Parse digit from string → numeric code |
 | `selectedUnderwaterLegends` | `revenantLegends` (aquatic pair) | Same mapping as terrestrial legends |
 | `selectedPets` `{terrestrial1, terrestrial2, aquatic1, aquatic2}` | `rangerPets` `[t1, t2, a1, a2]` | Already numeric IDs |
-| `equipment.weapons` `{mainhand1: "Sword", ...}` | `weapons` | String weapon names, library resolves to IDs |
+| `equipment.weapons` `{mainhand1: "Sword", ...}` | `weapons` | Flatten object values to array, filter empties, library resolves names to IDs |
+
+### Specialization padding
+
+The `gw2buildlink` library **requires exactly 3 specializations** and throws if fewer are provided. The mapping function must always pad the specializations array to length 3, using `{ id: null }` for empty slots (which the library encodes as zero bytes).
+
+### Weapon mapping
+
+The axiforge `equipment.weapons` is an object (`{mainhand1: "Sword", offhand1: "Axe", ...}`), but the library expects `weapons` as a flat `Array<number | string>`. The mapping function extracts the values, filters out empty strings, and passes them as an array.
 
 ### Legend ID mapping
 
@@ -199,3 +207,7 @@ Use the Heroicons `link` icon (already in the icon set used by the context menu)
 6. **Library context menu**: Right-click a saved build in the library. Click "Copy Chat Link". Verify link is copied.
 7. **Persistence**: Save a Revenant build with legends. Close and reopen the app. Right-click in library → Copy Chat Link. Verify legends are still included (tests the `normalizeBuild` fix).
 8. **Offline**: Disconnect from internet. Click "Chat Link". Verify error state shows (not a crash).
+
+## Known Limitations
+
+- **Revenant inactive legend skills**: The `gw2buildlink` library supports `revenantInactiveSkills` (6 skill slots for the inactive legend's skill bar), but axiforge does not currently track these separately. The inactive skill slots will encode as zeros, meaning the GW2 client will show defaults for the inactive legend. This is acceptable for a first pass.
