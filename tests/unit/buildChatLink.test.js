@@ -87,7 +87,7 @@ describe("mapBuildToTemplateInput", () => {
 
   it("maps weapons, filtering empties", () => {
     const input = mapBuildToTemplateInput(baseBuild);
-    expect(input.weapons).toEqual(["Greatsword", "Sword", "Focus"]);
+    expect(input.weapons).toEqual(["greatsword", "sword", "focus"]);
   });
 
   it("maps revenant legends from Legend strings", () => {

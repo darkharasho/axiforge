@@ -52,9 +52,15 @@ function mapBuildToTemplateInput(build) {
 
   // Weapons — flatten object to array, filter empties.
   const weaponSlots = ["mainhand1", "offhand1", "mainhand2", "offhand2", "aquatic1", "aquatic2"];
+  const KNOWN_WEAPONS = new Set([
+    "axe","longbow","dagger","focus","greatsword","hammer","mace","pistol",
+    "rifle","scepter","shield","staff","sword","torch","warhorn","shortbow","spear",
+  ]);
   const weapons = weaponSlots
     .map((slot) => build.equipment?.weapons?.[slot])
-    .filter((w) => w && typeof w === "string" && w.trim() !== "");
+    .filter((w) => w && typeof w === "string" && w.trim() !== "")
+    .map((w) => w.toLowerCase())
+    .filter((w) => KNOWN_WEAPONS.has(w));
 
   // Revenant legends — only for Revenant profession.
   const profLower = (build.profession || "").toLowerCase();
