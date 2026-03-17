@@ -271,40 +271,49 @@ function bindSidebarEvents(container) {
     });
   });
 
-  // New folder button
+  // New folder button (sidebar uses its own callback)
   container.querySelector("#lib-new-folder-btn")?.addEventListener("click", () => {
-    _callbacks.onNewFolder?.();
+    _callbacks.onNewFolderSidebar?.();
   });
 }
 
 /**
- * Insert an inline text input into the sidebar for naming a new folder or renaming.
- * Returns a Promise<string|null> — the entered name, or null if cancelled.
- * @param {HTMLElement} afterEl - Insert the input after this element (or at end of section)
- * @param {string} defaultValue - Pre-filled text
+ * Insert an inline text input for naming a folder.
+ * Returns a Promise<string|null> — the name, or null if Escape-cancelled.
+ * Blur or Enter with empty text defaults to "New Folder".
+ *
+ * @param {HTMLElement} afterEl - Insert after this element
+ * @param {string} defaultValue - Pre-filled text (empty for new folders)
+ * @param {Object} [options]
+ * @param {string} [options.fallbackName="New Folder"] - Name used on blur/Enter with empty input
+ * @param {HTMLElement} [options.container] - Alternative container to append to (for content-area inline)
+ * @param {string} [options.className] - Extra class for the row element
  */
-export function insertInlineInput(afterEl, defaultValue = "") {
+export function insertInlineInput(afterEl, defaultValue = "", options = {}) {
+  const { fallbackName = "New Folder", container, className } = options;
+
   return new Promise((resolve) => {
     const row = document.createElement("div");
-    row.className = "lib-nav-item lib-nav-item--editing";
+    row.className = `lib-nav-item lib-nav-item--editing${className ? ` ${className}` : ""}`;
     row.innerHTML = `
       <span class="lib-nav-item__icon">${folderIcon}</span>
-      <input type="text" class="lib-inline-input" value="" />
+      <input type="text" class="lib-inline-input" placeholder="${fallbackName}" value="" />
     `;
 
     const input = row.querySelector("input");
     input.value = defaultValue;
 
-    if (afterEl) {
+    if (container) {
+      container.appendChild(row);
+    } else if (afterEl) {
       afterEl.insertAdjacentElement("afterend", row);
     } else {
-      // Append to My Folders section
       const section = document.querySelector(".lib-sidebar__section:last-child");
       if (section) section.appendChild(row);
     }
 
     input.focus();
-    input.select();
+    if (defaultValue) input.select();
 
     let resolved = false;
     function finish(value) {
@@ -317,8 +326,7 @@ export function insertInlineInput(afterEl, defaultValue = "") {
     input.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
-        const val = input.value.trim();
-        finish(val || null);
+        finish(input.value.trim() || fallbackName);
       }
       if (e.key === "Escape") {
         e.preventDefault();
@@ -326,8 +334,7 @@ export function insertInlineInput(afterEl, defaultValue = "") {
       }
     });
     input.addEventListener("blur", () => {
-      const val = input.value.trim();
-      finish(val || null);
+      finish(input.value.trim() || fallbackName);
     });
   });
 }

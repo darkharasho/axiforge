@@ -516,6 +516,11 @@
   padding: 3px 8px 3px 16px;
 }
 
+.lib-content-inline-folder {
+  padding: 5px 12px;
+  border-bottom: 1px solid #1a1a3a;
+}
+
 /* ── Shared pills ────────────────────────────────────────────────── */
 
 .lib-pill {

@@ -191,12 +191,26 @@ function handleNewBuild() {
 }
 
 async function handleNewFolder() {
-  // Find the "+" button as anchor for inline input
+  // Find the "+" button as anchor for inline input in sidebar
   const btn = document.getElementById("lib-new-folder-btn");
   const anchor = btn?.closest(".lib-sidebar__section-header");
   const name = await insertInlineInput(anchor, "");
   if (!name) { renderLibrary(); return; }
   await saveFolder({ name, parentId: null });
+  renderLibrary();
+}
+
+async function handleNewFolderInContent() {
+  // Insert inline input at the top of the content area (like file explorer)
+  const content = document.getElementById("lib-content");
+  if (!content) return;
+  const name = await insertInlineInput(null, "", {
+    container: content,
+    className: "lib-content-inline-folder",
+  });
+  if (!name) { renderLibrary(); return; }
+  const parentId = state.currentFolder?.type === "custom" ? state.currentFolder.id : null;
+  await saveFolder({ name, parentId });
   renderLibrary();
 }
 
@@ -367,9 +381,12 @@ async function handleDeleteFolder(folderId) {
 }
 
 async function handleNewFolderAndMove(buildIds) {
-  const btn = document.getElementById("lib-new-folder-btn");
-  const anchor = btn?.closest(".lib-sidebar__section-header");
-  const name = await insertInlineInput(anchor, "");
+  const content = document.getElementById("lib-content");
+  if (!content) return;
+  const name = await insertInlineInput(null, "", {
+    container: content,
+    className: "lib-content-inline-folder",
+  });
   if (!name) { renderLibrary(); return; }
   const folder = await saveFolder({ name, parentId: null });
   if (!folder?.id) return;
@@ -419,7 +436,8 @@ function _buildSharedCallbacks() {
   return {
     // Toolbar
     onNewBuild: handleNewBuild,
-    onNewFolder: handleNewFolder,
+    onNewFolder: handleNewFolderInContent,
+    onNewFolderSidebar: handleNewFolder,
 
     onFilterChange(change) {
       if (!change) return;
