@@ -33,11 +33,9 @@ function _wireBuildDraggables() {
     if (el.dataset.dragBound) return;
     el.dataset.dragBound = "1";
 
-    // Set draggable on the element itself or its draggable child
-    const draggable = el.querySelector("[draggable]") || el;
-    if (!draggable.hasAttribute("draggable")) draggable.draggable = true;
+    el.draggable = true;
 
-    draggable.addEventListener("dragstart", (e) => {
+    el.addEventListener("dragstart", (e) => {
       e.stopPropagation();
       console.log("[drag] dragstart", el.dataset.buildId, "draggable el:", draggable.tagName, draggable.className);
       const buildId = el.dataset.buildId;
@@ -62,7 +60,7 @@ function _wireBuildDraggables() {
       });
     });
 
-    draggable.addEventListener("dragend", () => {
+    el.addEventListener("dragend", () => {
       // Remove dragging class from all elements
       document.querySelectorAll(".lib-dragging").forEach((node) => {
         node.classList.remove("lib-dragging");
