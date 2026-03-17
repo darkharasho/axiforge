@@ -106,8 +106,30 @@ function _wireFolderDropTargets() {
 
   // Content area itself — drop on empty space to move to root
   const content = document.getElementById("lib-content");
-  if (content) {
-    _makeDropTarget(content, null);
+  if (content && !content.dataset.rootDropBound) {
+    content.dataset.rootDropBound = "1";
+
+    content.addEventListener("dragover", (e) => {
+      // Only act as drop target if not over a folder or build
+      if (e.target.closest("[data-folder-id]") || e.target.closest("[data-build-id]")) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+    });
+
+    content.addEventListener("drop", async (e) => {
+      // Only handle if not dropped on a folder or build (those handle themselves)
+      if (e.target.closest("[data-folder-id]") || e.target.closest("[data-build-id]")) return;
+      e.preventDefault();
+
+      let ids = _draggedIds;
+      if (!ids || ids.length === 0) {
+        try { ids = JSON.parse(e.dataTransfer.getData("text/plain")); } catch { ids = []; }
+      }
+      if (ids.length === 0) return;
+
+      await moveBuilds(ids, null);
+      _callbacks.onRefresh?.();
+    });
   }
 }
 
@@ -130,7 +152,6 @@ function _makeDropTarget(el, folderId) {
   });
 
   el.addEventListener("drop", async (e) => {
-    e.preventDefault();
     el.classList.remove("lib-drop-target");
 
     // Prefer the module-level _draggedIds; fall back to dataTransfer
@@ -145,7 +166,20 @@ function _makeDropTarget(el, folderId) {
 
     if (ids.length === 0) return;
 
-    await moveBuilds(ids, folderId || null);
+    // If ALL dragged builds are already in this folder, skip and let event bubble
+    // so a parent folder can handle it
+    if (folderId) {
+      const { state } = await import("../state.js");
+      const allAlreadyHere = ids.every((id) => {
+        const build = state.builds.find((b) => b.id === id);
+        return build && build.folderId === folderId;
+      });
+      if (allAlreadyHere) return; // let it bubble to parent
+    }
+
+    e.preventDefault();
+    e.stopPropagation();
+    await moveBuilds(ids, folderId ?? null);
     _callbacks.onRefresh?.();
   });
 }
