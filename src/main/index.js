@@ -348,6 +348,11 @@ app.whenReady().then(async () => {
     const build = await decodeChatLinkToBuild(link, name, folderId, gameMode);
     return store.upsertBuild(build);
   });
+  ipcMain.handle("builds:import-gw2skills", async (_e, url, name, folderId, gameMode) => {
+    const { importGw2SkillsBuild } = require("./gw2skillsImport.js");
+    const build = await importGw2SkillsBuild(url, name, folderId, gameMode);
+    return store.upsertBuild(build);
+  });
 
   ipcMain.handle("builds:publish-build", async (event, buildId) => {
     const sender = event.sender;

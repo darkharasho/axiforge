@@ -155,6 +155,7 @@ function showEmptyMenu(x, y) {
     _item(clipboardIcon, "Paste from JSON", "Ctrl+V", () => _callbacks.onPasteJson?.()),
     _submenuItem(arrowDownTrayIcon, "Import", [
       _item(linkIcon, "Build Link", null, () => _callbacks.onImportChatLink?.()),
+      _item(arrowDownTrayIcon, "GW2Skills", null, () => _callbacks.onImportGw2Skills?.()),
     ]),
     _sep(),
     _item(null, "Select All", "Ctrl+A", () => _callbacks.onSelectAll?.()),
