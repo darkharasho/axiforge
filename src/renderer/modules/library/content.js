@@ -4,6 +4,7 @@ import { state } from "../state.js";
 import { escapeHtml, formatRelativeTime } from "../utils.js";
 import { getVisibleBuilds, getVisibleFolders } from "./folder-store.js";
 import { getProfessionSvg } from "../profession-icons.js";
+import { clearSelection } from "./selection.js";
 import {
   folderIcon,
   starIcon,
@@ -380,6 +381,13 @@ function renderIconView(container) {
 // ─── Event binding ─────────────────────────────────────────────────────────────
 
 function bindContentEvents(container) {
+  // Click on empty content area (not on a build or folder) clears selection
+  container.addEventListener("click", (e) => {
+    if (!e.target.closest("[data-build-id]") && !e.target.closest("[data-folder-id]")) {
+      clearSelection();
+    }
+  });
+
   // Double-click builds to load; stop propagation so folder parents don't toggle
   container.querySelectorAll("[data-build-id]").forEach((el) => {
     el.addEventListener("click", (e) => e.stopPropagation());

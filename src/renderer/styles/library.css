@@ -702,7 +702,7 @@
 .lib-tv__header,
 .lib-tv__row {
   display: grid;
-  grid-template-columns: 22px 22px 1fr auto auto auto auto auto auto;
+  grid-template-columns: 22px 22px 1fr 100px 100px 60px 80px 80px 80px;
   align-items: center;
   gap: 0;
   font-size: 0.85rem;
@@ -787,14 +787,22 @@
 
 /* Data columns */
 .lib-tv__profession,
-.lib-tv__spec,
+.lib-tv__spec {
+  color: #99a;
+  padding: 0 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 100px;
+}
+
 .lib-tv__mode {
   color: #99a;
   padding: 0 8px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  min-width: 80px;
+  min-width: 60px;
 }
 
 .lib-tv__tags {
@@ -811,7 +819,7 @@
   color: #556;
   padding: 0 8px;
   white-space: nowrap;
-  min-width: 70px;
+  min-width: 80px;
 }
 
 /* Sort buttons */
@@ -892,6 +900,8 @@
   width: 26px;
   height: 26px;
   flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
 }
 
 .lib-grid-card__spec-icon svg {
@@ -901,6 +911,9 @@
 }
 
 .lib-grid-card__icon--folder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: #668;
 }
 

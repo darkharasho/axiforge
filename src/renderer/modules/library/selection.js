@@ -48,7 +48,13 @@ export function handleBuildClick(buildId, event) {
   } else if (event.ctrlKey || event.metaKey) {
     _toggleSelect(buildId);
   } else {
-    _singleSelect(buildId);
+    // Clicking the sole selected item deselects it; otherwise single-select
+    if (selection.ids.size === 1 && selection.ids.has(buildId)) {
+      selection.ids.clear();
+      selection.lastClickedId = null;
+    } else {
+      _singleSelect(buildId);
+    }
   }
   updateSelectionVisuals();
 }

@@ -62,8 +62,11 @@ export function getVisibleBuilds() {
       builds = builds.filter(
         (b) => (b.gameMode || "pve") === folder.id,
       );
+    } else if (folder.type === "all") {
+      // "all" type: show only root-level builds at top level;
+      // builds inside folders appear under their expanded folder rows
+      builds = builds.filter((b) => !b.folderId);
     }
-    // "all" type = no filtering (shows everything including in-folder builds)
   } else {
     // Root: only show builds not in any folder
     builds = builds.filter((b) => !b.folderId);
