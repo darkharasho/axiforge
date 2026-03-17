@@ -92,8 +92,16 @@ async function getSession() {
   try {
     const viewer = await getViewer(auth.token);
     return { token: auth.token, viewer };
-  } catch {
-    await store.clearAuth();
+  } catch (err) {
+    if (err?.status === 401) {
+      await store.clearAuth();
+      return null;
+    }
+    // Network error or transient GitHub failure — keep the token,
+    // fall back to the cached viewer so the session stays alive.
+    if (auth.viewer) {
+      return { token: auth.token, viewer: auth.viewer };
+    }
     return null;
   }
 }
