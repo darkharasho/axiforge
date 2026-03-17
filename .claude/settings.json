@@ -6,7 +6,9 @@
       "Edit(*)",
       "Write(*)",
       "Read(//home/mstephens/.claude/**)",
-      "Read(//var/home/mstephens/.claude/**)"
+      "Read(//var/home/mstephens/.claude/**)",
+      "Skill(commit-commands:commit-push-pr)",
+      "Skill(commit-commands:commit-push-pr:*)"
     ]
   },
   "defaultMode": "bypassPermissions"

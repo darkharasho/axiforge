@@ -318,7 +318,7 @@ async function handleCopyChatLink(buildId) {
 }
 
 async function handleImportChatLink() {
-  const folderId = state.currentFolder || null;
+  const folderId = state.currentFolder?.type === "custom" ? state.currentFolder.id : null;
   const result = await showImportModal();
   if (!result) return;
   try {
@@ -335,7 +335,7 @@ async function handleImportChatLink() {
 }
 
 async function handleImportGw2Skills() {
-  const folderId = state.currentFolder || null;
+  const folderId = state.currentFolder?.type === "custom" ? state.currentFolder.id : null;
   const result = await showGw2SkillsImportModal();
   if (!result) return;
   showToast("Importing from GW2Skills\u2026", "loading");
