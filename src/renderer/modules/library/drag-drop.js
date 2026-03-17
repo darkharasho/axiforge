@@ -3,7 +3,12 @@
 // - Reordering builds within a container (any view)
 // - Moving builds between folders via nested containers (table view)
 // - Moving builds into folders by dropping on folder elements (all views)
+// - Dropping builds onto sidebar folder items and breadcrumbs
 // - Auto-expanding collapsed folders on hover (table view)
+//
+// Uses forceFallback mode to control the drag cursor, and pointer events +
+// elementFromPoint() for folder/sidebar/breadcrumb drop targets (since
+// forceFallback bypasses native HTML5 drag events).
 
 import Sortable from "sortablejs";
 import { moveBuilds, reorderBuilds } from "./folder-store.js";
@@ -13,6 +18,9 @@ import { state } from "../state.js";
 let _callbacks = {};
 let _sortableInstances = [];
 let _expandTimer = null;
+let _isDragging = false;
+let _draggedBuildId = null;
+let _hoverTarget = null;
 
 export function initDragDrop(callbacks) {
   _callbacks = callbacks || {};
@@ -29,10 +37,61 @@ export function wireDragDropEvents() {
   });
   _sortableInstances = [];
 
-  const onEnd = async (evt) => {
-    const buildId = evt.item?.dataset?.buildId;
-    if (!buildId) return;
+  const onStart = (evt) => {
+    _isDragging = true;
+    _draggedBuildId = evt.item?.dataset?.buildId;
+    document.addEventListener("pointermove", _onPointerMove);
+  };
 
+  const onEnd = async (evt) => {
+    document.removeEventListener("pointermove", _onPointerMove);
+    clearTimeout(_expandTimer);
+
+    // Clean up hover highlight
+    if (_hoverTarget) {
+      _hoverTarget.classList.remove("lib-drop-target");
+      _hoverTarget = null;
+    }
+
+    const buildId = evt.item?.dataset?.buildId;
+    if (!buildId) {
+      _isDragging = false;
+      _draggedBuildId = null;
+      return;
+    }
+
+    // Check if we dropped on a folder or sidebar/breadcrumb element
+    const origEvt = evt.originalEvent;
+    if (origEvt) {
+      const dropEl = document.elementFromPoint(origEvt.clientX, origEvt.clientY);
+
+      // Folder drop target (collapsed folder or folder in non-table views)
+      const folderEl = dropEl?.closest("[data-folder-id]");
+      if (folderEl) {
+        const childrenUl = folderEl.querySelector(".lib-tv__children");
+        if (!childrenUl) {
+          const folderId = folderEl.dataset.folderId;
+          _isDragging = false;
+          _draggedBuildId = null;
+          await moveBuilds([buildId], folderId);
+          _callbacks.onRefresh?.();
+          return;
+        }
+      }
+
+      // Sidebar or breadcrumb drop target
+      const navTarget = dropEl?.closest("[data-navigate-folder], [data-navigate-all], [data-navigate-root]");
+      if (navTarget) {
+        const folderId = navTarget.dataset.navigateFolder || null;
+        _isDragging = false;
+        _draggedBuildId = null;
+        await moveBuilds([buildId], folderId);
+        _callbacks.onRefresh?.();
+        return;
+      }
+    }
+
+    // Normal SortableJS reorder/move logic
     const dropContainer = evt.to;
     const folderLi = dropContainer.closest("[data-folder-id]");
     const newFolderId = folderLi?.dataset.folderId || null;
@@ -56,6 +115,8 @@ export function wireDragDropEvents() {
       }
     }
 
+    _isDragging = false;
+    _draggedBuildId = null;
     _callbacks.onRefresh?.();
   };
 
@@ -67,8 +128,11 @@ export function wireDragDropEvents() {
     dragClass: "lib-drag-active",
     draggable: "[data-build-id]",
     emptyInsertThreshold: 20,
+    forceFallback: true,
+    fallbackClass: "lib-drag-fallback",
     fallbackOnBody: true,
     swapThreshold: 0.65,
+    onStart,
     onEnd,
   };
 
@@ -78,115 +142,49 @@ export function wireDragDropEvents() {
   ).forEach((el) => {
     _sortableInstances.push(Sortable.create(el, sortableOpts));
   });
-
-  // Wire folder elements as drop targets (for all views)
-  _wireFolderDropTargets();
-
-  // Wire sidebar drop targets (once)
-  _wireSidebarDropTargets();
 }
 
-// ─── Folder drop targets (non-table views + collapsed table folders) ───────────
-// In list/grid/icon views, folders are flat elements — not SortableJS containers.
-// We add manual dragover/drop handlers so you can drop builds ON a folder element.
-// In table view, collapsed folders also need this since they have no children <ul>.
+// ─── Pointer-based hover tracking during drag ─────────────────────────────────
+// With forceFallback, native drag events don't fire. We use pointermove +
+// elementFromPoint to highlight folder/sidebar/breadcrumb targets during drag.
 
-function _wireFolderDropTargets() {
-  const content = document.getElementById("lib-content");
-  if (!content) return;
+function _onPointerMove(e) {
+  if (!_isDragging) return;
 
-  // Use delegation on #lib-content for folder drop targets + global dragover
-  if (content.dataset.folderDropBound) return;
-  content.dataset.folderDropBound = "1";
+  // Clear previous highlight
+  if (_hoverTarget) {
+    _hoverTarget.classList.remove("lib-drop-target");
+    _hoverTarget = null;
+  }
 
-  // Always allow drops on #lib-content so the cursor never shows "denied"
-  content.addEventListener("dragover", (e) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  if (!el) return;
 
-    const folderEl = e.target.closest("[data-folder-id]");
-    if (!folderEl) return;
-
+  // Check folder elements in content area
+  const folderEl = el.closest("[data-folder-id]");
+  if (folderEl) {
     const childrenUl = folderEl.querySelector(".lib-tv__children");
-    if (childrenUl) return;
-    folderEl.classList.add("lib-drop-target");
+    if (!childrenUl) {
+      _hoverTarget = folderEl;
+      folderEl.classList.add("lib-drop-target");
 
-    // Auto-expand collapsed folders in table view after hovering 500ms
-    const folderId = folderEl.dataset.folderId;
-    if (folderEl.closest(".lib-tv") && folderId) {
-      clearTimeout(_expandTimer);
-      _expandTimer = setTimeout(() => {
-        expandTableFolder(folderId);
-      }, 500);
+      // Auto-expand collapsed table folders after 500ms hover
+      const folderId = folderEl.dataset.folderId;
+      if (folderEl.closest(".lib-tv") && folderId) {
+        clearTimeout(_expandTimer);
+        _expandTimer = setTimeout(() => expandTableFolder(folderId), 500);
+      }
+      return;
     }
-  });
+  }
 
-  content.addEventListener("dragleave", (e) => {
-    const folderEl = e.target.closest("[data-folder-id]");
-    if (folderEl && !folderEl.contains(e.relatedTarget)) {
-      folderEl.classList.remove("lib-drop-target");
-      clearTimeout(_expandTimer);
-    }
-  });
+  // Check sidebar and breadcrumb targets
+  const navTarget = el.closest("[data-navigate-folder], [data-navigate-all], [data-navigate-root]");
+  if (navTarget) {
+    _hoverTarget = navTarget;
+    navTarget.classList.add("lib-drop-target");
+    return;
+  }
 
-  content.addEventListener("drop", async (e) => {
-    clearTimeout(_expandTimer);
-    const folderEl = e.target.closest("[data-folder-id]");
-    if (!folderEl) return;
-
-    // If this folder has a SortableJS children container, let SortableJS handle it
-    const childrenUl = folderEl.querySelector(".lib-tv__children");
-    if (childrenUl) return;
-
-    e.preventDefault();
-    e.stopPropagation();
-    folderEl.classList.remove("lib-drop-target");
-
-    // Find the dragged build
-    const dragging = document.querySelector(".sortable-drag");
-    const buildId = dragging?.dataset?.buildId;
-    if (!buildId) return;
-
-    const folderId = folderEl.dataset.folderId;
-    await moveBuilds([buildId], folderId);
-    _callbacks.onRefresh?.();
-  });
-}
-
-// ─── Sidebar drop targets ──────────────────────────────────────────────────────
-
-function _wireSidebarDropTargets() {
-  const sidebar = document.getElementById("lib-sidebar");
-  if (!sidebar || sidebar.dataset.sortableBound) return;
-  sidebar.dataset.sortableBound = "1";
-
-  sidebar.addEventListener("dragover", (e) => {
-    const target = e.target.closest("[data-navigate-folder], [data-navigate-all]");
-    if (!target) return;
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-    target.classList.add("lib-drop-target");
-  });
-
-  sidebar.addEventListener("dragleave", (e) => {
-    const target = e.target.closest("[data-navigate-folder], [data-navigate-all]");
-    if (target && !target.contains(e.relatedTarget)) {
-      target.classList.remove("lib-drop-target");
-    }
-  });
-
-  sidebar.addEventListener("drop", async (e) => {
-    const target = e.target.closest("[data-navigate-folder], [data-navigate-all]");
-    if (!target) return;
-    e.preventDefault();
-    target.classList.remove("lib-drop-target");
-
-    const dragging = document.querySelector(".sortable-drag, .lib-drag-chosen");
-    const buildId = dragging?.dataset?.buildId;
-    if (!buildId) return;
-
-    const folderId = target.dataset.navigateFolder || null;
-    await moveBuilds([buildId], folderId);
-    _callbacks.onRefresh?.();
-  });
+  clearTimeout(_expandTimer);
 }

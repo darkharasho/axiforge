@@ -75,9 +75,7 @@ export function renderLibrary() {
   renderToolbar();
   renderFilters();
   renderContent();
-  wireSelectionEvents();
   wireContextMenuEvents();
-  wireDragDropEvents();
 }
 
 /**

@@ -1157,14 +1157,29 @@
   opacity: 0.5;
 }
 
+.lib-drag-fallback {
+  opacity: 0.9;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  cursor: grab !important;
+}
+
 .sortable-drag {
   opacity: 0.9;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
 .lib-drop-target {
-  outline: 1px dashed rgba(72, 168, 255, 0.5);
-  background: rgba(72, 168, 255, 0.08) !important;
+  outline: 2px dashed rgba(72, 168, 255, 0.6);
+  outline-offset: -2px;
+  background: rgba(72, 168, 255, 0.1) !important;
+}
+
+.lib-breadcrumb__item.lib-drop-target {
+  outline: none;
+  box-shadow: inset 0 0 0 2px rgba(72, 168, 255, 0.6);
+  border-radius: 4px;
+  background: rgba(72, 168, 255, 0.15) !important;
+  overflow: visible;
 }
 
 .lib-root-drop-zone {

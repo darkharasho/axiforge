@@ -13,6 +13,7 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: ["sortablejs"],
+    force: true,
   },
   publicDir: path.resolve(__dirname, "public"),
   build: {
