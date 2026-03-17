@@ -215,12 +215,12 @@ function renderTableView(container) {
         + folderBuilds.map((b) => renderTreeBuild(b)).join("");
 
       if (items) {
-        childrenHtml = `<ul class="lib-tv__children">${items}</ul>`;
+        childrenHtml = `<ul class="lib-tv__children" ondragover="event.preventDefault()">${items}</ul>`;
       }
     }
 
     return `
-      <li class="lib-tv__item" data-folder-id="${escapeHtml(folder.id)}">
+      <li class="lib-tv__item" data-folder-id="${escapeHtml(folder.id)}" ondragover="event.preventDefault()">
         <div class="lib-tv__row lib-tv__row--folder">
           <span class="lib-tv__action" data-toggle-table-folder="${escapeHtml(folder.id)}">${chevron}</span>
           <span class="lib-tv__icon"><span class="lib-table__folder-icon">${folderIcon}</span></span>
@@ -241,7 +241,7 @@ function renderTableView(container) {
     const eliteSpec = getEliteSpecName(b);
     const tags = (b.tags || []).map((t) => escapeHtml(t)).join(", ");
     return `
-      <li class="lib-tv__item" data-build-id="${escapeHtml(b.id)}" draggable="true">
+      <li class="lib-tv__item" data-build-id="${escapeHtml(b.id)}" draggable="true" ondragover="event.preventDefault()">
         <div class="lib-tv__row lib-tv__row--build ${b.pinned ? "lib-tv__row--pinned" : ""}">
           <span class="lib-tv__action">${pinStarHtml(b)}</span>
           <span class="lib-tv__icon ${profClass(b.profession)}">${getSpecIcon(b)}</span>
@@ -273,7 +273,7 @@ function renderTableView(container) {
         <span class="lib-tv__created">${sortHeaderDiv("createdAt", "Created")}</span>
         <span class="lib-tv__modified">${sortHeaderDiv("updatedAt", "Modified")}</span>
       </div>
-      <ul class="lib-tv__tree">
+      <ul class="lib-tv__tree" ondragover="event.preventDefault()">
         ${folderItems}${buildItems}
       </ul>
     </div>
