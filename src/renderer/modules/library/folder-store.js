@@ -63,7 +63,10 @@ export function getVisibleBuilds() {
         (b) => (b.gameMode || "pve") === folder.id,
       );
     }
-    // "all" type = no filtering
+    // "all" type = no filtering (shows everything including in-folder builds)
+  } else {
+    // Root: only show builds not in any folder
+    builds = builds.filter((b) => !b.folderId);
   }
 
   // Apply filter chips
