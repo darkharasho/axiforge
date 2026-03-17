@@ -343,9 +343,9 @@ app.whenReady().then(async () => {
     const { previewChatLink } = require("./buildChatLink.js");
     return previewChatLink(link);
   });
-  ipcMain.handle("builds:import-chat-link", async (_e, link, name, folderId) => {
+  ipcMain.handle("builds:import-chat-link", async (_e, link, name, folderId, gameMode) => {
     const { decodeChatLinkToBuild } = require("./buildChatLink.js");
-    const build = await decodeChatLinkToBuild(link, name, folderId);
+    const build = await decodeChatLinkToBuild(link, name, folderId, gameMode);
     return store.upsertBuild(build);
   });
 

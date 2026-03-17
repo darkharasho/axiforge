@@ -160,7 +160,7 @@ async function previewChatLink(link) {
   return { profession: decoded.profession.id, eliteSpec };
 }
 
-async function decodeChatLinkToBuild(link, name, folderId) {
+async function decodeChatLinkToBuild(link, name, folderId, gameMode) {
   const { decodeBuildTemplate } = await import("gw2buildlink");
   const api = await getApi();
   const decoded = await decodeBuildTemplate(link, { api });
@@ -229,6 +229,7 @@ async function decodeChatLinkToBuild(link, name, folderId) {
     selectedPets,
     morphSkillIds: [0, 0, 0],
     ...(folderId ? { folderId } : {}),
+    ...(gameMode ? { gameMode } : {}),
   };
 }
 

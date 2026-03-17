@@ -320,7 +320,8 @@ async function handleImportChatLink() {
   const result = await showImportModal();
   if (!result) return;
   try {
-    const saved = await window.desktopApi.importChatLink(result.link, result.name, folderId);
+    const gameMode = state.editor?.gameMode || "pve";
+    const saved = await window.desktopApi.importChatLink(result.link, result.name, folderId, gameMode);
     state.builds = await window.desktopApi.listBuilds();
     renderLibrary();
     window.desktopApi.prewarmChatLinks?.([saved]);
