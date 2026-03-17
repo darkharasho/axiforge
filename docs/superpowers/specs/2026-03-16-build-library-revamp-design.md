@@ -32,7 +32,7 @@ New `folders.json` file alongside `builds.json`, managed by `FolderStore`. Each 
 ```
 
 - `parentId: null` means top-level folder.
-- Nesting is allowed to arbitrary depth but the UI encourages 2 levels max.
+- Maximum nesting depth: 3 levels. `folders:save` rejects a folder whose `parentId` chain would exceed this depth. The UI encourages 2 levels but the data model enforces the hard cap.
 - Deleting a folder sets `folderId: null` on all builds in that folder (moves them to root).
 - Deleting a parent folder also deletes all sub-folders (their builds also move to root).
 
@@ -54,10 +54,14 @@ Smart folders are read-only and not editable by the user.
 
 ### Migration
 
-On first launch after update:
-- Existing builds get `folderId: null`, `pinned: false`, `sortOrder: 0`.
-- Empty `folders.json` created: `[]`.
-- No data loss, fully backwards compatible.
+No discrete migration step needed. The existing `normalizeBuild()` function in `buildStore.js` is called on every `listBuilds()` and `upsertBuild()` call — adding the new fields with defaults there means existing builds are automatically normalized on read:
+- `folderId` defaults to `null`
+- `pinned` defaults to `false`
+- `sortOrder` defaults to `0`
+
+`FolderStore` creates an empty `folders.json` (`[]`) in its constructor if the file does not exist, following the same pattern as `BuildStore`.
+
+No data loss, fully backwards compatible.
 
 ## Sidebar
 
@@ -172,8 +176,8 @@ Minimal: spec icon (larger) + title below. Tightly packed grid for maximum densi
 | `F2`       | Rename selected build/folder    |
 | `Ctrl+D`   | Duplicate selected build        |
 | `Ctrl+N`   | New build                       |
-| `Ctrl+C`   | Copy selected build(s) as JSON  |
-| `Ctrl+V`   | Paste build from JSON           |
+| `Ctrl+C`   | Copy selected build(s) as JSON (only when build list is focused, not text inputs) |
+| `Ctrl+V`   | Paste build from JSON (only when build list is focused, not text inputs) |
 | `Del`      | Delete selected (with confirm)  |
 | `Ctrl+A`   | Select all                      |
 | Arrow keys | Navigate up/down through list   |
@@ -245,13 +249,13 @@ All menu items use Heroicons. Destructive actions shown in red at bottom of menu
 - `folders:reorder` — update `sortOrder` for a batch of folders
 
 **Builds (additions):**
-- `builds:move` — update `folderId` for one or more build IDs
+- `builds:move` — update `folderId` for one or more build IDs. Validates that `folderId` exists in `folders.json`; throws if not found (prevents orphaned builds).
 - `builds:pin` — toggle `pinned` for one or more build IDs
 - `builds:reorder` — update `sortOrder` for a batch of builds
 
 ### User Preferences
 
-Stored in app config (or new `preferences.json`):
+Stored via the existing `settings.json` mechanism (using `getSetting`/`setSetting` in `BuildStore` and the `settings:get`/`settings:set` IPC handlers):
 
 | Key                               | Type       | Default      |
 |-----------------------------------|------------|--------------|
@@ -293,7 +297,7 @@ Vanilla JS modules. Each module is small and single-purpose.
 | `src/main/index.js`                        | Add new IPC handlers for folders, move, pin, reorder           |
 | `src/renderer/modules/render-pages.js`     | Replace `renderBuildList()` with new library module            |
 | `src/renderer/modules/state.js`            | Add `folders`, library preferences to state                    |
-| `src/renderer/index.html`                  | Replace library page markup with new structure                 |
+| `src/renderer/index.html`                  | Replace library page markup with new structure: `div#lib-sidebar` (sidebar container), `div#lib-main` (content area with `div#lib-toolbar`, `div#lib-filters`, `div#lib-content`). Modules query these IDs to mount. |
 
 ### New Styles
 
@@ -301,7 +305,7 @@ Vanilla JS modules. Each module is small and single-purpose.
 |---------------------------------------|---------------------------------------------------------|
 | `src/renderer/styles/library.css`     | All library styles, prefixed with `lib-` to avoid conflicts |
 
-Replaces relevant parts of `cards.css` for the build list. Organized by section: sidebar, toolbar, list view, table view, grid view, icon view, context menu, drag-drop feedback.
+All build-list-related selectors currently in `cards.css` (`.build-list`, `.build-card`, `.build-card__*`) will be removed from `cards.css` and replaced by `lib-` prefixed equivalents in `library.css`. Any non-library selectors in `cards.css` (if any) are retained. Organized by section: sidebar, toolbar, list view, table view, grid view, icon view, context menu, drag-drop feedback.
 
 ## Dependencies
 
