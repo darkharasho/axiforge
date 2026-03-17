@@ -1148,6 +1148,23 @@
   background: rgba(72, 168, 255, 0.08) !important;
 }
 
+.lib-root-drop-zone {
+  padding: 10px 16px;
+  text-align: center;
+  color: #556;
+  font-size: 0.85rem;
+  border: 2px dashed #252545;
+  border-radius: 6px;
+  margin: 6px 8px;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.lib-root-drop-zone--active {
+  background: rgba(72, 168, 255, 0.1);
+  border-color: rgba(72, 168, 255, 0.5);
+  color: #8ab8e8;
+}
+
 /* ── Selection ───────────────────────────────────────────────────── */
 
 .lib-selected {

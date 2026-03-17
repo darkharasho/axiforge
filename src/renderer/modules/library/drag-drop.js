@@ -52,6 +52,12 @@ function _wireBuildDraggables() {
           .querySelectorAll(`[data-build-id="${CSS.escape(id)}"]`)
           .forEach((node) => node.classList.add("lib-dragging"));
       });
+
+      // Show root drop zone if build is in a folder
+      const build = state.builds.find((b) => b.id === buildId);
+      if (build?.folderId) {
+        _showRootDropZone();
+      }
     });
 
     el.addEventListener("dragend", () => {
@@ -61,6 +67,7 @@ function _wireBuildDraggables() {
       document.querySelectorAll(".lib-drop-target").forEach((node) => {
         node.classList.remove("lib-drop-target");
       });
+      _hideRootDropZone();
       setTimeout(() => { _draggedIds = []; }, 50);
     });
   });
@@ -149,6 +156,50 @@ function _wireRootDropTarget() {
     _draggedIds = [];
     _callbacks.onRefresh?.();
   });
+}
+
+// ─── Root drop zone (visible bar during drag) ─────────────────────────────────
+
+let _rootDropZone = null;
+
+function _showRootDropZone() {
+  if (_rootDropZone) return;
+  const content = document.getElementById("lib-content");
+  if (!content) return;
+
+  _rootDropZone = document.createElement("div");
+  _rootDropZone.className = "lib-root-drop-zone";
+  _rootDropZone.textContent = "Drop here to move to root";
+  content.prepend(_rootDropZone);
+
+  _rootDropZone.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = "move";
+    _rootDropZone.classList.add("lib-root-drop-zone--active");
+  });
+
+  _rootDropZone.addEventListener("dragleave", () => {
+    _rootDropZone.classList.remove("lib-root-drop-zone--active");
+  });
+
+  _rootDropZone.addEventListener("drop", async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const ids = _getDropIds(e);
+    if (ids.length === 0) return;
+    await moveBuilds(ids, null);
+    _draggedIds = [];
+    _hideRootDropZone();
+    _callbacks.onRefresh?.();
+  });
+}
+
+function _hideRootDropZone() {
+  if (_rootDropZone) {
+    _rootDropZone.remove();
+    _rootDropZone = null;
+  }
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
