@@ -450,13 +450,12 @@
 .lib-nav-item__icon {
   display: flex;
   flex-shrink: 0;
-  color: #8899bb;
+  color: #668;
 }
 
 .lib-nav-item__icon svg {
-  width: 15px;
-  height: 15px;
-  fill: currentColor;
+  width: 14px;
+  height: 14px;
 }
 
 .lib-nav-item__label {
