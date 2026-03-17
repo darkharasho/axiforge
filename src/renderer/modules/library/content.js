@@ -197,10 +197,10 @@ function renderTableView(container) {
     let rows = `
       <tr class="lib-table__row lib-table__row--folder" data-folder-id="${escapeHtml(folder.id)}">
         <td class="lib-table__td lib-table__td--pin"></td>
-        <td class="lib-table__td lib-table__td--icon" style="padding-left:${indent}px">
+        <td class="lib-table__td lib-table__td--icon">
           <span class="lib-table__chevron" data-toggle-table-folder="${escapeHtml(folder.id)}">${chevron}</span>
         </td>
-        <td class="lib-table__td lib-table__td--name"><span class="lib-table__folder-icon">${folderIcon}</span> ${escapeHtml(folder.name)}</td>
+        <td class="lib-table__td lib-table__td--name" ${indent ? `style="padding-left:${indent}px"` : ""}><span class="lib-table__folder-icon">${folderIcon}</span> ${escapeHtml(folder.name)}</td>
         <td class="lib-table__td lib-table__td--profession"></td>
         <td class="lib-table__td lib-table__td--spec"></td>
         <td class="lib-table__td lib-table__td--mode"></td>
@@ -247,8 +247,8 @@ function renderTableView(container) {
     return `
       <tr class="lib-table__row lib-table__row--build ${b.pinned ? "lib-table__row--pinned" : ""}" data-build-id="${escapeHtml(b.id)}">
         <td class="lib-table__td lib-table__td--pin">${pinStarHtml(b)}</td>
-        <td class="lib-table__td lib-table__td--icon ${profClass(b.profession)}" ${indent ? `style="padding-left:${indent}px"` : ""}>${getSpecIcon(b)}</td>
-        <td class="lib-table__td lib-table__td--name">${escapeHtml(b.title || "Untitled")}</td>
+        <td class="lib-table__td lib-table__td--icon ${profClass(b.profession)}">${getSpecIcon(b)}</td>
+        <td class="lib-table__td lib-table__td--name" ${indent ? `style="padding-left:${indent}px"` : ""}>${escapeHtml(b.title || "Untitled")}</td>
         <td class="lib-table__td lib-table__td--profession">${escapeHtml(b.profession || "")}</td>
         <td class="lib-table__td lib-table__td--spec">${escapeHtml(eliteSpec || "")}</td>
         <td class="lib-table__td lib-table__td--mode">${escapeHtml(gameModeLabel(b.gameMode || "pve"))}</td>
