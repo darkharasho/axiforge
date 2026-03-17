@@ -51,6 +51,7 @@ export function renderToolbar() {
       </div>
       <div class="lib-toolbar__sort">
         <select id="lib-sort-select" class="lib-toolbar__sort-select">
+          <option value="sortOrder" ${prefs.sortField === "sortOrder" ? "selected" : ""}>Custom</option>
           <option value="updatedAt" ${prefs.sortField === "updatedAt" ? "selected" : ""}>Last Modified</option>
           <option value="createdAt" ${prefs.sortField === "createdAt" ? "selected" : ""}>Created</option>
           <option value="title" ${prefs.sortField === "title" ? "selected" : ""}>A–Z</option>

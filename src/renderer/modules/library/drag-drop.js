@@ -3,7 +3,7 @@
 // is rebuilt via innerHTML each time.
 
 import Sortable from "sortablejs";
-import { moveBuilds } from "./folder-store.js";
+import { moveBuilds, reorderBuilds } from "./folder-store.js";
 import { state } from "../state.js";
 
 let _callbacks = {};
@@ -39,10 +39,25 @@ export function wireDragDropEvents() {
     const oldFolderId = build?.folderId || null;
 
     if (newFolderId !== oldFolderId) {
+      // Moved to a different folder
       await moveBuilds([buildId], newFolderId);
+    } else {
+      // Reordered within the same container — save custom sort order
+      const children = [...evt.to.children]
+        .map((el) => el.dataset?.buildId)
+        .filter(Boolean);
+
+      if (children.length > 0) {
+        const updates = children.map((id, i) => ({ id, sortOrder: i }));
+        await reorderBuilds(updates);
+
+        // Auto-switch to custom sort so the order is visible
+        state.libraryPrefs.sortField = "sortOrder";
+        state.libraryPrefs.sortDirection = "asc";
+      }
     }
 
-    // Always re-render to restore proper sort order
+    // Re-render to reflect changes
     _callbacks.onRefresh?.();
   };
 
