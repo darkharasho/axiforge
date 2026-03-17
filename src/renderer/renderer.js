@@ -62,6 +62,7 @@ const el = {
   buildList:         q("#buildList"),
   buildSearch:       q("#buildSearch"),
   editorTitle:       q("#editorTitle"),
+  chatLinkBtn:       q("#chatLinkBtn"),
   professionSelect:  q("#professionSelect"),
   tagsInput:         q("#tagsInput"),
   equipmentPanel:    q("#equipmentPanel"),
@@ -583,6 +584,27 @@ function wireEvents() {
 
   el.pasteBuildBtn.addEventListener("click", async () => {
     await importBuildJsonFromClipboard();
+  });
+
+  // Chat link button
+  const chatLinkDefaultHTML = el.chatLinkBtn.innerHTML;
+  let chatLinkTimeout = null;
+  el.chatLinkBtn.addEventListener("click", async () => {
+    const build = serializeEditorToBuild();
+    try {
+      const link = await window.desktopApi.generateChatLink(build);
+      await window.desktopApi.writeClipboardText(link);
+      el.chatLinkBtn.classList.add("title-input-group__btn--success");
+      el.chatLinkBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg> Copied!`;
+    } catch (err) {
+      el.chatLinkBtn.classList.add("title-input-group__btn--error");
+      el.chatLinkBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 18L18 6M6 6l12 12"/></svg> Failed`;
+    }
+    clearTimeout(chatLinkTimeout);
+    chatLinkTimeout = setTimeout(() => {
+      el.chatLinkBtn.classList.remove("title-input-group__btn--success", "title-input-group__btn--error");
+      el.chatLinkBtn.innerHTML = chatLinkDefaultHTML;
+    }, 2000);
   });
 
   // Overflow menu toggle

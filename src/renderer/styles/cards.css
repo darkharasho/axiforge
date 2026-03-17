@@ -132,6 +132,44 @@
   gap: 10px;
 }
 
+.title-input-group {
+  display: flex;
+}
+.title-input-group input {
+  border-radius: var(--radius) 0 0 var(--radius);
+  border-right: none;
+  flex: 1;
+  min-width: 0;
+}
+.title-input-group__btn {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  color: var(--muted);
+  padding: 0 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+.title-input-group__btn:hover {
+  background: var(--line);
+  color: var(--text);
+}
+.title-input-group__btn--success {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--panel));
+}
+.title-input-group__btn--error {
+  border-color: var(--danger);
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 10%, var(--panel));
+}
+
 label {
   display: grid;
   gap: 6px;
