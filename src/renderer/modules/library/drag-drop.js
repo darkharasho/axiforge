@@ -39,6 +39,7 @@ function _wireBuildDraggables() {
 
     draggable.addEventListener("dragstart", (e) => {
       e.stopPropagation();
+      console.log("[drag] dragstart", el.dataset.buildId, "draggable el:", draggable.tagName, draggable.className);
       const buildId = el.dataset.buildId;
 
       // If this build is part of a multi-selection, drag all selected
@@ -104,22 +105,21 @@ function _wireFolderDropTargets() {
     _makeDropTarget(el, null);
   });
 
-  // Content area itself — drop on empty space to move to root
+  // Content area — always accept drops, move to root
   const content = document.getElementById("lib-content");
   if (content && !content.dataset.rootDropBound) {
     content.dataset.rootDropBound = "1";
 
     content.addEventListener("dragover", (e) => {
-      // Only act as drop target if not over a folder or build
-      if (e.target.closest("[data-folder-id]") || e.target.closest("[data-build-id]")) return;
       e.preventDefault();
       e.dataTransfer.dropEffect = "move";
     });
 
     content.addEventListener("drop", async (e) => {
-      // Only handle if not dropped on a folder or build (those handle themselves)
-      if (e.target.closest("[data-folder-id]") || e.target.closest("[data-build-id]")) return;
+      // If a folder drop target already handled this, it will have
+      // called stopPropagation. If we get here, no folder caught it.
       e.preventDefault();
+      console.log("[drag] drop on content area (root)");
 
       let ids = _draggedIds;
       if (!ids || ids.length === 0) {
