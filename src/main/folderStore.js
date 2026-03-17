@@ -91,6 +91,22 @@ class FolderStore {
     return folders.some((f) => f.id === id);
   }
 
+  /**
+   * Update updatedAt on one or more folders.
+   * @param {string[]} ids - Folder IDs to touch
+   */
+  async touchFolders(ids) {
+    if (!ids.length) return;
+    const folders = await this.listFolders();
+    const now = new Date().toISOString();
+    for (const folder of folders) {
+      if (ids.includes(folder.id)) {
+        folder.updatedAt = now;
+      }
+    }
+    await this.#writeJson(this.foldersPath, folders);
+  }
+
   // --- Private helpers ---
 
   #getDepth(folders, parentId) {

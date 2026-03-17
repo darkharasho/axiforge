@@ -264,9 +264,23 @@ app.whenReady().then(async () => {
   });
 
   ipcMain.handle("builds:list", async () => store.listBuilds());
-  ipcMain.handle("builds:save", async (_e, build) => store.upsertBuild(build));
+  ipcMain.handle("builds:save", async (_e, build) => {
+    const saved = await store.upsertBuild(build);
+    // Touch the folder this build belongs to
+    if (saved.folderId) {
+      await folderStore.touchFolders([saved.folderId]);
+    }
+    return saved;
+  });
   ipcMain.handle("builds:delete", async (_e, id) => {
+    // Check which folder this build is in before deleting
+    const builds = await store.listBuilds();
+    const build = builds.find((b) => b.id === id);
+    const folderId = build?.folderId;
     await store.deleteBuild(id);
+    if (folderId) {
+      await folderStore.touchFolders([folderId]);
+    }
     return true;
   });
 
@@ -292,7 +306,16 @@ app.whenReady().then(async () => {
       const exists = await folderStore.folderExists(folderId);
       if (!exists) throw new Error(`Folder not found: ${folderId}`);
     }
+    // Collect source folders before move
+    const builds = await store.listBuilds();
+    const sourceFolderIds = [...new Set(
+      builds.filter((b) => ids.includes(b.id) && b.folderId).map((b) => b.folderId)
+    )];
     await store.moveBuilds(ids, folderId);
+    // Touch source and destination folders
+    const touchIds = [...sourceFolderIds];
+    if (folderId) touchIds.push(folderId);
+    if (touchIds.length) await folderStore.touchFolders([...new Set(touchIds)]);
   });
   ipcMain.handle("builds:pin", (_e, ids, pinned) =>
     store.pinBuilds(ids, pinned),

@@ -199,9 +199,15 @@ function renderTableView(container) {
         <td class="lib-table__td lib-table__td--pin"></td>
         <td class="lib-table__td lib-table__td--icon">
           <span class="lib-table__chevron" data-toggle-table-folder="${escapeHtml(folder.id)}" style="margin-left:${indent}px">${chevron}</span>
-          ${isExpanded ? folderIcon : folderIcon}
+          ${folderIcon}
         </td>
-        <td class="lib-table__td lib-table__td--name" colspan="7">${escapeHtml(folder.name)}</td>
+        <td class="lib-table__td lib-table__td--name">${escapeHtml(folder.name)}</td>
+        <td class="lib-table__td lib-table__td--profession"></td>
+        <td class="lib-table__td lib-table__td--spec"></td>
+        <td class="lib-table__td lib-table__td--mode"></td>
+        <td class="lib-table__td lib-table__td--tags"></td>
+        <td class="lib-table__td lib-table__td--created" title="${escapeHtml(folder.createdAt || "")}">${formatDate(folder.createdAt)}</td>
+        <td class="lib-table__td lib-table__td--modified" title="${escapeHtml(folder.updatedAt || "")}">${formatDate(folder.updatedAt)}</td>
       </tr>
     `;
 

@@ -183,3 +183,35 @@ describe("FolderStore — folderExists", () => {
     expect(await store.folderExists("nope")).toBe(false);
   });
 });
+
+describe("FolderStore — touchFolders", () => {
+  let store, dir;
+  beforeEach(async () => ({ store, dir } = await makeTempStore()));
+  afterEach(async () => cleanupDir(dir));
+
+  test("updates updatedAt for specified folders", async () => {
+    const folder = await store.upsertFolder({ name: "Test" });
+    const originalUpdated = folder.updatedAt;
+    // Small delay to ensure timestamp differs
+    await new Promise((r) => setTimeout(r, 5));
+    await store.touchFolders([folder.id]);
+    const folders = await store.listFolders();
+    const updated = folders.find((f) => f.id === folder.id);
+    expect(updated.updatedAt).not.toBe(originalUpdated);
+    expect(updated.createdAt).toBe(folder.createdAt);
+  });
+
+  test("does not touch unspecified folders", async () => {
+    const a = await store.upsertFolder({ name: "A" });
+    const b = await store.upsertFolder({ name: "B" });
+    await new Promise((r) => setTimeout(r, 5));
+    await store.touchFolders([a.id]);
+    const folders = await store.listFolders();
+    expect(folders.find((f) => f.id === b.id).updatedAt).toBe(b.updatedAt);
+  });
+
+  test("no-op for empty array", async () => {
+    await store.touchFolders([]);
+    // Should not throw
+  });
+});
