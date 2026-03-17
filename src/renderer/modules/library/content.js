@@ -196,11 +196,13 @@ function renderTableView(container) {
     const indent = depth * 20;
     let rows = `
       <tr class="lib-table__row lib-table__row--folder" data-folder-id="${escapeHtml(folder.id)}">
-        <td class="lib-table__td lib-table__td--pin"></td>
-        <td class="lib-table__td lib-table__td--icon">
-          <span class="lib-table__chevron" data-toggle-table-folder="${escapeHtml(folder.id)}">${chevron}</span>
-        </td>
-        <td class="lib-table__td lib-table__td--name" ${indent ? `style="padding-left:${indent}px"` : ""}><span class="lib-table__folder-icon">${folderIcon}</span> ${escapeHtml(folder.name)}</td>
+        ${indent
+          ? `<td class="lib-table__td lib-table__td--pin" colspan="2"></td>
+             <td class="lib-table__td lib-table__td--name" style="padding-left:${indent}px"><span class="lib-table__chevron" data-toggle-table-folder="${escapeHtml(folder.id)}">${chevron}</span> <span class="lib-table__folder-icon">${folderIcon}</span> ${escapeHtml(folder.name)}</td>`
+          : `<td class="lib-table__td lib-table__td--pin"></td>
+             <td class="lib-table__td lib-table__td--icon"><span class="lib-table__chevron" data-toggle-table-folder="${escapeHtml(folder.id)}">${chevron}</span></td>
+             <td class="lib-table__td lib-table__td--name"><span class="lib-table__folder-icon">${folderIcon}</span> ${escapeHtml(folder.name)}</td>`
+        }
         <td class="lib-table__td lib-table__td--profession"></td>
         <td class="lib-table__td lib-table__td--spec"></td>
         <td class="lib-table__td lib-table__td--mode"></td>
@@ -246,11 +248,11 @@ function renderTableView(container) {
     const indent = depth * 20;
     return `
       <tr class="lib-table__row lib-table__row--build ${b.pinned ? "lib-table__row--pinned" : ""}" data-build-id="${escapeHtml(b.id)}">
-        <td class="lib-table__td lib-table__td--pin">${pinStarHtml(b)}</td>
         ${indent
-          ? `<td class="lib-table__td lib-table__td--icon"></td>
-             <td class="lib-table__td lib-table__td--name" style="padding-left:${indent}px"><span class="lib-table__inline-icon ${profClass(b.profession)}">${getSpecIcon(b)}</span> ${escapeHtml(b.title || "Untitled")}</td>`
-          : `<td class="lib-table__td lib-table__td--icon ${profClass(b.profession)}">${getSpecIcon(b)}</td>
+          ? `<td class="lib-table__td lib-table__td--pin" colspan="2"></td>
+             <td class="lib-table__td lib-table__td--name" style="padding-left:${indent}px">${pinStarHtml(b)} <span class="lib-table__inline-icon ${profClass(b.profession)}">${getSpecIcon(b)}</span> ${escapeHtml(b.title || "Untitled")}</td>`
+          : `<td class="lib-table__td lib-table__td--pin">${pinStarHtml(b)}</td>
+             <td class="lib-table__td lib-table__td--icon ${profClass(b.profession)}">${getSpecIcon(b)}</td>
              <td class="lib-table__td lib-table__td--name">${escapeHtml(b.title || "Untitled")}</td>`
         }
         <td class="lib-table__td lib-table__td--profession">${escapeHtml(b.profession || "")}</td>
