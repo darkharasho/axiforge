@@ -854,6 +854,33 @@
   margin-left: auto;
 }
 
+/* Folder path breadcrumb shown in combined/smart folder views */
+.lib-folder-path {
+  font-size: 0.75rem;
+  color: #556;
+  margin-left: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lib-folder-path::before {
+  content: "—  ";
+}
+
+/* Grid / icon views: folder path sits on its own line */
+.lib-grid-card > .lib-folder-path,
+.lib-icon-item > .lib-folder-path {
+  display: block;
+  margin-left: 0;
+  font-size: 0.72rem;
+}
+
+.lib-grid-card > .lib-folder-path::before,
+.lib-icon-item > .lib-folder-path::before {
+  content: none;
+}
+
 /* Selection highlight */
 .lib-list-row.lib-selected {
   background: #1a1a4a;

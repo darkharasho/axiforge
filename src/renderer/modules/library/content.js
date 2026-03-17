@@ -141,6 +141,37 @@ function emptyStateHtml() {
   </div>`;
 }
 
+/** True when the current view mixes builds from multiple folders (smart folders). */
+function isCombinedView() {
+  const f = state.currentFolder;
+  if (!f) return false;
+  return f.type === "smart-profession" || f.type === "smart-gamemode" || f.type === "all";
+}
+
+/** Build the folder ancestor chain for a build and return "Folder / Sub / …" or "". */
+function folderPathText(build) {
+  if (!build.folderId) return "";
+  const chain = [];
+  let id = build.folderId;
+  const visited = new Set();
+  while (id && !visited.has(id)) {
+    visited.add(id);
+    const folder = state.folders.find((f) => f.id === id);
+    if (!folder) break;
+    chain.unshift(folder.name);
+    id = folder.parentId;
+  }
+  return chain.join(" / ");
+}
+
+/** Return HTML for the folder path breadcrumb shown in combined views. */
+function folderPathHtml(build) {
+  if (!isCombinedView()) return "";
+  const path = folderPathText(build);
+  if (!path) return "";
+  return `<span class="lib-folder-path">${escapeHtml(path)}</span>`;
+}
+
 // ─── List View ─────────────────────────────────────────────────────────────────
 
 function renderListView(container) {
@@ -168,7 +199,7 @@ function renderListView(container) {
       (b) => `
         <div class="lib-list-row lib-list-row--build ${b.pinned ? "lib-list-row--pinned" : ""}" data-build-id="${escapeHtml(b.id)}">
           <span class="lib-list-row__spec-icon ${profClass(b.profession)}">${getSpecIcon(b)}</span>
-          <span class="lib-list-row__title">${escapeHtml(b.title || "Untitled")}</span>
+          <span class="lib-list-row__title">${escapeHtml(b.title || "Untitled")}${folderPathHtml(b)}</span>
           <span class="lib-list-row__pills">
             ${profPillHtml(b)}${eliteSpecPillHtml(b)}${gameModePillHtml(b)}${tagPillsHtml(b)}
           </span>
@@ -260,7 +291,7 @@ function renderTableView(container) {
         <div class="lib-tv__row lib-tv__row--build ${b.pinned ? "lib-tv__row--pinned" : ""}">
           <span class="lib-tv__action">${pinStarHtml(b)}</span>
           <span class="lib-tv__icon ${profClass(b.profession)}">${getSpecIcon(b)}</span>
-          <span class="lib-tv__name">${escapeHtml(b.title || "Untitled")}</span>
+          <span class="lib-tv__name">${escapeHtml(b.title || "Untitled")}${folderPathHtml(b)}</span>
           <span class="lib-tv__profession">${escapeHtml(b.profession || "")}</span>
           <span class="lib-tv__spec">${escapeHtml(eliteSpec || "")}</span>
           <span class="lib-tv__mode">${escapeHtml(gameModeLabel(b.gameMode || "pve"))}</span>
@@ -342,6 +373,7 @@ function renderGridView(container) {
             ${pinStarHtml(b)}
           </div>
           <div class="lib-grid-card__title">${escapeHtml(b.title || "Untitled")}</div>
+          ${folderPathHtml(b)}
           <div class="lib-grid-card__pills">
             ${profPillHtml(b)}${eliteSpecPillHtml(b)}${gameModePillHtml(b)}
           </div>
@@ -384,6 +416,7 @@ function renderIconView(container) {
         <div class="lib-icon-item lib-icon-item--build ${b.pinned ? "lib-icon-item--pinned" : ""} ${profClass(b.profession)}" data-build-id="${escapeHtml(b.id)}">
           <div class="lib-icon-item__icon ${profClass(b.profession)}">${getSpecIcon(b)}</div>
           <div class="lib-icon-item__label">${escapeHtml(b.title || "Untitled")}</div>
+          ${folderPathHtml(b)}
         </div>
       `
     )
@@ -443,7 +476,7 @@ function renderColumnsView(container) {
           <div class="lib-col__item lib-col__item--build ${profClass(b.profession)}"
                data-build-id="${escapeHtml(b.id)}" data-col-index="${colIndex}">
             <span class="lib-col__icon ${profClass(b.profession)}">${getSpecIcon(b)}</span>
-            <span class="lib-col__name">${escapeHtml(b.title || "Untitled")}</span>
+            <span class="lib-col__name">${escapeHtml(b.title || "Untitled")}${folderPathHtml(b)}</span>
           </div>
         `);
       }
