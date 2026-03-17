@@ -73,7 +73,9 @@ function _wireBuildDraggables() {
         node.classList.remove("lib-drop-target");
       });
 
-      _draggedIds = [];
+      // Delay clearing IDs so drop handler can read them
+      // (dragend fires before drop on some targets)
+      setTimeout(() => { _draggedIds = []; }, 0);
     });
   });
 }
