@@ -817,6 +817,81 @@ describe("BuildStore — library fields", () => {
   });
 });
 
+describe("BuildStore — move builds", () => {
+  let store, dir;
+  beforeEach(async () => ({ store, dir } = await makeTempStore()));
+  afterEach(async () => cleanupDir(dir));
+
+  test("moveBuilds updates folderId for given build ids", async () => {
+    const b1 = await store.upsertBuild(makeBuild({ title: "B1" }));
+    const b2 = await store.upsertBuild(makeBuild({ title: "B2" }));
+    await store.moveBuilds([b1.id, b2.id], "folder-abc");
+    const builds = await store.listBuilds();
+    expect(builds.find((b) => b.id === b1.id).folderId).toBe("folder-abc");
+    expect(builds.find((b) => b.id === b2.id).folderId).toBe("folder-abc");
+  });
+
+  test("moveBuilds with null moves to root", async () => {
+    const b1 = await store.upsertBuild(
+      makeBuild({ title: "B1", folderId: "folder-abc" }),
+    );
+    await store.moveBuilds([b1.id], null);
+    const builds = await store.listBuilds();
+    expect(builds.find((b) => b.id === b1.id).folderId).toBe(null);
+  });
+
+  test("clearFolderFromBuilds sets folderId to null for matching builds", async () => {
+    const b1 = await store.upsertBuild(
+      makeBuild({ title: "B1", folderId: "folder-abc" }),
+    );
+    const b2 = await store.upsertBuild(
+      makeBuild({ title: "B2", folderId: "folder-xyz" }),
+    );
+    await store.clearFolderFromBuilds(["folder-abc"]);
+    const builds = await store.listBuilds();
+    expect(builds.find((b) => b.id === b1.id).folderId).toBe(null);
+    expect(builds.find((b) => b.id === b2.id).folderId).toBe("folder-xyz");
+  });
+});
+
+describe("BuildStore — pin builds", () => {
+  let store, dir;
+  beforeEach(async () => ({ store, dir } = await makeTempStore()));
+  afterEach(async () => cleanupDir(dir));
+
+  test("pinBuilds sets pinned to true", async () => {
+    const b1 = await store.upsertBuild(makeBuild());
+    await store.pinBuilds([b1.id], true);
+    const builds = await store.listBuilds();
+    expect(builds.find((b) => b.id === b1.id).pinned).toBe(true);
+  });
+
+  test("pinBuilds sets pinned to false (unpin)", async () => {
+    const b1 = await store.upsertBuild(makeBuild({ pinned: true }));
+    await store.pinBuilds([b1.id], false);
+    const builds = await store.listBuilds();
+    expect(builds.find((b) => b.id === b1.id).pinned).toBe(false);
+  });
+});
+
+describe("BuildStore — reorder builds", () => {
+  let store, dir;
+  beforeEach(async () => ({ store, dir } = await makeTempStore()));
+  afterEach(async () => cleanupDir(dir));
+
+  test("reorderBuilds updates sortOrder for batch", async () => {
+    const b1 = await store.upsertBuild(makeBuild({ title: "B1" }));
+    const b2 = await store.upsertBuild(makeBuild({ title: "B2" }));
+    await store.reorderBuilds([
+      { id: b1.id, sortOrder: 2 },
+      { id: b2.id, sortOrder: 1 },
+    ]);
+    const builds = await store.listBuilds();
+    expect(builds.find((b) => b.id === b1.id).sortOrder).toBe(2);
+    expect(builds.find((b) => b.id === b2.id).sortOrder).toBe(1);
+  });
+});
+
 describe("BuildStore — gameMode normalization", () => {
   let dir;
 

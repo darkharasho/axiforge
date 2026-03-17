@@ -47,6 +47,45 @@ class BuildStore {
     await this.#writeJson(this.buildsPath, filtered);
   }
 
+  async moveBuilds(ids, folderId) {
+    const builds = await this.#readJson(this.buildsPath, []);
+    for (const build of builds) {
+      if (ids.includes(build.id)) {
+        build.folderId = folderId;
+      }
+    }
+    await this.#writeJson(this.buildsPath, builds);
+  }
+
+  async pinBuilds(ids, pinned) {
+    const builds = await this.#readJson(this.buildsPath, []);
+    for (const build of builds) {
+      if (ids.includes(build.id)) {
+        build.pinned = Boolean(pinned);
+      }
+    }
+    await this.#writeJson(this.buildsPath, builds);
+  }
+
+  async reorderBuilds(updates) {
+    const builds = await this.#readJson(this.buildsPath, []);
+    for (const { id, sortOrder } of updates) {
+      const build = builds.find((b) => b.id === id);
+      if (build) build.sortOrder = sortOrder;
+    }
+    await this.#writeJson(this.buildsPath, builds);
+  }
+
+  async clearFolderFromBuilds(folderIds) {
+    const builds = await this.#readJson(this.buildsPath, []);
+    for (const build of builds) {
+      if (folderIds.includes(build.folderId)) {
+        build.folderId = null;
+      }
+    }
+    await this.#writeJson(this.buildsPath, builds);
+  }
+
   async getAuth() {
     return this.#readJson(this.authPath, {});
   }
