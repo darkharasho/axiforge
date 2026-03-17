@@ -1,13 +1,18 @@
 // Library drag-and-drop module — powered by SortableJS.
-// Re-initializes Sortable instances on every render since content
-// is rebuilt via innerHTML each time.
+// Handles:
+// - Reordering builds within a container (any view)
+// - Moving builds between folders via nested containers (table view)
+// - Moving builds into folders by dropping on folder elements (all views)
+// - Auto-expanding collapsed folders on hover (table view)
 
 import Sortable from "sortablejs";
 import { moveBuilds, reorderBuilds } from "./folder-store.js";
+import { expandTableFolder } from "./content.js";
 import { state } from "../state.js";
 
 let _callbacks = {};
 let _sortableInstances = [];
+let _expandTimer = null;
 
 export function initDragDrop(callbacks) {
   _callbacks = callbacks || {};
@@ -15,13 +20,12 @@ export function initDragDrop(callbacks) {
 
 /**
  * Initialize SortableJS on all sortable containers.
- * Must be called after every render (renderContent, folder expand, etc.)
- * because innerHTML replacement destroys the previous DOM + Sortable instances.
+ * Called after every render.
  */
 export function wireDragDropEvents() {
-  // Destroy old instances (they're on dead DOM nodes anyway)
+  // Destroy old instances
   _sortableInstances.forEach((s) => {
-    try { s.destroy(); } catch { /* already gone */ }
+    try { s.destroy(); } catch { /* dead DOM */ }
   });
   _sortableInstances = [];
 
@@ -29,20 +33,17 @@ export function wireDragDropEvents() {
     const buildId = evt.item?.dataset?.buildId;
     if (!buildId) return;
 
-    // Determine target folder from the container we dropped into
     const dropContainer = evt.to;
     const folderLi = dropContainer.closest("[data-folder-id]");
     const newFolderId = folderLi?.dataset.folderId || null;
 
-    // Get current folder
     const build = state.builds.find((b) => b.id === buildId);
     const oldFolderId = build?.folderId || null;
 
     if (newFolderId !== oldFolderId) {
-      // Moved to a different folder
       await moveBuilds([buildId], newFolderId);
     } else {
-      // Reordered within the same container — save custom sort order
+      // Reordered within same container — save custom sort order
       const children = [...evt.to.children]
         .map((el) => el.dataset?.buildId)
         .filter(Boolean);
@@ -50,14 +51,11 @@ export function wireDragDropEvents() {
       if (children.length > 0) {
         const updates = children.map((id, i) => ({ id, sortOrder: i }));
         await reorderBuilds(updates);
-
-        // Auto-switch to custom sort so the order is visible
         state.libraryPrefs.sortField = "sortOrder";
         state.libraryPrefs.sortDirection = "asc";
       }
     }
 
-    // Re-render to reflect changes
     _callbacks.onRefresh?.();
   };
 
@@ -74,31 +72,89 @@ export function wireDragDropEvents() {
     onEnd,
   };
 
-  // Tree/table view: root list + each expanded folder's children
-  document.querySelectorAll(".lib-tv__tree, .lib-tv__children").forEach((el) => {
+  // Create Sortable on all containers
+  document.querySelectorAll(
+    ".lib-list, .lib-tv__tree, .lib-tv__children, .lib-grid, .lib-icon-grid"
+  ).forEach((el) => {
     _sortableInstances.push(Sortable.create(el, sortableOpts));
   });
 
-  // List view: the root .lib-list container
-  document.querySelectorAll(".lib-list").forEach((el) => {
-    _sortableInstances.push(Sortable.create(el, sortableOpts));
-  });
+  // Wire folder elements as drop targets (for all views)
+  _wireFolderDropTargets();
 
-  // Grid view
-  document.querySelectorAll(".lib-grid").forEach((el) => {
-    _sortableInstances.push(Sortable.create(el, sortableOpts));
-  });
-
-  // Icon view
-  document.querySelectorAll(".lib-icon-grid").forEach((el) => {
-    _sortableInstances.push(Sortable.create(el, sortableOpts));
-  });
-
-  // Wire sidebar drop targets (delegation, only once)
+  // Wire sidebar drop targets (once)
   _wireSidebarDropTargets();
 }
 
-// ─── Sidebar drop targets (manual — not SortableJS) ────────────────────────────
+// ─── Folder drop targets (non-table views + collapsed table folders) ───────────
+// In list/grid/icon views, folders are flat elements — not SortableJS containers.
+// We add manual dragover/drop handlers so you can drop builds ON a folder element.
+// In table view, collapsed folders also need this since they have no children <ul>.
+
+function _wireFolderDropTargets() {
+  const content = document.getElementById("lib-content");
+  if (!content) return;
+
+  // Use delegation on #lib-content for folder drop targets
+  if (content.dataset.folderDropBound) return;
+  content.dataset.folderDropBound = "1";
+
+  content.addEventListener("dragover", (e) => {
+    const folderEl = e.target.closest("[data-folder-id]");
+    if (!folderEl) return;
+
+    // Check if this folder already has a SortableJS children container
+    // If so, SortableJS handles it — don't interfere
+    const childrenUl = folderEl.querySelector(".lib-tv__children");
+    if (childrenUl) return;
+
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    folderEl.classList.add("lib-drop-target");
+
+    // Auto-expand collapsed folders in table view after hovering 500ms
+    const folderId = folderEl.dataset.folderId;
+    if (folderEl.closest(".lib-tv") && folderId) {
+      clearTimeout(_expandTimer);
+      _expandTimer = setTimeout(() => {
+        expandTableFolder(folderId);
+      }, 500);
+    }
+  });
+
+  content.addEventListener("dragleave", (e) => {
+    const folderEl = e.target.closest("[data-folder-id]");
+    if (folderEl && !folderEl.contains(e.relatedTarget)) {
+      folderEl.classList.remove("lib-drop-target");
+      clearTimeout(_expandTimer);
+    }
+  });
+
+  content.addEventListener("drop", async (e) => {
+    clearTimeout(_expandTimer);
+    const folderEl = e.target.closest("[data-folder-id]");
+    if (!folderEl) return;
+
+    // If this folder has a SortableJS children container, let SortableJS handle it
+    const childrenUl = folderEl.querySelector(".lib-tv__children");
+    if (childrenUl) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+    folderEl.classList.remove("lib-drop-target");
+
+    // Find the dragged build
+    const dragging = document.querySelector(".sortable-drag");
+    const buildId = dragging?.dataset?.buildId;
+    if (!buildId) return;
+
+    const folderId = folderEl.dataset.folderId;
+    await moveBuilds([buildId], folderId);
+    _callbacks.onRefresh?.();
+  });
+}
+
+// ─── Sidebar drop targets ──────────────────────────────────────────────────────
 
 function _wireSidebarDropTargets() {
   const sidebar = document.getElementById("lib-sidebar");
@@ -126,7 +182,6 @@ function _wireSidebarDropTargets() {
     e.preventDefault();
     target.classList.remove("lib-drop-target");
 
-    // Find the SortableJS dragged element
     const dragging = document.querySelector(".sortable-drag, .lib-drag-chosen");
     const buildId = dragging?.dataset?.buildId;
     if (!buildId) return;

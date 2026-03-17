@@ -18,6 +18,14 @@ import {
 let _callbacks = {};
 const _tableExpandedFolders = new Set();
 
+/** Expand a folder in the table view (used by drag-drop to auto-expand on hover). */
+export function expandTableFolder(folderId) {
+  if (!_tableExpandedFolders.has(folderId)) {
+    _tableExpandedFolders.add(folderId);
+    renderContent();
+  }
+}
+
 /**
  * Store callbacks for content actions.
  * @param {{ onLoadBuild, onNavigate, onSortChange }} callbacks
