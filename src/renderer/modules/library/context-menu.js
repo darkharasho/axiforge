@@ -4,7 +4,6 @@
 
 import { escapeHtml } from "../utils.js";
 import { state } from "../state.js";
-import { getVisibleBuilds } from "./folder-store.js";
 import { isSelected, getSelection } from "./selection.js";
 import {
   playIcon,
