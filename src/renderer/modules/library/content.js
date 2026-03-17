@@ -248,7 +248,7 @@ function renderTableView(container) {
           <span class="lib-tv__profession">${escapeHtml(b.profession || "")}</span>
           <span class="lib-tv__spec">${escapeHtml(eliteSpec || "")}</span>
           <span class="lib-tv__mode">${escapeHtml(gameModeLabel(b.gameMode || "pve"))}</span>
-          <span class="lib-tv__tags">${tags}</span>
+          <span class="lib-tv__tags" title="${escapeHtml((b.tags || []).join(", "))}">${tags}</span>
           <span class="lib-tv__created" title="${escapeHtml(b.createdAt || "")}">${formatDate(b.createdAt)}</span>
           <span class="lib-tv__modified" title="${escapeHtml(b.updatedAt || "")}">${formatDate(b.updatedAt)}</span>
         </div>
