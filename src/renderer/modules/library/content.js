@@ -189,14 +189,19 @@ function renderTableView(container) {
     return;
   }
 
+  // Depth indent as px for the tree column
+  function treeIndent(depth) {
+    return depth * 24;
+  }
+
   // Render folders as expandable tree rows with children indented
   function renderTableFolder(folder, depth) {
     const isExpanded = _tableExpandedFolders.has(folder.id);
     const chevron = isExpanded ? chevronDownIcon : chevronRightIcon;
-    const indent = depth ? `<span class="lib-table__indent" style="width:${depth * 28}px"></span>` : "";
     let rows = `
       <tr class="lib-table__row lib-table__row--folder" data-folder-id="${escapeHtml(folder.id)}">
-        <td class="lib-table__td lib-table__td--pin">${indent}<span class="lib-table__chevron" data-toggle-table-folder="${escapeHtml(folder.id)}">${chevron}</span></td>
+        <td class="lib-table__td lib-table__td--tree" style="padding-left:${4 + treeIndent(depth)}px"><span class="lib-table__chevron" data-toggle-table-folder="${escapeHtml(folder.id)}">${chevron}</span></td>
+        <td class="lib-table__td lib-table__td--pin"></td>
         <td class="lib-table__td lib-table__td--icon"><span class="lib-table__folder-icon">${folderIcon}</span></td>
         <td class="lib-table__td lib-table__td--name">${escapeHtml(folder.name)}</td>
         <td class="lib-table__td lib-table__td--profession"></td>
@@ -209,7 +214,6 @@ function renderTableView(container) {
     `;
 
     if (isExpanded) {
-      // Child sub-folders
       const childFolders = state.folders
         .filter((f) => f.parentId === folder.id)
         .sort((a, b) => a.sortOrder - b.sortOrder);
@@ -217,7 +221,6 @@ function renderTableView(container) {
         rows += renderTableFolder(child, depth + 1);
       }
 
-      // Builds in this folder
       const folderBuilds = state.builds
         .filter((b) => b.folderId === folder.id)
         .sort((a, b) => {
@@ -241,10 +244,10 @@ function renderTableView(container) {
   function renderTableBuildRow(b, depth = 0) {
     const eliteSpec = getEliteSpecName(b);
     const tags = (b.tags || []).map((t) => escapeHtml(t)).join(", ");
-    const indent = depth ? `<span class="lib-table__indent" style="width:${depth * 28}px"></span>` : "";
     return `
       <tr class="lib-table__row lib-table__row--build ${b.pinned ? "lib-table__row--pinned" : ""}" data-build-id="${escapeHtml(b.id)}">
-        <td class="lib-table__td lib-table__td--pin">${indent}${pinStarHtml(b)}</td>
+        <td class="lib-table__td lib-table__td--tree" style="padding-left:${4 + treeIndent(depth)}px"></td>
+        <td class="lib-table__td lib-table__td--pin">${pinStarHtml(b)}</td>
         <td class="lib-table__td lib-table__td--icon ${profClass(b.profession)}">${getSpecIcon(b)}</td>
         <td class="lib-table__td lib-table__td--name">${escapeHtml(b.title || "Untitled")}</td>
         <td class="lib-table__td lib-table__td--profession">${escapeHtml(b.profession || "")}</td>
@@ -265,6 +268,7 @@ function renderTableView(container) {
       <table class="lib-table">
         <thead class="lib-table__head">
           <tr>
+            <th class="lib-table__th lib-table__th--tree"></th>
             <th class="lib-table__th lib-table__th--pin" aria-label="Pin"></th>
             <th class="lib-table__th lib-table__th--icon" aria-label="Icon"></th>
             ${sortHeader("title", "Name")}

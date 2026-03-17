@@ -808,15 +808,16 @@
   max-width: 0;
 }
 
-.lib-table__td--pin {
-  padding: 4px 0 4px 6px;
+.lib-table__th--tree,
+.lib-table__td--tree {
+  width: 20px;
+  padding: 4px 0 4px 4px;
   white-space: nowrap;
 }
 
-.lib-table__indent {
-  display: inline-block;
-  height: 1px;
-  vertical-align: middle;
+.lib-table__td--pin {
+  width: 28px;
+  padding: 4px 0 4px 4px;
 }
 
 .lib-table__td--icon {
