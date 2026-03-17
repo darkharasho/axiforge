@@ -4,7 +4,7 @@ import { state } from "../state.js";
 import { escapeHtml, formatRelativeTime } from "../utils.js";
 import { getVisibleBuilds, getVisibleFolders } from "./folder-store.js";
 import { getProfessionSvg } from "../profession-icons.js";
-import { clearSelection } from "./selection.js";
+import { clearSelection, handleBuildClick } from "./selection.js";
 import {
   folderIcon,
   starIcon,
@@ -389,9 +389,14 @@ function bindContentEvents(container) {
     }
   });
 
-  // Double-click builds to load; stop propagation so folder parents don't toggle
+  // Build click: select + stop propagation so folder parents don't toggle
   container.querySelectorAll("[data-build-id]").forEach((el) => {
-    el.addEventListener("click", (e) => e.stopPropagation());
+    el.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (!e.target.closest("[data-action]")) {
+        handleBuildClick(el.dataset.buildId, e);
+      }
+    });
     el.addEventListener("dblclick", (e) => {
       e.stopPropagation();
       _callbacks.onLoadBuild?.(el.dataset.buildId);

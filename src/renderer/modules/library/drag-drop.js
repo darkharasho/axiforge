@@ -36,6 +36,7 @@ function _wireBuildDraggables() {
     el.draggable = true;
 
     el.addEventListener("dragstart", (e) => {
+      e.stopPropagation();
       const buildId = el.dataset.buildId;
 
       // If this build is part of a multi-selection, drag all selected
