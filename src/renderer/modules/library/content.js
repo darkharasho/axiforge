@@ -17,6 +17,7 @@ import {
 
 let _callbacks = {};
 const _tableExpandedFolders = new Set();
+let _columnSelectedFolders = []; // tracks selected folder at each column depth
 
 /** Expand a folder in the table view (used by drag-drop to auto-expand on hover). */
 export function expandTableFolder(folderId) {
@@ -46,6 +47,9 @@ export function renderContent() {
   switch (viewMode) {
     case "table":
       renderTableView(container);
+      break;
+    case "columns":
+      renderColumnsView(container);
       break;
     case "grid":
       renderGridView(container);
@@ -390,6 +394,91 @@ function renderIconView(container) {
   bindContentEvents(container);
 }
 
+// ─── Columns View (Miller columns) ─────────────────────────────────────────────
+
+function renderColumnsView(container) {
+  // Build columns: first column is the current navigation context,
+  // subsequent columns are based on selected folders in _columnSelectedFolders
+  const columns = [];
+
+  // Column 0: root level (folders + builds at current navigation context)
+  const rootFolders = getVisibleFolders();
+  const rootBuilds = getVisibleBuilds();
+  columns.push({ folders: rootFolders, builds: rootBuilds, parentId: null });
+
+  // Subsequent columns based on selected folders
+  for (let i = 0; i < _columnSelectedFolders.length; i++) {
+    const selectedId = _columnSelectedFolders[i];
+    if (!selectedId) break;
+
+    const childFolders = state.folders
+      .filter((f) => f.parentId === selectedId)
+      .sort((a, b) => a.sortOrder - b.sortOrder);
+
+    const childBuilds = state.builds
+      .filter((b) => b.folderId === selectedId)
+      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+
+    columns.push({ folders: childFolders, builds: childBuilds, parentId: selectedId });
+  }
+
+  const columnsHtml = columns
+    .map((col, colIndex) => {
+      const items = [];
+
+      for (const f of col.folders) {
+        const isSelected = _columnSelectedFolders[colIndex] === f.id;
+        items.push(`
+          <div class="lib-col__item lib-col__item--folder ${isSelected ? "lib-col__item--selected" : ""}"
+               data-folder-id="${escapeHtml(f.id)}" data-col-index="${colIndex}">
+            <span class="lib-col__icon lib-col__icon--folder">${folderIcon}</span>
+            <span class="lib-col__name">${escapeHtml(f.name)}</span>
+            <span class="lib-col__chevron">${chevronRightIcon}</span>
+          </div>
+        `);
+      }
+
+      for (const b of col.builds) {
+        items.push(`
+          <div class="lib-col__item lib-col__item--build ${profClass(b.profession)}"
+               data-build-id="${escapeHtml(b.id)}" data-col-index="${colIndex}">
+            <span class="lib-col__icon ${profClass(b.profession)}">${getSpecIcon(b)}</span>
+            <span class="lib-col__name">${escapeHtml(b.title || "Untitled")}</span>
+          </div>
+        `);
+      }
+
+      if (items.length === 0) {
+        items.push(`<div class="lib-col__empty">Empty</div>`);
+      }
+
+      return `<div class="lib-col" data-col="${colIndex}">${items.join("")}</div>`;
+    })
+    .join("");
+
+  container.innerHTML = `<div class="lib-columns">${columnsHtml}</div>`;
+
+  bindColumnsEvents(container);
+  bindContentEvents(container);
+}
+
+function bindColumnsEvents(container) {
+  // Folder click in columns view: select folder and show its contents in the next column
+  container.querySelectorAll(".lib-col__item--folder[data-col-index]").forEach((el) => {
+    el.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const colIndex = parseInt(el.dataset.colIndex, 10);
+      const folderId = el.dataset.folderId;
+
+      // Truncate selections after this column and set new selection
+      _columnSelectedFolders = _columnSelectedFolders.slice(0, colIndex);
+      _columnSelectedFolders[colIndex] = folderId;
+
+      renderContent();
+    });
+  });
+}
+
 // ─── Event binding ─────────────────────────────────────────────────────────────
 
 function bindContentEvents(container) {
@@ -421,6 +510,7 @@ function bindContentEvents(container) {
   container.querySelectorAll("[data-folder-id]:not([data-bound])").forEach((el) => {
     el.dataset.bound = "1";
     if (el.closest(".lib-tv")) {
+      // Table view: single click toggles expand/collapse
       el.addEventListener("click", (e) => {
         e.stopPropagation();
         const folderId = el.dataset.folderId;
@@ -431,7 +521,9 @@ function bindContentEvents(container) {
         }
         renderContent();
       });
-    } else {
+    } else if (!el.closest(".lib-columns")) {
+      // List/grid/icon views: double-click navigates into folder
+      // (table and columns handle folders via their own click handlers)
       el.addEventListener("dblclick", () => {
         _callbacks.onNavigate?.({ type: "custom", id: el.dataset.folderId });
       });

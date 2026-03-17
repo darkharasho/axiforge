@@ -59,6 +59,8 @@ export const tableIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2
 
 export const squaresMiniIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="14" height="9" rx="1.5"/><rect x="1" y="11.5" width="9" height="1.5" rx="0.75"/><rect x="1" y="14" width="5" height="1.5" rx="0.75" opacity="0.5"/></svg>`;
 
+export const viewColumnsIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M14.5 2h1.75A1.75 1.75 0 0 1 18 3.75v12.5A1.75 1.75 0 0 1 16.25 18H14.5V2ZM13 18H7V2h6v16ZM5.5 2v16H3.75A1.75 1.75 0 0 1 2 16.25V3.75C2 2.784 2.784 2 3.75 2H5.5Z"/></svg>`;
+
 export const xMarkIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z"/></svg>`;
 
 export const checkIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd"/></svg>`;

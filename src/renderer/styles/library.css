@@ -1155,6 +1155,102 @@
   max-width: 76px;
 }
 
+/* ── Columns view (Miller columns) ──────────────────────────────── */
+
+.lib-columns {
+  display: flex;
+  height: 100%;
+  overflow-x: auto;
+}
+
+.lib-col {
+  min-width: 220px;
+  max-width: 280px;
+  flex-shrink: 0;
+  border-right: 1px solid #1a1a3a;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.lib-col:last-child {
+  flex: 1;
+  max-width: none;
+}
+
+.lib-col__item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: background 0.1s;
+  user-select: none;
+  font-size: 0.88rem;
+  color: #99a;
+}
+
+.lib-col__item:hover {
+  background: #151538;
+  color: #ccd;
+}
+
+.lib-col__item--selected {
+  background: #1a1a4a;
+  color: #ccd;
+}
+
+.lib-col__item.lib-selected {
+  background: #1a1a4a;
+  color: #ccd;
+}
+
+.lib-col__icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lib-col__icon svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+
+.lib-col__icon--folder {
+  color: #668;
+}
+
+.lib-col__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lib-col__chevron {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  color: #556;
+}
+
+.lib-col__chevron svg {
+  width: 14px;
+  height: 14px;
+}
+
+.lib-col__empty {
+  padding: 16px;
+  color: #556;
+  font-size: 0.85rem;
+  text-align: center;
+  font-style: italic;
+}
+
 /* ── Context menu ────────────────────────────────────────────────── */
 
 .lib-ctx-menu {

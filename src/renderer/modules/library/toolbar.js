@@ -10,6 +10,7 @@ import {
   tableIcon,
   squaresIcon,
   squaresMiniIcon,
+  viewColumnsIcon,
   chevronRightIcon,
   chevronDownIcon,
   homeIcon,
@@ -286,6 +287,7 @@ function renderViewToggle(active) {
   const modes = [
     { id: "list", icon: bars3Icon, label: "List view" },
     { id: "table", icon: tableIcon, label: "Table view" },
+    { id: "columns", icon: viewColumnsIcon, label: "Columns view" },
     { id: "grid", icon: squaresIcon, label: "Grid view" },
     { id: "icon", icon: squaresMiniIcon, label: "Icon view" },
   ];

@@ -47,6 +47,9 @@ export function wireDragDropEvents() {
     document.removeEventListener("pointermove", _onPointerMove);
     clearTimeout(_expandTimer);
 
+    // Save hover target before clearing (used for folder/nav drop detection)
+    const droppedOnTarget = _hoverTarget;
+
     // Clean up hover highlight
     if (_hoverTarget) {
       _hoverTarget.classList.remove("lib-drop-target");
@@ -60,27 +63,19 @@ export function wireDragDropEvents() {
       return;
     }
 
-    // Check if we dropped on a folder or sidebar/breadcrumb element
-    const origEvt = evt.originalEvent;
-    if (origEvt) {
-      const dropEl = document.elementFromPoint(origEvt.clientX, origEvt.clientY);
-
-      // Folder drop target (collapsed folder or folder in non-table views)
-      const folderEl = dropEl?.closest("[data-folder-id]");
+    // Check if we were hovering over a folder or nav target when dropped
+    if (droppedOnTarget) {
+      const folderEl = droppedOnTarget.closest("[data-folder-id]");
       if (folderEl) {
-        const childrenUl = folderEl.querySelector(".lib-tv__children");
-        if (!childrenUl) {
-          const folderId = folderEl.dataset.folderId;
-          _isDragging = false;
-          _draggedBuildId = null;
-          await moveBuilds([buildId], folderId);
-          _callbacks.onRefresh?.();
-          return;
-        }
+        const folderId = folderEl.dataset.folderId;
+        _isDragging = false;
+        _draggedBuildId = null;
+        await moveBuilds([buildId], folderId);
+        _callbacks.onRefresh?.();
+        return;
       }
 
-      // Sidebar or breadcrumb drop target
-      const navTarget = dropEl?.closest("[data-navigate-folder], [data-navigate-all], [data-navigate-root]");
+      const navTarget = droppedOnTarget.closest("[data-navigate-folder], [data-navigate-all], [data-navigate-root]");
       if (navTarget) {
         const folderId = navTarget.dataset.navigateFolder || null;
         _isDragging = false;
@@ -138,7 +133,7 @@ export function wireDragDropEvents() {
 
   // Create Sortable on all containers
   document.querySelectorAll(
-    ".lib-list, .lib-tv__tree, .lib-tv__children, .lib-grid, .lib-icon-grid"
+    ".lib-list, .lib-tv__tree, .lib-tv__children, .lib-grid, .lib-icon-grid, .lib-col"
   ).forEach((el) => {
     _sortableInstances.push(Sortable.create(el, sortableOpts));
   });
