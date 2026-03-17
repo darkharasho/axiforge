@@ -44,6 +44,7 @@ import { resolveEntityFacts } from "./modules/detail-panel.js";
 import { initWikiModal, openWikiModal } from "./modules/wiki-modal.js";
 import { initDetailModal, openDetailModal } from "./modules/detail-modal.js";
 import { initConfirmModal } from "./modules/confirm-modal.js";
+import { initLibrary, renderLibrary, handleLibraryKeydown } from "./modules/library/library.js";
 
 // ── DOM element cache ────────────────────────────────────────────────────────
 
@@ -295,6 +296,18 @@ async function init() {
   renderEditorForm();
   await refreshOnboardingStatus();
 
+  await initLibrary({
+    navigateToPage,
+    loadBuildIntoEditor,
+    startNewBuild,
+    confirmDiscardDirty,
+    saveCurrentBuild,
+    duplicateCurrentBuild,
+    copyBuildJsonToClipboard,
+    importBuildJsonFromClipboard,
+    render,
+  });
+
   if (state.builds.length) {
     await loadBuildIntoEditor(state.builds[0], { captureBaseline: true });
   } else if (state.professions.length) {
@@ -515,6 +528,10 @@ function navigateToPage(page) {
   if (target) target.classList.remove("hidden");
   // Show/hide subnav for editor page
   el.subnav.classList.toggle("subnav--visible", page === "editor");
+  // Render library when navigating to library page
+  if (page === "library") {
+    renderLibrary();
+  }
   // Redraw spec connectors when editor page becomes visible (they need layout dimensions)
   if (page === "editor") {
     requestAnimationFrame(() => {
@@ -630,15 +647,21 @@ function wireEvents() {
     }
   });
 
-  el.buildSearch.addEventListener("input", () => {
-    state.buildSearch = String(el.buildSearch.value || "").trim().toLowerCase();
-    renderBuildList();
-  });
+  if (el.buildSearch) {
+    el.buildSearch.addEventListener("input", () => {
+      state.buildSearch = String(el.buildSearch.value || "").trim().toLowerCase();
+      renderBuildList();
+    });
+  }
 
   window.addEventListener("keydown", async (event) => {
     if (event.key === "Escape") {
       closeCustomSelect();
       hideHoverPreview();
+      return;
+    }
+    if (state.activePage === "library") {
+      handleLibraryKeydown(event);
       return;
     }
     const key = String(event.key || "").toLowerCase();
