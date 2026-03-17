@@ -115,6 +115,14 @@ function normalizeBuild(input, fallbackCreatedAt) {
     publishedSlug: asString(input.publishedSlug, 200),
     publishedFileId: asString(input.publishedFileId, 20),
     publishedKey: asString(input.publishedKey, 100),
+    // Library organization fields
+    folderId:
+      typeof input.folderId === "string" ? input.folderId : null,
+    pinned: Boolean(input.pinned),
+    sortOrder:
+      typeof input.sortOrder === "number" && Number.isFinite(input.sortOrder)
+        ? input.sortOrder
+        : 0,
   };
 }
 

@@ -761,6 +761,62 @@ describe("BuildStore — publish metadata", () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// New library fields
+// ---------------------------------------------------------------------------
+
+describe("BuildStore — library fields", () => {
+  let store, dir;
+  beforeEach(async () => ({ store, dir } = await makeTempStore()));
+  afterEach(async () => cleanupDir(dir));
+
+  test("normalizeBuild adds folderId, pinned, sortOrder defaults", async () => {
+    const saved = await store.upsertBuild(makeBuild());
+    const builds = await store.listBuilds();
+    const build = builds.find((b) => b.id === saved.id);
+    expect(build.folderId).toBe(null);
+    expect(build.pinned).toBe(false);
+    expect(build.sortOrder).toBe(0);
+  });
+
+  test("preserves folderId when set", async () => {
+    const saved = await store.upsertBuild(
+      makeBuild({ folderId: "folder-123" }),
+    );
+    const builds = await store.listBuilds();
+    const build = builds.find((b) => b.id === saved.id);
+    expect(build.folderId).toBe("folder-123");
+  });
+
+  test("preserves pinned when true", async () => {
+    const saved = await store.upsertBuild(makeBuild({ pinned: true }));
+    const builds = await store.listBuilds();
+    const build = builds.find((b) => b.id === saved.id);
+    expect(build.pinned).toBe(true);
+  });
+
+  test("preserves sortOrder when set", async () => {
+    const saved = await store.upsertBuild(makeBuild({ sortOrder: 5 }));
+    const builds = await store.listBuilds();
+    const build = builds.find((b) => b.id === saved.id);
+    expect(build.sortOrder).toBe(5);
+  });
+
+  test("coerces non-boolean pinned to boolean", async () => {
+    const saved = await store.upsertBuild(makeBuild({ pinned: "yes" }));
+    const builds = await store.listBuilds();
+    const build = builds.find((b) => b.id === saved.id);
+    expect(build.pinned).toBe(true);
+  });
+
+  test("coerces non-number sortOrder to 0", async () => {
+    const saved = await store.upsertBuild(makeBuild({ sortOrder: "abc" }));
+    const builds = await store.listBuilds();
+    const build = builds.find((b) => b.id === saved.id);
+    expect(build.sortOrder).toBe(0);
+  });
+});
+
 describe("BuildStore — gameMode normalization", () => {
   let dir;
 
