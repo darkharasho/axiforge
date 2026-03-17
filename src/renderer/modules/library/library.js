@@ -347,8 +347,11 @@ async function handleRenameFolder(folderId) {
 }
 
 async function handleNewSubfolder(parentId) {
-  const navItem = document.querySelector(`[data-navigate-folder="${parentId}"]`);
-  const name = await insertInlineInput(navItem, "");
+  // Insert inline input in the content area after the parent folder row
+  const folderEl = document.querySelector(`#lib-content [data-folder-id="${parentId}"]`);
+  const name = await insertInlineInput(folderEl, "", {
+    className: "lib-content-inline-folder",
+  });
   if (!name) { renderLibrary(); return; }
   await saveFolder({ name, parentId });
   renderLibrary();
