@@ -32,12 +32,14 @@ export function wireDragDropEvents() {
     ".lib-list, .lib-tv__tree, .lib-tv__children, .lib-grid, .lib-icon-grid"
   );
 
+  console.log("[sortable] found containers:", containers.length, [...containers].map(c => c.className));
   containers.forEach((container) => {
     // Determine the folder ID this container belongs to
     // For .lib-tv__children, the parent <li> has data-folder-id
     const parentFolderLi = container.closest("[data-folder-id]");
     const containerId = parentFolderLi?.dataset.folderId || null;
 
+    console.log("[sortable] creating on", container.className, "children:", container.children.length);
     const sortable = Sortable.create(container, {
       group: "builds",
       animation: 150,
