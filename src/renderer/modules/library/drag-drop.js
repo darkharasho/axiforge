@@ -79,13 +79,14 @@ export function wireDragDropEvents() {
     const folderEl = e.target.closest("[data-folder-id]");
     const targetFolderId = folderEl?.dataset.folderId || null;
 
-    // If dropping on the same folder the builds are already in, move to root instead
+    // If dropping on the same folder the builds are already in, move to parent folder or root
     if (targetFolderId && ids.every((id) => state.builds.find((b) => b.id === id)?.folderId === targetFolderId)) {
-      // They're already here — don't do anything (root drop zone handles move-to-root)
-      return;
+      const folder = state.folders.find((f) => f.id === targetFolderId);
+      const parentId = folder?.parentId || null;
+      await moveBuilds(ids, parentId);
+    } else {
+      await moveBuilds(ids, targetFolderId);
     }
-
-    await moveBuilds(ids, targetFolderId);
     _draggedIds = [];
     _hideRootDropZone();
     _callbacks.onRefresh?.();
