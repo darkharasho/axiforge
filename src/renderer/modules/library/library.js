@@ -28,17 +28,6 @@ import { initDragDrop, wireDragDropEvents } from "./drag-drop.js";
 
 let _app = {};
 
-// ─── Preferences keys ─────────────────────────────────────────────────────────
-
-const PREF_KEYS = [
-  "library.viewMode",
-  "library.sortField",
-  "library.sortDirection",
-  "library.sidebarOpen",
-  "library.sidebarExpandedFolders",
-  "library.activeFilters",
-];
-
 // ─── Public API ────────────────────────────────────────────────────────────────
 
 /**
