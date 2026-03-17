@@ -141,6 +141,10 @@ function showFolderMenu(x, y, folderId, folder) {
     _sep(),
     _item(folderPlusIcon, "New Sub-folder", null, () => _callbacks.onNewSubfolder?.(folderId)),
     _item(documentPlusIcon, "New Build in Folder", null, () => _callbacks.onNewBuildInFolder?.(folderId)),
+    _submenuItem(arrowDownTrayIcon, "Import in Folder", [
+      _item(linkIcon, "Build Link", null, () => _callbacks.onImportChatLink?.(folderId)),
+      _item(arrowDownTrayIcon, "GW2Skills", null, () => _callbacks.onImportGw2Skills?.(folderId)),
+    ]),
     _sep(),
     _item(trashIcon, "Delete Folder", null, () => _callbacks.onDeleteFolder?.(folderId), true),
   ];
