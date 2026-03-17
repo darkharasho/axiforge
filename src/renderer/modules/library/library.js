@@ -11,6 +11,7 @@ import {
   pinBuilds,
 } from "./folder-store.js";
 
+import { showConfirmModal } from "../confirm-modal.js";
 import { initToolbar, renderToolbar, renderFilters } from "./toolbar.js";
 import { initSidebar, renderSidebar } from "./sidebar.js";
 import { initContent, renderContent } from "./content.js";
@@ -49,8 +50,12 @@ let _app = {};
 export async function initLibrary(appCallbacks) {
   _app = appCallbacks || {};
 
-  await loadFolders();
-  await loadPrefs();
+  try {
+    await loadFolders();
+    await loadPrefs();
+  } catch (err) {
+    console.warn("[library] init data load failed:", err);
+  }
 
   const shared = _buildSharedCallbacks();
 
@@ -186,9 +191,9 @@ function handleNewBuild() {
 }
 
 async function handleNewFolder() {
-  const name = window.prompt("New folder name:");
-  if (!name || !name.trim()) return;
-  await saveFolder({ name: name.trim(), parentId: null });
+  const name = await showPrompt("New folder name");
+  if (!name) return;
+  await saveFolder({ name, parentId: null });
   renderLibrary();
 }
 
@@ -203,9 +208,9 @@ function handleLoadBuild(buildId) {
 async function handleRename(buildId) {
   const build = state.builds.find((b) => b.id === buildId);
   if (!build) return;
-  const newTitle = window.prompt("Rename build:", build.title || "");
-  if (newTitle === null) return; // cancelled
-  await window.desktopApi.saveBuild({ ...build, title: newTitle.trim() });
+  const newTitle = await showPrompt("Rename build", build.title || "");
+  if (!newTitle) return;
+  await window.desktopApi.saveBuild({ ...build, title: newTitle });
   state.builds = await window.desktopApi.listBuilds();
   renderLibrary();
 }
@@ -241,7 +246,7 @@ async function handleMoveTo(ids, folderId) {
 async function handleDelete(ids) {
   const count = ids.length;
   const label = count === 1 ? "this build" : `${count} builds`;
-  const confirmed = window.confirm(`Delete ${label}? This cannot be undone.`);
+  const confirmed = await showConfirm(`Delete ${label}?`, "This cannot be undone.");
   if (!confirmed) return;
   for (const id of ids) {
     await window.desktopApi.deleteBuild(id);
@@ -278,17 +283,23 @@ function handleBuildInfo(buildId) {
   const created = build.createdAt ? new Date(build.createdAt).toLocaleString() : "—";
   const updated = build.updatedAt ? new Date(build.updatedAt).toLocaleString() : "—";
   const tags = (build.tags || []).join(", ") || "—";
-  window.alert(
-    `Title: ${title}\nProfession: ${prof}\nCreated: ${created}\nModified: ${updated}\nTags: ${tags}`
-  );
+  await showConfirm("Build Info", `
+    <div style="line-height:1.8">
+      <strong>Title:</strong> ${title}<br>
+      <strong>Profession:</strong> ${prof}<br>
+      <strong>Created:</strong> ${created}<br>
+      <strong>Modified:</strong> ${updated}<br>
+      <strong>Tags:</strong> ${tags}
+    </div>
+  `);
 }
 
 async function handleEditTags(idOrIds) {
   const ids = Array.isArray(idOrIds) ? idOrIds : [idOrIds];
   const firstBuild = state.builds.find((b) => b.id === ids[0]);
   const currentTags = (firstBuild?.tags || []).join(", ");
-  const input = window.prompt("Tags (comma-separated):", currentTags);
-  if (input === null) return; // cancelled
+  const input = await showPrompt("Tags (comma-separated)", currentTags);
+  if (input === null) return;
   const tags = input
     .split(",")
     .map((t) => t.trim())
@@ -310,16 +321,16 @@ function handleOpenFolder(folderId) {
 async function handleRenameFolder(folderId) {
   const folder = state.folders.find((f) => f.id === folderId);
   if (!folder) return;
-  const newName = window.prompt("Rename folder:", folder.name || "");
-  if (!newName || !newName.trim()) return;
-  await saveFolder({ ...folder, name: newName.trim() });
+  const newName = await showPrompt("Rename folder", folder.name || "");
+  if (!newName) return;
+  await saveFolder({ ...folder, name: newName });
   renderLibrary();
 }
 
 async function handleNewSubfolder(parentId) {
-  const name = window.prompt("New sub-folder name:");
-  if (!name || !name.trim()) return;
-  await saveFolder({ name: name.trim(), parentId });
+  const name = await showPrompt("New sub-folder name");
+  if (!name) return;
+  await saveFolder({ name, parentId });
   renderLibrary();
 }
 
@@ -336,8 +347,9 @@ function handleNewBuildInFolder(folderId) {
 async function handleDeleteFolder(folderId) {
   const folder = state.folders.find((f) => f.id === folderId);
   const name = folder?.name || "this folder";
-  const confirmed = window.confirm(
-    `Delete folder "${name}"? Builds inside will be moved to the root.`
+  const confirmed = await showConfirm(
+    `Delete folder "${name}"?`,
+    "Builds inside will be moved to the root.",
   );
   if (!confirmed) return;
   await deleteFolder(folderId);
@@ -349,9 +361,9 @@ async function handleDeleteFolder(folderId) {
 }
 
 async function handleNewFolderAndMove(buildIds) {
-  const name = window.prompt("New folder name:");
-  if (!name || !name.trim()) return;
-  const folder = await saveFolder({ name: name.trim(), parentId: null });
+  const name = await showPrompt("New folder name");
+  if (!name) return;
+  const folder = await saveFolder({ name, parentId: null });
   if (!folder?.id) return;
   await moveBuilds(buildIds, folder.id);
   renderLibrary();
@@ -478,4 +490,59 @@ function _buildSharedCallbacks() {
     // Refresh (used by drag-drop)
     onRefresh: renderLibrary,
   };
+}
+
+// ─── Dialog helpers (Electron doesn't support window.prompt/confirm/alert) ────
+
+/**
+ * Show a text-input prompt via a modal. Returns the entered string or null if cancelled.
+ */
+function showPrompt(title, defaultValue = "") {
+  return new Promise((resolve) => {
+    const overlay = document.createElement("div");
+    overlay.className = "confirm-modal-overlay";
+    overlay.innerHTML = `
+      <div class="confirm-modal">
+        <div class="confirm-modal__header">
+          <h3 class="confirm-modal__title">${title}</h3>
+        </div>
+        <div class="confirm-modal__body">
+          <input type="text" class="confirm-modal__input" value="" style="width:100%;padding:6px 8px;background:#151530;border:1px solid #303060;border-radius:4px;color:#ccd;font-size:0.9rem;" />
+        </div>
+        <div class="confirm-modal__actions">
+          <button class="confirm-modal__btn" data-action="cancel">Cancel</button>
+          <button class="confirm-modal__btn confirm-modal__btn--confirm" data-action="ok">OK</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    const input = overlay.querySelector("input");
+    input.value = defaultValue;
+    input.focus();
+    input.select();
+
+    function dismiss(value) {
+      document.removeEventListener("keydown", onKey);
+      overlay.remove();
+      resolve(value);
+    }
+
+    function onKey(e) {
+      if (e.key === "Escape") dismiss(null);
+      if (e.key === "Enter") dismiss(input.value.trim() || null);
+    }
+
+    document.addEventListener("keydown", onKey);
+    overlay.querySelector('[data-action="cancel"]').addEventListener("click", () => dismiss(null));
+    overlay.querySelector('[data-action="ok"]').addEventListener("click", () => dismiss(input.value.trim() || null));
+    overlay.addEventListener("click", (e) => { if (e.target === overlay) dismiss(null); });
+  });
+}
+
+/**
+ * Show a confirm dialog. Returns true/false.
+ */
+function showConfirm(title, body = "") {
+  return showConfirmModal({ title, body, confirmLabel: "Confirm", cancelLabel: "Cancel" });
 }
