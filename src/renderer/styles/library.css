@@ -808,6 +808,11 @@
   max-width: 0;
 }
 
+.lib-table__td--spacer {
+  width: 28px;
+  padding: 0;
+}
+
 .lib-table__td--pin {
   padding: 4px 0 4px 6px;
   white-space: nowrap;

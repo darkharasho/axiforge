@@ -193,10 +193,11 @@ function renderTableView(container) {
   function renderTableFolder(folder, depth) {
     const isExpanded = _tableExpandedFolders.has(folder.id);
     const chevron = isExpanded ? chevronDownIcon : chevronRightIcon;
-    const indent = depth * 20;
+    const spacers = `<td class="lib-table__td lib-table__td--spacer"></td>`.repeat(depth);
     let rows = `
       <tr class="lib-table__row lib-table__row--folder" data-folder-id="${escapeHtml(folder.id)}">
-        <td class="lib-table__td lib-table__td--pin">${indent ? `<span style="display:inline-block;width:${indent}px"></span>` : ""}<span class="lib-table__chevron" data-toggle-table-folder="${escapeHtml(folder.id)}">${chevron}</span></td>
+        ${spacers}
+        <td class="lib-table__td lib-table__td--pin"><span class="lib-table__chevron" data-toggle-table-folder="${escapeHtml(folder.id)}">${chevron}</span></td>
         <td class="lib-table__td lib-table__td--icon"><span class="lib-table__folder-icon">${folderIcon}</span></td>
         <td class="lib-table__td lib-table__td--name">${escapeHtml(folder.name)}</td>
         <td class="lib-table__td lib-table__td--profession"></td>
@@ -204,7 +205,7 @@ function renderTableView(container) {
         <td class="lib-table__td lib-table__td--mode"></td>
         <td class="lib-table__td lib-table__td--tags"></td>
         <td class="lib-table__td lib-table__td--created" title="${escapeHtml(folder.createdAt || "")}">${formatDate(folder.createdAt)}</td>
-        <td class="lib-table__td lib-table__td--modified" title="${escapeHtml(folder.updatedAt || "")}">${formatDate(folder.updatedAt)}</td>
+        <td class="lib-table__td lib-table__td--modified" title="${escapeHtml(folder.updatedAt || "")}" ${depth ? `colspan="${depth + 1}"` : ""}>${formatDate(folder.updatedAt)}</td>
       </tr>
     `;
 
@@ -241,10 +242,11 @@ function renderTableView(container) {
   function renderTableBuildRow(b, depth = 0) {
     const eliteSpec = getEliteSpecName(b);
     const tags = (b.tags || []).map((t) => escapeHtml(t)).join(", ");
-    const indent = depth * 20;
+    const spacers = `<td class="lib-table__td lib-table__td--spacer"></td>`.repeat(depth);
     return `
       <tr class="lib-table__row lib-table__row--build ${b.pinned ? "lib-table__row--pinned" : ""}" data-build-id="${escapeHtml(b.id)}">
-        <td class="lib-table__td lib-table__td--pin">${indent ? `<span style="display:inline-block;width:${indent}px"></span>` : ""}${pinStarHtml(b)}</td>
+        ${spacers}
+        <td class="lib-table__td lib-table__td--pin">${pinStarHtml(b)}</td>
         <td class="lib-table__td lib-table__td--icon ${profClass(b.profession)}">${getSpecIcon(b)}</td>
         <td class="lib-table__td lib-table__td--name">${escapeHtml(b.title || "Untitled")}</td>
         <td class="lib-table__td lib-table__td--profession">${escapeHtml(b.profession || "")}</td>
@@ -252,7 +254,7 @@ function renderTableView(container) {
         <td class="lib-table__td lib-table__td--mode">${escapeHtml(gameModeLabel(b.gameMode || "pve"))}</td>
         <td class="lib-table__td lib-table__td--tags">${tags}</td>
         <td class="lib-table__td lib-table__td--created" title="${escapeHtml(b.createdAt || "")}">${formatDate(b.createdAt)}</td>
-        <td class="lib-table__td lib-table__td--modified" title="${escapeHtml(b.updatedAt || "")}">${formatDate(b.updatedAt)}</td>
+        <td class="lib-table__td lib-table__td--modified" title="${escapeHtml(b.updatedAt || "")}" ${depth ? `colspan="${depth + 1}"` : ""}>${formatDate(b.updatedAt)}</td>
       </tr>
     `;
   }
