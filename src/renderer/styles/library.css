@@ -450,12 +450,13 @@
 .lib-nav-item__icon {
   display: flex;
   flex-shrink: 0;
-  color: #668;
+  color: #8899bb;
 }
 
 .lib-nav-item__icon svg {
-  width: 14px;
-  height: 14px;
+  width: 15px;
+  height: 15px;
+  fill: currentColor;
 }
 
 .lib-nav-item__label {
@@ -637,6 +638,8 @@
 .lib-list-row__icon--folder svg {
   width: 18px;
   height: 18px;
+  fill: currentColor;
+  display: block;
 }
 
 .lib-list-row__spec-icon {
@@ -839,6 +842,19 @@
 .lib-table__chevron svg {
   width: 14px;
   height: 14px;
+}
+
+.lib-table__folder-icon {
+  display: inline-flex;
+  align-items: center;
+  color: #8899bb;
+  vertical-align: middle;
+}
+
+.lib-table__folder-icon svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
 }
 
 .lib-table__row--folder {

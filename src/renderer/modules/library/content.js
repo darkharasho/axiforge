@@ -199,7 +199,7 @@ function renderTableView(container) {
         <td class="lib-table__td lib-table__td--pin"></td>
         <td class="lib-table__td lib-table__td--icon">
           <span class="lib-table__chevron" data-toggle-table-folder="${escapeHtml(folder.id)}" style="margin-left:${indent}px">${chevron}</span>
-          ${folderIcon}
+          <span class="lib-table__folder-icon">${folderIcon}</span>
         </td>
         <td class="lib-table__td lib-table__td--name">${escapeHtml(folder.name)}</td>
         <td class="lib-table__td lib-table__td--profession"></td>
