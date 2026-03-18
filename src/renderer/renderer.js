@@ -391,7 +391,7 @@ async function copyShareCodeToClipboard() {
     const payload = serializeEditorToBuild();
     const code = await window.desktopApi.encodeShareCode(payload);
     await window.desktopApi.writeClipboardText(code);
-    setPublishStatus("Share code copied to clipboard.");
+    setPublishStatus("AxiCode copied to clipboard.");
   } catch (err) {
     showError(err);
   }
@@ -418,7 +418,7 @@ async function importBuildJsonFromClipboard() {
     renderEditorMeta();
     render();
     syncGameModeToggleUI(state.editor.gameMode || "pve");
-    const source = trimmed.startsWith("<AxiForge:") ? "share code" : "JSON";
+    const source = trimmed.startsWith("<AxiForge:") ? "AxiCode" : "JSON";
     setPublishStatus(`Imported build from ${source}. Save to keep it locally.`);
   } catch (err) {
     showError(err);

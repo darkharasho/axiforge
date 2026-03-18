@@ -26,6 +26,7 @@ import {
   linkIcon,
   arrowDownTrayIcon,
   scissorsIcon,
+  axiforgeIcon,
 } from "./heroicons.js";
 
 let _callbacks = {};
@@ -112,7 +113,7 @@ function showBuildMenu(x, y, buildId, build) {
     _item(clipboardDocumentIcon, "Copy", "Ctrl+C", () => _callbacks.onCopyJson?.(buildId)),
     _item(scissorsIcon, "Cut", "Ctrl+X", () => _callbacks.onCutJson?.(buildId)),
     _item(linkIcon, "Copy Chat Link", null, () => _callbacks.onCopyChatLink?.(buildId)),
-    _item(linkIcon, "Copy Share Code", null, () => _callbacks.onCopyShareCode?.(buildId)),
+    _item(axiforgeIcon, "Copy AxiCode", null, () => _callbacks.onCopyShareCode?.(buildId)),
     _item(globeAltIcon, "Publish", null, () => _callbacks.onPublish?.(buildId)),
     _sep(),
     _item(informationCircleIcon, "Build Info", null, () => _callbacks.onBuildInfo?.(buildId)),
@@ -148,7 +149,7 @@ function showFolderMenu(x, y, folderId, folder) {
     _submenuItem(arrowDownTrayIcon, "Import in Folder", [
       _item(linkIcon, "Build Link", null, () => _callbacks.onImportChatLink?.(folderId)),
       _item(arrowDownTrayIcon, "GW2Skills", null, () => _callbacks.onImportGw2Skills?.(folderId)),
-      _item(linkIcon, "Share Code", null, () => _callbacks.onImportShareCode?.(folderId)),
+      _item(axiforgeIcon, "AxiCode", null, () => _callbacks.onImportShareCode?.(folderId)),
     ]),
     _sep(),
     _item(trashIcon, "Delete Folder", null, () => _callbacks.onDeleteFolder?.(folderId), true),
@@ -165,7 +166,7 @@ function showEmptyMenu(x, y) {
     _submenuItem(arrowDownTrayIcon, "Import", [
       _item(linkIcon, "Build Link", null, () => _callbacks.onImportChatLink?.()),
       _item(arrowDownTrayIcon, "GW2Skills", null, () => _callbacks.onImportGw2Skills?.()),
-      _item(linkIcon, "Share Code", null, () => _callbacks.onImportShareCode?.()),
+      _item(axiforgeIcon, "AxiCode", null, () => _callbacks.onImportShareCode?.()),
     ]),
     _sep(),
     _item(null, "Select All", "Ctrl+A", () => _callbacks.onSelectAll?.()),

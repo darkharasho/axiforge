@@ -334,7 +334,7 @@ function showToast(message, type = "success") {
 async function handleCopyShareCode(idOrIds) {
   const ids = Array.isArray(idOrIds) ? idOrIds : [idOrIds];
   if (ids.length !== 1) {
-    showToast?.("Share code only supports a single build.");
+    showToast?.("AxiCode only supports a single build.");
     return;
   }
   const build = state.builds.find((b) => b.id === ids[0]);
@@ -342,9 +342,9 @@ async function handleCopyShareCode(idOrIds) {
   try {
     const code = await window.desktopApi.encodeShareCode(build);
     await window.desktopApi.writeClipboardText(code);
-    showToast?.("Share code copied!");
+    showToast?.("AxiCode copied!");
   } catch (err) {
-    showToast?.("Failed to generate share code.");
+    showToast?.("Failed to generate AxiCode.");
   }
 }
 
@@ -407,7 +407,7 @@ async function handleImportShareCode(targetFolderId) {
     const saved = await window.desktopApi.saveBuild(decoded);
     state.builds = await window.desktopApi.listBuilds();
     renderLibrary();
-    showToast("Share code imported!");
+    showToast("AxiCode imported!");
   } catch (err) {
     console.error("Import failed:", err);
     showToast("Import failed: " + (err.message || "Unknown error"), "error");
@@ -987,15 +987,15 @@ function showShareCodeImportModal() {
     overlay.innerHTML = `
       <div class="confirm-modal" style="width:420px;max-width:90vw;">
         <div class="confirm-modal__header">
-          <h3 class="confirm-modal__title">Import Share Code</h3>
+          <h3 class="confirm-modal__title">Import AxiCode</h3>
         </div>
         <div class="confirm-modal__body" style="display:flex;flex-direction:column;gap:10px;">
           <div>
-            <label style="display:block;font-size:0.8rem;color:#889;margin-bottom:4px;">Share Code</label>
+            <label style="display:block;font-size:0.8rem;color:#889;margin-bottom:4px;">AxiCode</label>
             <input
               type="text"
               id="sharecode-input"
-              placeholder="Paste <AxiForge:...> share code here"
+              placeholder="Paste <AxiForge:...> AxiCode here"
               style="width:100%;padding:6px 8px;background:#151530;border:1px solid #303060;border-radius:4px;color:#ccd;font-size:0.9rem;outline:none;box-sizing:border-box;"
             />
             <div id="sharecode-status" style="font-size:0.75rem;min-height:1.2em;margin-top:3px;color:#556;"></div>
@@ -1037,7 +1037,7 @@ function showShareCodeImportModal() {
       codeValid = false;
       if (!val) { setStatus("", "#556"); return; }
       if (!val.startsWith("<AxiForge:") || !val.endsWith(">")) {
-        setStatus("Not a valid share code format", "#c55");
+        setStatus("Not a valid AxiCode format", "#c55");
         return;
       }
       // Extract the label (part between first : and second :)
@@ -1051,7 +1051,7 @@ function showShareCodeImportModal() {
           nameInput.dataset.autoFilled = "1";
         }
       } else {
-        setStatus("\u2713 Valid share code", "#5a5");
+        setStatus("\u2713 Valid AxiCode", "#5a5");
       }
       codeValid = true;
       importBtn.disabled = false;

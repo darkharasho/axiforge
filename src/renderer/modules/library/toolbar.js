@@ -18,6 +18,7 @@ import {
   checkIcon,
   arrowDownTrayIcon,
   linkIcon,
+  axiforgeIcon,
 } from "./heroicons.js";
 
 let _callbacks = {};
@@ -80,7 +81,7 @@ export function renderToolbar() {
             ${arrowDownTrayIcon} GW2Skills
           </button>
           <button type="button" class="lib-import-dropdown__item" data-import-type="sharecode">
-            ${linkIcon} Share Code
+            ${axiforgeIcon} AxiCode
           </button>
         </div>
       </div>
