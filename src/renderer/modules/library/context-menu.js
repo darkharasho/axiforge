@@ -160,6 +160,7 @@ function showCompMenu(x, y, compId, comp) {
     _sep(),
     _item(clipboardDocumentIcon, "Copy JSON", "Ctrl+C", () => _callbacks.onCopyCompJson?.(compId)),
     _item(scissorsIcon, "Cut", "Ctrl+X", () => _callbacks.onCutCompJson?.(compId)),
+    _item(clipboardIcon, "Paste", "Ctrl+V", () => _callbacks.onPasteJson?.(compId)),
     _sep(),
     _item(trashIcon, "Delete", "Del", () => _callbacks.onDeleteComps?.([compId]), true),
   ];
@@ -193,6 +194,8 @@ function showFolderMenu(x, y, folderId, folder) {
       _item(arrowDownTrayIcon, "GW2Skills", null, () => _callbacks.onImportGw2Skills?.(folderId)),
       _item(axiforgeIcon, "AxiCode", null, () => _callbacks.onImportShareCode?.(folderId)),
     ]),
+    _sep(),
+    _item(clipboardIcon, "Paste", "Ctrl+V", () => _callbacks.onPasteJson?.(folderId)),
     _sep(),
     _item(trashIcon, "Delete Folder", null, () => _callbacks.onDeleteFolder?.(folderId), true),
   ];
