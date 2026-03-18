@@ -4,6 +4,7 @@ import { state } from "../state.js";
 import { escapeHtml } from "../utils.js";
 import { getProfessionSvg } from "../profession-icons.js";
 import { wireCompDragDrop, destroyCompDragDrop } from "./comp-drag-drop.js";
+import { roleBadgeHtml } from "../roleEstimator.js";
 
 let _callbacks = {};
 let _notesDebounceTimer = null;
@@ -125,6 +126,7 @@ function showSlotHoverCard(slotEl, build) {
   if (relicName)   equipParts.push(`<span class="comp-hover__equip">${escapeHtml(relicName)}</span>`);
 
   const tagPills = tags.map((t) => `<span class="comp-hover__tag">${escapeHtml(t)}</span>`).join("");
+  const roleBadge = roleBadgeHtml(build, state.upgradeCatalog);
 
   card.innerHTML = `
     <div class="comp-hover__header">
@@ -137,6 +139,7 @@ function showSlotHoverCard(slotEl, build) {
     </div>
     ${equipParts.length ? `<div class="comp-hover__equip-row">${equipParts.join('<span class="comp-hover__sep">·</span>')}</div>` : ""}
     ${tagPills ? `<div class="comp-hover__tags">${tagPills}</div>` : ""}
+    ${roleBadge ? `<div class="comp-hover__role">${roleBadge}</div>` : ""}
   `;
 
   card.style.visibility = "hidden";
@@ -495,6 +498,7 @@ function renderPartyLine(pl, idx, totalCap) {
         `<div class="comp-slot comp-slot--filled ${pClass}" title="${title}"
               data-action="click-filled-slot" data-line-id="${escapeHtml(pl.id)}" data-slot-idx="${i}" data-build-id="${escapeHtml(buildId)}">
           <span class="comp-slot__icon">${icon}</span>
+          ${roleBadgeHtml(build, state.upgradeCatalog)}
         </div>`
       );
     } else {
@@ -521,7 +525,7 @@ function renderPartyLine(pl, idx, totalCap) {
   return `
     <div class="comp-line" data-line-id="${escapeHtml(pl.id)}">
       <span class="comp-line__label">P${idx + 1}</span>
-      <div class="comp-line__slots" style="max-height: ${Math.ceil(capacity / 5) * 42 + (Math.ceil(capacity / 5) - 1) * 5}px;">${slotBoxes.join("")}</div>
+      <div class="comp-line__slots" style="max-height: ${Math.ceil(capacity / 5) * 58 + (Math.ceil(capacity / 5) - 1) * 5}px;">${slotBoxes.join("")}</div>
       <div class="comp-line__controls">
         <button type="button" class="comp-line__btn" data-action="duplicate-line"
                 data-line-id="${escapeHtml(pl.id)}" title="Duplicate line">&#10697;</button>
@@ -611,6 +615,7 @@ function renderPoolCard(build) {
         <div class="comp-pool-card__top">
           <span class="comp-pool-card__name">${name}</span>
           ${tagPills}
+          ${roleBadgeHtml(build, state.upgradeCatalog)}
         </div>
         ${bottomParts.length ? `<div class="comp-pool-card__bottom">${bottomParts.join("")}</div>` : ""}
       </div>
