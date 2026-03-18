@@ -26,6 +26,7 @@ import {
 } from "./selection.js";
 import { initDragDrop, wireDragDropEvents } from "./drag-drop.js";
 import { compIcon } from "./heroicons.js";
+import { pushUndo, popUndo } from "./undo.js";
 
 // ─── App-level callbacks (injected at init) ────────────────────────────────────
 
@@ -86,7 +87,7 @@ export function renderLibrary() {
  * Handle keyboard shortcuts when the library page is active.
  * @param {KeyboardEvent} e
  */
-export function handleLibraryKeydown(e) {
+export async function handleLibraryKeydown(e) {
   const tag = document.activeElement?.tagName;
   if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
 
@@ -202,6 +203,19 @@ export function handleLibraryKeydown(e) {
         handlePasteJson();
       }
       break;
+
+    case "z":
+    case "Z":
+      if (ctrl) {
+        e.preventDefault();
+        const action = popUndo();
+        if (action) {
+          await action.undo();
+          renderLibrary();
+          showToast("Undone!");
+        }
+      }
+      break;
   }
 }
 
@@ -248,10 +262,16 @@ function handleLoadBuild(buildId) {
 async function handleRename(buildId) {
   const build = state.builds.find((b) => b.id === buildId);
   if (!build) return;
+  const oldTitle = build.title;
   const newTitle = await showPrompt("Rename build", build.title || "");
   if (!newTitle) return;
   await window.desktopApi.saveBuild({ ...build, title: newTitle });
   state.builds = await window.desktopApi.listBuilds();
+  pushUndo({ type: "rename-build", undo: async () => {
+    const current = state.builds.find((b) => b.id === buildId);
+    if (current) await window.desktopApi.saveBuild({ ...current, title: oldTitle });
+    state.builds = await window.desktopApi.listBuilds();
+  }});
   renderLibrary();
 }
 
@@ -279,7 +299,18 @@ async function handlePinAll(ids) {
 }
 
 async function handleMoveTo(ids, folderId) {
+  const oldFolderIds = ids.map((id) => {
+    const b = state.builds.find((b) => b.id === id);
+    return { id, folderId: b?.folderId || null };
+  });
   await moveBuilds(ids, folderId);
+  pushUndo({ type: "move-builds", undo: async () => {
+    for (const { id, folderId } of oldFolderIds) {
+      const build = state.builds.find((b) => b.id === id);
+      if (build) await window.desktopApi.saveBuild({ ...build, folderId });
+    }
+    state.builds = await window.desktopApi.listBuilds();
+  }});
   renderLibrary();
 }
 
@@ -474,6 +505,11 @@ async function handlePasteJson(targetId) {
         showToast("Cut builds no longer exist", "error");
         return;
       }
+      // Capture old locations before moving
+      const oldLocations = idsToMove.map((id) => {
+        const b = state.builds.find((b) => b.id === id);
+        return { id, folderId: b?.folderId || null, compId: b?.compId || null };
+      });
       if (compId) {
         // Move cut builds into the comp
         for (const id of idsToMove) {
@@ -492,6 +528,14 @@ async function handlePasteJson(targetId) {
       } else {
         await moveBuilds(idsToMove, folderId);
       }
+      pushUndo({ type: "cut-paste", undo: async () => {
+        for (const { id, folderId, compId } of oldLocations) {
+          const build = state.builds.find((b) => b.id === id);
+          if (build) await window.desktopApi.saveBuild({ ...build, folderId, compId });
+        }
+        state.builds = await window.desktopApi.listBuilds();
+        state.comps = await window.desktopApi.listComps();
+      }});
       clearSelection();
       renderLibrary();
       showToast(idsToMove.length === 1 ? "Build moved!" : `${idsToMove.length} builds moved!`);
@@ -512,6 +556,7 @@ async function handlePasteJson(targetId) {
       return;
     }
     const existingTitles = state.builds.map((b) => b.title || "");
+    const pastedIds = [];
     let savedCount = 0;
     for (const item of items) {
       if (!item || typeof item !== "object") continue;
@@ -522,6 +567,7 @@ async function handlePasteJson(targetId) {
       const copy = { ...source, title, folderId: compId ? null : folderId, compId: compId || null };
       delete copy.id;
       const saved = await window.desktopApi.saveBuild(copy);
+      if (saved?.id) pastedIds.push(saved.id);
       // If pasting into a comp, also add to comp's buildIds
       if (compId && saved) {
         const comp = state.comps?.find((c) => c.id === compId);
@@ -537,6 +583,13 @@ async function handlePasteJson(targetId) {
     }
     state.builds = await window.desktopApi.listBuilds();
     if (compId) state.comps = await window.desktopApi.listComps();
+    if (pastedIds.length > 0) {
+      pushUndo({ type: "paste", undo: async () => {
+        for (const id of pastedIds) await window.desktopApi.deleteBuild(id);
+        state.builds = await window.desktopApi.listBuilds();
+        if (compId) state.comps = await window.desktopApi.listComps();
+      }});
+    }
     renderLibrary();
     showToast(savedCount === 1 ? "Build pasted!" : `${savedCount} builds pasted!`);
   } catch (err) {
@@ -601,10 +654,16 @@ function handleOpenComp(compId) {
 async function handleRenameComp(compId) {
   const comp = state.comps?.find((c) => c.id === compId);
   if (!comp) return;
+  const oldName = comp.name;
   const newName = await showPrompt("Rename comp", comp.name || "");
   if (!newName) return;
   await window.desktopApi.saveComp({ ...comp, name: newName });
   state.comps = await window.desktopApi.listComps();
+  pushUndo({ type: "rename-comp", undo: async () => {
+    const current = state.comps?.find((c) => c.id === compId);
+    if (current) await window.desktopApi.saveComp({ ...current, name: oldName });
+    state.comps = await window.desktopApi.listComps();
+  }});
   renderLibrary();
 }
 
@@ -623,6 +682,8 @@ async function handleDropBuildOnComp(buildId, compId) {
   const build = state.builds.find((b) => b.id === buildId);
   if (!build) return;
   if (build.compId === compId) return; // already in this comp
+  const oldFolderId = build.folderId || null;
+  const oldCompId = build.compId || null;
   // Move the build into the comp: set compId, clear folderId
   await window.desktopApi.saveBuild({ ...build, compId, folderId: null });
   // Also add to comp's buildIds for party line tracking
@@ -635,17 +696,32 @@ async function handleDropBuildOnComp(buildId, compId) {
   }
   state.builds = await window.desktopApi.listBuilds();
   state.comps = await window.desktopApi.listComps();
+  pushUndo({ type: "move-to-comp", undo: async () => {
+    const current = state.builds.find((b) => b.id === buildId);
+    if (current) await window.desktopApi.saveBuild({ ...current, compId: oldCompId, folderId: oldFolderId });
+    // Remove from comp's buildIds
+    const c = state.comps?.find((c) => c.id === compId);
+    if (c) {
+      const ids = (c.buildIds || []).filter((id) => id !== buildId);
+      await window.desktopApi.saveComp({ ...c, buildIds: ids });
+    }
+    state.builds = await window.desktopApi.listBuilds();
+    state.comps = await window.desktopApi.listComps();
+  }});
   renderLibrary();
 }
 
 async function handleRemoveBuildFromComp(buildId, compId) {
+  // Capture comp state before removal for undo
+  const comp = state.comps?.find((c) => c.id === compId);
+  const oldCompBuildIds = comp ? [...(comp.buildIds || [])] : [];
+  const oldCompPartyLines = comp ? JSON.parse(JSON.stringify(comp.partyLines || [])) : [];
   // Clear compId on the build — it moves back to root
   const build = state.builds.find((b) => b.id === buildId);
   if (build) {
     await window.desktopApi.saveBuild({ ...build, compId: null });
   }
   // Also clean up comp's buildIds and party line slots
-  const comp = state.comps?.find((c) => c.id === compId);
   if (comp) {
     const buildIds = (comp.buildIds || []).filter((id) => id !== buildId);
     const partyLines = (comp.partyLines || []).map((line) => ({
@@ -656,6 +732,15 @@ async function handleRemoveBuildFromComp(buildId, compId) {
   }
   state.builds = await window.desktopApi.listBuilds();
   state.comps = await window.desktopApi.listComps();
+  pushUndo({ type: "remove-from-comp", undo: async () => {
+    const current = state.builds.find((b) => b.id === buildId);
+    if (current) await window.desktopApi.saveBuild({ ...current, compId });
+    // Restore comp's buildIds and partyLines
+    const c = state.comps?.find((c) => c.id === compId);
+    if (c) await window.desktopApi.saveComp({ ...c, buildIds: oldCompBuildIds, partyLines: oldCompPartyLines });
+    state.builds = await window.desktopApi.listBuilds();
+    state.comps = await window.desktopApi.listComps();
+  }});
   renderLibrary();
 }
 
@@ -673,12 +758,23 @@ async function handleDeleteComps(ids) {
 }
 
 async function handleMoveComps(compIds, folderId) {
+  const oldFolderIds = compIds.map((id) => {
+    const c = state.comps.find((c) => c.id === id);
+    return { id, folderId: c?.folderId || null };
+  });
   for (const id of compIds) {
     const comp = state.comps.find((c) => c.id === id);
     if (!comp) continue;
     await window.desktopApi.saveComp({ ...comp, folderId: folderId ?? null });
   }
   state.comps = await window.desktopApi.listComps();
+  pushUndo({ type: "move-comps", undo: async () => {
+    for (const { id, folderId } of oldFolderIds) {
+      const comp = state.comps.find((c) => c.id === id);
+      if (comp) await window.desktopApi.saveComp({ ...comp, folderId });
+    }
+    state.comps = await window.desktopApi.listComps();
+  }});
   renderLibrary();
 }
 
@@ -733,11 +829,16 @@ function handleOpenFolder(folderId) {
 async function handleRenameFolder(folderId) {
   const folder = state.folders.find((f) => f.id === folderId);
   if (!folder) return;
+  const oldName = folder.name;
   // Find the folder's nav item in sidebar and replace label with inline input
   const navItem = document.querySelector(`[data-navigate-folder="${folderId}"]`);
   const newName = await insertInlineInput(navItem, folder.name || "");
   if (!newName) { renderLibrary(); return; }
   await saveFolder({ ...folder, name: newName });
+  pushUndo({ type: "rename-folder", undo: async () => {
+    const current = state.folders.find((f) => f.id === folderId);
+    if (current) await saveFolder({ ...current, name: oldName });
+  }});
   renderLibrary();
 }
 

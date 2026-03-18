@@ -45,6 +45,7 @@ import { initWikiModal, openWikiModal } from "./modules/wiki-modal.js";
 import { initDetailModal, openDetailModal } from "./modules/detail-modal.js";
 import { initConfirmModal } from "./modules/confirm-modal.js";
 import { initLibrary, renderLibrary, handleLibraryKeydown } from "./modules/library/library.js";
+import { clearUndo as clearLibraryUndo } from "./modules/library/undo.js";
 import { initComps, loadComps, renderComps } from "./modules/comps/comps.js";
 
 // ── DOM element cache ────────────────────────────────────────────────────────
@@ -552,6 +553,8 @@ function updateWindowTitle() {
 
 function navigateToPage(page) {
   if (!page) return;
+  // Clear library undo stack when navigating away from the library
+  if (state.activePage === "library" && page !== "library") clearLibraryUndo();
   state.activePage = page;
   document.querySelectorAll(".leftnav__item").forEach((b) => b.classList.remove("leftnav__item--active"));
   const activeBtn = document.querySelector(`.leftnav__item[data-page="${page}"]`);
