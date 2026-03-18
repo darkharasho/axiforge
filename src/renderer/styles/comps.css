@@ -1202,6 +1202,10 @@
   padding: 0 11px 9px;
 }
 
+.comp-hover__role {
+  padding: 0 11px 9px;
+}
+
 .comp-hover__tag {
   font-size: 9px;
   border-radius: 8px;
