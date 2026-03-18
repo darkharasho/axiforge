@@ -3,6 +3,7 @@ require("dotenv").config({ path: path.resolve(__dirname, "../../.env") });
 const { app, BrowserWindow, ipcMain, dialog, clipboard } = require("electron");
 const { BuildStore } = require("./buildStore");
 const { FolderStore } = require("./folderStore");
+const { CompStore } = require("./compStore");
 const { beginGitHubDeviceAuth, completeGitHubDeviceAuth } = require("./githubAuth");
 const {
   TARGET_REPO,
@@ -33,6 +34,7 @@ if (IS_DEV_PROFILE) {
 const dataDir = path.join(app.getPath("userData"), "data");
 const store = new BuildStore(dataDir);
 const folderStore = new FolderStore(dataDir);
+const compStore = new CompStore(dataDir);
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -158,6 +160,7 @@ async function getOnboardingStatus() {
 app.whenReady().then(async () => {
   await store.init();
   await folderStore.init();
+  await compStore.init();
   const win = createWindow();
   initAutoUpdate(win);
 
@@ -286,6 +289,7 @@ app.whenReady().then(async () => {
     const build = builds.find((b) => b.id === id);
     const folderId = build?.folderId;
     await store.deleteBuild(id);
+    await compStore.removeBuildFromComps(id);
     if (folderId) {
       await folderStore.touchFolders([folderId]);
     }
@@ -331,6 +335,13 @@ app.whenReady().then(async () => {
   ipcMain.handle("builds:reorder", (_e, updates) =>
     store.reorderBuilds(updates),
   );
+
+  // Comp CRUD
+  ipcMain.handle("comps:list", () => compStore.listComps());
+  ipcMain.handle("comps:save", (_e, comp) => compStore.upsertComp(comp));
+  ipcMain.handle("comps:delete", (_e, id) => compStore.deleteComp(id));
+  ipcMain.handle("comps:reorder", (_e, updates) => compStore.reorderComps(updates));
+
   ipcMain.handle("builds:generate-chat-link", async (_e, build) => {
     const { generateChatLink } = require("./buildChatLink.js");
     return generateChatLink(build);

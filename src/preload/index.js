@@ -33,6 +33,12 @@ contextBridge.exposeInMainWorld("desktopApi", {
   reorderFolders: (updates) =>
     ipcRenderer.invoke("folders:reorder", updates),
 
+  // Comp operations
+  listComps: () => ipcRenderer.invoke("comps:list"),
+  saveComp: (comp) => ipcRenderer.invoke("comps:save", comp),
+  deleteComp: (id) => ipcRenderer.invoke("comps:delete", id),
+  reorderComps: (updates) => ipcRenderer.invoke("comps:reorder", updates),
+
   // Build library operations
   moveBuilds: (ids, folderId) =>
     ipcRenderer.invoke("builds:move", ids, folderId),
