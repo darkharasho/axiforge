@@ -881,6 +881,71 @@
   content: none;
 }
 
+/* ── Comp rows ───────────────────────────────────────────────────── */
+
+.lib-list-row--comp {
+  cursor: pointer;
+}
+
+.lib-list-row__comp-icon {
+  font-size: 16px;
+  color: #888;
+}
+
+.lib-list-row__comp-icon svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+
+.lib-list-row__badge {
+  font-size: 0.75rem;
+  color: #555;
+  margin-left: auto;
+  padding: 1px 8px;
+  background: #1a1a3a;
+  border-radius: 8px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.lib-tv__row--comp {
+  color: #99a;
+  cursor: pointer;
+}
+
+.lib-grid-card--comp {
+  color: #99a;
+}
+
+.lib-grid-card__icon--comp {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #668;
+}
+
+.lib-grid-card__icon--comp svg {
+  width: 24px;
+  height: 24px;
+}
+
+.lib-icon-item--comp {
+  color: #778;
+}
+
+.lib-icon-item__icon--comp {
+  color: #668;
+}
+
+.lib-col__item--comp {
+  color: #99a;
+}
+
+.lib-col__icon--comp {
+  color: #668;
+}
+
 /* Selection highlight */
 .lib-list-row.lib-selected {
   background: #1a1a4a;

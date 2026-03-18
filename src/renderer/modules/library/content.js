@@ -2,9 +2,9 @@
 
 import { state } from "../state.js";
 import { escapeHtml, formatRelativeTime } from "../utils.js";
-import { getVisibleBuilds, getVisibleFolders } from "./folder-store.js";
+import { getVisibleBuilds, getVisibleFolders, getVisibleComps } from "./folder-store.js";
 import { getProfessionSvg } from "../profession-icons.js";
-import { clearSelection, handleBuildClick } from "./selection.js";
+import { clearSelection, handleBuildClick, handleCompClick } from "./selection.js";
 import { wireDragDropEvents } from "./drag-drop.js";
 import {
   folderIcon,
@@ -13,6 +13,7 @@ import {
   chevronUpIcon,
   chevronDownIcon,
   chevronRightIcon,
+  userGroupIcon,
 } from "./heroicons.js";
 
 let _callbacks = {};
@@ -135,6 +136,12 @@ function tagPillsHtml(build) {
     .join("");
 }
 
+function compBadgeHtml(comp) {
+  const count = (comp.buildIds || []).length;
+  const label = count === 1 ? "1 build" : `${count} builds`;
+  return `<span class="lib-list-row__badge">${label}</span>`;
+}
+
 function emptyStateHtml() {
   return `<div class="lib-empty-state">
     <p>No builds found.</p>
@@ -177,8 +184,9 @@ function folderPathHtml(build) {
 function renderListView(container) {
   const folders = getVisibleFolders();
   const builds = getVisibleBuilds();
+  const comps = getVisibleComps();
 
-  if (folders.length === 0 && builds.length === 0) {
+  if (folders.length === 0 && builds.length === 0 && comps.length === 0) {
     container.innerHTML = emptyStateHtml();
     return;
   }
@@ -210,7 +218,19 @@ function renderListView(container) {
     )
     .join("");
 
-  container.innerHTML = `<div class="lib-list">${folderRows}${buildRows}</div>`;
+  const compRows = comps
+    .map(
+      (c) => `
+        <div class="lib-list-row lib-list-row--comp" data-comp-id="${escapeHtml(c.id)}">
+          <span class="lib-list-row__spec-icon lib-list-row__comp-icon">${userGroupIcon}</span>
+          <span class="lib-list-row__title">${escapeHtml(c.name || "Untitled Comp")}</span>
+          ${compBadgeHtml(c)}
+        </div>
+      `
+    )
+    .join("");
+
+  container.innerHTML = `<div class="lib-list">${folderRows}${buildRows}${compRows}</div>`;
 
   bindContentEvents(container);
 }
@@ -220,6 +240,7 @@ function renderListView(container) {
 function renderTableView(container) {
   const folders = getVisibleFolders();
   const builds = getVisibleBuilds();
+  const comps = getVisibleComps();
 
   const { sortField, sortDirection } = state.libraryPrefs;
 
@@ -231,7 +252,7 @@ function renderTableView(container) {
     return `<button type="button" class="lib-tv__sort-btn ${isActive ? "lib-tv__sort-btn--active" : ""}" data-sort-field="${field}">${escapeHtml(label)} ${icon}</button>`;
   }
 
-  if (folders.length === 0 && builds.length === 0) {
+  if (folders.length === 0 && builds.length === 0 && comps.length === 0) {
     container.innerHTML = emptyStateHtml();
     return;
   }
@@ -303,8 +324,30 @@ function renderTableView(container) {
     `;
   }
 
+  function renderTreeComp(c) {
+    const count = (c.buildIds || []).length;
+    const countLabel = count === 1 ? "1 build" : `${count} builds`;
+    const tags = (c.tags || []).map((t) => escapeHtml(t)).join(", ");
+    return `
+      <li class="lib-tv__item" data-comp-id="${escapeHtml(c.id)}">
+        <div class="lib-tv__row lib-tv__row--comp">
+          <span class="lib-tv__action"></span>
+          <span class="lib-tv__icon lib-list-row__comp-icon">${userGroupIcon}</span>
+          <span class="lib-tv__name">${escapeHtml(c.name || "Untitled Comp")}</span>
+          <span class="lib-tv__profession"><span class="lib-list-row__badge">${countLabel}</span></span>
+          <span class="lib-tv__spec"></span>
+          <span class="lib-tv__mode"></span>
+          <span class="lib-tv__tags" title="${escapeHtml((c.tags || []).join(", "))}">${tags}</span>
+          <span class="lib-tv__created" title="${escapeHtml(c.createdAt || "")}">${formatDate(c.createdAt)}</span>
+          <span class="lib-tv__modified" title="${escapeHtml(c.updatedAt || "")}">${formatDate(c.updatedAt)}</span>
+        </div>
+      </li>
+    `;
+  }
+
   const folderItems = folders.map((f) => renderTreeFolder(f)).join("");
   const buildItems = builds.map((b) => renderTreeBuild(b)).join("");
+  const compItems = comps.map((c) => renderTreeComp(c)).join("");
 
   container.innerHTML = `
     <div class="lib-tv">
@@ -320,7 +363,7 @@ function renderTableView(container) {
         <span class="lib-tv__modified">${sortHeaderDiv("updatedAt", "Modified")}</span>
       </div>
       <ul class="lib-tv__tree">
-        ${folderItems}${buildItems}
+        ${folderItems}${buildItems}${compItems}
       </ul>
     </div>
   `;
@@ -347,8 +390,9 @@ function renderTableView(container) {
 function renderGridView(container) {
   const folders = getVisibleFolders();
   const builds = getVisibleBuilds();
+  const comps = getVisibleComps();
 
-  if (folders.length === 0 && builds.length === 0) {
+  if (folders.length === 0 && builds.length === 0 && comps.length === 0) {
     container.innerHTML = emptyStateHtml();
     return;
   }
@@ -383,7 +427,19 @@ function renderGridView(container) {
     )
     .join("");
 
-  container.innerHTML = `<div class="lib-grid">${folderCards}${buildCards}</div>`;
+  const compCards = comps
+    .map(
+      (c) => `
+        <div class="lib-grid-card lib-grid-card--comp" data-comp-id="${escapeHtml(c.id)}">
+          <div class="lib-grid-card__icon lib-grid-card__icon--comp">${userGroupIcon}</div>
+          <div class="lib-grid-card__title">${escapeHtml(c.name || "Untitled Comp")}</div>
+          ${compBadgeHtml(c)}
+        </div>
+      `
+    )
+    .join("");
+
+  container.innerHTML = `<div class="lib-grid">${folderCards}${buildCards}${compCards}</div>`;
 
   bindContentEvents(container);
 }
@@ -393,8 +449,9 @@ function renderGridView(container) {
 function renderIconView(container) {
   const folders = getVisibleFolders();
   const builds = getVisibleBuilds();
+  const comps = getVisibleComps();
 
-  if (folders.length === 0 && builds.length === 0) {
+  if (folders.length === 0 && builds.length === 0 && comps.length === 0) {
     container.innerHTML = emptyStateHtml();
     return;
   }
@@ -422,7 +479,18 @@ function renderIconView(container) {
     )
     .join("");
 
-  container.innerHTML = `<div class="lib-icon-grid">${folderItems}${buildItems}</div>`;
+  const compItems = comps
+    .map(
+      (c) => `
+        <div class="lib-icon-item lib-icon-item--comp" data-comp-id="${escapeHtml(c.id)}">
+          <div class="lib-icon-item__icon lib-icon-item__icon--comp">${userGroupIcon}</div>
+          <div class="lib-icon-item__label">${escapeHtml(c.name || "Untitled Comp")}</div>
+        </div>
+      `
+    )
+    .join("");
+
+  container.innerHTML = `<div class="lib-icon-grid">${folderItems}${buildItems}${compItems}</div>`;
 
   bindContentEvents(container);
 }
@@ -434,10 +502,11 @@ function renderColumnsView(container) {
   // subsequent columns are based on selected folders in _columnSelectedFolders
   const columns = [];
 
-  // Column 0: root level (folders + builds at current navigation context)
+  // Column 0: root level (folders + builds + comps at current navigation context)
   const rootFolders = getVisibleFolders();
   const rootBuilds = getVisibleBuilds();
-  columns.push({ folders: rootFolders, builds: rootBuilds, parentId: null });
+  const rootComps = getVisibleComps();
+  columns.push({ folders: rootFolders, builds: rootBuilds, comps: rootComps, parentId: null });
 
   // Subsequent columns based on selected folders
   for (let i = 0; i < _columnSelectedFolders.length; i++) {
@@ -452,7 +521,11 @@ function renderColumnsView(container) {
       .filter((b) => b.folderId === selectedId)
       .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
 
-    columns.push({ folders: childFolders, builds: childBuilds, parentId: selectedId });
+    const childComps = (state.comps || [])
+      .filter((c) => c.folderId === selectedId)
+      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+
+    columns.push({ folders: childFolders, builds: childBuilds, comps: childComps, parentId: selectedId });
   }
 
   const columnsHtml = columns
@@ -477,6 +550,16 @@ function renderColumnsView(container) {
                data-build-id="${escapeHtml(b.id)}" data-col-index="${colIndex}">
             <span class="lib-col__icon ${profClass(b.profession)}">${getSpecIcon(b)}</span>
             <span class="lib-col__name">${escapeHtml(b.title || "Untitled")}${folderPathHtml(b)}</span>
+          </div>
+        `);
+      }
+
+      for (const c of (col.comps || [])) {
+        items.push(`
+          <div class="lib-col__item lib-col__item--comp"
+               data-comp-id="${escapeHtml(c.id)}" data-col-index="${colIndex}">
+            <span class="lib-col__icon lib-col__icon--comp">${userGroupIcon}</span>
+            <span class="lib-col__name">${escapeHtml(c.name || "Untitled Comp")}</span>
           </div>
         `);
       }
@@ -519,7 +602,7 @@ function bindContentEvents(container) {
   if (!container.dataset.contentBound) {
     container.dataset.contentBound = "1";
     container.addEventListener("click", (e) => {
-      if (!e.target.closest("[data-build-id]") && !e.target.closest("[data-folder-id]") && !e.target.closest("[data-sort-field]")) {
+      if (!e.target.closest("[data-build-id]") && !e.target.closest("[data-folder-id]") && !e.target.closest("[data-comp-id]") && !e.target.closest("[data-sort-field]")) {
         clearSelection();
       }
     });
@@ -537,6 +620,19 @@ function bindContentEvents(container) {
     el.addEventListener("dblclick", (e) => {
       e.stopPropagation();
       _callbacks.onLoadBuild?.(el.dataset.buildId);
+    });
+  });
+
+  // Comp elements
+  container.querySelectorAll("[data-comp-id]:not([data-bound])").forEach((el) => {
+    el.dataset.bound = "1";
+    el.addEventListener("click", (e) => {
+      e.stopPropagation();
+      handleCompClick(el.dataset.compId, e);
+    });
+    el.addEventListener("dblclick", (e) => {
+      e.stopPropagation();
+      _callbacks.onOpenComp?.(el.dataset.compId);
     });
   });
 

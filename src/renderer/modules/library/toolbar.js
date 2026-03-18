@@ -85,9 +85,22 @@ export function renderToolbar() {
           </button>
         </div>
       </div>
-      <button type="button" id="lib-new-build-btn" class="btn btn-primary lib-toolbar__new-btn">
-        ${plusIcon} New
-      </button>
+      <div class="lib-import-dropdown" id="lib-new-dropdown">
+        <button type="button" id="lib-new-btn" class="btn btn-primary lib-toolbar__new-btn lib-import-dropdown__trigger">
+          ${plusIcon} New
+        </button>
+        <div class="lib-import-dropdown__menu" id="lib-new-menu">
+          <button type="button" class="lib-import-dropdown__item" data-new-type="build">
+            ${plusIcon} New Build
+          </button>
+          <button type="button" class="lib-import-dropdown__item" data-new-type="folder">
+            ${plusIcon} New Folder
+          </button>
+          <button type="button" class="lib-import-dropdown__item" data-new-type="comp">
+            ${plusIcon} New Comp
+          </button>
+        </div>
+      </div>
     </div>
   `;
 
@@ -243,6 +256,12 @@ function renderBreadcrumb() {
     return parts.join("");
   }
 
+  if (folder.id === "__all-comps") {
+    parts.push(`<span class="lib-breadcrumb__sep">${chevronRightIcon}</span>`);
+    parts.push(`<span class="lib-breadcrumb__item lib-breadcrumb__item--current">All Comps</span>`);
+    return parts.join("");
+  }
+
   if (folder.type === "smart-profession") {
     parts.push(`<span class="lib-breadcrumb__sep">${chevronRightIcon}</span>`);
     parts.push(`<span class="lib-breadcrumb__item lib-breadcrumb__item--current">By Profession</span>`);
@@ -374,13 +393,30 @@ function bindToolbarEvents(container) {
     });
   });
 
-  // New build button
-  const newBtn = container.querySelector("#lib-new-build-btn");
-  if (newBtn) {
-    newBtn.addEventListener("click", () => {
-      _callbacks.onNewBuild?.();
+  // New button dropdown
+  const newDropdown = container.querySelector("#lib-new-dropdown");
+  const newMenu = container.querySelector("#lib-new-menu");
+  container.querySelector("#lib-new-btn")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const isOpen = newDropdown.classList.toggle("lib-import-dropdown--open");
+    if (isOpen) {
+      const closeHandler = (evt) => {
+        if (!newDropdown.contains(evt.target)) {
+          newDropdown.classList.remove("lib-import-dropdown--open");
+          document.removeEventListener("click", closeHandler);
+        }
+      };
+      setTimeout(() => document.addEventListener("click", closeHandler), 0);
+    }
+  });
+  newMenu?.querySelectorAll("[data-new-type]").forEach((item) => {
+    item.addEventListener("click", () => {
+      newDropdown.classList.remove("lib-import-dropdown--open");
+      if (item.dataset.newType === "build") _callbacks.onNewBuild?.();
+      else if (item.dataset.newType === "folder") _callbacks.onNewFolder?.();
+      else if (item.dataset.newType === "comp") _callbacks.onNewComp?.();
     });
-  }
+  });
 
   // Breadcrumb navigation
   container.querySelectorAll("[data-navigate-root]").forEach((el) => {

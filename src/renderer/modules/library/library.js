@@ -18,6 +18,7 @@ import { initContent, renderContent } from "./content.js";
 import { initContextMenu, wireContextMenuEvents, closeMenu } from "./context-menu.js";
 import {
   getSelection,
+  getCompSelection,
   clearSelection,
   selectAll,
   navigateSelection,
@@ -103,7 +104,11 @@ export function handleLibraryKeydown(e) {
 
     case "Enter": {
       const sel = getSelection();
-      if (sel.length > 0) {
+      const compSel = getCompSelection();
+      if (compSel.length > 0) {
+        e.preventDefault();
+        handleOpenComp(compSel[0]);
+      } else if (sel.length > 0) {
         e.preventDefault();
         handleLoadBuild(sel[0]);
       }
@@ -120,6 +125,12 @@ export function handleLibraryKeydown(e) {
     }
 
     case "Delete": {
+      const compSel = getCompSelection();
+      if (compSel.length > 0) {
+        e.preventDefault();
+        handleDeleteComps(compSel);
+        break;
+      }
       const sel = getSelection();
       if (sel.length > 0) {
         e.preventDefault();
@@ -492,6 +503,39 @@ async function handlePasteJson() {
   }
 }
 
+// ─── Comp action handlers ───────────────────────────────────────────────────
+
+async function handleNewComp() {
+  const saved = await window.desktopApi.saveComp({ name: "Untitled Comp" });
+  state.comps = await window.desktopApi.listComps();
+  // Open the newly created comp in detail mode on the comps page
+  const newComp = state.comps.find((c) => c.id === saved.id) || saved;
+  state.activeComp = newComp;
+  state.compPage = "detail";
+  _app.navigateToPage?.("comps");
+}
+
+function handleOpenComp(compId) {
+  const comp = state.comps.find((c) => c.id === compId);
+  if (!comp) return;
+  state.activeComp = comp;
+  state.compPage = "detail";
+  _app.navigateToPage?.("comps");
+}
+
+async function handleDeleteComps(ids) {
+  const count = ids.length;
+  const label = count === 1 ? "this comp" : `${count} comps`;
+  const confirmed = await showConfirm(`Delete ${label}?`, "This cannot be undone.");
+  if (!confirmed) return;
+  for (const id of ids) {
+    await window.desktopApi.deleteComp(id);
+  }
+  state.comps = await window.desktopApi.listComps();
+  clearSelection();
+  renderLibrary();
+}
+
 function handlePublish(buildId) {
   // Load the build into the editor and navigate there — publish from editor
   handleLoadBuild(buildId);
@@ -646,6 +690,7 @@ function _buildSharedCallbacks() {
     onNewBuild: handleNewBuild,
     onNewFolder: handleNewFolderInContent,
     onNewFolderSidebar: handleNewFolder,
+    onNewComp: handleNewComp,
 
     onFilterChange(change) {
       if (!change) {
@@ -702,6 +747,8 @@ function _buildSharedCallbacks() {
 
     // Content / build actions
     onLoadBuild: handleLoadBuild,
+    onOpenComp: handleOpenComp,
+    onDeleteComps: handleDeleteComps,
     onRename: handleRename,
     onDuplicate: handleDuplicate,
     onTogglePin: handleTogglePin,

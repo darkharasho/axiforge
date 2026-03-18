@@ -62,6 +62,9 @@ export function getVisibleBuilds() {
       builds = builds.filter(
         (b) => (b.gameMode || "pve") === folder.id,
       );
+    } else if (folder.id === "__all-comps") {
+      // "All Comps" smart folder: no builds shown
+      return [];
     } else if (folder.type === "all") {
       // "all" type: show only root-level builds at top level;
       // builds inside folders appear under their expanded folder rows
@@ -181,6 +184,43 @@ export function getVisibleFolders() {
 export function countBuildsInFolder(folderId) {
   const allFolderIds = collectFolderIds(folderId);
   return state.builds.filter((b) => allFolderIds.includes(b.folderId)).length;
+}
+
+/**
+ * Get comps for the current folder/filter context.
+ * Comps appear in "All Comps" smart folder, custom folders, or root.
+ */
+export function getVisibleComps() {
+  const folder = state.currentFolder;
+  let comps = [...(state.comps || [])];
+
+  if (folder) {
+    if (folder.type === "custom") {
+      comps = comps.filter((c) => c.folderId === folder.id);
+    } else if (folder.id === "__all-comps") {
+      // Show all comps — no filter
+    } else {
+      // Other smart folders (profession, gamemode, all builds) don't show comps
+      return [];
+    }
+  } else {
+    // Root: show comps with no folder
+    comps = comps.filter((c) => !c.folderId);
+  }
+
+  // Apply search
+  const query = (state.buildSearch || "").trim().toLowerCase();
+  if (query) {
+    comps = comps.filter((c) => {
+      const haystack = [c.name || "", ...(c.tags || [])].join(" ").toLowerCase();
+      return haystack.includes(query);
+    });
+  }
+
+  // Sort by sortOrder (or name as fallback)
+  comps.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+
+  return comps;
 }
 
 function collectFolderIds(folderId) {

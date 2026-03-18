@@ -11,6 +11,7 @@ import {
   chevronDownIcon,
   chevronDoubleLeftIcon,
   chevronDoubleRightIcon,
+  userGroupIcon,
 } from "./heroicons.js";
 
 let _callbacks = {};
@@ -72,8 +73,10 @@ export function renderSidebar() {
 function renderSmartFolders(profExpanded, modeExpanded) {
   const current = state.currentFolder;
   const allActive = !current || current.type === "all";
+  const allCompsActive = current?.id === "__all-comps";
 
   const totalBuilds = state.builds.length;
+  const totalComps = (state.comps || []).length;
 
   // Build profession items
   const professions = [...new Set(state.builds.map((b) => b.profession).filter(Boolean))].sort();
@@ -148,6 +151,17 @@ function renderSmartFolders(profExpanded, modeExpanded) {
           <span class="lib-nav-item__label">By Game Mode</span>
         </button>
         ${modeExpanded ? `<div class="lib-nav-group">${modeItems}</div>` : ""}
+      ` : ""}
+
+      ${totalComps > 0 ? `
+        <button type="button"
+          class="lib-nav-item ${allCompsActive ? "lib-nav-item--active" : ""}"
+          data-navigate-all-comps="1"
+        >
+          <span class="lib-nav-item__icon">${userGroupIcon}</span>
+          <span class="lib-nav-item__label">All Comps</span>
+          <span class="lib-nav-item__count">${totalComps}</span>
+        </button>
       ` : ""}
     </div>
   `;
@@ -228,6 +242,13 @@ function bindSidebarEvents(container) {
   container.querySelectorAll("[data-navigate-all]").forEach((el) => {
     el.addEventListener("click", () => {
       _callbacks.onNavigate?.({ type: "all" });
+    });
+  });
+
+  // Navigate to All Comps
+  container.querySelectorAll("[data-navigate-all-comps]").forEach((el) => {
+    el.addEventListener("click", () => {
+      _callbacks.onNavigate?.({ type: "smart", id: "__all-comps" });
     });
   });
 
