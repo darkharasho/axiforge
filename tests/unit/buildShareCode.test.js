@@ -167,3 +167,220 @@ describe("decodeShareCode", () => {
     expect(() => decodeShareCode("<AxiForge:Test:00000>")).toThrow();
   });
 });
+
+// ── Task 6: Profession-Specific Encoding Tests ──────────────────────────────
+
+describe("profession-specific round-trips", () => {
+  /** Helper: clone BERSERKER_BUILD with overrides */
+  function makeBuild(overrides) {
+    const base = JSON.parse(JSON.stringify(BERSERKER_BUILD));
+    return Object.assign(base, overrides);
+  }
+
+  test("Revenant (Vindicator) round-trip", () => {
+    const build = makeBuild({
+      profession: "Revenant",
+      specializations: [
+        BERSERKER_BUILD.specializations[0],
+        BERSERKER_BUILD.specializations[1],
+        { id: 62, name: "Vindicator", elite: true, majorChoices: { 1: 2049, 2: 2039, 3: 2043 },
+          majorTraitsByTier: BERSERKER_BUILD.specializations[2].majorTraitsByTier },
+      ],
+      selectedLegends: ["Legend2", "Legend7"],
+      selectedUnderwaterLegends: ["Legend3", "Legend4"],
+      allianceTacticsForm: 1,
+    });
+    const code = encodeShareCode(build);
+    expect(code.startsWith("<AxiForge:Vindicator:")).toBe(true);
+
+    const decoded = decodeShareCode(code);
+    expect(decoded.profession).toBe("Revenant");
+    expect(decoded.selectedLegends).toEqual(["Legend2", "Legend7"]);
+    expect(decoded.allianceTacticsForm).toBe(1);
+  });
+
+  test("Ranger (Druid) round-trip", () => {
+    const build = makeBuild({
+      profession: "Ranger",
+      specializations: [
+        BERSERKER_BUILD.specializations[0],
+        BERSERKER_BUILD.specializations[1],
+        { id: 5, name: "Druid", elite: true, majorChoices: { 1: 2049, 2: 2039, 3: 2043 },
+          majorTraitsByTier: BERSERKER_BUILD.specializations[2].majorTraitsByTier },
+      ],
+      selectedPets: { terrestrial1: 46, terrestrial2: 59, aquatic1: 21, aquatic2: 40 },
+    });
+    const code = encodeShareCode(build);
+    const decoded = decodeShareCode(code);
+    expect(decoded.selectedPets.terrestrial1).toBe(46);
+    expect(decoded.selectedPets.terrestrial2).toBe(59);
+    // aquatic pets only written when hasUnderwater flag is set
+  });
+
+  test("Elementalist (Weaver) round-trip", () => {
+    const build = makeBuild({
+      profession: "Elementalist",
+      specializations: [
+        BERSERKER_BUILD.specializations[0],
+        BERSERKER_BUILD.specializations[1],
+        { id: 56, name: "Weaver", elite: true, majorChoices: { 1: 2049, 2: 2039, 3: 2043 },
+          majorTraitsByTier: BERSERKER_BUILD.specializations[2].majorTraitsByTier },
+      ],
+      activeAttunement: "Fire",
+      activeAttunement2: "Water",
+    });
+    const code = encodeShareCode(build);
+    const decoded = decodeShareCode(code);
+    expect(decoded.activeAttunement).toBe("Fire");
+    expect(decoded.activeAttunement2).toBe("Water");
+  });
+
+  test("Elementalist (Tempest, non-Weaver) round-trip", () => {
+    const build = makeBuild({
+      profession: "Elementalist",
+      specializations: [
+        BERSERKER_BUILD.specializations[0],
+        BERSERKER_BUILD.specializations[1],
+        { id: 48, name: "Tempest", elite: true, majorChoices: { 1: 2049, 2: 2039, 3: 2043 },
+          majorTraitsByTier: BERSERKER_BUILD.specializations[2].majorTraitsByTier },
+      ],
+      activeAttunement: "Air",
+      activeAttunement2: "",
+    });
+    const code = encodeShareCode(build);
+    const decoded = decodeShareCode(code);
+    expect(decoded.activeAttunement).toBe("Air");
+    // "" maps to index 0 which decodes as "Fire"; secondary attunement is always stored
+    expect(decoded.activeAttunement2).toBe("Fire");
+  });
+
+  test("Thief (Antiquary) round-trip", () => {
+    const build = makeBuild({
+      profession: "Thief",
+      specializations: [
+        BERSERKER_BUILD.specializations[0],
+        BERSERKER_BUILD.specializations[1],
+        { id: 77, name: "Antiquary", elite: true, majorChoices: { 1: 2049, 2: 2039, 3: 2043 },
+          majorTraitsByTier: BERSERKER_BUILD.specializations[2].majorTraitsByTier },
+      ],
+      antiquaryArtifacts: { f2: 76582, f3: 76702, f4: 77288 },
+    });
+    const code = encodeShareCode(build);
+    const decoded = decodeShareCode(code);
+    expect(decoded.antiquaryArtifacts).toEqual({ f2: 76582, f3: 76702, f4: 77288 });
+  });
+
+  test("Engineer (Scrapper) round-trip", () => {
+    const build = makeBuild({
+      profession: "Engineer",
+      specializations: [
+        BERSERKER_BUILD.specializations[0],
+        BERSERKER_BUILD.specializations[1],
+        { id: 43, name: "Scrapper", elite: true, majorChoices: { 1: 2049, 2: 2039, 3: 2043 },
+          majorTraitsByTier: BERSERKER_BUILD.specializations[2].majorTraitsByTier },
+      ],
+      activeKit: 5812,
+    });
+    const code = encodeShareCode(build);
+    const decoded = decodeShareCode(code);
+    expect(decoded.activeKit).toBe(5812);
+  });
+
+  test("Warrior active weapon set round-trip", () => {
+    const build = makeBuild({
+      activeWeaponSet: 2,
+    });
+    const code = encodeShareCode(build);
+    const decoded = decodeShareCode(code);
+    expect(decoded.activeWeaponSet).toBe(2);
+  });
+});
+
+// ── Task 7: Per-Slot Mode Tests ─────────────────────────────────────────────
+
+describe("per-slot mode round-trips", () => {
+  /** Helper: clone BERSERKER_BUILD with overrides */
+  function makeBuild(overrides) {
+    const base = JSON.parse(JSON.stringify(BERSERKER_BUILD));
+    return Object.assign(base, overrides);
+  }
+
+  test("uniform runes round-trip", () => {
+    const code = encodeShareCode(BERSERKER_BUILD);
+    const decoded = decodeShareCode(code);
+    for (const slot of ["head", "shoulders", "chest", "hands", "legs", "feet"]) {
+      expect(decoded.equipment.runes[slot]).toBe("24836");
+    }
+  });
+
+  test("per-slot runes (mixed) round-trip", () => {
+    const build = makeBuild({});
+    build.equipment.runes = {
+      head: "24836", shoulders: "24836", chest: "24836",
+      hands: "24836", legs: "24836", feet: "24691",
+    };
+    const code = encodeShareCode(build);
+    const decoded = decodeShareCode(code);
+    expect(decoded.equipment.runes.head).toBe("24836");
+    expect(decoded.equipment.runes.feet).toBe("24691");
+  });
+
+  test("uniform infusions round-trip", () => {
+    const code = encodeShareCode(BERSERKER_BUILD);
+    const decoded = decodeShareCode(code);
+    expect(decoded.equipment.infusions.head).toBe("49432");
+    expect(decoded.equipment.infusions.accessory1).toBe("49432");
+  });
+
+  test("per-slot infusions (mixed) round-trip", () => {
+    const build = makeBuild({});
+    build.equipment.infusions.shoulders = "37131";
+    const code = encodeShareCode(build);
+    const decoded = decodeShareCode(code);
+    expect(decoded.equipment.infusions.head).toBe("49432");
+    expect(decoded.equipment.infusions.shoulders).toBe("37131");
+  });
+
+  test("underwater skills and weapons round-trip", () => {
+    const build = makeBuild({
+      underwaterSkills: {
+        heal: { id: 14402 },
+        utility: [{ id: 14404 }, { id: 14410 }, { id: 14405 }],
+        elite: { id: 14355 },
+      },
+    });
+    build.equipment.weapons.aquatic1 = "spear";
+    build.equipment.sigils.aquatic1 = ["24615", "24868"];
+    const code = encodeShareCode(build);
+    const decoded = decodeShareCode(code);
+    expect(decoded.underwaterSkills.healId).toBe(14402);
+    expect(decoded.underwaterSkills.utilityIds).toEqual([14404, 14410, 14405]);
+    expect(decoded.underwaterSkills.eliteId).toBe(14355);
+    expect(decoded.equipment.weapons.aquatic1).toBe("spear");
+    expect(decoded.equipment.sigils.aquatic1).toEqual(["24615", "24868"]);
+  });
+
+  test("sigils: 1H vs 2H weapon round-trip", () => {
+    const code = encodeShareCode(BERSERKER_BUILD);
+    const decoded = decodeShareCode(code);
+    // Greatsword (2H) → 2 sigils
+    expect(decoded.equipment.sigils.mainhand1).toEqual(["24615", "24868"]);
+    // Axe (1H, no offhand) → 1 sigil
+    expect(decoded.equipment.sigils.mainhand2).toEqual(["24615"]);
+  });
+});
+
+// ── Error handling ──────────────────────────────────────────────────────────
+
+describe("error handling", () => {
+  test("truncated payload throws", () => {
+    // Take a valid code and truncate the payload
+    const code = encodeShareCode(BERSERKER_BUILD);
+    const truncated = code.slice(0, code.length - 10) + ">";
+    expect(() => decodeShareCode(truncated)).toThrow();
+  });
+
+  test("invalid Z85 characters throws", () => {
+    expect(() => decodeShareCode("<AxiForge:Test:!!!invalid z85 chars!!!>")).toThrow();
+  });
+});
