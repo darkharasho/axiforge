@@ -7,6 +7,7 @@ const {
   _lookupUpgradeName,
   _lookupBuffName,
   _mapEquipment,
+  _extractMorphSkillIds,
 } = require("../../src/main/gw2skillsImport");
 
 // ── _parsePreloadFromHtml ─────────────────────────────────────────────────────
@@ -320,5 +321,39 @@ describe("_mapEquipment", () => {
     };
     const r = _mapEquipment(allBerserker, statLookup, upgradeMap, upgradeNameIdx, buffMap, buffNameIdx);
     expect(r.statPackage).toBe("Berserker's");
+  });
+});
+
+// ── _extractMorphSkillIds ─────────────────────────────────────────────────
+
+describe("_extractMorphSkillIds", () => {
+  it("maps gw2skills extra array to GW2 API morph skill IDs", () => {
+    // Real Amalgam build: extra = [0,0,1514,1512,1511,0]
+    const result = _extractMorphSkillIds([0, 0, 1514, 1512, 1511, 0]);
+    expect(result).toEqual([76927, 76806, 77163]); // Demolish, Obliterate, Thorns
+  });
+
+  it("returns [0,0,0] when extra is empty or missing", () => {
+    expect(_extractMorphSkillIds(null)).toEqual([0, 0, 0]);
+    expect(_extractMorphSkillIds(undefined)).toEqual([0, 0, 0]);
+    expect(_extractMorphSkillIds([])).toEqual([0, 0, 0]);
+  });
+
+  it("returns 0 for unrecognized gw2skills IDs", () => {
+    expect(_extractMorphSkillIds([0, 0, 9999, 0, 0, 0])).toEqual([0, 0, 0]);
+  });
+
+  it("handles partial morph selections", () => {
+    expect(_extractMorphSkillIds([0, 0, 1509, 0, 1515, 0])).toEqual([76798, 0, 77103]);
+  });
+
+  it("maps all 7 known morph skills correctly", () => {
+    expect(_extractMorphSkillIds([0, 0, 1509, 0, 0])).toEqual([76798, 0, 0]);  // Cleanse
+    expect(_extractMorphSkillIds([0, 0, 1510, 0, 0])).toEqual([76959, 0, 0]);  // Protect
+    expect(_extractMorphSkillIds([0, 0, 1511, 0, 0])).toEqual([77163, 0, 0]);  // Thorns
+    expect(_extractMorphSkillIds([0, 0, 1512, 0, 0])).toEqual([76806, 0, 0]);  // Obliterate
+    expect(_extractMorphSkillIds([0, 0, 1513, 0, 0])).toEqual([76815, 0, 0]);  // Pierce
+    expect(_extractMorphSkillIds([0, 0, 1514, 0, 0])).toEqual([76927, 0, 0]);  // Demolish
+    expect(_extractMorphSkillIds([0, 0, 1515, 0, 0])).toEqual([77103, 0, 0]);  // Shred
   });
 });

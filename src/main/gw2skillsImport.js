@@ -389,6 +389,32 @@ const _GW2S_WEAPON_KEY_OVERRIDES = {
   "harpoon_gun": "harpoon", // gw2skills harpoon_gun → axiforge "harpoon"
 };
 
+// ── Amalgam morph skill mapping ────────────────────────────────────────────
+// gw2skills internal skill ID → GW2 API skill ID for Amalgam morph slots (F2–F4).
+// Matched by visual icon comparison between gw2skills CDN and GW2 render service.
+const _GW2S_MORPH_SKILL_MAP = {
+  1509: 76798,  // Defensive Protocol: Cleanse
+  1510: 76959,  // Defensive Protocol: Protect
+  1511: 77163,  // Defensive Protocol: Thorns
+  1512: 76806,  // Offensive Protocol: Obliterate
+  1513: 76815,  // Offensive Protocol: Pierce
+  1514: 76927,  // Offensive Protocol: Demolish
+  1515: 77103,  // Offensive Protocol: Shred
+};
+
+/**
+ * Extract Amalgam morph skill IDs from the gw2skills preload.extra array.
+ * extra indices 2, 3, 4 correspond to F2, F3, F4 morph slots.
+ * Returns [F2, F3, F4] as GW2 API skill IDs, or [0,0,0] if not applicable.
+ * Exported for unit testing.
+ */
+function _extractMorphSkillIds(extra) {
+  if (!Array.isArray(extra)) return [0, 0, 0];
+  return [extra[2], extra[3], extra[4]].map(
+    (gw2sId) => (gw2sId ? (_GW2S_MORPH_SKILL_MAP[gw2sId] || 0) : 0)
+  );
+}
+
 // ── Main import function ───────────────────────────────────────────────────────
 
 /**
@@ -552,10 +578,14 @@ async function importGw2SkillsBuild(url, name, folderId, gameMode) {
     weapons,
   };
 
+  // ── Amalgam morph skills from preload.extra ─────────────────────────────
+  const morphSkillIds = _extractMorphSkillIds(preload.extra);
+
   return {
     ...buildTemplate,
     equipment: finalEquipment,
     gameMode: buildGameMode,
+    morphSkillIds,
   };
 }
 
@@ -568,4 +598,5 @@ module.exports = {
   _lookupUpgradeName,
   _lookupBuffName,
   _mapEquipment,
+  _extractMorphSkillIds,
 };
