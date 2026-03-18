@@ -27,13 +27,23 @@ export function initComps(appCallbacks) {
       await loadComps();
       renderComps();
     },
-    onRenameComp: async (id, name) => {
+    onRenameComp: async (id, currentName) => {
+      const newName = prompt("Rename comp:", currentName || "");
+      if (!newName || newName === currentName) return;
       const existing = state.comps.find((c) => c.id === id);
       if (existing) {
-        await window.desktopApi.saveComp({ ...existing, name });
+        await window.desktopApi.saveComp({ ...existing, name: newName });
       } else {
-        await window.desktopApi.saveComp({ id, name });
+        await window.desktopApi.saveComp({ id, name: newName });
       }
+      await loadComps();
+      renderComps();
+    },
+    onDuplicateComp: async (id) => {
+      const comp = state.comps.find((c) => c.id === id);
+      if (!comp) return;
+      const { id: _id, createdAt, updatedAt, ...rest } = comp;
+      await window.desktopApi.saveComp({ ...rest, name: `Copy of ${comp.name}` });
       await loadComps();
       renderComps();
     },

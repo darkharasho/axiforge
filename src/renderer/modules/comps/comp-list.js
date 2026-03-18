@@ -4,6 +4,8 @@ import { state } from "../state.js";
 import { escapeHtml } from "../utils.js";
 import { compIcon } from "../library/heroicons.js";
 
+let _activeCtxMenu = null;
+
 let _callbacks = {};
 
 /**
@@ -228,5 +230,122 @@ function bindListEvents(container) {
       const comp = state.comps.find((c) => c.id === compId);
       if (comp) _callbacks.onOpenComp?.(comp);
     });
+
+    // Right-click context menu
+    row.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      const compId = row.dataset.compId;
+      const comp = state.comps.find((c) => c.id === compId);
+      if (comp) showCompCtxMenu(e.clientX, e.clientY, comp);
+    });
   });
+
+  // Right-click on empty area
+  const body = container.querySelector(".comp-list-body");
+  if (body) {
+    body.addEventListener("contextmenu", (e) => {
+      if (e.target.closest(".comp-list-row")) return; // handled above
+      e.preventDefault();
+      showEmptyCtxMenu(e.clientX, e.clientY);
+    });
+  }
+}
+
+// ─── Context menu ──────────────────────────────────────────────────────────────
+
+function closeCtxMenu() {
+  if (_activeCtxMenu) {
+    _activeCtxMenu.remove();
+    _activeCtxMenu = null;
+  }
+}
+
+function showCtxMenu(x, y, items) {
+  closeCtxMenu();
+  const menu = document.createElement("div");
+  menu.className = "lib-ctx-menu";
+  menu.innerHTML = items.join("");
+  document.body.appendChild(menu);
+
+  // Position with viewport overflow correction
+  const rect = menu.getBoundingClientRect();
+  const maxX = window.innerWidth - rect.width - 4;
+  const maxY = window.innerHeight - rect.height - 4;
+  menu.style.left = `${Math.min(x, maxX)}px`;
+  menu.style.top = `${Math.min(y, maxY)}px`;
+
+  _activeCtxMenu = menu;
+
+  // Close on click outside or Escape
+  const onClose = (e) => {
+    if (!menu.contains(e.target)) { closeCtxMenu(); document.removeEventListener("mousedown", onClose); }
+  };
+  const onKey = (e) => {
+    if (e.key === "Escape") { closeCtxMenu(); document.removeEventListener("keydown", onKey); }
+  };
+  setTimeout(() => {
+    document.addEventListener("mousedown", onClose);
+    document.addEventListener("keydown", onKey);
+  }, 0);
+}
+
+function ctxItem(label, handler, destructive = false) {
+  const id = `ctx-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+  setTimeout(() => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener("click", () => { closeCtxMenu(); handler(); });
+  }, 0);
+  return `<button type="button" id="${id}" class="lib-ctx-item${destructive ? " lib-ctx-item--danger" : ""}">${escapeHtml(label)}</button>`;
+}
+
+function ctxSep() {
+  return `<div class="lib-ctx-sep"></div>`;
+}
+
+function showCompCtxMenu(x, y, comp) {
+  const items = [
+    ctxItem("Open", () => _callbacks.onOpenComp?.(comp)),
+    ctxItem("Rename", () => _callbacks.onRenameComp?.(comp.id, comp.name)),
+    ctxItem("Duplicate", () => _callbacks.onDuplicateComp?.(comp.id)),
+    ctxSep(),
+    ctxItem("Copy JSON", () => handleCopyCompJson(comp)),
+    ctxSep(),
+    ctxItem("Delete", () => _callbacks.onDeleteComp?.(comp.id), true),
+  ];
+  showCtxMenu(x, y, items);
+}
+
+function showEmptyCtxMenu(x, y) {
+  const items = [
+    ctxItem("New Comp", () => _callbacks.onNewComp?.()),
+    ctxSep(),
+    ctxItem("Paste", () => handlePasteComp()),
+  ];
+  showCtxMenu(x, y, items);
+}
+
+async function handleCopyCompJson(comp) {
+  const json = JSON.stringify(comp, null, 2);
+  await window.desktopApi.writeClipboardText(json);
+}
+
+async function handlePasteComp() {
+  try {
+    const text = await window.desktopApi.readClipboardText();
+    if (!text) return;
+    const parsed = JSON.parse(text);
+    // Handle single comp or array of comps
+    const comps = Array.isArray(parsed) ? parsed : [parsed];
+    for (const comp of comps) {
+      // Must have a name to be a valid comp paste
+      if (!comp.name) continue;
+      // Strip id so a new one is generated
+      const { id, createdAt, updatedAt, ...rest } = comp;
+      await window.desktopApi.saveComp(rest);
+    }
+    state.comps = await window.desktopApi.listComps();
+    renderCompList();
+  } catch {
+    // Not valid JSON or not a comp — ignore silently
+  }
 }
