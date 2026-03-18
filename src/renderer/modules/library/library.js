@@ -446,9 +446,25 @@ export function nextCopyTitle(title, existingTitles) {
   return `${base} (${max + 1})`;
 }
 
-async function handlePasteJson() {
+async function handlePasteJson(targetId) {
   try {
-    const folderId = state.currentFolder?.type === "custom" ? state.currentFolder.id : null;
+    // Determine paste destination: explicit target (from context menu), or current folder
+    let folderId = null;
+    let compId = null;
+
+    if (targetId) {
+      // Check if the target is a comp or a folder
+      const isComp = state.comps?.some((c) => c.id === targetId);
+      if (isComp) {
+        compId = targetId;
+      } else {
+        folderId = targetId;
+      }
+    } else if (state.currentFolder?.type === "comp") {
+      compId = state.currentFolder.id;
+    } else if (state.currentFolder?.type === "custom") {
+      folderId = state.currentFolder.id;
+    }
 
     // If we have pending cut IDs, move those builds instead of pasting from clipboard
     if (_cutIds.length > 0) {
@@ -458,7 +474,24 @@ async function handlePasteJson() {
         showToast("Cut builds no longer exist", "error");
         return;
       }
-      await moveBuilds(idsToMove, folderId);
+      if (compId) {
+        // Move cut builds into the comp
+        for (const id of idsToMove) {
+          const build = state.builds.find((b) => b.id === id);
+          if (build) {
+            await window.desktopApi.saveBuild({ ...build, compId, folderId: null });
+          }
+          // Also add to comp's buildIds for party line tracking
+          const comp = state.comps?.find((c) => c.id === compId);
+          if (comp && !(comp.buildIds || []).includes(id)) {
+            await window.desktopApi.saveComp({ ...comp, buildIds: [...(comp.buildIds || []), id] });
+          }
+        }
+        state.builds = await window.desktopApi.listBuilds();
+        state.comps = await window.desktopApi.listComps();
+      } else {
+        await moveBuilds(idsToMove, folderId);
+      }
       clearSelection();
       renderLibrary();
       showToast(idsToMove.length === 1 ? "Build moved!" : `${idsToMove.length} builds moved!`);
@@ -486,9 +519,16 @@ async function handlePasteJson() {
       const originalTitle = String(source.title || source.name || "Imported Build");
       const title = nextCopyTitle(originalTitle, existingTitles);
       existingTitles.push(title);
-      const copy = { ...source, title, folderId };
+      const copy = { ...source, title, folderId: compId ? null : folderId, compId: compId || null };
       delete copy.id;
-      await window.desktopApi.saveBuild(copy);
+      const saved = await window.desktopApi.saveBuild(copy);
+      // If pasting into a comp, also add to comp's buildIds
+      if (compId && saved) {
+        const comp = state.comps?.find((c) => c.id === compId);
+        if (comp && !(comp.buildIds || []).includes(saved.id)) {
+          await window.desktopApi.saveComp({ ...comp, buildIds: [...(comp.buildIds || []), saved.id] });
+        }
+      }
       savedCount++;
     }
     if (savedCount === 0) {
@@ -496,6 +536,7 @@ async function handlePasteJson() {
       return;
     }
     state.builds = await window.desktopApi.listBuilds();
+    if (compId) state.comps = await window.desktopApi.listComps();
     renderLibrary();
     showToast(savedCount === 1 ? "Build pasted!" : `${savedCount} builds pasted!`);
   } catch (err) {
