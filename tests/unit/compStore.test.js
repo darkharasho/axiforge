@@ -119,6 +119,13 @@ describe("CompStore — upsertComp", () => {
     const updated = await store.upsertComp({ ...created, name: "New Name" });
     expect(updated.gameMode).toBe("wvw");
   });
+
+  test("normalizes invalid gameMode values to null", async () => {
+    for (const bad of ["pvp", "", 0, true, {}, undefined]) {
+      const comp = await store.upsertComp(makeComp({ gameMode: bad }));
+      expect(comp.gameMode).toBeNull();
+    }
+  });
 });
 
 describe("CompStore — deleteComp", () => {
