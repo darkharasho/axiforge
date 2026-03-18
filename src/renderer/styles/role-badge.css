@@ -1,0 +1,58 @@
+/* src/renderer/styles/role-badge.css */
+/* Role badge pill — used in library cards and comp detail. */
+
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 1px 7px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  white-space: nowrap;
+  border: 1px solid transparent;
+  line-height: 1.5;
+  flex-shrink: 0;
+}
+
+.role-badge--power-dps {
+  background: rgba(220, 80, 80, 0.12);
+  border-color: rgba(220, 80, 80, 0.35);
+  color: #e87070;
+}
+
+.role-badge--condi-dps {
+  background: rgba(185, 80, 220, 0.12);
+  border-color: rgba(185, 80, 220, 0.35);
+  color: #cc80e8;
+}
+
+.role-badge--boon-support {
+  background: rgba(72, 160, 255, 0.12);
+  border-color: rgba(72, 160, 255, 0.35);
+  color: #72aaff;
+}
+
+.role-badge--heal-support {
+  background: rgba(77, 202, 122, 0.12);
+  border-color: rgba(77, 202, 122, 0.35);
+  color: #4dca7a;
+}
+
+.role-badge--hybrid {
+  background: rgba(200, 169, 110, 0.12);
+  border-color: rgba(200, 169, 110, 0.35);
+  color: #c8a96e;
+}
+
+.role-badge--unknown {
+  background: rgba(130, 130, 130, 0.10);
+  border-color: rgba(130, 130, 130, 0.25);
+  color: #888;
+}
+
+/* Compact variant used inside comp party line slots */
+.comp-slot .role-badge {
+  font-size: 0.6rem;
+  padding: 0 4px;
+  line-height: 1.4;
+}
