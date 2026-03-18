@@ -506,13 +506,49 @@ async function handlePasteJson() {
 // ─── Comp action handlers ───────────────────────────────────────────────────
 
 async function handleNewComp() {
-  const saved = await window.desktopApi.saveComp({ name: "Untitled Comp" });
+  // Inline input in the content area to name the comp (like new folders)
+  const content = document.getElementById("lib-content");
+  if (!content) return;
+  const name = await insertInlineInput(null, "", {
+    container: content,
+    className: "lib-content-inline-folder",
+  });
+  if (!name) { renderLibrary(); return; }
+  const parentId = state.currentFolder?.type === "custom" ? state.currentFolder.id : null;
+  const saved = await window.desktopApi.saveComp({ name, folderId: parentId });
   state.comps = await window.desktopApi.listComps();
   // Open the newly created comp in detail mode on the comps page
   const newComp = state.comps.find((c) => c.id === saved.id) || saved;
   state.activeComp = newComp;
   state.compPage = "detail";
   _app.navigateToPage?.("comps");
+}
+
+async function handleCopyCompJson(idOrIds) {
+  const ids = Array.isArray(idOrIds) ? idOrIds : [idOrIds];
+  const comps = ids
+    .map((id) => state.comps.find((c) => c.id === id))
+    .filter(Boolean);
+  if (comps.length === 0) return;
+  const json = JSON.stringify(comps.length === 1 ? comps[0] : comps, null, 2);
+  await window.desktopApi.writeClipboardText(json);
+  showToast(comps.length === 1 ? "Comp copied!" : `${comps.length} comps copied!`);
+}
+
+async function handleCutCompJson(idOrIds) {
+  const ids = Array.isArray(idOrIds) ? idOrIds : [idOrIds];
+  const comps = ids
+    .map((id) => state.comps.find((c) => c.id === id))
+    .filter(Boolean);
+  if (comps.length === 0) return;
+  const json = JSON.stringify(comps.length === 1 ? comps[0] : comps, null, 2);
+  await window.desktopApi.writeClipboardText(json);
+  for (const comp of comps) {
+    await window.desktopApi.deleteComp(comp.id);
+  }
+  state.comps = await window.desktopApi.listComps();
+  renderLibrary();
+  showToast(comps.length === 1 ? "Comp cut!" : `${comps.length} comps cut!`);
 }
 
 function handleOpenComp(compId) {
@@ -795,6 +831,8 @@ function _buildSharedCallbacks() {
     onDropBuildOnComp: handleDropBuildOnComp,
     onDeleteComps: handleDeleteComps,
     onMoveComps: handleMoveComps,
+    onCopyCompJson: handleCopyCompJson,
+    onCutCompJson: handleCutCompJson,
     onRename: handleRename,
     onDuplicate: handleDuplicate,
     onTogglePin: handleTogglePin,

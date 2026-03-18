@@ -158,6 +158,9 @@ function showCompMenu(x, y, compId, comp) {
     _sep(),
     _submenuItem(folderArrowDownIcon, "Move to Folder", _buildMoveToFolderItemsForComps([compId])),
     _sep(),
+    _item(clipboardDocumentIcon, "Copy JSON", "Ctrl+C", () => _callbacks.onCopyCompJson?.(compId)),
+    _item(scissorsIcon, "Cut", "Ctrl+X", () => _callbacks.onCutCompJson?.(compId)),
+    _sep(),
     _item(trashIcon, "Delete", "Del", () => _callbacks.onDeleteComps?.([compId]), true),
   ];
   _showMenu(x, y, items);
@@ -169,6 +172,9 @@ function showMultiCompSelectMenu(x, y, ids) {
     _header(`${count} comps selected`),
     _sep(),
     _submenuItem(folderArrowDownIcon, "Move to Folder", _buildMoveToFolderItemsForComps(ids)),
+    _sep(),
+    _item(clipboardDocumentIcon, "Copy JSON", "Ctrl+C", () => _callbacks.onCopyCompJson?.(ids)),
+    _item(scissorsIcon, "Cut", "Ctrl+X", () => _callbacks.onCutCompJson?.(ids)),
     _sep(),
     _item(trashIcon, `Delete ${count} Comps`, null, () => _callbacks.onDeleteComps?.(ids), true),
   ];
