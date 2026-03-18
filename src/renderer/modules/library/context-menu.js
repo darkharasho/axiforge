@@ -4,7 +4,7 @@
 
 import { escapeHtml } from "../utils.js";
 import { state } from "../state.js";
-import { isSelected, getSelection } from "./selection.js";
+import { isSelected, getSelection, isCompSelected, getCompSelection } from "./selection.js";
 import {
   playIcon,
   pencilIcon,
@@ -77,6 +77,7 @@ export function wireContextMenuEvents() {
 
     const buildEl = e.target.closest("[data-build-id]");
     const folderEl = e.target.closest("[data-folder-id]");
+    const compEl = e.target.closest("[data-comp-id]");
 
     if (buildEl) {
       const buildId = buildEl.dataset.buildId;
@@ -86,6 +87,15 @@ export function wireContextMenuEvents() {
       } else {
         const build = state.builds.find((b) => b.id === buildId);
         showBuildMenu(e.clientX, e.clientY, buildId, build);
+      }
+    } else if (compEl) {
+      const compId = compEl.dataset.compId;
+      // Multi-select: comp is part of a selection with >1 items
+      if (isCompSelected(compId) && getCompSelection().length > 1) {
+        showMultiCompSelectMenu(e.clientX, e.clientY, getCompSelection());
+      } else {
+        const comp = state.comps?.find((c) => c.id === compId);
+        showCompMenu(e.clientX, e.clientY, compId, comp);
       }
     } else if (folderEl) {
       const folderId = folderEl.dataset.folderId;
@@ -135,6 +145,29 @@ function showMultiSelectMenu(x, y, ids) {
     _item(scissorsIcon, "Cut", "Ctrl+X", () => _callbacks.onCutJson?.(ids)),
     _sep(),
     _item(trashIcon, `Delete ${count} Builds`, null, () => _callbacks.onDelete?.(ids), true),
+  ];
+  _showMenu(x, y, items);
+}
+
+function showCompMenu(x, y, compId, comp) {
+  const items = [
+    _item(playIcon, "Open", null, () => _callbacks.onOpenComp?.(compId)),
+    _sep(),
+    _submenuItem(folderArrowDownIcon, "Move to Folder", _buildMoveToFolderItemsForComps([compId])),
+    _sep(),
+    _item(trashIcon, "Delete", "Del", () => _callbacks.onDeleteComps?.([compId]), true),
+  ];
+  _showMenu(x, y, items);
+}
+
+function showMultiCompSelectMenu(x, y, ids) {
+  const count = ids.length;
+  const items = [
+    _header(`${count} comps selected`),
+    _sep(),
+    _submenuItem(folderArrowDownIcon, "Move to Folder", _buildMoveToFolderItemsForComps(ids)),
+    _sep(),
+    _item(trashIcon, `Delete ${count} Comps`, null, () => _callbacks.onDeleteComps?.(ids), true),
   ];
   _showMenu(x, y, items);
 }
@@ -189,6 +222,21 @@ function _buildMoveToFolderItems(buildIdOrIds) {
     _item(homeIcon, "Root (no folder)", null, () => _callbacks.onMoveTo?.(ids, null)),
     ...topLevelFolders.map((f) =>
       _item(folderIcon, escapeHtml(f.name), null, () => _callbacks.onMoveTo?.(ids, f.id))
+    ),
+  ];
+
+  return items;
+}
+
+function _buildMoveToFolderItemsForComps(compIds) {
+  const topLevelFolders = state.folders
+    .filter((f) => f.parentId === null)
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+
+  const items = [
+    _item(homeIcon, "Root (no folder)", null, () => _callbacks.onMoveComps?.(compIds, null)),
+    ...topLevelFolders.map((f) =>
+      _item(folderIcon, escapeHtml(f.name), null, () => _callbacks.onMoveComps?.(compIds, f.id))
     ),
   ];
 

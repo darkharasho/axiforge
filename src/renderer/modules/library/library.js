@@ -536,6 +536,16 @@ async function handleDeleteComps(ids) {
   renderLibrary();
 }
 
+async function handleMoveComps(compIds, folderId) {
+  for (const id of compIds) {
+    const comp = state.comps.find((c) => c.id === id);
+    if (!comp) continue;
+    await window.desktopApi.saveComp({ ...comp, folderId: folderId ?? null });
+  }
+  state.comps = await window.desktopApi.listComps();
+  renderLibrary();
+}
+
 function handlePublish(buildId) {
   // Load the build into the editor and navigate there — publish from editor
   handleLoadBuild(buildId);
@@ -749,6 +759,7 @@ function _buildSharedCallbacks() {
     onLoadBuild: handleLoadBuild,
     onOpenComp: handleOpenComp,
     onDeleteComps: handleDeleteComps,
+    onMoveComps: handleMoveComps,
     onRename: handleRename,
     onDuplicate: handleDuplicate,
     onTogglePin: handleTogglePin,

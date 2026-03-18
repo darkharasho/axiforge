@@ -137,7 +137,9 @@ export function navigateSelection(direction) {
 
   const nextBuild = builds[nextIndex];
   selection.ids = new Set([nextBuild.id]);
+  selection.compIds.clear();
   selection.lastClickedId = nextBuild.id;
+  selection.lastClickedType = "build";
   updateSelectionVisuals();
 
   // Scroll the newly selected item into view
