@@ -266,7 +266,7 @@ function showCtxMenu(x, y, items) {
   menu.className = "lib-ctx-menu";
   menu.style.position = "fixed";
   menu.style.zIndex = "9999";
-  menu.innerHTML = items.join("");
+  for (const item of items) menu.appendChild(item);
   document.body.appendChild(menu);
 
   // Position with viewport overflow correction
@@ -292,16 +292,23 @@ function showCtxMenu(x, y, items) {
 }
 
 function ctxItem(label, handler, destructive = false) {
-  const id = `ctx-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-  setTimeout(() => {
-    const el = document.getElementById(id);
-    if (el) el.addEventListener("click", () => { closeCtxMenu(); handler(); });
-  }, 0);
-  return `<button type="button" id="${id}" class="lib-ctx-item${destructive ? " lib-ctx-item--danger" : ""}">${escapeHtml(label)}</button>`;
+  const el = document.createElement("div");
+  el.className = "lib-ctx-item" + (destructive ? " lib-ctx-item--danger" : "");
+  el.innerHTML =
+    `<span class="lib-ctx-item__icon"></span>` +
+    `<span class="lib-ctx-item__label">${escapeHtml(label)}</span>`;
+  el.addEventListener("click", (e) => {
+    e.stopPropagation();
+    closeCtxMenu();
+    handler();
+  });
+  return el;
 }
 
 function ctxSep() {
-  return `<div class="lib-ctx-sep"></div>`;
+  const el = document.createElement("div");
+  el.className = "lib-ctx-sep";
+  return el;
 }
 
 function showCompCtxMenu(x, y, comp) {
