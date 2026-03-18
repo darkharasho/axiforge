@@ -3,6 +3,7 @@
 import { state } from "../state.js";
 import { escapeHtml } from "../utils.js";
 import { getProfessionSvg } from "../profession-icons.js";
+import { wireCompDragDrop, destroyCompDragDrop } from "./comp-drag-drop.js";
 
 let _callbacks = {};
 
@@ -82,6 +83,8 @@ function getDisplayName(build) {
  * Render the comp detail view into #comps-container.
  */
 export function renderCompDetail() {
+  destroyCompDragDrop();
+
   const container = document.getElementById("comps-container");
   if (!container) return;
 
@@ -113,6 +116,30 @@ export function renderCompDetail() {
   `;
 
   bindDetailEvents(container, comp);
+
+  wireCompDragDrop({
+    async onDropBuildToLine(buildId, lineId) {
+      const line = (comp.partyLines || []).find((pl) => pl.id === lineId);
+      if (!line) return;
+      const slots = line.slots || [];
+      if (slots.length >= (line.capacity || 5)) return;
+      if (getTotalCapacity(comp) >= 50) return;
+      line.slots = [...slots, buildId];
+      await saveAndSync(comp);
+      _callbacks.onRerender?.();
+    },
+    async onReorderLines(oldIdx, newIdx) {
+      if (oldIdx === newIdx) return;
+      const lines = comp.partyLines || [];
+      if (oldIdx < 0 || oldIdx >= lines.length) return;
+      if (newIdx < 0 || newIdx >= lines.length) return;
+      const [moved] = lines.splice(oldIdx, 1);
+      lines.splice(newIdx, 0, moved);
+      comp.partyLines = lines;
+      await saveAndSync(comp);
+      _callbacks.onRerender?.();
+    },
+  });
 }
 
 function renderTagsRow(comp) {

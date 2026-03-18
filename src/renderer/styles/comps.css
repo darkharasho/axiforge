@@ -858,3 +858,43 @@
   opacity: 0.4;
   cursor: default;
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   Drag & Drop States
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Shrink pool card to icon during drag */
+.comp-drag-icon-ghost {
+  width: 42px !important;
+  height: 42px !important;
+  overflow: hidden;
+  border-radius: 5px;
+  opacity: 0.9;
+}
+
+.comp-drag-icon-ghost .comp-pool-card__info,
+.comp-drag-icon-ghost .comp-pool-card__mode,
+.comp-drag-icon-ghost .comp-pool-card__remove {
+  display: none !important;
+}
+
+.comp-drag-icon-ghost .comp-pool-card__icon {
+  width: 42px;
+  height: 42px;
+}
+
+/* Slot ghost (drop placeholder) */
+.comp-slot-ghost {
+  opacity: 0.4;
+}
+
+/* Party line ghost during reorder */
+.comp-line-ghost {
+  opacity: 0.5;
+  background: #1a1a3a;
+}
+
+/* Make P# label grabbable when lines are reorderable */
+.comp-line__label {
+  cursor: grab;
+}
