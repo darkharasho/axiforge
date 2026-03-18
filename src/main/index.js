@@ -354,15 +354,15 @@ app.whenReady().then(async () => {
     return store.upsertBuild(build);
   });
   ipcMain.handle("builds:encode-share-code", async (_e, build) => {
-    const { encodeShareCode } = require("./buildShareCode.js");
+    const { encodeShareCode } = require("@mks.haro/axicode");
     return encodeShareCode(build);
   });
   ipcMain.handle("builds:decode-share-code", async (_e, code) => {
-    const { decodeShareCode } = require("./buildShareCode.js");
+    const { decodeShareCode } = require("@mks.haro/axicode");
     return decodeShareCode(code);
   });
   ipcMain.handle("builds:is-share-code", async (_e, text) => {
-    const { isValidShareCode } = require("./buildShareCode.js");
+    const { isValidShareCode } = require("@mks.haro/axicode");
     return isValidShareCode(text);
   });
 

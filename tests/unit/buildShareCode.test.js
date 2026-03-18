@@ -1,5 +1,5 @@
 "use strict";
-const { encodeShareCode, decodeShareCode, isValidShareCode } = require("../../src/main/buildShareCode");
+const { encodeShareCode, decodeShareCode, isValidShareCode } = require("@mks.haro/axicode");
 
 // Minimal Warrior/Berserker build fixture
 const BERSERKER_BUILD = {
