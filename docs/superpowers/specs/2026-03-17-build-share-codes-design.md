@@ -142,18 +142,22 @@ One 17-bit rune ID per armor slot (head, shoulders, chest, hands, legs, feet) = 
 #### Sigils
 
 Sigils are encoded per-weapon, with count determined by weapon type:
-- Two-handed weapon or mainhand: 2 sigil slots
-- Offhand: 1 sigil slot
+- Two-handed weapon: 2 sigil slots
+- One-handed weapon (mainhand or offhand): 1 sigil slot
 
 | Field | Bits | Description |
 |-------|------|-------------|
 | Sigil ID | 17 | GW2 API item ID per slot (0 = none) |
 
 Slot count depends on weapon flags:
-- Mainhand 1: 2 sigils (always)
+- Mainhand 1 (two-handed, no offhand): 2 sigils
+- Mainhand 1 (one-handed, with offhand): 1 sigil
 - Offhand 1: 1 sigil (if flag bit 1)
-- Mainhand 2: 2 sigils (if flag bit 3)
+- Mainhand 2 (two-handed, no offhand 2): 2 sigils
+- Mainhand 2 (one-handed, with offhand 2): 1 sigil
 - Offhand 2: 1 sigil (if flag bit 3 AND bit 2)
+
+The decoder determines whether a mainhand is two-handed by checking the weapon type table (indices 11–16, 18 are two-handed). If the mainhand is two-handed, the corresponding offhand flag must be 0.
 
 #### Relic, Food, Utility, Enrichment
 
@@ -189,13 +193,7 @@ Total: 18 slots × 17 bits = 306 bits (worst case).
 
 Only land-relevant slots are encoded unless the underwater flag is set, in which case aquatic weapon infusion slots and breather are also included.
 
-**Land-only infusion slots** (13 slots, when underwater flag = 0):
-- Head, Shoulders, Chest, Hands, Legs, Feet (6 × 1 = 6)
-- Accessory 1, Accessory 2 (2 × 1 = 2)
-- Back (1 × 2 = 2)
-- Ring 1, Ring 2 (2 × 3 = 6) — wait, that's not right
-
-Corrected slot counts (land-only, no underwater flag):
+**Land-only infusion slots** (when underwater flag = 0):
 
 | Slot | Infusion count |
 |------|---------------|
@@ -215,7 +213,7 @@ Corrected slot counts (land-only, no underwater flag):
 | Mainhand 2 | 2 (if flag bit 3) |
 | Offhand 2 | 1 (if flag bit 3 AND bit 2) |
 
-**Total land: 22 slots × 17 = 374 bits worst case**
+**Total land (worst case, all weapon slots present): 22 slots × 17 = 374 bits. Base (no offhand/set 2): 18 slots × 17 = 306 bits.**
 
 **Additional underwater slots** (if underwater flag set):
 | Slot | Infusion count |
@@ -252,11 +250,25 @@ Only present when flag bit 4 is set. The profession ID (from core section) deter
 
 | Field | Bits | Description |
 |-------|------|-------------|
-| Legend 1 | 3 | Legend index (1–6) |
-| Legend 2 | 3 | Legend index (1–6) |
+| Legend 1 | 3 | Legend index (see legend table below) |
+| Legend 2 | 3 | Legend index |
 | Active legend slot | 1 | 0 or 1 |
+| Alliance tactics form | 1 | 0=Archemorus, 1=Saint Viktor (Vindicator only; 0 otherwise) |
 | Underwater legend 1 | 3 | If underwater flag set |
 | Underwater legend 2 | 3 | If underwater flag set |
+
+**Revenant Legend Table (3 bits):**
+
+| Index | Legend | API String |
+|-------|--------|-----------|
+| 0 | (empty) | — |
+| 1 | Glint (Herald) | Legend1 |
+| 2 | Shiro (Assassin) | Legend2 |
+| 3 | Jalis (Dwarf) | Legend3 |
+| 4 | Mallyx (Demon) | Legend4 |
+| 5 | Ventari (Centaur) | Legend5 |
+| 6 | Kalla (Renegade) | Legend6 |
+| 7 | Alliance (Vindicator) | Legend7 |
 
 #### Ranger
 
@@ -280,11 +292,11 @@ Only present when flag bit 4 is set. The profession ID (from core section) deter
 |-------|------|-------------|
 | Active kit | 17 | GW2 API skill ID (0 = none) |
 
-#### Warrior (Bladesworn)
+#### Warrior
 
 | Field | Bits | Description |
 |-------|------|-------------|
-| Active weapon set | 1 | 0 = set 1, 1 = set 2 |
+| Active weapon set | 1 | 0 = set 1, 1 = set 2 (relevant for Bladesworn's gunsaber stance) |
 
 #### Thief (Antiquary)
 
@@ -293,14 +305,6 @@ Only present when flag bit 4 is set. The profession ID (from core section) deter
 | F2 artifact draw | 17 | Skill ID |
 | F3 artifact draw | 17 | Skill ID |
 | F4 artifact draw | 17 | Skill ID (0 if no Prolific Plunderer) |
-
-#### Revenant (Vindicator)
-
-Additional field after base Revenant data:
-
-| Field | Bits | Description |
-|-------|------|-------------|
-| Alliance tactics form | 1 | 0 = Archemorus, 1 = Saint Viktor |
 
 #### Guardian, Mesmer, Necromancer
 
@@ -378,7 +382,7 @@ No additional fields.
 
 ### Relic Table (7 bits)
 
-Index 0 = none. Indices 1–N correspond to the relics in alphabetical order by label. The canonical list is maintained in the app's `GW2_RELICS` constant array. Encoders/decoders must sort relics alphabetically by label to ensure stable indices.
+Index 0 = none. Indices 1–N correspond to the relics sorted alphabetically by label at runtime. The canonical source is the app's `GW2_RELICS` constant array, but note that this array is NOT pre-sorted — encoders/decoders must sort it alphabetically by label before indexing to ensure stable, interoperable indices across implementations.
 
 ### Food Table (4 bits)
 
@@ -446,7 +450,7 @@ Z85 encodes 4 bytes into 5 characters (~25% overhead). The bit buffer is padded 
 | Underwater weapons + sigils | 78 |
 | Underwater infusion slots (5) | 85 |
 | Profession-specific (Ranger worst case) | 28 |
-| **Total** | **~1127 bits → 141 bytes → 177 Z85 chars** |
+| **Total** | **~1127 bits → 141 bytes → padded to 144 → 180 Z85 chars** |
 
 This is an extreme worst case that real builds will never hit.
 

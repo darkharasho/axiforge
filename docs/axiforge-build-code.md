@@ -109,10 +109,10 @@ All fields are bit-packed MSB-first (most significant bit first).
 #### Sigils
 
 Per weapon slot, number depends on weapon type:
-- Two-handed or mainhand: **2** sigils (17 bits each)
-- Offhand: **1** sigil (17 bits)
+- Two-handed weapon (indices 11–16, 18): **2** sigils (17 bits each)
+- One-handed weapon (mainhand or offhand): **1** sigil (17 bits)
 
-Encoded for each weapon present based on flags.
+If a mainhand weapon is two-handed, the corresponding offhand flag must be 0. The decoder uses the weapon type index to determine sigil count.
 
 #### Relic, Food, Utility Buff, Enrichment
 
@@ -178,12 +178,25 @@ The profession ID determines which fields follow.
 
 | Field | Bits | Description |
 |-------|------|-------------|
-| Legend 1 | 3 | Legend index 1–6 |
+| Legend 1 | 3 | Legend index (see table below) |
 | Legend 2 | 3 | |
 | Active legend slot | 1 | 0 or 1 |
-| Alliance tactics form | 1 | 0=Archemorus, 1=Saint Viktor (Vindicator only; otherwise 0) |
+| Alliance tactics form | 1 | 0=Archemorus, 1=Saint Viktor (Vindicator only; 0 otherwise) |
 | Underwater legend 1 | 3 | If `HAS_UNDERWATER` |
 | Underwater legend 2 | 3 | If `HAS_UNDERWATER` |
+
+**Legend Table:**
+
+| Index | Legend | API String |
+|-------|--------|-----------|
+| 0 | *(empty)* | — |
+| 1 | Glint (Herald) | Legend1 |
+| 2 | Shiro (Assassin) | Legend2 |
+| 3 | Jalis (Dwarf) | Legend3 |
+| 4 | Mallyx (Demon) | Legend4 |
+| 5 | Ventari (Centaur) | Legend5 |
+| 6 | Kalla (Renegade) | Legend6 |
+| 7 | Alliance (Vindicator) | Legend7 |
 
 #### Ranger (profession 3)
 
@@ -219,7 +232,7 @@ The profession ID determines which fields follow.
 
 | Field | Bits | Description |
 |-------|------|-------------|
-| Active weapon set | 1 | 0=set 1, 1=set 2 |
+| Active weapon set | 1 | 0=set 1, 1=set 2 (relevant for Bladesworn's gunsaber stance) |
 
 #### Guardian (0), Mesmer (6), Necromancer (7)
 
@@ -276,7 +289,7 @@ No additional fields.
 
 ### Relics
 
-Sorted alphabetically by label. Index 0 = none, indices 1–N = relics in sort order. The canonical list is maintained in AxiForge's source (`constants.js` → `GW2_RELICS`).
+Index 0 = none. Indices 1–N = relics sorted alphabetically by label at runtime. The canonical source is AxiForge's `constants.js` → `GW2_RELICS`, but this array is NOT pre-sorted. Implementations must sort alphabetically by label before indexing.
 
 ### Food & Utility Buffs
 
