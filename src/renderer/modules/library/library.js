@@ -477,6 +477,11 @@ export function nextCopyTitle(title, existingTitles) {
   return `${base} (${max + 1})`;
 }
 
+export function isGameModeCompatible(comp, build) {
+  if (!comp.gameMode) return true;
+  return comp.gameMode === build.gameMode;
+}
+
 async function handlePasteJson(targetId) {
   try {
     // Determine paste destination: explicit target (from context menu), or current folder
@@ -681,17 +686,24 @@ async function handleDuplicateComp(compId) {
 async function handleDropBuildOnComp(buildId, compId) {
   const build = state.builds.find((b) => b.id === buildId);
   if (!build) return;
-  if (build.compId === compId) return; // already in this comp
+  if (build.compId === compId) return;
+
+  // Game mode lock check
+  const comp = state.comps?.find((c) => c.id === compId);
+  if (comp && !isGameModeCompatible(comp, build)) {
+    const modeName = comp.gameMode === "wvw" ? "WvW" : "PvE";
+    showToast(`This comp is locked to ${modeName} builds.`, "error");
+    return;
+  }
+
   const oldFolderId = build.folderId || null;
   const oldCompId = build.compId || null;
-  // Move the build into the comp: set compId, clear folderId
   await window.desktopApi.saveBuild({ ...build, compId, folderId: null });
-  // Also add to comp's buildIds for party line tracking
-  const comp = state.comps?.find((c) => c.id === compId);
   if (comp) {
     const buildIds = Array.isArray(comp.buildIds) ? comp.buildIds : [];
     if (!buildIds.includes(buildId)) {
-      await window.desktopApi.saveComp({ ...comp, buildIds: [...buildIds, buildId] });
+      const newGameMode = comp.gameMode || build.gameMode;
+      await window.desktopApi.saveComp({ ...comp, gameMode: newGameMode, buildIds: [...buildIds, buildId] });
     }
   }
   state.builds = await window.desktopApi.listBuilds();
@@ -699,11 +711,11 @@ async function handleDropBuildOnComp(buildId, compId) {
   pushUndo({ type: "move-to-comp", undo: async () => {
     const current = state.builds.find((b) => b.id === buildId);
     if (current) await window.desktopApi.saveBuild({ ...current, compId: oldCompId, folderId: oldFolderId });
-    // Remove from comp's buildIds
     const c = state.comps?.find((c) => c.id === compId);
     if (c) {
       const ids = (c.buildIds || []).filter((id) => id !== buildId);
-      await window.desktopApi.saveComp({ ...c, buildIds: ids });
+      const gameMode = ids.length === 0 ? null : c.gameMode;
+      await window.desktopApi.saveComp({ ...c, buildIds: ids, gameMode });
     }
     state.builds = await window.desktopApi.listBuilds();
     state.comps = await window.desktopApi.listComps();

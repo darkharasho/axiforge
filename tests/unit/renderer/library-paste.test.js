@@ -2,6 +2,7 @@
 
 const {
   nextCopyTitle,
+  isGameModeCompatible,
 } = require("../../../src/renderer/modules/library/library.js");
 
 describe("nextCopyTitle", () => {
@@ -38,5 +39,28 @@ describe("nextCopyTitle", () => {
   test("handles base title matching an existing numbered copy", () => {
     const existing = ["My Build (1)", "My Build (2)"];
     expect(nextCopyTitle("My Build (2)", existing)).toBe("My Build (3)");
+  });
+});
+
+describe("isGameModeCompatible", () => {
+  test("open comp (null) is compatible with any build", () => {
+    expect(isGameModeCompatible({ gameMode: null }, { gameMode: "pve" })).toBe(true);
+    expect(isGameModeCompatible({ gameMode: null }, { gameMode: "wvw" })).toBe(true);
+  });
+
+  test("pve comp is compatible with pve build", () => {
+    expect(isGameModeCompatible({ gameMode: "pve" }, { gameMode: "pve" })).toBe(true);
+  });
+
+  test("pve comp is incompatible with wvw build", () => {
+    expect(isGameModeCompatible({ gameMode: "pve" }, { gameMode: "wvw" })).toBe(false);
+  });
+
+  test("wvw comp is compatible with wvw build", () => {
+    expect(isGameModeCompatible({ gameMode: "wvw" }, { gameMode: "wvw" })).toBe(true);
+  });
+
+  test("wvw comp is incompatible with pve build", () => {
+    expect(isGameModeCompatible({ gameMode: "wvw" }, { gameMode: "pve" })).toBe(false);
   });
 });
