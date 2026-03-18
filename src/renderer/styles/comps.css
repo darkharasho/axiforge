@@ -1,5 +1,10 @@
 /* AxiForge — Comps page styles */
 
+/* Comp page uses its own internal layout — strip the generic .page padding */
+#page-comps {
+  padding: 0;
+}
+
 .comps-page {
   height: calc(100vh - 40px);
   overflow: hidden;
@@ -379,16 +384,46 @@
 }
 
 .comp-detail__party-panel {
-  width: 40%;
-  min-width: 260px;
+  flex: 0 0 auto;
+  width: 40%; /* overridden by JS */
+  min-width: 344px;
   overflow-y: auto;
-  border-right: 1px solid #1a1a3a;
   padding: 8px 0;
+  scrollbar-width: none;
+}
+
+.comp-detail__party-panel:hover {
+  scrollbar-width: thin;
+}
+
+.comp-detail__resize-handle {
+  flex: 0 0 4px;
+  background: #1a1a3a;
+  cursor: col-resize;
+  transition: background 0.15s;
+  position: relative;
+}
+
+/* Widen the hit area without affecting layout */
+.comp-detail__resize-handle::after {
+  content: "";
+  position: absolute;
+  inset: 0 -4px;
+}
+
+.comp-detail__resize-handle:hover,
+.comp-detail__resize-handle--dragging {
+  background: #4a4a8a;
 }
 
 .comp-detail__pool-panel {
-  width: 60%;
+  flex: 1 1 0;
+  min-width: 180px;
   overflow-y: auto;
+  scrollbar-width: none;
+}
+.comp-detail__pool-panel:hover {
+  scrollbar-width: thin;
 }
 
 /* ── Party Line Row ──────────────────────────────────────────────── */
@@ -416,6 +451,7 @@
   flex-wrap: wrap;
   gap: 5px;
   max-width: calc(5 * 42px + 4 * 5px);
+  overflow: hidden;
 }
 
 .comp-line__controls {
@@ -455,7 +491,6 @@
 .comp-line--add {
   cursor: pointer;
   border: 1px dashed #252545;
-  border-bottom: none;
   margin: 8px 12px;
   padding: 10px;
   border-radius: 6px;
@@ -737,6 +772,7 @@
   flex-shrink: 0;
 }
 
+.comp-pool-card__open,
 .comp-pool-card__remove {
   all: unset;
   cursor: pointer;
@@ -750,6 +786,11 @@
   border-radius: 3px;
   flex-shrink: 0;
   transition: color 0.15s, background 0.15s;
+}
+
+.comp-pool-card__open:hover {
+  color: #aaa;
+  background: rgba(255, 255, 255, 0.07);
 }
 
 .comp-pool-card__remove:hover {
@@ -959,14 +1000,32 @@
    Drag & Drop States
    ═══════════════════════════════════════════════════════════════════ */
 
-/* Shrink pool card to icon during drag */
+/* Pool card drag ghost — styled to look like a filled slot box */
 .comp-drag-icon-ghost {
   width: 42px !important;
   height: 42px !important;
-  overflow: hidden;
-  border-radius: 5px;
+  border-radius: 6px !important;
   opacity: 0.9;
+  background: #0e0e20 !important;
+  border: 2px solid #444 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  gap: 0 !important;
+  overflow: hidden;
 }
+
+/* Profession-colored borders matching slot colors */
+.comp-drag-icon-ghost.lib-prof--guardian     { border-color: #6ea8ff !important; }
+.comp-drag-icon-ghost.lib-prof--warrior      { border-color: #ff9944 !important; }
+.comp-drag-icon-ghost.lib-prof--necromancer  { border-color: #4dca7a !important; }
+.comp-drag-icon-ghost.lib-prof--engineer     { border-color: #cc8844 !important; }
+.comp-drag-icon-ghost.lib-prof--ranger       { border-color: #77cc55 !important; }
+.comp-drag-icon-ghost.lib-prof--thief        { border-color: #cc6677 !important; }
+.comp-drag-icon-ghost.lib-prof--mesmer       { border-color: #b07acc !important; }
+.comp-drag-icon-ghost.lib-prof--elementalist { border-color: #dd5555 !important; }
+.comp-drag-icon-ghost.lib-prof--revenant     { border-color: #aa6655 !important; }
 
 .comp-drag-icon-ghost .comp-pool-card__info,
 .comp-drag-icon-ghost .comp-pool-card__mode,
@@ -975,13 +1034,34 @@
 }
 
 .comp-drag-icon-ghost .comp-pool-card__icon {
-  width: 42px;
-  height: 42px;
+  width: 30px !important;
+  height: 30px !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-radius: 50% !important;
+  flex-shrink: 0 !important;
 }
 
-/* Slot ghost (drop placeholder) */
+.comp-drag-icon-ghost .comp-pool-card__icon svg {
+  width: 26px !important;
+  height: 26px !important;
+}
+
+/* Slot ghost (drop placeholder) — constrain to slot size regardless of dragged element */
 .comp-slot-ghost {
-  opacity: 0.4;
+  width: 42px !important;
+  height: 42px !important;
+  min-width: 0 !important;
+  max-width: 42px !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px dashed #5a5a9a !important;
+  border-radius: 6px !important;
+  overflow: hidden !important;
+  opacity: 0.7;
+  flex-shrink: 0 !important;
+}
+
+.comp-slot-ghost > * {
+  display: none !important;
 }
 
 /* Party line ghost during reorder */
@@ -993,4 +1073,167 @@
 /* Make P# label grabbable when lines are reorderable */
 .comp-line__label {
   cursor: grab;
+}
+
+/* ── Slot hover card ─────────────────────────────────────────────── */
+
+.comp-slot-hover-card {
+  position: fixed;
+  z-index: 8500;
+  width: 230px;
+  background: #0c0c1e;
+  border: 1px solid #2a2a4a;
+  border-left: 3px solid #333;
+  border-radius: 7px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55);
+  pointer-events: none;
+  animation: comp-hover-in 0.14s ease;
+}
+
+@keyframes comp-hover-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Profession accent */
+.comp-slot-hover-card.lib-prof--guardian     { border-left-color: #6ea8ff; }
+.comp-slot-hover-card.lib-prof--warrior      { border-left-color: #ff9944; }
+.comp-slot-hover-card.lib-prof--necromancer  { border-left-color: #4dca7a; }
+.comp-slot-hover-card.lib-prof--engineer     { border-left-color: #cc8844; }
+.comp-slot-hover-card.lib-prof--ranger       { border-left-color: #77cc55; }
+.comp-slot-hover-card.lib-prof--thief        { border-left-color: #cc6677; }
+.comp-slot-hover-card.lib-prof--mesmer       { border-left-color: #b07acc; }
+.comp-slot-hover-card.lib-prof--elementalist { border-left-color: #dd5555; }
+.comp-slot-hover-card.lib-prof--revenant     { border-left-color: #aa6655; }
+
+.comp-hover__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 11px 7px;
+}
+
+.comp-hover__icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.comp-hover__icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.comp-hover__title-group {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.comp-hover__name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #ddd;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.comp-hover__prof {
+  font-size: 10px;
+  color: #666;
+}
+
+.comp-hover__mode {
+  font-size: 9px;
+  color: #555;
+  background: #080818;
+  border-radius: 8px;
+  padding: 2px 6px;
+  flex-shrink: 0;
+  align-self: flex-start;
+  white-space: nowrap;
+}
+
+.comp-hover__equip-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 0 11px 8px;
+  border-top: 1px solid #16162e;
+  padding-top: 6px;
+}
+
+.comp-hover__stat {
+  font-size: 11px;
+  color: #c8a96e;
+  font-weight: 500;
+}
+
+.comp-hover__equip {
+  font-size: 10px;
+  color: #888;
+}
+
+.comp-hover__sep {
+  font-size: 10px;
+  color: #333;
+}
+
+.comp-hover__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  padding: 0 11px 9px;
+}
+
+.comp-hover__tag {
+  font-size: 9px;
+  border-radius: 8px;
+  padding: 1px 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #777;
+}
+
+/* ── Slot drag trash zone ────────────────────────────────────────── */
+
+.comp-line-trash {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  margin: 4px 12px 8px;
+  padding: 8px;
+  border: 1px dashed #3a3a5a;
+  border-radius: 6px;
+  transition: border-color 0.15s, background 0.15s;
+  min-height: 36px;
+}
+
+.comp-line-trash--visible {
+  display: flex;
+}
+
+.comp-line-trash--over {
+  border-color: #cc4444;
+  background: rgba(204, 68, 68, 0.08);
+}
+
+.comp-line-trash__text {
+  font-size: 0.75rem;
+  color: #555;
+  user-select: none;
+  pointer-events: none;
+}
+
+.comp-line-trash--over .comp-line-trash__text {
+  color: #cc4444;
 }

@@ -8,6 +8,77 @@ import { wireCompDragDrop, destroyCompDragDrop } from "./comp-drag-drop.js";
 let _callbacks = {};
 let _notesDebounceTimer = null;
 let _activeCtxMenu = null;
+let _justDropped = false;
+let _hoverTimer = null;
+let _activeHoverCard = null;
+let _cleanupResize = null;
+
+const SPLIT_KEY = "axiforge-comp-panel-split";
+const SPLIT_DEFAULT = 40; // percent
+const SPLIT_MIN_PX = 344; // fits P# label + 5 slots + controls + padding
+const SPLIT_MAX_PCT = 72;
+
+function getSavedSplit() {
+  const v = parseFloat(localStorage.getItem(SPLIT_KEY));
+  return isNaN(v) ? SPLIT_DEFAULT : Math.min(SPLIT_MAX_PCT, Math.max(0, v));
+}
+
+function clampSplitPct(pct, bodyWidth) {
+  const minPct = bodyWidth > 0 ? (SPLIT_MIN_PX / bodyWidth) * 100 : SPLIT_MIN_PX;
+  return Math.min(SPLIT_MAX_PCT, Math.max(minPct, pct));
+}
+
+function wireResizeHandle(container) {
+  if (_cleanupResize) { _cleanupResize(); _cleanupResize = null; }
+
+  const handle = container.querySelector(".comp-detail__resize-handle");
+  const body   = container.querySelector(".comp-detail__body");
+  const party  = container.querySelector(".comp-detail__party-panel");
+  if (!handle || !body || !party) return;
+
+  const bodyWidth = body.getBoundingClientRect().width;
+  party.style.width = `${clampSplitPct(getSavedSplit(), bodyWidth)}%`;
+
+  let dragging = false;
+
+  function onMouseMove(e) {
+    if (!dragging) return;
+    const rect = body.getBoundingClientRect();
+    const pct = clampSplitPct(((e.clientX - rect.left) / rect.width) * 100, rect.width);
+    party.style.width = `${pct}%`;
+  }
+
+  function onMouseUp() {
+    if (!dragging) return;
+    dragging = false;
+    handle.classList.remove("comp-detail__resize-handle--dragging");
+    document.body.style.cursor = "";
+    document.body.style.userSelect = "";
+    const rect = body.getBoundingClientRect();
+    const pct = (party.getBoundingClientRect().width / rect.width) * 100;
+    localStorage.setItem(SPLIT_KEY, String(pct));
+    document.removeEventListener("mousemove", onMouseMove);
+    document.removeEventListener("mouseup", onMouseUp);
+  }
+
+  function onMouseDown(e) {
+    e.preventDefault();
+    dragging = true;
+    handle.classList.add("comp-detail__resize-handle--dragging");
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+  }
+
+  handle.addEventListener("mousedown", onMouseDown);
+
+  _cleanupResize = () => {
+    handle.removeEventListener("mousedown", onMouseDown);
+    document.removeEventListener("mousemove", onMouseMove);
+    document.removeEventListener("mouseup", onMouseUp);
+  };
+}
 
 /**
  * Store callbacks for detail actions.
@@ -24,6 +95,66 @@ function closeCompCtxMenu() {
     _activeCtxMenu.remove();
     _activeCtxMenu = null;
   }
+}
+
+// ─── Slot Hover Card ──────────────────────────────────────────────────────────
+
+function closeHoverCard() {
+  if (_hoverTimer) { clearTimeout(_hoverTimer); _hoverTimer = null; }
+  if (_activeHoverCard) { _activeHoverCard.remove(); _activeHoverCard = null; }
+}
+
+function showSlotHoverCard(slotEl, build) {
+  const card = document.createElement("div");
+  const pClass = profClass(build.profession);
+  card.className = `comp-slot-hover-card ${pClass}`;
+
+  const icon = getSpecIcon(build);
+  const name = escapeHtml(getDisplayName(build));
+  const eliteSpec = getEliteSpecName(build);
+  const profLine = [eliteSpec, build.profession].filter(Boolean).join(" · ");
+  const gameMode = build.gameMode || "pve";
+  const statPackage = resolveStatPackage(build);
+  const runeName = getRuneName(build);
+  const relicName = build.equipment?.relic || "";
+  const tags = build.tags || [];
+
+  const equipParts = [];
+  if (statPackage) equipParts.push(`<span class="comp-hover__stat">${escapeHtml(statPackage)}</span>`);
+  if (runeName)    equipParts.push(`<span class="comp-hover__equip">${escapeHtml(runeName)}</span>`);
+  if (relicName)   equipParts.push(`<span class="comp-hover__equip">${escapeHtml(relicName)}</span>`);
+
+  const tagPills = tags.map((t) => `<span class="comp-hover__tag">${escapeHtml(t)}</span>`).join("");
+
+  card.innerHTML = `
+    <div class="comp-hover__header">
+      <span class="comp-hover__icon">${icon}</span>
+      <div class="comp-hover__title-group">
+        <span class="comp-hover__name">${name}</span>
+        ${profLine ? `<span class="comp-hover__prof">${escapeHtml(profLine)}</span>` : ""}
+      </div>
+      <span class="comp-hover__mode">${escapeHtml(gameMode)}</span>
+    </div>
+    ${equipParts.length ? `<div class="comp-hover__equip-row">${equipParts.join('<span class="comp-hover__sep">·</span>')}</div>` : ""}
+    ${tagPills ? `<div class="comp-hover__tags">${tagPills}</div>` : ""}
+  `;
+
+  card.style.visibility = "hidden";
+  document.body.appendChild(card);
+  _activeHoverCard = card;
+
+  // Position above the slot, clamped to viewport
+  const sr = slotEl.getBoundingClientRect();
+  const cr = card.getBoundingClientRect();
+  const vw = window.innerWidth;
+  let top = sr.top - cr.height - 8;
+  let left = sr.left + sr.width / 2 - cr.width / 2;
+  if (top < 4) top = sr.bottom + 8;
+  if (left < 4) left = 4;
+  if (left + cr.width > vw - 4) left = vw - cr.width - 4;
+  card.style.left = `${left}px`;
+  card.style.top = `${top}px`;
+  card.style.visibility = "";
 }
 
 function showSlotContextMenu(x, y, comp, lineId, slotIdx) {
@@ -144,21 +275,57 @@ async function saveAndSync(comp) {
 
 /**
  * Extract the primary rune name from the equipment runes object.
- * Runes is a map of slot->name; we pick the most common non-empty value.
+ * Runes are stored as numeric IDs; resolve via upgrade catalog when available.
  */
 function getRuneName(build) {
   const runes = build.equipment?.runes;
   if (!runes || typeof runes !== "object") return "";
   const counts = {};
   for (const v of Object.values(runes)) {
-    if (v) counts[v] = (counts[v] || 0) + 1;
+    if (v) counts[String(v)] = (counts[String(v)] || 0) + 1;
   }
-  let best = "";
+  let bestId = "";
   let bestCount = 0;
-  for (const [name, count] of Object.entries(counts)) {
-    if (count > bestCount) { best = name; bestCount = count; }
+  for (const [id, count] of Object.entries(counts)) {
+    if (count > bestCount) { bestId = id; bestCount = count; }
   }
-  return best;
+  if (!bestId) return "";
+
+  // Try to resolve the ID to a human name via the upgrade catalog
+  const runeDef = state.upgradeCatalog?.runeById?.get(Number(bestId));
+  if (runeDef?.name) {
+    // "Superior Rune of the Scholar" → "Scholar"
+    return runeDef.name.replace(/^(?:Superior|Major|Minor) Rune of (?:the )?/i, "");
+  }
+
+  // Fall back: if already a non-numeric label, return as-is
+  return /^\d+$/.test(bestId) ? "" : bestId;
+}
+
+/**
+ * Resolve a human-readable stat package label for a build.
+ * Falls back to deriving from equipment slot values when statPackage is a raw ID.
+ */
+function resolveStatPackage(build) {
+  const pkg = build.equipment?.statPackage || "";
+  if (pkg && !/^\d+$/.test(pkg)) return pkg; // already a label
+
+  // Derive from the most common slot stat combo
+  const slots = build.equipment?.slots;
+  if (slots && typeof slots === "object") {
+    const counts = {};
+    for (const v of Object.values(slots)) {
+      if (v && typeof v === "string") counts[v] = (counts[v] || 0) + 1;
+    }
+    let best = "";
+    let bestCount = 0;
+    for (const [label, count] of Object.entries(counts)) {
+      if (count > bestCount) { best = label; bestCount = count; }
+    }
+    if (best) return best;
+  }
+
+  return ""; // can't resolve — show nothing rather than a raw ID
 }
 
 function getDisplayName(build) {
@@ -174,6 +341,8 @@ function getDisplayName(build) {
 export function renderCompDetail() {
   destroyCompDragDrop();
   closeCompCtxMenu();
+  closeHoverCard();
+  if (_cleanupResize) { _cleanupResize(); _cleanupResize = null; }
 
   const container = document.getElementById("comps-container");
   if (!container) return;
@@ -201,6 +370,7 @@ export function renderCompDetail() {
         <div class="comp-detail__party-panel">
           ${renderPartyLines(comp, totalCap)}
         </div>
+        <div class="comp-detail__resize-handle" title="Drag to resize"></div>
         <div class="comp-detail__pool-panel">
           ${renderBuildPool(comp)}
         </div>
@@ -209,6 +379,7 @@ export function renderCompDetail() {
   `;
 
   bindDetailEvents(container, comp);
+  wireResizeHandle(container);
 
   wireCompDragDrop({
     async onDropBuildToLine(buildId, lineId) {
@@ -217,7 +388,40 @@ export function renderCompDetail() {
       const slots = line.slots || [];
       if (slots.length >= (line.capacity || 5)) return;
       if (getTotalCapacity(comp) >= 50) return;
+      _justDropped = true;
+      setTimeout(() => { _justDropped = false; }, 200);
       line.slots = [...slots, buildId];
+      await saveAndSync(comp);
+      _callbacks.onRerender?.();
+    },
+    async onRemoveSlotFromLine(lineId, slotIdx) {
+      const line = (comp.partyLines || []).find((pl) => pl.id === lineId);
+      if (!line) return;
+      const slots = [...(line.slots || [])];
+      slots.splice(slotIdx, 1);
+      line.slots = slots;
+      await saveAndSync(comp);
+      _callbacks.onRerender?.();
+    },
+    async onReorderSlotsInLine(lineId, newSlots) {
+      const line = (comp.partyLines || []).find((pl) => pl.id === lineId);
+      if (!line) return;
+      line.slots = newSlots;
+      await saveAndSync(comp);
+      _callbacks.onRerender?.();
+    },
+    async onMoveSlotToLine(buildId, fromLineId, fromSlotIdx, toLineId) {
+      if (fromLineId === toLineId) return;
+      const fromLine = (comp.partyLines || []).find((pl) => pl.id === fromLineId);
+      const toLine = (comp.partyLines || []).find((pl) => pl.id === toLineId);
+      if (!fromLine || !toLine) return;
+      if ((toLine.slots || []).length >= (toLine.capacity || 5)) return;
+      _justDropped = true;
+      setTimeout(() => { _justDropped = false; }, 200);
+      const fromSlots = [...(fromLine.slots || [])];
+      fromSlots.splice(fromSlotIdx, 1);
+      fromLine.slots = fromSlots;
+      toLine.slots = [...(toLine.slots || []), buildId];
       await saveAndSync(comp);
       _callbacks.onRerender?.();
     },
@@ -267,6 +471,9 @@ function renderPartyLines(comp, totalCap) {
          data-action="add-line">
       <span class="comp-line__add-text">+ Add Line</span>
     </div>
+    <div class="comp-line-trash">
+      <span class="comp-line-trash__text">Remove</span>
+    </div>
   `;
 }
 
@@ -314,7 +521,7 @@ function renderPartyLine(pl, idx, totalCap) {
   return `
     <div class="comp-line" data-line-id="${escapeHtml(pl.id)}">
       <span class="comp-line__label">P${idx + 1}</span>
-      <div class="comp-line__slots">${slotBoxes.join("")}</div>
+      <div class="comp-line__slots" style="max-height: ${Math.ceil(capacity / 5) * 42 + (Math.ceil(capacity / 5) - 1) * 5}px;">${slotBoxes.join("")}</div>
       <div class="comp-line__controls">
         <button type="button" class="comp-line__btn" data-action="duplicate-line"
                 data-line-id="${escapeHtml(pl.id)}" title="Duplicate line">&#10697;</button>
@@ -374,7 +581,7 @@ function renderPoolCard(build) {
   const gameMode = build.gameMode || "pve";
 
   // Equipment details
-  const statPackage = build.equipment?.statPackage || "";
+  const statPackage = resolveStatPackage(build);
   const runeName = getRuneName(build);
   const relicName = build.equipment?.relic || "";
 
@@ -408,6 +615,8 @@ function renderPoolCard(build) {
         ${bottomParts.length ? `<div class="comp-pool-card__bottom">${bottomParts.join("")}</div>` : ""}
       </div>
       <span class="comp-pool-card__mode">${escapeHtml(gameMode)}</span>
+      <button type="button" class="comp-pool-card__open" data-action="pool-open"
+              data-build-id="${escapeHtml(build.id)}" title="Open build">&#8599;</button>
       <button type="button" class="comp-pool-card__remove" data-action="pool-remove"
               data-build-id="${escapeHtml(build.id)}" title="Remove from comp">&times;</button>
     </div>
@@ -680,6 +889,7 @@ function bindDetailEvents(container, comp) {
   // Click empty slot — increment capacity
   container.querySelectorAll("[data-action='click-empty-slot']").forEach((slot) => {
     slot.addEventListener("click", async (e) => {
+      if (_justDropped) return; // ignore click that follows a drag-drop
       e.stopPropagation();
       const lineId = slot.dataset.lineId;
       if (getTotalCapacity(comp) >= 50) return;
@@ -693,8 +903,17 @@ function bindDetailEvents(container, comp) {
 
   // ── Filled slot click → open build ─────────────────────────────────────────
   container.querySelectorAll("[data-action='click-filled-slot']").forEach((slot) => {
+    // Hover → show delayed build card
+    slot.addEventListener("mouseenter", () => {
+      const build = resolveBuild(slot.dataset.buildId);
+      if (!build) return;
+      _hoverTimer = setTimeout(() => showSlotHoverCard(slot, build), 600);
+    });
+    slot.addEventListener("mouseleave", closeHoverCard);
+
     // Left click → open build in editor
     slot.addEventListener("click", (e) => {
+      closeHoverCard();
       e.stopPropagation();
       const buildId = slot.dataset.buildId;
       const build = buildId ? resolveBuild(buildId) : null;
@@ -705,6 +924,7 @@ function bindDetailEvents(container, comp) {
 
     // Right click → context menu
     slot.addEventListener("contextmenu", (e) => {
+      closeHoverCard();
       e.preventDefault();
       e.stopPropagation();
       const lineId = slot.dataset.lineId;
@@ -741,6 +961,16 @@ function bindPoolEvents(container, comp) {
   // Pool add button
   container.querySelector("[data-action='pool-add']")?.addEventListener("click", () => {
     openAddBuildModal(comp);
+  });
+
+  // Pool card open buttons
+  container.querySelectorAll("[data-action='pool-open']").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const buildId = btn.dataset.buildId;
+      const build = buildId ? state.builds.find((b) => b.id === buildId) : null;
+      if (build) _callbacks.onOpenBuild?.(build);
+    });
   });
 
   // Pool card remove buttons
