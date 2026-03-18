@@ -77,6 +77,26 @@ describe("isValidShareCode", () => {
 });
 
 describe("decodeShareCode", () => {
+  test("round-trip: preserves build title", () => {
+    const build = { ...BERSERKER_BUILD, title: "Power Berserker" };
+    const code = encodeShareCode(build);
+    const decoded = decodeShareCode(code);
+    expect(decoded.title).toBe("Power Berserker");
+  });
+
+  test("round-trip: empty title decodes as empty string", () => {
+    const code = encodeShareCode(BERSERKER_BUILD);
+    const decoded = decodeShareCode(code);
+    expect(decoded.title).toBe("");
+  });
+
+  test("round-trip: unicode title", () => {
+    const build = { ...BERSERKER_BUILD, title: "Über Build — Ñice" };
+    const code = encodeShareCode(build);
+    const decoded = decodeShareCode(code);
+    expect(decoded.title).toBe("Über Build — Ñice");
+  });
+
   test("round-trip: preserves profession", () => {
     const code = encodeShareCode(BERSERKER_BUILD);
     const decoded = decodeShareCode(code);

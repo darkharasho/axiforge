@@ -27,9 +27,10 @@ The share code encodes:
 - **Tier A (Core Build):** Profession, game mode, 3 specializations with trait choices, 5 terrestrial skills, profession-specific data
 - **Tier B (Equipment):** Stat package(s), weapons, rune(s), sigils, relic, food, utility buff, enrichment, infusion(s)
 - **Underwater (optional):** Underwater skills, aquatic weapons, aquatic sigils
+- **Title:** Build name (up to 140 chars, UTF-8)
 
 The share code does NOT encode:
-- Build title, notes, tags, images
+- Notes, tags, images
 - Library metadata (folder, pin status, sort order)
 - Timestamps, UUIDs
 - Display data derivable from IDs (names, icons, descriptions)
@@ -309,6 +310,17 @@ Only present when flag bit 4 is set. The profession ID (from core section) deter
 #### Guardian, Mesmer, Necromancer
 
 No additional fields.
+
+### Title Section
+
+Always present after the profession-specific section (or after equipment if flag bit 4 is not set).
+
+| Field | Bits | Description |
+|-------|------|-------------|
+| Title length | 8 | Length of UTF-8 encoded title in bytes (0 = no title, max 140 chars) |
+| Title bytes | N × 8 | UTF-8 encoded title string (N = title length) |
+
+Note: Multi-byte UTF-8 characters (accented letters, CJK, emoji) will use more bytes than characters. The 8-bit length field supports titles up to 255 bytes. The app caps titles at 140 characters.
 
 ---
 
