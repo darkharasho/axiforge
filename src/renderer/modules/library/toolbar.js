@@ -19,6 +19,7 @@ import {
   arrowDownTrayIcon,
   linkIcon,
   axiforgeIcon,
+  compPlusIcon,
 } from "./heroicons.js";
 
 let _callbacks = {};
@@ -97,7 +98,7 @@ export function renderToolbar() {
             ${plusIcon} New Folder
           </button>
           <button type="button" class="lib-import-dropdown__item" data-new-type="comp">
-            ${plusIcon} New Comp
+            ${compPlusIcon} New Comp
           </button>
         </div>
       </div>

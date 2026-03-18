@@ -2,6 +2,7 @@
 
 import { state } from "../state.js";
 import { escapeHtml } from "../utils.js";
+import { compIcon } from "../library/heroicons.js";
 
 let _callbacks = {};
 
@@ -143,7 +144,7 @@ function renderCompRow(comp) {
 
   return `
     <div class="comp-list-row" data-comp-id="${escapeHtml(comp.id)}">
-      <span class="comp-list-row__icon">\u2630</span>
+      <span class="comp-list-row__icon">${compIcon}</span>
       <span class="comp-list-row__name">${name}</span>
       <span class="comp-list-row__count">${countLabel}</span>
       <span class="comp-list-row__tags">${tags}</span>

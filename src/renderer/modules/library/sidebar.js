@@ -11,7 +11,7 @@ import {
   chevronDownIcon,
   chevronDoubleLeftIcon,
   chevronDoubleRightIcon,
-  userGroupIcon,
+  compIcon,
 } from "./heroicons.js";
 
 let _callbacks = {};
@@ -158,7 +158,7 @@ function renderSmartFolders(profExpanded, modeExpanded) {
           class="lib-nav-item ${allCompsActive ? "lib-nav-item--active" : ""}"
           data-navigate-all-comps="1"
         >
-          <span class="lib-nav-item__icon">${userGroupIcon}</span>
+          <span class="lib-nav-item__icon">${compIcon}</span>
           <span class="lib-nav-item__label">All Comps</span>
           <span class="lib-nav-item__count">${totalComps}</span>
         </button>

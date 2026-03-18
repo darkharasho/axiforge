@@ -13,7 +13,7 @@ import {
   chevronUpIcon,
   chevronDownIcon,
   chevronRightIcon,
-  userGroupIcon,
+  compIcon,
 } from "./heroicons.js";
 
 let _callbacks = {};
@@ -222,7 +222,7 @@ function renderListView(container) {
     .map(
       (c) => `
         <div class="lib-list-row lib-list-row--comp" data-comp-id="${escapeHtml(c.id)}">
-          <span class="lib-list-row__spec-icon lib-list-row__comp-icon">${userGroupIcon}</span>
+          <span class="lib-list-row__spec-icon lib-list-row__comp-icon">${compIcon}</span>
           <span class="lib-list-row__title">${escapeHtml(c.name || "Untitled Comp")}</span>
           ${compBadgeHtml(c)}
         </div>
@@ -332,7 +332,7 @@ function renderTableView(container) {
       <li class="lib-tv__item" data-comp-id="${escapeHtml(c.id)}">
         <div class="lib-tv__row lib-tv__row--comp">
           <span class="lib-tv__action"></span>
-          <span class="lib-tv__icon lib-list-row__comp-icon">${userGroupIcon}</span>
+          <span class="lib-tv__icon lib-list-row__comp-icon">${compIcon}</span>
           <span class="lib-tv__name">${escapeHtml(c.name || "Untitled Comp")}</span>
           <span class="lib-tv__profession"><span class="lib-list-row__badge">${countLabel}</span></span>
           <span class="lib-tv__spec"></span>
@@ -431,7 +431,7 @@ function renderGridView(container) {
     .map(
       (c) => `
         <div class="lib-grid-card lib-grid-card--comp" data-comp-id="${escapeHtml(c.id)}">
-          <div class="lib-grid-card__icon lib-grid-card__icon--comp">${userGroupIcon}</div>
+          <div class="lib-grid-card__icon lib-grid-card__icon--comp">${compIcon}</div>
           <div class="lib-grid-card__title">${escapeHtml(c.name || "Untitled Comp")}</div>
           ${compBadgeHtml(c)}
         </div>
@@ -483,7 +483,7 @@ function renderIconView(container) {
     .map(
       (c) => `
         <div class="lib-icon-item lib-icon-item--comp" data-comp-id="${escapeHtml(c.id)}">
-          <div class="lib-icon-item__icon lib-icon-item__icon--comp">${userGroupIcon}</div>
+          <div class="lib-icon-item__icon lib-icon-item__icon--comp">${compIcon}</div>
           <div class="lib-icon-item__label">${escapeHtml(c.name || "Untitled Comp")}</div>
         </div>
       `
@@ -558,7 +558,7 @@ function renderColumnsView(container) {
         items.push(`
           <div class="lib-col__item lib-col__item--comp"
                data-comp-id="${escapeHtml(c.id)}" data-col-index="${colIndex}">
-            <span class="lib-col__icon lib-col__icon--comp">${userGroupIcon}</span>
+            <span class="lib-col__icon lib-col__icon--comp">${compIcon}</span>
             <span class="lib-col__name">${escapeHtml(c.name || "Untitled Comp")}</span>
           </div>
         `);
