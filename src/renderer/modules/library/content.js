@@ -328,10 +328,24 @@ function renderTableView(container) {
     const count = (c.buildIds || []).length;
     const countLabel = count === 1 ? "1 build" : `${count} builds`;
     const tags = (c.tags || []).map((t) => escapeHtml(t)).join(", ");
+    const isExpanded = _tableExpandedFolders.has(c.id);
+    const chevron = count > 0
+      ? (isExpanded ? chevronDownIcon : chevronRightIcon)
+      : "";
+
+    let childrenHtml = "";
+    if (isExpanded) {
+      const compBuilds = (c.buildIds || [])
+        .map((id) => state.builds.find((b) => b.id === id))
+        .filter(Boolean);
+      const items = compBuilds.map((b) => renderTreeBuild(b)).join("");
+      childrenHtml = `<ul class="lib-tv__children">${items}</ul>`;
+    }
+
     return `
       <li class="lib-tv__item" data-comp-id="${escapeHtml(c.id)}">
         <div class="lib-tv__row lib-tv__row--comp">
-          <span class="lib-tv__action"></span>
+          <span class="lib-tv__action" data-toggle-table-folder="${escapeHtml(c.id)}">${chevron}</span>
           <span class="lib-tv__icon lib-list-row__comp-icon">${compIcon}</span>
           <span class="lib-tv__name">${escapeHtml(c.name || "Untitled Comp")}</span>
           <span class="lib-tv__profession"><span class="lib-list-row__badge">${countLabel}</span></span>
@@ -341,6 +355,7 @@ function renderTableView(container) {
           <span class="lib-tv__created" title="${escapeHtml(c.createdAt || "")}">${formatDate(c.createdAt)}</span>
           <span class="lib-tv__modified" title="${escapeHtml(c.updatedAt || "")}">${formatDate(c.updatedAt)}</span>
         </div>
+        ${childrenHtml}
       </li>
     `;
   }
@@ -623,17 +638,32 @@ function bindContentEvents(container) {
     });
   });
 
-  // Comp elements
+  // Comp elements — behave like folders (expand in table, drill-in in others)
   container.querySelectorAll("[data-comp-id]:not([data-bound])").forEach((el) => {
     el.dataset.bound = "1";
-    el.addEventListener("click", (e) => {
-      e.stopPropagation();
-      handleCompClick(el.dataset.compId, e);
-    });
-    el.addEventListener("dblclick", (e) => {
-      e.stopPropagation();
-      _callbacks.onOpenComp?.(el.dataset.compId);
-    });
+    if (el.closest(".lib-tv")) {
+      // Table view: single click toggles expand/collapse (like folders)
+      el.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const compId = el.dataset.compId;
+        if (_tableExpandedFolders.has(compId)) {
+          _tableExpandedFolders.delete(compId);
+        } else {
+          _tableExpandedFolders.add(compId);
+        }
+        renderContent();
+      });
+    } else {
+      // List/grid/icon views: single click selects, double-click navigates into comp
+      el.addEventListener("click", (e) => {
+        e.stopPropagation();
+        handleCompClick(el.dataset.compId, e);
+      });
+      el.addEventListener("dblclick", (e) => {
+        e.stopPropagation();
+        _callbacks.onOpenComp?.(el.dataset.compId);
+      });
+    }
   });
 
   container.querySelectorAll("[data-folder-id]:not([data-bound])").forEach((el) => {

@@ -265,6 +265,22 @@ function renderBreadcrumb() {
     return parts.join("");
   }
 
+  if (folder.type === "comp") {
+    const comp = state.comps.find((c) => c.id === folder.id);
+    const compName = comp?.name || "Comp";
+    // If comp is in a folder, show the folder chain first
+    if (comp?.folderId) {
+      const chain = buildFolderChain(comp.folderId);
+      for (const f of chain) {
+        parts.push(`<span class="lib-breadcrumb__sep">${chevronRightIcon}</span>`);
+        parts.push(`<button type="button" class="lib-breadcrumb__item" data-navigate-folder="${escapeHtml(f.id)}">${escapeHtml(f.name)}</button>`);
+      }
+    }
+    parts.push(`<span class="lib-breadcrumb__sep">${chevronRightIcon}</span>`);
+    parts.push(`<span class="lib-breadcrumb__item lib-breadcrumb__item--current">${escapeHtml(compName)}</span>`);
+    return parts.join("");
+  }
+
   if (folder.type === "smart-profession") {
     parts.push(`<span class="lib-breadcrumb__sep">${chevronRightIcon}</span>`);
     parts.push(`<span class="lib-breadcrumb__item lib-breadcrumb__item--current">By Profession</span>`);

@@ -518,13 +518,9 @@ async function handleNewComp() {
   });
   if (!name) { renderLibrary(); return; }
   const parentId = state.currentFolder?.type === "custom" ? state.currentFolder.id : null;
-  const saved = await window.desktopApi.saveComp({ name, folderId: parentId });
+  await window.desktopApi.saveComp({ name, folderId: parentId });
   state.comps = await window.desktopApi.listComps();
-  // Open the newly created comp in detail mode on the comps page
-  const newComp = state.comps.find((c) => c.id === saved.id) || saved;
-  state.activeComp = newComp;
-  state.compPage = "detail";
-  _app.navigateToPage?.("comps");
+  renderLibrary();
 }
 
 async function handleCopyCompJson(idOrIds) {
@@ -555,11 +551,10 @@ async function handleCutCompJson(idOrIds) {
 }
 
 function handleOpenComp(compId) {
-  const comp = state.comps.find((c) => c.id === compId);
-  if (!comp) return;
-  state.activeComp = comp;
-  state.compPage = "detail";
-  _app.navigateToPage?.("comps");
+  // Navigate into comp like a folder — shows the comp's builds in library
+  state.currentFolder = { type: "comp", id: compId };
+  clearSelection();
+  renderLibrary();
 }
 
 async function handleRenameComp(compId) {

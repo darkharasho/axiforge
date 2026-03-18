@@ -65,6 +65,12 @@ export function getVisibleBuilds() {
     } else if (folder.id === "__all-comps") {
       // "All Comps" smart folder: no builds shown
       return [];
+    } else if (folder.type === "comp") {
+      // Inside a comp: show only the comp's builds
+      const comp = state.comps.find((c) => c.id === folder.id);
+      if (!comp) return [];
+      const buildIdSet = new Set(comp.buildIds || []);
+      builds = builds.filter((b) => buildIdSet.has(b.id));
     } else if (folder.type === "all") {
       // "all" type: show only root-level builds at top level;
       // builds inside folders appear under their expanded folder rows
