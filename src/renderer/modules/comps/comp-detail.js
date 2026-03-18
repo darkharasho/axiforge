@@ -5,6 +5,7 @@ import { escapeHtml } from "../utils.js";
 import { getProfessionSvg } from "../profession-icons.js";
 import { wireCompDragDrop, destroyCompDragDrop } from "./comp-drag-drop.js";
 import { roleBadgeHtml } from "../roleEstimator.js";
+import { computeCompBoonCoverage, buildBoonCoverageHTML, bindBoonCoverageEvents } from "./comp-boon-coverage.js";
 
 let _callbacks = {};
 let _notesDebounceTimer = null;
@@ -440,6 +441,28 @@ export function renderCompDetail() {
       _callbacks.onRerender?.();
     },
   });
+
+  // Async patch: compute boon coverage and patch into the placeholder
+  if (_callbacks.getCatalog) {
+    const compIdAtRender = comp.id;
+    (async () => {
+      let data;
+      try {
+        data = await computeCompBoonCoverage(
+          comp, state.builds, state.catalogCache, _callbacks.getCatalog
+        );
+      } catch (err) {
+        console.error("[comp-boon-coverage] computation failed", err);
+        return;
+      }
+      // Guard: bail if user navigated away or opened a different comp
+      if (state.activeComp?.id !== compIdAtRender) return;
+      const bodyEl = container.querySelector("#comp-boon-coverage-body");
+      if (!bodyEl) return;
+      bodyEl.innerHTML = buildBoonCoverageHTML(data);
+      bindBoonCoverageEvents(bodyEl);
+    })();
+  }
 }
 
 function renderNotesPanel(comp) {
@@ -467,7 +490,7 @@ function renderPartyLines(comp, totalCap) {
     .join("");
 
   const canAdd = totalCap < 50;
-
+  const collapsed = state.compPrefs.boonCoverageCollapsed;
   return `
     ${lineRows}
     <div class="comp-line comp-line--add ${canAdd ? "" : "comp-line--disabled"}"
@@ -476,6 +499,15 @@ function renderPartyLines(comp, totalCap) {
     </div>
     <div class="comp-line-trash">
       <span class="comp-line-trash__text">Remove</span>
+    </div>
+    <div class="comp-boon-cov">
+      <div class="comp-boon-cov__header" data-action="toggle-boon-coverage">
+        <span class="comp-boon-cov__chevron">${collapsed ? "▸" : "▾"}</span>
+        <span class="comp-boon-cov__title">BOON COVERAGE</span>
+      </div>
+      <div class="comp-boon-cov__body${collapsed ? " comp-boon-cov__body--hidden" : ""}"
+           id="comp-boon-coverage-body">
+      </div>
     </div>
   `;
 }
