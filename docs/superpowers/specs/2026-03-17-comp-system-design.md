@@ -22,6 +22,7 @@ Stored in `data/comps.json` via a new `compStore.js` in the main process.
   partyLines: [
     {
       id: string,          // UUID for stable identity during reorder
+      capacity: number,    // total slot count (filled + empty); default 5, max 50
       slots: string[]      // buildId entries; no nulls — length = number of filled slots
     }
   ],
@@ -33,8 +34,10 @@ Stored in `data/comps.json` via a new `compStore.js` in the main process.
 Key constraints:
 - `buildIds` is the flat list of all builds in this comp (the "build pool")
 - `partyLines[].slots` references builds from `buildIds` — a build can appear in multiple slots across lines
-- Total slots across all party lines capped at **50** (hard limit, matching GW2 squad max)
-- A new comp starts with **one party line of 5 empty slots**
+- `partyLines[].capacity` tracks the total number of visual slots (filled + empty); the UI renders `capacity` boxes, with `slots.length` filled and the rest empty
+- Total capacity across all party lines capped at **50** (hard limit, matching GW2 squad max)
+- A new comp starts with **one party line with capacity 5** (all empty)
+- Clicking an empty `+` slot increments capacity by 1 (if under 50 total); dragging a build into an empty slot fills it without changing capacity
 - Builds are **references**, not copies — edits to a build in the library propagate to all comps containing it
 - A build can belong to **multiple comps**
 - No changes to the build entity — builds do not know they are in a comp
@@ -44,16 +47,16 @@ Key constraints:
 
 Mirrors the pattern of `buildStore.js` and `folderStore.js`:
 - `loadComps()` — read `comps.json` into memory
-- `saveComp(comp)` — create or update a comp
+- `upsertComp(comp)` — create or update a comp
 - `deleteComp(id)` — remove a comp
 - `reorderComps(updates)` — batch update `sortOrder` values
-- `getComps()` — return all comps
+- `listComps()` — return all comps
 
-IPC handlers registered on the `comp:` namespace:
-- `comp:list` — return all comps
-- `comp:save` — create/update
-- `comp:delete` — delete
-- `comp:reorder` — reorder
+IPC handlers registered on the `comps:` namespace:
+- `comps:list` — return all comps
+- `comps:save` — create/update
+- `comps:delete` — delete
+- `comps:reorder` — reorder
 
 ### State Integration
 
@@ -69,7 +72,7 @@ Add to the global `state` object:
 - Comps appear alongside builds in folder listings, distinguished by a squad/group icon
 - The existing smart folders ("All Builds", by Profession, by Game Mode) do **not** include comps
 - A new **"All Comps"** smart folder appears in the sidebar
-- Creating a new comp: the "New" button dropdown gets a **"New Comp"** option alongside "New Build" and "New Folder"
+- Creating a new comps: the "New" button dropdown gets a **"New Comp"** option alongside "New Build" and "New Folder"
 
 ### Comps in Content Views
 
@@ -152,7 +155,7 @@ Each party line is a **compact inline row**:
 
 **Drag behavior:** When dragging a mini card from the build pool, the drag ghost **shrinks to just the class icon** (matching the slot size) for clean visual feedback when dropping into party line slots.
 
-**Duplicate line:** Copies all slots (filled and empty) to a new party line appended below.
+**Duplicate line:** Creates a new party line with the same `capacity` and `slots` array, appended below the source line.
 
 #### Right Panel (60%) — Build Pool
 
