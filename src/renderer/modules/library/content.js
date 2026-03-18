@@ -521,10 +521,21 @@ function renderColumnsView(container) {
   const rootComps = getVisibleComps();
   columns.push({ folders: rootFolders, builds: rootBuilds, comps: rootComps, parentId: null });
 
-  // Subsequent columns based on selected folders
+  // Subsequent columns based on selected folders/comps
   for (let i = 0; i < _columnSelectedFolders.length; i++) {
     const selectedId = _columnSelectedFolders[i];
     if (!selectedId) break;
+
+    // Check if the selected item is a comp
+    const selectedComp = (state.comps || []).find((c) => c.id === selectedId);
+    if (selectedComp) {
+      // Comp selected: show its builds in next column, no sub-folders or sub-comps
+      const compBuilds = (selectedComp.buildIds || [])
+        .map((id) => state.builds.find((b) => b.id === id))
+        .filter(Boolean);
+      columns.push({ folders: [], builds: compBuilds, comps: [], parentId: selectedId });
+      break; // comps are flat — no further nesting
+    }
 
     const childFolders = state.folders
       .filter((f) => f.parentId === selectedId)
@@ -568,11 +579,13 @@ function renderColumnsView(container) {
       }
 
       for (const c of (col.comps || [])) {
+        const isSelected = _columnSelectedFolders[colIndex] === c.id;
         items.push(`
-          <div class="lib-col__item lib-col__item--comp"
+          <div class="lib-col__item lib-col__item--comp ${isSelected ? "lib-col__item--selected" : ""}"
                data-comp-id="${escapeHtml(c.id)}" data-col-index="${colIndex}">
             <span class="lib-col__icon lib-col__icon--comp">${compIcon}</span>
             <span class="lib-col__name">${escapeHtml(c.name || "Untitled Comp")}</span>
+            <span class="lib-col__chevron">${chevronRightIcon}</span>
           </div>
         `);
       }
@@ -602,6 +615,20 @@ function bindColumnsEvents(container) {
       // Truncate selections after this column and set new selection
       _columnSelectedFolders = _columnSelectedFolders.slice(0, colIndex);
       _columnSelectedFolders[colIndex] = folderId;
+
+      renderContent();
+    });
+  });
+
+  // Comp click in columns view: select comp and show its builds in the next column
+  container.querySelectorAll(".lib-col__item--comp[data-col-index]").forEach((el) => {
+    el.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const colIndex = parseInt(el.dataset.colIndex, 10);
+      const compId = el.dataset.compId;
+
+      _columnSelectedFolders = _columnSelectedFolders.slice(0, colIndex);
+      _columnSelectedFolders[colIndex] = compId;
 
       renderContent();
     });
