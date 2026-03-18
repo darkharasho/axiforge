@@ -1,4 +1,5 @@
 import { state } from "../state.js";
+import { showConfirmModal } from "../confirm-modal.js";
 import { initCompList, renderCompList } from "./comp-list.js";
 import { initCompDetail, renderCompDetail } from "./comp-detail.js";
 
@@ -23,6 +24,15 @@ export function initComps(appCallbacks) {
       renderComps();
     },
     onDeleteComp: async (id) => {
+      const comp = state.comps.find((c) => c.id === id);
+      const name = comp?.name || "this comp";
+      const confirmed = await showConfirmModal({
+        title: `Delete "${name}"?`,
+        body: "This cannot be undone.",
+        confirmLabel: "Delete",
+        cancelLabel: "Cancel",
+      });
+      if (!confirmed) return;
       await window.desktopApi.deleteComp(id);
       await loadComps();
       renderComps();
