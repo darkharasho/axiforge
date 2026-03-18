@@ -523,6 +523,38 @@ function handleOpenComp(compId) {
   _app.navigateToPage?.("comps");
 }
 
+async function handleRenameComp(compId) {
+  const comp = state.comps?.find((c) => c.id === compId);
+  if (!comp) return;
+  const newName = await showPrompt("Rename comp", comp.name || "");
+  if (!newName) return;
+  await window.desktopApi.saveComp({ ...comp, name: newName });
+  state.comps = await window.desktopApi.listComps();
+  renderLibrary();
+}
+
+async function handleDuplicateComp(compId) {
+  const comp = state.comps?.find((c) => c.id === compId);
+  if (!comp) return;
+  const copy = { ...comp };
+  delete copy.id;
+  copy.name = `Copy of ${comp.name || "Untitled"}`;
+  await window.desktopApi.saveComp(copy);
+  state.comps = await window.desktopApi.listComps();
+  renderLibrary();
+}
+
+async function handleDropBuildOnComp(buildId, compId) {
+  const comp = state.comps?.find((c) => c.id === compId);
+  if (!comp) return;
+  const buildIds = Array.isArray(comp.buildIds) ? comp.buildIds : [];
+  if (buildIds.includes(buildId)) return; // already present, no-op
+  const updated = { ...comp, buildIds: [...buildIds, buildId] };
+  await window.desktopApi.saveComp(updated);
+  state.comps = await window.desktopApi.listComps();
+  renderLibrary();
+}
+
 async function handleDeleteComps(ids) {
   const count = ids.length;
   const label = count === 1 ? "this comp" : `${count} comps`;
@@ -758,6 +790,9 @@ function _buildSharedCallbacks() {
     // Content / build actions
     onLoadBuild: handleLoadBuild,
     onOpenComp: handleOpenComp,
+    onRenameComp: handleRenameComp,
+    onDuplicateComp: handleDuplicateComp,
+    onDropBuildOnComp: handleDropBuildOnComp,
     onDeleteComps: handleDeleteComps,
     onMoveComps: handleMoveComps,
     onRename: handleRename,

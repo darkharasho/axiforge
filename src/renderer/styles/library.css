@@ -887,6 +887,11 @@
   cursor: pointer;
 }
 
+.lib-list-row--comp.lib-drop-target {
+  outline: 2px dashed rgba(110, 168, 255, 0.4);
+  background: rgba(110, 168, 255, 0.06);
+}
+
 .lib-list-row__comp-icon {
   font-size: 16px;
   color: #888;

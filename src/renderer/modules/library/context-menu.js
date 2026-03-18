@@ -152,6 +152,8 @@ function showMultiSelectMenu(x, y, ids) {
 function showCompMenu(x, y, compId, comp) {
   const items = [
     _item(playIcon, "Open", null, () => _callbacks.onOpenComp?.(compId)),
+    _item(pencilIcon, "Rename", "F2", () => _callbacks.onRenameComp?.(compId)),
+    _item(documentDuplicateIcon, "Duplicate", "Ctrl+D", () => _callbacks.onDuplicateComp?.(compId)),
     _sep(),
     _submenuItem(folderArrowDownIcon, "Move to Folder", _buildMoveToFolderItemsForComps([compId])),
     _sep(),

@@ -63,8 +63,17 @@ export function wireDragDropEvents() {
       return;
     }
 
-    // Check if we were hovering over a folder or nav target when dropped
+    // Check if we were hovering over a folder, comp, or nav target when dropped
     if (droppedOnTarget) {
+      const compEl = droppedOnTarget.closest("[data-comp-id]");
+      if (compEl) {
+        const compId = compEl.dataset.compId;
+        _isDragging = false;
+        _draggedBuildId = null;
+        await _callbacks.onDropBuildOnComp?.(buildId, compId);
+        return;
+      }
+
       const folderEl = droppedOnTarget.closest("[data-folder-id]");
       if (folderEl) {
         const folderId = folderEl.dataset.folderId;
@@ -171,6 +180,14 @@ function _onPointerMove(e) {
       }
       return;
     }
+  }
+
+  // Check comp rows — a build can be dropped onto a comp to add it
+  const compEl = el.closest("[data-comp-id]");
+  if (compEl && _draggedBuildId) {
+    _hoverTarget = compEl;
+    compEl.classList.add("lib-drop-target");
+    return;
   }
 
   // Check sidebar and breadcrumb targets
