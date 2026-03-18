@@ -77,6 +77,9 @@ class CompStore {
     for (const comp of comps) {
       if (comp.buildIds.includes(buildId)) {
         comp.buildIds = comp.buildIds.filter((id) => id !== buildId);
+        if (comp.buildIds.length === 0) {
+          comp.gameMode = null;
+        }
         changed = true;
       }
       for (const line of comp.partyLines) {

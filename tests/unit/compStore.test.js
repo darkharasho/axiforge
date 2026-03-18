@@ -193,3 +193,33 @@ describe("CompStore — removeBuildFromComps", () => {
     expect(comps[0].partyLines[0].slots).toEqual(["b1"]);
   });
 });
+
+describe("CompStore — removeBuildFromComps — gameMode unlock", () => {
+  let store, dir;
+  beforeEach(async () => ({ store, dir } = await makeTempStore()));
+  afterEach(async () => cleanupDir(dir));
+
+  test("clears gameMode when last build is removed", async () => {
+    await store.upsertComp(makeComp({
+      gameMode: "pve",
+      buildIds: ["b1"],
+      partyLines: [{ id: "pl1", capacity: 5, slots: ["b1"] }],
+    }));
+    await store.removeBuildFromComps("b1");
+    const comps = await store.listComps();
+    expect(comps[0].buildIds).toEqual([]);
+    expect(comps[0].gameMode).toBeNull();
+  });
+
+  test("does not clear gameMode when builds remain", async () => {
+    await store.upsertComp(makeComp({
+      gameMode: "pve",
+      buildIds: ["b1", "b2"],
+      partyLines: [{ id: "pl1", capacity: 5, slots: ["b1", "b2"] }],
+    }));
+    await store.removeBuildFromComps("b1");
+    const comps = await store.listComps();
+    expect(comps[0].buildIds).toEqual(["b2"]);
+    expect(comps[0].gameMode).toBe("pve");
+  });
+});
