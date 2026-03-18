@@ -977,6 +977,16 @@ function bindDetailEvents(container, comp) {
     });
   });
 
+  // ── Boon coverage collapse toggle ──────────────────────────────────────────
+  container.querySelector("[data-action='toggle-boon-coverage']")?.addEventListener("click", () => {
+    state.compPrefs.boonCoverageCollapsed = !state.compPrefs.boonCoverageCollapsed;
+    const collapsed = state.compPrefs.boonCoverageCollapsed;
+    const bodyEl = container.querySelector("#comp-boon-coverage-body");
+    if (bodyEl) bodyEl.classList.toggle("comp-boon-cov__body--hidden", collapsed);
+    const chevronEl = container.querySelector(".comp-boon-cov__chevron");
+    if (chevronEl) chevronEl.textContent = collapsed ? "▸" : "▾";
+  });
+
   // ── Build Pool Events ──────────────────────────────────────────────────────
 
   bindPoolEvents(container, comp);
