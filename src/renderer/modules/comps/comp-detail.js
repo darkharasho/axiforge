@@ -652,7 +652,11 @@ function openAddBuildModal(comp) {
   overlay.className = "comp-picker-overlay";
 
   // Available builds: those not already in this comp (and not in another comp)
-  const available = state.builds.filter((b) => !b.compId);
+  const available = state.builds.filter((b) => {
+    if (b.compId) return false;
+    if (comp.gameMode && b.gameMode !== comp.gameMode) return false;
+    return true;
+  });
 
   const selected = new Set();
   let searchTerm = "";
@@ -750,8 +754,12 @@ function openAddBuildModal(comp) {
           await window.desktopApi.saveBuild({ ...build, compId: comp.id, folderId: null });
         }
       }
-      // Also add to comp's buildIds for party line tracking
+      // Add to comp's buildIds and lock gameMode if not already set
       comp.buildIds = [...new Set([...(comp.buildIds || []), ...selected])];
+      if (!comp.gameMode) {
+        const firstSelectedBuild = state.builds.find((b) => selected.has(b.id));
+        comp.gameMode = firstSelectedBuild?.gameMode || null;
+      }
       await saveAndSync(comp);
       // Reload builds since we modified them
       state.builds = await window.desktopApi.listBuilds();
