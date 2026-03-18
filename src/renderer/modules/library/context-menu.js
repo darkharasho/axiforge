@@ -195,6 +195,7 @@ function showFolderMenu(x, y, folderId, folder) {
 function showEmptyMenu(x, y) {
   const items = [
     _item(plusIcon, "New Build", "Ctrl+N", () => _callbacks.onNewBuild?.()),
+    _item(plusIcon, "New Comp", null, () => _callbacks.onNewComp?.()),
     _item(folderPlusIcon, "New Folder", null, () => _callbacks.onNewFolder?.()),
     _sep(),
     _item(clipboardIcon, "Paste", "Ctrl+V", () => _callbacks.onPasteJson?.()),
