@@ -4,14 +4,14 @@ const { createMechanicsSuite, setupMechanicsHarness } = require("./mechanicsSuit
 
 describe("renderer Revenant mechanics — Alliance Tactics fallback", () => {
   test("injects Alliance Tactics (62729) at Profession_3 for Vindicator when Legendary Alliance is active", () => {
-    const { __testOnly } = require("../../../src/renderer/renderer");
+    const { buildRevenantEliteByProfSlot } = require("../../../src/renderer/modules/skills");
     const skill62729 = { id: 62729, name: "Alliance Tactics", slot: "Profession_3" };
     const skillById = new Map([[62729, skill62729]]);
     const eliteFixedSkills = [
       { id: 12345, slot: "Profession_4", name: "Tree Song" },
     ];
 
-    const bySlot = __testOnly.buildRevenantEliteByProfSlot(
+    const bySlot = buildRevenantEliteByProfSlot(
       eliteFixedSkills,
       69,
       true,
@@ -23,11 +23,11 @@ describe("renderer Revenant mechanics — Alliance Tactics fallback", () => {
   });
 
   test("does not inject Alliance Tactics when Legendary Alliance is not active", () => {
-    const { __testOnly } = require("../../../src/renderer/renderer");
+    const { buildRevenantEliteByProfSlot } = require("../../../src/renderer/modules/skills");
     const skill62729 = { id: 62729, name: "Alliance Tactics", slot: "Profession_3" };
     const skillById = new Map([[62729, skill62729]]);
 
-    const bySlot = __testOnly.buildRevenantEliteByProfSlot([], 69, false, skillById);
+    const bySlot = buildRevenantEliteByProfSlot([], 69, false, skillById);
 
     expect(bySlot.has("Profession_3")).toBe(false);
   });
