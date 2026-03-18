@@ -728,6 +728,7 @@ async function handleRemoveBuildFromComp(buildId, compId) {
   const comp = state.comps?.find((c) => c.id === compId);
   const oldCompBuildIds = comp ? [...(comp.buildIds || [])] : [];
   const oldCompPartyLines = comp ? JSON.parse(JSON.stringify(comp.partyLines || [])) : [];
+  const oldGameMode = comp?.gameMode ?? null;
   // Clear compId on the build — it moves back to root
   const build = state.builds.find((b) => b.id === buildId);
   if (build) {
@@ -740,7 +741,8 @@ async function handleRemoveBuildFromComp(buildId, compId) {
       ...line,
       slots: (line.slots || []).filter((id) => id !== buildId),
     }));
-    await window.desktopApi.saveComp({ ...comp, buildIds, partyLines });
+    const gameMode = buildIds.length === 0 ? null : comp.gameMode;
+    await window.desktopApi.saveComp({ ...comp, buildIds, partyLines, gameMode });
   }
   state.builds = await window.desktopApi.listBuilds();
   state.comps = await window.desktopApi.listComps();
@@ -749,7 +751,7 @@ async function handleRemoveBuildFromComp(buildId, compId) {
     if (current) await window.desktopApi.saveBuild({ ...current, compId });
     // Restore comp's buildIds and partyLines
     const c = state.comps?.find((c) => c.id === compId);
-    if (c) await window.desktopApi.saveComp({ ...c, buildIds: oldCompBuildIds, partyLines: oldCompPartyLines });
+    if (c) await window.desktopApi.saveComp({ ...c, buildIds: oldCompBuildIds, partyLines: oldCompPartyLines, gameMode: oldGameMode });
     state.builds = await window.desktopApi.listBuilds();
     state.comps = await window.desktopApi.listComps();
   }});
