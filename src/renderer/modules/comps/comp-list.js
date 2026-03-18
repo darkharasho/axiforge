@@ -264,6 +264,8 @@ function showCtxMenu(x, y, items) {
   closeCtxMenu();
   const menu = document.createElement("div");
   menu.className = "lib-ctx-menu";
+  menu.style.position = "fixed";
+  menu.style.zIndex = "9999";
   menu.innerHTML = items.join("");
   document.body.appendChild(menu);
 
