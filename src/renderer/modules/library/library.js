@@ -579,25 +579,41 @@ async function handleDuplicateComp(compId) {
 }
 
 async function handleDropBuildOnComp(buildId, compId) {
+  const build = state.builds.find((b) => b.id === buildId);
+  if (!build) return;
+  if (build.compId === compId) return; // already in this comp
+  // Move the build into the comp: set compId, clear folderId
+  await window.desktopApi.saveBuild({ ...build, compId, folderId: null });
+  // Also add to comp's buildIds for party line tracking
   const comp = state.comps?.find((c) => c.id === compId);
-  if (!comp) return;
-  const buildIds = Array.isArray(comp.buildIds) ? comp.buildIds : [];
-  if (buildIds.includes(buildId)) return; // already present, no-op
-  const updated = { ...comp, buildIds: [...buildIds, buildId] };
-  await window.desktopApi.saveComp(updated);
+  if (comp) {
+    const buildIds = Array.isArray(comp.buildIds) ? comp.buildIds : [];
+    if (!buildIds.includes(buildId)) {
+      await window.desktopApi.saveComp({ ...comp, buildIds: [...buildIds, buildId] });
+    }
+  }
+  state.builds = await window.desktopApi.listBuilds();
   state.comps = await window.desktopApi.listComps();
   renderLibrary();
 }
 
 async function handleRemoveBuildFromComp(buildId, compId) {
+  // Clear compId on the build — it moves back to root
+  const build = state.builds.find((b) => b.id === buildId);
+  if (build) {
+    await window.desktopApi.saveBuild({ ...build, compId: null });
+  }
+  // Also clean up comp's buildIds and party line slots
   const comp = state.comps?.find((c) => c.id === compId);
-  if (!comp) return;
-  const buildIds = (comp.buildIds || []).filter((id) => id !== buildId);
-  const partyLines = (comp.partyLines || []).map((line) => ({
-    ...line,
-    slots: (line.slots || []).filter((id) => id !== buildId),
-  }));
-  await window.desktopApi.saveComp({ ...comp, buildIds, partyLines });
+  if (comp) {
+    const buildIds = (comp.buildIds || []).filter((id) => id !== buildId);
+    const partyLines = (comp.partyLines || []).map((line) => ({
+      ...line,
+      slots: (line.slots || []).filter((id) => id !== buildId),
+    }));
+    await window.desktopApi.saveComp({ ...comp, buildIds, partyLines });
+  }
+  state.builds = await window.desktopApi.listBuilds();
   state.comps = await window.desktopApi.listComps();
   renderLibrary();
 }

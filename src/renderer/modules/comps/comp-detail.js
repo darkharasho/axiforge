@@ -328,14 +328,11 @@ function renderPartyLine(pl, idx, totalCap) {
 // ─── Build Pool ──────────────────────────────────────────────────────────────
 
 function renderBuildPool(comp) {
-  const buildIds = comp.buildIds || [];
+  // Builds in this comp are those with compId matching
+  const compBuilds = state.builds.filter((b) => b.compId === comp.id);
   const search = (state.compPoolSearch || "").toLowerCase();
 
-  // Resolve builds — keep missing IDs as placeholders
-  const poolEntries = buildIds.map((id) => {
-    const build = resolveBuild(id);
-    return build ? { type: "build", build } : { type: "missing", id };
-  });
+  const poolEntries = compBuilds.map((build) => ({ type: "build", build }));
 
   // Filter by search (missing builds don't match searches)
   const filtered = poolEntries.filter((entry) => {
@@ -356,7 +353,7 @@ function renderBuildPool(comp) {
   return `
     <div class="comp-pool">
       <div class="comp-pool-header">
-        <span class="comp-pool-title">BUILDS <span class="comp-pool-count">(${buildIds.length})</span></span>
+        <span class="comp-pool-title">BUILDS <span class="comp-pool-count">(${compBuilds.length})</span></span>
         <div class="comp-pool-header__right">
           <input type="text" class="comp-pool-search" placeholder="Search..."
                  value="${escapeHtml(state.compPoolSearch || "")}" data-action="pool-search" />
@@ -445,8 +442,8 @@ function openAddBuildModal(comp) {
   const overlay = document.createElement("div");
   overlay.className = "comp-picker-overlay";
 
-  const poolIds = new Set(comp.buildIds || []);
-  const available = state.builds.filter((b) => !poolIds.has(b.id));
+  // Available builds: those not already in this comp (and not in another comp)
+  const available = state.builds.filter((b) => !b.compId);
 
   const selected = new Set();
   let searchTerm = "";
@@ -537,8 +534,18 @@ function openAddBuildModal(comp) {
 
     overlay.querySelector("[data-action='picker-add']")?.addEventListener("click", async () => {
       if (selected.size === 0) return;
-      comp.buildIds = [...(comp.buildIds || []), ...selected];
+      // Move each selected build into this comp
+      for (const buildId of selected) {
+        const build = state.builds.find((b) => b.id === buildId);
+        if (build) {
+          await window.desktopApi.saveBuild({ ...build, compId: comp.id, folderId: null });
+        }
+      }
+      // Also add to comp's buildIds for party line tracking
+      comp.buildIds = [...new Set([...(comp.buildIds || []), ...selected])];
       await saveAndSync(comp);
+      // Reload builds since we modified them
+      state.builds = await window.desktopApi.listBuilds();
       overlay.remove();
       _callbacks.onRerender?.();
     });
@@ -743,15 +750,20 @@ function bindPoolEvents(container, comp) {
       const buildId = btn.dataset.buildId;
       if (!buildId) return;
 
-      // Remove from buildIds
-      comp.buildIds = (comp.buildIds || []).filter((id) => id !== buildId);
+      // Clear compId on the build — moves it back to root
+      const build = state.builds.find((b) => b.id === buildId);
+      if (build) {
+        await window.desktopApi.saveBuild({ ...build, compId: null });
+      }
 
-      // Remove from all party line slots
+      // Remove from buildIds and party line slots
+      comp.buildIds = (comp.buildIds || []).filter((id) => id !== buildId);
       for (const line of (comp.partyLines || [])) {
         line.slots = (line.slots || []).filter((id) => id !== buildId);
       }
 
       await saveAndSync(comp);
+      state.builds = await window.desktopApi.listBuilds();
       _callbacks.onRerender?.();
     });
   });

@@ -137,7 +137,7 @@ function tagPillsHtml(build) {
 }
 
 function compBadgeHtml(comp) {
-  const count = (comp.buildIds || []).length;
+  const count = state.builds.filter((b) => b.compId === comp.id).length;
   const label = count === 1 ? "1 build" : `${count} builds`;
   return `<span class="lib-list-row__badge">${label}</span>`;
 }
@@ -325,7 +325,8 @@ function renderTableView(container) {
   }
 
   function renderTreeComp(c) {
-    const count = (c.buildIds || []).length;
+    const compBuilds = state.builds.filter((b) => b.compId === c.id);
+    const count = compBuilds.length;
     const countLabel = count === 1 ? "1 build" : `${count} builds`;
     const tags = (c.tags || []).map((t) => escapeHtml(t)).join(", ");
     const isExpanded = _tableExpandedFolders.has(c.id);
@@ -333,9 +334,6 @@ function renderTableView(container) {
 
     let childrenHtml = "";
     if (isExpanded) {
-      const compBuilds = (c.buildIds || [])
-        .map((id) => state.builds.find((b) => b.id === id))
-        .filter(Boolean);
       const items = compBuilds.map((b) => renderTreeBuild(b)).join("");
       childrenHtml = `<ul class="lib-tv__children">${items}</ul>`;
     }
@@ -530,9 +528,7 @@ function renderColumnsView(container) {
     const selectedComp = (state.comps || []).find((c) => c.id === selectedId);
     if (selectedComp) {
       // Comp selected: show its builds in next column, no sub-folders or sub-comps
-      const compBuilds = (selectedComp.buildIds || [])
-        .map((id) => state.builds.find((b) => b.id === id))
-        .filter(Boolean);
+      const compBuilds = state.builds.filter((b) => b.compId === selectedId);
       columns.push({ folders: [], builds: compBuilds, comps: [], parentId: selectedId });
       break; // comps are flat — no further nesting
     }

@@ -157,6 +157,8 @@ function normalizeBuild(input, fallbackCreatedAt) {
     // Library organization fields
     folderId:
       typeof input.folderId === "string" ? input.folderId : null,
+    compId:
+      typeof input.compId === "string" ? input.compId : null,
     pinned: Boolean(input.pinned),
     sortOrder:
       typeof input.sortOrder === "number" && Number.isFinite(input.sortOrder)

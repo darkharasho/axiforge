@@ -54,31 +54,32 @@ export function getVisibleBuilds() {
   // Filter by current folder
   const folder = state.currentFolder;
   if (folder) {
-    if (folder.type === "custom") {
-      builds = builds.filter((b) => b.folderId === folder.id);
-    } else if (folder.type === "smart-profession") {
-      builds = builds.filter((b) => b.profession === folder.id);
-    } else if (folder.type === "smart-gamemode") {
-      builds = builds.filter(
-        (b) => (b.gameMode || "pve") === folder.id,
-      );
+    if (folder.type === "comp") {
+      // Inside a comp: show builds that belong to this comp
+      builds = builds.filter((b) => b.compId === folder.id);
     } else if (folder.id === "__all-comps") {
       // "All Comps" smart folder: no builds shown
       return [];
-    } else if (folder.type === "comp") {
-      // Inside a comp: show only the comp's builds
-      const comp = state.comps.find((c) => c.id === folder.id);
-      if (!comp) return [];
-      const buildIdSet = new Set(comp.buildIds || []);
-      builds = builds.filter((b) => buildIdSet.has(b.id));
-    } else if (folder.type === "all") {
-      // "all" type: show only root-level builds at top level;
-      // builds inside folders appear under their expanded folder rows
-      builds = builds.filter((b) => !b.folderId);
+    } else {
+      // Non-comp views: exclude builds that are inside any comp
+      builds = builds.filter((b) => !b.compId);
+      if (folder.type === "custom") {
+        builds = builds.filter((b) => b.folderId === folder.id);
+      } else if (folder.type === "smart-profession") {
+        builds = builds.filter((b) => b.profession === folder.id);
+      } else if (folder.type === "smart-gamemode") {
+        builds = builds.filter(
+          (b) => (b.gameMode || "pve") === folder.id,
+        );
+      } else if (folder.type === "all") {
+        // "all" type: show only root-level builds at top level;
+        // builds inside folders appear under their expanded folder rows
+        builds = builds.filter((b) => !b.folderId);
+      }
     }
   } else {
-    // Root: only show builds not in any folder
-    builds = builds.filter((b) => !b.folderId);
+    // Root: only show builds not in any folder or comp
+    builds = builds.filter((b) => !b.folderId && !b.compId);
   }
 
   // Apply filter dropdowns (multi-select arrays)

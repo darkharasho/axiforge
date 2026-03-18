@@ -138,7 +138,7 @@ function renderTagFilters(allTags, activeTags) {
 
 function renderCompRow(comp) {
   const name = escapeHtml(comp.name || "Untitled Comp");
-  const buildCount = (comp.builds || []).length;
+  const buildCount = state.builds.filter((b) => b.compId === comp.id).length;
   const countLabel = buildCount === 1 ? "1 build" : `${buildCount} builds`;
   const tags = (comp.tags || [])
     .map((t) => `<span class="comp-list-row__tag">${escapeHtml(t)}</span>`)
