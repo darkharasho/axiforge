@@ -329,9 +329,7 @@ function renderTableView(container) {
     const countLabel = count === 1 ? "1 build" : `${count} builds`;
     const tags = (c.tags || []).map((t) => escapeHtml(t)).join(", ");
     const isExpanded = _tableExpandedFolders.has(c.id);
-    const chevron = count > 0
-      ? (isExpanded ? chevronDownIcon : chevronRightIcon)
-      : "";
+    const chevron = isExpanded ? chevronDownIcon : chevronRightIcon;
 
     let childrenHtml = "";
     if (isExpanded) {
