@@ -311,7 +311,8 @@ function bindSidebarEvents(container) {
  * @param {string} [options.className] - Extra class for the row element
  */
 export function insertInlineInput(afterEl, defaultValue = "", options = {}) {
-  const { fallbackName = "New Folder", container, className } = options;
+  const { fallbackName = "New Folder", container, className, icon } = options;
+  const displayIcon = icon || folderIcon;
 
   // Detect if we're inserting into a table
   const isTable = afterEl?.tagName === "TR" || afterEl?.closest("table") || container?.querySelector("table");
@@ -325,7 +326,7 @@ export function insertInlineInput(afterEl, defaultValue = "", options = {}) {
       row.className = "lib-table__row lib-table__row--folder";
       row.innerHTML = `
         <td class="lib-table__td lib-table__td--pin"></td>
-        <td class="lib-table__td lib-table__td--icon"><span class="lib-table__folder-icon">${folderIcon}</span></td>
+        <td class="lib-table__td lib-table__td--icon"><span class="lib-table__folder-icon">${displayIcon}</span></td>
         <td class="lib-table__td lib-table__td--name" colspan="7"><input type="text" class="lib-inline-input" placeholder="${fallbackName}" value="" /></td>
       `;
       if (afterEl?.tagName === "TR") {
@@ -337,7 +338,7 @@ export function insertInlineInput(afterEl, defaultValue = "", options = {}) {
       row = document.createElement("div");
       row.className = `lib-nav-item lib-nav-item--editing${className ? ` ${className}` : ""}`;
       row.innerHTML = `
-        <span class="lib-nav-item__icon">${folderIcon}</span>
+        <span class="lib-nav-item__icon">${displayIcon}</span>
         <input type="text" class="lib-inline-input" placeholder="${fallbackName}" value="" />
       `;
       if (container) {

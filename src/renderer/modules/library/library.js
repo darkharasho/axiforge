@@ -25,6 +25,7 @@ import {
   wireSelectionEvents,
 } from "./selection.js";
 import { initDragDrop, wireDragDropEvents } from "./drag-drop.js";
+import { compIcon } from "./heroicons.js";
 
 // ─── App-level callbacks (injected at init) ────────────────────────────────────
 
@@ -512,6 +513,8 @@ async function handleNewComp() {
   const name = await insertInlineInput(null, "", {
     container: content,
     className: "lib-content-inline-folder",
+    fallbackName: "New Comp",
+    icon: compIcon,
   });
   if (!name) { renderLibrary(); return; }
   const parentId = state.currentFolder?.type === "custom" ? state.currentFolder.id : null;
