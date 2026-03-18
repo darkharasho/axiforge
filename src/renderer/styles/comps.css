@@ -6,3 +6,205 @@
   display: flex;
   flex-direction: column;
 }
+
+/* ── Comp List Toolbar ────────────────────────────────────────────── */
+
+.comp-list-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #1a1a3a;
+  flex-shrink: 0;
+}
+
+.comp-list-toolbar__left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.comp-list-toolbar__right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.comp-list-toolbar__new-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.85rem;
+  padding: 4px 10px;
+  white-space: nowrap;
+}
+
+/* Search */
+.comp-list-toolbar__search-input {
+  background: #0e0e20;
+  border: 1px solid #252545;
+  border-radius: 6px;
+  padding: 4px 8px;
+  color: #ccd;
+  font-size: 0.85rem;
+  font-family: inherit;
+  width: 160px;
+  outline: none;
+}
+
+.comp-list-toolbar__search-input:focus {
+  border-color: #4a4aaa;
+}
+
+.comp-list-toolbar__search-input::placeholder {
+  color: #556;
+}
+
+/* Sort */
+.comp-list-toolbar__sort-select {
+  background: #0e0e20;
+  border: 1px solid #252545;
+  border-radius: 6px;
+  padding: 4px 8px;
+  color: #ccd;
+  font-size: 0.85rem;
+  font-family: inherit;
+  cursor: pointer;
+  outline: none;
+}
+
+.comp-list-toolbar__sort-select:focus {
+  border-color: #4a4aaa;
+}
+
+/* ── Tag Filter Chips ─────────────────────────────────────────────── */
+
+.comp-list-tags-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-bottom: 1px solid #1a1a3a;
+  flex-shrink: 0;
+}
+
+.comp-tag-chip {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  color: #888;
+  background: #12122a;
+  border: 1px solid #1a1a3a;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.1s, color 0.1s, border-color 0.1s;
+}
+
+.comp-tag-chip:hover {
+  background: #1a1a3a;
+  color: #ccc;
+}
+
+.comp-tag-chip--active {
+  background: rgba(200, 169, 110, 0.15);
+  border-color: rgba(200, 169, 110, 0.4);
+  color: #c8a96e;
+}
+
+.comp-tag-chip--active:hover {
+  background: rgba(200, 169, 110, 0.25);
+}
+
+.comp-tag-chip--clear {
+  color: #666;
+  border-color: transparent;
+  background: transparent;
+}
+
+.comp-tag-chip--clear:hover {
+  color: #999;
+}
+
+/* ── Comp List Body ───────────────────────────────────────────────── */
+
+.comp-list-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* ── Comp Row ─────────────────────────────────────────────────────── */
+
+.comp-list-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid #111130;
+  transition: background 0.1s;
+}
+
+.comp-list-row:hover {
+  background: #151535;
+}
+
+.comp-list-row__icon {
+  color: #555;
+  font-size: 1rem;
+  flex-shrink: 0;
+  width: 20px;
+  text-align: center;
+}
+
+.comp-list-row__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #ccc;
+  font-size: 0.9rem;
+}
+
+.comp-list-row__count {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  color: #666;
+  white-space: nowrap;
+}
+
+.comp-list-row__tags {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.comp-list-row__tag {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  color: #c8a96e;
+  background: rgba(200, 169, 110, 0.1);
+  border: 1px solid rgba(200, 169, 110, 0.25);
+  white-space: nowrap;
+}
+
+/* ── Empty State ──────────────────────────────────────────────────── */
+
+.comp-list-empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: #555;
+  font-size: 0.9rem;
+}
+
+.comp-list-empty strong {
+  color: #888;
+}
