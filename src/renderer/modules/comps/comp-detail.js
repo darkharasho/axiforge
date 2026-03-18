@@ -5,7 +5,7 @@ import { escapeHtml } from "../utils.js";
 import { getProfessionSvg } from "../profession-icons.js";
 import { wireCompDragDrop, destroyCompDragDrop } from "./comp-drag-drop.js";
 import { roleBadgeHtml } from "../roleEstimator.js";
-import { computeCompBoonCoverage, buildBoonCoverageHTML, bindBoonCoverageEvents } from "./comp-boon-coverage.js";
+import { computeCompBoonCoverage, buildBoonCoverageHTML, bindBoonCoverageEvents, closeBoonTooltip } from "./comp-boon-coverage.js";
 
 let _callbacks = {};
 let _notesDebounceTimer = null;
@@ -346,6 +346,7 @@ export function renderCompDetail() {
   destroyCompDragDrop();
   closeCompCtxMenu();
   closeHoverCard();
+  closeBoonTooltip();
   if (_cleanupResize) { _cleanupResize(); _cleanupResize = null; }
 
   const container = document.getElementById("comps-container");

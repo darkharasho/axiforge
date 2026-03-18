@@ -6,7 +6,6 @@ import { resolveEquippedWeaponSkills } from "../equipment-weapon-skills.js";
 import { BOON_DISPLAY_ORDER, BOON_CONDITION_ICONS } from "../constants.js";
 import { getProfessionSvg } from "../profession-icons.js";
 import { escapeHtml } from "../utils.js";
-import { state } from "../state.js";
 
 /**
  * Compute boon coverage for all filled slots in a comp, squad-wide and per-line.
@@ -58,14 +57,14 @@ export async function computeCompBoonCoverage(comp, builds, catalogCache, getCat
         }
         const lineEntry = lineBoonMap.get(boon.name);
         lineEntry.count++;
-        lineEntry.providers.push({ buildId, buildName });
+        lineEntry.providers.push({ buildId, buildName, profession: build.profession });
 
         if (!squadMap.has(boon.name)) {
           squadMap.set(boon.name, { count: 0, providers: [] });
         }
         const squadEntry = squadMap.get(boon.name);
         squadEntry.count++;
-        squadEntry.providers.push({ buildId, buildName, lineLabel: label });
+        squadEntry.providers.push({ buildId, buildName, lineLabel: label, profession: build.profession });
       }
     }
 
@@ -138,6 +137,10 @@ function _closeBoonTooltip() {
   }
 }
 
+export function closeBoonTooltip() {
+  _closeBoonTooltip();
+}
+
 export function bindBoonCoverageEvents(container) {
   container.querySelectorAll(".comp-boon-cov__icon").forEach((iconEl) => {
     iconEl.addEventListener("mouseenter", () => {
@@ -187,7 +190,7 @@ function _buildTooltipHTML(boonName, count, providers, scope) {
 
   if (scope === "line") {
     const rows = providers.map((p) => {
-      const profSvg = _getProfSvgForBuild(p.buildId);
+      const profSvg = _getProfSvg(p.profession);
       return `<div class="comp-boon-tooltip__row">
         <span class="comp-boon-tooltip__prof">${profSvg}</span>
         <span class="comp-boon-tooltip__build-name">${escapeHtml(p.buildName)}</span>
@@ -211,7 +214,7 @@ function _buildTooltipHTML(boonName, count, providers, scope) {
   }
   const lineGroups = [...byLine.entries()].map(([lbl, lProviders]) => {
     const rows = lProviders.map((p) => {
-      const profSvg = _getProfSvgForBuild(p.buildId);
+      const profSvg = _getProfSvg(p.profession);
       return `<div class="comp-boon-tooltip__row">
         <span class="comp-boon-tooltip__prof">${profSvg}</span>
         <span class="comp-boon-tooltip__build-name">${escapeHtml(p.buildName)}</span>
@@ -233,8 +236,6 @@ function _buildTooltipHTML(boonName, count, providers, scope) {
     <div class="comp-boon-tooltip__providers">${lineGroups}</div>`;
 }
 
-function _getProfSvgForBuild(buildId) {
-  const build = state.builds?.find((b) => b.id === buildId);
-  if (!build) return "";
-  return getProfessionSvg(build.profession || "") || "";
+function _getProfSvg(profession) {
+  return getProfessionSvg(profession || "") || "";
 }
