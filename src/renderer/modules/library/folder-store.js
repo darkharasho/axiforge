@@ -205,8 +205,11 @@ export function getVisibleComps() {
       comps = comps.filter((c) => c.folderId === folder.id);
     } else if (folder.id === "__all-comps") {
       // Show all comps — no filter
+    } else if (folder.type === "all") {
+      // "All Builds" view: show root-level comps (same as no folder)
+      comps = comps.filter((c) => !c.folderId);
     } else {
-      // Other smart folders (profession, gamemode, all builds) don't show comps
+      // Other smart folders (profession, gamemode, comp drilldown) don't show comps
       return [];
     }
   } else {
