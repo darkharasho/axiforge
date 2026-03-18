@@ -589,6 +589,19 @@ async function handleDropBuildOnComp(buildId, compId) {
   renderLibrary();
 }
 
+async function handleRemoveBuildFromComp(buildId, compId) {
+  const comp = state.comps?.find((c) => c.id === compId);
+  if (!comp) return;
+  const buildIds = (comp.buildIds || []).filter((id) => id !== buildId);
+  const partyLines = (comp.partyLines || []).map((line) => ({
+    ...line,
+    slots: (line.slots || []).filter((id) => id !== buildId),
+  }));
+  await window.desktopApi.saveComp({ ...comp, buildIds, partyLines });
+  state.comps = await window.desktopApi.listComps();
+  renderLibrary();
+}
+
 async function handleDeleteComps(ids) {
   const count = ids.length;
   const label = count === 1 ? "this comp" : `${count} comps`;
@@ -827,6 +840,7 @@ function _buildSharedCallbacks() {
     onRenameComp: handleRenameComp,
     onDuplicateComp: handleDuplicateComp,
     onDropBuildOnComp: handleDropBuildOnComp,
+    onRemoveBuildFromComp: handleRemoveBuildFromComp,
     onDeleteComps: handleDeleteComps,
     onMoveComps: handleMoveComps,
     onCopyCompJson: handleCopyCompJson,

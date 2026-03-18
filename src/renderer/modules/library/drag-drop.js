@@ -79,17 +79,27 @@ export function wireDragDropEvents() {
         const folderId = folderEl.dataset.folderId;
         _isDragging = false;
         _draggedBuildId = null;
-        await moveBuilds([buildId], folderId);
+        // If inside a comp, remove build from comp instead of moving
+        if (state.currentFolder?.type === "comp") {
+          await _callbacks.onRemoveBuildFromComp?.(buildId, state.currentFolder.id);
+        } else {
+          await moveBuilds([buildId], folderId);
+        }
         _callbacks.onRefresh?.();
         return;
       }
 
       const navTarget = droppedOnTarget.closest("[data-navigate-folder], [data-navigate-all], [data-navigate-root]");
       if (navTarget) {
-        const folderId = navTarget.dataset.navigateFolder || null;
         _isDragging = false;
         _draggedBuildId = null;
-        await moveBuilds([buildId], folderId);
+        // If inside a comp, remove build from comp instead of moving
+        if (state.currentFolder?.type === "comp") {
+          await _callbacks.onRemoveBuildFromComp?.(buildId, state.currentFolder.id);
+        } else {
+          const folderId = navTarget.dataset.navigateFolder || null;
+          await moveBuilds([buildId], folderId);
+        }
         _callbacks.onRefresh?.();
         return;
       }
