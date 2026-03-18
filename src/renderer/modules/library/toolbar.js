@@ -79,6 +79,9 @@ export function renderToolbar() {
           <button type="button" class="lib-import-dropdown__item" data-import-type="gw2skills">
             ${arrowDownTrayIcon} GW2Skills
           </button>
+          <button type="button" class="lib-import-dropdown__item" data-import-type="sharecode">
+            ${linkIcon} Share Code
+          </button>
         </div>
       </div>
       <button type="button" id="lib-new-build-btn" class="btn btn-primary lib-toolbar__new-btn">
@@ -366,6 +369,7 @@ function bindToolbarEvents(container) {
       importDropdown.classList.remove("lib-import-dropdown--open");
       if (item.dataset.importType === "chatlink") _callbacks.onImportChatLink?.();
       else if (item.dataset.importType === "gw2skills") _callbacks.onImportGw2Skills?.();
+      else if (item.dataset.importType === "sharecode") _callbacks.onImportShareCode?.();
     });
   });
 

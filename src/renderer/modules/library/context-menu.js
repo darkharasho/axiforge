@@ -148,6 +148,7 @@ function showFolderMenu(x, y, folderId, folder) {
     _submenuItem(arrowDownTrayIcon, "Import in Folder", [
       _item(linkIcon, "Build Link", null, () => _callbacks.onImportChatLink?.(folderId)),
       _item(arrowDownTrayIcon, "GW2Skills", null, () => _callbacks.onImportGw2Skills?.(folderId)),
+      _item(linkIcon, "Share Code", null, () => _callbacks.onImportShareCode?.(folderId)),
     ]),
     _sep(),
     _item(trashIcon, "Delete Folder", null, () => _callbacks.onDeleteFolder?.(folderId), true),
@@ -164,6 +165,7 @@ function showEmptyMenu(x, y) {
     _submenuItem(arrowDownTrayIcon, "Import", [
       _item(linkIcon, "Build Link", null, () => _callbacks.onImportChatLink?.()),
       _item(arrowDownTrayIcon, "GW2Skills", null, () => _callbacks.onImportGw2Skills?.()),
+      _item(linkIcon, "Share Code", null, () => _callbacks.onImportShareCode?.()),
     ]),
     _sep(),
     _item(null, "Select All", "Ctrl+A", () => _callbacks.onSelectAll?.()),

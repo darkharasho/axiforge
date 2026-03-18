@@ -396,6 +396,24 @@ async function handleImportGw2Skills(targetFolderId) {
   }
 }
 
+async function handleImportShareCode(targetFolderId) {
+  const folderId = targetFolderId ?? (state.currentFolder?.type === "custom" ? state.currentFolder.id : null);
+  const result = await showShareCodeImportModal();
+  if (!result) return;
+  try {
+    const decoded = await window.desktopApi.decodeShareCode(result.code);
+    decoded.title = result.name || decoded.title || "Imported Build";
+    if (folderId) decoded.folderId = folderId;
+    const saved = await window.desktopApi.saveBuild(decoded);
+    state.builds = await window.desktopApi.listBuilds();
+    renderLibrary();
+    showToast("Share code imported!");
+  } catch (err) {
+    console.error("Import failed:", err);
+    showToast("Import failed: " + (err.message || "Unknown error"), "error");
+  }
+}
+
 /**
  * Compute the next copy title by appending or incrementing a numeric suffix.
  * Given "My Build" and existing titles ["My Build (1)", "My Build (2)"],
@@ -696,6 +714,7 @@ function _buildSharedCallbacks() {
     onCopyShareCode: handleCopyShareCode,
     onImportChatLink: handleImportChatLink,
     onImportGw2Skills: handleImportGw2Skills,
+    onImportShareCode: handleImportShareCode,
     onPasteJson: handlePasteJson,
     onPublish: handlePublish,
     onBuildInfo: handleBuildInfo,
@@ -956,6 +975,109 @@ function showGw2SkillsImportModal() {
     overlay.querySelector('[data-action="cancel"]').addEventListener("click", () => dismiss(null));
     importBtn.addEventListener("click", () => {
       dismiss({ url: urlInput.value.trim(), name: nameInput.value.trim() || "Imported Build" });
+    });
+    overlay.addEventListener("click", (e) => { if (e.target === overlay) dismiss(null); });
+  });
+}
+
+function showShareCodeImportModal() {
+  return new Promise((resolve) => {
+    const overlay = document.createElement("div");
+    overlay.className = "confirm-modal-overlay";
+    overlay.innerHTML = `
+      <div class="confirm-modal" style="width:420px;max-width:90vw;">
+        <div class="confirm-modal__header">
+          <h3 class="confirm-modal__title">Import Share Code</h3>
+        </div>
+        <div class="confirm-modal__body" style="display:flex;flex-direction:column;gap:10px;">
+          <div>
+            <label style="display:block;font-size:0.8rem;color:#889;margin-bottom:4px;">Share Code</label>
+            <input
+              type="text"
+              id="sharecode-input"
+              placeholder="Paste <AxiForge:...> share code here"
+              style="width:100%;padding:6px 8px;background:#151530;border:1px solid #303060;border-radius:4px;color:#ccd;font-size:0.9rem;outline:none;box-sizing:border-box;"
+            />
+            <div id="sharecode-status" style="font-size:0.75rem;min-height:1.2em;margin-top:3px;color:#556;"></div>
+          </div>
+          <div>
+            <label style="display:block;font-size:0.8rem;color:#889;margin-bottom:4px;">Build Name</label>
+            <input
+              type="text"
+              id="sharecode-name-input"
+              placeholder="Build name"
+              style="width:100%;padding:6px 8px;background:#151530;border:1px solid #303060;border-radius:4px;color:#ccd;font-size:0.9rem;outline:none;box-sizing:border-box;"
+            />
+          </div>
+        </div>
+        <div class="confirm-modal__actions">
+          <button class="confirm-modal__btn" data-action="cancel">Cancel</button>
+          <button class="confirm-modal__btn confirm-modal__btn--primary" data-action="import" disabled>Import</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    const codeInput = overlay.querySelector("#sharecode-input");
+    const nameInput = overlay.querySelector("#sharecode-name-input");
+    const statusEl = overlay.querySelector("#sharecode-status");
+    const importBtn = overlay.querySelector('[data-action="import"]');
+    let codeValid = false;
+
+    codeInput.focus();
+
+    function setStatus(msg, color) {
+      statusEl.textContent = msg;
+      statusEl.style.color = color;
+    }
+
+    codeInput.addEventListener("input", () => {
+      const val = codeInput.value.trim();
+      importBtn.disabled = true;
+      codeValid = false;
+      if (!val) { setStatus("", "#556"); return; }
+      if (!val.startsWith("<AxiForge:") || !val.endsWith(">")) {
+        setStatus("Not a valid share code format", "#c55");
+        return;
+      }
+      // Extract the label (part between first : and second :)
+      const inner = val.slice(1, -1); // remove < and >
+      const parts = inner.split(":");
+      const label = parts.length >= 2 ? parts[1] : "";
+      if (label) {
+        setStatus(`\u2713 ${label}`, "#5a5");
+        if (!nameInput.value || nameInput.dataset.autoFilled === "1") {
+          nameInput.value = `Imported ${label}`;
+          nameInput.dataset.autoFilled = "1";
+        }
+      } else {
+        setStatus("\u2713 Valid share code", "#5a5");
+      }
+      codeValid = true;
+      importBtn.disabled = false;
+    });
+
+    nameInput.addEventListener("input", () => {
+      nameInput.dataset.autoFilled = "0";
+    });
+
+    function dismiss(result) {
+      document.removeEventListener("keydown", onKey);
+      overlay.remove();
+      resolve(result);
+    }
+
+    function onKey(e) {
+      if (e.key === "Escape") dismiss(null);
+      if (e.key === "Enter" && codeValid) {
+        dismiss({ code: codeInput.value.trim(), name: nameInput.value.trim() || "Imported Build" });
+      }
+    }
+
+    document.addEventListener("keydown", onKey);
+    overlay.querySelector('[data-action="cancel"]').addEventListener("click", () => dismiss(null));
+    importBtn.addEventListener("click", () => {
+      dismiss({ code: codeInput.value.trim(), name: nameInput.value.trim() || "Imported Build" });
     });
     overlay.addEventListener("click", (e) => { if (e.target === overlay) dismiss(null); });
   });
