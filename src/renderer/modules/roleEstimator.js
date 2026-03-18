@@ -1,7 +1,7 @@
 // Role estimation from equipment stats — pure functions, no global state.
 import { computeSlotStats } from './stats.js';
 
-const MIN_THRESHOLD = 1500;
+const MIN_THRESHOLD = 700;
 const HYBRID_RATIO  = 0.20;
 
 const ROLE_SCORERS = [
@@ -9,7 +9,6 @@ const ROLE_SCORERS = [
   { role: 'Condi DPS',    fn: s => s.ConditionDamage * 1.0 + s.Expertise * 0.8 },
   { role: 'Boon Support', fn: s => s.Concentration * 1.5 + s.HealingPower * 0.3 },
   { role: 'Heal Support', fn: s => s.HealingPower * 1.5 + s.Concentration * 0.3 },
-  { role: 'Tank',         fn: s => s.Toughness * 1.5 + s.Vitality * 0.5 },
 ];
 
 const ROLE_CSS_CLASS = {
@@ -17,7 +16,6 @@ const ROLE_CSS_CLASS = {
   'Condi DPS':    'condi-dps',
   'Boon Support': 'boon-support',
   'Heal Support': 'heal-support',
-  'Tank':         'tank',
   'Hybrid':       'hybrid',
   'Unknown':      'unknown',
 };
