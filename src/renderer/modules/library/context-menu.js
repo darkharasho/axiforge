@@ -200,10 +200,13 @@ function showFolderMenu(x, y, folderId, folder) {
 }
 
 function showEmptyMenu(x, y) {
+  const insideComp = state.currentFolder?.type === "comp";
   const items = [
     _item(plusIcon, "New Build", "Ctrl+N", () => _callbacks.onNewBuild?.()),
-    _item(compPlusIcon, "New Comp", null, () => _callbacks.onNewComp?.()),
-    _item(folderPlusIcon, "New Folder", null, () => _callbacks.onNewFolder?.()),
+    ...(insideComp ? [] : [
+      _item(compPlusIcon, "New Comp", null, () => _callbacks.onNewComp?.()),
+      _item(folderPlusIcon, "New Folder", null, () => _callbacks.onNewFolder?.()),
+    ]),
     _sep(),
     _item(clipboardIcon, "Paste", "Ctrl+V", () => _callbacks.onPasteJson?.()),
     _submenuItem(arrowDownTrayIcon, "Import", [

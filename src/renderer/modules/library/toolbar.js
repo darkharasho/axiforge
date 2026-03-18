@@ -43,6 +43,7 @@ export function renderToolbar() {
 
   const prefs = state.libraryPrefs;
   const searchVal = escapeHtml(state.buildSearch || "");
+  const insideComp = state.currentFolder?.type === "comp";
 
   container.innerHTML = `
     <div class="lib-toolbar__breadcrumb">
@@ -96,12 +97,12 @@ export function renderToolbar() {
           <button type="button" class="lib-import-dropdown__item" data-new-type="build">
             ${documentPlusIcon} New Build
           </button>
-          <button type="button" class="lib-import-dropdown__item" data-new-type="folder">
+          ${insideComp ? "" : `<button type="button" class="lib-import-dropdown__item" data-new-type="folder">
             ${folderPlusIcon} New Folder
           </button>
           <button type="button" class="lib-import-dropdown__item" data-new-type="comp">
             ${compPlusIcon} New Comp
-          </button>
+          </button>`}
         </div>
       </div>
     </div>
