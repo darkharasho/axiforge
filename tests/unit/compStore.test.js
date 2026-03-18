@@ -93,6 +93,32 @@ describe("CompStore — upsertComp", () => {
     const comp = await store.upsertComp(makeComp({ notes: "x".repeat(15000) }));
     expect(comp.notes.length).toBe(12000);
   });
+
+  test("defaults gameMode to null", async () => {
+    const comp = await store.upsertComp(makeComp());
+    expect(comp.gameMode).toBeNull();
+  });
+
+  test("persists gameMode: pve", async () => {
+    const comp = await store.upsertComp(makeComp({ gameMode: "pve" }));
+    expect(comp.gameMode).toBe("pve");
+  });
+
+  test("persists gameMode: wvw", async () => {
+    const comp = await store.upsertComp(makeComp({ gameMode: "wvw" }));
+    expect(comp.gameMode).toBe("wvw");
+  });
+
+  test("persists gameMode null (unlocked)", async () => {
+    const comp = await store.upsertComp(makeComp({ gameMode: null }));
+    expect(comp.gameMode).toBeNull();
+  });
+
+  test("gameMode survives an update round-trip", async () => {
+    const created = await store.upsertComp(makeComp({ gameMode: "wvw" }));
+    const updated = await store.upsertComp({ ...created, name: "New Name" });
+    expect(updated.gameMode).toBe("wvw");
+  });
 });
 
 describe("CompStore — deleteComp", () => {

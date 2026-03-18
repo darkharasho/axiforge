@@ -27,6 +27,7 @@ class CompStore {
     const folderId = typeof input.folderId === "string" ? input.folderId : null;
     const sortOrder = typeof input.sortOrder === "number" ? input.sortOrder : 0;
     const buildIds = Array.isArray(input.buildIds) ? input.buildIds : [];
+    const gameMode = input.gameMode === "pve" || input.gameMode === "wvw" ? input.gameMode : null;
     const partyLines = Array.isArray(input.partyLines)
       ? input.partyLines.map((pl) => ({
           id: pl.id || crypto.randomUUID(),
@@ -38,7 +39,7 @@ class CompStore {
     const existing = comps.find((c) => c.id === id);
     if (existing) {
       Object.assign(existing, {
-        name, notes, tags, folderId, sortOrder, buildIds, partyLines,
+        name, notes, tags, folderId, sortOrder, buildIds, partyLines, gameMode,
         updatedAt: now,
       });
       existing.createdAt = existing.createdAt || now;
@@ -47,7 +48,7 @@ class CompStore {
     }
 
     const comp = {
-      id, name, notes, tags, folderId, sortOrder, buildIds, partyLines,
+      id, name, notes, tags, folderId, sortOrder, buildIds, partyLines, gameMode,
       createdAt: now, updatedAt: now,
     };
     comps.push(comp);
