@@ -52,7 +52,7 @@ export function wireDragDropEvents() {
 
     // Clean up hover highlight
     if (_hoverTarget) {
-      _hoverTarget.classList.remove("lib-drop-target");
+      _hoverTarget.classList.remove("lib-drop-target", "is-invalid");
       _hoverTarget = null;
     }
 
@@ -167,7 +167,7 @@ function _onPointerMove(e) {
 
   // Clear previous highlight
   if (_hoverTarget) {
-    _hoverTarget.classList.remove("lib-drop-target");
+    _hoverTarget.classList.remove("lib-drop-target", "is-invalid");
     _hoverTarget = null;
   }
 
@@ -197,6 +197,12 @@ function _onPointerMove(e) {
   if (compEl && _draggedBuildId) {
     _hoverTarget = compEl;
     compEl.classList.add("lib-drop-target");
+    // Show invalid indicator if comp is locked to a different game mode
+    const hoveredComp = state.comps?.find((c) => c.id === compEl.dataset.compId);
+    const draggedBuild = state.builds?.find((b) => b.id === _draggedBuildId);
+    if (hoveredComp?.gameMode && draggedBuild && hoveredComp.gameMode !== draggedBuild.gameMode) {
+      compEl.classList.add("is-invalid");
+    }
     return;
   }
 
