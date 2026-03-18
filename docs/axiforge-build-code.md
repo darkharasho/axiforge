@@ -240,17 +240,6 @@ No additional fields.
 
 ---
 
-### Title Section
-
-Always present after the profession-specific section (or after equipment if flag bit 4 is not set).
-
-| Field | Bits | Description |
-|-------|------|-------------|
-| Title length | 8 | Length of UTF-8 encoded title in bytes (0 = no title, max 140 chars) |
-| Title bytes | N × 8 | UTF-8 encoded title string |
-
----
-
 ## Reference Tables
 
 ### Professions

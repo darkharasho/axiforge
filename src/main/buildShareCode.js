@@ -338,14 +338,6 @@ function encodeShareCode(build) {
     }
   }
 
-  // Title: 8-bit length + UTF-8 bytes (0 = no title, max 140 chars)
-  const title = String(build.title || "").slice(0, 140);
-  const titleBytes = Buffer.from(title, "utf8");
-  w.write(titleBytes.length, 8);
-  for (let i = 0; i < titleBytes.length; i++) {
-    w.write(titleBytes[i], 8);
-  }
-
   // Pad to 4-byte boundary for Z85, encode
   const bytes = w.toPaddedBytes(4);
   const payload = z85Encode(bytes);
@@ -603,21 +595,7 @@ function decodeShareCode(code) {
     }
   }
 
-  // Title: 8-bit length + UTF-8 bytes
-  let title = "";
-  if (r.bitsRemaining() >= 8) {
-    const titleLen = r.read(8);
-    if (titleLen > 0 && r.bitsRemaining() >= titleLen * 8) {
-      const titleBytes = Buffer.alloc(titleLen);
-      for (let i = 0; i < titleLen; i++) {
-        titleBytes[i] = r.read(8);
-      }
-      title = titleBytes.toString("utf8");
-    }
-  }
-
   return {
-    title,
     profession,
     gameMode,
     specializations,
