@@ -15,7 +15,7 @@ PvP is not a supported game mode in the app and is out of scope.
 
 ### Comp schema change
 
-Add a `gameMode` field to the comp schema in `compStore.js`:
+Add a `gameMode` field to the comp schema in `compStore.js`. Update `upsertComp` to persist this field alongside the existing comp fields:
 
 ```js
 gameMode: null | "pve" | "wvw"
@@ -27,7 +27,13 @@ gameMode: null | "pve" | "wvw"
 
 ### Migration
 
-During `normalizComp` (or equivalent migration pass), derive `gameMode` for all existing comps by reading `builds[comp.buildIds[0]].gameMode`. If `buildIds` is empty, set to `null`.
+Migration runs once at app startup, before `listComps` is first called via IPC (in `index.js`). At that point both build and comp data are available, so they can be joined.
+
+For each existing comp:
+- If `comp.buildIds` is empty, set `comp.gameMode = null`
+- Otherwise, look up `builds[comp.buildIds[0]].gameMode` and set `comp.gameMode` to that value. If the build no longer exists (deleted but still referenced), treat the comp as unlocked (`null`).
+
+Persist each updated comp via `upsertComp`. This is a one-time pass; after migration, `gameMode` is maintained by the feature logic going forward.
 
 ---
 
@@ -39,8 +45,11 @@ During `normalizComp` (or equivalent migration pass), derive `gameMode` for all 
 | Subsequent build added (compatible) | No change |
 | Subsequent build added (incompatible) | Block; show toast |
 | Last build removed from comp | `comp.gameMode = null` |
+| Build deleted while inside a comp | Same as removal — update `comp.buildIds` and if now empty, `comp.gameMode = null` |
 
-This logic runs wherever `comp.buildIds` is mutated.
+This logic runs wherever `comp.buildIds` is mutated, including the server-side `removeBuildFromComps` path in `compStore.js` which is triggered on build deletion.
+
+**Build `gameMode` edited while inside a comp:** Out of scope. The comp's lock is not revalidated when a build's `gameMode` is changed after it is already in the comp. The editor does not check or block this.
 
 ---
 
@@ -57,9 +66,13 @@ Before moving the build:
 
 If `comp.gameMode !== null`, filter the available build list to only show builds where `build.gameMode === comp.gameMode`. Incompatible builds are excluded entirely (they can't be in the comp, so no need to display them greyed out).
 
-### 3. Paste via context menu (`context-menu.js`)
+### 3. Paste (`library.js` → `handlePasteJson`)
 
-Before pasting a build into a comp, check compatibility. If incompatible, show toast and abort.
+`handlePasteJson` has two internal code paths that can write a build into a comp:
+- **Cut-move path** (lines ~501–542): moves a build from clipboard into the target comp
+- **Clipboard-paste path** (lines ~545–578): pastes a build from external clipboard JSON
+
+Both paths must check compatibility before writing. If the target comp is locked to a different game mode, show toast and abort. This covers both the context menu Paste action (`context-menu.js`) and the Ctrl+V keyboard shortcut.
 
 ### 4. Build removal → unlock
 
@@ -81,9 +94,9 @@ Use the existing toast/notification system in the app.
 
 During a drag from the library, when hovering over a comp that is locked to a different game mode:
 
-- Add an `is-invalid` CSS class to the drag target element
+- Add `is-invalid` CSS class **alongside** the existing `lib-drop-target` class on the `[data-comp-id]` element (do not replace `lib-drop-target`)
 - The drop is rejected (no action on drop)
-- Remove `is-invalid` class on drag leave/end
+- Remove `is-invalid` on drag leave/end
 
 This check is synchronous using renderer-side state — no IPC round-trip needed.
 
@@ -92,5 +105,6 @@ This check is synchronous using renderer-side state — no IPC round-trip needed
 ## Out of Scope
 
 - PvP game mode (not present in the app)
+- Revalidating the comp lock when a build's `gameMode` is edited after it is already in the comp
 - Enforcing game mode on builds already inside party line slots (existing slot data is trusted as valid)
 - Any UI indication on the comp card/list showing its locked mode (informational display only, not required for this feature)
