@@ -3,7 +3,7 @@
 // Application-level orchestration (init, wireEvents, setProfession, etc.) lives here.
 
 import { state, createEmptyEditor } from "./modules/state.js";
-import { delay } from "./modules/utils.js";
+import { delay, wireTagInput } from "./modules/utils.js";
 import { injectSkeleton } from "./modules/skeleton.js";
 
 let _lastGameMode = "pve";
@@ -575,10 +575,12 @@ function wireEvents() {
     updateWindowTitle();
   });
 
-  el.tagsInput.addEventListener("input", () => {
-    state.editor.tagsText = String(el.tagsInput.value || "");
-    markEditorChanged();
-  });
+  wireTagInput(
+    el.tagsInput,
+    () => state.editor.tags || [],
+    (tags) => { state.editor.tags = tags; },
+    markEditorChanged,
+  );
 
   el.newBuildBtn?.addEventListener("click", async () => {
     await startNewBuild();

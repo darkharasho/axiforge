@@ -404,7 +404,7 @@ export function computeEditorSignature() {
   const payload = {
     title: String(editor.title || ""),
     profession: String(editor.profession || ""),
-    tags: parseTags(editor.tagsText),
+    tags: [...(editor.tags || [])],
     notes: String(editor.notes || ""),
     equipment: {
       statPackage: String(editor.equipment?.statPackage || ""),
@@ -599,7 +599,7 @@ export async function loadBuildIntoEditor(build, options = {}) {
     id: build.id || "",
     title: String(build.title || ""),
     profession,
-    tagsText: Array.isArray(build.tags) ? build.tags.join(", ") : "",
+    tags: Array.isArray(build.tags) ? [...build.tags] : [],
     notes: String(build.notes || ""),
     images: build.images && typeof build.images === "object" ? { ...build.images } : {},
     equipment: {
@@ -839,7 +839,7 @@ export function serializeEditorToBuild() {
       ),
       enrichment: String(state.editor.equipment.enrichment || ""),
     },
-    tags: parseTags(state.editor.tagsText),
+    tags: [...(state.editor.tags || [])],
     notes: String(state.editor.notes || ""),
     images: state.editor.images && typeof state.editor.images === "object" ? { ...state.editor.images } : {},
     morphSkillIds: Array.isArray(state.editor.morphSkillIds)

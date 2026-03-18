@@ -49,7 +49,7 @@ export function createEmptyEditor(profession = "", gameMode = "pve") {
     id: "",
     title: "",
     profession,
-    tagsText: "",
+    tags: [],
     notes: "",
     images: {},
     equipment: {

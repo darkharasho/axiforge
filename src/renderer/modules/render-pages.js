@@ -1,5 +1,5 @@
 import { state, createEmptyEditor } from "./state.js";
-import { escapeHtml, formatDate, formatShortDate, formatRelativeTime, makeButton, matchesBuildQuery, delay } from "./utils.js";
+import { escapeHtml, formatDate, formatShortDate, formatRelativeTime, makeButton, matchesBuildQuery, delay, renderTagPills } from "./utils.js";
 import { renderCustomSelect } from "./custom-select.js";
 import { closeCustomSelect } from "./custom-select.js";
 import { hideHoverPreview } from "./detail-panel.js";
@@ -559,7 +559,7 @@ export function renderEditorForm() {
   });
 
   _el.editorTitle.value = state.editor.title || "";
-  _el.tagsInput.value = state.editor.tagsText || "";
+  renderTagPills(_el.tagsInput, state.editor.tags || []);
 
   // Update window title to reflect current build name
   const buildName = state.editor.title;

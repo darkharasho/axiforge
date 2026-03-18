@@ -97,6 +97,95 @@ export function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+// ---------------------------------------------------------------------------
+// Tag pill helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Render tag pills inside a .tag-container element.
+ * Preserves the <input> at the end for adding new tags.
+ */
+export function renderTagPills(container, tags) {
+  const input = container.querySelector(".tag-container__input");
+  // Remove existing pills
+  for (const pill of [...container.querySelectorAll(".tag-pill")]) pill.remove();
+  // Insert pills before the input
+  for (const tag of tags) {
+    const pill = document.createElement("span");
+    pill.className = "tag-pill";
+    pill.textContent = tag;
+    const removeBtn = document.createElement("button");
+    removeBtn.className = "tag-pill__remove";
+    removeBtn.type = "button";
+    removeBtn.textContent = "\u00d7";
+    removeBtn.setAttribute("aria-label", `Remove tag ${tag}`);
+    pill.append(removeBtn);
+    container.insertBefore(pill, input);
+  }
+  input.value = "";
+}
+
+/**
+ * Wire up a .tag-container for interactive tag editing.
+ * Commits a tag on Enter or comma; removes on backspace when input is empty.
+ * @param {HTMLElement} container  The .tag-container element
+ * @param {() => string[]} getTags  Returns the live tags array from editor state
+ * @param {(tags: string[]) => void} setTags  Replaces the tags array in editor state
+ * @param {() => void} onChange  Called after any mutation
+ */
+export function wireTagInput(container, getTags, setTags, onChange) {
+  const input = container.querySelector(".tag-container__input");
+
+  function addTag(text) {
+    const tag = text.trim().slice(0, 40);
+    if (!tag) return;
+    const tags = getTags();
+    if (tags.length >= 20) return;
+    if (tags.includes(tag)) { input.value = ""; return; }
+    tags.push(tag);
+    setTags(tags);
+    renderTagPills(container, tags);
+    onChange();
+  }
+
+  function removeTag(index) {
+    const tags = getTags();
+    tags.splice(index, 1);
+    setTags(tags);
+    renderTagPills(container, tags);
+    onChange();
+  }
+
+  input.addEventListener("keydown", (e) => {
+    const tags = getTags();
+    if ((e.key === "Enter" || e.key === ",") && input.value.trim()) {
+      e.preventDefault();
+      for (const part of input.value.split(",")) addTag(part);
+      input.value = "";
+    } else if (e.key === "Backspace" && !input.value && tags.length > 0) {
+      removeTag(tags.length - 1);
+    }
+  });
+
+  input.addEventListener("paste", (e) => {
+    e.preventDefault();
+    const text = (e.clipboardData || window.clipboardData).getData("text");
+    for (const part of text.split(",")) addTag(part);
+  });
+
+  container.addEventListener("click", (e) => {
+    const removeBtn = e.target.closest(".tag-pill__remove");
+    if (removeBtn) {
+      const pill = removeBtn.parentElement;
+      const pills = [...container.querySelectorAll(".tag-pill")];
+      const index = pills.indexOf(pill);
+      if (index >= 0) removeTag(index);
+      return;
+    }
+    input.focus();
+  });
+}
+
 export function makeButton(label, variant, onClick) {
   const btn = document.createElement("button");
   btn.type = "button";
