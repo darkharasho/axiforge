@@ -6,13 +6,102 @@ import { getProfessionSvg } from "../profession-icons.js";
 import { wireCompDragDrop, destroyCompDragDrop } from "./comp-drag-drop.js";
 
 let _callbacks = {};
+let _notesDebounceTimer = null;
+let _activeCtxMenu = null;
 
 /**
  * Store callbacks for detail actions.
- * @param {{ onBack: Function, onRerender: Function }} callbacks
+ * @param {{ onBack: Function, onRerender: Function, onOpenBuild: Function }} callbacks
  */
 export function initCompDetail(callbacks) {
   _callbacks = callbacks || {};
+}
+
+// ─── Context Menu ────────────────────────────────────────────────────────────
+
+function closeCompCtxMenu() {
+  if (_activeCtxMenu) {
+    _activeCtxMenu.remove();
+    _activeCtxMenu = null;
+  }
+}
+
+function showSlotContextMenu(x, y, comp, lineId, slotIdx) {
+  closeCompCtxMenu();
+
+  const menu = document.createElement("div");
+  menu.className = "lib-ctx-menu";
+  menu.style.position = "fixed";
+  menu.style.zIndex = "9999";
+  menu.style.left = `${x}px`;
+  menu.style.top = `${y}px`;
+
+  // Remove from Line
+  const removeItem = document.createElement("div");
+  removeItem.className = "lib-ctx-item";
+  removeItem.innerHTML =
+    `<span class="lib-ctx-item__icon"></span>` +
+    `<span class="lib-ctx-item__label">Remove from Line</span>`;
+  removeItem.addEventListener("click", async (e) => {
+    e.stopPropagation();
+    closeCompCtxMenu();
+    const line = (comp.partyLines || []).find((pl) => pl.id === lineId);
+    if (!line) return;
+    const slots = [...(line.slots || [])];
+    slots.splice(slotIdx, 1);
+    line.slots = slots;
+    await saveAndSync(comp);
+    _callbacks.onRerender?.();
+  });
+  menu.appendChild(removeItem);
+
+  // Open Build
+  const line = (comp.partyLines || []).find((pl) => pl.id === lineId);
+  const buildId = line?.slots?.[slotIdx];
+  const build = buildId ? resolveBuild(buildId) : null;
+
+  if (build) {
+    const openItem = document.createElement("div");
+    openItem.className = "lib-ctx-item";
+    openItem.innerHTML =
+      `<span class="lib-ctx-item__icon"></span>` +
+      `<span class="lib-ctx-item__label">Open Build</span>`;
+    openItem.addEventListener("click", (e) => {
+      e.stopPropagation();
+      closeCompCtxMenu();
+      _callbacks.onOpenBuild?.(build);
+    });
+    menu.appendChild(openItem);
+  }
+
+  document.body.appendChild(menu);
+  _activeCtxMenu = menu;
+
+  // Reposition if overflowing viewport
+  const rect = menu.getBoundingClientRect();
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  if (rect.right > vw) menu.style.left = `${Math.max(0, vw - rect.width - 4)}px`;
+  if (rect.bottom > vh) menu.style.top = `${Math.max(0, vh - rect.height - 4)}px`;
+
+  // Close on click elsewhere
+  const onDocClick = (e) => {
+    if (_activeCtxMenu && !_activeCtxMenu.contains(e.target)) {
+      closeCompCtxMenu();
+      document.removeEventListener("click", onDocClick, true);
+    }
+  };
+  // Use setTimeout so the current contextmenu event doesn't immediately close it
+  setTimeout(() => document.addEventListener("click", onDocClick, true), 0);
+
+  // Close on Escape
+  const onKeydown = (e) => {
+    if (e.key === "Escape") {
+      closeCompCtxMenu();
+      document.removeEventListener("keydown", onKeydown);
+    }
+  };
+  document.addEventListener("keydown", onKeydown);
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -84,6 +173,7 @@ function getDisplayName(build) {
  */
 export function renderCompDetail() {
   destroyCompDragDrop();
+  closeCompCtxMenu();
 
   const container = document.getElementById("comps-container");
   if (!container) return;
@@ -92,18 +182,21 @@ export function renderCompDetail() {
   if (!comp) return;
 
   const totalCap = getTotalCapacity(comp);
+  const notesOpen = state.compNotesOpen || false;
+  const notesBtnClass = notesOpen ? "comp-detail__notes-btn comp-detail__notes-btn--active" : "comp-detail__notes-btn";
 
   container.innerHTML = `
     <div class="comp-detail">
       <div class="comp-detail__topbar">
         <button type="button" class="comp-detail__back-btn" data-action="back">&larr; Back to Comps</button>
         <span class="comp-detail__divider">|</span>
-        <span class="comp-detail__name">${escapeHtml(comp.name || "Untitled Comp")}</span>
+        <span class="comp-detail__name" data-action="edit-name">${escapeHtml(comp.name || "Untitled Comp")}</span>
         <span class="comp-detail__spacer"></span>
-        <button type="button" class="comp-detail__notes-btn" disabled>Notes</button>
+        <button type="button" class="${notesBtnClass}" data-action="toggle-notes">Notes</button>
         <span class="comp-detail__slot-counter">${totalCap} / 50 slots</span>
       </div>
       ${renderTagsRow(comp)}
+      ${notesOpen ? renderNotesPanel(comp) : ""}
       <div class="comp-detail__body">
         <div class="comp-detail__party-panel">
           ${renderPartyLines(comp, totalCap)}
@@ -140,6 +233,15 @@ export function renderCompDetail() {
       _callbacks.onRerender?.();
     },
   });
+}
+
+function renderNotesPanel(comp) {
+  return `
+    <div class="comp-detail__notes-panel">
+      <textarea class="comp-detail__notes-textarea" data-action="notes-input"
+                placeholder="Add notes about this comp...">${escapeHtml(comp.notes || "")}</textarea>
+    </div>
+  `;
 }
 
 function renderTagsRow(comp) {
@@ -183,15 +285,17 @@ function renderPartyLine(pl, idx, totalCap) {
       const pClass = profClass(build.profession);
       const title = escapeHtml(build.title || "Untitled");
       slotBoxes.push(
-        `<div class="comp-slot comp-slot--filled ${pClass}" title="${title}">
+        `<div class="comp-slot comp-slot--filled ${pClass}" title="${title}"
+              data-action="click-filled-slot" data-line-id="${escapeHtml(pl.id)}" data-slot-idx="${i}" data-build-id="${escapeHtml(buildId)}">
           <span class="comp-slot__icon">${icon}</span>
         </div>`
       );
     } else {
-      // Build reference not found — show as empty
+      // Build reference not found — show as missing
+      const truncId = buildId.length > 8 ? buildId.slice(0, 8) + "\u2026" : buildId;
       slotBoxes.push(
-        `<div class="comp-slot comp-slot--empty" data-action="click-empty-slot" data-line-id="${escapeHtml(pl.id)}">
-          <span class="comp-slot__plus">+</span>
+        `<div class="comp-slot comp-slot--missing" title="Missing build (${escapeHtml(truncId)})">
+          <span class="comp-slot__missing-icon">?</span>
         </div>`
       );
     }
@@ -227,19 +331,27 @@ function renderBuildPool(comp) {
   const buildIds = comp.buildIds || [];
   const search = (state.compPoolSearch || "").toLowerCase();
 
-  // Resolve builds, filter by search
-  const poolBuilds = buildIds
-    .map((id) => resolveBuild(id))
-    .filter((b) => b != null)
-    .filter((b) => {
-      if (!search) return true;
-      const name = (b.title || "").toLowerCase();
-      const prof = (b.profession || "").toLowerCase();
-      const elite = (getEliteSpecName(b) || "").toLowerCase();
-      return name.includes(search) || prof.includes(search) || elite.includes(search);
-    });
+  // Resolve builds — keep missing IDs as placeholders
+  const poolEntries = buildIds.map((id) => {
+    const build = resolveBuild(id);
+    return build ? { type: "build", build } : { type: "missing", id };
+  });
 
-  const cards = poolBuilds.map((b) => renderPoolCard(b)).join("");
+  // Filter by search (missing builds don't match searches)
+  const filtered = poolEntries.filter((entry) => {
+    if (entry.type === "missing") return !search;
+    const b = entry.build;
+    if (!search) return true;
+    const name = (b.title || "").toLowerCase();
+    const prof = (b.profession || "").toLowerCase();
+    const elite = (getEliteSpecName(b) || "").toLowerCase();
+    return name.includes(search) || prof.includes(search) || elite.includes(search);
+  });
+
+  const cards = filtered.map((entry) => {
+    if (entry.type === "missing") return renderMissingPoolCard(entry.id);
+    return renderPoolCard(entry.build);
+  }).join("");
 
   return `
     <div class="comp-pool">
@@ -301,6 +413,25 @@ function renderPoolCard(build) {
       <span class="comp-pool-card__mode">${escapeHtml(gameMode)}</span>
       <button type="button" class="comp-pool-card__remove" data-action="pool-remove"
               data-build-id="${escapeHtml(build.id)}" title="Remove from comp">&times;</button>
+    </div>
+  `;
+}
+
+function renderMissingPoolCard(buildId) {
+  const truncId = buildId.length > 12 ? buildId.slice(0, 12) + "\u2026" : buildId;
+  return `
+    <div class="comp-pool-card comp-pool-card--missing" data-build-id="${escapeHtml(buildId)}">
+      <div class="comp-pool-card__icon comp-pool-card__icon--missing">?</div>
+      <div class="comp-pool-card__info">
+        <div class="comp-pool-card__top">
+          <span class="comp-pool-card__name comp-pool-card__name--missing">Missing Build</span>
+        </div>
+        <div class="comp-pool-card__bottom">
+          <span class="comp-pool-card__equip">${escapeHtml(truncId)}</span>
+        </div>
+      </div>
+      <button type="button" class="comp-pool-card__remove" data-action="pool-remove"
+              data-build-id="${escapeHtml(buildId)}" title="Remove from comp">&times;</button>
     </div>
   `;
 }
@@ -430,8 +561,68 @@ function bindDetailEvents(container, comp) {
   container.querySelector("[data-action='back']")?.addEventListener("click", () => {
     state.compPage = "list";
     state.activeComp = null;
+    state.compNotesOpen = false;
     _callbacks.onRerender?.();
   });
+
+  // ── Inline name editing ────────────────────────────────────────────────────
+  const nameEl = container.querySelector("[data-action='edit-name']");
+  if (nameEl) {
+    nameEl.addEventListener("click", () => {
+      // Replace the span with an input
+      const input = document.createElement("input");
+      input.type = "text";
+      input.className = "comp-detail__name-input";
+      input.value = comp.name || "";
+      nameEl.replaceWith(input);
+      input.focus();
+      input.select();
+
+      let cancelled = false;
+
+      const commitRename = async () => {
+        if (cancelled) return;
+        const newName = input.value.trim() || "Untitled Comp";
+        comp.name = newName;
+        await saveAndSync(comp);
+        _callbacks.onRerender?.();
+      };
+
+      const cancelRename = () => {
+        cancelled = true;
+        _callbacks.onRerender?.();
+      };
+
+      input.addEventListener("blur", () => commitRename());
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          input.blur();
+        } else if (e.key === "Escape") {
+          e.preventDefault();
+          cancelRename();
+        }
+      });
+    });
+  }
+
+  // ── Notes toggle ───────────────────────────────────────────────────────────
+  container.querySelector("[data-action='toggle-notes']")?.addEventListener("click", () => {
+    state.compNotesOpen = !state.compNotesOpen;
+    _callbacks.onRerender?.();
+  });
+
+  // ── Notes textarea auto-save ───────────────────────────────────────────────
+  const notesTextarea = container.querySelector("[data-action='notes-input']");
+  if (notesTextarea) {
+    notesTextarea.addEventListener("input", () => {
+      if (_notesDebounceTimer) clearTimeout(_notesDebounceTimer);
+      _notesDebounceTimer = setTimeout(async () => {
+        comp.notes = notesTextarea.value;
+        await saveAndSync(comp);
+      }, 300);
+    });
+  }
 
   // Add line
   container.querySelector("[data-action='add-line']")?.addEventListener("click", async () => {
@@ -490,6 +681,28 @@ function bindDetailEvents(container, comp) {
       line.capacity = (line.capacity || 5) + 1;
       await saveAndSync(comp);
       _callbacks.onRerender?.();
+    });
+  });
+
+  // ── Filled slot click → open build ─────────────────────────────────────────
+  container.querySelectorAll("[data-action='click-filled-slot']").forEach((slot) => {
+    // Left click → open build in editor
+    slot.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const buildId = slot.dataset.buildId;
+      const build = buildId ? resolveBuild(buildId) : null;
+      if (build) {
+        _callbacks.onOpenBuild?.(build);
+      }
+    });
+
+    // Right click → context menu
+    slot.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const lineId = slot.dataset.lineId;
+      const slotIdx = parseInt(slot.dataset.slotIdx, 10);
+      showSlotContextMenu(e.clientX, e.clientY, comp, lineId, slotIdx);
     });
   });
 

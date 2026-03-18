@@ -257,6 +257,27 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   min-width: 0;
+  cursor: pointer;
+  border-bottom: 1px dashed transparent;
+  transition: border-color 0.15s;
+}
+
+.comp-detail__name:hover {
+  border-color: #4a4a8a;
+}
+
+.comp-detail__name-input {
+  font-size: 0.95rem;
+  color: #ddd;
+  font-weight: 500;
+  background: #0e0e20;
+  border: 1px solid #4a4aaa;
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-family: inherit;
+  outline: none;
+  min-width: 120px;
+  max-width: 300px;
 }
 
 .comp-detail__spacer {
@@ -272,16 +293,18 @@
   border: 1px solid #252545;
   border-radius: 4px;
   white-space: nowrap;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
 }
 
-.comp-detail__notes-btn:hover:not(:disabled) {
+.comp-detail__notes-btn:hover {
   color: #aaa;
   border-color: #3a3a6a;
 }
 
-.comp-detail__notes-btn:disabled {
-  opacity: 0.4;
-  cursor: default;
+.comp-detail__notes-btn--active {
+  color: #c8a96e;
+  border-color: rgba(200, 169, 110, 0.4);
+  background: rgba(200, 169, 110, 0.08);
 }
 
 .comp-detail__slot-counter {
@@ -311,6 +334,39 @@
   background: rgba(200, 169, 110, 0.1);
   border: 1px solid rgba(200, 169, 110, 0.25);
   white-space: nowrap;
+}
+
+/* ── Notes Panel ─────────────────────────────────────────────────── */
+
+.comp-detail__notes-panel {
+  padding: 8px 12px;
+  border-bottom: 1px solid #1a1a3a;
+  flex-shrink: 0;
+}
+
+.comp-detail__notes-textarea {
+  width: 100%;
+  min-height: 60px;
+  max-height: 160px;
+  background: #0e0e20;
+  border: 1px solid #252545;
+  border-radius: 6px;
+  padding: 8px 10px;
+  color: #bbb;
+  font-size: 0.85rem;
+  font-family: inherit;
+  resize: vertical;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+
+.comp-detail__notes-textarea:focus {
+  border-color: #4a4aaa;
+}
+
+.comp-detail__notes-textarea::placeholder {
+  color: #444;
 }
 
 /* ── Body (40/60 split) ──────────────────────────────────────────── */
@@ -442,6 +498,27 @@
 .comp-slot--filled {
   background: #0e0e20;
   border: 2px solid #444;
+  cursor: pointer;
+  transition: background 0.15s, box-shadow 0.15s;
+}
+
+.comp-slot--filled:hover {
+  background: #151530;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.comp-slot--missing {
+  background: #0e0e1a;
+  border: 1px dashed #333;
+  opacity: 0.5;
+  cursor: default;
+}
+
+.comp-slot__missing-icon {
+  font-size: 0.85rem;
+  color: #555;
+  user-select: none;
+  font-weight: 600;
 }
 
 .comp-slot--empty {
@@ -456,8 +533,8 @@
 }
 
 .comp-slot__icon {
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -466,8 +543,8 @@
 }
 
 .comp-slot__icon svg {
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
 }
 
 .comp-slot__plus {
@@ -689,6 +766,25 @@
   color: #888;
   white-space: nowrap;
   flex-shrink: 0;
+}
+
+/* ── Missing Pool Card ───────────────────────────────────────────── */
+
+.comp-pool-card--missing {
+  opacity: 0.5;
+  border-left-color: #444;
+  cursor: default;
+}
+
+.comp-pool-card__icon--missing {
+  color: #555;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.comp-pool-card__name--missing {
+  color: #666;
+  font-style: italic;
 }
 
 /* ═══════════════════════════════════════════════════════════════════

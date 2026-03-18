@@ -310,7 +310,11 @@ async function init() {
     importBuildJsonFromClipboard,
     render,
   });
-  initComps({});
+  initComps({
+    navigateToPage,
+    loadBuildIntoEditor,
+    confirmDiscardDirty,
+  });
   await loadComps();
 
   if (state.builds.length) {

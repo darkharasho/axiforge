@@ -41,6 +41,12 @@ export function initComps(appCallbacks) {
 
   initCompDetail({
     onRerender: () => renderComps(),
+    onOpenBuild: (build) => {
+      if (!build) return;
+      if (_app.confirmDiscardDirty && !_app.confirmDiscardDirty("Load another build")) return;
+      _app.loadBuildIntoEditor?.(build);
+      _app.navigateToPage?.("editor");
+    },
   });
 }
 
