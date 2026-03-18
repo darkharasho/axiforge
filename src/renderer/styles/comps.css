@@ -208,3 +208,286 @@
 .comp-list-empty strong {
   color: #888;
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   Comp Detail View
+   ═══════════════════════════════════════════════════════════════════ */
+
+.comp-detail {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* ── Top Bar ─────────────────────────────────────────────────────── */
+
+.comp-detail__topbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #1a1a3a;
+  flex-shrink: 0;
+}
+
+.comp-detail__back-btn {
+  all: unset;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: #888;
+  white-space: nowrap;
+  transition: color 0.15s;
+}
+
+.comp-detail__back-btn:hover {
+  color: #ccc;
+}
+
+.comp-detail__divider {
+  color: #333;
+  user-select: none;
+}
+
+.comp-detail__name {
+  font-size: 0.95rem;
+  color: #ddd;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.comp-detail__spacer {
+  flex: 1;
+}
+
+.comp-detail__notes-btn {
+  all: unset;
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: #666;
+  padding: 2px 8px;
+  border: 1px solid #252545;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.comp-detail__notes-btn:hover:not(:disabled) {
+  color: #aaa;
+  border-color: #3a3a6a;
+}
+
+.comp-detail__notes-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.comp-detail__slot-counter {
+  font-size: 0.8rem;
+  color: #777;
+  white-space: nowrap;
+}
+
+/* ── Tags Row ────────────────────────────────────────────────────── */
+
+.comp-detail__tags-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-bottom: 1px solid #1a1a3a;
+  flex-shrink: 0;
+}
+
+.comp-detail__tag {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  color: #c8a96e;
+  background: rgba(200, 169, 110, 0.1);
+  border: 1px solid rgba(200, 169, 110, 0.25);
+  white-space: nowrap;
+}
+
+/* ── Body (40/60 split) ──────────────────────────────────────────── */
+
+.comp-detail__body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.comp-detail__party-panel {
+  width: 40%;
+  min-width: 260px;
+  overflow-y: auto;
+  border-right: 1px solid #1a1a3a;
+  padding: 8px 0;
+}
+
+.comp-detail__pool-panel {
+  width: 60%;
+  overflow-y: auto;
+}
+
+/* ── Party Line Row ──────────────────────────────────────────────── */
+
+.comp-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #111130;
+}
+
+.comp-line__label {
+  flex-shrink: 0;
+  width: 22px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #777;
+  padding-top: 10px;
+  text-align: right;
+}
+
+.comp-line__slots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  max-width: calc(5 * 42px + 4 * 5px);
+}
+
+.comp-line__controls {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+  padding-top: 6px;
+  margin-left: auto;
+}
+
+.comp-line__btn {
+  all: unset;
+  cursor: pointer;
+  font-size: 1rem;
+  color: #555;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: color 0.15s, background 0.15s;
+}
+
+.comp-line__btn:hover {
+  color: #ccc;
+  background: #1a1a3a;
+}
+
+.comp-line__btn--remove:hover {
+  color: #e55;
+  background: rgba(238, 85, 85, 0.12);
+}
+
+/* ── Add Line ────────────────────────────────────────────────────── */
+
+.comp-line--add {
+  cursor: pointer;
+  border: 1px dashed #252545;
+  border-bottom: none;
+  margin: 8px 12px;
+  padding: 10px;
+  border-radius: 6px;
+  justify-content: center;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.comp-line--add:hover {
+  border-color: #4a4a8a;
+}
+
+.comp-line--add.comp-line--disabled {
+  opacity: 0.35;
+  cursor: default;
+  pointer-events: none;
+}
+
+.comp-line__add-text {
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.comp-line--add:hover .comp-line__add-text {
+  color: #aaa;
+}
+
+/* ── Slot Box ────────────────────────────────────────────────────── */
+
+.comp-slot {
+  width: 42px;
+  height: 42px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.comp-slot--filled {
+  background: #0e0e20;
+  border: 2px solid #444;
+}
+
+.comp-slot--empty {
+  background: transparent;
+  border: 1px dashed #333;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.comp-slot--empty:hover {
+  border-color: #5a5a9a;
+}
+
+.comp-slot__icon {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.comp-slot__icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.comp-slot__plus {
+  font-size: 1rem;
+  color: #444;
+  user-select: none;
+}
+
+.comp-slot--empty:hover .comp-slot__plus {
+  color: #888;
+}
+
+/* ── Profession-colored slot borders ─────────────────────────────── */
+
+.comp-slot--filled.lib-prof--guardian     { border-color: #6ea8ff; }
+.comp-slot--filled.lib-prof--warrior      { border-color: #ff9944; }
+.comp-slot--filled.lib-prof--necromancer  { border-color: #4dca7a; }
+.comp-slot--filled.lib-prof--engineer     { border-color: #cc8844; }
+.comp-slot--filled.lib-prof--ranger       { border-color: #77cc55; }
+.comp-slot--filled.lib-prof--thief        { border-color: #cc6677; }
+.comp-slot--filled.lib-prof--mesmer       { border-color: #b07acc; }
+.comp-slot--filled.lib-prof--elementalist { border-color: #dd5555; }
+.comp-slot--filled.lib-prof--revenant     { border-color: #aa6655; }

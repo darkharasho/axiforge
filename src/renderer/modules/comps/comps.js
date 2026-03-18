@@ -1,5 +1,6 @@
 import { state } from "../state.js";
 import { initCompList, renderCompList } from "./comp-list.js";
+import { initCompDetail, renderCompDetail } from "./comp-detail.js";
 
 let _app = {};
 
@@ -37,6 +38,10 @@ export function initComps(appCallbacks) {
       renderComps();
     },
   });
+
+  initCompDetail({
+    onRerender: () => renderComps(),
+  });
 }
 
 export async function loadComps() {
@@ -48,7 +53,7 @@ export function renderComps() {
   if (!container) return;
 
   if (state.compPage === "detail" && state.activeComp) {
-    container.innerHTML = `<p style="padding:20px;color:#888;">Detail view — coming in Task 5</p>`;
+    renderCompDetail();
   } else {
     renderCompList();
   }
