@@ -691,6 +691,25 @@
   padding: 3px 8px 3px 16px;
 }
 
+/* Inline input in grid view — matches card shape */
+.lib-grid-card--editing {
+  border-color: #4a4aaa;
+}
+.lib-grid-card__inline-input {
+  width: 100%;
+  text-align: center;
+}
+
+/* Inline input in icon view — matches icon item shape */
+.lib-icon-item--editing {
+  pointer-events: auto;
+}
+.lib-icon-item__inline-input {
+  width: 70px;
+  text-align: center;
+  font-size: 0.75rem;
+}
+
 .lib-content-inline-folder {
   padding: 5px 12px;
   border-bottom: 1px solid #1a1a3a;

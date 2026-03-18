@@ -314,8 +314,10 @@ export function insertInlineInput(afterEl, defaultValue = "", options = {}) {
   const { fallbackName = "New Folder", container, className, icon } = options;
   const displayIcon = icon || folderIcon;
 
-  // Detect if we're inserting into a table
+  // Detect view type from container contents
   const isTable = afterEl?.tagName === "TR" || afterEl?.closest("table") || container?.querySelector("table");
+  const isGrid = container?.querySelector(".lib-grid");
+  const isIconView = container?.querySelector(".lib-icon-grid");
 
   return new Promise((resolve) => {
     let row;
@@ -334,6 +336,26 @@ export function insertInlineInput(afterEl, defaultValue = "", options = {}) {
       } else if (tbody) {
         tbody.appendChild(row);
       }
+    } else if (isGrid) {
+      // Grid view: create a card-shaped inline input
+      row = document.createElement("div");
+      row.className = "lib-grid-card lib-grid-card--folder lib-grid-card--editing";
+      row.innerHTML = `
+        <div class="lib-grid-card__icon lib-grid-card__icon--folder">${displayIcon}</div>
+        <input type="text" class="lib-inline-input lib-grid-card__inline-input" placeholder="${fallbackName}" value="" />
+      `;
+      const grid = container.querySelector(".lib-grid");
+      if (grid) grid.appendChild(row);
+    } else if (isIconView) {
+      // Icon view: create an icon-shaped inline input
+      row = document.createElement("div");
+      row.className = "lib-icon-item lib-icon-item--folder lib-icon-item--editing";
+      row.innerHTML = `
+        <div class="lib-icon-item__icon lib-icon-item__icon--folder">${displayIcon}</div>
+        <input type="text" class="lib-inline-input lib-icon-item__inline-input" placeholder="${fallbackName}" value="" />
+      `;
+      const grid = container.querySelector(".lib-icon-grid");
+      if (grid) grid.appendChild(row);
     } else {
       row = document.createElement("div");
       row.className = `lib-nav-item lib-nav-item--editing${className ? ` ${className}` : ""}`;
