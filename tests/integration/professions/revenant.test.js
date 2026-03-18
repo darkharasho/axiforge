@@ -178,25 +178,25 @@ describe("Revenant — end-to-end profession mechanics", () => {
   // ---------------------------------------------------------------------------
 
   test("buildRevenantEliteByProfSlot injects Alliance Tactics at Profession_3 for Vindicator+Alliance", () => {
-    const { __testOnly } = require("../../../src/renderer/renderer");
+    const { buildRevenantEliteByProfSlot } = require("../../../src/renderer/modules/skills");
     const skill62729 = { id: 62729, name: "Alliance Tactics", slot: "Profession_3" };
     const skillById = new Map([[62729, skill62729]]);
-    const bySlot = __testOnly.buildRevenantEliteByProfSlot([], 69, true, skillById);
+    const bySlot = buildRevenantEliteByProfSlot([], 69, true, skillById);
     expect(bySlot.get("Profession_3")).toEqual(skill62729);
   });
 
   test("buildRevenantEliteByProfSlot does not inject Alliance Tactics when Legendary Alliance is inactive", () => {
-    const { __testOnly } = require("../../../src/renderer/renderer");
+    const { buildRevenantEliteByProfSlot } = require("../../../src/renderer/modules/skills");
     const skillById = new Map([[62729, { id: 62729, name: "Alliance Tactics" }]]);
-    const bySlot = __testOnly.buildRevenantEliteByProfSlot([], 69, false, skillById);
+    const bySlot = buildRevenantEliteByProfSlot([], 69, false, skillById);
     expect(bySlot.has("Profession_3")).toBe(false);
   });
 
   test("buildRevenantEliteByProfSlot does not inject Alliance Tactics for non-Vindicator specs", () => {
-    const { __testOnly } = require("../../../src/renderer/renderer");
+    const { buildRevenantEliteByProfSlot } = require("../../../src/renderer/modules/skills");
     const skillById = new Map([[62729, { id: 62729, name: "Alliance Tactics" }]]);
     // spec 52 = Herald (not Vindicator) + alliance active should still not inject
-    const bySlot = __testOnly.buildRevenantEliteByProfSlot([], 52, true, skillById);
+    const bySlot = buildRevenantEliteByProfSlot([], 52, true, skillById);
     expect(bySlot.has("Profession_3")).toBe(false);
   });
 

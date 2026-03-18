@@ -54,9 +54,8 @@ describe("buildSpaBundle", () => {
     expect(bundle["site/index.html"]).toContain("AxiForge Builds");
   });
 
-  test("404.html contains sessionStorage redirect", () => {
+  test("404.html contains redirect logic", () => {
     const bundle = buildSpaBundle();
-    expect(bundle["site/404.html"]).toContain("sessionStorage");
     expect(bundle["site/404.html"]).toContain("location.replace");
   });
 

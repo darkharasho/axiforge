@@ -93,6 +93,7 @@
   },
   "license": "MIT",
   "dependencies": {
+    "@mks.haro/axicode": "^1.0.0",
     "dotenv": "^17.3.1",
     "electron-updater": "^6.8.3",
     "gw2-class-icons": "^0.1.0",
@@ -104,6 +105,7 @@
     "@babel/core": "^7.29.0",
     "@babel/preset-env": "^7.29.0",
     "babel-jest": "^30.3.0",
+    "babel-plugin-transform-import-meta": "^2.3.3",
     "cheerio": "^1.2.0",
     "concurrently": "^9.2.1",
     "electron": "^37.2.0",

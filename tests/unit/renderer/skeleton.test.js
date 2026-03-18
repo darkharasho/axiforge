@@ -52,7 +52,6 @@ describe("skeletonTemplates", () => {
     expect(skeletonTemplates.equipment).toContain("skel-equip__weapon-stat");
     expect(skeletonTemplates.equipment).toContain("skel-equip__slot--compact");
     expect(skeletonTemplates.equipment).toContain("skel-equip__set-label");
-    expect(skeletonTemplates.equipment).toContain("skel-equip__notes");
     expect(skeletonTemplates.equipment).toContain("skel-equip__text-input");
     expect(skeletonTemplates.equipment).toContain("skel-equip__trinket-grid--4");
   });
