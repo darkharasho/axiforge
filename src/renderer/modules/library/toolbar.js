@@ -20,6 +20,8 @@ import {
   linkIcon,
   axiforgeIcon,
   compPlusIcon,
+  documentPlusIcon,
+  folderPlusIcon,
 } from "./heroicons.js";
 
 let _callbacks = {};
@@ -92,10 +94,10 @@ export function renderToolbar() {
         </button>
         <div class="lib-import-dropdown__menu" id="lib-new-menu">
           <button type="button" class="lib-import-dropdown__item" data-new-type="build">
-            ${plusIcon} New Build
+            ${documentPlusIcon} New Build
           </button>
           <button type="button" class="lib-import-dropdown__item" data-new-type="folder">
-            ${plusIcon} New Folder
+            ${folderPlusIcon} New Folder
           </button>
           <button type="button" class="lib-import-dropdown__item" data-new-type="comp">
             ${compPlusIcon} New Comp
