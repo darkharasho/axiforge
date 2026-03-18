@@ -31,6 +31,17 @@ export const state = {
     sidebarExpandedFolders: [],
     activeFilters: {},
   },
+  // Comp state
+  comps: [],
+  activeComp: null,
+  compPage: "list",   // "list" | "detail"
+  compSearch: "",
+  compPoolSearch: "",  // search within build pool in detail view
+  compPrefs: {
+    sortField: "updatedAt",
+    sortDirection: "desc",
+    activeFilters: {},
+  },
   skillSearch: "",
   catalogCache: new Map(),
   activeCatalog: null,

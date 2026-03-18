@@ -1,0 +1,8 @@
+/* AxiForge — Comps page styles */
+
+.comps-page {
+  height: calc(100vh - 40px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}

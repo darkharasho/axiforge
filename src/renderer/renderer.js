@@ -45,6 +45,7 @@ import { initWikiModal, openWikiModal } from "./modules/wiki-modal.js";
 import { initDetailModal, openDetailModal } from "./modules/detail-modal.js";
 import { initConfirmModal } from "./modules/confirm-modal.js";
 import { initLibrary, renderLibrary, handleLibraryKeydown } from "./modules/library/library.js";
+import { initComps, loadComps, renderComps } from "./modules/comps/comps.js";
 
 // ── DOM element cache ────────────────────────────────────────────────────────
 
@@ -309,6 +310,8 @@ async function init() {
     importBuildJsonFromClipboard,
     render,
   });
+  initComps({});
+  await loadComps();
 
   if (state.builds.length) {
     await loadBuildIntoEditor(state.builds[0], { captureBaseline: true });
@@ -557,6 +560,10 @@ function navigateToPage(page) {
   // Render library when navigating to library page
   if (page === "library") {
     renderLibrary();
+  }
+  // Render comps when navigating to comps page
+  if (page === "comps") {
+    renderComps();
   }
   // Redraw spec connectors when editor page becomes visible (they need layout dimensions)
   if (page === "editor") {
