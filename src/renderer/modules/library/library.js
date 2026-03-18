@@ -516,8 +516,33 @@ async function handlePasteJson(targetId) {
         return { id, folderId: b?.folderId || null, compId: b?.compId || null };
       });
       if (compId) {
-        // Move cut builds into the comp
+        // Game mode lock check — filter builds to only those compatible with the comp
+        const targetComp = state.comps?.find((c) => c.id === compId);
+        let effectiveLock = targetComp?.gameMode || null;
+        const incompatibleIds = [];
+        const filteredToMove = [];
+
         for (const id of idsToMove) {
+          const build = state.builds.find((b) => b.id === id);
+          if (!build) continue;
+          if (effectiveLock === null) {
+            effectiveLock = build.gameMode;
+            filteredToMove.push(id);
+          } else if (isGameModeCompatible({ gameMode: effectiveLock }, build)) {
+            filteredToMove.push(id);
+          } else {
+            incompatibleIds.push(id);
+          }
+        }
+
+        if (incompatibleIds.length > 0) {
+          const modeName = effectiveLock === "wvw" ? "WvW" : "PvE";
+          showToast(`${incompatibleIds.length} build(s) skipped — comp is locked to ${modeName}.`, "error");
+          if (filteredToMove.length === 0) { _cutIds = []; return; }
+        }
+
+        // Move only the compatible builds
+        for (const id of filteredToMove) {
           const build = state.builds.find((b) => b.id === id);
           if (build) {
             await window.desktopApi.saveBuild({ ...build, compId, folderId: null });
@@ -525,7 +550,12 @@ async function handlePasteJson(targetId) {
           // Also add to comp's buildIds for party line tracking
           const comp = state.comps?.find((c) => c.id === compId);
           if (comp && !(comp.buildIds || []).includes(id)) {
-            await window.desktopApi.saveComp({ ...comp, buildIds: [...(comp.buildIds || []), id] });
+            const newGameMode = comp.gameMode || state.builds.find((b) => b.id === id)?.gameMode || null;
+            const updatedComp = { ...comp, gameMode: newGameMode, buildIds: [...(comp.buildIds || []), id] };
+            await window.desktopApi.saveComp(updatedComp);
+            // Update in-memory so subsequent iterations see the set gameMode
+            const idx = state.comps.findIndex((c) => c.id === compId);
+            if (idx !== -1) state.comps[idx] = updatedComp;
           }
         }
         state.builds = await window.desktopApi.listBuilds();
@@ -560,6 +590,24 @@ async function handlePasteJson(targetId) {
       showToast("Clipboard does not contain valid JSON", "error");
       return;
     }
+    if (compId) {
+      const targetComp = state.comps?.find((c) => c.id === compId);
+      // Filter items to only those compatible with the comp's game mode (or would-be mode)
+      let effectiveLock = targetComp?.gameMode || null;
+      items = items.filter((item) => {
+        if (!item || typeof item !== "object") return true;
+        const source = item.build && typeof item.build === "object" ? item.build : item;
+        const buildGameMode = source.gameMode || "pve";
+        if (effectiveLock === null) { effectiveLock = buildGameMode; return true; }
+        return buildGameMode === effectiveLock;
+      });
+      if (items.length === 0) {
+        // Use effectiveLock (not targetComp?.gameMode) — it may have been set by the first item
+        const modeName = effectiveLock === "wvw" ? "WvW" : "PvE";
+        showToast(`This comp is locked to ${modeName} builds.`, "error");
+        return;
+      }
+    }
     const existingTitles = state.builds.map((b) => b.title || "");
     const pastedIds = [];
     let savedCount = 0;
@@ -577,7 +625,11 @@ async function handlePasteJson(targetId) {
       if (compId && saved) {
         const comp = state.comps?.find((c) => c.id === compId);
         if (comp && !(comp.buildIds || []).includes(saved.id)) {
-          await window.desktopApi.saveComp({ ...comp, buildIds: [...(comp.buildIds || []), saved.id] });
+          const newGameMode = comp.gameMode || saved.gameMode || null;
+          const updatedComp = { ...comp, gameMode: newGameMode, buildIds: [...(comp.buildIds || []), saved.id] };
+          await window.desktopApi.saveComp(updatedComp);
+          const idx = state.comps.findIndex((c) => c.id === compId);
+          if (idx !== -1) state.comps[idx] = updatedComp;
         }
       }
       savedCount++;
