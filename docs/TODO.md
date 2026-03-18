@@ -10,4 +10,4 @@
 - [ ] Comps
   - [x] Dragging onto needs some work, the small card is ehhh
   - [x] Dragging OFF should also remove it from the line
-  - [ ] Lets make the split between comp and builds user resizable and save the setting
+  - [x] Lets make the split between comp and builds user resizable and save the setting

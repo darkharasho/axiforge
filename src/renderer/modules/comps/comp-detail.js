@@ -676,13 +676,13 @@ function openAddBuildModal(comp) {
       const pClass = profClass(b.profession);
       const checked = selected.has(b.id) ? "checked" : "";
       const displayName = escapeHtml(getDisplayName(b));
-      const prof = escapeHtml(b.profession || "");
+      const gear = escapeHtml(resolveStatPackage(b));
       return `
         <label class="comp-picker-row ${pClass}" data-build-id="${escapeHtml(b.id)}">
           <input type="checkbox" class="comp-picker-row__checkbox" value="${escapeHtml(b.id)}" ${checked} />
           <span class="comp-picker-row__icon">${icon}</span>
           <span class="comp-picker-row__name">${displayName}</span>
-          <span class="comp-picker-row__prof">${prof}</span>
+          <span class="comp-picker-row__prof">${gear}</span>
         </label>
       `;
     }).join("");
