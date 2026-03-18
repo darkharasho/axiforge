@@ -353,6 +353,18 @@ app.whenReady().then(async () => {
     const build = await importGw2SkillsBuild(url, name, folderId, gameMode);
     return store.upsertBuild(build);
   });
+  ipcMain.handle("builds:encode-share-code", async (_e, build) => {
+    const { encodeShareCode } = require("./buildShareCode.js");
+    return encodeShareCode(build);
+  });
+  ipcMain.handle("builds:decode-share-code", async (_e, code) => {
+    const { decodeShareCode } = require("./buildShareCode.js");
+    return decodeShareCode(code);
+  });
+  ipcMain.handle("builds:is-share-code", async (_e, text) => {
+    const { isValidShareCode } = require("./buildShareCode.js");
+    return isValidShareCode(text);
+  });
 
   ipcMain.handle("builds:publish-build", async (event, buildId) => {
     const sender = event.sender;

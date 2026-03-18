@@ -112,6 +112,7 @@ function showBuildMenu(x, y, buildId, build) {
     _item(clipboardDocumentIcon, "Copy", "Ctrl+C", () => _callbacks.onCopyJson?.(buildId)),
     _item(scissorsIcon, "Cut", "Ctrl+X", () => _callbacks.onCutJson?.(buildId)),
     _item(linkIcon, "Copy Chat Link", null, () => _callbacks.onCopyChatLink?.(buildId)),
+    _item(linkIcon, "Copy Share Code", null, () => _callbacks.onCopyShareCode?.(buildId)),
     _item(globeAltIcon, "Publish", null, () => _callbacks.onPublish?.(buildId)),
     _sep(),
     _item(informationCircleIcon, "Build Info", null, () => _callbacks.onBuildInfo?.(buildId)),

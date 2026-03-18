@@ -331,6 +331,23 @@ function showToast(message, type = "success") {
   }
 }
 
+async function handleCopyShareCode(idOrIds) {
+  const ids = Array.isArray(idOrIds) ? idOrIds : [idOrIds];
+  if (ids.length !== 1) {
+    showToast?.("Share code only supports a single build.");
+    return;
+  }
+  const build = state.builds.find((b) => b.id === ids[0]);
+  if (!build) return;
+  try {
+    const code = await window.desktopApi.encodeShareCode(build);
+    await window.desktopApi.writeClipboardText(code);
+    showToast?.("Share code copied!");
+  } catch (err) {
+    showToast?.("Failed to generate share code.");
+  }
+}
+
 async function handleCopyChatLink(buildId) {
   const build = state.builds.find((b) => b.id === buildId);
   if (!build) return;
@@ -676,6 +693,7 @@ function _buildSharedCallbacks() {
     onCopyJson: handleCopyJson,
     onCutJson: handleCutJson,
     onCopyChatLink: handleCopyChatLink,
+    onCopyShareCode: handleCopyShareCode,
     onImportChatLink: handleImportChatLink,
     onImportGw2Skills: handleImportGw2Skills,
     onPasteJson: handlePasteJson,

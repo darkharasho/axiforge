@@ -173,6 +173,7 @@ initRenderPagesCallbacks({
   saveCurrentBuild,
   duplicateCurrentBuild,
   copyBuildJsonToClipboard,
+  copyShareCodeToClipboard,
   importBuildJsonFromClipboard,
   runPagesBuildPoll,
   showError,
@@ -385,6 +386,17 @@ async function copyBuildJsonToClipboard() {
   }
 }
 
+async function copyShareCodeToClipboard() {
+  try {
+    const payload = serializeEditorToBuild();
+    const code = await window.desktopApi.encodeShareCode(payload);
+    await window.desktopApi.writeClipboardText(code);
+    setPublishStatus("Share code copied to clipboard.");
+  } catch (err) {
+    showError(err);
+  }
+}
+
 async function importBuildJsonFromClipboard() {
   try {
     if (!confirmDiscardDirty("Import another build")) return;
@@ -392,7 +404,13 @@ async function importBuildJsonFromClipboard() {
     if (!text || !String(text).trim()) {
       throw new Error("Clipboard is empty.");
     }
-    const parsed = parseBuildImportPayload(String(text));
+    const trimmed = String(text).trim();
+    let parsed;
+    if (trimmed.startsWith("<AxiForge:") && trimmed.endsWith(">")) {
+      parsed = await window.desktopApi.decodeShareCode(trimmed);
+    } else {
+      parsed = parseBuildImportPayload(trimmed);
+    }
     await loadBuildIntoEditor(parsed, { captureBaseline: false });
     state.editor.id = "";
     markEditorChanged({ updateBuildList: true });
@@ -400,7 +418,8 @@ async function importBuildJsonFromClipboard() {
     renderEditorMeta();
     render();
     syncGameModeToggleUI(state.editor.gameMode || "pve");
-    setPublishStatus("Imported build JSON from clipboard. Save to keep it locally.");
+    const source = trimmed.startsWith("<AxiForge:") ? "share code" : "JSON";
+    setPublishStatus(`Imported build from ${source}. Save to keep it locally.`);
   } catch (err) {
     showError(err);
   }
