@@ -4,11 +4,11 @@
 
 ## Overview
 
-A new core feature that automatically estimates the role of a GW2 build based solely on its computed equipment stats. The estimated role is displayed as a badge on build cards in the library list and on build slots in the comp detail view.
+A new core feature that automatically estimates the role of a GW2 build based solely on its computed equipment stats. The estimated role is displayed as a badge on build cards in the library (all view modes except icon) and on build slots in the comp detail view.
 
 ## Roles
 
-Seven possible role labels:
+Six possible role labels:
 
 | Role | Primary Signal |
 |---|---|
@@ -16,9 +16,10 @@ Seven possible role labels:
 | Condi DPS | High Condition Damage / Expertise |
 | Boon Support | High Concentration / Boon Duration |
 | Heal Support | High Healing Power |
-| Tank | High Toughness |
 | Hybrid | Two roles are roughly equally dominant |
-| Unknown | No role clears the minimum threshold |
+| Unknown | Slots have stats but no role clears the minimum threshold |
+
+**Note:** Tank was explicitly excluded — it is not a meaningful role category in GW2 competitive play. Toughness-heavy gear sets (e.g. Minstrel's) fall under Heal Support or Boon Support based on their secondary stats.
 
 ## Architecture
 
@@ -26,16 +27,21 @@ A new pure function module — `src/renderer/modules/roleEstimator.js` — conta
 
 **Data flow:**
 ```
-build → computeEquipmentStats() → estimateRole() → role string
+build.equipment + catalog → scoreEquipmentSlots(slots) + scoreRuneStats(build, catalog)
+                          → estimateRole(build, catalog) → role string | null
 ```
 
-- `estimateRole(build)` calls the existing `computeEquipmentStats()` from `stats.js` to get the 9 raw stat totals, then scores them and returns the winning role label.
-- The result is **not persisted** on the build object. It is computed on-demand at render time, keeping the build data model clean and ensuring the role always reflects current equipment.
-- No state, no side effects. Pure function in, string out.
+- `estimateRole(build, catalog = null)` is the primary public API. `catalog` is the `state.upgradeCatalog` (upgrade item lookup map); passing it enables rune bonus scoring. If `null`, only equipment stat scoring is used.
+- `roleBadgeHtml(build, catalog = null)` is a convenience wrapper that returns an HTML string or `''`.
+- Internally, `scoreEquipmentSlots(slots)` computes stat totals from slot combo labels using `computeSlotStats` from `stats.js`; `scoreRuneStats(build, catalog)` parses rune bonus strings from the catalog.
+- The result is **not persisted** on the build object. It is computed on-demand at render time.
+- No global state access, no side effects. Pure functions in, string out.
+
+**Empty build guard:** Before scoring, check whether any slot in `build.equipment.slots` has a non-empty stat combo label set. If no slots have any stats, return `null` — no badge is rendered. This prevents the GW2 base stat values (Power, Precision, Toughness, Vitality start at 1000 each) from producing spurious role labels on empty builds.
 
 ## Scoring Algorithm
 
-Six role scores are computed from the raw stat totals:
+Four role scores are computed from equipment-contributed stat totals (`computeSlotStats` returns equipment values only — no GW2 base stat subtraction needed):
 
 | Role | Score Formula |
 |---|---|
@@ -43,29 +49,29 @@ Six role scores are computed from the raw stat totals:
 | Condi DPS | `ConditionDamage × 1.0 + Expertise × 0.8` |
 | Boon Support | `Concentration × 1.5 + HealingPower × 0.3` |
 | Heal Support | `HealingPower × 1.5 + Concentration × 0.3` |
-| Tank | `Toughness × 1.5 + Vitality × 0.5` |
+
+Hybrid is a derived outcome, not a scored role.
+
+**Rune bonuses** are also scored additively. Flat stat bonuses (e.g. `+25 Power`) are added directly to the relevant stat total. Percentage bonuses are converted to stats using GW2 conversions: `+1% Boon Duration = +15 Concentration`, `+1% Condition Duration = +15 Expertise`. `to All Stats` bonuses add to all nine stats.
 
 **Winner selection:**
-1. Compute all five scores.
-2. Find the highest score.
-3. If the highest score does not clear the minimum threshold (1500), return **Unknown**.
-4. If the top-2 scores are both above threshold and within 20% of each other, return **Hybrid**.
+1. Compute all four scores using equipment stats plus rune bonus stats.
+2. Sort scores descending. Let `score1` = highest, `score2` = second highest.
+3. If `score1` does not clear the minimum threshold (**700**), return **Unknown**.
+4. If both `score1` and `score2` clear threshold AND `(score1 - score2) / score1 < 0.20`, return **Hybrid**.
 5. Otherwise, return the role with the highest score.
 
-**Hybrid formula:**
-```
-if abs(score1 - score2) / score1 < 0.20 → Hybrid
-```
-
-**No badge:** If the build has no equipment filled in (all slots empty / no stat package set), `estimateRole` returns `null` and no badge is rendered.
+**Note:** The minimum threshold is 700, not the originally-designed 1500. The lower value ensures Celestial gear builds (~810 max single-role score) receive a role label rather than Unknown, while still correctly returning Unknown for completely empty gear sets.
 
 ## UI Display
 
-### Build cards (library list)
+### Build cards (library)
 
 - A small role badge renders below the build title, alongside existing tag chips.
+- Shown in all library view modes that display build cards: **list, table, grid, columns**.
+- Not shown in **icon** view mode (insufficient space).
 - Visual weight matches existing tags but is not interactive (no click/filter behavior).
-- One distinct color per role (defined in CSS variables for easy future theming).
+- One distinct color per role (defined as CSS custom properties for easy theming).
 
 ### Comp detail view
 
@@ -75,7 +81,7 @@ if abs(score1 - score2) / score1 < 0.20 → Hybrid
 
 ## Out of Scope
 
-- Trait/skill/rune-based role inference (stats only)
+- Trait/skill-based role inference
 - Multiple simultaneous role labels per build (single winner only)
 - Filtering or sorting by role (future enhancement)
 - PvP-specific role logic (standard stat compute handles PvP amulets already)
@@ -85,7 +91,8 @@ if abs(score1 - score2) / score1 < 0.20 → Hybrid
 
 | File | Change |
 |---|---|
-| `src/renderer/modules/roleEstimator.js` | New module — pure `estimateRole(build)` function |
-| `src/renderer/modules/library/content.js` | Render role badge on build cards |
+| `src/renderer/modules/roleEstimator.js` | New module — `estimateRole(build, catalog)` + `roleBadgeHtml(build, catalog)` + private helpers |
+| `src/renderer/modules/library/content.js` | Render role badge on build cards (all modes except icon) |
 | `src/renderer/modules/comps/comp-detail.js` | Render role badge on comp slots and pool builds |
-| `src/renderer/style.css` (or equivalent) | Role badge styles and per-role color variables |
+| `src/renderer/styles/role-badge.css` | New file — role badge styles and per-role CSS custom properties |
+| `src/renderer/styles.css` | Import `role-badge.css` |
