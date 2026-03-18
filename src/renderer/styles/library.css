@@ -968,6 +968,11 @@
   color: #668;
 }
 
+.lib-col__item--build {
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
 .lib-col__item--comp {
   color: #99a;
 }
@@ -999,7 +1004,7 @@
 .lib-tv__header,
 .lib-tv__row {
   display: grid;
-  grid-template-columns: 22px 22px 1fr 100px 100px 60px 80px 80px 80px;
+  grid-template-columns: 22px 22px 1fr 100px 100px 60px 80px 80px 80px 80px;
   align-items: center;
   gap: 0;
   font-size: 0.85rem;
@@ -1102,6 +1107,13 @@
   overflow: hidden;
   text-overflow: ellipsis;
   min-width: 60px;
+}
+
+.lib-tv__role {
+  padding: 0 8px;
+  min-width: 80px;
+  display: flex;
+  align-items: center;
 }
 
 .lib-tv__tags {

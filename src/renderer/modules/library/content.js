@@ -2,6 +2,7 @@
 
 import { state } from "../state.js";
 import { escapeHtml, formatRelativeTime } from "../utils.js";
+import { roleBadgeHtml } from '../roleEstimator.js';
 import { getVisibleBuilds, getVisibleFolders, getVisibleComps } from "./folder-store.js";
 import { getProfessionSvg } from "../profession-icons.js";
 import { clearSelection, handleBuildClick, handleCompClick } from "./selection.js";
@@ -209,7 +210,7 @@ function renderListView(container) {
           <span class="lib-list-row__spec-icon ${profClass(b.profession)}">${getSpecIcon(b)}</span>
           <span class="lib-list-row__title">${escapeHtml(b.title || "Untitled")}${folderPathHtml(b)}</span>
           <span class="lib-list-row__pills">
-            ${profPillHtml(b)}${eliteSpecPillHtml(b)}${gameModePillHtml(b)}${tagPillsHtml(b)}
+            ${profPillHtml(b)}${eliteSpecPillHtml(b)}${gameModePillHtml(b)}${tagPillsHtml(b)}${roleBadgeHtml(b, state.upgradeCatalog)}
           </span>
           <span class="lib-list-row__date" title="${escapeHtml(b.updatedAt || "")}">${formatDate(b.updatedAt)}</span>
           ${pinStarHtml(b)}
@@ -295,6 +296,7 @@ function renderTableView(container) {
           <span class="lib-tv__profession"></span>
           <span class="lib-tv__spec"></span>
           <span class="lib-tv__mode"></span>
+          <span class="lib-tv__role"></span>
           <span class="lib-tv__tags"></span>
           <span class="lib-tv__created" title="${escapeHtml(folder.createdAt || "")}">${formatDate(folder.createdAt)}</span>
           <span class="lib-tv__modified" title="${escapeHtml(folder.updatedAt || "")}">${formatDate(folder.updatedAt)}</span>
@@ -316,6 +318,7 @@ function renderTableView(container) {
           <span class="lib-tv__profession">${escapeHtml(b.profession || "")}</span>
           <span class="lib-tv__spec">${escapeHtml(eliteSpec || "")}</span>
           <span class="lib-tv__mode">${escapeHtml(gameModeLabel(b.gameMode || "pve"))}</span>
+          <span class="lib-tv__role">${roleBadgeHtml(b, state.upgradeCatalog)}</span>
           <span class="lib-tv__tags" title="${escapeHtml((b.tags || []).join(", "))}">${tags}</span>
           <span class="lib-tv__created" title="${escapeHtml(b.createdAt || "")}">${formatDate(b.createdAt)}</span>
           <span class="lib-tv__modified" title="${escapeHtml(b.updatedAt || "")}">${formatDate(b.updatedAt)}</span>
@@ -347,6 +350,7 @@ function renderTableView(container) {
           <span class="lib-tv__profession"><span class="lib-list-row__badge">${countLabel}</span></span>
           <span class="lib-tv__spec"></span>
           <span class="lib-tv__mode"></span>
+          <span class="lib-tv__role"></span>
           <span class="lib-tv__tags" title="${escapeHtml((c.tags || []).join(", "))}">${tags}</span>
           <span class="lib-tv__created" title="${escapeHtml(c.createdAt || "")}">${formatDate(c.createdAt)}</span>
           <span class="lib-tv__modified" title="${escapeHtml(c.updatedAt || "")}">${formatDate(c.updatedAt)}</span>
@@ -369,6 +373,7 @@ function renderTableView(container) {
         <span class="lib-tv__profession">${sortHeaderDiv("profession", "Profession")}</span>
         <span class="lib-tv__spec">Elite Spec</span>
         <span class="lib-tv__mode">Mode</span>
+        <span class="lib-tv__role">Role</span>
         <span class="lib-tv__tags">Tags</span>
         <span class="lib-tv__created">${sortHeaderDiv("createdAt", "Created")}</span>
         <span class="lib-tv__modified">${sortHeaderDiv("updatedAt", "Modified")}</span>
@@ -430,7 +435,7 @@ function renderGridView(container) {
           <div class="lib-grid-card__title">${escapeHtml(b.title || "Untitled")}</div>
           ${folderPathHtml(b)}
           <div class="lib-grid-card__pills">
-            ${profPillHtml(b)}${eliteSpecPillHtml(b)}${gameModePillHtml(b)}
+            ${profPillHtml(b)}${eliteSpecPillHtml(b)}${gameModePillHtml(b)}${roleBadgeHtml(b, state.upgradeCatalog)}
           </div>
           <div class="lib-grid-card__date">${formatDate(b.updatedAt)}</div>
         </div>
@@ -570,6 +575,7 @@ function renderColumnsView(container) {
                data-build-id="${escapeHtml(b.id)}" data-col-index="${colIndex}">
             <span class="lib-col__icon ${profClass(b.profession)}">${getSpecIcon(b)}</span>
             <span class="lib-col__name">${escapeHtml(b.title || "Untitled")}${folderPathHtml(b)}</span>
+            ${roleBadgeHtml(b, state.upgradeCatalog)}
           </div>
         `);
       }
