@@ -515,12 +515,13 @@ async function handlePasteJson(targetId) {
         const b = state.builds.find((b) => b.id === id);
         return { id, folderId: b?.folderId || null, compId: b?.compId || null };
       });
+      let filteredToMove = idsToMove;
       if (compId) {
         // Game mode lock check — filter builds to only those compatible with the comp
         const targetComp = state.comps?.find((c) => c.id === compId);
         let effectiveLock = targetComp?.gameMode || null;
         const incompatibleIds = [];
-        const filteredToMove = [];
+        filteredToMove = [];
 
         for (const id of idsToMove) {
           const build = state.builds.find((b) => b.id === id);
@@ -573,7 +574,7 @@ async function handlePasteJson(targetId) {
       }});
       clearSelection();
       renderLibrary();
-      showToast(idsToMove.length === 1 ? "Build moved!" : `${idsToMove.length} builds moved!`);
+      showToast(filteredToMove.length === 1 ? "Build moved!" : `${filteredToMove.length} builds moved!`);
       return;
     }
 
