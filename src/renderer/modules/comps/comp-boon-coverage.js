@@ -142,11 +142,10 @@ export function bindBoonCoverageEvents(container) {
   container.querySelectorAll(".comp-boon-cov__icon").forEach((iconEl) => {
     iconEl.addEventListener("mouseenter", () => {
       _closeBoonTooltip();
-      const boonName  = iconEl.dataset.boonName;
-      const count     = Number(iconEl.dataset.count) || 0;
-      const scope     = iconEl.dataset.scope;
-      const lineLabel = iconEl.dataset.lineLabel || null;
-      let providers   = [];
+      const boonName = iconEl.dataset.boonName;
+      const count    = Number(iconEl.dataset.count) || 0;
+      const scope    = iconEl.dataset.scope;
+      let providers  = [];
       try { providers = JSON.parse(iconEl.dataset.providers || "[]"); } catch (_) { /* ignore */ }
 
       const tip = document.createElement("div");
