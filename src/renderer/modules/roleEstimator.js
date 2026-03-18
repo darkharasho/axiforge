@@ -1,9 +1,12 @@
 // Role estimation from equipment stats — pure functions, no global state.
 import { computeSlotStats } from './stats.js';
 
+// 700 (not the spec's 1500): tuned down so Celestial gear (~810 max) and partial builds
+// still get a role rather than Unknown. Rune bonuses further lift scores for full builds.
 const MIN_THRESHOLD = 700;
 const HYBRID_RATIO  = 0.20;
 
+// Tank is intentionally excluded — not a meaningful role category in GW2.
 const ROLE_SCORERS = [
   { role: 'Power DPS',    fn: s => s.Power * 1.0 + s.Precision * 0.5 + s.Ferocity * 0.5 },
   { role: 'Condi DPS',    fn: s => s.ConditionDamage * 1.0 + s.Expertise * 0.8 },
@@ -20,7 +23,7 @@ const ROLE_CSS_CLASS = {
   'Unknown':      'unknown',
 };
 
-const RUNE_STAT_RE = /\+(\d+)\s+(Condition Damage|Healing Power|Healing|Power|Precision|Toughness|Vitality|Ferocity|Concentration|Expertise|to All Stats)/i;
+const RUNE_STAT_RE = /\+(\d+)\s+(Condition Damage|Healing Power|Healing|Power|Precision|Toughness|Vitality|Ferocity|Concentration|Expertise|to All Stats)/;
 const RUNE_BOON_RE = /\+(\d+)%\s+Boon Duration/i;
 const RUNE_CONDI_RE = /\+(\d+)%\s+Condition Duration/i;
 
@@ -72,7 +75,7 @@ function scoreRuneStats(build, catalog) {
     if (statMatch) {
       const value = parseInt(statMatch[1], 10);
       const rawName = statMatch[2];
-      if (rawName.toLowerCase() === 'to all stats') {
+      if (rawName === 'to All Stats') {
         for (const k of Object.keys(totals)) totals[k] += value;
       } else {
         const statKey = RUNE_STAT_MAP[rawName];
