@@ -4,7 +4,7 @@ import { computeSlotStats } from './stats.js';
 // 700 (not the spec's 1500): tuned down so Celestial gear (~810 max) and partial builds
 // still get a role rather than Unknown. Rune bonuses further lift scores for full builds.
 const MIN_THRESHOLD = 700;
-const HYBRID_RATIO  = 0.20;
+const HYBRID_RATIO  = 0.10;
 
 // Tank is intentionally excluded — not a meaningful role category in GW2.
 const ROLE_SCORERS = [
