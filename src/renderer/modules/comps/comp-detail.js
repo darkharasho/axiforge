@@ -498,7 +498,6 @@ function renderPartyLine(pl, idx, totalCap) {
         `<div class="comp-slot comp-slot--filled ${pClass}" title="${title}"
               data-action="click-filled-slot" data-line-id="${escapeHtml(pl.id)}" data-slot-idx="${i}" data-build-id="${escapeHtml(buildId)}">
           <span class="comp-slot__icon">${icon}</span>
-          ${roleBadgeHtml(build, state.upgradeCatalog)}
         </div>`
       );
     } else {
@@ -525,7 +524,7 @@ function renderPartyLine(pl, idx, totalCap) {
   return `
     <div class="comp-line" data-line-id="${escapeHtml(pl.id)}">
       <span class="comp-line__label">P${idx + 1}</span>
-      <div class="comp-line__slots" style="max-height: ${Math.ceil(capacity / 5) * 58 + (Math.ceil(capacity / 5) - 1) * 5}px;">${slotBoxes.join("")}</div>
+      <div class="comp-line__slots" style="max-height: ${Math.ceil(capacity / 5) * 42 + (Math.ceil(capacity / 5) - 1) * 5}px;">${slotBoxes.join("")}</div>
       <div class="comp-line__controls">
         <button type="button" class="comp-line__btn" data-action="duplicate-line"
                 data-line-id="${escapeHtml(pl.id)}" title="Duplicate line">&#10697;</button>
