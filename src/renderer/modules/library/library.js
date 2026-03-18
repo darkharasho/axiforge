@@ -515,6 +515,11 @@ async function handlePasteJson(targetId) {
         const b = state.builds.find((b) => b.id === id);
         return { id, folderId: b?.folderId || null, compId: b?.compId || null };
       });
+      // Capture comp state before paste so undo can restore it
+      const oldTargetComp = compId ? state.comps?.find((c) => c.id === compId) : null;
+      const oldTargetCompSnapshot = oldTargetComp
+        ? { buildIds: [...(oldTargetComp.buildIds || [])], gameMode: oldTargetComp.gameMode ?? null }
+        : null;
       let filteredToMove = idsToMove;
       if (compId) {
         // Game mode lock check — filter builds to only those compatible with the comp
@@ -568,6 +573,11 @@ async function handlePasteJson(targetId) {
         for (const { id, folderId, compId } of oldLocations) {
           const build = state.builds.find((b) => b.id === id);
           if (build) await window.desktopApi.saveBuild({ ...build, folderId, compId });
+        }
+        // Restore comp state if the paste was into a comp
+        if (compId && oldTargetCompSnapshot) {
+          const c = state.comps?.find((c) => c.id === compId);
+          if (c) await window.desktopApi.saveComp({ ...c, buildIds: oldTargetCompSnapshot.buildIds, gameMode: oldTargetCompSnapshot.gameMode });
         }
         state.builds = await window.desktopApi.listBuilds();
         state.comps = await window.desktopApi.listComps();

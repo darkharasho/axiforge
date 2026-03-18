@@ -14,6 +14,7 @@ import Sortable from "sortablejs";
 import { moveBuilds, reorderBuilds } from "./folder-store.js";
 import { expandTableFolder } from "./content.js";
 import { state } from "../state.js";
+import { isGameModeCompatible } from "./library.js";
 
 let _callbacks = {};
 let _sortableInstances = [];
@@ -200,7 +201,7 @@ function _onPointerMove(e) {
     // Show invalid indicator if comp is locked to a different game mode
     const hoveredComp = state.comps?.find((c) => c.id === compEl.dataset.compId);
     const draggedBuild = state.builds?.find((b) => b.id === _draggedBuildId);
-    if (hoveredComp?.gameMode && draggedBuild && hoveredComp.gameMode !== draggedBuild.gameMode) {
+    if (hoveredComp && draggedBuild && !isGameModeCompatible(hoveredComp, draggedBuild)) {
       compEl.classList.add("is-invalid");
     }
     return;
