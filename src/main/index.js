@@ -157,10 +157,28 @@ async function getOnboardingStatus() {
   };
 }
 
+async function migrateCompGameModes(buildStore, compStore) {
+  const comps = await compStore.listComps();
+  // Skip if all comps already have the gameMode field
+  if (comps.every((c) => "gameMode" in c)) return;
+  const builds = await buildStore.listBuilds();
+  const buildMap = new Map(builds.map((b) => [b.id, b]));
+  for (const comp of comps) {
+    if ("gameMode" in comp) continue;
+    let gameMode = null;
+    if (comp.buildIds && comp.buildIds.length > 0) {
+      const firstBuild = buildMap.get(comp.buildIds[0]);
+      gameMode = firstBuild?.gameMode ?? null;
+    }
+    await compStore.upsertComp({ ...comp, gameMode });
+  }
+}
+
 app.whenReady().then(async () => {
   await store.init();
   await folderStore.init();
   await compStore.init();
+  await migrateCompGameModes(store, compStore);
   const win = createWindow();
   initAutoUpdate(win);
 
