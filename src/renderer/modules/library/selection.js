@@ -184,8 +184,13 @@ function _toggleSelect(buildId) {
 }
 
 function _rangeSelect(buildId) {
-  const builds = getVisibleBuilds();
-  const ids = builds.map((b) => b.id);
+  // Use DOM order of build elements — this includes builds inside expanded
+  // folders/comps in table view, not just top-level getVisibleBuilds()
+  const container = document.getElementById("lib-content");
+  const elements = container
+    ? [...container.querySelectorAll("[data-build-id]")]
+    : [];
+  const ids = elements.map((el) => el.dataset.buildId);
 
   const anchorIndex = ids.indexOf(selection.lastClickedId);
   const targetIndex = ids.indexOf(buildId);
