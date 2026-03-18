@@ -151,7 +151,7 @@ export function bindBoonCoverageEvents(container) {
 
       const tip = document.createElement("div");
       tip.className = "comp-boon-tooltip";
-      tip.innerHTML = _buildTooltipHTML(boonName, count, providers, scope, lineLabel);
+      tip.innerHTML = _buildTooltipHTML(boonName, count, providers, scope);
       document.body.appendChild(tip);
       _activeBoonTooltip = tip;
 
@@ -171,7 +171,7 @@ export function bindBoonCoverageEvents(container) {
   });
 }
 
-function _buildTooltipHTML(boonName, count, providers, scope, lineLabel) {
+function _buildTooltipHTML(boonName, count, providers, scope) {
   const icon = BOON_CONDITION_ICONS[boonName] || "";
   const headerLabel = count > 0
     ? `${count} ${count === 1 ? "build" : "builds"}`
@@ -182,7 +182,7 @@ function _buildTooltipHTML(boonName, count, providers, scope, lineLabel) {
       <div class="comp-boon-tooltip__header">
         <img src="${escapeHtml(icon)}" width="14" height="14" alt="${escapeHtml(boonName)}" />
         <span class="comp-boon-tooltip__name">${escapeHtml(boonName)}</span>
-        <span class="comp-boon-tooltip__count">Not covered</span>
+        <span class="comp-boon-tooltip__count">${escapeHtml(headerLabel)}</span>
       </div>`;
   }
 
