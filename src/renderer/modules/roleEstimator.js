@@ -20,10 +20,80 @@ const ROLE_CSS_CLASS = {
   'Unknown':      'unknown',
 };
 
+const RUNE_STAT_RE = /\+(\d+)\s+(Condition Damage|Healing Power|Healing|Power|Precision|Toughness|Vitality|Ferocity|Concentration|Expertise|to All Stats)/i;
+const RUNE_BOON_RE = /\+(\d+)%\s+Boon Duration/i;
+const RUNE_CONDI_RE = /\+(\d+)%\s+Condition Duration/i;
+
+const RUNE_STAT_MAP = {
+  'Condition Damage': 'ConditionDamage',
+  'Healing Power':    'HealingPower',
+  'Healing':          'HealingPower',
+  'Power':            'Power',
+  'Precision':        'Precision',
+  'Toughness':        'Toughness',
+  'Vitality':         'Vitality',
+  'Ferocity':         'Ferocity',
+  'Concentration':    'Concentration',
+  'Expertise':        'Expertise',
+};
+
+// Returns a stat totals object from the equipped rune set, or null if no runes.
+// catalog = state.upgradeCatalog passed in from the caller.
+function scoreRuneStats(build, catalog) {
+  const runeSlots = build?.equipment?.runes;
+  if (!runeSlots || !catalog?.runeById) return null;
+
+  // Count equipped rune IDs (ignore breather slot, only armor slots contribute)
+  const counts = {};
+  for (const [slot, id] of Object.entries(runeSlots)) {
+    if (!id || slot === 'breather') continue;
+    const key = Number(id);
+    counts[key] = (counts[key] || 0) + 1;
+  }
+
+  // Find dominant rune
+  let bestId = null, bestCount = 0;
+  for (const [id, count] of Object.entries(counts)) {
+    if (count > bestCount) { bestId = Number(id); bestCount = count; }
+  }
+  if (!bestId) return null;
+
+  const runeDef = catalog.runeById.get(bestId);
+  if (!runeDef?.bonuses?.length) return null;
+
+  const totals = {
+    Power: 0, Precision: 0, Toughness: 0, Vitality: 0,
+    Ferocity: 0, ConditionDamage: 0, Expertise: 0, Concentration: 0, HealingPower: 0,
+  };
+  const activeBonuses = runeDef.bonuses.slice(0, Math.min(bestCount, 6));
+
+  for (const bonus of activeBonuses) {
+    const statMatch = RUNE_STAT_RE.exec(bonus);
+    if (statMatch) {
+      const value = parseInt(statMatch[1], 10);
+      const rawName = statMatch[2];
+      if (rawName.toLowerCase() === 'to all stats') {
+        for (const k of Object.keys(totals)) totals[k] += value;
+      } else {
+        const statKey = RUNE_STAT_MAP[rawName];
+        if (statKey) totals[statKey] += value;
+      }
+      continue;
+    }
+    const boonMatch = RUNE_BOON_RE.exec(bonus);
+    if (boonMatch) { totals.Concentration += parseInt(boonMatch[1], 10) * 15; continue; }
+    const condiMatch = RUNE_CONDI_RE.exec(bonus);
+    if (condiMatch) { totals.Expertise += parseInt(condiMatch[1], 10) * 15; }
+  }
+
+  return totals;
+}
+
 // Note: computeSlotStats returns only the equipment contribution for a slot,
 // not GW2 base stats (Power/Precision/Toughness/Vitality base = 1000 each).
 // Base stats are added separately in computeEquipmentStats() and are NOT
 // present here, so no subtraction is needed before scoring.
+// The returned totals serve as the base for rune stat scoring when a catalog is provided.
 function scoreEquipmentSlots(slots) {
   const totals = {
     Power: 0, Precision: 0, Toughness: 0, Vitality: 0,
@@ -42,11 +112,15 @@ function scoreEquipmentSlots(slots) {
  * Returns the estimated role for a build, or null if no slots are equipped.
  * Pure function — reads only from the build object, no global state.
  */
-export function estimateRole(build) {
+export function estimateRole(build, catalog = null) {
   const slots = build?.equipment?.slots;
   if (!slots || !Object.values(slots).some(Boolean)) return null;
 
-  const s = scoreEquipmentSlots(slots);
+  const equipStats = scoreEquipmentSlots(slots);
+  const runeStats  = catalog ? scoreRuneStats(build, catalog) : null;
+  const s = runeStats
+    ? Object.fromEntries(Object.keys(equipStats).map(k => [k, equipStats[k] + (runeStats[k] || 0)]))
+    : equipStats;
   const scored = ROLE_SCORERS.map(({ role, fn }) => ({ role, score: fn(s) }));
   scored.sort((a, b) => b.score - a.score);
 
@@ -65,8 +139,8 @@ export function estimateRole(build) {
 /**
  * Returns an HTML string for the role badge, or '' if the build has no equipment.
  */
-export function roleBadgeHtml(build) {
-  const role = estimateRole(build);
+export function roleBadgeHtml(build, catalog = null) {
+  const role = estimateRole(build, catalog);
   if (!role) return '';
   const cls = ROLE_CSS_CLASS[role] ?? 'unknown';
   return `<span class="role-badge role-badge--${cls}">${role}</span>`;
