@@ -369,6 +369,7 @@ export function renderCompDetail() {
   closeCompCtxMenu();
   closeHoverCard();
   closeBoonTooltip();
+  closeDurationExpand();
   if (_cleanupResize) { _cleanupResize(); _cleanupResize = null; }
 
   const container = document.getElementById("comps-container");
