@@ -100,10 +100,24 @@ button.mini-card__name:hover .mini-card__name-arrow {
 .mini-card__mode {
   font-size: 9px;
   color: #778;
-  background: #0d0d22;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   padding: 1px 6px;
   flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* ── Right-side pills (role + mode) ────────────────────────────────────────── */
+
+.mini-card__pills {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+  align-self: center;
+  margin-left: auto;
 }
 
 /* ── Two-Column Layout (specs left, gear right) ────────────────────────────── */
