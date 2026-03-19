@@ -265,8 +265,11 @@ button.mini-card__name:hover .mini-card__name-arrow {
   height: 16px;
 }
 
-.mini-card__weap-icon svg path {
-  fill: #fff;
+.mini-card__weap-icon svg,
+.mini-card__weap-icon svg path,
+.mini-card__weap-icon svg g {
+  fill: #fff !important;
+  color: #fff !important;
 }
 
 .mini-card__weap-name {
