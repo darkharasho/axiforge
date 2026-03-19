@@ -54,6 +54,7 @@
 }
 
 .mini-card__name {
+  all: unset;
   font-size: 13px;
   color: #ddd;
   font-weight: 600;
@@ -62,6 +63,27 @@
   white-space: nowrap;
   min-width: 0;
   flex-shrink: 1;
+}
+
+/* When the name is a button (clickable link to build) */
+button.mini-card__name {
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+button.mini-card__name:hover {
+  color: #fff;
+}
+
+.mini-card__name-arrow {
+  font-size: 11px;
+  opacity: 0;
+  transition: opacity 0.15s;
+  margin-left: 2px;
+}
+
+button.mini-card__name:hover .mini-card__name-arrow {
+  opacity: 1;
 }
 
 .mini-card__tag {
@@ -271,36 +293,30 @@
   margin: 0 3px;
 }
 
-/* ── Action buttons ────────────────────────────────────────────────────────── */
+/* ── Remove button (absolute top-right) ────────────────────────────────────── */
 
-.mini-card__actions {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  flex-shrink: 0;
-  align-self: flex-start;
-  margin-top: 2px;
-}
-
-.mini-card__btn-open,
 .mini-card__btn-remove {
   all: unset;
   cursor: pointer;
-  font-size: 14px;
-  color: #667;
-  width: 20px;
-  height: 20px;
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  font-size: 18px;
+  line-height: 1;
+  color: #556;
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 3px;
-  flex-shrink: 0;
-  transition: color 0.15s, background 0.15s;
+  border-radius: 4px;
+  z-index: 1;
+  opacity: 0;
+  transition: color 0.15s, background 0.15s, opacity 0.15s;
 }
 
-.mini-card__btn-open:hover {
-  color: #aaa;
-  background: rgba(255, 255, 255, 0.07);
+.mini-card:hover .mini-card__btn-remove {
+  opacity: 1;
 }
 
 .mini-card__btn-remove:hover {

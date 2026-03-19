@@ -199,22 +199,25 @@ export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
       </div>`;
   }
 
-  // Action buttons
-  const actionsHtml = showActions
-    ? `<div class="mini-card__actions">
-        <button type="button" class="mini-card__btn-open" data-action="pool-open"
-                data-build-id="${escapeHtml(build.id)}" title="Open build">&#8599;</button>
-        <button type="button" class="mini-card__btn-remove" data-action="pool-remove"
-                data-build-id="${escapeHtml(build.id)}" title="Remove from comp">&times;</button>
-      </div>`
+  // Title is a clickable link to open the build
+  const titleHtml = showActions
+    ? `<button type="button" class="mini-card__name" data-action="pool-open"
+              data-build-id="${escapeHtml(build.id)}" title="Open build">${name} <span class="mini-card__name-arrow">&#8599;</span></button>`
+    : `<span class="mini-card__name">${name}</span>`;
+
+  // Remove button — absolute top-right
+  const removeHtml = showActions
+    ? `<button type="button" class="mini-card__btn-remove" data-action="pool-remove"
+              data-build-id="${escapeHtml(build.id)}" title="Remove from comp">&times;</button>`
     : "";
 
   return `
     <div class="mini-card ${pClass}" data-build-id="${escapeHtml(build.id)}">
+      ${removeHtml}
       <div class="mini-card__icon">${icon}</div>
       <div class="mini-card__info">
         <div class="mini-card__header">
-          <span class="mini-card__name">${name}</span>
+          ${titleHtml}
           ${tagPills}
           ${role}
           ${modePill}
@@ -226,7 +229,6 @@ export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
           ${relicCellHtml}
         </div>
       </div>
-      ${actionsHtml}
     </div>
   `;
 }

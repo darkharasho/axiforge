@@ -905,7 +905,7 @@
 .comp-drag-icon-ghost.lib-prof--revenant     { border-color: #aa6655 !important; }
 
 .comp-drag-icon-ghost .mini-card__info,
-.comp-drag-icon-ghost .mini-card__actions {
+.comp-drag-icon-ghost .mini-card__btn-remove {
   display: none !important;
 }
 
