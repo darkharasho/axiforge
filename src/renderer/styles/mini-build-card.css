@@ -110,7 +110,7 @@ button.mini-card__name:hover .mini-card__name-arrow {
 
 .mini-card__columns {
   display: flex;
-  gap: 16px;
+  gap: 24px;
   margin-top: 6px;
 }
 
