@@ -104,7 +104,7 @@ describe("library skeleton templates", () => {
 
   test("library-sidebar contains section structure and skeleton items", () => {
     expect(skeletonTemplates["library-sidebar"]).toContain("skel-lib-sidebar");
-    expect(skeletonTemplates["library-sidebar"]).toContain("skel-lib-sidebar-item");
+    expect(skeletonTemplates["library-sidebar"]).toContain("lib-nav-item");
     expect(skeletonTemplates["library-sidebar"]).toContain("skel-lib-sidebar-icon");
     expect(skeletonTemplates["library-sidebar"]).toContain("skel-lib-sidebar-head");
   });

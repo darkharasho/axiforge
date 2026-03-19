@@ -124,7 +124,7 @@ function libTableRow(titleW, d1, d2, d3) {
         <span><div class="skel${c(d2)}" style="height:9px;width:58px;border-radius:8px"></div></span>
         <span><div class="skel${c(d2)}" style="height:9px;width:55px;border-radius:3px"></div></span>
         <span><div class="skel${c(d3)}" style="height:9px;width:34px;border-radius:3px"></div></span>
-        <span></span>
+        <span><div class="skel${c(d1)}" style="height:21px;width:52px;border-radius:999px"></div></span>
         <span></span>
         <span><div class="skel${c(d3)}" style="height:9px;width:52px;border-radius:3px"></div></span>
         <span><div class="skel${c(d1)}" style="height:9px;width:52px;border-radius:3px"></div></span>
@@ -294,14 +294,14 @@ const skeletonTemplates = {
 <div class="skel-lib-sidebar">
   <div class="skel-lib-sidebar-section">
     <div class="skel-lib-sidebar-label"><div class="skel skel-lib-sidebar-head" style="width:80px"></div></div>
-    <div class="skel-lib-sidebar-item"><div class="skel skel-lib-sidebar-icon"></div><div class="skel skel-d1" style="height:9px;width:70px"></div></div>
-    <div class="skel-lib-sidebar-item"><div class="skel skel-d2 skel-lib-sidebar-icon"></div><div class="skel skel-d2" style="height:9px;width:55px"></div></div>
-    <div class="skel-lib-sidebar-item"><div class="skel skel-d3 skel-lib-sidebar-icon"></div><div class="skel skel-d3" style="height:9px;width:80px"></div></div>
+    <div class="lib-nav-item"><div class="skel skel-lib-sidebar-icon"></div><div class="skel skel-d1" style="height:18px;width:70px;border-radius:3px"></div></div>
+    <div class="lib-nav-item"><div class="skel skel-d2 skel-lib-sidebar-icon"></div><div class="skel skel-d2" style="height:18px;width:55px;border-radius:3px"></div></div>
+    <div class="lib-nav-item"><div class="skel skel-d3 skel-lib-sidebar-icon"></div><div class="skel skel-d3" style="height:18px;width:80px;border-radius:3px"></div></div>
   </div>
   <div class="skel-lib-sidebar-section">
     <div class="skel-lib-sidebar-label"><div class="skel skel-d2 skel-lib-sidebar-head" style="width:65px"></div></div>
-    <div class="skel-lib-sidebar-item"><div class="skel skel-d3 skel-lib-sidebar-icon"></div><div class="skel skel-d3" style="height:9px;width:65px"></div></div>
-    <div class="skel-lib-sidebar-item"><div class="skel skel-d2 skel-lib-sidebar-icon"></div><div class="skel skel-d2" style="height:9px;width:75px"></div></div>
+    <div class="lib-nav-item"><div class="skel skel-d3 skel-lib-sidebar-icon"></div><div class="skel skel-d3" style="height:18px;width:65px;border-radius:3px"></div></div>
+    <div class="lib-nav-item"><div class="skel skel-d2 skel-lib-sidebar-icon"></div><div class="skel skel-d2" style="height:18px;width:75px;border-radius:3px"></div></div>
   </div>
 </div>`,
 
