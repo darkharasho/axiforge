@@ -65,13 +65,15 @@
   flex-shrink: 1;
 }
 
-/* When the name is a button (clickable link to build) */
-button.mini-card__name {
+/* When the name is a button or link (clickable link to build) */
+button.mini-card__name,
+a.mini-card__name {
   cursor: pointer;
   transition: color 0.15s;
 }
 
-button.mini-card__name:hover {
+button.mini-card__name:hover,
+a.mini-card__name:hover {
   color: #fff;
 }
 
@@ -82,7 +84,8 @@ button.mini-card__name:hover {
   margin-left: 2px;
 }
 
-button.mini-card__name:hover .mini-card__name-arrow {
+button.mini-card__name:hover .mini-card__name-arrow,
+a.mini-card__name:hover .mini-card__name-arrow {
   opacity: 1;
 }
 

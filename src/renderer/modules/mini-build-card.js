@@ -105,7 +105,7 @@ function getWeaponSets(build) {
  * @returns {string} HTML string
  */
 export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
-  const { showActions = true, showMode = true } = options;
+  const { showActions = true, showMode = true, linkUrl = null } = options;
 
   const icon = getSpecIcon(build);
   const pClass = profClass(build.profession);
@@ -211,7 +211,9 @@ export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
   const titleHtml = showActions
     ? `<button type="button" class="mini-card__name" data-action="pool-open"
               data-build-id="${escapeHtml(build.id)}" title="Open build">${name} <span class="mini-card__name-arrow">&#8599;</span></button>`
-    : `<span class="mini-card__name">${name}</span>`;
+    : linkUrl
+      ? `<a href="${escapeHtml(linkUrl)}" target="_blank" rel="noopener" class="mini-card__name" title="Open build">${name} <span class="mini-card__name-arrow">&#8599;</span></a>`
+      : `<span class="mini-card__name">${name}</span>`;
 
   // Remove button — absolute top-right
   const removeHtml = showActions

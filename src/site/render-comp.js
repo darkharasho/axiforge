@@ -64,16 +64,10 @@ function renderPartyLines(comp) {
 
 function renderPoolCard(build) {
   // Render the shared mini card (no desktop action buttons in read-only SPA)
-  const cardHtml = renderMiniBuildCard(build, null, { showActions: false });
-
-  // If the build has a SPA share URL, add a link button alongside the card
-  if (!build.spaUrl) return cardHtml;
-
-  return `<div class="comp-pool-card-wrap">
-    ${cardHtml}
-    <a href="${escapeHtml(build.spaUrl)}" target="_blank" rel="noopener"
-       class="mini-card__spa-link" title="Open build">&#8599;</a>
-  </div>`;
+  return renderMiniBuildCard(build, null, {
+    showActions: false,
+    linkUrl: build.spaUrl || null,
+  });
 }
 
 function renderBuildPool(comp) {
