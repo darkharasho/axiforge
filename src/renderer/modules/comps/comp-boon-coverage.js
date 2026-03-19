@@ -6,11 +6,12 @@ import { resolveEquippedWeaponSkills } from "../equipment-weapon-skills.js";
 import { BOON_DISPLAY_ORDER, BOON_CONDITION_ICONS } from "../constants.js";
 import { getProfessionSvg } from "../profession-icons.js";
 import { escapeHtml } from "../utils.js";
+import { computeBuildConcentration } from "../stats.js";
 
 /**
  * Compute boon coverage for all filled slots in a comp, squad-wide and per-line.
  */
-export async function computeCompBoonCoverage(comp, builds, catalogCache, getCatalog) {
+export async function computeCompBoonCoverage(comp, builds, catalogCache, getCatalog, upgradeCatalog = null) {
   const lines = comp.partyLines || [];
   const buildMap = new Map(builds.map((b) => [b.id, b]));
 
@@ -50,6 +51,7 @@ export async function computeCompBoonCoverage(comp, builds, catalogCache, getCat
       const weaponSkills = resolveEquippedWeaponSkills(catalog, build);
       const coverage = computeBoonCoverage(catalog, build, weaponSkills);
       const buildName = build.title || build.id;
+      const concentrationBonus = computeBuildConcentration(build, upgradeCatalog) / 1500;
 
       // Determine elite spec name (for icon display in tooltips).
       // Serialized builds have .elite and .name directly on each spec entry;
@@ -69,7 +71,15 @@ export async function computeCompBoonCoverage(comp, builds, catalogCache, getCat
         }
         const lineEntry = lineBoonMap.get(boon.name);
         lineEntry.count++;
-        lineEntry.providers.push({ buildId, buildName, profession: build.profession, eliteSpec });
+        const sources = (boon.sources || [])
+          .filter(s => s.duration > 0)
+          .map(s => ({
+            type: s.type,
+            name: s.name,
+            stacks: s.stacks,
+            effectiveDuration: +((s.duration * (1 + concentrationBonus)).toFixed(1)),
+          }));
+        lineEntry.providers.push({ buildId, buildName, profession: build.profession, eliteSpec, sources });
 
         if (!squadMap.has(boon.name)) {
           squadMap.set(boon.name, { count: 0, providers: [] });

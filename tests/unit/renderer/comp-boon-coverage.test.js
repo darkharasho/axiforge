@@ -253,3 +253,111 @@ describe("computeCompBoonCoverage", () => {
     expect(squad.get("Might").providers[0].buildName).toBe("My Firebrand");
   });
 });
+
+// Helper: build a catalog with upgradeCatalog (empty — no Concentration gear)
+function makeUpgradeCatalog() {
+  return {
+    foodById: new Map(), utilityById: new Map(), runeById: new Map(),
+    infusionById: new Map(), enrichmentById: new Map(),
+  };
+}
+
+describe("computeCompBoonCoverage — sources and effectiveDuration on line providers", () => {
+  test("line providers include sources array with effectiveDuration", async () => {
+    const build = makeBuild("b1", "Guardian");
+    build.skills.healId = 100;
+    const catalog = makeCatalog(new Map([[100, makeMightSkill()]]));
+    // makeMightSkill has duration: 10, apply_count: 5
+    const catalogCache = new Map();
+    const getCatalog = makeGetCatalog(catalogCache, catalog);
+
+    const comp = makeComp([makeLine("l1", ["b1"])]);
+    const upgradeCatalog = makeUpgradeCatalog(); // no Concentration gear → bonus = 0
+    const { lines } = await computeCompBoonCoverage(comp, [build], catalogCache, getCatalog, upgradeCatalog);
+
+    const mightEntry = lines[0].boons.get("Might");
+    expect(mightEntry).toBeDefined();
+    const provider = mightEntry.providers[0];
+    expect(provider.sources).toBeDefined();
+    expect(provider.sources).toHaveLength(1);
+    expect(provider.sources[0]).toMatchObject({
+      type: "skill",
+      name: "Healing Surge",
+      stacks: 5,
+      effectiveDuration: 10, // base 10s * (1 + 0) = 10s, no concentration
+    });
+  });
+
+  test("effectiveDuration is multiplied by concentrationBonus from gear", async () => {
+    const build = makeBuild("b1", "Guardian");
+    build.skills.healId = 100;
+    // Give build Harrier's chest — gives 96 Concentration
+    build.equipment.slots = { chest: "Harrier's" };
+
+    const catalog = makeCatalog(new Map([[100, makeMightSkill()]]));
+    // makeMightSkill: duration: 10
+    const catalogCache = new Map();
+    const getCatalog = makeGetCatalog(catalogCache, catalog);
+
+    const comp = makeComp([makeLine("l1", ["b1"])]);
+    const upgradeCatalog = makeUpgradeCatalog();
+    const { lines } = await computeCompBoonCoverage(comp, [build], catalogCache, getCatalog, upgradeCatalog);
+
+    const provider = lines[0].boons.get("Might").providers[0];
+    // 96 Concentration → 96/1500 = 0.064 → 10 * 1.064 = 10.6
+    expect(provider.sources[0].effectiveDuration).toBeCloseTo(10.6, 1);
+  });
+
+  test("sources with duration 0 are filtered out", async () => {
+    const zeroDurationSkill = {
+      id: 300, name: "Zero Dur Skill",
+      description: "Grant Might to allies.",
+      facts: [{ type: "Buff", status: "Might", duration: 0, apply_count: 3 }],
+      type: "Utility",
+    };
+    const build = makeBuild("b1", "Guardian");
+    build.skills.utilityIds = [300, 0, 0];
+    const catalog = makeCatalog(new Map([[300, zeroDurationSkill]]));
+    const catalogCache = new Map();
+    const getCatalog = makeGetCatalog(catalogCache, catalog);
+
+    const comp = makeComp([makeLine("l1", ["b1"])]);
+    const { lines } = await computeCompBoonCoverage(comp, [build], catalogCache, getCatalog, makeUpgradeCatalog());
+
+    // Might is provided (boon exists) but its source has duration 0 — filtered from sources
+    const mightEntry = lines[0].boons.get("Might");
+    if (mightEntry) {
+      const provider = mightEntry.providers[0];
+      if (provider?.sources) {
+        expect(provider.sources.every(s => s.effectiveDuration > 0)).toBe(true);
+      }
+    }
+  });
+
+  test("squad providers do NOT include sources", async () => {
+    const build = makeBuild("b1", "Guardian");
+    build.skills.healId = 100;
+    const catalog = makeCatalog(new Map([[100, makeMightSkill()]]));
+    const catalogCache = new Map();
+    const getCatalog = makeGetCatalog(catalogCache, catalog);
+
+    const comp = makeComp([makeLine("l1", ["b1"])]);
+    const { squad } = await computeCompBoonCoverage(comp, [build], catalogCache, getCatalog, makeUpgradeCatalog());
+
+    const squadProvider = squad.get("Might").providers[0];
+    expect(squadProvider.sources).toBeUndefined();
+  });
+
+  test("works with upgradeCatalog as undefined (backward compat)", async () => {
+    const build = makeBuild("b1", "Guardian");
+    build.skills.healId = 100;
+    const catalog = makeCatalog(new Map([[100, makeMightSkill()]]));
+    const catalogCache = new Map();
+    const getCatalog = makeGetCatalog(catalogCache, catalog);
+
+    const comp = makeComp([makeLine("l1", ["b1"])]);
+    // Call without 5th param — should not throw
+    const { lines } = await computeCompBoonCoverage(comp, [build], catalogCache, getCatalog);
+    expect(lines[0].boons.get("Might")).toBeDefined();
+  });
+});
