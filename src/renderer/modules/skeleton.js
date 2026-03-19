@@ -107,9 +107,9 @@ function libListRow(titleW, d1, d2, d3) {
   return `
   <div class="lib-list-row">
     <div class="skel${c(d1)} skel-lib-row-icon"></div>
-    <span class="lib-list-row__title"><div class="skel${c(d1)}" style="height:10px;width:${titleW}%;border-radius:3px"></div></span>
-    <span class="lib-list-row__pills"><div class="skel${c(d2)}" style="height:9px;width:54px;border-radius:8px"></div><div class="skel${c(d2)}" style="height:9px;width:46px;border-radius:8px"></div></span>
-    <span class="lib-list-row__date"><div class="skel${c(d3)}" style="height:9px;width:56px;border-radius:3px"></div></span>
+    <span class="lib-list-row__title"><div class="skel${c(d1)}" style="height:18px;width:${titleW}%;border-radius:3px"></div></span>
+    <span class="lib-list-row__pills"><div class="skel${c(d2)}" style="height:21px;width:54px;border-radius:999px"></div><div class="skel${c(d2)}" style="height:21px;width:46px;border-radius:999px"></div></span>
+    <span class="lib-list-row__date"><div class="skel${c(d3)}" style="height:18px;width:56px;border-radius:3px"></div></span>
   </div>`;
 }
 
@@ -120,7 +120,7 @@ function libTableRow(titleW, d1, d2, d3) {
       <div class="lib-tv__row">
         <span></span>
         <span class="lib-tv__icon"><div class="skel${c(d1)} skel-lib-row-icon"></div></span>
-        <span><div class="skel${c(d1)}" style="height:9px;width:${titleW}%;border-radius:3px"></div></span>
+        <span><div class="skel${c(d1)}" style="height:18px;width:${titleW}%;border-radius:3px"></div></span>
         <span><div class="skel${c(d2)}" style="height:9px;width:58px;border-radius:8px"></div></span>
         <span><div class="skel${c(d2)}" style="height:9px;width:55px;border-radius:3px"></div></span>
         <span><div class="skel${c(d3)}" style="height:9px;width:34px;border-radius:3px"></div></span>
@@ -137,19 +137,19 @@ function libGridCard(titleW, d1, d2, d3) {
   return `
   <div class="lib-grid-card">
     <div class="lib-grid-card__header"><div class="skel${c(d1)} skel-lib-card-icon"></div></div>
-    <div class="skel${c(d1)}" style="height:10px;width:${titleW}%;border-radius:3px"></div>
+    <div class="skel${c(d1)}" style="height:18px;width:${titleW}%;border-radius:3px"></div>
     <div class="lib-grid-card__pills">
-      <div class="skel${c(d2)}" style="height:9px;width:50px;border-radius:8px"></div>
-      <div class="skel${c(d2)}" style="height:9px;width:40px;border-radius:8px"></div>
+      <div class="skel${c(d2)}" style="height:21px;width:50px;border-radius:999px"></div>
+      <div class="skel${c(d2)}" style="height:21px;width:40px;border-radius:999px"></div>
     </div>
-    <div class="lib-grid-card__date"><div class="skel${c(d3)}" style="height:8px;width:48px;border-radius:3px"></div></div>
+    <div class="lib-grid-card__date"><div class="skel${c(d3)}" style="height:18px;width:48px;border-radius:3px"></div></div>
   </div>`;
 }
 
 function libIconItem(d1, d2, w) {
   const c = (d) => d ? ` skel-d${d}` : "";
   return `
-  <div class="lib-icon-item"><div class="skel${c(d1)} skel-lib-icon-img"></div><div class="skel${c(d2)}" style="height:8px;width:${w}px;border-radius:3px"></div></div>`;
+  <div class="lib-icon-item"><div class="skel${c(d1)} skel-lib-icon-img"></div><div class="skel${c(d2)}" style="height:18px;width:${w}px;border-radius:3px"></div></div>`;
 }
 
 const skeletonTemplates = {
