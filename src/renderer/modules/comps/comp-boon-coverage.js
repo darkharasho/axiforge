@@ -155,6 +155,7 @@ function _renderIconRow(boonMap, scope, size, lineLabel) {
 // ── Tooltip event binding ─────────────────────────────────────────────────────
 
 let _activeBoonTooltip = null;
+let _activeDurationExpand = null; // { expandEl: HTMLElement, iconEl: HTMLElement } | null
 
 function _closeBoonTooltip() {
   if (_activeBoonTooltip) {
@@ -167,9 +168,20 @@ export function closeBoonTooltip() {
   _closeBoonTooltip();
 }
 
+function _closeDurationExpand() {
+  if (!_activeDurationExpand) return;
+  _activeDurationExpand.expandEl.hidden = true;
+  _activeDurationExpand.iconEl.classList.remove("comp-boon-cov__icon--active");
+  _activeDurationExpand = null;
+}
+
+export function closeDurationExpand() { _closeDurationExpand(); }
+
 export function bindBoonCoverageEvents(container) {
   container.querySelectorAll(".comp-boon-cov__icon").forEach((iconEl) => {
     iconEl.addEventListener("mouseenter", () => {
+      // Suppress tooltip if this icon has its expansion open
+      if (_activeDurationExpand?.iconEl === iconEl) return;
       _closeBoonTooltip();
       const boonName = iconEl.dataset.boonName;
       const count    = Number(iconEl.dataset.count) || 0;
@@ -196,6 +208,44 @@ export function bindBoonCoverageEvents(container) {
     });
 
     iconEl.addEventListener("mouseleave", _closeBoonTooltip);
+  });
+
+  // ── Click handler for per-line boon icons ──────────────────────
+  container.querySelectorAll('.comp-boon-cov__icon[data-clickable="true"]').forEach((iconEl) => {
+    iconEl.addEventListener("click", (e) => {
+      e.stopPropagation();
+
+      // Toggle: clicking the active icon closes it
+      if (_activeDurationExpand?.iconEl === iconEl) {
+        _closeDurationExpand();
+        return;
+      }
+
+      // Close any existing expansion
+      _closeDurationExpand();
+
+      // Find the expansion div (next sibling of the parent .comp-boon-cov__line-row)
+      const lineRow = iconEl.closest(".comp-boon-cov__line-row");
+      const expandEl = lineRow?.nextElementSibling;
+      if (!expandEl || !expandEl.classList.contains("comp-boon-cov__duration-expand")) return;
+
+      // Parse providers and populate expansion
+      let providers = [];
+      try { providers = JSON.parse(iconEl.dataset.providers || "[]"); } catch (_) { /* ignore */ }
+      const boonName = iconEl.dataset.boonName;
+      const lineLabel = iconEl.dataset.lineLabel || "";
+
+      expandEl.innerHTML = _buildDurationExpandHTML(boonName, lineLabel, providers);
+      expandEl.hidden = false;
+      iconEl.classList.add("comp-boon-cov__icon--active");
+      _activeDurationExpand = { expandEl, iconEl };
+
+      // Wire the close button inside the expansion
+      expandEl.querySelector(".comp-boon-cov__dur-close")?.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        _closeDurationExpand();
+      });
+    });
   });
 }
 
@@ -264,4 +314,46 @@ function _buildTooltipHTML(boonName, count, providers, scope) {
 
 function _getProfSvg(profession, eliteSpec) {
   return (eliteSpec && getProfessionSvg(eliteSpec)) || getProfessionSvg(profession || "") || "";
+}
+
+function _buildDurationExpandHTML(boonName, lineLabel, providers) {
+  const icon = BOON_CONDITION_ICONS[boonName] || "";
+
+  const buildBlocks = providers
+    .filter(p => p.sources && p.sources.length > 0)
+    .map((p, i, arr) => {
+      const profSvg = _getProfSvg(p.profession, p.eliteSpec);
+      const sourceRows = p.sources.map(s => {
+        const typeClass = s.type === "skill" ? "comp-boon-cov__dur-type--skill" : "comp-boon-cov__dur-type--trait";
+        const typeLabel = s.type === "skill" ? "SKILL" : "TRAIT";
+        const dur = `${s.effectiveDuration}s`;
+        const stacksHtml = s.stacks > 1
+          ? `<span class="comp-boon-cov__dur-stacks">&times;${s.stacks}</span>`
+          : "";
+        return `<div class="comp-boon-cov__dur-source">
+          <span class="comp-boon-cov__dur-type ${typeClass}">${typeLabel}</span>
+          <span class="comp-boon-cov__dur-source-name">${escapeHtml(s.name)}</span>
+          <span class="comp-boon-cov__dur-duration">${escapeHtml(dur)}</span>
+          ${stacksHtml}
+        </div>`;
+      }).join("");
+      const sep = i < arr.length - 1 ? '<div class="comp-boon-cov__dur-sep"></div>' : "";
+      return `<div class="comp-boon-cov__dur-build">
+        <div class="comp-boon-cov__dur-build-header">
+          <span class="comp-boon-cov__dur-prof">${profSvg}</span>
+          <span class="comp-boon-cov__dur-build-name">${escapeHtml(p.buildName)}</span>
+        </div>
+        <div class="comp-boon-cov__dur-sources">${sourceRows}</div>
+      </div>${sep}`;
+    }).join("");
+
+  return `
+    <div class="comp-boon-cov__dur-header">
+      <img class="comp-boon-cov__dur-boon-icon" src="${escapeHtml(icon)}" width="18" height="18" alt="${escapeHtml(boonName)}">
+      <span class="comp-boon-cov__dur-boon-name">${escapeHtml(boonName)}</span>
+      <span class="comp-boon-cov__dur-line-label">${escapeHtml(lineLabel)}</span>
+      <button class="comp-boon-cov__dur-close" aria-label="Close">&#x2715;</button>
+    </div>
+    ${buildBlocks}
+  `;
 }
