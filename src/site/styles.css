@@ -10,6 +10,36 @@
 @import "../renderer/styles/notes.css";
 @import "../renderer/styles/detail-panel.css";
 @import "../renderer/styles/comps.css";
+@import "../renderer/styles/mini-build-card.css";
+
+/* ── Mini card SPA overrides ─────────────────────────────────────────── */
+
+/* Wrapper used when a build has a share link */
+.comp-pool-card-wrap {
+  position: relative;
+}
+
+/* SPA open-build link — styled like the desktop open button but as an <a> */
+.mini-card__spa-link {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 14px;
+  color: #667;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  text-decoration: none;
+  transition: color 0.15s, background 0.15s;
+}
+
+.mini-card__spa-link:hover {
+  color: #aaa;
+  background: rgba(255, 255, 255, 0.07);
+}
 
 /* Profession accent colors (from library.css — needed for comp pool cards) */
 .lib-prof--guardian     { color: #6ea8ff; }
