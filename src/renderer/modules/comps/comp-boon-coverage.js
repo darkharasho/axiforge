@@ -112,7 +112,8 @@ export function buildBoonCoverageHTML(data) {
         <div class="comp-boon-cov__icons">
           ${_renderIconRow(line.boons, "line", "28", line.label)}
         </div>
-      </div>`
+      </div>
+      <div class="comp-boon-cov__duration-expand" data-line-label="${escapeHtml(line.label)}" hidden></div>`
     )
     .join("");
 
@@ -134,9 +135,12 @@ function _renderIconRow(boonMap, scope, size, lineLabel) {
       ? escapeHtml(JSON.stringify(entry.providers))
       : "[]";
 
+    const isClickable = scope === "line" && covered;
+
     return `
       <div class="comp-boon-cov__icon ${covered ? "" : "comp-boon-cov__icon--uncovered"}"
            data-scope="${scope}"
+           ${isClickable ? 'data-clickable="true"' : ""}
            data-boon-name="${escapeHtml(boonName)}"
            data-count="${count}"
            data-providers="${providersJson}"
