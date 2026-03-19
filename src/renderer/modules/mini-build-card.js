@@ -149,7 +149,8 @@ export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
     const weapHtml = weaponSets.map((set) => {
       const icons = set.weapons
         .map((w) => {
-          const svg = getWeaponSvg(w.id);
+          let svg = getWeaponSvg(w.id);
+          if (svg) svg = svg.replace(/<svg /, '<svg fill="currentColor" ');
           return svg ? `<span class="mini-card__weap-icon">${svg}</span>` : "";
         })
         .join("");
