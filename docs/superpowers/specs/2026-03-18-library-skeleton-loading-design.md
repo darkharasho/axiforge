@@ -19,12 +19,14 @@ Facebook-style skeleton placeholders in both the sidebar and content area, using
 
 Only during initial app startup, specifically the window between page load and `renderLibrary()` being called. This only matters when the library was the active page on last close. Navigation from editor → library after startup has no loading gap (data is already in memory).
 
+`reloadBuilds()` (called after save/delete/import) is explicitly out of scope: those operations occur while the user is on the editor page, not the library, so the library page is never active at the same moment a reload is in flight. No skeleton is needed there.
+
 ## Architecture
 
 ### Pattern (mirrors existing editor panel skeletons)
 
 1. **Static HTML in `index.html`** — list-view content skeleton + sidebar skeleton pre-populated in `#lib-content` and `#lib-sidebar` for instant first paint, zero JS dependency
-2. **Early pref read in `renderer.js`** — before awaiting `listBuilds()` / `listProfessions()`, read `library.viewMode` from settings and re-inject the correct content skeleton if it differs from list view
+2. **Early pref read in `renderer.js`** — before awaiting `listBuilds()` / `listProfessions()`, read `library.viewMode` from settings and re-inject the correct content skeleton if it differs from list view. Note: `initLibrary()` also reads this setting via `loadPrefs()`, but that happens after the heavy data load — too late to show the right skeleton during it. The early read in `renderer.js` is a one-time extra IPC call at startup (a single setting key, ~1ms) whose sole purpose is covering the `listBuilds` loading window. The two reads are independent and serve different purposes.
 3. **Natural teardown** — `renderLibrary()` replaces both containers' `innerHTML`, automatically clearing skeletons
 
 ### Skeleton Templates
@@ -76,6 +78,8 @@ const [builds, professions] = await Promise.all([
 ### Static Skeleton in `index.html`
 
 `#lib-sidebar` and `#lib-content` are pre-populated with the `library-sidebar` and `library-list` skeleton HTML respectively. This ensures a skeleton is visible at first paint before any JS runs, covering the gap between HTML load and `renderer.js` executing the early pref read.
+
+For list-view users (the default), the static HTML is the final skeleton — the JS step is a no-op. For non-list-view users, the JS re-injection quickly replaces the list skeleton with the correct view-mode skeleton. The list-view flash lasts only as long as it takes `renderer.js` to start executing (~50ms), which is imperceptible.
 
 ## Files Changed
 
