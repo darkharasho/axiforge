@@ -4,6 +4,7 @@ import { escapeHtml } from "./utils.js";
 import { GW2_WEAPONS_BY_ID, GW2_RELICS_BY_LABEL } from "./constants.js";
 import { getProfessionSvg } from "./profession-icons.js";
 import { getWeaponSvg } from "./weapon-icons.js";
+
 import {
   getSpecIcon,
   profClass,
@@ -124,7 +125,7 @@ export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
     ? `<span class="mini-card__mode">${escapeHtml(gameMode)}</span>`
     : "";
 
-  // Left column: Specs (vertical, one per line)
+  // Left column: Specs as mini cards
   const specs = getSpecLineInfo(build);
   let specColHtml = "";
   if (specs.length) {
