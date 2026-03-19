@@ -282,4 +282,48 @@ describe("computeBoonCoverage", () => {
     expect(result.boons).toHaveLength(1);
     expect(result.boons[0].sources[0]).toMatchObject({ stacks: 0, duration: 0 });
   });
+
+  test("extracts boons from serialized build format (skills.heal/utility/elite objects, spec.id)", () => {
+    // Serialized builds use skills.heal/utility[]/elite (objects with .id) not healId/utilityIds/eliteId.
+    // Specializations use .id not .specializationId.
+    const swiftnessSkill = makeSkill(29965, "\"Advance!\"", [buffFact("Swiftness", 20)], {
+      description: "Shout. Grant aegis and swiftness to up to five nearby allies.",
+    });
+    const catalog = makeCatalog({ skillById: new Map([[29965, swiftnessSkill]]) });
+    const editor = {
+      skills: {
+        heal: null,
+        utility: [{ id: 29965, name: "\"Advance!\"" }, null, null],
+        elite: null,
+      },
+      specializations: [{ id: 62, name: "Firebrand", elite: true, majorChoices: { 1: 0, 2: 0, 3: 0 } }],
+      equipment: { weapons: {} },
+      underwaterMode: false,
+    };
+    const result = computeBoonCoverage(catalog, editor);
+    expect(result.boons.some((b) => b.name === "Swiftness")).toBe(true);
+  });
+
+  test("extracts boons from bundle skills of a profession mechanic (e.g. Firebrand tomes)", () => {
+    const chapterSkill = makeSkill(201, "Chapter 3: Azure Sun", [buffFact("Swiftness", 5)], {
+      type: "Weapon", slot: "Weapon_3", specialization: 62,
+      description: "Grant boons to allies.",
+    });
+    const tomeSkill = makeSkill(200, "Tome of Resolve", [], {
+      type: "Profession", slot: "Profession_2", specialization: 62,
+      bundleSkills: [201],
+    });
+    const catalog = makeCatalog({
+      skillById: new Map([[200, tomeSkill], [201, chapterSkill]]),
+      skills: [tomeSkill],
+    });
+    const editor = makeEditor({
+      specializations: [{ specializationId: 62, majorChoices: { 1: 0, 2: 0, 3: 0 } }],
+    });
+    const result = computeBoonCoverage(catalog, editor);
+    expect(result.boons.some((b) => b.name === "Swiftness")).toBe(true);
+    expect(result.boons.find((b) => b.name === "Swiftness").sources[0]).toMatchObject({
+      type: "skill", name: "Chapter 3: Azure Sun",
+    });
+  });
 });

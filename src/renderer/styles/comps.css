@@ -1338,11 +1338,11 @@
   right: -3px;
   background: #0d0d1e;
   color: #f0b870;
-  font-size: 7px;
+  font-size: 9px;
   font-weight: 600;
   border-radius: 2px;
   padding: 0 2px;
-  line-height: 12px;
+  line-height: 13px;
   border: 1px solid #2a2a3e;
   pointer-events: none;
 }

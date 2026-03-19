@@ -11,3 +11,11 @@
   - [x] Dragging onto needs some work, the small card is ehhh
   - [x] Dragging OFF should also remove it from the line
   - [x] Lets make the split between comp and builds user resizable and save the setting
+
+
+
+hover state on the comp boon coverage should use elite spec icons if available.
+
+on the comp boon coverage swiftness isnt getting calculated even though our fbs have "advance!" which says it gives swiftness
+
+on the comp boon coverage can we make the bottom right count a bit bigger?

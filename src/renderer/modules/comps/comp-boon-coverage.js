@@ -51,20 +51,32 @@ export async function computeCompBoonCoverage(comp, builds, catalogCache, getCat
       const coverage = computeBoonCoverage(catalog, build, weaponSkills);
       const buildName = build.title || build.id;
 
+      // Determine elite spec name (for icon display in tooltips).
+      // Serialized builds have .elite and .name directly on each spec entry;
+      // editor-format builds need a catalog lookup via specializationId.
+      let eliteSpec = null;
+      for (const spec of build.specializations || []) {
+        if (spec?.elite && spec?.name) { eliteSpec = spec.name; break; }
+        const specId = Number(spec?.specializationId || spec?.id) || 0;
+        if (!specId) continue;
+        const specData = catalog.specializationById?.get(specId);
+        if (specData?.elite) { eliteSpec = specData.name || null; break; }
+      }
+
       for (const boon of coverage.boons) {
         if (!lineBoonMap.has(boon.name)) {
           lineBoonMap.set(boon.name, { count: 0, providers: [] });
         }
         const lineEntry = lineBoonMap.get(boon.name);
         lineEntry.count++;
-        lineEntry.providers.push({ buildId, buildName, profession: build.profession });
+        lineEntry.providers.push({ buildId, buildName, profession: build.profession, eliteSpec });
 
         if (!squadMap.has(boon.name)) {
           squadMap.set(boon.name, { count: 0, providers: [] });
         }
         const squadEntry = squadMap.get(boon.name);
         squadEntry.count++;
-        squadEntry.providers.push({ buildId, buildName, lineLabel: label, profession: build.profession });
+        squadEntry.providers.push({ buildId, buildName, lineLabel: label, profession: build.profession, eliteSpec });
       }
     }
 
@@ -190,7 +202,7 @@ function _buildTooltipHTML(boonName, count, providers, scope) {
 
   if (scope === "line") {
     const rows = providers.map((p) => {
-      const profSvg = _getProfSvg(p.profession);
+      const profSvg = _getProfSvg(p.profession, p.eliteSpec);
       return `<div class="comp-boon-tooltip__row">
         <span class="comp-boon-tooltip__prof">${profSvg}</span>
         <span class="comp-boon-tooltip__build-name">${escapeHtml(p.buildName)}</span>
@@ -214,7 +226,7 @@ function _buildTooltipHTML(boonName, count, providers, scope) {
   }
   const lineGroups = [...byLine.entries()].map(([lbl, lProviders]) => {
     const rows = lProviders.map((p) => {
-      const profSvg = _getProfSvg(p.profession);
+      const profSvg = _getProfSvg(p.profession, p.eliteSpec);
       return `<div class="comp-boon-tooltip__row">
         <span class="comp-boon-tooltip__prof">${profSvg}</span>
         <span class="comp-boon-tooltip__build-name">${escapeHtml(p.buildName)}</span>
@@ -236,6 +248,6 @@ function _buildTooltipHTML(boonName, count, providers, scope) {
     <div class="comp-boon-tooltip__providers">${lineGroups}</div>`;
 }
 
-function _getProfSvg(profession) {
-  return getProfessionSvg(profession || "") || "";
+function _getProfSvg(profession, eliteSpec) {
+  return (eliteSpec && getProfessionSvg(eliteSpec)) || getProfessionSvg(profession || "") || "";
 }

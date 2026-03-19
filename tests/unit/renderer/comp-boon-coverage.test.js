@@ -191,6 +191,55 @@ describe("computeCompBoonCoverage", () => {
     expect(squad.size).toBe(0);
   });
 
+  test("includes eliteSpec in providers when build has an elite specialization", async () => {
+    const build = makeBuild("b1", "Guardian", {
+      specializations: [{ specializationId: 62, majorChoices: { 1: 0, 2: 0, 3: 0 } }],
+    });
+    build.skills.healId = 100;
+    const catalog = makeCatalog(new Map([[100, makeMightSkill()]]));
+    catalog.specializationById = new Map([[62, { id: 62, name: "Firebrand", elite: true }]]);
+    const catalogCache = new Map();
+    const getCatalog = makeGetCatalog(catalogCache, catalog);
+
+    const comp = makeComp([makeLine("l1", ["b1"])]);
+    const { squad } = await computeCompBoonCoverage(comp, [build], catalogCache, getCatalog);
+
+    expect(squad.get("Might").providers[0]).toMatchObject({
+      buildId: "b1",
+      eliteSpec: "Firebrand",
+    });
+  });
+
+  test("includes eliteSpec from serialized build format (spec.elite + spec.name direct)", async () => {
+    // Serialized builds store specializations with .elite and .name directly (no catalog lookup needed)
+    const build = makeBuild("b1", "Guardian", {
+      specializations: [{ id: 62, name: "Firebrand", elite: true, majorChoices: { 1: 0, 2: 0, 3: 0 } }],
+    });
+    build.skills = { heal: null, utility: [{ id: 100, name: "Healing Surge" }], elite: null };
+    const catalog = makeCatalog(new Map([[100, makeMightSkill()]]));
+    const catalogCache = new Map();
+    const getCatalog = makeGetCatalog(catalogCache, catalog);
+
+    const comp = makeComp([makeLine("l1", ["b1"])]);
+    const { squad } = await computeCompBoonCoverage(comp, [build], catalogCache, getCatalog);
+
+    expect(squad.get("Might").providers[0]).toMatchObject({ eliteSpec: "Firebrand" });
+  });
+
+  test("eliteSpec is null when build uses no elite specialization", async () => {
+    const build = makeBuild("b1", "Guardian");
+    build.skills.healId = 100;
+    const catalog = makeCatalog(new Map([[100, makeMightSkill()]]));
+    catalog.specializationById = new Map([[10, { id: 10, name: "Valor", elite: false }]]);
+    const catalogCache = new Map();
+    const getCatalog = makeGetCatalog(catalogCache, catalog);
+
+    const comp = makeComp([makeLine("l1", ["b1"])]);
+    const { squad } = await computeCompBoonCoverage(comp, [build], catalogCache, getCatalog);
+
+    expect(squad.get("Might").providers[0].eliteSpec).toBeNull();
+  });
+
   test("uses build.title as buildName when available", async () => {
     const build = makeBuild("b1", "Guardian", { title: "My Firebrand" });
     build.skills.healId = 100;

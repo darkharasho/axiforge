@@ -80,15 +80,23 @@ function extractBuffFacts(entity, sourceType) {
 function collectSkillIds(editor, catalog) {
   const ids = new Set();
   const skills = editor.skills || {};
-  if (skills.healId) ids.add(Number(skills.healId));
-  if (skills.eliteId) ids.add(Number(skills.eliteId));
+  // Support both editor format (healId/utilityIds/eliteId)
+  // and serialized build format (heal.id / utility[].id / elite.id).
+  const healId = skills.healId || skills.heal?.id;
+  const eliteId = skills.eliteId || skills.elite?.id;
+  if (healId) ids.add(Number(healId));
+  if (eliteId) ids.add(Number(eliteId));
   for (const uid of skills.utilityIds || []) {
     if (uid) ids.add(Number(uid));
   }
+  for (const u of skills.utility || []) {
+    if (u?.id) ids.add(Number(u.id));
+  }
   // Profession mechanic skill IDs (F1-F5)
+  // Support both editor format (specializationId) and serialized format (id).
   const profSkills = catalog?.skills || [];
   const selectedSpecIds = new Set(
-    (editor.specializations || []).map((s) => Number(s?.specializationId) || 0).filter(Boolean)
+    (editor.specializations || []).map((s) => Number(s?.specializationId || s?.id) || 0).filter(Boolean)
   );
   for (const s of profSkills) {
     if ((s.type || "").toLowerCase() !== "profession") continue;
@@ -109,7 +117,8 @@ function collectTraitIds(editor, catalog) {
       if (traitId) ids.add(traitId);
     }
     // Minor traits (always active when spec line is equipped)
-    const specId = Number(spec?.specializationId) || 0;
+    // Support both editor format (specializationId) and serialized format (id).
+    const specId = Number(spec?.specializationId || spec?.id) || 0;
     const specData = specId ? catalog?.specializationById?.get(specId) : null;
     for (const minorId of specData?.minorTraits || []) {
       if (minorId) ids.add(Number(minorId));
@@ -142,6 +151,10 @@ export function computeBoonCoverage(catalog, editor, weaponSkills = []) {
     if (skill.flipSkill) {
       const flip = catalog.skillById?.get(skill.flipSkill);
       if (flip) allFacts.push(...extractBuffFacts(flip, "skill"));
+    }
+    for (const bundleId of skill.bundleSkills || []) {
+      const bundleSkill = catalog.skillById?.get(bundleId);
+      if (bundleSkill) allFacts.push(...extractBuffFacts(bundleSkill, "skill"));
     }
   }
 
