@@ -469,7 +469,7 @@ export function renderCompDetail() {
       let data;
       try {
         data = await computeCompBoonCoverage(
-          comp, state.builds, state.catalogCache, _callbacks.getCatalog
+          comp, state.builds, state.catalogCache, _callbacks.getCatalog, state.upgradeCatalog
         );
       } catch (err) {
         console.error("[comp-boon-coverage] computation failed", err);
