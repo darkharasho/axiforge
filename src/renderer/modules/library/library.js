@@ -746,43 +746,61 @@ async function handleDuplicateComp(compId) {
   renderLibrary();
 }
 
-async function handleDropBuildOnComp(buildId, compId) {
-  const build = state.builds.find((b) => b.id === buildId);
-  if (!build) return;
-  if (build.compId === compId) return;
+async function handleDropBuildsOnComp(buildIds, compId) {
+  const builds = buildIds
+    .map((id) => state.builds.find((b) => b.id === id))
+    .filter((b) => b && b.compId !== compId);
+  if (builds.length === 0) return;
 
-  // Game mode lock check
+  // Game mode lock check against the first incompatible build
   const comp = state.comps?.find((c) => c.id === compId);
-  if (comp && !isGameModeCompatible(comp, build)) {
-    const modeName = comp.gameMode === "wvw" ? "WvW" : "PvE";
-    showToast(`This comp is locked to ${modeName} builds.`, "error");
-    return;
+  for (const build of builds) {
+    if (comp && !isGameModeCompatible(comp, build)) {
+      const modeName = comp.gameMode === "wvw" ? "WvW" : "PvE";
+      showToast(`This comp is locked to ${modeName} builds.`, "error");
+      return;
+    }
   }
 
-  const oldFolderId = build.folderId || null;
-  const oldCompId = build.compId || null;
-  await window.desktopApi.saveBuild({ ...build, compId, folderId: null });
+  // Save previous state for undo
+  const oldStates = builds.map((b) => ({
+    id: b.id,
+    folderId: b.folderId || null,
+    compId: b.compId || null,
+  }));
+
+  for (const build of builds) {
+    await window.desktopApi.saveBuild({ ...build, compId, folderId: null });
+  }
   if (comp) {
-    const buildIds = Array.isArray(comp.buildIds) ? comp.buildIds : [];
-    if (!buildIds.includes(buildId)) {
-      const newGameMode = comp.gameMode || build.gameMode;
-      await window.desktopApi.saveComp({ ...comp, gameMode: newGameMode, buildIds: [...buildIds, buildId] });
+    let currentBuildIds = Array.isArray(comp.buildIds) ? [...comp.buildIds] : [];
+    let newGameMode = comp.gameMode;
+    for (const build of builds) {
+      if (!currentBuildIds.includes(build.id)) {
+        currentBuildIds.push(build.id);
+        if (!newGameMode) newGameMode = build.gameMode;
+      }
     }
+    await window.desktopApi.saveComp({ ...comp, gameMode: newGameMode, buildIds: currentBuildIds });
   }
   state.builds = await window.desktopApi.listBuilds();
   state.comps = await window.desktopApi.listComps();
   pushUndo({ type: "move-to-comp", undo: async () => {
-    const current = state.builds.find((b) => b.id === buildId);
-    if (current) await window.desktopApi.saveBuild({ ...current, compId: oldCompId, folderId: oldFolderId });
+    for (const old of oldStates) {
+      const current = state.builds.find((b) => b.id === old.id);
+      if (current) await window.desktopApi.saveBuild({ ...current, compId: old.compId, folderId: old.folderId });
+    }
     const c = state.comps?.find((c) => c.id === compId);
     if (c) {
-      const ids = (c.buildIds || []).filter((id) => id !== buildId);
+      const movedIds = new Set(oldStates.map((o) => o.id));
+      const ids = (c.buildIds || []).filter((id) => !movedIds.has(id));
       const gameMode = ids.length === 0 ? null : c.gameMode;
       await window.desktopApi.saveComp({ ...c, buildIds: ids, gameMode });
     }
     state.builds = await window.desktopApi.listBuilds();
     state.comps = await window.desktopApi.listComps();
   }});
+  clearSelection();
   renderLibrary();
 }
 
@@ -1086,7 +1104,7 @@ function _buildSharedCallbacks() {
     onOpenComp: handleOpenComp,
     onRenameComp: handleRenameComp,
     onDuplicateComp: handleDuplicateComp,
-    onDropBuildOnComp: handleDropBuildOnComp,
+    onDropBuildsOnComp: handleDropBuildsOnComp,
     onRemoveBuildFromComp: handleRemoveBuildFromComp,
     onDeleteComps: handleDeleteComps,
     onMoveComps: handleMoveComps,

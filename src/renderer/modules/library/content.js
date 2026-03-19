@@ -5,7 +5,7 @@ import { escapeHtml, formatRelativeTime } from "../utils.js";
 import { roleBadgeHtml } from '../roleEstimator.js';
 import { getVisibleBuilds, getVisibleFolders, getVisibleComps } from "./folder-store.js";
 import { getProfessionSvg } from "../profession-icons.js";
-import { clearSelection, handleBuildClick, handleCompClick } from "./selection.js";
+import { clearSelection, handleBuildClick, handleCompClick, updateSelectionVisuals } from "./selection.js";
 import { wireDragDropEvents } from "./drag-drop.js";
 import {
   folderIcon,
@@ -67,6 +67,9 @@ export function renderContent() {
 
   // Re-init SortableJS on the new DOM
   wireDragDropEvents();
+
+  // Re-apply selection visuals after DOM replacement
+  updateSelectionVisuals();
 }
 
 // ─── Shared helpers ────────────────────────────────────────────────────────────

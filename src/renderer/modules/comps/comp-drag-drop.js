@@ -85,6 +85,12 @@ export function wireCompDragDrop(callbacks) {
             .map((el) => el.dataset.buildId);
           callbacks.onReorderSlotsInLine?.(lineId, newSlots);
         },
+        onMove(evt) {
+          if (evt.from === evt.to) return true; // allow reorder within same line
+          const capacity = parseInt(evt.to.dataset.capacity || "5", 10);
+          const filledCount = evt.to.querySelectorAll(".comp-slot--filled").length;
+          if (filledCount >= capacity) return false;
+        },
         onAdd(evt) {
           const toLineId = lineSlotsEl.closest("[data-line-id]")?.dataset.lineId;
           if (evt.item.classList.contains("comp-slot--filled")) {

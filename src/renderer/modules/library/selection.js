@@ -248,7 +248,7 @@ function _compRangeSelect(compId) {
 /**
  * Update DOM: add/remove `lib-selected` class on [data-build-id] and [data-comp-id] elements.
  */
-function updateSelectionVisuals() {
+export function updateSelectionVisuals() {
   document.querySelectorAll("[data-build-id]").forEach((el) => {
     const buildId = el.dataset.buildId;
     if (!buildId) return;

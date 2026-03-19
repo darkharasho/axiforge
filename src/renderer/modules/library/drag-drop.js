@@ -15,6 +15,7 @@ import { moveBuilds, reorderBuilds, reorderComps, reorderFolders } from "./folde
 import { expandTableFolder } from "./content.js";
 import { state } from "../state.js";
 import { isGameModeCompatible } from "./library.js";
+import { getSelection } from "./selection.js";
 
 let _callbacks = {};
 let _sortableInstances = [];
@@ -167,7 +168,12 @@ export function wireDragDropEvents() {
         const compId = compEl.dataset.compId;
         _isDragging = false;
         _draggedBuildId = null;
-        await _callbacks.onDropBuildOnComp?.(buildId, compId);
+        // Use multi-selection if the dragged build is part of one
+        const selected = getSelection();
+        const buildIds = selected.length > 1 && selected.includes(buildId)
+          ? selected
+          : [buildId];
+        await _callbacks.onDropBuildsOnComp?.(buildIds, compId);
         return;
       }
 
@@ -176,11 +182,17 @@ export function wireDragDropEvents() {
         const folderId = folderEl.dataset.folderId;
         _isDragging = false;
         _draggedBuildId = null;
-        // If inside a comp, remove build from comp instead of moving
+        const selected = getSelection();
+        const idsToMove = selected.length > 1 && selected.includes(buildId)
+          ? selected
+          : [buildId];
+        // If inside a comp, remove builds from comp instead of moving
         if (state.currentFolder?.type === "comp") {
-          await _callbacks.onRemoveBuildFromComp?.(buildId, state.currentFolder.id);
+          for (const id of idsToMove) {
+            await _callbacks.onRemoveBuildFromComp?.(id, state.currentFolder.id);
+          }
         } else {
-          await moveBuilds([buildId], folderId);
+          await moveBuilds(idsToMove, folderId);
         }
         _callbacks.onRefresh?.();
         return;
@@ -190,12 +202,18 @@ export function wireDragDropEvents() {
       if (navTarget) {
         _isDragging = false;
         _draggedBuildId = null;
-        // If inside a comp, remove build from comp instead of moving
+        const selected = getSelection();
+        const idsToMove = selected.length > 1 && selected.includes(buildId)
+          ? selected
+          : [buildId];
+        // If inside a comp, remove builds from comp instead of moving
         if (state.currentFolder?.type === "comp") {
-          await _callbacks.onRemoveBuildFromComp?.(buildId, state.currentFolder.id);
+          for (const id of idsToMove) {
+            await _callbacks.onRemoveBuildFromComp?.(id, state.currentFolder.id);
+          }
         } else {
           const folderId = navTarget.dataset.navigateFolder || null;
-          await moveBuilds([buildId], folderId);
+          await moveBuilds(idsToMove, folderId);
         }
         _callbacks.onRefresh?.();
         return;

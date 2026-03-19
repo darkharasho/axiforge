@@ -1071,6 +1071,11 @@
   display: none !important;
 }
 
+/* When a ghost placeholder is in a line, hide empty slots so total doesn't exceed capacity */
+.comp-line__slots:has(.comp-slot-ghost) .comp-slot--empty {
+  display: none !important;
+}
+
 /* Party line ghost during reorder */
 .comp-line-ghost {
   opacity: 0.5;
