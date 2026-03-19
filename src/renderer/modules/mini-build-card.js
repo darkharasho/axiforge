@@ -3,6 +3,7 @@
 import { escapeHtml } from "./utils.js";
 import { GW2_WEAPONS_BY_ID, GW2_RELICS_BY_LABEL } from "./constants.js";
 import { getProfessionSvg } from "./profession-icons.js";
+import { getWeaponSvg } from "./weapon-icons.js";
 import {
   getSpecIcon,
   profClass,
@@ -58,17 +59,17 @@ function getRuneIcon(build, upgradeCatalog) {
 }
 
 /**
- * Return array of weapon set display strings, e.g. ["Axe / Shield", "Staff"].
- * Skips empty sets.
+ * Return array of weapon set objects: [{ weapons: [{ id, label }], display }].
+ * Each set has the individual weapons (for icons) and a display string.
  */
-function getWeaponSetNames(build) {
+function getWeaponSets(build) {
   const weaps = build.equipment?.weapons;
   if (!weaps) return [];
 
   const resolve = (id) => {
     if (!id) return null;
     const w = GW2_WEAPONS_BY_ID.get(id);
-    return w ? w.label : id; // fallback to raw id
+    return w ? { id, label: w.label } : { id, label: id };
   };
 
   const sets = [];
@@ -77,14 +78,16 @@ function getWeaponSetNames(build) {
   const mh1 = resolve(weaps.mainhand1);
   const oh1 = resolve(weaps.offhand1);
   if (mh1 || oh1) {
-    sets.push([mh1, oh1].filter(Boolean).join(" / "));
+    const weapons = [mh1, oh1].filter(Boolean);
+    sets.push({ weapons, display: weapons.map((w) => w.label).join(" / ") });
   }
 
   // Set 2
   const mh2 = resolve(weaps.mainhand2);
   const oh2 = resolve(weaps.offhand2);
   if (mh2 || oh2) {
-    sets.push([mh2, oh2].filter(Boolean).join(" / "));
+    const weapons = [mh2, oh2].filter(Boolean);
+    sets.push({ weapons, display: weapons.map((w) => w.label).join(" / ") });
   }
 
   return sets;
@@ -140,12 +143,18 @@ export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
   }
 
   // Right column: Weapons, Gear, Relic (stacked)
-  const weaponSets = getWeaponSetNames(build);
+  const weaponSets = getWeaponSets(build);
   let weapRowHtml = "";
   if (weaponSets.length) {
-    const weapHtml = weaponSets
-      .map((s) => `<span class="mini-card__weap-name">${escapeHtml(s)}</span>`)
-      .join(`<span class="mini-card__weap-div">|</span>`);
+    const weapHtml = weaponSets.map((set) => {
+      const icons = set.weapons
+        .map((w) => {
+          const svg = getWeaponSvg(w.id);
+          return svg ? `<span class="mini-card__weap-icon">${svg}</span>` : "";
+        })
+        .join("");
+      return `${icons}<span class="mini-card__weap-name">${escapeHtml(set.display)}</span>`;
+    }).join(`<span class="mini-card__weap-div">|</span>`);
 
     weapRowHtml = `
       <div class="mini-card__cell">

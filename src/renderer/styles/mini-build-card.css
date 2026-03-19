@@ -239,6 +239,19 @@ button.mini-card__name:hover .mini-card__name-arrow {
   overflow: hidden;
 }
 
+.mini-card__weap-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #99aa88;
+}
+
+.mini-card__weap-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
 .mini-card__weap-name {
   font-size: 11px;
   color: #99aa88;
