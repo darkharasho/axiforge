@@ -12,6 +12,7 @@ import {
   setPublishStatusEl,
 } from "../render-pages.js";
 import { roleBadgeHtml } from "../roleEstimator.js";
+import { renderMiniBuildCard, renderMissingMiniBuildCard } from "../mini-build-card.js";
 import { computeCompBoonCoverage, buildBoonCoverageHTML, bindBoonCoverageEvents, closeBoonTooltip, closeDurationExpand } from "./comp-boon-coverage.js";
 import {
   getEliteSpecName,
@@ -593,8 +594,8 @@ function renderBuildPool(comp) {
   });
 
   const cards = filtered.map((entry) => {
-    if (entry.type === "missing") return renderMissingPoolCard(entry.id);
-    return renderPoolCard(entry.build);
+    if (entry.type === "missing") return renderMissingMiniBuildCard(entry.id);
+    return renderMiniBuildCard(entry.build, state.upgradeCatalog);
   }).join("");
 
   return `
@@ -610,75 +611,6 @@ function renderBuildPool(comp) {
       <div class="comp-pool-list">
         ${cards || '<p class="comp-pool-empty">No builds in pool</p>'}
       </div>
-    </div>
-  `;
-}
-
-function renderPoolCard(build) {
-  const icon = getSpecIcon(build);
-  const pClass = profClass(build.profession);
-  const name = escapeHtml(getDisplayName(build));
-  const gameMode = build.gameMode || "pve";
-
-  // Equipment details
-  const statPackage = resolveStatPackage(build);
-  const runeName = getRuneName(build, state.upgradeCatalog);
-  const relicName = build.equipment?.relic || "";
-
-  // Build bottom line parts (stat · rune · relic)
-  const bottomParts = [];
-  if (statPackage) {
-    bottomParts.push(`<span class="comp-pool-card__stat">${escapeHtml(statPackage)}</span>`);
-  }
-  if (runeName) {
-    if (bottomParts.length) bottomParts.push(`<span class="comp-pool-card__sep">&middot;</span>`);
-    bottomParts.push(`<span class="comp-pool-card__equip">${escapeHtml(runeName)}</span>`);
-  }
-  if (relicName) {
-    if (bottomParts.length) bottomParts.push(`<span class="comp-pool-card__sep">&middot;</span>`);
-    bottomParts.push(`<span class="comp-pool-card__equip">${escapeHtml(relicName)}</span>`);
-  }
-
-  // Tag pills
-  const tagPills = (build.tags || [])
-    .map((t) => `<span class="comp-pool-tag">${escapeHtml(t)}</span>`)
-    .join("");
-
-  return `
-    <div class="comp-pool-card ${pClass}" data-build-id="${escapeHtml(build.id)}">
-      <div class="comp-pool-card__icon">${icon}</div>
-      <div class="comp-pool-card__info">
-        <div class="comp-pool-card__top">
-          <span class="comp-pool-card__name">${name}</span>
-          ${tagPills}
-          ${roleBadgeHtml(build, state.upgradeCatalog)}
-        </div>
-        ${bottomParts.length ? `<div class="comp-pool-card__bottom">${bottomParts.join("")}</div>` : ""}
-      </div>
-      <span class="comp-pool-card__mode">${escapeHtml(gameMode)}</span>
-      <button type="button" class="comp-pool-card__open" data-action="pool-open"
-              data-build-id="${escapeHtml(build.id)}" title="Open build">&#8599;</button>
-      <button type="button" class="comp-pool-card__remove" data-action="pool-remove"
-              data-build-id="${escapeHtml(build.id)}" title="Remove from comp">&times;</button>
-    </div>
-  `;
-}
-
-function renderMissingPoolCard(buildId) {
-  const truncId = buildId.length > 12 ? buildId.slice(0, 12) + "\u2026" : buildId;
-  return `
-    <div class="comp-pool-card comp-pool-card--missing" data-build-id="${escapeHtml(buildId)}">
-      <div class="comp-pool-card__icon comp-pool-card__icon--missing">?</div>
-      <div class="comp-pool-card__info">
-        <div class="comp-pool-card__top">
-          <span class="comp-pool-card__name comp-pool-card__name--missing">Missing Build</span>
-        </div>
-        <div class="comp-pool-card__bottom">
-          <span class="comp-pool-card__equip">${escapeHtml(truncId)}</span>
-        </div>
-      </div>
-      <button type="button" class="comp-pool-card__remove" data-action="pool-remove"
-              data-build-id="${escapeHtml(buildId)}" title="Remove from comp">&times;</button>
     </div>
   `;
 }
