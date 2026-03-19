@@ -704,147 +704,6 @@
   text-align: center;
 }
 
-/* ── Pool Card ────────────────────────────────────────────────────── */
-
-.comp-pool-card {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  background: #12122a;
-  border-radius: 5px;
-  cursor: grab;
-  border-left: 3px solid currentColor;
-  position: relative;
-  transition: background 0.12s;
-}
-
-.comp-pool-card:hover {
-  background: #181838;
-}
-
-.comp-pool-card__icon {
-  width: 32px;
-  height: 32px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.comp-pool-card__icon svg {
-  width: 20px;
-  height: 20px;
-}
-
-.comp-pool-card__info {
-  flex: 1;
-  min-width: 0;
-}
-
-.comp-pool-card__top {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.comp-pool-card__name {
-  font-size: 13px;
-  color: #ddd;
-  font-weight: 500;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.comp-pool-card__bottom {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 3px;
-}
-
-.comp-pool-card__stat {
-  font-size: 11px;
-  color: #c8a96e;
-}
-
-.comp-pool-card__sep {
-  font-size: 11px;
-  color: #667;
-}
-
-.comp-pool-card__equip {
-  font-size: 11px;
-  color: #99a;
-}
-
-.comp-pool-card__mode {
-  font-size: 10px;
-  color: #778;
-  background: #0d0d22;
-  border-radius: 8px;
-  padding: 1px 6px;
-  flex-shrink: 0;
-}
-
-.comp-pool-card__open,
-.comp-pool-card__remove {
-  all: unset;
-  cursor: pointer;
-  font-size: 14px;
-  color: #667;
-  width: 20px;
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 3px;
-  flex-shrink: 0;
-  transition: color 0.15s, background 0.15s;
-}
-
-.comp-pool-card__open:hover {
-  color: #aaa;
-  background: rgba(255, 255, 255, 0.07);
-}
-
-.comp-pool-card__remove:hover {
-  color: #e55;
-  background: rgba(238, 85, 85, 0.12);
-}
-
-.comp-pool-tag {
-  font-size: 10px;
-  border-radius: 8px;
-  padding: 0 5px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #aab;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-/* ── Missing Pool Card ───────────────────────────────────────────── */
-
-.comp-pool-card--missing {
-  opacity: 0.5;
-  border-left-color: #444;
-  cursor: default;
-}
-
-.comp-pool-card__icon--missing {
-  color: #555;
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.comp-pool-card__name--missing {
-  color: #666;
-  font-style: italic;
-}
 
 /* ═══════════════════════════════════════════════════════════════════
    Add Build Picker Modal
@@ -1045,13 +904,12 @@
 .comp-drag-icon-ghost.lib-prof--elementalist { border-color: #dd5555 !important; }
 .comp-drag-icon-ghost.lib-prof--revenant     { border-color: #aa6655 !important; }
 
-.comp-drag-icon-ghost .comp-pool-card__info,
-.comp-drag-icon-ghost .comp-pool-card__mode,
-.comp-drag-icon-ghost .comp-pool-card__remove {
+.comp-drag-icon-ghost .mini-card__info,
+.comp-drag-icon-ghost .mini-card__actions {
   display: none !important;
 }
 
-.comp-drag-icon-ghost .comp-pool-card__icon {
+.comp-drag-icon-ghost .mini-card__icon {
   width: 30px !important;
   height: 30px !important;
   background: rgba(255, 255, 255, 0.05) !important;
@@ -1059,7 +917,7 @@
   flex-shrink: 0 !important;
 }
 
-.comp-drag-icon-ghost .comp-pool-card__icon svg {
+.comp-drag-icon-ghost .mini-card__icon svg {
   width: 26px !important;
   height: 26px !important;
 }
