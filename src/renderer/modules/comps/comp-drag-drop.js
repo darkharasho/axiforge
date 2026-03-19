@@ -8,6 +8,20 @@ import Sortable from "sortablejs";
 
 let _sortableInstances = [];
 
+// ── Drag-session CSS class ────────────────────────────────────────────────────
+// While any drag is active we add "comp-dragging" to the party panel.
+// The stylesheet rule for .comp-detail__party-panel.comp-dragging .comp-line__slots
+// removes max-height and overflow constraints so the SortableJS ghost is visible
+// when dragged into a full line that would need an extra row.
+
+function _addDraggingClass() {
+  document.querySelector(".comp-detail__party-panel")?.classList.add("comp-dragging");
+}
+
+export function collapseHoverExpanded() {
+  document.querySelector?.(".comp-detail__party-panel")?.classList.remove("comp-dragging");
+}
+
 /**
  * Wire up drag-and-drop interactions for the comp detail view.
  * Call after the detail DOM has been rendered.
@@ -27,6 +41,7 @@ export function wireCompDragDrop(callbacks) {
         fallbackClass: "comp-drag-icon-ghost",
         draggable: ".comp-pool-card",
         onStart(evt) {
+          _addDraggingClass();
           // Center the 42×42 ghost under the cursor instead of anchoring
           // it at the original card's top-left corner.
           const rect = evt.item.getBoundingClientRect();
@@ -41,7 +56,7 @@ export function wireCompDragDrop(callbacks) {
           });
         },
         onEnd() {
-          /* no-op — handled by line's onAdd */
+          collapseHoverExpanded();
         },
       })
     );
@@ -64,18 +79,6 @@ export function wireCompDragDrop(callbacks) {
         animation: 150,
         ghostClass: "comp-slot-ghost",
         draggable: ".comp-slot--filled",
-        onMove(evt) {
-          // Prevent ghost from being placed after the last slot (would wrap to next row)
-          const kids = lineSlotsEl.children;
-          if (
-            kids.length > 0 &&
-            evt.willInsertAfter &&
-            evt.related === kids[kids.length - 1]
-          ) {
-            return false;
-          }
-          return true;
-        },
         onUpdate() {
           const lineId = lineSlotsEl.closest("[data-line-id]")?.dataset.lineId;
           const newSlots = [...lineSlotsEl.querySelectorAll(".comp-slot--filled")]
@@ -85,7 +88,7 @@ export function wireCompDragDrop(callbacks) {
         onAdd(evt) {
           const toLineId = lineSlotsEl.closest("[data-line-id]")?.dataset.lineId;
           if (evt.item.classList.contains("comp-slot--filled")) {
-            // Slot moved from another line
+            // Slot moved from another line (or returned to original line)
             const fromLineId = evt.item.dataset.lineId;
             const fromSlotIdx = parseInt(evt.item.dataset.slotIdx, 10);
             const buildId = evt.item.dataset.buildId;
@@ -99,9 +102,11 @@ export function wireCompDragDrop(callbacks) {
           }
         },
         onStart() {
+          _addDraggingClass();
           document.querySelector(".comp-line-trash")?.classList.add("comp-line-trash--visible");
         },
         onEnd() {
+          collapseHoverExpanded();
           document.querySelector(".comp-line-trash")?.classList.remove("comp-line-trash--visible");
         },
       })
@@ -156,6 +161,7 @@ export function wireCompDragDrop(callbacks) {
  * Call at the START of renderCompDetail to clean up before re-render.
  */
 export function destroyCompDragDrop() {
+  collapseHoverExpanded();
   _sortableInstances.forEach((s) => {
     try {
       s.destroy();

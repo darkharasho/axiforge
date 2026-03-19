@@ -266,6 +266,28 @@ function getTotalCapacity(comp) {
   return comp.partyLines.reduce((sum, pl) => sum + (pl.capacity || 0), 0);
 }
 
+/**
+ * Pure data mutation: move a build slot from one party line to another.
+ * Expands the destination line's capacity if it is already full.
+ * Returns true if the move was applied, false if it was a no-op.
+ */
+export function applyMoveSlotBetweenLines(comp, buildId, fromLineId, fromSlotIdx, toLineId) {
+  if (fromLineId === toLineId) return false;
+  const fromLine = (comp.partyLines || []).find((pl) => pl.id === fromLineId);
+  const toLine = (comp.partyLines || []).find((pl) => pl.id === toLineId);
+  if (!fromLine || !toLine) return false;
+  if ((toLine.slots || []).length >= (toLine.capacity || 5)) {
+    toLine.capacity = (toLine.slots || []).length + 1;
+  }
+  const fromSlots = [...(fromLine.slots || [])];
+  fromSlots.splice(fromSlotIdx, 1);
+  fromLine.slots = fromSlots;
+  // Shrink source capacity back to natural size after removing a build
+  fromLine.capacity = Math.max(5, fromLine.slots.length);
+  toLine.slots = [...(toLine.slots || []), buildId];
+  return true;
+}
+
 function resolveBuild(buildId) {
   return state.builds.find((b) => b.id === buildId) || null;
 }
@@ -416,17 +438,14 @@ export function renderCompDetail() {
       _callbacks.onRerender?.();
     },
     async onMoveSlotToLine(buildId, fromLineId, fromSlotIdx, toLineId) {
-      if (fromLineId === toLineId) return;
-      const fromLine = (comp.partyLines || []).find((pl) => pl.id === fromLineId);
-      const toLine = (comp.partyLines || []).find((pl) => pl.id === toLineId);
-      if (!fromLine || !toLine) return;
-      if ((toLine.slots || []).length >= (toLine.capacity || 5)) return;
+      if (!applyMoveSlotBetweenLines(comp, buildId, fromLineId, fromSlotIdx, toLineId)) {
+        // Slot was returned to its original line (same fromLineId/toLineId) — the DOM
+        // item was already removed by onAdd, so re-render to restore the correct visual.
+        _callbacks.onRerender?.();
+        return;
+      }
       _justDropped = true;
       setTimeout(() => { _justDropped = false; }, 200);
-      const fromSlots = [...(fromLine.slots || [])];
-      fromSlots.splice(fromSlotIdx, 1);
-      fromLine.slots = fromSlots;
-      toLine.slots = [...(toLine.slots || []), buildId];
       await saveAndSync(comp);
       _callbacks.onRerender?.();
     },
@@ -557,7 +576,7 @@ function renderPartyLine(pl, idx, totalCap) {
   return `
     <div class="comp-line" data-line-id="${escapeHtml(pl.id)}">
       <span class="comp-line__label">P${idx + 1}</span>
-      <div class="comp-line__slots" style="max-height: ${Math.ceil(capacity / 5) * 42 + (Math.ceil(capacity / 5) - 1) * 5}px;">${slotBoxes.join("")}</div>
+      <div class="comp-line__slots" data-capacity="${capacity}" style="max-height: ${Math.ceil(capacity / 5) * 42 + (Math.ceil(capacity / 5) - 1) * 5}px;">${slotBoxes.join("")}</div>
       <div class="comp-line__controls">
         <button type="button" class="comp-line__btn" data-action="duplicate-line"
                 data-line-id="${escapeHtml(pl.id)}" title="Duplicate line">&#10697;</button>
@@ -931,20 +950,6 @@ function bindDetailEvents(container, comp) {
     });
   });
 
-  // Click empty slot — increment capacity
-  container.querySelectorAll("[data-action='click-empty-slot']").forEach((slot) => {
-    slot.addEventListener("click", async (e) => {
-      if (_justDropped) return; // ignore click that follows a drag-drop
-      e.stopPropagation();
-      const lineId = slot.dataset.lineId;
-      if (getTotalCapacity(comp) >= 50) return;
-      const line = (comp.partyLines || []).find((pl) => pl.id === lineId);
-      if (!line) return;
-      line.capacity = (line.capacity || 5) + 1;
-      await saveAndSync(comp);
-      _callbacks.onRerender?.();
-    });
-  });
 
   // ── Filled slot click → open build ─────────────────────────────────────────
   container.querySelectorAll("[data-action='click-filled-slot']").forEach((slot) => {
