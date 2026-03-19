@@ -102,6 +102,57 @@ function statRowSingle(d1) {
     </div>`;
 }
 
+function libListRow(titleW, d1, d2, d3) {
+  const c = (d) => d ? ` skel-d${d}` : "";
+  return `
+  <div class="lib-list-row">
+    <div class="skel${c(d1)} skel-lib-row-icon"></div>
+    <div class="skel${c(d1)}" style="height:10px;width:${titleW}%;border-radius:3px"></div>
+    <div class="skel${c(d2)}" style="height:9px;width:54px;border-radius:8px"></div>
+    <div class="skel${c(d2)}" style="height:9px;width:46px;border-radius:8px"></div>
+    <div class="skel${c(d3)}" style="height:9px;width:56px;border-radius:3px"></div>
+  </div>`;
+}
+
+function libTableRow(titleW, d1, d2, d3) {
+  const c = (d) => d ? ` skel-d${d}` : "";
+  return `
+    <li class="lib-tv__item">
+      <div class="lib-tv__row">
+        <span></span>
+        <span class="lib-tv__icon"><div class="skel${c(d1)} skel-lib-row-icon"></div></span>
+        <span><div class="skel${c(d1)}" style="height:9px;width:${titleW}%;border-radius:3px"></div></span>
+        <span><div class="skel${c(d2)}" style="height:9px;width:58px;border-radius:8px"></div></span>
+        <span><div class="skel${c(d2)}" style="height:9px;width:55px;border-radius:3px"></div></span>
+        <span><div class="skel${c(d3)}" style="height:9px;width:34px;border-radius:3px"></div></span>
+        <span></span>
+        <span></span>
+        <span><div class="skel${c(d3)}" style="height:9px;width:52px;border-radius:3px"></div></span>
+        <span><div class="skel${c(d1)}" style="height:9px;width:52px;border-radius:3px"></div></span>
+      </div>
+    </li>`;
+}
+
+function libGridCard(titleW, d1, d2, d3) {
+  const c = (d) => d ? ` skel-d${d}` : "";
+  return `
+  <div class="lib-grid-card">
+    <div class="lib-grid-card__header"><div class="skel${c(d1)} skel-lib-card-icon"></div></div>
+    <div class="skel${c(d1)}" style="height:10px;width:${titleW}%;border-radius:3px"></div>
+    <div class="lib-grid-card__pills">
+      <div class="skel${c(d2)}" style="height:9px;width:50px;border-radius:8px"></div>
+      <div class="skel${c(d2)}" style="height:9px;width:40px;border-radius:8px"></div>
+    </div>
+    <div class="lib-grid-card__date"><div class="skel${c(d3)}" style="height:8px;width:48px;border-radius:3px"></div></div>
+  </div>`;
+}
+
+function libIconItem(d1, d2, w) {
+  const c = (d) => d ? ` skel-d${d}` : "";
+  return `
+  <div class="lib-icon-item"><div class="skel${c(d1)} skel-lib-icon-img"></div><div class="skel${c(d2)}" style="height:8px;width:${w}px;border-radius:3px"></div></div>`;
+}
+
 const skeletonTemplates = {
   skills: `
 <div class="skel-skills">
@@ -220,6 +271,79 @@ const skeletonTemplates = {
 </div>`,
 
   dropdown: `<div class="skel skel-dropdown"></div>`,
+
+  "library-sidebar": `
+<div class="skel-lib-sidebar">
+  <div class="skel-lib-sidebar-section">
+    <div class="skel-lib-sidebar-label"><div class="skel skel-lib-sidebar-head" style="width:80px"></div></div>
+    <div class="skel-lib-sidebar-item"><div class="skel skel-lib-sidebar-icon"></div><div class="skel skel-d1" style="height:9px;width:70px"></div></div>
+    <div class="skel-lib-sidebar-item"><div class="skel skel-d2 skel-lib-sidebar-icon"></div><div class="skel skel-d2" style="height:9px;width:55px"></div></div>
+    <div class="skel-lib-sidebar-item"><div class="skel skel-d3 skel-lib-sidebar-icon"></div><div class="skel skel-d3" style="height:9px;width:80px"></div></div>
+  </div>
+  <div class="skel-lib-sidebar-section">
+    <div class="skel-lib-sidebar-label"><div class="skel skel-d2 skel-lib-sidebar-head" style="width:65px"></div></div>
+    <div class="skel-lib-sidebar-item"><div class="skel skel-d3 skel-lib-sidebar-icon"></div><div class="skel skel-d3" style="height:9px;width:65px"></div></div>
+    <div class="skel-lib-sidebar-item"><div class="skel skel-d2 skel-lib-sidebar-icon"></div><div class="skel skel-d2" style="height:9px;width:75px"></div></div>
+  </div>
+</div>`,
+
+  "library-list": `
+<div class="lib-list">
+  ${libListRow(52, "", 1, 2)}
+  ${libListRow(68, 1, 2, 3)}
+  ${libListRow(43, 2, 3, 1)}
+  ${libListRow(60, 3, 1, 2)}
+  ${libListRow(75, 1, 2, 3)}
+  ${libListRow(38, 2, 3, 1)}
+</div>`,
+
+  "library-table": `
+<div class="lib-tv">
+  <div class="lib-tv__header">
+    <span></span>
+    <span></span>
+    <span><div style="height:8px;width:30px;background:#1a1a3a;border-radius:3px"></div></span>
+    <span><div style="height:8px;width:50px;background:#1a1a3a;border-radius:3px"></div></span>
+    <span><div style="height:8px;width:50px;background:#1a1a3a;border-radius:3px"></div></span>
+    <span><div style="height:8px;width:35px;background:#1a1a3a;border-radius:3px"></div></span>
+    <span><div style="height:8px;width:35px;background:#1a1a3a;border-radius:3px"></div></span>
+    <span><div style="height:8px;width:35px;background:#1a1a3a;border-radius:3px"></div></span>
+    <span><div style="height:8px;width:42px;background:#1a1a3a;border-radius:3px"></div></span>
+    <span><div style="height:8px;width:42px;background:#1a1a3a;border-radius:3px"></div></span>
+  </div>
+  <ul class="lib-tv__tree">
+    ${libTableRow(62, "", 1, 2)}
+    ${libTableRow(74, 1, 2, 3)}
+    ${libTableRow(45, 2, 3, 1)}
+    ${libTableRow(58, 3, 1, 2)}
+    ${libTableRow(80, 1, 2, 3)}
+    ${libTableRow(50, 2, 3, 1)}
+  </ul>
+</div>`,
+
+  "library-grid": `
+<div class="lib-grid">
+  ${libGridCard(70, "", 1, 2)}
+  ${libGridCard(60, 1, 2, 3)}
+  ${libGridCard(82, 2, 3, 1)}
+  ${libGridCard(68, 3, 1, 2)}
+  ${libGridCard(55, 1, 2, 3)}
+  ${libGridCard(75, 2, 3, 1)}
+</div>`,
+
+  "library-icon": `
+<div class="lib-icon-grid">
+  ${libIconItem("", 1, 48)}
+  ${libIconItem(1, 2, 38)}
+  ${libIconItem(2, 3, 52)}
+  ${libIconItem(3, 1, 40)}
+  ${libIconItem(1, 2, 44)}
+  ${libIconItem(2, 3, 50)}
+  ${libIconItem(3, 1, 36)}
+  ${libIconItem("", 2, 48)}
+  ${libIconItem(1, 3, 42)}
+  ${libIconItem(2, 1, 46)}
+</div>`,
 };
 
 function injectSkeleton(el, templateName) {
