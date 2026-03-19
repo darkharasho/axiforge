@@ -93,6 +93,20 @@
   margin-top: 6px;
 }
 
+/* Drop to single column when the card's container is narrow.
+   Uses container query so it responds to the card's actual width,
+   not the viewport. */
+.mini-card__info {
+  container-type: inline-size;
+}
+
+@container (max-width: 320px) {
+  .mini-card__grid {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+}
+
 .mini-card__cell {
   display: flex;
   align-items: center;
