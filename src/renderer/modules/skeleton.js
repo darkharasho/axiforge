@@ -107,10 +107,9 @@ function libListRow(titleW, d1, d2, d3) {
   return `
   <div class="lib-list-row">
     <div class="skel${c(d1)} skel-lib-row-icon"></div>
-    <div class="skel${c(d1)}" style="height:10px;width:${titleW}%;border-radius:3px"></div>
-    <div class="skel${c(d2)}" style="height:9px;width:54px;border-radius:8px"></div>
-    <div class="skel${c(d2)}" style="height:9px;width:46px;border-radius:8px"></div>
-    <div class="skel${c(d3)}" style="height:9px;width:56px;border-radius:3px"></div>
+    <span class="lib-list-row__title"><div class="skel${c(d1)}" style="height:10px;width:${titleW}%;border-radius:3px"></div></span>
+    <span class="lib-list-row__pills"><div class="skel${c(d2)}" style="height:9px;width:54px;border-radius:8px"></div><div class="skel${c(d2)}" style="height:9px;width:46px;border-radius:8px"></div></span>
+    <span class="lib-list-row__date"><div class="skel${c(d3)}" style="height:9px;width:56px;border-radius:3px"></div></span>
   </div>`;
 }
 
