@@ -134,6 +134,7 @@ export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
 
     specColHtml = `
       <div class="mini-card__col-left">
+        <span class="mini-card__detail-label">Specs</span>
         ${specLines}
       </div>`;
   }
