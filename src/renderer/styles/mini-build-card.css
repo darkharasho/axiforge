@@ -60,6 +60,8 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  min-width: 0;
+  flex-shrink: 1;
 }
 
 .mini-card__tag {
@@ -96,6 +98,7 @@
   align-items: center;
   gap: 6px;
   min-width: 0;
+  overflow: hidden;
 }
 
 .mini-card__detail-label {
@@ -113,6 +116,8 @@
   display: flex;
   align-items: center;
   gap: 5px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .mini-card__spec-pip {
@@ -148,6 +153,9 @@
 .mini-card__spec-name {
   font-size: 11px;
   color: #8899bb;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .mini-card__spec-name--elite {
@@ -167,11 +175,16 @@
   display: flex;
   align-items: center;
   gap: 3px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .mini-card__weap-name {
   font-size: 11px;
   color: #99aa88;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .mini-card__weap-div {
@@ -219,16 +232,23 @@
 .mini-card__stat {
   font-size: 11px;
   color: #c8a96e;
+  white-space: nowrap;
 }
 
 .mini-card__equip {
   font-size: 11px;
   color: #99a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .mini-card__relic {
   font-size: 11px;
   color: #aa88cc;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .mini-card__sep {
