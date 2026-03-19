@@ -11,7 +11,7 @@
 // forceFallback bypasses native HTML5 drag events).
 
 import Sortable from "sortablejs";
-import { moveBuilds, reorderBuilds } from "./folder-store.js";
+import { moveBuilds, reorderBuilds, reorderComps } from "./folder-store.js";
 import { expandTableFolder } from "./content.js";
 import { state } from "../state.js";
 import { isGameModeCompatible } from "./library.js";
@@ -21,6 +21,7 @@ let _sortableInstances = [];
 let _expandTimer = null;
 let _isDragging = false;
 let _draggedBuildId = null;
+let _draggedCompId = null;
 let _hoverTarget = null;
 
 export function initDragDrop(callbacks) {
@@ -40,7 +41,8 @@ export function wireDragDropEvents() {
 
   const onStart = (evt) => {
     _isDragging = true;
-    _draggedBuildId = evt.item?.dataset?.buildId;
+    _draggedBuildId = evt.item?.dataset?.buildId || null;
+    _draggedCompId = evt.item?.dataset?.compId || null;
     document.addEventListener("pointermove", _onPointerMove);
   };
 
@@ -55,6 +57,52 @@ export function wireDragDropEvents() {
     if (_hoverTarget) {
       _hoverTarget.classList.remove("lib-drop-target", "is-invalid");
       _hoverTarget = null;
+    }
+
+    const compId = evt.item?.dataset?.compId;
+    if (compId) {
+      if (droppedOnTarget) {
+        const folderEl = droppedOnTarget.closest("[data-folder-id]");
+        if (folderEl) {
+          _isDragging = false;
+          _draggedCompId = null;
+          await _callbacks.onMoveComps?.([compId], folderEl.dataset.folderId);
+          return;
+        }
+        const navTarget = droppedOnTarget.closest("[data-navigate-folder], [data-navigate-all], [data-navigate-root]");
+        if (navTarget) {
+          _isDragging = false;
+          _draggedCompId = null;
+          await _callbacks.onMoveComps?.([compId], navTarget.dataset.navigateFolder || null);
+          _callbacks.onRefresh?.();
+          return;
+        }
+      }
+
+      const dropContainer = evt.to;
+      const folderLi = dropContainer.closest("[data-folder-id]");
+      const newFolderId = folderLi?.dataset.folderId || null;
+      const comp = state.comps?.find((c) => c.id === compId);
+      const oldFolderId = comp?.folderId || null;
+
+      if (newFolderId !== oldFolderId) {
+        await _callbacks.onMoveComps?.([compId], newFolderId);
+      } else {
+        const children = [...evt.to.children]
+          .map((el) => el.dataset?.compId)
+          .filter(Boolean);
+        if (children.length > 0) {
+          const updates = children.map((id, i) => ({ id, sortOrder: i }));
+          await reorderComps(updates);
+          state.libraryPrefs.sortField = "sortOrder";
+          state.libraryPrefs.sortDirection = "asc";
+        }
+      }
+
+      _isDragging = false;
+      _draggedCompId = null;
+      _callbacks.onRefresh?.();
+      return;
     }
 
     const buildId = evt.item?.dataset?.buildId;
@@ -132,6 +180,7 @@ export function wireDragDropEvents() {
 
     _isDragging = false;
     _draggedBuildId = null;
+    _draggedCompId = null;
     _callbacks.onRefresh?.();
   };
 
@@ -141,7 +190,7 @@ export function wireDragDropEvents() {
     ghostClass: "lib-drag-ghost",
     chosenClass: "lib-drag-chosen",
     dragClass: "lib-drag-active",
-    draggable: "[data-build-id]",
+    draggable: "[data-build-id], [data-comp-id]",
     emptyInsertThreshold: 20,
     forceFallback: true,
     fallbackClass: "lib-drag-fallback",

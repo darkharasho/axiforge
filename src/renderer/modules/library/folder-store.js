@@ -44,6 +44,11 @@ export async function reorderBuilds(updates) {
   state.builds = await window.desktopApi.listBuilds();
 }
 
+export async function reorderComps(updates) {
+  await window.desktopApi.reorderComps(updates);
+  state.comps = await window.desktopApi.listComps();
+}
+
 /**
  * Get builds for the current folder/filter context.
  * Applies smart folder filtering, custom folder filtering, search, and sort.
