@@ -454,6 +454,12 @@
   overflow: hidden;
 }
 
+/* During any drag, let full lines grow to show the drop ghost in the extra row */
+.comp-detail__party-panel.comp-dragging .comp-line__slots {
+  overflow: visible !important;
+  max-height: none !important;
+}
+
 .comp-line__controls {
   display: flex;
   gap: 4px;
