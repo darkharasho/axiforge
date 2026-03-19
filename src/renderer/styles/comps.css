@@ -160,7 +160,7 @@
 }
 
 .comp-list-row__icon {
-  color: #555;
+  color: #778;
   font-size: 1rem;
   flex-shrink: 0;
   width: 20px;
@@ -179,8 +179,8 @@
 
 .comp-list-row__count {
   flex-shrink: 0;
-  font-size: 0.75rem;
-  color: #666;
+  font-size: 0.8rem;
+  color: #889;
   white-space: nowrap;
 }
 
@@ -194,7 +194,7 @@
   display: inline-block;
   padding: 1px 8px;
   border-radius: 10px;
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   color: #c8a96e;
   background: rgba(200, 169, 110, 0.1);
   border: 1px solid rgba(200, 169, 110, 0.25);
@@ -240,7 +240,7 @@
   all: unset;
   cursor: pointer;
   font-size: 0.85rem;
-  color: #888;
+  color: #aab;
   white-space: nowrap;
   transition: color 0.15s;
 }
@@ -292,8 +292,8 @@
 .comp-detail__notes-btn {
   all: unset;
   cursor: pointer;
-  font-size: 0.8rem;
-  color: #666;
+  font-size: 0.85rem;
+  color: #889;
   padding: 2px 8px;
   border: 1px solid #252545;
   border-radius: 4px;
@@ -313,8 +313,8 @@
 }
 
 .comp-detail__slot-counter {
-  font-size: 0.8rem;
-  color: #777;
+  font-size: 0.85rem;
+  color: #99a;
   white-space: nowrap;
 }
 
@@ -439,9 +439,9 @@
 .comp-line__label {
   flex-shrink: 0;
   width: 22px;
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   font-weight: 600;
-  color: #777;
+  color: #99a;
   padding-top: 10px;
   text-align: right;
 }
@@ -472,7 +472,7 @@
   all: unset;
   cursor: pointer;
   font-size: 1rem;
-  color: #555;
+  color: #778;
   width: 22px;
   height: 22px;
   display: flex;
@@ -516,7 +516,7 @@
 
 .comp-line__add-text {
   font-size: 0.85rem;
-  color: #666;
+  color: #889;
 }
 
 .comp-line--add:hover .comp-line__add-text {
@@ -632,14 +632,14 @@
 }
 
 .comp-pool-title {
-  font-size: 11px;
-  color: #888;
+  font-size: 12px;
+  color: #aab;
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
 
 .comp-pool-count {
-  color: #555;
+  color: #778;
 }
 
 .comp-pool-search {
@@ -647,8 +647,8 @@
   border: 1px solid #1a1a3a;
   border-radius: 3px;
   padding: 3px 8px;
-  font-size: 10px;
-  color: #aaa;
+  font-size: 11px;
+  color: #bbb;
   font-family: inherit;
   width: 100px;
   outline: none;
@@ -667,8 +667,8 @@
   border: 1px solid #2a2a4a;
   border-radius: 4px;
   padding: 3px 8px;
-  font-size: 11px;
-  color: #aaa;
+  font-size: 12px;
+  color: #bbb;
   font-family: inherit;
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
@@ -686,8 +686,8 @@
 }
 
 .comp-pool-empty {
-  color: #555;
-  font-size: 12px;
+  color: #889;
+  font-size: 13px;
   padding: 20px 0;
   text-align: center;
 }
@@ -755,23 +755,23 @@
 }
 
 .comp-pool-card__stat {
-  font-size: 10px;
+  font-size: 11px;
   color: #c8a96e;
 }
 
 .comp-pool-card__sep {
-  font-size: 10px;
-  color: #444;
+  font-size: 11px;
+  color: #667;
 }
 
 .comp-pool-card__equip {
-  font-size: 10px;
-  color: #777;
+  font-size: 11px;
+  color: #99a;
 }
 
 .comp-pool-card__mode {
-  font-size: 9px;
-  color: #555;
+  font-size: 10px;
+  color: #778;
   background: #0d0d22;
   border-radius: 8px;
   padding: 1px 6px;
@@ -783,7 +783,7 @@
   all: unset;
   cursor: pointer;
   font-size: 14px;
-  color: #444;
+  color: #667;
   width: 20px;
   height: 20px;
   display: flex;
@@ -805,12 +805,12 @@
 }
 
 .comp-pool-tag {
-  font-size: 9px;
+  font-size: 10px;
   border-radius: 8px;
   padding: 0 5px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #888;
+  color: #aab;
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -902,7 +902,7 @@
 }
 
 .comp-picker-empty {
-  color: #555;
+  color: #889;
   font-size: 12px;
   padding: 20px 16px;
   text-align: center;
@@ -952,7 +952,7 @@
 
 .comp-picker-row__prof {
   font-size: 11px;
-  color: #666;
+  color: #889;
   flex-shrink: 0;
 }
 
@@ -1154,12 +1154,12 @@
 
 .comp-hover__prof {
   font-size: 10px;
-  color: #666;
+  color: #889;
 }
 
 .comp-hover__mode {
-  font-size: 9px;
-  color: #555;
+  font-size: 10px;
+  color: #778;
   background: #080818;
   border-radius: 8px;
   padding: 2px 6px;
@@ -1186,7 +1186,7 @@
 
 .comp-hover__equip {
   font-size: 10px;
-  color: #888;
+  color: #99a;
 }
 
 .comp-hover__sep {
@@ -1206,12 +1206,12 @@
 }
 
 .comp-hover__tag {
-  font-size: 9px;
+  font-size: 10px;
   border-radius: 8px;
   padding: 1px 6px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  color: #777;
+  color: #99a;
 }
 
 /* ── Slot drag trash zone ────────────────────────────────────────── */
@@ -1239,7 +1239,7 @@
 
 .comp-line-trash__text {
   font-size: 0.75rem;
-  color: #555;
+  color: #778;
   user-select: none;
   pointer-events: none;
 }
@@ -1262,17 +1262,17 @@
   padding: 7px 12px 6px;
   cursor: pointer;
   user-select: none;
-  color: #556;
-  font-size: 10px;
+  color: #778;
+  font-size: 11px;
   letter-spacing: .05em;
 }
 
 .comp-boon-cov__header:hover {
-  color: #889;
+  color: #aab;
 }
 
 .comp-boon-cov__chevron {
-  font-size: 9px;
+  font-size: 10px;
   line-height: 1;
 }
 
@@ -1285,9 +1285,9 @@
 }
 
 .comp-boon-cov__squad-label {
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: .04em;
-  color: #556;
+  color: #778;
   margin-bottom: 5px;
 }
 
@@ -1314,8 +1314,8 @@
 }
 
 .comp-boon-cov__line-label {
-  font-size: 9px;
-  color: #556;
+  font-size: 10px;
+  color: #778;
   min-width: 18px;
 }
 
@@ -1403,8 +1403,8 @@
 }
 
 .comp-boon-tooltip__line-label {
-  font-size: 9px;
-  color: #556;
+  font-size: 10px;
+  color: #778;
   letter-spacing: .04em;
   margin-bottom: 2px;
 }
