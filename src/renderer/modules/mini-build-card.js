@@ -219,11 +219,6 @@ export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
               data-build-id="${escapeHtml(build.id)}" title="Remove from comp">&times;</button>`
     : "";
 
-  // Right-side pills (role + mode)
-  const pillsHtml = (role || modePill)
-    ? `<div class="mini-card__pills">${role}${modePill}</div>`
-    : "";
-
   return `
     <div class="mini-card ${pClass}" data-build-id="${escapeHtml(build.id)}">
       ${removeHtml}
@@ -232,13 +227,16 @@ export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
         <div class="mini-card__header">
           ${titleHtml}
           ${tagPills}
+          <div class="mini-card__pills">
+            ${role}
+            ${modePill}
+          </div>
         </div>
         <div class="mini-card__columns">
           ${specColHtml}
           ${rightColHtml}
         </div>
       </div>
-      ${pillsHtml}
     </div>
   `;
 }

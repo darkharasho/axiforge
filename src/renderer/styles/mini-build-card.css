@@ -112,11 +112,9 @@ button.mini-card__name:hover .mini-card__name-arrow {
 
 .mini-card__pills {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
+  align-items: center;
+  gap: 6px;
   flex-shrink: 0;
-  align-self: center;
   margin-left: auto;
 }
 
