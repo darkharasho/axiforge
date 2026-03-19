@@ -1569,6 +1569,17 @@
   color: #99a;
   flex: 1;
   min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.comp-boon-cov__dur-source-desc {
+  font-size: 10px;
+  color: #556;
+  font-style: italic;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

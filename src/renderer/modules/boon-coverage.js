@@ -71,6 +71,7 @@ function extractBuffFacts(entity, sourceType) {
       sourceName: entity.name || "",
       stacks: fact.apply_count || 0,
       duration: fact.duration || 0,
+      description: fact.description || "",
       isAlly: isAllyTargeted(desc, rawStatus, ALL_KNOWN_NAMES),
     });
   }
@@ -173,7 +174,7 @@ export function computeBoonCoverage(catalog, editor, weaponSkills = []) {
       grouped.set(f.name, { sources: [], hasAnyAlly: false });
     }
     const entry = grouped.get(f.name);
-    const dupeKey = `${f.sourceType}|${f.sourceName}|${f.stacks}|${f.duration}`;
+    const dupeKey = `${f.sourceType}|${f.sourceName}|${f.stacks}|${f.duration}|${f.description}`;
     if (!entry._seen) entry._seen = new Set();
     if (!entry._seen.has(dupeKey)) {
       entry._seen.add(dupeKey);
@@ -182,6 +183,7 @@ export function computeBoonCoverage(catalog, editor, weaponSkills = []) {
         name: f.sourceName,
         stacks: f.stacks,
         duration: f.duration,
+        description: f.description,
       });
     }
     if (f.isAlly) entry.hasAnyAlly = true;
