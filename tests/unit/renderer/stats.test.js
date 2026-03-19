@@ -88,6 +88,36 @@ describe("computeSlotStats — 4-stat combos", () => {
   });
 });
 
+describe("computeSlotStats — missing stat combos (issue #29)", () => {
+  test("Sentinel's is defined and uses Vitality as primary 3-stat", () => {
+    const result = computeSlotStats("Sentinel's", "chest");
+    expect(result).toHaveLength(3);
+    expect(result[0]).toEqual({ stat: "Vitality", value: 134 });
+    expect(result[1]).toEqual({ stat: "Power",    value: 96  });
+    expect(result[2]).toEqual({ stat: "Toughness", value: 96 });
+  });
+
+  test("Wanderer's is defined and uses Toughness primary 4-stat", () => {
+    const result = computeSlotStats("Wanderer's", "chest");
+    expect(result).toHaveLength(4);
+    expect(result[0].stat).toBe("Toughness");
+    expect(result[1].stat).toBe("Power");
+    expect(result[2].stat).toBe("Vitality");
+    expect(result[3].stat).toBe("Concentration");
+    for (const r of result) expect(r.value).toBeGreaterThan(0);
+  });
+
+  test("Diviner's is defined and uses Power primary 4-stat", () => {
+    const result = computeSlotStats("Diviner's", "chest");
+    expect(result).toHaveLength(4);
+    expect(result[0].stat).toBe("Power");
+    expect(result[1].stat).toBe("Ferocity");
+    expect(result[2].stat).toBe("Concentration");
+    expect(result[3].stat).toBe("Precision");
+    for (const r of result) expect(r.value).toBeGreaterThan(0);
+  });
+});
+
 describe("computeSlotStats — 9-stat combo (Celestial)", () => {
   test("Celestial chest distributes evenly across 9 stats", () => {
     // chest: p=134, s=96; each = Math.round((134 + 2*96) / 9)
