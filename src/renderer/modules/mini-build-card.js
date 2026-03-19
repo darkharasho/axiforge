@@ -155,29 +155,28 @@ export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
   }
 
   const statPackage = resolveStatPackage(build);
+  let statRowHtml = "";
+  if (statPackage) {
+    statRowHtml = `
+      <div class="mini-card__cell">
+        <span class="mini-card__detail-label">Stats</span>
+        <span class="mini-card__gear-icon mini-card__gear-icon--stat">◆</span>
+        <span class="mini-card__stat">${escapeHtml(statPackage)}</span>
+      </div>`;
+  }
+
   const runeName = getRuneName(build, upgradeCatalog);
   const runeIconUrl = getRuneIcon(build, upgradeCatalog);
-  let gearRowHtml = "";
-  if (statPackage || runeName) {
-    const parts = [];
-    if (statPackage) {
-      parts.push(`<span class="mini-card__gear-icon mini-card__gear-icon--stat">◆</span>`);
-      parts.push(`<span class="mini-card__stat">${escapeHtml(statPackage)}</span>`);
-    }
-    if (statPackage && runeName) {
-      parts.push(`<span class="mini-card__sep">&middot;</span>`);
-    }
-    if (runeName) {
-      const runeIcon = runeIconUrl
-        ? `<img class="mini-card__gear-img" src="${escapeHtml(runeIconUrl)}" alt="" loading="lazy">`
-        : `<span class="mini-card__gear-icon mini-card__gear-icon--rune">ᚱ</span>`;
-      parts.push(runeIcon);
-      parts.push(`<span class="mini-card__equip">${escapeHtml(runeName)}</span>`);
-    }
-    gearRowHtml = `
+  let runeRowHtml = "";
+  if (runeName) {
+    const runeIcon = runeIconUrl
+      ? `<img class="mini-card__gear-img" src="${escapeHtml(runeIconUrl)}" alt="" loading="lazy">`
+      : `<span class="mini-card__gear-icon mini-card__gear-icon--rune">ᚱ</span>`;
+    runeRowHtml = `
       <div class="mini-card__cell">
-        <span class="mini-card__detail-label">Gear</span>
-        ${parts.join("")}
+        <span class="mini-card__detail-label">Rune</span>
+        ${runeIcon}
+        <span class="mini-card__equip">${escapeHtml(runeName)}</span>
       </div>`;
   }
 
@@ -196,8 +195,8 @@ export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
       </div>`;
   }
 
-  const rightColHtml = (weapRowHtml || gearRowHtml || relicRowHtml)
-    ? `<div class="mini-card__col-right">${weapRowHtml}${gearRowHtml}${relicRowHtml}</div>`
+  const rightColHtml = (weapRowHtml || statRowHtml || runeRowHtml || relicRowHtml)
+    ? `<div class="mini-card__col-right">${weapRowHtml}${statRowHtml}${runeRowHtml}${relicRowHtml}</div>`
     : "";
 
   // Title is a clickable link to open the build
