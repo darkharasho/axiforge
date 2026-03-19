@@ -189,6 +189,7 @@ export function computeBoonCoverage(catalog, editor, weaponSkills = []) {
         stacks: f.stacks,
         duration: f.duration,
         context: f.context,
+        isAlly: f.isAlly,
       });
     }
     if (f.isAlly) entry.hasAnyAlly = true;

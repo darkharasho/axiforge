@@ -79,6 +79,7 @@ export async function computeCompBoonCoverage(comp, builds, catalogCache, getCat
             stacks: s.stacks,
             effectiveDuration: +((s.duration * (1 + concentrationBonus)).toFixed(1)),
             context: s.context || "",
+            isAlly: s.isAlly,
           }));
         lineEntry.providers.push({ buildId, buildName, profession: build.profession, eliteSpec, sources });
 
@@ -332,6 +333,9 @@ function _buildDurationExpandHTML(boonName, lineLabel, providers) {
         const stacksHtml = s.stacks > 1
           ? `<span class="comp-boon-cov__dur-stacks">&times;${s.stacks}</span>`
           : "";
+        const targetHtml = s.isAlly
+          ? `<span class="comp-boon-cov__dur-target comp-boon-cov__dur-target--ally">ALLY</span>`
+          : `<span class="comp-boon-cov__dur-target comp-boon-cov__dur-target--self">SELF</span>`;
         const descHtml = s.context
           ? `<span class="comp-boon-cov__dur-source-desc">${escapeHtml(s.context)}</span>`
           : "";
@@ -340,6 +344,7 @@ function _buildDurationExpandHTML(boonName, lineLabel, providers) {
           <span class="comp-boon-cov__dur-source-name">${escapeHtml(s.name)}${descHtml}</span>
           <span class="comp-boon-cov__dur-duration">${escapeHtml(dur)}</span>
           ${stacksHtml}
+          ${targetHtml}
         </div>`;
       }).join("");
       const sep = i < arr.length - 1 ? '<div class="comp-boon-cov__dur-sep"></div>' : "";

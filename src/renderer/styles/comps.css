@@ -1600,6 +1600,25 @@
   flex-shrink: 0;
 }
 
+.comp-boon-cov__dur-target {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  padding: 1px 4px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.comp-boon-cov__dur-target--ally {
+  background: #1a2233;
+  color: #6ea8ff;
+}
+
+.comp-boon-cov__dur-target--self {
+  background: #201a2e;
+  color: #a78bfa;
+}
+
 .comp-boon-cov__dur-sep {
   height: 1px;
   background: #1a1a3a;
