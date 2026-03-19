@@ -147,14 +147,12 @@ export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
   let weapRowHtml = "";
   if (weaponSets.length) {
     const weapHtml = weaponSets.map((set) => {
-      const icons = set.weapons
-        .map((w) => {
-          let svg = getWeaponSvg(w.id);
-          if (svg) svg = svg.replace(/<svg([\s>])/, '<svg fill="currentColor"$1');
-          return svg ? `<span class="mini-card__weap-icon">${svg}</span>` : "";
-        })
-        .join("");
-      return `${icons}<span class="mini-card__weap-name">${escapeHtml(set.display)}</span>`;
+      return set.weapons.map((w) => {
+        let svg = getWeaponSvg(w.id);
+        if (svg) svg = svg.replace(/<svg([\s>])/, '<svg fill="currentColor"$1');
+        const icon = svg ? `<span class="mini-card__weap-icon">${svg}</span>` : "";
+        return `${icon}<span class="mini-card__weap-name">${escapeHtml(w.label)}</span>`;
+      }).join(`<span class="mini-card__weap-sep">/</span>`);
     }).join(`<span class="mini-card__weap-div">|</span>`);
 
     weapRowHtml = `
