@@ -113,6 +113,10 @@ Manual QA items for alpha testers. Check off items as you test them. Report issu
 
 ### Stats, Runes, Sigils, Infusions
 - [ ] Stat combo dropdown shows all stat combinations
+- [ ] Stat combo dropdown includes **Sentinel's** (Power / Toughness / Vitality)
+- [ ] Stat combo dropdown includes **Wanderer's** (Power / Toughness / Vitality / Concentration)
+- [ ] Stat combo dropdown includes **Diviner's** (Power / Precision / Ferocity / Concentration)
+- [ ] Sentinel's, Wanderer's, and Diviner's each produce correct stat totals when selected
 - [ ] Stat calculations update when stat package changes
 - [ ] Rune slots show for armor (6 slots)
 - [ ] Sigil slots show for weapons
@@ -306,7 +310,33 @@ Manual QA items for alpha testers. Check off items as you test them. Report issu
 
 ---
 
-## 17. Regression Checks
+## 17. Compositions (Comp Party Lines)
+
+Compositions group builds into labeled party lines for squad planning. Access via the Comps section of the library.
+
+### Party Line Drag-and-Drop
+- [ ] Build slot can be dragged to the **last position** in a party line (was previously blocked)
+- [ ] Dropping a build into a **full party line** expands the line to fit it instead of silently discarding the build
+- [ ] Source party line **shrinks back** to its natural size after a build is moved out
+- [ ] During a drag, the SortableJS ghost is **visible when hovering** over a full line that needs to expand
+- [ ] Dropping a slot back onto its **original party line** restores it correctly (slot should not disappear)
+- [ ] Clicking an empty slot does **not** add extra rows to the party line
+- [ ] Builds can be reordered within the same party line via drag-and-drop
+- [ ] Builds can be moved between different party lines via drag-and-drop
+- [ ] Dragging a build from the pool into a party line adds it to the correct position
+
+### Boon Coverage
+- [ ] Boon coverage section shows which boons are covered per party line and for the whole squad
+- [ ] Boon coverage tooltip for a **line** shows each contributing build's name and profession icon
+- [ ] Boon coverage tooltip shows the **elite spec icon** (not just the base profession) when a build uses an elite spec (e.g. Scourge instead of generic Necromancer)
+- [ ] Boon coverage tooltip shows the **base profession icon** for builds without an elite spec
+- [ ] Squad-level boon coverage tooltip groups providers by party line label and shows elite spec icons
+- [ ] Serialized builds (loaded from save) display the correct elite spec in boon tooltips
+- [ ] Editor-format builds (not yet published) look up elite spec from catalog and display it correctly
+
+---
+
+## 18. Regression Checks
 
 Verify these previously fixed issues have not regressed:
 
@@ -318,6 +348,10 @@ Verify these previously fixed issues have not regressed:
 - [ ] Loading states show during catalog fetches
 - [ ] Lines between skills persist after publish
 - [ ] GitHub Pages setup is optional (not forced)
+- [ ] **Sentinel's**, **Wanderer's**, and **Diviner's** appear in the stat combo dropdown (#29)
+- [ ] Comp: build can be dragged to the last slot position in a party line without being blocked (#44)
+- [ ] Comp: dropping a build into a full party line expands the line instead of discarding the build (#45)
+- [ ] Comp: build dropped back onto its original party line is restored and does not disappear
 
 ---
 

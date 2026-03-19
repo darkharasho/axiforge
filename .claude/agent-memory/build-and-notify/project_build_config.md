@@ -25,7 +25,7 @@ Build system is electron-builder (v26) with Vite as the renderer bundler.
 
 **Discord posting:** Post text-only via JSON payload (`content` field). Use `python3 -c "import json; ..."` to generate payload to a temp file, then pass with `curl -d @/tmp/discord_payload.json`. Do NOT use Python's `urllib.request.urlopen` — it returns HTTP 403 even with a valid webhook (curl returns 204 for the same URL). Artifacts are too large to attach (see discord limits memory).
 
-**Last build:** v0.1.0-beta.20260317T1946 built 2026-03-17. Last build commit: 49e0c199840ad7d074198dbbb9f71d9e3ee85ecc.
+**Last build:** v0.1.0-beta.20260318T2029 built 2026-03-18. Last build commit: 1f1b051dd1b94f4cec313afa896b52cb2c73b8c7.
 
 **Why:** Electron-builder targets are linux AppImage and win nsis. Wine on Linux handles Windows cross-compilation.
 
