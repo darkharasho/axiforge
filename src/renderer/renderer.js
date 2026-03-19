@@ -315,6 +315,7 @@ async function init() {
     navigateToPage,
     loadBuildIntoEditor,
     confirmDiscardDirty,
+    getCatalog,
   });
   await loadComps();
 
@@ -458,7 +459,7 @@ async function setProfession(professionId, options = {}) {
   renderEditor();
 }
 
-async function getCatalog(professionId, gameMode = "pve") {
+export async function getCatalog(professionId, gameMode = "pve") {
   const cacheKey = `${professionId}_${gameMode}`;
   if (state.catalogCache.has(cacheKey)) return state.catalogCache.get(cacheKey);
   const raw = await window.desktopApi.getProfessionCatalog(professionId, gameMode);

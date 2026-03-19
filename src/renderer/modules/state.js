@@ -41,6 +41,7 @@ export const state = {
     sortField: "updatedAt",
     sortDirection: "desc",
     activeFilters: {},
+    boonCoverageCollapsed: false,
   },
   skillSearch: "",
   catalogCache: new Map(),
