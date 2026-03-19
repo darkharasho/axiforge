@@ -257,6 +257,8 @@ export function computeBuildConcentration(build, upgradeCatalog) {
   }
 
   // Infusions (land slots only)
+  // Note: GW2 API uses the literal "Concentration" in infixUpgrade.attributes
+  // (unlike some other stats that have aliases), so no normalization is needed here.
   const infusions = equipment.infusions || {};
   const allInfusionIds = Object.entries(infusions)
     .filter(([k]) => !EXCLUDED.has(k))
@@ -272,6 +274,8 @@ export function computeBuildConcentration(build, upgradeCatalog) {
   }
 
   // Enrichment
+  // Note: GW2 API uses the literal "Concentration" in infixUpgrade.attributes
+  // (unlike some other stats that have aliases), so no normalization is needed here.
   const enrichmentId = equipment.enrichment;
   if (enrichmentId) {
     const def = upgradeCatalog.enrichmentById?.get(Number(enrichmentId));
@@ -306,6 +310,9 @@ export function computeBuildConcentration(build, upgradeCatalog) {
   if (utilityId) {
     const utilDef = upgradeCatalog.utilityById?.get(Number(utilityId));
     if (utilDef) {
+      // Note: "Gain Concentration Equal to N% of Your X" conversion pattern is omitted
+      // intentionally — computing it would require the full stat totals, and this pattern
+      // is rare/non-existent for Concentration in practice.
       // Pattern 1: conditional flat (writs)
       const writRe = /Gain (\d+) Concentration When Health/g;
       let m;

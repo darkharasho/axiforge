@@ -472,4 +472,13 @@ describe("computeBuildConcentration", () => {
     const build = { equipment: { slots: { aquatic1: "Harrier's" } } };
     expect(computeBuildConcentration(build, makeUpgradeCatalog())).toBe(0);
   });
+
+  test("adds Concentration from rune 'to All Stats' bonus", () => {
+    const runeDef = { bonuses: ["+50 to All Stats"] };
+    const catalog = makeUpgradeCatalog({
+      runeById: new Map([[2001, runeDef]]),
+    });
+    const build = { equipment: { slots: {}, runes: { head: "2001" } } };
+    expect(computeBuildConcentration(build, catalog)).toBe(50);
+  });
 });
