@@ -51,16 +51,16 @@ Parameters:
 
 Internal helpers (not exported):
 - `getSpecLineNames(build)` — returns array of `{ name, isElite }` for all 3 specializations
-- `getWeaponSetNames(build)` — returns array of weapon set strings (e.g., `["Axe / Shield", "Staff"]`) by looking up weapon IDs in `GW2_WEAPONS` constants
+- `getWeaponSetNames(build)` — returns array of weapon set strings (e.g., `["Axe / Shield", "Staff"]`) by looking up weapon string IDs via `GW2_WEAPONS_BY_ID` from `constants.js` to get display labels
 
-Reuses existing helpers from other modules:
-- `getSpecIcon(build)` from `profession-icons.js`
-- `resolveStatPackage(build)` — stays in `comp-detail.js` or gets extracted if needed elsewhere
+Reuses existing helpers (must be extracted to importable locations since they currently live as local functions in `comp-detail.js`):
+- `getSpecIcon(build)` — currently local in `comp-detail.js`, calls `getProfessionSvg()` from `profession-icons.js`. Must be extracted/shared.
+- `resolveStatPackage(build)` — currently local in `comp-detail.js`. Must be extracted.
 - `getRuneName(build)` — same
 - `getDisplayName(build)` — same
 - `profClass(build.profession)` — same
 - `roleBadgeHtml(build, catalog)` — same
-- `escapeHtml()` from `utils.js`
+- `escapeHtml()` from `utils.js` (already importable)
 
 ### New: `src/renderer/styles/mini-build-card.css`
 
