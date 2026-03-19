@@ -227,8 +227,8 @@ export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
         <div class="mini-card__header">
           ${titleHtml}
           ${tagPills}
+          ${role}
           <div class="mini-card__pills">
-            ${role}
             ${modePill}
           </div>
         </div>
