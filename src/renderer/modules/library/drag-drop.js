@@ -11,7 +11,7 @@
 // forceFallback bypasses native HTML5 drag events).
 
 import Sortable from "sortablejs";
-import { moveBuilds, reorderBuilds, reorderComps } from "./folder-store.js";
+import { moveBuilds, reorderBuilds, reorderComps, reorderFolders } from "./folder-store.js";
 import { expandTableFolder } from "./content.js";
 import { state } from "../state.js";
 import { isGameModeCompatible } from "./library.js";
@@ -22,6 +22,7 @@ let _expandTimer = null;
 let _isDragging = false;
 let _draggedBuildId = null;
 let _draggedCompId = null;
+let _draggedFolderId = null;
 let _hoverTarget = null;
 
 export function initDragDrop(callbacks) {
@@ -43,6 +44,7 @@ export function wireDragDropEvents() {
     _isDragging = true;
     _draggedBuildId = evt.item?.dataset?.buildId || null;
     _draggedCompId = evt.item?.dataset?.compId || null;
+    _draggedFolderId = evt.item?.dataset?.folderId || null;
     document.addEventListener("pointermove", _onPointerMove);
   };
 
@@ -57,6 +59,52 @@ export function wireDragDropEvents() {
     if (_hoverTarget) {
       _hoverTarget.classList.remove("lib-drop-target", "is-invalid");
       _hoverTarget = null;
+    }
+
+    const draggedFolderId = evt.item?.dataset?.folderId;
+    if (draggedFolderId) {
+      if (droppedOnTarget) {
+        const targetFolderEl = droppedOnTarget.closest("[data-folder-id]");
+        if (targetFolderEl && !_isFolderSelfOrDescendant(targetFolderEl.dataset.folderId, draggedFolderId)) {
+          _isDragging = false;
+          _draggedFolderId = null;
+          await _callbacks.onMoveFolder?.(draggedFolderId, targetFolderEl.dataset.folderId);
+          return;
+        }
+        const navTarget = droppedOnTarget.closest("[data-navigate-folder], [data-navigate-all], [data-navigate-root]");
+        if (navTarget) {
+          _isDragging = false;
+          _draggedFolderId = null;
+          await _callbacks.onMoveFolder?.(draggedFolderId, navTarget.dataset.navigateFolder || null);
+          _callbacks.onRefresh?.();
+          return;
+        }
+      }
+
+      const dropContainer = evt.to;
+      const parentLi = dropContainer.closest("[data-folder-id]");
+      const newParentId = parentLi?.dataset.folderId || null;
+      const folder = state.folders?.find((f) => f.id === draggedFolderId);
+      const oldParentId = folder?.parentId || null;
+
+      if (newParentId !== oldParentId && !_isFolderSelfOrDescendant(newParentId, draggedFolderId)) {
+        await _callbacks.onMoveFolder?.(draggedFolderId, newParentId);
+      } else {
+        const children = [...evt.to.children]
+          .map((el) => el.dataset?.folderId)
+          .filter(Boolean);
+        if (children.length > 0) {
+          const updates = children.map((id, i) => ({ id, sortOrder: i }));
+          await reorderFolders(updates);
+          state.libraryPrefs.sortField = "sortOrder";
+          state.libraryPrefs.sortDirection = "asc";
+        }
+      }
+
+      _isDragging = false;
+      _draggedFolderId = null;
+      _callbacks.onRefresh?.();
+      return;
     }
 
     const compId = evt.item?.dataset?.compId;
@@ -181,6 +229,7 @@ export function wireDragDropEvents() {
     _isDragging = false;
     _draggedBuildId = null;
     _draggedCompId = null;
+    _draggedFolderId = null;
     _callbacks.onRefresh?.();
   };
 
@@ -190,7 +239,7 @@ export function wireDragDropEvents() {
     ghostClass: "lib-drag-ghost",
     chosenClass: "lib-drag-chosen",
     dragClass: "lib-drag-active",
-    draggable: "[data-build-id], [data-comp-id]",
+    draggable: "[data-build-id], [data-comp-id], [data-folder-id]",
     emptyInsertThreshold: 20,
     forceFallback: true,
     fallbackClass: "lib-drag-fallback",
@@ -227,13 +276,24 @@ function _onPointerMove(e) {
   // Check folder elements in content area
   const folderEl = el.closest("[data-folder-id]");
   if (folderEl) {
+    const folderId = folderEl.dataset.folderId;
+    if (_draggedFolderId) {
+      // Folder-on-folder: highlight as target, mark invalid if self or descendant
+      if (folderId !== _draggedFolderId) {
+        _hoverTarget = folderEl;
+        folderEl.classList.add("lib-drop-target");
+        if (_isFolderSelfOrDescendant(folderId, _draggedFolderId)) {
+          folderEl.classList.add("is-invalid");
+        }
+      }
+      return;
+    }
     const childrenUl = folderEl.querySelector(".lib-tv__children");
     if (!childrenUl) {
       _hoverTarget = folderEl;
       folderEl.classList.add("lib-drop-target");
 
       // Auto-expand collapsed table folders after 500ms hover
-      const folderId = folderEl.dataset.folderId;
       if (folderEl.closest(".lib-tv") && folderId) {
         clearTimeout(_expandTimer);
         _expandTimer = setTimeout(() => expandTableFolder(folderId), 500);
@@ -265,4 +325,18 @@ function _onPointerMove(e) {
   }
 
   clearTimeout(_expandTimer);
+}
+
+/**
+ * Returns true if targetId is the same as ancestorId or is a descendant of it.
+ * Used to prevent dropping a folder into itself or one of its children.
+ */
+function _isFolderSelfOrDescendant(targetId, ancestorId) {
+  let current = targetId;
+  while (current) {
+    if (current === ancestorId) return true;
+    const folder = state.folders?.find((f) => f.id === current);
+    current = folder?.parentId || null;
+  }
+  return false;
 }
