@@ -106,25 +106,45 @@ button.mini-card__name:hover .mini-card__name-arrow {
   flex-shrink: 0;
 }
 
-/* ── 2×2 Detail Grid ───────────────────────────────────────────────────────── */
+/* ── Two-Column Layout (specs left, gear right) ────────────────────────────── */
 
-.mini-card__grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 4px 16px;
+.mini-card__columns {
+  display: flex;
+  gap: 16px;
   margin-top: 6px;
 }
 
-/* Drop to single column when the card's container is narrow.
-   Uses container query so it responds to the card's actual width,
-   not the viewport. */
 .mini-card__info {
   container-type: inline-size;
 }
 
+/* Left column: vertical spec list */
+.mini-card__col-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+/* Right column: weapons, gear, relic stacked */
+.mini-card__col-right {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+/* Drop to single stacked column when narrow */
 @container (max-width: 320px) {
-  .mini-card__grid {
-    grid-template-columns: 1fr;
+  .mini-card__columns {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .mini-card__col-left {
+    flex-direction: row;
+    flex-wrap: wrap;
     gap: 4px;
   }
 }
@@ -146,14 +166,13 @@ button.mini-card__name:hover .mini-card__name-arrow {
   flex-shrink: 0;
 }
 
-/* ── Spec pips ─────────────────────────────────────────────────────────────── */
+/* ── Spec lines (vertical) ──────────────────────────────────────────────────── */
 
-.mini-card__spec-group {
+.mini-card__spec-line {
   display: flex;
   align-items: center;
   gap: 5px;
   min-width: 0;
-  overflow: hidden;
 }
 
 .mini-card__spec-pip {
@@ -199,11 +218,6 @@ button.mini-card__name:hover .mini-card__name-arrow {
   font-weight: 500;
 }
 
-.mini-card__spec-sep {
-  color: #334;
-  margin: 0 2px;
-  font-size: 10px;
-}
 
 /* ── Weapon group ──────────────────────────────────────────────────────────── */
 

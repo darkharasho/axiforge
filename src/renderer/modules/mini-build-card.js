@@ -121,45 +121,42 @@ export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
     ? `<span class="mini-card__mode">${escapeHtml(gameMode)}</span>`
     : "";
 
-  // Spec cell (top-left)
+  // Left column: Specs (vertical, one per line)
   const specs = getSpecLineInfo(build);
-  let specCellHtml = "";
+  let specColHtml = "";
   if (specs.length) {
-    const specPips = specs.map((s, i) => {
+    const specLines = specs.map((s) => {
       const pipClass = s.isElite ? "mini-card__spec-pip mini-card__spec-pip--elite" : "mini-card__spec-pip";
       const nameClass = s.isElite ? "mini-card__spec-name mini-card__spec-name--elite" : "mini-card__spec-name";
       const pipContent = s.svg || escapeHtml(s.name.charAt(0).toUpperCase());
-      const sep = i < specs.length - 1 ? `<span class="mini-card__spec-sep">›</span>` : "";
-      return `<span class="${pipClass}">${pipContent}</span><span class="${nameClass}">${escapeHtml(s.name)}</span>${sep}`;
+      return `<div class="mini-card__spec-line"><span class="${pipClass}">${pipContent}</span><span class="${nameClass}">${escapeHtml(s.name)}</span></div>`;
     }).join("");
 
-    specCellHtml = `
-      <div class="mini-card__cell">
-        <span class="mini-card__detail-label">Specs</span>
-        <div class="mini-card__spec-group">${specPips}</div>
+    specColHtml = `
+      <div class="mini-card__col-left">
+        ${specLines}
       </div>`;
   }
 
-  // Weapon cell (top-right)
+  // Right column: Weapons, Gear, Relic (stacked)
   const weaponSets = getWeaponSetNames(build);
-  let weapCellHtml = "";
+  let weapRowHtml = "";
   if (weaponSets.length) {
     const weapHtml = weaponSets
       .map((s) => `<span class="mini-card__weap-name">${escapeHtml(s)}</span>`)
       .join(`<span class="mini-card__weap-div">|</span>`);
 
-    weapCellHtml = `
+    weapRowHtml = `
       <div class="mini-card__cell">
         <span class="mini-card__detail-label">Weap</span>
         <div class="mini-card__weap-group">${weapHtml}</div>
       </div>`;
   }
 
-  // Gear cell (bottom-left: stat + rune)
   const statPackage = resolveStatPackage(build);
   const runeName = getRuneName(build, upgradeCatalog);
   const runeIconUrl = getRuneIcon(build, upgradeCatalog);
-  let gearCellHtml = "";
+  let gearRowHtml = "";
   if (statPackage || runeName) {
     const parts = [];
     if (statPackage) {
@@ -176,28 +173,31 @@ export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
       parts.push(runeIcon);
       parts.push(`<span class="mini-card__equip">${escapeHtml(runeName)}</span>`);
     }
-    gearCellHtml = `
+    gearRowHtml = `
       <div class="mini-card__cell">
         <span class="mini-card__detail-label">Gear</span>
         ${parts.join("")}
       </div>`;
   }
 
-  // Relic cell (bottom-right)
   const relicName = build.equipment?.relic || "";
   const relicIconUrl = getRelicIcon(relicName);
-  let relicCellHtml = "";
+  let relicRowHtml = "";
   if (relicName) {
     const relicIcon = relicIconUrl
       ? `<img class="mini-card__gear-img" src="${escapeHtml(relicIconUrl)}" alt="" loading="lazy">`
       : `<span class="mini-card__gear-icon mini-card__gear-icon--relic">⬡</span>`;
-    relicCellHtml = `
+    relicRowHtml = `
       <div class="mini-card__cell">
         <span class="mini-card__detail-label">Relic</span>
         ${relicIcon}
         <span class="mini-card__relic">${escapeHtml(relicName)}</span>
       </div>`;
   }
+
+  const rightColHtml = (weapRowHtml || gearRowHtml || relicRowHtml)
+    ? `<div class="mini-card__col-right">${weapRowHtml}${gearRowHtml}${relicRowHtml}</div>`
+    : "";
 
   // Title is a clickable link to open the build
   const titleHtml = showActions
@@ -222,11 +222,9 @@ export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
           ${role}
           ${modePill}
         </div>
-        <div class="mini-card__grid">
-          ${specCellHtml}
-          ${weapCellHtml}
-          ${gearCellHtml}
-          ${relicCellHtml}
+        <div class="mini-card__columns">
+          ${specColHtml}
+          ${rightColHtml}
         </div>
       </div>
     </div>
