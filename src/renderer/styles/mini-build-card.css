@@ -82,13 +82,20 @@
   flex-shrink: 0;
 }
 
-/* ── Detail rows ───────────────────────────────────────────────────────────── */
+/* ── 2×2 Detail Grid ───────────────────────────────────────────────────────── */
 
-.mini-card__detail-row {
+.mini-card__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 16px;
+  margin-top: 6px;
+}
+
+.mini-card__cell {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-top: 4px;
+  min-width: 0;
 }
 
 .mini-card__detail-label {

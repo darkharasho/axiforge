@@ -121,9 +121,9 @@ export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
     ? `<span class="mini-card__mode">${escapeHtml(gameMode)}</span>`
     : "";
 
-  // Spec line
+  // Spec cell (top-left)
   const specs = getSpecLineInfo(build);
-  let specRowHtml = "";
+  let specCellHtml = "";
   if (specs.length) {
     const specPips = specs.map((s, i) => {
       const pipClass = s.isElite ? "mini-card__spec-pip mini-card__spec-pip--elite" : "mini-card__spec-pip";
@@ -133,33 +133,33 @@ export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
       return `<span class="${pipClass}">${pipContent}</span><span class="${nameClass}">${escapeHtml(s.name)}</span>${sep}`;
     }).join("");
 
-    specRowHtml = `
-      <div class="mini-card__detail-row">
+    specCellHtml = `
+      <div class="mini-card__cell">
         <span class="mini-card__detail-label">Specs</span>
         <div class="mini-card__spec-group">${specPips}</div>
       </div>`;
   }
 
-  // Weapon line
+  // Weapon cell (top-right)
   const weaponSets = getWeaponSetNames(build);
-  let weapRowHtml = "";
+  let weapCellHtml = "";
   if (weaponSets.length) {
     const weapHtml = weaponSets
       .map((s) => `<span class="mini-card__weap-name">${escapeHtml(s)}</span>`)
       .join(`<span class="mini-card__weap-div">|</span>`);
 
-    weapRowHtml = `
-      <div class="mini-card__detail-row">
+    weapCellHtml = `
+      <div class="mini-card__cell">
         <span class="mini-card__detail-label">Weap</span>
         <div class="mini-card__weap-group">${weapHtml}</div>
       </div>`;
   }
 
-  // Gear line (stat + rune)
+  // Gear cell (bottom-left: stat + rune)
   const statPackage = resolveStatPackage(build);
   const runeName = getRuneName(build, upgradeCatalog);
   const runeIconUrl = getRuneIcon(build, upgradeCatalog);
-  let gearRowHtml = "";
+  let gearCellHtml = "";
   if (statPackage || runeName) {
     const parts = [];
     if (statPackage) {
@@ -176,24 +176,24 @@ export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
       parts.push(runeIcon);
       parts.push(`<span class="mini-card__equip">${escapeHtml(runeName)}</span>`);
     }
-    gearRowHtml = `
-      <div class="mini-card__detail-row">
+    gearCellHtml = `
+      <div class="mini-card__cell">
         <span class="mini-card__detail-label">Gear</span>
         ${parts.join("")}
       </div>`;
   }
 
-  // Relic line
+  // Relic cell (bottom-right)
   const relicName = build.equipment?.relic || "";
   const relicIconUrl = getRelicIcon(relicName);
-  let relicRowHtml = "";
+  let relicCellHtml = "";
   if (relicName) {
     const relicIcon = relicIconUrl
       ? `<img class="mini-card__gear-img" src="${escapeHtml(relicIconUrl)}" alt="" loading="lazy">`
       : `<span class="mini-card__gear-icon mini-card__gear-icon--relic">⬡</span>`;
-    relicRowHtml = `
-      <div class="mini-card__detail-row">
-        <span class="mini-card__detail-label"></span>
+    relicCellHtml = `
+      <div class="mini-card__cell">
+        <span class="mini-card__detail-label">Relic</span>
         ${relicIcon}
         <span class="mini-card__relic">${escapeHtml(relicName)}</span>
       </div>`;
@@ -219,10 +219,12 @@ export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
           ${role}
           ${modePill}
         </div>
-        ${specRowHtml}
-        ${weapRowHtml}
-        ${gearRowHtml}
-        ${relicRowHtml}
+        <div class="mini-card__grid">
+          ${specCellHtml}
+          ${weapCellHtml}
+          ${gearCellHtml}
+          ${relicCellHtml}
+        </div>
       </div>
       ${actionsHtml}
     </div>
