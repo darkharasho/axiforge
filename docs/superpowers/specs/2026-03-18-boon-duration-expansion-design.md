@@ -25,9 +25,10 @@ In the comp view, the boon coverage section shows per-line boon icons (P1, P2, �
 2. **Click same active icon** → collapse panel (toggle).
 3. **Click a different boon** (any line, any boon) → close current expansion, open new one.
 4. **Click ✕ in panel** → collapse panel.
-5. **Hover tooltip** is suppressed on a boon icon while its expansion is open (to avoid overlap). All other hover tooltips continue to work normally.
-6. **Toggle-boon-coverage collapse** (the chevron header) → closes any open expansion before collapsing the section.
+5. **Hover tooltip** is suppressed on a boon icon while its expansion is open (to avoid overlap). All other hover tooltips continue to work normally. Implementation: in the `mouseenter` handler, if `_activeDurationExpand` is set and the hovered icon is the currently active icon, return early without creating a tooltip.
+6. **Toggle-boon-coverage collapse** (the chevron header) → closes any open expansion before collapsing the section. The `toggle-boon-coverage` click handler in `comp-detail.js` must call a `closeDurationExpand()` helper exported from `comp-boon-coverage.js` before toggling collapse.
 7. **Uncovered boon icons** are not clickable (no expansion).
+8. **Only contributing builds shown** in the expansion panel — only builds in the line that actually provide this boon appear. Builds in the line that don't provide this boon are omitted entirely.
 
 ---
 
@@ -37,14 +38,24 @@ In the comp view, the boon coverage section shows per-line boon icons (P1, P2, �
 
 **Location:** `src/renderer/modules/stats.js`
 
-Extracts the Concentration-computing logic from the existing `computeEquipmentStats()` (which is coupled to `state.editor`) into a standalone, parameter-driven function. Takes a `build` object and `upgradeCatalog` and returns total Concentration as a number.
+Refactors the Concentration-computing logic from `computeEquipmentStats()` (which is tightly coupled to `state.editor` and `state.upgradeCatalog`) into a standalone parameter-driven function.
 
-Sources it sums:
-- Stat combo slots (`build.equipment.slots`) via `STAT_COMBOS_BY_LABEL` and `SLOT_WEIGHTS`
-- Rune bonuses (`build.equipment.runes`) — up to 6 bonuses per rune, regex-parsed
-- Food (`build.equipment.food`) — regex-parsed from `foodDef.buff`
-- Utility consumable (`build.equipment.utility`) — regex-parsed from `utilityDef.buff`
-- Infusions/enrichment — via `infixUpgrade.attributes`
+**Signature:** `computeBuildConcentration(build, upgradeCatalog) → number`
+
+**Implementation notes:**
+- All references to `state.editor.*` become `build.*` (e.g. `state.editor.equipment?.slots` → `build.equipment?.slots`).
+- All references to `state.upgradeCatalog` become the passed `upgradeCatalog` parameter.
+- Returns only the Concentration value (a plain number); does not return the full `totals` object.
+- **Underwater mode:** always assumes land mode (aquatic-only slots are excluded via the existing `EXCLUDED_SLOTS` list, same as the land path in `computeEquipmentStats`).
+- **Guard — missing equipment:** if `build.equipment` is absent or null, return `0`.
+- **Guard — null upgradeCatalog:** if `upgradeCatalog` is null/undefined, return the Concentration derived from stat combo slots only (runes/food/utility/infusions require catalog lookups and are skipped). This matches the fallback behavior implied by the existing guard in `computeEquipmentStats`.
+
+**Sources summed (in order):**
+1. Stat combo slots (`build.equipment.slots`) via `STAT_COMBOS_BY_LABEL` and `SLOT_WEIGHTS` — no catalog needed
+2. Rune bonuses (`build.equipment.runes`) — regex-parsed from `upgradeCatalog.runeById`
+3. Food (`build.equipment.food`) — regex-parsed from `upgradeCatalog.foodById`
+4. Utility consumable (`build.equipment.utility`) — regex-parsed from `upgradeCatalog.utilityById`
+5. Infusions/enrichment — via `infixUpgrade.attributes` from `upgradeCatalog.infusionById` / `upgradeCatalog.enrichmentById`
 
 ### Changes to `computeCompBoonCoverage(comp, builds, catalogCache, getCatalog, upgradeCatalog)`
 
@@ -52,22 +63,40 @@ Sources it sums:
 
 - Accepts a new 5th parameter: `upgradeCatalog`.
 - For each build in each line, calls `computeBuildConcentration(build, upgradeCatalog)` to get Concentration.
-- Derives `boonDurationPct = Concentration / 15` (no artificial cap; the formula naturally results in 0 for builds without Concentration gear).
-- For each boon a build provides, finds the matching entry in `coverage.boons` and stores its sources with effective durations applied:
+- Derives `concentrationBonus = Concentration / 1500` (a decimal multiplier; e.g. 150 Concentration → `0.10` = 10% extra duration).
+- For each boon a build provides, finds the matching entry in `coverage.boons` and maps its sources to include `effectiveDuration`:
 
 ```js
+// concentrationBonus = Concentration / 1500  (e.g. 0.10 for 10% bonus)
+// effectiveDuration = base * (1 + concentrationBonus)
 sources: boon.sources
   .filter(s => s.duration > 0)
   .map(s => ({
-    type: s.type,           // "skill" | "trait"
+    type: s.type,              // "skill" | "trait"
     name: s.name,
     stacks: s.stacks,
-    duration: s.duration,
-    effectiveDuration: +(s.duration * (1 + boonDurationPct / 100)).toFixed(1),
+    effectiveDuration: +(s.duration * (1 + concentrationBonus)).toFixed(1),
   }))
 ```
 
-- Line-scope providers now include `sources` (squad-scope providers remain unchanged).
+**Updated provider schema for line-scope providers:**
+
+```js
+{
+  buildId: string,
+  buildName: string,
+  profession: string,
+  eliteSpec: string | null,
+  sources: Array<{
+    type: "skill" | "trait",
+    name: string,
+    stacks: number,
+    effectiveDuration: number,   // seconds, 1 decimal place
+  }>
+}
+```
+
+Squad-scope providers remain unchanged (no `sources` field).
 
 ### Call-site change in `comp-detail.js`
 
@@ -79,7 +108,7 @@ Pass `state.upgradeCatalog` as the 5th argument when calling `computeCompBoonCov
 
 ### `buildBoonCoverageHTML()` change
 
-After each `.comp-boon-cov__line-row`, emit a sibling expansion div:
+After each `.comp-boon-cov__line-row`, emit a sibling expansion div (empty, hidden):
 
 ```html
 <div class="comp-boon-cov__line-row" data-line-id="…">
@@ -93,7 +122,7 @@ The expansion div is empty at render time and populated on first click.
 
 ### `_renderIconRow()` change
 
-Line-scope icons get `data-clickable="true"` so the click handler and CSS can target them without affecting squad icons:
+Line-scope icons get `data-clickable="true"` so the click handler and CSS can target them distinctly from squad icons:
 
 ```html
 <div class="comp-boon-cov__icon"
@@ -109,6 +138,8 @@ Line-scope icons get `data-clickable="true"` so the click handler and CSS can ta
 
 ### Expansion panel inner HTML (populated on click)
 
+Only builds that contribute this boon are rendered (providers with `sources.length > 0` after filtering).
+
 ```html
 <div class="comp-boon-cov__dur-header">
   <img class="comp-boon-cov__dur-boon-icon" src="…" width="18" height="18" alt="Might">
@@ -117,7 +148,7 @@ Line-scope icons get `data-clickable="true"` so the click handler and CSS can ta
   <button class="comp-boon-cov__dur-close" aria-label="Close">✕</button>
 </div>
 
-<!-- Per build -->
+<!-- Per contributing build — separated by .comp-boon-cov__dur-sep if more than one -->
 <div class="comp-boon-cov__dur-build">
   <div class="comp-boon-cov__dur-build-header">
     <span class="comp-boon-cov__dur-prof"><!-- profession SVG --></span>
@@ -128,20 +159,17 @@ Line-scope icons get `data-clickable="true"` so the click handler and CSS can ta
       <span class="comp-boon-cov__dur-type comp-boon-cov__dur-type--skill">SKILL</span>
       <span class="comp-boon-cov__dur-source-name">Echo of Memory</span>
       <span class="comp-boon-cov__dur-duration">11.2s</span>
-      <span class="comp-boon-cov__dur-stacks">×5</span>
+      <span class="comp-boon-cov__dur-stacks">×5</span>  <!-- omitted if stacks === 1 -->
     </div>
     <!-- …more sources -->
   </div>
 </div>
-
-<!-- Separator between builds (if more than one) -->
-<div class="comp-boon-cov__dur-sep"></div>
 ```
 
 Duration display:
-- Shows `effectiveDuration` (post-Concentration), formatted as `Xs` or `X.Xs` (1 decimal if not whole).
+- Shows `effectiveDuration`, formatted as `Xs` (whole number) or `X.Xs` (1 decimal if fractional).
 - Stacks shown as `×N` if `stacks > 1`, omitted if `stacks === 1`.
-- Sources with `duration === 0` are filtered out.
+- Sources with `duration === 0` are already filtered before storing (in the data layer).
 
 ---
 
@@ -151,23 +179,43 @@ All logic lives in `bindBoonCoverageEvents()` in `comp-boon-coverage.js`.
 
 ```
 click on [data-clickable="true"][data-scope="line"] boon icon:
-  - if this icon is already active → close expansion, deactivate icon, return
-  - close any currently open expansion + deactivate its icon
-  - populate expansion div (sibling of the icon's parent line row)
-  - show expansion div (remove `hidden`)
-  - mark icon as active
+  if this icon is already active:
+    → _closeDurationExpand(), return
+  → _closeDurationExpand()          // close any open expansion
+  → populate expansion div sibling of icon's parent .comp-boon-cov__line-row
+  → remove `hidden` from expansion div
+  → add .comp-boon-cov__icon--active to icon
+  → set _activeDurationExpand = { expandEl, iconEl }
 
 click on .comp-boon-cov__dur-close:
-  - close expansion + deactivate icon
+  → _closeDurationExpand()
 
-mouseenter on active icon:
-  - suppress tooltip (skip _closeBoonTooltip / tip creation)
+mouseenter on [data-clickable="true"] boon icon:
+  if _activeDurationExpand?.iconEl === this icon:
+    → return early (suppress tooltip)
+  else:
+    → existing tooltip behavior (unchanged)
 
-toggle-boon-coverage click (chevron):
-  - close any open expansion before toggling section collapse
+toggle-boon-coverage click (chevron) — in comp-detail.js:
+  → call closeDurationExpand() exported from comp-boon-coverage.js
+  → then existing collapse toggle logic
 ```
 
-Module-level state: a single `_activeDurationExpand` reference (the currently open expand div + active icon element) replaces or extends the existing `_activeBoonTooltip` pattern.
+**Module-level state:**
+
+```js
+let _activeDurationExpand = null;
+// shape: { expandEl: HTMLElement, iconEl: HTMLElement } | null
+
+function _closeDurationExpand() {
+  if (!_activeDurationExpand) return;
+  _activeDurationExpand.expandEl.hidden = true;
+  _activeDurationExpand.iconEl.classList.remove("comp-boon-cov__icon--active");
+  _activeDurationExpand = null;
+}
+
+export function closeDurationExpand() { _closeDurationExpand(); }
+```
 
 ---
 
@@ -177,7 +225,7 @@ New classes added to the comp stylesheet:
 
 | Class | Purpose |
 |---|---|
-| `.comp-boon-cov__duration-expand` | Wrapper for expansion panel; `border-left: 2px solid accent; background: slightly-darker; padding: 8px 12px 10px` |
+| `.comp-boon-cov__duration-expand` | Wrapper; `border-left: 2px solid accent; background: slightly-darker; padding: 8px 12px 10px` |
 | `.comp-boon-cov__dur-header` | Flex row: boon icon + name + line label + close button |
 | `.comp-boon-cov__dur-boon-icon` | 18×18 boon icon |
 | `.comp-boon-cov__dur-boon-name` | Bold boon name |
@@ -205,8 +253,8 @@ New classes added to the comp stylesheet:
 | File | Change |
 |---|---|
 | `src/renderer/modules/stats.js` | Export `computeBuildConcentration(build, upgradeCatalog)` |
-| `src/renderer/modules/comps/comp-boon-coverage.js` | Data layer, HTML rendering, event handling (all changes) |
-| `src/renderer/modules/comps/comp-detail.js` | Pass `state.upgradeCatalog` as 5th arg |
+| `src/renderer/modules/comps/comp-boon-coverage.js` | Data layer, HTML rendering, event handling; export `closeDurationExpand()` |
+| `src/renderer/modules/comps/comp-detail.js` | Pass `state.upgradeCatalog` as 5th arg; call `closeDurationExpand()` in toggle-boon-coverage handler |
 | `src/renderer/css/comp.css` (or equivalent) | New `.comp-boon-cov__duration-expand` and child classes |
 
 ---
