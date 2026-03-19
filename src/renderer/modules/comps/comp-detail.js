@@ -22,6 +22,8 @@ let _justDropped = false;
 let _hoverTimer = null;
 let _activeHoverCard = null;
 let _cleanupResize = null;
+let _lastSavedAt = null;
+let _saveStatusInterval = null;
 
 const SPLIT_KEY = "axiforge-comp-panel-split";
 const SPLIT_DEFAULT = 40; // percent
@@ -300,10 +302,42 @@ function resolveBuild(buildId) {
   return state.builds.find((b) => b.id === buildId) || null;
 }
 
+function formatTimeAgo(date) {
+  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (seconds < 5) return "just now";
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  return `${hours}h ago`;
+}
+
+function updateSaveStatusText() {
+  const el = document.getElementById("compSaveStatus");
+  if (!el || !_lastSavedAt) return;
+  el.textContent = `Saved ${formatTimeAgo(_lastSavedAt)}`;
+  el.classList.remove("comp-detail__save-status--saving");
+}
+
+function showSaving() {
+  const el = document.getElementById("compSaveStatus");
+  if (!el) return;
+  el.textContent = "Saving\u2026";
+  el.classList.add("comp-detail__save-status--saving");
+}
+
+function startSaveStatusTicker() {
+  if (_saveStatusInterval) clearInterval(_saveStatusInterval);
+  _saveStatusInterval = setInterval(updateSaveStatusText, 5000);
+}
+
 async function saveAndSync(comp) {
+  showSaving();
   const saved = await window.desktopApi.saveComp(comp);
   state.activeComp = saved;
   state.comps = await window.desktopApi.listComps();
+  _lastSavedAt = new Date();
+  updateSaveStatusText();
   return saved;
 }
 
@@ -379,6 +413,8 @@ export function renderCompDetail() {
   closeBoonTooltip();
   closeDurationExpand();
   if (_cleanupResize) { _cleanupResize(); _cleanupResize = null; }
+  if (_saveStatusInterval) { clearInterval(_saveStatusInterval); _saveStatusInterval = null; }
+  _lastSavedAt = null;
   // Restore original publish status element when re-rendering
   const origPublishEl = document.getElementById("publishStatus");
   if (origPublishEl) setPublishStatusEl(origPublishEl);
@@ -400,6 +436,7 @@ export function renderCompDetail() {
         <span class="comp-detail__divider">|</span>
         <span class="comp-detail__name" data-action="edit-name">${escapeHtml(comp.name || "Untitled Comp")}</span>
         <span class="comp-detail__spacer"></span>
+        <span class="comp-detail__save-status" id="compSaveStatus"></span>
         <button type="button" class="btn btn-primary" data-action="publish">Publish</button>
         <button type="button" class="${notesBtnClass}" data-action="toggle-notes">Notes</button>
         <span class="comp-detail__slot-counter">${totalCap} / 50 slots</span>
@@ -421,6 +458,13 @@ export function renderCompDetail() {
 
   bindDetailEvents(container, comp);
   wireResizeHandle(container);
+
+  // Initialize save status badge from comp's updatedAt
+  if (!_lastSavedAt && comp.updatedAt) {
+    _lastSavedAt = new Date(comp.updatedAt);
+  }
+  updateSaveStatusText();
+  startSaveStatusTicker();
 
   wireCompDragDrop({
     async onDropBuildToLine(buildId, lineId) {

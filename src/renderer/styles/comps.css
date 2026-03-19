@@ -313,6 +313,17 @@
   background: rgba(200, 169, 110, 0.08);
 }
 
+.comp-detail__save-status {
+  font-size: 0.75rem;
+  color: #667;
+  white-space: nowrap;
+  transition: color 0.2s;
+}
+
+.comp-detail__save-status--saving {
+  color: #c8a96e;
+}
+
 .comp-detail__slot-counter {
   font-size: 0.85rem;
   color: #99a;
