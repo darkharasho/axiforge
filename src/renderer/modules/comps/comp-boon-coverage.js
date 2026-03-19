@@ -115,7 +115,7 @@ export function buildBoonCoverageHTML(data) {
           ${_renderIconRow(line.boons, "line", "28", line.label)}
         </div>
       </div>
-      <div class="comp-boon-cov__duration-expand" data-line-label="${escapeHtml(line.label)}" hidden></div>`
+      <div class="comp-boon-cov__duration-expand" data-line-label="${escapeHtml(line.label)}"></div>`
     )
     .join("");
 
@@ -172,7 +172,7 @@ export function closeBoonTooltip() {
 
 function _closeDurationExpand() {
   if (!_activeDurationExpand) return;
-  _activeDurationExpand.expandEl.hidden = true;
+  _activeDurationExpand.expandEl.classList.remove("comp-boon-cov__duration-expand--open");
   _activeDurationExpand.iconEl.classList.remove("comp-boon-cov__icon--active");
   _activeDurationExpand = null;
 }
@@ -239,7 +239,6 @@ export function bindBoonCoverageEvents(container) {
       const lineLabel = iconEl.dataset.lineLabel || "";
 
       expandEl.innerHTML = _buildDurationExpandHTML(boonName, lineLabel, providers);
-      expandEl.hidden = false;
       iconEl.classList.add("comp-boon-cov__icon--active");
       _activeDurationExpand = { expandEl, iconEl };
 
@@ -248,6 +247,9 @@ export function bindBoonCoverageEvents(container) {
         ev.stopPropagation();
         _closeDurationExpand();
       });
+
+      // Trigger open animation on next frame so the browser renders the initial state first
+      requestAnimationFrame(() => expandEl.classList.add("comp-boon-cov__duration-expand--open"));
     });
   });
 }

@@ -1450,8 +1450,18 @@
 .comp-boon-cov__duration-expand {
   border-left: 2px solid #6c5ce7;
   background: #14141e;
-  padding: 8px 12px 10px 12px;
   border-bottom: 1px solid #1a1a3a;
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  padding: 0 12px;
+  transition: max-height 0.25s ease, opacity 0.2s ease, padding 0.2s ease;
+}
+
+.comp-boon-cov__duration-expand--open {
+  max-height: 600px;
+  opacity: 1;
+  padding: 8px 12px 10px;
 }
 
 .comp-boon-cov__dur-header {
