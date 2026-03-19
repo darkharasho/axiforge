@@ -214,6 +214,7 @@ export function bindBoonCoverageEvents(container) {
   container.querySelectorAll('.comp-boon-cov__icon[data-clickable="true"]').forEach((iconEl) => {
     iconEl.addEventListener("click", (e) => {
       e.stopPropagation();
+      _closeBoonTooltip(); // dismiss any visible tooltip before opening/toggling expansion
 
       // Toggle: clicking the active icon closes it
       if (_activeDurationExpand?.iconEl === iconEl) {
