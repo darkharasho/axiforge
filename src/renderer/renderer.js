@@ -276,6 +276,14 @@ async function init() {
   try { _lastGameMode = (await window.desktopApi.getSetting("lastGameMode")) || "pve"; } catch { /* first run */ }
   syncGameModeToggleUI(_lastGameMode);
 
+  // Library skeleton: read saved view mode and show matching skeleton during the data load window.
+  // The static HTML in index.html already shows the list skeleton for first paint; this re-injects
+  // the correct template if the user's saved view mode differs from list.
+  let _libViewMode = "list";
+  try { _libViewMode = (await window.desktopApi.getSetting("library.viewMode")) || "list"; } catch { /* first run */ }
+  injectSkeleton(q("#lib-sidebar"), "library-sidebar");
+  injectSkeleton(q("#lib-content"), `library-${_libViewMode}`);
+
   const [builds, professions] = await Promise.all([
     window.desktopApi.listBuilds(),
     window.desktopApi.listProfessions(),
