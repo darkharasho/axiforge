@@ -231,7 +231,7 @@ function renderListView(container) {
     )
     .join("");
 
-  container.innerHTML = `<div class="lib-list">${folderRows}${buildRows}${compRows}</div>`;
+  container.innerHTML = `<div class="lib-list">${folderRows}${compRows}${buildRows}</div>`;
 
   bindContentEvents(container);
 }
@@ -280,7 +280,11 @@ function renderTableView(container) {
           return 0;
         });
 
+      const folderComps = (state.comps || [])
+        .filter((c) => c.folderId === folder.id)
+        .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
       const items = childFolders.map((f) => renderTreeFolder(f)).join("")
+        + folderComps.map((c) => renderTreeComp(c)).join("")
         + folderBuilds.map((b) => renderTreeBuild(b)).join("");
 
       // Always render <ul> even if empty so SortableJS can create a drop zone
@@ -379,7 +383,7 @@ function renderTableView(container) {
         <span class="lib-tv__modified">${sortHeaderDiv("updatedAt", "Modified")}</span>
       </div>
       <ul class="lib-tv__tree">
-        ${folderItems}${buildItems}${compItems}
+        ${folderItems}${compItems}${buildItems}
       </ul>
     </div>
   `;
@@ -455,7 +459,7 @@ function renderGridView(container) {
     )
     .join("");
 
-  container.innerHTML = `<div class="lib-grid">${folderCards}${buildCards}${compCards}</div>`;
+  container.innerHTML = `<div class="lib-grid">${folderCards}${compCards}${buildCards}</div>`;
 
   bindContentEvents(container);
 }
@@ -506,7 +510,7 @@ function renderIconView(container) {
     )
     .join("");
 
-  container.innerHTML = `<div class="lib-icon-grid">${folderItems}${buildItems}${compItems}</div>`;
+  container.innerHTML = `<div class="lib-icon-grid">${folderItems}${compItems}${buildItems}</div>`;
 
   bindContentEvents(container);
 }
@@ -569,17 +573,6 @@ function renderColumnsView(container) {
         `);
       }
 
-      for (const b of col.builds) {
-        items.push(`
-          <div class="lib-col__item lib-col__item--build ${profClass(b.profession)}"
-               data-build-id="${escapeHtml(b.id)}" data-col-index="${colIndex}">
-            <span class="lib-col__icon ${profClass(b.profession)}">${getSpecIcon(b)}</span>
-            <span class="lib-col__name">${escapeHtml(b.title || "Untitled")}${folderPathHtml(b)}</span>
-            ${roleBadgeHtml(b, state.upgradeCatalog)}
-          </div>
-        `);
-      }
-
       for (const c of (col.comps || [])) {
         const isSelected = _columnSelectedFolders[colIndex] === c.id;
         items.push(`
@@ -588,6 +581,17 @@ function renderColumnsView(container) {
             <span class="lib-col__icon lib-col__icon--comp">${compIcon}</span>
             <span class="lib-col__name">${escapeHtml(c.name || "Untitled Comp")}</span>
             <span class="lib-col__chevron">${chevronRightIcon}</span>
+          </div>
+        `);
+      }
+
+      for (const b of col.builds) {
+        items.push(`
+          <div class="lib-col__item lib-col__item--build ${profClass(b.profession)}"
+               data-build-id="${escapeHtml(b.id)}" data-col-index="${colIndex}">
+            <span class="lib-col__icon ${profClass(b.profession)}">${getSpecIcon(b)}</span>
+            <span class="lib-col__name">${escapeHtml(b.title || "Untitled")}${folderPathHtml(b)}</span>
+            ${roleBadgeHtml(b, state.upgradeCatalog)}
           </div>
         `);
       }

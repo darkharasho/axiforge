@@ -79,7 +79,7 @@ export async function computeCompBoonCoverage(comp, builds, catalogCache, getCat
 export function buildBoonCoverageHTML(data) {
   const { squad, lines } = data;
 
-  const squadIcons = _renderIconRow(squad, "squad", "22", null);
+  const squadIcons = _renderIconRow(squad, "squad", "36", null);
 
   const lineRowsHtml = lines
     .filter((l) => l.hasFilledSlots)
@@ -88,7 +88,7 @@ export function buildBoonCoverageHTML(data) {
       <div class="comp-boon-cov__line-row">
         <span class="comp-boon-cov__line-label">${escapeHtml(line.label)}</span>
         <div class="comp-boon-cov__icons">
-          ${_renderIconRow(line.boons, "line", "17", line.label)}
+          ${_renderIconRow(line.boons, "line", "28", line.label)}
         </div>
       </div>`
     )
