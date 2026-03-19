@@ -423,22 +423,63 @@
   width: 100%;
 }
 
-/* ── Library skeleton ──────────────────────────────────────────────────────── */
+/* ── Library skeleton ────────────────────────────────────────────────────── */
+
 /* Sidebar layout containers */
-.skel-lib-sidebar { display: flex; flex-direction: column; padding: 8px 0; }
-.skel-lib-sidebar-section { padding: 4px 0; }
-.skel-lib-sidebar-label { padding: 4px 10px; }
-.skel-lib-sidebar-item { display: flex; align-items: center; gap: 7px; padding: 5px 10px; height: 26px; }
+.skel-lib-sidebar {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 0;
+}
+
+.skel-lib-sidebar-section {
+  padding: 4px 0;
+}
+
+.skel-lib-sidebar-label {
+  padding: 4px 10px;
+}
+
+.skel-lib-sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 10px;
+  height: 26px;
+}
 
 /* Sidebar skeleton shapes */
-.skel-lib-sidebar-head { height: 9px; }
-.skel-lib-sidebar-icon { width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0; }
+.skel-lib-sidebar-head {
+  height: 9px;
+}
+
+.skel-lib-sidebar-icon {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
 
 /* List / table row icon placeholder (matches .lib-list-row__spec-icon and .lib-tv__icon svg) */
-.skel-lib-row-icon { width: 18px; height: 18px; border-radius: 4px; flex-shrink: 0; }
+.skel-lib-row-icon {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
 
 /* Grid card spec icon placeholder (matches .lib-grid-card__spec-icon) */
-.skel-lib-card-icon { width: 40px; height: 40px; border-radius: 6px; }
+.skel-lib-card-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
 
 /* Icon view item image placeholder (matches .lib-icon-item__icon) */
-.skel-lib-icon-img { width: 34px; height: 34px; border-radius: 6px; flex-shrink: 0; }
+.skel-lib-icon-img {
+  width: 34px;
+  height: 34px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
