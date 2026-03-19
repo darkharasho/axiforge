@@ -401,10 +401,6 @@
   min-width: 344px;
   overflow-y: auto;
   padding: 8px 0;
-  scrollbar-width: none;
-}
-
-.comp-detail__party-panel:hover {
   scrollbar-width: thin;
 }
 
@@ -432,9 +428,6 @@
   flex: 1 1 0;
   min-width: 180px;
   overflow-y: auto;
-  scrollbar-width: none;
-}
-.comp-detail__pool-panel:hover {
   scrollbar-width: thin;
 }
 
