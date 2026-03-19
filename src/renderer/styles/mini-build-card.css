@@ -178,7 +178,7 @@ button.mini-card__name:hover .mini-card__name-arrow {
 .mini-card__spec-pip {
   width: 18px;
   height: 18px;
-  border-radius: 50%;
+  border-radius: 4px;
   background: rgba(136, 153, 187, 0.15);
   display: flex;
   align-items: center;
