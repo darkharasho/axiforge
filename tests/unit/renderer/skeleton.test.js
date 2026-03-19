@@ -83,12 +83,23 @@ describe("injectSkeleton", () => {
 });
 
 describe("library skeleton templates", () => {
-  test("exports templates for all five library panels", () => {
+  test("exports templates for all library panels including toolbar and filters", () => {
+    expect(skeletonTemplates).toHaveProperty("library-toolbar");
+    expect(skeletonTemplates).toHaveProperty("library-filters");
     expect(skeletonTemplates).toHaveProperty("library-sidebar");
     expect(skeletonTemplates).toHaveProperty("library-list");
     expect(skeletonTemplates).toHaveProperty("library-table");
     expect(skeletonTemplates).toHaveProperty("library-grid");
     expect(skeletonTemplates).toHaveProperty("library-icon");
+  });
+
+  test("library-toolbar contains breadcrumb and controls structure", () => {
+    expect(skeletonTemplates["library-toolbar"]).toContain("lib-toolbar__breadcrumb");
+    expect(skeletonTemplates["library-toolbar"]).toContain("lib-toolbar__controls");
+  });
+
+  test("library-filters contains filters bar structure", () => {
+    expect(skeletonTemplates["library-filters"]).toContain("lib-filters__bar");
   });
 
   test("library-sidebar contains section structure and skeleton items", () => {

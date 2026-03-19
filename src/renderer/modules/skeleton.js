@@ -271,6 +271,25 @@ const skeletonTemplates = {
 
   dropdown: `<div class="skel skel-dropdown"></div>`,
 
+  "library-toolbar": `
+<div class="lib-toolbar__breadcrumb">
+  <div class="skel skel-d1" style="height:14px;width:90px;border-radius:4px"></div>
+</div>
+<div class="lib-toolbar__controls">
+  <div class="skel skel-d2" style="height:26px;width:160px;border-radius:6px"></div>
+  <div class="skel skel-d3" style="height:26px;width:90px;border-radius:6px"></div>
+  <div class="skel skel-d1" style="height:26px;width:130px;border-radius:6px"></div>
+  <div class="skel skel-d2" style="height:26px;width:75px;border-radius:6px"></div>
+  <div class="skel skel-d3" style="height:26px;width:60px;border-radius:6px"></div>
+</div>`,
+
+  "library-filters": `
+<div class="lib-filters__bar">
+  <div class="skel skel-d1" style="height:26px;width:65px;border-radius:6px"></div>
+  <div class="skel skel-d2" style="height:26px;width:58px;border-radius:6px"></div>
+  <div class="skel skel-d3" style="height:26px;width:52px;border-radius:6px"></div>
+</div>`,
+
   "library-sidebar": `
 <div class="skel-lib-sidebar">
   <div class="skel-lib-sidebar-section">

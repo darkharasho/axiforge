@@ -281,6 +281,8 @@ async function init() {
   // the correct template if the user's saved view mode differs from list.
   let _libViewMode = "list";
   try { _libViewMode = (await window.desktopApi.getSetting("library.viewMode")) || "list"; } catch { /* first run */ }
+  injectSkeleton(q("#lib-toolbar"), "library-toolbar");
+  injectSkeleton(q("#lib-filters"), "library-filters");
   injectSkeleton(q("#lib-sidebar"), "library-sidebar");
   injectSkeleton(q("#lib-content"), `library-${_libViewMode}`);
 
