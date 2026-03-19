@@ -49,9 +49,9 @@ All new shapes reuse the existing `.skel` base class and pulse animation. New sh
 |---|---|---|
 | `skel-lib-sidebar-head` | `height: 9px` | Section label bars in sidebar |
 | `skel-lib-sidebar-icon` | `14×14px, border-radius: 3px` | Folder icon placeholders in sidebar |
-| `skel-lib-row-icon` | `20×20px, border-radius: 4px` | Spec icon in list/table rows |
+| `skel-lib-row-icon` | `18×18px, border-radius: 4px` | Spec icon in list/table rows |
 | `skel-lib-card-icon` | `40×40px, border-radius: 6px` | Centered spec icon in grid cards |
-| `skel-lib-icon-img` | `36×36px, border-radius: 6px` | Icon view item image |
+| `skel-lib-icon-img` | `34×34px, border-radius: 6px` | Icon view item image |
 
 Text bars (title, date, pills) use inline `style` width values on plain `.skel` elements, same as existing skeleton templates.
 
