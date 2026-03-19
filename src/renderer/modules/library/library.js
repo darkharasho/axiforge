@@ -903,6 +903,18 @@ function handleOpenFolder(folderId) {
   renderLibrary();
 }
 
+async function handleMoveFolder(folderId, newParentId) {
+  const folder = state.folders.find((f) => f.id === folderId);
+  if (!folder) return;
+  const oldParentId = folder.parentId || null;
+  await saveFolder({ ...folder, parentId: newParentId ?? null });
+  pushUndo({ type: "move-folder", undo: async () => {
+    const current = state.folders.find((f) => f.id === folderId);
+    if (current) await saveFolder({ ...current, parentId: oldParentId });
+  }});
+  renderLibrary();
+}
+
 async function handleRenameFolder(folderId) {
   const folder = state.folders.find((f) => f.id === folderId);
   if (!folder) return;
@@ -1100,6 +1112,7 @@ function _buildSharedCallbacks() {
 
     // Folder actions
     onOpenFolder: handleOpenFolder,
+    onMoveFolder: handleMoveFolder,
     onRenameFolder: handleRenameFolder,
     onNewSubfolder: handleNewSubfolder,
     onNewBuildInFolder: handleNewBuildInFolder,
