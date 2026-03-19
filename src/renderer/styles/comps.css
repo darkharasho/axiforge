@@ -1467,14 +1467,14 @@
 }
 
 .comp-boon-cov__dur-boon-name {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
   color: #ccd;
 }
 
 .comp-boon-cov__dur-line-label {
-  font-size: 9px;
-  color: #445;
+  font-size: 11px;
+  color: #667;
   font-weight: 600;
   letter-spacing: .04em;
 }
@@ -1483,9 +1483,9 @@
   margin-left: auto;
   background: none;
   border: none;
-  color: #445;
+  color: #667;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 15px;
   line-height: 1;
   padding: 0 2px;
 }
@@ -1508,20 +1508,20 @@
 }
 
 .comp-boon-cov__dur-prof {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
 }
 
 .comp-boon-cov__dur-prof svg {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
 }
 
 .comp-boon-cov__dur-build-name {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   color: #aab;
 }
@@ -1536,8 +1536,8 @@
 .comp-boon-cov__dur-source {
   display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 1px 3px;
+  gap: 6px;
+  padding: 2px 4px;
   border-radius: 3px;
 }
 
@@ -1546,10 +1546,10 @@
 }
 
 .comp-boon-cov__dur-type {
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 700;
   letter-spacing: .04em;
-  padding: 1px 4px;
+  padding: 1px 5px;
   border-radius: 3px;
   flex-shrink: 0;
 }
@@ -1565,7 +1565,7 @@
 }
 
 .comp-boon-cov__dur-source-name {
-  font-size: 10px;
+  font-size: 12px;
   color: #99a;
   flex: 1;
   min-width: 0;
@@ -1575,7 +1575,7 @@
 }
 
 .comp-boon-cov__dur-duration {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   color: #c89b3c;
   white-space: nowrap;
@@ -1583,8 +1583,8 @@
 }
 
 .comp-boon-cov__dur-stacks {
-  font-size: 9px;
-  color: #556;
+  font-size: 11px;
+  color: #778;
   white-space: nowrap;
   flex-shrink: 0;
 }
