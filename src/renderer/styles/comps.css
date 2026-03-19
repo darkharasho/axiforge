@@ -1437,3 +1437,160 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* ── Boon Duration Expansion ──────────────────────────────────── */
+
+.comp-boon-cov__icon--active .comp-boon-cov__img {
+  outline: 1.5px solid #6c5ce7;
+  outline-offset: 1px;
+  border-radius: 3px;
+  box-shadow: 0 0 6px #6c5ce766;
+}
+
+.comp-boon-cov__duration-expand {
+  border-left: 2px solid #6c5ce7;
+  background: #14141e;
+  padding: 8px 12px 10px 12px;
+  border-bottom: 1px solid #1a1a3a;
+}
+
+.comp-boon-cov__dur-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.comp-boon-cov__dur-boon-icon {
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.comp-boon-cov__dur-boon-name {
+  font-size: 11px;
+  font-weight: 700;
+  color: #ccd;
+}
+
+.comp-boon-cov__dur-line-label {
+  font-size: 9px;
+  color: #445;
+  font-weight: 600;
+  letter-spacing: .04em;
+}
+
+.comp-boon-cov__dur-close {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: #445;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  padding: 0 2px;
+}
+
+.comp-boon-cov__dur-close:hover {
+  color: #889;
+}
+
+.comp-boon-cov__dur-build {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.comp-boon-cov__dur-build-header {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 3px;
+}
+
+.comp-boon-cov__dur-prof {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.comp-boon-cov__dur-prof svg {
+  width: 16px;
+  height: 16px;
+}
+
+.comp-boon-cov__dur-build-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: #aab;
+}
+
+.comp-boon-cov__dur-sources {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding-left: 21px;
+}
+
+.comp-boon-cov__dur-source {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 1px 3px;
+  border-radius: 3px;
+}
+
+.comp-boon-cov__dur-source:hover {
+  background: #1e1e2e;
+}
+
+.comp-boon-cov__dur-type {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  padding: 1px 4px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.comp-boon-cov__dur-type--skill {
+  background: #1a2e20;
+  color: #4caf82;
+}
+
+.comp-boon-cov__dur-type--trait {
+  background: #241a33;
+  color: #a78bfa;
+}
+
+.comp-boon-cov__dur-source-name {
+  font-size: 10px;
+  color: #99a;
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.comp-boon-cov__dur-duration {
+  font-size: 10px;
+  font-weight: 700;
+  color: #c89b3c;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.comp-boon-cov__dur-stacks {
+  font-size: 9px;
+  color: #556;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.comp-boon-cov__dur-sep {
+  height: 1px;
+  background: #1a1a3a;
+  margin: 5px 0;
+}
