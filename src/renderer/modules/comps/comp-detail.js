@@ -5,7 +5,7 @@ import { escapeHtml } from "../utils.js";
 import { getProfessionSvg } from "../profession-icons.js";
 import { wireCompDragDrop, destroyCompDragDrop } from "./comp-drag-drop.js";
 import { roleBadgeHtml } from "../roleEstimator.js";
-import { computeCompBoonCoverage, buildBoonCoverageHTML, bindBoonCoverageEvents, closeBoonTooltip } from "./comp-boon-coverage.js";
+import { computeCompBoonCoverage, buildBoonCoverageHTML, bindBoonCoverageEvents, closeBoonTooltip, closeDurationExpand } from "./comp-boon-coverage.js";
 
 let _callbacks = {};
 let _notesDebounceTimer = null;
@@ -985,6 +985,7 @@ function bindDetailEvents(container, comp) {
 
   // ── Boon coverage collapse toggle ──────────────────────────────────────────
   container.querySelector("[data-action='toggle-boon-coverage']")?.addEventListener("click", () => {
+    closeDurationExpand();
     state.compPrefs.boonCoverageCollapsed = !state.compPrefs.boonCoverageCollapsed;
     const collapsed = state.compPrefs.boonCoverageCollapsed;
     const bodyEl = container.querySelector("#comp-boon-coverage-body");
