@@ -1,7 +1,8 @@
 // Mini Build Card — reusable compact build summary card.
 
 import { escapeHtml } from "./utils.js";
-import { GW2_WEAPONS_BY_ID } from "./constants.js";
+import { GW2_WEAPONS_BY_ID, GW2_RELICS_BY_LABEL } from "./constants.js";
+import { getProfessionSvg } from "./profession-icons.js";
 import {
   getSpecIcon,
   profClass,
@@ -12,13 +13,48 @@ import {
 import { roleBadgeHtml } from "./roleEstimator.js";
 
 /**
- * Return array of { name, isElite } for each specialization on the build.
+ * Return array of { name, isElite, svg } for each specialization on the build.
+ * Elite specs get their own SVG icon; core specs get the profession icon as fallback.
  */
-function getSpecLineNames(build) {
+function getSpecLineInfo(build) {
   if (!build.specializations) return [];
+  const profSvg = getProfessionSvg(build.profession) || "";
   return build.specializations
     .filter((s) => s && s.name)
-    .map((s) => ({ name: s.name, isElite: !!s.elite }));
+    .map((s) => ({
+      name: s.name,
+      isElite: !!s.elite,
+      svg: getProfessionSvg(s.name) || profSvg,
+    }));
+}
+
+/**
+ * Resolve the relic icon URL from GW2_RELICS_BY_LABEL, or null.
+ */
+function getRelicIcon(relicName) {
+  if (!relicName) return null;
+  const entry = GW2_RELICS_BY_LABEL.get(relicName);
+  return entry?.icon || null;
+}
+
+/**
+ * Resolve the rune icon URL from upgradeCatalog, or null.
+ */
+function getRuneIcon(build, upgradeCatalog) {
+  const runes = build.equipment?.runes;
+  if (!runes || typeof runes !== "object" || !upgradeCatalog) return null;
+  const counts = {};
+  for (const v of Object.values(runes)) {
+    if (v) counts[String(v)] = (counts[String(v)] || 0) + 1;
+  }
+  let bestId = "";
+  let bestCount = 0;
+  for (const [id, count] of Object.entries(counts)) {
+    if (count > bestCount) { bestId = id; bestCount = count; }
+  }
+  if (!bestId) return null;
+  const runeDef = upgradeCatalog.runeById?.get(Number(bestId));
+  return runeDef?.icon || null;
 }
 
 /**
@@ -86,15 +122,15 @@ export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
     : "";
 
   // Spec line
-  const specs = getSpecLineNames(build);
+  const specs = getSpecLineInfo(build);
   let specRowHtml = "";
   if (specs.length) {
     const specPips = specs.map((s, i) => {
       const pipClass = s.isElite ? "mini-card__spec-pip mini-card__spec-pip--elite" : "mini-card__spec-pip";
       const nameClass = s.isElite ? "mini-card__spec-name mini-card__spec-name--elite" : "mini-card__spec-name";
-      const letter = escapeHtml(s.name.charAt(0).toUpperCase());
+      const pipContent = s.svg || escapeHtml(s.name.charAt(0).toUpperCase());
       const sep = i < specs.length - 1 ? `<span class="mini-card__spec-sep">›</span>` : "";
-      return `<span class="${pipClass}">${letter}</span><span class="${nameClass}">${escapeHtml(s.name)}</span>${sep}`;
+      return `<span class="${pipClass}">${pipContent}</span><span class="${nameClass}">${escapeHtml(s.name)}</span>${sep}`;
     }).join("");
 
     specRowHtml = `
@@ -122,6 +158,7 @@ export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
   // Gear line (stat + rune)
   const statPackage = resolveStatPackage(build);
   const runeName = getRuneName(build, upgradeCatalog);
+  const runeIconUrl = getRuneIcon(build, upgradeCatalog);
   let gearRowHtml = "";
   if (statPackage || runeName) {
     const parts = [];
@@ -133,7 +170,10 @@ export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
       parts.push(`<span class="mini-card__sep">&middot;</span>`);
     }
     if (runeName) {
-      parts.push(`<span class="mini-card__gear-icon mini-card__gear-icon--rune">ᚱ</span>`);
+      const runeIcon = runeIconUrl
+        ? `<img class="mini-card__gear-img" src="${escapeHtml(runeIconUrl)}" alt="" loading="lazy">`
+        : `<span class="mini-card__gear-icon mini-card__gear-icon--rune">ᚱ</span>`;
+      parts.push(runeIcon);
       parts.push(`<span class="mini-card__equip">${escapeHtml(runeName)}</span>`);
     }
     gearRowHtml = `
@@ -145,12 +185,16 @@ export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
 
   // Relic line
   const relicName = build.equipment?.relic || "";
+  const relicIconUrl = getRelicIcon(relicName);
   let relicRowHtml = "";
   if (relicName) {
+    const relicIcon = relicIconUrl
+      ? `<img class="mini-card__gear-img" src="${escapeHtml(relicIconUrl)}" alt="" loading="lazy">`
+      : `<span class="mini-card__gear-icon mini-card__gear-icon--relic">⬡</span>`;
     relicRowHtml = `
       <div class="mini-card__detail-row">
         <span class="mini-card__detail-label"></span>
-        <span class="mini-card__gear-icon mini-card__gear-icon--relic">⬡</span>
+        ${relicIcon}
         <span class="mini-card__relic">${escapeHtml(relicName)}</span>
       </div>`;
   }

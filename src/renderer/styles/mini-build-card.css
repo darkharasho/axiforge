@@ -4,8 +4,8 @@
 
 .mini-card {
   display: flex;
-  gap: 10px;
-  padding: 10px 12px;
+  gap: 12px;
+  padding: 10px 16px;
   background: #12122a;
   border-radius: 6px;
   cursor: grab;
@@ -50,7 +50,7 @@
 .mini-card__header {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .mini-card__name {
@@ -105,12 +105,12 @@
 .mini-card__spec-group {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
 }
 
 .mini-card__spec-pip {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   background: rgba(136, 153, 187, 0.15);
   display: flex;
@@ -122,10 +122,20 @@
   flex-shrink: 0;
 }
 
+.mini-card__spec-pip svg {
+  width: 14px;
+  height: 14px;
+}
+
 .mini-card__spec-pip--elite {
   background: rgba(255, 200, 80, 0.15);
   color: #ffc850;
   border: 1px solid rgba(255, 200, 80, 0.25);
+}
+
+.mini-card__spec-pip--elite svg {
+  width: 14px;
+  height: 14px;
 }
 
 .mini-card__spec-name {
@@ -189,6 +199,14 @@
 .mini-card__gear-icon--relic {
   background: rgba(170, 136, 204, 0.12);
   color: #aa88cc;
+}
+
+.mini-card__gear-img {
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  object-fit: contain;
 }
 
 .mini-card__stat {
