@@ -59,7 +59,12 @@ function extractBuffFacts(entity, sourceType) {
   const results = [];
   const facts = entity.facts || [];
   const desc = entity.description || "";
+  let sectionContext = ""; // most-recent NoData fact text — labels subsequent conditional facts
   for (const fact of facts) {
+    if (fact.type === "NoData") {
+      sectionContext = fact.text || "";
+      continue;
+    }
     if (!BUFF_FACT_TYPES.has(fact.type)) continue;
     const rawStatus = fact.status;
     if (!rawStatus) continue;
@@ -71,7 +76,7 @@ function extractBuffFacts(entity, sourceType) {
       sourceName: entity.name || "",
       stacks: fact.apply_count || 0,
       duration: fact.duration || 0,
-      description: fact.description || "",
+      context: sectionContext,
       isAlly: isAllyTargeted(desc, rawStatus, ALL_KNOWN_NAMES),
     });
   }
@@ -174,7 +179,7 @@ export function computeBoonCoverage(catalog, editor, weaponSkills = []) {
       grouped.set(f.name, { sources: [], hasAnyAlly: false });
     }
     const entry = grouped.get(f.name);
-    const dupeKey = `${f.sourceType}|${f.sourceName}|${f.stacks}|${f.duration}|${f.description}`;
+    const dupeKey = `${f.sourceType}|${f.sourceName}|${f.stacks}|${f.duration}|${f.context}`;
     if (!entry._seen) entry._seen = new Set();
     if (!entry._seen.has(dupeKey)) {
       entry._seen.add(dupeKey);
@@ -183,7 +188,7 @@ export function computeBoonCoverage(catalog, editor, weaponSkills = []) {
         name: f.sourceName,
         stacks: f.stacks,
         duration: f.duration,
-        description: f.description,
+        context: f.context,
       });
     }
     if (f.isAlly) entry.hasAnyAlly = true;

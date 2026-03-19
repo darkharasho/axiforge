@@ -78,7 +78,7 @@ export async function computeCompBoonCoverage(comp, builds, catalogCache, getCat
             name: s.name,
             stacks: s.stacks,
             effectiveDuration: +((s.duration * (1 + concentrationBonus)).toFixed(1)),
-            description: s.description || "",
+            context: s.context || "",
           }));
         lineEntry.providers.push({ buildId, buildName, profession: build.profession, eliteSpec, sources });
 
@@ -332,8 +332,8 @@ function _buildDurationExpandHTML(boonName, lineLabel, providers) {
         const stacksHtml = s.stacks > 1
           ? `<span class="comp-boon-cov__dur-stacks">&times;${s.stacks}</span>`
           : "";
-        const descHtml = s.description
-          ? `<span class="comp-boon-cov__dur-source-desc">${escapeHtml(s.description)}</span>`
+        const descHtml = s.context
+          ? `<span class="comp-boon-cov__dur-source-desc">${escapeHtml(s.context)}</span>`
           : "";
         return `<div class="comp-boon-cov__dur-source">
           <span class="comp-boon-cov__dur-type ${typeClass}">${typeLabel}</span>
