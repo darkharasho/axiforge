@@ -81,3 +81,46 @@ describe("injectSkeleton", () => {
     expect(el.innerHTML).toBe("existing");
   });
 });
+
+describe("library skeleton templates", () => {
+  test("exports templates for all five library panels", () => {
+    expect(skeletonTemplates).toHaveProperty("library-sidebar");
+    expect(skeletonTemplates).toHaveProperty("library-list");
+    expect(skeletonTemplates).toHaveProperty("library-table");
+    expect(skeletonTemplates).toHaveProperty("library-grid");
+    expect(skeletonTemplates).toHaveProperty("library-icon");
+  });
+
+  test("library-sidebar contains section structure and skeleton items", () => {
+    expect(skeletonTemplates["library-sidebar"]).toContain("skel-lib-sidebar");
+    expect(skeletonTemplates["library-sidebar"]).toContain("skel-lib-sidebar-item");
+    expect(skeletonTemplates["library-sidebar"]).toContain("skel-lib-sidebar-icon");
+    expect(skeletonTemplates["library-sidebar"]).toContain("skel-lib-sidebar-head");
+  });
+
+  test("library-list contains 6 rows with icon placeholder", () => {
+    const icons = (skeletonTemplates["library-list"].match(/skel-lib-row-icon/g) || []).length;
+    expect(icons).toBe(6);
+    expect(skeletonTemplates["library-list"]).toContain("lib-list-row");
+  });
+
+  test("library-table contains header row and 6 data rows matching lib-tv grid", () => {
+    expect(skeletonTemplates["library-table"]).toContain("lib-tv__header");
+    const rows = (skeletonTemplates["library-table"].match(/class="lib-tv__row"/g) || []).length;
+    expect(rows).toBe(6);
+    expect(skeletonTemplates["library-table"]).toContain("skel-lib-row-icon");
+  });
+
+  test("library-grid contains 6 cards with centered icon using lib-grid classes", () => {
+    const cards = (skeletonTemplates["library-grid"].match(/class="lib-grid-card"/g) || []).length;
+    expect(cards).toBe(6);
+    expect(skeletonTemplates["library-grid"]).toContain("lib-grid-card__header");
+    expect(skeletonTemplates["library-grid"]).toContain("skel-lib-card-icon");
+  });
+
+  test("library-icon contains 10 icon items using lib-icon classes", () => {
+    const items = (skeletonTemplates["library-icon"].match(/class="lib-icon-item"/g) || []).length;
+    expect(items).toBe(10);
+    expect(skeletonTemplates["library-icon"]).toContain("skel-lib-icon-img");
+  });
+});
