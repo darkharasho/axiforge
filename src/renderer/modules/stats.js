@@ -205,6 +205,121 @@ export function computeEquipmentStats(assumedBoons = null) {
 }
 
 /**
+ * Compute total Concentration for a given build from its equipment.
+ * Always uses land mode (aquatic slots excluded).
+ * Returns 0 if build.equipment is absent.
+ * Returns slot-only Concentration if upgradeCatalog is null.
+ */
+export function computeBuildConcentration(build, upgradeCatalog) {
+  if (!build?.equipment) return 0;
+  const equipment = build.equipment;
+  const slots = equipment.slots || {};
+  let concentration = 0;
+
+  // Stat combo slots — no catalog needed
+  const EXCLUDED = AQUATIC_SLOTS; // always land mode
+  for (const [slotKey, comboLabel] of Object.entries(slots)) {
+    if (!comboLabel || EXCLUDED.has(slotKey)) continue;
+    const combo = STAT_COMBOS_BY_LABEL.get(comboLabel);
+    const w = SLOT_WEIGHTS[slotKey];
+    if (!combo || !w) continue;
+    const n = combo.stats.length;
+    if (n <= 3) {
+      if (combo.stats[0] === "Concentration") concentration += w.p;
+      else {
+        for (let i = 1; i < n; i++) {
+          if (combo.stats[i] === "Concentration") concentration += w.s;
+        }
+      }
+    } else if (n === 4) {
+      const idx = combo.stats.indexOf("Concentration");
+      if (idx === 0) concentration += Math.round(w.p * 0.895);
+      else if (idx === 1 || idx === 2) concentration += Math.round(w.s * 0.889);
+      else if (idx === 3) concentration += Math.round(w.p * 0.452);
+    } else {
+      if (combo.stats.includes("Concentration")) concentration += Math.round((w.p + 2 * w.s) / n);
+    }
+  }
+
+  if (!upgradeCatalog) return concentration;
+
+  // Food
+  const foodId = equipment.food;
+  if (foodId) {
+    const foodDef = upgradeCatalog.foodById?.get(Number(foodId));
+    if (foodDef) {
+      const re = /\+(\d+)\s+(Concentration|to All Attributes)/g;
+      let m;
+      while ((m = re.exec(foodDef.buff)) !== null) {
+        concentration += Number(m[1]); // both "Concentration" and "to All Attributes" add flat value
+      }
+    }
+  }
+
+  // Infusions (land slots only)
+  const infusions = equipment.infusions || {};
+  const allInfusionIds = Object.entries(infusions)
+    .filter(([k]) => !EXCLUDED.has(k))
+    .flatMap(([, v]) => Array.isArray(v) ? v : [v]);
+  for (const id of allInfusionIds) {
+    if (!id) continue;
+    const def = upgradeCatalog.infusionById?.get(Number(id));
+    if (def?.infixUpgrade?.attributes) {
+      for (const attr of def.infixUpgrade.attributes) {
+        if (attr.attribute === "Concentration") concentration += attr.modifier || 0;
+      }
+    }
+  }
+
+  // Enrichment
+  const enrichmentId = equipment.enrichment;
+  if (enrichmentId) {
+    const def = upgradeCatalog.enrichmentById?.get(Number(enrichmentId));
+    if (def?.infixUpgrade?.attributes) {
+      for (const attr of def.infixUpgrade.attributes) {
+        if (attr.attribute === "Concentration") concentration += attr.modifier || 0;
+      }
+    }
+  }
+
+  // Runes (exclude aquatic slots)
+  const RUNE_BONUS_RE = /\+(\d+)\s+(Concentration|to All Stats)/;
+  const runes = equipment.runes || {};
+  const runeCounts = new Map();
+  for (const [slot, id] of Object.entries(runes)) {
+    if (!id || EXCLUDED.has(slot)) continue;
+    runeCounts.set(String(id), (runeCounts.get(String(id)) || 0) + 1);
+  }
+  for (const [runeId, count] of runeCounts) {
+    const runeDef = upgradeCatalog.runeById?.get(Number(runeId));
+    if (!runeDef?.bonuses?.length) continue;
+    const activeBonuses = runeDef.bonuses.slice(0, Math.min(count, 6));
+    for (const bonus of activeBonuses) {
+      const m = RUNE_BONUS_RE.exec(bonus);
+      if (!m) continue;
+      concentration += Number(m[1]);
+    }
+  }
+
+  // Utility
+  const utilityId = equipment.utility;
+  if (utilityId) {
+    const utilDef = upgradeCatalog.utilityById?.get(Number(utilityId));
+    if (utilDef) {
+      // Pattern 1: conditional flat (writs)
+      const writRe = /Gain (\d+) Concentration When Health/g;
+      let m;
+      while ((m = writRe.exec(utilDef.buff)) !== null) concentration += Number(m[1]);
+      // Pattern 2: flat bonuses
+      const flatRe = /\+(\d+)\s+Concentration/g;
+      while ((m = flatRe.exec(utilDef.buff)) !== null) concentration += Number(m[1]);
+    }
+  }
+
+  return concentration;
+}
+
+/**
  * Compute a detailed breakdown of all sources contributing to a given stat key.
  * Returns an array of { source: string, value: number } entries.
  */

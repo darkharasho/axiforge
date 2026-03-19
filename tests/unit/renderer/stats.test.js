@@ -7,7 +7,7 @@
  * damage estimates, so correctness is critical.
  */
 
-const { computeSlotStats, computeEquipmentStats } = require("../../../src/renderer/modules/stats");
+const { computeSlotStats, computeEquipmentStats, computeBuildConcentration } = require("../../../src/renderer/modules/stats");
 const { state } = require("../../../src/renderer/modules/state");
 
 // ---------------------------------------------------------------------------
@@ -401,5 +401,75 @@ describe("computeEquipmentStats — underwater mode", () => {
     };
     const result = computeEquipmentStats();
     expect(result.Power).toBe(1000);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// computeBuildConcentration
+// ---------------------------------------------------------------------------
+
+function makeUpgradeCatalog(overrides = {}) {
+  return {
+    foodById: overrides.foodById || new Map(),
+    utilityById: overrides.utilityById || new Map(),
+    runeById: overrides.runeById || new Map(),
+    infusionById: overrides.infusionById || new Map(),
+    enrichmentById: overrides.enrichmentById || new Map(),
+  };
+}
+
+describe("computeBuildConcentration", () => {
+  test("returns 0 when build has no equipment", () => {
+    const build = { equipment: null };
+    expect(computeBuildConcentration(build, makeUpgradeCatalog())).toBe(0);
+  });
+
+  test("returns 0 when build equipment has no slots", () => {
+    const build = { equipment: {} };
+    expect(computeBuildConcentration(build, makeUpgradeCatalog())).toBe(0);
+  });
+
+  test("returns slot Concentration even when upgradeCatalog is null", () => {
+    // Harrier's gives Concentration — slot stats don't need catalog
+    const build = { equipment: { slots: { head: "Harrier's" } } };
+    const result = computeBuildConcentration(build, null);
+    expect(result).toBeGreaterThan(0);
+  });
+
+  test("Harrier's chest adds Concentration from slot stats", () => {
+    // Harrier's: Power (primary), Healing Power, Concentration (secondary)
+    // chest secondary weight = 96
+    const build = { equipment: { slots: { chest: "Harrier's" } } };
+    const result = computeBuildConcentration(build, makeUpgradeCatalog());
+    expect(result).toBe(96); // chest secondary weight
+  });
+
+  test("adds flat Concentration from food buff string", () => {
+    const foodDef = { buff: "+40 Concentration" };
+    const catalog = makeUpgradeCatalog({
+      foodById: new Map([[1001, foodDef]]),
+    });
+    const build = { equipment: { slots: {}, food: "1001" } };
+    expect(computeBuildConcentration(build, catalog)).toBe(40);
+  });
+
+  test("returns slot Concentration only when upgradeCatalog is null (rune/food/util skipped)", () => {
+    const build = { equipment: { slots: { chest: "Harrier's" }, food: "1001" } };
+    // Without catalog, food lookup is skipped
+    expect(computeBuildConcentration(build, null)).toBe(96);
+  });
+
+  test("accumulates Concentration from multiple sources", () => {
+    const foodDef = { buff: "+40 Concentration" };
+    const catalog = makeUpgradeCatalog({ foodById: new Map([[1001, foodDef]]) });
+    const build = { equipment: { slots: { chest: "Harrier's" }, food: "1001" } };
+    // 96 from slot + 40 from food = 136
+    expect(computeBuildConcentration(build, catalog)).toBe(136);
+  });
+
+  test("excludes aquatic slots (always land mode)", () => {
+    // aquatic1 is in AQUATIC_SLOTS — should be excluded
+    const build = { equipment: { slots: { aquatic1: "Harrier's" } } };
+    expect(computeBuildConcentration(build, makeUpgradeCatalog())).toBe(0);
   });
 });
