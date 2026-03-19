@@ -232,6 +232,7 @@
   align-items: center;
   gap: 10px;
   padding: 8px 12px;
+  min-height: 80px;
   border-bottom: 1px solid #1a1a3a;
   flex-shrink: 0;
 }

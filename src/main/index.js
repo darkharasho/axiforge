@@ -20,8 +20,9 @@ const {
 } = require("./githubApi");
 const { getProfessionList, getProfessionCatalog, getUpgradeCatalog, getWikiSummary, getWikiRelatedData } = require("./gw2Data");
 const { slugifyBuildName, generateFileId, generateEncryptionKey, getDefaultBuildName } = require("./buildEncryption");
-const { buildSpaBundle, buildEncryptedBuildFile } = require("./siteBundle");
+const { buildSpaBundle, buildEncryptedBuildFile, buildEncryptedCompFile } = require("./siteBundle");
 const { serializeForPublish } = require("./buildPublish");
+const { serializeCompForPublish } = require("./compPublish");
 const { initAutoUpdate } = require("./autoUpdate");
 
 const DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL || "";
@@ -497,6 +498,129 @@ app.whenReady().then(async () => {
       fileId,
       changed: true,
     };
+  });
+
+  ipcMain.handle("comps:publish-comp", async (event, compId, boonCoverageHtml) => {
+    const sender = event.sender;
+    const progress = (step) => sender.send("publish-progress", step);
+
+    const session = await getSession();
+    if (!session) throw new Error("You must log in with GitHub before publishing.");
+
+    const auth = await getAuthRecord();
+    const branch = auth?.onboarding?.branch || "main";
+    const owner = auth?.onboarding?.targetOwner || session.viewer.login;
+
+    // ── 1. Load comp + its builds ──────────────────────────────────────
+    progress("loading");
+    const allComps = await compStore.listComps();
+    const comp = allComps.find((c) => c.id === compId);
+    if (!comp) throw new Error("Comp not found.");
+
+    if (!comp.name?.trim() || comp.name === "Untitled Comp") {
+      throw new Error("Comp name is required for publishing.");
+    }
+
+    const allBuilds = await store.listBuilds();
+    const compBuilds = allBuilds.filter((b) => b.compId === compId);
+
+    // ── 2. Ensure repo infrastructure ─────────────────────────────────
+    progress("repo");
+    await ensureAxiForgeRepo(session.token, owner, "user");
+    await ensurePagesWorkflow(session.token, owner, branch, TARGET_REPO);
+    await ensurePages(session.token, owner, branch, TARGET_REPO);
+
+    // ── 3. Build SPA bundle ────────────────────────────────────────────
+    progress("site");
+    const spaBundle = buildSpaBundle();
+
+    // ── 4. Publish unpublished builds, enrich all builds ──────────────
+    const buildsMap = {};
+    const updatedBuildRecords = [];
+    const unpublishedBuilds = compBuilds.filter((b) => !b.publishedFileId);
+
+    for (let i = 0; i < compBuilds.length; i++) {
+      const build = compBuilds[i];
+
+      if (!build.publishedFileId) {
+        const unpubIdx = unpublishedBuilds.indexOf(build);
+        progress(`builds:${unpubIdx + 1}:${unpublishedBuilds.length}:${build.title || build.profession || "Build"}`);
+      }
+
+      // Enrich build (with fallback)
+      let enrichedBuild = build;
+      try {
+        const [catalog, upgradeCatalog] = await Promise.all([
+          getProfessionCatalog(build.profession, "en"),
+          getUpgradeCatalog("en"),
+        ]);
+        enrichedBuild = serializeForPublish(build, catalog, upgradeCatalog);
+      } catch {
+        // Catalog unavailable — use unenriched build
+      }
+
+      const fileId = build.publishedFileId || generateFileId();
+      const encKey = build.publishedKey || generateEncryptionKey();
+      const slug = build.publishedSlug || slugifyBuildName(build.title);
+      const spaUrl = `https://${owner}.github.io/${TARGET_REPO}/?n=${encodeURIComponent(slug)}&b=${fileId}.${encKey}`;
+
+      if (!build.publishedFileId) {
+        const encFile = buildEncryptedBuildFile(enrichedBuild, fileId, encKey);
+        spaBundle[encFile.filePath] = encFile.content;
+        updatedBuildRecords.push({ ...build, publishedFileId: fileId, publishedKey: encKey, publishedSlug: slug });
+      }
+
+      buildsMap[build.id] = { ...enrichedBuild, spaUrl };
+    }
+
+    // ── 5. Serialize + encrypt comp ────────────────────────────────────
+    progress("encrypt");
+    const compFileId = comp.publishedFileId || generateFileId();
+    const compEncKey = comp.publishedKey || generateEncryptionKey();
+    const compSlug = slugifyBuildName(comp.name);
+
+    const compPayload = serializeCompForPublish(comp, buildsMap);
+    if (boonCoverageHtml) compPayload.boonCoverageHtml = boonCoverageHtml;
+    const compEncFile = buildEncryptedCompFile(compPayload, compFileId, compEncKey);
+    spaBundle[compEncFile.filePath] = compEncFile.content;
+
+    // ── 6. Upload everything in one commit ────────────────────────────
+    progress("upload");
+    await publishSiteBundle(session.token, owner, spaBundle, branch, TARGET_REPO);
+
+    // ── 7. Trigger Pages rebuild ───────────────────────────────────────
+    progress("deploy");
+    await triggerPagesWorkflow(session.token, owner, branch, TARGET_REPO).catch(() => null);
+
+    // ── 8. Persist metadata (builds first, then comp) ─────────────────
+    for (const updatedBuild of updatedBuildRecords) {
+      await store.upsertBuild(updatedBuild);
+    }
+
+    const compPagesUrl = `https://${owner}.github.io/${TARGET_REPO}/?n=${encodeURIComponent(compSlug)}&c=${compFileId}.${compEncKey}`;
+    await compStore.upsertComp({
+      ...comp,
+      publishedFileId: compFileId,
+      publishedKey: compEncKey,
+      publishedSlug: compSlug,
+    });
+
+    await patchAuthRecord({
+      onboarding: {
+        repoReady: true,
+        forkReady: true,
+        repoName: TARGET_REPO,
+        pagesReady: false,
+        pagesBuildStatus: "queued",
+        pagesBuildUpdatedAt: new Date().toISOString(),
+        pagesBuildError: null,
+        pagesUrl: `https://${owner}.github.io/${TARGET_REPO}/`,
+        branch,
+        targetOwner: owner,
+      },
+    });
+
+    return { pagesUrl: compPagesUrl, slug: compSlug, fileId: compFileId, changed: true };
   });
 
   ipcMain.handle("gw2:list-professions", async () => getProfessionList("en"));

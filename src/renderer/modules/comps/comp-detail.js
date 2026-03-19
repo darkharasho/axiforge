@@ -4,6 +4,14 @@ import { state } from "../state.js";
 import { escapeHtml } from "../utils.js";
 import { getProfessionSvg } from "../profession-icons.js";
 import { wireCompDragDrop, destroyCompDragDrop } from "./comp-drag-drop.js";
+import {
+  showPublishProgress,
+  advancePublishStep,
+  failPublishStep,
+  showPublishResult,
+  completeAllPublishSteps,
+  setPublishStatusEl,
+} from "../render-pages.js";
 import { roleBadgeHtml } from "../roleEstimator.js";
 import { computeCompBoonCoverage, buildBoonCoverageHTML, bindBoonCoverageEvents, closeBoonTooltip, closeDurationExpand } from "./comp-boon-coverage.js";
 
@@ -371,6 +379,9 @@ export function renderCompDetail() {
   closeBoonTooltip();
   closeDurationExpand();
   if (_cleanupResize) { _cleanupResize(); _cleanupResize = null; }
+  // Restore original publish status element when re-rendering
+  const origPublishEl = document.getElementById("publishStatus");
+  if (origPublishEl) setPublishStatusEl(origPublishEl);
 
   const container = document.getElementById("comps-container");
   if (!container) return;
@@ -389,8 +400,10 @@ export function renderCompDetail() {
         <span class="comp-detail__divider">|</span>
         <span class="comp-detail__name" data-action="edit-name">${escapeHtml(comp.name || "Untitled Comp")}</span>
         <span class="comp-detail__spacer"></span>
+        <button type="button" class="btn btn-primary" data-action="publish">Publish</button>
         <button type="button" class="${notesBtnClass}" data-action="toggle-notes">Notes</button>
         <span class="comp-detail__slot-counter">${totalCap} / 50 slots</span>
+        <div class="publish-status" id="compPublishStatus"></div>
       </div>
       ${renderTagsRow(comp)}
       ${notesOpen ? renderNotesPanel(comp) : ""}
@@ -886,6 +899,35 @@ function bindDetailEvents(container, comp) {
       });
     });
   }
+
+  // ── Publish ────────────────────────────────────────────────────────────────
+  container.querySelector("[data-action='publish']")?.addEventListener("click", async () => {
+    // Point publish ticker at the comp-local status element
+    const compEl = container.querySelector("#compPublishStatus");
+    if (compEl) setPublishStatusEl(compEl);
+    try {
+      showPublishProgress();
+      // Pre-compute boon coverage HTML to include in the published payload
+      let boonCoverageHtml = "";
+      try {
+        const covData = await computeCompBoonCoverage(
+          comp, state.builds, state.catalogCache, _callbacks.getCatalog, state.upgradeCatalog
+        );
+        boonCoverageHtml = buildBoonCoverageHTML(covData);
+      } catch { /* skip if computation fails */ }
+      const result = await window.desktopApi.publishComp(comp.id, boonCoverageHtml);
+      advancePublishStep("pages");
+      if (result?.pagesUrl) {
+        await window.desktopApi.writeClipboardText(result.pagesUrl);
+        showPublishResult(result.pagesUrl);
+      } else {
+        completeAllPublishSteps();
+      }
+      state.comps = await window.desktopApi.listComps();
+    } catch (err) {
+      failPublishStep("loading", err.message);
+    }
+  });
 
   // ── Notes toggle ───────────────────────────────────────────────────────────
   container.querySelector("[data-action='toggle-notes']")?.addEventListener("click", () => {

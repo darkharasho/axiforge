@@ -694,6 +694,8 @@ export async function startLoginFlow() {
 // ---------------------------------------------------------------------------
 // setPublishStatus
 // ---------------------------------------------------------------------------
+export function setPublishStatusEl(el) { _el.publishStatus = el; }
+
 export function setPublishStatus(message) {
   _el.publishStatus.textContent = message || "";
 }
@@ -707,7 +709,8 @@ const PUBLISH_STEPS = [
   { key: "loading", label: "Preparing build data" },
   { key: "repo", label: "Connecting to repository" },
   { key: "site", label: "Deploying site infrastructure" },
-  { key: "encrypt", label: "Encrypting build" },
+  { key: "builds", label: "Publishing builds" },
+  { key: "encrypt", label: "Encrypting" },
   { key: "upload", label: "Uploading to GitHub" },
   { key: "deploy", label: "Triggering Pages deploy" },
   { key: "pages", label: "Waiting for Pages to go live" },
@@ -765,6 +768,17 @@ export function showPublishProgress() {
 export function advancePublishStep(stepKey) {
   const strip = _el.publishStatus.querySelector(".publish-ticker__strip");
   if (!strip) return;
+
+  // Dynamic builds sub-step: "builds:N:M:Title"
+  if (stepKey.startsWith("builds:")) {
+    const parts = stepKey.split(":");
+    const n = parts[1], total = parts[2], title = parts.slice(3).join(":");
+    const buildsRow = strip.querySelector('[data-publish-step="builds"]');
+    if (buildsRow) {
+      buildsRow.innerHTML = `<span class="publish-ticker__icon">\u2022</span>Publishing build ${n} of ${total}: ${escapeHtml(title)}`;
+    }
+    stepKey = "builds";
+  }
 
   const rows = strip.querySelectorAll("[data-publish-step]");
   let idx = -1;

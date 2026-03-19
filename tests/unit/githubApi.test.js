@@ -543,6 +543,52 @@ describe("publishSiteBundle — SHA deduplication", () => {
     expect(result.files).toContain("site/styles.css");
     expect(result.files).toContain("site/app.js");
   });
+
+  test("preserves site/builds/*.enc files during stale-file sweep", async () => {
+    global.fetch = buildMockFetch({
+      existingFiles: {
+        "site/index.html": computeGitBlobSha("old"),
+        "site/builds/abc.enc": "encsha1",
+      },
+    });
+
+    const bundle = { "site/index.html": "new" };
+    await publishSiteBundle(FAKE_TOKEN, FAKE_OWNER, bundle);
+
+    // Find the create-tree call and inspect its body
+    const treeCall = global.fetch.mock.calls.find(
+      ([url, opts]) => String(url).includes("/git/trees") && opts?.method === "POST"
+    );
+    expect(treeCall).toBeDefined();
+    const treeBody = JSON.parse(treeCall[1].body);
+    const deletedPaths = treeBody.tree
+      .filter((e) => e.sha === null)
+      .map((e) => e.path);
+    expect(deletedPaths).not.toContain("site/builds/abc.enc");
+  });
+
+  test("preserves site/comps/*.enc files during stale-file sweep", async () => {
+    global.fetch = buildMockFetch({
+      existingFiles: {
+        "site/index.html": computeGitBlobSha("old"),
+        "site/comps/xyz.enc": "encsha2",
+      },
+    });
+
+    const bundle = { "site/index.html": "new" };
+    await publishSiteBundle(FAKE_TOKEN, FAKE_OWNER, bundle);
+
+    // Find the create-tree call and inspect its body
+    const treeCall = global.fetch.mock.calls.find(
+      ([url, opts]) => String(url).includes("/git/trees") && opts?.method === "POST"
+    );
+    expect(treeCall).toBeDefined();
+    const treeBody = JSON.parse(treeCall[1].body);
+    const deletedPaths = treeBody.tree
+      .filter((e) => e.sha === null)
+      .map((e) => e.path);
+    expect(deletedPaths).not.toContain("site/comps/xyz.enc");
+  });
 });
 
 // ---------------------------------------------------------------------------

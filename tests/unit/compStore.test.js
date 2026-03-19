@@ -194,6 +194,42 @@ describe("CompStore — removeBuildFromComps", () => {
   });
 });
 
+describe("CompStore — published fields", () => {
+  let store, dir;
+  beforeEach(async () => ({ store, dir } = await makeTempStore()));
+  afterEach(async () => cleanupDir(dir));
+
+  test("persists publishedFileId, publishedKey, publishedSlug on upsert", async () => {
+    const comp = await store.upsertComp(makeComp({
+      publishedFileId: "file-abc-123",
+      publishedKey: "key-xyz-456",
+      publishedSlug: "my-cool-comp",
+    }));
+    expect(comp.publishedFileId).toBe("file-abc-123");
+    expect(comp.publishedKey).toBe("key-xyz-456");
+    expect(comp.publishedSlug).toBe("my-cool-comp");
+
+    // survives a listComps round-trip (read back from disk)
+    const comps = await store.listComps();
+    expect(comps[0].publishedFileId).toBe("file-abc-123");
+    expect(comps[0].publishedKey).toBe("key-xyz-456");
+    expect(comps[0].publishedSlug).toBe("my-cool-comp");
+  });
+
+  test("preserves published fields when updating other fields", async () => {
+    const created = await store.upsertComp(makeComp({
+      publishedFileId: "file-abc-123",
+      publishedKey: "key-xyz-456",
+      publishedSlug: "my-cool-comp",
+    }));
+    // update only the name — do not pass published fields
+    const updated = await store.upsertComp({ ...created, name: "Renamed", publishedFileId: undefined, publishedKey: undefined, publishedSlug: undefined });
+    expect(updated.publishedFileId).toBe("file-abc-123");
+    expect(updated.publishedKey).toBe("key-xyz-456");
+    expect(updated.publishedSlug).toBe("my-cool-comp");
+  });
+});
+
 describe("CompStore — removeBuildFromComps — gameMode unlock", () => {
   let store, dir;
   beforeEach(async () => ({ store, dir } = await makeTempStore()));

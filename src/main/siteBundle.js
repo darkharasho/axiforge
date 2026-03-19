@@ -49,4 +49,12 @@ function buildEncryptedBuildFile(buildData, fileId, base64urlKey) {
   };
 }
 
-module.exports = { buildSpaBundle, buildEncryptedBuildFile };
+function buildEncryptedCompFile(compData, fileId, base64urlKey) {
+  const content = encryptBuild(compData, base64urlKey);
+  return {
+    filePath: `site/comps/${fileId}.enc`,
+    content,
+  };
+}
+
+module.exports = { buildSpaBundle, buildEncryptedBuildFile, buildEncryptedCompFile };

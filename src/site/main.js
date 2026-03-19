@@ -1,5 +1,6 @@
 import "./styles.css";
 import { renderBuildPage } from "./render-build.js";
+import { renderCompPage } from "./render-comp.js";
 import { setReadOnly as setSkillsReadOnly } from "@renderer/modules/skills.js";
 import { setReadOnly as setEquipmentReadOnly } from "@renderer/modules/equipment.js";
 import { setReadOnly as setSpecsReadOnly } from "@renderer/modules/specializations.js";
@@ -19,6 +20,18 @@ function init() {
 
   // Oldest format: #fileId.key (direct hash, no redirect needed)
   if (!buildParam && location.hash.length > 1) buildParam = location.hash.substring(1);
+
+  // Comp format: ?c=fileId.key&n=slug
+  const compParam = params.get("c");
+  if (compParam) {
+    const dotIdx = compParam.indexOf(".");
+    if (dotIdx < 1) { showError("Invalid comp link."); return; }
+    const fileId = compParam.substring(0, dotIdx);
+    const key = compParam.substring(dotIdx + 1);
+    showLoading();
+    loadComp(fileId, key);
+    return;
+  }
 
   if (!buildParam) { showLanding(); return; }
 
@@ -61,6 +74,27 @@ async function loadBuild(fileId, base64urlKey) {
   } catch (err) {
     showError(err.message || String(err));
   }
+}
+
+async function loadComp(fileId, base64urlKey) {
+  try {
+    const params = new URLSearchParams(location.search);
+    const remoteBase = params.get("remoteBase") || "";
+    const compUrl = remoteBase
+      ? `${remoteBase}comps/${encodeURIComponent(fileId)}.enc`
+      : `comps/${encodeURIComponent(fileId)}.enc`;
+    const res = await fetch(compUrl, { cache: "no-store" });
+    if (!res.ok) throw new Error("Comp not found (HTTP " + res.status + ")");
+    const base64Data = await res.text();
+    const comp = await decrypt(base64Data, base64urlKey);
+    renderComp(comp);
+  } catch (err) {
+    showError(err.message || String(err));
+  }
+}
+
+function renderComp(comp) {
+  renderCompPage(app, comp);
 }
 
 async function decrypt(base64Data, base64urlKey) {

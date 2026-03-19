@@ -9,6 +9,18 @@
 @import "../renderer/styles/equipment.css";
 @import "../renderer/styles/notes.css";
 @import "../renderer/styles/detail-panel.css";
+@import "../renderer/styles/comps.css";
+
+/* Profession accent colors (from library.css — needed for comp pool cards) */
+.lib-prof--guardian     { color: #6ea8ff; }
+.lib-prof--warrior      { color: #ff9944; }
+.lib-prof--necromancer  { color: #4dca7a; }
+.lib-prof--engineer     { color: #cc8844; }
+.lib-prof--ranger       { color: #77cc55; }
+.lib-prof--thief        { color: #cc6677; }
+.lib-prof--mesmer       { color: #b07acc; }
+.lib-prof--elementalist { color: #dd5555; }
+.lib-prof--revenant     { color: #aa6655; }
 
 /* ── SPA-specific styles ─────────────────────────────────────────────── */
 

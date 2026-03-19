@@ -38,6 +38,7 @@ contextBridge.exposeInMainWorld("desktopApi", {
   saveComp: (comp) => ipcRenderer.invoke("comps:save", comp),
   deleteComp: (id) => ipcRenderer.invoke("comps:delete", id),
   reorderComps: (updates) => ipcRenderer.invoke("comps:reorder", updates),
+  publishComp: (compId, boonCoverageHtml) => ipcRenderer.invoke("comps:publish-comp", compId, boonCoverageHtml),
 
   // Build library operations
   moveBuilds: (ids, folderId) =>

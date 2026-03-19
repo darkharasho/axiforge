@@ -36,10 +36,17 @@ class CompStore {
         }))
       : [{ id: crypto.randomUUID(), capacity: 5, slots: [] }];
 
+    const publishedPatch = {
+      ...(typeof input.publishedFileId === "string" ? { publishedFileId: input.publishedFileId } : {}),
+      ...(typeof input.publishedKey === "string" ? { publishedKey: input.publishedKey } : {}),
+      ...(typeof input.publishedSlug === "string" ? { publishedSlug: input.publishedSlug } : {}),
+    };
+
     const existing = comps.find((c) => c.id === id);
     if (existing) {
       Object.assign(existing, {
         name, notes, tags, folderId, sortOrder, buildIds, partyLines, gameMode,
+        ...publishedPatch,
         updatedAt: now,
       });
       existing.createdAt = existing.createdAt || now;
@@ -49,6 +56,7 @@ class CompStore {
 
     const comp = {
       id, name, notes, tags, folderId, sortOrder, buildIds, partyLines, gameMode,
+      ...publishedPatch,
       createdAt: now, updatedAt: now,
     };
     comps.push(comp);
