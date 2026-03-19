@@ -118,12 +118,22 @@ button.mini-card__name:hover .mini-card__name-arrow {
   container-type: inline-size;
 }
 
-/* Left column: vertical spec list */
+/* Left column: label + vertical spec list */
 .mini-card__col-left {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+  align-items: flex-start;
+}
+
+.mini-card__col-left .mini-card__detail-label {
+  margin-top: 2px;
+}
+
+.mini-card__spec-list {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  flex-shrink: 0;
 }
 
 /* Right column: weapons, gear, relic stacked */
