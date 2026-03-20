@@ -77,5 +77,9 @@
 /* Notes display */
 .site-notes { color: var(--muted); padding: 12px 14px; border: 1px solid var(--line-soft); border-radius: 8px; background: var(--panel); font-size: 0.88rem; line-height: 1.5; white-space: pre-wrap; }
 
+/* Comp slots are read-only in the SPA — no drag/pointer cursor */
+.comp-slot--filled { cursor: default; }
+a.comp-slot { text-decoration: none; color: inherit; cursor: pointer; }
+
 /* Reference panel sticky positioning */
 .detail-panel { position: sticky; top: 20px; align-self: flex-start; }

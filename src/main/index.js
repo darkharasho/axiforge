@@ -562,14 +562,14 @@ app.whenReady().then(async () => {
 
       const fileId = build.publishedFileId || generateFileId();
       const encKey = build.publishedKey || generateEncryptionKey();
-      const slug = build.publishedSlug || slugifyBuildName(build.title);
+      const slug = slugifyBuildName(build.title);
       const spaUrl = `https://${owner}.github.io/${TARGET_REPO}/?n=${encodeURIComponent(slug)}&b=${fileId}.${encKey}`;
 
       // Always re-encrypt with latest enriched data (traits may have been fixed)
       const encFile = buildEncryptedBuildFile(enrichedBuild, fileId, encKey);
       spaBundle[encFile.filePath] = encFile.content;
 
-      if (!build.publishedFileId) {
+      if (!build.publishedFileId || build.publishedSlug !== slug) {
         updatedBuildRecords.push({ ...build, publishedFileId: fileId, publishedKey: encKey, publishedSlug: slug });
       }
 

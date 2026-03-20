@@ -35,6 +35,13 @@ function renderSlot(build) {
   }
   const pClass = profClass(build.profession);
   const title = escapeHtml(getDisplayName(build));
+  if (build.spaUrl) {
+    return `
+      <a href="${escapeHtml(build.spaUrl)}" target="_blank" rel="noopener"
+         class="comp-slot comp-slot--filled ${pClass}" title="${title}">
+        <span class="comp-slot__icon">${getProfIcon(build)}</span>
+      </a>`;
+  }
   return `
     <div class="comp-slot comp-slot--filled ${pClass}" title="${title}">
       <span class="comp-slot__icon">${getProfIcon(build)}</span>
