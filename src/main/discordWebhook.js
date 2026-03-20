@@ -43,14 +43,16 @@ function buildCompEmbed(comp, builds, compUrl, buildUrls) {
 
   // Assemble description with truncation
   const grid = gridRows.join("\n");
-  let description = grid + "\n\n" + legendLines.join("\n");
+  const discordLine = `[Join our Discord](${DISCORD_URL})`;
+  let description = grid + "\n\n" + legendLines.join("\n") + "\n\n" + discordLine;
 
   if (description.length > EMBED_DESC_LIMIT) {
     const prefix = grid + "\n\n";
-    const remaining = EMBED_DESC_LIMIT - prefix.length - 3;
+    const suffix = "\n\n" + discordLine;
+    const remaining = EMBED_DESC_LIMIT - prefix.length - suffix.length - 3;
     const truncatedLegend = legendLines.join("\n").slice(0, remaining);
     const lastNewline = truncatedLegend.lastIndexOf("\n");
-    description = prefix + (lastNewline > 0 ? truncatedLegend.slice(0, lastNewline) : truncatedLegend) + "...";
+    description = prefix + (lastNewline > 0 ? truncatedLegend.slice(0, lastNewline) : truncatedLegend) + "..." + suffix;
   }
 
   return {
@@ -59,8 +61,9 @@ function buildCompEmbed(comp, builds, compUrl, buildUrls) {
     description,
     color: comp.gameMode === "wvw" ? COLOR_WVW : COLOR_PVE,
     thumbnail: { url: LOGO_URL },
-    footer: {
-      text: `AxiForge  •  GitHub  •  Discord`,
+    author: {
+      name: "AxiForge",
+      url: GITHUB_URL,
       icon_url: LOGO_URL,
     },
   };
