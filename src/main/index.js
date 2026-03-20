@@ -648,8 +648,12 @@ app.whenReady().then(async () => {
   ipcMain.handle("discord:share-comp", async (_e, compId) => {
     const { shareCompToDiscord } = require("./discordWebhook");
 
-    // 1. Load webhook URL
-    const webhookUrl = await store.getSetting("discord.webhookUrl");
+    // 1. Load webhook URL and thread settings
+    const [webhookUrl, threadMode, threadId] = await Promise.all([
+      store.getSetting("discord.webhookUrl"),
+      store.getSetting("discord.threadMode"),
+      store.getSetting("discord.threadId"),
+    ]);
     if (!webhookUrl || !/^https:\/\/(discord\.com|discordapp\.com)\/api\/webhooks\//.test(webhookUrl)) {
       return { success: false, error: "Discord webhook URL is not configured or invalid" };
     }
@@ -685,7 +689,10 @@ app.whenReady().then(async () => {
     }
 
     // 6. Share
-    return shareCompToDiscord(comp, buildsMap, compUrl, buildUrls, webhookUrl);
+    return shareCompToDiscord(comp, buildsMap, compUrl, buildUrls, webhookUrl, {
+      threadMode: threadMode || "none",
+      threadId: threadMode === "custom" ? threadId : null,
+    });
   });
 
   ipcMain.handle("onboarding:status", async () => getOnboardingStatus());

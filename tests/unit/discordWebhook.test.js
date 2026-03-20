@@ -230,4 +230,42 @@ describe("shareCompToDiscord", () => {
     const result = await shareCompToDiscord(comp, builds, compUrl, buildUrls, webhookUrl);
     expect(result).toEqual({ success: false, error: "Network error: connect ECONNREFUSED" });
   });
+
+  test("none mode posts without thread_name or thread_id", async () => {
+    mockHttpsResponse(204);
+    await shareCompToDiscord(comp, builds, compUrl, buildUrls, webhookUrl, { threadMode: "none" });
+    const reqOpts = https.request.mock.calls[0][0];
+    expect(reqOpts.path).toBe("/api/webhooks/123/abc");
+    const req = https.request.mock.results[0].value;
+    const payload = JSON.parse(req.write.mock.calls[0][0]);
+    expect(payload.thread_name).toBeUndefined();
+  });
+
+  test("auto mode sends thread_name from comp name", async () => {
+    mockHttpsResponse(204);
+    await shareCompToDiscord(comp, builds, compUrl, buildUrls, webhookUrl, { threadMode: "auto" });
+    const reqOpts = https.request.mock.calls[0][0];
+    expect(reqOpts.path).toBe("/api/webhooks/123/abc");
+    const req = https.request.mock.results[0].value;
+    const payload = JSON.parse(req.write.mock.calls[0][0]);
+    expect(payload.thread_name).toBe("Test Comp");
+  });
+
+  test("custom mode appends thread_id to webhook URL", async () => {
+    mockHttpsResponse(204);
+    await shareCompToDiscord(comp, builds, compUrl, buildUrls, webhookUrl, { threadMode: "custom", threadId: "9876543210" });
+    const reqOpts = https.request.mock.calls[0][0];
+    expect(reqOpts.path).toBe("/api/webhooks/123/abc?thread_id=9876543210");
+    const req = https.request.mock.results[0].value;
+    const payload = JSON.parse(req.write.mock.calls[0][0]);
+    expect(payload.thread_name).toBeUndefined();
+  });
+
+  test("defaults to none mode when no options provided", async () => {
+    mockHttpsResponse(204);
+    await shareCompToDiscord(comp, builds, compUrl, buildUrls, webhookUrl);
+    const req = https.request.mock.results[0].value;
+    const payload = JSON.parse(req.write.mock.calls[0][0]);
+    expect(payload.thread_name).toBeUndefined();
+  });
 });

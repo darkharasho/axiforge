@@ -110,12 +110,23 @@ function postWebhook(webhookUrl, payload) {
   });
 }
 
-async function shareCompToDiscord(comp, builds, compUrl, buildUrls, webhookUrl) {
+async function shareCompToDiscord(comp, builds, compUrl, buildUrls, webhookUrl, options = {}) {
+  const { threadMode = "none", threadId } = options;
   const embed = buildCompEmbed(comp, builds, compUrl, buildUrls);
   const payload = { embeds: [embed] };
 
+  let targetUrl = webhookUrl;
+  if (threadMode === "custom" && threadId) {
+    // Reply to an existing thread or forum post
+    const sep = webhookUrl.includes("?") ? "&" : "?";
+    targetUrl = `${webhookUrl}${sep}thread_id=${threadId}`;
+  } else if (threadMode === "auto") {
+    // Create a new forum post using the comp name
+    payload.thread_name = comp.name || "Untitled Comp";
+  }
+
   try {
-    const res = await postWebhook(webhookUrl, payload);
+    const res = await postWebhook(targetUrl, payload);
     if (res.status === 204 || res.status === 200) {
       return { success: true };
     }
