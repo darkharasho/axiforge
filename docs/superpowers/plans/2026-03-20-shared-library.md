@@ -1661,7 +1661,7 @@ if (confirm(`Share "${folder.name}" to your org? All builds in this folder will 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add src/renderer/modules/library/folder-store.js src/renderer/modules/library/library.js
+git add src/renderer/modules/library/folder-store.js src/renderer/modules/library/context-menu.js
 git commit -m "feat(shared-library): add share/unshare/sync context menu actions"
 ```
 
