@@ -332,19 +332,6 @@
 .comp-detail__discord-status--error {
   color: var(--danger, #e55);
 }
-.comp-detail__discord-input {
-  font-size: 0.75rem;
-  padding: 2px 6px;
-  border: 1px solid #555;
-  border-radius: 3px;
-  background: #1a1a2e;
-  color: #ccc;
-  width: 260px;
-  outline: none;
-}
-.comp-detail__discord-input:focus {
-  border-color: #7289da;
-}
 
 .comp-detail__slot-counter {
   font-size: 0.85rem;

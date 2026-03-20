@@ -4,6 +4,7 @@ import { renderCustomSelect } from "./custom-select.js";
 import { closeCustomSelect } from "./custom-select.js";
 import { hideHoverPreview } from "./detail-panel.js";
 import { showConfirmModal } from "./confirm-modal.js";
+import { openSettingsModal } from "./settings-modal.js";
 import { computeUnsavedChangeSummary } from "./editor.js";
 import { getProfessionSvg } from "./profession-icons.js";
 
@@ -70,7 +71,12 @@ export function renderAuth() {
       render();
     });
 
-    _el.authRow.append(who, reauth, logout);
+    const settings = makeButton("Settings", "secondary", () => {
+      _el.workspaceMenu?.classList.add("hidden");
+      openSettingsModal();
+    });
+
+    _el.authRow.append(who, reauth, logout, settings);
     return;
   }
 
@@ -83,7 +89,11 @@ export function renderAuth() {
       showError(err);
     }
   });
-  _el.authRow.append(loginBtn);
+  const settingsBtn = makeButton("Settings", "secondary", () => {
+    _el.workspaceMenu?.classList.add("hidden");
+    openSettingsModal();
+  });
+  _el.authRow.append(loginBtn, settingsBtn);
 }
 
 // ---------------------------------------------------------------------------

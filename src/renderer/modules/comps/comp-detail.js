@@ -992,32 +992,9 @@ function bindDetailEvents(container, comp) {
   if (discordBtn) {
     discordBtn.addEventListener("click", async () => {
       // Check if webhook URL is configured
-      let webhookUrl = await window.desktopApi.getSetting("discord.webhookUrl");
+      const webhookUrl = await window.desktopApi.getSetting("discord.webhookUrl");
       if (!webhookUrl) {
-        // Show inline input for webhook URL
-        const statusEl = document.getElementById("compDiscordStatus");
-        if (!statusEl) return;
-        statusEl.innerHTML = `<input type="text" class="comp-detail__discord-input" placeholder="Paste Discord webhook URL" autofocus>`;
-        const input = statusEl.querySelector("input");
-        const handleSubmit = async () => {
-          const url = input.value.trim();
-          if (!url) { statusEl.innerHTML = ""; return; }
-          if (!/^https:\/\/(discord\.com|discordapp\.com)\/api\/webhooks\//.test(url)) {
-            showDiscordStatus("Invalid webhook URL", true);
-            return;
-          }
-          await window.desktopApi.setSetting("discord.webhookUrl", url);
-          statusEl.innerHTML = "";
-          discordBtn.click(); // Re-trigger to share now
-        };
-        input.addEventListener("keydown", (e) => {
-          if (e.key === "Enter") handleSubmit();
-          if (e.key === "Escape") { statusEl.innerHTML = ""; }
-        });
-        input.addEventListener("blur", () => {
-          setTimeout(() => { if (statusEl.contains(input)) statusEl.innerHTML = ""; }, 150);
-        });
-        input.focus();
+        showDiscordStatus("Set webhook URL in Settings first", true);
         return;
       }
 
