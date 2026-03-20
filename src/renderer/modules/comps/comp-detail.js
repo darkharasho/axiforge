@@ -379,6 +379,7 @@ export function renderCompDetail() {
         <span class="comp-detail__save-status" id="compSaveStatus"></span>
         <button type="button" class="btn btn-primary" data-action="publish">Publish</button>
         ${comp.publishedFileId ? '<button type="button" class="btn btn-secondary" data-action="share-discord">Share to Discord</button>' : ""}
+        <button type="button" class="btn btn-secondary" data-action="copy-share-code">Copy AxiCode</button>
         <span class="comp-detail__discord-status" id="compDiscordStatus"></span>
         <button type="button" class="${notesBtnClass}" data-action="toggle-notes">Notes</button>
         <span class="comp-detail__slot-counter">${totalCap} / 50 slots</span>
@@ -873,6 +874,21 @@ function bindDetailEvents(container, comp) {
       }
     });
   }
+
+  // ── Copy Share Code ──────────────────────────────────────────────────────────
+  container.querySelector("[data-action='copy-share-code']")?.addEventListener("click", async (e) => {
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    try {
+      const code = await window.desktopApi.encodeCompShareCode(comp.id);
+      await window.desktopApi.writeClipboardText(code);
+      showSaveStatus("AxiCode copied to clipboard.");
+    } catch (err) {
+      showSaveStatus(err.message || "Failed to generate AxiCode", true);
+    } finally {
+      btn.disabled = false;
+    }
+  });
 
   // ── Notes toggle ───────────────────────────────────────────────────────────
   container.querySelector("[data-action='toggle-notes']")?.addEventListener("click", () => {
