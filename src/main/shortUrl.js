@@ -3,7 +3,7 @@
 const https = require("node:https");
 
 const AXI_LINK_API = "https://axi.link/api/register";
-const AXI_LINK_BASE = "https://axi.link/r/";
+const AXI_LINK_BASE = "https://axi.link/";
 
 /**
  * Register a short redirect URL at axi.link.
