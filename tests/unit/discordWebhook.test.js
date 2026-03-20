@@ -139,9 +139,9 @@ describe("buildCompEmbed", () => {
     }
     // Grid field preserved intact
     expect(embed.fields[0].value.match(/<:\w+:\d+>/g)).toHaveLength(50);
-    // Overflow fields are not inline
+    // Overflow comes in pairs: blank spacer (inline) + builds chunk (inline)
     for (let i = 2; i < embed.fields.length; i++) {
-      expect(embed.fields[i].inline).toBe(false);
+      expect(embed.fields[i].inline).toBe(true);
     }
   });
 });

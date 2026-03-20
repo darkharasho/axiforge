@@ -63,9 +63,10 @@ function buildCompEmbed(comp, builds, compUrl, buildUrls) {
     { name: "Comp", value: grid, inline: true },
     { name: "Builds", value: legendChunks[0], inline: true },
   ];
-  // Overflow chunks get their own full-width fields
+  // Overflow chunks: blank left column + builds in right column
   for (let i = 1; i < legendChunks.length; i++) {
-    fields.push({ name: "\u200b", value: legendChunks[i], inline: false });
+    fields.push({ name: "\u200b", value: "\u200b", inline: true });
+    fields.push({ name: "\u200b", value: legendChunks[i], inline: true });
   }
 
   return {
