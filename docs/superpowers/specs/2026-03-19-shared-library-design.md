@@ -27,9 +27,17 @@ One file per build/comp so that:
 - Smaller payloads per sync operation
 - Git diffs show which specific build changed
 
+`meta.json` is created when a folder is first shared (pushed alongside the initial builds). It is updated whenever the folder is renamed or its `sortOrder` changes, using the same SHA-based optimistic locking. On pull, changes to `meta.json` update the local folder's `name` and `sortOrder`. If two people rename the same folder simultaneously, the second push gets a 409 and the standard conflict resolution applies (keep mine / discard).
+
+Note: The GitHub tree API may return `truncated: true` for very large repos (>100,000 entries). This is not expected for build data but if encountered, the sync engine should fall back to paginated directory listing via the contents API.
+
+### Local storage integration
+
+Shared builds and comps are stored in the same `builds.json` and `comps.json` files as personal data. Their `folderId` points to a shared folder, which is the only distinction. On pull, the sync engine reads the local store, upserts/removes builds by ID for the affected shared folder, and rewrites the file. On push, the engine extracts the single build/comp by ID and serializes it as a standalone JSON file for the PUT. UUID collisions between personal and shared builds are astronomically unlikely with UUIDv4 and are not handled.
+
 ### Local folder metadata
 
-Each folder in `folders.json` gains optional fields when shared:
+Each folder in `folders.json` gains optional fields when shared. `FolderStore.upsertFolder` must be extended to persist these additional fields:
 
 ```json
 {
@@ -37,14 +45,25 @@ Each folder in `folders.json` gains optional fields when shared:
   "name": "Raid Builds",
   "shared": true,
   "orgName": "my-gw2-guild",
-  "repoName": "axibuilds-shared",
-  "lastSyncedAt": "2026-03-19T12:00:00Z",
-  "remoteShas": {
-    "builds/{buildId}": "sha-abc123",
-    "comps/{compId}": "sha-def456"
+  "lastSyncedAt": "2026-03-19T12:00:00Z"
+}
+```
+
+Sync metadata (SHA tracking) is stored separately in `syncState.json` to avoid bloating `folders.json`:
+
+```json
+{
+  "{folderId}": {
+    "remoteShas": {
+      "meta": "sha-aaa111",
+      "builds/{buildId}": "sha-abc123",
+      "comps/{compId}": "sha-def456"
+    }
   }
 }
 ```
+
+The org name and repo name (`axibuilds-shared`) are stored once in `auth.json` under a `sharedLibrary` key, not repeated per folder. The folder's `orgName` field is kept for display purposes and to identify which org a folder belongs to (future multi-org support).
 
 `remoteShas` maps each remote file path to its last-known GitHub SHA. When pushing an edit, the SHA is included — if someone else changed the file since, GitHub rejects the update with a 409.
 
@@ -67,23 +86,32 @@ Each folder in `folders.json` gains optional fields when shared:
 
 ### Push algorithm
 
-1. On save, if the build/comp is in a shared folder:
-2. `PUT /repos/{org}/{repo}/contents/{path}` with file content and last-known SHA.
-3. **200 OK** — success, store new SHA in `remoteShas`.
-4. **409 Conflict** — someone else edited it. Trigger conflict resolution UX.
-5. **404** (new file, no prior SHA) — `PUT` without SHA to create.
+1. On save, if the build/comp is in a shared folder (debounce 2 seconds after last change to avoid rapid-fire pushes):
+2. Check `syncState.json` for a SHA entry for this file path.
+3. If **no SHA** (new file): `PUT /repos/{org}/{repo}/contents/{path}` without `sha` field → creates file (201).
+4. If **SHA exists** (update): `PUT` with the SHA → updates file (200). Store new SHA from response.
+5. If **409 Conflict** — someone else edited it. Trigger conflict resolution UX.
 
 ### Deletions
 
 - Delete via `DELETE /repos/{org}/{repo}/contents/{path}` with SHA.
-- If 409, warn the user that the file was modified by someone else before proceeding.
+- If 409 (file was modified by someone else since last sync), show a dialog:
+  - **"Delete anyway"** — fetch current SHA, then delete with it.
+  - **"Cancel"** — abort deletion, pull the updated version.
+  - **"View updated version"** — pull and display the remote version, let user decide.
+
+### Offline and network failure handling
+
+- **Offline save:** The build is saved locally as normal. The push is queued and retried on next successful sync. A subtle indicator shows "unsynced changes" on the folder.
+- **Failed poll:** Silently skipped. Next poll retries. No retry storm.
+- **Transient server errors (500/502/503):** Retry once after 5 seconds. If still failing, skip and retry on next poll cycle. No user-facing error unless the failure persists across multiple cycles, at which point a non-blocking toast is shown.
 
 ### Rate limit budget
 
-- Full tree fetch: 1 API call
+- Full tree fetch: 1 API call per poll (covers the entire repo, not per-folder)
 - Each changed file fetch: 1 call
 - Push per save: 1 call
-- At 5-min polling with 5 shared folders: ~60 tree fetches/hr + change fetches
+- At 5-min polling: 12 tree fetches/hr + change fetches
 - Well within the 5,000/hr authenticated rate limit even with multiple users.
 
 ## Onboarding & Folder Sharing Flow
@@ -131,16 +159,20 @@ No merge UI or diffing. The optimistic locking is a safety net to prevent silent
 
 ### Remote deletion while build is open
 
-- On next sync, app detects the file is gone from remote.
+- On next sync, app detects the file is gone from remote (tracked SHA exists locally but file is absent from the tree).
 - Toast notification: "{build name} was deleted from the shared library by another member."
 - Build is removed from the shared folder locally.
 - If unsaved local edits exist, offer to save to a personal folder instead.
 
 ### Remote folder structure changes
 
-- New folders appear automatically on sync.
-- Renamed folders update locally.
-- Deleted folders: contained builds are removed locally with a notification. If any had unsaved local edits, offer to save personally.
+- New folders appear automatically on sync (new directory in `folders/` with a `meta.json`).
+- Renamed folders: detected by comparing the `name` field in the pulled `meta.json` against the local folder name. Updated locally.
+- Deleted folders (entire directory gone from tree): contained builds are removed locally with a notification. If any had unsaved local edits, offer to save personally.
+
+### Attribution
+
+The conflict dialog references "modified by {committer}" — this is read from the latest git commit that touched the file, available via `GET /repos/{org}/{repo}/commits?path={path}&per_page=1`. The committer name comes from the GitHub user who made the push.
 
 ## Interaction with Existing Features
 
@@ -159,8 +191,11 @@ No change. Generated on the fly from local data.
 ### Comps referencing builds across boundaries
 
 - A shared comp can only reference builds within the same shared folder. This keeps data self-contained in the repo.
+- **Enforcement:** The UI enforces this at the point of adding a build to a comp. The comp editor's build picker filters to builds in the same folder. If a build is dragged in from elsewhere, the prompt fires.
 - Adding a personal build to a shared comp prompts: "Move this build to the shared folder?"
 - Adding a build from a different shared folder triggers the same prompt.
+- **Sharing a comp that references builds in other folders:** When sharing a folder that contains comps, the app checks if any comp references builds outside the folder. If so, it prompts the user to move those builds into the folder first (or remove them from the comp) before the share can proceed.
+- **Build moved out of a shared folder while a shared comp references it:** The build is removed from the comp's slot. On next sync, other users see the updated comp with the empty slot. A toast notifies: "{build name} was removed from {comp name} because it was moved out of the shared folder."
 
 ### Folder operations
 
@@ -178,3 +213,4 @@ Flat model: org membership = full access. Anyone in the GitHub org can read, add
 - Existing GitHub OAuth token is used for all API calls.
 - No additional encryption layer (the repo is access-controlled, unlike the public GitHub Pages publishing which uses AES-256-GCM).
 - Build data at rest on GitHub is governed by GitHub's security model.
+- Build `images` (base64 data URIs) are included in shared build JSON. Users should be aware that large numbers of image-heavy builds will increase repo size. GitHub recommends repos stay under 1 GB.
