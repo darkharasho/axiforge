@@ -34,43 +34,44 @@ describe("buildCompEmbed", () => {
     b2: "https://x.github.io/axibuilds/?n=power-cata&b=b2.key",
   };
 
-  test("produces valid embed structure", () => {
+  test("produces valid embed structure with inline fields", () => {
     const embed = buildCompEmbed(comp, builds, compUrl, buildUrls);
     expect(embed.title).toBe("Test Comp");
     expect(embed.url).toBe(compUrl);
-    expect(embed.color).toBe(0xFFD700); // PVE gold
-    expect(typeof embed.description).toBe("string");
+    expect(embed.color).toBe(0xFFD700);
+    expect(embed.fields).toHaveLength(2);
+    expect(embed.fields[0].name).toBe("Comp");
+    expect(embed.fields[0].inline).toBe(true);
+    expect(embed.fields[1].name).toBe("Builds");
+    expect(embed.fields[1].inline).toBe(true);
     expect(embed.author.name).toBe("AxiForge");
     expect(embed.author.url).toContain("github.com");
     expect(embed.author.icon_url).toMatch(/build_logo\.png$/);
   });
 
-  test("grid section has one row per party line", () => {
+  test("grid field has one row per party line", () => {
     const embed = buildCompEmbed(comp, builds, compUrl, buildUrls);
-    const [grid] = embed.description.split("\n\n");
-    const rows = grid.split("\n");
+    const rows = embed.fields[0].value.split("\n");
     expect(rows).toHaveLength(2);
     expect(rows[0].match(/<:\w+:\d+>/g)).toHaveLength(2);
     expect(rows[1].match(/<:\w+:\d+>/g)).toHaveLength(1);
   });
 
-  test("legend section has one line per unique build", () => {
+  test("builds field has one line per unique build", () => {
     const embed = buildCompEmbed(comp, builds, compUrl, buildUrls);
-    const parts = embed.description.split("\n\n");
-    const legend = parts[1];
-    const lines = legend.split("\n").filter(Boolean);
+    const lines = embed.fields[1].value.split("\n").filter(Boolean);
     expect(lines).toHaveLength(3);
   });
 
-  test("legend entries with URLs are markdown links", () => {
+  test("builds field entries with URLs are markdown links", () => {
     const embed = buildCompEmbed(comp, builds, compUrl, buildUrls);
-    expect(embed.description).toContain("[Heal FB](https://x.github.io/axibuilds/?n=heal-fb&b=b1.key)");
+    expect(embed.fields[1].value).toContain("[Heal FB](https://x.github.io/axibuilds/?n=heal-fb&b=b1.key)");
   });
 
-  test("legend entries without URLs are plain text", () => {
+  test("builds field entries without URLs are plain text", () => {
     const embed = buildCompEmbed(comp, builds, compUrl, buildUrls);
-    expect(embed.description).toContain("Condi Scourge");
-    expect(embed.description).not.toContain("[Condi Scourge]");
+    expect(embed.fields[1].value).toContain("Condi Scourge");
+    expect(embed.fields[1].value).not.toContain("[Condi Scourge]");
   });
 
   test("skips missing builds in grid", () => {
@@ -79,8 +80,7 @@ describe("buildCompEmbed", () => {
       partyLines: [{ id: "p1", capacity: 5, slots: ["b1", "deleted-id"] }],
     };
     const embed = buildCompEmbed(compWithMissing, builds, compUrl, buildUrls);
-    const [grid] = embed.description.split("\n\n");
-    expect(grid.match(/<:\w+:\d+>/g)).toHaveLength(1);
+    expect(embed.fields[0].value.match(/<:\w+:\d+>/g)).toHaveLength(1);
   });
 
   test("omits party lines with zero resolved builds", () => {
@@ -92,8 +92,7 @@ describe("buildCompEmbed", () => {
       ],
     };
     const embed = buildCompEmbed(compEmpty, builds, compUrl, buildUrls);
-    const [grid] = embed.description.split("\n\n");
-    expect(grid.split("\n")).toHaveLength(1);
+    expect(embed.fields[0].value.split("\n")).toHaveLength(1);
   });
 
   test("deduplicates builds in legend", () => {
@@ -104,9 +103,7 @@ describe("buildCompEmbed", () => {
       ],
     };
     const embed = buildCompEmbed(compDup, builds, compUrl, buildUrls);
-    const parts = embed.description.split("\n\n");
-    const legend = parts[1];
-    const lines = legend.split("\n").filter(Boolean);
+    const lines = embed.fields[1].value.split("\n").filter(Boolean);
     expect(lines).toHaveLength(1);
   });
 
@@ -116,7 +113,7 @@ describe("buildCompEmbed", () => {
     expect(embed.color).toBe(0xDC143C);
   });
 
-  test("truncates description at 4096 chars while preserving grid", () => {
+  test("truncates builds field at 1024 chars", () => {
     const manyBuilds = {};
     const slots = [];
     for (let i = 0; i < 50; i++) {
@@ -134,11 +131,10 @@ describe("buildCompEmbed", () => {
       bigUrls[id] = `https://x.github.io/axibuilds/?n=${id}&b=${id}.key`;
     }
     const embed = buildCompEmbed(bigComp, manyBuilds, compUrl, bigUrls);
-    expect(embed.description.length).toBeLessThanOrEqual(4096);
-    expect(embed.description).toMatch(/\.\.\.$/);
-    // Grid preserved
-    const [grid] = embed.description.split("\n\n");
-    expect(grid.match(/<:\w+:\d+>/g)).toHaveLength(50);
+    expect(embed.fields[1].value.length).toBeLessThanOrEqual(1024);
+    expect(embed.fields[1].value).toMatch(/\.\.\.$/);
+    // Grid field preserved intact
+    expect(embed.fields[0].value.match(/<:\w+:\d+>/g)).toHaveLength(50);
   });
 });
 

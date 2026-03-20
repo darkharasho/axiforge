@@ -42,23 +42,26 @@ function buildCompEmbed(comp, builds, compUrl, buildUrls) {
     }
   }
 
-  // Assemble description with truncation
-  const grid = gridRows.join("\n");
-  let description = grid + "\n\n" + legendLines.join("\n") + "\n\n" + WIDTH_PAD;
+  // Assemble: grid in left field, legend in right field
+  const grid = gridRows.join("\n") || "\u200b";
+  let legend = legendLines.join("\n");
 
-  if (description.length > EMBED_DESC_LIMIT) {
-    const prefix = grid + "\n\n";
-    const remaining = EMBED_DESC_LIMIT - prefix.length - 3;
-    const truncatedLegend = legendLines.join("\n").slice(0, remaining);
-    const lastNewline = truncatedLegend.lastIndexOf("\n");
-    description = prefix + (lastNewline > 0 ? truncatedLegend.slice(0, lastNewline) : truncatedLegend) + "...";
+  // Discord field values are capped at 1024 chars
+  if (legend.length > 1024) {
+    const truncated = legend.slice(0, 1021);
+    const lastNewline = truncated.lastIndexOf("\n");
+    legend = (lastNewline > 0 ? truncated.slice(0, lastNewline) : truncated) + "...";
   }
 
   return {
     title: comp.name || "Untitled Comp",
     url: compUrl,
-    description,
+    description: WIDTH_PAD,
     color: comp.gameMode === "wvw" ? COLOR_WVW : COLOR_PVE,
+    fields: [
+      { name: "Comp", value: grid, inline: true },
+      { name: "Builds", value: legend || "\u200b", inline: true },
+    ],
     author: {
       name: "AxiForge",
       url: GITHUB_URL,
