@@ -64,7 +64,7 @@ function buildEncryptedCompFile(compData, fileId, base64urlKey) {
  * @param {"b"|"c"} type — "b" for builds, "c" for comps
  */
 function buildRedirectFile(fileId, encKey, type) {
-  const target = `/?${type}=${fileId}.${encKey}`;
+  const target = `../../?${type}=${fileId}.${encKey}`;
   return {
     filePath: `site/r/${fileId}/index.html`,
     content: `<!DOCTYPE html><meta http-equiv=refresh content="0;url=${target}">`,
