@@ -40,6 +40,9 @@ describe("buildCompEmbed", () => {
     expect(embed.url).toBe(compUrl);
     expect(embed.color).toBe(0xFFD700); // PVE gold
     expect(typeof embed.description).toBe("string");
+    expect(embed.thumbnail.url).toMatch(/build_logo\.png$/);
+    expect(embed.footer.text).toContain("AxiForge");
+    expect(embed.footer.icon_url).toMatch(/build_logo\.png$/);
   });
 
   test("grid section has one row per party line", () => {

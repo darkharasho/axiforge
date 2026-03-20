@@ -6,6 +6,9 @@ const { getDiscordEmoji, getDisplayName } = require("./discordEmoji");
 const EMBED_DESC_LIMIT = 4096;
 const COLOR_PVE = 0xFFD700;
 const COLOR_WVW = 0xDC143C;
+const LOGO_URL = "https://raw.githubusercontent.com/darkharasho/axiforge/main/public/img/build_logo.png";
+const GITHUB_URL = "https://github.com/darkharasho/axiforge";
+const DISCORD_URL = "https://discord.gg/UjzMXMGXEg";
 
 function buildCompEmbed(comp, builds, compUrl, buildUrls) {
   // Grid: one row of emojis per party line
@@ -55,6 +58,11 @@ function buildCompEmbed(comp, builds, compUrl, buildUrls) {
     url: compUrl,
     description,
     color: comp.gameMode === "wvw" ? COLOR_WVW : COLOR_PVE,
+    thumbnail: { url: LOGO_URL },
+    footer: {
+      text: `AxiForge  •  GitHub  •  Discord`,
+      icon_url: LOGO_URL,
+    },
   };
 }
 
