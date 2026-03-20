@@ -35,6 +35,10 @@ Note: The GitHub tree API may return `truncated: true` for very large repos (>10
 
 Shared builds and comps are stored in the same `builds.json` and `comps.json` files as personal data. Their `folderId` points to a shared folder, which is the only distinction. On pull, the sync engine reads the local store, upserts/removes builds by ID for the affected shared folder, and rewrites the file. On push, the engine extracts the single build/comp by ID and serializes it as a standalone JSON file for the PUT. UUID collisions between personal and shared builds are astronomically unlikely with UUIDv4 and are not handled.
 
+All sync engine reads and writes go through the existing `BuildStore` and `CompStore` methods, which are serialized by the Node.js event loop. This prevents concurrent write conflicts between user-initiated saves and background poll pulls without needing an explicit mutex.
+
+Shared folders are always top-level — they cannot be nested under personal folders, and personal folders cannot be nested under shared folders. The UI should prevent drag-nesting into/out of shared folders.
+
 ### Local folder metadata
 
 Each folder in `folders.json` gains optional fields when shared. `FolderStore.upsertFolder` must be extended to persist these additional fields:
