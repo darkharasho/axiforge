@@ -42,41 +42,28 @@ function buildCompEmbed(comp, builds, compUrl, buildUrls) {
     }
   }
 
-  // Assemble: grid in left field, legend in right field(s)
-  const grid = gridRows.join("\n") || "\u200b";
+  // All content in description — bold headers as fake columns
+  const grid = gridRows.join("\n");
+  const legend = legendLines.join("\n");
 
-  // Split legend across multiple fields if needed (Discord caps fields at 1024 chars)
-  const legendChunks = [];
-  let chunk = "";
-  for (const line of legendLines) {
-    if (chunk && (chunk + "\n" + line).length > 1024) {
-      legendChunks.push(chunk);
-      chunk = line;
-    } else {
-      chunk = chunk ? chunk + "\n" + line : line;
-    }
-  }
-  if (chunk) legendChunks.push(chunk);
-  if (!legendChunks.length) legendChunks.push("\u200b");
+  const sections = [WIDTH_PAD];
+  if (grid) sections.push("**Comp**\n" + grid);
+  if (legend) sections.push("**Builds**\n" + legend);
 
-  const fields = [
-    { name: "Comp", value: grid, inline: true },
-    { name: "Builds", value: legendChunks[0], inline: true },
-  ];
-  // Overflow chunks: force new row with non-inline break, then 2 inline fields
-  for (let i = 1; i < legendChunks.length; i++) {
-    // Non-inline field forces a row break (zero-width space keeps it invisible)
-    fields.push({ name: "\u200b", value: "\u200b", inline: false });
-    fields.push({ name: "\u200b", value: "\u200b", inline: true });
-    fields.push({ name: "\u200b", value: legendChunks[i], inline: true });
+  let description = sections.join("\n\n");
+  if (description.length > EMBED_DESC_LIMIT) {
+    const prefix = sections.slice(0, -1).join("\n\n") + "\n\n**Builds**\n";
+    const remaining = EMBED_DESC_LIMIT - prefix.length - 3;
+    const truncated = legend.slice(0, remaining);
+    const lastNewline = truncated.lastIndexOf("\n");
+    description = prefix + (lastNewline > 0 ? truncated.slice(0, lastNewline) : truncated) + "...";
   }
 
   return {
     title: comp.name || "Untitled Comp",
     url: compUrl,
-    description: WIDTH_PAD,
+    description,
     color: comp.gameMode === "wvw" ? COLOR_WVW : COLOR_PVE,
-    fields,
     author: {
       name: "AxiForge",
       url: GITHUB_URL,
