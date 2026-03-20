@@ -7,8 +7,8 @@ const EMBED_DESC_LIMIT = 4096;
 const COLOR_PVE = 0xFFD700;
 const COLOR_WVW = 0xDC143C;
 const LOGO_URL = "https://raw.githubusercontent.com/darkharasho/axiforge/main/public/img/build_logo.png";
+const SPACER_URL = "https://raw.githubusercontent.com/darkharasho/axiforge/main/public/img/spacer.png";
 const GITHUB_URL = "https://github.com/darkharasho/axiforge";
-const DISCORD_URL = "https://discord.gg/UjzMXMGXEg";
 
 function buildCompEmbed(comp, builds, compUrl, buildUrls) {
   // Grid: one row of emojis per party line
@@ -43,16 +43,14 @@ function buildCompEmbed(comp, builds, compUrl, buildUrls) {
 
   // Assemble description with truncation
   const grid = gridRows.join("\n");
-  const discordLine = `[Join our Discord](${DISCORD_URL})`;
-  let description = grid + "\n\n" + legendLines.join("\n") + "\n\n" + discordLine;
+  let description = grid + "\n\n" + legendLines.join("\n");
 
   if (description.length > EMBED_DESC_LIMIT) {
     const prefix = grid + "\n\n";
-    const suffix = "\n\n" + discordLine;
-    const remaining = EMBED_DESC_LIMIT - prefix.length - suffix.length - 3;
+    const remaining = EMBED_DESC_LIMIT - prefix.length - 3;
     const truncatedLegend = legendLines.join("\n").slice(0, remaining);
     const lastNewline = truncatedLegend.lastIndexOf("\n");
-    description = prefix + (lastNewline > 0 ? truncatedLegend.slice(0, lastNewline) : truncatedLegend) + "..." + suffix;
+    description = prefix + (lastNewline > 0 ? truncatedLegend.slice(0, lastNewline) : truncatedLegend) + "...";
   }
 
   return {
@@ -60,7 +58,7 @@ function buildCompEmbed(comp, builds, compUrl, buildUrls) {
     url: compUrl,
     description,
     color: comp.gameMode === "wvw" ? COLOR_WVW : COLOR_PVE,
-    thumbnail: { url: LOGO_URL },
+    image: { url: SPACER_URL },
     author: {
       name: "AxiForge",
       url: GITHUB_URL,

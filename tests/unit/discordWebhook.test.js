@@ -40,7 +40,7 @@ describe("buildCompEmbed", () => {
     expect(embed.url).toBe(compUrl);
     expect(embed.color).toBe(0xFFD700); // PVE gold
     expect(typeof embed.description).toBe("string");
-    expect(embed.thumbnail.url).toMatch(/build_logo\.png$/);
+    expect(embed.image.url).toMatch(/spacer\.png$/);
     expect(embed.author.name).toBe("AxiForge");
     expect(embed.author.url).toContain("github.com");
     expect(embed.author.icon_url).toMatch(/build_logo\.png$/);
@@ -58,16 +58,9 @@ describe("buildCompEmbed", () => {
   test("legend section has one line per unique build", () => {
     const embed = buildCompEmbed(comp, builds, compUrl, buildUrls);
     const parts = embed.description.split("\n\n");
-    // parts: [grid, legend, discord link]
     const legend = parts[1];
     const lines = legend.split("\n").filter(Boolean);
     expect(lines).toHaveLength(3);
-  });
-
-  test("includes Discord invite link", () => {
-    const embed = buildCompEmbed(comp, builds, compUrl, buildUrls);
-    expect(embed.description).toContain("[Join our Discord]");
-    expect(embed.description).toContain("discord.gg");
   });
 
   test("legend entries with URLs are markdown links", () => {
@@ -113,7 +106,6 @@ describe("buildCompEmbed", () => {
     };
     const embed = buildCompEmbed(compDup, builds, compUrl, buildUrls);
     const parts = embed.description.split("\n\n");
-    // parts: [grid, legend, discord link]
     const legend = parts[1];
     const lines = legend.split("\n").filter(Boolean);
     expect(lines).toHaveLength(1);
@@ -144,12 +136,10 @@ describe("buildCompEmbed", () => {
     }
     const embed = buildCompEmbed(bigComp, manyBuilds, compUrl, bigUrls);
     expect(embed.description.length).toBeLessThanOrEqual(4096);
-    expect(embed.description).toContain("...");
+    expect(embed.description).toMatch(/\.\.\.$/);
     // Grid preserved
     const [grid] = embed.description.split("\n\n");
     expect(grid.match(/<:\w+:\d+>/g)).toHaveLength(50);
-    // Discord link preserved after truncation
-    expect(embed.description).toContain("[Join our Discord]");
   });
 });
 
