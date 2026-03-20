@@ -200,3 +200,69 @@ describe("decodeComp", () => {
     expect(decoded.partyLines[0].capacity).toBe(50);
   });
 });
+
+describe("round-trip integration", () => {
+  // buildA is the standard Warrior/Berserker fixture
+  const buildA = { ...mockBuild };
+  // buildB differs by using different trait choices so it produces a different Z85 payload
+  const buildB = {
+    ...mockBuild,
+    specializations: [
+      { ...mockBuild.specializations[0], majorChoices: { 1: 1447, 2: 1448, 3: 1440 } },
+      { ...mockBuild.specializations[1], majorChoices: { 1: 1381, 2: 1484, 3: 1317 } },
+      { ...mockBuild.specializations[2], majorChoices: { 1: 2042, 2: 2011, 3: 2038 } },
+    ],
+  };
+
+  test("preserves comp structure with multiple builds across party lines", () => {
+    const comp = {
+      name: "Full Raid Comp",
+      gameMode: "pve",
+      partyLines: [
+        { id: "p1", capacity: 5, slots: ["a", "b", "a"] },
+        { id: "p2", capacity: 5, slots: ["b", "a"] },
+      ],
+      buildIds: ["a", "b"],
+    };
+    const builds = { a: buildA, b: buildB };
+
+    const code = encodeComp(comp, builds);
+    const decoded = decodeComp(code);
+
+    expect(decoded.name).toBe("Full Raid Comp");
+    expect(decoded.gameMode).toBe("pve");
+    expect(decoded.builds).toHaveLength(2);
+    expect(decoded.partyLines).toHaveLength(2);
+
+    // P1: 3 filled slots
+    expect(decoded.partyLines[0].slots).toHaveLength(3);
+    expect(decoded.partyLines[0].capacity).toBe(5);
+
+    // P2: 2 filled slots
+    expect(decoded.partyLines[1].slots).toHaveLength(2);
+    expect(decoded.partyLines[1].capacity).toBe(5);
+
+    // Verify deduplication — same build in P1 slot 0 and P1 slot 2
+    expect(decoded.partyLines[0].slots[0]).toBe(decoded.partyLines[0].slots[2]);
+  });
+
+  test("null gameMode round-trips correctly", () => {
+    const comp = { name: "No Mode", gameMode: null, partyLines: [], buildIds: [] };
+    const code = encodeComp(comp, {});
+    const decoded = decodeComp(code);
+    expect(decoded.gameMode).toBeNull();
+  });
+
+  test("wvw gameMode round-trips correctly", () => {
+    const comp = {
+      name: "WvW Comp",
+      gameMode: "wvw",
+      partyLines: [{ id: "p1", capacity: 5, slots: ["a"] }],
+      buildIds: ["a"],
+    };
+    const builds = { a: buildA };
+    const code = encodeComp(comp, builds);
+    const decoded = decodeComp(code);
+    expect(decoded.gameMode).toBe("wvw");
+  });
+});
