@@ -477,6 +477,10 @@ app.whenReady().then(async () => {
 
     const pagesUrl = `https://${owner}.github.io/${TARGET_REPO}/?n=${encodeURIComponent(newSlug)}&b=${fileId}.${encKey}`;
 
+    // Register short URL (fire and forget — non-blocking)
+    const { registerShortUrl } = require("./shortUrl");
+    registerShortUrl(fileId, pagesUrl).catch(() => null);
+
     await patchAuthRecord({
       onboarding: {
         repoReady: true,
@@ -598,6 +602,15 @@ app.whenReady().then(async () => {
     }
 
     const compPagesUrl = `https://${owner}.github.io/${TARGET_REPO}/?n=${encodeURIComponent(compSlug)}&c=${compFileId}.${compEncKey}`;
+
+    // Register short URLs for comp + any newly published builds (fire and forget)
+    const { registerShortUrl } = require("./shortUrl");
+    registerShortUrl(compFileId, compPagesUrl).catch(() => null);
+    for (const ub of updatedBuildRecords) {
+      const buildUrl = `https://${owner}.github.io/${TARGET_REPO}/?n=${encodeURIComponent(ub.publishedSlug)}&b=${ub.publishedFileId}.${ub.publishedKey}`;
+      registerShortUrl(ub.publishedFileId, buildUrl).catch(() => null);
+    }
+
     await compStore.upsertComp({
       ...comp,
       publishedFileId: compFileId,
@@ -657,17 +670,18 @@ app.whenReady().then(async () => {
     if (!owner) return { success: false, error: "GitHub publishing not configured" };
     const repo = auth?.onboarding?.repoName || TARGET_REPO;
 
-    // 4. Build comp URL (keep n= for the comp link since it's the title URL)
-    const compUrl = `https://${owner}.github.io/${repo}/?n=${encodeURIComponent(comp.publishedSlug)}&c=${comp.publishedFileId}.${comp.publishedKey}`;
+    // 4. Build comp URL — use short URL
+    const { shortUrl } = require("./shortUrl");
+    const compUrl = shortUrl(comp.publishedFileId);
 
-    // 5. Load builds and construct maps (drop n= slug to save space in embed)
+    // 5. Load builds and construct maps — use short URLs
     const allBuilds = await store.listBuilds();
     const buildsMap = {};
     const buildUrls = {};
     for (const build of allBuilds) {
       buildsMap[build.id] = build;
-      if (build.publishedFileId && build.publishedKey) {
-        buildUrls[build.id] = `https://${owner}.github.io/${repo}/?b=${build.publishedFileId}.${build.publishedKey}`;
+      if (build.publishedFileId) {
+        buildUrls[build.id] = shortUrl(build.publishedFileId);
       }
     }
 
