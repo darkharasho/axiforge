@@ -633,6 +633,48 @@ app.whenReady().then(async () => {
   ipcMain.handle("settings:get", async (_e, key) => store.getSetting(key));
   ipcMain.handle("settings:set", async (_e, key, value) => store.setSetting(key, value));
 
+  ipcMain.handle("discord:share-comp", async (_e, compId) => {
+    const { shareCompToDiscord } = require("./discordWebhook");
+
+    // 1. Load webhook URL
+    const webhookUrl = await store.getSetting("discord.webhookUrl");
+    if (!webhookUrl || !/^https:\/\/(discord\.com|discordapp\.com)\/api\/webhooks\//.test(webhookUrl)) {
+      return { success: false, error: "Discord webhook URL is not configured or invalid" };
+    }
+
+    // 2. Load and validate comp
+    const allComps = await compStore.listComps();
+    const comp = allComps.find((c) => c.id === compId);
+    if (!comp) return { success: false, error: "Comp not found" };
+    if (!comp.publishedFileId || !comp.publishedKey || !comp.publishedSlug) {
+      return { success: false, error: "Comp must be published before sharing" };
+    }
+
+    // 3. Resolve owner for URL construction (matches existing publish pattern)
+    const auth = await getAuthRecord();
+    const session = await getSession();
+    const owner = auth?.onboarding?.targetOwner || session?.viewer?.login;
+    if (!owner) return { success: false, error: "GitHub publishing not configured" };
+    const repo = auth?.onboarding?.repoName || TARGET_REPO;
+
+    // 4. Build comp URL
+    const compUrl = `https://${owner}.github.io/${repo}/?n=${encodeURIComponent(comp.publishedSlug)}&c=${comp.publishedFileId}.${comp.publishedKey}`;
+
+    // 5. Load builds and construct maps
+    const allBuilds = await store.listBuilds();
+    const buildsMap = {};
+    const buildUrls = {};
+    for (const build of allBuilds) {
+      buildsMap[build.id] = build;
+      if (build.publishedSlug && build.publishedFileId && build.publishedKey) {
+        buildUrls[build.id] = `https://${owner}.github.io/${repo}/?n=${encodeURIComponent(build.publishedSlug)}&b=${build.publishedFileId}.${build.publishedKey}`;
+      }
+    }
+
+    // 6. Share
+    return shareCompToDiscord(comp, buildsMap, compUrl, buildUrls, webhookUrl);
+  });
+
   ipcMain.handle("onboarding:status", async () => getOnboardingStatus());
   ipcMain.handle("onboarding:list-targets", async () => {
     const session = await getSession();

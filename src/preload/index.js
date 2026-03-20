@@ -64,6 +64,7 @@ contextBridge.exposeInMainWorld("desktopApi", {
   showError: (title, body) => ipcRenderer.invoke("dialog:error", title, body),
   getSetting: (key) => ipcRenderer.invoke("settings:get", key),
   setSetting: (key, value) => ipcRenderer.invoke("settings:set", key, value),
+  shareCompToDiscord: (compId) => ipcRenderer.invoke("discord:share-comp", compId),
   getAppVersion: () => ipcRenderer.invoke("updater:get-version"),
   checkForUpdates: () => ipcRenderer.send("updater:check"),
   restartApp: () => ipcRenderer.send("updater:restart"),
