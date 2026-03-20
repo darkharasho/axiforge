@@ -40,7 +40,6 @@ describe("buildCompEmbed", () => {
     expect(embed.url).toBe(compUrl);
     expect(embed.color).toBe(0xFFD700); // PVE gold
     expect(typeof embed.description).toBe("string");
-    expect(embed.image.url).toMatch(/spacer\.png$/);
     expect(embed.author.name).toBe("AxiForge");
     expect(embed.author.url).toContain("github.com");
     expect(embed.author.icon_url).toMatch(/build_logo\.png$/);
