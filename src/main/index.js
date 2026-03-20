@@ -657,17 +657,17 @@ app.whenReady().then(async () => {
     if (!owner) return { success: false, error: "GitHub publishing not configured" };
     const repo = auth?.onboarding?.repoName || TARGET_REPO;
 
-    // 4. Build comp URL
+    // 4. Build comp URL (keep n= for the comp link since it's the title URL)
     const compUrl = `https://${owner}.github.io/${repo}/?n=${encodeURIComponent(comp.publishedSlug)}&c=${comp.publishedFileId}.${comp.publishedKey}`;
 
-    // 5. Load builds and construct maps
+    // 5. Load builds and construct maps (drop n= slug to save space in embed)
     const allBuilds = await store.listBuilds();
     const buildsMap = {};
     const buildUrls = {};
     for (const build of allBuilds) {
       buildsMap[build.id] = build;
-      if (build.publishedSlug && build.publishedFileId && build.publishedKey) {
-        buildUrls[build.id] = `https://${owner}.github.io/${repo}/?n=${encodeURIComponent(build.publishedSlug)}&b=${build.publishedFileId}.${build.publishedKey}`;
+      if (build.publishedFileId && build.publishedKey) {
+        buildUrls[build.id] = `https://${owner}.github.io/${repo}/?b=${build.publishedFileId}.${build.publishedKey}`;
       }
     }
 
