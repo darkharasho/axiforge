@@ -1,0 +1,410 @@
+/* ── Mini Build Card ─────────────────────────────────────────────────────────
+   Reusable compact card showing build summary: specs, weapons, gear, relic.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+.mini-card {
+  display: flex;
+  gap: 12px;
+  padding: 10px 16px;
+  background: #12122a;
+  border-radius: 6px;
+  cursor: grab;
+  border-left: 3px solid currentColor;
+  position: relative;
+  transition: background 0.12s;
+}
+
+.mini-card:hover {
+  background: #181838;
+}
+
+/* ── Icon ──────────────────────────────────────────────────────────────────── */
+
+.mini-card__icon {
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  align-self: flex-start;
+  margin-top: 2px;
+}
+
+.mini-card__icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* ── Info area ─────────────────────────────────────────────────────────────── */
+
+.mini-card__info {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── Header row: name + tags + role + mode ─────────────────────────────────── */
+
+.mini-card__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mini-card__name {
+  all: unset;
+  font-size: 13px;
+  color: #ddd;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  flex-shrink: 1;
+}
+
+/* When the name is a button or link (clickable link to build) */
+button.mini-card__name,
+a.mini-card__name {
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+button.mini-card__name:hover,
+a.mini-card__name:hover {
+  color: #fff;
+}
+
+.mini-card__name-arrow {
+  font-size: 11px;
+  opacity: 0;
+  transition: opacity 0.15s;
+  margin-left: 2px;
+}
+
+button.mini-card__name:hover .mini-card__name-arrow,
+a.mini-card__name:hover .mini-card__name-arrow {
+  opacity: 1;
+}
+
+.mini-card__tag {
+  font-size: 9px;
+  border-radius: 8px;
+  padding: 1px 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #aab;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.mini-card__mode {
+  font-size: 9px;
+  color: #778;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 1px 6px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* ── Right-side pills (role + mode) ────────────────────────────────────────── */
+
+.mini-card__pills {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  margin-left: auto;
+  padding-right: 24px;
+}
+
+/* ── Two-Column Layout (specs left, gear right) ────────────────────────────── */
+
+.mini-card__columns {
+  display: flex;
+  gap: 24px;
+  margin-top: 6px;
+}
+
+.mini-card__info {
+  container-type: inline-size;
+}
+
+/* Left column: label + vertical spec list */
+.mini-card__col-left {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+  align-items: flex-start;
+}
+
+.mini-card__col-left .mini-card__detail-label {
+  margin-top: 2px;
+}
+
+.mini-card__spec-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Right column: weapons, gear, relic stacked */
+.mini-card__col-right {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+/* Drop to single stacked column when narrow */
+@container (max-width: 320px) {
+  .mini-card__columns {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .mini-card__col-left {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+}
+
+.mini-card__cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.mini-card__detail-label {
+  font-size: 9px;
+  color: #556;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  min-width: 36px;
+  flex-shrink: 0;
+}
+
+/* ── Spec lines (vertical) ──────────────────────────────────────────────────── */
+
+.mini-card__spec-line {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.mini-card__spec-pip {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  background: rgba(136, 153, 187, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  font-weight: 600;
+  color: #8899bb;
+  flex-shrink: 0;
+}
+
+.mini-card__spec-pip svg {
+  width: 14px;
+  height: 14px;
+}
+
+.mini-card__spec-pip--elite {
+  background: rgba(255, 200, 80, 0.15);
+  color: #ffc850;
+  border: 1px solid rgba(255, 200, 80, 0.25);
+}
+
+.mini-card__spec-pip--elite svg {
+  width: 14px;
+  height: 14px;
+}
+
+.mini-card__spec-name {
+  font-size: 11px;
+  color: #8899bb;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mini-card__spec-name--elite {
+  color: #ddc070;
+  font-weight: 500;
+}
+
+
+/* ── Weapon group ──────────────────────────────────────────────────────────── */
+
+.mini-card__weap-group {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.mini-card__weap-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #fff;
+}
+
+.mini-card__weap-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.mini-card__weap-icon svg,
+.mini-card__weap-icon svg path,
+.mini-card__weap-icon svg g {
+  fill: #fff !important;
+  color: #fff !important;
+}
+
+.mini-card__weap-name {
+  font-size: 11px;
+  color: #99aa88;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mini-card__weap-sep {
+  color: #445;
+  margin: 0 2px;
+  font-size: 11px;
+}
+
+.mini-card__weap-div {
+  color: #334;
+  margin: 0 4px;
+  font-size: 11px;
+}
+
+/* ── Gear icons & text ─────────────────────────────────────────────────────── */
+
+.mini-card__gear-icon {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  flex-shrink: 0;
+}
+
+.mini-card__gear-icon--stat {
+  background: rgba(200, 169, 110, 0.15);
+  color: #c8a96e;
+}
+
+.mini-card__gear-icon--rune {
+  background: rgba(153, 153, 170, 0.12);
+  color: #99a;
+}
+
+.mini-card__gear-icon--relic {
+  background: rgba(170, 136, 204, 0.12);
+  color: #aa88cc;
+}
+
+.mini-card__gear-img {
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+
+.mini-card__stat {
+  font-size: 11px;
+  color: #c8a96e;
+  white-space: nowrap;
+}
+
+.mini-card__equip {
+  font-size: 11px;
+  color: #99a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mini-card__relic {
+  font-size: 11px;
+  color: #aa88cc;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mini-card__sep {
+  font-size: 11px;
+  color: #334;
+  margin: 0 3px;
+}
+
+/* ── Remove button (absolute top-right) ────────────────────────────────────── */
+
+.mini-card__btn-remove {
+  all: unset;
+  cursor: pointer;
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  font-size: 18px;
+  line-height: 1;
+  color: #556;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  z-index: 1;
+  opacity: 0;
+  transition: color 0.15s, background 0.15s, opacity 0.15s;
+}
+
+.mini-card:hover .mini-card__btn-remove {
+  opacity: 1;
+}
+
+.mini-card__btn-remove:hover {
+  color: #e55;
+  background: rgba(238, 85, 85, 0.12);
+}
+
+/* ── Missing variant ───────────────────────────────────────────────────────── */
+
+.mini-card--missing {
+  opacity: 0.5;
+  border-left-color: #444;
+  cursor: default;
+}
+
+.mini-card__icon--missing {
+  color: #555;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.mini-card__name--missing {
+  color: #666;
+  font-style: italic;
+}

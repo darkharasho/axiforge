@@ -12,3 +12,5 @@
   - [x] Dragging OFF should also remove it from the line
   - [x] Lets make the split between comp and builds user resizable and save the setting
 - [ ] Boon coverage heat map
+- [ ] spa pills arent working for build classification (heal support, boon support, etc)
+- [ ] spa build link is still on the right and not on the title

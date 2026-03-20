@@ -39,7 +39,7 @@ export function wireCompDragDrop(callbacks) {
         animation: 150,
         forceFallback: true,
         fallbackClass: "comp-drag-icon-ghost",
-        draggable: ".comp-pool-card",
+        draggable: ".mini-card",
         onStart(evt) {
           _addDraggingClass();
           // Center the 42×42 ghost under the cursor instead of anchoring

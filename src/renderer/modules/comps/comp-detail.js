@@ -2,7 +2,6 @@
 
 import { state } from "../state.js";
 import { escapeHtml } from "../utils.js";
-import { getProfessionSvg } from "../profession-icons.js";
 import { wireCompDragDrop, destroyCompDragDrop } from "./comp-drag-drop.js";
 import {
   showPublishProgress,
@@ -13,7 +12,16 @@ import {
   setPublishStatusEl,
 } from "../render-pages.js";
 import { roleBadgeHtml } from "../roleEstimator.js";
+import { renderMiniBuildCard, renderMissingMiniBuildCard } from "../mini-build-card.js";
 import { computeCompBoonCoverage, buildBoonCoverageHTML, bindBoonCoverageEvents, closeBoonTooltip, closeDurationExpand } from "./comp-boon-coverage.js";
+import {
+  getEliteSpecName,
+  getSpecIcon,
+  profClass,
+  getDisplayName,
+  resolveStatPackage,
+  getRuneName,
+} from "../build-helpers.js";
 
 let _callbacks = {};
 let _notesDebounceTimer = null;
@@ -139,7 +147,7 @@ function showSlotHoverCard(slotEl, build) {
   const profLine = [eliteSpec, build.profession].filter(Boolean).join(" · ");
   const gameMode = build.gameMode || "pve";
   const statPackage = resolveStatPackage(build);
-  const runeName = getRuneName(build);
+  const runeName = getRuneName(build, state.upgradeCatalog);
   const relicName = build.equipment?.relic || "";
   const tags = build.tags || [];
 
@@ -263,26 +271,6 @@ function showSlotContextMenu(x, y, comp, lineId, slotIdx) {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function getEliteSpecName(build) {
-  if (!build.specializations) return null;
-  for (const s of build.specializations) {
-    if (s.elite && s.name) return s.name;
-  }
-  return null;
-}
-
-function getSpecIcon(build) {
-  const eliteSpec = getEliteSpecName(build);
-  const name = eliteSpec || build.profession;
-  if (!name) return "";
-  return getProfessionSvg(name) || "";
-}
-
-function profClass(profession) {
-  if (!profession) return "";
-  return `lib-prof--${profession.toLowerCase()}`;
-}
-
 function getTotalCapacity(comp) {
   if (!comp.partyLines) return 0;
   return comp.partyLines.reduce((sum, pl) => sum + (pl.capacity || 0), 0);
@@ -351,66 +339,6 @@ async function saveAndSync(comp) {
   _lastSavedAt = new Date();
   updateSaveStatusText();
   return saved;
-}
-
-/**
- * Extract the primary rune name from the equipment runes object.
- * Runes are stored as numeric IDs; resolve via upgrade catalog when available.
- */
-function getRuneName(build) {
-  const runes = build.equipment?.runes;
-  if (!runes || typeof runes !== "object") return "";
-  const counts = {};
-  for (const v of Object.values(runes)) {
-    if (v) counts[String(v)] = (counts[String(v)] || 0) + 1;
-  }
-  let bestId = "";
-  let bestCount = 0;
-  for (const [id, count] of Object.entries(counts)) {
-    if (count > bestCount) { bestId = id; bestCount = count; }
-  }
-  if (!bestId) return "";
-
-  // Try to resolve the ID to a human name via the upgrade catalog
-  const runeDef = state.upgradeCatalog?.runeById?.get(Number(bestId));
-  if (runeDef?.name) {
-    // "Superior Rune of the Scholar" → "Scholar"
-    return runeDef.name.replace(/^(?:Superior|Major|Minor) Rune of (?:the )?/i, "");
-  }
-
-  // Fall back: if already a non-numeric label, return as-is
-  return /^\d+$/.test(bestId) ? "" : bestId;
-}
-
-/**
- * Resolve a human-readable stat package label for a build.
- * Falls back to deriving from equipment slot values when statPackage is a raw ID.
- */
-function resolveStatPackage(build) {
-  const pkg = build.equipment?.statPackage || "";
-  if (pkg && !/^\d+$/.test(pkg)) return pkg; // already a label
-
-  // Derive from the most common slot stat combo
-  const slots = build.equipment?.slots;
-  if (slots && typeof slots === "object") {
-    const counts = {};
-    for (const v of Object.values(slots)) {
-      if (v && typeof v === "string") counts[v] = (counts[v] || 0) + 1;
-    }
-    let best = "";
-    let bestCount = 0;
-    for (const [label, count] of Object.entries(counts)) {
-      if (count > bestCount) { best = label; bestCount = count; }
-    }
-    if (best) return best;
-  }
-
-  return ""; // can't resolve — show nothing rather than a raw ID
-}
-
-function getDisplayName(build) {
-  const elite = getEliteSpecName(build);
-  return build.title || elite || build.profession || "Untitled";
 }
 
 // ─── Rendering ────────────────────────────────────────────────────────────────
@@ -680,8 +608,8 @@ function renderBuildPool(comp) {
   });
 
   const cards = filtered.map((entry) => {
-    if (entry.type === "missing") return renderMissingPoolCard(entry.id);
-    return renderPoolCard(entry.build);
+    if (entry.type === "missing") return renderMissingMiniBuildCard(entry.id);
+    return renderMiniBuildCard(entry.build, state.upgradeCatalog);
   }).join("");
 
   return `
@@ -697,75 +625,6 @@ function renderBuildPool(comp) {
       <div class="comp-pool-list">
         ${cards || '<p class="comp-pool-empty">No builds in pool</p>'}
       </div>
-    </div>
-  `;
-}
-
-function renderPoolCard(build) {
-  const icon = getSpecIcon(build);
-  const pClass = profClass(build.profession);
-  const name = escapeHtml(getDisplayName(build));
-  const gameMode = build.gameMode || "pve";
-
-  // Equipment details
-  const statPackage = resolveStatPackage(build);
-  const runeName = getRuneName(build);
-  const relicName = build.equipment?.relic || "";
-
-  // Build bottom line parts (stat · rune · relic)
-  const bottomParts = [];
-  if (statPackage) {
-    bottomParts.push(`<span class="comp-pool-card__stat">${escapeHtml(statPackage)}</span>`);
-  }
-  if (runeName) {
-    if (bottomParts.length) bottomParts.push(`<span class="comp-pool-card__sep">&middot;</span>`);
-    bottomParts.push(`<span class="comp-pool-card__equip">${escapeHtml(runeName)}</span>`);
-  }
-  if (relicName) {
-    if (bottomParts.length) bottomParts.push(`<span class="comp-pool-card__sep">&middot;</span>`);
-    bottomParts.push(`<span class="comp-pool-card__equip">${escapeHtml(relicName)}</span>`);
-  }
-
-  // Tag pills
-  const tagPills = (build.tags || [])
-    .map((t) => `<span class="comp-pool-tag">${escapeHtml(t)}</span>`)
-    .join("");
-
-  return `
-    <div class="comp-pool-card ${pClass}" data-build-id="${escapeHtml(build.id)}">
-      <div class="comp-pool-card__icon">${icon}</div>
-      <div class="comp-pool-card__info">
-        <div class="comp-pool-card__top">
-          <span class="comp-pool-card__name">${name}</span>
-          ${tagPills}
-          ${roleBadgeHtml(build, state.upgradeCatalog)}
-        </div>
-        ${bottomParts.length ? `<div class="comp-pool-card__bottom">${bottomParts.join("")}</div>` : ""}
-      </div>
-      <span class="comp-pool-card__mode">${escapeHtml(gameMode)}</span>
-      <button type="button" class="comp-pool-card__open" data-action="pool-open"
-              data-build-id="${escapeHtml(build.id)}" title="Open build">&#8599;</button>
-      <button type="button" class="comp-pool-card__remove" data-action="pool-remove"
-              data-build-id="${escapeHtml(build.id)}" title="Remove from comp">&times;</button>
-    </div>
-  `;
-}
-
-function renderMissingPoolCard(buildId) {
-  const truncId = buildId.length > 12 ? buildId.slice(0, 12) + "\u2026" : buildId;
-  return `
-    <div class="comp-pool-card comp-pool-card--missing" data-build-id="${escapeHtml(buildId)}">
-      <div class="comp-pool-card__icon comp-pool-card__icon--missing">?</div>
-      <div class="comp-pool-card__info">
-        <div class="comp-pool-card__top">
-          <span class="comp-pool-card__name comp-pool-card__name--missing">Missing Build</span>
-        </div>
-        <div class="comp-pool-card__bottom">
-          <span class="comp-pool-card__equip">${escapeHtml(truncId)}</span>
-        </div>
-      </div>
-      <button type="button" class="comp-pool-card__remove" data-action="pool-remove"
-              data-build-id="${escapeHtml(buildId)}" title="Remove from comp">&times;</button>
     </div>
   `;
 }

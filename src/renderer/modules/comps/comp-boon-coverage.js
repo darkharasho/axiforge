@@ -149,7 +149,7 @@ function _renderIconRow(boonMap, scope, size, lineLabel) {
            ${lineLabel ? `data-line-label="${escapeHtml(lineLabel)}"` : ""}>
         <img src="${escapeHtml(icon)}" width="${size}" height="${size}"
              class="comp-boon-cov__img" alt="${escapeHtml(boonName)}" />
-        ${covered ? `<span class="comp-boon-cov__badge">&times;${count}</span>` : ""}
+        ${count > 1 ? `<span class="comp-boon-cov__badge">&times;${count}</span>` : ""}
       </div>`;
   }).join("");
 }

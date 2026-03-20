@@ -10,6 +10,10 @@
 @import "../renderer/styles/notes.css";
 @import "../renderer/styles/detail-panel.css";
 @import "../renderer/styles/comps.css";
+@import "../renderer/styles/mini-build-card.css";
+@import "../renderer/styles/role-badge.css";
+
+/* ── Mini card SPA overrides ─────────────────────────────────────────── */
 
 /* Profession accent colors (from library.css — needed for comp pool cards) */
 .lib-prof--guardian     { color: #6ea8ff; }

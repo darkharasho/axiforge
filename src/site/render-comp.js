@@ -1,12 +1,13 @@
 "use strict";
 
 import { escapeHtml } from "./main.js";
+import { renderMiniBuildCard } from "../renderer/modules/mini-build-card.js";
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
-function profClass(profession) {
-  if (!profession) return "";
-  return `lib-prof--${profession.toLowerCase()}`;
+function getProfIcon(build) {
+  if (build.professionIcon) return build.professionIcon;
+  return `<span style="font-size:1.2em">${(build.profession || "?")[0]}</span>`;
 }
 
 function getEliteSpecName(build) {
@@ -17,13 +18,13 @@ function getEliteSpecName(build) {
   return null;
 }
 
-function getDisplayName(build) {
-  return build.title || getEliteSpecName(build) || build.profession || "Untitled";
+function profClass(profession) {
+  if (!profession) return "";
+  return `lib-prof--${profession.toLowerCase()}`;
 }
 
-function getProfIcon(build) {
-  if (build.professionIcon) return build.professionIcon;
-  return `<span style="font-size:1.2em">${(build.profession || "?")[0]}</span>`;
+function getDisplayName(build) {
+  return build.title || getEliteSpecName(build) || build.profession || "Untitled";
 }
 
 // ── Party Lines ──────────────────────────────────────────────────────────
@@ -62,50 +63,11 @@ function renderPartyLines(comp) {
 // ── Pool Panel ───────────────────────────────────────────────────────────
 
 function renderPoolCard(build) {
-  const pClass = profClass(build.profession);
-  const name = escapeHtml(getDisplayName(build));
-  const eliteSpec = getEliteSpecName(build);
-  const profLine = [eliteSpec, build.profession].filter(Boolean).join(" \u00b7 ");
-  const gameMode = build.gameMode || "pve";
-
-  const equip = build.equipmentDisplay || {};
-  const bottomParts = [];
-  const statName = build.computedStats?.statPackage || build.equipment?.statPackage || "";
-  const runeName = equip.runes ? Object.values(equip.runes)[0]?.name || "" : "";
-  const relicName = build.equipment?.relic || "";
-  if (statName) bottomParts.push(`<span class="comp-pool-card__stat">${escapeHtml(statName)}</span>`);
-  if (runeName) {
-    if (bottomParts.length) bottomParts.push(`<span class="comp-pool-card__sep">&middot;</span>`);
-    bottomParts.push(`<span class="comp-pool-card__equip">${escapeHtml(runeName)}</span>`);
-  }
-  if (relicName) {
-    if (bottomParts.length) bottomParts.push(`<span class="comp-pool-card__sep">&middot;</span>`);
-    bottomParts.push(`<span class="comp-pool-card__equip">${escapeHtml(relicName)}</span>`);
-  }
-
-  const tagPills = (build.tags || [])
-    .map((t) => `<span class="comp-pool-tag">${escapeHtml(t)}</span>`)
-    .join("");
-
-  const openBtn = build.spaUrl
-    ? `<a href="${escapeHtml(build.spaUrl)}" target="_blank" rel="noopener"
-          class="comp-pool-card__open" title="Open build">&#8599;</a>`
-    : "";
-
-  return `
-    <div class="comp-pool-card ${pClass}">
-      <div class="comp-pool-card__icon">${getProfIcon(build)}</div>
-      <div class="comp-pool-card__info">
-        <div class="comp-pool-card__top">
-          <span class="comp-pool-card__name">${name}</span>
-          ${tagPills}
-        </div>
-        ${profLine ? `<div class="comp-pool-card__bottom"><span class="comp-pool-card__equip">${escapeHtml(profLine)}</span></div>` : ""}
-        ${bottomParts.length ? `<div class="comp-pool-card__bottom">${bottomParts.join("")}</div>` : ""}
-      </div>
-      <span class="comp-pool-card__mode">${escapeHtml(gameMode)}</span>
-      ${openBtn}
-    </div>`;
+  // Render the shared mini card (no desktop action buttons in read-only SPA)
+  return renderMiniBuildCard(build, null, {
+    showActions: false,
+    linkUrl: build.spaUrl || null,
+  });
 }
 
 function renderBuildPool(comp) {
