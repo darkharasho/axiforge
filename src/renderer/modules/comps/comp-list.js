@@ -318,6 +318,7 @@ function showCompCtxMenu(x, y, comp) {
     ctxItem("Duplicate", () => _callbacks.onDuplicateComp?.(comp.id)),
     ctxSep(),
     ctxItem("Copy JSON", () => handleCopyCompJson(comp)),
+    ctxItem("Copy AxiCode", () => handleCopyCompShareCode(comp.id)),
     ctxSep(),
     ctxItem("Delete", () => _callbacks.onDeleteComp?.(comp.id), true),
   ];
@@ -338,23 +339,53 @@ async function handleCopyCompJson(comp) {
   await window.desktopApi.writeClipboardText(json);
 }
 
+async function handleCopyCompShareCode(compId) {
+  try {
+    const code = await window.desktopApi.encodeCompShareCode(compId);
+    await window.desktopApi.writeClipboardText(code);
+  } catch {
+    window.desktopApi.showError?.("Copy Failed", "Failed to generate comp AxiCode.");
+  }
+}
+
 async function handlePasteComp() {
   try {
     const text = await window.desktopApi.readClipboardText();
     if (!text) return;
-    const parsed = JSON.parse(text);
-    // Handle single comp or array of comps
+    const trimmed = text.trim();
+
+    // Check if it's a comp share code
+    if (trimmed.startsWith("<AxiForge:Comp:") && trimmed.endsWith(">")) {
+      try {
+        const result = await window.desktopApi.importCompShareCode(trimmed);
+        state.comps = await window.desktopApi.listComps();
+        state.builds = await window.desktopApi.listBuilds();
+        if (result.warning) {
+          window.desktopApi.showError?.("Partial Import", result.warning);
+        }
+        const newComp = state.comps.find((c) => c.id === result.compId);
+        if (newComp) {
+          _callbacks.onOpenComp?.(newComp);
+        } else {
+          renderCompList();
+        }
+      } catch (err) {
+        window.desktopApi.showError?.("Import Failed", err.message || "Failed to decode comp AxiCode.");
+      }
+      return;
+    }
+
+    // Fall back to JSON paste
+    const parsed = JSON.parse(trimmed);
     const comps = Array.isArray(parsed) ? parsed : [parsed];
     for (const comp of comps) {
-      // Must have a name to be a valid comp paste
       if (!comp.name) continue;
-      // Strip id so a new one is generated
       const { id, createdAt, updatedAt, ...rest } = comp;
       await window.desktopApi.saveComp(rest);
     }
     state.comps = await window.desktopApi.listComps();
     renderCompList();
   } catch {
-    // Not valid JSON or not a comp — ignore silently
+    // Not valid JSON or comp code — ignore silently
   }
 }
