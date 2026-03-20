@@ -42,15 +42,30 @@ function buildCompEmbed(comp, builds, compUrl, buildUrls) {
     }
   }
 
-  // Assemble: grid in left field, legend in right field
+  // Assemble: grid in left field, legend in right field(s)
   const grid = gridRows.join("\n") || "\u200b";
-  let legend = legendLines.join("\n");
 
-  // Discord field values are capped at 1024 chars
-  if (legend.length > 1024) {
-    const truncated = legend.slice(0, 1021);
-    const lastNewline = truncated.lastIndexOf("\n");
-    legend = (lastNewline > 0 ? truncated.slice(0, lastNewline) : truncated) + "...";
+  // Split legend across multiple fields if needed (Discord caps fields at 1024 chars)
+  const legendChunks = [];
+  let chunk = "";
+  for (const line of legendLines) {
+    if (chunk && (chunk + "\n" + line).length > 1024) {
+      legendChunks.push(chunk);
+      chunk = line;
+    } else {
+      chunk = chunk ? chunk + "\n" + line : line;
+    }
+  }
+  if (chunk) legendChunks.push(chunk);
+  if (!legendChunks.length) legendChunks.push("\u200b");
+
+  const fields = [
+    { name: "Comp", value: grid, inline: true },
+    { name: "Builds", value: legendChunks[0], inline: true },
+  ];
+  // Overflow chunks get their own full-width fields
+  for (let i = 1; i < legendChunks.length; i++) {
+    fields.push({ name: "\u200b", value: legendChunks[i], inline: false });
   }
 
   return {
@@ -58,10 +73,7 @@ function buildCompEmbed(comp, builds, compUrl, buildUrls) {
     url: compUrl,
     description: WIDTH_PAD,
     color: comp.gameMode === "wvw" ? COLOR_WVW : COLOR_PVE,
-    fields: [
-      { name: "Comp", value: grid, inline: true },
-      { name: "Builds", value: legend || "\u200b", inline: true },
-    ],
+    fields,
     author: {
       name: "AxiForge",
       url: GITHUB_URL,
