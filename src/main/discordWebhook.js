@@ -42,28 +42,26 @@ function buildCompEmbed(comp, builds, compUrl, buildUrls) {
     }
   }
 
-  // All content in description — bold headers as fake columns
-  const grid = gridRows.join("\n");
-  const legend = legendLines.join("\n");
+  // Grid in left inline field, legend in right inline field
+  const grid = gridRows.join("\n") || "\u200b";
+  let legend = legendLines.join("\n");
 
-  const sections = [WIDTH_PAD];
-  if (grid) sections.push("**Comp**\n" + grid);
-  if (legend) sections.push("**Builds**\n" + legend);
-
-  let description = sections.join("\n\n");
-  if (description.length > EMBED_DESC_LIMIT) {
-    const prefix = sections.slice(0, -1).join("\n\n") + "\n\n**Builds**\n";
-    const remaining = EMBED_DESC_LIMIT - prefix.length - 3;
-    const truncated = legend.slice(0, remaining);
+  // Discord field values capped at 1024 chars — truncate if needed
+  if (legend.length > 1024) {
+    const truncated = legend.slice(0, 1021);
     const lastNewline = truncated.lastIndexOf("\n");
-    description = prefix + (lastNewline > 0 ? truncated.slice(0, lastNewline) : truncated) + "...";
+    legend = (lastNewline > 0 ? truncated.slice(0, lastNewline) : truncated) + "...";
   }
 
   return {
     title: comp.name || "Untitled Comp",
     url: compUrl,
-    description,
+    description: WIDTH_PAD,
     color: comp.gameMode === "wvw" ? COLOR_WVW : COLOR_PVE,
+    fields: [
+      { name: "Comp", value: grid, inline: true },
+      { name: "Builds", value: legend || "\u200b", inline: true },
+    ],
     author: {
       name: "AxiForge",
       url: GITHUB_URL,
