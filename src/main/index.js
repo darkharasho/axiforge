@@ -20,7 +20,7 @@ const {
 } = require("./githubApi");
 const { getProfessionList, getProfessionCatalog, getUpgradeCatalog, getWikiSummary, getWikiRelatedData } = require("./gw2Data");
 const { slugifyBuildName, generateFileId, generateEncryptionKey, getDefaultBuildName } = require("./buildEncryption");
-const { buildSpaBundle, buildEncryptedBuildFile, buildEncryptedCompFile } = require("./siteBundle");
+const { buildSpaBundle, buildEncryptedBuildFile, buildEncryptedCompFile, buildRedirectFile } = require("./siteBundle");
 const { serializeForPublish } = require("./buildPublish");
 const { serializeCompForPublish } = require("./compPublish");
 const { initAutoUpdate } = require("./autoUpdate");
@@ -457,8 +457,9 @@ app.whenReady().then(async () => {
     }
     const encFile = buildEncryptedBuildFile(enrichedBuild, fileId, encKey);
 
-    // Merge SPA bundle + encrypted build into a single commit
-    const combinedBundle = { ...spaBundle, [encFile.filePath]: encFile.content };
+    // Merge SPA bundle + encrypted build + redirect into a single commit
+    const redirectFile = buildRedirectFile(fileId, encKey, "b");
+    const combinedBundle = { ...spaBundle, [encFile.filePath]: encFile.content, [redirectFile.filePath]: redirectFile.content };
 
     progress("upload");
     await publishSiteBundle(session.token, owner, combinedBundle, branch, TARGET_REPO);
@@ -476,10 +477,6 @@ app.whenReady().then(async () => {
     });
 
     const pagesUrl = `https://${owner}.github.io/${TARGET_REPO}/?n=${encodeURIComponent(newSlug)}&b=${fileId}.${encKey}`;
-
-    // Register short URL namespaced by owner (fire and forget — non-blocking)
-    const { registerShortUrl } = require("./shortUrl");
-    registerShortUrl(`${owner}-${fileId}`, pagesUrl).catch(() => null);
 
     await patchAuthRecord({
       onboarding: {
@@ -574,6 +571,10 @@ app.whenReady().then(async () => {
         updatedBuildRecords.push({ ...build, publishedFileId: fileId, publishedKey: encKey, publishedSlug: slug });
       }
 
+      // Always add redirect file (idempotent — overwrites if already exists)
+      const redir = buildRedirectFile(fileId, encKey, "b");
+      spaBundle[redir.filePath] = redir.content;
+
       buildsMap[build.id] = { ...enrichedBuild, spaUrl };
     }
 
@@ -587,6 +588,8 @@ app.whenReady().then(async () => {
     if (boonCoverageHtml) compPayload.boonCoverageHtml = boonCoverageHtml;
     const compEncFile = buildEncryptedCompFile(compPayload, compFileId, compEncKey);
     spaBundle[compEncFile.filePath] = compEncFile.content;
+    const compRedir = buildRedirectFile(compFileId, compEncKey, "c");
+    spaBundle[compRedir.filePath] = compRedir.content;
 
     // ── 6. Upload everything in one commit ────────────────────────────
     progress("upload");
@@ -603,18 +606,7 @@ app.whenReady().then(async () => {
 
     const compPagesUrl = `https://${owner}.github.io/${TARGET_REPO}/?n=${encodeURIComponent(compSlug)}&c=${compFileId}.${compEncKey}`;
 
-    // Register short URLs for comp + all builds (fire and forget)
-    const { registerShortUrl } = require("./shortUrl");
-    registerShortUrl(`${owner}-${compFileId}`, compPagesUrl).catch(() => null);
-    for (const build of compBuilds) {
-      const fId = build.publishedFileId || updatedBuildRecords.find(u => u.id === build.id)?.publishedFileId;
-      const eKey = build.publishedKey || updatedBuildRecords.find(u => u.id === build.id)?.publishedKey;
-      const slug = build.publishedSlug || updatedBuildRecords.find(u => u.id === build.id)?.publishedSlug;
-      if (fId && eKey) {
-        const buildUrl = `https://${owner}.github.io/${TARGET_REPO}/?n=${encodeURIComponent(slug || "build")}&b=${fId}.${eKey}`;
-        registerShortUrl(`${owner}-${fId}`, buildUrl).catch(() => null);
-      }
-    }
+
 
     await compStore.upsertComp({
       ...comp,
@@ -675,9 +667,9 @@ app.whenReady().then(async () => {
     if (!owner) return { success: false, error: "GitHub publishing not configured" };
     const repo = auth?.onboarding?.repoName || TARGET_REPO;
 
-    // 4. Build comp URL — use short URL namespaced by owner
+    // 4. Build comp URL — use GitHub Pages short redirect
     const { shortUrl } = require("./shortUrl");
-    const compUrl = shortUrl(`${owner}-${comp.publishedFileId}`);
+    const compUrl = shortUrl(owner, repo, comp.publishedFileId);
 
     // 5. Load builds and construct maps — use short URLs
     const allBuilds = await store.listBuilds();
@@ -686,7 +678,7 @@ app.whenReady().then(async () => {
     for (const build of allBuilds) {
       buildsMap[build.id] = build;
       if (build.publishedFileId) {
-        buildUrls[build.id] = shortUrl(`${owner}-${build.publishedFileId}`);
+        buildUrls[build.id] = shortUrl(owner, repo, build.publishedFileId);
       }
     }
 

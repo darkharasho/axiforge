@@ -57,4 +57,18 @@ function buildEncryptedCompFile(compData, fileId, base64urlKey) {
   };
 }
 
-module.exports = { buildSpaBundle, buildEncryptedBuildFile, buildEncryptedCompFile };
+/**
+ * Build a redirect HTML file for short URLs.
+ * @param {string} fileId
+ * @param {string} encKey — base64url encryption key
+ * @param {"b"|"c"} type — "b" for builds, "c" for comps
+ */
+function buildRedirectFile(fileId, encKey, type) {
+  const target = `/?${type}=${fileId}.${encKey}`;
+  return {
+    filePath: `site/r/${fileId}/index.html`,
+    content: `<!DOCTYPE html><meta http-equiv=refresh content="0;url=${target}">`,
+  };
+}
+
+module.exports = { buildSpaBundle, buildEncryptedBuildFile, buildEncryptedCompFile, buildRedirectFile };
