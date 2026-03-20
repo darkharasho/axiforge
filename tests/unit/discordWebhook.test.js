@@ -113,7 +113,7 @@ describe("buildCompEmbed", () => {
     expect(embed.color).toBe(0xDC143C);
   });
 
-  test("truncates builds field at 1024 chars", () => {
+  test("splits builds across multiple fields when exceeding 1024 chars", () => {
     const manyBuilds = {};
     const slots = [];
     for (let i = 0; i < 50; i++) {
@@ -131,8 +131,12 @@ describe("buildCompEmbed", () => {
       bigUrls[id] = `https://x.github.io/axibuilds/r/${id}`;
     }
     const embed = buildCompEmbed(bigComp, manyBuilds, compUrl, bigUrls);
-    expect(embed.fields[1].value.length).toBeLessThanOrEqual(1024);
-    expect(embed.fields[1].value).toMatch(/\.\.\.$/);
+    // Should have more than 2 fields
+    expect(embed.fields.length).toBeGreaterThan(2);
+    // All builds field values within 1024 chars
+    for (const field of embed.fields.slice(1)) {
+      expect(field.value.length).toBeLessThanOrEqual(1024);
+    }
     // Grid field preserved
     expect(embed.fields[0].value.match(/<:\w+:\d+>/g)).toHaveLength(50);
   });

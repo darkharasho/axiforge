@@ -42,15 +42,32 @@ function buildCompEmbed(comp, builds, compUrl, buildUrls) {
     }
   }
 
-  // Grid in left inline field, legend in right inline field
+  // Grid in left inline field, legend split across right-column fields
   const grid = gridRows.join("\n") || "\u200b";
-  let legend = legendLines.join("\n");
 
-  // Discord field values capped at 1024 chars — truncate if needed
-  if (legend.length > 1024) {
-    const truncated = legend.slice(0, 1021);
-    const lastNewline = truncated.lastIndexOf("\n");
-    legend = (lastNewline > 0 ? truncated.slice(0, lastNewline) : truncated) + "...";
+  // Split legend into chunks that fit Discord's 1024-char field limit
+  const legendChunks = [];
+  let chunk = "";
+  for (const line of legendLines) {
+    if (chunk && (chunk + "\n" + line).length > 1024) {
+      legendChunks.push(chunk);
+      chunk = line;
+    } else {
+      chunk = chunk ? chunk + "\n" + line : line;
+    }
+  }
+  if (chunk) legendChunks.push(chunk);
+  if (!legendChunks.length) legendChunks.push("\u200b");
+
+  const fields = [
+    { name: "Comp", value: grid, inline: true },
+    { name: "Builds", value: legendChunks[0], inline: true },
+  ];
+  // Overflow: row break + blank left + builds right (keeps right-column alignment)
+  for (let i = 1; i < legendChunks.length; i++) {
+    fields.push({ name: "\u200b", value: "\u200b", inline: false });
+    fields.push({ name: "\u200b", value: "\u200b", inline: true });
+    fields.push({ name: "\u200b", value: legendChunks[i], inline: true });
   }
 
   return {
@@ -58,10 +75,7 @@ function buildCompEmbed(comp, builds, compUrl, buildUrls) {
     url: compUrl,
     description: WIDTH_PAD,
     color: comp.gameMode === "wvw" ? COLOR_WVW : COLOR_PVE,
-    fields: [
-      { name: "Comp", value: grid, inline: true },
-      { name: "Builds", value: legend || "\u200b", inline: true },
-    ],
+    fields,
     author: {
       name: "AxiForge",
       url: GITHUB_URL,
