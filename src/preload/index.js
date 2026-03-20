@@ -55,6 +55,8 @@ contextBridge.exposeInMainWorld("desktopApi", {
   encodeShareCode: (build) => ipcRenderer.invoke("builds:encode-share-code", build),
   decodeShareCode: (code) => ipcRenderer.invoke("builds:decode-share-code", code),
   isShareCode: (text) => ipcRenderer.invoke("builds:is-share-code", text),
+  encodeCompShareCode: (compId) => ipcRenderer.invoke("comps:encode-share-code", compId),
+  importCompShareCode: (code) => ipcRenderer.invoke("comps:import-share-code", code),
   listProfessions: () => ipcRenderer.invoke("gw2:list-professions"),
   getProfessionCatalog: (professionId, gameMode) =>
     ipcRenderer.invoke("gw2:get-profession-catalog", professionId, gameMode),

@@ -396,6 +396,67 @@ app.whenReady().then(async () => {
     return isValidShareCode(text);
   });
 
+  ipcMain.handle("comps:encode-share-code", async (_e, compId) => {
+    const { encodeComp } = require("./compCodec.js");
+    const comps = await compStore.listComps();
+    const comp = comps.find((c) => c.id === compId);
+    if (!comp) throw new Error("Comp not found");
+    const allBuilds = await store.listBuilds();
+    const buildsMap = {};
+    for (const b of allBuilds) buildsMap[b.id] = b;
+    const code = encodeComp(comp, buildsMap);
+    if (!code) throw new Error("Failed to encode comp share code");
+    return code;
+  });
+
+  ipcMain.handle("comps:import-share-code", async (_e, code) => {
+    const { decodeComp, isValidCompCode } = require("./compCodec.js");
+    if (!isValidCompCode(code)) throw new Error("Invalid comp share code format");
+    const decoded = decodeComp(code);
+    if (!decoded) throw new Error("Failed to decode comp share code");
+
+    // Create the comp first (without builds) so we have an ID for compId wiring
+    const comp = await compStore.upsertComp({
+      name: decoded.name,
+      gameMode: decoded.gameMode,
+      buildIds: [],
+      partyLines: [],
+    });
+
+    // Create new builds for each unique decoded build, wiring compId immediately
+    const newBuildIds = [];
+    const buildRefToId = new Map();
+    for (const build of decoded.builds) {
+      const saved = await store.upsertBuild({
+        ...build,
+        title: build.title || "Imported Build",
+        compId: comp.id,
+      });
+      newBuildIds.push(saved.id);
+      buildRefToId.set(build, saved.id);
+    }
+
+    // Map party line slots from decoded build refs to new build IDs
+    const partyLines = decoded.partyLines.map((line) => ({
+      capacity: line.capacity,
+      slots: line.slots.map((buildRef) => buildRefToId.get(buildRef)).filter(Boolean),
+    }));
+
+    // Update the comp with buildIds and partyLines
+    const updated = await compStore.upsertComp({
+      ...comp,
+      buildIds: newBuildIds,
+      partyLines,
+    });
+
+    // Return comp ID + warning count for UI feedback
+    const result = { compId: updated.id };
+    if (decoded.failedBuildCount > 0) {
+      result.warning = `${decoded.failedBuildCount} of ${decoded.failedBuildCount + decoded.builds.length} builds could not be decoded — they may require a newer version of AxiForge.`;
+    }
+    return result;
+  });
+
   ipcMain.handle("builds:publish-build", async (event, buildId) => {
     const sender = event.sender;
     const progress = (step) => sender.send("publish-progress", step);
