@@ -477,9 +477,9 @@ app.whenReady().then(async () => {
 
     const pagesUrl = `https://${owner}.github.io/${TARGET_REPO}/?n=${encodeURIComponent(newSlug)}&b=${fileId}.${encKey}`;
 
-    // Register short URL (fire and forget — non-blocking)
+    // Register short URL namespaced by owner (fire and forget — non-blocking)
     const { registerShortUrl } = require("./shortUrl");
-    registerShortUrl(fileId, pagesUrl).catch(() => null);
+    registerShortUrl(`${owner}-${fileId}`, pagesUrl).catch(() => null);
 
     await patchAuthRecord({
       onboarding: {
@@ -603,12 +603,12 @@ app.whenReady().then(async () => {
 
     const compPagesUrl = `https://${owner}.github.io/${TARGET_REPO}/?n=${encodeURIComponent(compSlug)}&c=${compFileId}.${compEncKey}`;
 
-    // Register short URLs for comp + any newly published builds (fire and forget)
+    // Register short URLs namespaced by owner (fire and forget)
     const { registerShortUrl } = require("./shortUrl");
-    registerShortUrl(compFileId, compPagesUrl).catch(() => null);
+    registerShortUrl(`${owner}-${compFileId}`, compPagesUrl).catch(() => null);
     for (const ub of updatedBuildRecords) {
       const buildUrl = `https://${owner}.github.io/${TARGET_REPO}/?n=${encodeURIComponent(ub.publishedSlug)}&b=${ub.publishedFileId}.${ub.publishedKey}`;
-      registerShortUrl(ub.publishedFileId, buildUrl).catch(() => null);
+      registerShortUrl(`${owner}-${ub.publishedFileId}`, buildUrl).catch(() => null);
     }
 
     await compStore.upsertComp({
@@ -670,9 +670,9 @@ app.whenReady().then(async () => {
     if (!owner) return { success: false, error: "GitHub publishing not configured" };
     const repo = auth?.onboarding?.repoName || TARGET_REPO;
 
-    // 4. Build comp URL — use short URL
+    // 4. Build comp URL — use short URL namespaced by owner
     const { shortUrl } = require("./shortUrl");
-    const compUrl = shortUrl(comp.publishedFileId);
+    const compUrl = shortUrl(`${owner}-${comp.publishedFileId}`);
 
     // 5. Load builds and construct maps — use short URLs
     const allBuilds = await store.listBuilds();
@@ -681,7 +681,7 @@ app.whenReady().then(async () => {
     for (const build of allBuilds) {
       buildsMap[build.id] = build;
       if (build.publishedFileId) {
-        buildUrls[build.id] = shortUrl(build.publishedFileId);
+        buildUrls[build.id] = shortUrl(`${owner}-${build.publishedFileId}`);
       }
     }
 
