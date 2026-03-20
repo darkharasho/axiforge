@@ -603,12 +603,17 @@ app.whenReady().then(async () => {
 
     const compPagesUrl = `https://${owner}.github.io/${TARGET_REPO}/?n=${encodeURIComponent(compSlug)}&c=${compFileId}.${compEncKey}`;
 
-    // Register short URLs namespaced by owner (fire and forget)
+    // Register short URLs for comp + all builds (fire and forget)
     const { registerShortUrl } = require("./shortUrl");
     registerShortUrl(`${owner}-${compFileId}`, compPagesUrl).catch(() => null);
-    for (const ub of updatedBuildRecords) {
-      const buildUrl = `https://${owner}.github.io/${TARGET_REPO}/?n=${encodeURIComponent(ub.publishedSlug)}&b=${ub.publishedFileId}.${ub.publishedKey}`;
-      registerShortUrl(`${owner}-${ub.publishedFileId}`, buildUrl).catch(() => null);
+    for (const build of compBuilds) {
+      const fId = build.publishedFileId || updatedBuildRecords.find(u => u.id === build.id)?.publishedFileId;
+      const eKey = build.publishedKey || updatedBuildRecords.find(u => u.id === build.id)?.publishedKey;
+      const slug = build.publishedSlug || updatedBuildRecords.find(u => u.id === build.id)?.publishedSlug;
+      if (fId && eKey) {
+        const buildUrl = `https://${owner}.github.io/${TARGET_REPO}/?n=${encodeURIComponent(slug || "build")}&b=${fId}.${eKey}`;
+        registerShortUrl(`${owner}-${fId}`, buildUrl).catch(() => null);
+      }
     }
 
     await compStore.upsertComp({
