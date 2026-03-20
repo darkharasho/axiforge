@@ -407,24 +407,65 @@ function serializeForPublish(build, catalog, upgradeCatalog) {
     return full ? { ...stored, facts: full.facts, traitedFacts: full.traitedFacts } : stored;
   }
 
-  // Enrich specialization trait objects with facts from catalog
-  const enrichedSpecializations = (build.specializations || []).map(spec => ({
-    ...spec,
-    minorTraits: (spec.minorTraits || []).map(t => {
-      if (typeof t === "number") return t; // just an ID ref
+  // Rebuild majorTraitsByTier from catalog when stored data is empty.
+  // The build store saves majorChoices (selected trait ID per tier) but may have
+  // empty majorTraitsByTier. The catalog has the full major trait ID list per spec.
+  const catalogSpecs = catalog?.specializations || [];
+
+  const enrichedSpecializations = (build.specializations || []).map(spec => {
+    let mbt = spec.majorTraitsByTier || {};
+    const hasStoredTraits = Object.values(mbt).some(arr => Array.isArray(arr) && arr.length > 0);
+
+    if (!hasStoredTraits) {
+      // Reconstruct from catalog: find spec's majorTraits, look up each in traitById, group by tier
+      const catSpec = catalogSpecs.find(cs => cs.id === spec.id);
+      if (catSpec?.majorTraits?.length) {
+        const rebuilt = { 1: [], 2: [], 3: [] };
+        for (const traitId of catSpec.majorTraits) {
+          const trait = traitById.get(traitId);
+          if (trait) {
+            const tier = Number(trait.tier) || 0;
+            if (rebuilt[tier]) rebuilt[tier].push(trait);
+          }
+        }
+        mbt = rebuilt;
+      }
+    }
+
+    // Enrich minor traits — reconstruct from catalog if empty
+    let minorSource = spec.minorTraits || [];
+    if (!minorSource.length) {
+      const catSpec = catalogSpecs.find(cs => cs.id === spec.id);
+      if (catSpec?.minorTraits?.length) {
+        minorSource = catSpec.minorTraits;
+      }
+    }
+    const minorTraits = minorSource.map(t => {
+      if (typeof t === "number") {
+        const full = traitById.get(t);
+        return full || t;
+      }
       const full = traitById.get(t.id);
       return full ? { ...t, facts: full.facts, traitedFacts: full.traitedFacts } : t;
-    }),
-    majorTraitsByTier: Object.fromEntries(
-      Object.entries(spec.majorTraitsByTier || {}).map(([tier, traits]) => [
+    });
+
+    // Enrich major traits by tier
+    const majorTraitsByTier = Object.fromEntries(
+      Object.entries(mbt).map(([tier, traits]) => [
         tier,
         (traits || []).map(t => {
+          if (typeof t === "number") {
+            const full = traitById.get(t);
+            return full || { id: t };
+          }
           const full = traitById.get(t.id);
           return full ? { ...t, facts: full.facts, traitedFacts: full.traitedFacts } : t;
         }),
       ])
-    ),
-  }));
+    );
+
+    return { ...spec, minorTraits, majorTraitsByTier };
+  });
 
   // Enrich heal/utility/elite skill refs (build store format: { heal: obj, utility: [obj], elite: obj })
   function enrichSkillSelection(sel) {
