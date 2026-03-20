@@ -100,6 +100,18 @@ export function initCompDetail(callbacks) {
   _callbacks = callbacks || {};
 }
 
+// ─── Discord Status ───────────────────────────────────────────────────────────
+
+function showDiscordStatus(msg, isError = false) {
+  const el = document.getElementById("compDiscordStatus");
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.toggle("comp-detail__discord-status--error", isError);
+  if (!isError) {
+    setTimeout(() => { el.textContent = ""; }, 3000);
+  }
+}
+
 // ─── Context Menu ────────────────────────────────────────────────────────────
 
 function closeCompCtxMenu() {
@@ -438,6 +450,8 @@ export function renderCompDetail() {
         <span class="comp-detail__spacer"></span>
         <span class="comp-detail__save-status" id="compSaveStatus"></span>
         <button type="button" class="btn btn-primary" data-action="publish">Publish</button>
+        ${comp.publishedFileId ? '<button type="button" class="btn btn-secondary" data-action="share-discord">Share to Discord</button>' : ""}
+        <span class="comp-detail__discord-status" id="compDiscordStatus"></span>
         <button type="button" class="${notesBtnClass}" data-action="toggle-notes">Notes</button>
         <span class="comp-detail__slot-counter">${totalCap} / 50 slots</span>
         <div class="publish-status" id="compPublishStatus"></div>
@@ -972,6 +986,40 @@ function bindDetailEvents(container, comp) {
       failPublishStep("loading", err.message);
     }
   });
+
+  // ── Share to Discord ────────────────────────────────────────────────────────
+  const discordBtn = container.querySelector("[data-action='share-discord']");
+  if (discordBtn) {
+    discordBtn.addEventListener("click", async () => {
+      // Check if webhook URL is configured
+      let webhookUrl = await window.desktopApi.getSetting("discord.webhookUrl");
+      if (!webhookUrl) {
+        const url = prompt("Paste your Discord webhook URL:");
+        if (!url) return;
+        if (!/^https:\/\/(discord\.com|discordapp\.com)\/api\/webhooks\//.test(url)) {
+          showDiscordStatus("Invalid webhook URL", true);
+          return;
+        }
+        await window.desktopApi.setSetting("discord.webhookUrl", url);
+        webhookUrl = url;
+      }
+
+      discordBtn.disabled = true;
+      showDiscordStatus("Sharing...");
+      try {
+        const result = await window.desktopApi.shareCompToDiscord(comp.id);
+        if (result.success) {
+          showDiscordStatus("Shared to Discord!");
+        } else {
+          showDiscordStatus(result.error || "Failed to share", true);
+        }
+      } catch (err) {
+        showDiscordStatus(err.message || "Failed to share", true);
+      } finally {
+        discordBtn.disabled = false;
+      }
+    });
+  }
 
   // ── Notes toggle ───────────────────────────────────────────────────────────
   container.querySelector("[data-action='toggle-notes']")?.addEventListener("click", () => {

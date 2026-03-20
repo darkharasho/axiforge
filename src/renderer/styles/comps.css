@@ -324,6 +324,15 @@
   color: #c8a96e;
 }
 
+.comp-detail__discord-status {
+  font-size: 0.75rem;
+  color: #667;
+  white-space: nowrap;
+}
+.comp-detail__discord-status--error {
+  color: var(--danger, #e55);
+}
+
 .comp-detail__slot-counter {
   font-size: 0.85rem;
   color: #99a;
