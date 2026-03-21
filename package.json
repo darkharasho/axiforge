@@ -93,7 +93,7 @@
   },
   "license": "MIT",
   "dependencies": {
-    "@mks.haro/axicode": "^1.0.0",
+    "@mks.haro/axicode": "file:../axicode",
     "dotenv": "^17.3.1",
     "electron-updater": "^6.8.3",
     "gw2-class-icons": "^0.3.0",
