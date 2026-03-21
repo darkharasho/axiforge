@@ -813,7 +813,12 @@ app.whenReady().then(async () => {
       }
     }
 
-    const out = [`**${comp.name || "Untitled Comp"}**`];
+    const compName = comp.name || "Untitled Comp";
+    const compUrl = hasUrls && comp.publishedFileId
+      ? require("./shortUrl").shortUrl(owner, repo, comp.publishedFileId)
+      : null;
+    const title = compUrl ? `**[${compName}](${compUrl})**` : `**${compName}**`;
+    const out = [title];
     out.push("");
     out.push("**Comp**");
     out.push(gridRows.join("\n") || "(empty)");
