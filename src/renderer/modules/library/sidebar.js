@@ -341,10 +341,10 @@ export function insertInlineInput(afterEl, defaultValue = "", options = {}) {
       row = document.createElement("div");
       row.className = "lib-grid-card lib-grid-card--folder lib-grid-card--editing";
       row.innerHTML = `
-        <div class="lib-grid-card__icon lib-grid-card__icon--folder">${displayIcon}</div>
+        <div class="lib-grid-card__folder-icon">${displayIcon}</div>
         <input type="text" class="lib-inline-input lib-grid-card__inline-input" placeholder="${fallbackName}" value="" />
       `;
-      const grid = container.querySelector(".lib-grid");
+      const grid = container.querySelector(".lib-grid--folders") || container.querySelector(".lib-grid");
       if (grid) grid.appendChild(row);
     } else if (isIconView) {
       // Icon view: create an icon-shaped inline input

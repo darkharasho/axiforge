@@ -699,6 +699,9 @@
   width: 100%;
   text-align: center;
 }
+.lib-grid-card--folder .lib-grid-card__inline-input {
+  text-align: left;
+}
 
 /* Inline input in icon view — matches icon item shape */
 .lib-icon-item--editing {
@@ -944,22 +947,6 @@
   cursor: pointer;
 }
 
-.lib-grid-card--comp {
-  color: #99a;
-}
-
-.lib-grid-card__icon--comp {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #668;
-}
-
-.lib-grid-card__icon--comp svg {
-  width: 24px;
-  height: 24px;
-}
-
 .lib-icon-item--comp {
   color: #778;
 }
@@ -1158,6 +1145,18 @@
   gap: 8px;
 }
 
+.lib-grid + .lib-grid {
+  margin-top: 12px;
+}
+
+.lib-grid--folders {
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+}
+
+.lib-grid--comps {
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+}
+
 .lib-grid-card {
   background: #0d0d22;
   border: 1px solid #1a1a3a;
@@ -1179,6 +1178,10 @@
 
 .lib-grid-card--folder {
   color: #99a;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
 }
 
 .lib-grid-card--pinned {
@@ -1228,16 +1231,42 @@
   fill: currentColor;
 }
 
-.lib-grid-card__icon--folder {
+.lib-grid-card__folder-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #668;
+  flex-shrink: 0;
+  color: #778;
 }
 
-.lib-grid-card__icon--folder svg {
-  width: 24px;
-  height: 24px;
+.lib-grid-card__folder-icon svg {
+  width: 32px;
+  height: 32px;
+}
+
+.lib-grid-card--comp {
+  color: #99a;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+}
+
+.lib-grid-card__comp-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #778;
+}
+
+.lib-grid-card__comp-icon svg {
+  width: 32px;
+  height: 32px;
+}
+
+.lib-grid-card__comp-body {
+  min-width: 0;
 }
 
 .lib-grid-card__title {

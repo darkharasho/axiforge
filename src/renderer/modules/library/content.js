@@ -424,7 +424,7 @@ function renderGridView(container) {
     .map(
       (f) => `
         <div class="lib-grid-card lib-grid-card--folder" data-folder-id="${escapeHtml(f.id)}">
-          <div class="lib-grid-card__icon lib-grid-card__icon--folder">${folderIcon}</div>
+          <div class="lib-grid-card__folder-icon">${folderIcon}</div>
           <div class="lib-grid-card__title">${escapeHtml(f.name)}</div>
         </div>
       `
@@ -454,15 +454,21 @@ function renderGridView(container) {
     .map(
       (c) => `
         <div class="lib-grid-card lib-grid-card--comp" data-comp-id="${escapeHtml(c.id)}">
-          <div class="lib-grid-card__icon lib-grid-card__icon--comp">${compIcon}</div>
-          <div class="lib-grid-card__title">${escapeHtml(c.name || "Untitled Comp")}</div>
-          ${compBadgeHtml(c)}
+          <div class="lib-grid-card__comp-icon">${compIcon}</div>
+          <div class="lib-grid-card__comp-body">
+            <div class="lib-grid-card__title">${escapeHtml(c.name || "Untitled Comp")}</div>
+            ${compBadgeHtml(c)}
+          </div>
         </div>
       `
     )
     .join("");
 
-  container.innerHTML = `<div class="lib-grid">${folderCards}${compCards}${buildCards}</div>`;
+  const sections = [];
+  if (folderCards) sections.push(`<div class="lib-grid lib-grid--folders">${folderCards}</div>`);
+  if (compCards) sections.push(`<div class="lib-grid lib-grid--comps">${compCards}</div>`);
+  if (buildCards) sections.push(`<div class="lib-grid">${buildCards}</div>`);
+  container.innerHTML = sections.join("");
 
   bindContentEvents(container);
 }
