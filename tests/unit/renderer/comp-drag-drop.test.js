@@ -133,19 +133,32 @@ describe("comp-dragging class management", () => {
   });
 });
 
-// ── onMove — all placements allowed ──────────────────────────────────────────
+// ── onMove — capacity enforcement ────────────────────────────────────────────
 
-describe("onMove — all placements allowed", () => {
-  it("returns true for cross-list drops (full line)", () => {
+describe("onMove — capacity enforcement", () => {
+  it("blocks cross-list drops when target line is at capacity", () => {
+    const slotsEl = buildFakeSlotsEl({ slotCount: 5, capacity: 5 });
+    const otherEl = buildFakeSlotsEl({ slotCount: 2, lineId: "line-2" });
+    setupDoc([slotsEl, otherEl]);
+    wireCompDragDrop(makeCallbacks());
+
+    const sortable = capturedSortableInstances.find((i) => i.el === slotsEl);
+    expect(typeof sortable.options.onMove).toBe("function");
+
+    // Target line is full — should block the drop
+    const result = sortable.options.onMove({ from: otherEl, to: slotsEl });
+    expect(result).toBe(false);
+  });
+
+  it("allows reorder within the same line", () => {
     const slotsEl = buildFakeSlotsEl({ slotCount: 5, capacity: 5 });
     setupDoc([slotsEl]);
     wireCompDragDrop(makeCallbacks());
 
     const sortable = capturedSortableInstances.find((i) => i.el === slotsEl);
-    const otherEl = buildFakeSlotsEl({ slotCount: 2, lineId: "line-2" });
-    const result = sortable.options.onUpdate;
-    // onMove is no longer defined on line sortables (no per-element expansion)
-    expect(sortable.options.onMove).toBeUndefined();
+    // Same from and to — always allowed
+    const result = sortable.options.onMove({ from: slotsEl, to: slotsEl });
+    expect(result).toBe(true);
   });
 });
 
