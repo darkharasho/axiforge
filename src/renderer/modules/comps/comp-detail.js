@@ -12,6 +12,7 @@ import {
   setPublishStatusEl,
 } from "../render-pages.js";
 import { roleBadgeHtml } from "../roleEstimator.js";
+import { axiforgeIcon, checkIcon } from "../library/heroicons.js";
 import { renderMiniBuildCard, renderMissingMiniBuildCard } from "../mini-build-card.js";
 import { computeCompBoonCoverage, buildBoonCoverageHTML, bindBoonCoverageEvents, closeBoonTooltip, closeDurationExpand } from "./comp-boon-coverage.js";
 import {
@@ -379,7 +380,7 @@ export function renderCompDetail() {
         <span class="comp-detail__save-status" id="compSaveStatus"></span>
         <button type="button" class="btn btn-primary" data-action="publish">Publish</button>
         ${comp.publishedFileId ? '<button type="button" class="btn btn-secondary" data-action="share-discord">Share to Discord</button>' : ""}
-        <button type="button" class="btn btn-secondary" data-action="copy-share-code">Copy AxiCode</button>
+        <button type="button" class="btn btn-secondary" data-action="copy-share-code">${axiforgeIcon} Copy AxiCode</button>
         <span class="comp-detail__discord-status" id="compDiscordStatus"></span>
         <button type="button" class="${notesBtnClass}" data-action="toggle-notes">Notes</button>
         <span class="comp-detail__slot-counter">${totalCap} / 50 slots</span>
@@ -876,17 +877,27 @@ function bindDetailEvents(container, comp) {
   }
 
   // ── Copy Share Code ──────────────────────────────────────────────────────────
-  container.querySelector("[data-action='copy-share-code']")?.addEventListener("click", async (e) => {
-    const btn = e.currentTarget;
-    btn.disabled = true;
+  const copyBtn = container.querySelector("[data-action='copy-share-code']");
+  const copyBtnDefault = `${axiforgeIcon} Copy AxiCode`;
+  const copyBtnSuccess = `${checkIcon} Copied!`;
+  copyBtn?.addEventListener("click", async () => {
+    if (copyBtn.classList.contains("btn--copied")) return;
     try {
       const code = await window.desktopApi.encodeCompShareCode(comp.id);
       await window.desktopApi.writeClipboardText(code);
-      showSaveStatus("AxiCode copied to clipboard.");
-    } catch (err) {
-      showSaveStatus(err.message || "Failed to generate AxiCode", true);
-    } finally {
-      btn.disabled = false;
+      copyBtn.classList.add("btn--copied");
+      copyBtn.innerHTML = copyBtnSuccess;
+      setTimeout(() => {
+        copyBtn.classList.remove("btn--copied");
+        copyBtn.innerHTML = copyBtnDefault;
+      }, 2000);
+    } catch {
+      copyBtn.classList.add("btn--copy-error");
+      copyBtn.innerHTML = "Failed";
+      setTimeout(() => {
+        copyBtn.classList.remove("btn--copy-error");
+        copyBtn.innerHTML = copyBtnDefault;
+      }, 2000);
     }
   });
 

@@ -237,6 +237,40 @@
   flex-shrink: 0;
 }
 
+.comp-detail__topbar .btn svg {
+  width: 14px;
+  height: 14px;
+  vertical-align: -2px;
+}
+
+/* Copy AxiCode button states */
+.comp-detail__topbar .btn[data-action="copy-share-code"] {
+  transition: background 0.25s, border-color 0.25s, color 0.25s, transform 0.15s;
+}
+
+.comp-detail__topbar .btn[data-action="copy-share-code"]:active:not(.btn--copied) {
+  transform: scale(0.95);
+}
+
+.comp-detail__topbar .btn.btn--copied {
+  border-color: var(--accent, #99e6ff);
+  color: var(--accent, #99e6ff);
+  background: rgba(100, 210, 255, 0.1);
+  animation: copy-pop 0.3s ease;
+}
+
+.comp-detail__topbar .btn.btn--copy-error {
+  border-color: var(--danger, #f87171);
+  color: var(--danger, #f87171);
+  background: rgba(200, 30, 30, 0.1);
+}
+
+@keyframes copy-pop {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+
 .comp-detail__back-btn {
   all: unset;
   cursor: pointer;
