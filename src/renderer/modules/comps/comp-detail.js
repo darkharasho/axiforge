@@ -378,13 +378,13 @@ export function renderCompDetail() {
         <span class="comp-detail__name" data-action="edit-name">${escapeHtml(comp.name || "Untitled Comp")}</span>
         <span class="comp-detail__spacer"></span>
         <span class="comp-detail__save-status" id="compSaveStatus"></span>
-        <button type="button" class="btn btn-primary" data-action="publish">Publish</button>
         ${comp.publishedFileId ? '<button type="button" class="btn btn-secondary" data-action="share-discord">Share to Discord</button>' : ""}
         <button type="button" class="btn btn-secondary" data-action="copy-share-code">${axiforgeIcon} Copy AxiCode</button>
+        <button type="button" class="btn btn-primary" data-action="publish">Publish</button>
+        <div class="publish-status" id="compPublishStatus"></div>
         <span class="comp-detail__discord-status" id="compDiscordStatus"></span>
         <button type="button" class="${notesBtnClass}" data-action="toggle-notes">Notes</button>
         <span class="comp-detail__slot-counter">${totalCap} / 50 slots</span>
-        <div class="publish-status" id="compPublishStatus"></div>
       </div>
       ${renderTagsRow(comp)}
       ${notesOpen ? renderNotesPanel(comp) : ""}
