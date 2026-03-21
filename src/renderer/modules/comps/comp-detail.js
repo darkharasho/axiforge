@@ -12,7 +12,7 @@ import {
   setPublishStatusEl,
 } from "../render-pages.js";
 import { roleBadgeHtml } from "../roleEstimator.js";
-import { axiforgeIcon, checkIcon } from "../library/heroicons.js";
+import { axiforgeIcon, checkIcon, chevronDownIcon, arrowUpTrayIcon, clipboardDocumentIcon } from "../library/heroicons.js";
 import { renderMiniBuildCard, renderMissingMiniBuildCard } from "../mini-build-card.js";
 import { computeCompBoonCoverage, buildBoonCoverageHTML, bindBoonCoverageEvents, closeBoonTooltip, closeDurationExpand } from "./comp-boon-coverage.js";
 import {
@@ -378,8 +378,22 @@ export function renderCompDetail() {
         <span class="comp-detail__name" data-action="edit-name">${escapeHtml(comp.name || "Untitled Comp")}</span>
         <span class="comp-detail__spacer"></span>
         <span class="comp-detail__save-status" id="compSaveStatus"></span>
-        ${comp.publishedFileId ? '<button type="button" class="btn btn-secondary" data-action="share-discord">Share to Discord</button>' : ""}
-        <button type="button" class="btn btn-secondary" data-action="copy-share-code">${axiforgeIcon} Copy AxiCode</button>
+        <div class="comp-share-dropdown">
+          <button type="button" class="btn btn-secondary comp-share-dropdown__trigger" data-action="share-toggle">
+            Share ${chevronDownIcon}
+          </button>
+          <div class="comp-share-dropdown__menu">
+            <button type="button" class="comp-share-dropdown__item" data-action="copy-share-code">
+              ${axiforgeIcon} AxiCode
+            </button>
+            <button type="button" class="comp-share-dropdown__item" data-action="share-discord">
+              ${arrowUpTrayIcon} Discord Embed
+            </button>
+            <button type="button" class="comp-share-dropdown__item" data-action="copy-plaintext">
+              ${clipboardDocumentIcon} Discord Plaintext
+            </button>
+          </div>
+        </div>
         <button type="button" class="btn btn-primary" data-action="publish">Publish</button>
         <div class="publish-status" id="compPublishStatus"></div>
         <span class="comp-detail__discord-status" id="compDiscordStatus"></span>
@@ -848,58 +862,100 @@ function bindDetailEvents(container, comp) {
     }
   });
 
-  // ── Share to Discord ────────────────────────────────────────────────────────
-  const discordBtn = container.querySelector("[data-action='share-discord']");
-  if (discordBtn) {
-    discordBtn.addEventListener("click", async () => {
-      // Check if webhook URL is configured
+  // ── Share dropdown ──────────────────────────────────────────────────────────
+  const shareDropdown = container.querySelector(".comp-share-dropdown");
+  const shareTrigger = container.querySelector("[data-action='share-toggle']");
+  if (shareDropdown && shareTrigger) {
+    shareTrigger.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const isOpen = shareDropdown.classList.toggle("comp-share-dropdown--open");
+      if (isOpen) {
+        setTimeout(() => {
+          const close = () => {
+            shareDropdown.classList.remove("comp-share-dropdown--open");
+            document.removeEventListener("click", close);
+          };
+          document.addEventListener("click", close);
+        }, 0);
+      }
+    });
+
+    // Flash an item as "Copied!" briefly
+    function flashItem(item, orig) {
+      item.innerHTML = `${checkIcon} Copied!`;
+      item.classList.add("comp-share-dropdown__item--copied");
+      setTimeout(() => {
+        item.innerHTML = orig;
+        item.classList.remove("comp-share-dropdown__item--copied");
+      }, 1500);
+    }
+
+    // AxiCode
+    const axiBtn = shareDropdown.querySelector("[data-action='copy-share-code']");
+    const axiBtnDefault = axiBtn?.innerHTML;
+    axiBtn?.addEventListener("click", async () => {
+      if (axiBtn.classList.contains("comp-share-dropdown__item--copied")) return;
+      try {
+        const code = await window.desktopApi.encodeCompShareCode(comp.id);
+        await window.desktopApi.writeClipboardText(code);
+        flashItem(axiBtn, axiBtnDefault);
+      } catch {
+        axiBtn.innerHTML = "Failed";
+        axiBtn.classList.add("comp-share-dropdown__item--error");
+        setTimeout(() => {
+          axiBtn.innerHTML = axiBtnDefault;
+          axiBtn.classList.remove("comp-share-dropdown__item--error");
+        }, 1500);
+      }
+    });
+
+    // Discord Embed
+    const embedBtn = shareDropdown.querySelector("[data-action='share-discord']");
+    const embedBtnDefault = embedBtn?.innerHTML;
+    embedBtn?.addEventListener("click", async () => {
       const webhookUrl = await window.desktopApi.getSetting("discord.webhookUrl");
       if (!webhookUrl) {
         showDiscordStatus("Set webhook URL in Settings first", true);
         return;
       }
-
-      discordBtn.disabled = true;
-      showDiscordStatus("Sharing...");
+      embedBtn.disabled = true;
+      embedBtn.innerHTML = "Sharing...";
       try {
         const result = await window.desktopApi.shareCompToDiscord(comp.id);
         if (result.success) {
+          flashItem(embedBtn, embedBtnDefault);
           showDiscordStatus("Shared to Discord!");
         } else {
           showDiscordStatus(result.error || "Failed to share", true);
+          embedBtn.innerHTML = embedBtnDefault;
         }
       } catch (err) {
         showDiscordStatus(err.message || "Failed to share", true);
+        embedBtn.innerHTML = embedBtnDefault;
       } finally {
-        discordBtn.disabled = false;
+        embedBtn.disabled = false;
+      }
+    });
+
+    // Discord Plaintext
+    const plainBtn = shareDropdown.querySelector("[data-action='copy-plaintext']");
+    const plainBtnDefault = plainBtn?.innerHTML;
+    plainBtn?.addEventListener("click", async () => {
+      if (plainBtn.classList.contains("comp-share-dropdown__item--copied")) return;
+      try {
+        const text = await window.desktopApi.generateCompPlaintext(comp.id);
+        await window.desktopApi.writeClipboardText(text);
+        flashItem(plainBtn, plainBtnDefault);
+      } catch {
+        plainBtn.innerHTML = "Failed";
+        plainBtn.classList.add("comp-share-dropdown__item--error");
+        setTimeout(() => {
+          plainBtn.innerHTML = plainBtnDefault;
+          plainBtn.classList.remove("comp-share-dropdown__item--error");
+        }, 1500);
       }
     });
   }
-
-  // ── Copy Share Code ──────────────────────────────────────────────────────────
-  const copyBtn = container.querySelector("[data-action='copy-share-code']");
-  const copyBtnDefault = `${axiforgeIcon} Copy AxiCode`;
-  const copyBtnSuccess = `${checkIcon} Copied!`;
-  copyBtn?.addEventListener("click", async () => {
-    if (copyBtn.classList.contains("btn--copied")) return;
-    try {
-      const code = await window.desktopApi.encodeCompShareCode(comp.id);
-      await window.desktopApi.writeClipboardText(code);
-      copyBtn.classList.add("btn--copied");
-      copyBtn.innerHTML = copyBtnSuccess;
-      setTimeout(() => {
-        copyBtn.classList.remove("btn--copied");
-        copyBtn.innerHTML = copyBtnDefault;
-      }, 2000);
-    } catch {
-      copyBtn.classList.add("btn--copy-error");
-      copyBtn.innerHTML = "Failed";
-      setTimeout(() => {
-        copyBtn.classList.remove("btn--copy-error");
-        copyBtn.innerHTML = copyBtnDefault;
-      }, 2000);
-    }
-  });
 
   // ── Notes toggle ───────────────────────────────────────────────────────────
   container.querySelector("[data-action='toggle-notes']")?.addEventListener("click", () => {

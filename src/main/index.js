@@ -756,6 +756,73 @@ app.whenReady().then(async () => {
     });
   });
 
+  ipcMain.handle("comps:generate-plaintext", async (_e, compId) => {
+    const { getDisplayName, getDiscordEmoji } = require("./discordEmoji");
+
+    const allComps = await compStore.listComps();
+    const comp = allComps.find((c) => c.id === compId);
+    if (!comp) throw new Error("Comp not found");
+
+    // Resolve owner/repo for short URLs
+    const auth = await getAuthRecord();
+    const session = await getSession();
+    const owner = auth?.onboarding?.targetOwner || session?.viewer?.login;
+    const repo = auth?.onboarding?.repoName || TARGET_REPO;
+    const hasUrls = !!owner;
+
+    const allBuilds = await store.listBuilds();
+    const buildsMap = {};
+    const buildUrls = {};
+    if (hasUrls) {
+      const { shortUrl } = require("./shortUrl");
+      for (const b of allBuilds) {
+        buildsMap[b.id] = b;
+        if (b.publishedFileId) buildUrls[b.id] = shortUrl(owner, repo, b.publishedFileId);
+      }
+    } else {
+      for (const b of allBuilds) buildsMap[b.id] = b;
+    }
+
+    // Comp grid: one row of emojis per party line
+    const gridRows = [];
+    for (const line of comp.partyLines || []) {
+      const emojis = [];
+      for (const slotId of line.slots || []) {
+        const build = buildsMap[slotId];
+        if (!build) continue;
+        const emoji = getDiscordEmoji(build);
+        if (emoji) emojis.push(emoji);
+      }
+      if (emojis.length > 0) gridRows.push(emojis.join(" "));
+    }
+
+    // Builds legend: one line per unique build with emoji + linked name
+    const seen = new Set();
+    const legendLines = [];
+    for (const line of comp.partyLines || []) {
+      for (const slotId of line.slots || []) {
+        if (seen.has(slotId)) continue;
+        seen.add(slotId);
+        const build = buildsMap[slotId];
+        if (!build) continue;
+        const emoji = getDiscordEmoji(build);
+        const name = getDisplayName(build);
+        const url = buildUrls[slotId];
+        const nameStr = url ? `[${name}](${url})` : name;
+        legendLines.push(emoji ? `${emoji} ${nameStr}` : nameStr);
+      }
+    }
+
+    const out = [`**${comp.name || "Untitled Comp"}**`];
+    out.push("");
+    out.push("**Comp**");
+    out.push(gridRows.join("\n") || "(empty)");
+    out.push("");
+    out.push("**Builds**");
+    out.push(legendLines.join("\n") || "(none)");
+    return out.join("\n");
+  });
+
   ipcMain.handle("onboarding:status", async () => getOnboardingStatus());
   ipcMain.handle("onboarding:list-targets", async () => {
     const session = await getSession();

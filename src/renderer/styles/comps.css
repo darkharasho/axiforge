@@ -243,32 +243,94 @@
   vertical-align: -2px;
 }
 
-/* Copy AxiCode button states */
-.comp-detail__topbar .btn[data-action="copy-share-code"] {
-  transition: background 0.25s, border-color 0.25s, color 0.25s, transform 0.15s;
+/* ── Share dropdown ───────────────────────────────────────────────────────── */
+.comp-share-dropdown {
+  position: relative;
 }
 
-.comp-detail__topbar .btn[data-action="copy-share-code"]:active:not(.btn--copied) {
-  transform: scale(0.95);
+.comp-share-dropdown__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
-.comp-detail__topbar .btn.btn--copied {
-  border-color: var(--accent, #99e6ff);
+.comp-share-dropdown__trigger svg {
+  width: 12px;
+  height: 12px;
+  transition: transform 0.15s;
+}
+
+.comp-share-dropdown--open .comp-share-dropdown__trigger svg:last-child {
+  transform: rotate(180deg);
+}
+
+.comp-share-dropdown__menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 170px;
+  background: #1a1a3a;
+  border: 1px solid #303060;
+  border-radius: 6px;
+  padding: 4px 0;
+  z-index: 200;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  animation: share-menu-in 0.12s ease;
+}
+
+.comp-share-dropdown--open .comp-share-dropdown__menu {
+  display: block;
+}
+
+@keyframes share-menu-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.comp-share-dropdown__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 14px;
+  background: none;
+  border: none;
+  color: #ccd;
+  font-size: 0.85rem;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.1s, color 0.1s;
+}
+
+.comp-share-dropdown__item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.comp-share-dropdown__item svg {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+  color: #889;
+}
+
+.comp-share-dropdown__item--copied {
   color: var(--accent, #99e6ff);
-  background: rgba(100, 210, 255, 0.1);
-  animation: copy-pop 0.3s ease;
 }
 
-.comp-detail__topbar .btn.btn--copy-error {
-  border-color: var(--danger, #f87171);
+.comp-share-dropdown__item--copied svg {
+  color: var(--accent, #99e6ff);
+}
+
+.comp-share-dropdown__item--error {
   color: var(--danger, #f87171);
-  background: rgba(200, 30, 30, 0.1);
 }
 
-@keyframes copy-pop {
-  0%   { transform: scale(1); }
-  40%  { transform: scale(1.08); }
-  100% { transform: scale(1); }
+.comp-share-dropdown__item:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .comp-detail__back-btn {
