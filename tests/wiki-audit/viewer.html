@@ -144,23 +144,49 @@
   .detail-section{margin-bottom:.6rem}
   .detail-section h4{font-size:.72rem;color:#8b949e;margin-bottom:.3rem;text-transform:uppercase;letter-spacing:.03em}
 
-  .diff-table{width:100%;border-collapse:collapse;margin-bottom:.4rem}
-  .diff-table th{
-    font-size:.65rem;padding:.3rem .5rem;
-    background:#161b22;border-bottom:1px solid #21262d;
-    position:static;
+  /* ── Git-style diff ───────────────────────────────────────── */
+  .diff-container{
+    border:1px solid #30363d;border-radius:6px;overflow:hidden;
+    margin-bottom:.6rem;font-size:.75rem;
   }
-  .diff-table td{
-    padding:.3rem .5rem;font-size:.75rem;border-bottom:1px solid #161b22;
+  .diff-header{
+    display:flex;background:#161b22;border-bottom:1px solid #30363d;
+    font-size:.7rem;font-weight:600;
   }
-  .val-wiki{color:#f85149}
-  .val-splits{color:#3fb950}
-  .fact-text{color:#c9d1d9;font-weight:500}
-  .fact-type{color:#8b949e;font-size:.68rem}
+  .diff-header-side{flex:1;padding:.4rem .6rem}
+  .diff-header-wiki{color:#f85149}
+  .diff-header-splits{color:#3fb950;border-left:1px solid #30363d}
 
-  .only-fact{
-    padding:.25rem .5rem;font-size:.75rem;
-    background:#161b22;border-radius:4px;margin-bottom:.2rem;
+  .diff-row{display:flex;border-bottom:1px solid #161b22}
+  .diff-row:last-child{border-bottom:none}
+  .diff-side{flex:1;padding:.3rem .6rem;min-height:1.6em}
+  .diff-side-wiki{border-right:1px solid #21262d}
+  .diff-side-splits{border-left:none}
+
+  .diff-row.diff-match .diff-side{color:#8b949e}
+  .diff-row.diff-changed .diff-side-wiki{background:rgba(248,81,73,.08)}
+  .diff-row.diff-changed .diff-side-splits{background:rgba(63,185,80,.08)}
+  .diff-row.diff-added .diff-side-wiki{background:rgba(248,81,73,.08);color:#f85149}
+  .diff-row.diff-added .diff-side-splits{color:#484f58;font-style:italic}
+  .diff-row.diff-removed .diff-side-splits{background:rgba(63,185,80,.08);color:#3fb950}
+  .diff-row.diff-removed .diff-side-wiki{color:#484f58;font-style:italic}
+
+  .diff-fact-name{font-weight:600;color:#e6edf3}
+  .diff-field{color:#8b949e;margin-right:.4rem;min-width:5rem;display:inline-block}
+  .diff-val{font-weight:500}
+  .diff-val-changed{font-weight:700}
+  .diff-gutter{
+    width:1.5rem;text-align:center;font-size:.7rem;
+    padding:.3rem 0;flex-shrink:0;color:#484f58;user-select:none;
+  }
+  .diff-gutter-wiki{background:rgba(248,81,73,.06);color:rgba(248,81,73,.6)}
+  .diff-gutter-splits{background:rgba(63,185,80,.06);color:rgba(63,185,80,.6)}
+  .diff-gutter-match{background:transparent;color:#30363d}
+
+  .diff-section-label{
+    padding:.3rem .6rem;font-size:.65rem;text-transform:uppercase;
+    letter-spacing:.04em;color:#8b949e;background:#0d1117;
+    border-bottom:1px solid #161b22;
   }
 
   .error-msg{
@@ -421,7 +447,7 @@
     }
   }
 
-  const FACT_FIELDS = ["type","text","status","target","source","value","duration","apply_count","dmg_multiplier","hit_count","coefficient","distance","percent"];
+  const VALUE_FIELDS = ["value","duration","apply_count","dmg_multiplier","hit_count","coefficient","distance","percent"];
 
   function buildDetail(entry){
     if(entry.err){
@@ -430,80 +456,139 @@
     const d = entry.disc;
     if(!d) return '<span style="color:#484f58">No details available.</span>';
 
-    let html = "";
+    const wikiFacts = d.wiki_wvw_facts || d.wiki_facts || [];
+    const splitsFacts = d.splits_wvw_facts || [];
 
-    // Fact diffs — show field-by-field comparison
-    if(d.fact_diffs && d.fact_diffs.length){
-      html += '<div class="detail-section"><h4>Fact Diffs</h4>';
-      html += '<table class="diff-table"><thead><tr><th>Fact</th><th>Field</th><th class="val-wiki">Wiki</th><th class="val-splits">Splits</th></tr></thead><tbody>';
-      for(const fd of d.fact_diffs){
-        const factLabel = esc(fd.text || "") + (fd.type ? ' <span class="fact-type">(' + esc(fd.type) + ')</span>' : "");
-        const fields = fd.fields || {};
-        const keys = Object.keys(fields);
-        if(keys.length === 0){
-          html += '<tr><td>' + factLabel + '</td><td colspan="3" style="color:#484f58">No field details</td></tr>';
-        } else {
-          for(let i = 0; i < keys.length; i++){
-            const k = keys[i];
-            const v = fields[k];
-            html += '<tr>';
-            html += i === 0 ? '<td rowspan="' + keys.length + '" class="fact-text">' + factLabel + '</td>' : '';
-            html += '<td>' + esc(k) + '</td>';
-            html += '<td class="val-wiki">' + formatVal(v.wiki) + '</td>';
-            html += '<td class="val-splits">' + formatVal(v.splits) + '</td>';
-            html += '</tr>';
-          }
+    // If we have both sides, render a unified side-by-side diff
+    if(wikiFacts.length || splitsFacts.length){
+      return renderUnifiedDiff(wikiFacts, splitsFacts);
+    }
+
+    return '<span style="color:#484f58">No fact data available.</span>';
+  }
+
+  /**
+   * Render a git-style side-by-side diff of WvW facts.
+   * Left = Wiki WvW, Right = Our splits.json WvW.
+   * Matched facts shown side-by-side with changed values highlighted.
+   * Unmatched facts shown as additions/removals.
+   */
+  function renderUnifiedDiff(wikiFacts, splitsFacts){
+    // Build a simple match table by fact text + type
+    const matched = [];   // { wiki, splits }
+    const wikiOnly = [];
+    const splitsOnly = [];
+    const usedSplits = new Set();
+
+    for(const wf of wikiFacts){
+      const key = factKey(wf);
+      let bestIdx = -1;
+      for(let i = 0; i < splitsFacts.length; i++){
+        if(usedSplits.has(i)) continue;
+        if(factKey(splitsFacts[i]) === key){ bestIdx = i; break; }
+      }
+      if(bestIdx === -1){
+        // Try fuzzy: match by text only
+        for(let i = 0; i < splitsFacts.length; i++){
+          if(usedSplits.has(i)) continue;
+          if((splitsFacts[i].text||"").toLowerCase() === (wf.text||"").toLowerCase()){ bestIdx = i; break; }
         }
       }
-      html += '</tbody></table></div>';
+      if(bestIdx >= 0){
+        usedSplits.add(bestIdx);
+        matched.push({ wiki: wf, splits: splitsFacts[bestIdx] });
+      } else {
+        wikiOnly.push(wf);
+      }
+    }
+    for(let i = 0; i < splitsFacts.length; i++){
+      if(!usedSplits.has(i)) splitsOnly.push(splitsFacts[i]);
     }
 
-    // Wiki-only facts — show all fields in a table
-    if(d.wiki_only_facts && d.wiki_only_facts.length){
-      html += '<div class="detail-section"><h4>Wiki-only Facts <span style="font-size:.65rem;color:#484f58;text-transform:none">(present on wiki, absent from splits.json)</span></h4>';
-      html += renderFactTable(d.wiki_only_facts, "val-wiki");
+    let html = '<div class="diff-container">';
+
+    // Header
+    html += '<div class="diff-header">';
+    html += '<div class="diff-gutter"></div>';
+    html += '<div class="diff-header-side diff-header-wiki">Wiki WvW</div>';
+    html += '<div class="diff-gutter"></div>';
+    html += '<div class="diff-header-side diff-header-splits">Our WvW (splits.json)</div>';
+    html += '</div>';
+
+    // Matched facts
+    for(const { wiki, splits } of matched){
+      const diffs = getFactDiffs(wiki, splits);
+      const isDiff = diffs.length > 0;
+      const rowClass = isDiff ? "diff-changed" : "diff-match";
+
+      // Fact name row
+      html += '<div class="diff-row ' + rowClass + '">';
+      html += '<div class="diff-gutter ' + (isDiff ? 'diff-gutter-wiki' : 'diff-gutter-match') + '">' + (isDiff ? '~' : '') + '</div>';
+      html += '<div class="diff-side diff-side-wiki"><span class="diff-fact-name">' + esc(wiki.text || wiki.status || "?") + '</span></div>';
+      html += '<div class="diff-gutter ' + (isDiff ? 'diff-gutter-splits' : 'diff-gutter-match') + '">' + (isDiff ? '~' : '') + '</div>';
+      html += '<div class="diff-side diff-side-splits"><span class="diff-fact-name">' + esc(splits.text || splits.status || "?") + '</span></div>';
+      html += '</div>';
+
+      // Value fields
+      const allFields = [...new Set([...Object.keys(wiki), ...Object.keys(splits)])].filter(f => VALUE_FIELDS.includes(f));
+      for(const f of allFields){
+        const wVal = wiki[f];
+        const sVal = splits[f];
+        const changed = wVal !== sVal && (wVal !== undefined || sVal !== undefined);
+        const cls = changed ? "diff-changed" : "diff-match";
+        html += '<div class="diff-row ' + cls + '">';
+        html += '<div class="diff-gutter ' + (changed ? 'diff-gutter-wiki' : 'diff-gutter-match') + '">' + (changed ? '-' : '') + '</div>';
+        html += '<div class="diff-side diff-side-wiki"><span class="diff-field">' + esc(f) + '</span> <span class="diff-val' + (changed ? ' diff-val-changed' : '') + '">' + formatVal(wVal) + '</span></div>';
+        html += '<div class="diff-gutter ' + (changed ? 'diff-gutter-splits' : 'diff-gutter-match') + '">' + (changed ? '+' : '') + '</div>';
+        html += '<div class="diff-side diff-side-splits"><span class="diff-field">' + esc(f) + '</span> <span class="diff-val' + (changed ? ' diff-val-changed' : '') + '">' + formatVal(sVal) + '</span></div>';
+        html += '</div>';
+      }
+    }
+
+    // Wiki-only facts (on wiki but not in our splits)
+    for(const wf of wikiOnly){
+      html += '<div class="diff-row diff-added">';
+      html += '<div class="diff-gutter diff-gutter-wiki">+</div>';
+      html += '<div class="diff-side diff-side-wiki"><span class="diff-fact-name">' + esc(wf.text || wf.status || "?") + '</span> ' + factValSummary(wf) + '</div>';
+      html += '<div class="diff-gutter"></div>';
+      html += '<div class="diff-side diff-side-splits" style="color:#484f58;font-style:italic">not in splits.json</div>';
       html += '</div>';
     }
 
-    // Splits-only facts — show all fields in a table
-    if(d.splits_only_facts && d.splits_only_facts.length){
-      html += '<div class="detail-section"><h4>Splits-only Facts <span style="font-size:.65rem;color:#484f58;text-transform:none">(present in splits.json, absent from wiki)</span></h4>';
-      html += renderFactTable(d.splits_only_facts, "val-splits");
+    // Splits-only facts (in our splits but not on wiki)
+    for(const sf of splitsOnly){
+      html += '<div class="diff-row diff-removed">';
+      html += '<div class="diff-gutter"></div>';
+      html += '<div class="diff-side diff-side-wiki" style="color:#484f58;font-style:italic">not on wiki</div>';
+      html += '<div class="diff-gutter diff-gutter-splits">+</div>';
+      html += '<div class="diff-side diff-side-splits"><span class="diff-fact-name">' + esc(sf.text || sf.status || "?") + '</span> ' + factValSummary(sf) + '</div>';
       html += '</div>';
     }
 
-    // Wiki facts (for missing_from_splits entries)
-    if(d.wiki_facts && d.wiki_facts.length){
-      html += '<div class="detail-section"><h4>Wiki Facts <span style="font-size:.65rem;color:#484f58;text-transform:none">(wiki has WvW data, no splits.json entry)</span></h4>';
-      html += renderFactTable(d.wiki_facts, "val-wiki");
-      html += '</div>';
-    }
-
-    if(!html) html = '<span style="color:#484f58">No details available.</span>';
+    html += '</div>';
     return html;
   }
 
-  function renderFactTable(facts, colorClass){
-    // Collect which fields are actually present across all facts
-    const presentFields = FACT_FIELDS.filter(f => facts.some(fact => fact[f] !== undefined));
-    if(!presentFields.length) return '<span style="color:#484f58">No field data</span>';
+  function factKey(f){
+    return ((f.text||"") + ":" + (f.type||"")).toLowerCase();
+  }
 
-    let html = '<table class="diff-table"><thead><tr>';
-    for(const f of presentFields){
-      html += '<th>' + esc(f) + '</th>';
-    }
-    html += '</tr></thead><tbody>';
-    for(const fact of facts){
-      html += '<tr>';
-      for(const f of presentFields){
-        const val = fact[f];
-        const cls = (f === "text" || f === "type" || f === "status") ? "fact-text" : colorClass;
-        html += '<td class="' + cls + '">' + formatVal(val) + '</td>';
+  function getFactDiffs(a, b){
+    const diffs = [];
+    for(const k of VALUE_FIELDS){
+      if(a[k] !== b[k] && (a[k] !== undefined || b[k] !== undefined)){
+        diffs.push(k);
       }
-      html += '</tr>';
     }
-    html += '</tbody></table>';
-    return html;
+    return diffs;
+  }
+
+  function factValSummary(f){
+    const parts = [];
+    for(const k of VALUE_FIELDS){
+      if(f[k] !== undefined) parts.push('<span class="diff-field">' + esc(k) + '</span>' + formatVal(f[k]));
+    }
+    return parts.join("  ");
   }
 
   // ── Filters & search ──────────────────────────────────────

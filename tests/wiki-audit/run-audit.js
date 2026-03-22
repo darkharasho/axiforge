@@ -140,10 +140,12 @@ async function crawlWithWorkers(browser, entities, splitsIndex, workerCount, inc
             wiki_url: crawlResult.wiki_url || `https://wiki.guildwars2.com/wiki/${entity.name.replace(/ /g, "_")}`,
             category: cmp.category,
           };
+          // Include raw fact arrays for side-by-side diff in viewer
+          record.wiki_wvw_facts = wikiFacts;
+          record.splits_wvw_facts = splitEntry?.facts || [];
           if (cmp.fact_diffs.length) record.fact_diffs = cmp.fact_diffs;
           if (cmp.wiki_only_facts.length) record.wiki_only_facts = cmp.wiki_only_facts;
           if (cmp.splits_only_facts.length) record.splits_only_facts = cmp.splits_only_facts;
-          if (cmp.category === "missing_from_splits") record.wiki_facts = wikiFacts;
           discrepancies.push(record);
           incremental.writeDiscrepancy(record);
 
