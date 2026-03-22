@@ -476,14 +476,9 @@ Write `tests/e2e/helpers/editor.js`:
  */
 
 async function selectProfession(window, name) {
-  await window.click("#professionSelect");
-  await window.waitForTimeout(200);
-  // Click the profession option by text
-  await window.click(`#professionSelect option:has-text("${name}")`, { force: true }).catch(() => {
-    // If it's a custom dropdown, try clicking by data attribute or text
-    return window.click(`[data-profession="${name}"], .profession-option:has-text("${name}")`);
-  });
-  // Wait for catalog to load
+  // Use selectOption for native <select> elements
+  await window.selectOption("#professionSelect", { label: name });
+  // Wait for catalog to load from mock server
   await window.waitForTimeout(1500);
 }
 
