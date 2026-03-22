@@ -18,15 +18,20 @@ This test suite does NOT run as part of `npm test`. It is invoked manually via `
 ## File Structure
 
 ```
+lib/gw2-balance-splits/
+  match.js              # Extracted fact-matching logic (shared by catalog.js and compare.js)
+
 tests/wiki-audit/
-  run-audit.js        # Entry point — orchestrates the full audit
-  crawl.js            # Playwright: navigate pages, toggle WvW, extract facts
-  compare.js          # Diff wiki facts against splits.json facts
-  report.js           # Generate JSON report + copy HTML viewer into results/
-  viewer.html         # Static HTML file (inline CSS/JS) that loads JSON client-side
-  results/            # gitignored output directory
-    .gitignore        # Ignore everything in results/
+  run-audit.js          # Entry point — orchestrates the full audit
+  crawl.js              # Playwright: navigate pages, toggle WvW, extract facts
+  compare.js            # Diff wiki facts against splits.json facts
+  report.js             # Generate JSON report + copy HTML viewer into results/
+  viewer.html           # Static HTML file (inline CSS/JS) that loads JSON client-side
+  results/              # gitignored output directory
+    .gitignore          # Ignore everything in results/
 ```
+
+**Important:** Files in `tests/wiki-audit/` must NOT use the `.test.js` suffix, since the Jest config (`testMatch: ["**/tests/**/*.test.js"]`) would pick them up during `npm test`.
 
 Output files are written to `tests/wiki-audit/results/` and gitignored. Each run produces:
 - `<timestamp>-audit.json` — the full report
@@ -62,11 +67,13 @@ Run `npx playwright install chromium` once after install to download the browser
 
 ### 1. Fetch entity list
 
-Pull all skill and trait data from the GW2 API:
-- `GET /v2/skills?ids=all` (paginated via `fetchGw2ByIds` from `src/main/gw2Data/fetch.js` — or direct fetch, since this runs outside Electron)
-- `GET /v2/traits?ids=all`
+Pull all skill and trait data from the GW2 API using a two-step approach (the GW2 API does not support `?ids=all` for skills/traits):
 
-Extract `{ id, name }` pairs. This gives the complete universe of ~1500 skills and ~260 traits.
+1. `GET /v2/skills` → returns an array of all skill IDs (e.g. `[1, 2, 3, ...]`)
+2. Batch-fetch in chunks of 200: `GET /v2/skills?ids=1,2,3,...,200` → returns full skill objects
+3. Repeat for traits: `GET /v2/traits` → ID list, then batch-fetch
+
+Extract `{ id, name }` pairs from each response. This gives the complete universe of ~1500 skills and ~260 traits. ~8 batched requests for skills, ~2 for traits.
 
 ### 2. Load splits.json
 
@@ -125,7 +132,7 @@ The GW2 wiki renders game mode toggles as clickable elements (PvE / WvW / PvP bu
 2. If found, click the WvW option
 3. Wait for the visible facts to update
 
-The exact selectors will be determined during implementation by inspecting live wiki pages. The crawl module should encapsulate selector logic so it can be updated if the wiki changes its markup.
+The exact selectors will be determined during implementation by inspecting live wiki pages. The first implementation task is to navigate to a few representative skill pages (one with splits, one without) and document the DOM structure. The crawl module should encapsulate all selector logic in a single `SELECTORS` constant object so it can be updated in one place if the wiki changes its markup.
 
 ### Fact extraction
 
@@ -137,10 +144,20 @@ After toggling to WvW (or reading base facts if no toggle), extract each visible
 
 The extraction logic should parse the rendered text of each fact row. For example, a fact row showing "Damage (3x): 0.5" yields `{ type: "Damage", text: "Damage", dmg_multiplier: 0.5, hit_count: 3 }`.
 
-### Disambiguation and redirect handling
+### Name collisions and disambiguation
+
+Many GW2 skills share the same name across professions or weapons (e.g. multiple "Fireball" skills, "Slash" on several classes). When navigating by name, this can land on a disambiguation page.
+
+**Strategy:** After navigation, check whether the page is a disambiguation page (presence of disambiguation markers in the DOM). If so:
+1. Check if the wiki uses the `Skill_name_(profession)` or `Skill_name_(weapon_type)` naming convention
+2. Attempt the profession-qualified URL using the skill's profession from the GW2 API data
+3. If still ambiguous, log as error with context and continue
+
+This means the GW2 API fetch (Step 1) must also capture each skill's `professions` array and each trait's `specialization` ID, not just `{ id, name }`.
+
+### Redirect and missing page handling
 
 - **Redirects:** Playwright follows redirects naturally; no special handling needed.
-- **Disambiguation pages:** Detect by checking for disambiguation markers (e.g. a page listing multiple skills with the same name). Log as error, skip.
 - **Missing pages:** If the wiki returns a "page does not exist" state, log as error, continue.
 
 ---
@@ -156,7 +173,7 @@ Use the same matching strategy as `catalog.js` (`_buildSplitMatchTables`):
 3. **Pass 2:** Type-group positional match
 4. **Pass 3:** Keyword overlap
 
-This reuses the proven matching logic already in the codebase. The `compare.js` module can import or replicate the matching functions from `catalog.js`.
+To reuse this logic, extract the matching functions (`_buildSplitMatchTables`, `_splitNormalizeType`, `_splitGroupKey`, `_SPLIT_VALUE_KEYS`, `_splitValueChanged`) from `catalog.js` into a shared module at `lib/gw2-balance-splits/match.js`. Both `catalog.js` and `compare.js` import from this shared module. This avoids code duplication and ensures the audit uses the same matching behavior as production.
 
 ### Value comparison
 
@@ -173,9 +190,21 @@ For each matched fact pair (wiki vs splits.json), compare these fields:
 
 A fact is flagged as a mismatch if any of these fields differ between wiki and splits.json. Record which fields differ with both values.
 
+### The `complete` flag
+
+Each entry in `splits.json` has a `complete` field (`true` or `false`) that affects comparison semantics:
+
+- **`complete: true`** — The split represents the FULL WvW fact set. PvE facts absent from the split were intentionally removed in WvW. When comparing, the wiki's WvW facts are the authoritative list. A fact in `splits.json` but absent on the wiki is a mismatch. A fact on the wiki but absent from `splits.json` is also a mismatch.
+
+- **`complete: false`** — The split only lists CHANGED facts. Unlisted facts are expected to match PvE base values. When comparing, only compare the facts that `splits.json` explicitly lists; do not flag missing facts as mismatches.
+
+### PvP/WvW grouping
+
+Some wiki pages group WvW and PvP together (they share the same split values). When the Playwright toggle shows "WvW" mode, it may display the combined WvW+PvP values. This is expected and should not produce false mismatches — the audit compares whatever the WvW toggle shows.
+
 ### Missing fact detection
 
-- Facts present on the wiki but not matched in splits.json → flagged as additions
+- Facts present on the wiki but not matched in splits.json → flagged as additions (only for `complete: true` entries)
 - Facts present in splits.json but not matched on the wiki → flagged as removals
 
 ---
@@ -258,11 +287,13 @@ The viewer reads the JSON entirely client-side. No server needed.
 
 ## Rate Limiting & Resilience
 
-- **Rate limit:** 200ms minimum delay between page navigations (matching `seed.js` convention)
+- **Rate limit:** No artificial delay between page loads. Playwright's page load already provides natural rate limiting (~2-5 seconds per page). This is slower than the lightweight JSON requests in `seed.js` that need the 200ms delay.
 - **Retry:** On network error or timeout, retry once after 2 seconds. On second failure, log to errors and continue.
 - **Progress:** Console progress bar using the `seed.js` style (`progressBar` function)
 - **Resume support:** Accept `--skip N` CLI argument to start from entity N (useful if interrupted mid-run)
+- **Limit support:** Accept `--limit N` CLI argument to crawl only the first N entities (useful for testing the audit tool itself)
 - **Timeout:** 10-second page load timeout per entity. If exceeded, log as error and continue.
+- **Expected runtime:** ~1-2 hours for a full run of ~1760 entities at ~2-5 seconds per page.
 
 ---
 
