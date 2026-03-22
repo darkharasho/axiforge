@@ -106,30 +106,52 @@ async function _crawlEntityOnce(page, entity, entityType) {
 }
 
 /**
- * Try multiple wiki URL patterns to resolve a disambiguation page.
- * The GW2 wiki uses various naming conventions:
- *   Steam_(elementalist_skill)
- *   Slash_(warrior_sword_skill)
- *   Signet_of_Restoration_(guardian_skill)
- *   Raging_Storm_(trait)
+ * Resolve a disambiguation page by scraping the links on it.
  *
- * We try several patterns in order, returning the first that resolves
- * to a non-disambig, non-missing page.
+ * Disambiguation pages list all variants as links, e.g.:
+ *   Slash (warrior sword skill)
+ *   Slash (ranger greatsword skill)
+ *   Slash (thief dagger skill)
+ *
+ * We collect all links with parenthetical qualifiers, then pick the
+ * best match for our entity's profession. If no profession match,
+ * we try all links that contain "skill" or "trait".
  */
 async function _resolveDisambig(page, wikiName, entity, entityType) {
   const profession = (entity.professions?.[0] || "").toLowerCase();
   const type = entityType === "trait" ? "trait" : "skill";
 
-  // Build candidate suffixes in priority order
-  const suffixes = [];
-  if (profession) {
-    suffixes.push(`${profession}_${type}`);   // Steam_(elementalist_skill)
-    suffixes.push(profession);                 // Steam_(elementalist)
-  }
-  suffixes.push(type);                         // Steam_(skill)
+  // Scrape all internal links from the disambiguation page that have parenthetical qualifiers
+  const candidates = await page.$$eval(".mw-parser-output a[href*='(']", (links) => {
+    return links
+      .map((a) => ({ href: a.getAttribute("href"), text: a.textContent.trim() }))
+      .filter((l) => l.href && l.href.startsWith("/wiki/") && l.href.includes("("));
+  });
 
-  for (const suffix of suffixes) {
-    const candidateUrl = `${WIKI_BASE}${encodeURI(wikiName + "_(" + suffix + ")")}`;
+  if (!candidates.length) {
+    return { hasToggle: false, wvwFacts: [], error: "Disambiguation page with no parenthetical links" };
+  }
+
+  // Score candidates: profession match + type match
+  const scored = candidates.map((c) => {
+    const lower = c.href.toLowerCase();
+    let score = 0;
+    if (profession && lower.includes(profession)) score += 10;
+    if (lower.includes(type)) score += 5;
+    // Penalise links that look like non-skill/trait pages (e.g. items, NPCs)
+    if (lower.includes("npc") || lower.includes("item")) score -= 20;
+    return { ...c, score };
+  });
+
+  // Sort by score descending, try best matches first
+  scored.sort((a, b) => b.score - a.score);
+
+  // Only try candidates that have a positive score (at least match the type)
+  const viable = scored.filter((c) => c.score > 0);
+  const toTry = viable.length > 0 ? viable : scored.slice(0, 3); // fallback: try top 3
+
+  for (const candidate of toTry) {
+    const candidateUrl = `https://wiki.guildwars2.com${candidate.href}`;
     try {
       await page.goto(candidateUrl, { timeout: PAGE_TIMEOUT, waitUntil: "domcontentloaded" });
       await page.waitForTimeout(500);
@@ -144,7 +166,8 @@ async function _resolveDisambig(page, wikiName, entity, entityType) {
     }
   }
 
-  return { hasToggle: false, wvwFacts: [], error: `Disambiguation: tried ${suffixes.map(s => `(${s})`).join(", ")}` };
+  const tried = toTry.map((c) => c.text).join(", ");
+  return { hasToggle: false, wvwFacts: [], error: `Disambiguation: tried [${tried}]` };
 }
 
 /**
