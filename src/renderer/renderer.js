@@ -44,7 +44,7 @@ import { resolveEntityFacts } from "./modules/detail-panel.js";
 import { initWikiModal, openWikiModal } from "./modules/wiki-modal.js";
 import { initDetailModal, openDetailModal } from "./modules/detail-modal.js";
 import { initConfirmModal } from "./modules/confirm-modal.js";
-import { initSettingsModal } from "./modules/settings-modal.js";
+import { initSettingsModal, initSettingsCallbacks } from "./modules/settings-modal.js";
 import { initLibrary, renderLibrary, handleLibraryKeydown } from "./modules/library/library.js";
 import { clearUndo as clearLibraryUndo } from "./modules/library/undo.js";
 import { initComps, loadComps, renderComps } from "./modules/comps/comps.js";
@@ -184,6 +184,7 @@ initRenderPagesCallbacks({
   setPublishStatus,
   navigateToPage,
 });
+initSettingsCallbacks({ refreshOnboardingStatus, render });
 
 // ── Auto-update titlebar UI ──────────────────────────────────────────────────
 

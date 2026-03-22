@@ -242,3 +242,50 @@
   color: #7ac0ff;
   border-color: #48a8ff;
 }
+
+/* ── Publishing section ──────────────────────────────────────── */
+
+.settings-modal__hint {
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin: 0;
+}
+
+.settings-modal__setup-row {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settings-modal__status-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.settings-modal__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+.settings-modal__badge--ok {
+  color: #6ee7a0;
+  background: rgba(79, 216, 151, 0.12);
+  border: 1px solid rgba(79, 216, 151, 0.3);
+}
+
+.settings-modal__badge--pending {
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--line);
+}
+
+.settings-modal__setup-row .settings-modal__btn {
+  align-self: flex-start;
+}

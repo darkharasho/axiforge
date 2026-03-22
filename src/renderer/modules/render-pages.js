@@ -44,6 +44,29 @@ export function render() {
 // ---------------------------------------------------------------------------
 // renderAuth
 // ---------------------------------------------------------------------------
+// SVG icons for workspace menu items (Heroicons outline, 20x20)
+const _wsIcons = {
+  github: `<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>`,
+  refresh: `<svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.451a.75.75 0 000-1.5H4.5a.75.75 0 00-.75.75v3.75a.75.75 0 001.5 0v-2.127l.209.209a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm-10.624-2.85a5.5 5.5 0 019.201-2.465l.312.311h-2.451a.75.75 0 000 1.5H15.5a.75.75 0 00.75-.75V3.42a.75.75 0 00-1.5 0v2.127l-.209-.209A7 7 0 002.829 8.476a.75.75 0 101.449.39z" clip-rule="evenodd"/></svg>`,
+  settings: `<svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.34 1.804A1 1 0 019.32 1h1.36a1 1 0 01.98.804l.295 1.473c.497.144.971.342 1.416.587l1.25-.834a1 1 0 011.262.125l.962.962a1 1 0 01.125 1.262l-.834 1.25c.245.445.443.919.587 1.416l1.473.295a1 1 0 01.804.98v1.36a1 1 0 01-.804.98l-1.473.295a6.95 6.95 0 01-.587 1.416l.834 1.25a1 1 0 01-.125 1.262l-.962.962a1 1 0 01-1.262.125l-1.25-.834a6.953 6.953 0 01-1.416.587l-.295 1.473a1 1 0 01-.98.804H9.32a1 1 0 01-.98-.804l-.295-1.473a6.957 6.957 0 01-1.416-.587l-1.25.834a1 1 0 01-1.262-.125l-.962-.962a1 1 0 01-.125-1.262l.834-1.25a6.957 6.957 0 01-.587-1.416l-1.473-.295A1 1 0 011 11.36V10a1 1 0 01.804-.98l1.473-.295c.144-.497.342-.971.587-1.416l-.834-1.25a1 1 0 01.125-1.262l.962-.962A1 1 0 015.38 3.71l1.25.834a6.957 6.957 0 011.416-.587l.295-1.473zM13 10a3 3 0 11-6 0 3 3 0 016 0z" clip-rule="evenodd"/></svg>`,
+  logout: `<svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 4.25A2.25 2.25 0 015.25 2h5.5A2.25 2.25 0 0113 4.25v2a.75.75 0 01-1.5 0v-2a.75.75 0 00-.75-.75h-5.5a.75.75 0 00-.75.75v11.5c0 .414.336.75.75.75h5.5a.75.75 0 00.75-.75v-2a.75.75 0 011.5 0v2A2.25 2.25 0 0110.75 18h-5.5A2.25 2.25 0 013 15.75V4.25z" clip-rule="evenodd"/><path fill-rule="evenodd" d="M19 10a.75.75 0 00-.75-.75H8.704l1.048-.943a.75.75 0 10-1.004-1.114l-2.5 2.25a.75.75 0 000 1.114l2.5 2.25a.75.75 0 101.004-1.114l-1.048-.943h9.546A.75.75 0 0019 10z" clip-rule="evenodd"/></svg>`,
+};
+
+function _menuItem(icon, label, onClick, className = "") {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = `ws-menu-item${className ? ` ${className}` : ""}`;
+  btn.innerHTML = `<span class="ws-menu-item__icon">${icon}</span><span class="ws-menu-item__label">${escapeHtml(label)}</span>`;
+  btn.addEventListener("click", onClick);
+  return btn;
+}
+
+function _menuSeparator() {
+  const div = document.createElement("div");
+  div.className = "ws-menu-sep";
+  return div;
+}
+
 export function renderAuth() {
   _el.authRow.innerHTML = "";
 
@@ -53,34 +76,37 @@ export function renderAuth() {
   if (state.user) {
     const who = document.createElement("div");
     who.className = "workspace-menu__user";
-    who.textContent = `Signed in as ${state.user.login}`;
+    who.innerHTML = `<span class="workspace-menu__avatar">${_wsIcons.github}</span><span>${escapeHtml(state.user.login)}</span>`;
     _el.authRow.append(who);
 
-    const reauth = makeButton("Re-authenticate", "secondary", async () => {
+    _el.authRow.append(_menuSeparator());
+
+    _el.authRow.append(_menuItem(_wsIcons.refresh, "Re-authenticate", async () => {
       try {
         await startLoginFlow();
         await _callbacks.refreshOnboardingStatus();
         render();
       } catch (err) { showError(err); }
-    });
+    }));
 
-    const logout = makeButton("Log out", "danger", async () => {
+    _el.authRow.append(_menuItem(_wsIcons.settings, "Settings", () => {
+      _el.workspaceMenu?.classList.add("hidden");
+      openSettingsModal();
+    }));
+
+    _el.authRow.append(_menuSeparator());
+
+    _el.authRow.append(_menuItem(_wsIcons.logout, "Log out", async () => {
       await window.desktopApi.logout();
       state.loginFlow.beginData = null;
       await _callbacks.refreshOnboardingStatus();
       render();
-    });
+    }, "ws-menu-item--danger"));
 
-    const settings = makeButton("Settings", "secondary", () => {
-      _el.workspaceMenu?.classList.add("hidden");
-      openSettingsModal();
-    });
-
-    _el.authRow.append(who, reauth, logout, settings);
     return;
   }
 
-  const loginBtn = makeButton("Login with GitHub", "primary", async () => {
+  _el.authRow.append(_menuItem(_wsIcons.github, "Sign in with GitHub", async () => {
     try {
       await startLoginFlow();
       await _callbacks.refreshOnboardingStatus();
@@ -88,138 +114,23 @@ export function renderAuth() {
     } catch (err) {
       showError(err);
     }
-  });
-  const settingsBtn = makeButton("Settings", "secondary", () => {
+  }, "ws-menu-item--primary"));
+
+  _el.authRow.append(_menuSeparator());
+
+  _el.authRow.append(_menuItem(_wsIcons.settings, "Settings", () => {
     _el.workspaceMenu?.classList.add("hidden");
     openSettingsModal();
-  });
-  _el.authRow.append(loginBtn, settingsBtn);
-}
-
-// ---------------------------------------------------------------------------
-// Setup ticker — flag to prevent renderOnboarding from wiping during setup
-// ---------------------------------------------------------------------------
-let _setupInProgress = false;
-
-const SETUP_STEPS = [
-  { key: "repo", label: "Creating repository" },
-  { key: "pages", label: "Configuring GitHub Pages" },
-  { key: "deploy", label: "Deploying site files" },
-  { key: "trigger", label: "Triggering first build" },
-  { key: "poll", label: "Waiting for Pages to go live" },
-];
-
-const PAGES_POLL_STEPS = [
-  { key: "queued", label: "Queued for build" },
-  { key: "building", label: "Building site" },
-  { key: "deploying", label: "Deploying to Pages" },
-  { key: "built", label: "Live" },
-];
-
-/**
- * Creates a ticker element with scrolling step display.
- * @param {Array<{key:string,label:string}>} steps
- * @param {string} [initialActiveKey] — if provided, set to this position without animation
- * @returns {{ el: HTMLElement, advance(key:string):void, complete():void, fail(key:string, msg?:string):void }}
- */
-function createTicker(steps, initialActiveKey) {
-  const ROW_H = 20;
-  const ticker = document.createElement("div");
-  ticker.className = "publish-ticker publish-ticker--card";
-
-  const strip = document.createElement("div");
-  strip.className = "publish-ticker__strip";
-
-  const blank = document.createElement("div");
-  blank.className = "publish-ticker__row publish-ticker__row--blank";
-  blank.innerHTML = "&nbsp;";
-  strip.append(blank);
-
-  for (const step of steps) {
-    const row = document.createElement("div");
-    row.className = "publish-ticker__row publish-ticker__row--pending";
-    row.dataset.tickerStep = step.key;
-    row.innerHTML = `<span class="publish-ticker__icon">\u2022</span>${escapeHtml(step.label)}`;
-    strip.append(row);
-  }
-
-  const blankEnd = document.createElement("div");
-  blankEnd.className = "publish-ticker__row publish-ticker__row--blank";
-  blankEnd.innerHTML = "&nbsp;";
-  strip.append(blankEnd);
-
-  ticker.append(strip);
-
-  const _advance = (stepKey, animate) => {
-    const rows = strip.querySelectorAll("[data-ticker-step]");
-    let idx = -1;
-    for (let i = 0; i < rows.length; i++) {
-      if (rows[i].dataset.tickerStep === stepKey) { idx = i; break; }
-    }
-    if (idx < 0) return;
-    for (let i = 0; i < rows.length; i++) {
-      const row = rows[i];
-      row.classList.remove("publish-ticker__row--pending", "publish-ticker__row--active", "publish-ticker__row--done", "publish-ticker__row--error");
-      if (i < idx) {
-        row.classList.add("publish-ticker__row--done");
-        row.querySelector(".publish-ticker__icon").textContent = "\u2713";
-      } else if (i === idx) {
-        row.classList.add("publish-ticker__row--active");
-        row.querySelector(".publish-ticker__icon").innerHTML = `<span class="publish-ticker__spinner"></span>`;
-      } else {
-        row.classList.add("publish-ticker__row--pending");
-        row.querySelector(".publish-ticker__icon").textContent = "\u2022";
-      }
-    }
-    if (!animate) strip.style.transition = "none";
-    strip.style.transform = `translateY(${-idx * ROW_H}px)`;
-    if (!animate) requestAnimationFrame(() => { strip.style.transition = ""; });
-  };
-
-  if (initialActiveKey) _advance(initialActiveKey, false);
-
-  return {
-    el: ticker,
-    advance: (key) => _advance(key, true),
-    complete: () => {
-      const rows = strip.querySelectorAll("[data-ticker-step]");
-      for (const row of rows) {
-        row.classList.remove("publish-ticker__row--pending", "publish-ticker__row--active");
-        row.classList.add("publish-ticker__row--done");
-        row.querySelector(".publish-ticker__icon").textContent = "\u2713";
-      }
-      strip.style.transform = `translateY(${-(rows.length - 1) * ROW_H}px)`;
-    },
-    fail: (stepKey, message) => {
-      for (const row of strip.querySelectorAll("[data-ticker-step]")) {
-        if (row.dataset.tickerStep === stepKey) {
-          row.classList.remove("publish-ticker__row--active", "publish-ticker__row--pending");
-          row.classList.add("publish-ticker__row--error");
-          row.querySelector(".publish-ticker__icon").textContent = "\u2717";
-          if (message) {
-            const err = document.createElement("span");
-            err.className = "publish-ticker__error";
-            err.textContent = ` \u2014 ${message}`;
-            row.append(err);
-          }
-          break;
-        }
-      }
-    },
-  };
+  }));
 }
 
 // ---------------------------------------------------------------------------
 // renderOnboarding
 // ---------------------------------------------------------------------------
 export function renderOnboarding() {
-  if (_setupInProgress) return;
-
   const status = state.onboarding;
   _el.onboarding.innerHTML = "";
   if (!status) return;
-
-  const target = getSelectedTarget();
 
   // Device code display — shown during active login flow, hidden once authenticated
   if (state.loginFlow.beginData && !status.isAuthenticated) {
@@ -252,117 +163,6 @@ export function renderOnboarding() {
     card.append(heading, instruction, codeDisplay, copyBtn, link);
     _el.onboarding.append(card);
   }
-
-  // Onboarding steps — only show setup step when authenticated but not fully set up
-  if (!status.isAuthenticated) return;
-
-  const repoReady = status.repoReady;
-  const pagesReady = status.pagesReady;
-
-  // Target picker — always show when authenticated
-  const pickerContainer = document.createElement("div");
-  _el.onboarding.append(pickerContainer);
-  renderTargetPicker(pickerContainer);
-
-  // Setup Publishing card
-  const card = document.createElement("article");
-  card.className = "status-card";
-  const title = document.createElement("h3");
-  title.textContent = "Setup Publishing";
-  const body = document.createElement("p");
-  body.textContent = target ? `Target: ${target.login}` : "Pick a target first.";
-  card.append(title, body);
-
-  // Pages poll ticker — shown when poll is active (standalone, not during setup)
-  if (state.pagesPoll.active) {
-    const currentStatus = String(state.pagesPoll.status || "queued").toLowerCase();
-    const { el: tickerEl } = createTicker(PAGES_POLL_STEPS, currentStatus);
-    card.append(tickerEl);
-    if (state.pagesPoll.error) {
-      const errLine = document.createElement("p");
-      errLine.className = "error-line";
-      errLine.textContent = state.pagesPoll.error;
-      card.append(errLine);
-    }
-  } else if (target) {
-    const setupReady = repoReady && pagesReady;
-    const btn = makeButton(setupReady ? "Re-run Setup" : "Setup Publishing", setupReady ? "secondary" : "primary", async () => {
-      _setupInProgress = true;
-      btn.style.display = "none";
-      const triggeredAt = Date.now();
-
-      const tickerCtrl = createTicker(SETUP_STEPS);
-      card.append(tickerCtrl.el);
-
-      let currentStep = "repo";
-      try {
-        tickerCtrl.advance("repo");
-        currentStep = "repo";
-        await window.desktopApi.setupRepoPages(target.login, target.type);
-
-        tickerCtrl.advance("pages");
-        currentStep = "pages";
-        await delay(400);
-
-        tickerCtrl.advance("deploy");
-        currentStep = "deploy";
-        await delay(400);
-
-        tickerCtrl.advance("trigger");
-        currentStep = "trigger";
-        await delay(300);
-
-        tickerCtrl.advance("poll");
-        currentStep = "poll";
-        await runPagesBuildPoll(triggeredAt);
-
-        tickerCtrl.complete();
-        await delay(600);
-
-        _setupInProgress = false;
-        await _callbacks.refreshOnboardingStatus();
-        render();
-      } catch (err) {
-        tickerCtrl.fail(currentStep, err.message);
-        _setupInProgress = false;
-        btn.style.display = "";
-      }
-    });
-    btn.classList.add("mt-8");
-    card.append(btn);
-  }
-  _el.onboarding.append(card);
-}
-
-// ---------------------------------------------------------------------------
-// renderTargetPicker
-// ---------------------------------------------------------------------------
-export function renderTargetPicker(container) {
-  if (!container || !state.targets.length) return;
-  const wrap = document.createElement("div");
-  wrap.className = "target-picker";
-  const label = document.createElement("label");
-  label.textContent = "Repository owner";
-  const host = document.createElement("div");
-  renderCustomSelect(host, {
-    value: state.selectedTarget?.login || state.targets[0]?.login || "",
-    className: "cselect--target",
-    options: state.targets.map((target) => ({
-      value: target.login,
-      label: target.login,
-      meta: String(target.type || "").toUpperCase(),
-      iconText: target.type === "org" ? "O" : "U",
-    })),
-    placeholder: "Select owner",
-    onChange: (login) => {
-      state.selectedTarget = state.targets.find((target) => target.login === String(login)) || null;
-      render();
-    },
-  });
-  label.append(host);
-  wrap.append(label);
-  container.innerHTML = "";
-  container.append(wrap);
 }
 
 // ---------------------------------------------------------------------------
