@@ -111,26 +111,21 @@ class StatusDisplay {
   }
 
   _render() {
-    const lines = [];
     const w = Math.min(process.stdout.columns || 80, 78);
+    const termRows = process.stdout.rows || 40;
     const hbar = GRAY + "\u2500".repeat(w) + RESET;
     const thickbar = GRAY + "\u2550".repeat(w) + RESET;
 
-    // Header
-    const elapsed = this._formatTime(this._elapsed());
-    lines.push("");
-    lines.push(`  ${BOLD}${CYAN}Wiki Audit${RESET}${" ".repeat(Math.max(1, w - 14 - elapsed.length))}${DIM}${elapsed}${RESET}`);
-    lines.push(thickbar);
+    const lines = [];
 
-    // Progress bar
+    // Header + progress (compact: 3 lines)
+    const elapsed = this._formatTime(this._elapsed());
     const eta = this._eta();
-    lines.push("");
+    lines.push(`  ${BOLD}${CYAN}Wiki Audit${RESET}${" ".repeat(Math.max(1, w - 14 - elapsed.length))}${DIM}${elapsed}${RESET}`);
     lines.push(`  ${this._progressBar()}  ${DIM}${eta}${RESET}`);
-    lines.push("");
     lines.push(hbar);
 
-    // Workers
-    lines.push("");
+    // Workers (compact: 1 header + N workers)
     lines.push(`  ${BOLD}Workers${RESET}`);
     for (let i = 0; i < this.workerCount; i++) {
       const status = this.workerStatus[i] || "idle";
@@ -140,43 +135,37 @@ class StatusDisplay {
       const name = isIdle ? `${GRAY}${status}${RESET}` : `${WHITE}${status}${RESET}`;
       lines.push(`  ${dot} ${label} ${_truncate(name, w - 10)}`);
     }
-    lines.push("");
     lines.push(hbar);
 
-    // Stats — two rows for breathing room
-    lines.push("");
+    // Stats (compact: 1 line if it fits, 2 otherwise)
     const s = this.summary;
-    lines.push(
-      `  ${GREEN}\u2713${RESET} ${BOLD}${GREEN}${s.matches}${RESET} ${DIM}match${RESET}` +
-      `     ${RED}\u2717${RESET} ${BOLD}${RED}${s.mismatches}${RESET} ${DIM}mismatch${RESET}` +
-      `     ${YELLOW}\u25cc${RESET} ${BOLD}${YELLOW}${s.missing_from_splits}${RESET} ${DIM}missing(splits)${RESET}`
-    );
-    lines.push(
-      `  ${YELLOW}\u25cc${RESET} ${BOLD}${YELLOW}${s.missing_from_wiki}${RESET} ${DIM}missing(wiki)${RESET}` +
-      `  ${GRAY}\u2500${RESET} ${GRAY}${s.no_split}${RESET} ${DIM}no split${RESET}` +
-      `     ${GRAY}!${RESET} ${GRAY}${s.errors}${RESET} ${DIM}errors${RESET}`
-    );
-    lines.push("");
+    const statsLine =
+      `  ${GREEN}\u2713${RESET}${GREEN}${s.matches}${RESET}${DIM}ok${RESET}` +
+      `  ${RED}\u2717${RESET}${RED}${s.mismatches}${RESET}${DIM}mis${RESET}` +
+      `  ${YELLOW}\u25cc${RESET}${YELLOW}${s.missing_from_splits}${RESET}${DIM}ms${RESET}` +
+      `  ${YELLOW}\u25cc${RESET}${YELLOW}${s.missing_from_wiki}${RESET}${DIM}mw${RESET}` +
+      `  ${GRAY}\u2500${RESET}${GRAY}${s.no_split}${RESET}${DIM}skip${RESET}` +
+      `  ${GRAY}!${RESET}${GRAY}${s.errors}${RESET}${DIM}err${RESET}`;
+    lines.push(statsLine);
     lines.push(hbar);
 
-    // Recent findings
-    if (this.recent.length > 0) {
-      lines.push("");
+    // Recent findings — fill remaining terminal space
+    const recentBudget = termRows - lines.length - 2; // 2 for bottom bar + safety
+    if (this.recent.length > 0 && recentBudget > 1) {
       lines.push(`  ${BOLD}Recent Findings${RESET}`);
-      lines.push("");
-      for (const r of this.recent) {
+      const showCount = Math.min(this.recent.length, recentBudget - 1);
+      for (let i = 0; i < showCount; i++) {
+        const r = this.recent[i];
         const icon = `${r.color}${r.icon}${RESET}`;
         const label = `${r.color}${BOLD}${r.label.padEnd(11)}${RESET}`;
         lines.push(`  ${icon} ${label} ${_truncate(r.text, w - 17)}`);
       }
     }
 
-    lines.push("");
     lines.push(thickbar);
 
-    // Move cursor to home and write all lines
+    // Render: move cursor home and write all lines, clear remainder
     let output = CURSOR_HOME;
-    const termRows = process.stdout.rows || 40;
     for (let i = 0; i < termRows; i++) {
       if (i < lines.length) {
         output += lines[i] + CLEAR_LINE + "\n";
