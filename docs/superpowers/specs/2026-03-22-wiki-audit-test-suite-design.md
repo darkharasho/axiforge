@@ -81,7 +81,7 @@ Read `lib/gw2-balance-splits/data/splits.json` and index by entity type + ID for
 
 ### 3. Launch Playwright
 
-Single Chromium instance, single page. No parallelism — sequential page loads with rate limiting.
+Single Chromium instance, single page. No parallelism — sequential page loads.
 
 ### 4. Crawl each entity
 
@@ -97,7 +97,6 @@ For each skill and trait (by name from the GW2 API):
 5. If no toggle exists:
    - Extract base facts (no WvW split on wiki for this entity)
    - Record that wiki shows no split
-6. Rate limit: wait 200ms minimum between page loads
 
 ### 5. Compare
 
