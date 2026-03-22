@@ -57,6 +57,7 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "audit:wiki": "node tests/wiki-audit/run-audit.js",
+    "audit:wiki:fix": "node tests/wiki-audit/fix-splits.js",
     "build:app": "npm run build:site && npm run build:renderer && electron-builder --publish never",
     "build:app:linux": "npm run build:site && npm run build:renderer && electron-builder --linux --publish never",
     "build:app:win": "npm run build:site && npm run build:renderer && electron-builder --win --publish never"

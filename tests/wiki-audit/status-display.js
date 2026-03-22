@@ -137,16 +137,18 @@ class StatusDisplay {
     }
     lines.push(hbar);
 
-    // Stats (compact: 1 line if it fits, 2 otherwise)
+    // Stats — two rows for readability
     const s = this.summary;
-    const statsLine =
-      `  ${GREEN}\u2713${RESET}${GREEN}${s.matches}${RESET}${DIM}ok${RESET}` +
-      `  ${RED}\u2717${RESET}${RED}${s.mismatches}${RESET}${DIM}mis${RESET}` +
-      `  ${YELLOW}\u25cc${RESET}${YELLOW}${s.missing_from_splits}${RESET}${DIM}ms${RESET}` +
-      `  ${YELLOW}\u25cc${RESET}${YELLOW}${s.missing_from_wiki}${RESET}${DIM}mw${RESET}` +
-      `  ${GRAY}\u2500${RESET}${GRAY}${s.no_split}${RESET}${DIM}skip${RESET}` +
-      `  ${GRAY}!${RESET}${GRAY}${s.errors}${RESET}${DIM}err${RESET}`;
-    lines.push(statsLine);
+    lines.push(
+      `  ${GREEN}\u2713 ${s.matches}${RESET} ${DIM}match${RESET}` +
+      `     ${RED}\u2717 ${s.mismatches}${RESET} ${DIM}mismatch${RESET}` +
+      `     ${GRAY}\u2500 ${s.no_split}${RESET} ${DIM}no split${RESET}`,
+    );
+    lines.push(
+      `  ${YELLOW}\u25cc ${s.missing_from_splits}${RESET} ${DIM}missing(splits)${RESET}` +
+      `  ${YELLOW}\u25cc ${s.missing_from_wiki}${RESET} ${DIM}missing(wiki)${RESET}` +
+      `  ${GRAY}! ${s.errors}${RESET} ${DIM}errors${RESET}`,
+    );
     lines.push(hbar);
 
     // Recent findings — fill remaining terminal space
