@@ -189,6 +189,21 @@
     border-bottom:1px solid #161b22;
   }
 
+  /* ── Detail tables (structured view below the diff) ────── */
+  .diff-detail-table{width:100%;border-collapse:collapse;margin-bottom:.4rem}
+  .diff-detail-table th{
+    font-size:.65rem;padding:.3rem .5rem;
+    background:#161b22;border-bottom:1px solid #21262d;
+    text-align:left;position:static;
+  }
+  .diff-detail-table td{
+    padding:.3rem .5rem;font-size:.75rem;border-bottom:1px solid #161b22;
+  }
+  .val-wiki{color:#f85149}
+  .val-splits{color:#3fb950}
+  .fact-text{color:#c9d1d9;font-weight:500}
+  .fact-type{color:#8b949e;font-size:.68rem}
+
   .error-msg{
     font-size:.8rem;color:#f85149;
     background:rgba(248,81,73,.08);padding:.4rem .6rem;border-radius:4px;
@@ -448,6 +463,7 @@
   }
 
   const VALUE_FIELDS = ["value","duration","apply_count","dmg_multiplier","hit_count","coefficient","distance","percent"];
+  const FACT_FIELDS = ["type","text","status","target","source",...VALUE_FIELDS];
 
   function buildDetail(entry){
     if(entry.err){
@@ -456,15 +472,67 @@
     const d = entry.disc;
     if(!d) return '<span style="color:#484f58">No details available.</span>';
 
+    let html = "";
+
+    // ── Git-style side-by-side diff ──
     const wikiFacts = d.wiki_wvw_facts || d.wiki_facts || [];
     const splitsFacts = d.splits_wvw_facts || [];
 
-    // If we have both sides, render a unified side-by-side diff
     if(wikiFacts.length || splitsFacts.length){
-      return renderUnifiedDiff(wikiFacts, splitsFacts);
+      html += renderUnifiedDiff(wikiFacts, splitsFacts);
     }
 
-    return '<span style="color:#484f58">No fact data available.</span>';
+    // ── Structured fact tables (detailed view) ──
+    if(d.wiki_only_facts && d.wiki_only_facts.length){
+      html += '<div class="detail-section"><h4>Wiki-only Facts <span style="font-size:.65rem;color:#484f58;text-transform:none">(on wiki, not in splits.json)</span></h4>';
+      html += renderFactTable(d.wiki_only_facts, "val-wiki");
+      html += '</div>';
+    }
+    if(d.splits_only_facts && d.splits_only_facts.length){
+      html += '<div class="detail-section"><h4>Splits-only Facts <span style="font-size:.65rem;color:#484f58;text-transform:none">(in splits.json, not on wiki)</span></h4>';
+      html += renderFactTable(d.splits_only_facts, "val-splits");
+      html += '</div>';
+    }
+    if(d.fact_diffs && d.fact_diffs.length){
+      html += '<div class="detail-section"><h4>Field Diffs</h4>';
+      html += '<table class="diff-detail-table"><thead><tr><th>Fact</th><th>Field</th><th style="color:#f85149">Wiki</th><th style="color:#3fb950">Splits</th></tr></thead><tbody>';
+      for(const fd of d.fact_diffs){
+        const factLabel = esc(fd.text || "") + (fd.type ? ' <span class="fact-type">(' + esc(fd.type) + ')</span>' : "");
+        const fields = fd.fields || {};
+        const keys = Object.keys(fields);
+        for(let i = 0; i < keys.length; i++){
+          const k = keys[i], v = fields[k];
+          html += '<tr>';
+          html += i === 0 ? '<td rowspan="' + keys.length + '" class="fact-text">' + factLabel + '</td>' : '';
+          html += '<td>' + esc(k) + '</td>';
+          html += '<td style="color:#f85149">' + formatVal(v.wiki) + '</td>';
+          html += '<td style="color:#3fb950">' + formatVal(v.splits) + '</td>';
+          html += '</tr>';
+        }
+      }
+      html += '</tbody></table></div>';
+    }
+
+    if(!html) html = '<span style="color:#484f58">No fact data available.</span>';
+    return html;
+  }
+
+  function renderFactTable(facts, colorClass){
+    const presentFields = FACT_FIELDS.filter(f => facts.some(fact => fact[f] !== undefined));
+    if(!presentFields.length) return '<span style="color:#484f58">No field data</span>';
+    let html = '<table class="diff-detail-table"><thead><tr>';
+    for(const f of presentFields) html += '<th>' + esc(f) + '</th>';
+    html += '</tr></thead><tbody>';
+    for(const fact of facts){
+      html += '<tr>';
+      for(const f of presentFields){
+        const cls = (f === "text" || f === "type" || f === "status") ? "fact-text" : colorClass;
+        html += '<td class="' + cls + '">' + formatVal(fact[f]) + '</td>';
+      }
+      html += '</tr>';
+    }
+    html += '</tbody></table>';
+    return html;
   }
 
   /**
