@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wiki Audit Report Viewer</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html{font-size:14px}
+  body{
+    font-family:'SF Mono','Cascadia Code','Consolas','Liberation Mono',monospace;
+    background:#0d1117;color:#c9d1d9;min-height:100vh;
+    display:flex;flex-direction:column;
+  }
+
+  /* ── Drop zone ────────────────────────────────────────────── */
+  #drop-zone{
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    flex:1;gap:1rem;padding:3rem;
+    border:2px dashed #30363d;border-radius:8px;margin:2rem;
+    transition:border-color .2s,background .2s;
+    cursor:pointer;
+  }
+  #drop-zone.hover{border-color:#58a6ff;background:rgba(88,166,255,.06)}
+  #drop-zone h1{font-size:1.4rem;font-weight:600;color:#e6edf3}
+  #drop-zone p{color:#8b949e;font-size:.85rem}
+  #drop-zone input[type=file]{display:none}
+  #drop-zone button{
+    padding:.5rem 1.2rem;border:1px solid #30363d;border-radius:6px;
+    background:#21262d;color:#c9d1d9;font-family:inherit;font-size:.85rem;
+    cursor:pointer;transition:background .15s;
+  }
+  #drop-zone button:hover{background:#30363d}
+
+  /* ── Report view ──────────────────────────────────────────── */
+  #report{display:none;padding:1rem 1.5rem 2rem}
+
+  /* Header */
+  .report-header{
+    display:flex;flex-wrap:wrap;align-items:center;gap:.75rem;
+    margin-bottom:1rem;
+  }
+  .report-header h1{font-size:1.1rem;font-weight:600;color:#e6edf3;margin-right:auto}
+  .report-meta{font-size:.75rem;color:#8b949e}
+  .btn-reset{
+    padding:.35rem .8rem;border:1px solid #30363d;border-radius:6px;
+    background:#21262d;color:#c9d1d9;font-family:inherit;font-size:.75rem;
+    cursor:pointer;
+  }
+  .btn-reset:hover{background:#30363d}
+
+  /* ── Summary bar ──────────────────────────────────────────── */
+  .summary{
+    display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:1rem;
+  }
+  .stat{
+    padding:.5rem .85rem;border-radius:6px;
+    font-size:.8rem;line-height:1.3;
+    border:1px solid transparent;
+    min-width:7rem;
+  }
+  .stat .label{display:block;font-size:.65rem;text-transform:uppercase;letter-spacing:.04em;opacity:.7;margin-bottom:.15rem}
+  .stat .value{font-size:1.3rem;font-weight:700}
+
+  .stat-checked  {background:#161b22;border-color:#30363d;color:#c9d1d9}
+  .stat-match    {background:rgba(63,185,80,.1);border-color:rgba(63,185,80,.3);color:#3fb950}
+  .stat-mismatch {background:rgba(248,81,73,.1);border-color:rgba(248,81,73,.3);color:#f85149}
+  .stat-missing-s{background:rgba(210,153,34,.1);border-color:rgba(210,153,34,.3);color:#d29922}
+  .stat-missing-w{background:rgba(210,153,34,.1);border-color:rgba(210,153,34,.3);color:#d29922}
+  .stat-no-split {background:#161b22;border-color:#30363d;color:#8b949e}
+  .stat-error    {background:rgba(139,148,158,.1);border-color:rgba(139,148,158,.3);color:#8b949e}
+
+  /* ── Toolbar ──────────────────────────────────────────────── */
+  .toolbar{
+    display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;
+    margin-bottom:.75rem;
+  }
+  .search-box{
+    padding:.4rem .6rem;border:1px solid #30363d;border-radius:6px;
+    background:#0d1117;color:#c9d1d9;font-family:inherit;font-size:.8rem;
+    width:16rem;
+  }
+  .search-box::placeholder{color:#484f58}
+  .search-box:focus{outline:none;border-color:#58a6ff}
+
+  .filter-group{display:flex;gap:.3rem}
+  .filter-btn{
+    padding:.35rem .7rem;border:1px solid #30363d;border-radius:6px;
+    background:#21262d;color:#8b949e;font-family:inherit;font-size:.72rem;
+    cursor:pointer;transition:all .15s;user-select:none;
+  }
+  .filter-btn:hover{border-color:#484f58;color:#c9d1d9}
+  .filter-btn.active{color:#e6edf3;font-weight:600}
+  .filter-btn.active[data-cat=all]          {border-color:#58a6ff;background:rgba(88,166,255,.12);color:#58a6ff}
+  .filter-btn.active[data-cat=mismatch]     {border-color:#f85149;background:rgba(248,81,73,.12);color:#f85149}
+  .filter-btn.active[data-cat=missing_from_splits]{border-color:#d29922;background:rgba(210,153,34,.12);color:#d29922}
+  .filter-btn.active[data-cat=missing_from_wiki]  {border-color:#d29922;background:rgba(210,153,34,.12);color:#d29922}
+  .filter-btn.active[data-cat=error]        {border-color:#8b949e;background:rgba(139,148,158,.12);color:#8b949e}
+
+  .results-count{margin-left:auto;font-size:.72rem;color:#484f58}
+
+  /* ── Table ────────────────────────────────────────────────── */
+  .table-wrap{overflow-x:auto}
+  table{width:100%;border-collapse:collapse}
+  th{
+    text-align:left;padding:.5rem .6rem;
+    font-size:.7rem;text-transform:uppercase;letter-spacing:.04em;
+    color:#8b949e;border-bottom:1px solid #21262d;
+    position:sticky;top:0;background:#0d1117;z-index:1;
+  }
+  td{padding:.45rem .6rem;border-bottom:1px solid #161b22;font-size:.8rem;vertical-align:top}
+
+  tr.disc-row{cursor:pointer;transition:background .12s}
+  tr.disc-row:hover{background:#161b22}
+
+  .badge{
+    display:inline-block;padding:.15rem .45rem;border-radius:4px;
+    font-size:.68rem;font-weight:600;line-height:1.3;
+  }
+  .badge-mismatch{background:rgba(248,81,73,.15);color:#f85149}
+  .badge-missing_from_splits{background:rgba(210,153,34,.15);color:#d29922}
+  .badge-missing_from_wiki{background:rgba(210,153,34,.15);color:#d29922}
+  .badge-error{background:rgba(139,148,158,.15);color:#8b949e}
+
+  .entity-link{color:#58a6ff;text-decoration:none}
+  .entity-link:hover{text-decoration:underline}
+
+  .type-badge{
+    display:inline-block;padding:.1rem .4rem;border-radius:3px;
+    font-size:.65rem;background:#21262d;color:#8b949e;text-transform:uppercase;
+  }
+
+  .expand-icon{
+    display:inline-block;width:1rem;text-align:center;
+    color:#484f58;font-size:.75rem;transition:transform .15s;margin-right:.3rem;
+  }
+  tr.disc-row.expanded .expand-icon{transform:rotate(90deg)}
+
+  /* ── Detail row ───────────────────────────────────────────── */
+  tr.detail-row{display:none;background:#0d1117}
+  tr.detail-row.visible{display:table-row}
+  .detail-cell{padding:.6rem .6rem .8rem 2.2rem}
+
+  .detail-section{margin-bottom:.6rem}
+  .detail-section h4{font-size:.72rem;color:#8b949e;margin-bottom:.3rem;text-transform:uppercase;letter-spacing:.03em}
+
+  .diff-table{width:100%;border-collapse:collapse;margin-bottom:.4rem}
+  .diff-table th{
+    font-size:.65rem;padding:.3rem .5rem;
+    background:#161b22;border-bottom:1px solid #21262d;
+    position:static;
+  }
+  .diff-table td{
+    padding:.3rem .5rem;font-size:.75rem;border-bottom:1px solid #161b22;
+  }
+  .val-wiki{color:#f85149}
+  .val-splits{color:#3fb950}
+  .fact-text{color:#c9d1d9;font-weight:500}
+  .fact-type{color:#8b949e;font-size:.68rem}
+
+  .only-fact{
+    padding:.25rem .5rem;font-size:.75rem;
+    background:#161b22;border-radius:4px;margin-bottom:.2rem;
+  }
+
+  .error-msg{
+    font-size:.8rem;color:#f85149;
+    background:rgba(248,81,73,.08);padding:.4rem .6rem;border-radius:4px;
+  }
+
+  /* ── Empty state ──────────────────────────────────────────── */
+  .empty-state{text-align:center;padding:3rem 1rem;color:#484f58;font-size:.85rem}
+</style>
+</head>
+<body>
+
+<!-- Drop zone / file picker -->
+<div id="drop-zone">
+  <h1>Wiki Audit Report Viewer</h1>
+  <p>Drop a JSON audit report here, or click to browse</p>
+  <button id="browse-btn">Choose File</button>
+  <input type="file" id="file-input" accept=".json,application/json">
+</div>
+
+<!-- Report view -->
+<div id="report">
+  <div class="report-header">
+    <h1>Audit Report</h1>
+    <span class="report-meta" id="report-meta"></span>
+    <button class="btn-reset" id="btn-reset">Load Another</button>
+  </div>
+
+  <!-- Summary -->
+  <div class="summary" id="summary"></div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <input class="search-box" id="search" type="text" placeholder="Search by name...">
+    <div class="filter-group" id="filters">
+      <button class="filter-btn active" data-cat="all">All</button>
+      <button class="filter-btn" data-cat="mismatch">Mismatch</button>
+      <button class="filter-btn" data-cat="missing_from_splits">Missing from Splits</button>
+      <button class="filter-btn" data-cat="missing_from_wiki">Missing from Wiki</button>
+      <button class="filter-btn" data-cat="error">Error</button>
+    </div>
+    <span class="results-count" id="results-count"></span>
+  </div>
+
+  <!-- Table -->
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:2.5rem"></th>
+          <th>Type</th>
+          <th>Name</th>
+          <th>Category</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+  <div class="empty-state" id="empty-state" style="display:none">No results match your filters.</div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ── DOM refs ───────────────────────────────────────────────
+  const dropZone   = document.getElementById("drop-zone");
+  const fileInput  = document.getElementById("file-input");
+  const browseBtn  = document.getElementById("browse-btn");
+  const reportEl   = document.getElementById("report");
+  const summaryEl  = document.getElementById("summary");
+  const metaEl     = document.getElementById("report-meta");
+  const resetBtn   = document.getElementById("btn-reset");
+  const searchEl   = document.getElementById("search");
+  const filtersEl  = document.getElementById("filters");
+  const tbodyEl    = document.getElementById("tbody");
+  const countEl    = document.getElementById("results-count");
+  const emptyEl    = document.getElementById("empty-state");
+
+  let data = null;       // parsed report
+  let rows = [];         // { mainTr, detailTr, cat, name }
+  let activeFilter = "all";
+
+  // ── File loading ───────────────────────────────────────────
+  browseBtn.addEventListener("click", () => fileInput.click());
+  fileInput.addEventListener("change", e => { if(e.target.files[0]) loadFile(e.target.files[0]); });
+
+  dropZone.addEventListener("dragover", e => { e.preventDefault(); dropZone.classList.add("hover"); });
+  dropZone.addEventListener("dragleave", () => dropZone.classList.remove("hover"));
+  dropZone.addEventListener("drop", e => {
+    e.preventDefault(); dropZone.classList.remove("hover");
+    const f = e.dataTransfer.files[0];
+    if(f) loadFile(f);
+  });
+  dropZone.addEventListener("click", e => {
+    if(e.target === browseBtn) return;
+    fileInput.click();
+  });
+
+  resetBtn.addEventListener("click", () => {
+    reportEl.style.display = "none";
+    dropZone.style.display = "flex";
+    fileInput.value = "";
+    data = null; rows = []; activeFilter = "all";
+    tbodyEl.innerHTML = "";
+    summaryEl.innerHTML = "";
+    searchEl.value = "";
+    document.querySelectorAll(".filter-btn").forEach(b => b.classList.toggle("active", b.dataset.cat === "all"));
+  });
+
+  function loadFile(file){
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        data = JSON.parse(e.target.result);
+        render();
+        dropZone.style.display = "none";
+        reportEl.style.display = "block";
+      } catch(err) {
+        alert("Failed to parse JSON:\n" + err.message);
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  // ── Render ─────────────────────────────────────────────────
+  function render(){
+    renderMeta();
+    renderSummary();
+    renderTable();
+    applyFilters();
+  }
+
+  function renderMeta(){
+    const parts = [];
+    if(data.timestamp){
+      const d = new Date(data.timestamp);
+      parts.push(d.toLocaleString());
+    }
+    if(data.duration_ms != null){
+      const s = (data.duration_ms / 1000).toFixed(1);
+      parts.push(s + "s");
+    }
+    metaEl.textContent = parts.join("  |  ");
+  }
+
+  function renderSummary(){
+    const s = data.summary || {};
+    const items = [
+      { label:"Checked",          value:s.total_checked       ?? 0, cls:"stat-checked" },
+      { label:"Matches",          value:s.matches             ?? 0, cls:"stat-match" },
+      { label:"Mismatches",       value:s.mismatches          ?? 0, cls:"stat-mismatch" },
+      { label:"Missing (Splits)", value:s.missing_from_splits ?? 0, cls:"stat-missing-s" },
+      { label:"Missing (Wiki)",   value:s.missing_from_wiki   ?? 0, cls:"stat-missing-w" },
+      { label:"No Split",         value:s.no_split            ?? 0, cls:"stat-no-split" },
+      { label:"Errors",           value:s.errors              ?? 0, cls:"stat-error" },
+    ];
+    summaryEl.innerHTML = items.map(i =>
+      '<div class="stat ' + i.cls + '"><span class="label">' + esc(i.label) + '</span><span class="value">' + i.value + '</span></div>'
+    ).join("");
+  }
+
+  function renderTable(){
+    tbodyEl.innerHTML = "";
+    rows = [];
+
+    // Combine discrepancies + errors into a unified list
+    const entries = [];
+
+    if(data.discrepancies){
+      for(const d of data.discrepancies){
+        entries.push({ type: d.entity_type, id: d.id, name: d.name, url: d.wiki_url, cat: d.category, disc: d, err: null });
+      }
+    }
+    if(data.errors){
+      for(const e of data.errors){
+        // Avoid duplicating if already in discrepancies with same id + error category
+        const dup = entries.find(x => x.id === e.id && x.cat === "error");
+        if(!dup){
+          entries.push({ type: e.entity_type, id: e.id, name: e.name, url: e.wiki_url, cat: "error", disc: null, err: e });
+        }
+      }
+    }
+
+    for(const entry of entries){
+      const mainTr  = document.createElement("tr");
+      mainTr.className = "disc-row";
+
+      const detailTr = document.createElement("tr");
+      detailTr.className = "detail-row";
+
+      // Main row cells
+      mainTr.innerHTML =
+        '<td><span class="expand-icon">&#9654;</span></td>' +
+        '<td><span class="type-badge">' + esc(entry.type || "?") + '</span></td>' +
+        '<td>' + (entry.url
+          ? '<a class="entity-link" href="' + esc(entry.url) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()">' + esc(entry.name) + '</a>'
+          : esc(entry.name || "ID " + entry.id)) +
+        ' <span style="color:#484f58;font-size:.68rem">#' + entry.id + '</span></td>' +
+        '<td><span class="badge badge-' + esc(entry.cat) + '">' + esc(formatCat(entry.cat)) + '</span></td>';
+
+      // Detail row
+      const detailTd = document.createElement("td");
+      detailTd.className = "detail-cell";
+      detailTd.colSpan = 4;
+      detailTd.innerHTML = buildDetail(entry);
+      detailTr.appendChild(detailTd);
+
+      // Toggle
+      mainTr.addEventListener("click", () => {
+        const open = mainTr.classList.toggle("expanded");
+        detailTr.classList.toggle("visible", open);
+      });
+
+      tbodyEl.appendChild(mainTr);
+      tbodyEl.appendChild(detailTr);
+
+      rows.push({ mainTr, detailTr, cat: entry.cat, name: (entry.name || "").toLowerCase() });
+    }
+  }
+
+  function buildDetail(entry){
+    if(entry.err){
+      return '<div class="error-msg">' + esc(entry.err.error || "Unknown error") + '</div>';
+    }
+    const d = entry.disc;
+    if(!d) return '<span style="color:#484f58">No details available.</span>';
+
+    let html = "";
+
+    // Fact diffs
+    if(d.fact_diffs && d.fact_diffs.length){
+      html += '<div class="detail-section"><h4>Fact Diffs</h4>';
+      html += '<table class="diff-table"><thead><tr><th>Fact</th><th>Field</th><th>Wiki Value</th><th>Splits Value</th></tr></thead><tbody>';
+      for(const fd of d.fact_diffs){
+        const factLabel = esc(fd.text || "") + (fd.type ? ' <span class="fact-type">(' + esc(fd.type) + ')</span>' : "");
+        const fields = fd.fields || {};
+        const keys = Object.keys(fields);
+        if(keys.length === 0){
+          html += '<tr><td>' + factLabel + '</td><td colspan="3" style="color:#484f58">No field details</td></tr>';
+        } else {
+          for(let i = 0; i < keys.length; i++){
+            const k = keys[i];
+            const v = fields[k];
+            html += '<tr>';
+            html += i === 0 ? '<td rowspan="' + keys.length + '">' + factLabel + '</td>' : '';
+            html += '<td>' + esc(k) + '</td>';
+            html += '<td class="val-wiki">' + formatVal(v.wiki) + '</td>';
+            html += '<td class="val-splits">' + formatVal(v.splits) + '</td>';
+            html += '</tr>';
+          }
+        }
+      }
+      html += '</tbody></table></div>';
+    }
+
+    // Wiki-only facts
+    if(d.wiki_only_facts && d.wiki_only_facts.length){
+      html += '<div class="detail-section"><h4>Wiki-only Facts</h4>';
+      for(const f of d.wiki_only_facts){
+        html += '<div class="only-fact">' + esc(factSummary(f)) + '</div>';
+      }
+      html += '</div>';
+    }
+
+    // Splits-only facts
+    if(d.splits_only_facts && d.splits_only_facts.length){
+      html += '<div class="detail-section"><h4>Splits-only Facts</h4>';
+      for(const f of d.splits_only_facts){
+        html += '<div class="only-fact">' + esc(factSummary(f)) + '</div>';
+      }
+      html += '</div>';
+    }
+
+    if(!html) html = '<span style="color:#484f58">No details available.</span>';
+    return html;
+  }
+
+  // ── Filters & search ──────────────────────────────────────
+  filtersEl.addEventListener("click", e => {
+    const btn = e.target.closest(".filter-btn");
+    if(!btn) return;
+    activeFilter = btn.dataset.cat;
+    filtersEl.querySelectorAll(".filter-btn").forEach(b => b.classList.toggle("active", b === btn));
+    applyFilters();
+  });
+
+  searchEl.addEventListener("input", () => applyFilters());
+
+  function applyFilters(){
+    const q = searchEl.value.trim().toLowerCase();
+    let visible = 0;
+    for(const r of rows){
+      const catOk = activeFilter === "all" || r.cat === activeFilter;
+      const nameOk = !q || r.name.includes(q);
+      const show = catOk && nameOk;
+      r.mainTr.style.display = show ? "" : "none";
+      // Collapse hidden rows
+      if(!show){
+        r.mainTr.classList.remove("expanded");
+        r.detailTr.classList.remove("visible");
+      }
+      r.detailTr.style.display = show && r.detailTr.classList.contains("visible") ? "" : "none";
+      if(show) visible++;
+    }
+    countEl.textContent = visible + " of " + rows.length + " entries";
+    emptyEl.style.display = visible === 0 && rows.length > 0 ? "" : "none";
+  }
+
+  // ── Helpers ────────────────────────────────────────────────
+  function esc(s){
+    if(s == null) return "";
+    return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  }
+
+  function formatVal(v){
+    if(v === undefined || v === null) return '<span style="color:#484f58">--</span>';
+    if(typeof v === "object") return esc(JSON.stringify(v));
+    return esc(String(v));
+  }
+
+  function formatCat(cat){
+    return (cat || "").replace(/_/g, " ");
+  }
+
+  function factSummary(f){
+    if(typeof f === "string") return f;
+    const parts = [];
+    if(f.text) parts.push(f.text);
+    if(f.type) parts.push("(" + f.type + ")");
+    return parts.join(" ") || JSON.stringify(f);
+  }
+})();
+</script>
+</body>
+</html>
