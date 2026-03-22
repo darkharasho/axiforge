@@ -6,7 +6,8 @@
  *   npm run audit:wiki
  *   npm run audit:wiki -- --skip 100
  *   npm run audit:wiki -- --limit 10
- *   npm run audit:wiki -- --skip 100 --limit 50
+ *   npm run audit:wiki -- --workers 6
+ *   npm run audit:wiki -- --skip 100 --limit 50 --workers 4
  */
 
 const { chromium } = require("playwright");
@@ -19,17 +20,19 @@ const { writeReport } = require("./report");
 
 const GW2_API = "https://api.guildwars2.com/v2";
 const SPLITS_PATH = path.join(__dirname, "../../lib/gw2-balance-splits/data/splits.json");
+const DEFAULT_WORKERS = 4;
 
 // ── CLI args ──
 
 function parseArgs() {
   const args = process.argv.slice(2);
-  let skip = 0, limit = Infinity;
+  let skip = 0, limit = Infinity, workers = DEFAULT_WORKERS;
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--skip" && args[i + 1]) skip = parseInt(args[i + 1], 10);
     if (args[i] === "--limit" && args[i + 1]) limit = parseInt(args[i + 1], 10);
+    if (args[i] === "--workers" && args[i + 1]) workers = parseInt(args[i + 1], 10);
   }
-  return { skip, limit };
+  return { skip, limit, workers: Math.max(1, Math.min(workers, 10)) };
 }
 
 // ── Progress bar (matches seed.js style) ──
@@ -63,10 +66,105 @@ async function fetchByIds(endpoint, ids) {
   return results;
 }
 
+// ── Worker pool ──
+
+/**
+ * Process entities across N browser contexts in parallel.
+ * Each worker gets its own browser context + page, pulls entities
+ * from a shared queue, and pushes results to shared arrays.
+ */
+async function crawlWithWorkers(browser, entities, splitsIndex, workerCount) {
+  const summary = {
+    skills_checked: 0, traits_checked: 0, total_checked: 0,
+    matches: 0, mismatches: 0, missing_from_splits: 0,
+    missing_from_wiki: 0, no_split: 0, errors: 0,
+  };
+  const discrepancies = [];
+  const errors = [];
+
+  let nextIndex = 0;       // shared cursor into entities array
+  let completed = 0;       // total completed (for progress bar)
+  const total = entities.length;
+
+  async function worker(workerId) {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+
+    while (true) {
+      // Atomically grab the next entity
+      const idx = nextIndex++;
+      if (idx >= total) break;
+
+      const entity = entities[idx];
+      const entityType = entity.type;
+
+      // Crawl
+      const crawlResult = await crawlEntity(page, entity, entityType);
+
+      // Process result (synchronized via single-threaded JS)
+      if (entityType === "skill") summary.skills_checked++;
+      else summary.traits_checked++;
+      summary.total_checked++;
+
+      if (crawlResult.error) {
+        summary.errors++;
+        errors.push({
+          entity_type: entityType, id: entity.id, name: entity.name,
+          error: crawlResult.error,
+        });
+      } else {
+        const wikiFacts = crawlResult.wvwFacts
+          .map((f) => parseFactText(f.name, f.valueText))
+          .filter(Boolean);
+
+        const splitEntry = splitsIndex[entityType]?.[String(entity.id)]?.modes?.wvw || null;
+        const cmp = compareEntity(wikiFacts, splitEntry, { hasToggle: crawlResult.hasToggle });
+
+        switch (cmp.category) {
+          case "match": summary.matches++; break;
+          case "mismatch": summary.mismatches++; break;
+          case "missing_from_splits": summary.missing_from_splits++; break;
+          case "missing_from_wiki": summary.missing_from_wiki++; break;
+          case "no_split": summary.no_split++; break;
+        }
+
+        if (cmp.category !== "match" && cmp.category !== "no_split") {
+          const record = {
+            entity_type: entityType,
+            id: entity.id,
+            name: entity.name,
+            wiki_url: crawlResult.wiki_url || `https://wiki.guildwars2.com/wiki/${entity.name.replace(/ /g, "_")}`,
+            category: cmp.category,
+          };
+          if (cmp.fact_diffs.length) record.fact_diffs = cmp.fact_diffs;
+          if (cmp.wiki_only_facts.length) record.wiki_only_facts = cmp.wiki_only_facts;
+          if (cmp.splits_only_facts.length) record.splits_only_facts = cmp.splits_only_facts;
+          if (cmp.category === "missing_from_splits") record.wiki_facts = wikiFacts;
+          discrepancies.push(record);
+        }
+      }
+
+      completed++;
+      process.stdout.write(`\r  Crawling: ${progressBar(completed, total)}`);
+    }
+
+    await context.close();
+  }
+
+  // Launch all workers concurrently
+  const workers = [];
+  for (let i = 0; i < workerCount; i++) {
+    workers.push(worker(i));
+  }
+  await Promise.all(workers);
+
+  return { summary, discrepancies, errors };
+}
+
 // ── Main ──
 
 async function main() {
-  const { skip, limit } = parseArgs();
+  const { skip, limit, workers } = parseArgs();
   const startTime = Date.now();
   const timestamp = new Date().toISOString();
 
@@ -102,82 +200,14 @@ async function main() {
   // 3. Build entity list with skip/limit
   const allEntities = [...skillEntities, ...traitEntities];
   const entities = allEntities.slice(skip, skip + limit);
-  console.log(`Crawling ${entities.length} entities (skip=${skip}, limit=${limit === Infinity ? "all" : limit})\n`);
+  console.log(`Crawling ${entities.length} entities (skip=${skip}, limit=${limit === Infinity ? "all" : limit}, workers=${workers})\n`);
 
   // 4. Launch browser
-  console.log("Launching browser...\n");
+  console.log(`Launching browser with ${workers} worker(s)...\n`);
   const browser = await chromium.launch({ headless: true });
-  const context = await browser.newContext();
-  const page = await context.newPage();
 
-  // 5. Crawl and compare
-  const summary = {
-    skills_checked: 0, traits_checked: 0, total_checked: 0,
-    matches: 0, mismatches: 0, missing_from_splits: 0,
-    missing_from_wiki: 0, no_split: 0, errors: 0,
-  };
-  const discrepancies = [];
-  const errors = [];
-
-  for (let i = 0; i < entities.length; i++) {
-    const entity = entities[i];
-    const entityType = entity.type;
-
-    // Progress
-    process.stdout.write(`\r  Crawling: ${progressBar(i + 1, entities.length)}`);
-
-    // Crawl
-    const crawlResult = await crawlEntity(page, entity, entityType);
-
-    if (entityType === "skill") summary.skills_checked++;
-    else summary.traits_checked++;
-    summary.total_checked++;
-
-    // Handle errors
-    if (crawlResult.error) {
-      summary.errors++;
-      errors.push({
-        entity_type: entityType, id: entity.id, name: entity.name,
-        error: crawlResult.error,
-      });
-      continue;
-    }
-
-    // Parse raw facts through parseFactText
-    const wikiFacts = crawlResult.wvwFacts
-      .map((f) => parseFactText(f.name, f.valueText))
-      .filter(Boolean);
-
-    // Look up splits.json entry
-    const splitEntry = splitsIndex[entityType]?.[String(entity.id)]?.modes?.wvw || null;
-
-    // Compare
-    const cmp = compareEntity(wikiFacts, splitEntry, { hasToggle: crawlResult.hasToggle });
-
-    switch (cmp.category) {
-      case "match": summary.matches++; break;
-      case "mismatch": summary.mismatches++; break;
-      case "missing_from_splits": summary.missing_from_splits++; break;
-      case "missing_from_wiki": summary.missing_from_wiki++; break;
-      case "no_split": summary.no_split++; break;
-    }
-
-    // Record discrepancies (skip matches and no_split)
-    if (cmp.category !== "match" && cmp.category !== "no_split") {
-      const record = {
-        entity_type: entityType,
-        id: entity.id,
-        name: entity.name,
-        wiki_url: crawlResult.wiki_url || `https://wiki.guildwars2.com/wiki/${entity.name.replace(/ /g, "_")}`,
-        category: cmp.category,
-      };
-      if (cmp.fact_diffs.length) record.fact_diffs = cmp.fact_diffs;
-      if (cmp.wiki_only_facts.length) record.wiki_only_facts = cmp.wiki_only_facts;
-      if (cmp.splits_only_facts.length) record.splits_only_facts = cmp.splits_only_facts;
-      if (cmp.category === "missing_from_splits") record.wiki_facts = wikiFacts;
-      discrepancies.push(record);
-    }
-  }
+  // 5. Crawl and compare with worker pool
+  const { summary, discrepancies, errors } = await crawlWithWorkers(browser, entities, splitsIndex, workers);
 
   console.log("\n");
 
@@ -196,6 +226,7 @@ async function main() {
   const reportPath = await writeReport(report);
 
   // 8. Print summary
+  const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
   console.log("── Summary ──");
   console.log(`  Checked:             ${summary.total_checked}`);
   console.log(`  Matches:             ${summary.matches}`);
@@ -204,6 +235,7 @@ async function main() {
   console.log(`  Missing from wiki:   ${summary.missing_from_wiki}`);
   console.log(`  No split:            ${summary.no_split}`);
   console.log(`  Errors:              ${summary.errors}`);
+  console.log(`  Duration:            ${elapsed}s`);
   console.log("");
   console.log(`Report written to ${reportPath}`);
   console.log(`Open tests/wiki-audit/results/viewer.html to review.`);
