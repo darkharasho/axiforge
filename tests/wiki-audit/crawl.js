@@ -62,19 +62,21 @@ async function _crawlEntityOnce(page, entity, entityType) {
     // Check for disambiguation page
     const isDisambig = await page.$(SELECTORS.disambigBox);
     if (isDisambig) {
-      // Try profession-qualified URL
-      const profession = entity.professions?.[0];
-      if (profession) {
-        const qualifiedUrl = `${WIKI_BASE}${encodeURI(wikiName + "_(" + profession + ")")}`;
-        await page.goto(qualifiedUrl, { timeout: PAGE_TIMEOUT, waitUntil: "domcontentloaded" });
-        await page.waitForTimeout(500);
-        finalUrl = qualifiedUrl;
-        const stillDisambig = await page.$(SELECTORS.disambigBox);
-        if (stillDisambig) {
-          return { hasToggle: false, wvwFacts: [], error: "Disambiguation page (even with profession qualifier)" };
-        }
-      } else {
-        return { hasToggle: false, wvwFacts: [], error: "Disambiguation page" };
+      const resolved = await _resolveDisambig(page, wikiName, entity, entityType);
+      if (resolved.error) return resolved;
+      finalUrl = resolved.wiki_url;
+    }
+
+    // Also check if we landed on a page that isn't a skill/trait (e.g. an item
+    // or NPC with the same name). If there's no infobox, treat it like a disambig.
+    if (!isDisambig) {
+      const hasInfobox = await page.$(SELECTORS.infobox);
+      const hasBlockquote = await page.$(SELECTORS.blockquote);
+      if (!hasInfobox && !hasBlockquote) {
+        // Page exists but isn't a skill/trait — try qualified URLs
+        const resolved = await _resolveDisambig(page, wikiName, entity, entityType);
+        if (!resolved.error) finalUrl = resolved.wiki_url;
+        // If still no luck, continue with the original page (might just be a skill with no infobox)
       }
     }
 
@@ -101,6 +103,48 @@ async function _crawlEntityOnce(page, entity, entityType) {
   } catch (err) {
     return { hasToggle: false, wvwFacts: [], error: err.message };
   }
+}
+
+/**
+ * Try multiple wiki URL patterns to resolve a disambiguation page.
+ * The GW2 wiki uses various naming conventions:
+ *   Steam_(elementalist_skill)
+ *   Slash_(warrior_sword_skill)
+ *   Signet_of_Restoration_(guardian_skill)
+ *   Raging_Storm_(trait)
+ *
+ * We try several patterns in order, returning the first that resolves
+ * to a non-disambig, non-missing page.
+ */
+async function _resolveDisambig(page, wikiName, entity, entityType) {
+  const profession = (entity.professions?.[0] || "").toLowerCase();
+  const type = entityType === "trait" ? "trait" : "skill";
+
+  // Build candidate suffixes in priority order
+  const suffixes = [];
+  if (profession) {
+    suffixes.push(`${profession}_${type}`);   // Steam_(elementalist_skill)
+    suffixes.push(profession);                 // Steam_(elementalist)
+  }
+  suffixes.push(type);                         // Steam_(skill)
+
+  for (const suffix of suffixes) {
+    const candidateUrl = `${WIKI_BASE}${encodeURI(wikiName + "_(" + suffix + ")")}`;
+    try {
+      await page.goto(candidateUrl, { timeout: PAGE_TIMEOUT, waitUntil: "domcontentloaded" });
+      await page.waitForTimeout(500);
+
+      const stillDisambig = await page.$(SELECTORS.disambigBox);
+      const noArticle = await page.$(".mw-newarticletext");
+      if (!stillDisambig && !noArticle) {
+        return { error: null, wiki_url: candidateUrl };
+      }
+    } catch {
+      // Network error on this candidate, try next
+    }
+  }
+
+  return { hasToggle: false, wvwFacts: [], error: `Disambiguation: tried ${suffixes.map(s => `(${s})`).join(", ")}` };
 }
 
 /**
