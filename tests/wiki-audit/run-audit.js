@@ -17,6 +17,7 @@ const { crawlEntity } = require("./crawl");
 const { compareEntity } = require("./compare");
 const { parseFactText } = require("./parse-facts");
 const { IncrementalReport, writeReport } = require("./report");
+const { StatusDisplay } = require("./status-display");
 
 const GW2_API = "https://api.guildwars2.com/v2";
 const SPLITS_PATH = path.join(__dirname, "../../lib/gw2-balance-splits/data/splits.json");
@@ -33,16 +34,6 @@ function parseArgs() {
     if (args[i] === "--workers" && args[i + 1]) workers = parseInt(args[i + 1], 10);
   }
   return { skip, limit, workers: Math.max(1, Math.min(workers, 10)) };
-}
-
-// ── Progress bar (matches seed.js style) ──
-
-function progressBar(current, total, width = 30) {
-  const pct = total > 0 ? current / total : 0;
-  const filled = Math.round(width * pct);
-  const bar = "\u2588".repeat(filled) + "\u2591".repeat(width - filled);
-  const pctStr = (pct * 100).toFixed(1).padStart(5);
-  return `  ${bar} ${pctStr}% (${current}/${total})`;
 }
 
 // ── GW2 API fetching ──
@@ -73,7 +64,7 @@ async function fetchByIds(endpoint, ids) {
  * Each worker gets its own browser context + page, pulls entities
  * from a shared queue, and pushes results to shared arrays.
  */
-async function crawlWithWorkers(browser, entities, splitsIndex, workerCount, incremental) {
+async function crawlWithWorkers(browser, entities, splitsIndex, workerCount, incremental, display) {
   const summary = {
     skills_checked: 0, traits_checked: 0, total_checked: 0,
     matches: 0, mismatches: 0, missing_from_splits: 0,
@@ -83,7 +74,6 @@ async function crawlWithWorkers(browser, entities, splitsIndex, workerCount, inc
   const errors = [];
 
   let nextIndex = 0;       // shared cursor into entities array
-  let completed = 0;       // total completed (for progress bar)
   const total = entities.length;
 
   async function worker(workerId) {
@@ -97,6 +87,9 @@ async function crawlWithWorkers(browser, entities, splitsIndex, workerCount, inc
 
       const entity = entities[idx];
       const entityType = entity.type;
+
+      // Update display with what this worker is checking
+      display.setWorker(workerId, `${entity.name} (${entityType} #${entity.id})`);
 
       // Crawl
       const crawlResult = await crawlEntity(page, entity, entityType);
@@ -114,6 +107,8 @@ async function crawlWithWorkers(browser, entities, splitsIndex, workerCount, inc
         };
         errors.push(errRecord);
         incremental.writeError(errRecord);
+        display.addCompleted("errors");
+        display.addRecent("!", "\x1b[90m", "ERROR", `${entity.name} — ${crawlResult.error.slice(0, 50)}`);
       } else {
         const wikiFacts = crawlResult.wvwFacts
           .map((f) => parseFactText(f.name, f.valueText))
@@ -130,6 +125,13 @@ async function crawlWithWorkers(browser, entities, splitsIndex, workerCount, inc
           case "no_split": summary.no_split++; break;
         }
 
+        display.addCompleted(cmp.category === "match" ? "matches"
+          : cmp.category === "no_split" ? "no_split"
+          : cmp.category === "mismatch" ? "mismatches"
+          : cmp.category === "missing_from_splits" ? "missing_from_splits"
+          : cmp.category === "missing_from_wiki" ? "missing_from_wiki"
+          : "errors");
+
         if (cmp.category !== "match" && cmp.category !== "no_split") {
           const record = {
             entity_type: entityType,
@@ -144,13 +146,21 @@ async function crawlWithWorkers(browser, entities, splitsIndex, workerCount, inc
           if (cmp.category === "missing_from_splits") record.wiki_facts = wikiFacts;
           discrepancies.push(record);
           incremental.writeDiscrepancy(record);
+
+          // Add to recent findings display
+          const tag = entity.name + ` (${entityType} #${entity.id})`;
+          if (cmp.category === "mismatch") {
+            display.addRecent("\u2717", "\x1b[31m", "MISMATCH", tag);
+          } else if (cmp.category === "missing_from_splits") {
+            display.addRecent("\u25cc", "\x1b[33m", "MISSING(S)", tag);
+          } else if (cmp.category === "missing_from_wiki") {
+            display.addRecent("\u25cc", "\x1b[33m", "MISSING(W)", tag);
+          }
         }
       }
-
-      completed++;
-      process.stdout.write(`\r  Crawling: ${progressBar(completed, total)}`);
     }
 
+    display.setWorker(workerId, "done");
     await context.close();
   }
 
@@ -205,17 +215,19 @@ async function main() {
   const entities = allEntities.slice(skip, skip + limit);
   console.log(`Crawling ${entities.length} entities (skip=${skip}, limit=${limit === Infinity ? "all" : limit}, workers=${workers})\n`);
 
-  // 4. Launch browser and incremental writer
-  console.log(`Launching browser with ${workers} worker(s)...\n`);
+  // 4. Launch browser, incremental writer, and status display
   const browser = await chromium.launch({ headless: true });
   const incremental = new IncrementalReport(timestamp);
   incremental.open();
-  console.log(`  Writing results incrementally to ${incremental.incrementalPath}\n`);
+
+  const display = new StatusDisplay(workers, entities.length);
+  display.start();
 
   // 5. Crawl and compare with worker pool
-  const { summary, discrepancies, errors } = await crawlWithWorkers(browser, entities, splitsIndex, workers, incremental);
+  const { summary, discrepancies, errors } = await crawlWithWorkers(browser, entities, splitsIndex, workers, incremental, display);
 
-  console.log("\n");
+  display.stop();
+  console.log("");
 
   // 6. Close browser
   await browser.close();
