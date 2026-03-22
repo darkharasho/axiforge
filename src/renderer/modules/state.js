@@ -40,7 +40,13 @@ export const state = {
   compPrefs: {
     sortField: "updatedAt",
     sortDirection: "desc",
-    activeFilters: {},
+    activeFilters: {
+      gameMode: null,
+      publishStatus: null,
+      tags: [],
+    },
+    filtersExpanded: false,
+    viewMode: "expanded",
     boonCoverageCollapsed: false,
   },
   skillSearch: "",

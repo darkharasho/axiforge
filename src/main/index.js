@@ -360,6 +360,9 @@ app.whenReady().then(async () => {
   ipcMain.handle("comps:save", (_e, comp) => compStore.upsertComp(comp));
   ipcMain.handle("comps:delete", (_e, id) => compStore.deleteComp(id));
   ipcMain.handle("comps:reorder", (_e, updates) => compStore.reorderComps(updates));
+  ipcMain.handle("comps:delete-batch", (_e, ids) => compStore.deleteComps(ids));
+  ipcMain.handle("comps:add-tags", (_e, ids, tags) => compStore.addTagsToComps(ids, tags));
+  ipcMain.handle("comps:remove-tags", (_e, ids, tags) => compStore.removeTagsFromComps(ids, tags));
 
   ipcMain.handle("builds:generate-chat-link", async (_e, build) => {
     const { generateChatLink } = require("./buildChatLink.js");

@@ -1,6 +1,6 @@
 import { state } from "../state.js";
 import { showConfirmModal } from "../confirm-modal.js";
-import { initCompList, renderCompList } from "./comp-list.js";
+import { initCompList, renderCompList, clearCompSelection } from "./comp-list.js";
 import { initCompDetail, renderCompDetail } from "./comp-detail.js";
 
 let _app = {};
@@ -10,6 +10,7 @@ export function initComps(appCallbacks) {
 
   initCompList({
     onOpenComp: (comp) => {
+      clearCompSelection();
       state.activeComp = comp;
       state.compPage = "detail";
       renderComps();
@@ -57,6 +58,36 @@ export function initComps(appCallbacks) {
       await loadComps();
       renderComps();
     },
+    onDeleteComps: async (ids) => {
+      const count = ids.length;
+      const confirmed = await showConfirmModal({
+        title: `Delete ${count} comp${count > 1 ? "s" : ""}?`,
+        body: "This cannot be undone.",
+        confirmLabel: "Delete",
+        cancelLabel: "Cancel",
+      });
+      if (!confirmed) return;
+      await window.desktopApi.deleteComps(ids);
+      clearCompSelection();
+      await loadComps();
+      renderComps();
+    },
+    onAddTags: async (ids, tags) => {
+      await window.desktopApi.addTagsToComps(ids, tags);
+      await loadComps();
+      renderComps();
+    },
+    onRemoveTags: async (ids, tags) => {
+      await window.desktopApi.removeTagsFromComps(ids, tags);
+      await loadComps();
+      renderComps();
+    },
+    onExportComps: async (ids) => {
+      const selected = state.comps.filter((c) => ids.includes(c.id));
+      const json = JSON.stringify(selected, null, 2);
+      await window.desktopApi.writeClipboardText(json);
+    },
+    getCatalog: _app.getCatalog,
   });
 
   initCompDetail({
