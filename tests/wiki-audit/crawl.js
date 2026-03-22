@@ -193,10 +193,15 @@ async function extractFacts(page, hasToggle) {
         if (style.display === "none") continue;
       }
 
-      // Extract the fact name from the <a> tag
-      const link = dd.querySelector("a[title]");
-      if (!link) continue;
-      const name = link.textContent.trim();
+      // Extract the fact name from the <a> tag.
+      // The first <a> in each dd is often the icon (empty text), so find
+      // the first link that actually has text content.
+      const links = dd.querySelectorAll("a[title]");
+      let name = "";
+      for (const l of links) {
+        const t = l.textContent.trim();
+        if (t) { name = t; break; }
+      }
       if (!name) continue;
 
       // Extract the full text content after the link
