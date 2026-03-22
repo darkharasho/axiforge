@@ -259,12 +259,68 @@ function handleLoadBuild(buildId) {
   _app.navigateToPage?.("editor");
 }
 
+/**
+ * Replace the title/name element inside a content item with an inline input.
+ * Returns the new value (trimmed) or null if cancelled (Escape).
+ */
+function startInlineRename(itemEl, currentValue) {
+  if (!itemEl) return Promise.resolve(null);
+  // Find the title element — different classes per view type
+  const titleEl =
+    itemEl.querySelector(".lib-list-row__title") ||
+    itemEl.querySelector(".lib-grid-card__title") ||
+    itemEl.querySelector(".lib-icon-item__label") ||
+    itemEl.querySelector(".lib-tv__name");
+  if (!titleEl) return Promise.resolve(null);
+
+  return new Promise((resolve) => {
+    const input = document.createElement("input");
+    input.type = "text";
+    input.className = "lib-inline-input";
+    input.value = currentValue;
+    // Preserve the element's dimensions
+    input.style.width = "100%";
+
+    const originalContent = titleEl.innerHTML;
+    titleEl.textContent = "";
+    titleEl.appendChild(input);
+
+    input.focus();
+    input.select();
+
+    let resolved = false;
+    function finish(value) {
+      if (resolved) return;
+      resolved = true;
+      resolve(value);
+    }
+
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        e.stopPropagation();
+        finish(input.value.trim() || null);
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        titleEl.innerHTML = originalContent;
+        finish(null);
+      }
+    });
+    input.addEventListener("blur", () => {
+      finish(input.value.trim() || null);
+    });
+  });
+}
+
 async function handleRename(buildId) {
   const build = state.builds.find((b) => b.id === buildId);
   if (!build) return;
   const oldTitle = build.title;
-  const newTitle = await showPrompt("Rename build", build.title || "");
-  if (!newTitle) return;
+  const el = document.querySelector(`#lib-content [data-build-id="${buildId}"]`);
+  const newTitle = await startInlineRename(el, build.title || "");
+  if (!newTitle) { renderLibrary(); return; }
   await window.desktopApi.saveBuild({ ...build, title: newTitle });
   state.builds = await window.desktopApi.listBuilds();
   pushUndo({ type: "rename-build", undo: async () => {
@@ -723,8 +779,9 @@ async function handleRenameComp(compId) {
   const comp = state.comps?.find((c) => c.id === compId);
   if (!comp) return;
   const oldName = comp.name;
-  const newName = await showPrompt("Rename comp", comp.name || "");
-  if (!newName) return;
+  const el = document.querySelector(`#lib-content [data-comp-id="${compId}"]`);
+  const newName = await startInlineRename(el, comp.name || "");
+  if (!newName) { renderLibrary(); return; }
   await window.desktopApi.saveComp({ ...comp, name: newName });
   state.comps = await window.desktopApi.listComps();
   pushUndo({ type: "rename-comp", undo: async () => {
