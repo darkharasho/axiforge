@@ -16,7 +16,7 @@ const fs = require("fs/promises");
 const { crawlEntity } = require("./crawl");
 const { compareEntity } = require("./compare");
 const { parseFactText } = require("./parse-facts");
-const { writeReport } = require("./report");
+const { IncrementalReport, writeReport } = require("./report");
 
 const GW2_API = "https://api.guildwars2.com/v2";
 const SPLITS_PATH = path.join(__dirname, "../../lib/gw2-balance-splits/data/splits.json");
@@ -73,7 +73,7 @@ async function fetchByIds(endpoint, ids) {
  * Each worker gets its own browser context + page, pulls entities
  * from a shared queue, and pushes results to shared arrays.
  */
-async function crawlWithWorkers(browser, entities, splitsIndex, workerCount) {
+async function crawlWithWorkers(browser, entities, splitsIndex, workerCount, incremental) {
   const summary = {
     skills_checked: 0, traits_checked: 0, total_checked: 0,
     matches: 0, mismatches: 0, missing_from_splits: 0,
@@ -108,10 +108,12 @@ async function crawlWithWorkers(browser, entities, splitsIndex, workerCount) {
 
       if (crawlResult.error) {
         summary.errors++;
-        errors.push({
+        const errRecord = {
           entity_type: entityType, id: entity.id, name: entity.name,
           error: crawlResult.error,
-        });
+        };
+        errors.push(errRecord);
+        incremental.writeError(errRecord);
       } else {
         const wikiFacts = crawlResult.wvwFacts
           .map((f) => parseFactText(f.name, f.valueText))
@@ -141,6 +143,7 @@ async function crawlWithWorkers(browser, entities, splitsIndex, workerCount) {
           if (cmp.splits_only_facts.length) record.splits_only_facts = cmp.splits_only_facts;
           if (cmp.category === "missing_from_splits") record.wiki_facts = wikiFacts;
           discrepancies.push(record);
+          incremental.writeDiscrepancy(record);
         }
       }
 
@@ -202,12 +205,15 @@ async function main() {
   const entities = allEntities.slice(skip, skip + limit);
   console.log(`Crawling ${entities.length} entities (skip=${skip}, limit=${limit === Infinity ? "all" : limit}, workers=${workers})\n`);
 
-  // 4. Launch browser
+  // 4. Launch browser and incremental writer
   console.log(`Launching browser with ${workers} worker(s)...\n`);
   const browser = await chromium.launch({ headless: true });
+  const incremental = new IncrementalReport(timestamp);
+  incremental.open();
+  console.log(`  Writing results incrementally to ${incremental.incrementalPath}\n`);
 
   // 5. Crawl and compare with worker pool
-  const { summary, discrepancies, errors } = await crawlWithWorkers(browser, entities, splitsIndex, workers);
+  const { summary, discrepancies, errors } = await crawlWithWorkers(browser, entities, splitsIndex, workers, incremental);
 
   console.log("\n");
 
@@ -223,7 +229,7 @@ async function main() {
     errors,
   };
 
-  const reportPath = await writeReport(report);
+  const reportPath = await writeReport(report, incremental);
 
   // 8. Print summary
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);

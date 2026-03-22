@@ -177,9 +177,9 @@
 <!-- Drop zone / file picker -->
 <div id="drop-zone">
   <h1>Wiki Audit Report Viewer</h1>
-  <p>Drop a JSON audit report here, or click to browse</p>
+  <p>Drop a JSON audit report here, or click to browse (.json or .jsonl for partial runs)</p>
   <button id="browse-btn">Choose File</button>
-  <input type="file" id="file-input" accept=".json,application/json">
+  <input type="file" id="file-input" accept=".json,.jsonl,application/json">
 </div>
 
 <!-- Report view -->
@@ -276,15 +276,52 @@
     const reader = new FileReader();
     reader.onload = e => {
       try {
-        data = JSON.parse(e.target.result);
+        const text = e.target.result;
+        if (file.name.endsWith(".jsonl")) {
+          data = parseJsonl(text);
+        } else {
+          data = JSON.parse(text);
+        }
         render();
         dropZone.style.display = "none";
         reportEl.style.display = "block";
       } catch(err) {
-        alert("Failed to parse JSON:\n" + err.message);
+        alert("Failed to parse report:\n" + err.message);
       }
     };
     reader.readAsText(file);
+  }
+
+  /** Parse a .jsonl (newline-delimited JSON) file from a partial/crashed run. */
+  function parseJsonl(text) {
+    const lines = text.trim().split("\n").filter(Boolean);
+    const discrepancies = [];
+    const errors = [];
+    for (const line of lines) {
+      const obj = JSON.parse(line);
+      if (obj.kind === "error") {
+        const { kind, ...rest } = obj;
+        errors.push(rest);
+      } else if (obj.kind === "discrepancy") {
+        const { kind, ...rest } = obj;
+        discrepancies.push(rest);
+      }
+    }
+    return {
+      timestamp: null,
+      duration_ms: null,
+      summary: {
+        total_checked: lines.length,
+        matches: 0,
+        mismatches: discrepancies.filter(d => d.category === "mismatch").length,
+        missing_from_splits: discrepancies.filter(d => d.category === "missing_from_splits").length,
+        missing_from_wiki: discrepancies.filter(d => d.category === "missing_from_wiki").length,
+        no_split: 0,
+        errors: errors.length,
+      },
+      discrepancies,
+      errors,
+    };
   }
 
   // ── Render ─────────────────────────────────────────────────
