@@ -7,7 +7,7 @@
 
 Automated E2E tests that launch the real AxiForge Electron app via Playwright's `_electron.launch()`, interact with the renderer window, and validate QA checklist items. GW2 API data is fully mocked via a local HTTP fixture server. Runs on command via `npm run test:e2e`, not part of `npm test`.
 
-Covers 14 of 18 QA checklist sections (~120 test cases). Skips: Authentication/Onboarding (OAuth), Publishing (GitHub API), Performance (not suited to Playwright), Cross-Platform (not Playwright's job).
+Covers 14 of 18 QA checklist sections (~150 test cases). Skips: Authentication/Onboarding (OAuth), Publishing (GitHub API), Performance (not suited to Playwright), Cross-Platform (not Playwright's job).
 
 ---
 
@@ -35,19 +35,19 @@ tests/e2e/
     editor.js                     # selectProfession(), addSpecialization(), selectSkill(), etc.
     data.js                       # seedBuild(), seedComp(), seedFolder() — write JSON directly
   specs/
-    editor-profession.spec.js     # Section 2: Profession & Metadata (8 tests)
+    editor-profession.spec.js     # Section 2: Profession & Metadata (9 tests)
     game-mode.spec.js             # Section 3: Game Mode Toggle (5 tests)
     specializations.spec.js       # Section 4: Specializations & Traits (11 tests)
-    skills.spec.js                # Section 5: Skills (12 tests)
-    equipment.spec.js             # Section 6: Equipment (~25 tests)
+    skills.spec.js                # Section 5: Skills (18 tests)
+    equipment.spec.js             # Section 6: Equipment (~31 tests)
     detail-panel.spec.js          # Section 7: Detail Panel (6 tests)
     underwater.spec.js            # Section 8: Underwater Mode (7 tests)
-    library.spec.js               # Section 9: Library & Management (~25 tests)
+    library.spec.js               # Section 9: Library & Management (~33 tests)
     notes.spec.js                 # Section 11: Notes Tab (7 tests)
     persistence.spec.js           # Section 12: Persistence & Import/Export (6 tests)
-    window-controls.spec.js       # Section 13: Window Controls (7 tests)
+    window-controls.spec.js       # Section 13: Window Controls (8 tests)
     edge-cases.spec.js            # Section 16: Edge Cases (7 tests)
-    compositions.spec.js          # Section 17: Compositions (15 tests)
+    compositions.spec.js          # Section 17: Compositions (16 tests)
     regressions.spec.js           # Section 18: Regression Checks (12 tests)
 ```
 
@@ -100,11 +100,37 @@ afterAll(async () => { await app.close(); });
 
 ### Data Isolation
 
-Setting `APP_PROFILE=e2e-test` causes the app to use a separate data directory (`~/.config/AxiForge-e2e-test/data/`). The `app.js` helper cleans this directory before each test file. For tests that need pre-existing data (library tests, comp tests), the `data.js` helper writes JSON fixtures directly to this directory.
+The existing `APP_PROFILE` mechanism in `src/main/index.js` only handles the `"dev"` profile. A small production code change generalizes it to support any profile name:
 
-### Production Code Change
+```js
+// Before (src/main/index.js lines 29-33):
+const IS_DEV_PROFILE = process.env.APP_PROFILE === "dev" && !app.isPackaged;
+if (IS_DEV_PROFILE) {
+  const devUserData = path.join(app.getPath("appData"), `${app.getName()}-dev`);
+  app.setPath("userData", devUserData);
+}
 
-One minimal change to `src/main/gw2Data/fetch.js` to make the API root configurable:
+// After:
+const APP_PROFILE = process.env.APP_PROFILE;
+if (APP_PROFILE && !app.isPackaged) {
+  const profileUserData = path.join(app.getPath("appData"), `${app.getName()}-${APP_PROFILE}`);
+  app.setPath("userData", profileUserData);
+}
+```
+
+This preserves the existing `APP_PROFILE=dev` behavior and adds support for `APP_PROFILE=e2e-test`, which creates `~/.config/AxiForge-e2e-test/data/`. Since Playwright launches unpackaged Electron (`args: ["."]`), the `!app.isPackaged` guard passes.
+
+The `app.js` helper cleans this directory before each test file. For tests that need pre-existing data (library tests, comp tests), the `data.js` helper seeds data before the app launches via `launchApp()`. Because each spec file launches a fresh Electron instance in `beforeAll`, seeded data is read from disk at startup — no in-memory cache issues.
+
+For `beforeEach` within a running app, use IPC-based seeding (`window.desktopApi.saveBuild()`, etc.) instead of direct file writes, since the stores cache data in memory.
+
+### Production Code Changes
+
+Two minimal changes:
+
+**1. `src/main/index.js`** — Generalize APP_PROFILE (shown above)
+
+**2. `src/main/gw2Data/fetch.js`** — Make API root configurable:
 
 ```js
 // Before:
@@ -114,7 +140,7 @@ const GW2_API_ROOT = "https://api.guildwars2.com/v2";
 const GW2_API_ROOT = process.env.GW2_API_ROOT || "https://api.guildwars2.com/v2";
 ```
 
-This is a one-line change. No behavior change in production (env var is unset). Enables E2E tests to redirect API calls to the local mock server.
+Both are one-line changes. No behavior change in production (env vars are unset).
 
 ---
 
@@ -137,7 +163,6 @@ The server serves fixture data for all GW2 API endpoints the app calls:
 | `GET /v2/legends` | Legend IDs |
 | `GET /v2/legends?ids=...` | Legend objects |
 | `GET /v2/pets?ids=all` | Pet objects |
-| `GET /v2/itemstats?ids=...` | Stat combo objects |
 | `GET /v2/items?ids=...` | Item objects (runes, sigils, food) |
 
 ### Fixture Data
@@ -187,16 +212,25 @@ setTitle(window, title)                 // Type into #editorTitle
 saveBuild(window)                       // Click #saveBuildBtn, wait for save
 ```
 
-### `helpers/data.js` — Direct data seeding
+### `helpers/data.js` — Data seeding
+
+Two seeding modes depending on timing:
+
+**Pre-launch seeding** (before `launchApp()` in `beforeAll`): writes JSON files directly to the e2e-test data directory. The app reads them on startup.
 
 ```js
-seedBuild(build)       // Write a build object into builds.json
-seedComp(comp)         // Write a comp object into comps.json
-seedFolder(folder)     // Write a folder object into folders.json
+seedBuildFile(build)   // Write a build object into builds.json (pre-launch only)
+seedCompFile(comp)     // Write a comp object into comps.json (pre-launch only)
+seedFolderFile(folder) // Write a folder object into folders.json (pre-launch only)
 clearData()            // Remove all JSON data files
 ```
 
-These bypass the UI to set up test preconditions quickly.
+**Live seeding** (while app is running, in `beforeEach`): uses IPC via the renderer to ensure in-memory stores stay in sync.
+
+```js
+seedBuildIPC(window, build)   // await window.evaluate(b => desktopApi.saveBuild(b), build)
+seedCompIPC(window, comp)     // await window.evaluate(c => desktopApi.saveComp(c), comp)
+```
 
 ---
 
@@ -204,7 +238,7 @@ These bypass the UI to set up test preconditions quickly.
 
 Each test maps to one QA checklist checkbox. Format: `test("checklist item text", ...)`.
 
-### Section 2: Build Editor - Profession & Metadata (8 tests)
+### Section 2: Build Editor - Profession & Metadata (9 tests)
 
 ```
 - All 9 professions selectable
@@ -214,6 +248,7 @@ Each test maps to one QA checklist checkbox. Format: `test("checklist item text"
 - Loading skeletons appear during catalog fetches
 - Build title input accepts up to 140 characters
 - Build title appears in window title bar
+- Tags input accepts comma-separated values
 - Unsaved changes indicator (dirty dot) shows/hides correctly
 ```
 
@@ -243,9 +278,10 @@ Each test maps to one QA checklist checkbox. Format: `test("checklist item text"
 - Removing a specialization clears its traits
 ```
 
-### Section 5: Skills (12 tests)
+### Section 5: Skills (18 tests)
 
 ```
+Base skills:
 - Heal skill slot displays with correct icon
 - 3 Utility skill slots display in order
 - Elite skill slot displays correctly
@@ -254,33 +290,44 @@ Each test maps to one QA checklist checkbox. Format: `test("checklist item text"
 - Picker filters skills by profession/mode
 - Selected skill updates immediately
 - Aquatic/underwater skill slots show when applicable
+
+Profession mechanics (F1–F5):
 - Elementalist: Attunement buttons (Fire/Water/Air/Earth) + Overload F5
-- Guardian: Virtue buttons
+- Necromancer: Shroud or spec-specific mechanics
+- Revenant: Legend swap buttons (2 slots) + legend-specific skills
+- Guardian: Virtue buttons (Justice/Resolve/Courage) + spec variations
+- Warrior: Burst skill updates based on equipped weapon
 - Engineer: Tool-belt skills derived from heal/utility/elite
-- Revenant: Legend swap buttons + legend-specific skills
+- Ranger: Pet swap commands + species skill
+- Thief: Steal/shadow mechanics
+- Mesmer: Shatter buttons or spec-specific mechanics
+- Mechanics update when specialization or weapon changes
 ```
 
-Profession mechanics are tested for the 3 fixture professions (Necromancer, Elementalist, Revenant). Other professions are spot-checked where fixtures allow.
+The 3 fixture professions (Necromancer, Elementalist, Revenant) get full mechanics tests. The other 6 professions require additional fixture data captured during implementation — the mock server serves per-profession snapshots, so adding fixture files is straightforward.
 
-### Section 6: Equipment (~25 tests)
+### Section 6: Equipment (~31 tests)
 
 ```
 Armor:
-- 6 armor slots display
-- Armor weight correct per profession
+- 6 armor slots display: Head, Shoulders, Chest, Hands, Legs, Feet
+- Armor weight (light/medium/heavy) correct per profession
 
 Weapons:
-- 2 weapon sets available
+- 2 weapon sets available (mainhand/offhand per set)
 - Aquatic weapons show separately
 - Weapon dropdown enforces hand restrictions
+- Weapon swaps update visible skill bar
 - Two-handed weapons disable offhand slot
 
 Trinkets:
 - Back, Amulet, 2 Rings, 2 Accessories display
+- Trinket picker/search works
 
 Stats, Runes, Sigils, Infusions:
 - Stat combo dropdown shows all stat combinations
 - Stat combo dropdown includes Sentinel's, Wanderer's, Diviner's
+- Sentinel's, Wanderer's, Diviner's each produce correct stat totals when selected
 - Stat calculations update when stat package changes
 - Rune slots show for armor (6 slots)
 - Sigil slots show for weapons
@@ -291,16 +338,19 @@ Stats, Runes, Sigils, Infusions:
 
 Food & Utility:
 - Food dropdown available with search
+- Utility consumable dropdown available
 - Stats update based on food/utility selection
 
 Assumed Boons:
 - Might stacks selector (0–25)
 - Fury and Alacrity toggles
+- Assumed boons persist in build
 - Reset button clears assumptions
 
 Stats Display:
-- Stats calculate correctly
-- Stats break down by source
+- Power, Precision, Ferocity, Toughness, Vitality, Condition Damage, Expertise, Healing Power, Concentration calculate correctly
+- Stats break down by source (Base, Armor, Weapon, Runes, Sigils, Infusions, Food, Assumptions)
+- Stat totals are accurate
 - Crit chance % calculates correctly from Precision
 ```
 
@@ -329,11 +379,11 @@ Wiki webview test is skipped (out of scope).
 - Elementalist: Attunement-dependent skills update for underwater
 ```
 
-### Section 9: Library & Management (~25 tests)
+### Section 9: Library & Management (~33 tests)
 
 ```
 Library:
-- Library page shows all saved builds
+- Library page shows all saved builds with title, profession icon, last modified
 - Search filters builds by title
 - New Build creates empty build
 - Load build from library into editor
@@ -346,21 +396,32 @@ Folders:
 - Create, rename, and delete folders
 - Move builds between folders via drag-drop
 - Drag builds within folder to reorder
-- Visual feedback during drag
+- Visual feedback during drag (hover states, drop zones)
 
 Copy/Cut/Paste:
-- Ctrl+C copies selected build; toast appears
-- Ctrl+C with multiple builds copies all
-- Ctrl+V pastes clipboard build with "(1)" suffix
-- Ctrl+V again increments suffix
-- Ctrl+V pastes into current folder
-- Ctrl+X cuts; Ctrl+V moves
-- Ctrl+V with empty clipboard shows error toast
+- Ctrl+C copies selected build; "Build copied!" toast appears
+- Ctrl+C with multiple builds selected copies all; "N builds copied!" toast
+- Ctrl+V pastes clipboard build as new build with "(1)" title suffix
+- Ctrl+V again increments suffix to "(2)", "(3)", etc.
+- Ctrl+V pastes into current folder (not always root)
+- Ctrl+X cuts selected build; "Build cut!" toast appears
+- Ctrl+V after Ctrl+X moves build; "Build moved!" toast
+- Ctrl+C after Ctrl+X cancels the cut (paste creates copy, not move)
+- Ctrl+V with empty clipboard shows "Clipboard is empty" error toast
+- Ctrl+V with non-JSON clipboard shows error toast
+- Ctrl+V with array of builds in clipboard pastes all builds
+- Copy/Cut/Paste work when inside folders and subfolders
 
 Context Menu:
-- Open, Duplicate, Delete, Move, Pin/Unpin options
-- Copy and Cut in single-build context menu
-- Paste in empty-area context menu
+- Open, Duplicate, Delete, Move, Pin/Unpin options for builds
+- Copy and Cut options appear in single-build context menu
+- Copy and Cut options appear in multi-select context menu
+- Paste option appears in empty-area context menu
+- Edit name, Delete options for folders
+
+Chat Link Integration:
+- Generate chat link button copies link to clipboard
+- Chat links can be imported back (paste)
 ```
 
 ### Section 11: Notes Tab (7 tests)
@@ -386,12 +447,13 @@ Context Menu:
 - Imported build loads all data correctly
 ```
 
-### Section 13: Window Controls (7 tests)
+### Section 13: Window Controls (8 tests)
 
 ```
 - Minimize, Maximize/Restore, Close buttons work
 - Double-clicking title bar maximizes/restores
 - Window resizing works (min 1120x740)
+- Window size persists across sessions
 - Version displays in titlebar
 - Dark theme is readable with good contrast
 - Profession colors distinguish clearly
@@ -414,7 +476,7 @@ Update check tests are skipped.
 
 GitHub API failure test is skipped.
 
-### Section 17: Compositions (15 tests)
+### Section 17: Compositions (16 tests)
 
 ```
 Party Line Drag-and-Drop:
@@ -435,6 +497,7 @@ Boon Coverage:
 - Base profession icon for builds without elite spec
 - Squad-level boon coverage groups by party line
 - Serialized builds display correct elite spec in tooltips
+- Editor-format builds look up elite spec from catalog and display correctly
 ```
 
 ### Section 18: Regression Checks (12 tests)
@@ -474,6 +537,8 @@ module.exports = {
 ```
 
 Workers must be 1 — multiple Electron instances would compete for ports and data directories.
+
+**Expected runtime:** ~10-20 minutes for the full suite (~150 tests, each spec file launches a fresh Electron instance). Most tests should complete well under the 30s timeout.
 
 ---
 
