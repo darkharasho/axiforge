@@ -1,32 +1,17 @@
 /**
  * status-display.js — Terminal status dashboard for the wiki audit.
  *
- * Renders an in-place updating TUI panel using ANSI escape codes.
- * No external dependencies — just process.stdout with cursor control.
- *
- * ┌─────────────────────────────────────────────────────────────────┐
- * │  Wiki Audit                                          15m 23s   │
- * │  ████████████████░░░░░░░░░░░░░░  53.2% (3021/5695)  ~14m left │
- * │                                                                │
- * │  Workers                                                       │
- * │  ● #1  Fireball                                                │
- * │  ● #2  Signet of Restoration                                   │
- * │  ● #3  Raging Storm                                            │
- * │  ● #4  idle                                                    │
- * │                                                                │
- * │  ✓ 3001 match   ✗ 12 mismatch   ◌ 3 missing(s)   ─ 2890 skip │
- * │  ◌ 1 missing(w)   ! 4 error                                   │
- * │                                                                │
- * │  Recent                                                        │
- * │  ✗ MISMATCH   Consume Plasma (skill #1123)                     │
- * │  ! ERROR      Slash — Disambiguation                           │
- * │  ◌ MISSING(S) Eye of the Storm (skill #5765)                   │
- * └─────────────────────────────────────────────────────────────────┘
+ * Uses the alternate screen buffer (like vim/htop) so the dashboard
+ * occupies the full terminal and restores the original content on exit.
+ * This works reliably across all terminals including VS Code integrated.
  */
 
 const ESC = "\x1b";
 const HIDE_CURSOR = `${ESC}[?25l`;
 const SHOW_CURSOR = `${ESC}[?25h`;
+const ALT_SCREEN_ON = `${ESC}[?1049h`;   // Switch to alternate screen buffer
+const ALT_SCREEN_OFF = `${ESC}[?1049l`;  // Restore original screen buffer
+const CURSOR_HOME = `${ESC}[H`;          // Move cursor to top-left
 const CLEAR_LINE = `${ESC}[K`;
 const BOLD = `${ESC}[1m`;
 const DIM = `${ESC}[2m`;
@@ -39,12 +24,11 @@ const YELLOW = `${ESC}[33m`;
 const CYAN = `${ESC}[36m`;
 const GRAY = `${ESC}[90m`;
 const WHITE = `${ESC}[37m`;
-const BG_DARK = `${ESC}[48;5;235m`;
 
 const BAR_FILLED = "\u2588";
 const BAR_EMPTY = "\u2591";
 const BAR_WIDTH = 35;
-const MAX_RECENT = 8;
+const MAX_RECENT = 12;
 
 class StatusDisplay {
   constructor(workerCount, total) {
@@ -58,22 +42,27 @@ class StatusDisplay {
       missing_from_wiki: 0, no_split: 0, errors: 0,
     };
     this.recent = []; // { icon, color, label, text }
-    this._lines = 0;  // how many lines we rendered last frame
     this._interval = null;
     this._started = false;
   }
 
   start() {
     this._started = true;
-    process.stdout.write(HIDE_CURSOR);
-    this._interval = setInterval(() => this._render(), 250);
+    // Switch to alternate screen buffer and hide cursor
+    process.stdout.write(ALT_SCREEN_ON + HIDE_CURSOR);
+    this._interval = setInterval(() => this._render(), 200);
     this._render();
   }
 
   stop() {
     if (this._interval) clearInterval(this._interval);
     this._interval = null;
-    if (this._started) process.stdout.write(SHOW_CURSOR);
+    if (this._started) {
+      // Final render before leaving
+      this._render();
+      // Restore original screen buffer and show cursor
+      process.stdout.write(ALT_SCREEN_OFF + SHOW_CURSOR);
+    }
   }
 
   setWorker(id, text) {
@@ -123,76 +112,79 @@ class StatusDisplay {
 
   _render() {
     const lines = [];
-    const w = Math.min(process.stdout.columns || 80, 75);
-    const hbar = GRAY + "─".repeat(w) + RESET;
+    const w = Math.min(process.stdout.columns || 80, 78);
+    const hbar = GRAY + "\u2500".repeat(w) + RESET;
+    const thickbar = GRAY + "\u2550".repeat(w) + RESET;
 
     // Header
     const elapsed = this._formatTime(this._elapsed());
-    const title = `${BOLD}${CYAN}  Wiki Audit${RESET}`;
-    const elapsedStr = `${GRAY}${elapsed}${RESET}`;
-    lines.push(`${title}${" ".repeat(Math.max(1, w - 14 - elapsed.length))}${elapsedStr}`);
-    lines.push(hbar);
+    lines.push("");
+    lines.push(`  ${BOLD}${CYAN}Wiki Audit${RESET}${" ".repeat(Math.max(1, w - 14 - elapsed.length))}${DIM}${elapsed}${RESET}`);
+    lines.push(thickbar);
 
     // Progress bar
     const eta = this._eta();
+    lines.push("");
     lines.push(`  ${this._progressBar()}  ${DIM}${eta}${RESET}`);
     lines.push("");
+    lines.push(hbar);
 
     // Workers
+    lines.push("");
     lines.push(`  ${BOLD}Workers${RESET}`);
     for (let i = 0; i < this.workerCount; i++) {
       const status = this.workerStatus[i] || "idle";
       const isIdle = status === "idle" || status === "starting..." || status === "done";
-      const dot = isIdle ? `${GRAY}○${RESET}` : `${GREEN}●${RESET}`;
+      const dot = isIdle ? `${GRAY}\u25cb${RESET}` : `${GREEN}\u25cf${RESET}`;
+      const label = `${DIM}#${String(i + 1).padEnd(2)}${RESET}`;
       const name = isIdle ? `${GRAY}${status}${RESET}` : `${WHITE}${status}${RESET}`;
-      lines.push(`  ${dot} ${DIM}#${i + 1}${RESET}  ${_truncate(name, w - 10)}`);
+      lines.push(`  ${dot} ${label} ${_truncate(name, w - 10)}`);
     }
     lines.push("");
+    lines.push(hbar);
 
-    // Stats
-    const s = this.summary;
-    const stats = [
-      `${GREEN}✓${RESET} ${GREEN}${s.matches}${RESET} ${DIM}match${RESET}`,
-      `${RED}✗${RESET} ${RED}${s.mismatches}${RESET} ${DIM}mismatch${RESET}`,
-      `${YELLOW}◌${RESET} ${YELLOW}${s.missing_from_splits}${RESET} ${DIM}miss(s)${RESET}`,
-      `${YELLOW}◌${RESET} ${YELLOW}${s.missing_from_wiki}${RESET} ${DIM}miss(w)${RESET}`,
-      `${GRAY}─${RESET} ${GRAY}${s.no_split}${RESET} ${DIM}skip${RESET}`,
-      `${GRAY}!${RESET} ${GRAY}${s.errors}${RESET} ${DIM}err${RESET}`,
-    ];
-    lines.push(`  ${stats.join("   ")}`);
+    // Stats — two rows for breathing room
     lines.push("");
+    const s = this.summary;
+    lines.push(
+      `  ${GREEN}\u2713${RESET} ${BOLD}${GREEN}${s.matches}${RESET} ${DIM}match${RESET}` +
+      `     ${RED}\u2717${RESET} ${BOLD}${RED}${s.mismatches}${RESET} ${DIM}mismatch${RESET}` +
+      `     ${YELLOW}\u25cc${RESET} ${BOLD}${YELLOW}${s.missing_from_splits}${RESET} ${DIM}missing(splits)${RESET}`
+    );
+    lines.push(
+      `  ${YELLOW}\u25cc${RESET} ${BOLD}${YELLOW}${s.missing_from_wiki}${RESET} ${DIM}missing(wiki)${RESET}` +
+      `  ${GRAY}\u2500${RESET} ${GRAY}${s.no_split}${RESET} ${DIM}no split${RESET}` +
+      `     ${GRAY}!${RESET} ${GRAY}${s.errors}${RESET} ${DIM}errors${RESET}`
+    );
+    lines.push("");
+    lines.push(hbar);
 
     // Recent findings
     if (this.recent.length > 0) {
-      lines.push(`  ${BOLD}Recent${RESET}`);
+      lines.push("");
+      lines.push(`  ${BOLD}Recent Findings${RESET}`);
+      lines.push("");
       for (const r of this.recent) {
         const icon = `${r.color}${r.icon}${RESET}`;
-        const label = `${r.color}${r.label.padEnd(10)}${RESET}`;
-        lines.push(`  ${icon} ${label} ${_truncate(r.text, w - 16)}`);
+        const label = `${r.color}${BOLD}${r.label.padEnd(11)}${RESET}`;
+        lines.push(`  ${icon} ${label} ${_truncate(r.text, w - 17)}`);
       }
     }
 
-    lines.push(hbar);
+    lines.push("");
+    lines.push(thickbar);
 
-    // Move cursor up to overwrite previous frame
-    if (this._lines > 0) {
-      process.stdout.write(`${ESC}[${this._lines}A`);
+    // Move cursor to home and write all lines
+    let output = CURSOR_HOME;
+    const termRows = process.stdout.rows || 40;
+    for (let i = 0; i < termRows; i++) {
+      if (i < lines.length) {
+        output += lines[i] + CLEAR_LINE + "\n";
+      } else {
+        output += CLEAR_LINE + "\n";
+      }
     }
-
-    // Write all lines, clearing each to end
-    const output = lines.map((l) => l + CLEAR_LINE).join("\n") + "\n";
     process.stdout.write(output);
-
-    // Pad with blank lines if this frame is shorter than previous
-    if (lines.length < this._lines) {
-      for (let i = 0; i < this._lines - lines.length; i++) {
-        process.stdout.write(CLEAR_LINE + "\n");
-      }
-      // Move back up for the extra lines
-      process.stdout.write(`${ESC}[${this._lines - lines.length}A`);
-    }
-
-    this._lines = lines.length;
   }
 }
 
@@ -200,7 +192,6 @@ function _truncate(str, max) {
   // Strip ANSI for length calculation
   const plain = str.replace(/\x1b\[[0-9;]*m/g, "");
   if (plain.length <= max) return str;
-  // Rough truncation — find where to cut in the raw string
   let plainIdx = 0;
   let rawIdx = 0;
   while (rawIdx < str.length && plainIdx < max - 1) {
@@ -211,7 +202,7 @@ function _truncate(str, max) {
     plainIdx++;
     rawIdx++;
   }
-  return str.slice(0, rawIdx) + `${GRAY}…${RESET}`;
+  return str.slice(0, rawIdx) + `${GRAY}\u2026${RESET}`;
 }
 
 module.exports = { StatusDisplay };
