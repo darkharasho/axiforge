@@ -370,10 +370,11 @@
       detailTd.innerHTML = buildDetail(entry);
       detailTr.appendChild(detailTd);
 
-      // Toggle
+      // Toggle — must set inline display because applyFilters() uses inline styles
       mainTr.addEventListener("click", () => {
         const open = mainTr.classList.toggle("expanded");
         detailTr.classList.toggle("visible", open);
+        detailTr.style.display = open ? "table-row" : "none";
       });
 
       tbodyEl.appendChild(mainTr);
