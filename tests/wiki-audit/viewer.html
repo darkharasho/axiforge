@@ -384,6 +384,8 @@
     }
   }
 
+  const FACT_FIELDS = ["type","text","status","target","source","value","duration","apply_count","dmg_multiplier","hit_count","coefficient","distance","percent"];
+
   function buildDetail(entry){
     if(entry.err){
       return '<div class="error-msg">' + esc(entry.err.error || "Unknown error") + '</div>';
@@ -393,10 +395,10 @@
 
     let html = "";
 
-    // Fact diffs
+    // Fact diffs — show field-by-field comparison
     if(d.fact_diffs && d.fact_diffs.length){
       html += '<div class="detail-section"><h4>Fact Diffs</h4>';
-      html += '<table class="diff-table"><thead><tr><th>Fact</th><th>Field</th><th>Wiki Value</th><th>Splits Value</th></tr></thead><tbody>';
+      html += '<table class="diff-table"><thead><tr><th>Fact</th><th>Field</th><th class="val-wiki">Wiki</th><th class="val-splits">Splits</th></tr></thead><tbody>';
       for(const fd of d.fact_diffs){
         const factLabel = esc(fd.text || "") + (fd.type ? ' <span class="fact-type">(' + esc(fd.type) + ')</span>' : "");
         const fields = fd.fields || {};
@@ -408,7 +410,7 @@
             const k = keys[i];
             const v = fields[k];
             html += '<tr>';
-            html += i === 0 ? '<td rowspan="' + keys.length + '">' + factLabel + '</td>' : '';
+            html += i === 0 ? '<td rowspan="' + keys.length + '" class="fact-text">' + factLabel + '</td>' : '';
             html += '<td>' + esc(k) + '</td>';
             html += '<td class="val-wiki">' + formatVal(v.wiki) + '</td>';
             html += '<td class="val-splits">' + formatVal(v.splits) + '</td>';
@@ -419,25 +421,51 @@
       html += '</tbody></table></div>';
     }
 
-    // Wiki-only facts
+    // Wiki-only facts — show all fields in a table
     if(d.wiki_only_facts && d.wiki_only_facts.length){
-      html += '<div class="detail-section"><h4>Wiki-only Facts</h4>';
-      for(const f of d.wiki_only_facts){
-        html += '<div class="only-fact">' + esc(factSummary(f)) + '</div>';
-      }
+      html += '<div class="detail-section"><h4>Wiki-only Facts <span style="font-size:.65rem;color:#484f58;text-transform:none">(present on wiki, absent from splits.json)</span></h4>';
+      html += renderFactTable(d.wiki_only_facts, "val-wiki");
       html += '</div>';
     }
 
-    // Splits-only facts
+    // Splits-only facts — show all fields in a table
     if(d.splits_only_facts && d.splits_only_facts.length){
-      html += '<div class="detail-section"><h4>Splits-only Facts</h4>';
-      for(const f of d.splits_only_facts){
-        html += '<div class="only-fact">' + esc(factSummary(f)) + '</div>';
-      }
+      html += '<div class="detail-section"><h4>Splits-only Facts <span style="font-size:.65rem;color:#484f58;text-transform:none">(present in splits.json, absent from wiki)</span></h4>';
+      html += renderFactTable(d.splits_only_facts, "val-splits");
+      html += '</div>';
+    }
+
+    // Wiki facts (for missing_from_splits entries)
+    if(d.wiki_facts && d.wiki_facts.length){
+      html += '<div class="detail-section"><h4>Wiki Facts <span style="font-size:.65rem;color:#484f58;text-transform:none">(wiki has WvW data, no splits.json entry)</span></h4>';
+      html += renderFactTable(d.wiki_facts, "val-wiki");
       html += '</div>';
     }
 
     if(!html) html = '<span style="color:#484f58">No details available.</span>';
+    return html;
+  }
+
+  function renderFactTable(facts, colorClass){
+    // Collect which fields are actually present across all facts
+    const presentFields = FACT_FIELDS.filter(f => facts.some(fact => fact[f] !== undefined));
+    if(!presentFields.length) return '<span style="color:#484f58">No field data</span>';
+
+    let html = '<table class="diff-table"><thead><tr>';
+    for(const f of presentFields){
+      html += '<th>' + esc(f) + '</th>';
+    }
+    html += '</tr></thead><tbody>';
+    for(const fact of facts){
+      html += '<tr>';
+      for(const f of presentFields){
+        const val = fact[f];
+        const cls = (f === "text" || f === "type" || f === "status") ? "fact-text" : colorClass;
+        html += '<td class="' + cls + '">' + formatVal(val) + '</td>';
+      }
+      html += '</tr>';
+    }
+    html += '</tbody></table>';
     return html;
   }
 
