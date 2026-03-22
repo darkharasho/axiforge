@@ -79,6 +79,51 @@ class CompStore {
     await this.#writeJson(this.compsPath, comps);
   }
 
+  async deleteComps(ids) {
+    const comps = await this.listComps();
+    const idSet = new Set(ids);
+    const filtered = comps.filter((c) => !idSet.has(c.id));
+    await this.#writeJson(this.compsPath, filtered);
+  }
+
+  async addTagsToComps(ids, tags) {
+    const comps = await this.listComps();
+    const idSet = new Set(ids);
+    const now = new Date().toISOString();
+    let changed = false;
+    for (const comp of comps) {
+      if (!idSet.has(comp.id)) continue;
+      const existing = new Set(comp.tags || []);
+      for (const tag of tags) {
+        if (!existing.has(tag)) {
+          existing.add(tag);
+          changed = true;
+        }
+      }
+      comp.tags = [...existing];
+      comp.updatedAt = now;
+    }
+    if (changed) await this.#writeJson(this.compsPath, comps);
+  }
+
+  async removeTagsFromComps(ids, tags) {
+    const comps = await this.listComps();
+    const idSet = new Set(ids);
+    const tagsToRemove = new Set(tags);
+    const now = new Date().toISOString();
+    let changed = false;
+    for (const comp of comps) {
+      if (!idSet.has(comp.id)) continue;
+      const before = (comp.tags || []).length;
+      comp.tags = (comp.tags || []).filter((t) => !tagsToRemove.has(t));
+      if (comp.tags.length !== before) {
+        comp.updatedAt = now;
+        changed = true;
+      }
+    }
+    if (changed) await this.#writeJson(this.compsPath, comps);
+  }
+
   async removeBuildFromComps(buildId) {
     const comps = await this.listComps();
     let changed = false;

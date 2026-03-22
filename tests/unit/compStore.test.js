@@ -230,6 +230,90 @@ describe("CompStore — published fields", () => {
   });
 });
 
+describe("CompStore — deleteComps (batch)", () => {
+  let store, dir;
+  beforeEach(async () => ({ store, dir } = await makeTempStore()));
+  afterEach(async () => cleanupDir(dir));
+
+  test("deletes multiple comps by id array", async () => {
+    const a = await store.upsertComp(makeComp({ name: "A" }));
+    const b = await store.upsertComp(makeComp({ name: "B" }));
+    const c = await store.upsertComp(makeComp({ name: "C" }));
+    await store.deleteComps([a.id, c.id]);
+    const comps = await store.listComps();
+    expect(comps).toHaveLength(1);
+    expect(comps[0].id).toBe(b.id);
+  });
+
+  test("no-op when ids array is empty", async () => {
+    await store.upsertComp(makeComp({ name: "A" }));
+    await store.deleteComps([]);
+    expect(await store.listComps()).toHaveLength(1);
+  });
+
+  test("ignores non-existent ids", async () => {
+    const a = await store.upsertComp(makeComp({ name: "A" }));
+    await store.deleteComps(["nonexistent", a.id]);
+    expect(await store.listComps()).toEqual([]);
+  });
+});
+
+describe("CompStore — addTagsToComps", () => {
+  let store, dir;
+  beforeEach(async () => ({ store, dir } = await makeTempStore()));
+  afterEach(async () => cleanupDir(dir));
+
+  test("adds tags to multiple comps", async () => {
+    const a = await store.upsertComp(makeComp({ name: "A", tags: ["existing"] }));
+    const b = await store.upsertComp(makeComp({ name: "B", tags: [] }));
+    await store.addTagsToComps([a.id, b.id], ["new-tag", "another"]);
+    const comps = await store.listComps();
+    expect(comps.find((c) => c.id === a.id).tags).toEqual(["existing", "new-tag", "another"]);
+    expect(comps.find((c) => c.id === b.id).tags).toEqual(["new-tag", "another"]);
+  });
+
+  test("does not duplicate existing tags", async () => {
+    const a = await store.upsertComp(makeComp({ name: "A", tags: ["t1"] }));
+    await store.addTagsToComps([a.id], ["t1", "t2"]);
+    const comps = await store.listComps();
+    expect(comps[0].tags).toEqual(["t1", "t2"]);
+  });
+
+  test("updates updatedAt timestamp", async () => {
+    const a = await store.upsertComp(makeComp({ name: "A" }));
+    const before = a.updatedAt;
+    // Small delay to ensure timestamp differs
+    await new Promise((r) => setTimeout(r, 10));
+    await store.addTagsToComps([a.id], ["tag"]);
+    const comps = await store.listComps();
+    expect(comps[0].updatedAt).not.toBe(before);
+  });
+});
+
+describe("CompStore — removeTagsFromComps", () => {
+  let store, dir;
+  beforeEach(async () => ({ store, dir } = await makeTempStore()));
+  afterEach(async () => cleanupDir(dir));
+
+  test("removes specified tags from multiple comps", async () => {
+    const a = await store.upsertComp(makeComp({ name: "A", tags: ["keep", "remove"] }));
+    const b = await store.upsertComp(makeComp({ name: "B", tags: ["remove", "also-keep"] }));
+    await store.removeTagsFromComps([a.id, b.id], ["remove"]);
+    const comps = await store.listComps();
+    expect(comps.find((c) => c.id === a.id).tags).toEqual(["keep"]);
+    expect(comps.find((c) => c.id === b.id).tags).toEqual(["also-keep"]);
+  });
+
+  test("no-op when tags to remove are not present", async () => {
+    const a = await store.upsertComp(makeComp({ name: "A", tags: ["t1"] }));
+    const before = a.updatedAt;
+    await store.removeTagsFromComps([a.id], ["nonexistent"]);
+    const comps = await store.listComps();
+    expect(comps[0].tags).toEqual(["t1"]);
+    expect(comps[0].updatedAt).toBe(before);
+  });
+});
+
 describe("CompStore — removeBuildFromComps — gameMode unlock", () => {
   let store, dir;
   beforeEach(async () => ({ store, dir } = await makeTempStore()));
