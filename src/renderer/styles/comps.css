@@ -808,6 +808,12 @@
   cursor: not-allowed;
 }
 
+.comp-share-dropdown__divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 2px 0;
+}
+
 .comp-detail__back-btn {
   all: unset;
   cursor: pointer;
