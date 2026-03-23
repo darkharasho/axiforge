@@ -158,7 +158,7 @@
   .skill-icon-large.skill-icon--flip-anim {
     animation: mobileSkillFlip 1s ease-in-out;
     transform-origin: center center;
-    backface-visibility: hidden;
+    backface-visibility: visible;
   }
 
   .skill-select-overlay {
