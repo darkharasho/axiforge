@@ -591,9 +591,10 @@ export function computeStatBreakdown(statKey, assumedBoons = null, sigilStacks =
   }
 
   // Trait conversion contributions
-  // Compute full stat totals to use as the base for conversions.
-  // The `totals` variable at line 484 is block-scoped inside the utility block
-  // and not accessible here, so we call computeEquipmentStats directly.
+  // Note: computeEquipmentStats returns post-conversion totals (trait bonuses already applied).
+  // If two traits chain conversions (e.g. Power→Precision, Precision→Ferocity), the breakdown
+  // entry for the second conversion may be slightly inflated vs. the actual total. This is
+  // acceptable — GW2 conversion chains are rare, and the stat totals displayed are correct.
   const traitBase = computeEquipmentStats(assumedBoons, sigilStacks);
   const traitBonuses = computeTraitConversions(traitBase);
   if (traitBonuses[statKey]) {

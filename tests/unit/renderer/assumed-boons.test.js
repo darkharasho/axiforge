@@ -1,6 +1,6 @@
 "use strict";
 
-const { computeEquipmentStats, computeStatBreakdown } = require("../../../src/renderer/modules/stats");
+const { computeEquipmentStats, computeStatBreakdown, computeTraitConversions } = require("../../../src/renderer/modules/stats");
 const { state } = require("../../../src/renderer/modules/state");
 
 function makeEditor(slots = {}, food = "", utility = "") {
@@ -165,8 +165,6 @@ describe("computeEquipmentStats — stacking sigils", () => {
     expect(withSigil.Precision).toBe(baseline.Precision + 150);
   });
 });
-
-const { computeTraitConversions } = require("../../../src/renderer/modules/stats");
 
 describe("computeTraitConversions", () => {
   beforeEach(() => {
