@@ -606,26 +606,15 @@
     row-gap: 4px;
   }
 
-  /* Row 1: name (left) + pills (right) */
   .mini-card__name {
-    order: 1;
-    flex: 1;
-    min-width: 0;
+    width: 100%;
+    white-space: normal;
+    text-overflow: unset;
   }
 
   .mini-card__pills {
-    order: 2;
     padding-right: 0;
-    margin-left: auto;
-  }
-
-  /* Row 2: tags + role left-aligned */
-  .mini-card__tag {
-    order: 3;
-  }
-
-  .role-badge {
-    order: 4;
+    margin-left: 0;
   }
 
   /* Boon coverage: horizontal scroll */
