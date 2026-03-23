@@ -150,8 +150,14 @@
     height: 58px;
   }
 
+  @keyframes mobileSkillFlip {
+    0%   { transform: perspective(400px) rotateX(-90deg); }
+    100% { transform: perspective(400px) rotateX(0deg); }
+  }
+
   .skill-icon-large.skill-icon--flip-anim {
-    animation: skillFlipSwap 900ms ease-in-out;
+    animation: mobileSkillFlip 700ms ease-out;
+    transform-origin: center center;
   }
 
   .skill-select-overlay {
