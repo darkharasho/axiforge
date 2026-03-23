@@ -182,7 +182,7 @@ export function renderSpecializations() {
           .map((optionSpec) => ({
             value: String(optionSpec.id),
             label: optionSpec.name,
-            icon: optionSpec.icon || "",
+            icon: optionSpec.icon || (optionSpec.name ? `https://wiki.guildwars2.com/wiki/Special:FilePath/${encodeURIComponent(optionSpec.name)}.png` : ""),
             disabled: usedInOtherSlots.has(optionSpec.id),
           }));
       })(),
@@ -259,8 +259,17 @@ export function renderSpecializations() {
     emblem.type = "button";
     emblem.className = spec.elite ? "spec-emblem spec-emblem--elite" : "spec-emblem";
     emblem.title = spec.name || `Spec ${slotIndex + 1}`;
-    if (spec.icon) {
-      emblem.innerHTML = `<img src="${escapeHtml(spec.icon)}" alt="${escapeHtml(spec.name || "Specialization")}" />`;
+    const wikiIcon = spec.name
+      ? `https://wiki.guildwars2.com/wiki/Special:FilePath/${encodeURIComponent(spec.name)}.png`
+      : "";
+    if (spec.icon || wikiIcon) {
+      const img = document.createElement("img");
+      img.alt = spec.name || "Specialization";
+      img.src = spec.icon || wikiIcon;
+      if (spec.icon && wikiIcon) {
+        img.onerror = () => { img.onerror = null; img.src = wikiIcon; };
+      }
+      emblem.append(img);
     } else {
       emblem.textContent = "?";
     }
