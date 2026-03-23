@@ -6,6 +6,58 @@ import {
 } from "./constants.js";
 
 /**
+ * Map GW2 API AttributeConversion target names to our stat keys.
+ * The API uses derived-stat names for some targets.
+ */
+const CONVERSION_TARGET_MAP = {
+  BoonDuration: "Concentration",
+  ConditionDuration: "Expertise",
+  CritDamage: "Ferocity",
+  Healing: "HealingPower",
+};
+
+/**
+ * Compute stat bonuses from active trait AttributeConversion facts.
+ * Reads base stats (before conversions) and returns a map of bonus stats to add.
+ * Formula per conversion: floor(baseStatValue * percent / 100)
+ *
+ * @param {Object} baseStats - Current stat totals (before trait conversions)
+ * @returns {Object} bonuses - Map of stat key → bonus value to add
+ */
+export function computeTraitConversions(baseStats) {
+  const bonuses = {};
+  const catalog = state.catalog;
+  if (!catalog?.traitById) return bonuses;
+
+  // Collect active trait IDs from selected specializations
+  const activeTraitIds = new Set(
+    (state.editor.specializations || [])
+      .flatMap((s) => Object.values(s?.majorChoices || {}))
+      .map(Number)
+      .filter(Boolean)
+  );
+  if (!activeTraitIds.size) return bonuses;
+
+  for (const traitId of activeTraitIds) {
+    const trait = catalog.traitById.get(traitId);
+    if (!trait?.facts) continue;
+    for (const fact of trait.facts) {
+      // Only process AttributeConversion facts — other fact types (Buff, etc.)
+      // may coincidentally have source/target/percent fields.
+      if (fact.type !== "AttributeConversion") continue;
+      if (!fact.source || !fact.target || !fact.percent) continue;
+      const sourceVal = baseStats[fact.source] || 0;
+      if (!sourceVal) continue;
+      const targetKey = CONVERSION_TARGET_MAP[fact.target] || fact.target;
+      const bonus = Math.floor(sourceVal * fact.percent / 100);
+      bonuses[targetKey] = (bonuses[targetKey] || 0) + bonus;
+    }
+  }
+
+  return bonuses;
+}
+
+/**
  * Build the set of equipment slot keys to exclude from stat calculations.
  * Excludes the opposite environment's slots AND the inactive weapon set.
  */

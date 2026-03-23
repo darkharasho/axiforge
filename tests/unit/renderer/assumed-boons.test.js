@@ -112,3 +112,122 @@ describe("computeEquipmentStats — extended boons", () => {
     }
   });
 });
+
+const { computeTraitConversions } = require("../../../src/renderer/modules/stats");
+
+describe("computeTraitConversions", () => {
+  beforeEach(() => {
+    state.editor = makeEditor({ chest: "Berserker's" });
+    state.upgradeCatalog = null;
+  });
+
+  test("returns empty object when no specializations selected", () => {
+    state.editor.specializations = [];
+    state.catalog = { traitById: new Map() };
+    const result = computeTraitConversions({});
+    expect(result).toEqual({});
+  });
+
+  test("applies a simple Power → Vitality 10% conversion", () => {
+    const fakeTrait = {
+      id: 9999,
+      facts: [{ type: "AttributeConversion", source: "Power", target: "Vitality", percent: 10 }],
+      traitedFacts: [],
+    };
+    state.catalog = { traitById: new Map([[9999, fakeTrait]]) };
+    state.editor.specializations = [
+      { specializationId: 1, majorChoices: { 1: 9999 } },
+    ];
+    const baseStats = { Power: 1000, Vitality: 500 };
+    const result = computeTraitConversions(baseStats);
+    expect(result.Vitality).toBe(100);
+  });
+
+  test("maps BoonDuration target to Concentration", () => {
+    const fakeTrait = {
+      id: 8888,
+      facts: [{ type: "AttributeConversion", source: "Power", target: "BoonDuration", percent: 13 }],
+      traitedFacts: [],
+    };
+    state.catalog = { traitById: new Map([[8888, fakeTrait]]) };
+    state.editor.specializations = [
+      { specializationId: 1, majorChoices: { 2: 8888 } },
+    ];
+    const result = computeTraitConversions({ Power: 1000 });
+    expect(result.Concentration).toBe(130);
+  });
+
+  test("maps CritDamage target to Ferocity", () => {
+    const fakeTrait = {
+      id: 7777,
+      facts: [{ type: "AttributeConversion", source: "Precision", target: "CritDamage", percent: 10 }],
+      traitedFacts: [],
+    };
+    state.catalog = { traitById: new Map([[7777, fakeTrait]]) };
+    state.editor.specializations = [
+      { specializationId: 1, majorChoices: { 1: 7777 } },
+    ];
+    const result = computeTraitConversions({ Precision: 2000 });
+    expect(result.Ferocity).toBe(200);
+  });
+
+  test("maps ConditionDuration target to Expertise", () => {
+    const fakeTrait = {
+      id: 6666,
+      facts: [{ type: "AttributeConversion", source: "Precision", target: "ConditionDuration", percent: 7 }],
+      traitedFacts: [],
+    };
+    state.catalog = { traitById: new Map([[6666, fakeTrait]]) };
+    state.editor.specializations = [
+      { specializationId: 1, majorChoices: { 1: 6666 } },
+    ];
+    const result = computeTraitConversions({ Precision: 1000 });
+    expect(result.Expertise).toBe(70);
+  });
+
+  test("maps Healing target to HealingPower", () => {
+    const fakeTrait = {
+      id: 5555,
+      facts: [{ type: "AttributeConversion", source: "Power", target: "Healing", percent: 7 }],
+      traitedFacts: [],
+    };
+    state.catalog = { traitById: new Map([[5555, fakeTrait]]) };
+    state.editor.specializations = [
+      { specializationId: 1, majorChoices: { 1: 5555 } },
+    ];
+    const result = computeTraitConversions({ Power: 2000 });
+    expect(result.HealingPower).toBe(140);
+  });
+
+  test("ignores traits not selected in majorChoices", () => {
+    const fakeTrait = {
+      id: 4444,
+      facts: [{ type: "AttributeConversion", source: "Power", target: "Vitality", percent: 10 }],
+      traitedFacts: [],
+    };
+    state.catalog = { traitById: new Map([[4444, fakeTrait]]) };
+    state.editor.specializations = [
+      { specializationId: 1, majorChoices: { 1: 1111 } },
+    ];
+    const result = computeTraitConversions({ Power: 1000 });
+    expect(result).toEqual({});
+  });
+
+  test("multiple conversions from same trait stack additively", () => {
+    const fakeTrait = {
+      id: 3333,
+      facts: [
+        { type: "AttributeConversion", source: "Power", target: "Vitality", percent: 10 },
+        { type: "AttributeConversion", source: "Power", target: "CritDamage", percent: 10 },
+      ],
+      traitedFacts: [],
+    };
+    state.catalog = { traitById: new Map([[3333, fakeTrait]]) };
+    state.editor.specializations = [
+      { specializationId: 1, majorChoices: { 1: 3333 } },
+    ];
+    const result = computeTraitConversions({ Power: 1000 });
+    expect(result.Vitality).toBe(100);
+    expect(result.Ferocity).toBe(100);
+  });
+});
