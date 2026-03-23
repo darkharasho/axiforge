@@ -5,7 +5,7 @@ import { renderSkills } from "@renderer/modules/skills.js";
 import { renderEquipmentPanel } from "@renderer/modules/equipment.js";
 import { buildSkillCard } from "@renderer/modules/detail-panel.js";
 
-const MOBILE_BREAKPOINT = 768;
+const MOBILE_BREAKPOINT = 1024;
 
 /** True when viewport is at or below mobile breakpoint */
 export function isMobile() {

@@ -86,7 +86,7 @@
   padding: 0 16px 24px;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   /* --- Global / Layout --- */
   #app {
     width: 100%;
