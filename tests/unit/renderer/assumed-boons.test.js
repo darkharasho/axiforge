@@ -97,3 +97,18 @@ describe("computeStatBreakdown — assumed boons", () => {
     expect(boonEntry).toBeUndefined();
   });
 });
+
+describe("computeEquipmentStats — extended boons", () => {
+  test("toggling non-stat boons does not change any attribute", () => {
+    const baseline = computeEquipmentStats();
+    const extended = computeEquipmentStats({
+      might: 0, fury: false, alacrity: false,
+      quickness: false, protection: false, regeneration: false,
+      resolution: false, resistance: false, stability: 0,
+      swiftness: false, vigor: false, aegis: false,
+    });
+    for (const key of Object.keys(baseline)) {
+      expect(extended[key]).toBe(baseline[key]);
+    }
+  });
+});

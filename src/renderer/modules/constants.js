@@ -502,6 +502,7 @@ export const MIGHT_POWER_PER_STACK = 30;
 export const MIGHT_CONDI_PER_STACK = 30;
 export const MIGHT_MAX_STACKS = 25;
 export const FURY_CRIT_CHANCE = 25; // percentage points
+export const STABILITY_MAX_STACKS = 25;
 
 export const BOON_NAMES = new Set([
   "Aegis", "Alacrity", "Fury", "Might", "Protection", "Quickness",

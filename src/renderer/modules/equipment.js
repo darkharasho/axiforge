@@ -24,9 +24,21 @@ let _readOnly = false;
 export function setReadOnly(val) { _readOnly = val; }
 
 // Assumed boons — session-only, not persisted to builds.
-let _assumedBoons = { might: 0, fury: false, alacrity: false };
+let _assumedBoons = {
+  might: 0, fury: false, alacrity: false,
+  quickness: false, protection: false, regeneration: false,
+  resolution: false, resistance: false, stability: 0,
+  swiftness: false, vigor: false, aegis: false,
+};
 export function getAssumedBoons() { return _assumedBoons; }
-export function resetAssumedBoons() { _assumedBoons = { might: 0, fury: false, alacrity: false }; }
+export function resetAssumedBoons() {
+  _assumedBoons = {
+    might: 0, fury: false, alacrity: false,
+    quickness: false, protection: false, regeneration: false,
+    resolution: false, resistance: false, stability: 0,
+    swiftness: false, vigor: false, aegis: false,
+  };
+}
 
 // DOM refs
 let _el = { equipmentPanel: null };
