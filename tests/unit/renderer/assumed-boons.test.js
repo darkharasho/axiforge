@@ -113,6 +113,29 @@ describe("computeEquipmentStats — extended boons", () => {
   });
 });
 
+describe("computeEquipmentStats — trait conversions integrated", () => {
+  test("trait conversion adds to stat totals", () => {
+    state.editor = makeEditor({ chest: "Berserker's" }); // Adds Power
+    const fakeTrait = {
+      id: 9999,
+      facts: [{ type: "AttributeConversion", source: "Power", target: "Vitality", percent: 10 }],
+      traitedFacts: [],
+    };
+    state.catalog = { traitById: new Map([[9999, fakeTrait]]) };
+    state.editor.specializations = [
+      { specializationId: 1, majorChoices: { 1: 9999 } },
+    ];
+    const withTrait = computeEquipmentStats();
+    // Remove trait to get baseline
+    state.editor.specializations = [];
+    const baseline = computeEquipmentStats();
+    // Vitality should be higher with the trait
+    expect(withTrait.Vitality).toBeGreaterThan(baseline.Vitality);
+    // Power should be the same (source is not increased by conversion)
+    expect(withTrait.Power).toBe(baseline.Power);
+  });
+});
+
 const { computeTraitConversions } = require("../../../src/renderer/modules/stats");
 
 describe("computeTraitConversions", () => {

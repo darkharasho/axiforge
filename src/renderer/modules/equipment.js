@@ -9,7 +9,7 @@ import {
   FURY_CRIT_CHANCE, MIGHT_MAX_STACKS, MIGHT_POWER_PER_STACK, MIGHT_CONDI_PER_STACK, STABILITY_MAX_STACKS, BOON_CONDITION_ICONS,
 } from "./constants.js";
 import { escapeHtml } from "./utils.js";
-import { computeSlotStats, computeEquipmentStats, computeUpgradeModifiers, computeStatBreakdown } from "./stats.js";
+import { computeSlotStats, computeEquipmentStats, computeUpgradeModifiers, computeStatBreakdown, computeTraitConversions } from "./stats.js";
 import { bindHoverPreview, selectDetail } from "./detail-panel.js";
 import { getProfessionSvg } from "./profession-icons.js";
 import { getSlotSvg } from "./slot-icons.js";
@@ -1323,6 +1323,7 @@ export function renderEquipmentPanel() {
   // Attributes
   const statsSection = makeSection("Attributes");
   const computed = computeEquipmentStats(_assumedBoons);
+  const traitBonuses = computeTraitConversions(computed);
   const professionName = state.editor.profession;
   const baseHP = PROFESSION_BASE_HP[professionName] || 9212;
   const health = baseHP + (computed.Vitality || 0) * 10;
@@ -1355,7 +1356,8 @@ export function renderEquipmentPanel() {
 
     const leftEl = document.createElement("div");
     leftEl.className = "equip-stat-cell";
-    const isBoosted = (_assumedBoons.might > 0 && (row.key === "Power" || row.key === "ConditionDamage"));
+    const isBoosted = (_assumedBoons.might > 0 && (row.key === "Power" || row.key === "ConditionDamage"))
+      || (traitBonuses[row.key] > 0);
     leftEl.innerHTML = `<span class="equip-stat-label">${row.stat}</span><span class="equip-stat-value${isBoosted ? " equip-stat-value--boosted" : ""}">${(row.value || 0).toLocaleString()}</span>`;
 
     bindHoverPreview(leftEl, "equip-stat", () => {

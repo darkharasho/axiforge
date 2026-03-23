@@ -275,6 +275,12 @@ export function computeEquipmentStats(assumedBoons = null) {
     totals.ConditionDamage += (assumedBoons.might || 0) * MIGHT_CONDI_PER_STACK;
   }
 
+  // Trait AttributeConversion contributions
+  const traitBonuses = computeTraitConversions(totals);
+  for (const [key, bonus] of Object.entries(traitBonuses)) {
+    totals[key] = (totals[key] || 0) + bonus;
+  }
+
   return totals;
 }
 
@@ -572,6 +578,16 @@ export function computeStatBreakdown(statKey, assumedBoons = null) {
         entries.push({ source: `Boon (Might ×${mightStacks})`, value: mightStacks * MIGHT_CONDI_PER_STACK });
       }
     }
+  }
+
+  // Trait conversion contributions
+  // Compute full stat totals to use as the base for conversions.
+  // The `totals` variable at line 484 is block-scoped inside the utility block
+  // and not accessible here, so we call computeEquipmentStats directly.
+  const traitBase = computeEquipmentStats(assumedBoons);
+  const traitBonuses = computeTraitConversions(traitBase);
+  if (traitBonuses[statKey]) {
+    entries.push({ source: "Trait conversion", value: traitBonuses[statKey] });
   }
 
   return entries;
