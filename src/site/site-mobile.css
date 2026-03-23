@@ -355,8 +355,14 @@
     justify-items: stretch;
   }
 
-  .spec-card {
+  .specs-panel {
     width: 100%;
+  }
+
+  .spec-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-inline: 0;
   }
 
   /* --- Detail Panel / Hover Preview --- */
