@@ -397,23 +397,33 @@
   }
 
   .spec-card.expanded .spec-card__body {
-    display: grid;
-    grid-template-columns: auto auto 1fr;
-    gap: 8px;
-    padding: 12px;
-    justify-items: start;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
     align-items: center;
+    gap: 6px;
+    padding: 12px;
   }
 
   .spec-card.expanded .spec-emblem {
-    grid-column: 1 / -1;
-    justify-self: center;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    margin-bottom: 4px;
   }
 
+  /* Major trait columns stay vertical (3 stacked) */
   .spec-card.expanded .trait-column--major {
     display: flex;
-    flex-direction: row;
-    gap: 6px;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  /* Minor diamonds sit between the major columns */
+  .spec-card.expanded .trait-minor-anchor {
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .spec-card.expanded .spec-connector {
