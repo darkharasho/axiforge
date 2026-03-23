@@ -406,6 +406,128 @@ describe("computeEquipmentStats — underwater mode", () => {
 });
 
 // ---------------------------------------------------------------------------
+// computeEquipmentStats — skill passive bonuses (issue #61)
+// ---------------------------------------------------------------------------
+
+describe("computeEquipmentStats — skill passive bonuses", () => {
+  test("Signet of Fire adds +180 Precision in PvE", () => {
+    state.editor = {
+      ...makeEditor(),
+      skills: { healId: 0, utilityIds: [5542, 0, 0], eliteId: 0 },
+      gameMode: "pve",
+    };
+    const result = computeEquipmentStats();
+    expect(result.Precision).toBe(1000 + 180);
+  });
+
+  test("Signet of Fire adds +180 Precision in WvW", () => {
+    state.editor = {
+      ...makeEditor(),
+      skills: { healId: 0, utilityIds: [5542, 0, 0], eliteId: 0 },
+      gameMode: "wvw",
+    };
+    const result = computeEquipmentStats();
+    expect(result.Precision).toBe(1000 + 180);
+  });
+
+  test("Bane Signet adds +180 Power", () => {
+    state.editor = {
+      ...makeEditor(),
+      skills: { healId: 0, utilityIds: [9093, 0, 0], eliteId: 0 },
+      gameMode: "pve",
+    };
+    const result = computeEquipmentStats();
+    expect(result.Power).toBe(1000 + 180);
+  });
+
+  test("Assassin's Signet adds +200 Power in PvE but +180 in WvW", () => {
+    state.editor = {
+      ...makeEditor(),
+      skills: { healId: 0, utilityIds: [13046, 0, 0], eliteId: 0 },
+      gameMode: "pve",
+    };
+    expect(computeEquipmentStats().Power).toBe(1000 + 200);
+
+    state.editor.gameMode = "wvw";
+    expect(computeEquipmentStats().Power).toBe(1000 + 180);
+  });
+
+  test("multiple signets stack on top of each other", () => {
+    // Bane Signet (+180 Power) + Signet of Wrath (+180 ConditionDamage)
+    state.editor = {
+      ...makeEditor(),
+      skills: { healId: 0, utilityIds: [9093, 9151, 0], eliteId: 0 },
+      gameMode: "pve",
+    };
+    const result = computeEquipmentStats();
+    expect(result.Power).toBe(1000 + 180);
+    expect(result.ConditionDamage).toBe(180);
+  });
+
+  test("signet passives stack on top of equipment stats", () => {
+    // Berserker's chest (Power +141, Precision +101) + Signet of Fire (Precision +180)
+    state.editor = {
+      ...makeEditor({ chest: "Berserker's" }),
+      skills: { healId: 0, utilityIds: [5542, 0, 0], eliteId: 0 },
+      gameMode: "pve",
+    };
+    const result = computeEquipmentStats();
+    expect(result.Power).toBe(1000 + 141);
+    expect(result.Precision).toBe(1000 + 101 + 180);
+  });
+
+  test("heal and elite slot passives also contribute", () => {
+    // Healing signet as heal, signet passive in elite (Signet of Rage has no attribute bonus)
+    // Using Bane Signet as heal (unusual but tests the slot) and Signet of Wrath as elite
+    state.editor = {
+      ...makeEditor(),
+      skills: { healId: 9093, utilityIds: [0, 0, 0], eliteId: 9151 },
+      gameMode: "pve",
+    };
+    const result = computeEquipmentStats();
+    expect(result.Power).toBe(1000 + 180);
+    expect(result.ConditionDamage).toBe(180);
+  });
+
+  test("unknown skill IDs add nothing", () => {
+    state.editor = {
+      ...makeEditor(),
+      skills: { healId: 99999, utilityIds: [88888, 0, 0], eliteId: 77777 },
+      gameMode: "pve",
+    };
+    const result = computeEquipmentStats();
+    expect(result.Power).toBe(1000);
+    expect(result.Precision).toBe(1000);
+  });
+
+  test("underwater mode uses underwaterSkills", () => {
+    state.editor = {
+      ...makeEditor(),
+      skills: { healId: 0, utilityIds: [5542, 0, 0], eliteId: 0 },
+      underwaterSkills: { healId: 0, utilityIds: [9093, 0, 0], eliteId: 0 },
+      underwaterMode: true,
+      gameMode: "pve",
+    };
+    const result = computeEquipmentStats();
+    // Should use underwaterSkills (Bane Signet +180 Power), not land skills (Signet of Fire)
+    expect(result.Power).toBe(1000 + 180);
+    expect(result.Precision).toBe(1000); // Signet of Fire is NOT applied (land only)
+  });
+
+  test("Signet of Mercy adds +180 Concentration in PvE but +120 in WvW", () => {
+    state.editor = {
+      ...makeEditor(),
+      skills: { healId: 0, utilityIds: [9163, 0, 0], eliteId: 0 },
+      gameMode: "pve",
+    };
+    expect(computeEquipmentStats().Concentration).toBe(180);
+
+    state.editor.gameMode = "wvw";
+    expect(computeEquipmentStats().Concentration).toBe(120);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // computeBuildConcentration
 // ---------------------------------------------------------------------------
 

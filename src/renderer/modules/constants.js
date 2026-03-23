@@ -503,6 +503,31 @@ export const MIGHT_CONDI_PER_STACK = 30;
 export const MIGHT_MAX_STACKS = 25;
 export const FURY_CRIT_CHANCE = 25; // percentage points
 
+// Signet passive flat attribute bonuses (GW2 API doesn't expose these numerically).
+// Values sourced from GW2 wiki; keyed by skill ID → { attribute, pve, wvw }.
+// Only signets that grant flat attribute increases are included (not %, speed, regen, etc.).
+export const SKILL_PASSIVE_BONUSES = new Map([
+  // Elementalist
+  [5542, { attribute: "Precision", pve: 180, wvw: 180 }],         // Signet of Fire
+  // Guardian
+  [9093, { attribute: "Power", pve: 180, wvw: 180 }],             // Bane Signet
+  [9151, { attribute: "ConditionDamage", pve: 180, wvw: 180 }],   // Signet of Wrath
+  [9163, { attribute: "Concentration", pve: 180, wvw: 120 }],     // Signet of Mercy
+  // Warrior
+  [14404, { attribute: "Power", pve: 180, wvw: 180 }],            // Signet of Might
+  [14410, { attribute: "Precision", pve: 180, wvw: 180 }],        // Signet of Fury
+  // Thief
+  [13046, { attribute: "Power", pve: 200, wvw: 180 }],            // Assassin's Signet
+  [13062, { attribute: "Precision", pve: 180, wvw: 180 }],        // Signet of Agility
+  // Necromancer
+  [10622, { attribute: "Power", pve: 180, wvw: 180 }],            // Signet of Spite
+  // Mesmer
+  [10232, { attribute: "ConditionDamage", pve: 180, wvw: 180 }],  // Signet of Domination
+  // Ranger
+  [12500, { attribute: "Toughness", pve: 180, wvw: 180 }],        // Signet of Stone
+  [12491, { attribute: "Ferocity", pve: 180, wvw: 180 }],         // Signet of the Wild
+]);
+
 export const BOON_NAMES = new Set([
   "Aegis", "Alacrity", "Fury", "Might", "Protection", "Quickness",
   "Regeneration", "Resistance", "Resolution", "Stability", "Swiftness", "Vigor",

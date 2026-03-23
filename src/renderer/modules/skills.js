@@ -33,11 +33,13 @@ let _renderEditor = () => {};
 let _markEditorChanged = () => {};
 let _enforceEditorConsistency = () => {};
 let _openSlotPicker = () => {};
-export function initSkillsCallbacks({ renderEditor, markEditorChanged, enforceEditorConsistency, openSlotPicker }) {
+let _renderEquipmentPanel = () => {};
+export function initSkillsCallbacks({ renderEditor, markEditorChanged, enforceEditorConsistency, openSlotPicker, renderEquipmentPanel }) {
   _renderEditor = renderEditor;
   _markEditorChanged = markEditorChanged;
   _enforceEditorConsistency = enforceEditorConsistency;
   _openSlotPicker = openSlotPicker;
+  if (renderEquipmentPanel) _renderEquipmentPanel = renderEquipmentPanel;
 }
 
 // Tracks which utility slot (0–2) is currently being dragged; -1 means none.
@@ -945,6 +947,7 @@ export function makeSkillSlot(slot, catalog, options, utilitySelection, markSkil
         state.editor.activeKit = 0; // clear kit view when utility selection changes
         _markEditorChanged({ updateBuildList: true });
         renderSkills();
+        _renderEquipmentPanel(); // skill passives (e.g. signets) affect attributes
 
         // FLIP animation: after re-render, briefly offset the new icons to their OLD positions
         // then transition them to their natural (0,0) resting place with a springy easing.
@@ -1726,6 +1729,7 @@ export function openLegendPicker(anchorEl, slotIdx, catalog) {
       syncRevenantSkillsFromLegend(catalog);
       _markEditorChanged();
       renderSkills();
+      _renderEquipmentPanel(); // legend skills may have passive attribute bonuses
     }, { items, searchPlaceholder: "Search legends…" });
   }
 }

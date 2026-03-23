@@ -2,7 +2,7 @@
 import { state } from "./state.js";
 import {
   STAT_COMBOS_BY_LABEL, SLOT_WEIGHTS, LAND_ONLY_SLOTS, AQUATIC_SLOTS,
-  MIGHT_POWER_PER_STACK, MIGHT_CONDI_PER_STACK,
+  MIGHT_POWER_PER_STACK, MIGHT_CONDI_PER_STACK, SKILL_PASSIVE_BONUSES,
 } from "./constants.js";
 
 export function computeSlotStats(comboLabel, slotKey) {
@@ -191,6 +191,27 @@ export function computeEquipmentStats(assumedBoons = null) {
       while ((m = flatRe.exec(utilDef.buff)) !== null) {
         const key = UTIL_STAT_MAP[m[2]];
         if (key) totals[key] = (totals[key] || 0) + Number(m[1]);
+      }
+    }
+  }
+
+  // Skill passive attribute bonuses (e.g. signets)
+  const skillSource = isUnderwater ? state.editor.underwaterSkills : state.editor.skills;
+  if (skillSource) {
+    const gameMode = state.editor.gameMode || "pve";
+    const modeKey = gameMode === "wvw" ? "wvw" : "pve";
+    const skillIds = [
+      skillSource.healId,
+      ...(skillSource.utilityIds || []),
+      skillSource.eliteId,
+    ];
+    for (const id of skillIds) {
+      if (!id) continue;
+      const bonus = SKILL_PASSIVE_BONUSES.get(Number(id));
+      if (!bonus) continue;
+      const value = bonus[modeKey] ?? bonus.pve;
+      if (value && totals[bonus.attribute] !== undefined) {
+        totals[bonus.attribute] += value;
       }
     }
   }
@@ -476,6 +497,31 @@ export function computeStatBreakdown(statKey, assumedBoons = null) {
       while ((m = flatRe.exec(utilDef.buff)) !== null) {
         const key = MAP[m[2]] || m[2];
         if (key === statKey) entries.push({ source: `${utilDef.name}`, value: Number(m[1]) });
+      }
+    }
+  }
+
+  // Skill passive attribute bonuses (e.g. signets)
+  {
+    const skillSource = isUnderwater ? state.editor.underwaterSkills : state.editor.skills;
+    if (skillSource) {
+      const gameMode = state.editor.gameMode || "pve";
+      const modeKey = gameMode === "wvw" ? "wvw" : "pve";
+      const catalog = state.activeCatalog;
+      const skillIds = [
+        skillSource.healId,
+        ...(skillSource.utilityIds || []),
+        skillSource.eliteId,
+      ];
+      for (const id of skillIds) {
+        if (!id) continue;
+        const bonus = SKILL_PASSIVE_BONUSES.get(Number(id));
+        if (!bonus || bonus.attribute !== statKey) continue;
+        const value = bonus[modeKey] ?? bonus.pve;
+        if (value) {
+          const skillName = catalog?.skillById?.get(Number(id))?.name || "Signet";
+          entries.push({ source: `Skill (${skillName})`, value });
+        }
       }
     }
   }
