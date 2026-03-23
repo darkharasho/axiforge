@@ -381,8 +381,8 @@ app.whenReady().then(async () => {
     const owner = auth?.onboarding?.targetOwner;
     if (!owner) throw new Error("GitHub publishing not configured.");
     const repo = auth?.onboarding?.repoName || TARGET_REPO;
-    const { shortUrl } = require("./shortUrl");
-    return shortUrl(owner, repo, comp.publishedFileId);
+    const slug = comp.publishedSlug || "";
+    return `https://${owner}.github.io/${repo}/?n=${encodeURIComponent(slug)}&c=${comp.publishedFileId}.${comp.publishedKey}`;
   });
 
   ipcMain.handle("builds:generate-chat-link", async (_e, build) => {
