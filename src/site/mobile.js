@@ -92,7 +92,7 @@ export function initSpecAccordion() {
     // Get spec data from state
     const specData = state.editor.specializations?.[index];
     const specId = specData?.id;
-    const spec = specId ? state.activeCatalog.specializations?.get(specId) : null;
+    const spec = specId ? state.activeCatalog.specializationById?.get(specId) : null;
 
     // Build header
     const header = document.createElement("div");
