@@ -17,7 +17,7 @@ After publishing a comp, there is no quick way to grab the published link again 
 - **Position:** Below the three existing items (AxiCode, Discord Embed, Discord Plaintext), separated by a visual divider (1px `rgba(255,255,255,0.08)` line)
 - **Published state:** Normal item styling. Click copies the short URL to clipboard and shows the standard "Copied!" flash (same pattern as AxiCode/Plaintext items)
 - **Unpublished state:** Button has `disabled` attribute. Existing `.comp-share-dropdown__item:disabled` CSS applies (opacity 0.5, cursor not-allowed). `title="Publish first"` provides tooltip hint
-- **Disabled-to-enabled transition:** After publishing, `renderCompDetail()` is called with the updated comp object (which now has `publishedFileId`), so the button renders as enabled automatically
+- **Disabled-to-enabled transition:** After a successful publish, the publish click handler imperatively removes the `disabled` attribute from the Published Link button (e.g., `publishedLinkBtn.disabled = false`). A full re-render is not appropriate here since it would destroy the in-progress publish status UI. The button element is captured in the same scope as the publish handler, so this is straightforward
 
 ### URL Format
 
