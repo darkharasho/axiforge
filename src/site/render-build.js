@@ -5,7 +5,7 @@ import { initEquipment, initEquipmentCallbacks, renderEquipmentPanel } from "@re
 import { initDetailPanel, bindHoverPreview, setOnHoverPreview } from "@renderer/modules/detail-panel.js";
 import { initReferencePanel, updateReferencePanel } from "./render-reference.js";
 import { renderNotes } from "./render-notes.js";
-import { initMobileDetection, initSkillBarMobile, initSpecAccordion, initEquipmentSubTabs } from "./mobile.js";
+import { initMobileDetection, initSkillBarMobile, initSpecAccordion, initEquipmentSubTabs, isMobile, openBottomSheet } from "./mobile.js";
 
 function escapeHtml(s) {
   const d = document.createElement("div");
@@ -366,10 +366,14 @@ export function renderBuildPage(container, build) {
     lastHoveredEntity = entity;
   });
 
-  // Click on a skill/trait to pin it in the reference panel (like the app's selectDetail).
+  // Click on a skill/trait to pin it in the reference panel (or open bottom sheet on mobile).
   buildContent.addEventListener("click", () => {
     if (lastHoveredEntity) {
-      updateReferencePanel(lastHoveredKind, lastHoveredEntity);
+      if (isMobile()) {
+        openBottomSheet(lastHoveredKind, lastHoveredEntity);
+      } else {
+        updateReferencePanel(lastHoveredKind, lastHoveredEntity);
+      }
     }
   });
 

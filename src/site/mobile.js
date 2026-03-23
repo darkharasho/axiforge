@@ -1,6 +1,7 @@
 /* AxiForge — SPA mobile enhancements */
 
 import { state } from "@renderer/modules/state.js";
+import { buildSkillCard } from "@renderer/modules/detail-panel.js";
 
 const MOBILE_BREAKPOINT = 768;
 
@@ -136,6 +137,91 @@ export function initEquipmentSubTabs() {
       showArmor();
     }
   });
+}
+
+let _bottomSheet = null;
+let _backdrop = null;
+let _sheetContent = null;
+let _touchStartY = 0;
+let _sheetStartTranslate = 0;
+
+/**
+ * Create and inject the bottom sheet DOM elements.
+ */
+function createBottomSheet() {
+  // Backdrop
+  _backdrop = document.createElement("div");
+  _backdrop.className = "bottom-sheet-backdrop";
+  _backdrop.addEventListener("click", closeBottomSheet);
+
+  // Sheet
+  _bottomSheet = document.createElement("div");
+  _bottomSheet.className = "bottom-sheet";
+
+  // Handle
+  const handle = document.createElement("div");
+  handle.className = "bottom-sheet__handle";
+  handle.innerHTML = '<div class="bottom-sheet__handle-bar"></div>';
+
+  // Close button
+  const closeBtn = document.createElement("button");
+  closeBtn.className = "bottom-sheet__close";
+  closeBtn.textContent = "✕";
+  closeBtn.addEventListener("click", closeBottomSheet);
+
+  // Content
+  _sheetContent = document.createElement("div");
+  _sheetContent.className = "bottom-sheet__content";
+
+  _bottomSheet.append(handle, closeBtn, _sheetContent);
+  document.body.append(_backdrop, _bottomSheet);
+
+  // Swipe to dismiss
+  handle.addEventListener("touchstart", onTouchStart, { passive: true });
+  _bottomSheet.addEventListener("touchmove", onTouchMove, { passive: false });
+  _bottomSheet.addEventListener("touchend", onTouchEnd, { passive: true });
+}
+
+function onTouchStart(e) {
+  _touchStartY = e.touches[0].clientY;
+  _sheetStartTranslate = 0;
+  _bottomSheet.style.transition = "none";
+}
+
+function onTouchMove(e) {
+  const deltaY = e.touches[0].clientY - _touchStartY;
+  if (deltaY > 0) {
+    _sheetStartTranslate = deltaY;
+    _bottomSheet.style.transform = `translateY(${deltaY}px)`;
+    e.preventDefault();
+  }
+}
+
+function onTouchEnd() {
+  _bottomSheet.style.transition = "";
+  if (_sheetStartTranslate > 100) {
+    closeBottomSheet();
+  } else {
+    _bottomSheet.style.transform = "";
+    _bottomSheet.classList.add("bottom-sheet--active");
+  }
+}
+
+export function openBottomSheet(kind, entity) {
+  if (!_bottomSheet) createBottomSheet();
+  _sheetContent.innerHTML = buildSkillCard(entity, kind || "skill");
+  _backdrop.classList.add("bottom-sheet-backdrop--active");
+  _bottomSheet.classList.add("bottom-sheet--active");
+  _bottomSheet.style.transform = "";
+  document.body.style.overflow = "hidden";
+}
+
+export function closeBottomSheet() {
+  if (!_bottomSheet) return;
+  _backdrop.classList.remove("bottom-sheet-backdrop--active");
+  _bottomSheet.classList.remove("bottom-sheet--active");
+  _bottomSheet.style.transform = "";
+  document.body.style.overflow = "";
 }
 
 /**
