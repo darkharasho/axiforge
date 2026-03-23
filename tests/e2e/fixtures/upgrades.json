@@ -1,0 +1,252 @@
+[
+  {
+    "name": "Superior Rune of the Scholar",
+    "description": "<c=@abilitytype>Element: </c>Brilliance<br>Double-click to apply to a piece of armor.",
+    "type": "UpgradeComponent",
+    "level": 60,
+    "rarity": "Exotic",
+    "vendor_value": 65,
+    "game_types": [
+      "Activity",
+      "Wvw",
+      "Dungeon",
+      "Pve"
+    ],
+    "flags": [],
+    "restrictions": [],
+    "id": 24836,
+    "chat_link": "[&AgEEYQAA]",
+    "icon": "https://render.guildwars2.com/file/4378ABC0415950DAC6A05C76920392D72E242EC2/220736.png",
+    "details": {
+      "type": "Rune",
+      "flags": [
+        "HeavyArmor",
+        "LightArmor",
+        "MediumArmor"
+      ],
+      "infusion_upgrade_flags": [],
+      "bonuses": [
+        "+25 Power",
+        "+35 Ferocity",
+        "+50 Power",
+        "+65 Ferocity",
+        "+100 Power",
+        "+125 Ferocity"
+      ],
+      "attribute_adjustment": 0,
+      "infix_upgrade": {
+        "id": 112,
+        "attributes": []
+      },
+      "suffix": "of the Scholar"
+    }
+  },
+  {
+    "name": "Minor Rune of the Water",
+    "description": "<c=@abilitytype>Element: </c>Skill<br>Double-click to apply to a piece of armor.",
+    "type": "UpgradeComponent",
+    "level": 0,
+    "rarity": "Masterwork",
+    "vendor_value": 5,
+    "game_types": [
+      "Activity",
+      "Wvw",
+      "Dungeon",
+      "Pve"
+    ],
+    "flags": [],
+    "restrictions": [],
+    "id": 24837,
+    "chat_link": "[&AgEFYQAA]",
+    "icon": "https://render.guildwars2.com/file/41DFE8A9374CCC7A1E7C5E6B14535DB7B544F874/221146.png",
+    "details": {
+      "type": "Rune",
+      "flags": [
+        "HeavyArmor",
+        "LightArmor",
+        "MediumArmor"
+      ],
+      "infusion_upgrade_flags": [],
+      "bonuses": [
+        "+10 Healing",
+        "+2% Boon Duration"
+      ],
+      "attribute_adjustment": 0,
+      "infix_upgrade": {
+        "id": 112,
+        "attributes": []
+      },
+      "suffix": "of the Water"
+    }
+  },
+  {
+    "name": "Major Rune of the Water",
+    "description": "<c=@abilitytype>Element: </c>Skill<br>Double-click to apply to a piece of armor.",
+    "type": "UpgradeComponent",
+    "level": 39,
+    "rarity": "Rare",
+    "vendor_value": 30,
+    "game_types": [
+      "Activity",
+      "Wvw",
+      "Dungeon",
+      "Pve"
+    ],
+    "flags": [],
+    "restrictions": [],
+    "id": 24838,
+    "chat_link": "[&AgEGYQAA]",
+    "icon": "https://render.guildwars2.com/file/BF001AE4ED5BD7335A49D64D2AD1090E1CA19E09/221147.png",
+    "details": {
+      "type": "Rune",
+      "flags": [
+        "HeavyArmor",
+        "LightArmor",
+        "MediumArmor"
+      ],
+      "infusion_upgrade_flags": [],
+      "bonuses": [
+        "+15 Healing",
+        "+3% Boon Duration",
+        "+30 Healing",
+        "Remove a condition when you are struck. <c=@reminder>(Cooldown: 30 Seconds)</c>"
+      ],
+      "attribute_adjustment": 0,
+      "infix_upgrade": {
+        "id": 112,
+        "attributes": []
+      },
+      "suffix": "of the Water"
+    }
+  },
+  {
+    "name": "Superior Rune of the Water",
+    "description": "<c=@abilitytype>Element: </c>Skill<br>Double-click to apply to a piece of armor.",
+    "type": "UpgradeComponent",
+    "level": 60,
+    "rarity": "Exotic",
+    "vendor_value": 65,
+    "game_types": [
+      "Activity",
+      "Wvw",
+      "Dungeon",
+      "Pve"
+    ],
+    "flags": [],
+    "restrictions": [],
+    "id": 24839,
+    "chat_link": "[&AgEHYQAA]",
+    "icon": "https://render.guildwars2.com/file/50C5E3125234FF4525162A052335354D47B50D0F/220737.png",
+    "details": {
+      "type": "Rune",
+      "flags": [
+        "HeavyArmor",
+        "LightArmor",
+        "MediumArmor"
+      ],
+      "infusion_upgrade_flags": [],
+      "bonuses": [
+        "+25 Healing",
+        "+5% Boon Duration",
+        "+50 Healing",
+        "+10% Boon Duration",
+        "+100 Healing",
+        "+10% Boon Duration"
+      ],
+      "attribute_adjustment": 0,
+      "infix_upgrade": {
+        "id": 112,
+        "attributes": []
+      },
+      "suffix": "of the Water"
+    }
+  },
+  {
+    "name": "Minor Rune of the Monk",
+    "description": "<c=@abilitytype>Element: </c>Brilliance<br>Double-click to apply to a piece of armor.",
+    "type": "UpgradeComponent",
+    "level": 0,
+    "rarity": "Masterwork",
+    "vendor_value": 16,
+    "game_types": [
+      "Activity",
+      "Wvw",
+      "Dungeon",
+      "Pve"
+    ],
+    "flags": [
+      "HideSuffix",
+      "AccountBound",
+      "AccountBindOnUse"
+    ],
+    "restrictions": [],
+    "id": 24840,
+    "chat_link": "[&AgEIYQAA]",
+    "icon": "https://render.guildwars2.com/file/AFBC93E29150DBB8CF3D050791FF0D0502354A0D/221148.png",
+    "details": {
+      "type": "Rune",
+      "flags": [
+        "HeavyArmor",
+        "LightArmor",
+        "MediumArmor"
+      ],
+      "infusion_upgrade_flags": [],
+      "bonuses": [
+        "+10 Healing",
+        "+2% Boon Duration"
+      ],
+      "attribute_adjustment": 0,
+      "infix_upgrade": {
+        "id": 112,
+        "attributes": []
+      },
+      "suffix": "of the Monk"
+    }
+  },
+  {
+    "name": "Superior Rune of the Monk",
+    "description": "<c=@abilitytype>Element: </c>Brilliance<br>Double-click to apply to a piece of armor.",
+    "type": "UpgradeComponent",
+    "level": 60,
+    "rarity": "Exotic",
+    "vendor_value": 216,
+    "game_types": [
+      "Activity",
+      "Wvw",
+      "Dungeon",
+      "Pve"
+    ],
+    "flags": [
+      "HideSuffix",
+      "AccountBound",
+      "AccountBindOnUse"
+    ],
+    "restrictions": [],
+    "id": 24842,
+    "chat_link": "[&AgEKYQAA]",
+    "icon": "https://render.guildwars2.com/file/E028F4BC03E9EC36A368712463D824CEC30FCCDA/220738.png",
+    "details": {
+      "type": "Rune",
+      "flags": [
+        "HeavyArmor",
+        "LightArmor",
+        "MediumArmor"
+      ],
+      "infusion_upgrade_flags": [],
+      "bonuses": [
+        "+25 Healing",
+        "+5% Boon Duration",
+        "+50 Healing",
+        "+10% Boon Duration",
+        "+100 Healing",
+        "+125 Healing"
+      ],
+      "attribute_adjustment": 0,
+      "infix_upgrade": {
+        "id": 112,
+        "attributes": []
+      },
+      "suffix": "of the Monk"
+    }
+  }
+]
