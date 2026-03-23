@@ -386,6 +386,9 @@
     max-height: 0;
     overflow: hidden;
     opacity: 0;
+    padding: 0;
+    border: 0;
+    min-height: 0;
     transition: max-height 0.25s ease, opacity 0.2s ease;
     border-top-left-radius: 0;
     border-top-right-radius: 0;
@@ -393,6 +396,9 @@
 
   .spec-card.expanded .spec-card__panel {
     opacity: 1;
+    padding: calc(8px * var(--spec-scale)) calc(12px * var(--spec-scale)) calc(10px * var(--spec-scale));
+    border: 1px solid rgba(80, 132, 163, 0.48);
+    border-top: 0;
   }
 
   .spec-card__body {
