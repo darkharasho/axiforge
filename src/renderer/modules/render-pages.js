@@ -654,7 +654,7 @@ export function showPublishResult(url) {
   const resultSlot = _el.publishStatus.querySelector(".publish-result");
   if (!resultSlot) return;
 
-  // Dev-only: show preview button immediately alongside the ticker
+  // Dev-only: show preview + mobile buttons immediately alongside the ticker
   if (location.port || location.hostname === "localhost") {
     try {
       const parsed = new URL(url);
@@ -668,7 +668,13 @@ export function showPublishResult(url) {
       localBtn.addEventListener("click", () => {
         window.desktopApi.openPreviewWindow(localUrl);
       });
-      resultSlot.append(localBtn);
+      const mobileBtn = document.createElement("button");
+      mobileBtn.className = "btn btn-dev publish-result__preview";
+      mobileBtn.textContent = "Mobile";
+      mobileBtn.addEventListener("click", () => {
+        window.desktopApi.openPreviewWindow(localUrl, { mobile: true });
+      });
+      resultSlot.append(localBtn, mobileBtn);
     } catch { /* ignore malformed URL */ }
   }
 
@@ -699,7 +705,7 @@ function _showUrlResult(url, resultSlot) {
 
   urlInput.addEventListener("click", () => urlInput.select());
 
-  // Dev-only: preview button
+  // Dev-only: preview + mobile buttons
   if (location.port || location.hostname === "localhost") {
     try {
       const parsed = new URL(url);
@@ -713,7 +719,13 @@ function _showUrlResult(url, resultSlot) {
       localBtn.addEventListener("click", () => {
         window.desktopApi.openPreviewWindow(localUrl);
       });
-      resultSlot.append(localBtn);
+      const mobileBtn = document.createElement("button");
+      mobileBtn.className = "btn btn-dev publish-result__preview";
+      mobileBtn.textContent = "Mobile";
+      mobileBtn.addEventListener("click", () => {
+        window.desktopApi.openPreviewWindow(localUrl, { mobile: true });
+      });
+      resultSlot.append(localBtn, mobileBtn);
     } catch { /* ignore malformed URL */ }
   }
 }

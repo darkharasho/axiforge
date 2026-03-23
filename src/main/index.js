@@ -249,15 +249,17 @@ app.whenReady().then(async () => {
     return true;
   });
 
-  ipcMain.handle("window:open-preview", (_event, url) => {
+  ipcMain.handle("window:open-preview", (_event, url, opts = {}) => {
+    const mobile = opts.mobile === true;
     const preview = new BrowserWindow({
-      width: 1600,
-      height: 980,
-      minWidth: 1120,
-      minHeight: 740,
+      width: mobile ? 390 : 1600,
+      height: mobile ? 844 : 980,
+      minWidth: mobile ? 320 : 1120,
+      minHeight: mobile ? 568 : 740,
+      useContentSize: mobile,
       backgroundColor: "#050910",
       icon: path.join(__dirname, "../../public/img/build_logo.png"),
-      title: "AxiForge — Local Preview",
+      title: mobile ? "AxiForge — Mobile Preview" : "AxiForge — Local Preview",
     });
     preview.loadURL(url);
     return true;
