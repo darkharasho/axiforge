@@ -373,6 +373,18 @@ app.whenReady().then(async () => {
   ipcMain.handle("comps:add-tags", (_e, ids, tags) => compStore.addTagsToComps(ids, tags));
   ipcMain.handle("comps:remove-tags", (_e, ids, tags) => compStore.removeTagsFromComps(ids, tags));
 
+  ipcMain.handle("comps:get-published-url", async (_e, compId) => {
+    const comps = await compStore.listComps();
+    const comp = comps.find((c) => c.id === compId);
+    if (!comp?.publishedFileId) return null;
+    const auth = await getAuthRecord();
+    const owner = auth?.onboarding?.targetOwner;
+    if (!owner) throw new Error("GitHub publishing not configured.");
+    const repo = auth?.onboarding?.repoName || TARGET_REPO;
+    const { shortUrl } = require("./shortUrl");
+    return shortUrl(owner, repo, comp.publishedFileId);
+  });
+
   ipcMain.handle("builds:generate-chat-link", async (_e, build) => {
     const { generateChatLink } = require("./buildChatLink.js");
     return generateChatLink(build);

@@ -42,6 +42,7 @@ contextBridge.exposeInMainWorld("desktopApi", {
   addTagsToComps: (ids, tags) => ipcRenderer.invoke("comps:add-tags", ids, tags),
   removeTagsFromComps: (ids, tags) => ipcRenderer.invoke("comps:remove-tags", ids, tags),
   publishComp: (compId, boonCoverageHtml) => ipcRenderer.invoke("comps:publish-comp", compId, boonCoverageHtml),
+  getCompPublishedUrl: (compId) => ipcRenderer.invoke("comps:get-published-url", compId),
 
   // Build library operations
   moveBuilds: (ids, folderId) =>
