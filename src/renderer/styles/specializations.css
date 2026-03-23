@@ -258,6 +258,14 @@
   opacity: 1;
 }
 
+.trait-column--major .trait-btn:not(.trait-btn--active):not(.trait-btn--always) img {
+  filter: grayscale(60%) brightness(0.7);
+}
+
+.trait-column--major .trait-btn:not(.trait-btn--active):not(.trait-btn--always):hover img {
+  filter: grayscale(20%) brightness(0.9);
+}
+
 .trait-column--major .trait-btn:hover {
   border-color: transparent;
   background: transparent;
