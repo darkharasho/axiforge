@@ -326,6 +326,14 @@
     flex-direction: column;
   }
 
+  .specializations-host {
+    justify-items: stretch;
+  }
+
+  .spec-card {
+    width: 100%;
+  }
+
   /* --- Detail Panel / Hover Preview --- */
   .detail-panel {
     display: none !important;
