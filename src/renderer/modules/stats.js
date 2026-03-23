@@ -26,7 +26,7 @@ const CONVERSION_TARGET_MAP = {
  */
 export function computeTraitConversions(baseStats) {
   const bonuses = {};
-  const catalog = state.catalog;
+  const catalog = state.activeCatalog;
   if (!catalog?.traitById) return bonuses;
 
   // Collect active trait IDs from selected specializations
@@ -42,9 +42,11 @@ export function computeTraitConversions(baseStats) {
     const trait = catalog.traitById.get(traitId);
     if (!trait?.facts) continue;
     for (const fact of trait.facts) {
-      // Only process AttributeConversion facts — other fact types (Buff, etc.)
-      // may coincidentally have source/target/percent fields.
-      if (fact.type !== "AttributeConversion") continue;
+      // Only process AttributeConversion/BuffConversion facts — the GW2 API uses
+      // "BuffConversion" for attribute conversions (e.g. Power → Vitality).
+      // Other fact types (Buff, Damage, etc.) may coincidentally have
+      // source/target/percent fields so we must filter by type explicitly.
+      if (fact.type !== "AttributeConversion" && fact.type !== "BuffConversion") continue;
       if (!fact.source || !fact.target || !fact.percent) continue;
       const sourceVal = baseStats[fact.source] || 0;
       if (!sourceVal) continue;

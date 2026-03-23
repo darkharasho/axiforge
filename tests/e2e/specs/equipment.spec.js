@@ -988,6 +988,235 @@ test.describe("Equipment — Assumed Boons", () => {
   });
 });
 
+// ─── Section 6F2: Assumed Boons — Expand/Collapse & Expanded Interactions ───
+
+test.describe("Assumed Boons — expand/collapse bar", () => {
+  let app, window;
+
+  test.beforeAll(async () => {
+    ({ app, window } = await launchApp());
+    await goToEquipment(window);
+    // Wait for the boons section to be fully rendered (expand btn is in .equip-boons header)
+    await window.waitForFunction(
+      () => !!document.querySelector(".equip-boons__expand-btn"),
+      null,
+      { timeout: 10_000 }
+    );
+  });
+
+  test.afterAll(async () => {
+    await closeApp(app);
+  });
+
+  // 6F2-1. Clicking "More ▼" expands the boons bar — 9 additional boons appear
+  test("More ▼ button expands boons bar and shows 9 additional boons", async () => {
+    const panel = window.locator("#equipmentPanel");
+    const boonsSection = panel.locator(".equip-boons");
+    await expect(boonsSection).toBeVisible();
+
+    // Verify expand section is collapsed initially
+    const isOpenBefore = await window.evaluate(() => {
+      const el = document.querySelector(".equip-boons__expand");
+      return el ? el.classList.contains("equip-boons__expand--open") : null;
+    });
+    expect(isOpenBefore).toBe(false);
+
+    // Click "More ▼" to expand
+    const expandBtn = boonsSection.locator(".equip-boons__expand-btn");
+    await expect(expandBtn).toBeVisible();
+    await expect(expandBtn).toHaveText("More ▼");
+    await expandBtn.click();
+    await window.waitForTimeout(300);
+
+    // Expanded section should now have the --open class
+    const isOpenAfter = await window.evaluate(() => {
+      const el = document.querySelector(".equip-boons__expand");
+      return el ? el.classList.contains("equip-boons__expand--open") : null;
+    });
+    expect(isOpenAfter).toBe(true);
+
+    // Button text should now read "Less ▲"
+    await expect(expandBtn).toHaveText("Less ▲");
+
+    // The expanded section should contain exactly 9 boon items
+    const expandSection = boonsSection.locator(".equip-boons__expand");
+    const expandedItems = expandSection.locator(".equip-boons__item");
+    const count = await expandedItems.count();
+    expect(count).toBe(9);
+
+    // The 9 expanded boons should include each expected label
+    const expectedBoons = [
+      "Quickness", "Protection", "Regen", "Resolution",
+      "Resistance", "Stability", "Swiftness", "Vigor", "Aegis",
+    ];
+    const itemTexts = await expandedItems.locator(".equip-boons__label").allTextContents();
+    for (const boonName of expectedBoons) {
+      expect(itemTexts, `Expected expanded boon: ${boonName}`).toContain(boonName);
+    }
+  });
+
+  // 6F2-2. Clicking "Less ▲" collapses the boons bar — only core 3 remain visible
+  test("Less ▲ button collapses boons bar — only core 3 boons visible", async () => {
+    const panel = window.locator("#equipmentPanel");
+    const boonsSection = panel.locator(".equip-boons");
+    const expandBtn = boonsSection.locator(".equip-boons__expand-btn");
+
+    // Ensure expand section is open (may still be open from previous test)
+    const isOpen = await window.evaluate(() => {
+      const el = document.querySelector(".equip-boons__expand");
+      return el ? el.classList.contains("equip-boons__expand--open") : false;
+    });
+    if (!isOpen) {
+      await expandBtn.click();
+      await window.waitForTimeout(300);
+    }
+
+    // Now collapse
+    await expandBtn.click();
+    await window.waitForTimeout(300);
+
+    // Expanded section should no longer have --open class
+    const isClosedAfter = await window.evaluate(() => {
+      const el = document.querySelector(".equip-boons__expand");
+      return el ? el.classList.contains("equip-boons__expand--open") : true;
+    });
+    expect(isClosedAfter).toBe(false);
+
+    // Button text should be "More ▼" again
+    await expect(expandBtn).toHaveText("More ▼");
+
+    // The core bar should still show exactly 3 items (Might, Fury, Alacrity)
+    const coreBar = boonsSection.locator(".equip-boons__bar").first();
+    const coreItems = coreBar.locator(".equip-boons__item");
+    const coreCount = await coreItems.count();
+    expect(coreCount).toBe(3);
+
+    const coreTexts = await coreItems.locator(".equip-boons__label").allTextContents();
+    expect(coreTexts).toContain("Might");
+    expect(coreTexts).toContain("Fury");
+    expect(coreTexts).toContain("Alacrity");
+  });
+});
+
+test.describe("Assumed Boons — expanded boon interactions", () => {
+  let app, window;
+
+  test.beforeAll(async () => {
+    ({ app, window } = await launchApp());
+    await goToEquipment(window);
+    // Wait for the boons section to be fully rendered (expand btn is in .equip-boons header)
+    await window.waitForFunction(
+      () => !!document.querySelector(".equip-boons__expand-btn"),
+      null,
+      { timeout: 10_000 }
+    );
+
+    // Open the expanded boons bar so non-core boons are accessible
+    const isOpen = await window.evaluate(() => {
+      const el = document.querySelector(".equip-boons__expand");
+      return el ? el.classList.contains("equip-boons__expand--open") : false;
+    });
+    if (!isOpen) {
+      await window.click(".equip-boons__expand-btn");
+      await window.waitForTimeout(300);
+    }
+  });
+
+  test.afterAll(async () => {
+    await closeApp(app);
+  });
+
+  // 6F2-3. Quickness toggle: click activates (--on class), click again deactivates
+  test("Quickness toggle: click activates icon, second click deactivates", async () => {
+    const panel = window.locator("#equipmentPanel");
+    const expandSection = panel.locator(".equip-boons__expand");
+
+    const quicknessItem = expandSection.locator(".equip-boons__item")
+      .filter({ hasText: "Quickness" }).first();
+    await expect(quicknessItem).toBeVisible();
+
+    const quicknessIcon = quicknessItem.locator(".equip-boons__icon");
+
+    // Initially off
+    const isOff = await quicknessIcon.evaluate((el) =>
+      !el.classList.contains("equip-boons__icon--on")
+    );
+    expect(isOff).toBe(true);
+
+    // Click to activate
+    await quicknessIcon.click();
+    await window.waitForTimeout(300);
+
+    const isOn = await quicknessIcon.evaluate((el) =>
+      el.classList.contains("equip-boons__icon--on")
+    );
+    expect(isOn).toBe(true);
+
+    // Click again to deactivate
+    await quicknessIcon.click();
+    await window.waitForTimeout(300);
+
+    const isOffAgain = await quicknessIcon.evaluate((el) =>
+      !el.classList.contains("equip-boons__icon--on")
+    );
+    expect(isOffAgain).toBe(true);
+  });
+
+  // 6F2-4. Stability stacking: works like Might — click adds stacks, badge shows, right-click removes
+  test("Stability stacking: click adds stacks, badge shows count, right-click removes stacks", async () => {
+    const panel = window.locator("#equipmentPanel");
+    const expandSection = panel.locator(".equip-boons__expand");
+
+    const stabilityItem = expandSection.locator(".equip-boons__item")
+      .filter({ hasText: "Stability" }).first();
+    await expect(stabilityItem).toBeVisible();
+
+    const stabilityIcon = stabilityItem.locator(".equip-boons__icon");
+
+    // Initially at 0 stacks (not active)
+    const isInitiallyOff = await stabilityIcon.evaluate((el) =>
+      !el.classList.contains("equip-boons__icon--on")
+    );
+    expect(isInitiallyOff).toBe(true);
+
+    // Click to add 1 stack
+    await stabilityIcon.click();
+    await window.waitForTimeout(300);
+
+    // Badge should show "1"
+    const badge = stabilityItem.locator(".equip-boons__badge");
+    const badgeText1 = await badge.textContent();
+    expect(badgeText1).toBe("1");
+
+    // Icon should be active
+    const isActive = await stabilityIcon.evaluate((el) =>
+      el.classList.contains("equip-boons__icon--on")
+    );
+    expect(isActive).toBe(true);
+
+    // Shift+click to add 5 more (total 6)
+    await stabilityIcon.click({ modifiers: ["Shift"] });
+    await window.waitForTimeout(300);
+    const badgeText6 = await badge.textContent();
+    expect(badgeText6).toBe("6");
+
+    // Right-click to remove 1 stack (back to 5)
+    await stabilityIcon.click({ button: "right" });
+    await window.waitForTimeout(300);
+    const badgeText5 = await badge.textContent();
+    expect(badgeText5).toBe("5");
+
+    // Ctrl+right-click to remove all stacks (to 0)
+    await stabilityIcon.click({ button: "right", modifiers: ["Control"] });
+    await window.waitForTimeout(300);
+
+    const isNowOff = await stabilityIcon.evaluate((el) =>
+      !el.classList.contains("equip-boons__icon--on")
+    );
+    expect(isNowOff).toBe(true);
+  });
+});
+
 // ─── Section 6G: Stats Display ──────────────────────────────────────────────
 
 test.describe("Equipment — Stats Display", () => {
@@ -1112,6 +1341,132 @@ test.describe("Equipment — Stats Display", () => {
 
     // Disable Fury
     await furyIcon.click();
+    await window.waitForTimeout(300);
+  });
+});
+
+// ─── Section 6H: Trait AttributeConversion ──────────────────────────────────
+
+test.describe("Assumed Boons — trait AttributeConversion", () => {
+  let app, window;
+
+  test.beforeAll(async () => {
+    ({ app, window } = await launchApp());
+    // Start on the build tab
+    await goToEditor(window);
+    await selectProfession(window, "Warrior");
+    // After selectProfession, Warrior gets default spec selections. The first slot
+    // typically gets "Strength" by default (first core spec in the fixture).
+    // Verify slot 0 has "Strength" (it's selected by default); if not, open the
+    // cselect and pick it. The cselect__trigger needs force:true because the
+    // spec-select-overlay has pointer-events:none via the cselect-host class.
+    // Check if slot 0 already has Strength
+    const slot0HasStrength = await window.evaluate(() => {
+      const card = document.querySelectorAll(".spec-card")[0];
+      if (!card) return false;
+      const label = card.querySelector(".cselect__label");
+      return label ? label.textContent.includes("Strength") : false;
+    });
+    if (!slot0HasStrength) {
+      // Open the spec picker for slot 0 using the cselect
+      const firstCardTrigger = window.locator(".spec-card").nth(0).locator(".cselect__trigger");
+      await firstCardTrigger.click({ force: true });
+      // Wait for the cselect menu to open
+      await window.waitForFunction(
+        () => {
+          const open = document.querySelector(".cselect--open");
+          return open && open.closest(".spec-card") !== null;
+        },
+        null,
+        { timeout: 5000 }
+      );
+      // Click the "Strength" option
+      await window.click('.cselect--open .cselect__option:has-text("Strength")');
+      await window.waitForTimeout(500);
+    }
+    // Select Great Fortitude: trait id 1449, tier 2 (major col index 1), col 2 (0-indexed).
+    // Major trait columns (.trait-column--major) are indexed 0=tier1, 1=tier2, 2=tier3.
+    // Within each column, trait buttons are indexed 0, 1, 2 (left to right).
+    // After selecting Strength, the trait columns should be visible.
+    await window.waitForFunction(
+      () => {
+        const card = document.querySelectorAll(".spec-card")[0];
+        return card && card.querySelectorAll(".trait-column--major").length >= 3;
+      },
+      null,
+      { timeout: 5000 }
+    );
+    const specCard = window.locator(".spec-card").nth(0);
+    // Tier 2 is the 2nd major column (index 1), Great Fortitude is the 3rd button (index 2)
+    const tier2Column = specCard.locator(".trait-column--major").nth(1);
+    const greatFortitudeBtn = tier2Column.locator(".trait-btn").nth(2);
+    await greatFortitudeBtn.click();
+    await window.waitForTimeout(300);
+    // Navigate to equipment tab
+    await switchTab(window, "equipment");
+    await window.waitForFunction(
+      () => {
+        const panel = document.querySelector("#equipmentPanel");
+        return panel && panel.querySelector(".equip-section") !== null;
+      },
+      null,
+      { timeout: 10_000 }
+    );
+  });
+
+  test.afterAll(async () => {
+    await closeApp(app);
+  });
+
+  // 32. Great Fortitude trait converts 10% Power → Vitality: Vitality rises above 1000 when Power is added
+  //
+  // Note: the equipment panel only re-renders when a stat combo is selected (which calls _render()).
+  // After the trait is selected in beforeAll, the equipment panel hasn't re-rendered yet, so
+  // Vitality would still show 1000. We verify the trait works by equipping Power gear, which
+  // triggers a re-render that includes the trait conversion effect.
+  //
+  // With Great Fortitude active and Berserker's Chest (+141 Power):
+  //   Power = 1000 (base) + 141 (chest) = 1141
+  //   Trait converts 10% of Power to Vitality: floor(1141 * 0.10) = 114
+  //   Vitality = 1000 (base) + 114 (trait) = 1114 → must be > 1000
+  //
+  // Without the trait, Vitality from Berserker's gear = 0 bonus (Berserker's doesn't add Vitality),
+  // so Vitality would remain at 1000.
+  test("Great Fortitude trait: equipping Power gear raises Vitality above 1000", async () => {
+    const panel = window.locator("#equipmentPanel");
+    const statsSection = panel.locator(".equip-section").filter({ hasText: "Attributes" }).first();
+
+    const getStatValue = async (statLabel) => {
+      const rows = statsSection.locator(".equip-stat-row");
+      const count = await rows.count();
+      for (let i = 0; i < count; i++) {
+        const label = await rows.nth(i).locator(".equip-stat-label").first().textContent();
+        if (label.trim() === statLabel) {
+          const val = await rows.nth(i).locator(".equip-stat-value").first().textContent();
+          return parseInt(val.replace(/,/g, ""));
+        }
+      }
+      return null;
+    };
+
+    // Equip Berserker's on Chest (Chest primary Power = +141, no Vitality bonus from the gear itself)
+    // This triggers a full re-render of the equipment panel with the trait active.
+    const armorSection = panel.locator(".equip-section").filter({ hasText: "Armor" }).first();
+    // Chest is the 3rd armor slot (index 2: Head, Shoulders, Chest)
+    const chestSlot = armorSection.locator(".equip-slot").nth(2);
+    await openStatPicker(window, chestSlot);
+    await selectStatInPicker(window, "Berserker");
+
+    // After equipping Berserker's Chest with Great Fortitude active:
+    // Great Fortitude converts 10% of total Power to Vitality.
+    // Power = 1141, bonus Vitality = 114, so Vitality = 1114 (> 1000 base).
+    // Without the trait, Vitality from Berserker's chest = 0 (Berserker's has no Vitality), so it stays at 1000.
+    const vitalityWithTrait = await getStatValue("Vitality");
+    expect(vitalityWithTrait).toBeGreaterThan(1000);
+
+    // Cleanup: clear the chest slot
+    await openStatPicker(window, chestSlot);
+    await window.click('.slot-picker__option:has-text("Empty")');
     await window.waitForTimeout(300);
   });
 });

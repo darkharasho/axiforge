@@ -248,5 +248,34 @@
       },
       "suffix": "of the Monk"
     }
+  },
+  {
+    "name": "Superior Sigil of Bloodlust",
+    "description": "<c=@abilitytype>Element: </c>Enhancement<br>Double-click to apply to a weapon.",
+    "type": "UpgradeComponent",
+    "level": 60,
+    "rarity": "Exotic",
+    "vendor_value": 216,
+    "game_types": ["Activity", "Wvw", "Dungeon", "Pve"],
+    "flags": [],
+    "restrictions": [],
+    "id": 24575,
+    "chat_link": "[&AgD/XQAA]",
+    "icon": "https://render.guildwars2.com/file/04D6D66AAD5E4B04714545D0EBC1C00B6BDACE66/220696.png",
+    "details": {
+      "type": "Sigil",
+      "flags": ["Axe", "Dagger", "Focus", "Greatsword", "Hammer", "Longbow", "Mace", "Pistol", "Rifle", "Scepter", "Shield", "ShortBow", "Staff", "Sword", "Torch", "Warhorn"],
+      "infusion_upgrade_flags": [],
+      "attribute_adjustment": 0,
+      "infix_upgrade": {
+        "id": 0,
+        "attributes": [],
+        "buff": {
+          "skill_id": 9297,
+          "description": "Gain a charge of +10 power each time you kill a foe, five charges if you kill an enemy player. (Max 25 stacks; ends on down.) (Only one attribute-stacking sigil can be active at a time.)"
+        }
+      },
+      "suffix": "of Bloodlust"
+    }
   }
 ]

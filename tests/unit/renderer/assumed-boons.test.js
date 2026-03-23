@@ -121,7 +121,7 @@ describe("computeEquipmentStats — trait conversions integrated", () => {
       facts: [{ type: "AttributeConversion", source: "Power", target: "Vitality", percent: 10 }],
       traitedFacts: [],
     };
-    state.catalog = { traitById: new Map([[9999, fakeTrait]]) };
+    state.activeCatalog = { traitById: new Map([[9999, fakeTrait]]) };
     state.editor.specializations = [
       { specializationId: 1, majorChoices: { 1: 9999 } },
     ];
@@ -142,7 +142,7 @@ describe("computeEquipmentStats — stacking sigils", () => {
     state.editor.equipment.weapons = { mainhand1: 1234 };
     state.editor.equipment.sigils = { mainhand1: ["24575", ""] }; // Bloodlust
     state.upgradeCatalog = null;
-    state.catalog = { traitById: new Map() };
+    state.activeCatalog = { traitById: new Map() };
 
     const baseline = computeEquipmentStats();
     const withSigil = computeEquipmentStats(null, { sigilBloodlust: 25 });
@@ -151,7 +151,7 @@ describe("computeEquipmentStats — stacking sigils", () => {
 
   test("stacking sigil at 0 stacks has no effect", () => {
     state.editor = makeEditor();
-    state.catalog = { traitById: new Map() };
+    state.activeCatalog = { traitById: new Map() };
     const baseline = computeEquipmentStats();
     const withSigil = computeEquipmentStats(null, { sigilBloodlust: 0 });
     expect(withSigil.Power).toBe(baseline.Power);
@@ -159,7 +159,7 @@ describe("computeEquipmentStats — stacking sigils", () => {
 
   test("Perception sigil adds to Precision", () => {
     state.editor = makeEditor();
-    state.catalog = { traitById: new Map() };
+    state.activeCatalog = { traitById: new Map() };
     const baseline = computeEquipmentStats();
     const withSigil = computeEquipmentStats(null, { sigilPerception: 15 });
     expect(withSigil.Precision).toBe(baseline.Precision + 150);
@@ -174,7 +174,7 @@ describe("computeTraitConversions", () => {
 
   test("returns empty object when no specializations selected", () => {
     state.editor.specializations = [];
-    state.catalog = { traitById: new Map() };
+    state.activeCatalog = { traitById: new Map() };
     const result = computeTraitConversions({});
     expect(result).toEqual({});
   });
@@ -185,7 +185,7 @@ describe("computeTraitConversions", () => {
       facts: [{ type: "AttributeConversion", source: "Power", target: "Vitality", percent: 10 }],
       traitedFacts: [],
     };
-    state.catalog = { traitById: new Map([[9999, fakeTrait]]) };
+    state.activeCatalog = { traitById: new Map([[9999, fakeTrait]]) };
     state.editor.specializations = [
       { specializationId: 1, majorChoices: { 1: 9999 } },
     ];
@@ -200,7 +200,7 @@ describe("computeTraitConversions", () => {
       facts: [{ type: "AttributeConversion", source: "Power", target: "BoonDuration", percent: 13 }],
       traitedFacts: [],
     };
-    state.catalog = { traitById: new Map([[8888, fakeTrait]]) };
+    state.activeCatalog = { traitById: new Map([[8888, fakeTrait]]) };
     state.editor.specializations = [
       { specializationId: 1, majorChoices: { 2: 8888 } },
     ];
@@ -214,7 +214,7 @@ describe("computeTraitConversions", () => {
       facts: [{ type: "AttributeConversion", source: "Precision", target: "CritDamage", percent: 10 }],
       traitedFacts: [],
     };
-    state.catalog = { traitById: new Map([[7777, fakeTrait]]) };
+    state.activeCatalog = { traitById: new Map([[7777, fakeTrait]]) };
     state.editor.specializations = [
       { specializationId: 1, majorChoices: { 1: 7777 } },
     ];
@@ -228,7 +228,7 @@ describe("computeTraitConversions", () => {
       facts: [{ type: "AttributeConversion", source: "Precision", target: "ConditionDuration", percent: 7 }],
       traitedFacts: [],
     };
-    state.catalog = { traitById: new Map([[6666, fakeTrait]]) };
+    state.activeCatalog = { traitById: new Map([[6666, fakeTrait]]) };
     state.editor.specializations = [
       { specializationId: 1, majorChoices: { 1: 6666 } },
     ];
@@ -242,7 +242,7 @@ describe("computeTraitConversions", () => {
       facts: [{ type: "AttributeConversion", source: "Power", target: "Healing", percent: 7 }],
       traitedFacts: [],
     };
-    state.catalog = { traitById: new Map([[5555, fakeTrait]]) };
+    state.activeCatalog = { traitById: new Map([[5555, fakeTrait]]) };
     state.editor.specializations = [
       { specializationId: 1, majorChoices: { 1: 5555 } },
     ];
@@ -256,7 +256,7 @@ describe("computeTraitConversions", () => {
       facts: [{ type: "AttributeConversion", source: "Power", target: "Vitality", percent: 10 }],
       traitedFacts: [],
     };
-    state.catalog = { traitById: new Map([[4444, fakeTrait]]) };
+    state.activeCatalog = { traitById: new Map([[4444, fakeTrait]]) };
     state.editor.specializations = [
       { specializationId: 1, majorChoices: { 1: 1111 } },
     ];
@@ -273,7 +273,7 @@ describe("computeTraitConversions", () => {
       ],
       traitedFacts: [],
     };
-    state.catalog = { traitById: new Map([[3333, fakeTrait]]) };
+    state.activeCatalog = { traitById: new Map([[3333, fakeTrait]]) };
     state.editor.specializations = [
       { specializationId: 1, majorChoices: { 1: 3333 } },
     ];
