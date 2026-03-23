@@ -105,7 +105,7 @@ function getWeaponSets(build) {
  * @returns {string} HTML string
  */
 export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
-  const { showActions = true, showMode = true, linkUrl = null } = options;
+  const { showActions = true, showMode = true, linkUrl = null, chatLink = null } = options;
 
   const icon = getSpecIcon(build);
   const pClass = profClass(build.profession);
@@ -221,6 +221,14 @@ export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
               data-build-id="${escapeHtml(build.id)}" title="Remove from comp">&times;</button>`
     : "";
 
+  // Copy build code button (SPA comp view)
+  const copyCodeHtml = chatLink
+    ? `<button type="button" class="mini-card__btn-copy-code" data-chat-link="${escapeHtml(chatLink)}" title="Copy build code">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        <span>Code</span>
+      </button>`
+    : "";
+
   return `
     <div class="mini-card ${pClass}" data-build-id="${escapeHtml(build.id)}">
       ${removeHtml}
@@ -231,6 +239,7 @@ export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
           ${tagPills}
           ${role}
           <div class="mini-card__pills">
+            ${copyCodeHtml}
             ${modePill}
           </div>
         </div>

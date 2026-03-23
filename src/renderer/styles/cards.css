@@ -170,6 +170,77 @@
   background: color-mix(in srgb, var(--danger) 10%, var(--panel));
 }
 
+/* Build code readonly input + copy button */
+.build-code-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 2px;
+}
+.build-code-row__label {
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.build-code-group {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+}
+.build-code-group__input {
+  flex: 1;
+  min-width: 0;
+  background: var(--base);
+  border: 1px solid var(--line);
+  border-right: none;
+  border-radius: var(--radius) 0 0 var(--radius);
+  color: var(--text);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.8rem;
+  padding: 5px 10px;
+  cursor: text;
+}
+.build-code-group__input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.build-code-group__input::placeholder {
+  color: var(--muted);
+  font-family: 'Exo 2', sans-serif;
+  font-style: italic;
+  font-size: 0.75rem;
+}
+.build-code-group__btn {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  color: var(--muted);
+  padding: 0 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+.build-code-group__btn:hover:not(:disabled) {
+  background: var(--line);
+  color: var(--text);
+}
+.build-code-group__btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.build-code-group__btn--copied {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--panel));
+}
+
 label {
   display: grid;
   gap: 6px;

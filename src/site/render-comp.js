@@ -74,6 +74,7 @@ function renderPoolCard(build) {
   return renderMiniBuildCard(build, null, {
     showActions: false,
     linkUrl: build.spaUrl || null,
+    chatLink: build.chatLink || null,
   });
 }
 
@@ -330,6 +331,27 @@ export function renderCompPage(app, comp) {
         </div>
       </div>
     </div>`;
+
+  // Bind build code copy buttons
+  app.querySelectorAll(".mini-card__btn-copy-code").forEach(btn => {
+    btn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      const link = btn.dataset.chatLink;
+      if (!link) return;
+      const labelEl = btn.querySelector("span");
+      try {
+        await navigator.clipboard.writeText(link);
+        btn.classList.add("mini-card__btn-copy-code--copied");
+        if (labelEl) labelEl.textContent = "Copied!";
+      } catch {
+        if (labelEl) labelEl.textContent = "Failed";
+      }
+      setTimeout(() => {
+        btn.classList.remove("mini-card__btn-copy-code--copied");
+        if (labelEl) labelEl.textContent = "Code";
+      }, 2000);
+    });
+  });
 
   // Bind boon coverage interactions after DOM is rendered
   if (comp.boonCoverageHtml) {

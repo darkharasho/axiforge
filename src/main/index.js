@@ -540,6 +540,13 @@ app.whenReady().then(async () => {
     } catch {
       // Fall back to un-enriched build if catalog unavailable
     }
+    // Pre-compute GW2 chat link so the SPA can display it without API calls
+    try {
+      const { generateChatLink } = require("./buildChatLink.js");
+      enrichedBuild.chatLink = await generateChatLink(build);
+    } catch {
+      // Chat link unavailable — SPA will hide the build code widget
+    }
     const encFile = buildEncryptedBuildFile(enrichedBuild, fileId, encKey);
 
     // Merge SPA bundle + encrypted build + redirect into a single commit
@@ -643,6 +650,13 @@ app.whenReady().then(async () => {
         enrichedBuild = serializeForPublish(build, catalog, upgradeCatalog);
       } catch {
         // Catalog unavailable — use unenriched build
+      }
+      // Pre-compute GW2 chat link so the SPA can display it without API calls
+      try {
+        const { generateChatLink } = require("./buildChatLink.js");
+        enrichedBuild.chatLink = await generateChatLink(build);
+      } catch {
+        // Chat link unavailable — SPA will hide the build code widget
       }
 
       const fileId = build.publishedFileId || generateFileId();

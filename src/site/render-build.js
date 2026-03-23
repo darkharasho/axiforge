@@ -227,6 +227,43 @@ export function renderBuildPage(container, build) {
   }
 
   header.append(info);
+
+  // ── Build code widget (inline in header, right-aligned) ────────────────
+  if (build.chatLink) {
+    const codeGroup = document.createElement("div");
+    codeGroup.className = "build-code-group build-code-group--header";
+
+    const codeInput = document.createElement("input");
+    codeInput.type = "text";
+    codeInput.readOnly = true;
+    codeInput.className = "build-code-group__input";
+    codeInput.value = build.chatLink;
+    codeInput.addEventListener("click", () => codeInput.select());
+
+    const copyBtn = document.createElement("button");
+    copyBtn.type = "button";
+    copyBtn.className = "build-code-group__btn";
+    copyBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy`;
+    let copyTimeout = null;
+    copyBtn.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(build.chatLink);
+        copyBtn.classList.add("build-code-group__btn--copied");
+        copyBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg> Copied!`;
+      } catch {
+        copyBtn.textContent = "Failed";
+      }
+      clearTimeout(copyTimeout);
+      copyTimeout = setTimeout(() => {
+        copyBtn.classList.remove("build-code-group__btn--copied");
+        copyBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy`;
+      }, 2000);
+    });
+
+    codeGroup.append(codeInput, copyBtn);
+    header.append(codeGroup);
+  }
+
   container.append(header);
 
   // ── Tab bar ───────────────────────────────────────────────────────────────
