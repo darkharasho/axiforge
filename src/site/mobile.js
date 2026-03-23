@@ -76,6 +76,69 @@ export function initSkillBarMobile() {
 }
 
 /**
+ * Inject sub-tab bar above equipment layout on mobile.
+ * Toggles between "Armor & Runes" (left column) and "Weapons & Trinkets" (right column).
+ */
+export function initEquipmentSubTabs() {
+  const equipLayout = document.querySelector(".equip-layout");
+  if (!equipLayout) return;
+
+  const leftCol = equipLayout.querySelector(".equip-col--left");
+  const rightCol = equipLayout.querySelector(".equip-col--right");
+  if (!leftCol || !rightCol) return;
+
+  // Create sub-tab bar
+  const tabBar = document.createElement("div");
+  tabBar.className = "equip-mobile-tabs";
+
+  const armorTab = document.createElement("button");
+  armorTab.className = "equip-mobile-tab equip-mobile-tab--active";
+  armorTab.textContent = "Armor & Runes";
+
+  const weaponsTab = document.createElement("button");
+  weaponsTab.className = "equip-mobile-tab";
+  weaponsTab.textContent = "Weapons & Trinkets";
+
+  tabBar.append(armorTab, weaponsTab);
+
+  // Insert before the equipment layout
+  equipLayout.parentElement.insertBefore(tabBar, equipLayout);
+
+  // Initial state: show left, hide right
+  function showArmor() {
+    leftCol.style.display = "";
+    rightCol.style.display = "none";
+    armorTab.classList.add("equip-mobile-tab--active");
+    weaponsTab.classList.remove("equip-mobile-tab--active");
+  }
+
+  function showWeapons() {
+    leftCol.style.display = "none";
+    rightCol.style.display = "";
+    armorTab.classList.remove("equip-mobile-tab--active");
+    weaponsTab.classList.add("equip-mobile-tab--active");
+  }
+
+  armorTab.addEventListener("click", showArmor);
+  weaponsTab.addEventListener("click", showWeapons);
+
+  // Only apply hide/show on mobile
+  if (isMobile()) {
+    showArmor();
+  }
+
+  // Handle resize — reset visibility when switching between mobile and desktop
+  window.addEventListener("resize", () => {
+    if (!isMobile()) {
+      leftCol.style.display = "";
+      rightCol.style.display = "";
+    } else if (!weaponsTab.classList.contains("equip-mobile-tab--active")) {
+      showArmor();
+    }
+  });
+}
+
+/**
  * Convert spec cards to collapsible accordions on mobile.
  * Injects a collapsed header into each .spec-card with the spec emblem,
  * name, selected trait thumbnails, and a chevron.

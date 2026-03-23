@@ -5,6 +5,7 @@
 .skills-bar__mobile-meta { display: none; }
 .spec-card__mobile-header { display: none; }
 .spec-card__mobile-tiers { display: none; }
+.equip-mobile-tabs { display: none; }
 
 @media (max-width: 768px) {
   /* --- Global / Layout --- */
@@ -166,6 +167,54 @@
     color: rgba(255, 180, 180, 0.6);
     text-transform: uppercase;
     font-weight: 600;
+  }
+
+  /* --- Equipment Sub-tabs --- */
+  .equip-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .equip-col--art {
+    display: none;
+  }
+
+  /* Sub-tab bar — injected by mobile.js */
+  .equip-mobile-tabs {
+    display: flex;
+    gap: 2px;
+    background: rgba(8, 14, 28, 0.72);
+    border: 1px solid var(--line-soft, rgba(100, 120, 160, 0.25));
+    border-radius: 20px;
+    padding: 3px;
+    width: fit-content;
+    margin-bottom: 12px;
+  }
+
+  .equip-mobile-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 14px;
+    border: none;
+    border-radius: 16px;
+    background: transparent;
+    color: var(--text-dim, #7a9abf);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+    line-height: 1.2;
+  }
+
+  .equip-mobile-tab:hover:not(.equip-mobile-tab--active) {
+    background: rgba(100, 140, 200, 0.12);
+    color: rgba(180, 200, 230, 0.9);
+  }
+
+  .equip-mobile-tab--active {
+    background: rgba(74, 143, 214, 0.45);
+    color: #fff;
+    cursor: default;
   }
 
   /* --- Specializations Accordion --- */
