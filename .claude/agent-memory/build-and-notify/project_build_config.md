@@ -7,7 +7,7 @@ type: project
 Build system is electron-builder (v26) with Vite as the renderer bundler.
 
 **Build commands (per build-local.md):**
-- Both platforms in one pass: `npm run build:renderer && npx electron-builder --linux --win --publish never`
+- Both platforms in one pass: `npm run build:site && npm run build:renderer && npx electron-builder --linux --win --publish never`
 - Linux only: `npm run build:app:linux`
 - Windows only: `npm run build:app:win`
 

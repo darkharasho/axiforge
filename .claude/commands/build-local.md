@@ -41,10 +41,10 @@ rm -rf dist/ dist_out/
 ### Step 4 — Build
 
 ```bash
-npm run build:renderer && npx electron-builder --linux --win --publish never
+npm run build:site && npm run build:renderer && npx electron-builder --linux --win --publish never
 ```
 
-Note: Building Windows from Linux requires Wine. If `--win` fails due to Wine, retry with `--linux` only and note this in the output.
+Note: `build:site` must run before electron-builder so the site bundle is included as an extra resource in the packaged app. Building Windows from Linux requires Wine. If `--win` fails due to Wine, retry with `--linux` only and note this in the output.
 
 ### Step 5 — Restore version
 
