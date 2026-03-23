@@ -6,7 +6,7 @@ contextBridge.exposeInMainWorld("desktopApi", {
   toggleMaximizeWindow: () => ipcRenderer.invoke("window:toggle-maximize"),
   isMaximizedWindow: () => ipcRenderer.invoke("window:is-maximized"),
   closeWindow: () => ipcRenderer.invoke("window:close"),
-  openPreviewWindow: (url) => ipcRenderer.invoke("window:open-preview", url),
+  openPreviewWindow: (url, opts) => ipcRenderer.invoke("window:open-preview", url, opts),
   writeClipboardText: (text) => ipcRenderer.invoke("clipboard:write-text", text),
   readClipboardText: () => ipcRenderer.invoke("clipboard:read-text"),
   getSession: () => ipcRenderer.invoke("auth:get-session"),
