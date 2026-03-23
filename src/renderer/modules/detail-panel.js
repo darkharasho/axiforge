@@ -1,6 +1,6 @@
 import { state } from "./state.js";
 import { WEAPON_STRENGTH_MIDPOINT, BOON_CONDITION_ICONS, BUFF_FACT_TYPES, FACT_TYPE_ICONS } from "./constants.js";
-import { escapeHtml, tierLabel, normalizeText } from "./utils.js";
+import { escapeHtml, tierLabel, normalizeText, stripGw2Markup } from "./utils.js";
 import { computeEquipmentStats } from "./stats.js";
 import { getAssumedBoons } from "./equipment.js";
 
@@ -460,7 +460,7 @@ export async function selectDetail(kind, entity) {
     title: entity.name || "Unknown",
     icon: entity.icon || "",
     iconFallback: entity.iconFallback || "",
-    description: entity.description || "",
+    description: stripGw2Markup(entity.description),
     facts: resolveEntityFacts(entity),
     wiki: { loading: true, summary: "", url: "" },
     hasSplit: Boolean(entity.hasSplit),
@@ -506,11 +506,6 @@ function formatBuffConditionText(fact) {
       ? `: ${fact.text}`
       : "";
   return `${name}${stackPart}${duration}${extra}`;
-}
-
-/** Strip GW2 in-game markup like <c=@abilitytype>text</c> from API strings. */
-function stripGw2Markup(s) {
-  return String(s || "").replace(/<c=[^>]*>(.*?)<\/c>/gi, "$1").trim();
 }
 
 export function formatFactHtml(fact, dmgStats = null, { alacrity = false } = {}) {

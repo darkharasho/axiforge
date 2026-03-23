@@ -1,6 +1,6 @@
 import { formatFactHtml, resolveEntityFacts } from "./detail-panel.js";
 import { getProfessionSvg } from "./profession-icons.js";
-import { escapeHtml } from "./utils.js";
+import { escapeHtml, stripGw2Markup } from "./utils.js";
 
 // Module-level singleton — one modal for the app lifetime
 let _overlay = null;
@@ -220,7 +220,7 @@ function _buildModalDetail(kind, entity) {
     title: entity.name || "Unknown",
     icon: entity.icon || "",
     iconFallback: entity.iconFallback || "",
-    description: entity.description || "",
+    description: stripGw2Markup(entity.description),
     facts: resolveEntityFacts(entity),
     wiki: { loading: false, summary: "", url: "" },
     hasSplit: Boolean(entity.hasSplit),
