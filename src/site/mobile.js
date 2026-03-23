@@ -322,16 +322,44 @@ export function initSpecAccordion() {
     // Insert header before the panel
     card.insertBefore(header, panel);
 
-    // Click handler
+    // Click handler — animated expand/collapse
     header.addEventListener("click", () => {
       const wasExpanded = card.classList.contains("expanded");
 
-      // Collapse all
-      specCards.forEach(c => c.classList.remove("expanded"));
+      // Collapse all others
+      specCards.forEach(c => {
+        if (c !== card && c.classList.contains("expanded")) {
+          const p = c.querySelector(".spec-card__panel");
+          if (p) {
+            p.style.maxHeight = p.scrollHeight + "px";
+            p.offsetHeight; // force reflow
+            p.style.maxHeight = "0";
+          }
+          c.classList.remove("expanded");
+        }
+      });
 
-      // Toggle clicked
       if (!wasExpanded) {
+        // Expand
         card.classList.add("expanded");
+        if (panel) {
+          panel.style.maxHeight = panel.scrollHeight + "px";
+          const onEnd = () => {
+            panel.removeEventListener("transitionend", onEnd);
+            if (card.classList.contains("expanded")) {
+              panel.style.maxHeight = "none";
+            }
+          };
+          panel.addEventListener("transitionend", onEnd);
+        }
+      } else {
+        // Collapse
+        if (panel) {
+          panel.style.maxHeight = panel.scrollHeight + "px";
+          panel.offsetHeight; // force reflow
+          panel.style.maxHeight = "0";
+        }
+        card.classList.remove("expanded");
       }
     });
   });
