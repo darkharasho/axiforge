@@ -5,6 +5,7 @@ import { initEquipment, initEquipmentCallbacks, renderEquipmentPanel } from "@re
 import { initDetailPanel, bindHoverPreview, setOnHoverPreview } from "@renderer/modules/detail-panel.js";
 import { initReferencePanel, updateReferencePanel } from "./render-reference.js";
 import { renderNotes } from "./render-notes.js";
+import { initMobileDetection, initSkillBarMobile } from "./mobile.js";
 
 function escapeHtml(s) {
   const d = document.createElement("div");
@@ -417,4 +418,8 @@ export function renderBuildPage(container, build) {
   allTabs.forEach((tab, i) => {
     tab.addEventListener("click", () => activateTab(i));
   });
+
+  // Mobile enhancements
+  initMobileDetection();
+  initSkillBarMobile();
 }
