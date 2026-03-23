@@ -84,8 +84,8 @@ git commit -m "feat: add share dropdown divider style"
 **Files:**
 - Modify: `src/renderer/modules/comps/comp-detail.js:15` (import)
 - Modify: `src/renderer/modules/comps/comp-detail.js:394-395` (HTML — between Discord Plaintext and closing `</div>`)
-- Modify: `src/renderer/modules/comps/comp-detail.js:857-859` (publish success — enable button)
-- Modify: `src/renderer/modules/comps/comp-detail.js:958` (after Discord Plaintext handler — add click handler)
+- Modify: `src/renderer/modules/comps/comp-detail.js:859` (publish success — enable button via DOM query)
+- Modify: `src/renderer/modules/comps/comp-detail.js:957` (before closing `}` of share dropdown block — add click handler)
 
 - [ ] **Step 1: Add `globeAltIcon` to the import**
 
@@ -112,9 +112,9 @@ In `src/renderer/modules/comps/comp-detail.js`, after the Discord Plaintext butt
             </button>
 ```
 
-- [ ] **Step 3: Add the click handler after the Discord Plaintext handler**
+- [ ] **Step 3: Add the click handler before the closing `}` of the share dropdown block**
 
-After the Discord Plaintext handler block (after line 957), add:
+Inside the `if (shareDropdown && shareTrigger)` block, after the Discord Plaintext handler (before the closing `}` on line 958), add:
 
 ```js
     // Published Link
@@ -143,10 +143,11 @@ After the Discord Plaintext handler block (after line 957), add:
 In the publish click handler, after `state.comps = await window.desktopApi.listComps();` (line 859), add:
 
 ```js
-      if (pubLinkBtn) pubLinkBtn.disabled = false;
+      const pubLinkEl = container.querySelector("[data-action='copy-published-link']");
+      if (pubLinkEl) { pubLinkEl.disabled = false; pubLinkEl.removeAttribute("title"); }
 ```
 
-Note: `pubLinkBtn` is in the same function scope (the `initCompDetail` closure) so it's accessible here.
+Note: The publish handler (line 837) is a sibling scope to the share dropdown block (line 868), so we query the DOM directly rather than referencing `pubLinkBtn`.
 
 - [ ] **Step 5: Commit**
 
