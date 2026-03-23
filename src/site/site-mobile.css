@@ -617,6 +617,21 @@
     margin-left: 0;
   }
 
+  /* Weapon sets: each set on its own line, divider becomes a horizontal rule */
+  .mini-card__weap-group {
+    flex-wrap: wrap;
+  }
+
+  .mini-card__weap-div {
+    width: 100%;
+    height: 1px;
+    background: rgba(80, 132, 163, 0.25);
+    margin: 4px 0;
+    font-size: 0;
+    color: transparent;
+    overflow: hidden;
+  }
+
   /* Boon coverage: horizontal scroll */
   .comp-boon-cov__body {
     overflow-x: auto;
