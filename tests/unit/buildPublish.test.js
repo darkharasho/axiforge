@@ -120,8 +120,14 @@ function makeMockUpgradeCatalog() {
   return {
     runeById: new Map([[24836, { id: 24836, name: "Superior Rune of the Scholar", icon: "scholar.png" }]]),
     sigilById: new Map([[24615, { id: 24615, name: "Superior Sigil of Force", icon: "force.png" }]]),
-    infusionById: new Map([[43254, { id: 43254, name: "+9 Agony Infusion", icon: "agony.png" }]]),
-    enrichmentById: new Map([[87417, { id: 87417, name: "Mist Attunement Enrichment", icon: "mist.png" }]]),
+    infusionById: new Map([[43254, {
+      id: 43254, name: "+9 Agony Infusion", icon: "agony.png",
+      infixUpgrade: { attributes: [{ attribute: "Precision", modifier: 5 }] },
+    }]]),
+    enrichmentById: new Map([[87417, {
+      id: 87417, name: "Mist Attunement Enrichment", icon: "mist.png",
+      infixUpgrade: { attributes: [{ attribute: "Vitality", modifier: 15 }] },
+    }]]),
     foodById: new Map([[91805, { id: 91805, name: "Bowl of Soup", icon: "soup.png" }]]),
     utilityById: new Map([[67528, { id: 67528, name: "Superior Sharpening Stone", icon: "stone.png" }]]),
   };
@@ -195,6 +201,7 @@ describe("serializeForPublish", () => {
       id: 43254,
       name: "+9 Agony Infusion",
       icon: "agony.png",
+      infixUpgrade: { attributes: [{ attribute: "Precision", modifier: 5 }] },
     });
   });
 
@@ -206,7 +213,28 @@ describe("serializeForPublish", () => {
     const result = serializeForPublish(build, makeMockCatalog(), makeMockUpgradeCatalog());
     expect(result.equipmentDisplay.food).toEqual({ id: 91805, name: "Bowl of Soup", icon: "soup.png" });
     expect(result.equipmentDisplay.utility).toEqual({ id: 67528, name: "Superior Sharpening Stone", icon: "stone.png" });
-    expect(result.equipmentDisplay.enrichment).toEqual({ id: 87417, name: "Mist Attunement Enrichment", icon: "mist.png" });
+    expect(result.equipmentDisplay.enrichment).toEqual({
+      id: 87417, name: "Mist Attunement Enrichment", icon: "mist.png",
+      infixUpgrade: { attributes: [{ attribute: "Vitality", modifier: 15 }] },
+    });
+  });
+
+  test("resolveEquipmentDisplay preserves infixUpgrade for infusions", () => {
+    const build = makeMockBuild();
+    build.equipment.infusions = { head: "43254" };
+    const result = serializeForPublish(build, makeMockCatalog(), makeMockUpgradeCatalog());
+    expect(result.equipmentDisplay.infusions.head.infixUpgrade).toEqual({
+      attributes: [{ attribute: "Precision", modifier: 5 }],
+    });
+  });
+
+  test("resolveEquipmentDisplay preserves infixUpgrade for enrichments", () => {
+    const build = makeMockBuild();
+    build.equipment.enrichment = "87417";
+    const result = serializeForPublish(build, makeMockCatalog(), makeMockUpgradeCatalog());
+    expect(result.equipmentDisplay.enrichment.infixUpgrade).toEqual({
+      attributes: [{ attribute: "Vitality", modifier: 15 }],
+    });
   });
 
   test("handles missing upgrade catalog gracefully", () => {

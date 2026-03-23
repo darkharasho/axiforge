@@ -249,12 +249,14 @@ function resolveEquipmentDisplay(equipment, upgradeCatalog) {
     const item = byIdMap.get(id);
     if (!item) return null;
     // Include description/buff fields for hover previews in the SPA
+    // Include infixUpgrade so infusion/enrichment stat contributions are available
     return {
       id: item.id, name: item.name, icon: item.icon,
       ...(item.description ? { description: item.description } : {}),
       ...(item.buffDescription ? { buffDescription: item.buffDescription } : {}),
       ...(item.bonuses ? { bonuses: item.bonuses } : {}),
       ...(item.buff ? { buff: item.buff } : {}),
+      ...(item.infixUpgrade ? { infixUpgrade: item.infixUpgrade } : {}),
     };
   }
 
