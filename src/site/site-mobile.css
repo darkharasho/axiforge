@@ -1,0 +1,42 @@
+/* AxiForge — SPA mobile overrides */
+/* All rules scoped to max-width: 768px */
+
+@media (max-width: 768px) {
+  /* --- Global / Layout --- */
+  #app {
+    width: 100vw;
+    margin: 12px 0 32px;
+    padding: 0 12px;
+    box-sizing: border-box;
+  }
+
+  .build-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .build-header__icon {
+    width: 48px;
+    height: 48px;
+  }
+
+  .build-header__icon img {
+    width: 48px;
+    height: 48px;
+  }
+
+  .build-code-group--header {
+    align-self: stretch;
+    justify-content: flex-start;
+  }
+
+  .site-tabs {
+    width: 100%;
+  }
+
+  .site-tab {
+    flex: 1;
+    text-align: center;
+  }
+}

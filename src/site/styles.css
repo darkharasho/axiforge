@@ -12,6 +12,7 @@
 @import "../renderer/styles/comps.css";
 @import "../renderer/styles/mini-build-card.css";
 @import "../renderer/styles/role-badge.css";
+@import "./site-mobile.css";
 
 /* ── Mini card SPA overrides ─────────────────────────────────────────── */
 
