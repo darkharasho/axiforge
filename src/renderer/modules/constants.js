@@ -12,6 +12,7 @@ export const CONDUIT_F2_BY_SWAP = new Map([
   [76610, 78661],                 // Legendary Entity Stance   → Release Potential: Dervish
 ]);
 
+// For 4-stat combos: first 2 stats are major (0.3 multiplier), last 2 are minor (0.165 multiplier)
 export const STAT_COMBOS = [
   { label: "Berserker's",   stats: ["Power", "Precision", "Ferocity"] },
   { label: "Marauder's",    stats: ["Power", "Precision", "Vitality", "Ferocity"] },
@@ -28,8 +29,8 @@ export const STAT_COMBOS = [
   { label: "Knight's",      stats: ["Toughness", "Power", "Precision"] },
   { label: "Soldier's",     stats: ["Power", "Toughness", "Vitality"] },
   { label: "Sentinel's",    stats: ["Vitality", "Power", "Toughness"] },
-  { label: "Wanderer's",    stats: ["Toughness", "Power", "Vitality", "Concentration"] },
-  { label: "Diviner's",     stats: ["Power", "Ferocity", "Concentration", "Precision"] },
+  { label: "Wanderer's",    stats: ["Power", "Vitality", "Toughness", "Concentration"] },
+  { label: "Diviner's",     stats: ["Power", "Concentration", "Ferocity", "Precision"] },
   { label: "Cleric's",      stats: ["HealingPower", "Toughness", "Power"] },
   { label: "Minstrel's",    stats: ["Toughness", "HealingPower", "Vitality", "Concentration"] },
   { label: "Harrier's",     stats: ["Power", "HealingPower", "Concentration"] },
@@ -41,26 +42,29 @@ export const STAT_COMBOS = [
 
 export const STAT_COMBOS_BY_LABEL = new Map(STAT_COMBOS.map((c) => [c.label, c]));
 
+// Ascended/Legendary stat weights per slot.
+// p/s = 3-stat major/minor; p4/s4 = 4-stat major/minor; c = Celestial per-stat.
+// Derived from GW2 API attribute_adjustment × stat multipliers (0.35/0.25/0.3/0.165).
 export const SLOT_WEIGHTS = {
-  head:       { p: 60,  s: 43 },
-  shoulders:  { p: 45,  s: 32 },
-  chest:      { p: 134, s: 96 },
-  hands:      { p: 45,  s: 32 },
-  legs:       { p: 90,  s: 64 },
-  feet:       { p: 45,  s: 32 },
-  mainhand1:  { p: 120, s: 85 },
-  offhand1:   { p: 90,  s: 64 },
-  mainhand2:  { p: 120, s: 85 },
-  offhand2:   { p: 90,  s: 64 },
-  back:       { p: 63,  s: 40 },
-  amulet:     { p: 157, s: 108 },
-  ring1:      { p: 126, s: 85 },
-  ring2:      { p: 126, s: 85 },
-  accessory1: { p: 110, s: 74 },
-  accessory2: { p: 110, s: 74 },
-  breather:   { p: 60,  s: 43  },
-  aquatic1:   { p: 215, s: 154 },
-  aquatic2:   { p: 215, s: 154 },
+  head:       { p: 63,  s: 45,  p4: 54,  s4: 30, c: 30 },
+  shoulders:  { p: 47,  s: 34,  p4: 40,  s4: 22, c: 22 },
+  chest:      { p: 141, s: 101, p4: 121, s4: 66, c: 66 },
+  hands:      { p: 47,  s: 34,  p4: 40,  s4: 22, c: 22 },
+  legs:       { p: 94,  s: 67,  p4: 81,  s4: 44, c: 44 },
+  feet:       { p: 47,  s: 34,  p4: 40,  s4: 22, c: 22 },
+  mainhand1:  { p: 125, s: 90,  p4: 107, s4: 59, c: 59 },
+  offhand1:   { p: 125, s: 90,  p4: 107, s4: 59, c: 59 },
+  mainhand2:  { p: 125, s: 90,  p4: 107, s4: 59, c: 59 },
+  offhand2:   { p: 125, s: 90,  p4: 107, s4: 59, c: 59 },
+  back:       { p: 63,  s: 40,  p4: 51,  s4: 27, c: 28 },
+  amulet:     { p: 157, s: 108, p4: 132, s4: 71, c: 72 },
+  ring1:      { p: 126, s: 85,  p4: 105, s4: 56, c: 57 },
+  ring2:      { p: 126, s: 85,  p4: 105, s4: 56, c: 57 },
+  accessory1: { p: 110, s: 74,  p4: 92,  s4: 49, c: 50 },
+  accessory2: { p: 110, s: 74,  p4: 92,  s4: 49, c: 50 },
+  breather:   { p: 63,  s: 45,  p4: 54,  s4: 30, c: 30 },
+  aquatic1:   { p: 251, s: 179, p4: 215, s4: 118, c: 118 },
+  aquatic2:   { p: 251, s: 179, p4: 215, s4: 118, c: 118 },
 };
 
 export const EQUIP_ARMOR_SLOTS = [
