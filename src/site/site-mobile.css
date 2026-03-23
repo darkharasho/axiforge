@@ -397,25 +397,23 @@
   }
 
   .spec-card.expanded .spec-card__body {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
+    display: grid;
+    grid-template-columns: auto auto 1fr;
+    gap: 8px;
     padding: 12px;
+    justify-items: start;
+    align-items: center;
   }
 
   .spec-card.expanded .spec-emblem {
-    margin-bottom: 4px;
-  }
-
-  .spec-card.expanded .trait-minor-anchor {
-    margin-top: 2px;
+    grid-column: 1 / -1;
+    justify-self: center;
   }
 
   .spec-card.expanded .trait-column--major {
     display: flex;
     flex-direction: row;
-    gap: 8px;
+    gap: 6px;
   }
 
   .spec-card.expanded .spec-connector {
