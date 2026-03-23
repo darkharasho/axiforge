@@ -7,13 +7,13 @@
 - [x] loading states on first load
 - [x] Lines between skills are missing sometimes (right after publish maybe?)
 - [x] Build name still isnt showing up in the tab title
-- [ ] Comps
+- [x] Comps
   - [x] Dragging onto needs some work, the small card is ehhh
   - [x] Dragging OFF should also remove it from the line
   - [x] Lets make the split between comp and builds user resizable and save the setting
 - [ ] Boon coverage heat map
-- [ ] spa pills arent working for build classification (heal support, boon support, etc)
+- [x] spa pills arent working for build classification (heal support, boon support, etc)
 - [ ] spa build link is still on the right and not on the title
-- [ ] renaming a build moves it out of the comp
-- [ ] creating a build in the comp in library puts it at the root
-- [ ] need a way to copy build link easily in both comp view and build view
+- [x] renaming a build moves it out of the comp
+- [x] creating a build in the comp in library puts it at the root
+- [x] need a way to copy build link easily in both comp view and build view

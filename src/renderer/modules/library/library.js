@@ -224,6 +224,14 @@ export async function handleLibraryKeydown(e) {
 function handleNewBuild() {
   if (!_app.confirmDiscardDirty?.("Start a new build")) return;
   _app.startNewBuild?.();
+  // Preserve current location so the build is saved into the right place
+  if (state.editor) {
+    if (state.currentFolder?.type === "comp") {
+      state.editor.compId = state.currentFolder.id;
+    } else if (state.currentFolder?.type === "custom") {
+      state.editor.folderId = state.currentFolder.id;
+    }
+  }
   _app.navigateToPage?.("editor");
 }
 
