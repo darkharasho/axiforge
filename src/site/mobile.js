@@ -1,6 +1,8 @@
 /* AxiForge — SPA mobile enhancements */
 
 import { state } from "@renderer/modules/state.js";
+import { renderSkills } from "@renderer/modules/skills.js";
+import { renderEquipmentPanel } from "@renderer/modules/equipment.js";
 import { buildSkillCard } from "@renderer/modules/detail-panel.js";
 
 const MOBILE_BREAKPOINT = 768;
@@ -54,16 +56,19 @@ export function initSkillBarMobile() {
     metaRow.className = "skills-bar__mobile-meta";
 
     // Swap pill — mirror active state from the real swap button
-    const isActive = swapBtn?.classList.contains("weapon-swap-btn--active");
+    const activeWeaponSet = Number(state.editor.activeWeaponSet) || 1;
+    const isActive = activeWeaponSet === 2;
+    const hasSet2 = !swapBtn?.disabled;
     const swapPill = document.createElement("button");
     swapPill.className = "mobile-swap-pill" + (isActive ? " mobile-swap-pill--active" : "");
     swapPill.innerHTML = `<span class="mobile-swap-pill__icon">⇄</span> Swap`;
-    if (swapBtn) {
-      swapPill.disabled = swapBtn.disabled;
+    swapPill.disabled = !hasSet2;
+    if (hasSet2) {
       swapPill.addEventListener("click", () => {
-        // Get fresh reference — renderSkills() replaces the entire bar
-        const currentSwap = skillsHost.querySelector(".weapon-swap-btn");
-        if (currentSwap) currentSwap.click();
+        // Directly toggle weapon set and re-render (same as the desktop swap handler)
+        state.editor.activeWeaponSet = state.editor.activeWeaponSet === 1 ? 2 : 1;
+        renderSkills();
+        renderEquipmentPanel();
       });
     }
 
