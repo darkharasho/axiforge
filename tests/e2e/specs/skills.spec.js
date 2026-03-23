@@ -359,22 +359,43 @@ test.describe("Skills — Profession mechanics", () => {
     }
   });
 
-  // 12. Guardian: profession mechanics (skip — no fixture data)
-  test.skip("Guardian: profession mechanics display", async () => {
-    // Guardian has no full catalog data in fixtures. Full test requires fixture data.
+  // 12. Guardian: Virtue buttons (F1-F3)
+  test("Guardian: profession mechanics display", async () => {
     await selectProfession(window, "Guardian");
+    const mechBar = window.locator(".profession-mechanics-bar");
+    await expect(mechBar).toBeVisible();
+    // Guardian has 3 virtue slots (F1 Justice, F2 Resolve, F3 Courage)
+    const mechSlots = mechBar.locator(".skill-slot");
+    expect(await mechSlots.count()).toBeGreaterThanOrEqual(3);
+    // F1 should have a skill icon with title
+    const f1Icon = mechSlots.first().locator(".skill-icon--profession");
+    await expect(f1Icon).toBeVisible();
+    const title = await f1Icon.getAttribute("title");
+    expect(title).toBeTruthy();
   });
 
-  // 13. Warrior: profession mechanics (skip — no fixture data)
-  test.skip("Warrior: profession mechanics display", async () => {
-    // Warrior has no full catalog data in fixtures. Full test requires fixture data.
+  // 13. Warrior: Burst skill (F1)
+  test("Warrior: profession mechanics display", async () => {
     await selectProfession(window, "Warrior");
+    const mechBar = window.locator(".profession-mechanics-bar");
+    await expect(mechBar).toBeVisible();
+    // Warrior has F1 burst + potentially F2 from elite specs
+    const mechSlots = mechBar.locator(".skill-slot");
+    expect(await mechSlots.count()).toBeGreaterThanOrEqual(1);
+    const f1Label = mechSlots.first().locator(".skill-icon--profession-flabel");
+    await expect(f1Label).toHaveText("F1");
   });
 
-  // 14. Engineer: profession mechanics (skip — no fixture data)
-  test.skip("Engineer: profession mechanics display", async () => {
-    // Engineer has no full catalog data in fixtures. Full test requires fixture data.
+  // 14. Engineer: Tool belt skills (F1-F5)
+  test("Engineer: profession mechanics display", async () => {
     await selectProfession(window, "Engineer");
+    const mechBar = window.locator(".profession-mechanics-bar");
+    await expect(mechBar).toBeVisible();
+    // Engineer has tool belt F1-F5 derived from equipped skills
+    const mechSlots = mechBar.locator(".skill-slot");
+    expect(await mechSlots.count()).toBeGreaterThanOrEqual(1);
+    const f1Label = mechSlots.first().locator(".skill-icon--profession-flabel");
+    await expect(f1Label).toHaveText("F1");
   });
 
   // 15. Ranger: profession mechanics (pet slots)
@@ -388,16 +409,33 @@ test.describe("Skills — Profession mechanics", () => {
     expect(await petLabel.first().textContent()).toBeTruthy();
   });
 
-  // 16. Thief: profession mechanics (skip — no fixture data)
-  test.skip("Thief: profession mechanics display", async () => {
-    // Thief has no full catalog data in fixtures. Full test requires fixture data.
+  // 16. Thief: Steal/shadow mechanic (F1)
+  test("Thief: profession mechanics display", async () => {
     await selectProfession(window, "Thief");
+    const mechBar = window.locator(".profession-mechanics-bar");
+    await expect(mechBar).toBeVisible();
+    // Thief has F1 Steal + potentially F2 from elite specs
+    const mechSlots = mechBar.locator(".skill-slot");
+    expect(await mechSlots.count()).toBeGreaterThanOrEqual(1);
+    const f1Icon = mechSlots.first().locator(".skill-icon--profession");
+    await expect(f1Icon).toBeVisible();
+    const title = await f1Icon.getAttribute("title");
+    expect(title).toBeTruthy();
   });
 
-  // 17. Mesmer: profession mechanics (skip — no fixture data)
-  test.skip("Mesmer: profession mechanics display", async () => {
-    // Mesmer has no full catalog data in fixtures. Full test requires fixture data.
+  // 17. Mesmer: Shatter skills (F1-F4)
+  test("Mesmer: profession mechanics display", async () => {
     await selectProfession(window, "Mesmer");
+    const mechBar = window.locator(".profession-mechanics-bar");
+    await expect(mechBar).toBeVisible();
+    // Mesmer has 4 shatter skills (F1-F4)
+    const mechSlots = mechBar.locator(".skill-slot");
+    expect(await mechSlots.count()).toBeGreaterThanOrEqual(4);
+    // Verify F1-F4 labels
+    for (let i = 0; i < 4; i++) {
+      const label = mechSlots.nth(i).locator(".skill-icon--profession-flabel");
+      await expect(label).toHaveText(`F${i + 1}`);
+    }
   });
 
   // 18. Mechanics update when specialization changes
