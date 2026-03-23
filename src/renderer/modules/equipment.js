@@ -6,7 +6,7 @@ import {
   PROFESSION_WEIGHT,
   LEGENDARY_ARMOR_ICONS, _WK,
   PROFESSION_BASE_HP,
-  FURY_CRIT_CHANCE, MIGHT_MAX_STACKS, MIGHT_POWER_PER_STACK, MIGHT_CONDI_PER_STACK, STABILITY_MAX_STACKS, BOON_CONDITION_ICONS,
+  FURY_CRIT_CHANCE, MIGHT_MAX_STACKS, MIGHT_POWER_PER_STACK, MIGHT_CONDI_PER_STACK, STABILITY_MAX_STACKS, STACKING_SIGIL_DEFS, STACKING_SIGIL_IDS, BOON_CONDITION_ICONS,
 } from "./constants.js";
 import { escapeHtml } from "./utils.js";
 import { computeSlotStats, computeEquipmentStats, computeUpgradeModifiers, computeStatBreakdown, computeTraitConversions } from "./stats.js";
@@ -39,6 +39,10 @@ export function resetAssumedBoons() {
     swiftness: false, vigor: false, aegis: false,
   };
 }
+
+let _sigilStacks = {};
+export function getSigilStacks() { return _sigilStacks; }
+export function resetSigilStacks() { _sigilStacks = {}; }
 
 let _boonsExpanded = false;
 
@@ -319,6 +323,7 @@ export function renderEquipmentPanel() {
   const currentBuildId = state.editor.id || "";
   if (currentBuildId !== _lastBoonResetBuildId) {
     resetAssumedBoons();
+    resetSigilStacks();
     _lastBoonResetBuildId = currentBuildId;
   }
 
@@ -1127,6 +1132,8 @@ export function renderEquipmentPanel() {
   const rightCol = document.createElement("div");
   rightCol.className = "equip-col equip-col--right";
 
+  let equippedStackingSigils = [];
+
   // Assumed Boons
   const boonsSection = document.createElement("div");
   boonsSection.className = "equip-boons";
@@ -1320,9 +1327,113 @@ export function renderEquipmentPanel() {
   boonsSection.append(boonsBar);
   boonsSection.append(boonsExpand);
 
+  // Detect equipped stacking sigils from active weapon set
+  const equippedSigils = state.editor.equipment?.sigils || {};
+  const activeSet = Number(state.editor.activeWeaponSet) || 1;
+  const isUnderwater = Boolean(state.editor.underwaterMode);
+  let activeSigilIds;
+  if (isUnderwater) {
+    const aqKey = activeSet === 2 ? "aquatic2" : "aquatic1";
+    activeSigilIds = [...(Array.isArray(equippedSigils[aqKey]) ? equippedSigils[aqKey] : [])].filter(Boolean);
+  } else {
+    const mhKey = activeSet === 2 ? "mainhand2" : "mainhand1";
+    const ohKey = activeSet === 2 ? "offhand2" : "offhand1";
+    activeSigilIds = [
+      ...(Array.isArray(equippedSigils[mhKey]) ? equippedSigils[mhKey] : []),
+      ...(Array.isArray(equippedSigils[ohKey]) ? equippedSigils[ohKey] : []),
+    ].filter(Boolean);
+  }
+
+  equippedStackingSigils = STACKING_SIGIL_DEFS.filter((def) =>
+    activeSigilIds.some((id) => Number(id) === def.id)
+  );
+
+  // Clean up sigil stacks for unequipped sigils
+  for (const key of Object.keys(_sigilStacks)) {
+    if (!equippedStackingSigils.some((d) => d.key === key)) {
+      delete _sigilStacks[key];
+    }
+  }
+
+  if (equippedStackingSigils.length > 0) {
+    const sigilLabel = document.createElement("div");
+    sigilLabel.className = "equip-boons__sigil-label";
+    sigilLabel.textContent = "Sigil Stacks";
+    boonsSection.append(sigilLabel);
+
+    const sigilBar = document.createElement("div");
+    sigilBar.className = "equip-boons__bar equip-boons__bar--sigils";
+
+    for (const def of equippedStackingSigils) {
+      const stacks = _sigilStacks[def.key] || 0;
+      const sigilDef = state.upgradeCatalog?.sigilById?.get(def.id);
+      const icon = sigilDef?.icon || "";
+
+      const item = document.createElement("div");
+      item.className = "equip-boons__item";
+
+      const iconWrap = document.createElement("div");
+      iconWrap.className = "equip-boons__icon equip-boons__icon--sigil" + (stacks > 0 ? " equip-boons__icon--on" : "");
+
+      if (icon) {
+        const img = document.createElement("img");
+        img.src = icon;
+        img.alt = def.label;
+        img.width = 28;
+        img.height = 28;
+        iconWrap.append(img);
+      }
+
+      // Stack badge
+      const badge = document.createElement("div");
+      badge.className = "equip-boons__badge";
+      badge.textContent = stacks || "";
+      if (!stacks) badge.style.display = "none";
+      iconWrap.append(badge);
+
+      // Tooltip
+      const tooltip = document.createElement("div");
+      tooltip.className = "equip-boons__tooltip";
+      const statLabel = def.stat.replace(/([A-Z])/g, " $1").trim();
+      if (stacks > 0) {
+        tooltip.innerHTML =
+          `<div class="equip-boons__tip-title">${def.label} ×${stacks}</div>` +
+          `<div class="equip-boons__tip-effect">+${stacks * def.perStack} ${statLabel}</div>` +
+          `<div class="equip-boons__tip-note">+${def.perStack} ${statLabel} per stack (max ${def.maxStacks})</div>`;
+      } else {
+        tooltip.innerHTML =
+          `<div class="equip-boons__tip-title">Sigil of ${def.label}</div>` +
+          `<div class="equip-boons__tip-note">Click to add stacks. +${def.perStack} ${statLabel} per stack (max ${def.maxStacks}).</div>`;
+      }
+      item.append(tooltip);
+
+      // Click handlers (same as Might)
+      iconWrap.addEventListener("click", (e) => {
+        _sigilStacks[def.key] = Math.min(def.maxStacks, Math.max(0, (_sigilStacks[def.key] || 0) + getDelta(e)));
+        _render();
+      });
+      iconWrap.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
+        _sigilStacks[def.key] = Math.min(def.maxStacks, Math.max(0, (_sigilStacks[def.key] || 0) - getDelta(e)));
+        _render();
+      });
+
+      item.append(iconWrap);
+
+      const label = document.createElement("div");
+      label.className = "equip-boons__label" + (stacks > 0 ? " equip-boons__label--on" : "");
+      label.textContent = def.label;
+      item.append(label);
+
+      sigilBar.append(item);
+    }
+
+    boonsSection.append(sigilBar);
+  }
+
   // Attributes
   const statsSection = makeSection("Attributes");
-  const computed = computeEquipmentStats(_assumedBoons);
+  const computed = computeEquipmentStats(_assumedBoons, _sigilStacks);
   const traitBonuses = computeTraitConversions(computed);
   const professionName = state.editor.profession;
   const baseHP = PROFESSION_BASE_HP[professionName] || 9212;
@@ -1356,12 +1467,14 @@ export function renderEquipmentPanel() {
 
     const leftEl = document.createElement("div");
     leftEl.className = "equip-stat-cell";
+    const sigilBoosted = equippedStackingSigils.some((d) => d.stat === row.key && (_sigilStacks[d.key] || 0) > 0);
     const isBoosted = (_assumedBoons.might > 0 && (row.key === "Power" || row.key === "ConditionDamage"))
-      || (traitBonuses[row.key] > 0);
+      || (traitBonuses[row.key] > 0)
+      || sigilBoosted;
     leftEl.innerHTML = `<span class="equip-stat-label">${row.stat}</span><span class="equip-stat-value${isBoosted ? " equip-stat-value--boosted" : ""}">${(row.value || 0).toLocaleString()}</span>`;
 
     bindHoverPreview(leftEl, "equip-stat", () => {
-      const breakdown = computeStatBreakdown(row.key, _assumedBoons);
+      const breakdown = computeStatBreakdown(row.key, _assumedBoons, _sigilStacks);
       if (!breakdown.length) return null;
       // Consolidate duplicate sources (e.g. 18x identical infusions → one line)
       const grouped = new Map();

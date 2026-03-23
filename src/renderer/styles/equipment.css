@@ -1202,6 +1202,25 @@
   margin-top: 8px;
 }
 
+.equip-boons__bar--sigils {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.equip-boons__sigil-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+  margin-top: 10px;
+  margin-bottom: 2px;
+}
+
+.equip-boons__icon--sigil {
+  border-radius: 2px;
+}
+
 .equip-stat-value--boosted {
   color: #d4aa44;
 }
