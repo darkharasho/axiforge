@@ -26,10 +26,10 @@ const { serializeCompForPublish } = require("./compPublish");
 const { initAutoUpdate } = require("./autoUpdate");
 
 const DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL || "";
-const IS_DEV_PROFILE = process.env.APP_PROFILE === "dev" && !app.isPackaged;
-if (IS_DEV_PROFILE) {
-  const devUserData = path.join(app.getPath("appData"), `${app.getName()}-dev`);
-  app.setPath("userData", devUserData);
+const APP_PROFILE = process.env.APP_PROFILE;
+if (APP_PROFILE && !app.isPackaged) {
+  const profileUserData = path.join(app.getPath("appData"), `${app.getName()}-${APP_PROFILE}`);
+  app.setPath("userData", profileUserData);
 }
 
 const dataDir = path.join(app.getPath("userData"), "data");

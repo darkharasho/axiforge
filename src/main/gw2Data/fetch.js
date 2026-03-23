@@ -1,4 +1,4 @@
-const GW2_API_ROOT = "https://api.guildwars2.com/v2";
+const GW2_API_ROOT = process.env.GW2_API_ROOT || "https://api.guildwars2.com/v2";
 const WIKI_API_ROOT = "https://wiki.guildwars2.com/api.php";
 const USER_AGENT = "axiforge-desktop";
 
