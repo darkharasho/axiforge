@@ -57,9 +57,9 @@ gh project item-add 1 --owner darkharasho \
   --format json
 ```
 
-Capture the `id` field from the JSON response. This is the **item ID** used in 3b and Step 11.
+Capture the `id` field from the JSON response. This is the **item ID** used in 3b and Step 13.
 
-> **Remember this item ID — you will need it again in Step 11.**
+> **Remember this item ID — you will need it again in Step 13.**
 
 **3b. Move to "In progress":**
 
@@ -124,20 +124,7 @@ All tests (including the new ones from Step 7) must pass.
 If tests fail: revise the fix and run once more.
 If they still fail after 2 attempts: go to the **Failure Path** below.
 
-### Step 10 — Manual test checkpoint
-
-**Stop and ask the user to manually test the fix before proceeding.**
-
-Tell the user:
-1. What was changed and why
-2. How to reproduce the original bug
-3. What they should verify is now working
-
-Then ask: "Please test this and let me know if the fix looks good, or if anything needs adjusting."
-
-**Wait for user confirmation before continuing.** If the user reports issues, revise the fix (go back to Step 8) and re-run tests.
-
-### Step 11 — Commit + push
+### Step 10 — Commit + push
 
 ```bash
 git add src/ tests/
@@ -147,7 +134,7 @@ git push -u origin fix/issue-$ARGUMENTS-<slug>
 
 (Use the actual issue title fetched in Step 1, not the literal text `<issue title>`.)
 
-### Step 12 — Open PR (or find existing)
+### Step 11 — Open PR (or find existing)
 
 Check for an existing PR on this branch:
 
@@ -175,9 +162,35 @@ Closes #$ARGUMENTS" \
 
 Capture the PR URL.
 
-### Step 13 — Move to "Done" + close out
+### Step 12 — Manual test checkpoint
+
+**Stop and ask the user to manually test the fix before proceeding.**
+
+Tell the user:
+1. What was changed and why
+2. How to reproduce the original bug
+3. What they should verify is now working
+4. The PR URL so they can review the changes
+
+Then ask: "Please test this and let me know if the fix looks good, or if anything needs adjusting."
+
+**Wait for user confirmation before continuing.** If the user reports issues, revise the fix (go back to Step 8), re-run tests, amend/push, and ask again.
+
+### Step 13 — Merge, close out, return to main
 
 Use the item ID you captured in Step 3a.
+
+**Merge the PR:**
+
+```bash
+gh pr merge <pr-number> --repo darkharasho/axiforge --merge
+```
+
+**Switch to main and pull:**
+
+```bash
+git checkout main && git pull
+```
 
 **Move to Done:**
 
@@ -196,7 +209,7 @@ gh issue comment $ARGUMENTS --repo darkharasho/axiforge \
   --body "✅ **Fix complete.** PR: <pr-url>"
 ```
 
-End your response with: `PR opened: <pr-url>`
+End your response with: `Merged: <pr-url> — on main.`
 
 ---
 
