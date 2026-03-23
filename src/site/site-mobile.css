@@ -151,7 +151,7 @@
   }
 
   .skill-icon-large.skill-icon--flip-anim {
-    animation-duration: 1200ms;
+    animation: skillFlipSwap 900ms ease-in-out;
   }
 
   .skill-select-overlay {
