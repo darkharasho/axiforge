@@ -1285,6 +1285,26 @@ export function renderEquipmentPanel() {
     tooltip.innerHTML = buildBoonTooltipHTML(def);
     item.append(tooltip);
 
+    // Reposition tooltip if it overflows the viewport
+    item.addEventListener("pointerenter", () => {
+      tooltip.style.left = "";
+      tooltip.style.transform = "";
+      requestAnimationFrame(() => {
+        const rect = tooltip.getBoundingClientRect();
+        if (rect.left < 12) {
+          tooltip.style.left = "0";
+          tooltip.style.transform = `translateX(${12 - rect.left}px)`;
+        } else if (rect.right > window.innerWidth - 12) {
+          tooltip.style.left = "0";
+          tooltip.style.transform = `translateX(${window.innerWidth - 12 - rect.right}px)`;
+        }
+      });
+    });
+    item.addEventListener("pointerleave", () => {
+      tooltip.style.left = "";
+      tooltip.style.transform = "";
+    });
+
     // Click handler
     if (def.stackable) {
       const max = def.maxStacks || MIGHT_MAX_STACKS;
@@ -1308,6 +1328,24 @@ export function renderEquipmentPanel() {
         _render();
       });
     }
+
+    // Long press to reset (mobile)
+    let longPressTimer = null;
+    iconWrap.addEventListener("touchstart", () => {
+      longPressTimer = setTimeout(() => {
+        longPressTimer = null;
+        _assumedBoons[def.key] = def.stackable ? 0 : false;
+        _render();
+        iconWrap.style.opacity = "0.4";
+        setTimeout(() => { iconWrap.style.opacity = ""; }, 150);
+      }, 500);
+    }, { passive: true });
+    iconWrap.addEventListener("touchend", () => {
+      if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+    });
+    iconWrap.addEventListener("touchmove", () => {
+      if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+    }, { passive: true });
 
     item.append(iconWrap);
 
