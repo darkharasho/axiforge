@@ -307,6 +307,10 @@
     flex-wrap: wrap;
   }
 
+  .equip-stats {
+    padding-top: 12px;
+  }
+
   /* Sub-tab bar — injected by mobile.js */
   .equip-mobile-tabs {
     display: flex;
