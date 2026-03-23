@@ -1,6 +1,9 @@
 /* AxiForge — SPA mobile overrides */
 /* All rules scoped to max-width: 768px */
 
+/* Hidden on desktop — only styled inside @media */
+.skills-bar__mobile-meta { display: none; }
+
 @media (max-width: 768px) {
   /* --- Global / Layout --- */
   #app {
@@ -38,5 +41,128 @@
   .site-tab {
     flex: 1;
     text-align: center;
+  }
+
+  /* --- Skill Bar --- */
+  .skills-bar {
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .skills-bar__weapon-col {
+    width: 100%;
+  }
+
+  .skills-bar__weapon-row {
+    justify-content: center;
+  }
+
+  .skill-icon-large {
+    width: 58px;
+    height: 58px;
+  }
+
+  .skill-select-overlay {
+    width: 58px;
+    height: 58px;
+  }
+
+  .health-orb {
+    display: none;
+  }
+
+  .skills-bar__orb-col {
+    display: none;
+  }
+
+  .weapon-swap-btn {
+    display: none;
+  }
+
+  .profession-mechanics-bar {
+    padding-left: 0;
+    justify-content: center;
+  }
+
+  .skill-icon--profession {
+    width: 30px;
+    height: 30px;
+  }
+
+  .legend-slot-btn {
+    width: 30px;
+    height: 30px;
+  }
+
+  /* Mobile meta row (swap pill + HP badge) — injected by mobile.js */
+  .skills-bar__mobile-meta {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .mobile-swap-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(14, 11, 4, 0.7);
+    border: 1px solid rgba(210, 175, 70, 0.5);
+    border-radius: 16px;
+    padding: 4px 12px 4px 6px;
+    cursor: pointer;
+    color: rgba(220, 185, 75, 0.85);
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .mobile-swap-pill:hover {
+    border-color: rgba(255, 215, 100, 1);
+    color: #ffe06a;
+  }
+
+  .mobile-swap-pill__icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid rgba(210, 175, 70, 0.85);
+    background: rgba(14, 11, 4, 0.96);
+    display: grid;
+    place-items: center;
+    font-size: 10px;
+  }
+
+  .mobile-hp-badge {
+    background: rgba(160, 20, 20, 0.2);
+    border: 1px solid rgba(200, 60, 60, 0.4);
+    border-radius: 16px;
+    padding: 4px 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .mobile-hp-badge__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(200, 60, 60, 0.8);
+    box-shadow: 0 0 4px rgba(200, 30, 30, 0.6);
+  }
+
+  .mobile-hp-badge__value {
+    font-size: 12px;
+    font-weight: 700;
+    color: rgba(255, 200, 200, 0.95);
+    letter-spacing: 0.3px;
+  }
+
+  .mobile-hp-badge__label {
+    font-size: 8px;
+    color: rgba(255, 180, 180, 0.6);
+    text-transform: uppercase;
+    font-weight: 600;
   }
 }
