@@ -182,13 +182,17 @@ function createBottomSheet() {
   _bottomSheet.addEventListener("touchend", onTouchEnd, { passive: true });
 }
 
+let _isDragging = false;
+
 function onTouchStart(e) {
+  _isDragging = true;
   _touchStartY = e.touches[0].clientY;
   _sheetStartTranslate = 0;
   _bottomSheet.style.transition = "none";
 }
 
 function onTouchMove(e) {
+  if (!_isDragging) return;
   const deltaY = e.touches[0].clientY - _touchStartY;
   if (deltaY > 0) {
     _sheetStartTranslate = deltaY;
@@ -198,12 +202,13 @@ function onTouchMove(e) {
 }
 
 function onTouchEnd() {
+  if (!_isDragging) return;
+  _isDragging = false;
   _bottomSheet.style.transition = "";
   if (_sheetStartTranslate > 100) {
     closeBottomSheet();
   } else {
     _bottomSheet.style.transform = "";
-    _bottomSheet.classList.add("bottom-sheet--active");
   }
 }
 

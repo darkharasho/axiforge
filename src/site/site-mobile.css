@@ -89,7 +89,7 @@
 @media (max-width: 768px) {
   /* --- Global / Layout --- */
   #app {
-    width: 100vw;
+    width: 100%;
     margin: 12px 0 32px;
     padding: 0 12px;
     box-sizing: border-box;
