@@ -33,11 +33,13 @@ let _renderEditor = () => {};
 let _markEditorChanged = () => {};
 let _enforceEditorConsistency = () => {};
 let _openSlotPicker = () => {};
-export function initSkillsCallbacks({ renderEditor, markEditorChanged, enforceEditorConsistency, openSlotPicker }) {
+let _renderEquipmentPanel = () => {};
+export function initSkillsCallbacks({ renderEditor, markEditorChanged, enforceEditorConsistency, openSlotPicker, renderEquipmentPanel }) {
   _renderEditor = renderEditor;
   _markEditorChanged = markEditorChanged;
   _enforceEditorConsistency = enforceEditorConsistency;
   _openSlotPicker = openSlotPicker;
+  if (renderEquipmentPanel) _renderEquipmentPanel = renderEquipmentPanel;
 }
 
 // Tracks which utility slot (0–2) is currently being dragged; -1 means none.
@@ -1646,6 +1648,7 @@ export function renderSkills() {
   swapBtn.addEventListener("click", () => {
     state.editor.activeWeaponSet = activeWeaponSet === 1 ? 2 : 1;
     renderSkills();
+    _renderEquipmentPanel(); // active weapon set affects attribute totals
     if (!_readOnly && _markEditorChanged) _markEditorChanged();
   });
 

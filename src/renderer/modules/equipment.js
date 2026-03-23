@@ -12,6 +12,8 @@ import { escapeHtml } from "./utils.js";
 import { computeSlotStats, computeEquipmentStats, computeUpgradeModifiers, computeStatBreakdown } from "./stats.js";
 import { bindHoverPreview, selectDetail } from "./detail-panel.js";
 import { getProfessionSvg } from "./profession-icons.js";
+import { getSlotSvg } from "./slot-icons.js";
+import { getWeaponSvg } from "./weapon-icons.js";
 import { resolveEquippedWeaponSkills, getAvailableAttunements, resolveWarriorBurst } from "./equipment-weapon-skills.js";
 import { getSkillOptionsByType } from "./skills.js";
 import { computeBoonCoverage } from "./boon-coverage.js";
@@ -1292,14 +1294,30 @@ export function renderEquipmentPanel() {
       for (const e of breakdown) {
         const existing = grouped.get(e.source);
         if (existing) { existing.value += e.value; existing.count++; }
-        else grouped.set(e.source, { source: e.source, value: e.value, count: 1 });
+        else grouped.set(e.source, { ...e, count: 1 });
       }
-      const lines = [...grouped.values()].map((e) =>
-        e.count > 1 ? `+${e.value}  ${e.source} \u00d7${e.count}` : `+${e.value}  ${e.source}`
-      );
+      // Attach SVG icons for equipment slot entries
+      const weight = PROFESSION_WEIGHT[state.editor.profession] || "heavy";
+      const weapons = state.editor.equipment?.weapons || {};
+      for (const entry of grouped.values()) {
+        if (entry.slotKey && !entry.svgIcon) {
+          // Weapon slots: use the weapon type SVG
+          const weaponId = weapons[entry.slotKey];
+          if (weaponId) {
+            entry.svgIcon = getWeaponSvg(weaponId);
+          }
+          // Armor/trinket slots: use the slot SVG
+          if (!entry.svgIcon) {
+            entry.svgIcon = getSlotSvg(entry.slotKey, weight);
+          }
+        }
+      }
       const total = breakdown.reduce((s, e) => s + e.value, 0);
-      lines.push(`——\n${total}  Total ${row.stat}`);
-      return { name: row.stat, description: lines.join("\n") };
+      return {
+        name: row.stat,
+        breakdown: [...grouped.values()],
+        breakdownTotal: total,
+      };
     });
 
     rowEl.append(leftEl);

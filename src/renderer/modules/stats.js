@@ -5,6 +5,28 @@ import {
   MIGHT_POWER_PER_STACK, MIGHT_CONDI_PER_STACK,
 } from "./constants.js";
 
+/**
+ * Build the set of equipment slot keys to exclude from stat calculations.
+ * Excludes the opposite environment's slots AND the inactive weapon set.
+ */
+function getExcludedSlots() {
+  const isUnderwater = Boolean(state.editor.underwaterMode);
+  const activeSet = Number(state.editor.activeWeaponSet) || 1;
+  const excluded = new Set(isUnderwater ? LAND_ONLY_SLOTS : AQUATIC_SLOTS);
+  if (isUnderwater) {
+    excluded.add(activeSet === 2 ? "aquatic1" : "aquatic2");
+  } else {
+    if (activeSet === 2) {
+      excluded.add("mainhand1");
+      excluded.add("offhand1");
+    } else {
+      excluded.add("mainhand2");
+      excluded.add("offhand2");
+    }
+  }
+  return excluded;
+}
+
 export function computeSlotStats(comboLabel, slotKey) {
   const combo = STAT_COMBOS_BY_LABEL.get(comboLabel);
   const w = SLOT_WEIGHTS[slotKey];
@@ -33,7 +55,7 @@ export function computeEquipmentStats(assumedBoons = null) {
     Ferocity: 0, ConditionDamage: 0, Expertise: 0, Concentration: 0, HealingPower: 0,
   };
   const isUnderwater = Boolean(state.editor.underwaterMode);
-  const EXCLUDED_SLOTS = isUnderwater ? LAND_ONLY_SLOTS : AQUATIC_SLOTS;
+  const EXCLUDED_SLOTS = getExcludedSlots();
   for (const [slotKey, comboLabel] of Object.entries(slots)) {
     if (!comboLabel || EXCLUDED_SLOTS.has(slotKey)) continue;
     const combo = STAT_COMBOS_BY_LABEL.get(comboLabel);
@@ -336,7 +358,7 @@ export function computeStatBreakdown(statKey, assumedBoons = null) {
 
   const slots = state.editor.equipment?.slots || {};
   const isUnderwater = Boolean(state.editor.underwaterMode);
-  const EXCLUDED_SLOTS = isUnderwater ? LAND_ONLY_SLOTS : AQUATIC_SLOTS;
+  const EXCLUDED_SLOTS = getExcludedSlots();
   const SLOT_LABELS = {
     head: "Head", shoulders: "Shoulders", chest: "Chest", hands: "Hands", legs: "Legs", feet: "Feet",
     mainhand1: "Mainhand 1", offhand1: "Offhand 1", mainhand2: "Mainhand 2", offhand2: "Offhand 2",
@@ -362,7 +384,14 @@ export function computeStatBreakdown(statKey, assumedBoons = null) {
     } else {
       if (combo.stats.includes(statKey)) val = w.c;
     }
-    if (val) entries.push({ source: `${SLOT_LABELS[slotKey] || slotKey} (${comboLabel})`, value: val });
+    if (val) {
+      const weapons = state.editor.equipment?.weapons || {};
+      const weaponName = weapons[slotKey] || "";
+      const label = weaponName
+        ? `${SLOT_LABELS[slotKey] || slotKey} — ${weaponName} (${comboLabel})`
+        : `${SLOT_LABELS[slotKey] || slotKey} (${comboLabel})`;
+      entries.push({ source: label, value: val, slotKey });
+    }
   }
 
   const upgradeCatalog = state.upgradeCatalog;
@@ -380,10 +409,10 @@ export function computeStatBreakdown(statKey, assumedBoons = null) {
       let m;
       while ((m = re.exec(foodDef.buff)) !== null) {
         if (m[2] === "to All Attributes") {
-          entries.push({ source: `Food (${foodDef.name})`, value: Number(m[1]) });
+          entries.push({ source: `Food (${foodDef.name})`, value: Number(m[1]), icon: foodDef.icon });
         } else {
           const key = MAP[m[2]] || m[2];
-          if (key === statKey) entries.push({ source: `Food (${foodDef.name})`, value: Number(m[1]) });
+          if (key === statKey) entries.push({ source: `Food (${foodDef.name})`, value: Number(m[1]), icon: foodDef.icon });
         }
       }
     }
@@ -402,7 +431,7 @@ export function computeStatBreakdown(statKey, assumedBoons = null) {
       if (!def?.infixUpgrade?.attributes) continue;
       for (const attr of def.infixUpgrade.attributes) {
         if (toStatKey(attr.attribute) === statKey && attr.modifier) {
-          entries.push({ source: `Infusion (${def.name})`, value: attr.modifier });
+          entries.push({ source: `Infusion (${def.name})`, value: attr.modifier, icon: def.icon });
         }
       }
     }
@@ -414,7 +443,7 @@ export function computeStatBreakdown(statKey, assumedBoons = null) {
       if (def?.infixUpgrade?.attributes) {
         for (const attr of def.infixUpgrade.attributes) {
           if (toStatKey(attr.attribute) === statKey && attr.modifier) {
-            entries.push({ source: `Enrichment (${def.name})`, value: attr.modifier });
+            entries.push({ source: `Enrichment (${def.name})`, value: attr.modifier, icon: def.icon });
           }
         }
       }
@@ -441,7 +470,7 @@ export function computeStatBreakdown(statKey, assumedBoons = null) {
         if (m[2] === "to All Stats") runeTotal += val;
         else { const key = MAP[m[2]] || m[2]; if (key === statKey) runeTotal += val; }
       }
-      if (runeTotal) entries.push({ source: `Rune (${runeDef.name})`, value: runeTotal });
+      if (runeTotal) entries.push({ source: `Rune (${runeDef.name})`, value: runeTotal, icon: runeDef.icon });
     }
   }
 
@@ -514,7 +543,7 @@ export function computeUpgradeModifiers() {
   const FLAT_STAT_RE = /\+\d+\s+(Condition Damage|Healing Power|Healing|Power|Precision|Toughness|Vitality|Ferocity|Concentration|Expertise|to All Stats|to All Attributes)/;
 
   const isUnderwater = Boolean(state.editor.underwaterMode);
-  const EXCLUDED_SLOTS = isUnderwater ? LAND_ONLY_SLOTS : AQUATIC_SLOTS;
+  const EXCLUDED_SLOTS = getExcludedSlots();
 
   // Rune percentage modifiers (cumulative per piece, exclude breather)
   const runes = state.editor.equipment?.runes || {};
