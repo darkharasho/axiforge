@@ -6,7 +6,7 @@ import {
   PROFESSION_WEIGHT,
   LEGENDARY_ARMOR_ICONS, _WK,
   PROFESSION_BASE_HP,
-  FURY_CRIT_CHANCE, MIGHT_MAX_STACKS, MIGHT_POWER_PER_STACK, MIGHT_CONDI_PER_STACK, BOON_CONDITION_ICONS,
+  FURY_CRIT_CHANCE, MIGHT_MAX_STACKS, MIGHT_POWER_PER_STACK, MIGHT_CONDI_PER_STACK, STABILITY_MAX_STACKS, BOON_CONDITION_ICONS,
 } from "./constants.js";
 import { escapeHtml } from "./utils.js";
 import { computeSlotStats, computeEquipmentStats, computeUpgradeModifiers, computeStatBreakdown } from "./stats.js";
@@ -39,6 +39,8 @@ export function resetAssumedBoons() {
     swiftness: false, vigor: false, aegis: false,
   };
 }
+
+let _boonsExpanded = false;
 
 // DOM refs
 let _el = { equipmentPanel: null };
@@ -1153,15 +1155,40 @@ export function renderEquipmentPanel() {
     '<div class="equip-boons__help-row"><kbd>Ctrl+Right</kbd> <span class="equip-boons__help-down">\u221225</span></div>';
   helpIcon.append(helpTooltip);
   boonsHeader.append(helpIcon);
+
+  const expandBtn = document.createElement("button");
+  expandBtn.className = "equip-boons__expand-btn";
+  expandBtn.textContent = _boonsExpanded ? "Less ▲" : "More ▼";
+  expandBtn.title = _boonsExpanded ? "Show core boons only" : "Show all boons";
+  expandBtn.addEventListener("click", () => {
+    _boonsExpanded = !_boonsExpanded;
+    _render();
+  });
+  boonsHeader.append(expandBtn);
+
   boonsSection.append(boonsHeader);
 
   const boonsBar = document.createElement("div");
   boonsBar.className = "equip-boons__bar";
 
+  const boonsExpand = document.createElement("div");
+  boonsExpand.className = "equip-boons__expand" + (_boonsExpanded ? " equip-boons__expand--open" : "");
+
   const BOON_DEFS = [
-    { key: "might", label: "Might", icon: BOON_CONDITION_ICONS.Might, stackable: true },
-    { key: "fury", label: "Fury", icon: BOON_CONDITION_ICONS.Fury, stackable: false },
-    { key: "alacrity", label: "Alacrity", icon: BOON_CONDITION_ICONS.Alacrity, stackable: false },
+    // Always-visible boons (core 3)
+    { key: "might", label: "Might", icon: BOON_CONDITION_ICONS.Might, stackable: true, maxStacks: MIGHT_MAX_STACKS, core: true },
+    { key: "fury", label: "Fury", icon: BOON_CONDITION_ICONS.Fury, stackable: false, core: true },
+    { key: "alacrity", label: "Alacrity", icon: BOON_CONDITION_ICONS.Alacrity, stackable: false, core: true },
+    // Expandable boons
+    { key: "quickness", label: "Quickness", icon: BOON_CONDITION_ICONS.Quickness, stackable: false },
+    { key: "protection", label: "Protection", icon: BOON_CONDITION_ICONS.Protection, stackable: false },
+    { key: "regeneration", label: "Regen", icon: BOON_CONDITION_ICONS.Regeneration, stackable: false },
+    { key: "resolution", label: "Resolution", icon: BOON_CONDITION_ICONS.Resolution, stackable: false },
+    { key: "resistance", label: "Resistance", icon: BOON_CONDITION_ICONS.Resistance, stackable: false },
+    { key: "stability", label: "Stability", icon: BOON_CONDITION_ICONS.Stability, stackable: true, maxStacks: STABILITY_MAX_STACKS },
+    { key: "swiftness", label: "Swiftness", icon: BOON_CONDITION_ICONS.Swiftness, stackable: false },
+    { key: "vigor", label: "Vigor", icon: BOON_CONDITION_ICONS.Vigor, stackable: false },
+    { key: "aegis", label: "Aegis", icon: BOON_CONDITION_ICONS.Aegis, stackable: false },
   ];
 
   function getDelta(event) {
@@ -1176,7 +1203,7 @@ export function renderEquipmentPanel() {
       if (val > 0) {
         const power = val * MIGHT_POWER_PER_STACK;
         const condi = val * MIGHT_CONDI_PER_STACK;
-        return `<div class="equip-boons__tip-title">Might \u00d7${val}</div>` +
+        return `<div class="equip-boons__tip-title">Might ×${val}</div>` +
           `<div class="equip-boons__tip-effect">+${power} Power</div>` +
           `<div class="equip-boons__tip-effect">+${condi} Condition Damage</div>` +
           `<div class="equip-boons__tip-note">+${MIGHT_POWER_PER_STACK} Power and +${MIGHT_CONDI_PER_STACK} Condition Damage per stack (max ${MIGHT_MAX_STACKS})</div>`;
@@ -1189,10 +1216,36 @@ export function renderEquipmentPanel() {
         ? '<div class="equip-boons__tip-title">Fury</div><div class="equip-boons__tip-effect">+25% Critical Chance</div><div class="equip-boons__tip-note">Added to Crit Chance derived stat</div>'
         : '<div class="equip-boons__tip-title">Fury</div><div class="equip-boons__tip-note">Click to enable. Grants +25% Critical Chance.</div>';
     }
-    // alacrity
+    if (def.key === "alacrity") {
+      return val
+        ? '<div class="equip-boons__tip-title">Alacrity</div><div class="equip-boons__tip-effect">\u221225% Skill Cooldown</div><div class="equip-boons__tip-note">Cooldown reduction shown in skill tooltips</div>'
+        : '<div class="equip-boons__tip-title">Alacrity</div><div class="equip-boons__tip-note">Click to enable. Reduces skill cooldowns by 25%.</div>';
+    }
+    if (def.key === "stability") {
+      if (val > 0) {
+        return `<div class="equip-boons__tip-title">Stability ×${val}</div>` +
+          `<div class="equip-boons__tip-effect">Cannot be knocked down, pushed back, pulled, launched, stunned, dazed, floated, sunk, feared, or taunted</div>` +
+          `<div class="equip-boons__tip-note">1 stack removed per incoming CC (max ${STABILITY_MAX_STACKS})</div>`;
+      }
+      return `<div class="equip-boons__tip-title">Stability</div>` +
+        `<div class="equip-boons__tip-note">Click to add stacks. Prevents crowd control effects. 1 stack consumed per incoming CC (max ${STABILITY_MAX_STACKS}).</div>`;
+    }
+    // Simple toggle boons — generic tooltip
+    const BOON_DESCRIPTIONS = {
+      quickness: { effect: "+50% Animation Speed", note: "Actions and casts are faster" },
+      protection: { effect: "\u221233% Incoming Strike Damage", note: "Reduces strike damage taken" },
+      regeneration: { effect: "Heal Over Time", note: "Regenerates health every second" },
+      resolution: { effect: "\u221233% Incoming Condition Damage", note: "Reduces condition damage taken" },
+      resistance: { effect: "Negate Conditions", note: "Conditions have no effect while active" },
+      swiftness: { effect: "+33% Movement Speed", note: "Increases movement speed" },
+      vigor: { effect: "+50% Endurance Regeneration", note: "Dodge bar refills faster" },
+      aegis: { effect: "Block Next Attack", note: "Blocks the next incoming strike" },
+    };
+    const info = BOON_DESCRIPTIONS[def.key];
+    if (!info) return `<div class="equip-boons__tip-title">${def.label}</div>`;
     return val
-      ? '<div class="equip-boons__tip-title">Alacrity</div><div class="equip-boons__tip-effect">\u221225% Skill Cooldown</div><div class="equip-boons__tip-note">Cooldown reduction \u2014 not reflected in stat totals</div>'
-      : '<div class="equip-boons__tip-title">Alacrity</div><div class="equip-boons__tip-note">Click to enable. Reduces skill cooldowns by 25%.</div>';
+      ? `<div class="equip-boons__tip-title">${def.label}</div><div class="equip-boons__tip-effect">${info.effect}</div><div class="equip-boons__tip-note">${info.note}</div>`
+      : `<div class="equip-boons__tip-title">${def.label}</div><div class="equip-boons__tip-note">Click to enable. ${info.note}.</div>`;
   }
 
   for (const def of BOON_DEFS) {
@@ -1210,7 +1263,7 @@ export function renderEquipmentPanel() {
     img.height = 28;
     iconWrap.append(img);
 
-    // Stack badge (Might only)
+    // Stack badge (stackable boons)
     if (def.stackable) {
       const badge = document.createElement("div");
       badge.className = "equip-boons__badge";
@@ -1227,13 +1280,14 @@ export function renderEquipmentPanel() {
 
     // Click handler
     if (def.stackable) {
+      const max = def.maxStacks || MIGHT_MAX_STACKS;
       iconWrap.addEventListener("click", (e) => {
-        _assumedBoons[def.key] = Math.min(MIGHT_MAX_STACKS, Math.max(0, _assumedBoons[def.key] + getDelta(e)));
+        _assumedBoons[def.key] = Math.min(max, Math.max(0, _assumedBoons[def.key] + getDelta(e)));
         _render();
       });
       iconWrap.addEventListener("contextmenu", (e) => {
         e.preventDefault();
-        _assumedBoons[def.key] = Math.min(MIGHT_MAX_STACKS, Math.max(0, _assumedBoons[def.key] - getDelta(e)));
+        _assumedBoons[def.key] = Math.min(max, Math.max(0, _assumedBoons[def.key] - getDelta(e)));
         _render();
       });
     } else {
@@ -1255,10 +1309,16 @@ export function renderEquipmentPanel() {
     label.textContent = def.label;
     item.append(label);
 
-    boonsBar.append(item);
+    // Core boons go in main bar, others in expandable section
+    if (def.core) {
+      boonsBar.append(item);
+    } else {
+      boonsExpand.append(item);
+    }
   }
 
   boonsSection.append(boonsBar);
+  boonsSection.append(boonsExpand);
 
   // Attributes
   const statsSection = makeSection("Attributes");
