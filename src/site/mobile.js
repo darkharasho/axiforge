@@ -69,6 +69,14 @@ export function initSkillBarMobile() {
         state.editor.activeWeaponSet = state.editor.activeWeaponSet === 1 ? 2 : 1;
         renderSkills();
         renderEquipmentPanel();
+        // Apply flip animation to the freshly rendered skill icons
+        requestAnimationFrame(() => {
+          const bar = skillsHost.querySelector(".skills-bar");
+          if (!bar) return;
+          bar.querySelectorAll(".skill-icon-large, .skill-icon--profession, .legend-slot-btn").forEach(el => {
+            el.classList.add("skill-icon--flip-anim");
+          });
+        });
       });
     }
 
