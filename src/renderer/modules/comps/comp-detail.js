@@ -12,7 +12,7 @@ import {
   setPublishStatusEl,
 } from "../render-pages.js";
 import { roleBadgeHtml } from "../roleEstimator.js";
-import { axiforgeIcon, checkIcon, chevronDownIcon, arrowUpTrayIcon, clipboardDocumentIcon } from "../library/heroicons.js";
+import { axiforgeIcon, checkIcon, chevronDownIcon, arrowUpTrayIcon, clipboardDocumentIcon, globeAltIcon } from "../library/heroicons.js";
 import { renderMiniBuildCard, renderMissingMiniBuildCard } from "../mini-build-card.js";
 import { computeCompBoonCoverage, buildBoonCoverageHTML, bindBoonCoverageEvents, closeBoonTooltip, closeDurationExpand } from "./comp-boon-coverage.js";
 import {
@@ -391,6 +391,10 @@ export function renderCompDetail() {
             </button>
             <button type="button" class="comp-share-dropdown__item" data-action="copy-plaintext">
               ${clipboardDocumentIcon} Discord Plaintext
+            </button>
+            <div class="comp-share-dropdown__divider"></div>
+            <button type="button" class="comp-share-dropdown__item" data-action="copy-published-link"${comp.publishedFileId ? "" : ' disabled title="Publish first"'}>
+              ${globeAltIcon} Published Link
             </button>
           </div>
         </div>
@@ -857,6 +861,8 @@ function bindDetailEvents(container, comp) {
         completeAllPublishSteps();
       }
       state.comps = await window.desktopApi.listComps();
+      const pubLinkEl = container.querySelector("[data-action='copy-published-link']");
+      if (pubLinkEl) { pubLinkEl.disabled = false; pubLinkEl.removeAttribute("title"); }
     } catch (err) {
       failPublishStep("loading", err.message);
     }
@@ -952,6 +958,26 @@ function bindDetailEvents(container, comp) {
         setTimeout(() => {
           plainBtn.innerHTML = plainBtnDefault;
           plainBtn.classList.remove("comp-share-dropdown__item--error");
+        }, 1500);
+      }
+    });
+
+    // Published Link
+    const pubLinkBtn = shareDropdown.querySelector("[data-action='copy-published-link']");
+    const pubLinkBtnDefault = pubLinkBtn?.innerHTML;
+    pubLinkBtn?.addEventListener("click", async () => {
+      if (pubLinkBtn.disabled || pubLinkBtn.classList.contains("comp-share-dropdown__item--copied")) return;
+      try {
+        const url = await window.desktopApi.getCompPublishedUrl(comp.id);
+        if (!url) return;
+        await window.desktopApi.writeClipboardText(url);
+        flashItem(pubLinkBtn, pubLinkBtnDefault);
+      } catch {
+        pubLinkBtn.innerHTML = "Failed";
+        pubLinkBtn.classList.add("comp-share-dropdown__item--error");
+        setTimeout(() => {
+          pubLinkBtn.innerHTML = pubLinkBtnDefault;
+          pubLinkBtn.classList.remove("comp-share-dropdown__item--error");
         }, 1500);
       }
     });
