@@ -1,6 +1,13 @@
 async function selectProfession(window, name) {
-  await window.selectOption("#professionSelect", { label: name });
-  await window.waitForTimeout(2000);
+  // #professionSelect is a custom select (.cselect), not a native <select>
+  await window.click("#professionSelect .cselect__trigger");
+  await window.click(`#professionSelect .cselect__option:has-text('${name}')`);
+  // Wait for catalog to load — spec cards appear when setProfession() completes
+  await window.waitForFunction(
+    () => !!document.querySelector("#specializationsHost article.spec-card"),
+    null,
+    { timeout: 15_000 }
+  );
 }
 
 async function setTitle(window, title) {
