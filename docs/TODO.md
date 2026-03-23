@@ -14,3 +14,6 @@
 - [ ] Boon coverage heat map
 - [ ] spa pills arent working for build classification (heal support, boon support, etc)
 - [ ] spa build link is still on the right and not on the title
+- [ ] renaming a build moves it out of the comp
+- [ ] creating a build in the comp in library puts it at the root
+- [ ] need a way to copy build link easily in both comp view and build view
