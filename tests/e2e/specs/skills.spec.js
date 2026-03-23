@@ -377,10 +377,15 @@ test.describe("Skills — Profession mechanics", () => {
     await selectProfession(window, "Engineer");
   });
 
-  // 15. Ranger: profession mechanics (skip — no fixture data)
-  test.skip("Ranger: profession mechanics display", async () => {
-    // Ranger has no full catalog data in fixtures. Full test requires fixture data.
+  // 15. Ranger: profession mechanics (pet slots)
+  test("Ranger: profession mechanics display", async () => {
     await selectProfession(window, "Ranger");
+    // Ranger has pet slots in the mechanic bar
+    const petBtn = window.locator(".pet-slot-btn");
+    await expect(petBtn.first()).toBeVisible({ timeout: 5000 });
+    // Should have pet slot label
+    const petLabel = window.locator(".pet-slot-btn__label");
+    expect(await petLabel.first().textContent()).toBeTruthy();
   });
 
   // 16. Thief: profession mechanics (skip — no fixture data)

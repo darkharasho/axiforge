@@ -248,15 +248,77 @@ test.describe("Underwater Mode — Revenant legends", () => {
 });
 
 test.describe("Underwater Mode — Ranger pets", () => {
-  // 6. Ranger: Only amphibious/aquatic pets available underwater (skip — no Ranger fixtures)
-  test.skip("Ranger: only aquatic/amphibious pets available underwater", async () => {
-    // Skipped: no Ranger fixture data in the mock server.
-    // When Ranger fixtures are added, this test should:
-    // 1. Select Ranger profession
-    // 2. Switch to underwater mode
-    // 3. Open the pet picker
-    // 4. Verify only aquatic/amphibious pets appear (AQUATIC_PET_IDS from constants.js)
-    // 5. Switch to land and verify only terrestrial pets appear
+  let app, window;
+
+  test.beforeAll(async () => {
+    ({ app, window } = await launchApp());
+    await goToEditor(window);
+    await selectProfession(window, "Ranger");
+  });
+
+  test.afterAll(async () => {
+    await closeApp(app);
+  });
+
+  // Aquatic pet IDs from constants.js — drakes, shark, armor fish, jellyfish, siege turtle
+  const AQUATIC_PET_IDS = new Set([7, 12, 18, 19, 45, 21, 40, 41, 42, 43, 66]);
+
+  test("Ranger: only aquatic/amphibious pets available underwater", async () => {
+    // Aquatic-only pet names (should NOT appear on land)
+    const AQUATIC_ONLY_NAMES = ["Shark", "Armor Fish", "Blue Jellyfish", "Red Jellyfish", "Rainbow Jellyfish"];
+
+    // Switch to underwater mode
+    const waterBtn = window.locator('.underwater-toggle__btn[data-mode="water"]');
+    await waterBtn.click();
+    await window.waitForTimeout(500);
+
+    // Open the pet picker
+    const petBtn = window.locator(".pet-slot-btn").first();
+    await expect(petBtn).toBeVisible({ timeout: 5000 });
+    await petBtn.click();
+    await window.waitForSelector(".slot-picker", { timeout: 3000 });
+
+    // Get aquatic pet names (skip "— None —" option)
+    const aquaticPetNames = await window.evaluate(() => {
+      const options = document.querySelectorAll(".slot-picker__option .slot-picker__name");
+      return Array.from(options).map((el) => el.textContent.trim()).filter((n) => n !== "— None —");
+    });
+
+    // Should have aquatic pets (drakes, shark, jellyfish, etc.)
+    expect(aquaticPetNames.length).toBeGreaterThan(0);
+    // Aquatic-only pets should be in the list
+    for (const name of AQUATIC_ONLY_NAMES) {
+      const found = aquaticPetNames.some((n) => n.includes(name));
+      expect(found).toBe(true);
+    }
+
+    // Close picker
+    await window.keyboard.press("Escape");
+    await window.waitForTimeout(200);
+
+    // Switch back to land
+    const landBtn = window.locator('.underwater-toggle__btn[data-mode="land"]');
+    await landBtn.click();
+    await window.waitForTimeout(500);
+
+    // Open pet picker on land
+    await petBtn.click();
+    await window.waitForSelector(".slot-picker", { timeout: 3000 });
+
+    // Get land pet names
+    const landPetNames = await window.evaluate(() => {
+      const options = document.querySelectorAll(".slot-picker__option .slot-picker__name");
+      return Array.from(options).map((el) => el.textContent.trim()).filter((n) => n !== "— None —");
+    });
+
+    expect(landPetNames.length).toBeGreaterThan(0);
+    // Aquatic-only pets should NOT appear on land
+    for (const name of AQUATIC_ONLY_NAMES) {
+      const found = landPetNames.some((n) => n.includes(name));
+      expect(found).toBe(false);
+    }
+
+    await window.keyboard.press("Escape");
   });
 });
 
