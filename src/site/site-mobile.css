@@ -596,13 +596,24 @@
     -webkit-overflow-scrolling: touch;
   }
 
-  /* Mini build cards: full width */
+  /* Mini build cards: full width, name on its own line */
   .mini-card {
     width: 100%;
   }
 
+  .mini-card__header {
+    flex-wrap: wrap;
+  }
+
+  .mini-card__name {
+    width: 100%;
+    white-space: normal;
+    text-overflow: unset;
+  }
+
   .mini-card__pills {
     padding-right: 0;
+    margin-left: 0;
   }
 
   /* Boon coverage: horizontal scroll */
