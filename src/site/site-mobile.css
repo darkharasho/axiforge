@@ -3,6 +3,8 @@
 
 /* Hidden on desktop — only styled inside @media */
 .skills-bar__mobile-meta { display: none; }
+.spec-card__mobile-header { display: none; }
+.spec-card__mobile-tiers { display: none; }
 
 @media (max-width: 768px) {
   /* --- Global / Layout --- */
@@ -164,5 +166,155 @@
     color: rgba(255, 180, 180, 0.6);
     text-transform: uppercase;
     font-weight: 600;
+  }
+
+  /* --- Specializations Accordion --- */
+  .specs-with-detail {
+    flex-direction: column;
+  }
+
+  /* Note: .detail-panel and .hover-preview hiding is in Task 7 (bottom sheet) */
+
+  .spec-card {
+    --spec-scale: 0.9;
+  }
+
+  .spec-card__body {
+    display: none;
+  }
+
+  .spec-connector {
+    display: none;
+  }
+
+  .spec-card.expanded .spec-card__body {
+    display: grid;
+    grid-template-columns: 40px repeat(3, 32px);
+    column-gap: 8px;
+    row-gap: 8px;
+    padding: 12px;
+    justify-content: center;
+  }
+
+  .spec-card.expanded .spec-connector {
+    display: none;
+  }
+
+  /* Collapsed header row — injected by mobile.js */
+  .spec-card__mobile-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    cursor: pointer;
+    border: 1px solid rgba(80, 132, 163, 0.48);
+    border-radius: 4px;
+    background: #070f1d;
+  }
+
+  .spec-card__mobile-header:active {
+    background: rgba(16, 25, 48, 0.9);
+  }
+
+  .spec-card--elite .spec-card__mobile-header {
+    border-color: rgba(210, 165, 50, 0.7);
+    box-shadow: 0 0 20px rgba(190, 145, 30, 0.2) inset;
+  }
+
+  .spec-card__mobile-emblem {
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+  }
+
+  .spec-card__mobile-emblem img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  .spec-card__mobile-name {
+    font-family: "Cinzel", serif;
+    font-size: 14px;
+    color: #e8f0ff;
+    font-weight: 600;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .spec-card__mobile-traits {
+    display: flex;
+    gap: 3px;
+    flex-shrink: 0;
+  }
+
+  .spec-card__mobile-traits img {
+    width: 20px;
+    height: 20px;
+    border-radius: 2px;
+    border: 1px solid rgba(100, 220, 255, 0.4);
+  }
+
+  .spec-card--elite .spec-card__mobile-traits img {
+    border-color: rgba(210, 165, 50, 0.5);
+  }
+
+  .spec-card__mobile-chevron {
+    color: rgba(166, 187, 222, 0.5);
+    font-size: 16px;
+    flex-shrink: 0;
+    transition: transform 0.2s ease;
+  }
+
+  .spec-card.expanded .spec-card__mobile-chevron {
+    transform: rotate(180deg);
+    color: rgba(100, 220, 255, 0.8);
+  }
+
+  .spec-card.expanded .spec-card__mobile-header {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    border-bottom: none;
+  }
+
+  .spec-card.expanded .spec-card__panel {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+  }
+
+  /* Mobile expanded layout: vertical tiers */
+  .spec-card__mobile-tiers {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .spec-card__mobile-tier {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(80, 132, 163, 0.15);
+  }
+
+  .spec-card__mobile-tier:last-child {
+    border-bottom: none;
+  }
+
+  .spec-card__mobile-tier-label {
+    font-size: 10px;
+    color: rgba(166, 187, 222, 0.4);
+    width: 36px;
+    flex-shrink: 0;
+  }
+
+  .spec-card__mobile-tier .trait-btn {
+    height: auto;
+  }
+
+  .spec-card__mobile-tier .trait-btn img {
+    width: 36px;
+    height: 36px;
   }
 }
