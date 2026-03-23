@@ -38,11 +38,13 @@ const folderStore = new FolderStore(dataDir);
 const compStore = new CompStore(dataDir);
 
 function createWindow() {
+  const isE2E = APP_PROFILE && APP_PROFILE.startsWith("e2e");
   const win = new BrowserWindow({
     width: 1600,
     height: 980,
     minWidth: 1120,
     minHeight: 740,
+    show: !isE2E,
     frame: false,
     titleBarStyle: process.platform === "darwin" ? "hiddenInset" : "hidden",
     backgroundColor: "#050910",
