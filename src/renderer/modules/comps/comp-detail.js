@@ -109,6 +109,24 @@ export function initCompDetail(callbacks) {
   _callbacks = callbacks || {};
 }
 
+// ─── Toast ────────────────────────────────────────────────────────────────────
+
+let _toastEl = null;
+let _toastTimer = null;
+function showToast(message) {
+  if (!_toastEl) {
+    _toastEl = document.createElement("div");
+    _toastEl.className = "lib-toast";
+    document.body.appendChild(_toastEl);
+  }
+  _toastEl.textContent = message;
+  _toastEl.className = "lib-toast lib-toast--success";
+  void _toastEl.offsetWidth;
+  _toastEl.classList.add("lib-toast--visible");
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => { _toastEl.classList.remove("lib-toast--visible"); }, 2000);
+}
+
 // ─── Discord Status ───────────────────────────────────────────────────────────
 
 function showDiscordStatus(msg, isError = false) {
@@ -972,6 +990,7 @@ function bindDetailEvents(container, comp) {
         if (!url) return;
         await window.desktopApi.writeClipboardText(url);
         flashItem(pubLinkBtn, pubLinkBtnDefault);
+        showToast("Link copied!");
       } catch {
         pubLinkBtn.innerHTML = "Failed";
         pubLinkBtn.classList.add("comp-share-dropdown__item--error");
