@@ -71,4 +71,4 @@ function buildRedirectFile(fileId, encKey, type) {
   };
 }
 
-module.exports = { buildSpaBundle, buildEncryptedBuildFile, buildEncryptedCompFile, buildRedirectFile };
+module.exports = { getSiteDistDir, buildSpaBundle, buildEncryptedBuildFile, buildEncryptedCompFile, buildRedirectFile };

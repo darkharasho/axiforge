@@ -73,6 +73,25 @@ describe("buildSpaBundle", () => {
   });
 });
 
+describe("getSiteDistDir — packaged path", () => {
+  test("uses process.resourcesPath/site when app.isPackaged is true", () => {
+    jest.resetModules();
+    jest.mock("electron", () => ({ app: { isPackaged: true } }), { virtual: true });
+    const origResources = process.resourcesPath;
+    process.resourcesPath = "/mock/resources";
+    try {
+      const { getSiteDistDir } = require("../../src/main/siteBundle");
+      expect(getSiteDistDir()).toBe(path.join("/mock/resources", "site"));
+    } finally {
+      if (origResources === undefined) delete process.resourcesPath;
+      else process.resourcesPath = origResources;
+      // Restore original mock for remaining tests
+      jest.resetModules();
+      jest.mock("electron", () => ({ app: { isPackaged: false } }), { virtual: true });
+    }
+  });
+});
+
 describe("buildEncryptedBuildFile", () => {
   test("returns filePath and content", () => {
     const result = buildEncryptedBuildFile({ title: "Test" }, "abc12345", "someBase64urlKey_that_is_43_chars_longAAAAA");

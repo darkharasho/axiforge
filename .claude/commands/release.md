@@ -51,8 +51,10 @@ rm -rf dist/ dist_out/
 ### Step 5 — Build
 
 ```bash
-npm run build:renderer && npx electron-builder --linux --win --publish never
+npm run build:site && npm run build:renderer && npx electron-builder --linux --win --publish never
 ```
+
+Note: `build:site` must run before electron-builder so the site bundle is included as an extra resource in the packaged app.
 
 If the build fails, abort: "Build failed — see output above."
 
