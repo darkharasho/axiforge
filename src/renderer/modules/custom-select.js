@@ -65,6 +65,19 @@ export function renderCustomSelect(host, config = {}) {
         event.stopPropagation();
         if (button.disabled) return;
         closeCustomSelect();
+
+        // Update trigger to reflect the newly selected option
+        const valueNode = trigger.querySelector(".cselect__value");
+        if (valueNode) {
+          const newValue = makeCustomSelectValueNode(option, config.placeholder || "Select");
+          valueNode.replaceWith(newValue);
+        }
+
+        // Update selected class on all options
+        for (const opt of list.querySelectorAll(".cselect__option")) {
+          opt.classList.toggle("cselect__option--selected", opt === button);
+        }
+
         if (typeof config.onChange === "function") {
           Promise.resolve(config.onChange(option.value, option)).catch((err) => _onError(err));
         }
