@@ -126,6 +126,11 @@
   }
 
   /* --- Skill Bar --- */
+  .underwater-toggle {
+    position: static;
+    margin-bottom: 8px;
+  }
+
   .skills-bar {
     flex-direction: column;
     align-items: center;
@@ -257,6 +262,26 @@
     display: none;
   }
 
+  .equip-col,
+  .equip-col--right {
+    padding: 0;
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  .equip-section {
+    max-width: 100%;
+  }
+
+  .equip-slot {
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  .equip-slot__row {
+    flex-wrap: wrap;
+  }
+
   /* Sub-tab bar — injected by mobile.js */
   .equip-mobile-tabs {
     display: flex;
@@ -314,6 +339,16 @@
     --spec-scale: 0.9;
   }
 
+  .spec-card__panel {
+    display: none;
+  }
+
+  .spec-card.expanded .spec-card__panel {
+    display: block;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+  }
+
   .spec-card__body {
     display: none;
   }
@@ -324,11 +359,22 @@
 
   .spec-card.expanded .spec-card__body {
     display: grid;
-    grid-template-columns: 40px repeat(3, 32px);
-    column-gap: 8px;
-    row-gap: 8px;
+    grid-template-columns: auto 1fr;
+    gap: 8px;
     padding: 12px;
-    justify-content: center;
+    justify-items: start;
+    align-items: center;
+  }
+
+  .spec-card.expanded .spec-emblem {
+    grid-column: 1 / -1;
+    justify-self: center;
+  }
+
+  .spec-card.expanded .trait-column--major {
+    display: flex;
+    flex-direction: row;
+    gap: 6px;
   }
 
   .spec-card.expanded .spec-connector {
@@ -412,10 +458,6 @@
     border-bottom: none;
   }
 
-  .spec-card.expanded .spec-card__panel {
-    border-top-left-radius: 0;
-    border-top-right-radius: 0;
-  }
 
   /* Mobile expanded layout: vertical tiers */
   .spec-card__mobile-tiers {
