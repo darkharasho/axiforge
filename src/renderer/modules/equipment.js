@@ -1384,16 +1384,18 @@ export function renderEquipmentPanel() {
       // Tooltip
       const tooltip = document.createElement("div");
       tooltip.className = "equip-boons__tooltip";
-      const statLabel = def.stat.replace(/([A-Z])/g, " $1").trim();
+      const statLabel = def.allStats ? "All Stats" : def.modifier ? def.modifier : def.stat.replace(/([A-Z])/g, " $1").trim();
+      const perStackLabel = def.modifier ? `+${def.perStack}% ${statLabel}` : `+${def.perStack} ${statLabel}`;
       if (stacks > 0) {
+        const totalLabel = def.modifier ? `+${(stacks * def.perStack).toFixed(1)}% ${statLabel}` : `+${stacks * def.perStack} ${statLabel}`;
         tooltip.innerHTML =
           `<div class="equip-boons__tip-title">${def.label} ×${stacks}</div>` +
-          `<div class="equip-boons__tip-effect">+${stacks * def.perStack} ${statLabel}</div>` +
-          `<div class="equip-boons__tip-note">+${def.perStack} ${statLabel} per stack (max ${def.maxStacks})</div>`;
+          `<div class="equip-boons__tip-effect">${totalLabel}</div>` +
+          `<div class="equip-boons__tip-note">${perStackLabel} per stack (max ${def.maxStacks})</div>`;
       } else {
         tooltip.innerHTML =
           `<div class="equip-boons__tip-title">Sigil of ${def.label}</div>` +
-          `<div class="equip-boons__tip-note">Click to add stacks. +${def.perStack} ${statLabel} per stack (max ${def.maxStacks}).</div>`;
+          `<div class="equip-boons__tip-note">Click to add stacks. ${perStackLabel} per stack (max ${def.maxStacks}).</div>`;
       }
       item.append(tooltip);
 
@@ -1457,7 +1459,10 @@ export function renderEquipmentPanel() {
 
     const leftEl = document.createElement("div");
     leftEl.className = "equip-stat-cell";
-    const sigilBoosted = equippedStackingSigils.some((d) => d.stat === row.key && (_sigilStacks[d.key] || 0) > 0);
+    const sigilBoosted = equippedStackingSigils.some((d) => {
+      if ((_sigilStacks[d.key] || 0) <= 0) return false;
+      return d.allStats ? d.allStats.includes(row.key) : d.stat === row.key;
+    });
     const isBoosted = (_assumedBoons.might > 0 && (row.key === "Power" || row.key === "ConditionDamage"))
       || (traitBonuses[row.key] > 0)
       || sigilBoosted;

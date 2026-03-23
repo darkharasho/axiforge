@@ -281,9 +281,13 @@ export function computeEquipmentStats(assumedBoons = null, sigilStacks = null) {
   if (sigilStacks) {
     for (const def of STACKING_SIGIL_DEFS) {
       const stacks = sigilStacks[def.key] || 0;
-      if (stacks > 0) {
+      if (stacks <= 0) continue;
+      if (def.allStats) {
+        for (const s of def.allStats) totals[s] = (totals[s] || 0) + stacks * def.perStack;
+      } else if (def.stat) {
         totals[def.stat] = (totals[def.stat] || 0) + stacks * def.perStack;
       }
+      // modifier-only sigils (e.g. Benevolence) don't affect flat attributes
     }
   }
 
@@ -607,7 +611,9 @@ export function computeStatBreakdown(statKey, assumedBoons = null, sigilStacks =
   if (sigilStacks) {
     for (const def of STACKING_SIGIL_DEFS) {
       const stacks = sigilStacks[def.key] || 0;
-      if (stacks > 0 && def.stat === statKey) {
+      if (stacks <= 0) continue;
+      const matches = def.allStats ? def.allStats.includes(statKey) : def.stat === statKey;
+      if (matches) {
         entries.push({ source: `Sigil (${def.label} ×${stacks})`, value: stacks * def.perStack });
       }
     }

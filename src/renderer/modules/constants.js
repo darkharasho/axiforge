@@ -505,11 +505,19 @@ export const FURY_CRIT_CHANCE = 25; // percentage points
 export const STABILITY_MAX_STACKS = 25;
 
 // Attribute-stacking sigils (only one can be active at a time in-game)
+// stat: single stat key affected.  allStats: true = +perStack to every attribute.
+// modifier: string label for percentage modifiers that don't map to a flat attribute.
+const _ALL_STATS = ["Power", "Precision", "Toughness", "Vitality", "Ferocity", "ConditionDamage", "Expertise", "Concentration", "HealingPower"];
 export const STACKING_SIGIL_DEFS = [
   { id: 24575, key: "sigilBloodlust", label: "Bloodlust", stat: "Power", perStack: 10, maxStacks: 25 },
+  { id: 81045, key: "sigilBounty", label: "Bounty", stat: "Concentration", perStack: 9, maxStacks: 25 },
   { id: 24578, key: "sigilCorruption", label: "Corruption", stat: "ConditionDamage", perStack: 10, maxStacks: 25 },
+  { id: 67341, key: "sigilCruelty", label: "Cruelty", stat: "Ferocity", perStack: 10, maxStacks: 25 },
+  { id: 24584, key: "sigilBenevolence", label: "Benevolence", modifier: "Outgoing Healing", perStack: 0.5, maxStacks: 25 },
   { id: 24582, key: "sigilLife", label: "Life", stat: "HealingPower", perStack: 10, maxStacks: 25 },
+  { id: 49457, key: "sigilMomentum", label: "Momentum", stat: "Toughness", perStack: 5, maxStacks: 25 },
   { id: 24580, key: "sigilPerception", label: "Perception", stat: "Precision", perStack: 10, maxStacks: 25 },
+  { id: 86170, key: "sigilStars", label: "Stars", allStats: _ALL_STATS, perStack: 2, maxStacks: 25 },
 ];
 export const STACKING_SIGIL_IDS = new Set(STACKING_SIGIL_DEFS.map((d) => d.id));
 
