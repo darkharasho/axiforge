@@ -543,32 +543,77 @@
   }
 
   /* --- Comp Page --- */
-  .comp-header {
+
+  /* Stack the topbar vertically */
+  .comp-detail__topbar {
     flex-direction: column;
     align-items: flex-start;
+    gap: 6px;
+    min-height: auto;
+    padding: 12px;
   }
 
-  .party-lines {
+  .comp-detail__spacer {
+    display: none;
+  }
+
+  /* Stack body vertically instead of 40/60 split */
+  .comp-detail__body {
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  /* Party panel: full width, no min-width constraint */
+  .comp-detail__party-panel {
+    width: 100% !important;
+    min-width: 0;
+    flex: none;
+    overflow-y: visible;
+  }
+
+  /* Hide the resize handle */
+  .comp-detail__resize-handle {
+    display: none;
+  }
+
+  /* Pool panel: full width */
+  .comp-detail__pool-panel {
+    width: 100%;
+    min-width: 0;
+    flex: none;
+    overflow-y: visible;
+  }
+
+  /* Party lines: horizontal scroll per line */
+  .comp-line {
+    flex-wrap: nowrap;
+  }
+
+  .comp-line__slots {
+    max-width: none;
+    flex-wrap: nowrap;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
   }
 
-  .party-line {
-    min-width: max-content;
-  }
-
-  .mini-build-card {
+  /* Mini build cards: full width */
+  .mini-card {
     width: 100%;
   }
 
-  .boon-coverage-grid {
+  .mini-card__pills {
+    padding-right: 0;
+  }
+
+  /* Boon coverage: horizontal scroll */
+  .comp-boon-cov__body {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     padding-bottom: 8px;
   }
 
-  .boon-coverage-grid > table,
-  .boon-coverage-grid > div {
+  .comp-boon-cov__body > table,
+  .comp-boon-cov__body > div {
     min-width: max-content;
   }
 }
