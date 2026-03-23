@@ -15,13 +15,13 @@ export function computeSlotStats(comboLabel, slotKey) {
     result.push({ stat: combo.stats[0], value: w.p });
     for (let i = 1; i < n; i++) result.push({ stat: combo.stats[i], value: w.s });
   } else if (n === 4) {
-    result.push({ stat: combo.stats[0], value: Math.round(w.p * 0.895) });
-    result.push({ stat: combo.stats[1], value: Math.round(w.s * 0.889) });
-    result.push({ stat: combo.stats[2], value: Math.round(w.s * 0.889) });
-    result.push({ stat: combo.stats[3], value: Math.round(w.p * 0.452) });
+    // 2-2 pattern: first 2 stats are major, last 2 are minor
+    result.push({ stat: combo.stats[0], value: w.p4 });
+    result.push({ stat: combo.stats[1], value: w.p4 });
+    result.push({ stat: combo.stats[2], value: w.s4 });
+    result.push({ stat: combo.stats[3], value: w.s4 });
   } else {
-    const each = Math.round((w.p + 2 * w.s) / n);
-    for (const stat of combo.stats) result.push({ stat, value: each });
+    for (const stat of combo.stats) result.push({ stat, value: w.c });
   }
   return result;
 }
@@ -46,14 +46,14 @@ export function computeEquipmentStats(assumedBoons = null) {
         totals[combo.stats[i]] = (totals[combo.stats[i]] || 0) + w.s;
       }
     } else if (n === 4) {
-      totals[combo.stats[0]] = (totals[combo.stats[0]] || 0) + Math.round(w.p * 0.895);
-      totals[combo.stats[1]] = (totals[combo.stats[1]] || 0) + Math.round(w.s * 0.889);
-      totals[combo.stats[2]] = (totals[combo.stats[2]] || 0) + Math.round(w.s * 0.889);
-      totals[combo.stats[3]] = (totals[combo.stats[3]] || 0) + Math.round(w.p * 0.452);
+      // 2-2 pattern: first 2 stats are major, last 2 are minor
+      totals[combo.stats[0]] = (totals[combo.stats[0]] || 0) + w.p4;
+      totals[combo.stats[1]] = (totals[combo.stats[1]] || 0) + w.p4;
+      totals[combo.stats[2]] = (totals[combo.stats[2]] || 0) + w.s4;
+      totals[combo.stats[3]] = (totals[combo.stats[3]] || 0) + w.s4;
     } else {
-      const each = Math.round((w.p + 2 * w.s) / n);
       for (const stat of combo.stats) {
-        totals[stat] = (totals[stat] || 0) + each;
+        totals[stat] = (totals[stat] || 0) + w.c;
       }
     }
   }
@@ -233,11 +233,10 @@ export function computeBuildConcentration(build, upgradeCatalog) {
       }
     } else if (n === 4) {
       const idx = combo.stats.indexOf("Concentration");
-      if (idx === 0) concentration += Math.round(w.p * 0.895);
-      else if (idx === 1 || idx === 2) concentration += Math.round(w.s * 0.889);
-      else if (idx === 3) concentration += Math.round(w.p * 0.452);
+      if (idx === 0 || idx === 1) concentration += w.p4;
+      else if (idx === 2 || idx === 3) concentration += w.s4;
     } else {
-      if (combo.stats.includes("Concentration")) concentration += Math.round((w.p + 2 * w.s) / n);
+      if (combo.stats.includes("Concentration")) concentration += w.c;
     }
   }
 
@@ -358,11 +357,10 @@ export function computeStatBreakdown(statKey, assumedBoons = null) {
       else if (combo.stats.includes(statKey)) val = w.s;
     } else if (n === 4) {
       const idx = combo.stats.indexOf(statKey);
-      if (idx === 0) val = Math.round(w.p * 0.895);
-      else if (idx === 1 || idx === 2) val = Math.round(w.s * 0.889);
-      else if (idx === 3) val = Math.round(w.p * 0.452);
+      if (idx === 0 || idx === 1) val = w.p4;
+      else if (idx === 2 || idx === 3) val = w.s4;
     } else {
-      if (combo.stats.includes(statKey)) val = Math.round((w.p + 2 * w.s) / n);
+      if (combo.stats.includes(statKey)) val = w.c;
     }
     if (val) entries.push({ source: `${SLOT_LABELS[slotKey] || slotKey} (${comboLabel})`, value: val });
   }

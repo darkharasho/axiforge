@@ -291,7 +291,7 @@ describe("computeCompBoonCoverage — sources and effectiveDuration on line prov
   test("effectiveDuration is multiplied by concentrationBonus from gear", async () => {
     const build = makeBuild("b1", "Guardian");
     build.skills.healId = 100;
-    // Give build Harrier's chest — gives 96 Concentration
+    // Give build Harrier's chest — gives 101 Concentration (ascended)
     build.equipment.slots = { chest: "Harrier's" };
 
     const catalog = makeCatalog(new Map([[100, makeMightSkill()]]));
@@ -304,8 +304,8 @@ describe("computeCompBoonCoverage — sources and effectiveDuration on line prov
     const { lines } = await computeCompBoonCoverage(comp, [build], catalogCache, getCatalog, upgradeCatalog);
 
     const provider = lines[0].boons.get("Might").providers[0];
-    // 96 Concentration → 96/1500 = 0.064 → 10 * 1.064 = 10.6
-    expect(provider.sources[0].effectiveDuration).toBeCloseTo(10.6, 1);
+    // 101 Concentration → 101/1500 = 0.0673 → 10 * 1.0673 = 10.7
+    expect(provider.sources[0].effectiveDuration).toBeCloseTo(10.7, 1);
   });
 
   test("sources with duration 0 are filtered out", async () => {

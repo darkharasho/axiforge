@@ -35,16 +35,16 @@ describe("computeSlotStats — 3-stat combos", () => {
   test("Berserker's chest returns Power primary, Precision+Ferocity secondary", () => {
     const result = computeSlotStats("Berserker's", "chest");
     expect(result).toHaveLength(3);
-    expect(result[0]).toEqual({ stat: "Power",     value: 134 });
-    expect(result[1]).toEqual({ stat: "Precision",  value: 96  });
-    expect(result[2]).toEqual({ stat: "Ferocity",   value: 96  });
+    expect(result[0]).toEqual({ stat: "Power",     value: 141 });
+    expect(result[1]).toEqual({ stat: "Precision",  value: 101 });
+    expect(result[2]).toEqual({ stat: "Ferocity",   value: 101 });
   });
 
   test("Berserker's head returns correct head weights", () => {
     const result = computeSlotStats("Berserker's", "head");
-    expect(result[0]).toEqual({ stat: "Power",    value: 60 });
-    expect(result[1]).toEqual({ stat: "Precision", value: 43 });
-    expect(result[2]).toEqual({ stat: "Ferocity",  value: 43 });
+    expect(result[0]).toEqual({ stat: "Power",    value: 63 });
+    expect(result[1]).toEqual({ stat: "Precision", value: 45 });
+    expect(result[2]).toEqual({ stat: "Ferocity",  value: 45 });
   });
 
   test("returns empty for unknown combo", () => {
@@ -59,22 +59,22 @@ describe("computeSlotStats — 3-stat combos", () => {
     const result = computeSlotStats("Sinister", "mainhand1");
     expect(result).toHaveLength(3);
     expect(result[0].stat).toBe("ConditionDamage");
-    expect(result[0].value).toBe(120); // p weight for mainhand1
+    expect(result[0].value).toBe(125); // p weight for mainhand1 (ascended)
     expect(result[1].stat).toBe("Power");
-    expect(result[1].value).toBe(85);  // s weight for mainhand1
+    expect(result[1].value).toBe(90);  // s weight for mainhand1 (ascended)
   });
 });
 
 describe("computeSlotStats — 4-stat combos", () => {
-  test("Viper's chest applies 4-stat scaling formula", () => {
-    // Viper's: Power, ConditionDamage, Precision, Expertise
-    // chest weights: p=134, s=96
+  test("Viper's chest applies 4-stat 2-2 pattern", () => {
+    // Viper's: Power, ConditionDamage (major), Precision, Expertise (minor)
+    // chest weights: p4=121, s4=66
     const result = computeSlotStats("Viper's", "chest");
     expect(result).toHaveLength(4);
-    expect(result[0]).toEqual({ stat: "Power",          value: Math.round(134 * 0.895) });
-    expect(result[1]).toEqual({ stat: "ConditionDamage", value: Math.round(96  * 0.889) });
-    expect(result[2]).toEqual({ stat: "Precision",       value: Math.round(96  * 0.889) });
-    expect(result[3]).toEqual({ stat: "Expertise",       value: Math.round(134 * 0.452) });
+    expect(result[0]).toEqual({ stat: "Power",          value: 121 });
+    expect(result[1]).toEqual({ stat: "ConditionDamage", value: 121 });
+    expect(result[2]).toEqual({ stat: "Precision",       value: 66 });
+    expect(result[3]).toEqual({ stat: "Expertise",       value: 66 });
   });
 
   test("Marauder's ring1 applies 4-stat formula", () => {
@@ -92,39 +92,41 @@ describe("computeSlotStats — missing stat combos (issue #29)", () => {
   test("Sentinel's is defined and uses Vitality as primary 3-stat", () => {
     const result = computeSlotStats("Sentinel's", "chest");
     expect(result).toHaveLength(3);
-    expect(result[0]).toEqual({ stat: "Vitality", value: 134 });
-    expect(result[1]).toEqual({ stat: "Power",    value: 96  });
-    expect(result[2]).toEqual({ stat: "Toughness", value: 96 });
+    expect(result[0]).toEqual({ stat: "Vitality", value: 141 });
+    expect(result[1]).toEqual({ stat: "Power",    value: 101 });
+    expect(result[2]).toEqual({ stat: "Toughness", value: 101 });
   });
 
-  test("Wanderer's is defined and uses Toughness primary 4-stat", () => {
+  test("Wanderer's is defined with Power+Vitality major, Toughness+Concentration minor", () => {
     const result = computeSlotStats("Wanderer's", "chest");
     expect(result).toHaveLength(4);
-    expect(result[0].stat).toBe("Toughness");
-    expect(result[1].stat).toBe("Power");
-    expect(result[2].stat).toBe("Vitality");
+    expect(result[0].stat).toBe("Power");
+    expect(result[1].stat).toBe("Vitality");
+    expect(result[2].stat).toBe("Toughness");
     expect(result[3].stat).toBe("Concentration");
-    for (const r of result) expect(r.value).toBeGreaterThan(0);
+    // Major stats get p4, minor stats get s4
+    expect(result[0].value).toBe(121); // p4 for chest
+    expect(result[2].value).toBe(66);  // s4 for chest
   });
 
-  test("Diviner's is defined and uses Power primary 4-stat", () => {
+  test("Diviner's is defined with Power+Concentration major, Ferocity+Precision minor", () => {
     const result = computeSlotStats("Diviner's", "chest");
     expect(result).toHaveLength(4);
     expect(result[0].stat).toBe("Power");
-    expect(result[1].stat).toBe("Ferocity");
-    expect(result[2].stat).toBe("Concentration");
+    expect(result[1].stat).toBe("Concentration");
+    expect(result[2].stat).toBe("Ferocity");
     expect(result[3].stat).toBe("Precision");
-    for (const r of result) expect(r.value).toBeGreaterThan(0);
+    expect(result[0].value).toBe(121); // p4 for chest
+    expect(result[2].value).toBe(66);  // s4 for chest
   });
 });
 
 describe("computeSlotStats — 9-stat combo (Celestial)", () => {
-  test("Celestial chest distributes evenly across 9 stats", () => {
-    // chest: p=134, s=96; each = Math.round((134 + 2*96) / 9)
-    const each = Math.round((134 + 2 * 96) / 9);
+  test("Celestial chest uses per-stat Celestial weight", () => {
+    // chest: c=66 (Celestial per-stat weight)
     const result = computeSlotStats("Celestial", "chest");
     expect(result).toHaveLength(9);
-    for (const r of result) expect(r.value).toBe(each);
+    for (const r of result) expect(r.value).toBe(66);
     const stats = result.map((r) => r.stat);
     expect(stats).toContain("Power");
     expect(stats).toContain("HealingPower");
@@ -156,9 +158,9 @@ describe("computeEquipmentStats — single slot contributions", () => {
   test("Berserker's chest adds Power/Precision/Ferocity correctly", () => {
     state.editor = makeEditor({ chest: "Berserker's" });
     const result = computeEquipmentStats();
-    expect(result.Power).toBe(1000 + 134);
-    expect(result.Precision).toBe(1000 + 96);
-    expect(result.Ferocity).toBe(96);
+    expect(result.Power).toBe(1000 + 141);
+    expect(result.Precision).toBe(1000 + 101);
+    expect(result.Ferocity).toBe(101);
   });
 
   test("Cleric's amulet adds HealingPower primary, Toughness+Power secondary", () => {
@@ -186,25 +188,25 @@ describe("computeEquipmentStats — single slot contributions", () => {
 
 describe("computeEquipmentStats — multiple slot accumulation", () => {
   test("full Berserker's armor set accumulates all 6 armor slots", () => {
-    // armor: head(p60,s43), shoulders(p45,s32), chest(p134,s96), hands(p45,s32), legs(p90,s64), feet(p45,s32)
+    // armor (ascended): head(p63,s45), shoulders(p47,s34), chest(p141,s101), hands(p47,s34), legs(p94,s67), feet(p47,s34)
     const armorSlots = { head: "Berserker's", shoulders: "Berserker's", chest: "Berserker's",
                          hands: "Berserker's", legs: "Berserker's",  feet: "Berserker's" };
     state.editor = makeEditor(armorSlots);
     const result = computeEquipmentStats();
-    const totalPrimary   = 60 + 45 + 134 + 45 + 90 + 45;  // = 419
-    const totalSecondary = 43 + 32 +  96 + 32 + 64 + 32;  // = 299
+    const totalPrimary   = 63 + 47 + 141 + 47 + 94 + 47;  // = 439
+    const totalSecondary = 45 + 34 + 101 + 34 + 67 + 34;   // = 315
     expect(result.Power).toBe(1000 + totalPrimary);
     expect(result.Precision).toBe(1000 + totalSecondary);
     expect(result.Ferocity).toBe(totalSecondary);
   });
 
   test("dual weapon set adds mainhand1 + mainhand2", () => {
-    // mainhand1 and mainhand2 each: p=120, s=85
+    // mainhand1 and mainhand2 each: p=125, s=90 (ascended)
     state.editor = makeEditor({ mainhand1: "Berserker's", mainhand2: "Berserker's" });
     const result = computeEquipmentStats();
-    expect(result.Power).toBe(1000 + 120 + 120);
-    expect(result.Precision).toBe(1000 + 85 + 85);
-    expect(result.Ferocity).toBe(85 + 85);
+    expect(result.Power).toBe(1000 + 125 + 125);
+    expect(result.Precision).toBe(1000 + 90 + 90);
+    expect(result.Ferocity).toBe(90 + 90);
   });
 });
 
@@ -248,11 +250,11 @@ describe("computeEquipmentStats — food contributions", () => {
   });
 
   test("food stacks on top of equipment stats", () => {
-    // Berserker's chest + food with +100 Power
+    // Berserker's chest (ascended) + food with +100 Power
     state.editor = makeEditor({ chest: "Berserker's" }, "91734");
     const result = computeEquipmentStats();
-    expect(result.Power).toBe(1000 + 134 + 100);
-    expect(result.Ferocity).toBe(96 + 70);
+    expect(result.Power).toBe(1000 + 141 + 100);
+    expect(result.Ferocity).toBe(101 + 70);
   });
 
   test("food with 'to All Attributes' adds to every stat", () => {
@@ -276,15 +278,14 @@ describe("computeEquipmentStats — food contributions", () => {
 });
 
 describe("computeEquipmentStats — 4-stat combo accumulation", () => {
-  test("Viper's chest applies 4-stat scaling and accumulates correctly", () => {
+  test("Viper's chest applies 4-stat 2-2 pattern and accumulates correctly", () => {
     state.editor = makeEditor({ chest: "Viper's" });
     const result = computeEquipmentStats();
-    // Viper's: Power(0), ConditionDamage(1), Precision(2), Expertise(3)
-    // chest: p=134, s=96
-    expect(result.Power).toBe(1000 + Math.round(134 * 0.895));
-    expect(result.ConditionDamage).toBe(Math.round(96 * 0.889));
-    expect(result.Precision).toBe(1000 + Math.round(96 * 0.889));
-    expect(result.Expertise).toBe(Math.round(134 * 0.452));
+    // Viper's: Power+CondDmg (major p4=121), Precision+Expertise (minor s4=66)
+    expect(result.Power).toBe(1000 + 121);
+    expect(result.ConditionDamage).toBe(121);
+    expect(result.Precision).toBe(1000 + 66);
+    expect(result.Expertise).toBe(66);
   });
 });
 
@@ -327,11 +328,11 @@ describe("computeEquipmentStats — utility contributions", () => {
   });
 
   test("utility stacks on top of equipment stats", () => {
-    // Berserker's chest (Power 134, Precision 96, Ferocity 96) + Superior Sharpening Stone
+    // Berserker's chest ascended (Power 141, Precision 101, Ferocity 101) + Superior Sharpening Stone
     state.editor = makeEditor({ chest: "Berserker's" }, "", "9443");
     const result = computeEquipmentStats();
-    // Power += round((1000+96) * 0.03) + round(96 * 0.06) = 33 + 6 = 39
-    expect(result.Power).toBe(1000 + 134 + 33 + 6);
+    // Power += round((1000+101) * 0.03) + round(101 * 0.06) = 33 + 6 = 39
+    expect(result.Power).toBe(1000 + 141 + 33 + 6);
   });
 
   test("unknown utility ID adds nothing", () => {
@@ -438,10 +439,10 @@ describe("computeBuildConcentration", () => {
 
   test("Harrier's chest adds Concentration from slot stats", () => {
     // Harrier's: Power (primary), Healing Power, Concentration (secondary)
-    // chest secondary weight = 96
+    // chest secondary weight = 101 (ascended)
     const build = { equipment: { slots: { chest: "Harrier's" } } };
     const result = computeBuildConcentration(build, makeUpgradeCatalog());
-    expect(result).toBe(96); // chest secondary weight
+    expect(result).toBe(101); // chest secondary weight (ascended)
   });
 
   test("adds flat Concentration from food buff string", () => {
@@ -456,15 +457,15 @@ describe("computeBuildConcentration", () => {
   test("returns slot Concentration only when upgradeCatalog is null (rune/food/util skipped)", () => {
     const build = { equipment: { slots: { chest: "Harrier's" }, food: "1001" } };
     // Without catalog, food lookup is skipped
-    expect(computeBuildConcentration(build, null)).toBe(96);
+    expect(computeBuildConcentration(build, null)).toBe(101);
   });
 
   test("accumulates Concentration from multiple sources", () => {
     const foodDef = { buff: "+40 Concentration" };
     const catalog = makeUpgradeCatalog({ foodById: new Map([[1001, foodDef]]) });
     const build = { equipment: { slots: { chest: "Harrier's" }, food: "1001" } };
-    // 96 from slot + 40 from food = 136
-    expect(computeBuildConcentration(build, catalog)).toBe(136);
+    // 101 from slot + 40 from food = 141
+    expect(computeBuildConcentration(build, catalog)).toBe(141);
   });
 
   test("excludes aquatic slots (always land mode)", () => {
