@@ -504,6 +504,15 @@ export const MIGHT_MAX_STACKS = 25;
 export const FURY_CRIT_CHANCE = 25; // percentage points
 export const STABILITY_MAX_STACKS = 25;
 
+// Attribute-stacking sigils (only one can be active at a time in-game)
+export const STACKING_SIGIL_DEFS = [
+  { id: 24575, key: "sigilBloodlust", label: "Bloodlust", stat: "Power", perStack: 10, maxStacks: 25 },
+  { id: 24578, key: "sigilCorruption", label: "Corruption", stat: "ConditionDamage", perStack: 10, maxStacks: 25 },
+  { id: 24582, key: "sigilLife", label: "Life", stat: "HealingPower", perStack: 10, maxStacks: 25 },
+  { id: 24580, key: "sigilPerception", label: "Perception", stat: "Precision", perStack: 10, maxStacks: 25 },
+];
+export const STACKING_SIGIL_IDS = new Set(STACKING_SIGIL_DEFS.map((d) => d.id));
+
 export const BOON_NAMES = new Set([
   "Aegis", "Alacrity", "Fury", "Might", "Protection", "Quickness",
   "Regeneration", "Resistance", "Resolution", "Stability", "Swiftness", "Vigor",

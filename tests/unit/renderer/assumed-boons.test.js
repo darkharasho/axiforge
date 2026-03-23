@@ -136,6 +136,36 @@ describe("computeEquipmentStats — trait conversions integrated", () => {
   });
 });
 
+describe("computeEquipmentStats — stacking sigils", () => {
+  test("stacking sigil at max stacks adds to stat total", () => {
+    state.editor = makeEditor();
+    state.editor.equipment.weapons = { mainhand1: 1234 };
+    state.editor.equipment.sigils = { mainhand1: ["24575", ""] }; // Bloodlust
+    state.upgradeCatalog = null;
+    state.catalog = { traitById: new Map() };
+
+    const baseline = computeEquipmentStats();
+    const withSigil = computeEquipmentStats(null, { sigilBloodlust: 25 });
+    expect(withSigil.Power).toBe(baseline.Power + 250); // 25 * 10
+  });
+
+  test("stacking sigil at 0 stacks has no effect", () => {
+    state.editor = makeEditor();
+    state.catalog = { traitById: new Map() };
+    const baseline = computeEquipmentStats();
+    const withSigil = computeEquipmentStats(null, { sigilBloodlust: 0 });
+    expect(withSigil.Power).toBe(baseline.Power);
+  });
+
+  test("Perception sigil adds to Precision", () => {
+    state.editor = makeEditor();
+    state.catalog = { traitById: new Map() };
+    const baseline = computeEquipmentStats();
+    const withSigil = computeEquipmentStats(null, { sigilPerception: 15 });
+    expect(withSigil.Precision).toBe(baseline.Precision + 150);
+  });
+});
+
 const { computeTraitConversions } = require("../../../src/renderer/modules/stats");
 
 describe("computeTraitConversions", () => {

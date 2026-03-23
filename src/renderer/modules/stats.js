@@ -2,7 +2,7 @@
 import { state } from "./state.js";
 import {
   STAT_COMBOS_BY_LABEL, SLOT_WEIGHTS, LAND_ONLY_SLOTS, AQUATIC_SLOTS,
-  MIGHT_POWER_PER_STACK, MIGHT_CONDI_PER_STACK,
+  MIGHT_POWER_PER_STACK, MIGHT_CONDI_PER_STACK, STACKING_SIGIL_DEFS,
 } from "./constants.js";
 
 /**
@@ -100,7 +100,7 @@ export function computeSlotStats(comboLabel, slotKey) {
   return result;
 }
 
-export function computeEquipmentStats(assumedBoons = null) {
+export function computeEquipmentStats(assumedBoons = null, sigilStacks = null) {
   const slots = state.editor.equipment?.slots || {};
   const totals = {
     Power: 1000, Precision: 1000, Toughness: 1000, Vitality: 1000,
@@ -275,6 +275,16 @@ export function computeEquipmentStats(assumedBoons = null) {
     totals.ConditionDamage += (assumedBoons.might || 0) * MIGHT_CONDI_PER_STACK;
   }
 
+  // Stacking sigil contributions
+  if (sigilStacks) {
+    for (const def of STACKING_SIGIL_DEFS) {
+      const stacks = sigilStacks[def.key] || 0;
+      if (stacks > 0) {
+        totals[def.stat] = (totals[def.stat] || 0) + stacks * def.perStack;
+      }
+    }
+  }
+
   // Trait AttributeConversion contributions
   const traitBonuses = computeTraitConversions(totals);
   for (const [key, bonus] of Object.entries(traitBonuses)) {
@@ -409,7 +419,7 @@ export function computeBuildConcentration(build, upgradeCatalog) {
  * Compute a detailed breakdown of all sources contributing to a given stat key.
  * Returns an array of { source: string, value: number } entries.
  */
-export function computeStatBreakdown(statKey, assumedBoons = null) {
+export function computeStatBreakdown(statKey, assumedBoons = null, sigilStacks = null) {
   const entries = [];
   const BASE_STATS = new Set(["Power", "Precision", "Toughness", "Vitality"]);
   if (BASE_STATS.has(statKey)) entries.push({ source: "Base", value: 1000 });
@@ -539,7 +549,7 @@ export function computeStatBreakdown(statKey, assumedBoons = null) {
     if (utilDef) {
       const MAP = { "Condition Damage": "ConditionDamage", "Healing Power": "HealingPower" };
       // Percentage conversions — need current totals for source stats
-      const totals = computeEquipmentStats(assumedBoons);
+      const totals = computeEquipmentStats(assumedBoons, sigilStacks);
       const convRe = /Gain (Condition Damage|Healing Power|Power|Precision|Toughness|Vitality|Ferocity|Concentration|Expertise) Equal to (\d+(?:\.\d+)?)% of Your (Condition Damage|Healing Power|Power|Precision|Toughness|Vitality|Ferocity|Concentration|Expertise)/g;
       let m;
       while ((m = convRe.exec(utilDef.buff)) !== null) {
@@ -584,10 +594,20 @@ export function computeStatBreakdown(statKey, assumedBoons = null) {
   // Compute full stat totals to use as the base for conversions.
   // The `totals` variable at line 484 is block-scoped inside the utility block
   // and not accessible here, so we call computeEquipmentStats directly.
-  const traitBase = computeEquipmentStats(assumedBoons);
+  const traitBase = computeEquipmentStats(assumedBoons, sigilStacks);
   const traitBonuses = computeTraitConversions(traitBase);
   if (traitBonuses[statKey]) {
     entries.push({ source: "Trait conversion", value: traitBonuses[statKey] });
+  }
+
+  // Stacking sigil contributions
+  if (sigilStacks) {
+    for (const def of STACKING_SIGIL_DEFS) {
+      const stacks = sigilStacks[def.key] || 0;
+      if (stacks > 0 && def.stat === statKey) {
+        entries.push({ source: `Sigil (${def.label} ×${stacks})`, value: stacks * def.perStack });
+      }
+    }
   }
 
   return entries;
