@@ -260,7 +260,11 @@ app.whenReady().then(async () => {
       backgroundColor: "#050910",
       icon: path.join(__dirname, "../../public/img/build_logo.png"),
       title: mobile ? "AxiForge — Mobile Preview" : "AxiForge — Local Preview",
+      webPreferences: {
+        devTools: true,
+      },
     });
+    if (mobile) preview.webContents.openDevTools({ mode: "detach" });
     preview.loadURL(url);
     return true;
   });
