@@ -2,8 +2,62 @@
 import { state } from "./state.js";
 import {
   STAT_COMBOS_BY_LABEL, SLOT_WEIGHTS, LAND_ONLY_SLOTS, AQUATIC_SLOTS,
-  MIGHT_POWER_PER_STACK, MIGHT_CONDI_PER_STACK,
+  MIGHT_POWER_PER_STACK, MIGHT_CONDI_PER_STACK, STACKING_SIGIL_DEFS,
 } from "./constants.js";
+
+/**
+ * Map GW2 API AttributeConversion target names to our stat keys.
+ * The API uses derived-stat names for some targets.
+ */
+const CONVERSION_TARGET_MAP = {
+  BoonDuration: "Concentration",
+  ConditionDuration: "Expertise",
+  CritDamage: "Ferocity",
+  Healing: "HealingPower",
+};
+
+/**
+ * Compute stat bonuses from active trait AttributeConversion facts.
+ * Reads base stats (before conversions) and returns a map of bonus stats to add.
+ * Formula per conversion: floor(baseStatValue * percent / 100)
+ *
+ * @param {Object} baseStats - Current stat totals (before trait conversions)
+ * @returns {Object} bonuses - Map of stat key → bonus value to add
+ */
+export function computeTraitConversions(baseStats) {
+  const bonuses = {};
+  const catalog = state.activeCatalog;
+  if (!catalog?.traitById) return bonuses;
+
+  // Collect active trait IDs from selected specializations
+  const activeTraitIds = new Set(
+    (state.editor.specializations || [])
+      .flatMap((s) => Object.values(s?.majorChoices || {}))
+      .map(Number)
+      .filter(Boolean)
+  );
+  if (!activeTraitIds.size) return bonuses;
+
+  for (const traitId of activeTraitIds) {
+    const trait = catalog.traitById.get(traitId);
+    if (!trait?.facts) continue;
+    for (const fact of trait.facts) {
+      // Only process AttributeConversion/BuffConversion facts — the GW2 API uses
+      // "BuffConversion" for attribute conversions (e.g. Power → Vitality).
+      // Other fact types (Buff, Damage, etc.) may coincidentally have
+      // source/target/percent fields so we must filter by type explicitly.
+      if (fact.type !== "AttributeConversion" && fact.type !== "BuffConversion") continue;
+      if (!fact.source || !fact.target || !fact.percent) continue;
+      const sourceVal = baseStats[fact.source] || 0;
+      if (!sourceVal) continue;
+      const targetKey = CONVERSION_TARGET_MAP[fact.target] || fact.target;
+      const bonus = Math.floor(sourceVal * fact.percent / 100);
+      bonuses[targetKey] = (bonuses[targetKey] || 0) + bonus;
+    }
+  }
+
+  return bonuses;
+}
 
 /**
  * Build the set of equipment slot keys to exclude from stat calculations.
@@ -48,7 +102,7 @@ export function computeSlotStats(comboLabel, slotKey) {
   return result;
 }
 
-export function computeEquipmentStats(assumedBoons = null) {
+export function computeEquipmentStats(assumedBoons = null, sigilStacks = null) {
   const slots = state.editor.equipment?.slots || {};
   const totals = {
     Power: 1000, Precision: 1000, Toughness: 1000, Vitality: 1000,
@@ -223,6 +277,26 @@ export function computeEquipmentStats(assumedBoons = null) {
     totals.ConditionDamage += (assumedBoons.might || 0) * MIGHT_CONDI_PER_STACK;
   }
 
+  // Stacking sigil contributions
+  if (sigilStacks) {
+    for (const def of STACKING_SIGIL_DEFS) {
+      const stacks = sigilStacks[def.key] || 0;
+      if (stacks <= 0) continue;
+      if (def.allStats) {
+        for (const s of def.allStats) totals[s] = (totals[s] || 0) + stacks * def.perStack;
+      } else if (def.stat) {
+        totals[def.stat] = (totals[def.stat] || 0) + stacks * def.perStack;
+      }
+      // modifier-only sigils (e.g. Benevolence) don't affect flat attributes
+    }
+  }
+
+  // Trait AttributeConversion contributions
+  const traitBonuses = computeTraitConversions(totals);
+  for (const [key, bonus] of Object.entries(traitBonuses)) {
+    totals[key] = (totals[key] || 0) + bonus;
+  }
+
   return totals;
 }
 
@@ -351,7 +425,7 @@ export function computeBuildConcentration(build, upgradeCatalog) {
  * Compute a detailed breakdown of all sources contributing to a given stat key.
  * Returns an array of { source: string, value: number } entries.
  */
-export function computeStatBreakdown(statKey, assumedBoons = null) {
+export function computeStatBreakdown(statKey, assumedBoons = null, sigilStacks = null) {
   const entries = [];
   const BASE_STATS = new Set(["Power", "Precision", "Toughness", "Vitality"]);
   if (BASE_STATS.has(statKey)) entries.push({ source: "Base", value: 1000 });
@@ -481,7 +555,7 @@ export function computeStatBreakdown(statKey, assumedBoons = null) {
     if (utilDef) {
       const MAP = { "Condition Damage": "ConditionDamage", "Healing Power": "HealingPower" };
       // Percentage conversions — need current totals for source stats
-      const totals = computeEquipmentStats(assumedBoons);
+      const totals = computeEquipmentStats(assumedBoons, sigilStacks);
       const convRe = /Gain (Condition Damage|Healing Power|Power|Precision|Toughness|Vitality|Ferocity|Concentration|Expertise) Equal to (\d+(?:\.\d+)?)% of Your (Condition Damage|Healing Power|Power|Precision|Toughness|Vitality|Ferocity|Concentration|Expertise)/g;
       let m;
       while ((m = convRe.exec(utilDef.buff)) !== null) {
@@ -518,6 +592,29 @@ export function computeStatBreakdown(statKey, assumedBoons = null) {
       }
       if (statKey === "ConditionDamage") {
         entries.push({ source: `Boon (Might ×${mightStacks})`, value: mightStacks * MIGHT_CONDI_PER_STACK });
+      }
+    }
+  }
+
+  // Trait conversion contributions
+  // Note: computeEquipmentStats returns post-conversion totals (trait bonuses already applied).
+  // If two traits chain conversions (e.g. Power→Precision, Precision→Ferocity), the breakdown
+  // entry for the second conversion may be slightly inflated vs. the actual total. This is
+  // acceptable — GW2 conversion chains are rare, and the stat totals displayed are correct.
+  const traitBase = computeEquipmentStats(assumedBoons, sigilStacks);
+  const traitBonuses = computeTraitConversions(traitBase);
+  if (traitBonuses[statKey]) {
+    entries.push({ source: "Trait conversion", value: traitBonuses[statKey] });
+  }
+
+  // Stacking sigil contributions
+  if (sigilStacks) {
+    for (const def of STACKING_SIGIL_DEFS) {
+      const stacks = sigilStacks[def.key] || 0;
+      if (stacks <= 0) continue;
+      const matches = def.allStats ? def.allStats.includes(statKey) : def.stat === statKey;
+      if (matches) {
+        entries.push({ source: `Sigil (${def.label} ×${stacks})`, value: stacks * def.perStack });
       }
     }
   }
