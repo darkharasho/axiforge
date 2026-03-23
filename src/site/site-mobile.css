@@ -150,6 +150,10 @@
     height: 58px;
   }
 
+  .skill-icon-large.skill-icon--flip-anim {
+    animation-duration: 800ms;
+  }
+
   .skill-select-overlay {
     width: 58px;
     height: 58px;
