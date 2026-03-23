@@ -37,12 +37,17 @@ Reflows from a single horizontal row into 3 stacked rows:
 - **Row 3:** Heal + 3 utilities + elite at ~58px, centered
 
 Implementation:
+
+**CSS:**
 - `.skills-bar` switches to vertical flex direction
 - `.health-orb` hidden via `display: none`
-- New `.skills-bar__mobile-meta` element holds swap pill + HP badge — hidden on desktop, visible on mobile
+- `.weapon-swap-btn` hidden via `display: none` (replaced by pill in injected row)
 - `.profession-mechanics-bar`: remove left padding, center icons, keep at ~30px
 - Boon/condition coverage wraps naturally (flex with gap)
-- **No JS changes** — CSS reflow only
+
+**JS (SPA-only, in `mobile.js`):**
+- Inject a `.skills-bar__mobile-meta` row between weapon skills and utility skills containing: swap pill button (reuses existing swap click handler) + HP badge (reads value from `.health-orb__hp`)
+- Hidden on desktop via CSS, visible on mobile
 
 ### 3. Specializations — Collapsible Accordion
 
