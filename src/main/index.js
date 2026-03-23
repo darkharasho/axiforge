@@ -256,6 +256,7 @@ app.whenReady().then(async () => {
       height: mobile ? 844 : 980,
       minWidth: mobile ? 320 : 1120,
       minHeight: mobile ? 568 : 740,
+      useContentSize: mobile,
       backgroundColor: "#050910",
       icon: path.join(__dirname, "../../public/img/build_logo.png"),
       title: mobile ? "AxiForge — Mobile Preview" : "AxiForge — Local Preview",

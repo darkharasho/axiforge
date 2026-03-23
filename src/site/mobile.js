@@ -31,33 +31,37 @@ export function initMobileDetection() {
  * Re-injects after skill re-renders (e.g. weapon swap) via MutationObserver.
  */
 export function initSkillBarMobile() {
-  const skillsBar = document.querySelector(".skills-bar");
-  if (!skillsBar) return;
+  // The .skills-bar element is destroyed and recreated on every renderSkills().
+  // We observe the persistent parent (.skills-host) to detect re-renders.
+  const skillsHost = document.querySelector(".skills-host");
+  if (!skillsHost) return;
 
   function injectMetaRow() {
-    // Remove any existing meta row first
-    const existing = skillsBar.querySelector(".skills-bar__mobile-meta");
-    if (existing) existing.remove();
+    const bar = skillsHost.querySelector(".skills-bar");
+    if (!bar) return;
 
-    // Find current swap button (fresh reference after re-render)
-    const swapBtn = skillsBar.querySelector(".weapon-swap-btn");
+    // Already injected in this render cycle
+    if (bar.querySelector(".skills-bar__mobile-meta")) return;
+
+    // Find current swap button (fresh reference)
+    const swapBtn = bar.querySelector(".weapon-swap-btn");
 
     // Read HP value from the health orb
-    const hpEl = skillsBar.querySelector(".health-orb__hp");
+    const hpEl = bar.querySelector(".health-orb__hp");
     const hpValue = hpEl ? hpEl.textContent : "";
 
     const metaRow = document.createElement("div");
     metaRow.className = "skills-bar__mobile-meta";
 
-    // Swap pill — click the current swap button (fresh DOM reference each time)
+    // Swap pill
     const swapPill = document.createElement("button");
     swapPill.className = "mobile-swap-pill";
     swapPill.innerHTML = `<span class="mobile-swap-pill__icon">⇄</span> Swap`;
     if (swapBtn) {
       swapPill.disabled = swapBtn.disabled;
       swapPill.addEventListener("click", () => {
-        // Get a fresh reference — the swap button re-renders the skill bar
-        const currentSwap = skillsBar.querySelector(".weapon-swap-btn");
+        // Get fresh reference — renderSkills() replaces the entire bar
+        const currentSwap = skillsHost.querySelector(".weapon-swap-btn");
         if (currentSwap) currentSwap.click();
       });
     }
@@ -73,24 +77,22 @@ export function initSkillBarMobile() {
 
     metaRow.append(swapPill, hpBadge);
 
-    const orbCol = skillsBar.querySelector(".skills-bar__orb-col");
+    const orbCol = bar.querySelector(".skills-bar__orb-col");
     if (orbCol) {
-      skillsBar.insertBefore(metaRow, orbCol);
+      bar.insertBefore(metaRow, orbCol);
     } else {
-      skillsBar.appendChild(metaRow);
+      bar.appendChild(metaRow);
     }
   }
 
   // Initial injection
   injectMetaRow();
 
-  // Re-inject when the skill bar re-renders (e.g. weapon swap)
+  // Re-inject when skills re-render (observer on the persistent host, not the bar)
   const observer = new MutationObserver(() => {
-    if (!skillsBar.querySelector(".skills-bar__mobile-meta")) {
-      injectMetaRow();
-    }
+    injectMetaRow();
   });
-  observer.observe(skillsBar, { childList: true, subtree: true });
+  observer.observe(skillsHost, { childList: true, subtree: true });
 }
 
 /**
