@@ -261,6 +261,21 @@ export function resolveEntityFacts(entity) {
   });
 }
 
+function _renderStatBreakdown(entries, total, statName) {
+  const lines = entries.map((e) => {
+    let iconHtml = "";
+    if (e.svgIcon) {
+      iconHtml = `<span class="breakdown-svg-icon">${e.svgIcon}</span>`;
+    } else if (e.icon) {
+      iconHtml = `<img class="fact-status-icon" src="${escapeHtml(e.icon)}" alt="" aria-hidden="true">`;
+    }
+    const countSuffix = e.count > 1 ? ` <span class="breakdown-count">\u00d7${e.count}</span>` : "";
+    return `<li>${iconHtml}<span class="breakdown-value">+${e.value}</span> ${escapeHtml(e.source)}${countSuffix}</li>`;
+  });
+  lines.push(`<li class="breakdown-total"><span class="breakdown-value">${total}</span> Total ${escapeHtml(statName)}</li>`);
+  return `<ul class="hover-preview__breakdown">${lines.join("")}</ul>`;
+}
+
 export function buildSkillCard(skill, kind, isChained = false, dmgStats = null) {
   const icon = String(skill.icon || skill.iconFallback || "");
   const description = normalizeText(skill.description || "");
@@ -284,8 +299,9 @@ export function buildSkillCard(skill, kind, isChained = false, dmgStats = null) 
         <p class="hover-preview__meta">${escapeHtml(meta)}${skill.hasSplit ? ' <span class="split-badge">WvW split</span>' : ''}${_isAquaticOnlySkill(kind, skill) ? ' <span class="split-badge aquatic-badge">Aquatic</span>' : ''}</p>
       </div>
     </div>
-    ${description ? `<p class="hover-preview__desc">${escapeHtml(description).replace(/\n/g, "<br>")}</p>` : (!factsItems.length && !skill.bonuses?.length && !kind.startsWith("equip-") ? `<p class="hover-preview__desc">No description available.</p>` : "")}
+    ${description ? `<p class="hover-preview__desc">${escapeHtml(description).replace(/\n/g, "<br>")}</p>` : (!factsItems.length && !skill.bonuses?.length && !skill.breakdown?.length && !kind.startsWith("equip-") ? `<p class="hover-preview__desc">No description available.</p>` : "")}
     ${skill.bonuses?.length ? `<ul class="hover-preview__bonuses">${skill.bonuses.map((b, i) => `<li class="${i < (skill.activeBonusCount || 0) ? "hover-preview__bonus--active" : "hover-preview__bonus--inactive"}">(${i + 1}): ${escapeHtml(b)}</li>`).join("")}</ul>` : ""}
+    ${skill.breakdown?.length ? _renderStatBreakdown(skill.breakdown, skill.breakdownTotal, skill.name) : ""}
     ${factsItems.length ? `<ul class="hover-preview__facts">${factsItems.join("")}</ul>` : ""}
   `;
 }

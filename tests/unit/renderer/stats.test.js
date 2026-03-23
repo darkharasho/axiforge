@@ -200,13 +200,14 @@ describe("computeEquipmentStats — multiple slot accumulation", () => {
     expect(result.Ferocity).toBe(totalSecondary);
   });
 
-  test("dual weapon set adds mainhand1 + mainhand2", () => {
+  test("only active weapon set contributes (default = set 1)", () => {
     // mainhand1 and mainhand2 each: p=125, s=90 (ascended)
+    // Only the active set (default = 1) should count
     state.editor = makeEditor({ mainhand1: "Berserker's", mainhand2: "Berserker's" });
     const result = computeEquipmentStats();
-    expect(result.Power).toBe(1000 + 125 + 125);
-    expect(result.Precision).toBe(1000 + 90 + 90);
-    expect(result.Ferocity).toBe(90 + 90);
+    expect(result.Power).toBe(1000 + 125);
+    expect(result.Precision).toBe(1000 + 90);
+    expect(result.Ferocity).toBe(90);
   });
 });
 
@@ -402,6 +403,102 @@ describe("computeEquipmentStats — underwater mode", () => {
     };
     const result = computeEquipmentStats();
     expect(result.Power).toBe(1000);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// computeEquipmentStats — active weapon set filtering (issue #64)
+// ---------------------------------------------------------------------------
+
+describe("computeEquipmentStats — active weapon set filtering", () => {
+  test("only active weapon set 1 contributes to stats on land", () => {
+    // Set 1 = Berserker's, Set 2 = Celestial. With set 1 active, only set 1 should count.
+    state.editor = {
+      ...makeEditor({
+        mainhand1: "Berserker's", offhand1: "Berserker's",
+        mainhand2: "Celestial",   offhand2: "Celestial",
+      }),
+      activeWeaponSet: 1,
+    };
+    const result = computeEquipmentStats();
+    // mainhand1 + offhand1 Berserker's: Power = 2×125 = 250, Precision = 2×90 = 180
+    expect(result.Power).toBe(1000 + 250);
+    expect(result.Precision).toBe(1000 + 180);
+    // Celestial stats from set 2 should NOT be included
+    expect(result.Expertise).toBe(0);
+    expect(result.Concentration).toBe(0);
+    expect(result.HealingPower).toBe(0);
+  });
+
+  test("only active weapon set 2 contributes to stats on land", () => {
+    state.editor = {
+      ...makeEditor({
+        mainhand1: "Berserker's", offhand1: "Berserker's",
+        mainhand2: "Celestial",   offhand2: "Celestial",
+      }),
+      activeWeaponSet: 2,
+    };
+    const result = computeEquipmentStats();
+    // Only Celestial set 2 should count: 2 weapons × 59 per stat = 118
+    expect(result.Expertise).toBe(118);
+    expect(result.Concentration).toBe(118);
+    // Berserker's set 1 should NOT be included — base Power = 1000 + Celestial 118
+    expect(result.Power).toBe(1000 + 118);
+  });
+
+  test("switching active set changes which weapon stats are included", () => {
+    state.editor = {
+      ...makeEditor({
+        mainhand1: "Berserker's",
+        mainhand2: "Cleric's",
+      }),
+      activeWeaponSet: 1,
+    };
+    const r1 = computeEquipmentStats();
+    expect(r1.HealingPower).toBe(0); // Berserker's has no HealingPower
+
+    state.editor.activeWeaponSet = 2;
+    const r2 = computeEquipmentStats();
+    expect(r2.HealingPower).toBe(125); // Cleric's mainhand2 primary = HealingPower
+  });
+
+  test("underwater mode only includes active aquatic weapon", () => {
+    // Aquatic weapons are 2H — weights: p=251, s=179, c=118
+    state.editor = {
+      ...makeEditor({
+        aquatic1: "Berserker's",
+        aquatic2: "Celestial",
+      }),
+      underwaterMode: true,
+      activeWeaponSet: 1,
+      underwaterSkills: { healId: 0, utilityIds: [0, 0, 0], eliteId: 0 },
+    };
+    const r1 = computeEquipmentStats();
+    // Only aquatic1 (Berserker's) should count: Power primary = 251
+    expect(r1.Power).toBe(1000 + 251);
+    expect(r1.Expertise).toBe(0); // Celestial not included
+
+    state.editor.activeWeaponSet = 2;
+    const r2 = computeEquipmentStats();
+    // Only aquatic2 (Celestial) should count: per-stat = 118
+    expect(r2.Expertise).toBe(118);
+    expect(r2.Power).toBe(1000 + 118); // Celestial Power, not Berserker's
+  });
+
+  test("armor slots are unaffected by weapon set selection", () => {
+    state.editor = {
+      ...makeEditor({
+        head: "Berserker's",
+        chest: "Berserker's",
+        mainhand1: "Celestial",
+      }),
+      activeWeaponSet: 2, // set 2 is active, but set 2 has no weapons
+    };
+    const result = computeEquipmentStats();
+    // Armor should still count even though active set is 2
+    expect(result.Power).toBe(1000 + 63 + 141); // head(63) + chest(141)
+    // mainhand1 is set 1 — should be excluded since set 2 is active
+    expect(result.Ferocity).toBe(45 + 101); // head(45) + chest(101), no weapon contribution
   });
 });
 

@@ -161,6 +161,60 @@
   color: #7a8a9e;
 }
 
+/* Stat breakdown list (attribute hover) */
+.hover-preview__breakdown {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  color: #cadfff;
+  display: grid;
+  gap: 2px;
+}
+
+.hover-preview__breakdown li {
+  font-size: 0.74rem;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.breakdown-value {
+  color: #6fdc6f;
+  font-weight: 600;
+  min-width: 36px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.breakdown-svg-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #cadfff;
+  opacity: 0.85;
+}
+
+.breakdown-svg-icon svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+.breakdown-count {
+  color: #7a8a9e;
+}
+
+.breakdown-total {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(202, 223, 255, 0.15);
+  font-weight: 600;
+  color: #e4efff;
+}
+
 .hover-preview__facts {
   margin: 8px 0 0;
   padding-left: 16px;

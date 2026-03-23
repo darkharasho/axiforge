@@ -129,6 +129,7 @@ initSkillsCallbacks({
   markEditorChanged,
   enforceEditorConsistency,
   openSlotPicker,
+  renderEquipmentPanel,
 });
 
 initEquipment({ equipmentPanel: el.equipmentPanel });
