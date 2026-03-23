@@ -151,8 +151,10 @@
   }
 
   @keyframes mobileSkillFlip {
-    0%   { transform: perspective(600px) rotateX(180deg); }
-    100% { transform: perspective(600px) rotateX(0deg); }
+    0%   { transform: perspective(600px) rotateX(180deg) scaleY(-1); }
+    50%  { transform: perspective(600px) rotateX(90deg) scaleY(-1); }
+    50.1%{ transform: perspective(600px) rotateX(90deg) scaleY(1); }
+    100% { transform: perspective(600px) rotateX(0deg) scaleY(1); }
   }
 
   .skill-icon-large.skill-icon--flip-anim {
