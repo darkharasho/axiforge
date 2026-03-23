@@ -53,9 +53,10 @@ export function initSkillBarMobile() {
     const metaRow = document.createElement("div");
     metaRow.className = "skills-bar__mobile-meta";
 
-    // Swap pill
+    // Swap pill — mirror active state from the real swap button
+    const isActive = swapBtn?.classList.contains("weapon-swap-btn--active");
     const swapPill = document.createElement("button");
-    swapPill.className = "mobile-swap-pill";
+    swapPill.className = "mobile-swap-pill" + (isActive ? " mobile-swap-pill--active" : "");
     swapPill.innerHTML = `<span class="mobile-swap-pill__icon">⇄</span> Swap`;
     if (swapBtn) {
       swapPill.disabled = swapBtn.disabled;

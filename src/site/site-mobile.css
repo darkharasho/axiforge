@@ -210,6 +210,18 @@
     color: #ffe06a;
   }
 
+  .mobile-swap-pill--active {
+    border-color: rgba(100, 200, 255, 0.85);
+    color: rgba(120, 210, 255, 0.95);
+    background: rgba(10, 20, 40, 0.7);
+  }
+
+  .mobile-swap-pill--active .mobile-swap-pill__icon {
+    border-color: rgba(100, 200, 255, 0.85);
+    color: rgba(120, 210, 255, 0.95);
+    box-shadow: 0 0 6px rgba(80, 180, 240, 0.35);
+  }
+
   .mobile-swap-pill__icon {
     width: 24px;
     height: 24px;
