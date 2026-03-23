@@ -1327,25 +1327,15 @@ export function renderEquipmentPanel() {
   boonsSection.append(boonsBar);
   boonsSection.append(boonsExpand);
 
-  // Detect equipped stacking sigils from active weapon set
+  // Detect equipped stacking sigils from ALL weapon sets (not just active —
+  // stacking sigils persist across weapon swaps in GW2)
   const equippedSigils = state.editor.equipment?.sigils || {};
-  const activeSet = Number(state.editor.activeWeaponSet) || 1;
-  const isUnderwater = Boolean(state.editor.underwaterMode);
-  let activeSigilIds;
-  if (isUnderwater) {
-    const aqKey = activeSet === 2 ? "aquatic2" : "aquatic1";
-    activeSigilIds = [...(Array.isArray(equippedSigils[aqKey]) ? equippedSigils[aqKey] : [])].filter(Boolean);
-  } else {
-    const mhKey = activeSet === 2 ? "mainhand2" : "mainhand1";
-    const ohKey = activeSet === 2 ? "offhand2" : "offhand1";
-    activeSigilIds = [
-      ...(Array.isArray(equippedSigils[mhKey]) ? equippedSigils[mhKey] : []),
-      ...(Array.isArray(equippedSigils[ohKey]) ? equippedSigils[ohKey] : []),
-    ].filter(Boolean);
-  }
+  const allSigilIds = Object.values(equippedSigils)
+    .flatMap((arr) => (Array.isArray(arr) ? arr : []))
+    .filter(Boolean);
 
   equippedStackingSigils = STACKING_SIGIL_DEFS.filter((def) =>
-    activeSigilIds.some((id) => Number(id) === def.id)
+    allSigilIds.some((id) => Number(id) === def.id)
   );
 
   // Clean up sigil stacks for unequipped sigils
