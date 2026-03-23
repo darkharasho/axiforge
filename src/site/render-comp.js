@@ -2,6 +2,7 @@
 
 import { escapeHtml } from "./main.js";
 import { renderMiniBuildCard } from "../renderer/modules/mini-build-card.js";
+import { initMobileDetection } from "./mobile.js";
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -357,4 +358,6 @@ export function renderCompPage(app, comp) {
   if (comp.boonCoverageHtml) {
     bindBoonEvents(app, comp.builds || {});
   }
+
+  initMobileDetection();
 }
