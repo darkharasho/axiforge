@@ -712,6 +712,8 @@ export async function loadBuildIntoEditor(build, options = {}) {
     },
     activePetSlot: build.activePetSlot === "terrestrial2" ? "terrestrial2" : "terrestrial1",
     gameMode: String(build.gameMode || "pve"),
+    folderId: build.folderId || "",
+    compId: build.compId || "",
   };
 
   if (profession) {
@@ -860,5 +862,7 @@ export function serializeEditorToBuild() {
     },
     activePetSlot: state.editor.activePetSlot === "terrestrial2" ? "terrestrial2" : "terrestrial1",
     gameMode: String(state.editor.gameMode || "pve"),
+    folderId: state.editor.folderId || undefined,
+    compId: state.editor.compId || undefined,
   };
 }
