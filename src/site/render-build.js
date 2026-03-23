@@ -5,7 +5,7 @@ import { initEquipment, initEquipmentCallbacks, renderEquipmentPanel } from "@re
 import { initDetailPanel, bindHoverPreview, setOnHoverPreview } from "@renderer/modules/detail-panel.js";
 import { initReferencePanel, updateReferencePanel } from "./render-reference.js";
 import { renderNotes } from "./render-notes.js";
-import { initMobileDetection, initSkillBarMobile } from "./mobile.js";
+import { initMobileDetection, initSkillBarMobile, initSpecAccordion } from "./mobile.js";
 
 function escapeHtml(s) {
   const d = document.createElement("div");
@@ -422,4 +422,5 @@ export function renderBuildPage(container, build) {
   // Mobile enhancements
   initMobileDetection();
   initSkillBarMobile();
+  initSpecAccordion();
 }

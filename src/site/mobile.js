@@ -1,5 +1,7 @@
 /* AxiForge — SPA mobile enhancements */
 
+import { state } from "@renderer/modules/state.js";
+
 const MOBILE_BREAKPOINT = 768;
 
 /** True when viewport is at or below mobile breakpoint */
@@ -71,4 +73,79 @@ export function initSkillBarMobile() {
     // Fallback: just append
     skillsBar.appendChild(metaRow);
   }
+}
+
+/**
+ * Convert spec cards to collapsible accordions on mobile.
+ * Injects a collapsed header into each .spec-card with the spec emblem,
+ * name, selected trait thumbnails, and a chevron.
+ * Tap to expand/collapse. Only one expanded at a time.
+ */
+export function initSpecAccordion() {
+  const specCards = document.querySelectorAll(".spec-card");
+  if (!specCards.length) return;
+
+  specCards.forEach((card, index) => {
+    const panel = card.querySelector(".spec-card__panel");
+    if (!panel) return;
+
+    // Get spec data from state
+    const specData = state.editor.specializations?.[index];
+    const specId = specData?.id;
+    const spec = specId ? state.activeCatalog.specializations?.get(specId) : null;
+
+    // Build header
+    const header = document.createElement("div");
+    header.className = "spec-card__mobile-header";
+
+    // Emblem — clone the existing one
+    const existingEmblem = card.querySelector(".spec-emblem img");
+    const emblemWrap = document.createElement("div");
+    emblemWrap.className = "spec-card__mobile-emblem";
+    if (existingEmblem) {
+      emblemWrap.appendChild(existingEmblem.cloneNode(true));
+    }
+
+    // Spec name
+    const nameEl = document.createElement("div");
+    nameEl.className = "spec-card__mobile-name";
+    nameEl.textContent = spec?.name || `Specialization ${index + 1}`;
+
+    // Selected major trait thumbnails
+    const traitsWrap = document.createElement("div");
+    traitsWrap.className = "spec-card__mobile-traits";
+    const activeTraits = card.querySelectorAll(".trait-column--major .trait-btn--active img");
+    activeTraits.forEach(img => {
+      const thumb = img.cloneNode(true);
+      traitsWrap.appendChild(thumb);
+    });
+
+    // Chevron
+    const chevron = document.createElement("span");
+    chevron.className = "spec-card__mobile-chevron";
+    chevron.textContent = "▾";
+
+    header.append(emblemWrap, nameEl, traitsWrap, chevron);
+
+    // Mark elite specs
+    if (panel.classList.contains("spec-card__panel--elite")) {
+      card.classList.add("spec-card--elite");
+    }
+
+    // Insert header before the panel
+    card.insertBefore(header, panel);
+
+    // Click handler
+    header.addEventListener("click", () => {
+      const wasExpanded = card.classList.contains("expanded");
+
+      // Collapse all
+      specCards.forEach(c => c.classList.remove("expanded"));
+
+      // Toggle clicked
+      if (!wasExpanded) {
+        card.classList.add("expanded");
+      }
+    });
+  });
 }
