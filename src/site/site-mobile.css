@@ -158,7 +158,7 @@
   }
 
   .skill-icon-large.skill-icon--flip-anim {
-    animation: mobileSkillFlip 1s ease-in-out;
+    animation: mobileSkillFlip 800ms ease-in-out;
     transform-origin: center center;
     backface-visibility: visible;
   }
