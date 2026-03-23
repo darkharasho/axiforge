@@ -25,8 +25,11 @@ for (const catalog of Object.values(catalogs)) {
 function parseIds(url) {
   const match = url.match(/[?&]ids=([^&]+)/);
   if (!match) return null;
-  if (match[1] === "all") return "all";
-  return match[1].split(",");
+  // fetchGw2ByIds URL-encodes the ids string with encodeURIComponent, which encodes commas
+  // as %2C. Decode the matched value before splitting so "31%2C41" splits correctly.
+  const decoded = decodeURIComponent(match[1]);
+  if (decoded === "all") return "all";
+  return decoded.split(",");
 }
 
 function handleRequest(method, url) {

@@ -1,5 +1,15 @@
-const { autoUpdater } = require("electron-updater");
 const { app, ipcMain } = require("electron");
+
+// Lazy-load autoUpdater to avoid initialization order issues with Electron 37+
+// (electron-updater accesses app.getVersion() at require time, which fails if the
+// Electron built-in module override hasn't run yet)
+let _autoUpdater = null;
+function getAutoUpdater() {
+  if (!_autoUpdater) {
+    ({ autoUpdater: _autoUpdater } = require("electron-updater"));
+  }
+  return _autoUpdater;
+}
 
 const RETRY_ERRORS = [
   "ECONNRESET", "ETIMEDOUT", "ENOTFOUND", "EPIPE",
@@ -28,6 +38,7 @@ function isRetryableError(err) {
 }
 
 function checkWithTimeout() {
+  const autoUpdater = getAutoUpdater();
   return Promise.race([
     autoUpdater.checkForUpdates(),
     new Promise((_, reject) =>
@@ -50,6 +61,8 @@ function initAutoUpdate(win) {
     send("update-not-available", { version: app.getVersion() });
     return;
   }
+
+  const autoUpdater = getAutoUpdater();
 
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
@@ -98,7 +111,7 @@ function initAutoUpdate(win) {
   });
 
   ipcMain.on("updater:restart", () => {
-    autoUpdater.quitAndInstall();
+    getAutoUpdater().quitAndInstall();
   });
 
   ipcMain.handle("updater:get-version", () => {

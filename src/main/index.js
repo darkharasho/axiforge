@@ -80,7 +80,10 @@ function createWindow() {
       if (!wasFocused) win.setFocusable(true);
     });
   } else {
-    const rendererPath = app.isPackaged
+    // E2E tests set APP_PROFILE="e2e-test" and run against the built renderer
+    // (src/renderer uses bare module specifiers that require Vite to resolve).
+    const useDistRenderer = app.isPackaged || (APP_PROFILE && APP_PROFILE.startsWith("e2e"));
+    const rendererPath = useDistRenderer
       ? path.join(__dirname, "../../dist/renderer/index.html")
       : path.join(__dirname, "../renderer/index.html");
     win.loadFile(rendererPath);
