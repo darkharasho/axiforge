@@ -16,13 +16,6 @@ test.describe("Window Controls", () => {
 
   // 1. Minimize, Maximize/Restore, Close buttons work
   test("minimize, maximize/restore buttons work", async () => {
-    // Show the window for minimize/maximize tests (hidden in e2e mode)
-    await app.evaluate(({ BrowserWindow }) => {
-      const win = BrowserWindow.getAllWindows()[0];
-      if (!win.isVisible()) win.showInactive();
-    });
-    await window.waitForTimeout(300);
-
     // Verify buttons are visible
     await expect(window.locator("#winMin")).toBeVisible();
     await expect(window.locator("#winMax")).toBeVisible();
@@ -69,11 +62,7 @@ test.describe("Window Controls", () => {
 
   // 2. Double-clicking title bar maximizes/restores
   test("double-clicking title bar maximizes/restores", async () => {
-    // Ensure window is visible and not maximized
-    await app.evaluate(({ BrowserWindow }) => {
-      const win = BrowserWindow.getAllWindows()[0];
-      if (!win.isVisible()) win.showInactive();
-    });
+    // Ensure window is not maximized
     const wasMaximized = await app.evaluate(({ BrowserWindow }) =>
       BrowserWindow.getAllWindows()[0].isMaximized()
     );

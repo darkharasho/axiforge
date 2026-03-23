@@ -38,13 +38,12 @@ const folderStore = new FolderStore(dataDir);
 const compStore = new CompStore(dataDir);
 
 function createWindow() {
-  const isE2E = APP_PROFILE && APP_PROFILE.startsWith("e2e");
   const win = new BrowserWindow({
     width: 1600,
     height: 980,
     minWidth: 1120,
     minHeight: 740,
-    show: !isE2E,
+    show: false,
     frame: false,
     titleBarStyle: process.platform === "darwin" ? "hiddenInset" : "hidden",
     backgroundColor: "#050910",
@@ -56,6 +55,9 @@ function createWindow() {
       preload: path.join(__dirname, "../preload/index.js"),
     },
   });
+
+  // Show window without stealing focus from the user's active app
+  win.once("ready-to-show", () => win.showInactive());
 
   win.webContents.on("will-attach-webview", (event, webPreferences, params) => {
     // Strip any preload the renderer tries to attach — prevents privilege escalation
@@ -71,15 +73,17 @@ function createWindow() {
 
   if (DEV_SERVER_URL) {
     win.loadURL(DEV_SERVER_URL);
-    // Vite HMR reloads cause Electron to steal focus. Before each reload, make the
-    // window non-focusable so the OS never hands it focus; restore after load finishes.
-    let wasFocused = false;
+    // Prevent Vite full-reload from stealing focus. On Linux/Wayland,
+    // setFocusable alone isn't reliable — also suppress the 'focus' event
+    // and avoid any show/raise calls during the reload cycle.
     win.webContents.on("did-start-loading", () => {
-      wasFocused = win.isFocused();
-      if (!wasFocused) win.setFocusable(false);
+      if (!win.isFocused()) {
+        win.setFocusable(false);
+        win.once("focus", () => win.blur());
+      }
     });
     win.webContents.on("did-finish-load", () => {
-      if (!wasFocused) win.setFocusable(true);
+      win.setFocusable(true);
     });
   } else {
     // E2E tests set APP_PROFILE="e2e-test" and run against the built renderer
