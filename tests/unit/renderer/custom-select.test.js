@@ -1,0 +1,242 @@
+"use strict";
+
+// custom-select.js uses document.createElement, querySelector, etc.
+// testEnvironment is "node", so we use a minimal DOM mock.
+
+function makeElement(tag) {
+  let _className = "";
+  const el = {
+    tagName: tag.toUpperCase(),
+    get className() { return _className; },
+    set className(v) {
+      _className = v;
+      el.classList._set = new Set(v.split(/\s+/).filter(Boolean));
+    },
+    type: "",
+    textContent: "",
+    disabled: false,
+    style: {},
+    dataset: {},
+    _children: [],
+    _listeners: {},
+    _parent: null,
+
+    classList: (() => {
+      const api = {
+        add(...cs) { for (const c of cs) api._set.add(c); _syncClassName(); },
+        remove(...cs) { for (const c of cs) api._set.delete(c); _syncClassName(); },
+        contains(c) { return api._set.has(c); },
+        toggle(c, force) {
+          const has = api._set.has(c);
+          const add = force !== undefined ? force : !has;
+          if (add) api._set.add(c); else api._set.delete(c);
+          _syncClassName();
+          return add;
+        },
+        _set: new Set(),
+      };
+      function _syncClassName() { _className = [...api._set].join(" "); }
+      return api;
+    })(),
+
+    append(...nodes) {
+      for (const n of nodes) {
+        if (typeof n === "string") continue;
+        n._parent = el;
+        el._children.push(n);
+      }
+    },
+    appendChild(child) { child._parent = el; el._children.push(child); return child; },
+
+    addEventListener(event, handler) {
+      (el._listeners[event] ||= []).push(handler);
+    },
+    removeEventListener(event, handler) {
+      const list = el._listeners[event];
+      if (list) el._listeners[event] = list.filter((h) => h !== handler);
+    },
+    dispatchEvent(event) {
+      const handlers = el._listeners[event.type] || [];
+      for (const h of handlers) h(event);
+    },
+    click() {
+      const ev = { type: "click", preventDefault() {}, stopPropagation() {}, target: el };
+      el.dispatchEvent(ev);
+    },
+
+    get isConnected() { return true; },
+
+    // innerHTML setter clears children
+    set innerHTML(v) { el._innerHTML = v; el._children = []; },
+    get innerHTML() { return el._innerHTML || ""; },
+
+    // Basic querySelector / querySelectorAll by class
+    querySelectorAll(sel) {
+      const results = [];
+      _walk(el, (node) => { if (_matches(node, sel)) results.push(node); });
+      return results;
+    },
+    querySelector(sel) {
+      let found = null;
+      _walk(el, (node) => { if (!found && _matches(node, sel)) found = node; });
+      return found;
+    },
+    replaceWith(newNode) {
+      if (el._parent) {
+        const idx = el._parent._children.indexOf(el);
+        if (idx !== -1) {
+          el._parent._children[idx] = newNode;
+          newNode._parent = el._parent;
+        }
+      }
+    },
+    closest(sel) {
+      let cur = el;
+      while (cur) {
+        if (_matches(cur, sel)) return cur;
+        cur = cur._parent;
+      }
+      return null;
+    },
+    getBoundingClientRect() {
+      return { top: 0, bottom: 50, left: 0, right: 200 };
+    },
+  };
+  return el;
+}
+
+// Walk all descendants
+function _walk(node, fn) {
+  for (const child of node._children || []) {
+    fn(child);
+    _walk(child, fn);
+  }
+}
+
+// Match a simple selector: ".foo", ".foo.bar", ".foo .bar", "tag", "tag.class"
+function _matches(node, selector) {
+  // Handle compound selectors with spaces (descendant combinator)
+  if (selector.includes(" ")) {
+    const parts = selector.trim().split(/\s+/);
+    // Only match the last part for the element itself
+    return _matchesSingle(node, parts[parts.length - 1]);
+  }
+  return _matchesSingle(node, selector);
+}
+
+function _matchesSingle(node, sel) {
+  if (!node || !node.tagName) return false;
+  // Parse selector: optional tag + optional classes
+  const classMatch = sel.match(/^([a-z]*)((?:\.[a-zA-Z0-9_-]+)*)$/);
+  if (!classMatch) return false;
+  const [, tagPart, classPart] = classMatch;
+  if (tagPart && node.tagName !== tagPart.toUpperCase()) return false;
+  if (classPart) {
+    const classes = classPart.split(".").filter(Boolean);
+    for (const c of classes) {
+      if (!node.classList.contains(c)) return false;
+    }
+  }
+  return true;
+}
+
+// --- Setup global DOM mock ---
+
+let customSelectModule, stateModule;
+
+beforeEach(() => {
+  jest.resetModules();
+
+  global.document = {
+    createElement: (tag) => makeElement(tag),
+    body: makeElement("body"),
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
+  };
+  global.window = { innerHeight: 800, innerWidth: 1200 };
+  global.requestAnimationFrame = (cb) => cb();
+
+  customSelectModule = require("../../../src/renderer/modules/custom-select.js");
+  stateModule = require("../../../src/renderer/modules/state.js");
+  stateModule.state.openCustomSelect = null;
+});
+
+afterEach(() => {
+  delete global.document;
+  delete global.window;
+  delete global.requestAnimationFrame;
+});
+
+describe("renderCustomSelect — trigger update on selection", () => {
+  test("trigger displays newly selected option after clicking an item", () => {
+    const host = makeElement("div");
+    const onChange = jest.fn();
+
+    customSelectModule.renderCustomSelect(host, {
+      value: "alpha",
+      options: [
+        { value: "alpha", label: "Alpha", meta: "USER" },
+        { value: "bravo", label: "Bravo", meta: "ORG" },
+      ],
+      onChange,
+    });
+
+    // Verify initial trigger text
+    const trigger = host.querySelector(".cselect__trigger");
+    expect(trigger).toBeTruthy();
+    expect(trigger.querySelector(".cselect__label").textContent).toBe("Alpha");
+
+    // Click the second option
+    const options = host.querySelectorAll(".cselect__option");
+    expect(options.length).toBe(2);
+    options[1].click();
+
+    // onChange should have been called
+    expect(onChange).toHaveBeenCalledWith("bravo", expect.objectContaining({ value: "bravo" }));
+
+    // Trigger should now show "Bravo"
+    expect(trigger.querySelector(".cselect__label").textContent).toBe("Bravo");
+  });
+
+  test("trigger meta text updates after selection", () => {
+    const host = makeElement("div");
+
+    customSelectModule.renderCustomSelect(host, {
+      value: "alpha",
+      options: [
+        { value: "alpha", label: "Alpha", meta: "USER" },
+        { value: "bravo", label: "Bravo", meta: "ORG" },
+      ],
+      onChange: () => {},
+    });
+
+    const trigger = host.querySelector(".cselect__trigger");
+    expect(trigger.querySelector(".cselect__meta").textContent).toBe("USER");
+
+    host.querySelectorAll(".cselect__option")[1].click();
+
+    expect(trigger.querySelector(".cselect__meta").textContent).toBe("ORG");
+  });
+
+  test("selected option class toggles after selection", () => {
+    const host = makeElement("div");
+
+    customSelectModule.renderCustomSelect(host, {
+      value: "alpha",
+      options: [
+        { value: "alpha", label: "Alpha" },
+        { value: "bravo", label: "Bravo" },
+      ],
+      onChange: () => {},
+    });
+
+    const options = host.querySelectorAll(".cselect__option");
+    expect(options[0].classList.contains("cselect__option--selected")).toBe(true);
+    expect(options[1].classList.contains("cselect__option--selected")).toBe(false);
+
+    options[1].click();
+
+    expect(options[0].classList.contains("cselect__option--selected")).toBe(false);
+    expect(options[1].classList.contains("cselect__option--selected")).toBe(true);
+  });
+});
