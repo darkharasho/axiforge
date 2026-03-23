@@ -151,13 +151,14 @@
   }
 
   @keyframes mobileSkillFlip {
-    0%   { transform: perspective(400px) rotateX(-90deg); }
-    100% { transform: perspective(400px) rotateX(0deg); }
+    0%   { transform: perspective(600px) rotateX(180deg); }
+    100% { transform: perspective(600px) rotateX(0deg); }
   }
 
   .skill-icon-large.skill-icon--flip-anim {
-    animation: mobileSkillFlip 800ms linear;
+    animation: mobileSkillFlip 1s ease-in-out;
     transform-origin: center center;
+    backface-visibility: hidden;
   }
 
   .skill-select-overlay {
