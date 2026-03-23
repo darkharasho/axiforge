@@ -1,5 +1,14 @@
 // Pure utility functions with no DOM dependencies or global state.
 
+/** Strip GW2 in-game markup (e.g. <c=@abilitytype>text</c>, <br>) from API strings. */
+export function stripGw2Markup(s) {
+  return String(s || "")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<c=[^>]*>(.*?)<\/c>/gi, "$1")
+    .replace(/<[^>]*>/g, "")
+    .trim();
+}
+
 export function escapeHtml(value) {
   return String(value)
     .replaceAll("&", "&amp;")
@@ -201,7 +210,7 @@ export function simplifyTrait(trait) {
     id: Number(trait.id) || 0,
     name: String(trait.name || ""),
     icon: String(trait.icon || ""),
-    description: String(trait.description || ""),
+    description: stripGw2Markup(trait.description),
     tier: Number(trait.tier) || 0,
   };
 }
@@ -212,7 +221,7 @@ export function simplifySkill(skill) {
     id: Number(skill.id) || 0,
     name: String(skill.name || ""),
     icon: String(skill.icon || ""),
-    description: String(skill.description || ""),
+    description: stripGw2Markup(skill.description),
     slot: String(skill.slot || ""),
     type: String(skill.type || ""),
     specialization: Number(skill.specialization) || 0,
