@@ -1224,3 +1224,9 @@
 .equip-stat-value--boosted {
   color: #d4aa44;
 }
+
+@media (max-width: 1024px) {
+  .equip-boons__tooltip {
+    max-width: calc(100vw - 24px);
+  }
+}

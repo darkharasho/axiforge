@@ -383,24 +383,19 @@
   }
 
   .spec-card__panel {
-    display: none;
-  }
-
-  .spec-card.expanded .spec-card__panel {
-    display: block;
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: max-height 0.25s ease, opacity 0.2s ease;
     border-top-left-radius: 0;
     border-top-right-radius: 0;
   }
 
+  .spec-card.expanded .spec-card__panel {
+    opacity: 1;
+  }
+
   .spec-card__body {
-    display: none;
-  }
-
-  .spec-connector {
-    display: none;
-  }
-
-  .spec-card.expanded .spec-card__body {
     display: flex;
     flex-wrap: nowrap;
     justify-content: center;
@@ -408,6 +403,10 @@
     column-gap: 2px;
     row-gap: 4px;
     padding: 8px 4px;
+  }
+
+  .spec-connector {
+    display: none;
   }
 
   .spec-card.expanded .spec-emblem {
