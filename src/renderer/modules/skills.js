@@ -1518,8 +1518,8 @@ export function renderSkills() {
             } else if (isDragonTriggerToggle) {
               state.editor.activeKit = resolvedKit === 62803 ? 0 : 62803;
             } else if (isUnleashToggle) {
-              // Toggle between Unleash Ranger active (63147) and inactive (0)
-              state.editor.activeKit = activeKit === 63147 ? 0 : 63147;
+              // Three-state Unleash cycle: 0 → 63344 (Unleash Pet) → 63147 (Unleash Ranger) → 0
+              state.editor.activeKit = activeKit === 0 ? 63344 : activeKit === 63344 ? 63147 : 0;
             } else {
               state.editor.activeKit = resolvedKit === skill.id ? 0 : skill.id;
             }
