@@ -60,6 +60,8 @@ export const state = {
   detail: null,
   wikiCache: new Map(),
   openCustomSelect: null,
+  // Per-build/comp publish progress: { [id]: { currentStep, result, error } }
+  publishProgress: {},
 };
 
 export function createEmptyEditor(profession = "", gameMode = "pve") {

@@ -485,7 +485,7 @@ app.whenReady().then(async () => {
 
   ipcMain.handle("builds:publish-build", async (event, buildId) => {
     const sender = event.sender;
-    const progress = (step) => sender.send("publish-progress", step);
+    const progress = (step) => sender.send("publish-progress", { id: buildId, step });
 
     const session = await getSession();
     if (!session) {
@@ -597,7 +597,7 @@ app.whenReady().then(async () => {
 
   ipcMain.handle("comps:publish-comp", async (event, compId, boonCoverageHtml) => {
     const sender = event.sender;
-    const progress = (step) => sender.send("publish-progress", step);
+    const progress = (step) => sender.send("publish-progress", { id: compId, step });
 
     const session = await getSession();
     if (!session) throw new Error("You must log in with GitHub before publishing.");
