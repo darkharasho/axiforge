@@ -16,7 +16,7 @@ A Playwright browser-based test suite for the SPA's preview (hover cards, detail
 
 ## Prerequisites
 
-- `@playwright/test` must be added to `devDependencies` (currently only `playwright` is listed)
+- `playwright` (already in `devDependencies`) provides `playwright/test` — no additional package needed. SPA tests use `require("playwright/test")` matching the existing e2e convention.
 - `gw2-class-icons` must be installed (`serializeForPublish()` reads SVG icons from `node_modules/gw2-class-icons/wiki/svg/` — already in `dependencies`)
 
 ## Module Format
