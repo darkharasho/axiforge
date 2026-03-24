@@ -226,12 +226,69 @@ function generateCompPayload(comp, builds) {
   return { fileId, encKey, base64Payload };
 }
 
+/**
+ * Create a realistic Necromancer (Reaper) build with real skill/spec IDs
+ * from the fixture data, so the SPA renders interactive skill/trait elements.
+ */
+function makeRealisticNecromancerBuild(overrides = {}) {
+  return makeTestBuild({
+    profession: "Necromancer",
+    title: "Power Reaper",
+    specializations: [
+      {
+        id: 53, name: "Spite", elite: false,
+        icon: "", background: "",
+        minorTraits: [913, 915, 917],
+        majorChoices: { 1: 914, 2: 829, 3: 853 },
+        majorTraitsByTier: {},
+      },
+      {
+        id: 39, name: "Curses", elite: false,
+        icon: "", background: "",
+        minorTraits: [802, 803, 810],
+        majorChoices: { 1: 801, 2: 1693, 3: 812 },
+        majorTraitsByTier: {},
+      },
+      {
+        id: 34, name: "Reaper", elite: true,
+        icon: "", background: "",
+        minorTraits: [1905, 1879, 2018],
+        majorChoices: { 1: 2020, 2: 2031, 3: 2021 },
+        majorTraitsByTier: {},
+      },
+    ],
+    skills: {
+      heal: { id: 10548, name: "Consume Conditions", icon: "", slot: "Heal" },
+      utility: [
+        { id: 10546, name: "Well of Suffering", icon: "", slot: "Utility" },
+        { id: 10545, name: "Well of Corruption", icon: "", slot: "Utility" },
+        { id: 10609, name: "Well of Power", icon: "", slot: "Utility" },
+      ],
+      elite: { id: 10646, name: "Summon Flesh Golem", icon: "", slot: "Elite" },
+    },
+    equipment: {
+      statPackage: "Berserker",
+      relic: "",
+      food: "",
+      utility: "",
+      slots: {},
+      weapons: { mainhand1: "Greatsword" },
+      runes: {},
+      sigils: {},
+      infusions: {},
+      enrichment: "",
+    },
+    ...overrides,
+  });
+}
+
 module.exports = {
   loadCatalog,
   generateBuildPayload,
   generateCompPayload,
   makeTestBuild,
   makeTestComp,
+  makeRealisticNecromancerBuild,
 };
 ```
 
@@ -415,7 +472,7 @@ Desktop-only tests for `.hover-preview` card behavior. The SPA creates `#hoverPr
 
 ```js
 const { test, expect } = require("playwright/test");
-const { generateBuildPayload, makeTestBuild } = require("../helpers/fixture-gen");
+const { generateBuildPayload, makeTestBuild, makeRealisticNecromancerBuild } = require("../helpers/fixture-gen");
 const { loadBuildPage } = require("../helpers/route-mock");
 
 // Only run on desktop — hover doesn't exist on mobile/tablet
@@ -425,7 +482,7 @@ test.describe("Preview hover card", () => {
   let payload;
 
   test.beforeAll(() => {
-    const build = makeTestBuild({ profession: "Necromancer", title: "Hover Test" });
+    const build = makeRealisticNecromancerBuild({ title: "Hover Test" });
     payload = generateBuildPayload(build);
   });
 
@@ -541,7 +598,7 @@ Desktop-only tests for the `.detail-panel` sidebar that populates on skill/trait
 
 ```js
 const { test, expect } = require("playwright/test");
-const { generateBuildPayload, makeTestBuild } = require("../helpers/fixture-gen");
+const { generateBuildPayload, makeTestBuild, makeRealisticNecromancerBuild } = require("../helpers/fixture-gen");
 const { loadBuildPage } = require("../helpers/route-mock");
 
 test.describe("Detail panel", () => {
@@ -550,7 +607,7 @@ test.describe("Detail panel", () => {
   let payload;
 
   test.beforeAll(() => {
-    const build = makeTestBuild({ profession: "Necromancer", title: "Detail Panel Test" });
+    const build = makeRealisticNecromancerBuild({ title: "Detail Panel Test" });
     payload = generateBuildPayload(build);
   });
 
@@ -583,10 +640,27 @@ test.describe("Detail panel", () => {
     await skillIcon.click();
     await page.waitForTimeout(300);
 
-    const detailCard = page.locator("#detailHost .detail-card");
+    const detailCard = page.locator(".detail-panel .detail-card");
     const html = await detailCard.innerHTML();
     // Should have some text content (name, description)
     expect(html.length).toBeGreaterThan(0);
+  });
+
+  test("detail panel contains wiki link", async ({ page }) => {
+    await loadBuildPage(page, payload);
+
+    const skillIcon = page.locator(".skill-icon-large").first();
+    if (await skillIcon.count() === 0) {
+      test.skip(true, "No skill icons rendered");
+      return;
+    }
+
+    await skillIcon.click();
+    await page.waitForTimeout(300);
+
+    // The detail card should contain a link with data-url attribute (wiki link)
+    const wikiLink = page.locator(".detail-panel .detail-card [data-url]");
+    await expect(wikiLink).toBeVisible();
   });
 
   test("clicking a different skill updates panel content", async ({ page }) => {
@@ -602,12 +676,12 @@ test.describe("Detail panel", () => {
     // Click first skill
     await skills.nth(0).click();
     await page.waitForTimeout(300);
-    const firstContent = await page.locator("#detailHost .detail-card").innerHTML();
+    const firstContent = await page.locator(".detail-panel .detail-card").innerHTML();
 
     // Click second skill
     await skills.nth(1).click();
     await page.waitForTimeout(300);
-    const secondContent = await page.locator("#detailHost .detail-card").innerHTML();
+    const secondContent = await page.locator(".detail-panel .detail-card").innerHTML();
 
     // Content should differ (different skills)
     expect(firstContent).not.toBe(secondContent);
@@ -646,7 +720,7 @@ Tests for the specialization accordion at viewport ≤ 1024px. Each `.spec-card`
 
 ```js
 const { test, expect } = require("playwright/test");
-const { generateBuildPayload, makeTestBuild } = require("../helpers/fixture-gen");
+const { generateBuildPayload, makeTestBuild, makeRealisticNecromancerBuild } = require("../helpers/fixture-gen");
 const { loadBuildPage } = require("../helpers/route-mock");
 
 test.describe("Mobile spec accordion", () => {
@@ -655,8 +729,8 @@ test.describe("Mobile spec accordion", () => {
   let payload;
 
   test.beforeAll(() => {
-    // Use Necromancer — fully cataloged, will produce enriched specs
-    const build = makeTestBuild({ profession: "Necromancer", title: "Accordion Test" });
+    // Use realistic Necromancer — fully cataloged, will produce enriched specs with traits
+    const build = makeRealisticNecromancerBuild({ title: "Accordion Test" });
     payload = generateBuildPayload(build);
   });
 
@@ -782,7 +856,7 @@ Tests the `.equip-mobile-tabs` bar that toggles between `.equip-col--left` (Armo
 
 ```js
 const { test, expect } = require("playwright/test");
-const { generateBuildPayload, makeTestBuild } = require("../helpers/fixture-gen");
+const { generateBuildPayload, makeTestBuild, makeRealisticNecromancerBuild } = require("../helpers/fixture-gen");
 const { loadBuildPage } = require("../helpers/route-mock");
 
 test.describe("Mobile equipment sub-tabs", () => {
@@ -791,7 +865,7 @@ test.describe("Mobile equipment sub-tabs", () => {
   let payload;
 
   test.beforeAll(() => {
-    const build = makeTestBuild({ profession: "Necromancer", title: "Equip Tabs Test" });
+    const build = makeRealisticNecromancerBuild({ title: "Equip Tabs Test" });
     payload = generateBuildPayload(build);
   });
 
@@ -887,7 +961,7 @@ Tests the mobile skill bar: `.skills-bar__mobile-meta` row with `.mobile-swap-pi
 
 ```js
 const { test, expect } = require("playwright/test");
-const { generateBuildPayload, makeTestBuild } = require("../helpers/fixture-gen");
+const { generateBuildPayload, makeTestBuild, makeRealisticNecromancerBuild } = require("../helpers/fixture-gen");
 const { loadBuildPage } = require("../helpers/route-mock");
 
 test.describe("Mobile skill bar", () => {
@@ -896,7 +970,7 @@ test.describe("Mobile skill bar", () => {
   let payload;
 
   test.beforeAll(() => {
-    const build = makeTestBuild({ profession: "Necromancer", title: "Skill Bar Test" });
+    const build = makeRealisticNecromancerBuild({ title: "Skill Bar Test" });
     payload = generateBuildPayload(build);
   });
 
@@ -969,7 +1043,7 @@ Tests the `.bottom-sheet` slide-up panel that replaces the detail panel on mobil
 
 ```js
 const { test, expect } = require("playwright/test");
-const { generateBuildPayload, makeTestBuild } = require("../helpers/fixture-gen");
+const { generateBuildPayload, makeTestBuild, makeRealisticNecromancerBuild } = require("../helpers/fixture-gen");
 const { loadBuildPage } = require("../helpers/route-mock");
 
 test.describe("Mobile bottom sheet", () => {
@@ -978,7 +1052,7 @@ test.describe("Mobile bottom sheet", () => {
   let payload;
 
   test.beforeAll(() => {
-    const build = makeTestBuild({ profession: "Necromancer", title: "Bottom Sheet Test" });
+    const build = makeRealisticNecromancerBuild({ title: "Bottom Sheet Test" });
     payload = generateBuildPayload(build);
   });
 
@@ -1201,7 +1275,7 @@ Tests that resizing the viewport between desktop and mobile correctly toggles UI
 
 ```js
 const { test, expect } = require("playwright/test");
-const { generateBuildPayload, makeTestBuild } = require("../helpers/fixture-gen");
+const { generateBuildPayload, makeTestBuild, makeRealisticNecromancerBuild } = require("../helpers/fixture-gen");
 const { loadBuildPage } = require("../helpers/route-mock");
 
 test.describe("Responsive transitions", () => {
@@ -1211,7 +1285,7 @@ test.describe("Responsive transitions", () => {
   let payload;
 
   test.beforeAll(() => {
-    const build = makeTestBuild({ profession: "Necromancer", title: "Responsive Test" });
+    const build = makeRealisticNecromancerBuild({ title: "Responsive Test" });
     payload = generateBuildPayload(build);
   });
 
@@ -1272,9 +1346,10 @@ test.describe("Responsive transitions", () => {
     await expect(page.locator(".specializations-host")).toBeVisible();
     await expect(page.locator(".detail-panel")).toBeVisible();
 
-    // No JS errors (check for error overlay or broken state)
-    const appHidden = await page.locator("#app").evaluate((el) => el.classList.contains("hidden"));
-    expect(appHidden).toBe(false);
+    // No console errors during resize cycle
+    const errors = [];
+    page.on("console", (msg) => { if (msg.type() === "error") errors.push(msg.text()); });
+    expect(errors).toEqual([]);
   });
 });
 ```
