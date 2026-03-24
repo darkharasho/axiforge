@@ -5,7 +5,7 @@ const { createMechanicsSuite, setupMechanicsHarness } = require("./mechanicsSuit
 createMechanicsSuite("Ranger", [
   { specId: 0, expected: ["fake:attack", "12478", "fake:return"] },
   { specId: 55, expected: ["fake:attack", "12478", "fake:return"] },
-  { specId: 72, expected: ["63209", "63258", "63094", "63344"] },
+  { specId: 72, expected: ["fake:attack", "12478", "fake:return", "63344"] },
 ]);
 
 describe("renderer mechanics selection — Ranger core vs elite F skills", () => {
@@ -22,13 +22,13 @@ describe("renderer mechanics selection — Ranger core vs elite F skills", () =>
     expect(soulbeast.signatures).toEqual(core.signatures);
   });
 
-  test("Untamed default (Unleash Pet) shows empowered pet commands at F1-F3", async () => {
+  test("Untamed default shows normal pet bar at F1-F3", async () => {
     const untamed = await resolve({ specId: 72 });
-    expect(untamed.signatures).toEqual(["63209", "63258", "63094", "63344"]);
+    expect(untamed.signatures).toEqual(["fake:attack", "12478", "fake:return", "63344"]);
   });
 });
 
-describe("renderer mechanics selection — Untamed F5 Unleash toggle", () => {
+describe("renderer mechanics selection — Untamed F5 three-state Unleash cycle", () => {
   const resolve = setupMechanicsHarness("Ranger");
 
   test("Untamed has F5 Unleash skill as a toggleable slot", async () => {
@@ -39,32 +39,49 @@ describe("renderer mechanics selection — Untamed F5 Unleash toggle", () => {
     expect(f5Slot.isUnleashToggle).toBe(true);
   });
 
-  test("F5 shows Unleash Pet by default (current state)", async () => {
-    const defaultState = await resolve({ specId: 72 });
-    const f5 = defaultState.result.mechSlots.find((s) => s.fKeyLabel === "F5");
-    expect(f5.skill.id).toBe(63344); // Unleash Pet (current state)
+  // State 1: Default (activeKit=0) — F5="Unleash Pet", normal pet, normal weapons
+  test("default: F5 shows Unleash Pet", async () => {
+    const state = await resolve({ specId: 72 });
+    const f5 = state.result.mechSlots.find((s) => s.fKeyLabel === "F5");
+    expect(f5.skill.id).toBe(63344); // Unleash Pet
   });
 
-  test("F5 shows Unleash Ranger when toggled", async () => {
-    const unleashed = await resolve({ specId: 72, activeKit: 63147 });
-    const f5 = unleashed.result.mechSlots.find((s) => s.fKeyLabel === "F5");
-    expect(f5.skill.id).toBe(63147); // Unleash Ranger (current state)
-  });
-
-  test("Unleash Ranger active shows normal pet commands at F1-F3", async () => {
-    const unleashed = await resolve({ specId: 72, activeKit: 63147 });
-    const sigs = unleashed.signatures;
+  test("default: F1-F3 are normal pet commands", async () => {
+    const state = await resolve({ specId: 72 });
+    const sigs = state.signatures;
     expect(sigs[0]).toBe("fake:attack");
     expect(sigs[1]).toBe("12478");
     expect(sigs[2]).toBe("fake:return");
   });
 
-  test("Default state (Unleash Pet) shows empowered pet commands at F1-F3", async () => {
-    const untamed = await resolve({ specId: 72 });
-    const sigs = untamed.signatures;
+  // State 2: Unleash Pet (activeKit=63344) — F5="Unleash Ranger", unleashed pet, normal weapons
+  test("Unleash Pet: F5 shows Unleash Ranger", async () => {
+    const state = await resolve({ specId: 72, activeKit: 63344 });
+    const f5 = state.result.mechSlots.find((s) => s.fKeyLabel === "F5");
+    expect(f5.skill.id).toBe(63147); // Unleash Ranger
+  });
+
+  test("Unleash Pet: F1-F3 show empowered pet commands", async () => {
+    const state = await resolve({ specId: 72, activeKit: 63344 });
+    const sigs = state.signatures;
     expect(sigs[0]).toBe("63209"); // Venomous Outburst
     expect(sigs[1]).toBe("63258"); // Rending Vines
     expect(sigs[2]).toBe("63094"); // Enveloping Haze
+  });
+
+  // State 3: Unleash Ranger (activeKit=63147) — F5="Unleash Pet", normal pet, unleashed weapons
+  test("Unleash Ranger: F5 shows Unleash Pet", async () => {
+    const state = await resolve({ specId: 72, activeKit: 63147 });
+    const f5 = state.result.mechSlots.find((s) => s.fKeyLabel === "F5");
+    expect(f5.skill.id).toBe(63344); // Unleash Pet
+  });
+
+  test("Unleash Ranger: F1-F3 are normal pet commands", async () => {
+    const state = await resolve({ specId: 72, activeKit: 63147 });
+    const sigs = state.signatures;
+    expect(sigs[0]).toBe("fake:attack");
+    expect(sigs[1]).toBe("12478");
+    expect(sigs[2]).toBe("fake:return");
   });
 });
 

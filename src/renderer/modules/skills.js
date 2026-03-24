@@ -579,13 +579,21 @@ export function buildMechanicSlotsForRender({
         });
       }
     } else if (eliteSpecId === 72) {
-      // Untamed: default state is Unleash Pet — pet is unleashed and gets empowered commands
-      // at F1-F3 (Venomous Outburst, Rending Vines, Enveloping Haze).
-      // Toggling F5 activates Unleash Ranger (activeKit=63147) — ranger gets unleashed weapon
-      // skills, pet reverts to normal controls (attack / pet F2 / return).
-      const unleashRangerActive = activeKit === 63147;
-      if (unleashRangerActive) {
-        // Unleash Ranger active: pet reverts to normal controls
+      // Untamed three-state F5 cycle:
+      //   Default (activeKit=0):     F5="Unleash Pet",    normal pet,     normal weapons
+      //   Unleash Pet (kit=63344):   F5="Unleash Ranger", unleashed pet,  normal weapons
+      //   Unleash Ranger (kit=63147):F5="Unleash Pet",    normal pet,     unleashed weapons
+      const unleashPetActive = activeKit === 63344;
+      if (unleashPetActive) {
+        // Unleash Pet active: pet gets empowered commands
+        const venomousOutburst = catalog.skillById.get(63209) || null;
+        const rendingVines = catalog.skillById.get(63258) || null;
+        const envHaze = catalog.skillById.get(63094) || null;
+        mechSlots.push({ skill: venomousOutburst, sourceId: venomousOutburst?.id || 0, isStatic: true, isSelectable: false });
+        mechSlots.push({ skill: rendingVines, sourceId: rendingVines?.id || 0, isStatic: true, isSelectable: false });
+        mechSlots.push({ skill: envHaze, sourceId: envHaze?.id || 0, isStatic: true, isSelectable: false });
+      } else {
+        // Default or Unleash Ranger: normal pet controls
         mechSlots.push({ skill: null, sourceId: 0, isStatic: true, isSelectable: false, fakeCommand: "attack" });
         const petSkills = activePet?.skills || [];
         const isAquaticSlot = activePetSlotKey === "aquatic1" || activePetSlotKey === "aquatic2";
@@ -593,14 +601,6 @@ export function buildMechanicSlotsForRender({
         const f2Skill = petSkills[f2SkillIdx] || null;
         mechSlots.push({ skill: f2Skill, sourceId: f2Skill?.id || 0, isStatic: true, isSelectable: false });
         mechSlots.push({ skill: null, sourceId: 0, isStatic: true, isSelectable: false, fakeCommand: "return" });
-      } else {
-        // Unleash Pet active (default): pet gets empowered commands
-        const venomousOutburst = catalog.skillById.get(63209) || null;
-        const rendingVines = catalog.skillById.get(63258) || null;
-        const envHaze = catalog.skillById.get(63094) || null;
-        mechSlots.push({ skill: venomousOutburst, sourceId: venomousOutburst?.id || 0, isStatic: true, isSelectable: false });
-        mechSlots.push({ skill: rendingVines, sourceId: rendingVines?.id || 0, isStatic: true, isSelectable: false });
-        mechSlots.push({ skill: envHaze, sourceId: envHaze?.id || 0, isStatic: true, isSelectable: false });
       }
     } else {
       mechSlots.push({ skill: null, sourceId: 0, isStatic: true, isSelectable: false, fakeCommand: "attack" });
@@ -613,12 +613,12 @@ export function buildMechanicSlotsForRender({
     }
     if (eliteSpecId !== 55) {
       if (eliteSpecId === 72) {
-        // Untamed: F5 is a toggle between "Unleash Ranger" (63147) and "Unleash Pet" (63344).
+        // Untamed: F5 cycles through 3 states. Show the next action:
+        //   Default (kit=0) → "Unleash Pet";  Unleash Pet (kit=63344) → "Unleash Ranger";
+        //   Unleash Ranger (kit=63147) → "Unleash Pet".
         const unleashRanger = catalog.skillById.get(63147) || null;
         const unleashPet = catalog.skillById.get(63344) || null;
-        const unleashRangerActive = activeKit === 63147;
-        // Show current state: default = Unleash Pet, toggled = Unleash Ranger
-        const displaySkill = unleashRangerActive ? unleashRanger : unleashPet;
+        const displaySkill = activeKit === 63344 ? unleashRanger : unleashPet;
         if (displaySkill) {
           mechSlots.push({
             skill: displaySkill, sourceId: displaySkill.id, isStatic: true, isSelectable: false,
@@ -1218,7 +1218,7 @@ export function renderSkills() {
     const isEquippedSlotKit = (kitSkill?.bundleSkills?.length ?? 0) > 0 && equippedIds.has(activeKit);
     // Soulbeast Beastmode / Untamed Unleash have no bundle_skills in the API; allow them to persist.
     const isBeastmodeKit = mechSlots.some((s) => s.isBeastmodeToggle && s.skill?.id === activeKit);
-    const isUnleashKit = mechSlots.some((s) => s.isUnleashToggle) && activeKit === 63147;
+    const isUnleashKit = mechSlots.some((s) => s.isUnleashToggle) && (activeKit === 63147 || activeKit === 63344);
     const isBerserkKit = mechSlots.some((s) => s.isBerserkToggle && s.skill?.id === activeKit);
     // Bladesworn: Gunsaber (62745) and Dragon Trigger (62803) are both valid active kits; the
     // displayed skill changes to the flip variant when active so we can't match by skill.id.
