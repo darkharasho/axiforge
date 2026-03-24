@@ -77,6 +77,9 @@ function main() {
   const changes = [];
 
   for (const d of discrepancies) {
+    if (d.entity_type === "relic") {
+      continue; // handled in relic loop below
+    }
     const collection = d.entity_type === "trait" ? "traits" : "skills";
     const idStr = String(d.id);
     const wikiFacts = d.wiki_wvw_facts || [];
@@ -131,6 +134,42 @@ function main() {
     } else {
       stats.skipped++;
     }
+  }
+
+  // ── Relic patching ──
+  const relicFactsPath = path.join(__dirname, "data/relicFacts.json");
+  let relicFacts;
+  try {
+    relicFacts = JSON.parse(fs.readFileSync(relicFactsPath, "utf8"));
+  } catch {
+    relicFacts = { updatedAt: "", relics: {} };
+  }
+
+  let relicChanged = false;
+  for (const d of discrepancies.filter(d => d.entity_type === "relic")) {
+    const idStr = String(d.id);
+    const wikiFacts = (d.wiki_wvw_facts || []).filter(f => f && f.type);
+
+    if (d.category === "mismatch") {
+      if (wikiFacts.length === 0) { stats.skipped++; continue; }
+      relicFacts.relics[idStr] = relicFacts.relics[idStr] || { name: d.name, facts: [] };
+      relicFacts.relics[idStr].facts = wikiFacts;
+      relicChanged = true;
+      stats.updated++;
+    } else if (d.category === "missing_from_splits") {
+      if (wikiFacts.length === 0) { stats.skipped++; continue; }
+      relicFacts.relics[idStr] = { name: d.name, facts: wikiFacts };
+      relicChanged = true;
+      stats.added++;
+    } else {
+      stats.skipped++;
+    }
+  }
+
+  if (relicChanged && !dryRun) {
+    relicFacts.updatedAt = new Date().toISOString();
+    fs.writeFileSync(relicFactsPath, JSON.stringify(relicFacts, null, 2) + "\n");
+    console.log(`Wrote ${relicFactsPath}`);
   }
 
   // Print changes
