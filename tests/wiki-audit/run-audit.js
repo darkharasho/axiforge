@@ -14,7 +14,8 @@ const { chromium } = require("playwright");
 const path = require("path");
 const fs = require("fs/promises");
 const { crawlEntity } = require("./crawl");
-const { compareEntity } = require("./compare");
+const { crawlEntity: crawlRelic } = require("./crawl-relic");
+const { compareEntity, compareRelicFacts } = require("./compare");
 const { parseFactText } = require("./parse-facts");
 const { IncrementalReport, writeReport } = require("./report");
 const { StatusDisplay } = require("./status-display");
@@ -33,7 +34,14 @@ function parseArgs() {
     if (args[i] === "--limit" && args[i + 1]) limit = parseInt(args[i + 1], 10);
     if (args[i] === "--workers" && args[i + 1]) workers = parseInt(args[i + 1], 10);
   }
-  return { skip, limit, workers: Math.max(1, Math.min(workers, 10)) };
+  const typeArg = args.find(a => a.startsWith("--type"));
+  const typeVal = typeArg ? (typeArg.includes("=") ? typeArg.split("=")[1] : args[args.indexOf(typeArg) + 1]) : null;
+  const VALID_TYPES = new Set(["skills", "traits", "relics"]);
+  if (typeVal && !VALID_TYPES.has(typeVal)) {
+    console.error(`Invalid --type: ${typeVal}. Must be one of: skills, traits, relics`);
+    process.exit(1);
+  }
+  return { skip, limit, workers: Math.max(1, Math.min(workers, 10)), typeVal };
 }
 
 // ── GW2 API fetching ──
@@ -64,9 +72,9 @@ async function fetchByIds(endpoint, ids) {
  * Each worker gets its own browser context + page, pulls entities
  * from a shared queue, and pushes results to shared arrays.
  */
-async function crawlWithWorkers(browser, entities, splitsIndex, workerCount, incremental, display) {
+async function crawlWithWorkers(browser, entities, splitsIndex, relicFactsData, workerCount, incremental, display) {
   const summary = {
-    skills_checked: 0, traits_checked: 0, total_checked: 0,
+    skills_checked: 0, traits_checked: 0, relics_checked: 0, total_checked: 0,
     matches: 0, mismatches: 0, missing_from_splits: 0,
     missing_from_wiki: 0, no_split: 0, errors: 0,
   };
@@ -92,11 +100,14 @@ async function crawlWithWorkers(browser, entities, splitsIndex, workerCount, inc
       display.setWorker(workerId, `${entity.name} (${entityType} #${entity.id})`);
 
       // Crawl
-      const crawlResult = await crawlEntity(page, entity, entityType);
+      const crawlResult = entityType === "relic"
+        ? await crawlRelic(page, entity, entityType)
+        : await crawlEntity(page, entity, entityType);
 
       // Process result (synchronized via single-threaded JS)
       if (entityType === "skill") summary.skills_checked++;
-      else summary.traits_checked++;
+      else if (entityType === "trait") summary.traits_checked++;
+      else if (entityType === "relic") summary.relics_checked++;
       summary.total_checked++;
 
       if (crawlResult.error) {
@@ -109,7 +120,50 @@ async function crawlWithWorkers(browser, entities, splitsIndex, workerCount, inc
         incremental.writeError(errRecord);
         display.addCompleted("errors");
         display.addRecent("!", "\x1b[90m", "ERROR", `${entity.name} — ${crawlResult.error.slice(0, 50)}`);
+      } else if (entityType === "relic") {
+        const storedEntry = relicFactsData.relics[String(entity.id)];
+        const wikiFacts = crawlResult.facts
+          .map((f) => parseFactText(f.name, f.valueText))
+          .filter(Boolean);
+        const cmp = compareRelicFacts(wikiFacts, storedEntry?.facts || null);
+
+        switch (cmp.category) {
+          case "match": summary.matches++; break;
+          case "mismatch": summary.mismatches++; break;
+          case "missing_from_splits": summary.missing_from_splits++; break;
+          case "no_split": summary.no_split++; break;
+        }
+
+        display.addCompleted(cmp.category === "match" ? "matches"
+          : cmp.category === "no_split" ? "no_split"
+          : cmp.category === "mismatch" ? "mismatches"
+          : cmp.category === "missing_from_splits" ? "missing_from_splits"
+          : "errors");
+
+        if (cmp.category !== "match" && cmp.category !== "no_split") {
+          const record = {
+            entity_type: entityType,
+            id: entity.id,
+            name: entity.name,
+            wiki_url: crawlResult.wiki_url || `https://wiki.guildwars2.com/wiki/${entity.name.replace(/ /g, "_")}`,
+            category: cmp.category,
+            wiki_wvw_facts: wikiFacts,
+            splits_wvw_facts: storedEntry?.facts || [],
+          };
+          if (cmp.fact_diffs.length) record.fact_diffs = cmp.fact_diffs;
+          if (cmp.wiki_only_facts.length) record.wiki_only_facts = cmp.wiki_only_facts;
+          if (cmp.splits_only_facts.length) record.splits_only_facts = cmp.splits_only_facts;
+          discrepancies.push(record);
+          incremental.writeDiscrepancy(record);
+          const tag = `${entity.name} (${entityType} #${entity.id})`;
+          if (cmp.category === "mismatch") {
+            display.addRecent("\u2717", "\x1b[31m", "MISMATCH", tag);
+          } else if (cmp.category === "missing_from_splits") {
+            display.addRecent("\u25cc", "\x1b[33m", "MISSING(S)", tag);
+          }
+        }
       } else {
+        // Existing skill/trait comparison path
         const wikiFacts = crawlResult.wvwFacts
           .map((f) => parseFactText(f.name, f.valueText))
           .filter(Boolean);
@@ -179,28 +233,46 @@ async function crawlWithWorkers(browser, entities, splitsIndex, workerCount, inc
 // ── Main ──
 
 async function main() {
-  const { skip, limit, workers } = parseArgs();
+  const { skip, limit, workers, typeVal } = parseArgs();
   const startTime = Date.now();
   const timestamp = new Date().toISOString();
 
   console.log(`Wiki Audit — ${timestamp}`);
 
   // 1. Fetch entity list
-  process.stdout.write("Fetching skills from GW2 API... ");
-  const skillIds = await fetchAllIds("skills");
-  const skills = await fetchByIds("skills", skillIds);
-  const skillEntities = skills.map((s) => ({
-    id: s.id, name: s.name, professions: s.professions || [], type: "skill",
-  }));
-  console.log(`${skillEntities.length} skills`);
+  let skillEntities = [];
+  if (!typeVal || typeVal === "skills") {
+    process.stdout.write("Fetching skills from GW2 API... ");
+    const skillIds = await fetchAllIds("skills");
+    const skills = await fetchByIds("skills", skillIds);
+    skillEntities = skills.map((s) => ({
+      id: s.id, name: s.name, professions: s.professions || [], type: "skill",
+    }));
+    console.log(`${skillEntities.length} skills`);
+  }
 
-  process.stdout.write("Fetching traits from GW2 API... ");
-  const traitIds = await fetchAllIds("traits");
-  const traits = await fetchByIds("traits", traitIds);
-  const traitEntities = traits.map((t) => ({
-    id: t.id, name: t.name, professions: [], specialization: t.specialization, type: "trait",
-  }));
-  console.log(`${traitEntities.length} traits`);
+  let traitEntities = [];
+  if (!typeVal || typeVal === "traits") {
+    process.stdout.write("Fetching traits from GW2 API... ");
+    const traitIds = await fetchAllIds("traits");
+    const traits = await fetchByIds("traits", traitIds);
+    traitEntities = traits.map((t) => ({
+      id: t.id, name: t.name, professions: [], specialization: t.specialization, type: "trait",
+    }));
+    console.log(`${traitEntities.length} traits`);
+  }
+
+  let relicEntities = [];
+  if (!typeVal || typeVal === "relics") {
+    const { RELIC_ITEM_IDS } = require("../../src/main/gw2Data/upgradeIds");
+    const relicItems = await fetchByIds("items", RELIC_ITEM_IDS);
+    relicEntities = relicItems.map(item => ({
+      id: item.id,
+      name: item.name,
+      type: "relic",
+    }));
+    console.log(`${relicEntities.length} relics`);
+  }
 
   // 2. Load splits.json
   const splitsRaw = JSON.parse(await fs.readFile(SPLITS_PATH, "utf-8"));
@@ -212,8 +284,11 @@ async function main() {
   const traitSplitCount = Object.keys(splitsIndex.trait).length;
   console.log(`Loaded splits.json (${skillSplitCount} skills, ${traitSplitCount} traits)`);
 
+  // 2b. Load relicFacts.json
+  const relicFactsData = require("./data/relicFacts.json");
+
   // 3. Build entity list with skip/limit
-  const allEntities = [...skillEntities, ...traitEntities];
+  const allEntities = [...skillEntities, ...traitEntities, ...relicEntities];
   const entities = allEntities.slice(skip, skip + limit);
   console.log(`Crawling ${entities.length} entities (skip=${skip}, limit=${limit === Infinity ? "all" : limit}, workers=${workers})\n`);
 
@@ -226,7 +301,7 @@ async function main() {
   display.start();
 
   // 5. Crawl and compare with worker pool
-  const { summary, discrepancies, errors } = await crawlWithWorkers(browser, entities, splitsIndex, workers, incremental, display);
+  const { summary, discrepancies, errors } = await crawlWithWorkers(browser, entities, splitsIndex, relicFactsData, workers, incremental, display);
 
   display.stop();
   console.log("");
