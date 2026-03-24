@@ -292,6 +292,15 @@ export function getEquippedWeaponSkills(catalog, weapons, activeAttunement = "",
   return slots;
 }
 
+// Untamed: when Unleash Ranger is active, swap each weapon skill to its unleashed flip variant.
+export function applyUnleashWeaponFlip(catalog, weaponSkills) {
+  const wById = catalog?.weaponSkillById || new Map();
+  return weaponSkills.map((skill) => {
+    if (!skill?.flipSkill) return skill;
+    return wById.get(skill.flipSkill) || skill;
+  });
+}
+
 // Returns the offensive and defensive artifact pools for Antiquary's Skritt Swipe.
 // Currently the pools are fixed; hook is here for future trait-based modifications.
 export function getAntiquaryArtifactPools(_catalog, _editor) {
@@ -1235,6 +1244,11 @@ export function renderSkills() {
       mainhand: equippedWeapons[mhKey] || "",
       offhand: equippedWeapons[ohKey] || "",
     }, activeAttunement, activeAttunement2, isWeaver, false);
+  }
+
+  // Untamed: when Unleash Ranger is active, swap weapon skills to unleashed flip variants.
+  if (resolvedKit === 63147) {
+    weaponSkills = applyUnleashWeaponFlip(catalog, weaponSkills);
   }
 
   const weaponGroup = document.createElement("div");
