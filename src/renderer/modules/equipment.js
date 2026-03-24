@@ -1631,7 +1631,7 @@ export function renderEquipmentPanel() {
       const rDef = GW2_RELICS_BY_LABEL.get(equip.relic || "");
       if (!rDef) return null;
       const catalogRelic = state.upgradeCatalog?.relicByName?.get(rDef.label);
-      return { name: rDef.label, icon: rDef.icon, description: catalogRelic?.description || "" };
+      return { name: rDef.label, icon: rDef.icon, description: catalogRelic?.description || "", facts: catalogRelic?.facts || [] };
     });
 
     return wrapper;
