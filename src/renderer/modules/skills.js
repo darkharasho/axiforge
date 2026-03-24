@@ -292,6 +292,33 @@ export function getEquippedWeaponSkills(catalog, weapons, activeAttunement = "",
   return slots;
 }
 
+// Untamed: when Unleash Ranger is active, swap weapon skills to unleashed variants.
+// Weapon_1 (index 0) is replaced by the Unleashed Ambush skill for the current weapon type
+// (trait-granted from Unleashed Power, specialization=72, in skillById).
+// Weapons 2-5 are swapped to their unleashed flip variants via flipSkill in weaponSkillById.
+export function applyUnleashWeaponFlip(catalog, weaponSkills) {
+  const wById = catalog?.weaponSkillById || new Map();
+  return weaponSkills.map((skill, i) => {
+    if (!skill) return skill;
+    // Weapon_1: find the Unleashed Ambush skill matching this weapon type.
+    if (i === 0) {
+      const wt = (skill.weaponType || "").toLowerCase();
+      if (wt && catalog?.skillById) {
+        for (const s of catalog.skillById.values()) {
+          if (s.slot === "Weapon_1" && Number(s.specialization) === 72
+              && (s.weaponType || "").toLowerCase() === wt) {
+            return s;
+          }
+        }
+      }
+      return skill;
+    }
+    // Slots 2-5: swap via flipSkill to unleashed weapon skill variants.
+    if (!skill.flipSkill) return skill;
+    return wById.get(skill.flipSkill) || skill;
+  });
+}
+
 // Returns the offensive and defensive artifact pools for Antiquary's Skritt Swipe.
 // Currently the pools are fixed; hook is here for future trait-based modifications.
 export function getAntiquaryArtifactPools(_catalog, _editor) {
@@ -552,12 +579,13 @@ export function buildMechanicSlotsForRender({
         });
       }
     } else if (eliteSpecId === 72) {
-      // Untamed: default state is Unleash Pet (normal pet bar: attack / pet F2 / return).
-      // Toggling F5 activates Unleash Ranger (activeKit=63147), which gives the pet empowered
-      // commands at F1-F3 (Venomous Outburst, Rending Vines, Enveloping Haze).
-      const unleashRangerActive = activeKit === 63147;
-      if (unleashRangerActive) {
-        // Unleash Ranger active: pet gets empowered commands
+      // Untamed three-state F5 cycle:
+      //   Default (activeKit=0):     F5="Unleash Pet",    normal pet,     normal weapons
+      //   Unleash Pet (kit=63344):   F5="Unleash Ranger", unleashed pet,  normal weapons
+      //   Unleash Ranger (kit=63147):F5="Unleash Pet",    normal pet,     unleashed weapons
+      const unleashPetActive = activeKit === 63344;
+      if (unleashPetActive) {
+        // Unleash Pet active: pet gets empowered commands
         const venomousOutburst = catalog.skillById.get(63209) || null;
         const rendingVines = catalog.skillById.get(63258) || null;
         const envHaze = catalog.skillById.get(63094) || null;
@@ -565,7 +593,7 @@ export function buildMechanicSlotsForRender({
         mechSlots.push({ skill: rendingVines, sourceId: rendingVines?.id || 0, isStatic: true, isSelectable: false });
         mechSlots.push({ skill: envHaze, sourceId: envHaze?.id || 0, isStatic: true, isSelectable: false });
       } else {
-        // Unleash Pet active (default): normal pet controls (attack / pet F2 / return)
+        // Default or Unleash Ranger: normal pet controls
         mechSlots.push({ skill: null, sourceId: 0, isStatic: true, isSelectable: false, fakeCommand: "attack" });
         const petSkills = activePet?.skills || [];
         const isAquaticSlot = activePetSlotKey === "aquatic1" || activePetSlotKey === "aquatic2";
@@ -585,12 +613,12 @@ export function buildMechanicSlotsForRender({
     }
     if (eliteSpecId !== 55) {
       if (eliteSpecId === 72) {
-        // Untamed: F5 is a toggle between "Unleash Ranger" (63147) and "Unleash Pet" (63344).
+        // Untamed: F5 cycles through 3 states. Show the next action:
+        //   Default (kit=0) → "Unleash Pet";  Unleash Pet (kit=63344) → "Unleash Ranger";
+        //   Unleash Ranger (kit=63147) → "Unleash Pet".
         const unleashRanger = catalog.skillById.get(63147) || null;
         const unleashPet = catalog.skillById.get(63344) || null;
-        const unleashRangerActive = activeKit === 63147;
-        // Show current state: default = Unleash Pet, toggled = Unleash Ranger
-        const displaySkill = unleashRangerActive ? unleashRanger : unleashPet;
+        const displaySkill = activeKit === 63344 ? unleashRanger : unleashPet;
         if (displaySkill) {
           mechSlots.push({
             skill: displaySkill, sourceId: displaySkill.id, isStatic: true, isSelectable: false,
@@ -1190,7 +1218,7 @@ export function renderSkills() {
     const isEquippedSlotKit = (kitSkill?.bundleSkills?.length ?? 0) > 0 && equippedIds.has(activeKit);
     // Soulbeast Beastmode / Untamed Unleash have no bundle_skills in the API; allow them to persist.
     const isBeastmodeKit = mechSlots.some((s) => s.isBeastmodeToggle && s.skill?.id === activeKit);
-    const isUnleashKit = mechSlots.some((s) => s.isUnleashToggle) && activeKit === 63147;
+    const isUnleashKit = mechSlots.some((s) => s.isUnleashToggle) && (activeKit === 63147 || activeKit === 63344);
     const isBerserkKit = mechSlots.some((s) => s.isBerserkToggle && s.skill?.id === activeKit);
     // Bladesworn: Gunsaber (62745) and Dragon Trigger (62803) are both valid active kits; the
     // displayed skill changes to the flip variant when active so we can't match by skill.id.
@@ -1235,6 +1263,11 @@ export function renderSkills() {
       mainhand: equippedWeapons[mhKey] || "",
       offhand: equippedWeapons[ohKey] || "",
     }, activeAttunement, activeAttunement2, isWeaver, false);
+  }
+
+  // Untamed: when Unleash Ranger is active, swap weapon skills to unleashed flip variants.
+  if (resolvedKit === 63147) {
+    weaponSkills = applyUnleashWeaponFlip(catalog, weaponSkills);
   }
 
   const weaponGroup = document.createElement("div");
@@ -1485,8 +1518,8 @@ export function renderSkills() {
             } else if (isDragonTriggerToggle) {
               state.editor.activeKit = resolvedKit === 62803 ? 0 : 62803;
             } else if (isUnleashToggle) {
-              // Toggle between Unleash Ranger active (63147) and inactive (0)
-              state.editor.activeKit = activeKit === 63147 ? 0 : 63147;
+              // Three-state Unleash cycle: 0 → 63344 (Unleash Pet) → 63147 (Unleash Ranger) → 0
+              state.editor.activeKit = activeKit === 0 ? 63344 : activeKit === 63344 ? 63147 : 0;
             } else {
               state.editor.activeKit = resolvedKit === skill.id ? 0 : skill.id;
             }

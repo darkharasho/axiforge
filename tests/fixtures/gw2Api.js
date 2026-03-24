@@ -627,6 +627,19 @@ const MOCK_SKILLS = {
   // Untamed F5 toggle
   63147: makeSkill(63147, { name: "Unleash Ranger", slot: "Profession_5", type: "Profession", specialization: 72, professions: ["Ranger"] }),
   63344: makeSkill(63344, { name: "Unleash Pet",    slot: "Profession_5", type: "Profession", specialization: 72, professions: ["Ranger"] }),
+  // Untamed Unleashed Ambush skills (trait-granted from Unleashed Power, trait 2268)
+  63438: makeSkill(63438, { name: "Relentless Whirl",    slot: "Weapon_1", type: "Weapon", weapon_type: "Hammer",   specialization: 72, professions: ["Ranger"] }),
+  63129: makeSkill(63129, { name: "Sundering Volley",    slot: "Weapon_1", type: "Weapon", weapon_type: "Axe",      specialization: 72, professions: ["Ranger"] }),
+  69223: makeSkill(69223, { name: "Neurotoxin Burst",    slot: "Weapon_1", type: "Weapon", weapon_type: "Dagger",   specialization: 72, professions: ["Ranger"] }),
+  63350: makeSkill(63350, { name: "Savage Slash",        slot: "Weapon_1", type: "Weapon", weapon_type: "Greatsword", specialization: 72, professions: ["Ranger"] }),
+  72079: makeSkill(72079, { name: "Rampant Growth",      slot: "Weapon_1", type: "Weapon", weapon_type: "Mace",     specialization: 72, professions: ["Ranger"] }),
+  63336: makeSkill(63336, { name: "Deft Strike",         slot: "Weapon_1", type: "Weapon", weapon_type: "Sword",    specialization: 72, professions: ["Ranger"] }),
+  63225: makeSkill(63225, { name: "Multishot",           slot: "Weapon_1", type: "Weapon", weapon_type: "Longbow",  specialization: 72, professions: ["Ranger"] }),
+  63326: makeSkill(63326, { name: "Toxic Shot",          slot: "Weapon_1", type: "Weapon", weapon_type: "Shortbow", specialization: 72, professions: ["Ranger"] }),
+  69175: makeSkill(69175, { name: "Solar Brilliance",    slot: "Weapon_1", type: "Weapon", weapon_type: "Staff",    specialization: 72, professions: ["Ranger"] }),
+  72932: makeSkill(72932, { name: "Ravager's Abandon",   slot: "Weapon_1", type: "Weapon", weapon_type: "Spear",    specialization: 72, professions: ["Ranger"] }),
+  63065: makeSkill(63065, { name: "Vicious Pike",        slot: "Weapon_1", type: "Weapon", weapon_type: "Spear",    specialization: 72, professions: ["Ranger"] }),
+  63301: makeSkill(63301, { name: "Jagged Fan",          slot: "Weapon_1", type: "Weapon", weapon_type: "Speargun", specialization: 72, professions: ["Ranger"] }),
 
   // ---- Thief ----
   13050: makeSkill(13050, { name: "Channeled Vigor", slot: "Heal", type: "Heal", professions: ["Thief"] }),
