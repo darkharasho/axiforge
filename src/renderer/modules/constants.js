@@ -40,7 +40,14 @@ export const STAT_COMBOS = [
   { label: "Celestial",     stats: ["Power", "Precision", "Toughness", "Vitality", "ConditionDamage", "Ferocity", "HealingPower", "Expertise", "Concentration"] },
 ];
 
-export const STAT_COMBOS_BY_LABEL = new Map(STAT_COMBOS.map((c) => [c.label, c]));
+export const STAT_COMBOS_BY_LABEL = new Map(
+  STAT_COMBOS.flatMap((c) => {
+    const entries = [[c.label, c]];
+    // Add alias without "'s" so imported builds (e.g. "Wanderer") resolve correctly
+    if (c.label.endsWith("'s")) entries.push([c.label.slice(0, -2), c]);
+    return entries;
+  })
+);
 
 // Ascended/Legendary stat weights per slot.
 // p/s = 3-stat major/minor; p4/s4 = 4-stat major/minor; c = Celestial per-stat.

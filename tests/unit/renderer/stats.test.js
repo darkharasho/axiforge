@@ -179,6 +179,24 @@ describe("computeEquipmentStats — single slot contributions", () => {
     expect(result.Power).toBe(1000); // base unchanged
   });
 
+  test("stat combo without apostrophe-s resolves correctly (issue #81)", () => {
+    // Builds imported from gw2skills may store "Wanderer" instead of "Wanderer's"
+    state.editor = makeEditor({ chest: "Wanderer" });
+    const result = computeEquipmentStats();
+    // Wanderer's: Power, Vitality (major p4=121), Toughness, Concentration (minor s4=66)
+    expect(result.Power).toBe(1000 + 121);
+    expect(result.Vitality).toBe(1000 + 121);
+    expect(result.Toughness).toBe(1000 + 66);
+    expect(result.Concentration).toBe(66);
+  });
+
+  test("computeSlotStats resolves alias without apostrophe-s (issue #81)", () => {
+    const result = computeSlotStats("Wanderer", "chest");
+    expect(result).toHaveLength(4);
+    expect(result[0]).toEqual({ stat: "Power", value: 121 });
+    expect(result[1]).toEqual({ stat: "Vitality", value: 121 });
+  });
+
   test("empty slot value is skipped", () => {
     state.editor = makeEditor({ chest: "", head: "" });
     const result = computeEquipmentStats();
