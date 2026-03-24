@@ -381,6 +381,24 @@ const KNOWN_SKILL_ATTUNEMENT_OVERRIDES = new Map([
 // mechanics so the F5 slot switches correctly when attunement changes.
 const EVOKER_F5_EXTRA_VARIANTS = [77225, 77370, 77226]; // Splash (Water), Zap (Air), Calcify (Earth)
 
+// Untamed (spec 72) Unleashed Ambush skills — trait-granted by Unleashed Power (trait 2268).
+// NOT listed in the Ranger profession endpoint; must be explicitly fetched so they appear
+// in the Weapon_1 slot when Unleash Ranger is active.
+const UNTAMED_UNLEASHED_AMBUSH = [
+  63129,  // Sundering Volley (Axe)
+  69223,  // Neurotoxin Burst (Dagger)
+  63350,  // Savage Slash (Greatsword)
+  63438,  // Relentless Whirl (Hammer)
+  63301,  // Jagged Fan (Harpoon gun / Speargun)
+  72079,  // Rampant Growth (Mace)
+  63225,  // Multishot (Longbow)
+  63326,  // Toxic Shot (Short bow)
+  72932,  // Ravager's Abandon (Spear, land)
+  63065,  // Vicious Pike (Spear, aquatic)
+  69175,  // Solar Brilliance (Staff)
+  63336,  // Deft Strike (Sword)
+];
+
 module.exports = {
   KNOWN_SKILL_DESCRIPTION_OVERRIDES,
   _IC,
@@ -413,4 +431,5 @@ module.exports = {
   LEGEND_FLIP_OVERRIDES,
   KNOWN_SKILL_ATTUNEMENT_OVERRIDES,
   EVOKER_F5_EXTRA_VARIANTS,
+  UNTAMED_UNLEASHED_AMBUSH,
 };

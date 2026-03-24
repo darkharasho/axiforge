@@ -882,6 +882,33 @@ describe("Ranger — pets catalog", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Ranger — Untamed Unleashed Ambush skills
+// ---------------------------------------------------------------------------
+
+describe("Ranger — Untamed Unleashed Ambush skills in catalog", () => {
+  beforeEach(() => { freshLoad(); global.fetch = createGw2MockFetch(); });
+  afterEach(() => { delete global.fetch; });
+
+  test("unleashed ambush skills are included in catalog.skills", async () => {
+    const catalog = await gw2Data.getProfessionCatalog("Ranger");
+    const ambushIds = [63438, 63129, 69223, 63350, 72079, 63336, 63225, 63326, 69175, 72932, 63065, 63301];
+    const skillIds = new Set(catalog.skills.map((s) => s.id));
+    for (const id of ambushIds) {
+      expect(skillIds.has(id)).toBe(true);
+    }
+  });
+
+  test("Relentless Whirl (63438) has correct weapon_type, slot, and specialization", async () => {
+    const catalog = await gw2Data.getProfessionCatalog("Ranger");
+    const skill = catalog.skills.find((s) => s.id === 63438);
+    expect(skill).toBeTruthy();
+    expect(skill.weaponType).toBe("Hammer");
+    expect(skill.slot).toBe("Weapon_1");
+    expect(skill.specialization).toBe(72);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Revenant — legends
 // ---------------------------------------------------------------------------
 

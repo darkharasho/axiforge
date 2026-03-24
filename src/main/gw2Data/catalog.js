@@ -34,6 +34,7 @@ const {
   LEGEND_FLIP_OVERRIDES,
   KNOWN_SKILL_ATTUNEMENT_OVERRIDES,
   EVOKER_F5_EXTRA_VARIANTS,
+  UNTAMED_UNLEASHED_AMBUSH,
 } = require("./overrides");
 
 const { getSkillSplit, getTraitSplit, getSkillPveFacts, getTraitPveFacts } = require("../../../lib/gw2-balance-splits");
@@ -358,6 +359,8 @@ async function getProfessionCatalog(professionId, lang = "en", gameMode = "pve")
     // - Specter Siphon (63067, spec=71) — not in Thief profession endpoint
     // - Shadow Shroud Enter/Exit (63155/63251) + weapon skills (for bundle display)
     ...(professionId === "Thief" ? [63067, 63155, 63251, ...SHADOW_SHROUD_BUNDLE] : []),
+    // Untamed Unleashed Ambush skills — trait-granted (Unleashed Power), not in profession endpoint.
+    ...(professionId === "Ranger" ? UNTAMED_UNLEASHED_AMBUSH : []),
     // Weapon auto-attack chain continuations (depth 1): merged here to avoid an extra round-trip.
     ...weaponChainDepth1Ids,
   ]);
