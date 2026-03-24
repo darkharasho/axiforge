@@ -14,6 +14,7 @@ module.exports = {
     command: "npx vite --config src/site/vite.config.js --port 3100",
     port: 3100,
     reuseExistingServer: !process.env.CI,
+    cwd: path.join(__dirname, "../.."),
   },
   projects: [
     {
