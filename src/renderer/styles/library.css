@@ -723,43 +723,35 @@
 .lib-pill {
   display: inline-flex;
   align-items: center;
-  border-radius: 999px;
-  padding: 1px 7px;
-  font-size: 0.85rem;
-  font-weight: 500;
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 0.73rem;
+  font-weight: 600;
   white-space: nowrap;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  line-height: 1.5;
+  border: none;
 }
 
-.lib-pill--prof {
-  color: #fff;
-}
-.lib-pill--prof.lib-prof--guardian     { background: rgba(110, 168, 255, 0.18); border: 1px solid rgba(110, 168, 255, 0.5); color: #fff; }
-.lib-pill--prof.lib-prof--warrior      { background: rgba(255, 153, 68, 0.18);  border: 1px solid rgba(255, 153, 68, 0.5);  color: #fff; }
-.lib-pill--prof.lib-prof--necromancer  { background: rgba(77, 202, 122, 0.18);  border: 1px solid rgba(77, 202, 122, 0.5);  color: #fff; }
-.lib-pill--prof.lib-prof--engineer     { background: rgba(204, 136, 68, 0.18);  border: 1px solid rgba(204, 136, 68, 0.5);  color: #fff; }
-.lib-pill--prof.lib-prof--ranger       { background: rgba(119, 204, 85, 0.18);  border: 1px solid rgba(119, 204, 85, 0.5);  color: #fff; }
-.lib-pill--prof.lib-prof--thief        { background: rgba(204, 102, 119, 0.18); border: 1px solid rgba(204, 102, 119, 0.5); color: #fff; }
-.lib-pill--prof.lib-prof--mesmer       { background: rgba(176, 122, 204, 0.18); border: 1px solid rgba(176, 122, 204, 0.5); color: #fff; }
-.lib-pill--prof.lib-prof--elementalist { background: rgba(221, 85, 85, 0.18);   border: 1px solid rgba(221, 85, 85, 0.5);   color: #fff; }
-.lib-pill--prof.lib-prof--revenant     { background: rgba(170, 102, 85, 0.18);  border: 1px solid rgba(170, 102, 85, 0.5);  color: #fff; }
-.lib-pill--prof.lib-prof--unknown      { background: rgba(136, 136, 136, 0.18); border: 1px solid rgba(136, 136, 136, 0.5); color: #fff; }
+/* ── Profession pills — the only colored ones ── */
+.lib-pill--prof.lib-prof--guardian     { background: rgba(110, 168, 255, 0.15); color: #7db4ff; }
+.lib-pill--prof.lib-prof--warrior      { background: rgba(255, 153, 68, 0.15);  color: #ffa858; }
+.lib-pill--prof.lib-prof--necromancer  { background: rgba(77, 202, 122, 0.15);  color: #5ed088; }
+.lib-pill--prof.lib-prof--engineer     { background: rgba(204, 136, 68, 0.15);  color: #d4a060; }
+.lib-pill--prof.lib-prof--ranger       { background: rgba(119, 204, 85, 0.15);  color: #88d468; }
+.lib-pill--prof.lib-prof--thief        { background: rgba(204, 102, 119, 0.15); color: #d87888; }
+.lib-pill--prof.lib-prof--mesmer       { background: rgba(176, 122, 204, 0.15); color: #c08ee0; }
+.lib-pill--prof.lib-prof--elementalist { background: rgba(221, 85, 85, 0.15);   color: #e87070; }
+.lib-pill--prof.lib-prof--revenant     { background: rgba(170, 102, 85, 0.15);  color: #c48068; }
+.lib-pill--prof.lib-prof--unknown      { background: rgba(136, 136, 136, 0.10); color: #999; }
 
-.lib-pill--mode {
-  background: rgba(72, 168, 255, 0.15);
-  border: 1px solid rgba(72, 168, 255, 0.45);
-  color: #fff;
-}
-
-.lib-pill--spec {
-  background: rgba(160, 100, 220, 0.15);
-  border: 1px solid rgba(160, 100, 220, 0.45);
-  color: #fff;
-}
-
+/* ── Neutral pills — spec, mode, tags share one calm style ── */
+.lib-pill--spec,
+.lib-pill--mode,
 .lib-pill--tag {
-  background: rgba(150, 150, 180, 0.1);
-  border: 1px solid rgba(150, 150, 180, 0.2);
-  color: #9999bb;
+  background: rgba(200, 200, 220, 0.07);
+  color: #8888aa;
 }
 
 /* ── Pin button ──────────────────────────────────────────────────── */
@@ -864,7 +856,7 @@
 .lib-list-row__pills {
   display: flex;
   flex-wrap: nowrap;
-  gap: 3px;
+  gap: 4px;
   flex-shrink: 0;
 }
 
@@ -1281,7 +1273,7 @@
 .lib-grid-card__pills {
   display: flex;
   flex-wrap: wrap;
-  gap: 3px;
+  gap: 4px;
 }
 
 .lib-grid-card__date {

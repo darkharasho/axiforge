@@ -25,7 +25,9 @@ Build system is electron-builder (v26) with Vite as the renderer bundler.
 
 **Discord posting:** Post text-only via JSON payload (`content` field). Use `python3 -c "import json; ..."` to generate payload to a temp file, then pass with `curl -d @/tmp/discord_payload.json`. Do NOT use Python's `urllib.request.urlopen` — it returns HTTP 403 even with a valid webhook (curl returns 204 for the same URL). Artifacts are too large to attach (see discord limits memory).
 
-**Last build:** v0.1.0-beta.20260323T0849 built 2026-03-23. Last build commit: 338f3bc7992624a7aac0cef23ec7dc1bc69ef743.
+**Last build:** v0.1.0-beta.20260323T1653 built 2026-03-23. Last build commit: ae31ba234ae63bda047dcba275d10e52e03b8905.
+
+**SPA publishing (GitHub Pages):** Site assets in gw2eww/axibuilds repo under `site/` directory. Update via `gh api --method PUT/DELETE repos/gw2eww/axibuilds/contents/site/assets/{filename}` with base64-encoded content. Always delete old hashed JS/CSS assets and upload new ones, then update `site/index.html` and `site/404.html` with their current SHAs. The deploy-pages.yml workflow triggers on every push to main and deploys from the `site/` folder. Artifact sizes for this build: AppImage 177 MB, EXE 155 MB.
 
 **Discord 2000-char limit:** Patch notes for large releases exceed Discord's 2000-character message cap. Split into two sequential posts (part 1: New Features; part 2: Bug Fixes + Improvements + download link). Both return HTTP 204 on success.
 

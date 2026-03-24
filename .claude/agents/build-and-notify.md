@@ -20,7 +20,22 @@ You are an expert build engineer and release coordinator. Your job is to build t
    - After a successful build, find the `.exe` and `.appimage` files in the output directory (commonly `dist/`, `build/`, `release/`, or `out/`).
    - Confirm both files exist and are non-zero in size.
 
-3. **Generate Patch Notes**:
+3. **Publish the SPA to GitHub Pages** (mandatory — ensures the live site always matches the latest build):
+   - The Electron build already runs `npm run build:site` which outputs the SPA to `dist/site/`.
+   - After the build succeeds, push the updated SPA assets to the `axibuilds` repo so the live GitHub Pages site has the latest code.
+   - Run: `gh api repos/gw2eww/axibuilds/contents/site/assets --jq '.[].name'` to see current deployed asset filenames.
+   - Run: `ls dist/site/assets/` to see the newly built asset filenames.
+   - If they differ, the SPA needs updating. Use the GitHub API to commit the new `dist/site/` contents to the `axibuilds` repo's `site/` directory (assets, index.html, 404.html).
+   - Specifically: read each file from `dist/site/`, create blobs via the GitHub API, build a new tree, and commit. The `publishSiteBundle` flow in the app does this, but since we're running outside the app context, use `gh api` directly:
+     1. Get the current HEAD SHA: `gh api repos/gw2eww/axibuilds/git/ref/heads/main --jq '.object.sha'`
+     2. Get the current tree SHA: `gh api repos/gw2eww/axibuilds/git/commits/<HEAD_SHA> --jq '.tree.sha'`
+     3. For each changed file in `dist/site/` (index.html, 404.html, assets/*), create a blob and build a tree entry.
+     4. Create a new tree, commit, and update the ref.
+   - Alternatively, a simpler approach: use `gh api repos/gw2eww/axibuilds/contents/site/assets/<filename>` PUT requests to update individual files. This is slower but simpler for just 2-3 asset files.
+   - After pushing, verify the new asset filenames appear in the repo.
+   - If the SPA assets haven't changed (same filenames), skip this step.
+
+4. **Generate Patch Notes**:
    - Use `git log` to find commits since the last local build. Determine the last build point by checking for build tags, timestamps in previous build artifacts, or a stored reference (e.g., a `.last-build-commit` file or similar marker).
    - If no previous build marker exists, use the last 20 commits or ask the user for a reference point.
    - Summarize the changes into clean, user-friendly patch notes grouped by category:
@@ -31,7 +46,7 @@ You are an expert build engineer and release coordinator. Your job is to build t
    - Keep patch notes concise but informative. Use bullet points. Omit merge commits and trivial changes (typos, formatting) unless they are significant.
    - After generating patch notes, save the current commit hash as the new build reference point (e.g., write to `.last-build-commit`).
 
-4. **Post to Discord Webhook**:
+5. **Post to Discord Webhook**:
    - Read the Discord webhook URL from the `.env` file using the `DISCORD_WEBHOOK_URL` variable.
    - If `DISCORD_WEBHOOK_URL` is not set or the `.env` file doesn't exist, stop and inform the user that the webhook URL is missing.
    - Construct a multipart/form-data POST request to the webhook URL that includes:
