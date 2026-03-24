@@ -61,6 +61,9 @@
     "test:e2e": "npx playwright test --config tests/e2e/playwright.config.js",
     "test:e2e:headed": "npx playwright test --config tests/e2e/playwright.config.js --headed",
     "test:e2e:debug": "PWDEBUG=1 npx playwright test --config tests/e2e/playwright.config.js",
+    "test:spa": "npx playwright test --config tests/spa/playwright.config.js",
+    "test:spa:headed": "npx playwright test --config tests/spa/playwright.config.js --headed",
+    "test:spa:debug": "PWDEBUG=1 npx playwright test --config tests/spa/playwright.config.js",
     "build:app": "npm run build:site && npm run build:renderer && electron-builder --publish never",
     "build:app:linux": "npm run build:site && npm run build:renderer && electron-builder --linux --publish never",
     "build:app:win": "npm run build:site && npm run build:renderer && electron-builder --win --publish never"
