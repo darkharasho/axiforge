@@ -87,6 +87,20 @@ describe("computePublishStats", () => {
     expect(result.stats.ConditionDuration).toBe("0.0%");
   });
 
+  test("stat combo without apostrophe-s resolves correctly (issue #81)", () => {
+    // Builds imported from gw2skills may store "Wanderer" instead of "Wanderer's"
+    const equipment = {
+      slots: { chest: "Wanderer" },
+      runes: {}, infusions: {},
+    };
+    const result = computePublishStats(equipment, null, "Guardian");
+    // Wanderer's chest: Power p4=121, Vitality p4=121, Toughness s4=66, Concentration s4=66
+    expect(result.stats.Power).toBe(1000 + 121);
+    expect(result.stats.Vitality).toBe(1000 + 121);
+    expect(result.stats.Toughness).toBe(1000 + 66);
+    expect(result.stats.Concentration).toBe(66);
+  });
+
   test("equipment with no slots set returns only base stats", () => {
     const equipment = { slots: {}, runes: {}, infusions: {} };
     const result = computePublishStats(equipment, null, "Guardian");

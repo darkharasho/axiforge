@@ -133,6 +133,15 @@ describe("_normalizeStatName", () => {
     expect(_normalizeStatName(null)).toBe("");
     expect(_normalizeStatName(undefined)).toBe("");
   });
+  it("maps Wanderer → Wanderer's (issue #81)", () => {
+    expect(_normalizeStatName("Wanderer")).toBe("Wanderer's");
+  });
+  it("maps Sentinel → Sentinel's (issue #81)", () => {
+    expect(_normalizeStatName("Sentinel")).toBe("Sentinel's");
+  });
+  it("maps Diviner → Diviner's (issue #81)", () => {
+    expect(_normalizeStatName("Diviner")).toBe("Diviner's");
+  });
   it("passes through unknown stat names unchanged", () => {
     expect(_normalizeStatName("SomeNewStat")).toBe("SomeNewStat");
   });

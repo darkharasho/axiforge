@@ -2,7 +2,7 @@
 
 // Embed static constants
 // For 4-stat combos: first 2 stats are major (0.3 multiplier), last 2 are minor (0.165 multiplier)
-const STAT_COMBOS_BY_LABEL = new Map([
+const _STAT_COMBOS_ENTRIES = [
   ["Berserker's", { stats: ["Power", "Precision", "Ferocity"] }],
   ["Marauder's", { stats: ["Power", "Precision", "Vitality", "Ferocity"] }],
   ["Assassin's", { stats: ["Precision", "Power", "Ferocity"] }],
@@ -27,7 +27,15 @@ const STAT_COMBOS_BY_LABEL = new Map([
   ["Seraph", { stats: ["Precision", "ConditionDamage", "HealingPower", "Concentration"] }],
   ["Zealot's", { stats: ["Power", "Precision", "HealingPower"] }],
   ["Celestial", { stats: ["Power", "Precision", "Toughness", "Vitality", "ConditionDamage", "Ferocity", "HealingPower", "Expertise", "Concentration"] }],
-]);
+];
+// Add aliases without "'s" so imported builds (e.g. "Wanderer") resolve correctly
+const STAT_COMBOS_BY_LABEL = new Map(
+  _STAT_COMBOS_ENTRIES.flatMap(([label, combo]) => {
+    const entries = [[label, combo]];
+    if (label.endsWith("'s")) entries.push([label.slice(0, -2), combo]);
+    return entries;
+  })
+);
 
 // Ascended/Legendary stat weights per slot.
 // p/s = 3-stat major/minor; p4/s4 = 4-stat major/minor; c = Celestial per-stat.
