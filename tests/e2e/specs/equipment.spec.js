@@ -442,8 +442,8 @@ test.describe("Equipment — Stats, Runes, Sigils, Infusions", () => {
   // 14. Sentinel's, Wanderer's, Diviner's produce correct stat totals
   test("Sentinel's, Wanderer's, Diviner's produce correct stat totals", async () => {
     // Sentinel's = Vitality (primary), Power (secondary), Toughness (secondary)
-    // For Head slot: primary weight = 60, secondary weight = 43
-    // So Head with Sentinel's: Vitality +60, Power +43, Toughness +43
+    // For Head slot (ascended): primary weight = 63, secondary weight = 45
+    // So Head with Sentinel's: Vitality +63, Power +45, Toughness +45
 
     const panel = window.locator("#equipmentPanel");
     const armorSection = panel.locator(".equip-section").filter({ hasText: "Armor" }).first();
@@ -460,8 +460,8 @@ test.describe("Equipment — Stats, Runes, Sigils, Infusions", () => {
     // Check stats display — Power should have increased from base 1000
     const statsSection = panel.locator(".equip-section").filter({ hasText: "Attributes" }).first();
     const powerValue = await statsSection.locator('.equip-stat-row').first().locator(".equip-stat-value").first().textContent();
-    // Base Power is 1000, Sentinel's adds +43 Power to Head slot
-    expect(parseInt(powerValue.replace(/,/g, ""))).toBe(1043);
+    // Base Power is 1000, Sentinel's adds +45 Power to Head slot (ascended)
+    expect(parseInt(powerValue.replace(/,/g, ""))).toBe(1045);
 
     // Clear the slot for next test
     await openStatPicker(window, headSlot);
@@ -492,20 +492,20 @@ test.describe("Equipment — Stats, Runes, Sigils, Infusions", () => {
     const basePower = await getStatValue("Power");
     expect(basePower).toBe(1000);
 
-    // Set Head to Berserker's (Power primary = +60)
+    // Set Head to Berserker's (Power primary = +63 ascended)
     const headSlot = armorSection.locator(".equip-slot").first();
     await openStatPicker(window, headSlot);
     await selectStatInPicker(window, "Berserker");
 
     const afterPower = await getStatValue("Power");
-    expect(afterPower).toBe(1060); // 1000 base + 60 from Head slot
+    expect(afterPower).toBe(1063); // 1000 base + 63 from Head slot (ascended)
 
-    // Change Head to Soldier's (Power primary = +60)
+    // Change Head to Soldier's (Power primary = +63 ascended)
     await openStatPicker(window, headSlot);
     await selectStatInPicker(window, "Soldier");
 
     const soldierPower = await getStatValue("Power");
-    expect(soldierPower).toBe(1060); // Soldier's also has Power as primary
+    expect(soldierPower).toBe(1063); // Soldier's also has Power as primary
 
     // Clear the slot
     await openStatPicker(window, headSlot);
@@ -1291,9 +1291,9 @@ test.describe("Equipment — Stats Display", () => {
       expect(previewText).toContain("Power");
     }
 
-    // The important thing is that Power stat is 1060 (1000 base + 60 from Berserker's Head)
+    // The important thing is that Power stat is 1063 (1000 base + 63 from Berserker's Head, ascended)
     const powerValue = await powerRow.locator(".equip-stat-value").first().textContent();
-    expect(parseInt(powerValue.replace(/,/g, ""))).toBe(1060);
+    expect(parseInt(powerValue.replace(/,/g, ""))).toBe(1063);
 
     // Clear the slot
     await openStatPicker(window, headSlot);
