@@ -579,20 +579,13 @@ export function buildMechanicSlotsForRender({
         });
       }
     } else if (eliteSpecId === 72) {
-      // Untamed: default state is Unleash Pet (normal pet bar: attack / pet F2 / return).
-      // Toggling F5 activates Unleash Ranger (activeKit=63147), which gives the pet empowered
-      // commands at F1-F3 (Venomous Outburst, Rending Vines, Enveloping Haze).
+      // Untamed: default state is Unleash Pet — pet is unleashed and gets empowered commands
+      // at F1-F3 (Venomous Outburst, Rending Vines, Enveloping Haze).
+      // Toggling F5 activates Unleash Ranger (activeKit=63147) — ranger gets unleashed weapon
+      // skills, pet reverts to normal controls (attack / pet F2 / return).
       const unleashRangerActive = activeKit === 63147;
       if (unleashRangerActive) {
-        // Unleash Ranger active: pet gets empowered commands
-        const venomousOutburst = catalog.skillById.get(63209) || null;
-        const rendingVines = catalog.skillById.get(63258) || null;
-        const envHaze = catalog.skillById.get(63094) || null;
-        mechSlots.push({ skill: venomousOutburst, sourceId: venomousOutburst?.id || 0, isStatic: true, isSelectable: false });
-        mechSlots.push({ skill: rendingVines, sourceId: rendingVines?.id || 0, isStatic: true, isSelectable: false });
-        mechSlots.push({ skill: envHaze, sourceId: envHaze?.id || 0, isStatic: true, isSelectable: false });
-      } else {
-        // Unleash Pet active (default): normal pet controls (attack / pet F2 / return)
+        // Unleash Ranger active: pet reverts to normal controls
         mechSlots.push({ skill: null, sourceId: 0, isStatic: true, isSelectable: false, fakeCommand: "attack" });
         const petSkills = activePet?.skills || [];
         const isAquaticSlot = activePetSlotKey === "aquatic1" || activePetSlotKey === "aquatic2";
@@ -600,6 +593,14 @@ export function buildMechanicSlotsForRender({
         const f2Skill = petSkills[f2SkillIdx] || null;
         mechSlots.push({ skill: f2Skill, sourceId: f2Skill?.id || 0, isStatic: true, isSelectable: false });
         mechSlots.push({ skill: null, sourceId: 0, isStatic: true, isSelectable: false, fakeCommand: "return" });
+      } else {
+        // Unleash Pet active (default): pet gets empowered commands
+        const venomousOutburst = catalog.skillById.get(63209) || null;
+        const rendingVines = catalog.skillById.get(63258) || null;
+        const envHaze = catalog.skillById.get(63094) || null;
+        mechSlots.push({ skill: venomousOutburst, sourceId: venomousOutburst?.id || 0, isStatic: true, isSelectable: false });
+        mechSlots.push({ skill: rendingVines, sourceId: rendingVines?.id || 0, isStatic: true, isSelectable: false });
+        mechSlots.push({ skill: envHaze, sourceId: envHaze?.id || 0, isStatic: true, isSelectable: false });
       }
     } else {
       mechSlots.push({ skill: null, sourceId: 0, isStatic: true, isSelectable: false, fakeCommand: "attack" });

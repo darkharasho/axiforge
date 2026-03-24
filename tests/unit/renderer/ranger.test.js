@@ -5,7 +5,7 @@ const { createMechanicsSuite, setupMechanicsHarness } = require("./mechanicsSuit
 createMechanicsSuite("Ranger", [
   { specId: 0, expected: ["fake:attack", "12478", "fake:return"] },
   { specId: 55, expected: ["fake:attack", "12478", "fake:return"] },
-  { specId: 72, expected: ["fake:attack", "12478", "fake:return", "63344"] },
+  { specId: 72, expected: ["63209", "63258", "63094", "63344"] },
 ]);
 
 describe("renderer mechanics selection — Ranger core vs elite F skills", () => {
@@ -22,9 +22,9 @@ describe("renderer mechanics selection — Ranger core vs elite F skills", () =>
     expect(soulbeast.signatures).toEqual(core.signatures);
   });
 
-  test("Untamed default (Unleash Pet) shows normal pet bar at F1-F3", async () => {
+  test("Untamed default (Unleash Pet) shows empowered pet commands at F1-F3", async () => {
     const untamed = await resolve({ specId: 72 });
-    expect(untamed.signatures).toEqual(["fake:attack", "12478", "fake:return", "63344"]);
+    expect(untamed.signatures).toEqual(["63209", "63258", "63094", "63344"]);
   });
 });
 
@@ -51,20 +51,20 @@ describe("renderer mechanics selection — Untamed F5 Unleash toggle", () => {
     expect(f5.skill.id).toBe(63147); // Unleash Ranger (current state)
   });
 
-  test("Unleash Ranger active shows empowered pet commands at F1-F3", async () => {
+  test("Unleash Ranger active shows normal pet commands at F1-F3", async () => {
     const unleashed = await resolve({ specId: 72, activeKit: 63147 });
     const sigs = unleashed.signatures;
-    expect(sigs[0]).toBe("63209"); // Venomous Outburst
-    expect(sigs[1]).toBe("63258"); // Rending Vines
-    expect(sigs[2]).toBe("63094"); // Enveloping Haze
-  });
-
-  test("Default state (Unleash Pet) shows normal pet commands at F1-F3", async () => {
-    const untamed = await resolve({ specId: 72 });
-    const sigs = untamed.signatures;
     expect(sigs[0]).toBe("fake:attack");
     expect(sigs[1]).toBe("12478");
     expect(sigs[2]).toBe("fake:return");
+  });
+
+  test("Default state (Unleash Pet) shows empowered pet commands at F1-F3", async () => {
+    const untamed = await resolve({ specId: 72 });
+    const sigs = untamed.signatures;
+    expect(sigs[0]).toBe("63209"); // Venomous Outburst
+    expect(sigs[1]).toBe("63258"); // Rending Vines
+    expect(sigs[2]).toBe("63094"); // Enveloping Haze
   });
 });
 
