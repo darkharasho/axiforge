@@ -518,7 +518,9 @@ function serializeForPublish(build, catalog, upgradeCatalog) {
   const petById = new Map(petsArray.map((p) => [p.id, p]));
   const petDisplay = petIds.map((id) => {
     const pet = petById.get(id);
-    return pet ? { id: pet.id, name: pet.name, icon: pet.icon } : { id, name: "", icon: "" };
+    return pet
+      ? { id: pet.id, name: pet.name, icon: pet.icon, skills: pet.skills || [] }
+      : { id, name: "", icon: "", skills: [] };
   });
 
   // Legend display for Revenant
