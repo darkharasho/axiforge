@@ -1,0 +1,787 @@
+{
+  "updatedAt": "2026-03-24T21:18:47.177Z",
+  "relics": {
+    "99997": {
+      "name": "Relic of Isgarren",
+      "facts": []
+    },
+    "100031": {
+      "name": "Relic of the Monk",
+      "facts": []
+    },
+    "100048": {
+      "name": "Relic of the Ice",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 30
+        }
+      ]
+    },
+    "100063": {
+      "name": "Relic of Surging",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 30
+        }
+      ]
+    },
+    "100074": {
+      "name": "Relic of Cerus",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 30
+        }
+      ]
+    },
+    "100090": {
+      "name": "Relic of the Dragonhunter",
+      "facts": []
+    },
+    "100115": {
+      "name": "Relic of Mabon",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 2
+        }
+      ]
+    },
+    "100144": {
+      "name": "Relic of the Warrior",
+      "facts": []
+    },
+    "100148": {
+      "name": "Relic of Speed",
+      "facts": []
+    },
+    "100158": {
+      "name": "Relic of the Mirage",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 1
+        }
+      ]
+    },
+    "100165": {
+      "name": "Relic of the Necromancer",
+      "facts": []
+    },
+    "100177": {
+      "name": "Relic of Peitha",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 4
+        }
+      ]
+    },
+    "100194": {
+      "name": "Relic of the Weaver",
+      "facts": []
+    },
+    "100219": {
+      "name": "Relic of the Herald",
+      "facts": []
+    },
+    "100230": {
+      "name": "Relic of the Krait",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 30
+        }
+      ]
+    },
+    "100238": {
+      "name": "Relic of the Lich",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 60
+        }
+      ]
+    },
+    "100248": {
+      "name": "Relic of the Citadel",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 30
+        }
+      ]
+    },
+    "100262": {
+      "name": "Relic of Fireworks",
+      "facts": []
+    },
+    "100311": {
+      "name": "Relic of the Ogre",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 60
+        }
+      ]
+    },
+    "100345": {
+      "name": "Relic of the Daredevil",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 1
+        }
+      ]
+    },
+    "100368": {
+      "name": "Relic of the Scourge",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 1
+        }
+      ]
+    },
+    "100385": {
+      "name": "Relic of the Centaur",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 20
+        }
+      ]
+    },
+    "100388": {
+      "name": "Relic of the Astral Ward",
+      "facts": []
+    },
+    "100390": {
+      "name": "Relic of Antitoxin",
+      "facts": []
+    },
+    "100400": {
+      "name": "Relic of the Sunless",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 30
+        }
+      ]
+    },
+    "100403": {
+      "name": "Relic of the Golemancer",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 60
+        }
+      ]
+    },
+    "100411": {
+      "name": "Relic of the Trooper",
+      "facts": []
+    },
+    "100429": {
+      "name": "Relic of Mercy",
+      "facts": []
+    },
+    "100432": {
+      "name": "Relic of Akeem",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 10
+        }
+      ]
+    },
+    "100435": {
+      "name": "Relic of the Earth",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 30
+        }
+      ]
+    },
+    "100442": {
+      "name": "Relic of Dwayna",
+      "facts": []
+    },
+    "100450": {
+      "name": "Relic of the Chronomancer",
+      "facts": []
+    },
+    "100453": {
+      "name": "Relic of the Firebrand",
+      "facts": []
+    },
+    "100455": {
+      "name": "Relic of Durability",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 15
+        }
+      ]
+    },
+    "100461": {
+      "name": "Relic of Lyhr",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 15
+        }
+      ]
+    },
+    "100479": {
+      "name": "Relic of the Privateer",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 60
+        }
+      ]
+    },
+    "100527": {
+      "name": "Relic of the Brawler",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 8
+        }
+      ]
+    },
+    "100531": {
+      "name": "Relic of the Water",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 20
+        }
+      ]
+    },
+    "100542": {
+      "name": "Relic of the Cavalier",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 1
+        }
+      ]
+    },
+    "100557": {
+      "name": "Relic of the Wizard's Tower",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 30
+        }
+      ]
+    },
+    "100561": {
+      "name": "Relic of the Adventurer",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 20
+        }
+      ]
+    },
+    "100614": {
+      "name": "Relic of Evasion",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 1
+        }
+      ]
+    },
+    "100625": {
+      "name": "Relic of Leadership",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 30
+        }
+      ]
+    },
+    "100633": {
+      "name": "Relic of the Flock",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 10
+        }
+      ]
+    },
+    "100676": {
+      "name": "Relic of Vampirism",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 20
+        }
+      ]
+    },
+    "100693": {
+      "name": "Relic of the Afflicted",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 10
+        }
+      ]
+    },
+    "100694": {
+      "name": "Relic of the Unseen Invasion",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 5
+        }
+      ]
+    },
+    "100739": {
+      "name": "Relic of the Reaper",
+      "facts": []
+    },
+    "100752": {
+      "name": "Relic of the Pack",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 30
+        }
+      ]
+    },
+    "100775": {
+      "name": "Relic of Vass",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 10
+        }
+      ]
+    },
+    "100794": {
+      "name": "Relic of Resistance",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 10
+        }
+      ]
+    },
+    "100849": {
+      "name": "Relic of the Aristocracy",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 1
+        }
+      ]
+    },
+    "100893": {
+      "name": "Relic of the Zephyrite",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 30
+        }
+      ]
+    },
+    "100908": {
+      "name": "Relic of the Holosmith",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 30
+        }
+      ]
+    },
+    "100916": {
+      "name": "Relic of the Thief",
+      "facts": []
+    },
+    "100924": {
+      "name": "Relic of the Deadeye",
+      "facts": []
+    },
+    "100934": {
+      "name": "Relic of the Defender",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 1
+        }
+      ]
+    },
+    "100942": {
+      "name": "Relic of Dagda",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 30
+        }
+      ]
+    },
+    "100947": {
+      "name": "Relic of Fireworks",
+      "facts": []
+    },
+    "101116": {
+      "name": "Relic of Febe",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 10
+        }
+      ]
+    },
+    "101139": {
+      "name": "Relic of the Midnight King",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 1
+        }
+      ]
+    },
+    "101166": {
+      "name": "Relic of the Demon Queen",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 1
+        }
+      ]
+    },
+    "101191": {
+      "name": "Relic of Nourys",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 0.25
+        }
+      ]
+    },
+    "101198": {
+      "name": "Relic of Nayos",
+      "facts": []
+    },
+    "101268": {
+      "name": "Relic of Karakosa",
+      "facts": []
+    },
+    "101737": {
+      "name": "Relic of the Founding",
+      "facts": []
+    },
+    "101767": {
+      "name": "Relic of the Twin Generals",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 10
+        }
+      ]
+    },
+    "101801": {
+      "name": "Relic of Mosyn",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 1
+        }
+      ]
+    },
+    "101863": {
+      "name": "Relic of the Sorcerer",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 1
+        }
+      ]
+    },
+    "101955": {
+      "name": "Relic of Zakiros",
+      "facts": []
+    },
+    "102199": {
+      "name": "Relic of the Blightbringer",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 8
+        }
+      ]
+    },
+    "102245": {
+      "name": "Relic of Atrocity",
+      "facts": []
+    },
+    "102595": {
+      "name": "Relic of the Stormsinger",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 3
+        }
+      ]
+    },
+    "103015": {
+      "name": "Relic of Rivers",
+      "facts": []
+    },
+    "103424": {
+      "name": "Relic of Sorrow",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 30
+        }
+      ]
+    },
+    "103574": {
+      "name": "Relic of the Claw",
+      "facts": []
+    },
+    "103763": {
+      "name": "Relic of Geysers",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 5
+        }
+      ]
+    },
+    "103872": {
+      "name": "Relic of Mount Balrior",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 30
+        }
+      ]
+    },
+    "103901": {
+      "name": "Relic of the Mists Tide",
+      "facts": []
+    },
+    "103977": {
+      "name": "Relic of the Beehive",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 30
+        }
+      ]
+    },
+    "103984": {
+      "name": "Relic of Reunification",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 20
+        }
+      ]
+    },
+    "104022": {
+      "name": "Relic of the Steamshrieker",
+      "facts": []
+    },
+    "104241": {
+      "name": "Relic of the Eagle",
+      "facts": []
+    },
+    "104256": {
+      "name": "Relic of Altruism",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 20
+        }
+      ]
+    },
+    "104424": {
+      "name": "Relic of Thorns",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 5
+        }
+      ]
+    },
+    "104501": {
+      "name": "Relic of Fire",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 20
+        }
+      ]
+    },
+    "104733": {
+      "name": "Relic of the Phenom",
+      "facts": []
+    },
+    "104800": {
+      "name": "Relic of Bloodstone",
+      "facts": []
+    },
+    "104848": {
+      "name": "Relic of Bava Nisos",
+      "facts": []
+    },
+    "104849": {
+      "name": "Relic of Agony",
+      "facts": []
+    },
+    "104928": {
+      "name": "Relic of the Living City",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 30
+        }
+      ]
+    },
+    "104994": {
+      "name": "Relic of Mistburn",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 1
+        }
+      ]
+    },
+    "105585": {
+      "name": "Relic of the First Revenant",
+      "facts": []
+    },
+    "105652": {
+      "name": "Relic of Castora",
+      "facts": []
+    },
+    "106206": {
+      "name": "Relic of the Mist Stranger",
+      "facts": []
+    },
+    "106221": {
+      "name": "Relic of the Pirate Queen",
+      "facts": []
+    },
+    "106355": {
+      "name": "Relic of the Scoundrel",
+      "facts": []
+    },
+    "106364": {
+      "name": "Relic of the Biomancer",
+      "facts": []
+    },
+    "106916": {
+      "name": "Relic of Shackles",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 10
+        }
+      ]
+    },
+    "106920": {
+      "name": "Relic of the Nautical Beast",
+      "facts": []
+    },
+    "107030": {
+      "name": "Relic of Fog",
+      "facts": []
+    },
+    "107061": {
+      "name": "Relic of the Coral Heart",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 20
+        }
+      ]
+    },
+    "107124": {
+      "name": "Relic of the Forest Dweller",
+      "facts": [
+        {
+          "type": "Recharge",
+          "text": "Cooldown",
+          "value": 30
+        }
+      ]
+    },
+    "107192": {
+      "name": "Relic of the Alliance",
+      "facts": []
+    }
+  }
+}
