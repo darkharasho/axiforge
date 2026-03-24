@@ -153,7 +153,7 @@ function populateStateFromBuild(build) {
     legendById:         new Map((build.legendDisplay || []).map(l => [l.id, {
       id: l.id, name: l.name, icon: l.icon, swap: l.swap?.id || null,
     }])),
-    pets:               (build.petDisplay || []).map(p => ({ id: p.id, name: p.name, icon: p.icon })),
+    pets:               (build.petDisplay || []).map(p => ({ id: p.id, name: p.name, icon: p.icon, skills: p.skills || [] })),
     petById:            new Map((build.petDisplay || []).map(p => [p.id, p])),
     professionWeapons:  build.professionWeapons || {},
   };

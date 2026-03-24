@@ -442,6 +442,31 @@ describe("serializeForPublish", () => {
     expect(result.computedStats).toHaveProperty("ConditionDuration");
   });
 
+  test("petDisplay includes pet skills array for Ranger builds", () => {
+    const build = {
+      ...makeMockBuild(),
+      profession: "Ranger",
+      selectedPets: { terrestrial1: 1, terrestrial2: 5, aquatic1: 0, aquatic2: 0 },
+    };
+    const catalog = {
+      ...makeMockCatalog(),
+      pets: [
+        { id: 1, name: "Juvenile Black Bear", icon: "bear.png", type: "terrestrial",
+          skills: [{ id: 12478, name: "Bite", description: "Bite foe", icon: "bite.png" }] },
+        { id: 5, name: "Juvenile Hyena", icon: "hyena.png", type: "terrestrial",
+          skills: [{ id: 12461, name: "Howl", description: "Howl at foe", icon: "howl.png" }] },
+      ],
+    };
+    const result = serializeForPublish(build, catalog, null);
+    expect(result.petDisplay).toHaveLength(2);
+    // Each pet in petDisplay must include its skills array
+    expect(result.petDisplay[0].skills).toBeDefined();
+    expect(result.petDisplay[0].skills).toHaveLength(1);
+    expect(result.petDisplay[0].skills[0].id).toBe(12478);
+    expect(result.petDisplay[1].skills).toBeDefined();
+    expect(result.petDisplay[1].skills[0].id).toBe(12461);
+  });
+
   test("waterSkills contains aquatic weapon sets and excludes NoUnderwater mechanics", () => {
     const catalog = makeMockCatalog();
     // Add a NoUnderwater mechanic
