@@ -96,4 +96,78 @@ function compareEntity(wikiFacts, splitEntry, opts = {}) {
   return result;
 }
 
-module.exports = { compareEntity };
+/**
+ * Compare wiki-scraped relic facts against stored relicFacts.json data.
+ * Simpler than compareEntity — no WvW toggle semantics, just direct fact comparison.
+ * Uses the same buildSplitMatchTables and SPLIT_VALUE_KEYS already imported at the top.
+ */
+function compareRelicFacts(wikiFacts, storedFacts) {
+  const result = {
+    category: "match",
+    fact_diffs: [],
+    wiki_only_facts: [],
+    splits_only_facts: [],
+  };
+
+  const wFacts = Array.isArray(wikiFacts) ? wikiFacts : [];
+  const sFacts = Array.isArray(storedFacts) ? storedFacts : [];
+
+  // Both empty — nothing to compare
+  if (wFacts.length === 0 && sFacts.length === 0) {
+    result.category = "no_split";
+    return result;
+  }
+
+  // Wiki has facts but stored is empty/null — new data available
+  if (wFacts.length > 0 && sFacts.length === 0) {
+    result.category = "missing_from_splits";
+    result.wiki_only_facts = wFacts;
+    return result;
+  }
+
+  // Use existing match infrastructure (baseToSplit/splitToBase are Map<index, index>)
+  const { baseToSplit, splitToBase } = buildSplitMatchTables(wFacts, sFacts);
+
+  // Compare matched pairs
+  for (let wi = 0; wi < wFacts.length; wi++) {
+    const si = baseToSplit.get(wi);
+    if (si === undefined) continue;
+    const wf = wFacts[wi];
+    const sf = sFacts[si];
+    const fields = {};
+
+    for (const key of SPLIT_VALUE_KEYS) {
+      const wVal = wf[key];
+      const sVal = sf[key];
+      if (wVal === undefined && sVal === undefined) continue;
+      if (wVal === sVal) continue;
+      fields[key] = { wiki: wVal, splits: sVal };
+    }
+
+    if (Object.keys(fields).length > 0) {
+      result.fact_diffs.push({ text: wf.text || sf.text, type: wf.type || sf.type, fields });
+    }
+  }
+
+  // Unmatched wiki facts (always flag for relics — we have complete data)
+  for (let wi = 0; wi < wFacts.length; wi++) {
+    if (!baseToSplit.has(wi)) {
+      result.wiki_only_facts.push(wFacts[wi]);
+    }
+  }
+
+  // Unmatched stored facts
+  for (let si = 0; si < sFacts.length; si++) {
+    if (!splitToBase.has(si)) {
+      result.splits_only_facts.push(sFacts[si]);
+    }
+  }
+
+  if (result.fact_diffs.length || result.wiki_only_facts.length || result.splits_only_facts.length) {
+    result.category = "mismatch";
+  }
+
+  return result;
+}
+
+module.exports = { compareEntity, compareRelicFacts };
