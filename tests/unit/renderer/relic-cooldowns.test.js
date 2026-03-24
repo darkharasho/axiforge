@@ -111,16 +111,20 @@ describe("Relic inner cooldown display", () => {
   });
 });
 
-describe("Relic override data", () => {
-  test("RELIC_ICD_OVERRIDES maps item IDs to cooldown seconds", () => {
-    const { RELIC_ICD_OVERRIDES } = require("../../../src/main/gw2Data/relicOverrides");
+describe("Relic facts data", () => {
+  test("relicFacts.json contains expected relic entries with facts", () => {
+    const data = require("../../../tests/wiki-audit/data/relicFacts.json");
 
-    expect(RELIC_ICD_OVERRIDES).toBeInstanceOf(Map);
-    // Relic of Cerus should have 30s ICD
-    expect(RELIC_ICD_OVERRIDES.get(100074)).toBe(30);
-    // Relic of the Aristocracy should have 1s ICD
-    expect(RELIC_ICD_OVERRIDES.get(100849)).toBe(1);
+    expect(data.relics).toBeDefined();
+    // Relic of Cerus should have a Cooldown fact
+    const cerus = data.relics["100074"];
+    expect(cerus).toBeDefined();
+    expect(cerus.facts.find(f => f.type === "Recharge")).toEqual(
+      { type: "Recharge", text: "Cooldown", value: 30 }
+    );
     // Relic of Speed has no ICD
-    expect(RELIC_ICD_OVERRIDES.has(100148)).toBe(false);
+    const speed = data.relics["100148"];
+    expect(speed).toBeDefined();
+    expect(speed.facts.find(f => f.type === "Recharge")).toBeUndefined();
   });
 });
