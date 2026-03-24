@@ -268,7 +268,8 @@ export function renderBuildList() {
       try {
         publishBtn.disabled = true;
         publishBtn.textContent = "Publishing...";
-        showPublishProgress();
+        state.publishProgress[build.id] = { currentStep: "saving" };
+        showPublishProgress(build.id);
         advancePublishStep("saving");
 
         if (build.id === state.editor.id && state.editorDirty) {
@@ -282,9 +283,11 @@ export function renderBuildList() {
         advancePublishStep("pages");
 
         if (result?.pagesUrl) {
+          state.publishProgress[build.id] = { ...state.publishProgress[build.id], result: result.pagesUrl };
           await window.desktopApi.writeClipboardText(result.pagesUrl);
           showPublishResult(result.pagesUrl);
         } else {
+          state.publishProgress[build.id] = { ...state.publishProgress[build.id], result: "complete" };
           completeAllPublishSteps();
         }
 
@@ -292,6 +295,9 @@ export function renderBuildList() {
         renderBuildList();
         renderEditorMeta();
       } catch (err) {
+        if (state.publishProgress[build.id]) {
+          state.publishProgress[build.id].error = { step: "saving", message: err.message };
+        }
         showError(err);
       } finally {
         publishBtn.disabled = false;
@@ -507,7 +513,23 @@ export async function startLoginFlow() {
 export function setPublishStatusEl(el) { _el.publishStatus = el; }
 
 export function setPublishStatus(message) {
+  // Don't overwrite an active publish ticker
+  const pid = _el.publishStatus.dataset.publishId;
+  if (pid && state.publishProgress[pid]) return;
   _el.publishStatus.textContent = message || "";
+}
+
+export function getPublishTargetId() {
+  return _el.publishStatus?.dataset?.publishId || null;
+}
+
+export function syncPublishStatus(id) {
+  if (id && state.publishProgress[id]) {
+    restorePublishProgress(id);
+  } else {
+    _el.publishStatus.innerHTML = "";
+    delete _el.publishStatus.dataset.publishId;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -529,15 +551,21 @@ const PUBLISH_STEPS = [
 // Ticker row height must match CSS --ticker-row-h (20px)
 const TICKER_ROW_H = 20;
 
-export function showPublishProgress() {
+export function showPublishProgress(id) {
   _el.publishStatus.innerHTML = "";
+  if (id) _el.publishStatus.dataset.publishId = id;
 
   // Dismiss button
   const dismiss = document.createElement("button");
   dismiss.className = "publish-status__dismiss";
   dismiss.textContent = "\u00d7";
   dismiss.title = "Dismiss";
-  dismiss.addEventListener("click", () => { _el.publishStatus.innerHTML = ""; });
+  dismiss.addEventListener("click", () => {
+    const pid = _el.publishStatus.dataset.publishId;
+    if (pid) delete state.publishProgress[pid];
+    _el.publishStatus.innerHTML = "";
+    delete _el.publishStatus.dataset.publishId;
+  });
 
   // Ticker window — shows 3 rows: prev (done), current (active), next (pending)
   const ticker = document.createElement("div");
@@ -745,6 +773,31 @@ async function pollPageLive(url, resultSlot) {
   // Timeout — show URL anyway
   completeAllPublishSteps();
   _showUrlResult(url, resultSlot);
+}
+
+// ---------------------------------------------------------------------------
+// restorePublishProgress — rebuild ticker UI from state.publishProgress
+// ---------------------------------------------------------------------------
+export function restorePublishProgress(id) {
+  const entry = state.publishProgress[id];
+  if (!entry) {
+    _el.publishStatus.innerHTML = "";
+    delete _el.publishStatus.dataset.publishId;
+    return;
+  }
+  showPublishProgress(id);
+  if (entry.error) {
+    // Advance to the error step first so prior steps show as done
+    advancePublishStep(entry.error.step);
+    failPublishStep(entry.error.step, entry.error.message);
+  } else if (entry.result) {
+    completeAllPublishSteps();
+    if (entry.result !== "complete") {
+      showPublishResult(entry.result);
+    }
+  } else if (entry.currentStep) {
+    advancePublishStep(entry.currentStep);
+  }
 }
 
 // ---------------------------------------------------------------------------

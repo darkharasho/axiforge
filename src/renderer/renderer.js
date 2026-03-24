@@ -38,7 +38,7 @@ import {
   render, renderEditor, renderEditorForm, renderEditorMeta, renderBuildList,
   setPublishStatus, showError, runPagesBuildPoll, getSelectedTarget,
   showPublishProgress, advancePublishStep, completeAllPublishSteps,
-  failPublishStep, showPublishResult,
+  failPublishStep, showPublishResult, getPublishTargetId, syncPublishStatus,
 } from "./modules/render-pages.js";
 import { resolveEntityFacts } from "./modules/detail-panel.js";
 import { initWikiModal, openWikiModal } from "./modules/wiki-modal.js";
@@ -589,6 +589,8 @@ function navigateToPage(page) {
   }
   // Redraw spec connectors when editor page becomes visible (they need layout dimensions)
   if (page === "editor") {
+    // Restore publish ticker for the current editor build (if any active publish)
+    syncPublishStatus(state.editor.id);
     requestAnimationFrame(() => {
       document.querySelectorAll(".spec-card__body").forEach((body) => drawSpecConnector(body));
     });
@@ -679,39 +681,52 @@ function wireEvents() {
   });
 
   // Listen for publish progress events from main process
-  window.desktopApi.onPublishProgress((step) => {
-    advancePublishStep(step);
+  window.desktopApi.onPublishProgress((payload) => {
+    const id = typeof payload === "object" ? payload.id : null;
+    const step = typeof payload === "object" ? payload.step : payload;
+    // Store in per-ID state
+    if (id && state.publishProgress[id]) {
+      state.publishProgress[id].currentStep = step;
+    }
+    // Only advance the visible ticker if it matches the current target
+    if (!id || id === getPublishTargetId()) {
+      advancePublishStep(step);
+    }
   });
 
   el.publishSiteBtn.addEventListener("click", async () => {
-    if (!state.editor.id) {
+    const buildId = state.editor.id;
+    if (!buildId) {
       showError(new Error("Save the build first before publishing."));
       return;
     }
     let lastStep = "saving";
     try {
       el.publishSiteBtn.disabled = true;
-      showPublishProgress();
+      state.publishProgress[buildId] = { currentStep: "saving" };
+      showPublishProgress(buildId);
       advancePublishStep("saving");
 
       if (state.editorDirty) {
         const serialized = serializeEditorToBuild();
-        await window.desktopApi.saveBuild({ ...serialized, id: state.editor.id });
+        await window.desktopApi.saveBuild({ ...serialized, id: buildId });
         state.builds = await window.desktopApi.listBuilds();
         captureEditorBaseline();
       }
 
       // The main process sends progress events for loading, repo, site, encrypt, upload, deploy
-      const result = await window.desktopApi.publishBuild(state.editor.id);
+      const result = await window.desktopApi.publishBuild(buildId);
 
       // Mark all upload steps done, advance to Pages polling
       advancePublishStep("pages");
 
       if (result?.pagesUrl) {
+        state.publishProgress[buildId] = { ...state.publishProgress[buildId], result: result.pagesUrl };
         await window.desktopApi.writeClipboardText(result.pagesUrl);
         // showPublishResult marks "pages" done and polls until live
         showPublishResult(result.pagesUrl);
       } else {
+        state.publishProgress[buildId] = { ...state.publishProgress[buildId], result: "complete" };
         completeAllPublishSteps();
       }
 
@@ -719,6 +734,9 @@ function wireEvents() {
       renderBuildList();
       renderEditorMeta();
     } catch (err) {
+      if (state.publishProgress[buildId]) {
+        state.publishProgress[buildId].error = { step: lastStep, message: err.message };
+      }
       failPublishStep(lastStep, err.message);
       showError(err);
     } finally {

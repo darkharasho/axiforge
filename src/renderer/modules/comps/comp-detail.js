@@ -10,6 +10,7 @@ import {
   showPublishResult,
   completeAllPublishSteps,
   setPublishStatusEl,
+  restorePublishProgress,
 } from "../render-pages.js";
 import { roleBadgeHtml } from "../roleEstimator.js";
 import { axiforgeIcon, checkIcon, chevronDownIcon, arrowUpTrayIcon, clipboardDocumentIcon, globeAltIcon } from "../library/heroicons.js";
@@ -861,7 +862,8 @@ function bindDetailEvents(container, comp) {
     const compEl = container.querySelector("#compPublishStatus");
     if (compEl) setPublishStatusEl(compEl);
     try {
-      showPublishProgress();
+      state.publishProgress[comp.id] = { currentStep: "saving" };
+      showPublishProgress(comp.id);
       // Pre-compute boon coverage HTML to include in the published payload
       let boonCoverageHtml = "";
       try {
@@ -873,18 +875,32 @@ function bindDetailEvents(container, comp) {
       const result = await window.desktopApi.publishComp(comp.id, boonCoverageHtml);
       advancePublishStep("pages");
       if (result?.pagesUrl) {
+        state.publishProgress[comp.id] = { ...state.publishProgress[comp.id], result: result.pagesUrl };
         await window.desktopApi.writeClipboardText(result.pagesUrl);
         showPublishResult(result.pagesUrl);
       } else {
+        state.publishProgress[comp.id] = { ...state.publishProgress[comp.id], result: "complete" };
         completeAllPublishSteps();
       }
       state.comps = await window.desktopApi.listComps();
       const pubLinkEl = container.querySelector("[data-action='copy-published-link']");
       if (pubLinkEl) { pubLinkEl.disabled = false; pubLinkEl.removeAttribute("title"); }
     } catch (err) {
+      if (state.publishProgress[comp.id]) {
+        state.publishProgress[comp.id].error = { step: "loading", message: err.message };
+      }
       failPublishStep("loading", err.message);
     }
   });
+
+  // ── Restore publish status if comp has active publish state ─────────────────
+  if (state.publishProgress[comp.id]) {
+    const compEl = container.querySelector("#compPublishStatus");
+    if (compEl) {
+      setPublishStatusEl(compEl);
+      restorePublishProgress(comp.id);
+    }
+  }
 
   // ── Share dropdown ──────────────────────────────────────────────────────────
   const shareDropdown = container.querySelector(".comp-share-dropdown");
