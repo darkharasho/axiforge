@@ -14,15 +14,22 @@ A Playwright browser-based test suite for the SPA's preview (hover cards, detail
 - Tests run in Chromium (not Electron) at multiple viewport sizes
 - Parallel workers enabled (no Electron singleton constraint)
 
+## Prerequisites
+
+- `@playwright/test` must be added to `devDependencies` (currently only `playwright` is listed)
+- `gw2-class-icons` must be installed (`serializeForPublish()` reads SVG icons from `node_modules/gw2-class-icons/wiki/svg/` — already in `dependencies`)
+
+## Module Format
+
+All `tests/spa/` files use **CommonJS** (`require`/`module.exports`) to match the existing test and source conventions. The `src/main/` modules (`buildPublish.js`, `buildEncryption.js`) and `tests/e2e/helpers/` are all CJS. Using CJS throughout avoids interop issues.
+
 ## File Structure
 
 ```
 tests/
 ├── e2e/                          # existing Electron tests (untouched)
 └── spa/
-    ├── playwright.config.js      # browser config with 3 viewport projects
-    ├── global-setup.js           # starts Vite dev server
-    ├── global-teardown.js        # stops Vite dev server
+    ├── playwright.config.js      # browser config with 3 viewport projects + webServer
     ├── helpers/
     │   ├── fixture-gen.js        # serializeForPublish + encryptBuild wrapper
     │   ├── route-mock.js         # page.route() helpers for .enc interception
@@ -43,23 +50,25 @@ tests/
 ## Playwright Config
 
 - **Projects:** `desktop` (1280x800), `mobile` (375x667), `tablet` (768x1024)
-- **webServer:** Vite dev server auto-started
+- **webServer:** Playwright's `webServer` config auto-starts and stops the Vite dev server (no separate `global-setup.js`/`global-teardown.js` needed)
 - **Workers:** Parallel (no Electron singleton constraint)
 - **Traces:** On first retry (matching existing e2e convention)
 
 ### npm Scripts
 
-- `test:spa` — run SPA test suite
-- `test:spa:headed` — headed mode
-- `test:spa:debug` — PWDEBUG mode
+```json
+"test:spa": "npx playwright test --config tests/spa/playwright.config.js",
+"test:spa:headed": "npx playwright test --config tests/spa/playwright.config.js --headed",
+"test:spa:debug": "PWDEBUG=1 npx playwright test --config tests/spa/playwright.config.js"
+```
 
 ## Data Flow
 
 ### Fixture Generation (`helpers/fixture-gen.js`)
 
-Imports from main process modules:
-- `serializeForPublish()` from `src/main/buildPublish.js`
-- `encryptBuild()` from `src/main/buildEncryption.js`
+Imports from main process modules (all CJS, `require()`):
+- `serializeForPublish()` from `src/main/buildPublish.js` (depends on `src/main/statsCompute.js` transitively; reads profession icon SVGs from `node_modules/gw2-class-icons/` via `fs.readFileSync`)
+- `encryptBuild()` from `src/main/buildEncryption.js` (depends only on Node `crypto`)
 - `makeTestBuild()` / `makeTestComp()` from `tests/e2e/helpers/builds.js`
 - Profession catalogs from `tests/e2e/fixtures/`
 
