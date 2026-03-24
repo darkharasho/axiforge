@@ -292,29 +292,11 @@ export function getEquippedWeaponSkills(catalog, weapons, activeAttunement = "",
   return slots;
 }
 
-// Untamed: when Unleash Ranger is active, swap weapon skills to unleashed variants.
-// Weapon_1 (index 0) is replaced by the Unleashed Ambush skill for the current weapon type
-// (trait-granted from Unleashed Power, specialization=72, in skillById).
-// Weapons 2-5 are swapped to their unleashed flip variants via flipSkill in weaponSkillById.
+// Untamed: when Unleash Ranger is active, swap each weapon skill to its unleashed flip variant.
 export function applyUnleashWeaponFlip(catalog, weaponSkills) {
   const wById = catalog?.weaponSkillById || new Map();
-  return weaponSkills.map((skill, i) => {
-    if (!skill) return skill;
-    // Weapon_1: find the Unleashed Ambush skill matching this weapon type.
-    if (i === 0) {
-      const wt = (skill.weaponType || "").toLowerCase();
-      if (wt && catalog?.skillById) {
-        for (const s of catalog.skillById.values()) {
-          if (s.slot === "Weapon_1" && Number(s.specialization) === 72
-              && (s.weaponType || "").toLowerCase() === wt) {
-            return s;
-          }
-        }
-      }
-      return skill;
-    }
-    // Slots 2-5: swap via flipSkill to unleashed weapon skill variants.
-    if (!skill.flipSkill) return skill;
+  return weaponSkills.map((skill) => {
+    if (!skill?.flipSkill) return skill;
     return wById.get(skill.flipSkill) || skill;
   });
 }

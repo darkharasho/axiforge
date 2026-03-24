@@ -110,8 +110,7 @@ describe("getEquippedWeaponSkills — mainhand vs offhand slot restriction", () 
 });
 
 describe("applyUnleashWeaponFlip — Untamed unleashed weapon skill swap", () => {
-  // Simulate Ranger Hammer: 5 base skills + unleashed variants in weaponSkillById,
-  // plus the Unleashed Ambush skill (Relentless Whirl) in skillById.
+  // Simulate Ranger Hammer: 5 base skills each with a flipSkill pointing to an unleashed variant.
   function makeUnleashCatalog() {
     const baseSkills = [
       { id: 63118, name: "Hammer Strike",       slot: "Weapon_1", flipSkill: 63222, weaponType: "Hammer", attunement: "", dualWield: "", flags: [] },
@@ -121,31 +120,24 @@ describe("applyUnleashWeaponFlip — Untamed unleashed weapon skill swap", () =>
       { id: 69212, name: "Thump",                slot: "Weapon_5", flipSkill: 63208, weaponType: "Hammer", attunement: "", dualWield: "", flags: [] },
     ];
     const unleashSkills = [
-      // 63222 is the auto-attack chain continuation, NOT the unleashed ambush
       { id: 63222, name: "Hammer Slam",                   slot: "Weapon_1", flipSkill: 0, weaponType: "Hammer", attunement: "", dualWield: "", flags: [] },
       { id: 63335, name: "Unleashed Wild Swing",           slot: "Weapon_2", flipSkill: 0, weaponType: "Hammer", attunement: "", dualWield: "", flags: [] },
       { id: 63197, name: "Unleashed Overbearing Smash",    slot: "Weapon_3", flipSkill: 0, weaponType: "Hammer", attunement: "", dualWield: "", flags: [] },
       { id: 63131, name: "Unleashed Savage Shock Wave",     slot: "Weapon_4", flipSkill: 0, weaponType: "Hammer", attunement: "", dualWield: "", flags: [] },
       { id: 63208, name: "Unleashed Thump",                slot: "Weapon_5", flipSkill: 0, weaponType: "Hammer", attunement: "", dualWield: "", flags: [] },
     ];
-    // Unleashed Ambush skill from Unleashed Power trait (specialization=72)
-    const ambushSkill = { id: 63438, name: "Relentless Whirl", slot: "Weapon_1", specialization: 72, weaponType: "Hammer", flipSkill: 0 };
     return {
       weaponSkillById: new Map([...baseSkills, ...unleashSkills].map((s) => [s.id, s])),
-      skillById: new Map([[ambushSkill.id, ambushSkill]]),
     };
   }
 
-  test("Weapon_1 shows Unleashed Ambush, slots 2-5 show unleashed flip variants", () => {
+  test("swaps all 5 hammer skills to their unleashed flip variants", () => {
     const catalog = makeUnleashCatalog();
     const baseSkills = [63118, 69167, 69262, 69340, 69212].map((id) => catalog.weaponSkillById.get(id));
     const result = applyUnleashWeaponFlip(catalog, baseSkills);
-    // Weapon_1: Unleashed Ambush (Relentless Whirl), NOT auto-attack chain (Hammer Slam)
-    expect(result[0]?.id).toBe(63438);
-    expect(result[0]?.name).toBe("Relentless Whirl");
-    // Weapons 2-5: unleashed flip variants
-    expect(result.slice(1).map((s) => s.id)).toEqual([63335, 63197, 63131, 63208]);
-    expect(result.slice(1).map((s) => s.name)).toEqual([
+    expect(result.map((s) => s.id)).toEqual([63222, 63335, 63197, 63131, 63208]);
+    expect(result.map((s) => s.name)).toEqual([
+      "Hammer Slam",
       "Unleashed Wild Swing",
       "Unleashed Overbearing Smash",
       "Unleashed Savage Shock Wave",
@@ -153,24 +145,14 @@ describe("applyUnleashWeaponFlip — Untamed unleashed weapon skill swap", () =>
     ]);
   });
 
-  test("keeps Weapon_1 unchanged when no ambush skill exists in catalog", () => {
-    const catalog = makeUnleashCatalog();
-    catalog.skillById = new Map(); // empty — no ambush skills
-    const baseSkills = [63118, 69167, 69262, 69340, 69212].map((id) => catalog.weaponSkillById.get(id));
-    const result = applyUnleashWeaponFlip(catalog, baseSkills);
-    expect(result[0]?.id).toBe(63118); // original Hammer Strike kept
-    expect(result[1]?.id).toBe(63335); // slots 2-5 still flip
-  });
-
-  test("returns original skills for slots 2-5 when none have flipSkill", () => {
+  test("returns original skills when none have flipSkill", () => {
     const catalog = makeUnleashCatalog();
     const noFlipSkills = [
-      { id: 1, name: "Skill 1", weaponType: "Hammer", flipSkill: 0 },
+      { id: 1, name: "Skill 1", flipSkill: 0 },
       { id: 2, name: "Skill 2", flipSkill: 0 },
     ];
     const result = applyUnleashWeaponFlip(catalog, noFlipSkills);
-    expect(result[0]?.id).toBe(63438); // ambush still applies to Weapon_1
-    expect(result[1]?.id).toBe(2);     // no flip for slot 2
+    expect(result.map((s) => s.id)).toEqual([1, 2]);
   });
 
   test("preserves null entries in the weapon skill array", () => {
