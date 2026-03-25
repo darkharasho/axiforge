@@ -4,6 +4,7 @@
 import { marked } from "marked";
 import { state } from "./state.js";
 import { bindHoverPreview } from "./detail-panel.js";
+import { decodeHtmlEntities } from "./utils.js";
 
 let _el = {};
 let _markEditorChanged = () => {};
@@ -555,7 +556,7 @@ function renderPreview(markdown, container) {
     const resolved = resolveReference(category, numId);
     const icon = resolved?.icon || "";
     const iconHtml = icon ? `<img class="notes-mention__icon" src="${icon}" alt="">` : "";
-    return `<span class="notes-mention" data-type="${category}" data-id="${numId}">${iconHtml}${escapeHtml(name)} <span class="notes-mention__label">${category}</span></span>`;
+    return `<span class="notes-mention" data-type="${category}" data-id="${numId}">${iconHtml}${escapeHtml(decodeHtmlEntities(name))} <span class="notes-mention__label">${category}</span></span>`;
   });
 
   container.innerHTML = html;
