@@ -357,6 +357,17 @@ export function renderCompPage(app, comp) {
   // Bind boon coverage interactions after DOM is rendered
   if (comp.boonCoverageHtml) {
     bindBoonEvents(app, comp.builds || {});
+
+    // Collapse/expand toggle for boon coverage header
+    const boonHeader = app.querySelector(".comp-boon-cov__header");
+    const boonBody = app.querySelector(".comp-boon-cov__body");
+    const boonChevron = app.querySelector(".comp-boon-cov__chevron");
+    if (boonHeader && boonBody && boonChevron) {
+      boonHeader.addEventListener("click", () => {
+        const collapsed = boonBody.classList.toggle("comp-boon-cov__body--hidden");
+        boonChevron.textContent = collapsed ? "\u25b8" : "\u25be";
+      });
+    }
   }
 
   initMobileDetection();
