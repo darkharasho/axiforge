@@ -17,6 +17,7 @@ import {
   xMarkIcon,
   checkIcon,
   arrowDownTrayIcon,
+  arrowUpTrayIcon,
   linkIcon,
   axiforgeIcon,
   compPlusIcon,
@@ -86,6 +87,20 @@ export function renderToolbar() {
           </button>
           <button type="button" class="lib-import-dropdown__item" data-import-type="sharecode">
             ${axiforgeIcon} AxiCode
+          </button>
+          <div class="lib-import-dropdown__sep"></div>
+          <button type="button" class="lib-import-dropdown__item" data-import-type="axicode-file">
+            ${arrowDownTrayIcon} .axicode File
+          </button>
+        </div>
+      </div>
+      <div class="lib-import-dropdown" id="lib-export-dropdown">
+        <button type="button" id="lib-export-btn" class="btn lib-toolbar__new-btn lib-import-dropdown__trigger">
+          ${arrowUpTrayIcon} Export
+        </button>
+        <div class="lib-import-dropdown__menu" id="lib-export-menu">
+          <button type="button" class="lib-import-dropdown__item" data-export-type="all">
+            ${arrowUpTrayIcon} Export All (.axicode)
           </button>
         </div>
       </div>
@@ -410,6 +425,30 @@ function bindToolbarEvents(container) {
       if (item.dataset.importType === "chatlink") _callbacks.onImportChatLink?.();
       else if (item.dataset.importType === "gw2skills") _callbacks.onImportGw2Skills?.();
       else if (item.dataset.importType === "sharecode") _callbacks.onImportShareCode?.();
+      else if (item.dataset.importType === "axicode-file") _callbacks.onImportAxicodeFile?.();
+    });
+  });
+
+  // Export dropdown
+  const exportDropdown = container.querySelector("#lib-export-dropdown");
+  const exportMenu = container.querySelector("#lib-export-menu");
+  container.querySelector("#lib-export-btn")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const isOpen = exportDropdown.classList.toggle("lib-import-dropdown--open");
+    if (isOpen) {
+      const closeHandler = (evt) => {
+        if (!exportDropdown.contains(evt.target)) {
+          exportDropdown.classList.remove("lib-import-dropdown--open");
+          document.removeEventListener("click", closeHandler);
+        }
+      };
+      setTimeout(() => document.addEventListener("click", closeHandler), 0);
+    }
+  });
+  exportMenu?.querySelectorAll("[data-export-type]").forEach((item) => {
+    item.addEventListener("click", () => {
+      exportDropdown.classList.remove("lib-import-dropdown--open");
+      _callbacks.onExportAxicode?.("visible");
     });
   });
 

@@ -230,6 +230,11 @@
   flex-shrink: 0;
   color: #889;
 }
+.lib-import-dropdown__sep {
+  height: 1px;
+  background: var(--border-primary, #333);
+  margin: 4px 0;
+}
 
 /* Breadcrumb */
 .lib-breadcrumb__item {
