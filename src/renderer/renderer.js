@@ -260,6 +260,23 @@ initSettingsCallbacks({ refreshOnboardingStatus, render });
     }, 5000);
   });
 
+  if (el.updateVersionLabel) {
+    el.updateVersionLabel.style.cursor = "pointer";
+    el.updateVersionLabel.title = "Click to check for updates";
+    el.updateVersionLabel.addEventListener("click", () => {
+      if (el.updateVersionLabel.classList.contains("titlebar__dev-badge")) return;
+      const prev = el.updateVersionLabel.textContent;
+      el.updateVersionLabel.textContent = "Checking...";
+      window.desktopApi.checkForUpdates?.();
+      // Restore after timeout if no update event fires
+      setTimeout(() => {
+        if (el.updateVersionLabel.textContent === "Checking...") {
+          el.updateVersionLabel.textContent = prev;
+        }
+      }, 10000);
+    });
+  }
+
   if (el.updateRestartBtn) {
     el.updateRestartBtn.addEventListener("click", () => {
       window.desktopApi.restartApp?.();
