@@ -32,6 +32,7 @@ import {
   createDefaultSpecializationSelections, createDefaultSkillSelections,
   computeEditorSignature,
   computeUnsavedChangeSummary,
+  normalizeImportedSkills,
 } from "./modules/editor.js";
 import {
   initRenderPagesDom, initRenderPagesCallbacks,
@@ -44,6 +45,7 @@ import { resolveEntityFacts } from "./modules/detail-panel.js";
 import { initWikiModal, openWikiModal } from "./modules/wiki-modal.js";
 import { initDetailModal, openDetailModal } from "./modules/detail-modal.js";
 import { initConfirmModal } from "./modules/confirm-modal.js";
+import { initImportConflictModal } from "./modules/import-conflict-modal.js";
 import { initSettingsModal, initSettingsCallbacks } from "./modules/settings-modal.js";
 import { initLibrary, renderLibrary, handleLibraryKeydown } from "./modules/library/library.js";
 import { clearUndo as clearLibraryUndo } from "./modules/library/undo.js";
@@ -104,6 +106,7 @@ initCustomSelect({ bindHoverPreview, onError: showError });
 initWikiModal();
 initDetailModal();
 initConfirmModal();
+initImportConflictModal();
 initSettingsModal();
 initDetailPanel(
   { detailHost: el.detailHost, hoverPreview: el.hoverPreview, expandBtn: el.detailExpandBtn },
@@ -447,7 +450,16 @@ async function importBuildJsonFromClipboard() {
     const trimmed = String(text).trim();
     let parsed;
     if (trimmed.startsWith("<AxiForge:") && trimmed.endsWith(">")) {
-      parsed = await window.desktopApi.decodeShareCode(trimmed);
+      const decoded = await window.desktopApi.decodeShareCode(trimmed);
+      // Normalize axicode skills format (flat healId/utilityIds/eliteId → nested heal.id)
+      const skills = normalizeImportedSkills(decoded);
+      const underwaterSkills = normalizeImportedSkills({ skills: decoded.underwaterSkills || {} });
+      // Preserve traitChoices on each spec so enforceEditorConsistency can resolve them
+      const specializations = (decoded.specializations || []).map((s) => ({
+        ...s,
+        _traitChoices: Array.isArray(s.traitChoices) ? s.traitChoices : null,
+      }));
+      parsed = { ...decoded, skills, underwaterSkills, specializations };
     } else {
       parsed = parseBuildImportPayload(trimmed);
     }

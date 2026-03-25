@@ -91,6 +91,16 @@ body:
     validations:
       required: false
 
+  - type: textarea
+    id: axicode
+    attributes:
+      label: Axicode
+      description: If you have an axicode for the build, paste it here. This helps us reproduce the issue.
+      placeholder: e.g. [&abc123...]
+      render: text
+    validations:
+      required: false
+
   - type: input
     id: version
     attributes:

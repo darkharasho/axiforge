@@ -134,12 +134,27 @@ export function enforceEditorConsistency(options = {}) {
     if (!spec) continue;
     used.add(spec.id);
     const majors = getMajorTraitsByTier(spec, catalog);
+    // If traitChoices (from axicode import) exist and majorChoices are all 0,
+    // resolve the 1-based position indices to actual trait IDs.
+    // Check both _traitChoices (normalized imports) and traitChoices (raw axicode saves).
+    const tc = Array.isArray(current._traitChoices) ? current._traitChoices
+      : Array.isArray(current.traitChoices) ? current.traitChoices : null;
+    const resolveForTier = (tier) => {
+      const existing = current.majorChoices?.[tier];
+      if (existing) return chooseTraitId(existing, majors[tier]);
+      if (tc) {
+        const posIdx = (Number(tc[tier - 1]) || 1) - 1;
+        const resolved = Number(majors[tier]?.[posIdx]?.id) || 0;
+        if (resolved) return resolved;
+      }
+      return chooseTraitId(0, majors[tier]);
+    };
     nextSpecs.push({
       specializationId: spec.id,
       majorChoices: {
-        1: chooseTraitId(current.majorChoices?.[1], majors[1]),
-        2: chooseTraitId(current.majorChoices?.[2], majors[2]),
-        3: chooseTraitId(current.majorChoices?.[3], majors[3]),
+        1: resolveForTier(1),
+        2: resolveForTier(2),
+        3: resolveForTier(3),
       },
     });
   }
@@ -669,6 +684,11 @@ export async function loadBuildIntoEditor(build, options = {}) {
             2: Number(entry?.majorChoices?.[2]) || 0,
             3: Number(entry?.majorChoices?.[3]) || 0,
           },
+          ...(() => {
+            const tc = Array.isArray(entry?._traitChoices) ? entry._traitChoices
+              : Array.isArray(entry?.traitChoices) ? entry.traitChoices : null;
+            return tc ? { _traitChoices: tc } : {};
+          })(),
         }))
       : [],
     skills: {

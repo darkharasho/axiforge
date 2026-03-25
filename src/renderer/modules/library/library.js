@@ -2,6 +2,7 @@
 // This is the main entry point for the library page.
 
 import { state } from "../state.js";
+import { normalizeImportedSkills } from "../editor.js";
 
 import {
   loadFolders,
@@ -27,6 +28,7 @@ import {
 import { initDragDrop, wireDragDropEvents } from "./drag-drop.js";
 import { compIcon } from "./heroicons.js";
 import { pushUndo, popUndo } from "./undo.js";
+import { handleAxicodeExport, handleAxicodeImport } from "./axicode-io.js";
 
 // ─── App-level callbacks (injected at init) ────────────────────────────────────
 
@@ -509,6 +511,26 @@ async function handleImportShareCode(targetFolderId) {
   if (!result) return;
   try {
     const decoded = await window.desktopApi.decodeShareCode(result.code);
+    // Normalize axicode format to match the internal build store format.
+    // Skills: convert flat healId/utilityIds/eliteId → nested { heal: {id}, utility: [{id}], elite: {id} }
+    decoded.skills = normalizeImportedSkills(decoded);
+    decoded.underwaterSkills = normalizeImportedSkills({ skills: decoded.underwaterSkills || {} });
+    // Specializations: extract elite spec name from axicode label and
+    // convert traitChoices → _traitChoices for later resolution by the editor.
+    const labelMatch = result.code.match(/^<AxiForge:([^:]+):/);
+    const axicodeLabel = labelMatch?.[1] || null;
+    const isCoreBuild = axicodeLabel && axicodeLabel === decoded.profession;
+    decoded.specializations = (decoded.specializations || []).map((s, i) => {
+      // The last spec is typically the elite; the axicode label is its name
+      const isElite = !isCoreBuild && axicodeLabel && i === (decoded.specializations.length - 1);
+      return {
+        ...s,
+        name: s.name || (isElite ? axicodeLabel : ""),
+        elite: s.elite ?? isElite,
+        majorChoices: s.majorChoices || { 1: 0, 2: 0, 3: 0 },
+        _traitChoices: Array.isArray(s.traitChoices) ? s.traitChoices : null,
+      };
+    });
     decoded.title = result.name || decoded.title || "Imported Build";
     if (folderId) decoded.folderId = folderId;
     const saved = await window.desktopApi.saveBuild(decoded);
@@ -519,6 +541,19 @@ async function handleImportShareCode(targetFolderId) {
     console.error("Import failed:", err);
     showToast("Import failed: " + (err.message || "Unknown error"), "error");
   }
+}
+
+async function handleExportAxicode(mode) {
+  await handleAxicodeExport(mode, null, showToast);
+}
+
+async function handleExportAxicodeFolder(folderId) {
+  await handleAxicodeExport(null, folderId, showToast);
+}
+
+async function handleImportAxicodeFile(targetFolderId) {
+  const folderId = targetFolderId ?? (state.currentFolder?.type === "custom" ? state.currentFolder.id : null);
+  await handleAxicodeImport(folderId, renderLibrary, showToast);
 }
 
 /**
@@ -1188,6 +1223,9 @@ function _buildSharedCallbacks() {
     onImportChatLink: handleImportChatLink,
     onImportGw2Skills: handleImportGw2Skills,
     onImportShareCode: handleImportShareCode,
+    onExportAxicode: handleExportAxicode,
+    onExportAxicodeFolder: handleExportAxicodeFolder,
+    onImportAxicodeFile: handleImportAxicodeFile,
     onPasteJson: handlePasteJson,
     onPublish: handlePublish,
     onBuildInfo: handleBuildInfo,

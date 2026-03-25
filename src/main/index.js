@@ -24,6 +24,7 @@ const { buildSpaBundle, buildEncryptedBuildFile, buildEncryptedCompFile, buildRe
 const { serializeForPublish } = require("./buildPublish");
 const { serializeCompForPublish } = require("./compPublish");
 const { initAutoUpdate } = require("./autoUpdate");
+const { registerAxicodeFileHandlers } = require("./axicodeFile");
 
 const DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL || "";
 const APP_PROFILE = process.env.APP_PROFILE;
@@ -989,6 +990,9 @@ app.whenReady().then(async () => {
     });
     return true;
   });
+
+  // .axicode file export/import
+  registerAxicodeFileHandlers(win);
 });
 
 app.on("window-all-closed", () => {

@@ -61,6 +61,10 @@ contextBridge.exposeInMainWorld("desktopApi", {
   isShareCode: (text) => ipcRenderer.invoke("builds:is-share-code", text),
   encodeCompShareCode: (compId) => ipcRenderer.invoke("comps:encode-share-code", compId),
   importCompShareCode: (code) => ipcRenderer.invoke("comps:import-share-code", code),
+  // .axicode file export/import
+  exportAxicodeFile: (builds, folders, comps) =>
+    ipcRenderer.invoke("axicode-file:export", { builds, folders, comps }),
+  importAxicodeFile: () => ipcRenderer.invoke("axicode-file:import"),
   listProfessions: () => ipcRenderer.invoke("gw2:list-professions"),
   getProfessionCatalog: (professionId, gameMode) =>
     ipcRenderer.invoke("gw2:get-profession-catalog", professionId, gameMode),
