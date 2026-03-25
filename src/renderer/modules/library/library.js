@@ -28,6 +28,7 @@ import {
 import { initDragDrop, wireDragDropEvents } from "./drag-drop.js";
 import { compIcon } from "./heroicons.js";
 import { pushUndo, popUndo } from "./undo.js";
+import { handleAxicodeExport, handleAxicodeImport } from "./axicode-io.js";
 
 // ─── App-level callbacks (injected at init) ────────────────────────────────────
 
@@ -540,6 +541,19 @@ async function handleImportShareCode(targetFolderId) {
     console.error("Import failed:", err);
     showToast("Import failed: " + (err.message || "Unknown error"), "error");
   }
+}
+
+async function handleExportAxicode(mode) {
+  await handleAxicodeExport(mode, null, showToast);
+}
+
+async function handleExportAxicodeFolder(folderId) {
+  await handleAxicodeExport(null, folderId, showToast);
+}
+
+async function handleImportAxicodeFile(targetFolderId) {
+  const folderId = targetFolderId ?? (state.currentFolder?.type === "custom" ? state.currentFolder.id : null);
+  await handleAxicodeImport(folderId, renderLibrary, showToast);
 }
 
 /**
@@ -1209,6 +1223,9 @@ function _buildSharedCallbacks() {
     onImportChatLink: handleImportChatLink,
     onImportGw2Skills: handleImportGw2Skills,
     onImportShareCode: handleImportShareCode,
+    onExportAxicode: handleExportAxicode,
+    onExportAxicodeFolder: handleExportAxicodeFolder,
+    onImportAxicodeFile: handleImportAxicodeFile,
     onPasteJson: handlePasteJson,
     onPublish: handlePublish,
     onBuildInfo: handleBuildInfo,
