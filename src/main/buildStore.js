@@ -3,6 +3,8 @@ const path = require("node:path");
 const crypto = require("node:crypto");
 
 class BuildStore {
+  #settingsQueue = Promise.resolve();
+
   constructor(baseDir) {
     this.baseDir = baseDir;
     this.buildsPath = path.join(baseDir, "builds.json");
@@ -124,10 +126,14 @@ class BuildStore {
     return data[key] ?? null;
   }
 
-  async setSetting(key, value) {
-    const data = await this.#readJson(this.settingsPath, {});
-    data[key] = value;
-    await this.#writeJson(this.settingsPath, data);
+  setSetting(key, value) {
+    const op = this.#settingsQueue.then(async () => {
+      const data = await this.#readJson(this.settingsPath, {});
+      data[key] = value;
+      await this.#writeJson(this.settingsPath, data);
+    });
+    this.#settingsQueue = op.catch(() => {});
+    return op;
   }
 }
 
