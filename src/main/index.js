@@ -540,15 +540,18 @@ app.whenReady().then(async () => {
 
     // Enrich build data for the SPA
     progress("encrypt");
-    let enrichedBuild = build;
+    let enrichedBuild;
     try {
       const [catalog, upgradeCatalog] = await Promise.all([
         getProfessionCatalog(build.profession, "en"),
         getUpgradeCatalog("en"),
       ]);
       enrichedBuild = serializeForPublish(build, catalog, upgradeCatalog);
-    } catch {
-      // Fall back to un-enriched build if catalog unavailable
+    } catch (err) {
+      throw new Error(
+        `Failed to enrich build data: ${err?.message || err}. ` +
+        "Check your internet connection and try again."
+      );
     }
     // Pre-compute GW2 chat link so the SPA can display it without API calls
     try {
@@ -650,16 +653,19 @@ app.whenReady().then(async () => {
         progress(`builds:${unpubIdx + 1}:${unpublishedBuilds.length}:${build.title || build.profession || "Build"}`);
       }
 
-      // Enrich build (with fallback)
-      let enrichedBuild = build;
+      // Enrich build — required for the SPA to display skills and traits
+      let enrichedBuild;
       try {
         const [catalog, upgradeCatalog] = await Promise.all([
           getProfessionCatalog(build.profession, "en"),
           getUpgradeCatalog("en"),
         ]);
         enrichedBuild = serializeForPublish(build, catalog, upgradeCatalog);
-      } catch {
-        // Catalog unavailable — use unenriched build
+      } catch (err) {
+        throw new Error(
+          `Failed to enrich build "${build.title || build.profession}": ${err?.message || err}. ` +
+          "Check your internet connection and try again."
+        );
       }
       // Pre-compute GW2 chat link so the SPA can display it without API calls
       try {
