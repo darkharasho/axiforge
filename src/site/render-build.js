@@ -88,11 +88,23 @@ function populateStateFromBuild(build) {
   state.editor.gameMode                = build.gameMode || "pve";
   state.editor.equipment               = build.equipment;
   // The renderer reads specializationId but the build store uses id.
-  // Normalize so both fields are present.
-  state.editor.specializations         = (build.specializations || []).map(s => ({
-    ...s,
-    specializationId: s.specializationId || s.id || 0,
-  }));
+  // Normalize so both fields are present; resolve _traitChoices if needed.
+  state.editor.specializations         = (build.specializations || []).map(s => {
+    const entry = { ...s, specializationId: s.specializationId || s.id || 0 };
+    // Resolve _traitChoices (axicode position indices) → majorChoices (trait IDs) if needed
+    const tc = Array.isArray(s._traitChoices) ? s._traitChoices : null;
+    const mc = entry.majorChoices || { 1: 0, 2: 0, 3: 0 };
+    if (tc && !Object.values(mc).some(v => v)) {
+      const mbt = s.majorTraitsByTier || {};
+      entry.majorChoices = {};
+      for (const tier of [1, 2, 3]) {
+        const posIdx = (Number(tc[tier - 1]) || 1) - 1;
+        const traitsInTier = (mbt[tier] || []);
+        entry.majorChoices[tier] = Number(traitsInTier[posIdx]?.id) || Number(traitsInTier[0]?.id) || 0;
+      }
+    }
+    return entry;
+  });
   // The build store saves skills as { heal: {obj}, utility: [{obj}], elite: {obj} }
   // but the renderer expects { healId: number, utilityIds: [number], eliteId: number }.
   // Convert to the editor format.

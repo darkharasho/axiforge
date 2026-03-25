@@ -483,3 +483,107 @@ describe("serializeForPublish", () => {
     expect(waterMechIds).not.toContain(20000);
   });
 });
+
+// ── _traitChoices resolution and spec enrichment ────────────────────────────
+
+describe("serializeForPublish — axicode _traitChoices resolution", () => {
+  function makeAxicodeImportBuild() {
+    return {
+      ...makeMockBuild(),
+      specializations: [
+        { id: 42, majorChoices: { 1: 0, 2: 0, 3: 0 }, _traitChoices: [2, 2, 2] },
+        { id: 46, majorChoices: { 1: 0, 2: 0, 3: 0 }, _traitChoices: [1, 1, 3] },
+        { id: 62, name: "Firebrand", elite: true, majorChoices: { 1: 0, 2: 0, 3: 0 }, _traitChoices: [2, 2, 1] },
+      ],
+    };
+  }
+
+  function makeGuardianCatalog() {
+    const catalog = makeMockCatalog();
+    catalog.specializations = [
+      { id: 42, name: "Zeal", elite: false, icon: "zeal.png", background: "zeal-bg.png",
+        majorTraits: [634, 628, 653, 637, 643, 2017, 635, 648, 1925],
+        minorTraits: [640, 641, 642] },
+      { id: 46, name: "Virtues", elite: false, icon: "virtues.png", background: "virtues-bg.png",
+        majorTraits: [624, 625, 617, 610, 621, 603, 622, 554, 612],
+        minorTraits: [613, 614, 615] },
+      { id: 62, name: "Firebrand", elite: true, icon: "fb.png", background: "fb-bg.png",
+        majorTraits: [2075, 2101, 2086, 2063, 2076, 2116, 2105, 2179, 2159],
+        minorTraits: [2070, 2071, 2072] },
+    ];
+    // Traits with tier info
+    const traits = [
+      // Zeal traits
+      { id: 634, tier: 1 }, { id: 628, tier: 1 }, { id: 653, tier: 1 },
+      { id: 637, tier: 2 }, { id: 643, tier: 2 }, { id: 2017, tier: 2 },
+      { id: 635, tier: 3 }, { id: 648, tier: 3 }, { id: 1925, tier: 3 },
+      // Virtues traits
+      { id: 624, tier: 1 }, { id: 625, tier: 1 }, { id: 617, tier: 1 },
+      { id: 610, tier: 2 }, { id: 621, tier: 2 }, { id: 603, tier: 2 },
+      { id: 622, tier: 3 }, { id: 554, tier: 3 }, { id: 612, tier: 3 },
+      // Firebrand traits
+      { id: 2075, tier: 1 }, { id: 2101, tier: 1 }, { id: 2086, tier: 1 },
+      { id: 2063, tier: 2 }, { id: 2076, tier: 2 }, { id: 2116, tier: 2 },
+      { id: 2105, tier: 3 }, { id: 2179, tier: 3 }, { id: 2159, tier: 3 },
+      // Minor traits
+      { id: 640, tier: 1 }, { id: 641, tier: 2 }, { id: 642, tier: 3 },
+      { id: 613, tier: 1 }, { id: 614, tier: 2 }, { id: 615, tier: 3 },
+      { id: 2070, tier: 1 }, { id: 2071, tier: 2 }, { id: 2072, tier: 3 },
+    ];
+    catalog.traits = traits;
+    return catalog;
+  }
+
+  test("resolves _traitChoices to actual majorChoices trait IDs", () => {
+    const build = makeAxicodeImportBuild();
+    const catalog = makeGuardianCatalog();
+    const result = serializeForPublish(build, catalog, null);
+
+    // Zeal: [2,2,2] → 2nd trait per tier
+    expect(result.specializations[0].majorChoices[1]).toBe(628);
+    expect(result.specializations[0].majorChoices[2]).toBe(643);
+    expect(result.specializations[0].majorChoices[3]).toBe(648);
+
+    // Virtues: [1,1,3] → 1st, 1st, 3rd
+    expect(result.specializations[1].majorChoices[1]).toBe(624);
+    expect(result.specializations[1].majorChoices[2]).toBe(610);
+    expect(result.specializations[1].majorChoices[3]).toBe(612);
+
+    // Firebrand: [2,2,1] → 2nd, 2nd, 1st
+    expect(result.specializations[2].majorChoices[1]).toBe(2101);
+    expect(result.specializations[2].majorChoices[2]).toBe(2076);
+    expect(result.specializations[2].majorChoices[3]).toBe(2105);
+  });
+
+  test("enriches spec name, elite, icon, background from catalog", () => {
+    const build = makeAxicodeImportBuild();
+    // Remove name/elite from non-elite specs to simulate raw axicode
+    build.specializations[0] = { id: 42, majorChoices: { 1: 0, 2: 0, 3: 0 }, _traitChoices: [2, 2, 2] };
+    build.specializations[1] = { id: 46, majorChoices: { 1: 0, 2: 0, 3: 0 }, _traitChoices: [1, 1, 3] };
+
+    const catalog = makeGuardianCatalog();
+    const result = serializeForPublish(build, catalog, null);
+
+    expect(result.specializations[0].name).toBe("Zeal");
+    expect(result.specializations[0].elite).toBe(false);
+    expect(result.specializations[0].icon).toBe("zeal.png");
+    expect(result.specializations[0].background).toBe("zeal-bg.png");
+
+    expect(result.specializations[2].name).toBe("Firebrand");
+    expect(result.specializations[2].elite).toBe(true);
+  });
+
+  test("does not override existing majorChoices with _traitChoices", () => {
+    const build = makeAxicodeImportBuild();
+    // Give the first spec real majorChoices
+    build.specializations[0].majorChoices = { 1: 653, 2: 637, 3: 1925 };
+
+    const catalog = makeGuardianCatalog();
+    const result = serializeForPublish(build, catalog, null);
+
+    // Real majorChoices should be preserved
+    expect(result.specializations[0].majorChoices[1]).toBe(653);
+    expect(result.specializations[0].majorChoices[2]).toBe(637);
+    expect(result.specializations[0].majorChoices[3]).toBe(1925);
+  });
+});
