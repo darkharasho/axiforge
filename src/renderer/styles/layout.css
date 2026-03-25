@@ -61,7 +61,11 @@
   font-weight: 600;
   letter-spacing: 0.06em;
   color: color-mix(in srgb, var(--text-dim, #7a9abf) 60%, transparent);
-  transition: opacity 0.3s ease, transform 0.3s ease;
+  transition: opacity 0.3s ease, transform 0.3s ease, color 0.2s ease;
+  cursor: pointer;
+}
+.titlebar__version:hover {
+  color: var(--text-dim, #7a9abf);
 }
 
 .titlebar__progress {
