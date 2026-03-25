@@ -854,7 +854,9 @@ async function getUpgradeCatalog(lang = "en") {
   _upgradeCatalogPromise = (async () => {
     const { RUNE_ITEM_IDS, SIGIL_ITEM_IDS, INFUSION_ITEM_IDS, WVW_INFUSION_IDS, ENRICHMENT_ITEM_IDS, FOOD_ITEM_IDS, UTILITY_ITEM_IDS, RELIC_ITEM_IDS } = require("./upgradeIds");
     const { FOOD_BUFF_OVERRIDES } = require("./foodOverrides");
-    const { RELIC_ICD_OVERRIDES } = require("./relicOverrides");
+    const _relicFactsPath = require("path").join(__dirname, "../../../tests/wiki-audit/data/relicFacts.json");
+    const _relicFactsData = JSON.parse(require("fs").readFileSync(_relicFactsPath, "utf8"));
+    const _relicFactsIndex = _relicFactsData.relics || {};
 
     const [runeItems, sigilItems, infusionItems, enrichmentItems, foodItems, utilityItems, relicItems] = await Promise.all([
       fetchGw2ByIds("items", RUNE_ITEM_IDS, lang),
@@ -911,8 +913,8 @@ async function getUpgradeCatalog(lang = "en") {
       enrichments: enrichmentItems.map(mapItem).sort((a, b) => a.name.localeCompare(b.name)),
       relics: relicItems.map((item) => {
         const mapped = mapItem(item);
-        const cd = RELIC_ICD_OVERRIDES.get(item.id);
-        if (cd != null) mapped.facts = [{ type: "Recharge", text: "Cooldown", value: cd }];
+        const relicData = _relicFactsIndex[String(item.id)];
+        if (relicData?.facts?.length) mapped.facts = relicData.facts;
         return mapped;
       }).sort((a, b) => a.name.localeCompare(b.name)),
       foods: foodItems.filter((item) => item.details?.type === "Food").map(mapFood).sort((a, b) => a.name.localeCompare(b.name)),

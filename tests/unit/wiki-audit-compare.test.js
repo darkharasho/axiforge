@@ -74,3 +74,58 @@ describe("compareEntity", () => {
     expect(result.splits_only_facts).toHaveLength(1);
   });
 });
+
+const { compareRelicFacts } = require("../wiki-audit/compare");
+
+describe("compareRelicFacts", () => {
+  test("returns match when wiki facts equal stored facts", () => {
+    const wikiFacts = [
+      { type: "Recharge", text: "Cooldown", value: 30 },
+      { type: "Number", text: "Number of Targets", value: 5 },
+    ];
+    const storedFacts = [
+      { type: "Recharge", text: "Cooldown", value: 30 },
+      { type: "Number", text: "Number of Targets", value: 5 },
+    ];
+    const result = compareRelicFacts(wikiFacts, storedFacts);
+    expect(result.category).toBe("match");
+  });
+
+  test("returns mismatch when a fact value differs", () => {
+    const wikiFacts = [
+      { type: "Recharge", text: "Cooldown", value: 20 },
+    ];
+    const storedFacts = [
+      { type: "Recharge", text: "Cooldown", value: 30 },
+    ];
+    const result = compareRelicFacts(wikiFacts, storedFacts);
+    expect(result.category).toBe("mismatch");
+    expect(result.fact_diffs[0].fields.value).toEqual({ wiki: 20, splits: 30 });
+  });
+
+  test("returns missing_from_splits when wiki has facts but stored is empty", () => {
+    const wikiFacts = [
+      { type: "Recharge", text: "Cooldown", value: 10 },
+    ];
+    const result = compareRelicFacts(wikiFacts, []);
+    expect(result.category).toBe("missing_from_splits");
+  });
+
+  test("returns missing_from_splits when stored is null", () => {
+    const wikiFacts = [
+      { type: "Recharge", text: "Cooldown", value: 10 },
+    ];
+    const result = compareRelicFacts(wikiFacts, null);
+    expect(result.category).toBe("missing_from_splits");
+  });
+
+  test("returns no_split when both wiki and stored are empty", () => {
+    const result = compareRelicFacts([], []);
+    expect(result.category).toBe("no_split");
+  });
+
+  test("returns no_split when wiki is empty and stored is null", () => {
+    const result = compareRelicFacts([], null);
+    expect(result.category).toBe("no_split");
+  });
+});

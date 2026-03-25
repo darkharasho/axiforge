@@ -390,13 +390,16 @@
     const s = data.summary || {};
     const items = [
       { label:"Checked",          value:s.total_checked       ?? 0, cls:"stat-checked" },
+    ];
+    if (s.relics_checked) items.push({ label:"Relics Checked", value:s.relics_checked, cls:"stat-checked" });
+    items.push(
       { label:"Matches",          value:s.matches             ?? 0, cls:"stat-match" },
       { label:"Mismatches",       value:s.mismatches          ?? 0, cls:"stat-mismatch" },
       { label:"Missing (Splits)", value:s.missing_from_splits ?? 0, cls:"stat-missing-s" },
       { label:"Missing (Wiki)",   value:s.missing_from_wiki   ?? 0, cls:"stat-missing-w" },
       { label:"No Split",         value:s.no_split            ?? 0, cls:"stat-no-split" },
       { label:"Errors",           value:s.errors              ?? 0, cls:"stat-error" },
-    ];
+    );
     summaryEl.innerHTML = items.map(i =>
       '<div class="stat ' + i.cls + '"><span class="label">' + esc(i.label) + '</span><span class="value">' + i.value + '</span></div>'
     ).join("");
