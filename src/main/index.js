@@ -56,8 +56,15 @@ function createWindow() {
     },
   });
 
-  // Show window without stealing focus from the user's active app
-  win.once("ready-to-show", () => win.showInactive());
+  // In dev, show without stealing focus so hot-reloads aren't disruptive.
+  // In production, focus the window normally on launch.
+  win.once("ready-to-show", () => {
+    if (DEV_SERVER_URL) {
+      win.showInactive();
+    } else {
+      win.show();
+    }
+  });
 
   win.webContents.on("will-attach-webview", (event, webPreferences, params) => {
     // Strip any preload the renderer tries to attach — prevents privilege escalation
