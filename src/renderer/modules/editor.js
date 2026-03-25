@@ -684,7 +684,11 @@ export async function loadBuildIntoEditor(build, options = {}) {
             2: Number(entry?.majorChoices?.[2]) || 0,
             3: Number(entry?.majorChoices?.[3]) || 0,
           },
-          ...(Array.isArray(entry?._traitChoices) ? { _traitChoices: entry._traitChoices } : {}),
+          ...(() => {
+            const tc = Array.isArray(entry?._traitChoices) ? entry._traitChoices
+              : Array.isArray(entry?.traitChoices) ? entry.traitChoices : null;
+            return tc ? { _traitChoices: tc } : {};
+          })(),
         }))
       : [],
     skills: {
