@@ -162,6 +162,10 @@ export const PROFESSION_WEIGHT = {
   Guardian: "heavy", Warrior: "heavy", Revenant: "heavy",
 };
 
+// Total defense from a full set of level 80 Ascended/Legendary armor (6 pieces).
+// Armor (derived stat) = Toughness + total defense.
+export const ARMOR_DEFENSE_BY_WEIGHT = { light: 967, medium: 1118, heavy: 1271 };
+
 const _R = "https://render.guildwars2.com/file";
 export const LEGENDARY_ARMOR_ICONS = {
   light: {

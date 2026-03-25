@@ -3,7 +3,7 @@ import {
   STAT_COMBOS, STAT_COMBOS_BY_LABEL, SLOT_WEIGHTS, EQUIP_ARMOR_SLOTS, EQUIP_WEAPON_SETS,
   EQUIP_TRINKET_SLOTS, EQUIP_UNDERWATER_SLOTS, GW2_WEAPONS, GW2_WEAPONS_BY_ID,
   GW2_RELICS, GW2_RELICS_BY_LABEL,
-  PROFESSION_WEIGHT,
+  PROFESSION_WEIGHT, ARMOR_DEFENSE_BY_WEIGHT,
   LEGENDARY_ARMOR_ICONS, _WK,
   PROFESSION_BASE_HP,
   FURY_CRIT_CHANCE, MIGHT_MAX_STACKS, MIGHT_POWER_PER_STACK, MIGHT_CONDI_PER_STACK, STABILITY_MAX_STACKS, STACKING_SIGIL_DEFS, BOON_CONDITION_ICONS,
@@ -1476,11 +1476,13 @@ export function renderEquipmentPanel() {
   const critDamage = 150 + (computed.Ferocity || 0) / 15.0 + popMod("Critical Damage");
   const condDuration = (computed.Expertise || 0) / 15.0 + popMod("Condition Duration");
   const boonDuration = (computed.Concentration || 0) / 15.0 + popMod("Boon Duration");
+  const weightClass = PROFESSION_WEIGHT[professionName] || "heavy";
+  const armor = (computed.Toughness || 1000) + (ARMOR_DEFENSE_BY_WEIGHT[weightClass] || 0);
 
   const statRows = [
     { stat: "Power",           key: "Power",          value: computed.Power },
     { stat: "Precision",       key: "Precision",      value: computed.Precision,       derived: "Crit Chance",      derivedVal: `${critChance.toFixed(1)}%` },
-    { stat: "Toughness",       key: "Toughness",      value: computed.Toughness },
+    { stat: "Toughness",       key: "Toughness",      value: computed.Toughness,       derived: "Armor",            derivedVal: armor.toLocaleString() },
     { stat: "Vitality",        key: "Vitality",       value: computed.Vitality,        derived: "Health",            derivedVal: health.toLocaleString() },
     { stat: "Ferocity",        key: "Ferocity",       value: computed.Ferocity,        derived: "Crit Damage",       derivedVal: `${critDamage.toFixed(0)}%` },
     { stat: "Condition Dmg",   key: "ConditionDamage", value: computed.ConditionDamage },

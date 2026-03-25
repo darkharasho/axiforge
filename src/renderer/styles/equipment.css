@@ -605,6 +605,10 @@
   background: rgba(255, 255, 255, 0.03);
 }
 
+.equip-stat-cell:only-child {
+  flex: 0 0 calc(50% - 4px);
+}
+
 .equip-stat-cell--derived {
   background: rgba(80, 132, 163, 0.08);
 }
