@@ -137,7 +137,7 @@ function main() {
   }
 
   // ── Relic patching ──
-  const relicFactsPath = path.join(__dirname, "data/relicFacts.json");
+  const relicFactsPath = path.join(__dirname, "../../src/main/gw2Data/relicFacts.json");
   let relicFacts;
   try {
     relicFacts = JSON.parse(fs.readFileSync(relicFactsPath, "utf8"));

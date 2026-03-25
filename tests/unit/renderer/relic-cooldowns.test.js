@@ -113,7 +113,7 @@ describe("Relic inner cooldown display", () => {
 
 describe("Relic facts data", () => {
   test("relicFacts.json contains expected relic entries with facts", () => {
-    const data = require("../../../tests/wiki-audit/data/relicFacts.json");
+    const data = require("../../../src/main/gw2Data/relicFacts.json");
 
     expect(data.relics).toBeDefined();
     // Relic of Cerus should have a Recharge fact (ICD)

@@ -854,7 +854,7 @@ async function getUpgradeCatalog(lang = "en") {
   _upgradeCatalogPromise = (async () => {
     const { RUNE_ITEM_IDS, SIGIL_ITEM_IDS, INFUSION_ITEM_IDS, WVW_INFUSION_IDS, ENRICHMENT_ITEM_IDS, FOOD_ITEM_IDS, UTILITY_ITEM_IDS, RELIC_ITEM_IDS } = require("./upgradeIds");
     const { FOOD_BUFF_OVERRIDES } = require("./foodOverrides");
-    const _relicFactsPath = require("path").join(__dirname, "../../../tests/wiki-audit/data/relicFacts.json");
+    const _relicFactsPath = require("path").join(__dirname, "relicFacts.json");
     const _relicFactsData = JSON.parse(require("fs").readFileSync(_relicFactsPath, "utf8"));
     const _relicFactsIndex = _relicFactsData.relics || {};
 

@@ -285,7 +285,7 @@ async function main() {
   console.log(`Loaded splits.json (${skillSplitCount} skills, ${traitSplitCount} traits)`);
 
   // 2b. Load relicFacts.json
-  const relicFactsData = require("./data/relicFacts.json");
+  const relicFactsData = require("../../src/main/gw2Data/relicFacts.json");
 
   // 3. Build entity list with skip/limit
   const allEntities = [...skillEntities, ...traitEntities, ...relicEntities];
