@@ -370,6 +370,45 @@ describe("per-slot mode round-trips", () => {
   });
 });
 
+// ── Import normalization (axicode → editor format) ──────────────────────────
+
+describe("axicode import normalization", () => {
+  const { normalizeImportedSkills } = require("../../src/renderer/modules/editor");
+
+  test("decoded skills are normalized to nested format for loadBuildIntoEditor", () => {
+    const code = encodeShareCode(BERSERKER_BUILD);
+    const decoded = decodeShareCode(code);
+
+    // Decoded format: { healId, utilityIds, eliteId }
+    expect(decoded.skills.healId).toBe(14402);
+    expect(decoded.skills.utilityIds).toEqual([14404, 14410, 14405]);
+    expect(decoded.skills.eliteId).toBe(14355);
+
+    // normalizeImportedSkills converts to nested { heal: {id}, utility: [{id}], elite: {id} }
+    const normalized = normalizeImportedSkills(decoded);
+    expect(normalized.heal).toEqual({ id: 14402 });
+    expect(normalized.utility).toEqual([{ id: 14404 }, { id: 14410 }, { id: 14405 }]);
+    expect(normalized.elite).toEqual({ id: 14355 });
+  });
+
+  test("decoded traitChoices can be preserved as _traitChoices for resolution", () => {
+    const code = encodeShareCode(BERSERKER_BUILD);
+    const decoded = decodeShareCode(code);
+
+    // traitChoices are 1-based position indices
+    expect(decoded.specializations[0].traitChoices).toEqual([1, 1, 1]);
+    expect(decoded.specializations[2].traitChoices).toEqual([1, 1, 1]);
+
+    // Attaching _traitChoices for later resolution by enforceEditorConsistency
+    const specs = decoded.specializations.map((s) => ({
+      ...s,
+      _traitChoices: Array.isArray(s.traitChoices) ? s.traitChoices : null,
+    }));
+    expect(specs[0]._traitChoices).toEqual([1, 1, 1]);
+    expect(specs[2]._traitChoices).toEqual([1, 1, 1]);
+  });
+});
+
 // ── Error handling ──────────────────────────────────────────────────────────
 
 describe("error handling", () => {

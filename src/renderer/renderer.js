@@ -32,6 +32,7 @@ import {
   createDefaultSpecializationSelections, createDefaultSkillSelections,
   computeEditorSignature,
   computeUnsavedChangeSummary,
+  normalizeImportedSkills,
 } from "./modules/editor.js";
 import {
   initRenderPagesDom, initRenderPagesCallbacks,
@@ -447,7 +448,16 @@ async function importBuildJsonFromClipboard() {
     const trimmed = String(text).trim();
     let parsed;
     if (trimmed.startsWith("<AxiForge:") && trimmed.endsWith(">")) {
-      parsed = await window.desktopApi.decodeShareCode(trimmed);
+      const decoded = await window.desktopApi.decodeShareCode(trimmed);
+      // Normalize axicode skills format (flat healId/utilityIds/eliteId → nested heal.id)
+      const skills = normalizeImportedSkills(decoded);
+      const underwaterSkills = normalizeImportedSkills({ skills: decoded.underwaterSkills || {} });
+      // Preserve traitChoices on each spec so enforceEditorConsistency can resolve them
+      const specializations = (decoded.specializations || []).map((s) => ({
+        ...s,
+        _traitChoices: Array.isArray(s.traitChoices) ? s.traitChoices : null,
+      }));
+      parsed = { ...decoded, skills, underwaterSkills, specializations };
     } else {
       parsed = parseBuildImportPayload(trimmed);
     }

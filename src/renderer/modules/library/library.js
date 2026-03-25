@@ -2,6 +2,7 @@
 // This is the main entry point for the library page.
 
 import { state } from "../state.js";
+import { normalizeImportedSkills } from "../editor.js";
 
 import {
   loadFolders,
@@ -509,6 +510,26 @@ async function handleImportShareCode(targetFolderId) {
   if (!result) return;
   try {
     const decoded = await window.desktopApi.decodeShareCode(result.code);
+    // Normalize axicode format to match the internal build store format.
+    // Skills: convert flat healId/utilityIds/eliteId → nested { heal: {id}, utility: [{id}], elite: {id} }
+    decoded.skills = normalizeImportedSkills(decoded);
+    decoded.underwaterSkills = normalizeImportedSkills({ skills: decoded.underwaterSkills || {} });
+    // Specializations: extract elite spec name from axicode label and
+    // convert traitChoices → _traitChoices for later resolution by the editor.
+    const labelMatch = result.code.match(/^<AxiForge:([^:]+):/);
+    const axicodeLabel = labelMatch?.[1] || null;
+    const isCoreBuild = axicodeLabel && axicodeLabel === decoded.profession;
+    decoded.specializations = (decoded.specializations || []).map((s, i) => {
+      // The last spec is typically the elite; the axicode label is its name
+      const isElite = !isCoreBuild && axicodeLabel && i === (decoded.specializations.length - 1);
+      return {
+        ...s,
+        name: s.name || (isElite ? axicodeLabel : ""),
+        elite: s.elite ?? isElite,
+        majorChoices: s.majorChoices || { 1: 0, 2: 0, 3: 0 },
+        _traitChoices: Array.isArray(s.traitChoices) ? s.traitChoices : null,
+      };
+    });
     decoded.title = result.name || decoded.title || "Imported Build";
     if (folderId) decoded.folderId = folderId;
     const saved = await window.desktopApi.saveBuild(decoded);
