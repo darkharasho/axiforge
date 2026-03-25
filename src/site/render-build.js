@@ -91,8 +91,10 @@ function populateStateFromBuild(build) {
   // Normalize so both fields are present; resolve _traitChoices if needed.
   state.editor.specializations         = (build.specializations || []).map(s => {
     const entry = { ...s, specializationId: s.specializationId || s.id || 0 };
-    // Resolve _traitChoices (axicode position indices) → majorChoices (trait IDs) if needed
-    const tc = Array.isArray(s._traitChoices) ? s._traitChoices : null;
+    // Resolve traitChoices (axicode position indices) → majorChoices (trait IDs) if needed
+    // Check both _traitChoices (normalized imports) and traitChoices (raw axicode saves).
+    const tc = Array.isArray(s._traitChoices) ? s._traitChoices
+      : Array.isArray(s.traitChoices) ? s.traitChoices : null;
     const mc = entry.majorChoices || { 1: 0, 2: 0, 3: 0 };
     if (tc && !Object.values(mc).some(v => v)) {
       const mbt = s.majorTraitsByTier || {};

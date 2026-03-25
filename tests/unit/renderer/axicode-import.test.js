@@ -231,6 +231,21 @@ describe("enforceEditorConsistency — _traitChoices resolution", () => {
     expect(state.editor.specializations[0]._traitChoices).toBeUndefined();
   });
 
+  test("resolves raw traitChoices (without underscore) from axicode saves", () => {
+    const catalog = buildCatalog();
+    state.activeCatalog = catalog;
+    state.editor.specializations = [
+      { specializationId: 42, majorChoices: { 1: 0, 2: 0, 3: 0 }, traitChoices: [2, 2, 2] },
+    ];
+
+    enforceEditorConsistency();
+
+    // Should resolve using traitChoices just like _traitChoices
+    expect(state.editor.specializations[0].majorChoices[1]).toBe(628);
+    expect(state.editor.specializations[0].majorChoices[2]).toBe(643);
+    expect(state.editor.specializations[0].majorChoices[3]).toBe(648);
+  });
+
   test("without _traitChoices, defaults to first trait (existing behavior)", () => {
     const catalog = buildCatalog();
     state.activeCatalog = catalog;

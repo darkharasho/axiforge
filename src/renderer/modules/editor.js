@@ -134,9 +134,11 @@ export function enforceEditorConsistency(options = {}) {
     if (!spec) continue;
     used.add(spec.id);
     const majors = getMajorTraitsByTier(spec, catalog);
-    // If _traitChoices (from axicode import) exist and majorChoices are all 0,
+    // If traitChoices (from axicode import) exist and majorChoices are all 0,
     // resolve the 1-based position indices to actual trait IDs.
-    const tc = Array.isArray(current._traitChoices) ? current._traitChoices : null;
+    // Check both _traitChoices (normalized imports) and traitChoices (raw axicode saves).
+    const tc = Array.isArray(current._traitChoices) ? current._traitChoices
+      : Array.isArray(current.traitChoices) ? current.traitChoices : null;
     const resolveForTier = (tier) => {
       const existing = current.majorChoices?.[tier];
       if (existing) return chooseTraitId(existing, majors[tier]);

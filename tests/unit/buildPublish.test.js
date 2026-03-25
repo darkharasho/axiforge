@@ -586,4 +586,27 @@ describe("serializeForPublish — axicode _traitChoices resolution", () => {
     expect(result.specializations[0].majorChoices[2]).toBe(637);
     expect(result.specializations[0].majorChoices[3]).toBe(1925);
   });
+
+  test("resolves raw traitChoices (without underscore) from old axicode saves", () => {
+    const build = {
+      ...makeMockBuild(),
+      specializations: [
+        { id: 42, traitChoices: [2, 2, 2] },
+        { id: 46, traitChoices: [1, 1, 3] },
+        { id: 62, traitChoices: [2, 2, 1] },
+      ],
+    };
+
+    const catalog = makeGuardianCatalog();
+    const result = serializeForPublish(build, catalog, null);
+
+    // Should resolve traitChoices just like _traitChoices
+    expect(result.specializations[0].majorChoices[1]).toBe(628);
+    expect(result.specializations[0].majorChoices[2]).toBe(643);
+    expect(result.specializations[0].majorChoices[3]).toBe(648);
+
+    expect(result.specializations[2].majorChoices[1]).toBe(2101);
+    expect(result.specializations[2].majorChoices[2]).toBe(2076);
+    expect(result.specializations[2].majorChoices[3]).toBe(2105);
+  });
 });

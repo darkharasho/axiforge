@@ -466,9 +466,11 @@ function serializeForPublish(build, catalog, upgradeCatalog) {
       ])
     );
 
-    // Resolve _traitChoices (from axicode import) → majorChoices if needed.
-    // _traitChoices are 1-based position indices; majorChoices are actual trait IDs.
-    const tc = Array.isArray(spec._traitChoices) ? spec._traitChoices : null;
+    // Resolve traitChoices (from axicode import) → majorChoices if needed.
+    // traitChoices are 1-based position indices; majorChoices are actual trait IDs.
+    // Check both _traitChoices (normalized imports) and traitChoices (raw axicode saves).
+    const tc = Array.isArray(spec._traitChoices) ? spec._traitChoices
+      : Array.isArray(spec.traitChoices) ? spec.traitChoices : null;
     let majorChoices = spec.majorChoices || { 1: 0, 2: 0, 3: 0 };
     const hasChoices = Object.values(majorChoices).some(v => v);
     if (tc && !hasChoices) {
