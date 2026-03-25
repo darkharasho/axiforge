@@ -193,24 +193,31 @@ function normalizeBuild(input, fallbackCreatedAt) {
 
 function normalizeSpecializations(value) {
   if (!Array.isArray(value)) return [];
-  return value.slice(0, 3).map((spec) => ({
-    id: Number(spec?.id) || 0,
-    name: asString(spec?.name, 100),
-    elite: Boolean(spec?.elite),
-    icon: asString(spec?.icon, 500),
-    background: asString(spec?.background, 500),
-    minorTraits: normalizeTraitRefs(spec?.minorTraits, 3),
-    majorChoices: {
-      1: Number(spec?.majorChoices?.[1]) || 0,
-      2: Number(spec?.majorChoices?.[2]) || 0,
-      3: Number(spec?.majorChoices?.[3]) || 0,
-    },
-    majorTraitsByTier: {
-      1: normalizeTraitRefs(spec?.majorTraitsByTier?.[1], 3),
-      2: normalizeTraitRefs(spec?.majorTraitsByTier?.[2], 3),
-      3: normalizeTraitRefs(spec?.majorTraitsByTier?.[3], 3),
-    },
-  }));
+  return value.slice(0, 3).map((spec) => {
+    // Preserve traitChoices (axicode position indices) so they can be resolved
+    // to majorChoices later when the catalog is available.
+    const tc = Array.isArray(spec?._traitChoices) ? spec._traitChoices
+      : Array.isArray(spec?.traitChoices) ? spec.traitChoices : null;
+    return {
+      id: Number(spec?.id) || 0,
+      name: asString(spec?.name, 100),
+      elite: Boolean(spec?.elite),
+      icon: asString(spec?.icon, 500),
+      background: asString(spec?.background, 500),
+      minorTraits: normalizeTraitRefs(spec?.minorTraits, 3),
+      majorChoices: {
+        1: Number(spec?.majorChoices?.[1]) || 0,
+        2: Number(spec?.majorChoices?.[2]) || 0,
+        3: Number(spec?.majorChoices?.[3]) || 0,
+      },
+      majorTraitsByTier: {
+        1: normalizeTraitRefs(spec?.majorTraitsByTier?.[1], 3),
+        2: normalizeTraitRefs(spec?.majorTraitsByTier?.[2], 3),
+        3: normalizeTraitRefs(spec?.majorTraitsByTier?.[3], 3),
+      },
+      ...(tc ? { traitChoices: tc } : {}),
+    };
+  });
 }
 
 function normalizeTraitRefs(value, max = 9) {

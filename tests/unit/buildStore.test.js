@@ -985,4 +985,33 @@ describe("BuildStore — gameMode normalization", () => {
     const saved = await store.upsertBuild(makeBuild({ gameMode: "a".repeat(50) }));
     expect(saved.gameMode.length).toBeLessThanOrEqual(10);
   });
+
+  test("preserves traitChoices from axicode imports through store", async () => {
+    ({ dir } = (await makeTempStore()));
+    const store = new BuildStore(dir);
+    await store.init();
+    const saved = await store.upsertBuild(makeBuild({
+      specializations: [
+        { id: 42, traitChoices: [2, 2, 2] },
+        { id: 46, _traitChoices: [1, 1, 3] },
+        { id: 62, name: "Firebrand", elite: true, traitChoices: [2, 2, 1] },
+      ],
+    }));
+    expect(saved.specializations[0].traitChoices).toEqual([2, 2, 2]);
+    expect(saved.specializations[1].traitChoices).toEqual([1, 1, 3]);
+    expect(saved.specializations[2].traitChoices).toEqual([2, 2, 1]);
+  });
+
+  test("omits traitChoices when majorChoices are populated", async () => {
+    ({ dir } = (await makeTempStore()));
+    const store = new BuildStore(dir);
+    await store.init();
+    const saved = await store.upsertBuild(makeBuild({
+      specializations: [
+        { id: 42, majorChoices: { 1: 634, 2: 653, 3: 637 } },
+      ],
+    }));
+    expect(saved.specializations[0].traitChoices).toBeUndefined();
+    expect(saved.specializations[0].majorChoices[1]).toBe(634);
+  });
 });
