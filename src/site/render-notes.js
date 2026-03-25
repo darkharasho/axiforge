@@ -3,6 +3,7 @@
 
 import { marked } from "marked";
 import { bindHoverPreview } from "@renderer/modules/detail-panel.js";
+import { decodeHtmlEntities } from "@renderer/modules/utils.js";
 
 export function renderNotes(build) {
   const container = document.createElement("div");
@@ -51,7 +52,7 @@ export function renderNotes(build) {
 
     const icon = resolved?.icon || "";
     const iconHtml = icon ? `<img class="notes-mention__icon" src="${icon}" alt="">` : "";
-    const escapedName = escapeHtml(name);
+    const escapedName = escapeHtml(decodeHtmlEntities(name));
 
     if (resolved) {
       return `<span class="notes-mention" data-type="${category}" data-id="${numId}">${iconHtml}${escapedName} <span class="notes-mention__label">${category}</span></span>`;

@@ -97,9 +97,13 @@ export function normalizeText(input) {
 }
 
 export function decodeHtmlEntities(value) {
-  const node = document.createElement("textarea");
-  node.innerHTML = String(value || "");
-  return node.value;
+  return String(value || "")
+    .replaceAll("&#039;", "'")
+    .replaceAll("&#39;", "'")
+    .replaceAll("&quot;", "\"")
+    .replaceAll("&gt;", ">")
+    .replaceAll("&lt;", "<")
+    .replaceAll("&amp;", "&");
 }
 
 export function delay(ms) {
