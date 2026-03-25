@@ -336,6 +336,9 @@
   border-radius: 4px;
   background: rgba(255, 255, 255, 0.03);
 }
+.skel-equip__stat-cell:only-child {
+  flex: 0 0 calc(50% - 4px);
+}
 
 /* matches .equip-text-label */
 .skel-equip__text-label {

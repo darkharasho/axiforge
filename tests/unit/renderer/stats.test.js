@@ -9,6 +9,7 @@
 
 const { computeSlotStats, computeEquipmentStats, computeBuildConcentration } = require("../../../src/renderer/modules/stats");
 const { state } = require("../../../src/renderer/modules/state");
+const { ARMOR_DEFENSE_BY_WEIGHT, PROFESSION_WEIGHT } = require("../../../src/renderer/modules/constants");
 
 // ---------------------------------------------------------------------------
 // Helpers — reset state.editor before each test
@@ -596,5 +597,37 @@ describe("computeBuildConcentration", () => {
     });
     const build = { equipment: { slots: {}, runes: { head: "2001" } } };
     expect(computeBuildConcentration(build, catalog)).toBe(50);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ARMOR_DEFENSE_BY_WEIGHT — derived Armor stat (issue #91)
+// ---------------------------------------------------------------------------
+
+describe("ARMOR_DEFENSE_BY_WEIGHT constant", () => {
+  test("exists and has entries for all three weight classes", () => {
+    expect(ARMOR_DEFENSE_BY_WEIGHT).toBeDefined();
+    expect(ARMOR_DEFENSE_BY_WEIGHT).toHaveProperty("light");
+    expect(ARMOR_DEFENSE_BY_WEIGHT).toHaveProperty("medium");
+    expect(ARMOR_DEFENSE_BY_WEIGHT).toHaveProperty("heavy");
+  });
+
+  test("defense values are correct for level 80 Ascended armor", () => {
+    // Standard GW2 total defense for full Ascended/Legendary armor sets
+    expect(ARMOR_DEFENSE_BY_WEIGHT.light).toBe(967);
+    expect(ARMOR_DEFENSE_BY_WEIGHT.medium).toBe(1118);
+    expect(ARMOR_DEFENSE_BY_WEIGHT.heavy).toBe(1271);
+  });
+
+  test("heavy > medium > light", () => {
+    expect(ARMOR_DEFENSE_BY_WEIGHT.heavy).toBeGreaterThan(ARMOR_DEFENSE_BY_WEIGHT.medium);
+    expect(ARMOR_DEFENSE_BY_WEIGHT.medium).toBeGreaterThan(ARMOR_DEFENSE_BY_WEIGHT.light);
+  });
+
+  test("all professions map to a valid weight class", () => {
+    for (const [prof, weight] of Object.entries(PROFESSION_WEIGHT)) {
+      expect(ARMOR_DEFENSE_BY_WEIGHT).toHaveProperty(weight,
+        expect.any(Number));
+    }
   });
 });

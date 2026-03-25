@@ -211,13 +211,13 @@ const skeletonTemplates = {
       <div class="skel-equip__stats">
         ${statRowSingle(1)}
         ${statRow(1, 2)}
-        ${statRowSingle(2)}
         ${statRow(2, 3)}
         ${statRow(3, 4)}
-        ${statRowSingle(4)}
         ${statRow(4, 5)}
-        ${statRow(5, 1)}
-        ${statRowSingle(1)}
+        ${statRowSingle(5)}
+        ${statRow(1, 2)}
+        ${statRow(2, 3)}
+        ${statRowSingle(3)}
       </div>
     </div>
     <!-- Upgrades -->
