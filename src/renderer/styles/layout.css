@@ -189,10 +189,15 @@
 }
 
 /* New app layout */
+body:has(.app-layout) {
+  height: 100vh;
+  overflow: hidden;
+}
+
 .app-layout {
   display: grid;
   grid-template-columns: 100px 1fr;
-  min-height: calc(100vh - 40px);
+  height: calc(100vh - 40px);
   margin-top: 40px;
 }
 

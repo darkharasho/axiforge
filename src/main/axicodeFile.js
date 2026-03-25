@@ -5,7 +5,9 @@ const { encodeAxicodeFile, decodeAxicodeFile } = require("@mks.haro/axicode");
 
 function registerAxicodeFileHandlers(mainWindow) {
   ipcMain.handle("axicode-file:export", async (_e, { builds, folders, comps }) => {
-    const defaultName = `axiforge-export-${new Date().toISOString().slice(0, 10)}.axicode`;
+    const now = new Date();
+    const stamp = now.toISOString().slice(0, 19).replace(/[T:]/g, "-");
+    const defaultName = `axiforge-export-${stamp}.axicode`;
     const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
       title: "Export .axicode File",
       defaultPath: defaultName,
