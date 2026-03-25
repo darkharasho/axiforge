@@ -17,3 +17,6 @@
 - [x] renaming a build moves it out of the comp
 - [x] creating a build in the comp in library puts it at the root
 - [x] need a way to copy build link easily in both comp view and build view
+- [ ] force the axiforge logo for discord webhooks
+- [ ] share to discord for builds
+  - [ ] make a NEW forum post for share to forum
