@@ -653,6 +653,21 @@ describe("BuildStore — settings", () => {
     expect(await store2.getSetting("lastGameMode")).toBe("wvw");
   });
 
+  test("concurrent setSetting calls do not lose values (issue #93)", async () => {
+    ({ dir } = (await makeTempStore()));
+    const store = new BuildStore(dir);
+    await store.init();
+    // Simulate the settings modal: three parallel setSetting calls
+    await Promise.all([
+      store.setSetting("discord.webhookUrl", "https://discord.com/api/webhooks/123/abc"),
+      store.setSetting("discord.threadMode", "auto"),
+      store.setSetting("discord.threadId", "999"),
+    ]);
+    expect(await store.getSetting("discord.webhookUrl")).toBe("https://discord.com/api/webhooks/123/abc");
+    expect(await store.getSetting("discord.threadMode")).toBe("auto");
+    expect(await store.getSetting("discord.threadId")).toBe("999");
+  });
+
   test("init creates settings.json if missing", async () => {
     const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "axiforge-settings-test-"));
     dir = tmpDir;
