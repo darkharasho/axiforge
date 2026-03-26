@@ -1254,6 +1254,18 @@ describe("KNOWN_SKILL_FACTS_OVERRIDES", () => {
       expect(skill.facts.some((f) => f.type === "Damage")).toBe(true);
     }
   });
+
+  test("Elixir of Ambition (62655) override boons survive WvW balance split", async () => {
+    const catalog = await gw2Data.getProfessionCatalog("Necromancer", "en", "wvw");
+    const skill = findSkill(catalog, 62655);
+    expect(skill).toBeTruthy();
+    // WvW split has conditions (Bleeding, Burning, etc.) but the override adds all 12 boons
+    const boonNames = ["Might", "Fury", "Alacrity", "Aegis", "Quickness", "Protection",
+      "Regeneration", "Resolution", "Resistance", "Stability", "Swiftness", "Vigor"];
+    const boonFacts = skill.facts.filter((f) => f.type === "Buff" && boonNames.includes(f.status));
+    expect(boonFacts).toHaveLength(12);
+    expect(boonFacts.find((f) => f.status === "Might").apply_count).toBe(25);
+  });
 });
 
 // ---------------------------------------------------------------------------
