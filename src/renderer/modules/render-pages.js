@@ -419,23 +419,15 @@ export function renderEditorMeta() {
     _el.saveStatus.classList.toggle("subnav__save-status--saved", !isDraft);
   }
 
-  // Published link button
-  if (_el.copyPublishLink) {
+  // Published link button (inside share dropdown)
+  if (_el.editorSharePubLink) {
     const publishUrl = _getPublishedUrl();
     if (publishUrl) {
-      _el.copyPublishLink.classList.remove("hidden");
-      _el.copyPublishLink.onclick = async () => {
-        await window.desktopApi.writeClipboardText(publishUrl);
-        _el.copyPublishLink.classList.add("subnav__link-btn--copied");
-        _el.copyPublishLink.title = "Copied!";
-        setTimeout(() => {
-          _el.copyPublishLink.classList.remove("subnav__link-btn--copied");
-          _el.copyPublishLink.title = "Copy published link";
-        }, 2000);
-      };
+      _el.editorSharePubLink.disabled = false;
+      _el.editorSharePubLink.removeAttribute("title");
     } else {
-      _el.copyPublishLink.classList.add("hidden");
-      _el.copyPublishLink.onclick = null;
+      _el.editorSharePubLink.disabled = true;
+      _el.editorSharePubLink.title = "Publish first";
     }
   }
 }

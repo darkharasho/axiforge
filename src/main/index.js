@@ -810,6 +810,108 @@ app.whenReady().then(async () => {
     });
   });
 
+  ipcMain.handle("discord:share-build", async (_e, buildId) => {
+    const { shareBuildToDiscord } = require("./discordWebhook");
+    const { generateChatLink } = require("./buildChatLink.js");
+
+    // 1. Load webhook URL and thread settings
+    const [webhookUrl, threadMode, threadId] = await Promise.all([
+      store.getSetting("discord.webhookUrl"),
+      store.getSetting("discord.threadMode"),
+      store.getSetting("discord.threadId"),
+    ]);
+    if (!webhookUrl || !/^https:\/\/(discord\.com|discordapp\.com)\/api\/webhooks\//.test(webhookUrl)) {
+      return { success: false, error: "Discord webhook URL is not configured or invalid" };
+    }
+
+    // 2. Load and validate build
+    const allBuilds = await store.listBuilds();
+    const build = allBuilds.find((b) => b.id === buildId);
+    if (!build) return { success: false, error: "Build not found" };
+    if (!build.publishedFileId || !build.publishedKey) {
+      return { success: false, error: "Build must be published before sharing" };
+    }
+
+    // 3. Resolve owner for URL construction
+    const auth = await getAuthRecord();
+    const session = await getSession();
+    const owner = auth?.onboarding?.targetOwner || session?.viewer?.login;
+    if (!owner) return { success: false, error: "GitHub publishing not configured" };
+    const repo = auth?.onboarding?.repoName || TARGET_REPO;
+
+    // 4. Build URL
+    const { shortUrl } = require("./shortUrl");
+    const buildUrl = shortUrl(owner, repo, build.publishedFileId);
+
+    // 5. Generate chat link
+    let chatLink = null;
+    try { chatLink = await generateChatLink(build); } catch (err) { console.error("discord:share-build — chat link generation failed:", err); }
+
+    // 6. Get class icon URL (gw2-class-icons: elite spec > profession), spec icon, and elite spec name
+    const CLASS_ICON_BASE = "https://raw.githubusercontent.com/darkharasho/gw2-class-icons/main/wiki/150px";
+    const { getEliteSpecName } = require("./discordEmoji");
+    const eliteSpecName = getEliteSpecName(build);
+    const classIconName = eliteSpecName || build.profession;
+    const professionIconUrl = classIconName ? `${CLASS_ICON_BASE}/${encodeURIComponent(classIconName)}.png` : null;
+
+    let specIconUrl = null;
+    let catalog = null;
+    let upgradeCatalog = null;
+    try {
+      [catalog, upgradeCatalog] = await Promise.all([
+        getProfessionCatalog(build.profession, "en", build.gameMode || "pve"),
+        getUpgradeCatalog("en"),
+      ]);
+      if (eliteSpecName) {
+        const specData = catalog.specializations?.find((s) => s.name === eliteSpecName);
+        specIconUrl = specData?.icon || null;
+      }
+      if (!specIconUrl) {
+        specIconUrl = catalog.profession?.icon || null;
+      }
+    } catch { /* optional */ }
+
+    // 7. Estimate role
+    const { estimateRole } = require("./statsCompute");
+    const role = estimateRole(build);
+
+    // 8. Share
+    return shareBuildToDiscord(build, buildUrl, chatLink, {
+      professionIconUrl,
+      specIconUrl,
+      eliteSpecName,
+      gameMode: build.gameMode || "pve",
+      role,
+      catalog,
+      upgradeCatalog,
+    }, webhookUrl, {
+      threadMode: threadMode || "none",
+      threadId: threadMode === "custom" ? threadId : null,
+    });
+  });
+
+  ipcMain.handle("discord:build-copy-text", async (_e, buildId) => {
+    const { formatBuildDiscordCopy } = require("./discordWebhook");
+
+    const allBuilds = await store.listBuilds();
+    const build = allBuilds.find((b) => b.id === buildId);
+    if (!build) throw new Error("Build not found");
+
+    let buildUrl = null;
+    if (build.publishedFileId) {
+      const auth = await getAuthRecord();
+      const session = await getSession();
+      const owner = auth?.onboarding?.targetOwner || session?.viewer?.login;
+      if (owner) {
+        const repo = auth?.onboarding?.repoName || TARGET_REPO;
+        const { shortUrl } = require("./shortUrl");
+        buildUrl = shortUrl(owner, repo, build.publishedFileId);
+      }
+    }
+
+    return formatBuildDiscordCopy(build, buildUrl);
+  });
+
   ipcMain.handle("comps:generate-plaintext", async (_e, compId) => {
     const { getDisplayName, getDiscordEmoji } = require("./discordEmoji");
 

@@ -75,6 +75,8 @@ contextBridge.exposeInMainWorld("desktopApi", {
   getSetting: (key) => ipcRenderer.invoke("settings:get", key),
   setSetting: (key, value) => ipcRenderer.invoke("settings:set", key, value),
   shareCompToDiscord: (compId) => ipcRenderer.invoke("discord:share-comp", compId),
+  shareBuildToDiscord: (buildId) => ipcRenderer.invoke("discord:share-build", buildId),
+  getBuildDiscordCopyText: (buildId) => ipcRenderer.invoke("discord:build-copy-text", buildId),
   generateCompPlaintext: (compId) => ipcRenderer.invoke("comps:generate-plaintext", compId),
   getAppVersion: () => ipcRenderer.invoke("updater:get-version"),
   checkForUpdates: () => ipcRenderer.send("updater:check"),

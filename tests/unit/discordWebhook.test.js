@@ -3,7 +3,7 @@
 jest.mock("node:https");
 
 const https = require("node:https");
-const { buildCompEmbed, shareCompToDiscord } = require("../../src/main/discordWebhook");
+const { buildCompEmbed, shareCompToDiscord, buildBuildEmbed, shareBuildToDiscord, formatBuildDiscordCopy } = require("../../src/main/discordWebhook");
 
 function makeBuild(id, profession, eliteSpec, title) {
   return {
@@ -267,5 +267,195 @@ describe("shareCompToDiscord", () => {
     const req = https.request.mock.results[0].value;
     const payload = JSON.parse(req.write.mock.calls[0][0]);
     expect(payload.thread_name).toBeUndefined();
+  });
+});
+
+describe("buildBuildEmbed", () => {
+  const build = makeBuild("b1", "Guardian", "Firebrand", "Heal FB");
+  build.updatedAt = "2026-03-20T12:00:00Z";
+  build.gameMode = "pve";
+  const buildUrl = "https://x.github.io/axibuilds/r/b1";
+  const chatLink = "[&DQkAAAA=]";
+  const specIconUrl = "https://render.guildwars2.com/file/abc/123.png";
+  const profIconUrl = "https://render.guildwars2.com/file/def/456.png";
+  const meta = { professionIconUrl: profIconUrl, specIconUrl, eliteSpecName: "Firebrand", gameMode: "pve", role: "Heal Support" };
+
+  test("produces embed with profession color", () => {
+    const embed = buildBuildEmbed(build, buildUrl, chatLink, meta);
+    expect(embed.color).toBe(0x6EA8FF); // Guardian blue
+  });
+
+  test("title includes emoji and build name", () => {
+    const embed = buildBuildEmbed(build, buildUrl, chatLink, meta);
+    expect(embed.title).toContain("Firebrand");
+    expect(embed.title).toContain("Heal FB");
+  });
+
+  test("url is the build URL", () => {
+    const embed = buildBuildEmbed(build, buildUrl, chatLink, meta);
+    expect(embed.url).toBe(buildUrl);
+  });
+
+  test("description contains build URL and chat link in code block", () => {
+    const embed = buildBuildEmbed(build, buildUrl, chatLink, meta);
+    expect(embed.description).toContain(buildUrl);
+    expect(embed.description).toContain("```");
+    expect(embed.description).toContain(chatLink);
+  });
+
+  test("thumbnail uses profession big icon URL", () => {
+    const embed = buildBuildEmbed(build, buildUrl, chatLink, meta);
+    expect(embed.thumbnail).toEqual({ url: profIconUrl });
+  });
+
+  test("footer contains tags and last updated date", () => {
+    const embed = buildBuildEmbed(build, buildUrl, chatLink, meta);
+    expect(embed.footer.text).toContain("PVE");
+    expect(embed.footer.text).toContain("Firebrand");
+    expect(embed.footer.text).toContain("Heal Support");
+    expect(embed.footer.text).toMatch(/Last updated:.*Mar.*20.*2026/);
+  });
+
+  test("footer icon_url uses spec icon", () => {
+    const embed = buildBuildEmbed(build, buildUrl, chatLink, meta);
+    expect(embed.footer.icon_url).toBe(specIconUrl);
+  });
+
+  test("has AxiForge author block", () => {
+    const embed = buildBuildEmbed(build, buildUrl, chatLink, meta);
+    expect(embed.author.name).toBe("AxiForge");
+  });
+
+  test("omits thumbnail when no icon URLs", () => {
+    const embed = buildBuildEmbed(build, buildUrl, chatLink, {});
+    expect(embed.thumbnail).toBeUndefined();
+  });
+
+  test("falls back to spec icon for thumbnail when no profession icon", () => {
+    const embed = buildBuildEmbed(build, buildUrl, chatLink, { specIconUrl });
+    expect(embed.thumbnail).toEqual({ url: specIconUrl });
+  });
+
+  test("omits footer when no tags and no updatedAt", () => {
+    const noDate = { ...build, updatedAt: null };
+    const embed = buildBuildEmbed(noDate, buildUrl, chatLink, {});
+    expect(embed.footer).toBeUndefined();
+  });
+
+  test("excludes Unknown role from footer tags", () => {
+    const embed = buildBuildEmbed(build, buildUrl, chatLink, { ...meta, role: "Unknown" });
+    expect(embed.footer.text).not.toContain("Unknown");
+  });
+
+  test("omits chat link code block when no chat link", () => {
+    const embed = buildBuildEmbed(build, buildUrl, null, meta);
+    expect(embed.description).not.toContain("```");
+    expect(embed.description).toContain(buildUrl);
+  });
+
+  test("uses Necromancer color for Necromancer build", () => {
+    const necro = makeBuild("b2", "Necromancer", "Scourge", "Condi Scourge");
+    const embed = buildBuildEmbed(necro, buildUrl, chatLink, meta);
+    expect(embed.color).toBe(0x4DCA7A);
+  });
+
+  test("uses Elementalist color for Elementalist build", () => {
+    const ele = makeBuild("b3", "Elementalist", "Catalyst", "Power Cata");
+    const embed = buildBuildEmbed(ele, buildUrl, chatLink, meta);
+    expect(embed.color).toBe(0xDD5555);
+  });
+});
+
+describe("shareBuildToDiscord", () => {
+  const webhookUrl = "https://discord.com/api/webhooks/123/abc";
+  const build = makeBuild("b1", "Guardian", "Firebrand", "Heal FB");
+  build.updatedAt = "2026-03-20T12:00:00Z";
+  const buildUrl = "https://x.github.io/axibuilds/r/b1";
+  const chatLink = "[&DQkAAAA=]";
+  const embedMeta = { specIconUrl: "https://render.guildwars2.com/file/abc/123.png", gameMode: "pve", role: "Heal Support" };
+
+  function mockHttpsResponse(statusCode) {
+    const res = {
+      statusCode,
+      on: jest.fn((event, cb) => {
+        if (event === "end") cb();
+        return res;
+      }),
+    };
+    const req = {
+      on: jest.fn().mockReturnThis(),
+      write: jest.fn(),
+      end: jest.fn(),
+    };
+    https.request.mockImplementation((_opts, callback) => {
+      callback(res);
+      return req;
+    });
+  }
+
+  beforeEach(() => {
+    jest.resetAllMocks();
+  });
+
+  test("204 returns success", async () => {
+    mockHttpsResponse(204);
+    const result = await shareBuildToDiscord(build, buildUrl, chatLink, embedMeta, webhookUrl);
+    expect(result).toEqual({ success: true });
+  });
+
+  test("sends embed with build title in payload", async () => {
+    mockHttpsResponse(204);
+    await shareBuildToDiscord(build, buildUrl, chatLink, embedMeta, webhookUrl);
+    const req = https.request.mock.results[0].value;
+    const payload = JSON.parse(req.write.mock.calls[0][0]);
+    expect(payload.embeds).toHaveLength(1);
+    expect(payload.embeds[0].title).toContain("Heal FB");
+  });
+
+  test("auto mode sends thread_name from build name", async () => {
+    mockHttpsResponse(204);
+    await shareBuildToDiscord(build, buildUrl, chatLink, embedMeta, webhookUrl, { threadMode: "auto" });
+    const req = https.request.mock.results[0].value;
+    const payload = JSON.parse(req.write.mock.calls[0][0]);
+    expect(payload.thread_name).toBe("Heal FB");
+  });
+
+  test("custom mode appends thread_id", async () => {
+    mockHttpsResponse(204);
+    await shareBuildToDiscord(build, buildUrl, chatLink, embedMeta, webhookUrl, { threadMode: "custom", threadId: "999" });
+    const reqOpts = https.request.mock.calls[0][0];
+    expect(reqOpts.path).toContain("thread_id=999");
+  });
+
+  test("429 returns rate limit error", async () => {
+    mockHttpsResponse(429);
+    const result = await shareBuildToDiscord(build, buildUrl, chatLink, embedMeta, webhookUrl);
+    expect(result).toEqual({ success: false, error: "Rate limited by Discord. Try again in a few seconds." });
+  });
+});
+
+describe("formatBuildDiscordCopy", () => {
+  const build = makeBuild("b1", "Guardian", "Firebrand", "Heal FB");
+  const buildUrl = "https://x.github.io/axibuilds/r/b1";
+
+  test("formats as markdown link with emoji when URL provided", () => {
+    const text = formatBuildDiscordCopy(build, buildUrl);
+    expect(text).toContain("[Heal FB]");
+    expect(text).toContain(buildUrl);
+    expect(text).toMatch(/<:Firebrand:\d+>/);
+  });
+
+  test("formats as plain text with emoji when no URL", () => {
+    const text = formatBuildDiscordCopy(build, null);
+    expect(text).toContain("Heal FB");
+    expect(text).not.toContain("[");
+    expect(text).toMatch(/<:Firebrand:\d+>/);
+  });
+
+  test("uses profession emoji when no elite spec", () => {
+    const coreBuild = makeBuild("b2", "Guardian", null, "Core Guard");
+    const text = formatBuildDiscordCopy(coreBuild, buildUrl);
+    expect(text).toMatch(/<:Guardian:\d+>/);
+    expect(text).toContain("[Core Guard]");
   });
 });

@@ -68,6 +68,7 @@ const el = {
   buildSearch:       q("#buildSearch"),
   editorTitle:       q("#editorTitle"),
   chatLinkBtn:       q("#chatLinkBtn"),
+  editorShareDropdown: q("#editorShareDropdown"),
   professionSelect:  q("#professionSelect"),
   tagsInput:         q("#tagsInput"),
   equipmentPanel:    q("#equipmentPanel"),
@@ -76,7 +77,7 @@ const el = {
   saveBuildBtn:      q("#saveBuildBtn"),
   saveDot:           q("#saveDot"),
   saveStatus:        q("#saveStatus"),
-  copyPublishLink:   q("#copyPublishLink"),
+  editorSharePubLink: document.querySelector("#editorShareDropdown [data-action='copy-published-link']"),
   duplicateBuildBtn: q("#duplicateBuildBtn"),
   copyBuildBtn:      q("#copyBuildBtn"),
   pasteBuildBtn:     q("#pasteBuildBtn"),
@@ -689,6 +690,175 @@ function wireEvents() {
       el.chatLinkBtn.innerHTML = chatLinkDefaultHTML;
     }, 2000);
   });
+
+  // Editor share dropdown (subnav)
+  {
+    const dropdown = el.editorShareDropdown;
+    const trigger = dropdown.querySelector(".editor-share-dropdown__trigger");
+    const checkSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="13" height="13"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd"/></svg>`;
+
+    trigger.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const isOpen = dropdown.classList.toggle("editor-share-dropdown--open");
+      if (isOpen) {
+        setTimeout(() => {
+          const close = () => {
+            dropdown.classList.remove("editor-share-dropdown--open");
+            document.removeEventListener("click", close);
+          };
+          document.addEventListener("click", close);
+        }, 0);
+      }
+    });
+
+    function flashItem(item, origHTML) {
+      item.innerHTML = `${checkSvg} Copied!`;
+      item.classList.add("editor-share-dropdown__item--copied");
+      setTimeout(() => {
+        item.innerHTML = origHTML;
+        item.classList.remove("editor-share-dropdown__item--copied");
+      }, 1500);
+    }
+
+    function failItem(item, origHTML) {
+      item.innerHTML = "Failed";
+      item.classList.add("editor-share-dropdown__item--error");
+      setTimeout(() => {
+        item.innerHTML = origHTML;
+        item.classList.remove("editor-share-dropdown__item--error");
+      }, 1500);
+    }
+
+    // Chat Link
+    const chatLinkItem = dropdown.querySelector("[data-action='copy-chat-link']");
+    const chatLinkItemDefault = chatLinkItem?.innerHTML;
+    chatLinkItem?.addEventListener("click", async () => {
+      if (chatLinkItem.classList.contains("editor-share-dropdown__item--copied")) return;
+      const build = serializeEditorToBuild();
+      try {
+        const link = await window.desktopApi.generateChatLink(build);
+        await window.desktopApi.writeClipboardText(link);
+        flashItem(chatLinkItem, chatLinkItemDefault);
+      } catch {
+        failItem(chatLinkItem, chatLinkItemDefault);
+      }
+    });
+
+    // AxiCode
+    const axicodeItem = dropdown.querySelector("[data-action='copy-axicode']");
+    const axicodeDefault = axicodeItem?.innerHTML;
+    axicodeItem?.addEventListener("click", async () => {
+      if (axicodeItem.classList.contains("editor-share-dropdown__item--copied")) return;
+      const build = serializeEditorToBuild();
+      try {
+        const code = await window.desktopApi.encodeShareCode(build);
+        await window.desktopApi.writeClipboardText(code);
+        flashItem(axicodeItem, axicodeDefault);
+      } catch {
+        failItem(axicodeItem, axicodeDefault);
+      }
+    });
+
+    // Discord Copy
+    const discordCopyItem = dropdown.querySelector("[data-action='discord-copy']");
+    const discordCopyDefault = discordCopyItem?.innerHTML;
+    discordCopyItem?.addEventListener("click", async () => {
+      if (discordCopyItem.classList.contains("editor-share-dropdown__item--copied")) return;
+      try {
+        const buildId = state.editor?.id;
+        if (!buildId) throw new Error("No build loaded");
+        const text = await window.desktopApi.getBuildDiscordCopyText(buildId);
+        await window.desktopApi.writeClipboardText(text);
+        flashItem(discordCopyItem, discordCopyDefault);
+      } catch {
+        failItem(discordCopyItem, discordCopyDefault);
+      }
+    });
+
+    // Discord Embed
+    const discordEmbedItem = dropdown.querySelector("[data-action='discord-embed']");
+    const discordEmbedDefault = discordEmbedItem?.innerHTML;
+    discordEmbedItem?.addEventListener("click", async () => {
+      if (discordEmbedItem.classList.contains("editor-share-dropdown__item--copied")) return;
+      try {
+        const webhookUrl = await window.desktopApi.getSetting("discord.webhookUrl");
+        if (!webhookUrl) {
+          showError(new Error("Set webhook URL in Settings first."));
+          return;
+        }
+        const buildId = state.editor?.id;
+        if (!buildId) throw new Error("No build loaded");
+
+        // Auto-save + publish if not yet published
+        let build = state.builds.find((b) => b.id === buildId);
+        if (!build?.publishedFileId) {
+          el.publishSiteBtn.disabled = true;
+          state.publishProgress[buildId] = { currentStep: "saving" };
+          showPublishProgress(buildId);
+          advancePublishStep("saving");
+
+          if (state.editorDirty) {
+            const serialized = serializeEditorToBuild();
+            await window.desktopApi.saveBuild({ ...serialized, id: buildId });
+            state.builds = await window.desktopApi.listBuilds();
+            captureEditorBaseline();
+          }
+
+          const pubResult = await window.desktopApi.publishBuild(buildId);
+          advancePublishStep("pages");
+
+          if (pubResult?.pagesUrl) {
+            state.publishProgress[buildId] = { ...state.publishProgress[buildId], result: pubResult.pagesUrl };
+            showPublishResult(pubResult.pagesUrl);
+          } else {
+            state.publishProgress[buildId] = { ...state.publishProgress[buildId], result: "complete" };
+            completeAllPublishSteps();
+          }
+
+          state.builds = await window.desktopApi.listBuilds();
+          renderBuildList();
+          renderEditorMeta();
+          el.publishSiteBtn.disabled = false;
+        }
+
+        discordEmbedItem.innerHTML = "Sharing...";
+        const result = await window.desktopApi.shareBuildToDiscord(buildId);
+        if (result.success) {
+          flashItem(discordEmbedItem, discordEmbedDefault);
+        } else {
+          showError(new Error(result.error || "Failed to share"));
+          discordEmbedItem.innerHTML = discordEmbedDefault;
+        }
+      } catch (err) {
+        if (state.editor?.id && state.publishProgress[state.editor.id]) {
+          failPublishStep("saving", err.message);
+        }
+        el.publishSiteBtn.disabled = false;
+        failItem(discordEmbedItem, discordEmbedDefault);
+      }
+    });
+
+    // Published Link
+    const pubLinkItem = dropdown.querySelector("[data-action='copy-published-link']");
+    const pubLinkDefault = pubLinkItem?.innerHTML;
+    pubLinkItem?.addEventListener("click", async () => {
+      if (pubLinkItem.disabled) return;
+      if (pubLinkItem.classList.contains("editor-share-dropdown__item--copied")) return;
+      try {
+        const buildId = state.editor?.id;
+        if (!buildId) throw new Error("No build loaded");
+        const build = state.builds.find((b) => b.id === buildId);
+        if (!build?.publishedFileId) throw new Error("Build not published");
+        const config = await window.desktopApi.getConfig();
+        const slug = build.publishedSlug || "";
+        const url = `${config.pagesUrl}?n=${encodeURIComponent(slug)}&b=${build.publishedFileId}.${build.publishedKey}`;
+        await window.desktopApi.writeClipboardText(url);
+        flashItem(pubLinkItem, pubLinkDefault);
+      } catch {
+        failItem(pubLinkItem, pubLinkDefault);
+      }
+    });
+  }
 
   // Overflow menu toggle
   el.overflowMenuBtn.addEventListener("click", (e) => {
