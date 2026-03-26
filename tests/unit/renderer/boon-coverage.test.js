@@ -304,6 +304,41 @@ describe("computeBoonCoverage", () => {
     expect(result.boons.some((b) => b.name === "Swiftness")).toBe(true);
   });
 
+  test("extracts all 12 boons from Elixir of Ambition (skill 62655) via overridden facts", () => {
+    // Elixir of Ambition grants all boons to self, but the GW2 API returns no buff facts.
+    // The KNOWN_SKILL_FACTS_OVERRIDES override injects them at catalog build time.
+    // Simulate the catalog already having the overridden facts applied.
+    const { KNOWN_SKILL_FACTS_OVERRIDES } = require("../../../src/main/gw2Data/overrides");
+    const overriddenFacts = KNOWN_SKILL_FACTS_OVERRIDES.get(62655);
+    expect(overriddenFacts).toBeDefined();
+    // The override must contain Buff facts for all 12 boons
+    const buffFacts = overriddenFacts.filter((f) => f.type === "Buff" && f.status);
+    const boonStatuses = buffFacts.map((f) => f.status);
+    for (const boon of [
+      "Might", "Fury", "Alacrity", "Aegis", "Quickness", "Protection",
+      "Regeneration", "Resolution", "Resistance", "Stability", "Swiftness", "Vigor",
+    ]) {
+      expect(boonStatuses).toContain(boon);
+    }
+    // Might should have 25 stacks
+    const mightFact = buffFacts.find((f) => f.status === "Might");
+    expect(mightFact.apply_count).toBe(25);
+
+    // Now verify computeBoonCoverage extracts them when the skill has those facts
+    const elixir = makeSkill(62655, "Elixir of Ambition", overriddenFacts, {
+      type: "Elite", slot: "Elite", specialization: 64,
+      description: "Elixir. Infuse your boundless ambition into an elixir, gaining every possible boon.",
+    });
+    const catalog = makeCatalog({ skillById: new Map([[62655, elixir]]) });
+    const editor = makeEditor({ skills: { healId: 0, utilityIds: [0, 0, 0], eliteId: 62655 } });
+    const result = computeBoonCoverage(catalog, editor);
+    expect(result.boons).toHaveLength(12);
+    const resultBoonNames = result.boons.map((b) => b.name);
+    expect(resultBoonNames).toContain("Might");
+    expect(resultBoonNames).toContain("Quickness");
+    expect(resultBoonNames).toContain("Alacrity");
+  });
+
   test("extracts boons from bundle skills of a profession mechanic (e.g. Firebrand tomes)", () => {
     const chapterSkill = makeSkill(201, "Chapter 3: Azure Sun", [buffFact("Swiftness", 5)], {
       type: "Weapon", slot: "Weapon_3", specialization: 62,

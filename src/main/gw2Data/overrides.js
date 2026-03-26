@@ -16,6 +16,27 @@ const FACT_ICONS = {
 // Fact list patches for skills the GW2 API returns with missing or incomplete facts.
 // Durations are in seconds (matching GW2 API fact format). Icons use render CDN URLs.
 const KNOWN_SKILL_FACTS_OVERRIDES = new Map([
+  // Harbinger elite: Elixir of Ambition (62655) — GW2 API returns no buff facts at all.
+  // In-game the skill grants all 12 boons to self for 5 s (Might ×25).
+  // Wiki: https://wiki.guildwars2.com/wiki/Elixir_of_Ambition
+  [62655, [
+    { type: "NoData",   text: "Self Effects on Cast" },
+    { type: "Buff", text: "Might",        status: "Might",        duration: 5, apply_count: 25 },
+    { type: "Buff", text: "Fury",         status: "Fury",         duration: 5, apply_count: 1 },
+    { type: "Buff", text: "Alacrity",     status: "Alacrity",     duration: 5, apply_count: 1 },
+    { type: "Buff", text: "Aegis",        status: "Aegis",        duration: 5, apply_count: 1 },
+    { type: "Buff", text: "Quickness",    status: "Quickness",    duration: 5, apply_count: 1 },
+    { type: "Buff", text: "Protection",   status: "Protection",   duration: 5, apply_count: 1 },
+    { type: "Buff", text: "Regeneration", status: "Regeneration", duration: 5, apply_count: 1 },
+    { type: "Buff", text: "Resolution",   status: "Resolution",   duration: 5, apply_count: 1 },
+    { type: "Buff", text: "Resistance",   status: "Resistance",   duration: 5, apply_count: 1 },
+    { type: "Buff", text: "Stability",    status: "Stability",    duration: 5, apply_count: 1 },
+    { type: "Buff", text: "Swiftness",    status: "Swiftness",    duration: 5, apply_count: 1 },
+    { type: "Buff", text: "Vigor",        status: "Vigor",        duration: 5, apply_count: 1 },
+    { type: "NoData",   text: "Effects in Impact Area" },
+    { type: "Number",   text: "Number of Targets",            icon: FACT_ICONS.targets, value: 5 },
+    { type: "Distance", text: "Radius",                       icon: FACT_ICONS.radius,  distance: 240 },
+  ]],
   [78661, [
     { type: "Damage",   text: "Damage",                       icon: FACT_ICONS.damage,  dmg_multiplier: 1.98, hit_count: 1 },
     { type: "Percent",  text: "Damage increase per Affinity", icon: FACT_ICONS.percent, percent: 10 },

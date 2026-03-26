@@ -156,6 +156,20 @@ describe("Necromancer — end-to-end profession mechanics", () => {
   });
 
   // ---------------------------------------------------------------------------
+  // Elixir of Ambition — facts override (GW2 API returns no buff facts)
+  // ---------------------------------------------------------------------------
+
+  test("Elixir of Ambition (62655) has overridden facts with all 12 boons", async () => {
+    const catalog = await h.loadCatalog();
+    const skill = catalog.skillById.get(62655);
+    expect(skill).toBeTruthy();
+    expect(skill.facts.length).toBeGreaterThan(0);
+    const buffFacts = skill.facts.filter((f) => f.type === "Buff" && f.status);
+    expect(buffFacts).toHaveLength(12);
+    expect(buffFacts.find((f) => f.status === "Might").apply_count).toBe(25);
+  });
+
+  // ---------------------------------------------------------------------------
   // Spec override — Ritualist's Shroud spec correction
   // ---------------------------------------------------------------------------
 
