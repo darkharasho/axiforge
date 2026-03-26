@@ -693,8 +693,9 @@ function bindContentEvents(container) {
         }
         renderContent();
       });
-    } else {
+    } else if (!el.closest(".lib-columns")) {
       // List/grid/icon views: single click selects, double-click navigates into comp
+      // (columns view handles comp clicks via bindColumnsEvents)
       el.addEventListener("click", (e) => {
         e.stopPropagation();
         handleCompClick(el.dataset.compId, e);
