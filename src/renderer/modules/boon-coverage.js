@@ -55,6 +55,11 @@ function isAllyTargeted(description, statusName, allBoonNames) {
   return true;
 }
 
+// Twisted Medicine (Harbinger trait 2220): "Elixir skills also grant their boons to
+// allies within the elixir impact radius." When this trait is selected, boon facts
+// from skills with the "Elixir" category are also ally-targeted.
+const TWISTED_MEDICINE_TRAIT_ID = 2220;
+
 function extractBuffFacts(entity, sourceType) {
   const results = [];
   const facts = entity.facts || [];
@@ -150,10 +155,19 @@ export function computeBoonCoverage(catalog, editor, weaponSkills = []) {
 
   // Collect from skills (heal, utility, elite, profession mechanics)
   const skillIds = collectSkillIds(editor, catalog);
+  const traitIds = collectTraitIds(editor, catalog);
+  const hasTwistedMedicine = traitIds.has(TWISTED_MEDICINE_TRAIT_ID);
   for (const id of skillIds) {
     const skill = catalog.skillById?.get(id);
     if (!skill) continue;
-    allFacts.push(...extractBuffFacts(skill, "skill"));
+    const isElixir = hasTwistedMedicine && (skill.categories || []).includes("Elixir");
+    const facts = extractBuffFacts(skill, "skill");
+    if (isElixir) {
+      for (const f of facts) {
+        if (BOON_NAMES.has(f.name)) f.isAlly = true;
+      }
+    }
+    allFacts.push(...facts);
     if (skill.flipSkill) {
       const flip = catalog.skillById?.get(skill.flipSkill);
       if (flip) allFacts.push(...extractBuffFacts(flip, "skill"));
@@ -165,7 +179,6 @@ export function computeBoonCoverage(catalog, editor, weaponSkills = []) {
   }
 
   // Collect from traits
-  const traitIds = collectTraitIds(editor, catalog);
   for (const id of traitIds) {
     const trait = catalog.traitById?.get(id);
     if (!trait) continue;

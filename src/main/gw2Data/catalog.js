@@ -618,6 +618,18 @@ async function getProfessionCatalog(professionId, lang = "en", gameMode = "pve")
     };
     applyBalanceSplit(mapped, "skill", gameMode);
     if (gameMode === "pve") applyPveFacts(mapped, "skill");
+    // If a facts override exists and a complete balance split replaced the facts array,
+    // merge any override facts that the split is missing (e.g. boons the wiki scraper
+    // doesn't capture because the API/wiki omits them from the standard facts template).
+    const factsOverride = KNOWN_SKILL_FACTS_OVERRIDES.get(skill.id);
+    if (factsOverride && mapped.hasSplit) {
+      const splitStatuses = new Set(mapped.facts.map((f) => f.status).filter(Boolean));
+      const missing = factsOverride.filter((f) => f.status && !splitStatuses.has(f.status));
+      if (missing.length > 0) {
+        // Insert override facts before the first split fact (damage/conditions come after boons)
+        mapped.facts = [...missing, ...mapped.facts];
+      }
+    }
     return mapped;
   }
 

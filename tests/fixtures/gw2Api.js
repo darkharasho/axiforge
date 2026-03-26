@@ -302,6 +302,8 @@ const MOCK_PROFESSIONS = {
       { id: 77238, slot: "Profession_1",     specialization: 0,  type: "Profession" },
       // Lich Form (elite)
       { id: 10550, slot: "Elite",            specialization: 0,  type: "Elite" },
+      // Elixir of Ambition (elite, spec=64 Harbinger)
+      { id: 62655, slot: "Elite",            specialization: 64, type: "Elite" },
     ],
     weapons: {
       Axe: {
@@ -759,6 +761,10 @@ const MOCK_SKILLS = {
   62591: makeSkill(62591, { name: "Devouring Cut",     slot: "Downed_2", type: "Weapon", specialization: 64 }),
   62603: makeSkill(62603, { name: "Void Embrace",      slot: "Downed_3", type: "Weapon", specialization: 64 }),
   62618: makeSkill(62618, { name: "Wicked Corruption", slot: "Downed_4", type: "Weapon", specialization: 64 }),
+  // Elixir of Ambition (Harbinger elite, spec=64) — GW2 API returns no buff facts
+  62655: makeSkill(62655, { name: "Elixir of Ambition", slot: "Elite", type: "Elite", specialization: 64, professions: ["Necromancer"],
+    description: "Elixir. Infuse your boundless ambition into an elixir, gaining every possible boon.",
+    facts: [{ type: "Range", text: "Range", value: 900 }, { type: "Recharge", text: "Recharge", value: 60 }] }),
 
   // Ritualist's Shroud (spec=76 via override; API returns spec=0)
   77238: makeSkill(77238, { name: "Ritualist's Shroud", slot: "Profession_1", type: "Profession", specialization: 0, professions: ["Necromancer"],
