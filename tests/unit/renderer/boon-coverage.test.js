@@ -339,6 +339,57 @@ describe("computeBoonCoverage", () => {
     expect(resultBoonNames).toContain("Alacrity");
   });
 
+  test("Twisted Medicine trait marks Elixir skill boons as ally-targeted", () => {
+    const elixir = makeSkill(62655, "Elixir of Ambition", [
+      buffFact("Might", 5, 25), buffFact("Fury", 5),
+    ], { type: "Elite", slot: "Elite", specialization: 64, categories: ["Elixir"] });
+    const catalog = makeCatalog({
+      skillById: new Map([[62655, elixir]]),
+      specializationById: new Map([[64, { minorTraits: [] }]]),
+    });
+    // Twisted Medicine = trait 2220, Harbinger tier 2
+    const editor = makeEditor({
+      skills: { healId: 0, utilityIds: [0, 0, 0], eliteId: 62655 },
+      specializations: [{ specializationId: 64, majorChoices: { 1: 0, 2: 2220, 3: 0 } }],
+    });
+    const result = computeBoonCoverage(catalog, editor);
+    expect(result.boons.find((b) => b.name === "Might").hasAllySource).toBe(true);
+    expect(result.boons.find((b) => b.name === "Fury").hasAllySource).toBe(true);
+  });
+
+  test("without Twisted Medicine, Elixir boons are self-only", () => {
+    const elixir = makeSkill(62655, "Elixir of Ambition", [
+      buffFact("Might", 5, 25),
+    ], { type: "Elite", slot: "Elite", specialization: 64, categories: ["Elixir"] });
+    const catalog = makeCatalog({
+      skillById: new Map([[62655, elixir]]),
+      specializationById: new Map([[64, { minorTraits: [] }]]),
+    });
+    // No Twisted Medicine selected
+    const editor = makeEditor({
+      skills: { healId: 0, utilityIds: [0, 0, 0], eliteId: 62655 },
+      specializations: [{ specializationId: 64, majorChoices: { 1: 0, 2: 0, 3: 0 } }],
+    });
+    const result = computeBoonCoverage(catalog, editor);
+    expect(result.boons.find((b) => b.name === "Might").hasAllySource).toBe(false);
+  });
+
+  test("Twisted Medicine does not affect non-Elixir skills", () => {
+    const nonElixir = makeSkill(100, "Regular Skill", [buffFact("Might", 5)], {
+      type: "Utility", categories: [],
+    });
+    const catalog = makeCatalog({
+      skillById: new Map([[100, nonElixir]]),
+      specializationById: new Map([[64, { minorTraits: [] }]]),
+    });
+    const editor = makeEditor({
+      skills: { healId: 0, utilityIds: [100, 0, 0], eliteId: 0 },
+      specializations: [{ specializationId: 64, majorChoices: { 1: 0, 2: 2220, 3: 0 } }],
+    });
+    const result = computeBoonCoverage(catalog, editor);
+    expect(result.boons.find((b) => b.name === "Might").hasAllySource).toBe(false);
+  });
+
   test("extracts boons from bundle skills of a profession mechanic (e.g. Firebrand tomes)", () => {
     const chapterSkill = makeSkill(201, "Chapter 3: Azure Sun", [buffFact("Swiftness", 5)], {
       type: "Weapon", slot: "Weapon_3", specialization: 62,
