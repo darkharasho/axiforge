@@ -44,43 +44,30 @@ export function initSettingsModal() {
           <div id="sm-setup-row" class="settings-modal__setup-row"></div>
         </div>
         <div class="settings-modal__section">
-          <h4 class="settings-modal__section-title">Discord Webhook</h4>
-          <label class="settings-modal__label" for="sm-webhook-url">Webhook URL</label>
-          <input type="text" class="settings-modal__input" id="sm-webhook-url" placeholder="https://discord.com/api/webhooks/..." autocomplete="off" spellcheck="false">
-          <span class="settings-modal__error" id="sm-webhook-error"></span>
-        </div>
-        <div class="settings-modal__section">
-          <h4 class="settings-modal__section-title">Forum Channel</h4>
-          <div class="settings-modal__radio-group" id="sm-thread-mode">
-            <label class="settings-modal__radio" data-value="none">
-              <input type="radio" name="sm-thread-mode" value="none" class="settings-modal__radio-input">
-              <span class="settings-modal__radio-dot"></span>
-              <span class="settings-modal__radio-content">
-                <span class="settings-modal__radio-label">None</span>
-                <span class="settings-modal__radio-desc">Post directly to the channel</span>
-              </span>
-            </label>
-            <label class="settings-modal__radio" data-value="auto">
-              <input type="radio" name="sm-thread-mode" value="auto" class="settings-modal__radio-input">
-              <span class="settings-modal__radio-dot"></span>
-              <span class="settings-modal__radio-content">
-                <span class="settings-modal__radio-label">Auto</span>
-                <span class="settings-modal__radio-desc">Create a new forum post per comp</span>
-              </span>
-            </label>
-            <label class="settings-modal__radio" data-value="custom">
-              <input type="radio" name="sm-thread-mode" value="custom" class="settings-modal__radio-input">
-              <span class="settings-modal__radio-dot"></span>
-              <span class="settings-modal__radio-content">
-                <span class="settings-modal__radio-label">Custom</span>
-                <span class="settings-modal__radio-desc">Reply to an existing thread or post</span>
-              </span>
-            </label>
-          </div>
-          <div class="settings-modal__thread-id-row settings-modal__thread-id-row--hidden" id="sm-thread-id-row">
-            <label class="settings-modal__label" for="sm-thread-id">Thread / Post ID</label>
-            <input type="text" class="settings-modal__input" id="sm-thread-id" placeholder="e.g. 1234567890" autocomplete="off" spellcheck="false">
+          <h4 class="settings-modal__section-title">Discord</h4>
+          <div class="settings-modal__subsection">
+            <label class="settings-modal__sublabel">Comp Webhook</label>
+            <input type="text" class="settings-modal__input" id="sm-webhook-url" placeholder="https://discord.com/api/webhooks/..." autocomplete="off" spellcheck="false">
+            <span class="settings-modal__error" id="sm-webhook-error"></span>
+            <div class="settings-modal__thread-inline" id="sm-thread-mode">
+              <label class="settings-modal__pill"><input type="radio" name="sm-thread-mode" value="none"><span>Channel</span></label>
+              <label class="settings-modal__pill"><input type="radio" name="sm-thread-mode" value="auto"><span>New Post</span></label>
+              <label class="settings-modal__pill"><input type="radio" name="sm-thread-mode" value="custom"><span>Thread ID</span></label>
+              <input type="text" class="settings-modal__input settings-modal__thread-id-input settings-modal__thread-id-input--hidden" id="sm-thread-id" placeholder="Thread ID" autocomplete="off" spellcheck="false">
+            </div>
             <span class="settings-modal__error" id="sm-thread-error"></span>
+          </div>
+          <div class="settings-modal__subsection">
+            <label class="settings-modal__sublabel">Build Webhook</label>
+            <input type="text" class="settings-modal__input" id="sm-build-webhook-url" placeholder="https://discord.com/api/webhooks/..." autocomplete="off" spellcheck="false">
+            <span class="settings-modal__error" id="sm-build-webhook-error"></span>
+            <div class="settings-modal__thread-inline" id="sm-build-thread-mode">
+              <label class="settings-modal__pill"><input type="radio" name="sm-build-thread-mode" value="none"><span>Channel</span></label>
+              <label class="settings-modal__pill"><input type="radio" name="sm-build-thread-mode" value="auto"><span>New Post</span></label>
+              <label class="settings-modal__pill"><input type="radio" name="sm-build-thread-mode" value="custom"><span>Thread ID</span></label>
+              <input type="text" class="settings-modal__input settings-modal__thread-id-input settings-modal__thread-id-input--hidden" id="sm-build-thread-id" placeholder="Thread ID" autocomplete="off" spellcheck="false">
+            </div>
+            <span class="settings-modal__error" id="sm-build-thread-error"></span>
           </div>
         </div>
       </div>
@@ -96,21 +83,29 @@ export function initSettingsModal() {
     targetPicker:   document.getElementById("sm-target-picker"),
     setupRow:       document.getElementById("sm-setup-row"),
     publishSection: document.getElementById("sm-publishing-section"),
-    webhookUrl:     document.getElementById("sm-webhook-url"),
-    webhookError:   document.getElementById("sm-webhook-error"),
-    threadMode:     document.getElementById("sm-thread-mode"),
-    threadIdRow:    document.getElementById("sm-thread-id-row"),
-    threadId:       document.getElementById("sm-thread-id"),
-    threadError:    document.getElementById("sm-thread-error"),
-    save:           document.getElementById("sm-save"),
+    webhookUrl:        document.getElementById("sm-webhook-url"),
+    webhookError:      document.getElementById("sm-webhook-error"),
+    threadMode:        document.getElementById("sm-thread-mode"),
+    threadId:          document.getElementById("sm-thread-id"),
+    threadError:       document.getElementById("sm-thread-error"),
+    buildWebhookUrl:   document.getElementById("sm-build-webhook-url"),
+    buildWebhookError: document.getElementById("sm-build-webhook-error"),
+    buildThreadMode:   document.getElementById("sm-build-thread-mode"),
+    buildThreadId:     document.getElementById("sm-build-thread-id"),
+    buildThreadError:  document.getElementById("sm-build-thread-error"),
+    save:              document.getElementById("sm-save"),
   };
 
   _el.close.addEventListener("click", _close);
   _el.save.addEventListener("click", _save);
 
-  // Toggle thread ID input visibility based on radio selection
+  // Toggle thread ID input visibility for comp webhook
   _el.threadMode.addEventListener("change", (e) => {
-    _el.threadIdRow.classList.toggle("settings-modal__thread-id-row--hidden", e.target.value !== "custom");
+    _el.threadId.classList.toggle("settings-modal__thread-id-input--hidden", e.target.value !== "custom");
+  });
+  // Toggle thread ID input visibility for build webhook
+  _el.buildThreadMode.addEventListener("change", (e) => {
+    _el.buildThreadId.classList.toggle("settings-modal__thread-id-input--hidden", e.target.value !== "custom");
   });
 }
 
@@ -118,20 +113,34 @@ export async function openSettingsModal() {
   if (!_overlay) return;
 
   // Load current values
-  const [webhookUrl, threadMode, threadId] = await Promise.all([
+  const [webhookUrl, buildWebhookUrl, threadMode, threadId, buildThreadMode, buildThreadId] = await Promise.all([
     window.desktopApi.getSetting("discord.webhookUrl"),
+    window.desktopApi.getSetting("discord.buildWebhookUrl"),
     window.desktopApi.getSetting("discord.threadMode"),
     window.desktopApi.getSetting("discord.threadId"),
+    window.desktopApi.getSetting("discord.buildThreadMode"),
+    window.desktopApi.getSetting("discord.buildThreadId"),
   ]);
+
+  // Comp webhook
   _el.webhookUrl.value = webhookUrl || "";
   _el.webhookError.textContent = "";
-
   const mode = threadMode || "none";
   const radio = _el.threadMode.querySelector(`input[value="${mode}"]`);
   if (radio) radio.checked = true;
-  _el.threadIdRow.classList.toggle("settings-modal__thread-id-row--hidden", mode !== "custom");
+  _el.threadId.classList.toggle("settings-modal__thread-id-input--hidden", mode !== "custom");
   _el.threadId.value = threadId || "";
   _el.threadError.textContent = "";
+
+  // Build webhook
+  _el.buildWebhookUrl.value = buildWebhookUrl || "";
+  _el.buildWebhookError.textContent = "";
+  const bMode = buildThreadMode || "none";
+  const bRadio = _el.buildThreadMode.querySelector(`input[value="${bMode}"]`);
+  if (bRadio) bRadio.checked = true;
+  _el.buildThreadId.classList.toggle("settings-modal__thread-id-input--hidden", bMode !== "custom");
+  _el.buildThreadId.value = buildThreadId || "";
+  _el.buildThreadError.textContent = "";
 
   // Populate publishing section
   _renderPublishing();
@@ -372,18 +381,25 @@ function _createTicker(steps) {
 
 async function _save() {
   const url = _el.webhookUrl.value.trim();
+  const buildUrl = _el.buildWebhookUrl.value.trim();
   const mode = _el.threadMode.querySelector("input:checked")?.value || "none";
   const threadId = _el.threadId.value.trim();
+  const bMode = _el.buildThreadMode.querySelector("input:checked")?.value || "none";
+  const bThreadId = _el.buildThreadId.value.trim();
 
-  // Validate webhook URL: allow empty (clears setting) or valid Discord webhook URL
+  // Validate webhook URLs
   if (url && !WEBHOOK_RE.test(url)) {
     _el.webhookError.textContent = "Must be a Discord webhook URL";
     return;
   }
+  if (buildUrl && !WEBHOOK_RE.test(buildUrl)) {
+    _el.buildWebhookError.textContent = "Must be a Discord webhook URL";
+    return;
+  }
 
-  // Validate thread ID when custom mode is selected
+  // Validate comp thread ID
   if (mode === "custom" && !threadId) {
-    _el.threadError.textContent = "Thread ID is required for custom mode";
+    _el.threadError.textContent = "Thread ID is required";
     return;
   }
   if (mode === "custom" && !/^\d+$/.test(threadId)) {
@@ -391,12 +407,27 @@ async function _save() {
     return;
   }
 
+  // Validate build thread ID
+  if (bMode === "custom" && !bThreadId) {
+    _el.buildThreadError.textContent = "Thread ID is required";
+    return;
+  }
+  if (bMode === "custom" && !/^\d+$/.test(bThreadId)) {
+    _el.buildThreadError.textContent = "Must be a numeric Discord ID";
+    return;
+  }
+
   _el.webhookError.textContent = "";
+  _el.buildWebhookError.textContent = "";
   _el.threadError.textContent = "";
+  _el.buildThreadError.textContent = "";
   await Promise.all([
     window.desktopApi.setSetting("discord.webhookUrl", url || null),
     window.desktopApi.setSetting("discord.threadMode", mode),
     window.desktopApi.setSetting("discord.threadId", mode === "custom" ? threadId : null),
+    window.desktopApi.setSetting("discord.buildWebhookUrl", buildUrl || null),
+    window.desktopApi.setSetting("discord.buildThreadMode", bMode),
+    window.desktopApi.setSetting("discord.buildThreadId", bMode === "custom" ? bThreadId : null),
   ]);
   _close();
 }
