@@ -170,6 +170,100 @@
   background: color-mix(in srgb, var(--danger) 10%, var(--panel));
 }
 
+/* ── Editor share dropdown ─────────────────────────────────────────────── */
+.editor-share-dropdown {
+  position: relative;
+}
+
+.editor-share-dropdown__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.editor-share-dropdown__trigger svg {
+  transition: transform 0.15s;
+}
+
+.editor-share-dropdown--open .editor-share-dropdown__trigger svg:last-child {
+  transform: rotate(180deg);
+}
+
+.editor-share-dropdown__menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 170px;
+  background: #1a1a3a;
+  border: 1px solid #303060;
+  border-radius: 6px;
+  padding: 4px 0;
+  z-index: 200;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  animation: editor-share-menu-in 0.12s ease;
+}
+
+.editor-share-dropdown--open .editor-share-dropdown__menu {
+  display: block;
+}
+
+@keyframes editor-share-menu-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.editor-share-dropdown__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 14px;
+  background: none;
+  border: none;
+  color: #ccd;
+  font-size: 0.85rem;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.1s, color 0.1s;
+}
+
+.editor-share-dropdown__item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.editor-share-dropdown__item svg {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+  color: #889;
+}
+
+.editor-share-dropdown__item--copied {
+  color: var(--accent, #99e6ff);
+}
+
+.editor-share-dropdown__item--copied svg {
+  color: var(--accent, #99e6ff);
+}
+
+.editor-share-dropdown__item--error {
+  color: var(--danger, #f87171);
+}
+
+.editor-share-dropdown__item:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.editor-share-dropdown__divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 2px 0;
+}
+
 /* Build code readonly input + copy button */
 .build-code-row {
   display: flex;

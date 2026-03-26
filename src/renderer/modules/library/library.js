@@ -470,6 +470,46 @@ async function handleCopyChatLink(buildId) {
   }
 }
 
+async function handleDiscordCopy(buildId) {
+  try {
+    const text = await window.desktopApi.getBuildDiscordCopyText(buildId);
+    await window.desktopApi.writeClipboardText(text);
+    showToast("Discord link copied!");
+  } catch (err) {
+    console.error("Failed to copy Discord link:", err);
+    showToast("Failed to copy Discord link", "error");
+  }
+}
+
+async function handleDiscordEmbed(buildId) {
+  try {
+    const webhookUrl = await window.desktopApi.getSetting("discord.webhookUrl");
+    if (!webhookUrl) {
+      showToast("Set webhook URL in Settings first", "error");
+      return;
+    }
+
+    // Auto-publish if not yet published
+    let build = state.builds.find((b) => b.id === buildId);
+    if (!build?.publishedFileId) {
+      showToast("Publishing first...");
+      await window.desktopApi.publishBuild(buildId);
+      state.builds = await window.desktopApi.listBuilds();
+      renderLibrary();
+    }
+
+    const result = await window.desktopApi.shareBuildToDiscord(buildId);
+    if (result.success) {
+      showToast("Shared to Discord!");
+    } else {
+      showToast(result.error || "Failed to share", "error");
+    }
+  } catch (err) {
+    console.error("Failed to share to Discord:", err);
+    showToast("Failed to share to Discord", "error");
+  }
+}
+
 async function handleImportChatLink(targetFolderId) {
   const folderId = targetFolderId ?? (state.currentFolder?.type === "custom" ? state.currentFolder.id : null);
   const result = await showImportModal();
@@ -1220,6 +1260,8 @@ function _buildSharedCallbacks() {
     onCutJson: handleCutJson,
     onCopyChatLink: handleCopyChatLink,
     onCopyShareCode: handleCopyShareCode,
+    onDiscordCopy: handleDiscordCopy,
+    onDiscordEmbed: handleDiscordEmbed,
     onImportChatLink: handleImportChatLink,
     onImportGw2Skills: handleImportGw2Skills,
     onImportShareCode: handleImportShareCode,

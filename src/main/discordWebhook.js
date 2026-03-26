@@ -1,13 +1,26 @@
 "use strict";
 
 const https = require("node:https");
-const { getDiscordEmoji, getDisplayName } = require("./discordEmoji");
+const { getDiscordEmoji, getDisplayName, getSpecLineEmoji } = require("./discordEmoji");
 
 const EMBED_DESC_LIMIT = 4096;
 const COLOR_PVE = 0xFFD700;
 const COLOR_WVW = 0xDC143C;
 const LOGO_URL = "https://raw.githubusercontent.com/darkharasho/axiforge/main/public/img/build_logo.png";
 const GITHUB_URL = "https://github.com/darkharasho/axiforge";
+
+// Profession colors — match the CSS class colors used in the app UI
+const PROFESSION_COLORS = {
+  Guardian:     0x6EA8FF,
+  Warrior:      0xFF9944,
+  Necromancer:  0x4DCA7A,
+  Engineer:     0xCC8844,
+  Ranger:       0x77CC55,
+  Thief:        0xCC6677,
+  Mesmer:       0xB07ACC,
+  Elementalist: 0xDD5555,
+  Revenant:     0xAA6655,
+};
 // Braille Pattern Blank — renders as whitespace but forces embed width
 const WIDTH_PAD = "\u2800".repeat(45);
 
@@ -113,7 +126,7 @@ function postWebhook(webhookUrl, payload) {
 async function shareCompToDiscord(comp, builds, compUrl, buildUrls, webhookUrl, options = {}) {
   const { threadMode = "none", threadId } = options;
   const embed = buildCompEmbed(comp, builds, compUrl, buildUrls);
-  const payload = { embeds: [embed] };
+  const payload = { username: "AxiForge", avatar_url: LOGO_URL, embeds: [embed] };
 
   let targetUrl = webhookUrl;
   if (threadMode === "custom" && threadId) {
@@ -142,4 +155,297 @@ async function shareCompToDiscord(comp, builds, compUrl, buildUrls, webhookUrl, 
   }
 }
 
-module.exports = { buildCompEmbed, shareCompToDiscord };
+/**
+ * Build a compact spec overview like:
+ *   (icon) `Fire            3 | 2 | 1`
+ *   (icon) `Tempest         1 | 2 | 2`
+ *
+ * @param {Array} specializations - build.specializations
+ * @param {string} profession - build.profession
+ * @param {object} [catalog] - profession catalog with .specializations and .traits
+ */
+function formatSpecCard(specializations, profession, catalog) {
+  if (!Array.isArray(specializations)) return null;
+
+  // Build a lookup: for each spec id → ordered major trait IDs per tier (1/2/3)
+  // from the catalog, so we can derive position indices from majorChoices.
+  const tierMap = new Map(); // specId → { 1: [id,id,id], 2: [...], 3: [...] }
+  if (catalog) {
+    const traitById = new Map();
+    for (const t of catalog.traits || []) {
+      traitById.set(Number(t.id), t);
+    }
+    for (const catSpec of catalog.specializations || []) {
+      const byTier = { 1: [], 2: [], 3: [] };
+      for (const traitId of catSpec.majorTraits || []) {
+        const t = traitById.get(Number(traitId));
+        if (t && byTier[t.tier]) byTier[t.tier].push(Number(t.id));
+      }
+      tierMap.set(Number(catSpec.id), byTier);
+    }
+  }
+
+  const names = [];
+  const entries = [];
+  for (const spec of specializations) {
+    if (!spec || !spec.name) continue;
+
+    const choices = [];
+    const catalogTiers = tierMap.get(Number(spec.id));
+    for (let tier = 1; tier <= 3; tier++) {
+      // 1. Direct position indices (axicode imports)
+      if (Array.isArray(spec.traitChoices) && spec.traitChoices[tier - 1]) {
+        choices.push(spec.traitChoices[tier - 1]);
+        continue;
+      }
+      // 2. Reverse-map from majorChoices using catalog tier data
+      const chosen = Number(spec.majorChoices?.[tier]) || 0;
+      const tierTraits = catalogTiers?.[tier]
+        || (spec.majorTraitsByTier?.[tier] || []).map((t) => Number(t?.id));
+      if (chosen && tierTraits.length) {
+        const idx = tierTraits.indexOf(chosen);
+        choices.push(idx >= 0 ? idx + 1 : "–");
+      } else {
+        choices.push("–");
+      }
+    }
+    const emoji = getSpecLineEmoji(profession, spec.name, spec.elite);
+    const prefix = emoji ? `${emoji} ` : "";
+    names.push(spec.name);
+    entries.push({ prefix, choices });
+  }
+  if (!entries.length) return null;
+  const maxLen = Math.max(...names.map((n) => n.length));
+  return entries.map((e, i) => {
+    const padded = names[i].padEnd(maxLen);
+    return `${e.prefix}\`${padded}  ${e.choices.join(" | ")}\``;
+  }).join("\n");
+}
+
+// Equipment emoji — weapons, trinkets, relic, armor (per weight class)
+const WEAPON_EMOJI = {
+  Axe:        "<:Axe:1486805523566166036>",
+  Dagger:     "<:Dagger:1486805417219854429>",
+  Focus:      "<:Focus:1486805416259096626>",
+  Greatsword: "<:Greatsword:1486805410802569396>",
+  Hammer:     "<:Hammer:1486805522404343808>",
+  HarpoonGun: "<:HarpoonGun:1486805406348087497>",
+  Longbow:    "<:Longbow:1486805520789803008>",
+  Mace:       "<:Mace:1486805402682130543>",
+  Pistol:     "<:Pistol:1486805512447197274>",
+  Rifle:      "<:Rifle:1486805399771283566>",
+  Scepter:    "<:Scepter:1486805397946761347>",
+  Shield:     "<:Shield:1486805396516769883>",
+  ShortBow:   "<:ShortBow:1486805394704830616>",
+  Spear:      "<:Spear:1486805393001676910>",
+  Staff:      "<:Staff:1486805391580069918>",
+  Sword:      "<:Sword:1486805389239521305>",
+  Torch:      "<:Torch:1486805387381444791>",
+  Trident:    "<:Trident:1486805386265886941>",
+  Warhorn:    "<:Warhorn:1486805384759869491>",
+};
+
+const TRINKET_EMOJI = {
+  amulet:   "<:amulet:1486805585755111464>",
+  backpack: "<:backpack:1486805583129612481>",
+  earring:  "<:earring:1486805580457971897>",
+  relic:    "<:relic:1486805577970618610>",
+  ring:     "<:ring:1486805575923794220>",
+};
+
+// Armor emoji keyed by weight → slot
+const ARMOR_EMOJI = {
+  heavy: {
+    head:      "<:heavyheadgear:1486805056555712522>",
+    shoulders: "<:heavyshoulders:1486805052063744143>",
+    chest:     "<:heavychest:1486805059755970580>",
+    hands:     "<:heavygloves:1486805057805750413>",
+    legs:      "<:heavyleggings:1486805054387257384>",
+    feet:      "<:heavyboots:1486805085148151859>",
+  },
+  medium: {
+    head:      "<:mediumheadgear:1486805024284868650>",
+    shoulders: "<:mediumshoulders:1486805021067710615>",
+    chest:     "<:mediumchest:1486805032480411890>",
+    hands:     "<:mediumgloves:1486805026784673863>",
+    legs:      "<:mediumleggings:1486805022254563374>",
+    feet:      "<:mediumboots:1486805035831656551>",
+  },
+  light: {
+    head:      "<:lighthelm:1486805044727779608>",
+    shoulders: "<:lightpauldrons:1486805038566342666>",
+    chest:     "<:lightchest:1486805048137744384>",
+    hands:     "<:lightgloves:1486805046795702272>",
+    legs:      "<:lightleggings:1486805041665937588>",
+    feet:      "<:lightboots:1486805050419576884>",
+  },
+};
+
+const PROFESSION_WEIGHT = {
+  Elementalist: "light", Mesmer: "light", Necromancer: "light",
+  Engineer: "medium", Ranger: "medium", Thief: "medium",
+  Guardian: "heavy", Warrior: "heavy", Revenant: "heavy",
+};
+
+const WEAPON_KEY_MAP = {
+  axe: "Axe", dagger: "Dagger", focus: "Focus", greatsword: "Greatsword",
+  hammer: "Hammer", harpoongun: "HarpoonGun", longbow: "Longbow", mace: "Mace",
+  pistol: "Pistol", rifle: "Rifle", scepter: "Scepter", shield: "Shield",
+  shortbow: "ShortBow", spear: "Spear", staff: "Staff", sword: "Sword",
+  torch: "Torch", trident: "Trident", warhorn: "Warhorn",
+};
+
+function getWeaponEmoji(weaponType) {
+  if (!weaponType) return "";
+  const key = WEAPON_KEY_MAP[weaponType.toLowerCase()] || weaponType;
+  return WEAPON_EMOJI[key] || "";
+}
+
+function resolveSigilNames(sigilIds, upgradeCatalog) {
+  if (!upgradeCatalog || !sigilIds.length) return [];
+  return sigilIds.map((id) => {
+    const item = upgradeCatalog.sigilById?.get(Number(id));
+    return item ? item.name.replace(/^Superior Sigil of /i, "") : null;
+  }).filter(Boolean);
+}
+
+function resolveRuneName(runeId, upgradeCatalog) {
+  if (!upgradeCatalog || !runeId || runeId === "0") return null;
+  const item = upgradeCatalog.runeById?.get(Number(runeId));
+  return item ? item.name.replace(/^Superior Rune of (the )?/i, "") : null;
+}
+
+/**
+ * Equipment card with slot emoji as labels:
+ *
+ *   (helm)      `Stat  Rune | Rune  Stat` (hands)
+ *   (shoulders) `Stat  Rune | Rune  Stat` (leggings)
+ *   (chest)     `Stat  Rune | Rune  Stat` (boots)
+ *
+ *   (Axe) (Focus)  `Stat | Force · Impact`
+ *   (Greatsword)   `Stat | Force · Air`
+ *
+ *   (backpack) `Stat | Stat` (amulet)
+ *   (earring)  `Stat | Stat` (ring)
+ *   (earring)  `Stat | Stat` (ring)
+ *   (relic) `Relic of Fireworks`
+ */
+/**
+ * Returns the equipment field string — weapon emoji + name for both sets.
+ */
+function formatEquipCard(equipment) {
+  if (!equipment) return null;
+  const wep = equipment.weapons || {};
+  const lines = [];
+
+  for (const [mh, oh, label] of [["mainhand1", "offhand1", "Set 1"], ["mainhand2", "offhand2", "Set 2"]]) {
+    const mhType = wep[mh];
+    if (!mhType) continue;
+    const ohType = wep[oh];
+
+    const parts = [];
+    parts.push(`${getWeaponEmoji(mhType)} \`${mhType[0].toUpperCase() + mhType.slice(1)}\``);
+    if (ohType) {
+      parts.push(`${getWeaponEmoji(ohType)} \`${ohType[0].toUpperCase() + ohType.slice(1)}\``);
+    }
+    lines.push(parts.join(" / "));
+  }
+
+  return lines.length ? lines.join("\n") : null;
+}
+
+function buildBuildEmbed(build, buildUrl, chatLink, embedMeta = {}) {
+  const { professionIconUrl, specIconUrl, eliteSpecName, gameMode, role } = embedMeta;
+  const name = getDisplayName(build);
+  const emoji = getDiscordEmoji(build);
+  const color = PROFESSION_COLORS[build.profession] || COLOR_PVE;
+
+  const descParts = [];
+  if (buildUrl) descParts.push(buildUrl);
+
+  const updatedAt = build.updatedAt
+    ? new Date(build.updatedAt).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })
+    : null;
+
+  // Footer: tags + last updated
+  const tags = [];
+  if (gameMode) tags.push(gameMode.toUpperCase());
+  if (eliteSpecName) tags.push(eliteSpecName);
+  if (role && role !== "Unknown") tags.push(role);
+  const footerParts = [];
+  if (tags.length) footerParts.push(tags.join(" · "));
+  if (updatedAt) footerParts.push(`Last updated: ${updatedAt}`);
+
+  const embed = {
+    title: `${emoji} ${name}`,
+    url: buildUrl || undefined,
+    description: descParts.join("\n") || undefined,
+    color,
+    author: {
+      name: "AxiForge",
+      url: GITHUB_URL,
+      icon_url: LOGO_URL,
+    },
+  };
+
+  // Spec + equipment fields
+  const fields = [];
+  const specCard = formatSpecCard(build.specializations, build.profession, embedMeta.catalog);
+  if (specCard) fields.push({ name: "Build", value: specCard, inline: true });
+  const equipCard = formatEquipCard(build.equipment);
+  if (equipCard) fields.push({ name: "Weapons", value: equipCard, inline: true });
+  if (chatLink) fields.push({ name: "Build Code", value: `\`\`\`\n${chatLink}\n\`\`\`` });
+  if (fields.length) embed.fields = fields;
+
+  // Thumbnail: profession big icon (class art)
+  const thumbUrl = professionIconUrl || specIconUrl;
+  if (thumbUrl) {
+    embed.thumbnail = { url: thumbUrl };
+  }
+
+  // Footer: tags + date as text (no icon)
+  if (footerParts.length) {
+    embed.footer = { text: footerParts.join("  |  ") };
+  }
+
+  return embed;
+}
+
+async function shareBuildToDiscord(build, buildUrl, chatLink, embedMeta, webhookUrl, options = {}) {
+  const { threadMode = "none", threadId } = options;
+  const embed = buildBuildEmbed(build, buildUrl, chatLink, embedMeta);
+  const payload = { username: "AxiForge", avatar_url: LOGO_URL, embeds: [embed] };
+
+  let targetUrl = webhookUrl;
+  if (threadMode === "custom" && threadId) {
+    const sep = webhookUrl.includes("?") ? "&" : "?";
+    targetUrl = `${webhookUrl}${sep}thread_id=${threadId}`;
+  } else if (threadMode === "auto") {
+    payload.thread_name = getDisplayName(build);
+  }
+
+  try {
+    const res = await postWebhook(targetUrl, payload);
+    if (res.status === 204 || res.status === 200) {
+      return { success: true };
+    }
+    if (res.status === 401 || res.status === 404) {
+      return { success: false, error: "Webhook URL is invalid or has been deleted" };
+    }
+    if (res.status === 429) {
+      return { success: false, error: "Rate limited by Discord. Try again in a few seconds." };
+    }
+    return { success: false, error: `Discord returned status ${res.status}` };
+  } catch (err) {
+    return { success: false, error: `Network error: ${err.message}` };
+  }
+}
+
+function formatBuildDiscordCopy(build, buildUrl) {
+  const emoji = getDiscordEmoji(build);
+  const name = getDisplayName(build);
+  if (buildUrl) return `${emoji} [${name}](${buildUrl})`;
+  return `${emoji} ${name}`;
+}
+
+module.exports = { buildCompEmbed, shareCompToDiscord, buildBuildEmbed, shareBuildToDiscord, formatBuildDiscordCopy };

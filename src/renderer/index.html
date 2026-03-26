@@ -76,9 +76,35 @@
               Save
             </button>
             <button id="publishSiteBtn" class="btn btn-primary" type="button">Publish</button>
-            <button id="copyPublishLink" class="subnav__link-btn hidden" type="button" title="Copy published link">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-            </button>
+            <div id="editorShareDropdown" class="editor-share-dropdown">
+              <button type="button" class="btn btn-secondary editor-share-dropdown__trigger">
+                Share <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="12" height="12"><path fill-rule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd"/></svg>
+              </button>
+              <div class="editor-share-dropdown__menu">
+                <button type="button" class="editor-share-dropdown__item" data-action="copy-chat-link">
+                  <svg width="14" height="14" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2.5L16.5 6.25V13.75L10 17.5L3.5 13.75V6.25L10 2.5Z"/><path d="M6.25 7.9H8.75M11.25 7.9H13.75"/><circle cx="10" cy="7.9" r="1.25" fill="currentColor" stroke="none"/><path d="M6.25 10H8.75M11.25 10H13.75"/><circle cx="10" cy="10" r="1.25" fill="currentColor" stroke="none"/><path d="M6.25 12.1H8.75M11.25 12.1H13.75"/><circle cx="10" cy="12.1" r="1.25" fill="currentColor" stroke="none"/></svg>
+                  Chat Link
+                </button>
+                <button type="button" class="editor-share-dropdown__item" data-action="copy-axicode">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path d="M15.98 1.804a1 1 0 0 0-1.96 0l-.24 1.192a1 1 0 0 1-.784.785l-1.192.238a1 1 0 0 0 0 1.962l1.192.238a1 1 0 0 1 .785.785l.238 1.192a1 1 0 0 0 1.962 0l.238-1.192a1 1 0 0 1 .785-.785l1.192-.238a1 1 0 0 0 0-1.962l-1.192-.238a1 1 0 0 1-.785-.785l-.238-1.192ZM6.949 5.684a1 1 0 0 0-1.898 0l-.683 2.051a1 1 0 0 1-.633.633l-2.051.683a1 1 0 0 0 0 1.898l2.051.684a1 1 0 0 1 .633.632l.683 2.051a1 1 0 0 0 1.898 0l.683-2.051a1 1 0 0 1 .633-.633l2.051-.683a1 1 0 0 0 0-1.898l-2.051-.683a1 1 0 0 1-.633-.633L6.95 5.684ZM13.949 13.684a1 1 0 0 0-1.898 0l-.184.551a1 1 0 0 1-.632.633l-.551.183a1 1 0 0 0 0 1.898l.551.183a1 1 0 0 1 .633.633l.183.551a1 1 0 0 0 1.898 0l.184-.551a1 1 0 0 1 .632-.633l.551-.183a1 1 0 0 0 0-1.898l-.551-.184a1 1 0 0 1-.633-.632l-.183-.551Z"/></svg>
+                  AxiCode
+                </button>
+                <div class="editor-share-dropdown__divider"></div>
+                <button type="button" class="editor-share-dropdown__item" data-action="discord-copy">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path d="M7 3.5A1.5 1.5 0 0 1 8.5 2h3A1.5 1.5 0 0 1 13 3.5v.21a7.522 7.522 0 0 1 4.593 3.443.75.75 0 0 1-.072.755l-.09.1a7.04 7.04 0 0 0-1.93 4.142v.247a2.25 2.25 0 0 1-.533 1.453l-1.395 1.674a.75.75 0 0 1-.577.272H6.004a.75.75 0 0 1-.577-.272L4.032 13.85a2.25 2.25 0 0 1-.533-1.452v-.247A7.04 7.04 0 0 0 1.57 8.008l-.091-.1a.75.75 0 0 1-.072-.756A7.522 7.522 0 0 1 7 3.71V3.5Z"/></svg>
+                  Discord Copy
+                </button>
+                <button type="button" class="editor-share-dropdown__item" data-action="discord-embed">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path d="M9.25 13.25a.75.75 0 0 0 1.5 0V4.636l2.955 3.129a.75.75 0 0 0 1.09-1.03l-4.25-4.5a.75.75 0 0 0-1.09 0l-4.25 4.5a.75.75 0 1 0 1.09 1.03L9.25 4.636v8.614Z"/><path d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z"/></svg>
+                  Discord Embed
+                </button>
+                <div class="editor-share-dropdown__divider"></div>
+                <button type="button" class="editor-share-dropdown__item" data-action="copy-published-link" disabled title="Publish first">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                  Published Link
+                </button>
+              </div>
+            </div>
             <div id="publishStatus" class="publish-status"></div>
             <div class="subnav__overflow">
               <button id="overflowMenuBtn" class="subnav__overflow-btn" type="button" title="More actions"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M6.75 12C6.75 12.4142 6.41421 12.75 6 12.75C5.58579 12.75 5.25 12.4142 5.25 12C5.25 11.5858 5.58579 11.25 6 11.25C6.41421 11.25 6.75 11.5858 6.75 12Z"/><path d="M12.75 12C12.75 12.4142 12.4142 12.75 12 12.75C11.5858 12.75 11.25 12.4142 11.25 12C11.25 11.5858 11.5858 11.25 12 11.25C12.4142 11.25 12.75 11.5858 12.75 12Z"/><path d="M18.75 12C18.75 12.4142 18.4142 12.75 18 12.75C17.5858 12.75 17.25 12.4142 17.25 12C17.25 11.5858 17.5858 11.25 18 11.25C18.4142 11.25 18.75 11.5858 18.75 12Z"/></svg></button>

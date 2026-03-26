@@ -81,10 +81,10 @@ function mapBuildToTemplateInput(build) {
   if (profLower === "ranger") {
     const pets = build.selectedPets || {};
     rangerPets = [
-      Number(pets.terrestrial1) || 0,
-      Number(pets.terrestrial2) || 0,
-      Number(pets.aquatic1) || 0,
-      Number(pets.aquatic2) || 0,
+      Number(pets.terrestrial1) || undefined,
+      Number(pets.terrestrial2) || undefined,
+      Number(pets.aquatic1) || undefined,
+      Number(pets.aquatic2) || undefined,
     ];
   }
 

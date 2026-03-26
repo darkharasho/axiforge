@@ -126,6 +126,10 @@ function showBuildMenu(x, y, buildId, build) {
     _item(scissorsIcon, "Cut", "Ctrl+X", () => _callbacks.onCutJson?.(buildId)),
     _item(linkIcon, "Copy Chat Link", null, () => _callbacks.onCopyChatLink?.(buildId)),
     _item(axiforgeIcon, "Copy AxiCode", null, () => _callbacks.onCopyShareCode?.(buildId)),
+    _submenuItem(arrowUpTrayIcon, "Share to Discord", [
+      _item(clipboardDocumentIcon, "Copy Link", null, () => _callbacks.onDiscordCopy?.(buildId)),
+      _item(arrowUpTrayIcon, "Discord Embed", null, () => _callbacks.onDiscordEmbed?.(buildId)),
+    ]),
     _item(arrowUpTrayIcon, "Export (.axicode)", null, () => _callbacks.onExportAxicode?.("selection")),
     _item(globeAltIcon, "Publish", null, () => _callbacks.onPublish?.(buildId)),
     _sep(),

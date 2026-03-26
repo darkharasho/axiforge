@@ -222,4 +222,55 @@ function computePublishStats(equipment, upgradeCatalog, profession) {
   return { stats, modifiers };
 }
 
-module.exports = { computePublishStats };
+// ── Lightweight role estimation (mirrors renderer roleEstimator.js) ──────────
+
+const MIN_THRESHOLD = 700;
+const HYBRID_RATIO  = 0.10;
+
+const ROLE_SCORERS = [
+  { role: "Power DPS",    fn: s => s.Power * 1.0 + s.Precision * 0.5 + s.Ferocity * 0.5 },
+  { role: "Condi DPS",    fn: s => s.ConditionDamage * 1.0 + s.Expertise * 0.8 },
+  { role: "Boon Support", fn: s => s.Concentration * 1.5 + s.HealingPower * 0.3 },
+  { role: "Heal Support", fn: s => s.HealingPower * 1.5 + s.Concentration * 0.3 },
+];
+
+function estimateRole(build) {
+  const slots = build?.equipment?.slots;
+  if (!slots || !Object.values(slots).some(Boolean)) return null;
+
+  const totals = {
+    Power: 0, Precision: 0, Toughness: 0, Vitality: 0,
+    Ferocity: 0, ConditionDamage: 0, Expertise: 0, Concentration: 0, HealingPower: 0,
+  };
+
+  for (const [slotKey, comboLabel] of Object.entries(slots)) {
+    if (!comboLabel) continue;
+    const combo = STAT_COMBOS_BY_LABEL.get(comboLabel);
+    const w = SLOT_WEIGHTS[slotKey];
+    if (!combo || !w) continue;
+    const n = combo.stats.length;
+    if (n <= 3) {
+      totals[combo.stats[0]] += w.p;
+      for (let i = 1; i < n; i++) totals[combo.stats[i]] += w.s;
+    } else if (n === 4) {
+      totals[combo.stats[0]] += w.p4;
+      totals[combo.stats[1]] += w.p4;
+      totals[combo.stats[2]] += w.s4;
+      totals[combo.stats[3]] += w.s4;
+    } else {
+      for (const stat of combo.stats) totals[stat] += w.c;
+    }
+  }
+
+  const scored = ROLE_SCORERS.map(({ role, fn }) => ({ role, score: fn(totals) }));
+  scored.sort((a, b) => b.score - a.score);
+
+  const [first, second] = scored;
+  if (first.score < MIN_THRESHOLD) return "Unknown";
+  if (second && second.score >= MIN_THRESHOLD && (first.score - second.score) / first.score < HYBRID_RATIO) {
+    return "Hybrid";
+  }
+  return first.role;
+}
+
+module.exports = { computePublishStats, estimateRole };
