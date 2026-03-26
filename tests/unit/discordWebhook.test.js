@@ -296,11 +296,13 @@ describe("buildBuildEmbed", () => {
     expect(embed.url).toBe(buildUrl);
   });
 
-  test("description contains build URL and chat link in code block", () => {
+  test("description contains build URL; chat link is in Build Code field", () => {
     const embed = buildBuildEmbed(build, buildUrl, chatLink, meta);
     expect(embed.description).toContain(buildUrl);
-    expect(embed.description).toContain("```");
-    expect(embed.description).toContain(chatLink);
+    const buildCodeField = (embed.fields || []).find(f => f.name === "Build Code");
+    expect(buildCodeField).toBeDefined();
+    expect(buildCodeField.value).toContain("```");
+    expect(buildCodeField.value).toContain(chatLink);
   });
 
   test("thumbnail uses profession big icon URL", () => {
@@ -316,9 +318,11 @@ describe("buildBuildEmbed", () => {
     expect(embed.footer.text).toMatch(/Last updated:.*Mar.*20.*2026/);
   });
 
-  test("footer icon_url uses spec icon", () => {
+  test("footer has text but no icon_url (icon removed from footer design)", () => {
     const embed = buildBuildEmbed(build, buildUrl, chatLink, meta);
-    expect(embed.footer.icon_url).toBe(specIconUrl);
+    expect(embed.footer).toBeDefined();
+    expect(embed.footer.text).toBeDefined();
+    expect(embed.footer.icon_url).toBeUndefined();
   });
 
   test("has AxiForge author block", () => {
