@@ -816,12 +816,12 @@ app.whenReady().then(async () => {
 
     // 1. Load webhook URL and thread settings
     const [webhookUrl, threadMode, threadId] = await Promise.all([
-      store.getSetting("discord.webhookUrl"),
-      store.getSetting("discord.threadMode"),
-      store.getSetting("discord.threadId"),
+      store.getSetting("discord.buildWebhookUrl"),
+      store.getSetting("discord.buildThreadMode"),
+      store.getSetting("discord.buildThreadId"),
     ]);
     if (!webhookUrl || !/^https:\/\/(discord\.com|discordapp\.com)\/api\/webhooks\//.test(webhookUrl)) {
-      return { success: false, error: "Discord webhook URL is not configured or invalid" };
+      return { success: false, error: "Build webhook URL is not configured or invalid" };
     }
 
     // 2. Load and validate build

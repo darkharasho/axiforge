@@ -483,9 +483,9 @@ async function handleDiscordCopy(buildId) {
 
 async function handleDiscordEmbed(buildId) {
   try {
-    const webhookUrl = await window.desktopApi.getSetting("discord.webhookUrl");
+    const webhookUrl = await window.desktopApi.getSetting("discord.buildWebhookUrl");
     if (!webhookUrl) {
-      showToast("Set webhook URL in Settings first", "error");
+      showToast("Set build webhook URL in Settings first", "error");
       return;
     }
 

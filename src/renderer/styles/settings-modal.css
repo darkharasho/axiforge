@@ -105,6 +105,25 @@
   border-color: var(--accent-2);
 }
 
+/* ── Subsections (grouped items under a section heading) ─────── */
+
+.settings-modal__subsection {
+  margin-top: 12px;
+  padding-left: 2px;
+}
+
+.settings-modal__subsection:first-child {
+  margin-top: 4px;
+}
+
+.settings-modal__sublabel {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
 /* ── Radio group ─────────────────────────────────────────────── */
 
 .settings-modal__radio-group {
@@ -185,13 +204,69 @@
   color: var(--muted);
 }
 
-/* ── Thread ID row (shown only in custom mode) ──────────────── */
+/* ── Thread ID row (legacy, kept for compat) ─────────────────── */
 
 .settings-modal__thread-id-row {
   margin-top: 10px;
 }
 
 .settings-modal__thread-id-row--hidden {
+  display: none;
+}
+
+/* ── Compact inline thread mode pills ────────────────────────── */
+
+.settings-modal__thread-inline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.settings-modal__pill {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.settings-modal__pill input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.settings-modal__pill span {
+  padding: 3px 10px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--muted);
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.settings-modal__pill:hover span {
+  border-color: var(--line-soft, #444);
+  background: var(--panel);
+}
+
+.settings-modal__pill input:checked + span {
+  background: rgba(72, 168, 255, 0.12);
+  border-color: rgba(72, 168, 255, 0.5);
+  color: #48a8ff;
+}
+
+.settings-modal__thread-id-input {
+  flex: 1;
+  min-width: 100px;
+  max-width: 160px;
+  font-size: 0.7rem !important;
+  padding: 3px 8px !important;
+}
+
+.settings-modal__thread-id-input--hidden {
   display: none;
 }
 

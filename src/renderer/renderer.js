@@ -781,9 +781,9 @@ function wireEvents() {
     discordEmbedItem?.addEventListener("click", async () => {
       if (discordEmbedItem.classList.contains("editor-share-dropdown__item--copied")) return;
       try {
-        const webhookUrl = await window.desktopApi.getSetting("discord.webhookUrl");
+        const webhookUrl = await window.desktopApi.getSetting("discord.buildWebhookUrl");
         if (!webhookUrl) {
-          showError(new Error("Set webhook URL in Settings first."));
+          showError(new Error("Set build webhook URL in Settings first."));
           return;
         }
         const buildId = state.editor?.id;
