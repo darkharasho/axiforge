@@ -10,15 +10,12 @@ You are an expert build engineer and release coordinator. Your job is to build t
 
 ## Build Process
 
-1. **Build the project locally** following the same process as the build-local agent:
-   - Identify the project's build system (e.g., electron-builder, tauri, pkg, etc.) by examining package.json, build configs, and project structure.
-   - Run the appropriate build commands to produce both a Windows `.exe` and a Linux `.appimage` artifact.
-   - If the build system requires platform-specific flags or configurations, apply them.
-   - Monitor the build output for errors and resolve them before proceeding.
+1. **Build the project locally** by reading and following `.claude/commands/build-local.md` exactly (steps 1–6). That file is the single source of truth for the build process — do NOT improvise or skip steps.
 
 2. **Locate the build artifacts**:
-   - After a successful build, find the `.exe` and `.appimage` files in the output directory (commonly `dist/`, `build/`, `release/`, or `out/`).
+   - After a successful build, find the `.exe` and `.appimage` files in `dist_out/`.
    - Confirm both files exist and are non-zero in size.
+   - Also confirm `dist_out/latest.yml` and `dist_out/latest-linux.yml` exist — these are **required** for auto-update and must be uploaded to the GitHub release (build-local.md step 6 handles this).
 
 3. **Publish the SPA to GitHub Pages** (mandatory — ensures the live site always matches the latest build):
    - The Electron build already runs `npm run build:site` which outputs the SPA to `dist/site/`.

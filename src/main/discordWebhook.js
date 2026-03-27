@@ -391,9 +391,9 @@ function buildBuildEmbed(build, buildUrl, chatLink, embedMeta = {}) {
   // Spec + equipment fields
   const fields = [];
   const specCard = formatSpecCard(build.specializations, build.profession, embedMeta.catalog);
-  if (specCard) fields.push({ name: "Build", value: specCard, inline: true });
+  if (specCard) fields.push({ name: "Build", value: specCard });
   const equipCard = formatEquipCard(build.equipment);
-  if (equipCard) fields.push({ name: "Weapons", value: equipCard, inline: true });
+  if (equipCard) fields.push({ name: "Weapons", value: equipCard });
   if (chatLink) fields.push({ name: "Build Code", value: `\`\`\`\n${chatLink}\n\`\`\`` });
   if (fields.length) embed.fields = fields;
 
