@@ -259,3 +259,128 @@ describe("showHoverPreview — flip-chain suppression for mismatched elite spec"
     expect(mockHover.innerHTML).not.toContain("Overload Fire (Weaver target)");
   });
 });
+
+// ── showHoverPreview — trait-associated skill cards ─────────────────────────
+//
+// When hovering over a trait that has traitSkillIds (skills triggered by the
+// trait), the hover preview should show the associated skill card(s) below the
+// trait card, separated by a "Trait skill" divider.
+
+describe("showHoverPreview — trait-associated skill cards", () => {
+  const LESSER_SIGNET = {
+    id: 79344, name: "Lesser Signet of the Locust", specialization: 0,
+    icon: "", iconFallback: "", description: "Strikes nearby foes", facts: [],
+    traitedFacts: [], slot: "", type: "", professions: [],
+    attunement: "", weaponType: "", hasSplit: false,
+  };
+
+  const TRAIT_WITH_SKILLS = {
+    id: 916, name: "Malicious Swarm", tier: 3, slot: "Major",
+    specialization: 53, icon: "", iconFallback: "",
+    description: "Minions have a chance to inflict poison.",
+    facts: [], traitedFacts: [],
+    traitSkillIds: [79344],
+    traitSkillIcons: { 79344: "" },
+  };
+
+  const TRAIT_WITHOUT_SKILLS = {
+    id: 900, name: "Plain Trait", tier: 1, slot: "Major",
+    specialization: 53, icon: "", iconFallback: "",
+    description: "A basic trait.", facts: [], traitedFacts: [],
+    traitSkillIds: [],
+    traitSkillIcons: {},
+  };
+
+  const MOCK_CATALOG = {
+    specializationById: new Map(),
+    skillById: new Map([
+      [79344, LESSER_SIGNET],
+    ]),
+    weaponSkillById: new Map(),
+  };
+
+  let savedEditor;
+  let savedCatalog;
+  let savedWindow;
+  let savedDocument;
+  let mockHover;
+
+  beforeEach(() => {
+    savedEditor   = state.editor;
+    savedCatalog  = state.activeCatalog;
+    savedWindow   = global.window;
+    savedDocument = global.document;
+
+    global.window = { innerWidth: 1920, innerHeight: 1080 };
+    global.document = {
+      createElement(tag) {
+        if (tag === "textarea") {
+          const el = { _html: "", value: "" };
+          Object.defineProperty(el, "innerHTML", {
+            set(v) { el._html = v; el.value = v; },
+            get() { return el._html; },
+          });
+          return el;
+        }
+        return {};
+      },
+    };
+
+    mockHover = {
+      innerHTML: "",
+      style: {},
+      classList: {
+        _classes: new Set(),
+        add(c)      { this._classes.add(c); },
+        remove(c)   { this._classes.delete(c); },
+        contains(c) { return this._classes.has(c); },
+      },
+      getBoundingClientRect: () => ({ width: 200, height: 100 }),
+    };
+
+    detailPanel.initDetailPanel({ hoverPreview: mockHover }, {});
+
+    state.activeCatalog = MOCK_CATALOG;
+    state.editor = {
+      profession: "Necromancer",
+      specializations: [{ specializationId: 53, majorChoices: { 3: 916 } }],
+      skills: { healId: 0, utilityIds: [0, 0, 0], eliteId: 0 },
+      activeWeaponSet: 1,
+      equipment: {
+        slots: {},
+        weapons: { mainhand1: "", offhand1: "", mainhand2: "", offhand2: "" },
+      },
+    };
+  });
+
+  afterEach(() => {
+    state.editor        = savedEditor;
+    state.activeCatalog = savedCatalog;
+    global.window       = savedWindow;
+    global.document     = savedDocument;
+  });
+
+  test("shows associated skill card when trait has traitSkillIds", () => {
+    detailPanel.showHoverPreview("trait", TRAIT_WITH_SKILLS, 100, 100);
+    expect(mockHover.innerHTML).toContain("Lesser Signet of the Locust");
+    expect(mockHover.innerHTML).toContain("hover-preview__trait-skill-divider");
+  });
+
+  test("does not show trait-skill divider when trait has no traitSkillIds", () => {
+    detailPanel.showHoverPreview("trait", TRAIT_WITHOUT_SKILLS, 100, 100);
+    expect(mockHover.innerHTML).not.toContain("hover-preview__trait-skill-divider");
+    expect(mockHover.innerHTML).not.toContain("Lesser Signet of the Locust");
+  });
+
+  test("does not show trait-skill divider when traitSkillIds is absent", () => {
+    const traitNoField = { ...TRAIT_WITH_SKILLS, traitSkillIds: undefined };
+    detailPanel.showHoverPreview("trait", traitNoField, 100, 100);
+    expect(mockHover.innerHTML).not.toContain("hover-preview__trait-skill-divider");
+  });
+
+  test("gracefully skips skill IDs not found in skillById", () => {
+    const traitMissing = { ...TRAIT_WITH_SKILLS, traitSkillIds: [99999] };
+    detailPanel.showHoverPreview("trait", traitMissing, 100, 100);
+    expect(mockHover.innerHTML).not.toContain("hover-preview__trait-skill-divider");
+  });
+});
