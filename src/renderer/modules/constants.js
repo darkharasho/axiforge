@@ -554,6 +554,26 @@ export const BOON_DISPLAY_ORDER = [
   "Regeneration", "Resistance", "Resolution", "Stability", "Swiftness", "Vigor",
 ];
 
+// Combo field type display colors — bg and text pairs matching the mockup
+export const COMBO_FIELD_COLORS = {
+  Fire:      { bg: "#5a3a2a", text: "#f96", border: "#7a5a3a" },
+  Water:     { bg: "#2a3a5a", text: "#6af", border: "#3a5a7a" },
+  Light:     { bg: "#5a5a3a", text: "#ee8", border: "#7a7a5a" },
+  Dark:      { bg: "#3a2a3a", text: "#c8a", border: "#5a3a5a" },
+  Ethereal:  { bg: "#3a3a5a", text: "#aaf", border: "#5a5a7a" },
+  Ice:       { bg: "#2a4a5a", text: "#8de", border: "#3a6a7a" },
+  Lightning: { bg: "#5a5a2a", text: "#ee6", border: "#7a7a3a" },
+  Smoke:     { bg: "#3a3a3a", text: "#aaa", border: "#5a5a5a" },
+  Poison:    { bg: "#2a4a2a", text: "#8d8", border: "#3a6a3a" },
+};
+
+export const COMBO_FIELD_DISPLAY_ORDER = [
+  "Fire", "Water", "Light", "Dark", "Ethereal", "Ice", "Lightning", "Smoke", "Poison",
+];
+
+// Blast finisher theme colors
+export const BLAST_FINISHER_COLORS = { bg: "#4a3a5a", text: "#c8f", border: "#6a5a7a" };
+
 // Fallback icons keyed by GW2 API fact type, for facts missing fact.icon.
 // Icons sourced from render.guildwars2.com via /v2/skills API responses.
 export const FACT_TYPE_ICONS = {
