@@ -1,9 +1,9 @@
 "use strict";
 
-// computeCompBoonCoverage is in comp-boon-coverage.js which imports from
+// computeCompPartyCoverage is in comp-boon-coverage.js which imports from
 // boon-coverage.js (which imports from constants.js etc). Jest handles
 // ES module transpilation via babel — same as the existing boon-coverage tests.
-const { computeCompBoonCoverage } = require("../../../src/renderer/modules/comps/comp-boon-coverage");
+const { computeCompPartyCoverage } = require("../../../src/renderer/modules/comps/comp-boon-coverage");
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -73,18 +73,16 @@ function makeGetCatalog(catalogCache, catalog) {
 
 // ── Tests ────────────────────────────────────────────────────────────────────
 
-describe("computeCompBoonCoverage", () => {
-  test("returns empty squad and empty lines when comp has no partyLines", async () => {
+describe("computeCompPartyCoverage", () => {
+  test("returns empty lines when comp has no partyLines", async () => {
     const comp = makeComp([]);
-    const { squad, lines } = await computeCompBoonCoverage(comp, [], new Map(), async () => null);
-    expect(squad.size).toBe(0);
+    const { lines } = await computeCompPartyCoverage(comp, [], new Map(), async () => null);
     expect(lines).toHaveLength(0);
   });
 
-  test("returns empty squad when all lines have empty slots", async () => {
+  test("returns empty boons when all lines have empty slots", async () => {
     const comp = makeComp([makeLine("l1", []), makeLine("l2", [])]);
-    const { squad, lines } = await computeCompBoonCoverage(comp, [], new Map(), async () => null);
-    expect(squad.size).toBe(0);
+    const { lines } = await computeCompPartyCoverage(comp, [], new Map(), async () => null);
     expect(lines).toHaveLength(2);
     expect(lines[0].boons.size).toBe(0);
     expect(lines[0].hasFilledSlots).toBe(false);
@@ -98,20 +96,16 @@ describe("computeCompBoonCoverage", () => {
     const getCatalog = makeGetCatalog(catalogCache, catalog);
 
     const comp = makeComp([makeLine("l1", ["b1"])]);
-    const { squad, lines } = await computeCompBoonCoverage(comp, [build], catalogCache, getCatalog);
-
-    expect(squad.get("Might")).toMatchObject({ count: 1 });
-    expect(squad.get("Might").providers).toHaveLength(1);
-    expect(squad.get("Might").providers[0]).toMatchObject({
-      buildId: "b1",
-      buildName: "b1",
-      lineLabel: "P1",
-    });
+    const { lines } = await computeCompPartyCoverage(comp, [build], catalogCache, getCatalog);
 
     expect(lines[0].label).toBe("P1");
     expect(lines[0].hasFilledSlots).toBe(true);
     expect(lines[0].boons.get("Might")).toMatchObject({ count: 1 });
-    expect(lines[0].boons.get("Might").providers[0]).toMatchObject({ buildId: "b1" });
+    expect(lines[0].boons.get("Might").providers).toHaveLength(1);
+    expect(lines[0].boons.get("Might").providers[0]).toMatchObject({
+      buildId: "b1",
+      buildName: "b1",
+    });
   });
 
   test("aggregates the same boon from two builds in one line", async () => {
@@ -124,14 +118,13 @@ describe("computeCompBoonCoverage", () => {
     const getCatalog = makeGetCatalog(catalogCache, catalog);
 
     const comp = makeComp([makeLine("l1", ["b1", "b2"])]);
-    const { squad, lines } = await computeCompBoonCoverage(comp, [b1, b2], catalogCache, getCatalog);
+    const { lines } = await computeCompPartyCoverage(comp, [b1, b2], catalogCache, getCatalog);
 
-    expect(squad.get("Might").count).toBe(2);
-    expect(squad.get("Might").providers).toHaveLength(2);
     expect(lines[0].boons.get("Might").count).toBe(2);
+    expect(lines[0].boons.get("Might").providers).toHaveLength(2);
   });
 
-  test("aggregates boons across two lines into squad total", async () => {
+  test("aggregates boons across two lines independently", async () => {
     const b1 = makeBuild("b1", "Guardian");
     b1.skills.healId = 100;
     const b2 = makeBuild("b2", "Ranger");
@@ -141,16 +134,15 @@ describe("computeCompBoonCoverage", () => {
     const getCatalog = makeGetCatalog(catalogCache, catalog);
 
     const comp = makeComp([makeLine("l1", ["b1"]), makeLine("l2", ["b2"])]);
-    const { squad, lines } = await computeCompBoonCoverage(comp, [b1, b2], catalogCache, getCatalog);
+    const { lines } = await computeCompPartyCoverage(comp, [b1, b2], catalogCache, getCatalog);
 
-    expect(squad.get("Might").count).toBe(2);
-    expect(squad.get("Might").providers[0].lineLabel).toBe("P1");
-    expect(squad.get("Might").providers[1].lineLabel).toBe("P2");
+    expect(lines[0].label).toBe("P1");
+    expect(lines[1].label).toBe("P2");
     expect(lines[0].boons.get("Might").count).toBe(1);
     expect(lines[1].boons.get("Might").count).toBe(1);
   });
 
-  test("different boons from different builds appear separately in squad", async () => {
+  test("different boons from different builds appear separately per line", async () => {
     const b1 = makeBuild("b1", "Guardian");
     b1.skills.healId = 100;
     const b2 = makeBuild("b2", "Guardian");
@@ -160,10 +152,10 @@ describe("computeCompBoonCoverage", () => {
     const getCatalog = makeGetCatalog(catalogCache, catalog);
 
     const comp = makeComp([makeLine("l1", ["b1", "b2"])]);
-    const { squad } = await computeCompBoonCoverage(comp, [b1, b2], catalogCache, getCatalog);
+    const { lines } = await computeCompPartyCoverage(comp, [b1, b2], catalogCache, getCatalog);
 
-    expect(squad.get("Might").count).toBe(1);
-    expect(squad.get("Fury").count).toBe(1);
+    expect(lines[0].boons.get("Might").count).toBe(1);
+    expect(lines[0].boons.get("Fury").count).toBe(1);
   });
 
   test("skips build IDs not found in builds array", async () => {
@@ -172,9 +164,9 @@ describe("computeCompBoonCoverage", () => {
     const getCatalog = makeGetCatalog(catalogCache, catalog);
 
     const comp = makeComp([makeLine("l1", ["ghost-build-id"])]);
-    const { squad, lines } = await computeCompBoonCoverage(comp, [], catalogCache, getCatalog);
+    const { lines } = await computeCompPartyCoverage(comp, [], catalogCache, getCatalog);
 
-    expect(squad.size).toBe(0);
+    expect(lines[0].boons.size).toBe(0);
     expect(lines[0].hasFilledSlots).toBe(false);
   });
 
@@ -186,9 +178,9 @@ describe("computeCompBoonCoverage", () => {
     const getCatalog = async () => null;
 
     const comp = makeComp([makeLine("l1", ["b1"])]);
-    const { squad } = await computeCompBoonCoverage(comp, [build], catalogCache, getCatalog);
+    const { lines } = await computeCompPartyCoverage(comp, [build], catalogCache, getCatalog);
 
-    expect(squad.size).toBe(0);
+    expect(lines[0].boons.size).toBe(0);
   });
 
   test("includes eliteSpec in providers when build has an elite specialization", async () => {
@@ -202,9 +194,9 @@ describe("computeCompBoonCoverage", () => {
     const getCatalog = makeGetCatalog(catalogCache, catalog);
 
     const comp = makeComp([makeLine("l1", ["b1"])]);
-    const { squad } = await computeCompBoonCoverage(comp, [build], catalogCache, getCatalog);
+    const { lines } = await computeCompPartyCoverage(comp, [build], catalogCache, getCatalog);
 
-    expect(squad.get("Might").providers[0]).toMatchObject({
+    expect(lines[0].boons.get("Might").providers[0]).toMatchObject({
       buildId: "b1",
       eliteSpec: "Firebrand",
     });
@@ -221,9 +213,9 @@ describe("computeCompBoonCoverage", () => {
     const getCatalog = makeGetCatalog(catalogCache, catalog);
 
     const comp = makeComp([makeLine("l1", ["b1"])]);
-    const { squad } = await computeCompBoonCoverage(comp, [build], catalogCache, getCatalog);
+    const { lines } = await computeCompPartyCoverage(comp, [build], catalogCache, getCatalog);
 
-    expect(squad.get("Might").providers[0]).toMatchObject({ eliteSpec: "Firebrand" });
+    expect(lines[0].boons.get("Might").providers[0]).toMatchObject({ eliteSpec: "Firebrand" });
   });
 
   test("eliteSpec is null when build uses no elite specialization", async () => {
@@ -235,9 +227,9 @@ describe("computeCompBoonCoverage", () => {
     const getCatalog = makeGetCatalog(catalogCache, catalog);
 
     const comp = makeComp([makeLine("l1", ["b1"])]);
-    const { squad } = await computeCompBoonCoverage(comp, [build], catalogCache, getCatalog);
+    const { lines } = await computeCompPartyCoverage(comp, [build], catalogCache, getCatalog);
 
-    expect(squad.get("Might").providers[0].eliteSpec).toBeNull();
+    expect(lines[0].boons.get("Might").providers[0].eliteSpec).toBeNull();
   });
 
   test("uses build.title as buildName when available", async () => {
@@ -248,9 +240,9 @@ describe("computeCompBoonCoverage", () => {
     const getCatalog = makeGetCatalog(catalogCache, catalog);
 
     const comp = makeComp([makeLine("l1", ["b1"])]);
-    const { squad } = await computeCompBoonCoverage(comp, [build], catalogCache, getCatalog);
+    const { lines } = await computeCompPartyCoverage(comp, [build], catalogCache, getCatalog);
 
-    expect(squad.get("Might").providers[0].buildName).toBe("My Firebrand");
+    expect(lines[0].boons.get("Might").providers[0].buildName).toBe("My Firebrand");
   });
 });
 
@@ -262,7 +254,7 @@ function makeUpgradeCatalog() {
   };
 }
 
-describe("computeCompBoonCoverage — sources and effectiveDuration on line providers", () => {
+describe("computeCompPartyCoverage — sources and effectiveDuration on line providers", () => {
   test("line providers include sources array with effectiveDuration", async () => {
     const build = makeBuild("b1", "Guardian");
     build.skills.healId = 100;
@@ -273,7 +265,7 @@ describe("computeCompBoonCoverage — sources and effectiveDuration on line prov
 
     const comp = makeComp([makeLine("l1", ["b1"])]);
     const upgradeCatalog = makeUpgradeCatalog(); // no Concentration gear → bonus = 0
-    const { lines } = await computeCompBoonCoverage(comp, [build], catalogCache, getCatalog, upgradeCatalog);
+    const { lines } = await computeCompPartyCoverage(comp, [build], catalogCache, getCatalog, upgradeCatalog);
 
     const mightEntry = lines[0].boons.get("Might");
     expect(mightEntry).toBeDefined();
@@ -301,7 +293,7 @@ describe("computeCompBoonCoverage — sources and effectiveDuration on line prov
 
     const comp = makeComp([makeLine("l1", ["b1"])]);
     const upgradeCatalog = makeUpgradeCatalog();
-    const { lines } = await computeCompBoonCoverage(comp, [build], catalogCache, getCatalog, upgradeCatalog);
+    const { lines } = await computeCompPartyCoverage(comp, [build], catalogCache, getCatalog, upgradeCatalog);
 
     const provider = lines[0].boons.get("Might").providers[0];
     // 101 Concentration → 101/1500 = 0.0673 → 10 * 1.0673 = 10.7
@@ -322,7 +314,7 @@ describe("computeCompBoonCoverage — sources and effectiveDuration on line prov
     const getCatalog = makeGetCatalog(catalogCache, catalog);
 
     const comp = makeComp([makeLine("l1", ["b1"])]);
-    const { lines } = await computeCompBoonCoverage(comp, [build], catalogCache, getCatalog, makeUpgradeCatalog());
+    const { lines } = await computeCompPartyCoverage(comp, [build], catalogCache, getCatalog, makeUpgradeCatalog());
 
     // Might is provided (boon exists) but its source has duration 0 — filtered from sources
     const mightEntry = lines[0].boons.get("Might");
@@ -334,7 +326,7 @@ describe("computeCompBoonCoverage — sources and effectiveDuration on line prov
     }
   });
 
-  test("squad providers do NOT include sources", async () => {
+  test("line providers include sources (no separate squad-level provider)", async () => {
     const build = makeBuild("b1", "Guardian");
     build.skills.healId = 100;
     const catalog = makeCatalog(new Map([[100, makeMightSkill()]]));
@@ -342,10 +334,10 @@ describe("computeCompBoonCoverage — sources and effectiveDuration on line prov
     const getCatalog = makeGetCatalog(catalogCache, catalog);
 
     const comp = makeComp([makeLine("l1", ["b1"])]);
-    const { squad } = await computeCompBoonCoverage(comp, [build], catalogCache, getCatalog, makeUpgradeCatalog());
+    const { lines } = await computeCompPartyCoverage(comp, [build], catalogCache, getCatalog, makeUpgradeCatalog());
 
-    const squadProvider = squad.get("Might").providers[0];
-    expect(squadProvider.sources).toBeUndefined();
+    const lineProvider = lines[0].boons.get("Might").providers[0];
+    expect(lineProvider.sources).toBeDefined();
   });
 
   test("works with upgradeCatalog as undefined (backward compat)", async () => {
@@ -357,7 +349,7 @@ describe("computeCompBoonCoverage — sources and effectiveDuration on line prov
 
     const comp = makeComp([makeLine("l1", ["b1"])]);
     // Call without 5th param — should not throw
-    const { lines } = await computeCompBoonCoverage(comp, [build], catalogCache, getCatalog);
+    const { lines } = await computeCompPartyCoverage(comp, [build], catalogCache, getCatalog);
     expect(lines[0].boons.get("Might")).toBeDefined();
   });
 });
