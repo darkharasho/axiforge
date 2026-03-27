@@ -368,3 +368,104 @@ test.describe("Party Coverage — Desktop", () => {
     expect(hasSelfOnlyAfter).toBe(false);
   });
 });
+
+// ── Mobile Tests ─────────────────────────────────────────────────────────────
+
+test.describe("Party Coverage — Mobile", () => {
+  test.skip(({ viewport }) => viewport.width > 1024, "Mobile/tablet only");
+
+  let payload;
+
+  test.beforeAll(() => {
+    const builds = [
+      makeTestBuild({ profession: "Guardian", title: "Firebrand" }),
+      makeTestBuild({ profession: "Elementalist", title: "Tempest" }),
+      makeTestBuild({ profession: "Warrior", title: "Berserker" }),
+      makeTestBuild({ profession: "Necromancer", title: "Reaper" }),
+    ];
+    const comp = makeTestComp({
+      name: "Party Coverage SPA Mobile Test",
+      buildIds: builds.map((b) => b.id),
+      partyLines: [
+        { id: "pl-1", capacity: 5, slots: [builds[0].id, builds[1].id] },
+        { id: "pl-2", capacity: 5, slots: [builds[2].id, builds[3].id] },
+      ],
+      boonCoverageHtml,
+    });
+    payload = generateCompPayload(comp, builds);
+  });
+
+  // SPA Mobile Test 10: Renders at mobile width
+  test("party coverage renders at mobile width without horizontal overflow", async ({ page }) => {
+    await loadCompPage(page, payload);
+    const container = page.locator(".comp-boon-cov");
+    await expect(container).toBeVisible();
+
+    // Check no horizontal overflow
+    const overflows = await page.evaluate(() => {
+      const el = document.querySelector(".comp-boon-cov");
+      return el ? el.scrollWidth > el.clientWidth : false;
+    });
+    expect(overflows).toBe(false);
+  });
+
+  // SPA Mobile Test 11: Header boons wrap
+  test("header boons wrap at narrow width", async ({ page }) => {
+    await loadCompPage(page, payload);
+    const headerBoons = page.locator('.party-cov__line[data-line-label="P1"] .party-cov__header-boons');
+    await expect(headerBoons).toBeVisible();
+
+    // flex-wrap should be applied — verify computed style
+    const flexWrap = await headerBoons.evaluate((el) => getComputedStyle(el).flexWrap);
+    expect(flexWrap).toBe("wrap");
+  });
+
+  // SPA Mobile Test 12: Pills tappable
+  test("pill elements are visible and tappable at narrow width", async ({ page }) => {
+    await loadCompPage(page, payload);
+    // Expand P1
+    await page.locator('.party-cov__line[data-line-label="P1"] .party-cov__line-header').click();
+    await page.waitForTimeout(300);
+
+    const pill = page.locator('.party-cov__line[data-line-label="P1"] .party-cov__pill--boon[data-clickable="true"]').first();
+    await expect(pill).toBeVisible();
+
+    // Verify it's not clipped (bounding box within viewport)
+    const box = await pill.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box.width).toBeGreaterThan(0);
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(375);
+  });
+
+  // SPA Mobile Test 13: Expand/collapse via tap
+  test("expand and collapse work via tap on mobile", async ({ page }) => {
+    await loadCompPage(page, payload);
+    const header = page.locator('.party-cov__line[data-line-label="P1"] .party-cov__line-header');
+    const chevron = page.locator('.party-cov__line[data-line-label="P1"] .party-cov__line-chevron');
+
+    await expect(chevron).toHaveText("\u25b8");
+    await header.tap();
+    await expect(chevron).toHaveText("\u25be");
+    await header.tap();
+    await expect(chevron).toHaveText("\u25b8");
+  });
+
+  // SPA Mobile Test 14: Expanded detail fits viewport
+  test("expanded detail panel does not exceed viewport width", async ({ page }) => {
+    await loadCompPage(page, payload);
+    // Expand P1
+    await page.locator('.party-cov__line[data-line-label="P1"] .party-cov__line-header').tap();
+    await page.waitForTimeout(300);
+
+    // Tap a boon pill
+    const pill = page.locator('.party-cov__line[data-line-label="P1"] .party-cov__pill--boon[data-clickable="true"]').first();
+    await pill.tap();
+    await page.waitForTimeout(300);
+
+    // Check expand container fits
+    const expandEl = page.locator('.party-cov__line[data-line-label="P1"] .party-cov__expand[data-expand-for="boons"]');
+    const overflows = await expandEl.evaluate((el) => el.scrollWidth > el.clientWidth);
+    expect(overflows).toBe(false);
+  });
+});
