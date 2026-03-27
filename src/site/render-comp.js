@@ -110,199 +110,184 @@ function renderNotes(comp) {
     </div>`;
 }
 
-// ── Boon Coverage ────────────────────────────────────────────────────────
+// ── Party Coverage ───────────────────────────────────────────────────────
 
-function renderBoonCoverage(comp) {
+function renderPartyCoverage(comp) {
   if (!comp.boonCoverageHtml) return "";
   return `
     <div class="comp-boon-cov">
       <div class="comp-boon-cov__header">
         <span class="comp-boon-cov__chevron">\u25be</span>
-        <span class="comp-boon-cov__title">BOON COVERAGE</span>
+        <span class="comp-boon-cov__title">PARTY COVERAGE</span>
       </div>
       <div class="comp-boon-cov__body">${comp.boonCoverageHtml}</div>
     </div>`;
 }
 
-// ── Boon Coverage Interactions ───────────────────────────────────────────
+// ── Party Coverage Interactions ───────────────────────────────────────────
 
-let _activeExpand = null; // { expandEl, iconEl }
-let _activeTooltip = null;
+// Profession color pips (same as desktop)
+const PROF_PIP_COLORS = {
+  Guardian: "#6ea8ff", Warrior: "#ff9944", Necromancer: "#4dca7a",
+  Engineer: "#cc8844", Ranger: "#77cc55", Thief: "#cc6677",
+  Mesmer: "#b07acc", Elementalist: "#dd5555", Revenant: "#aa6655",
+};
 
-function closeBoonTooltip() {
-  if (_activeTooltip) { _activeTooltip.remove(); _activeTooltip = null; }
-}
+const COMBO_FIELD_COLORS = {
+  Fire: { text: "#f96" }, Water: { text: "#6af" }, Light: { text: "#ee8" },
+  Dark: { text: "#c8a" }, Ethereal: { text: "#aaf" }, Ice: { text: "#8de" },
+  Lightning: { text: "#ee6" }, Smoke: { text: "#aaa" }, Poison: { text: "#8d8" },
+};
 
-function closeDurationExpand() {
+let _activeExpand = null; // { expandEl, pillEl }
+
+function closePartyCoverageExpand() {
   if (!_activeExpand) return;
-  _activeExpand.expandEl.classList.remove("comp-boon-cov__duration-expand--open");
-  _activeExpand.iconEl.classList.remove("comp-boon-cov__icon--active");
+  _activeExpand.expandEl.classList.remove("party-cov__expand--open");
+  _activeExpand.pillEl.classList.remove("party-cov__pill--active");
   _activeExpand = null;
 }
 
-function buildDurationExpandHTML(boonName, lineLabel, providers, builds) {
-  const buildBlocks = providers
-    .filter(p => p.sources && p.sources.length > 0)
-    .map((p, i, arr) => {
-      // Look up professionIcon SVG from the comp's builds map
-      const buildData = builds?.[p.buildId];
-      const profIcon = buildData?.professionIcon || getProfIcon(buildData || { profession: p.profession });
-      const sourceRows = p.sources.map(s => {
-        const typeClass = s.type === "skill" ? "comp-boon-cov__dur-type--skill" : "comp-boon-cov__dur-type--trait";
-        const typeLabel = s.type === "skill" ? "SKILL" : "TRAIT";
-        const dur = `${s.effectiveDuration}s`;
-        const stacksHtml = s.stacks > 1
-          ? `<span class="comp-boon-cov__dur-stacks">&times;${s.stacks}</span>`
-          : "";
-        const targetHtml = s.isAlly
-          ? `<span class="comp-boon-cov__dur-target comp-boon-cov__dur-target--ally">ALLY</span>`
-          : `<span class="comp-boon-cov__dur-target comp-boon-cov__dur-target--self">SELF</span>`;
-        const descHtml = s.context
-          ? `<span class="comp-boon-cov__dur-source-desc">${escapeHtml(s.context)}</span>`
-          : "";
-        return `<div class="comp-boon-cov__dur-source">
-          <span class="comp-boon-cov__dur-type ${typeClass}">${typeLabel}</span>
-          <span class="comp-boon-cov__dur-source-name">${escapeHtml(s.name)}${descHtml}</span>
-          <span class="comp-boon-cov__dur-duration">${escapeHtml(dur)}</span>
-          ${stacksHtml}
-          ${targetHtml}
-        </div>`;
-      }).join("");
-      const sep = i < arr.length - 1 ? '<div class="comp-boon-cov__dur-sep"></div>' : "";
-      return `<div class="comp-boon-cov__dur-build">
-        <div class="comp-boon-cov__dur-build-header">
-          <span class="comp-boon-cov__dur-prof">${profIcon}</span>
-          <span class="comp-boon-cov__dur-build-name">${escapeHtml(p.buildName)}</span>
-        </div>
-        <div class="comp-boon-cov__dur-sources">${sourceRows}</div>
-      </div>${sep}`;
-    }).join("");
+function buildBoonExpandHTML(boonName, providers, builds) {
+  const totalSources = providers.reduce((n, p) => n + (p.sources?.length || 0), 0);
 
-  // Get the icon URL from the data-providers parent icon's img src
+  const sourceRows = providers.flatMap(p => {
+    return (p.sources || []).map(s => {
+      const pipColor = PROF_PIP_COLORS[p.profession] || "#888";
+      const specLabel = p.eliteSpec || p.profession || "";
+      const dur = `${s.effectiveDuration}s`;
+      const stacksHtml = s.stacks > 1
+        ? `<span class="party-cov__src-stacks">&times;${s.stacks}</span>` : "";
+      const targetClass = s.isAlly ? "party-cov__src-target--ally" : "party-cov__src-target--self";
+      const targetLabel = s.isAlly ? "ALLY" : "SELF";
+      return `<div class="party-cov__src-row">
+        <span class="party-cov__src-pip" style="background:${pipColor};"></span>
+        <span class="party-cov__src-name">${escapeHtml(s.name)}</span>
+        <span class="party-cov__src-spec">${escapeHtml(specLabel)}</span>
+        ${stacksHtml}
+        <span class="party-cov__src-dur">${escapeHtml(dur)}</span>
+        <span class="party-cov__src-target ${targetClass}">${targetLabel}</span>
+      </div>`;
+    });
+  }).join("");
+
   return `
-    <div class="comp-boon-cov__dur-header">
-      <span class="comp-boon-cov__dur-boon-name">${escapeHtml(boonName)}</span>
-      <span class="comp-boon-cov__dur-line-label">${escapeHtml(lineLabel)}</span>
-      <button class="comp-boon-cov__dur-close" aria-label="Close">&#x2715;</button>
+    <div class="party-cov__expand-header" style="border-left-color: #8f8;">
+      <span class="party-cov__expand-title" style="color: #afa;">${escapeHtml(boonName)} — ${totalSources} source${totalSources !== 1 ? "s" : ""}</span>
     </div>
-    ${buildBlocks}
-  `;
+    <div class="party-cov__expand-body" style="border-left-color: #8f8;">
+      ${sourceRows}
+    </div>`;
 }
 
-function buildTooltipHTML(boonName, count, providers, scope, builds) {
-  const headerLabel = count > 0
-    ? `${count} ${count === 1 ? "build" : "builds"}`
-    : "Not covered";
-
-  if (count === 0) {
-    return `<div class="comp-boon-tooltip__header">
-      <span class="comp-boon-tooltip__name">${escapeHtml(boonName)}</span>
-      <span class="comp-boon-tooltip__count">${escapeHtml(headerLabel)}</span>
-    </div>`;
-  }
-
-  if (scope === "line") {
-    const rows = providers.map(p => {
-      const bd = builds?.[p.buildId];
-      const icon = bd?.professionIcon || getProfIcon(bd || { profession: p.profession });
-      return `<div class="comp-boon-tooltip__row">
-        <span class="comp-boon-tooltip__prof">${icon}</span>
-        <span class="comp-boon-tooltip__build-name">${escapeHtml(p.buildName)}</span>
-      </div>`;
-    }).join("");
-    return `<div class="comp-boon-tooltip__header">
-      <span class="comp-boon-tooltip__name">${escapeHtml(boonName)}</span>
-      <span class="comp-boon-tooltip__count">${escapeHtml(headerLabel)}</span>
-    </div>
-    <div class="comp-boon-tooltip__sep"></div>
-    <div class="comp-boon-tooltip__providers">${rows}</div>`;
-  }
-
-  // Squad scope — group by line
-  const byLine = new Map();
-  for (const p of providers) {
-    if (!byLine.has(p.lineLabel)) byLine.set(p.lineLabel, []);
-    byLine.get(p.lineLabel).push(p);
-  }
-  const lineGroups = [...byLine.entries()].map(([lbl, lps]) => {
-    const rows = lps.map(p =>
-      `<div class="comp-boon-tooltip__row">
-        <span class="comp-boon-tooltip__build-name">${escapeHtml(p.buildName)}</span>
-      </div>`
-    ).join("");
-    return `<div class="comp-boon-tooltip__line-group">
-      <div class="comp-boon-tooltip__line-label">${escapeHtml(lbl)}</div>
-      ${rows}
+function buildFieldExpandHTML(fieldType, sources) {
+  const colors = COMBO_FIELD_COLORS[fieldType] || { text: "#aaa" };
+  const sourceRows = sources.map(s => {
+    const pipColor = PROF_PIP_COLORS[s.profession] || "#888";
+    const specLabel = s.kitName
+      ? `${s.eliteSpec || s.profession} <span class="party-cov__src-kit">(${escapeHtml(s.kitName)})</span>`
+      : escapeHtml(s.eliteSpec || s.profession || "");
+    const durHtml = s.duration ? `<span class="party-cov__src-dur">${s.duration}s duration</span>` : "";
+    const radiusHtml = s.radius ? `<span class="party-cov__src-radius">${s.radius} radius</span>` : "";
+    return `<div class="party-cov__src-row">
+      <span class="party-cov__src-pip" style="background:${pipColor};"></span>
+      <span class="party-cov__src-name">${escapeHtml(s.sourceName)}</span>
+      <span class="party-cov__src-spec">${specLabel}</span>
+      ${durHtml}
+      ${radiusHtml}
     </div>`;
   }).join("");
 
-  return `<div class="comp-boon-tooltip__header">
-    <span class="comp-boon-tooltip__name">${escapeHtml(boonName)}</span>
-    <span class="comp-boon-tooltip__count">${escapeHtml(headerLabel)}</span>
-  </div>
-  <div class="comp-boon-tooltip__sep"></div>
-  <div class="comp-boon-tooltip__providers">${lineGroups}</div>`;
+  return `
+    <div class="party-cov__expand-header" style="border-left-color: ${colors.text};">
+      <span class="party-cov__expand-title" style="color: ${colors.text};">${escapeHtml(fieldType)} Field — ${sources.length} source${sources.length !== 1 ? "s" : ""}</span>
+    </div>
+    <div class="party-cov__expand-body" style="border-left-color: ${colors.text};">
+      ${sourceRows}
+    </div>`;
 }
 
-function bindBoonEvents(container, builds) {
-  // Hover tooltips
-  container.querySelectorAll(".comp-boon-cov__icon").forEach(iconEl => {
-    iconEl.addEventListener("mouseenter", () => {
-      if (_activeExpand?.iconEl === iconEl) return;
-      closeBoonTooltip();
-      const boonName = iconEl.dataset.boonName;
-      const count = Number(iconEl.dataset.count) || 0;
-      const scope = iconEl.dataset.scope;
-      let providers = [];
-      try { providers = JSON.parse(iconEl.dataset.providers || "[]"); } catch { /* */ }
+function buildBlastExpandHTML(blasts) {
+  const sourceRows = blasts.map(b => {
+    const pipColor = PROF_PIP_COLORS[b.profession] || "#888";
+    const specLabel = b.kitName
+      ? `${b.eliteSpec || b.profession} <span class="party-cov__src-kit">(${escapeHtml(b.kitName)})</span>`
+      : escapeHtml(b.eliteSpec || b.profession || "");
+    const countLabel = `&times;${b.blastCount} blast${b.blastCount !== 1 ? "s" : ""}`;
+    const pctHtml = b.percent < 100
+      ? ` <span class="party-cov__src-pct">(${b.percent}%)</span>` : "";
+    return `<div class="party-cov__src-row">
+      <span class="party-cov__src-pip" style="background:${pipColor};"></span>
+      <span class="party-cov__src-name">${escapeHtml(b.sourceName)}</span>
+      <span class="party-cov__src-spec">${specLabel}</span>
+      <span class="party-cov__src-blasts">${countLabel}${pctHtml}</span>
+    </div>`;
+  }).join("");
 
-      const tip = document.createElement("div");
-      tip.className = "comp-boon-tooltip";
-      tip.innerHTML = buildTooltipHTML(boonName, count, providers, scope, builds);
-      document.body.appendChild(tip);
-      _activeTooltip = tip;
+  return `
+    <div class="party-cov__expand-header" style="border-left-color: #c8f;">
+      <span class="party-cov__expand-title" style="color: #c8f;">Blast Finishers — ${blasts.length} source${blasts.length !== 1 ? "s" : ""}</span>
+    </div>
+    <div class="party-cov__expand-body" style="border-left-color: #c8f;">
+      ${sourceRows}
+    </div>`;
+}
 
-      const ir = iconEl.getBoundingClientRect();
-      const tr = tip.getBoundingClientRect();
-      const vw = window.innerWidth;
-      let top = ir.top - tr.height - 6;
-      let left = ir.left + ir.width / 2 - tr.width / 2;
-      if (top < 4) top = ir.bottom + 6;
-      if (left < 4) left = 4;
-      if (left + tr.width > vw - 4) left = vw - tr.width - 4;
-      tip.style.top = `${top}px`;
-      tip.style.left = `${left}px`;
+function bindPartyCoverageEvents(container, builds) {
+  // Self-boon toggle
+  container.querySelectorAll('[data-action="toggle-self-boons"]').forEach(toggle => {
+    toggle.addEventListener("change", () => {
+      const lineEl = toggle.closest(".party-cov__line");
+      if (!lineEl) return;
+      const showSelf = toggle.checked;
+      lineEl.querySelectorAll(".party-cov__pill--boon").forEach(pill => {
+        if (showSelf) {
+          pill.classList.remove("party-cov__pill--self-hidden");
+        } else {
+          const hasAlly = pill.dataset.hasAlly === "true";
+          const covered = Number(pill.dataset.count) > 0;
+          if (covered && !hasAlly) {
+            pill.classList.add("party-cov__pill--self-hidden");
+          }
+        }
+      });
     });
-    iconEl.addEventListener("mouseleave", closeBoonTooltip);
+    // Apply initial state
+    toggle.dispatchEvent(new Event("change"));
   });
 
-  // Click to expand duration details (per-line icons)
-  container.querySelectorAll('.comp-boon-cov__icon[data-clickable="true"]').forEach(iconEl => {
-    iconEl.addEventListener("click", (e) => {
+  // Click to expand
+  container.querySelectorAll('.party-cov__pill[data-clickable="true"]').forEach(pillEl => {
+    pillEl.addEventListener("click", (e) => {
       e.stopPropagation();
-      closeBoonTooltip();
-      if (_activeExpand?.iconEl === iconEl) { closeDurationExpand(); return; }
-      closeDurationExpand();
+      if (_activeExpand?.pillEl === pillEl) { closePartyCoverageExpand(); return; }
+      closePartyCoverageExpand();
 
-      const lineRow = iconEl.closest(".comp-boon-cov__line-row");
-      const expandEl = lineRow?.nextElementSibling;
-      if (!expandEl || !expandEl.classList.contains("comp-boon-cov__duration-expand")) return;
+      const section = pillEl.closest(".party-cov__section");
+      const expandEl = section?.querySelector(".party-cov__expand");
+      if (!expandEl) return;
 
-      let providers = [];
-      try { providers = JSON.parse(iconEl.dataset.providers || "[]"); } catch { /* */ }
-      const boonName = iconEl.dataset.boonName;
-      const lineLabel = iconEl.dataset.lineLabel || "";
+      const category = pillEl.dataset.category;
+      let html = "";
 
-      expandEl.innerHTML = buildDurationExpandHTML(boonName, lineLabel, providers, builds);
-      iconEl.classList.add("comp-boon-cov__icon--active");
-      _activeExpand = { expandEl, iconEl };
+      if (category === "boon") {
+        let providers = [];
+        try { providers = JSON.parse(pillEl.dataset.providers || "[]"); } catch { /* */ }
+        html = buildBoonExpandHTML(pillEl.dataset.boonName, providers, builds);
+      } else if (category === "field") {
+        let sources = [];
+        try { sources = JSON.parse(pillEl.dataset.sources || "[]"); } catch { /* */ }
+        html = buildFieldExpandHTML(pillEl.dataset.fieldType, sources);
+      } else if (category === "blast") {
+        let sources = [];
+        try { sources = JSON.parse(pillEl.dataset.sources || "[]"); } catch { /* */ }
+        html = buildBlastExpandHTML(sources);
+      }
 
-      expandEl.querySelector(".comp-boon-cov__dur-close")?.addEventListener("click", (ev) => {
-        ev.stopPropagation();
-        closeDurationExpand();
-      });
-
-      requestAnimationFrame(() => expandEl.classList.add("comp-boon-cov__duration-expand--open"));
+      expandEl.innerHTML = html;
+      pillEl.classList.add("party-cov__pill--active");
+      _activeExpand = { expandEl, pillEl };
+      requestAnimationFrame(() => expandEl.classList.add("party-cov__expand--open"));
     });
   });
 }
@@ -325,7 +310,7 @@ export function renderCompPage(app, comp) {
       <div class="comp-detail__body">
         <div class="comp-detail__party-panel">
           ${renderPartyLines(comp)}
-          ${renderBoonCoverage(comp)}
+          ${renderPartyCoverage(comp)}
         </div>
         <div class="comp-detail__pool-panel">
           ${renderBuildPool(comp)}
@@ -356,7 +341,7 @@ export function renderCompPage(app, comp) {
 
   // Bind boon coverage interactions after DOM is rendered
   if (comp.boonCoverageHtml) {
-    bindBoonEvents(app, comp.builds || {});
+    bindPartyCoverageEvents(app, comp.builds || {});
 
     // Collapse/expand toggle for boon coverage header
     const boonHeader = app.querySelector(".comp-boon-cov__header");
