@@ -1813,11 +1813,18 @@
 
 /* Collapsible body */
 .party-cov__line-body {
-  padding: 0 16px 16px;
+  padding: 4px 16px 16px;
+  max-height: 2000px;
+  overflow: hidden;
+  opacity: 1;
+  transition: max-height 0.3s ease, opacity 0.2s ease, padding 0.3s ease;
 }
 
 .party-cov__line-body--collapsed {
-  display: none;
+  max-height: 0;
+  opacity: 0;
+  padding-top: 0;
+  padding-bottom: 0;
 }
 
 .party-cov__section-header {
