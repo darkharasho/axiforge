@@ -227,3 +227,199 @@ test.describe("Party Coverage — Rendering", () => {
     expect(count).toBeGreaterThan(0);
   });
 });
+
+test.describe("Party Coverage — Interactions", () => {
+  let app, window;
+
+  test.beforeAll(async () => {
+    cleanDataDir();
+    seedBuildFile(guardianBuild);
+    seedBuildFile(elementalistBuild);
+    seedBuildFile(warriorBuild);
+    seedBuildFile(necromancerBuild);
+    seedCompFile(comp);
+    ({ app, window } = await launchApp({ clean: false }));
+    await goToComps(window);
+    await openFirstComp(window);
+    await waitForPartyCoverage(window);
+  });
+
+  test.afterAll(async () => {
+    await closeApp(app);
+  });
+
+  // Test 9: Lines start collapsed
+  test("party lines start collapsed by default", async () => {
+    const bodies = window.locator(".party-cov__line-body");
+    const count = await bodies.count();
+    for (let i = 0; i < count; i++) {
+      const hasCollapsed = await bodies.nth(i).evaluate(
+        (el) => el.classList.contains("party-cov__line-body--collapsed")
+      );
+      expect(hasCollapsed).toBe(true);
+    }
+  });
+
+  // Test 10: Line header expand/collapse
+  test("clicking line header expands and collapses the line body", async () => {
+    const p1Header = window.locator('.party-cov__line[data-line-label="P1"] .party-cov__line-header');
+    const p1Body = window.locator('.party-cov__line[data-line-label="P1"] .party-cov__line-body');
+    const p1Chevron = window.locator('.party-cov__line[data-line-label="P1"] .party-cov__line-chevron');
+
+    // Initially collapsed
+    await expect(p1Chevron).toHaveText("\u25b8"); // ▸
+
+    // Click to expand
+    await p1Header.click();
+    await window.waitForTimeout(300);
+    const expandedClass = await p1Body.evaluate(
+      (el) => !el.classList.contains("party-cov__line-body--collapsed")
+    );
+    expect(expandedClass).toBe(true);
+    await expect(p1Chevron).toHaveText("\u25be"); // ▾
+
+    // Click to collapse
+    await p1Header.click();
+    await window.waitForTimeout(300);
+    const collapsedClass = await p1Body.evaluate(
+      (el) => el.classList.contains("party-cov__line-body--collapsed")
+    );
+    expect(collapsedClass).toBe(true);
+    await expect(p1Chevron).toHaveText("\u25b8"); // ▸
+  });
+
+  // Test 11: Boon pill expand
+  test("clicking a covered boon pill expands its detail panel", async () => {
+    // Expand P1
+    const p1Header = window.locator('.party-cov__line[data-line-label="P1"] .party-cov__line-header');
+    await p1Header.click();
+    await window.waitForTimeout(300);
+
+    const p1 = window.locator('.party-cov__line[data-line-label="P1"]');
+    const coveredPill = p1.locator('.party-cov__pill--boon[data-clickable="true"]').first();
+    await coveredPill.click();
+    await window.waitForTimeout(300);
+
+    const expandEl = p1.locator('.party-cov__expand[data-expand-for="boons"]');
+    const hasContent = await expandEl.evaluate((el) => el.innerHTML.trim().length > 0);
+    expect(hasContent).toBe(true);
+  });
+
+  // Test 12: Boon detail shows source rows with profession icon, name, duration, target
+  test("expanded boon detail shows source rows with expected content", async () => {
+    const p1 = window.locator('.party-cov__line[data-line-label="P1"]');
+    const expandEl = p1.locator('.party-cov__expand[data-expand-for="boons"]');
+    const srcRows = expandEl.locator(".party-cov__src-row");
+    const count = await srcRows.count();
+    expect(count).toBeGreaterThan(0);
+
+    // First source row should have an icon, name, duration, and target badge
+    const firstRow = srcRows.first();
+    await expect(firstRow.locator(".party-cov__src-icon")).toBeVisible();
+    await expect(firstRow.locator(".party-cov__src-name")).toBeVisible();
+    await expect(firstRow.locator(".party-cov__src-dur")).toBeVisible();
+
+    // Target should be either ALLY or SELF
+    const target = firstRow.locator(".party-cov__src-target--ally, .party-cov__src-target--self");
+    await expect(target).toHaveCount(1);
+  });
+
+  // Test 13: Clicking same boon pill again collapses
+  test("clicking the same boon pill again collapses the detail", async () => {
+    const p1 = window.locator('.party-cov__line[data-line-label="P1"]');
+    const coveredPill = p1.locator('.party-cov__pill--boon[data-clickable="true"]').first();
+    await coveredPill.click();
+    await window.waitForTimeout(300);
+
+    // _closeExpand removes the --open class (does not clear innerHTML)
+    const expandEl = p1.locator('.party-cov__expand[data-expand-for="boons"]');
+    const isOpen = await expandEl.evaluate(
+      (el) => el.classList.contains("party-cov__expand--open")
+    );
+    expect(isOpen).toBe(false);
+  });
+
+  // Test 14: Self-boon toggle
+  test("self-boon toggle hides self-only boons and revealing shows them", async () => {
+    const p1 = window.locator('.party-cov__line[data-line-label="P1"]');
+    // The toggle label is visible and wraps the hidden checkbox — click it to toggle
+    const toggleLabel = p1.locator('.party-cov__toggle');
+
+    // Toggle is unchecked by default — self-only boons should have self-only class
+    const selfOnlyBefore = await p1.locator(".party-cov__pill--self-only").count();
+
+    // Click the visible label to check the toggle (show self boons)
+    await toggleLabel.click();
+    await window.waitForTimeout(300);
+    const selfOnlyAfter = await p1.locator(".party-cov__pill--self-only").count();
+
+    // After checking, no pills should have the self-only class
+    expect(selfOnlyAfter).toBe(0);
+
+    // Click again to uncheck and restore
+    await toggleLabel.click();
+    await window.waitForTimeout(300);
+    const selfOnlyRestored = await p1.locator(".party-cov__pill--self-only").count();
+    expect(selfOnlyRestored).toBe(selfOnlyBefore);
+  });
+
+  // Test 15: Combo field pill expand
+  test("clicking a combo field pill expands its detail", async () => {
+    // Ensure P1 is expanded before clicking field pill
+    const p1 = window.locator('.party-cov__line[data-line-label="P1"]');
+    const p1Body = p1.locator(".party-cov__line-body");
+    const p1IsCollapsed = await p1Body.evaluate(
+      (el) => el.classList.contains("party-cov__line-body--collapsed")
+    );
+    if (p1IsCollapsed) {
+      await p1.locator(".party-cov__line-header").click();
+      await window.waitForTimeout(300);
+    }
+
+    const fieldPill = p1.locator('.party-cov__pill--field[data-clickable="true"]').first();
+    await fieldPill.click();
+    await window.waitForTimeout(300);
+
+    const expandEl = p1.locator('.party-cov__expand[data-expand-for="fields"]');
+    const srcRows = expandEl.locator(".party-cov__src-row");
+    const count = await srcRows.count();
+    expect(count).toBeGreaterThan(0);
+
+    // Source row should have name
+    await expect(srcRows.first().locator(".party-cov__src-name")).toBeVisible();
+
+    // Click again to collapse
+    await fieldPill.click();
+    await window.waitForTimeout(300);
+  });
+
+  // Test 16: Finisher pill expand
+  test("clicking a finisher pill expands its detail", async () => {
+    // Need to use P2 which has finishers from Warrior
+    const p2 = window.locator('.party-cov__line[data-line-label="P2"]');
+    // Expand P2 if not already
+    const p2Body = p2.locator(".party-cov__line-body");
+    const isCollapsed = await p2Body.evaluate(
+      (el) => el.classList.contains("party-cov__line-body--collapsed")
+    );
+    if (isCollapsed) {
+      await p2.locator(".party-cov__line-header").click();
+      await window.waitForTimeout(300);
+    }
+
+    const finisherPill = p2.locator('.party-cov__pill--finisher[data-clickable="true"]').first();
+    await finisherPill.click();
+    await window.waitForTimeout(300);
+
+    const expandEl = p2.locator('.party-cov__expand[data-expand-for="finishers"]');
+    const srcRows = expandEl.locator(".party-cov__src-row");
+    const count = await srcRows.count();
+    expect(count).toBeGreaterThan(0);
+
+    await expect(srcRows.first().locator(".party-cov__src-name")).toBeVisible();
+
+    // Collapse
+    await finisherPill.click();
+    await window.waitForTimeout(300);
+  });
+});
