@@ -275,6 +275,7 @@ function _renderFieldPills(fieldMap, lineLabel) {
              data-line-label="${escapeHtml(lineLabel)}"
              data-clickable="true"
              style="background:${colors.bg}; color:${colors.text}; border-color:${colors.border};">
+          <span class="party-cov__pill-emoji">${colors.emoji || ""}</span>
           <span class="party-cov__pill-name">${escapeHtml(fieldType)}</span>
           ${count > 1 ? `<span class="party-cov__pill-badge" style="color:${colors.text};">&times;${count}</span>` : ""}
         </div>`;
@@ -299,6 +300,7 @@ function _renderFinisherPills(finisherMap, lineLabel) {
              data-line-label="${escapeHtml(lineLabel)}"
              data-clickable="true"
              style="background:${colors.bg}; color:${colors.text}; border-color:${colors.border};">
+          <span class="party-cov__pill-emoji">${colors.emoji || ""}</span>
           <span class="party-cov__pill-name">${escapeHtml(finisherType)}</span>
           ${count > 1 ? `<span class="party-cov__pill-badge" style="color:${colors.text};">&times;${count}</span>` : ""}
         </div>`;

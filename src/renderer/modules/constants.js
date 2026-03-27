@@ -556,15 +556,15 @@ export const BOON_DISPLAY_ORDER = [
 
 // Combo field type display colors — bg and text pairs matching the mockup
 export const COMBO_FIELD_COLORS = {
-  Fire:      { bg: "#5a3a2a", text: "#f96", border: "#7a5a3a" },
-  Water:     { bg: "#2a3a5a", text: "#6af", border: "#3a5a7a" },
-  Light:     { bg: "#5a5a3a", text: "#ee8", border: "#7a7a5a" },
-  Dark:      { bg: "#3a2a3a", text: "#c8a", border: "#5a3a5a" },
-  Ethereal:  { bg: "#3a3a5a", text: "#aaf", border: "#5a5a7a" },
-  Ice:       { bg: "#2a4a5a", text: "#8de", border: "#3a6a7a" },
-  Lightning: { bg: "#5a5a2a", text: "#ee6", border: "#7a7a3a" },
-  Smoke:     { bg: "#3a3a3a", text: "#aaa", border: "#5a5a5a" },
-  Poison:    { bg: "#2a4a2a", text: "#8d8", border: "#3a6a3a" },
+  Fire:      { bg: "#5a3a2a", text: "#f96", border: "#7a5a3a", emoji: "\ud83d\udd25" },
+  Water:     { bg: "#2a3a5a", text: "#6af", border: "#3a5a7a", emoji: "\ud83d\udca7" },
+  Light:     { bg: "#5a5a3a", text: "#ee8", border: "#7a7a5a", emoji: "\u2728" },
+  Dark:      { bg: "#3a2a3a", text: "#c8a", border: "#5a3a5a", emoji: "\ud83c\udf11" },
+  Ethereal:  { bg: "#3a3a5a", text: "#aaf", border: "#5a5a7a", emoji: "\ud83d\udd2e" },
+  Ice:       { bg: "#2a4a5a", text: "#8de", border: "#3a6a7a", emoji: "\u2744\ufe0f" },
+  Lightning: { bg: "#5a5a2a", text: "#ee6", border: "#7a7a3a", emoji: "\u26a1" },
+  Smoke:     { bg: "#3a3a3a", text: "#aaa", border: "#5a5a5a", emoji: "\ud83d\udca8" },
+  Poison:    { bg: "#2a4a2a", text: "#8d8", border: "#3a6a3a", emoji: "\u2620\ufe0f" },
 };
 
 export const COMBO_FIELD_DISPLAY_ORDER = [
@@ -573,10 +573,10 @@ export const COMBO_FIELD_DISPLAY_ORDER = [
 
 // Combo finisher type display colors
 export const COMBO_FINISHER_COLORS = {
-  Blast:      { bg: "#4a3a5a", text: "#c8f", border: "#6a5a7a" },
-  Whirl:      { bg: "#3a4a4a", text: "#8dd", border: "#5a6a6a" },
-  Leap:       { bg: "#4a4a3a", text: "#dd8", border: "#6a6a5a" },
-  Projectile: { bg: "#4a3a3a", text: "#d88", border: "#6a5a5a" },
+  Blast:      { bg: "#4a3a5a", text: "#c8f", border: "#6a5a7a", emoji: "\ud83d\udca5" },
+  Whirl:      { bg: "#3a4a4a", text: "#8dd", border: "#5a6a6a", emoji: "\ud83c\udf00" },
+  Leap:       { bg: "#4a4a3a", text: "#dd8", border: "#6a6a5a", emoji: "\ud83e\uddb6" },
+  Projectile: { bg: "#4a3a3a", text: "#d88", border: "#6a5a5a", emoji: "\u27a1\ufe0f" },
 };
 
 export const COMBO_FINISHER_DISPLAY_ORDER = ["Blast", "Whirl", "Leap", "Projectile"];
