@@ -102,6 +102,8 @@ export async function computeCompPartyCoverage(comp, builds, catalogCache, getCa
         entry.count++;
         entry.sources.push({
           sourceName: field.sourceName,
+          skillIcon: field.skillIcon || "",
+          skillDescription: field.skillDescription || "",
           profession: build.profession,
           eliteSpec,
           profIcon,
@@ -120,6 +122,8 @@ export async function computeCompPartyCoverage(comp, builds, catalogCache, getCa
         entry.count++;
         entry.sources.push({
           sourceName: fin.sourceName,
+          skillIcon: fin.skillIcon || "",
+          skillDescription: fin.skillDescription || "",
           profession: build.profession,
           eliteSpec,
           profIcon,
@@ -338,16 +342,18 @@ function _buildFieldExpandHTML(fieldType, sources) {
   const colors = COMBO_FIELD_COLORS[fieldType] || { text: "#aaa", border: "#555" };
 
   const sourceRows = sources.map(s => {
-    const iconHtml = s.profIcon || "";
-    const specLabel = s.kitName
-      ? `${s.eliteSpec || s.profession} <span class="party-cov__src-kit">(${escapeHtml(s.kitName)})</span>`
-      : escapeHtml(s.eliteSpec || s.profession || "");
-    const durHtml = s.duration ? `<span class="party-cov__src-dur">${s.duration}s duration</span>` : "";
+    const profIconHtml = s.profIcon || "";
+    const skillIconHtml = s.skillIcon
+      ? `<img src="${escapeHtml(s.skillIcon)}" width="20" height="20" alt="${escapeHtml(s.sourceName)}"
+              class="party-cov__src-skill-icon" title="${escapeHtml(s.skillDescription || s.sourceName)}" />`
+      : "";
+    const kitHtml = s.kitName ? `<span class="party-cov__src-kit">(${escapeHtml(s.kitName)})</span>` : "";
+    const durHtml = s.duration ? `<span class="party-cov__src-dur">${s.duration}s</span>` : "";
     const radiusHtml = s.radius ? `<span class="party-cov__src-radius">${s.radius} radius</span>` : "";
     return `<div class="party-cov__src-row">
-      <span class="party-cov__src-icon">${iconHtml}</span>
-      <span class="party-cov__src-name">${escapeHtml(s.sourceName)}</span>
-      <span class="party-cov__src-spec">${specLabel}</span>
+      <span class="party-cov__src-icon">${profIconHtml}</span>
+      ${skillIconHtml}
+      <span class="party-cov__src-name">${escapeHtml(s.sourceName)}${kitHtml}</span>
       ${durHtml}
       ${radiusHtml}
     </div>`;
@@ -366,17 +372,19 @@ function _buildFinisherExpandHTML(finisherType, sources) {
   const colors = COMBO_FINISHER_COLORS[finisherType] || { text: "#aaa" };
 
   const sourceRows = sources.map(s => {
-    const iconHtml = s.profIcon || "";
-    const specLabel = s.kitName
-      ? `${s.eliteSpec || s.profession} <span class="party-cov__src-kit">(${escapeHtml(s.kitName)})</span>`
-      : escapeHtml(s.eliteSpec || s.profession || "");
+    const profIconHtml = s.profIcon || "";
+    const skillIconHtml = s.skillIcon
+      ? `<img src="${escapeHtml(s.skillIcon)}" width="20" height="20" alt="${escapeHtml(s.sourceName)}"
+              class="party-cov__src-skill-icon" title="${escapeHtml(s.skillDescription || s.sourceName)}" />`
+      : "";
+    const kitHtml = s.kitName ? `<span class="party-cov__src-kit">(${escapeHtml(s.kitName)})</span>` : "";
     const countLabel = s.hitCount > 1 ? `<span class="party-cov__src-blasts">&times;${s.hitCount}</span>` : "";
     const pctHtml = s.percent < 100
       ? `<span class="party-cov__src-pct">(${s.percent}%)</span>` : "";
     return `<div class="party-cov__src-row">
-      <span class="party-cov__src-icon">${iconHtml}</span>
-      <span class="party-cov__src-name">${escapeHtml(s.sourceName)}</span>
-      <span class="party-cov__src-spec">${specLabel}</span>
+      <span class="party-cov__src-icon">${profIconHtml}</span>
+      ${skillIconHtml}
+      <span class="party-cov__src-name">${escapeHtml(s.sourceName)}${kitHtml}</span>
       ${countLabel}
       ${pctHtml}
     </div>`;

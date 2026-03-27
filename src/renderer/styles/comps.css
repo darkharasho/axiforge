@@ -2019,6 +2019,17 @@
   height: 16px;
 }
 
+.party-cov__src-skill-icon {
+  border-radius: 3px;
+  flex-shrink: 0;
+  cursor: help;
+  transition: outline 0.1s;
+}
+
+.party-cov__src-skill-icon:hover {
+  outline: 1.5px solid rgba(255, 255, 255, 0.3);
+}
+
 .party-cov__src-name {
   color: #ddd;
   font-size: 12px;
