@@ -86,6 +86,9 @@ export async function computeCompPartyCoverage(comp, builds, catalogCache, getCa
           .map(s => ({
             type: s.type,
             name: s.name,
+            skillIcon: s.skillIcon || "",
+            skillDescription: s.skillDescription || "",
+            skillFacts: s.skillFacts || [],
             stacks: s.stacks,
             effectiveDuration: +((s.duration * (1 + concentrationBonus)).toFixed(1)),
             context: s.context || "",
@@ -315,17 +318,24 @@ function _buildBoonExpandHTML(boonName, providers) {
 
   const sourceRows = providers.flatMap(p =>
     (p.sources || []).map(s => {
-      const iconHtml = p.profIcon || "";
-      const specLabel = p.eliteSpec || p.profession || "";
+      const profIconHtml = p.profIcon || "";
+      const skillIconHtml = s.skillIcon
+        ? `<img src="${escapeHtml(s.skillIcon)}" width="20" height="20" alt="${escapeHtml(s.name)}"
+                class="party-cov__src-skill-icon"
+                data-skill-name="${escapeHtml(s.name)}"
+                data-skill-desc="${escapeHtml(s.skillDescription || "")}"
+                data-skill-icon="${escapeHtml(s.skillIcon)}"
+                data-skill-facts="${escapeHtml(JSON.stringify(s.skillFacts || []))}" />`
+        : "";
       const dur = `${s.effectiveDuration}s`;
       const stacksHtml = s.stacks > 1
         ? `<span class="party-cov__src-stacks">&times;${s.stacks}</span>` : "";
       const targetClass = s.isAlly ? "party-cov__src-target--ally" : "party-cov__src-target--self";
       const targetLabel = s.isAlly ? "ALLY" : "SELF";
       return `<div class="party-cov__src-row">
-        <span class="party-cov__src-icon">${iconHtml}</span>
+        <span class="party-cov__src-icon">${profIconHtml}</span>
+        ${skillIconHtml}
         <span class="party-cov__src-name">${escapeHtml(s.name)}</span>
-        <span class="party-cov__src-spec">${escapeHtml(specLabel)}</span>
         ${stacksHtml}
         <span class="party-cov__src-dur">${escapeHtml(dur)}</span>
         <span class="party-cov__src-target ${targetClass}">${targetLabel}</span>

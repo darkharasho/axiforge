@@ -200,7 +200,14 @@ function buildBoonExpandHTML(boonName, providers, builds, iconSrc) {
   const sourceRows = providers.flatMap(p => {
     return (p.sources || []).map(s => {
       const profIconHtml = p.profIcon || "";
-      const specLabel = p.eliteSpec || p.profession || "";
+      const skillIconHtml = s.skillIcon
+        ? `<img src="${escapeHtml(s.skillIcon)}" width="20" height="20" alt="${escapeHtml(s.name)}"
+                class="party-cov__src-skill-icon"
+                data-skill-name="${escapeHtml(s.name)}"
+                data-skill-desc="${escapeHtml(s.skillDescription || "")}"
+                data-skill-icon="${escapeHtml(s.skillIcon)}"
+                data-skill-facts="${escapeHtml(JSON.stringify(s.skillFacts || []))}" />`
+        : "";
       const dur = `${s.effectiveDuration}s`;
       const stacksHtml = s.stacks > 1
         ? `<span class="party-cov__src-stacks">&times;${s.stacks}</span>` : "";
@@ -208,8 +215,8 @@ function buildBoonExpandHTML(boonName, providers, builds, iconSrc) {
       const targetLabel = s.isAlly ? "ALLY" : "SELF";
       return `<div class="party-cov__src-row">
         <span class="party-cov__src-icon">${profIconHtml}</span>
+        ${skillIconHtml}
         <span class="party-cov__src-name">${escapeHtml(s.name)}</span>
-        <span class="party-cov__src-spec">${escapeHtml(specLabel)}</span>
         ${stacksHtml}
         <span class="party-cov__src-dur">${escapeHtml(dur)}</span>
         <span class="party-cov__src-target ${targetClass}">${targetLabel}</span>
