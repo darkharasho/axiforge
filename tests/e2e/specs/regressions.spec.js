@@ -223,12 +223,12 @@ test.describe("Boon coverage collapsed by default", () => {
   });
 
   test("boon coverage section exists with toggle header", async () => {
-    // The boon coverage section should have its collapsible header
+    // The party coverage section should have its collapsible header
     const header = window.locator("[data-action='toggle-boon-coverage']");
     await expect(header).toBeVisible();
-    // The title should say BOON COVERAGE
+    // The title should say PARTY COVERAGE
     const title = window.locator(".comp-boon-cov__title");
-    await expect(title).toHaveText("BOON COVERAGE");
+    await expect(title).toHaveText("PARTY COVERAGE");
   });
 });
 
