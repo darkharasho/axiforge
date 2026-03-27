@@ -8,6 +8,7 @@ import {
   COMBO_FIELD_COLORS, COMBO_FIELD_DISPLAY_ORDER,
   BLAST_FINISHER_COLORS,
 } from "../constants.js";
+import { getProfessionSvg } from "../profession-icons.js";
 import { escapeHtml } from "../utils.js";
 import { computeBuildConcentration } from "../stats.js";
 
@@ -75,7 +76,8 @@ export async function computeCompPartyCoverage(comp, builds, catalogCache, getCa
         if (specData?.elite) { eliteSpec = specData.name || null; break; }
       }
 
-      lineBuilds.push({ profession: build.profession, eliteSpec });
+      const profIcon = (eliteSpec && getProfessionSvg(eliteSpec)) || getProfessionSvg(build.profession) || "";
+      lineBuilds.push({ profession: build.profession, eliteSpec, profIcon });
 
       // Aggregate boons
       for (const boon of coverage.boons) {
@@ -157,20 +159,26 @@ function _renderPartyLine(line) {
   const fieldPills = _renderFieldPills(line.comboFields, line.label);
   const blastPills = _renderBlastPills(line.blastFinishers, line.label);
 
-  // Profession pips for the collapsed header
-  const profPips = (line.builds || []).map(b => {
-    const color = PROF_PIP_COLORS[b.profession] || "#888";
+  // Profession icons for the collapsed header (SVGs embedded for SPA portability)
+  const profIcons = (line.builds || []).map(b => {
     const label = b.eliteSpec || b.profession || "";
-    return `<span class="party-cov__header-pip" style="background:${color};" title="${escapeHtml(label)}"></span>`;
+    return `<span class="party-cov__header-prof" title="${escapeHtml(label)}">${b.profIcon || ""}</span>`;
   }).join("");
 
   // Mini boon icons for the collapsed header (all 12, greyed if uncovered)
+  // Respects self-boon toggle: data-has-ally marks whether the boon has ally sources
   const headerBoons = BOON_DISPLAY_ORDER.map(boonName => {
     const entry = line.boons.get(boonName);
     const covered = entry && entry.count > 0;
+    const hasAllySource = entry?.providers?.some(p =>
+      p.sources?.some(s => s.isAlly)
+    ) || false;
     const icon = BOON_CONDITION_ICONS[boonName] || "";
     return `<img src="${escapeHtml(icon)}" width="16" height="16" alt="${escapeHtml(boonName)}"
-                 class="party-cov__header-boon ${covered ? "" : "party-cov__header-boon--uncovered"}" />`;
+                 class="party-cov__header-boon ${covered ? "" : "party-cov__header-boon--uncovered"}"
+                 data-boon-name="${escapeHtml(boonName)}"
+                 data-has-ally="${hasAllySource}"
+                 data-covered="${covered}" />`;
   }).join("");
 
   return `
@@ -178,7 +186,7 @@ function _renderPartyLine(line) {
       <div class="party-cov__line-header" data-action="toggle-line">
         <span class="party-cov__line-chevron">&#x25b8;</span>
         <span class="party-cov__line-label">${escapeHtml(line.label)}</span>
-        <span class="party-cov__header-pips">${profPips}</span>
+        <span class="party-cov__header-profs">${profIcons}</span>
         <span class="party-cov__header-boons">${headerBoons}</span>
       </div>
       <div class="party-cov__line-body party-cov__line-body--collapsed">
@@ -402,12 +410,13 @@ export function bindPartyCoverageEvents(container) {
     });
   });
 
-  // Self-boon toggle
+  // Self-boon toggle — updates both body pills and header boon icons
   container.querySelectorAll('[data-action="toggle-self-boons"]').forEach(toggle => {
     toggle.addEventListener("change", () => {
       const lineEl = toggle.closest(".party-cov__line");
       if (!lineEl) return;
       const showSelf = toggle.checked;
+      // Update body pills
       lineEl.querySelectorAll('.party-cov__pill--boon').forEach(pill => {
         if (showSelf) {
           pill.classList.remove("party-cov__pill--self-hidden");
@@ -417,6 +426,18 @@ export function bindPartyCoverageEvents(container) {
           if (covered && !hasAlly) {
             pill.classList.add("party-cov__pill--self-hidden");
           }
+        }
+      });
+      // Update header boon icons to match
+      lineEl.querySelectorAll('.party-cov__header-boon').forEach(img => {
+        const covered = img.dataset.covered === "true";
+        const hasAlly = img.dataset.hasAlly === "true";
+        if (!covered) {
+          img.classList.add("party-cov__header-boon--uncovered");
+        } else if (!showSelf && !hasAlly) {
+          img.classList.add("party-cov__header-boon--uncovered");
+        } else {
+          img.classList.remove("party-cov__header-boon--uncovered");
         }
       });
     });

@@ -251,12 +251,13 @@ function bindPartyCoverageEvents(container, builds) {
     });
   });
 
-  // Self-boon toggle
+  // Self-boon toggle — updates both body pills and header boon icons
   container.querySelectorAll('[data-action="toggle-self-boons"]').forEach(toggle => {
     toggle.addEventListener("change", () => {
       const lineEl = toggle.closest(".party-cov__line");
       if (!lineEl) return;
       const showSelf = toggle.checked;
+      // Update body pills
       lineEl.querySelectorAll(".party-cov__pill--boon").forEach(pill => {
         if (showSelf) {
           pill.classList.remove("party-cov__pill--self-hidden");
@@ -266,6 +267,18 @@ function bindPartyCoverageEvents(container, builds) {
           if (covered && !hasAlly) {
             pill.classList.add("party-cov__pill--self-hidden");
           }
+        }
+      });
+      // Update header boon icons to match
+      lineEl.querySelectorAll(".party-cov__header-boon").forEach(img => {
+        const covered = img.dataset.covered === "true";
+        const hasAlly = img.dataset.hasAlly === "true";
+        if (!covered) {
+          img.classList.add("party-cov__header-boon--uncovered");
+        } else if (!showSelf && !hasAlly) {
+          img.classList.add("party-cov__header-boon--uncovered");
+        } else {
+          img.classList.remove("party-cov__header-boon--uncovered");
         }
       });
     });

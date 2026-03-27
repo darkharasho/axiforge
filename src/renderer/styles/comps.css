@@ -1775,18 +1775,24 @@
   flex-shrink: 0;
 }
 
-.party-cov__header-pips {
+.party-cov__header-profs {
   display: flex;
-  gap: 4px;
+  gap: 3px;
   align-items: center;
   flex-shrink: 0;
 }
 
-.party-cov__header-pip {
-  width: 10px;
-  height: 10px;
-  border-radius: 2px;
-  display: inline-block;
+.party-cov__header-prof {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+}
+
+.party-cov__header-prof svg {
+  width: 18px;
+  height: 18px;
 }
 
 .party-cov__header-boons {
