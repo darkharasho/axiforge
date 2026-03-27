@@ -88,6 +88,74 @@ function extractBuffFacts(entity, sourceType) {
   return results;
 }
 
+/**
+ * Extract combo field facts from a skill/trait entity.
+ * Also pulls Duration and Radius facts from the same entity for metadata.
+ */
+function extractComboFields(entity, sourceType, kitName = "") {
+  const results = [];
+  const facts = entity.facts || [];
+  let duration = 0;
+  let radius = 0;
+
+  // First pass: collect Duration and Radius metadata
+  for (const fact of facts) {
+    if ((fact.type === "Duration" || fact.type === "Time") && fact.duration) {
+      duration = fact.duration;
+    }
+    if (fact.type === "Radius" && fact.distance) {
+      radius = fact.distance;
+    }
+  }
+
+  // Second pass: extract ComboField facts
+  for (const fact of facts) {
+    if (fact.type !== "ComboField") continue;
+    const fieldType = fact.field_type;
+    if (!fieldType) continue;
+    results.push({
+      fieldType,
+      sourceType,
+      sourceName: entity.name || "",
+      duration,
+      radius,
+      kitName,
+    });
+  }
+  return results;
+}
+
+/**
+ * Extract blast finisher facts from a skill/trait entity.
+ * Counts multiple ComboFinisher facts on the same skill as multiple blasts.
+ */
+function extractBlastFinishers(entity, sourceType, kitName = "") {
+  const results = [];
+  const facts = entity.facts || [];
+  let blastCount = 0;
+  let percent = 100;
+
+  for (const fact of facts) {
+    if (fact.type !== "ComboFinisher") continue;
+    if (fact.finisher_type !== "Blast") continue;
+    blastCount++;
+    if (fact.percent != null && fact.percent < 100) {
+      percent = fact.percent;
+    }
+  }
+
+  if (blastCount > 0) {
+    results.push({
+      sourceType,
+      sourceName: entity.name || "",
+      blastCount,
+      percent,
+      kitName,
+    });
+  }
+  return results;
+}
+
 function collectSkillIds(editor, catalog) {
   const ids = new Set();
   const skills = editor.skills || {};
@@ -234,4 +302,76 @@ export function computeBoonCoverage(catalog, editor, weaponSkills = []) {
   conditions.sort((a, b) => a.name.localeCompare(b.name));
 
   return { boons, conditions };
+}
+
+/**
+ * Compute full party coverage for a single build: boons, combo fields, blast finishers.
+ * Scans weapon skills, heal/utility/elite, profession mechanics, traits,
+ * and kit/bundle sub-skills.
+ */
+export function computePartyCoverage(catalog, editor, weaponSkills = []) {
+  // Boons — delegate to existing function
+  const { boons, conditions } = computeBoonCoverage(catalog, editor, weaponSkills);
+
+  const allFields = [];
+  const allBlasts = [];
+
+  // Helper: scan an entity for fields and blasts
+  function scanEntity(entity, sourceType, kitName = "") {
+    if (!entity) return;
+    allFields.push(...extractComboFields(entity, sourceType, kitName));
+    allBlasts.push(...extractBlastFinishers(entity, sourceType, kitName));
+  }
+
+  // Weapon skills
+  for (const ws of weaponSkills) {
+    if (!ws) continue;
+    scanEntity(ws, "skill");
+    if (ws.flipSkill) {
+      const flip = catalog.skillById?.get(ws.flipSkill) || catalog.weaponSkillById?.get(ws.flipSkill);
+      scanEntity(flip, "skill");
+    }
+  }
+
+  // Skills (heal, utility, elite, profession mechanics)
+  const skillIds = collectSkillIds(editor, catalog);
+  for (const id of skillIds) {
+    const skill = catalog.skillById?.get(id);
+    if (!skill) continue;
+    scanEntity(skill, "skill");
+    if (skill.flipSkill) {
+      const flip = catalog.skillById?.get(skill.flipSkill);
+      scanEntity(flip, "skill");
+    }
+    // Kit/bundle sub-skills
+    for (const bundleId of skill.bundleSkills || []) {
+      const bundleSkill = catalog.skillById?.get(bundleId);
+      scanEntity(bundleSkill, "skill", skill.name || "");
+    }
+  }
+
+  // Traits
+  const traitIds = collectTraitIds(editor, catalog);
+  for (const id of traitIds) {
+    const trait = catalog.traitById?.get(id);
+    scanEntity(trait, "trait");
+  }
+
+  // Deduplicate fields by (fieldType, sourceName)
+  const fieldMap = new Map();
+  for (const f of allFields) {
+    const key = `${f.fieldType}|${f.sourceName}`;
+    if (!fieldMap.has(key)) fieldMap.set(key, f);
+  }
+  const comboFields = [...fieldMap.values()];
+
+  // Deduplicate blasts by sourceName
+  const blastMap = new Map();
+  for (const b of allBlasts) {
+    const key = b.sourceName;
+    if (!blastMap.has(key)) blastMap.set(key, b);
+  }
+  const blastFinishers = [...blastMap.values()];
+
+  return { boons, conditions, comboFields, blastFinishers };
 }
