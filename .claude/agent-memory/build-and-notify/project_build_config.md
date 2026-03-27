@@ -25,7 +25,7 @@ Build system is electron-builder (v26) with Vite as the renderer bundler.
 
 **Discord posting:** Post text-only via JSON payload (`content` field). Use `python3 -c "import json; ..."` to generate payload to a temp file, then pass with `curl -d @/tmp/discord_payload.json`. Do NOT use Python's `urllib.request.urlopen` — it returns HTTP 403 even with a valid webhook (curl returns 204 for the same URL). Artifacts are too large to attach (see discord limits memory).
 
-**Last build:** v0.1.0-beta.20260327T1024 built 2026-03-27. Last build commit: 829b673763cd11c85ea7016337442a4f2df00a2a.
+**Last build:** v0.1.0-beta.20260327T1114 built 2026-03-27. Last build commit: 1afc77ead3d675596c6bb5c05716a41a471c306d.
 
 **SPA publishing (GitHub Pages):** Site assets in gw2eww/axibuilds repo under `site/` directory. The `gh api --method PUT` approach fails for large files (JS ~1.27 MB) due to "Argument list too long". Instead: use Python to write blob JSON files (base64 content), then create blobs via `curl -d @/tmp/blob_X.json` POST to `https://api.github.com/repos/gw2eww/axibuilds/git/blobs`, then build a new tree (base_tree + entries with null sha to delete old files), create a commit, and PATCH the ref. Do NOT use shell variable expansion for base64 content — use Python to write JSON files directly. Artifact sizes: AppImage 177 MB, EXE 155 MB.
 
