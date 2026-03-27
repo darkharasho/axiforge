@@ -381,6 +381,25 @@ export function showHoverPreview(kind, entity, x, y) {
     }
   }
 
+  // For traits with associated skills (traitSkillIds), append skill cards below.
+  // Use the icon from traitSkillIcons (embedded in the trait API response) when available,
+  // since the separately-fetched /v2/skills object often shares the trait's icon instead
+  // of the distinct trait-skill icon (e.g. Chilling Nova trait vs Chilling Nova trait skill).
+  if (kind === "trait" && Array.isArray(entity.traitSkillIds) && entity.traitSkillIds.length) {
+    const catalog = state.activeCatalog;
+    const iconOverrides = entity.traitSkillIcons || {};
+    for (const skillId of entity.traitSkillIds) {
+      const skill = catalog?.skillById?.get(skillId);
+      if (!skill) continue;
+      const overrideIcon = iconOverrides[skillId];
+      const displaySkill = overrideIcon ? { ...skill, icon: overrideIcon } : skill;
+      chainCards.push(
+        `<div class="hover-preview__trait-skill-divider">Trait skill</div>`
+        + buildSkillCard(displaySkill, "skill", false, null)
+      );
+    }
+  }
+
   if (_el.hoverPreview) {
     _el.hoverPreview.innerHTML = chainCards.join("");
     _el.hoverPreview.classList.remove("hidden");

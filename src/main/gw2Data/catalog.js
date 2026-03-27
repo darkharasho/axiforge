@@ -401,6 +401,18 @@ async function getProfessionCatalog(professionId, lang = "en", gameMode = "pve")
     }
   }
 
+  // Collect ALL trait skill IDs (including non-elite spec traits) so that
+  // trait-associated skills (e.g. Lesser Signet of the Locust from Malicious Swarm)
+  // are available in skillById for hover preview display.
+  const allTraitSkillIds = new Set();
+  for (const trait of traits) {
+    if (!Array.isArray(trait.skills)) continue;
+    for (const ts of trait.skills) {
+      const skillId = Number(ts?.id);
+      if (skillId) allTraitSkillIds.add(skillId);
+    }
+  }
+
   // Merge profession reference metadata into fetched skill objects (needs traitSkillTagMap).
   // Prefer the reference's slot/specialization/type over the skill's own values.
   // Also apply traitSkillTagMap specialization as a fallback for elite spec skills whose
@@ -527,7 +539,7 @@ async function getProfessionCatalog(professionId, lang = "en", gameMode = "pve")
     ...professionSkillsRaw.map((s) => s.id),
     ...extraSkillsRaw.map((s) => s.id),
   ]);
-  const traitSkillIdsToFetch = [...traitSkillTagMap.keys()].filter((id) => !alreadyFetchedForTraits.has(id));
+  const traitSkillIdsToFetch = [...new Set([...traitSkillTagMap.keys(), ...allTraitSkillIds])].filter((id) => !alreadyFetchedForTraits.has(id));
 
   const [weaponChainDepth2Raw, traitSkillsRaw, morphPoolSkillsRaw] = await Promise.all([
     weaponChainDepth2Ids.length ? fetchGw2ByIds("skills", weaponChainDepth2Ids, lang) : Promise.resolve([]),

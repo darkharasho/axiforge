@@ -293,6 +293,32 @@ li.fact-item--split {
   padding-top: 5px;
 }
 
+.hover-preview__trait-skill-divider {
+  text-align: center;
+  color: #6a8a5a;
+  font-size: 0.55rem;
+  margin: 8px 0 4px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  border-top: 1px solid rgba(100, 140, 90, 0.3);
+  padding-top: 5px;
+}
+
+.hover-preview__trait-skill-divider + .hover-preview__head {
+  grid-template-columns: 36px 1fr;
+  gap: 8px;
+}
+
+.hover-preview__trait-skill-divider + .hover-preview__head .hover-preview__icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 7px;
+}
+
+.hover-preview__trait-skill-divider + .hover-preview__head .hover-preview__title {
+  font-size: 0.82rem;
+}
+
 .hover-preview__head--chained {
   margin-top: 2px;
 }
