@@ -1940,6 +1940,11 @@
 
 .party-cov__pill--active {
   border-color: currentColor;
+  box-shadow: 0 0 6px 1px currentColor;
+}
+
+.party-cov__pill:not(.party-cov__pill--uncovered):not(.party-cov__pill--self-only):hover {
+  border-color: rgba(255, 255, 255, 0.25);
 }
 
 .party-cov__pill-icon {
@@ -2028,6 +2033,47 @@
 
 .party-cov__src-skill-icon:hover {
   outline: 1.5px solid rgba(255, 255, 255, 0.3);
+}
+
+/* Skill hover tooltip — matches build view hover-preview style */
+.party-cov__skill-tooltip {
+  position: fixed;
+  z-index: 10000;
+  width: min(320px, calc(100vw - 16px));
+  border: 1px solid #43679f;
+  border-radius: 11px;
+  background:
+    linear-gradient(180deg, rgba(11, 21, 41, 0.97), rgba(8, 15, 30, 0.96)),
+    rgba(8, 15, 30, 0.96);
+  box-shadow:
+    0 12px 28px rgba(2, 7, 18, 0.72),
+    0 0 0 1px rgba(74, 113, 170, 0.18) inset;
+  padding: 10px;
+  pointer-events: none;
+}
+
+.party-cov__skill-tooltip-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.party-cov__skill-tooltip-icon {
+  border-radius: 8px;
+  border: 1px solid #4f79b5;
+}
+
+.party-cov__skill-tooltip-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #eff6ff;
+}
+
+.party-cov__skill-tooltip-desc {
+  margin: 8px 0 0;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: #b0c4de;
 }
 
 .party-cov__src-name {

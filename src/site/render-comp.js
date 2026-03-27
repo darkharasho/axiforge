@@ -133,6 +133,41 @@ const COMBO_FIELD_COLORS = {
 };
 
 let _activeExpand = null; // { expandEl, pillEl }
+let _skillTooltip = null;
+
+function showSkillTooltip(iconEl) {
+  hideSkillTooltip();
+  const name = iconEl.dataset.skillName || "";
+  const desc = iconEl.dataset.skillDesc || "";
+  const icon = iconEl.dataset.skillIcon || "";
+  if (!name) return;
+
+  const tip = document.createElement("div");
+  tip.className = "party-cov__skill-tooltip";
+  tip.innerHTML = `
+    <div class="party-cov__skill-tooltip-head">
+      ${icon ? `<img src="${escapeHtml(icon)}" width="40" height="40" class="party-cov__skill-tooltip-icon" />` : ""}
+      <span class="party-cov__skill-tooltip-name">${escapeHtml(name)}</span>
+    </div>
+    ${desc ? `<p class="party-cov__skill-tooltip-desc">${escapeHtml(desc)}</p>` : ""}`;
+  document.body.appendChild(tip);
+  _skillTooltip = tip;
+
+  const ir = iconEl.getBoundingClientRect();
+  const tr = tip.getBoundingClientRect();
+  const vw = window.innerWidth;
+  let top = ir.top - tr.height - 6;
+  let left = ir.left + ir.width / 2 - tr.width / 2;
+  if (top < 4) top = ir.bottom + 6;
+  if (left < 4) left = 4;
+  if (left + tr.width > vw - 4) left = vw - tr.width - 4;
+  tip.style.top = `${top}px`;
+  tip.style.left = `${left}px`;
+}
+
+function hideSkillTooltip() {
+  if (_skillTooltip) { _skillTooltip.remove(); _skillTooltip = null; }
+}
 
 function closePartyCoverageExpand() {
   if (!_activeExpand) return;
@@ -183,7 +218,10 @@ function buildFieldExpandHTML(fieldType, sources) {
     const profIconHtml = s.profIcon || "";
     const skillIconHtml = s.skillIcon
       ? `<img src="${escapeHtml(s.skillIcon)}" width="20" height="20" alt="${escapeHtml(s.sourceName)}"
-              class="party-cov__src-skill-icon" title="${escapeHtml(s.skillDescription || s.sourceName)}" />`
+              class="party-cov__src-skill-icon"
+              data-skill-name="${escapeHtml(s.sourceName)}"
+              data-skill-desc="${escapeHtml(s.skillDescription || "")}"
+              data-skill-icon="${escapeHtml(s.skillIcon)}" />`
       : "";
     const kitHtml = s.kitName ? `<span class="party-cov__src-kit">(${escapeHtml(s.kitName)})</span>` : "";
     const durHtml = s.duration ? `<span class="party-cov__src-dur">${s.duration}s</span>` : "";
@@ -217,7 +255,10 @@ function buildFinisherExpandHTML(finisherType, sources) {
     const profIconHtml = s.profIcon || "";
     const skillIconHtml = s.skillIcon
       ? `<img src="${escapeHtml(s.skillIcon)}" width="20" height="20" alt="${escapeHtml(s.sourceName)}"
-              class="party-cov__src-skill-icon" title="${escapeHtml(s.skillDescription || s.sourceName)}" />`
+              class="party-cov__src-skill-icon"
+              data-skill-name="${escapeHtml(s.sourceName)}"
+              data-skill-desc="${escapeHtml(s.skillDescription || "")}"
+              data-skill-icon="${escapeHtml(s.skillIcon)}" />`
       : "";
     const kitHtml = s.kitName ? `<span class="party-cov__src-kit">(${escapeHtml(s.kitName)})</span>` : "";
     const countLabel = s.hitCount > 1 ? `<span class="party-cov__src-blasts">&times;${s.hitCount}</span>` : "";
@@ -242,6 +283,14 @@ function buildFinisherExpandHTML(finisherType, sources) {
 }
 
 function bindPartyCoverageEvents(container, builds) {
+  // Skill icon hover tooltip (delegated)
+  container.addEventListener("mouseenter", (e) => {
+    if (e.target.classList?.contains("party-cov__src-skill-icon")) showSkillTooltip(e.target);
+  }, true);
+  container.addEventListener("mouseleave", (e) => {
+    if (e.target.classList?.contains("party-cov__src-skill-icon")) hideSkillTooltip();
+  }, true);
+
   // Line collapse/expand toggle
   container.querySelectorAll('[data-action="toggle-line"]').forEach(header => {
     header.addEventListener("click", () => {
