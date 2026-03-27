@@ -48,6 +48,7 @@ export async function computeCompPartyCoverage(comp, builds, catalogCache, getCa
     const lineBoonMap = new Map();
     const lineFieldMap = new Map();
     const lineBlasts = [];
+    const lineBuilds = []; // { profession, eliteSpec } per build in this line
     let hasFilledSlots = false;
 
     for (const buildId of line.slots || []) {
@@ -73,6 +74,8 @@ export async function computeCompPartyCoverage(comp, builds, catalogCache, getCa
         const specData = catalog.specializationById?.get(specId);
         if (specData?.elite) { eliteSpec = specData.name || null; break; }
       }
+
+      lineBuilds.push({ profession: build.profession, eliteSpec });
 
       // Aggregate boons
       for (const boon of coverage.boons) {
@@ -128,6 +131,7 @@ export async function computeCompPartyCoverage(comp, builds, catalogCache, getCa
       lineId: line.id,
       label,
       hasFilledSlots,
+      builds: lineBuilds,
       boons: lineBoonMap,
       comboFields: lineFieldMap,
       blastFinishers: lineBlasts,
@@ -153,30 +157,53 @@ function _renderPartyLine(line) {
   const fieldPills = _renderFieldPills(line.comboFields, line.label);
   const blastPills = _renderBlastPills(line.blastFinishers, line.label);
 
+  // Profession pips for the collapsed header
+  const profPips = (line.builds || []).map(b => {
+    const color = PROF_PIP_COLORS[b.profession] || "#888";
+    const label = b.eliteSpec || b.profession || "";
+    return `<span class="party-cov__header-pip" style="background:${color};" title="${escapeHtml(label)}"></span>`;
+  }).join("");
+
+  // Mini boon icons for the collapsed header (all 12, greyed if uncovered)
+  const headerBoons = BOON_DISPLAY_ORDER.map(boonName => {
+    const entry = line.boons.get(boonName);
+    const covered = entry && entry.count > 0;
+    const icon = BOON_CONDITION_ICONS[boonName] || "";
+    return `<img src="${escapeHtml(icon)}" width="16" height="16" alt="${escapeHtml(boonName)}"
+                 class="party-cov__header-boon ${covered ? "" : "party-cov__header-boon--uncovered"}" />`;
+  }).join("");
+
   return `
     <div class="party-cov__line" data-line-label="${escapeHtml(line.label)}">
-      <div class="party-cov__line-header">
-        <span class="party-cov__line-label">${escapeHtml(line.label)} — Party Line ${line.label.replace("P", "")}</span>
-        <label class="party-cov__toggle">
-          <input type="checkbox" class="party-cov__toggle-input" data-action="toggle-self-boons" />
-          <span class="party-cov__toggle-switch"></span>
-          <span class="party-cov__toggle-text">Show self boons</span>
-        </label>
+      <div class="party-cov__line-header" data-action="toggle-line">
+        <span class="party-cov__line-chevron">&#x25b8;</span>
+        <span class="party-cov__line-label">${escapeHtml(line.label)}</span>
+        <span class="party-cov__header-pips">${profPips}</span>
+        <span class="party-cov__header-boons">${headerBoons}</span>
       </div>
-      <div class="party-cov__section" data-section="boons">
-        <div class="party-cov__section-label">BOONS</div>
-        <div class="party-cov__pills">${boonPills}</div>
-        <div class="party-cov__expand" data-expand-for="boons"></div>
-      </div>
-      <div class="party-cov__section" data-section="fields">
-        <div class="party-cov__section-label">COMBO FIELDS</div>
-        <div class="party-cov__pills">${fieldPills}</div>
-        <div class="party-cov__expand" data-expand-for="fields"></div>
-      </div>
-      <div class="party-cov__section" data-section="blasts">
-        <div class="party-cov__section-label">BLAST FINISHERS</div>
-        <div class="party-cov__pills">${blastPills}</div>
-        <div class="party-cov__expand" data-expand-for="blasts"></div>
+      <div class="party-cov__line-body party-cov__line-body--collapsed">
+        <div class="party-cov__body-toolbar">
+          <label class="party-cov__toggle">
+            <input type="checkbox" class="party-cov__toggle-input" data-action="toggle-self-boons" />
+            <span class="party-cov__toggle-switch"></span>
+            <span class="party-cov__toggle-text">Show self boons</span>
+          </label>
+        </div>
+        <div class="party-cov__section" data-section="boons">
+          <div class="party-cov__section-label">BOONS</div>
+          <div class="party-cov__pills">${boonPills}</div>
+          <div class="party-cov__expand" data-expand-for="boons"></div>
+        </div>
+        <div class="party-cov__section" data-section="fields">
+          <div class="party-cov__section-label">COMBO FIELDS</div>
+          <div class="party-cov__pills">${fieldPills}</div>
+          <div class="party-cov__expand" data-expand-for="fields"></div>
+        </div>
+        <div class="party-cov__section" data-section="blasts">
+          <div class="party-cov__section-label">BLAST FINISHERS</div>
+          <div class="party-cov__pills">${blastPills}</div>
+          <div class="party-cov__expand" data-expand-for="blasts"></div>
+        </div>
       </div>
     </div>`;
 }
@@ -362,6 +389,19 @@ function _closeExpand() {
 export function closePartyCoverageExpand() { _closeExpand(); }
 
 export function bindPartyCoverageEvents(container) {
+  // Line collapse/expand toggle
+  container.querySelectorAll('[data-action="toggle-line"]').forEach(header => {
+    header.addEventListener("click", () => {
+      const lineEl = header.closest(".party-cov__line");
+      if (!lineEl) return;
+      const body = lineEl.querySelector(".party-cov__line-body");
+      const chevron = header.querySelector(".party-cov__line-chevron");
+      if (!body) return;
+      const collapsed = body.classList.toggle("party-cov__line-body--collapsed");
+      if (chevron) chevron.innerHTML = collapsed ? "&#x25b8;" : "&#x25be;";
+    });
+  });
+
   // Self-boon toggle
   container.querySelectorAll('[data-action="toggle-self-boons"]').forEach(toggle => {
     toggle.addEventListener("change", () => {

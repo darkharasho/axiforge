@@ -238,6 +238,19 @@ function buildBlastExpandHTML(blasts) {
 }
 
 function bindPartyCoverageEvents(container, builds) {
+  // Line collapse/expand toggle
+  container.querySelectorAll('[data-action="toggle-line"]').forEach(header => {
+    header.addEventListener("click", () => {
+      const lineEl = header.closest(".party-cov__line");
+      if (!lineEl) return;
+      const body = lineEl.querySelector(".party-cov__line-body");
+      const chevron = header.querySelector(".party-cov__line-chevron");
+      if (!body) return;
+      const collapsed = body.classList.toggle("party-cov__line-body--collapsed");
+      if (chevron) chevron.innerHTML = collapsed ? "&#x25b8;" : "&#x25be;";
+    });
+  });
+
   // Self-boon toggle
   container.querySelectorAll('[data-action="toggle-self-boons"]').forEach(toggle => {
     toggle.addEventListener("change", () => {
