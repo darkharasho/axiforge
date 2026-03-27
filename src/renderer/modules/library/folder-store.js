@@ -65,17 +65,18 @@ export function getVisibleBuilds() {
     } else if (folder.id === "__all-comps") {
       // "All Comps" smart folder: no builds shown
       return [];
+    } else if (folder.type === "smart-profession") {
+      // Smart folders aggregate ALL matching builds, including those in comps
+      builds = builds.filter((b) => b.profession === folder.id);
+    } else if (folder.type === "smart-gamemode") {
+      builds = builds.filter(
+        (b) => (b.gameMode || "pve") === folder.id,
+      );
     } else {
-      // Non-comp views: exclude builds that are inside any comp
+      // Non-smart views: exclude builds that are inside any comp
       builds = builds.filter((b) => !b.compId);
       if (folder.type === "custom") {
         builds = builds.filter((b) => b.folderId === folder.id);
-      } else if (folder.type === "smart-profession") {
-        builds = builds.filter((b) => b.profession === folder.id);
-      } else if (folder.type === "smart-gamemode") {
-        builds = builds.filter(
-          (b) => (b.gameMode || "pve") === folder.id,
-        );
       } else if (folder.type === "all") {
         // "all" type: show only root-level builds at top level;
         // builds inside folders appear under their expanded folder rows
