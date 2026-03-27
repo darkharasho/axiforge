@@ -445,7 +445,7 @@ async function computeBoonCoverageAsync(comp) {
           if (entry && entry.count > 0) coveredBoons.add(boon);
         }
       }
-      const percentage = Math.round((coveredBoons.size / 12) * 100);
+      const percentage = Math.round((coveredBoons.size / BOON_DISPLAY_ORDER.length) * 100);
       _boonCache.set(comp.id, { percentage, hash });
     }
   } catch {

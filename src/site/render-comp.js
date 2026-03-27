@@ -148,8 +148,11 @@ function closePartyCoverageExpand() {
   _activeExpand = null;
 }
 
-function buildBoonExpandHTML(boonName, providers, builds) {
+function buildBoonExpandHTML(boonName, providers, builds, iconSrc) {
   const totalSources = providers.reduce((n, p) => n + (p.sources?.length || 0), 0);
+  const iconHtml = iconSrc
+    ? `<img src="${escapeHtml(iconSrc)}" width="18" height="18" alt="${escapeHtml(boonName)}" class="party-cov__expand-icon" />`
+    : "";
 
   const sourceRows = providers.flatMap(p => {
     return (p.sources || []).map(s => {
@@ -173,6 +176,7 @@ function buildBoonExpandHTML(boonName, providers, builds) {
 
   return `
     <div class="party-cov__expand-header" style="border-left-color: #8f8;">
+      ${iconHtml}
       <span class="party-cov__expand-title" style="color: #afa;">${escapeHtml(boonName)} — ${totalSources} source${totalSources !== 1 ? "s" : ""}</span>
     </div>
     <div class="party-cov__expand-body" style="border-left-color: #8f8;">
@@ -273,7 +277,8 @@ function bindPartyCoverageEvents(container, builds) {
       if (category === "boon") {
         let providers = [];
         try { providers = JSON.parse(pillEl.dataset.providers || "[]"); } catch { /* */ }
-        html = buildBoonExpandHTML(pillEl.dataset.boonName, providers, builds);
+        const iconSrc = pillEl.querySelector(".party-cov__pill-icon")?.src || "";
+        html = buildBoonExpandHTML(pillEl.dataset.boonName, providers, builds, iconSrc);
       } else if (category === "field") {
         let sources = [];
         try { sources = JSON.parse(pillEl.dataset.sources || "[]"); } catch { /* */ }

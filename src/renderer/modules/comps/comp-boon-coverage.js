@@ -6,9 +6,8 @@ import { resolveEquippedWeaponSkills } from "../equipment-weapon-skills.js";
 import {
   BOON_DISPLAY_ORDER, BOON_CONDITION_ICONS,
   COMBO_FIELD_COLORS, COMBO_FIELD_DISPLAY_ORDER,
-  BLAST_FINISHER_COLORS, FACT_TYPE_ICONS,
+  BLAST_FINISHER_COLORS,
 } from "../constants.js";
-import { getProfessionSvg } from "../profession-icons.js";
 import { escapeHtml } from "../utils.js";
 import { computeBuildConcentration } from "../stats.js";
 
