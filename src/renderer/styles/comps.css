@@ -1924,8 +1924,18 @@
   cursor: default;
 }
 
-.party-cov__pill--self-hidden {
-  display: none;
+.party-cov__pill--self-only {
+  background: #333;
+  color: #666;
+  cursor: default;
+}
+
+.party-cov__pill--self-only .party-cov__pill-icon {
+  opacity: 0.28;
+}
+
+.party-cov__pill--self-only .party-cov__pill-badge {
+  color: #555;
 }
 
 .party-cov__pill--active {
@@ -1995,11 +2005,18 @@
   border-radius: 4px;
 }
 
-.party-cov__src-pip {
-  width: 8px;
-  height: 8px;
-  border-radius: 2px;
+.party-cov__src-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
   flex-shrink: 0;
+}
+
+.party-cov__src-icon svg {
+  width: 16px;
+  height: 16px;
 }
 
 .party-cov__src-name {

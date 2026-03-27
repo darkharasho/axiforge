@@ -12,12 +12,6 @@ import { getProfessionSvg } from "../profession-icons.js";
 import { escapeHtml } from "../utils.js";
 import { computeBuildConcentration } from "../stats.js";
 
-// Profession color pips for source rows (hex values)
-const PROF_PIP_COLORS = {
-  Guardian: "#6ea8ff", Warrior: "#ff9944", Necromancer: "#4dca7a",
-  Engineer: "#cc8844", Ranger: "#77cc55", Thief: "#cc6677",
-  Mesmer: "#b07acc", Elementalist: "#dd5555", Revenant: "#aa6655",
-};
 
 /**
  * Compute party coverage for all filled slots in a comp, per line.
@@ -96,7 +90,7 @@ export async function computeCompPartyCoverage(comp, builds, catalogCache, getCa
             context: s.context || "",
             isAlly: s.isAlly,
           }));
-        entry.providers.push({ buildId, buildName, profession: build.profession, eliteSpec, sources });
+        entry.providers.push({ buildId, buildName, profession: build.profession, eliteSpec, profIcon, sources });
       }
 
       // Aggregate combo fields
@@ -110,6 +104,7 @@ export async function computeCompPartyCoverage(comp, builds, catalogCache, getCa
           sourceName: field.sourceName,
           profession: build.profession,
           eliteSpec,
+          profIcon,
           kitName: field.kitName || "",
           duration: field.duration,
           radius: field.radius,
@@ -122,6 +117,7 @@ export async function computeCompPartyCoverage(comp, builds, catalogCache, getCa
           sourceName: blast.sourceName,
           profession: build.profession,
           eliteSpec,
+          profIcon,
           kitName: blast.kitName || "",
           blastCount: blast.blastCount,
           percent: blast.percent,
@@ -299,7 +295,7 @@ function _buildBoonExpandHTML(boonName, providers) {
 
   const sourceRows = providers.flatMap(p =>
     (p.sources || []).map(s => {
-      const pipColor = PROF_PIP_COLORS[p.profession] || "#888";
+      const iconHtml = p.profIcon || "";
       const specLabel = p.eliteSpec || p.profession || "";
       const dur = `${s.effectiveDuration}s`;
       const stacksHtml = s.stacks > 1
@@ -307,7 +303,7 @@ function _buildBoonExpandHTML(boonName, providers) {
       const targetClass = s.isAlly ? "party-cov__src-target--ally" : "party-cov__src-target--self";
       const targetLabel = s.isAlly ? "ALLY" : "SELF";
       return `<div class="party-cov__src-row">
-        <span class="party-cov__src-pip" style="background:${pipColor};"></span>
+        <span class="party-cov__src-icon">${iconHtml}</span>
         <span class="party-cov__src-name">${escapeHtml(s.name)}</span>
         <span class="party-cov__src-spec">${escapeHtml(specLabel)}</span>
         ${stacksHtml}
@@ -331,14 +327,14 @@ function _buildFieldExpandHTML(fieldType, sources) {
   const colors = COMBO_FIELD_COLORS[fieldType] || { text: "#aaa", border: "#555" };
 
   const sourceRows = sources.map(s => {
-    const pipColor = PROF_PIP_COLORS[s.profession] || "#888";
+    const iconHtml = s.profIcon || "";
     const specLabel = s.kitName
       ? `${s.eliteSpec || s.profession} <span class="party-cov__src-kit">(${escapeHtml(s.kitName)})</span>`
       : escapeHtml(s.eliteSpec || s.profession || "");
     const durHtml = s.duration ? `<span class="party-cov__src-dur">${s.duration}s duration</span>` : "";
     const radiusHtml = s.radius ? `<span class="party-cov__src-radius">${s.radius} radius</span>` : "";
     return `<div class="party-cov__src-row">
-      <span class="party-cov__src-pip" style="background:${pipColor};"></span>
+      <span class="party-cov__src-icon">${iconHtml}</span>
       <span class="party-cov__src-name">${escapeHtml(s.sourceName)}</span>
       <span class="party-cov__src-spec">${specLabel}</span>
       ${durHtml}
@@ -359,7 +355,7 @@ function _buildBlastExpandHTML(blasts) {
   const colors = BLAST_FINISHER_COLORS;
 
   const sourceRows = blasts.map(b => {
-    const pipColor = PROF_PIP_COLORS[b.profession] || "#888";
+    const iconHtml = b.profIcon || "";
     const specLabel = b.kitName
       ? `${b.eliteSpec || b.profession} <span class="party-cov__src-kit">(${escapeHtml(b.kitName)})</span>`
       : escapeHtml(b.eliteSpec || b.profession || "");
@@ -367,7 +363,7 @@ function _buildBlastExpandHTML(blasts) {
     const pctHtml = b.percent < 100
       ? ` <span class="party-cov__src-pct">(${b.percent}%)</span>` : "";
     return `<div class="party-cov__src-row">
-      <span class="party-cov__src-pip" style="background:${pipColor};"></span>
+      <span class="party-cov__src-icon">${iconHtml}</span>
       <span class="party-cov__src-name">${escapeHtml(b.sourceName)}</span>
       <span class="party-cov__src-spec">${specLabel}</span>
       <span class="party-cov__src-blasts">${countLabel}${pctHtml}</span>
@@ -410,22 +406,21 @@ export function bindPartyCoverageEvents(container) {
     });
   });
 
-  // Self-boon toggle — updates both body pills and header boon icons
+  // Self-boon toggle — updates pills, header icons, and expanded source rows
   container.querySelectorAll('[data-action="toggle-self-boons"]').forEach(toggle => {
     toggle.addEventListener("change", () => {
       const lineEl = toggle.closest(".party-cov__line");
       if (!lineEl) return;
       const showSelf = toggle.checked;
-      // Update body pills
+      // Update body pills — grey out self-only boons (don't hide entirely)
       lineEl.querySelectorAll('.party-cov__pill--boon').forEach(pill => {
-        if (showSelf) {
-          pill.classList.remove("party-cov__pill--self-hidden");
+        const hasAlly = pill.dataset.hasAlly === "true";
+        const covered = Number(pill.dataset.count) > 0;
+        if (!covered) return; // naturally uncovered, leave as-is
+        if (!showSelf && !hasAlly) {
+          pill.classList.add("party-cov__pill--self-only");
         } else {
-          const hasAlly = pill.dataset.hasAlly === "true";
-          const covered = Number(pill.dataset.count) > 0;
-          if (covered && !hasAlly) {
-            pill.classList.add("party-cov__pill--self-hidden");
-          }
+          pill.classList.remove("party-cov__pill--self-only");
         }
       });
       // Update header boon icons to match
@@ -439,6 +434,11 @@ export function bindPartyCoverageEvents(container) {
         } else {
           img.classList.remove("party-cov__header-boon--uncovered");
         }
+      });
+      // Hide/show SELF source rows in any open expansion
+      lineEl.querySelectorAll('.party-cov__src-target--self').forEach(badge => {
+        const row = badge.closest('.party-cov__src-row');
+        if (row) row.style.display = showSelf ? "" : "none";
       });
     });
     // Apply initial state (toggle is unchecked = hide self-only)
@@ -481,6 +481,16 @@ export function bindPartyCoverageEvents(container) {
       expandEl.innerHTML = html;
       pillEl.classList.add("party-cov__pill--active");
       _activeExpand = { expandEl, pillEl };
+
+      // Apply current self-toggle state to newly rendered SELF source rows
+      const lineEl = pillEl.closest(".party-cov__line");
+      const toggleEl = lineEl?.querySelector('[data-action="toggle-self-boons"]');
+      if (toggleEl && !toggleEl.checked) {
+        expandEl.querySelectorAll('.party-cov__src-target--self').forEach(badge => {
+          const row = badge.closest('.party-cov__src-row');
+          if (row) row.style.display = "none";
+        });
+      }
 
       requestAnimationFrame(() => expandEl.classList.add("party-cov__expand--open"));
     });

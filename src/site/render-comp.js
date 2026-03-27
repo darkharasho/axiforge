@@ -126,13 +126,6 @@ function renderPartyCoverage(comp) {
 
 // ── Party Coverage Interactions ───────────────────────────────────────────
 
-// Profession color pips (same as desktop)
-const PROF_PIP_COLORS = {
-  Guardian: "#6ea8ff", Warrior: "#ff9944", Necromancer: "#4dca7a",
-  Engineer: "#cc8844", Ranger: "#77cc55", Thief: "#cc6677",
-  Mesmer: "#b07acc", Elementalist: "#dd5555", Revenant: "#aa6655",
-};
-
 const COMBO_FIELD_COLORS = {
   Fire: { text: "#f96" }, Water: { text: "#6af" }, Light: { text: "#ee8" },
   Dark: { text: "#c8a" }, Ethereal: { text: "#aaf" }, Ice: { text: "#8de" },
@@ -156,7 +149,7 @@ function buildBoonExpandHTML(boonName, providers, builds, iconSrc) {
 
   const sourceRows = providers.flatMap(p => {
     return (p.sources || []).map(s => {
-      const pipColor = PROF_PIP_COLORS[p.profession] || "#888";
+      const profIconHtml = p.profIcon || "";
       const specLabel = p.eliteSpec || p.profession || "";
       const dur = `${s.effectiveDuration}s`;
       const stacksHtml = s.stacks > 1
@@ -164,7 +157,7 @@ function buildBoonExpandHTML(boonName, providers, builds, iconSrc) {
       const targetClass = s.isAlly ? "party-cov__src-target--ally" : "party-cov__src-target--self";
       const targetLabel = s.isAlly ? "ALLY" : "SELF";
       return `<div class="party-cov__src-row">
-        <span class="party-cov__src-pip" style="background:${pipColor};"></span>
+        <span class="party-cov__src-icon">${profIconHtml}</span>
         <span class="party-cov__src-name">${escapeHtml(s.name)}</span>
         <span class="party-cov__src-spec">${escapeHtml(specLabel)}</span>
         ${stacksHtml}
@@ -187,14 +180,14 @@ function buildBoonExpandHTML(boonName, providers, builds, iconSrc) {
 function buildFieldExpandHTML(fieldType, sources) {
   const colors = COMBO_FIELD_COLORS[fieldType] || { text: "#aaa" };
   const sourceRows = sources.map(s => {
-    const pipColor = PROF_PIP_COLORS[s.profession] || "#888";
+    const profIconHtml = s.profIcon || "";
     const specLabel = s.kitName
       ? `${s.eliteSpec || s.profession} <span class="party-cov__src-kit">(${escapeHtml(s.kitName)})</span>`
       : escapeHtml(s.eliteSpec || s.profession || "");
     const durHtml = s.duration ? `<span class="party-cov__src-dur">${s.duration}s duration</span>` : "";
     const radiusHtml = s.radius ? `<span class="party-cov__src-radius">${s.radius} radius</span>` : "";
     return `<div class="party-cov__src-row">
-      <span class="party-cov__src-pip" style="background:${pipColor};"></span>
+      <span class="party-cov__src-icon">${profIconHtml}</span>
       <span class="party-cov__src-name">${escapeHtml(s.sourceName)}</span>
       <span class="party-cov__src-spec">${specLabel}</span>
       ${durHtml}
@@ -213,7 +206,7 @@ function buildFieldExpandHTML(fieldType, sources) {
 
 function buildBlastExpandHTML(blasts) {
   const sourceRows = blasts.map(b => {
-    const pipColor = PROF_PIP_COLORS[b.profession] || "#888";
+    const profIconHtml = b.profIcon || "";
     const specLabel = b.kitName
       ? `${b.eliteSpec || b.profession} <span class="party-cov__src-kit">(${escapeHtml(b.kitName)})</span>`
       : escapeHtml(b.eliteSpec || b.profession || "");
@@ -221,7 +214,7 @@ function buildBlastExpandHTML(blasts) {
     const pctHtml = b.percent < 100
       ? ` <span class="party-cov__src-pct">(${b.percent}%)</span>` : "";
     return `<div class="party-cov__src-row">
-      <span class="party-cov__src-pip" style="background:${pipColor};"></span>
+      <span class="party-cov__src-icon">${profIconHtml}</span>
       <span class="party-cov__src-name">${escapeHtml(b.sourceName)}</span>
       <span class="party-cov__src-spec">${specLabel}</span>
       <span class="party-cov__src-blasts">${countLabel}${pctHtml}</span>
@@ -251,22 +244,21 @@ function bindPartyCoverageEvents(container, builds) {
     });
   });
 
-  // Self-boon toggle — updates both body pills and header boon icons
+  // Self-boon toggle — updates pills, header icons, and expanded source rows
   container.querySelectorAll('[data-action="toggle-self-boons"]').forEach(toggle => {
     toggle.addEventListener("change", () => {
       const lineEl = toggle.closest(".party-cov__line");
       if (!lineEl) return;
       const showSelf = toggle.checked;
-      // Update body pills
+      // Update body pills — grey out self-only boons
       lineEl.querySelectorAll(".party-cov__pill--boon").forEach(pill => {
-        if (showSelf) {
-          pill.classList.remove("party-cov__pill--self-hidden");
+        const hasAlly = pill.dataset.hasAlly === "true";
+        const covered = Number(pill.dataset.count) > 0;
+        if (!covered) return;
+        if (!showSelf && !hasAlly) {
+          pill.classList.add("party-cov__pill--self-only");
         } else {
-          const hasAlly = pill.dataset.hasAlly === "true";
-          const covered = Number(pill.dataset.count) > 0;
-          if (covered && !hasAlly) {
-            pill.classList.add("party-cov__pill--self-hidden");
-          }
+          pill.classList.remove("party-cov__pill--self-only");
         }
       });
       // Update header boon icons to match
@@ -280,6 +272,11 @@ function bindPartyCoverageEvents(container, builds) {
         } else {
           img.classList.remove("party-cov__header-boon--uncovered");
         }
+      });
+      // Hide/show SELF source rows in any open expansion
+      lineEl.querySelectorAll(".party-cov__src-target--self").forEach(badge => {
+        const row = badge.closest(".party-cov__src-row");
+        if (row) row.style.display = showSelf ? "" : "none";
       });
     });
     // Apply initial state
@@ -318,6 +315,17 @@ function bindPartyCoverageEvents(container, builds) {
       expandEl.innerHTML = html;
       pillEl.classList.add("party-cov__pill--active");
       _activeExpand = { expandEl, pillEl };
+
+      // Apply current self-toggle state to newly rendered SELF source rows
+      const lineEl = pillEl.closest(".party-cov__line");
+      const toggleEl = lineEl?.querySelector('[data-action="toggle-self-boons"]');
+      if (toggleEl && !toggleEl.checked) {
+        expandEl.querySelectorAll(".party-cov__src-target--self").forEach(badge => {
+          const row = badge.closest(".party-cov__src-row");
+          if (row) row.style.display = "none";
+        });
+      }
+
       requestAnimationFrame(() => expandEl.classList.add("party-cov__expand--open"));
     });
   });
