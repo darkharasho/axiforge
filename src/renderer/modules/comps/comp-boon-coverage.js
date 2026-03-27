@@ -9,6 +9,7 @@ import {
   COMBO_FINISHER_COLORS, COMBO_FINISHER_DISPLAY_ORDER,
 } from "../constants.js";
 import { getProfessionSvg } from "../profession-icons.js";
+import { formatFactHtml } from "../detail-panel.js";
 import { escapeHtml } from "../utils.js";
 import { computeBuildConcentration } from "../stats.js";
 
@@ -104,6 +105,7 @@ export async function computeCompPartyCoverage(comp, builds, catalogCache, getCa
           sourceName: field.sourceName,
           skillIcon: field.skillIcon || "",
           skillDescription: field.skillDescription || "",
+          skillFacts: field.skillFacts || [],
           profession: build.profession,
           eliteSpec,
           profIcon,
@@ -124,6 +126,7 @@ export async function computeCompPartyCoverage(comp, builds, catalogCache, getCa
           sourceName: fin.sourceName,
           skillIcon: fin.skillIcon || "",
           skillDescription: fin.skillDescription || "",
+          skillFacts: fin.skillFacts || [],
           profession: build.profession,
           eliteSpec,
           profIcon,
@@ -348,7 +351,8 @@ function _buildFieldExpandHTML(fieldType, sources) {
               class="party-cov__src-skill-icon"
               data-skill-name="${escapeHtml(s.sourceName)}"
               data-skill-desc="${escapeHtml(s.skillDescription || "")}"
-              data-skill-icon="${escapeHtml(s.skillIcon)}" />`
+              data-skill-icon="${escapeHtml(s.skillIcon)}"
+              data-skill-facts="${escapeHtml(JSON.stringify(s.skillFacts || []))}" />`
       : "";
     const kitHtml = s.kitName ? `<span class="party-cov__src-kit">(${escapeHtml(s.kitName)})</span>` : "";
     const durHtml = s.duration ? `<span class="party-cov__src-dur">${s.duration}s</span>` : "";
@@ -381,7 +385,8 @@ function _buildFinisherExpandHTML(finisherType, sources) {
               class="party-cov__src-skill-icon"
               data-skill-name="${escapeHtml(s.sourceName)}"
               data-skill-desc="${escapeHtml(s.skillDescription || "")}"
-              data-skill-icon="${escapeHtml(s.skillIcon)}" />`
+              data-skill-icon="${escapeHtml(s.skillIcon)}"
+              data-skill-facts="${escapeHtml(JSON.stringify(s.skillFacts || []))}" />`
       : "";
     const kitHtml = s.kitName ? `<span class="party-cov__src-kit">(${escapeHtml(s.kitName)})</span>` : "";
     const countLabel = s.hitCount > 1 ? `<span class="party-cov__src-blasts">&times;${s.hitCount}</span>` : "";
@@ -424,6 +429,19 @@ function _showSkillTooltip(iconEl) {
   const icon = iconEl.dataset.skillIcon || "";
   if (!name) return;
 
+  let factsHtml = "";
+  try {
+    const facts = JSON.parse(iconEl.dataset.skillFacts || "[]");
+    const items = facts
+      .filter(f => f.type !== "NoData")
+      .map(f => formatFactHtml(f))
+      .filter(Boolean)
+      .slice(0, 12);
+    if (items.length) {
+      factsHtml = `<ul class="hover-preview__facts">${items.map(h => `<li>${h}</li>`).join("")}</ul>`;
+    }
+  } catch { /* */ }
+
   const tip = document.createElement("div");
   tip.className = "party-cov__skill-tooltip";
   tip.innerHTML = `
@@ -431,7 +449,8 @@ function _showSkillTooltip(iconEl) {
       ${icon ? `<img src="${escapeHtml(icon)}" width="40" height="40" class="party-cov__skill-tooltip-icon" />` : ""}
       <span class="party-cov__skill-tooltip-name">${escapeHtml(name)}</span>
     </div>
-    ${desc ? `<p class="party-cov__skill-tooltip-desc">${escapeHtml(desc)}</p>` : ""}`;
+    ${desc ? `<p class="party-cov__skill-tooltip-desc">${escapeHtml(desc)}</p>` : ""}
+    ${factsHtml}`;
   document.body.appendChild(tip);
   _skillTooltip = tip;
 

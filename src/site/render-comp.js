@@ -2,6 +2,7 @@
 
 import { escapeHtml } from "./main.js";
 import { renderMiniBuildCard } from "../renderer/modules/mini-build-card.js";
+import { formatFactHtml } from "../renderer/modules/detail-panel.js";
 import { initMobileDetection } from "./mobile.js";
 
 // ── Helpers ──────────────────────────────────────────────────────────────
@@ -142,6 +143,19 @@ function showSkillTooltip(iconEl) {
   const icon = iconEl.dataset.skillIcon || "";
   if (!name) return;
 
+  let factsHtml = "";
+  try {
+    const facts = JSON.parse(iconEl.dataset.skillFacts || "[]");
+    const items = facts
+      .filter(f => f.type !== "NoData")
+      .map(f => formatFactHtml(f))
+      .filter(Boolean)
+      .slice(0, 12);
+    if (items.length) {
+      factsHtml = `<ul class="hover-preview__facts">${items.map(h => `<li>${h}</li>`).join("")}</ul>`;
+    }
+  } catch { /* */ }
+
   const tip = document.createElement("div");
   tip.className = "party-cov__skill-tooltip";
   tip.innerHTML = `
@@ -149,7 +163,8 @@ function showSkillTooltip(iconEl) {
       ${icon ? `<img src="${escapeHtml(icon)}" width="40" height="40" class="party-cov__skill-tooltip-icon" />` : ""}
       <span class="party-cov__skill-tooltip-name">${escapeHtml(name)}</span>
     </div>
-    ${desc ? `<p class="party-cov__skill-tooltip-desc">${escapeHtml(desc)}</p>` : ""}`;
+    ${desc ? `<p class="party-cov__skill-tooltip-desc">${escapeHtml(desc)}</p>` : ""}
+    ${factsHtml}`;
   document.body.appendChild(tip);
   _skillTooltip = tip;
 
@@ -221,7 +236,8 @@ function buildFieldExpandHTML(fieldType, sources) {
               class="party-cov__src-skill-icon"
               data-skill-name="${escapeHtml(s.sourceName)}"
               data-skill-desc="${escapeHtml(s.skillDescription || "")}"
-              data-skill-icon="${escapeHtml(s.skillIcon)}" />`
+              data-skill-icon="${escapeHtml(s.skillIcon)}"
+              data-skill-facts="${escapeHtml(JSON.stringify(s.skillFacts || []))}" />`
       : "";
     const kitHtml = s.kitName ? `<span class="party-cov__src-kit">(${escapeHtml(s.kitName)})</span>` : "";
     const durHtml = s.duration ? `<span class="party-cov__src-dur">${s.duration}s</span>` : "";
@@ -258,7 +274,8 @@ function buildFinisherExpandHTML(finisherType, sources) {
               class="party-cov__src-skill-icon"
               data-skill-name="${escapeHtml(s.sourceName)}"
               data-skill-desc="${escapeHtml(s.skillDescription || "")}"
-              data-skill-icon="${escapeHtml(s.skillIcon)}" />`
+              data-skill-icon="${escapeHtml(s.skillIcon)}"
+              data-skill-facts="${escapeHtml(JSON.stringify(s.skillFacts || []))}" />`
       : "";
     const kitHtml = s.kitName ? `<span class="party-cov__src-kit">(${escapeHtml(s.kitName)})</span>` : "";
     const countLabel = s.hitCount > 1 ? `<span class="party-cov__src-blasts">&times;${s.hitCount}</span>` : "";
