@@ -320,6 +320,11 @@ function bindPartyCoverageEvents(container, builds) {
   container.querySelectorAll('.party-cov__pill[data-clickable="true"]').forEach(pillEl => {
     pillEl.addEventListener("click", (e) => {
       e.stopPropagation();
+
+      // Don't expand uncovered or self-only boon pills
+      if (pillEl.classList.contains("party-cov__pill--uncovered") ||
+          pillEl.classList.contains("party-cov__pill--self-only")) return;
+
       if (_activeExpand?.pillEl === pillEl) { closePartyCoverageExpand(); return; }
       closePartyCoverageExpand();
 
@@ -349,7 +354,7 @@ function bindPartyCoverageEvents(container, builds) {
       pillEl.classList.add("party-cov__pill--active");
       _activeExpand = { expandEl, pillEl };
 
-      // Apply current self-toggle state to newly rendered SELF source rows
+      // Apply current self-toggle state to newly rendered SELF source rows + update count
       const lineEl = pillEl.closest(".party-cov__line");
       const toggleEl = lineEl?.querySelector('[data-action="toggle-self-boons"]');
       if (toggleEl && !toggleEl.checked) {
@@ -357,6 +362,13 @@ function bindPartyCoverageEvents(container, builds) {
           const row = badge.closest(".party-cov__src-row");
           if (row) row.style.display = "none";
         });
+        const rows = expandEl.querySelectorAll(".party-cov__src-row");
+        let visible = 0;
+        rows.forEach(r => { if (r.style.display !== "none") visible++; });
+        const titleEl = expandEl.querySelector(".party-cov__expand-title");
+        if (titleEl) {
+          titleEl.textContent = titleEl.textContent.replace(/— \d+ source(s?)/, `— ${visible} source${visible !== 1 ? "s" : ""}`);
+        }
       }
 
       requestAnimationFrame(() => expandEl.classList.add("party-cov__expand--open"));
