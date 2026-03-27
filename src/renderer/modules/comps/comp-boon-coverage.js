@@ -6,7 +6,7 @@ import { resolveEquippedWeaponSkills } from "../equipment-weapon-skills.js";
 import {
   BOON_DISPLAY_ORDER, BOON_CONDITION_ICONS,
   COMBO_FIELD_COLORS, COMBO_FIELD_DISPLAY_ORDER,
-  BLAST_FINISHER_COLORS,
+  COMBO_FINISHER_COLORS, COMBO_FINISHER_DISPLAY_ORDER,
 } from "../constants.js";
 import { getProfessionSvg } from "../profession-icons.js";
 import { escapeHtml } from "../utils.js";
@@ -42,7 +42,7 @@ export async function computeCompPartyCoverage(comp, builds, catalogCache, getCa
     const label = `P${i + 1}`;
     const lineBoonMap = new Map();
     const lineFieldMap = new Map();
-    const lineBlasts = [];
+    const lineFinisherMap = new Map(); // keyed by finisher type (Blast, Whirl, Leap, Projectile)
     const lineBuilds = []; // { profession, eliteSpec } per build in this line
     let hasFilledSlots = false;
 
@@ -111,16 +111,21 @@ export async function computeCompPartyCoverage(comp, builds, catalogCache, getCa
         });
       }
 
-      // Aggregate blast finishers
-      for (const blast of coverage.blastFinishers) {
-        lineBlasts.push({
-          sourceName: blast.sourceName,
+      // Aggregate combo finishers (Blast, Whirl, Leap, Projectile)
+      for (const fin of coverage.comboFinishers) {
+        if (!lineFinisherMap.has(fin.finisherType)) {
+          lineFinisherMap.set(fin.finisherType, { count: 0, sources: [] });
+        }
+        const entry = lineFinisherMap.get(fin.finisherType);
+        entry.count++;
+        entry.sources.push({
+          sourceName: fin.sourceName,
           profession: build.profession,
           eliteSpec,
           profIcon,
-          kitName: blast.kitName || "",
-          blastCount: blast.blastCount,
-          percent: blast.percent,
+          kitName: fin.kitName || "",
+          hitCount: fin.hitCount,
+          percent: fin.percent,
         });
       }
     }
@@ -132,7 +137,7 @@ export async function computeCompPartyCoverage(comp, builds, catalogCache, getCa
       builds: lineBuilds,
       boons: lineBoonMap,
       comboFields: lineFieldMap,
-      blastFinishers: lineBlasts,
+      comboFinishers: lineFinisherMap,
     });
   }
 
@@ -153,7 +158,7 @@ export function buildPartyCoverageHTML(data) {
 function _renderPartyLine(line) {
   const boonPills = _renderBoonPills(line.boons, line.label);
   const fieldPills = _renderFieldPills(line.comboFields, line.label);
-  const blastPills = _renderBlastPills(line.blastFinishers, line.label);
+  const finisherPills = _renderFinisherPills(line.comboFinishers, line.label);
 
   // Profession icons for the collapsed header (SVGs embedded for SPA portability)
   const profIcons = (line.builds || []).map(b => {
@@ -203,10 +208,10 @@ function _renderPartyLine(line) {
           <div class="party-cov__pills">${fieldPills}</div>
           <div class="party-cov__expand" data-expand-for="fields"></div>
         </div>
-        <div class="party-cov__section" data-section="blasts">
-          <div class="party-cov__section-label">BLAST FINISHERS</div>
-          <div class="party-cov__pills">${blastPills}</div>
-          <div class="party-cov__expand" data-expand-for="blasts"></div>
+        <div class="party-cov__section" data-section="finishers">
+          <div class="party-cov__section-label">FINISHERS</div>
+          <div class="party-cov__pills">${finisherPills}</div>
+          <div class="party-cov__expand" data-expand-for="finishers"></div>
         </div>
       </div>
     </div>`;
@@ -269,22 +274,28 @@ function _renderFieldPills(fieldMap, lineLabel) {
     }).join("");
 }
 
-function _renderBlastPills(blasts, lineLabel) {
-  if (blasts.length === 0) return "";
-  const colors = BLAST_FINISHER_COLORS;
-  const sourcesJson = escapeHtml(JSON.stringify(blasts));
+function _renderFinisherPills(finisherMap, lineLabel) {
+  return COMBO_FINISHER_DISPLAY_ORDER
+    .filter((ft) => finisherMap.has(ft))
+    .map((finisherType) => {
+      const entry = finisherMap.get(finisherType);
+      const count = entry.count || 0;
+      const colors = COMBO_FINISHER_COLORS[finisherType] || { bg: "#333", text: "#aaa", border: "#555" };
+      const sourcesJson = escapeHtml(JSON.stringify(entry.sources));
 
-  return `
-    <div class="party-cov__pill party-cov__pill--blast"
-         data-category="blast"
-         data-count="${blasts.length}"
-         data-sources="${sourcesJson}"
-         data-line-label="${escapeHtml(lineLabel)}"
-         data-clickable="true"
-         style="background:${colors.bg}; color:${colors.text}; border-color:${colors.border};">
-      <span class="party-cov__pill-name">Blast</span>
-      <span class="party-cov__pill-badge" style="color:#dda;">&times;${blasts.length}</span>
-    </div>`;
+      return `
+        <div class="party-cov__pill party-cov__pill--finisher"
+             data-category="finisher"
+             data-finisher-type="${escapeHtml(finisherType)}"
+             data-count="${count}"
+             data-sources="${sourcesJson}"
+             data-line-label="${escapeHtml(lineLabel)}"
+             data-clickable="true"
+             style="background:${colors.bg}; color:${colors.text}; border-color:${colors.border};">
+          <span class="party-cov__pill-name">${escapeHtml(finisherType)}</span>
+          ${count > 1 ? `<span class="party-cov__pill-badge" style="color:${colors.text};">&times;${count}</span>` : ""}
+        </div>`;
+    }).join("");
 }
 
 // ── Expanded source detail panels ──────────────────────────────────────────
@@ -351,28 +362,29 @@ function _buildFieldExpandHTML(fieldType, sources) {
     </div>`;
 }
 
-function _buildBlastExpandHTML(blasts) {
-  const colors = BLAST_FINISHER_COLORS;
+function _buildFinisherExpandHTML(finisherType, sources) {
+  const colors = COMBO_FINISHER_COLORS[finisherType] || { text: "#aaa" };
 
-  const sourceRows = blasts.map(b => {
-    const iconHtml = b.profIcon || "";
-    const specLabel = b.kitName
-      ? `${b.eliteSpec || b.profession} <span class="party-cov__src-kit">(${escapeHtml(b.kitName)})</span>`
-      : escapeHtml(b.eliteSpec || b.profession || "");
-    const countLabel = `&times;${b.blastCount} blast${b.blastCount !== 1 ? "s" : ""}`;
-    const pctHtml = b.percent < 100
-      ? ` <span class="party-cov__src-pct">(${b.percent}%)</span>` : "";
+  const sourceRows = sources.map(s => {
+    const iconHtml = s.profIcon || "";
+    const specLabel = s.kitName
+      ? `${s.eliteSpec || s.profession} <span class="party-cov__src-kit">(${escapeHtml(s.kitName)})</span>`
+      : escapeHtml(s.eliteSpec || s.profession || "");
+    const countLabel = s.hitCount > 1 ? `<span class="party-cov__src-blasts">&times;${s.hitCount}</span>` : "";
+    const pctHtml = s.percent < 100
+      ? `<span class="party-cov__src-pct">(${s.percent}%)</span>` : "";
     return `<div class="party-cov__src-row">
       <span class="party-cov__src-icon">${iconHtml}</span>
-      <span class="party-cov__src-name">${escapeHtml(b.sourceName)}</span>
+      <span class="party-cov__src-name">${escapeHtml(s.sourceName)}</span>
       <span class="party-cov__src-spec">${specLabel}</span>
-      <span class="party-cov__src-blasts">${countLabel}${pctHtml}</span>
+      ${countLabel}
+      ${pctHtml}
     </div>`;
   }).join("");
 
   return `
     <div class="party-cov__expand-header" style="border-left-color: ${colors.text};">
-      <span class="party-cov__expand-title" style="color: ${colors.text};">Blast Finishers — ${blasts.length} source${blasts.length !== 1 ? "s" : ""}</span>
+      <span class="party-cov__expand-title" style="color: ${colors.text};">${escapeHtml(finisherType)} — ${sources.length} source${sources.length !== 1 ? "s" : ""}</span>
     </div>
     <div class="party-cov__expand-body" style="border-left-color: ${colors.text};">
       ${sourceRows}
@@ -406,21 +418,33 @@ export function bindPartyCoverageEvents(container) {
     });
   });
 
-  // Self-boon toggle — updates pills, header icons, and expanded source rows
+  // Self-boon toggle — updates pills, header icons, badges, and expanded source rows
   container.querySelectorAll('[data-action="toggle-self-boons"]').forEach(toggle => {
     toggle.addEventListener("change", () => {
       const lineEl = toggle.closest(".party-cov__line");
       if (!lineEl) return;
       const showSelf = toggle.checked;
-      // Update body pills — grey out self-only boons (don't hide entirely)
+      // Update body pills — grey out self-only boons, update badge counts
       lineEl.querySelectorAll('.party-cov__pill--boon').forEach(pill => {
         const hasAlly = pill.dataset.hasAlly === "true";
-        const covered = Number(pill.dataset.count) > 0;
-        if (!covered) return; // naturally uncovered, leave as-is
+        const totalCount = Number(pill.dataset.count) || 0;
+        if (!totalCount) return; // naturally uncovered, leave as-is
         if (!showSelf && !hasAlly) {
           pill.classList.add("party-cov__pill--self-only");
         } else {
           pill.classList.remove("party-cov__pill--self-only");
+        }
+        // Recount providers based on toggle — count only providers with ally sources when self is off
+        let visibleCount = totalCount;
+        if (!showSelf) {
+          try {
+            const providers = JSON.parse(pill.dataset.providers || "[]");
+            visibleCount = providers.filter(p => p.sources?.some(s => s.isAlly)).length;
+          } catch { /* */ }
+        }
+        const badge = pill.querySelector(".party-cov__pill-badge");
+        if (badge) {
+          badge.textContent = visibleCount > 1 ? `×${visibleCount}` : "";
         }
       });
       // Update header boon icons to match
@@ -435,10 +459,20 @@ export function bindPartyCoverageEvents(container) {
           img.classList.remove("party-cov__header-boon--uncovered");
         }
       });
-      // Hide/show SELF source rows in any open expansion
+      // Hide/show SELF source rows in any open expansion, update source count header
       lineEl.querySelectorAll('.party-cov__src-target--self').forEach(badge => {
         const row = badge.closest('.party-cov__src-row');
         if (row) row.style.display = showSelf ? "" : "none";
+      });
+      // Update "N sources" count in expand headers
+      lineEl.querySelectorAll('.party-cov__expand--open').forEach(expandEl => {
+        const rows = expandEl.querySelectorAll('.party-cov__src-row');
+        let visible = 0;
+        rows.forEach(r => { if (r.style.display !== "none") visible++; });
+        const titleEl = expandEl.querySelector('.party-cov__expand-title');
+        if (titleEl) {
+          titleEl.textContent = titleEl.textContent.replace(/— \d+ source(s?)/, `— ${visible} source${visible !== 1 ? "s" : ""}`);
+        }
       });
     });
     // Apply initial state (toggle is unchecked = hide self-only)
@@ -472,10 +506,10 @@ export function bindPartyCoverageEvents(container) {
         let sources = [];
         try { sources = JSON.parse(pillEl.dataset.sources || "[]"); } catch { /* */ }
         html = _buildFieldExpandHTML(pillEl.dataset.fieldType, sources);
-      } else if (category === "blast") {
+      } else if (category === "finisher") {
         let sources = [];
         try { sources = JSON.parse(pillEl.dataset.sources || "[]"); } catch { /* */ }
-        html = _buildBlastExpandHTML(sources);
+        html = _buildFinisherExpandHTML(pillEl.dataset.finisherType, sources);
       }
 
       expandEl.innerHTML = html;

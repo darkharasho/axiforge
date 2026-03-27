@@ -204,28 +204,35 @@ function buildFieldExpandHTML(fieldType, sources) {
     </div>`;
 }
 
-function buildBlastExpandHTML(blasts) {
-  const sourceRows = blasts.map(b => {
-    const profIconHtml = b.profIcon || "";
-    const specLabel = b.kitName
-      ? `${b.eliteSpec || b.profession} <span class="party-cov__src-kit">(${escapeHtml(b.kitName)})</span>`
-      : escapeHtml(b.eliteSpec || b.profession || "");
-    const countLabel = `&times;${b.blastCount} blast${b.blastCount !== 1 ? "s" : ""}`;
-    const pctHtml = b.percent < 100
-      ? ` <span class="party-cov__src-pct">(${b.percent}%)</span>` : "";
+const COMBO_FINISHER_COLORS_SPA = {
+  Blast: { text: "#c8f" }, Whirl: { text: "#8dd" },
+  Leap: { text: "#dd8" }, Projectile: { text: "#d88" },
+};
+
+function buildFinisherExpandHTML(finisherType, sources) {
+  const colors = COMBO_FINISHER_COLORS_SPA[finisherType] || { text: "#aaa" };
+  const sourceRows = sources.map(s => {
+    const profIconHtml = s.profIcon || "";
+    const specLabel = s.kitName
+      ? `${s.eliteSpec || s.profession} <span class="party-cov__src-kit">(${escapeHtml(s.kitName)})</span>`
+      : escapeHtml(s.eliteSpec || s.profession || "");
+    const countLabel = s.hitCount > 1 ? `<span class="party-cov__src-blasts">&times;${s.hitCount}</span>` : "";
+    const pctHtml = s.percent < 100
+      ? `<span class="party-cov__src-pct">(${s.percent}%)</span>` : "";
     return `<div class="party-cov__src-row">
       <span class="party-cov__src-icon">${profIconHtml}</span>
-      <span class="party-cov__src-name">${escapeHtml(b.sourceName)}</span>
+      <span class="party-cov__src-name">${escapeHtml(s.sourceName)}</span>
       <span class="party-cov__src-spec">${specLabel}</span>
-      <span class="party-cov__src-blasts">${countLabel}${pctHtml}</span>
+      ${countLabel}
+      ${pctHtml}
     </div>`;
   }).join("");
 
   return `
-    <div class="party-cov__expand-header" style="border-left-color: #c8f;">
-      <span class="party-cov__expand-title" style="color: #c8f;">Blast Finishers — ${blasts.length} source${blasts.length !== 1 ? "s" : ""}</span>
+    <div class="party-cov__expand-header" style="border-left-color: ${colors.text};">
+      <span class="party-cov__expand-title" style="color: ${colors.text};">${escapeHtml(finisherType)} — ${sources.length} source${sources.length !== 1 ? "s" : ""}</span>
     </div>
-    <div class="party-cov__expand-body" style="border-left-color: #c8f;">
+    <div class="party-cov__expand-body" style="border-left-color: ${colors.text};">
       ${sourceRows}
     </div>`;
 }
@@ -253,12 +260,24 @@ function bindPartyCoverageEvents(container, builds) {
       // Update body pills — grey out self-only boons
       lineEl.querySelectorAll(".party-cov__pill--boon").forEach(pill => {
         const hasAlly = pill.dataset.hasAlly === "true";
-        const covered = Number(pill.dataset.count) > 0;
-        if (!covered) return;
+        const totalCount = Number(pill.dataset.count) || 0;
+        if (!totalCount) return;
         if (!showSelf && !hasAlly) {
           pill.classList.add("party-cov__pill--self-only");
         } else {
           pill.classList.remove("party-cov__pill--self-only");
+        }
+        // Recount providers based on toggle
+        let visibleCount = totalCount;
+        if (!showSelf) {
+          try {
+            const providers = JSON.parse(pill.dataset.providers || "[]");
+            visibleCount = providers.filter(p => p.sources?.some(s => s.isAlly)).length;
+          } catch { /* */ }
+        }
+        const badge = pill.querySelector(".party-cov__pill-badge");
+        if (badge) {
+          badge.textContent = visibleCount > 1 ? `×${visibleCount}` : "";
         }
       });
       // Update header boon icons to match
@@ -277,6 +296,16 @@ function bindPartyCoverageEvents(container, builds) {
       lineEl.querySelectorAll(".party-cov__src-target--self").forEach(badge => {
         const row = badge.closest(".party-cov__src-row");
         if (row) row.style.display = showSelf ? "" : "none";
+      });
+      // Update "N sources" count in expand headers
+      lineEl.querySelectorAll(".party-cov__expand--open").forEach(expandEl => {
+        const rows = expandEl.querySelectorAll(".party-cov__src-row");
+        let visible = 0;
+        rows.forEach(r => { if (r.style.display !== "none") visible++; });
+        const titleEl = expandEl.querySelector(".party-cov__expand-title");
+        if (titleEl) {
+          titleEl.textContent = titleEl.textContent.replace(/— \d+ source(s?)/, `— ${visible} source${visible !== 1 ? "s" : ""}`);
+        }
       });
     });
     // Apply initial state
@@ -306,10 +335,10 @@ function bindPartyCoverageEvents(container, builds) {
         let sources = [];
         try { sources = JSON.parse(pillEl.dataset.sources || "[]"); } catch { /* */ }
         html = buildFieldExpandHTML(pillEl.dataset.fieldType, sources);
-      } else if (category === "blast") {
+      } else if (category === "finisher") {
         let sources = [];
         try { sources = JSON.parse(pillEl.dataset.sources || "[]"); } catch { /* */ }
-        html = buildBlastExpandHTML(sources);
+        html = buildFinisherExpandHTML(pillEl.dataset.finisherType, sources);
       }
 
       expandEl.innerHTML = html;

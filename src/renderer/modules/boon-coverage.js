@@ -126,30 +126,34 @@ function extractComboFields(entity, sourceType, kitName = "") {
 }
 
 /**
- * Extract blast finisher facts from a skill/trait entity.
- * Counts multiple ComboFinisher facts on the same skill as multiple blasts.
+ * Extract combo finisher facts from a skill/trait entity.
+ * Groups by finisher type (Blast, Whirl, Leap, Projectile).
  */
-function extractBlastFinishers(entity, sourceType, kitName = "") {
+function extractComboFinishers(entity, sourceType, kitName = "") {
   const results = [];
   const facts = entity.facts || [];
-  let blastCount = 0;
-  let percent = 100;
 
+  // Group by finisher type — count hits per type
+  const byType = new Map();
   for (const fact of facts) {
     if (fact.type !== "ComboFinisher") continue;
-    if (fact.finisher_type !== "Blast") continue;
-    blastCount++;
+    const ft = fact.finisher_type;
+    if (!ft) continue;
+    if (!byType.has(ft)) byType.set(ft, { count: 0, percent: 100 });
+    const entry = byType.get(ft);
+    entry.count++;
     if (fact.percent != null && fact.percent < 100) {
-      percent = fact.percent;
+      entry.percent = fact.percent;
     }
   }
 
-  if (blastCount > 0) {
+  for (const [finisherType, data] of byType) {
     results.push({
+      finisherType,
       sourceType,
       sourceName: entity.name || "",
-      blastCount,
-      percent,
+      hitCount: data.count,
+      percent: data.percent,
       kitName,
     });
   }
@@ -314,13 +318,13 @@ export function computePartyCoverage(catalog, editor, weaponSkills = []) {
   const { boons, conditions } = computeBoonCoverage(catalog, editor, weaponSkills);
 
   const allFields = [];
-  const allBlasts = [];
+  const allFinishers = [];
 
-  // Helper: scan an entity for fields and blasts
+  // Helper: scan an entity for fields and finishers
   function scanEntity(entity, sourceType, kitName = "") {
     if (!entity) return;
     allFields.push(...extractComboFields(entity, sourceType, kitName));
-    allBlasts.push(...extractBlastFinishers(entity, sourceType, kitName));
+    allFinishers.push(...extractComboFinishers(entity, sourceType, kitName));
   }
 
   // Weapon skills
@@ -365,13 +369,13 @@ export function computePartyCoverage(catalog, editor, weaponSkills = []) {
   }
   const comboFields = [...fieldMap.values()];
 
-  // Deduplicate blasts by sourceName
-  const blastMap = new Map();
-  for (const b of allBlasts) {
-    const key = b.sourceName;
-    if (!blastMap.has(key)) blastMap.set(key, b);
+  // Deduplicate finishers by (finisherType, sourceName)
+  const finisherMap = new Map();
+  for (const f of allFinishers) {
+    const key = `${f.finisherType}|${f.sourceName}`;
+    if (!finisherMap.has(key)) finisherMap.set(key, f);
   }
-  const blastFinishers = [...blastMap.values()];
+  const comboFinishers = [...finisherMap.values()];
 
-  return { boons, conditions, comboFields, blastFinishers };
+  return { boons, conditions, comboFields, comboFinishers };
 }

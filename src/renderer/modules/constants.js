@@ -571,8 +571,15 @@ export const COMBO_FIELD_DISPLAY_ORDER = [
   "Fire", "Water", "Light", "Dark", "Ethereal", "Ice", "Lightning", "Smoke", "Poison",
 ];
 
-// Blast finisher theme colors
-export const BLAST_FINISHER_COLORS = { bg: "#4a3a5a", text: "#c8f", border: "#6a5a7a" };
+// Combo finisher type display colors
+export const COMBO_FINISHER_COLORS = {
+  Blast:      { bg: "#4a3a5a", text: "#c8f", border: "#6a5a7a" },
+  Whirl:      { bg: "#3a4a4a", text: "#8dd", border: "#5a6a6a" },
+  Leap:       { bg: "#4a4a3a", text: "#dd8", border: "#6a6a5a" },
+  Projectile: { bg: "#4a3a3a", text: "#d88", border: "#6a5a5a" },
+};
+
+export const COMBO_FINISHER_DISPLAY_ORDER = ["Blast", "Whirl", "Leap", "Projectile"];
 
 // Fallback icons keyed by GW2 API fact type, for facts missing fact.icon.
 // Icons sourced from render.guildwars2.com via /v2/skills API responses.
