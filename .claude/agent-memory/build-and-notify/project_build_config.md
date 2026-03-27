@@ -25,11 +25,13 @@ Build system is electron-builder (v26) with Vite as the renderer bundler.
 
 **Discord posting:** Post text-only via JSON payload (`content` field). Use `python3 -c "import json; ..."` to generate payload to a temp file, then pass with `curl -d @/tmp/discord_payload.json`. Do NOT use Python's `urllib.request.urlopen` — it returns HTTP 403 even with a valid webhook (curl returns 204 for the same URL). Artifacts are too large to attach (see discord limits memory).
 
-**Last build:** v0.1.0-beta.20260327T1114 built 2026-03-27. Last build commit: 1afc77ead3d675596c6bb5c05716a41a471c306d.
+**Last build:** v0.1.0-beta.20260327T1426 built 2026-03-27. Last build commit: 9cd7950a51d2de02385f157d3f42c7cdb6460c06.
 
 **SPA publishing (GitHub Pages):** Site assets in gw2eww/axibuilds repo under `site/` directory. The `gh api --method PUT` approach fails for large files (JS ~1.27 MB) due to "Argument list too long". Instead: use Python to write blob JSON files (base64 content), then create blobs via `curl -d @/tmp/blob_X.json` POST to `https://api.github.com/repos/gw2eww/axibuilds/git/blobs`, then build a new tree (base_tree + entries with null sha to delete old files), create a commit, and PATCH the ref. Do NOT use shell variable expansion for base64 content — use Python to write JSON files directly. Artifact sizes: AppImage 177 MB, EXE 155 MB.
 
 **Discord 2000-char limit:** Patch notes for large releases exceed Discord's 2000-character message cap. Split into two sequential posts (part 1: New Features; part 2: Bug Fixes + Improvements + download link). Both return HTTP 204 on success.
+
+**Test fix during build (2026-03-27):** Found stale test in `tests/unit/renderer/comp-boon-coverage.test.js` — the party coverage rewrite renamed `computeCompBoonCoverage` to `computeCompPartyCoverage` and removed the squad-wide aggregate. Tests still referenced the old function name and squad return shape. Updated to use new function name and per-line-only assertions.
 
 **Test fix during build (2026-03-21):** Found stale test in `tests/unit/renderer/comp-drag-drop.test.js` — the "onMove — all placements allowed" describe block had a comment saying onMove was removed, but it was never removed from source. Fixed to correctly assert onMove exists and enforces capacity (returns false when line is full, true for same-line reorder).
 
