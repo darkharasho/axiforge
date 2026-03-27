@@ -193,6 +193,17 @@ function collectSkillIds(editor, catalog) {
     if (reqSpec && !selectedSpecIds.has(reqSpec)) continue;
     if (/^Profession_[1-5]$/.test(s.slot || "")) ids.add(s.id);
   }
+  // Revenant legend skills (heal, utilities, elite) — fixed per legend stance
+  for (const legendId of editor.selectedLegends || []) {
+    if (!legendId) continue;
+    const legend = catalog?.legendById?.get(legendId);
+    if (!legend) continue;
+    if (legend.heal) ids.add(Number(legend.heal));
+    if (legend.elite) ids.add(Number(legend.elite));
+    for (const uid of legend.utilities || []) {
+      if (uid) ids.add(Number(uid));
+    }
+  }
   return ids;
 }
 
