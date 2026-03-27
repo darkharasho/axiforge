@@ -254,6 +254,11 @@ export function computeBoonCoverage(catalog, editor, weaponSkills = []) {
       const bundleSkill = catalog.skillById?.get(bundleId);
       if (bundleSkill) allFacts.push(...extractBuffFacts(bundleSkill, "skill"));
     }
+    // Toolbelt skill (Engineer)
+    if (skill.toolbeltSkill) {
+      const tbSkill = catalog.skillById?.get(skill.toolbeltSkill);
+      if (tbSkill) allFacts.push(...extractBuffFacts(tbSkill, "skill"));
+    }
   }
 
   // Collect from traits
@@ -357,6 +362,11 @@ export function computePartyCoverage(catalog, editor, weaponSkills = []) {
     for (const bundleId of skill.bundleSkills || []) {
       const bundleSkill = catalog.skillById?.get(bundleId);
       scanEntity(bundleSkill, "skill", skill.name || "");
+    }
+    // Toolbelt skill (Engineer)
+    if (skill.toolbeltSkill) {
+      const tbSkill = catalog.skillById?.get(skill.toolbeltSkill);
+      scanEntity(tbSkill, "skill", skill.name || "");
     }
   }
 
