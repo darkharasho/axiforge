@@ -86,7 +86,7 @@ function buildCompEmbed(comp, builds, compUrl, buildUrls) {
   return {
     title: comp.name || "Untitled Comp",
     url: compUrl,
-    description: WIDTH_PAD,
+    description: comp.notes ? `${comp.notes}\n${WIDTH_PAD}` : WIDTH_PAD,
     color: comp.gameMode === "wvw" ? COLOR_WVW : COLOR_PVE,
     fields,
     author: {
