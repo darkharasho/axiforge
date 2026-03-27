@@ -2088,3 +2088,265 @@
   background: #1a1a3a;
   margin: 5px 0;
 }
+
+/* ── Party Coverage (replaces squad-level boon coverage) ──────────────── */
+
+.party-cov__line {
+  background: #1a1a2e;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 8px;
+}
+
+.party-cov__line-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.party-cov__line-label {
+  color: #e0a040;
+  font-weight: bold;
+  font-size: 15px;
+}
+
+/* Self-boon toggle */
+.party-cov__toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.party-cov__toggle-input {
+  display: none;
+}
+
+.party-cov__toggle-switch {
+  width: 32px;
+  height: 18px;
+  background: #3a3a4e;
+  border-radius: 9px;
+  position: relative;
+  transition: background 0.2s;
+}
+
+.party-cov__toggle-switch::after {
+  content: "";
+  width: 14px;
+  height: 14px;
+  background: #888;
+  border-radius: 50%;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  transition: transform 0.2s, background 0.2s;
+}
+
+.party-cov__toggle-input:checked + .party-cov__toggle-switch {
+  background: #3a6ea5;
+}
+
+.party-cov__toggle-input:checked + .party-cov__toggle-switch::after {
+  transform: translateX(14px);
+  background: white;
+}
+
+.party-cov__toggle-text {
+  color: #888;
+  font-size: 11px;
+}
+
+/* Sections */
+.party-cov__section {
+  background: #2a2a3e;
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+
+.party-cov__section:last-child {
+  margin-bottom: 0;
+}
+
+.party-cov__section-label {
+  color: #aaa;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+/* Pills */
+.party-cov__pills {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.party-cov__pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: opacity 0.15s, border-color 0.15s;
+}
+
+.party-cov__pill--boon {
+  background: #3a5a3a;
+  color: #8f8;
+}
+
+.party-cov__pill--uncovered {
+  background: #333;
+  color: #666;
+  cursor: default;
+}
+
+.party-cov__pill--self-hidden {
+  display: none;
+}
+
+.party-cov__pill--active {
+  border-color: currentColor;
+}
+
+.party-cov__pill-icon {
+  display: block;
+  border-radius: 3px;
+}
+
+.party-cov__pill-name {
+  white-space: nowrap;
+}
+
+.party-cov__pill-badge {
+  color: #dda;
+  font-size: 10px;
+}
+
+/* Expanded source panel */
+.party-cov__expand {
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-height 0.25s ease, opacity 0.2s ease, padding 0.25s ease;
+}
+
+.party-cov__expand--open {
+  max-height: 600px;
+  opacity: 1;
+  padding-top: 8px;
+}
+
+.party-cov__expand-header {
+  border-left: 3px solid;
+  padding: 4px 10px;
+  margin-bottom: 4px;
+}
+
+.party-cov__expand-title {
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.party-cov__expand-icon {
+  border-radius: 3px;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+
+.party-cov__expand-body {
+  border-left: 3px solid;
+  padding-left: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Source rows */
+.party-cov__src-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  background: #252540;
+  border-radius: 4px;
+}
+
+.party-cov__src-pip {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.party-cov__src-name {
+  color: #ddd;
+  font-size: 12px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.party-cov__src-spec {
+  font-size: 11px;
+  color: #aaa;
+  white-space: nowrap;
+}
+
+.party-cov__src-kit {
+  color: #888;
+  font-size: 10px;
+}
+
+.party-cov__src-stacks {
+  color: #aaa;
+  font-size: 11px;
+}
+
+.party-cov__src-dur {
+  color: #aaa;
+  font-size: 11px;
+}
+
+.party-cov__src-radius {
+  color: #aaa;
+  font-size: 11px;
+}
+
+.party-cov__src-blasts {
+  color: #aaa;
+  font-size: 11px;
+}
+
+.party-cov__src-pct {
+  color: #888;
+  font-size: 10px;
+}
+
+.party-cov__src-target {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+
+.party-cov__src-target--ally {
+  background: #2a4a6a;
+  color: #8cf;
+}
+
+.party-cov__src-target--self {
+  background: #4a4a2a;
+  color: #dd8;
+}
