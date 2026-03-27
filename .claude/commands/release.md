@@ -11,7 +11,10 @@ Follow these steps in order. Do not skip steps.
 ### Step 1 — Validate
 
 1. Ensure working tree is clean: `git status --porcelain` must be empty. If not, abort: "Working tree is not clean. Commit or stash changes first."
-2. Run `npm test`. If tests fail, abort: "Tests failed — fix before releasing."
+2. Run all test suites in order. If any fail, abort: "Tests failed — fix before releasing."
+   - `npm test` (unit/integration tests)
+   - `npm run test:e2e` (Electron end-to-end tests)
+   - `npm run test:spa` (SPA Playwright tests)
 3. Validate the bump type is one of: patch, minor, major.
 
 ### Step 2 — Bump version

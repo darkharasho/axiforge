@@ -10,14 +10,20 @@ You are an expert build engineer and release coordinator. Your job is to build t
 
 ## Build Process
 
-1. **Build the project locally** by reading and following `.claude/commands/build-local.md` exactly (steps 1–6). That file is the single source of truth for the build process — do NOT improvise or skip steps.
+1. **Run all tests** before building. Tests must pass or the build is aborted — no artifacts, no Discord post.
+   - `npm test` (unit/integration tests — fast, catches obvious breaks)
+   - `npm run test:e2e` (Electron end-to-end tests)
+   - `npm run test:spa` (SPA Playwright tests)
+   - Run them in this order. If any suite fails, stop immediately and report which tests failed. Do not proceed to the build step.
 
-2. **Locate the build artifacts**:
+2. **Build the project locally** by reading and following `.claude/commands/build-local.md` exactly (steps 1–6). That file is the single source of truth for the build process — do NOT improvise or skip steps.
+
+3. **Locate the build artifacts**:
    - After a successful build, find the `.exe` and `.appimage` files in `dist_out/`.
    - Confirm both files exist and are non-zero in size.
    - Also confirm `dist_out/latest.yml` and `dist_out/latest-linux.yml` exist — these are **required** for auto-update and must be uploaded to the GitHub release (build-local.md step 6 handles this).
 
-3. **Publish the SPA to GitHub Pages** (mandatory — ensures the live site always matches the latest build):
+4. **Publish the SPA to GitHub Pages** (mandatory — ensures the live site always matches the latest build):
    - The Electron build already runs `npm run build:site` which outputs the SPA to `dist/site/`.
    - After the build succeeds, push the updated SPA assets to the `axibuilds` repo so the live GitHub Pages site has the latest code.
    - Run: `gh api repos/gw2eww/axibuilds/contents/site/assets --jq '.[].name'` to see current deployed asset filenames.
@@ -32,7 +38,7 @@ You are an expert build engineer and release coordinator. Your job is to build t
    - After pushing, verify the new asset filenames appear in the repo.
    - If the SPA assets haven't changed (same filenames), skip this step.
 
-4. **Generate Patch Notes**:
+5. **Generate Patch Notes**:
    - Use `git log` to find commits since the last local build. Determine the last build point by checking for build tags, timestamps in previous build artifacts, or a stored reference (e.g., a `.last-build-commit` file or similar marker).
    - If no previous build marker exists, use the last 20 commits or ask the user for a reference point.
    - Summarize the changes into clean, user-friendly patch notes grouped by category:
@@ -43,7 +49,7 @@ You are an expert build engineer and release coordinator. Your job is to build t
    - Keep patch notes concise but informative. Use bullet points. Omit merge commits and trivial changes (typos, formatting) unless they are significant.
    - After generating patch notes, save the current commit hash as the new build reference point (e.g., write to `.last-build-commit`).
 
-5. **Post to Discord Webhook**:
+6. **Post to Discord Webhook**:
    - Read the Discord webhook URL from the `.env` file using the `DISCORD_WEBHOOK_URL` variable.
    - If `DISCORD_WEBHOOK_URL` is not set or the `.env` file doesn't exist, stop and inform the user that the webhook URL is missing.
    - Construct a multipart/form-data POST request to the webhook URL that includes:
