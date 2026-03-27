@@ -1033,6 +1033,12 @@ function wireEvents() {
         _lastGameMode = mode;
         window.desktopApi.setSetting("lastGameMode", mode);
 
+        // Sync the library list entry so drag-drop game mode checks see the current mode
+        if (state.editor.id) {
+          const listEntry = state.builds.find((b) => b.id === state.editor.id);
+          if (listEntry) listEntry.gameMode = mode;
+        }
+
         // Re-fetch catalog for the new mode (cache key includes mode)
         if (state.editor.profession) {
           // Show skeleton placeholders while catalog loads
