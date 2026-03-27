@@ -6,7 +6,7 @@ import { escapeHtml } from "../utils.js";
 import { compIcon } from "../library/heroicons.js";
 import { getProfessionSvg } from "../profession-icons.js";
 import { getEliteSpecName, profClass } from "../build-helpers.js";
-import { computeCompBoonCoverage } from "./comp-boon-coverage.js";
+import { computeCompPartyCoverage } from "./comp-boon-coverage.js";
 import { BOON_DISPLAY_ORDER } from "../constants.js";
 
 // ─── Module-level state (not persisted) ──────────────────────────────────────
@@ -432,17 +432,20 @@ async function computeBoonCoverageAsync(comp) {
       state.upgradeCatalog = await window.desktopApi.getUpgradeCatalog();
     }
 
-    const result = await computeCompBoonCoverage(comp, builds, catalogCache, _callbacks.getCatalog, state.upgradeCatalog);
-    if (!result || !result.squad) {
+    const result = await computeCompPartyCoverage(comp, builds, catalogCache, _callbacks.getCatalog, state.upgradeCatalog);
+    if (!result || !result.lines) {
       _boonCache.set(comp.id, { percentage: 0, hash });
     } else {
-      const squadMap = result.squad;
-      let covered = 0;
-      for (const boon of BOON_DISPLAY_ORDER) {
-        const entry = squadMap.get(boon);
-        if (entry && entry.count > 0) covered++;
+      // Aggregate boon coverage across all lines (union of covered boons)
+      const coveredBoons = new Set();
+      for (const line of result.lines) {
+        if (!line.hasFilledSlots) continue;
+        for (const boon of BOON_DISPLAY_ORDER) {
+          const entry = line.boons.get(boon);
+          if (entry && entry.count > 0) coveredBoons.add(boon);
+        }
       }
-      const percentage = Math.round((covered / 12) * 100);
+      const percentage = Math.round((coveredBoons.size / 12) * 100);
       _boonCache.set(comp.id, { percentage, hash });
     }
   } catch {
