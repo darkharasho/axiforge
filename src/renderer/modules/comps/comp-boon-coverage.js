@@ -201,15 +201,15 @@ function _renderPartyLine(line) {
         <span class="party-cov__header-boons">${headerBoons}</span>
       </div>
       <div class="party-cov__line-body party-cov__line-body--collapsed">
-        <div class="party-cov__body-toolbar">
-          <label class="party-cov__toggle">
-            <input type="checkbox" class="party-cov__toggle-input" data-action="toggle-self-boons" />
-            <span class="party-cov__toggle-switch"></span>
-            <span class="party-cov__toggle-text">Show self boons</span>
-          </label>
-        </div>
         <div class="party-cov__section" data-section="boons">
-          <div class="party-cov__section-label">BOONS</div>
+          <div class="party-cov__section-header">
+            <div class="party-cov__section-label">BOONS</div>
+            <label class="party-cov__toggle">
+              <input type="checkbox" class="party-cov__toggle-input" data-action="toggle-self-boons" />
+              <span class="party-cov__toggle-switch"></span>
+              <span class="party-cov__toggle-text">Show self boons</span>
+            </label>
+          </div>
           <div class="party-cov__pills">${boonPills}</div>
           <div class="party-cov__expand" data-expand-for="boons"></div>
         </div>

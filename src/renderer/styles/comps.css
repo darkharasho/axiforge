@@ -1820,10 +1820,11 @@
   display: none;
 }
 
-.party-cov__body-toolbar {
+.party-cov__section-header {
   display: flex;
-  justify-content: flex-end;
-  margin-bottom: 10px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
 }
 
 /* Self-boon toggle */
