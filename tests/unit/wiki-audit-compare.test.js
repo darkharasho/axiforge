@@ -73,6 +73,44 @@ describe("compareEntity", () => {
     expect(result.category).toBe("missing_from_wiki");
     expect(result.splits_only_facts).toHaveLength(1);
   });
+
+  test("detects mismatch when combo finisher_type differs", () => {
+    const wikiFacts = [
+      { type: "ComboFinisher", text: "Combo Finisher", finisher_type: "Blast", percent: 100 },
+    ];
+    const splitEntry = {
+      facts: [{ type: "ComboFinisher", text: "Combo Finisher", finisher_type: "Whirl", percent: 100 }],
+      complete: true,
+    };
+    const result = compareEntity(wikiFacts, splitEntry);
+    expect(result.category).toBe("mismatch");
+    expect(result.fact_diffs[0].fields.finisher_type).toEqual({ wiki: "Blast", splits: "Whirl" });
+  });
+
+  test("detects mismatch when combo field_type differs", () => {
+    const wikiFacts = [
+      { type: "ComboField", text: "Combo Field", field_type: "Fire" },
+    ];
+    const splitEntry = {
+      facts: [{ type: "ComboField", text: "Combo Field", field_type: "Water" }],
+      complete: true,
+    };
+    const result = compareEntity(wikiFacts, splitEntry);
+    expect(result.category).toBe("mismatch");
+    expect(result.fact_diffs[0].fields.field_type).toEqual({ wiki: "Fire", splits: "Water" });
+  });
+
+  test("returns match when combo finisher facts agree", () => {
+    const wikiFacts = [
+      { type: "ComboFinisher", text: "Combo Finisher", finisher_type: "Blast", percent: 100 },
+    ];
+    const splitEntry = {
+      facts: [{ type: "ComboFinisher", text: "Combo Finisher", finisher_type: "Blast", percent: 100 }],
+      complete: true,
+    };
+    const result = compareEntity(wikiFacts, splitEntry);
+    expect(result.category).toBe("match");
+  });
 });
 
 const { compareRelicFacts } = require("../wiki-audit/compare");
@@ -127,5 +165,37 @@ describe("compareRelicFacts", () => {
   test("returns no_split when wiki is empty and stored is null", () => {
     const result = compareRelicFacts([], null);
     expect(result.category).toBe("no_split");
+  });
+});
+
+const { splitValueChanged, SPLIT_VALUE_KEYS } = require("../../lib/gw2-balance-splits/match");
+
+describe("SPLIT_VALUE_KEYS includes combo keys", () => {
+  test("includes finisher_type", () => {
+    expect(SPLIT_VALUE_KEYS).toContain("finisher_type");
+  });
+
+  test("includes field_type", () => {
+    expect(SPLIT_VALUE_KEYS).toContain("field_type");
+  });
+});
+
+describe("splitValueChanged detects combo type changes", () => {
+  test("detects finisher_type change", () => {
+    const before = { type: "ComboFinisher", finisher_type: "Blast", percent: 100 };
+    const after = { type: "ComboFinisher", finisher_type: "Whirl", percent: 100 };
+    expect(splitValueChanged(before, after)).toBe(true);
+  });
+
+  test("detects field_type change", () => {
+    const before = { type: "ComboField", field_type: "Fire" };
+    const after = { type: "ComboField", field_type: "Water" };
+    expect(splitValueChanged(before, after)).toBe(true);
+  });
+
+  test("no change when combo facts match", () => {
+    const before = { type: "ComboFinisher", finisher_type: "Blast", percent: 100 };
+    const after = { type: "ComboFinisher", finisher_type: "Blast", percent: 100 };
+    expect(splitValueChanged(before, after)).toBe(false);
   });
 });

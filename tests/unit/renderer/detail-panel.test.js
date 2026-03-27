@@ -384,3 +384,35 @@ describe("showHoverPreview — trait-associated skill cards", () => {
     expect(mockHover.innerHTML).not.toContain("hover-preview__trait-skill-divider");
   });
 });
+
+describe("formatFactHtml — ComboFinisher / ComboField", () => {
+  test("renders combo finisher with type name", () => {
+    const html = detailPanel.formatFactHtml({
+      type: "ComboFinisher", text: "Combo Finisher", finisher_type: "Blast", percent: 100,
+    });
+    expect(html).toContain("Combo Finisher: Blast");
+    expect(html).not.toContain("100");
+  });
+
+  test("renders combo finisher with percent when below 100", () => {
+    const html = detailPanel.formatFactHtml({
+      type: "ComboFinisher", text: "Combo Finisher", finisher_type: "Whirl", percent: 20,
+    });
+    expect(html).toContain("Combo Finisher: Whirl (20%)");
+  });
+
+  test("renders combo field with field type name", () => {
+    const html = detailPanel.formatFactHtml({
+      type: "ComboField", text: "Combo Field", field_type: "Fire",
+    });
+    expect(html).toContain("Combo Field: Fire");
+  });
+
+  test("renders combo field type name not a numeric fallback", () => {
+    const html = detailPanel.formatFactHtml({
+      type: "ComboField", text: "Combo Field", field_type: "Water",
+    });
+    expect(html).toContain("Combo Field: Water");
+    expect(html).not.toContain("Combo Field: 0");
+  });
+});
