@@ -296,6 +296,9 @@ export function computeBoonCoverage(catalog, editor, weaponSkills = []) {
       entry.sources.push({
         type: f.sourceType,
         name: f.sourceName,
+        skillIcon: f.skillIcon || "",
+        skillDescription: f.skillDescription || "",
+        skillFacts: f.skillFacts || [],
         stacks: f.stacks,
         duration: f.duration,
         context: f.context,
