@@ -354,7 +354,8 @@ async function publishSiteBundle(token, owner, bundle, branch = "main", repo = T
     if (!entry?.path || entry?.type !== "blob") continue;
     const isLegacyRootNoJekyll = entry.path === ".nojekyll";
     const isEncBuild = (entry.path.startsWith("site/builds/") || entry.path.startsWith("site/comps/")) && entry.path.endsWith(".enc");
-    const isStaleSiteFile = entry.path.startsWith("site/") && !nextPathSet.has(entry.path) && !isEncBuild;
+    const isRedirect = entry.path.startsWith("site/r/");
+    const isStaleSiteFile = entry.path.startsWith("site/") && !nextPathSet.has(entry.path) && !isEncBuild && !isRedirect;
     if (!isLegacyRootNoJekyll && !isStaleSiteFile) continue;
     treeEntries.push({ path: entry.path, sha: null });
   }

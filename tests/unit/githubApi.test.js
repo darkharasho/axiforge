@@ -589,6 +589,28 @@ describe("publishSiteBundle — SHA deduplication", () => {
       .map((e) => e.path);
     expect(deletedPaths).not.toContain("site/comps/xyz.enc");
   });
+
+  test("preserves site/r/* redirect files during stale-file sweep", async () => {
+    global.fetch = buildMockFetch({
+      existingFiles: {
+        "site/index.html": computeGitBlobSha("old"),
+        "site/r/abc12345/index.html": "redirsha1",
+      },
+    });
+
+    const bundle = { "site/index.html": "new" };
+    await publishSiteBundle(FAKE_TOKEN, FAKE_OWNER, bundle);
+
+    const treeCall = global.fetch.mock.calls.find(
+      ([url, opts]) => String(url).includes("/git/trees") && opts?.method === "POST"
+    );
+    expect(treeCall).toBeDefined();
+    const treeBody = JSON.parse(treeCall[1].body);
+    const deletedPaths = treeBody.tree
+      .filter((e) => e.sha === null)
+      .map((e) => e.path);
+    expect(deletedPaths).not.toContain("site/r/abc12345/index.html");
+  });
 });
 
 // ---------------------------------------------------------------------------

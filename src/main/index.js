@@ -46,7 +46,9 @@ function createWindow() {
     minHeight: 740,
     show: false,
     frame: false,
-    titleBarStyle: process.platform === "darwin" ? "hiddenInset" : "hidden",
+    ...(process.platform === "darwin"
+      ? { titleBarStyle: "hidden", trafficLightPosition: { x: -20, y: -20 } }
+      : { titleBarStyle: "hidden" }),
     backgroundColor: "#050910",
     icon: path.join(__dirname, "../../public/img/build_logo.png"),
     webPreferences: {
