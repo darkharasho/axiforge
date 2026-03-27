@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-03-24T21:28:11.403Z",
+  "updatedAt": "2026-03-27T18:13:12.538Z",
   "relics": {
     "99997": {
       "name": "Relic of Isgarren",
@@ -242,8 +242,8 @@
         },
         {
           "type": "Buff",
-          "text": "Poison",
-          "status": "Poison",
+          "text": "Poisoned",
+          "status": "Poisoned",
           "duration": 8,
           "apply_count": 1
         },
@@ -440,9 +440,16 @@
         },
         {
           "type": "Buff",
-          "text": "Poison",
-          "status": "Poison",
+          "text": "Poisoned",
+          "status": "Poisoned",
           "duration": 5,
+          "apply_count": 1
+        },
+        {
+          "type": "Buff",
+          "text": "Crippled",
+          "status": "Crippled",
+          "duration": 1,
           "apply_count": 1
         },
         {
@@ -907,15 +914,15 @@
         },
         {
           "type": "Buff",
-          "text": "Poison",
-          "status": "Poison",
+          "text": "Poisoned",
+          "status": "Poisoned",
           "duration": 10,
           "apply_count": 1
         },
         {
           "type": "Buff",
-          "text": "Poison",
-          "status": "Poison",
+          "text": "Poisoned",
+          "status": "Poisoned",
           "duration": 10,
           "apply_count": 1
         },
@@ -1040,15 +1047,15 @@
       "facts": [
         {
           "type": "Buff",
-          "text": "Poison",
-          "status": "Poison",
+          "text": "Poisoned",
+          "status": "Poisoned",
           "duration": 5,
           "apply_count": 1
         },
         {
           "type": "Buff",
-          "text": "Poison",
-          "status": "Poison",
+          "text": "Poisoned",
+          "status": "Poisoned",
           "duration": 3,
           "apply_count": 1
         },
@@ -1236,6 +1243,13 @@
         },
         {
           "type": "Buff",
+          "text": "Blinded",
+          "status": "Blinded",
+          "duration": 3,
+          "apply_count": 1
+        },
+        {
+          "type": "Buff",
           "text": "Weakness",
           "status": "Weakness",
           "duration": 4,
@@ -1355,15 +1369,15 @@
       "facts": [
         {
           "type": "Buff",
-          "text": "Poison",
-          "status": "Poison",
+          "text": "Poisoned",
+          "status": "Poisoned",
           "duration": 3,
           "apply_count": 1
         },
         {
           "type": "Buff",
-          "text": "Poison",
-          "status": "Poison",
+          "text": "Poisoned",
+          "status": "Poisoned",
           "duration": 3,
           "apply_count": 1
         },
@@ -1613,23 +1627,44 @@
       "facts": [
         {
           "type": "Buff",
-          "text": "Poison",
-          "status": "Poison",
+          "text": "Poisoned",
+          "status": "Poisoned",
           "duration": 10,
           "apply_count": 1
         },
         {
           "type": "Buff",
-          "text": "Poison",
-          "status": "Poison",
+          "text": "Poisoned",
+          "status": "Poisoned",
           "duration": 7,
           "apply_count": 1
         },
         {
           "type": "Buff",
-          "text": "Poison",
-          "status": "Poison",
+          "text": "Poisoned",
+          "status": "Poisoned",
           "duration": 5,
+          "apply_count": 1
+        },
+        {
+          "type": "Buff",
+          "text": "Crippled",
+          "status": "Crippled",
+          "duration": 5,
+          "apply_count": 1
+        },
+        {
+          "type": "Buff",
+          "text": "Crippled",
+          "status": "Crippled",
+          "duration": 4,
+          "apply_count": 1
+        },
+        {
+          "type": "Buff",
+          "text": "Crippled",
+          "status": "Crippled",
+          "duration": 3,
           "apply_count": 1
         },
         {
@@ -1824,8 +1859,8 @@
         },
         {
           "type": "Buff",
-          "text": "Poison",
-          "status": "Poison",
+          "text": "Poisoned",
+          "status": "Poisoned",
           "duration": 4,
           "apply_count": 1
         },
@@ -2146,6 +2181,11 @@
           "status": "Quickness",
           "duration": 0,
           "apply_count": 1
+        },
+        {
+          "type": "Recharge",
+          "text": "Recharge",
+          "value": 1
         }
       ]
     },

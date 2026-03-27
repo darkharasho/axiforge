@@ -1,0 +1,49 @@
+name: Feature Request
+description: Suggest a new feature or improvement for AxiForge
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: Got an idea for AxiForge? We'd love to hear it!
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What would you like to see?
+      description: A clear description of the feature or improvement.
+      placeholder: e.g. "Add a button to copy the build URL to clipboard"
+    validations:
+      required: true
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Why would this be useful?
+      description: What problem does this solve, or what workflow does it improve?
+      placeholder: e.g. "Right now I have to manually select the URL bar and copy — a one-click button would be faster for sharing builds"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of the app does this relate to?
+      options:
+        - Build editor
+        - Skill / trait tooltips
+        - Gear / equipment
+        - Build sharing / axicodes
+        - UI / layout
+        - Performance
+        - Other
+    validations:
+      required: false
+
+  - type: textarea
+    id: screenshot
+    attributes:
+      label: Screenshots or mockups
+      description: Drag and drop images here if it helps illustrate the idea.
+    validations:
+      required: false

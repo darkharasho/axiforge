@@ -196,11 +196,15 @@ async function extractFacts(page, hasToggle) {
       // Extract the fact name from the <a> tag.
       // The first <a> in each dd is often the icon (empty text), so find
       // the first link that actually has text content.
+      // Also capture the title attribute — the wiki uses canonical names
+      // there (e.g. title="Crippled") even when the display text differs
+      // (e.g. "Cripple"), which helps condition/buff recognition.
       const links = dd.querySelectorAll("a[title]");
       let name = "";
+      let titleAttr = "";
       for (const l of links) {
         const t = l.textContent.trim();
-        if (t) { name = t; break; }
+        if (t) { name = t; titleAttr = l.getAttribute("title") || ""; break; }
       }
       if (!name) continue;
 
@@ -219,7 +223,7 @@ async function extractFacts(page, hasToggle) {
       // Strip leading colon and whitespace
       valueText = valueText.replace(/^\s*:\s*/, "").replace(/\?\s*$/, "").trim();
 
-      facts.push({ name, valueText });
+      facts.push({ name, valueText, titleAttr });
     }
 
     return facts;

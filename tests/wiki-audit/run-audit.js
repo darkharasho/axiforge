@@ -123,7 +123,7 @@ async function crawlWithWorkers(browser, entities, splitsIndex, relicFactsData, 
       } else if (entityType === "relic") {
         const storedEntry = relicFactsData.relics[String(entity.id)];
         const wikiFacts = crawlResult.facts
-          .map((f) => parseFactText(f.name, f.valueText))
+          .map((f) => parseFactText(f.name, f.valueText, f.titleAttr))
           .filter(Boolean);
         const cmp = compareRelicFacts(wikiFacts, storedEntry?.facts || null);
 
@@ -165,7 +165,7 @@ async function crawlWithWorkers(browser, entities, splitsIndex, relicFactsData, 
       } else {
         // Existing skill/trait comparison path
         const wikiFacts = crawlResult.wvwFacts
-          .map((f) => parseFactText(f.name, f.valueText))
+          .map((f) => parseFactText(f.name, f.valueText, f.titleAttr))
           .filter(Boolean);
 
         const splitEntry = splitsIndex[entityType]?.[String(entity.id)]?.modes?.wvw || null;

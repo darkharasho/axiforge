@@ -73,4 +73,44 @@ describe("parseFactText", () => {
       type: "Percent", text: "Damage Reduction", percent: 33,
     });
   });
+
+  // ── Display text aliases for conditions ──
+
+  test("normalizes Cripple display text to Crippled", () => {
+    expect(parseFactText("Cripple", "(7s): -50% Movement Speed")).toEqual({
+      type: "Buff", text: "Crippled", status: "Crippled", duration: 7, apply_count: 1,
+    });
+  });
+
+  test("normalizes Immobilize display text to Immobile", () => {
+    expect(parseFactText("Immobilize", "(2s): Unable to move.")).toEqual({
+      type: "Buff", text: "Immobile", status: "Immobile", duration: 2, apply_count: 1,
+    });
+  });
+
+  test("normalizes Blind display text to Blinded", () => {
+    expect(parseFactText("Blind", "(3s): Next outgoing attack misses.")).toEqual({
+      type: "Buff", text: "Blinded", status: "Blinded", duration: 3, apply_count: 1,
+    });
+  });
+
+  test("falls back to title attribute for unrecognized display text", () => {
+    expect(parseFactText("SomeWeirdText", "(5s)", "Crippled")).toEqual({
+      type: "Buff", text: "Crippled", status: "Crippled", duration: 5, apply_count: 1,
+    });
+  });
+
+  // ── Combo facts ──
+
+  test("parses combo finisher", () => {
+    expect(parseFactText("Combo Finisher", "Blast")).toEqual({
+      type: "ComboFinisher", text: "Combo Finisher", finisher_type: "Blast", percent: 100,
+    });
+  });
+
+  test("parses combo field", () => {
+    expect(parseFactText("Combo Field", "Fire")).toEqual({
+      type: "ComboField", text: "Combo Field", field_type: "Fire",
+    });
+  });
 });

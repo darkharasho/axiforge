@@ -23,16 +23,42 @@ const KNOWN_CONDITIONS = new Set([
   "taunt", "daze", "stun", "knockdown", "knockback", "float", "pull", "sink",
 ]);
 
+// The wiki often renders condition/buff names with display text that differs
+// from the canonical name (e.g. "Cripple" instead of "Crippled"). This map
+// normalizes display text → canonical name for recognition and output.
+const DISPLAY_NAME_ALIASES = {
+  "cripple": "Crippled",
+  "immobilize": "Immobile",
+  "immobilized": "Immobile",
+  "blind": "Blinded",
+  "blindness": "Blinded",
+  "chill": "Chilled",
+  "poison": "Poisoned",
+  "poisoned": "Poisoned",
+};
+
 function isBuffOrCondition(name) {
-  return KNOWN_BUFFS.has(name.toLowerCase()) || KNOWN_CONDITIONS.has(name.toLowerCase());
+  const lower = name.toLowerCase();
+  return KNOWN_BUFFS.has(lower) || KNOWN_CONDITIONS.has(lower) || lower in DISPLAY_NAME_ALIASES;
 }
 
 /**
- * @param {string} name  — the fact label (e.g. "Damage", "Fury", "Radius")
- * @param {string} value — the text after the label (e.g. "269 (0.666)", "4 s")
+ * Normalize a buff/condition display name to its canonical form.
+ * E.g. "Cripple" → "Crippled", "Immobilize" → "Immobile".
+ * Returns the original name (capitalized) if no alias exists.
+ */
+function normalizeBuffName(name) {
+  const alias = DISPLAY_NAME_ALIASES[name.toLowerCase()];
+  return alias || name;
+}
+
+/**
+ * @param {string} name      — the fact label (e.g. "Damage", "Fury", "Radius")
+ * @param {string} value     — the text after the label (e.g. "269 (0.666)", "4 s")
+ * @param {string} [titleAttr] — optional title attribute from the wiki link (canonical name)
  * @returns {object|null} structured fact object or null if unparseable
  */
-function parseFactText(name, value) {
+function parseFactText(name, value, titleAttr) {
   const nameLower = name.toLowerCase().trim();
   const val = (value || "").trim();
 
@@ -65,8 +91,24 @@ function parseFactText(name, value) {
   }
 
   // ── Buffs and conditions ──
+  // Check display name first, then fall back to title attribute for recognition
   if (isBuffOrCondition(name)) {
-    return parseBuffFact(name, val);
+    const canonical = normalizeBuffName(name);
+    return parseBuffFact(canonical, val);
+  }
+  // Title attribute fallback: the wiki <a title="Crippled"> uses the canonical
+  // condition name even when the display text differs (e.g. "Cripple")
+  if (titleAttr && isBuffOrCondition(titleAttr)) {
+    const canonical = normalizeBuffName(titleAttr);
+    return parseBuffFact(canonical, val);
+  }
+
+  // ── Combo finisher / field ──
+  if (nameLower === "combo finisher") {
+    return parseComboFinisher(val);
+  }
+  if (nameLower === "combo field") {
+    return parseComboField(val);
   }
 
   // ── Number of targets, conditions removed, etc. ──
@@ -139,4 +181,23 @@ function parseBuffFact(name, val) {
   };
 }
 
-module.exports = { parseFactText, isBuffOrCondition, KNOWN_BUFFS, KNOWN_CONDITIONS };
+function parseComboFinisher(val) {
+  // "Blast" or "Whirl (100%)" etc.
+  const type = val.replace(/\s*\([\d%]+\)\s*$/, "").trim();
+  if (!type) return null;
+  const pctMatch = val.match(/\((\d+)%\)/);
+  return {
+    type: "ComboFinisher",
+    text: "Combo Finisher",
+    finisher_type: type,
+    percent: pctMatch ? parseInt(pctMatch[1], 10) : 100,
+  };
+}
+
+function parseComboField(val) {
+  const type = val.trim();
+  if (!type) return null;
+  return { type: "ComboField", text: "Combo Field", field_type: type };
+}
+
+module.exports = { parseFactText, isBuffOrCondition, normalizeBuffName, KNOWN_BUFFS, KNOWN_CONDITIONS, DISPLAY_NAME_ALIASES };
