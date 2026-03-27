@@ -79,10 +79,91 @@ function extractBuffFacts(entity, sourceType) {
       name,
       sourceType,
       sourceName: entity.name || "",
+      skillIcon: entity.icon || "",
+      skillDescription: desc,
+      skillFacts: facts,
       stacks: fact.apply_count || 0,
       duration: fact.duration || 0,
       context: sectionContext,
       isAlly: isAllyTargeted(desc, rawStatus, ALL_KNOWN_NAMES),
+    });
+  }
+  return results;
+}
+
+/**
+ * Extract combo field facts from a skill/trait entity.
+ * Also pulls Duration and Radius facts from the same entity for metadata.
+ */
+function extractComboFields(entity, sourceType, kitName = "") {
+  const results = [];
+  const facts = entity.facts || [];
+  let duration = 0;
+  let radius = 0;
+
+  // First pass: collect Duration and Radius metadata
+  for (const fact of facts) {
+    if ((fact.type === "Duration" || fact.type === "Time") && fact.duration) {
+      duration = fact.duration;
+    }
+    if (fact.type === "Radius" && fact.distance) {
+      radius = fact.distance;
+    }
+  }
+
+  // Second pass: extract ComboField facts
+  for (const fact of facts) {
+    if (fact.type !== "ComboField") continue;
+    const fieldType = fact.field_type;
+    if (!fieldType) continue;
+    results.push({
+      fieldType,
+      sourceType,
+      sourceName: entity.name || "",
+      skillIcon: entity.icon || "",
+      skillDescription: entity.description || "",
+      skillFacts: entity.facts || [],
+      duration,
+      radius,
+      kitName,
+    });
+  }
+  return results;
+}
+
+/**
+ * Extract combo finisher facts from a skill/trait entity.
+ * Groups by finisher type (Blast, Whirl, Leap, Projectile).
+ */
+function extractComboFinishers(entity, sourceType, kitName = "") {
+  const results = [];
+  const facts = entity.facts || [];
+
+  // Group by finisher type — count hits per type
+  const byType = new Map();
+  for (const fact of facts) {
+    if (fact.type !== "ComboFinisher") continue;
+    const ft = fact.finisher_type;
+    if (!ft) continue;
+    if (!byType.has(ft)) byType.set(ft, { count: 0, percent: 100 });
+    const entry = byType.get(ft);
+    entry.count++;
+    if (fact.percent != null && fact.percent < 100) {
+      entry.percent = fact.percent;
+    }
+  }
+
+  for (const [finisherType, data] of byType) {
+    results.push({
+      finisherType,
+      sourceType,
+      sourceName: entity.name || "",
+      skillIcon: entity.icon || "",
+      skillDescription: entity.description || "",
+      skillFacts: entity.facts || [],
+      hitCount: data.count,
+      percent: data.percent,
+      kitName,
     });
   }
   return results;
@@ -114,6 +195,17 @@ function collectSkillIds(editor, catalog) {
     const reqSpec = Number(s.specialization) || 0;
     if (reqSpec && !selectedSpecIds.has(reqSpec)) continue;
     if (/^Profession_[1-5]$/.test(s.slot || "")) ids.add(s.id);
+  }
+  // Revenant legend skills (heal, utilities, elite) — fixed per legend stance
+  for (const legendId of editor.selectedLegends || []) {
+    if (!legendId) continue;
+    const legend = catalog?.legendById?.get(legendId);
+    if (!legend) continue;
+    if (legend.heal) ids.add(Number(legend.heal));
+    if (legend.elite) ids.add(Number(legend.elite));
+    for (const uid of legend.utilities || []) {
+      if (uid) ids.add(Number(uid));
+    }
   }
   return ids;
 }
@@ -176,6 +268,11 @@ export function computeBoonCoverage(catalog, editor, weaponSkills = []) {
       const bundleSkill = catalog.skillById?.get(bundleId);
       if (bundleSkill) allFacts.push(...extractBuffFacts(bundleSkill, "skill"));
     }
+    // Toolbelt skill (Engineer)
+    if (skill.toolbeltSkill) {
+      const tbSkill = catalog.skillById?.get(skill.toolbeltSkill);
+      if (tbSkill) allFacts.push(...extractBuffFacts(tbSkill, "skill"));
+    }
   }
 
   // Collect from traits
@@ -199,6 +296,9 @@ export function computeBoonCoverage(catalog, editor, weaponSkills = []) {
       entry.sources.push({
         type: f.sourceType,
         name: f.sourceName,
+        skillIcon: f.skillIcon || "",
+        skillDescription: f.skillDescription || "",
+        skillFacts: f.skillFacts || [],
         stacks: f.stacks,
         duration: f.duration,
         context: f.context,
@@ -234,4 +334,81 @@ export function computeBoonCoverage(catalog, editor, weaponSkills = []) {
   conditions.sort((a, b) => a.name.localeCompare(b.name));
 
   return { boons, conditions };
+}
+
+/**
+ * Compute full party coverage for a single build: boons, combo fields, blast finishers.
+ * Scans weapon skills, heal/utility/elite, profession mechanics, traits,
+ * and kit/bundle sub-skills.
+ */
+export function computePartyCoverage(catalog, editor, weaponSkills = []) {
+  // Boons — delegate to existing function
+  const { boons, conditions } = computeBoonCoverage(catalog, editor, weaponSkills);
+
+  const allFields = [];
+  const allFinishers = [];
+
+  // Helper: scan an entity for fields and finishers
+  function scanEntity(entity, sourceType, kitName = "") {
+    if (!entity) return;
+    allFields.push(...extractComboFields(entity, sourceType, kitName));
+    allFinishers.push(...extractComboFinishers(entity, sourceType, kitName));
+  }
+
+  // Weapon skills
+  for (const ws of weaponSkills) {
+    if (!ws) continue;
+    scanEntity(ws, "skill");
+    if (ws.flipSkill) {
+      const flip = catalog.skillById?.get(ws.flipSkill) || catalog.weaponSkillById?.get(ws.flipSkill);
+      scanEntity(flip, "skill");
+    }
+  }
+
+  // Skills (heal, utility, elite, profession mechanics)
+  const skillIds = collectSkillIds(editor, catalog);
+  for (const id of skillIds) {
+    const skill = catalog.skillById?.get(id);
+    if (!skill) continue;
+    scanEntity(skill, "skill");
+    if (skill.flipSkill) {
+      const flip = catalog.skillById?.get(skill.flipSkill);
+      scanEntity(flip, "skill");
+    }
+    // Kit/bundle sub-skills
+    for (const bundleId of skill.bundleSkills || []) {
+      const bundleSkill = catalog.skillById?.get(bundleId);
+      scanEntity(bundleSkill, "skill", skill.name || "");
+    }
+    // Toolbelt skill (Engineer)
+    if (skill.toolbeltSkill) {
+      const tbSkill = catalog.skillById?.get(skill.toolbeltSkill);
+      scanEntity(tbSkill, "skill", skill.name || "");
+    }
+  }
+
+  // Traits
+  const traitIds = collectTraitIds(editor, catalog);
+  for (const id of traitIds) {
+    const trait = catalog.traitById?.get(id);
+    scanEntity(trait, "trait");
+  }
+
+  // Deduplicate fields by (fieldType, sourceName)
+  const fieldMap = new Map();
+  for (const f of allFields) {
+    const key = `${f.fieldType}|${f.sourceName}`;
+    if (!fieldMap.has(key)) fieldMap.set(key, f);
+  }
+  const comboFields = [...fieldMap.values()];
+
+  // Deduplicate finishers by (finisherType, sourceName)
+  const finisherMap = new Map();
+  for (const f of allFinishers) {
+    const key = `${f.finisherType}|${f.sourceName}`;
+    if (!finisherMap.has(key)) finisherMap.set(key, f);
+  }
+  const comboFinishers = [...finisherMap.values()];
+
+  return { boons, conditions, comboFields, comboFinishers };
 }

@@ -15,7 +15,7 @@ import {
 import { roleBadgeHtml } from "../roleEstimator.js";
 import { axiforgeIcon, checkIcon, chevronDownIcon, arrowUpTrayIcon, clipboardDocumentIcon, globeAltIcon } from "../library/heroicons.js";
 import { renderMiniBuildCard, renderMissingMiniBuildCard } from "../mini-build-card.js";
-import { computeCompBoonCoverage, buildBoonCoverageHTML, bindBoonCoverageEvents, closeBoonTooltip, closeDurationExpand } from "./comp-boon-coverage.js";
+import { computeCompPartyCoverage, buildPartyCoverageHTML, bindPartyCoverageEvents, closePartyCoverageExpand } from "./comp-boon-coverage.js";
 import {
   getEliteSpecName,
   getSpecIcon,
@@ -370,8 +370,7 @@ export function renderCompDetail() {
   destroyCompDragDrop();
   closeCompCtxMenu();
   closeHoverCard();
-  closeBoonTooltip();
-  closeDurationExpand();
+  closePartyCoverageExpand();
   if (_cleanupResize) { _cleanupResize(); _cleanupResize = null; }
   if (_saveStatusInterval) { clearInterval(_saveStatusInterval); _saveStatusInterval = null; }
   _lastSavedAt = null;
@@ -507,7 +506,7 @@ export function renderCompDetail() {
     (async () => {
       let data;
       try {
-        data = await computeCompBoonCoverage(
+        data = await computeCompPartyCoverage(
           comp, state.builds, state.catalogCache, _callbacks.getCatalog, state.upgradeCatalog
         );
       } catch (err) {
@@ -518,8 +517,8 @@ export function renderCompDetail() {
       if (state.activeComp?.id !== compIdAtRender) return;
       const bodyEl = container.querySelector("#comp-boon-coverage-body");
       if (!bodyEl) return;
-      bodyEl.innerHTML = buildBoonCoverageHTML(data);
-      bindBoonCoverageEvents(bodyEl);
+      bodyEl.innerHTML = buildPartyCoverageHTML(data);
+      bindPartyCoverageEvents(bodyEl);
     })();
   }
 }
@@ -562,7 +561,7 @@ function renderPartyLines(comp, totalCap) {
     <div class="comp-boon-cov">
       <div class="comp-boon-cov__header" data-action="toggle-boon-coverage">
         <span class="comp-boon-cov__chevron">${collapsed ? "▸" : "▾"}</span>
-        <span class="comp-boon-cov__title">BOON COVERAGE</span>
+        <span class="comp-boon-cov__title">PARTY COVERAGE</span>
       </div>
       <div class="comp-boon-cov__body${collapsed ? " comp-boon-cov__body--hidden" : ""}"
            id="comp-boon-coverage-body">
@@ -867,10 +866,10 @@ function bindDetailEvents(container, comp) {
       // Pre-compute boon coverage HTML to include in the published payload
       let boonCoverageHtml = "";
       try {
-        const covData = await computeCompBoonCoverage(
+        const covData = await computeCompPartyCoverage(
           comp, state.builds, state.catalogCache, _callbacks.getCatalog, state.upgradeCatalog
         );
-        boonCoverageHtml = buildBoonCoverageHTML(covData);
+        boonCoverageHtml = buildPartyCoverageHTML(covData);
       } catch { /* skip if computation fails */ }
       const result = await window.desktopApi.publishComp(comp.id, boonCoverageHtml);
       advancePublishStep("pages");
@@ -1117,7 +1116,7 @@ function bindDetailEvents(container, comp) {
 
   // ── Boon coverage collapse toggle ──────────────────────────────────────────
   container.querySelector("[data-action='toggle-boon-coverage']")?.addEventListener("click", () => {
-    closeDurationExpand();
+    closePartyCoverageExpand();
     state.compPrefs.boonCoverageCollapsed = !state.compPrefs.boonCoverageCollapsed;
     const collapsed = state.compPrefs.boonCoverageCollapsed;
     const bodyEl = container.querySelector("#comp-boon-coverage-body");

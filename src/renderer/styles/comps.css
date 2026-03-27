@@ -1738,353 +1738,417 @@
   display: none;
 }
 
-.comp-boon-cov__squad-label {
-  font-size: 10px;
-  letter-spacing: .04em;
-  color: #778;
-  margin-bottom: 5px;
+/* ── Party Coverage (replaces squad-level boon coverage) ──────────────── */
+
+.party-cov__line {
+  background: #1a1a2e;
+  border-radius: 8px;
+  margin-bottom: 8px;
 }
 
-.comp-boon-cov__icons {
-  display: flex;
-  gap: 7px;
-  flex-wrap: wrap;
-}
-
-.comp-boon-cov__icons--squad {
-  margin-bottom: 10px;
-}
-
-.comp-boon-cov__lines {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.comp-boon-cov__line-row {
+.party-cov__line-header {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 10px;
+  padding: 10px 16px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s;
 }
 
-.comp-boon-cov__line-label {
-  font-size: 10px;
+.party-cov__line-header:hover {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+}
+
+.party-cov__line-chevron {
   color: #778;
-  min-width: 18px;
+  font-size: 10px;
+  flex-shrink: 0;
+  width: 10px;
 }
 
-/* Individual boon icon wrapper */
-.comp-boon-cov__icon {
-  position: relative;
+.party-cov__line-label {
+  color: #e0a040;
+  font-weight: bold;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.party-cov__header-profs {
+  display: flex;
+  gap: 3px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.party-cov__header-prof {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  width: 18px;
+  height: 18px;
+}
+
+.party-cov__header-prof svg {
+  width: 18px;
+  height: 18px;
+}
+
+.party-cov__header-boons {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+  margin-left: auto;
+}
+
+.party-cov__header-boon {
+  display: block;
+  border-radius: 2px;
+}
+
+.party-cov__header-boon--uncovered {
+  opacity: 0.2;
+}
+
+/* Collapsible body */
+.party-cov__line-body {
+  padding: 4px 16px 16px;
+  max-height: 2000px;
+  overflow: hidden;
+  opacity: 1;
+  transition: max-height 0.3s ease, opacity 0.2s ease, padding 0.3s ease;
+}
+
+.party-cov__line-body--collapsed {
+  max-height: 0;
+  opacity: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.party-cov__section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+/* Self-boon toggle */
+.party-cov__toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.party-cov__toggle-input {
+  display: none;
+}
+
+.party-cov__toggle-switch {
+  width: 32px;
+  height: 18px;
+  background: #3a3a4e;
+  border-radius: 9px;
+  position: relative;
+  transition: background 0.2s;
+}
+
+.party-cov__toggle-switch::after {
+  content: "";
+  width: 14px;
+  height: 14px;
+  background: #888;
+  border-radius: 50%;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  transition: transform 0.2s, background 0.2s;
+}
+
+.party-cov__toggle-input:checked + .party-cov__toggle-switch {
+  background: #3a6ea5;
+}
+
+.party-cov__toggle-input:checked + .party-cov__toggle-switch::after {
+  transform: translateX(14px);
+  background: white;
+}
+
+.party-cov__toggle-text {
+  color: #888;
+  font-size: 11px;
+}
+
+/* Sections */
+.party-cov__section {
+  background: #2a2a3e;
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+
+.party-cov__section:last-child {
+  margin-bottom: 0;
+}
+
+.party-cov__section-label {
+  color: #aaa;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+/* Pills */
+.party-cov__pills {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.party-cov__pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: opacity 0.15s, border-color 0.15s;
+}
+
+.party-cov__pill--boon {
+  background: #3a5a3a;
+  color: #8f8;
+}
+
+.party-cov__pill--uncovered {
+  background: #333;
+  color: #666;
   cursor: default;
 }
 
-.comp-boon-cov__icon--uncovered {
+.party-cov__pill--self-only {
+  background: #333;
+  color: #666;
+  cursor: default;
+}
+
+.party-cov__pill--self-only .party-cov__pill-icon {
   opacity: 0.28;
 }
 
-.comp-boon-cov__img {
+.party-cov__pill--self-only .party-cov__pill-badge {
+  color: #555;
+}
+
+.party-cov__pill--active {
+  border-color: currentColor;
+  box-shadow: 0 0 6px 1px currentColor;
+}
+
+.party-cov__pill:not(.party-cov__pill--uncovered):not(.party-cov__pill--self-only):hover {
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.party-cov__pill-icon {
   display: block;
   border-radius: 3px;
 }
 
-/* Count badge */
-.comp-boon-cov__badge {
-  position: absolute;
-  bottom: -3px;
-  right: -3px;
-  background: #0d0d1e;
-  color: #f0b870;
-  font-size: 9px;
-  font-weight: 600;
-  border-radius: 2px;
-  padding: 0 2px;
-  line-height: 13px;
-  border: 1px solid #2a2a3e;
-  pointer-events: none;
+.party-cov__pill-emoji {
+  font-size: 12px;
+  line-height: 1;
 }
 
-/* Boon tooltip */
-.comp-boon-tooltip {
-  position: fixed;
-  z-index: 10000;
-  background: #13131f;
-  border: 1px solid #3a3a5e;
-  border-radius: 5px;
-  padding: 7px 10px;
-  min-width: 140px;
-  max-width: 220px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, .65);
-  pointer-events: none;
-  font-size: 11px;
-}
-
-.comp-boon-tooltip__header {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.comp-boon-tooltip__name {
-  color: #ddd;
-  font-weight: 600;
-  flex: 1;
-}
-
-.comp-boon-tooltip__count {
-  color: #778;
-  font-size: 10px;
+.party-cov__pill-name {
   white-space: nowrap;
 }
 
-.comp-boon-tooltip__sep {
-  height: 1px;
-  background: #2a2a4e;
-  margin: 5px 0;
+.party-cov__pill-badge {
+  color: #dda;
+  font-size: 10px;
 }
 
-.comp-boon-tooltip__providers {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
+/* Expanded source panel */
+.party-cov__expand {
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-height 0.25s ease, opacity 0.2s ease, padding 0.25s ease;
 }
 
-.comp-boon-tooltip__line-group {
+.party-cov__expand--open {
+  max-height: 600px;
+  opacity: 1;
+  padding-top: 8px;
+}
+
+.party-cov__expand-header {
+  border-left: 3px solid;
+  padding: 4px 10px;
   margin-bottom: 4px;
 }
 
-.comp-boon-tooltip__line-label {
-  font-size: 10px;
-  color: #778;
-  letter-spacing: .04em;
-  margin-bottom: 2px;
+.party-cov__expand-title {
+  font-size: 12px;
+  font-weight: bold;
 }
 
-.comp-boon-tooltip__row {
+.party-cov__expand-icon {
+  border-radius: 3px;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+
+.party-cov__expand-body {
+  border-left: 3px solid;
+  padding-left: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Source rows */
+.party-cov__src-row {
   display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 1px 0 1px 4px;
+  gap: 8px;
+  padding: 4px 8px;
+  background: #252540;
+  border-radius: 4px;
 }
 
-.comp-boon-tooltip__prof {
-  width: 14px;
-  height: 14px;
-  display: flex;
+.party-cov__src-icon {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
+  width: 16px;
+  height: 16px;
   flex-shrink: 0;
 }
 
-.comp-boon-tooltip__prof svg {
-  width: 14px;
-  height: 14px;
+.party-cov__src-icon svg {
+  width: 16px;
+  height: 16px;
 }
 
-.comp-boon-tooltip__build-name {
-  color: #bbb;
-  font-size: 10px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* ── Boon Duration Expansion ──────────────────────────────────── */
-
-.comp-boon-cov__icon--active .comp-boon-cov__img {
-  outline: 1.5px solid #6c5ce7;
-  outline-offset: 1px;
+.party-cov__src-skill-icon {
   border-radius: 3px;
-  box-shadow: 0 0 6px #6c5ce766;
+  flex-shrink: 0;
+  cursor: help;
+  transition: outline 0.1s;
 }
 
-.comp-boon-cov__duration-expand {
-  border-left: 2px solid #6c5ce7;
-  background: #14141e;
-  border-bottom: 1px solid #1a1a3a;
-  overflow: hidden;
-  max-height: 0;
-  opacity: 0;
-  padding: 0 12px;
-  transition: max-height 0.25s ease, opacity 0.2s ease, padding 0.2s ease;
+.party-cov__src-skill-icon:hover {
+  outline: 1.5px solid rgba(255, 255, 255, 0.3);
 }
 
-.comp-boon-cov__duration-expand--open {
-  max-height: 600px;
-  opacity: 1;
-  padding: 8px 12px 10px;
+/* Skill hover tooltip — matches build view hover-preview style */
+.party-cov__skill-tooltip {
+  position: fixed;
+  z-index: 10000;
+  width: min(320px, calc(100vw - 16px));
+  border: 1px solid #43679f;
+  border-radius: 11px;
+  background:
+    linear-gradient(180deg, rgba(11, 21, 41, 0.97), rgba(8, 15, 30, 0.96)),
+    rgba(8, 15, 30, 0.96);
+  box-shadow:
+    0 12px 28px rgba(2, 7, 18, 0.72),
+    0 0 0 1px rgba(74, 113, 170, 0.18) inset;
+  padding: 10px;
+  pointer-events: none;
 }
 
-.comp-boon-cov__dur-header {
+.party-cov__skill-tooltip-head {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-bottom: 8px;
+  gap: 10px;
 }
 
-.comp-boon-cov__dur-boon-icon {
-  border-radius: 3px;
-  flex-shrink: 0;
+.party-cov__skill-tooltip-icon {
+  border-radius: 8px;
+  border: 1px solid #4f79b5;
 }
 
-.comp-boon-cov__dur-boon-name {
-  font-size: 13px;
-  font-weight: 700;
-  color: #ccd;
-}
-
-.comp-boon-cov__dur-line-label {
-  font-size: 11px;
-  color: #667;
+.party-cov__skill-tooltip-name {
+  font-size: 0.95rem;
   font-weight: 600;
-  letter-spacing: .04em;
+  color: #eff6ff;
 }
 
-.comp-boon-cov__dur-close {
-  margin-left: auto;
-  background: none;
-  border: none;
-  color: #667;
-  cursor: pointer;
-  font-size: 15px;
-  line-height: 1;
-  padding: 0 2px;
+.party-cov__skill-tooltip-desc {
+  margin: 8px 0 0;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: #b0c4de;
 }
 
-.comp-boon-cov__dur-close:hover {
-  color: #889;
-}
-
-.comp-boon-cov__dur-build {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.comp-boon-cov__dur-build-header {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  margin-bottom: 3px;
-}
-
-.comp-boon-cov__dur-prof {
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-}
-
-.comp-boon-cov__dur-prof svg {
-  width: 18px;
-  height: 18px;
-}
-
-.comp-boon-cov__dur-build-name {
+.party-cov__src-name {
+  color: #ddd;
   font-size: 12px;
-  font-weight: 600;
-  color: #aab;
-}
-
-.comp-boon-cov__dur-sources {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  padding-left: 21px;
-}
-
-.comp-boon-cov__dur-source {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 2px 4px;
-  border-radius: 3px;
-}
-
-.comp-boon-cov__dur-source:hover {
-  background: #1e1e2e;
-}
-
-.comp-boon-cov__dur-type {
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: .04em;
-  padding: 1px 5px;
-  border-radius: 3px;
-  flex-shrink: 0;
-}
-
-.comp-boon-cov__dur-type--skill {
-  background: #1a2e20;
-  color: #4caf82;
-}
-
-.comp-boon-cov__dur-type--trait {
-  background: #241a33;
-  color: #a78bfa;
-}
-
-.comp-boon-cov__dur-source-name {
-  font-size: 12px;
-  color: #99a;
   flex: 1;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.comp-boon-cov__dur-source-desc {
-  font-size: 10px;
-  color: #556;
-  font-style: italic;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
-.comp-boon-cov__dur-duration {
-  font-size: 12px;
-  font-weight: 700;
-  color: #c89b3c;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.comp-boon-cov__dur-stacks {
+.party-cov__src-spec {
   font-size: 11px;
-  color: #778;
+  color: #aaa;
   white-space: nowrap;
-  flex-shrink: 0;
 }
 
-.comp-boon-cov__dur-target {
+.party-cov__src-kit {
+  color: #888;
+  font-size: 10px;
+}
+
+.party-cov__src-stacks {
+  color: #aaa;
+  font-size: 11px;
+}
+
+.party-cov__src-dur {
+  color: #aaa;
+  font-size: 11px;
+}
+
+.party-cov__src-radius {
+  color: #aaa;
+  font-size: 11px;
+}
+
+.party-cov__src-blasts {
+  color: #aaa;
+  font-size: 11px;
+}
+
+.party-cov__src-pct {
+  color: #888;
+  font-size: 10px;
+}
+
+.party-cov__src-target {
   font-size: 9px;
   font-weight: 700;
-  letter-spacing: .04em;
-  padding: 1px 4px;
+  padding: 1px 6px;
   border-radius: 3px;
-  flex-shrink: 0;
+  white-space: nowrap;
 }
 
-.comp-boon-cov__dur-target--ally {
-  background: #1a2233;
-  color: #6ea8ff;
+.party-cov__src-target--ally {
+  background: #2a4a6a;
+  color: #8cf;
 }
 
-.comp-boon-cov__dur-target--self {
-  background: #201a2e;
-  color: #a78bfa;
-}
-
-.comp-boon-cov__dur-sep {
-  height: 1px;
-  background: #1a1a3a;
-  margin: 5px 0;
+.party-cov__src-target--self {
+  background: #4a4a2a;
+  color: #dd8;
 }
