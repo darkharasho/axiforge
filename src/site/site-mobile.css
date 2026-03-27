@@ -637,33 +637,30 @@
     overflow: hidden;
   }
 
-  /* Boon coverage: horizontal scroll */
-  .comp-boon-cov__body {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    padding-bottom: 8px;
-  }
-
-  .comp-boon-cov__body > table,
-  .comp-boon-cov__body > div {
-    min-width: max-content;
-  }
-
   /* Party coverage mobile overrides */
-  .party-cov__line {
-    padding: 10px;
-  }
-  .party-cov__line-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-  .party-cov__pills {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    padding-bottom: 4px;
-  }
-  .party-cov__src-row {
+  .party-cov__header-boons {
     flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .party-cov__line-header {
+    padding: 10px 10px;
+  }
+
+  .party-cov__line-body {
+    padding: 4px 10px 12px;
+  }
+
+  .party-cov__section {
+    padding: 8px 10px;
+    margin-bottom: 6px;
+  }
+
+  .party-cov__line {
+    margin-bottom: 6px;
+  }
+
+  .comp-boon-cov__body {
+    padding: 0 8px 8px;
   }
 }
