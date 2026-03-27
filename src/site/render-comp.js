@@ -239,7 +239,7 @@ function buildFieldExpandHTML(fieldType, sources) {
               data-skill-icon="${escapeHtml(s.skillIcon)}"
               data-skill-facts="${escapeHtml(JSON.stringify(s.skillFacts || []))}" />`
       : "";
-    const kitHtml = s.kitName ? `<span class="party-cov__src-kit">(${escapeHtml(s.kitName)})</span>` : "";
+    const kitHtml = s.kitName ? ` <span class="party-cov__src-kit">(${escapeHtml(s.kitName)})</span>` : "";
     const durHtml = s.duration ? `<span class="party-cov__src-dur">${s.duration}s</span>` : "";
     const radiusHtml = s.radius ? `<span class="party-cov__src-radius">${s.radius} radius</span>` : "";
     return `<div class="party-cov__src-row">
@@ -277,7 +277,7 @@ function buildFinisherExpandHTML(finisherType, sources) {
               data-skill-icon="${escapeHtml(s.skillIcon)}"
               data-skill-facts="${escapeHtml(JSON.stringify(s.skillFacts || []))}" />`
       : "";
-    const kitHtml = s.kitName ? `<span class="party-cov__src-kit">(${escapeHtml(s.kitName)})</span>` : "";
+    const kitHtml = s.kitName ? ` <span class="party-cov__src-kit">(${escapeHtml(s.kitName)})</span>` : "";
     const countLabel = s.hitCount > 1 ? `<span class="party-cov__src-blasts">&times;${s.hitCount}</span>` : "";
     const pctHtml = s.percent < 100
       ? `<span class="party-cov__src-pct">(${s.percent}%)</span>` : "";
