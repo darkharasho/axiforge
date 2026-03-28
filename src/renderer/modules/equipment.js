@@ -6,7 +6,7 @@ import {
   PROFESSION_WEIGHT, ARMOR_DEFENSE_BY_WEIGHT,
   LEGENDARY_ARMOR_ICONS, _WK,
   PROFESSION_BASE_HP,
-  FURY_CRIT_CHANCE, MIGHT_MAX_STACKS, MIGHT_POWER_PER_STACK, MIGHT_CONDI_PER_STACK, STABILITY_MAX_STACKS, STACKING_SIGIL_DEFS, BOON_CONDITION_ICONS,
+  FURY_CRIT_CHANCE, FURY_CRIT_CHANCE_WVW, MIGHT_MAX_STACKS, MIGHT_POWER_PER_STACK, MIGHT_CONDI_PER_STACK, STABILITY_MAX_STACKS, STACKING_SIGIL_DEFS, BOON_CONDITION_ICONS,
 } from "./constants.js";
 import { escapeHtml } from "./utils.js";
 import { computeSlotStats, computeEquipmentStats, computeUpgradeModifiers, computeStatBreakdown, computeTraitConversions } from "./stats.js";
@@ -1219,9 +1219,10 @@ export function renderEquipmentPanel() {
         `<div class="equip-boons__tip-note">Click to add stacks. +${MIGHT_POWER_PER_STACK} Power and +${MIGHT_CONDI_PER_STACK} Condition Damage per stack (max ${MIGHT_MAX_STACKS}).</div>`;
     }
     if (def.key === "fury") {
+      const furyPct = state.editor.gameMode === "wvw" ? FURY_CRIT_CHANCE_WVW : FURY_CRIT_CHANCE;
       return val
-        ? '<div class="equip-boons__tip-title">Fury</div><div class="equip-boons__tip-effect">+25% Critical Chance</div><div class="equip-boons__tip-note">Added to Crit Chance derived stat</div>'
-        : '<div class="equip-boons__tip-title">Fury</div><div class="equip-boons__tip-note">Click to enable. Grants +25% Critical Chance.</div>';
+        ? `<div class="equip-boons__tip-title">Fury</div><div class="equip-boons__tip-effect">+${furyPct}% Critical Chance</div><div class="equip-boons__tip-note">Added to Crit Chance derived stat</div>`
+        : `<div class="equip-boons__tip-title">Fury</div><div class="equip-boons__tip-note">Click to enable. Grants +${furyPct}% Critical Chance.</div>`;
     }
     if (def.key === "alacrity") {
       return val
@@ -1471,7 +1472,8 @@ export function renderEquipmentPanel() {
   // Collect upgrade modifiers and apply ones that map to derived stats
   const modifiers = computeUpgradeModifiers();
   const popMod = (key) => { const v = modifiers.get(key) || 0; modifiers.delete(key); return v; };
-  const furyCrit = _assumedBoons.fury ? FURY_CRIT_CHANCE : 0;
+  const furyCritPct = state.editor.gameMode === "wvw" ? FURY_CRIT_CHANCE_WVW : FURY_CRIT_CHANCE;
+  const furyCrit = _assumedBoons.fury ? furyCritPct : 0;
   const critChance = Math.min(100, 5 + ((computed.Precision || 1000) - 895) / 21.0 + popMod("Critical Chance") + furyCrit);
   const critDamage = 150 + (computed.Ferocity || 0) / 15.0 + popMod("Critical Damage");
   const condDuration = (computed.Expertise || 0) / 15.0 + popMod("Condition Duration");
