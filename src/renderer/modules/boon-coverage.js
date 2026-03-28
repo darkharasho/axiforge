@@ -190,11 +190,23 @@ function collectSkillIds(editor, catalog) {
   const selectedSpecIds = new Set(
     (editor.specializations || []).map((s) => Number(s?.specializationId || s?.id) || 0).filter(Boolean)
   );
+  // Collect equipped weapon types so weapon-specific profession skills (e.g. Warrior
+  // bursts) are filtered to only those matching an equipped weapon.
+  const equippedWeapons = editor.equipment?.weapons || {};
+  const equippedWeaponTypes = new Set(
+    ["mainhand1", "offhand1", "mainhand2", "offhand2", "aquatic1", "aquatic2"]
+      .map((k) => (equippedWeapons[k] || "").toLowerCase())
+      .filter(Boolean)
+  );
   for (const s of profSkills) {
     if ((s.type || "").toLowerCase() !== "profession") continue;
     const reqSpec = Number(s.specialization) || 0;
     if (reqSpec && !selectedSpecIds.has(reqSpec)) continue;
-    if (/^Profession_[1-5]$/.test(s.slot || "")) ids.add(s.id);
+    if (!/^Profession_[1-5]$/.test(s.slot || "")) continue;
+    // If the skill is tied to a specific weapon, only include it when that weapon is equipped.
+    const wt = (s.weaponType || "").toLowerCase();
+    if (wt && !equippedWeaponTypes.has(wt)) continue;
+    ids.add(s.id);
   }
   // Revenant legend skills (heal, utilities, elite) — fixed per legend stance
   for (const legendId of editor.selectedLegends || []) {
