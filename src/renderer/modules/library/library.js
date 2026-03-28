@@ -510,6 +510,27 @@ async function handleDiscordEmbed(buildId) {
   }
 }
 
+async function addImportedBuildToActiveComp(saved) {
+  if (state.currentFolder?.type !== "comp") return;
+  const compId = state.currentFolder.id;
+  const comp = state.comps?.find((c) => c.id === compId);
+  if (!comp) return;
+  if (!isGameModeCompatible(comp, saved)) {
+    const modeName = comp.gameMode === "wvw" ? "WvW" : "PvE";
+    showToast(`Build imported but not added to comp (locked to ${modeName}).`, "warning");
+    return;
+  }
+  await window.desktopApi.saveBuild({ ...saved, compId, folderId: null });
+  const currentBuildIds = Array.isArray(comp.buildIds) ? [...comp.buildIds] : [];
+  if (!currentBuildIds.includes(saved.id)) {
+    currentBuildIds.push(saved.id);
+    const newGameMode = comp.gameMode || saved.gameMode;
+    await window.desktopApi.saveComp({ ...comp, gameMode: newGameMode, buildIds: currentBuildIds });
+  }
+  state.builds = await window.desktopApi.listBuilds();
+  state.comps = await window.desktopApi.listComps();
+}
+
 async function handleImportChatLink(targetFolderId) {
   const folderId = targetFolderId ?? (state.currentFolder?.type === "custom" ? state.currentFolder.id : null);
   const result = await showImportModal();
@@ -517,6 +538,7 @@ async function handleImportChatLink(targetFolderId) {
   try {
     const gameMode = state.editor?.gameMode || "pve";
     const saved = await window.desktopApi.importChatLink(result.link, result.name, folderId, gameMode);
+    await addImportedBuildToActiveComp(saved);
     state.builds = await window.desktopApi.listBuilds();
     renderLibrary();
     window.desktopApi.prewarmChatLinks?.([saved]);
@@ -535,6 +557,7 @@ async function handleImportGw2Skills(targetFolderId) {
   try {
     const gameMode = state.editor?.gameMode || "pve";
     const saved = await window.desktopApi.importGw2Skills(result.url, result.name, folderId, gameMode);
+    await addImportedBuildToActiveComp(saved);
     state.builds = await window.desktopApi.listBuilds();
     renderLibrary();
     window.desktopApi.prewarmChatLinks?.([saved]);
@@ -574,6 +597,7 @@ async function handleImportShareCode(targetFolderId) {
     decoded.title = result.name || decoded.title || "Imported Build";
     if (folderId) decoded.folderId = folderId;
     const saved = await window.desktopApi.saveBuild(decoded);
+    await addImportedBuildToActiveComp(saved);
     state.builds = await window.desktopApi.listBuilds();
     renderLibrary();
     showToast("AxiCode imported!");
