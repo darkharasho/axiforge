@@ -1,6 +1,6 @@
 "use strict";
 
-const { computeBoonCoverage } = require("../../../src/renderer/modules/boon-coverage");
+const { computeBoonCoverage, computePartyCoverage } = require("../../../src/renderer/modules/boon-coverage");
 
 function makeCatalog(overrides = {}) {
   return {
@@ -411,5 +411,89 @@ describe("computeBoonCoverage", () => {
     expect(result.boons.find((b) => b.name === "Swiftness").sources[0]).toMatchObject({
       type: "skill", name: "Chapter 3: Azure Sun",
     });
+  });
+});
+
+describe("computePartyCoverage", () => {
+  test("only includes profession skills for equipped weapons (Warrior burst filtering)", () => {
+    // Earthshaker = Hammer burst (Blast finisher), Scorched Earth = Longbow Berserker burst (Fire field)
+    const earthshaker = makeSkill(14387, "Earthshaker", [
+      { type: "ComboFinisher", finisher_type: "Blast", percent: 100 },
+    ], { type: "Profession", slot: "Profession_1", weaponType: "Hammer" });
+    const scorched = makeSkill(29923, "Scorched Earth", [
+      { type: "ComboField", field_type: "Fire" },
+    ], { type: "Profession", slot: "Profession_1", weaponType: "Longbow", specialization: 18 });
+    const harriers = makeSkill(73024, "Harrier's Toss", [
+      { type: "ComboFinisher", finisher_type: "Blast", percent: 100 },
+    ], { type: "Profession", slot: "Profession_1", weaponType: "Spear" });
+
+    const catalog = makeCatalog({
+      skills: [earthshaker, scorched, harriers],
+      skillById: new Map([
+        [14387, earthshaker],
+        [29923, scorched],
+        [73024, harriers],
+      ]),
+      specializationById: new Map([[18, { id: 18, elite: true, name: "Berserker", minorTraits: [] }]]),
+    });
+
+    // Build has Hammer equipped (mainhand1) and Berserker spec selected
+    const editor = makeEditor({
+      equipment: { weapons: { mainhand1: "Hammer" } },
+      specializations: [{ specializationId: 18, majorChoices: { 1: 0, 2: 0, 3: 0 } }],
+    });
+
+    const result = computePartyCoverage(catalog, editor);
+
+    // Earthshaker (Hammer) should be included — Blast finisher
+    const blastSources = result.comboFinishers.filter((f) => f.finisherType === "Blast");
+    expect(blastSources.some((f) => f.sourceName === "Earthshaker")).toBe(true);
+
+    // Harrier's Toss (Spear) should NOT be included — Spear is not equipped
+    expect(blastSources.some((f) => f.sourceName === "Harrier's Toss")).toBe(false);
+
+    // Scorched Earth (Longbow) should NOT be included — Longbow is not equipped
+    const fireFields = result.comboFields.filter((f) => f.fieldType === "Fire");
+    expect(fireFields.some((f) => f.sourceName === "Scorched Earth")).toBe(false);
+  });
+
+  test("includes weapon-agnostic profession skills regardless of equipped weapons", () => {
+    // A profession skill with no weaponType should always be included
+    const genericF2 = makeSkill(999, "Generic Mechanic", [
+      { type: "ComboFinisher", finisher_type: "Blast", percent: 100 },
+    ], { type: "Profession", slot: "Profession_2", weaponType: "" });
+
+    const catalog = makeCatalog({
+      skills: [genericF2],
+      skillById: new Map([[999, genericF2]]),
+    });
+
+    const editor = makeEditor({
+      equipment: { weapons: { mainhand1: "Sword" } },
+    });
+
+    const result = computePartyCoverage(catalog, editor);
+    const blastSources = result.comboFinishers.filter((f) => f.finisherType === "Blast");
+    expect(blastSources.some((f) => f.sourceName === "Generic Mechanic")).toBe(true);
+  });
+
+  test("includes profession skills for second weapon set", () => {
+    const burstSkill = makeSkill(14506, "Combustive Shot", [
+      { type: "ComboField", field_type: "Fire" },
+    ], { type: "Profession", slot: "Profession_1", weaponType: "Longbow" });
+
+    const catalog = makeCatalog({
+      skills: [burstSkill],
+      skillById: new Map([[14506, burstSkill]]),
+    });
+
+    // Longbow only on weapon set 2
+    const editor = makeEditor({
+      equipment: { weapons: { mainhand1: "Hammer", mainhand2: "Longbow" } },
+    });
+
+    const result = computePartyCoverage(catalog, editor);
+    const fireFields = result.comboFields.filter((f) => f.fieldType === "Fire");
+    expect(fireFields.some((f) => f.sourceName === "Combustive Shot")).toBe(true);
   });
 });
