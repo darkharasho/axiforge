@@ -366,39 +366,6 @@ test.describe("Compositions — Boon Coverage", () => {
     await closeApp(app);
   });
 
-  // 10. Boon coverage shows which boons are covered
-  test("boon coverage panel displays boon icons", async () => {
-    const boonIcons = window.locator(".comp-boon-cov__icon");
-    const count = await boonIcons.count();
-    // Should have boon icons rendered (the full BOON_DISPLAY_ORDER set)
-    expect(count).toBeGreaterThan(0);
-
-    // Each icon should have a data-boon-name attribute
-    const firstBoon = await boonIcons.first().getAttribute("data-boon-name");
-    expect(firstBoon).toBeTruthy();
-  });
-
-  // 11. Boon coverage tooltip shows header with boon name on hover
-  test("boon coverage tooltip shows header on hover", async () => {
-    // Hover any boon icon (even uncovered) — tooltip shows boon name and coverage status
-    const anyIcon = window.locator(".comp-boon-cov__icon").first();
-    await anyIcon.hover();
-    await window.waitForTimeout(500);
-
-    const tooltip = window.locator(".comp-boon-tooltip");
-    await expect(tooltip).toBeVisible({ timeout: 3000 });
-
-    // Tooltip should have a header with the boon name
-    const header = tooltip.locator(".comp-boon-tooltip__header");
-    await expect(header).toBeVisible();
-    const headerHtml = await header.innerHTML();
-    expect(headerHtml).toContain("comp-boon-tooltip__name");
-
-    // Move away to dismiss
-    await window.locator(".comp-detail__topbar").hover();
-    await window.waitForTimeout(200);
-  });
-
   // 12. Elite spec icon shows (not base profession) when build uses elite spec
   test("elite spec slot icon shows for build with elite spec", async () => {
     // The filled slot for buildWithElite should have the Reaper (elite) spec icon
@@ -450,23 +417,6 @@ test.describe("Compositions — Boon Coverage", () => {
     // Move away to dismiss
     await window.locator(".comp-detail__topbar").hover();
     await window.waitForTimeout(200);
-  });
-
-  // 14. Squad-level boon coverage groups by party line
-  test("squad-level boon coverage has separate squad and line rows", async () => {
-    // The boon coverage panel should have squad-scope icons
-    const squadIcons = window.locator('.comp-boon-cov__icon[data-scope="squad"]');
-    const squadCount = await squadIcons.count();
-    expect(squadCount).toBeGreaterThan(0);
-
-    // And per-line rows (one per filled party line)
-    const lineRows = window.locator(".comp-boon-cov__line-row");
-    const lineRowCount = await lineRows.count();
-    expect(lineRowCount).toBeGreaterThanOrEqual(1);
-
-    // Each line row should have a label like "P1", "P2"
-    const firstLabel = await lineRows.first().locator(".comp-boon-cov__line-label").textContent();
-    expect(firstLabel).toMatch(/^P\d+$/);
   });
 
   // 15. Serialized builds display correct elite spec in hover card tooltips

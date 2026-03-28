@@ -9,7 +9,7 @@
 
 const { computeSlotStats, computeEquipmentStats, computeBuildConcentration } = require("../../../src/renderer/modules/stats");
 const { state } = require("../../../src/renderer/modules/state");
-const { ARMOR_DEFENSE_BY_WEIGHT, PROFESSION_WEIGHT } = require("../../../src/renderer/modules/constants");
+const { ARMOR_DEFENSE_BY_WEIGHT, PROFESSION_WEIGHT, FURY_CRIT_CHANCE, FURY_CRIT_CHANCE_WVW } = require("../../../src/renderer/modules/constants");
 
 // ---------------------------------------------------------------------------
 // Helpers — reset state.editor before each test
@@ -629,5 +629,24 @@ describe("ARMOR_DEFENSE_BY_WEIGHT constant", () => {
       expect(ARMOR_DEFENSE_BY_WEIGHT).toHaveProperty(weight,
         expect.any(Number));
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// FURY_CRIT_CHANCE constants — WvW vs PvE (fury gives 20% in WvW, 25% in PvE)
+// ---------------------------------------------------------------------------
+
+describe("FURY_CRIT_CHANCE constants", () => {
+  test("PvE fury crit chance is 25%", () => {
+    expect(FURY_CRIT_CHANCE).toBe(25);
+  });
+
+  test("WvW fury crit chance is 20%", () => {
+    expect(FURY_CRIT_CHANCE_WVW).toBeDefined();
+    expect(FURY_CRIT_CHANCE_WVW).toBe(20);
+  });
+
+  test("WvW fury crit chance is less than PvE", () => {
+    expect(FURY_CRIT_CHANCE_WVW).toBeLessThan(FURY_CRIT_CHANCE);
   });
 });

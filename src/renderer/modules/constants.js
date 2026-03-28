@@ -512,7 +512,8 @@ export const BUFF_FACT_TYPES = new Set(["Buff", "ApplyBuffCondition", "PrefixedB
 export const MIGHT_POWER_PER_STACK = 30;
 export const MIGHT_CONDI_PER_STACK = 30;
 export const MIGHT_MAX_STACKS = 25;
-export const FURY_CRIT_CHANCE = 25; // percentage points
+export const FURY_CRIT_CHANCE = 25; // percentage points (PvE)
+export const FURY_CRIT_CHANCE_WVW = 20; // percentage points (WvW)
 export const STABILITY_MAX_STACKS = 25;
 
 // Attribute-stacking sigils (only one can be active at a time in-game)
