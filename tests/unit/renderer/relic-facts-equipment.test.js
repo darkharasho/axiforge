@@ -109,6 +109,40 @@ describe("Relic facts on equipment panel (#125)", () => {
     expect(html).toContain("Damage Increase");
   });
 
+  test("SPA-style catalog with relicByName from equipmentDisplay resolves facts", () => {
+    // Simulates the SPA path: relic data comes from the published build's
+    // equipmentDisplay, reconstructed in render-build.js as relicByName.
+    const relic = {
+      name: "Relic of Cerus",
+      icon: "https://example.com/cerus.png",
+      description: "Upon using an elite skill, summon an Eye of Cerus.",
+      facts: [
+        { type: "Recharge", text: "Cooldown", value: 30 },
+        { type: "Percent", text: "Damage Increase", percent: 10 },
+      ],
+    };
+
+    // This mirrors what render-build.js now does:
+    const catalog = {
+      relicByName: new Map([[relic.name, relic]]),
+    };
+
+    const found = catalog.relicByName.get("Relic of Cerus");
+    expect(found).toBeDefined();
+    expect(found.facts).toHaveLength(2);
+
+    const entity = {
+      name: found.name,
+      icon: found.icon,
+      description: found.description || "",
+      facts: found.facts,
+    };
+
+    const html = detailPanel.buildSkillCard(entity, "equip-relic");
+    expect(html).toContain("Cooldown: 30s");
+    expect(html).toContain("Damage Increase");
+  });
+
   test("missing relicByName causes relic facts lookup to fail", () => {
     // Simulates the buggy state where relicByName is not constructed
     const relics = [
