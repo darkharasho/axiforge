@@ -47,6 +47,12 @@ function makeElement(tag) {
       }
     },
     appendChild(child) { child._parent = el; el._children.push(child); return child; },
+    insertBefore(newChild, refChild) {
+      newChild._parent = el;
+      const idx = el._children.indexOf(refChild);
+      if (idx === -1) { el._children.push(newChild); } else { el._children.splice(idx, 0, newChild); }
+      return newChild;
+    },
 
     addEventListener(event, handler) {
       (el._listeners[event] ||= []).push(handler);
@@ -375,5 +381,142 @@ describe("renderCustomSelect — grouped options", () => {
 
     const headers = host.querySelectorAll(".cselect__group-header");
     expect(headers.length).toBe(0);
+  });
+});
+
+describe("renderCustomSelect — searchable", () => {
+  test("renders a search input when searchable is true", () => {
+    const host = makeElement("div");
+
+    customSelectModule.renderCustomSelect(host, {
+      value: "Necromancer:7",
+      searchable: true,
+      groups: [
+        {
+          label: "Necromancer",
+          options: [
+            { value: "Necromancer:core", label: "Core" },
+            { value: "Necromancer:7", label: "Reaper" },
+          ],
+        },
+      ],
+      onChange: () => {},
+    });
+
+    const search = host.querySelector(".cselect__search");
+    expect(search).toBeTruthy();
+    expect(search.tagName).toBe("INPUT");
+  });
+
+  test("does not render search input when searchable is false", () => {
+    const host = makeElement("div");
+
+    customSelectModule.renderCustomSelect(host, {
+      value: "alpha",
+      options: [{ value: "alpha", label: "Alpha" }],
+      onChange: () => {},
+    });
+
+    const search = host.querySelector(".cselect__search");
+    expect(search).toBeNull();
+  });
+
+  test("typing in search filters options by label match", () => {
+    const host = makeElement("div");
+
+    customSelectModule.renderCustomSelect(host, {
+      value: "Necromancer:7",
+      searchable: true,
+      groups: [
+        {
+          label: "Elementalist",
+          options: [
+            { value: "Elementalist:core", label: "Core" },
+            { value: "Elementalist:48", label: "Weaver" },
+          ],
+        },
+        {
+          label: "Necromancer",
+          options: [
+            { value: "Necromancer:core", label: "Core" },
+            { value: "Necromancer:7", label: "Reaper" },
+          ],
+        },
+      ],
+      onChange: () => {},
+    });
+
+    const search = host.querySelector(".cselect__search");
+    search.value = "rea";
+    search.dispatchEvent({ type: "input", preventDefault() {}, stopPropagation() {}, target: search });
+
+    // Only Necromancer group should be visible (has "Reaper" matching "rea")
+    const headers = host.querySelectorAll(".cselect__group-header");
+    const visibleHeaders = headers.filter((h) => h.style.display !== "none");
+    expect(visibleHeaders.length).toBe(1);
+    expect(visibleHeaders[0].querySelector(".cselect__label").textContent).toBe("Necromancer");
+
+    // Only Reaper option should be visible
+    const options = host.querySelectorAll(".cselect__option");
+    const visibleOptions = options.filter((o) => o.style.display !== "none");
+    expect(visibleOptions.length).toBe(1);
+    expect(visibleOptions[0].querySelector(".cselect__label").textContent).toBe("Reaper");
+  });
+
+  test("search matches group label (profession name)", () => {
+    const host = makeElement("div");
+
+    customSelectModule.renderCustomSelect(host, {
+      value: "Necromancer:7",
+      searchable: true,
+      groups: [
+        {
+          label: "Elementalist",
+          options: [{ value: "Elementalist:48", label: "Weaver" }],
+        },
+        {
+          label: "Necromancer",
+          options: [{ value: "Necromancer:7", label: "Reaper" }],
+        },
+      ],
+      onChange: () => {},
+    });
+
+    const search = host.querySelector(".cselect__search");
+    search.value = "nec";
+    search.dispatchEvent({ type: "input", preventDefault() {}, stopPropagation() {}, target: search });
+
+    // Necromancer group and all its children should be visible
+    const options = host.querySelectorAll(".cselect__option");
+    const visibleOptions = options.filter((o) => o.style.display !== "none");
+    expect(visibleOptions.length).toBe(1);
+    expect(visibleOptions[0].querySelector(".cselect__label").textContent).toBe("Reaper");
+  });
+
+  test("empty search shows all options", () => {
+    const host = makeElement("div");
+
+    customSelectModule.renderCustomSelect(host, {
+      value: "Necromancer:7",
+      searchable: true,
+      groups: [
+        {
+          label: "Necromancer",
+          options: [
+            { value: "Necromancer:core", label: "Core" },
+            { value: "Necromancer:7", label: "Reaper" },
+          ],
+        },
+      ],
+      onChange: () => {},
+    });
+
+    const search = host.querySelector(".cselect__search");
+    search.value = "";
+    search.dispatchEvent({ type: "input", preventDefault() {}, stopPropagation() {}, target: search });
+
+    const options = host.querySelectorAll(".cselect__option");
+    const visibleOptions = options.filter((o) => o.style.display !== "none");
+    expect(visibleOptions.length).toBe(2);
   });
 });

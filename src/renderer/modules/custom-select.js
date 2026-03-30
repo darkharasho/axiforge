@@ -82,16 +82,25 @@ export function renderCustomSelect(host, config = {}) {
     return button;
   }
 
+  // Track group elements for search filtering (direct references avoid attribute selectors)
+  const groupRefs = [];
+
   if (hasGroups) {
     for (const group of config.groups) {
       const header = document.createElement("div");
       header.className = "cselect__group-header";
+      header.dataset.group = group.label;
       header.append(makeCustomSelectValueNode({ label: group.label, icon: group.icon }));
       list.append(header);
 
+      const optionRefs = [];
       for (const option of group.options || []) {
-        list.append(makeOptionButton(option, { grouped: true }));
+        const btn = makeOptionButton(option, { grouped: true });
+        btn.dataset.value = option.value;
+        list.append(btn);
+        optionRefs.push({ el: btn, label: option.label });
       }
+      groupRefs.push({ headerEl: header, groupLabel: group.label, options: optionRefs });
     }
   } else if (allOptions.length) {
     for (const option of allOptions) {
@@ -105,6 +114,30 @@ export function renderCustomSelect(host, config = {}) {
   }
 
   menu.append(list);
+
+  if (config.searchable && hasGroups) {
+    const searchInput = document.createElement("input");
+    searchInput.type = "text";
+    searchInput.className = "cselect__search";
+    searchInput.placeholder = "Search...";
+    searchInput.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); });
+    searchInput.addEventListener("input", () => {
+      const query = searchInput.value.toLowerCase().trim();
+      for (const groupRef of groupRefs) {
+        let groupHasVisible = false;
+        const matchesGroup = groupRef.groupLabel.toLowerCase().includes(query);
+        for (const optRef of groupRef.options) {
+          const matchesOption = optRef.label.toLowerCase().includes(query);
+          const visible = !query || matchesOption || matchesGroup;
+          optRef.el.style.display = visible ? "" : "none";
+          if (visible) groupHasVisible = true;
+        }
+        groupRef.headerEl.style.display = groupHasVisible ? "" : "none";
+      }
+    });
+    menu.insertBefore(searchInput, list);
+  }
+
   root.append(trigger, menu);
   host.append(root);
 
