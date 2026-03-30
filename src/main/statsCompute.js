@@ -27,6 +27,7 @@ const _STAT_COMBOS_ENTRIES = [
   ["Seraph", { stats: ["Precision", "ConditionDamage", "HealingPower", "Concentration"] }],
   ["Crusader", { stats: ["Power", "Toughness", "Ferocity", "HealingPower"] }],
   ["Zealot's", { stats: ["Power", "Precision", "HealingPower"] }],
+  ["Giver's", { stats: ["Toughness", "HealingPower", "Concentration"] }],
   ["Celestial", { stats: ["Power", "Precision", "Toughness", "Vitality", "ConditionDamage", "Ferocity", "HealingPower", "Expertise", "Concentration"] }],
 ];
 // Add aliases without "'s" so imported builds (e.g. "Wanderer") resolve correctly

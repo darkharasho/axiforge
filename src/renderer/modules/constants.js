@@ -38,6 +38,7 @@ export const STAT_COMBOS = [
   { label: "Seraph",        stats: ["Precision", "ConditionDamage", "HealingPower", "Concentration"] },
   { label: "Crusader",       stats: ["Power", "Toughness", "Ferocity", "HealingPower"] },
   { label: "Zealot's",      stats: ["Power", "Precision", "HealingPower"] },
+  { label: "Giver's",       stats: ["Toughness", "HealingPower", "Concentration"] },
   { label: "Celestial",     stats: ["Power", "Precision", "Toughness", "Vitality", "ConditionDamage", "Ferocity", "HealingPower", "Expertise", "Concentration"] },
 ];
 
