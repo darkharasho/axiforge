@@ -90,7 +90,7 @@ export function renderCustomSelect(host, config = {}) {
       const header = document.createElement("div");
       header.className = "cselect__group-header";
       header.dataset.group = group.label;
-      header.append(makeCustomSelectValueNode({ label: group.label, icon: group.icon }));
+      header.append(makeCustomSelectValueNode({ label: group.label, icon: group.icon, iconSvg: group.iconSvg }));
       list.append(header);
 
       const optionRefs = [];
