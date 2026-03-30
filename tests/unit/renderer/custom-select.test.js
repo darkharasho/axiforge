@@ -337,4 +337,43 @@ describe("renderCustomSelect — grouped options", () => {
     expect(onChange).toHaveBeenCalledWith("Necromancer:60", expect.objectContaining({ value: "Necromancer:60" }));
     expect(trigger.querySelector(".cselect__label").textContent).toBe("Scourge");
   });
+
+  test("group with empty options array renders header but no options", () => {
+    const host = makeElement("div");
+
+    customSelectModule.renderCustomSelect(host, {
+      value: "",
+      groups: [
+        {
+          label: "EmptyGroup",
+          options: [],
+        },
+      ],
+      onChange: () => {},
+    });
+
+    const headers = host.querySelectorAll(".cselect__group-header");
+    expect(headers.length).toBe(1);
+    expect(headers[0].querySelector(".cselect__label").textContent).toBe("EmptyGroup");
+
+    const options = host.querySelectorAll(".cselect__option");
+    expect(options.length).toBe(0);
+  });
+
+  test("empty groups array shows 'No options' empty state", () => {
+    const host = makeElement("div");
+
+    customSelectModule.renderCustomSelect(host, {
+      value: "",
+      groups: [],
+      onChange: () => {},
+    });
+
+    const empty = host.querySelector(".cselect__empty");
+    expect(empty).toBeTruthy();
+    expect(empty.textContent).toBe("No options");
+
+    const headers = host.querySelectorAll(".cselect__group-header");
+    expect(headers.length).toBe(0);
+  });
 });

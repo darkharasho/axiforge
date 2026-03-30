@@ -45,11 +45,11 @@ export function renderCustomSelect(host, config = {}) {
   const list = document.createElement("div");
   list.className = "cselect__list";
 
-  function makeOptionButton(option) {
+  function makeOptionButton(option, { grouped = false } = {}) {
     const button = document.createElement("button");
     button.type = "button";
     const isSelected = String(option.value) === String(selectedOption?.value ?? "");
-    button.className = `cselect__option${hasGroups ? " cselect__option--grouped" : ""}${isSelected ? " cselect__option--selected" : ""}`;
+    button.className = `cselect__option${grouped ? " cselect__option--grouped" : ""}${isSelected ? " cselect__option--selected" : ""}`;
     button.disabled = Boolean(option.disabled);
     button.append(makeCustomSelectValueNode(option, config.placeholder || "Select"));
 
@@ -82,12 +82,7 @@ export function renderCustomSelect(host, config = {}) {
     return button;
   }
 
-  if (!allOptions.length) {
-    const empty = document.createElement("p");
-    empty.className = "cselect__empty";
-    empty.textContent = "No options";
-    list.append(empty);
-  } else if (hasGroups) {
+  if (hasGroups) {
     for (const group of config.groups) {
       const header = document.createElement("div");
       header.className = "cselect__group-header";
@@ -95,13 +90,18 @@ export function renderCustomSelect(host, config = {}) {
       list.append(header);
 
       for (const option of group.options || []) {
-        list.append(makeOptionButton(option));
+        list.append(makeOptionButton(option, { grouped: true }));
       }
     }
-  } else {
+  } else if (allOptions.length) {
     for (const option of allOptions) {
       list.append(makeOptionButton(option));
     }
+  } else {
+    const empty = document.createElement("p");
+    empty.className = "cselect__empty";
+    empty.textContent = "No options";
+    list.append(empty);
   }
 
   menu.append(list);
