@@ -185,11 +185,12 @@
   pointer-events: none;
 }
 
-.cselect__group-header .cselect__icon {
+.cselect__group-header .cselect__icon svg {
   width: 16px;
   height: 16px;
-  filter: brightness(0) invert(1);
-  opacity: 0.85;
+  fill: white;
+  stroke: black;
+  stroke-width: 1px;
 }
 
 .cselect__option--grouped {
