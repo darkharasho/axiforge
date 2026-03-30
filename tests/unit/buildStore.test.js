@@ -867,6 +867,19 @@ describe("BuildStore — move builds", () => {
     expect(builds.find((b) => b.id === b1.id).folderId).toBe(null);
     expect(builds.find((b) => b.id === b2.id).folderId).toBe("folder-xyz");
   });
+
+  test("clearCompFromBuilds sets compId to null for matching builds", async () => {
+    const b1 = await store.upsertBuild(
+      makeBuild({ title: "B1", compId: "comp-abc" }),
+    );
+    const b2 = await store.upsertBuild(
+      makeBuild({ title: "B2", compId: "comp-xyz" }),
+    );
+    await store.clearCompFromBuilds(["comp-abc"]);
+    const builds = await store.listBuilds();
+    expect(builds.find((b) => b.id === b1.id).compId).toBe(null);
+    expect(builds.find((b) => b.id === b2.id).compId).toBe("comp-xyz");
+  });
 });
 
 describe("BuildStore — pin builds", () => {

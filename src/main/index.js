@@ -379,9 +379,17 @@ app.whenReady().then(async () => {
   // Comp CRUD
   ipcMain.handle("comps:list", () => compStore.listComps());
   ipcMain.handle("comps:save", (_e, comp) => compStore.upsertComp(comp));
-  ipcMain.handle("comps:delete", (_e, id) => compStore.deleteComp(id));
+  ipcMain.handle("comps:delete", async (_e, id) => {
+    await compStore.deleteComp(id);
+    await store.clearCompFromBuilds([id]);
+  });
   ipcMain.handle("comps:reorder", (_e, updates) => compStore.reorderComps(updates));
-  ipcMain.handle("comps:delete-batch", (_e, ids) => compStore.deleteComps(ids));
+  ipcMain.handle("comps:delete-batch", async (_e, ids) => {
+    await compStore.deleteComps(ids);
+    if (ids.length) {
+      await store.clearCompFromBuilds(ids);
+    }
+  });
   ipcMain.handle("comps:add-tags", (_e, ids, tags) => compStore.addTagsToComps(ids, tags));
   ipcMain.handle("comps:remove-tags", (_e, ids, tags) => compStore.removeTagsFromComps(ids, tags));
 

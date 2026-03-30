@@ -88,6 +88,16 @@ class BuildStore {
     await this.#writeJson(this.buildsPath, builds);
   }
 
+  async clearCompFromBuilds(compIds) {
+    const builds = await this.#readJson(this.buildsPath, []);
+    for (const build of builds) {
+      if (compIds.includes(build.compId)) {
+        build.compId = null;
+      }
+    }
+    await this.#writeJson(this.buildsPath, builds);
+  }
+
   async getAuth() {
     return this.#readJson(this.authPath, {});
   }
