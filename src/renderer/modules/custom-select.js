@@ -12,12 +12,15 @@ export function initCustomSelect({ bindHoverPreview, onError } = {}) {
 
 export function renderCustomSelect(host, config = {}) {
   if (!host) return;
-  const options = Array.isArray(config.options) ? config.options : [];
+  const hasGroups = Array.isArray(config.groups) && config.groups.length > 0;
+  const allOptions = hasGroups
+    ? config.groups.flatMap((g) => g.options || [])
+    : Array.isArray(config.options) ? config.options : [];
   const currentValue = String(config.value ?? "");
   const selectedOption =
-    options.find((option) => String(option.value) === currentValue) ||
-    options.find((option) => !option.disabled) ||
-    options[0] ||
+    allOptions.find((option) => String(option.value) === currentValue) ||
+    allOptions.find((option) => !option.disabled) ||
+    allOptions[0] ||
     null;
 
   host.innerHTML = "";
@@ -29,7 +32,7 @@ export function renderCustomSelect(host, config = {}) {
   const trigger = document.createElement("button");
   trigger.type = "button";
   trigger.className = "cselect__trigger";
-  trigger.disabled = Boolean(config.disabled) || !options.length;
+  trigger.disabled = Boolean(config.disabled) || !allOptions.length;
   trigger.append(makeCustomSelectValueNode(selectedOption, config.placeholder || "Select"));
 
   const chevron = document.createElement("span");
@@ -42,47 +45,62 @@ export function renderCustomSelect(host, config = {}) {
   const list = document.createElement("div");
   list.className = "cselect__list";
 
-  if (!options.length) {
+  function makeOptionButton(option) {
+    const button = document.createElement("button");
+    button.type = "button";
+    const isSelected = String(option.value) === String(selectedOption?.value ?? "");
+    button.className = `cselect__option${hasGroups ? " cselect__option--grouped" : ""}${isSelected ? " cselect__option--selected" : ""}`;
+    button.disabled = Boolean(option.disabled);
+    button.append(makeCustomSelectValueNode(option, config.placeholder || "Select"));
+
+    if (option.kind && option.entity && _bindHoverPreview) {
+      _bindHoverPreview(button, option.kind, () => option.entity);
+    }
+
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (button.disabled) return;
+      closeCustomSelect();
+
+      // Update trigger to reflect the newly selected option
+      const valueNode = trigger.querySelector(".cselect__value");
+      if (valueNode) {
+        const newValue = makeCustomSelectValueNode(option, config.placeholder || "Select");
+        valueNode.replaceWith(newValue);
+      }
+
+      // Update selected class on all options
+      for (const opt of list.querySelectorAll(".cselect__option")) {
+        opt.classList.toggle("cselect__option--selected", opt === button);
+      }
+
+      if (typeof config.onChange === "function") {
+        Promise.resolve(config.onChange(option.value, option)).catch((err) => _onError(err));
+      }
+    });
+    return button;
+  }
+
+  if (!allOptions.length) {
     const empty = document.createElement("p");
     empty.className = "cselect__empty";
     empty.textContent = "No options";
     list.append(empty);
-  } else {
-    for (const option of options) {
-      const button = document.createElement("button");
-      button.type = "button";
-      const isSelected = String(option.value) === String(selectedOption?.value ?? "");
-      button.className = `cselect__option ${isSelected ? "cselect__option--selected" : ""}`;
-      button.disabled = Boolean(option.disabled);
-      button.append(makeCustomSelectValueNode(option, config.placeholder || "Select"));
+  } else if (hasGroups) {
+    for (const group of config.groups) {
+      const header = document.createElement("div");
+      header.className = "cselect__group-header";
+      header.append(makeCustomSelectValueNode({ label: group.label, icon: group.icon }));
+      list.append(header);
 
-      if (option.kind && option.entity && _bindHoverPreview) {
-        _bindHoverPreview(button, option.kind, () => option.entity);
+      for (const option of group.options || []) {
+        list.append(makeOptionButton(option));
       }
-
-      button.addEventListener("click", (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        if (button.disabled) return;
-        closeCustomSelect();
-
-        // Update trigger to reflect the newly selected option
-        const valueNode = trigger.querySelector(".cselect__value");
-        if (valueNode) {
-          const newValue = makeCustomSelectValueNode(option, config.placeholder || "Select");
-          valueNode.replaceWith(newValue);
-        }
-
-        // Update selected class on all options
-        for (const opt of list.querySelectorAll(".cselect__option")) {
-          opt.classList.toggle("cselect__option--selected", opt === button);
-        }
-
-        if (typeof config.onChange === "function") {
-          Promise.resolve(config.onChange(option.value, option)).catch((err) => _onError(err));
-        }
-      });
-      list.append(button);
+    }
+  } else {
+    for (const option of allOptions) {
+      list.append(makeOptionButton(option));
     }
   }
 

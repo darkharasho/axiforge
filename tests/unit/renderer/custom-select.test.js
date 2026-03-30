@@ -240,3 +240,101 @@ describe("renderCustomSelect — trigger update on selection", () => {
     expect(options[1].classList.contains("cselect__option--selected")).toBe(true);
   });
 });
+
+describe("renderCustomSelect — grouped options", () => {
+  test("renders group headers and grouped options", () => {
+    const host = makeElement("div");
+    const onChange = jest.fn();
+
+    customSelectModule.renderCustomSelect(host, {
+      value: "Necromancer:7",
+      groups: [
+        {
+          label: "Elementalist",
+          icon: "ele.png",
+          options: [
+            { value: "Elementalist:core", label: "Core" },
+            { value: "Elementalist:48", label: "Weaver" },
+          ],
+        },
+        {
+          label: "Necromancer",
+          icon: "necro.png",
+          options: [
+            { value: "Necromancer:core", label: "Core" },
+            { value: "Necromancer:7", label: "Reaper" },
+            { value: "Necromancer:60", label: "Scourge" },
+          ],
+        },
+      ],
+      onChange,
+    });
+
+    // Should have 2 group headers
+    const headers = host.querySelectorAll(".cselect__group-header");
+    expect(headers.length).toBe(2);
+    expect(headers[0].querySelector(".cselect__label").textContent).toBe("Elementalist");
+    expect(headers[1].querySelector(".cselect__label").textContent).toBe("Necromancer");
+
+    // Should have 5 options total (2 + 3)
+    const options = host.querySelectorAll(".cselect__option");
+    expect(options.length).toBe(5);
+
+    // Options should have grouped class
+    expect(options[0].classList.contains("cselect__option--grouped")).toBe(true);
+
+    // Reaper should be selected
+    const selected = host.querySelectorAll(".cselect__option--selected");
+    expect(selected.length).toBe(1);
+    expect(selected[0].querySelector(".cselect__label").textContent).toBe("Reaper");
+  });
+
+  test("group headers are not clickable", () => {
+    const host = makeElement("div");
+    const onChange = jest.fn();
+
+    customSelectModule.renderCustomSelect(host, {
+      value: "Necromancer:core",
+      groups: [
+        {
+          label: "Necromancer",
+          options: [{ value: "Necromancer:core", label: "Core" }],
+        },
+      ],
+      onChange,
+    });
+
+    const header = host.querySelector(".cselect__group-header");
+    expect(header).toBeTruthy();
+    // Headers should be div elements, not buttons
+    expect(header.tagName).toBe("DIV");
+  });
+
+  test("clicking a grouped option fires onChange and updates trigger", () => {
+    const host = makeElement("div");
+    const onChange = jest.fn();
+
+    customSelectModule.renderCustomSelect(host, {
+      value: "Necromancer:7",
+      groups: [
+        {
+          label: "Necromancer",
+          options: [
+            { value: "Necromancer:7", label: "Reaper", icon: "reaper.png" },
+            { value: "Necromancer:60", label: "Scourge", icon: "scourge.png" },
+          ],
+        },
+      ],
+      onChange,
+    });
+
+    const trigger = host.querySelector(".cselect__trigger");
+    expect(trigger.querySelector(".cselect__label").textContent).toBe("Reaper");
+
+    const options = host.querySelectorAll(".cselect__option");
+    options[1].click();
+
+    expect(onChange).toHaveBeenCalledWith("Necromancer:60", expect.objectContaining({ value: "Necromancer:60" }));
+    expect(trigger.querySelector(".cselect__label").textContent).toBe("Scourge");
+  });
+});
