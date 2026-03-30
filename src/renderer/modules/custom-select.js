@@ -227,6 +227,10 @@ export function toggleCustomSelect(root) {
   }
   root.classList.toggle("cselect--open", shouldOpen);
   state.openCustomSelect = shouldOpen ? root : null;
+  if (shouldOpen) {
+    const searchInput = root.querySelector(".cselect__search");
+    if (searchInput) searchInput.focus();
+  }
 }
 
 export function resetCustomSelectMenuPosition(menu) {
@@ -244,6 +248,11 @@ export function closeCustomSelect() {
   if (open.isConnected) {
     open.classList.remove("cselect--open");
     resetCustomSelectMenuPosition(open.querySelector(".cselect__menu"));
+    const searchInput = open.querySelector(".cselect__search");
+    if (searchInput) {
+      searchInput.value = "";
+      try { searchInput.dispatchEvent(new Event("input")); } catch (_) { /* test env */ }
+    }
   }
   state.openCustomSelect = null;
 }
