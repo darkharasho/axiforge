@@ -157,3 +157,51 @@
   font-size: 0.78rem;
   padding: 4px 6px;
 }
+
+/* ── Grouped select ──────────────────────────────────────────────────────── */
+
+.cselect__group-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px 2px;
+  color: #6a7a9e;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  cursor: default;
+  pointer-events: none;
+}
+
+.cselect__group-header .cselect__icon {
+  width: 16px;
+  height: 16px;
+  opacity: 0.65;
+}
+
+.cselect__option--grouped {
+  padding-left: 32px;
+}
+
+.cselect__search {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 7px 10px;
+  margin-bottom: 4px;
+  border: 1px solid #2c3d5e;
+  border-radius: 8px;
+  background: rgba(6, 11, 21, 0.92);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85rem;
+  outline: none;
+}
+
+.cselect__search:focus {
+  border-color: var(--accent-2);
+  box-shadow: 0 0 0 2px rgba(72, 168, 255, 0.2);
+}
+
+.cselect__search::placeholder {
+  color: #5a6a8e;
+}
