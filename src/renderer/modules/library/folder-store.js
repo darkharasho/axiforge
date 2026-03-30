@@ -73,8 +73,9 @@ export function getVisibleBuilds() {
         (b) => (b.gameMode || "pve") === folder.id,
       );
     } else {
-      // Non-smart views: exclude builds that are inside any comp
-      builds = builds.filter((b) => !b.compId);
+      // Non-smart views: exclude builds that are inside an existing comp
+      const compIds = new Set((state.comps || []).map((c) => c.id));
+      builds = builds.filter((b) => !b.compId || !compIds.has(b.compId));
       if (folder.type === "custom") {
         builds = builds.filter((b) => b.folderId === folder.id);
       } else if (folder.type === "all") {

@@ -153,9 +153,22 @@ describe("getVisibleBuilds — all-builds folder", () => {
       makeBuild({ id: "b1", compId: null }),
       makeBuild({ id: "b2", compId: "comp-1" }),
     ];
+    state.comps = [{ id: "comp-1", name: "Test Comp" }];
     state.currentFolder = { type: "all" };
 
     const result = getVisibleBuilds();
     expect(result.map((b) => b.id)).toEqual(["b1"]);
+  });
+
+  test("shows builds with orphaned compId (comp no longer exists)", () => {
+    state.builds = [
+      makeBuild({ id: "b1", compId: null }),
+      makeBuild({ id: "b2", compId: "deleted-comp" }),
+    ];
+    state.comps = [];
+    state.currentFolder = { type: "all" };
+
+    const result = getVisibleBuilds();
+    expect(result.map((b) => b.id)).toEqual(["b1", "b2"]);
   });
 });
