@@ -251,6 +251,20 @@ export function wireDragDropEvents() {
     _callbacks.onRefresh?.();
   };
 
+  const onMove = (evt) => {
+    const dragged = evt.dragged;
+    const related = evt.related;
+    // When dragging a build, don't allow reorder indicators near folders or comps
+    // — builds can only be dropped *into* them (handled by pointer-based hover).
+    if (dragged?.dataset?.buildId) {
+      if (related?.dataset?.folderId || related?.dataset?.compId) return false;
+    }
+    // When dragging a comp, don't allow reorder indicators near folders
+    if (dragged?.dataset?.compId) {
+      if (related?.dataset?.folderId) return false;
+    }
+  };
+
   const sortableOpts = {
     group: "builds",
     animation: 150,
@@ -265,6 +279,7 @@ export function wireDragDropEvents() {
     swapThreshold: 0.65,
     onStart,
     onEnd,
+    onMove,
   };
 
   // Create Sortable on all containers
