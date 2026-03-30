@@ -111,6 +111,15 @@ describe("computePublishStats", () => {
     expect(result.stats.HealingPower).toBe(66);
   });
 
+  test("Giver's chest applies 3-stat formula (issue #122)", () => {
+    const equipment = { slots: { chest: "Giver's" }, runes: {}, infusions: {} };
+    const result = computePublishStats(equipment, null, "Guardian");
+    // Giver's: Toughness major (p=141), HealingPower + Concentration minor (s=101)
+    expect(result.stats.Toughness).toBe(1000 + 141);
+    expect(result.stats.HealingPower).toBe(101);
+    expect(result.stats.Concentration).toBe(101);
+  });
+
   test("equipment with no slots set returns only base stats", () => {
     const equipment = { slots: {}, runes: {}, infusions: {} };
     const result = computePublishStats(equipment, null, "Guardian");
