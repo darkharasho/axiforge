@@ -329,6 +329,7 @@ async function init() {
     raw.foodById = new Map((raw.foods || []).map((f) => [f.id, f]));
     raw.utilityById = new Map((raw.utilities || []).map((u) => [u.id, u]));
     raw.relicById = new Map((raw.relics || []).map((r) => [r.id, r]));
+    raw.relicByName = new Map((raw.relics || []).map((r) => [r.name, r]));
     state.upgradeCatalog = raw;
   }).catch((err) => {
     console.warn("Failed to load upgrade catalog:", err);

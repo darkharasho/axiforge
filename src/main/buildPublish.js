@@ -265,6 +265,17 @@ function resolveEquipmentDisplay(equipment, upgradeCatalog) {
     return { name: label, icon: "" };
   }
 
+  function resolveRelicByName(label, relicByNameMap) {
+    if (!label) return null;
+    const item = relicByNameMap?.get(label);
+    if (!item) return { name: label, icon: "" };
+    return {
+      name: item.name, icon: item.icon || "",
+      ...(item.description ? { description: item.description } : {}),
+      ...(item.facts?.length ? { facts: item.facts } : {}),
+    };
+  }
+
   const runes = equipment.runes || {};
   const sigils = equipment.sigils || {};
   const infusions = equipment.infusions || {};
@@ -298,7 +309,7 @@ function resolveEquipmentDisplay(equipment, upgradeCatalog) {
     infusions: resolvedInfusions,
     food: resolveId(equipment.food, upgradeCatalog.foodById),
     utility: resolveId(equipment.utility, upgradeCatalog.utilityById),
-    relic: resolveByName(equipment.relic),
+    relic: resolveRelicByName(equipment.relic, upgradeCatalog.relicByName),
     enrichment: resolveId(equipment.enrichment, upgradeCatalog.enrichmentById),
   };
 }

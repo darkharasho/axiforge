@@ -130,6 +130,11 @@ function makeMockUpgradeCatalog() {
     }]]),
     foodById: new Map([[91805, { id: 91805, name: "Bowl of Soup", icon: "soup.png" }]]),
     utilityById: new Map([[67528, { id: 67528, name: "Superior Sharpening Stone", icon: "stone.png" }]]),
+    relicByName: new Map([["Relic of the Thief", {
+      name: "Relic of the Thief", icon: "thief-relic.png",
+      description: "Steal health on hit.",
+      facts: [{ type: "Recharge", text: "Cooldown", value: 10 }],
+    }]]),
   };
 }
 
@@ -235,6 +240,25 @@ describe("serializeForPublish", () => {
     expect(result.equipmentDisplay.enrichment.infixUpgrade).toEqual({
       attributes: [{ attribute: "Vitality", modifier: 15 }],
     });
+  });
+
+  test("resolves relic name to display object with description and facts", () => {
+    const build = makeMockBuild();
+    build.equipment.relic = "Relic of the Thief";
+    const result = serializeForPublish(build, makeMockCatalog(), makeMockUpgradeCatalog());
+    expect(result.equipmentDisplay.relic).toEqual({
+      name: "Relic of the Thief",
+      icon: "thief-relic.png",
+      description: "Steal health on hit.",
+      facts: [{ type: "Recharge", text: "Cooldown", value: 10 }],
+    });
+  });
+
+  test("resolves unknown relic name to minimal display object", () => {
+    const build = makeMockBuild();
+    build.equipment.relic = "Relic of the Unknown";
+    const result = serializeForPublish(build, makeMockCatalog(), makeMockUpgradeCatalog());
+    expect(result.equipmentDisplay.relic).toEqual({ name: "Relic of the Unknown", icon: "" });
   });
 
   test("handles missing upgrade catalog gracefully", () => {
