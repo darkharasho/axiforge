@@ -331,45 +331,145 @@ export function renderEditor() {
 // renderEditorForm
 // ---------------------------------------------------------------------------
 export function renderEditorForm() {
-  renderCustomSelect(_el.professionSelect, {
-    value: state.editor.profession,
-    className: "cselect--toolbar",
-    options: state.professions.map((profession) => ({
-      value: profession.id,
-      label: profession.name,
-      icon: profession.icon || "",
-    })),
-    placeholder: "Select profession",
-    onChange: async (nextProfession) => {
-      const professionId = String(nextProfession || "");
-      if (!professionId || professionId === state.editor.profession) return;
+  // Build grouped options: each profession is a group with Core + elite spec children.
+  // Uses SVG class icons from gw2-class-icons package via getProfessionSvg().
+  const currentProfession = state.editor.profession;
+  const gameMode = state.editor.gameMode || "pve";
 
-      if (state.editor.id) {
-        // Saved build — class switch starts a new draft
-        if (state.editorDirty) {
-          const changes = computeUnsavedChangeSummary();
-          const body = changes.length
-            ? `<ul>${changes.map((c) => `<li>${escapeHtml(c)}</li>`).join("")}</ul>`
-            : "<p>You have unsaved changes that will be lost.</p>";
-          const confirmed = await showConfirmModal({
-            title: "Discard unsaved changes?",
-            body,
-            confirmLabel: "Discard & Switch",
-            cancelLabel: "Cancel",
-          });
-          if (!confirmed) {
-            renderEditorForm();
-            return;
+  // Pre-fetch catalogs for all professions in the background so elite specs appear
+  if (_callbacks.getCatalog) {
+    for (const prof of state.professions) {
+      const cacheKey = `${prof.id}_${gameMode}`;
+      if (!state.catalogCache.has(cacheKey)) {
+        _callbacks.getCatalog(prof.id, gameMode).then(() => {
+          // Re-render once the catalog arrives so the dropdown shows elite specs
+          if (state.editor.profession) renderEditorForm();
+        }).catch(() => {});
+      }
+    }
+  }
+
+  const profSpecGroups = state.professions.map((profession) => {
+    const isActive = profession.id === currentProfession;
+    const catalog = isActive
+      ? state.activeCatalog
+      : state.catalogCache.get(`${profession.id}_${gameMode}`) || null;
+    const eliteSpecs = catalog
+      ? (Array.isArray(catalog.specializations) ? catalog.specializations : []).filter((s) => s.elite)
+      : [];
+    const profSvg = getProfessionSvg(profession.name) || "";
+
+    if (eliteSpecs.length > 0) {
+      return {
+        label: profession.name,
+        iconSvg: profSvg,
+        options: [
+          { value: `${profession.id}:core`, label: "Core", iconSvg: profSvg },
+          ...eliteSpecs.map((spec) => ({
+            value: `${profession.id}:${spec.id}`,
+            label: spec.name,
+            iconSvg: getProfessionSvg(spec.name) || profSvg,
+          })),
+        ],
+      };
+    }
+    // No catalog loaded yet — show profession as a single selectable option
+    return {
+      label: profession.name,
+      iconSvg: profSvg,
+      options: [
+        { value: `${profession.id}:core`, label: profession.name, iconSvg: profSvg },
+      ],
+    };
+  });
+
+  // Determine current value: "ProfessionId:eliteSpecId" or "ProfessionId:core"
+  const currentEliteSpecId = (() => {
+    const catalog = state.activeCatalog;
+    if (!catalog) return "core";
+    const slot2 = state.editor.specializations[2];
+    const specId = Number(slot2?.specializationId) || 0;
+    const spec = catalog.specializationById.get(specId);
+    return spec?.elite ? String(specId) : "core";
+  })();
+  const profSpecValue = `${currentProfession}:${currentEliteSpecId}`;
+
+  renderCustomSelect(_el.professionSelect, {
+    value: profSpecValue,
+    className: "cselect--toolbar",
+    searchable: true,
+    groups: profSpecGroups,
+    placeholder: "Select profession / elite spec",
+    onChange: async (nextValue) => {
+      const [professionId, specPart] = nextValue.split(":");
+      if (!professionId) return;
+      const eliteSpecId = specPart === "core" ? 0 : Number(specPart) || 0;
+      const isSameProfession = professionId === state.editor.profession;
+
+      if (isSameProfession) {
+        // Same profession — swap elite spec in slot 3, preserve slots 1-2
+        const catalog = state.activeCatalog;
+        if (!catalog) return;
+        if (eliteSpecId) {
+          if (Number(state.editor.specializations[2]?.specializationId) === eliteSpecId) return;
+          state.editor.specializations[2] = {
+            specializationId: eliteSpecId,
+            majorChoices: { 1: 0, 2: 0, 3: 0 },
+          };
+        } else {
+          // Core — clear elite from slot 3
+          const allSpecs = Array.isArray(catalog.specializations) ? catalog.specializations : [];
+          const usedIds = new Set(
+            state.editor.specializations.slice(0, 2).map((s) => Number(s?.specializationId) || 0).filter(Boolean)
+          );
+          const replacement = allSpecs.find((s) => !s.elite && !usedIds.has(s.id));
+          state.editor.specializations[2] = replacement
+            ? { specializationId: replacement.id, majorChoices: { 1: 0, 2: 0, 3: 0 } }
+            : { specializationId: 0, majorChoices: { 1: 0, 2: 0, 3: 0 } };
+        }
+        _callbacks.enforceEditorConsistency({ preferredEliteSlot: 2 });
+        _callbacks.markEditorChanged({ updateBuildList: true });
+        renderEditor();
+      } else {
+        // Different profession — full switch
+        if (state.editor.id) {
+          if (state.editorDirty) {
+            const changes = computeUnsavedChangeSummary();
+            const body = changes.length
+              ? `<ul>${changes.map((c) => `<li>${escapeHtml(c)}</li>`).join("")}</ul>`
+              : "<p>You have unsaved changes that will be lost.</p>";
+            const confirmed = await showConfirmModal({
+              title: "Discard unsaved changes?",
+              body,
+              confirmLabel: "Discard & Switch",
+              cancelLabel: "Cancel",
+            });
+            if (!confirmed) {
+              renderEditorForm();
+              return;
+            }
+          }
+          await _callbacks.startNewBuild(professionId, { skipDirtyCheck: true });
+        } else {
+          state.editor.profession = professionId;
+          await _callbacks.setProfession(professionId, { preserveSelections: false });
+          state.detail = null;
+          _callbacks.captureEditorBaseline();
+          renderEditor();
+        }
+        // After profession loads, set elite spec if requested
+        if (eliteSpecId) {
+          const catalog = state.activeCatalog;
+          if (catalog) {
+            state.editor.specializations[2] = {
+              specializationId: eliteSpecId,
+              majorChoices: { 1: 0, 2: 0, 3: 0 },
+            };
+            _callbacks.enforceEditorConsistency({ preferredEliteSlot: 2 });
+            _callbacks.markEditorChanged({ updateBuildList: true });
+            renderEditor();
           }
         }
-        await _callbacks.startNewBuild(professionId, { skipDirtyCheck: true });
-      } else {
-        // Unsaved draft — swap in-place (current behavior)
-        state.editor.profession = professionId;
-        await _callbacks.setProfession(professionId, { preserveSelections: false });
-        state.detail = null;
-        _callbacks.captureEditorBaseline();
-        renderEditor();
       }
     },
   });

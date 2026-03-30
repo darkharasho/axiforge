@@ -12,12 +12,15 @@ export function initCustomSelect({ bindHoverPreview, onError } = {}) {
 
 export function renderCustomSelect(host, config = {}) {
   if (!host) return;
-  const options = Array.isArray(config.options) ? config.options : [];
+  const hasGroups = Array.isArray(config.groups) && config.groups.length > 0;
+  const allOptions = hasGroups
+    ? config.groups.flatMap((g) => g.options || [])
+    : Array.isArray(config.options) ? config.options : [];
   const currentValue = String(config.value ?? "");
   const selectedOption =
-    options.find((option) => String(option.value) === currentValue) ||
-    options.find((option) => !option.disabled) ||
-    options[0] ||
+    allOptions.find((option) => String(option.value) === currentValue) ||
+    allOptions.find((option) => !option.disabled) ||
+    allOptions[0] ||
     null;
 
   host.innerHTML = "";
@@ -29,7 +32,7 @@ export function renderCustomSelect(host, config = {}) {
   const trigger = document.createElement("button");
   trigger.type = "button";
   trigger.className = "cselect__trigger";
-  trigger.disabled = Boolean(config.disabled) || !options.length;
+  trigger.disabled = Boolean(config.disabled) || !allOptions.length;
   trigger.append(makeCustomSelectValueNode(selectedOption, config.placeholder || "Select"));
 
   const chevron = document.createElement("span");
@@ -42,51 +45,99 @@ export function renderCustomSelect(host, config = {}) {
   const list = document.createElement("div");
   list.className = "cselect__list";
 
-  if (!options.length) {
+  function makeOptionButton(option, { grouped = false } = {}) {
+    const button = document.createElement("button");
+    button.type = "button";
+    const isSelected = String(option.value) === String(selectedOption?.value ?? "");
+    button.className = `cselect__option${grouped ? " cselect__option--grouped" : ""}${isSelected ? " cselect__option--selected" : ""}`;
+    button.disabled = Boolean(option.disabled);
+    button.append(makeCustomSelectValueNode(option, config.placeholder || "Select"));
+
+    if (option.kind && option.entity && _bindHoverPreview) {
+      _bindHoverPreview(button, option.kind, () => option.entity);
+    }
+
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (button.disabled) return;
+      closeCustomSelect();
+
+      // Update trigger to reflect the newly selected option
+      const valueNode = trigger.querySelector(".cselect__value");
+      if (valueNode) {
+        const newValue = makeCustomSelectValueNode(option, config.placeholder || "Select");
+        valueNode.replaceWith(newValue);
+      }
+
+      // Update selected class on all options
+      for (const opt of list.querySelectorAll(".cselect__option")) {
+        opt.classList.toggle("cselect__option--selected", opt === button);
+      }
+
+      if (typeof config.onChange === "function") {
+        Promise.resolve(config.onChange(option.value, option)).catch((err) => _onError(err));
+      }
+    });
+    return button;
+  }
+
+  // Track group elements for search filtering (direct references avoid attribute selectors)
+  const groupRefs = [];
+
+  if (hasGroups) {
+    for (const group of config.groups) {
+      const header = document.createElement("div");
+      header.className = "cselect__group-header";
+      header.dataset.group = group.label;
+      header.append(makeCustomSelectValueNode({ label: group.label, icon: group.icon, iconSvg: group.iconSvg }));
+      list.append(header);
+
+      const optionRefs = [];
+      for (const option of group.options || []) {
+        const btn = makeOptionButton(option, { grouped: true });
+        btn.dataset.value = option.value;
+        list.append(btn);
+        optionRefs.push({ el: btn, label: option.label });
+      }
+      groupRefs.push({ headerEl: header, groupLabel: group.label, options: optionRefs });
+    }
+  } else if (allOptions.length) {
+    for (const option of allOptions) {
+      list.append(makeOptionButton(option));
+    }
+  } else {
     const empty = document.createElement("p");
     empty.className = "cselect__empty";
     empty.textContent = "No options";
     list.append(empty);
-  } else {
-    for (const option of options) {
-      const button = document.createElement("button");
-      button.type = "button";
-      const isSelected = String(option.value) === String(selectedOption?.value ?? "");
-      button.className = `cselect__option ${isSelected ? "cselect__option--selected" : ""}`;
-      button.disabled = Boolean(option.disabled);
-      button.append(makeCustomSelectValueNode(option, config.placeholder || "Select"));
-
-      if (option.kind && option.entity && _bindHoverPreview) {
-        _bindHoverPreview(button, option.kind, () => option.entity);
-      }
-
-      button.addEventListener("click", (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        if (button.disabled) return;
-        closeCustomSelect();
-
-        // Update trigger to reflect the newly selected option
-        const valueNode = trigger.querySelector(".cselect__value");
-        if (valueNode) {
-          const newValue = makeCustomSelectValueNode(option, config.placeholder || "Select");
-          valueNode.replaceWith(newValue);
-        }
-
-        // Update selected class on all options
-        for (const opt of list.querySelectorAll(".cselect__option")) {
-          opt.classList.toggle("cselect__option--selected", opt === button);
-        }
-
-        if (typeof config.onChange === "function") {
-          Promise.resolve(config.onChange(option.value, option)).catch((err) => _onError(err));
-        }
-      });
-      list.append(button);
-    }
   }
 
   menu.append(list);
+
+  if (config.searchable && hasGroups) {
+    const searchInput = document.createElement("input");
+    searchInput.type = "text";
+    searchInput.className = "cselect__search";
+    searchInput.placeholder = "Search...";
+    searchInput.addEventListener("click", (e) => { e.stopPropagation(); });
+    searchInput.addEventListener("input", () => {
+      const query = searchInput.value.toLowerCase().trim();
+      for (const groupRef of groupRefs) {
+        let groupHasVisible = false;
+        const matchesGroup = groupRef.groupLabel.toLowerCase().includes(query);
+        for (const optRef of groupRef.options) {
+          const matchesOption = optRef.label.toLowerCase().includes(query);
+          const visible = !query || matchesOption || matchesGroup;
+          optRef.el.style.display = visible ? "" : "none";
+          if (visible) groupHasVisible = true;
+        }
+        groupRef.headerEl.style.display = groupHasVisible ? "" : "none";
+      }
+    });
+    menu.insertBefore(searchInput, list);
+  }
+
   root.append(trigger, menu);
   host.append(root);
 
@@ -119,6 +170,12 @@ export function makeCustomSelectValueNode(option, placeholder) {
 }
 
 export function makeCustomSelectIconNode(option) {
+  if (option?.iconSvg) {
+    const span = document.createElement("span");
+    span.className = "cselect__icon cselect__icon--svg";
+    span.innerHTML = String(option.iconSvg);
+    return span;
+  }
   if (option?.icon) {
     const img = document.createElement("img");
     img.className = "cselect__icon";
@@ -176,6 +233,10 @@ export function toggleCustomSelect(root) {
   }
   root.classList.toggle("cselect--open", shouldOpen);
   state.openCustomSelect = shouldOpen ? root : null;
+  if (shouldOpen) {
+    const searchInput = root.querySelector(".cselect__search");
+    if (searchInput) searchInput.focus();
+  }
 }
 
 export function resetCustomSelectMenuPosition(menu) {
@@ -193,6 +254,11 @@ export function closeCustomSelect() {
   if (open.isConnected) {
     open.classList.remove("cselect--open");
     resetCustomSelectMenuPosition(open.querySelector(".cselect__menu"));
+    const searchInput = open.querySelector(".cselect__search");
+    if (searchInput) {
+      searchInput.value = "";
+      try { searchInput.dispatchEvent(new Event("input")); } catch (_) { /* test env */ }
+    }
   }
   state.openCustomSelect = null;
 }

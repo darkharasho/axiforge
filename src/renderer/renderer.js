@@ -188,6 +188,7 @@ initRenderPagesCallbacks({
   showError,
   setPublishStatus,
   navigateToPage,
+  getCatalog,
 });
 initSettingsCallbacks({ refreshOnboardingStatus, render });
 
