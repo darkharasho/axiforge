@@ -188,9 +188,12 @@
 .cselect__group-header .cselect__icon svg {
   width: 16px;
   height: 16px;
-  fill: white;
-  stroke: black;
-  stroke-width: 1px;
+}
+
+.cselect__group-header .cselect__icon svg * {
+  fill: white !important;
+  stroke: black !important;
+  stroke-width: 1px !important;
 }
 
 .cselect__option--grouped {
