@@ -193,7 +193,7 @@
 .cselect__group-header .cselect__icon svg * {
   fill: white !important;
   stroke: black !important;
-  stroke-width: 8px !important;
+  stroke-width: 4px !important;
 }
 
 .cselect__option--grouped {
