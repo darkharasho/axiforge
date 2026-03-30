@@ -331,10 +331,24 @@ export function renderEditor() {
 // renderEditorForm
 // ---------------------------------------------------------------------------
 export function renderEditorForm() {
-  // Build grouped options: each profession is a group with its elite specs as children
-  // Only the active profession shows elite spec options (catalog may not be loaded for others)
+  // Build grouped options: each profession is a group with Core + elite spec children.
+  // Uses SVG class icons from gw2-class-icons package via getProfessionSvg().
   const currentProfession = state.editor.profession;
   const gameMode = state.editor.gameMode || "pve";
+
+  // Pre-fetch catalogs for all professions in the background so elite specs appear
+  if (_callbacks.getCatalog) {
+    for (const prof of state.professions) {
+      const cacheKey = `${prof.id}_${gameMode}`;
+      if (!state.catalogCache.has(cacheKey)) {
+        _callbacks.getCatalog(prof.id, gameMode).then(() => {
+          // Re-render once the catalog arrives so the dropdown shows elite specs
+          if (state.editor.profession) renderEditorForm();
+        }).catch(() => {});
+      }
+    }
+  }
+
   const profSpecGroups = state.professions.map((profession) => {
     const isActive = profession.id === currentProfession;
     const catalog = isActive
@@ -343,17 +357,18 @@ export function renderEditorForm() {
     const eliteSpecs = catalog
       ? (Array.isArray(catalog.specializations) ? catalog.specializations : []).filter((s) => s.elite)
       : [];
+    const profSvg = getProfessionSvg(profession.name) || "";
 
     if (eliteSpecs.length > 0) {
       return {
         label: profession.name,
-        icon: profession.icon || "",
+        iconSvg: profSvg,
         options: [
-          { value: `${profession.id}:core`, label: "Core", icon: profession.icon || "" },
+          { value: `${profession.id}:core`, label: "Core", iconSvg: profSvg },
           ...eliteSpecs.map((spec) => ({
             value: `${profession.id}:${spec.id}`,
             label: spec.name,
-            icon: spec.icon || profession.icon || "",
+            iconSvg: getProfessionSvg(spec.name) || profSvg,
           })),
         ],
       };
@@ -361,9 +376,9 @@ export function renderEditorForm() {
     // No catalog loaded yet — show profession as a single selectable option
     return {
       label: profession.name,
-      icon: profession.icon || "",
+      iconSvg: profSvg,
       options: [
-        { value: `${profession.id}:core`, label: profession.name, icon: profession.icon || "" },
+        { value: `${profession.id}:core`, label: profession.name, iconSvg: profSvg },
       ],
     };
   });

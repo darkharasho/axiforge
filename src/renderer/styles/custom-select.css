@@ -121,6 +121,18 @@
   flex: 0 0 auto;
 }
 
+.cselect__icon--svg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+}
+
+.cselect__icon--svg svg {
+  width: 100%;
+  height: 100%;
+}
+
 .cselect__icon--fallback {
   display: grid;
   place-items: center;

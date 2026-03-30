@@ -170,6 +170,12 @@ export function makeCustomSelectValueNode(option, placeholder) {
 }
 
 export function makeCustomSelectIconNode(option) {
+  if (option?.iconSvg) {
+    const span = document.createElement("span");
+    span.className = "cselect__icon cselect__icon--svg";
+    span.innerHTML = String(option.iconSvg);
+    return span;
+  }
   if (option?.icon) {
     const img = document.createElement("img");
     img.className = "cselect__icon";
