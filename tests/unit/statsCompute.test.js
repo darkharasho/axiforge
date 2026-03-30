@@ -101,6 +101,16 @@ describe("computePublishStats", () => {
     expect(result.stats.Concentration).toBe(66);
   });
 
+  test("Crusader chest applies 4-stat formula (issue #121)", () => {
+    const equipment = { slots: { chest: "Crusader" }, runes: {}, infusions: {} };
+    const result = computePublishStats(equipment, null, "Guardian");
+    // Crusader: Power + Toughness major (p4=121), Ferocity + HealingPower minor (s4=66)
+    expect(result.stats.Power).toBe(1000 + 121);
+    expect(result.stats.Toughness).toBe(1000 + 121);
+    expect(result.stats.Ferocity).toBe(66);
+    expect(result.stats.HealingPower).toBe(66);
+  });
+
   test("equipment with no slots set returns only base stats", () => {
     const equipment = { slots: {}, runes: {}, infusions: {} };
     const result = computePublishStats(equipment, null, "Guardian");

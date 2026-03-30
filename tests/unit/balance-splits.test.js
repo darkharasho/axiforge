@@ -125,6 +125,21 @@ describe("splits.json schema validation", () => {
     }
   });
 
+  test("Carnivore trait skill (72369) WvW split uses value field matching API AttributeAdjust type (issue #121)", () => {
+    const entry = realSplits.skills["72369"];
+    expect(entry).toBeDefined();
+    expect(entry.name).toBe("Carnivore (trait skill)");
+    expect(entry.modes.wvw.complete).toBe(true);
+    // Facts must use "value" field (not "duration") to correctly merge with
+    // the GW2 API's AttributeAdjust facts — otherwise the PvE value persists.
+    for (const fact of entry.modes.wvw.facts) {
+      expect(fact.type).toBe("AttributeAdjust");
+      expect(fact).toHaveProperty("value");
+      expect(fact).not.toHaveProperty("duration");
+      expect(fact.value).toBeLessThan(1000); // WvW values are 586/581, not PvE 3205
+    }
+  });
+
   test("trait entries have valid structure", () => {
     for (const [id, entry] of Object.entries(realSplits.traits)) {
       expect(id).toMatch(/^\d+$/);
