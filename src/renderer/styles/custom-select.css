@@ -188,7 +188,8 @@
 .cselect__group-header .cselect__icon {
   width: 16px;
   height: 16px;
-  opacity: 0.65;
+  filter: brightness(0) invert(1);
+  opacity: 0.85;
 }
 
 .cselect__option--grouped {
