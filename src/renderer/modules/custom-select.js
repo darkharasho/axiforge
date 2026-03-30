@@ -120,7 +120,7 @@ export function renderCustomSelect(host, config = {}) {
     searchInput.type = "text";
     searchInput.className = "cselect__search";
     searchInput.placeholder = "Search...";
-    searchInput.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); });
+    searchInput.addEventListener("click", (e) => { e.stopPropagation(); });
     searchInput.addEventListener("input", () => {
       const query = searchInput.value.toLowerCase().trim();
       for (const groupRef of groupRefs) {
