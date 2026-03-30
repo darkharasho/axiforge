@@ -122,6 +122,26 @@ describe("computeSlotStats — missing stat combos (issue #29)", () => {
   });
 });
 
+describe("computeSlotStats — Crusader stats (issue #121)", () => {
+  test("Crusader is defined as a 4-stat combo with Power+Toughness major, Ferocity+HealingPower minor", () => {
+    const result = computeSlotStats("Crusader", "chest");
+    expect(result).toHaveLength(4);
+    expect(result[0]).toEqual({ stat: "Power",        value: 121 }); // p4 for chest
+    expect(result[1]).toEqual({ stat: "Toughness",    value: 121 }); // p4 for chest
+    expect(result[2]).toEqual({ stat: "Ferocity",     value: 66 });  // s4 for chest
+    expect(result[3]).toEqual({ stat: "HealingPower", value: 66 });  // s4 for chest
+  });
+
+  test("Crusader ring1 applies 4-stat formula", () => {
+    const result = computeSlotStats("Crusader", "ring1");
+    expect(result).toHaveLength(4);
+    expect(result[0]).toEqual({ stat: "Power",        value: 105 }); // p4 for ring1
+    expect(result[1]).toEqual({ stat: "Toughness",    value: 105 }); // p4 for ring1
+    expect(result[2]).toEqual({ stat: "Ferocity",     value: 56 });  // s4 for ring1
+    expect(result[3]).toEqual({ stat: "HealingPower", value: 56 });  // s4 for ring1
+  });
+});
+
 describe("computeSlotStats — 9-stat combo (Celestial)", () => {
   test("Celestial chest uses per-stat Celestial weight", () => {
     // chest: c=66 (Celestial per-stat weight)

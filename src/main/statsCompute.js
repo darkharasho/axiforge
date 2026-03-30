@@ -25,6 +25,7 @@ const _STAT_COMBOS_ENTRIES = [
   ["Harrier's", { stats: ["Power", "HealingPower", "Concentration"] }],
   ["Ritualist's", { stats: ["Vitality", "ConditionDamage", "Expertise", "Concentration"] }],
   ["Seraph", { stats: ["Precision", "ConditionDamage", "HealingPower", "Concentration"] }],
+  ["Crusader", { stats: ["Power", "Toughness", "Ferocity", "HealingPower"] }],
   ["Zealot's", { stats: ["Power", "Precision", "HealingPower"] }],
   ["Celestial", { stats: ["Power", "Precision", "Toughness", "Vitality", "ConditionDamage", "Ferocity", "HealingPower", "Expertise", "Concentration"] }],
 ];

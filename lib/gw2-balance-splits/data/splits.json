@@ -72723,19 +72723,17 @@
         "wvw": {
           "facts": [
             {
-              "type": "Buff",
-              "text": "Life siphon damage",
-              "status": "Life siphon damage",
-              "duration": 586,
-              "apply_count": 1,
+              "type": "AttributeAdjust",
+              "text": "Life Siphon Damage",
+              "value": 586,
+              "target": "Power",
               "icon": "https://render.guildwars2.com/file/61AA4919C4A7990903241B680A69530121E994C7/156657.png"
             },
             {
-              "type": "Buff",
-              "text": "Life siphon healing",
-              "status": "Life siphon healing",
-              "duration": 581,
-              "apply_count": 1,
+              "type": "AttributeAdjust",
+              "text": "Life Siphon Healing",
+              "value": 581,
+              "target": "Healing",
               "icon": "https://render.guildwars2.com/file/61AA4919C4A7990903241B680A69530121E994C7/156657.png"
             }
           ],
