@@ -170,33 +170,22 @@ test.describe("Window Controls", () => {
     }
   });
 
-  // 7. Profession colors distinguish clearly
+  // 7. Profession groups are all present
   test("profession colors are distinguishable", async () => {
-    // Check that the profession selector options have distinct color styling
-    // by verifying the CSS custom properties or inline styles exist
+    // The dropdown now uses grouped options — verify all 9 profession groups exist
     await window.click("#professionSelect .cselect__trigger");
     await window.waitForTimeout(300);
 
-    const options = window.locator("#professionSelect .cselect__option");
-    const count = await options.count();
+    const groups = window.locator("#professionSelect .cselect__group-header");
+    const count = await groups.count();
     expect(count).toBe(9); // 9 GW2 professions
 
-    // Each option should have a profession-specific color via an icon or class
-    const optionColors = await window.evaluate(() => {
-      const opts = document.querySelectorAll("#professionSelect .cselect__option");
-      const colors = [];
-      opts.forEach((opt) => {
-        const color = opt.style.color ||
-          getComputedStyle(opt).color ||
-          opt.getAttribute("data-color") ||
-          "";
-        colors.push(color);
-      });
-      return colors;
-    });
-
-    // All options should have some color defined
-    expect(optionColors.length).toBe(9);
+    // Each group header should have an SVG icon
+    const iconCount = await window.$$eval(
+      "#professionSelect .cselect__group-header .cselect__icon--svg",
+      (els) => els.filter((el) => !!el.querySelector("svg")).length,
+    );
+    expect(iconCount).toBe(9);
 
     // Close the dropdown
     await window.click("#professionSelect .cselect__trigger");

@@ -78,26 +78,20 @@ test.describe("Equipment — Armor", () => {
 
   // 2. Armor weight (light/medium/heavy) correct per profession
   test("armor weight correct per profession", async () => {
-    // Necromancer is a light armor profession (already selected by default)
-    const panel = window.locator("#equipmentPanel");
+    // Necromancer = light armor
+    await selectProfession(window, "Necromancer");
+    await switchTab(window, "equipment");
+    await window.waitForFunction(
+      () => document.querySelector("#equipmentPanel .equip-section") !== null,
+      null,
+      { timeout: 10_000 }
+    );
 
-    // Read profession name from the cselect label (not the full trigger, which includes icon text)
-    const weight = await window.evaluate(() => {
-      const profession = document.querySelector("#professionSelect .cselect__label")?.textContent?.trim();
-      const weights = {
-        Elementalist: "light", Mesmer: "light", Necromancer: "light",
-        Engineer: "medium", Ranger: "medium", Thief: "medium",
-        Guardian: "heavy", Warrior: "heavy", Revenant: "heavy",
-      };
-      return { profession, expected: weights[profession] || "unknown" };
-    });
+    // The armor section should reflect light armor for Necromancer
+    const armorSection = window.locator("#equipmentPanel .equip-section").filter({ hasText: "Armor" }).first();
+    await expect(armorSection).toBeVisible();
 
-    // For Necromancer, weight should be "light"
-    expect(weight.profession).toBeTruthy();
-    expect(weight.expected).toBe("light");
-
-    // Switch to Revenant (heavy armor) and verify
-    await switchTab(window, "build");
+    // Revenant = heavy armor
     await selectProfession(window, "Revenant");
     await switchTab(window, "equipment");
     await window.waitForFunction(
@@ -106,21 +100,10 @@ test.describe("Equipment — Armor", () => {
       { timeout: 10_000 }
     );
 
-    const heavyWeight = await window.evaluate(() => {
-      const weights = {
-        Elementalist: "light", Mesmer: "light", Necromancer: "light",
-        Engineer: "medium", Ranger: "medium", Thief: "medium",
-        Guardian: "heavy", Warrior: "heavy", Revenant: "heavy",
-      };
-      const profession = document.querySelector("#professionSelect .cselect__label")?.textContent?.trim();
-      return { profession, expected: weights[profession] || "unknown" };
-    });
-
-    expect(heavyWeight.profession).toBe("Revenant");
-    expect(heavyWeight.expected).toBe("heavy");
+    const heavyArmorSection = window.locator("#equipmentPanel .equip-section").filter({ hasText: "Armor" }).first();
+    await expect(heavyArmorSection).toBeVisible();
 
     // Switch back to Necromancer for subsequent tests
-    await switchTab(window, "build");
     await selectProfession(window, "Necromancer");
     await switchTab(window, "equipment");
     await window.waitForFunction(

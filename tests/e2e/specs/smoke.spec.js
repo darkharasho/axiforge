@@ -30,17 +30,8 @@ test.describe("Smoke test", () => {
   });
 
   test("can select Necromancer and see specializations host", async () => {
-    // Open the custom select dropdown
-    await window.click("#professionSelect .cselect__trigger");
-    // Click the Necromancer option
-    await window.click("#professionSelect .cselect__option:has-text('Necromancer')");
-    // Wait for specializationsHost to contain spec cards — this proves setProfession()
-    // fetched the Necromancer catalog and renderSpecializations() populated the host.
-    await window.waitForFunction(
-      () => !!document.querySelector("#specializationsHost article.spec-card"),
-      null,
-      { timeout: 15_000 }
-    );
+    const { selectProfession } = require("../helpers/editor");
+    await selectProfession(window, "Necromancer");
     const specHost = window.locator("#specializationsHost");
     await expect(specHost).toBeVisible();
   });

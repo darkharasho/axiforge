@@ -1,7 +1,16 @@
 async function selectProfession(window, name) {
-  // #professionSelect is a custom select (.cselect), not a native <select>
+  // #professionSelect is a grouped custom select — professions are group headers,
+  // options underneath are "Core {Profession}" + elite specs. Use the search input
+  // to filter, then click the option whose label contains the profession name.
   await window.click("#professionSelect .cselect__trigger");
-  await window.click(`#professionSelect .cselect__option:has-text('${name}')`);
+  const search = window.locator("#professionSelect .cselect__search");
+  if (await search.isVisible()) {
+    await search.fill(name);
+    await window.waitForTimeout(200);
+  }
+  // Click the option containing the profession name (e.g. "Core Necromancer" or "Necromancer")
+  const option = window.locator(`#professionSelect .cselect__option:has-text("${name}") >> visible=true`).first();
+  await option.click();
   // Wait for catalog to load — spec cards appear when setProfession() completes
   await window.waitForFunction(
     () => !!document.querySelector("#specializationsHost article.spec-card"),

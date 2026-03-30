@@ -32,23 +32,22 @@ test.describe("Editor — Profession & Metadata", () => {
 
   // ── Test 1: All 9 professions are selectable ──────────────────────────────
   test("all 9 professions selectable", async () => {
-    // Open the custom-select dropdown
+    // Open the custom-select dropdown (grouped: professions are group headers)
     await window.click("#professionSelect .cselect__trigger");
-    // Wait for the dropdown menu to appear
     await window.waitForSelector("#professionSelect .cselect--open", { timeout: 5_000 });
 
-    // Gather all option labels
-    const optionLabels = await window.$$eval(
-      "#professionSelect .cselect__option .cselect__label",
+    // Gather all group header labels — each profession should have a group
+    const groupLabels = await window.$$eval(
+      "#professionSelect .cselect__group-header .cselect__label",
       (els) => els.map((el) => el.textContent.trim()),
     );
 
     for (const name of ALL_PROFESSIONS) {
-      expect(optionLabels, `Missing profession: ${name}`).toContain(name);
+      expect(groupLabels, `Missing profession group: ${name}`).toContain(name);
     }
-    expect(optionLabels.length).toBe(ALL_PROFESSIONS.length);
+    expect(groupLabels.length).toBe(ALL_PROFESSIONS.length);
 
-    // Close the dropdown without selecting (click trigger again or click elsewhere)
+    // Close the dropdown without selecting
     await window.click("#professionSelect .cselect__trigger");
   });
 
@@ -68,34 +67,28 @@ test.describe("Editor — Profession & Metadata", () => {
     await window.click("#professionSelect .cselect__trigger");
     await window.waitForSelector("#professionSelect .cselect--open", { timeout: 5_000 });
 
-    // Each option should have a .cselect__icon (either <img> or fallback <span>)
+    // Each option should have a .cselect__icon (SVG spans via iconSvg)
     const iconCount = await window.$$eval(
       "#professionSelect .cselect__option .cselect__icon",
       (els) => els.length,
     );
-    expect(iconCount).toBe(ALL_PROFESSIONS.length);
+    expect(iconCount).toBeGreaterThanOrEqual(ALL_PROFESSIONS.length);
 
-    // The professions fixture provides icon URLs, so they should render as <img> elements
-    const imgIcons = await window.$$eval(
-      "#professionSelect .cselect__option img.cselect__icon",
-      (els) =>
-        els.map((el) => ({
-          src: el.src,
-          alt: el.alt,
-          className: el.className,
-        })),
+    // Icons are SVG spans (.cselect__icon--svg), not <img> elements
+    const svgIcons = await window.$$eval(
+      "#professionSelect .cselect__option .cselect__icon--svg",
+      (els) => els.map((el) => ({ hasSvg: !!el.querySelector("svg"), className: el.className })),
     );
-    // All 9 professions have icon URLs, so all should be <img>
-    expect(imgIcons.length).toBe(ALL_PROFESSIONS.length);
+    expect(svgIcons.length).toBeGreaterThanOrEqual(ALL_PROFESSIONS.length);
 
-    // Each icon img should have a non-empty src
-    for (const icon of imgIcons) {
-      expect(icon.src).toBeTruthy();
+    // Each SVG icon should contain an actual <svg> element
+    for (const icon of svgIcons) {
+      expect(icon.hasSvg).toBe(true);
       expect(icon.className).toContain("cselect__icon");
     }
 
-    // Also verify the trigger button shows the currently-selected profession's icon
-    const triggerIcon = window.locator("#professionSelect .cselect__trigger img.cselect__icon");
+    // Also verify the trigger button shows a profession SVG icon
+    const triggerIcon = window.locator("#professionSelect .cselect__trigger .cselect__icon--svg");
     await expect(triggerIcon).toBeVisible();
 
     // Close the dropdown
@@ -169,8 +162,7 @@ test.describe("Editor — Profession & Metadata", () => {
 
     // Trigger a profession switch (pick one that needs loading)
     // Use a profession whose catalog might already be in the cache — but we cleared it
-    await window.click("#professionSelect .cselect__trigger");
-    await window.click("#professionSelect .cselect__option:has-text('Revenant')");
+    await selectProfession(window, "Revenant");
 
     const sawSkeleton = await skelPromise;
     expect(sawSkeleton).toBe(true);

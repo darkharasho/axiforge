@@ -4,6 +4,7 @@ const fs = require("fs");
 const os = require("os");
 const { PORT: MOCK_PORT } = require("../mock-server/server");
 
+const VITE_PORT = 5199;
 const APP_NAME = "axiforge-desktop";
 const DATA_DIR = getDataDir();
 
@@ -34,6 +35,7 @@ async function launchApp({ clean = true } = {}) {
       ...env,
       APP_PROFILE: "e2e-test",
       GW2_API_ROOT: `http://localhost:${MOCK_PORT}/v2`,
+      VITE_DEV_SERVER_URL: `http://localhost:${VITE_PORT}`,
     },
   });
   const window = await app.firstWindow();

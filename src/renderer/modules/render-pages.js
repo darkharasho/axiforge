@@ -364,7 +364,7 @@ export function renderEditorForm() {
         label: profession.name,
         iconSvg: profSvg,
         options: [
-          { value: `${profession.id}:core`, label: "Core", iconSvg: profSvg },
+          { value: `${profession.id}:core`, label: `Core ${profession.name}`, iconSvg: profSvg },
           ...eliteSpecs.map((spec) => ({
             value: `${profession.id}:${spec.id}`,
             label: spec.name,
