@@ -16,6 +16,38 @@ const CONVERSION_TARGET_MAP = {
   Healing: "HealingPower",
 };
 
+// --- Boon-modifier trait constants ---
+// Roiling Mists: has fury crit bonus but no Buff(Fury) fact in the API
+const IMPLICIT_FURY_TRAITS = new Set([1719]);
+// Fang and Claw: AttributeAdjust facts apply to pets, not the player
+const PET_STAT_TRAITS = new Set([1016]);
+// Notoriety: modifies Might per-stack values (+40P/+20CD instead of +30P/+30CD)
+const NOTORIETY_TRAIT_ID = 1765;
+const NOTORIETY_MIGHT_POWER = 40;
+const NOTORIETY_MIGHT_CONDI = 20;
+
+/**
+ * Collect all active trait IDs — major choices + minor (auto-selected) traits.
+ * Shared by computeTraitConversions, computeFuryCritModifier, etc.
+ */
+function collectActiveTraitIds() {
+  const catalog = state.activeCatalog;
+  if (!catalog) return new Set();
+  const ids = new Set();
+  for (const spec of state.editor.specializations || []) {
+    for (const id of Object.values(spec?.majorChoices || {})) {
+      const n = Number(id);
+      if (n) ids.add(n);
+    }
+    const specId = Number(spec?.specializationId || spec?.id) || 0;
+    const specData = specId ? catalog.specializationById?.get(specId) : null;
+    for (const minorId of specData?.minorTraits || []) {
+      if (minorId) ids.add(Number(minorId));
+    }
+  }
+  return ids;
+}
+
 /**
  * Compute stat bonuses from active trait AttributeConversion facts.
  * Reads base stats (before conversions) and returns a map of bonus stats to add.
@@ -29,13 +61,7 @@ export function computeTraitConversions(baseStats) {
   const catalog = state.activeCatalog;
   if (!catalog?.traitById) return bonuses;
 
-  // Collect active trait IDs from selected specializations
-  const activeTraitIds = new Set(
-    (state.editor.specializations || [])
-      .flatMap((s) => Object.values(s?.majorChoices || {}))
-      .map(Number)
-      .filter(Boolean)
-  );
+  const activeTraitIds = collectActiveTraitIds();
   if (!activeTraitIds.size) return bonuses;
 
   for (const traitId of activeTraitIds) {
@@ -60,47 +86,97 @@ export function computeTraitConversions(baseStats) {
 }
 
 /**
+ * Check whether a trait is fury-related: has a Buff(Fury) fact or is in IMPLICIT_FURY_TRAITS.
+ */
+function isFuryTrait(trait, traitId) {
+  if (IMPLICIT_FURY_TRAITS.has(traitId)) return true;
+  return trait.facts?.some((f) => f.type === "Buff" && f.status === "Fury") || false;
+}
+
+/**
  * Compute additional fury crit-chance modifier from active traits.
  * Some traits (e.g. Warrior's Furious Burst) grant extra crit chance when Fury
  * is active.  The GW2 API represents this as a trait with both a Buff fact
  * (status "Fury") and a Percent fact (text "Critical Chance Increase").
  *
+ * When multiple "Critical Chance Increase" facts exist on a trait, they represent
+ * game-mode splits: first = PvE, second = WvW.
+ *
+ * @param {string} [gameMode="pve"] - "pve" or "wvw"
  * @returns {number} Extra crit-chance percentage points from traits (0 if none)
  */
-export function computeFuryCritModifier() {
+export function computeFuryCritModifier(gameMode = "pve") {
   const catalog = state.activeCatalog;
   if (!catalog?.traitById) return 0;
 
-  // Collect active trait IDs — both major choices and minor (auto-selected) traits
-  const activeTraitIds = new Set();
-  for (const spec of state.editor.specializations || []) {
-    for (const id of Object.values(spec?.majorChoices || {})) {
-      const n = Number(id);
-      if (n) activeTraitIds.add(n);
-    }
-    const specId = Number(spec?.specializationId || spec?.id) || 0;
-    const specData = specId ? catalog.specializationById?.get(specId) : null;
-    for (const minorId of specData?.minorTraits || []) {
-      if (minorId) activeTraitIds.add(Number(minorId));
-    }
-  }
+  const activeTraitIds = collectActiveTraitIds();
   if (!activeTraitIds.size) return 0;
 
   let modifier = 0;
   for (const traitId of activeTraitIds) {
     const trait = catalog.traitById.get(traitId);
     if (!trait?.facts) continue;
-    const hasFuryBuff = trait.facts.some(
-      (f) => f.type === "Buff" && f.status === "Fury"
+    if (!isFuryTrait(trait, traitId)) continue;
+    const critFacts = trait.facts.filter(
+      (f) => f.type === "Percent" && f.text === "Critical Chance Increase" && f.percent
     );
-    if (!hasFuryBuff) continue;
-    for (const fact of trait.facts) {
-      if (fact.type === "Percent" && fact.text === "Critical Chance Increase" && fact.percent) {
-        modifier += fact.percent;
-      }
+    if (critFacts.length > 0) {
+      const idx = gameMode === "wvw" ? Math.min(1, critFacts.length - 1) : 0;
+      modifier += critFacts[idx].percent;
     }
   }
   return modifier;
+}
+
+/**
+ * Compute flat stat bonuses from traits that activate while Fury is active.
+ * Reads AttributeAdjust facts from fury-related traits.
+ * Excludes PET_STAT_TRAITS where the bonuses apply to pets, not the player.
+ *
+ * @param {string} [gameMode="pve"] - "pve" or "wvw"
+ * @returns {Object} Map of stat key → bonus value (e.g. { Ferocity: 180 })
+ */
+export function computeFuryStatBonuses(gameMode = "pve") {
+  const catalog = state.activeCatalog;
+  if (!catalog?.traitById) return {};
+
+  const activeTraitIds = collectActiveTraitIds();
+  if (!activeTraitIds.size) return {};
+
+  const bonuses = {};
+  for (const traitId of activeTraitIds) {
+    if (PET_STAT_TRAITS.has(traitId)) continue;
+    const trait = catalog.traitById.get(traitId);
+    if (!trait?.facts) continue;
+    if (!isFuryTrait(trait, traitId)) continue;
+
+    // Group AttributeAdjust facts by target for game-mode selection
+    const byTarget = new Map();
+    for (const fact of trait.facts) {
+      if (fact.type !== "AttributeAdjust" || !fact.target || !fact.value) continue;
+      if (!byTarget.has(fact.target)) byTarget.set(fact.target, []);
+      byTarget.get(fact.target).push(fact.value);
+    }
+
+    for (const [target, values] of byTarget) {
+      const statKey = CONVERSION_TARGET_MAP[target] || target;
+      const idx = gameMode === "wvw" ? Math.min(1, values.length - 1) : 0;
+      bonuses[statKey] = (bonuses[statKey] || 0) + values[idx];
+    }
+  }
+  return bonuses;
+}
+
+/**
+ * Compute effective Might per-stack values, accounting for Notoriety trait.
+ * @returns {{ power: number, condi: number }}
+ */
+export function computeMightPerStack() {
+  const activeTraitIds = collectActiveTraitIds();
+  if (activeTraitIds.has(NOTORIETY_TRAIT_ID)) {
+    return { power: NOTORIETY_MIGHT_POWER, condi: NOTORIETY_MIGHT_CONDI };
+  }
+  return { power: MIGHT_POWER_PER_STACK, condi: MIGHT_CONDI_PER_STACK };
 }
 
 /**
@@ -317,8 +393,16 @@ export function computeEquipmentStats(assumedBoons = null, sigilStacks = null) {
 
   // Assumed boon contributions (session-only, not persisted)
   if (assumedBoons) {
-    totals.Power += (assumedBoons.might || 0) * MIGHT_POWER_PER_STACK;
-    totals.ConditionDamage += (assumedBoons.might || 0) * MIGHT_CONDI_PER_STACK;
+    const mightValues = computeMightPerStack();
+    totals.Power += (assumedBoons.might || 0) * mightValues.power;
+    totals.ConditionDamage += (assumedBoons.might || 0) * mightValues.condi;
+
+    if (assumedBoons.fury) {
+      const furyBonuses = computeFuryStatBonuses(state.editor.gameMode);
+      for (const [key, val] of Object.entries(furyBonuses)) {
+        totals[key] = (totals[key] || 0) + val;
+      }
+    }
   }
 
   // Stacking sigil contributions
@@ -631,11 +715,18 @@ export function computeStatBreakdown(statKey, assumedBoons = null, sigilStacks =
   if (assumedBoons) {
     const mightStacks = assumedBoons.might || 0;
     if (mightStacks > 0) {
+      const mightValues = computeMightPerStack();
       if (statKey === "Power") {
-        entries.push({ source: `Boon (Might ×${mightStacks})`, value: mightStacks * MIGHT_POWER_PER_STACK });
+        entries.push({ source: `Boon (Might ×${mightStacks})`, value: mightStacks * mightValues.power });
       }
       if (statKey === "ConditionDamage") {
-        entries.push({ source: `Boon (Might ×${mightStacks})`, value: mightStacks * MIGHT_CONDI_PER_STACK });
+        entries.push({ source: `Boon (Might ×${mightStacks})`, value: mightStacks * mightValues.condi });
+      }
+    }
+    if (assumedBoons.fury) {
+      const furyBonuses = computeFuryStatBonuses(state.editor.gameMode);
+      if (furyBonuses[statKey]) {
+        entries.push({ source: "Boon (Fury)", value: furyBonuses[statKey] });
       }
     }
   }
