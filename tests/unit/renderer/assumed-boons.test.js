@@ -1,6 +1,6 @@
 "use strict";
 
-const { computeEquipmentStats, computeStatBreakdown, computeTraitConversions } = require("../../../src/renderer/modules/stats");
+const { computeEquipmentStats, computeStatBreakdown, computeTraitConversions, computeFuryCritModifier, computeFuryStatBonuses, computeMightPerStack } = require("../../../src/renderer/modules/stats");
 const { state } = require("../../../src/renderer/modules/state");
 
 function makeEditor(slots = {}, food = "", utility = "") {
@@ -280,5 +280,365 @@ describe("computeTraitConversions", () => {
     const result = computeTraitConversions({ Power: 1000 });
     expect(result.Vitality).toBe(100);
     expect(result.Ferocity).toBe(100);
+  });
+});
+
+describe("computeFuryCritModifier — trait-based fury crit bonus", () => {
+  beforeEach(() => {
+    state.editor = makeEditor();
+    state.upgradeCatalog = null;
+  });
+
+  test("returns 0 when no specializations are selected", () => {
+    state.editor.specializations = [];
+    state.activeCatalog = { traitById: new Map(), specializationById: new Map() };
+    expect(computeFuryCritModifier()).toBe(0);
+  });
+
+  test("returns 0 when active traits have no fury crit modifier", () => {
+    const fakeTrait = {
+      id: 9999,
+      facts: [{ type: "AttributeConversion", source: "Power", target: "Vitality", percent: 10 }],
+    };
+    state.activeCatalog = {
+      traitById: new Map([[9999, fakeTrait]]),
+      specializationById: new Map(),
+    };
+    state.editor.specializations = [
+      { specializationId: 1, majorChoices: { 1: 9999 } },
+    ];
+    expect(computeFuryCritModifier()).toBe(0);
+  });
+
+  test("returns modifier from a minor trait with Fury buff + Percent fact", () => {
+    // Simulates Furious Burst: minor trait that grants Fury and adds 5% crit
+    const furiousBurst = {
+      id: 1342,
+      facts: [
+        { text: "Recharge", type: "Recharge", value: 4 },
+        { text: "Apply Buff/Condition", type: "Buff", status: "Fury", duration: 3, apply_count: 1 },
+        { text: "Critical Chance Increase", type: "Percent", percent: 5 },
+        { text: "Combat Only", type: "NoData" },
+      ],
+    };
+    state.activeCatalog = {
+      traitById: new Map([[1342, furiousBurst]]),
+      specializationById: new Map([[36, { id: 36, minorTraits: [1342] }]]),
+    };
+    state.editor.specializations = [
+      { specializationId: 36, majorChoices: {} },
+    ];
+    expect(computeFuryCritModifier()).toBe(5);
+  });
+
+  test("returns modifier from a major trait with Fury buff + Percent fact", () => {
+    const fakeTrait = {
+      id: 5000,
+      facts: [
+        { text: "Apply Buff/Condition", type: "Buff", status: "Fury", duration: 5, apply_count: 1 },
+        { text: "Critical Chance Increase", type: "Percent", percent: 7 },
+      ],
+    };
+    state.activeCatalog = {
+      traitById: new Map([[5000, fakeTrait]]),
+      specializationById: new Map(),
+    };
+    state.editor.specializations = [
+      { specializationId: 1, majorChoices: { 1: 5000 } },
+    ];
+    expect(computeFuryCritModifier()).toBe(7);
+  });
+
+  test("ignores Percent facts on traits without a Fury Buff fact", () => {
+    const nonFuryTrait = {
+      id: 6000,
+      facts: [
+        { text: "Apply Buff/Condition", type: "Buff", status: "Might", duration: 5, apply_count: 1 },
+        { text: "Critical Chance Increase", type: "Percent", percent: 10 },
+      ],
+    };
+    state.activeCatalog = {
+      traitById: new Map([[6000, nonFuryTrait]]),
+      specializationById: new Map(),
+    };
+    state.editor.specializations = [
+      { specializationId: 1, majorChoices: { 1: 6000 } },
+    ];
+    expect(computeFuryCritModifier()).toBe(0);
+  });
+
+  test("detects Roiling Mists (1719) without Buff fact via IMPLICIT_FURY_TRAITS", () => {
+    // Roiling Mists has no Buff(Fury) fact — detected by hardcoded ID
+    const roilingMists = {
+      id: 1719,
+      facts: [
+        { text: "Critical Chance Increase", type: "Percent", percent: 25 },
+        { text: "Critical Chance Increase", type: "Percent", percent: 20 },
+      ],
+    };
+    state.activeCatalog = {
+      traitById: new Map([[1719, roilingMists]]),
+      specializationById: new Map([[63, { id: 63, minorTraits: [1719] }]]),
+    };
+    state.editor.specializations = [
+      { specializationId: 63, majorChoices: {} },
+    ];
+    expect(computeFuryCritModifier("pve")).toBe(25);
+    expect(computeFuryCritModifier("wvw")).toBe(20);
+  });
+
+  test("game-mode split picks first value for PvE, second for WvW", () => {
+    const trait = {
+      id: 2193,
+      facts: [
+        { type: "Buff", status: "Fury", duration: 5, apply_count: 1 },
+        { text: "Critical Chance Increase", type: "Percent", percent: 15 },
+        { text: "Critical Chance Increase", type: "Percent", percent: 10 },
+      ],
+    };
+    state.activeCatalog = {
+      traitById: new Map([[2193, trait]]),
+      specializationById: new Map(),
+    };
+    state.editor.specializations = [
+      { specializationId: 1, majorChoices: { 1: 2193 } },
+    ];
+    expect(computeFuryCritModifier("pve")).toBe(15);
+    expect(computeFuryCritModifier("wvw")).toBe(10);
+  });
+});
+
+describe("computeFuryStatBonuses — flat stat bonuses while Fury active", () => {
+  beforeEach(() => {
+    state.editor = makeEditor();
+    state.upgradeCatalog = null;
+  });
+
+  test("returns empty when no specializations selected", () => {
+    state.editor.specializations = [];
+    state.activeCatalog = { traitById: new Map(), specializationById: new Map() };
+    expect(computeFuryStatBonuses()).toEqual({});
+  });
+
+  test("returns Ferocity from Raging Storm (Elementalist)", () => {
+    const ragingStorm = {
+      id: 214,
+      facts: [
+        { type: "AttributeAdjust", value: 180, target: "CritDamage" },
+        { type: "Buff", status: "Fury", duration: 4, apply_count: 1 },
+      ],
+    };
+    state.activeCatalog = {
+      traitById: new Map([[214, ragingStorm]]),
+      specializationById: new Map(),
+    };
+    state.editor.specializations = [
+      { specializationId: 1, majorChoices: { 1: 214 } },
+    ];
+    expect(computeFuryStatBonuses()).toEqual({ Ferocity: 180 });
+  });
+
+  test("handles game-mode split for AttributeAdjust (No Quarter)", () => {
+    const noQuarter = {
+      id: 1904,
+      facts: [
+        { type: "Buff", status: "Fury", duration: 2, apply_count: 1 },
+        { type: "AttributeAdjust", value: 250, target: "CritDamage" },
+        { type: "AttributeAdjust", value: 300, target: "CritDamage" },
+      ],
+    };
+    state.activeCatalog = {
+      traitById: new Map([[1904, noQuarter]]),
+      specializationById: new Map(),
+    };
+    state.editor.specializations = [
+      { specializationId: 1, majorChoices: { 1: 1904 } },
+    ];
+    expect(computeFuryStatBonuses("pve")).toEqual({ Ferocity: 250 });
+    expect(computeFuryStatBonuses("wvw")).toEqual({ Ferocity: 300 });
+  });
+
+  test("returns Precision from Furious Demise (Necromancer)", () => {
+    const furiousDemise = {
+      id: 803,
+      facts: [
+        { type: "Buff", status: "Fury", duration: 8, apply_count: 1 },
+        { type: "AttributeAdjust", value: 180, target: "Precision" },
+      ],
+    };
+    state.activeCatalog = {
+      traitById: new Map([[803, furiousDemise]]),
+      specializationById: new Map(),
+    };
+    state.editor.specializations = [
+      { specializationId: 1, majorChoices: { 1: 803 } },
+    ];
+    expect(computeFuryStatBonuses()).toEqual({ Precision: 180 });
+  });
+
+  test("maps ConditionDuration target to Expertise (Sharpening Sorrow)", () => {
+    const sharpeningSorrow = {
+      id: 2207,
+      facts: [
+        { type: "Buff", status: "Fury", duration: 5, apply_count: 1 },
+        { type: "AttributeAdjust", value: 150, target: "ConditionDuration" },
+      ],
+    };
+    state.activeCatalog = {
+      traitById: new Map([[2207, sharpeningSorrow]]),
+      specializationById: new Map(),
+    };
+    state.editor.specializations = [
+      { specializationId: 1, majorChoices: { 1: 2207 } },
+    ];
+    expect(computeFuryStatBonuses()).toEqual({ Expertise: 150 });
+  });
+
+  test("excludes Fang and Claw (pet stats, not player)", () => {
+    const fangAndClaw = {
+      id: 1016,
+      facts: [
+        { type: "Buff", status: "Fury", duration: 8, apply_count: 1 },
+        { type: "AttributeAdjust", value: 420, target: "Precision" },
+        { type: "AttributeAdjust", value: 450, target: "CritDamage" },
+      ],
+    };
+    state.activeCatalog = {
+      traitById: new Map([[1016, fangAndClaw]]),
+      specializationById: new Map(),
+    };
+    state.editor.specializations = [
+      { specializationId: 1, majorChoices: { 1: 1016 } },
+    ];
+    expect(computeFuryStatBonuses()).toEqual({});
+  });
+
+  test("ignores traits without Fury buff", () => {
+    const nonFuryTrait = {
+      id: 9999,
+      facts: [
+        { type: "Buff", status: "Might", duration: 5, apply_count: 1 },
+        { type: "AttributeAdjust", value: 200, target: "CritDamage" },
+      ],
+    };
+    state.activeCatalog = {
+      traitById: new Map([[9999, nonFuryTrait]]),
+      specializationById: new Map(),
+    };
+    state.editor.specializations = [
+      { specializationId: 1, majorChoices: { 1: 9999 } },
+    ];
+    expect(computeFuryStatBonuses()).toEqual({});
+  });
+
+  test("fury stat bonuses applied to computeEquipmentStats when fury assumed", () => {
+    const ragingStorm = {
+      id: 214,
+      facts: [
+        { type: "AttributeAdjust", value: 180, target: "CritDamage" },
+        { type: "Buff", status: "Fury", duration: 4, apply_count: 1 },
+      ],
+    };
+    state.activeCatalog = {
+      traitById: new Map([[214, ragingStorm]]),
+      specializationById: new Map(),
+    };
+    state.editor.specializations = [
+      { specializationId: 1, majorChoices: { 1: 214 } },
+    ];
+    const baseline = computeEquipmentStats({ might: 0, fury: false, alacrity: false });
+    const withFury = computeEquipmentStats({ might: 0, fury: true, alacrity: false });
+    expect(withFury.Ferocity).toBe(baseline.Ferocity + 180);
+  });
+
+  test("fury stat bonuses appear in stat breakdown", () => {
+    const ragingStorm = {
+      id: 214,
+      facts: [
+        { type: "AttributeAdjust", value: 180, target: "CritDamage" },
+        { type: "Buff", status: "Fury", duration: 4, apply_count: 1 },
+      ],
+    };
+    state.activeCatalog = {
+      traitById: new Map([[214, ragingStorm]]),
+      specializationById: new Map(),
+    };
+    state.editor.specializations = [
+      { specializationId: 1, majorChoices: { 1: 214 } },
+    ];
+    const entries = computeStatBreakdown("Ferocity", { might: 0, fury: true, alacrity: false });
+    const furyEntry = entries.find((e) => e.source === "Boon (Fury)");
+    expect(furyEntry).toBeDefined();
+    expect(furyEntry.value).toBe(180);
+  });
+});
+
+describe("computeMightPerStack — Notoriety trait", () => {
+  beforeEach(() => {
+    state.editor = makeEditor();
+    state.upgradeCatalog = null;
+  });
+
+  test("returns default 30/30 when no specializations", () => {
+    state.editor.specializations = [];
+    state.activeCatalog = { traitById: new Map(), specializationById: new Map() };
+    expect(computeMightPerStack()).toEqual({ power: 30, condi: 30 });
+  });
+
+  test("returns 40/20 when Notoriety (1765) is active", () => {
+    const notoriety = {
+      id: 1765,
+      facts: [
+        { type: "Buff", status: "Might", duration: 5, apply_count: 2 },
+      ],
+    };
+    state.activeCatalog = {
+      traitById: new Map([[1765, notoriety]]),
+      specializationById: new Map([[63, { id: 63, minorTraits: [1765] }]]),
+    };
+    state.editor.specializations = [
+      { specializationId: 63, majorChoices: {} },
+    ];
+    expect(computeMightPerStack()).toEqual({ power: 40, condi: 20 });
+  });
+
+  test("Notoriety modifies Might in computeEquipmentStats", () => {
+    const notoriety = {
+      id: 1765,
+      facts: [
+        { type: "Buff", status: "Might", duration: 5, apply_count: 2 },
+      ],
+    };
+    state.activeCatalog = {
+      traitById: new Map([[1765, notoriety]]),
+      specializationById: new Map([[63, { id: 63, minorTraits: [1765] }]]),
+    };
+    state.editor.specializations = [
+      { specializationId: 63, majorChoices: {} },
+    ];
+    const base = computeEquipmentStats(); // no boons
+    const withMight = computeEquipmentStats({ might: 25, fury: false, alacrity: false });
+    expect(withMight.Power).toBe(base.Power + 25 * 40);
+    expect(withMight.ConditionDamage).toBe(base.ConditionDamage + 25 * 20);
+  });
+
+  test("Notoriety modifies Might in stat breakdown", () => {
+    const notoriety = {
+      id: 1765,
+      facts: [
+        { type: "Buff", status: "Might", duration: 5, apply_count: 2 },
+      ],
+    };
+    state.activeCatalog = {
+      traitById: new Map([[1765, notoriety]]),
+      specializationById: new Map([[63, { id: 63, minorTraits: [1765] }]]),
+    };
+    state.editor.specializations = [
+      { specializationId: 63, majorChoices: {} },
+    ];
+    const entries = computeStatBreakdown("Power", { might: 10, fury: false, alacrity: false });
+    const mightEntry = entries.find((e) => e.source.includes("Might"));
+    expect(mightEntry).toBeDefined();
+    expect(mightEntry.value).toBe(10 * 40); // 400, not 300
   });
 });
