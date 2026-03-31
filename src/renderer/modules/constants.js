@@ -39,6 +39,22 @@ export const STAT_COMBOS = [
   { label: "Crusader",       stats: ["Power", "Toughness", "Ferocity", "HealingPower"] },
   { label: "Zealot's",      stats: ["Power", "Precision", "HealingPower"] },
   { label: "Celestial",     stats: ["Power", "Precision", "Toughness", "Vitality", "ConditionDamage", "Ferocity", "HealingPower", "Expertise", "Concentration"] },
+  // Added in issue #133 — missing PvE / WvW stat sets
+  { label: "Apothecary's",  stats: ["HealingPower", "Toughness", "ConditionDamage"] },
+  { label: "Magi's",        stats: ["HealingPower", "Precision", "Vitality"] },
+  { label: "Shaman's",      stats: ["Vitality", "ConditionDamage", "HealingPower"] },
+  { label: "Rampager's",    stats: ["Precision", "Power", "ConditionDamage"] },
+  { label: "Cavalier's",    stats: ["Toughness", "Power", "Ferocity"] },
+  { label: "Nomad's",       stats: ["Toughness", "Vitality", "HealingPower"] },
+  { label: "Settler's",     stats: ["Toughness", "ConditionDamage", "HealingPower"] },
+  { label: "Giver's",       stats: ["Toughness", "HealingPower", "Concentration"] },
+  { label: "Captain's",     stats: ["Toughness", "Power", "HealingPower"] },
+  { label: "Vigilant",      stats: ["Power", "Toughness", "Concentration"] },
+  { label: "Apostate's",    stats: ["ConditionDamage", "Toughness", "HealingPower"] },
+  { label: "Plaguedoctor's", stats: ["ConditionDamage", "Vitality", "HealingPower", "Concentration"] },
+  { label: "Marshal's",     stats: ["Power", "HealingPower", "Precision", "ConditionDamage"] },
+  { label: "Demolisher",    stats: ["Power", "Precision", "Toughness", "Ferocity"] },
+  { label: "Commander's",   stats: ["Power", "Precision", "Toughness", "Concentration"] },
 ];
 
 export const STAT_COMBOS_BY_LABEL = new Map(
