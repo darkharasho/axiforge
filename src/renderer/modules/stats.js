@@ -60,6 +60,50 @@ export function computeTraitConversions(baseStats) {
 }
 
 /**
+ * Compute additional fury crit-chance modifier from active traits.
+ * Some traits (e.g. Warrior's Furious Burst) grant extra crit chance when Fury
+ * is active.  The GW2 API represents this as a trait with both a Buff fact
+ * (status "Fury") and a Percent fact (text "Critical Chance Increase").
+ *
+ * @returns {number} Extra crit-chance percentage points from traits (0 if none)
+ */
+export function computeFuryCritModifier() {
+  const catalog = state.activeCatalog;
+  if (!catalog?.traitById) return 0;
+
+  // Collect active trait IDs — both major choices and minor (auto-selected) traits
+  const activeTraitIds = new Set();
+  for (const spec of state.editor.specializations || []) {
+    for (const id of Object.values(spec?.majorChoices || {})) {
+      const n = Number(id);
+      if (n) activeTraitIds.add(n);
+    }
+    const specId = Number(spec?.specializationId || spec?.id) || 0;
+    const specData = specId ? catalog.specializationById?.get(specId) : null;
+    for (const minorId of specData?.minorTraits || []) {
+      if (minorId) activeTraitIds.add(Number(minorId));
+    }
+  }
+  if (!activeTraitIds.size) return 0;
+
+  let modifier = 0;
+  for (const traitId of activeTraitIds) {
+    const trait = catalog.traitById.get(traitId);
+    if (!trait?.facts) continue;
+    const hasFuryBuff = trait.facts.some(
+      (f) => f.type === "Buff" && f.status === "Fury"
+    );
+    if (!hasFuryBuff) continue;
+    for (const fact of trait.facts) {
+      if (fact.type === "Percent" && fact.text === "Critical Chance Increase" && fact.percent) {
+        modifier += fact.percent;
+      }
+    }
+  }
+  return modifier;
+}
+
+/**
  * Build the set of equipment slot keys to exclude from stat calculations.
  * Excludes the opposite environment's slots AND the inactive weapon set.
  */

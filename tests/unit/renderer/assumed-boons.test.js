@@ -1,6 +1,6 @@
 "use strict";
 
-const { computeEquipmentStats, computeStatBreakdown, computeTraitConversions } = require("../../../src/renderer/modules/stats");
+const { computeEquipmentStats, computeStatBreakdown, computeTraitConversions, computeFuryCritModifier } = require("../../../src/renderer/modules/stats");
 const { state } = require("../../../src/renderer/modules/state");
 
 function makeEditor(slots = {}, food = "", utility = "") {
@@ -280,5 +280,90 @@ describe("computeTraitConversions", () => {
     const result = computeTraitConversions({ Power: 1000 });
     expect(result.Vitality).toBe(100);
     expect(result.Ferocity).toBe(100);
+  });
+});
+
+describe("computeFuryCritModifier — trait-based fury crit bonus", () => {
+  beforeEach(() => {
+    state.editor = makeEditor();
+    state.upgradeCatalog = null;
+  });
+
+  test("returns 0 when no specializations are selected", () => {
+    state.editor.specializations = [];
+    state.activeCatalog = { traitById: new Map(), specializationById: new Map() };
+    expect(computeFuryCritModifier()).toBe(0);
+  });
+
+  test("returns 0 when active traits have no fury crit modifier", () => {
+    const fakeTrait = {
+      id: 9999,
+      facts: [{ type: "AttributeConversion", source: "Power", target: "Vitality", percent: 10 }],
+    };
+    state.activeCatalog = {
+      traitById: new Map([[9999, fakeTrait]]),
+      specializationById: new Map(),
+    };
+    state.editor.specializations = [
+      { specializationId: 1, majorChoices: { 1: 9999 } },
+    ];
+    expect(computeFuryCritModifier()).toBe(0);
+  });
+
+  test("returns modifier from a minor trait with Fury buff + Percent fact", () => {
+    // Simulates Furious Burst: minor trait that grants Fury and adds 5% crit
+    const furiousBurst = {
+      id: 1342,
+      facts: [
+        { text: "Recharge", type: "Recharge", value: 4 },
+        { text: "Apply Buff/Condition", type: "Buff", status: "Fury", duration: 3, apply_count: 1 },
+        { text: "Critical Chance Increase", type: "Percent", percent: 5 },
+        { text: "Combat Only", type: "NoData" },
+      ],
+    };
+    state.activeCatalog = {
+      traitById: new Map([[1342, furiousBurst]]),
+      specializationById: new Map([[36, { id: 36, minorTraits: [1342] }]]),
+    };
+    state.editor.specializations = [
+      { specializationId: 36, majorChoices: {} },
+    ];
+    expect(computeFuryCritModifier()).toBe(5);
+  });
+
+  test("returns modifier from a major trait with Fury buff + Percent fact", () => {
+    const fakeTrait = {
+      id: 5000,
+      facts: [
+        { text: "Apply Buff/Condition", type: "Buff", status: "Fury", duration: 5, apply_count: 1 },
+        { text: "Critical Chance Increase", type: "Percent", percent: 7 },
+      ],
+    };
+    state.activeCatalog = {
+      traitById: new Map([[5000, fakeTrait]]),
+      specializationById: new Map(),
+    };
+    state.editor.specializations = [
+      { specializationId: 1, majorChoices: { 1: 5000 } },
+    ];
+    expect(computeFuryCritModifier()).toBe(7);
+  });
+
+  test("ignores Percent facts on traits without a Fury Buff fact", () => {
+    const nonFuryTrait = {
+      id: 6000,
+      facts: [
+        { text: "Apply Buff/Condition", type: "Buff", status: "Might", duration: 5, apply_count: 1 },
+        { text: "Critical Chance Increase", type: "Percent", percent: 10 },
+      ],
+    };
+    state.activeCatalog = {
+      traitById: new Map([[6000, nonFuryTrait]]),
+      specializationById: new Map(),
+    };
+    state.editor.specializations = [
+      { specializationId: 1, majorChoices: { 1: 6000 } },
+    ];
+    expect(computeFuryCritModifier()).toBe(0);
   });
 });
