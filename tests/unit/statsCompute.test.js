@@ -204,6 +204,54 @@ describe("computePublishStats", () => {
     expect(result.stats.Precision).toBe(1000 + 756);
   });
 
+  // ── New stat sets (issue #133) ──────────────────────────────────────────
+
+  test("Apothecary's chest: 3-stat healing set", () => {
+    const equipment = { slots: { chest: "Apothecary's" }, runes: {}, infusions: {} };
+    const result = computePublishStats(equipment, null, "Guardian");
+    // Apothecary's: HealingPower (major), Toughness, ConditionDamage (minor)
+    expect(result.stats.HealingPower).toBe(141);
+    expect(result.stats.Toughness).toBe(1000 + 101);
+    expect(result.stats.ConditionDamage).toBe(101);
+  });
+
+  test("Commander's chest: 4-stat combo", () => {
+    const equipment = { slots: { chest: "Commander's" }, runes: {}, infusions: {} };
+    const result = computePublishStats(equipment, null, "Guardian");
+    // Commander's: Power + Precision (major p4=121), Toughness + Concentration (minor s4=66)
+    expect(result.stats.Power).toBe(1000 + 121);
+    expect(result.stats.Precision).toBe(1000 + 121);
+    expect(result.stats.Toughness).toBe(1000 + 66);
+    expect(result.stats.Concentration).toBe(66);
+  });
+
+  test("Plaguedoctor's chest: 4-stat condi-heal combo", () => {
+    const equipment = { slots: { chest: "Plaguedoctor's" }, runes: {}, infusions: {} };
+    const result = computePublishStats(equipment, null, "Guardian");
+    // Plaguedoctor's: ConditionDamage + Vitality (major p4=121), HealingPower + Concentration (minor s4=66)
+    expect(result.stats.ConditionDamage).toBe(121);
+    expect(result.stats.Vitality).toBe(1000 + 121);
+    expect(result.stats.HealingPower).toBe(66);
+    expect(result.stats.Concentration).toBe(66);
+  });
+
+  test("Rampager's chest: 3-stat precision set", () => {
+    const equipment = { slots: { chest: "Rampager's" }, runes: {}, infusions: {} };
+    const result = computePublishStats(equipment, null, "Guardian");
+    // Rampager's: Precision (major), Power, ConditionDamage (minor)
+    expect(result.stats.Precision).toBe(1000 + 141);
+    expect(result.stats.Power).toBe(1000 + 101);
+    expect(result.stats.ConditionDamage).toBe(101);
+  });
+
+  test("Nomad's without apostrophe resolves correctly", () => {
+    const equipment = { slots: { chest: "Nomad" }, runes: {}, infusions: {} };
+    const result = computePublishStats(equipment, null, "Guardian");
+    expect(result.stats.Toughness).toBe(1000 + 141);
+    expect(result.stats.Vitality).toBe(1000 + 101);
+    expect(result.stats.HealingPower).toBe(101);
+  });
+
   test("food with 'to All Attributes' adds to every stat", () => {
     const equipment = { slots: {}, runes: {}, infusions: {}, food: "91713", utility: "" };
     const upgradeCatalog = {

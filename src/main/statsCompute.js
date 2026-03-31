@@ -29,6 +29,22 @@ const _STAT_COMBOS_ENTRIES = [
   ["Zealot's", { stats: ["Power", "Precision", "HealingPower"] }],
   ["Giver's", { stats: ["Toughness", "HealingPower", "Concentration"] }],
   ["Celestial", { stats: ["Power", "Precision", "Toughness", "Vitality", "ConditionDamage", "Ferocity", "HealingPower", "Expertise", "Concentration"] }],
+  // Added in issue #133 — missing PvE / WvW stat sets
+  ["Apothecary's", { stats: ["HealingPower", "Toughness", "ConditionDamage"] }],
+  ["Magi's", { stats: ["HealingPower", "Precision", "Vitality"] }],
+  ["Shaman's", { stats: ["Vitality", "ConditionDamage", "HealingPower"] }],
+  ["Rampager's", { stats: ["Precision", "Power", "ConditionDamage"] }],
+  ["Cavalier's", { stats: ["Toughness", "Power", "Ferocity"] }],
+  ["Nomad's", { stats: ["Toughness", "Vitality", "HealingPower"] }],
+  ["Settler's", { stats: ["Toughness", "ConditionDamage", "HealingPower"] }],
+  ["Giver's", { stats: ["Toughness", "HealingPower", "Concentration"] }],
+  ["Captain's", { stats: ["Toughness", "Power", "HealingPower"] }],
+  ["Vigilant", { stats: ["Power", "Toughness", "Concentration"] }],
+  ["Apostate's", { stats: ["ConditionDamage", "Toughness", "HealingPower"] }],
+  ["Plaguedoctor's", { stats: ["ConditionDamage", "Vitality", "HealingPower", "Concentration"] }],
+  ["Marshal's", { stats: ["Power", "HealingPower", "Precision", "ConditionDamage"] }],
+  ["Demolisher", { stats: ["Power", "Precision", "Toughness", "Ferocity"] }],
+  ["Commander's", { stats: ["Power", "Precision", "Toughness", "Concentration"] }],
 ];
 // Add aliases without "'s" so imported builds (e.g. "Wanderer") resolve correctly
 const STAT_COMBOS_BY_LABEL = new Map(
