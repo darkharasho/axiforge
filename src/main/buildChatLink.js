@@ -154,9 +154,14 @@ async function previewChatLink(link) {
   const { decodeBuildTemplate } = await import("gw2buildlink");
   const api = await getApi();
   const decoded = await decodeBuildTemplate(link, { api });
-  const eliteSpec = decoded.specializations?.[2]?.id !== 0
-    ? decoded.specializations?.[2]?.name || null
-    : null;
+  let eliteSpec = null;
+  const thirdSpec = decoded.specializations?.[2];
+  if (thirdSpec?.id) {
+    const specData = await api.getSpecializationById(thirdSpec.id);
+    if (specData.elite) {
+      eliteSpec = thirdSpec.name || specData.name || null;
+    }
+  }
   return { profession: decoded.profession.id, eliteSpec };
 }
 
@@ -165,19 +170,28 @@ async function decodeChatLinkToBuild(link, name, folderId, gameMode) {
   const api = await getApi();
   const decoded = await decodeBuildTemplate(link, { api });
 
-  const specializations = decoded.specializations
+  const specEntries = decoded.specializations
     .map((s, i) => ({ s, i }))
-    .filter(({ s }) => s.id !== 0)
-    .map(({ s, i }) => ({
-      id: s.id,
-      name: s.name,
-      elite: i === 2,
-      majorChoices: {
-        1: s.traits[0]?.traitId || 0,
-        2: s.traits[1]?.traitId || 0,
-        3: s.traits[2]?.traitId || 0,
-      },
-    }));
+    .filter(({ s }) => s.id !== 0);
+  const specializations = await Promise.all(
+    specEntries.map(async ({ s, i }) => {
+      let isElite = false;
+      if (i === 2) {
+        const specData = await api.getSpecializationById(s.id);
+        isElite = !!specData.elite;
+      }
+      return {
+        id: s.id,
+        name: s.name,
+        elite: isElite,
+        majorChoices: {
+          1: s.traits[0]?.traitId || 0,
+          2: s.traits[1]?.traitId || 0,
+          3: s.traits[2]?.traitId || 0,
+        },
+      };
+    })
+  );
 
   const mapSkillSet = (set) => ({
     heal: set?.heal?.skillId ? { id: set.heal.skillId, name: set.heal.name } : null,

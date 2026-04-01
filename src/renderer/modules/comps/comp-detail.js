@@ -451,7 +451,9 @@ export function renderCompDetail() {
       const line = (comp.partyLines || []).find((pl) => pl.id === lineId);
       if (!line) return;
       const slots = line.slots || [];
-      if (slots.length >= (line.capacity || 5)) return;
+      if (slots.length >= (line.capacity || 5)) {
+        line.capacity = slots.length + 1;
+      }
       if (getTotalCapacity(comp) >= 50) return;
       _justDropped = true;
       setTimeout(() => { _justDropped = false; }, 200);
