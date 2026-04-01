@@ -21,6 +21,7 @@
  */
 
 const { createGw2MockFetch, installMockFetch } = require("../helpers/mockFetch");
+const { MOCK_PROFESSIONS, MOCK_SPECIALIZATIONS, MOCK_LEGENDS_DATA } = require("../fixtures/gw2Api");
 
 // ---------------------------------------------------------------------------
 // Module reset helpers
@@ -31,6 +32,11 @@ let gw2Data;
 function freshLoad() {
   jest.resetModules();
   gw2Data = require("../../src/main/gw2Data");
+  gw2Data._setStaticData({
+    professions: Object.values(MOCK_PROFESSIONS),
+    specializations: Object.values(MOCK_SPECIALIZATIONS),
+    legends: MOCK_LEGENDS_DATA,
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -96,10 +102,8 @@ describe("getProfessionList", () => {
     expect(list.every((p) => p.id)).toBe(true);
   });
 
-  test("returns empty array when API returns non-array", async () => {
-    global.fetch = createGw2MockFetch({
-      "/v2/professions": () => ({ broken: true }), // not an array
-    });
+  test("returns empty array when static data is empty", async () => {
+    gw2Data._setStaticData({ professions: [], specializations: [], legends: [] });
     const list = await gw2Data.getProfessionList();
     expect(list).toEqual([]);
   });
@@ -129,10 +133,8 @@ describe("getProfessionCatalog — error handling", () => {
     await expect(gw2Data.getProfessionCatalog(undefined)).rejects.toThrow("Missing profession id");
   });
 
-  test("throws when profession not found in API", async () => {
-    global.fetch = createGw2MockFetch({
-      "/v2/professions": () => [], // empty — profession not found
-    });
+  test("throws when profession not found in static data", async () => {
+    gw2Data._setStaticData({ professions: [], specializations: [], legends: [] });
     await expect(gw2Data.getProfessionCatalog("Warrior")).rejects.toThrow("Unknown profession");
   });
 });
@@ -1384,35 +1386,33 @@ describe("getWikiSummary", () => {
 // fetchJson — retry behavior
 // ---------------------------------------------------------------------------
 
-describe("fetchJson — retry behavior (via getProfessionList)", () => {
+describe("fetchJson — retry behavior (via fetchCachedJson)", () => {
   afterEach(() => { delete global.fetch; });
 
   test("retries on 500 error up to 3 times", async () => {
     jest.useFakeTimers();
     freshLoad();
+    const { fetchCachedJson, cache } = require("../../src/main/gw2Data/fetch");
+    cache.clear();
     let attempts = 0;
-    global.fetch = jest.fn(async (url) => {
-      // Only retry-relevant endpoint
-      if (url.includes("/v2/professions")) {
-        attempts++;
-        if (attempts < 3) {
-          return Promise.resolve({
-            ok: false, status: 500,
-            text: () => Promise.resolve("Server Error"),
-            headers: { get: () => null },
-          });
-        }
+    global.fetch = jest.fn(async () => {
+      attempts++;
+      if (attempts < 3) {
         return Promise.resolve({
-          ok: true, status: 200,
-          json: () => Promise.resolve(Object.values(require("../fixtures/gw2Api").MOCK_PROFESSIONS)),
-          text: () => Promise.resolve("[]"),
+          ok: false, status: 500,
+          text: () => Promise.resolve("Server Error"),
           headers: { get: () => null },
         });
       }
-      return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([]), text: () => Promise.resolve("[]"), headers: { get: () => null } });
+      return Promise.resolve({
+        ok: true, status: 200,
+        json: () => Promise.resolve({ ok: true }),
+        text: () => Promise.resolve("{}"),
+        headers: { get: () => null },
+      });
     });
 
-    const promise = gw2Data.getProfessionList();
+    const promise = fetchCachedJson("retry-test-500", "https://api.guildwars2.com/v2/test", 60000);
     // Advance timers through retry delays (800ms * 1, 800ms * 2)
     await Promise.resolve();
     jest.advanceTimersByTime(1000);
@@ -1422,12 +1422,14 @@ describe("fetchJson — retry behavior (via getProfessionList)", () => {
     jest.useRealTimers();
 
     const result = await promise;
-    expect(Array.isArray(result)).toBe(true);
+    expect(result).toEqual({ ok: true });
     expect(attempts).toBe(3); // initial + 2 retries
   });
 
   test("does NOT retry on 404 (non-retryable)", async () => {
     freshLoad();
+    const { fetchCachedJson, cache } = require("../../src/main/gw2Data/fetch");
+    cache.clear();
     let attempts = 0;
     global.fetch = jest.fn(async () => {
       attempts++;
@@ -1438,36 +1440,35 @@ describe("fetchJson — retry behavior (via getProfessionList)", () => {
       });
     });
 
-    await expect(gw2Data.getProfessionList()).rejects.toThrow();
+    await expect(fetchCachedJson("retry-test-404", "https://api.guildwars2.com/v2/test", 60000)).rejects.toThrow();
     expect(attempts).toBe(1); // no retry on 404
   });
 
   test("retries on network error (fetch throws)", async () => {
     jest.useFakeTimers();
     freshLoad();
+    const { fetchCachedJson, cache } = require("../../src/main/gw2Data/fetch");
+    cache.clear();
     let attempts = 0;
-    global.fetch = jest.fn(async (url) => {
-      if (url.includes("/v2/professions")) {
-        attempts++;
-        if (attempts < 2) throw new Error("Network error");
-        return Promise.resolve({
-          ok: true, status: 200,
-          json: () => Promise.resolve(Object.values(require("../fixtures/gw2Api").MOCK_PROFESSIONS)),
-          text: () => Promise.resolve("[]"),
-          headers: { get: () => null },
-        });
-      }
-      return Promise.resolve({ ok: true, json: () => Promise.resolve([]), text: () => Promise.resolve("[]"), headers: { get: () => null } });
+    global.fetch = jest.fn(async () => {
+      attempts++;
+      if (attempts < 2) throw new Error("Network error");
+      return Promise.resolve({
+        ok: true, status: 200,
+        json: () => Promise.resolve({ ok: true }),
+        text: () => Promise.resolve("{}"),
+        headers: { get: () => null },
+      });
     });
 
-    const promise = gw2Data.getProfessionList();
+    const promise = fetchCachedJson("retry-test-net", "https://api.guildwars2.com/v2/test", 60000);
     await Promise.resolve();
     jest.advanceTimersByTime(1000);
     await Promise.resolve();
     jest.useRealTimers();
 
     const result = await promise;
-    expect(Array.isArray(result)).toBe(true);
+    expect(result).toEqual({ ok: true });
     expect(attempts).toBeGreaterThanOrEqual(2);
   });
 });

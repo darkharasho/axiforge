@@ -7,9 +7,16 @@ const {
 
 // Static snapshots of stable GW2 API data — these change only with expansions.
 // To update: re-fetch from the API and overwrite the JSON files.
-const PROFESSIONS_STATIC = require("./professions.json");
-const SPECIALIZATIONS_STATIC = require("./specializations.json");
-const LEGENDS_STATIC = require("./legends.json");
+let PROFESSIONS_STATIC = require("./professions.json");
+let SPECIALIZATIONS_STATIC = require("./specializations.json");
+let LEGENDS_STATIC = require("./legends.json");
+
+// Allow tests to inject mock data instead of the on-disk snapshots.
+function _setStaticData({ professions, specializations, legends } = {}) {
+  PROFESSIONS_STATIC = professions || require("./professions.json");
+  SPECIALIZATIONS_STATIC = specializations || require("./specializations.json");
+  LEGENDS_STATIC = legends || require("./legends.json");
+}
 
 const {
   KNOWN_SKILL_DESCRIPTION_OVERRIDES,
@@ -956,4 +963,5 @@ module.exports = {
   getProfessionCatalog,
   getUpgradeCatalog,
   applyBalanceSplit,
+  _setStaticData,
 };

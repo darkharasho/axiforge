@@ -1,4 +1,4 @@
-const { getProfessionList, getProfessionCatalog, getUpgradeCatalog } = require("./catalog");
+const { getProfessionList, getProfessionCatalog, getUpgradeCatalog, _setStaticData } = require("./catalog");
 const { getWikiSummary, getWikiRelatedData } = require("./wiki");
 
 module.exports = {
@@ -7,4 +7,5 @@ module.exports = {
   getUpgradeCatalog,
   getWikiSummary,
   getWikiRelatedData,
+  _setStaticData,
 };

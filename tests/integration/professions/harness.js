@@ -12,6 +12,7 @@
  */
 
 const { createGw2MockFetch } = require("../../helpers/mockFetch");
+const { MOCK_PROFESSIONS, MOCK_SPECIALIZATIONS, MOCK_LEGENDS_DATA } = require("../../fixtures/gw2Api");
 const { buildMechanicSlotsForRender, getSkillOptionsByType, getEquippedWeaponSkills } = require("../../../src/renderer/modules/skills");
 
 function normalizeCatalog(raw) {
@@ -39,8 +40,18 @@ function setupHarness(defaultProfession = "") {
     ctx.gw2Data = require("../../../src/main/gw2Data");
   });
 
-  beforeEach(() => { global.fetch = createGw2MockFetch(); });
-  afterEach(() => { delete global.fetch; });
+  beforeEach(() => {
+    global.fetch = createGw2MockFetch();
+    ctx.gw2Data._setStaticData({
+      professions: Object.values(MOCK_PROFESSIONS),
+      specializations: Object.values(MOCK_SPECIALIZATIONS),
+      legends: MOCK_LEGENDS_DATA,
+    });
+  });
+  afterEach(() => {
+    delete global.fetch;
+    ctx.gw2Data._setStaticData();
+  });
 
   async function loadCatalog(profession = defaultProfession) {
     return normalizeCatalog(await ctx.gw2Data.getProfessionCatalog(profession));

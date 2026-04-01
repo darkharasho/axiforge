@@ -1,6 +1,7 @@
 "use strict";
 
 const { createGw2MockFetch } = require("../../helpers/mockFetch");
+const { MOCK_PROFESSIONS, MOCK_SPECIALIZATIONS, MOCK_LEGENDS_DATA } = require("../../fixtures/gw2Api");
 const { buildMechanicSlotsForRender, getSkillOptionsByType } = require("../../../src/renderer/modules/skills");
 
 function normalizeCatalog(raw) {
@@ -73,10 +74,16 @@ function setupMechanicsHarness(defaultProfession = "") {
 
   beforeEach(() => {
     global.fetch = createGw2MockFetch();
+    context.gw2Data._setStaticData({
+      professions: Object.values(MOCK_PROFESSIONS),
+      specializations: Object.values(MOCK_SPECIALIZATIONS),
+      legends: MOCK_LEGENDS_DATA,
+    });
   });
 
   afterEach(() => {
     delete global.fetch;
+    context.gw2Data._setStaticData();
   });
 
   return async function resolve(entry) {
