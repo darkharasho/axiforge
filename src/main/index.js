@@ -949,9 +949,15 @@ app.whenReady().then(async () => {
       for (const b of allBuilds) buildsMap[b.id] = b;
     }
 
-    // Comp grid: one row of emojis per party line
+    // Comp grid: one row of emojis per party line, broken at 5 with party numbers
+    const PARTY_EMOJIS = [
+      "1\uFE0F\u20E3", "2\uFE0F\u20E3", "3\uFE0F\u20E3",
+      "4\uFE0F\u20E3", "5\uFE0F\u20E3", "6\uFE0F\u20E3",
+      "7\uFE0F\u20E3", "8\uFE0F\u20E3", "9\uFE0F\u20E3",
+      "\uD83D\uDD1F",
+    ];
     const gridRows = [];
-    for (const line of comp.partyLines || []) {
+    (comp.partyLines || []).forEach((line, idx) => {
       const emojis = [];
       for (const slotId of line.slots || []) {
         const build = buildsMap[slotId];
@@ -959,8 +965,18 @@ app.whenReady().then(async () => {
         const emoji = getDiscordEmoji(build);
         if (emoji) emojis.push(emoji);
       }
-      if (emojis.length > 0) gridRows.push(emojis.join(" "));
-    }
+      if (emojis.length > 0) {
+        const label = PARTY_EMOJIS[idx] || `P${idx + 1}`;
+        if (emojis.length <= 5) {
+          gridRows.push(`${label} ${emojis.join(" ")}`);
+        } else {
+          for (let i = 0; i < emojis.length; i += 5) {
+            const chunk = emojis.slice(i, i + 5).join(" ");
+            gridRows.push(i === 0 ? `${label} ${chunk}` : `\u2B1B ${chunk}`);
+          }
+        }
+      }
+    });
 
     // Builds legend: one line per unique build with emoji + linked name
     const seen = new Set();

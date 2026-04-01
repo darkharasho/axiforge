@@ -296,6 +296,11 @@ function getTotalCapacity(comp) {
   return comp.partyLines.reduce((sum, pl) => sum + (pl.capacity || 0), 0);
 }
 
+export function getTotalFilledSlots(comp) {
+  if (!comp.partyLines) return 0;
+  return comp.partyLines.reduce((sum, pl) => sum + (pl.slots || []).length, 0);
+}
+
 /**
  * Pure data mutation: move a build slot from one party line to another.
  * Expands the destination line's capacity if it is already full.
@@ -384,7 +389,7 @@ export function renderCompDetail() {
   const comp = state.activeComp;
   if (!comp) return;
 
-  const totalCap = getTotalCapacity(comp);
+  const totalCap = getTotalFilledSlots(comp);
   const notesOpen = state.compNotesOpen || false;
   const notesBtnClass = notesOpen ? "comp-detail__notes-btn comp-detail__notes-btn--active" : "comp-detail__notes-btn";
 
@@ -454,7 +459,7 @@ export function renderCompDetail() {
       if (slots.length >= (line.capacity || 5)) {
         line.capacity = slots.length + 1;
       }
-      if (getTotalCapacity(comp) >= 50) return;
+      if (getTotalFilledSlots(comp) >= 50) return;
       _justDropped = true;
       setTimeout(() => { _justDropped = false; }, 200);
       line.slots = [...slots, buildId];
@@ -549,7 +554,7 @@ function renderPartyLines(comp, totalCap) {
     .map((pl, idx) => renderPartyLine(pl, idx, totalCap))
     .join("");
 
-  const canAdd = totalCap < 50;
+  const canAdd = totalCap < 50;  // totalCap is now filled slots
   const collapsed = state.compPrefs.boonCoverageCollapsed;
   return `
     ${lineRows}
@@ -571,6 +576,13 @@ function renderPartyLines(comp, totalCap) {
     </div>
   `;
 }
+
+const PARTY_NUMBER_EMOJIS = [
+  "\u0031\uFE0F\u20E3", "\u0032\uFE0F\u20E3", "\u0033\uFE0F\u20E3",
+  "\u0034\uFE0F\u20E3", "\u0035\uFE0F\u20E3", "\u0036\uFE0F\u20E3",
+  "\u0037\uFE0F\u20E3", "\u0038\uFE0F\u20E3", "\u0039\uFE0F\u20E3",
+  "\uD83D\uDD1F",
+];
 
 function renderPartyLine(pl, idx, totalCap) {
   const capacity = pl.capacity || 5;
@@ -603,9 +615,10 @@ function renderPartyLine(pl, idx, totalCap) {
     }
   }
 
-  // Empty slots (remaining capacity)
+  // Empty slots — fill the current row (multiple of 5), not the full capacity
   const filledCount = Math.min(slots.length, capacity);
-  for (let i = filledCount; i < capacity; i++) {
+  const visibleCapacity = Math.max(5, Math.ceil(Math.max(filledCount, 1) / 5) * 5);
+  for (let i = filledCount; i < visibleCapacity; i++) {
     slotBoxes.push(
       `<div class="comp-slot comp-slot--empty" data-action="click-empty-slot" data-line-id="${escapeHtml(pl.id)}">
         <span class="comp-slot__plus">+</span>
@@ -613,10 +626,11 @@ function renderPartyLine(pl, idx, totalCap) {
     );
   }
 
+  const multiRow = filledCount > 5;
   return `
-    <div class="comp-line" data-line-id="${escapeHtml(pl.id)}">
-      <span class="comp-line__label">P${idx + 1}</span>
-      <div class="comp-line__slots" data-capacity="${capacity}" style="max-height: ${Math.ceil(capacity / 5) * 42 + (Math.ceil(capacity / 5) - 1) * 5}px;">${slotBoxes.join("")}</div>
+    <div class="comp-line${multiRow ? " comp-line--multirow" : ""}" data-line-id="${escapeHtml(pl.id)}">
+      <span class="comp-line__label">${PARTY_NUMBER_EMOJIS[idx] || `P${idx + 1}`}</span>
+      <div class="comp-line__slots" data-capacity="${capacity}">${slotBoxes.join("")}</div>
       <div class="comp-line__controls">
         <button type="button" class="comp-line__btn" data-action="duplicate-line"
                 data-line-id="${escapeHtml(pl.id)}" title="Duplicate line">&#10697;</button>
@@ -1039,7 +1053,7 @@ function bindDetailEvents(container, comp) {
 
   // Add line
   container.querySelector("[data-action='add-line']")?.addEventListener("click", async () => {
-    if (getTotalCapacity(comp) >= 50) return;
+    if (getTotalFilledSlots(comp) >= 50) return;
     const newLine = { id: crypto.randomUUID(), capacity: 5, slots: [] };
     comp.partyLines = [...(comp.partyLines || []), newLine];
     await saveAndSync(comp);
@@ -1064,7 +1078,7 @@ function bindDetailEvents(container, comp) {
       const lineId = btn.dataset.lineId;
       const source = (comp.partyLines || []).find((pl) => pl.id === lineId);
       if (!source) return;
-      if (getTotalCapacity(comp) + (source.capacity || 5) > 50) return;
+      if (getTotalFilledSlots(comp) + (source.slots || []).length > 50) return;
 
       const clone = {
         id: crypto.randomUUID(),

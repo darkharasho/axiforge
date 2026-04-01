@@ -24,10 +24,31 @@ const PROFESSION_COLORS = {
 // Braille Pattern Blank — renders as whitespace but forces embed width
 const WIDTH_PAD = "\u2800".repeat(45);
 
+const PARTY_NUMBER_EMOJIS = [
+  "1\uFE0F\u20E3", "2\uFE0F\u20E3", "3\uFE0F\u20E3",
+  "4\uFE0F\u20E3", "5\uFE0F\u20E3", "6\uFE0F\u20E3",
+  "7\uFE0F\u20E3", "8\uFE0F\u20E3", "9\uFE0F\u20E3",
+  "\uD83D\uDD1F",
+];
+
+function formatPartyGrid(emojis, partyIdx) {
+  const label = PARTY_NUMBER_EMOJIS[partyIdx] || `P${partyIdx + 1}`;
+  if (emojis.length <= 5) {
+    return `${label} ${emojis.join(" ")}`;
+  }
+  // Break into rows of 5, first row gets the number label, rest get ⬛
+  const rows = [];
+  for (let i = 0; i < emojis.length; i += 5) {
+    const chunk = emojis.slice(i, i + 5).join(" ");
+    rows.push(i === 0 ? `${label} ${chunk}` : `\u2B1B ${chunk}`);
+  }
+  return rows.join("\n");
+}
+
 function buildCompEmbed(comp, builds, compUrl, buildUrls) {
-  // Grid: one row of emojis per party line
+  // Grid: one row of emojis per party line, broken at 5
   const gridRows = [];
-  for (const line of comp.partyLines || []) {
+  (comp.partyLines || []).forEach((line, idx) => {
     const emojis = [];
     for (const slotId of line.slots || []) {
       const build = builds[slotId];
@@ -35,8 +56,8 @@ function buildCompEmbed(comp, builds, compUrl, buildUrls) {
       const emoji = getDiscordEmoji(build);
       if (emoji) emojis.push(emoji);
     }
-    if (emojis.length > 0) gridRows.push(emojis.join(" "));
-  }
+    if (emojis.length > 0) gridRows.push(formatPartyGrid(emojis, idx));
+  });
 
   // Legend: one line per unique build
   const seen = new Set();

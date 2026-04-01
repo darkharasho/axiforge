@@ -104,10 +104,31 @@ function mapBuildToTemplateInput(build) {
  * @param {Object} build — serialized axiforge build object
  * @returns {Promise<string>} — the [&...] chat link
  */
+// Wrap global fetch with 429 retry handling for gw2buildlink's DefaultGw2ApiClient,
+// which makes direct fetch() calls without rate-limit awareness.
+const _origFetch = globalThis.fetch;
+let _fetchPatched = false;
+function patchFetchFor429() {
+  if (_fetchPatched) return;
+  _fetchPatched = true;
+  globalThis.fetch = async function rateLimitedFetch(url, opts) {
+    const isGw2 = typeof url === "string" && url.includes("api.guildwars2.com");
+    if (!isGw2) return _origFetch(url, opts);
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const res = await _origFetch(url, opts);
+      if (res.status !== 429) return res;
+      const wait = 1000 * Math.pow(2, attempt); // 1s, 2s, 4s, 8s
+      await new Promise((r) => setTimeout(r, wait));
+    }
+    return _origFetch(url, opts); // final attempt — let it throw if still 429
+  };
+}
+
 // Singleton API client — profession/spec/skill data cached across all calls in the session.
 let _gw2Api = null;
 async function getApi() {
   if (!_gw2Api) {
+    patchFetchFor429();
     const { DefaultGw2ApiClient } = await import("gw2buildlink");
     _gw2Api = new DefaultGw2ApiClient();
   }

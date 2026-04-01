@@ -1037,17 +1037,27 @@
   text-align: right;
 }
 
+.comp-line--multirow .comp-line__label {
+  background: #111;
+  color: #fff;
+  border-radius: 4px;
+  padding: 6px 4px;
+  text-align: center;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .comp-line__slots {
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
   max-width: calc(5 * 42px + 4 * 5px);
-  overflow: hidden;
 }
 
-/* During any drag, let full lines grow to show the drop ghost in the extra row */
+/* During drag, ensure ghost slots are visible in expanded lines */
 .comp-detail__party-panel.comp-dragging .comp-line__slots {
-  overflow: visible !important;
   max-height: none !important;
 }
 
