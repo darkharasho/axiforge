@@ -5,6 +5,12 @@ const {
   dedupeNumbers,
 } = require("./fetch");
 
+// Static snapshots of stable GW2 API data — these change only with expansions.
+// To update: re-fetch from the API and overwrite the JSON files.
+const PROFESSIONS_STATIC = require("./professions.json");
+const SPECIALIZATIONS_STATIC = require("./specializations.json");
+const LEGENDS_STATIC = require("./legends.json");
+
 const {
   KNOWN_SKILL_DESCRIPTION_OVERRIDES,
   KNOWN_SKILL_FACTS_OVERRIDES,
@@ -213,16 +219,7 @@ function applyPveFacts(mapped, entityType) {
 }
 
 async function getProfessionList(lang = "en") {
-  // Profession IDs are static (unchanged since 2015); hardcode to avoid an extra round-trip
-  // and to avoid the /v2/professions bare endpoint which has inconsistent API support.
-  const PROFESSION_IDS = ["Guardian","Warrior","Engineer","Ranger","Thief","Elementalist","Mesmer","Necromancer","Revenant"];
-  const data = await fetchCachedJson(
-    `professions:${lang}`,
-    `${GW2_API_ROOT}/professions?ids=${PROFESSION_IDS.join(",")}&lang=${encodeURIComponent(lang)}`,
-    1000 * 60 * 60
-  );
-  if (!Array.isArray(data)) return [];
-  return data
+  return PROFESSIONS_STATIC
     .filter((entry) => entry?.id)
     .map((entry) => ({
       id: entry.id,
@@ -238,10 +235,8 @@ async function getProfessionCatalog(professionId, lang = "en", gameMode = "pve")
     throw new Error("Missing profession id.");
   }
 
-  // Step 1: fetch profession data — everything else depends on this.
-  const professionUrl = `${GW2_API_ROOT}/professions?ids=${encodeURIComponent(professionId)}&lang=${encodeURIComponent(lang)}`;
-  const professionArr = await fetchCachedJson(`profession:${professionId}:${lang}`, professionUrl, 1000 * 60 * 60);
-  const profession = Array.isArray(professionArr) ? professionArr[0] : professionArr;
+  // Step 1: look up profession from static snapshot — this data rarely changes.
+  const profession = PROFESSIONS_STATIC.find((p) => p.id === professionId);
   if (!profession?.id) {
     throw new Error(`Unknown profession "${professionId}".`);
   }
@@ -299,23 +294,15 @@ async function getProfessionCatalog(professionId, lang = "en", gameMode = "pve")
   // These are all independent of each other — they only need the profession data from step 1.
   // Also start Ranger pets and Revenant legend IDs here since they're fully independent.
   const petsPromise = professionId === "Ranger"
-    ? fetchCachedJson(`pets:${lang}`, `${GW2_API_ROOT}/pets?ids=all&lang=${encodeURIComponent(lang)}`, 1000 * 60 * 60 * 24)
+    ? fetchCachedJson(`pets:${lang}`, `${GW2_API_ROOT}/pets?ids=all&lang=${encodeURIComponent(lang)}`, 1000 * 60 * 60 * 24 * 7)
     : Promise.resolve([]);
   const legendsRawPromise = professionId === "Revenant"
-    ? fetchCachedJson(`legendIds`, `${GW2_API_ROOT}/legends`, 1000 * 60 * 60 * 24)
-        .then((legendIds) =>
-          Array.isArray(legendIds) && legendIds.length
-            ? fetchCachedJson(
-                `legends:${legendIds.join(",")}`,
-                `${GW2_API_ROOT}/legends?ids=${encodeURIComponent(legendIds.join(","))}`,
-                1000 * 60 * 60 * 24
-              )
-            : []
-        )
+    ? Promise.resolve(LEGENDS_STATIC)
     : Promise.resolve([]);
 
-  const [specializations, professionSkillsRawApi, weaponSkillsBase] = await Promise.all([
-    fetchGw2ByIds("specializations", specializationIds, lang),
+  const specIdSet = new Set(specializationIds);
+  const specializations = SPECIALIZATIONS_STATIC.filter((s) => specIdSet.has(s.id));
+  const [professionSkillsRawApi, weaponSkillsBase] = await Promise.all([
     fetchGw2ByIds("skills", allProfessionSkillIds, lang),
     fetchGw2ByIds("skills", weaponSkillIds, lang),
   ]);
@@ -518,7 +505,7 @@ async function getProfessionCatalog(professionId, lang = "en", gameMode = "pve")
     morphPoolPromise = fetchCachedJson(
       `allSkillIds:${lang}`,
       `${GW2_API_ROOT}/skills?lang=${encodeURIComponent(lang)}`,
-      1000 * 60 * 60 * 24
+      1000 * 60 * 60 * 24 * 7
     ).then(async (allSkillIds) => {
       const candidateIds = (Array.isArray(allSkillIds) ? allSkillIds : []).filter(
         (id) => id >= idMin && id <= idMax && !alreadyFetchedForMorph.has(id)
