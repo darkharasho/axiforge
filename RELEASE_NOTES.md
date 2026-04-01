@@ -1,4 +1,4 @@
-## Version v0.1.1 — April 1, 2026
+## Version v0.1.0 — April 1, 2026
 
 ### New Features
 - Grouped profession selector for streamlined build creation
