@@ -7,6 +7,7 @@ import {
   LEGENDARY_ARMOR_ICONS, _WK,
   PROFESSION_BASE_HP,
   FURY_CRIT_CHANCE, FURY_CRIT_CHANCE_WVW, MIGHT_MAX_STACKS, MIGHT_POWER_PER_STACK, MIGHT_CONDI_PER_STACK, STABILITY_MAX_STACKS, STACKING_SIGIL_DEFS, BOON_CONDITION_ICONS,
+  getEffectiveStats,
 } from "./constants.js";
 import { escapeHtml } from "./utils.js";
 import { computeSlotStats, computeEquipmentStats, computeUpgradeModifiers, computeStatBreakdown, computeTraitConversions, computeFuryCritModifier, computeFuryStatBonuses, computeMightPerStack } from "./stats.js";
@@ -109,7 +110,7 @@ export function openSlotPicker(anchorEl, currentValue, onSelect, { items = null,
 
   const allOptions = items ?? [
     { value: "", label: "— Empty —", subtitle: "" },
-    ...STAT_COMBOS.map((c) => ({ value: c.label, label: c.label, subtitle: c.stats.join(" · ") })),
+    ...STAT_COMBOS.map((c) => ({ value: c.label, label: c.label, subtitle: getEffectiveStats(c, state.editor?.gameMode || "pve").join(" · ") })),
   ];
 
   function renderPickerList(query) {
@@ -372,7 +373,7 @@ export function renderEquipmentPanel() {
     valueEl.className = "equip-slot__value" + (currentCombo ? "" : " equip-slot__value--empty");
     if (currentCombo) {
       const combo = STAT_COMBOS_BY_LABEL.get(currentCombo);
-      valueEl.innerHTML = `<span class="equip-slot__combo-name">${escapeHtml(currentCombo)}</span>${combo ? `<span class="equip-slot__combo-stats">${combo.stats.join(" · ")}</span>` : ""}`;
+      valueEl.innerHTML = `<span class="equip-slot__combo-name">${escapeHtml(currentCombo)}</span>${combo ? `<span class="equip-slot__combo-stats">${getEffectiveStats(combo, state.editor?.gameMode || "pve").join(" · ")}</span>` : ""}`;
     } else {
       valueEl.textContent = _readOnly ? "—" : "Select stats…";
     }
@@ -511,7 +512,7 @@ export function renderEquipmentPanel() {
       statBtn.style.display = "none";
     } else if (currentCombo) {
       const combo = STAT_COMBOS_BY_LABEL.get(currentCombo);
-      statBtn.innerHTML = `<span class="equip-slot__combo-name">${escapeHtml(currentCombo)}</span>${combo ? `<span class="equip-slot__combo-stats">${combo.stats.join(" · ")}</span>` : ""}`;
+      statBtn.innerHTML = `<span class="equip-slot__combo-name">${escapeHtml(currentCombo)}</span>${combo ? `<span class="equip-slot__combo-stats">${getEffectiveStats(combo, state.editor?.gameMode || "pve").join(" · ")}</span>` : ""}`;
     } else {
       statBtn.textContent = _readOnly ? "—" : "Select stats…";
     }

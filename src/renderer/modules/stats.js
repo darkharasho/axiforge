@@ -2,7 +2,7 @@
 import { state } from "./state.js";
 import {
   STAT_COMBOS_BY_LABEL, SLOT_WEIGHTS, LAND_ONLY_SLOTS, AQUATIC_SLOTS,
-  MIGHT_POWER_PER_STACK, MIGHT_CONDI_PER_STACK, STACKING_SIGIL_DEFS,
+  MIGHT_POWER_PER_STACK, MIGHT_CONDI_PER_STACK, STACKING_SIGIL_DEFS, getEffectiveStats,
 } from "./constants.js";
 
 /**
@@ -205,19 +205,21 @@ export function computeSlotStats(comboLabel, slotKey) {
   const combo = STAT_COMBOS_BY_LABEL.get(comboLabel);
   const w = SLOT_WEIGHTS[slotKey];
   if (!combo || !w) return [];
-  const n = combo.stats.length;
+  const gameMode = state.editor?.gameMode || "pve";
+  const stats = getEffectiveStats(combo, gameMode);
+  const n = stats.length;
   const result = [];
   if (n <= 3) {
-    result.push({ stat: combo.stats[0], value: w.p });
-    for (let i = 1; i < n; i++) result.push({ stat: combo.stats[i], value: w.s });
+    result.push({ stat: stats[0], value: w.p });
+    for (let i = 1; i < n; i++) result.push({ stat: stats[i], value: w.s });
   } else if (n === 4) {
     // 2-2 pattern: first 2 stats are major, last 2 are minor
-    result.push({ stat: combo.stats[0], value: w.p4 });
-    result.push({ stat: combo.stats[1], value: w.p4 });
-    result.push({ stat: combo.stats[2], value: w.s4 });
-    result.push({ stat: combo.stats[3], value: w.s4 });
+    result.push({ stat: stats[0], value: w.p4 });
+    result.push({ stat: stats[1], value: w.p4 });
+    result.push({ stat: stats[2], value: w.s4 });
+    result.push({ stat: stats[3], value: w.s4 });
   } else {
-    for (const stat of combo.stats) result.push({ stat, value: w.c });
+    for (const stat of stats) result.push({ stat, value: w.c });
   }
   return result;
 }
@@ -230,25 +232,27 @@ export function computeEquipmentStats(assumedBoons = null, sigilStacks = null) {
   };
   const isUnderwater = Boolean(state.editor.underwaterMode);
   const EXCLUDED_SLOTS = getExcludedSlots();
+  const gameMode = state.editor?.gameMode || "pve";
   for (const [slotKey, comboLabel] of Object.entries(slots)) {
     if (!comboLabel || EXCLUDED_SLOTS.has(slotKey)) continue;
     const combo = STAT_COMBOS_BY_LABEL.get(comboLabel);
     const w = SLOT_WEIGHTS[slotKey];
     if (!combo || !w) continue;
-    const n = combo.stats.length;
+    const stats = getEffectiveStats(combo, gameMode);
+    const n = stats.length;
     if (n <= 3) {
-      totals[combo.stats[0]] = (totals[combo.stats[0]] || 0) + w.p;
-      for (let i = 1; i < combo.stats.length; i++) {
-        totals[combo.stats[i]] = (totals[combo.stats[i]] || 0) + w.s;
+      totals[stats[0]] = (totals[stats[0]] || 0) + w.p;
+      for (let i = 1; i < stats.length; i++) {
+        totals[stats[i]] = (totals[stats[i]] || 0) + w.s;
       }
     } else if (n === 4) {
       // 2-2 pattern: first 2 stats are major, last 2 are minor
-      totals[combo.stats[0]] = (totals[combo.stats[0]] || 0) + w.p4;
-      totals[combo.stats[1]] = (totals[combo.stats[1]] || 0) + w.p4;
-      totals[combo.stats[2]] = (totals[combo.stats[2]] || 0) + w.s4;
-      totals[combo.stats[3]] = (totals[combo.stats[3]] || 0) + w.s4;
+      totals[stats[0]] = (totals[stats[0]] || 0) + w.p4;
+      totals[stats[1]] = (totals[stats[1]] || 0) + w.p4;
+      totals[stats[2]] = (totals[stats[2]] || 0) + w.s4;
+      totals[stats[3]] = (totals[stats[3]] || 0) + w.s4;
     } else {
-      for (const stat of combo.stats) {
+      for (const stat of stats) {
         totals[stat] = (totals[stat] || 0) + w.c;
       }
     }
