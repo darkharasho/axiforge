@@ -155,6 +155,50 @@ describe("computeSlotStats — 9-stat combo (Celestial)", () => {
   });
 });
 
+describe("computeSlotStats — Celestial in WvW excludes Expertise/Concentration", () => {
+  test("WvW Celestial chest returns 7 stats (no Expertise or Concentration)", () => {
+    state.editor = makeEditor({});
+    state.editor.gameMode = "wvw";
+    const result = computeSlotStats("Celestial", "chest");
+    expect(result).toHaveLength(7);
+    const stats = result.map((r) => r.stat);
+    expect(stats).toContain("Power");
+    expect(stats).toContain("HealingPower");
+    expect(stats).not.toContain("Expertise");
+    expect(stats).not.toContain("Concentration");
+    for (const r of result) expect(r.value).toBe(66); // still uses c weight
+  });
+
+  test("PvE Celestial chest still returns all 9 stats", () => {
+    state.editor = makeEditor({});
+    state.editor.gameMode = "pve";
+    const result = computeSlotStats("Celestial", "chest");
+    expect(result).toHaveLength(9);
+    const stats = result.map((r) => r.stat);
+    expect(stats).toContain("Expertise");
+    expect(stats).toContain("Concentration");
+  });
+});
+
+describe("computeEquipmentStats — Celestial WvW excludes Expertise/Concentration", () => {
+  test("WvW Celestial gear does not contribute Expertise or Concentration", () => {
+    state.editor = makeEditor({ chest: "Celestial" });
+    state.editor.gameMode = "wvw";
+    const result = computeEquipmentStats();
+    expect(result.Expertise).toBe(0);
+    expect(result.Concentration).toBe(0);
+    expect(result.Power).toBe(1000 + 66); // base + celestial c weight
+  });
+
+  test("PvE Celestial gear contributes Expertise and Concentration", () => {
+    state.editor = makeEditor({ chest: "Celestial" });
+    state.editor.gameMode = "pve";
+    const result = computeEquipmentStats();
+    expect(result.Expertise).toBe(66);
+    expect(result.Concentration).toBe(66);
+  });
+});
+
 // ---------------------------------------------------------------------------
 // computeEquipmentStats
 // ---------------------------------------------------------------------------

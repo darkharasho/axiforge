@@ -577,7 +577,7 @@ function serializeForPublish(build, catalog, upgradeCatalog) {
   const equipmentDisplay = resolveEquipmentDisplay(build.equipment, upgradeCatalog);
   const equipmentIcons = resolveEquipmentIcons(build);
   const { stats: computedStats, modifiers: statModifiers } = computePublishStats(
-    build.equipment, upgradeCatalog, build.profession
+    build.equipment, upgradeCatalog, build.profession, build.gameMode
   );
 
   return {

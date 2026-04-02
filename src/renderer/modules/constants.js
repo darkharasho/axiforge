@@ -58,6 +58,21 @@ export const STAT_COMBOS = [
   { label: "Commander's",   stats: ["Power", "Precision", "Toughness", "Concentration"] },
 ];
 
+// In WvW, Celestial gear does not grant Expertise or Concentration.
+const WVW_CELESTIAL_EXCLUDED = new Set(["Expertise", "Concentration"]);
+
+/**
+ * Return the effective stats array for a combo, accounting for game-mode restrictions.
+ * In WvW, Celestial excludes Expertise and Concentration.
+ */
+export function getEffectiveStats(combo, gameMode) {
+  if (!combo) return [];
+  if (gameMode === "wvw" && combo.label === "Celestial") {
+    return combo.stats.filter((s) => !WVW_CELESTIAL_EXCLUDED.has(s));
+  }
+  return combo.stats;
+}
+
 export const STAT_COMBOS_BY_LABEL = new Map(
   STAT_COMBOS.flatMap((c) => {
     const entries = [[c.label, c]];

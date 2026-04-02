@@ -83,9 +83,19 @@ const PROFESSION_BASE_HP = {
   Guardian: 11645, Thief: 11645, Elementalist: 11645,
 };
 
-function computePublishStats(equipment, upgradeCatalog, profession) {
+// In WvW, Celestial gear does not grant Expertise or Concentration.
+const _WVW_CELESTIAL_EXCLUDED = new Set(["Expertise", "Concentration"]);
+function _getEffectiveStats(comboLabel, combo, gameMode) {
+  if (gameMode === "wvw" && comboLabel === "Celestial") {
+    return combo.stats.filter((s) => !_WVW_CELESTIAL_EXCLUDED.has(s));
+  }
+  return combo.stats;
+}
+
+function computePublishStats(equipment, upgradeCatalog, profession, gameMode) {
   if (!equipment) return { stats: {}, modifiers: [] };
 
+  const gm = gameMode || "pve";
   const slots = equipment.slots || {};
   const totals = {
     Power: 1000, Precision: 1000, Toughness: 1000, Vitality: 1000,
@@ -98,18 +108,19 @@ function computePublishStats(equipment, upgradeCatalog, profession) {
     const combo = STAT_COMBOS_BY_LABEL.get(comboLabel);
     const w = SLOT_WEIGHTS[slotKey];
     if (!combo || !w) continue;
-    const n = combo.stats.length;
+    const stats = _getEffectiveStats(comboLabel, combo, gm);
+    const n = stats.length;
     if (n <= 3) {
-      totals[combo.stats[0]] = (totals[combo.stats[0]] || 0) + w.p;
-      for (let i = 1; i < n; i++) totals[combo.stats[i]] = (totals[combo.stats[i]] || 0) + w.s;
+      totals[stats[0]] = (totals[stats[0]] || 0) + w.p;
+      for (let i = 1; i < n; i++) totals[stats[i]] = (totals[stats[i]] || 0) + w.s;
     } else if (n === 4) {
       // 2-2 pattern: first 2 stats are major, last 2 are minor
-      totals[combo.stats[0]] = (totals[combo.stats[0]] || 0) + w.p4;
-      totals[combo.stats[1]] = (totals[combo.stats[1]] || 0) + w.p4;
-      totals[combo.stats[2]] = (totals[combo.stats[2]] || 0) + w.s4;
-      totals[combo.stats[3]] = (totals[combo.stats[3]] || 0) + w.s4;
+      totals[stats[0]] = (totals[stats[0]] || 0) + w.p4;
+      totals[stats[1]] = (totals[stats[1]] || 0) + w.p4;
+      totals[stats[2]] = (totals[stats[2]] || 0) + w.s4;
+      totals[stats[3]] = (totals[stats[3]] || 0) + w.s4;
     } else {
-      for (const stat of combo.stats) totals[stat] = (totals[stat] || 0) + w.c;
+      for (const stat of stats) totals[stat] = (totals[stat] || 0) + w.c;
     }
   }
 
