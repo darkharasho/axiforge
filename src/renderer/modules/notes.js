@@ -379,6 +379,15 @@ export function renderNotesPanel() {
 
 // ── Catalog search (for @ mentions) ──────────────────────────────────────
 
+export function nameMatches(name, query) {
+  const lower = (name || "").toLowerCase();
+  const q = query.toLowerCase();
+  if (lower.includes(q)) return true;
+  // Also match with spaces stripped so "weaponswa" finds "Weapon Swap"
+  if (lower.replace(/ /g, "").includes(q.replace(/ /g, ""))) return true;
+  return false;
+}
+
 function searchCatalog(query, maxResults = 8) {
   const results = [];
   const q = query.toLowerCase();
@@ -386,7 +395,7 @@ function searchCatalog(query, maxResults = 8) {
   const catalog = state.activeCatalog;
   if (catalog?.skills) {
     for (const skill of catalog.skills) {
-      if (skill.name?.toLowerCase().includes(q)) {
+      if (nameMatches(skill.name, q)) {
         results.push({ id: skill.id, name: skill.name, icon: skill.icon, category: "Skill" });
         if (results.length >= maxResults) return results;
       }
@@ -395,7 +404,7 @@ function searchCatalog(query, maxResults = 8) {
 
   if (catalog?.weaponSkills) {
     for (const skill of catalog.weaponSkills) {
-      if (skill.name?.toLowerCase().includes(q)) {
+      if (nameMatches(skill.name, q)) {
         results.push({ id: skill.id, name: skill.name, icon: skill.icon, category: "Skill" });
         if (results.length >= maxResults) return results;
       }
@@ -404,7 +413,7 @@ function searchCatalog(query, maxResults = 8) {
 
   if (catalog?.traits) {
     for (const trait of catalog.traits) {
-      if (trait.name?.toLowerCase().includes(q)) {
+      if (nameMatches(trait.name, q)) {
         results.push({ id: trait.id, name: trait.name, icon: trait.icon, category: "Trait" });
         if (results.length >= maxResults) return results;
       }
@@ -425,7 +434,7 @@ function searchCatalog(query, maxResults = 8) {
     for (const { arr, label } of categories) {
       if (!arr) continue;
       for (const item of arr) {
-        if (item.name?.toLowerCase().includes(q)) {
+        if (nameMatches(item.name, q)) {
           results.push({ id: item.id, name: item.name, icon: item.icon, category: label });
           if (results.length >= maxResults) return results;
         }
@@ -538,7 +547,8 @@ function detectMentionTrigger(textarea) {
   const pos = textarea.selectionEnd;
   const text = textarea.value;
   let i = pos - 1;
-  while (i >= 0 && text[i] !== "@" && text[i] !== "\n" && text[i] !== " ") i--;
+  // Allow spaces inside the query so multi-word names (e.g. "Weapon Swap") work.
+  while (i >= 0 && text[i] !== "@" && text[i] !== "\n") i--;
   if (i >= 0 && text[i] === "@") {
     if (i > 0 && /\w/.test(text[i - 1])) { hideAutocomplete(); return; }
     const query = text.slice(i + 1, pos);
