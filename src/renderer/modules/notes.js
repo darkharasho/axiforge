@@ -61,7 +61,7 @@ const TOOLBAR_ITEMS = [
 
 // ── Markdown insertion ───────────────────────────────────────────────────
 
-function insertMarkdown(action, textarea) {
+export function insertMarkdown(action, textarea) {
   const start = textarea.selectionStart;
   const end = textarea.selectionEnd;
   const text = textarea.value;
@@ -170,7 +170,7 @@ function insertMarkdown(action, textarea) {
     default: return;
   }
 
-  textarea.value = before + (action === "bold" || action === "italic" ? selected : "") + after;
+  textarea.value = before + (action === "bold" || action === "italic" || action === "underline" ? selected : "") + after;
   textarea.selectionStart = textarea.selectionEnd = start + cursorOffset;
   textarea.focus();
   syncState(textarea);
