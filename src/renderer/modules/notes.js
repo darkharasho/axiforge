@@ -296,6 +296,13 @@ export function renderNotesPanel() {
     });
 
     textarea.addEventListener("keydown", (e) => {
+      // Ctrl/Cmd + B/I/U shortcuts
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey) {
+        const key = e.key.toLowerCase();
+        if (key === "b") { e.preventDefault(); insertMarkdown("bold", textarea); return; }
+        if (key === "i") { e.preventDefault(); insertMarkdown("italic", textarea); return; }
+        if (key === "u") { e.preventDefault(); insertMarkdown("underline", textarea); return; }
+      }
       if (!_autocompleteEl) return;
       if (e.key === "ArrowDown") { e.preventDefault(); _autocompleteIndex = Math.min(_autocompleteIndex + 1, _autocompleteItems.length - 1); renderAutocompleteItems(); }
       else if (e.key === "ArrowUp") { e.preventDefault(); _autocompleteIndex = Math.max(_autocompleteIndex - 1, 0); renderAutocompleteItems(); }
