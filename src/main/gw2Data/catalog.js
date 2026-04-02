@@ -724,6 +724,20 @@ async function getProfessionCatalog(professionId, lang = "en", gameMode = "pve")
     }
   }
 
+  // Weapon Swap is a game mechanic, not a GW2 API skill — inject a synthetic entry
+  // so it appears in the Notes @ mention autocomplete for professions that support it.
+  const hasWeaponSwap = !(profession.flags || []).includes("NoWeaponSwap");
+  if (hasWeaponSwap) {
+    skills.push({
+      id: 999999, name: "Weapon Swap", icon: "https://wiki.guildwars2.com/images/c/ce/Weapon_Swap_Button.png",
+      slot: "", type: "Profession", specialization: 0, professions: [professionId],
+      weapon_type: "None", attunement: "None", dual_attunement: "None",
+      categories: [], facts: [], bundle_skills: [], transform_skills: [],
+      toolbelt_skill: 0, flip_skill: 0,
+      description: "Swap between your two equipped weapon sets.",
+    });
+  }
+
   // Sixth pass: Ranger pet data.
   // petsPromise was started in step 2, so this await is typically instant (already in flight).
   // The /v2/pets skills array returns only {id} — names/icons must be fetched from /v2/skills.
