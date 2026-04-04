@@ -34,14 +34,16 @@ Based on the label you applied:
 ### If `bug`:
 
 Tell the user:
-> Issue #$ARGUMENTS classified as **bug**.
-> Recommended next step: run `/fix-issue $ARGUMENTS` if you want me to work it.
+> Issue #$ARGUMENTS classified as **bug**. Proceeding to fix.
+
+Then invoke `/fix-issue $ARGUMENTS` to begin the fix.
 
 ### If `enhancement`:
 
 Tell the user:
-> Issue #$ARGUMENTS classified as **enhancement**.
-> Recommended next step: run `/add-feature $ARGUMENTS` if you want me to implement it.
+> Issue #$ARGUMENTS classified as **enhancement**. Proceeding to implement.
+
+Then invoke `/add-feature $ARGUMENTS` to begin implementation.
 
 ### If `question`:
 
@@ -56,5 +58,3 @@ gh issue comment $ARGUMENTS --repo darkharasho/axiforge \
 ```
 
 2. End with: `Triaged as question. Comment posted on #$ARGUMENTS.`
-
-Stop after reporting the result. Do not invoke `/fix-issue`, `/add-feature`, or `/release` unless the user explicitly asks for that follow-up work.
