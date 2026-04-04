@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-04-04T06:48:36.647Z",
+  "updatedAt": "2026-04-04T07:42:36.569Z",
   "relics": {
     "99997": {
       "name": "Relic of Isgarren",
@@ -1177,13 +1177,11 @@
         {
           "type": "Time",
           "text": "Stack Duration",
-          "icon": "https://render.guildwars2.com/file/7B2193ACCF77E56C13E608191B082D68AA0FAA71/156659.png",
           "duration": 6
         },
         {
           "type": "Number",
           "text": "Maximum Stacks",
-          "icon": "https://render.guildwars2.com/file/9352ED3244417304995F26CB01AE76BB7E547052/156661.png",
           "value": 5
         }
       ]

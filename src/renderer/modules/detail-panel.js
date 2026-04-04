@@ -601,6 +601,10 @@ export function formatFactHtml(fact, dmgStats = null, { alacrity = false } = {})
     const iconUrl = fact.icon || FACT_TYPE_ICONS["ComboField"] || "";
     return iconUrl ? `<img class="fact-status-icon" src="${escapeHtml(iconUrl)}" alt="" aria-hidden="true">${escapeHtml(text)}` : escapeHtml(text);
   }
+  if (fact.type === "StunBreak") {
+    const iconUrl = fact.icon || FACT_TYPE_ICONS["StunBreak"] || "";
+    return iconUrl ? `<img class="fact-status-icon" src="${escapeHtml(iconUrl)}" alt="" aria-hidden="true">${escapeHtml("Breaks Stun")}` : escapeHtml("Breaks Stun");
+  }
   // Recharge facts — apply Alacrity reduction when active
   if (fact.type === "Recharge" && fact.value != null) {
     const label = String(fact.text || "Recharge");
