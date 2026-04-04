@@ -270,7 +270,7 @@ function resolveEquipmentDisplay(equipment, upgradeCatalog) {
     const item = relicByNameMap?.get(label);
     if (!item) return { name: label, icon: "" };
     return {
-      name: item.name, icon: item.icon || "",
+      id: item.id, name: item.name, icon: item.icon || "",
       ...(item.description ? { description: item.description } : {}),
       ...(item.facts?.length ? { facts: item.facts } : {}),
     };
