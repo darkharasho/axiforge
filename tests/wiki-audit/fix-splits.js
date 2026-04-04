@@ -130,7 +130,7 @@ function main() {
         modes: {
           wvw: {
             facts: wikiFacts,
-            complete: true,
+            complete: false,
           },
         },
       };

@@ -241,6 +241,14 @@ export function resolveEntityFacts(entity) {
   //   All other facts: key = text + type + target + source. Distinct facts that happen
   //     to share text (e.g. two AttributeConversion entries for different stats) differ
   //     by target/source and are preserved.
+  // Normalise NoData stun-break facts into proper StunBreak type so they
+  // deduplicate against split StunBreak entries and render with an icon.
+  result = result.map((f) =>
+    f.type === "NoData" && /breaks?\s*stun/i.test(f.text)
+      ? { ...f, type: "StunBreak", text: "Stun Break", value: true }
+      : f
+  );
+
   // NoData facts (section separators) and facts with no identifying field are always kept.
   const seen = new Set();
   return result.filter((f) => {
@@ -532,7 +540,12 @@ export function formatFactHtml(fact, dmgStats = null, { alacrity = false } = {})
   // Normalise GW2 API markup in text/status fields before any rendering.
   fact = fact.text && /<c=/.test(fact.text) ? { ...fact, text: stripGw2Markup(fact.text) } : fact;
   // NoData facts are section headers (e.g. conditional legend-stance effects).
+  // Exception: the API uses NoData for "Breaks Stun" — render those with icon like StunBreak.
   if (fact.type === "NoData") {
+    if (/breaks?\s*stun/i.test(fact.text)) {
+      const iconUrl = fact.icon || FACT_TYPE_ICONS["StunBreak"] || "";
+      return iconUrl ? `<img class="fact-status-icon" src="${escapeHtml(iconUrl)}" alt="" aria-hidden="true">${escapeHtml("Breaks Stun")}` : escapeHtml("Breaks Stun");
+    }
     return `<span class="fact-section-header">${escapeHtml(String(fact.text || ""))}</span>`;
   }
   if (fact.type === "Damage" && fact.dmg_multiplier != null) {
