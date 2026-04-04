@@ -223,24 +223,43 @@
   color: #5a6a8e;
 }
 
-/* ── Skill slot dropdown overrides ──────────────────────────────────────── */
+/* ── Skill slot dropdown overrides (mini-card 2-column grid) ────────────── */
 
 .skill-select-overlay .cselect__menu {
-  min-width: 340px;
+  min-width: 380px;
 }
 
 .skill-select-overlay .cselect__list {
   max-height: 400px;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
 }
 
 .skill-select-overlay .cselect__icon {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   border-radius: 4px;
 }
 
 .skill-select-overlay .cselect__option {
-  align-items: flex-start;
+  align-items: center;
+  padding: 5px 7px;
+}
+
+.skill-select-overlay .cselect__label {
+  font-size: 0.75rem;
+}
+
+.skill-select-overlay .cselect__meta {
+  display: none;
+}
+
+.skill-select-overlay .cselect__option-description {
+  display: none;
+}
+
+.skill-select-overlay .cselect__empty {
+  grid-column: 1 / -1;
 }
 
 /* ── Option description ─────────────────────────────────────────────────── */
