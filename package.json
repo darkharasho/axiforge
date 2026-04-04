@@ -1,6 +1,6 @@
 {
   "name": "axiforge-desktop",
-  "version": "0.1.1-beta.1",
+  "version": "0.1.1-beta.20260404T1242",
   "description": "GW2 build editor desktop app with GitHub Pages publishing",
   "main": "src/main/index.js",
   "build": {
