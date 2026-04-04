@@ -131,6 +131,14 @@ function parseFactText(name, value, titleAttr) {
     }
   }
 
+  // ── Self-named buff effect ──
+  // Wiki renders relic/skill self-buffs as e.g. "Relic of the Claw (8s): Strike damage increased."
+  // The name is the relic/buff name itself and the value contains a "(Xs)" duration.
+  const selfBuffDurMatch = val.match(/^\(?([\d.]+)\s*s(?:\)|(?:\s|$|[^a-z]))/);
+  if (selfBuffDurMatch) {
+    return { type: "Time", text: "Duration", duration: parseFloat(selfBuffDurMatch[1]) };
+  }
+
   // ── Percent ──
   const pctMatch = val.match(/^([\d.]+)\s*%/);
   if (pctMatch) {
