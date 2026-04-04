@@ -520,3 +520,179 @@ describe("renderCustomSelect — searchable", () => {
     expect(visibleOptions.length).toBe(2);
   });
 });
+
+describe("renderCustomSelect — flat searchable", () => {
+  test("renders search input for flat options when searchable is true", () => {
+    const host = makeElement("div");
+
+    customSelectModule.renderCustomSelect(host, {
+      value: "alpha",
+      searchable: true,
+      options: [
+        { value: "alpha", label: "Alpha" },
+        { value: "bravo", label: "Bravo" },
+      ],
+      onChange: () => {},
+    });
+
+    const search = host.querySelector(".cselect__search");
+    expect(search).toBeTruthy();
+    expect(search.tagName).toBe("INPUT");
+  });
+
+  test("typing in search filters flat options by label", () => {
+    const host = makeElement("div");
+
+    customSelectModule.renderCustomSelect(host, {
+      value: "alpha",
+      searchable: true,
+      options: [
+        { value: "alpha", label: "Alpha" },
+        { value: "bravo", label: "Bravo" },
+        { value: "charlie", label: "Charlie" },
+      ],
+      onChange: () => {},
+    });
+
+    const search = host.querySelector(".cselect__search");
+    search.value = "bra";
+    search.dispatchEvent({ type: "input", preventDefault() {}, stopPropagation() {}, target: search });
+
+    const options = host.querySelectorAll(".cselect__option");
+    const visible = options.filter((o) => o.style.display !== "none");
+    expect(visible.length).toBe(1);
+    expect(visible[0].querySelector(".cselect__label").textContent).toBe("Bravo");
+  });
+
+  test("search matches against description when searchFields includes it", () => {
+    const host = makeElement("div");
+
+    customSelectModule.renderCustomSelect(host, {
+      value: "alpha",
+      searchable: true,
+      searchFields: ["label", "description"],
+      options: [
+        { value: "alpha", label: "Alpha Skill", description: "Grants stability" },
+        { value: "bravo", label: "Bravo Skill", description: "Heals allies" },
+      ],
+      onChange: () => {},
+    });
+
+    const search = host.querySelector(".cselect__search");
+    search.value = "stability";
+    search.dispatchEvent({ type: "input", preventDefault() {}, stopPropagation() {}, target: search });
+
+    const options = host.querySelectorAll(".cselect__option");
+    const visible = options.filter((o) => o.style.display !== "none");
+    expect(visible.length).toBe(1);
+    expect(visible[0].querySelector(".cselect__label").textContent).toBe("Alpha Skill");
+  });
+
+  test("clearing search shows all flat options", () => {
+    const host = makeElement("div");
+
+    customSelectModule.renderCustomSelect(host, {
+      value: "alpha",
+      searchable: true,
+      options: [
+        { value: "alpha", label: "Alpha" },
+        { value: "bravo", label: "Bravo" },
+      ],
+      onChange: () => {},
+    });
+
+    const search = host.querySelector(".cselect__search");
+    search.value = "alpha";
+    search.dispatchEvent({ type: "input", preventDefault() {}, stopPropagation() {}, target: search });
+
+    // Only Alpha visible
+    let visible = host.querySelectorAll(".cselect__option").filter((o) => o.style.display !== "none");
+    expect(visible.length).toBe(1);
+
+    // Clear search
+    search.value = "";
+    search.dispatchEvent({ type: "input", preventDefault() {}, stopPropagation() {}, target: search });
+
+    visible = host.querySelectorAll(".cselect__option").filter((o) => o.style.display !== "none");
+    expect(visible.length).toBe(2);
+  });
+
+  test("shows empty state when no options match search", () => {
+    const host = makeElement("div");
+
+    customSelectModule.renderCustomSelect(host, {
+      value: "alpha",
+      searchable: true,
+      options: [
+        { value: "alpha", label: "Alpha" },
+        { value: "bravo", label: "Bravo" },
+      ],
+      onChange: () => {},
+    });
+
+    const search = host.querySelector(".cselect__search");
+    search.value = "zzzzz";
+    search.dispatchEvent({ type: "input", preventDefault() {}, stopPropagation() {}, target: search });
+
+    const empty = host.querySelector(".cselect__empty");
+    expect(empty).toBeTruthy();
+    expect(empty.style.display).not.toBe("none");
+    expect(empty.textContent).toBe("No results found");
+  });
+
+  test("empty state hides when search is cleared after no results", () => {
+    const host = makeElement("div");
+
+    customSelectModule.renderCustomSelect(host, {
+      value: "alpha",
+      searchable: true,
+      options: [
+        { value: "alpha", label: "Alpha" },
+        { value: "bravo", label: "Bravo" },
+      ],
+      onChange: () => {},
+    });
+
+    const search = host.querySelector(".cselect__search");
+
+    // Search with no results
+    search.value = "zzzzz";
+    search.dispatchEvent({ type: "input", preventDefault() {}, stopPropagation() {}, target: search });
+
+    const empty = host.querySelector(".cselect__empty");
+    expect(empty).toBeTruthy();
+    expect(empty.style.display).not.toBe("none");
+
+    // Clear search
+    search.value = "";
+    search.dispatchEvent({ type: "input", preventDefault() {}, stopPropagation() {}, target: search });
+
+    expect(empty.style.display).toBe("none");
+  });
+});
+
+describe("renderCustomSelect — option descriptions", () => {
+  test("renders description text below option label when provided", () => {
+    const host = makeElement("div");
+
+    customSelectModule.renderCustomSelect(host, {
+      value: "alpha",
+      options: [
+        { value: "alpha", label: "Alpha Skill", description: "Grants stability to allies" },
+        { value: "bravo", label: "Bravo Skill" },
+      ],
+      onChange: () => {},
+    });
+
+    const options = host.querySelectorAll(".cselect__option");
+
+    // First option should have a description element
+    const desc = options[0].querySelector(".cselect__option-description");
+    expect(desc).toBeTruthy();
+    expect(desc.textContent).toBe("Grants stability to allies");
+
+    // Second option should NOT have a description element (no description provided)
+    const noDesc = options[1].querySelector(".cselect__option-description");
+    expect(noDesc).toBeNull();
+  });
+});

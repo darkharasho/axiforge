@@ -70,6 +70,14 @@ export function initSettingsModal() {
             <span class="settings-modal__error" id="sm-build-thread-error"></span>
           </div>
         </div>
+        <div class="settings-modal__section">
+          <h4 class="settings-modal__section-title">Data</h4>
+          <p class="settings-modal__hint">GW2 API responses are cached for 24 hours to speed up launch times.</p>
+          <div class="settings-modal__cache-row">
+            <button class="settings-modal__btn" id="sm-clear-cache" type="button">Clear API Cache</button>
+            <span class="settings-modal__cache-status" id="sm-cache-status"></span>
+          </div>
+        </div>
       </div>
       <div class="settings-modal__actions">
         <button class="settings-modal__btn settings-modal__btn--save" id="sm-save">Save</button>
@@ -94,10 +102,13 @@ export function initSettingsModal() {
     buildThreadId:     document.getElementById("sm-build-thread-id"),
     buildThreadError:  document.getElementById("sm-build-thread-error"),
     save:              document.getElementById("sm-save"),
+    clearCache:        document.getElementById("sm-clear-cache"),
+    cacheStatus:       document.getElementById("sm-cache-status"),
   };
 
   _el.close.addEventListener("click", _close);
   _el.save.addEventListener("click", _save);
+  _el.clearCache.addEventListener("click", _clearCache);
 
   // Toggle thread ID input visibility for comp webhook
   _el.threadMode.addEventListener("change", (e) => {
@@ -375,6 +386,22 @@ function _createTicker(steps) {
       }
     },
   };
+}
+
+// ─── Clear API cache ────────────────────────────────────────────────────────
+
+async function _clearCache() {
+  _el.clearCache.disabled = true;
+  _el.cacheStatus.textContent = "";
+  try {
+    await window.desktopApi.clearGw2Cache();
+    _el.cacheStatus.textContent = "Cache cleared";
+    _el.cacheStatus.className = "settings-modal__cache-status settings-modal__cache-status--ok";
+  } catch {
+    _el.cacheStatus.textContent = "Failed to clear cache";
+    _el.cacheStatus.className = "settings-modal__cache-status settings-modal__cache-status--error";
+  }
+  _el.clearCache.disabled = false;
 }
 
 // ─── Discord settings save ───────────────────────────────────────────────────

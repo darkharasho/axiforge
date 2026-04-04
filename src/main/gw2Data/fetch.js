@@ -1,8 +1,64 @@
+const fs = require("node:fs/promises");
+const path = require("node:path");
+
 const GW2_API_ROOT = process.env.GW2_API_ROOT || "https://api.guildwars2.com/v2";
 const WIKI_API_ROOT = "https://wiki.guildwars2.com/api.php";
 const USER_AGENT = "axiforge-desktop";
 
 const cache = new Map();
+
+// ─── Disk cache (persists across app restarts) ──────────────────────────────
+
+let _diskCachePath = null;
+let _diskCache = {};      // { [key]: { value, expiresAt } }
+let _diskDirty = false;
+let _flushTimer = null;
+const FLUSH_DELAY = 2000; // debounce writes by 2s
+
+async function initDiskCache(dir) {
+  _diskCachePath = path.join(dir, "api-cache.json");
+  try {
+    const raw = await fs.readFile(_diskCachePath, "utf8");
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      // Prune expired entries on load
+      const now = Date.now();
+      for (const k of Object.keys(parsed)) {
+        if (parsed[k] && parsed[k].expiresAt > now) {
+          _diskCache[k] = parsed[k];
+        }
+      }
+    }
+  } catch {
+    _diskCache = {};
+  }
+}
+
+async function _flushDiskCache() {
+  if (!_diskCachePath || !_diskDirty) return;
+  _diskDirty = false;
+  try {
+    await fs.writeFile(_diskCachePath, JSON.stringify(_diskCache), "utf8");
+  } catch { /* best-effort */ }
+}
+
+function _scheduleDiskFlush() {
+  _diskDirty = true;
+  if (_flushTimer) clearTimeout(_flushTimer);
+  _flushTimer = setTimeout(() => _flushDiskCache(), FLUSH_DELAY);
+}
+
+async function clearDiskCache() {
+  cache.clear();
+  _diskCache = {};
+  _diskDirty = false;
+  if (_flushTimer) clearTimeout(_flushTimer);
+  if (_diskCachePath) {
+    try { await fs.unlink(_diskCachePath); } catch { /* ok if missing */ }
+  }
+}
+
+// ─── Request queue ──────────────────────────────────────────────────────────
 
 // Simple queue to limit concurrent GW2 API requests and avoid 429s.
 const MAX_CONCURRENT = 3;
@@ -27,12 +83,13 @@ function drainQueue() {
   }
 }
 
-// Endpoints whose data essentially never changes get a 24h cache.
-// Professions, specializations, and legends are now hardcoded static JSON.
-// Only "races" remains here as a long-cache endpoint if it's ever fetched.
+// ─── Cache TTLs ─────────────────────────────────────────────────────────────
+
+// All API responses are now cached for 24 hours on disk.
+// Endpoints whose data essentially never changes get a 7-day cache.
 const LONG_CACHE_ENDPOINTS = new Set(["races"]);
-const TTL_LONG = 1000 * 60 * 60 * 24 * 7; // 7 days (resets on app restart anyway)
-const TTL_DEFAULT = 1000 * 60 * 60;    // 1 hour
+const TTL_LONG = 1000 * 60 * 60 * 24 * 7; // 7 days
+const TTL_DEFAULT = 1000 * 60 * 60 * 24;   // 24 hours
 
 async function fetchGw2ByIds(endpoint, ids, lang = "en") {
   if (!Array.isArray(ids) || !ids.length) return [];
@@ -51,12 +108,23 @@ async function fetchGw2ByIds(endpoint, ids, lang = "en") {
 }
 
 async function fetchCachedJson(key, url, ttlMs) {
-  const cached = cache.get(key);
-  if (cached && Date.now() < cached.expiresAt) {
-    return cached.value;
+  // L1: in-memory cache
+  const memCached = cache.get(key);
+  if (memCached && Date.now() < memCached.expiresAt) {
+    return memCached.value;
   }
+  // L2: disk cache
+  const diskEntry = _diskCache[key];
+  if (diskEntry && Date.now() < diskEntry.expiresAt) {
+    cache.set(key, diskEntry); // promote to memory
+    return diskEntry.value;
+  }
+  // L3: network
   const data = await fetchJson(url);
-  cache.set(key, { value: data, expiresAt: Date.now() + ttlMs });
+  const entry = { value: data, expiresAt: Date.now() + ttlMs };
+  cache.set(key, entry);
+  _diskCache[key] = entry;
+  _scheduleDiskFlush();
   return data;
 }
 
@@ -113,6 +181,8 @@ module.exports = {
   WIKI_API_ROOT,
   USER_AGENT,
   cache,
+  initDiskCache,
+  clearDiskCache,
   fetchGw2ByIds,
   fetchCachedJson,
   fetchJson,

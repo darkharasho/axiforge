@@ -364,3 +364,25 @@
 .settings-modal__setup-row .settings-modal__btn {
   align-self: flex-start;
 }
+
+/* ── Cache section ─────────────────────────────────────────── */
+
+.settings-modal__cache-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.settings-modal__cache-status {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.settings-modal__cache-status--ok {
+  color: #6ee7a0;
+}
+
+.settings-modal__cache-status--error {
+  color: var(--danger, #e55);
+}

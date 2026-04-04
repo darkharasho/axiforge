@@ -1472,3 +1472,139 @@ describe("fetchJson — retry behavior (via fetchCachedJson)", () => {
     expect(attempts).toBeGreaterThanOrEqual(2);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Disk cache — persistence across module reloads
+// ---------------------------------------------------------------------------
+
+const fs = require("node:fs/promises");
+const path = require("node:path");
+const os = require("node:os");
+
+describe("disk cache", () => {
+  let tmpDir;
+
+  beforeEach(async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "axiforge-cache-test-"));
+    delete global.fetch;
+  });
+
+  afterEach(async () => {
+    delete global.fetch;
+    jest.useRealTimers();
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  });
+
+  test("initDiskCache loads entries from disk and serves them without network", async () => {
+    // Write a pre-populated cache file
+    const cacheData = {
+      "skills:en:123": { value: [{ id: 123, name: "Fireball" }], expiresAt: Date.now() + 86400000 },
+    };
+    await fs.writeFile(path.join(tmpDir, "api-cache.json"), JSON.stringify(cacheData), "utf8");
+
+    jest.resetModules();
+    const { initDiskCache, fetchCachedJson, cache } = require("../../src/main/gw2Data/fetch");
+    cache.clear();
+
+    await initDiskCache(tmpDir);
+
+    // Should NOT call fetch — data comes from disk
+    global.fetch = jest.fn(() => { throw new Error("should not be called"); });
+
+    const result = await fetchCachedJson("skills:en:123", "https://api.guildwars2.com/v2/skills?ids=123", 86400000);
+    expect(result).toEqual([{ id: 123, name: "Fireball" }]);
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  test("initDiskCache prunes expired entries on load", async () => {
+    const cacheData = {
+      "expired:en:1": { value: [{ id: 1 }], expiresAt: Date.now() - 1000 },
+      "fresh:en:2": { value: [{ id: 2 }], expiresAt: Date.now() + 86400000 },
+    };
+    await fs.writeFile(path.join(tmpDir, "api-cache.json"), JSON.stringify(cacheData), "utf8");
+
+    jest.resetModules();
+    const { initDiskCache, fetchCachedJson, cache } = require("../../src/main/gw2Data/fetch");
+    cache.clear();
+    await initDiskCache(tmpDir);
+
+    // Fresh entry should be served from disk
+    global.fetch = jest.fn(() => { throw new Error("should not be called"); });
+    const result = await fetchCachedJson("fresh:en:2", "https://example.com", 86400000);
+    expect(result).toEqual([{ id: 2 }]);
+
+    // Expired entry should require a network call
+    global.fetch = jest.fn(async () => ({
+      ok: true,
+      json: async () => [{ id: 1, name: "refetched" }],
+    }));
+    const result2 = await fetchCachedJson("expired:en:1", "https://example.com", 86400000);
+    expect(result2).toEqual([{ id: 1, name: "refetched" }]);
+    expect(global.fetch).toHaveBeenCalled();
+  });
+
+  test("fetchCachedJson persists new entries to disk", async () => {
+    jest.resetModules();
+    jest.useFakeTimers();
+    const { initDiskCache, fetchCachedJson, cache } = require("../../src/main/gw2Data/fetch");
+    cache.clear();
+    await initDiskCache(tmpDir);
+
+    global.fetch = jest.fn(async () => ({
+      ok: true,
+      json: async () => [{ id: 5, name: "Heal" }],
+    }));
+
+    await fetchCachedJson("skills:en:5", "https://api.guildwars2.com/v2/skills?ids=5", 86400000);
+
+    // Trigger the debounced flush
+    jest.advanceTimersByTime(3000);
+    jest.useRealTimers();
+    // Give the async write a tick to complete
+    await new Promise((r) => setTimeout(r, 50));
+
+    const raw = await fs.readFile(path.join(tmpDir, "api-cache.json"), "utf8");
+    const diskData = JSON.parse(raw);
+    expect(diskData["skills:en:5"]).toBeDefined();
+    expect(diskData["skills:en:5"].value).toEqual([{ id: 5, name: "Heal" }]);
+  });
+
+  test("clearDiskCache removes in-memory and disk entries", async () => {
+    // Seed a cache file
+    const cacheData = {
+      "skills:en:1": { value: [{ id: 1 }], expiresAt: Date.now() + 86400000 },
+    };
+    await fs.writeFile(path.join(tmpDir, "api-cache.json"), JSON.stringify(cacheData), "utf8");
+
+    jest.resetModules();
+    const { initDiskCache, clearDiskCache, cache } = require("../../src/main/gw2Data/fetch");
+    cache.clear();
+    await initDiskCache(tmpDir);
+
+    await clearDiskCache();
+
+    // Memory cache should be empty
+    expect(cache.size).toBe(0);
+    // Disk file should be removed
+    await expect(fs.access(path.join(tmpDir, "api-cache.json"))).rejects.toThrow();
+  });
+
+  test("initDiskCache handles missing cache file gracefully", async () => {
+    jest.resetModules();
+    const { initDiskCache, cache } = require("../../src/main/gw2Data/fetch");
+    cache.clear();
+
+    // Should not throw even though no file exists
+    await expect(initDiskCache(tmpDir)).resolves.not.toThrow();
+  });
+
+  test("initDiskCache handles corrupt cache file gracefully", async () => {
+    await fs.writeFile(path.join(tmpDir, "api-cache.json"), "NOT VALID JSON{{{", "utf8");
+
+    jest.resetModules();
+    const { initDiskCache, cache } = require("../../src/main/gw2Data/fetch");
+    cache.clear();
+
+    await expect(initDiskCache(tmpDir)).resolves.not.toThrow();
+  });
+});

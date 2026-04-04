@@ -84,6 +84,7 @@ export function renderCustomSelect(host, config = {}) {
 
   // Track group elements for search filtering (direct references avoid attribute selectors)
   const groupRefs = [];
+  const flatOptionRefs = [];
 
   if (hasGroups) {
     for (const group of config.groups) {
@@ -98,13 +99,15 @@ export function renderCustomSelect(host, config = {}) {
         const btn = makeOptionButton(option, { grouped: true });
         btn.dataset.value = option.value;
         list.append(btn);
-        optionRefs.push({ el: btn, label: option.label });
+        optionRefs.push({ el: btn, label: option.label, description: option.description || "" });
       }
       groupRefs.push({ headerEl: header, groupLabel: group.label, options: optionRefs });
     }
   } else if (allOptions.length) {
     for (const option of allOptions) {
-      list.append(makeOptionButton(option));
+      const btn = makeOptionButton(option);
+      list.append(btn);
+      flatOptionRefs.push({ el: btn, label: option.label, description: option.description || "" });
     }
   } else {
     const empty = document.createElement("p");
@@ -115,7 +118,8 @@ export function renderCustomSelect(host, config = {}) {
 
   menu.append(list);
 
-  if (config.searchable && hasGroups) {
+  if (config.searchable) {
+    const searchFields = config.searchFields || ["label"];
     const searchInput = document.createElement("input");
     searchInput.type = "text";
     searchInput.className = "cselect__search";
@@ -123,16 +127,37 @@ export function renderCustomSelect(host, config = {}) {
     searchInput.addEventListener("click", (e) => { e.stopPropagation(); });
     searchInput.addEventListener("input", () => {
       const query = searchInput.value.toLowerCase().trim();
-      for (const groupRef of groupRefs) {
-        let groupHasVisible = false;
-        const matchesGroup = groupRef.groupLabel.toLowerCase().includes(query);
-        for (const optRef of groupRef.options) {
-          const matchesOption = optRef.label.toLowerCase().includes(query);
-          const visible = !query || matchesOption || matchesGroup;
-          optRef.el.style.display = visible ? "" : "none";
-          if (visible) groupHasVisible = true;
+      if (hasGroups) {
+        for (const groupRef of groupRefs) {
+          let groupHasVisible = false;
+          const matchesGroup = groupRef.groupLabel.toLowerCase().includes(query);
+          for (const optRef of groupRef.options) {
+            const visible = !query || matchesGroup || searchFields.some((f) => (optRef[f] || "").toLowerCase().includes(query));
+            optRef.el.style.display = visible ? "" : "none";
+            if (visible) groupHasVisible = true;
+          }
+          groupRef.headerEl.style.display = groupHasVisible ? "" : "none";
         }
-        groupRef.headerEl.style.display = groupHasVisible ? "" : "none";
+      } else {
+        let anyVisible = false;
+        for (const optRef of flatOptionRefs) {
+          const visible = !query || searchFields.some((f) => (optRef[f] || "").toLowerCase().includes(query));
+          optRef.el.style.display = visible ? "" : "none";
+          if (visible) anyVisible = true;
+        }
+        // Show/hide empty state
+        let emptyEl = list.querySelector(".cselect__empty");
+        if (!anyVisible && query) {
+          if (!emptyEl) {
+            emptyEl = document.createElement("p");
+            emptyEl.className = "cselect__empty";
+            emptyEl.textContent = config.emptySearchText || "No results found";
+            list.append(emptyEl);
+          }
+          emptyEl.style.display = "";
+        } else if (emptyEl) {
+          emptyEl.style.display = "none";
+        }
       }
     });
     menu.insertBefore(searchInput, list);
@@ -164,6 +189,12 @@ export function makeCustomSelectValueNode(option, placeholder) {
     meta.className = "cselect__meta";
     meta.textContent = String(option.meta);
     text.append(meta);
+  }
+  if (option?.description) {
+    const desc = document.createElement("span");
+    desc.className = "cselect__option-description";
+    desc.textContent = String(option.description);
+    text.append(desc);
   }
   value.append(text);
   return value;
@@ -218,7 +249,8 @@ export function toggleCustomSelect(root) {
       const spaceAbove = rect.top;
       const dropUp = spaceBelow < menuEstHeight + 8 && spaceAbove > spaceBelow;
       menu.style.position = "fixed";
-      menu.style.left = `${Math.min(rect.left, window.innerWidth - 200)}px`;
+      const menuWidth = parseFloat(getComputedStyle(menu).minWidth) || 200;
+      menu.style.left = `${Math.min(rect.left, window.innerWidth - menuWidth - 8)}px`;
       menu.style.right = "auto";
       if (dropUp) {
         menu.style.top = "auto";

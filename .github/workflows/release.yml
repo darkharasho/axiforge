@@ -1,0 +1,102 @@
+name: Build Release Artifacts
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+  build:
+    needs: [test]
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+            args: --linux AppImage
+          - os: windows-latest
+            platform: win
+            args: --win nsis
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build site and renderer
+        run: npm run build:site && npm run build:renderer
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
+
+      - name: Build and publish Electron distributables
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder ${{ matrix.args }} --publish always
+
+  publish:
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+          gh release edit "$tag" --draft=false
+
+      - name: Post to Discord
+        if: ${{ vars.DISCORD_WEBHOOK_URL != '' }}
+        env:
+          DISCORD_WEBHOOK_URL: ${{ vars.DISCORD_WEBHOOK_URL }}
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+          release_url="https://github.com/darkharasho/axiforge/releases/tag/${tag}"
+          notes=$(gh release view "$tag" --json body --jq '.body' 2>/dev/null || echo "")
+
+          # Truncate notes to fit Discord's 2000 char limit (leaving room for header)
+          if [ ${#notes} -gt 1500 ]; then
+            notes="${notes:0:1500}..."
+          fi
+
+          payload=$(python3 -c "
+          import json, sys
+          content = f'**AxiForge ${tag}** released!\n\n${notes}\n\n🔗 {release_url}'
+          if len(content) > 2000:
+              content = content[:1997] + '...'
+          print(json.dumps({'content': content}))
+          " 2>/dev/null || echo '{"content":"AxiForge '"$tag"' released! '"$release_url"'"}')
+
+          curl -s -H "Content-Type: application/json" -d "$payload" "$DISCORD_WEBHOOK_URL"

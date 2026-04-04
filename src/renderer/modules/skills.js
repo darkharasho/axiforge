@@ -810,18 +810,18 @@ export function buildMechanicSlotsForRender({
 
 export function makeSkillSlot(slot, catalog, options, utilitySelection, markSkillIconRendered = null, skillTarget = null) {
   const target = skillTarget || state.editor.skills;
-  const query = "";
   const selectedId =
     slot.index === undefined
       ? Number(target[slot.key]) || 0
       : Number(target[slot.key]?.[slot.index]) || 0;
   const selectedSkill = slot.list.find((skill) => Number(skill.id) === selectedId) || null;
-  const filteredList = filterSkillList(slot.list, query, selectedId);
+  const filteredList = slot.list;
 
   const skillOptions = filteredList.map((skill) => ({
     value: String(skill.id),
     label: skill.name,
     icon: skill.icon || "",
+    description: skill.description || "",
     meta: skill.type ? String(skill.type).toUpperCase() : "",
     kind: "skill",
     entity: skill,
@@ -942,6 +942,8 @@ export function makeSkillSlot(slot, catalog, options, utilitySelection, markSkil
       options: skillOptions,
       placeholder: filteredList.length ? "Select skill" : "No skills available",
       disabled: !filteredList.length,
+      searchable: true,
+      searchFields: ["label", "description"],
       onChange: (nextValue) => {
         const nextId = Number(nextValue) || 0;
         if (!nextId) return;
