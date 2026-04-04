@@ -179,3 +179,43 @@ describe("Relic facts on equipment panel (#125)", () => {
     expect(html).not.toContain("Cooldown: 30s");
   });
 });
+
+describe("Relic of the Thief tooltip completeness (#136)", () => {
+  const relicFacts = require("../../../src/main/gw2Data/relicFacts.json");
+  const thief = relicFacts.relics["100916"];
+
+  test("relicFacts.json contains Relic of the Thief entry", () => {
+    expect(thief).toBeDefined();
+    expect(thief.name).toBe("Relic of the Thief");
+  });
+
+  test("Relic of the Thief has Stack Duration fact", () => {
+    const stackDuration = thief.facts.find(
+      (f) => f.type === "Time" && /stack duration/i.test(f.text)
+    );
+    expect(stackDuration).toBeDefined();
+    expect(stackDuration.duration).toBe(6);
+  });
+
+  test("Relic of the Thief has Maximum Stacks fact", () => {
+    const maxStacks = thief.facts.find(
+      (f) => f.type === "Number" && /maximum stacks/i.test(f.text)
+    );
+    expect(maxStacks).toBeDefined();
+    expect(maxStacks.value).toBe(5);
+  });
+
+  test("tooltip renders stack duration and max stacks for Relic of the Thief", () => {
+    const entity = {
+      name: thief.name,
+      icon: "https://example.com/thief.png",
+      description: "",
+      facts: thief.facts,
+    };
+
+    const html = detailPanel.buildSkillCard(entity, "equip-relic");
+    expect(html).toContain("Damage Increase");
+    expect(html).toContain("Stack Duration");
+    expect(html).toContain("Maximum Stacks");
+  });
+});
