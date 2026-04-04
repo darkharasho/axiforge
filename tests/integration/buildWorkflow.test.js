@@ -10,10 +10,28 @@
 
 const path = require("node:path");
 const fs = require("node:fs/promises");
+const fsSync = require("node:fs");
 const os = require("node:os");
+const { execSync } = require("node:child_process");
 const { BuildStore } = require("../../src/main/buildStore");
+
+// Mock electron app for siteBundle.js
+jest.mock("electron", () => ({ app: { isPackaged: false } }), { virtual: true });
+
 const { buildSpaBundle, buildEncryptedBuildFile } = require("../../src/main/siteBundle");
 const { generateEncryptionKey } = require("../../src/main/buildEncryption");
+
+const DIST_DIR = path.join(__dirname, "../../dist/site");
+
+// Build site if dist doesn't exist (needed in CI)
+beforeAll(() => {
+  if (!fsSync.existsSync(DIST_DIR)) {
+    execSync("npx vite build --config src/site/vite.config.js", {
+      cwd: path.join(__dirname, "../.."),
+      stdio: "pipe",
+    });
+  }
+});
 
 // ---------------------------------------------------------------------------
 // Helpers

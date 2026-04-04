@@ -76,7 +76,7 @@ describe("buildSpaBundle", () => {
 describe("getSiteDistDir — packaged path", () => {
   test("uses process.resourcesPath/site when app.isPackaged is true", () => {
     jest.resetModules();
-    jest.mock("electron", () => ({ app: { isPackaged: true } }), { virtual: true });
+    jest.doMock("electron", () => ({ app: { isPackaged: true } }), { virtual: true });
     const origResources = process.resourcesPath;
     process.resourcesPath = "/mock/resources";
     try {
