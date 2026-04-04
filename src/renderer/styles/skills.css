@@ -577,7 +577,6 @@
 }
 
 .skill-select-overlay .cselect__menu {
-  min-width: 220px;
   pointer-events: auto;
 }
 

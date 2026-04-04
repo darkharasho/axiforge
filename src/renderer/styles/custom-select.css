@@ -222,3 +222,35 @@
 .cselect__search::placeholder {
   color: #5a6a8e;
 }
+
+/* ── Skill slot dropdown overrides ──────────────────────────────────────── */
+
+.skill-select-overlay .cselect__menu {
+  min-width: 340px;
+}
+
+.skill-select-overlay .cselect__list {
+  max-height: 400px;
+}
+
+.skill-select-overlay .cselect__icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
+}
+
+.skill-select-overlay .cselect__option {
+  align-items: flex-start;
+}
+
+/* ── Option description ─────────────────────────────────────────────────── */
+
+.cselect__option-description {
+  display: block;
+  font-size: 0.69rem;
+  color: #6a7a9e;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 1px;
+}
