@@ -72,6 +72,11 @@ function parseFactText(name, value, titleAttr) {
     return parseHealingFact(name, val);
   }
 
+  // ── Stun Break ──
+  if (nameLower === "breaks stun" || nameLower === "stun break") {
+    return { type: "StunBreak", text: "Stun Break", value: true };
+  }
+
   // ── Recharge ──
   if (nameLower === "recharge" || nameLower === "recharge time") {
     const num = parseFloat(val);
