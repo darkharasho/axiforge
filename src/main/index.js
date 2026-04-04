@@ -18,7 +18,7 @@ const {
   publishSiteBundle,
   deleteFile,
 } = require("./githubApi");
-const { getProfessionList, getProfessionCatalog, getUpgradeCatalog, getWikiSummary, getWikiRelatedData } = require("./gw2Data");
+const { getProfessionList, getProfessionCatalog, getUpgradeCatalog, getWikiSummary, getWikiRelatedData, initDiskCache, clearDiskCache } = require("./gw2Data");
 const { slugifyBuildName, generateFileId, generateEncryptionKey, getDefaultBuildName } = require("./buildEncryption");
 const { buildSpaBundle, buildEncryptedBuildFile, buildEncryptedCompFile, buildRedirectFile } = require("./siteBundle");
 const { serializeForPublish } = require("./buildPublish");
@@ -198,6 +198,7 @@ app.whenReady().then(async () => {
   await store.init();
   await folderStore.init();
   await compStore.init();
+  await initDiskCache(dataDir);
   await migrateCompGameModes(store, compStore);
   const win = createWindow();
   initAutoUpdate(win);
@@ -765,6 +766,7 @@ app.whenReady().then(async () => {
     getProfessionCatalog(professionId, "en", gameMode)
   );
   ipcMain.handle("gw2:get-upgrade-catalog", async () => getUpgradeCatalog("en"));
+  ipcMain.handle("gw2:clear-cache", async () => clearDiskCache());
   ipcMain.handle("wiki:get-summary", async (_e, title) => getWikiSummary(title));
   ipcMain.handle("wiki:get-related-data", async (_e, title) => getWikiRelatedData(title));
   ipcMain.handle("settings:get", async (_e, key) => store.getSetting(key));
