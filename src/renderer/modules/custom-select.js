@@ -190,6 +190,12 @@ export function makeCustomSelectValueNode(option, placeholder) {
     meta.textContent = String(option.meta);
     text.append(meta);
   }
+  if (option?.description) {
+    const desc = document.createElement("span");
+    desc.className = "cselect__option-description";
+    desc.textContent = String(option.description);
+    text.append(desc);
+  }
   value.append(text);
   return value;
 }

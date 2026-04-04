@@ -670,3 +670,29 @@ describe("renderCustomSelect — flat searchable", () => {
     expect(empty.style.display).toBe("none");
   });
 });
+
+describe("renderCustomSelect — option descriptions", () => {
+  test("renders description text below option label when provided", () => {
+    const host = makeElement("div");
+
+    customSelectModule.renderCustomSelect(host, {
+      value: "alpha",
+      options: [
+        { value: "alpha", label: "Alpha Skill", description: "Grants stability to allies" },
+        { value: "bravo", label: "Bravo Skill" },
+      ],
+      onChange: () => {},
+    });
+
+    const options = host.querySelectorAll(".cselect__option");
+
+    // First option should have a description element
+    const desc = options[0].querySelector(".cselect__option-description");
+    expect(desc).toBeTruthy();
+    expect(desc.textContent).toBe("Grants stability to allies");
+
+    // Second option should NOT have a description element (no description provided)
+    const noDesc = options[1].querySelector(".cselect__option-description");
+    expect(noDesc).toBeNull();
+  });
+});
