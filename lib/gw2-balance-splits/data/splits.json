@@ -30841,6 +30841,21 @@
         "wvw": {
           "facts": [
             {
+              "type": "Recharge",
+              "text": "Recharge",
+              "value": 11
+            },
+            {
+              "type": "Percent",
+              "text": "Attack Speed Increase",
+              "percent": 15
+            },
+            {
+              "type": "Time",
+              "text": "Duration",
+              "duration": 15
+            },
+            {
               "type": "Number",
               "text": "Adrenaline",
               "value": 10
@@ -31962,6 +31977,21 @@
       "modes": {
         "wvw": {
           "facts": [
+            {
+              "type": "Recharge",
+              "text": "Recharge",
+              "value": 11
+            },
+            {
+              "type": "Percent",
+              "text": "Attack Speed Increase",
+              "percent": 15
+            },
+            {
+              "type": "Time",
+              "text": "Duration",
+              "duration": 15
+            },
             {
               "type": "Number",
               "text": "Adrenaline",
