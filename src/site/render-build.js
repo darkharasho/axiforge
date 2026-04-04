@@ -186,6 +186,7 @@ function populateStateFromBuild(build) {
     foodById:       new Map(eqd.food ? [[eqd.food.id, eqd.food]] : []),
     utilityById:    new Map(eqd.utility ? [[eqd.utility.id, eqd.utility]] : []),
     relicByName:    new Map(eqd.relic ? [[eqd.relic.name, eqd.relic]] : []),
+    relicById:      new Map(eqd.relic ? [[eqd.relic.id, eqd.relic]] : []),
   };
 }
 

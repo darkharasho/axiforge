@@ -33,8 +33,11 @@ export function renderNotes(build) {
   const traitById = new Map((build.catalogTraits || []).map((t) => [t.id, t]));
   const runeById = new Map(Object.values(build.equipmentDisplay?.runes || {}).filter(Boolean).map((r) => [r.id, r]));
   const sigilById = new Map(Object.values(build.equipmentDisplay?.sigils || {}).flat().filter(Boolean).map((s) => [s.id, s]));
+  const infusionById = new Map(Object.values(build.equipmentDisplay?.infusions || {}).flat().filter(Boolean).map((i) => [i.id, i]));
+  const enrichmentById = build.equipmentDisplay?.enrichment ? new Map([[build.equipmentDisplay.enrichment.id, build.equipmentDisplay.enrichment]]) : new Map();
   const foodById = build.equipmentDisplay?.food ? new Map([[build.equipmentDisplay.food.id, build.equipmentDisplay.food]]) : new Map();
   const utilityById = build.equipmentDisplay?.utility ? new Map([[build.equipmentDisplay.utility.id, build.equipmentDisplay.utility]]) : new Map();
+  const relicById = build.equipmentDisplay?.relic ? new Map([[build.equipmentDisplay.relic.id, build.equipmentDisplay.relic]]) : new Map();
 
   // Resolve @[category:id:Name] patterns
   html = html.replace(/@\[(\w+):(\d+):([^\]]+)\]/g, (match, category, id, name) => {
@@ -47,6 +50,9 @@ export function renderNotes(build) {
       case "sigil": resolved = sigilById.get(numId); break;
       case "food": resolved = foodById.get(numId); break;
       case "utility": resolved = utilityById.get(numId); break;
+      case "infusion": resolved = infusionById.get(numId); break;
+      case "enrichment": resolved = enrichmentById.get(numId); break;
+      case "relic": resolved = relicById.get(numId); break;
       default: break;
     }
 
@@ -83,6 +89,9 @@ export function renderNotes(build) {
         case "sigil": return sigilById.get(id) || null;
         case "food": return foodById.get(id) || null;
         case "utility": return utilityById.get(id) || null;
+        case "infusion": return infusionById.get(id) || null;
+        case "enrichment": return enrichmentById.get(id) || null;
+        case "relic": return relicById.get(id) || null;
         default: return null;
       }
     });
