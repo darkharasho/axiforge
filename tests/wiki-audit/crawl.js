@@ -23,6 +23,8 @@ const SELECTORS = {
   noArticle: ".noarticle",
   // Skill/trait infobox
   infobox: ".infobox.skill, .infobox.trait",
+  // Recharge/cooldown statistics div inside blockquote
+  statistics: "blockquote .statistics",
 };
 
 const WIKI_BASE = "https://wiki.guildwars2.com/wiki/";
@@ -98,6 +100,30 @@ async function _crawlEntityOnce(page, entity, entityType) {
 
     // Extract facts from blockquote
     const wvwFacts = await extractFacts(page, hasToggle);
+
+    // Extract recharge from the statistics div (separate from dd fact rows).
+    // The div contains gamemode-tagged children; read the visible one.
+    try {
+      const recharge = await page.$eval(SELECTORS.statistics, (el) => {
+        const gameDivs = el.querySelectorAll(".gamemode");
+        if (gameDivs.length > 0) {
+          for (const gm of gameDivs) {
+            if (window.getComputedStyle(gm).display === "none") continue;
+            const match = gm.textContent.trim().match(/^([\d.]+)/);
+            if (match) return parseFloat(match[1]);
+          }
+          return null;
+        }
+        // No gamemode wrappers — single value
+        const match = el.textContent.trim().match(/^([\d.]+)/);
+        return match ? parseFloat(match[1]) : null;
+      });
+      if (recharge != null) {
+        wvwFacts.unshift({ name: "Recharge", valueText: String(recharge), titleAttr: "Recharge time" });
+      }
+    } catch {
+      // No statistics div — skill has no recharge
+    }
 
     return { hasToggle, wvwFacts, error: null, wiki_url: finalUrl };
   } catch (err) {
@@ -206,12 +232,22 @@ async function extractFacts(page, hasToggle) {
         const t = l.textContent.trim();
         if (t) { name = t; titleAttr = l.getAttribute("title") || ""; break; }
       }
-      if (!name) continue;
 
       // Extract the full text content after the link
       // Get the text of the dd (or the visible gamemode div)
       const container = gmDiv || dd;
       const fullText = container.textContent.trim();
+
+      // Fallback for facts without named links (e.g. "Attack Speed Increase: 15%",
+      // "Duration: 15 seconds"). These rows only have icon-only <a> tags whose
+      // textContent is empty. Extract the label from the full text before the colon.
+      if (!name) {
+        const colonIdx = fullText.indexOf(":");
+        if (colonIdx > 0) {
+          name = fullText.slice(0, colonIdx).trim();
+        }
+        if (!name) continue;
+      }
 
       // The value portion is everything after "Name:" or "Name (Ns):"
       // Remove the fact name from the beginning, and strip the "?" tooltip

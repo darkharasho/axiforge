@@ -117,6 +117,15 @@ function parseFactText(name, value, titleAttr) {
     return !isNaN(num) ? { type: "Number", text: name, value: num } : null;
   }
 
+  // ── Duration / Time ──
+  // "15 seconds", "20 seconds", etc. — wiki renders time facts with a "seconds" suffix
+  if (nameLower === "duration" || nameLower === "duration increase") {
+    const timeMatch = val.match(/^([\d.]+)\s*s/);
+    if (timeMatch) {
+      return { type: "Time", text: name, duration: parseFloat(timeMatch[1]) };
+    }
+  }
+
   // ── Percent ──
   const pctMatch = val.match(/^([\d.]+)\s*%/);
   if (pctMatch) {
