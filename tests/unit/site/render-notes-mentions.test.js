@@ -10,16 +10,16 @@
 //
 // Bug #139: relic/infusion/enrichment mentions were silently dropped in
 // the published SPA because render-notes.js had no case handlers for them.
-
-// We cannot import the ES module directly, so we replicate the core
-// resolution and mapping logic that render-notes.js must implement, and
-// verify the source file contains the required case branches.
+// Additionally, mentions of non-equipped upgrade items (e.g. a relic
+// referenced in notes but not currently equipped) were unresolvable because
+// the SPA only had data for equipped items.
 
 const fs = require("node:fs");
 const path = require("node:path");
 
 const RENDER_NOTES_PATH = path.join(__dirname, "../../../src/site/render-notes.js");
 const RENDER_BUILD_PATH = path.join(__dirname, "../../../src/site/render-build.js");
+const BUILD_PUBLISH_PATH = path.join(__dirname, "../../../src/main/buildPublish.js");
 
 const renderNotesSrc = fs.readFileSync(RENDER_NOTES_PATH, "utf-8");
 const renderBuildSrc = fs.readFileSync(RENDER_BUILD_PATH, "utf-8");
@@ -31,7 +31,6 @@ describe("SPA render-notes.js — mention category coverage", () => {
   test.each(ALL_CATEGORIES)(
     'has case "%s" in the mention-resolve switch',
     (category) => {
-      // Match case "category": in the source (the resolve switch)
       const pattern = new RegExp(`case\\s+"${category}"\\s*:`);
       expect(renderNotesSrc).toMatch(pattern);
     }
@@ -40,7 +39,6 @@ describe("SPA render-notes.js — mention category coverage", () => {
   test.each(ALL_CATEGORIES)(
     'has case "%s" in the hover-binding switch',
     (category) => {
-      // There should be at least 2 occurrences of each case (resolve + hover)
       const pattern = new RegExp(`case\\s+"${category}"\\s*:`, "g");
       const matches = renderNotesSrc.match(pattern) || [];
       expect(matches.length).toBeGreaterThanOrEqual(2);
@@ -62,8 +60,6 @@ describe("SPA render-build.js — upgradeCatalog completeness", () => {
 });
 
 describe("SPA render-notes.js — lookup map construction", () => {
-  // Verify that render-notes.js builds lookup maps for the categories
-  // that are sourced from upgradeCatalog (not from catalogSkills/catalogTraits)
   const UPGRADE_CATEGORIES = ["rune", "sigil", "food", "utility", "infusion", "enrichment", "relic"];
 
   test.each(UPGRADE_CATEGORIES)(
@@ -73,4 +69,89 @@ describe("SPA render-notes.js — lookup map construction", () => {
       expect(renderNotesSrc).toMatch(pattern);
     }
   );
+});
+
+describe("SPA render-notes.js — catalogNotesMentions integration", () => {
+  test("merges catalogNotesMentions into lookup maps", () => {
+    expect(renderNotesSrc).toMatch(/catalogNotesMentions/);
+  });
+});
+
+describe("SPA render-build.js — catalogNotesMentions integration", () => {
+  test("merges catalogNotesMentions into state.upgradeCatalog", () => {
+    expect(renderBuildSrc).toMatch(/catalogNotesMentions/);
+  });
+});
+
+describe("buildPublish — resolveNotesMentions", () => {
+  const { serializeForPublish } = require(BUILD_PUBLISH_PATH);
+
+  test("includes non-equipped relic mentioned in notes", () => {
+    const build = {
+      profession: "Warrior",
+      equipment: { relic: "Relic of Fireworks", weapons: {} },
+      notes: "@[relic:100144:Relic of the Warrior]",
+    };
+    const catalog = { traits: [], skills: [], weaponSkills: [], professionWeapons: {} };
+    const upgradeCatalog = {
+      runeById: new Map(),
+      sigilById: new Map(),
+      infusionById: new Map(),
+      enrichmentById: new Map(),
+      foodById: new Map(),
+      utilityById: new Map(),
+      relicByName: new Map([
+        ["Relic of Fireworks", { id: 100947, name: "Relic of Fireworks", icon: "fw.png" }],
+      ]),
+      relics: [
+        { id: 100947, name: "Relic of Fireworks", icon: "fw.png" },
+        { id: 100144, name: "Relic of the Warrior", icon: "warrior.png", description: "Dmg" },
+      ],
+    };
+
+    const result = serializeForPublish(build, catalog, upgradeCatalog);
+    const mentions = result.catalogNotesMentions;
+    expect(mentions).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: 100144, name: "Relic of the Warrior", category: "relic" }),
+    ]));
+  });
+
+  test("does not duplicate items already in equipmentDisplay", () => {
+    const build = {
+      profession: "Warrior",
+      equipment: { relic: "Relic of Fireworks", weapons: {} },
+      notes: "@[relic:100947:Relic of Fireworks]",
+    };
+    const catalog = { traits: [], skills: [], weaponSkills: [], professionWeapons: {} };
+    const upgradeCatalog = {
+      runeById: new Map(),
+      sigilById: new Map(),
+      infusionById: new Map(),
+      enrichmentById: new Map(),
+      foodById: new Map(),
+      utilityById: new Map(),
+      relicByName: new Map([
+        ["Relic of Fireworks", { id: 100947, name: "Relic of Fireworks", icon: "fw.png" }],
+      ]),
+      relics: [
+        { id: 100947, name: "Relic of Fireworks", icon: "fw.png" },
+      ],
+    };
+
+    const result = serializeForPublish(build, catalog, upgradeCatalog);
+    expect(result.catalogNotesMentions).toEqual([]);
+  });
+
+  test("returns empty array when no notes", () => {
+    const build = { profession: "Warrior", equipment: { weapons: {} } };
+    const catalog = { traits: [], skills: [], weaponSkills: [], professionWeapons: {} };
+    const upgradeCatalog = {
+      runeById: new Map(), sigilById: new Map(), infusionById: new Map(),
+      enrichmentById: new Map(), foodById: new Map(), utilityById: new Map(),
+      relicByName: new Map(),
+    };
+
+    const result = serializeForPublish(build, catalog, upgradeCatalog);
+    expect(result.catalogNotesMentions).toEqual([]);
+  });
 });

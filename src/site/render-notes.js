@@ -38,7 +38,13 @@ export function renderNotes(build) {
   const foodById = build.equipmentDisplay?.food ? new Map([[build.equipmentDisplay.food.id, build.equipmentDisplay.food]]) : new Map();
   const utilityById = build.equipmentDisplay?.utility ? new Map([[build.equipmentDisplay.utility.id, build.equipmentDisplay.utility]]) : new Map();
   const relicById = build.equipmentDisplay?.relic ? new Map([[build.equipmentDisplay.relic.id, build.equipmentDisplay.relic]]) : new Map();
-  const relicByName = build.equipmentDisplay?.relic ? new Map([[build.equipmentDisplay.relic.name, build.equipmentDisplay.relic]]) : new Map();
+
+  // Merge in any extra upgrade items referenced in notes but not equipped
+  for (const item of (build.catalogNotesMentions || [])) {
+    const map = { rune: runeById, sigil: sigilById, food: foodById, utility: utilityById,
+      infusion: infusionById, enrichment: enrichmentById, relic: relicById }[item.category];
+    if (map && !map.has(item.id)) map.set(item.id, item);
+  }
 
   // Resolve @[category:id:Name] patterns
   html = html.replace(/@\[(\w+):(\d+):([^\]]+)\]/g, (match, category, id, name) => {
@@ -53,7 +59,7 @@ export function renderNotes(build) {
       case "utility": resolved = utilityById.get(numId); break;
       case "infusion": resolved = infusionById.get(numId); break;
       case "enrichment": resolved = enrichmentById.get(numId); break;
-      case "relic": resolved = relicById.get(numId) || relicByName.get(decodeHtmlEntities(name)); break;
+      case "relic": resolved = relicById.get(numId); break;
       default: break;
     }
 
@@ -62,8 +68,7 @@ export function renderNotes(build) {
     const escapedName = escapeHtml(decodeHtmlEntities(name));
 
     if (resolved) {
-      const decodedName = decodeHtmlEntities(name);
-      return `<span class="notes-mention" data-type="${category}" data-id="${numId}" data-name="${escapeHtml(decodedName)}">${iconHtml}${escapedName} <span class="notes-mention__label">${category}</span></span>`;
+      return `<span class="notes-mention" data-type="${category}" data-id="${numId}">${iconHtml}${escapedName} <span class="notes-mention__label">${category}</span></span>`;
     }
     return `@${escapedName}`;
   });
@@ -93,7 +98,7 @@ export function renderNotes(build) {
         case "utility": return utilityById.get(id) || null;
         case "infusion": return infusionById.get(id) || null;
         case "enrichment": return enrichmentById.get(id) || null;
-        case "relic": return relicById.get(id) || relicByName.get(chip.dataset.name) || null;
+        case "relic": return relicById.get(id) || null;
         default: return null;
       }
     });

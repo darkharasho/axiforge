@@ -315,6 +315,64 @@ function resolveEquipmentDisplay(equipment, upgradeCatalog) {
 }
 
 /**
+ * Extract upgrade items referenced in notes @[category:id:name] mentions that are
+ * not already present in equipmentDisplay.  Returns a flat array of { id, name, icon,
+ * category, description? } objects the SPA can use to build lookup maps.
+ */
+function resolveNotesMentions(notes, upgradeCatalog, equipmentDisplay) {
+  if (!notes || !upgradeCatalog) return [];
+
+  const UPGRADE_MAPS = {
+    rune:       upgradeCatalog.runeById,
+    sigil:      upgradeCatalog.sigilById,
+    food:       upgradeCatalog.foodById,
+    utility:    upgradeCatalog.utilityById,
+    infusion:   upgradeCatalog.infusionById,
+    enrichment: upgradeCatalog.enrichmentById,
+    relic:      upgradeCatalog.relicById || new Map(
+      (upgradeCatalog.relics || []).map(r => [r.id, r])
+    ),
+  };
+
+  // Collect IDs already in equipmentDisplay so we don't duplicate them
+  const existing = new Set();
+  const eqd = equipmentDisplay || {};
+  for (const group of [eqd.runes, eqd.sigils, eqd.infusions]) {
+    if (!group) continue;
+    for (const val of Object.values(group)) {
+      for (const item of [].concat(val).filter(Boolean)) {
+        if (item.id) existing.add(item.id);
+      }
+    }
+  }
+  for (const item of [eqd.food, eqd.utility, eqd.enrichment, eqd.relic]) {
+    if (item?.id) existing.add(item.id);
+  }
+
+  const result = [];
+  const seen = new Set();
+  const mentionRegex = /@\[(\w+):(\d+):[^\]]+\]/g;
+  let match;
+  while ((match = mentionRegex.exec(notes)) !== null) {
+    const category = match[1];
+    const id = Number(match[2]);
+    if (!UPGRADE_MAPS[category] || existing.has(id) || seen.has(id)) continue;
+    seen.add(id);
+    const item = UPGRADE_MAPS[category].get(id);
+    if (!item) continue;
+    result.push({
+      id: item.id,
+      name: item.name,
+      icon: item.icon || "",
+      category,
+      ...(item.description ? { description: item.description } : {}),
+      ...(item.facts?.length ? { facts: item.facts } : {}),
+    });
+  }
+  return result;
+}
+
+/**
  * Enrich a serialized build with all data the SPA needs to render without API calls.
  *
  * Adds:
@@ -608,6 +666,9 @@ function serializeForPublish(build, catalog, upgradeCatalog) {
     catalogSkills: skillsArray,
     catalogWeaponSkills: weaponSkillsArray,
     catalogTraits: catalog?.traits || [],
+    // Upgrade items referenced in notes mentions that aren't already in equipmentDisplay.
+    // Allows the SPA to resolve @[relic:id:name] etc. for items not currently equipped.
+    catalogNotesMentions: resolveNotesMentions(build.notes, upgradeCatalog, equipmentDisplay),
   };
 }
 

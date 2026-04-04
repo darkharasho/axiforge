@@ -188,6 +188,14 @@ function populateStateFromBuild(build) {
     relicByName:    new Map(eqd.relic ? [[eqd.relic.name, eqd.relic]] : []),
     relicById:      new Map(eqd.relic ? [[eqd.relic.id, eqd.relic]] : []),
   };
+
+  // Merge in upgrade items referenced in notes but not equipped
+  const uc = state.upgradeCatalog;
+  for (const item of (build.catalogNotesMentions || [])) {
+    const map = { rune: uc.runeById, sigil: uc.sigilById, food: uc.foodById, utility: uc.utilityById,
+      infusion: uc.infusionById, enrichment: uc.enrichmentById, relic: uc.relicById }[item.category];
+    if (map && !map.has(item.id)) map.set(item.id, item);
+  }
 }
 
 /**
