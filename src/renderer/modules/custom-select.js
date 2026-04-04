@@ -249,7 +249,8 @@ export function toggleCustomSelect(root) {
       const spaceAbove = rect.top;
       const dropUp = spaceBelow < menuEstHeight + 8 && spaceAbove > spaceBelow;
       menu.style.position = "fixed";
-      menu.style.left = `${Math.min(rect.left, window.innerWidth - 200)}px`;
+      const menuWidth = parseFloat(getComputedStyle(menu).minWidth) || 200;
+      menu.style.left = `${Math.min(rect.left, window.innerWidth - menuWidth - 8)}px`;
       menu.style.right = "auto";
       if (dropUp) {
         menu.style.top = "auto";
