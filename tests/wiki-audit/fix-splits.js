@@ -99,8 +99,19 @@ function main() {
         continue;
       }
 
-      // Replace WvW facts with wiki's version
+      // Safety guard: if the existing split is complete and the wiki has fewer
+      // facts, the crawler may have missed data (e.g. facts rendered without named
+      // links, or infobox params not in blockquote rows). Flag for manual review
+      // instead of destructively replacing good data with incomplete data.
       const oldFacts = entry.modes.wvw.facts;
+      if (entry.modes.wvw.complete && wikiFacts.length < oldFacts.length) {
+        if (!stats.review) stats.review = 0;
+        stats.review++;
+        changes.push({ action: "review", name: d.name, id: d.id, oldCount: oldFacts.length, newCount: wikiFacts.length, reason: "wiki has fewer facts than complete split" });
+        continue;
+      }
+
+      // Replace WvW facts with wiki's version
       entry.modes.wvw.facts = wikiFacts;
       stats.updated++;
       changes.push({ action: "update", name: d.name, id: d.id, oldCount: oldFacts.length, newCount: wikiFacts.length });
@@ -180,6 +191,8 @@ function main() {
       console.log(`  ${YELLOW}\u270e${RESET}  ${BOLD}${c.name}${RESET} ${DIM}(${c.id})${RESET} — updated ${c.oldCount} → ${c.newCount} facts`);
     } else if (c.action === "add") {
       console.log(`  ${GREEN}+${RESET}  ${BOLD}${c.name}${RESET} ${DIM}(${c.id})${RESET} — added ${c.factCount} facts`);
+    } else if (c.action === "review") {
+      console.log(`  ${RED}?${RESET}  ${BOLD}${c.name}${RESET} ${DIM}(${c.id})${RESET} — ${c.reason} (${c.oldCount} → ${c.newCount})`);
     } else if (c.action === "skip") {
       console.log(`  ${GRAY}\u2013${RESET}  ${DIM}${c.name} (${c.id}) — ${c.reason}${RESET}`);
     }
@@ -189,6 +202,7 @@ function main() {
   console.log(`\n${BOLD}  Summary:${RESET}`);
   console.log(`    ${GREEN}Updated:${RESET}  ${stats.updated}`);
   console.log(`    ${GREEN}Added:${RESET}    ${stats.added}`);
+  if (stats.review) console.log(`    ${RED}Review:${RESET}   ${stats.review}`);
   console.log(`    ${GRAY}Skipped:${RESET}  ${stats.skipped}`);
 
   // Write
