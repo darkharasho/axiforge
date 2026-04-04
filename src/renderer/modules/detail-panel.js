@@ -31,6 +31,7 @@ function _isAquaticOnlySkill(kind, entity) {
 let _el = { detailHost: null, hoverPreview: null, expandBtn: null };
 let _openWikiModal = null;
 let _openDetailModal = null;
+let _anchoredMenu = null;
 
 export function triggerDetailPanelAnimation() {
   if (!_el.detailHost) return;
@@ -163,15 +164,26 @@ export function bindHoverPreview(node, kind, entityProvider) {
   node.addEventListener("mouseenter", (event) => {
     const entity = readEntity();
     if (!entity) return;
+    // Inside a skill-select dropdown, anchor tooltip to the left of the menu
+    const menu = node.closest(".skill-select-overlay .cselect__menu");
+    if (menu) {
+      _anchoredMenu = menu;
+      showHoverPreview(kind, entity, 0, 0);
+      positionHoverPreviewAnchored(menu.getBoundingClientRect());
+      return;
+    }
+    _anchoredMenu = null;
     showHoverPreview(kind, entity, event.clientX, event.clientY);
   });
 
   node.addEventListener("mousemove", (event) => {
     if (_el.hoverPreview?.classList.contains("hidden")) return;
+    if (_anchoredMenu) return; // anchored mode — don't follow mouse
     positionHoverPreview(event.clientX, event.clientY);
   });
 
   node.addEventListener("mouseleave", () => {
+    _anchoredMenu = null;
     hideHoverPreview();
   });
 
@@ -312,6 +324,24 @@ export function buildSkillCard(skill, kind, isChained = false, dmgStats = null) 
     ${skill.breakdown?.length ? _renderStatBreakdown(skill.breakdown, skill.breakdownTotal, skill.name) : ""}
     ${factsItems.length ? `<ul class="hover-preview__facts">${factsItems.join("")}</ul>` : ""}
   `;
+}
+
+export function positionHoverPreviewAnchored(menuRect) {
+  const node = _el.hoverPreview;
+  if (!node || node.classList.contains("hidden")) return;
+  const pad = 8;
+  const gap = 6;
+  const rect = node.getBoundingClientRect();
+  // Place to the left of the menu
+  let left = menuRect.left - rect.width - gap;
+  if (left < pad) left = menuRect.right + gap; // fall back to right side
+  let top = menuRect.top;
+  if (top + rect.height > window.innerHeight - pad) {
+    top = window.innerHeight - rect.height - pad;
+  }
+  top = Math.max(46, top);
+  node.style.left = `${left}px`;
+  node.style.top = `${top}px`;
 }
 
 export function showHoverPreview(kind, entity, x, y) {
