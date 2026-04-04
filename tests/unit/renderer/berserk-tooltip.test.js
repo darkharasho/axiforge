@@ -38,12 +38,12 @@ describe("Berserk skill tooltip completeness (#137)", () => {
     expect(duration.duration).toBe(15);
   });
 
-  test("Berserk (30435) WvW recharge is 11s, not PvE 8s", async () => {
+  test("Berserk (30435) WvW recharge is 15s, not PvE 8s", async () => {
     const catalog = await gw2Data.getProfessionCatalog("Warrior", "en", "wvw");
     const berserk = catalog.skills.find((s) => s.id === 30435);
     const recharge = berserk.facts.find((f) => f.type === "Recharge");
     expect(recharge).toBeDefined();
-    expect(recharge.value).toBe(11);
+    expect(recharge.value).toBe(15);
   });
 
   test("Berserk (30185) WvW facts include Attack Speed Increase", async () => {
@@ -67,12 +67,12 @@ describe("Berserk skill tooltip completeness (#137)", () => {
     expect(duration.duration).toBe(15);
   });
 
-  test("Berserk (30185) WvW recharge is 11s", async () => {
+  test("Berserk (30185) WvW recharge is 15s", async () => {
     const catalog = await gw2Data.getProfessionCatalog("Warrior", "en", "wvw");
     const berserk = catalog.skills.find((s) => s.id === 30185);
     const recharge = berserk.facts.find((f) => f.type === "Recharge");
     expect(recharge).toBeDefined();
-    expect(recharge.value).toBe(11);
+    expect(recharge.value).toBe(15);
   });
 
   test("tooltip renders all key Berserk facts in WvW mode", async () => {
