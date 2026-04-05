@@ -83,6 +83,12 @@ function parseFactText(name, value, titleAttr) {
     return !isNaN(num) ? { type: "Recharge", text: name, value: num } : null;
   }
 
+  // ── Activation time (cast time) ──
+  if (nameLower === "activation" || nameLower === "activation time") {
+    const num = parseFloat(val);
+    return !isNaN(num) ? { type: "Time", text: "Activation", duration: num } : null;
+  }
+
   // ── Radius ──
   if (nameLower === "radius" || nameLower === "blast radius" || nameLower === "healing radius") {
     const num = parseInt(val, 10);

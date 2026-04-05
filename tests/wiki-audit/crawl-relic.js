@@ -63,20 +63,32 @@ async function _crawlRelicOnce(page, entity) {
   try {
     const facts = await page.$$eval(SELECTORS.factRow, _extractRelicFactsBrowser);
 
-    // Extract recharge from statistics div
-    let recharge = null;
+    // Extract recharge from statistics div — distinguish from activation time
+    // by checking the <a title> that follows each number.
     try {
-      recharge = await page.$eval(SELECTORS.statistics, (el) => {
-        const text = (el.textContent || "").trim();
-        const match = text.match(/^([\d.]+)/);
-        return match ? parseFloat(match[1]) : null;
+      const timings = await page.$eval(SELECTORS.statistics, (el) => {
+        const result = { recharge: null };
+        let lastNum = null;
+        for (const node of el.childNodes) {
+          if (node.nodeType === 3) {
+            const m = node.textContent.match(/([\d.]+)/);
+            if (m) lastNum = parseFloat(m[1]);
+          } else if (node.nodeType === 1) {
+            const anchor = node.tagName === "A" ? node : node.querySelector("a[title]");
+            if (anchor && lastNum != null) {
+              const title = (anchor.getAttribute("title") || "").toLowerCase();
+              if (title.includes("recharge")) result.recharge = lastNum;
+            }
+            lastNum = null;
+          }
+        }
+        return result;
       });
+      if (timings.recharge != null) {
+        facts.push({ name: "Recharge", valueText: String(timings.recharge) });
+      }
     } catch {
       // No statistics div — relic has no ICD
-    }
-
-    if (recharge != null) {
-      facts.push({ name: "Recharge", valueText: String(recharge) });
     }
 
     return { facts, error: null, wiki_url: finalUrl };

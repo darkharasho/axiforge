@@ -1,7 +1,7 @@
 import { state } from "./state.js";
 import { WEAPON_STRENGTH_MIDPOINT, BOON_CONDITION_ICONS, BUFF_FACT_TYPES, FACT_TYPE_ICONS } from "./constants.js";
 import { escapeHtml, tierLabel, normalizeText, stripGw2Markup } from "./utils.js";
-import { computeEquipmentStats } from "./stats.js";
+import { computeEquipmentStats, computeUpgradeModifiers } from "./stats.js";
 import { getAssumedBoons } from "./equipment.js";
 
 let _readOnly = false;
@@ -106,11 +106,13 @@ export function renderDetailPanel() {
     const effectivePower = power * (1 + critChance * (0.5 + ferocity / 1500));
     return { weaponStrength, effectivePower };
   })();
+  // Burst Recharge: applies to warrior burst skills (slot Profession_1)
+  const burstRecharge = detail.slot === "Profession_1" ? (computeUpgradeModifiers().get("Burst Recharge") || 0) : 0;
   const factsHtml = facts.length
     ? facts
         .map((fact) => {
           const cls = fact.type === "NoData" ? "fact-item--section" : fact._splitFact ? "fact-item--split" : fact._newFact ? "fact-item--new-in-mode" : "";
-          return `<li${cls ? ` class="${cls}"` : ""}>${formatFactHtml(fact, detailDmgStats, { alacrity: getAssumedBoons().alacrity })}</li>`;
+          return `<li${cls ? ` class="${cls}"` : ""}>${formatFactHtml(fact, detailDmgStats, { alacrity: getAssumedBoons().alacrity, burstRecharge })}</li>`;
         })
         .join("")
     : "<li>No fact entries.</li>";
@@ -301,9 +303,10 @@ export function buildSkillCard(skill, kind, isChained = false, dmgStats = null) 
   const description = normalizeText(skill.description || "");
   const maxFacts = kind.startsWith("equip-") ? 12 : 16;
   const rawFacts = resolveEntityFacts(skill).slice(0, maxFacts);
+  const burstRch = skill.slot === "Profession_1" ? (computeUpgradeModifiers().get("Burst Recharge") || 0) : 0;
   const factsItems = rawFacts
     .map((fact) => {
-      const html = formatFactHtml(fact, dmgStats, { alacrity: getAssumedBoons().alacrity });
+      const html = formatFactHtml(fact, dmgStats, { alacrity: getAssumedBoons().alacrity, burstRecharge: burstRch });
       if (!html) return null;
       const cls = fact.type === "NoData" ? "fact-item--section" : fact._splitFact ? "fact-item--split" : "";
       return `<li${cls ? ` class="${cls}"` : ""}>${html}</li>`;
@@ -522,6 +525,7 @@ export async function selectDetail(kind, entity) {
     wiki: { loading: true, summary: "", url: "" },
     hasSplit: Boolean(entity.hasSplit),
     isAquaticOnly: _isAquaticOnlySkill(kind, entity),
+    slot: entity.slot || "",
   };
   state.detail = detail;
   renderDetailPanel();
@@ -565,7 +569,7 @@ function formatBuffConditionText(fact) {
   return `${name}${stackPart}${duration}${extra}`;
 }
 
-export function formatFactHtml(fact, dmgStats = null, { alacrity = false } = {}) {
+export function formatFactHtml(fact, dmgStats = null, { alacrity = false, burstRecharge = 0 } = {}) {
   if (!fact || typeof fact !== "object") return "Unknown fact";
   // Normalise GW2 API markup in text/status fields before any rendering.
   fact = fact.text && /<c=/.test(fact.text) ? { ...fact, text: stripGw2Markup(fact.text) } : fact;
@@ -648,14 +652,17 @@ export function formatFactHtml(fact, dmgStats = null, { alacrity = false } = {})
     const iconUrl = fact.icon || FACT_TYPE_ICONS["StunBreak"] || "";
     return iconUrl ? `<img class="fact-status-icon" src="${escapeHtml(iconUrl)}" alt="" aria-hidden="true">${escapeHtml("Breaks Stun")}` : escapeHtml("Breaks Stun");
   }
-  // Recharge facts — apply Alacrity reduction when active
+  // Recharge facts — apply Alacrity and/or Burst Recharge reduction when active
   if (fact.type === "Recharge" && fact.value != null) {
     const label = String(fact.text || "Recharge");
     const base = Number(fact.value);
     const iconUrl = fact.icon || FACT_TYPE_ICONS[fact.type] || "";
-    if (alacrity && base > 0) {
-      const reduced = +(base * 0.75).toFixed(2);
-      // Show reduced value with original crossed out
+    // Combine reduction multipliers: Alacrity (×0.75) and Burst Recharge (percentage)
+    const alacMult = (alacrity && base > 0) ? 0.75 : 1;
+    const burstMult = (burstRecharge > 0 && base > 0) ? (1 - burstRecharge / 100) : 1;
+    const totalMult = alacMult * burstMult;
+    if (totalMult < 1) {
+      const reduced = +(base * totalMult).toFixed(2);
       const text = `${label}: ${reduced}s`;
       const suffix = ` <span class="fact-alacrity-original">${base}s</span>`;
       const inner = escapeHtml(text) + suffix;

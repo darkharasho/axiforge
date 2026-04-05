@@ -15,7 +15,7 @@ function mockPage(opts = {}) {
     $$eval: jest.fn(async () => facts),
     $eval: jest.fn(async (sel, fn) => {
       if (sel === SELECTORS.statistics && recharge != null) {
-        return recharge;
+        return { recharge };
       }
       throw new Error("not found");
     }),

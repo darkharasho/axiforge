@@ -62,6 +62,18 @@ describe("parseFactText", () => {
     });
   });
 
+  test("parses activation time", () => {
+    expect(parseFactText("Activation", "0.25")).toEqual({
+      type: "Time", text: "Activation", duration: 0.25,
+    });
+  });
+
+  test("parses activation time (alt label)", () => {
+    expect(parseFactText("Activation time", "0.75")).toEqual({
+      type: "Time", text: "Activation", duration: 0.75,
+    });
+  });
+
   test("parses conditions removed", () => {
     expect(parseFactText("Conditions Removed", "3")).toEqual({
       type: "Number", text: "Conditions Removed", value: 3,

@@ -101,28 +101,55 @@ async function _crawlEntityOnce(page, entity, entityType) {
     // Extract facts from blockquote
     const wvwFacts = await extractFacts(page, hasToggle);
 
-    // Extract recharge from the statistics div (separate from dd fact rows).
-    // The div contains gamemode-tagged children; read the visible one.
+    // Extract recharge and activation time from the statistics div (separate
+    // from dd fact rows).  The div shows activation time and recharge side by
+    // side, each preceded by a number and followed by an <a> whose title
+    // identifies the stat ("Activation time" vs "Recharge time").
+    // The div may contain gamemode-tagged children; only the visible one is read.
     try {
-      const recharge = await page.$eval(SELECTORS.statistics, (el) => {
+      const timings = await page.$eval(SELECTORS.statistics, (el) => {
+        const result = { recharge: null, activation: null };
+
+        // Resolve the visible container (gamemode div or entire element)
+        let container = el;
         const gameDivs = el.querySelectorAll(".gamemode");
         if (gameDivs.length > 0) {
+          container = null;
           for (const gm of gameDivs) {
-            if (window.getComputedStyle(gm).display === "none") continue;
-            const match = gm.textContent.trim().match(/^([\d.]+)/);
-            if (match) return parseFloat(match[1]);
+            if (window.getComputedStyle(gm).display !== "none") { container = gm; break; }
           }
-          return null;
+          if (!container) return result; // all hidden
         }
-        // No gamemode wrappers — single value
-        const match = el.textContent.trim().match(/^([\d.]+)/);
-        return match ? parseFloat(match[1]) : null;
+
+        // Walk child nodes: each number text node is followed by an <a> whose
+        // title tells us whether it is activation or recharge.
+        let lastNum = null;
+        for (const node of container.childNodes) {
+          if (node.nodeType === 3) { // Text node
+            const m = node.textContent.match(/([\d.]+)/);
+            if (m) lastNum = parseFloat(m[1]);
+          } else if (node.nodeType === 1) { // Element node
+            const anchor = node.tagName === "A" ? node : node.querySelector("a[title]");
+            if (anchor && lastNum != null) {
+              const title = (anchor.getAttribute("title") || "").toLowerCase();
+              if (title.includes("recharge")) result.recharge = lastNum;
+              else if (title.includes("activation")) result.activation = lastNum;
+            }
+            // Reset — the number was consumed (or the element wasn't a timing link)
+            lastNum = null;
+          }
+        }
+
+        return result;
       });
-      if (recharge != null) {
-        wvwFacts.unshift({ name: "Recharge", valueText: String(recharge), titleAttr: "Recharge time" });
+      if (timings.recharge != null) {
+        wvwFacts.unshift({ name: "Recharge", valueText: String(timings.recharge), titleAttr: "Recharge time" });
+      }
+      if (timings.activation != null) {
+        wvwFacts.unshift({ name: "Activation", valueText: String(timings.activation), titleAttr: "Activation time" });
       }
     } catch {
-      // No statistics div — skill has no recharge
+      // No statistics div — skill has no recharge or activation time
     }
 
     return { hasToggle, wvwFacts, error: null, wiki_url: finalUrl };
