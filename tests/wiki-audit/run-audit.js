@@ -15,6 +15,7 @@ const path = require("path");
 const fs = require("fs/promises");
 const { crawlEntity } = require("./crawl");
 const { crawlEntity: crawlRelic } = require("./crawl-relic");
+const { crawlEntity: crawlSignet } = require("./crawl-signet");
 const { compareEntity, compareRelicFacts } = require("./compare");
 const { parseFactText } = require("./parse-facts");
 const { IncrementalReport, writeReport } = require("./report");
@@ -36,7 +37,7 @@ function parseArgs() {
   }
   const typeArg = args.find(a => a.startsWith("--type"));
   const typeVal = typeArg ? (typeArg.includes("=") ? typeArg.split("=")[1] : args[args.indexOf(typeArg) + 1]) : null;
-  const VALID_TYPES = new Set(["skills", "traits", "relics"]);
+  const VALID_TYPES = new Set(["skills", "traits", "relics", "signets"]);
   if (typeVal && !VALID_TYPES.has(typeVal)) {
     console.error(`Invalid --type: ${typeVal}. Must be one of: skills, traits, relics`);
     process.exit(1);
@@ -72,9 +73,9 @@ async function fetchByIds(endpoint, ids) {
  * Each worker gets its own browser context + page, pulls entities
  * from a shared queue, and pushes results to shared arrays.
  */
-async function crawlWithWorkers(browser, entities, splitsIndex, relicFactsData, workerCount, incremental, display) {
+async function crawlWithWorkers(browser, entities, splitsIndex, relicFactsData, signetPassivesData, workerCount, incremental, display) {
   const summary = {
-    skills_checked: 0, traits_checked: 0, relics_checked: 0, total_checked: 0,
+    skills_checked: 0, traits_checked: 0, relics_checked: 0, signets_checked: 0, total_checked: 0,
     matches: 0, mismatches: 0, missing_from_splits: 0,
     missing_from_wiki: 0, no_split: 0, errors: 0,
   };
@@ -102,12 +103,15 @@ async function crawlWithWorkers(browser, entities, splitsIndex, relicFactsData, 
       // Crawl
       const crawlResult = entityType === "relic"
         ? await crawlRelic(page, entity, entityType)
+        : entityType === "signet"
+        ? await crawlSignet(page, entity, entityType)
         : await crawlEntity(page, entity, entityType);
 
       // Process result (synchronized via single-threaded JS)
       if (entityType === "skill") summary.skills_checked++;
       else if (entityType === "trait") summary.traits_checked++;
       else if (entityType === "relic") summary.relics_checked++;
+      else if (entityType === "signet") summary.signets_checked++;
       summary.total_checked++;
 
       if (crawlResult.error) {
@@ -122,6 +126,48 @@ async function crawlWithWorkers(browser, entities, splitsIndex, relicFactsData, 
         display.addRecent("!", "\x1b[90m", "ERROR", `${entity.name} — ${crawlResult.error.slice(0, 50)}`);
       } else if (entityType === "relic") {
         const storedEntry = relicFactsData.relics[String(entity.id)];
+        const wikiFacts = crawlResult.facts
+          .map((f) => parseFactText(f.name, f.valueText, f.titleAttr))
+          .filter(Boolean);
+        const cmp = compareRelicFacts(wikiFacts, storedEntry?.facts || null);
+
+        switch (cmp.category) {
+          case "match": summary.matches++; break;
+          case "mismatch": summary.mismatches++; break;
+          case "missing_from_splits": summary.missing_from_splits++; break;
+          case "no_split": summary.no_split++; break;
+        }
+
+        display.addCompleted(cmp.category === "match" ? "matches"
+          : cmp.category === "no_split" ? "no_split"
+          : cmp.category === "mismatch" ? "mismatches"
+          : cmp.category === "missing_from_splits" ? "missing_from_splits"
+          : "errors");
+
+        if (cmp.category !== "match" && cmp.category !== "no_split") {
+          const record = {
+            entity_type: entityType,
+            id: entity.id,
+            name: entity.name,
+            wiki_url: crawlResult.wiki_url || `https://wiki.guildwars2.com/wiki/${entity.name.replace(/ /g, "_")}`,
+            category: cmp.category,
+            wiki_wvw_facts: wikiFacts,
+            splits_wvw_facts: storedEntry?.facts || [],
+          };
+          if (cmp.fact_diffs.length) record.fact_diffs = cmp.fact_diffs;
+          if (cmp.wiki_only_facts.length) record.wiki_only_facts = cmp.wiki_only_facts;
+          if (cmp.splits_only_facts.length) record.splits_only_facts = cmp.splits_only_facts;
+          discrepancies.push(record);
+          incremental.writeDiscrepancy(record);
+          const tag = `${entity.name} (${entityType} #${entity.id})`;
+          if (cmp.category === "mismatch") {
+            display.addRecent("\u2717", "\x1b[31m", "MISMATCH", tag);
+          } else if (cmp.category === "missing_from_splits") {
+            display.addRecent("\u25cc", "\x1b[33m", "MISSING(S)", tag);
+          }
+        }
+      } else if (entityType === "signet") {
+        const storedEntry = signetPassivesData.signets[String(entity.id)];
         const wikiFacts = crawlResult.facts
           .map((f) => parseFactText(f.name, f.valueText, f.titleAttr))
           .filter(Boolean);
@@ -274,6 +320,17 @@ async function main() {
     console.log(`${relicEntities.length} relics`);
   }
 
+  let signetEntities = [];
+  if (!typeVal || typeVal === "signets") {
+    const signetPassivesData = require("../../src/main/gw2Data/signetPassives.json");
+    signetEntities = Object.entries(signetPassivesData.signets).map(([id, data]) => ({
+      id: parseInt(id, 10),
+      name: data.name,
+      type: "signet",
+    }));
+    console.log(`${signetEntities.length} signet passives`);
+  }
+
   // 2. Load splits.json
   const splitsRaw = JSON.parse(await fs.readFile(SPLITS_PATH, "utf-8"));
   const splitsIndex = {
@@ -287,8 +344,11 @@ async function main() {
   // 2b. Load relicFacts.json
   const relicFactsData = require("../../src/main/gw2Data/relicFacts.json");
 
+  // 2c. Load signetPassives.json
+  const signetPassivesData = require("../../src/main/gw2Data/signetPassives.json");
+
   // 3. Build entity list with skip/limit
-  const allEntities = [...skillEntities, ...traitEntities, ...relicEntities];
+  const allEntities = [...skillEntities, ...traitEntities, ...relicEntities, ...signetEntities];
   const entities = allEntities.slice(skip, skip + limit);
   console.log(`Crawling ${entities.length} entities (skip=${skip}, limit=${limit === Infinity ? "all" : limit}, workers=${workers})\n`);
 
@@ -301,7 +361,7 @@ async function main() {
   display.start();
 
   // 5. Crawl and compare with worker pool
-  const { summary, discrepancies, errors } = await crawlWithWorkers(browser, entities, splitsIndex, relicFactsData, workers, incremental, display);
+  const { summary, discrepancies, errors } = await crawlWithWorkers(browser, entities, splitsIndex, relicFactsData, signetPassivesData, workers, incremental, display);
 
   display.stop();
   console.log("");
@@ -323,7 +383,7 @@ async function main() {
   // 8. Print summary
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
   console.log("── Summary ──");
-  console.log(`  Checked:             ${summary.total_checked}`);
+  console.log(`  Checked:             ${summary.total_checked} (${summary.skills_checked} skills, ${summary.traits_checked} traits, ${summary.relics_checked} relics, ${summary.signets_checked} signets)`);
   console.log(`  Matches:             ${summary.matches}`);
   console.log(`  Mismatches:          ${summary.mismatches}`);
   console.log(`  Missing from splits: ${summary.missing_from_splits}`);

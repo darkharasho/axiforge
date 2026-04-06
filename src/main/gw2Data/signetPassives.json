@@ -1,0 +1,83 @@
+{
+  "updatedAt": "2026-04-06T00:00:00.000Z",
+  "signets": {
+    "9093": {
+      "name": "Bane Signet",
+      "facts": [
+        { "type": "Number", "text": "Power", "value": 180 }
+      ]
+    },
+    "9151": {
+      "name": "Signet of Wrath",
+      "facts": [
+        { "type": "Number", "text": "Condition Damage", "value": 180 }
+      ]
+    },
+    "9163": {
+      "name": "Signet of Mercy",
+      "facts": [
+        { "type": "Number", "text": "Concentration", "value": 180 }
+      ]
+    },
+    "14404": {
+      "name": "Signet of Might",
+      "facts": [
+        { "type": "Number", "text": "Power", "value": 180 }
+      ]
+    },
+    "14410": {
+      "name": "Signet of Fury",
+      "facts": [
+        { "type": "Number", "text": "Precision", "value": 180 }
+      ]
+    },
+    "12500": {
+      "name": "Signet of Stone",
+      "facts": [
+        { "type": "Number", "text": "Toughness", "value": 180 }
+      ]
+    },
+    "12491": {
+      "name": "Signet of the Wild",
+      "facts": [
+        { "type": "Number", "text": "Ferocity", "value": 180 }
+      ]
+    },
+    "13046": {
+      "name": "Assassin's Signet",
+      "facts": [
+        { "type": "Number", "text": "Power", "value": 180 }
+      ]
+    },
+    "13062": {
+      "name": "Signet of Agility",
+      "facts": [
+        { "type": "Number", "text": "Precision", "value": 180 }
+      ]
+    },
+    "5542": {
+      "name": "Signet of Fire",
+      "facts": [
+        { "type": "Number", "text": "Precision", "value": 180 }
+      ]
+    },
+    "10232": {
+      "name": "Signet of Domination",
+      "facts": [
+        { "type": "Number", "text": "Condition Damage", "value": 180 }
+      ]
+    },
+    "10234": {
+      "name": "Signet of Midnight",
+      "facts": [
+        { "type": "Number", "text": "Expertise", "value": 180 }
+      ]
+    },
+    "10622": {
+      "name": "Signet of Spite",
+      "facts": [
+        { "type": "Number", "text": "Power", "value": 180 }
+      ]
+    }
+  }
+}
