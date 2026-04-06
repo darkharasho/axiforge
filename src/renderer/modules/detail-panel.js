@@ -166,8 +166,8 @@ export function bindHoverPreview(node, kind, entityProvider) {
   node.addEventListener("mouseenter", (event) => {
     const entity = readEntity();
     if (!entity) return;
-    // Inside a skill-select dropdown, anchor tooltip to the left of the menu
-    const menu = node.closest(".skill-select-overlay .cselect__menu");
+    // Inside a dropdown menu, anchor tooltip to the left of the menu
+    const menu = node.closest(".skill-select-overlay .cselect__menu") || node.closest(".slot-picker__list");
     if (menu) {
       _anchoredMenu = menu;
       showHoverPreview(kind, entity, 0, 0);
