@@ -1,3 +1,9 @@
+## Version v0.1.4 — April 5, 2026
+
+### Bug Fixes
+- Two-handed weapons (greatsword, hammer, longbow, rifle, short bow, staff, spear) now correctly show higher stats than one-handed weapons
+- Boon coverage tracker now uses correct stat weights for two-handed weapons
+
 ## Version v0.1.3 — April 5, 2026
 
 ### Other Changes
