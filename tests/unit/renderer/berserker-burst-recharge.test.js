@@ -29,7 +29,7 @@ describe("Berserker burst skill recharge (#154)", () => {
   function setupWarriorState({ specId = 0, activeKit = 0 } = {}) {
     state.editor = {
       profession: "Warrior",
-      specializations: specId ? [{ id: specId, majorChoices: {} }] : [],
+      specializations: specId ? [{ specializationId: specId, majorChoices: {} }] : [],
       activeKit,
       equipment: {
         runes: {}, sigils: {}, infusions: {}, slots: {},
@@ -92,7 +92,7 @@ describe("Berserker burst skill recharge (#154)", () => {
   test("non-Warrior profession is not affected", () => {
     state.editor = {
       profession: "Guardian",
-      specializations: [{ id: 18, majorChoices: {} }],
+      specializations: [{ specializationId: 18, majorChoices: {} }],
       activeKit: 0,
       equipment: {
         runes: {}, sigils: {}, infusions: {}, slots: {},

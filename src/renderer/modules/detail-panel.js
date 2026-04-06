@@ -19,7 +19,7 @@ function _getBerserkerBurstRecharge(slot) {
   if (slot !== "Profession_1") return null;
   if ((state.editor.profession || "") !== "Warrior") return null;
   const specs = state.editor.specializations || [];
-  if (!specs.some((s) => Number(s?.id) === 18)) return null;
+  if (!specs.some((s) => Number(s?.specializationId || s?.id) === 18)) return null;
   const activeKit = Number(state.editor.activeKit) || 0;
   // Berserk F2 skill IDs: 30185 (PvE) / 30435 (WvW)
   const berserkActive = activeKit === 30185 || activeKit === 30435;
