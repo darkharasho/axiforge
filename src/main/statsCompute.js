@@ -77,6 +77,12 @@ const SLOT_WEIGHTS = {
   accessory2: { p: 110, s: 74,  p4: 92,  s4: 49, c: 50 },
 };
 
+// Two-handed weapon stat weights (attribute_adjustment 716.8, double the 1h value).
+const TWO_HAND_WEIGHTS = { p: 251, s: 179, p4: 215, s4: 118, c: 118 };
+const TWO_HAND_WEAPON_IDS = new Set([
+  "greatsword", "hammer", "longbow", "rifle", "shortbow", "staff", "spear",
+]);
+
 const PROFESSION_BASE_HP = {
   Warrior: 19212, Necromancer: 19212, Revenant: 15922,
   Engineer: 15922, Ranger: 15922, Mesmer: 15922,
@@ -103,11 +109,16 @@ function computePublishStats(equipment, upgradeCatalog, profession, gameMode) {
   };
 
   // Equipment slot contributions
+  const weapons = equipment.weapons || {};
   for (const [slotKey, comboLabel] of Object.entries(slots)) {
     if (!comboLabel) continue;
     const combo = STAT_COMBOS_BY_LABEL.get(comboLabel);
-    const w = SLOT_WEIGHTS[slotKey];
+    let w = SLOT_WEIGHTS[slotKey];
     if (!combo || !w) continue;
+    // Use 2h weights when a two-handed weapon is equipped in a mainhand slot
+    if (slotKey.startsWith("mainhand") && TWO_HAND_WEAPON_IDS.has(weapons[slotKey])) {
+      w = TWO_HAND_WEIGHTS;
+    }
     const stats = _getEffectiveStats(comboLabel, combo, gm);
     const n = stats.length;
     if (n <= 3) {
@@ -272,11 +283,15 @@ function estimateRole(build) {
     Ferocity: 0, ConditionDamage: 0, Expertise: 0, Concentration: 0, HealingPower: 0,
   };
 
+  const weapons = build?.equipment?.weapons || {};
   for (const [slotKey, comboLabel] of Object.entries(slots)) {
     if (!comboLabel) continue;
     const combo = STAT_COMBOS_BY_LABEL.get(comboLabel);
-    const w = SLOT_WEIGHTS[slotKey];
+    let w = SLOT_WEIGHTS[slotKey];
     if (!combo || !w) continue;
+    if (slotKey.startsWith("mainhand") && TWO_HAND_WEAPON_IDS.has(weapons[slotKey])) {
+      w = TWO_HAND_WEIGHTS;
+    }
     const n = combo.stats.length;
     if (n <= 3) {
       totals[combo.stats[0]] += w.p;

@@ -252,6 +252,59 @@ describe("computePublishStats", () => {
     expect(result.stats.HealingPower).toBe(101);
   });
 
+  // ── Two-handed weapon stats (issue #150) ─────────────────────────────
+
+  test("2h mainhand weapon uses higher stat weights than 1h (issue #150)", () => {
+    // A greatsword (2h) in mainhand1 should give p:251, not p:125
+    const equipment = {
+      slots: { mainhand1: "Berserker's" },
+      weapons: { mainhand1: "greatsword" },
+      runes: {}, infusions: {},
+    };
+    const result = computePublishStats(equipment, null, "Warrior");
+    // 2h Berserker's mainhand: Power major=251, Precision minor=179, Ferocity minor=179
+    expect(result.stats.Power).toBe(1000 + 251);
+    expect(result.stats.Precision).toBe(1000 + 179);
+    expect(result.stats.Ferocity).toBe(179);
+  });
+
+  test("1h mainhand weapon keeps original stat weights (issue #150)", () => {
+    const equipment = {
+      slots: { mainhand1: "Berserker's" },
+      weapons: { mainhand1: "sword" },
+      runes: {}, infusions: {},
+    };
+    const result = computePublishStats(equipment, null, "Warrior");
+    // 1h Berserker's mainhand: Power major=125, Precision minor=90, Ferocity minor=90
+    expect(result.stats.Power).toBe(1000 + 125);
+    expect(result.stats.Precision).toBe(1000 + 90);
+    expect(result.stats.Ferocity).toBe(90);
+  });
+
+  test("2h weapon with 4-stat combo uses correct 2h weights (issue #150)", () => {
+    const equipment = {
+      slots: { mainhand1: "Viper's" },
+      weapons: { mainhand1: "staff" },
+      runes: {}, infusions: {},
+    };
+    const result = computePublishStats(equipment, null, "Necromancer");
+    // 2h Viper's: Power + CondDmg major (p4=215), Precision + Expertise minor (s4=118)
+    expect(result.stats.Power).toBe(1000 + 215);
+    expect(result.stats.ConditionDamage).toBe(215);
+    expect(result.stats.Precision).toBe(1000 + 118);
+    expect(result.stats.Expertise).toBe(118);
+  });
+
+  test("no weapons object falls back to 1h weights (backwards compat, issue #150)", () => {
+    // Old builds without weapons data should still work (use 1h weights)
+    const equipment = {
+      slots: { mainhand1: "Berserker's" },
+      runes: {}, infusions: {},
+    };
+    const result = computePublishStats(equipment, null, "Warrior");
+    expect(result.stats.Power).toBe(1000 + 125);
+  });
+
   test("food with 'to All Attributes' adds to every stat", () => {
     const equipment = { slots: {}, runes: {}, infusions: {}, food: "91713", utility: "" };
     const upgradeCatalog = {

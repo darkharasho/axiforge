@@ -107,6 +107,9 @@ export const SLOT_WEIGHTS = {
   aquatic2:   { p: 251, s: 179, p4: 215, s4: 118, c: 118 },
 };
 
+// Two-handed land weapon stat weights (same as aquatic — attribute_adjustment 716.8).
+export const TWO_HAND_WEIGHTS = { p: 251, s: 179, p4: 215, s4: 118, c: 118 };
+
 export const EQUIP_ARMOR_SLOTS = [
   { key: "head",      label: "Head",      icon: "Head_slot.png" },
   { key: "shoulders", label: "Shoulders", icon: "Shoulder_slot.png" },
