@@ -1,6 +1,6 @@
 import { state } from "@renderer/modules/state.js";
 import { initSkills, renderSkills } from "@renderer/modules/skills.js";
-import { initSpecializations, renderSpecializations } from "@renderer/modules/specializations.js";
+import { initSpecializations, renderSpecializations, drawSpecConnector } from "@renderer/modules/specializations.js";
 import { initEquipment, initEquipmentCallbacks, renderEquipmentPanel } from "@renderer/modules/equipment.js";
 import { initDetailPanel, bindHoverPreview, setOnHoverPreview } from "@renderer/modules/detail-panel.js";
 import { initReferencePanel, updateReferencePanel } from "./render-reference.js";
@@ -445,6 +445,15 @@ export function renderBuildPage(container, build) {
 
   allTabs.forEach((tab, i) => {
     tab.addEventListener("click", () => activateTab(i));
+  });
+
+  // Redraw spec connectors on window resize so SVG lines stay aligned (#148)
+  let resizeRaf = 0;
+  window.addEventListener("resize", () => {
+    cancelAnimationFrame(resizeRaf);
+    resizeRaf = requestAnimationFrame(() => {
+      specializationsHost.querySelectorAll(".spec-card__body").forEach((body) => drawSpecConnector(body));
+    });
   });
 
   // Mobile enhancements
