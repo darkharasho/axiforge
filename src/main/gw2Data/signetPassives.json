@@ -1,0 +1,298 @@
+{
+  "updatedAt": "2026-04-06T00:00:00.000Z",
+  "signets": {
+    "5503": {
+      "name": "Signet of Restoration",
+      "passive": "heal per spell cast",
+      "facts": [
+        { "type": "Number", "text": "Healing per Cast", "value": 171 }
+      ]
+    },
+    "5542": {
+      "name": "Signet of Fire",
+      "passive": "+180 Precision",
+      "facts": [
+        { "type": "Number", "text": "Signet of Fire", "value": 180 }
+      ]
+    },
+    "5570": {
+      "name": "Signet of Water",
+      "passive": "-20% condition duration",
+      "facts": [
+        { "type": "Number", "text": "Signet of Water", "value": -20 }
+      ]
+    },
+    "5571": {
+      "name": "Signet of Earth",
+      "passive": "-10% incoming strike damage",
+      "facts": [
+        { "type": "Number", "text": "Signet of Earth", "value": -10 }
+      ]
+    },
+    "5572": {
+      "name": "Signet of Air",
+      "passive": "25% movement speed",
+      "facts": [
+        { "type": "Number", "text": "Signet of Air", "value": 25 }
+      ]
+    },
+    "9093": {
+      "name": "Bane Signet",
+      "passive": "+180 Power",
+      "facts": [
+        { "type": "Number", "text": "Bane Signet", "value": 180 }
+      ]
+    },
+    "9150": {
+      "name": "Signet of Judgment",
+      "passive": "-10% incoming damage, -10% incoming condition damage",
+      "facts": [
+        { "type": "Number", "text": "Signet of Judgment", "value": -10 }
+      ]
+    },
+    "9151": {
+      "name": "Signet of Wrath",
+      "passive": "+180 Condition Damage",
+      "facts": [
+        { "type": "Number", "text": "Signet of Wrath", "value": 180 }
+      ]
+    },
+    "9158": {
+      "name": "Signet of Resolve",
+      "passive": "condition removal every 5s",
+      "facts": [
+        { "type": "Number", "text": "Passive Conditions Removed", "value": 1 },
+        { "type": "Number", "text": "Interval", "value": 5 }
+      ]
+    },
+    "9163": {
+      "name": "Signet of Mercy",
+      "passive": "+180 Concentration (120 in WvW)",
+      "facts": [
+        { "type": "Number", "text": "Signet of Mercy", "value": 180 }
+      ]
+    },
+    "10232": {
+      "name": "Signet of Domination",
+      "passive": "+180 Condition Damage",
+      "facts": [
+        { "type": "Number", "text": "Signet of Domination", "value": 180 }
+      ]
+    },
+    "10234": {
+      "name": "Signet of Midnight",
+      "passive": "+180 Expertise",
+      "facts": [
+        { "type": "Number", "text": "Signet of Midnight", "value": 180 }
+      ]
+    },
+    "10236": {
+      "name": "Signet of Inspiration",
+      "passive": "random boon every 10 seconds",
+      "facts": []
+    },
+    "10247": {
+      "name": "Signet of Illusions",
+      "passive": "creates clone every 10 seconds",
+      "facts": [
+        { "type": "Number", "text": "Interval", "value": 10 }
+      ]
+    },
+    "10562": {
+      "name": "Plague Signet",
+      "passive": "-10% incoming condition damage",
+      "facts": [
+        { "type": "Number", "text": "Plague Signet", "value": -10 }
+      ]
+    },
+    "10611": {
+      "name": "Signet of Undeath",
+      "passive": "4% life force per 3 seconds",
+      "facts": [
+        { "type": "Percent", "text": "Life Force per 3 Seconds", "percent": 4 }
+      ]
+    },
+    "10612": {
+      "name": "Signet of the Locust",
+      "passive": "25% movement speed",
+      "facts": [
+        { "type": "Number", "text": "Signet of the Locust", "value": 25 }
+      ]
+    },
+    "10622": {
+      "name": "Signet of Spite",
+      "passive": "+180 Power",
+      "facts": [
+        { "type": "Number", "text": "Signet of Spite", "value": 180 }
+      ]
+    },
+    "12491": {
+      "name": "Signet of the Wild",
+      "passive": "+180 Ferocity",
+      "facts": [
+        { "type": "Number", "text": "Signet of the Wild", "value": 180 }
+      ]
+    },
+    "12500": {
+      "name": "Signet of Stone",
+      "passive": "+180 Toughness",
+      "facts": [
+        { "type": "Number", "text": "Signet of Stone", "value": 180 }
+      ]
+    },
+    "12502": {
+      "name": "Signet of Renewal",
+      "passive": "heal per second (you and pet)",
+      "facts": [
+        { "type": "Number", "text": "Signet of Renewal", "value": 62 }
+      ]
+    },
+    "12542": {
+      "name": "Signet of the Hunt",
+      "passive": "25% movement speed",
+      "facts": [
+        { "type": "Number", "text": "Signet of the Hunt", "value": 25 }
+      ]
+    },
+    "13046": {
+      "name": "Assassin's Signet",
+      "passive": "+180 Power",
+      "facts": [
+        { "type": "Number", "text": "Assassin's Signet", "value": 180 }
+      ]
+    },
+    "13050": {
+      "name": "Signet of Malice",
+      "passive": "heal on hit",
+      "facts": []
+    },
+    "13060": {
+      "name": "Signet of Shadows",
+      "passive": "25% movement speed",
+      "facts": []
+    },
+    "13062": {
+      "name": "Signet of Agility",
+      "passive": "+180 Precision",
+      "facts": [
+        { "type": "Number", "text": "Signet of Agility", "value": 180 }
+      ]
+    },
+    "13064": {
+      "name": "Infiltrator's Signet",
+      "passive": "initiative every 10 seconds",
+      "facts": []
+    },
+    "14355": {
+      "name": "Signet of Rage",
+      "passive": "adrenaline every 3 seconds",
+      "facts": [
+        { "type": "Number", "text": "Interval", "value": 3 }
+      ]
+    },
+    "14389": {
+      "name": "Healing Signet",
+      "passive": "344 heal per second",
+      "facts": [
+        { "type": "Number", "text": "Healing Signet", "value": 344 }
+      ]
+    },
+    "14404": {
+      "name": "Signet of Might",
+      "passive": "+180 Power",
+      "facts": [
+        { "type": "Number", "text": "Signet of Might", "value": 180 }
+      ]
+    },
+    "14410": {
+      "name": "Signet of Fury",
+      "passive": "+180 Precision",
+      "facts": [
+        { "type": "Number", "text": "Signet of Fury", "value": 180 }
+      ]
+    },
+    "14413": {
+      "name": "Dolyak Signet",
+      "passive": "-10% incoming damage",
+      "facts": [
+        { "type": "Number", "text": "Dolyak Signet", "value": -10 }
+      ]
+    },
+    "14479": {
+      "name": "Signet of Stamina",
+      "passive": "50% endurance regeneration",
+      "facts": [
+        { "type": "Percent", "text": "Signet of Stamina", "percent": 50 }
+      ]
+    },
+    "21750": {
+      "name": "Signet of the Ether",
+      "passive": "heal on illusion summon",
+      "facts": [
+        { "type": "Number", "text": "Heal on Illusion Summon", "value": 297 }
+      ]
+    },
+    "21762": {
+      "name": "Signet of Vampirism",
+      "passive": "health steal",
+      "facts": []
+    },
+    "29519": {
+      "name": "Signet of Humility",
+      "passive": "-20% stun/daze/fear/taunt duration",
+      "facts": [
+        { "type": "Number", "text": "Signet of Humility", "value": -20 }
+      ]
+    },
+    "30461": {
+      "name": "Signet of Courage",
+      "passive": "periodic heal to allies",
+      "facts": [
+        { "type": "Number", "text": "Passive Heal", "value": 202 },
+        { "type": "Number", "text": "Passive Radius", "value": 300 }
+      ]
+    },
+    "63049": {
+      "name": "Rectifier Signet",
+      "passive": "230 heal per second",
+      "facts": [
+        { "type": "Number", "text": "Heal Pulse", "value": 230 }
+      ]
+    },
+    "63095": {
+      "name": "Overclock Signet",
+      "passive": "-20% signet recharge",
+      "facts": [
+        { "type": "Number", "text": "Overclock Signet", "value": -20 }
+      ]
+    },
+    "63111": {
+      "name": "Shift Signet",
+      "passive": "25% movement speed",
+      "facts": [
+        { "type": "Percent", "text": "Movement Speed Increase", "percent": 25 }
+      ]
+    },
+    "63113": {
+      "name": "Superconducting Signet",
+      "passive": "+10% condition damage dealt",
+      "facts": [
+        { "type": "Number", "text": "Superconducting Signet", "value": 10 }
+      ]
+    },
+    "63253": {
+      "name": "Force Signet",
+      "passive": "+15% strike damage dealt (10% WvW)",
+      "facts": [
+        { "type": "Number", "text": "Force Signet", "value": 15 }
+      ]
+    },
+    "63262": {
+      "name": "Barrier Signet",
+      "passive": "-10% incoming damage, -10% incoming condition damage",
+      "facts": [
+        { "type": "Number", "text": "Barrier Signet", "value": -10 }
+      ]
+    }
+  }
+}

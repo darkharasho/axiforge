@@ -3,7 +3,7 @@ import { state } from "./state.js";
 import {
   STAT_COMBOS_BY_LABEL, SLOT_WEIGHTS, TWO_HAND_WEIGHTS, LAND_ONLY_SLOTS, AQUATIC_SLOTS,
   MIGHT_POWER_PER_STACK, MIGHT_CONDI_PER_STACK, STACKING_SIGIL_DEFS, getEffectiveStats,
-  GW2_WEAPONS_BY_ID,
+  GW2_WEAPONS_BY_ID, SIGNET_PASSIVE_BUFFS,
 } from "./constants.js";
 
 /**
@@ -429,6 +429,23 @@ export function computeEquipmentStats(assumedBoons = null, sigilStacks = null) {
         totals[def.stat] = (totals[def.stat] || 0) + stacks * def.perStack;
       }
       // modifier-only sigils (e.g. Benevolence) don't affect flat attributes
+    }
+  }
+
+  // Signet passive attribute buff contributions
+  const skillSource = isUnderwater ? state.editor.underwaterSkills : state.editor.skills;
+  if (skillSource && state.activeCatalog?.skillById) {
+    const ids = [
+      skillSource.healId,
+      ...(skillSource.utilityIds || []),
+      skillSource.eliteId,
+    ];
+    for (const id of ids) {
+      if (!id) continue;
+      const buff = SIGNET_PASSIVE_BUFFS.get(Number(id));
+      if (buff && totals[buff.stat] !== undefined) {
+        totals[buff.stat] += buff.value;
+      }
     }
   }
 

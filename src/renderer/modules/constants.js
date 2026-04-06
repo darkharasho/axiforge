@@ -569,6 +569,32 @@ export const STACKING_SIGIL_DEFS = [
 ];
 export const STACKING_SIGIL_IDS = new Set(STACKING_SIGIL_DEFS.map((d) => d.id));
 
+// Signet passive attribute buffs — the GW2 API does not expose these values,
+// so they are maintained as a static map.  Key = skill ID, value = { stat, value }.
+// Source: https://wiki.guildwars2.com/wiki/Signet (PvE values, all 180 as of 2025-06).
+export const SIGNET_PASSIVE_BUFFS = new Map([
+  // Guardian
+  [9093,  { stat: "Power",          value: 180 }], // Bane Signet
+  [9151,  { stat: "ConditionDamage", value: 180 }], // Signet of Wrath
+  [9163,  { stat: "Concentration",  value: 180 }], // Signet of Mercy
+  // Warrior
+  [14404, { stat: "Power",          value: 180 }], // Signet of Might
+  [14410, { stat: "Precision",      value: 180 }], // Signet of Fury
+  // Ranger
+  [12500, { stat: "Toughness",      value: 180 }], // Signet of Stone
+  [12491, { stat: "Ferocity",       value: 180 }], // Signet of the Wild
+  // Thief
+  [13046, { stat: "Power",          value: 180 }], // Assassin's Signet
+  [13062, { stat: "Precision",      value: 180 }], // Signet of Agility
+  // Elementalist
+  [5542,  { stat: "Precision",      value: 180 }], // Signet of Fire
+  // Mesmer
+  [10232, { stat: "ConditionDamage", value: 180 }], // Signet of Domination
+  [10234, { stat: "Expertise",      value: 180 }], // Signet of Midnight
+  // Necromancer
+  [10622, { stat: "Power",          value: 180 }], // Signet of Spite
+]);
+
 export const BOON_NAMES = new Set([
   "Aegis", "Alacrity", "Fury", "Might", "Protection", "Quickness",
   "Regeneration", "Resistance", "Resolution", "Stability", "Swiftness", "Vigor",

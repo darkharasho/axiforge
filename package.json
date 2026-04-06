@@ -61,6 +61,7 @@
     "audit:wiki:skills": "node tests/wiki-audit/run-audit.js --type skills",
     "audit:wiki:traits": "node tests/wiki-audit/run-audit.js --type traits",
     "audit:wiki:relics": "node tests/wiki-audit/run-audit.js --type relics",
+    "audit:wiki:signets": "node tests/wiki-audit/run-audit.js --type signets",
     "test:e2e": "npx playwright test --config tests/e2e/playwright.config.js",
     "test:e2e:headed": "npx playwright test --config tests/e2e/playwright.config.js --headed",
     "test:e2e:debug": "PWDEBUG=1 npx playwright test --config tests/e2e/playwright.config.js",
