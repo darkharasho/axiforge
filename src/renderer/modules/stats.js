@@ -894,12 +894,21 @@ export function computeUpgradeModifiers() {
   // Burst Recharge — Discipline's minor trait "Versatile Power" (trait 1417)
   // grants 15% burst recharge reduction. Detect this by checking active minor
   // traits whose description mentions "Burst" and facts include "Recharge Reduced".
+  //
+  // Berserker's minor trait "Primal Rage" (trait 1831) additionally grants 10%
+  // burst recharge reduction, but the GW2 API omits this fact from the trait data.
+  // We hardcode the 10% when trait 1831 is active. (#154)
   const catalog = state.activeCatalog;
   if (catalog?.traitById) {
     const activeIds = collectActiveTraitIds();
     for (const traitId of activeIds) {
       const trait = catalog.traitById.get(traitId);
       if (!trait || trait.slot !== "Minor") continue;
+      // Primal Rage (1831): API omits the 10% burst recharge reduction fact.
+      if (traitId === 1831) {
+        addMod("Burst Recharge", 10);
+        continue;
+      }
       const desc = (trait.description || "").toLowerCase();
       if (!desc.includes("burst")) continue;
       for (const fact of trait.facts || []) {

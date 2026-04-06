@@ -7,32 +7,6 @@ import { getAssumedBoons } from "./equipment.js";
 let _readOnly = false;
 export function setReadOnly(val) { _readOnly = val; }
 
-/**
- * Berserker burst recharge override (#154).
- * The GW2 API returns generic recharge values for burst skills (8s core, 5s primal)
- * but Berserker overrides these:
- *   - Outside Berserk mode: 6s
- *   - In Berserk mode: 3.75s
- * Returns null when the override does not apply.
- */
-function _getBerserkerBurstRecharge(slot) {
-  if (slot !== "Profession_1") return null;
-  if ((state.editor.profession || "") !== "Warrior") return null;
-  const specs = state.editor.specializations || [];
-  if (!specs.some((s) => Number(s?.specializationId || s?.id) === 18)) return null;
-  const activeKit = Number(state.editor.activeKit) || 0;
-  // Berserk F2 skill IDs: 30185 (PvE) / 30435 (WvW)
-  const berserkActive = activeKit === 30185 || activeKit === 30435;
-  return berserkActive ? 3.75 : 6;
-}
-
-function _applyBerserkerBurstRecharge(facts, slot) {
-  const override = _getBerserkerBurstRecharge(slot);
-  if (override === null) return facts;
-  return facts.map((f) =>
-    f.type === "Recharge" ? { ...f, value: override } : f
-  );
-}
 
 let _onHoverPreview = null;
 export function setOnHoverPreview(cb) { _onHoverPreview = cb; }
@@ -111,10 +85,7 @@ export function renderDetailPanel() {
     return;
   }
 
-  const facts = _applyBerserkerBurstRecharge(
-    Array.isArray(detail.facts) ? detail.facts.slice(0, 16) : [],
-    detail.slot,
-  );
+  const facts = Array.isArray(detail.facts) ? detail.facts.slice(0, 16) : [];
   const detailDmgStats = (() => {
     if (detail.kindLabel === "Trait") return null;
     const computed = computeEquipmentStats();
@@ -136,11 +107,8 @@ export function renderDetailPanel() {
     const effectivePower = power * (1 + critChance * (0.5 + ferocity / 1500));
     return { weaponStrength, effectivePower };
   })();
-  // Burst Recharge: applies to warrior burst skills (slot Profession_1).
-  // When Berserker overrides the recharge value, skip the trait modifier — the override is already final.
-  const burstRecharge = _getBerserkerBurstRecharge(detail.slot) !== null
-    ? 0
-    : (detail.slot === "Profession_1" ? (computeUpgradeModifiers().get("Burst Recharge") || 0) : 0);
+  // Burst Recharge: applies to warrior burst skills (slot Profession_1)
+  const burstRecharge = detail.slot === "Profession_1" ? (computeUpgradeModifiers().get("Burst Recharge") || 0) : 0;
   const factsHtml = facts.length
     ? facts
         .map((fact) => {
@@ -335,13 +303,8 @@ export function buildSkillCard(skill, kind, isChained = false, dmgStats = null) 
   const icon = String(skill.icon || skill.iconFallback || "");
   const description = normalizeText(skill.description || "");
   const maxFacts = kind.startsWith("equip-") ? 12 : 16;
-  const rawFacts = _applyBerserkerBurstRecharge(
-    resolveEntityFacts(skill).slice(0, maxFacts),
-    skill.slot,
-  );
-  const burstRch = _getBerserkerBurstRecharge(skill.slot) !== null
-    ? 0
-    : (skill.slot === "Profession_1" ? (computeUpgradeModifiers().get("Burst Recharge") || 0) : 0);
+  const rawFacts = resolveEntityFacts(skill).slice(0, maxFacts);
+  const burstRch = skill.slot === "Profession_1" ? (computeUpgradeModifiers().get("Burst Recharge") || 0) : 0;
   const factsItems = rawFacts
     .map((fact) => {
       const html = formatFactHtml(fact, dmgStats, { alacrity: getAssumedBoons().alacrity, burstRecharge: burstRch });
