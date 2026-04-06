@@ -1,3 +1,12 @@
+## Version v0.1.2 — April 5, 2026
+
+### New Features
+- Burst recharge reduction is now included in stat calculations
+- Updated WvW skill balance splits data
+
+### Bug Fixes
+- Trait connector lines in published web builds now stay aligned when the browser window is resized
+
 ## Version v0.1.0 — April 1, 2026
 
 ### New Features
