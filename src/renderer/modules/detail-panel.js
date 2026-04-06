@@ -7,6 +7,7 @@ import { getAssumedBoons } from "./equipment.js";
 let _readOnly = false;
 export function setReadOnly(val) { _readOnly = val; }
 
+
 let _onHoverPreview = null;
 export function setOnHoverPreview(cb) { _onHoverPreview = cb; }
 

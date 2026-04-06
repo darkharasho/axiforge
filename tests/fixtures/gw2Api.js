@@ -507,10 +507,10 @@ const MOCK_SKILLS = {
   14447: makeSkill(14447, { name: "Whirlwind Attack", slot: "Weapon_1", type: "Weapon", weapon_type: "Greatsword" }),
   14489: makeSkill(14489, { name: "Harpoon Pull", slot: "Weapon_1", type: "Weapon", weapon_type: "HarpoonGun" }),
   // Warrior profession mechanics (burst / primal burst / Berserk toggle)
-  14367: makeSkill(14367, { name: "Flurry",                 slot: "Profession_1", type: "Profession", weapon_type: "Sword",       professions: ["Warrior"] }),
-  14375: makeSkill(14375, { name: "Arcing Slice",           slot: "Profession_1", type: "Profession", weapon_type: "Greatsword",  professions: ["Warrior"] }),
-  30682: makeSkill(30682, { name: "Flaming Flurry",         slot: "Profession_1", type: "Profession", weapon_type: "Sword",       professions: ["Warrior"], specialization: 18 }),
-  29852: makeSkill(29852, { name: "Arc Divider",            slot: "Profession_1", type: "Profession", weapon_type: "Greatsword",  professions: ["Warrior"], specialization: 18 }),
+  14367: makeSkill(14367, { name: "Flurry",                 slot: "Profession_1", type: "Profession", weapon_type: "Sword",       professions: ["Warrior"], facts: [{ type: "Recharge", text: "Recharge", value: 8 }] }),
+  14375: makeSkill(14375, { name: "Arcing Slice",           slot: "Profession_1", type: "Profession", weapon_type: "Greatsword",  professions: ["Warrior"], facts: [{ type: "Recharge", text: "Recharge", value: 8 }] }),
+  30682: makeSkill(30682, { name: "Flaming Flurry",         slot: "Profession_1", type: "Profession", weapon_type: "Sword",       professions: ["Warrior"], specialization: 18, facts: [{ type: "Recharge", text: "Recharge", value: 5 }] }),
+  29852: makeSkill(29852, { name: "Arc Divider",            slot: "Profession_1", type: "Profession", weapon_type: "Greatsword",  professions: ["Warrior"], specialization: 18, facts: [{ type: "Recharge", text: "Recharge", value: 5 }] }),
   30185: makeSkill(30185, { name: "Berserk",                slot: "Profession_2", type: "Profession",                             professions: ["Warrior"], specialization: 18 }),
   42494: makeSkill(42494, { name: "Flurry",                 slot: "Profession_1", type: "Profession", weapon_type: "Sword",       professions: ["Warrior"], specialization: 61 }),
 
