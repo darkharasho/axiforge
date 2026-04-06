@@ -1,8 +1,9 @@
 // Equipment stat computation — pure logic over state + constants, no DOM deps.
 import { state } from "./state.js";
 import {
-  STAT_COMBOS_BY_LABEL, SLOT_WEIGHTS, LAND_ONLY_SLOTS, AQUATIC_SLOTS,
+  STAT_COMBOS_BY_LABEL, SLOT_WEIGHTS, TWO_HAND_WEIGHTS, LAND_ONLY_SLOTS, AQUATIC_SLOTS,
   MIGHT_POWER_PER_STACK, MIGHT_CONDI_PER_STACK, STACKING_SIGIL_DEFS, getEffectiveStats,
+  GW2_WEAPONS_BY_ID,
 } from "./constants.js";
 
 /**
@@ -203,8 +204,12 @@ function getExcludedSlots() {
 
 export function computeSlotStats(comboLabel, slotKey) {
   const combo = STAT_COMBOS_BY_LABEL.get(comboLabel);
-  const w = SLOT_WEIGHTS[slotKey];
+  let w = SLOT_WEIGHTS[slotKey];
   if (!combo || !w) return [];
+  const weapons = state.editor.equipment?.weapons || {};
+  if (slotKey.startsWith("mainhand") && GW2_WEAPONS_BY_ID.get(weapons[slotKey])?.hand === "two") {
+    w = TWO_HAND_WEIGHTS;
+  }
   const gameMode = state.editor?.gameMode || "pve";
   const stats = getEffectiveStats(combo, gameMode);
   const n = stats.length;
@@ -233,11 +238,15 @@ export function computeEquipmentStats(assumedBoons = null, sigilStacks = null) {
   const isUnderwater = Boolean(state.editor.underwaterMode);
   const EXCLUDED_SLOTS = getExcludedSlots();
   const gameMode = state.editor?.gameMode || "pve";
+  const weapons = state.editor.equipment?.weapons || {};
   for (const [slotKey, comboLabel] of Object.entries(slots)) {
     if (!comboLabel || EXCLUDED_SLOTS.has(slotKey)) continue;
     const combo = STAT_COMBOS_BY_LABEL.get(comboLabel);
-    const w = SLOT_WEIGHTS[slotKey];
+    let w = SLOT_WEIGHTS[slotKey];
     if (!combo || !w) continue;
+    if (slotKey.startsWith("mainhand") && GW2_WEAPONS_BY_ID.get(weapons[slotKey])?.hand === "two") {
+      w = TWO_HAND_WEIGHTS;
+    }
     const stats = getEffectiveStats(combo, gameMode);
     const n = stats.length;
     if (n <= 3) {
@@ -573,11 +582,15 @@ export function computeStatBreakdown(statKey, assumedBoons = null, sigilStacks =
   };
 
   // Equipment slots
+  const weapons = state.editor.equipment?.weapons || {};
   for (const [slotKey, comboLabel] of Object.entries(slots)) {
     if (!comboLabel || EXCLUDED_SLOTS.has(slotKey)) continue;
     const combo = STAT_COMBOS_BY_LABEL.get(comboLabel);
-    const w = SLOT_WEIGHTS[slotKey];
+    let w = SLOT_WEIGHTS[slotKey];
     if (!combo || !w) continue;
+    if (slotKey.startsWith("mainhand") && GW2_WEAPONS_BY_ID.get(weapons[slotKey])?.hand === "two") {
+      w = TWO_HAND_WEIGHTS;
+    }
     const n = combo.stats.length;
     let val = 0;
     if (n <= 3) {
