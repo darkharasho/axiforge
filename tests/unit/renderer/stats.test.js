@@ -714,3 +714,144 @@ describe("FURY_CRIT_CHANCE constants", () => {
     expect(FURY_CRIT_CHANCE_WVW).toBeLessThan(FURY_CRIT_CHANCE);
   });
 });
+
+// ---------------------------------------------------------------------------
+// computeEquipmentStats — signet passive buff contributions (issue #155)
+// ---------------------------------------------------------------------------
+
+describe("computeEquipmentStats — signet passive buffs", () => {
+  // Signet of Might (14404) grants +180 Power passively
+  const mockCatalog = {
+    skillById: new Map([
+      [14404, { id: 14404, name: "Signet of Might", categories: ["Signet"], facts: [] }],
+      [14410, { id: 14410, name: "Signet of Fury", categories: ["Signet"], facts: [] }],
+      [9093, { id: 9093, name: "Bane Signet", categories: ["Signet"], facts: [] }],
+      [12491, { id: 12491, name: "Signet of the Wild", categories: ["Signet"], facts: [] }],
+      [10622, { id: 10622, name: "Signet of Spite", categories: ["Signet"], facts: [] }],
+      [10232, { id: 10232, name: "Signet of Domination", categories: ["Signet"], facts: [] }],
+      [10234, { id: 10234, name: "Signet of Midnight", categories: ["Signet"], facts: [] }],
+      [5542, { id: 5542, name: "Signet of Fire", categories: ["Signet"], facts: [] }],
+      [13046, { id: 13046, name: "Assassin's Signet", categories: ["Signet"], facts: [] }],
+      [13062, { id: 13062, name: "Signet of Agility", categories: ["Signet"], facts: [] }],
+      [12500, { id: 12500, name: "Signet of Stone", categories: ["Signet"], facts: [] }],
+      [9151, { id: 9151, name: "Signet of Wrath", categories: ["Signet"], facts: [] }],
+      [9163, { id: 9163, name: "Signet of Mercy", categories: ["Signet"], facts: [] }],
+      // Non-signet utility for negative test
+      [14354, { id: 14354, name: "Bull's Charge", categories: [], facts: [] }],
+    ]),
+    traitById: new Map(),
+    specializationById: new Map(),
+  };
+
+  beforeEach(() => {
+    state.activeCatalog = mockCatalog;
+  });
+  afterEach(() => {
+    state.activeCatalog = null;
+  });
+
+  test("Signet of Might in utility slot adds +180 Power", () => {
+    state.editor = makeEditor({});
+    state.editor.skills = { healId: 0, utilityIds: [14404, 0, 0], eliteId: 0 };
+    const result = computeEquipmentStats();
+    expect(result.Power).toBe(1000 + 180);
+  });
+
+  test("Signet of Fury in utility slot adds +180 Precision", () => {
+    state.editor = makeEditor({});
+    state.editor.skills = { healId: 0, utilityIds: [14410, 0, 0], eliteId: 0 };
+    const result = computeEquipmentStats();
+    expect(result.Precision).toBe(1000 + 180);
+  });
+
+  test("multiple signets stack their passive buffs", () => {
+    state.editor = makeEditor({});
+    state.editor.skills = { healId: 0, utilityIds: [14404, 14410, 0], eliteId: 0 };
+    const result = computeEquipmentStats();
+    expect(result.Power).toBe(1000 + 180);
+    expect(result.Precision).toBe(1000 + 180);
+  });
+
+  test("signet passive buffs stack with equipment stats", () => {
+    state.editor = makeEditor({ chest: "Berserker's" });
+    state.editor.skills = { healId: 0, utilityIds: [14404, 0, 0], eliteId: 0 };
+    const result = computeEquipmentStats();
+    expect(result.Power).toBe(1000 + 141 + 180);
+  });
+
+  test("non-signet utility skill does not add passive stats", () => {
+    state.editor = makeEditor({});
+    state.editor.skills = { healId: 0, utilityIds: [14354, 0, 0], eliteId: 0 };
+    const result = computeEquipmentStats();
+    expect(result.Power).toBe(1000);
+  });
+
+  test("empty skill slots add nothing", () => {
+    state.editor = makeEditor({});
+    state.editor.skills = { healId: 0, utilityIds: [0, 0, 0], eliteId: 0 };
+    const result = computeEquipmentStats();
+    expect(result.Power).toBe(1000);
+  });
+
+  test("heal and elite signets also contribute passive buffs", () => {
+    state.editor = makeEditor({});
+    // Use Bane Signet as heal slot (for test purposes) and Signet of Spite as elite
+    state.editor.skills = { healId: 9093, utilityIds: [0, 0, 0], eliteId: 10622 };
+    const result = computeEquipmentStats();
+    expect(result.Power).toBe(1000 + 180 + 180);
+  });
+
+  test("Signet of the Wild adds +180 Ferocity", () => {
+    state.editor = makeEditor({});
+    state.editor.skills = { healId: 0, utilityIds: [12491, 0, 0], eliteId: 0 };
+    const result = computeEquipmentStats();
+    expect(result.Ferocity).toBe(180);
+  });
+
+  test("Signet of Domination adds +180 ConditionDamage", () => {
+    state.editor = makeEditor({});
+    state.editor.skills = { healId: 0, utilityIds: [10232, 0, 0], eliteId: 0 };
+    const result = computeEquipmentStats();
+    expect(result.ConditionDamage).toBe(180);
+  });
+
+  test("Signet of Midnight adds +180 Expertise", () => {
+    state.editor = makeEditor({});
+    state.editor.skills = { healId: 0, utilityIds: [10234, 0, 0], eliteId: 0 };
+    const result = computeEquipmentStats();
+    expect(result.Expertise).toBe(180);
+  });
+
+  test("Signet of Stone adds +180 Toughness", () => {
+    state.editor = makeEditor({});
+    state.editor.skills = { healId: 0, utilityIds: [12500, 0, 0], eliteId: 0 };
+    const result = computeEquipmentStats();
+    expect(result.Toughness).toBe(1000 + 180);
+  });
+
+  test("Signet of Mercy adds +180 Concentration", () => {
+    state.editor = makeEditor({});
+    state.editor.skills = { healId: 0, utilityIds: [9163, 0, 0], eliteId: 0 };
+    const result = computeEquipmentStats();
+    expect(result.Concentration).toBe(180);
+  });
+
+  test("underwater mode uses underwaterSkills for signet passives", () => {
+    state.editor = {
+      ...makeEditor({}),
+      underwaterMode: true,
+      underwaterSkills: { healId: 0, utilityIds: [14404, 0, 0], eliteId: 0 },
+      skills: { healId: 0, utilityIds: [0, 0, 0], eliteId: 0 },
+    };
+    const result = computeEquipmentStats();
+    expect(result.Power).toBe(1000 + 180);
+  });
+
+  test("missing activeCatalog does not throw", () => {
+    state.activeCatalog = null;
+    state.editor = makeEditor({});
+    state.editor.skills = { healId: 0, utilityIds: [14404, 0, 0], eliteId: 0 };
+    const result = computeEquipmentStats();
+    expect(result.Power).toBe(1000);
+  });
+});
