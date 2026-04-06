@@ -1,3 +1,8 @@
+## Version v0.1.5 — April 6, 2026
+
+### New Features
+- Hovering over relics in the relic selector dropdown now shows a tooltip with the relic's description and effects, anchored to the side of the menu
+
 ## Version v0.1.4 — April 5, 2026
 
 ### Bug Fixes
