@@ -5,6 +5,7 @@ import { marked } from "marked";
 import { state } from "./state.js";
 import { bindHoverPreview } from "./detail-panel.js";
 import { decodeHtmlEntities } from "./utils.js";
+import { GW2_WEAPONS, GW2_WEAPONS_BY_ID } from "./constants.js";
 
 let _el = {};
 let _markEditorChanged = () => {};
@@ -442,6 +443,14 @@ function searchCatalog(query, maxResults = 8) {
     }
   }
 
+  // Weapons (static list from constants)
+  for (const weapon of GW2_WEAPONS) {
+    if (nameMatches(weapon.label, q)) {
+      results.push({ id: weapon.id, name: weapon.label, icon: weapon.icon, category: "Weapon" });
+      if (results.length >= maxResults) return results;
+    }
+  }
+
   return results;
 }
 
@@ -568,12 +577,12 @@ function renderPreview(markdown, container) {
   let html = marked.parse(markdown, { breaks: true });
 
   // Resolve @[category:id:Name] patterns into mention chips
-  html = html.replace(/@\[(\w+):(\d+):([^\]]+)\]/g, (match, category, id, name) => {
-    const numId = Number(id);
-    const resolved = resolveReference(category, numId);
+  html = html.replace(/@\[(\w+):([\w]+):([^\]]+)\]/g, (match, category, id, name) => {
+    const resolvedId = /^\d+$/.test(id) ? Number(id) : id;
+    const resolved = resolveReference(category, resolvedId);
     const icon = resolved?.icon || "";
     const iconHtml = icon ? `<img class="notes-mention__icon" src="${icon}" alt="">` : "";
-    return `<span class="notes-mention" data-type="${category}" data-id="${numId}">${iconHtml}${escapeHtml(decodeHtmlEntities(name))} <span class="notes-mention__label">${category}</span></span>`;
+    return `<span class="notes-mention" data-type="${category}" data-id="${resolvedId}">${iconHtml}${escapeHtml(decodeHtmlEntities(name))} <span class="notes-mention__label">${category}</span></span>`;
   });
 
   container.innerHTML = html;
@@ -588,7 +597,8 @@ function renderPreview(markdown, container) {
   // Bind hover tooltips to mention chips
   container.querySelectorAll(".notes-mention").forEach((chip) => {
     const type = chip.dataset.type;
-    const id = Number(chip.dataset.id);
+    const rawId = chip.dataset.id;
+    const id = /^\d+$/.test(rawId) ? Number(rawId) : rawId;
     const kind = type === "trait" ? "trait" : type === "skill" ? "skill" : `equip-${type}`;
     bindHoverPreview(chip, kind, () => resolveReference(type, id));
   });
@@ -798,6 +808,7 @@ function resolveReference(category, id) {
     case "infusion": return upgrades?.infusionById?.get(id) || null;
     case "enrichment": return upgrades?.enrichmentById?.get(id) || null;
     case "relic": return upgrades?.relicById?.get(id) || null;
+    case "weapon": { const w = GW2_WEAPONS_BY_ID.get(id); return w ? { id: w.id, name: w.label, icon: w.icon } : null; }
     default: return null;
   }
 }
