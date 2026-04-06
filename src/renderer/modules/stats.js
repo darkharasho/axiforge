@@ -874,5 +874,24 @@ export function computeUpgradeModifiers() {
     }
   }
 
+  // Burst Recharge — Discipline's minor trait "Versatile Power" (trait 1417)
+  // grants 15% burst recharge reduction. Detect this by checking active minor
+  // traits whose description mentions "Burst" and facts include "Recharge Reduced".
+  const catalog = state.activeCatalog;
+  if (catalog?.traitById) {
+    const activeIds = collectActiveTraitIds();
+    for (const traitId of activeIds) {
+      const trait = catalog.traitById.get(traitId);
+      if (!trait || trait.slot !== "Minor") continue;
+      const desc = (trait.description || "").toLowerCase();
+      if (!desc.includes("burst")) continue;
+      for (const fact of trait.facts || []) {
+        if (fact.type === "Percent" && fact.text === "Recharge Reduced" && fact.percent > 0) {
+          addMod("Burst Recharge", fact.percent);
+        }
+      }
+    }
+  }
+
   return modifiers;
 }
