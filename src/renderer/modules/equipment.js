@@ -72,7 +72,7 @@ export function closeSlotPicker() {
   if (_slotPickerCleanup) { _slotPickerCleanup(); _slotPickerCleanup = null; }
 }
 
-export function openSlotPicker(anchorEl, currentValue, onSelect, { items = null, searchPlaceholder = "Search stats…", className = "", tabs = null } = {}) {
+export function openSlotPicker(anchorEl, currentValue, onSelect, { items = null, searchPlaceholder = "Search stats…", className = "", tabs = null, hoverProvider = null } = {}) {
   closeSlotPicker();
 
   const picker = document.createElement("div");
@@ -148,6 +148,9 @@ export function openSlotPicker(anchorEl, currentValue, onSelect, { items = null,
         btn.style.pointerEvents = "none";
       }
       btn.addEventListener("click", () => { if (opt.disabled) return; onSelect(opt.value); closeSlotPicker(); });
+      if (hoverProvider && opt.value) {
+        bindHoverPreview(btn, ...hoverProvider(opt));
+      }
       list.append(btn);
     }
   }
@@ -1640,7 +1643,17 @@ export function renderEquipmentPanel() {
       equip.relic = newVal || "";
       _markEditorChanged();
       renderEquipmentPanel();
-    }, { items: relicItems, searchPlaceholder: "Search relics…" });
+    }, {
+      items: relicItems, searchPlaceholder: "Search relics…",
+      hoverProvider: (opt) => {
+        const rDef = GW2_RELICS_BY_LABEL.get(opt.value);
+        return ["equip-relic", () => {
+          if (!rDef) return null;
+          const catalogRelic = state.upgradeCatalog?.relicByName?.get(rDef.label);
+          return { name: rDef.label, icon: rDef.icon, description: catalogRelic?.description || "", facts: catalogRelic?.facts || [] };
+        }];
+      },
+    });
     if (!_readOnly) {
       wrapper.addEventListener("click", doOpen);
       wrapper.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); doOpen(); } });
