@@ -136,8 +136,11 @@ export function renderDetailPanel() {
     const effectivePower = power * (1 + critChance * (0.5 + ferocity / 1500));
     return { weaponStrength, effectivePower };
   })();
-  // Burst Recharge: applies to warrior burst skills (slot Profession_1)
-  const burstRecharge = detail.slot === "Profession_1" ? (computeUpgradeModifiers().get("Burst Recharge") || 0) : 0;
+  // Burst Recharge: applies to warrior burst skills (slot Profession_1).
+  // When Berserker overrides the recharge value, skip the trait modifier — the override is already final.
+  const burstRecharge = _getBerserkerBurstRecharge(detail.slot) !== null
+    ? 0
+    : (detail.slot === "Profession_1" ? (computeUpgradeModifiers().get("Burst Recharge") || 0) : 0);
   const factsHtml = facts.length
     ? facts
         .map((fact) => {
@@ -336,7 +339,9 @@ export function buildSkillCard(skill, kind, isChained = false, dmgStats = null) 
     resolveEntityFacts(skill).slice(0, maxFacts),
     skill.slot,
   );
-  const burstRch = skill.slot === "Profession_1" ? (computeUpgradeModifiers().get("Burst Recharge") || 0) : 0;
+  const burstRch = _getBerserkerBurstRecharge(skill.slot) !== null
+    ? 0
+    : (skill.slot === "Profession_1" ? (computeUpgradeModifiers().get("Burst Recharge") || 0) : 0);
   const factsItems = rawFacts
     .map((fact) => {
       const html = formatFactHtml(fact, dmgStats, { alacrity: getAssumedBoons().alacrity, burstRecharge: burstRch });

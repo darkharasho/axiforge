@@ -74,6 +74,42 @@ describe("Berserker burst skill recharge (#154)", () => {
     expect(html).not.toMatch(/Recharge: 5s/);
   });
 
+  test("Berserker override is not further reduced by Burst Recharge trait modifier", () => {
+    setupWarriorState({ specId: 18, activeKit: 0 });
+    // Simulate Discipline's Versatile Power (trait 1417) being active — 15% burst recharge
+    // reduction. The trait adds a "Burst Recharge" modifier via computeUpgradeModifiers().
+    // With the Berserker override, the value should stay 6s (not 6 × 0.85 = 5.1s).
+    state.activeCatalog = {
+      traitById: new Map([
+        [1417, { id: 1417, slot: "Minor", description: "Burst skills have reduced recharge.", facts: [{ type: "Percent", text: "Recharge Reduced", percent: 15 }] }],
+      ]),
+    };
+    state.editor.specializations.push({ specializationId: 36, majorChoices: { 1: 0, 2: 0, 3: 0 } });
+    const skill = makeBurstSkill();
+    const html = detailPanel.buildSkillCard(skill, "skill");
+    expect(html).toContain("Recharge: 6s");
+    expect(html).not.toContain("5.1");
+  });
+
+  test("Berserker berserk mode override is not further reduced by Burst Recharge trait modifier", () => {
+    setupWarriorState({ specId: 18, activeKit: 30185 });
+    state.activeCatalog = {
+      traitById: new Map([
+        [1417, { id: 1417, slot: "Minor", description: "Burst skills have reduced recharge.", facts: [{ type: "Percent", text: "Recharge Reduced", percent: 15 }] }],
+      ]),
+    };
+    state.editor.specializations.push({ specializationId: 36, majorChoices: { 1: 0, 2: 0, 3: 0 } });
+    const skill = makeBurstSkill({
+      id: 30682,
+      name: "Flaming Flurry",
+      specialization: 18,
+      facts: [{ type: "Recharge", text: "Recharge", value: 5 }],
+    });
+    const html = detailPanel.buildSkillCard(skill, "skill");
+    expect(html).toContain("Recharge: 3.75s");
+    expect(html).not.toContain("3.19");
+  });
+
   test("non-Profession_1 skill is not affected by Berserker recharge override", () => {
     setupWarriorState({ specId: 18, activeKit: 0 });
     const skill = {
