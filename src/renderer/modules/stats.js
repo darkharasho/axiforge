@@ -455,11 +455,15 @@ export function computeBuildConcentration(build, upgradeCatalog) {
 
   // Stat combo slots — no catalog needed
   const EXCLUDED = AQUATIC_SLOTS; // always land mode
+  const weapons = equipment.weapons || {};
   for (const [slotKey, comboLabel] of Object.entries(slots)) {
     if (!comboLabel || EXCLUDED.has(slotKey)) continue;
     const combo = STAT_COMBOS_BY_LABEL.get(comboLabel);
-    const w = SLOT_WEIGHTS[slotKey];
+    let w = SLOT_WEIGHTS[slotKey];
     if (!combo || !w) continue;
+    if (slotKey.startsWith("mainhand") && GW2_WEAPONS_BY_ID.get(weapons[slotKey])?.hand === "two") {
+      w = TWO_HAND_WEIGHTS;
+    }
     const n = combo.stats.length;
     if (n <= 3) {
       if (combo.stats[0] === "Concentration") concentration += w.p;
