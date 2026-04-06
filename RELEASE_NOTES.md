@@ -1,3 +1,9 @@
+## Version v0.1.3 — April 5, 2026
+
+### Other Changes
+- App titlebar badge updated from "alpha" to "beta"
+- Simplified release process to standard semver versioning
+
 ## Version v0.1.2 — April 5, 2026
 
 ### New Features
