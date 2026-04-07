@@ -1,14 +1,9 @@
 {
-  "updatedAt": "2026-04-04T19:34:21.161Z",
+  "updatedAt": "2026-04-07T04:19:43.655Z",
   "relics": {
     "99997": {
       "name": "Relic of Isgarren",
       "facts": [
-        {
-          "type": "Time",
-          "text": "Duration",
-          "duration": 6
-        },
         {
           "type": "Percent",
           "text": "Damage Increase",
@@ -18,7 +13,13 @@
     },
     "100031": {
       "name": "Relic of the Monk",
-      "facts": []
+      "facts": [
+        {
+          "type": "Time",
+          "text": "Duration",
+          "duration": 3
+        }
+      ]
     },
     "100048": {
       "name": "Relic of the Ice",
@@ -70,8 +71,13 @@
       "name": "Relic of Surging",
       "facts": [
         {
+          "type": "Time",
+          "text": "Duration",
+          "duration": 4
+        },
+        {
           "type": "Recharge",
-          "text": "Cooldown",
+          "text": "Recharge",
           "value": 30
         }
       ]
@@ -112,11 +118,6 @@
       "name": "Relic of the Dragonhunter",
       "facts": [
         {
-          "type": "Time",
-          "text": "Duration",
-          "duration": 5
-        },
-        {
           "type": "Percent",
           "text": "Damage Increase",
           "percent": 10
@@ -127,8 +128,13 @@
       "name": "Relic of Mabon",
       "facts": [
         {
+          "type": "Time",
+          "text": "Duration",
+          "duration": 8
+        },
+        {
           "type": "Recharge",
-          "text": "Cooldown",
+          "text": "Recharge",
           "value": 2
         }
       ]
@@ -237,7 +243,13 @@
     },
     "100219": {
       "name": "Relic of the Herald",
-      "facts": []
+      "facts": [
+        {
+          "type": "Time",
+          "text": "Duration",
+          "duration": 3
+        }
+      ]
     },
     "100230": {
       "name": "Relic of the Krait",
@@ -372,8 +384,13 @@
       "name": "Relic of the Daredevil",
       "facts": [
         {
+          "type": "Time",
+          "text": "Duration",
+          "duration": 10
+        },
+        {
           "type": "Recharge",
-          "text": "Cooldown",
+          "text": "Recharge",
           "value": 1
         }
       ]
@@ -382,8 +399,13 @@
       "name": "Relic of the Scourge",
       "facts": [
         {
+          "type": "Time",
+          "text": "Duration",
+          "duration": 6
+        },
+        {
           "type": "Recharge",
-          "text": "Cooldown",
+          "text": "Recharge",
           "value": 1
         }
       ]
@@ -577,6 +599,11 @@
           "apply_count": 1
         },
         {
+          "type": "Time",
+          "text": "Duration",
+          "duration": 4
+        },
+        {
           "type": "Number",
           "text": "Number of Targets",
           "value": 5
@@ -618,7 +645,13 @@
     },
     "100453": {
       "name": "Relic of the Firebrand",
-      "facts": []
+      "facts": [
+        {
+          "type": "Time",
+          "text": "Duration",
+          "duration": 4
+        }
+      ]
     },
     "100455": {
       "name": "Relic of Durability",
@@ -629,6 +662,11 @@
           "status": "Protection",
           "duration": 4,
           "apply_count": 1
+        },
+        {
+          "type": "Time",
+          "text": "Duration",
+          "duration": 4
         },
         {
           "type": "Buff",
@@ -798,11 +836,6 @@
           "type": "Number",
           "text": "Endurance Gained",
           "value": 25
-        },
-        {
-          "type": "Recharge",
-          "text": "Recharge",
-          "value": 20
         }
       ]
     },
@@ -822,11 +855,6 @@
           "status": "Vigor",
           "duration": 3,
           "apply_count": 1
-        },
-        {
-          "type": "Recharge",
-          "text": "Recharge",
-          "value": 1
         }
       ]
     },
@@ -865,11 +893,6 @@
           "type": "Radius",
           "text": "Radius",
           "distance": 600
-        },
-        {
-          "type": "Recharge",
-          "text": "Recharge",
-          "value": 10
         }
       ]
     },
@@ -1071,6 +1094,11 @@
       "name": "Relic of Vass",
       "facts": [
         {
+          "type": "Time",
+          "text": "Duration",
+          "duration": 10
+        },
+        {
           "type": "Buff",
           "text": "Poisoned",
           "status": "Poisoned",
@@ -1112,8 +1140,13 @@
       "name": "Relic of the Aristocracy",
       "facts": [
         {
+          "type": "Time",
+          "text": "Duration",
+          "duration": 8
+        },
+        {
           "type": "Recharge",
-          "text": "Cooldown",
+          "text": "Recharge",
           "value": 1
         }
       ]
@@ -1201,13 +1234,8 @@
         },
         {
           "type": "Time",
-          "text": "Stack Duration",
+          "text": "Duration",
           "duration": 6
-        },
-        {
-          "type": "Number",
-          "text": "Maximum Stacks",
-          "value": 5
         }
       ]
     },
@@ -1437,11 +1465,6 @@
       "name": "Relic of Nourys",
       "facts": [
         {
-          "type": "Time",
-          "text": "Duration",
-          "duration": 5
-        },
-        {
           "type": "Percent",
           "text": "Damage to Healing",
           "percent": 15
@@ -1472,9 +1495,14 @@
           "percent": 10
         },
         {
-          "type": "Recharge",
-          "text": "Recharge",
-          "value": 0.25
+          "type": "Time",
+          "text": "Duration",
+          "duration": 5
+        },
+        {
+          "type": "Time",
+          "text": "Duration",
+          "duration": 5
         }
       ]
     },
@@ -1581,6 +1609,16 @@
           "status": "Might",
           "duration": 8,
           "apply_count": 1
+        },
+        {
+          "type": "Time",
+          "text": "Duration",
+          "duration": 10
+        },
+        {
+          "type": "Time",
+          "text": "Duration",
+          "duration": 8
         },
         {
           "type": "Buff",
@@ -1747,11 +1785,6 @@
           "type": "Radius",
           "text": "Radius",
           "distance": 240
-        },
-        {
-          "type": "Recharge",
-          "text": "Recharge",
-          "value": 8
         }
       ]
     },
@@ -1773,6 +1806,11 @@
           "text": "Damage",
           "dmg_multiplier": 0.36,
           "hit_count": 1
+        },
+        {
+          "type": "Time",
+          "text": "Duration",
+          "duration": 5
         },
         {
           "type": "Number",
@@ -1807,6 +1845,21 @@
           "status": "Alacrity",
           "duration": 1,
           "apply_count": 1
+        },
+        {
+          "type": "Time",
+          "text": "Duration",
+          "duration": 4
+        },
+        {
+          "type": "Time",
+          "text": "Duration",
+          "duration": 3
+        },
+        {
+          "type": "Time",
+          "text": "Duration",
+          "duration": 2
         }
       ]
     },
@@ -1820,6 +1873,11 @@
           "value": 660,
           "coefficient": 0.25,
           "hit_count": 1
+        },
+        {
+          "type": "Time",
+          "text": "Duration",
+          "duration": 1
         },
         {
           "type": "Radius",
@@ -1940,8 +1998,18 @@
       "name": "Relic of Reunification",
       "facts": [
         {
+          "type": "Time",
+          "text": "Duration",
+          "duration": 4
+        },
+        {
+          "type": "Time",
+          "text": "Duration",
+          "duration": 4
+        },
+        {
           "type": "Recharge",
-          "text": "Cooldown",
+          "text": "Recharge",
           "value": 20
         }
       ]
@@ -2037,8 +2105,18 @@
       "name": "Relic of Thorns",
       "facts": [
         {
+          "type": "Time",
+          "text": "Duration",
+          "duration": 30
+        },
+        {
+          "type": "Time",
+          "text": "Duration",
+          "duration": 30
+        },
+        {
           "type": "Recharge",
-          "text": "Cooldown",
+          "text": "Recharge",
           "value": 5
         }
       ]
@@ -2094,6 +2172,16 @@
           "percent": 10
         },
         {
+          "type": "Time",
+          "text": "Duration",
+          "duration": 10
+        },
+        {
+          "type": "Time",
+          "text": "Duration",
+          "duration": 8
+        },
+        {
           "type": "Damage",
           "text": "Damage",
           "dmg_multiplier": 3,
@@ -2136,15 +2224,26 @@
     },
     "104849": {
       "name": "Relic of Agony",
-      "facts": []
+      "facts": [
+        {
+          "type": "Time",
+          "text": "Duration",
+          "duration": 5
+        },
+        {
+          "type": "Time",
+          "text": "Duration",
+          "duration": 3
+        }
+      ]
     },
     "104928": {
       "name": "Relic of the Living City",
       "facts": [
         {
-          "type": "Recharge",
-          "text": "Cooldown",
-          "value": 30
+          "type": "Time",
+          "text": "Duration",
+          "duration": 5
         }
       ]
     },
@@ -2251,7 +2350,13 @@
     },
     "106355": {
       "name": "Relic of the Scoundrel",
-      "facts": []
+      "facts": [
+        {
+          "type": "Time",
+          "text": "Duration",
+          "duration": 8
+        }
+      ]
     },
     "106364": {
       "name": "Relic of the Biomancer",
@@ -2307,11 +2412,6 @@
           "status": "Stun",
           "duration": 1,
           "apply_count": 1
-        },
-        {
-          "type": "Recharge",
-          "text": "Recharge",
-          "value": 10
         }
       ]
     },
@@ -2360,7 +2460,13 @@
     },
     "107030": {
       "name": "Relic of Fog",
-      "facts": []
+      "facts": [
+        {
+          "type": "Time",
+          "text": "Duration",
+          "duration": 5
+        }
+      ]
     },
     "107061": {
       "name": "Relic of the Coral Heart",
@@ -2376,6 +2482,11 @@
           "text": "Damage",
           "dmg_multiplier": 0.5,
           "hit_count": 1
+        },
+        {
+          "type": "Time",
+          "text": "Duration",
+          "duration": 6
         },
         {
           "type": "Recharge",
