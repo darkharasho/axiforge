@@ -79,13 +79,23 @@ Hypothesis: <one-line root cause guess>.
 Branch: \`fix/issue-$ARGUMENTS-<slug>\`. Will post results when complete."
 ```
 
-### Step 5 — Explore codebase
+### Step 5 — Explore codebase and identify root cause
 
 Use `Glob`, `Grep`, and `Read` to identify the root cause.
 - For UI bugs: start with `src/renderer/renderer.js`
 - For data/API bugs: start with `src/main/gw2Data.js`
 
 If the root cause cannot be identified after 3–4 targeted searches, go to the **Failure Path**.
+
+**IMPORTANT — Root cause analysis:** After identifying the immediate cause, ask yourself:
+
+1. **Why wasn't this caught?** Trace the data pipeline upstream. If wrong data reached the renderer, check: did the API return bad data? Did the scraper/parser mishandle it? Did the audit miss it? Fix the upstream system, not just the output.
+2. **Is this a one-off or a class of bugs?** If the fix is a hardcoded override or special case, look for a general pattern. A parser that can't handle a format will fail again on the next skill/trait that uses that format.
+3. **Prefer fixing the system over patching the symptom.** Hardcoded overrides (e.g. `KNOWN_*_OVERRIDES`, manual `splits.json` edits) are acceptable as an **immediate patch** but should not be the only fix. Always also fix the upstream code that produced the bad data (parser, scraper, catalog builder, etc.).
+
+The fix should include BOTH:
+- The immediate patch so the bug is resolved now
+- The upstream/systemic fix so the same class of bug doesn't recur
 
 ### Step 6 — Create or reuse branch
 
