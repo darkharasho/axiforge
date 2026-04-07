@@ -173,15 +173,87 @@ describe("resolveEntityFacts — traited_facts overrides", () => {
     expect(result[0].value).toBe(10); // base value unchanged
   });
 
-  test("does not append traited facts without overrides index", () => {
+  test("appends traited facts without overrides index when trait is active", () => {
+    state.editor = {
+      specializations: [{ specializationId: 51, majorChoices: { 1: 1855, 2: 0, 3: 0 } }],
+    };
+
     const entity = {
       facts: [makeNumber("Radius", 240)],
-      // traited fact with no overrides — should be skipped, not appended
       traitedFacts: [{ requires_trait: 1855, type: "Number", text: "Bonus Range", value: 100 }],
+    };
+    const result = resolveEntityFacts(entity);
+    expect(result).toHaveLength(2);
+    expect(result[0].text).toBe("Radius");
+    expect(result[1].text).toBe("Bonus Range");
+    expect(result[1].value).toBe(100);
+
+    state.editor = { specializations: [] };
+  });
+
+  test("does not append traited facts without overrides when trait is inactive", () => {
+    const entity = {
+      facts: [makeNumber("Radius", 240)],
+      traitedFacts: [{ requires_trait: 9999, type: "Number", text: "Bonus Range", value: 100 }],
     };
     const result = resolveEntityFacts(entity);
     expect(result).toHaveLength(1);
     expect(result[0].text).toBe("Radius");
+  });
+
+  test("marks replaced traited facts with _traitedFact flag", () => {
+    state.editor = {
+      specializations: [{ specializationId: 51, majorChoices: { 1: 1855, 2: 0, 3: 0 } }],
+    };
+
+    const entity = {
+      facts: [makeNumber("Stack Threshold", 10)],
+      traitedFacts: [makeTraited(1855, 0, makeNumber("Stack Threshold", 8))],
+    };
+    const result = resolveEntityFacts(entity);
+    expect(result[0]._traitedFact).toBe(true);
+
+    state.editor = { specializations: [] };
+  });
+
+  test("marks appended traited facts with _traitedFact flag", () => {
+    state.editor = {
+      specializations: [{ specializationId: 51, majorChoices: { 1: 1855, 2: 0, 3: 0 } }],
+    };
+
+    const entity = {
+      facts: [makeNumber("Radius", 240)],
+      traitedFacts: [{ requires_trait: 1855, type: "Number", text: "Bonus Range", value: 100 }],
+    };
+    const result = resolveEntityFacts(entity);
+    expect(result[1]._traitedFact).toBe(true);
+    expect(result[0]._traitedFact).toBeUndefined();
+
+    state.editor = { specializations: [] };
+  });
+
+  test("activates traited facts from minor traits", () => {
+    // Minor trait 2020 belongs to specialization 51
+    state.activeCatalog = {
+      specializationById: new Map([
+        [51, { minorTraits: [2020, 2021, 2022] }],
+      ]),
+    };
+    state.editor = {
+      specializations: [{ specializationId: 51, majorChoices: { 1: 0, 2: 0, 3: 0 } }],
+    };
+
+    const entity = {
+      facts: [makeNumber("Endurance", 0)],
+      traitedFacts: [makeTraited(2020, 0, makeNumber("Endurance", 15))],
+    };
+    const result = resolveEntityFacts(entity);
+    expect(result).toHaveLength(1);
+    expect(result[0].value).toBe(15);
+    expect(result[0]._traitedFact).toBe(true);
+
+    state.activeCatalog = null;
+    state.editor = { specializations: [] };
   });
 });
 

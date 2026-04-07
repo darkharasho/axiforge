@@ -252,6 +252,10 @@ li.fact-item--split {
   color: #e8b84a;
 }
 
+li.fact-item--traited {
+  color: #5ae8a0;
+}
+
 @keyframes facts-list-refresh {
   0%   { opacity: 0; transform: translateY(4px); }
   100% { opacity: 1; transform: translateY(0); }
