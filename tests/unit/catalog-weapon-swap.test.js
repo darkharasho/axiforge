@@ -22,6 +22,7 @@ jest.mock("../../src/main/gw2Data/fetch", () => ({
 jest.mock("../../src/main/gw2Data/overrides", () => ({
   KNOWN_SKILL_DESCRIPTION_OVERRIDES: new Map(),
   KNOWN_SKILL_FACTS_OVERRIDES: new Map(),
+  KNOWN_TRAIT_FACTS_OVERRIDES: new Map(),
   KNOWN_SKILL_SPEC_OVERRIDES: new Map(),
   KNOWN_SKILL_SLOT_OVERRIDES: new Map(),
   PHOTON_FORGE_SKILL_ID: 0, PHOTON_FORGE_BUNDLE: [],
