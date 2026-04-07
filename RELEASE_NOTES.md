@@ -1,3 +1,21 @@
+## Version v0.1.6 — April 6, 2026
+
+### New Features
+- Skill tooltips now show traited fact overrides when matching traits are equipped
+- Weapon @ mentions in build notes for quick reference
+- Expanded signet passive buff audit coverage across all professions
+
+### Bug Fixes
+- Paragon Strengthening Stanzas trait now shows accurate chant effect descriptions instead of raw numbers
+- Signet passive buffs now properly affect stat totals
+- Forceful Greatsword and other trait passive buffs now correctly apply to stat totals
+- Berserker burst recharge reduction no longer missing from tooltip calculations
+- Versatile Rage now shows correct 5s recharge rate and tooltip timing
+- Wiki audit parser now correctly handles percentage-based buff descriptions (e.g. Paragon chants)
+
+### Other Changes
+- Updated WvW skill balance split data
+
 ## Version v0.1.5 — April 6, 2026
 
 ### New Features
