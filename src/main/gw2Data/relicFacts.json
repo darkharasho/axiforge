@@ -1234,8 +1234,13 @@
         },
         {
           "type": "Time",
-          "text": "Duration",
+          "text": "Stack Duration",
           "duration": 6
+        },
+        {
+          "type": "Number",
+          "text": "Maximum Stacks",
+          "value": 5
         }
       ]
     },
