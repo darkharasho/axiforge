@@ -112,7 +112,7 @@ export function renderDetailPanel() {
   const factsHtml = facts.length
     ? facts
         .map((fact) => {
-          const cls = fact.type === "NoData" ? "fact-item--section" : fact._splitFact ? "fact-item--split" : fact._newFact ? "fact-item--new-in-mode" : "";
+          const cls = fact.type === "NoData" ? "fact-item--section" : fact._splitFact ? "fact-item--split" : fact._traitedFact ? "fact-item--traited" : fact._newFact ? "fact-item--new-in-mode" : "";
           return `<li${cls ? ` class="${cls}"` : ""}>${formatFactHtml(fact, detailDmgStats, { alacrity: getAssumedBoons().alacrity, burstRecharge })}</li>`;
         })
         .join("")
@@ -225,20 +225,30 @@ export function resolveEntityFacts(entity) {
   // Apply traited_facts overrides when the required trait is active.
   let result = baseFacts;
   if (traitedFacts.length) {
-    const activeTraitIds = new Set(
-      (state.editor.specializations || [])
-        .flatMap((s) => Object.values(s?.majorChoices || {}))
-        .map(Number)
-        .filter(Boolean)
-    );
+    // Collect active trait IDs — both major choices and minor traits.
+    const activeTraitIds = new Set();
+    const catalog = state.activeCatalog;
+    for (const spec of state.editor.specializations || []) {
+      for (const id of Object.values(spec?.majorChoices || {})) {
+        const n = Number(id);
+        if (n) activeTraitIds.add(n);
+      }
+      const specId = Number(spec?.specializationId || spec?.id) || 0;
+      const specData = specId ? catalog?.specializationById?.get(specId) : null;
+      for (const minorId of specData?.minorTraits || []) {
+        if (minorId) activeTraitIds.add(Number(minorId));
+      }
+    }
     if (activeTraitIds.size) {
       result = [...baseFacts];
       for (const tf of traitedFacts) {
         if (!activeTraitIds.has(Number(tf.requires_trait))) continue;
         const { requires_trait: _r, overrides, ...factData } = tf;
-        // Only apply replacements (overrides set); skip appended facts.
+        factData._traitedFact = true;
         if (overrides !== undefined && overrides !== null && overrides >= 0 && overrides < result.length) {
           result[overrides] = factData;
+        } else if (overrides === undefined || overrides === null) {
+          result.push(factData);
         }
       }
     }
@@ -309,7 +319,7 @@ export function buildSkillCard(skill, kind, isChained = false, dmgStats = null) 
     .map((fact) => {
       const html = formatFactHtml(fact, dmgStats, { alacrity: getAssumedBoons().alacrity, burstRecharge: burstRch });
       if (!html) return null;
-      const cls = fact.type === "NoData" ? "fact-item--section" : fact._splitFact ? "fact-item--split" : "";
+      const cls = fact.type === "NoData" ? "fact-item--section" : fact._splitFact ? "fact-item--split" : fact._traitedFact ? "fact-item--traited" : "";
       return `<li${cls ? ` class="${cls}"` : ""}>${html}</li>`;
     })
     .filter(Boolean);

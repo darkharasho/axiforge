@@ -125,6 +125,7 @@ initSpecializationsCallbacks({
   markEditorChanged,
   renderEditor,
   renderSkills,
+  renderEquipmentPanel,
 });
 
 initSkills({ skillsHost: el.skillsHost });
