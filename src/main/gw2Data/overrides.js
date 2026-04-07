@@ -55,6 +55,18 @@ const KNOWN_SKILL_FACTS_OVERRIDES = new Map([
   ]],
 ]);
 
+// Fact list patches for traits the GW2 API returns with incorrect values.
+// Same pattern as KNOWN_SKILL_FACTS_OVERRIDES but keyed by trait ID.
+const KNOWN_TRAIT_FACTS_OVERRIDES = new Map([
+  // Versatile Rage (trait 1415, Discipline spec 51) — GW2 API returns Recharge: 4s,
+  // but in-game the skill has a 5s recharge. Wiki: https://wiki.guildwars2.com/wiki/Versatile_Rage
+  [1415, [
+    { type: "Recharge", text: "Recharge", icon: `${_IC}/D767B963D120F077C3B163A05DC05A7317D7DB70/156651.png`, value: 5 },
+    { type: "Number",   text: "Adrenaline", icon: `${_IC}/E1E7C4D3A6E62F3D5C9F627CE8175BFB0C614CBE/156652.png`, value: 5 },
+    { type: "NoData",   text: "Combat Only", icon: `${_IC}/9352ED3244417304995F26CB01AE76BB7E547052/156661.png` },
+  ]],
+]);
+
 // Some GW2 skills have specialization: null in /v2/skills despite belonging to an elite spec,
 // or their spec is inconsistent between API endpoints. Override the specialization for known skills.
 const KNOWN_SKILL_SPEC_OVERRIDES = new Map([
@@ -425,6 +437,7 @@ module.exports = {
   _IC,
   FACT_ICONS,
   KNOWN_SKILL_FACTS_OVERRIDES,
+  KNOWN_TRAIT_FACTS_OVERRIDES,
   KNOWN_SKILL_SPEC_OVERRIDES,
   KNOWN_SKILL_SLOT_OVERRIDES,
   PHOTON_FORGE_SKILL_ID,

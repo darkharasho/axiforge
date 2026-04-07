@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-04-06T23:59:32.883Z",
+  "updatedAt": "2026-04-07T04:19:43.657Z",
   "skills": {
     "985": {
       "name": "Drop Stim Brew",
@@ -99049,52 +99049,29 @@
         "wvw": {
           "facts": [
             {
-              "type": "Buff",
-              "text": "Frost Aura (effect)",
-              "status": "Frost Aura (effect)",
-              "duration": 2,
-              "apply_count": 1,
-              "icon": "https://wiki.guildwars2.com/images/8/87/Frost_Aura_%28effect%29.png"
+              "type": "Time",
+              "text": "Duration",
+              "duration": 2
             },
             {
-              "type": "Buff",
-              "text": "Fire Aura",
-              "status": "Fire Aura",
-              "duration": 4,
-              "apply_count": 1,
-              "icon": "https://wiki.guildwars2.com/images/c/ce/Fire_Aura.png"
+              "type": "Time",
+              "text": "Duration",
+              "duration": 4
             },
             {
-              "type": "Buff",
-              "text": "Frost Aura (effect)",
-              "status": "Frost Aura (effect)",
-              "duration": 2,
-              "apply_count": 1,
-              "icon": "https://wiki.guildwars2.com/images/8/87/Frost_Aura_%28effect%29.png"
+              "type": "Time",
+              "text": "Duration",
+              "duration": 2
             },
             {
-              "type": "Buff",
-              "text": "Shocking Aura (effect)",
-              "status": "Shocking Aura (effect)",
-              "duration": 2,
-              "apply_count": 1,
-              "icon": "https://wiki.guildwars2.com/images/5/5d/Shocking_Aura_%28effect%29.png"
+              "type": "Time",
+              "text": "Duration",
+              "duration": 2
             },
             {
-              "type": "Buff",
-              "text": "Magnetic Aura (effect)",
-              "status": "Magnetic Aura (effect)",
-              "duration": 2,
-              "apply_count": 1,
-              "icon": "https://wiki.guildwars2.com/images/0/0b/Magnetic_Aura_%28effect%29.png"
-            },
-            {
-              "type": "Buff",
-              "text": "180 Toughness",
-              "status": "Signet of Earth (effect)",
-              "duration": 15,
-              "apply_count": 1,
-              "icon": "https://wiki.guildwars2.com/images/c/ce/Signet_of_Earth.png"
+              "type": "Time",
+              "text": "Duration",
+              "duration": 2
             }
           ],
           "complete": false
@@ -100265,25 +100242,19 @@
         "wvw": {
           "facts": [
             {
-              "type": "Buff",
-              "text": "Chaos Aura",
-              "status": "Chaos Aura",
-              "duration": 4,
-              "apply_count": 1,
-              "icon": "https://wiki.guildwars2.com/images/e/ec/Chaos_Aura.png"
-            },
-            {
-              "type": "Buff",
-              "text": "+10% Condition Damage",
-              "status": "Illusionary Membrane (effect)",
-              "duration": 5,
-              "apply_count": 1,
-              "icon": "https://wiki.guildwars2.com/images/b/bf/Illusionary_Membrane.png"
+              "type": "Time",
+              "text": "Duration",
+              "duration": 4
             },
             {
               "type": "Time",
+              "text": "Duration",
+              "duration": 5
+            },
+            {
+              "type": "Number",
               "text": "Maximum Effect Duration",
-              "duration": 15
+              "value": 15
             }
           ],
           "complete": false
@@ -101007,6 +100978,21 @@
         }
       }
     },
+    "856": {
+      "name": "Armored Shroud",
+      "modes": {
+        "wvw": {
+          "facts": [
+            {
+              "type": "Time",
+              "text": "Duration",
+              "duration": 10
+            }
+          ],
+          "complete": false
+        }
+      }
+    },
     "857": {
       "name": "Putrid Defense",
       "modes": {
@@ -101579,11 +101565,6 @@
         "wvw": {
           "facts": [
             {
-              "type": "Recharge",
-              "text": "Recharge",
-              "value": 0.25
-            },
-            {
               "type": "Buff",
               "text": "Fury",
               "status": "Fury",
@@ -101818,27 +101799,19 @@
         "wvw": {
           "facts": [
             {
-              "type": "Buff",
-              "text": "+10%",
-              "status": "Attack of Opportunity (effect)",
-              "duration": 10,
-              "apply_count": 1
+              "type": "Time",
+              "text": "Duration",
+              "duration": 10
             },
             {
-              "type": "Buff",
-              "text": "Duration increase",
-              "status": "Duration increase",
-              "duration": 10,
-              "apply_count": 1,
-              "icon": "https://render.guildwars2.com/file/7B2193ACCF77E56C13E608191B082D68AA0FAA71/156659.png"
+              "type": "Percent",
+              "text": "Duration Increase",
+              "percent": 10
             },
             {
-              "type": "Buff",
+              "type": "Number",
               "text": "Interval",
-              "status": "Interval",
-              "duration": 3,
-              "apply_count": 1,
-              "icon": "https://wiki.guildwars2.com/images/2/29/Interval.png"
+              "value": 3
             }
           ],
           "complete": false
@@ -101851,9 +101824,14 @@
         "wvw": {
           "facts": [
             {
+              "type": "Time",
+              "text": "Activation",
+              "duration": 1
+            },
+            {
               "type": "Recharge",
               "text": "Recharge",
-              "value": 1
+              "value": 25
             },
             {
               "type": "AttributeAdjust",
@@ -102612,11 +102590,6 @@
         "wvw": {
           "facts": [
             {
-              "type": "Recharge",
-              "text": "Recharge",
-              "value": 0.75
-            },
-            {
               "type": "Damage",
               "text": "Damage",
               "dmg_multiplier": 0.533,
@@ -102997,11 +102970,6 @@
       "modes": {
         "wvw": {
           "facts": [
-            {
-              "type": "Recharge",
-              "text": "Recharge",
-              "value": 0.25
-            },
             {
               "type": "Buff",
               "text": "Quickness",
@@ -104225,11 +104193,6 @@
         "wvw": {
           "facts": [
             {
-              "type": "Recharge",
-              "text": "Recharge",
-              "value": 0.25
-            },
-            {
               "type": "Percent",
               "text": "Damage Increase",
               "percent": 10
@@ -105352,11 +105315,6 @@
         "wvw": {
           "facts": [
             {
-              "type": "Recharge",
-              "text": "Recharge",
-              "value": 0.25
-            },
-            {
               "type": "Buff",
               "text": "Protection",
               "status": "Protection",
@@ -105404,19 +105362,14 @@
         "wvw": {
           "facts": [
             {
-              "type": "Buff",
-              "text": "Invoking Harmony (effect)",
-              "status": "Invoking Harmony (effect)",
-              "duration": 10,
-              "apply_count": 1,
-              "icon": "https://wiki.guildwars2.com/images/e/ec/Invoking_Harmony.png"
+              "type": "Time",
+              "text": "Duration",
+              "duration": 10
             },
             {
-              "type": "Buff",
-              "text": "Percent",
-              "status": "Percent",
-              "duration": 10,
-              "apply_count": 1
+              "type": "Percent",
+              "text": "Effectiveness Increased",
+              "percent": 10
             }
           ],
           "complete": false
@@ -105481,12 +105434,9 @@
         "wvw": {
           "facts": [
             {
-              "type": "Buff",
-              "text": "+15% Condition Damage",
-              "status": "Lotus Training (effect)",
-              "duration": 4,
-              "apply_count": 1,
-              "icon": "https://wiki.guildwars2.com/images/e/ea/Lotus_Training.png"
+              "type": "Time",
+              "text": "Duration",
+              "duration": 4
             }
           ],
           "complete": false
@@ -107157,28 +107107,19 @@
         "wvw": {
           "facts": [
             {
-              "type": "Buff",
-              "text": "Exhaustion",
-              "status": "Exhaustion",
-              "duration": 2,
-              "apply_count": 1,
-              "icon": "https://wiki.guildwars2.com/images/8/88/Exhaustion.png"
+              "type": "Time",
+              "text": "Duration",
+              "duration": 2
             },
             {
-              "type": "Buff",
-              "text": "Exhaustion",
-              "status": "Exhaustion",
-              "duration": 4,
-              "apply_count": 1,
-              "icon": "https://wiki.guildwars2.com/images/8/88/Exhaustion.png"
+              "type": "Time",
+              "text": "Duration",
+              "duration": 4
             },
             {
-              "type": "Buff",
-              "text": "-10% Incoming Condition Damage, -10% Incoming Damage",
-              "status": "Unhindered Combatant (effect)",
-              "duration": 4,
-              "apply_count": 1,
-              "icon": "https://wiki.guildwars2.com/images/a/a1/Unhindered_Combatant.png"
+              "type": "Time",
+              "text": "Duration",
+              "duration": 4
             }
           ],
           "complete": false
@@ -107966,12 +107907,9 @@
         "wvw": {
           "facts": [
             {
-              "type": "Buff",
-              "text": "+15% Damage",
-              "status": "Bounding Dodger (effect)",
-              "duration": 4,
-              "apply_count": 1,
-              "icon": "https://wiki.guildwars2.com/images/3/30/Bounding_Dodger.png"
+              "type": "Time",
+              "text": "Duration",
+              "duration": 4
             }
           ],
           "complete": false
@@ -108117,12 +108055,9 @@
         "wvw": {
           "facts": [
             {
-              "type": "Buff",
-              "text": "+10% Condition Damage, +10% Condition Duration, +300 Concentration",
-              "status": "Natural Balance (effect)",
-              "duration": 5,
-              "apply_count": 1,
-              "icon": "https://wiki.guildwars2.com/images/3/3d/Natural_Balance.png"
+              "type": "Time",
+              "text": "Duration",
+              "duration": 5
             }
           ],
           "complete": false
@@ -108621,36 +108556,14 @@
         "wvw": {
           "facts": [
             {
-              "type": "Buff",
-              "text": "+6{{fraction",
-              "status": "Phantom Pain (effect)",
-              "duration": 10,
-              "apply_count": 1,
-              "icon": "https://wiki.guildwars2.com/images/5/55/Phantom_Pain_%28effect%29.png"
+              "type": "Time",
+              "text": "Duration",
+              "duration": 10
             },
             {
-              "type": "Buff",
-              "text": "+3% Damage, +3% Condition Damage",
-              "status": "Phantom Pain (effect)",
-              "duration": 10,
-              "apply_count": 1,
-              "icon": "https://wiki.guildwars2.com/images/5/55/Phantom_Pain_%28effect%29.png"
-            },
-            {
-              "type": "Buff",
-              "text": "+2{{fraction",
-              "status": "Phantom Pain (effect)",
-              "duration": 10,
-              "apply_count": 1,
-              "icon": "https://wiki.guildwars2.com/images/5/55/Phantom_Pain_%28effect%29.png"
-            },
-            {
-              "type": "Buff",
-              "text": "Maximum stacks",
-              "status": "Maximum stacks",
-              "duration": 4,
-              "apply_count": 1,
-              "icon": "https://render.guildwars2.com/file/B4490FB81AA1E7C06F1B22056AE09A0F54CBE2C4/1770201.png"
+              "type": "Number",
+              "text": "Maximum Stacks",
+              "value": 4
             }
           ],
           "complete": false
@@ -108792,11 +108705,6 @@
       "modes": {
         "wvw": {
           "facts": [
-            {
-              "type": "Recharge",
-              "text": "Recharge",
-              "value": 0.5
-            },
             {
               "type": "Damage",
               "text": "Damage",
@@ -109099,12 +109007,9 @@
         "wvw": {
           "facts": [
             {
-              "type": "Buff",
-              "text": "+5%",
-              "status": "Twice as Vicious (effect)",
-              "duration": 10,
-              "apply_count": 1,
-              "icon": "https://wiki.guildwars2.com/images/0/00/Twice_as_Vicious.png"
+              "type": "Time",
+              "text": "Duration",
+              "duration": 10
             }
           ],
           "complete": false
@@ -109147,20 +109052,14 @@
         "wvw": {
           "facts": [
             {
-              "type": "Buff",
-              "text": "30 Power, 30 Precision, 30 Ferocity",
-              "status": "Attacker's Insight (effect)",
-              "duration": 15,
-              "apply_count": 1,
-              "icon": "https://wiki.guildwars2.com/images/8/89/Attacker%27s_Insight.png"
+              "type": "Time",
+              "text": "Duration",
+              "duration": 15
             },
             {
-              "type": "Buff",
-              "text": "Maximum stacks",
-              "status": "Maximum stacks",
-              "duration": 5,
-              "apply_count": 1,
-              "icon": "https://render.guildwars2.com/file/9352ED3244417304995F26CB01AE76BB7E547052/156661.png"
+              "type": "Number",
+              "text": "Maximum Stacks",
+              "value": 5
             }
           ],
           "complete": false
@@ -109173,20 +109072,9 @@
         "wvw": {
           "facts": [
             {
-              "type": "Buff",
-              "text": "+5% Damage, +5% Condition Damage",
-              "status": "Elements of Rage (effect)",
-              "duration": 8,
-              "apply_count": 1,
-              "icon": "https://wiki.guildwars2.com/images/a/a2/Elements_of_Rage.png"
-            },
-            {
-              "type": "AttributeConversion",
-              "text": "Gain Precision Based on a Percentage of Vitality",
-              "source": "Vitality",
-              "target": "Precision",
-              "percent": 13,
-              "icon": "https://wiki.guildwars2.com/images/d/dd/Precision_attribute.png"
+              "type": "Time",
+              "text": "Duration",
+              "duration": 8
             }
           ],
           "complete": false
@@ -109435,11 +109323,6 @@
       "modes": {
         "wvw": {
           "facts": [
-            {
-              "type": "Recharge",
-              "text": "Recharge",
-              "value": 0.5
-            },
             {
               "type": "Buff",
               "text": "Might",
@@ -109793,12 +109676,9 @@
         "wvw": {
           "facts": [
             {
-              "type": "Buff",
-              "text": "+10% Condition Damage, +7% Condition Duration",
-              "status": "Weaver's Prowess (effect)",
-              "duration": 8,
-              "apply_count": 1,
-              "icon": "https://wiki.guildwars2.com/images/7/75/Weaver%27s_Prowess.png"
+              "type": "Time",
+              "text": "Duration",
+              "duration": 8
             }
           ],
           "complete": false
@@ -110347,44 +110227,34 @@
         "wvw": {
           "facts": [
             {
-              "type": "Buff",
-              "text": "Fire Aura",
-              "status": "Fire Aura",
-              "duration": 4,
-              "apply_count": 1,
-              "icon": "https://wiki.guildwars2.com/images/c/ce/Fire_Aura.png"
+              "type": "Recharge",
+              "text": "Recharge",
+              "value": 10
             },
             {
-              "type": "Buff",
-              "text": "-10% Incoming Damage",
-              "status": "Frost Aura (effect)",
-              "duration": 2,
-              "apply_count": 1,
-              "icon": "https://wiki.guildwars2.com/images/8/87/Frost_Aura_%28effect%29.png"
+              "type": "Time",
+              "text": "Duration",
+              "duration": 4
             },
             {
-              "type": "Buff",
-              "text": "Shocking Aura (effect)",
-              "status": "Shocking Aura (effect)",
-              "duration": 3,
-              "apply_count": 1,
-              "icon": "https://wiki.guildwars2.com/images/5/5d/Shocking_Aura_%28effect%29.png"
+              "type": "Time",
+              "text": "Duration",
+              "duration": 2
             },
             {
-              "type": "Buff",
-              "text": "Magnetic Aura (effect)",
-              "status": "Magnetic Aura (effect)",
-              "duration": 3,
-              "apply_count": 1,
-              "icon": "https://wiki.guildwars2.com/images/0/0b/Magnetic_Aura_%28effect%29.png"
+              "type": "Time",
+              "text": "Duration",
+              "duration": 3
             },
             {
-              "type": "Buff",
-              "text": "+1%",
-              "status": "Elemental Empowerment (effect)",
-              "duration": 15,
-              "apply_count": 1,
-              "icon": "https://wiki.guildwars2.com/images/e/e6/Elemental_Empowerment.png"
+              "type": "Time",
+              "text": "Duration",
+              "duration": 3
+            },
+            {
+              "type": "Time",
+              "text": "Duration",
+              "duration": 15
             }
           ],
           "complete": false
@@ -110687,75 +110557,9 @@
         "wvw": {
           "facts": [
             {
-              "type": "Buff",
-              "text": "Duration increase",
-              "status": "Duration increase",
-              "duration": 50,
-              "apply_count": 1,
-              "icon": "https://render.guildwars2.com/file/7B2193ACCF77E56C13E608191B082D68AA0FAA71/156659.png"
-            },
-            {
-              "type": "Buff",
-              "text": "Might",
-              "status": "Might",
-              "duration": 7.5,
-              "apply_count": 1
-            },
-            {
-              "type": "Buff",
-              "text": "Resolution",
-              "status": "Resolution",
-              "duration": 1.5,
-              "apply_count": 1
-            },
-            {
-              "type": "Buff",
-              "text": "Quickness",
-              "status": "Quickness",
-              "duration": 1.5,
-              "apply_count": 1
-            },
-            {
-              "type": "Buff",
-              "text": "Protection",
-              "status": "Protection",
-              "duration": 1.5,
-              "apply_count": 1
-            },
-            {
-              "type": "Buff",
-              "text": "Might",
-              "status": "Might",
-              "duration": 9,
-              "apply_count": 1
-            },
-            {
-              "type": "Buff",
-              "text": "Vigor",
-              "status": "Vigor",
-              "duration": 4.5,
-              "apply_count": 1
-            },
-            {
-              "type": "Buff",
-              "text": "Fury",
-              "status": "Fury",
-              "duration": 4.5,
-              "apply_count": 1
-            },
-            {
-              "type": "Buff",
-              "text": "Resistance",
-              "status": "Resistance",
-              "duration": 3,
-              "apply_count": 1
-            },
-            {
-              "type": "Buff",
-              "text": "Swiftness",
-              "status": "Swiftness",
-              "duration": 3,
-              "apply_count": 1
+              "type": "Percent",
+              "text": "Duration Increase",
+              "percent": 50
             }
           ],
           "complete": false
@@ -110825,12 +110629,9 @@
         "wvw": {
           "facts": [
             {
-              "type": "Buff",
-              "text": "+15% Damage",
-              "status": "Forerunner of Death (effect)",
-              "duration": 10,
-              "apply_count": 1,
-              "icon": "https://wiki.guildwars2.com/images/9/95/Forerunner_of_Death.png"
+              "type": "Time",
+              "text": "Duration",
+              "duration": 10
             }
           ],
           "complete": false
@@ -111075,27 +110876,14 @@
         "wvw": {
           "facts": [
             {
-              "type": "Buff",
-              "text": "+3% Damage, +5% Movement Speed",
-              "status": "Ferocious Symbiosis (effect)",
-              "duration": 5,
-              "apply_count": 1,
-              "icon": "https://wiki.guildwars2.com/images/7/73/Ferocious_Symbiosis.png"
+              "type": "Time",
+              "text": "Duration",
+              "duration": 5
             },
             {
-              "type": "Buff",
-              "text": "Maximum stacks",
-              "status": "Maximum stacks",
-              "duration": 5,
-              "apply_count": 1,
-              "icon": "https://render.guildwars2.com/file/B4490FB81AA1E7C06F1B22056AE09A0F54CBE2C4/1770201.png"
-            },
-            {
-              "type": "Buff",
-              "text": "Movement speed increase",
-              "status": "Movement speed increase",
-              "duration": 5,
-              "apply_count": 1
+              "type": "Number",
+              "text": "Maximum Stacks",
+              "value": 5
             }
           ],
           "complete": false
@@ -111929,17 +111717,14 @@
         "wvw": {
           "facts": [
             {
-              "type": "Buff",
-              "text": "+10%",
-              "status": "Exhilarating Ephemera (effect)",
-              "duration": 10,
-              "apply_count": 1,
-              "icon": "https://wiki.guildwars2.com/images/c/cf/Exhilarating_Ephemera_%28effect%29.png"
+              "type": "Time",
+              "text": "Duration",
+              "duration": 10
             },
             {
-              "type": "Time",
+              "type": "Number",
               "text": "Maximum Duration",
-              "duration": 20
+              "value": 20
             }
           ],
           "complete": false
@@ -111952,40 +111737,29 @@
         "wvw": {
           "facts": [
             {
-              "type": "Buff",
-              "text": "+10%",
-              "status": "Familiar's Prowess (fox)",
-              "duration": 5,
-              "apply_count": 1
+              "type": "Time",
+              "text": "Duration",
+              "duration": 5
             },
             {
-              "type": "Buff",
-              "text": "+15% Healing Increase to Others",
-              "status": "Familiar's Prowess (otter)",
-              "duration": 5,
-              "apply_count": 1
+              "type": "Time",
+              "text": "Duration",
+              "duration": 5
             },
             {
-              "type": "Buff",
-              "text": "+10% Damage",
-              "status": "Familiar's Prowess (hare)",
-              "duration": 5,
-              "apply_count": 1
+              "type": "Time",
+              "text": "Duration",
+              "duration": 5
             },
             {
-              "type": "Buff",
-              "text": "-10% Incoming Damage",
-              "status": "Familiar's Prowess (toad)",
-              "duration": 5,
-              "apply_count": 1
+              "type": "Time",
+              "text": "Duration",
+              "duration": 5
             },
             {
-              "type": "Buff",
-              "text": "Max duration",
-              "status": "Max duration",
-              "duration": 15,
-              "apply_count": 1,
-              "icon": "https://render.guildwars2.com/file/9352ED3244417304995F26CB01AE76BB7E547052/156661.png"
+              "type": "Number",
+              "text": "Max Duration",
+              "value": 15
             }
           ],
           "complete": false
@@ -112165,12 +111939,9 @@
         "wvw": {
           "facts": [
             {
-              "type": "Buff",
-              "text": "+10%",
-              "status": "Willing Host (effect)",
-              "duration": 10,
-              "apply_count": 1,
-              "icon": "https://wiki.guildwars2.com/images/c/c9/Willing_Host_%28effect%29.png"
+              "type": "Time",
+              "text": "Duration",
+              "duration": 10
             }
           ],
           "complete": false
@@ -113060,11 +112831,6 @@
       "modes": {
         "wvw": {
           "facts": [
-            {
-              "type": "Recharge",
-              "text": "Recharge",
-              "value": 0.25
-            },
             {
               "type": "Number",
               "text": "Recharge Time Reduced",

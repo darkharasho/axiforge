@@ -21,6 +21,7 @@ function _setStaticData({ professions, specializations, legends } = {}) {
 const {
   KNOWN_SKILL_DESCRIPTION_OVERRIDES,
   KNOWN_SKILL_FACTS_OVERRIDES,
+  KNOWN_TRAIT_FACTS_OVERRIDES,
   KNOWN_SKILL_SPEC_OVERRIDES,
   KNOWN_SKILL_SLOT_OVERRIDES,
   PHOTON_FORGE_SKILL_ID,
@@ -814,7 +815,7 @@ async function getProfessionCatalog(professionId, lang = "en", gameMode = "pve")
         order: Number(trait.order) || 0,
         slot: trait.slot || "",
         specialization: Number(trait.specialization) || 0,
-        facts: Array.isArray(trait.facts) ? trait.facts.filter((f) => !f.requires_trait) : [],
+        facts: KNOWN_TRAIT_FACTS_OVERRIDES.get(trait.id) || (Array.isArray(trait.facts) ? trait.facts.filter((f) => !f.requires_trait) : []),
         traitedFacts: Array.isArray(trait.traited_facts) ? trait.traited_facts : [],
         traitSkillIds: Array.isArray(trait.skills)
           ? trait.skills.map((s) => Number(s?.id)).filter(Boolean)
