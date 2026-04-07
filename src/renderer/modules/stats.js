@@ -169,6 +169,45 @@ export function computeFuryStatBonuses(gameMode = "pve") {
 }
 
 /**
+ * Compute flat stat bonuses from passive traits (non-Fury, non-conversion).
+ * Reads AttributeAdjust facts from active traits that are NOT Fury-gated
+ * (Fury-gated traits are handled separately by computeFuryStatBonuses).
+ * Excludes PET_STAT_TRAITS where the bonuses apply to pets, not the player.
+ *
+ * @param {string} [gameMode="pve"] - "pve" or "wvw"
+ * @returns {Object} Map of stat key → bonus value (e.g. { Power: 120 })
+ */
+export function computePassiveTraitBonuses(gameMode = "pve") {
+  const catalog = state.activeCatalog;
+  if (!catalog?.traitById) return {};
+
+  const activeTraitIds = collectActiveTraitIds();
+  if (!activeTraitIds.size) return {};
+
+  const bonuses = {};
+  for (const traitId of activeTraitIds) {
+    if (PET_STAT_TRAITS.has(traitId)) continue;
+    const trait = catalog.traitById.get(traitId);
+    if (!trait?.facts) continue;
+    if (isFuryTrait(trait, traitId)) continue;
+
+    const byTarget = new Map();
+    for (const fact of trait.facts) {
+      if (fact.type !== "AttributeAdjust" || !fact.target || !fact.value) continue;
+      if (!byTarget.has(fact.target)) byTarget.set(fact.target, []);
+      byTarget.get(fact.target).push(fact.value);
+    }
+
+    for (const [target, values] of byTarget) {
+      const statKey = CONVERSION_TARGET_MAP[target] || target;
+      const idx = gameMode === "wvw" ? Math.min(1, values.length - 1) : 0;
+      bonuses[statKey] = (bonuses[statKey] || 0) + values[idx];
+    }
+  }
+  return bonuses;
+}
+
+/**
  * Compute effective Might per-stack values, accounting for Notoriety trait.
  * @returns {{ power: number, condi: number }}
  */
@@ -447,6 +486,12 @@ export function computeEquipmentStats(assumedBoons = null, sigilStacks = null) {
         totals[buff.stat] += buff.value;
       }
     }
+  }
+
+  // Passive trait flat stat bonuses (e.g. Forceful Greatsword +120 Power)
+  const passiveBonuses = computePassiveTraitBonuses(state.editor.gameMode);
+  for (const [key, val] of Object.entries(passiveBonuses)) {
+    totals[key] = (totals[key] || 0) + val;
   }
 
   // Trait AttributeConversion contributions
@@ -767,6 +812,12 @@ export function computeStatBreakdown(statKey, assumedBoons = null, sigilStacks =
         entries.push({ source: "Boon (Fury)", value: furyBonuses[statKey] });
       }
     }
+  }
+
+  // Passive trait flat stat bonuses (e.g. Forceful Greatsword +120 Power)
+  const passiveBonuses = computePassiveTraitBonuses(state.editor.gameMode);
+  if (passiveBonuses[statKey]) {
+    entries.push({ source: "Trait bonus", value: passiveBonuses[statKey] });
   }
 
   // Trait conversion contributions

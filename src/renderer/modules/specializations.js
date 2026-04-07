@@ -20,12 +20,14 @@ let _enforceEditorConsistency = () => {};
 let _markEditorChanged = () => {};
 let _renderEditor = () => {};
 let _renderSkills = () => {};
+let _renderEquipmentPanel = () => {};
 
-export function initSpecializationsCallbacks({ enforceEditorConsistency, markEditorChanged, renderEditor, renderSkills }) {
+export function initSpecializationsCallbacks({ enforceEditorConsistency, markEditorChanged, renderEditor, renderSkills, renderEquipmentPanel }) {
   _enforceEditorConsistency = enforceEditorConsistency;
   _markEditorChanged = markEditorChanged;
   _renderEditor = renderEditor;
   _renderSkills = renderSkills;
+  _renderEquipmentPanel = renderEquipmentPanel || (() => {});
 }
 
 export function getMajorTraitsByTier(spec, catalog) {
@@ -323,6 +325,7 @@ export function renderSpecializations() {
           cancelAnimationFrame(_connectorRafId);
           _connectorRafId = requestAnimationFrame(() => drawSpecConnector(body));
           _renderSkills();
+          _renderEquipmentPanel();
           selectDetail("trait", trait);
         };
         const majorButton = makeTraitButton(trait, isSelected, majorOnClick);

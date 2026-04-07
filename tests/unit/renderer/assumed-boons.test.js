@@ -1,6 +1,6 @@
 "use strict";
 
-const { computeEquipmentStats, computeStatBreakdown, computeTraitConversions, computeFuryCritModifier, computeFuryStatBonuses, computeMightPerStack } = require("../../../src/renderer/modules/stats");
+const { computeEquipmentStats, computeStatBreakdown, computeTraitConversions, computeFuryCritModifier, computeFuryStatBonuses, computePassiveTraitBonuses, computeMightPerStack } = require("../../../src/renderer/modules/stats");
 const { state } = require("../../../src/renderer/modules/state");
 
 function makeEditor(slots = {}, food = "", utility = "") {
@@ -640,5 +640,152 @@ describe("computeMightPerStack — Notoriety trait", () => {
     const mightEntry = entries.find((e) => e.source.includes("Might"));
     expect(mightEntry).toBeDefined();
     expect(mightEntry.value).toBe(10 * 40); // 400, not 300
+  });
+});
+
+// ---------------------------------------------------------------------------
+// computePassiveTraitBonuses — flat stat bonuses from non-Fury traits
+// ---------------------------------------------------------------------------
+
+describe("computePassiveTraitBonuses — flat stat bonuses from passive traits", () => {
+  beforeEach(() => {
+    state.editor = makeEditor();
+    state.upgradeCatalog = null;
+  });
+
+  test("returns empty when no specializations selected", () => {
+    state.editor.specializations = [];
+    state.activeCatalog = { traitById: new Map(), specializationById: new Map() };
+    expect(computePassiveTraitBonuses()).toEqual({});
+  });
+
+  test("returns Power from Forceful Greatsword (non-Fury AttributeAdjust)", () => {
+    const forcefulGreatsword = {
+      id: 1338,
+      facts: [
+        { type: "AttributeAdjust", value: 120, target: "Power" },
+      ],
+    };
+    state.activeCatalog = {
+      traitById: new Map([[1338, forcefulGreatsword]]),
+      specializationById: new Map(),
+    };
+    state.editor.specializations = [
+      { specializationId: 4, majorChoices: { 2: 1338 } },
+    ];
+    expect(computePassiveTraitBonuses()).toEqual({ Power: 120 });
+  });
+
+  test("returns Power from Pinnacle of Strength minor trait", () => {
+    const pinnacle = {
+      id: 1453,
+      facts: [
+        { type: "AttributeAdjust", value: 10, target: "Power" },
+      ],
+    };
+    state.activeCatalog = {
+      traitById: new Map([[1453, pinnacle]]),
+      specializationById: new Map([[4, { id: 4, minorTraits: [1446, 1448, 1453] }]]),
+    };
+    state.editor.specializations = [
+      { specializationId: 4, majorChoices: {} },
+    ];
+    expect(computePassiveTraitBonuses()).toEqual({ Power: 10 });
+  });
+
+  test("does not include Fury-gated traits (already handled by computeFuryStatBonuses)", () => {
+    const ragingStorm = {
+      id: 214,
+      facts: [
+        { type: "AttributeAdjust", value: 180, target: "CritDamage" },
+        { type: "Buff", status: "Fury", duration: 4, apply_count: 1 },
+      ],
+    };
+    state.activeCatalog = {
+      traitById: new Map([[214, ragingStorm]]),
+      specializationById: new Map(),
+    };
+    state.editor.specializations = [
+      { specializationId: 1, majorChoices: { 1: 214 } },
+    ];
+    expect(computePassiveTraitBonuses()).toEqual({});
+  });
+
+  test("excludes PET_STAT_TRAITS", () => {
+    const fangAndClaw = {
+      id: 1016,
+      facts: [
+        { type: "AttributeAdjust", value: 420, target: "Precision" },
+      ],
+    };
+    state.activeCatalog = {
+      traitById: new Map([[1016, fangAndClaw]]),
+      specializationById: new Map(),
+    };
+    state.editor.specializations = [
+      { specializationId: 1, majorChoices: { 1: 1016 } },
+    ];
+    expect(computePassiveTraitBonuses()).toEqual({});
+  });
+
+  test("maps Healing target to HealingPower", () => {
+    const mightMakesRight = {
+      id: 1454,
+      facts: [
+        { type: "AttributeAdjust", value: 133, target: "Healing" },
+      ],
+    };
+    state.activeCatalog = {
+      traitById: new Map([[1454, mightMakesRight]]),
+      specializationById: new Map(),
+    };
+    state.editor.specializations = [
+      { specializationId: 4, majorChoices: { 3: 1454 } },
+    ];
+    expect(computePassiveTraitBonuses()).toEqual({ HealingPower: 133 });
+  });
+
+  test("handles game-mode split (PvE vs WvW)", () => {
+    const splitTrait = {
+      id: 5555,
+      facts: [
+        { type: "AttributeAdjust", value: 100, target: "Power" },
+        { type: "AttributeAdjust", value: 50, target: "Power" },
+      ],
+    };
+    state.activeCatalog = {
+      traitById: new Map([[5555, splitTrait]]),
+      specializationById: new Map(),
+    };
+    state.editor.specializations = [
+      { specializationId: 1, majorChoices: { 1: 5555 } },
+    ];
+    expect(computePassiveTraitBonuses("pve")).toEqual({ Power: 100 });
+    expect(computePassiveTraitBonuses("wvw")).toEqual({ Power: 50 });
+  });
+
+  test("passive trait bonuses applied to computeEquipmentStats totals", () => {
+    const forcefulGreatsword = {
+      id: 1338,
+      facts: [
+        { type: "AttributeAdjust", value: 120, target: "Power" },
+      ],
+    };
+    state.activeCatalog = {
+      traitById: new Map([[1338, forcefulGreatsword]]),
+      specializationById: new Map(),
+    };
+    const baselineEditor = makeEditor();
+    baselineEditor.specializations = [];
+    state.editor = baselineEditor;
+    const baseline = computeEquipmentStats();
+
+    const withTraitEditor = makeEditor();
+    withTraitEditor.specializations = [
+      { specializationId: 4, majorChoices: { 2: 1338 } },
+    ];
+    state.editor = withTraitEditor;
+    const withTrait = computeEquipmentStats();
+    expect(withTrait.Power).toBe(baseline.Power + 120);
   });
 });
