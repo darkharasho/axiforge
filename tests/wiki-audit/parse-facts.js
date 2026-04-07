@@ -145,6 +145,15 @@ function parseFactText(name, value, titleAttr) {
     return { type: "Time", text: "Duration", duration: parseFloat(selfBuffDurMatch[1]) };
   }
 
+  // ── Custom buff effect description ──
+  // Trait-granted custom effects on the wiki appear as percentage-based descriptions
+  // e.g. "Chant of Action: +10% Damage, +10% Condition Damage"
+  // where the name is the custom buff and the value describes the effect.
+  // Detect values with a percentage followed by descriptive game effect text.
+  if (/^[+-]?\d+%\s+[A-Z]/.test(val)) {
+    return { type: "Buff", text: val, status: name, apply_count: 1 };
+  }
+
   // ── Percent ──
   const pctMatch = val.match(/^([\d.]+)\s*%/);
   if (pctMatch) {

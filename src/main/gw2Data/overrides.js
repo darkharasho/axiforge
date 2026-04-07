@@ -65,6 +65,16 @@ const KNOWN_TRAIT_FACTS_OVERRIDES = new Map([
     { type: "Number",   text: "Adrenaline", icon: `${_IC}/E1E7C4D3A6E62F3D5C9F627CE8175BFB0C614CBE/156652.png`, value: 5 },
     { type: "NoData",   text: "Combat Only", icon: `${_IC}/9352ED3244417304995F26CB01AE76BB7E547052/156661.png` },
   ]],
+  // Strengthening Stanzas (trait 2385, Paragon spec 74) — GW2 API returns Buff facts for
+  // Chant of Action/Recuperation/Freedom with empty descriptions and 0s durations.
+  // In-game the trait grants: Action +10% Damage & Condition Damage, Recuperation −7%
+  // Incoming Damage & Condition Damage, Freedom +50% Movement Speed.
+  // Wiki: https://wiki.guildwars2.com/wiki/Strengthening_Stanzas
+  [2385, [
+    { type: "Buff", text: "+10% Damage, +10% Condition Damage",               status: "Chant of Action",        icon: `${_IC}/4B3C78BCBC05A7FDE4DDC8624AD9D80924B3F237/3680056.png`, apply_count: 1 },
+    { type: "Buff", text: "-7% Incoming Damage, -7% Incoming Condition Damage", status: "Chant of Recuperation", icon: `${_IC}/6EAB0F5614F71BA857B1797E42596FEF3E0733AE/3680058.png`, apply_count: 1 },
+    { type: "Buff", text: "+50% Movement Speed",                               status: "Chant of Freedom",       icon: `${_IC}/416DB03D770454152C5CAC1BE00575E075AD9571/3680057.png`, apply_count: 1 },
+  ]],
 ]);
 
 // Some GW2 skills have specialization: null in /v2/skills despite belonging to an elite spec,

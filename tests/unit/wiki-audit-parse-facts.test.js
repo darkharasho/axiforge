@@ -86,6 +86,36 @@ describe("parseFactText", () => {
     });
   });
 
+  // ── Custom buff effect descriptions (Paragon chants, etc.) ──
+
+  test("parses custom buff with positive percentage description", () => {
+    expect(parseFactText("Chant of Action", "+10% Damage, +10% Condition Damage")).toEqual({
+      type: "Buff", text: "+10% Damage, +10% Condition Damage",
+      status: "Chant of Action", apply_count: 1,
+    });
+  });
+
+  test("parses custom buff with negative percentage description", () => {
+    expect(parseFactText("Chant of Recuperation", "-7% Incoming Damage, -7% Incoming Condition Damage")).toEqual({
+      type: "Buff", text: "-7% Incoming Damage, -7% Incoming Condition Damage",
+      status: "Chant of Recuperation", apply_count: 1,
+    });
+  });
+
+  test("parses custom buff with movement speed description", () => {
+    expect(parseFactText("Chant of Freedom", "+50% Movement Speed")).toEqual({
+      type: "Buff", text: "+50% Movement Speed",
+      status: "Chant of Freedom", apply_count: 1,
+    });
+  });
+
+  test("does not treat bare percent as custom buff", () => {
+    // "33%" has no descriptive text after — should remain a Percent fact
+    expect(parseFactText("Damage Reduction", "33%")).toEqual({
+      type: "Percent", text: "Damage Reduction", percent: 33,
+    });
+  });
+
   // ── Display text aliases for conditions ──
 
   test("normalizes Cripple display text to Crippled", () => {

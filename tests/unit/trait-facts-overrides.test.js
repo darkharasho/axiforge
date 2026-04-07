@@ -50,3 +50,36 @@ describe("Trait facts overrides (#162)", () => {
     expect(combatOnly).toBeDefined();
   });
 });
+
+describe("Strengthening Stanzas facts override (#159)", () => {
+  test("trait 2385 has fact overrides", () => {
+    const facts = KNOWN_TRAIT_FACTS_OVERRIDES.get(2385);
+    expect(facts).toBeDefined();
+    expect(facts.length).toBe(3);
+  });
+
+  test("Chant of Action fact includes damage description", () => {
+    const facts = KNOWN_TRAIT_FACTS_OVERRIDES.get(2385);
+    const chantOfAction = facts.find((f) => f.status === "Chant of Action");
+    expect(chantOfAction).toBeDefined();
+    expect(chantOfAction.type).toBe("Buff");
+    expect(chantOfAction.text).toMatch(/Damage/i);
+    expect(chantOfAction.icon).toBeTruthy();
+  });
+
+  test("Chant of Recuperation fact includes incoming damage description", () => {
+    const facts = KNOWN_TRAIT_FACTS_OVERRIDES.get(2385);
+    const chant = facts.find((f) => f.status === "Chant of Recuperation");
+    expect(chant).toBeDefined();
+    expect(chant.type).toBe("Buff");
+    expect(chant.text).toMatch(/Incoming Damage/i);
+  });
+
+  test("Chant of Freedom fact includes movement speed description", () => {
+    const facts = KNOWN_TRAIT_FACTS_OVERRIDES.get(2385);
+    const chant = facts.find((f) => f.status === "Chant of Freedom");
+    expect(chant).toBeDefined();
+    expect(chant.type).toBe("Buff");
+    expect(chant.text).toMatch(/Movement Speed/i);
+  });
+});
