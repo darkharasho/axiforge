@@ -1,3 +1,9 @@
+## Version v0.1.7 — April 6, 2026
+
+### Bug Fixes
+- Relic of the Thief tooltip now shows Stack Duration and Maximum Stacks facts
+- Fixes CI test failures from v0.1.6
+
 ## Version v0.1.6 — April 6, 2026
 
 ### New Features
