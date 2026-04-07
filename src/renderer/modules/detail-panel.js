@@ -107,13 +107,16 @@ export function renderDetailPanel() {
     const effectivePower = power * (1 + critChance * (0.5 + ferocity / 1500));
     return { weaponStrength, effectivePower };
   })();
+  // Alacrity only affects skill cooldowns, not trait internal cooldowns.
+  const isSkill = detail.kindLabel !== "Trait";
+  const alacrity = isSkill && getAssumedBoons().alacrity;
   // Burst Recharge: applies to warrior burst skills (slot Profession_1)
-  const burstRecharge = detail.slot === "Profession_1" ? (computeUpgradeModifiers().get("Burst Recharge") || 0) : 0;
+  const burstRecharge = isSkill && detail.slot === "Profession_1" ? (computeUpgradeModifiers().get("Burst Recharge") || 0) : 0;
   const factsHtml = facts.length
     ? facts
         .map((fact) => {
           const cls = fact.type === "NoData" ? "fact-item--section" : fact._splitFact ? "fact-item--split" : fact._traitedFact ? "fact-item--traited" : fact._newFact ? "fact-item--new-in-mode" : "";
-          return `<li${cls ? ` class="${cls}"` : ""}>${formatFactHtml(fact, detailDmgStats, { alacrity: getAssumedBoons().alacrity, burstRecharge })}</li>`;
+          return `<li${cls ? ` class="${cls}"` : ""}>${formatFactHtml(fact, detailDmgStats, { alacrity, burstRecharge })}</li>`;
         })
         .join("")
     : "<li>No fact entries.</li>";
@@ -314,10 +317,12 @@ export function buildSkillCard(skill, kind, isChained = false, dmgStats = null) 
   const description = normalizeText(skill.description || "");
   const maxFacts = kind.startsWith("equip-") ? 12 : 16;
   const rawFacts = resolveEntityFacts(skill).slice(0, maxFacts);
-  const burstRch = skill.slot === "Profession_1" ? (computeUpgradeModifiers().get("Burst Recharge") || 0) : 0;
+  const isSkillCard = kind !== "trait";
+  const cardAlacrity = isSkillCard && getAssumedBoons().alacrity;
+  const burstRch = isSkillCard && skill.slot === "Profession_1" ? (computeUpgradeModifiers().get("Burst Recharge") || 0) : 0;
   const factsItems = rawFacts
     .map((fact) => {
-      const html = formatFactHtml(fact, dmgStats, { alacrity: getAssumedBoons().alacrity, burstRecharge: burstRch });
+      const html = formatFactHtml(fact, dmgStats, { alacrity: cardAlacrity, burstRecharge: burstRch });
       if (!html) return null;
       const cls = fact.type === "NoData" ? "fact-item--section" : fact._splitFact ? "fact-item--split" : fact._traitedFact ? "fact-item--traited" : "";
       return `<li${cls ? ` class="${cls}"` : ""}>${html}</li>`;
