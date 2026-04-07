@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-04-05T23:55:14.257Z",
+  "updatedAt": "2026-04-06T23:59:32.883Z",
   "skills": {
     "985": {
       "name": "Drop Stim Brew",
@@ -10515,21 +10515,6 @@
               "type": "Number",
               "text": "Signet Passive",
               "value": 120
-            },
-            {
-              "type": "Number",
-              "text": "Number of Allied Targets",
-              "value": 1
-            },
-            {
-              "type": "Radius",
-              "text": "Radius",
-              "distance": 180
-            },
-            {
-              "type": "Range",
-              "text": "Range",
-              "value": 900
             }
           ],
           "complete": false
@@ -20921,6 +20906,24 @@
         }
       }
     },
+    "13050": {
+      "name": "Signet of Malice",
+      "modes": {
+        "wvw": {
+          "facts": [
+            {
+              "type": "AttributeAdjust",
+              "text": "Healing",
+              "target": "Healing",
+              "value": 132,
+              "coefficient": 0.05,
+              "hit_count": 1
+            }
+          ],
+          "complete": false
+        }
+      }
+    },
     "13055": {
       "name": "Skale Venom",
       "modes": {
@@ -23459,34 +23462,14 @@
         "wvw": {
           "facts": [
             {
-              "type": "Recharge",
-              "text": "Recharge",
-              "value": 20
-            },
-            {
-              "type": "AttributeAdjust",
-              "text": "Healing",
-              "target": "Healing",
-              "value": 2320,
-              "coefficient": 0.35,
-              "hit_count": 1
+              "type": "Number",
+              "text": "Healing Signet",
+              "value": 344
             },
             {
               "type": "Number",
               "text": "Healing Signet",
               "value": 230
-            },
-            {
-              "type": "Buff",
-              "text": "Resistance",
-              "status": "Resistance",
-              "duration": 6,
-              "apply_count": 1
-            },
-            {
-              "type": "Number",
-              "text": "Interval",
-              "value": 1
             }
           ],
           "complete": false
