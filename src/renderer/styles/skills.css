@@ -454,6 +454,14 @@
   border-style: dashed;
 }
 
+/* Empty heal/utility/elite skill slots */
+.skill-icon-large.skill-icon--empty:not(.skill-icon--weapon) {
+  opacity: 0.45;
+  background: rgba(2, 8, 16, 0.4);
+  border-style: dashed;
+  border-color: rgba(166, 187, 222, 0.2);
+}
+
 .skill-icon-large {
   position: relative;
   overflow: visible;

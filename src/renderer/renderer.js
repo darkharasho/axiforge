@@ -357,13 +357,9 @@ async function init() {
   });
   await loadComps();
 
-  if (state.builds.length) {
-    await loadBuildIntoEditor(state.builds[0], { captureBaseline: true });
-  } else if (state.professions.length) {
-    state.editor = createEmptyEditor(state.professions[0].id, _lastGameMode);
-    await setProfession(state.professions[0].id, { preserveSelections: false });
-    captureEditorBaseline();
-  }
+  // Always start with a blank editor — the user loads a build when they want one.
+  state.editor = createEmptyEditor("", _lastGameMode);
+  captureEditorBaseline();
 
   await refreshWindowControls();
   render();
@@ -384,7 +380,7 @@ async function reloadBuilds() {
 
 async function startNewBuild(profession, { skipDirtyCheck = false } = {}) {
   if (!skipDirtyCheck && !confirmDiscardDirty("Start a new build")) return;
-  profession = profession || state.editor.profession || state.professions[0]?.id || "";
+  profession = profession || "";
   state.editor = createEmptyEditor(profession, _lastGameMode);
   if (profession) {
     await setProfession(profession, { preserveSelections: false });

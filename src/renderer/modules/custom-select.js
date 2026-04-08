@@ -17,11 +17,12 @@ export function renderCustomSelect(host, config = {}) {
     ? config.groups.flatMap((g) => g.options || [])
     : Array.isArray(config.options) ? config.options : [];
   const currentValue = String(config.value ?? "");
-  const selectedOption =
-    allOptions.find((option) => String(option.value) === currentValue) ||
-    allOptions.find((option) => !option.disabled) ||
-    allOptions[0] ||
-    null;
+  const selectedOption = currentValue
+    ? (allOptions.find((option) => String(option.value) === currentValue) ||
+       allOptions.find((option) => !option.disabled) ||
+       allOptions[0] ||
+       null)
+    : null; // Empty value = no selection, show placeholder.
 
   host.innerHTML = "";
   host.classList.add("cselect-host");

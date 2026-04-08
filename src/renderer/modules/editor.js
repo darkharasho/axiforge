@@ -68,48 +68,29 @@ export function initEditorCallbacks({
 // Specialization / skill selection helpers
 // ---------------------------------------------------------------------------
 
-export function createDefaultSpecializationSelections(catalog) {
-  const specs = Array.isArray(catalog.specializations) ? catalog.specializations : [];
-  const core = specs.filter((entry) => !entry.elite);
-  const elite = specs.filter((entry) => entry.elite);
-  const picks = [core[0], core[1], elite[0] || core[2] || core[0]].filter(Boolean);
-  const seen = new Set();
-  const selections = [];
-  for (const spec of picks) {
-    if (!spec || seen.has(spec.id)) continue;
-    seen.add(spec.id);
-    selections.push(createSpecializationSelection(spec, catalog));
-  }
-
-  while (selections.length < 3) {
-    const fallback = specs.find((entry) => !seen.has(entry.id));
-    if (!fallback) break;
-    seen.add(fallback.id);
-    selections.push(createSpecializationSelection(fallback, catalog));
-  }
-
-  return selections.slice(0, 3);
+export function createDefaultSpecializationSelections(_catalog) {
+  // Start with three empty spec slots — the user picks each one.
+  return [
+    { specializationId: 0, majorChoices: { 1: 0, 2: 0, 3: 0 } },
+    { specializationId: 0, majorChoices: { 1: 0, 2: 0, 3: 0 } },
+    { specializationId: 0, majorChoices: { 1: 0, 2: 0, 3: 0 } },
+  ];
 }
 
-export function createSpecializationSelection(spec, catalog) {
-  const majors = getMajorTraitsByTier(spec, catalog);
+export function createSpecializationSelection(spec, _catalog) {
+  // Assign the spec but leave trait choices blank — the user picks each one.
   return {
     specializationId: Number(spec.id),
-    majorChoices: {
-      1: Number(majors[1]?.[0]?.id || 0),
-      2: Number(majors[2]?.[0]?.id || 0),
-      3: Number(majors[3]?.[0]?.id || 0),
-    },
+    majorChoices: { 1: 0, 2: 0, 3: 0 },
   };
 }
 
-export function createDefaultSkillSelections(catalog, specializations) {
-  const skillOptions = _getSkillOptionsByType(catalog, specializations);
-  const utilityIds = (skillOptions.utility || []).slice(0, 3).map((skill) => skill.id);
+export function createDefaultSkillSelections(_catalog, _specializations) {
+  // Start with blank skill slots — the user picks each one.
   return {
-    healId: Number(skillOptions.heal?.[0]?.id || 0),
-    utilityIds: [utilityIds[0] || 0, utilityIds[1] || 0, utilityIds[2] || 0],
-    eliteId: Number(skillOptions.elite?.[0]?.id || 0),
+    healId: 0,
+    utilityIds: [0, 0, 0],
+    eliteId: 0,
   };
 }
 
@@ -127,11 +108,19 @@ export function enforceEditorConsistency(options = {}) {
   for (let i = 0; i < 3; i += 1) {
     const current = state.editor.specializations[i] || {};
     const currentId = Number(current.specializationId) || 0;
+
+    // Empty slot is valid — preserve it as-is.
+    if (!currentId) {
+      nextSpecs.push({ specializationId: 0, majorChoices: { 1: 0, 2: 0, 3: 0 } });
+      continue;
+    }
+
     let spec = catalog.specializationById.get(currentId) || null;
     if (!spec || used.has(spec.id)) {
-      spec = specs.find((entry) => !used.has(entry.id)) || null;
+      // Invalid or duplicate — clear the slot rather than auto-picking a replacement.
+      nextSpecs.push({ specializationId: 0, majorChoices: { 1: 0, 2: 0, 3: 0 } });
+      continue;
     }
-    if (!spec) continue;
     used.add(spec.id);
     const majors = getMajorTraitsByTier(spec, catalog);
     // If traitChoices (from axicode import) exist and majorChoices are all 0,
@@ -169,20 +158,8 @@ export function enforceEditorConsistency(options = {}) {
     const keepSlot = eliteSlots.includes(preferredEliteSlot) ? preferredEliteSlot : eliteSlots[0];
     for (const slot of eliteSlots) {
       if (slot === keepSlot) continue;
-      const usedIds = new Set(nextSpecs.map((entry) => Number(entry.specializationId) || 0));
-      usedIds.delete(Number(nextSpecs[slot]?.specializationId) || 0);
-      const replacement = specs.find((entry) => !entry.elite && !usedIds.has(Number(entry.id)));
-      if (!replacement) continue;
-      const current = state.editor.specializations[slot] || {};
-      const majors = getMajorTraitsByTier(replacement, catalog);
-      nextSpecs[slot] = {
-        specializationId: Number(replacement.id),
-        majorChoices: {
-          1: chooseTraitId(current.majorChoices?.[1], majors[1]),
-          2: chooseTraitId(current.majorChoices?.[2], majors[2]),
-          3: chooseTraitId(current.majorChoices?.[3], majors[3]),
-        },
-      };
+      // Clear the conflicting elite slot rather than auto-picking a replacement.
+      nextSpecs[slot] = { specializationId: 0, majorChoices: { 1: 0, 2: 0, 3: 0 } };
     }
   }
 
@@ -335,24 +312,24 @@ export function enforceEditorConsistency(options = {}) {
 
 export function chooseTraitId(currentId, options) {
   const id = Number(currentId) || 0;
-  if (id && Array.isArray(options) && options.some((entry) => Number(entry.id) === id)) {
+  if (!id) return 0; // Blank selection is intentional — don't auto-fill.
+  if (Array.isArray(options) && options.some((entry) => Number(entry.id) === id)) {
     return id;
   }
-  return Number(options?.[0]?.id || 0);
+  return 0; // Trait not found in this spec — clear rather than guess.
 }
 
 export function chooseSkillId(currentId, options, usedSet = null) {
   const id = Number(currentId) || 0;
+  if (!id) return 0; // Blank slot is intentional — don't auto-fill.
   if (
-    id &&
     Array.isArray(options) &&
     options.some((entry) => Number(entry.id) === id) &&
     (!usedSet || !usedSet.has(id))
   ) {
     return id;
   }
-  const fallback = (options || []).find((entry) => !usedSet || !usedSet.has(Number(entry.id)));
-  return Number(fallback?.id || 0);
+  return 0; // Skill not valid for current build — clear rather than guess.
 }
 
 // ---------------------------------------------------------------------------

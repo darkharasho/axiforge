@@ -246,7 +246,7 @@ describe("enforceEditorConsistency — _traitChoices resolution", () => {
     expect(state.editor.specializations[0].majorChoices[3]).toBe(648);
   });
 
-  test("without _traitChoices, defaults to first trait (existing behavior)", () => {
+  test("without _traitChoices, blank traits stay blank", () => {
     const catalog = buildCatalog();
     state.activeCatalog = catalog;
     state.editor.specializations = [
@@ -255,9 +255,9 @@ describe("enforceEditorConsistency — _traitChoices resolution", () => {
 
     enforceEditorConsistency();
 
-    // Should pick first trait in each tier
-    expect(state.editor.specializations[0].majorChoices[1]).toBe(634);
-    expect(state.editor.specializations[0].majorChoices[2]).toBe(637);
-    expect(state.editor.specializations[0].majorChoices[3]).toBe(635);
+    // Blank choices are intentional — don't auto-fill.
+    expect(state.editor.specializations[0].majorChoices[1]).toBe(0);
+    expect(state.editor.specializations[0].majorChoices[2]).toBe(0);
+    expect(state.editor.specializations[0].majorChoices[3]).toBe(0);
   });
 });

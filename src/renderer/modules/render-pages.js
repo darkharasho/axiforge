@@ -343,7 +343,7 @@ export function renderEditorForm() {
       if (!state.catalogCache.has(cacheKey)) {
         _callbacks.getCatalog(prof.id, gameMode).then(() => {
           // Re-render once the catalog arrives so the dropdown shows elite specs
-          if (state.editor.profession) renderEditorForm();
+          renderEditorForm();
         }).catch(() => {});
       }
     }
@@ -384,15 +384,16 @@ export function renderEditorForm() {
   });
 
   // Determine current value: "ProfessionId:eliteSpecId" or "ProfessionId:core"
-  const currentEliteSpecId = (() => {
+  // Empty string when no profession is selected — shows the placeholder.
+  const profSpecValue = (() => {
+    if (!currentProfession) return "";
     const catalog = state.activeCatalog;
-    if (!catalog) return "core";
+    if (!catalog) return `${currentProfession}:core`;
     const slot2 = state.editor.specializations[2];
     const specId = Number(slot2?.specializationId) || 0;
     const spec = catalog.specializationById.get(specId);
-    return spec?.elite ? String(specId) : "core";
+    return `${currentProfession}:${spec?.elite ? String(specId) : "core"}`;
   })();
-  const profSpecValue = `${currentProfession}:${currentEliteSpecId}`;
 
   renderCustomSelect(_el.professionSelect, {
     value: profSpecValue,

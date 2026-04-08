@@ -140,7 +140,18 @@ export function renderSpecializations() {
   if (!_el.specializationsHost) return;
   _el.specializationsHost.innerHTML = "";
   if (!catalog) {
-    _el.specializationsHost.innerHTML = `<p class="empty-line">Choose a profession to load specialization data.</p>`;
+    _el.specializationsHost.innerHTML = `
+      <div class="spec-empty-state">
+        <div class="spec-empty-state__icon">
+          <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+            <path d="M24 4L44 24L24 44L4 24Z" stroke="rgba(79,216,151,0.4)" stroke-width="1.5" fill="rgba(79,216,151,0.06)"/>
+            <path d="M24 12L36 24L24 36L12 24Z" stroke="rgba(79,216,151,0.25)" stroke-width="1" fill="none"/>
+            <line x1="24" y1="18" x2="24" y2="30" stroke="rgba(79,216,151,0.5)" stroke-width="1.5" stroke-linecap="round"/>
+            <line x1="18" y1="24" x2="30" y2="24" stroke="rgba(79,216,151,0.5)" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <p class="spec-empty-state__text">Select a profession to begin building</p>
+      </div>`;
     return;
   }
 
@@ -152,7 +163,83 @@ export function renderSpecializations() {
     const selection = state.editor.specializations[slotIndex];
     const currentId = Number(selection?.specializationId) || 0;
     const spec = catalog.specializationById.get(currentId) || null;
-    if (!spec) continue;
+
+    // Empty slot — render a placeholder card with a picker.
+    if (!spec) {
+      const card = document.createElement("article");
+      card.className = "spec-card spec-card--empty";
+      const panel = document.createElement("div");
+      panel.className = "spec-card__panel spec-card__panel--empty";
+
+      const body = document.createElement("div");
+      body.className = "spec-card__empty-body";
+
+      const diamond = document.createElement("div");
+      diamond.className = "spec-empty-diamond";
+      diamond.innerHTML = `
+        <svg width="52" height="52" viewBox="0 0 52 52" fill="none">
+          <path d="M26 4L48 26L26 48L4 26Z" stroke="rgba(166,187,222,0.3)" stroke-width="1.5" fill="rgba(166,187,222,0.04)"/>
+          <line x1="26" y1="18" x2="26" y2="34" stroke="rgba(166,187,222,0.4)" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="18" y1="26" x2="34" y2="26" stroke="rgba(166,187,222,0.4)" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>`;
+
+      const label = document.createElement("span");
+      label.className = "spec-empty-label";
+      label.textContent = slotIndex === 2 ? "Choose specialization or elite" : "Choose specialization";
+
+      body.append(diamond, label);
+      panel.append(body);
+
+      // Wire up the select overlay for empty slots too.
+      if (!_readOnly) {
+        const selectHost = document.createElement("div");
+        renderCustomSelect(selectHost, {
+          value: "",
+          className: "cselect--spec",
+          options: (() => {
+            const usedIds = new Set(
+              state.editor.specializations
+                .map((e) => Number(e?.specializationId) || 0)
+                .filter(Boolean)
+            );
+            return allSpecs
+              .filter((optionSpec) => slotIndex === 2 || !optionSpec.elite)
+              .map((optionSpec) => ({
+                value: String(optionSpec.id),
+                label: optionSpec.name,
+                icon: optionSpec.icon || (optionSpec.name ? `https://wiki.guildwars2.com/wiki/Special:FilePath/${encodeURIComponent(optionSpec.name)}.png` : ""),
+                disabled: usedIds.has(optionSpec.id),
+              }));
+          })(),
+          placeholder: "Select specialization",
+          onChange: (nextValue) => {
+            const nextId = Number(nextValue) || 0;
+            state.editor.specializations[slotIndex] = {
+              specializationId: nextId,
+              majorChoices: { 1: 0, 2: 0, 3: 0 },
+            };
+            _enforceEditorConsistency({ preferredEliteSlot: slotIndex });
+            _markEditorChanged({ updateBuildList: true });
+            _renderEditor();
+          },
+        });
+        selectHost.classList.add("spec-select-overlay", "spec-select-overlay--empty");
+
+        // Make the whole empty card clickable to open the spec picker.
+        panel.style.cursor = "pointer";
+        panel.addEventListener("click", () => {
+          const trigger = selectHost.querySelector(".cselect__trigger");
+          if (trigger instanceof HTMLElement) trigger.click();
+        });
+
+        card.append(panel, selectHost);
+      } else {
+        card.append(panel);
+      }
+
+      _el.specializationsHost.append(card);
+      continue;
+    }
 
     const card = document.createElement("article");
     card.className = "spec-card";

@@ -832,7 +832,7 @@ export function makeSkillSlot(slot, catalog, options, utilitySelection, markSkil
 
   const iconBtn = document.createElement("button");
   iconBtn.type = "button";
-  iconBtn.className = "skill-icon-large";
+  iconBtn.className = selectedSkill ? "skill-icon-large" : "skill-icon-large skill-icon--empty";
   iconBtn.title = selectedSkill?.name || slot.label;
   if (selectedSkill?.icon) {
     iconBtn.innerHTML = `<img src="${escapeHtml(selectedSkill.icon)}" alt="${escapeHtml(selectedSkill.name || "")}" />`;
@@ -1144,10 +1144,86 @@ function _renderBoonCoverage(catalog, editor, weaponSkills = []) {
   return container;
 }
 
+function _renderEmptySkillBar() {
+  const bar = document.createElement("div");
+  bar.className = "skills-bar";
+
+  // Weapon column: swap button + 5 empty weapon slots
+  const weaponCol = document.createElement("div");
+  weaponCol.className = "skills-bar__weapon-col";
+  const weaponRow = document.createElement("div");
+  weaponRow.className = "skills-bar__weapon-row";
+  const swapBtn = document.createElement("button");
+  swapBtn.type = "button";
+  swapBtn.className = "weapon-swap-btn";
+  swapBtn.disabled = true;
+  swapBtn.innerHTML = `<svg viewBox="0 0 16 13"><path d="M4 1v4H1l5 5 5-5H8V1z" fill="currentColor" opacity=".5"/></svg>`;
+  const weaponGroup = document.createElement("div");
+  weaponGroup.className = "skill-group skill-group--weapons";
+  for (let i = 0; i < 5; i++) {
+    const slotEl = document.createElement("div");
+    slotEl.className = "skill-slot skill-slot--weapon";
+    const iconBtn = document.createElement("button");
+    iconBtn.type = "button";
+    iconBtn.className = "skill-icon-large skill-icon--weapon skill-icon--empty";
+    iconBtn.disabled = true;
+    const keyLabel = document.createElement("span");
+    keyLabel.className = "skill-icon-large__keylabel";
+    keyLabel.textContent = String(i + 1);
+    iconBtn.append(keyLabel);
+    slotEl.append(iconBtn);
+    weaponGroup.append(slotEl);
+  }
+  weaponRow.append(swapBtn, weaponGroup);
+  weaponCol.append(weaponRow);
+
+  // Health orb
+  const orbCol = document.createElement("div");
+  orbCol.className = "skills-bar__orb-col";
+  const orbEl = document.createElement("div");
+  orbEl.className = "health-orb";
+  orbEl.innerHTML = `
+    <div class="health-orb__fill"></div>
+    <div class="health-orb__text">
+      <span class="health-orb__hp">—</span>
+      <span class="health-orb__label">HP</span>
+    </div>
+  `;
+  orbCol.append(orbEl);
+
+  // Utility column: heal + 3 utility + elite (all empty)
+  const utilCol = document.createElement("div");
+  utilCol.className = "skills-bar__util-col";
+  const utilityGroup = document.createElement("div");
+  utilityGroup.className = "skill-group skill-group--utilities";
+  const slotLabels = ["6", "7", "8", "9", "0"];
+  for (let i = 0; i < 5; i++) {
+    const slotEl = document.createElement("div");
+    slotEl.className = "skill-slot";
+    const iconBtn = document.createElement("button");
+    iconBtn.type = "button";
+    iconBtn.className = "skill-icon-large skill-icon--empty";
+    iconBtn.disabled = true;
+    const keyLabel = document.createElement("span");
+    keyLabel.className = "skill-icon-large__keylabel";
+    keyLabel.textContent = slotLabels[i];
+    iconBtn.append(keyLabel);
+    slotEl.append(iconBtn);
+    utilityGroup.append(slotEl);
+  }
+  utilCol.append(utilityGroup);
+
+  bar.append(weaponCol, orbCol, utilCol);
+  _el.skillsHost.append(bar);
+}
+
 export function renderSkills() {
   const catalog = state.activeCatalog;
   _el.skillsHost.innerHTML = "";
-  if (!catalog) return;
+  if (!catalog) {
+    _renderEmptySkillBar();
+    return;
+  }
 
   // Toggle is inserted into the orb column later (to keep health orb centered)
 
