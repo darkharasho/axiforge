@@ -6,9 +6,9 @@
 
 .cselect__trigger {
   width: 100%;
-  border: 1px solid #2c3d5e;
+  border: 1px solid var(--input-border);
   border-radius: 10px;
-  background: rgba(6, 11, 21, 0.92);
+  background: var(--surface);
   color: var(--text);
   padding: 8px 10px;
   min-height: 40px;
@@ -23,12 +23,12 @@
 
 .cselect__trigger:hover {
   border-color: #4b638e;
-  background: rgba(11, 18, 33, 0.95);
+  background: var(--surface-hover);
 }
 
 .cselect--open .cselect__trigger {
   border-color: var(--accent-2);
-  box-shadow: 0 0 0 2px rgba(72, 168, 255, 0.26);
+  box-shadow: 0 0 0 2px var(--focus-ring);
 }
 
 .cselect__trigger:disabled {
@@ -38,7 +38,7 @@
 
 .cselect__chevron {
   font-size: 0.82rem;
-  color: #98b7ea;
+  color: var(--muted);
   transition: transform 0.14s ease;
 }
 
@@ -48,14 +48,14 @@
 
 .cselect__menu {
   position: absolute;
-  z-index: 90;
+  z-index: var(--z-dropdown);
   top: calc(100% + 6px);
   left: 0;
   right: 0;
-  border: 1px solid #2f4368;
+  border: 1px solid var(--line);
   border-radius: 10px;
   background: rgba(8, 15, 30, 0.98);
-  box-shadow: 0 10px 22px rgba(3, 9, 19, 0.64);
+  box-shadow: var(--shadow-md);
   padding: 6px;
   display: none;
 }
@@ -75,7 +75,7 @@
   width: 100%;
   border: 1px solid transparent;
   border-radius: 8px;
-  background: #0c1426;
+  background: var(--panel-2);
   color: var(--text);
   padding: 7px 8px;
   text-align: left;
@@ -86,7 +86,7 @@
 
 .cselect__option:hover {
   border-color: #4e6998;
-  background: #131f39;
+  background: var(--panel);
 }
 
 .cselect__option--selected {
@@ -101,7 +101,7 @@
 
 .cselect__option:disabled:hover {
   border-color: transparent;
-  background: #0f1730;
+  background: var(--panel-2);
 }
 
 .cselect__value {
@@ -114,7 +114,7 @@
 .cselect__icon {
   width: 20px;
   height: 20px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   border: 1px solid rgba(168, 189, 224, 0.52);
   background: transparent;
   object-fit: cover;
@@ -138,7 +138,7 @@
   place-items: center;
   font-size: 0.68rem;
   font-weight: 700;
-  color: #d8e8ff;
+  color: var(--text);
   background: rgba(10, 14, 21, 0.76);
 }
 
@@ -153,19 +153,19 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 0.87rem;
-  color: #e6efff;
+  color: var(--text);
 }
 
 .cselect__meta {
   font-size: 0.63rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #94b4e6;
+  color: var(--muted);
 }
 
 .cselect__empty {
   margin: 0;
-  color: #a7bde3;
+  color: var(--muted);
   font-size: 0.78rem;
   padding: 4px 6px;
 }
@@ -177,7 +177,7 @@
   align-items: center;
   gap: 8px;
   padding: 6px 8px 2px;
-  color: #6a7a9e;
+  color: var(--text-dim);
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -205,9 +205,9 @@
   box-sizing: border-box;
   padding: 7px 10px;
   margin-bottom: 4px;
-  border: 1px solid #2c3d5e;
+  border: 1px solid var(--input-border);
   border-radius: 8px;
-  background: rgba(6, 11, 21, 0.92);
+  background: var(--surface);
   color: var(--text);
   font: inherit;
   font-size: 0.85rem;
@@ -216,11 +216,11 @@
 
 .cselect__search:focus {
   border-color: var(--accent-2);
-  box-shadow: 0 0 0 2px rgba(72, 168, 255, 0.2);
+  box-shadow: 0 0 0 2px var(--focus-ring);
 }
 
 .cselect__search::placeholder {
-  color: #5a6a8e;
+  color: var(--text-dim);
 }
 
 /* ── Skill slot dropdown overrides (mini-card 2-column grid) ────────────── */
@@ -238,7 +238,7 @@
 .skill-select-overlay .cselect__icon {
   width: 36px;
   height: 36px;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
 }
 
 .skill-select-overlay .cselect__option {
@@ -267,7 +267,7 @@
 .cselect__option-description {
   display: block;
   font-size: 0.69rem;
-  color: #6a7a9e;
+  color: var(--text-dim);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

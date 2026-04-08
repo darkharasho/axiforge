@@ -7,7 +7,7 @@
 }
 
 .skel {
-  background: #1a2744;
+  background: var(--line-soft);
   border-radius: 4px;
   animation: skel-pulse 1.8s ease-in-out infinite;
   animation-delay: 150ms;
@@ -117,7 +117,7 @@
   border: 1px solid rgba(80, 132, 163, 0.48);
   border-radius: 4px;
   padding: calc(8px * var(--spec-scale)) calc(12px * var(--spec-scale)) calc(10px * var(--spec-scale));
-  background-color: #070f1d;
+  background-color: var(--bg-2);
   min-height: calc(148px * var(--spec-scale));
 }
 
@@ -206,7 +206,7 @@
   gap: 6px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: linear-gradient(180deg, rgba(16, 25, 48, 0.95), rgba(11, 18, 34, 0.95));
+  background: var(--panel-gradient);
   padding: 12px;
 }
 
@@ -369,7 +369,7 @@
 /* ── Detail panel skeleton ───────────────────────────────────────────────── */
 /* matches .detail-card */
 .skel-detail {
-  border: 1px solid #2e4674;
+  border: 1px solid var(--line);
   border-radius: 10px;
   background: rgba(11, 18, 36, 0.88);
   padding: 10px;

@@ -3,8 +3,8 @@
 .wiki-modal-overlay {
   position: fixed;
   inset: 0;
-  z-index: 1000;
-  background: rgba(0, 0, 0, 0.72);
+  z-index: var(--z-modal);
+  background: var(--overlay);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -22,7 +22,7 @@
   background: var(--panel-2);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.7);
+  box-shadow: var(--shadow-lg);
   overflow: hidden;
 }
 
@@ -160,7 +160,7 @@
   background: none;
   border: none;
   padding: 0;
-  color: #9ac9ff;
+  color: var(--link);
   font-family: inherit;
   font-size: inherit;
   cursor: pointer;
@@ -168,5 +168,5 @@
 }
 
 .wiki-open-btn:hover {
-  color: #c8e4ff;
+  color: var(--text);
 }

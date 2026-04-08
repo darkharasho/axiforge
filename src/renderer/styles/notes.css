@@ -143,11 +143,11 @@
 .notes-preview h1 { font-size: 1.4rem; margin: 0 0 12px; color: var(--text); }
 .notes-preview h2 { font-size: 1.15rem; margin: 16px 0 8px; color: var(--text); }
 .notes-preview h3 { font-size: 1rem; margin: 12px 0 6px; color: var(--text); }
-.notes-preview p { margin: 0 0 12px; color: #c8d8f0; }
+.notes-preview p { margin: 0 0 12px; color: var(--text); }
 .notes-preview strong { color: var(--text); }
 .notes-preview em { font-style: italic; }
 .notes-preview ul, .notes-preview ol { padding-left: 20px; margin: 0 0 12px; }
-.notes-preview li { margin: 4px 0; color: #c8d8f0; }
+.notes-preview li { margin: 4px 0; color: var(--text); }
 .notes-preview hr {
   border: none;
   border-top: 1px solid var(--line);

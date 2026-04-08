@@ -3,8 +3,8 @@
 .settings-modal-overlay {
   position: fixed;
   inset: 0;
-  z-index: 1100;
-  background: rgba(0, 0, 0, 0.72);
+  z-index: var(--z-modal-confirm);
+  background: var(--overlay);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -18,7 +18,7 @@
   background: var(--panel-2);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.7);
+  box-shadow: var(--shadow-lg);
   width: 480px;
   max-width: calc(100vw - 48px);
   max-height: calc(100vh - 48px);
@@ -59,7 +59,7 @@
 
 .settings-modal__close:hover {
   background: rgba(197, 72, 95, 0.2);
-  color: #e07080;
+  color: var(--danger-text);
   border-color: var(--danger);
 }
 
@@ -146,7 +146,7 @@
 
 .settings-modal__radio:hover {
   background: var(--panel);
-  border-color: var(--line-soft, #444);
+  border-color: var(--line-soft);
 }
 
 .settings-modal__radio:has(.settings-modal__radio-input:checked) {
@@ -248,7 +248,7 @@
 }
 
 .settings-modal__pill:hover span {
-  border-color: var(--line-soft, #444);
+  border-color: var(--line-soft);
   background: var(--panel);
 }
 
@@ -273,7 +273,7 @@
 .settings-modal__error {
   display: block;
   font-size: 0.75rem;
-  color: var(--danger, #e55);
+  color: var(--danger);
   margin-top: 4px;
   min-height: 1em;
 }
@@ -384,5 +384,5 @@
 }
 
 .settings-modal__cache-status--error {
-  color: var(--danger, #e55);
+  color: var(--danger);
 }

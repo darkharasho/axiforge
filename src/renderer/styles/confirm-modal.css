@@ -3,8 +3,8 @@
 .confirm-modal-overlay {
   position: fixed;
   inset: 0;
-  z-index: 1100;
-  background: rgba(0, 0, 0, 0.72);
+  z-index: var(--z-modal-confirm);
+  background: var(--overlay);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -18,7 +18,7 @@
   background: var(--panel-2);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.7);
+  box-shadow: var(--shadow-lg);
   width: 420px;
   max-width: calc(100vw - 48px);
   max-height: calc(100vh - 48px);
@@ -59,7 +59,7 @@
 
 .confirm-modal__close:hover {
   background: rgba(197, 72, 95, 0.2);
-  color: #e07080;
+  color: var(--danger-text);
   border-color: var(--danger);
 }
 
@@ -118,13 +118,13 @@
 
 .confirm-modal__btn--confirm {
   background: rgba(197, 72, 95, 0.15);
-  color: #e07080;
+  color: var(--danger-text);
   border-color: rgba(197, 72, 95, 0.4);
 }
 
 .confirm-modal__btn--confirm:hover {
   background: rgba(197, 72, 95, 0.3);
-  color: #f0909e;
+  color: var(--danger-text);
   border-color: var(--danger);
 }
 

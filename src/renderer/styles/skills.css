@@ -531,7 +531,7 @@
 
 .skill-slot-label {
   font-size: 10px;
-  color: var(--text-dim, #7a9abf);
+  color: var(--text-dim);
   text-align: center;
   white-space: nowrap;
 }
@@ -634,7 +634,7 @@
   display: flex;
   gap: 2px;
   background: rgba(8, 14, 28, 0.72);
-  border: 1px solid var(--line-soft, rgba(100, 120, 160, 0.25));
+  border: 1px solid var(--line-soft);
   border-radius: 20px;
   padding: 3px;
   width: fit-content;
@@ -652,7 +652,7 @@
   border: none;
   border-radius: 16px;
   background: transparent;
-  color: var(--text-dim, #7a9abf);
+  color: var(--text-dim);
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;

@@ -15,7 +15,7 @@
 .panel {
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: linear-gradient(180deg, rgba(16, 25, 48, 0.95), rgba(11, 18, 34, 0.95));
+  background: var(--panel-gradient);
   padding: 12px;
 }
 
@@ -44,9 +44,9 @@
 .panel select,
 .panel textarea {
   width: 100%;
-  border: 1px solid #2a3c66;
+  border: 1px solid var(--input-border);
   border-radius: 10px;
-  background: #091124;
+  background: var(--input-bg);
   color: var(--text);
   padding: 9px 10px;
   font: inherit;
@@ -61,7 +61,7 @@
 .panel textarea:focus {
   outline: none;
   border-color: var(--accent-2);
-  box-shadow: 0 0 0 2px rgba(72, 168, 255, 0.26);
+  box-shadow: 0 0 0 2px var(--focus-ring);
 }
 
 .cselect-host {
@@ -77,16 +77,16 @@
   gap: 5px;
   width: 100%;
   min-height: 38px;
-  border: 1px solid #2a3c66;
+  border: 1px solid var(--input-border);
   border-radius: 10px;
-  background: #091124;
+  background: var(--input-bg);
   padding: 5px 8px;
   cursor: text;
 }
 
 .tag-container:focus-within {
   border-color: var(--accent-2);
-  box-shadow: 0 0 0 2px rgba(72, 168, 255, 0.26);
+  box-shadow: 0 0 0 2px var(--focus-ring);
 }
 
 .tag-pill {

@@ -2,11 +2,11 @@
 .icm-overlay {
   position: fixed;
   inset: 0;
-  z-index: 1100;
+  z-index: var(--z-modal-confirm);
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--overlay);
   backdrop-filter: blur(2px);
 }
 
@@ -15,15 +15,15 @@
 }
 
 .icm {
-  background: var(--surface-secondary, #1e1e2e);
-  border: 1px solid var(--border-primary, #333);
-  border-radius: 12px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
   width: 480px;
   max-width: 90vw;
   max-height: 80vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--shadow-lg);
 }
 
 .icm__header {
@@ -31,35 +31,35 @@
   align-items: center;
   justify-content: space-between;
   padding: 14px 18px;
-  border-bottom: 1px solid var(--border-primary, #333);
+  border-bottom: 1px solid var(--line);
 }
 
 .icm__title {
   margin: 0;
   font-size: 15px;
   font-weight: 600;
-  color: var(--text-primary, #fff);
+  color: var(--text);
 }
 
 .icm__close {
   background: none;
   border: none;
-  color: var(--text-secondary, #888);
+  color: var(--text-dim);
   cursor: pointer;
   padding: 4px;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
 }
 
 .icm__close:hover {
-  color: var(--text-primary, #fff);
-  background: var(--surface-tertiary, #2a2a3e);
+  color: var(--text);
+  background: var(--hover-subtle);
 }
 
 .icm__subtitle {
   padding: 12px 18px;
   font-size: 13px;
-  color: var(--text-secondary, #94a3b8);
-  border-bottom: 1px solid var(--border-primary, #333);
+  color: var(--muted);
+  border-bottom: 1px solid var(--line);
 }
 
 .icm__list {
@@ -73,7 +73,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 10px 18px;
-  border-bottom: 1px solid var(--border-subtle, #2a2a3e);
+  border-bottom: 1px solid var(--line-soft);
 }
 
 .icm__row:last-child {
@@ -98,33 +98,33 @@
 }
 
 .icm__row-type--build {
-  background: var(--accent-blue, #2563eb);
-  color: #fff;
+  background: rgba(72, 168, 255, 0.2);
+  color: var(--accent-2);
 }
 
 .icm__row-type--comp {
-  background: var(--accent-purple, #7c3aed);
-  color: #fff;
+  background: rgba(170, 136, 204, 0.2);
+  color: #aa88cc;
 }
 
 .icm__row-type--folder {
-  background: var(--accent-amber, #d97706);
-  color: #fff;
+  background: rgba(200, 169, 110, 0.2);
+  color: var(--gold);
 }
 
 .icm__row-name {
   font-size: 13px;
-  color: var(--text-primary, #fff);
+  color: var(--text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .icm__row-select {
-  background: var(--surface-tertiary, #2a2a3e);
-  color: var(--text-primary, #ccc);
-  border: 1px solid var(--border-primary, #444);
-  border-radius: 4px;
+  background: var(--panel);
+  color: var(--text-light);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xs);
   padding: 3px 6px;
   font-size: 12px;
   flex-shrink: 0;
@@ -136,7 +136,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 12px 18px;
-  border-top: 1px solid var(--border-primary, #333);
+  border-top: 1px solid var(--line);
 }
 
 .icm__bulk {
@@ -147,7 +147,7 @@
 .icm__bulk-btn {
   background: none;
   border: none;
-  color: var(--accent-blue, #60a5fa);
+  color: var(--accent-2);
   font-size: 12px;
   cursor: pointer;
   padding: 0;
@@ -163,25 +163,27 @@
 }
 
 .icm__btn {
-  background: var(--surface-tertiary, #333);
-  color: var(--text-primary, #ccc);
-  border: 1px solid var(--border-primary, #555);
-  border-radius: 6px;
+  background: var(--bg-2);
+  color: var(--text-light);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
   padding: 6px 14px;
   font-size: 13px;
   cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
 }
 
 .icm__btn:hover {
-  background: var(--surface-hover, #3a3a4e);
+  background: var(--panel);
 }
 
 .icm__btn--primary {
-  background: var(--accent-blue, #2563eb);
-  color: #fff;
-  border-color: var(--accent-blue, #2563eb);
+  background: rgba(72, 168, 255, 0.15);
+  color: var(--accent-2);
+  border-color: rgba(72, 168, 255, 0.4);
 }
 
 .icm__btn--primary:hover {
-  background: var(--accent-blue-hover, #1d4ed8);
+  background: rgba(72, 168, 255, 0.3);
+  border-color: var(--accent-2);
 }

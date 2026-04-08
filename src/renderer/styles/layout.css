@@ -28,7 +28,7 @@
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: color-mix(in srgb, var(--accent, #c8a96e) 75%, transparent);
+  color: color-mix(in srgb, var(--gold) 75%, transparent);
   border: 1px solid currentColor;
   border-radius: 3px;
   padding: 1px 4px;
@@ -50,7 +50,7 @@
 }
 
 .titlebar__version.titlebar__dev-badge {
-  color: color-mix(in srgb, #c8a96e 85%, transparent);
+  color: color-mix(in srgb, var(--gold) 85%, transparent);
   transition: none;
 }
 
@@ -60,12 +60,12 @@
   font-size: 0.6rem;
   font-weight: 600;
   letter-spacing: 0.06em;
-  color: color-mix(in srgb, var(--text-dim, #7a9abf) 60%, transparent);
+  color: color-mix(in srgb, var(--text-dim) 60%, transparent);
   transition: opacity 0.3s ease, transform 0.3s ease, color 0.2s ease;
   cursor: pointer;
 }
 .titlebar__version:hover {
-  color: var(--text-dim, #7a9abf);
+  color: var(--text-dim);
 }
 
 .titlebar__progress {
@@ -73,7 +73,7 @@
   font-size: 0.6rem;
   font-weight: 600;
   letter-spacing: 0.04em;
-  color: var(--accent, #c8a96e);
+  color: var(--gold);
   opacity: 0;
   transform: translateY(4px);
   transition: opacity 0.3s ease, transform 0.3s ease;
@@ -91,8 +91,8 @@
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--accent, #c8a96e);
-  border: 1px solid color-mix(in srgb, var(--accent, #c8a96e) 60%, transparent);
+  color: var(--gold);
+  border: 1px solid color-mix(in srgb, var(--gold) 60%, transparent);
   border-radius: 3px;
   padding: 2px 8px;
   line-height: 1.4;
@@ -110,8 +110,8 @@
 }
 
 .titlebar__restart-btn:hover {
-  background: color-mix(in srgb, var(--accent, #c8a96e) 15%, transparent);
-  border-color: var(--accent, #c8a96e);
+  background: color-mix(in srgb, var(--gold) 15%, transparent);
+  border-color: var(--gold);
 }
 
 .titlebar__update-status .hidden {
@@ -119,7 +119,7 @@
 }
 
 .titlebar__version--error {
-  color: #e06060;
+  color: var(--danger-text);
   transition: opacity 0.3s ease;
 }
 
@@ -225,7 +225,7 @@ body:has(.app-layout) {
   border-radius: 6px;
   background: transparent;
   cursor: pointer;
-  color: var(--text-dim, #7a9abf);
+  color: var(--text-dim);
   font-size: 14px;
   font-weight: 600;
   letter-spacing: 0.03em;
@@ -245,13 +245,13 @@ body:has(.app-layout) {
 }
 
 .subnav__item:hover {
-  background: rgba(80, 132, 163, 0.12);
-  color: var(--text, #c8dff0);
+  background: var(--hover-accent);
+  color: var(--text);
 }
 
 .subnav__item--active {
-  background: rgba(80, 132, 163, 0.2);
-  color: var(--accent, #99e6ff);
+  background: var(--hover-accent-strong);
+  color: var(--accent);
 }
 
 .subnav__actions {
@@ -330,9 +330,9 @@ body:has(.app-layout) {
 .subnav__overflow-btn {
   padding: 4px 8px;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: transparent;
-  color: #7a9abf;
+  color: var(--text-dim);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -340,8 +340,8 @@ body:has(.app-layout) {
 }
 
 .subnav__overflow-btn:hover {
-  background: rgba(80, 132, 163, 0.12);
-  color: var(--text, #c8dff0);
+  background: var(--hover-accent);
+  color: var(--text);
 }
 
 .subnav__overflow-menu {
@@ -351,11 +351,11 @@ body:has(.app-layout) {
   margin-top: 4px;
   min-width: 160px;
   background: rgba(10, 17, 34, 0.98);
-  border: 1px solid #2a3f69;
+  border: 1px solid var(--line);
   border-radius: 8px;
   padding: 4px 0;
-  z-index: 20;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  z-index: var(--z-sticky);
+  box-shadow: var(--shadow-sm);
 }
 
 .subnav__overflow-item {
@@ -366,7 +366,7 @@ body:has(.app-layout) {
   padding: 7px 12px;
   border: none;
   background: transparent;
-  color: #c8dff0;
+  color: var(--text);
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
@@ -375,7 +375,7 @@ body:has(.app-layout) {
 }
 
 .subnav__overflow-item:hover {
-  background: rgba(80, 132, 163, 0.15);
+  background: var(--hover-accent);
 }
 
 .subnav__overflow-icon {
@@ -407,18 +407,18 @@ body:has(.app-layout) {
   border-radius: 6px;
   background: transparent;
   cursor: pointer;
-  color: var(--text-dim, #7a9abf);
+  color: var(--text-dim);
   transition: background 0.15s, color 0.15s;
 }
 
 .leftnav__item:hover {
-  background: rgba(80, 132, 163, 0.12);
-  color: var(--text, #c8dff0);
+  background: var(--hover-accent);
+  color: var(--text);
 }
 
 .leftnav__item--active {
-  background: rgba(80, 132, 163, 0.2);
-  color: var(--accent, #99e6ff);
+  background: var(--hover-accent-strong);
+  color: var(--accent);
 }
 
 .leftnav__icon {
@@ -462,8 +462,8 @@ body:has(.app-layout) {
 .game-mode-toggle__btn {
   padding: 4px 10px;
   border: none;
-  background: #2a2a3e;
-  color: var(--text-dim, #7a9abf);
+  background: var(--panel);
+  color: var(--text-dim);
   font-size: 11px;
   font-weight: 500;
   cursor: pointer;
@@ -471,17 +471,17 @@ body:has(.app-layout) {
 }
 
 .game-mode-toggle__btn:hover {
-  background: #3a3a52;
+  background: var(--line);
 }
 
 .game-mode-toggle__btn--active {
-  background: var(--accent, #c5a855);
-  color: #1a1a2e;
+  background: var(--gold);
+  color: var(--bg);
   font-weight: 600;
 }
 
 .game-mode-toggle__btn--active:hover {
-  background: var(--accent, #c5a855);
+  background: var(--gold);
 }
 
 /* WvW balance split badge */
@@ -493,12 +493,12 @@ body:has(.app-layout) {
   letter-spacing: 0.5px;
   padding: 1px 5px;
   border-radius: 3px;
-  background: #3a5a3a;
-  color: #8fc98f;
+  background: rgba(79, 216, 151, 0.15);
+  color: var(--accent);
   margin-left: 6px;
   vertical-align: middle;
 }
 .aquatic-badge {
-  background: #2a4a6a;
-  color: #7ac0e8;
+  background: rgba(72, 168, 255, 0.15);
+  color: var(--accent-2);
 }

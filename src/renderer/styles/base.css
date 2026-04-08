@@ -1,6 +1,8 @@
 /* AxiForge — base styles */
 :root {
   color-scheme: dark;
+
+  /* ── Core palette ─────────────────────────────────────────────────────── */
   --bg: #04070f;
   --bg-2: #070d1b;
   --panel: #101930;
@@ -8,11 +10,51 @@
   --line: #223458;
   --line-soft: #1a2a49;
   --text: #e8f0ff;
+  --text-light: #ccccdd;
+  --text-dim: #7a9abf;
   --muted: #a6bbde;
   --accent: #4fd897;
   --accent-2: #48a8ff;
   --danger: #c5485f;
+  --danger-text: #f87171;
+  --gold: #c8a96e;
+  --link: #9ac9ff;
+
+  /* ── Surfaces ─────────────────────────────────────────────────────────── */
+  --input-bg: #091124;
+  --input-border: #2c3d5e;
+  --surface: rgba(6, 11, 21, 0.92);
+  --surface-hover: rgba(11, 18, 33, 0.95);
+  --panel-gradient: linear-gradient(180deg, rgba(16, 25, 48, 0.95), rgba(11, 18, 34, 0.95));
+
+  /* ── Interactive states ───────────────────────────────────────────────── */
+  --hover-subtle: rgba(255, 255, 255, 0.06);
+  --hover-accent: rgba(80, 132, 163, 0.12);
+  --hover-accent-strong: rgba(80, 132, 163, 0.2);
+  --focus-ring: rgba(72, 168, 255, 0.26);
+
+  /* ── Radius ───────────────────────────────────────────────────────────── */
   --radius: 14px;
+  --radius-sm: 6px;
+  --radius-xs: 4px;
+
+  /* ── Shadows ──────────────────────────────────────────────────────────── */
+  --shadow-sm: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.6);
+  --shadow-lg: 0 24px 64px rgba(0, 0, 0, 0.7);
+
+  /* ── Overlay ──────────────────────────────────────────────────────────── */
+  --overlay: rgba(0, 0, 0, 0.72);
+
+  /* ── Z-index scale ────────────────────────────────────────────────────── */
+  --z-sticky: 10;
+  --z-titlebar: 50;
+  --z-dropdown: 90;
+  --z-autocomplete: 100;
+  --z-tooltip: 120;
+  --z-menu: 200;
+  --z-modal: 1000;
+  --z-modal-confirm: 1100;
 }
 
 * {
@@ -57,7 +99,7 @@ body {
 }
 
 a {
-  color: #9ac9ff;
+  color: var(--link);
 }
 
 .app-drag {
