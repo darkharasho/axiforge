@@ -1,3 +1,13 @@
+## Version v0.1.8 — April 7, 2026
+
+### New Features
+- Build editor now starts with a completely blank state — no profession, specializations, traits, or skills are pre-selected
+- Empty specialization slots display interactive placeholder cards that open the spec picker on click
+- Skill bar renders disabled placeholder slots (weapon, heal, utility, elite) when no profession is selected
+- Profession dropdown shows placeholder text instead of defaulting to the first class
+- Selecting a new specialization no longer auto-picks the first trait in each tier — all trait choices start blank
+- Switching professions or starting a new build no longer auto-fills skills
+
 ## Version v0.1.7 — April 6, 2026
 
 ### Bug Fixes
