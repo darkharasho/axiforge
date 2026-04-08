@@ -319,6 +319,34 @@ function resolveEquipmentDisplay(equipment, upgradeCatalog) {
  * not already present in equipmentDisplay.  Returns a flat array of { id, name, icon,
  * category, description? } objects the SPA can use to build lookup maps.
  */
+/**
+ * Rewrite generic @[item:id:name] mentions in notes to their specific category
+ * (e.g. @[rune:id:name], @[food:id:name]) so downstream renderers can resolve them.
+ */
+function normalizeNotesMentions(notes, upgradeCatalog) {
+  if (!notes || !upgradeCatalog) return notes;
+
+  const UPGRADE_MAPS = {
+    rune:       upgradeCatalog.runeById,
+    sigil:      upgradeCatalog.sigilById,
+    food:       upgradeCatalog.foodById,
+    utility:    upgradeCatalog.utilityById,
+    infusion:   upgradeCatalog.infusionById,
+    enrichment: upgradeCatalog.enrichmentById,
+    relic:      upgradeCatalog.relicById || new Map(
+      (upgradeCatalog.relics || []).map(r => [r.id, r])
+    ),
+  };
+
+  return notes.replace(/@\[item:(\d+):([^\]]+)\]/g, (match, idStr, name) => {
+    const id = Number(idStr);
+    for (const [cat, map] of Object.entries(UPGRADE_MAPS)) {
+      if (map.has(id)) return `@[${cat}:${idStr}:${name}]`;
+    }
+    return match; // leave unchanged if not found
+  });
+}
+
 function resolveNotesMentions(notes, upgradeCatalog, equipmentDisplay) {
   if (!notes || !upgradeCatalog) return [];
 
@@ -356,15 +384,24 @@ function resolveNotesMentions(notes, upgradeCatalog, equipmentDisplay) {
   while ((match = mentionRegex.exec(notes)) !== null) {
     const category = match[1];
     const id = Number(match[2]);
-    if (!UPGRADE_MAPS[category] || existing.has(id) || seen.has(id)) continue;
+    if (existing.has(id) || seen.has(id)) continue;
+    // "item" is a generic category — search all upgrade maps
+    let map = UPGRADE_MAPS[category];
+    let resolvedCategory = category;
+    if (!map && category === "item") {
+      for (const [cat, m] of Object.entries(UPGRADE_MAPS)) {
+        if (m.has(id)) { map = m; resolvedCategory = cat; break; }
+      }
+    }
+    if (!map) continue;
     seen.add(id);
-    const item = UPGRADE_MAPS[category].get(id);
+    const item = map.get(id);
     if (!item) continue;
     result.push({
       id: item.id,
       name: item.name,
       icon: item.icon || "",
-      category,
+      category: resolvedCategory,
       ...(item.description ? { description: item.description } : {}),
       ...(item.facts?.length ? { facts: item.facts } : {}),
     });
@@ -638,8 +675,12 @@ function serializeForPublish(build, catalog, upgradeCatalog) {
     build.equipment, upgradeCatalog, build.profession, build.gameMode
   );
 
+  // Normalize generic @[item:id:name] → @[rune:id:name] etc. before publish
+  const normalizedNotes = normalizeNotesMentions(build.notes, upgradeCatalog);
+
   return {
     ...build,
+    notes: normalizedNotes,
     // Override stored specializations/skills with enriched versions (facts restored)
     specializations: enrichedSpecializations,
     skills: enrichedSkills,
@@ -668,7 +709,7 @@ function serializeForPublish(build, catalog, upgradeCatalog) {
     catalogTraits: catalog?.traits || [],
     // Upgrade items referenced in notes mentions that aren't already in equipmentDisplay.
     // Allows the SPA to resolve @[relic:id:name] etc. for items not currently equipped.
-    catalogNotesMentions: resolveNotesMentions(build.notes, upgradeCatalog, equipmentDisplay),
+    catalogNotesMentions: resolveNotesMentions(normalizedNotes, upgradeCatalog, equipmentDisplay),
   };
 }
 

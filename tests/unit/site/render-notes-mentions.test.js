@@ -25,7 +25,7 @@ const renderNotesSrc = fs.readFileSync(RENDER_NOTES_PATH, "utf-8");
 const renderBuildSrc = fs.readFileSync(RENDER_BUILD_PATH, "utf-8");
 
 // All categories that the app's notes.js resolveReference handles
-const ALL_CATEGORIES = ["skill", "trait", "rune", "sigil", "food", "utility", "infusion", "enrichment", "relic"];
+const ALL_CATEGORIES = ["skill", "trait", "rune", "sigil", "food", "utility", "infusion", "enrichment", "relic", "item"];
 
 describe("SPA render-notes.js — mention category coverage", () => {
   test.each(ALL_CATEGORIES)(
@@ -140,6 +140,60 @@ describe("buildPublish — resolveNotesMentions", () => {
 
     const result = serializeForPublish(build, catalog, upgradeCatalog);
     expect(result.catalogNotesMentions).toEqual([]);
+  });
+
+  test("normalizes @[item:id:name] to specific category in published notes", () => {
+    const build = {
+      profession: "Warrior",
+      equipment: { weapons: {} },
+      notes: "@[item:74978:Superior Rune of the Dragonhunter] and @[item:43360:Dragon's Breath Bun] and @[trait:893:Death Perception]",
+    };
+    const catalog = { traits: [], skills: [], weaponSkills: [], professionWeapons: {} };
+    const upgradeCatalog = {
+      runeById: new Map([[74978, { id: 74978, name: "Superior Rune of the Dragonhunter", icon: "rune.png" }]]),
+      sigilById: new Map(),
+      infusionById: new Map(),
+      enrichmentById: new Map(),
+      foodById: new Map([[43360, { id: 43360, name: "Dragon's Breath Bun", icon: "food.png" }]]),
+      utilityById: new Map(),
+      relicByName: new Map(),
+      relics: [],
+    };
+
+    const result = serializeForPublish(build, catalog, upgradeCatalog);
+    // @[item:...] should be rewritten to @[rune:...] and @[food:...]
+    expect(result.notes).toContain("@[rune:74978:Superior Rune of the Dragonhunter]");
+    expect(result.notes).toContain("@[food:43360:Dragon's Breath Bun]");
+    // Non-item mentions should be untouched
+    expect(result.notes).toContain("@[trait:893:Death Perception]");
+    // No @[item:...] should remain
+    expect(result.notes).not.toMatch(/@\[item:/);
+  });
+
+  test("resolves @[item:id:name] generic mentions by searching all upgrade maps", () => {
+    const build = {
+      profession: "Warrior",
+      equipment: { weapons: {} },
+      notes: "@[item:74978:Superior Rune of the Dragonhunter] @[item:43360:Dragon's Breath Bun]",
+    };
+    const catalog = { traits: [], skills: [], weaponSkills: [], professionWeapons: {} };
+    const upgradeCatalog = {
+      runeById: new Map([[74978, { id: 74978, name: "Superior Rune of the Dragonhunter", icon: "rune.png" }]]),
+      sigilById: new Map(),
+      infusionById: new Map(),
+      enrichmentById: new Map(),
+      foodById: new Map([[43360, { id: 43360, name: "Dragon's Breath Bun", icon: "food.png", description: "+70 Ferocity" }]]),
+      utilityById: new Map(),
+      relicByName: new Map(),
+      relics: [],
+    };
+
+    const result = serializeForPublish(build, catalog, upgradeCatalog);
+    const mentions = result.catalogNotesMentions;
+    expect(mentions).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: 74978, category: "rune" }),
+      expect.objectContaining({ id: 43360, category: "food" }),
+    ]));
   });
 
   test("returns empty array when no notes", () => {

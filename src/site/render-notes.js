@@ -50,6 +50,7 @@ export function renderNotes(build) {
   html = html.replace(/@\[(\w+):(\d+):([^\]]+)\]/g, (match, category, id, name) => {
     const numId = Number(id);
     let resolved = null;
+    let resolvedCategory = category;
     switch (category) {
       case "skill": resolved = skillById.get(numId); break;
       case "trait": resolved = traitById.get(numId); break;
@@ -60,6 +61,14 @@ export function renderNotes(build) {
       case "infusion": resolved = infusionById.get(numId); break;
       case "enrichment": resolved = enrichmentById.get(numId); break;
       case "relic": resolved = relicById.get(numId); break;
+      case "item": {
+        const itemMaps = [["rune", runeById], ["sigil", sigilById], ["food", foodById], ["utility", utilityById], ["infusion", infusionById], ["enrichment", enrichmentById], ["relic", relicById]];
+        for (const [cat, map] of itemMaps) {
+          resolved = map.get(numId);
+          if (resolved) { resolvedCategory = cat; break; }
+        }
+        break;
+      }
       default: break;
     }
 
@@ -67,10 +76,9 @@ export function renderNotes(build) {
     const iconHtml = icon ? `<img class="notes-mention__icon" src="${icon}" alt="">` : "";
     const escapedName = escapeHtml(decodeHtmlEntities(name));
 
-    if (resolved) {
-      return `<span class="notes-mention" data-type="${category}" data-id="${numId}">${iconHtml}${escapedName} <span class="notes-mention__label">${category}</span></span>`;
-    }
-    return `@${escapedName}`;
+    // Always render as a styled chip (matching Electron behavior) — even if
+    // the item couldn't be resolved, the name is still meaningful to the reader.
+    return `<span class="notes-mention" data-type="${resolvedCategory}" data-id="${numId}">${iconHtml}${escapedName} <span class="notes-mention__label">${resolvedCategory}</span></span>`;
   });
 
   container.innerHTML = html;
@@ -99,6 +107,7 @@ export function renderNotes(build) {
         case "infusion": return infusionById.get(id) || null;
         case "enrichment": return enrichmentById.get(id) || null;
         case "relic": return relicById.get(id) || null;
+        case "item": return runeById.get(id) || sigilById.get(id) || foodById.get(id) || utilityById.get(id) || infusionById.get(id) || enrichmentById.get(id) || relicById.get(id) || null;
         default: return null;
       }
     });

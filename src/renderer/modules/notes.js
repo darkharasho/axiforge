@@ -579,10 +579,19 @@ function renderPreview(markdown, container) {
   // Resolve @[category:id:Name] patterns into mention chips
   html = html.replace(/@\[(\w+):([\w]+):([^\]]+)\]/g, (match, category, id, name) => {
     const resolvedId = /^\d+$/.test(id) ? Number(id) : id;
-    const resolved = resolveReference(category, resolvedId);
+    let resolvedCategory = category;
+    let resolved = resolveReference(category, resolvedId);
+    // For generic "item" mentions, determine the specific category
+    if (category === "item" && resolved) {
+      const upgrades = state.upgradeCatalog;
+      const itemCats = [["rune", "runeById"], ["sigil", "sigilById"], ["food", "foodById"], ["utility", "utilityById"], ["infusion", "infusionById"], ["enrichment", "enrichmentById"], ["relic", "relicById"]];
+      for (const [cat, mapName] of itemCats) {
+        if (upgrades?.[mapName]?.has(resolvedId)) { resolvedCategory = cat; break; }
+      }
+    }
     const icon = resolved?.icon || "";
     const iconHtml = icon ? `<img class="notes-mention__icon" src="${icon}" alt="">` : "";
-    return `<span class="notes-mention" data-type="${category}" data-id="${resolvedId}">${iconHtml}${escapeHtml(decodeHtmlEntities(name))} <span class="notes-mention__label">${category}</span></span>`;
+    return `<span class="notes-mention" data-type="${resolvedCategory}" data-id="${resolvedId}">${iconHtml}${escapeHtml(decodeHtmlEntities(name))} <span class="notes-mention__label">${resolvedCategory}</span></span>`;
   });
 
   container.innerHTML = html;
@@ -808,6 +817,7 @@ function resolveReference(category, id) {
     case "infusion": return upgrades?.infusionById?.get(id) || null;
     case "enrichment": return upgrades?.enrichmentById?.get(id) || null;
     case "relic": return upgrades?.relicById?.get(id) || null;
+    case "item": return upgrades?.runeById?.get(id) || upgrades?.sigilById?.get(id) || upgrades?.foodById?.get(id) || upgrades?.utilityById?.get(id) || upgrades?.infusionById?.get(id) || upgrades?.enrichmentById?.get(id) || upgrades?.relicById?.get(id) || null;
     case "weapon": { const w = GW2_WEAPONS_BY_ID.get(id); return w ? { id: w.id, name: w.label, icon: w.icon } : null; }
     default: return null;
   }
