@@ -22,6 +22,10 @@
   letter-spacing: 0.06em;
 }
 
+.titlebar__brand-accent {
+  color: var(--accent);
+}
+
 .titlebar__beta-badge {
   font-family: system-ui, sans-serif;
   font-size: 0.6rem;
