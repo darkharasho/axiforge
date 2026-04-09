@@ -32,4 +32,21 @@ describe("splits.json data integrity", () => {
     );
     expect(bad).toEqual([]);
   });
+
+  test("Heightened Focus (trait 1317) has correct WvW split with Quickness 2.5s", () => {
+    const entry = splits.traits["1317"];
+    expect(entry).toBeDefined();
+    expect(entry.name).toBe("Heightened Focus");
+    const wvw = entry.modes?.wvw;
+    expect(wvw).toBeDefined();
+    expect(wvw.complete).toBe(true);
+    // Quickness duration must be 2.5s, not 0 (was a parser bug)
+    const quickness = wvw.facts.find((f) => f.status === "Quickness");
+    expect(quickness).toBeDefined();
+    expect(quickness.duration).toBe(2.5);
+    // Must include Adrenaline Stage buff facts with correct stacks
+    const stages = wvw.facts.filter((f) => f.status === "Heightened Focus");
+    expect(stages).toHaveLength(3);
+    expect(stages.map((f) => f.apply_count)).toEqual([2, 3, 4]);
+  });
 });
