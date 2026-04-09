@@ -305,6 +305,93 @@ describe("computePublishStats", () => {
     expect(result.stats.Power).toBe(1000 + 125);
   });
 
+  // ── Infusion calculations (issue #167) ───────────────────────────────
+
+  test("Concentration infusion (BoonDuration attribute) adds to Concentration", () => {
+    const equipment = {
+      slots: {},
+      runes: {},
+      infusions: { head: "86986" }, // Concentration WvW Infusion
+    };
+    const upgradeCatalog = {
+      runeById: new Map(),
+      infusionById: new Map([[86986, {
+        id: 86986, name: "Concentration WvW Infusion",
+        infixUpgrade: { attributes: [{ attribute: "BoonDuration", modifier: 5 }] },
+      }]]),
+      enrichmentById: new Map(),
+      foodById: new Map(),
+      utilityById: new Map(),
+    };
+    const result = computePublishStats(equipment, upgradeCatalog, "Guardian");
+    expect(result.stats.Concentration).toBe(5);
+  });
+
+  test("Expertise infusion (ConditionDuration attribute) adds to Expertise", () => {
+    const equipment = {
+      slots: {},
+      runes: {},
+      infusions: { head: "87218" }, // Expertise WvW Infusion
+    };
+    const upgradeCatalog = {
+      runeById: new Map(),
+      infusionById: new Map([[87218, {
+        id: 87218, name: "Expertise WvW Infusion",
+        infixUpgrade: { attributes: [{ attribute: "ConditionDuration", modifier: 5 }] },
+      }]]),
+      enrichmentById: new Map(),
+      foodById: new Map(),
+      utilityById: new Map(),
+    };
+    const result = computePublishStats(equipment, upgradeCatalog, "Guardian");
+    expect(result.stats.Expertise).toBe(5);
+  });
+
+  test("multiple infusions across slots sum correctly", () => {
+    const equipment = {
+      slots: {},
+      runes: {},
+      infusions: {
+        head: "86986",
+        shoulders: "86986",
+        ring1: ["86986", "86986", "86986"],
+      },
+    };
+    const upgradeCatalog = {
+      runeById: new Map(),
+      infusionById: new Map([[86986, {
+        id: 86986, name: "Concentration WvW Infusion",
+        infixUpgrade: { attributes: [{ attribute: "BoonDuration", modifier: 5 }] },
+      }]]),
+      enrichmentById: new Map(),
+      foodById: new Map(),
+      utilityById: new Map(),
+    };
+    const result = computePublishStats(equipment, upgradeCatalog, "Guardian");
+    // 2 single-slot + 3 in ring1 array = 5 infusions × 5 = 25
+    expect(result.stats.Concentration).toBe(25);
+  });
+
+  test("Power infusion adds to Power (standard attribute name)", () => {
+    const equipment = {
+      slots: {},
+      runes: {},
+      infusions: { head: "39336" },
+    };
+    const upgradeCatalog = {
+      runeById: new Map(),
+      infusionById: new Map([[39336, {
+        id: 39336, name: "Mighty Infusion",
+        infixUpgrade: { attributes: [{ attribute: "Power", modifier: 5 }] },
+      }]]),
+      enrichmentById: new Map(),
+      foodById: new Map(),
+      utilityById: new Map(),
+    };
+    const result = computePublishStats(equipment, upgradeCatalog, "Guardian");
+    expect(result.stats.Power).toBe(1000 + 5);
+  });
+
   test("food with 'to All Attributes' adds to every stat", () => {
     const equipment = { slots: {}, runes: {}, infusions: {}, food: "91713", utility: "" };
     const upgradeCatalog = {
