@@ -415,7 +415,7 @@
 }
 
 .health-orb__hp {
-  font-family: var(--font-display, 'Cinzel', serif);
+  font-family: var(--font-display, 'Outfit', sans-serif);
   font-size: 16px;
   font-weight: 700;
   color: #fff;

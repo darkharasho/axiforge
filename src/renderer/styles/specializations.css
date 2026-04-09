@@ -77,7 +77,7 @@
 
 .spec-card__panel {
   position: relative;
-  border: 1px solid rgba(80, 132, 163, 0.48);
+  border: 1px solid rgba(100, 170, 240, 0.35);
   border-radius: 4px;
   padding: calc(8px * var(--spec-scale)) calc(12px * var(--spec-scale)) calc(10px * var(--spec-scale));
   background-color: #070f1d;
@@ -354,7 +354,7 @@
 }
 
 .spec-empty-state__text {
-  font-family: var(--font-display, 'Cinzel', serif);
+  font-family: var(--font-display, 'Outfit', sans-serif);
   font-size: 0.85rem;
   font-weight: 500;
   color: rgba(166, 187, 222, 0.5);
@@ -380,8 +380,8 @@
 }
 
 .spec-card__panel--empty:hover {
-  border-color: rgba(79, 216, 151, 0.35);
-  background: rgba(79, 216, 151, 0.03);
+  border-color: rgba(240, 144, 64, 0.35);
+  background: rgba(240, 144, 64, 0.03);
 }
 
 .spec-card__empty-body {
