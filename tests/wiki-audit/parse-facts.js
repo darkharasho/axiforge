@@ -98,7 +98,9 @@ function parseFactText(name, value, titleAttr) {
   // ── Range ──
   if (nameLower === "range") {
     const num = parseInt(val, 10);
-    return !isNaN(num) ? { type: "Range", text: name, value: num } : null;
+    // Reject Range <= 1: no GW2 skill has range that low; value 1 is a
+    // boolean flag artifact from older wiki templates.
+    return !isNaN(num) && num > 1 ? { type: "Range", text: name, value: num } : null;
   }
 
   // ── Buffs and conditions ──

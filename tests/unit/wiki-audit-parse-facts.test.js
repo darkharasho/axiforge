@@ -56,6 +56,11 @@ describe("parseFactText", () => {
     });
   });
 
+  test("rejects range with value <= 1 (boolean flag artifact)", () => {
+    expect(parseFactText("Range", "1")).toBeNull();
+    expect(parseFactText("Range", "0")).toBeNull();
+  });
+
   test("parses recharge", () => {
     expect(parseFactText("Recharge", "10")).toEqual({
       type: "Recharge", text: "Recharge", value: 10,
