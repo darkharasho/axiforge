@@ -1,3 +1,16 @@
+## Version v0.2.0 — April 9, 2026
+
+### New Features
+- Complete visual overhaul with the new "Cool Midnight + Clean Orange" design language
+- Modernized color palette with warm orange accents replacing the previous blue theme across all interactive elements
+- Updated typography system using Outfit for headings and DM Sans for body text
+- Redesigned settings modal with card-based sections, SVG icons, and staggered entrance animations
+- Published SPA rebranded with the AxiForge orange/gold color scheme and updated navbar branding
+
+### Other Changes
+- Migrated all focus states, selection highlights, toggles, tooltips, and drag indicators to the new accent color
+- Updated mobile styles for color consistency with the desktop app
+
 ## Version v0.1.9 — April 8, 2026
 
 ### Bug Fixes
