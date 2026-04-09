@@ -48,6 +48,18 @@
   box-shadow: 0 2px 12px rgba(240, 144, 64, 0.25);
 }
 
+.btn-secondary {
+  border-color: var(--focus-ring);
+  background: transparent;
+  color: var(--accent);
+}
+
+.btn-secondary:hover {
+  background: var(--hover-accent);
+  border-color: var(--accent);
+  box-shadow: 0 2px 12px rgba(240, 144, 64, 0.15);
+}
+
 .btn-danger {
   border-color: rgba(197, 72, 95, 0.4);
   background: rgba(197, 72, 95, 0.15);

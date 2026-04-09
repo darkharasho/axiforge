@@ -280,9 +280,9 @@ body:has(.app-layout) {
 }
 
 .subnav__save-status--draft {
-  color: #ffb347;
-  background: rgba(255, 179, 71, 0.1);
-  border-color: rgba(255, 179, 71, 0.3);
+  color: var(--accent);
+  background: var(--hover-accent);
+  border-color: var(--focus-ring);
 }
 
 .subnav__link-btn {
@@ -323,7 +323,7 @@ body:has(.app-layout) {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #ffb347;
+  background: var(--accent);
   flex-shrink: 0;
 }
 
