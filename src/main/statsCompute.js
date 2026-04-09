@@ -156,7 +156,7 @@ function computePublishStats(equipment, upgradeCatalog, profession, gameMode) {
 
   // Infusion/enrichment stat contributions (via infix_upgrade.attributes)
   if (upgradeCatalog) {
-    const toStatKey = (attr) => attr === "Healing" ? "HealingPower" : attr === "ConditionDamage" ? "ConditionDamage" : attr;
+    const toStatKey = (attr) => attr === "Healing" ? "HealingPower" : attr === "BoonDuration" ? "Concentration" : attr === "ConditionDuration" ? "Expertise" : attr;
     const addInfixAttributes = (infixUpgrade) => {
       if (!infixUpgrade?.attributes) return;
       for (const attr of infixUpgrade.attributes) {

@@ -338,8 +338,8 @@ export function computeEquipmentStats(assumedBoons = null, sigilStacks = null) {
     // Helper: resolve API attribute name to our stat key
     const toStatKey = (attr) =>
       attr === "Healing" ? "HealingPower"
-      : attr === "ConditionDamage" ? "ConditionDamage"
-      : attr === "HealingPower" ? "HealingPower"
+      : attr === "BoonDuration" ? "Concentration"
+      : attr === "ConditionDuration" ? "Expertise"
       : attr;
 
     // Helper: add infix_upgrade.attributes to totals
@@ -705,7 +705,7 @@ export function computeStatBreakdown(statKey, assumedBoons = null, sigilStacks =
 
   // Infusions
   if (upgradeCatalog) {
-    const toStatKey = (attr) => attr === "Healing" ? "HealingPower" : attr;
+    const toStatKey = (attr) => attr === "Healing" ? "HealingPower" : attr === "BoonDuration" ? "Concentration" : attr === "ConditionDuration" ? "Expertise" : attr;
     const infusions = state.editor.equipment?.infusions || {};
     const allInfusions = Object.entries(infusions)
       .filter(([k]) => !EXCLUDED_SLOTS.has(k))
