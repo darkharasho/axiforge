@@ -9,7 +9,7 @@
   justify-content: space-between;
   padding: 0 10px;
   border-bottom: 1px solid var(--line-soft);
-  background: rgba(6, 10, 20, 0.94);
+  background: rgba(10, 11, 14, 0.94);
   backdrop-filter: blur(8px);
 }
 
