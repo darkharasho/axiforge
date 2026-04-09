@@ -8,10 +8,20 @@
   justify-content: center;
   background: var(--overlay);
   backdrop-filter: blur(2px);
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.2s ease-out, visibility 0.2s;
 }
 
 .icm-overlay--hidden {
-  display: none;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.icm-overlay--hidden .icm {
+  transform: scale(0.96);
+  opacity: 0;
 }
 
 .icm {
@@ -24,6 +34,7 @@
   display: flex;
   flex-direction: column;
   box-shadow: var(--shadow-lg);
+  transition: transform 0.2s ease-out, opacity 0.2s ease-out;
 }
 
 .icm__header {
@@ -98,7 +109,7 @@
 }
 
 .icm__row-type--build {
-  background: rgba(72, 168, 255, 0.2);
+  background: rgba(100, 170, 240, 0.2);
   color: var(--accent-2);
 }
 
@@ -178,12 +189,12 @@
 }
 
 .icm__btn--primary {
-  background: rgba(72, 168, 255, 0.15);
+  background: rgba(100, 170, 240, 0.15);
   color: var(--accent-2);
-  border-color: rgba(72, 168, 255, 0.4);
+  border-color: rgba(100, 170, 240, 0.4);
 }
 
 .icm__btn--primary:hover {
-  background: rgba(72, 168, 255, 0.3);
+  background: rgba(100, 170, 240, 0.3);
   border-color: var(--accent-2);
 }

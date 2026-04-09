@@ -8,10 +8,20 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.2s ease-out, visibility 0.2s;
 }
 
 .wiki-modal-overlay--hidden {
-  display: none;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.wiki-modal-overlay--hidden .wiki-modal {
+  transform: scale(0.96);
+  opacity: 0;
 }
 
 .wiki-modal {
@@ -24,6 +34,7 @@
   border-radius: var(--radius);
   box-shadow: var(--shadow-lg);
   overflow: hidden;
+  transition: transform 0.2s ease-out, opacity 0.2s ease-out;
 }
 
 .wiki-modal-toolbar {

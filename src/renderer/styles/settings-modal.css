@@ -8,10 +8,20 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.2s ease-out, visibility 0.2s;
 }
 
 .settings-modal-overlay--hidden {
-  display: none;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.settings-modal-overlay--hidden .settings-modal {
+  transform: scale(0.96);
+  opacity: 0;
 }
 
 .settings-modal {
@@ -25,6 +35,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  transition: transform 0.2s ease-out, opacity 0.2s ease-out;
 }
 
 .settings-modal__header {
@@ -105,6 +116,8 @@
   border-color: var(--accent-2);
 }
 
+/* accent color replacements for 72,168,255 -> 100,170,240 */
+
 /* ── Subsections (grouped items under a section heading) ─────── */
 
 .settings-modal__subsection {
@@ -150,8 +163,8 @@
 }
 
 .settings-modal__radio:has(.settings-modal__radio-input:checked) {
-  background: rgba(72, 168, 255, 0.08);
-  border-color: rgba(72, 168, 255, 0.4);
+  background: rgba(100, 170, 240, 0.08);
+  border-color: rgba(100, 170, 240, 0.4);
 }
 
 .settings-modal__radio-input {
@@ -180,11 +193,11 @@
 }
 
 .settings-modal__radio-input:checked ~ .settings-modal__radio-dot {
-  border-color: #48a8ff;
+  border-color: #64aaf0;
 }
 
 .settings-modal__radio-input:checked ~ .settings-modal__radio-dot::after {
-  background: #48a8ff;
+  background: #64aaf0;
 }
 
 .settings-modal__radio-content {
@@ -253,9 +266,9 @@
 }
 
 .settings-modal__pill input:checked + span {
-  background: rgba(72, 168, 255, 0.12);
-  border-color: rgba(72, 168, 255, 0.5);
-  color: #48a8ff;
+  background: rgba(100, 170, 240, 0.12);
+  border-color: rgba(100, 170, 240, 0.5);
+  color: #64aaf0;
 }
 
 .settings-modal__thread-id-input {
@@ -307,15 +320,15 @@
 }
 
 .settings-modal__btn--save {
-  background: rgba(72, 168, 255, 0.15);
-  color: #48a8ff;
-  border-color: rgba(72, 168, 255, 0.4);
+  background: rgba(100, 170, 240, 0.15);
+  color: #64aaf0;
+  border-color: rgba(100, 170, 240, 0.4);
 }
 
 .settings-modal__btn--save:hover {
-  background: rgba(72, 168, 255, 0.3);
+  background: rgba(100, 170, 240, 0.3);
   color: #7ac0ff;
-  border-color: #48a8ff;
+  border-color: #64aaf0;
 }
 
 /* ── Publishing section ──────────────────────────────────────── */
@@ -351,8 +364,8 @@
 
 .settings-modal__badge--ok {
   color: #6ee7a0;
-  background: rgba(79, 216, 151, 0.12);
-  border: 1px solid rgba(79, 216, 151, 0.3);
+  background: rgba(240, 144, 64, 0.12);
+  border: 1px solid rgba(240, 144, 64, 0.3);
 }
 
 .settings-modal__badge--pending {
