@@ -53,13 +53,13 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-family: "Cinzel", serif;
+  font-family: "Outfit", sans-serif;
   font-size: 11px;
   letter-spacing: 0.08em;
   color: var(--accent);
   text-transform: uppercase;
   padding-bottom: 4px;
-  border-bottom: 1px solid rgba(80, 132, 163, 0.3);
+  border-bottom: 1px solid rgba(240, 144, 64, 0.2);
   margin-bottom: 2px;
 }
 
@@ -68,9 +68,9 @@
   font-size: 10px;
   padding: 2px 8px;
   border-radius: var(--radius-xs);
-  border: 1px solid rgba(80, 132, 163, 0.5);
-  background: rgba(80, 132, 163, 0.1);
-  color: var(--accent-2);
+  border: 1px solid rgba(240, 144, 64, 0.35);
+  background: rgba(240, 144, 64, 0.08);
+  color: var(--accent);
   cursor: pointer;
   text-transform: none;
   letter-spacing: 0;
@@ -78,7 +78,7 @@
 
 .equip-fill-btn:hover {
   background: var(--hover-accent-strong);
-  border-color: var(--accent-2);
+  border-color: var(--accent);
 }
 
 .equip-section__btns {
@@ -276,7 +276,7 @@
 }
 
 .equip-slot:focus-visible {
-  outline: 2px solid var(--accent-2);
+  outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
 
@@ -286,7 +286,7 @@
   flex-shrink: 0;
   border-radius: var(--radius-xs);
   background: rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba(80, 132, 163, 0.3);
+  border: 1px solid rgba(240, 144, 64, 0.2);
   overflow: hidden;
   display: flex;
   transition: border-color 0.15s;
@@ -314,7 +314,7 @@
 }
 
 .equip-slot__icon--filled {
-  border-color: rgba(80, 132, 163, 0.6);
+  border-color: rgba(240, 144, 64, 0.4);
 }
 
 .equip-slot__icon--filled img {
@@ -390,7 +390,7 @@
   padding: 4px 8px;
   background: none;
   border: none;
-  border-right: 1px solid rgba(80, 132, 163, 0.15);
+  border-right: 1px solid rgba(240, 144, 64, 0.1);
   cursor: pointer;
   flex: 0 0 auto;
   min-width: 130px;
@@ -474,7 +474,7 @@
 }
 
 .slot-picker__search:focus {
-  border-bottom-color: var(--accent-2);
+  border-bottom-color: var(--accent);
 }
 
 .slot-picker__tabs {
@@ -506,7 +506,7 @@
 
 .slot-picker__tab--active {
   color: var(--text);
-  border-bottom-color: var(--accent-2);
+  border-bottom-color: var(--accent);
 }
 
 .slot-picker__list {
@@ -547,12 +547,12 @@
 
 .slot-picker__option:hover {
   background: var(--hover-accent);
-  border-color: rgba(80, 132, 163, 0.4);
+  border-color: rgba(240, 144, 64, 0.3);
 }
 
 .slot-picker__option--selected {
-  background: rgba(80, 132, 163, 0.18);
-  border-color: var(--accent-2);
+  background: rgba(240, 144, 64, 0.14);
+  border-color: var(--accent);
 }
 
 .slot-picker__name {
@@ -610,7 +610,7 @@
 }
 
 .equip-stat-cell--derived {
-  background: rgba(80, 132, 163, 0.08);
+  background: rgba(240, 144, 64, 0.06);
 }
 
 .equip-stat-label {
@@ -625,7 +625,7 @@
 }
 
 .equip-stat-value--derived {
-  color: var(--accent-2);
+  color: var(--accent);
 }
 
 .equip-modifiers {
@@ -664,7 +664,7 @@
 }
 
 .equip-text-label input:focus {
-  border-color: var(--accent-2);
+  border-color: var(--accent);
 }
 
 /* Upgrade sub-slots (rune / sigil / infusion) */

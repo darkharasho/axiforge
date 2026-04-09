@@ -8,10 +8,20 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.2s ease-out, visibility 0.2s;
 }
 
 .detail-modal-overlay--hidden {
-  display: none;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.detail-modal-overlay--hidden .detail-modal {
+  transform: scale(0.96);
+  opacity: 0;
 }
 
 .detail-modal {
@@ -24,6 +34,7 @@
   border-radius: var(--radius);
   box-shadow: var(--shadow-lg);
   overflow: hidden;
+  transition: transform 0.2s ease-out, opacity 0.2s ease-out;
 }
 
 .detail-modal-toolbar {
@@ -141,7 +152,7 @@
   width: 24px;
   height: 24px;
   border: 2px solid rgba(255, 255, 255, 0.08);
-  border-top-color: var(--accent-2, #6ab0f5);
+  border-top-color: var(--accent);
   border-radius: 50%;
   animation: wiki-spin 0.7s linear infinite;
   display: none;  /* hidden by default; shown only when parent has dm-section--loading */
@@ -350,7 +361,7 @@
 .detail-expand-btn:hover:not(:disabled) {
   background: var(--panel);
   color: var(--text);
-  border-color: var(--accent-2);
+  border-color: var(--accent);
 }
 
 .detail-expand-btn:disabled {

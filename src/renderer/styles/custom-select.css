@@ -27,7 +27,7 @@
 }
 
 .cselect--open .cselect__trigger {
-  border-color: var(--accent-2);
+  border-color: var(--accent);
   box-shadow: 0 0 0 2px var(--focus-ring);
 }
 
@@ -58,6 +58,7 @@
   box-shadow: var(--shadow-md);
   padding: 6px;
   display: none;
+  animation: cselect-open 0.15s ease-out;
 }
 
 .cselect--open .cselect__menu {
@@ -90,7 +91,7 @@
 }
 
 .cselect__option--selected {
-  border-color: rgba(79, 216, 151, 0.45);
+  border-color: rgba(240, 144, 64, 0.45);
   background: rgba(24, 44, 37, 0.85);
 }
 
@@ -215,7 +216,7 @@
 }
 
 .cselect__search:focus {
-  border-color: var(--accent-2);
+  border-color: var(--accent);
   box-shadow: 0 0 0 2px var(--focus-ring);
 }
 
@@ -272,4 +273,15 @@
   overflow: hidden;
   text-overflow: ellipsis;
   margin-top: 1px;
+}
+
+@keyframes cselect-open {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

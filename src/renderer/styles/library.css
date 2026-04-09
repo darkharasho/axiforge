@@ -106,7 +106,7 @@
 }
 
 .lib-toolbar__search-input:focus {
-  border-color: var(--accent-2);
+  border-color: var(--accent);
 }
 
 .lib-toolbar__search-input::placeholder {
@@ -127,7 +127,7 @@
 }
 
 .lib-toolbar__sort-select:focus {
-  border-color: var(--accent-2);
+  border-color: var(--accent);
 }
 
 /* View toggle */
@@ -169,7 +169,7 @@
 
 .lib-view-btn--active {
   background: var(--panel);
-  color: var(--accent-2);
+  color: var(--accent);
 }
 
 /* New build button */
@@ -339,13 +339,13 @@
 .lib-fd__trigger:hover {
   background: var(--hover-subtle);
   color: var(--text-light);
-  border-color: var(--accent-2);
+  border-color: var(--accent);
 }
 
 .lib-fd__trigger--active {
   background: var(--panel);
-  color: var(--accent-2);
-  border-color: var(--accent-2);
+  color: var(--accent);
+  border-color: var(--accent);
 }
 
 /* Dropdown menu */
@@ -415,7 +415,7 @@
 
 .lib-fd__item--active .lib-fd__check {
   opacity: 1;
-  color: var(--accent-2);
+  color: var(--accent);
 }
 
 /* Icon (profession/spec SVG) */
@@ -618,7 +618,7 @@
 
 .lib-nav-item--active {
   background: var(--panel);
-  color: var(--accent-2);
+  color: var(--accent);
   font-weight: 600;
 }
 
@@ -652,7 +652,7 @@
 }
 
 .lib-nav-item--active .lib-nav-item__icon {
-  color: var(--accent-2);
+  color: var(--accent);
   opacity: 1;
 }
 
@@ -702,7 +702,7 @@
   flex: 1;
   min-width: 0;
   background: var(--panel);
-  border: 1px solid var(--accent-2);
+  border: 1px solid var(--accent);
   border-radius: 3px;
   color: var(--text-light);
   font-size: 0.85rem;
@@ -711,7 +711,7 @@
 }
 
 .lib-inline-input:focus {
-  border-color: var(--accent-2);
+  border-color: var(--accent);
 }
 
 .lib-nav-item--editing {
@@ -720,7 +720,7 @@
 
 /* Inline input in grid view — matches card shape */
 .lib-grid-card--editing {
-  border-color: var(--accent-2);
+  border-color: var(--accent);
 }
 .lib-grid-card__inline-input {
   width: 100%;
@@ -990,13 +990,13 @@
 /* Selection highlight */
 .lib-list-row.lib-selected {
   background: var(--panel);
-  border-left: 2px solid var(--accent-2);
+  border-left: 2px solid var(--accent);
 }
 
 /* Drop target */
 .lib-list-row.lib-drop-target {
-  background: rgba(72, 168, 255, 0.1);
-  border: 1px dashed rgba(72, 168, 255, 0.4);
+  background: rgba(240, 144, 64, 0.1);
+  border: 1px dashed rgba(240, 144, 64, 0.4);
 }
 
 /* Dragging */
@@ -1044,7 +1044,7 @@
 .lib-tv__row--pinned { border-left: 2px solid rgba(212, 192, 68, 0.4); }
 .lib-tv__item.lib-selected > .lib-tv__row { background: var(--panel); }
 .lib-tv__item.lib-drop-target > .lib-tv__row,
-.lib-tv__item.lib-drop-target { background: rgba(72, 168, 255, 0.1); }
+.lib-tv__item.lib-drop-target { background: rgba(240, 144, 64, 0.1); }
 .lib-tv__item.lib-dragging > .lib-tv__row,
 .lib-tv__item.lib-dragging { opacity: 0.4; }
 
@@ -1153,7 +1153,7 @@
   white-space: nowrap;
 }
 .lib-tv__sort-btn svg { width: 12px; height: 12px; fill: currentColor; flex-shrink: 0; }
-.lib-tv__sort-btn--active { color: var(--accent-2); }
+.lib-tv__sort-btn--active { color: var(--accent); }
 .lib-tv__sort-btn:hover { color: var(--text-light); }
 
 /* ── Grid view ───────────────────────────────────────────────────── */
@@ -1210,12 +1210,12 @@
 
 .lib-grid-card.lib-selected {
   background: var(--panel);
-  border-color: var(--accent-2);
+  border-color: var(--accent);
 }
 
 .lib-grid-card.lib-drop-target {
-  border: 1px dashed rgba(72, 168, 255, 0.5);
-  background: rgba(72, 168, 255, 0.06);
+  border: 1px dashed rgba(240, 144, 64, 0.5);
+  background: rgba(240, 144, 64, 0.06);
 }
 
 .lib-grid-card.lib-dragging {
@@ -1342,8 +1342,8 @@
 }
 
 .lib-icon-item.lib-drop-target {
-  background: rgba(72, 168, 255, 0.08);
-  outline: 1px dashed rgba(72, 168, 255, 0.4);
+  background: rgba(240, 144, 64, 0.08);
+  outline: 1px dashed rgba(240, 144, 64, 0.4);
 }
 
 .lib-icon-item.lib-dragging {
@@ -1631,7 +1631,7 @@
 /* SortableJS drag classes */
 .lib-drag-ghost {
   opacity: 0.3;
-  background: rgba(72, 168, 255, 0.1) !important;
+  background: rgba(240, 144, 64, 0.1) !important;
 }
 
 .lib-drag-chosen {
@@ -1654,16 +1654,16 @@
 }
 
 .lib-drop-target {
-  outline: 2px dashed rgba(72, 168, 255, 0.6);
+  outline: 2px dashed rgba(240, 144, 64, 0.6);
   outline-offset: -2px;
-  background: rgba(72, 168, 255, 0.1) !important;
+  background: rgba(240, 144, 64, 0.1) !important;
 }
 
 .lib-breadcrumb__item.lib-drop-target {
   outline: none;
-  box-shadow: inset 0 0 0 2px rgba(72, 168, 255, 0.6);
+  box-shadow: inset 0 0 0 2px rgba(240, 144, 64, 0.6);
   border-radius: 4px;
-  background: rgba(72, 168, 255, 0.15) !important;
+  background: rgba(240, 144, 64, 0.15) !important;
   overflow: visible;
 }
 
@@ -1679,8 +1679,8 @@
 }
 
 .lib-root-drop-zone--active {
-  background: rgba(72, 168, 255, 0.1);
-  border-color: rgba(72, 168, 255, 0.5);
+  background: rgba(240, 144, 64, 0.1);
+  border-color: rgba(240, 144, 64, 0.5);
   color: var(--muted);
 }
 
@@ -1688,7 +1688,7 @@
 
 .lib-selected {
   background: var(--panel) !important;
-  border-left: 2px solid var(--accent-2);
+  border-left: 2px solid var(--accent);
 }
 
 /* ── Library toast ───────────────────────────────────────────────── */
@@ -1736,3 +1736,29 @@
 @keyframes lib-toast-spin {
   to { transform: rotate(360deg); }
 }
+
+/* ── Card entrance animation ────────────────────────────────────────── */
+@keyframes lib-card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.lib-grid-card {
+  animation: lib-card-enter 0.25s ease-out both;
+}
+
+.lib-grid-card:nth-child(1) { animation-delay: 0ms; }
+.lib-grid-card:nth-child(2) { animation-delay: 40ms; }
+.lib-grid-card:nth-child(3) { animation-delay: 80ms; }
+.lib-grid-card:nth-child(4) { animation-delay: 120ms; }
+.lib-grid-card:nth-child(5) { animation-delay: 160ms; }
+.lib-grid-card:nth-child(6) { animation-delay: 200ms; }
+.lib-grid-card:nth-child(7) { animation-delay: 240ms; }
+.lib-grid-card:nth-child(8) { animation-delay: 280ms; }
+.lib-grid-card:nth-child(n+9) { animation-delay: 320ms; }
