@@ -309,7 +309,7 @@
 }
 .build-code-group__input::placeholder {
   color: var(--muted);
-  font-family: 'Exo 2', sans-serif;
+  font-family: 'DM Sans', sans-serif;
   font-style: italic;
   font-size: 0.75rem;
 }
