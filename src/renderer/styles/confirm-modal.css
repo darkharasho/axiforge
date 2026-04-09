@@ -140,15 +140,15 @@
 }
 
 .confirm-modal__btn--primary {
-  background: linear-gradient(180deg, #f09040, #e07020);
+  background: linear-gradient(180deg, #c89848, #a87828);
   color: #0a0a10;
-  border-color: rgba(240, 144, 64, 0.5);
+  border-color: rgba(200, 152, 72, 0.5);
   font-weight: 700;
 }
 
 .confirm-modal__btn--primary:hover {
-  background: linear-gradient(180deg, #f8a050, #e88030);
-  box-shadow: 0 2px 12px rgba(240, 144, 64, 0.3);
+  background: linear-gradient(180deg, #d0a858, #b89038);
+  box-shadow: 0 2px 12px rgba(200, 152, 72, 0.3);
   border-color: var(--accent);
 }
 

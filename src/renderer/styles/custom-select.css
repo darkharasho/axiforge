@@ -91,7 +91,7 @@
 }
 
 .cselect__option--selected {
-  border-color: rgba(240, 144, 64, 0.45);
+  border-color: rgba(200, 152, 72, 0.45);
   background: rgba(24, 44, 37, 0.85);
 }
 

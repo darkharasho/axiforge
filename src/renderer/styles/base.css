@@ -13,7 +13,7 @@
   --text-light: #b0b4c0;
   --text-dim: #6a6e80;
   --muted: #8890a6;
-  --accent: #f09040;
+  --accent: #c89848;
   --accent-2: #64aaf0;
   --danger: #c5485f;
   --danger-text: #f87171;
@@ -29,9 +29,9 @@
 
   /* ── Interactive states ───────────────────────────────────────────────── */
   --hover-subtle: rgba(255, 255, 255, 0.05);
-  --hover-accent: rgba(240, 144, 64, 0.12);
-  --hover-accent-strong: rgba(240, 144, 64, 0.2);
-  --focus-ring: rgba(240, 144, 64, 0.26);
+  --hover-accent: rgba(200, 152, 72, 0.12);
+  --hover-accent-strong: rgba(200, 152, 72, 0.2);
+  --focus-ring: rgba(200, 152, 72, 0.26);
 
   /* ── Radius ───────────────────────────────────────────────────────────── */
   --radius: 14px;
@@ -59,7 +59,7 @@
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(240, 144, 64, 0.3) transparent;
+  scrollbar-color: rgba(200, 152, 72, 0.3) transparent;
 }
 
 ::-webkit-scrollbar {
@@ -72,12 +72,12 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(240, 144, 64, 0.3);
+  background: rgba(200, 152, 72, 0.3);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(240, 144, 64, 0.5);
+  background: rgba(200, 152, 72, 0.5);
 }
 
 *,
@@ -92,7 +92,7 @@ body {
   min-height: 100vh;
   font-family: "DM Sans", system-ui, sans-serif;
   background:
-    radial-gradient(1300px 550px at -5% -10%, rgba(240, 144, 64, 0.08), transparent 55%),
+    radial-gradient(1300px 550px at -5% -10%, rgba(200, 152, 72, 0.08), transparent 55%),
     radial-gradient(1000px 550px at 110% 0%, rgba(100, 170, 240, 0.08), transparent 55%),
     var(--bg);
   background-size: 100% 100%, 100% 100%, 100% 100%;

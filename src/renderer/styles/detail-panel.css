@@ -102,7 +102,7 @@
     rgba(13, 14, 22, 0.96);
   box-shadow:
     0 12px 28px rgba(0, 0, 0, 0.72),
-    0 0 0 1px rgba(240, 144, 64, 0.12) inset;
+    0 0 0 1px rgba(200, 152, 72, 0.12) inset;
   padding: 10px;
   pointer-events: none;
 }

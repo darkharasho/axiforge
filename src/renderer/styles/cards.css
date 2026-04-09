@@ -38,14 +38,14 @@
 }
 
 .btn-primary {
-  border-color: rgba(240, 144, 64, 0.5);
-  background: linear-gradient(180deg, #f09040, #e07020);
+  border-color: rgba(200, 152, 72, 0.5);
+  background: linear-gradient(180deg, #c89848, #a87828);
   color: #0a0a10;
 }
 
 .btn-primary:hover {
-  background: linear-gradient(180deg, #f8a050, #e88030);
-  box-shadow: 0 2px 12px rgba(240, 144, 64, 0.25);
+  background: linear-gradient(180deg, #d0a858, #b89038);
+  box-shadow: 0 2px 12px rgba(200, 152, 72, 0.25);
 }
 
 .btn-secondary {
@@ -57,7 +57,7 @@
 .btn-secondary:hover {
   background: var(--hover-accent);
   border-color: var(--accent);
-  box-shadow: 0 2px 12px rgba(240, 144, 64, 0.15);
+  box-shadow: 0 2px 12px rgba(200, 152, 72, 0.15);
 }
 
 .btn-danger {
@@ -112,8 +112,8 @@
 }
 
 .status-card--done {
-  border-color: rgba(240, 144, 64, 0.48);
-  background: rgba(240, 144, 64, 0.12);
+  border-color: rgba(200, 152, 72, 0.48);
+  background: rgba(200, 152, 72, 0.12);
 }
 
 @keyframes spin {
@@ -481,7 +481,7 @@ label {
   display: inline-block;
   width: 10px;
   height: 10px;
-  border: 1.5px solid rgba(240, 144, 64, 0.3);
+  border: 1.5px solid rgba(200, 152, 72, 0.3);
   border-top-color: var(--accent);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
