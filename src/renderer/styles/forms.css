@@ -22,7 +22,7 @@
 .panel h1,
 .panel h2 {
   margin: 0;
-  font-family: "Cinzel", serif;
+  font-family: "Outfit", sans-serif;
   letter-spacing: 0.03em;
 }
 
@@ -93,8 +93,8 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background: rgba(72, 168, 255, 0.18);
-  border: 1px solid rgba(72, 168, 255, 0.35);
+  background: rgba(240, 144, 64, 0.18);
+  border: 1px solid rgba(240, 144, 64, 0.35);
   border-radius: 6px;
   padding: 2px 6px 2px 8px;
   font-size: 0.82rem;
