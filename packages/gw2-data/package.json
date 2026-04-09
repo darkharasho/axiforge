@@ -7,8 +7,7 @@
     ".": "./src/index.js",
     "./wiki": "./src/wiki/client.js",
     "./api": "./src/api/client.js",
-    "./facts": "./src/facts/merge.js",
-    "./engine": "./src/engine/index.js"
+    "./facts": "./src/facts/merge.js"
   },
   "scripts": {
     "test": "jest"

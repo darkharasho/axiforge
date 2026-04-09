@@ -36,7 +36,7 @@ class WikiClient {
 
   async getWikitext(title) {
     const cacheKey = `wikitext:${title}`;
-    const cached = this._cache.get(cacheKey);
+    const cached = await this._cache.get(cacheKey);
     if (cached !== null) return cached;
 
     const url =
@@ -55,7 +55,7 @@ class WikiClient {
 
     const wikitext = page.revisions?.[0]?.["*"] || null;
     if (wikitext) {
-      this._cache.set(cacheKey, wikitext, this._cacheTTL);
+      await this._cache.set(cacheKey, wikitext, this._cacheTTL);
     }
     return wikitext;
   }
@@ -82,8 +82,8 @@ class WikiClient {
 
     const changed = await this.getRecentChanges(this._lastFetchTimestamp);
     for (const title of changed) {
-      this._cache.invalidate(`wikitext:${title}`);
-      this._cache.invalidate(`facts:${title}`);
+      await this._cache.invalidate(`wikitext:${title}`);
+      await this._cache.invalidate(`facts:${title}`);
     }
     this._lastFetchTimestamp = new Date().toISOString();
     return changed;

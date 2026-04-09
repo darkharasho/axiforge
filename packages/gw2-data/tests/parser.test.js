@@ -188,6 +188,28 @@ describe("mapWikiFactToApiFact", () => {
     });
   });
 
+  test("effect produces Buff with status from positional[0] and duration from positional[1]", () => {
+    const fact = mapWikiFactToApiFact("effect", ["Superspeed", "5"], { stacks: "2" }, true, false);
+    expect(fact).toEqual({
+      type: "Buff",
+      text: "Superspeed",
+      status: "Superspeed",
+      duration: 5,
+      apply_count: 2,
+    });
+  });
+
+  test("effect with no positionals returns empty status and zero duration", () => {
+    const fact = mapWikiFactToApiFact("effect", [], {}, false, true);
+    expect(fact).toEqual({
+      type: "Buff",
+      text: "",
+      status: "",
+      duration: 0,
+      apply_count: 1,
+    });
+  });
+
   test("returns null for unknown fact type", () => {
     const fact = mapWikiFactToApiFact("text", [], {}, true, false);
     expect(fact).toBeNull();

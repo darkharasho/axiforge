@@ -1,5 +1,7 @@
 "use strict";
 
+const { MemoryCache } = require("../wiki/cache");
+
 const GW2_API_ROOT = "https://api.guildwars2.com";
 const MAX_IDS_PER_REQUEST = 180;
 const MAX_RETRIES = 3;
@@ -16,7 +18,7 @@ class Gw2ApiClient {
    * @param {string} [options.lang] - Language code (default: "en")
    */
   constructor(options = {}) {
-    this._cache = options.cache;
+    this._cache = options.cache || new MemoryCache();
     this._fetch = options.fetch || globalThis.fetch;
     this._apiRoot = options.apiRoot || GW2_API_ROOT;
     this._lang = options.lang || "en";
@@ -65,11 +67,11 @@ class Gw2ApiClient {
   }
 
   async fetchCached(key, url, ttlMs) {
-    const cached = this._cache.get(key);
+    const cached = await this._cache.get(key);
     if (cached !== null) return cached;
 
     const data = await this.fetchJson(url);
-    this._cache.set(key, data, ttlMs);
+    await this._cache.set(key, data, ttlMs);
     return data;
   }
 

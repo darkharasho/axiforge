@@ -272,7 +272,7 @@ function mapWikiFactToApiFact(factType, positional, params, isWvw, isUniversal) 
   // ── Effect ────────────────────────────────────────────────────────────
   if (type === "effect") {
     const status = positional[0] ? stripWikiMarkup(positional[0]).trim() : "";
-    const duration = pos0Num ? parseFloat(stripWikiMarkup(positional[1]) || "0") : 0;
+    const duration = parseFloat(stripWikiMarkup(positional[1]) || "0");
     return {
       type: "Buff",
       text: status,
