@@ -403,7 +403,8 @@ app.whenReady().then(async () => {
     if (!owner) throw new Error("GitHub publishing not configured.");
     const repo = auth?.onboarding?.repoName || TARGET_REPO;
     const slug = comp.publishedSlug || "";
-    return `https://${owner}.github.io/${repo}/?n=${encodeURIComponent(slug)}&c=${comp.publishedFileId}.${comp.publishedKey}`;
+    const theme = await store.getSetting("appearance.theme");
+    return `https://${owner}.github.io/${repo}/?n=${encodeURIComponent(slug)}&c=${comp.publishedFileId}.${comp.publishedKey}${theme ? `&t=${theme}` : ""}`;
   });
 
   ipcMain.handle("builds:generate-chat-link", async (_e, build) => {
@@ -592,7 +593,8 @@ app.whenReady().then(async () => {
       publishedKey: encKey,
     });
 
-    const pagesUrl = `https://${owner}.github.io/${TARGET_REPO}/?n=${encodeURIComponent(newSlug)}&b=${fileId}.${encKey}`;
+    const themeParam = await store.getSetting("appearance.theme");
+    const pagesUrl = `https://${owner}.github.io/${TARGET_REPO}/?n=${encodeURIComponent(newSlug)}&b=${fileId}.${encKey}${themeParam ? `&t=${themeParam}` : ""}`;
 
     await patchAuthRecord({
       onboarding: {
@@ -629,6 +631,7 @@ app.whenReady().then(async () => {
     const owner = auth?.onboarding?.targetOwner || session.viewer.login;
 
     // ── 1. Load comp + its builds ──────────────────────────────────────
+    const compTheme = await store.getSetting("appearance.theme");
     progress("loading");
     const allComps = await compStore.listComps();
     const comp = allComps.find((c) => c.id === compId);
@@ -689,7 +692,7 @@ app.whenReady().then(async () => {
       const fileId = build.publishedFileId || generateFileId();
       const encKey = build.publishedKey || generateEncryptionKey();
       const slug = slugifyBuildName(build.title);
-      const spaUrl = `https://${owner}.github.io/${TARGET_REPO}/?n=${encodeURIComponent(slug)}&b=${fileId}.${encKey}`;
+      const spaUrl = `https://${owner}.github.io/${TARGET_REPO}/?n=${encodeURIComponent(slug)}&b=${fileId}.${encKey}${compTheme ? `&t=${compTheme}` : ""}`;
 
       // Always re-encrypt with latest enriched data (traits may have been fixed)
       const encFile = buildEncryptedBuildFile(enrichedBuild, fileId, encKey);
@@ -732,7 +735,8 @@ app.whenReady().then(async () => {
       await store.upsertBuild(updatedBuild);
     }
 
-    const compPagesUrl = `https://${owner}.github.io/${TARGET_REPO}/?n=${encodeURIComponent(compSlug)}&c=${compFileId}.${compEncKey}`;
+    const savedTheme = await store.getSetting("appearance.theme");
+    const compPagesUrl = `https://${owner}.github.io/${TARGET_REPO}/?n=${encodeURIComponent(compSlug)}&c=${compFileId}.${compEncKey}${savedTheme ? `&t=${savedTheme}` : ""}`;
 
 
 

@@ -109,7 +109,7 @@
 }
 
 .icm__row-type--build {
-  background: rgba(200, 152, 72, 0.2);
+  background: rgba(var(--accent-rgb), 0.2);
   color: var(--accent);
 }
 
@@ -189,12 +189,12 @@
 }
 
 .icm__btn--primary {
-  background: rgba(200, 152, 72, 0.15);
+  background: rgba(var(--accent-rgb), 0.15);
   color: var(--accent);
-  border-color: rgba(200, 152, 72, 0.4);
+  border-color: rgba(var(--accent-rgb), 0.4);
 }
 
 .icm__btn--primary:hover {
-  background: rgba(200, 152, 72, 0.3);
+  background: rgba(var(--accent-rgb), 0.3);
   border-color: var(--accent);
 }

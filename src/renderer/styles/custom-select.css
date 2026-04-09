@@ -22,7 +22,7 @@
 }
 
 .cselect__trigger:hover {
-  border-color: #4b638e;
+  border-color: var(--muted);
   background: var(--surface-hover);
 }
 
@@ -54,7 +54,7 @@
   right: 0;
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: rgba(8, 15, 30, 0.98);
+  background: var(--surface);
   box-shadow: var(--shadow-md);
   padding: 6px;
   display: none;
@@ -86,13 +86,13 @@
 }
 
 .cselect__option:hover {
-  border-color: #4e6998;
+  border-color: var(--muted);
   background: var(--panel);
 }
 
 .cselect__option--selected {
-  border-color: rgba(200, 152, 72, 0.45);
-  background: rgba(24, 44, 37, 0.85);
+  border-color: rgba(var(--accent-rgb), 0.45);
+  background: rgba(var(--accent-rgb), 0.12);
 }
 
 .cselect__option:disabled {
@@ -116,7 +116,7 @@
   width: 20px;
   height: 20px;
   border-radius: var(--radius-sm);
-  border: 1px solid rgba(168, 189, 224, 0.52);
+  border: 1px solid rgba(var(--accent-2-rgb), 0.3);
   background: transparent;
   object-fit: cover;
   flex: 0 0 auto;
@@ -140,7 +140,7 @@
   font-size: 0.68rem;
   font-weight: 700;
   color: var(--text);
-  background: rgba(10, 14, 21, 0.76);
+  background: var(--surface);
 }
 
 .cselect__text {

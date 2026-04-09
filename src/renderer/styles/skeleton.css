@@ -114,7 +114,7 @@
 
 /* matches .spec-card__panel */
 .skel-spec-card__panel {
-  border: 1px solid rgba(200, 152, 72, 0.35);
+  border: 1px solid rgba(var(--accent-rgb), 0.35);
   border-radius: 4px;
   padding: calc(8px * var(--spec-scale)) calc(12px * var(--spec-scale)) calc(10px * var(--spec-scale));
   background-color: var(--bg-2);
@@ -194,8 +194,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border-left: 1px solid rgba(200, 152, 72, 0.15);
-  border-right: 1px solid rgba(200, 152, 72, 0.15);
+  border-left: 1px solid rgba(var(--accent-rgb), 0.15);
+  border-right: 1px solid rgba(var(--accent-rgb), 0.15);
   padding: 0;
 }
 
@@ -216,7 +216,7 @@
   align-items: center;
   min-height: 16px;
   padding-bottom: 4px;
-  border-bottom: 1px solid rgba(200, 152, 72, 0.2);
+  border-bottom: 1px solid rgba(var(--accent-rgb), 0.2);
   margin-bottom: 2px;
 }
 
@@ -225,7 +225,7 @@
   width: 36px;
   height: 18px;
   border-radius: 4px;
-  border: 1px solid rgba(200, 152, 72, 0.35);
+  border: 1px solid rgba(var(--accent-rgb), 0.35);
   margin-left: auto;
 }
 
@@ -236,8 +236,8 @@
   align-items: center;
   padding: 4px 6px;
   border-radius: 6px;
-  border: 1px solid rgba(200, 152, 72, 0.15);
-  background: rgba(6, 11, 21, 0.5);
+  border: 1px solid rgba(var(--accent-rgb), 0.15);
+  background: var(--input-bg);
 }
 
 /* matches .equip-slot--weapon */
@@ -251,7 +251,7 @@
   align-items: center;
   gap: 8px;
   padding: 4px 8px;
-  border-right: 1px solid rgba(200, 152, 72, 0.1);
+  border-right: 1px solid rgba(var(--accent-rgb), 0.1);
   min-width: 130px;
 }
 
@@ -288,7 +288,7 @@
   width: 40px;
   height: 40px;
   border-radius: 4px;
-  border: 1px solid rgba(200, 152, 72, 0.2);
+  border: 1px solid rgba(var(--accent-rgb), 0.2);
   flex-shrink: 0;
 }
 
@@ -349,9 +349,9 @@
 
 .skel-equip__text-input {
   height: 26px; /* 12px font × ~1.2 line-height + 10px padding + 2px border */
-  border: 1px solid rgba(44, 61, 94, 0.8);
+  border: 1px solid var(--input-border);
   border-radius: 6px;
-  background: rgba(6, 11, 21, 0.8);
+  background: var(--input-bg);
 }
 
 /* matches .equip-trinket-grid */
@@ -371,7 +371,7 @@
 .skel-detail {
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: rgba(11, 18, 36, 0.88);
+  background: var(--surface);
   padding: 10px;
 }
 

@@ -12,6 +12,18 @@ let _callbacks = {};
 
 const WEBHOOK_RE = /^https:\/\/(discord\.com|discordapp\.com)\/api\/webhooks\//;
 
+const THEMES = [
+  { id: "",                label: "Golden Amber",     type: "full",   warm: true,  swatches: ["#c89848", "#64aaf0"] },
+  { id: "molten-core",     label: "Molten Core",      type: "full",   warm: true,  swatches: ["#dc6930", "#e8a538"] },
+  { id: "cinderfall",      label: "Cinderfall",       type: "full",   warm: true,  swatches: ["#c85050", "#d89060"] },
+  { id: "frostforge",      label: "Frostforge",       type: "full",   warm: false, swatches: ["#64afe6", "#9bd2f0"] },
+  { id: "verdant-crucible", label: "Verdant Crucible", type: "full",   warm: false, swatches: ["#4bbe78", "#3ca5b4"] },
+  { id: "copper",          label: "Copper Alloy",     type: "accent", warm: true,  swatches: ["#d28c60", "#64aaf0"] },
+  { id: "rose-gold",       label: "Rose Gold",        type: "accent", warm: true,  swatches: ["#c8738c", "#64aaf0"] },
+  { id: "cobalt",          label: "Cobalt Steel",     type: "accent", warm: false, swatches: ["#5888c8", "#82b4f0"] },
+  { id: "mithril",         label: "Mithril",          type: "accent", warm: false, swatches: ["#aab4c8", "#8cbee6"] },
+];
+
 const SETUP_STEPS = [
   { key: "repo", label: "Creating repository" },
   { key: "pages", label: "Configuring GitHub Pages" },
@@ -40,6 +52,13 @@ export function initSettingsModal() {
         <button class="settings-modal__close" id="sm-close"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18L18 6M6 6L18 18"/></svg></button>
       </div>
       <div class="settings-modal__body">
+        <div class="settings-modal__section" id="sm-appearance-section">
+          <h4 class="settings-modal__section-title">
+            <svg class="settings-modal__section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r="2.5"/><path d="M17.5 10.5 21 3"/><path d="M3 21l5.5-5.5"/><circle cx="8" cy="16" r="3"/><path d="M12 12c-2-2.67-4-4-6-4a4 4 0 1 0 0 8c2 0 4-1.33 6-4z"/></svg>
+            Appearance
+          </h4>
+          <div class="settings-modal__theme-grid" id="sm-theme-grid"></div>
+        </div>
         <div class="settings-modal__section" id="sm-publishing-section">
           <h4 class="settings-modal__section-title">
             <svg class="settings-modal__section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
@@ -100,6 +119,7 @@ export function initSettingsModal() {
 
   _el = {
     close:          document.getElementById("sm-close"),
+    themeGrid:      document.getElementById("sm-theme-grid"),
     targetPicker:   document.getElementById("sm-target-picker"),
     setupRow:       document.getElementById("sm-setup-row"),
     publishSection: document.getElementById("sm-publishing-section"),
@@ -165,6 +185,9 @@ export async function openSettingsModal() {
   _el.buildThreadId.value = buildThreadId || "";
   _el.buildThreadError.textContent = "";
 
+  // Populate appearance section
+  _renderThemeGrid();
+
   // Populate publishing section
   _renderPublishing();
 
@@ -172,6 +195,44 @@ export async function openSettingsModal() {
   _escHandler = (e) => { if (e.key === "Escape") _close(); };
   document.addEventListener("keydown", _escHandler);
   _el.webhookUrl.focus();
+}
+
+// ─── Theme grid ─────────────────────────────────────────────────────────────
+
+function _renderThemeGrid() {
+  const grid = _el.themeGrid;
+  grid.innerHTML = "";
+  const current = document.documentElement.getAttribute("data-theme") || "";
+
+  for (const theme of THEMES) {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = `settings-modal__theme-card${theme.id === current ? " settings-modal__theme-card--active" : ""}`;
+    card.dataset.theme = theme.id;
+
+    const swatchRow = theme.swatches
+      .map((c) => `<span class="settings-modal__theme-swatch" style="background:${c}"></span>`)
+      .join("");
+
+    card.innerHTML = `
+      <div class="settings-modal__theme-swatches">${swatchRow}</div>
+      <span class="settings-modal__theme-label">${escapeHtml(theme.label)}</span>
+      <span class="settings-modal__theme-tag">${theme.type === "full" ? "Full" : "Accent"}</span>
+    `;
+
+    card.addEventListener("click", () => _applyTheme(theme.id));
+    grid.append(card);
+  }
+}
+
+async function _applyTheme(themeId) {
+  if (themeId) {
+    document.documentElement.setAttribute("data-theme", themeId);
+  } else {
+    document.documentElement.removeAttribute("data-theme");
+  }
+  await window.desktopApi.setSetting("appearance.theme", themeId || null);
+  _renderThemeGrid();
 }
 
 // ─── Publishing section ─────────────────────────────────────────────────────

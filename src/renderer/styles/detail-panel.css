@@ -16,7 +16,7 @@
 .detail-card {
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: rgba(16, 18, 26, 0.92);
+  background: var(--surface);
   padding: 10px;
 }
 
@@ -39,7 +39,7 @@
   height: 56px;
   border-radius: 10px;
   border: 1px solid var(--line);
-  background: rgba(16, 18, 26, 0.5);
+  background: var(--surface);
 }
 
 .detail-card h3 {
@@ -85,7 +85,7 @@
 .target-picker {
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: rgba(16, 18, 26, 0.8);
+  background: var(--surface);
   padding: 10px;
 }
 
@@ -98,11 +98,11 @@
   border: 1px solid var(--line);
   border-radius: 11px;
   background:
-    linear-gradient(180deg, rgba(16, 18, 26, 0.97), rgba(13, 14, 22, 0.96)),
-    rgba(13, 14, 22, 0.96);
+    var(--panel-gradient),
+    var(--surface);
   box-shadow:
     0 12px 28px rgba(0, 0, 0, 0.72),
-    0 0 0 1px rgba(200, 152, 72, 0.12) inset;
+    0 0 0 1px rgba(var(--accent-rgb), 0.12) inset;
   padding: 10px;
   pointer-events: none;
 }

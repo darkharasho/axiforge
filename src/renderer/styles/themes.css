@@ -1,0 +1,143 @@
+/* AxiForge — Color Themes
+   ─────────────────────────────────────────────────────────────────────────
+   Full themes override all color elements (backgrounds, accents, glows).
+   Accent themes override only the primary/secondary accent colors.
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* ══════════════════════════════════════════════════════════════════════════
+   FULL THEMES
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Molten Core — The forge at full blast, rivers of liquid metal ─────── */
+[data-theme="molten-core"] {
+  --bg: #0e0806;
+  --bg-2: #120a08;
+  --panel: #1a1210;
+  --panel-2: #140e0c;
+  --line: #2a1e1a;
+  --line-soft: #201814;
+  --input-bg: #0c0806;
+  --input-border: #302018;
+  --surface: rgba(14, 8, 6, 0.92);
+  --surface-hover: rgba(18, 10, 8, 0.95);
+  --panel-gradient: linear-gradient(180deg, rgba(26, 18, 16, 0.95), rgba(20, 14, 12, 0.95));
+  --accent-rgb: 220, 105, 45;
+  --accent-2-rgb: 230, 165, 55;
+  --gold: #e87830;
+  --btn-primary-from: #dc6930;
+  --btn-primary-to: #b84818;
+  --btn-primary-from-hover: #e87a40;
+  --btn-primary-to-hover: #c85828;
+}
+
+/* ── Frostforge — Cold-worked steel under northern lights ─────────────── */
+[data-theme="frostforge"] {
+  --bg: #060a0e;
+  --bg-2: #080c12;
+  --panel: #10151c;
+  --panel-2: #0c1118;
+  --line: #1a2230;
+  --line-soft: #141c26;
+  --input-bg: #060810;
+  --input-border: #182438;
+  --surface: rgba(6, 10, 14, 0.92);
+  --surface-hover: rgba(8, 12, 18, 0.95);
+  --panel-gradient: linear-gradient(180deg, rgba(16, 21, 28, 0.95), rgba(12, 17, 24, 0.95));
+  --accent-rgb: 100, 175, 230;
+  --accent-2-rgb: 155, 210, 240;
+  --gold: #88c8e8;
+  --btn-primary-from: #5898d0;
+  --btn-primary-to: #3878b0;
+  --btn-primary-from-hover: #68a8e0;
+  --btn-primary-to-hover: #4888c0;
+}
+
+/* ── Verdant Crucible — Alchemist's forge, emerald and teal ───────────── */
+[data-theme="verdant-crucible"] {
+  --bg: #060c08;
+  --bg-2: #080e0a;
+  --panel: #101a14;
+  --panel-2: #0c1610;
+  --line: #1a2c20;
+  --line-soft: #14241a;
+  --input-bg: #060a08;
+  --input-border: #183024;
+  --surface: rgba(6, 12, 8, 0.92);
+  --surface-hover: rgba(8, 14, 10, 0.95);
+  --panel-gradient: linear-gradient(180deg, rgba(16, 26, 20, 0.95), rgba(12, 22, 16, 0.95));
+  --accent-rgb: 75, 190, 120;
+  --accent-2-rgb: 60, 165, 180;
+  --gold: #60c888;
+  --btn-primary-from: #48b070;
+  --btn-primary-to: #309050;
+  --btn-primary-from-hover: #58c080;
+  --btn-primary-to-hover: #40a060;
+}
+
+/* ── Cinderfall — Dying embers in ash, deep warm reds ─────────────────── */
+[data-theme="cinderfall"] {
+  --bg: #0c0708;
+  --bg-2: #100a0a;
+  --panel: #1a1214;
+  --panel-2: #140e10;
+  --line: #2a1c20;
+  --line-soft: #20161a;
+  --input-bg: #0c0808;
+  --input-border: #301c22;
+  --surface: rgba(12, 7, 8, 0.92);
+  --surface-hover: rgba(16, 10, 10, 0.95);
+  --panel-gradient: linear-gradient(180deg, rgba(26, 18, 20, 0.95), rgba(20, 14, 16, 0.95));
+  --accent-rgb: 200, 80, 80;
+  --accent-2-rgb: 215, 145, 90;
+  --gold: #d07050;
+  --btn-primary-from: #c05050;
+  --btn-primary-to: #a03838;
+  --btn-primary-from-hover: #d06060;
+  --btn-primary-to-hover: #b04848;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ACCENT THEMES  (only swap accent colors, keep default backgrounds)
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Copper Alloy — Warm copper tones ─────────────────────────────────── */
+[data-theme="copper"] {
+  --accent-rgb: 210, 140, 95;
+  --gold: #d8a070;
+  --btn-primary-from: #c88858;
+  --btn-primary-to: #a86838;
+  --btn-primary-from-hover: #d89868;
+  --btn-primary-to-hover: #b87848;
+}
+
+/* ── Cobalt Steel — Cool blue steel ───────────────────────────────────── */
+[data-theme="cobalt"] {
+  --accent-rgb: 88, 135, 200;
+  --accent-2-rgb: 130, 180, 240;
+  --gold: #6898d8;
+  --btn-primary-from: #5080c0;
+  --btn-primary-to: #3860a0;
+  --btn-primary-from-hover: #6090d0;
+  --btn-primary-to-hover: #4870b0;
+}
+
+/* ── Mithril — Silvery platinum sheen ─────────────────────────────────── */
+[data-theme="mithril"] {
+  --accent-rgb: 170, 180, 200;
+  --accent-2-rgb: 140, 190, 230;
+  --gold: #b8c0d0;
+  --btn-primary-from: #98a0b8;
+  --btn-primary-to: #788098;
+  --btn-primary-from-hover: #a8b0c8;
+  --btn-primary-to-hover: #8890a8;
+}
+
+/* ── Rose Gold — Warm rose-gold tones ─────────────────────────────────── */
+[data-theme="rose-gold"] {
+  --accent-rgb: 200, 115, 140;
+  --gold: #d88898;
+  --btn-primary-from: #c06878;
+  --btn-primary-to: #a04858;
+  --btn-primary-from-hover: #d07888;
+  --btn-primary-to-hover: #b05868;
+}

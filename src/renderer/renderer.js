@@ -303,6 +303,12 @@ async function init() {
   try { _lastGameMode = (await window.desktopApi.getSetting("lastGameMode")) || "pve"; } catch { /* first run */ }
   syncGameModeToggleUI(_lastGameMode);
 
+  // Apply saved color theme
+  try {
+    const savedTheme = await window.desktopApi.getSetting("appearance.theme");
+    if (savedTheme) document.documentElement.setAttribute("data-theme", savedTheme);
+  } catch { /* first run */ }
+
   // Library skeleton: read saved view mode and show matching skeleton during the data load window.
   // The static HTML in index.html already shows the list skeleton for first paint; this re-injects
   // the correct template if the user's saved view mode differs from list.

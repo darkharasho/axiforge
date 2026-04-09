@@ -548,13 +548,13 @@
 .skill-slot--dragging .skill-icon-large {
   opacity: 0.5;
   cursor: grabbing;
-  border-color: rgba(200, 152, 72, 0.7);
-  box-shadow: 0 0 0 2px rgba(200, 152, 72, 0.3);
+  border-color: rgba(var(--accent-rgb), 0.7);
+  box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.3);
 }
 
 .skill-slot--drag-over .skill-icon-large {
-  border-color: rgba(200, 152, 72, 0.9);
-  box-shadow: 0 0 0 2px rgba(200, 152, 72, 0.5), 0 0 14px rgba(200, 152, 72, 0.35);
+  border-color: rgba(var(--accent-rgb), 0.9);
+  box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.5), 0 0 14px rgba(var(--accent-rgb), 0.35);
 }
 
 .skill-select-overlay {
@@ -609,7 +609,7 @@
 }
 
 .skill-icon-btn:hover {
-  border-color: rgba(200, 152, 72, 0.6);
+  border-color: rgba(var(--accent-rgb), 0.6);
   background: rgba(11, 17, 27, 0.82);
   box-shadow: 0 4px 12px rgba(5, 11, 20, 0.54);
   transform: translateY(-1px);
@@ -622,7 +622,7 @@
 }
 
 .skill-card select:hover {
-  border-color: rgba(200, 152, 72, 0.5);
+  border-color: rgba(var(--accent-rgb), 0.5);
 }
 
 .skill-card select option:disabled {
@@ -661,12 +661,12 @@
 }
 
 .underwater-toggle__btn:hover:not(.underwater-toggle__btn--active) {
-  background: rgba(200, 152, 72, 0.12);
+  background: rgba(var(--accent-rgb), 0.12);
   color: rgba(228, 230, 238, 0.9);
 }
 
 .underwater-toggle__btn--active {
-  background: rgba(200, 152, 72, 0.35);
+  background: rgba(var(--accent-rgb), 0.35);
   color: #fff;
   cursor: default;
 }
@@ -739,7 +739,7 @@
   left: 50%;
   transform: translateX(-50%);
   background: rgba(12, 18, 32, 0.96);
-  border: 1px solid rgba(200, 152, 72, 0.25);
+  border: 1px solid rgba(var(--accent-rgb), 0.25);
   border-radius: 6px;
   padding: 8px 12px;
   min-width: 200px;
@@ -756,7 +756,7 @@
   color: #fff;
   margin-bottom: 5px;
   padding-bottom: 4px;
-  border-bottom: 1px solid rgba(200, 152, 72, 0.15);
+  border-bottom: 1px solid rgba(var(--accent-rgb), 0.15);
 }
 
 .boon-coverage__tooltip-row {

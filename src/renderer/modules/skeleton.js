@@ -325,14 +325,14 @@ const skeletonTemplates = {
   <div class="lib-tv__header">
     <span class="lib-tv__action"></span>
     <span class="lib-tv__icon"></span>
-    <span class="lib-tv__name"><div style="height:18px;width:40px;background:#1a1a3a;border-radius:3px"></div></span>
-    <span class="lib-tv__profession"><div style="height:18px;width:60px;background:#1a1a3a;border-radius:3px"></div></span>
-    <span class="lib-tv__spec"><div style="height:18px;width:48px;background:#1a1a3a;border-radius:3px"></div></span>
-    <span class="lib-tv__mode"><div style="height:18px;width:36px;background:#1a1a3a;border-radius:3px"></div></span>
-    <span class="lib-tv__role"><div style="height:18px;width:30px;background:#1a1a3a;border-radius:3px"></div></span>
-    <span class="lib-tv__tags"><div style="height:18px;width:30px;background:#1a1a3a;border-radius:3px"></div></span>
-    <span class="lib-tv__created"><div style="height:18px;width:48px;background:#1a1a3a;border-radius:3px"></div></span>
-    <span class="lib-tv__modified"><div style="height:18px;width:48px;background:#1a1a3a;border-radius:3px"></div></span>
+    <span class="lib-tv__name"><div style="height:18px;width:40px;background:var(--line-soft);border-radius:3px"></div></span>
+    <span class="lib-tv__profession"><div style="height:18px;width:60px;background:var(--line-soft);border-radius:3px"></div></span>
+    <span class="lib-tv__spec"><div style="height:18px;width:48px;background:var(--line-soft);border-radius:3px"></div></span>
+    <span class="lib-tv__mode"><div style="height:18px;width:36px;background:var(--line-soft);border-radius:3px"></div></span>
+    <span class="lib-tv__role"><div style="height:18px;width:30px;background:var(--line-soft);border-radius:3px"></div></span>
+    <span class="lib-tv__tags"><div style="height:18px;width:30px;background:var(--line-soft);border-radius:3px"></div></span>
+    <span class="lib-tv__created"><div style="height:18px;width:48px;background:var(--line-soft);border-radius:3px"></div></span>
+    <span class="lib-tv__modified"><div style="height:18px;width:48px;background:var(--line-soft);border-radius:3px"></div></span>
   </div>
   <ul class="lib-tv__tree">
     ${libTableRow(62, "", 1, 2)}

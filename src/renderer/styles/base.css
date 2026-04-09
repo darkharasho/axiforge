@@ -13,12 +13,20 @@
   --text-light: #aeafb8;
   --text-dim: #646670;
   --muted: #828490;
-  --accent: #c89848;
-  --accent-2: #64aaf0;
+  --accent-rgb: 200, 152, 72;
+  --accent: rgb(var(--accent-rgb));
+  --accent-2-rgb: 100, 170, 240;
+  --accent-2: rgb(var(--accent-2-rgb));
   --danger: #c5485f;
   --danger-text: #f87171;
   --gold: #e8b050;
-  --link: #64aaf0;
+  --link: var(--accent-2);
+
+  /* ── Button gradients ────────────────────────────────────────────────── */
+  --btn-primary-from: #c89848;
+  --btn-primary-to: #a87828;
+  --btn-primary-from-hover: #d0a858;
+  --btn-primary-to-hover: #b89038;
 
   /* ── Surfaces ─────────────────────────────────────────────────────────── */
   --input-bg: #0a0b0e;
@@ -29,9 +37,9 @@
 
   /* ── Interactive states ───────────────────────────────────────────────── */
   --hover-subtle: rgba(255, 255, 255, 0.05);
-  --hover-accent: rgba(200, 152, 72, 0.12);
-  --hover-accent-strong: rgba(200, 152, 72, 0.2);
-  --focus-ring: rgba(200, 152, 72, 0.26);
+  --hover-accent: rgba(var(--accent-rgb), 0.12);
+  --hover-accent-strong: rgba(var(--accent-rgb), 0.2);
+  --focus-ring: rgba(var(--accent-rgb), 0.26);
 
   /* ── Radius ───────────────────────────────────────────────────────────── */
   --radius: 14px;
@@ -59,7 +67,7 @@
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(200, 152, 72, 0.3) transparent;
+  scrollbar-color: rgba(var(--accent-rgb), 0.3) transparent;
 }
 
 ::-webkit-scrollbar {
@@ -72,12 +80,12 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(200, 152, 72, 0.3);
+  background: rgba(var(--accent-rgb), 0.3);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(200, 152, 72, 0.5);
+  background: rgba(var(--accent-rgb), 0.5);
 }
 
 *,
@@ -92,8 +100,8 @@ body {
   min-height: 100vh;
   font-family: "DM Sans", system-ui, sans-serif;
   background:
-    radial-gradient(1300px 550px at -5% -10%, rgba(200, 152, 72, 0.14), transparent 55%),
-    radial-gradient(1000px 550px at 110% 0%, rgba(80, 140, 240, 0.16), transparent 55%),
+    radial-gradient(1300px 550px at -5% -10%, rgba(var(--accent-rgb), 0.14), transparent 55%),
+    radial-gradient(1000px 550px at 110% 0%, rgba(var(--accent-2-rgb), 0.16), transparent 55%),
     var(--bg);
   background-size: 100% 100%, 100% 100%, 100% 100%;
   animation: ambient-drift 60s ease-in-out infinite;

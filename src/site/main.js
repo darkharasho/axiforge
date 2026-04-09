@@ -6,11 +6,22 @@ import { setReadOnly as setEquipmentReadOnly } from "@renderer/modules/equipment
 import { setReadOnly as setSpecsReadOnly } from "@renderer/modules/specializations.js";
 import { setReadOnly as setDetailReadOnly } from "@renderer/modules/detail-panel.js";
 
+const VALID_THEMES = new Set([
+  "molten-core", "frostforge", "verdant-crucible", "cinderfall",
+  "copper", "cobalt", "mithril", "rose-gold",
+]);
+
 const app = document.getElementById("app");
 
 // ── SPA Routing ──────────────────────────────────────────────────────────
 function init() {
   const params = new URLSearchParams(location.search);
+
+  // Apply color theme from URL
+  const theme = params.get("t");
+  if (theme && VALID_THEMES.has(theme)) {
+    document.documentElement.setAttribute("data-theme", theme);
+  }
 
   // New format: ?b=fileId.key&n=slug
   let buildParam = params.get("b");

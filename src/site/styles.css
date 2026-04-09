@@ -1,5 +1,6 @@
 /* Import desktop CSS — one source of truth for component styles */
 @import "../renderer/styles/base.css";
+@import "../renderer/styles/themes.css";
 @import "../renderer/styles/layout.css";
 @import "../renderer/styles/buttons.css";
 @import "../renderer/styles/forms.css";

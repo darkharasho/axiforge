@@ -995,8 +995,8 @@
 
 /* Drop target */
 .lib-list-row.lib-drop-target {
-  background: rgba(200, 152, 72, 0.1);
-  border: 1px dashed rgba(200, 152, 72, 0.4);
+  background: rgba(var(--accent-rgb), 0.1);
+  border: 1px dashed rgba(var(--accent-rgb), 0.4);
 }
 
 /* Dragging */
@@ -1044,7 +1044,7 @@
 .lib-tv__row--pinned { border-left: 2px solid rgba(212, 192, 68, 0.4); }
 .lib-tv__item.lib-selected > .lib-tv__row { background: var(--panel); }
 .lib-tv__item.lib-drop-target > .lib-tv__row,
-.lib-tv__item.lib-drop-target { background: rgba(200, 152, 72, 0.1); }
+.lib-tv__item.lib-drop-target { background: rgba(var(--accent-rgb), 0.1); }
 .lib-tv__item.lib-dragging > .lib-tv__row,
 .lib-tv__item.lib-dragging { opacity: 0.4; }
 
@@ -1214,8 +1214,8 @@
 }
 
 .lib-grid-card.lib-drop-target {
-  border: 1px dashed rgba(200, 152, 72, 0.5);
-  background: rgba(200, 152, 72, 0.06);
+  border: 1px dashed rgba(var(--accent-rgb), 0.5);
+  background: rgba(var(--accent-rgb), 0.06);
 }
 
 .lib-grid-card.lib-dragging {
@@ -1342,8 +1342,8 @@
 }
 
 .lib-icon-item.lib-drop-target {
-  background: rgba(200, 152, 72, 0.08);
-  outline: 1px dashed rgba(200, 152, 72, 0.4);
+  background: rgba(var(--accent-rgb), 0.08);
+  outline: 1px dashed rgba(var(--accent-rgb), 0.4);
 }
 
 .lib-icon-item.lib-dragging {
@@ -1631,7 +1631,7 @@
 /* SortableJS drag classes */
 .lib-drag-ghost {
   opacity: 0.3;
-  background: rgba(200, 152, 72, 0.1) !important;
+  background: rgba(var(--accent-rgb), 0.1) !important;
 }
 
 .lib-drag-chosen {
@@ -1654,16 +1654,16 @@
 }
 
 .lib-drop-target {
-  outline: 2px dashed rgba(200, 152, 72, 0.6);
+  outline: 2px dashed rgba(var(--accent-rgb), 0.6);
   outline-offset: -2px;
-  background: rgba(200, 152, 72, 0.1) !important;
+  background: rgba(var(--accent-rgb), 0.1) !important;
 }
 
 .lib-breadcrumb__item.lib-drop-target {
   outline: none;
-  box-shadow: inset 0 0 0 2px rgba(200, 152, 72, 0.6);
+  box-shadow: inset 0 0 0 2px rgba(var(--accent-rgb), 0.6);
   border-radius: 4px;
-  background: rgba(200, 152, 72, 0.15) !important;
+  background: rgba(var(--accent-rgb), 0.15) !important;
   overflow: visible;
 }
 
@@ -1679,8 +1679,8 @@
 }
 
 .lib-root-drop-zone--active {
-  background: rgba(200, 152, 72, 0.1);
-  border-color: rgba(200, 152, 72, 0.5);
+  background: rgba(var(--accent-rgb), 0.1);
+  border-color: rgba(var(--accent-rgb), 0.5);
   color: var(--muted);
 }
 

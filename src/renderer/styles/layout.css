@@ -9,7 +9,7 @@
   justify-content: space-between;
   padding: 0 10px;
   border-bottom: 1px solid var(--line-soft);
-  background: rgba(10, 11, 14, 0.94);
+  background: var(--surface);
   backdrop-filter: blur(8px);
 }
 
@@ -212,7 +212,7 @@ body:has(.app-layout) {
   gap: 8px;
   padding: 8px 14px;
   min-height: 76px;
-  background: rgba(10, 12, 18, 0.98);
+  background: var(--surface);
   border-bottom: 1px solid var(--line);
   position: sticky;
   top: 0;
@@ -300,7 +300,7 @@ body:has(.app-layout) {
 
 .subnav__link-btn:hover {
   color: var(--accent);
-  background: rgba(200, 152, 72, 0.1);
+  background: rgba(var(--accent-rgb), 0.1);
 }
 
 .subnav__link-btn--copied {
@@ -309,8 +309,8 @@ body:has(.app-layout) {
 
 .subnav__save-status--saved {
   color: var(--accent);
-  background: rgba(200, 152, 72, 0.1);
-  border-color: rgba(200, 152, 72, 0.3);
+  background: rgba(var(--accent-rgb), 0.1);
+  border-color: rgba(var(--accent-rgb), 0.3);
 }
 
 .subnav__save-btn {
@@ -354,7 +354,7 @@ body:has(.app-layout) {
   right: 0;
   margin-top: 4px;
   min-width: 160px;
-  background: rgba(10, 17, 34, 0.98);
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 4px 0;
@@ -395,7 +395,7 @@ body:has(.app-layout) {
   align-items: center;
   gap: 4px;
   padding: 12px 0;
-  background: rgba(10, 12, 18, 0.98);
+  background: var(--surface);
   border-right: 1px solid var(--line);
 }
 
@@ -507,12 +507,12 @@ body:has(.app-layout) {
   letter-spacing: 0.5px;
   padding: 1px 5px;
   border-radius: 3px;
-  background: rgba(200, 152, 72, 0.15);
+  background: rgba(var(--accent-rgb), 0.15);
   color: var(--accent);
   margin-left: 6px;
   vertical-align: middle;
 }
 .aquatic-badge {
-  background: rgba(100, 170, 240, 0.15);
+  background: rgba(var(--accent-2-rgb), 0.15);
   color: var(--accent-2);
 }

@@ -1329,7 +1329,7 @@ function showPrompt(title, defaultValue = "") {
           <h3 class="confirm-modal__title">${title}</h3>
         </div>
         <div class="confirm-modal__body">
-          <input type="text" class="confirm-modal__input" value="" style="width:100%;padding:6px 8px;background:#151530;border:1px solid #303060;border-radius:4px;color:#ccd;font-size:0.9rem;outline:none;" />
+          <input type="text" class="confirm-modal__input" value="" style="width:100%;padding:6px 8px;background:var(--input-bg);border:1px solid var(--input-border);border-radius:4px;color:var(--text);font-size:0.9rem;outline:none;" />
         </div>
         <div class="confirm-modal__actions">
           <button class="confirm-modal__btn" data-action="cancel">Cancel</button>
@@ -1373,22 +1373,22 @@ function showImportModal() {
         </div>
         <div class="confirm-modal__body" style="display:flex;flex-direction:column;gap:10px;">
           <div>
-            <label style="display:block;font-size:0.8rem;color:#889;margin-bottom:4px;">Build Link</label>
+            <label style="display:block;font-size:0.8rem;color:var(--muted);margin-bottom:4px;">Build Link</label>
             <input
               type="text"
               id="import-link-input"
               placeholder="Paste [&amp;...] chat link here"
-              style="width:100%;padding:6px 8px;background:#151530;border:1px solid #303060;border-radius:4px;color:#ccd;font-size:0.9rem;outline:none;box-sizing:border-box;"
+              style="width:100%;padding:6px 8px;background:var(--input-bg);border:1px solid var(--input-border);border-radius:4px;color:var(--text);font-size:0.9rem;outline:none;box-sizing:border-box;"
             />
-            <div id="import-link-status" style="font-size:0.75rem;min-height:1.2em;margin-top:3px;color:#556;"></div>
+            <div id="import-link-status" style="font-size:0.75rem;min-height:1.2em;margin-top:3px;color:var(--text-dim);"></div>
           </div>
           <div>
-            <label style="display:block;font-size:0.8rem;color:#889;margin-bottom:4px;">Build Name</label>
+            <label style="display:block;font-size:0.8rem;color:var(--muted);margin-bottom:4px;">Build Name</label>
             <input
               type="text"
               id="import-name-input"
               placeholder="Build name"
-              style="width:100%;padding:6px 8px;background:#151530;border:1px solid #303060;border-radius:4px;color:#ccd;font-size:0.9rem;outline:none;box-sizing:border-box;"
+              style="width:100%;padding:6px 8px;background:var(--input-bg);border:1px solid var(--input-border);border-radius:4px;color:var(--text);font-size:0.9rem;outline:none;box-sizing:border-box;"
             />
           </div>
         </div>
@@ -1478,22 +1478,22 @@ function showGw2SkillsImportModal() {
         </div>
         <div class="confirm-modal__body" style="display:flex;flex-direction:column;gap:10px;">
           <div>
-            <label style="display:block;font-size:0.8rem;color:#889;margin-bottom:4px;">GW2Skills URL</label>
+            <label style="display:block;font-size:0.8rem;color:var(--muted);margin-bottom:4px;">GW2Skills URL</label>
             <input
               type="text"
               id="gw2s-url-input"
               placeholder="https://gw2skills.net/editor/?..."
-              style="width:100%;padding:6px 8px;background:#151530;border:1px solid #303060;border-radius:4px;color:#ccd;font-size:0.9rem;outline:none;box-sizing:border-box;"
+              style="width:100%;padding:6px 8px;background:var(--input-bg);border:1px solid var(--input-border);border-radius:4px;color:var(--text);font-size:0.9rem;outline:none;box-sizing:border-box;"
             />
-            <div id="gw2s-url-status" style="font-size:0.75rem;min-height:1.2em;margin-top:3px;color:#556;"></div>
+            <div id="gw2s-url-status" style="font-size:0.75rem;min-height:1.2em;margin-top:3px;color:var(--text-dim);"></div>
           </div>
           <div>
-            <label style="display:block;font-size:0.8rem;color:#889;margin-bottom:4px;">Build Name</label>
+            <label style="display:block;font-size:0.8rem;color:var(--muted);margin-bottom:4px;">Build Name</label>
             <input
               type="text"
               id="gw2s-name-input"
               placeholder="Build name"
-              style="width:100%;padding:6px 8px;background:#151530;border:1px solid #303060;border-radius:4px;color:#ccd;font-size:0.9rem;outline:none;box-sizing:border-box;"
+              style="width:100%;padding:6px 8px;background:var(--input-bg);border:1px solid var(--input-border);border-radius:4px;color:var(--text);font-size:0.9rem;outline:none;box-sizing:border-box;"
             />
           </div>
         </div>
@@ -1569,22 +1569,22 @@ function showShareCodeImportModal() {
         </div>
         <div class="confirm-modal__body" style="display:flex;flex-direction:column;gap:10px;">
           <div>
-            <label style="display:block;font-size:0.8rem;color:#889;margin-bottom:4px;">AxiCode</label>
+            <label style="display:block;font-size:0.8rem;color:var(--muted);margin-bottom:4px;">AxiCode</label>
             <input
               type="text"
               id="sharecode-input"
               placeholder="Paste <AxiForge:...> AxiCode here"
-              style="width:100%;padding:6px 8px;background:#151530;border:1px solid #303060;border-radius:4px;color:#ccd;font-size:0.9rem;outline:none;box-sizing:border-box;"
+              style="width:100%;padding:6px 8px;background:var(--input-bg);border:1px solid var(--input-border);border-radius:4px;color:var(--text);font-size:0.9rem;outline:none;box-sizing:border-box;"
             />
-            <div id="sharecode-status" style="font-size:0.75rem;min-height:1.2em;margin-top:3px;color:#556;"></div>
+            <div id="sharecode-status" style="font-size:0.75rem;min-height:1.2em;margin-top:3px;color:var(--text-dim);"></div>
           </div>
           <div>
-            <label style="display:block;font-size:0.8rem;color:#889;margin-bottom:4px;">Build Name</label>
+            <label style="display:block;font-size:0.8rem;color:var(--muted);margin-bottom:4px;">Build Name</label>
             <input
               type="text"
               id="sharecode-name-input"
               placeholder="Build name"
-              style="width:100%;padding:6px 8px;background:#151530;border:1px solid #303060;border-radius:4px;color:#ccd;font-size:0.9rem;outline:none;box-sizing:border-box;"
+              style="width:100%;padding:6px 8px;background:var(--input-bg);border:1px solid var(--input-border);border-radius:4px;color:var(--text);font-size:0.9rem;outline:none;box-sizing:border-box;"
             />
           </div>
         </div>

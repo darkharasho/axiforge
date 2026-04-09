@@ -142,7 +142,7 @@ export function renderOnboarding() {
     instruction.textContent = "Approve login at GitHub using this code.";
 
     const codeDisplay = document.createElement("div");
-    codeDisplay.style.cssText = "text-align:center;font-size:1.5rem;font-family:monospace;padding:0.75rem;background:#060d1d;border-radius:6px;margin:8px 0;letter-spacing:0.15em;";
+    codeDisplay.style.cssText = "text-align:center;font-size:1.5rem;font-family:monospace;padding:0.75rem;background:var(--input-bg);border-radius:6px;margin:8px 0;letter-spacing:0.15em;";
     codeDisplay.textContent = state.loginFlow.beginData.userCode || "";
 
     const copyBtn = makeButton("Copy code", "secondary", async () => {
@@ -540,7 +540,8 @@ function _getPublishedUrl() {
   const owner = state.onboarding?.targetOwner;
   const repo = state.onboarding?.repoName;
   if (!owner || !repo) return null;
-  return `https://${owner}.github.io/${repo}/?n=${encodeURIComponent(build.publishedSlug)}&b=${build.publishedFileId}.${build.publishedKey}`;
+  const theme = document.documentElement.getAttribute("data-theme");
+  return `https://${owner}.github.io/${repo}/?n=${encodeURIComponent(build.publishedSlug)}&b=${build.publishedFileId}.${build.publishedKey}${theme ? `&t=${theme}` : ""}`;
 }
 
 // ---------------------------------------------------------------------------

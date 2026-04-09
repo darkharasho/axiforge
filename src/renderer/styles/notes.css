@@ -39,7 +39,7 @@
 }
 
 .notes-toolbar__btn:hover {
-  background: rgba(200, 152, 72, 0.1);
+  background: rgba(var(--accent-rgb), 0.1);
   color: var(--accent);
 }
 
@@ -94,7 +94,7 @@
 }
 
 .notes-toolbar__preview--active {
-  background: rgba(200, 152, 72, 0.1);
+  background: rgba(var(--accent-rgb), 0.1);
   border-color: var(--accent);
   color: var(--accent);
 }
@@ -306,8 +306,8 @@
   align-items: center;
   gap: 4px;
   padding: 1px 8px;
-  background: rgba(200, 152, 72, 0.12);
-  border: 1px solid rgba(200, 152, 72, 0.25);
+  background: rgba(var(--accent-rgb), 0.12);
+  border: 1px solid rgba(var(--accent-rgb), 0.25);
   border-radius: 4px;
   color: var(--accent);
   font-size: 0.82rem;
@@ -317,8 +317,8 @@
 }
 
 .notes-mention:hover {
-  background: rgba(200, 152, 72, 0.2);
-  border-color: rgba(200, 152, 72, 0.4);
+  background: rgba(var(--accent-rgb), 0.2);
+  border-color: rgba(var(--accent-rgb), 0.4);
 }
 
 .notes-mention__icon {
@@ -370,7 +370,7 @@
 
 .notes-autocomplete__item:hover,
 .notes-autocomplete__item--selected {
-  background: rgba(200, 152, 72, 0.08);
+  background: rgba(var(--accent-rgb), 0.08);
 }
 
 .notes-autocomplete__item-icon {
@@ -405,8 +405,8 @@
 .notes-feature-hint {
   padding: 10px 14px;
   margin-top: 8px;
-  background: rgba(200, 152, 72, 0.06);
-  border: 1px solid rgba(200, 152, 72, 0.15);
+  background: rgba(var(--accent-rgb), 0.06);
+  border: 1px solid rgba(var(--accent-rgb), 0.15);
   border-radius: 8px;
   font-size: 0.78rem;
   color: var(--muted);
