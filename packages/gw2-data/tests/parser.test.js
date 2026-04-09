@@ -262,8 +262,13 @@ describe("mapWikiFactToApiFact", () => {
     });
   });
 
-  test("returns null for completely unknown fact type", () => {
-    const fact = mapWikiFactToApiFact("nonexistent_type_xyz", ["5"], {}, true, false);
+  test("unknown fact type with numeric value produces generic Number fact", () => {
+    const fact = mapWikiFactToApiFact("attack speed increase", ["15"], {}, true, false);
+    expect(fact).toEqual({ type: "Number", text: "Attack Speed Increase", value: 15 });
+  });
+
+  test("unknown fact type with no numeric value returns null", () => {
+    const fact = mapWikiFactToApiFact("nonexistent_type_xyz", [], {}, true, false);
     expect(fact).toBeNull();
   });
 

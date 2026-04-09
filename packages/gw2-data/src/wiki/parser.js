@@ -204,7 +204,8 @@ function mapWikiFactToApiFact(factType, positional, params, isWvw, isUniversal) 
 
   // ── Healing ───────────────────────────────────────────────────────────
   if (type === "healing") {
-    const base = parseInt(stripWikiMarkup(params.base) || "0", 10);
+    // Base may come as named param or positional[0]: {{skill fact|healing|372|coefficient=0.25}}
+    const base = parseInt(stripWikiMarkup(params.base || positional[0]) || "0", 10);
     const coefficient = parseFloat(stripWikiMarkup(params.coefficient) || "0");
     return {
       type: "AttributeAdjust",
@@ -217,7 +218,7 @@ function mapWikiFactToApiFact(factType, positional, params, isWvw, isUniversal) 
 
   // ── Barrier ───────────────────────────────────────────────────────────
   if (type === "barrier") {
-    const base = parseInt(stripWikiMarkup(params.base) || "0", 10);
+    const base = parseInt(stripWikiMarkup(params.base || positional[0]) || "0", 10);
     const coefficient = parseFloat(stripWikiMarkup(params.coefficient) || "0");
     return {
       type: "AttributeAdjust",
@@ -320,7 +321,14 @@ function mapWikiFactToApiFact(factType, positional, params, isWvw, isUniversal) 
     };
   }
 
-  // Unknown — return null
+  // ── Unknown but has a numeric value — emit a generic Number fact ────
+  // Real wiki data has many one-off fact types like "attack speed increase",
+  // "adrenaline", "critical chance", etc. that carry a single numeric value.
+  if (positional[0] && !isNaN(parseFloat(stripWikiMarkup(positional[0])))) {
+    const label = type.replace(/\b\w/g, (c) => c.toUpperCase());
+    return { type: "Number", text: label, value: pos0Num() };
+  }
+
   return null;
 }
 
@@ -362,35 +370,38 @@ function parseWikitextFacts(wikitext, wvwGroupedWithPvp) {
       }
     }
 
-    // Determine game mode filter
+    // Determine game mode filter.
+    // Real wiki data uses compound modes like "pvp wvw" or "wvw pvp" meaning
+    // "this fact applies to both PvP and WvW".
     const gameMode = (params["game mode"] || "").toLowerCase().trim();
+    const gameModeTokens = gameMode ? gameMode.split(/\s+/) : [];
 
-    const isWvw = gameMode === "wvw";
-    const isPvp = gameMode === "pvp";
-    const isPve = gameMode === "pve";
-    const isUniversal = !gameMode;
+    const mentionsWvw = gameModeTokens.includes("wvw");
+    const mentionsPvp = gameModeTokens.includes("pvp");
+    const mentionsPve = gameModeTokens.includes("pve");
+    const isUniversal = gameModeTokens.length === 0;
 
     // Track PvE-only facts
-    if (isPve) {
+    if (mentionsPve && !mentionsWvw && !mentionsPvp) {
       hasPveOnly = true;
     }
 
     // Decide whether to include this fact in WvW output:
     // - universal facts (no game mode): always include
-    // - wvw facts: include
-    // - pvp facts: include only if wvwGroupedWithPvp
-    // - pve facts: skip
+    // - facts mentioning wvw: include
+    // - facts mentioning only pvp: include only if wvwGroupedWithPvp
+    // - facts mentioning only pve: skip
     let include = false;
     if (isUniversal) include = true;
-    else if (isWvw) include = true;
-    else if (isPvp && wvwGroupedWithPvp) include = true;
+    else if (mentionsWvw) include = true;
+    else if (mentionsPvp && wvwGroupedWithPvp) include = true;
 
     if (!include) continue;
 
     // Strip wiki markup from positionals
     const cleanPositionals = positional.map((p) => stripWikiMarkup(p));
 
-    const fact = mapWikiFactToApiFact(factType, cleanPositionals, params, isWvw, isUniversal);
+    const fact = mapWikiFactToApiFact(factType, cleanPositionals, params, mentionsWvw, isUniversal);
     if (fact) facts.push(fact);
   }
 
