@@ -3,16 +3,16 @@
   color-scheme: dark;
 
   /* ── Core palette ─────────────────────────────────────────────────────── */
-  --bg: #090a10;
-  --bg-2: #0d0e16;
-  --panel: #14161e;
-  --panel-2: #10121a;
-  --line: #1e2030;
-  --line-soft: #181a26;
-  --text: #e4e6ee;
-  --text-light: #b0b4c0;
-  --text-dim: #6a6e80;
-  --muted: #8890a6;
+  --bg: #06080e;
+  --bg-2: #0a0c14;
+  --panel: #10141c;
+  --panel-2: #0c1018;
+  --line: #1a1e2e;
+  --line-soft: #141828;
+  --text: #e0e4ee;
+  --text-light: #a8b0c4;
+  --text-dim: #606880;
+  --muted: #7880a0;
   --accent: #c89848;
   --accent-2: #64aaf0;
   --danger: #c5485f;
@@ -21,11 +21,11 @@
   --link: #64aaf0;
 
   /* ── Surfaces ─────────────────────────────────────────────────────────── */
-  --input-bg: #0c0e16;
-  --input-border: #252838;
-  --surface: rgba(10, 12, 18, 0.92);
-  --surface-hover: rgba(14, 16, 24, 0.95);
-  --panel-gradient: linear-gradient(180deg, rgba(20, 22, 30, 0.95), rgba(16, 18, 26, 0.95));
+  --input-bg: #080c14;
+  --input-border: #202838;
+  --surface: rgba(8, 10, 16, 0.92);
+  --surface-hover: rgba(12, 14, 22, 0.95);
+  --panel-gradient: linear-gradient(180deg, rgba(16, 20, 28, 0.95), rgba(12, 16, 24, 0.95));
 
   /* ── Interactive states ───────────────────────────────────────────────── */
   --hover-subtle: rgba(255, 255, 255, 0.05);
@@ -92,8 +92,8 @@ body {
   min-height: 100vh;
   font-family: "DM Sans", system-ui, sans-serif;
   background:
-    radial-gradient(1300px 550px at -5% -10%, rgba(200, 152, 72, 0.08), transparent 55%),
-    radial-gradient(1000px 550px at 110% 0%, rgba(100, 170, 240, 0.08), transparent 55%),
+    radial-gradient(1300px 550px at -5% -10%, rgba(200, 152, 72, 0.14), transparent 55%),
+    radial-gradient(1000px 550px at 110% 0%, rgba(80, 140, 240, 0.16), transparent 55%),
     var(--bg);
   background-size: 100% 100%, 100% 100%, 100% 100%;
   animation: ambient-drift 60s ease-in-out infinite;
