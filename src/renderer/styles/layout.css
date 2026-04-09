@@ -196,7 +196,7 @@ body:has(.app-layout) {
 
 .app-layout {
   display: grid;
-  grid-template-columns: 100px 1fr;
+  grid-template-columns: 54px 1fr;
   height: calc(100vh - 40px);
   margin-top: 40px;
 }
@@ -208,7 +208,7 @@ body:has(.app-layout) {
   gap: 8px;
   padding: 8px 14px;
   min-height: 76px;
-  background: rgba(10, 17, 34, 0.98);
+  background: rgba(10, 12, 18, 0.98);
   border-bottom: 1px solid var(--line);
   position: sticky;
   top: 0;
@@ -220,9 +220,9 @@ body:has(.app-layout) {
 }
 
 .subnav__item {
-  padding: 10px 16px;
+  padding: 8px 16px;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   background: transparent;
   cursor: pointer;
   color: var(--text-dim);
@@ -233,7 +233,7 @@ body:has(.app-layout) {
   display: flex;
   align-items: center;
   gap: 7px;
-  transition: background 0.15s, color 0.15s;
+  transition: background 0.2s, color 0.2s, transform 0.15s;
   white-space: nowrap;
 }
 
@@ -245,12 +245,12 @@ body:has(.app-layout) {
 }
 
 .subnav__item:hover {
-  background: var(--hover-accent);
+  background: var(--hover-subtle);
   color: var(--text);
 }
 
 .subnav__item--active {
-  background: var(--hover-accent-strong);
+  background: var(--hover-accent);
   color: var(--accent);
 }
 
@@ -388,10 +388,10 @@ body:has(.app-layout) {
 .leftnav {
   display: flex;
   flex-direction: column;
-  align-items: stretch;
+  align-items: center;
   gap: 4px;
   padding: 12px 0;
-  background: rgba(8, 14, 28, 0.98);
+  background: rgba(10, 12, 18, 0.98);
   border-right: 1px solid var(--line);
 }
 
@@ -399,26 +399,41 @@ body:has(.app-layout) {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  width: calc(100% - 16px);
-  margin: 0 8px;
-  padding: 10px 6px;
+  justify-content: center;
+  gap: 0;
+  width: 40px;
+  height: 40px;
+  padding: 0;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   background: transparent;
   cursor: pointer;
   color: var(--text-dim);
-  transition: background 0.15s, color 0.15s;
+  position: relative;
+  transition: background 0.2s, color 0.2s, transform 0.2s;
 }
 
 .leftnav__item:hover {
   background: var(--hover-accent);
   color: var(--text);
+  transform: translateY(-1px);
 }
 
 .leftnav__item--active {
   background: var(--hover-accent-strong);
   color: var(--accent);
+}
+
+.leftnav__item--active::before {
+  content: '';
+  position: absolute;
+  left: -6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 20px;
+  background: var(--accent);
+  border-radius: 0 2px 2px 0;
 }
 
 .leftnav__icon {
@@ -428,12 +443,7 @@ body:has(.app-layout) {
 }
 
 .leftnav__label {
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  text-align: center;
-  white-space: nowrap;
+  display: none;
 }
 
 .page-content {
