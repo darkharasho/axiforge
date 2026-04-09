@@ -44,9 +44,11 @@ describe("splits.json data integrity", () => {
     const quickness = wvw.facts.find((f) => f.status === "Quickness");
     expect(quickness).toBeDefined();
     expect(quickness.duration).toBe(2.5);
-    // Must include Adrenaline Stage buff facts with correct stacks
-    const stages = wvw.facts.filter((f) => f.status === "Heightened Focus");
+    // Must include three Adrenaline Stage buff facts with unique status names
+    const stages = wvw.facts.filter((f) => /^Adrenaline Stage/.test(f.status));
     expect(stages).toHaveLength(3);
-    expect(stages.map((f) => f.apply_count)).toEqual([2, 3, 4]);
+    expect(stages.map((f) => f.status)).toEqual([
+      "Adrenaline Stage 1", "Adrenaline Stage 2", "Adrenaline Stage 3",
+    ]);
   });
 });

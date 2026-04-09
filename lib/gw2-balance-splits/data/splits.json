@@ -100930,26 +100930,26 @@
             },
             {
               "type": "Buff",
-              "text": "Adrenaline Stage 1",
-              "status": "Heightened Focus",
+              "text": "+7.5% Healing Increase to Others",
+              "status": "Adrenaline Stage 1",
               "duration": 15,
-              "apply_count": 2,
+              "apply_count": 1,
               "icon": "https://render.guildwars2.com/file/FC5A1E5591B670A175ED01297B48C7F2B1DC1FED/1012806.png"
             },
             {
               "type": "Buff",
-              "text": "Adrenaline Stage 2",
-              "status": "Heightened Focus",
+              "text": "+11.25% Healing Increase to Others",
+              "status": "Adrenaline Stage 2",
               "duration": 15,
-              "apply_count": 3,
+              "apply_count": 1,
               "icon": "https://render.guildwars2.com/file/FC5A1E5591B670A175ED01297B48C7F2B1DC1FED/1012806.png"
             },
             {
               "type": "Buff",
-              "text": "Adrenaline Stage 3",
-              "status": "Heightened Focus",
+              "text": "+15% Healing Increase to Others",
+              "status": "Adrenaline Stage 3",
               "duration": 15,
-              "apply_count": 4,
+              "apply_count": 1,
               "icon": "https://render.guildwars2.com/file/FC5A1E5591B670A175ED01297B48C7F2B1DC1FED/1012806.png"
             }
           ],

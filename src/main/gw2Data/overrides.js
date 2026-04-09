@@ -65,6 +65,18 @@ const KNOWN_TRAIT_FACTS_OVERRIDES = new Map([
     { type: "Number",   text: "Adrenaline", icon: `${_IC}/E1E7C4D3A6E62F3D5C9F627CE8175BFB0C614CBE/156652.png`, value: 5 },
     { type: "NoData",   text: "Combat Only", icon: `${_IC}/9352ED3244417304995F26CB01AE76BB7E547052/156661.png` },
   ]],
+  // Heightened Focus (trait 1317, Discipline spec 51) — GW2 API returns generic "Heightened Focus"
+  // Buff stacks (apply_count 2/3/4) with no percentage values. In-game the trait shows three
+  // Adrenaline Stages with specific Healing Increase percentages per burst adrenaline level.
+  // Wiki: https://wiki.guildwars2.com/wiki/Heightened_Focus
+  [1317, [
+    { type: "Recharge", text: "Recharge",         icon: `${_IC}/D767B963D120F077C3B163A05DC05A7317D7DB70/156651.png`, value: 12 },
+    { type: "Percent",  text: "Health Threshold",  icon: `${_IC}/B0CD8077991E4FB1622D2930337ED7F9B54211D5/156665.png`, percent: 50 },
+    { type: "Buff",     text: "Quickness",         status: "Quickness", icon: `${_IC}/D4AB6401A6D6917C3D4F230764452BCCE1035B0D/1012835.png`, duration: 4, apply_count: 1 },
+    { type: "Buff",     text: "+10% Healing Increase to Others",   status: "Adrenaline Stage 1", icon: `${_IC}/FC5A1E5591B670A175ED01297B48C7F2B1DC1FED/1012806.png`, duration: 15, apply_count: 1 },
+    { type: "Buff",     text: "+15% Healing Increase to Others",   status: "Adrenaline Stage 2", icon: `${_IC}/FC5A1E5591B670A175ED01297B48C7F2B1DC1FED/1012806.png`, duration: 15, apply_count: 1 },
+    { type: "Buff",     text: "+20% Healing Increase to Others",   status: "Adrenaline Stage 3", icon: `${_IC}/FC5A1E5591B670A175ED01297B48C7F2B1DC1FED/1012806.png`, duration: 15, apply_count: 1 },
+  ]],
   // Strengthening Stanzas (trait 2385, Paragon spec 74) — GW2 API returns Buff facts for
   // Chant of Action/Recuperation/Freedom with empty descriptions and 0s durations.
   // In-game the trait grants: Action +10% Damage & Condition Damage, Recuperation −7%
