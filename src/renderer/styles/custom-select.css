@@ -27,7 +27,7 @@
 }
 
 .cselect--open .cselect__trigger {
-  border-color: var(--accent-2);
+  border-color: var(--accent);
   box-shadow: 0 0 0 2px var(--focus-ring);
 }
 
@@ -216,7 +216,7 @@
 }
 
 .cselect__search:focus {
-  border-color: var(--accent-2);
+  border-color: var(--accent);
   box-shadow: 0 0 0 2px var(--focus-ring);
 }
 

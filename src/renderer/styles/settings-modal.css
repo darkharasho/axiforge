@@ -1,4 +1,4 @@
-/* Settings Modal */
+/* Settings Modal — revamped */
 
 .settings-modal-overlay {
   position: fixed;
@@ -20,113 +20,172 @@
 }
 
 .settings-modal-overlay--hidden .settings-modal {
-  transform: scale(0.96);
+  transform: scale(0.96) translateY(8px);
   opacity: 0;
 }
 
 .settings-modal {
-  background: var(--panel-2);
+  background: var(--bg-2);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: var(--shadow-lg);
-  width: 480px;
+  width: 520px;
   max-width: calc(100vw - 48px);
   max-height: calc(100vh - 48px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  transition: transform 0.2s ease-out, opacity 0.2s ease-out;
+  transition: transform 0.25s cubic-bezier(0.22, 0.68, 0.35, 1), opacity 0.2s ease-out;
 }
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
 
 .settings-modal__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 18px;
-  background: var(--panel);
+  padding: 16px 20px;
   border-bottom: 1px solid var(--line);
   flex-shrink: 0;
 }
 
 .settings-modal__title {
-  font-size: 0.95rem;
+  font-family: "Outfit", sans-serif;
+  font-size: 1rem;
   font-weight: 700;
+  letter-spacing: 0.02em;
   color: var(--text);
   margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-modal__title-icon {
+  width: 18px;
+  height: 18px;
+  color: var(--accent);
+  flex-shrink: 0;
 }
 
 .settings-modal__close {
-  background: var(--bg-2);
-  border: 1px solid var(--line);
-  border-radius: 6px;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border: none;
+  border-radius: 50%;
   color: var(--muted);
-  font-family: inherit;
-  font-size: 0.78rem;
-  padding: 5px 12px;
   cursor: pointer;
   flex-shrink: 0;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  transition: background 0.15s, color 0.15s;
 }
 
 .settings-modal__close:hover {
-  background: rgba(197, 72, 95, 0.2);
+  background: rgba(197, 72, 95, 0.15);
   color: var(--danger-text);
-  border-color: var(--danger);
 }
+
+/* ── Body ────────────────────────────────────────────────────────────────── */
 
 .settings-modal__body {
-  padding: 18px;
+  padding: 16px 20px 20px;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
+/* ── Section cards ───────────────────────────────────────────────────────── */
+
 .settings-modal__section {
-  margin-bottom: 16px;
+  background: var(--panel);
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
+  padding: 14px 16px;
+  opacity: 0;
+  transform: translateY(6px);
+  animation: sm-section-in 0.3s ease-out forwards;
+}
+
+.settings-modal__section:nth-child(1) { animation-delay: 0.04s; }
+.settings-modal__section:nth-child(2) { animation-delay: 0.08s; }
+.settings-modal__section:nth-child(3) { animation-delay: 0.12s; }
+
+@keyframes sm-section-in {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .settings-modal__section-title {
-  font-size: 0.7rem;
+  font-family: "Outfit", sans-serif;
+  font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--muted);
-  margin: 0 0 10px;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  margin: 0 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
 }
+
+.settings-modal__section-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+/* ── Labels & inputs ─────────────────────────────────────────────────────── */
 
 .settings-modal__label {
   display: block;
-  font-size: 0.8rem;
-  color: var(--text);
-  margin-bottom: 4px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-light);
+  margin-bottom: 6px;
 }
 
 .settings-modal__input {
   width: 100%;
   box-sizing: border-box;
   font-size: 0.8rem;
-  padding: 6px 10px;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  background: var(--bg);
+  padding: 8px 12px;
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-sm);
+  background: var(--input-bg);
   color: var(--text);
   outline: none;
   font-family: inherit;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 
 .settings-modal__input:focus {
-  border-color: var(--accent-2);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
-/* accent color replacements for 72,168,255 -> 100,170,240 */
+.settings-modal__input::placeholder {
+  color: var(--text-dim);
+  font-style: italic;
+}
 
-/* ── Subsections (grouped items under a section heading) ─────── */
+/* ── Subsections ─────────────────────────────────────────────────────────── */
 
 .settings-modal__subsection {
-  margin-top: 12px;
-  padding-left: 2px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line-soft);
 }
 
 .settings-modal__subsection:first-child {
-  margin-top: 4px;
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
 }
 
 .settings-modal__sublabel {
@@ -134,10 +193,10 @@
   font-size: 0.75rem;
   font-weight: 600;
   color: var(--text);
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 
-/* ── Radio group ─────────────────────────────────────────────── */
+/* ── Radio group ─────────────────────────────────────────────────────────── */
 
 .settings-modal__radio-group {
   display: flex;
@@ -151,7 +210,7 @@
   gap: 10px;
   padding: 8px 12px;
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: var(--bg);
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s;
@@ -163,8 +222,8 @@
 }
 
 .settings-modal__radio:has(.settings-modal__radio-input:checked) {
-  background: rgba(100, 170, 240, 0.08);
-  border-color: rgba(100, 170, 240, 0.4);
+  background: rgba(240, 144, 64, 0.08);
+  border-color: rgba(240, 144, 64, 0.4);
 }
 
 .settings-modal__radio-input {
@@ -193,11 +252,11 @@
 }
 
 .settings-modal__radio-input:checked ~ .settings-modal__radio-dot {
-  border-color: #64aaf0;
+  border-color: var(--accent);
 }
 
 .settings-modal__radio-input:checked ~ .settings-modal__radio-dot::after {
-  background: #64aaf0;
+  background: var(--accent);
 }
 
 .settings-modal__radio-content {
@@ -217,7 +276,7 @@
   color: var(--muted);
 }
 
-/* ── Thread ID row (legacy, kept for compat) ─────────────────── */
+/* ── Thread ID row (legacy) ──────────────────────────────────────────────── */
 
 .settings-modal__thread-id-row {
   margin-top: 10px;
@@ -227,7 +286,7 @@
   display: none;
 }
 
-/* ── Compact inline thread mode pills ────────────────────────── */
+/* ── Thread mode pills ───────────────────────────────────────────────────── */
 
 .settings-modal__thread-inline {
   display: flex;
@@ -250,25 +309,27 @@
 }
 
 .settings-modal__pill span {
-  padding: 3px 10px;
+  padding: 4px 12px;
   font-size: 0.7rem;
   font-weight: 600;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--bg);
+  border: 1px solid var(--input-border);
+  border-radius: 20px;
+  background: var(--input-bg);
   color: var(--muted);
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s;
 }
 
 .settings-modal__pill:hover span {
-  border-color: var(--line-soft);
+  border-color: var(--line);
   background: var(--panel);
+  color: var(--text-light);
 }
 
 .settings-modal__pill input:checked + span {
-  background: rgba(100, 170, 240, 0.12);
-  border-color: rgba(100, 170, 240, 0.5);
-  color: #64aaf0;
+  background: rgba(240, 144, 64, 0.12);
+  border-color: rgba(240, 144, 64, 0.4);
+  color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(240, 144, 64, 0.08);
 }
 
 .settings-modal__thread-id-input {
@@ -276,7 +337,7 @@
   min-width: 100px;
   max-width: 160px;
   font-size: 0.7rem !important;
-  padding: 3px 8px !important;
+  padding: 4px 10px !important;
 }
 
 .settings-modal__thread-id-input--hidden {
@@ -285,58 +346,68 @@
 
 .settings-modal__error {
   display: block;
-  font-size: 0.75rem;
-  color: var(--danger);
+  font-size: 0.72rem;
+  color: var(--danger-text);
   margin-top: 4px;
   min-height: 1em;
 }
+
+/* ── Footer / actions ────────────────────────────────────────────────────── */
 
 .settings-modal__actions {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-  padding: 14px 18px;
+  padding: 14px 20px;
   border-top: 1px solid var(--line);
   flex-shrink: 0;
 }
 
 .settings-modal__btn {
-  background: var(--bg-2);
+  background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 6px;
-  color: var(--muted);
+  border-radius: var(--radius-sm);
+  color: var(--text-light);
   font-family: inherit;
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   font-weight: 600;
-  padding: 7px 16px;
+  padding: 8px 18px;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.15s, box-shadow 0.15s;
 }
 
 .settings-modal__btn:hover {
-  background: var(--panel);
+  background: var(--line);
   color: var(--text);
-  border-color: var(--accent-2);
+  transform: scale(1.02);
+}
+
+.settings-modal__btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .settings-modal__btn--save {
-  background: rgba(100, 170, 240, 0.15);
-  color: #64aaf0;
-  border-color: rgba(100, 170, 240, 0.4);
+  background: linear-gradient(180deg, #f09040, #e07020);
+  color: #0a0a10;
+  border-color: rgba(240, 144, 64, 0.5);
+  font-weight: 700;
 }
 
 .settings-modal__btn--save:hover {
-  background: rgba(100, 170, 240, 0.3);
-  color: #7ac0ff;
-  border-color: #64aaf0;
+  background: linear-gradient(180deg, #f8a050, #e88030);
+  box-shadow: 0 2px 12px rgba(240, 144, 64, 0.3);
+  border-color: var(--accent);
 }
 
-/* ── Publishing section ──────────────────────────────────────── */
+/* ── Publishing section ──────────────────────────────────────────────────── */
 
 .settings-modal__hint {
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   color: var(--muted);
   margin: 0;
+  line-height: 1.5;
 }
 
 .settings-modal__setup-row {
@@ -355,22 +426,23 @@
 .settings-modal__badge {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-size: 0.7rem;
+  gap: 5px;
+  font-size: 0.68rem;
   font-weight: 600;
-  padding: 3px 8px;
-  border-radius: 4px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  letter-spacing: 0.02em;
 }
 
 .settings-modal__badge--ok {
-  color: #6ee7a0;
-  background: rgba(240, 144, 64, 0.12);
-  border: 1px solid rgba(240, 144, 64, 0.3);
+  color: var(--accent);
+  background: rgba(240, 144, 64, 0.1);
+  border: 1px solid rgba(240, 144, 64, 0.25);
 }
 
 .settings-modal__badge--pending {
   color: var(--muted);
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.03);
   border: 1px solid var(--line);
 }
 
@@ -378,24 +450,25 @@
   align-self: flex-start;
 }
 
-/* ── Cache section ─────────────────────────────────────────── */
+/* ── Cache section ───────────────────────────────────────────────────────── */
 
 .settings-modal__cache-row {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-top: 8px;
+  margin-top: 10px;
 }
 
 .settings-modal__cache-status {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 600;
+  transition: color 0.15s;
 }
 
 .settings-modal__cache-status--ok {
-  color: #6ee7a0;
+  color: var(--accent);
 }
 
 .settings-modal__cache-status--error {
-  color: var(--danger);
+  color: var(--danger-text);
 }

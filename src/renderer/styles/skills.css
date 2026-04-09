@@ -8,7 +8,7 @@
 .subpanel {
   border: 1px solid var(--line-soft);
   border-radius: 10px;
-  background: rgba(8, 14, 28, 0.72);
+  background: rgba(9, 10, 16, 0.72);
   padding: 10px;
   min-height: 260px;
 }
@@ -72,9 +72,9 @@
 }
 
 .weapon-swap-btn--active {
-  border-color: rgba(100, 200, 255, 0.85) !important;
-  color: rgba(120, 210, 255, 0.95) !important;
-  box-shadow: 0 0 8px rgba(80, 180, 240, 0.45), inset 0 1px 0 rgba(150, 220, 255, 0.15) !important;
+  border-color: rgba(100, 170, 240, 0.85) !important;
+  color: rgba(130, 190, 250, 0.95) !important;
+  box-shadow: 0 0 8px rgba(100, 170, 240, 0.45), inset 0 1px 0 rgba(140, 200, 250, 0.15) !important;
 }
 
 .weapon-swap-btn svg {
@@ -352,9 +352,9 @@
 }
 
 .pet-swap-btn--active {
-  border-color: rgba(100, 200, 255, 0.85) !important;
-  color: rgba(120, 210, 255, 0.95) !important;
-  box-shadow: 0 0 8px rgba(80, 180, 240, 0.45) !important;
+  border-color: rgba(100, 170, 240, 0.85) !important;
+  color: rgba(130, 190, 250, 0.95) !important;
+  box-shadow: 0 0 8px rgba(100, 170, 240, 0.45) !important;
 }
 
 .pet-swap-btn svg {
@@ -548,13 +548,13 @@
 .skill-slot--dragging .skill-icon-large {
   opacity: 0.5;
   cursor: grabbing;
-  border-color: rgba(74, 143, 214, 0.7);
-  box-shadow: 0 0 0 2px rgba(74, 143, 214, 0.3);
+  border-color: rgba(240, 144, 64, 0.7);
+  box-shadow: 0 0 0 2px rgba(240, 144, 64, 0.3);
 }
 
 .skill-slot--drag-over .skill-icon-large {
-  border-color: rgba(74, 143, 214, 0.9);
-  box-shadow: 0 0 0 2px rgba(74, 143, 214, 0.5), 0 0 14px rgba(74, 143, 214, 0.35);
+  border-color: rgba(240, 144, 64, 0.9);
+  box-shadow: 0 0 0 2px rgba(240, 144, 64, 0.5), 0 0 14px rgba(240, 144, 64, 0.35);
 }
 
 .skill-select-overlay {
@@ -593,7 +593,7 @@
 }
 
 .skill-icon-btn {
-  border: 1px solid rgba(159, 183, 221, 0.56);
+  border: 1px solid rgba(136, 144, 166, 0.45);
   border-radius: 8px;
   background: rgba(8, 12, 19, 0.74);
   width: 38px;
@@ -609,7 +609,7 @@
 }
 
 .skill-icon-btn:hover {
-  border-color: #93bbe9;
+  border-color: rgba(240, 144, 64, 0.6);
   background: rgba(11, 17, 27, 0.82);
   box-shadow: 0 4px 12px rgba(5, 11, 20, 0.54);
   transform: translateY(-1px);
@@ -622,18 +622,18 @@
 }
 
 .skill-card select:hover {
-  border-color: #4870b1;
+  border-color: rgba(240, 144, 64, 0.5);
 }
 
 .skill-card select option:disabled {
-  color: #8095bc;
+  color: var(--text-dim);
 }
 
 /* Land / Water segmented pill toggle */
 .underwater-toggle {
   display: flex;
   gap: 2px;
-  background: rgba(8, 14, 28, 0.72);
+  background: rgba(9, 10, 16, 0.72);
   border: 1px solid var(--line-soft);
   border-radius: 20px;
   padding: 3px;
@@ -661,12 +661,12 @@
 }
 
 .underwater-toggle__btn:hover:not(.underwater-toggle__btn--active) {
-  background: rgba(100, 140, 200, 0.12);
-  color: rgba(180, 200, 230, 0.9);
+  background: rgba(240, 144, 64, 0.12);
+  color: rgba(228, 230, 238, 0.9);
 }
 
 .underwater-toggle__btn--active {
-  background: rgba(74, 143, 214, 0.45);
+  background: rgba(240, 144, 64, 0.35);
   color: #fff;
   cursor: default;
 }
@@ -724,7 +724,7 @@
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: rgba(100, 180, 255, 0.9);
+  background: rgba(100, 170, 240, 0.9);
   display: grid;
   place-items: center;
   font-size: 6px;
@@ -739,7 +739,7 @@
   left: 50%;
   transform: translateX(-50%);
   background: rgba(12, 18, 32, 0.96);
-  border: 1px solid rgba(100, 140, 200, 0.3);
+  border: 1px solid rgba(240, 144, 64, 0.25);
   border-radius: 6px;
   padding: 8px 12px;
   min-width: 200px;
@@ -756,7 +756,7 @@
   color: #fff;
   margin-bottom: 5px;
   padding-bottom: 4px;
-  border-bottom: 1px solid rgba(100, 140, 200, 0.15);
+  border-bottom: 1px solid rgba(240, 144, 64, 0.15);
 }
 
 .boon-coverage__tooltip-row {
@@ -776,8 +776,8 @@
 }
 
 .boon-coverage__tooltip-tag--skill {
-  color: rgba(100, 180, 255, 0.9);
-  background: rgba(100, 180, 255, 0.15);
+  color: rgba(100, 170, 240, 0.9);
+  background: rgba(100, 170, 240, 0.15);
 }
 
 .boon-coverage__tooltip-tag--trait {

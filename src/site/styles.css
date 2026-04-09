@@ -70,14 +70,14 @@
 
 /* Tabs */
 .site-tabs { display: flex; gap: 0; border-bottom: 2px solid var(--line-soft); margin-bottom: 16px; }
-.site-tab { background: none; border: none; color: var(--muted); font-family: 'Exo 2', sans-serif; font-size: 0.88rem; font-weight: 600; padding: 10px 20px; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; letter-spacing: 0.04em; transition: color 0.15s, border-color 0.15s; }
+.site-tab { background: none; border: none; color: var(--muted); font-family: 'Outfit', sans-serif; font-size: 0.88rem; font-weight: 600; padding: 10px 20px; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; letter-spacing: 0.04em; transition: color 0.15s, border-color 0.15s; }
 .site-tab:hover { color: var(--text); }
 .site-tab--active { color: var(--accent); border-bottom-color: var(--accent); }
 .site-tab-content { display: none; }
 .site-tab-content--active { display: flex; flex-direction: column; gap: 12px; }
 
 /* Section headings used in SPA */
-.site-section-heading { color: var(--accent-2); font-family: 'Exo 2', sans-serif; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; margin: 20px 0 8px; }
+.site-section-heading { color: var(--accent); font-family: 'Outfit', sans-serif; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; margin: 20px 0 8px; }
 
 /* Notes display */
 .site-notes { color: var(--muted); padding: 12px 14px; border: 1px solid var(--line-soft); border-radius: 8px; background: var(--panel); font-size: 0.88rem; line-height: 1.5; white-space: pre-wrap; }

@@ -1,22 +1,22 @@
 :root{
   color-scheme: dark;
-  --bg:#04070f;
-  --surface:#0b1223;
-  --surface-2:#101a33;
-  --line:#1f3157;
-  --text:#e8f0ff;
-  --muted:#9bb0d9;
-  --accent:#45d18f;
-  --accent-2:#4aa7ff;
+  --bg:#090a10;
+  --surface:#14161e;
+  --surface-2:#10121a;
+  --line:#1e2030;
+  --text:#e4e6ee;
+  --muted:#8890a6;
+  --accent:#f09040;
+  --accent-2:#64aaf0;
 }
 *{box-sizing:border-box}
 body{
   margin:0;
   min-height:100vh;
-  font-family:"Segoe UI",ui-sans-serif,system-ui,-apple-system,sans-serif;
+  font-family:"DM Sans",ui-sans-serif,system-ui,-apple-system,sans-serif;
   background:
-    radial-gradient(1200px 500px at 0 -20%, rgba(69,209,143,0.2), transparent 60%),
-    radial-gradient(1000px 500px at 100% 0, rgba(74,167,255,0.2), transparent 55%),
+    radial-gradient(1200px 500px at 0 100%, rgba(240,144,64,0.08), transparent 60%),
+    radial-gradient(1000px 550px at 110% 0%, rgba(100,170,240,0.08), transparent 55%),
     var(--bg);
   color:var(--text);
 }
@@ -32,7 +32,7 @@ body{
   padding:14px;
   border:1px solid var(--line);
   border-radius:14px;
-  background:rgba(16,26,51,.75);
+  background:rgba(20,22,30,.75);
 }
 .search-wrap{
   display:grid;
@@ -43,9 +43,9 @@ body{
   color:var(--muted);
 }
 .search-wrap input{
-  border:1px solid #2a3f6b;
+  border:1px solid var(--line);
   border-radius:10px;
-  background:#070d1a;
+  background:#0c0e16;
   color:var(--text);
   padding:10px 12px;
 }
@@ -58,7 +58,7 @@ body{
 .build-card{
   border:1px solid var(--line);
   border-radius:14px;
-  background:linear-gradient(180deg, rgba(16,26,51,.96), rgba(10,17,34,.98));
+  background:linear-gradient(180deg, rgba(20,22,30,.96), rgba(16,18,26,.98));
   padding:14px;
 }
 .build-card h2{margin:0 0 6px;font-size:1.1rem}
@@ -77,12 +77,12 @@ body{
   gap:6px;
 }
 .token{
-  border:1px solid #2b4577;
-  background:#0c152a;
+  border:1px solid var(--line);
+  background:#0c0e16;
   border-radius:999px;
   padding:4px 8px;
   font-size:.74rem;
-  color:#c6d7fa;
+  color:var(--text);
 }
 .skill{
   display:grid;
@@ -96,8 +96,8 @@ body{
   width:30px;
   height:30px;
   border-radius:6px;
-  border:1px solid #2d3b60;
-  background:#0a1020;
+  border:1px solid var(--line);
+  background:var(--bg);
 }
 .site-footer{
   margin-top:18px;

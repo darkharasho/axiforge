@@ -16,7 +16,7 @@
 .detail-card {
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: rgba(11, 18, 36, 0.88);
+  background: rgba(16, 18, 26, 0.92);
   padding: 10px;
 }
 
@@ -39,7 +39,7 @@
   height: 56px;
   border-radius: 10px;
   border: 1px solid var(--line);
-  background: rgba(11, 18, 36, 0.5);
+  background: rgba(16, 18, 26, 0.5);
 }
 
 .detail-card h3 {
@@ -53,7 +53,7 @@
 
 .detail-card h4 {
   margin: 0 0 6px;
-  color: var(--accent-2);
+  color: var(--accent);
   font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -85,7 +85,7 @@
 .target-picker {
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: rgba(9, 16, 32, 0.8);
+  background: rgba(16, 18, 26, 0.8);
   padding: 10px;
 }
 
@@ -98,11 +98,11 @@
   border: 1px solid var(--line);
   border-radius: 11px;
   background:
-    linear-gradient(180deg, rgba(11, 21, 41, 0.97), rgba(8, 15, 30, 0.96)),
-    rgba(8, 15, 30, 0.96);
+    linear-gradient(180deg, rgba(16, 18, 26, 0.97), rgba(13, 14, 22, 0.96)),
+    rgba(13, 14, 22, 0.96);
   box-shadow:
-    0 12px 28px rgba(2, 7, 18, 0.72),
-    0 0 0 1px rgba(74, 113, 170, 0.18) inset;
+    0 12px 28px rgba(0, 0, 0, 0.72),
+    0 0 0 1px rgba(240, 144, 64, 0.12) inset;
   padding: 10px;
   pointer-events: none;
 }
@@ -245,7 +245,7 @@
 .fact-item--section {
   margin-top: 6px;
   padding-top: 4px;
-  border-top: 1px solid rgba(74, 113, 170, 0.25);
+  border-top: 1px solid var(--line-soft);
 }
 
 li.fact-item--split {

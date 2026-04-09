@@ -85,7 +85,7 @@
 .wiki-modal-btn:hover {
   background: var(--panel);
   color: var(--text);
-  border-color: var(--accent-2);
+  border-color: var(--accent);
 }
 
 .wiki-modal-btn--copied {
@@ -137,7 +137,7 @@
   width: 36px;
   height: 36px;
   border: 3px solid rgba(255, 255, 255, 0.08);
-  border-top-color: var(--accent-2, #6ab0f5);
+  border-top-color: var(--accent);
   border-radius: 50%;
   animation: wiki-spin 0.7s linear infinite;
 }

@@ -443,7 +443,7 @@ label {
 }
 
 .publish-ticker__row--active {
-  color: var(--accent-2);
+  color: var(--accent);
   opacity: 1;
   font-weight: 600;
 }
@@ -469,8 +469,8 @@ label {
   display: inline-block;
   width: 10px;
   height: 10px;
-  border: 1.5px solid rgba(100, 170, 240, 0.3);
-  border-top-color: var(--accent-2);
+  border: 1.5px solid rgba(240, 144, 64, 0.3);
+  border-top-color: var(--accent);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -512,14 +512,14 @@ label {
   border: 1px solid var(--line);
   border-radius: var(--radius-xs);
   background: var(--bg);
-  color: var(--accent-2);
+  color: var(--accent);
   padding: 2px 6px;
   font-size: 0.68rem;
   font-family: monospace;
   cursor: text;
   outline: none;
 }
-.publish-result__url:focus { border-color: var(--accent-2); }
+.publish-result__url:focus { border-color: var(--accent); }
 
 .publish-result__copy,
 .publish-result__preview {

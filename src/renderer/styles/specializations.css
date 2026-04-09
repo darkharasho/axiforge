@@ -77,7 +77,7 @@
 
 .spec-card__panel {
   position: relative;
-  border: 1px solid rgba(100, 170, 240, 0.35);
+  border: 1px solid rgba(240, 144, 64, 0.35);
   border-radius: 4px;
   padding: calc(8px * var(--spec-scale)) calc(12px * var(--spec-scale)) calc(10px * var(--spec-scale));
   background-color: #070f1d;

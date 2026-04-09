@@ -60,7 +60,7 @@
 .panel select:focus,
 .panel textarea:focus {
   outline: none;
-  border-color: var(--accent-2);
+  border-color: var(--accent);
   box-shadow: 0 0 0 2px var(--focus-ring);
 }
 
@@ -85,7 +85,7 @@
 }
 
 .tag-container:focus-within {
-  border-color: var(--accent-2);
+  border-color: var(--accent);
   box-shadow: 0 0 0 2px var(--focus-ring);
 }
 

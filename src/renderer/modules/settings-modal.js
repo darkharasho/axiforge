@@ -33,18 +33,27 @@ export function initSettingsModal() {
   _overlay.innerHTML = `
     <div class="settings-modal">
       <div class="settings-modal__header">
-        <h3 class="settings-modal__title">Settings</h3>
+        <h3 class="settings-modal__title">
+          <svg class="settings-modal__title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          Settings
+        </h3>
         <button class="settings-modal__close" id="sm-close"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18L18 6M6 6L18 18"/></svg></button>
       </div>
       <div class="settings-modal__body">
         <div class="settings-modal__section" id="sm-publishing-section">
-          <h4 class="settings-modal__section-title">Publishing</h4>
+          <h4 class="settings-modal__section-title">
+            <svg class="settings-modal__section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+            Publishing
+          </h4>
           <label class="settings-modal__label">Repository owner</label>
           <div id="sm-target-picker"></div>
           <div id="sm-setup-row" class="settings-modal__setup-row"></div>
         </div>
         <div class="settings-modal__section">
-          <h4 class="settings-modal__section-title">Discord</h4>
+          <h4 class="settings-modal__section-title">
+            <svg class="settings-modal__section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            Discord
+          </h4>
           <div class="settings-modal__subsection">
             <label class="settings-modal__sublabel">Comp Webhook</label>
             <input type="text" class="settings-modal__input" id="sm-webhook-url" placeholder="https://discord.com/api/webhooks/..." autocomplete="off" spellcheck="false">
@@ -71,7 +80,10 @@ export function initSettingsModal() {
           </div>
         </div>
         <div class="settings-modal__section">
-          <h4 class="settings-modal__section-title">Data</h4>
+          <h4 class="settings-modal__section-title">
+            <svg class="settings-modal__section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+            Data
+          </h4>
           <p class="settings-modal__hint">GW2 API responses are cached for 24 hours to speed up launch times.</p>
           <div class="settings-modal__cache-row">
             <button class="settings-modal__btn" id="sm-clear-cache" type="button">Clear API Cache</button>
@@ -395,7 +407,7 @@ async function _clearCache() {
   _el.cacheStatus.textContent = "";
   try {
     await window.desktopApi.clearGw2Cache();
-    _el.cacheStatus.textContent = "Cache cleared";
+    _el.cacheStatus.textContent = "\u2713 Cache cleared";
     _el.cacheStatus.className = "settings-modal__cache-status settings-modal__cache-status--ok";
   } catch {
     _el.cacheStatus.textContent = "Failed to clear cache";

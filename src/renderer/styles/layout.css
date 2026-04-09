@@ -299,8 +299,8 @@ body:has(.app-layout) {
 }
 
 .subnav__link-btn:hover {
-  color: var(--accent-2);
-  background: rgba(100, 170, 240, 0.1);
+  color: var(--accent);
+  background: rgba(240, 144, 64, 0.1);
 }
 
 .subnav__link-btn--copied {

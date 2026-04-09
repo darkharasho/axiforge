@@ -124,7 +124,7 @@
 .confirm-modal__btn:hover {
   background: var(--panel);
   color: var(--text);
-  border-color: var(--accent-2);
+  border-color: var(--line-soft);
 }
 
 .confirm-modal__btn--confirm {
@@ -140,15 +140,16 @@
 }
 
 .confirm-modal__btn--primary {
-  background: rgba(100, 170, 240, 0.15);
-  color: #64aaf0;
-  border-color: rgba(100, 170, 240, 0.4);
+  background: linear-gradient(180deg, #f09040, #e07020);
+  color: #0a0a10;
+  border-color: rgba(240, 144, 64, 0.5);
+  font-weight: 700;
 }
 
 .confirm-modal__btn--primary:hover {
-  background: rgba(100, 170, 240, 0.3);
-  color: #7ac0ff;
-  border-color: #64aaf0;
+  background: linear-gradient(180deg, #f8a050, #e88030);
+  box-shadow: 0 2px 12px rgba(240, 144, 64, 0.3);
+  border-color: var(--accent);
 }
 
 .confirm-modal__btn--primary:disabled {
