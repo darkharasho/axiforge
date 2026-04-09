@@ -411,10 +411,11 @@ export function showHoverPreview(kind, entity, x, y) {
     && _entitySpecId !== _activeEliteSpecId;
   // Elementalist: only Tempest (spec 48) has Overload flips on attunement F1-F4 skills; suppress
   // for all other builds including Weaver where the entity spec matches the active elite spec.
+  // Also covers core attunement skills (spec 0) that fall back into the Weaver/Catalyst pool
+  // via the skill lookup cascade — their flipSkill still points to the Overload.
   // Restrict to F1-F4 slots so Evoker F5 familiar flip chains (e.g. Ignite → Conflagration) are
   // not suppressed.
-  const suppressElemNonTempestFlip = _entitySpecId > 0
-    && (state.editor?.profession ?? "") === "Elementalist"
+  const suppressElemNonTempestFlip = (state.editor?.profession ?? "") === "Elementalist"
     && _activeEliteSpecId !== 48
     && /^Profession_[1-4]$/.test(entity.slot || "");
   const chainCards = [buildSkillCard(entity, kind, false, dmgStats)];
