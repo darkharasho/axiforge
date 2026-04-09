@@ -283,7 +283,7 @@ export function resolveEntityFacts(entity) {
     if (f.type === "NoData") return true;
     const statusKey = (f.status || "").trim();
     if (statusKey) {
-      const key = `status:${statusKey}`;
+      const key = `status:${statusKey}|${f.apply_count || ""}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
