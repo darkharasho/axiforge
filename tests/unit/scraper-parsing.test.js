@@ -54,6 +54,36 @@ describe("seed.js parsing functions", () => {
       expect(fact).toBeNull();
     });
 
+    test("extracts barrier as AttributeAdjust with value and coefficient", () => {
+      const fact = mapWikiFactToApiFact("barrier", ["barrier", "1753"], { coefficient: "0.4" }, true, false);
+      expect(fact).toEqual({
+        type: "AttributeAdjust",
+        text: "Barrier",
+        value: 1753,
+        target: "Healing",
+        hit_count: 1,
+        coefficient: 0.4,
+        icon: "https://render.guildwars2.com/file/357922487919E8E84B914EAC13D5796DDDC42D14/1770209.png",
+      });
+    });
+
+    test("extracts barrier with alt label", () => {
+      const fact = mapWikiFactToApiFact("barrier", ["barrier", "500"], { alt: "Ally Barrier" }, true, false);
+      expect(fact.text).toBe("Ally Barrier");
+      expect(fact.type).toBe("AttributeAdjust");
+      expect(fact.value).toBe(500);
+    });
+
+    test("rejects range with value <= 1", () => {
+      const fact = mapWikiFactToApiFact("range", ["range", "1"], {}, true, false);
+      expect(fact).toBeNull();
+    });
+
+    test("accepts range with valid value", () => {
+      const fact = mapWikiFactToApiFact("range", ["range", "1200"], {}, true, false);
+      expect(fact).toEqual({ type: "Range", text: "Range", value: 1200 });
+    });
+
     test("maps gain to AttributeConversion", () => {
       const fact = mapWikiFactToApiFact("gain", ["gain", "Precision", "Vitality", "13"], {}, true, false);
       expect(fact).toEqual({
