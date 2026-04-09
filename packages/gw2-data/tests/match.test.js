@@ -51,6 +51,30 @@ describe("valueChanged", () => {
     const b = { type: "Damage", dmg_multiplier: 1.0, hit_count: 1 };
     expect(valueChanged(a, b)).toBe(false);
   });
+
+  test("detects hit_count change when base has it", () => {
+    const a = { type: "Damage", dmg_multiplier: 1.0, hit_count: 1 };
+    const b = { type: "Damage", dmg_multiplier: 1.0, hit_count: 3 };
+    expect(valueChanged(a, b)).toBe(true);
+  });
+
+  test("detects apply_count change", () => {
+    const a = { type: "Buff", status: "Might", apply_count: 1 };
+    const b = { type: "Buff", status: "Might", apply_count: 3 };
+    expect(valueChanged(a, b)).toBe(true);
+  });
+
+  test("detects percent change", () => {
+    const a = { type: "Percent", percent: 10 };
+    const b = { type: "Percent", percent: 20 };
+    expect(valueChanged(a, b)).toBe(true);
+  });
+
+  test("returns false when all VALUE_KEYS match", () => {
+    const a = { type: "Buff", status: "Might", duration: 5, apply_count: 2, value: 0 };
+    const b = { type: "Buff", status: "Might", duration: 5, apply_count: 2, value: 0 };
+    expect(valueChanged(a, b)).toBe(false);
+  });
 });
 
 describe("buildMatchTables", () => {
@@ -121,5 +145,32 @@ describe("buildMatchTables", () => {
     const { baseToSplit } = buildMatchTables(base, split);
     expect(baseToSplit.size).toBe(1);
     expect(baseToSplit.get(0)).toBe(0);
+  });
+
+  test("pass 3: does not match when keywords have no overlap", () => {
+    const base = [
+      { type: "Number", text: "Maximum Count", value: 3 },
+    ];
+    const split = [
+      { type: "Buff", text: "Fury Duration Increase", status: "Fury", duration: 5 },
+    ];
+    const { baseToSplit } = buildMatchTables(base, split);
+    expect(baseToSplit.size).toBe(0);
+  });
+
+  test("pass 2: positional match within group when texts differ", () => {
+    // Two Damage facts with different text but same group key
+    const base = [
+      { type: "Damage", text: "Initial Hit", dmg_multiplier: 1.0 },
+      { type: "Damage", text: "Final Hit", dmg_multiplier: 2.0 },
+    ];
+    const split = [
+      { type: "Damage", text: "First Strike", dmg_multiplier: 0.5 },
+      { type: "Damage", text: "Last Strike", dmg_multiplier: 1.0 },
+    ];
+    const { baseToSplit } = buildMatchTables(base, split);
+    // Positional: base[0]→split[0], base[1]→split[1]
+    expect(baseToSplit.get(0)).toBe(0);
+    expect(baseToSplit.get(1)).toBe(1);
   });
 });

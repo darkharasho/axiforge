@@ -41,6 +41,12 @@ describe("stripGw2Markup", () => {
   test("returns plain text unchanged", () => {
     expect(stripGw2Markup("No markup here")).toBe("No markup here");
   });
+
+  test("returns null/empty unchanged", () => {
+    expect(stripGw2Markup("")).toBe("");
+    expect(stripGw2Markup(null)).toBeNull();
+    expect(stripGw2Markup(undefined)).toBeUndefined();
+  });
 });
 
 describe("stripWikiMarkup", () => {

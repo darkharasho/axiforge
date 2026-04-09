@@ -21,6 +21,36 @@ describe("parseRelatedItems", () => {
   test("returns empty array for empty HTML", () => {
     expect(parseRelatedItems("")).toEqual([]);
   });
+
+  test("skips list items with no link title", () => {
+    const html = '<li>Some text with no link</li><li><a href="/wiki/Fireball" title="Fireball">Fireball</a></li>';
+    const items = parseRelatedItems(html);
+    expect(items).toHaveLength(1);
+    expect(items[0].name).toBe("Fireball");
+  });
+
+  test("extracts icon from img src", () => {
+    const html = '<li><img src="https://wiki.guildwars2.com/images/fireball.png"/><a title="Fireball">Fireball</a></li>';
+    const items = parseRelatedItems(html);
+    expect(items).toHaveLength(1);
+    expect(items[0].icon).toBe("https://wiki.guildwars2.com/images/fireball.png");
+  });
+
+  test("converts protocol-relative icon URLs to https", () => {
+    const html = '<li><img src="//wiki.guildwars2.com/images/fireball.png"/><a title="Fireball">Fireball</a></li>';
+    const items = parseRelatedItems(html);
+    expect(items).toHaveLength(1);
+    expect(items[0].icon).toBe("https://wiki.guildwars2.com/images/fireball.png");
+  });
+
+  test("omits icon and context properties when absent", () => {
+    const html = '<li><a title="Fireball">Fireball</a></li>';
+    const items = parseRelatedItems(html);
+    expect(items).toHaveLength(1);
+    expect(items[0]).toEqual({ name: "Fireball" });
+    expect(items[0]).not.toHaveProperty("icon");
+    expect(items[0]).not.toHaveProperty("context");
+  });
 });
 
 describe("parseRelatedGroups", () => {

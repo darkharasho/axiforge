@@ -41,6 +41,16 @@ describe("parseSplitGrouping", () => {
     const result = parseSplitGrouping("pve wvw, pvp");
     expect(result).toEqual({ wvwHasSplit: false, wvwGroupedWithPvp: false });
   });
+
+  test("returns no split for null/empty input", () => {
+    expect(parseSplitGrouping("")).toEqual({ wvwHasSplit: false, wvwGroupedWithPvp: false });
+    expect(parseSplitGrouping(null)).toEqual({ wvwHasSplit: false, wvwGroupedWithPvp: false });
+  });
+
+  test("pve, pvp → no WvW at all means no split", () => {
+    const result = parseSplitGrouping("pve, pvp");
+    expect(result).toEqual({ wvwHasSplit: false, wvwGroupedWithPvp: false });
+  });
 });
 
 describe("mapWikiFactToApiFact", () => {
@@ -210,12 +220,55 @@ describe("mapWikiFactToApiFact", () => {
     });
   });
 
-  test("returns null for unknown fact type", () => {
-    const fact = mapWikiFactToApiFact("text", [], {}, true, false);
+  test("barrier with base and coefficient", () => {
+    const fact = mapWikiFactToApiFact("barrier", [], { base: "200", coefficient: "0.3" }, true, false);
+    expect(fact).toMatchObject({
+      type: "AttributeAdjust",
+      text: "Barrier",
+      target: "Barrier",
+      value: 200,
+      coefficient: 0.3,
+    });
+  });
+
+  test("defiance break with value", () => {
+    const fact = mapWikiFactToApiFact("defiance break", ["300"], {}, true, false);
+    expect(fact).toEqual({ type: "Number", text: "Defiance Break", value: 300 });
+  });
+
+  test("defiance bar variant", () => {
+    const fact = mapWikiFactToApiFact("defiance bar", ["150"], {}, true, false);
+    expect(fact).toEqual({ type: "Number", text: "Defiance Break", value: 150 });
+  });
+
+  test("combo field", () => {
+    const fact = mapWikiFactToApiFact("combo", ["fire"], {}, true, false);
+    expect(fact).toEqual({ type: "ComboField", text: "Combo Field", field_type: "Fire" });
+  });
+
+  test("unblockable", () => {
+    const fact = mapWikiFactToApiFact("unblockable", [], {}, true, false);
+    expect(fact).toEqual({ type: "Unblockable", text: "Unblockable", value: true });
+  });
+
+  test("condition (burning) with stacks", () => {
+    const fact = mapWikiFactToApiFact("burning", ["3"], { stacks: "2" }, true, false);
+    expect(fact).toEqual({
+      type: "Buff",
+      text: "Burning",
+      status: "Burning",
+      duration: 3,
+      apply_count: 2,
+    });
+  });
+
+  test("returns null for completely unknown fact type", () => {
+    const fact = mapWikiFactToApiFact("nonexistent_type_xyz", ["5"], {}, true, false);
     expect(fact).toBeNull();
   });
 
-  test("returns null for combat-only/misc fact types", () => {
+  test("returns null for known skip types", () => {
+    expect(mapWikiFactToApiFact("text", [], {}, true, false)).toBeNull();
     expect(mapWikiFactToApiFact("combat", [], {}, true, false)).toBeNull();
     expect(mapWikiFactToApiFact("misc", [], {}, true, false)).toBeNull();
     expect(mapWikiFactToApiFact("pierces", [], {}, true, false)).toBeNull();

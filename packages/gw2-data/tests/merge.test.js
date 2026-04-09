@@ -100,4 +100,29 @@ describe("mergeFacts", () => {
     const result = mergeFacts(baseFacts, [], { complete: false });
     expect(result).toEqual(baseFacts);
   });
+
+  test("returns base facts unchanged when split facts is null", () => {
+    const baseFacts = [
+      { type: "Damage", text: "Damage", dmg_multiplier: 1.0 },
+    ];
+
+    const result = mergeFacts(baseFacts, null, { complete: false });
+    expect(result).toEqual(baseFacts);
+  });
+
+  test("defaults complete to false when options omitted", () => {
+    const baseFacts = [
+      { type: "Damage", text: "Damage", dmg_multiplier: 1.0 },
+      { type: "Buff", text: "Might", status: "Might", duration: 5 },
+    ];
+    const splitFacts = [
+      { type: "Damage", text: "Damage", dmg_multiplier: 0.5 },
+    ];
+
+    // No options arg — should behave like complete: false (keep unmatched base)
+    const result = mergeFacts(baseFacts, splitFacts);
+    expect(result).toHaveLength(2);
+    expect(result[0].dmg_multiplier).toBe(0.5);
+    expect(result[1].status).toBe("Might");
+  });
 });

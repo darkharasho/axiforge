@@ -43,6 +43,14 @@ describe("Gw2ApiClient", () => {
         client.fetchJson("https://api.guildwars2.com/v2/skills/5489")
       ).rejects.toThrow("500");
     });
+
+    test("throws immediately on 4xx (non-429) without retrying", async () => {
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 404, statusText: "Not Found" });
+      await expect(
+        client.fetchJson("https://api.guildwars2.com/v2/skills/99999")
+      ).rejects.toThrow("404");
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe("fetchByIds", () => {
@@ -108,6 +116,22 @@ describe("Gw2ApiClient", () => {
       expect(result).toEqual({ fresh: true });
       const result2 = await client.fetchCached("test-key", "https://example.com", 60000);
       expect(result2).toEqual({ fresh: true });
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("constructor defaults", () => {
+    test("defaults to MemoryCache when no cache provided", async () => {
+      const defaultClient = new Gw2ApiClient({ fetch: mockFetch });
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ id: 1 }),
+      });
+      const result = await defaultClient.fetchCached("k", "https://example.com", 60000);
+      expect(result).toEqual({ id: 1 });
+      // Second call should hit cache
+      const result2 = await defaultClient.fetchCached("k", "https://example.com", 60000);
+      expect(result2).toEqual({ id: 1 });
       expect(mockFetch).toHaveBeenCalledTimes(1);
     });
   });
