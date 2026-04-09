@@ -1,3 +1,13 @@
+## Version v0.1.9 — April 8, 2026
+
+### Bug Fixes
+- Rune, sigil, food, utility, and relic mentions in build notes now render as styled tooltip chips in the published SPA instead of plain text
+- Generic `@[item:...]` mentions are automatically resolved to their specific type (rune, food, sigil, etc.) at publish time
+- Unresolved mentions now render as styled chips instead of falling back to plain text
+
+### Other Changes
+- Unified design system with consistent CSS tokens across all UI components
+
 ## Version v0.1.8 — April 7, 2026
 
 ### New Features
