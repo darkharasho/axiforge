@@ -1641,4 +1641,14 @@ describe("catalog caching", () => {
     expect(catalog1).not.toBe(catalog2); // different object after cache clear
     expect(catalog2.profession.id).toBe("Warrior"); // still correct data
   });
+
+  test("concurrent calls for same profession share a single build", async () => {
+    const [cat1, cat2, cat3] = await Promise.all([
+      gw2Data.getProfessionCatalog("Warrior", "en"),
+      gw2Data.getProfessionCatalog("Warrior", "en"),
+      gw2Data.getProfessionCatalog("Warrior", "en"),
+    ]);
+    expect(cat1).toBe(cat2);
+    expect(cat2).toBe(cat3);
+  });
 });
