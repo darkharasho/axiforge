@@ -604,6 +604,18 @@ export function hideHoverPreview() {
 export async function selectDetail(kind, entity) {
   if (_readOnly) return;
   if (!entity) return;
+  const facts = resolveEntityFacts(entity);
+  // Fall back to extracting timing from facts when wiki infobox data isn't available
+  let recharge = entity.recharge || null;
+  let activation = entity.activation || null;
+  if (!recharge) {
+    const rchFact = facts.find((f) => f.type === "Recharge" && f.value > 0);
+    if (rchFact) recharge = { pve: rchFact.value };
+  }
+  if (!activation) {
+    const actFact = facts.find((f) => f.type === "Time" && /cast|activation/i.test(f.text || "") && f.duration > 0);
+    if (actFact) activation = { pve: actFact.duration };
+  }
   const detail = {
     kind,
     entityId: Number(entity.id) || null,
@@ -612,13 +624,13 @@ export async function selectDetail(kind, entity) {
     icon: entity.icon || "",
     iconFallback: entity.iconFallback || "",
     description: stripGw2Markup(entity.description),
-    facts: resolveEntityFacts(entity),
+    facts,
     wiki: { loading: true, summary: "", url: "" },
     hasSplit: Boolean(entity.hasSplit),
     isAquaticOnly: _isAquaticOnlySkill(kind, entity),
     slot: entity.slot || "",
-    recharge: entity.recharge || null,
-    activation: entity.activation || null,
+    recharge,
+    activation,
   };
   state.detail = detail;
   renderDetailPanel();
