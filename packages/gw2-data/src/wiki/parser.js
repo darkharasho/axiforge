@@ -76,6 +76,40 @@ const CONDITIONS = new Set([
   "weakness",
 ]);
 
+// Wiki fact types whose numeric value is a percentage (e.g. "damage reduction|33" → 33%).
+// These fall through to the generic Number handler without this set, losing the % symbol.
+const PERCENT_TYPES = new Set([
+  "critical chance",
+  "critical chance increase",
+  "damage increase",
+  "damage reduction",
+  "condition damage increase",
+  "condition duration increase",
+  "condition duration reduction",
+  "attack speed increase",
+  "movement speed increase",
+  "movement speed reduction",
+  "endurance recovery rate",
+  "healing effectiveness increase",
+  "healing effectiveness reduction",
+  "incoming damage increase",
+  "incoming damage reduction",
+  "incoming healing increase",
+  "incoming healing reduction",
+  "life force cost",
+  "life force drain",
+  "outgoing damage increase",
+  "outgoing damage reduction",
+  "outgoing healing increase",
+  "outgoing healing reduction",
+  "strike damage increase",
+  "strike damage reduction",
+  "condition damage reduction",
+  "boon duration increase",
+  "maximum health increase",
+  "maximum health reduction",
+]);
+
 /**
  * Split a string on `|` while respecting `{{...}}` nesting.
  * @param {string} s
@@ -354,11 +388,22 @@ function mapWikiFactToApiFact(factType, positional, params, isWvw, isUniversal) 
     };
   }
 
-  // ── Unknown but has a numeric value — emit a generic Number fact ────
-  // Real wiki data has many one-off fact types like "attack speed increase",
-  // "adrenaline", "critical chance", etc. that carry a single numeric value.
+  // ── Known percentage fact types ────────────────────────────────────
+  // Many wiki fact types carry a percentage value (e.g. "damage reduction|33").
+  // Without this, they fall through to generic Number and lose the % suffix.
+  if (PERCENT_TYPES.has(type)) {
+    const label = type.replace(/\b\w/g, (c) => c.toUpperCase());
+    return { type: "Percent", text: label, percent: pos0Num() };
+  }
+
+  // ── Unknown but has a numeric value ────────────────────────────────
   if (positional[0] && !isNaN(parseFloat(stripWikiMarkup(positional[0])))) {
     const label = type.replace(/\b\w/g, (c) => c.toUpperCase());
+    // Heuristic: fact type names containing "increase", "reduction", "chance",
+    // or "rate" are almost always percentages in GW2 wiki templates.
+    if (/(?:increase|reduction|chance|rate|cost|drain)$/.test(type)) {
+      return { type: "Percent", text: label, percent: pos0Num() };
+    }
     return { type: "Number", text: label, value: pos0Num() };
   }
 
