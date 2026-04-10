@@ -1,10 +1,29 @@
 // src/renderer/modules/engine-bridge.js
 //
-// Adapter layer between renderer state and @axi/gw2-data engine.
-// Only file that knows about both shapes. Dev-mode only validation.
+// Production bridge between renderer state and @axi/gw2-data engine.
+// Only file that imports from the CJS engine package.
 
 import * as engine from "@axi/gw2-data/engine";
-const { computeAttributes, analyzeBoons, loadOverrides } = engine;
+const { computeAttributes, analyzeBoons, analyzeCombos, loadOverrides, computeSlotStats: engineSlotStats, collectModifiers: engineCollectModifiers } = engine;
+
+// Re-export engine constants for renderer modules that need them
+export const {
+  MIGHT_POWER_PER_STACK,
+  MIGHT_CONDI_PER_STACK,
+  FURY_CRIT_CHANCE,
+  FURY_CRIT_CHANCE_WVW,
+  STACKING_SIGIL_DEFS,
+  SIGNET_PASSIVE_BUFFS,
+  BOON_NAMES,
+  CONDITION_NAMES,
+  CONDITION_NAME_NORMALIZE,
+  BUFF_FACT_TYPES,
+  STAT_COMBOS_BY_LABEL,
+  SLOT_WEIGHTS,
+  TWO_HAND_WEIGHTS,
+  AQUATIC_SLOTS,
+  LAND_ONLY_SLOTS,
+} = engine;
 
 // Cache overrides — loaded once, immutable
 let _overrides = null;
@@ -12,11 +31,6 @@ function getOverrides() {
   if (!_overrides) _overrides = loadOverrides();
   return _overrides;
 }
-
-const ALL_STAT_KEYS = [
-  "Power", "Precision", "Toughness", "Vitality", "Ferocity",
-  "ConditionDamage", "Expertise", "Concentration", "HealingPower",
-];
 
 /**
  * Transform renderer state.editor into the engine's build context shape.
@@ -70,91 +84,167 @@ export function buildEngineCatalogs(state) {
 }
 
 /**
- * Run engine computation and compare against old code's result.
- * Logs mismatches to console. Only call in dev mode.
+ * Compute all stats via the engine. Returns the full engine result:
+ * { base, equipment, food, runes, infusions, enrichment, utility, signets,
+ *   traits, conversions, boons, sigils, total, derived }
  */
-export function validateStatResult(oldTotals, state, label, assumedBoons = null, sigilStacks = null) {
-  try {
-    const ctx = buildEngineCtx(state, assumedBoons, sigilStacks);
-    const catalogs = buildEngineCatalogs(state);
-    const engineResult = computeAttributes(ctx, catalogs);
-    const newTotals = engineResult.total;
-
-    const mismatches = [];
-    for (const key of ALL_STAT_KEYS) {
-      const oldVal = oldTotals[key] || 0;
-      const newVal = newTotals[key] || 0;
-      if (oldVal !== newVal) {
-        mismatches.push(`${key}: old=${oldVal}, new=${newVal}`);
-      }
-    }
-
-    if (mismatches.length > 0) {
-      console.warn(`[ENGINE-MISMATCH] ${label} —`, mismatches.join(" | "));
-    }
-  } catch (err) {
-    console.error(`[ENGINE-ERROR] ${label} —`, err.message);
-  }
+export function computeStats(state, assumedBoons = null, sigilStacks = null) {
+  const ctx = buildEngineCtx(state, assumedBoons, sigilStacks);
+  const catalogs = buildEngineCatalogs(state);
+  return computeAttributes(ctx, catalogs);
 }
 
 /**
- * Run engine boon analysis and compare against old code's result.
- * Logs mismatches to console. Only call in dev mode.
+ * Compute boon/condition coverage via the engine.
+ * Returns { boons, conditions } in the same shape the renderer expects.
  */
-export function validateBoonResult(oldResult, state, label, catalog, editor, weaponSkills) {
-  try {
-    const resolvedSkills = (weaponSkills || []).filter(Boolean);
-    const resolvedTraits = [];
+export function computeBoons(state, weaponSkills = []) {
+  const ctx = buildEngineCtx(state);
+  const catalogs = buildEngineCatalogs(state);
+  const resolvedSkills = [...(weaponSkills || []).filter(Boolean)];
+  const resolvedTraits = [];
 
-    const ctx = buildEngineCtx(state);
-    const catalogs = buildEngineCatalogs(state);
-
-    for (const spec of ctx.specializations || []) {
-      const specId = Number(spec.specializationId || spec.id) || 0;
-      const specData = catalogs.specializationById.get(specId);
-      const allTraitIds = [
-        ...Object.values(spec.majorChoices || {}),
-        ...(specData?.minorTraits || []),
-      ].map(Number).filter(Boolean);
-      for (const tid of allTraitIds) {
-        const trait = catalogs.traitById.get(tid);
-        if (trait) resolvedTraits.push(trait);
-      }
+  for (const spec of ctx.specializations || []) {
+    const specId = Number(spec.specializationId || spec.id) || 0;
+    const specData = catalogs.specializationById.get(specId);
+    const allTraitIds = [
+      ...Object.values(spec.majorChoices || {}),
+      ...(specData?.minorTraits || []),
+    ].map(Number).filter(Boolean);
+    for (const tid of allTraitIds) {
+      const trait = catalogs.traitById.get(tid);
+      if (trait) resolvedTraits.push(trait);
     }
-
-    // Resolve heal/utility/elite skills
-    const skills = ctx.skills || {};
-    const skillIds = [skills.healId, ...(skills.utilityIds || []), skills.eliteId].filter(Boolean);
-    for (const id of skillIds) {
-      const skill = catalogs.skillById.get(Number(id));
-      if (skill) resolvedSkills.push(skill);
-    }
-
-    const overrides = getOverrides();
-    const activeTraitIds = new Set(resolvedTraits.map((t) => t.id));
-    const engineResult = analyzeBoons(resolvedSkills, resolvedTraits, overrides, activeTraitIds);
-
-    // Compare boon names
-    const oldBoonNames = new Set((oldResult.boons || []).map((b) => b.name));
-    const newBoonNames = new Set((engineResult.boons || []).map((b) => b.name));
-    const missingBoons = [...oldBoonNames].filter((n) => !newBoonNames.has(n));
-    const extraBoons = [...newBoonNames].filter((n) => !oldBoonNames.has(n));
-
-    const oldCondNames = new Set((oldResult.conditions || []).map((c) => c.name));
-    const newCondNames = new Set((engineResult.conditions || []).map((c) => c.name));
-    const missingConds = [...oldCondNames].filter((n) => !newCondNames.has(n));
-    const extraConds = [...newCondNames].filter((n) => !oldCondNames.has(n));
-
-    const issues = [];
-    if (missingBoons.length) issues.push(`missing boons: ${missingBoons.join(", ")}`);
-    if (extraBoons.length) issues.push(`extra boons: ${extraBoons.join(", ")}`);
-    if (missingConds.length) issues.push(`missing conditions: ${missingConds.join(", ")}`);
-    if (extraConds.length) issues.push(`extra conditions: ${extraConds.join(", ")}`);
-
-    if (issues.length > 0) {
-      console.warn(`[ENGINE-MISMATCH] ${label} —`, issues.join(" | "));
-    }
-  } catch (err) {
-    console.error(`[ENGINE-ERROR] ${label} —`, err.message);
   }
+
+  // Resolve heal/utility/elite skills
+  const skills = ctx.skills || {};
+  const skillIds = [skills.healId, ...(skills.utilityIds || []), skills.eliteId].filter(Boolean);
+  for (const id of skillIds) {
+    const skill = catalogs.skillById.get(Number(id));
+    if (skill) resolvedSkills.push(skill);
+  }
+
+  const overrides = getOverrides();
+  const activeTraitIds = new Set(resolvedTraits.map((t) => t.id));
+  return analyzeBoons(resolvedSkills, resolvedTraits, overrides, activeTraitIds);
+}
+
+/**
+ * Compute combo fields/finishers via the engine.
+ * Returns { fields, finishers }.
+ */
+export function computeCombos(state, weaponSkills = []) {
+  const ctx = buildEngineCtx(state);
+  const catalogs = buildEngineCatalogs(state);
+  const resolvedSkills = [...(weaponSkills || []).filter(Boolean)];
+  const resolvedTraits = [];
+
+  for (const spec of ctx.specializations || []) {
+    const specId = Number(spec.specializationId || spec.id) || 0;
+    const specData = catalogs.specializationById.get(specId);
+    const allTraitIds = [
+      ...Object.values(spec.majorChoices || {}),
+      ...(specData?.minorTraits || []),
+    ].map(Number).filter(Boolean);
+    for (const tid of allTraitIds) {
+      const trait = catalogs.traitById.get(tid);
+      if (trait) resolvedTraits.push(trait);
+    }
+  }
+
+  const skills = ctx.skills || {};
+  const skillIds = [skills.healId, ...(skills.utilityIds || []), skills.eliteId].filter(Boolean);
+  for (const id of skillIds) {
+    const skill = catalogs.skillById.get(Number(id));
+    if (skill) resolvedSkills.push(skill);
+  }
+
+  return analyzeCombos(resolvedSkills, resolvedTraits);
+}
+
+/**
+ * Thin wrapper around the engine's computeSlotStats.
+ * Matches the old renderer signature: computeSlotStats(comboLabel, slotKey).
+ */
+export function computeSlotStatsFromState(state, comboLabel, slotKey) {
+  const weapons = state.editor?.equipment?.weapons || {};
+  const gameMode = state.editor?.gameMode || "pve";
+  return engineSlotStats(comboLabel, slotKey, weapons, gameMode);
+}
+
+/**
+ * Compute Fury crit modifier from active traits.
+ * Returns the bonus crit % from Fury-related traits (e.g., Roiling Mists).
+ */
+export function computeFuryCritModifier(state) {
+  const ctx = buildEngineCtx(state);
+  const catalogs = buildEngineCatalogs(state);
+  const overrides = getOverrides();
+  const mods = engineCollectModifiers(ctx, catalogs, overrides);
+  let bonus = 0;
+  for (const mod of mods) {
+    if (mod.type === "critChance" && mod.condition === "fury") {
+      bonus += mod.value;
+    }
+  }
+  return bonus;
+}
+
+/**
+ * Compute Fury stat bonuses from active traits.
+ * Returns an object like { Ferocity: 120, Precision: 80 } or empty {}.
+ */
+export function computeFuryStatBonuses(state) {
+  const ctx = buildEngineCtx(state);
+  const catalogs = buildEngineCatalogs(state);
+  const overrides = getOverrides();
+  const mods = engineCollectModifiers(ctx, catalogs, overrides);
+  const bonuses = {};
+  for (const mod of mods) {
+    if (mod.type === "flatBonus" && mod.condition === "fury") {
+      bonuses[mod.stat] = (bonuses[mod.stat] || 0) + mod.value;
+    }
+  }
+  return bonuses;
+}
+
+/**
+ * Get Might per-stack values, accounting for Notoriety trait override.
+ */
+export function computeMightPerStack(state) {
+  const ctx = buildEngineCtx(state);
+  const catalogs = buildEngineCatalogs(state);
+  const overrides = getOverrides();
+  const mods = engineCollectModifiers(ctx, catalogs, overrides);
+  for (const mod of mods) {
+    if (mod.type === "mightModifier") {
+      return { power: mod.power, condi: mod.condi };
+    }
+  }
+  return { power: MIGHT_POWER_PER_STACK, condi: MIGHT_CONDI_PER_STACK };
+}
+
+/**
+ * Compute total Concentration for a build object (used by comp-boon-coverage).
+ * The build object has a different shape than state.editor — it comes from
+ * the comp/party system. We construct a minimal ctx from it.
+ */
+export function computeBuildConcentration(build, upgradeCatalog) {
+  if (!build?.equipment) return 0;
+  const fakeState = {
+    editor: {
+      profession: build.profession || "",
+      specializations: build.specializations || [],
+      equipment: build.equipment,
+      gameMode: "pve",
+      underwaterMode: false,
+      activeWeaponSet: 1,
+      skills: {},
+    },
+    activeCatalog: { traitById: new Map(), skillById: new Map(), specializationById: new Map() },
+    upgradeCatalog: upgradeCatalog || { runeById: new Map(), foodById: new Map(), utilityById: new Map(), infusionById: new Map(), enrichmentById: new Map() },
+  };
+  const result = computeStats(fakeState);
+  return result.total.Concentration || 0;
 }
