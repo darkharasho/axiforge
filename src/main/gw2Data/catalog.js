@@ -4,6 +4,10 @@ const {
   fetchGw2ByIds,
   dedupeNumbers,
 } = require("./fetch");
+const { WikiClient } = require("../../../packages/gw2-data/src/wiki/client");
+const { DiskCache } = require("../../../packages/gw2-data/src/wiki/cache");
+const { resolveEntityFacts } = require("../../../packages/gw2-data/src/wiki/resolver");
+const path = require("node:path");
 
 // Static snapshots of stable GW2 API data — these change only with expansions.
 // To update: re-fetch from the API and overwrite the JSON files.
@@ -16,6 +20,38 @@ function _setStaticData({ professions, specializations, legends } = {}) {
   PROFESSIONS_STATIC = professions || require("./professions.json");
   SPECIALIZATIONS_STATIC = specializations || require("./specializations.json");
   LEGENDS_STATIC = legends || require("./legends.json");
+}
+
+let _wikiClient = null;
+
+function initWikiClient(cacheDir) {
+  const cache = new DiskCache(path.join(cacheDir, "wiki-facts"));
+  _wikiClient = new WikiClient({ cache });
+}
+
+function getWikiClient() {
+  if (!_wikiClient) {
+    _wikiClient = new WikiClient();
+  }
+  return _wikiClient;
+}
+
+function applyWikiFacts(entity, wikiFactsById, overridesMap) {
+  // Emergency overrides always win
+  if (overridesMap.has(entity.id)) return;
+
+  const wikiFacts = wikiFactsById.get(entity.id);
+  if (!wikiFacts) return; // No wiki page — keep API facts
+
+  entity.facts = wikiFacts.pve;
+  entity.hasSplit = wikiFacts.hasSplit;
+
+  if (wikiFacts.wvw) {
+    entity.wvwFacts = wikiFacts.wvw;
+  }
+  if (wikiFacts.pvp) {
+    entity.pvpFacts = wikiFacts.pvp;
+  }
 }
 
 const {
@@ -595,53 +631,110 @@ async function getProfessionCatalog(professionId, lang = "en", gameMode = "pve")
     return apiKey.toLowerCase();
   }
 
+  // Hoist entity mapping
+  const mappedSpecializations = specializations.map((spec) => ({
+    id: spec.id,
+    name: spec.name || "",
+    profession: spec.profession || "",
+    elite: Boolean(spec.elite),
+    icon: spec.icon || "",
+    background: spec.background || "",
+    minorTraits: Array.isArray(spec.minor_traits) ? spec.minor_traits : [],
+    majorTraits: Array.isArray(spec.major_traits) ? spec.major_traits : [],
+  }));
+
+  const mappedTraits = traits.map((trait) => {
+    const mapped = {
+      id: trait.id,
+      name: trait.name || "",
+      // Use the render CDN icon directly — wiki FilePath lookups by trait name are unreliable
+      // because multiple traits across different professions can share the same name (e.g.
+      // "Deadly Aim", "No Quarter"), causing the wrong profession's icon to be served.
+      icon: trait.icon || "",
+      iconFallback: "",
+      description: trait.description || "",
+      tier: Number(trait.tier) || 0,
+      order: Number(trait.order) || 0,
+      slot: trait.slot || "",
+      specialization: Number(trait.specialization) || 0,
+      facts: KNOWN_TRAIT_FACTS_OVERRIDES.get(trait.id) || (Array.isArray(trait.facts) ? trait.facts.filter((f) => !f.requires_trait) : []),
+      traitedFacts: Array.isArray(trait.traited_facts) ? trait.traited_facts : [],
+      traitSkillIds: Array.isArray(trait.skills)
+        ? trait.skills.map((s) => Number(s?.id)).filter(Boolean)
+        : [],
+      traitSkillIcons: Array.isArray(trait.skills)
+        ? Object.fromEntries(
+            trait.skills
+              .filter((s) => s?.id && s?.icon)
+              .map((s) => [Number(s.id), String(s.icon)])
+          )
+        : {},
+    };
+    return mapped;
+  });
+
+  const mappedSkills = skills.map(mapSkill);
+
+  const mappedWeaponSkills = weaponSkillsRaw.map((skill) => {
+    const mapped = {
+      id: skill.id,
+      name: skill.name || "",
+      icon: skill.icon || "",
+      description: skill.description || "",
+      slot: skill.slot || "",
+      attunement: skill.attunement === "None" ? "" : (skill.attunement || ""),
+      dualWield: skill.dual_attunement === "None" ? "" : (skill.dual_attunement || ""),
+      weaponType: skill.weapon_type === "None" ? "" : (skill.weapon_type || ""),
+      flags: Array.isArray(skill.flags) ? skill.flags : [],
+      facts: Array.isArray(skill.facts) ? skill.facts : [],
+      flipSkill: Number(skill.flip_skill) || 0,
+    };
+    return mapped;
+  });
+
+  // ── Wiki fact resolution ─────────────────────────────────────────────────
+  const titleToId = new Map();
+  for (const s of mappedSkills) {
+    if (s.name) titleToId.set(s.name, s.id);
+  }
+  for (const t of mappedTraits) {
+    if (t.name) titleToId.set(t.name, t.id);
+  }
+  for (const ws of mappedWeaponSkills) {
+    if (ws.name) titleToId.set(ws.name, ws.id);
+  }
+
+  let wikiFactsById = new Map();
+  try {
+    const client = getWikiClient();
+    wikiFactsById = await resolveEntityFacts(client, titleToId);
+  } catch (err) {
+    console.warn("[catalog] Wiki fact resolution failed, using API facts:", err.message);
+  }
+
+  for (const s of mappedSkills) {
+    applyWikiFacts(s, wikiFactsById, KNOWN_SKILL_FACTS_OVERRIDES);
+  }
+  for (const t of mappedTraits) {
+    applyWikiFacts(t, wikiFactsById, KNOWN_TRAIT_FACTS_OVERRIDES);
+  }
+  for (const ws of mappedWeaponSkills) {
+    applyWikiFacts(ws, wikiFactsById, KNOWN_SKILL_FACTS_OVERRIDES);
+  }
+
+  // Log missing pages for monitoring
+  const resolved = wikiFactsById.size;
+  const total = titleToId.size;
+  if (resolved < total) {
+    const missing = [...titleToId.keys()].filter((t) => !wikiFactsById.has(titleToId.get(t)));
+    console.warn(`[catalog] Wiki facts: ${resolved}/${total} resolved. Missing: ${missing.slice(0, 10).join(", ")}${missing.length > 10 ? ` (+${missing.length - 10} more)` : ""}`);
+  }
+
   return {
-    profession: {
-      id: profession.id,
-      name: profession.name || profession.id,
-      icon: profession.icon || "",
-      iconBig: profession.icon_big || "",
-    },
-    specializations: specializations.map((spec) => ({
-      id: spec.id,
-      name: spec.name || "",
-      profession: spec.profession || "",
-      elite: Boolean(spec.elite),
-      icon: spec.icon || "",
-      background: spec.background || "",
-      minorTraits: Array.isArray(spec.minor_traits) ? spec.minor_traits : [],
-      majorTraits: Array.isArray(spec.major_traits) ? spec.major_traits : [],
-    })),
-    traits: traits.map((trait) => {
-      const mapped = {
-        id: trait.id,
-        name: trait.name || "",
-        // Use the render CDN icon directly — wiki FilePath lookups by trait name are unreliable
-        // because multiple traits across different professions can share the same name (e.g.
-        // "Deadly Aim", "No Quarter"), causing the wrong profession's icon to be served.
-        icon: trait.icon || "",
-        iconFallback: "",
-        description: trait.description || "",
-        tier: Number(trait.tier) || 0,
-        order: Number(trait.order) || 0,
-        slot: trait.slot || "",
-        specialization: Number(trait.specialization) || 0,
-        facts: KNOWN_TRAIT_FACTS_OVERRIDES.get(trait.id) || (Array.isArray(trait.facts) ? trait.facts.filter((f) => !f.requires_trait) : []),
-        traitedFacts: Array.isArray(trait.traited_facts) ? trait.traited_facts : [],
-        traitSkillIds: Array.isArray(trait.skills)
-          ? trait.skills.map((s) => Number(s?.id)).filter(Boolean)
-          : [],
-        traitSkillIcons: Array.isArray(trait.skills)
-          ? Object.fromEntries(
-              trait.skills
-                .filter((s) => s?.id && s?.icon)
-                .map((s) => [Number(s.id), String(s.icon)])
-            )
-          : {},
-      };
-      return mapped;
-    }),
-    skills: skills.map(mapSkill),
+    profession: { id: profession.id, name: profession.name || profession.id, icon: profession.icon || "", iconBig: profession.icon_big || "" },
+    specializations: mappedSpecializations,
+    traits: mappedTraits,
+    skills: mappedSkills,
     professionWeapons: Object.fromEntries(
       Object.entries(profession.weapons || {}).map(([apiKey, wData]) => [
         normalizeWeaponKey(apiKey),
@@ -657,22 +750,7 @@ async function getProfessionCatalog(professionId, lang = "en", gameMode = "pve")
         },
       ])
     ),
-    weaponSkills: weaponSkillsRaw.map((skill) => {
-      const mapped = {
-        id: skill.id,
-        name: skill.name || "",
-        icon: skill.icon || "",
-        description: skill.description || "",
-        slot: skill.slot || "",
-        attunement: skill.attunement === "None" ? "" : (skill.attunement || ""),
-        dualWield: skill.dual_attunement === "None" ? "" : (skill.dual_attunement || ""),
-        weaponType: skill.weapon_type === "None" ? "" : (skill.weapon_type || ""),
-        flags: Array.isArray(skill.flags) ? skill.flags : [],
-        facts: Array.isArray(skill.facts) ? skill.facts : [],
-        flipSkill: Number(skill.flip_skill) || 0,
-      };
-      return mapped;
-    }),
+    weaponSkills: mappedWeaponSkills,
     legends,
     pets,
     gameMode: gameMode || "pve",
@@ -785,4 +863,6 @@ module.exports = {
   getProfessionCatalog,
   getUpgradeCatalog,
   _setStaticData,
+  initWikiClient,
+  getWikiClient,
 };
