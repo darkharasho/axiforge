@@ -7,11 +7,11 @@ const { state } = require("../../../src/renderer/modules/state");
 /**
  * Berserker burst skill recharge (#154)
  *
- * Berserker's minor trait Primal Rage (1831) grants 10% burst recharge reduction
- * that the GW2 API omits from its facts. Combined with Discipline's Versatile Power
- * (15%), burst skills should show 25% total reduction:
- *   - Core burst (8s base) → 6s
- *   - Primal burst (5s base) → 3.75s
+ * Primal Rage (1831) grants access to Primal Bursts but does NOT reduce burst
+ * recharge. Only Discipline's Burst Mastery / Versatile Power (15%) reduces it.
+ * With Discipline alone, burst skills show 15% total reduction:
+ *   - Core burst (8s base) → 6.8s
+ *   - Primal burst (5s base) → 4.25s
  */
 describe("Berserker burst skill recharge (#154)", () => {
   // Berserker spec 18, minor traits include 1831 (Primal Rage)
@@ -60,10 +60,10 @@ describe("Berserker burst skill recharge (#154)", () => {
 
   // --- computeUpgradeModifiers tests ---
 
-  test("Berserker alone contributes 10% Burst Recharge", () => {
+  test("Berserker alone contributes 0% Burst Recharge (Primal Rage has no recharge reduction)", () => {
     setupState({ specs: [18] });
     const mods = computeUpgradeModifiers();
-    expect(mods.get("Burst Recharge")).toBe(10);
+    expect(mods.get("Burst Recharge") || 0).toBe(0);
   });
 
   test("Discipline alone contributes 15% Burst Recharge", () => {
@@ -72,10 +72,10 @@ describe("Berserker burst skill recharge (#154)", () => {
     expect(mods.get("Burst Recharge")).toBe(15);
   });
 
-  test("Berserker + Discipline gives 25% total Burst Recharge", () => {
+  test("Berserker + Discipline gives 15% total Burst Recharge", () => {
     setupState({ specs: [18, 51] });
     const mods = computeUpgradeModifiers();
-    expect(mods.get("Burst Recharge")).toBe(25);
+    expect(mods.get("Burst Recharge")).toBe(15);
   });
 
   test("no warrior specs gives 0% Burst Recharge", () => {
@@ -86,7 +86,7 @@ describe("Berserker burst skill recharge (#154)", () => {
 
   // --- tooltip rendering tests ---
 
-  test("Berserker + Discipline: core burst (8s) renders as 6s", () => {
+  test("Berserker + Discipline: core burst (8s) renders as 6.8s", () => {
     setupState({ specs: [18, 51] });
     const skill = {
       id: 14367, name: "Flurry", icon: "", description: "Burst.",
@@ -94,10 +94,10 @@ describe("Berserker burst skill recharge (#154)", () => {
       facts: [{ type: "Recharge", text: "Recharge", value: 8 }],
     };
     const html = detailPanel.buildSkillCard(skill, "skill");
-    expect(html).toContain("6s");
+    expect(html).toContain("6.8s");
   });
 
-  test("Berserker + Discipline: primal burst (5s) renders as 3.75s", () => {
+  test("Berserker + Discipline: primal burst (5s) renders as 4.25s", () => {
     setupState({ specs: [18, 51] });
     const skill = {
       id: 30682, name: "Flaming Flurry", icon: "", description: "Primal Burst.",
@@ -105,7 +105,7 @@ describe("Berserker burst skill recharge (#154)", () => {
       facts: [{ type: "Recharge", text: "Recharge", value: 5 }],
     };
     const html = detailPanel.buildSkillCard(skill, "skill");
-    expect(html).toContain("3.75s");
+    expect(html).toContain("4.25s");
   });
 
   test("non-Profession_1 skill is not affected", () => {

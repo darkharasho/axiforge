@@ -182,6 +182,11 @@ describe("mapWikiFactToApiFact", () => {
     expect(fact).toEqual({ type: "Percent", text: "Percent", percent: 20 });
   });
 
+  test("recharge reduced preserves text", () => {
+    const fact = mapWikiFactToApiFact("recharge reduced", ["15"], {}, true, false);
+    expect(fact).toEqual({ type: "Percent", text: "Recharge Reduced", percent: 15 });
+  });
+
   test("attribute gain/conversion", () => {
     const fact = mapWikiFactToApiFact(
       "gain",

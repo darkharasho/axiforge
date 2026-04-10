@@ -43,10 +43,10 @@ describe("overrides module", () => {
       expect(entry.allyTargeted).toContain("elixir");
     });
 
-    it("trait:1831 has burstRechargeReduction: 10", () => {
+    it("trait:1831 has no burstRechargeReduction (Primal Rage only grants Primal Bursts)", () => {
       const entry = overrides.get("trait:1831");
       expect(entry).toBeDefined();
-      expect(entry.burstRechargeReduction).toBe(10);
+      expect(entry.burstRechargeReduction).toBeUndefined();
     });
   });
 

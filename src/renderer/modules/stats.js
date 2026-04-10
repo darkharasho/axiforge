@@ -466,11 +466,6 @@ export function computeUpgradeModifiers() {
     for (const traitId of activeIds) {
       const trait = catalog.traitById.get(traitId);
       if (!trait || trait.slot !== "Minor") continue;
-      // Primal Rage (1831): API omits the 10% burst recharge reduction fact
-      if (traitId === 1831) {
-        addMod("Burst Recharge", 10);
-        continue;
-      }
       const desc = (trait.description || "").toLowerCase();
       if (!desc.includes("burst")) continue;
       for (const fact of trait.facts || []) {

@@ -248,7 +248,7 @@ function mapWikiFactToApiFact(factType, positional, params, isWvw, isUniversal) 
 
   // ── Percent / Recharge Reduced ────────────────────────────────────────
   if (type === "percent" || type === "recharge reduced") {
-    return { type: "Percent", text: "Percent", percent: pos0Num() };
+    return { type: "Percent", text: type === "recharge reduced" ? "Recharge Reduced" : "Percent", percent: pos0Num() };
   }
 
   // ── Combo ─────────────────────────────────────────────────────────────
