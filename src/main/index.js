@@ -1,5 +1,11 @@
 const path = require("node:path");
 require("dotenv").config({ path: path.resolve(__dirname, "../../.env") });
+
+// Ignore EPIPE errors on stdout/stderr — AppImage launches may close the
+// parent pipe, and writing to it would crash the main process.
+for (const stream of [process.stdout, process.stderr]) {
+  stream?.on?.("error", (err) => { if (err.code !== "EPIPE") throw err; });
+}
 const { app, BrowserWindow, ipcMain, dialog, clipboard } = require("electron");
 const { BuildStore } = require("./buildStore");
 const { FolderStore } = require("./folderStore");
@@ -866,7 +872,7 @@ app.whenReady().then(async () => {
 
     // 5. Generate chat link
     let chatLink = null;
-    try { chatLink = await generateChatLink(build); } catch (err) { console.error("discord:share-build — chat link generation failed:", err); }
+    try { chatLink = await generateChatLink(build); } catch (err) { try { console.error("discord:share-build — chat link generation failed:", err); } catch (_) {} }
 
     // 6. Get class icon URL (gw2-class-icons: elite spec > profession), spec icon, and elite spec name
     const CLASS_ICON_BASE = "https://raw.githubusercontent.com/darkharasho/gw2-class-icons/main/wiki/150px";

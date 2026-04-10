@@ -833,7 +833,7 @@ async function _buildProfessionCatalog(professionId, lang = "en", gameMode = "pv
     const client = getWikiClient();
     wikiFactsById = await resolveEntityFacts(client, idToTitle, { profession: profession.name || professionId });
   } catch (err) {
-    console.warn("[catalog] Wiki fact resolution failed, using API facts:", err.message);
+    try { console.warn("[catalog] Wiki fact resolution failed, using API facts:", err.message); } catch (_) {}
   }
 
   for (const s of mappedSkills) {
@@ -867,7 +867,7 @@ async function _buildProfessionCatalog(professionId, lang = "en", gameMode = "pv
     const missingNames = [...new Set(missingIds.map((id) => idToTitle.get(id)))];
     const preview = missingNames.slice(0, 10).join(", ");
     const extra = missingNames.length > 10 ? ` (+${missingNames.length - 10} more)` : "";
-    console.warn(`[catalog] Wiki facts: ${resolved}/${total} resolved. Missing: ${preview}${extra}`);
+    try { console.warn(`[catalog] Wiki facts: ${resolved}/${total} resolved. Missing: ${preview}${extra}`); } catch (_) {}
   }
 
   const catalog = {

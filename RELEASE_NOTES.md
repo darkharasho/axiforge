@@ -1,3 +1,8 @@
+## Version v0.3.2 — April 10, 2026
+
+### Bug Fixes
+- Fixed crash on AppImage launch caused by EPIPE error when stdout/stderr pipe is closed by the parent process
+
 ## Version v0.3.1 — April 10, 2026
 
 ### Bug Fixes
