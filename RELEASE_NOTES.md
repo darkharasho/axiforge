@@ -1,3 +1,8 @@
+## Version v0.3.3 — April 10, 2026
+
+### Bug Fixes
+- Fixed "require is not defined" error in packaged builds — the gw2-data engine CJS modules are now properly converted to ESM during the renderer Vite build
+
 ## Version v0.3.2 — April 10, 2026
 
 ### Bug Fixes

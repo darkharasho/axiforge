@@ -20,5 +20,8 @@ export default defineConfig({
   build: {
     outDir: path.resolve(__dirname, "dist/renderer"),
     emptyOutDir: true,
+    commonjsOptions: {
+      include: [/packages\/gw2-data/, /node_modules/],
+    },
   },
 });
