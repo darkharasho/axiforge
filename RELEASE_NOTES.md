@@ -1,3 +1,8 @@
+## Version v0.3.1 — April 10, 2026
+
+### Bug Fixes
+- Fixed crash on launch for Linux AppImage and Windows installer builds — the new gw2-data package was not being included in the packaged app
+
 ## Version v0.3.0 — April 10, 2026
 
 ### New Features
