@@ -1,0 +1,839 @@
+{
+  "skills": [
+    {
+      "id": 5489,
+      "wikiTitle": "Fireball",
+      "note": "basic damage, has split",
+      "api": {
+        "name": "Lightning Whip",
+        "facts": [
+          {
+            "text": "Range",
+            "type": "Range",
+            "icon": "https://render.guildwars2.com/file/0AAB34BEB1C9F4A25EC612DDBEACF3E20B2810FA/156666.png",
+            "value": 240
+          },
+          {
+            "text": "Damage",
+            "type": "Damage",
+            "icon": "https://render.guildwars2.com/file/61AA4919C4A7990903241B680A69530121E994C7/156657.png",
+            "hit_count": 2,
+            "dmg_multiplier": 0.63
+          },
+          {
+            "text": "Number of Targets",
+            "type": "Number",
+            "icon": "https://render.guildwars2.com/file/BBE8191A494B0352259C10EADFDACCE177E6DA5B/1770208.png",
+            "value": 3
+          }
+        ],
+        "description": "Lash your foe with lightning.",
+        "icon": "https://render.guildwars2.com/file/AD9670FD92547F6254DFA9CC6BF3B49845DF0C07/102901.png",
+        "type": "Weapon",
+        "weapon_type": "Dagger",
+        "attunement": "Air",
+        "professions": [
+          "Elementalist"
+        ],
+        "slot": "Weapon_1",
+        "flags": [
+          "NoUnderwater"
+        ],
+        "id": 5489,
+        "chat_link": "[&BnEVAAA=]"
+      },
+      "wikitext": "{{otheruses|the [[elementalist]] skill|the [[skyscale]]'s skill|Fireball (skyscale)|other uses|Fireball (disambiguation)}}\n{{Skill infobox\n| split = pve, wvw pvp\n| description = Cast a fireball that explodes on impact and hits multiple foes.\n| facts = {{skill fact|damage|weapon=staff|coefficient=1.4|game mode = pve}}{{skill fact|damage|weapon=staff|coefficient=0.666|game mode = pvp wvw}}{{skill fact|burning|1|game mode=pve}}{{skill fact|targets|3}}{{skill fact|radius|180}}{{skill fact|range|1200}}\n| activation = 1\n| profession = elementalist\n| slot = weapon\n| twohand = staff\n| attunement = fire\n| weapon slot = 1\n| damage type = Fire\n| id = 5491\n}}\n\n== Related [[trait]]s ==\n{{related traits}}\n\n== Notes ==\n* Attack speed is 1 attack per 1.4 seconds, or .714 attacks per second.\n* The projectile flies in a small arc and then explodes, so it can hit targets from further than maximum range, and occasionally ones behind (small) obstructions\n\n== Version history ==\n{{Version history table header|elementalist}}\n{{Version history table row|2022-08-23|Elementalist}}\n* (PvE only) Damage multiplier increased from 1.0 to 1.4. Now also inflicts 1 stack of burning with a 1-second duration.\n{{Version history table row|2020-02-25|Elementalist}}\n* (Competitive split) Reduced power coefficient from 1.0 to 0.666.\n{{Version history table row|2016-04-19|Elementalist}} \n* The effect of this skill has been returned to its previous state.\n* The damage of this skill has been increased by 17%.\n{{Version history table row|2015-11-17|Elementalist}} \n* Reduced the visual noise on the effects associated with this skill.\n{{Version history table row|2015-06-23|Elementalist}}\n* Blasting Staff: The effects of this trait have been added to all staff-skill area attacks by default.\n{{Version history table row|2014-09-09|Elementalist}}\n* Added a Number of Targets: 3 skill fact.\n{{Version history table row|2014-06-03|Elementalist}}\n* Added a skill fact for the maximum number of targets (3).\n{{Version history table row|2013-10-15|Elementalist}}\n* Increased the base radius to 120. Increased the radius to 180 when traited with Blasting Staff.\n{{Version history table row|2012-12-14|Elementalist}}\n* The Fireball tooltip has been updated to display the correct radius.\n{{Version history table row|release|r=y}}\n|}\n\n== Trivia ==\n* {{Guild Wars skill}}\n\n[[de:Feuerball]]\n[[es:Bola de fuego]]\n[[fr:Boule de feu]]"
+    },
+    {
+      "id": 5536,
+      "wikiTitle": "Arcane Blast",
+      "note": "split with different coefficients",
+      "api": {
+        "name": "Lightning Flash",
+        "facts": [
+          {
+            "text": "Range",
+            "type": "Range",
+            "icon": "https://render.guildwars2.com/file/0AAB34BEB1C9F4A25EC612DDBEACF3E20B2810FA/156666.png",
+            "value": 900
+          },
+          {
+            "text": "Recharge",
+            "type": "Recharge",
+            "icon": "https://render.guildwars2.com/file/D767B963D120F077C3B163A05DC05A7317D7DB70/156651.png",
+            "value": 20
+          },
+          {
+            "text": "Damage",
+            "type": "Damage",
+            "icon": "https://render.guildwars2.com/file/61AA4919C4A7990903241B680A69530121E994C7/156657.png",
+            "hit_count": 1,
+            "dmg_multiplier": 1.5
+          },
+          {
+            "text": "Radius",
+            "type": "Distance",
+            "icon": "https://render.guildwars2.com/file/B0CD8077991E4FB1622D2930337ED7F9B54211D5/156665.png",
+            "distance": 120
+          }
+        ],
+        "description": "Cantrip. Teleport to target area.",
+        "icon": "https://render.guildwars2.com/file/BEB6010EC947E8A9525899242E7F6D703D023128/103337.png",
+        "type": "Utility",
+        "weapon_type": "None",
+        "professions": [
+          "Elementalist"
+        ],
+        "slot": "Utility",
+        "flags": [
+          "GroundTargeted"
+        ],
+        "id": 5536,
+        "chat_link": "[&BqAVAAA=]",
+        "categories": [
+          "Cantrip"
+        ],
+        "traited_facts": [
+          {
+            "text": "Apply Buff/Condition",
+            "type": "Buff",
+            "icon": "https://render.guildwars2.com/file/50BAC1B8E10CFAB9E749A5D910D4A9DCF29EBB7C/961398.png",
+            "duration": 4,
+            "status": "Resistance",
+            "description": "Nondamaging conditions currently on you are ineffective; stacks duration.",
+            "apply_count": 1,
+            "requires_trait": 364
+          }
+        ]
+      },
+      "wikitext": "{{skill infobox\n| split = pve, wvw pvp\n| description = Blast your foe with energy for [[critical]] [[damage]].\n| facts =\n{{skill fact|damage|weapon=utility|coefficient=1.4|game mode = pve}}{{skill fact|damage|weapon=utility|coefficient=0.6|game mode = pvp wvw}}\n{{skill fact|maximum count|3|game mode=pve}}\n{{skill fact|maximum count|2|game mode=wvw pvp}}\n{{skill fact|count recharge|20}}\n{{skill fact|combo|projectile}}\n{{skill fact|range|1500}}\n| missing facts = {{skill fact|Critical Chance Increase|100}} <!-- used by Wild Blow -->\n| recharge = 1\n| ammunition = 3\n| ammunition pvp = 2\n| profession = elementalist\n| slot = utility\n| type = arcane\n| damage type = Lightning\n| hero points = 2\n| training order = 2\n| id = 5539\n| palette id = 336\n}}\n\n== Related [[trait]]s ==\n{{related traits}}\n\n== Notes ==\n*This skill has no cast time and may be cast during other actions.\n\n== Version history ==\n{{Version history table header|elementalist}}\n{{Version history table row|2020-02-25|Elementalist}}\n* (Competitive split) Reduced power coefficient from 1.4 to 0.6.\n{{Version history table row|2018-03-27|Elementalist}}\n* Reduced the maximum ammo count from 3 to 2 in PvP and WvW.\n{{Version history table row|2017-08-08|Elementalist}}\n* This skill now uses the ammo system.\n* Ammo count has been set to 3, with a 20-second count recharge.\n* There is a 1-second recharge between each use.\n{{Version history table row|release|r=y}}\n|}\n\n[[de:Energieentladung]]\n[[es:Descarga arcana]]\n[[fr:Explosion des arcanes]]"
+    },
+    {
+      "id": 30185,
+      "wikiTitle": "Berserk",
+      "note": "warrior elite, regression target",
+      "api": {
+        "name": "Berserk",
+        "facts": [
+          {
+            "text": "Recharge",
+            "type": "Recharge",
+            "icon": "https://render.guildwars2.com/file/D767B963D120F077C3B163A05DC05A7317D7DB70/156651.png",
+            "value": 15
+          },
+          {
+            "text": "StunBreak",
+            "type": "StunBreak",
+            "icon": "https://render.guildwars2.com/file/DCF0719729165FD8910E034CA4E0780F90582D15/156654.png",
+            "value": true
+          },
+          {
+            "text": "Attack Speed Increase",
+            "type": "Percent",
+            "icon": "https://render.guildwars2.com/file/B0CD8077991E4FB1622D2930337ED7F9B54211D5/156665.png",
+            "percent": 15
+          },
+          {
+            "text": "Duration",
+            "type": "Time",
+            "icon": "https://render.guildwars2.com/file/7B2193ACCF77E56C13E608191B082D68AA0FAA71/156659.png",
+            "duration": 15
+          },
+          {
+            "text": "Adrenaline",
+            "type": "Number",
+            "icon": "https://render.guildwars2.com/file/E1E7C4D3A6E62F3D5C9F627CE8175BFB0C614CBE/156652.png",
+            "value": 10
+          }
+        ],
+        "description": "Rage. Gain adrenaline, an attack-speed boost, and access to primal burst skills.",
+        "icon": "https://render.guildwars2.com/file/1354D8FC07F9F859DC7F0E7B61C0724FD4927C4E/1058638.png",
+        "type": "Profession",
+        "weapon_type": "None",
+        "professions": [
+          "Warrior"
+        ],
+        "slot": "Profession_2",
+        "cost": 30,
+        "flags": [],
+        "specialization": 18,
+        "id": 30185,
+        "chat_link": "[&Bul1AAA=]",
+        "categories": [
+          "Rage"
+        ],
+        "traited_facts": [
+          {
+            "text": "Duration",
+            "type": "Time",
+            "icon": "https://render.guildwars2.com/file/7B2193ACCF77E56C13E608191B082D68AA0FAA71/156659.png",
+            "duration": 20,
+            "requires_trait": 2049,
+            "overrides": 3
+          }
+        ]
+      },
+      "wikitext": "{{otheruses|the [[berserker]] mechanic|the enemy effect|Berserk (effect)|the ally NPC effect|Berserk (Lowland Kodan)}}\n{{Skill infobox\n| split = pve, wvw pvp\n| description = Gain [[adrenaline]], an attack-speed boost, and access to [[Primal Burst|primal burst]] skills.\n| facts =\n{{skill fact|Attack Speed Increase|15}}\n{{skill fact|adrenaline|10}}\n{{skill fact|targets|5}}\n{{skill fact|duration|20|game mode=pve}}{{skill fact|duration|15|game mode=wvw pvp}}\n| recharge = 8\n| recharge pvp = 15\n| profession = warrior\n| specialization = berserker\n| slot = mechanic\n| mechanic slot = 2\n| type = Rage\n| id = 30435, 30185\n| requires = hot\n}}\n== Mechanics ==\n* Costs 30 [[adrenaline]] to activate.\n** Replaces [[burst]] skills with [[primal burst]]s. \n** Adrenaline bar caps at 10 instead of 30. \n** [[Rage]] skills increase Berserk duration.\n** There does not seem to be a cap on berserk duration.\n\n== Related [[trait]]s ==\n{{Related traits}}\n\n== Notes ==\n* The increased 15% attack speed does not stack with {{Quickness}}.\n** The largest increase will take priority.\n\n== Version history ==\n{{Version history table header|warrior}}\n{{Version history table row|2023-11-28|Berserker}}\n* Increased the duration from 15 seconds to 20 seconds in PvE only. Reduced the cooldown from 15 seconds to 8 seconds in PvE only.\n{{Version history table row|2022-10-04|Warrior}}\n* This skill has been moved to slot 2 of the profession mechanic bar. Core burst skills are now accessible in slot 1 of the profession mechanic bar for the berserker specialization.\n* Berserk mode now activates instantly.\n* Entering berserk mode no longer initiates an attack, and now counts as a rage skill instead of a level 3 burst skill.\n{{Version history table row|2019-04-23|Warrior}}\n* This skill has been moved to slot 1 of the profession mechanic bar. Slot 2 of the profession mechanic bar has been removed when warriors use the berserker specialization.\n* Berserk mode is no longer instant and has a casting time.\n* Entering berserk mode now initiates an attack that damages nearby foes and inflicts burning for 3 seconds.\n* Berserk mode is no longer a rage skill. Instead, it is considered a level-3 burst skill.\n{{Version history table row|2015-10-23|Berserker|r=y}}\n|}\n\n== Trivia ==\n* The character sometimes shouts \"You can't stop me!\" or \"I'll destroy you all!\" upon activating Berserk.\n* The character sometimes shouts \"No!\" when Berserk is about to run out.\n\n{{Profession mechanics nav}}\n\n[[de:Berserker (Fertigkeit)]]\n[[es:Berserker (habilidad)]]\n[[fr:Berserker (compétence)]]"
+    },
+    {
+      "id": 5507,
+      "wikiTitle": "Meteor Shower",
+      "note": "damage+burning+hits+radius",
+      "api": {
+        "name": "Ether Renewal",
+        "facts": [
+          {
+            "text": "Recharge",
+            "type": "Recharge",
+            "icon": "https://render.guildwars2.com/file/D767B963D120F077C3B163A05DC05A7317D7DB70/156651.png",
+            "value": 15
+          },
+          {
+            "text": "Healing",
+            "type": "AttributeAdjust",
+            "icon": "https://render.guildwars2.com/file/D4347C52157B040943051D7E09DEAD7AF63D4378/156662.png",
+            "value": 996,
+            "target": "Healing"
+          },
+          {
+            "text": "Conditions Removed",
+            "type": "Number",
+            "icon": "https://render.guildwars2.com/file/9352ED3244417304995F26CB01AE76BB7E547052/156661.png",
+            "value": 1
+          },
+          {
+            "text": "Pulses",
+            "type": "Number",
+            "icon": "https://render.guildwars2.com/file/9352ED3244417304995F26CB01AE76BB7E547052/156661.png",
+            "value": 8
+          },
+          {
+            "text": "Endurance Gained",
+            "type": "Number",
+            "icon": "https://render.guildwars2.com/file/9352ED3244417304995F26CB01AE76BB7E547052/156661.png",
+            "value": 6
+          }
+        ],
+        "description": "Cantrip. Cure a condition and heal yourself with every pulse.",
+        "icon": "https://render.guildwars2.com/file/024A09E8342E54AEB9EDE624E4123138D21639D8/103038.png",
+        "type": "Heal",
+        "weapon_type": "None",
+        "professions": [
+          "Elementalist"
+        ],
+        "slot": "Heal",
+        "flags": [],
+        "id": 5507,
+        "chat_link": "[&BoMVAAA=]",
+        "categories": [
+          "Cantrip"
+        ],
+        "traited_facts": [
+          {
+            "text": "Apply Buff/Condition",
+            "type": "Buff",
+            "icon": "https://render.guildwars2.com/file/58E92EBAF0DB4DA7C4AC04D9B22BCA5ECF0100DE/102843.png",
+            "duration": 6,
+            "status": "Vigor",
+            "description": "Endurance regeneration increased by 50%; stacks duration.",
+            "apply_count": 1,
+            "requires_trait": 364
+          }
+        ]
+      },
+      "wikitext": "{{Skill infobox\n| description = Call down a meteor shower onto the target area.<br>{{gray|Damage is reduced per target each time they are struck by this ability.}}\n| split = pve, wvw, pvp\n| facts =\n{{skill fact|damage|weapon=staff|coefficient=1.6|game mode = pve}}\n{{skill fact|damage|weapon=staff|coefficient=0.88|game mode = wvw}}\n{{skill fact|damage|weapon=staff|coefficient=1.1|game mode = pvp}}\n{{skill fact|damage|weapon=staff|alt=Minimum Damage|coefficient=0.32|game mode = pve}}\n{{skill fact|damage|weapon=staff|alt=Minimum Damage|coefficient=0.176|game mode = wvw}}\n{{skill fact|damage|weapon=staff|alt=Minimum Damage|coefficient=0.22|game mode = pvp}}\n{{skill fact|damage reduction per hit|10}}\n{{skill fact|Number of Impacts|24}}\n{{skill fact|targets|3}}\n{{skill fact|duration|9}}\n{{skill fact|radius|alt=Impact Radius|180}}\n{{skill fact|radius|360}}\n{{skill fact|range|1200}}\n| activation = 3.75\n| recharge = 30\n| profession = elementalist\n| slot = weapon\n| twohand = staff\n| attunement = fire\n| activation type = hold\n| damage type = Fire\n| weapon slot = 5\n| ground target = circle\n| id = 5501\n}}\n== Related [[trait]]s ==\n{{related traits}}\n\n== Notes ==\n{{anomaly|The white line that appears after casting to denote the area is closer to 480 units radius, rather than the listed 360.}}\n* Each of the 24 meteors deal damage randomly around in the targeted area.\n** Since each meteor has its own area, they may hit outside the skill's AoE circle if the center or a meteor's AoE is close enough to the border.\n* Movement interrupts the channeling time, resulting in fewer meteors.\n* The meteors will only fall within the limits of the map where player characters would be able to be (e.g: They won't fall on a slope a player can't climb or slide down from above). This can be used to narrow the spread and increase the effective damage of the skill.\n* Can be precast during [[Burning Retreat]] for longer range cast, causing the channel to begin after the [[Burning Retreat]] ends. Note that Allow Skill Retargeting must be off for this to work if ground targeting is set to Instant.\n* The damage reduction is additive rather than multiplicative. Meaning the second hit does 90%, third 80%, and so on, reaching the minimum on the 9th hit.\n* Assuming all 24 impacts hit, it will do a total of: \n{{skill fact|damage|weapon=staff|coefficient=13.44}} in PvE\n{{skill fact|damage|weapon=staff|coefficient=3.792}} in WvW \n{{skill fact|damage|weapon=staff|coefficient=9.24}} in PvP\n\n== Version history ==\n{{Version history table header|elementalist}}\n{{Version history table row|2022-05-10|Elementalist}}\n* Reduced power coefficient from 1.1 to 0.88 in WvW only.\n{{Version history table row|2020-02-25|Elementalist}}\n* (Competitive split) Reduced power coefficient from 1.6 to 1.1.\n{{Version history table row|2019-10-15|Elementalist}}\n* Fixed a visual bug that could cull meteor landing effects before they were complete.\n{{Version history table row|2018-07-24|Elementalist 2}}\n* Fixed a bug that caused this skill to have a much higher initial impact than intended.\n{{Version history table row|2018-07-10|Elementalist 2}}\n* Fixed a bug that caused the minimum damage of this skill to be higher than intended. The expected minimum damage has been increased from 10% to 20%.\n{{Version history table row|2018-05-08|Elementalist}}\n* The internal cooldown of this skill has been removed when used against PvE targets, and its initial damage has been increased by 23%.\n* Damage will now decline by 10% for each subsequent hit, capping at a minimum value equal to 10% of the initial impact's damage.\n{{Version history table row|2017-02-23|Bux Fixes}}\n* The cooldown for non-player targets will now apply for 0.33 seconds if the player is affected by quickness.\n{{Version history table row|2017-02-22|Elementalist}}\n* This skill now has a 0.5-second cooldown when hitting nonplayer targets.\n{{Version history table row|2015-09-29|Elementalist}}\n* Fixed a bug that caused all impacts to fall within a smaller than intended radius when casting this skill.\n{{Version history table row|2015-06-23|Elementalist}}\n* Blasting Staff: The effects of this trait have been added to all staff-skill area attacks by default.\n{{Version history table row|2014-09-30|Elementalist}}\n* Updated the Duration: 9 skill fact.\n* Adjusted the ground effect ring to better match skill duration.\n{{Version history table row|2014-05-20|Elementalist}}\n* Added a toughness increase skill fact when traited with Obsidian Focus.\n{{Version history table row|2014-04-15|Elementalist 2}}\n* Updated the skill fact to display the increased endurance regeneration while the player has the Zephyr's Focus trait.\n* Added a red ring to indicate area of effect for enemy players.\n* Added a white ring for allied players.\n{{Version history table row|2013-10-15|Elementalist}}\n* Increased the impact radius to 180 when traited with Blasting Staff.\n{{Version history table row|2013-06-25|Elementalist}}\n* Reduced the cast time from 4.2 seconds to 3.8 seconds.\n* Increased the size of the area that each meteor strikes.\n* This ability has been optimized. As a result, no functionality has been changed, but the amount of meteor effects has been reduced.\n** Previously, extra meteor effects that didn't actually do any damage would play.\n** We now only display the meteors that deal damage on impact.\n{{Version history table row|2013-02-26|Balance, Bug-Fixing, Polish}}\n* Fixed a bug where players would sometimes become rooted after cancelling meteor shower, healing rain, or similar skills.\n{{Version history table row|release|r=y}}\n|}\n\n== Trivia ==\n* {{Guild Wars skill}}\n\n[[de:Meteorschauer]]\n[[es:Lluvia de meteoros]]\n[[fr:Pluie de météores]]"
+    },
+    {
+      "id": 5492,
+      "wikiTitle": "Fire Attunement",
+      "note": "attunement with flipSkill",
+      "api": {
+        "name": "Fire Attunement",
+        "description": "Attune to fire, gaining heavy damage and burning abilities.",
+        "icon": "https://render.guildwars2.com/file/1C91E9C799469ACC6EAF1ACD4B0AD8ACAB0C69A2/103035.png",
+        "type": "Profession",
+        "weapon_type": "None",
+        "professions": [
+          "Elementalist"
+        ],
+        "slot": "Profession_1",
+        "flip_skill": 29706,
+        "flags": [],
+        "id": 5492,
+        "chat_link": "[&BnQVAAA=]",
+        "traited_facts": [
+          {
+            "text": "Apply Buff/Condition",
+            "type": "Buff",
+            "icon": "https://render.guildwars2.com/file/2FA9DF9D6BC17839BBEA14723F1C53D645DDB5E1/102852.png",
+            "duration": 15,
+            "status": "Might",
+            "description": "Increased outgoing damage; stacks intensity.",
+            "apply_count": 1,
+            "requires_trait": 264
+          },
+          {
+            "text": "Number of Targets",
+            "type": "Number",
+            "icon": "https://render.guildwars2.com/file/BBE8191A494B0352259C10EADFDACCE177E6DA5B/1770208.png",
+            "value": 5,
+            "requires_trait": 264
+          },
+          {
+            "text": "Radius",
+            "type": "Distance",
+            "icon": "https://render.guildwars2.com/file/B0CD8077991E4FB1622D2930337ED7F9B54211D5/156665.png",
+            "distance": 240,
+            "requires_trait": 264
+          }
+        ]
+      },
+      "wikitext": "{{Skill infobox\n| description = [[Attunement|Attune]] to fire, gaining heavy [[damage]] and [[burning]] abilities.\n| profession = elementalist\n| slot = mechanic\n| mechanic slot = 1\n| type = attunement\n| id = 5492\n}}\n[[File:Fire Attunement appearance.jpg|thumb|Hand aura of an elementalist attuned to fire]]\n[[Fire Attunement]] is an [[elementalist]] [[attunement]] skill that attunes the elementalist to fire. While attuned to fire the elementalist's [[Skill bar#Weapon skills|weapon skills]] are fire magic skills.\n\n== Skills by [[weapon]] ==\n{{weapon skill table|attunement=Fire|showWeapons=true}}\n\n== Related [[trait]]s ==\n{{see|Attunement#Related traits}}\n{{related traits}}\n\n== Notes ==\n* This skill has an instant cast time and may be cast during other actions.\n* This skill can be activated while in the air.\n\n== Version history ==\n{{Version history table header|elementalist}}\n{{Version history table row|2015-06-23|Elementalist}}\n* Reduced base attunement recharge from 13 seconds to 10 seconds.\n{{Version history table row|release|r=y}}\n|}\n\n== Trivia ==\n* {{Guild Wars skill}}\n* Before the release of [[Guild Wars 2: Path of Fire]], human female elementalists could say \"Feel the fires of Balthazar!\" when attuning to fire. That shout was changed to \"Now burn!\" with the release of the expansion.\n* When attuning to fire, the character will occasionally shout out one of the following lines, depending on race and gender.\n{{Character quote\n| asura_male = Fire!<br>I have ignition!<br>Turn up the heat!\n| asura_female = Fire!<br>Observe the power of fire!<br>Spark to flame!\n| charr_male = Bring the flames!<br>Fire!<br>Immolate!\n| charr_female = Burn them!<br>Feel the flame!<br>Fire!\n| human_male = Fire!<br>Here come the flames!<br>Getting hotter!\n| human_female = Feeling hot!<br>Fire!<br>Now burn!\n| norn_male = Bringing the fire!<br>Flames are my friend.<br>They'll burn.\n| norn_female = Fire, do my bidding!<br>Flames!<br>Fire!<br>Heat!\n| sylvari_male = Consuming fire!<br>Element of fire, obey me!<br>I am the flames!\n| sylvari_female = Ferocious fire!<br>Fire consumes at my whim!<br>I channel the flames!\n}}\n\n== See also ==\n* {{skill icon|Water Attunement}} — {{skill description|Water Attunement}}\n* {{skill icon|Air Attunement}} — {{skill description|Air Attunement}}\n* {{skill icon|Earth Attunement}} — {{skill description|Earth Attunement}}\n\n[[Category:Fire attunement skills|*]]\n[[de:Feuereinstimmung]]\n[[es:Sintonía con el fuego]]\n[[fr:Affinité avec le feu]]"
+    },
+    {
+      "id": 5548,
+      "wikiTitle": "Eruption",
+      "note": "blast finisher + fire field",
+      "api": {
+        "name": "Lava Font",
+        "facts": [
+          {
+            "text": "Range",
+            "type": "Range",
+            "icon": "https://render.guildwars2.com/file/0AAB34BEB1C9F4A25EC612DDBEACF3E20B2810FA/156666.png",
+            "value": 1200
+          },
+          {
+            "text": "Recharge",
+            "type": "Recharge",
+            "icon": "https://render.guildwars2.com/file/D767B963D120F077C3B163A05DC05A7317D7DB70/156651.png",
+            "value": 6
+          },
+          {
+            "text": "Damage",
+            "type": "Damage",
+            "icon": "https://render.guildwars2.com/file/61AA4919C4A7990903241B680A69530121E994C7/156657.png",
+            "hit_count": 1,
+            "dmg_multiplier": 0.525
+          },
+          {
+            "text": "Number of Targets",
+            "type": "Number",
+            "icon": "https://render.guildwars2.com/file/BBE8191A494B0352259C10EADFDACCE177E6DA5B/1770208.png",
+            "value": 5
+          },
+          {
+            "text": "Interval",
+            "type": "Time",
+            "icon": "https://render.guildwars2.com/file/B75E91EB22E0DFCC1D08030204055946506D56F6/1770206.png",
+            "duration": 1
+          },
+          {
+            "text": "Duration",
+            "type": "Time",
+            "icon": "https://render.guildwars2.com/file/7B2193ACCF77E56C13E608191B082D68AA0FAA71/156659.png",
+            "duration": 4
+          },
+          {
+            "text": "Radius",
+            "type": "Distance",
+            "icon": "https://render.guildwars2.com/file/B0CD8077991E4FB1622D2930337ED7F9B54211D5/156665.png",
+            "distance": 180
+          },
+          {
+            "text": "Apply Buff/Condition",
+            "type": "Buff",
+            "icon": "https://render.guildwars2.com/file/B47BF5803FED2718D7474EAF9617629AD068EE10/102849.png",
+            "duration": 1,
+            "status": "Burning",
+            "description": "Deals damage every second; stacks intensity.",
+            "apply_count": 1
+          },
+          {
+            "text": "Combo Field",
+            "type": "ComboField",
+            "icon": "https://render.guildwars2.com/file/59E0DB6A699810641C959926ADFEF73E08CC255B/156655.png",
+            "field_type": "Fire"
+          }
+        ],
+        "description": "Make lava erupt from the target area.",
+        "icon": "https://render.guildwars2.com/file/CFA80DB42022C240001D249CED6235CEF70C9042/103135.png",
+        "type": "Weapon",
+        "weapon_type": "Staff",
+        "attunement": "Fire",
+        "professions": [
+          "Elementalist"
+        ],
+        "slot": "Weapon_2",
+        "flags": [
+          "GroundTargeted",
+          "NoUnderwater"
+        ],
+        "id": 5548,
+        "chat_link": "[&BqwVAAA=]",
+        "traited_facts": [
+          {
+            "text": "Duration",
+            "type": "Time",
+            "icon": "https://render.guildwars2.com/file/7B2193ACCF77E56C13E608191B082D68AA0FAA71/156659.png",
+            "duration": 6,
+            "requires_trait": 1510,
+            "overrides": 5
+          }
+        ]
+      },
+      "wikitext": "{{Skill infobox\n| description = Shake the ground until it erupts and damages foes.\n| split = pve, wvw pvp\n| facts = {{skill fact|damage|weapon=staff|coefficient=1.5|game mode = pve}}{{skill fact|damage|weapon=staff|coefficient=1.25|game mode = pvp wvw}}{{skill fact|bleeding|12|stacks=6}}{{skill fact|crippled|3}}{{skill fact|targets|5}}{{skill fact|radius|300}}{{skill fact|combo|blast}}{{skill fact|range|1200}}\n| activation = 1.25\n| recharge = 6\n| profession = elementalist\n| slot = weapon\n| twohand = staff\n| attunement = earth\n| weapon slot = 2\n| ground target = circle\n| id = 5528\n}}\n\n== Related [[trait]]s ==\n{{related traits}}\n\n== Notes ==\n* This skill has a delay of approximately 3 seconds, or ~4.25 including the cast time.\n** This means it is possible to activate this skill first, then use a skill that creates a [[combo]] field before the Eruption completes.\n\n== Version history ==\n{{Version history table header|elementalist}}\n{{Version history table row|2020-02-25|Elementalist}}\n* (Competitive split) Reduced power coefficient from 1.5 to 1.25.\n{{Version history table row|2018-08-28|Elementalist}}\n* The damage of this skill has been increased by 20%.\n{{Version history table row|2017-06-20|Elementalist}}\n* This skill now cripples enemies for 3 seconds in addition to its other effects.\n{{Version history table row|2015-06-23|Elementalist}}\n* Blasting Staff: The effects of this trait have been added to all staff-skill area attacks by default.\n{{Version history table row|2014-04-15|Elementalist 2}}\n* Fixed a bug that allowed the spell effects to continue even if the skill was canceled early.\n{{Version history table row|2013-06-25|Elementalist}}\n* Reduced the cast time from 1.8 seconds to 1.2 seconds.\n{{Version history table row|release|r=y}}\n|}\n\n== Trivia ==\n*{{Guild Wars skill}}\n\n[[de:Eruption]]\n[[es:Erupción]]\n[[fr:Eruption]]"
+    },
+    {
+      "id": 5569,
+      "wikiTitle": "Water Blast",
+      "note": "healing skill",
+      "api": {
+        "name": "Glyph of Elemental Harmony",
+        "facts": [
+          {
+            "text": "Recharge",
+            "type": "Recharge",
+            "icon": "https://render.guildwars2.com/file/D767B963D120F077C3B163A05DC05A7317D7DB70/156651.png",
+            "value": 20
+          },
+          {
+            "text": "Healing",
+            "type": "AttributeAdjust",
+            "icon": "https://render.guildwars2.com/file/D4347C52157B040943051D7E09DEAD7AF63D4378/156662.png",
+            "value": 6494,
+            "target": "Healing"
+          },
+          {
+            "text": "Apply Buff/Condition",
+            "type": "PrefixedBuff",
+            "icon": "https://render.guildwars2.com/file/2FA9DF9D6BC17839BBEA14723F1C53D645DDB5E1/102852.png",
+            "duration": 20,
+            "status": "Might",
+            "description": "Increased outgoing damage; stacks intensity.",
+            "apply_count": 3,
+            "prefix": {
+              "text": "Apply Buff/Condition",
+              "icon": "https://render.guildwars2.com/file/1C91E9C799469ACC6EAF1ACD4B0AD8ACAB0C69A2/103035.png",
+              "status": "Fire Attunement",
+              "description": "Cast fire spells."
+            }
+          },
+          {
+            "text": "Apply Buff/Condition",
+            "type": "PrefixedBuff",
+            "icon": "https://render.guildwars2.com/file/F69996772B9E18FD18AD0AABAB25D7E3FC42F261/102835.png",
+            "duration": 10,
+            "status": "Regeneration",
+            "description": "Gain health every second; stacks duration.",
+            "apply_count": 1,
+            "prefix": {
+              "text": "Apply Buff/Condition",
+              "icon": "https://render.guildwars2.com/file/737E1B9F7855B9F5D3DE1C990CD42118EF3D1C92/102820.png",
+              "status": "Water Attunement",
+              "description": "Cast water spells."
+            }
+          },
+          {
+            "text": "Apply Buff/Condition",
+            "type": "PrefixedBuff",
+            "icon": "https://render.guildwars2.com/file/20CFC14967E67F7A3FD4A4B8722B4CF5B8565E11/102836.png",
+            "duration": 10,
+            "status": "Swiftness",
+            "description": "Movement speed increased by 33%; stacks duration.",
+            "apply_count": 1,
+            "prefix": {
+              "text": "Apply Buff/Condition",
+              "icon": "https://render.guildwars2.com/file/4857F59020DE3B0950B9C91F3D234A1C1932984A/103048.png",
+              "status": "Air Attunement",
+              "description": "Cast air spells."
+            }
+          },
+          {
+            "text": "Apply Buff/Condition",
+            "type": "PrefixedBuff",
+            "icon": "https://render.guildwars2.com/file/CD77D1FAB7B270223538A8F8ECDA1CFB044D65F4/102834.png",
+            "duration": 3,
+            "status": "Protection",
+            "description": "Incoming strike damage decreased by 33%; stacks duration.",
+            "apply_count": 1,
+            "prefix": {
+              "text": "Apply Buff/Condition",
+              "icon": "https://render.guildwars2.com/file/4B8056D9BD080DC8E74AE6A57B2B383A2D4265C9/102870.png",
+              "status": "Earth Attunement",
+              "description": "Cast earth spells."
+            }
+          }
+        ],
+        "description": "Glyph. Heal yourself and gain a boon based on your attunement.",
+        "icon": "https://render.guildwars2.com/file/1E78AF94DA0249583CBE14CD30CD24EF5FE21A40/103350.png",
+        "type": "Heal",
+        "weapon_type": "None",
+        "professions": [
+          "Elementalist"
+        ],
+        "slot": "Heal",
+        "flags": [],
+        "id": 5569,
+        "chat_link": "[&BsEVAAA=]",
+        "categories": [
+          "Glyph"
+        ],
+        "subskills": [
+          {
+            "id": 34743,
+            "attunement": "Fire"
+          },
+          {
+            "id": 34651,
+            "attunement": "Water"
+          },
+          {
+            "id": 34724,
+            "attunement": "Air"
+          },
+          {
+            "id": 34609,
+            "attunement": "Earth"
+          }
+        ],
+        "traited_facts": [
+          {
+            "text": "Apply Buff/Condition",
+            "type": "PrefixedBuff",
+            "icon": "https://render.guildwars2.com/file/2FA9DF9D6BC17839BBEA14723F1C53D645DDB5E1/102852.png",
+            "duration": 20,
+            "status": "Might",
+            "description": "Increased outgoing damage; stacks intensity.",
+            "apply_count": 4,
+            "requires_trait": 229,
+            "prefix": {
+              "text": "Apply Buff/Condition",
+              "icon": "https://render.guildwars2.com/file/1C91E9C799469ACC6EAF1ACD4B0AD8ACAB0C69A2/103035.png",
+              "status": "Fire Attunement",
+              "description": "Cast fire spells."
+            },
+            "overrides": 2
+          },
+          {
+            "text": "Apply Buff/Condition",
+            "type": "PrefixedBuff",
+            "icon": "https://render.guildwars2.com/file/F69996772B9E18FD18AD0AABAB25D7E3FC42F261/102835.png",
+            "duration": 20,
+            "status": "Regeneration",
+            "description": "Gain health every second; stacks duration.",
+            "apply_count": 1,
+            "requires_trait": 229,
+            "prefix": {
+              "text": "Apply Buff/Condition",
+              "icon": "https://render.guildwars2.com/file/737E1B9F7855B9F5D3DE1C990CD42118EF3D1C92/102820.png",
+              "status": "Water Attunement",
+              "description": "Cast water spells."
+            },
+            "overrides": 3
+          },
+          {
+            "text": "Apply Buff/Condition",
+            "type": "PrefixedBuff",
+            "icon": "https://render.guildwars2.com/file/20CFC14967E67F7A3FD4A4B8722B4CF5B8565E11/102836.png",
+            "duration": 20,
+            "status": "Swiftness",
+            "description": "Movement speed increased by 33%; stacks duration.",
+            "apply_count": 1,
+            "requires_trait": 229,
+            "prefix": {
+              "text": "Apply Buff/Condition",
+              "icon": "https://render.guildwars2.com/file/4857F59020DE3B0950B9C91F3D234A1C1932984A/103048.png",
+              "status": "Air Attunement",
+              "description": "Cast air spells."
+            },
+            "overrides": 4
+          },
+          {
+            "text": "Apply Buff/Condition",
+            "type": "PrefixedBuff",
+            "icon": "https://render.guildwars2.com/file/CD77D1FAB7B270223538A8F8ECDA1CFB044D65F4/102834.png",
+            "duration": 6,
+            "status": "Protection",
+            "description": "Incoming strike damage decreased by 33%; stacks duration.",
+            "apply_count": 1,
+            "requires_trait": 229,
+            "prefix": {
+              "text": "Apply Buff/Condition",
+              "icon": "https://render.guildwars2.com/file/4B8056D9BD080DC8E74AE6A57B2B383A2D4265C9/102870.png",
+              "status": "Earth Attunement",
+              "description": "Cast earth spells."
+            },
+            "overrides": 5
+          }
+        ]
+      },
+      "wikitext": "{{Skill infobox\n| description =  Spray a jet of water at your foe that splashes to [[heal]] nearby allies.\n| split = pve, wvw pvp\n| facts = {{skill fact|damage|weapon=staff|coefficient=0.3|game mode = pve}}{{skill fact|damage|weapon=staff|coefficient=0.2|game mode = pvp wvw}}{{skill fact|healing|372|coefficient=0.25|game mode = pve}}{{skill fact|healing|223|coefficient=0.15|game mode = pvp wvw}}{{skill fact|targets|5}}{{skill fact|radius|240}}{{skill fact|range|1200}}\n| activation = 0.75\n| profession = elementalist\n| slot = weapon\n| twohand = staff\n| attunement = water\n| weapon slot = 1\n| id = 5549\n}}\n\n== Related [[trait]]s ==\n{{related traits}}\n\n== Notes ==\n* Attack speed is 1 attack per 1.2 seconds.\n* Healing is done in a 240 unit radius around the impact location, regardless of it hitting a foe or not.\n* Can heal yourself if you are within the radius.\n* Targeting an enemy will cause this attack to pass through allies, but not enemies; it will hit the first enemy struck, even if it's not your target.\n* Likewise, targeting an ally will cause this attack to pass through enemies, but not allies; it will hit the first ally struck, even if they're not your target.\n\n== Version history ==\n{{Version history table header|elementalist}}\n{{Version history table row|2023-02-14|Elementalist}}\n* This skill can now target allies.\n{{Version history table row|2020-02-25|Elementalist}}\n* (Competitive split) Reduced base heal from 372 to 223. Reduced heal coefficient from 0.25 to 0.15. Reduced power coefficient from 0.3 to 0.2.\n{{Version history table row|2015-06-23|Elementalist}}\n* Blasting Staff: The effects of this trait have been added to all staff-skill area attacks by default.\n{{Version history table row|2014-09-30|Elementalist}}\n* Updated the description accuracy for the number of targets.\n{{Version history table row|2014-09-09|Elementalist}}\n* Added a Number of Targets: 5 skill fact.\n* Fixed a bug that caused the center of the healing effect created by this skill to be positioned off-center.\n{{Version history table row|2013-10-15|Elementalist}}\n* Increased the healing stat scaling from 10% to 25%.\n* Slightly decreased the base heal at low levels, but it will heal for the same base at level 80.\n* Increased the base radius to 180.\n* Removed the heal that occurs if the water blast strikes nothing.\n{{Version history table row|2013-06-25|Elementalist}}\n* Reduced the aftercast by .1 seconds.\n* Increased the size of the effect to more accurately show the area healed.\n{{Version history table row|release|r=y}}\n|}\n\n[[de:Wasserentladung]]\n[[es:Descarga de agua]]\n[[fr:Explosion aqueuse]]"
+    },
+    {
+      "id": 5503,
+      "wikiTitle": "Glyph of Storms",
+      "note": "multi-attunement",
+      "api": {
+        "name": "Signet of Restoration",
+        "facts": [
+          {
+            "text": "Recharge",
+            "type": "Recharge",
+            "icon": "https://render.guildwars2.com/file/D767B963D120F077C3B163A05DC05A7317D7DB70/156651.png",
+            "value": 20
+          },
+          {
+            "text": "Healing",
+            "type": "AttributeAdjust",
+            "icon": "https://render.guildwars2.com/file/D4347C52157B040943051D7E09DEAD7AF63D4378/156662.png",
+            "value": 3275,
+            "target": "Healing"
+          },
+          {
+            "text": "Healing per Cast",
+            "type": "AttributeAdjust",
+            "icon": "https://render.guildwars2.com/file/D4347C52157B040943051D7E09DEAD7AF63D4378/156662.png",
+            "value": 202,
+            "target": "Healing"
+          },
+          {
+            "text": "Healing per Cast",
+            "type": "AttributeAdjust",
+            "icon": "https://render.guildwars2.com/file/D4347C52157B040943051D7E09DEAD7AF63D4378/156662.png",
+            "value": 171,
+            "target": "Healing"
+          }
+        ],
+        "description": "Signet Passive: Grants health every time you cast a spell. \nSignet Active: Heal yourself.",
+        "icon": "https://render.guildwars2.com/file/3FA4D3DCA80A06036E7F6C77E84D94466D157766/103321.png",
+        "type": "Heal",
+        "weapon_type": "None",
+        "professions": [
+          "Elementalist"
+        ],
+        "slot": "Heal",
+        "flags": [],
+        "id": 5503,
+        "chat_link": "[&Bn8VAAA=]",
+        "categories": [
+          "Signet"
+        ],
+        "traited_facts": [
+          {
+            "text": "Apply Buff/Condition",
+            "type": "Buff",
+            "icon": "https://render.guildwars2.com/file/719B80E35C276D68EF0AABB79126CF4CD42E3AF6/2261522.png",
+            "duration": 4,
+            "status": "Frost Aura",
+            "description": "Chill foes that strike you (only once per second for each attacker); incoming damage is reduced by 10%.",
+            "apply_count": 1,
+            "requires_trait": 287
+          }
+        ]
+      },
+      "wikitext": "{{Skill infobox\n| description = Create a storm based on your [[attunement]].\n| facts =\n{{skill fact|effect|Firestorm (Glyph of Storms skill)|linked skill=Fire Attunement|desc=}}\n{{skill fact|effect|Ice Storm (Glyph of Storms skill)|linked skill=Water Attunement|desc=}}\n{{skill fact|effect|Lightning Storm (Glyph of Storms skill)|linked skill=Air Attunement|desc=}}\n{{skill fact|effect|Sandstorm|linked skill=Earth Attunement|desc=}}\n{{skill fact|range|900}}\n| activation = 1.25\n| recharge = 60\n| profession = Elementalist\n| slot = utility\n| uw replaced by = none\n| type = glyph\n| hero points = 2\n| ground target = circle\n| training order = 2\n| id = 5734\n| palette id = 446\n}}\n[[File:Glyph of Storms appearance.jpg|thumb|Ingame appearance when used.]]\n\n== Skills ==\n{| {{STDT|elementalist}}\n{{Slot skill table header}}\n{{Slot skill table row|Firestorm (Glyph of Storms skill)}}\n{{Slot skill table row|Ice Storm (Glyph of Storms skill)}}\n{{Slot skill table row|Lightning Storm (Glyph of Storms skill)}}\n{{Slot skill table row|Sandstorm}}\n|}\n\n== Related [[trait]]s ==\n{{related traits}}\n\n== Notes ==\n* The attunement effect is determined at the beginning of the skill's activation.\n\n== Gallery ==\n<gallery>\nFile:Glyph of Storms render.png|Render\n</gallery>\n\n== Version history ==\n{{Version history table header|elementalist}}\n{{Version history table row|2020-07-07|Elementalist}}\n* This skill will now correctly put all attunement variants on interrupt cooldown when interrupted.\n{{Version history table row|2018-07-24|Elementalist}}\n* Fixed a bug that limited the maximum damage to 120% rather than 130%.\n{{Version history table row|2018-07-10|Elementalist}}\n* Fixed a bug in which this skill used an interrupt recharge instead of a full recharge.\n{{Version history table row|2018-05-22|Elementalist}}\n* Fixed a bug in which this skill required a full cooldown in situations where it should have required an interrupt cooldown.\n{{Version history table row|2018-05-08|Elementalist}}\n* The recharge time of storms will now be based on the player's attunement.\n{{Version history table row|2018-02-06|Elementalist}}\n* Reduced the recharge of Firestorm from 60 seconds to 25 seconds.\n* Reduced the recharge of Ice Storm from 60 seconds to 30 seconds.\n* Reduced the recharge of Sandstorm from 60 seconds to 40 seconds.\n* All storm glyph variants go on cooldown whenever one glyph is cast.\n{{Version history table row|2016-04-19|Elementalist}}\n* This skill now has new icons for each attunement for better visibility.\n{{Version history table row|2015-10-23|Elementalist}}\n* Ice Storm: Fixed a bug that caused all impacts to fall within a smaller than intended radius when casting this skill.\n* Lightning Storm: Fixed a bug that caused all impacts to fall within a smaller than intended radius when casting this skill.\n{{Version history table row|2015-06-23|Elementalist}}\n* Firestorm (Glyph of Storms): Increased the burning duration from 1 second to 2 seconds.\n{{Version history table row|2014-09-09|Elementalist}}\n* Fire now inflicts 1 second of burning on hit.\n* Lightning strike now inflicts 2 stacks of vulnerability for 8 seconds.\n{{Version history table row|2013-10-15|Elementalist}}\n* This skill now properly displays the duration of each spell. Added AoE rings to the fire and earth skills.\n** Firestorm: Reduced the number of maximum targets per impact from 10 to 5. Added an AoE ring.\n** Ice Storm: Added an AoE ring.\n** Lightning Storm: Increased the impact radius from 60 to 90.\n** Sandstorm: Reduced the number of maximum targets per pulse from 10 to 5. Added an AoE ring.\n{{Version history table row|2013-04-30|Elementalist}}\n* Increased duration of Lightning Storm by 50%, Ice Storm by 50%, Firestorm by 25%, and Sandstorm by 11%.\n{{Version history table row|release|r=y}}\n|}\n\n[[de:Glyphe der Stürme]]\n[[es:Glifo de tormentas]]\n[[fr:Glyphe des Tempêtes]]"
+    }
+  ],
+  "traits": [
+    {
+      "id": 1510,
+      "wikiTitle": "Flow like Water",
+      "note": "Weaver trait with split",
+      "api": {
+        "id": 1510,
+        "tier": 3,
+        "order": 0,
+        "name": "Persisting Flames",
+        "description": "Fire fields created by weapon skills last longer. Whenever your fire fields hit a foe or you inflict burning, gain increased strike damage for a duration.",
+        "slot": "Major",
+        "facts": [
+          {
+            "text": "Duration Increase",
+            "type": "Time",
+            "icon": "https://render.guildwars2.com/file/7B2193ACCF77E56C13E608191B082D68AA0FAA71/156659.png",
+            "duration": 2
+          },
+          {
+            "text": "Apply Buff/Condition",
+            "type": "Buff",
+            "icon": "https://render.guildwars2.com/file/38496307B7C27BCB08D6800F2A699B4998DD1935/1012312.png",
+            "duration": 15,
+            "status": "Persisting Flames",
+            "description": "Deal increased strike damage per stack.",
+            "apply_count": 1
+          },
+          {
+            "text": "Maximum Stacks",
+            "type": "Number",
+            "icon": "https://render.guildwars2.com/file/B4490FB81AA1E7C06F1B22056AE09A0F54CBE2C4/1770201.png",
+            "value": 5
+          }
+        ],
+        "specialization": 31,
+        "icon": "https://render.guildwars2.com/file/38496307B7C27BCB08D6800F2A699B4998DD1935/1012312.png"
+      },
+      "wikitext": "{{Trait infobox\n| line = Water\n| tier = Master\n| type = Major\n| recharge = 4\n| position = 3\n| split = pve, wvw pvp\n| description = Deal increased [[strike damage]], which is further increased while your [[health]] is above the threshold. [[Blocking]] or [[evading]] an attack [[heals]] you.\n| facts =\n{{skill fact|damage increase|alt=High-Health Damage Increase|10}}\n{{skill fact|damage increase|5}}\n{{skill fact|healing|714|coefficient=0.3|game mode = pve}}{{skill fact|healing|478|coefficient=0.3|game mode = pvp wvw}}\n{{skill fact|health threshold|50}}\n| training order = 8\n| improves property = Block, Evade\n| improves boon = Aegis\n| id = 349\n}}\n\n== Related [[skill]]s ==\n{{related skills}}\n\n== Notes ==\n* The healing done by this trait is equal to <code>(10 + Level^2 * 0.11 + [[Healing Power]] * 0.3)</code>.\n\n== Version history ==\n{{Version history table header|elementalist|type=trait}}\n{{Version history table row|2024-06-25}}\n* Increased the bonus strike damage while above the health threshold from 5% to 10% in PvP and WvW. This trait now also grants 5% bonus strike damage while under the health threshold. Reduced the health threshold from 75% to 50%. Reduced the internal cooldown from 10 seconds to 4 seconds.\n{{Version history table row|2021-05-11|General}}\n* Text on many damage-increasing profession traits, runes, and sigils has been clarified to indicate whether they increase outgoing strike damage, condition damage, or all damage, as appropriate.\n{{Version history table row|2020-02-25|Elementalist}}\n* (Competitive split) Reduced bonus damage from 10% to 5%. Reduced base heal from 714 to 478.\n{{Version history table row|2019-07-16|Elementalist_2|r=y}}\n* This new trait takes the slot previously occupied by [[Aquamancer's Training]] and increases damage dealt by 10% while the elementalist is above 75% health.\n* Additionally, it heals the elementalist when they block or evade an attack. The healing effect has a 10-second cooldown.\n|}\n\n[[de:Wie Wasser fließen]]\n[[es:Fluye como el agua]]\n[[fr:Agilité aquatique]]"
+    },
+    {
+      "id": 1502,
+      "wikiTitle": "Swift Revenge",
+      "note": "Weaver trait",
+      "api": {
+        "id": 1502,
+        "tier": 2,
+        "order": 2,
+        "name": "Stormsoul",
+        "description": "Deal increased strike damage to disabled or defiant foes. Outgoing stun duration increased. <br><c=@reminder>Disables include stun, daze, knockback, pull, knockdown, sink, float, launch, taunt, and fear.</c>",
+        "slot": "Major",
+        "facts": [
+          {
+            "text": "Damage Increase",
+            "type": "Percent",
+            "icon": "https://render.guildwars2.com/file/61AA4919C4A7990903241B680A69530121E994C7/156657.png",
+            "percent": 10
+          },
+          {
+            "text": "Duration Increase",
+            "type": "Percent",
+            "icon": "https://render.guildwars2.com/file/7B2193ACCF77E56C13E608191B082D68AA0FAA71/156659.png",
+            "percent": 33
+          }
+        ],
+        "specialization": 41,
+        "icon": "https://render.guildwars2.com/file/4505D3D02606283B02124C3304697304E663ECAE/1012275.png"
+      },
+      "wikitext": "{{Trait infobox\n| description = Gain [[swiftness]] when using a [[Dual Attack]]. Deal increased [[strike damage]] to enemies while under the effects of swiftness or [[superspeed]].\n| facts = {{skill fact|damage increase|10}}{{skill fact|swiftness|4}}\n| line = Weaver\n| tier = Master\n| type = Major\n| position = 2\n| training order = 5\n| improves boon = Swiftness\n| improves effect = Superspeed\n| improves type = Dual Attack\n| id = 2061\n| requires = pof\n}}\n\n== Mechanics ==\n* Grants {{Swiftness}} at the end of the dual attack's animation. \n\n== Related [[skill]]s ==\n{{Related skills}}\n\n== Related [[trait]]s ==\n{{Related traits}}\n\n== Version history ==\n{{Version history table header|elementalist}}\n{{Version history table row|2023-08-22|Weaver}}\n* Reduced damage bonus from 15% to 10% in PvE only.\n{{Version history table row|2022-11-29|Elementalist}}\n* Increased damage bonus from 10% to 15% in PvE only.\n{{Version history table row|2021-05-11|General}}\n* Text on many damage-increasing profession traits, runes, and sigils has been clarified to indicate whether they increase outgoing strike damage, condition damage, or all damage, as appropriate.\n{{Version history table row|2019-07-16|Elementalist 2}}\n* Increased bonus damage from 7% to 10%.\n{{Version history table row|2017-09-22|Elementalist|r=y}}\n|}\n\n[[de:Schnelle Rache]]\n[[es:Venganza rápida]]\n[[fr:Vengeance rapide]]"
+    },
+    {
+      "id": 264,
+      "wikiTitle": "Burning Precision",
+      "note": "trait with condition",
+      "api": {
+        "id": 264,
+        "tier": 2,
+        "order": 0,
+        "name": "Elemental Attunement",
+        "description": "Grant a boon to nearby allies when changing attunements.\n<c=@reminder>Note: This effect will not trigger when attuning to the same element.</c>",
+        "slot": "Minor",
+        "facts": [
+          {
+            "text": "Apply Buff/Condition",
+            "type": "PrefixedBuff",
+            "icon": "https://render.guildwars2.com/file/2FA9DF9D6BC17839BBEA14723F1C53D645DDB5E1/102852.png",
+            "duration": 15,
+            "status": "Might",
+            "description": "Increased outgoing damage; stacks intensity.",
+            "apply_count": 1,
+            "prefix": {
+              "text": "Apply Buff/Condition",
+              "icon": "https://render.guildwars2.com/file/1C91E9C799469ACC6EAF1ACD4B0AD8ACAB0C69A2/103035.png",
+              "status": "Fire Attunement",
+              "description": "Cast fire spells."
+            }
+          },
+          {
+            "text": "Apply Buff/Condition",
+            "type": "PrefixedBuff",
+            "icon": "https://render.guildwars2.com/file/2FA9DF9D6BC17839BBEA14723F1C53D645DDB5E1/102852.png",
+            "duration": 6,
+            "status": "Might",
+            "description": "Increased outgoing damage; stacks intensity.",
+            "apply_count": 1,
+            "prefix": {
+              "text": "Apply Buff/Condition",
+              "icon": "https://render.guildwars2.com/file/1C91E9C799469ACC6EAF1ACD4B0AD8ACAB0C69A2/103035.png",
+              "status": "Fire Attunement",
+              "description": "Cast fire spells."
+            }
+          },
+          {
+            "text": "Apply Buff/Condition",
+            "type": "PrefixedBuff",
+            "icon": "https://render.guildwars2.com/file/F69996772B9E18FD18AD0AABAB25D7E3FC42F261/102835.png",
+            "duration": 5,
+            "status": "Regeneration",
+            "description": "Gain health every second; stacks duration.",
+            "apply_count": 1,
+            "prefix": {
+              "text": "Apply Buff/Condition",
+              "icon": "https://render.guildwars2.com/file/737E1B9F7855B9F5D3DE1C990CD42118EF3D1C92/102820.png",
+              "status": "Water Attunement",
+              "description": "Cast water spells."
+            }
+          },
+          {
+            "text": "Apply Buff/Condition",
+            "type": "PrefixedBuff",
+            "icon": "https://render.guildwars2.com/file/20CFC14967E67F7A3FD4A4B8722B4CF5B8565E11/102836.png",
+            "duration": 8,
+            "status": "Swiftness",
+            "description": "Movement speed increased by 33%; stacks duration.",
+            "apply_count": 1,
+            "prefix": {
+              "text": "Apply Buff/Condition",
+              "icon": "https://render.guildwars2.com/file/4857F59020DE3B0950B9C91F3D234A1C1932984A/103048.png",
+              "status": "Air Attunement",
+              "description": "Cast air spells."
+            }
+          },
+          {
+            "text": "Apply Buff/Condition",
+            "type": "PrefixedBuff",
+            "icon": "https://render.guildwars2.com/file/CD77D1FAB7B270223538A8F8ECDA1CFB044D65F4/102834.png",
+            "duration": 5,
+            "status": "Protection",
+            "description": "Incoming strike damage decreased by 33%; stacks duration.",
+            "apply_count": 1,
+            "prefix": {
+              "text": "Apply Buff/Condition",
+              "icon": "https://render.guildwars2.com/file/4B8056D9BD080DC8E74AE6A57B2B383A2D4265C9/102870.png",
+              "status": "Earth Attunement",
+              "description": "Cast earth spells."
+            }
+          },
+          {
+            "text": "Apply Buff/Condition",
+            "type": "PrefixedBuff",
+            "icon": "https://render.guildwars2.com/file/CD77D1FAB7B270223538A8F8ECDA1CFB044D65F4/102834.png",
+            "duration": 4,
+            "status": "Protection",
+            "description": "Incoming strike damage decreased by 33%; stacks duration.",
+            "apply_count": 1,
+            "prefix": {
+              "text": "Apply Buff/Condition",
+              "icon": "https://render.guildwars2.com/file/4B8056D9BD080DC8E74AE6A57B2B383A2D4265C9/102870.png",
+              "status": "Earth Attunement",
+              "description": "Cast earth spells."
+            }
+          },
+          {
+            "text": "Number of Targets",
+            "type": "Number",
+            "icon": "https://render.guildwars2.com/file/BBE8191A494B0352259C10EADFDACCE177E6DA5B/1770208.png",
+            "value": 5
+          },
+          {
+            "text": "Radius",
+            "type": "Distance",
+            "icon": "https://render.guildwars2.com/file/B0CD8077991E4FB1622D2930337ED7F9B54211D5/156665.png",
+            "distance": 240
+          }
+        ],
+        "traited_facts": [
+          {
+            "text": "Recharge Time",
+            "type": "Time",
+            "icon": "https://render.guildwars2.com/file/AAB7C5387A08367C2F023F19FEE70E1556AD4375/1770202.png",
+            "duration": 5,
+            "requires_trait": 2344
+          }
+        ],
+        "specialization": 37,
+        "icon": "https://render.guildwars2.com/file/EB242E0D58000DD8DCB80B0F7B049F03C62299B6/1012292.png"
+      },
+      "wikitext": "{{Trait infobox\n| line = Fire\n| tier = Adept\n| type = Major\n| position = 1\n| recharge = 5\n| split = pve, wvw pvp\n| description = [[Burning]] you inflict has increased duration and your [[critical hit]]s gain a chance to inflict burning.\n| facts = {{skill fact|critical chance|33}}{{skill fact|burning|3|game mode = pve}}{{skill fact|burning|1|game mode = pvp wvw}}{{skill fact|duration increase|20%|game mode = pve}}{{skill fact|duration increase|15%|game mode = pvp wvw}}\n| training order = 2\n| improves condition = Burning\n| improves property = Critical hit\n| id = 296\n}}\n\n== Related [[skill]]s ==\n{{Related skills}}\n\n== Related [[trait]]s ==\n{{Related traits}}\n\n== Version history ==\n{{Version history table header|elementalist|type=trait}}\n{{Version history table row|2020-02-25|Elementalist}}\n* (Competitive split) Reduced bonus burning duration from 20% to 15%. Reduced burning duration from 3 seconds to 1 second.\n{{Version history table row|2019-07-16|Elementalist_2}}\n* Increased burning duration from 2 seconds to 3 seconds.\n{{Version history table row|2015-06-23|Elementalist}}\n* Updated this trait to reflect the introduction of the specialization mechanic.\n* Increased chance to 33%.\n* Increased burning duration to 2 seconds.\n* Increased cooldown to 5 seconds.\n* [[Ember's Might]] has been merged into this trait.\n** Burning duration is increased by 20%.\n{{Version history table row|release|r=y}}\n|}\n\n[[de:Brennende Präzision]]\n[[es:Precisión abrasadora]]\n[[fr:Précision ardente]]"
+    }
+  ],
+  "capturedAt": "2026-04-09T23:52:48.937Z"
+}

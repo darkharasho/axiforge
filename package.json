@@ -1,6 +1,7 @@
 {
   "name": "axiforge-desktop",
   "version": "0.2.0",
+  "workspaces": ["packages/*"],
   "description": "GW2 build editor desktop app with GitHub Pages publishing",
   "main": "src/main/index.js",
   "build": {
@@ -75,7 +76,7 @@
   "jest": {
     "testEnvironment": "node",
     "testMatch": [
-      "**/tests/**/*.test.js"
+      "<rootDir>/tests/**/*.test.js"
     ],
     "transform": {
       "^.+/src/renderer/.+\\.js$": [
