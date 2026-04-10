@@ -81,22 +81,36 @@ jobs:
         if: ${{ vars.DISCORD_WEBHOOK_URL != '' }}
         env:
           DISCORD_WEBHOOK_URL: ${{ vars.DISCORD_WEBHOOK_URL }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           tag="${GITHUB_REF#refs/tags/}"
           release_url="https://github.com/darkharasho/axiforge/releases/tag/${tag}"
           notes=$(gh release view "$tag" --json body --jq '.body' 2>/dev/null || echo "")
 
-          # Truncate notes to fit Discord's 2000 char limit (leaving room for header)
-          if [ ${#notes} -gt 1500 ]; then
-            notes="${notes:0:1500}..."
-          fi
+          export TAG="$tag"
+          export RELEASE_URL="$release_url"
+          export NOTES="$notes"
 
           payload=$(python3 -c "
-          import json, sys
-          content = f'**AxiForge ${tag}** released!\n\n${notes}\n\n🔗 {release_url}'
-          if len(content) > 2000:
-              content = content[:1997] + '...'
-          print(json.dumps({'content': content}))
-          " 2>/dev/null || echo '{"content":"AxiForge '"$tag"' released! '"$release_url"'"}')
+          import json, os
+
+          tag = os.environ['TAG']
+          release_url = os.environ['RELEASE_URL']
+          notes = os.environ.get('NOTES', '')
+
+          # Truncate notes for Discord embed description limit (4096 chars)
+          if len(notes) > 3800:
+              notes = notes[:3800] + '\n\n*... see full notes on GitHub*'
+
+          embed = {
+              'title': f'AxiForge {tag}',
+              'url': release_url,
+              'description': notes or 'A new version of AxiForge is available!',
+              'color': 0x5865F2,
+              'footer': {'text': 'AxiForge Release'},
+          }
+
+          print(json.dumps({'embeds': [embed]}))
+          ")
 
           curl -s -H "Content-Type: application/json" -d "$payload" "$DISCORD_WEBHOOK_URL"

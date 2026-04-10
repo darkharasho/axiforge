@@ -7,7 +7,7 @@
  * damage estimates, so correctness is critical.
  */
 
-const { computeSlotStats, computeEquipmentStats, computeBuildConcentration } = require("../../../src/renderer/modules/stats");
+const { computeSlotStats, computeEquipmentStats, computeStatBreakdown, computeBuildConcentration } = require("../../../src/renderer/modules/stats");
 const { state } = require("../../../src/renderer/modules/state");
 const { ARMOR_DEFENSE_BY_WEIGHT, PROFESSION_WEIGHT } = require("../../../src/renderer/modules/constants");
 const { FURY_CRIT_CHANCE, FURY_CRIT_CHANCE_WVW } = require("../../../src/renderer/modules/engine-bridge");
@@ -855,5 +855,61 @@ describe("computeEquipmentStats — signet passive buffs", () => {
     const result = computeEquipmentStats();
     // Engine resolves signet passives via constant map, independent of catalog
     expect(result.Power).toBe(1000 + 180);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// computeStatBreakdown — signet passive buff contributions (issue #174)
+// ---------------------------------------------------------------------------
+
+describe("computeStatBreakdown — signet passive buffs", () => {
+  const mockCatalog = {
+    skillById: new Map([
+      [14404, { id: 14404, name: "Signet of Might", categories: ["Signet"], facts: [] }],
+      [14410, { id: 14410, name: "Signet of Fury", categories: ["Signet"], facts: [] }],
+    ]),
+    traitById: new Map(),
+    specializationById: new Map(),
+  };
+
+  beforeEach(() => {
+    state.activeCatalog = mockCatalog;
+  });
+  afterEach(() => {
+    state.activeCatalog = null;
+  });
+
+  test("Signet of Fury appears in Precision breakdown with +180", () => {
+    state.editor = makeEditor({});
+    state.editor.skills = { healId: 0, utilityIds: [14410, 0, 0], eliteId: 0 };
+    const entries = computeStatBreakdown("Precision");
+    const signetEntry = entries.find((e) => e.source.includes("Signet"));
+    expect(signetEntry).toBeDefined();
+    expect(signetEntry.value).toBe(180);
+  });
+
+  test("Signet of Might appears in Power breakdown with +180", () => {
+    state.editor = makeEditor({});
+    state.editor.skills = { healId: 0, utilityIds: [14404, 0, 0], eliteId: 0 };
+    const entries = computeStatBreakdown("Power");
+    const signetEntry = entries.find((e) => e.source.includes("Signet"));
+    expect(signetEntry).toBeDefined();
+    expect(signetEntry.value).toBe(180);
+  });
+
+  test("no signet entry when no signets equipped", () => {
+    state.editor = makeEditor({});
+    state.editor.skills = { healId: 0, utilityIds: [0, 0, 0], eliteId: 0 };
+    const entries = computeStatBreakdown("Power");
+    const signetEntry = entries.find((e) => e.source.includes("Signet"));
+    expect(signetEntry).toBeUndefined();
+  });
+
+  test("signet does not appear in unrelated stat breakdown", () => {
+    state.editor = makeEditor({});
+    state.editor.skills = { healId: 0, utilityIds: [14410, 0, 0], eliteId: 0 };
+    const entries = computeStatBreakdown("Power");
+    const signetEntry = entries.find((e) => e.source.includes("Signet"));
+    expect(signetEntry).toBeUndefined();
   });
 });

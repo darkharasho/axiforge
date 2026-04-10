@@ -95,6 +95,54 @@ describe("resolveEntityFacts — buff deduplication", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Signet passive/active buff deduplication (issue #174)
+// ---------------------------------------------------------------------------
+
+describe("resolveEntityFacts — signet passive vs active buff", () => {
+  test("Signet of Fury: passive (duration 0) and active (duration 4) are both kept", () => {
+    const entity = {
+      facts: [
+        { type: "Recharge", text: "Recharge", value: 16, icon: "" },
+        { type: "Buff", status: "Signet of Fury", duration: 0, description: "Improved precision.", apply_count: 1, icon: "" },
+        { type: "Number", text: "Adrenaline", value: 30, icon: "" },
+        { type: "Buff", status: "Signet of Fury", duration: 4, description: "Improves precision and ferocity.", apply_count: 1, icon: "" },
+      ],
+      traitedFacts: [],
+    };
+    const result = resolveEntityFacts(entity);
+    const signetBuffs = result.filter((f) => f.status === "Signet of Fury");
+    expect(signetBuffs).toHaveLength(2);
+    expect(signetBuffs[0].duration).toBe(0);
+    expect(signetBuffs[1].duration).toBe(4);
+  });
+
+  test("wiki-style effect facts with desc/alt are both kept", () => {
+    const entity = {
+      facts: [
+        { type: "Buff", text: "Signet of Fury (effect)", status: "Signet of Fury (effect)", duration: 0, description: "180 Precision", apply_count: 1 },
+        { type: "Buff", text: "Active Bonus", status: "Signet of Fury (effect)", duration: 4, description: "360 Precision, 360 Ferocity", apply_count: 1 },
+      ],
+      traitedFacts: [],
+    };
+    const result = resolveEntityFacts(entity);
+    const signetBuffs = result.filter((f) => f.status === "Signet of Fury (effect)");
+    expect(signetBuffs).toHaveLength(2);
+    expect(signetBuffs[0].description).toBe("180 Precision");
+    expect(signetBuffs[1].description).toBe("360 Precision, 360 Ferocity");
+  });
+
+  test("still deduplicates same-status buffs when both have positive durations", () => {
+    const entity = {
+      facts: [makeBuff("Quickness", 5), makeBuff("Quickness", 2)],
+      traitedFacts: [],
+    };
+    const result = resolveEntityFacts(entity);
+    expect(result).toHaveLength(1);
+    expect(result[0].duration).toBe(5);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Text-based deduplication (Stack Threshold, generic numeric facts)
 // ---------------------------------------------------------------------------
 
