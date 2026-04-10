@@ -12,7 +12,8 @@ export default defineConfig({
     strictPort: true,
   },
   optimizeDeps: {
-    include: ["sortablejs"],
+    include: ["sortablejs", "@axi/gw2-data/engine"],
+    exclude: ["@axi/gw2-data"],
     force: true,
   },
   publicDir: path.resolve(__dirname, "public"),
