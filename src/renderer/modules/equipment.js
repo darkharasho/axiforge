@@ -11,7 +11,7 @@ import {
 } from "./constants.js";
 import { escapeHtml } from "./utils.js";
 import { computeSlotStats, computeUpgradeModifiers, computeStatBreakdown } from "./stats.js";
-import { computeStats, computeBoons, computeFuryCritModifier, computeFuryStatBonuses, computeMightPerStack, FURY_CRIT_CHANCE, FURY_CRIT_CHANCE_WVW } from "./engine-bridge.js";
+import { computeStats, computeBoons, computeFuryCritModifier, computeFuryStatBonuses, computeMightPerStack, FURY_CRIT_CHANCE, FURY_CRIT_CHANCE_WVW, STACKING_SIGIL_DEFS } from "./engine-bridge.js";
 import { bindHoverPreview, selectDetail } from "./detail-panel.js";
 import { getProfessionSvg } from "./profession-icons.js";
 import { getSlotSvg } from "./slot-icons.js";

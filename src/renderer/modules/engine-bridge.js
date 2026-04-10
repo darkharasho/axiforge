@@ -3,8 +3,11 @@
 // Production bridge between renderer state and @axi/gw2-data engine.
 // Only file that imports from the CJS engine package.
 
-import * as engine from "@axi/gw2-data/engine";
+import * as _engine from "@axi/gw2-data/engine";
 import { BOON_CONDITION_ICONS } from "./constants.js";
+
+// Normalize CJS interop: Vite dev uses namespace, Rollup prod wraps in { default }
+const engine = _engine.default || _engine;
 const { computeAttributes, analyzeBoons, analyzeCombos, loadOverrides, computeSlotStats: engineSlotStats, collectModifiers: engineCollectModifiers } = engine;
 
 // Re-export engine constants for renderer modules that need them

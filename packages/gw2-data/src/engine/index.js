@@ -7,7 +7,17 @@ const { buildInteractionGraph } = require("./graph");
 const { analyzeBoons, isAllyTargeted, normalizeName } = require("./boons");
 const { analyzeCombos } = require("./combos");
 const { loadOverrides, getOverride } = require("./overrides");
-const constants = require("./constants");
+const {
+  STAT_COMBOS, STAT_COMBOS_BY_LABEL, getStatCombo, getEffectiveStats,
+  SLOT_WEIGHTS, TWO_HAND_WEIGHTS, LAND_ONLY_SLOTS, AQUATIC_SLOTS,
+  PROFESSION_WEIGHT, ARMOR_DEFENSE_BY_WEIGHT, PROFESSION_BASE_HP,
+  WEAPON_STRENGTH_MIDPOINT, BUFF_FACT_TYPES,
+  MIGHT_POWER_PER_STACK, MIGHT_CONDI_PER_STACK,
+  FURY_CRIT_CHANCE, FURY_CRIT_CHANCE_WVW,
+  STACKING_SIGIL_DEFS, SIGNET_PASSIVE_BUFFS,
+  BOON_NAMES, CONDITION_NAMES, CONDITION_NAME_NORMALIZE,
+  BOON_DISPLAY_ORDER, ALL_STAT_KEYS, CONVERSION_TARGET_MAP,
+} = require("./constants");
 
 class StatEngine {
   /**
@@ -59,6 +69,14 @@ module.exports = {
   analyzeCombos,
   loadOverrides,
   getOverride,
-  // Re-export constants
-  ...constants,
+  // Constants
+  STAT_COMBOS, STAT_COMBOS_BY_LABEL, getStatCombo, getEffectiveStats,
+  SLOT_WEIGHTS, TWO_HAND_WEIGHTS, LAND_ONLY_SLOTS, AQUATIC_SLOTS,
+  PROFESSION_WEIGHT, ARMOR_DEFENSE_BY_WEIGHT, PROFESSION_BASE_HP,
+  WEAPON_STRENGTH_MIDPOINT, BUFF_FACT_TYPES,
+  MIGHT_POWER_PER_STACK, MIGHT_CONDI_PER_STACK,
+  FURY_CRIT_CHANCE, FURY_CRIT_CHANCE_WVW,
+  STACKING_SIGIL_DEFS, SIGNET_PASSIVE_BUFFS,
+  BOON_NAMES, CONDITION_NAMES, CONDITION_NAME_NORMALIZE,
+  BOON_DISPLAY_ORDER, ALL_STAT_KEYS, CONVERSION_TARGET_MAP,
 };
