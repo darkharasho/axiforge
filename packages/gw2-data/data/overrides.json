@@ -16,8 +16,7 @@
     "description": "Twisted Medicine: elixir skills become ally-targeted"
   },
   "trait:1831": {
-    "burstRechargeReduction": 10,
-    "description": "Primal Rage: API omits 10% burst recharge reduction fact"
+    "description": "Primal Rage: grants access to Primal Bursts (no burst recharge reduction)"
   },
   "trait:2046": {
     "berserkConditional": true,

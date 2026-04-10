@@ -294,22 +294,16 @@ describe("collectModifiers()", () => {
     expect(flatMods[0].value).toBe(200);
   });
 
-  it("collects burstRecharge from overrides", () => {
+  it("does not collect burstRecharge from Primal Rage (no recharge reduction)", () => {
     const traitId = 1831;
     const trait = { slot: "Major", description: "Primal Rage", facts: [] };
     const catalogs = makeCatalogs({ [traitId]: trait });
     const ctx = makeCtx([{ id: 1, majorChoices: { 1: traitId } }]);
-    const overrides = makeOverrides({ "trait:1831": { burstRechargeReduction: 10 } });
+    const overrides = makeOverrides({ "trait:1831": { description: "no burst recharge" } });
 
     const mods = collectModifiers(ctx, catalogs, overrides);
     const burstMods = mods.filter((m) => m.type === "burstRecharge");
-    expect(burstMods).toHaveLength(1);
-    expect(burstMods[0]).toMatchObject({
-      source: `trait:${traitId}`,
-      type: "burstRecharge",
-      value: 10,
-      condition: null,
-    });
+    expect(burstMods).toHaveLength(0);
   });
 
   it("collects burstRecharge from minor trait with Recharge Reduced Percent fact", () => {
