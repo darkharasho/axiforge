@@ -325,7 +325,7 @@ function mapWikiFactToApiFact(factType, positional, params, isWvw, isUniversal) 
     return {
       type: "AttributeAdjust",
       text: attrName,
-      target: attrName,
+      target: normalizeAttr(attrName),
       value,
     };
   }

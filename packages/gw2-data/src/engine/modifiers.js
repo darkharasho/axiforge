@@ -112,13 +112,19 @@ function collectModifiers(ctx, catalogs, overrides) {
 
     if (!trait?.facts) continue;
 
+    // Use per-mode facts when the wiki pipeline has separated them;
+    // fall back to trait.facts (which may contain mixed-mode duplicates).
+    const modeFacts = gameMode === "wvw" && trait.wvwFacts ? trait.wvwFacts
+      : gameMode === "pvp" && trait.pvpFacts ? trait.pvpFacts
+      : trait.facts;
+
     const fury = isFuryTrait(trait, traitId, overrides);
     const condition = override?.berserkConditional ? "berserk"
       : fury ? "fury" : null;
 
     // 4. AttributeAdjust facts — flatBonus
     const byTarget = new Map();
-    for (const fact of trait.facts) {
+    for (const fact of modeFacts) {
       if (fact.type !== "AttributeAdjust" || !fact.target || fact.value == null) continue;
       if (!byTarget.has(fact.target)) byTarget.set(fact.target, []);
       byTarget.get(fact.target).push(fact.value);
@@ -139,7 +145,7 @@ function collectModifiers(ctx, catalogs, overrides) {
     //    Group by source+target pair and pick PvE (index 0) or WvW (index 1),
     //    mirroring the dedup logic used for AttributeAdjust facts above.
     const convByPair = new Map();
-    for (const fact of trait.facts) {
+    for (const fact of modeFacts) {
       if (fact.type !== "AttributeConversion" && fact.type !== "BuffConversion") continue;
       if (!fact.source || !fact.target || !fact.percent) continue;
       const pairKey = `${fact.source}|${fact.target}`;
@@ -162,7 +168,7 @@ function collectModifiers(ctx, catalogs, overrides) {
 
     // 6. Fury traits with "Critical Chance Increase" Percent facts — critChance
     if (fury) {
-      const critFacts = trait.facts.filter(
+      const critFacts = modeFacts.filter(
         (f) => f.type === "Percent" && f.text === "Critical Chance Increase" && f.percent
       );
       if (critFacts.length > 0) {
@@ -178,7 +184,7 @@ function collectModifiers(ctx, catalogs, overrides) {
 
     // 7. Minor traits with "burst" in description and "Recharge Reduced" Percent facts
     if (trait.slot === "Minor" && trait.description?.toLowerCase().includes("burst")) {
-      const rechargeFacts = trait.facts.filter(
+      const rechargeFacts = modeFacts.filter(
         (f) => f.type === "Percent" && f.text === "Recharge Reduced" && f.percent
       );
       for (const fact of rechargeFacts) {
