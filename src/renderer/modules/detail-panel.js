@@ -1,9 +1,9 @@
 import { state } from "./state.js";
-import { WEAPON_STRENGTH_MIDPOINT, BOON_CONDITION_ICONS, BUFF_FACT_TYPES, FACT_TYPE_ICONS } from "./constants.js";
+import { WEAPON_STRENGTH_MIDPOINT, BOON_CONDITION_ICONS, FACT_TYPE_ICONS } from "./constants.js";
 import { escapeHtml, tierLabel, normalizeText, stripGw2Markup } from "./utils.js";
 import { computeEquipmentStats, computeUpgradeModifiers } from "./stats.js";
 import { getAssumedBoons } from "./equipment.js";
-import { validateStatResult } from "./engine-bridge.js";
+import { BUFF_FACT_TYPES, validateStatResult } from "./engine-bridge.js";
 
 let _readOnly = false;
 export function setReadOnly(val) { _readOnly = val; }

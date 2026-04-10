@@ -541,76 +541,9 @@ export const BOON_CONDITION_ICONS = {
   Poison:         `${_RW}/559B0AF9FB5E1243D2649FAAE660CCB338AACC19/102840.png`,
 };
 
-// Fact types where the icon represents the boon/condition being applied.
-export const BUFF_FACT_TYPES = new Set(["Buff", "ApplyBuffCondition", "PrefixedBuff"]);
-
 // Assumed boon stat effects (per GW2 wiki, level 80)
-export const MIGHT_POWER_PER_STACK = 30;
-export const MIGHT_CONDI_PER_STACK = 30;
 export const MIGHT_MAX_STACKS = 25;
-export const FURY_CRIT_CHANCE = 25; // percentage points (PvE)
-export const FURY_CRIT_CHANCE_WVW = 20; // percentage points (WvW)
 export const STABILITY_MAX_STACKS = 25;
-
-// Attribute-stacking sigils (only one can be active at a time in-game)
-// stat: single stat key affected.  allStats: true = +perStack to every attribute.
-// modifier: string label for percentage modifiers that don't map to a flat attribute.
-const _ALL_STATS = ["Power", "Precision", "Toughness", "Vitality", "Ferocity", "ConditionDamage", "Expertise", "Concentration", "HealingPower"];
-export const STACKING_SIGIL_DEFS = [
-  { id: 24575, key: "sigilBloodlust", label: "Bloodlust", stat: "Power", perStack: 10, maxStacks: 25 },
-  { id: 81045, key: "sigilBounty", label: "Bounty", stat: "Concentration", perStack: 9, maxStacks: 25 },
-  { id: 24578, key: "sigilCorruption", label: "Corruption", stat: "ConditionDamage", perStack: 10, maxStacks: 25 },
-  { id: 67341, key: "sigilCruelty", label: "Cruelty", stat: "Ferocity", perStack: 10, maxStacks: 25 },
-  { id: 24584, key: "sigilBenevolence", label: "Benevolence", modifier: "Outgoing Healing", perStack: 0.5, maxStacks: 25 },
-  { id: 24582, key: "sigilLife", label: "Life", stat: "HealingPower", perStack: 10, maxStacks: 25 },
-  { id: 49457, key: "sigilMomentum", label: "Momentum", stat: "Toughness", perStack: 5, maxStacks: 25 },
-  { id: 24580, key: "sigilPerception", label: "Perception", stat: "Precision", perStack: 10, maxStacks: 25 },
-  { id: 86170, key: "sigilStars", label: "Stars", allStats: _ALL_STATS, perStack: 2, maxStacks: 25 },
-];
-export const STACKING_SIGIL_IDS = new Set(STACKING_SIGIL_DEFS.map((d) => d.id));
-
-// Signet passive attribute buffs — the GW2 API does not expose these values,
-// so they are maintained as a static map.  Key = skill ID, value = { stat, value }.
-// Source: https://wiki.guildwars2.com/wiki/Signet (PvE values, all 180 as of 2025-06).
-export const SIGNET_PASSIVE_BUFFS = new Map([
-  // Guardian
-  [9093,  { stat: "Power",          value: 180 }], // Bane Signet
-  [9151,  { stat: "ConditionDamage", value: 180 }], // Signet of Wrath
-  [9163,  { stat: "Concentration",  value: 180 }], // Signet of Mercy
-  // Warrior
-  [14404, { stat: "Power",          value: 180 }], // Signet of Might
-  [14410, { stat: "Precision",      value: 180 }], // Signet of Fury
-  // Ranger
-  [12500, { stat: "Toughness",      value: 180 }], // Signet of Stone
-  [12491, { stat: "Ferocity",       value: 180 }], // Signet of the Wild
-  // Thief
-  [13046, { stat: "Power",          value: 180 }], // Assassin's Signet
-  [13062, { stat: "Precision",      value: 180 }], // Signet of Agility
-  // Elementalist
-  [5542,  { stat: "Precision",      value: 180 }], // Signet of Fire
-  // Mesmer
-  [10232, { stat: "ConditionDamage", value: 180 }], // Signet of Domination
-  [10234, { stat: "Expertise",      value: 180 }], // Signet of Midnight
-  // Necromancer
-  [10622, { stat: "Power",          value: 180 }], // Signet of Spite
-]);
-
-export const BOON_NAMES = new Set([
-  "Aegis", "Alacrity", "Fury", "Might", "Protection", "Quickness",
-  "Regeneration", "Resistance", "Resolution", "Stability", "Swiftness", "Vigor",
-]);
-
-export const CONDITION_NAMES = new Set([
-  "Bleeding", "Blind", "Blinded", "Burning", "Chill", "Chilled",
-  "Confusion", "Cripple", "Crippled", "Fear", "Immobile", "Immobilize", "Immobilized",
-  "Poison", "Poisoned", "Slow", "Taunt", "Torment",
-  "Vulnerability", "Weakness",
-]);
-
-export const CONDITION_NAME_NORMALIZE = {
-  Blind: "Blinded", Chill: "Chilled", Cripple: "Crippled",
-  Immobilize: "Immobile", Immobilized: "Immobile", Poison: "Poisoned",
-};
 
 export const BOON_DISPLAY_ORDER = [
   "Aegis", "Alacrity", "Fury", "Might", "Protection", "Quickness",
