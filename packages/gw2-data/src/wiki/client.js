@@ -11,6 +11,7 @@ const WIKI_API_ROOT = "https://wiki.guildwars2.com/api.php";
 const USER_AGENT = "@axi/gw2-data (https://github.com/darkharasho/axiforge)";
 const DEFAULT_TTL_MS = 4 * 60 * 60 * 1000; // 4 hours
 const RATE_LIMIT_MS = 200;
+const MISSING_SENTINEL = "__WIKI_MISSING__";
 
 class WikiClient {
   constructor(options = {}) {
@@ -37,6 +38,7 @@ class WikiClient {
   async getWikitext(title) {
     const cacheKey = `wikitext:${title}`;
     const cached = await this._cache.get(cacheKey);
+    if (cached === MISSING_SENTINEL) return null;
     if (cached !== null) return cached;
 
     const url =
@@ -51,7 +53,10 @@ class WikiClient {
     if (!pages) return null;
 
     const page = Object.values(pages)[0];
-    if (page.missing) return null;
+    if (page.missing) {
+      await this._cache.set(cacheKey, MISSING_SENTINEL, this._cacheTTL);
+      return null;
+    }
 
     const wikitext = page.revisions?.[0]?.["*"] || null;
     if (wikitext) {
@@ -77,7 +82,9 @@ class WikiClient {
     for (const title of titles) {
       const cacheKey = `wikitext:${title}`;
       const cached = await this._cache.get(cacheKey);
-      if (cached !== null) {
+      if (cached === MISSING_SENTINEL) {
+        result.set(title, null);
+      } else if (cached !== null) {
         result.set(title, cached);
       } else {
         uncached.push(title);
@@ -137,9 +144,11 @@ class WikiClient {
         if (wikitext === undefined) wikitext = null;
 
         result.set(title, wikitext);
+        const cacheKey = `wikitext:${title}`;
         if (wikitext !== null) {
-          const cacheKey = `wikitext:${title}`;
           await this._cache.set(cacheKey, wikitext, this._cacheTTL);
+        } else {
+          await this._cache.set(cacheKey, MISSING_SENTINEL, this._cacheTTL);
         }
       }
     }

@@ -182,6 +182,44 @@ describe("WikiClient", () => {
       expect(mockFetch).not.toHaveBeenCalled();
     });
 
+    test("caches missing pages so subsequent batch calls skip them", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          query: {
+            pages: {
+              "-1": { title: "Missing Skill", missing: true },
+              "1": { title: "Fireball", revisions: [{ "*": "fireball text" }] },
+            },
+          },
+        }),
+      });
+
+      const result1 = await client.getWikitextBatch(["Fireball", "Missing Skill"]);
+      expect(result1.get("Missing Skill")).toBeNull();
+      expect(result1.get("Fireball")).toBe("fireball text");
+
+      // Second batch: "Missing Skill" should come from cache, only "Shelter" fetched
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          query: {
+            pages: {
+              "1": { title: "Shelter", revisions: [{ "*": "shelter text" }] },
+            },
+          },
+        }),
+      });
+
+      const result2 = await client.getWikitextBatch(["Missing Skill", "Shelter"]);
+      expect(result2.get("Missing Skill")).toBeNull();
+      expect(result2.get("Shelter")).toBe("shelter text");
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      // Second fetch should only contain Shelter, not Missing Skill
+      expect(mockFetch.mock.calls[1][0]).toContain("Shelter");
+      expect(mockFetch.mock.calls[1][0]).not.toContain("Missing");
+    });
+
     test("handles MediaWiki title normalization", async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
@@ -220,6 +258,27 @@ describe("WikiClient", () => {
   });
 
   describe("getWikitext", () => {
+    test("caches missing pages so subsequent calls skip the network", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          query: {
+            pages: {
+              "-1": { missing: true },
+            },
+          },
+        }),
+      });
+
+      const result1 = await client.getWikitext("Nonexistent");
+      expect(result1).toBeNull();
+
+      // Second call should NOT hit the network
+      const result2 = await client.getWikitext("Nonexistent");
+      expect(result2).toBeNull();
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
     test("returns null on HTTP error", async () => {
       mockFetch.mockResolvedValueOnce({ ok: false, status: 500 });
       const result = await client.getWikitext("Fireball");
