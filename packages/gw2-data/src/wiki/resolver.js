@@ -109,6 +109,28 @@ function isDisambiguation(wikitext) {
 }
 
 /**
+ * Extract the GW2 API ID(s) from a {{Skill infobox}} or {{Trait infobox}} template.
+ * Returns an array of numeric IDs, or empty array if no matching infobox found.
+ *
+ * @param {string} wikitext
+ * @returns {number[]}
+ */
+function extractInfoboxId(wikitext) {
+  // Match only Skill or Trait infoboxes (not Location, Weapon, NPC, etc.)
+  const infoboxMatch = wikitext.match(/\{\{(?:Skill|Trait) infobox\b/i);
+  if (!infoboxMatch) return [];
+
+  // Find the | id = ... line within the infobox
+  const idMatch = wikitext.match(/\|\s*id\s*=\s*([0-9,\s]+)/);
+  if (!idMatch) return [];
+
+  return idMatch[1]
+    .split(",")
+    .map((s) => parseInt(s.trim(), 10))
+    .filter((n) => !isNaN(n));
+}
+
+/**
  * Batch-resolve wiki facts for multiple entities.
  *
  * @param {import("./client").WikiClient} client
@@ -125,8 +147,9 @@ async function resolveEntityFacts(client, titleToId, options = {}) {
   const titles = [...titleToId.keys()];
   const wikitextMap = await client.getWikitextBatch(titles);
 
-  // Collect disambiguation pages for retry
+  // Collect disambiguation pages and name collisions for retry
   const disambigRetries = new Map(); // alternative title → original title
+  const nameCollisionRetries = new Map(); // original title → id (wrong infobox type / wrong ID)
   const profession = options.profession ? options.profession.toLowerCase() : null;
 
   for (const [title, id] of titleToId) {
@@ -141,6 +164,34 @@ async function resolveEntityFacts(client, titleToId, options = {}) {
       continue;
     }
 
+    // Check if page has a Skill or Trait infobox (right page type).
+    // Don't check the specific ID — multiple entities can share a name,
+    // and titleToFirstId may map to a different entity than the wiki page lists.
+    const hasSkillOrTraitInfobox = /\{\{(?:Skill|Trait) infobox\b/i.test(wikitext);
+    if (!hasSkillOrTraitInfobox) {
+      // Wrong page type (location, weapon, NPC, etc.) or no infobox.
+      // Check if page has parseable facts anyway (some skill pages lack formal infoboxes).
+      const parsed = parseFactsByMode(wikitext);
+      const hasTimings = parsed.recharge.pve != null || parsed.activation.pve != null;
+      const hasFacts = parsed.pve.length > 0 || parsed.wvw.length > 0 || parsed.pvp.length > 0 || hasTimings;
+      if (hasFacts) {
+        // Has facts but no infobox — accept it (existing behavior)
+        result.set(id, {
+          pve: parsed.pve,
+          wvw: parsed.hasSplit ? parsed.wvw : null,
+          pvp: parsed.hasSplit ? parsed.pvp : null,
+          hasSplit: parsed.hasSplit,
+          recharge: parsed.recharge,
+          activation: parsed.activation,
+        });
+      } else {
+        // No infobox AND no facts — likely a wrong page type, queue retry
+        nameCollisionRetries.set(title, id);
+      }
+      continue;
+    }
+
+    // Has Skill/Trait infobox — correct page type, parse facts normally
     const parsed = parseFactsByMode(wikitext);
 
     const hasTimings = parsed.recharge.pve != null || parsed.activation.pve != null;
@@ -184,7 +235,67 @@ async function resolveEntityFacts(client, titleToId, options = {}) {
     }
   }
 
+  // Retry name collision pages via prefix search for "Name (" variants
+  if (nameCollisionRetries.size > 0) {
+    // Prefix-search all colliding titles in parallel to find candidate pages
+    const searchPromises = [];
+    for (const [title] of nameCollisionRetries) {
+      searchPromises.push(
+        client.prefixSearch(`${title} (`).then((titles) => ({ originalTitle: title, candidates: titles }))
+      );
+    }
+    const searchResults = await Promise.all(searchPromises);
+
+    // Collect all candidate titles for a single batch fetch
+    const candidateToOriginal = new Map(); // candidate title → original title
+    for (const { originalTitle, candidates } of searchResults) {
+      for (const candidate of candidates) {
+        // Only consider candidates that look like "Name (... skill)" or "Name (... trait)"
+        // Exclude subpages like "Name (skill)/history"
+        if (candidate.includes("/")) continue;
+        if (/\(.*(?:skill|trait)\)$/i.test(candidate)) {
+          candidateToOriginal.set(candidate, originalTitle);
+        }
+      }
+    }
+
+    if (candidateToOriginal.size > 0) {
+      const candidateWikitext = await client.getWikitextBatch([...candidateToOriginal.keys()]);
+
+      // Group candidates by original title, try each until one has a Skill/Trait infobox with facts
+      const candidatesByOriginal = new Map(); // original title → [candidate titles]
+      for (const [candidate, original] of candidateToOriginal) {
+        if (!candidatesByOriginal.has(original)) candidatesByOriginal.set(original, []);
+        candidatesByOriginal.get(original).push(candidate);
+      }
+
+      for (const [originalTitle, candidates] of candidatesByOriginal) {
+        for (const candidate of candidates) {
+          const wikitext = candidateWikitext.get(candidate);
+          if (!wikitext) continue;
+
+          if (!/\{\{(?:Skill|Trait) infobox\b/i.test(wikitext)) continue;
+
+          const parsed = parseFactsByMode(wikitext);
+          const hasTimings = parsed.recharge.pve != null || parsed.activation.pve != null;
+          if (parsed.pve.length === 0 && parsed.wvw.length === 0 && parsed.pvp.length === 0 && !hasTimings) continue;
+
+          const id = nameCollisionRetries.get(originalTitle);
+          result.set(id, {
+            pve: parsed.pve,
+            wvw: parsed.hasSplit ? parsed.wvw : null,
+            pvp: parsed.hasSplit ? parsed.pvp : null,
+            hasSplit: parsed.hasSplit,
+            recharge: parsed.recharge,
+            activation: parsed.activation,
+          });
+          break; // found a valid candidate for this title
+        }
+      }
+    }
+  }
+
   return result;
 }
 
-module.exports = { groupFactsByMode, parseFactsByMode, resolveEntityFacts, isDisambiguation };
+module.exports = { groupFactsByMode, parseFactsByMode, resolveEntityFacts, isDisambiguation, extractInfoboxId };

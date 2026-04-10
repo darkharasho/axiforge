@@ -23,6 +23,8 @@ function _setStaticData({ professions, specializations, legends } = {}) {
 }
 
 let _wikiClient = null;
+const _catalogCache = new Map();
+const _catalogInflight = new Map();
 
 function initWikiClient(cacheDir) {
   const cache = new DiskCache(path.join(cacheDir, "wiki-facts"));
@@ -34,6 +36,10 @@ function getWikiClient() {
     _wikiClient = new WikiClient();
   }
   return _wikiClient;
+}
+
+function clearCatalogCache() {
+  _catalogCache.clear();
 }
 
 function applyWikiFacts(entity, wikiFactsById, overridesMap) {
@@ -106,11 +112,7 @@ async function getProfessionList(lang = "en") {
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
-async function getProfessionCatalog(professionId, lang = "en", gameMode = "pve") {
-  if (!professionId) {
-    throw new Error("Missing profession id.");
-  }
-
+async function _buildProfessionCatalog(professionId, lang = "en", gameMode = "pve") {
   // Step 1: look up profession from static snapshot — this data rarely changes.
   const profession = PROFESSIONS_STATIC.find((p) => p.id === professionId);
   if (!profession?.id) {
@@ -751,7 +753,7 @@ async function getProfessionCatalog(professionId, lang = "en", gameMode = "pve")
     console.warn(`[catalog] Wiki facts: ${resolved}/${total} resolved. Missing: ${missing.slice(0, 10).join(", ")}${missing.length > 10 ? ` (+${missing.length - 10} more)` : ""}`);
   }
 
-  return {
+  const catalog = {
     profession: { id: profession.id, name: profession.name || profession.id, icon: profession.icon || "", iconBig: profession.icon_big || "" },
     specializations: mappedSpecializations,
     traits: mappedTraits,
@@ -777,6 +779,29 @@ async function getProfessionCatalog(professionId, lang = "en", gameMode = "pve")
     gameMode: gameMode || "pve",
     updatedAt: new Date().toISOString(),
   };
+
+  return catalog;
+}
+
+async function getProfessionCatalog(professionId, lang = "en", gameMode = "pve") {
+  if (!professionId) {
+    throw new Error("Missing profession id.");
+  }
+
+  const cacheKey = `${professionId}:${lang}`;
+  if (_catalogCache.has(cacheKey)) return _catalogCache.get(cacheKey);
+  if (_catalogInflight.has(cacheKey)) return _catalogInflight.get(cacheKey);
+
+  const promise = _buildProfessionCatalog(professionId, lang, gameMode);
+  _catalogInflight.set(cacheKey, promise);
+
+  try {
+    const catalog = await promise;
+    _catalogCache.set(cacheKey, catalog);
+    return catalog;
+  } finally {
+    _catalogInflight.delete(cacheKey);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -886,4 +911,5 @@ module.exports = {
   _setStaticData,
   initWikiClient,
   getWikiClient,
+  clearCatalogCache,
 };

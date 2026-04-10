@@ -5,6 +5,7 @@ const {
   parseFactsByMode,
   resolveEntityFacts,
   isDisambiguation,
+  extractInfoboxId,
 } = require("../src/wiki/resolver");
 const { WikiClient } = require("../src/wiki/client");
 const { MemoryCache } = require("../src/wiki/cache");
@@ -258,6 +259,237 @@ describe("resolveEntityFacts", () => {
     expect(mockFetch).toHaveBeenCalledTimes(1);
   });
 
+  test("retries with prefix search when page has wrong infobox type", async () => {
+    const locationWikitext = "{{Location infobox\n| name = Ring of Fire\n| id = 20\n}}";
+    const skillWikitext = "{{Skill infobox\n| id = 5765\n}}\n{{skill fact|damage|1.0}}";
+
+    // Initial batch fetch returns location page
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        query: {
+          pages: {
+            "1": { title: "Ring of Fire", revisions: [{ "*": locationWikitext }] },
+          },
+        },
+      }),
+    });
+
+    // Prefix search for "Ring of Fire (" returns candidates
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        query: {
+          prefixsearch: [
+            { title: "Ring of Fire (elementalist skill)" },
+            { title: "Ring of Fire (location)" },
+          ],
+        },
+      }),
+    });
+
+    // Batch fetch of skill candidate (location filtered out by regex)
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        query: {
+          pages: {
+            "2": { title: "Ring of Fire (elementalist skill)", revisions: [{ "*": skillWikitext }] },
+          },
+        },
+      }),
+    });
+
+    const titleToId = new Map([["Ring of Fire", 5765]]);
+    const result = await resolveEntityFacts(client, titleToId, { profession: "Elementalist" });
+
+    expect(result.size).toBe(1);
+    expect(result.has(5765)).toBe(true);
+    expect(result.get(5765).pve[0].type).toBe("Damage");
+  });
+
+  test("prefix search finds generic (skill) suffix", async () => {
+    const weaponWikitext = "{{Weapon infobox\n| type = Sword\n| id = 29181\n}}";
+    const skillWikitext = "{{Skill infobox\n| id = 63281\n}}\n{{skill fact|damage|0.5}}";
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        query: {
+          pages: {
+            "1": { title: "Zap", revisions: [{ "*": weaponWikitext }] },
+          },
+        },
+      }),
+    });
+
+    // Prefix search returns only the generic (skill) page
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        query: {
+          prefixsearch: [{ title: "Zap (skill)" }],
+        },
+      }),
+    });
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        query: {
+          pages: {
+            "3": { title: "Zap (skill)", revisions: [{ "*": skillWikitext }] },
+          },
+        },
+      }),
+    });
+
+    const titleToId = new Map([["Zap", 63281]]);
+    const result = await resolveEntityFacts(client, titleToId, { profession: "Elementalist" });
+
+    expect(result.size).toBe(1);
+    expect(result.has(63281)).toBe(true);
+    expect(result.get(63281).pve[0].type).toBe("Damage");
+  });
+
+  test("accepts page directly when it has correct infobox type", async () => {
+    const skillWikitext = "{{Skill infobox\n| id = 5489\n}}\n{{skill fact|damage|0.8}}";
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        query: {
+          pages: {
+            "1": { title: "Fireball", revisions: [{ "*": skillWikitext }] },
+          },
+        },
+      }),
+    });
+
+    const titleToId = new Map([["Fireball", 5489]]);
+    const result = await resolveEntityFacts(client, titleToId, { profession: "Elementalist" });
+
+    expect(result.size).toBe(1);
+    expect(result.has(5489)).toBe(true);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  test("falls back to API facts when prefix search finds no skill/trait candidates", async () => {
+    const locationWikitext = "{{Location infobox\n| name = Some Place\n| id = 99\n}}";
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        query: {
+          pages: {
+            "1": { title: "Some Place", revisions: [{ "*": locationWikitext }] },
+          },
+        },
+      }),
+    });
+
+    // Prefix search returns no skill/trait candidates
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        query: {
+          prefixsearch: [{ title: "Some Place (location)" }],
+        },
+      }),
+    });
+
+    const titleToId = new Map([["Some Place", 12345]]);
+    const result = await resolveEntityFacts(client, titleToId, { profession: "Warrior" });
+
+    expect(result.size).toBe(0);
+  });
+
+  test("prefix search finds (trait skill) suffix", async () => {
+    const locationWikitext = "{{Location infobox\n| name = Pulmonary Impact\n| id = 99\n}}";
+    const traitSkillWikitext = "{{Skill infobox\n| id = 62710\n}}\n{{skill fact|damage|1.2}}";
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        query: {
+          pages: {
+            "1": { title: "Pulmonary Impact", revisions: [{ "*": locationWikitext }] },
+          },
+        },
+      }),
+    });
+
+    // Prefix search finds the (trait skill) page
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        query: {
+          prefixsearch: [{ title: "Pulmonary Impact (trait skill)" }],
+        },
+      }),
+    });
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        query: {
+          pages: {
+            "5": { title: "Pulmonary Impact (trait skill)", revisions: [{ "*": traitSkillWikitext }] },
+          },
+        },
+      }),
+    });
+
+    const titleToId = new Map([["Pulmonary Impact", 62710]]);
+    const result = await resolveEntityFacts(client, titleToId, { profession: "Harbinger" });
+
+    expect(result.size).toBe(1);
+    expect(result.has(62710)).toBe(true);
+    expect(result.get(62710).pve[0].type).toBe("Damage");
+  });
+
+  test("prefix search works without profession option", async () => {
+    const locationWikitext = "{{Location infobox\n| name = Some Skill\n| id = 99\n}}";
+    const skillWikitext = "{{Skill infobox\n| id = 1234\n}}\n{{skill fact|damage|0.5}}";
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        query: {
+          pages: {
+            "1": { title: "Some Skill", revisions: [{ "*": locationWikitext }] },
+          },
+        },
+      }),
+    });
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        query: {
+          prefixsearch: [{ title: "Some Skill (skill)" }],
+        },
+      }),
+    });
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        query: {
+          pages: {
+            "2": { title: "Some Skill (skill)", revisions: [{ "*": skillWikitext }] },
+          },
+        },
+      }),
+    });
+
+    const titleToId = new Map([["Some Skill", 1234]]);
+    const result = await resolveEntityFacts(client, titleToId); // no profession
+
+    expect(result.size).toBe(1);
+    expect(result.has(1234)).toBe(true);
+  });
+
   test("skips pages with no fact templates (keeps API facts)", async () => {
     // A wiki page exists but has no {{skill fact|...}} or {{trait fact|...}} templates
     const noFactsWikitext = "'''Piercing Shards''' is a trait for Elementalist that makes ice shards pierce.";
@@ -300,5 +532,42 @@ describe("isDisambiguation", () => {
 
   test("returns false for pages mentioning disambig in prose", () => {
     expect(isDisambiguation("This page is not a disambiguation page")).toBe(false);
+  });
+});
+
+describe("extractInfoboxId", () => {
+  test("extracts single ID from skill infobox", () => {
+    const wikitext = "{{Skill infobox\n| id = 5489\n| description = Launch a ball of fire.\n}}";
+    expect(extractInfoboxId(wikitext)).toEqual([5489]);
+  });
+
+  test("extracts multi-ID from skill infobox", () => {
+    const wikitext = "{{Skill infobox\n| id = 5805,6020\n| description = Equip a kit.\n}}";
+    expect(extractInfoboxId(wikitext)).toEqual([5805, 6020]);
+  });
+
+  test("extracts ID from trait infobox", () => {
+    const wikitext = "{{Trait infobox\n| line = Spite\n| id = 903\n}}";
+    expect(extractInfoboxId(wikitext)).toEqual([903]);
+  });
+
+  test("returns empty array for location infobox", () => {
+    const wikitext = "{{Location infobox\n| name = Ring of Fire\n| id = 20\n}}";
+    expect(extractInfoboxId(wikitext)).toEqual([]);
+  });
+
+  test("returns empty array for weapon infobox", () => {
+    const wikitext = "{{Weapon infobox\n| type = Sword\n| id = 29181\n}}";
+    expect(extractInfoboxId(wikitext)).toEqual([]);
+  });
+
+  test("returns empty array for page with no infobox", () => {
+    const wikitext = "'''Some Page''' is about something.";
+    expect(extractInfoboxId(wikitext)).toEqual([]);
+  });
+
+  test("handles whitespace variations", () => {
+    const wikitext = "{{Skill infobox\n|id=5489\n}}";
+    expect(extractInfoboxId(wikitext)).toEqual([5489]);
   });
 });

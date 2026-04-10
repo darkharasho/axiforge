@@ -1608,3 +1608,47 @@ describe("disk cache", () => {
     await expect(initDiskCache(tmpDir)).resolves.not.toThrow();
   });
 });
+
+// ---------------------------------------------------------------------------
+// catalog caching
+// ---------------------------------------------------------------------------
+
+describe("catalog caching", () => {
+  beforeEach(() => {
+    freshLoad();
+    global.fetch = createGw2MockFetch();
+  });
+  afterEach(() => { delete global.fetch; });
+
+  test("returns cached catalog on second call for same profession", async () => {
+    const catalog1 = await gw2Data.getProfessionCatalog("Warrior", "en");
+    const catalog2 = await gw2Data.getProfessionCatalog("Warrior", "en");
+    expect(catalog1).toBe(catalog2); // same object reference
+  });
+
+  test("returns different catalogs for different professions", async () => {
+    const warrior = await gw2Data.getProfessionCatalog("Warrior", "en");
+    const necro = await gw2Data.getProfessionCatalog("Necromancer", "en");
+    expect(warrior).not.toBe(necro);
+    expect(warrior.profession.id).toBe("Warrior");
+    expect(necro.profession.id).toBe("Necromancer");
+  });
+
+  test("clearCatalogCache forces rebuild on next call", async () => {
+    const catalog1 = await gw2Data.getProfessionCatalog("Warrior", "en");
+    gw2Data.clearCatalogCache();
+    const catalog2 = await gw2Data.getProfessionCatalog("Warrior", "en");
+    expect(catalog1).not.toBe(catalog2); // different object after cache clear
+    expect(catalog2.profession.id).toBe("Warrior"); // still correct data
+  });
+
+  test("concurrent calls for same profession share a single build", async () => {
+    const [cat1, cat2, cat3] = await Promise.all([
+      gw2Data.getProfessionCatalog("Warrior", "en"),
+      gw2Data.getProfessionCatalog("Warrior", "en"),
+      gw2Data.getProfessionCatalog("Warrior", "en"),
+    ]);
+    expect(cat1).toBe(cat2);
+    expect(cat2).toBe(cat3);
+  });
+});
