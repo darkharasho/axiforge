@@ -118,6 +118,23 @@ export function renderDetailPanel() {
   const detailDisplayFacts = hasInfoboxRecharge ? facts.filter((f) => f.type !== "Recharge") : facts;
   const detailTimingBadges = isSkill ? _buildTimingBadges(detail, alacrity, burstRecharge) : "";
 
+  // Build trait skill list (icon + name) for traits with associated skills
+  const traitSkillsHtml = (() => {
+    if (detail.kind !== "trait" || !Array.isArray(detail.traitSkillIds) || !detail.traitSkillIds.length) return "";
+    const catalog = state.activeCatalog;
+    if (!catalog?.skillById) return "";
+    const iconOverrides = detail.traitSkillIcons || {};
+    const items = [];
+    for (const skillId of detail.traitSkillIds) {
+      const skill = catalog.skillById.get(skillId);
+      if (!skill) continue;
+      const icon = iconOverrides[skillId] || skill.icon || "";
+      const name = escapeHtml(skill.name || "Unknown");
+      items.push(`<li class="trait-skill-entry"><img src="${escapeHtml(icon)}" alt="" onerror="this.style.visibility='hidden'" /><span>${name}</span></li>`);
+    }
+    return items.length ? `<ul class="trait-skill-list">${items.join("")}</ul>` : "";
+  })();
+
   const factsHtml = detailDisplayFacts.length
     ? detailDisplayFacts
         .map((fact) => {
@@ -125,7 +142,7 @@ export function renderDetailPanel() {
           return `<li${cls ? ` class="${cls}"` : ""}>${formatFactHtml(fact, detailDmgStats, { alacrity, burstRecharge })}</li>`;
         })
         .join("")
-    : "<li>No fact entries.</li>";
+    : traitSkillsHtml ? "" : "<li>No fact entries.</li>";
 
   const wiki = detail.wiki || {};
   const wikiSummary = wiki.loading
@@ -159,10 +176,14 @@ export function renderDetailPanel() {
           ${wikiSummary}
           ${wikiLink}
         </section>
-        <section>
+        ${traitSkillsHtml ? `<section>
+          <h4>Trait Skills</h4>
+          ${traitSkillsHtml}
+        </section>` : ""}
+        ${factsHtml ? `<section>
           <h4>Facts</h4>
           <ul class="facts-list">${factsHtml}</ul>
-        </section>
+        </section>` : ""}
       </article>
     `;
     if (_el.expandBtn) _el.expandBtn.disabled = false;
@@ -521,21 +542,23 @@ export function showHoverPreview(kind, entity, x, y) {
     }
   }
 
-  // For traits with associated skills (traitSkillIds), append skill cards below.
-  // Use the icon from traitSkillIcons (embedded in the trait API response) when available,
-  // since the separately-fetched /v2/skills object often shares the trait's icon instead
-  // of the distinct trait-skill icon (e.g. Chilling Nova trait vs Chilling Nova trait skill).
+  // For traits with associated skills (traitSkillIds), show a compact list (icon + name)
+  // matching the detail-panel layout instead of full skill cards.
   if (kind === "trait" && Array.isArray(entity.traitSkillIds) && entity.traitSkillIds.length) {
     const catalog = state.activeCatalog;
     const iconOverrides = entity.traitSkillIcons || {};
+    const items = [];
     for (const skillId of entity.traitSkillIds) {
       const skill = catalog?.skillById?.get(skillId);
       if (!skill) continue;
-      const overrideIcon = iconOverrides[skillId];
-      const displaySkill = overrideIcon ? { ...skill, icon: overrideIcon } : skill;
+      const icon = iconOverrides[skillId] || skill.icon || "";
+      const name = escapeHtml(skill.name || "Unknown");
+      items.push(`<li class="trait-skill-entry"><img src="${escapeHtml(icon)}" alt="" onerror="this.style.visibility='hidden'" /><span>${name}</span></li>`);
+    }
+    if (items.length) {
       chainCards.push(
-        `<div class="hover-preview__trait-skill-divider">Trait skill</div>`
-        + buildSkillCard(displaySkill, "skill", false, null)
+        `<div class="hover-preview__trait-skill-divider">Trait Skills</div>`
+        + `<ul class="trait-skill-list">${items.join("")}</ul>`
       );
     }
   }
@@ -639,6 +662,8 @@ export async function selectDetail(kind, entity) {
     slot: entity.slot || "",
     recharge,
     activation,
+    traitSkillIds: entity.traitSkillIds || null,
+    traitSkillIcons: entity.traitSkillIcons || null,
   };
   state.detail = detail;
   renderDetailPanel();

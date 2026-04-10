@@ -65,6 +65,10 @@ const KNOWN_TRAIT_FACTS_OVERRIDES = new Map([
     { type: "Number",   text: "Adrenaline", icon: `${_IC}/E1E7C4D3A6E62F3D5C9F627CE8175BFB0C614CBE/156652.png`, value: 5 },
     { type: "NoData",   text: "Combat Only", icon: `${_IC}/9352ED3244417304995F26CB01AE76BB7E547052/156661.png` },
   ]],
+  // Primal Rage (trait 1831, Berserker spec 18) — no trait-level facts; the wiki page
+  // lists Berserk skill facts which the parser misattributes to the trait itself.
+  // Trait skills (primal bursts) are shown via traitSkillIds instead.
+  [1831, []],
   // Strengthening Stanzas (trait 2385, Paragon spec 74) — GW2 API returns Buff facts for
   // Chant of Action/Recuperation/Freedom with empty descriptions and 0s durations.
   // In-game the trait grants: Action +10% Damage & Condition Damage, Recuperation −7%
