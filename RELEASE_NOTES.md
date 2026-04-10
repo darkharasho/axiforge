@@ -1,3 +1,33 @@
+## Version v0.3.0 — April 10, 2026
+
+### New Features
+- New `@axi/gw2-data` engine package — stat computation, boon analysis, combo detection, and tooltip rendering are now powered by a dedicated calculation engine with full test coverage
+- Wiki-sourced skill and trait facts replace hardcoded balance split data, providing accurate per-mode (PvE/WvW/PvP) tooltips that stay up-to-date with game patches
+- Wiki shared-name resolution automatically disambiguates skills and traits that share names across professions
+- Recharge and cast time badges now appear in tooltip and detail panel headers
+- Discord embed notifications for new releases (when webhook is configured)
+- Color theme system with 9 forge-themed palettes
+
+### Bug Fixes
+- Published web builds no longer show a blank page (fixed CJS-to-ESM conversion for the gw2-data engine package in the Vite SPA build)
+- @Weapons tags now render as styled chips with icons in published builds instead of raw text
+- Percentage-based wiki facts now correctly preserve the % symbol
+- Profession dropdown is now disabled until all catalogs finish loading, preventing selection errors
+- Berserker Burst Recharge reduction now displays correctly in tooltips
+- Fatal Frenzy trait now shows correct Condition Damage values and proper PvE/WvW split
+- Berserker Blood Reaction trait bonuses now apply correctly, including berserk toggle from skills panel
+- Signet of Fury passive bonus and active bonus now display correctly in tooltips
+- Weapon tooltips now show proper timing badges and recharge values
+- Elementalist tooltips no longer show incorrect values
+- Infusion stat calculations now compute correctly
+- Missing tooltips for traits with WvW splits now display properly
+- Hover tooltips now use compact trait skill lists instead of full skill cards
+
+### Other Changes
+- Renderer modules now delegate stat computation to the engine bridge instead of duplicating logic
+- Wiki name collision detection with profession-specific suffix retries
+- In-memory catalog caching and concurrent request deduplication for faster load times
+
 ## Version v0.2.0 — April 9, 2026
 
 ### New Features
