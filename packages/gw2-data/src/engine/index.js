@@ -7,6 +7,7 @@ const { buildInteractionGraph } = require("./graph");
 const { analyzeBoons, isAllyTargeted, normalizeName } = require("./boons");
 const { analyzeCombos } = require("./combos");
 const { loadOverrides, getOverride } = require("./overrides");
+const constants = require("./constants");
 
 class StatEngine {
   /**
@@ -58,4 +59,6 @@ module.exports = {
   analyzeCombos,
   loadOverrides,
   getOverride,
+  // Re-export constants
+  ...constants,
 };

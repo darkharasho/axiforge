@@ -11,10 +11,12 @@ import { GW2_WEAPONS_BY_ID, getEffectiveStats } from "./constants.js";
 import {
   computeStats,
   computeSlotStatsFromState,
+  computeFuryCritModifier as bridgeFuryCritModifier,
   computeFuryStatBonuses as bridgeFuryStatBonuses,
   computeMightPerStack as bridgeMightPerStack,
   computeBuildConcentration as bridgeBuildConcentration,
 } from "./engine-bridge.js";
+import * as engine from "@axi/gw2-data/engine";
 
 /**
  * Thin wrapper: computeSlotStats(comboLabel, slotKey)
@@ -31,6 +33,66 @@ export function computeSlotStats(comboLabel, slotKey) {
  */
 export function computeBuildConcentration(build, upgradeCatalog) {
   return bridgeBuildConcentration(build, upgradeCatalog);
+}
+
+/**
+ * Thin wrapper preserving old API: computeEquipmentStats(assumedBoons?, sigilStacks?) → flat totals.
+ * Used by tests and any remaining call sites.
+ */
+export function computeEquipmentStats(assumedBoons = null, sigilStacks = null) {
+  return computeStats(state, assumedBoons, sigilStacks).total;
+}
+
+/**
+ * Thin wrapper: computeTraitConversions(baseStats) → { stat: amount }.
+ * Computes trait conversion contributions given baseline stats.
+ */
+export function computeTraitConversions(baseStats) {
+  const result = computeStats(state);
+  return _stripZeros(result.conversions || {});
+}
+
+/**
+ * Thin wrapper: computeFuryCritModifier(gameMode?) → number.
+ * Returns bonus crit % from Fury-related traits.
+ */
+export function computeFuryCritModifier(gameMode) {
+  if (gameMode) state.editor.gameMode = gameMode;
+  return bridgeFuryCritModifier(state);
+}
+
+/**
+ * Thin wrapper: computeFuryStatBonuses(gameMode?) → { stat: amount }.
+ */
+export function computeFuryStatBonuses(gameMode) {
+  if (gameMode) state.editor.gameMode = gameMode;
+  return bridgeFuryStatBonuses(state);
+}
+
+/**
+ * Thin wrapper: computeMightPerStack() → { power, condi }.
+ */
+export function computeMightPerStack() {
+  return bridgeMightPerStack(state);
+}
+
+/**
+ * Thin wrapper: computePassiveTraitBonuses(gameMode?) → { stat: amount }.
+ * Returns flat stat bonuses from non-Fury passive traits.
+ */
+export function computePassiveTraitBonuses(gameMode) {
+  if (gameMode) state.editor.gameMode = gameMode;
+  const result = computeStats(state);
+  return _stripZeros(result.traits || {});
+}
+
+/** Remove zero-valued entries to match legacy sparse-object API */
+function _stripZeros(obj) {
+  const out = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (v) out[k] = v;
+  }
+  return out;
 }
 
 /**

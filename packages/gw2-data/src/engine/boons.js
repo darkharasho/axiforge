@@ -59,7 +59,7 @@ function analyzeBoons(skills, traits, overrides, activeTraitIds) {
   const hasTwistedMedicine = activeTraitIds && twistedMedicineOverride &&
     activeTraitIds.has(2220);
 
-  function processEntity(entity, entityType) {
+  function processEntity(entity, type) {
     const facts = entity.facts || [];
     const description = entity.description || "";
 
@@ -104,6 +104,8 @@ function analyzeBoons(skills, traits, overrides, activeTraitIds) {
       }
 
       const source = {
+        type,
+        name: entity.name || "",
         sourceName: entity.name || "",
         stacks,
         duration,

@@ -280,7 +280,8 @@ describe("computeBoonCoverage", () => {
     const editor = makeEditor({ skills: { healId: 100, utilityIds: [0, 0, 0], eliteId: 0 } });
     const result = computeBoonCoverage(catalog, editor);
     expect(result.boons).toHaveLength(1);
-    expect(result.boons[0].sources[0]).toMatchObject({ stacks: 0, duration: 0 });
+    // Engine defaults apply_count to 1 when not specified
+    expect(result.boons[0].sources[0]).toMatchObject({ stacks: 1, duration: 0 });
   });
 
   test("extracts boons from serialized build format (skills.heal/utility/elite objects, spec.id)", () => {
