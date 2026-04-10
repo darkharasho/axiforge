@@ -259,6 +259,149 @@ describe("resolveEntityFacts", () => {
     expect(mockFetch).toHaveBeenCalledTimes(1);
   });
 
+  test("retries with profession suffix when page has wrong infobox type", async () => {
+    const locationWikitext = "{{Location infobox\n| name = Ring of Fire\n| id = 20\n}}";
+    const skillWikitext = "{{Skill infobox\n| id = 5765\n}}\n{{skill fact|damage|1.0}}";
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        query: {
+          pages: {
+            "1": { title: "Ring of Fire", revisions: [{ "*": locationWikitext }] },
+          },
+        },
+      }),
+    });
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        query: {
+          pages: {
+            "2": { title: "Ring of Fire (elementalist skill)", revisions: [{ "*": skillWikitext }] },
+          },
+        },
+      }),
+    });
+
+    const titleToId = new Map([["Ring of Fire", 5765]]);
+    const result = await resolveEntityFacts(client, titleToId, { profession: "Elementalist" });
+
+    expect(result.size).toBe(1);
+    expect(result.has(5765)).toBe(true);
+    expect(result.get(5765).pve[0].type).toBe("Damage");
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    expect(mockFetch.mock.calls[1][0]).toContain("Ring%20of%20Fire%20(elementalist%20skill)");
+  });
+
+  test("falls back to generic (skill) suffix when profession suffix fails", async () => {
+    const weaponWikitext = "{{Weapon infobox\n| type = Sword\n| id = 29181\n}}";
+    const skillWikitext = "{{Skill infobox\n| id = 63281\n}}\n{{skill fact|damage|0.5}}";
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        query: {
+          pages: {
+            "1": { title: "Zap", revisions: [{ "*": weaponWikitext }] },
+          },
+        },
+      }),
+    });
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        query: {
+          pages: {
+            "-1": { title: "Zap (elementalist skill)", missing: true },
+          },
+        },
+      }),
+    });
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        query: {
+          pages: {
+            "3": { title: "Zap (skill)", revisions: [{ "*": skillWikitext }] },
+          },
+        },
+      }),
+    });
+
+    const titleToId = new Map([["Zap", 63281]]);
+    const result = await resolveEntityFacts(client, titleToId, { profession: "Elementalist" });
+
+    expect(result.size).toBe(1);
+    expect(result.has(63281)).toBe(true);
+    expect(result.get(63281).pve[0].type).toBe("Damage");
+    expect(mockFetch).toHaveBeenCalledTimes(3);
+  });
+
+  test("accepts page directly when infobox ID matches expected entity", async () => {
+    const skillWikitext = "{{Skill infobox\n| id = 5489\n}}\n{{skill fact|damage|0.8}}";
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        query: {
+          pages: {
+            "1": { title: "Fireball", revisions: [{ "*": skillWikitext }] },
+          },
+        },
+      }),
+    });
+
+    const titleToId = new Map([["Fireball", 5489]]);
+    const result = await resolveEntityFacts(client, titleToId, { profession: "Elementalist" });
+
+    expect(result.size).toBe(1);
+    expect(result.has(5489)).toBe(true);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  test("falls back to API facts when all suffix retries fail", async () => {
+    const locationWikitext = "{{Location infobox\n| name = Some Place\n| id = 99\n}}";
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        query: {
+          pages: {
+            "1": { title: "Some Place", revisions: [{ "*": locationWikitext }] },
+          },
+        },
+      }),
+    });
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        query: {
+          pages: { "-1": { title: "Some Place (warrior skill)", missing: true } },
+        },
+      }),
+    });
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        query: {
+          pages: { "-1": { title: "Some Place (skill)", missing: true } },
+        },
+      }),
+    });
+
+    const titleToId = new Map([["Some Place", 12345]]);
+    const result = await resolveEntityFacts(client, titleToId, { profession: "Warrior" });
+
+    expect(result.size).toBe(0);
+    expect(mockFetch).toHaveBeenCalledTimes(3);
+  });
+
   test("skips pages with no fact templates (keeps API facts)", async () => {
     // A wiki page exists but has no {{skill fact|...}} or {{trait fact|...}} templates
     const noFactsWikitext = "'''Piercing Shards''' is a trait for Elementalist that makes ice shards pierce.";

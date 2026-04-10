@@ -147,8 +147,9 @@ async function resolveEntityFacts(client, titleToId, options = {}) {
   const titles = [...titleToId.keys()];
   const wikitextMap = await client.getWikitextBatch(titles);
 
-  // Collect disambiguation pages for retry
+  // Collect disambiguation pages and name collisions for retry
   const disambigRetries = new Map(); // alternative title → original title
+  const nameCollisionRetries = new Map(); // original title → id (wrong infobox type / wrong ID)
   const profession = options.profession ? options.profession.toLowerCase() : null;
 
   for (const [title, id] of titleToId) {
@@ -163,6 +164,37 @@ async function resolveEntityFacts(client, titleToId, options = {}) {
       continue;
     }
 
+    // Check if page has a matching Skill/Trait infobox
+    const infoboxIds = extractInfoboxId(wikitext);
+    if (infoboxIds.length > 0 && !infoboxIds.includes(id)) {
+      // Has a Skill/Trait infobox but wrong ID — name collision, queue retry
+      nameCollisionRetries.set(title, id);
+      continue;
+    }
+    if (infoboxIds.length === 0) {
+      // No Skill/Trait infobox — check if page has parseable facts
+      // (some valid skill pages lack a formal infobox but have fact templates)
+      const parsed = parseFactsByMode(wikitext);
+      const hasTimings = parsed.recharge.pve != null || parsed.activation.pve != null;
+      const hasFacts = parsed.pve.length > 0 || parsed.wvw.length > 0 || parsed.pvp.length > 0 || hasTimings;
+      if (!hasFacts) {
+        // No infobox AND no facts — likely a wrong page type, queue retry
+        nameCollisionRetries.set(title, id);
+        continue;
+      }
+      // Has facts but no infobox — accept it (existing behavior)
+      result.set(id, {
+        pve: parsed.pve,
+        wvw: parsed.hasSplit ? parsed.wvw : null,
+        pvp: parsed.hasSplit ? parsed.pvp : null,
+        hasSplit: parsed.hasSplit,
+        recharge: parsed.recharge,
+        activation: parsed.activation,
+      });
+      continue;
+    }
+
+    // Infobox ID matches — parse facts normally
     const parsed = parseFactsByMode(wikitext);
 
     const hasTimings = parsed.recharge.pve != null || parsed.activation.pve != null;
@@ -203,6 +235,74 @@ async function resolveEntityFacts(client, titleToId, options = {}) {
         recharge: parsed.recharge,
         activation: parsed.activation,
       });
+    }
+  }
+
+  // Retry name collision pages with suffix variants
+  if (nameCollisionRetries.size > 0 && profession) {
+    // Round 1: "Name (profession skill)"
+    const round1Map = new Map(); // retry title → original title
+    for (const [title] of nameCollisionRetries) {
+      round1Map.set(`${title} (${profession} skill)`, title);
+    }
+
+    const round1Titles = [...round1Map.keys()];
+    const round1Wikitext = await client.getWikitextBatch(round1Titles);
+    const stillMissing = new Map(); // original title → id
+
+    for (const [retryTitle, originalTitle] of round1Map) {
+      const wikitext = round1Wikitext.get(retryTitle);
+      if (!wikitext) {
+        stillMissing.set(originalTitle, nameCollisionRetries.get(originalTitle));
+        continue;
+      }
+
+      const parsed = parseFactsByMode(wikitext);
+      const hasTimings = parsed.recharge.pve != null || parsed.activation.pve != null;
+      if (parsed.pve.length === 0 && parsed.wvw.length === 0 && parsed.pvp.length === 0 && !hasTimings) {
+        stillMissing.set(originalTitle, nameCollisionRetries.get(originalTitle));
+        continue;
+      }
+
+      const id = nameCollisionRetries.get(originalTitle);
+      result.set(id, {
+        pve: parsed.pve,
+        wvw: parsed.hasSplit ? parsed.wvw : null,
+        pvp: parsed.hasSplit ? parsed.pvp : null,
+        hasSplit: parsed.hasSplit,
+        recharge: parsed.recharge,
+        activation: parsed.activation,
+      });
+    }
+
+    // Round 2: "Name (skill)" for remaining
+    if (stillMissing.size > 0) {
+      const round2Map = new Map(); // retry title → original title
+      for (const [title] of stillMissing) {
+        round2Map.set(`${title} (skill)`, title);
+      }
+
+      const round2Titles = [...round2Map.keys()];
+      const round2Wikitext = await client.getWikitextBatch(round2Titles);
+
+      for (const [retryTitle, originalTitle] of round2Map) {
+        const wikitext = round2Wikitext.get(retryTitle);
+        if (!wikitext) continue;
+
+        const parsed = parseFactsByMode(wikitext);
+        const hasTimings = parsed.recharge.pve != null || parsed.activation.pve != null;
+        if (parsed.pve.length === 0 && parsed.wvw.length === 0 && parsed.pvp.length === 0 && !hasTimings) continue;
+
+        const id = stillMissing.get(originalTitle);
+        result.set(id, {
+          pve: parsed.pve,
+          wvw: parsed.hasSplit ? parsed.wvw : null,
+          pvp: parsed.hasSplit ? parsed.pvp : null,
+          hasSplit: parsed.hasSplit,
+          recharge: parsed.recharge,
+          activation: parsed.activation,
+        });
+      }
     }
   }
 
