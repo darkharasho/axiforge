@@ -17,6 +17,7 @@ import { bindHoverPreview, selectDetail, buildSkillCard, showHoverPreview } from
 import { computeEquipmentStats } from "./stats.js";
 import { computeBoonCoverage } from "./boon-coverage.js";
 import { renderCustomSelect } from "./custom-select.js";
+import { validateStatResult, validateBoonResult } from "./engine-bridge.js";
 
 let _readOnly = false;
 export function setReadOnly(val) { _readOnly = val; }
@@ -1055,6 +1056,9 @@ function _renderUnderwaterToggle() {
 
 function _renderBoonCoverage(catalog, editor, weaponSkills = []) {
   const coverage = computeBoonCoverage(catalog, editor, weaponSkills);
+  if (process.env.NODE_ENV !== "production") {
+    validateBoonResult(coverage, state, "skills.js:renderBoonCoverage", catalog, editor, weaponSkills);
+  }
   const hasBoons = coverage.boons.length > 0;
   const hasConditions = coverage.conditions.length > 0;
   if (!hasBoons && !hasConditions) return null;
@@ -1772,6 +1776,9 @@ export function renderSkills() {
   const profession = state.editor.profession || "";
   const baseHp = PROFESSION_BASE_HP[profession] ?? 0;
   const computed = computeEquipmentStats();
+  if (process.env.NODE_ENV !== "production") {
+    validateStatResult(computed, state, "skills.js:renderSkillBar");
+  }
   const totalHp = baseHp > 0 ? baseHp + (computed.Vitality || 0) * 10 : 0;
   const orbEl = document.createElement("div");
   orbEl.className = "health-orb";
