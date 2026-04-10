@@ -160,4 +160,19 @@ describe("parseFactText", () => {
       type: "ComboField", text: "Combo Field", field_type: "Fire",
     });
   });
+
+  // ── Comma-formatted numbers ──
+
+  test("parses barrier with thousands-separator comma", () => {
+    expect(parseFactText("Barrier", "2,580")).toEqual({
+      type: "Number", text: "Barrier", value: 2580,
+    });
+  });
+
+  test("parses healing with thousands-separator comma and coefficient", () => {
+    expect(parseFactText("Healing", "1,930 (0.5)")).toEqual({
+      type: "AttributeAdjust", text: "Healing", target: "Healing",
+      value: 1930, coefficient: 0.5, hit_count: 1,
+    });
+  });
 });

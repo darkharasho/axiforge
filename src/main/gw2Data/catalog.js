@@ -4,6 +4,10 @@ const {
   fetchGw2ByIds,
   dedupeNumbers,
 } = require("./fetch");
+const { WikiClient } = require("../../../packages/gw2-data/src/wiki/client");
+const { DiskCache } = require("../../../packages/gw2-data/src/wiki/cache");
+const { resolveEntityFacts } = require("../../../packages/gw2-data/src/wiki/resolver");
+const path = require("node:path");
 
 // Static snapshots of stable GW2 API data — these change only with expansions.
 // To update: re-fetch from the API and overwrite the JSON files.
@@ -16,6 +20,45 @@ function _setStaticData({ professions, specializations, legends } = {}) {
   PROFESSIONS_STATIC = professions || require("./professions.json");
   SPECIALIZATIONS_STATIC = specializations || require("./specializations.json");
   LEGENDS_STATIC = legends || require("./legends.json");
+}
+
+let _wikiClient = null;
+
+function initWikiClient(cacheDir) {
+  const cache = new DiskCache(path.join(cacheDir, "wiki-facts"));
+  _wikiClient = new WikiClient({ cache });
+}
+
+function getWikiClient() {
+  if (!_wikiClient) {
+    _wikiClient = new WikiClient();
+  }
+  return _wikiClient;
+}
+
+function applyWikiFacts(entity, wikiFactsById, overridesMap) {
+  // Emergency overrides always win
+  if (overridesMap.has(entity.id)) return;
+
+  const wikiFacts = wikiFactsById.get(entity.id);
+  if (!wikiFacts) return; // No wiki page — keep API facts
+
+  // Only replace facts if wiki actually has fact templates
+  if (wikiFacts.pve.length > 0) {
+    entity.facts = wikiFacts.pve;
+  }
+  entity.hasSplit = wikiFacts.hasSplit;
+
+  if (wikiFacts.wvw) {
+    entity.wvwFacts = wikiFacts.wvw;
+  }
+  if (wikiFacts.pvp) {
+    entity.pvpFacts = wikiFacts.pvp;
+  }
+
+  // Infobox timings (recharge, activation) — per-mode
+  if (wikiFacts.recharge) entity.recharge = wikiFacts.recharge;
+  if (wikiFacts.activation) entity.activation = wikiFacts.activation;
 }
 
 const {
@@ -50,181 +93,6 @@ const {
   EVOKER_F5_EXTRA_VARIANTS,
   UNTAMED_UNLEASHED_AMBUSH,
 } = require("./overrides");
-
-const { getSkillSplit, getTraitSplit, getSkillPveFacts, getTraitPveFacts } = require("../../../lib/gw2-balance-splits");
-
-const {
-  splitNormalizeType: _splitNormalizeType,
-  splitGroupKey: _splitGroupKey,
-  SPLIT_VALUE_KEYS: _SPLIT_VALUE_KEYS,
-  splitValueChanged: _splitValueChanged,
-  buildSplitMatchTables: _buildSplitMatchTables,
-} = require("../../../lib/gw2-balance-splits/match");
-
-/**
- * Apply WvW balance split override to a mapped skill or trait object (mutates in place).
- * Called from mapSkill(), traits.map(), and weaponSkills mapping.
- *
- * Merges split facts into the base facts rather than replacing them, so that facts
- * not covered by the split (e.g. Recharge) are still shown. Split facts are matched
- * to base facts in two passes:
- *   1. Exact text + type match (e.g. "Conditions Removed" → "Conditions Removed")
- *   2. Type-group positional match (e.g. 1st AttributeAdjust split → 1st AttributeAdjust base)
- *      using type+target as the grouping key for finer granularity.
- * The base fact's text label is always preserved; only value fields are taken from the split.
- * A fact is marked _splitFact:true only when its value actually changed.
- */
-
-/** Merge a split fact's values into a base fact (mutates a copy). */
-function _mergeSplitValues(bf, sf) {
-  const merged = { ...bf };
-  for (const k of _SPLIT_VALUE_KEYS) {
-    if (sf[k] !== undefined) merged[k] = sf[k];
-  }
-  // Cross-map Distance↔Radius: the GW2 API stores these in "value" (type Distance)
-  // while the wiki scraper uses "distance" (type Radius). Promote so the renderer
-  // (which reads fact.value first) shows the correct WvW number.
-  if (sf.distance !== undefined && bf.value !== undefined && bf.distance === undefined) {
-    merged.value = sf.distance;
-  }
-  return merged;
-}
-
-/**
- * Sanitise a WvW-only split fact (no base match) so it renders correctly.
- * The wiki scraper emits type:"Buff" for many facts that are not actual buffs
- * (e.g. "Maximum count", "Allied targets"). Without a matching base fact to
- * inherit type/icon from, these render with a generic Might icon and buff
- * formatting. Strip the misleading Buff type so the renderer uses the generic
- * text-based fallback instead.
- */
-function _sanitiseUnmatchedSplitFact(sf) {
-  const clean = { ...sf, _splitFact: true };
-  const status = (sf.status || "").toLowerCase();
-  // If it's a real buff/condition (known boon/condition name or has a recognized
-  // icon from the GW2 render CDN), keep it. Otherwise demote to generic.
-  const isRenderCdn = sf.icon && sf.icon.includes("render.guildwars2.com");
-  if (sf.type === "Buff" && !isRenderCdn) {
-    // Check if status looks like a real buff/condition name
-    const KNOWN_EFFECTS = [
-      "might", "fury", "quickness", "alacrity", "swiftness", "vigor", "regeneration",
-      "protection", "resolution", "resistance", "stability", "aegis", "retaliation",
-      "bleeding", "burning", "confusion", "poison", "torment", "vulnerability",
-      "weakness", "crippled", "chilled", "blinded", "immobile", "slow", "fear",
-      "taunt", "daze", "stun", "knockdown", "knockback", "float", "pull", "sink",
-      "stealth", "superspeed", "revealed",
-    ];
-    if (!KNOWN_EFFECTS.includes(status)) {
-      clean.type = "Untyped";
-    }
-  }
-  return clean;
-}
-
-/**
- * Apply WvW balance split override to a mapped skill or trait object (mutates in place).
- * Called from mapSkill(), traits.map(), and weaponSkills mapping.
- *
- * Two modes controlled by split.complete:
- *
- *   complete:true  — The split represents the FULL WvW fact set (scraped from wiki
- *                    {{skill fact}} templates). WvW facts are used as the primary list;
- *                    base labels are grafted in where possible. Any PvE fact absent from
- *                    the WvW split is DROPPED (e.g. Aegis removed in WvW).
- *
- *   complete:false — The split only lists CHANGED facts (e.g. a Recharge override from
- *   (or undefined)   an infobox param). PvE facts not in the split are kept unchanged.
- */
-function applyBalanceSplit(mapped, entityType, gameMode) {
-  if (gameMode === "pve") return;
-  const splitFn = entityType === "trait" ? getTraitSplit : getSkillSplit;
-  const split = splitFn(mapped.id, gameMode);
-  if (!split?.facts) return;
-
-  mapped.hasSplit = true;
-  const baseFacts = Array.isArray(mapped.facts) ? mapped.facts : [];
-  const splitFacts = split.facts;
-
-  if (baseFacts.length === 0) {
-    mapped.facts = splitFacts.map((f) => ({ ...f, _splitFact: true }));
-    return;
-  }
-
-  const { baseToSplit, splitToBase } = _buildSplitMatchTables(baseFacts, splitFacts);
-
-  if (split.complete) {
-    // ── Complete mode ─────────────────────────────────────────────────────────
-    // Iterate over the WvW split facts (authoritative). Enrich each with its
-    // matching PvE base label. PvE facts with no WvW counterpart are dropped.
-    const wvwFacts = splitFacts.map((sf, si) => {
-      const bi = splitToBase.get(si);
-      if (bi === undefined) return _sanitiseUnmatchedSplitFact(sf); // WvW-only fact (added in WvW)
-      const merged = _mergeSplitValues(baseFacts[bi], sf);
-      if (_splitValueChanged(baseFacts[bi], merged)) merged._splitFact = true;
-      return merged;
-    });
-    // The wiki represents Recharge changes via infobox params, never template facts,
-    // so Recharge is always absent from complete-mode WvW splits even when unchanged.
-    // Preserve the base PvE Recharge facts unless the WvW split already has one.
-    if (!wvwFacts.some((f) => f.type === "Recharge")) {
-      const pveRecharge = baseFacts.filter((f) => f.type === "Recharge");
-      mapped.facts = [...pveRecharge, ...wvwFacts];
-    } else {
-      mapped.facts = wvwFacts;
-    }
-  } else {
-    // ── Partial mode ──────────────────────────────────────────────────────────
-    // Iterate over the PvE base facts. Apply split overrides where matched.
-    // Unmatched base facts pass through unchanged. Unmatched split facts appended.
-    const result = baseFacts.map((bf, bi) => {
-      const si = baseToSplit.get(bi);
-      if (si === undefined) return bf;
-      const merged = _mergeSplitValues(bf, splitFacts[si]);
-      if (_splitValueChanged(bf, merged)) merged._splitFact = true;
-      return merged;
-    });
-    for (let si = 0; si < splitFacts.length; si++) {
-      if (!splitToBase.has(si)) result.push(_sanitiseUnmatchedSplitFact(splitFacts[si]));
-    }
-    mapped.facts = result;
-  }
-}
-
-/**
- * Apply PvE fact enrichments (healing coefficients) to a mapped skill/trait object.
- * The GW2 API does not expose healing-power coefficients in its facts; we scrape them
- * from the wiki and store them in modes.pve. This function merges just the coefficient
- * field into matching base facts so PvE tooltips can display e.g. "+2344 (×0.75)".
- * Does NOT mark facts as _splitFact — these are PvE values, not WvW overrides.
- */
-function applyPveFacts(mapped, entityType) {
-  const pveFn = entityType === "trait" ? getTraitPveFacts : getSkillPveFacts;
-  const pve = pveFn(mapped.id);
-  if (!pve?.facts?.length) return;
-
-  const baseFacts = Array.isArray(mapped.facts) ? mapped.facts : [];
-  if (baseFacts.length === 0) return;
-
-  // Match PvE facts to base facts by type+target positional group, then copy coefficient.
-  const groupKey = (f) => `${f.type || ""}:${f.target || f.status || ""}`;
-  const byGroup = {};
-  for (const pf of pve.facts) {
-    const key = groupKey(pf);
-    (byGroup[key] = byGroup[key] || []).push(pf);
-  }
-  const counters = {};
-
-  mapped.facts = baseFacts.map((bf) => {
-    const key = groupKey(bf);
-    const pool = byGroup[key];
-    if (!pool) return bf;
-    const idx = counters[key] || 0;
-    if (idx >= pool.length) return bf;
-    counters[key] = idx + 1;
-    const pf = pool[idx];
-    return pf.coefficient != null ? { ...bf, coefficient: pf.coefficient } : bf;
-  });
-}
 
 async function getProfessionList(lang = "en") {
   return PROFESSIONS_STATIC
@@ -623,20 +491,6 @@ async function getProfessionCatalog(professionId, lang = "en", gameMode = "pve")
       // not appear as permanent F-slot selections.
       inProfessionEndpoint: profSkillRefs.has(skill.id),
     };
-    applyBalanceSplit(mapped, "skill", gameMode);
-    if (gameMode === "pve") applyPveFacts(mapped, "skill");
-    // If a facts override exists and a complete balance split replaced the facts array,
-    // merge any override facts that the split is missing (e.g. boons the wiki scraper
-    // doesn't capture because the API/wiki omits them from the standard facts template).
-    const factsOverride = KNOWN_SKILL_FACTS_OVERRIDES.get(skill.id);
-    if (factsOverride && mapped.hasSplit) {
-      const splitStatuses = new Set(mapped.facts.map((f) => f.status).filter(Boolean));
-      const missing = factsOverride.filter((f) => f.status && !splitStatuses.has(f.status));
-      if (missing.length > 0) {
-        // Insert override facts before the first split fact (damage/conditions come after boons)
-        mapped.facts = [...missing, ...mapped.facts];
-      }
-    }
     return mapped;
   }
 
@@ -784,55 +638,123 @@ async function getProfessionCatalog(professionId, lang = "en", gameMode = "pve")
     return apiKey.toLowerCase();
   }
 
+  // Hoist entity mapping
+  const mappedSpecializations = specializations.map((spec) => ({
+    id: spec.id,
+    name: spec.name || "",
+    profession: spec.profession || "",
+    elite: Boolean(spec.elite),
+    icon: spec.icon || "",
+    background: spec.background || "",
+    minorTraits: Array.isArray(spec.minor_traits) ? spec.minor_traits : [],
+    majorTraits: Array.isArray(spec.major_traits) ? spec.major_traits : [],
+  }));
+
+  const mappedTraits = traits.map((trait) => {
+    const mapped = {
+      id: trait.id,
+      name: trait.name || "",
+      // Use the render CDN icon directly — wiki FilePath lookups by trait name are unreliable
+      // because multiple traits across different professions can share the same name (e.g.
+      // "Deadly Aim", "No Quarter"), causing the wrong profession's icon to be served.
+      icon: trait.icon || "",
+      iconFallback: "",
+      description: trait.description || "",
+      tier: Number(trait.tier) || 0,
+      order: Number(trait.order) || 0,
+      slot: trait.slot || "",
+      specialization: Number(trait.specialization) || 0,
+      facts: KNOWN_TRAIT_FACTS_OVERRIDES.get(trait.id) || (Array.isArray(trait.facts) ? trait.facts.filter((f) => !f.requires_trait) : []),
+      traitedFacts: Array.isArray(trait.traited_facts) ? trait.traited_facts : [],
+      traitSkillIds: Array.isArray(trait.skills)
+        ? trait.skills.map((s) => Number(s?.id)).filter(Boolean)
+        : [],
+      traitSkillIcons: Array.isArray(trait.skills)
+        ? Object.fromEntries(
+            trait.skills
+              .filter((s) => s?.id && s?.icon)
+              .map((s) => [Number(s.id), String(s.icon)])
+          )
+        : {},
+    };
+    return mapped;
+  });
+
+  const mappedSkills = skills.map(mapSkill);
+
+  const mappedWeaponSkills = weaponSkillsRaw.map((skill) => {
+    const mapped = {
+      id: skill.id,
+      name: skill.name || "",
+      icon: skill.icon || "",
+      description: skill.description || "",
+      slot: skill.slot || "",
+      attunement: skill.attunement === "None" ? "" : (skill.attunement || ""),
+      dualWield: skill.dual_attunement === "None" ? "" : (skill.dual_attunement || ""),
+      weaponType: skill.weapon_type === "None" ? "" : (skill.weapon_type || ""),
+      flags: Array.isArray(skill.flags) ? skill.flags : [],
+      facts: Array.isArray(skill.facts) ? skill.facts : [],
+      flipSkill: Number(skill.flip_skill) || 0,
+    };
+    return mapped;
+  });
+
+  // ── Wiki fact resolution ─────────────────────────────────────────────────
+  // Build title → IDs mapping. Multiple entities can share a name (e.g. a skill
+  // and a trait both called "Mending"), so map each title to all matching IDs.
+  // The wiki page is fetched once and the parsed facts are applied to every entity.
+  const titleToIds = new Map();
+  const titleToFirstId = new Map(); // for resolveEntityFacts (needs Map<title, id>)
+  for (const entity of [...mappedSkills, ...mappedTraits, ...mappedWeaponSkills]) {
+    if (!entity.name) continue;
+    if (!titleToIds.has(entity.name)) {
+      titleToIds.set(entity.name, []);
+      titleToFirstId.set(entity.name, entity.id);
+    }
+    titleToIds.get(entity.name).push(entity.id);
+  }
+
+  let wikiFactsById = new Map();
+  try {
+    const client = getWikiClient();
+    // resolveEntityFacts expects Map<title, id> — use the first ID per title
+    const resolvedByFirstId = await resolveEntityFacts(client, titleToFirstId);
+    // Expand: if multiple entity IDs share a title, give them all the same wiki facts
+    for (const [title, ids] of titleToIds) {
+      const firstId = ids[0];
+      const facts = resolvedByFirstId.get(firstId);
+      if (!facts) continue;
+      for (const id of ids) {
+        wikiFactsById.set(id, facts);
+      }
+    }
+  } catch (err) {
+    console.warn("[catalog] Wiki fact resolution failed, using API facts:", err.message);
+  }
+
+  for (const s of mappedSkills) {
+    applyWikiFacts(s, wikiFactsById, KNOWN_SKILL_FACTS_OVERRIDES);
+  }
+  for (const t of mappedTraits) {
+    applyWikiFacts(t, wikiFactsById, KNOWN_TRAIT_FACTS_OVERRIDES);
+  }
+  for (const ws of mappedWeaponSkills) {
+    applyWikiFacts(ws, wikiFactsById, KNOWN_SKILL_FACTS_OVERRIDES);
+  }
+
+  // Log missing pages for monitoring
+  const resolved = new Set([...wikiFactsById.keys()]).size;
+  const total = titleToFirstId.size;
+  if (resolved < total) {
+    const missing = [...titleToFirstId.keys()].filter((t) => !wikiFactsById.has(titleToFirstId.get(t)));
+    console.warn(`[catalog] Wiki facts: ${resolved}/${total} resolved. Missing: ${missing.slice(0, 10).join(", ")}${missing.length > 10 ? ` (+${missing.length - 10} more)` : ""}`);
+  }
+
   return {
-    profession: {
-      id: profession.id,
-      name: profession.name || profession.id,
-      icon: profession.icon || "",
-      iconBig: profession.icon_big || "",
-    },
-    specializations: specializations.map((spec) => ({
-      id: spec.id,
-      name: spec.name || "",
-      profession: spec.profession || "",
-      elite: Boolean(spec.elite),
-      icon: spec.icon || "",
-      background: spec.background || "",
-      minorTraits: Array.isArray(spec.minor_traits) ? spec.minor_traits : [],
-      majorTraits: Array.isArray(spec.major_traits) ? spec.major_traits : [],
-    })),
-    traits: traits.map((trait) => {
-      const mapped = {
-        id: trait.id,
-        name: trait.name || "",
-        // Use the render CDN icon directly — wiki FilePath lookups by trait name are unreliable
-        // because multiple traits across different professions can share the same name (e.g.
-        // "Deadly Aim", "No Quarter"), causing the wrong profession's icon to be served.
-        icon: trait.icon || "",
-        iconFallback: "",
-        description: trait.description || "",
-        tier: Number(trait.tier) || 0,
-        order: Number(trait.order) || 0,
-        slot: trait.slot || "",
-        specialization: Number(trait.specialization) || 0,
-        facts: KNOWN_TRAIT_FACTS_OVERRIDES.get(trait.id) || (Array.isArray(trait.facts) ? trait.facts.filter((f) => !f.requires_trait) : []),
-        traitedFacts: Array.isArray(trait.traited_facts) ? trait.traited_facts : [],
-        traitSkillIds: Array.isArray(trait.skills)
-          ? trait.skills.map((s) => Number(s?.id)).filter(Boolean)
-          : [],
-        traitSkillIcons: Array.isArray(trait.skills)
-          ? Object.fromEntries(
-              trait.skills
-                .filter((s) => s?.id && s?.icon)
-                .map((s) => [Number(s.id), String(s.icon)])
-            )
-          : {},
-      };
-      applyBalanceSplit(mapped, "trait", gameMode);
-      if (gameMode === "pve") applyPveFacts(mapped, "trait");
-      return mapped;
-    }),
-    skills: skills.map(mapSkill),
+    profession: { id: profession.id, name: profession.name || profession.id, icon: profession.icon || "", iconBig: profession.icon_big || "" },
+    specializations: mappedSpecializations,
+    traits: mappedTraits,
+    skills: mappedSkills,
     professionWeapons: Object.fromEntries(
       Object.entries(profession.weapons || {}).map(([apiKey, wData]) => [
         normalizeWeaponKey(apiKey),
@@ -848,24 +770,7 @@ async function getProfessionCatalog(professionId, lang = "en", gameMode = "pve")
         },
       ])
     ),
-    weaponSkills: weaponSkillsRaw.map((skill) => {
-      const mapped = {
-        id: skill.id,
-        name: skill.name || "",
-        icon: skill.icon || "",
-        description: skill.description || "",
-        slot: skill.slot || "",
-        attunement: skill.attunement === "None" ? "" : (skill.attunement || ""),
-        dualWield: skill.dual_attunement === "None" ? "" : (skill.dual_attunement || ""),
-        weaponType: skill.weapon_type === "None" ? "" : (skill.weapon_type || ""),
-        flags: Array.isArray(skill.flags) ? skill.flags : [],
-        facts: Array.isArray(skill.facts) ? skill.facts : [],
-        flipSkill: Number(skill.flip_skill) || 0,
-      };
-      applyBalanceSplit(mapped, "skill", gameMode);
-      if (gameMode === "pve") applyPveFacts(mapped, "skill");
-      return mapped;
-    }),
+    weaponSkills: mappedWeaponSkills,
     legends,
     pets,
     gameMode: gameMode || "pve",
@@ -977,6 +882,7 @@ module.exports = {
   getProfessionList,
   getProfessionCatalog,
   getUpgradeCatalog,
-  applyBalanceSplit,
   _setStaticData,
+  initWikiClient,
+  getWikiClient,
 };

@@ -5,13 +5,6 @@
  * for professions that support weapon swap, and omitted for those that don't.
  */
 
-jest.mock("../../lib/gw2-balance-splits", () => ({
-  getSkillSplit: () => null,
-  getTraitSplit: () => null,
-  getSkillPveFacts: () => null,
-  getTraitPveFacts: () => null,
-}));
-
 jest.mock("../../src/main/gw2Data/fetch", () => ({
   GW2_API_ROOT: "https://api.guildwars2.com/v2",
   fetchCachedJson: jest.fn(),

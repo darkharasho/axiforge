@@ -1,0 +1,104 @@
+{
+  "name": "Viper Mirage",
+  "description": "Medium armor, 4-stat, trait conversions, food + utility",
+  "ctx": {
+    "profession": "Mesmer",
+    "specializations": [
+      {
+        "id": 24,
+        "majorChoices": {
+          "1": 700
+        }
+      }
+    ],
+    "equipment": {
+      "slots": {
+        "head": "Viper's",
+        "shoulders": "Viper's",
+        "chest": "Viper's",
+        "gloves": "Viper's",
+        "legs": "Viper's",
+        "boots": "Viper's",
+        "mainhand1": "Viper's",
+        "back": "Viper's",
+        "accessory1": "Viper's",
+        "accessory2": "Viper's",
+        "amulet": "Viper's",
+        "ring1": "Viper's",
+        "ring2": "Viper's"
+      },
+      "weapons": {
+        "mainhand1": "axe"
+      },
+      "runes": {},
+      "infusions": {},
+      "enrichment": null,
+      "food": 91805,
+      "utility": null
+    },
+    "gameMode": "pve",
+    "underwaterMode": false,
+    "activeWeaponSet": 1,
+    "skills": {
+      "healId": null,
+      "utilityIds": [],
+      "eliteId": null
+    },
+    "assumedBoons": null,
+    "sigilStacks": null
+  },
+  "catalogs": {
+    "traits": [
+      {
+        "id": 700,
+        "facts": [
+          {
+            "type": "BuffConversion",
+            "source": "Vitality",
+            "target": "ConditionDamage",
+            "percent": 10
+          }
+        ]
+      }
+    ],
+    "specializations": [
+      {
+        "id": 24,
+        "minorTraits": []
+      }
+    ],
+    "skills": [],
+    "runes": [],
+    "foods": [
+      {
+        "id": 91805,
+        "name": "Plate of Beef Rendang",
+        "buff": "+100 Expertise\n+70 Condition Damage"
+      }
+    ],
+    "utilities": [],
+    "infusions": [],
+    "enrichments": []
+  },
+  "expected": {
+    "total": {
+      "Power": 1980,
+      "Precision": 1529,
+      "Toughness": 1000,
+      "Vitality": 1000,
+      "Ferocity": 0,
+      "ConditionDamage": 1150,
+      "HealingPower": 0,
+      "Expertise": 629,
+      "Concentration": 0
+    },
+    "derived": {
+      "health": 15922,
+      "critChance": 35.19047619047619,
+      "critDamage": 150,
+      "conditionDuration": 41.93333333333333,
+      "boonDuration": 0,
+      "armor": 1967
+    }
+  }
+}

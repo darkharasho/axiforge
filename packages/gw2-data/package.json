@@ -1,0 +1,32 @@
+{
+  "name": "@axi/gw2-data",
+  "version": "0.1.0",
+  "description": "GW2 data library — wiki-sourced facts, GW2 API structural data, and stat computation",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./wiki": "./src/wiki/client.js",
+    "./api": "./src/api/client.js",
+    "./facts": "./src/facts/merge.js",
+    "./engine": "./src/engine/index.js"
+  },
+  "scripts": {
+    "test": "jest"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": ["**/packages/gw2-data/tests/**/*.test.js"],
+    "clearMocks": true,
+    "testTimeout": 15000
+  },
+  "license": "MIT",
+  "keywords": ["gw2", "guild-wars-2", "wiki", "api", "build-editor"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/darkharasho/axiforge",
+    "directory": "packages/gw2-data"
+  },
+  "devDependencies": {
+    "jest": "^30.3.0"
+  }
+}

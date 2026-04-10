@@ -124,7 +124,23 @@ function createGw2MockFetch(overrides = {}) {
       return okResponse(MOCK_PETS_RAW);
     }
 
-    // Wiki API
+    // Wiki API — wikitext batch queries (used by WikiClient.getWikitextBatch)
+    if (urlStr.includes("wiki.guildwars2.com") && urlStr.includes("rvprop=content")) {
+      // Parse requested titles from URL and return stub wikitext for each
+      const titlesMatch = urlStr.match(/titles=([^&]+)/);
+      const titles = titlesMatch ? decodeURIComponent(titlesMatch[1]).split("|") : [];
+      const pages = {};
+      titles.forEach((title, i) => {
+        pages[String(i + 1)] = {
+          pageid: i + 1,
+          title,
+          revisions: [{ "*": `{{Skill infobox\n| description = Mock description for ${title}\n}}` }],
+        };
+      });
+      return okResponse({ query: { pages } });
+    }
+
+    // Wiki API — other queries (summaries, etc.)
     if (urlStr.includes("wiki.guildwars2.com")) {
       return okResponse({ query: { pages: [{ title: "Test", extract: "Summary", fullurl: "https://wiki.guildwars2.com/wiki/Test", missing: false }] } });
     }

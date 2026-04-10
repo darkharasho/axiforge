@@ -1,0 +1,94 @@
+{
+  "name": "Celestial Firebrand WvW",
+  "description": "Heavy armor, 9-stat, WvW Celestial exclusion, rune bonuses",
+  "ctx": {
+    "profession": "Guardian",
+    "specializations": [],
+    "equipment": {
+      "slots": {
+        "head": "Celestial",
+        "shoulders": "Celestial",
+        "chest": "Celestial",
+        "gloves": "Celestial",
+        "legs": "Celestial",
+        "boots": "Celestial",
+        "mainhand1": "Celestial",
+        "back": "Celestial",
+        "accessory1": "Celestial",
+        "accessory2": "Celestial",
+        "amulet": "Celestial",
+        "ring1": "Celestial",
+        "ring2": "Celestial"
+      },
+      "weapons": {
+        "mainhand1": "axe"
+      },
+      "runes": {
+        "head": 24836,
+        "shoulders": 24836,
+        "chest": 24836,
+        "gloves": 24836,
+        "legs": 24836,
+        "boots": 24836
+      },
+      "infusions": {},
+      "enrichment": null,
+      "food": null,
+      "utility": null
+    },
+    "gameMode": "wvw",
+    "underwaterMode": false,
+    "activeWeaponSet": 1,
+    "skills": {
+      "healId": null,
+      "utilityIds": [],
+      "eliteId": null
+    },
+    "assumedBoons": null,
+    "sigilStacks": null
+  },
+  "catalogs": {
+    "traits": [],
+    "specializations": [],
+    "skills": [],
+    "runes": [
+      {
+        "id": 24836,
+        "name": "Superior Rune of the Scholar",
+        "bonuses": [
+          "+25 Power",
+          "+35 Ferocity",
+          "+50 Power",
+          "+65 Ferocity",
+          "+100 Power",
+          "+125 Ferocity"
+        ]
+      }
+    ],
+    "foods": [],
+    "utilities": [],
+    "infusions": [],
+    "enrichments": []
+  },
+  "expected": {
+    "total": {
+      "Power": 1710,
+      "Precision": 1535,
+      "Toughness": 1535,
+      "Vitality": 1535,
+      "Ferocity": 760,
+      "ConditionDamage": 535,
+      "HealingPower": 535,
+      "Expertise": 0,
+      "Concentration": 0
+    },
+    "derived": {
+      "health": 16995,
+      "critChance": 35.476190476190474,
+      "critDamage": 200.66666666666666,
+      "conditionDuration": 0,
+      "boonDuration": 0,
+      "armor": 2806
+    }
+  }
+}

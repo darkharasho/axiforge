@@ -1,0 +1,224 @@
+"use strict";
+
+const { computeAttributes, computeSlotStats, getExcludedSlots } = require("../../src/engine/attributes");
+
+function makeCtx(overrides = {}) {
+  return {
+    profession: "Warrior",
+    specializations: [],
+    equipment: {
+      slots: {},
+      weapons: {},
+      runes: {},
+      infusions: {},
+      enrichment: null,
+      food: null,
+      utility: null,
+    },
+    gameMode: "pve",
+    underwaterMode: false,
+    activeWeaponSet: 1,
+    skills: {},
+    assumedBoons: null,
+    sigilStacks: null,
+    ...overrides,
+  };
+}
+
+function makeCatalogs(overrides = {}) {
+  return {
+    traitById: new Map(),
+    skillById: new Map(),
+    specializationById: new Map(),
+    runeById: new Map(),
+    foodById: new Map(),
+    utilityById: new Map(),
+    infusionById: new Map(),
+    enrichmentById: new Map(),
+    ...overrides,
+  };
+}
+
+describe("getExcludedSlots", () => {
+  test("excludes aquatic slots in land mode", () => {
+    const excluded = getExcludedSlots(false, 1);
+    expect(excluded.has("breather")).toBe(true);
+    expect(excluded.has("aquatic1")).toBe(true);
+    expect(excluded.has("aquatic2")).toBe(true);
+    expect(excluded.has("head")).toBe(false);
+  });
+
+  test("excludes land weapon slots in land mode for inactive set", () => {
+    const excluded = getExcludedSlots(false, 1);
+    expect(excluded.has("mainhand2")).toBe(true);
+    expect(excluded.has("offhand2")).toBe(true);
+    expect(excluded.has("mainhand1")).toBe(false);
+  });
+
+  test("excludes land-only slots in underwater mode", () => {
+    const excluded = getExcludedSlots(true, 1);
+    expect(excluded.has("head")).toBe(true);
+    expect(excluded.has("mainhand1")).toBe(true);
+    expect(excluded.has("breather")).toBe(false);
+  });
+});
+
+describe("computeSlotStats", () => {
+  test("3-stat combo returns major + minor stats", () => {
+    const result = computeSlotStats("Berserker's", "chest", {}, "pve");
+    expect(result).toEqual([
+      { stat: "Power", value: 141 },
+      { stat: "Precision", value: 101 },
+      { stat: "Ferocity", value: 101 },
+    ]);
+  });
+
+  test("4-stat combo returns 2 major + 2 minor stats", () => {
+    const result = computeSlotStats("Marauder's", "chest", {}, "pve");
+    expect(result).toEqual([
+      { stat: "Power", value: 121 },
+      { stat: "Precision", value: 121 },
+      { stat: "Vitality", value: 66 },
+      { stat: "Ferocity", value: 66 },
+    ]);
+  });
+
+  test("Celestial uses c weight for all stats", () => {
+    const result = computeSlotStats("Celestial", "chest", {}, "pve");
+    expect(result.every((r) => r.value === 66)).toBe(true);
+    expect(result).toHaveLength(9);
+  });
+
+  test("WvW Celestial excludes Expertise and Concentration", () => {
+    const result = computeSlotStats("Celestial", "chest", {}, "wvw");
+    expect(result.find((r) => r.stat === "Expertise")).toBeUndefined();
+    expect(result.find((r) => r.stat === "Concentration")).toBeUndefined();
+    expect(result).toHaveLength(7);
+  });
+
+  test("two-handed weapon uses TWO_HAND_WEIGHTS", () => {
+    const weapons = { mainhand1: "greatsword" };
+    const result = computeSlotStats("Berserker's", "mainhand1", weapons, "pve");
+    expect(result[0]).toEqual({ stat: "Power", value: 251 });
+  });
+});
+
+describe("computeAttributes", () => {
+  test("empty build returns base stats only", () => {
+    const result = computeAttributes(makeCtx(), makeCatalogs());
+    expect(result.base.Power).toBe(1000);
+    expect(result.base.Precision).toBe(1000);
+    expect(result.base.Toughness).toBe(1000);
+    expect(result.base.Vitality).toBe(1000);
+    expect(result.base.Ferocity).toBe(0);
+    expect(result.total.Power).toBe(1000);
+  });
+
+  test("equipment slots contribute to total", () => {
+    const ctx = makeCtx({
+      equipment: { slots: { chest: "Berserker's" }, weapons: {}, runes: {}, infusions: {} },
+    });
+    const result = computeAttributes(ctx, makeCatalogs());
+    expect(result.equipment.Power).toBe(141);
+    expect(result.total.Power).toBe(1141);
+  });
+
+  test("food flat bonuses parsed from buff text", () => {
+    const catalogs = makeCatalogs({
+      foodById: new Map([[100, { name: "Steak", buff: "+100 Power" }]]),
+    });
+    const ctx = makeCtx({ equipment: { slots: {}, weapons: {}, runes: {}, infusions: {}, food: 100 } });
+    const result = computeAttributes(ctx, catalogs);
+    expect(result.food.Power).toBe(100);
+  });
+
+  test("food 'to All Attributes' adds to all stats", () => {
+    const catalogs = makeCatalogs({
+      foodById: new Map([[101, { name: "Feast", buff: "+50 to All Attributes" }]]),
+    });
+    const ctx = makeCtx({ equipment: { slots: {}, weapons: {}, runes: {}, infusions: {}, food: 101 } });
+    const result = computeAttributes(ctx, catalogs);
+    expect(result.food.Power).toBe(50);
+    expect(result.food.Ferocity).toBe(50);
+    expect(result.food.HealingPower).toBe(50);
+  });
+
+  test("rune bonuses are cumulative per piece", () => {
+    const catalogs = makeCatalogs({
+      runeById: new Map([[24836, { name: "Scholar", bonuses: ["+25 Power", "+35 Ferocity", "+50 Power"] }]]),
+    });
+    const ctx = makeCtx({
+      equipment: { slots: {}, weapons: {}, runes: { head: 24836, shoulders: 24836, chest: 24836 }, infusions: {} },
+    });
+    const result = computeAttributes(ctx, catalogs);
+    expect(result.runes.Power).toBe(75);
+    expect(result.runes.Ferocity).toBe(35);
+  });
+
+  test("infusion attributes added", () => {
+    const catalogs = makeCatalogs({
+      infusionById: new Map([[49431, { name: "+5 Power", infixUpgrade: { attributes: [{ attribute: "Power", modifier: 5 }] } }]]),
+    });
+    const ctx = makeCtx({
+      equipment: { slots: {}, weapons: {}, infusions: { chest: [49431, 49431] }, runes: {} },
+    });
+    const result = computeAttributes(ctx, catalogs);
+    expect(result.infusions.Power).toBe(10);
+  });
+
+  test("assumed Might boons add Power and ConditionDamage", () => {
+    const ctx = makeCtx({ assumedBoons: { might: 25 } });
+    const result = computeAttributes(ctx, makeCatalogs());
+    expect(result.boons.Power).toBe(750);
+    expect(result.boons.ConditionDamage).toBe(750);
+  });
+
+  test("derived health uses profession base HP", () => {
+    const ctx = makeCtx({ profession: "Warrior" });
+    const result = computeAttributes(ctx, makeCatalogs());
+    // Warrior base HP = 9212, base Vitality = 1000, health = 9212 + 1000*10 = 19212
+    expect(result.derived.health).toBe(19212);
+  });
+
+  test("derived crit chance formula", () => {
+    const ctx = makeCtx();
+    const result = computeAttributes(ctx, makeCatalogs());
+    // Base precision 1000: critChance = 5 + (1000 - 895) / 21 = 5 + 5 = 10
+    expect(result.derived.critChance).toBeCloseTo(10, 0);
+  });
+
+  test("derived armor includes weight class defense", () => {
+    const ctx = makeCtx({ profession: "Warrior" });
+    const result = computeAttributes(ctx, makeCatalogs());
+    // Warrior = heavy = 1271 defense, base toughness 1000
+    expect(result.derived.armor).toBe(2271);
+  });
+
+  test("trait conversions applied after base stats", () => {
+    const catalogs = makeCatalogs({
+      traitById: new Map([[500, {
+        id: 500,
+        facts: [{ type: "BuffConversion", source: "Vitality", target: "Power", percent: 10 }],
+      }]]),
+      specializationById: new Map([[4, { id: 4, minorTraits: [] }]]),
+    });
+    const ctx = makeCtx({
+      specializations: [{ id: 4, majorChoices: { 1: 500 } }],
+    });
+    const result = computeAttributes(ctx, catalogs);
+    // base Vitality = 1000, 10% = floor(100) = 100
+    expect(result.conversions.Power).toBe(100);
+    expect(result.total.Power).toBe(1100);
+  });
+
+  test("signet passive buffs added", () => {
+    const ctx = makeCtx({
+      skills: { healId: null, utilityIds: [], eliteId: null },
+      equipment: { slots: {}, weapons: {}, runes: {}, infusions: {} },
+    });
+    // Bane Signet (9093) = +180 Power
+    ctx.skills.utilityIds = [9093];
+    const result = computeAttributes(ctx, makeCatalogs());
+    expect(result.signets.Power).toBe(180);
+  });
+});

@@ -1,0 +1,22 @@
+{
+  "trait:1719": {
+    "implicitFury": true,
+    "description": "Roiling Mists: has fury crit bonus but no Buff(Fury) fact in API"
+  },
+  "trait:1016": {
+    "petStatOnly": true,
+    "description": "Fang and Claw: AttributeAdjust facts apply to pets, not player"
+  },
+  "trait:1765": {
+    "mightOverride": { "power": 40, "condi": 20 },
+    "description": "Notoriety: modifies Might per-stack values (+40P/+20CD instead of +30P/+30CD)"
+  },
+  "trait:2220": {
+    "allyTargeted": ["elixir"],
+    "description": "Twisted Medicine: elixir skills become ally-targeted"
+  },
+  "trait:1831": {
+    "burstRechargeReduction": 10,
+    "description": "Primal Rage: API omits 10% burst recharge reduction fact"
+  }
+}

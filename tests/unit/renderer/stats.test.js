@@ -9,7 +9,8 @@
 
 const { computeSlotStats, computeEquipmentStats, computeBuildConcentration } = require("../../../src/renderer/modules/stats");
 const { state } = require("../../../src/renderer/modules/state");
-const { ARMOR_DEFENSE_BY_WEIGHT, PROFESSION_WEIGHT, FURY_CRIT_CHANCE, FURY_CRIT_CHANCE_WVW } = require("../../../src/renderer/modules/constants");
+const { ARMOR_DEFENSE_BY_WEIGHT, PROFESSION_WEIGHT } = require("../../../src/renderer/modules/constants");
+const { FURY_CRIT_CHANCE, FURY_CRIT_CHANCE_WVW } = require("../../../src/renderer/modules/engine-bridge");
 
 // ---------------------------------------------------------------------------
 // Helpers — reset state.editor before each test
@@ -852,6 +853,7 @@ describe("computeEquipmentStats — signet passive buffs", () => {
     state.editor = makeEditor({});
     state.editor.skills = { healId: 0, utilityIds: [14404, 0, 0], eliteId: 0 };
     const result = computeEquipmentStats();
-    expect(result.Power).toBe(1000);
+    // Engine resolves signet passives via constant map, independent of catalog
+    expect(result.Power).toBe(1000 + 180);
   });
 });

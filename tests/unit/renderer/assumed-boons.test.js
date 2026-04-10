@@ -166,16 +166,18 @@ describe("computeEquipmentStats — stacking sigils", () => {
   });
 });
 
-describe("computeTraitConversions", () => {
+describe("computeTraitConversions — via engine", () => {
+  // Engine computes conversions from actual equipment stats (not passed-in baseStats).
+  // Base Power/Precision/Toughness/Vitality = 1000 each with no equipment.
   beforeEach(() => {
-    state.editor = makeEditor({ chest: "Berserker's" });
+    state.editor = makeEditor(); // no equipment — base stats only
     state.upgradeCatalog = null;
   });
 
   test("returns empty object when no specializations selected", () => {
     state.editor.specializations = [];
     state.activeCatalog = { traitById: new Map() };
-    const result = computeTraitConversions({});
+    const result = computeTraitConversions();
     expect(result).toEqual({});
   });
 
@@ -189,8 +191,8 @@ describe("computeTraitConversions", () => {
     state.editor.specializations = [
       { specializationId: 1, majorChoices: { 1: 9999 } },
     ];
-    const baseStats = { Power: 1000, Vitality: 500 };
-    const result = computeTraitConversions(baseStats);
+    const result = computeTraitConversions();
+    // 10% of base Power (1000) = 100
     expect(result.Vitality).toBe(100);
   });
 
@@ -204,7 +206,8 @@ describe("computeTraitConversions", () => {
     state.editor.specializations = [
       { specializationId: 1, majorChoices: { 2: 8888 } },
     ];
-    const result = computeTraitConversions({ Power: 1000 });
+    const result = computeTraitConversions();
+    // 13% of base Power (1000) = 130
     expect(result.Concentration).toBe(130);
   });
 
@@ -218,8 +221,9 @@ describe("computeTraitConversions", () => {
     state.editor.specializations = [
       { specializationId: 1, majorChoices: { 1: 7777 } },
     ];
-    const result = computeTraitConversions({ Precision: 2000 });
-    expect(result.Ferocity).toBe(200);
+    const result = computeTraitConversions();
+    // 10% of base Precision (1000) = 100
+    expect(result.Ferocity).toBe(100);
   });
 
   test("maps ConditionDuration target to Expertise", () => {
@@ -232,7 +236,8 @@ describe("computeTraitConversions", () => {
     state.editor.specializations = [
       { specializationId: 1, majorChoices: { 1: 6666 } },
     ];
-    const result = computeTraitConversions({ Precision: 1000 });
+    const result = computeTraitConversions();
+    // 7% of base Precision (1000) = 70
     expect(result.Expertise).toBe(70);
   });
 
@@ -246,8 +251,9 @@ describe("computeTraitConversions", () => {
     state.editor.specializations = [
       { specializationId: 1, majorChoices: { 1: 5555 } },
     ];
-    const result = computeTraitConversions({ Power: 2000 });
-    expect(result.HealingPower).toBe(140);
+    const result = computeTraitConversions();
+    // 7% of base Power (1000) = 70
+    expect(result.HealingPower).toBe(70);
   });
 
   test("ignores traits not selected in majorChoices", () => {
@@ -260,7 +266,7 @@ describe("computeTraitConversions", () => {
     state.editor.specializations = [
       { specializationId: 1, majorChoices: { 1: 1111 } },
     ];
-    const result = computeTraitConversions({ Power: 1000 });
+    const result = computeTraitConversions();
     expect(result).toEqual({});
   });
 
@@ -277,7 +283,8 @@ describe("computeTraitConversions", () => {
     state.editor.specializations = [
       { specializationId: 1, majorChoices: { 1: 3333 } },
     ];
-    const result = computeTraitConversions({ Power: 1000 });
+    const result = computeTraitConversions();
+    // 10% of base Power (1000) = 100 each
     expect(result.Vitality).toBe(100);
     expect(result.Ferocity).toBe(100);
   });

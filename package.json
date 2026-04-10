@@ -1,6 +1,7 @@
 {
   "name": "axiforge-desktop",
   "version": "0.2.0",
+  "workspaces": ["packages/*"],
   "description": "GW2 build editor desktop app with GitHub Pages publishing",
   "main": "src/main/index.js",
   "build": {
@@ -51,13 +52,10 @@
     "dev:clean": "node scripts/dev-clean.mjs",
     "build:site": "vite build --config src/site/vite.config.js",
     "build:renderer": "vite build",
-    "seed": "node lib/gw2-balance-splits/scripts/seed.js",
-    "crawl": "node lib/gw2-balance-splits/scripts/crawl-patches.js",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "audit:wiki": "node tests/wiki-audit/run-audit.js",
-    "audit:wiki:fix": "node tests/wiki-audit/fix-splits.js",
     "audit:wiki:skills": "node tests/wiki-audit/run-audit.js --type skills",
     "audit:wiki:traits": "node tests/wiki-audit/run-audit.js --type traits",
     "audit:wiki:relics": "node tests/wiki-audit/run-audit.js --type relics",
@@ -75,7 +73,7 @@
   "jest": {
     "testEnvironment": "node",
     "testMatch": [
-      "**/tests/**/*.test.js"
+      "<rootDir>/tests/**/*.test.js"
     ],
     "transform": {
       "^.+/src/renderer/.+\\.js$": [

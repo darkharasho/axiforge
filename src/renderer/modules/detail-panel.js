@@ -1,8 +1,9 @@
 import { state } from "./state.js";
-import { WEAPON_STRENGTH_MIDPOINT, BOON_CONDITION_ICONS, BUFF_FACT_TYPES, FACT_TYPE_ICONS } from "./constants.js";
+import { WEAPON_STRENGTH_MIDPOINT, BOON_CONDITION_ICONS, FACT_TYPE_ICONS } from "./constants.js";
 import { escapeHtml, tierLabel, normalizeText, stripGw2Markup } from "./utils.js";
-import { computeEquipmentStats, computeUpgradeModifiers } from "./stats.js";
+import { computeUpgradeModifiers } from "./stats.js";
 import { getAssumedBoons } from "./equipment.js";
+import { BUFF_FACT_TYPES, computeStats } from "./engine-bridge.js";
 
 let _readOnly = false;
 export function setReadOnly(val) { _readOnly = val; }
@@ -88,7 +89,7 @@ export function renderDetailPanel() {
   const facts = Array.isArray(detail.facts) ? detail.facts.slice(0, 16) : [];
   const detailDmgStats = (() => {
     if (detail.kindLabel === "Trait") return null;
-    const computed = computeEquipmentStats();
+    const computed = computeStats(state).total;
     const power = computed.Power || 1000;
     const precision = computed.Precision || 1000;
     const ferocity = computed.Ferocity || 0;
@@ -112,8 +113,13 @@ export function renderDetailPanel() {
   const alacrity = isSkill && getAssumedBoons().alacrity;
   // Burst Recharge: applies to warrior burst skills (slot Profession_1)
   const burstRecharge = isSkill && detail.slot === "Profession_1" ? (computeUpgradeModifiers().get("Burst Recharge") || 0) : 0;
-  const factsHtml = facts.length
-    ? facts
+  // Filter Recharge facts from list when we have infobox recharge data
+  const hasInfoboxRecharge = isSkill && detail.recharge?.pve != null;
+  const detailDisplayFacts = hasInfoboxRecharge ? facts.filter((f) => f.type !== "Recharge") : facts;
+  const detailTimingBadges = isSkill ? _buildTimingBadges(detail, alacrity, burstRecharge) : "";
+
+  const factsHtml = detailDisplayFacts.length
+    ? detailDisplayFacts
         .map((fact) => {
           const cls = fact.type === "NoData" ? "fact-item--section" : fact._splitFact ? "fact-item--split" : fact._traitedFact ? "fact-item--traited" : fact._newFact ? "fact-item--new-in-mode" : "";
           return `<li${cls ? ` class="${cls}"` : ""}>${formatFactHtml(fact, detailDmgStats, { alacrity, burstRecharge })}</li>`;
@@ -142,6 +148,7 @@ export function renderDetailPanel() {
             <h3>${escapeHtml(detail.title)}</h3>
             <p>${escapeHtml(detail.kindLabel)}${detail.hasSplit ? ' <span class="split-badge">WvW split</span>' : ''}${detail.isAquaticOnly ? ' <span class="split-badge aquatic-badge">Aquatic</span>' : ''}</p>
           </div>
+          ${detailTimingBadges}
         </header>
         <section>
           <h4>In-Game Description</h4>
@@ -222,7 +229,25 @@ export function bindHoverPreview(node, kind, entityProvider) {
  * would otherwise cause fact bloat when any matching trait is selected.
  */
 export function resolveEntityFacts(entity) {
-  const baseFacts = Array.isArray(entity.facts) ? entity.facts : [];
+  const gameMode = state.editor?.gameMode || "pve";
+
+  // Select the appropriate fact set based on game mode.
+  // PvP falls back to WvW facts (GW2 frequently shares WvW/PvP balance),
+  // then to PvE facts as a last resort.
+  let baseFacts;
+  if (gameMode === "wvw" && Array.isArray(entity.wvwFacts)) {
+    baseFacts = entity.wvwFacts;
+  } else if (gameMode === "pvp") {
+    if (Array.isArray(entity.pvpFacts)) {
+      baseFacts = entity.pvpFacts;
+    } else if (Array.isArray(entity.wvwFacts)) {
+      baseFacts = entity.wvwFacts;
+    } else {
+      baseFacts = Array.isArray(entity.facts) ? entity.facts : [];
+    }
+  } else {
+    baseFacts = Array.isArray(entity.facts) ? entity.facts : [];
+  }
   const traitedFacts = Array.isArray(entity.traitedFacts) ? entity.traitedFacts : [];
 
   // Apply traited_facts overrides when the required trait is active.
@@ -297,6 +322,44 @@ export function resolveEntityFacts(entity) {
   });
 }
 
+/**
+ * Build timing badge HTML (recharge + cast time) for the hover/detail header.
+ * Reads infobox timings from entity.recharge / entity.activation (per-mode objects).
+ */
+function _buildTimingBadges(entity, alacrity, burstRecharge) {
+  const gameMode = state.editor?.gameMode || "pve";
+  const badges = [];
+
+  // Cast time / activation
+  if (entity.activation) {
+    const castTime = entity.activation[gameMode] ?? entity.activation.pve;
+    if (castTime != null && castTime > 0) {
+      const castIcon = FACT_TYPE_ICONS["Time"] || "";
+      badges.push(`<div class="hover-preview__timing"><img src="${escapeHtml(castIcon)}" alt="Cast time" />${castTime}s</div>`);
+    }
+  }
+
+  // Recharge / cooldown
+  if (entity.recharge) {
+    const base = entity.recharge[gameMode] ?? entity.recharge.pve;
+    if (base != null && base > 0) {
+      const rechargeIcon = FACT_TYPE_ICONS["Recharge"] || "";
+      const alacMult = (alacrity && base > 0) ? 0.75 : 1;
+      const burstMult = (burstRecharge > 0 && base > 0) ? (1 - burstRecharge / 100) : 1;
+      const totalMult = alacMult * burstMult;
+      if (totalMult < 1) {
+        const reduced = +(base * totalMult).toFixed(2);
+        badges.push(`<div class="hover-preview__timing"><img src="${escapeHtml(rechargeIcon)}" alt="Recharge" /><span class="fact-alacrity">${reduced}s <span class="fact-alacrity-original">${base}s</span></span></div>`);
+      } else {
+        badges.push(`<div class="hover-preview__timing"><img src="${escapeHtml(rechargeIcon)}" alt="Recharge" />${base}s</div>`);
+      }
+    }
+  }
+
+  if (!badges.length) return "";
+  return `<div class="hover-preview__timings">${badges.join("")}</div>`;
+}
+
 function _renderStatBreakdown(entries, total, statName) {
   const lines = entries.map((e) => {
     let iconHtml = "";
@@ -320,7 +383,13 @@ export function buildSkillCard(skill, kind, isChained = false, dmgStats = null) 
   const isSkillCard = kind !== "trait";
   const cardAlacrity = isSkillCard && getAssumedBoons().alacrity;
   const burstRch = isSkillCard && skill.slot === "Profession_1" ? (computeUpgradeModifiers().get("Burst Recharge") || 0) : 0;
-  const factsItems = rawFacts
+
+  // Filter Recharge facts out of the list when we have infobox recharge data
+  const isEquip = kind.startsWith("equip-");
+  const hasInfoboxRecharge = !isEquip && skill.recharge?.pve != null;
+  const displayFacts = hasInfoboxRecharge ? rawFacts.filter((f) => f.type !== "Recharge") : rawFacts;
+
+  const factsItems = displayFacts
     .map((fact) => {
       const html = formatFactHtml(fact, dmgStats, { alacrity: cardAlacrity, burstRecharge: burstRch });
       if (!html) return null;
@@ -329,6 +398,10 @@ export function buildSkillCard(skill, kind, isChained = false, dmgStats = null) 
     })
     .filter(Boolean);
   const meta = getHoverMetaLine(kind, skill);
+
+  // Build timing badges for the header top-right (recharge + cast time)
+  const timingBadges = isEquip ? "" : _buildTimingBadges(skill, cardAlacrity, burstRch);
+
   return `
     ${isChained ? `<div class="hover-preview__chain-divider">▸</div>` : ""}
     <div class="hover-preview__head${isChained ? " hover-preview__head--chained" : ""}">
@@ -337,6 +410,7 @@ export function buildSkillCard(skill, kind, isChained = false, dmgStats = null) 
         <h4 class="hover-preview__title">${escapeHtml(skill.name || "Unknown")}</h4>
         <p class="hover-preview__meta">${escapeHtml(meta)}${skill.hasSplit ? ' <span class="split-badge">WvW split</span>' : ''}${_isAquaticOnlySkill(kind, skill) ? ' <span class="split-badge aquatic-badge">Aquatic</span>' : ''}</p>
       </div>
+      ${timingBadges}
     </div>
     ${description ? `<p class="hover-preview__desc">${escapeHtml(description).replace(/\n/g, "<br>")}</p>` : (!factsItems.length && !skill.bonuses?.length && !skill.breakdown?.length && !kind.startsWith("equip-") ? `<p class="hover-preview__desc">No description available.</p>` : "")}
     ${skill.bonuses?.length ? `<ul class="hover-preview__bonuses">${skill.bonuses.map((b, i) => `<li class="${i < (skill.activeBonusCount || 0) ? "hover-preview__bonus--active" : "hover-preview__bonus--inactive"}">(${i + 1}): ${escapeHtml(b)}</li>`).join("")}</ul>` : ""}
@@ -372,7 +446,7 @@ export function showHoverPreview(kind, entity, x, y) {
   // EffectivePower = Power × (1 + CritChance × (0.5 + Ferocity/1500))
   let dmgStats = null;
   if (kind === "skill") {
-    const computed = computeEquipmentStats();
+    const computed = computeStats(state).total;
     const power = computed.Power || 1000;
     const precision = computed.Precision || 1000;
     const ferocity = computed.Ferocity || 0;
@@ -411,10 +485,11 @@ export function showHoverPreview(kind, entity, x, y) {
     && _entitySpecId !== _activeEliteSpecId;
   // Elementalist: only Tempest (spec 48) has Overload flips on attunement F1-F4 skills; suppress
   // for all other builds including Weaver where the entity spec matches the active elite spec.
+  // Also covers core attunement skills (spec 0) that fall back into the Weaver/Catalyst pool
+  // via the skill lookup cascade — their flipSkill still points to the Overload.
   // Restrict to F1-F4 slots so Evoker F5 familiar flip chains (e.g. Ignite → Conflagration) are
   // not suppressed.
-  const suppressElemNonTempestFlip = _entitySpecId > 0
-    && (state.editor?.profession ?? "") === "Elementalist"
+  const suppressElemNonTempestFlip = (state.editor?.profession ?? "") === "Elementalist"
     && _activeEliteSpecId !== 48
     && /^Profession_[1-4]$/.test(entity.slot || "");
   const chainCards = [buildSkillCard(entity, kind, false, dmgStats)];
@@ -542,6 +617,8 @@ export async function selectDetail(kind, entity) {
     hasSplit: Boolean(entity.hasSplit),
     isAquaticOnly: _isAquaticOnlySkill(kind, entity),
     slot: entity.slot || "",
+    recharge: entity.recharge || null,
+    activation: entity.activation || null,
   };
   state.detail = detail;
   renderDetailPanel();
@@ -664,6 +741,12 @@ export function formatFactHtml(fact, dmgStats = null, { alacrity = false, burstR
     const iconUrl = fact.icon || FACT_TYPE_ICONS["ComboField"] || "";
     return iconUrl ? `<img class="fact-status-icon" src="${escapeHtml(iconUrl)}" alt="" aria-hidden="true">${escapeHtml(text)}` : escapeHtml(text);
   }
+  if (fact.type === "Percent" && fact.percent != null) {
+    const label = String(fact.text && fact.text !== "Percent" ? fact.text : "Percent");
+    const text = `${label}: ${fact.percent}%`;
+    const iconUrl = fact.icon || FACT_TYPE_ICONS["Percent"] || "";
+    return iconUrl ? `<img class="fact-status-icon" src="${escapeHtml(iconUrl)}" alt="" aria-hidden="true">${escapeHtml(text)}` : escapeHtml(text);
+  }
   if (fact.type === "StunBreak") {
     const iconUrl = fact.icon || FACT_TYPE_ICONS["StunBreak"] || "";
     return iconUrl ? `<img class="fact-status-icon" src="${escapeHtml(iconUrl)}" alt="" aria-hidden="true">${escapeHtml("Breaks Stun")}` : escapeHtml("Breaks Stun");
@@ -690,17 +773,14 @@ export function formatFactHtml(fact, dmgStats = null, { alacrity = false, burstR
     return iconUrl ? `<img class="fact-status-icon" src="${escapeHtml(iconUrl)}" alt="" aria-hidden="true">${escapeHtml(text)}` : escapeHtml(text);
   }
   const label = String(fact.text || fact.type || "Fact");
-  const value =
-    fact.value ??
-    fact.percent ??
-    fact.distance ??
-    fact.duration ??
-    fact.hit_count ??
-    fact.apply_count ??
-    fact.status ??
-    fact.description ??
-    "";
-  const text = value === "" ? label : `${label}: ${value}`;
+  let value;
+  let suffix = "";
+  if (fact.value != null) { value = fact.value; }
+  else if (fact.percent != null) { value = fact.percent; suffix = "%"; }
+  else if (fact.distance != null) { value = fact.distance; }
+  else if (fact.duration != null) { value = fact.duration; suffix = "s"; }
+  else { value = fact.hit_count ?? fact.apply_count ?? fact.status ?? fact.description ?? ""; }
+  const text = value === "" ? label : `${label}: ${value}${suffix}`;
   const iconUrl = fact.icon || FACT_TYPE_ICONS[fact.type] || "";
   if (!iconUrl) return escapeHtml(text);
   return `<img class="fact-status-icon" src="${escapeHtml(iconUrl)}" alt="" aria-hidden="true">${escapeHtml(text)}`;

@@ -42,6 +42,7 @@ import {
   failPublishStep, showPublishResult, getPublishTargetId, syncPublishStatus,
 } from "./modules/render-pages.js";
 import { resolveEntityFacts } from "./modules/detail-panel.js";
+import { resetWikiResolution } from "./modules/wiki-updates.js";
 import { initWikiModal, openWikiModal } from "./modules/wiki-modal.js";
 import { initDetailModal, openDetailModal } from "./modules/detail-modal.js";
 import { initConfirmModal } from "./modules/confirm-modal.js";
@@ -495,6 +496,7 @@ async function setProfession(professionId, options = {}) {
   injectSkeleton(el.equipmentPanel, "equipment");
   injectSkeleton(el.detailHost, "detail");
 
+  resetWikiResolution();
   const catalog = await getCatalog(selected, state.editor.gameMode || "pve");
   state.activeCatalog = catalog;
   state.editor.profession = selected;
@@ -1063,26 +1065,39 @@ function wireEvents() {
               ? catalog.traitById?.get(entityId)
               : (catalog.skillById?.get(entityId) || catalog.weaponSkillById?.get(entityId));
             if (freshEntity) {
-              const oldFacts = state.detail.facts || [];
               const newFacts = resolveEntityFacts(freshEntity);
-              // Key by type+status for buffs/conditions (wiki uses boon name as text,
-              // GW2 API uses "Apply Buff/Condition"), or type+text for everything else.
-              const factKey = (f) => f.status
-                ? `${f.type}:${f.status}`
-                : `${f.type}:${(f.text || "").toLowerCase()}`;
-              const oldKeys = new Set(oldFacts.map(factKey));
-              // _splitFact = value changed (already flagged by catalog) → yellow text + flash
-              // _newFact   = fact newly appeared/disappeared in this mode → flash only, no yellow
-              const annotatedFacts = newFacts.map((f) => {
-                if (oldKeys.has(factKey(f))) return f;
-                if (f._splitFact) return f; // catalog already flagged as value-changed
-                return { ...f, _newFact: true };
-              });
-              state.detail = {
-                ...state.detail,
-                facts: annotatedFacts,
-                hasSplit: Boolean(freshEntity.hasSplit),
-              };
+
+              // Delta comparison for split highlighting:
+              // Compare current mode's facts against PvE facts to find changed values.
+              if (mode !== "pve" && freshEntity.hasSplit) {
+                const pveFacts = Array.isArray(freshEntity.facts) ? freshEntity.facts : [];
+                const factKey = (f) => f.status
+                  ? `${f.type}:${f.status}`
+                  : `${f.type}:${(f.text || "").toLowerCase()}`;
+                const pveByKey = new Map(pveFacts.map((f) => [factKey(f), f]));
+
+                const VALUE_KEYS = ["value", "duration", "percent", "distance", "dmg_multiplier", "hit_count", "apply_count", "coefficient"];
+                const annotatedFacts = newFacts.map((f) => {
+                  const key = factKey(f);
+                  const pveFact = pveByKey.get(key);
+                  if (!pveFact) return { ...f, _newFact: true };
+                  const changed = VALUE_KEYS.some((k) => f[k] !== undefined && pveFact[k] !== undefined && f[k] !== pveFact[k]);
+                  if (changed) return { ...f, _splitFact: true };
+                  return f;
+                });
+
+                state.detail = {
+                  ...state.detail,
+                  facts: annotatedFacts,
+                  hasSplit: true,
+                };
+              } else {
+                state.detail = {
+                  ...state.detail,
+                  facts: newFacts,
+                  hasSplit: Boolean(freshEntity.hasSplit),
+                };
+              }
             }
           }
         }

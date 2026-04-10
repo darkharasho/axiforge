@@ -1,4 +1,4 @@
-const { getProfessionList, getProfessionCatalog, getUpgradeCatalog, _setStaticData } = require("./catalog");
+const { getProfessionList, getProfessionCatalog, getUpgradeCatalog, _setStaticData, initWikiClient } = require("./catalog");
 const { getWikiSummary, getWikiRelatedData } = require("./wiki");
 const { initDiskCache, clearDiskCache } = require("./fetch");
 
@@ -11,4 +11,5 @@ module.exports = {
   initDiskCache,
   clearDiskCache,
   _setStaticData,
+  initWikiClient,
 };

@@ -1,227 +1,102 @@
-// Equipment stat computation — pure logic over state + constants, no DOM deps.
+// Equipment stat display — UI-only functions that consume engine results.
+// Core computation lives in @axi/gw2-data/engine, accessed via engine-bridge.js.
 import { state } from "./state.js";
 import {
-  STAT_COMBOS_BY_LABEL, SLOT_WEIGHTS, TWO_HAND_WEIGHTS, LAND_ONLY_SLOTS, AQUATIC_SLOTS,
-  MIGHT_POWER_PER_STACK, MIGHT_CONDI_PER_STACK, STACKING_SIGIL_DEFS, getEffectiveStats,
-  GW2_WEAPONS_BY_ID, SIGNET_PASSIVE_BUFFS,
-} from "./constants.js";
+  STAT_COMBOS_BY_LABEL, SLOT_WEIGHTS, TWO_HAND_WEIGHTS,
+  STACKING_SIGIL_DEFS,
+  MIGHT_POWER_PER_STACK, MIGHT_CONDI_PER_STACK,
+  AQUATIC_SLOTS, LAND_ONLY_SLOTS,
+} from "./engine-bridge.js";
+import { GW2_WEAPONS_BY_ID, getEffectiveStats } from "./constants.js";
+import {
+  computeStats,
+  computeSlotStatsFromState,
+  computeFuryCritModifier as bridgeFuryCritModifier,
+  computeFuryStatBonuses as bridgeFuryStatBonuses,
+  computeMightPerStack as bridgeMightPerStack,
+  computeBuildConcentration as bridgeBuildConcentration,
+} from "./engine-bridge.js";
 
 /**
- * Map GW2 API AttributeConversion target names to our stat keys.
- * The API uses derived-stat names for some targets.
+ * Thin wrapper: computeSlotStats(comboLabel, slotKey)
+ * Delegates to engine via bridge, preserving the old 2-arg signature
+ * used by equipment.js and roleEstimator.js.
  */
-const CONVERSION_TARGET_MAP = {
-  BoonDuration: "Concentration",
-  ConditionDuration: "Expertise",
-  CritDamage: "Ferocity",
-  Healing: "HealingPower",
-};
-
-// --- Boon-modifier trait constants ---
-// Roiling Mists: has fury crit bonus but no Buff(Fury) fact in the API
-const IMPLICIT_FURY_TRAITS = new Set([1719]);
-// Fang and Claw: AttributeAdjust facts apply to pets, not the player
-const PET_STAT_TRAITS = new Set([1016]);
-// Notoriety: modifies Might per-stack values (+40P/+20CD instead of +30P/+30CD)
-const NOTORIETY_TRAIT_ID = 1765;
-const NOTORIETY_MIGHT_POWER = 40;
-const NOTORIETY_MIGHT_CONDI = 20;
-
-/**
- * Collect all active trait IDs — major choices + minor (auto-selected) traits.
- * Shared by computeTraitConversions, computeFuryCritModifier, etc.
- */
-function collectActiveTraitIds() {
-  const catalog = state.activeCatalog;
-  if (!catalog) return new Set();
-  const ids = new Set();
-  for (const spec of state.editor.specializations || []) {
-    for (const id of Object.values(spec?.majorChoices || {})) {
-      const n = Number(id);
-      if (n) ids.add(n);
-    }
-    const specId = Number(spec?.specializationId || spec?.id) || 0;
-    const specData = specId ? catalog.specializationById?.get(specId) : null;
-    for (const minorId of specData?.minorTraits || []) {
-      if (minorId) ids.add(Number(minorId));
-    }
-  }
-  return ids;
+export function computeSlotStats(comboLabel, slotKey) {
+  return computeSlotStatsFromState(state, comboLabel, slotKey);
 }
 
 /**
- * Compute stat bonuses from active trait AttributeConversion facts.
- * Reads base stats (before conversions) and returns a map of bonus stats to add.
- * Formula per conversion: floor(baseStatValue * percent / 100)
- *
- * @param {Object} baseStats - Current stat totals (before trait conversions)
- * @returns {Object} bonuses - Map of stat key → bonus value to add
+ * Thin wrapper: computeBuildConcentration(build, upgradeCatalog)
+ * Used by comp-boon-coverage.js for party comp displays.
+ */
+export function computeBuildConcentration(build, upgradeCatalog) {
+  return bridgeBuildConcentration(build, upgradeCatalog);
+}
+
+/**
+ * Thin wrapper preserving old API: computeEquipmentStats(assumedBoons?, sigilStacks?) → flat totals.
+ * Used by tests and any remaining call sites.
+ */
+export function computeEquipmentStats(assumedBoons = null, sigilStacks = null) {
+  return computeStats(state, assumedBoons, sigilStacks).total;
+}
+
+/**
+ * Thin wrapper: computeTraitConversions(baseStats) → { stat: amount }.
+ * Computes trait conversion contributions given baseline stats.
  */
 export function computeTraitConversions(baseStats) {
-  const bonuses = {};
-  const catalog = state.activeCatalog;
-  if (!catalog?.traitById) return bonuses;
-
-  const activeTraitIds = collectActiveTraitIds();
-  if (!activeTraitIds.size) return bonuses;
-
-  for (const traitId of activeTraitIds) {
-    const trait = catalog.traitById.get(traitId);
-    if (!trait?.facts) continue;
-    for (const fact of trait.facts) {
-      // Only process AttributeConversion/BuffConversion facts — the GW2 API uses
-      // "BuffConversion" for attribute conversions (e.g. Power → Vitality).
-      // Other fact types (Buff, Damage, etc.) may coincidentally have
-      // source/target/percent fields so we must filter by type explicitly.
-      if (fact.type !== "AttributeConversion" && fact.type !== "BuffConversion") continue;
-      if (!fact.source || !fact.target || !fact.percent) continue;
-      const sourceVal = baseStats[fact.source] || 0;
-      if (!sourceVal) continue;
-      const targetKey = CONVERSION_TARGET_MAP[fact.target] || fact.target;
-      const bonus = Math.floor(sourceVal * fact.percent / 100);
-      bonuses[targetKey] = (bonuses[targetKey] || 0) + bonus;
-    }
-  }
-
-  return bonuses;
+  const result = computeStats(state);
+  return _stripZeros(result.conversions || {});
 }
 
 /**
- * Check whether a trait is fury-related: has a Buff(Fury) fact or is in IMPLICIT_FURY_TRAITS.
+ * Thin wrapper: computeFuryCritModifier(gameMode?) → number.
+ * Returns bonus crit % from Fury-related traits.
  */
-function isFuryTrait(trait, traitId) {
-  if (IMPLICIT_FURY_TRAITS.has(traitId)) return true;
-  return trait.facts?.some((f) => f.type === "Buff" && f.status === "Fury") || false;
+export function computeFuryCritModifier(gameMode) {
+  if (gameMode) state.editor.gameMode = gameMode;
+  return bridgeFuryCritModifier(state);
 }
 
 /**
- * Compute additional fury crit-chance modifier from active traits.
- * Some traits (e.g. Warrior's Furious Burst) grant extra crit chance when Fury
- * is active.  The GW2 API represents this as a trait with both a Buff fact
- * (status "Fury") and a Percent fact (text "Critical Chance Increase").
- *
- * When multiple "Critical Chance Increase" facts exist on a trait, they represent
- * game-mode splits: first = PvE, second = WvW.
- *
- * @param {string} [gameMode="pve"] - "pve" or "wvw"
- * @returns {number} Extra crit-chance percentage points from traits (0 if none)
+ * Thin wrapper: computeFuryStatBonuses(gameMode?) → { stat: amount }.
  */
-export function computeFuryCritModifier(gameMode = "pve") {
-  const catalog = state.activeCatalog;
-  if (!catalog?.traitById) return 0;
-
-  const activeTraitIds = collectActiveTraitIds();
-  if (!activeTraitIds.size) return 0;
-
-  let modifier = 0;
-  for (const traitId of activeTraitIds) {
-    const trait = catalog.traitById.get(traitId);
-    if (!trait?.facts) continue;
-    if (!isFuryTrait(trait, traitId)) continue;
-    const critFacts = trait.facts.filter(
-      (f) => f.type === "Percent" && f.text === "Critical Chance Increase" && f.percent
-    );
-    if (critFacts.length > 0) {
-      const idx = gameMode === "wvw" ? Math.min(1, critFacts.length - 1) : 0;
-      modifier += critFacts[idx].percent;
-    }
-  }
-  return modifier;
+export function computeFuryStatBonuses(gameMode) {
+  if (gameMode) state.editor.gameMode = gameMode;
+  return bridgeFuryStatBonuses(state);
 }
 
 /**
- * Compute flat stat bonuses from traits that activate while Fury is active.
- * Reads AttributeAdjust facts from fury-related traits.
- * Excludes PET_STAT_TRAITS where the bonuses apply to pets, not the player.
- *
- * @param {string} [gameMode="pve"] - "pve" or "wvw"
- * @returns {Object} Map of stat key → bonus value (e.g. { Ferocity: 180 })
- */
-export function computeFuryStatBonuses(gameMode = "pve") {
-  const catalog = state.activeCatalog;
-  if (!catalog?.traitById) return {};
-
-  const activeTraitIds = collectActiveTraitIds();
-  if (!activeTraitIds.size) return {};
-
-  const bonuses = {};
-  for (const traitId of activeTraitIds) {
-    if (PET_STAT_TRAITS.has(traitId)) continue;
-    const trait = catalog.traitById.get(traitId);
-    if (!trait?.facts) continue;
-    if (!isFuryTrait(trait, traitId)) continue;
-
-    // Group AttributeAdjust facts by target for game-mode selection
-    const byTarget = new Map();
-    for (const fact of trait.facts) {
-      if (fact.type !== "AttributeAdjust" || !fact.target || !fact.value) continue;
-      if (!byTarget.has(fact.target)) byTarget.set(fact.target, []);
-      byTarget.get(fact.target).push(fact.value);
-    }
-
-    for (const [target, values] of byTarget) {
-      const statKey = CONVERSION_TARGET_MAP[target] || target;
-      const idx = gameMode === "wvw" ? Math.min(1, values.length - 1) : 0;
-      bonuses[statKey] = (bonuses[statKey] || 0) + values[idx];
-    }
-  }
-  return bonuses;
-}
-
-/**
- * Compute flat stat bonuses from passive traits (non-Fury, non-conversion).
- * Reads AttributeAdjust facts from active traits that are NOT Fury-gated
- * (Fury-gated traits are handled separately by computeFuryStatBonuses).
- * Excludes PET_STAT_TRAITS where the bonuses apply to pets, not the player.
- *
- * @param {string} [gameMode="pve"] - "pve" or "wvw"
- * @returns {Object} Map of stat key → bonus value (e.g. { Power: 120 })
- */
-export function computePassiveTraitBonuses(gameMode = "pve") {
-  const catalog = state.activeCatalog;
-  if (!catalog?.traitById) return {};
-
-  const activeTraitIds = collectActiveTraitIds();
-  if (!activeTraitIds.size) return {};
-
-  const bonuses = {};
-  for (const traitId of activeTraitIds) {
-    if (PET_STAT_TRAITS.has(traitId)) continue;
-    const trait = catalog.traitById.get(traitId);
-    if (!trait?.facts) continue;
-    if (isFuryTrait(trait, traitId)) continue;
-
-    const byTarget = new Map();
-    for (const fact of trait.facts) {
-      if (fact.type !== "AttributeAdjust" || !fact.target || !fact.value) continue;
-      if (!byTarget.has(fact.target)) byTarget.set(fact.target, []);
-      byTarget.get(fact.target).push(fact.value);
-    }
-
-    for (const [target, values] of byTarget) {
-      const statKey = CONVERSION_TARGET_MAP[target] || target;
-      const idx = gameMode === "wvw" ? Math.min(1, values.length - 1) : 0;
-      bonuses[statKey] = (bonuses[statKey] || 0) + values[idx];
-    }
-  }
-  return bonuses;
-}
-
-/**
- * Compute effective Might per-stack values, accounting for Notoriety trait.
- * @returns {{ power: number, condi: number }}
+ * Thin wrapper: computeMightPerStack() → { power, condi }.
  */
 export function computeMightPerStack() {
-  const activeTraitIds = collectActiveTraitIds();
-  if (activeTraitIds.has(NOTORIETY_TRAIT_ID)) {
-    return { power: NOTORIETY_MIGHT_POWER, condi: NOTORIETY_MIGHT_CONDI };
-  }
-  return { power: MIGHT_POWER_PER_STACK, condi: MIGHT_CONDI_PER_STACK };
+  return bridgeMightPerStack(state);
 }
 
 /**
- * Build the set of equipment slot keys to exclude from stat calculations.
- * Excludes the opposite environment's slots AND the inactive weapon set.
+ * Thin wrapper: computePassiveTraitBonuses(gameMode?) → { stat: amount }.
+ * Returns flat stat bonuses from non-Fury passive traits.
+ */
+export function computePassiveTraitBonuses(gameMode) {
+  if (gameMode) state.editor.gameMode = gameMode;
+  const result = computeStats(state);
+  return _stripZeros(result.traits || {});
+}
+
+/** Remove zero-valued entries to match legacy sparse-object API */
+function _stripZeros(obj) {
+  const out = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (v) out[k] = v;
+  }
+  return out;
+}
+
+/**
+ * Excluded slots helper — returns set of slot keys to skip based on
+ * underwater mode and active weapon set.
  */
 function getExcludedSlots() {
   const isUnderwater = Boolean(state.editor.underwaterMode);
@@ -230,407 +105,16 @@ function getExcludedSlots() {
   if (isUnderwater) {
     excluded.add(activeSet === 2 ? "aquatic1" : "aquatic2");
   } else {
-    if (activeSet === 2) {
-      excluded.add("mainhand1");
-      excluded.add("offhand1");
-    } else {
-      excluded.add("mainhand2");
-      excluded.add("offhand2");
-    }
+    if (activeSet === 1) { excluded.add("mainhand2"); excluded.add("offhand2"); }
+    else { excluded.add("mainhand1"); excluded.add("offhand1"); }
   }
   return excluded;
-}
-
-export function computeSlotStats(comboLabel, slotKey) {
-  const combo = STAT_COMBOS_BY_LABEL.get(comboLabel);
-  let w = SLOT_WEIGHTS[slotKey];
-  if (!combo || !w) return [];
-  const weapons = state.editor.equipment?.weapons || {};
-  if (slotKey.startsWith("mainhand") && GW2_WEAPONS_BY_ID.get(weapons[slotKey])?.hand === "two") {
-    w = TWO_HAND_WEIGHTS;
-  }
-  const gameMode = state.editor?.gameMode || "pve";
-  const stats = getEffectiveStats(combo, gameMode);
-  const n = stats.length;
-  const result = [];
-  if (n <= 3) {
-    result.push({ stat: stats[0], value: w.p });
-    for (let i = 1; i < n; i++) result.push({ stat: stats[i], value: w.s });
-  } else if (n === 4) {
-    // 2-2 pattern: first 2 stats are major, last 2 are minor
-    result.push({ stat: stats[0], value: w.p4 });
-    result.push({ stat: stats[1], value: w.p4 });
-    result.push({ stat: stats[2], value: w.s4 });
-    result.push({ stat: stats[3], value: w.s4 });
-  } else {
-    for (const stat of stats) result.push({ stat, value: w.c });
-  }
-  return result;
-}
-
-export function computeEquipmentStats(assumedBoons = null, sigilStacks = null) {
-  const slots = state.editor.equipment?.slots || {};
-  const totals = {
-    Power: 1000, Precision: 1000, Toughness: 1000, Vitality: 1000,
-    Ferocity: 0, ConditionDamage: 0, Expertise: 0, Concentration: 0, HealingPower: 0,
-  };
-  const isUnderwater = Boolean(state.editor.underwaterMode);
-  const EXCLUDED_SLOTS = getExcludedSlots();
-  const gameMode = state.editor?.gameMode || "pve";
-  const weapons = state.editor.equipment?.weapons || {};
-  for (const [slotKey, comboLabel] of Object.entries(slots)) {
-    if (!comboLabel || EXCLUDED_SLOTS.has(slotKey)) continue;
-    const combo = STAT_COMBOS_BY_LABEL.get(comboLabel);
-    let w = SLOT_WEIGHTS[slotKey];
-    if (!combo || !w) continue;
-    if (slotKey.startsWith("mainhand") && GW2_WEAPONS_BY_ID.get(weapons[slotKey])?.hand === "two") {
-      w = TWO_HAND_WEIGHTS;
-    }
-    const stats = getEffectiveStats(combo, gameMode);
-    const n = stats.length;
-    if (n <= 3) {
-      totals[stats[0]] = (totals[stats[0]] || 0) + w.p;
-      for (let i = 1; i < stats.length; i++) {
-        totals[stats[i]] = (totals[stats[i]] || 0) + w.s;
-      }
-    } else if (n === 4) {
-      // 2-2 pattern: first 2 stats are major, last 2 are minor
-      totals[stats[0]] = (totals[stats[0]] || 0) + w.p4;
-      totals[stats[1]] = (totals[stats[1]] || 0) + w.p4;
-      totals[stats[2]] = (totals[stats[2]] || 0) + w.s4;
-      totals[stats[3]] = (totals[stats[3]] || 0) + w.s4;
-    } else {
-      for (const stat of stats) {
-        totals[stat] = (totals[stat] || 0) + w.c;
-      }
-    }
-  }
-
-  // Food flat stat contributions (+N StatName patterns)
-  const foodId = state.editor.equipment?.food;
-  if (foodId) {
-    const foodDef = state.upgradeCatalog?.foodById?.get(Number(foodId));
-    if (foodDef) {
-      const foodStatMap = {
-        "Condition Damage": "ConditionDamage", "Healing Power": "HealingPower",
-        "Healing": "HealingPower",
-        "Power": "Power", "Precision": "Precision", "Toughness": "Toughness",
-        "Vitality": "Vitality", "Ferocity": "Ferocity",
-        "Concentration": "Concentration", "Expertise": "Expertise",
-      };
-      const re = /\+(\d+)\s+(Condition Damage|Healing Power|Healing|Power|Precision|Toughness|Vitality|Ferocity|Concentration|Expertise|to All Attributes)/g;
-      const ALL_STAT_KEYS = ["Power", "Precision", "Toughness", "Vitality", "Ferocity", "ConditionDamage", "HealingPower", "Concentration", "Expertise"];
-      let m;
-      while ((m = re.exec(foodDef.buff)) !== null) {
-        if (m[2] === "to All Attributes") {
-          for (const key of ALL_STAT_KEYS) totals[key] = (totals[key] || 0) + Number(m[1]);
-        } else {
-          const key = foodStatMap[m[2]];
-          if (key) totals[key] = (totals[key] || 0) + Number(m[1]);
-        }
-      }
-    }
-  }
-
-  // Upgrade stat contributions (infusions, enrichments, runes)
-  const upgradeCatalog = state.upgradeCatalog;
-  if (upgradeCatalog) {
-    // Helper: resolve API attribute name to our stat key
-    const toStatKey = (attr) =>
-      attr === "Healing" ? "HealingPower"
-      : attr === "BoonDuration" ? "Concentration"
-      : attr === "ConditionDuration" ? "Expertise"
-      : attr;
-
-    // Helper: add infix_upgrade.attributes to totals
-    const addInfixAttributes = (infixUpgrade) => {
-      if (!infixUpgrade?.attributes) return;
-      for (const attr of infixUpgrade.attributes) {
-        const key = toStatKey(attr.attribute);
-        if (totals[key] !== undefined) totals[key] += attr.modifier || 0;
-      }
-    };
-
-    // Infusions (some slots are arrays: back=2, rings=3; exclude underwater)
-    const infusions = state.editor.equipment?.infusions || {};
-    const allInfusionIds = Object.entries(infusions)
-      .filter(([k]) => !EXCLUDED_SLOTS.has(k))
-      .flatMap(([, v]) => Array.isArray(v) ? v : [v]);
-    for (const id of allInfusionIds) {
-      if (!id) continue;
-      const def = upgradeCatalog.infusionById?.get(Number(id));
-      if (def) addInfixAttributes(def.infixUpgrade);
-    }
-
-    // Enrichment (amulet)
-    const enrichmentId = state.editor.equipment?.enrichment;
-    if (enrichmentId) {
-      const def = upgradeCatalog.enrichmentById?.get(Number(enrichmentId));
-      if (def) addInfixAttributes(def.infixUpgrade);
-    }
-
-    // Runes — bonuses are cumulative per piece equipped.
-    // Each bonus line may contain "+N StatName" flat stats to parse.
-    const RUNE_BONUS_STAT_MAP = {
-      "Power": "Power", "Precision": "Precision", "Toughness": "Toughness",
-      "Vitality": "Vitality", "Ferocity": "Ferocity", "Concentration": "Concentration",
-      "Expertise": "Expertise", "Condition Damage": "ConditionDamage",
-      "Healing Power": "HealingPower", "Healing": "HealingPower",
-    };
-    const RUNE_BONUS_RE = /\+(\d+)\s+(Condition Damage|Healing Power|Healing|Power|Precision|Toughness|Vitality|Ferocity|Concentration|Expertise|to All Stats)/;
-    const ALL_STAT_KEYS = ["Power", "Precision", "Toughness", "Vitality", "Ferocity", "ConditionDamage", "HealingPower", "Concentration", "Expertise"];
-
-    const runes = state.editor.equipment?.runes || {};
-    // Count how many of each rune ID are equipped (exclude breather)
-    const runeCounts = new Map();
-    for (const [slot, id] of Object.entries(runes)) {
-      if (!id || EXCLUDED_SLOTS.has(slot)) continue;
-      runeCounts.set(String(id), (runeCounts.get(String(id)) || 0) + 1);
-    }
-    for (const [runeId, count] of runeCounts) {
-      const runeDef = upgradeCatalog.runeById?.get(Number(runeId));
-      if (!runeDef?.bonuses?.length) continue;
-      // Apply bonuses up to the count equipped (max 6)
-      const activeBonuses = runeDef.bonuses.slice(0, Math.min(count, 6));
-      for (const bonus of activeBonuses) {
-        const m = RUNE_BONUS_RE.exec(bonus);
-        if (!m) continue;
-        const value = Number(m[1]);
-        if (m[2] === "to All Stats") {
-          for (const key of ALL_STAT_KEYS) totals[key] += value;
-        } else {
-          const key = RUNE_BONUS_STAT_MAP[m[2]];
-          if (key && totals[key] !== undefined) totals[key] += value;
-        }
-      }
-    }
-  }
-
-  // Utility consumable stat contributions
-  const utilityId = state.editor.equipment?.utility;
-  if (utilityId) {
-    const utilDef = state.upgradeCatalog?.utilityById?.get(Number(utilityId));
-    if (utilDef) {
-      const UTIL_STAT_MAP = {
-        "Power": "Power", "Precision": "Precision", "Toughness": "Toughness",
-        "Vitality": "Vitality", "Ferocity": "Ferocity", "Concentration": "Concentration",
-        "Expertise": "Expertise", "Condition Damage": "ConditionDamage",
-        "Healing Power": "HealingPower",
-      };
-      // Pattern 1: "Gain [Stat] Equal to [N]% of Your [SourceStat]"
-      const convRe = /Gain (Condition Damage|Healing Power|Power|Precision|Toughness|Vitality|Ferocity|Concentration|Expertise) Equal to (\d+(?:\.\d+)?)% of Your (Condition Damage|Healing Power|Power|Precision|Toughness|Vitality|Ferocity|Concentration|Expertise)/g;
-      let m;
-      while ((m = convRe.exec(utilDef.buff)) !== null) {
-        const targetKey = UTIL_STAT_MAP[m[1]];
-        const pct = Number(m[2]) / 100;
-        const sourceKey = UTIL_STAT_MAP[m[3]];
-        if (targetKey && sourceKey && totals[sourceKey] !== undefined) {
-          totals[targetKey] = (totals[targetKey] || 0) + Math.round(totals[sourceKey] * pct);
-        }
-      }
-      // Pattern 2: "Gain [N] [Stat] When Health..." (writs — conditional flat stats)
-      const writRe = /Gain (\d+) (Condition Damage|Healing Power|Power|Precision|Toughness|Vitality|Ferocity|Concentration|Expertise) When Health/g;
-      while ((m = writRe.exec(utilDef.buff)) !== null) {
-        const key = UTIL_STAT_MAP[m[2]];
-        if (key) totals[key] = (totals[key] || 0) + Number(m[1]);
-      }
-      // Pattern 3: "+N StatName" flat bonuses (food-style, some special utils)
-      const flatRe = /\+(\d+)\s+(Condition Damage|Healing Power|Power|Precision|Toughness|Vitality|Ferocity|Concentration|Expertise)/g;
-      while ((m = flatRe.exec(utilDef.buff)) !== null) {
-        const key = UTIL_STAT_MAP[m[2]];
-        if (key) totals[key] = (totals[key] || 0) + Number(m[1]);
-      }
-    }
-  }
-
-  // Assumed boon contributions (session-only, not persisted)
-  if (assumedBoons) {
-    const mightValues = computeMightPerStack();
-    totals.Power += (assumedBoons.might || 0) * mightValues.power;
-    totals.ConditionDamage += (assumedBoons.might || 0) * mightValues.condi;
-
-    if (assumedBoons.fury) {
-      const furyBonuses = computeFuryStatBonuses(state.editor.gameMode);
-      for (const [key, val] of Object.entries(furyBonuses)) {
-        totals[key] = (totals[key] || 0) + val;
-      }
-    }
-  }
-
-  // Stacking sigil contributions
-  if (sigilStacks) {
-    for (const def of STACKING_SIGIL_DEFS) {
-      const stacks = sigilStacks[def.key] || 0;
-      if (stacks <= 0) continue;
-      if (def.allStats) {
-        for (const s of def.allStats) totals[s] = (totals[s] || 0) + stacks * def.perStack;
-      } else if (def.stat) {
-        totals[def.stat] = (totals[def.stat] || 0) + stacks * def.perStack;
-      }
-      // modifier-only sigils (e.g. Benevolence) don't affect flat attributes
-    }
-  }
-
-  // Signet passive attribute buff contributions
-  const skillSource = isUnderwater ? state.editor.underwaterSkills : state.editor.skills;
-  if (skillSource && state.activeCatalog?.skillById) {
-    const ids = [
-      skillSource.healId,
-      ...(skillSource.utilityIds || []),
-      skillSource.eliteId,
-    ];
-    for (const id of ids) {
-      if (!id) continue;
-      const buff = SIGNET_PASSIVE_BUFFS.get(Number(id));
-      if (buff && totals[buff.stat] !== undefined) {
-        totals[buff.stat] += buff.value;
-      }
-    }
-  }
-
-  // Passive trait flat stat bonuses (e.g. Forceful Greatsword +120 Power)
-  const passiveBonuses = computePassiveTraitBonuses(state.editor.gameMode);
-  for (const [key, val] of Object.entries(passiveBonuses)) {
-    totals[key] = (totals[key] || 0) + val;
-  }
-
-  // Trait AttributeConversion contributions
-  const traitBonuses = computeTraitConversions(totals);
-  for (const [key, bonus] of Object.entries(traitBonuses)) {
-    totals[key] = (totals[key] || 0) + bonus;
-  }
-
-  return totals;
-}
-
-/**
- * Compute total Concentration for a given build from its equipment.
- * Always uses land mode (aquatic slots excluded).
- * Returns 0 if build.equipment is absent.
- * Returns slot-only Concentration if upgradeCatalog is null.
- */
-export function computeBuildConcentration(build, upgradeCatalog) {
-  if (!build?.equipment) return 0;
-  const equipment = build.equipment;
-  const slots = equipment.slots || {};
-  let concentration = 0;
-
-  // Stat combo slots — no catalog needed
-  const EXCLUDED = AQUATIC_SLOTS; // always land mode
-  const weapons = equipment.weapons || {};
-  for (const [slotKey, comboLabel] of Object.entries(slots)) {
-    if (!comboLabel || EXCLUDED.has(slotKey)) continue;
-    const combo = STAT_COMBOS_BY_LABEL.get(comboLabel);
-    let w = SLOT_WEIGHTS[slotKey];
-    if (!combo || !w) continue;
-    if (slotKey.startsWith("mainhand") && GW2_WEAPONS_BY_ID.get(weapons[slotKey])?.hand === "two") {
-      w = TWO_HAND_WEIGHTS;
-    }
-    const n = combo.stats.length;
-    if (n <= 3) {
-      if (combo.stats[0] === "Concentration") concentration += w.p;
-      else {
-        for (let i = 1; i < n; i++) {
-          if (combo.stats[i] === "Concentration") concentration += w.s;
-        }
-      }
-    } else if (n === 4) {
-      const idx = combo.stats.indexOf("Concentration");
-      if (idx === 0 || idx === 1) concentration += w.p4;
-      else if (idx === 2 || idx === 3) concentration += w.s4;
-    } else {
-      if (combo.stats.includes("Concentration")) concentration += w.c;
-    }
-  }
-
-  if (!upgradeCatalog) return concentration;
-
-  // Food
-  const foodId = equipment.food;
-  if (foodId) {
-    const foodDef = upgradeCatalog.foodById?.get(Number(foodId));
-    if (foodDef) {
-      const re = /\+(\d+)\s+(Concentration|to All Attributes)/g;
-      let m;
-      while ((m = re.exec(foodDef.buff)) !== null) {
-        concentration += Number(m[1]); // both "Concentration" and "to All Attributes" add flat value
-      }
-    }
-  }
-
-  // Infusions (land slots only)
-  // Note: GW2 API uses the literal "Concentration" in infixUpgrade.attributes
-  // (unlike some other stats that have aliases), so no normalization is needed here.
-  const infusions = equipment.infusions || {};
-  const allInfusionIds = Object.entries(infusions)
-    .filter(([k]) => !EXCLUDED.has(k))
-    .flatMap(([, v]) => Array.isArray(v) ? v : [v]);
-  for (const id of allInfusionIds) {
-    if (!id) continue;
-    const def = upgradeCatalog.infusionById?.get(Number(id));
-    if (def?.infixUpgrade?.attributes) {
-      for (const attr of def.infixUpgrade.attributes) {
-        if (attr.attribute === "Concentration") concentration += attr.modifier || 0;
-      }
-    }
-  }
-
-  // Enrichment
-  // Note: GW2 API uses the literal "Concentration" in infixUpgrade.attributes
-  // (unlike some other stats that have aliases), so no normalization is needed here.
-  const enrichmentId = equipment.enrichment;
-  if (enrichmentId) {
-    const def = upgradeCatalog.enrichmentById?.get(Number(enrichmentId));
-    if (def?.infixUpgrade?.attributes) {
-      for (const attr of def.infixUpgrade.attributes) {
-        if (attr.attribute === "Concentration") concentration += attr.modifier || 0;
-      }
-    }
-  }
-
-  // Runes (exclude aquatic slots)
-  const RUNE_BONUS_RE = /\+(\d+)\s+(Concentration|to All Stats)/;
-  const runes = equipment.runes || {};
-  const runeCounts = new Map();
-  for (const [slot, id] of Object.entries(runes)) {
-    if (!id || EXCLUDED.has(slot)) continue;
-    runeCounts.set(String(id), (runeCounts.get(String(id)) || 0) + 1);
-  }
-  for (const [runeId, count] of runeCounts) {
-    const runeDef = upgradeCatalog.runeById?.get(Number(runeId));
-    if (!runeDef?.bonuses?.length) continue;
-    const activeBonuses = runeDef.bonuses.slice(0, Math.min(count, 6));
-    for (const bonus of activeBonuses) {
-      const m = RUNE_BONUS_RE.exec(bonus);
-      if (!m) continue;
-      concentration += Number(m[1]);
-    }
-  }
-
-  // Utility
-  const utilityId = equipment.utility;
-  if (utilityId) {
-    const utilDef = upgradeCatalog.utilityById?.get(Number(utilityId));
-    if (utilDef) {
-      // Note: "Gain Concentration Equal to N% of Your X" conversion pattern is omitted
-      // intentionally — computing it would require the full stat totals, and this pattern
-      // is rare/non-existent for Concentration in practice.
-      // Pattern 1: conditional flat (writs)
-      const writRe = /Gain (\d+) Concentration When Health/g;
-      let m;
-      while ((m = writRe.exec(utilDef.buff)) !== null) concentration += Number(m[1]);
-      // Pattern 2: flat bonuses
-      const flatRe = /\+(\d+)\s+Concentration/g;
-      while ((m = flatRe.exec(utilDef.buff)) !== null) concentration += Number(m[1]);
-    }
-  }
-
-  return concentration;
 }
 
 /**
  * Compute a detailed breakdown of all sources contributing to a given stat key.
  * Returns an array of { source: string, value: number } entries.
+ * This is a UI-only function for hover tooltips.
  */
 export function computeStatBreakdown(statKey, assumedBoons = null, sigilStacks = null) {
   const entries = [];
@@ -638,7 +122,6 @@ export function computeStatBreakdown(statKey, assumedBoons = null, sigilStacks =
   if (BASE_STATS.has(statKey)) entries.push({ source: "Base", value: 1000 });
 
   const slots = state.editor.equipment?.slots || {};
-  const isUnderwater = Boolean(state.editor.underwaterMode);
   const EXCLUDED_SLOTS = getExcludedSlots();
   const SLOT_LABELS = {
     head: "Head", shoulders: "Shoulders", chest: "Chest", hands: "Hands", legs: "Legs", feet: "Feet",
@@ -670,7 +153,6 @@ export function computeStatBreakdown(statKey, assumedBoons = null, sigilStacks =
       if (combo.stats.includes(statKey)) val = w.c;
     }
     if (val) {
-      const weapons = state.editor.equipment?.weapons || {};
       const weaponName = weapons[slotKey] || "";
       const label = weaponName
         ? `${SLOT_LABELS[slotKey] || slotKey} — ${weaponName} (${comboLabel})`
@@ -686,9 +168,6 @@ export function computeStatBreakdown(statKey, assumedBoons = null, sigilStacks =
   if (foodId && upgradeCatalog) {
     const foodDef = upgradeCatalog.foodById?.get(Number(foodId));
     if (foodDef) {
-      const STAT_NAMES = { Power: "Power", Precision: "Precision", Toughness: "Toughness", Vitality: "Vitality",
-        Ferocity: "Ferocity", ConditionDamage: "Condition Damage", HealingPower: "Healing Power",
-        Concentration: "Concentration", Expertise: "Expertise" };
       const re = /\+(\d+)\s+(Condition Damage|Healing Power|Healing|Power|Precision|Toughness|Vitality|Ferocity|Concentration|Expertise|to All Attributes)/g;
       const MAP = { "Condition Damage": "ConditionDamage", "Healing Power": "HealingPower", "Healing": "HealingPower" };
       let m;
@@ -765,8 +244,8 @@ export function computeStatBreakdown(statKey, assumedBoons = null, sigilStacks =
     const utilDef = upgradeCatalog.utilityById?.get(Number(utilityId));
     if (utilDef) {
       const MAP = { "Condition Damage": "ConditionDamage", "Healing Power": "HealingPower" };
-      // Percentage conversions — need current totals for source stats
-      const totals = computeEquipmentStats(assumedBoons, sigilStacks);
+      // Percentage conversions — use engine totals for source stats
+      const totals = computeStats(state, assumedBoons, sigilStacks).total;
       const convRe = /Gain (Condition Damage|Healing Power|Power|Precision|Toughness|Vitality|Ferocity|Concentration|Expertise) Equal to (\d+(?:\.\d+)?)% of Your (Condition Damage|Healing Power|Power|Precision|Toughness|Vitality|Ferocity|Concentration|Expertise)/g;
       let m;
       while ((m = convRe.exec(utilDef.buff)) !== null) {
@@ -774,7 +253,6 @@ export function computeStatBreakdown(statKey, assumedBoons = null, sigilStacks =
         if (targetKey !== statKey) continue;
         const pct = Number(m[2]) / 100;
         const sourceKey = MAP[m[3]] || m[3];
-        // Subtract own utility contribution to get pre-utility source value
         const sourceBase = (totals[sourceKey] || 0);
         const val = Math.round(sourceBase * pct);
         if (val) entries.push({ source: `${utilDef.name} (${m[2]}% of ${m[3]})`, value: val });
@@ -798,7 +276,7 @@ export function computeStatBreakdown(statKey, assumedBoons = null, sigilStacks =
   if (assumedBoons) {
     const mightStacks = assumedBoons.might || 0;
     if (mightStacks > 0) {
-      const mightValues = computeMightPerStack();
+      const mightValues = bridgeMightPerStack(state);
       if (statKey === "Power") {
         entries.push({ source: `Boon (Might ×${mightStacks})`, value: mightStacks * mightValues.power });
       }
@@ -807,28 +285,22 @@ export function computeStatBreakdown(statKey, assumedBoons = null, sigilStacks =
       }
     }
     if (assumedBoons.fury) {
-      const furyBonuses = computeFuryStatBonuses(state.editor.gameMode);
+      const furyBonuses = bridgeFuryStatBonuses(state);
       if (furyBonuses[statKey]) {
         entries.push({ source: "Boon (Fury)", value: furyBonuses[statKey] });
       }
     }
   }
 
-  // Passive trait flat stat bonuses (e.g. Forceful Greatsword +120 Power)
-  const passiveBonuses = computePassiveTraitBonuses(state.editor.gameMode);
-  if (passiveBonuses[statKey]) {
-    entries.push({ source: "Trait bonus", value: passiveBonuses[statKey] });
+  // Passive trait flat stat bonuses — derive from engine result
+  const engineResult = computeStats(state, assumedBoons, sigilStacks);
+  if (engineResult.traits[statKey]) {
+    entries.push({ source: "Trait bonus", value: engineResult.traits[statKey] });
   }
 
   // Trait conversion contributions
-  // Note: computeEquipmentStats returns post-conversion totals (trait bonuses already applied).
-  // If two traits chain conversions (e.g. Power→Precision, Precision→Ferocity), the breakdown
-  // entry for the second conversion may be slightly inflated vs. the actual total. This is
-  // acceptable — GW2 conversion chains are rare, and the stat totals displayed are correct.
-  const traitBase = computeEquipmentStats(assumedBoons, sigilStacks);
-  const traitBonuses = computeTraitConversions(traitBase);
-  if (traitBonuses[statKey]) {
-    entries.push({ source: "Trait conversion", value: traitBonuses[statKey] });
+  if (engineResult.conversions[statKey]) {
+    entries.push({ source: "Trait conversion", value: engineResult.conversions[statKey] });
   }
 
   // Stacking sigil contributions
@@ -847,26 +319,23 @@ export function computeStatBreakdown(statKey, assumedBoons = null, sigilStacks =
 }
 
 /**
- * Collect non-attribute modifiers from equipped upgrades (rune %, sigil buffs, infusion buffs).
- * Returns a Map of modifier text → total value (aggregated where possible).
- * Example: "+10% Might Duration" from 2 rune bonuses → { "Might Duration": 20 }
+ * Collect non-attribute modifiers from equipped upgrades (rune %, sigil buffs, etc.).
+ * Returns a Map of modifier text → total value.
+ * This is a UI-only function — reads directly from state and upgrade catalog.
  */
 export function computeUpgradeModifiers() {
-  const modifiers = new Map(); // label → numeric total
+  const modifiers = new Map();
   const addMod = (label, value) => modifiers.set(label, (modifiers.get(label) || 0) + value);
 
   const upgradeCatalog = state.upgradeCatalog;
   if (!upgradeCatalog) return modifiers;
 
-  // Regex for percentage bonuses in rune bonus text: "+N% Something"
   const PCT_RE = /\+(\d+)%\s+(.+)/;
-  // Regex for flat bonuses we already handle as stats — skip these
   const FLAT_STAT_RE = /\+\d+\s+(Condition Damage|Healing Power|Healing|Power|Precision|Toughness|Vitality|Ferocity|Concentration|Expertise|to All Stats|to All Attributes)/;
 
-  const isUnderwater = Boolean(state.editor.underwaterMode);
   const EXCLUDED_SLOTS = getExcludedSlots();
 
-  // Rune percentage modifiers (cumulative per piece, exclude breather)
+  // Rune percentage modifiers
   const runes = state.editor.equipment?.runes || {};
   const runeCounts = new Map();
   for (const [slot, id] of Object.entries(runes)) {
@@ -884,8 +353,9 @@ export function computeUpgradeModifiers() {
     }
   }
 
-  // Sigil buff modifiers (from active weapon set)
+  // Sigil buff modifiers
   const sigils = state.editor.equipment?.sigils || {};
+  const isUnderwater = Boolean(state.editor.underwaterMode);
   let activeSigilIds;
   if (isUnderwater) {
     const aquaticSet = (Number(state.editor.activeWeaponSet) || 1) === 2 ? "aquatic2" : "aquatic1";
@@ -906,7 +376,7 @@ export function computeUpgradeModifiers() {
     if (m) addMod(m[2], Number(m[1]));
   }
 
-  // Infusion buff modifiers (percentage lines from buffDescription, exclude underwater)
+  // Infusion buff modifiers
   const infusions = state.editor.equipment?.infusions || {};
   const allInfusionIds = Object.entries(infusions)
     .filter(([k]) => !EXCLUDED_SLOTS.has(k))
@@ -915,7 +385,6 @@ export function computeUpgradeModifiers() {
     if (!id) continue;
     const def = upgradeCatalog.infusionById?.get(Number(id));
     const desc = def?.buffDescription || "";
-    // Infusion buff can have multiple lines
     for (const line of desc.split("\n")) {
       const m = PCT_RE.exec(line.trim());
       if (m) addMod(m[2], Number(m[1]));
@@ -959,20 +428,26 @@ export function computeUpgradeModifiers() {
     }
   }
 
-  // Burst Recharge — Discipline's minor trait "Versatile Power" (trait 1417)
-  // grants 15% burst recharge reduction. Detect this by checking active minor
-  // traits whose description mentions "Burst" and facts include "Recharge Reduced".
-  //
-  // Berserker's minor trait "Primal Rage" (trait 1831) additionally grants 10%
-  // burst recharge reduction, but the GW2 API omits this fact from the trait data.
-  // We hardcode the 10% when trait 1831 is active. (#154)
+  // Burst Recharge from traits
   const catalog = state.activeCatalog;
   if (catalog?.traitById) {
-    const activeIds = collectActiveTraitIds();
+    // Collect active trait IDs from state
+    const activeIds = new Set();
+    for (const spec of state.editor.specializations || []) {
+      for (const id of Object.values(spec?.majorChoices || {})) {
+        const n = Number(id);
+        if (n) activeIds.add(n);
+      }
+      const specId = Number(spec?.specializationId || spec?.id) || 0;
+      const specData = specId ? catalog.specializationById?.get(specId) : null;
+      for (const minorId of specData?.minorTraits || []) {
+        if (minorId) activeIds.add(Number(minorId));
+      }
+    }
     for (const traitId of activeIds) {
       const trait = catalog.traitById.get(traitId);
       if (!trait || trait.slot !== "Minor") continue;
-      // Primal Rage (1831): API omits the 10% burst recharge reduction fact.
+      // Primal Rage (1831): API omits the 10% burst recharge reduction fact
       if (traitId === 1831) {
         addMod("Burst Recharge", 10);
         continue;

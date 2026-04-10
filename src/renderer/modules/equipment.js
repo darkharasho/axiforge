@@ -6,20 +6,21 @@ import {
   PROFESSION_WEIGHT, ARMOR_DEFENSE_BY_WEIGHT,
   LEGENDARY_ARMOR_ICONS, _WK,
   PROFESSION_BASE_HP,
-  FURY_CRIT_CHANCE, FURY_CRIT_CHANCE_WVW, MIGHT_MAX_STACKS, MIGHT_POWER_PER_STACK, MIGHT_CONDI_PER_STACK, STABILITY_MAX_STACKS, STACKING_SIGIL_DEFS, BOON_CONDITION_ICONS,
+  MIGHT_MAX_STACKS, STABILITY_MAX_STACKS, BOON_CONDITION_ICONS,
   getEffectiveStats,
 } from "./constants.js";
 import { escapeHtml } from "./utils.js";
-import { computeSlotStats, computeEquipmentStats, computeUpgradeModifiers, computeStatBreakdown, computeTraitConversions, computeFuryCritModifier, computeFuryStatBonuses, computeMightPerStack } from "./stats.js";
+import { computeSlotStats, computeUpgradeModifiers, computeStatBreakdown } from "./stats.js";
+import { computeStats, computeBoons, computeFuryCritModifier, computeFuryStatBonuses, computeMightPerStack, FURY_CRIT_CHANCE, FURY_CRIT_CHANCE_WVW, STACKING_SIGIL_DEFS } from "./engine-bridge.js";
 import { bindHoverPreview, selectDetail } from "./detail-panel.js";
 import { getProfessionSvg } from "./profession-icons.js";
 import { getSlotSvg } from "./slot-icons.js";
 import { getWeaponSvg } from "./weapon-icons.js";
 import { resolveEquippedWeaponSkills, getAvailableAttunements, resolveWarriorBurst } from "./equipment-weapon-skills.js";
 import { getSkillOptionsByType } from "./skills.js";
-import { computeBoonCoverage } from "./boon-coverage.js";
 
-export { computeSlotStats, computeEquipmentStats, computeUpgradeModifiers, computeStatBreakdown } from "./stats.js";
+export { computeSlotStats, computeUpgradeModifiers, computeStatBreakdown } from "./stats.js";
+export { computeStats } from "./engine-bridge.js";
 
 let _readOnly = false;
 export function setReadOnly(val) { _readOnly = val; }
@@ -312,8 +313,8 @@ export function updateHealthOrb() {
   if (!orbHp) return;
   const profession = state.editor.profession || "";
   const baseHp = PROFESSION_BASE_HP[profession] ?? 0;
-  const computed = computeEquipmentStats();
-  const totalHp = baseHp > 0 ? baseHp + (computed.Vitality || 0) * 10 : 0;
+  const result = computeStats(state);
+  const totalHp = baseHp > 0 ? baseHp + (result.total.Vitality || 0) * 10 : 0;
   orbHp.textContent = totalHp > 0 ? totalHp.toLocaleString() : "—";
 }
 
@@ -1043,7 +1044,7 @@ export function renderEquipmentPanel() {
       wskillSection.append(skillRow);
 
       // Boon/condition coverage
-      const coverage = computeBoonCoverage(catalog, state.editor, weaponSkills);
+      const coverage = computeBoons(state, weaponSkills);
       const hasBoons = coverage.boons.length > 0;
       const hasConditions = coverage.conditions.length > 0;
       if (hasBoons || hasConditions) {
@@ -1211,7 +1212,7 @@ export function renderEquipmentPanel() {
   function buildBoonTooltipHTML(def) {
     const val = _assumedBoons[def.key];
     if (def.key === "might") {
-      const mightValues = computeMightPerStack();
+      const mightValues = computeMightPerStack(state);
       if (val > 0) {
         const power = val * mightValues.power;
         const condi = val * mightValues.condi;
@@ -1225,8 +1226,8 @@ export function renderEquipmentPanel() {
     }
     if (def.key === "fury") {
       const gm = state.editor.gameMode || "pve";
-      const furyPct = (gm === "wvw" ? FURY_CRIT_CHANCE_WVW : FURY_CRIT_CHANCE) + computeFuryCritModifier(gm);
-      const furyStats = computeFuryStatBonuses(gm);
+      const furyPct = (gm === "wvw" ? FURY_CRIT_CHANCE_WVW : FURY_CRIT_CHANCE) + computeFuryCritModifier(state);
+      const furyStats = computeFuryStatBonuses(state);
       const STAT_LABELS = { Ferocity: "Ferocity", Precision: "Precision", Expertise: "Expertise", Concentration: "Concentration", HealingPower: "Healing Power" };
       const statLines = Object.entries(furyStats)
         .filter(([, v]) => v > 0)
@@ -1481,8 +1482,9 @@ export function renderEquipmentPanel() {
 
   // Attributes
   const statsSection = makeSection("Attributes");
-  const computed = computeEquipmentStats(_assumedBoons, _sigilStacks);
-  const traitBonuses = computeTraitConversions(computed);
+  const statsResult = computeStats(state, _assumedBoons, _sigilStacks);
+  const computed = statsResult.total;
+  const traitBonuses = statsResult.conversions;
   const professionName = state.editor.profession;
   const baseHP = PROFESSION_BASE_HP[professionName] || 9212;
   const health = baseHP + (computed.Vitality || 0) * 10;
@@ -1490,7 +1492,7 @@ export function renderEquipmentPanel() {
   const modifiers = computeUpgradeModifiers();
   const popMod = (key) => { const v = modifiers.get(key) || 0; modifiers.delete(key); return v; };
   const gm = state.editor.gameMode || "pve";
-  const furyCritPct = (gm === "wvw" ? FURY_CRIT_CHANCE_WVW : FURY_CRIT_CHANCE) + computeFuryCritModifier(gm);
+  const furyCritPct = (gm === "wvw" ? FURY_CRIT_CHANCE_WVW : FURY_CRIT_CHANCE) + computeFuryCritModifier(state);
   const furyCrit = _assumedBoons.fury ? furyCritPct : 0;
   const critChance = Math.min(100, 5 + ((computed.Precision || 1000) - 895) / 21.0 + popMod("Critical Chance") + furyCrit);
   const critDamage = 150 + (computed.Ferocity || 0) / 15.0 + popMod("Critical Damage");

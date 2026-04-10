@@ -1,0 +1,119 @@
+{
+  "name": "Harrier Druid",
+  "description": "Medium armor, 3-stat healing, enrichment, infusions",
+  "ctx": {
+    "profession": "Ranger",
+    "specializations": [],
+    "equipment": {
+      "slots": {
+        "head": "Harrier's",
+        "shoulders": "Harrier's",
+        "chest": "Harrier's",
+        "gloves": "Harrier's",
+        "legs": "Harrier's",
+        "boots": "Harrier's",
+        "mainhand1": "Harrier's",
+        "back": "Harrier's",
+        "accessory1": "Harrier's",
+        "accessory2": "Harrier's",
+        "amulet": "Harrier's",
+        "ring1": "Harrier's",
+        "ring2": "Harrier's"
+      },
+      "weapons": {
+        "mainhand1": "staff"
+      },
+      "runes": {},
+      "infusions": {
+        "head": [
+          49432
+        ],
+        "shoulders": [
+          49432
+        ],
+        "chest": [
+          49432
+        ],
+        "gloves": [
+          49432
+        ],
+        "legs": [
+          49432
+        ],
+        "boots": [
+          49432
+        ]
+      },
+      "enrichment": 78061,
+      "food": null,
+      "utility": null
+    },
+    "gameMode": "pve",
+    "underwaterMode": false,
+    "activeWeaponSet": 1,
+    "skills": {
+      "healId": null,
+      "utilityIds": [],
+      "eliteId": null
+    },
+    "assumedBoons": null,
+    "sigilStacks": null
+  },
+  "catalogs": {
+    "traits": [],
+    "specializations": [],
+    "skills": [],
+    "runes": [],
+    "foods": [],
+    "utilities": [],
+    "infusions": [
+      {
+        "id": 49432,
+        "name": "+5 Healing Power Infusion",
+        "infixUpgrade": {
+          "attributes": [
+            {
+              "attribute": "Healing",
+              "modifier": 5
+            }
+          ]
+        }
+      }
+    ],
+    "enrichments": [
+      {
+        "id": 78061,
+        "name": "+10 Concentration Enrichment",
+        "infixUpgrade": {
+          "attributes": [
+            {
+              "attribute": "BoonDuration",
+              "modifier": 10
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "expected": {
+    "total": {
+      "Power": 2288,
+      "Precision": 1000,
+      "Toughness": 1000,
+      "Vitality": 1000,
+      "Ferocity": 0,
+      "ConditionDamage": 0,
+      "HealingPower": 922,
+      "Expertise": 0,
+      "Concentration": 902
+    },
+    "derived": {
+      "health": 15922,
+      "critChance": 10,
+      "critDamage": 150,
+      "conditionDuration": 0,
+      "boonDuration": 60.13333333333333,
+      "armor": 2118
+    }
+  }
+}

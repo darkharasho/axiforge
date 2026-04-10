@@ -18,7 +18,7 @@ const {
   publishSiteBundle,
   deleteFile,
 } = require("./githubApi");
-const { getProfessionList, getProfessionCatalog, getUpgradeCatalog, getWikiSummary, getWikiRelatedData, initDiskCache, clearDiskCache } = require("./gw2Data");
+const { getProfessionList, getProfessionCatalog, getUpgradeCatalog, getWikiSummary, getWikiRelatedData, initDiskCache, clearDiskCache, initWikiClient } = require("./gw2Data");
 const { slugifyBuildName, generateFileId, generateEncryptionKey, getDefaultBuildName } = require("./buildEncryption");
 const { buildSpaBundle, buildEncryptedBuildFile, buildEncryptedCompFile, buildRedirectFile } = require("./siteBundle");
 const { serializeForPublish } = require("./buildPublish");
@@ -199,6 +199,7 @@ app.whenReady().then(async () => {
   await folderStore.init();
   await compStore.init();
   await initDiskCache(dataDir);
+  initWikiClient(dataDir);
   await migrateCompGameModes(store, compStore);
   const win = createWindow();
   initAutoUpdate(win);
@@ -216,17 +217,6 @@ app.whenReady().then(async () => {
         // Ignore errors — pre-warming is best-effort
       }
       await new Promise((r) => setTimeout(r, 400));
-    }
-  })();
-
-  // Check for new GW2 balance patches and update splits.json in the background.
-  (async () => {
-    await new Promise((r) => setTimeout(r, 10000));
-    try {
-      const { main: crawlPatches } = require("../../lib/gw2-balance-splits/scripts/crawl-patches");
-      await crawlPatches();
-    } catch {
-      // Non-fatal — app works without latest splits
     }
   })();
 
@@ -773,6 +763,21 @@ app.whenReady().then(async () => {
   ipcMain.handle("gw2:clear-cache", async () => clearDiskCache());
   ipcMain.handle("wiki:get-summary", async (_e, title) => getWikiSummary(title));
   ipcMain.handle("wiki:get-related-data", async (_e, title) => getWikiRelatedData(title));
+  ipcMain.handle("wiki:resolve-entity-facts", async (_e, entityNames) => {
+    const { getWikiClient } = require("./gw2Data/catalog");
+    const { resolveEntityFacts } = require("../../packages/gw2-data/src/wiki/resolver");
+    const client = getWikiClient();
+
+    const titleToId = new Map(entityNames.map((n) => [n.name, n.id]));
+    const result = await resolveEntityFacts(client, titleToId);
+
+    // Convert Map to plain object for IPC serialization
+    const serialized = {};
+    for (const [id, facts] of result) {
+      serialized[id] = facts;
+    }
+    return serialized;
+  });
   ipcMain.handle("settings:get", async (_e, key) => store.getSetting(key));
   ipcMain.handle("settings:set", async (_e, key, value) => store.setSetting(key, value));
 

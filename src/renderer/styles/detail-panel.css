@@ -22,7 +22,7 @@
 
 .detail-card header {
   display: grid;
-  grid-template-columns: 56px 1fr;
+  grid-template-columns: 56px 1fr auto;
   gap: 10px;
   align-items: center;
 }
@@ -109,9 +109,32 @@
 
 .hover-preview__head {
   display: grid;
-  grid-template-columns: 56px 1fr;
+  grid-template-columns: 56px 1fr auto;
   gap: 10px;
   align-items: center;
+}
+
+.hover-preview__timings {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-self: start;
+  margin-top: 2px;
+}
+
+.hover-preview__timing {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.82rem;
+  color: var(--text-secondary, #b0b0b0);
+  white-space: nowrap;
+}
+
+.hover-preview__timing img {
+  width: 16px;
+  height: 16px;
+  opacity: 0.85;
 }
 
 .hover-preview__icon {
@@ -309,7 +332,7 @@ li.fact-item--traited {
 }
 
 .hover-preview__trait-skill-divider + .hover-preview__head {
-  grid-template-columns: 36px 1fr;
+  grid-template-columns: 36px 1fr auto;
   gap: 8px;
 }
 

@@ -235,12 +235,22 @@ describe("showHoverPreview — flip-chain suppression for mismatched elite spec"
     expect(mockHover.innerHTML).toContain("Overload Fire");
   });
 
-  test("does not suppress flip chain for a core (spec 0) skill — only elite-spec mismatches are filtered", () => {
-    // spec=0 entity with a flip to another spec=0 skill should always be allowed through
+  test("does not suppress flip chain for a core (spec 0) non-Elementalist skill", () => {
+    // spec=0 entity with a flip to another spec=0 skill should be allowed for non-Elementalist
+    state.editor.profession = "Warrior";
     state.editor.specializations = [{ specializationId: 67, majorChoices: {} }];
     detailPanel.showHoverPreview("skill", CORE_SKILL_WITH_FLIP, 100, 100);
     expect(mockHover.innerHTML).toContain("hover-preview__chain-divider");
     expect(mockHover.innerHTML).toContain("Core Flip Target");
+  });
+
+  test("suppresses flip chain for a core (spec 0) Elementalist attunement when not Tempest", () => {
+    // Core attunement skills (spec=0) fall back into Weaver/Catalyst pool via skill lookup
+    // cascade — their flipSkill still points to the Overload and must be suppressed
+    state.editor.specializations = [{ specializationId: 56, majorChoices: {} }];
+    detailPanel.showHoverPreview("skill", CORE_SKILL_WITH_FLIP, 100, 100);
+    expect(mockHover.innerHTML).not.toContain("hover-preview__chain-divider");
+    expect(mockHover.innerHTML).not.toContain("Core Flip Target");
   });
 
   test("suppresses Overload flip chain for Weaver (spec 56) attunement when Weaver is active elite", () => {
