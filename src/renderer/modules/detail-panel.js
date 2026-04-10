@@ -113,25 +113,10 @@ export function renderDetailPanel() {
   const alacrity = isSkill && getAssumedBoons().alacrity;
   // Burst Recharge: applies to warrior burst skills (slot Profession_1)
   const burstRecharge = isSkill && detail.slot === "Profession_1" ? (computeUpgradeModifiers().get("Burst Recharge") || 0) : 0;
-  // Extract recharge facts for the detail header badge
-  const detailRechargeFacts = isSkill ? facts.filter((f) => f.type === "Recharge") : [];
-  const detailDisplayFacts = detailRechargeFacts.length ? facts.filter((f) => f.type !== "Recharge") : facts;
-
-  let detailRechargeBadge = "";
-  if (detailRechargeFacts.length) {
-    const rch = detailRechargeFacts[0];
-    const base = Number(rch.value);
-    const alacMult = (alacrity && base > 0) ? 0.75 : 1;
-    const burstMult = (burstRecharge > 0 && base > 0) ? (1 - burstRecharge / 100) : 1;
-    const totalMult = alacMult * burstMult;
-    const rechargeIcon = rch.icon || FACT_TYPE_ICONS["Recharge"] || "";
-    if (totalMult < 1) {
-      const reduced = +(base * totalMult).toFixed(2);
-      detailRechargeBadge = `<div class="hover-preview__recharge"><img src="${escapeHtml(rechargeIcon)}" alt="Recharge" /><span class="fact-alacrity">${reduced}s <span class="fact-alacrity-original">${base}s</span></span></div>`;
-    } else {
-      detailRechargeBadge = `<div class="hover-preview__recharge"><img src="${escapeHtml(rechargeIcon)}" alt="Recharge" />${base}s</div>`;
-    }
-  }
+  // Filter Recharge facts from list when we have infobox recharge data
+  const hasInfoboxRecharge = isSkill && detail.recharge?.pve != null;
+  const detailDisplayFacts = hasInfoboxRecharge ? facts.filter((f) => f.type !== "Recharge") : facts;
+  const detailTimingBadges = isSkill ? _buildTimingBadges(detail, alacrity, burstRecharge) : "";
 
   const factsHtml = detailDisplayFacts.length
     ? detailDisplayFacts
@@ -163,7 +148,7 @@ export function renderDetailPanel() {
             <h3>${escapeHtml(detail.title)}</h3>
             <p>${escapeHtml(detail.kindLabel)}${detail.hasSplit ? ' <span class="split-badge">WvW split</span>' : ''}${detail.isAquaticOnly ? ' <span class="split-badge aquatic-badge">Aquatic</span>' : ''}</p>
           </div>
-          ${detailRechargeBadge}
+          ${detailTimingBadges}
         </header>
         <section>
           <h4>In-Game Description</h4>
@@ -337,6 +322,44 @@ export function resolveEntityFacts(entity) {
   });
 }
 
+/**
+ * Build timing badge HTML (recharge + cast time) for the hover/detail header.
+ * Reads infobox timings from entity.recharge / entity.activation (per-mode objects).
+ */
+function _buildTimingBadges(entity, alacrity, burstRecharge) {
+  const gameMode = state.editor?.gameMode || "pve";
+  const badges = [];
+
+  // Cast time / activation
+  if (entity.activation) {
+    const castTime = entity.activation[gameMode] ?? entity.activation.pve;
+    if (castTime != null && castTime > 0) {
+      const castIcon = FACT_TYPE_ICONS["Time"] || "";
+      badges.push(`<div class="hover-preview__timing"><img src="${escapeHtml(castIcon)}" alt="Cast time" />${castTime}s</div>`);
+    }
+  }
+
+  // Recharge / cooldown
+  if (entity.recharge) {
+    const base = entity.recharge[gameMode] ?? entity.recharge.pve;
+    if (base != null && base > 0) {
+      const rechargeIcon = FACT_TYPE_ICONS["Recharge"] || "";
+      const alacMult = (alacrity && base > 0) ? 0.75 : 1;
+      const burstMult = (burstRecharge > 0 && base > 0) ? (1 - burstRecharge / 100) : 1;
+      const totalMult = alacMult * burstMult;
+      if (totalMult < 1) {
+        const reduced = +(base * totalMult).toFixed(2);
+        badges.push(`<div class="hover-preview__timing"><img src="${escapeHtml(rechargeIcon)}" alt="Recharge" /><span class="fact-alacrity">${reduced}s <span class="fact-alacrity-original">${base}s</span></span></div>`);
+      } else {
+        badges.push(`<div class="hover-preview__timing"><img src="${escapeHtml(rechargeIcon)}" alt="Recharge" />${base}s</div>`);
+      }
+    }
+  }
+
+  if (!badges.length) return "";
+  return `<div class="hover-preview__timings">${badges.join("")}</div>`;
+}
+
 function _renderStatBreakdown(entries, total, statName) {
   const lines = entries.map((e) => {
     let iconHtml = "";
@@ -361,10 +384,10 @@ export function buildSkillCard(skill, kind, isChained = false, dmgStats = null) 
   const cardAlacrity = isSkillCard && getAssumedBoons().alacrity;
   const burstRch = isSkillCard && skill.slot === "Profession_1" ? (computeUpgradeModifiers().get("Burst Recharge") || 0) : 0;
 
-  // Extract recharge facts for the header badges — only for skills/weapons, not equipment
+  // Filter Recharge facts out of the list when we have infobox recharge data
   const isEquip = kind.startsWith("equip-");
-  const rechargeFacts = isEquip ? [] : rawFacts.filter((f) => f.type === "Recharge");
-  const displayFacts = rechargeFacts.length ? rawFacts.filter((f) => f.type !== "Recharge") : rawFacts;
+  const hasInfoboxRecharge = !isEquip && skill.recharge?.pve != null;
+  const displayFacts = hasInfoboxRecharge ? rawFacts.filter((f) => f.type !== "Recharge") : rawFacts;
 
   const factsItems = displayFacts
     .map((fact) => {
@@ -376,22 +399,8 @@ export function buildSkillCard(skill, kind, isChained = false, dmgStats = null) 
     .filter(Boolean);
   const meta = getHoverMetaLine(kind, skill);
 
-  // Build recharge badge HTML for the header top-right
-  let rechargeBadgeHtml = "";
-  if (rechargeFacts.length) {
-    const rch = rechargeFacts[0];
-    const base = Number(rch.value);
-    const alacMult = (cardAlacrity && base > 0) ? 0.75 : 1;
-    const burstMult = (burstRch > 0 && base > 0) ? (1 - burstRch / 100) : 1;
-    const totalMult = alacMult * burstMult;
-    const rechargeIcon = rch.icon || FACT_TYPE_ICONS["Recharge"] || "";
-    if (totalMult < 1) {
-      const reduced = +(base * totalMult).toFixed(2);
-      rechargeBadgeHtml = `<div class="hover-preview__recharge"><img src="${escapeHtml(rechargeIcon)}" alt="Recharge" /><span class="fact-alacrity">${reduced}s <span class="fact-alacrity-original">${base}s</span></span></div>`;
-    } else {
-      rechargeBadgeHtml = `<div class="hover-preview__recharge"><img src="${escapeHtml(rechargeIcon)}" alt="Recharge" />${base}s</div>`;
-    }
-  }
+  // Build timing badges for the header top-right (recharge + cast time)
+  const timingBadges = isEquip ? "" : _buildTimingBadges(skill, cardAlacrity, burstRch);
 
   return `
     ${isChained ? `<div class="hover-preview__chain-divider">▸</div>` : ""}
@@ -401,7 +410,7 @@ export function buildSkillCard(skill, kind, isChained = false, dmgStats = null) 
         <h4 class="hover-preview__title">${escapeHtml(skill.name || "Unknown")}</h4>
         <p class="hover-preview__meta">${escapeHtml(meta)}${skill.hasSplit ? ' <span class="split-badge">WvW split</span>' : ''}${_isAquaticOnlySkill(kind, skill) ? ' <span class="split-badge aquatic-badge">Aquatic</span>' : ''}</p>
       </div>
-      ${rechargeBadgeHtml}
+      ${timingBadges}
     </div>
     ${description ? `<p class="hover-preview__desc">${escapeHtml(description).replace(/\n/g, "<br>")}</p>` : (!factsItems.length && !skill.bonuses?.length && !skill.breakdown?.length && !kind.startsWith("equip-") ? `<p class="hover-preview__desc">No description available.</p>` : "")}
     ${skill.bonuses?.length ? `<ul class="hover-preview__bonuses">${skill.bonuses.map((b, i) => `<li class="${i < (skill.activeBonusCount || 0) ? "hover-preview__bonus--active" : "hover-preview__bonus--inactive"}">(${i + 1}): ${escapeHtml(b)}</li>`).join("")}</ul>` : ""}
@@ -608,6 +617,8 @@ export async function selectDetail(kind, entity) {
     hasSplit: Boolean(entity.hasSplit),
     isAquaticOnly: _isAquaticOnlySkill(kind, entity),
     slot: entity.slot || "",
+    recharge: entity.recharge || null,
+    activation: entity.activation || null,
   };
   state.detail = detail;
   renderDetailPanel();

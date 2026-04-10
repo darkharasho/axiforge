@@ -114,18 +114,24 @@
   align-items: center;
 }
 
-.hover-preview__recharge {
+.hover-preview__timings {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-self: start;
+  margin-top: 2px;
+}
+
+.hover-preview__timing {
   display: flex;
   align-items: center;
   gap: 3px;
   font-size: 0.82rem;
   color: var(--text-secondary, #b0b0b0);
   white-space: nowrap;
-  align-self: start;
-  margin-top: 2px;
 }
 
-.hover-preview__recharge img {
+.hover-preview__timing img {
   width: 16px;
   height: 16px;
   opacity: 0.85;

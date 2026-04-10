@@ -28,10 +28,44 @@ function groupFactsByMode(taggedFacts) {
 }
 
 /**
+ * Parse infobox-level timing parameters (recharge, activation) by game mode.
+ * These live outside the facts templates: `| recharge = 25`, `| activation = 0.5`
+ *
+ * @param {string} wikitext
+ * @returns {{ recharge: {pve:number|null, wvw:number|null, pvp:number|null}, activation: {pve:number|null, wvw:number|null, pvp:number|null} }}
+ */
+function parseInfoboxTimings(wikitext) {
+  const result = {
+    recharge:   { pve: null, wvw: null, pvp: null },
+    activation: { pve: null, wvw: null, pvp: null },
+  };
+  for (const param of ["recharge", "activation"]) {
+    // Base value: `| recharge = 25` (applies to all modes as default)
+    const baseRe = new RegExp(`\\|\\s*${param}\\s*=\\s*([\\d.]+)`, "i");
+    const baseMatch = wikitext.match(baseRe);
+    const baseVal = baseMatch ? parseFloat(baseMatch[1]) : null;
+    if (baseVal != null && !isNaN(baseVal)) {
+      result[param].pve = baseVal;
+      result[param].wvw = baseVal;
+      result[param].pvp = baseVal;
+    }
+    // Mode-specific overrides: `| recharge wvw = 40`, `| recharge pvp = 40`
+    const modeRe = new RegExp(`\\|\\s*${param}\\s+(pve|wvw|pvp)\\s*=\\s*([\\d.]+)`, "gi");
+    let m;
+    while ((m = modeRe.exec(wikitext)) !== null) {
+      const mode = m[1].toLowerCase();
+      const val = parseFloat(m[2]);
+      if (!isNaN(val)) result[param][mode] = val;
+    }
+  }
+  return result;
+}
+
+/**
  * Parse wikitext and return facts separated by game mode.
  *
  * @param {string} wikitext
- * @returns {{ pve: Object[], wvw: Object[], pvp: Object[], hasSplit: boolean }}
+ * @returns {{ pve: Object[], wvw: Object[], pvp: Object[], hasSplit: boolean, recharge: {pve:number|null, wvw:number|null, pvp:number|null}, activation: {pve:number|null, wvw:number|null, pvp:number|null} }}
  */
 function parseFactsByMode(wikitext) {
   const { facts: taggedFacts, hasPveOnly } = parseAllTaggedFacts(wikitext);
@@ -54,12 +88,15 @@ function parseFactsByMode(wikitext) {
   }
 
   const hasSplit = hasPveOnly || (splitGrouping?.wvwHasSplit ?? false);
+  const timings = parseInfoboxTimings(wikitext);
 
   return {
     pve: grouped.pve,
     wvw: grouped.wvw,
     pvp: grouped.pvp,
     hasSplit,
+    recharge: timings.recharge,
+    activation: timings.activation,
   };
 }
 
@@ -84,15 +121,19 @@ async function resolveEntityFacts(client, titleToId) {
 
     const parsed = parseFactsByMode(wikitext);
 
-    // Skip pages that exist but have no fact templates — keep API facts instead
-    // of replacing them with empty arrays.
-    if (parsed.pve.length === 0 && parsed.wvw.length === 0 && parsed.pvp.length === 0) continue;
+    const hasTimings = parsed.recharge.pve != null || parsed.activation.pve != null;
+
+    // Skip pages that exist but have no fact templates and no timings —
+    // keep API facts instead of replacing them with empty arrays.
+    if (parsed.pve.length === 0 && parsed.wvw.length === 0 && parsed.pvp.length === 0 && !hasTimings) continue;
 
     result.set(id, {
       pve: parsed.pve,
       wvw: parsed.hasSplit ? parsed.wvw : null,
       pvp: parsed.hasSplit ? parsed.pvp : null,
       hasSplit: parsed.hasSplit,
+      recharge: parsed.recharge,
+      activation: parsed.activation,
     });
   }
 

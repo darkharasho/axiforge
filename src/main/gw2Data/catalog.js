@@ -43,7 +43,10 @@ function applyWikiFacts(entity, wikiFactsById, overridesMap) {
   const wikiFacts = wikiFactsById.get(entity.id);
   if (!wikiFacts) return; // No wiki page — keep API facts
 
-  entity.facts = wikiFacts.pve;
+  // Only replace facts if wiki actually has fact templates
+  if (wikiFacts.pve.length > 0) {
+    entity.facts = wikiFacts.pve;
+  }
   entity.hasSplit = wikiFacts.hasSplit;
 
   if (wikiFacts.wvw) {
@@ -52,6 +55,10 @@ function applyWikiFacts(entity, wikiFactsById, overridesMap) {
   if (wikiFacts.pvp) {
     entity.pvpFacts = wikiFacts.pvp;
   }
+
+  // Infobox timings (recharge, activation) — per-mode
+  if (wikiFacts.recharge) entity.recharge = wikiFacts.recharge;
+  if (wikiFacts.activation) entity.activation = wikiFacts.activation;
 }
 
 const {
