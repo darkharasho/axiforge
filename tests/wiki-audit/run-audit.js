@@ -12,7 +12,6 @@
 
 const { chromium } = require("playwright");
 const path = require("path");
-const fs = require("fs/promises");
 const { crawlEntity } = require("./crawl");
 const { crawlEntity: crawlRelic } = require("./crawl-relic");
 const { crawlEntity: crawlSignet } = require("./crawl-signet");
@@ -22,7 +21,7 @@ const { IncrementalReport, writeReport } = require("./report");
 const { StatusDisplay } = require("./status-display");
 
 const GW2_API = "https://api.guildwars2.com/v2";
-const SPLITS_PATH = path.join(__dirname, "../../lib/gw2-balance-splits/data/splits.json");
+// Balance splits data has been removed (Phase 4); splitsIndex is now always empty.
 const DEFAULT_WORKERS = 4;
 
 // ── CLI args ──
@@ -331,15 +330,8 @@ async function main() {
     console.log(`${signetEntities.length} signet passives`);
   }
 
-  // 2. Load splits.json
-  const splitsRaw = JSON.parse(await fs.readFile(SPLITS_PATH, "utf-8"));
-  const splitsIndex = {
-    skill: splitsRaw.skills || {},
-    trait: splitsRaw.traits || {},
-  };
-  const skillSplitCount = Object.keys(splitsIndex.skill).length;
-  const traitSplitCount = Object.keys(splitsIndex.trait).length;
-  console.log(`Loaded splits.json (${skillSplitCount} skills, ${traitSplitCount} traits)`);
+  // 2. Splits data removed (Phase 4) — empty index for backward compat
+  const splitsIndex = { skill: {}, trait: {} };
 
   // 2b. Load relicFacts.json
   const relicFactsData = require("../../src/main/gw2Data/relicFacts.json");

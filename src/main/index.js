@@ -219,17 +219,6 @@ app.whenReady().then(async () => {
     }
   })();
 
-  // Check for new GW2 balance patches and update splits.json in the background.
-  (async () => {
-    await new Promise((r) => setTimeout(r, 10000));
-    try {
-      const { main: crawlPatches } = require("../../lib/gw2-balance-splits/scripts/crawl-patches");
-      await crawlPatches();
-    } catch {
-      // Non-fatal — app works without latest splits
-    }
-  })();
-
   ipcMain.handle("app:get-config", async () => {
     const auth = await getAuthRecord();
     return {

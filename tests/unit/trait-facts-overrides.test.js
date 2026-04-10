@@ -12,14 +12,6 @@
  *   - In-game value is Recharge: 5s
  */
 
-// Mock the balance-splits module
-jest.mock("../../lib/gw2-balance-splits", () => ({
-  getSkillSplit: () => null,
-  getTraitSplit: () => null,
-  getSkillPveFacts: () => null,
-  getTraitPveFacts: () => null,
-}));
-
 // Mock fetch module (required by catalog.js at import time)
 jest.mock("../../src/main/gw2Data/fetch", () => ({
   GW2_API_ROOT: "https://api.guildwars2.com/v2",
