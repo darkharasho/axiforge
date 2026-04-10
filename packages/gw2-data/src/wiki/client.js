@@ -60,6 +60,93 @@ class WikiClient {
     return wikitext;
   }
 
+  /**
+   * Batch-fetch wikitext for multiple page titles.
+   * Uses MediaWiki's multi-title query (up to 50 per request).
+   * Checks cache first; only uncached titles are fetched.
+   *
+   * @param {string[]} titles
+   * @returns {Promise<Map<string, string|null>>} title → wikitext (null if page missing)
+   */
+  async getWikitextBatch(titles) {
+    const BATCH_SIZE = 50;
+    const result = new Map();
+
+    // Check cache first, collect uncached titles
+    const uncached = [];
+    for (const title of titles) {
+      const cacheKey = `wikitext:${title}`;
+      const cached = await this._cache.get(cacheKey);
+      if (cached !== null) {
+        result.set(title, cached);
+      } else {
+        uncached.push(title);
+      }
+    }
+
+    // Fetch uncached in batches of 50
+    for (let i = 0; i < uncached.length; i += BATCH_SIZE) {
+      const batch = uncached.slice(i, i + BATCH_SIZE);
+      const titlesParam = batch.map((t) => encodeURIComponent(t)).join("|");
+      const url =
+        `${this._wikiApiRoot}?action=query&titles=${titlesParam}` +
+        `&prop=revisions&rvprop=content&format=json&formatversion=1`;
+
+      const res = await this._fetch(url, {
+        headers: { "User-Agent": USER_AGENT },
+      });
+
+      if (!res.ok) {
+        // Mark all in this batch as null
+        for (const title of batch) {
+          result.set(title, null);
+        }
+        continue;
+      }
+
+      const data = await res.json();
+      const pages = data.query?.pages || {};
+
+      // Build a normalized-title lookup from the API response
+      const normalized = new Map();
+      for (const n of data.query?.normalized || []) {
+        normalized.set(n.to, n.from);
+      }
+
+      // Map response pages back to requested titles
+      const responseByTitle = new Map();
+      for (const page of Object.values(pages)) {
+        const responseTitle = page.title;
+        const wikitext = page.missing ? null : (page.revisions?.[0]?.["*"] || null);
+        responseByTitle.set(responseTitle, wikitext);
+      }
+
+      for (const title of batch) {
+        // MediaWiki may normalize the title (e.g. underscores → spaces)
+        // Try exact match first, then check if our title was the "from" in normalized
+        let wikitext = responseByTitle.get(title);
+        if (wikitext === undefined) {
+          // Check if this title was normalized to something else
+          for (const [to, from] of normalized) {
+            if (from === title) {
+              wikitext = responseByTitle.get(to);
+              break;
+            }
+          }
+        }
+        if (wikitext === undefined) wikitext = null;
+
+        result.set(title, wikitext);
+        if (wikitext !== null) {
+          const cacheKey = `wikitext:${title}`;
+          await this._cache.set(cacheKey, wikitext, this._cacheTTL);
+        }
+      }
+    }
+
+    return result;
+  }
+
   async getRecentChanges(since) {
     const url =
       `${this._wikiApiRoot}?action=query&list=recentchanges` +

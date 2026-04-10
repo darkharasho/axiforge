@@ -76,6 +76,130 @@ describe("WikiClient", () => {
     });
   });
 
+  describe("getWikitextBatch", () => {
+    test("fetches multiple pages in a single request", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          query: {
+            pages: {
+              "1": { title: "Fireball", revisions: [{ "*": "fireball wikitext" }] },
+              "2": { title: "Shelter", revisions: [{ "*": "shelter wikitext" }] },
+              "3": { title: "Moa Stance", revisions: [{ "*": "moa wikitext" }] },
+            },
+          },
+        }),
+      });
+
+      const result = await client.getWikitextBatch(["Fireball", "Shelter", "Moa Stance"]);
+      expect(result.size).toBe(3);
+      expect(result.get("Fireball")).toBe("fireball wikitext");
+      expect(result.get("Shelter")).toBe("shelter wikitext");
+      expect(result.get("Moa Stance")).toBe("moa wikitext");
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
+    test("chunks at 50 titles per request", async () => {
+      // Generate 51 titles
+      const titles = Array.from({ length: 51 }, (_, i) => `Skill_${i}`);
+
+      const makeBatchResponse = (batch) => ({
+        ok: true,
+        json: async () => ({
+          query: {
+            pages: Object.fromEntries(
+              batch.map((t, i) => [String(i), { title: t, revisions: [{ "*": `${t} text` }] }])
+            ),
+          },
+        }),
+      });
+
+      // First call: 50 titles, second call: 1 title
+      mockFetch
+        .mockResolvedValueOnce(makeBatchResponse(titles.slice(0, 50)))
+        .mockResolvedValueOnce(makeBatchResponse(titles.slice(50)));
+
+      const result = await client.getWikitextBatch(titles);
+      expect(result.size).toBe(51);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      expect(result.get("Skill_0")).toBe("Skill_0 text");
+      expect(result.get("Skill_50")).toBe("Skill_50 text");
+    });
+
+    test("uses cached entries without fetching", async () => {
+      // Pre-populate cache
+      client._cache.set("wikitext:Fireball", "cached fireball", 60000);
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          query: {
+            pages: {
+              "1": { title: "Shelter", revisions: [{ "*": "shelter text" }] },
+            },
+          },
+        }),
+      });
+
+      const result = await client.getWikitextBatch(["Fireball", "Shelter"]);
+      expect(result.get("Fireball")).toBe("cached fireball");
+      expect(result.get("Shelter")).toBe("shelter text");
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      // URL should only contain Shelter
+      expect(mockFetch.mock.calls[0][0]).toContain("Shelter");
+      expect(mockFetch.mock.calls[0][0]).not.toContain("Fireball");
+    });
+
+    test("returns null for missing pages", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          query: {
+            pages: {
+              "-1": { title: "Nonexistent Skill", missing: true },
+              "1": { title: "Fireball", revisions: [{ "*": "fireball text" }] },
+            },
+          },
+        }),
+      });
+
+      const result = await client.getWikitextBatch(["Fireball", "Nonexistent Skill"]);
+      expect(result.get("Fireball")).toBe("fireball text");
+      expect(result.get("Nonexistent Skill")).toBe(null);
+    });
+
+    test("handles failed HTTP response gracefully", async () => {
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 500 });
+
+      const result = await client.getWikitextBatch(["Fireball", "Shelter"]);
+      expect(result.get("Fireball")).toBe(null);
+      expect(result.get("Shelter")).toBe(null);
+    });
+
+    test("returns empty map for empty input", async () => {
+      const result = await client.getWikitextBatch([]);
+      expect(result.size).toBe(0);
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    test("handles MediaWiki title normalization", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          query: {
+            normalized: [{ from: "fireball", to: "Fireball" }],
+            pages: {
+              "1": { title: "Fireball", revisions: [{ "*": "fireball text" }] },
+            },
+          },
+        }),
+      });
+
+      const result = await client.getWikitextBatch(["fireball"]);
+      expect(result.get("fireball")).toBe("fireball text");
+    });
+  });
+
   describe("getRecentChanges", () => {
     test("returns list of recently changed page titles", async () => {
       mockFetch.mockResolvedValueOnce({
