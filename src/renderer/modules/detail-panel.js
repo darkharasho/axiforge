@@ -684,6 +684,12 @@ export function formatFactHtml(fact, dmgStats = null, { alacrity = false, burstR
     const iconUrl = fact.icon || FACT_TYPE_ICONS["ComboField"] || "";
     return iconUrl ? `<img class="fact-status-icon" src="${escapeHtml(iconUrl)}" alt="" aria-hidden="true">${escapeHtml(text)}` : escapeHtml(text);
   }
+  if (fact.type === "Percent" && fact.percent != null) {
+    const label = String(fact.text && fact.text !== "Percent" ? fact.text : "Percent");
+    const text = `${label}: ${fact.percent}%`;
+    const iconUrl = fact.icon || FACT_TYPE_ICONS["Percent"] || "";
+    return iconUrl ? `<img class="fact-status-icon" src="${escapeHtml(iconUrl)}" alt="" aria-hidden="true">${escapeHtml(text)}` : escapeHtml(text);
+  }
   if (fact.type === "StunBreak") {
     const iconUrl = fact.icon || FACT_TYPE_ICONS["StunBreak"] || "";
     return iconUrl ? `<img class="fact-status-icon" src="${escapeHtml(iconUrl)}" alt="" aria-hidden="true">${escapeHtml("Breaks Stun")}` : escapeHtml("Breaks Stun");
@@ -710,17 +716,14 @@ export function formatFactHtml(fact, dmgStats = null, { alacrity = false, burstR
     return iconUrl ? `<img class="fact-status-icon" src="${escapeHtml(iconUrl)}" alt="" aria-hidden="true">${escapeHtml(text)}` : escapeHtml(text);
   }
   const label = String(fact.text || fact.type || "Fact");
-  const value =
-    fact.value ??
-    fact.percent ??
-    fact.distance ??
-    fact.duration ??
-    fact.hit_count ??
-    fact.apply_count ??
-    fact.status ??
-    fact.description ??
-    "";
-  const text = value === "" ? label : `${label}: ${value}`;
+  let value;
+  let suffix = "";
+  if (fact.value != null) { value = fact.value; }
+  else if (fact.percent != null) { value = fact.percent; suffix = "%"; }
+  else if (fact.distance != null) { value = fact.distance; }
+  else if (fact.duration != null) { value = fact.duration; suffix = "s"; }
+  else { value = fact.hit_count ?? fact.apply_count ?? fact.status ?? fact.description ?? ""; }
+  const text = value === "" ? label : `${label}: ${value}${suffix}`;
   const iconUrl = fact.icon || FACT_TYPE_ICONS[fact.type] || "";
   if (!iconUrl) return escapeHtml(text);
   return `<img class="fact-status-icon" src="${escapeHtml(iconUrl)}" alt="" aria-hidden="true">${escapeHtml(text)}`;
