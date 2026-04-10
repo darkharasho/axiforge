@@ -72,6 +72,8 @@ contextBridge.exposeInMainWorld("desktopApi", {
   clearGw2Cache: () => ipcRenderer.invoke("gw2:clear-cache"),
   getWikiSummary: (title) => ipcRenderer.invoke("wiki:get-summary", title),
   getWikiRelatedData: (title) => ipcRenderer.invoke("wiki:get-related-data", title),
+  resolveEntityFacts: (entityNames) =>
+    ipcRenderer.invoke("wiki:resolve-entity-facts", entityNames),
   showError: (title, body) => ipcRenderer.invoke("dialog:error", title, body),
   getSetting: (key) => ipcRenderer.invoke("settings:get", key),
   setSetting: (key, value) => ipcRenderer.invoke("settings:set", key, value),
