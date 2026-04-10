@@ -42,6 +42,39 @@ function clearCatalogCache() {
   _catalogCache.clear();
 }
 
+/**
+ * Transfer icons from API facts to wiki facts that lack them.
+ * Wiki-parsed facts have accurate values but no icon URLs; API facts have
+ * per-fact icons. Match by type + key field (status for Buffs, text for others).
+ */
+function _transferIcons(apiFacts, wikiFacts) {
+  if (!apiFacts?.length || !wikiFacts?.length) return;
+  // Build a lookup from the API facts: type+key → icon
+  const iconMap = new Map();
+  for (const f of apiFacts) {
+    if (!f.icon) continue;
+    // For Buff-type facts, key by status; for others, key by text
+    const key = f.status
+      ? `${f.type || ""}|status:${f.status}`
+      : `${f.type || ""}|text:${f.text || ""}`;
+    if (!iconMap.has(key)) iconMap.set(key, f.icon);
+  }
+  for (const wf of wikiFacts) {
+    if (wf.icon) continue;
+    // Try matching by status first (Buff facts), then by text, then by type only
+    const statusKey = wf.status ? `${wf.type || ""}|status:${wf.status}` : null;
+    // Strip "(effect)" suffix for matching — wiki uses "Signet of Fury (effect)"
+    // but API uses "Signet of Fury"
+    const cleanStatus = wf.status?.replace(/\s*\(effect\)\s*$/i, "");
+    const cleanStatusKey = cleanStatus ? `${wf.type || ""}|status:${cleanStatus}` : null;
+    const textKey = `${wf.type || ""}|text:${wf.text || ""}`;
+    const icon = (statusKey && iconMap.get(statusKey))
+      || (cleanStatusKey && iconMap.get(cleanStatusKey))
+      || iconMap.get(textKey);
+    if (icon) wf.icon = icon;
+  }
+}
+
 function applyWikiFacts(entity, wikiFactsById, overridesMap) {
   // Emergency overrides always win
   if (overridesMap.has(entity.id)) return;
@@ -51,14 +84,17 @@ function applyWikiFacts(entity, wikiFactsById, overridesMap) {
 
   // Only replace facts if wiki actually has fact templates
   if (wikiFacts.pve.length > 0) {
+    _transferIcons(entity.facts, wikiFacts.pve);
     entity.facts = wikiFacts.pve;
   }
   entity.hasSplit = wikiFacts.hasSplit;
 
   if (wikiFacts.wvw) {
+    _transferIcons(entity.wvwFacts || entity.facts, wikiFacts.wvw);
     entity.wvwFacts = wikiFacts.wvw;
   }
   if (wikiFacts.pvp) {
+    _transferIcons(entity.pvpFacts || entity.facts, wikiFacts.pvp);
     entity.pvpFacts = wikiFacts.pvp;
   }
 
@@ -993,4 +1029,5 @@ module.exports = {
   initWikiClient,
   getWikiClient,
   clearCatalogCache,
+  _transferIcons,
 };
