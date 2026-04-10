@@ -3,7 +3,8 @@
 // Adapter layer between renderer state and @axi/gw2-data engine.
 // Only file that knows about both shapes. Dev-mode only validation.
 
-import { computeAttributes, analyzeBoons, loadOverrides } from "@axi/gw2-data/engine";
+import * as engine from "@axi/gw2-data/engine";
+const { computeAttributes, analyzeBoons, loadOverrides } = engine;
 
 // Cache overrides — loaded once, immutable
 let _overrides = null;
