@@ -1,0 +1,113 @@
+{
+  "name": "Berserker Warrior",
+  "description": "Heavy armor, 3-stat, full ascended, signets, Might+Fury assumed",
+  "ctx": {
+    "profession": "Warrior",
+    "specializations": [
+      {
+        "id": 4,
+        "majorChoices": {
+          "1": 1444,
+          "2": 1449,
+          "3": 1437
+        }
+      }
+    ],
+    "equipment": {
+      "slots": {
+        "head": "Berserker's",
+        "shoulders": "Berserker's",
+        "chest": "Berserker's",
+        "gloves": "Berserker's",
+        "legs": "Berserker's",
+        "boots": "Berserker's",
+        "mainhand1": "Berserker's",
+        "offhand1": "Berserker's",
+        "back": "Berserker's",
+        "accessory1": "Berserker's",
+        "accessory2": "Berserker's",
+        "amulet": "Berserker's",
+        "ring1": "Berserker's",
+        "ring2": "Berserker's"
+      },
+      "weapons": {
+        "mainhand1": "greatsword"
+      },
+      "runes": {},
+      "infusions": {},
+      "enrichment": null,
+      "food": null,
+      "utility": null
+    },
+    "gameMode": "pve",
+    "underwaterMode": false,
+    "activeWeaponSet": 1,
+    "skills": {
+      "healId": null,
+      "utilityIds": [
+        9093
+      ],
+      "eliteId": null
+    },
+    "assumedBoons": {
+      "might": 25,
+      "fury": true
+    },
+    "sigilStacks": null
+  },
+  "catalogs": {
+    "traits": [
+      {
+        "id": 1444,
+        "facts": [
+          {
+            "type": "AttributeAdjust",
+            "target": "Power",
+            "value": 120
+          }
+        ]
+      },
+      {
+        "id": 1449,
+        "facts": []
+      },
+      {
+        "id": 1437,
+        "facts": []
+      }
+    ],
+    "specializations": [
+      {
+        "id": 4,
+        "minorTraits": []
+      }
+    ],
+    "skills": [],
+    "runes": [],
+    "foods": [],
+    "utilities": [],
+    "infusions": [],
+    "enrichments": []
+  },
+  "expected": {
+    "total": {
+      "Power": 3463,
+      "Precision": 1982,
+      "Toughness": 1000,
+      "Vitality": 1000,
+      "Ferocity": 982,
+      "ConditionDamage": 750,
+      "HealingPower": 0,
+      "Expertise": 0,
+      "Concentration": 0
+    },
+    "derived": {
+      "health": 19212,
+      "critChance": 81.76190476190476,
+      "critDamage": 215.46666666666667,
+      "conditionDuration": 0,
+      "boonDuration": 0,
+      "armor": 2271
+    }
+  }
+}

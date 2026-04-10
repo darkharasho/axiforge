@@ -1,0 +1,61 @@
+{
+  "name": "Berserker Thief",
+  "description": "Medium armor, sparse gear (testing empty slots gracefully)",
+  "ctx": {
+    "profession": "Thief",
+    "specializations": [],
+    "equipment": {
+      "slots": {
+        "chest": "Berserker's",
+        "legs": "Berserker's"
+      },
+      "weapons": {},
+      "runes": {},
+      "infusions": {},
+      "enrichment": null,
+      "food": null,
+      "utility": null
+    },
+    "gameMode": "pve",
+    "underwaterMode": false,
+    "activeWeaponSet": 1,
+    "skills": {
+      "healId": null,
+      "utilityIds": [],
+      "eliteId": null
+    },
+    "assumedBoons": null,
+    "sigilStacks": null
+  },
+  "catalogs": {
+    "traits": [],
+    "specializations": [],
+    "skills": [],
+    "runes": [],
+    "foods": [],
+    "utilities": [],
+    "infusions": [],
+    "enrichments": []
+  },
+  "expected": {
+    "total": {
+      "Power": 1235,
+      "Precision": 1168,
+      "Toughness": 1000,
+      "Vitality": 1000,
+      "Ferocity": 168,
+      "ConditionDamage": 0,
+      "HealingPower": 0,
+      "Expertise": 0,
+      "Concentration": 0
+    },
+    "derived": {
+      "health": 11645,
+      "critChance": 18,
+      "critDamage": 161.2,
+      "conditionDuration": 0,
+      "boonDuration": 0,
+      "armor": 2118
+    }
+  }
+}
