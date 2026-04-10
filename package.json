@@ -23,6 +23,7 @@
       "dist/renderer/**/*",
       "public/**/*",
       "lib/**/*",
+      "packages/**/*",
       "package.json"
     ],
     "extraResources": [
