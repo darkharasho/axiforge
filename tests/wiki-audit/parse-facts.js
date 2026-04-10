@@ -163,7 +163,8 @@ function parseFactText(name, value, titleAttr) {
   }
 
   // ── Generic number ──
-  const num = parseFloat(val);
+  // Strip thousands-separator commas before parsing (e.g. "2,580" → "2580").
+  const num = parseFloat(val.replace(/,/g, ""));
   if (!isNaN(num)) {
     return { type: "Number", text: name, value: num };
   }
