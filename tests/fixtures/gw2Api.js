@@ -442,6 +442,8 @@ const MOCK_TRAITS = {
       { id: 30029, slot: "Profession_3", icon: "" }, // DH Fragments of Faith (F3)
     ],
   },
+  // Warrior Strength major trait: used to test traited_facts on weapon skills
+  1444: { id: 1444, name: "Body Blow",        specialization: 4,  tier: 1, order: 0, slot: "Major", icon: "", description: "", facts: [], skills: [] },
   // Some placeholder traits for other specs
   1714: { id: 1714, name: "Chilling Nova",     specialization: 34, tier: 1, order: 0, slot: "Minor", icon: "", description: "", facts: [], skills: [] },
   1716: { id: 1716, name: "Soul Eater",        specialization: 34, tier: 2, order: 0, slot: "Minor", icon: "", description: "", facts: [], skills: [] },
@@ -470,6 +472,7 @@ function makeSkill(id, overrides = {}) {
     categories: overrides.categories || [],
     flags: overrides.flags || [],
     facts: overrides.facts || [],
+    traited_facts: overrides.traited_facts || [],
     toolbelt_skill: overrides.toolbelt_skill || 0,
     flip_skill: overrides.flip_skill || 0,
     bundle_skills: overrides.bundle_skills || [],
@@ -502,7 +505,11 @@ const MOCK_SKILLS = {
   14402: makeSkill(14402, { name: "Mending",      slot: "Heal",    type: "Heal",    professions: ["Warrior"], flags: [] }),
   14516: makeSkill(14516, { name: "Balanced Stance", slot: "Utility", type: "Utility", professions: ["Warrior"], flags: ["NoUnderwater"] }),
   14404: makeSkill(14404, { name: "Rampage",      slot: "Elite",   type: "Elite",   professions: ["Warrior"] }),
-  14360: makeSkill(14360, { name: "Sever Artery", slot: "Weapon_1", type: "Weapon", weapon_type: "Sword" }),
+  14360: makeSkill(14360, { name: "Sever Artery", slot: "Weapon_1", type: "Weapon", weapon_type: "Sword", facts: [
+    { type: "Damage", text: "Damage", hit_count: 1, dmg_multiplier: 0.8 },
+  ], traited_facts: [
+    { text: "Damage", type: "Damage", hit_count: 1, dmg_multiplier: 1.0, requires_trait: 1444, overrides: 0 },
+  ] }),
   14521: makeSkill(14521, { name: "Shield Bash",  slot: "Weapon_4", type: "Weapon", weapon_type: "Shield" }),
   14447: makeSkill(14447, { name: "Whirlwind Attack", slot: "Weapon_1", type: "Weapon", weapon_type: "Greatsword" }),
   14489: makeSkill(14489, { name: "Harpoon Pull", slot: "Weapon_1", type: "Weapon", weapon_type: "HarpoonGun" }),

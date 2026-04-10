@@ -141,4 +141,25 @@ describe("Warrior — end-to-end profession mechanics", () => {
     expect(slots[3]).toBeNull();
     expect(slots[4]).toBeNull();
   });
+
+  // ---------------------------------------------------------------------------
+  // Weapon skill traited_facts (#171)
+  // ---------------------------------------------------------------------------
+
+  test("weapon skills in catalog include traitedFacts from API data", async () => {
+    const catalog = await h.loadCatalog();
+    const swordW1 = catalog.weaponSkillById.get(14360); // Sever Artery
+    expect(swordW1).toBeDefined();
+    expect(swordW1.traitedFacts).toBeDefined();
+    expect(swordW1.traitedFacts.length).toBeGreaterThan(0);
+    expect(swordW1.traitedFacts[0].requires_trait).toBe(1444);
+  });
+
+  test("weapon skill base facts exclude requires_trait entries", async () => {
+    const catalog = await h.loadCatalog();
+    const swordW1 = catalog.weaponSkillById.get(14360); // Sever Artery
+    // Base facts should not contain any entries with requires_trait
+    const conditional = swordW1.facts.filter((f) => f.requires_trait);
+    expect(conditional).toHaveLength(0);
+  });
 });
