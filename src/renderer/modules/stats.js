@@ -16,7 +16,6 @@ import {
   computeMightPerStack as bridgeMightPerStack,
   computeBuildConcentration as bridgeBuildConcentration,
 } from "./engine-bridge.js";
-import * as engine from "@axi/gw2-data/engine";
 
 /**
  * Thin wrapper: computeSlotStats(comboLabel, slotKey)
@@ -103,7 +102,9 @@ function getExcludedSlots() {
   const isUnderwater = Boolean(state.editor.underwaterMode);
   const activeSet = Number(state.editor.activeWeaponSet) || 1;
   const excluded = new Set(isUnderwater ? LAND_ONLY_SLOTS : AQUATIC_SLOTS);
-  if (!isUnderwater) {
+  if (isUnderwater) {
+    excluded.add(activeSet === 2 ? "aquatic1" : "aquatic2");
+  } else {
     if (activeSet === 1) { excluded.add("mainhand2"); excluded.add("offhand2"); }
     else { excluded.add("mainhand1"); excluded.add("offhand1"); }
   }

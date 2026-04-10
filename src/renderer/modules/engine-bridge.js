@@ -97,10 +97,6 @@ export function computeStats(state, assumedBoons = null, sigilStacks = null) {
 }
 
 /**
- * Compute boon/condition coverage via the engine.
- * Returns { boons, conditions } in the same shape the renderer expects.
- */
-/**
  * Shared helper: resolve all skills and traits from state for boon/combo analysis.
  * Handles standard and serialized build formats, flip skills, profession mechanics, bundle skills.
  */
