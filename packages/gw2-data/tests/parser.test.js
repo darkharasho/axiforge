@@ -359,8 +359,13 @@ describe("mapWikiFactToApiFact", () => {
   });
 
   test("unknown fact type with numeric value produces generic Number fact", () => {
+    const fact = mapWikiFactToApiFact("some unknown type", ["15"], {}, true, false);
+    expect(fact).toEqual({ type: "Number", text: "Some Unknown Type", value: 15 });
+  });
+
+  test("attack speed increase produces Percent fact", () => {
     const fact = mapWikiFactToApiFact("attack speed increase", ["15"], {}, true, false);
-    expect(fact).toEqual({ type: "Number", text: "Attack Speed Increase", value: 15 });
+    expect(fact).toEqual({ type: "Percent", text: "Attack Speed Increase", percent: 15 });
   });
 
   test("unknown fact type with no numeric value returns null", () => {

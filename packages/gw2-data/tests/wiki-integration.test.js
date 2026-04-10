@@ -47,13 +47,13 @@ describe("Wiki fact resolution integration", () => {
   });
 
   test("resolves all entities with correct per-mode facts", async () => {
-    const titleToId = new Map([
-      ["Fireball", 5489],
-      ["Shelter", 9124],
-      ["Searing Slash", 12345],
+    const idToTitle = new Map([
+      [5489, "Fireball"],
+      [9124, "Shelter"],
+      [12345, "Searing Slash"],
     ]);
 
-    const result = await resolveEntityFacts(client, titleToId);
+    const result = await resolveEntityFacts(client, idToTitle);
 
     // Fireball: no split
     const fireball = result.get(5489);
@@ -107,12 +107,12 @@ describe("Wiki fact resolution integration", () => {
       }),
     });
 
-    const titleToId = new Map([
-      ["Fireball", 5489],
-      ["Unknown Skill", 9999],
+    const idToTitle = new Map([
+      [5489, "Fireball"],
+      [9999, "Unknown Skill"],
     ]);
 
-    const result = await resolveEntityFacts(client, titleToId);
+    const result = await resolveEntityFacts(client, idToTitle);
     expect(result.has(5489)).toBe(true);
     expect(result.has(9999)).toBe(false);
   });
@@ -144,12 +144,12 @@ describe("Wiki fact resolution integration", () => {
   });
 
   test("all fact entries have valid type fields", async () => {
-    const titleToId = new Map([
-      ["Fireball", 5489],
-      ["Shelter", 9124],
+    const idToTitle = new Map([
+      [5489, "Fireball"],
+      [9124, "Shelter"],
     ]);
 
-    const result = await resolveEntityFacts(client, titleToId);
+    const result = await resolveEntityFacts(client, idToTitle);
 
     for (const [, entity] of result) {
       for (const fact of entity.pve) {
@@ -165,8 +165,8 @@ describe("Wiki fact resolution integration", () => {
   });
 
   test("buff facts have status and duration", async () => {
-    const titleToId = new Map([["Fireball", 5489]]);
-    const result = await resolveEntityFacts(client, titleToId);
+    const idToTitle = new Map([[5489, "Fireball"]]);
+    const result = await resolveEntityFacts(client, idToTitle);
     const fireball = result.get(5489);
     const buffFacts = fireball.pve.filter((f) => f.type === "Buff");
     for (const bf of buffFacts) {

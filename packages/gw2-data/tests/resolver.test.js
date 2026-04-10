@@ -398,6 +398,18 @@ describe("resolveEntityFacts", () => {
       }),
     });
 
+    // Batch fetch of the candidate page (location infobox, not skill/trait)
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        query: {
+          pages: {
+            "2": { title: "Some Place (location)", revisions: [{ "*": "{{Location infobox\n| name = Some Place\n| id = 99\n}}" }] },
+          },
+        },
+      }),
+    });
+
     const idToTitle = new Map([[12345, "Some Place"]]);
     const result = await resolveEntityFacts(client, idToTitle, { profession: "Warrior" });
 
