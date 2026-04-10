@@ -235,98 +235,52 @@ async function resolveEntityFacts(client, titleToId, options = {}) {
     }
   }
 
-  // Retry name collision pages with suffix variants
-  if (nameCollisionRetries.size > 0 && profession) {
-    // Round 1: "Name (profession skill)"
-    const round1Map = new Map(); // retry title → original title
+  // Retry name collision pages via prefix search for "Name (" variants
+  if (nameCollisionRetries.size > 0) {
+    // Prefix-search all colliding titles in parallel to find candidate pages
+    const searchPromises = [];
     for (const [title] of nameCollisionRetries) {
-      round1Map.set(`${title} (${profession} skill)`, title);
+      searchPromises.push(
+        client.prefixSearch(`${title} (`).then((titles) => ({ originalTitle: title, candidates: titles }))
+      );
+    }
+    const searchResults = await Promise.all(searchPromises);
+
+    // Collect all candidate titles for a single batch fetch
+    const candidateToOriginal = new Map(); // candidate title → original title
+    for (const { originalTitle, candidates } of searchResults) {
+      for (const candidate of candidates) {
+        // Only consider candidates that look like "Name (... skill)" or "Name (... trait)"
+        // Exclude subpages like "Name (skill)/history"
+        if (candidate.includes("/")) continue;
+        if (/\(.*(?:skill|trait)\)$/i.test(candidate)) {
+          candidateToOriginal.set(candidate, originalTitle);
+        }
+      }
     }
 
-    const round1Titles = [...round1Map.keys()];
-    const round1Wikitext = await client.getWikitextBatch(round1Titles);
-    const stillMissing = new Map(); // original title → id
+    if (candidateToOriginal.size > 0) {
+      const candidateWikitext = await client.getWikitextBatch([...candidateToOriginal.keys()]);
 
-    for (const [retryTitle, originalTitle] of round1Map) {
-      const wikitext = round1Wikitext.get(retryTitle);
-      if (!wikitext) {
-        stillMissing.set(originalTitle, nameCollisionRetries.get(originalTitle));
-        continue;
+      // Group candidates by original title, try each until one has a Skill/Trait infobox with facts
+      const candidatesByOriginal = new Map(); // original title → [candidate titles]
+      for (const [candidate, original] of candidateToOriginal) {
+        if (!candidatesByOriginal.has(original)) candidatesByOriginal.set(original, []);
+        candidatesByOriginal.get(original).push(candidate);
       }
 
-      const parsed = parseFactsByMode(wikitext);
-      const hasTimings = parsed.recharge.pve != null || parsed.activation.pve != null;
-      if (parsed.pve.length === 0 && parsed.wvw.length === 0 && parsed.pvp.length === 0 && !hasTimings) {
-        stillMissing.set(originalTitle, nameCollisionRetries.get(originalTitle));
-        continue;
-      }
-
-      const id = nameCollisionRetries.get(originalTitle);
-      result.set(id, {
-        pve: parsed.pve,
-        wvw: parsed.hasSplit ? parsed.wvw : null,
-        pvp: parsed.hasSplit ? parsed.pvp : null,
-        hasSplit: parsed.hasSplit,
-        recharge: parsed.recharge,
-        activation: parsed.activation,
-      });
-    }
-
-    // Round 2: "Name (skill)" for remaining
-    if (stillMissing.size > 0) {
-      const round2Map = new Map(); // retry title → original title
-      for (const [title] of stillMissing) {
-        round2Map.set(`${title} (skill)`, title);
-      }
-
-      const round2Titles = [...round2Map.keys()];
-      const round2Wikitext = await client.getWikitextBatch(round2Titles);
-      const stillMissing2 = new Map(); // original title → id
-
-      for (const [retryTitle, originalTitle] of round2Map) {
-        const wikitext = round2Wikitext.get(retryTitle);
-        if (!wikitext) {
-          stillMissing2.set(originalTitle, stillMissing.get(originalTitle));
-          continue;
-        }
-
-        const parsed = parseFactsByMode(wikitext);
-        const hasTimings = parsed.recharge.pve != null || parsed.activation.pve != null;
-        if (parsed.pve.length === 0 && parsed.wvw.length === 0 && parsed.pvp.length === 0 && !hasTimings) {
-          stillMissing2.set(originalTitle, stillMissing.get(originalTitle));
-          continue;
-        }
-
-        const id = stillMissing.get(originalTitle);
-        result.set(id, {
-          pve: parsed.pve,
-          wvw: parsed.hasSplit ? parsed.wvw : null,
-          pvp: parsed.hasSplit ? parsed.pvp : null,
-          hasSplit: parsed.hasSplit,
-          recharge: parsed.recharge,
-          activation: parsed.activation,
-        });
-      }
-
-      // Round 3: "Name (trait skill)" for remaining
-      if (stillMissing2.size > 0) {
-        const round3Map = new Map(); // retry title → original title
-        for (const [title] of stillMissing2) {
-          round3Map.set(`${title} (trait skill)`, title);
-        }
-
-        const round3Titles = [...round3Map.keys()];
-        const round3Wikitext = await client.getWikitextBatch(round3Titles);
-
-        for (const [retryTitle, originalTitle] of round3Map) {
-          const wikitext = round3Wikitext.get(retryTitle);
+      for (const [originalTitle, candidates] of candidatesByOriginal) {
+        for (const candidate of candidates) {
+          const wikitext = candidateWikitext.get(candidate);
           if (!wikitext) continue;
+
+          if (!/\{\{(?:Skill|Trait) infobox\b/i.test(wikitext)) continue;
 
           const parsed = parseFactsByMode(wikitext);
           const hasTimings = parsed.recharge.pve != null || parsed.activation.pve != null;
           if (parsed.pve.length === 0 && parsed.wvw.length === 0 && parsed.pvp.length === 0 && !hasTimings) continue;
 
-          const id = stillMissing2.get(originalTitle);
+          const id = nameCollisionRetries.get(originalTitle);
           result.set(id, {
             pve: parsed.pve,
             wvw: parsed.hasSplit ? parsed.wvw : null,
@@ -335,6 +289,7 @@ async function resolveEntityFacts(client, titleToId, options = {}) {
             recharge: parsed.recharge,
             activation: parsed.activation,
           });
+          break; // found a valid candidate for this title
         }
       }
     }

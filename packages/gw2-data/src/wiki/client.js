@@ -156,6 +156,28 @@ class WikiClient {
     return result;
   }
 
+  /**
+   * Search for wiki pages whose titles start with a given prefix.
+   * Uses MediaWiki's prefixsearch API.
+   *
+   * @param {string} prefix - Title prefix to search for
+   * @param {number} [limit=10] - Max results
+   * @returns {Promise<string[]>} Array of matching page titles
+   */
+  async prefixSearch(prefix, limit = 10) {
+    const url =
+      `${this._wikiApiRoot}?action=query&list=prefixsearch` +
+      `&pssearch=${encodeURIComponent(prefix)}&pslimit=${limit}` +
+      `&format=json`;
+
+    const res = await this._rateLimitedFetch(url);
+    if (!res.ok) return [];
+
+    const data = await res.json();
+    const results = data.query?.prefixsearch || [];
+    return results.map((r) => r.title);
+  }
+
   async getRecentChanges(since) {
     const url =
       `${this._wikiApiRoot}?action=query&list=recentchanges` +

@@ -376,6 +376,47 @@ describe("WikiClient", () => {
     });
   });
 
+  describe("prefixSearch", () => {
+    test("returns matching page titles", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          query: {
+            prefixsearch: [
+              { title: "Ring of Fire (elementalist skill)" },
+              { title: "Ring of Fire (location)" },
+            ],
+          },
+        }),
+      });
+
+      const results = await client.prefixSearch("Ring of Fire (");
+      expect(results).toEqual([
+        "Ring of Fire (elementalist skill)",
+        "Ring of Fire (location)",
+      ]);
+    });
+
+    test("returns empty array when no matches", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          query: { prefixsearch: [] },
+        }),
+      });
+
+      const results = await client.prefixSearch("Nonexistent (");
+      expect(results).toEqual([]);
+    });
+
+    test("returns empty array on fetch failure", async () => {
+      mockFetch.mockResolvedValueOnce({ ok: false });
+
+      const results = await client.prefixSearch("Test (");
+      expect(results).toEqual([]);
+    });
+  });
+
   describe("parseFacts", () => {
     test("parses wikitext into facts for a game mode", () => {
       const wikitext = [

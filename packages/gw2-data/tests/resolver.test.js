@@ -259,10 +259,11 @@ describe("resolveEntityFacts", () => {
     expect(mockFetch).toHaveBeenCalledTimes(1);
   });
 
-  test("retries with profession suffix when page has wrong infobox type", async () => {
+  test("retries with prefix search when page has wrong infobox type", async () => {
     const locationWikitext = "{{Location infobox\n| name = Ring of Fire\n| id = 20\n}}";
     const skillWikitext = "{{Skill infobox\n| id = 5765\n}}\n{{skill fact|damage|1.0}}";
 
+    // Initial batch fetch returns location page
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
@@ -274,6 +275,20 @@ describe("resolveEntityFacts", () => {
       }),
     });
 
+    // Prefix search for "Ring of Fire (" returns candidates
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        query: {
+          prefixsearch: [
+            { title: "Ring of Fire (elementalist skill)" },
+            { title: "Ring of Fire (location)" },
+          ],
+        },
+      }),
+    });
+
+    // Batch fetch of skill candidate (location filtered out by regex)
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
@@ -291,11 +306,9 @@ describe("resolveEntityFacts", () => {
     expect(result.size).toBe(1);
     expect(result.has(5765)).toBe(true);
     expect(result.get(5765).pve[0].type).toBe("Damage");
-    expect(mockFetch).toHaveBeenCalledTimes(2);
-    expect(mockFetch.mock.calls[1][0]).toContain("Ring%20of%20Fire%20(elementalist%20skill)");
   });
 
-  test("falls back to generic (skill) suffix when profession suffix fails", async () => {
+  test("prefix search finds generic (skill) suffix", async () => {
     const weaponWikitext = "{{Weapon infobox\n| type = Sword\n| id = 29181\n}}";
     const skillWikitext = "{{Skill infobox\n| id = 63281\n}}\n{{skill fact|damage|0.5}}";
 
@@ -310,13 +323,12 @@ describe("resolveEntityFacts", () => {
       }),
     });
 
+    // Prefix search returns only the generic (skill) page
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
         query: {
-          pages: {
-            "-1": { title: "Zap (elementalist skill)", missing: true },
-          },
+          prefixsearch: [{ title: "Zap (skill)" }],
         },
       }),
     });
@@ -338,10 +350,9 @@ describe("resolveEntityFacts", () => {
     expect(result.size).toBe(1);
     expect(result.has(63281)).toBe(true);
     expect(result.get(63281).pve[0].type).toBe("Damage");
-    expect(mockFetch).toHaveBeenCalledTimes(3);
   });
 
-  test("accepts page directly when infobox ID matches expected entity", async () => {
+  test("accepts page directly when it has correct infobox type", async () => {
     const skillWikitext = "{{Skill infobox\n| id = 5489\n}}\n{{skill fact|damage|0.8}}";
 
     mockFetch.mockResolvedValueOnce({
@@ -363,7 +374,7 @@ describe("resolveEntityFacts", () => {
     expect(mockFetch).toHaveBeenCalledTimes(1);
   });
 
-  test("falls back to API facts when all suffix retries fail", async () => {
+  test("falls back to API facts when prefix search finds no skill/trait candidates", async () => {
     const locationWikitext = "{{Location infobox\n| name = Some Place\n| id = 99\n}}";
 
     mockFetch.mockResolvedValueOnce({
@@ -377,29 +388,12 @@ describe("resolveEntityFacts", () => {
       }),
     });
 
+    // Prefix search returns no skill/trait candidates
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
         query: {
-          pages: { "-1": { title: "Some Place (warrior skill)", missing: true } },
-        },
-      }),
-    });
-
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        query: {
-          pages: { "-1": { title: "Some Place (skill)", missing: true } },
-        },
-      }),
-    });
-
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        query: {
-          pages: { "-1": { title: "Some Place (trait skill)", missing: true } },
+          prefixsearch: [{ title: "Some Place (location)" }],
         },
       }),
     });
@@ -408,14 +402,12 @@ describe("resolveEntityFacts", () => {
     const result = await resolveEntityFacts(client, titleToId, { profession: "Warrior" });
 
     expect(result.size).toBe(0);
-    expect(mockFetch).toHaveBeenCalledTimes(4);
   });
 
-  test("falls back to (trait skill) suffix when profession and generic suffixes fail", async () => {
+  test("prefix search finds (trait skill) suffix", async () => {
     const locationWikitext = "{{Location infobox\n| name = Pulmonary Impact\n| id = 99\n}}";
     const traitSkillWikitext = "{{Skill infobox\n| id = 62710\n}}\n{{skill fact|damage|1.2}}";
 
-    // Round 0: initial fetch returns wrong page type
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
@@ -427,27 +419,16 @@ describe("resolveEntityFacts", () => {
       }),
     });
 
-    // Round 1: "(harbinger skill)" — missing
+    // Prefix search finds the (trait skill) page
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
         query: {
-          pages: { "-1": { title: "Pulmonary Impact (harbinger skill)", missing: true } },
+          prefixsearch: [{ title: "Pulmonary Impact (trait skill)" }],
         },
       }),
     });
 
-    // Round 2: "(skill)" — missing
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        query: {
-          pages: { "-1": { title: "Pulmonary Impact (skill)", missing: true } },
-        },
-      }),
-    });
-
-    // Round 3: "(trait skill)" — found!
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
@@ -465,7 +446,48 @@ describe("resolveEntityFacts", () => {
     expect(result.size).toBe(1);
     expect(result.has(62710)).toBe(true);
     expect(result.get(62710).pve[0].type).toBe("Damage");
-    expect(mockFetch).toHaveBeenCalledTimes(4);
+  });
+
+  test("prefix search works without profession option", async () => {
+    const locationWikitext = "{{Location infobox\n| name = Some Skill\n| id = 99\n}}";
+    const skillWikitext = "{{Skill infobox\n| id = 1234\n}}\n{{skill fact|damage|0.5}}";
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        query: {
+          pages: {
+            "1": { title: "Some Skill", revisions: [{ "*": locationWikitext }] },
+          },
+        },
+      }),
+    });
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        query: {
+          prefixsearch: [{ title: "Some Skill (skill)" }],
+        },
+      }),
+    });
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        query: {
+          pages: {
+            "2": { title: "Some Skill (skill)", revisions: [{ "*": skillWikitext }] },
+          },
+        },
+      }),
+    });
+
+    const titleToId = new Map([["Some Skill", 1234]]);
+    const result = await resolveEntityFacts(client, titleToId); // no profession
+
+    expect(result.size).toBe(1);
+    expect(result.has(1234)).toBe(true);
   });
 
   test("skips pages with no fact templates (keeps API facts)", async () => {
