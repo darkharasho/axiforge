@@ -5,6 +5,7 @@ const {
   parseFactsByMode,
   resolveEntityFacts,
   isDisambiguation,
+  extractInfoboxId,
 } = require("../src/wiki/resolver");
 const { WikiClient } = require("../src/wiki/client");
 const { MemoryCache } = require("../src/wiki/cache");
@@ -300,5 +301,42 @@ describe("isDisambiguation", () => {
 
   test("returns false for pages mentioning disambig in prose", () => {
     expect(isDisambiguation("This page is not a disambiguation page")).toBe(false);
+  });
+});
+
+describe("extractInfoboxId", () => {
+  test("extracts single ID from skill infobox", () => {
+    const wikitext = "{{Skill infobox\n| id = 5489\n| description = Launch a ball of fire.\n}}";
+    expect(extractInfoboxId(wikitext)).toEqual([5489]);
+  });
+
+  test("extracts multi-ID from skill infobox", () => {
+    const wikitext = "{{Skill infobox\n| id = 5805,6020\n| description = Equip a kit.\n}}";
+    expect(extractInfoboxId(wikitext)).toEqual([5805, 6020]);
+  });
+
+  test("extracts ID from trait infobox", () => {
+    const wikitext = "{{Trait infobox\n| line = Spite\n| id = 903\n}}";
+    expect(extractInfoboxId(wikitext)).toEqual([903]);
+  });
+
+  test("returns empty array for location infobox", () => {
+    const wikitext = "{{Location infobox\n| name = Ring of Fire\n| id = 20\n}}";
+    expect(extractInfoboxId(wikitext)).toEqual([]);
+  });
+
+  test("returns empty array for weapon infobox", () => {
+    const wikitext = "{{Weapon infobox\n| type = Sword\n| id = 29181\n}}";
+    expect(extractInfoboxId(wikitext)).toEqual([]);
+  });
+
+  test("returns empty array for page with no infobox", () => {
+    const wikitext = "'''Some Page''' is about something.";
+    expect(extractInfoboxId(wikitext)).toEqual([]);
+  });
+
+  test("handles whitespace variations", () => {
+    const wikitext = "{{Skill infobox\n|id=5489\n}}";
+    expect(extractInfoboxId(wikitext)).toEqual([5489]);
   });
 });

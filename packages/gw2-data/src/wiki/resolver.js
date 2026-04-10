@@ -109,6 +109,28 @@ function isDisambiguation(wikitext) {
 }
 
 /**
+ * Extract the GW2 API ID(s) from a {{Skill infobox}} or {{Trait infobox}} template.
+ * Returns an array of numeric IDs, or empty array if no matching infobox found.
+ *
+ * @param {string} wikitext
+ * @returns {number[]}
+ */
+function extractInfoboxId(wikitext) {
+  // Match only Skill or Trait infoboxes (not Location, Weapon, NPC, etc.)
+  const infoboxMatch = wikitext.match(/\{\{(?:Skill|Trait) infobox\b/i);
+  if (!infoboxMatch) return [];
+
+  // Find the | id = ... line within the infobox
+  const idMatch = wikitext.match(/\|\s*id\s*=\s*([0-9,\s]+)/);
+  if (!idMatch) return [];
+
+  return idMatch[1]
+    .split(",")
+    .map((s) => parseInt(s.trim(), 10))
+    .filter((n) => !isNaN(n));
+}
+
+/**
  * Batch-resolve wiki facts for multiple entities.
  *
  * @param {import("./client").WikiClient} client
@@ -187,4 +209,4 @@ async function resolveEntityFacts(client, titleToId, options = {}) {
   return result;
 }
 
-module.exports = { groupFactsByMode, parseFactsByMode, resolveEntityFacts, isDisambiguation };
+module.exports = { groupFactsByMode, parseFactsByMode, resolveEntityFacts, isDisambiguation, extractInfoboxId };
