@@ -84,6 +84,10 @@ async function resolveEntityFacts(client, titleToId) {
 
     const parsed = parseFactsByMode(wikitext);
 
+    // Skip pages that exist but have no fact templates — keep API facts instead
+    // of replacing them with empty arrays.
+    if (parsed.pve.length === 0 && parsed.wvw.length === 0 && parsed.pvp.length === 0) continue;
+
     result.set(id, {
       pve: parsed.pve,
       wvw: parsed.hasSplit ? parsed.wvw : null,

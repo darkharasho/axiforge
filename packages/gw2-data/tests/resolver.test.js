@@ -198,4 +198,26 @@ describe("resolveEntityFacts", () => {
     expect(result.size).toBe(0);
     expect(mockFetch).not.toHaveBeenCalled();
   });
+
+  test("skips pages with no fact templates (keeps API facts)", async () => {
+    // A wiki page exists but has no {{skill fact|...}} or {{trait fact|...}} templates
+    const noFactsWikitext = "'''Piercing Shards''' is a trait for Elementalist that makes ice shards pierce.";
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        query: {
+          pages: {
+            "42": { title: "Piercing Shards", revisions: [{ slots: { main: { "*": noFactsWikitext } } }] },
+          },
+        },
+      }),
+    });
+
+    const titleToId = new Map([["Piercing Shards", 1234]]);
+    const result = await resolveEntityFacts(client, titleToId);
+
+    // Should NOT have an entry — empty facts would wipe valid API facts
+    expect(result.size).toBe(0);
+    expect(result.has(1234)).toBe(false);
+  });
 });
