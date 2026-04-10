@@ -1601,6 +1601,7 @@ export function renderSkills() {
               state.editor.activeKit = resolvedKit === skill.id ? 0 : skill.id;
             }
             renderSkills();
+            _renderEquipmentPanel(); // refresh stats (e.g. berserk-conditional bonuses)
             if (!_readOnly && skill) selectDetail("skill", skill);
             return;
           } else if (isStatic && !isToolbelt) {
