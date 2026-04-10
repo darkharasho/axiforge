@@ -271,16 +271,22 @@ function mapWikiFactToApiFact(factType, positional, params, isWvw, isUniversal) 
   }
 
   // ── Effect ────────────────────────────────────────────────────────────
+  // {{skill fact|effect|Signet of Fury (effect)|desc=180 [[Precision]]|effect bonus=Precision}}
+  // {{skill fact|effect|Signet of Fury (effect)|alt=Active Bonus|4|desc=360 [[Precision]], 360 [[Ferocity]]}}
   if (type === "effect") {
     const status = positional[0] ? stripWikiMarkup(positional[0]).trim() : "";
     const duration = parseFloat(stripWikiMarkup(positional[1]) || "0");
-    return {
+    const alt = params.alt ? stripWikiMarkup(params.alt).trim() : "";
+    const desc = params.desc ? stripWikiMarkup(params.desc).trim() : "";
+    const fact = {
       type: "Buff",
-      text: status,
+      text: alt || status,
       status,
       duration,
       apply_count: parseInt(stripWikiMarkup(params.stacks) || "1", 10),
     };
+    if (desc) fact.description = desc;
+    return fact;
   }
 
   // ── Attribute Conversion (gain) ──────────────────────────────────────

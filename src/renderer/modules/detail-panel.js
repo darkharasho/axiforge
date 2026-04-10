@@ -669,10 +669,14 @@ export async function selectDetail(kind, entity) {
 // ── Fact formatting helpers ──────────────────────────────────────────────────
 
 function formatBuffConditionText(fact) {
-  const name = String(fact.status || fact.text || "Unknown").replace(/\s*\(effect\)\s*$/i, "");
+  const rawStatus = String(fact.status || fact.text || "Unknown").replace(/\s*\(effect\)\s*$/i, "");
+  // Use text as display name when it provides an alternative label (e.g. "Active Bonus")
+  const hasAltText = fact.text && fact.status && fact.text !== fact.status
+    && fact.text !== "Apply Buff/Condition" && !/\(effect\)$/i.test(fact.text);
+  const name = hasAltText ? fact.text : rawStatus;
   const count = Number(fact.apply_count) || 0;
   const stackPart = count > 1 ? ` ×${count}` : "";
-  const duration = fact.duration != null ? ` (${fact.duration}s)` : "";
+  const duration = fact.duration ? ` (${fact.duration}s)` : "";
   // Show description if available, or text if it differs from status (wiki effect facts)
   const extra = fact.description
     ? `: ${fact.description}`

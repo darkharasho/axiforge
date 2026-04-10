@@ -236,6 +236,30 @@ describe("mapWikiFactToApiFact", () => {
     });
   });
 
+  test("effect with desc captures description (signet passive)", () => {
+    const fact = mapWikiFactToApiFact("effect", ["Signet of Fury (effect)"], { desc: "180 Precision" }, false, true);
+    expect(fact).toEqual({
+      type: "Buff",
+      text: "Signet of Fury (effect)",
+      status: "Signet of Fury (effect)",
+      duration: 0,
+      apply_count: 1,
+      description: "180 Precision",
+    });
+  });
+
+  test("effect with alt and desc (signet active)", () => {
+    const fact = mapWikiFactToApiFact("effect", ["Signet of Fury (effect)", "4"], { alt: "Active Bonus", desc: "360 Precision, 360 Ferocity" }, false, true);
+    expect(fact).toEqual({
+      type: "Buff",
+      text: "Active Bonus",
+      status: "Signet of Fury (effect)",
+      duration: 4,
+      apply_count: 1,
+      description: "360 Precision, 360 Ferocity",
+    });
+  });
+
   test("barrier with base and coefficient", () => {
     const fact = mapWikiFactToApiFact("barrier", [], { base: "200", coefficient: "0.3" }, true, false);
     expect(fact).toMatchObject({

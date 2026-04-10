@@ -116,6 +116,21 @@ describe("resolveEntityFacts — signet passive vs active buff", () => {
     expect(signetBuffs[1].duration).toBe(4);
   });
 
+  test("wiki-style effect facts with desc/alt are both kept", () => {
+    const entity = {
+      facts: [
+        { type: "Buff", text: "Signet of Fury (effect)", status: "Signet of Fury (effect)", duration: 0, description: "180 Precision", apply_count: 1 },
+        { type: "Buff", text: "Active Bonus", status: "Signet of Fury (effect)", duration: 4, description: "360 Precision, 360 Ferocity", apply_count: 1 },
+      ],
+      traitedFacts: [],
+    };
+    const result = resolveEntityFacts(entity);
+    const signetBuffs = result.filter((f) => f.status === "Signet of Fury (effect)");
+    expect(signetBuffs).toHaveLength(2);
+    expect(signetBuffs[0].description).toBe("180 Precision");
+    expect(signetBuffs[1].description).toBe("360 Precision, 360 Ferocity");
+  });
+
   test("still deduplicates same-status buffs when both have positive durations", () => {
     const entity = {
       facts: [makeBuff("Quickness", 5), makeBuff("Quickness", 2)],
