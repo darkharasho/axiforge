@@ -18,6 +18,7 @@ import { getWeaponSvg } from "./weapon-icons.js";
 import { resolveEquippedWeaponSkills, getAvailableAttunements, resolveWarriorBurst } from "./equipment-weapon-skills.js";
 import { getSkillOptionsByType } from "./skills.js";
 import { computeBoonCoverage } from "./boon-coverage.js";
+import { validateStatResult, validateBoonResult } from "./engine-bridge.js";
 
 export { computeSlotStats, computeEquipmentStats, computeUpgradeModifiers, computeStatBreakdown } from "./stats.js";
 
@@ -313,6 +314,9 @@ export function updateHealthOrb() {
   const profession = state.editor.profession || "";
   const baseHp = PROFESSION_BASE_HP[profession] ?? 0;
   const computed = computeEquipmentStats();
+  if (process.env.NODE_ENV !== "production") {
+    validateStatResult(computed, state, "equipment.js:updateHealthOrb");
+  }
   const totalHp = baseHp > 0 ? baseHp + (computed.Vitality || 0) * 10 : 0;
   orbHp.textContent = totalHp > 0 ? totalHp.toLocaleString() : "—";
 }
@@ -1044,6 +1048,9 @@ export function renderEquipmentPanel() {
 
       // Boon/condition coverage
       const coverage = computeBoonCoverage(catalog, state.editor, weaponSkills);
+      if (process.env.NODE_ENV !== "production") {
+        validateBoonResult(coverage, state, "equipment.js:boonCoverage", catalog, state.editor, weaponSkills);
+      }
       const hasBoons = coverage.boons.length > 0;
       const hasConditions = coverage.conditions.length > 0;
       if (hasBoons || hasConditions) {
@@ -1482,6 +1489,9 @@ export function renderEquipmentPanel() {
   // Attributes
   const statsSection = makeSection("Attributes");
   const computed = computeEquipmentStats(_assumedBoons, _sigilStacks);
+  if (process.env.NODE_ENV !== "production") {
+    validateStatResult(computed, state, "equipment.js:renderStats", _assumedBoons, _sigilStacks);
+  }
   const traitBonuses = computeTraitConversions(computed);
   const professionName = state.editor.profession;
   const baseHP = PROFESSION_BASE_HP[professionName] || 9212;
