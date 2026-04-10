@@ -3,6 +3,7 @@ import { WEAPON_STRENGTH_MIDPOINT, BOON_CONDITION_ICONS, BUFF_FACT_TYPES, FACT_T
 import { escapeHtml, tierLabel, normalizeText, stripGw2Markup } from "./utils.js";
 import { computeEquipmentStats, computeUpgradeModifiers } from "./stats.js";
 import { getAssumedBoons } from "./equipment.js";
+import { validateStatResult } from "./engine-bridge.js";
 
 let _readOnly = false;
 export function setReadOnly(val) { _readOnly = val; }
@@ -89,6 +90,9 @@ export function renderDetailPanel() {
   const detailDmgStats = (() => {
     if (detail.kindLabel === "Trait") return null;
     const computed = computeEquipmentStats();
+    if (process.env.NODE_ENV !== "production") {
+      validateStatResult(computed, state, "detail-panel.js:selectDetail");
+    }
     const power = computed.Power || 1000;
     const precision = computed.Precision || 1000;
     const ferocity = computed.Ferocity || 0;
@@ -373,6 +377,9 @@ export function showHoverPreview(kind, entity, x, y) {
   let dmgStats = null;
   if (kind === "skill") {
     const computed = computeEquipmentStats();
+    if (process.env.NODE_ENV !== "production") {
+      validateStatResult(computed, state, "detail-panel.js:showHoverPreview");
+    }
     const power = computed.Power || 1000;
     const precision = computed.Precision || 1000;
     const ferocity = computed.Ferocity || 0;
