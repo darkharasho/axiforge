@@ -164,37 +164,34 @@ async function resolveEntityFacts(client, titleToId, options = {}) {
       continue;
     }
 
-    // Check if page has a matching Skill/Trait infobox
-    const infoboxIds = extractInfoboxId(wikitext);
-    if (infoboxIds.length > 0 && !infoboxIds.includes(id)) {
-      // Has a Skill/Trait infobox but wrong ID — name collision, queue retry
-      nameCollisionRetries.set(title, id);
-      continue;
-    }
-    if (infoboxIds.length === 0) {
-      // No Skill/Trait infobox — check if page has parseable facts
-      // (some valid skill pages lack a formal infobox but have fact templates)
+    // Check if page has a Skill or Trait infobox (right page type).
+    // Don't check the specific ID — multiple entities can share a name,
+    // and titleToFirstId may map to a different entity than the wiki page lists.
+    const hasSkillOrTraitInfobox = /\{\{(?:Skill|Trait) infobox\b/i.test(wikitext);
+    if (!hasSkillOrTraitInfobox) {
+      // Wrong page type (location, weapon, NPC, etc.) or no infobox.
+      // Check if page has parseable facts anyway (some skill pages lack formal infoboxes).
       const parsed = parseFactsByMode(wikitext);
       const hasTimings = parsed.recharge.pve != null || parsed.activation.pve != null;
       const hasFacts = parsed.pve.length > 0 || parsed.wvw.length > 0 || parsed.pvp.length > 0 || hasTimings;
-      if (!hasFacts) {
+      if (hasFacts) {
+        // Has facts but no infobox — accept it (existing behavior)
+        result.set(id, {
+          pve: parsed.pve,
+          wvw: parsed.hasSplit ? parsed.wvw : null,
+          pvp: parsed.hasSplit ? parsed.pvp : null,
+          hasSplit: parsed.hasSplit,
+          recharge: parsed.recharge,
+          activation: parsed.activation,
+        });
+      } else {
         // No infobox AND no facts — likely a wrong page type, queue retry
         nameCollisionRetries.set(title, id);
-        continue;
       }
-      // Has facts but no infobox — accept it (existing behavior)
-      result.set(id, {
-        pve: parsed.pve,
-        wvw: parsed.hasSplit ? parsed.wvw : null,
-        pvp: parsed.hasSplit ? parsed.pvp : null,
-        hasSplit: parsed.hasSplit,
-        recharge: parsed.recharge,
-        activation: parsed.activation,
-      });
       continue;
     }
 
-    // Infobox ID matches — parse facts normally
+    // Has Skill/Trait infobox — correct page type, parse facts normally
     const parsed = parseFactsByMode(wikitext);
 
     const hasTimings = parsed.recharge.pve != null || parsed.activation.pve != null;
