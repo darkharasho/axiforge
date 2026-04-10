@@ -18,5 +18,9 @@
   "trait:1831": {
     "burstRechargeReduction": 10,
     "description": "Primal Rage: API omits 10% burst recharge reduction fact"
+  },
+  "trait:2046": {
+    "berserkConditional": true,
+    "description": "Fatal Frenzy: stat bonuses only apply while in berserk mode"
   }
 }

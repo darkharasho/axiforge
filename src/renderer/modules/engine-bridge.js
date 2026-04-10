@@ -44,6 +44,13 @@ export function buildEngineCtx(state, assumedBoons = null, sigilStacks = null) {
   const equipment = editor.equipment || {};
   const isUnderwater = Boolean(editor.underwaterMode);
 
+  // Determine if berserk mode is toggled on (Warrior/Berserker spec 18).
+  const activeKit = Number(editor.activeKit) || 0;
+  const hasBerserker = (editor.specializations || []).some(
+    (s) => Number(s?.specializationId || s?.id) === 18
+  );
+  const berserkActive = hasBerserker && activeKit > 0;
+
   return {
     profession: editor.profession || "",
     specializations: (editor.specializations || []).map((s) => ({
@@ -67,6 +74,7 @@ export function buildEngineCtx(state, assumedBoons = null, sigilStacks = null) {
     skills: isUnderwater ? (editor.underwaterSkills || {}) : (editor.skills || {}),
     assumedBoons,
     sigilStacks,
+    berserkActive,
   };
 }
 

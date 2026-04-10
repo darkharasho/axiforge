@@ -211,6 +211,34 @@ describe("computeAttributes", () => {
     expect(result.total.Power).toBe(1100);
   });
 
+  test("berserk-conditional trait bonuses only apply when berserkActive", () => {
+    const catalogs = makeCatalogs({
+      traitById: new Map([[2046, {
+        id: 2046,
+        slot: "Minor",
+        description: "Fatal Frenzy",
+        facts: [
+          { type: "AttributeAdjust", target: "Power", value: 150 },
+          { type: "AttributeAdjust", target: "ConditionDamage", value: 300 },
+        ],
+      }]]),
+      specializationById: new Map([[18, { id: 18, minorTraits: [2046] }]]),
+    });
+    const baseCtx = {
+      specializations: [{ id: 18, majorChoices: {} }],
+    };
+
+    // Without berserk: bonuses NOT applied
+    const resultOff = computeAttributes(makeCtx({ ...baseCtx, berserkActive: false }), catalogs);
+    expect(resultOff.traits.Power).toBe(0);
+    expect(resultOff.traits.ConditionDamage).toBe(0);
+
+    // With berserk: bonuses applied
+    const resultOn = computeAttributes(makeCtx({ ...baseCtx, berserkActive: true }), catalogs);
+    expect(resultOn.traits.Power).toBe(150);
+    expect(resultOn.traits.ConditionDamage).toBe(300);
+  });
+
   test("signet passive buffs added", () => {
     const ctx = makeCtx({
       skills: { healId: null, utilityIds: [], eliteId: null },
