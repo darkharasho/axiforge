@@ -409,6 +409,76 @@ function parseWikitextFacts(wikitext, wvwGroupedWithPvp) {
 }
 
 /**
+ * Parse all {{skill fact|...}} / {{trait fact|...}} templates, tagging each
+ * with the game modes it applies to.
+ *
+ * @param {string} wikitext
+ * @returns {{ facts: Object[], hasPveOnly: boolean }}
+ *   Each fact has `_modes: string[]` — subset of ["pve", "wvw", "pvp"].
+ *   An empty _modes means "universal" (applies to all modes).
+ */
+function parseAllTaggedFacts(wikitext) {
+  const facts = [];
+  let hasPveOnly = false;
+
+  const templateRe = /\{\{(?:skill|trait) fact\|([^{}]*(?:\{\{[^{}]*\}\}[^{}]*)*)\}\}/gi;
+  let match;
+
+  while ((match = templateRe.exec(wikitext)) !== null) {
+    const inner = match[1];
+    const parts = splitRespectingTemplates(inner);
+
+    const factType = (parts[0] || "").trim().toLowerCase();
+
+    const positional = [];
+    const params = {};
+
+    for (let i = 1; i < parts.length; i++) {
+      const part = parts[i];
+      const eqIdx = part.indexOf("=");
+      if (eqIdx !== -1) {
+        const key = part.slice(0, eqIdx).trim().toLowerCase();
+        const val = part.slice(eqIdx + 1).trim();
+        params[key] = val;
+      } else {
+        positional.push(part.trim());
+      }
+    }
+
+    const gameMode = (params["game mode"] || "").toLowerCase().trim();
+    const gameModeTokens = gameMode ? gameMode.split(/\s+/) : [];
+
+    const mentionsWvw = gameModeTokens.includes("wvw");
+    const mentionsPvp = gameModeTokens.includes("pvp");
+    const mentionsPve = gameModeTokens.includes("pve");
+    const isUniversal = gameModeTokens.length === 0;
+
+    if (mentionsPve && !mentionsWvw && !mentionsPvp) {
+      hasPveOnly = true;
+    }
+
+    // Build _modes array
+    const modes = [];
+    if (isUniversal) {
+      // Universal — applies to all modes (empty array signals this)
+    } else {
+      if (mentionsPve) modes.push("pve");
+      if (mentionsWvw) modes.push("wvw");
+      if (mentionsPvp) modes.push("pvp");
+    }
+
+    const cleanPositionals = positional.map((p) => stripWikiMarkup(p));
+    const fact = mapWikiFactToApiFact(factType, cleanPositionals, params, mentionsWvw, isUniversal);
+    if (fact) {
+      fact._modes = modes;
+      facts.push(fact);
+    }
+  }
+
+  return { facts, hasPveOnly };
+}
+
+/**
  * Fallback parser for infobox-style params like `| recharge wvw = 25`.
  *
  * @param {string} wikitext
@@ -447,4 +517,5 @@ module.exports = {
   mapWikiFactToApiFact,
   parseWikitextFacts,
   parseInfoboxParams,
+  parseAllTaggedFacts,
 };
