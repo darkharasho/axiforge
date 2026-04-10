@@ -1537,6 +1537,7 @@ export function renderSkills() {
             state.editor.activeKit = resolvedKit === skill.id ? 0 : skill.id;
           }
           renderSkills();
+          _renderEquipmentPanel(); // refresh stats (e.g. berserk-conditional bonuses)
         });
         iconBtn.append(toggleBadge);
       }
@@ -1588,7 +1589,7 @@ export function renderSkills() {
             if (!_readOnly && skill) selectDetail("skill", skill);
             return;
           }
-          if (isStatic && ((skill?.bundleSkills?.length ?? 0) > 0 || isBeastmodeToggle || isUnleashToggle || isGunsaberToggle || isDragonTriggerToggle)) {
+          if (isStatic && ((skill?.bundleSkills?.length ?? 0) > 0 || isBeastmodeToggle || isUnleashToggle || isBerserkToggle || isGunsaberToggle || isDragonTriggerToggle)) {
             // Static bundle skill (shroud, Photon Forge, beastmode, Unleash, Gunsaber, Dragon Trigger, etc.): toggle active state.
             if (isGunsaberToggle) {
               state.editor.activeKit = resolvedKit === 62745 ? 0 : 62745;
