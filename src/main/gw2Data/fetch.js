@@ -87,7 +87,7 @@ function drainQueue() {
 
 // All API responses are now cached for 24 hours on disk.
 // Endpoints whose data essentially never changes get a 7-day cache.
-const LONG_CACHE_ENDPOINTS = new Set(["races"]);
+const LONG_CACHE_ENDPOINTS = new Set(["races", "professions", "specializations", "traits", "skills", "legends", "pets"]);
 const TTL_LONG = 1000 * 60 * 60 * 24 * 7; // 7 days
 const TTL_DEFAULT = 1000 * 60 * 60 * 24;   // 24 hours
 

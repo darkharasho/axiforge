@@ -19,6 +19,7 @@ export function initRenderPagesDom(el) { _el = el; }
 // ---------------------------------------------------------------------------
 let _callbacks = {};
 export function initRenderPagesCallbacks(callbacks) { _callbacks = callbacks; }
+const _pendingCatalogFetches = new Map(); // dedup in-flight catalog pre-fetches
 
 // ---------------------------------------------------------------------------
 // render — top-level page refresh
@@ -336,15 +337,22 @@ export function renderEditorForm() {
   const currentProfession = state.editor.profession;
   const gameMode = state.editor.gameMode || "pve";
 
-  // Pre-fetch catalogs for all professions in the background so elite specs appear
+  // Pre-fetch catalogs for all professions in the background so elite specs appear.
+  // The dropdown is disabled until every catalog has arrived so clicking it too early
+  // doesn't silently do nothing.
+  let allCatalogsReady = state.professions.length > 0;
   if (_callbacks.getCatalog) {
     for (const prof of state.professions) {
       const cacheKey = `${prof.id}_${gameMode}`;
       if (!state.catalogCache.has(cacheKey)) {
-        _callbacks.getCatalog(prof.id, gameMode).then(() => {
-          // Re-render once the catalog arrives so the dropdown shows elite specs
-          renderEditorForm();
-        }).catch(() => {});
+        allCatalogsReady = false;
+        if (!_pendingCatalogFetches.has(cacheKey)) {
+          const p = _callbacks.getCatalog(prof.id, gameMode).then(() => {
+            _pendingCatalogFetches.delete(cacheKey);
+            renderEditorForm();
+          }).catch(() => { _pendingCatalogFetches.delete(cacheKey); });
+          _pendingCatalogFetches.set(cacheKey, p);
+        }
       }
     }
   }
@@ -397,10 +405,11 @@ export function renderEditorForm() {
 
   renderCustomSelect(_el.professionSelect, {
     value: profSpecValue,
-    className: "cselect--toolbar",
+    className: `cselect--toolbar${allCatalogsReady ? "" : " cselect--loading"}`,
     searchable: true,
+    disabled: !allCatalogsReady,
     groups: profSpecGroups,
-    placeholder: "Select profession / elite spec",
+    placeholder: allCatalogsReady ? "Select profession / elite spec" : "Loading professions\u2026",
     onChange: async (nextValue) => {
       const [professionId, specPart] = nextValue.split(":");
       if (!professionId) return;

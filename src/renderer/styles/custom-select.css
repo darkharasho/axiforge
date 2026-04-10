@@ -32,8 +32,18 @@
 }
 
 .cselect__trigger:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
+  pointer-events: none;
+}
+
+.cselect--loading .cselect__trigger:disabled {
+  animation: cselect-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes cselect-pulse {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 0.55; }
 }
 
 .cselect__chevron {
