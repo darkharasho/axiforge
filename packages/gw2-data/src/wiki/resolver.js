@@ -101,13 +101,23 @@ function parseFactsByMode(wikitext) {
 }
 
 /**
+ * Detect whether wikitext is a disambiguation page.
+ * GW2 wiki uses {{disambig}} or {{disambiguation}} templates.
+ */
+function isDisambiguation(wikitext) {
+  return /\{\{disambig(uation)?\s*(\||\}\})/i.test(wikitext);
+}
+
+/**
  * Batch-resolve wiki facts for multiple entities.
  *
  * @param {import("./client").WikiClient} client
  * @param {Map<string, number>} titleToId - Map of wiki title to entity ID
+ * @param {object} [options]
+ * @param {string} [options.profession] - Profession name (e.g. "Warrior") for disambiguation retries
  * @returns {Promise<Map<number, { pve: Object[], wvw: Object[]|null, pvp: Object[]|null, hasSplit: boolean }>>}
  */
-async function resolveEntityFacts(client, titleToId) {
+async function resolveEntityFacts(client, titleToId, options = {}) {
   const result = new Map();
 
   if (titleToId.size === 0) return result;
@@ -115,9 +125,21 @@ async function resolveEntityFacts(client, titleToId) {
   const titles = [...titleToId.keys()];
   const wikitextMap = await client.getWikitextBatch(titles);
 
+  // Collect disambiguation pages for retry
+  const disambigRetries = new Map(); // alternative title → original title
+  const profession = options.profession ? options.profession.toLowerCase() : null;
+
   for (const [title, id] of titleToId) {
     const wikitext = wikitextMap.get(title);
     if (!wikitext) continue; // skip missing pages
+
+    // If this is a disambiguation page, queue a retry with profession-specific suffix
+    if (isDisambiguation(wikitext)) {
+      if (profession) {
+        disambigRetries.set(`${title} (${profession} skill)`, title);
+      }
+      continue;
+    }
 
     const parsed = parseFactsByMode(wikitext);
 
@@ -137,7 +159,32 @@ async function resolveEntityFacts(client, titleToId) {
     });
   }
 
+  // Retry disambiguation pages with profession-specific titles
+  if (disambigRetries.size > 0) {
+    const retryTitles = [...disambigRetries.keys()];
+    const retryMap = await client.getWikitextBatch(retryTitles);
+
+    for (const [retryTitle, originalTitle] of disambigRetries) {
+      const wikitext = retryMap.get(retryTitle);
+      if (!wikitext) continue;
+
+      const parsed = parseFactsByMode(wikitext);
+      const hasTimings = parsed.recharge.pve != null || parsed.activation.pve != null;
+      if (parsed.pve.length === 0 && parsed.wvw.length === 0 && parsed.pvp.length === 0 && !hasTimings) continue;
+
+      const id = titleToId.get(originalTitle);
+      result.set(id, {
+        pve: parsed.pve,
+        wvw: parsed.hasSplit ? parsed.wvw : null,
+        pvp: parsed.hasSplit ? parsed.pvp : null,
+        hasSplit: parsed.hasSplit,
+        recharge: parsed.recharge,
+        activation: parsed.activation,
+      });
+    }
+  }
+
   return result;
 }
 
-module.exports = { groupFactsByMode, parseFactsByMode, resolveEntityFacts };
+module.exports = { groupFactsByMode, parseFactsByMode, resolveEntityFacts, isDisambiguation };

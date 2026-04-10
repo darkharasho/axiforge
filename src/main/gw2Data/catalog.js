@@ -719,7 +719,7 @@ async function getProfessionCatalog(professionId, lang = "en", gameMode = "pve")
   try {
     const client = getWikiClient();
     // resolveEntityFacts expects Map<title, id> — use the first ID per title
-    const resolvedByFirstId = await resolveEntityFacts(client, titleToFirstId);
+    const resolvedByFirstId = await resolveEntityFacts(client, titleToFirstId, { profession: profession.name || professionId });
     // Expand: if multiple entity IDs share a title, give them all the same wiki facts
     for (const [title, ids] of titleToIds) {
       const firstId = ids[0];
