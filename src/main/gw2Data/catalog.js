@@ -100,6 +100,35 @@ const {
   UNTAMED_UNLEASHED_AMBUSH,
 } = require("./overrides");
 
+// Pet ID → wiki family name for disambiguation of pet skills.
+// The GW2 API does not expose pet family; this is derived from the wiki's naming convention.
+// Unique pets (e.g. Bristleback, Smokescale) are omitted — their skills rarely collide.
+const PET_ID_TO_FAMILY = new Map([
+  // Avian
+  [44, "avian"], [10, "avian"], [32, "avian"], [30, "avian"], [31, "avian"], [72, "avian"],
+  // Bear
+  [23, "bear"], [20, "bear"], [24, "bear"], [25, "bear"], [5, "bear"],
+  // Canine
+  [8, "canine"], [29, "canine"], [4, "canine"], [28, "canine"], [22, "canine"],
+  // Devourer
+  [6, "devourer"], [26, "devourer"], [27, "devourer"],
+  // Drake
+  [18, "drake"], [7, "drake"], [45, "drake"], [19, "drake"], [12, "drake"],
+  // Feline
+  [9, "feline"], [3, "feline"], [11, "feline"], [54, "feline"], [47, "feline"],
+  [55, "feline"], [1, "feline"], [63, "feline"], [70, "feline"],
+  // Jellyfish
+  [41, "jellyfish"], [43, "jellyfish"], [42, "jellyfish"],
+  // Moa
+  [13, "moa"], [15, "moa"], [16, "moa"], [17, "moa"], [14, "moa"],
+  // Porcine
+  [38, "porcine"], [37, "porcine"], [2, "porcine"], [39, "porcine"], [64, "porcine"],
+  // Spider
+  [33, "spider"], [34, "spider"], [36, "spider"], [35, "spider"],
+  // Wyvern
+  [48, "wyvern"], [51, "wyvern"],
+]);
+
 async function getProfessionList(lang = "en") {
   return PROFESSIONS_STATIC
     .filter((entry) => entry?.id)
@@ -703,34 +732,70 @@ async function _buildProfessionCatalog(professionId, lang = "en", gameMode = "pv
   });
 
   // ── Wiki fact resolution ─────────────────────────────────────────────────
-  // Build title → IDs mapping. Multiple entities can share a name (e.g. a skill
-  // and a trait both called "Mending"), so map each title to all matching IDs.
-  // The wiki page is fetched once and the parsed facts are applied to every entity.
-  const titleToIds = new Map();
-  const titleToFirstId = new Map(); // for resolveEntityFacts (needs Map<title, id>)
-  for (const entity of [...mappedSkills, ...mappedTraits, ...mappedWeaponSkills]) {
-    if (!entity.name) continue;
-    if (!titleToIds.has(entity.name)) {
-      titleToIds.set(entity.name, []);
-      titleToFirstId.set(entity.name, entity.id);
+  // Build per-entity id → wiki title map. Each entity gets a wiki title to look up;
+  // the resolver deduplicates fetches by title and uses infobox ID matching to
+  // route the right facts to the right entity when names collide.
+  //
+  // Most entities use their bare display name. Pet family skills get pre-disambiguated
+  // with family names (e.g. "Maul (porcine)") because the wiki consistently uses this
+  // convention — this avoids extra round-trips for the resolver's prefix search fallback.
+  //
+  // NOTE: Pet skill IDs also appear in mappedSkills (Ranger's profession.skills lists
+  // them as Profession_1 slots), so we must build the pet family map BEFORE iterating
+  // entities to ensure disambiguation applies regardless of which array contributes the ID.
+
+  // Build skill ID → pet family name lookup from pets data
+  const petFamilyBySkillId = new Map();
+  for (const pet of pets) {
+    const family = PET_ID_TO_FAMILY.get(pet.id) || "";
+    if (!family) continue;
+    for (const skill of pet.skills) {
+      if (skill.id && !petFamilyBySkillId.has(skill.id)) {
+        petFamilyBySkillId.set(skill.id, family);
+      }
     }
-    titleToIds.get(entity.name).push(entity.id);
+  }
+
+  // First pass: add all entities with bare names (deduplicated by ID)
+  const idToTitle = new Map();
+  const seenIds = new Set();
+
+  for (const entity of [...mappedSkills, ...mappedTraits, ...mappedWeaponSkills]) {
+    if (!entity.name || seenIds.has(entity.id)) continue;
+    // Skip synthetic/placeholder entries that have no wiki pages
+    if (entity.id === 999999 || entity.name === "Locked") continue;
+    seenIds.add(entity.id);
+    idToTitle.set(entity.id, entity.name);
+  }
+
+  // Add pet skills not already covered by mappedSkills
+  for (const pet of pets) {
+    for (const skill of pet.skills) {
+      if (!skill.name || seenIds.has(skill.id)) continue;
+      seenIds.add(skill.id);
+      idToTitle.set(skill.id, skill.name);
+    }
+  }
+
+  // Second pass: disambiguate pet family skills whose bare name collides with
+  // another entity. Only add "(family)" suffixes when the name is shared — unique
+  // pet skill names resolve to their bare wiki page just fine.
+  const nameToIds = new Map();
+  for (const [id, title] of idToTitle) {
+    if (!nameToIds.has(title)) nameToIds.set(title, []);
+    nameToIds.get(title).push(id);
+  }
+  for (const [id, title] of idToTitle) {
+    const family = petFamilyBySkillId.get(id);
+    if (family && nameToIds.get(title).length > 1) {
+      idToTitle.set(id, `${title} (${family})`);
+    }
   }
 
   let wikiFactsById = new Map();
   try {
     const client = getWikiClient();
-    // resolveEntityFacts expects Map<title, id> — use the first ID per title
-    const resolvedByFirstId = await resolveEntityFacts(client, titleToFirstId, { profession: profession.name || professionId });
-    // Expand: if multiple entity IDs share a title, give them all the same wiki facts
-    for (const [title, ids] of titleToIds) {
-      const firstId = ids[0];
-      const facts = resolvedByFirstId.get(firstId);
-      if (!facts) continue;
-      for (const id of ids) {
-        wikiFactsById.set(id, facts);
-      }
-    }
+    wikiFactsById = await resolveEntityFacts(client, idToTitle, { profession: profession.name || professionId });
   } catch (err) {
     console.warn("[catalog] Wiki fact resolution failed, using API facts:", err.message);
   }
@@ -744,13 +809,29 @@ async function _buildProfessionCatalog(professionId, lang = "en", gameMode = "pv
   for (const ws of mappedWeaponSkills) {
     applyWikiFacts(ws, wikiFactsById, KNOWN_SKILL_FACTS_OVERRIDES);
   }
+  // Apply wiki facts to pet skills (nested inside pets[].skills[])
+  for (const pet of pets) {
+    for (const skill of pet.skills) {
+      const wikiFacts = wikiFactsById.get(skill.id);
+      if (!wikiFacts) continue;
+      if (wikiFacts.pve.length > 0) skill.facts = wikiFacts.pve;
+      skill.hasSplit = wikiFacts.hasSplit;
+      if (wikiFacts.wvw) skill.wvwFacts = wikiFacts.wvw;
+      if (wikiFacts.pvp) skill.pvpFacts = wikiFacts.pvp;
+      if (wikiFacts.recharge) skill.recharge = wikiFacts.recharge;
+      if (wikiFacts.activation) skill.activation = wikiFacts.activation;
+    }
+  }
 
   // Log missing pages for monitoring
   const resolved = new Set([...wikiFactsById.keys()]).size;
-  const total = titleToFirstId.size;
+  const total = idToTitle.size;
   if (resolved < total) {
-    const missing = [...titleToFirstId.keys()].filter((t) => !wikiFactsById.has(titleToFirstId.get(t)));
-    console.warn(`[catalog] Wiki facts: ${resolved}/${total} resolved. Missing: ${missing.slice(0, 10).join(", ")}${missing.length > 10 ? ` (+${missing.length - 10} more)` : ""}`);
+    const missingIds = [...idToTitle.keys()].filter((id) => !wikiFactsById.has(id));
+    const missingNames = [...new Set(missingIds.map((id) => idToTitle.get(id)))];
+    const preview = missingNames.slice(0, 10).join(", ");
+    const extra = missingNames.length > 10 ? ` (+${missingNames.length - 10} more)` : "";
+    console.warn(`[catalog] Wiki facts: ${resolved}/${total} resolved. Missing: ${preview}${extra}`);
   }
 
   const catalog = {

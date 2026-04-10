@@ -133,26 +133,38 @@ function extractInfoboxId(wikitext) {
 /**
  * Batch-resolve wiki facts for multiple entities.
  *
+ * Accepts a per-entity title map so that the caller (catalog) can provide
+ * disambiguated wiki titles for entities that share a display name.
+ * Internally deduplicates fetches by title — if multiple IDs point to the
+ * same wiki title, the page is fetched once and the parsed facts are shared.
+ *
  * @param {import("./client").WikiClient} client
- * @param {Map<string, number>} titleToId - Map of wiki title to entity ID
+ * @param {Map<number, string>} idToTitle - Map of entity ID to wiki title
  * @param {object} [options]
  * @param {string} [options.profession] - Profession name (e.g. "Warrior") for disambiguation retries
  * @returns {Promise<Map<number, { pve: Object[], wvw: Object[]|null, pvp: Object[]|null, hasSplit: boolean }>>}
  */
-async function resolveEntityFacts(client, titleToId, options = {}) {
+async function resolveEntityFacts(client, idToTitle, options = {}) {
   const result = new Map();
 
-  if (titleToId.size === 0) return result;
+  if (idToTitle.size === 0) return result;
 
-  const titles = [...titleToId.keys()];
+  // Group by title → id[] for batch fetching (avoids duplicate requests)
+  const titleToIds = new Map();
+  for (const [id, title] of idToTitle) {
+    if (!titleToIds.has(title)) titleToIds.set(title, []);
+    titleToIds.get(title).push(id);
+  }
+
+  const titles = [...titleToIds.keys()];
   const wikitextMap = await client.getWikitextBatch(titles);
 
   // Collect disambiguation pages and name collisions for retry
   const disambigRetries = new Map(); // alternative title → original title
-  const nameCollisionRetries = new Map(); // original title → id (wrong infobox type / wrong ID)
+  const nameCollisionRetries = new Map(); // original title → id[] (wrong infobox type / wrong ID)
   const profession = options.profession ? options.profession.toLowerCase() : null;
 
-  for (const [title, id] of titleToId) {
+  for (const [title, ids] of titleToIds) {
     const wikitext = wikitextMap.get(title);
     if (!wikitext) continue; // skip missing pages
 
@@ -165,8 +177,6 @@ async function resolveEntityFacts(client, titleToId, options = {}) {
     }
 
     // Check if page has a Skill or Trait infobox (right page type).
-    // Don't check the specific ID — multiple entities can share a name,
-    // and titleToFirstId may map to a different entity than the wiki page lists.
     const hasSkillOrTraitInfobox = /\{\{(?:Skill|Trait) infobox\b/i.test(wikitext);
     if (!hasSkillOrTraitInfobox) {
       // Wrong page type (location, weapon, NPC, etc.) or no infobox.
@@ -176,17 +186,18 @@ async function resolveEntityFacts(client, titleToId, options = {}) {
       const hasFacts = parsed.pve.length > 0 || parsed.wvw.length > 0 || parsed.pvp.length > 0 || hasTimings;
       if (hasFacts) {
         // Has facts but no infobox — accept it (existing behavior)
-        result.set(id, {
+        const factEntry = {
           pve: parsed.pve,
           wvw: parsed.hasSplit ? parsed.wvw : null,
           pvp: parsed.hasSplit ? parsed.pvp : null,
           hasSplit: parsed.hasSplit,
           recharge: parsed.recharge,
           activation: parsed.activation,
-        });
+        };
+        for (const id of ids) result.set(id, factEntry);
       } else {
         // No infobox AND no facts — likely a wrong page type, queue retry
-        nameCollisionRetries.set(title, id);
+        nameCollisionRetries.set(title, ids);
       }
       continue;
     }
@@ -200,14 +211,34 @@ async function resolveEntityFacts(client, titleToId, options = {}) {
     // keep API facts instead of replacing them with empty arrays.
     if (parsed.pve.length === 0 && parsed.wvw.length === 0 && parsed.pvp.length === 0 && !hasTimings) continue;
 
-    result.set(id, {
+    const factEntry = {
       pve: parsed.pve,
       wvw: parsed.hasSplit ? parsed.wvw : null,
       pvp: parsed.hasSplit ? parsed.pvp : null,
       hasSplit: parsed.hasSplit,
       recharge: parsed.recharge,
       activation: parsed.activation,
-    });
+    };
+
+    // Apply facts to ALL IDs sharing this title. Many skills have multiple API IDs
+    // that map to a single wiki page (e.g. True Nature per legend, Deploy Jade Sphere
+    // per attunement). Giving all IDs the same facts is correct for these variants.
+    for (const id of ids) result.set(id, factEntry);
+
+    // If the page's infobox ID doesn't cover all requesting IDs, queue the unmatched
+    // ones for prefix search — they might be genuinely different entities (e.g. "Maul"
+    // the ranger greatsword vs "Maul" the pet skill). If prefix search finds a better
+    // page, it overwrites the initially-shared facts.
+    if (ids.length > 1) {
+      const infoboxIds = new Set(extractInfoboxId(wikitext));
+      if (infoboxIds.size > 0) {
+        const unmatched = ids.filter((id) => !infoboxIds.has(id));
+        if (unmatched.length > 0) {
+          const existing = nameCollisionRetries.get(title) || [];
+          nameCollisionRetries.set(title, [...existing, ...unmatched]);
+        }
+      }
+    }
   }
 
   // Retry disambiguation pages with profession-specific titles
@@ -223,19 +254,22 @@ async function resolveEntityFacts(client, titleToId, options = {}) {
       const hasTimings = parsed.recharge.pve != null || parsed.activation.pve != null;
       if (parsed.pve.length === 0 && parsed.wvw.length === 0 && parsed.pvp.length === 0 && !hasTimings) continue;
 
-      const id = titleToId.get(originalTitle);
-      result.set(id, {
+      const ids = titleToIds.get(originalTitle);
+      const factEntry = {
         pve: parsed.pve,
         wvw: parsed.hasSplit ? parsed.wvw : null,
         pvp: parsed.hasSplit ? parsed.pvp : null,
         hasSplit: parsed.hasSplit,
         recharge: parsed.recharge,
         activation: parsed.activation,
-      });
+      };
+      for (const id of ids) result.set(id, factEntry);
     }
   }
 
-  // Retry name collision pages via prefix search for "Name (" variants
+  // Retry name collision pages via prefix search for "Name (" variants.
+  // This handles both wrong-type pages (location instead of skill) and infobox ID
+  // mismatches (page is about a different entity with the same name).
   if (nameCollisionRetries.size > 0) {
     // Prefix-search all colliding titles in parallel to find candidate pages
     const searchPromises = [];
@@ -246,23 +280,22 @@ async function resolveEntityFacts(client, titleToId, options = {}) {
     }
     const searchResults = await Promise.all(searchPromises);
 
-    // Collect all candidate titles for a single batch fetch
+    // Collect all candidate titles for a single batch fetch.
+    // Accept any disambiguated page (not just "skill"/"trait" suffixes) — pet skill
+    // pages use family names like "Maul (porcine)". The infobox type/ID check after
+    // fetching is the real filter.
     const candidateToOriginal = new Map(); // candidate title → original title
     for (const { originalTitle, candidates } of searchResults) {
       for (const candidate of candidates) {
-        // Only consider candidates that look like "Name (... skill)" or "Name (... trait)"
-        // Exclude subpages like "Name (skill)/history"
-        if (candidate.includes("/")) continue;
-        if (/\(.*(?:skill|trait)\)$/i.test(candidate)) {
-          candidateToOriginal.set(candidate, originalTitle);
-        }
+        if (candidate.includes("/")) continue; // exclude subpages
+        candidateToOriginal.set(candidate, originalTitle);
       }
     }
 
     if (candidateToOriginal.size > 0) {
       const candidateWikitext = await client.getWikitextBatch([...candidateToOriginal.keys()]);
 
-      // Group candidates by original title, try each until one has a Skill/Trait infobox with facts
+      // Group candidates by original title
       const candidatesByOriginal = new Map(); // original title → [candidate titles]
       for (const [candidate, original] of candidateToOriginal) {
         if (!candidatesByOriginal.has(original)) candidatesByOriginal.set(original, []);
@@ -270,7 +303,11 @@ async function resolveEntityFacts(client, titleToId, options = {}) {
       }
 
       for (const [originalTitle, candidates] of candidatesByOriginal) {
+        const unresolvedIds = new Set(nameCollisionRetries.get(originalTitle));
+
         for (const candidate of candidates) {
+          if (unresolvedIds.size === 0) break;
+
           const wikitext = candidateWikitext.get(candidate);
           if (!wikitext) continue;
 
@@ -280,16 +317,30 @@ async function resolveEntityFacts(client, titleToId, options = {}) {
           const hasTimings = parsed.recharge.pve != null || parsed.activation.pve != null;
           if (parsed.pve.length === 0 && parsed.wvw.length === 0 && parsed.pvp.length === 0 && !hasTimings) continue;
 
-          const id = nameCollisionRetries.get(originalTitle);
-          result.set(id, {
+          const factEntry = {
             pve: parsed.pve,
             wvw: parsed.hasSplit ? parsed.wvw : null,
             pvp: parsed.hasSplit ? parsed.pvp : null,
             hasSplit: parsed.hasSplit,
             recharge: parsed.recharge,
             activation: parsed.activation,
-          });
-          break; // found a valid candidate for this title
+          };
+
+          // Match candidate to specific requesting IDs by infobox ID
+          const infoboxIds = extractInfoboxId(wikitext);
+          const matched = infoboxIds.filter((id) => unresolvedIds.has(id));
+
+          if (matched.length > 0) {
+            for (const id of matched) {
+              result.set(id, factEntry);
+              unresolvedIds.delete(id);
+            }
+          } else if (infoboxIds.length === 0) {
+            // No infobox IDs extractable — apply to all remaining (legacy fallback)
+            for (const id of unresolvedIds) result.set(id, factEntry);
+            unresolvedIds.clear();
+          }
+          // If infobox IDs exist but don't match any requesting ID, skip this candidate
         }
       }
     }

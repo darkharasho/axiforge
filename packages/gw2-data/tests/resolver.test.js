@@ -145,12 +145,12 @@ describe("resolveEntityFacts", () => {
       }),
     });
 
-    const titleToId = new Map([
-      ["Fireball", 5489],
-      ["Heal", 5503],
+    const idToTitle = new Map([
+      [5489, "Fireball"],
+      [5503, "Heal"],
     ]);
 
-    const result = await resolveEntityFacts(client, titleToId);
+    const result = await resolveEntityFacts(client, idToTitle);
 
     expect(result.size).toBe(2);
     expect(result.get(5489).pve.length).toBeGreaterThan(0);
@@ -181,12 +181,12 @@ describe("resolveEntityFacts", () => {
       }),
     });
 
-    const titleToId = new Map([
-      ["Fireball", 5489],
-      ["Nonexistent Skill", 9999],
+    const idToTitle = new Map([
+      [5489, "Fireball"],
+      [9999, "Nonexistent Skill"],
     ]);
 
-    const result = await resolveEntityFacts(client, titleToId);
+    const result = await resolveEntityFacts(client, idToTitle);
 
     expect(result.size).toBe(1);
     expect(result.has(5489)).toBe(true);
@@ -194,8 +194,8 @@ describe("resolveEntityFacts", () => {
   });
 
   test("returns empty map for empty input", async () => {
-    const titleToId = new Map();
-    const result = await resolveEntityFacts(client, titleToId);
+    const idToTitle = new Map();
+    const result = await resolveEntityFacts(client, idToTitle);
 
     expect(result.size).toBe(0);
     expect(mockFetch).not.toHaveBeenCalled();
@@ -228,8 +228,8 @@ describe("resolveEntityFacts", () => {
       }),
     });
 
-    const titleToId = new Map([["Charge", 14401]]);
-    const result = await resolveEntityFacts(client, titleToId, { profession: "Warrior" });
+    const idToTitle = new Map([[14401, "Charge"]]);
+    const result = await resolveEntityFacts(client, idToTitle, { profession: "Warrior" });
 
     expect(result.size).toBe(1);
     expect(result.has(14401)).toBe(true);
@@ -252,8 +252,8 @@ describe("resolveEntityFacts", () => {
       }),
     });
 
-    const titleToId = new Map([["Charge", 14401]]);
-    const result = await resolveEntityFacts(client, titleToId);
+    const idToTitle = new Map([[14401, "Charge"]]);
+    const result = await resolveEntityFacts(client, idToTitle);
 
     expect(result.size).toBe(0);
     expect(mockFetch).toHaveBeenCalledTimes(1);
@@ -300,8 +300,8 @@ describe("resolveEntityFacts", () => {
       }),
     });
 
-    const titleToId = new Map([["Ring of Fire", 5765]]);
-    const result = await resolveEntityFacts(client, titleToId, { profession: "Elementalist" });
+    const idToTitle = new Map([[5765, "Ring of Fire"]]);
+    const result = await resolveEntityFacts(client, idToTitle, { profession: "Elementalist" });
 
     expect(result.size).toBe(1);
     expect(result.has(5765)).toBe(true);
@@ -344,8 +344,8 @@ describe("resolveEntityFacts", () => {
       }),
     });
 
-    const titleToId = new Map([["Zap", 63281]]);
-    const result = await resolveEntityFacts(client, titleToId, { profession: "Elementalist" });
+    const idToTitle = new Map([[63281, "Zap"]]);
+    const result = await resolveEntityFacts(client, idToTitle, { profession: "Elementalist" });
 
     expect(result.size).toBe(1);
     expect(result.has(63281)).toBe(true);
@@ -366,8 +366,8 @@ describe("resolveEntityFacts", () => {
       }),
     });
 
-    const titleToId = new Map([["Fireball", 5489]]);
-    const result = await resolveEntityFacts(client, titleToId, { profession: "Elementalist" });
+    const idToTitle = new Map([[5489, "Fireball"]]);
+    const result = await resolveEntityFacts(client, idToTitle, { profession: "Elementalist" });
 
     expect(result.size).toBe(1);
     expect(result.has(5489)).toBe(true);
@@ -398,8 +398,8 @@ describe("resolveEntityFacts", () => {
       }),
     });
 
-    const titleToId = new Map([["Some Place", 12345]]);
-    const result = await resolveEntityFacts(client, titleToId, { profession: "Warrior" });
+    const idToTitle = new Map([[12345, "Some Place"]]);
+    const result = await resolveEntityFacts(client, idToTitle, { profession: "Warrior" });
 
     expect(result.size).toBe(0);
   });
@@ -440,8 +440,8 @@ describe("resolveEntityFacts", () => {
       }),
     });
 
-    const titleToId = new Map([["Pulmonary Impact", 62710]]);
-    const result = await resolveEntityFacts(client, titleToId, { profession: "Harbinger" });
+    const idToTitle = new Map([[62710, "Pulmonary Impact"]]);
+    const result = await resolveEntityFacts(client, idToTitle, { profession: "Harbinger" });
 
     expect(result.size).toBe(1);
     expect(result.has(62710)).toBe(true);
@@ -483,11 +483,147 @@ describe("resolveEntityFacts", () => {
       }),
     });
 
-    const titleToId = new Map([["Some Skill", 1234]]);
-    const result = await resolveEntityFacts(client, titleToId); // no profession
+    const idToTitle = new Map([[1234, "Some Skill"]]);
+    const result = await resolveEntityFacts(client, idToTitle); // no profession
 
     expect(result.size).toBe(1);
     expect(result.has(1234)).toBe(true);
+  });
+
+  test("resolves different facts for entities with disambiguated titles", async () => {
+    const weaponSkillWikitext = "{{Skill infobox\n| id = 12525\n}}\n{{skill fact|damage|1.5}}\n| recharge = 4";
+    const petSkillWikitext = "{{Skill infobox\n| id = 41406\n}}\n{{skill fact|damage|0.8}}\n| recharge = 10";
+
+    // Both titles fetched in a single batch
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        query: {
+          pages: {
+            "1": { title: "Maul (ranger greatsword skill)", revisions: [{ "*": weaponSkillWikitext }] },
+            "2": { title: "Maul (porcine)", revisions: [{ "*": petSkillWikitext }] },
+          },
+        },
+      }),
+    });
+
+    // Two different IDs, each with their own disambiguated title
+    const idToTitle = new Map([
+      [12525, "Maul (ranger greatsword skill)"],
+      [41406, "Maul (porcine)"],
+    ]);
+
+    const result = await resolveEntityFacts(client, idToTitle, { profession: "Ranger" });
+
+    expect(result.size).toBe(2);
+    // Weapon skill gets its own facts
+    expect(result.get(12525).pve[0].type).toBe("Damage");
+    expect(result.get(12525).recharge.pve).toBe(4);
+    // Pet skill gets different facts
+    expect(result.get(41406).pve[0].type).toBe("Damage");
+    expect(result.get(41406).recharge.pve).toBe(10);
+    // Only one batch fetch needed (both titles in the same request)
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  test("uses infobox ID matching to refine facts for colliding names", async () => {
+    // Wiki page "Maul" is about the ranger greatsword skill (id 12525).
+    // A pet skill (id 41406) shares the name "Maul" — it initially gets the same
+    // facts, but the resolver's prefix search finds a better-matched page and
+    // overwrites with the correct facts.
+    const mainPageWikitext = "{{Skill infobox\n| id = 12525\n}}\n{{skill fact|damage|1.5}}\n| recharge = 4";
+    const petPageWikitext = "{{Skill infobox\n| id = 41406\n}}\n{{skill fact|damage|0.8}}\n| recharge = 10";
+
+    // Initial batch: both IDs request "Maul"
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        query: {
+          pages: {
+            "1": { title: "Maul", revisions: [{ "*": mainPageWikitext }] },
+          },
+        },
+      }),
+    });
+
+    // Prefix search for "Maul (" returns candidates
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        query: {
+          prefixsearch: [
+            { title: "Maul (porcine)" },
+            { title: "Maul (ranger greatsword skill)" },
+          ],
+        },
+      }),
+    });
+
+    // Batch fetch of prefix search candidates
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        query: {
+          pages: {
+            "2": { title: "Maul (porcine)", revisions: [{ "*": petPageWikitext }] },
+            "3": { title: "Maul (ranger greatsword skill)", revisions: [{ "*": mainPageWikitext }] },
+          },
+        },
+      }),
+    });
+
+    // Both IDs share the same bare title "Maul"
+    const idToTitle = new Map([
+      [12525, "Maul"],
+      [41406, "Maul"],
+    ]);
+
+    const result = await resolveEntityFacts(client, idToTitle, { profession: "Ranger" });
+
+    expect(result.size).toBe(2);
+    // Weapon skill matched by infobox ID on the main page
+    expect(result.get(12525).recharge.pve).toBe(4);
+    // Pet skill: initially got main page facts, then overwritten by prefix search match
+    expect(result.get(41406).recharge.pve).toBe(10);
+  });
+
+  test("shares facts across variant IDs when page lists matching infobox ID", async () => {
+    // "True Nature" has multiple API IDs (one per legend) but one wiki page.
+    // The wiki lists only one ID in its infobox. All IDs should get the facts,
+    // and unmatched IDs get queued for prefix search (which finds nothing, so
+    // they keep the initially-shared facts).
+    const wikitext = "{{Skill infobox\n| id = 29393\n}}\n{{skill fact|damage|0.5}}\n| recharge = 1";
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        query: {
+          pages: {
+            "1": { title: "True Nature", revisions: [{ "*": wikitext }] },
+          },
+        },
+      }),
+    });
+
+    // Prefix search for unmatched IDs — finds nothing useful
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ query: { prefixsearch: [] } }),
+    });
+
+    const idToTitle = new Map([
+      [29393, "True Nature"],
+      [51675, "True Nature"],
+      [51714, "True Nature"],
+    ]);
+
+    const result = await resolveEntityFacts(client, idToTitle);
+
+    // All 3 IDs should have facts (shared from the one wiki page)
+    expect(result.size).toBe(3);
+    expect(result.get(29393).recharge.pve).toBe(1);
+    expect(result.get(51675).recharge.pve).toBe(1);
+    expect(result.get(51714).recharge.pve).toBe(1);
   });
 
   test("skips pages with no fact templates (keeps API facts)", async () => {
@@ -504,8 +640,8 @@ describe("resolveEntityFacts", () => {
       }),
     });
 
-    const titleToId = new Map([["Piercing Shards", 1234]]);
-    const result = await resolveEntityFacts(client, titleToId);
+    const idToTitle = new Map([[1234, "Piercing Shards"]]);
+    const result = await resolveEntityFacts(client, idToTitle);
 
     // Should NOT have an entry — empty facts would wipe valid API facts
     expect(result.size).toBe(0);
