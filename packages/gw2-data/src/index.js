@@ -13,6 +13,7 @@ const { parseRelatedItems, parseRelatedGroups } = require("./wiki/relations");
 const { mergeFacts } = require("./facts/merge");
 const { buildMatchTables, valueChanged, VALUE_KEYS } = require("./facts/match");
 const { normalizeFactType, stripGw2Markup, stripWikiMarkup } = require("./facts/normalize");
+const engine = require("./engine");
 
 module.exports = {
   // Wiki layer
@@ -45,4 +46,15 @@ module.exports = {
   normalizeFactType,
   stripGw2Markup,
   stripWikiMarkup,
+
+  // Engine
+  StatEngine: engine.StatEngine,
+  computeAttributes: engine.computeAttributes,
+  computeSlotStats: engine.computeSlotStats,
+  collectModifiers: engine.collectModifiers,
+  computeTooltip: engine.computeTooltip,
+  analyzeBoons: engine.analyzeBoons,
+  analyzeCombos: engine.analyzeCombos,
+  loadOverrides: engine.loadOverrides,
+  buildInteractionGraph: engine.buildInteractionGraph,
 };
