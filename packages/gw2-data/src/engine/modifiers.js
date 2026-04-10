@@ -135,9 +135,19 @@ function collectModifiers(ctx, catalogs, overrides) {
     }
 
     // 5. BuffConversion / AttributeConversion facts — conversion
+    //    Group by source+target pair and pick PvE (index 0) or WvW (index 1),
+    //    mirroring the dedup logic used for AttributeAdjust facts above.
+    const convByPair = new Map();
     for (const fact of trait.facts) {
       if (fact.type !== "AttributeConversion" && fact.type !== "BuffConversion") continue;
       if (!fact.source || !fact.target || !fact.percent) continue;
+      const pairKey = `${fact.source}|${fact.target}`;
+      if (!convByPair.has(pairKey)) convByPair.set(pairKey, []);
+      convByPair.get(pairKey).push(fact);
+    }
+    for (const [, facts] of convByPair) {
+      const idx = gameMode === "wvw" ? Math.min(1, facts.length - 1) : 0;
+      const fact = facts[idx];
       const targetKey = CONVERSION_TARGET_MAP[fact.target] || fact.target;
       modifiers.push({
         source,

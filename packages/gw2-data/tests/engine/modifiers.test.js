@@ -342,4 +342,53 @@ describe("collectModifiers()", () => {
     const mods = collectModifiers(ctx, {}, makeOverrides());
     expect(mods).toEqual([]);
   });
+
+  // Blood Reaction bug: GW2 API returns multiple BuffConversion facts for
+  // same source→target pair with different percentages (PvE/WvW variants).
+  // Only the first (PvE) or second (WvW) should be used — not all summed.
+  it("deduplicates BuffConversion facts by source+target (PvE picks first)", () => {
+    const traitId = 2011;
+    const trait = {
+      slot: "Major",
+      description: "Blood Reaction",
+      facts: [
+        { type: "BuffConversion", source: "Precision", target: "CritDamage", percent: 12 },
+        { type: "BuffConversion", source: "Precision", target: "CritDamage", percent: 10 },
+        { type: "BuffConversion", source: "Precision", target: "CritDamage", percent: 5 },
+        { type: "BuffConversion", source: "Power", target: "ConditionDamage", percent: 10 },
+        { type: "BuffConversion", source: "Power", target: "ConditionDamage", percent: 15 },
+      ],
+    };
+    const catalogs = makeCatalogs({ [traitId]: trait });
+    const ctx = makeCtx([{ id: 1, majorChoices: { 1: traitId } }], "pve");
+
+    const mods = collectModifiers(ctx, catalogs, makeOverrides());
+    const convMods = mods.filter((m) => m.type === "conversion");
+    expect(convMods).toHaveLength(2);
+    expect(convMods[0]).toMatchObject({ sourceAttr: "Precision", target: "Ferocity", percent: 12 });
+    expect(convMods[1]).toMatchObject({ sourceAttr: "Power", target: "ConditionDamage", percent: 10 });
+  });
+
+  it("deduplicates BuffConversion facts by source+target (WvW picks second)", () => {
+    const traitId = 2011;
+    const trait = {
+      slot: "Major",
+      description: "Blood Reaction",
+      facts: [
+        { type: "BuffConversion", source: "Precision", target: "CritDamage", percent: 12 },
+        { type: "BuffConversion", source: "Precision", target: "CritDamage", percent: 10 },
+        { type: "BuffConversion", source: "Precision", target: "CritDamage", percent: 5 },
+        { type: "BuffConversion", source: "Power", target: "ConditionDamage", percent: 10 },
+        { type: "BuffConversion", source: "Power", target: "ConditionDamage", percent: 15 },
+      ],
+    };
+    const catalogs = makeCatalogs({ [traitId]: trait });
+    const ctx = makeCtx([{ id: 1, majorChoices: { 1: traitId } }], "wvw");
+
+    const mods = collectModifiers(ctx, catalogs, makeOverrides());
+    const convMods = mods.filter((m) => m.type === "conversion");
+    expect(convMods).toHaveLength(2);
+    expect(convMods[0]).toMatchObject({ sourceAttr: "Precision", target: "Ferocity", percent: 10 });
+    expect(convMods[1]).toMatchObject({ sourceAttr: "Power", target: "ConditionDamage", percent: 15 });
+  });
 });
