@@ -6,6 +6,7 @@ import {
   STACKING_SIGIL_DEFS,
   MIGHT_POWER_PER_STACK, MIGHT_CONDI_PER_STACK,
   AQUATIC_SLOTS, LAND_ONLY_SLOTS,
+  SIGNET_PASSIVE_BUFFS,
 } from "./engine-bridge.js";
 import { GW2_WEAPONS_BY_ID, getEffectiveStats } from "./constants.js";
 import {
@@ -269,6 +270,24 @@ export function computeStatBreakdown(statKey, assumedBoons = null, sigilStacks =
         const key = MAP[m[2]] || m[2];
         if (key === statKey) entries.push({ source: `${utilDef.name}`, value: Number(m[1]) });
       }
+    }
+  }
+
+  // Signet passive buffs
+  const isUnderwater = Boolean(state.editor.underwaterMode);
+  const skills = isUnderwater ? (state.editor.underwaterSkills || {}) : (state.editor.skills || {});
+  const signetSkillIds = [
+    skills.healId,
+    ...(skills.utilityIds || []),
+    skills.eliteId,
+  ].filter(Boolean).map(Number);
+  for (const skillId of signetSkillIds) {
+    const buff = SIGNET_PASSIVE_BUFFS.get(skillId);
+    if (buff && buff.stat === statKey) {
+      const catalog = state.activeCatalog;
+      const skillData = catalog?.skillById?.get(skillId);
+      const name = skillData?.name || `Signet (${skillId})`;
+      entries.push({ source: `Signet (${name})`, value: buff.value, icon: skillData?.icon });
     }
   }
 

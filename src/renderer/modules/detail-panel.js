@@ -308,7 +308,10 @@ export function resolveEntityFacts(entity) {
     if (f.type === "NoData") return true;
     const statusKey = (f.status || "").trim();
     if (statusKey) {
-      const key = `status:${statusKey}|${f.apply_count || ""}`;
+      // Distinguish passive (duration 0) from active (duration > 0) signet-style
+      // buffs that share the same status name (e.g. "Signet of Fury").
+      const durBucket = (f.duration || 0) === 0 ? "p" : "a";
+      const key = `status:${statusKey}|${f.apply_count || ""}|${durBucket}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
