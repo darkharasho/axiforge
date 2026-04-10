@@ -346,6 +346,27 @@ describe("collectModifiers()", () => {
   // Blood Reaction bug: GW2 API returns multiple BuffConversion facts for
   // same source→target pair with different percentages (PvE/WvW variants).
   // Only the first (PvE) or second (WvW) should be used — not all summed.
+  it("marks berserkConditional override traits with condition: 'berserk'", () => {
+    const traitId = 2046;
+    const trait = {
+      slot: "Minor",
+      description: "Fatal Frenzy",
+      facts: [
+        { type: "AttributeAdjust", target: "Power", value: 150 },
+        { type: "AttributeAdjust", target: "ConditionDamage", value: 300 },
+      ],
+    };
+    const catalogs = makeCatalogs({ [traitId]: trait });
+    const ctx = makeCtx([{ id: 1, majorChoices: { 1: traitId } }]);
+    const overrides = makeOverrides({ "trait:2046": { berserkConditional: true } });
+
+    const mods = collectModifiers(ctx, catalogs, overrides);
+    const flatMods = mods.filter((m) => m.type === "flatBonus");
+    expect(flatMods).toHaveLength(2);
+    expect(flatMods[0].condition).toBe("berserk");
+    expect(flatMods[1].condition).toBe("berserk");
+  });
+
   it("deduplicates BuffConversion facts by source+target (PvE picks first)", () => {
     const traitId = 2011;
     const trait = {

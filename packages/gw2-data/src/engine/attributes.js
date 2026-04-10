@@ -391,11 +391,14 @@ function computeAttributes(ctx, catalogs) {
   const traitStats = zeroStats();
   const modifiers = collectModifiers(ctx, catalogs, overrides);
   const furyAssumed = Boolean(ctx.assumedBoons?.fury);
+  const berserkActive = Boolean(ctx.berserkActive);
 
   for (const mod of modifiers) {
     if (mod.type !== "flatBonus") continue;
-    // Apply if: passive (condition === null) OR fury condition and fury is assumed
-    if (mod.condition === null || (mod.condition === "fury" && furyAssumed)) {
+    // Apply if: passive (condition === null), fury (when assumed), or berserk (when toggled)
+    if (mod.condition === null
+        || (mod.condition === "fury" && furyAssumed)
+        || (mod.condition === "berserk" && berserkActive)) {
       if (mod.target in traitStats) {
         traitStats[mod.target] += mod.value;
       }

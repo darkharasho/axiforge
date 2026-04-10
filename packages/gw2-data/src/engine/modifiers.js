@@ -113,7 +113,8 @@ function collectModifiers(ctx, catalogs, overrides) {
     if (!trait?.facts) continue;
 
     const fury = isFuryTrait(trait, traitId, overrides);
-    const condition = fury ? "fury" : null;
+    const condition = override?.berserkConditional ? "berserk"
+      : fury ? "fury" : null;
 
     // 4. AttributeAdjust facts — flatBonus
     const byTarget = new Map();
