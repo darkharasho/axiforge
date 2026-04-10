@@ -693,21 +693,34 @@ async function getProfessionCatalog(professionId, lang = "en", gameMode = "pve")
   });
 
   // ── Wiki fact resolution ─────────────────────────────────────────────────
-  const titleToId = new Map();
-  for (const s of mappedSkills) {
-    if (s.name) titleToId.set(s.name, s.id);
-  }
-  for (const t of mappedTraits) {
-    if (t.name) titleToId.set(t.name, t.id);
-  }
-  for (const ws of mappedWeaponSkills) {
-    if (ws.name) titleToId.set(ws.name, ws.id);
+  // Build title → IDs mapping. Multiple entities can share a name (e.g. a skill
+  // and a trait both called "Mending"), so map each title to all matching IDs.
+  // The wiki page is fetched once and the parsed facts are applied to every entity.
+  const titleToIds = new Map();
+  const titleToFirstId = new Map(); // for resolveEntityFacts (needs Map<title, id>)
+  for (const entity of [...mappedSkills, ...mappedTraits, ...mappedWeaponSkills]) {
+    if (!entity.name) continue;
+    if (!titleToIds.has(entity.name)) {
+      titleToIds.set(entity.name, []);
+      titleToFirstId.set(entity.name, entity.id);
+    }
+    titleToIds.get(entity.name).push(entity.id);
   }
 
   let wikiFactsById = new Map();
   try {
     const client = getWikiClient();
-    wikiFactsById = await resolveEntityFacts(client, titleToId);
+    // resolveEntityFacts expects Map<title, id> — use the first ID per title
+    const resolvedByFirstId = await resolveEntityFacts(client, titleToFirstId);
+    // Expand: if multiple entity IDs share a title, give them all the same wiki facts
+    for (const [title, ids] of titleToIds) {
+      const firstId = ids[0];
+      const facts = resolvedByFirstId.get(firstId);
+      if (!facts) continue;
+      for (const id of ids) {
+        wikiFactsById.set(id, facts);
+      }
+    }
   } catch (err) {
     console.warn("[catalog] Wiki fact resolution failed, using API facts:", err.message);
   }
@@ -723,10 +736,10 @@ async function getProfessionCatalog(professionId, lang = "en", gameMode = "pve")
   }
 
   // Log missing pages for monitoring
-  const resolved = wikiFactsById.size;
-  const total = titleToId.size;
+  const resolved = new Set([...wikiFactsById.keys()]).size;
+  const total = titleToFirstId.size;
   if (resolved < total) {
-    const missing = [...titleToId.keys()].filter((t) => !wikiFactsById.has(titleToId.get(t)));
+    const missing = [...titleToFirstId.keys()].filter((t) => !wikiFactsById.has(titleToFirstId.get(t)));
     console.warn(`[catalog] Wiki facts: ${resolved}/${total} resolved. Missing: ${missing.slice(0, 10).join(", ")}${missing.length > 10 ? ` (+${missing.length - 10} more)` : ""}`);
   }
 

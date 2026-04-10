@@ -225,12 +225,20 @@ export function bindHoverPreview(node, kind, entityProvider) {
 export function resolveEntityFacts(entity) {
   const gameMode = state.editor?.gameMode || "pve";
 
-  // Select the appropriate fact set based on game mode
+  // Select the appropriate fact set based on game mode.
+  // PvP falls back to WvW facts (GW2 frequently shares WvW/PvP balance),
+  // then to PvE facts as a last resort.
   let baseFacts;
   if (gameMode === "wvw" && Array.isArray(entity.wvwFacts)) {
     baseFacts = entity.wvwFacts;
-  } else if (gameMode === "pvp" && Array.isArray(entity.pvpFacts)) {
-    baseFacts = entity.pvpFacts;
+  } else if (gameMode === "pvp") {
+    if (Array.isArray(entity.pvpFacts)) {
+      baseFacts = entity.pvpFacts;
+    } else if (Array.isArray(entity.wvwFacts)) {
+      baseFacts = entity.wvwFacts;
+    } else {
+      baseFacts = Array.isArray(entity.facts) ? entity.facts : [];
+    }
   } else {
     baseFacts = Array.isArray(entity.facts) ? entity.facts : [];
   }
