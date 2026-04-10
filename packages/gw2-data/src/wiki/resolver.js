@@ -281,14 +281,21 @@ async function resolveEntityFacts(client, titleToId, options = {}) {
 
       const round2Titles = [...round2Map.keys()];
       const round2Wikitext = await client.getWikitextBatch(round2Titles);
+      const stillMissing2 = new Map(); // original title → id
 
       for (const [retryTitle, originalTitle] of round2Map) {
         const wikitext = round2Wikitext.get(retryTitle);
-        if (!wikitext) continue;
+        if (!wikitext) {
+          stillMissing2.set(originalTitle, stillMissing.get(originalTitle));
+          continue;
+        }
 
         const parsed = parseFactsByMode(wikitext);
         const hasTimings = parsed.recharge.pve != null || parsed.activation.pve != null;
-        if (parsed.pve.length === 0 && parsed.wvw.length === 0 && parsed.pvp.length === 0 && !hasTimings) continue;
+        if (parsed.pve.length === 0 && parsed.wvw.length === 0 && parsed.pvp.length === 0 && !hasTimings) {
+          stillMissing2.set(originalTitle, stillMissing.get(originalTitle));
+          continue;
+        }
 
         const id = stillMissing.get(originalTitle);
         result.set(id, {
@@ -299,6 +306,36 @@ async function resolveEntityFacts(client, titleToId, options = {}) {
           recharge: parsed.recharge,
           activation: parsed.activation,
         });
+      }
+
+      // Round 3: "Name (trait skill)" for remaining
+      if (stillMissing2.size > 0) {
+        const round3Map = new Map(); // retry title → original title
+        for (const [title] of stillMissing2) {
+          round3Map.set(`${title} (trait skill)`, title);
+        }
+
+        const round3Titles = [...round3Map.keys()];
+        const round3Wikitext = await client.getWikitextBatch(round3Titles);
+
+        for (const [retryTitle, originalTitle] of round3Map) {
+          const wikitext = round3Wikitext.get(retryTitle);
+          if (!wikitext) continue;
+
+          const parsed = parseFactsByMode(wikitext);
+          const hasTimings = parsed.recharge.pve != null || parsed.activation.pve != null;
+          if (parsed.pve.length === 0 && parsed.wvw.length === 0 && parsed.pvp.length === 0 && !hasTimings) continue;
+
+          const id = stillMissing2.get(originalTitle);
+          result.set(id, {
+            pve: parsed.pve,
+            wvw: parsed.hasSplit ? parsed.wvw : null,
+            pvp: parsed.hasSplit ? parsed.pvp : null,
+            hasSplit: parsed.hasSplit,
+            recharge: parsed.recharge,
+            activation: parsed.activation,
+          });
+        }
       }
     }
   }

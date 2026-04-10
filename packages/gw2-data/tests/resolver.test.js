@@ -395,11 +395,77 @@ describe("resolveEntityFacts", () => {
       }),
     });
 
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        query: {
+          pages: { "-1": { title: "Some Place (trait skill)", missing: true } },
+        },
+      }),
+    });
+
     const titleToId = new Map([["Some Place", 12345]]);
     const result = await resolveEntityFacts(client, titleToId, { profession: "Warrior" });
 
     expect(result.size).toBe(0);
-    expect(mockFetch).toHaveBeenCalledTimes(3);
+    expect(mockFetch).toHaveBeenCalledTimes(4);
+  });
+
+  test("falls back to (trait skill) suffix when profession and generic suffixes fail", async () => {
+    const locationWikitext = "{{Location infobox\n| name = Pulmonary Impact\n| id = 99\n}}";
+    const traitSkillWikitext = "{{Skill infobox\n| id = 62710\n}}\n{{skill fact|damage|1.2}}";
+
+    // Round 0: initial fetch returns wrong page type
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        query: {
+          pages: {
+            "1": { title: "Pulmonary Impact", revisions: [{ "*": locationWikitext }] },
+          },
+        },
+      }),
+    });
+
+    // Round 1: "(harbinger skill)" — missing
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        query: {
+          pages: { "-1": { title: "Pulmonary Impact (harbinger skill)", missing: true } },
+        },
+      }),
+    });
+
+    // Round 2: "(skill)" — missing
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        query: {
+          pages: { "-1": { title: "Pulmonary Impact (skill)", missing: true } },
+        },
+      }),
+    });
+
+    // Round 3: "(trait skill)" — found!
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        query: {
+          pages: {
+            "5": { title: "Pulmonary Impact (trait skill)", revisions: [{ "*": traitSkillWikitext }] },
+          },
+        },
+      }),
+    });
+
+    const titleToId = new Map([["Pulmonary Impact", 62710]]);
+    const result = await resolveEntityFacts(client, titleToId, { profession: "Harbinger" });
+
+    expect(result.size).toBe(1);
+    expect(result.has(62710)).toBe(true);
+    expect(result.get(62710).pve[0].type).toBe("Damage");
+    expect(mockFetch).toHaveBeenCalledTimes(4);
   });
 
   test("skips pages with no fact templates (keeps API facts)", async () => {
