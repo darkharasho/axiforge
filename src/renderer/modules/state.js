@@ -59,6 +59,10 @@ export const state = {
   editorDirty: false,
   detail: null,
   wikiCache: new Map(),
+  wikiResolution: {
+    pending: new Set(),
+    resolved: new Set(),
+  },
   openCustomSelect: null,
   // Per-build/comp publish progress: { [id]: { currentStep, result, error } }
   publishProgress: {},

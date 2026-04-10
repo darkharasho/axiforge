@@ -223,7 +223,17 @@ export function bindHoverPreview(node, kind, entityProvider) {
  * would otherwise cause fact bloat when any matching trait is selected.
  */
 export function resolveEntityFacts(entity) {
-  const baseFacts = Array.isArray(entity.facts) ? entity.facts : [];
+  const gameMode = state.editor?.gameMode || "pve";
+
+  // Select the appropriate fact set based on game mode
+  let baseFacts;
+  if (gameMode === "wvw" && Array.isArray(entity.wvwFacts)) {
+    baseFacts = entity.wvwFacts;
+  } else if (gameMode === "pvp" && Array.isArray(entity.pvpFacts)) {
+    baseFacts = entity.pvpFacts;
+  } else {
+    baseFacts = Array.isArray(entity.facts) ? entity.facts : [];
+  }
   const traitedFacts = Array.isArray(entity.traitedFacts) ? entity.traitedFacts : [];
 
   // Apply traited_facts overrides when the required trait is active.
