@@ -384,10 +384,15 @@ export function buildSkillCard(skill, kind, isChained = false, dmgStats = null) 
   const cardAlacrity = isSkillCard && getAssumedBoons().alacrity;
   const burstRch = isSkillCard && skill.slot === "Profession_1" ? (computeUpgradeModifiers().get("Burst Recharge") || 0) : 0;
 
-  // Filter Recharge facts out of the list when we have infobox recharge data
+  // Build timing data: prefer wiki infobox, fall back to extracting from facts
   const isEquip = kind.startsWith("equip-");
-  const hasInfoboxRecharge = !isEquip && skill.recharge?.pve != null;
-  const displayFacts = hasInfoboxRecharge ? rawFacts.filter((f) => f.type !== "Recharge") : rawFacts;
+  let timingEntity = skill;
+  if (!isEquip && !skill.recharge?.pve) {
+    const rchFact = rawFacts.find((f) => f.type === "Recharge" && f.value > 0);
+    if (rchFact) timingEntity = { ...skill, recharge: { pve: rchFact.value } };
+  }
+  const hasRechargeHeader = !isEquip && timingEntity.recharge?.pve != null;
+  const displayFacts = hasRechargeHeader ? rawFacts.filter((f) => f.type !== "Recharge") : rawFacts;
 
   const factsItems = displayFacts
     .map((fact) => {
@@ -400,7 +405,7 @@ export function buildSkillCard(skill, kind, isChained = false, dmgStats = null) 
   const meta = getHoverMetaLine(kind, skill);
 
   // Build timing badges for the header top-right (recharge + cast time)
-  const timingBadges = isEquip ? "" : _buildTimingBadges(skill, cardAlacrity, burstRch);
+  const timingBadges = isEquip ? "" : _buildTimingBadges(timingEntity, cardAlacrity, burstRch);
 
   return `
     ${isChained ? `<div class="hover-preview__chain-divider">▸</div>` : ""}
@@ -604,6 +609,18 @@ export function hideHoverPreview() {
 export async function selectDetail(kind, entity) {
   if (_readOnly) return;
   if (!entity) return;
+  const facts = resolveEntityFacts(entity);
+  // Fall back to extracting timing from facts when wiki infobox data isn't available
+  let recharge = entity.recharge || null;
+  let activation = entity.activation || null;
+  if (!recharge) {
+    const rchFact = facts.find((f) => f.type === "Recharge" && f.value > 0);
+    if (rchFact) recharge = { pve: rchFact.value };
+  }
+  if (!activation) {
+    const actFact = facts.find((f) => f.type === "Time" && /cast|activation/i.test(f.text || "") && f.duration > 0);
+    if (actFact) activation = { pve: actFact.duration };
+  }
   const detail = {
     kind,
     entityId: Number(entity.id) || null,
@@ -612,13 +629,13 @@ export async function selectDetail(kind, entity) {
     icon: entity.icon || "",
     iconFallback: entity.iconFallback || "",
     description: stripGw2Markup(entity.description),
-    facts: resolveEntityFacts(entity),
+    facts,
     wiki: { loading: true, summary: "", url: "" },
     hasSplit: Boolean(entity.hasSplit),
     isAquaticOnly: _isAquaticOnlySkill(kind, entity),
     slot: entity.slot || "",
-    recharge: entity.recharge || null,
-    activation: entity.activation || null,
+    recharge,
+    activation,
   };
   state.detail = detail;
   renderDetailPanel();

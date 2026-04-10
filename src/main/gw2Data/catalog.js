@@ -693,7 +693,8 @@ async function getProfessionCatalog(professionId, lang = "en", gameMode = "pve")
       dualWield: skill.dual_attunement === "None" ? "" : (skill.dual_attunement || ""),
       weaponType: skill.weapon_type === "None" ? "" : (skill.weapon_type || ""),
       flags: Array.isArray(skill.flags) ? skill.flags : [],
-      facts: Array.isArray(skill.facts) ? skill.facts : [],
+      facts: Array.isArray(skill.facts) ? skill.facts.filter((f) => !f.requires_trait) : [],
+      traitedFacts: Array.isArray(skill.traited_facts) ? skill.traited_facts : [],
       flipSkill: Number(skill.flip_skill) || 0,
     };
     return mapped;
@@ -718,7 +719,7 @@ async function getProfessionCatalog(professionId, lang = "en", gameMode = "pve")
   try {
     const client = getWikiClient();
     // resolveEntityFacts expects Map<title, id> — use the first ID per title
-    const resolvedByFirstId = await resolveEntityFacts(client, titleToFirstId);
+    const resolvedByFirstId = await resolveEntityFacts(client, titleToFirstId, { profession: profession.name || professionId });
     // Expand: if multiple entity IDs share a title, give them all the same wiki facts
     for (const [title, ids] of titleToIds) {
       const firstId = ids[0];

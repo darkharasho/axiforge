@@ -283,8 +283,9 @@ function mapWikiFactToApiFact(factType, positional, params, isWvw, isUniversal) 
     };
   }
 
-  // ── Attribute Gain / Conversion ───────────────────────────────────────
-  if (type === "gain" || type === "attribute") {
+  // ── Attribute Conversion (gain) ──────────────────────────────────────
+  // {{skill fact|gain|source=Power|target=Condition Damage|percent=10}}
+  if (type === "gain") {
     const source = stripWikiMarkup(params.source) || "";
     const target = stripWikiMarkup(params.target) || "";
     const percent = parseFloat(stripWikiMarkup(params.percent) || "0");
@@ -294,6 +295,19 @@ function mapWikiFactToApiFact(factType, positional, params, isWvw, isUniversal) 
       source,
       target,
       percent,
+    };
+  }
+
+  // ── Flat attribute bonus ──────────────────────────────────────────────
+  // {{skill fact|attribute|Concentration|120}}
+  if (type === "attribute") {
+    const attrName = stripWikiMarkup(positional[0]) || "";
+    const value = parseInt(stripWikiMarkup(positional[1] || params.base) || "0", 10);
+    return {
+      type: "AttributeAdjust",
+      text: attrName,
+      target: attrName,
+      value,
     };
   }
 

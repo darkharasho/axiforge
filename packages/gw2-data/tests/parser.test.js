@@ -198,6 +198,22 @@ describe("mapWikiFactToApiFact", () => {
     });
   });
 
+  test("flat attribute bonus produces AttributeAdjust", () => {
+    const fact = mapWikiFactToApiFact(
+      "attribute",
+      ["Concentration", "120"],
+      {},
+      true,
+      false
+    );
+    expect(fact).toEqual({
+      type: "AttributeAdjust",
+      text: "Concentration",
+      target: "Concentration",
+      value: 120,
+    });
+  });
+
   test("effect produces Buff with status from positional[0] and duration from positional[1]", () => {
     const fact = mapWikiFactToApiFact("effect", ["Superspeed", "5"], { stacks: "2" }, true, false);
     expect(fact).toEqual({

@@ -27,7 +27,7 @@
   align-items: center;
 }
 
-.detail-card header img {
+.detail-card header > img {
   width: 56px;
   height: 56px;
   border-radius: 10px;

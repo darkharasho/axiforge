@@ -4,6 +4,7 @@ const {
   groupFactsByMode,
   parseFactsByMode,
   resolveEntityFacts,
+  isDisambiguation,
 } = require("../src/wiki/resolver");
 const { WikiClient } = require("../src/wiki/client");
 const { MemoryCache } = require("../src/wiki/cache");
@@ -199,6 +200,64 @@ describe("resolveEntityFacts", () => {
     expect(mockFetch).not.toHaveBeenCalled();
   });
 
+  test("retries disambiguation pages with profession-specific suffix", async () => {
+    const disambigWikitext = "'''Charge''' may refer to:\n{{disambig}}\n* [[Charge (warrior skill)]]\n* [[Charge (ranger skill)]]";
+    const realWikitext = "{{skill fact|damage|0.8}}\n| recharge = 10";
+
+    // First fetch: returns the disambig page
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        query: {
+          pages: {
+            "100": { title: "Charge", revisions: [{ "*": disambigWikitext }] },
+          },
+        },
+      }),
+    });
+    // Second fetch: retry with "Charge (warrior skill)"
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        query: {
+          pages: {
+            "200": { title: "Charge (warrior skill)", revisions: [{ "*": realWikitext }] },
+          },
+        },
+      }),
+    });
+
+    const titleToId = new Map([["Charge", 14401]]);
+    const result = await resolveEntityFacts(client, titleToId, { profession: "Warrior" });
+
+    expect(result.size).toBe(1);
+    expect(result.has(14401)).toBe(true);
+    expect(result.get(14401).pve[0].type).toBe("Damage");
+    expect(result.get(14401).recharge.pve).toBe(10);
+    // Should have made 2 fetch calls: original batch + retry batch
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  test("skips disambiguation pages when no profession provided", async () => {
+    const disambigWikitext = "'''Charge''' may refer to:\n{{disambig}}";
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        query: {
+          pages: {
+            "100": { title: "Charge", revisions: [{ "*": disambigWikitext }] },
+          },
+        },
+      }),
+    });
+
+    const titleToId = new Map([["Charge", 14401]]);
+    const result = await resolveEntityFacts(client, titleToId);
+
+    expect(result.size).toBe(0);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
   test("skips pages with no fact templates (keeps API facts)", async () => {
     // A wiki page exists but has no {{skill fact|...}} or {{trait fact|...}} templates
     const noFactsWikitext = "'''Piercing Shards''' is a trait for Elementalist that makes ice shards pierce.";
@@ -219,5 +278,27 @@ describe("resolveEntityFacts", () => {
     // Should NOT have an entry — empty facts would wipe valid API facts
     expect(result.size).toBe(0);
     expect(result.has(1234)).toBe(false);
+  });
+});
+
+describe("isDisambiguation", () => {
+  test("detects {{disambig}} template", () => {
+    expect(isDisambiguation("Some text\n{{disambig}}\n* [[Link]]")).toBe(true);
+  });
+
+  test("detects {{disambiguation}} template", () => {
+    expect(isDisambiguation("{{disambiguation}}\n* [[Link]]")).toBe(true);
+  });
+
+  test("detects {{disambig|...}} with parameters", () => {
+    expect(isDisambiguation("{{disambig|skill}}\n* [[Link]]")).toBe(true);
+  });
+
+  test("returns false for normal skill pages", () => {
+    expect(isDisambiguation("{{skill fact|damage|0.8}}\n| recharge = 10")).toBe(false);
+  });
+
+  test("returns false for pages mentioning disambig in prose", () => {
+    expect(isDisambiguation("This page is not a disambiguation page")).toBe(false);
   });
 });
