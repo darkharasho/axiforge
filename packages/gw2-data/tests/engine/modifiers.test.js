@@ -367,6 +367,70 @@ describe("collectModifiers()", () => {
     expect(flatMods[1].condition).toBe("berserk");
   });
 
+  it("uses wvwFacts for flatBonus when gameMode is wvw and wvwFacts exists", () => {
+    const traitId = 2046;
+    const trait = {
+      slot: "Minor",
+      description: "Fatal Frenzy",
+      facts: [
+        { type: "AttributeAdjust", target: "Power", value: 300 },
+        { type: "AttributeAdjust", target: "ConditionDamage", value: 300 },
+      ],
+      wvwFacts: [
+        { type: "AttributeAdjust", target: "Power", value: 150 },
+        { type: "AttributeAdjust", target: "ConditionDamage", value: 300 },
+      ],
+    };
+    const catalogs = makeCatalogs({ [traitId]: trait });
+    const overrides = makeOverrides({ "trait:2046": { berserkConditional: true } });
+
+    const wvwMods = collectModifiers(
+      makeCtx([{ id: 1, majorChoices: { 1: traitId } }], "wvw"),
+      catalogs, overrides
+    );
+    const wvwFlat = wvwMods.filter((m) => m.type === "flatBonus");
+    expect(wvwFlat).toHaveLength(2);
+    const powerMod = wvwFlat.find((m) => m.target === "Power");
+    const condiMod = wvwFlat.find((m) => m.target === "ConditionDamage");
+    expect(powerMod.value).toBe(150);
+    expect(condiMod.value).toBe(300);
+
+    // PvE should still use trait.facts
+    const pveMods = collectModifiers(
+      makeCtx([{ id: 1, majorChoices: { 1: traitId } }], "pve"),
+      catalogs, overrides
+    );
+    const pveFlat = pveMods.filter((m) => m.type === "flatBonus");
+    const pvePower = pveFlat.find((m) => m.target === "Power");
+    expect(pvePower.value).toBe(300);
+  });
+
+  it("uses wvwFacts for conversions when gameMode is wvw and wvwFacts exists", () => {
+    const traitId = 2011;
+    const trait = {
+      slot: "Major",
+      description: "Blood Reaction",
+      facts: [
+        { type: "BuffConversion", source: "Precision", target: "CritDamage", percent: 12 },
+        { type: "BuffConversion", source: "Power", target: "ConditionDamage", percent: 15 },
+      ],
+      wvwFacts: [
+        { type: "BuffConversion", source: "Precision", target: "CritDamage", percent: 5 },
+        { type: "BuffConversion", source: "Power", target: "ConditionDamage", percent: 10 },
+      ],
+    };
+    const catalogs = makeCatalogs({ [traitId]: trait });
+
+    const wvwMods = collectModifiers(
+      makeCtx([{ id: 1, majorChoices: { 1: traitId } }], "wvw"),
+      catalogs, makeOverrides()
+    );
+    const convMods = wvwMods.filter((m) => m.type === "conversion");
+    expect(convMods).toHaveLength(2);
+    expect(convMods.find((m) => m.target === "Ferocity").percent).toBe(5);
+    expect(convMods.find((m) => m.target === "ConditionDamage").percent).toBe(10);
+  });
+
   it("deduplicates BuffConversion facts by source+target (PvE picks first)", () => {
     const traitId = 2011;
     const trait = {
