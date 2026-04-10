@@ -2,6 +2,18 @@
 
 const { stripWikiMarkup } = require("../facts/normalize");
 
+// Wiki uses human-readable attribute names; normalize to API stat keys.
+const WIKI_ATTR_MAP = {
+  "Condition Damage": "ConditionDamage",
+  "Healing Power": "HealingPower",
+  "Boon Duration": "BoonDuration",
+  "Condition Duration": "ConditionDuration",
+  "Critical Damage": "CritDamage",
+};
+function normalizeAttr(name) {
+  return WIKI_ATTR_MAP[name] || name;
+}
+
 // Fact types to silently ignore
 const SKIP_TYPES = new Set([
   "text",
@@ -290,11 +302,12 @@ function mapWikiFactToApiFact(factType, positional, params, isWvw, isUniversal) 
   }
 
   // ── Attribute Conversion (gain) ──────────────────────────────────────
-  // {{skill fact|gain|source=Power|target=Condition Damage|percent=10}}
+  // Named:      {{skill fact|gain|source=Power|target=Condition Damage|percent=10}}
+  // Positional: {{skill fact|Gain|Ferocity|Precision|12}}  (target, source, percent)
   if (type === "gain") {
-    const source = stripWikiMarkup(params.source) || "";
-    const target = stripWikiMarkup(params.target) || "";
-    const percent = parseFloat(stripWikiMarkup(params.percent) || "0");
+    const source = normalizeAttr(stripWikiMarkup(params.source || positional[1]) || "");
+    const target = normalizeAttr(stripWikiMarkup(params.target || positional[0]) || "");
+    const percent = parseFloat(stripWikiMarkup(params.percent || positional[2]) || "0");
     return {
       type: "BuffConversion",
       text: "Attribute Conversion",

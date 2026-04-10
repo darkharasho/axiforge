@@ -198,6 +198,41 @@ describe("mapWikiFactToApiFact", () => {
     });
   });
 
+  test("attribute gain/conversion with positional params", () => {
+    // {{skill fact|Gain|Ferocity|Precision|12}} → positional[0]=Ferocity (target),
+    // positional[1]=Precision (source), positional[2]=12 (percent)
+    const fact = mapWikiFactToApiFact(
+      "gain",
+      ["Ferocity", "Precision", "12"],
+      {},
+      false,
+      false
+    );
+    expect(fact).toMatchObject({
+      type: "BuffConversion",
+      source: "Precision",
+      target: "Ferocity",
+      percent: 12,
+    });
+  });
+
+  test("attribute gain/conversion normalizes wiki attribute names", () => {
+    // {{skill fact|Gain|Condition Damage|Power|15}} — "Condition Damage" → "ConditionDamage"
+    const fact = mapWikiFactToApiFact(
+      "gain",
+      ["Condition Damage", "Power", "15"],
+      {},
+      false,
+      false
+    );
+    expect(fact).toMatchObject({
+      type: "BuffConversion",
+      source: "Power",
+      target: "ConditionDamage",
+      percent: 15,
+    });
+  });
+
   test("flat attribute bonus produces AttributeAdjust", () => {
     const fact = mapWikiFactToApiFact(
       "attribute",
