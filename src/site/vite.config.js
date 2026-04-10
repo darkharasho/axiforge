@@ -18,9 +18,15 @@ export default defineConfig({
   server: {
     fs: { allow: [projectRoot] },
   },
+  optimizeDeps: {
+    include: ["@axi/gw2-data", "@axi/gw2-data/engine"],
+  },
   build: {
     outDir: "../../dist/site",
     emptyOutDir: true,
+    commonjsOptions: {
+      include: [/packages\/gw2-data/, /node_modules/],
+    },
     rollupOptions: {
       input: {
         main: path.resolve(__dirname, "index.html"),
