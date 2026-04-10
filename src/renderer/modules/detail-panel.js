@@ -384,10 +384,15 @@ export function buildSkillCard(skill, kind, isChained = false, dmgStats = null) 
   const cardAlacrity = isSkillCard && getAssumedBoons().alacrity;
   const burstRch = isSkillCard && skill.slot === "Profession_1" ? (computeUpgradeModifiers().get("Burst Recharge") || 0) : 0;
 
-  // Filter Recharge facts out of the list when we have infobox recharge data
+  // Build timing data: prefer wiki infobox, fall back to extracting from facts
   const isEquip = kind.startsWith("equip-");
-  const hasInfoboxRecharge = !isEquip && skill.recharge?.pve != null;
-  const displayFacts = hasInfoboxRecharge ? rawFacts.filter((f) => f.type !== "Recharge") : rawFacts;
+  let timingEntity = skill;
+  if (!isEquip && !skill.recharge?.pve) {
+    const rchFact = rawFacts.find((f) => f.type === "Recharge" && f.value > 0);
+    if (rchFact) timingEntity = { ...skill, recharge: { pve: rchFact.value } };
+  }
+  const hasRechargeHeader = !isEquip && timingEntity.recharge?.pve != null;
+  const displayFacts = hasRechargeHeader ? rawFacts.filter((f) => f.type !== "Recharge") : rawFacts;
 
   const factsItems = displayFacts
     .map((fact) => {
@@ -400,7 +405,7 @@ export function buildSkillCard(skill, kind, isChained = false, dmgStats = null) 
   const meta = getHoverMetaLine(kind, skill);
 
   // Build timing badges for the header top-right (recharge + cast time)
-  const timingBadges = isEquip ? "" : _buildTimingBadges(skill, cardAlacrity, burstRch);
+  const timingBadges = isEquip ? "" : _buildTimingBadges(timingEntity, cardAlacrity, burstRch);
 
   return `
     ${isChained ? `<div class="hover-preview__chain-divider">▸</div>` : ""}
