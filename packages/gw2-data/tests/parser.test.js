@@ -345,11 +345,11 @@ describe("parseWikitextFacts", () => {
 describe("parseAllTaggedFacts", () => {
   const { parseAllTaggedFacts } = require("../src/wiki/parser");
 
-  test("universal facts have empty _modes array", () => {
+  test("universal facts have all three modes", () => {
     const wikitext = "{{skill fact|damage|0.8}}";
     const { facts } = parseAllTaggedFacts(wikitext);
     expect(facts).toHaveLength(1);
-    expect(facts[0]._modes).toEqual([]);
+    expect(facts[0]._modes).toEqual(["pve", "wvw", "pvp"]);
     expect(facts[0].type).toBe("Damage");
   });
 
@@ -368,6 +368,13 @@ describe("parseAllTaggedFacts", () => {
     expect(facts[0]._modes).toEqual(["wvw"]);
   });
 
+  test("pvp-only fact tagged with ['pvp']", () => {
+    const wikitext = "{{skill fact|damage|0.5|game mode=pvp}}";
+    const { facts } = parseAllTaggedFacts(wikitext);
+    expect(facts).toHaveLength(1);
+    expect(facts[0]._modes).toEqual(["pvp"]);
+  });
+
   test("compound mode 'pvp wvw' tagged with both", () => {
     const wikitext = "{{skill fact|damage|0.5|game mode=pvp wvw}}";
     const { facts } = parseAllTaggedFacts(wikitext);
@@ -383,7 +390,7 @@ describe("parseAllTaggedFacts", () => {
     ].join("\n");
     const { facts, hasPveOnly } = parseAllTaggedFacts(wikitext);
     expect(facts).toHaveLength(3);
-    expect(facts[0]._modes).toEqual([]);         // universal damage
+    expect(facts[0]._modes).toEqual(["pve", "wvw", "pvp"]); // universal damage
     expect(facts[1]._modes).toEqual(["pve"]);     // pve burning
     expect(facts[2]._modes).toEqual(["wvw", "pvp"]); // wvw+pvp burning
     expect(hasPveOnly).toBe(true);

@@ -415,7 +415,7 @@ function parseWikitextFacts(wikitext, wvwGroupedWithPvp) {
  * @param {string} wikitext
  * @returns {{ facts: Object[], hasPveOnly: boolean }}
  *   Each fact has `_modes: string[]` — subset of ["pve", "wvw", "pvp"].
- *   An empty _modes means "universal" (applies to all modes).
+ *   Universal facts (no game mode tag) get _modes: ["pve", "wvw", "pvp"].
  */
 function parseAllTaggedFacts(wikitext) {
   const facts = [];
@@ -460,7 +460,7 @@ function parseAllTaggedFacts(wikitext) {
     // Build _modes array
     const modes = [];
     if (isUniversal) {
-      // Universal — applies to all modes (empty array signals this)
+      modes.push("pve", "wvw", "pvp");
     } else {
       if (mentionsPve) modes.push("pve");
       if (mentionsWvw) modes.push("wvw");
