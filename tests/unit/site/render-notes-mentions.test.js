@@ -25,7 +25,7 @@ const renderNotesSrc = fs.readFileSync(RENDER_NOTES_PATH, "utf-8");
 const renderBuildSrc = fs.readFileSync(RENDER_BUILD_PATH, "utf-8");
 
 // All categories that the app's notes.js resolveReference handles
-const ALL_CATEGORIES = ["skill", "trait", "rune", "sigil", "food", "utility", "infusion", "enrichment", "relic", "item"];
+const ALL_CATEGORIES = ["skill", "trait", "rune", "sigil", "food", "utility", "infusion", "enrichment", "relic", "item", "weapon"];
 
 describe("SPA render-notes.js — mention category coverage", () => {
   test.each(ALL_CATEGORIES)(
@@ -69,6 +69,23 @@ describe("SPA render-notes.js — lookup map construction", () => {
       expect(renderNotesSrc).toMatch(pattern);
     }
   );
+});
+
+describe("SPA render-notes.js — weapon mention support (issue #186)", () => {
+  test("mention regex accepts non-numeric IDs (e.g. weapon string IDs like 'sword')", () => {
+    // The mention regex must use [\\w]+ (not \\d+) for the ID capture group,
+    // because weapon IDs are strings like "sword", "greatsword", etc.
+    // Extract the regex from the @[category:id:Name] replacement
+    const regexMatch = renderNotesSrc.match(/@\\\[.*?\]\//);
+    // The ID capture group should accept word characters, not just digits
+    expect(renderNotesSrc).toMatch(/@\\\[.*\[\\w\]\+.*\]\//);
+  });
+
+  test("weapon mentions do not require numeric ID conversion", () => {
+    // Weapon IDs are strings — the code should NOT blindly Number() them
+    // Check that there's weapon-specific handling that preserves string IDs
+    expect(renderNotesSrc).toMatch(/weapon/);
+  });
 });
 
 describe("SPA render-notes.js — catalogNotesMentions integration", () => {

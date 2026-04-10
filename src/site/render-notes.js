@@ -4,6 +4,7 @@
 import { marked } from "marked";
 import { bindHoverPreview } from "@renderer/modules/detail-panel.js";
 import { decodeHtmlEntities } from "@renderer/modules/utils.js";
+import { GW2_WEAPONS_BY_ID } from "@renderer/modules/constants.js";
 
 export function renderNotes(build) {
   const container = document.createElement("div");
@@ -47,8 +48,8 @@ export function renderNotes(build) {
   }
 
   // Resolve @[category:id:Name] patterns
-  html = html.replace(/@\[(\w+):(\d+):([^\]]+)\]/g, (match, category, id, name) => {
-    const numId = Number(id);
+  html = html.replace(/@\[(\w+):([\w]+):([^\]]+)\]/g, (match, category, id, name) => {
+    const numId = /^\d+$/.test(id) ? Number(id) : id;
     let resolved = null;
     let resolvedCategory = category;
     switch (category) {
@@ -61,6 +62,11 @@ export function renderNotes(build) {
       case "infusion": resolved = infusionById.get(numId); break;
       case "enrichment": resolved = enrichmentById.get(numId); break;
       case "relic": resolved = relicById.get(numId); break;
+      case "weapon": {
+        const w = GW2_WEAPONS_BY_ID.get(id);
+        resolved = w ? { id: w.id, name: w.label, icon: w.icon } : null;
+        break;
+      }
       case "item": {
         const itemMaps = [["rune", runeById], ["sigil", sigilById], ["food", foodById], ["utility", utilityById], ["infusion", infusionById], ["enrichment", enrichmentById], ["relic", relicById]];
         for (const [cat, map] of itemMaps) {
@@ -93,7 +99,8 @@ export function renderNotes(build) {
   // Bind hover tooltips
   container.querySelectorAll(".notes-mention").forEach((chip) => {
     const type = chip.dataset.type;
-    const id = Number(chip.dataset.id);
+    const rawId = chip.dataset.id;
+    const id = /^\d+$/.test(rawId) ? Number(rawId) : rawId;
     const kind = type === "trait" ? "trait" : type === "skill" ? "skill" : `equip-${type}`;
 
     bindHoverPreview(chip, kind, () => {
@@ -107,6 +114,7 @@ export function renderNotes(build) {
         case "infusion": return infusionById.get(id) || null;
         case "enrichment": return enrichmentById.get(id) || null;
         case "relic": return relicById.get(id) || null;
+        case "weapon": { const w = GW2_WEAPONS_BY_ID.get(id); return w ? { id: w.id, name: w.label, icon: w.icon } : null; }
         case "item": return runeById.get(id) || sigilById.get(id) || foodById.get(id) || utilityById.get(id) || infusionById.get(id) || enrichmentById.get(id) || relicById.get(id) || null;
         default: return null;
       }
