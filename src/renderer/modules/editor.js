@@ -719,6 +719,16 @@ export async function loadBuildIntoEditor(build, options = {}) {
     compId: build.compId || "",
   };
 
+  // Expand statPackage into empty slots (e.g. uniform axicode imports)
+  const pkg = state.editor.equipment.statPackage;
+  if (pkg) {
+    const sl = state.editor.equipment.slots;
+    const allEmpty = Object.values(sl).every(v => !v);
+    if (allEmpty) {
+      for (const key of Object.keys(sl)) sl[key] = pkg;
+    }
+  }
+
   if (profession) {
     await _setProfession(profession, { preserveSelections: true });
   }
