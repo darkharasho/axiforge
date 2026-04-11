@@ -1,3 +1,12 @@
+## Version v0.3.13 — April 11, 2026
+
+### Bug Fixes
+- Weapon swapping between a two-handed weapon set and a one-handed weapon set no longer miscounts infusions — previously, switching to a one-handed mainhand would count an extra infusion slot
+- Stat breakdown hover tooltip rows now align consistently (removed misaligned icons)
+
+### Other Changes
+- Dev mode no longer suppresses window focus on Vite hot-reload
+
 ## Version v0.3.12 — April 11, 2026
 
 ### New Features
