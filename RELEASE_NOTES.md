@@ -1,3 +1,8 @@
+## Version v0.3.7 — April 10, 2026
+
+### Bug Fixes
+- Fixed weapon dropdowns showing empty after clearing the API cache — the in-memory catalog cache was not being flushed alongside the disk cache, causing stale data to be served
+
 ## Version v0.3.6 — April 10, 2026
 
 ### Bug Fixes
