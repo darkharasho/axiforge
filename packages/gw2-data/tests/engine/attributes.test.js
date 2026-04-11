@@ -166,6 +166,75 @@ describe("computeAttributes", () => {
     expect(result.infusions.Power).toBe(10);
   });
 
+  test("1H mainhand infusions count only 1 slot, not full array length (issue #201)", () => {
+    const catalogs = makeCatalogs({
+      infusionById: new Map([[49431, { name: "+5 Power", infixUpgrade: { attributes: [{ attribute: "Power", modifier: 5 }] } }]]),
+    });
+    // mainhand1 has a 1H weapon (axe) with a 2-entry infusion array both filled
+    const ctx = makeCtx({
+      activeWeaponSet: 1,
+      equipment: {
+        slots: {},
+        weapons: { mainhand1: "axe" },
+        runes: {},
+        infusions: { mainhand1: [49431, 49431] },
+      },
+    });
+    const result = computeAttributes(ctx, catalogs);
+    // Only 1 infusion should be counted for a 1H weapon, not 2
+    expect(result.infusions.Power).toBe(5);
+  });
+
+  test("2H mainhand infusions count both slots (issue #201)", () => {
+    const catalogs = makeCatalogs({
+      infusionById: new Map([[49431, { name: "+5 Power", infixUpgrade: { attributes: [{ attribute: "Power", modifier: 5 }] } }]]),
+    });
+    // mainhand1 has a 2H weapon (greatsword) with both infusion slots filled
+    const ctx = makeCtx({
+      activeWeaponSet: 1,
+      equipment: {
+        slots: {},
+        weapons: { mainhand1: "greatsword" },
+        runes: {},
+        infusions: { mainhand1: [49431, 49431] },
+      },
+    });
+    const result = computeAttributes(ctx, catalogs);
+    // Both infusions should be counted for a 2H weapon
+    expect(result.infusions.Power).toBe(10);
+  });
+
+  test("weapon swap does not change infusion count between 2H and 1H+1H sets (issue #201)", () => {
+    const catalogs = makeCatalogs({
+      infusionById: new Map([[49431, { name: "+5 Power", infixUpgrade: { attributes: [{ attribute: "Power", modifier: 5 }] } }]]),
+    });
+    // Set 1: greatsword (2H) with 2 infusions
+    // Set 2: axe (1H) + axe offhand (1H), each with 1 infusion
+    const baseEquipment = {
+      slots: {},
+      weapons: { mainhand1: "greatsword", mainhand2: "axe", offhand2: "axe" },
+      runes: {},
+      infusions: {
+        mainhand1: [49431, 49431],
+        offhand1: [""],
+        mainhand2: [49431, 49431],  // BUG: both filled by "Fill Infusions"
+        offhand2: [49431],
+      },
+    };
+
+    // Set 1 active: greatsword = 2 infusions
+    const ctx1 = makeCtx({ activeWeaponSet: 1, equipment: { ...baseEquipment } });
+    const result1 = computeAttributes(ctx1, catalogs);
+
+    // Set 2 active: axe+axe = 2 infusions (1 mainhand + 1 offhand)
+    const ctx2 = makeCtx({ activeWeaponSet: 2, equipment: { ...baseEquipment } });
+    const result2 = computeAttributes(ctx2, catalogs);
+
+    // Both sets should contribute the same number of infusion stats
+    expect(result1.infusions.Power).toBe(10);  // 2 infusions × 5 Power
+    expect(result2.infusions.Power).toBe(10);  // 2 infusions × 5 Power (not 3!)
+  });
+
   test("assumed Might boons add Power and ConditionDamage", () => {
     const ctx = makeCtx({ assumedBoons: { might: 25 } });
     const result = computeAttributes(ctx, makeCatalogs());

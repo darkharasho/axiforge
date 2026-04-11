@@ -183,13 +183,21 @@ export function computeStatBreakdown(statKey, assumedBoons = null, sigilStacks =
     }
   }
 
-  // Infusions
+  // Infusions — cap mainhand weapon slots to 1 infusion for 1H weapons (issue #201)
   if (upgradeCatalog) {
     const toStatKey = (attr) => attr === "Healing" ? "HealingPower" : attr === "BoonDuration" ? "Concentration" : attr === "ConditionDuration" ? "Expertise" : attr;
     const infusions = state.editor.equipment?.infusions || {};
+    const TWO_HAND_TYPES = new Set(["greatsword", "hammer", "longbow", "shortbow", "rifle", "staff", "spear", "trident", "harpoon-gun"]);
     const allInfusions = Object.entries(infusions)
       .filter(([k]) => !EXCLUDED_SLOTS.has(k))
-      .flatMap(([, v]) => Array.isArray(v) ? v : [v]);
+      .flatMap(([slotKey, v]) => {
+        const ids = Array.isArray(v) ? v : [v];
+        if (slotKey.startsWith("mainhand") && !slotKey.startsWith("aquatic")) {
+          const weaponType = weapons[slotKey] || "";
+          if (weaponType && !TWO_HAND_TYPES.has(weaponType)) return ids.slice(0, 1);
+        }
+        return ids;
+      });
     for (const id of allInfusions) {
       if (!id) continue;
       const def = upgradeCatalog.infusionById?.get(Number(id));
