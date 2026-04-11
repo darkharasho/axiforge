@@ -110,8 +110,14 @@ function encodeShareCode(build) {
   const hasWeaponSet2 = !!weapons.mainhand2;
   const hasProfData = hasProfessionData(build);
 
-  // Per-slot stats: always 0 for v1 (uniform statPackage)
-  const perSlotStats = false;
+  // Per-slot stats: check if all equipment slots share the same stat combo
+  const slots = build.equipment.slots || {};
+  const STAT_SLOTS = ["head", "shoulders", "chest", "hands", "legs", "feet",
+    "back", "amulet", "ring1", "ring2", "accessory1", "accessory2",
+    "mainhand1", "offhand1", "mainhand2", "offhand2"];
+  const slotStatValues = STAT_SLOTS.map(k => slots[k] || "");
+  const nonEmptyStats = slotStatValues.filter(Boolean);
+  const perSlotStats = nonEmptyStats.length > 0 && !allSame(nonEmptyStats);
 
   // Per-slot runes: check if all 6 armor rune slots are the same
   const runeSlots = [runes.head, runes.shoulders, runes.chest, runes.hands, runes.legs, runes.feet];
@@ -171,7 +177,23 @@ function encodeShareCode(build) {
 
   // Equipment - Stats
   if (!perSlotStats) {
-    w.write(statToIndex(build.equipment.statPackage), 5);
+    // Uniform stat: use statPackage, or derive from slots if all slots share the same stat
+    const uniformStat = build.equipment.statPackage || (nonEmptyStats.length > 0 ? nonEmptyStats[0] : "");
+    w.write(statToIndex(uniformStat), 5);
+  } else {
+    // Per-slot stats: armor, trinkets, weapons (conditional)
+    for (const slot of ["head", "shoulders", "chest", "hands", "legs", "feet"]) {
+      w.write(statToIndex(slots[slot] || ""), 5);
+    }
+    for (const slot of ["back", "amulet", "ring1", "ring2", "accessory1", "accessory2"]) {
+      w.write(statToIndex(slots[slot] || ""), 5);
+    }
+    w.write(statToIndex(slots.mainhand1 || ""), 5);
+    if (hasOffhand1) w.write(statToIndex(slots.offhand1 || ""), 5);
+    if (hasWeaponSet2) {
+      w.write(statToIndex(slots.mainhand2 || ""), 5);
+      if (hasOffhand2) w.write(statToIndex(slots.offhand2 || ""), 5);
+    }
   }
 
   // Equipment - Runes
@@ -420,8 +442,22 @@ function decodeShareCode(code) {
 
   // Stats
   let statPackage = "";
+  const slotsOut = {};
   if (!perSlotStats) {
     statPackage = indexToStat(r.read(5));
+  } else {
+    for (const slot of ["head", "shoulders", "chest", "hands", "legs", "feet"]) {
+      slotsOut[slot] = indexToStat(r.read(5));
+    }
+    for (const slot of ["back", "amulet", "ring1", "ring2", "accessory1", "accessory2"]) {
+      slotsOut[slot] = indexToStat(r.read(5));
+    }
+    slotsOut.mainhand1 = indexToStat(r.read(5));
+    if (hasOffhand1) slotsOut.offhand1 = indexToStat(r.read(5));
+    if (hasWeaponSet2) {
+      slotsOut.mainhand2 = indexToStat(r.read(5));
+      if (hasOffhand2) slotsOut.offhand2 = indexToStat(r.read(5));
+    }
   }
 
   // Runes
@@ -579,6 +615,7 @@ function decodeShareCode(code) {
     underwaterSkills,
     equipment: {
       statPackage,
+      slots: slotsOut,
       relic,
       food,
       utility,

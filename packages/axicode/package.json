@@ -1,6 +1,6 @@
 {
   "name": "@axiapps/code",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "Compact binary build code encoder/decoder for Guild Wars 2 builds (AxiCode format)",
   "main": "src/index.js",
   "scripts": {

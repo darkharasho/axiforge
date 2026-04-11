@@ -314,6 +314,85 @@ describe("per-slot mode round-trips", () => {
     expect(decoded.equipment.infusions.shoulders).toBe("37131");
   });
 
+  test("per-slot stats (mixed) round-trip", () => {
+    const build = makeBuild({});
+    build.equipment.slots = {
+      head: "Berserker's", shoulders: "Berserker's", chest: "Berserker's",
+      hands: "Berserker's", legs: "Berserker's", feet: "Berserker's",
+      back: "Assassin's", amulet: "Assassin's",
+      ring1: "Assassin's", ring2: "Assassin's",
+      accessory1: "Assassin's", accessory2: "Assassin's",
+      mainhand1: "Berserker's", mainhand2: "Berserker's",
+    };
+    const code = encodeShareCode(build);
+    const decoded = decodeShareCode(code);
+    expect(decoded.equipment.slots.head).toBe("Berserker's");
+    expect(decoded.equipment.slots.back).toBe("Assassin's");
+    expect(decoded.equipment.slots.ring1).toBe("Assassin's");
+    expect(decoded.equipment.slots.mainhand1).toBe("Berserker's");
+    expect(decoded.equipment.statPackage).toBe("");
+  });
+
+  test("uniform slots uses statPackage (no per-slot flag)", () => {
+    const build = makeBuild({});
+    build.equipment.slots = {
+      head: "Berserker's", shoulders: "Berserker's", chest: "Berserker's",
+      hands: "Berserker's", legs: "Berserker's", feet: "Berserker's",
+      back: "Berserker's", amulet: "Berserker's",
+      ring1: "Berserker's", ring2: "Berserker's",
+      accessory1: "Berserker's", accessory2: "Berserker's",
+      mainhand1: "Berserker's", mainhand2: "Berserker's",
+    };
+    const code = encodeShareCode(build);
+    const decoded = decodeShareCode(code);
+    expect(decoded.equipment.statPackage).toBe("Berserker's");
+  });
+
+  test("per-slot stats with offhand round-trip", () => {
+    const build = makeBuild({});
+    build.equipment.weapons = {
+      mainhand1: "sword", offhand1: "focus",
+      mainhand2: "axe", offhand2: "shield",
+      aquatic1: "", aquatic2: "",
+    };
+    build.equipment.slots = {
+      head: "Viper's", shoulders: "Viper's", chest: "Viper's",
+      hands: "Viper's", legs: "Viper's", feet: "Viper's",
+      back: "Sinister", amulet: "Sinister",
+      ring1: "Sinister", ring2: "Sinister",
+      accessory1: "Sinister", accessory2: "Sinister",
+      mainhand1: "Viper's", offhand1: "Viper's",
+      mainhand2: "Grieving", offhand2: "Grieving",
+    };
+    build.equipment.sigils = {
+      mainhand1: ["24615"], offhand1: ["24868"],
+      mainhand2: ["24615"], offhand2: ["24868"],
+      aquatic1: [], aquatic2: [],
+    };
+    const code = encodeShareCode(build);
+    const decoded = decodeShareCode(code);
+    expect(decoded.equipment.slots.head).toBe("Viper's");
+    expect(decoded.equipment.slots.amulet).toBe("Sinister");
+    expect(decoded.equipment.slots.offhand1).toBe("Viper's");
+    expect(decoded.equipment.slots.offhand2).toBe("Grieving");
+  });
+
+  test("slots derives uniform stat when no statPackage set", () => {
+    const build = makeBuild({});
+    build.equipment.statPackage = "";
+    build.equipment.slots = {
+      head: "Celestial", shoulders: "Celestial", chest: "Celestial",
+      hands: "Celestial", legs: "Celestial", feet: "Celestial",
+      back: "Celestial", amulet: "Celestial",
+      ring1: "Celestial", ring2: "Celestial",
+      accessory1: "Celestial", accessory2: "Celestial",
+      mainhand1: "Celestial", mainhand2: "Celestial",
+    };
+    const code = encodeShareCode(build);
+    const decoded = decodeShareCode(code);
+    expect(decoded.equipment.statPackage).toBe("Celestial");
+  });
+
   test("underwater skills and weapons round-trip", () => {
     const build = makeBuild({
       underwaterSkills: {
