@@ -1,3 +1,12 @@
+## Version v0.3.9 — April 10, 2026
+
+### Bug Fixes
+- Fixed equipment stats not being preserved when sharing builds via axicode — mixed-stat builds (e.g. Berserker armor + Assassin trinkets) now encode and decode per-slot stats correctly
+- Fixed imported axicode builds showing "Select stats..." on all equipment slots instead of the actual stat combo
+
+### Other Changes
+- Moved axicode source into the monorepo under `packages/axicode` and renamed packages to the `@axiapps` scope (`@axiapps/code`, `@axiapps/gw2-data`)
+
 ## Version v0.3.8 — April 10, 2026
 
 ### Bug Fixes
