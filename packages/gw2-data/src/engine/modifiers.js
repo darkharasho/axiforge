@@ -58,6 +58,26 @@ function isFuryTrait(trait, traitId, overrides) {
 }
 
 /**
+ * Return the set of weapon type strings for the active weapon set.
+ */
+function _activeWeaponTypes(ctx) {
+  const weapons = ctx?.equipment?.weapons || {};
+  const underwater = Boolean(ctx?.underwaterMode);
+  const set = Number(ctx?.activeWeaponSet) || 1;
+  const types = new Set();
+  if (underwater) {
+    const key = `aquatic${set}`;
+    if (weapons[key]) types.add(weapons[key]);
+  } else {
+    for (const prefix of ["mainhand", "offhand"]) {
+      const key = `${prefix}${set}`;
+      if (weapons[key]) types.add(weapons[key]);
+    }
+  }
+  return types;
+}
+
+/**
  * Collect typed modifier objects from active traits.
  *
  * Modifier types emitted:
@@ -77,6 +97,7 @@ function collectModifiers(ctx, catalogs, overrides) {
   if (!catalogs?.traitById) return modifiers;
 
   const gameMode = ctx?.gameMode || "pve";
+  const activeWeaponTypes = _activeWeaponTypes(ctx);
   const activeTraitIds = collectActiveTraitIds(ctx, catalogs);
   if (!activeTraitIds.size) return modifiers;
 
@@ -131,14 +152,19 @@ function collectModifiers(ctx, catalogs, overrides) {
         if (!byTarget.has(fact.target)) byTarget.set(fact.target, []);
         byTarget.get(fact.target).push(fact.value);
       }
+      // weaponConditional: multiply flat bonuses when an active weapon matches
+      const wc = override?.weaponConditional;
+      const weaponMatch = wc && wc.weapons?.some((w) => activeWeaponTypes.has(w));
+
       for (const [target, values] of byTarget) {
         const statKey = CONVERSION_TARGET_MAP[target] || target;
         const idx = gameMode === "wvw" ? Math.min(1, values.length - 1) : 0;
+        const base = values[idx];
         modifiers.push({
           source,
           type: "flatBonus",
           target: statKey,
-          value: values[idx],
+          value: weaponMatch ? base * wc.multiplier : base,
           condition,
         });
       }
