@@ -226,6 +226,29 @@
   fill: currentColor;
 }
 
+.breakdown-pill {
+  font-size: 0.6rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 1px 4px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  color: #fff;
+  background: var(--bg-surface, #444);
+}
+.breakdown-pill--base       { background: #555; }
+.breakdown-pill--equipment  { background: #4a7c59; }
+.breakdown-pill--trait      { background: #8b5cf6; }
+.breakdown-pill--skill      { background: #3b82f6; }
+.breakdown-pill--boon       { background: #d97706; }
+.breakdown-pill--food       { background: #9d5c3a; }
+.breakdown-pill--rune       { background: #be185d; }
+.breakdown-pill--sigil      { background: #0891b2; }
+.breakdown-pill--infusion   { background: #6d28d9; }
+.breakdown-pill--enrichment { background: #6d28d9; }
+.breakdown-pill--utility    { background: #9d5c3a; }
+
 .breakdown-count {
   color: var(--text-dim);
 }

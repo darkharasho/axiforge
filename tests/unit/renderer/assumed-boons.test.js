@@ -879,4 +879,29 @@ describe("computePassiveTraitBonuses — flat stat bonuses from passive traits",
     state.editor = editor;
     expect(computePassiveTraitBonuses()).toEqual({ Power: 240 });
   });
+
+  test("stat breakdown shows trait name instead of generic 'Trait bonus'", () => {
+    const forcefulGreatsword = {
+      id: 1338,
+      name: "Forceful Greatsword",
+      facts: [
+        { type: "AttributeAdjust", value: 120, target: "Power" },
+      ],
+    };
+    state.activeCatalog = {
+      traitById: new Map([[1338, forcefulGreatsword]]),
+      specializationById: new Map(),
+    };
+    const editor = makeEditor();
+    editor.specializations = [
+      { specializationId: 4, majorChoices: { 2: 1338 } },
+    ];
+    editor.equipment.weapons = { mainhand1: "greatsword" };
+    state.editor = editor;
+    const entries = computeStatBreakdown("Power");
+    const traitEntry = entries.find((e) => e.source === "Forceful Greatsword");
+    expect(traitEntry).toBeDefined();
+    expect(traitEntry.value).toBe(240);
+    expect(entries.find((e) => e.source === "Trait bonus")).toBeUndefined();
+  });
 });

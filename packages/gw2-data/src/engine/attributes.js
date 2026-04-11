@@ -389,6 +389,7 @@ function computeAttributes(ctx, catalogs) {
   // Step 10: Traits — flat bonuses from active traits
   // -------------------------------------------------------------------------
   const traitStats = zeroStats();
+  const traitDetails = []; // per-trait breakdown: { traitId, name, target, value }
   const modifiers = collectModifiers(ctx, catalogs, overrides);
   const furyAssumed = Boolean(ctx.assumedBoons?.fury);
   const berserkActive = Boolean(ctx.berserkActive);
@@ -401,6 +402,15 @@ function computeAttributes(ctx, catalogs) {
         || (mod.condition === "berserk" && berserkActive)) {
       if (mod.target in traitStats) {
         traitStats[mod.target] += mod.value;
+        // Extract trait ID from source (e.g. "trait:1338" → 1338)
+        const traitId = Number(mod.source?.replace("trait:", "")) || 0;
+        const trait = traitId && catalogs?.traitById?.get(traitId);
+        traitDetails.push({
+          traitId,
+          name: trait?.name || mod.source,
+          target: mod.target,
+          value: mod.value,
+        });
       }
     }
   }
@@ -520,6 +530,7 @@ function computeAttributes(ctx, catalogs) {
     utility: utilityStats,
     signets: signetStats,
     traits: traitStats,
+    traitDetails,
     conversions: conversionStats,
     boons: boonStats,
     sigils: sigilStats,

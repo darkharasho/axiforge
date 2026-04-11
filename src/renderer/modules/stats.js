@@ -120,7 +120,7 @@ function getExcludedSlots() {
 export function computeStatBreakdown(statKey, assumedBoons = null, sigilStacks = null) {
   const entries = [];
   const BASE_STATS = new Set(["Power", "Precision", "Toughness", "Vitality"]);
-  if (BASE_STATS.has(statKey)) entries.push({ source: "Base", value: 1000 });
+  if (BASE_STATS.has(statKey)) entries.push({ source: "Base", value: 1000, category: "base" });
 
   const slots = state.editor.equipment?.slots || {};
   const EXCLUDED_SLOTS = getExcludedSlots();
@@ -158,7 +158,7 @@ export function computeStatBreakdown(statKey, assumedBoons = null, sigilStacks =
       const label = weaponName
         ? `${SLOT_LABELS[slotKey] || slotKey} — ${weaponName} (${comboLabel})`
         : `${SLOT_LABELS[slotKey] || slotKey} (${comboLabel})`;
-      entries.push({ source: label, value: val, slotKey });
+      entries.push({ source: label, value: val, slotKey, category: "equipment" });
     }
   }
 
@@ -174,10 +174,10 @@ export function computeStatBreakdown(statKey, assumedBoons = null, sigilStacks =
       let m;
       while ((m = re.exec(foodDef.buff)) !== null) {
         if (m[2] === "to All Attributes") {
-          entries.push({ source: `Food (${foodDef.name})`, value: Number(m[1]), icon: foodDef.icon });
+          entries.push({ source: `Food (${foodDef.name})`, value: Number(m[1]), icon: foodDef.icon, category: "food" });
         } else {
           const key = MAP[m[2]] || m[2];
-          if (key === statKey) entries.push({ source: `Food (${foodDef.name})`, value: Number(m[1]), icon: foodDef.icon });
+          if (key === statKey) entries.push({ source: `Food (${foodDef.name})`, value: Number(m[1]), icon: foodDef.icon, category: "food" });
         }
       }
     }
@@ -196,7 +196,7 @@ export function computeStatBreakdown(statKey, assumedBoons = null, sigilStacks =
       if (!def?.infixUpgrade?.attributes) continue;
       for (const attr of def.infixUpgrade.attributes) {
         if (toStatKey(attr.attribute) === statKey && attr.modifier) {
-          entries.push({ source: `Infusion (${def.name})`, value: attr.modifier, icon: def.icon });
+          entries.push({ source: `Infusion (${def.name})`, value: attr.modifier, icon: def.icon, category: "infusion" });
         }
       }
     }
@@ -208,7 +208,7 @@ export function computeStatBreakdown(statKey, assumedBoons = null, sigilStacks =
       if (def?.infixUpgrade?.attributes) {
         for (const attr of def.infixUpgrade.attributes) {
           if (toStatKey(attr.attribute) === statKey && attr.modifier) {
-            entries.push({ source: `Enrichment (${def.name})`, value: attr.modifier, icon: def.icon });
+            entries.push({ source: `Enrichment (${def.name})`, value: attr.modifier, icon: def.icon, category: "enrichment" });
           }
         }
       }
@@ -235,7 +235,7 @@ export function computeStatBreakdown(statKey, assumedBoons = null, sigilStacks =
         if (m[2] === "to All Stats") runeTotal += val;
         else { const key = MAP[m[2]] || m[2]; if (key === statKey) runeTotal += val; }
       }
-      if (runeTotal) entries.push({ source: `Rune (${runeDef.name})`, value: runeTotal, icon: runeDef.icon });
+      if (runeTotal) entries.push({ source: `Rune (${runeDef.name})`, value: runeTotal, icon: runeDef.icon, category: "rune" });
     }
   }
 
@@ -256,19 +256,19 @@ export function computeStatBreakdown(statKey, assumedBoons = null, sigilStacks =
         const sourceKey = MAP[m[3]] || m[3];
         const sourceBase = (totals[sourceKey] || 0);
         const val = Math.round(sourceBase * pct);
-        if (val) entries.push({ source: `${utilDef.name} (${m[2]}% of ${m[3]})`, value: val });
+        if (val) entries.push({ source: `${utilDef.name} (${m[2]}% of ${m[3]})`, value: val, category: "utility" });
       }
       // Conditional flat (writs)
       const writRe = /Gain (\d+) (Condition Damage|Healing Power|Power|Precision|Toughness|Vitality|Ferocity|Concentration|Expertise) When Health/g;
       while ((m = writRe.exec(utilDef.buff)) !== null) {
         const key = MAP[m[2]] || m[2];
-        if (key === statKey) entries.push({ source: `${utilDef.name}`, value: Number(m[1]) });
+        if (key === statKey) entries.push({ source: `${utilDef.name}`, value: Number(m[1]), category: "utility" });
       }
       // Flat bonuses
       const flatRe = /\+(\d+)\s+(Condition Damage|Healing Power|Power|Precision|Toughness|Vitality|Ferocity|Concentration|Expertise)/g;
       while ((m = flatRe.exec(utilDef.buff)) !== null) {
         const key = MAP[m[2]] || m[2];
-        if (key === statKey) entries.push({ source: `${utilDef.name}`, value: Number(m[1]) });
+        if (key === statKey) entries.push({ source: `${utilDef.name}`, value: Number(m[1]), category: "utility" });
       }
     }
   }
@@ -287,7 +287,7 @@ export function computeStatBreakdown(statKey, assumedBoons = null, sigilStacks =
       const catalog = state.activeCatalog;
       const skillData = catalog?.skillById?.get(skillId);
       const name = skillData?.name || `Signet (${skillId})`;
-      entries.push({ source: `Signet (${name})`, value: buff.value, icon: skillData?.icon });
+      entries.push({ source: `Signet (${name})`, value: buff.value, icon: skillData?.icon, category: "skill" });
     }
   }
 
@@ -297,29 +297,35 @@ export function computeStatBreakdown(statKey, assumedBoons = null, sigilStacks =
     if (mightStacks > 0) {
       const mightValues = bridgeMightPerStack(state);
       if (statKey === "Power") {
-        entries.push({ source: `Boon (Might ×${mightStacks})`, value: mightStacks * mightValues.power });
+        entries.push({ source: `Boon (Might ×${mightStacks})`, value: mightStacks * mightValues.power, category: "boon" });
       }
       if (statKey === "ConditionDamage") {
-        entries.push({ source: `Boon (Might ×${mightStacks})`, value: mightStacks * mightValues.condi });
+        entries.push({ source: `Boon (Might ×${mightStacks})`, value: mightStacks * mightValues.condi, category: "boon" });
       }
     }
     if (assumedBoons.fury) {
       const furyBonuses = bridgeFuryStatBonuses(state);
       if (furyBonuses[statKey]) {
-        entries.push({ source: "Boon (Fury)", value: furyBonuses[statKey] });
+        entries.push({ source: "Boon (Fury)", value: furyBonuses[statKey], category: "boon" });
       }
     }
   }
 
-  // Passive trait flat stat bonuses — derive from engine result
+  // Passive trait flat stat bonuses — per-trait breakdown from engine
   const engineResult = computeStats(state, assumedBoons, sigilStacks);
-  if (engineResult.traits[statKey]) {
-    entries.push({ source: "Trait bonus", value: engineResult.traits[statKey] });
+  if (engineResult.traitDetails) {
+    for (const detail of engineResult.traitDetails) {
+      if (detail.target === statKey && detail.value) {
+        entries.push({ source: detail.name, value: detail.value, category: "trait" });
+      }
+    }
+  } else if (engineResult.traits[statKey]) {
+    entries.push({ source: "Trait bonus", value: engineResult.traits[statKey], category: "trait" });
   }
 
   // Trait conversion contributions
   if (engineResult.conversions[statKey]) {
-    entries.push({ source: "Trait conversion", value: engineResult.conversions[statKey] });
+    entries.push({ source: "Trait conversion", value: engineResult.conversions[statKey], category: "trait" });
   }
 
   // Stacking sigil contributions
@@ -329,7 +335,7 @@ export function computeStatBreakdown(statKey, assumedBoons = null, sigilStacks =
       if (stacks <= 0) continue;
       const matches = def.allStats ? def.allStats.includes(statKey) : def.stat === statKey;
       if (matches) {
-        entries.push({ source: `Sigil (${def.label} ×${stacks})`, value: stacks * def.perStack });
+        entries.push({ source: `Sigil (${def.label} ×${stacks})`, value: stacks * def.perStack, category: "sigil" });
       }
     }
   }
