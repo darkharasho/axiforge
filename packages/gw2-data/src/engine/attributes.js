@@ -489,7 +489,7 @@ function computeAttributes(ctx, catalogs) {
     }
   }
 
-  const critChance = Math.min(100, 5 + (total.Precision - 895) / 21 + furyCritBonus);
+  const critChance = Math.min(100, (total.Precision - 895) / 21 + furyCritBonus);
   const critDamage = 150 + total.Ferocity / 15;
   const conditionDuration = total.Expertise / 15;
   const boonDuration = total.Concentration / 15;

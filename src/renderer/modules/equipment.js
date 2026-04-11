@@ -1494,7 +1494,7 @@ export function renderEquipmentPanel() {
   const gm = state.editor.gameMode || "pve";
   const furyCritPct = (gm === "wvw" ? FURY_CRIT_CHANCE_WVW : FURY_CRIT_CHANCE) + computeFuryCritModifier(state);
   const furyCrit = _assumedBoons.fury ? furyCritPct : 0;
-  const critChance = Math.min(100, 5 + ((computed.Precision || 1000) - 895) / 21.0 + popMod("Critical Chance") + furyCrit);
+  const critChance = Math.min(100, ((computed.Precision || 1000) - 895) / 21.0 + popMod("Critical Chance") + furyCrit);
   const critDamage = 150 + (computed.Ferocity || 0) / 15.0 + popMod("Critical Damage");
   const condDuration = (computed.Expertise || 0) / 15.0 + popMod("Condition Duration");
   const boonDuration = (computed.Concentration || 0) / 15.0 + popMod("Boon Duration");
