@@ -272,13 +272,19 @@ export function enforceEditorConsistency(options = {}) {
     }
   }
 
-  // Clear weapons that the new profession cannot equip
+  // Clear weapons that the new profession cannot equip.
+  // Guard: only clear when we have weapon data to validate against.  Without
+  // professionWeapons every lookup returns undefined and all weapons are wiped,
+  // which is the root cause of the "save deletes weapons" bug.
   const profWeapons = catalog.professionWeapons || {};
+  const hasProfWeapons = Object.keys(profWeapons).length > 0;
   const equip = state.editor.equipment;
-  if (equip?.weapons) {
+  if (hasProfWeapons && equip?.weapons) {
     for (const [key, weaponId] of Object.entries(equip.weapons)) {
       if (!weaponId) continue;
       const wData = profWeapons[weaponId];
+      // If the weapon isn't in professionWeapons at all, the profession cannot
+      // equip it — clear it.  If it IS present, check flag compatibility.
       const isOffhand = key.startsWith("offhand");
       const isMainhand = key.startsWith("mainhand");
       let valid = false;

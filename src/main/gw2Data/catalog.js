@@ -905,7 +905,7 @@ async function getProfessionCatalog(professionId, lang = "en", gameMode = "pve")
     throw new Error("Missing profession id.");
   }
 
-  const cacheKey = `${professionId}:${lang}`;
+  const cacheKey = `${professionId}:${lang}:${gameMode}`;
   if (_catalogCache.has(cacheKey)) return _catalogCache.get(cacheKey);
   if (_catalogInflight.has(cacheKey)) return _catalogInflight.get(cacheKey);
 
