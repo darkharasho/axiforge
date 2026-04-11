@@ -1016,11 +1016,16 @@
   font-size: 0.85rem;
 }
 
+/* Remove top padding from content area when table view is active */
+.lib-content:has(.lib-tv) {
+  padding-top: 0;
+}
+
 .lib-tv__header {
   position: sticky;
   top: 0;
   background: var(--bg-2);
-  z-index: 1;
+  z-index: 2;
   padding: 6px 4px;
   border-bottom: 1px solid var(--line-soft);
   color: var(--text-dim);
