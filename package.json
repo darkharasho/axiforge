@@ -7,7 +7,7 @@
   "build": {
     "appId": "com.darkharasho.axiforge",
     "productName": "AxiForge",
-    "icon": "public/img/build_logo.png",
+    "icon": "public/img/AxiForge-White.png",
     "directories": {
       "output": "dist_out"
     },

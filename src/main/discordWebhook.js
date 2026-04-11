@@ -9,7 +9,7 @@ const TOTAL_CHAR_LIMIT = 6000;
 const FIELD_LIMIT = 25;
 const COLOR_PVE = 0xFFD700;
 const COLOR_WVW = 0xDC143C;
-const LOGO_URL = "https://raw.githubusercontent.com/darkharasho/axiforge/main/public/img/build_logo.png";
+const LOGO_URL = "https://raw.githubusercontent.com/darkharasho/axiforge/main/public/img/AxiForge-White.png";
 const GITHUB_URL = "https://github.com/darkharasho/axiforge";
 
 // Profession colors — match the CSS class colors used in the app UI
