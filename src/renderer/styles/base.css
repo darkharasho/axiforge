@@ -99,22 +99,28 @@ body {
   margin: 0;
   min-height: 100vh;
   font-family: "DM Sans", system-ui, sans-serif;
-  background:
-    radial-gradient(1300px 550px at -5% -10%, rgba(var(--accent-rgb), 0.14), transparent 55%),
-    radial-gradient(1000px 550px at 110% 0%, rgba(var(--accent-2-rgb), 0.16), transparent 55%),
-    var(--bg);
-  background-size: 100% 100%, 100% 100%, 100% 100%;
-  animation: ambient-drift 60s ease-in-out infinite;
+  background: var(--bg);
   color: var(--text);
 }
 
+/* Ambient gradient layer — uses transform (GPU-composited) instead of
+   background-position (CPU-repainted) so the animation is nearly free. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: -3%;          /* slight oversize so translate doesn't reveal edges */
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(1300px 550px at -5% -10%, rgba(var(--accent-rgb), 0.14), transparent 55%),
+    radial-gradient(1000px 550px at 110% 0%, rgba(var(--accent-2-rgb), 0.16), transparent 55%);
+  will-change: transform;
+  animation: ambient-drift 60s ease-in-out infinite;
+}
+
 @keyframes ambient-drift {
-  0%, 100% {
-    background-position: 0% 0%, 100% 0%, 0% 0%;
-  }
-  50% {
-    background-position: 2% 3%, 97% 2%, 0% 0%;
-  }
+  0%, 100% { transform: translate(0, 0); }
+  50%      { transform: translate(2%, 3%); }
 }
 
 a {
