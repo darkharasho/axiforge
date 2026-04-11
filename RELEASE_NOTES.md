@@ -1,3 +1,13 @@
+## Version v0.3.12 — April 11, 2026
+
+### New Features
+- Stat breakdown hover now shows the specific trait name (e.g. "Forceful Greatsword") instead of a generic "Trait bonus" label
+- Stat breakdown entries now display a colored category pill (trait, equipment, boon, food, rune, sigil, etc.) for easier identification
+- App icon now adapts to system theme on macOS and Windows (light icon on dark backgrounds, dark icon on light backgrounds)
+
+### Bug Fixes
+- Forceful Greatsword warrior trait now correctly doubles its Power bonus (+120 → +240) when a greatsword or underwater spear is equipped
+
 ## Version v0.3.11 — April 11, 2026
 
 ### Bug Fixes
