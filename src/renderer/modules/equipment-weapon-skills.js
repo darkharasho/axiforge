@@ -44,6 +44,63 @@ export function resolveEquippedWeaponSkills(catalog, editor) {
 }
 
 /**
+ * Resolve weapon skills across ALL attunements for composition analysis.
+ * For non-Elementalist builds this behaves identically to resolveEquippedWeaponSkills.
+ * For Elementalist it returns the union of weapon skills from every available attunement
+ * (and for Weaver, every attunement pair), deduplicated by skill id.
+ */
+export function resolveAllWeaponSkills(catalog, editor) {
+  const attunements = getAvailableAttunements(catalog, editor);
+  if (attunements.length === 0) return resolveEquippedWeaponSkills(catalog, editor);
+
+  if (!catalog) return [];
+
+  const equippedWeapons = editor.equipment?.weapons || {};
+  const activeWeaponSet = Number(editor.activeWeaponSet) || 1;
+  const isUnderwater = Boolean(editor.underwaterMode);
+
+  const isWeaver = (editor.specializations || []).some((s) => {
+    const specId = Number(s?.specializationId) || 0;
+    const spec = catalog.specializationById?.get(specId);
+    return spec?.elite && spec?.name === "Weaver";
+  });
+
+  let weapons;
+  if (isUnderwater) {
+    const activeAquatic = activeWeaponSet === 2 ? "aquatic2" : "aquatic1";
+    weapons = { mainhand: equippedWeapons[activeAquatic] || "", offhand: "" };
+  } else {
+    const mhKey = activeWeaponSet === 2 ? "mainhand2" : "mainhand1";
+    const ohKey = activeWeaponSet === 2 ? "offhand2" : "offhand1";
+    weapons = { mainhand: equippedWeapons[mhKey] || "", offhand: equippedWeapons[ohKey] || "" };
+  }
+
+  const seen = new Set();
+  const all = [];
+
+  if (isWeaver) {
+    // For Weaver, iterate all attunement pairs (including same-element)
+    for (const att1 of attunements) {
+      for (const att2 of attunements) {
+        const skills = getEquippedWeaponSkills(catalog, weapons, att1, att2, true, isUnderwater);
+        for (const s of skills) {
+          if (s && !seen.has(s.id)) { seen.add(s.id); all.push(s); }
+        }
+      }
+    }
+  } else {
+    for (const att of attunements) {
+      const skills = getEquippedWeaponSkills(catalog, weapons, att, "", false, isUnderwater);
+      for (const s of skills) {
+        if (s && !seen.has(s.id)) { seen.add(s.id); all.push(s); }
+      }
+    }
+  }
+
+  return all;
+}
+
+/**
  * Returns the list of available attunement names for the current weapon set.
  * Empty array if the profession doesn't use attunements.
  */

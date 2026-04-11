@@ -158,6 +158,16 @@ function _resolveSkillsAndTraits(state, ctx, catalogs, weaponSkills = [], { filt
         const flip = catalogs.skillById.get(Number(skill.flipSkill));
         if (flip) resolvedSkills.push(flip);
       }
+      // Follow bundleSkills (e.g., Engineer kits, Elementalist conjures)
+      if (skill.bundleSkills) {
+        for (const bsId of skill.bundleSkills) {
+          const bs = catalogs.skillById.get(Number(bsId));
+          if (bs && !seenSkillIds.has(bs.id)) {
+            seenSkillIds.add(bs.id);
+            resolvedSkills.push(bs);
+          }
+        }
+      }
     }
   }
 

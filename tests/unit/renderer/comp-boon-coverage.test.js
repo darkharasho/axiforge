@@ -246,6 +246,62 @@ describe("computeCompPartyCoverage", () => {
   });
 });
 
+describe("computeCompPartyCoverage — elementalist all-attunement weapon skills", () => {
+  test("includes weapon skills from all attunements, not just the active one", async () => {
+    // Create weapon skills for different attunements, each with a combo finisher
+    const fireSkill = {
+      id: 5501, name: "Drake's Breath", slot: "Weapon_2", weaponType: "Dagger",
+      attunement: "Fire", type: "Weapon",
+      facts: [{ type: "ComboFinisher", finisher_type: "Blast", percent: 100 }],
+    };
+    const earthSkill = {
+      id: 5502, name: "Earthquake", slot: "Weapon_4", weaponType: "Dagger",
+      attunement: "Earth", type: "Weapon",
+      facts: [{ type: "ComboFinisher", finisher_type: "Blast", percent: 100 }],
+    };
+    const waterSkill = {
+      id: 5503, name: "Frozen Burst", slot: "Weapon_4", weaponType: "Dagger",
+      attunement: "Water", type: "Weapon",
+      facts: [{ type: "ComboFinisher", finisher_type: "Blast", percent: 100 }],
+    };
+
+    const catalog = makeCatalog(new Map([
+      [5501, fireSkill], [5502, earthSkill], [5503, waterSkill],
+    ]));
+    catalog.weaponSkillById = new Map([
+      [5501, fireSkill], [5502, earthSkill], [5503, waterSkill],
+    ]);
+    catalog.professionWeapons = {
+      dagger: {
+        skills: [
+          { id: 5501, slot: "Weapon_2", attunement: "Fire" },
+          { id: 5502, slot: "Weapon_4", attunement: "Earth" },
+          { id: 5503, slot: "Weapon_4", attunement: "Water" },
+        ],
+      },
+    };
+    catalog.profession = { id: "Elementalist" };
+
+    const build = makeBuild("b1", "Elementalist", {
+      activeAttunement: "Fire",
+      equipment: { weapons: { mainhand1: "Dagger", offhand1: "Dagger" } },
+    });
+
+    const catalogCache = new Map();
+    const getCatalog = makeGetCatalog(catalogCache, catalog);
+    const comp = makeComp([makeLine("l1", ["b1"])]);
+    const { lines } = await computeCompPartyCoverage(comp, [build], catalogCache, getCatalog, makeUpgradeCatalog());
+
+    // Should find blast finishers from fire AND earth AND water attunements
+    const blastEntry = lines[0].comboFinishers.get("Blast");
+    expect(blastEntry).toBeDefined();
+    const sourceNames = blastEntry.sources.map((s) => s.sourceName);
+    expect(sourceNames).toContain("Drake's Breath");
+    expect(sourceNames).toContain("Earthquake");
+    expect(sourceNames).toContain("Frozen Burst");
+  });
+});
+
 // Helper: build a catalog with upgradeCatalog (empty — no Concentration gear)
 function makeUpgradeCatalog() {
   return {

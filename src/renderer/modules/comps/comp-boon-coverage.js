@@ -2,7 +2,7 @@
 // across all builds in a comp, per party line (no squad-wide summary).
 
 import { computePartyCoverage } from "../boon-coverage.js";
-import { resolveEquippedWeaponSkills } from "../equipment-weapon-skills.js";
+import { resolveAllWeaponSkills } from "../equipment-weapon-skills.js";
 import {
   BOON_DISPLAY_ORDER, BOON_CONDITION_ICONS,
   COMBO_FIELD_COLORS, COMBO_FIELD_DISPLAY_ORDER,
@@ -56,7 +56,7 @@ export async function computeCompPartyCoverage(comp, builds, catalogCache, getCa
       if (!catalog) continue;
 
       hasFilledSlots = true;
-      const weaponSkills = resolveEquippedWeaponSkills(catalog, build);
+      const weaponSkills = resolveAllWeaponSkills(catalog, build);
       const coverage = computePartyCoverage(catalog, build, weaponSkills);
       const buildName = build.title || build.id;
       const concentrationBonus = computeBuildConcentration(build, upgradeCatalog) / 1500;
