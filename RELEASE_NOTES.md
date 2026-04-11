@@ -1,3 +1,10 @@
+## Version v0.3.11 — April 11, 2026
+
+### Bug Fixes
+- Composition builder now analyzes weapon skills from all Elementalist attunements, not just the active one — blast finishers like Frozen Burst, Earthquake, and Churning Earth are now correctly listed
+- Composition builder now includes combo finishers and fields from utility bundle skills (e.g., Engineer kits, Elementalist conjure weapons)
+- Fixed build library table view header having a gap below the filter bar and rows rendering above the sticky header when scrolling
+
 ## Version v0.3.10 — April 10, 2026
 
 ### Bug Fixes
