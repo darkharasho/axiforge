@@ -797,4 +797,86 @@ describe("computePassiveTraitBonuses — flat stat bonuses from passive traits",
     const withTrait = computeEquipmentStats();
     expect(withTrait.Power).toBe(baseline.Power + 120);
   });
+
+  test("Forceful Greatsword doubles Power when greatsword is equipped", () => {
+    const forcefulGreatsword = {
+      id: 1338,
+      facts: [
+        { type: "AttributeAdjust", value: 120, target: "Power" },
+      ],
+    };
+    state.activeCatalog = {
+      traitById: new Map([[1338, forcefulGreatsword]]),
+      specializationById: new Map(),
+    };
+    const editor = makeEditor();
+    editor.specializations = [
+      { specializationId: 4, majorChoices: { 2: 1338 } },
+    ];
+    editor.equipment.weapons = { mainhand1: "greatsword" };
+    state.editor = editor;
+    expect(computePassiveTraitBonuses()).toEqual({ Power: 240 });
+  });
+
+  test("Forceful Greatsword gives base Power when non-greatsword equipped", () => {
+    const forcefulGreatsword = {
+      id: 1338,
+      facts: [
+        { type: "AttributeAdjust", value: 120, target: "Power" },
+      ],
+    };
+    state.activeCatalog = {
+      traitById: new Map([[1338, forcefulGreatsword]]),
+      specializationById: new Map(),
+    };
+    const editor = makeEditor();
+    editor.specializations = [
+      { specializationId: 4, majorChoices: { 2: 1338 } },
+    ];
+    editor.equipment.weapons = { mainhand1: "sword" };
+    state.editor = editor;
+    expect(computePassiveTraitBonuses()).toEqual({ Power: 120 });
+  });
+
+  test("Forceful Greatsword doubles Power when spear is equipped (underwater)", () => {
+    const forcefulGreatsword = {
+      id: 1338,
+      facts: [
+        { type: "AttributeAdjust", value: 120, target: "Power" },
+      ],
+    };
+    state.activeCatalog = {
+      traitById: new Map([[1338, forcefulGreatsword]]),
+      specializationById: new Map(),
+    };
+    const editor = makeEditor();
+    editor.specializations = [
+      { specializationId: 4, majorChoices: { 2: 1338 } },
+    ];
+    editor.equipment.weapons = { aquatic1: "spear" };
+    editor.underwaterMode = true;
+    state.editor = editor;
+    expect(computePassiveTraitBonuses()).toEqual({ Power: 240 });
+  });
+
+  test("Forceful Greatsword doubles when greatsword on weapon set 2", () => {
+    const forcefulGreatsword = {
+      id: 1338,
+      facts: [
+        { type: "AttributeAdjust", value: 120, target: "Power" },
+      ],
+    };
+    state.activeCatalog = {
+      traitById: new Map([[1338, forcefulGreatsword]]),
+      specializationById: new Map(),
+    };
+    const editor = makeEditor();
+    editor.specializations = [
+      { specializationId: 4, majorChoices: { 2: 1338 } },
+    ];
+    editor.equipment.weapons = { mainhand1: "sword", mainhand2: "greatsword" };
+    editor.activeWeaponSet = 2;
+    state.editor = editor;
+    expect(computePassiveTraitBonuses()).toEqual({ Power: 240 });
+  });
 });

@@ -6,7 +6,7 @@ require("dotenv").config({ path: path.resolve(__dirname, "../../.env") });
 for (const stream of [process.stdout, process.stderr]) {
   stream?.on?.("error", (err) => { if (err.code !== "EPIPE") throw err; });
 }
-const { app, BrowserWindow, ipcMain, dialog, clipboard } = require("electron");
+const { app, BrowserWindow, ipcMain, dialog, clipboard, nativeTheme, nativeImage } = require("electron");
 const { BuildStore } = require("./buildStore");
 const { FolderStore } = require("./folderStore");
 const { CompStore } = require("./compStore");
@@ -44,6 +44,11 @@ const store = new BuildStore(dataDir);
 const folderStore = new FolderStore(dataDir);
 const compStore = new CompStore(dataDir);
 
+function getIconPath() {
+  const variant = process.platform === "linux" || nativeTheme.shouldUseDarkColors ? "White" : "Black";
+  return path.join(__dirname, `../../public/img/AxiForge-${variant}.png`);
+}
+
 function createWindow() {
   const win = new BrowserWindow({
     width: 1600,
@@ -56,7 +61,7 @@ function createWindow() {
       ? { titleBarStyle: "hidden", trafficLightPosition: { x: -20, y: -20 } }
       : { titleBarStyle: "hidden" }),
     backgroundColor: "#050910",
-    icon: path.join(__dirname, "../../public/img/build_logo.png"),
+    icon: getIconPath(),
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
@@ -210,6 +215,12 @@ app.whenReady().then(async () => {
   const win = createWindow();
   initAutoUpdate(win);
 
+  // Update window icon when system theme changes (light ↔ dark)
+  nativeTheme.on("updated", () => {
+    const icon = nativeImage.createFromPath(getIconPath());
+    win?.setIcon(icon);
+  });
+
   // Pre-warm all profession catalogs in the background so class switching is instant.
   // Runs sequentially with a short delay between each to avoid hammering the GW2 API.
   (async () => {
@@ -265,7 +276,7 @@ app.whenReady().then(async () => {
       minHeight: mobile ? 568 : 740,
       useContentSize: mobile,
       backgroundColor: "#050910",
-      icon: path.join(__dirname, "../../public/img/build_logo.png"),
+      icon: getIconPath(),
       title: mobile ? "AxiForge — Mobile Preview" : "AxiForge — Local Preview",
     });
     preview.loadURL(url);
