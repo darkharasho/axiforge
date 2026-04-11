@@ -3,7 +3,7 @@
 jest.mock("node:https");
 
 const https = require("node:https");
-const { buildCompEmbed, shareCompToDiscord, buildBuildEmbed, shareBuildToDiscord, formatBuildDiscordCopy } = require("../../src/main/discordWebhook");
+const { buildCompEmbed, buildCompEmbeds, shareCompToDiscord, buildBuildEmbed, shareBuildToDiscord, formatBuildDiscordCopy } = require("../../src/main/discordWebhook");
 
 function makeBuild(id, profession, eliteSpec, title) {
   return {
@@ -461,5 +461,220 @@ describe("formatBuildDiscordCopy", () => {
     const text = formatBuildDiscordCopy(coreBuild, buildUrl);
     expect(text).toMatch(/<:Guardian:\d+>/);
     expect(text).toContain("[Core Guard]");
+  });
+});
+
+describe("buildCompEmbeds — embed limit splitting", () => {
+  function makeLargeComp(buildCount) {
+    const slots = [];
+    const builds = {};
+    const buildUrls = {};
+    for (let i = 0; i < buildCount; i++) {
+      const id = `b${i}`;
+      slots.push(id);
+      builds[id] = makeBuild(id, "Guardian", "Firebrand", "A".repeat(60) + ` Build ${i}`);
+      buildUrls[id] = `https://x.github.io/axibuilds/?n=${"a".repeat(50)}&b=${id}.key`;
+    }
+    const comp = {
+      name: "Big Comp",
+      gameMode: "pve",
+      partyLines: [{ id: "p1", capacity: buildCount, slots }],
+    };
+    return { comp, builds, buildUrls };
+  }
+
+  const compUrl = "https://x.github.io/axibuilds/?n=test&c=abc.key";
+
+  test("returns single-element array for small comp", () => {
+    const comp = {
+      name: "Small Comp",
+      gameMode: "pve",
+      partyLines: [{ id: "p1", capacity: 5, slots: ["b1", "b2"] }],
+    };
+    const builds = {
+      b1: makeBuild("b1", "Guardian", "Firebrand", "Heal FB"),
+      b2: makeBuild("b2", "Elementalist", "Catalyst", "Power Cata"),
+    };
+    const embeds = buildCompEmbeds(comp, builds, compUrl, {});
+    expect(embeds).toHaveLength(1);
+    expect(embeds[0].title).toBe("Small Comp");
+    expect(embeds[0].fields).toHaveLength(2);
+  });
+
+  test("splits into multiple embeds when total chars exceed 6000", () => {
+    const { comp, builds, buildUrls } = makeLargeComp(40);
+    const embeds = buildCompEmbeds(comp, builds, compUrl, buildUrls);
+    expect(embeds.length).toBeGreaterThan(1);
+    // First embed has title and author
+    expect(embeds[0].title).toBe("Big Comp");
+    expect(embeds[0].author).toBeDefined();
+    // All embeds share the same color
+    for (const e of embeds) {
+      expect(e.color).toBe(embeds[0].color);
+    }
+  });
+
+  test("no single embed exceeds 6000 total characters", () => {
+    const { comp, builds, buildUrls } = makeLargeComp(40);
+    const embeds = buildCompEmbeds(comp, builds, compUrl, buildUrls);
+    for (const embed of embeds) {
+      let count = 0;
+      if (embed.title) count += embed.title.length;
+      if (embed.description) count += embed.description.length;
+      if (embed.author?.name) count += embed.author.name.length;
+      if (embed.footer?.text) count += embed.footer.text.length;
+      for (const f of embed.fields || []) {
+        count += (f.name || "").length + (f.value || "").length;
+      }
+      expect(count).toBeLessThanOrEqual(6000);
+    }
+  });
+
+  test("no single embed exceeds 25 fields", () => {
+    const { comp, builds, buildUrls } = makeLargeComp(40);
+    const embeds = buildCompEmbeds(comp, builds, compUrl, buildUrls);
+    for (const embed of embeds) {
+      expect((embed.fields || []).length).toBeLessThanOrEqual(25);
+    }
+  });
+
+  test("continuation embeds have no title or author", () => {
+    const { comp, builds, buildUrls } = makeLargeComp(40);
+    const embeds = buildCompEmbeds(comp, builds, compUrl, buildUrls);
+    expect(embeds.length).toBeGreaterThan(1);
+    for (const e of embeds.slice(1)) {
+      expect(e.title).toBeUndefined();
+      expect(e.author).toBeUndefined();
+    }
+  });
+
+  test("truncates comp title exceeding 256 characters", () => {
+    const comp = {
+      name: "A".repeat(300),
+      gameMode: "pve",
+      partyLines: [{ id: "p1", capacity: 5, slots: ["b1"] }],
+    };
+    const builds = { b1: makeBuild("b1", "Guardian", "Firebrand", "Heal FB") };
+    const embeds = buildCompEmbeds(comp, builds, compUrl, {});
+    expect(embeds[0].title.length).toBeLessThanOrEqual(256);
+    expect(embeds[0].title.endsWith("\u2026")).toBe(true);
+  });
+
+  test("truncates comp description exceeding 4096 characters", () => {
+    const comp = {
+      name: "Test Comp",
+      notes: "N".repeat(5000),
+      gameMode: "pve",
+      partyLines: [{ id: "p1", capacity: 5, slots: ["b1"] }],
+    };
+    const builds = { b1: makeBuild("b1", "Guardian", "Firebrand", "Heal FB") };
+    const embeds = buildCompEmbeds(comp, builds, compUrl, {});
+    expect(embeds[0].description.length).toBeLessThanOrEqual(4096);
+    expect(embeds[0].description.endsWith("\u2026")).toBe(true);
+  });
+});
+
+describe("shareCompToDiscord — multi-embed payload", () => {
+  const webhookUrl = "https://discord.com/api/webhooks/123/abc";
+
+  function mockHttpsResponse(statusCode, body = "") {
+    const res = {
+      statusCode,
+      on: jest.fn((event, cb) => {
+        if (event === "data" && body) cb(body);
+        if (event === "end") cb();
+        return res;
+      }),
+    };
+    const req = {
+      on: jest.fn().mockReturnThis(),
+      write: jest.fn(),
+      end: jest.fn(),
+    };
+    https.request.mockImplementation((_opts, callback) => {
+      callback(res);
+      return req;
+    });
+    return req;
+  }
+
+  beforeEach(() => {
+    jest.resetAllMocks();
+  });
+
+  test("sends multiple embeds for large comp", () => {
+    const req = mockHttpsResponse(204);
+    const slots = [];
+    const builds = {};
+    const buildUrls = {};
+    for (let i = 0; i < 40; i++) {
+      const id = `b${i}`;
+      slots.push(id);
+      builds[id] = makeBuild(id, "Guardian", "Firebrand", "A".repeat(60) + ` Build ${i}`);
+      buildUrls[id] = `https://x.github.io/axibuilds/?n=${"a".repeat(50)}&b=${id}.key`;
+    }
+    const comp = {
+      name: "Big Comp",
+      gameMode: "pve",
+      partyLines: [{ id: "p1", capacity: 40, slots }],
+    };
+    return shareCompToDiscord(comp, builds, "https://x.github.io/axibuilds/?n=test&c=abc.key", buildUrls, webhookUrl).then((result) => {
+      expect(result).toEqual({ success: true });
+      const payload = JSON.parse(req.write.mock.calls[0][0]);
+      expect(payload.embeds.length).toBeGreaterThan(1);
+    });
+  });
+
+  test("includes Discord error body in error message for 400", () => {
+    mockHttpsResponse(400, '{"message":"Invalid Form Body","code":50035}');
+    const comp = {
+      name: "Test Comp",
+      gameMode: "pve",
+      partyLines: [{ id: "p1", capacity: 5, slots: ["b1"] }],
+    };
+    const builds = { b1: makeBuild("b1", "Guardian", "Firebrand", "Heal FB") };
+    return shareCompToDiscord(comp, builds, "https://example.com", {}, webhookUrl).then((result) => {
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("400");
+      expect(result.error).toContain("Invalid Form Body");
+    });
+  });
+});
+
+describe("shareBuildToDiscord — error body", () => {
+  const webhookUrl = "https://discord.com/api/webhooks/123/abc";
+
+  function mockHttpsResponse(statusCode, body = "") {
+    const res = {
+      statusCode,
+      on: jest.fn((event, cb) => {
+        if (event === "data" && body) cb(body);
+        if (event === "end") cb();
+        return res;
+      }),
+    };
+    const req = {
+      on: jest.fn().mockReturnThis(),
+      write: jest.fn(),
+      end: jest.fn(),
+    };
+    https.request.mockImplementation((_opts, callback) => {
+      callback(res);
+      return req;
+    });
+  }
+
+  beforeEach(() => {
+    jest.resetAllMocks();
+  });
+
+  test("includes Discord error body in error message for 400", () => {
+    mockHttpsResponse(400, '{"message":"Invalid Form Body"}');
+    const build = makeBuild("b1", "Guardian", "Firebrand", "Heal FB");
+    return shareBuildToDiscord(build, "https://example.com", "[&DQk=]", {}, webhookUrl).then((result) => {
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("400");
+      expect(result.error).toContain("Invalid Form Body");
+    });
   });
 });

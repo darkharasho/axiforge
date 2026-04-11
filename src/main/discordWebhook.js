@@ -3,7 +3,10 @@
 const https = require("node:https");
 const { getDiscordEmoji, getDisplayName, getSpecLineEmoji } = require("./discordEmoji");
 
-const EMBED_DESC_LIMIT = 4096;
+const TITLE_LIMIT = 256;
+const DESC_LIMIT = 4096;
+const TOTAL_CHAR_LIMIT = 6000;
+const FIELD_LIMIT = 25;
 const COLOR_PVE = 0xFFD700;
 const COLOR_WVW = 0xDC143C;
 const LOGO_URL = "https://raw.githubusercontent.com/darkharasho/axiforge/main/public/img/build_logo.png";
@@ -118,6 +121,72 @@ function buildCompEmbed(comp, builds, compUrl, buildUrls) {
   };
 }
 
+function truncate(str, max) {
+  if (!str || str.length <= max) return str;
+  return str.slice(0, max - 1) + "\u2026";
+}
+
+function embedCharCount(embed) {
+  let count = 0;
+  if (embed.title) count += embed.title.length;
+  if (embed.description) count += embed.description.length;
+  if (embed.author?.name) count += embed.author.name.length;
+  if (embed.footer?.text) count += embed.footer.text.length;
+  for (const f of embed.fields || []) {
+    count += (f.name || "").length + (f.value || "").length;
+  }
+  return count;
+}
+
+/**
+ * Build one or more embeds for a comp, splitting across multiple embeds
+ * when a single embed would exceed Discord's 6000-char or 25-field limits.
+ * First embed: title + author + grid field.  Continuation embeds: legend fields.
+ */
+function buildCompEmbeds(comp, builds, compUrl, buildUrls) {
+  const embed = buildCompEmbed(comp, builds, compUrl, buildUrls);
+
+  // Enforce per-field limits
+  embed.title = truncate(embed.title, TITLE_LIMIT);
+  if (embed.description) embed.description = truncate(embed.description, DESC_LIMIT);
+
+  // If within limits, return as single embed
+  if (embedCharCount(embed) <= TOTAL_CHAR_LIMIT && (embed.fields || []).length <= FIELD_LIMIT) {
+    return [embed];
+  }
+
+  // Split: first embed gets header + grid, rest get legend fields
+  const gridField = embed.fields[0]; // "Comp" field with emoji grid
+  const legendFields = embed.fields.slice(1); // "Builds" legend chunks
+
+  const gridEmbed = {
+    title: embed.title,
+    url: embed.url,
+    description: embed.description,
+    color: embed.color,
+    author: embed.author,
+    fields: [gridField],
+  };
+
+  const embeds = [gridEmbed];
+  let current = { color: embed.color, fields: [] };
+
+  for (const field of legendFields) {
+    const testFields = [...current.fields, field];
+    const testEmbed = { ...current, fields: testFields };
+    if (current.fields.length > 0 &&
+        (testFields.length > FIELD_LIMIT || embedCharCount(testEmbed) > TOTAL_CHAR_LIMIT)) {
+      embeds.push(current);
+      current = { color: embed.color, fields: [field] };
+    } else {
+      current.fields.push(field);
+    }
+  }
+  if (current.fields.length) embeds.push(current);
+
+  return embeds;
+}
+
 function postWebhook(webhookUrl, payload) {
   return new Promise((resolve, reject) => {
     const url = new URL(webhookUrl);
@@ -146,8 +215,8 @@ function postWebhook(webhookUrl, payload) {
 
 async function shareCompToDiscord(comp, builds, compUrl, buildUrls, webhookUrl, options = {}) {
   const { threadMode = "none", threadId } = options;
-  const embed = buildCompEmbed(comp, builds, compUrl, buildUrls);
-  const payload = { username: "AxiForge", avatar_url: LOGO_URL, embeds: [embed] };
+  const embeds = buildCompEmbeds(comp, builds, compUrl, buildUrls);
+  const payload = { username: "AxiForge", avatar_url: LOGO_URL, embeds };
 
   let targetUrl = webhookUrl;
   if (threadMode === "custom" && threadId) {
@@ -170,7 +239,8 @@ async function shareCompToDiscord(comp, builds, compUrl, buildUrls, webhookUrl, 
     if (res.status === 429) {
       return { success: false, error: "Rate limited by Discord. Try again in a few seconds." };
     }
-    return { success: false, error: `Discord returned status ${res.status}` };
+    const detail = res.body ? `: ${res.body}` : "";
+    return { success: false, error: `Discord returned status ${res.status}${detail}` };
   } catch (err) {
     return { success: false, error: `Network error: ${err.message}` };
   }
@@ -456,7 +526,8 @@ async function shareBuildToDiscord(build, buildUrl, chatLink, embedMeta, webhook
     if (res.status === 429) {
       return { success: false, error: "Rate limited by Discord. Try again in a few seconds." };
     }
-    return { success: false, error: `Discord returned status ${res.status}` };
+    const detail = res.body ? `: ${res.body}` : "";
+    return { success: false, error: `Discord returned status ${res.status}${detail}` };
   } catch (err) {
     return { success: false, error: `Network error: ${err.message}` };
   }
@@ -469,4 +540,4 @@ function formatBuildDiscordCopy(build, buildUrl) {
   return `${emoji} ${name}`;
 }
 
-module.exports = { buildCompEmbed, shareCompToDiscord, buildBuildEmbed, shareBuildToDiscord, formatBuildDiscordCopy };
+module.exports = { buildCompEmbed, buildCompEmbeds, shareCompToDiscord, buildBuildEmbed, shareBuildToDiscord, formatBuildDiscordCopy };
