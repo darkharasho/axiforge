@@ -67,8 +67,8 @@ describe("computePublishStats", () => {
 
   test("derived stat: CritChance computed from Precision", () => {
     const result = computePublishStats(makeFullBerserkerEquipment(), null, "Necromancer");
-    // Precision = 2141 => (2141 - 1000) / 21 + 5 = 54.333... + 5 = 59.3%
-    expect(result.stats.CritChance).toBe("59.3%");
+    // Precision = 2141 => (2141 - 1000) / 21 + 5 = 54.333... + 5 = 59.33%
+    expect(result.stats.CritChance).toBe("59.33%");
   });
 
   test("derived stat: CritDamage computed from Ferocity", () => {

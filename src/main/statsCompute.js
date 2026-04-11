@@ -241,7 +241,7 @@ function computePublishStats(equipment, upgradeCatalog, profession, gameMode) {
   // Derived stats
   const baseHP = PROFESSION_BASE_HP[profession] || 11645;
   const health = baseHP + totals.Vitality * 10;
-  const critChance = ((totals.Precision - 1000) / 21 + 5).toFixed(1) + "%";
+  const critChance = ((totals.Precision - 1000) / 21 + 5).toFixed(2) + "%";
   const critDamage = (150 + totals.Ferocity / 15).toFixed(1) + "%";
   const boonDuration = (totals.Concentration / 15).toFixed(1) + "%";
   const condDuration = (totals.Expertise / 15).toFixed(1) + "%";

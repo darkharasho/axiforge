@@ -1302,7 +1302,7 @@ test.describe("Equipment — Stats Display", () => {
     expect(critLabel.trim()).toBe("Crit Chance");
 
     const critValue = await derivedCell.locator(".equip-stat-value").textContent();
-    expect(critValue.trim()).toBe("5.0%");
+    expect(critValue.trim()).toBe("5.00%");
 
     // Now enable Fury (+25% crit chance) and verify it updates
     const boonsSection = panel.locator(".equip-boons");
@@ -1313,7 +1313,7 @@ test.describe("Equipment — Stats Display", () => {
     await window.waitForTimeout(500);
 
     const critWithFury = await derivedCell.locator(".equip-stat-value").textContent();
-    expect(critWithFury.trim()).toBe("30.0%"); // 5.0% + 25% from Fury
+    expect(critWithFury.trim()).toBe("30.00%"); // 5.00% + 25% from Fury
 
     // The crit value should have the boosted class
     const isBoosted = await derivedCell.locator(".equip-stat-value").evaluate(
