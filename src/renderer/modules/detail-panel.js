@@ -385,18 +385,23 @@ function _buildTimingBadges(entity, alacrity, burstRecharge) {
 }
 
 function _renderStatBreakdown(entries, total, statName) {
+  // Check if any entry has an icon — if so, add a spacer to icon-less rows for alignment
+  const hasAnyIcon = entries.some((e) => e.svgIcon || e.icon);
   const lines = entries.map((e) => {
     let iconHtml = "";
     if (e.svgIcon) {
       iconHtml = `<span class="breakdown-svg-icon">${e.svgIcon}</span>`;
     } else if (e.icon) {
       iconHtml = `<img class="fact-status-icon" src="${escapeHtml(e.icon)}" alt="" aria-hidden="true">`;
+    } else if (hasAnyIcon) {
+      iconHtml = `<span class="breakdown-svg-icon"></span>`;
     }
     const countSuffix = e.count > 1 ? ` <span class="breakdown-count">\u00d7${e.count}</span>` : "";
     const pill = e.category ? `<span class="breakdown-pill breakdown-pill--${e.category}">${e.category}</span>` : "";
     return `<li>${iconHtml}<span class="breakdown-value">+${e.value}</span> ${pill}${escapeHtml(e.source)}${countSuffix}</li>`;
   });
-  lines.push(`<li class="breakdown-total"><span class="breakdown-value">${total}</span> Total ${escapeHtml(statName)}</li>`);
+  const totalSpacer = hasAnyIcon ? `<span class="breakdown-svg-icon"></span>` : "";
+  lines.push(`<li class="breakdown-total">${totalSpacer}<span class="breakdown-value">${total}</span> Total ${escapeHtml(statName)}</li>`);
   return `<ul class="hover-preview__breakdown">${lines.join("")}</ul>`;
 }
 
