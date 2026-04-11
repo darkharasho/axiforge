@@ -267,6 +267,24 @@ export function computeFuryCritModifier(state) {
 }
 
 /**
+ * Compute passive crit modifier from active traits.
+ * Returns the bonus crit % from passive traits (e.g., Pinnacle of Strength).
+ */
+export function computePassiveCritModifier(state) {
+  const ctx = buildEngineCtx(state);
+  const catalogs = buildEngineCatalogs(state);
+  const overrides = getOverrides();
+  const mods = engineCollectModifiers(ctx, catalogs, overrides);
+  let bonus = 0;
+  for (const mod of mods) {
+    if (mod.type === "critChance" && mod.condition === null) {
+      bonus += mod.value;
+    }
+  }
+  return bonus;
+}
+
+/**
  * Compute Fury stat bonuses from active traits.
  * Returns an object like { Ferocity: 120, Precision: 80 } or empty {}.
  */

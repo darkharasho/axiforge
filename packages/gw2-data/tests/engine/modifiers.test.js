@@ -470,4 +470,57 @@ describe("collectModifiers()", () => {
     expect(convMods[0]).toMatchObject({ sourceAttr: "Precision", target: "Ferocity", percent: 10 });
     expect(convMods[1]).toMatchObject({ sourceAttr: "Power", target: "ConditionDamage", percent: 15 });
   });
+
+  it("skips AttributeAdjust facts for traits with mightOverride (Pinnacle of Strength)", () => {
+    const traitId = 1453;
+    const trait = {
+      slot: "Minor",
+      description: "Might applied to you grants more power. Your critical-hit chance is increased.",
+      facts: [
+        { type: "AttributeAdjust", target: "Power", value: 10 },
+        { type: "Percent", text: "Critical Chance Increase", percent: 5 },
+      ],
+    };
+    const catalogs = makeCatalogs({ [traitId]: trait }, { 4: { minorTraits: [1453] } });
+    const ctx = makeCtx([{ specializationId: 4, majorChoices: {} }]);
+    const overrides = makeOverrides({
+      "trait:1453": { mightOverride: { power: 40 } },
+    });
+
+    const mods = collectModifiers(ctx, catalogs, overrides);
+    // Should NOT have a flatBonus for Power (the +10 is part of mightOverride)
+    const flatMods = mods.filter((m) => m.type === "flatBonus");
+    expect(flatMods).toHaveLength(0);
+    // Should have a mightModifier
+    const mightMods = mods.filter((m) => m.type === "mightModifier");
+    expect(mightMods).toHaveLength(1);
+    expect(mightMods[0]).toMatchObject({ power: 40, condition: null });
+  });
+
+  it("collects passive critChance from non-fury traits (Pinnacle of Strength)", () => {
+    const traitId = 1453;
+    const trait = {
+      slot: "Minor",
+      description: "Might applied to you grants more power. Your critical-hit chance is increased.",
+      facts: [
+        { type: "AttributeAdjust", target: "Power", value: 10 },
+        { type: "Percent", text: "Critical Chance Increase", percent: 5 },
+      ],
+    };
+    const catalogs = makeCatalogs({ [traitId]: trait }, { 4: { minorTraits: [1453] } });
+    const ctx = makeCtx([{ specializationId: 4, majorChoices: {} }]);
+    const overrides = makeOverrides({
+      "trait:1453": { mightOverride: { power: 40 } },
+    });
+
+    const mods = collectModifiers(ctx, catalogs, overrides);
+    const critMods = mods.filter((m) => m.type === "critChance");
+    expect(critMods).toHaveLength(1);
+    expect(critMods[0]).toMatchObject({
+      source: "trait:1453",
+      type: "critChance",
+      value: 5,
+      condition: null,
+    });
+  });
 });

@@ -18,6 +18,10 @@
   "trait:1831": {
     "description": "Primal Rage: grants access to Primal Bursts (no burst recharge reduction)"
   },
+  "trait:1453": {
+    "mightOverride": { "power": 40 },
+    "description": "Pinnacle of Strength: Might grants +10 bonus Power per stack (40P instead of 30P), +5% passive crit chance"
+  },
   "trait:2046": {
     "berserkConditional": true,
     "description": "Fatal Frenzy: stat bonuses only apply while in berserk mode"

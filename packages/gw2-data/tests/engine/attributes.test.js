@@ -249,4 +249,73 @@ describe("computeAttributes", () => {
     const result = computeAttributes(ctx, makeCatalogs());
     expect(result.signets.Power).toBe(180);
   });
+
+  test("Pinnacle of Strength adds +10 Power per Might stack (40 instead of 30)", () => {
+    const catalogs = makeCatalogs({
+      traitById: new Map([[1453, {
+        id: 1453,
+        slot: "Minor",
+        description: "Might applied to you grants more power. Your critical-hit chance is increased.",
+        facts: [
+          { type: "AttributeAdjust", target: "Power", value: 10 },
+          { type: "Percent", text: "Critical Chance Increase", percent: 5 },
+        ],
+      }]]),
+      specializationById: new Map([[4, { id: 4, minorTraits: [1453] }]]),
+    });
+    const ctx = makeCtx({
+      specializations: [{ specializationId: 4, majorChoices: {} }],
+      assumedBoons: { might: 25 },
+    });
+    const result = computeAttributes(ctx, catalogs);
+    // 25 stacks * 40 Power per stack = 1000 (not 750 + 10 passive)
+    expect(result.boons.Power).toBe(1000);
+    // No passive +10 Power from traits
+    expect(result.traits.Power).toBe(0);
+  });
+
+  test("Pinnacle of Strength does not add Power when Might is 0", () => {
+    const catalogs = makeCatalogs({
+      traitById: new Map([[1453, {
+        id: 1453,
+        slot: "Minor",
+        description: "Might applied to you grants more power. Your critical-hit chance is increased.",
+        facts: [
+          { type: "AttributeAdjust", target: "Power", value: 10 },
+          { type: "Percent", text: "Critical Chance Increase", percent: 5 },
+        ],
+      }]]),
+      specializationById: new Map([[4, { id: 4, minorTraits: [1453] }]]),
+    });
+    const ctx = makeCtx({
+      specializations: [{ specializationId: 4, majorChoices: {} }],
+      assumedBoons: null,
+    });
+    const result = computeAttributes(ctx, catalogs);
+    // No might = no bonus Power at all
+    expect(result.boons.Power).toBe(0);
+    expect(result.traits.Power).toBe(0);
+  });
+
+  test("Pinnacle of Strength adds passive 5% crit chance", () => {
+    const catalogs = makeCatalogs({
+      traitById: new Map([[1453, {
+        id: 1453,
+        slot: "Minor",
+        description: "Might applied to you grants more power. Your critical-hit chance is increased.",
+        facts: [
+          { type: "AttributeAdjust", target: "Power", value: 10 },
+          { type: "Percent", text: "Critical Chance Increase", percent: 5 },
+        ],
+      }]]),
+      specializationById: new Map([[4, { id: 4, minorTraits: [1453] }]]),
+    });
+    const ctx = makeCtx({
+      specializations: [{ specializationId: 4, majorChoices: {} }],
+    });
+    const result = computeAttributes(ctx, catalogs);
+    // Base crit at 1000 Precision = (1000-895)/21 = 5%
+    // + 5% from Pinnacle of Strength = 10%
+    expect(result.derived.critChance).toBeCloseTo(10, 0);
+  });
 });

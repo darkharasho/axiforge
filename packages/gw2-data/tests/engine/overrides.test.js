@@ -14,8 +14,8 @@ describe("overrides module", () => {
       expect(overrides).toBeInstanceOf(Map);
     });
 
-    it("contains exactly 6 entries", () => {
-      expect(overrides.size).toBe(6);
+    it("contains exactly 7 entries", () => {
+      expect(overrides.size).toBe(7);
     });
 
     it("trait:1719 has implicitFury: true", () => {

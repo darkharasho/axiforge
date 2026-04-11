@@ -976,6 +976,7 @@ export function makeSkillSlot(slot, catalog, options, utilitySelection, markSkil
         state.editor.activeKit = 0; // clear kit view when utility selection changes
         _markEditorChanged({ updateBuildList: true });
         renderSkills();
+        _renderEquipmentPanel(); // refresh stats (e.g. signet passive bonuses)
 
         // FLIP animation: after re-render, briefly offset the new icons to their OLD positions
         // then transition them to their natural (0,0) resting place with a springy easing.
@@ -1841,6 +1842,7 @@ export function openLegendPicker(anchorEl, slotIdx, catalog) {
       syncRevenantSkillsFromLegend(catalog);
       _markEditorChanged();
       renderSkills();
+      _renderEquipmentPanel(); // refresh stats (e.g. signet passive bonuses)
     }, { items, searchPlaceholder: "Search legends…" });
   }
 }

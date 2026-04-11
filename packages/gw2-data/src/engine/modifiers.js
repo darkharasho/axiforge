@@ -123,22 +123,25 @@ function collectModifiers(ctx, catalogs, overrides) {
       : fury ? "fury" : null;
 
     // 4. AttributeAdjust facts — flatBonus
-    const byTarget = new Map();
-    for (const fact of modeFacts) {
-      if (fact.type !== "AttributeAdjust" || !fact.target || fact.value == null) continue;
-      if (!byTarget.has(fact.target)) byTarget.set(fact.target, []);
-      byTarget.get(fact.target).push(fact.value);
-    }
-    for (const [target, values] of byTarget) {
-      const statKey = CONVERSION_TARGET_MAP[target] || target;
-      const idx = gameMode === "wvw" ? Math.min(1, values.length - 1) : 0;
-      modifiers.push({
-        source,
-        type: "flatBonus",
-        target: statKey,
-        value: values[idx],
-        condition,
-      });
+    //    Skip for traits with mightOverride (the bonus is folded into per-stack values)
+    if (!override?.mightOverride) {
+      const byTarget = new Map();
+      for (const fact of modeFacts) {
+        if (fact.type !== "AttributeAdjust" || !fact.target || fact.value == null) continue;
+        if (!byTarget.has(fact.target)) byTarget.set(fact.target, []);
+        byTarget.get(fact.target).push(fact.value);
+      }
+      for (const [target, values] of byTarget) {
+        const statKey = CONVERSION_TARGET_MAP[target] || target;
+        const idx = gameMode === "wvw" ? Math.min(1, values.length - 1) : 0;
+        modifiers.push({
+          source,
+          type: "flatBonus",
+          target: statKey,
+          value: values[idx],
+          condition,
+        });
+      }
     }
 
     // 5. BuffConversion / AttributeConversion facts — conversion
@@ -166,18 +169,20 @@ function collectModifiers(ctx, catalogs, overrides) {
       });
     }
 
-    // 6. Fury traits with "Critical Chance Increase" Percent facts — critChance
-    if (fury) {
+    // 6. "Critical Chance Increase" Percent facts — critChance
+    //    Fury traits: condition = "fury" (applied only when fury is assumed)
+    //    Non-fury/non-berserk traits: condition = null (passive, always active)
+    {
       const critFacts = modeFacts.filter(
         (f) => f.type === "Percent" && f.text === "Critical Chance Increase" && f.percent
       );
-      if (critFacts.length > 0) {
+      if (critFacts.length > 0 && (fury || condition === null)) {
         const idx = gameMode === "wvw" ? Math.min(1, critFacts.length - 1) : 0;
         modifiers.push({
           source,
           type: "critChance",
           value: critFacts[idx].percent,
-          condition: "fury",
+          condition,
         });
       }
     }

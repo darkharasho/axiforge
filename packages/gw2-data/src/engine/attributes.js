@@ -477,19 +477,25 @@ function computeAttributes(ctx, catalogs) {
 
   const health = profBaseHp + total.Vitality * 10;
 
+  // Crit bonus from traits and boons
+  let critBonus = 0;
+  // Passive crit chance modifiers (always active, condition === null)
+  for (const mod of modifiers) {
+    if (mod.type === "critChance" && mod.condition === null) {
+      critBonus += mod.value;
+    }
+  }
   // Fury crit bonus
-  let furyCritBonus = 0;
   if (furyAssumed) {
-    furyCritBonus += gameMode === "wvw" ? FURY_CRIT_CHANCE_WVW : FURY_CRIT_CHANCE;
-    // Add any critChance modifiers from traits that have condition === "fury"
+    critBonus += gameMode === "wvw" ? FURY_CRIT_CHANCE_WVW : FURY_CRIT_CHANCE;
     for (const mod of modifiers) {
       if (mod.type === "critChance" && mod.condition === "fury") {
-        furyCritBonus += mod.value;
+        critBonus += mod.value;
       }
     }
   }
 
-  const critChance = Math.min(100, (total.Precision - 895) / 21 + furyCritBonus);
+  const critChance = Math.min(100, (total.Precision - 895) / 21 + critBonus);
   const critDamage = 150 + total.Ferocity / 15;
   const conditionDuration = total.Expertise / 15;
   const boonDuration = total.Concentration / 15;

@@ -683,11 +683,12 @@ describe("computePassiveTraitBonuses — flat stat bonuses from passive traits",
     expect(computePassiveTraitBonuses()).toEqual({ Power: 120 });
   });
 
-  test("returns Power from Pinnacle of Strength minor trait", () => {
+  test("Pinnacle of Strength does not add passive Power (handled via mightOverride)", () => {
     const pinnacle = {
       id: 1453,
       facts: [
         { type: "AttributeAdjust", value: 10, target: "Power" },
+        { type: "Percent", text: "Critical Chance Increase", percent: 5 },
       ],
     };
     state.activeCatalog = {
@@ -697,7 +698,8 @@ describe("computePassiveTraitBonuses — flat stat bonuses from passive traits",
     state.editor.specializations = [
       { specializationId: 4, majorChoices: {} },
     ];
-    expect(computePassiveTraitBonuses()).toEqual({ Power: 10 });
+    // Power bonus is now part of mightOverride, not a passive flat bonus
+    expect(computePassiveTraitBonuses()).toEqual({});
   });
 
   test("does not include Fury-gated traits (already handled by computeFuryStatBonuses)", () => {
