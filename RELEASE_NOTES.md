@@ -1,3 +1,9 @@
+## Version v0.3.8 — April 10, 2026
+
+### Bug Fixes
+- Fixed Critical Strike Chance calculation being 5% too high across all builds — the formula was double-counting the base crit chance on top of what Precision already provides (#193)
+- Crit Chance now displays with 2 decimal places to match the in-game tooltip precision
+
 ## Version v0.3.7 — April 10, 2026
 
 ### Bug Fixes
