@@ -1,3 +1,10 @@
+## Version v0.3.4 — April 10, 2026
+
+### Bug Fixes
+- Fixed Discord webhook sharing failing with a 400 error for large comps — embeds that exceed Discord's 6000-character or 25-field limits are now automatically split across multiple embeds (grid in the first, build legend in continuation embeds)
+- Discord error responses now include the full error body in the error message, making it easier to diagnose webhook issues
+- Comp titles and descriptions that exceed Discord's limits are now truncated gracefully instead of causing a rejection
+
 ## Version v0.3.3 — April 10, 2026
 
 ### Bug Fixes
