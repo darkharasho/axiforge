@@ -1,3 +1,10 @@
+## Version v0.3.10 — April 10, 2026
+
+### Bug Fixes
+- Fixed Pinnacle of Strength trait applying +10 Power as a passive bonus instead of correctly modifying Might per-stack Power (30 → 40 per stack)
+- Fixed Pinnacle of Strength not granting its passive 5% critical chance increase
+- Fixed signet passive stat bonuses not updating the attributes panel immediately when selecting a skill — previously required saving the build first
+
 ## Version v0.3.9 — April 10, 2026
 
 ### Bug Fixes
