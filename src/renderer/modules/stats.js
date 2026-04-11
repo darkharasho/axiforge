@@ -1,5 +1,5 @@
 // Equipment stat display — UI-only functions that consume engine results.
-// Core computation lives in @axi/gw2-data/engine, accessed via engine-bridge.js.
+// Core computation lives in @axiapps/gw2-data/engine, accessed via engine-bridge.js.
 import { state } from "./state.js";
 import {
   STAT_COMBOS_BY_LABEL, SLOT_WEIGHTS, TWO_HAND_WEIGHTS,

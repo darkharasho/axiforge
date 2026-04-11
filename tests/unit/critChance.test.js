@@ -7,7 +7,7 @@
  * Base Precision is 1000, so base crit chance = (1000 - 895) / 21 = 5%.
  */
 
-const { computeAttributes } = require("@axi/gw2-data/engine");
+const { computeAttributes } = require("@axiapps/gw2-data/engine");
 
 function makeCtx(overrides = {}) {
   return {

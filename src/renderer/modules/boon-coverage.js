@@ -1,5 +1,5 @@
 // Boon coverage — party-level aggregation wrapper.
-// Core boon computation lives in @axi/gw2-data/engine, accessed via engine-bridge.js.
+// Core boon computation lives in @axiapps/gw2-data/engine, accessed via engine-bridge.js.
 import { computeBoons, computeCombos } from "./engine-bridge.js";
 import { state } from "./state.js";
 

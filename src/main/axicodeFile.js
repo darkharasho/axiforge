@@ -1,7 +1,7 @@
 const { ipcMain, dialog } = require("electron");
 const fs = require("node:fs/promises");
 const path = require("node:path");
-const { encodeAxicodeFile, decodeAxicodeFile } = require("@mks.haro/axicode");
+const { encodeAxicodeFile, decodeAxicodeFile } = require("@axiapps/code");
 
 function registerAxicodeFileHandlers(mainWindow) {
   ipcMain.handle("axicode-file:export", async (_e, { builds, folders, comps }) => {

@@ -7,7 +7,7 @@ const MAX_IDS_PER_REQUEST = 180;
 const MAX_RETRIES = 3;
 const MAX_CONCURRENT = 3;
 const RATE_LIMIT_DELAY_MS = 2000;
-const USER_AGENT = "@axi/gw2-data (https://github.com/darkharasho/axiforge)";
+const USER_AGENT = "@axiapps/gw2-data (https://github.com/darkharasho/axiforge)";
 
 class Gw2ApiClient {
   /**

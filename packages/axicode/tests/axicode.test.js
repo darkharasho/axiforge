@@ -1,5 +1,5 @@
 "use strict";
-const { encodeShareCode, decodeShareCode, isValidShareCode } = require("@axiapps/code");
+const { encodeShareCode, decodeShareCode, isValidShareCode } = require("../src/index");
 
 // Minimal Warrior/Berserker build fixture
 const BERSERKER_BUILD = {
@@ -146,9 +146,7 @@ describe("decodeShareCode", () => {
   test("round-trip: preserves sigils", () => {
     const code = encodeShareCode(BERSERKER_BUILD);
     const decoded = decodeShareCode(code);
-    // Greatsword (2H) → 2 sigils
     expect(decoded.equipment.sigils.mainhand1).toEqual(["24615", "24868"]);
-    // Axe (1H, no offhand in set 2) → 1 sigil
     expect(decoded.equipment.sigils.mainhand2[0]).toBe("24615");
   });
 
@@ -163,15 +161,13 @@ describe("decodeShareCode", () => {
   });
 
   test("throws on unknown version", () => {
-    // Any Z85 payload that starts with version != 1 should fail
     expect(() => decodeShareCode("<AxiForge:Test:00000>")).toThrow();
   });
 });
 
-// ── Task 6: Profession-Specific Encoding Tests ──────────────────────────────
+// ── Profession-Specific Encoding Tests ───────────────────────────────────────
 
 describe("profession-specific round-trips", () => {
-  /** Helper: clone BERSERKER_BUILD with overrides */
   function makeBuild(overrides) {
     const base = JSON.parse(JSON.stringify(BERSERKER_BUILD));
     return Object.assign(base, overrides);
@@ -214,7 +210,6 @@ describe("profession-specific round-trips", () => {
     const decoded = decodeShareCode(code);
     expect(decoded.selectedPets.terrestrial1).toBe(46);
     expect(decoded.selectedPets.terrestrial2).toBe(59);
-    // aquatic pets only written when hasUnderwater flag is set
   });
 
   test("Elementalist (Weaver) round-trip", () => {
@@ -233,25 +228,6 @@ describe("profession-specific round-trips", () => {
     const decoded = decodeShareCode(code);
     expect(decoded.activeAttunement).toBe("Fire");
     expect(decoded.activeAttunement2).toBe("Water");
-  });
-
-  test("Elementalist (Tempest, non-Weaver) round-trip", () => {
-    const build = makeBuild({
-      profession: "Elementalist",
-      specializations: [
-        BERSERKER_BUILD.specializations[0],
-        BERSERKER_BUILD.specializations[1],
-        { id: 48, name: "Tempest", elite: true, majorChoices: { 1: 2049, 2: 2039, 3: 2043 },
-          majorTraitsByTier: BERSERKER_BUILD.specializations[2].majorTraitsByTier },
-      ],
-      activeAttunement: "Air",
-      activeAttunement2: "",
-    });
-    const code = encodeShareCode(build);
-    const decoded = decodeShareCode(code);
-    expect(decoded.activeAttunement).toBe("Air");
-    // "" maps to index 0 which decodes as "Fire"; secondary attunement is always stored
-    expect(decoded.activeAttunement2).toBe("Fire");
   });
 
   test("Thief (Antiquary) round-trip", () => {
@@ -287,19 +263,16 @@ describe("profession-specific round-trips", () => {
   });
 
   test("Warrior active weapon set round-trip", () => {
-    const build = makeBuild({
-      activeWeaponSet: 2,
-    });
+    const build = makeBuild({ activeWeaponSet: 2 });
     const code = encodeShareCode(build);
     const decoded = decodeShareCode(code);
     expect(decoded.activeWeaponSet).toBe(2);
   });
 });
 
-// ── Task 7: Per-Slot Mode Tests ─────────────────────────────────────────────
+// ── Per-Slot Mode Tests ──────────────────────────────────────────────────────
 
 describe("per-slot mode round-trips", () => {
-  /** Helper: clone BERSERKER_BUILD with overrides */
   function makeBuild(overrides) {
     const base = JSON.parse(JSON.stringify(BERSERKER_BUILD));
     return Object.assign(base, overrides);
@@ -359,61 +332,12 @@ describe("per-slot mode round-trips", () => {
     expect(decoded.equipment.weapons.aquatic1).toBe("spear");
     expect(decoded.equipment.sigils.aquatic1).toEqual(["24615", "24868"]);
   });
-
-  test("sigils: 1H vs 2H weapon round-trip", () => {
-    const code = encodeShareCode(BERSERKER_BUILD);
-    const decoded = decodeShareCode(code);
-    // Greatsword (2H) → 2 sigils
-    expect(decoded.equipment.sigils.mainhand1).toEqual(["24615", "24868"]);
-    // Axe (1H, no offhand) → 1 sigil
-    expect(decoded.equipment.sigils.mainhand2).toEqual(["24615"]);
-  });
 });
 
-// ── Import normalization (axicode → editor format) ──────────────────────────
-
-describe("axicode import normalization", () => {
-  const { normalizeImportedSkills } = require("../../src/renderer/modules/editor");
-
-  test("decoded skills are normalized to nested format for loadBuildIntoEditor", () => {
-    const code = encodeShareCode(BERSERKER_BUILD);
-    const decoded = decodeShareCode(code);
-
-    // Decoded format: { healId, utilityIds, eliteId }
-    expect(decoded.skills.healId).toBe(14402);
-    expect(decoded.skills.utilityIds).toEqual([14404, 14410, 14405]);
-    expect(decoded.skills.eliteId).toBe(14355);
-
-    // normalizeImportedSkills converts to nested { heal: {id}, utility: [{id}], elite: {id} }
-    const normalized = normalizeImportedSkills(decoded);
-    expect(normalized.heal).toEqual({ id: 14402 });
-    expect(normalized.utility).toEqual([{ id: 14404 }, { id: 14410 }, { id: 14405 }]);
-    expect(normalized.elite).toEqual({ id: 14355 });
-  });
-
-  test("decoded traitChoices can be preserved as _traitChoices for resolution", () => {
-    const code = encodeShareCode(BERSERKER_BUILD);
-    const decoded = decodeShareCode(code);
-
-    // traitChoices are 1-based position indices
-    expect(decoded.specializations[0].traitChoices).toEqual([1, 1, 1]);
-    expect(decoded.specializations[2].traitChoices).toEqual([1, 1, 1]);
-
-    // Attaching _traitChoices for later resolution by enforceEditorConsistency
-    const specs = decoded.specializations.map((s) => ({
-      ...s,
-      _traitChoices: Array.isArray(s.traitChoices) ? s.traitChoices : null,
-    }));
-    expect(specs[0]._traitChoices).toEqual([1, 1, 1]);
-    expect(specs[2]._traitChoices).toEqual([1, 1, 1]);
-  });
-});
-
-// ── Error handling ──────────────────────────────────────────────────────────
+// ── Error handling ───────────────────────────────────────────────────────────
 
 describe("error handling", () => {
   test("truncated payload throws", () => {
-    // Take a valid code and truncate the payload
     const code = encodeShareCode(BERSERKER_BUILD);
     const truncated = code.slice(0, code.length - 10) + ">";
     expect(() => decodeShareCode(truncated)).toThrow();

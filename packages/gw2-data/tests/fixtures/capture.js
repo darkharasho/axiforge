@@ -16,7 +16,7 @@ const path = require("path");
 const GW2_API = "https://api.guildwars2.com/v2";
 const WIKI_API = "https://wiki.guildwars2.com/api.php";
 const RATE_LIMIT_MS = 250;
-const USER_AGENT = "@axi/gw2-data fixture-capture";
+const USER_AGENT = "@axiapps/gw2-data fixture-capture";
 
 // Representative skills/traits covering different edge cases:
 //

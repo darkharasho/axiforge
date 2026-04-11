@@ -1,9 +1,9 @@
 // src/renderer/modules/engine-bridge.js
 //
-// Production bridge between renderer state and @axi/gw2-data engine.
+// Production bridge between renderer state and @axiapps/gw2-data engine.
 // Only file that imports from the CJS engine package.
 
-import * as _engine from "@axi/gw2-data/engine";
+import * as _engine from "@axiapps/gw2-data/engine";
 import { BOON_CONDITION_ICONS } from "./constants.js";
 
 // Normalize CJS interop: Vite dev uses namespace, Rollup prod wraps in { default }

@@ -19,7 +19,7 @@ export default defineConfig({
     fs: { allow: [projectRoot] },
   },
   optimizeDeps: {
-    include: ["@axi/gw2-data", "@axi/gw2-data/engine"],
+    include: ["@axiapps/gw2-data", "@axiapps/gw2-data/engine"],
   },
   build: {
     outDir: "../../dist/site",
