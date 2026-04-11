@@ -1,3 +1,8 @@
+## Version v0.3.6 — April 10, 2026
+
+### Bug Fixes
+- Fixed the shared build website (SPA) pegging CPU to 100% and causing high temperatures in Chrome and Edge — the ambient background animation now uses GPU-composited transforms instead of expensive gradient repaints
+
 ## Version v0.3.5 — April 10, 2026
 
 ### Bug Fixes
