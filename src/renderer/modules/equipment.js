@@ -607,9 +607,12 @@ export function renderEquipmentPanel() {
                 equip.weapons[ofKey] = "";
                 equip.slots[ofKey] = "";
               }
-              // Clear second sigil on the mainhand when swapping to one-handed
+              // Clear second sigil/infusion on the mainhand when swapping to one-handed
               if (!newFlags.includes("TwoHand") && equip.sigils?.[slotDef.key]) {
                 equip.sigils[slotDef.key][1] = "";
+              }
+              if (!newFlags.includes("TwoHand") && Array.isArray(equip.infusions?.[slotDef.key])) {
+                equip.infusions[slotDef.key][1] = "";
               }
               _markEditorChanged();
               renderEquipmentPanel();
@@ -709,7 +712,15 @@ export function renderEquipmentPanel() {
       } else {
         if (!equip.infusions) equip.infusions = {};
         if (Array.isArray(equip.infusions[key])) {
-          equip.infusions[key] = equip.infusions[key].map(() => newVal);
+          // For mainhand weapon slots, only fill infusion slots matching weapon type
+          const weaponType = weapons[key] || "";
+          const wDef = GW2_WEAPONS_BY_ID.get(weaponType);
+          const isTwoHand = wDef?.hand === "two" || (
+            !key.startsWith("offhand") && !key.startsWith("aquatic") &&
+            (state.activeCatalog?.professionWeapons?.[weaponType]?.flags || []).includes("TwoHand")
+          );
+          const maxSlots = key.startsWith("mainhand") && weaponType && !isTwoHand ? 1 : equip.infusions[key].length;
+          equip.infusions[key] = equip.infusions[key].map((_, i) => i < maxSlots ? newVal : "");
         } else {
           equip.infusions[key] = newVal;
         }

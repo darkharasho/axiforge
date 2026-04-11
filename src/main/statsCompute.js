@@ -165,11 +165,18 @@ function computePublishStats(equipment, upgradeCatalog, profession, gameMode) {
       }
     };
 
-    // Infusions
+    // Infusions — cap mainhand weapon slots to 1 infusion for 1H weapons (issue #201)
     const infusions = equipment.infusions || {};
-    for (const v of Object.values(infusions)) {
+    for (const [slotKey, v] of Object.entries(infusions)) {
       const ids = Array.isArray(v) ? v : [v];
-      for (const id of ids) {
+      let maxSlots = ids.length;
+      if (slotKey.startsWith("mainhand")) {
+        const weaponType = weapons[slotKey] || "";
+        if (weaponType && !TWO_HAND_WEAPON_IDS.has(weaponType)) maxSlots = 1;
+      }
+      const limit = Math.min(ids.length, maxSlots);
+      for (let i = 0; i < limit; i++) {
+        const id = ids[i];
         if (!id) continue;
         const def = upgradeCatalog.infusionById?.get(Number(id));
         if (def) addInfixAttributes(def.infixUpgrade);

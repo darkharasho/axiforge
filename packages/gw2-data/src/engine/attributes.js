@@ -305,13 +305,25 @@ function computeAttributes(ctx, catalogs) {
 
   // -------------------------------------------------------------------------
   // Step 5: Infusions — per slot, flatMap arrays, lookup infixUpgrade.attributes
+  // For mainhand weapon slots, limit infusion count based on weapon type:
+  // 1H weapons get 1 infusion slot, 2H/aquatic weapons get 2.
   // -------------------------------------------------------------------------
   const infusionStats = zeroStats();
   if (equipment.infusions && catalogs.infusionById) {
     for (const [slotKey, infusionIds] of Object.entries(equipment.infusions)) {
       if (excluded.has(slotKey)) continue;
       const ids = Array.isArray(infusionIds) ? infusionIds : [infusionIds];
-      for (const infId of ids) {
+      // Cap infusion slots for mainhand weapons: 2H = 2, 1H = 1
+      let maxSlots = ids.length;
+      if (slotKey.startsWith("mainhand") || slotKey.startsWith("aquatic")) {
+        const weaponType = weapons[slotKey] || "";
+        if (weaponType && !slotKey.startsWith("aquatic")) {
+          maxSlots = TWO_HAND_WEAPON_TYPES.has(weaponType) ? 2 : 1;
+        }
+      }
+      const limit = Math.min(ids.length, maxSlots);
+      for (let i = 0; i < limit; i++) {
+        const infId = ids[i];
         if (!infId) continue;
         const inf = catalogs.infusionById.get(Number(infId));
         if (!inf?.infixUpgrade?.attributes) continue;
