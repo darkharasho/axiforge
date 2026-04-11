@@ -1290,11 +1290,10 @@ test.describe("Equipment — Stats Display", () => {
     const statsSection = panel.locator(".equip-section").filter({ hasText: "Attributes" }).first();
 
     // Base Precision = 1000
-    // Crit Chance = 5 + (Precision - 895) / 21.0
-    // = 5 + (1000 - 895) / 21.0
-    // = 5 + 105 / 21.0
-    // = 5 + 5.0
-    // = 10.0%
+    // Crit Chance = (Precision - 895) / 21.0
+    // = (1000 - 895) / 21.0
+    // = 105 / 21.0
+    // = 5.0%
     const precisionRow = statsSection.locator(".equip-stat-row").nth(1); // Precision is second row
     const derivedCell = precisionRow.locator(".equip-stat-cell--derived");
     await expect(derivedCell).toBeVisible();
@@ -1303,7 +1302,7 @@ test.describe("Equipment — Stats Display", () => {
     expect(critLabel.trim()).toBe("Crit Chance");
 
     const critValue = await derivedCell.locator(".equip-stat-value").textContent();
-    expect(critValue.trim()).toBe("10.0%");
+    expect(critValue.trim()).toBe("5.0%");
 
     // Now enable Fury (+25% crit chance) and verify it updates
     const boonsSection = panel.locator(".equip-boons");
@@ -1314,7 +1313,7 @@ test.describe("Equipment — Stats Display", () => {
     await window.waitForTimeout(500);
 
     const critWithFury = await derivedCell.locator(".equip-stat-value").textContent();
-    expect(critWithFury.trim()).toBe("35.0%"); // 10.0% + 25% from Fury
+    expect(critWithFury.trim()).toBe("30.0%"); // 5.0% + 25% from Fury
 
     // The crit value should have the boosted class
     const isBoosted = await derivedCell.locator(".equip-stat-value").evaluate(

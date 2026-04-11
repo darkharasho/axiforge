@@ -183,8 +183,8 @@ describe("computeAttributes", () => {
   test("derived crit chance formula", () => {
     const ctx = makeCtx();
     const result = computeAttributes(ctx, makeCatalogs());
-    // Base precision 1000: critChance = 5 + (1000 - 895) / 21 = 5 + 5 = 10
-    expect(result.derived.critChance).toBeCloseTo(10, 0);
+    // Base precision 1000: critChance = (1000 - 895) / 21 = 5%
+    expect(result.derived.critChance).toBeCloseTo(5, 0);
   });
 
   test("derived armor includes weight class defense", () => {
