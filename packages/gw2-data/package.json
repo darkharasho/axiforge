@@ -1,6 +1,6 @@
 {
   "name": "@axiapps/gw2-data",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "GW2 data library — wiki-sourced facts, GW2 API structural data, and stat computation",
   "main": "src/index.js",
   "exports": {
