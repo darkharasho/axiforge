@@ -212,6 +212,13 @@ gh project item-edit \
   --single-select-option-id 98236657
 ```
 
+**Delete the merged branch (local + remote):**
+
+```bash
+git branch -D fix/issue-$ARGUMENTS-<slug>
+git push origin --delete fix/issue-$ARGUMENTS-<slug> 2>/dev/null || true
+```
+
 **Post closing comment:**
 
 ```bash

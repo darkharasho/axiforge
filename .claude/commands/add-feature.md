@@ -180,9 +180,21 @@ Closes #$ARGUMENTS" \
 
 Capture the PR URL.
 
-### Step 13 — Move to "Done" + close out
+### Step 13 — Merge, close out, return to main
 
 Use the item ID you captured in Step 3a.
+
+**Merge the PR:**
+
+```bash
+gh pr merge <pr-number> --repo darkharasho/axiforge --merge
+```
+
+**Switch to main and pull:**
+
+```bash
+git checkout main && git pull
+```
 
 **Move to Done:**
 
@@ -194,6 +206,13 @@ gh project item-edit \
   --single-select-option-id 98236657
 ```
 
+**Delete the merged branch (local + remote):**
+
+```bash
+git branch -D feat/issue-$ARGUMENTS-<slug>
+git push origin --delete feat/issue-$ARGUMENTS-<slug> 2>/dev/null || true
+```
+
 **Post closing comment:**
 
 ```bash
@@ -201,7 +220,7 @@ gh issue comment $ARGUMENTS --repo darkharasho/axiforge \
   --body "✅ **Feature implemented.** PR: <pr-url>"
 ```
 
-End your response with: `PR opened: <pr-url>`
+End your response with: `Merged: <pr-url> — on main.`
 
 ---
 
