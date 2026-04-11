@@ -1,3 +1,9 @@
+## Version v0.3.5 — April 10, 2026
+
+### Bug Fixes
+- Fixed a bug where clicking Save could delete equipped weapons (greatsword, axe, etc.) from a build, making them impossible to re-equip
+- Fixed catalog cache not distinguishing between game modes, which could return stale data when switching between PvE, WvW, and PvP
+
 ## Version v0.3.4 — April 10, 2026
 
 ### Bug Fixes
