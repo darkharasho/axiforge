@@ -70,14 +70,8 @@ function createWindow() {
     },
   });
 
-  // In dev, show without stealing focus so hot-reloads aren't disruptive.
-  // In production, focus the window normally on launch.
   win.once("ready-to-show", () => {
-    if (DEV_SERVER_URL) {
-      win.showInactive();
-    } else {
-      win.show();
-    }
+    win.show();
   });
 
   win.webContents.on("will-attach-webview", (event, webPreferences, params) => {
@@ -94,18 +88,6 @@ function createWindow() {
 
   if (DEV_SERVER_URL) {
     win.loadURL(DEV_SERVER_URL);
-    // Prevent Vite full-reload from stealing focus. On Linux/Wayland,
-    // setFocusable alone isn't reliable — also suppress the 'focus' event
-    // and avoid any show/raise calls during the reload cycle.
-    win.webContents.on("did-start-loading", () => {
-      if (!win.isFocused()) {
-        win.setFocusable(false);
-        win.once("focus", () => win.blur());
-      }
-    });
-    win.webContents.on("did-finish-load", () => {
-      win.setFocusable(true);
-    });
   } else {
     // E2E tests set APP_PROFILE="e2e-test" and run against the built renderer
     // (src/renderer uses bare module specifiers that require Vite to resolve).
