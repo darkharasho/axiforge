@@ -22,7 +22,7 @@ class CompStore {
     const now = new Date().toISOString();
     const id = input.id || crypto.randomUUID();
     const name = String(input.name || "Untitled Comp").slice(0, 140);
-    const notes = String(input.notes || "").slice(0, 12000);
+    const notes = String(input.notes || "").slice(0, 100000);
     const tags = Array.isArray(input.tags) ? input.tags : [];
     const folderId = typeof input.folderId === "string" ? input.folderId : null;
     const sortOrder = typeof input.sortOrder === "number" ? input.sortOrder : 0;
