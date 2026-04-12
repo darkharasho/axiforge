@@ -7,6 +7,8 @@ import { delay, wireTagInput, escapeHtml } from "./modules/utils.js";
 import { injectSkeleton } from "./modules/skeleton.js";
 
 let _lastGameMode = "pve";
+let _stashedTheme = null;
+let _themedBuildsEnabled = false;
 import { initCustomSelect, closeCustomSelect } from "./modules/custom-select.js";
 import {
   initDetailPanel, bindHoverPreview, hideHoverPreview,
@@ -54,6 +56,7 @@ import { initComps, loadComps, renderComps } from "./modules/comps/comps.js";
 import { getProfessionSvg } from "./modules/profession-icons.js";
 import { getEliteSpecName, profClass } from "./modules/build-helpers.js";
 import { renderMiniBuildCard } from "./modules/mini-build-card.js";
+import { PROFESSION_THEMES } from "./modules/constants.js";
 
 // ── DOM element cache ────────────────────────────────────────────────────────
 
@@ -197,7 +200,20 @@ initRenderPagesCallbacks({
   navigateToPage,
   getCatalog,
 });
-initSettingsCallbacks({ refreshOnboardingStatus, render });
+initSettingsCallbacks({
+  refreshOnboardingStatus,
+  render,
+  onThemedBuildsToggle: (enabled) => {
+    _themedBuildsEnabled = enabled;
+    if (state.activePage === "editor") {
+      if (enabled) {
+        applyProfessionThemeIfEnabled();
+      } else {
+        restoreUserThemeIfNeeded();
+      }
+    }
+  },
+});
 
 // ── Auto-update titlebar UI ──────────────────────────────────────────────────
 
@@ -314,6 +330,8 @@ async function init() {
     const savedTheme = await window.desktopApi.getSetting("appearance.theme");
     if (savedTheme) document.documentElement.setAttribute("data-theme", savedTheme);
   } catch { /* first run */ }
+
+  _themedBuildsEnabled = !!(await window.desktopApi.getSetting("appearance.themedBuildPages"));
 
   // Library skeleton: read saved view mode and show matching skeleton during the data load window.
   // The static HTML in index.html already shows the list skeleton for first paint; this re-injects
@@ -524,6 +542,7 @@ async function setProfession(professionId, options = {}) {
 
   enforceEditorConsistency({ preferredEliteSlot: options.preferredEliteSlot });
   renderEditor();
+  if (state.activePage === "editor") applyProfessionThemeIfEnabled();
 }
 
 export async function getCatalog(professionId, gameMode = "pve") {
@@ -619,6 +638,34 @@ function updateWindowTitle() {
 
 // ── Page navigation ─────────────────────────────────────────────────────────
 
+function applyThemeWithTransition(themeId) {
+  document.documentElement.classList.add("theme-transitioning");
+  if (themeId) {
+    document.documentElement.setAttribute("data-theme", themeId);
+  } else {
+    document.documentElement.removeAttribute("data-theme");
+  }
+  setTimeout(() => document.documentElement.classList.remove("theme-transitioning"), 200);
+}
+
+function applyProfessionThemeIfEnabled() {
+  if (!_themedBuildsEnabled) return;
+  const profession = state.editor?.profession;
+  const profTheme = profession ? PROFESSION_THEMES[profession] : null;
+  if (!profTheme) return;
+  const current = document.documentElement.getAttribute("data-theme") || "";
+  if (current === profTheme) return;
+  if (!current.startsWith("prof-")) _stashedTheme = current;
+  applyThemeWithTransition(profTheme);
+}
+
+function restoreUserThemeIfNeeded() {
+  const current = document.documentElement.getAttribute("data-theme") || "";
+  if (!current.startsWith("prof-")) return;
+  applyThemeWithTransition(_stashedTheme || "");
+  _stashedTheme = null;
+}
+
 function navigateToPage(page) {
   if (!page) return;
   // Clear library undo stack when navigating away from the library
@@ -647,6 +694,11 @@ function navigateToPage(page) {
     requestAnimationFrame(() => {
       document.querySelectorAll(".spec-card__body").forEach((body) => drawSpecConnector(body));
     });
+  }
+  if (page === "editor") {
+    applyProfessionThemeIfEnabled();
+  } else {
+    restoreUserThemeIfNeeded();
   }
 }
 
