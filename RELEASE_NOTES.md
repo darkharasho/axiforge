@@ -1,3 +1,9 @@
+## Version v0.4.0 — April 12, 2026
+
+### New Features
+- **Themed build pages** — a new "Themed build pages" toggle in Settings applies per-profession color themes to build pages. When enabled, opening a build shifts the entire UI (backgrounds, panels, accents, buttons) to match the profession's colors: Guardian blue, Warrior orange, Necromancer green, Engineer copper, Ranger lime, Thief rose, Mesmer purple, Elementalist red, and Revenant burgundy. Navigate away and the theme smoothly transitions back to your chosen palette. Published build links bake in the profession theme so viewers see it in the browser too.
+- **Builds can belong to multiple compositions** — builds are no longer locked to a single comp. The editor now shows a Comps tab listing all linked compositions, and context menus offer per-comp unlinking. Duplicating a build no longer carries over comp associations.
+
 ## Version v0.3.14 — April 11, 2026
 
 ### Bug Fixes
