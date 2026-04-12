@@ -214,6 +214,10 @@ initSettingsCallbacks({
       }
     }
   },
+  onThemeChange: (themeId) => {
+    const current = document.documentElement.getAttribute("data-theme") || "";
+    if (current.startsWith("prof-")) _stashedTheme = themeId;
+  },
 });
 
 // ── Auto-update titlebar UI ──────────────────────────────────────────────────

@@ -216,10 +216,13 @@ export async function openSettingsModal() {
 
 // ─── Theme grid ─────────────────────────────────────────────────────────────
 
-function _renderThemeGrid() {
+async function _renderThemeGrid() {
   const grid = _el.themeGrid;
   grid.innerHTML = "";
-  const current = document.documentElement.getAttribute("data-theme") || "";
+  const domTheme = document.documentElement.getAttribute("data-theme") || "";
+  const current = domTheme.startsWith("prof-")
+    ? (await window.desktopApi.getSetting("appearance.theme")) || ""
+    : domTheme;
 
   for (const theme of THEMES) {
     const card = document.createElement("button");
@@ -243,12 +246,17 @@ function _renderThemeGrid() {
 }
 
 async function _applyTheme(themeId) {
-  if (themeId) {
-    document.documentElement.setAttribute("data-theme", themeId);
-  } else {
-    document.documentElement.removeAttribute("data-theme");
+  const current = document.documentElement.getAttribute("data-theme") || "";
+  const profThemeActive = current.startsWith("prof-");
+  if (!profThemeActive) {
+    if (themeId) {
+      document.documentElement.setAttribute("data-theme", themeId);
+    } else {
+      document.documentElement.removeAttribute("data-theme");
+    }
   }
   await window.desktopApi.setSetting("appearance.theme", themeId || null);
+  if (_callbacks.onThemeChange) _callbacks.onThemeChange(themeId || "");
   _renderThemeGrid();
 }
 
