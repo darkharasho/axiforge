@@ -139,3 +139,18 @@ a {
 .hidden {
   display: none !important;
 }
+
+/* ── Theme transition (applied transiently during profession theme swaps) ── */
+.theme-transitioning,
+.theme-transitioning .page,
+.theme-transitioning .panel,
+.theme-transitioning .leftnav,
+.theme-transitioning .subnav,
+.theme-transitioning .editor-main,
+.theme-transitioning .spec-line,
+.theme-transitioning .editor-skills,
+.theme-transitioning .editor-equipment,
+.theme-transitioning input,
+.theme-transitioning button {
+  transition: background-color 500ms ease, border-color 500ms ease, color 500ms ease;
+}

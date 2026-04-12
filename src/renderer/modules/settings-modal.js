@@ -58,6 +58,11 @@ export function initSettingsModal() {
             Appearance
           </h4>
           <div class="settings-modal__theme-grid" id="sm-theme-grid"></div>
+          <label class="settings-modal__toggle" id="sm-themed-builds-toggle">
+            <input type="checkbox" class="settings-modal__toggle-input" id="sm-themed-builds">
+            <span class="settings-modal__toggle-switch"></span>
+            <span class="settings-modal__toggle-text">Themed build pages</span>
+          </label>
         </div>
         <div class="settings-modal__section" id="sm-publishing-section">
           <h4 class="settings-modal__section-title">
@@ -137,6 +142,7 @@ export function initSettingsModal() {
     clearCache:        document.getElementById("sm-clear-cache"),
     cacheStatus:       document.getElementById("sm-cache-status"),
   };
+  _el.themedBuilds = _overlay.querySelector("#sm-themed-builds");
 
   _el.close.addEventListener("click", _close);
   _el.save.addEventListener("click", _save);
@@ -150,19 +156,27 @@ export function initSettingsModal() {
   _el.buildThreadMode.addEventListener("change", (e) => {
     _el.buildThreadId.classList.toggle("settings-modal__thread-id-input--hidden", e.target.value !== "custom");
   });
+
+  // Toggle themed build pages
+  _el.themedBuilds.addEventListener("change", async () => {
+    const enabled = _el.themedBuilds.checked;
+    await window.desktopApi.setSetting("appearance.themedBuildPages", enabled);
+    if (_callbacks.onThemedBuildsToggle) _callbacks.onThemedBuildsToggle(enabled);
+  });
 }
 
 export async function openSettingsModal() {
   if (!_overlay) return;
 
   // Load current values
-  const [webhookUrl, buildWebhookUrl, threadMode, threadId, buildThreadMode, buildThreadId] = await Promise.all([
+  const [webhookUrl, buildWebhookUrl, threadMode, threadId, buildThreadMode, buildThreadId, themedBuilds] = await Promise.all([
     window.desktopApi.getSetting("discord.webhookUrl"),
     window.desktopApi.getSetting("discord.buildWebhookUrl"),
     window.desktopApi.getSetting("discord.threadMode"),
     window.desktopApi.getSetting("discord.threadId"),
     window.desktopApi.getSetting("discord.buildThreadMode"),
     window.desktopApi.getSetting("discord.buildThreadId"),
+    window.desktopApi.getSetting("appearance.themedBuildPages"),
   ]);
 
   // Comp webhook
@@ -185,6 +199,9 @@ export async function openSettingsModal() {
   _el.buildThreadId.value = buildThreadId || "";
   _el.buildThreadError.textContent = "";
 
+  // Themed build pages toggle
+  _el.themedBuilds.checked = !!themedBuilds;
+
   // Populate appearance section
   _renderThemeGrid();
 
@@ -199,10 +216,13 @@ export async function openSettingsModal() {
 
 // ─── Theme grid ─────────────────────────────────────────────────────────────
 
-function _renderThemeGrid() {
+async function _renderThemeGrid() {
   const grid = _el.themeGrid;
   grid.innerHTML = "";
-  const current = document.documentElement.getAttribute("data-theme") || "";
+  const domTheme = document.documentElement.getAttribute("data-theme") || "";
+  const current = domTheme.startsWith("prof-")
+    ? (await window.desktopApi.getSetting("appearance.theme")) || ""
+    : domTheme;
 
   for (const theme of THEMES) {
     const card = document.createElement("button");
@@ -226,12 +246,17 @@ function _renderThemeGrid() {
 }
 
 async function _applyTheme(themeId) {
-  if (themeId) {
-    document.documentElement.setAttribute("data-theme", themeId);
-  } else {
-    document.documentElement.removeAttribute("data-theme");
+  const current = document.documentElement.getAttribute("data-theme") || "";
+  const profThemeActive = current.startsWith("prof-");
+  if (!profThemeActive) {
+    if (themeId) {
+      document.documentElement.setAttribute("data-theme", themeId);
+    } else {
+      document.documentElement.removeAttribute("data-theme");
+    }
   }
   await window.desktopApi.setSetting("appearance.theme", themeId || null);
+  if (_callbacks.onThemeChange) _callbacks.onThemeChange(themeId || "");
   _renderThemeGrid();
 }
 

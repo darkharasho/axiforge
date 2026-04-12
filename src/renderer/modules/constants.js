@@ -198,6 +198,18 @@ export const PROFESSION_WEIGHT = {
   Guardian: "heavy", Warrior: "heavy", Revenant: "heavy",
 };
 
+export const PROFESSION_THEMES = {
+  Guardian: "prof-guardian",
+  Warrior: "prof-warrior",
+  Necromancer: "prof-necromancer",
+  Engineer: "prof-engineer",
+  Ranger: "prof-ranger",
+  Thief: "prof-thief",
+  Mesmer: "prof-mesmer",
+  Elementalist: "prof-elementalist",
+  Revenant: "prof-revenant",
+};
+
 // Total defense from a full set of level 80 Ascended/Legendary armor (6 pieces).
 // Armor (derived stat) = Toughness + total defense.
 export const ARMOR_DEFENSE_BY_WEIGHT = { light: 967, medium: 1118, heavy: 1271 };

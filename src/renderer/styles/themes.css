@@ -97,6 +97,208 @@
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
+   PROFESSION THEMES  (applied programmatically on build pages)
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Guardian — Noble blue, clarity and protection ───────────────────── */
+[data-theme="prof-guardian"] {
+  --bg: #060a10;
+  --bg-2: #080c14;
+  --panel: #101828;
+  --panel-2: #0c1420;
+  --line: #1a2838;
+  --line-soft: #142030;
+  --input-bg: #060a10;
+  --input-border: #182840;
+  --surface: rgba(6, 10, 16, 0.92);
+  --surface-hover: rgba(8, 12, 20, 0.95);
+  --panel-gradient: linear-gradient(180deg, rgba(16, 24, 40, 0.95), rgba(12, 20, 32, 0.95));
+  --accent-rgb: 110, 168, 255;
+  --accent-2-rgb: 144, 192, 255;
+  --gold: #78b0f0;
+  --btn-primary-from: #5890d0;
+  --btn-primary-to: #3870b0;
+  --btn-primary-from-hover: #68a0e0;
+  --btn-primary-to-hover: #4880c0;
+}
+
+/* ── Warrior — Bold orange, raw power and aggression ─────────────────── */
+[data-theme="prof-warrior"] {
+  --bg: #100a06;
+  --bg-2: #140c08;
+  --panel: #1c1410;
+  --panel-2: #18100c;
+  --line: #2c1e18;
+  --line-soft: #241814;
+  --input-bg: #100a06;
+  --input-border: #302018;
+  --surface: rgba(16, 10, 6, 0.92);
+  --surface-hover: rgba(20, 12, 8, 0.95);
+  --panel-gradient: linear-gradient(180deg, rgba(28, 20, 16, 0.95), rgba(24, 16, 12, 0.95));
+  --accent-rgb: 255, 153, 68;
+  --accent-2-rgb: 255, 184, 112;
+  --gold: #f09030;
+  --btn-primary-from: #e08030;
+  --btn-primary-to: #c06018;
+  --btn-primary-from-hover: #f09040;
+  --btn-primary-to-hover: #d07028;
+}
+
+/* ── Necromancer — Toxic green, death magic and decay ────────────────── */
+[data-theme="prof-necromancer"] {
+  --bg: #060e08;
+  --bg-2: #081010;
+  --panel: #101c14;
+  --panel-2: #0c1810;
+  --line: #1a2c20;
+  --line-soft: #14241a;
+  --input-bg: #060e08;
+  --input-border: #183024;
+  --surface: rgba(6, 14, 8, 0.92);
+  --surface-hover: rgba(8, 16, 16, 0.95);
+  --panel-gradient: linear-gradient(180deg, rgba(16, 28, 20, 0.95), rgba(12, 24, 16, 0.95));
+  --accent-rgb: 77, 202, 122;
+  --accent-2-rgb: 64, 160, 160;
+  --gold: #50c080;
+  --btn-primary-from: #40b068;
+  --btn-primary-to: #289048;
+  --btn-primary-from-hover: #50c078;
+  --btn-primary-to-hover: #38a058;
+}
+
+/* ── Engineer — Warm copper, gears and gunpowder ─────────────────────── */
+[data-theme="prof-engineer"] {
+  --bg: #0e0a06;
+  --bg-2: #120c08;
+  --panel: #1a1410;
+  --panel-2: #16100c;
+  --line: #281e16;
+  --line-soft: #201812;
+  --input-bg: #0e0a06;
+  --input-border: #2c2018;
+  --surface: rgba(14, 10, 6, 0.92);
+  --surface-hover: rgba(18, 12, 8, 0.95);
+  --panel-gradient: linear-gradient(180deg, rgba(26, 20, 16, 0.95), rgba(22, 16, 12, 0.95));
+  --accent-rgb: 204, 136, 68;
+  --accent-2-rgb: 224, 168, 96;
+  --gold: #c89040;
+  --btn-primary-from: #b87838;
+  --btn-primary-to: #986020;
+  --btn-primary-from-hover: #c88848;
+  --btn-primary-to-hover: #a87030;
+}
+
+/* ── Ranger — Bright lime, nature and wilderness ─────────────────────── */
+[data-theme="prof-ranger"] {
+  --bg: #080e06;
+  --bg-2: #0a1008;
+  --panel: #141c10;
+  --panel-2: #10180c;
+  --line: #1e2c18;
+  --line-soft: #182414;
+  --input-bg: #080e06;
+  --input-border: #203018;
+  --surface: rgba(8, 14, 6, 0.92);
+  --surface-hover: rgba(10, 16, 8, 0.95);
+  --panel-gradient: linear-gradient(180deg, rgba(20, 28, 16, 0.95), rgba(16, 24, 12, 0.95));
+  --accent-rgb: 119, 204, 85;
+  --accent-2-rgb: 160, 216, 120;
+  --gold: #70c048;
+  --btn-primary-from: #60b040;
+  --btn-primary-to: #489028;
+  --btn-primary-from-hover: #70c050;
+  --btn-primary-to-hover: #58a038;
+}
+
+/* ── Thief — Dusky rose, shadow and subtlety ─────────────────────────── */
+[data-theme="prof-thief"] {
+  --bg: #0e070a;
+  --bg-2: #10090c;
+  --panel: #1c1216;
+  --panel-2: #180e12;
+  --line: #2a1c22;
+  --line-soft: #22161c;
+  --input-bg: #0e070a;
+  --input-border: #2e1e24;
+  --surface: rgba(14, 7, 10, 0.92);
+  --surface-hover: rgba(16, 9, 12, 0.95);
+  --panel-gradient: linear-gradient(180deg, rgba(28, 18, 22, 0.95), rgba(24, 14, 18, 0.95));
+  --accent-rgb: 204, 102, 119;
+  --accent-2-rgb: 216, 160, 168;
+  --gold: #c87080;
+  --btn-primary-from: #b85060;
+  --btn-primary-to: #984048;
+  --btn-primary-from-hover: #c86070;
+  --btn-primary-to-hover: #a85058;
+}
+
+/* ── Mesmer — Arcane purple, illusion and chaos ──────────────────────── */
+[data-theme="prof-mesmer"] {
+  --bg: #0a060e;
+  --bg-2: #0c0810;
+  --panel: #18101e;
+  --panel-2: #140c1a;
+  --line: #24182c;
+  --line-soft: #1e1426;
+  --input-bg: #0a060e;
+  --input-border: #281c30;
+  --surface: rgba(10, 6, 14, 0.92);
+  --surface-hover: rgba(12, 8, 16, 0.95);
+  --panel-gradient: linear-gradient(180deg, rgba(24, 16, 30, 0.95), rgba(20, 12, 26, 0.95));
+  --accent-rgb: 176, 122, 204;
+  --accent-2-rgb: 200, 160, 224;
+  --gold: #a880c8;
+  --btn-primary-from: #9868b8;
+  --btn-primary-to: #784898;
+  --btn-primary-from-hover: #a878c8;
+  --btn-primary-to-hover: #8858a8;
+}
+
+/* ── Elementalist — Ember red, elemental fury ────────────────────────── */
+[data-theme="prof-elementalist"] {
+  --bg: #0e0608;
+  --bg-2: #100810;
+  --panel: #1c1012;
+  --panel-2: #180c0e;
+  --line: #2c181c;
+  --line-soft: #241418;
+  --input-bg: #0e0608;
+  --input-border: #30181e;
+  --surface: rgba(14, 6, 8, 0.92);
+  --surface-hover: rgba(16, 8, 16, 0.95);
+  --panel-gradient: linear-gradient(180deg, rgba(28, 16, 18, 0.95), rgba(24, 12, 14, 0.95));
+  --accent-rgb: 221, 85, 85;
+  --accent-2-rgb: 232, 144, 112;
+  --gold: #d06050;
+  --btn-primary-from: #c84040;
+  --btn-primary-to: #a83030;
+  --btn-primary-from-hover: #d85050;
+  --btn-primary-to-hover: #b84040;
+}
+
+/* ── Revenant — Dark burgundy, ancient power from the Mists ──────────── */
+[data-theme="prof-revenant"] {
+  --bg: #0a0507;
+  --bg-2: #0c0709;
+  --panel: #180c10;
+  --panel-2: #14080c;
+  --line: #261420;
+  --line-soft: #20101a;
+  --input-bg: #0a0507;
+  --input-border: #2a1622;
+  --surface: rgba(10, 5, 7, 0.92);
+  --surface-hover: rgba(12, 7, 9, 0.95);
+  --panel-gradient: linear-gradient(180deg, rgba(24, 12, 16, 0.95), rgba(20, 8, 12, 0.95));
+  --accent-rgb: 184, 72, 72;
+  --accent-2-rgb: 200, 120, 104;
+  --gold: #b05050;
+  --btn-primary-from: #a03838;
+  --btn-primary-to: #802828;
+  --btn-primary-from-hover: #b04848;
+  --btn-primary-to-hover: #903838;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
    ACCENT THEMES  (only swap accent colors, keep default backgrounds)
    ══════════════════════════════════════════════════════════════════════════ */
 

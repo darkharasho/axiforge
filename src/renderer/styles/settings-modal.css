@@ -542,3 +542,54 @@
 .settings-modal__theme-card--active .settings-modal__theme-tag {
   color: var(--accent);
 }
+
+/* ── Themed builds toggle ─────────────────────────────────────────────── */
+.settings-modal__toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+  margin-top: 12px;
+  padding: 0 2px;
+}
+
+.settings-modal__toggle-input {
+  display: none;
+}
+
+.settings-modal__toggle-switch {
+  width: 32px;
+  height: 18px;
+  background: var(--line);
+  border-radius: 9px;
+  position: relative;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.settings-modal__toggle-switch::after {
+  content: "";
+  width: 14px;
+  height: 14px;
+  background: #888;
+  border-radius: 50%;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  transition: transform 0.2s, background 0.2s;
+}
+
+.settings-modal__toggle-input:checked + .settings-modal__toggle-switch {
+  background: rgba(var(--accent-rgb), 0.6);
+}
+
+.settings-modal__toggle-input:checked + .settings-modal__toggle-switch::after {
+  transform: translateX(14px);
+  background: white;
+}
+
+.settings-modal__toggle-text {
+  color: var(--text-dim, #888);
+  font-size: 12px;
+}
