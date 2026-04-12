@@ -89,9 +89,9 @@ describe("CompStore — upsertComp", () => {
     expect(comp.name.length).toBe(140);
   });
 
-  test("truncates notes to 12000 chars", async () => {
-    const comp = await store.upsertComp(makeComp({ notes: "x".repeat(15000) }));
-    expect(comp.notes.length).toBe(12000);
+  test("truncates notes to 100000 chars", async () => {
+    const comp = await store.upsertComp(makeComp({ notes: "x".repeat(110000) }));
+    expect(comp.notes.length).toBe(100000);
   });
 
   test("defaults gameMode to null", async () => {

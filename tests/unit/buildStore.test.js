@@ -350,10 +350,10 @@ describe("normalizeBuild — notes", () => {
   beforeEach(async () => { ({ store, dir } = await makeTempStore()); });
   afterEach(async () => { await cleanupDir(dir); });
 
-  test("truncates notes to 12000 characters", async () => {
-    const long = "x".repeat(15000);
+  test("truncates notes to 100000 characters", async () => {
+    const long = "x".repeat(110000);
     const result = await store.upsertBuild(makeBuild({ notes: long }));
-    expect(result.notes).toHaveLength(12000);
+    expect(result.notes).toHaveLength(100000);
   });
 
   test("preserves notes under the limit", async () => {

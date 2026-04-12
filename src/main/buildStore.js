@@ -160,7 +160,7 @@ function normalizeBuild(input, fallbackCreatedAt) {
     underwaterSkills: normalizeSkills(input.underwaterSkills),
     equipment: normalizeEquipment(input.equipment),
     tags: normalizeTags(input.tags),
-    notes: asString(input.notes, 12000),
+    notes: asString(input.notes, 100000),
     images: normalizeImages(input.images),
     createdAt,
     updatedAt,
