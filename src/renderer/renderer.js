@@ -6,9 +6,6 @@ import { state, createEmptyEditor } from "./modules/state.js";
 import { delay, wireTagInput, escapeHtml } from "./modules/utils.js";
 import { injectSkeleton } from "./modules/skeleton.js";
 
-let _lastGameMode = "pve";
-let _stashedTheme = null;
-let _themedBuildsEnabled = false;
 import { initCustomSelect, closeCustomSelect } from "./modules/custom-select.js";
 import {
   initDetailPanel, bindHoverPreview, hideHoverPreview,
@@ -57,6 +54,10 @@ import { getProfessionSvg } from "./modules/profession-icons.js";
 import { getEliteSpecName, profClass } from "./modules/build-helpers.js";
 import { renderMiniBuildCard } from "./modules/mini-build-card.js";
 import { PROFESSION_THEMES } from "./modules/constants.js";
+
+let _lastGameMode = "pve";
+let _stashedTheme = null;
+let _themedBuildsEnabled = false;
 
 // ── DOM element cache ────────────────────────────────────────────────────────
 
