@@ -9,6 +9,8 @@ import { setReadOnly as setDetailReadOnly } from "@renderer/modules/detail-panel
 const VALID_THEMES = new Set([
   "molten-core", "frostforge", "verdant-crucible", "cinderfall",
   "copper", "cobalt", "mithril", "rose-gold",
+  "prof-guardian", "prof-warrior", "prof-necromancer", "prof-engineer",
+  "prof-ranger", "prof-thief", "prof-mesmer", "prof-elementalist", "prof-revenant",
 ]);
 
 const app = document.getElementById("app");
