@@ -152,5 +152,5 @@ a {
 .theme-transitioning .editor-equipment,
 .theme-transitioning input,
 .theme-transitioning button {
-  transition: background-color 200ms ease, border-color 200ms ease, color 200ms ease;
+  transition: background-color 500ms ease, border-color 500ms ease, color 500ms ease;
 }

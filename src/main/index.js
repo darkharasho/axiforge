@@ -606,7 +606,15 @@ app.whenReady().then(async () => {
       publishedKey: encKey,
     });
 
-    const themeParam = await store.getSetting("appearance.theme");
+    const themedBuilds = await store.getSetting("appearance.themedBuildPages");
+    const PROF_THEMES = {
+      Guardian: "prof-guardian", Warrior: "prof-warrior", Necromancer: "prof-necromancer",
+      Engineer: "prof-engineer", Ranger: "prof-ranger", Thief: "prof-thief",
+      Mesmer: "prof-mesmer", Elementalist: "prof-elementalist", Revenant: "prof-revenant",
+    };
+    const themeParam = themedBuilds && build.profession && PROF_THEMES[build.profession]
+      ? PROF_THEMES[build.profession]
+      : await store.getSetting("appearance.theme");
     const pagesUrl = `https://${owner}.github.io/${TARGET_REPO}/?n=${encodeURIComponent(newSlug)}&b=${fileId}.${encKey}${themeParam ? `&t=${themeParam}` : ""}`;
 
     await patchAuthRecord({

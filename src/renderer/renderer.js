@@ -650,7 +650,7 @@ function applyThemeWithTransition(themeId) {
   } else {
     document.documentElement.removeAttribute("data-theme");
   }
-  setTimeout(() => document.documentElement.classList.remove("theme-transitioning"), 200);
+  setTimeout(() => document.documentElement.classList.remove("theme-transitioning"), 500);
 }
 
 function applyProfessionThemeIfEnabled() {
