@@ -32,6 +32,12 @@ const { serializeCompForPublish } = require("./compPublish");
 const { initAutoUpdate } = require("./autoUpdate");
 const { registerAxicodeFileHandlers } = require("./axicodeFile");
 
+const PROFESSION_THEME_IDS = {
+  Guardian: "prof-guardian", Warrior: "prof-warrior", Necromancer: "prof-necromancer",
+  Engineer: "prof-engineer", Ranger: "prof-ranger", Thief: "prof-thief",
+  Mesmer: "prof-mesmer", Elementalist: "prof-elementalist", Revenant: "prof-revenant",
+};
+
 const DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL || "";
 const APP_PROFILE = process.env.APP_PROFILE;
 if (APP_PROFILE && !app.isPackaged) {
@@ -607,13 +613,8 @@ app.whenReady().then(async () => {
     });
 
     const themedBuilds = await store.getSetting("appearance.themedBuildPages");
-    const PROF_THEMES = {
-      Guardian: "prof-guardian", Warrior: "prof-warrior", Necromancer: "prof-necromancer",
-      Engineer: "prof-engineer", Ranger: "prof-ranger", Thief: "prof-thief",
-      Mesmer: "prof-mesmer", Elementalist: "prof-elementalist", Revenant: "prof-revenant",
-    };
-    const themeParam = themedBuilds && build.profession && PROF_THEMES[build.profession]
-      ? PROF_THEMES[build.profession]
+    const themeParam = themedBuilds && build.profession && PROFESSION_THEME_IDS[build.profession]
+      ? PROFESSION_THEME_IDS[build.profession]
       : await store.getSetting("appearance.theme");
     const pagesUrl = `https://${owner}.github.io/${TARGET_REPO}/?n=${encodeURIComponent(newSlug)}&b=${fileId}.${encKey}${themeParam ? `&t=${themeParam}` : ""}`;
 
@@ -653,6 +654,7 @@ app.whenReady().then(async () => {
 
     // ── 1. Load comp + its builds ──────────────────────────────────────
     const compTheme = await store.getSetting("appearance.theme");
+    const themedBuildsOn = await store.getSetting("appearance.themedBuildPages");
     progress("loading");
     const allComps = await compStore.listComps();
     const comp = allComps.find((c) => c.id === compId);
@@ -714,7 +716,10 @@ app.whenReady().then(async () => {
       const fileId = build.publishedFileId || generateFileId();
       const encKey = build.publishedKey || generateEncryptionKey();
       const slug = slugifyBuildName(build.title);
-      const spaUrl = `https://${owner}.github.io/${TARGET_REPO}/?n=${encodeURIComponent(slug)}&b=${fileId}.${encKey}${compTheme ? `&t=${compTheme}` : ""}`;
+      const buildTheme = themedBuildsOn && build.profession && PROFESSION_THEME_IDS[build.profession]
+        ? PROFESSION_THEME_IDS[build.profession]
+        : compTheme;
+      const spaUrl = `https://${owner}.github.io/${TARGET_REPO}/?n=${encodeURIComponent(slug)}&b=${fileId}.${encKey}${buildTheme ? `&t=${buildTheme}` : ""}`;
 
       // Always re-encrypt with latest enriched data (traits may have been fixed)
       const encFile = buildEncryptedBuildFile(enrichedBuild, fileId, encKey);
