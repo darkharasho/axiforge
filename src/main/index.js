@@ -44,8 +44,31 @@ const store = new BuildStore(dataDir);
 const folderStore = new FolderStore(dataDir);
 const compStore = new CompStore(dataDir);
 
+// On Windows, the taskbar follows the "system" theme (SystemUsesLightTheme)
+// while nativeTheme.shouldUseDarkColors follows the "app" theme. These can
+// differ when the user picks "Custom" under Personalisation → Colors.
+function isWindowsTaskbarDark() {
+  try {
+    const out = require("child_process").execSync(
+      'reg query "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize" /v SystemUsesLightTheme',
+      { encoding: "utf8", windowsHide: true, timeout: 2000 },
+    );
+    const match = out.match(/SystemUsesLightTheme\s+REG_DWORD\s+0x([0-9a-fA-F]+)/);
+    return match ? parseInt(match[1], 16) === 0 : nativeTheme.shouldUseDarkColors;
+  } catch {
+    return nativeTheme.shouldUseDarkColors;
+  }
+}
+
 function getIconPath() {
-  const variant = process.platform === "linux" || nativeTheme.shouldUseDarkColors ? "White" : "Black";
+  let variant;
+  if (process.platform === "linux") {
+    variant = "White";
+  } else if (process.platform === "win32") {
+    variant = isWindowsTaskbarDark() ? "White" : "Black";
+  } else {
+    variant = nativeTheme.shouldUseDarkColors ? "White" : "Black";
+  }
   return path.join(__dirname, `../../public/img/AxiForge-${variant}.png`);
 }
 
