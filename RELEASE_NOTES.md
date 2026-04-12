@@ -1,3 +1,9 @@
+## Version v0.3.14 — April 11, 2026
+
+### Bug Fixes
+- Build and comp notes are no longer silently cut off at 12,000 characters — the limit has been raised to 100,000 characters, supporting long-form build guides
+- Windows taskbar icon now follows the system/taskbar theme instead of the app theme
+
 ## Version v0.3.13 — April 11, 2026
 
 ### Bug Fixes
