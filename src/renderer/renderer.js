@@ -1060,7 +1060,8 @@ function wireEvents() {
         if (!build?.publishedFileId) throw new Error("Build not published");
         const config = await window.desktopApi.getConfig();
         const slug = build.publishedSlug || "";
-        const url = `${config.pagesUrl}?n=${encodeURIComponent(slug)}&b=${build.publishedFileId}.${build.publishedKey}`;
+        const theme = document.documentElement.getAttribute("data-theme");
+        const url = `${config.pagesUrl}?n=${encodeURIComponent(slug)}&b=${build.publishedFileId}.${build.publishedKey}${theme ? `&t=${theme}` : ""}`;
         await window.desktopApi.writeClipboardText(url);
         flashItem(pubLinkItem, pubLinkDefault);
       } catch {
