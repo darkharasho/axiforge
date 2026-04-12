@@ -37,7 +37,7 @@ function makeBuild(overrides) {
     profession: overrides.profession || "Guardian",
     gameMode: overrides.gameMode || "pve",
     folderId: overrides.folderId || null,
-    compId: overrides.compId || null,
+    compIds: overrides.compIds || [],
     pinned: overrides.pinned || false,
     sortOrder: overrides.sortOrder || 0,
     tags: overrides.tags || [],
@@ -75,10 +75,10 @@ describe("getVisibleBuilds — smart-profession folder", () => {
 
   test("shows builds that are inside comps", () => {
     state.builds = [
-      makeBuild({ id: "g1", profession: "Guardian", compId: null }),
-      makeBuild({ id: "g2", profession: "Guardian", compId: "comp-1" }),
+      makeBuild({ id: "g1", profession: "Guardian" }),
+      makeBuild({ id: "g2", profession: "Guardian" }),
     ];
-    state.comps = [{ id: "comp-1", name: "Raid Comp" }];
+    state.comps = [{ id: "comp-1", name: "Raid Comp", buildIds: ["g2"] }];
     state.currentFolder = { type: "smart-profession", id: "Guardian" };
 
     const result = getVisibleBuilds();
@@ -124,10 +124,10 @@ describe("getVisibleBuilds — smart-gamemode folder", () => {
 
   test("shows builds that are inside comps", () => {
     state.builds = [
-      makeBuild({ id: "p1", gameMode: "wvw", compId: null }),
-      makeBuild({ id: "p2", gameMode: "wvw", compId: "comp-1" }),
+      makeBuild({ id: "p1", gameMode: "wvw" }),
+      makeBuild({ id: "p2", gameMode: "wvw" }),
     ];
-    state.comps = [{ id: "comp-1", name: "WvW Comp" }];
+    state.comps = [{ id: "comp-1", name: "WvW Comp", buildIds: ["p2"] }];
     state.currentFolder = { type: "smart-gamemode", id: "wvw" };
 
     const result = getVisibleBuilds();
@@ -148,24 +148,12 @@ describe("getVisibleBuilds — smart-gamemode folder", () => {
 });
 
 describe("getVisibleBuilds — all-builds folder", () => {
-  test("excludes builds inside comps", () => {
+  test("shows builds in comps alongside regular builds (comps are references, not containers)", () => {
     state.builds = [
-      makeBuild({ id: "b1", compId: null }),
-      makeBuild({ id: "b2", compId: "comp-1" }),
+      makeBuild({ id: "b1" }),
+      makeBuild({ id: "b2" }),
     ];
-    state.comps = [{ id: "comp-1", name: "Test Comp" }];
-    state.currentFolder = { type: "all" };
-
-    const result = getVisibleBuilds();
-    expect(result.map((b) => b.id)).toEqual(["b1"]);
-  });
-
-  test("shows builds with orphaned compId (comp no longer exists)", () => {
-    state.builds = [
-      makeBuild({ id: "b1", compId: null }),
-      makeBuild({ id: "b2", compId: "deleted-comp" }),
-    ];
-    state.comps = [];
+    state.comps = [{ id: "comp-1", name: "Test Comp", buildIds: ["b2"] }];
     state.currentFolder = { type: "all" };
 
     const result = getVisibleBuilds();

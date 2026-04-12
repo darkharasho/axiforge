@@ -88,14 +88,19 @@ class BuildStore {
     await this.#writeJson(this.buildsPath, builds);
   }
 
-  async clearCompFromBuilds(compIds) {
+  async clearCompFromBuilds(compIdsToRemove) {
     const builds = await this.#readJson(this.buildsPath, []);
+    const removeSet = new Set(compIdsToRemove);
+    let changed = false;
     for (const build of builds) {
-      if (compIds.includes(build.compId)) {
-        build.compId = null;
+      const arr = Array.isArray(build.compIds) ? build.compIds : [];
+      const filtered = arr.filter((id) => !removeSet.has(id));
+      if (filtered.length !== arr.length) {
+        build.compIds = filtered;
+        changed = true;
       }
     }
-    await this.#writeJson(this.buildsPath, builds);
+    if (changed) await this.#writeJson(this.buildsPath, builds);
   }
 
   async getAuth() {
@@ -129,6 +134,20 @@ class BuildStore {
 
   async #writeJson(filePath, data) {
     await fs.writeFile(filePath, JSON.stringify(data, null, 2), "utf8");
+  }
+
+  async migrateCompIdToCompIds() {
+    const raw = await this.#readJson(this.buildsPath, []);
+    if (!Array.isArray(raw)) return;
+    let changed = false;
+    for (const build of raw) {
+      if (typeof build.compId === "string" && build.compId && !Array.isArray(build.compIds)) {
+        build.compIds = [build.compId];
+        delete build.compId;
+        changed = true;
+      }
+    }
+    if (changed) await this.#writeJson(this.buildsPath, raw);
   }
 
   async getSetting(key) {
@@ -173,8 +192,7 @@ function normalizeBuild(input, fallbackCreatedAt) {
     // Library organization fields
     folderId:
       typeof input.folderId === "string" ? input.folderId : null,
-    compId:
-      typeof input.compId === "string" ? input.compId : null,
+    compIds: normalizeCompIds(input),
     pinned: Boolean(input.pinned),
     sortOrder:
       typeof input.sortOrder === "number" && Number.isFinite(input.sortOrder)
@@ -334,6 +352,17 @@ function normalizeImages(value) {
     }
   }
   return result;
+}
+
+function normalizeCompIds(input) {
+  if (Array.isArray(input.compIds)) {
+    return input.compIds.filter((id) => typeof id === "string" && id);
+  }
+  // Migrate legacy single compId to array
+  if (typeof input.compId === "string" && input.compId) {
+    return [input.compId];
+  }
+  return [];
 }
 
 function asString(value, maxLen) {

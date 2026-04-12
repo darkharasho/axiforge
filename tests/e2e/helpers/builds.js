@@ -29,7 +29,7 @@ function makeTestBuild(overrides = {}) {
     notes: "",
     images: {},
     folderId: null,
-    compId: null,
+    compIds: [],
     pinned: false,
     sortOrder: 0,
     selectedLegends: ["", ""],

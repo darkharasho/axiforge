@@ -105,7 +105,7 @@ function getWeaponSets(build) {
  * @returns {string} HTML string
  */
 export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
-  const { showActions = true, showMode = true, linkUrl = null, chatLink = null } = options;
+  const { showActions = true, showMode = true, linkUrl = null, chatLink = null, linkBadge = null } = options;
 
   const icon = getSpecIcon(build);
   const pClass = profClass(build.profession);
@@ -215,10 +215,18 @@ export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
       ? `<a href="${escapeHtml(linkUrl)}" target="_blank" rel="noopener" class="mini-card__name" title="Open build">${name} <span class="mini-card__name-arrow">&#8599;</span></a>`
       : `<span class="mini-card__name">${name}</span>`;
 
+  // Link badge — shows this build is a reference, not owned by the comp
+  const linkBadgeHtml = linkBadge
+    ? `<span class="mini-card__link-badge" title="${escapeHtml(linkBadge.tooltip)}">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        ${escapeHtml(linkBadge.label)}
+      </span>`
+    : "";
+
   // Remove button — absolute top-right
   const removeHtml = showActions
     ? `<button type="button" class="mini-card__btn-remove" data-action="pool-remove"
-              data-build-id="${escapeHtml(build.id)}" title="Remove from comp">&times;</button>`
+              data-build-id="${escapeHtml(build.id)}" title="Unlink from comp">&times;</button>`
     : "";
 
   // Copy build code button (SPA comp view)
@@ -236,6 +244,7 @@ export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
       <div class="mini-card__info">
         <div class="mini-card__header">
           ${titleHtml}
+          ${linkBadgeHtml}
           ${tagPills}
           ${role}
           <div class="mini-card__pills">

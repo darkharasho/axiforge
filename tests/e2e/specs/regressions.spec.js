@@ -207,7 +207,7 @@ test.describe("Boon coverage collapsed by default", () => {
     buildIds: [build.id],
     partyLines: [{ id: lineId, capacity: 5, slots: [build.id] }],
   });
-  build.compId = comp.id;
+  build.compIds = [comp.id];
 
   test.beforeAll(async () => {
     cleanDataDir();
@@ -406,12 +406,12 @@ test.describe("Comp regressions — drag-and-drop", () => {
     ],
   });
 
-  buildA.compId = comp.id;
-  buildB.compId = comp.id;
-  buildC.compId = comp.id;
-  buildD.compId = comp.id;
-  buildE.compId = comp.id;
-  buildF.compId = comp.id;
+  buildA.compIds = [comp.id];
+  buildB.compIds = [comp.id];
+  buildC.compIds = [comp.id];
+  buildD.compIds = [comp.id];
+  buildE.compIds = [comp.id];
+  buildF.compIds = [comp.id];
 
   test.beforeAll(async () => {
     cleanDataDir();

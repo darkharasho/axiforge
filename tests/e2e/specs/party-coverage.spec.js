@@ -124,10 +124,10 @@ const comp = makeTestComp({
   ],
 });
 
-guardianBuild.compId = comp.id;
-elementalistBuild.compId = comp.id;
-warriorBuild.compId = comp.id;
-necromancerBuild.compId = comp.id;
+guardianBuild.compIds = [comp.id];
+elementalistBuild.compIds = [comp.id];
+warriorBuild.compIds = [comp.id];
+necromancerBuild.compIds = [comp.id];
 
 // ── Tests ────────────────────────────────────────────────────────────────────
 

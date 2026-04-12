@@ -716,7 +716,8 @@ export async function loadBuildIntoEditor(build, options = {}) {
     activePetSlot: build.activePetSlot === "terrestrial2" ? "terrestrial2" : "terrestrial1",
     gameMode: String(build.gameMode || "pve"),
     folderId: build.folderId || "",
-    compId: build.compId || "",
+    compIds: Array.isArray(build.compIds) ? [...build.compIds] : [],
+    activeCompId: "",
   };
 
   // Expand statPackage into empty slots (e.g. uniform axicode imports)
@@ -876,6 +877,12 @@ export function serializeEditorToBuild() {
     activePetSlot: state.editor.activePetSlot === "terrestrial2" ? "terrestrial2" : "terrestrial1",
     gameMode: String(state.editor.gameMode || "pve"),
     folderId: state.editor.folderId || undefined,
-    compId: state.editor.compId || undefined,
+    compIds: (() => {
+      const ids = [...(state.editor.compIds || [])];
+      if (state.editor.activeCompId && !ids.includes(state.editor.activeCompId)) {
+        ids.push(state.editor.activeCompId);
+      }
+      return ids.length ? ids : undefined;
+    })(),
   };
 }

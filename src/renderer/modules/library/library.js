@@ -229,7 +229,7 @@ function handleNewBuild() {
   // Preserve current location so the build is saved into the right place
   if (state.editor) {
     if (state.currentFolder?.type === "comp") {
-      state.editor.compId = state.currentFolder.id;
+      state.editor.activeCompId = state.currentFolder.id;
     } else if (state.currentFolder?.type === "custom") {
       state.editor.folderId = state.currentFolder.id;
     }
@@ -347,6 +347,7 @@ async function handleDuplicate(buildId) {
   const copy = { ...build };
   delete copy.id;
   copy.title = `${build.title || "Untitled"} (Copy)`;
+  copy.compIds = [];
   await window.desktopApi.saveBuild(copy);
   state.builds = await window.desktopApi.listBuilds();
   renderLibrary();
@@ -383,7 +384,23 @@ async function handleMoveTo(ids, folderId) {
 async function handleDelete(ids) {
   const count = ids.length;
   const label = count === 1 ? "this build" : `${count} builds`;
-  const confirmed = await showConfirm(`Delete ${label}?`, "This cannot be undone.");
+
+  const affectedComps = new Set();
+  for (const id of ids) {
+    const build = state.builds.find((b) => b.id === id);
+    if (build && Array.isArray(build.compIds)) {
+      for (const cid of build.compIds) affectedComps.add(cid);
+    }
+  }
+  let detail = "This cannot be undone.";
+  if (affectedComps.size > 0) {
+    const compNames = [...affectedComps]
+      .map((cid) => (state.comps || []).find((c) => c.id === cid)?.name || "Untitled Comp")
+      .join(", ");
+    detail = `${count === 1 ? "This build is" : "These builds are"} linked to ${affectedComps.size} comp${affectedComps.size !== 1 ? "s" : ""}: ${compNames}. Deleting will remove ${count === 1 ? "it" : "them"} from ${affectedComps.size === 1 ? "that comp" : "those comps"}. This cannot be undone.`;
+  }
+
+  const confirmed = await showConfirm(`Delete ${label}?`, detail);
   if (!confirmed) return;
   for (const id of ids) {
     await window.desktopApi.deleteBuild(id);
@@ -520,7 +537,8 @@ async function addImportedBuildToActiveComp(saved) {
     showToast(`Build imported but not added to comp (locked to ${modeName}).`, "warning");
     return;
   }
-  await window.desktopApi.saveBuild({ ...saved, compId, folderId: null });
+  const newCompIds = [...new Set([...(saved.compIds || []), compId])];
+  await window.desktopApi.saveBuild({ ...saved, compIds: newCompIds });
   const currentBuildIds = Array.isArray(comp.buildIds) ? [...comp.buildIds] : [];
   if (!currentBuildIds.includes(saved.id)) {
     currentBuildIds.push(saved.id);
@@ -676,7 +694,7 @@ async function handlePasteJson(targetId) {
       // Capture old locations before moving
       const oldLocations = idsToMove.map((id) => {
         const b = state.builds.find((b) => b.id === id);
-        return { id, folderId: b?.folderId || null, compId: b?.compId || null };
+        return { id, folderId: b?.folderId || null, compIds: [...(b?.compIds || [])] };
       });
       // Capture comp state before paste so undo can restore it
       const oldTargetComp = compId ? state.comps?.find((c) => c.id === compId) : null;
@@ -714,9 +732,9 @@ async function handlePasteJson(targetId) {
         for (const id of filteredToMove) {
           const build = state.builds.find((b) => b.id === id);
           if (build) {
-            await window.desktopApi.saveBuild({ ...build, compId, folderId: null });
+            const newCompIds = [...new Set([...(build.compIds || []), compId])];
+            await window.desktopApi.saveBuild({ ...build, compIds: newCompIds });
           }
-          // Also add to comp's buildIds for party line tracking
           const comp = state.comps?.find((c) => c.id === compId);
           if (comp && !(comp.buildIds || []).includes(id)) {
             const newGameMode = comp.gameMode || state.builds.find((b) => b.id === id)?.gameMode || null;
@@ -733,9 +751,9 @@ async function handlePasteJson(targetId) {
         await moveBuilds(idsToMove, folderId);
       }
       pushUndo({ type: "cut-paste", undo: async () => {
-        for (const { id, folderId, compId } of oldLocations) {
+        for (const { id, folderId, compIds } of oldLocations) {
           const build = state.builds.find((b) => b.id === id);
-          if (build) await window.desktopApi.saveBuild({ ...build, folderId, compId });
+          if (build) await window.desktopApi.saveBuild({ ...build, folderId, compIds });
         }
         // Restore comp state if the paste was into a comp
         if (compId && oldTargetCompSnapshot) {
@@ -791,7 +809,7 @@ async function handlePasteJson(targetId) {
       const originalTitle = String(source.title || source.name || "Imported Build");
       const title = nextCopyTitle(originalTitle, existingTitles);
       existingTitles.push(title);
-      const copy = { ...source, title, folderId: compId ? null : folderId, compId: compId || null };
+      const copy = { ...source, title, folderId: folderId || undefined, compIds: compId ? [compId] : [] };
       delete copy.id;
       const saved = await window.desktopApi.saveBuild(copy);
       if (saved?.id) pastedIds.push(saved.id);
@@ -911,9 +929,12 @@ async function handleDuplicateComp(compId) {
 }
 
 async function handleDropBuildsOnComp(buildIds, compId) {
+  const compBuildIdSet = new Set(
+    (state.comps?.find((c) => c.id === compId)?.buildIds) || [],
+  );
   const builds = buildIds
     .map((id) => state.builds.find((b) => b.id === id))
-    .filter((b) => b && b.compId !== compId);
+    .filter((b) => b && !compBuildIdSet.has(b.id));
   if (builds.length === 0) return;
 
   // Game mode lock check against the first incompatible build
@@ -930,11 +951,12 @@ async function handleDropBuildsOnComp(buildIds, compId) {
   const oldStates = builds.map((b) => ({
     id: b.id,
     folderId: b.folderId || null,
-    compId: b.compId || null,
+    compIds: [...(b.compIds || [])],
   }));
 
   for (const build of builds) {
-    await window.desktopApi.saveBuild({ ...build, compId, folderId: null });
+    const newCompIds = [...new Set([...(build.compIds || []), compId])];
+    await window.desktopApi.saveBuild({ ...build, compIds: newCompIds });
   }
   if (comp) {
     let currentBuildIds = Array.isArray(comp.buildIds) ? [...comp.buildIds] : [];
@@ -952,7 +974,7 @@ async function handleDropBuildsOnComp(buildIds, compId) {
   pushUndo({ type: "move-to-comp", undo: async () => {
     for (const old of oldStates) {
       const current = state.builds.find((b) => b.id === old.id);
-      if (current) await window.desktopApi.saveBuild({ ...current, compId: old.compId, folderId: old.folderId });
+      if (current) await window.desktopApi.saveBuild({ ...current, compIds: old.compIds, folderId: old.folderId });
     }
     const c = state.comps?.find((c) => c.id === compId);
     if (c) {
@@ -974,10 +996,11 @@ async function handleRemoveBuildFromComp(buildId, compId) {
   const oldCompBuildIds = comp ? [...(comp.buildIds || [])] : [];
   const oldCompPartyLines = comp ? JSON.parse(JSON.stringify(comp.partyLines || [])) : [];
   const oldGameMode = comp?.gameMode ?? null;
-  // Clear compId on the build — it moves back to root
+  // Remove this comp from the build's compIds
   const build = state.builds.find((b) => b.id === buildId);
   if (build) {
-    await window.desktopApi.saveBuild({ ...build, compId: null });
+    const newCompIds = (build.compIds || []).filter((id) => id !== compId);
+    await window.desktopApi.saveBuild({ ...build, compIds: newCompIds });
   }
   // Also clean up comp's buildIds and party line slots
   if (comp) {
@@ -993,7 +1016,10 @@ async function handleRemoveBuildFromComp(buildId, compId) {
   state.comps = await window.desktopApi.listComps();
   pushUndo({ type: "remove-from-comp", undo: async () => {
     const current = state.builds.find((b) => b.id === buildId);
-    if (current) await window.desktopApi.saveBuild({ ...current, compId });
+    if (current) {
+      const restoredCompIds = [...new Set([...(current.compIds || []), compId])];
+      await window.desktopApi.saveBuild({ ...current, compIds: restoredCompIds });
+    }
     // Restore comp's buildIds and partyLines
     const c = state.comps?.find((c) => c.id === compId);
     if (c) await window.desktopApi.saveComp({ ...c, buildIds: oldCompBuildIds, partyLines: oldCompPartyLines, gameMode: oldGameMode });
@@ -1012,6 +1038,7 @@ async function handleDeleteComps(ids) {
     await window.desktopApi.deleteComp(id);
   }
   state.comps = await window.desktopApi.listComps();
+  state.builds = await window.desktopApi.listBuilds();
   clearSelection();
   renderLibrary();
 }

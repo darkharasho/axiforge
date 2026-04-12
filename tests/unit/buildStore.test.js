@@ -868,17 +868,139 @@ describe("BuildStore — move builds", () => {
     expect(builds.find((b) => b.id === b2.id).folderId).toBe("folder-xyz");
   });
 
-  test("clearCompFromBuilds sets compId to null for matching builds", async () => {
+  test("clearCompFromBuilds removes matching compId from compIds arrays", async () => {
     const b1 = await store.upsertBuild(
-      makeBuild({ title: "B1", compId: "comp-abc" }),
+      makeBuild({ title: "B1", compIds: ["comp-abc", "comp-def"] }),
     );
     const b2 = await store.upsertBuild(
-      makeBuild({ title: "B2", compId: "comp-xyz" }),
+      makeBuild({ title: "B2", compIds: ["comp-xyz"] }),
     );
     await store.clearCompFromBuilds(["comp-abc"]);
     const builds = await store.listBuilds();
-    expect(builds.find((b) => b.id === b1.id).compId).toBe(null);
-    expect(builds.find((b) => b.id === b2.id).compId).toBe("comp-xyz");
+    expect(builds.find((b) => b.id === b1.id).compIds).toEqual(["comp-def"]);
+    expect(builds.find((b) => b.id === b2.id).compIds).toEqual(["comp-xyz"]);
+  });
+});
+
+describe("BuildStore — compIds (multi-comp membership)", () => {
+  let store, dir;
+  beforeEach(async () => ({ store, dir } = await makeTempStore()));
+  afterEach(async () => cleanupDir(dir));
+
+  test("compIds defaults to empty array", async () => {
+    const build = await store.upsertBuild(makeBuild());
+    expect(build.compIds).toEqual([]);
+  });
+
+  test("persists compIds array", async () => {
+    const build = await store.upsertBuild(
+      makeBuild({ compIds: ["comp-a", "comp-b"] }),
+    );
+    expect(build.compIds).toEqual(["comp-a", "comp-b"]);
+    const builds = await store.listBuilds();
+    expect(builds[0].compIds).toEqual(["comp-a", "comp-b"]);
+  });
+
+  test("migrates legacy compId string to compIds array", async () => {
+    const build = await store.upsertBuild(
+      makeBuild({ compId: "comp-legacy" }),
+    );
+    expect(build.compIds).toEqual(["comp-legacy"]);
+    expect(build.compId).toBeUndefined();
+  });
+
+  test("compIds survives update round-trip", async () => {
+    const created = await store.upsertBuild(
+      makeBuild({ compIds: ["comp-a", "comp-b"] }),
+    );
+    const updated = await store.upsertBuild({ ...created, title: "Renamed" });
+    expect(updated.compIds).toEqual(["comp-a", "comp-b"]);
+  });
+
+  test("migrateCompIdToCompIds rewrites legacy compId on disk", async () => {
+    // Write raw JSON with legacy compId field
+    const buildsPath = path.join(dir, "builds.json");
+    await fs.writeFile(buildsPath, JSON.stringify([
+      { id: "b1", title: "Legacy", compId: "comp-old", profession: "Warrior" },
+      { id: "b2", title: "Already migrated", compIds: ["comp-new"], profession: "Guardian" },
+      { id: "b3", title: "No comp", profession: "Thief" },
+    ]));
+
+    await store.migrateCompIdToCompIds();
+
+    // Read raw JSON to verify disk was rewritten
+    const raw = JSON.parse(await fs.readFile(buildsPath, "utf8"));
+    expect(raw[0].compIds).toEqual(["comp-old"]);
+    expect(raw[0].compId).toBeUndefined();
+    expect(raw[1].compIds).toEqual(["comp-new"]);
+    expect(raw[2].compIds).toBeUndefined();
+  });
+
+  test("clearCompFromBuilds removes comp from all builds' compIds", async () => {
+    await store.upsertBuild(
+      makeBuild({ title: "B1", compIds: ["comp-a", "comp-b"] }),
+    );
+    await store.upsertBuild(
+      makeBuild({ title: "B2", compIds: ["comp-a"] }),
+    );
+    await store.upsertBuild(
+      makeBuild({ title: "B3", compIds: ["comp-c"] }),
+    );
+    await store.clearCompFromBuilds(["comp-a"]);
+    const builds = await store.listBuilds();
+    expect(builds.find((b) => b.title === "B1").compIds).toEqual(["comp-b"]);
+    expect(builds.find((b) => b.title === "B2").compIds).toEqual([]);
+    expect(builds.find((b) => b.title === "B3").compIds).toEqual(["comp-c"]);
+  });
+
+  test("normalizeCompIds handles null/undefined/missing gracefully", async () => {
+    const b1 = await store.upsertBuild(makeBuild({ compIds: null }));
+    expect(b1.compIds).toEqual([]);
+
+    const b2 = await store.upsertBuild(makeBuild({ compIds: undefined }));
+    expect(b2.compIds).toEqual([]);
+
+    const b3 = await store.upsertBuild(makeBuild({}));
+    expect(b3.compIds).toEqual([]);
+  });
+
+  test("normalizeCompIds filters out non-string and empty values", async () => {
+    const b = await store.upsertBuild(
+      makeBuild({ compIds: ["comp-a", "", null, 123, "comp-b", undefined] }),
+    );
+    expect(b.compIds).toEqual(["comp-a", "comp-b"]);
+  });
+
+  test("clearCompFromBuilds is a no-op when comp ID does not match any build", async () => {
+    const b1 = await store.upsertBuild(
+      makeBuild({ compIds: ["comp-a"] }),
+    );
+    await store.clearCompFromBuilds(["comp-nonexistent"]);
+    const builds = await store.listBuilds();
+    expect(builds.find((b) => b.id === b1.id).compIds).toEqual(["comp-a"]);
+  });
+
+  test("clearCompFromBuilds handles multiple comp IDs at once", async () => {
+    await store.upsertBuild(makeBuild({ title: "B1", compIds: ["comp-a", "comp-b", "comp-c"] }));
+    await store.clearCompFromBuilds(["comp-a", "comp-c"]);
+    const builds = await store.listBuilds();
+    expect(builds[0].compIds).toEqual(["comp-b"]);
+  });
+
+  test("migrateCompIdToCompIds is idempotent (safe to run twice)", async () => {
+    const raw = [
+      { id: "b1", title: "Legacy", compId: "comp-old", profession: "Warrior" },
+    ];
+    await require("node:fs/promises").writeFile(
+      path.join(dir, "builds.json"), JSON.stringify(raw),
+    );
+    await store.migrateCompIdToCompIds();
+    await store.migrateCompIdToCompIds();
+    const data = JSON.parse(await require("node:fs/promises").readFile(
+      path.join(dir, "builds.json"), "utf-8",
+    ));
+    expect(data[0].compIds).toEqual(["comp-old"]);
+    expect(data[0].compId).toBeUndefined();
   });
 });
 

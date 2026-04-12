@@ -72,12 +72,12 @@ test.describe("Compositions — Party Line Drag-and-Drop", () => {
   });
 
   // Mark builds as belonging to the comp
-  buildA.compId = comp.id;
-  buildB.compId = comp.id;
-  buildC.compId = comp.id;
-  buildD.compId = comp.id;
-  buildE.compId = comp.id;
-  buildF.compId = comp.id;
+  buildA.compIds = [comp.id];
+  buildB.compIds = [comp.id];
+  buildC.compIds = [comp.id];
+  buildD.compIds = [comp.id];
+  buildE.compIds = [comp.id];
+  buildF.compIds = [comp.id];
 
   test.beforeAll(async () => {
     cleanDataDir();
@@ -197,7 +197,7 @@ test.describe("Compositions — Full Party Line Behavior", () => {
     ],
   });
 
-  builds.forEach((b) => { b.compId = comp.id; });
+  builds.forEach((b) => { b.compIds = [comp.id]; });
 
   test.beforeAll(async () => {
     cleanDataDir();
@@ -343,10 +343,10 @@ test.describe("Compositions — Boon Coverage", () => {
     ],
   });
 
-  buildWithElite.compId = comp.id;
-  buildWithoutElite.compId = comp.id;
-  serializedBuild.compId = comp.id;
-  editorBuild.compId = comp.id;
+  buildWithElite.compIds = [comp.id];
+  buildWithoutElite.compIds = [comp.id];
+  serializedBuild.compIds = [comp.id];
+  editorBuild.compIds = [comp.id];
 
   test.beforeAll(async () => {
     cleanDataDir();
