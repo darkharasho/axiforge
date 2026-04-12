@@ -65,9 +65,9 @@ describe("Columns view — comp double-click", () => {
     initContent({ onOpenComp });
 
     // Set up state: one comp with one build
-    state.comps = [{ id: "comp-1", name: "Test Comp", folderId: null, sortOrder: 0 }];
+    state.comps = [{ id: "comp-1", name: "Test Comp", folderId: null, sortOrder: 0, buildIds: ["build-1"] }];
     state.builds = [
-      { id: "build-1", title: "Build A", compId: "comp-1", profession: "Guardian" },
+      { id: "build-1", title: "Build A", compIds: ["comp-1"], profession: "Guardian" },
     ];
     state.folders = [];
     state.libraryPrefs = { viewMode: "columns" };

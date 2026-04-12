@@ -644,8 +644,9 @@ function renderPartyLine(pl, idx, totalCap) {
 // ─── Build Pool ──────────────────────────────────────────────────────────────
 
 function renderBuildPool(comp) {
-  // Builds in this comp are those with compId matching
-  const compBuilds = state.builds.filter((b) => b.compId === comp.id);
+  // Builds in this comp are those listed in comp.buildIds
+  const buildIdSet = new Set(comp.buildIds || []);
+  const compBuilds = state.builds.filter((b) => buildIdSet.has(b.id));
   const search = (state.compPoolSearch || "").toLowerCase();
 
   const poolEntries = compBuilds.map((build) => ({ type: "build", build }));
@@ -663,7 +664,19 @@ function renderBuildPool(comp) {
 
   const cards = filtered.map((entry) => {
     if (entry.type === "missing") return renderMissingMiniBuildCard(entry.id);
-    return renderMiniBuildCard(entry.build, state.upgradeCatalog);
+    const b = entry.build;
+    const otherComps = (state.comps || []).filter(
+      (c) => c.id !== comp.id && (c.buildIds || []).includes(b.id),
+    );
+    const totalComps = otherComps.length + 1;
+    const otherNames = otherComps.map((c) => c.name || "Untitled Comp");
+    const tooltip = totalComps === 1
+      ? "Linked build — lives in your library"
+      : `Linked in ${totalComps} comps: ${[comp.name, ...otherNames].join(", ")}`;
+    const label = totalComps > 1 ? `${totalComps} comps` : "linked";
+    return renderMiniBuildCard(b, state.upgradeCatalog, {
+      linkBadge: { label, tooltip },
+    });
   }).join("");
 
   return `
@@ -692,9 +705,10 @@ function openAddBuildModal(comp) {
   const overlay = document.createElement("div");
   overlay.className = "comp-picker-overlay";
 
-  // Available builds: those not already in this comp (and not in another comp)
+  // Available builds: those not already in this comp
+  const currentBuildIds = new Set(comp.buildIds || []);
   const available = state.builds.filter((b) => {
-    if (b.compId) return false;
+    if (currentBuildIds.has(b.id)) return false;
     if (comp.gameMode && b.gameMode !== comp.gameMode) return false;
     return true;
   });
@@ -718,11 +732,16 @@ function openAddBuildModal(comp) {
       const checked = selected.has(b.id) ? "checked" : "";
       const displayName = escapeHtml(getDisplayName(b));
       const gear = escapeHtml(resolveStatPackage(b));
+      const otherCompCount = (b.compIds || []).length;
+      const compBadge = otherCompCount > 0
+        ? `<span class="comp-picker-row__comp-count" title="Used in ${otherCompCount} comp${otherCompCount === 1 ? "" : "s"}">${otherCompCount} comp${otherCompCount === 1 ? "" : "s"}</span>`
+        : "";
       return `
         <label class="comp-picker-row ${pClass}" data-build-id="${escapeHtml(b.id)}">
           <input type="checkbox" class="comp-picker-row__checkbox" value="${escapeHtml(b.id)}" ${checked} />
           <span class="comp-picker-row__icon">${icon}</span>
           <span class="comp-picker-row__name">${displayName}</span>
+          ${compBadge}
           <span class="comp-picker-row__prof">${gear}</span>
         </label>
       `;
@@ -788,11 +807,12 @@ function openAddBuildModal(comp) {
 
     overlay.querySelector("[data-action='picker-add']")?.addEventListener("click", async () => {
       if (selected.size === 0) return;
-      // Move each selected build into this comp
+      // Add this comp to each selected build's compIds
       for (const buildId of selected) {
         const build = state.builds.find((b) => b.id === buildId);
         if (build) {
-          await window.desktopApi.saveBuild({ ...build, compId: comp.id, folderId: null });
+          const newCompIds = [...new Set([...(build.compIds || []), comp.id])];
+          await window.desktopApi.saveBuild({ ...build, compIds: newCompIds });
         }
       }
       // Add to comp's buildIds and lock gameMode if not already set
@@ -802,7 +822,6 @@ function openAddBuildModal(comp) {
         comp.gameMode = firstSelectedBuild?.gameMode || null;
       }
       await saveAndSync(comp);
-      // Reload builds since we modified them
       state.builds = await window.desktopApi.listBuilds();
       overlay.remove();
       _callbacks.onRerender?.();
@@ -1188,10 +1207,11 @@ function bindPoolEvents(container, comp) {
       const buildId = btn.dataset.buildId;
       if (!buildId) return;
 
-      // Clear compId on the build — moves it back to root
+      // Remove this comp from the build's compIds
       const build = state.builds.find((b) => b.id === buildId);
       if (build) {
-        await window.desktopApi.saveBuild({ ...build, compId: null });
+        const newCompIds = (build.compIds || []).filter((id) => id !== comp.id);
+        await window.desktopApi.saveBuild({ ...build, compIds: newCompIds });
       }
 
       // Remove from buildIds and party line slots

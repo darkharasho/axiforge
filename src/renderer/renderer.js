@@ -3,7 +3,7 @@
 // Application-level orchestration (init, wireEvents, setProfession, etc.) lives here.
 
 import { state, createEmptyEditor } from "./modules/state.js";
-import { delay, wireTagInput } from "./modules/utils.js";
+import { delay, wireTagInput, escapeHtml } from "./modules/utils.js";
 import { injectSkeleton } from "./modules/skeleton.js";
 
 let _lastGameMode = "pve";
@@ -51,6 +51,9 @@ import { initSettingsModal, initSettingsCallbacks } from "./modules/settings-mod
 import { initLibrary, renderLibrary, handleLibraryKeydown } from "./modules/library/library.js";
 import { clearUndo as clearLibraryUndo } from "./modules/library/undo.js";
 import { initComps, loadComps, renderComps } from "./modules/comps/comps.js";
+import { getProfessionSvg } from "./modules/profession-icons.js";
+import { getEliteSpecName, profClass } from "./modules/build-helpers.js";
+import { renderMiniBuildCard } from "./modules/mini-build-card.js";
 
 // ── DOM element cache ────────────────────────────────────────────────────────
 
@@ -74,6 +77,7 @@ const el = {
   tagsInput:         q("#tagsInput"),
   equipmentPanel:    q("#equipmentPanel"),
   notesPanel:        q("#notesPanel"),
+  compsPanel:        q("#compsPanel"),
   newBuildBtn:       q("#newBuildBtn"),
   saveBuildBtn:      q("#saveBuildBtn"),
   saveDot:           q("#saveDot"),
@@ -176,6 +180,7 @@ initRenderPagesCallbacks({
   renderSkills,
   renderEquipmentPanel,
   renderNotesPanel,
+  renderCompsPanel,
   renderDetailPanel,
   serializeEditorToBuild,
   parseBuildImportPayload,
@@ -401,8 +406,19 @@ async function startNewBuild(profession, { skipDirtyCheck = false } = {}) {
 
 async function saveCurrentBuild() {
   try {
+    const activeCompId = state.editor.activeCompId;
     const saved = await window.desktopApi.saveBuild(serializeEditorToBuild());
     state.editor.id = saved.id;
+    // If this build was created inside a comp, ensure the comp's buildIds includes it
+    if (activeCompId) {
+      const comp = state.comps?.find((c) => c.id === activeCompId);
+      if (comp && !(comp.buildIds || []).includes(saved.id)) {
+        const newGameMode = comp.gameMode || saved.gameMode || null;
+        await window.desktopApi.saveComp({ ...comp, gameMode: newGameMode, buildIds: [...(comp.buildIds || []), saved.id] });
+        state.comps = await window.desktopApi.listComps();
+      }
+      state.editor.activeCompId = "";
+    }
     await reloadBuilds();
     const savedBuild = state.builds.find((entry) => entry.id === saved.id);
     if (savedBuild) await loadBuildIntoEditor(savedBuild, { captureBaseline: true });
@@ -632,6 +648,139 @@ function navigateToPage(page) {
       document.querySelectorAll(".spec-card__body").forEach((body) => drawSpecConnector(body));
     });
   }
+}
+
+// ── Comps panel (editor tab) ─────────────────────────────────────────────────
+
+const PROF_COLORS = {
+  guardian: "#6ea8ff", warrior: "#ff9944", necromancer: "#4dca7a",
+  engineer: "#cc8844", ranger: "#77cc55", thief: "#cc6677",
+  mesmer: "#b07acc", elementalist: "#dd5555", revenant: "#aa6655",
+};
+
+function _compTabProfIcons(comp) {
+  const specs = [];
+  const seen = new Set();
+  for (const line of (comp.partyLines || [])) {
+    for (const slotBuildId of (line.slots || [])) {
+      if (!slotBuildId) continue;
+      const build = state.builds.find((b) => b.id === slotBuildId);
+      if (!build) continue;
+      const specName = getEliteSpecName(build) || build.profession;
+      if (!specName || seen.has(specName)) continue;
+      seen.add(specName);
+      specs.push({ specName, profession: build.profession });
+      if (specs.length >= 5) break;
+    }
+    if (specs.length >= 5) break;
+  }
+  if (specs.length === 0) return "";
+  return specs.map(({ specName, profession }) => {
+    const svg = getProfessionSvg(specName) || getProfessionSvg(profession) || "";
+    const color = PROF_COLORS[(profession || "").toLowerCase()] || "#888";
+    return `<span class="comp-list-row__prof-icon ${profClass(profession)}" style="background:${color}" title="${escapeHtml(specName)}">${svg}</span>`;
+  }).join("");
+}
+
+function _compTabPartySummary(comp) {
+  const lines = comp.partyLines || [];
+  const parties = lines.length;
+  const slots = lines.reduce((sum, l) => sum + (l.capacity || 0), 0);
+  return `${parties} ${parties === 1 ? "party" : "parties"} &middot; ${slots} ${slots === 1 ? "slot" : "slots"}`;
+}
+
+function renderCompsPanel() {
+  const panel = el.compsPanel;
+  if (!panel) return;
+
+  const compIds = state.editor.compIds || [];
+  const comps = (state.comps || []).filter((c) => compIds.includes(c.id));
+  if (comps.length === 0) {
+    panel.innerHTML = `<div class="comps-tab__empty">
+      <span class="comps-tab__empty-icon"><svg width="32" height="32" viewBox="0 0 16 16" fill="currentColor" opacity="0.3"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg></span>
+      <span class="comps-tab__empty-text">This build is not linked to any comps.</span>
+    </div>`;
+    return;
+  }
+
+  const cards = comps.map((c) => {
+    const name = escapeHtml(c.name || "Untitled Comp");
+    const gmBadge = c.gameMode === "pve"
+      ? `<span class="comp-badge comp-badge--sm comp-badge--pve">PvE</span>`
+      : c.gameMode === "wvw"
+        ? `<span class="comp-badge comp-badge--sm comp-badge--wvw">WvW</span>`
+        : "";
+    const profIcons = _compTabProfIcons(c);
+    const summary = _compTabPartySummary(c);
+
+    const allBuildIds = new Set(c.buildIds || []);
+    for (const line of (c.partyLines || [])) {
+      for (const sid of (line.slots || [])) {
+        if (sid) allBuildIds.add(sid);
+      }
+    }
+    const buildCount = allBuildIds.size;
+
+    return `<div class="comps-tab__card" data-comp-id="${escapeHtml(c.id)}">
+      <div class="comps-tab__card-header">
+        <span class="comps-tab__card-name">${name}</span>
+        ${gmBadge}
+        <span class="comps-tab__card-spacer"></span>
+        <span class="comps-tab__card-open" title="Open comp">&#8599;</span>
+      </div>
+      <div class="comps-tab__card-meta">
+        <div class="comp-list-row__prof-icons">${profIcons}</div>
+        ${profIcons ? `<span class="comp-list-row__pipe">|</span>` : ""}
+        <span class="comp-list-row__summary">${summary}</span>
+      </div>
+      <button type="button" class="comps-tab__toggle" data-comp-toggle="${escapeHtml(c.id)}">
+        <svg class="comps-tab__toggle-chevron" width="12" height="12" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 0 1 .02-1.06L11.168 10 7.23 6.29a.75.75 0 1 1 1.04-1.08l4.5 4.25a.75.75 0 0 1 0 1.08l-4.5 4.25a.75.75 0 0 1-1.06-.02Z" clip-rule="evenodd"/></svg>
+        <span>${buildCount} build${buildCount !== 1 ? "s" : ""}</span>
+      </button>
+      <div class="comps-tab__card-builds comps-tab__card-builds--collapsed" data-comp-builds="${escapeHtml(c.id)}"></div>
+    </div>`;
+  }).join("");
+
+  panel.innerHTML = `<div class="comps-tab">
+    <div class="comps-tab__header">Linked Comps <span class="comps-tab__badge">${comps.length}</span></div>
+    <div class="comps-tab__list">${cards}</div>
+  </div>`;
+
+  panel.querySelectorAll(".comps-tab__card-header").forEach((header) => {
+    header.addEventListener("click", () => {
+      const compId = header.closest("[data-comp-id]").dataset.compId;
+      const comp = (state.comps || []).find((c) => c.id === compId);
+      if (!comp) return;
+      state.activeComp = comp;
+      state.compPage = "detail";
+      navigateToPage("comps");
+    });
+  });
+
+  panel.querySelectorAll(".comps-tab__toggle").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const compId = btn.dataset.compToggle;
+      const buildsEl = panel.querySelector(`[data-comp-builds="${compId}"]`);
+      if (!buildsEl) return;
+      const isCollapsed = buildsEl.classList.toggle("comps-tab__card-builds--collapsed");
+      btn.classList.toggle("comps-tab__toggle--open", !isCollapsed);
+      if (!isCollapsed && !buildsEl.dataset.rendered) {
+        const comp = (state.comps || []).find((c) => c.id === compId);
+        if (!comp) return;
+        const allIds = new Set(comp.buildIds || []);
+        for (const line of (comp.partyLines || [])) {
+          for (const sid of (line.slots || [])) { if (sid) allIds.add(sid); }
+        }
+        const html = [...allIds].map((bid) => {
+          const b = state.builds.find((x) => x.id === bid);
+          if (!b) return "";
+          return `<div class="comps-tab__build">${renderMiniBuildCard(b, state.upgradeCatalog, { showActions: false })}</div>`;
+        }).filter(Boolean).join("");
+        buildsEl.innerHTML = html || `<span class="comps-tab__card-empty">No builds</span>`;
+        buildsEl.dataset.rendered = "1";
+      }
+    });
+  });
 }
 
 // ── Event wiring ─────────────────────────────────────────────────────────────
@@ -1025,6 +1174,9 @@ function wireEvents() {
         requestAnimationFrame(() => {
           document.querySelectorAll(".spec-card__body").forEach((body) => drawSpecConnector(body));
         });
+      }
+      if (tab === "comps") {
+        renderCompsPanel();
       }
     });
   });

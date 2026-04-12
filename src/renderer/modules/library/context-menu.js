@@ -29,6 +29,7 @@ import {
   scissorsIcon,
   axiforgeIcon,
   compPlusIcon,
+  squaresIcon,
 } from "./heroicons.js";
 
 let _callbacks = {};
@@ -44,8 +45,9 @@ let _activeSubmenu = null;
 export function initContextMenu(callbacks) {
   _callbacks = callbacks || {};
 
-  document.addEventListener("click", (e) => {
-    if (_activeMenu && !_activeMenu.contains(e.target)) {
+  document.addEventListener("mousedown", (e) => {
+    if (_activeMenu && !_activeMenu.contains(e.target) &&
+        !(_activeSubmenu && _activeSubmenu.contains(e.target))) {
       closeMenu();
     }
   });
@@ -55,6 +57,10 @@ export function initContextMenu(callbacks) {
       closeMenu();
     }
   });
+
+  window.addEventListener("scroll", () => {
+    if (_activeMenu) closeMenu();
+  }, true);
 }
 
 /** Remove any active context menu from the DOM. */
@@ -134,7 +140,7 @@ function showBuildMenu(x, y, buildId, build) {
     _item(globeAltIcon, "Publish", null, () => _callbacks.onPublish?.(buildId)),
     _sep(),
     _item(informationCircleIcon, "Build Info", null, () => _callbacks.onBuildInfo?.(buildId)),
-    _item(trashIcon, "Delete", "Del", () => _callbacks.onDelete?.([buildId]), true),
+    ..._buildUnlinkOrDeleteItems(buildId, build),
   ];
   _showMenu(x, y, items);
 }
@@ -152,7 +158,7 @@ function showMultiSelectMenu(x, y, ids) {
     _item(scissorsIcon, "Cut", "Ctrl+X", () => _callbacks.onCutJson?.(ids)),
     _item(arrowUpTrayIcon, "Export (.axicode)", null, () => _callbacks.onExportAxicode?.("selection")),
     _sep(),
-    _item(trashIcon, `Delete ${count} Builds`, null, () => _callbacks.onDelete?.(ids), true),
+    ..._multiSelectUnlinkOrDeleteItems(ids),
   ];
   _showMenu(x, y, items);
 }
@@ -236,6 +242,75 @@ function showEmptyMenu(x, y) {
     _item(null, "Select All", "Ctrl+A", () => _callbacks.onSelectAll?.()),
   ];
   _showMenu(x, y, items);
+}
+
+// ─── Build unlink / delete items ──────────────────────────────────────────────
+
+function _buildUnlinkOrDeleteItems(buildId, build) {
+  const compIds = Array.isArray(build?.compIds) ? build.compIds : [];
+  const inCompView = state.currentFolder?.type === "comp";
+
+  if (inCompView) {
+    return [
+      _item(squaresIcon, "Unlink from Comp", null, () =>
+        _callbacks.onRemoveBuildFromComp?.(buildId, state.currentFolder.id)),
+    ];
+  }
+
+  const items = [];
+  if (compIds.length > 0) {
+    const comps = (state.comps || []).filter((c) => compIds.includes(c.id));
+    if (comps.length === 1) {
+      const c = comps[0];
+      items.push(
+        _item(squaresIcon, `Unlink from ${escapeHtml(c.name)}`, null, () =>
+          _callbacks.onRemoveBuildFromComp?.(buildId, c.id)),
+      );
+    } else if (comps.length > 1) {
+      items.push(
+        _submenuItem(squaresIcon, `Unlink from Comp (${comps.length})`, comps.map((c) =>
+          _item(null, escapeHtml(c.name), null, () =>
+            _callbacks.onRemoveBuildFromComp?.(buildId, c.id)),
+        )),
+      );
+    }
+  }
+  items.push(_item(trashIcon, "Delete", "Del", () => _callbacks.onDelete?.([buildId]), true));
+  return items;
+}
+
+function _multiSelectUnlinkOrDeleteItems(ids) {
+  const count = ids.length;
+  const inCompView = state.currentFolder?.type === "comp";
+
+  if (inCompView) {
+    return [
+      _item(squaresIcon, `Unlink ${count} Builds`, null, () => {
+        for (const id of ids) _callbacks.onRemoveBuildFromComp?.(id, state.currentFolder.id);
+      }),
+    ];
+  }
+
+  const items = [];
+  const linkedIds = ids.filter((id) => {
+    const b = state.builds.find((x) => x.id === id);
+    return b && Array.isArray(b.compIds) && b.compIds.length > 0;
+  });
+
+  if (linkedIds.length > 0) {
+    items.push(
+      _item(squaresIcon, `Unlink ${linkedIds.length} from Comps`, null, () => {
+        for (const id of linkedIds) {
+          const b = state.builds.find((x) => x.id === id);
+          for (const compId of (b?.compIds || [])) {
+            _callbacks.onRemoveBuildFromComp?.(id, compId);
+          }
+        }
+      }),
+    );
+  }
+  items.push(_item(trashIcon, `Delete ${count} Builds`, null, () => _callbacks.onDelete?.(ids), true));
+  return items;
 }
 
 // ─── Move to Folder submenu items ──────────────────────────────────────────────

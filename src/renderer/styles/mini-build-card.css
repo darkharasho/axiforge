@@ -422,6 +422,26 @@ a.mini-card__name:hover .mini-card__name-arrow {
   background: rgba(197, 72, 95, 0.12);
 }
 
+/* ── Link badge (comp reference indicator) ────────────────────────────────── */
+
+.mini-card__link-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  color: var(--text-dim);
+  background: var(--bg-tertiary, rgba(255, 255, 255, 0.06));
+  padding: 1px 6px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.mini-card__link-badge svg {
+  opacity: 0.7;
+}
+
 /* ── Missing variant ───────────────────────────────────────────────────────── */
 
 .mini-card--missing {

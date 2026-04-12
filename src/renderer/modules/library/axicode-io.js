@@ -244,14 +244,14 @@ export async function handleAxicodeImport(targetFolderId, renderLibrary, showToa
       await window.desktopApi.saveBuild(build);
     } else if (action === "copy") {
       const copy = { ...build, id: crypto.randomUUID(), title: nextCopyTitle(build.title, existingBuildTitles) };
-      if (targetFolderId && !build.folderId && !build.compId) copy.folderId = targetFolderId;
+      if (targetFolderId && !build.folderId) copy.folderId = targetFolderId;
       existingBuildTitles.push(copy.title);
       await window.desktopApi.saveBuild(copy);
       undoActions.push({ type: "build", action: "create", id: copy.id });
     } else {
       // No conflict
       const toSave = { ...build };
-      if (targetFolderId && !build.folderId && !build.compId) toSave.folderId = targetFolderId;
+      if (targetFolderId && !build.folderId) toSave.folderId = targetFolderId;
       await window.desktopApi.saveBuild(toSave);
       undoActions.push({ type: "build", action: "create", id: toSave.id });
     }

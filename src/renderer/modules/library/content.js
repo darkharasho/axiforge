@@ -141,7 +141,7 @@ function tagPillsHtml(build) {
 }
 
 function compBadgeHtml(comp) {
-  const count = state.builds.filter((b) => b.compId === comp.id).length;
+  const count = (comp.buildIds || []).length;
   const label = count === 1 ? "1 build" : `${count} builds`;
   return `<span class="lib-list-row__badge">${label}</span>`;
 }
@@ -335,7 +335,8 @@ function renderTableView(container) {
   }
 
   function renderTreeComp(c) {
-    const compBuilds = state.builds.filter((b) => b.compId === c.id);
+    const compBuildIdSet = new Set(c.buildIds || []);
+    const compBuilds = state.builds.filter((b) => compBuildIdSet.has(b.id));
     const count = compBuilds.length;
     const countLabel = count === 1 ? "1 build" : `${count} builds`;
     const tags = (c.tags || []).map((t) => escapeHtml(t)).join(", ");
@@ -546,7 +547,8 @@ function renderColumnsView(container) {
     const selectedComp = (state.comps || []).find((c) => c.id === selectedId);
     if (selectedComp) {
       // Comp selected: show its builds in next column, no sub-folders or sub-comps
-      const compBuilds = state.builds.filter((b) => b.compId === selectedId);
+      const selectedCompBuildIds = new Set(selectedComp.buildIds || []);
+      const compBuilds = state.builds.filter((b) => selectedCompBuildIds.has(b.id));
       columns.push({ folders: [], builds: compBuilds, comps: [], parentId: selectedId });
       break; // comps are flat — no further nesting
     }

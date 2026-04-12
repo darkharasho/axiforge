@@ -1410,6 +1410,16 @@
   min-width: 0;
 }
 
+.comp-picker-row__comp-count {
+  font-size: 10px;
+  color: var(--text-dim);
+  background: var(--bg-tertiary, rgba(255, 255, 255, 0.08));
+  padding: 1px 6px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
 .comp-picker-row__prof {
   font-size: 11px;
   color: var(--text-dim);
@@ -2161,4 +2171,162 @@
 .party-cov__src-target--self {
   background: #4a4a2a;
   color: #dd8;
+}
+
+/* ── Comps Tab (editor subtab) ────────────────────────────────────────────── */
+
+.comps-tab {
+  max-width: 640px;
+}
+
+.comps-tab__header {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-light);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.comps-tab__badge {
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--hover-subtle);
+  color: var(--text-dim);
+  padding: 1px 7px;
+  border-radius: 8px;
+}
+
+.comps-tab__list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ── Comp card ────────────────────────────────────────────────────────────── */
+
+.comps-tab__card {
+  background: var(--panel-2);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-soft);
+  overflow: hidden;
+}
+
+.comps-tab__card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: background 0.12s;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.comps-tab__card-header:hover {
+  background: var(--panel);
+}
+
+.comps-tab__card-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gold);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.comps-tab__card-spacer {
+  flex: 1;
+}
+
+.comps-tab__card-open {
+  font-size: 13px;
+  color: var(--text-dim);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.comps-tab__card-header:hover .comps-tab__card-open {
+  opacity: 1;
+}
+
+.comps-tab__card-meta {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 6px 14px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+/* ── Toggle button ────────────────────────────────────────────────────────── */
+
+.comps-tab__toggle {
+  all: unset;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  font-size: 12px;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: color 0.12s;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.comps-tab__toggle:hover {
+  color: var(--text-light);
+}
+
+.comps-tab__toggle-chevron {
+  transition: transform 0.15s;
+}
+
+.comps-tab__toggle--open .comps-tab__toggle-chevron {
+  transform: rotate(90deg);
+}
+
+/* ── Collapsible build list ───────────────────────────────────────────────── */
+
+.comps-tab__card-builds {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0 0 4px;
+}
+
+.comps-tab__card-builds--collapsed {
+  display: none;
+}
+
+.comps-tab__build {
+  padding: 2px 8px;
+}
+
+.comps-tab__build .mini-card {
+  background: transparent;
+  cursor: default;
+}
+
+.comps-tab__card-empty {
+  font-size: 12px;
+  color: var(--text-dim);
+  padding: 12px 14px;
+}
+
+/* ── Empty state ──────────────────────────────────────────────────────────── */
+
+.comps-tab__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 40px 20px;
+  color: var(--text-dim);
+}
+
+.comps-tab__empty-text {
+  font-size: 13px;
 }

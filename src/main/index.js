@@ -212,6 +212,7 @@ async function migrateCompGameModes(buildStore, compStore) {
 
 app.whenReady().then(async () => {
   await store.init();
+  await store.migrateCompIdToCompIds();
   await folderStore.init();
   await compStore.init();
   await initDiskCache(dataDir);
@@ -481,14 +482,14 @@ app.whenReady().then(async () => {
       partyLines: [],
     });
 
-    // Create new builds for each unique decoded build, wiring compId immediately
+    // Create new builds for each unique decoded build, wiring compIds immediately
     const newBuildIds = [];
     const buildRefToId = new Map();
     for (const build of decoded.builds) {
       const saved = await store.upsertBuild({
         ...build,
         title: build.title || "Imported Build",
-        compId: comp.id,
+        compIds: [comp.id],
       });
       newBuildIds.push(saved.id);
       buildRefToId.set(build, saved.id);
@@ -654,7 +655,8 @@ app.whenReady().then(async () => {
     }
 
     const allBuilds = await store.listBuilds();
-    const compBuilds = allBuilds.filter((b) => b.compId === compId);
+    const buildIdSet = new Set(comp.buildIds || []);
+    const compBuilds = allBuilds.filter((b) => buildIdSet.has(b.id));
 
     // ── 2. Ensure repo infrastructure ─────────────────────────────────
     progress("repo");

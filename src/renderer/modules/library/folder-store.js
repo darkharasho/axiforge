@@ -61,7 +61,10 @@ export function getVisibleBuilds() {
   if (folder) {
     if (folder.type === "comp") {
       // Inside a comp: show builds that belong to this comp
-      builds = builds.filter((b) => b.compId === folder.id);
+      const compBuildIds = new Set(
+        (state.comps || []).find((c) => c.id === folder.id)?.buildIds || [],
+      );
+      builds = builds.filter((b) => compBuildIds.has(b.id));
     } else if (folder.id === "__all-comps") {
       // "All Comps" smart folder: no builds shown
       return [];
@@ -73,9 +76,6 @@ export function getVisibleBuilds() {
         (b) => (b.gameMode || "pve") === folder.id,
       );
     } else {
-      // Non-smart views: exclude builds that are inside an existing comp
-      const compIds = new Set((state.comps || []).map((c) => c.id));
-      builds = builds.filter((b) => !b.compId || !compIds.has(b.compId));
       if (folder.type === "custom") {
         builds = builds.filter((b) => b.folderId === folder.id);
       } else if (folder.type === "all") {
@@ -85,8 +85,8 @@ export function getVisibleBuilds() {
       }
     }
   } else {
-    // Root: only show builds not in any folder or comp
-    builds = builds.filter((b) => !b.folderId && !b.compId);
+    // Root: only show builds not in any folder
+    builds = builds.filter((b) => !b.folderId);
   }
 
   // Apply filter dropdowns (multi-select arrays)
