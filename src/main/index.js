@@ -6,7 +6,7 @@ require("dotenv").config({ path: path.resolve(__dirname, "../../.env") });
 for (const stream of [process.stdout, process.stderr]) {
   stream?.on?.("error", (err) => { if (err.code !== "EPIPE") throw err; });
 }
-const { app, BrowserWindow, ipcMain, dialog, clipboard, nativeTheme, nativeImage } = require("electron");
+const { app, BrowserWindow, ipcMain, dialog, clipboard, nativeTheme, nativeImage, screen } = require("electron");
 const { BuildStore } = require("./buildStore");
 const { FolderStore } = require("./folderStore");
 const { CompStore } = require("./compStore");
@@ -78,10 +78,11 @@ function getIconPath() {
   return path.join(__dirname, `../../public/img/AxiForge-${variant}.png`);
 }
 
-function createWindow() {
+function createWindow(savedBounds) {
   const win = new BrowserWindow({
-    width: 1600,
-    height: 980,
+    width: savedBounds?.width ?? 1600,
+    height: savedBounds?.height ?? 980,
+    ...(savedBounds ? { x: savedBounds.x, y: savedBounds.y } : {}),
     minWidth: 1120,
     minHeight: 740,
     show: false,
@@ -97,6 +98,10 @@ function createWindow() {
       webviewTag: true,
       preload: path.join(__dirname, "../preload/index.js"),
     },
+  });
+
+  win.on("close", () => {
+    store.setSetting("windowBounds", win.getBounds());
   });
 
   win.once("ready-to-show", () => {
@@ -224,7 +229,22 @@ app.whenReady().then(async () => {
   await initDiskCache(dataDir);
   initWikiClient(dataDir);
   await migrateCompGameModes(store, compStore);
-  const win = createWindow();
+
+  // Restore last window position/size if valid
+  let savedBounds;
+  const b = await store.getSetting("windowBounds");
+  if (b && typeof b.x === "number" && typeof b.y === "number" &&
+      typeof b.width === "number" && typeof b.height === "number") {
+    const isOnScreen = screen.getAllDisplays().some(({ bounds }) =>
+      b.x < bounds.x + bounds.width &&
+      b.x + b.width > bounds.x &&
+      b.y < bounds.y + bounds.height &&
+      b.y + b.height > bounds.y
+    );
+    if (isOnScreen) savedBounds = b;
+  }
+
+  const win = createWindow(savedBounds);
   initAutoUpdate(win);
 
   // Update window icon when system theme changes (light ↔ dark)
