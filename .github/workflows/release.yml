@@ -106,12 +106,11 @@ jobs:
               'url': release_url,
               'description': notes or 'A new version of AxiForge is available!',
               'color': 0x5865F2,
+              'thumbnail': {'url': 'https://raw.githubusercontent.com/darkharasho/axiforge/main/public/img/AxiForge-White.png'},
               'footer': {'text': 'AxiForge Release'},
           }
 
           print(json.dumps({
-              'username': 'AxiForge',
-              'avatar_url': 'https://raw.githubusercontent.com/darkharasho/axiforge/main/public/img/AxiForge-White.png',
               'embeds': [embed],
           }))
           ")
