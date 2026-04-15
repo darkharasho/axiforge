@@ -89,7 +89,7 @@ function createWindow(savedBounds) {
     frame: false,
     ...(process.platform === "darwin"
       ? { titleBarStyle: "hidden", trafficLightPosition: { x: -20, y: -20 } }
-      : { titleBarStyle: "hidden" }),
+      : {}),
     backgroundColor: "#050910",
     icon: getIconPath(),
     webPreferences: {
