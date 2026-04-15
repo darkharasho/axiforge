@@ -1,3 +1,12 @@
+## Version v0.4.1 — April 15, 2026
+
+### New Features
+- **Window size and position persistence** — the app now remembers your window size and position between launches, so it reopens exactly where you left it.
+
+### Bug Fixes
+- **Fixed titlebar overlap on Linux AppImage** — the app content no longer bleeds into the titlebar area in packaged Linux builds. This was caused by a conflict between Electron's `titleBarStyle` and the custom frameless window on Linux.
+- **Discord release notifications** — webhook messages now display with the correct bot identity and include the app avatar as an embed thumbnail.
+
 ## Version v0.4.0 — April 12, 2026
 
 ### New Features
