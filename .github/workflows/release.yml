@@ -98,7 +98,6 @@ jobs:
           release_url = os.environ['RELEASE_URL']
           notes = os.environ.get('NOTES', '')
 
-          # Truncate notes for Discord embed description limit (4096 chars)
           if len(notes) > 3800:
               notes = notes[:3800] + '\n\n*... see full notes on GitHub*'
 
@@ -110,7 +109,11 @@ jobs:
               'footer': {'text': 'AxiForge Release'},
           }
 
-          print(json.dumps({'embeds': [embed]}))
+          print(json.dumps({
+              'username': 'AxiForge',
+              'avatar_url': 'https://raw.githubusercontent.com/darkharasho/axiforge/main/public/img/AxiForge-White.png',
+              'embeds': [embed],
+          }))
           ")
 
           curl -s -H "Content-Type: application/json" -d "$payload" "$DISCORD_WEBHOOK_URL"
