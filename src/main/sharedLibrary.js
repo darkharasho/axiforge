@@ -105,6 +105,19 @@ class SharedLibrary {
               id: folderId, name: meta.name, sortOrder: meta.sortOrder,
               shared: true, orgName: folder.orgName,
             });
+            // Restore any subfolders listed in meta that don't exist locally
+            if (Array.isArray(meta.subfolders)) {
+              const allFolders = await this.folderStore.listFolders();
+              for (const sf of meta.subfolders) {
+                if (!allFolders.find((f) => f.id === sf.id)) {
+                  await this.folderStore.upsertFolder({
+                    id: sf.id,
+                    name: sf.name,
+                    parentId: sf.parentId || folderId,
+                  });
+                }
+              }
+            }
             await this.syncStore.setSha(folderId, "meta", file.sha);
           }
         }
@@ -313,6 +326,82 @@ class SharedLibrary {
     }
   }
 
+  // ─── Folder meta push ──────────────────────────────────────────────────────
+
+  // Collect all direct and indirect children of rootId from allFolders array.
+  _collectDescendantFolders(rootId, allFolders) {
+    const result = [];
+    const queue = allFolders.filter((f) => f.parentId === rootId);
+    while (queue.length) {
+      const f = queue.shift();
+      result.push(f);
+      queue.push(...allFolders.filter((x) => x.parentId === f.id));
+    }
+    return result;
+  }
+
+  // Build the meta.json payload for a root shared folder (includes subfolders list).
+  async #buildMetaPayload(folderId, folder, allFolders) {
+    const subfolders = this._collectDescendantFolders(folderId, allFolders);
+    return JSON.stringify({
+      id: folder.id,
+      name: folder.name,
+      sortOrder: folder.sortOrder || 0,
+      createdAt: folder.createdAt,
+      updatedAt: folder.updatedAt,
+      subfolders: subfolders.map((sf) => ({
+        id: sf.id, name: sf.name, parentId: sf.parentId,
+      })),
+    }, null, 2);
+  }
+
+  // Push updated meta.json (folder name + subfolder list) for a root shared folder.
+  async pushFolderMeta(rootFolderId) {
+    const auth = await this.#getAuth();
+    if (!auth) return { conflict: false };
+
+    const allFolders = await this.folderStore.listFolders();
+    const folder = allFolders.find((f) => f.id === rootFolderId && f.shared);
+    if (!folder) return { conflict: false };
+
+    const metaContent = await this.#buildMetaPayload(rootFolderId, folder, allFolders);
+    const shas = await this.syncStore.getShas(rootFolderId);
+    const currentSha = shas["meta"] || null;
+
+    try {
+      const result = await api().putSharedFile(
+        auth.token, auth.org, auth.repo,
+        `folders/${rootFolderId}/meta.json`, metaContent, currentSha, "main",
+        `Update folder structure: ${folder.name}`
+      );
+      await this.syncStore.setSha(rootFolderId, "meta", result.sha);
+      return { conflict: false };
+    } catch (err) {
+      if (err.status === 409) return { conflict: true };
+      throw err;
+    }
+  }
+
+  // Debounced version — use from index.js when a subfolder is created/renamed/deleted.
+  schedulePushFolderMeta(rootFolderId, delayMs = 2000) {
+    const key = `meta:${rootFolderId}`;
+    if (this._pushTimers.has(key)) clearTimeout(this._pushTimers.get(key));
+    this._pushTimers.set(key, setTimeout(async () => {
+      this._pushTimers.delete(key);
+      try {
+        const result = await this.pushFolderMeta(rootFolderId);
+        if (result?.conflict) {
+          this._emit("sync-conflict", { type: "folder", id: rootFolderId, folderId: rootFolderId });
+        } else {
+          this._emit("sync-status", { status: "synced", folderId: rootFolderId });
+        }
+      } catch (err) {
+        console.error(`Shared library folder meta push failed for ${rootFolderId}:`, err.message);
+        this._emit("sync-status", { status: "error", folderId: rootFolderId });
+      }
+    }, delayMs));
+  }
+
   // ─── Share / unshare folder ─────────────────────────────────────────────────
 
   async shareFolder(folderId) {
@@ -321,17 +410,12 @@ class SharedLibrary {
 
     await api().ensureSharedRepo(auth.token, auth.org);
 
-    const folder = (await this.folderStore.listFolders()).find((f) => f.id === folderId);
+    const allFolders = await this.folderStore.listFolders();
+    const folder = allFolders.find((f) => f.id === folderId);
     if (!folder) throw new Error("Folder not found");
 
-    // Create meta.json
-    const metaContent = JSON.stringify({
-      id: folder.id,
-      name: folder.name,
-      sortOrder: folder.sortOrder || 0,
-      createdAt: folder.createdAt,
-      updatedAt: folder.updatedAt,
-    }, null, 2);
+    // Create meta.json (includes subfolder list)
+    const metaContent = await this.#buildMetaPayload(folderId, folder, allFolders);
 
     const metaResult = await api().putSharedFile(
       auth.token, auth.org, auth.repo,
@@ -341,9 +425,8 @@ class SharedLibrary {
     await this.syncStore.setSha(folderId, "meta", metaResult.sha);
 
     // Push all builds in this folder and any subfolders
-    const allFolders = await this.folderStore.listFolders();
     const folderTree = new Set([folderId]);
-    // collect all descendant folder IDs
+    // collect all descendant folder IDs (reuse allFolders already loaded above)
     const addChildren = (id) => {
       for (const f of allFolders.filter((f) => f.parentId === id)) {
         folderTree.add(f.id);

@@ -420,13 +420,31 @@ app.whenReady().then(async () => {
 
   // Folder CRUD
   ipcMain.handle("folders:list", () => folderStore.listFolders());
-  ipcMain.handle("folders:save", (_e, folder) =>
-    folderStore.upsertFolder(folder),
-  );
+  ipcMain.handle("folders:save", async (_e, folder) => {
+    const saved = await folderStore.upsertFolder(folder);
+    // If this folder lives inside a shared folder, sync the folder structure
+    if (saved.parentId) {
+      const rootShared = await findRootSharedFolder(saved.parentId);
+      if (rootShared) {
+        _e.sender.send("sync-status", { status: "syncing", folderId: rootShared.id });
+        sharedLibrary.schedulePushFolderMeta(rootShared.id);
+      }
+    }
+    return saved;
+  });
   ipcMain.handle("folders:delete", async (_e, id) => {
+    // Capture parent before deletion to determine shared ancestry
+    const allFolders = await folderStore.listFolders();
+    const target = allFolders.find((f) => f.id === id);
+    const rootShared = target?.parentId ? await findRootSharedFolder(target.parentId) : null;
+
     const deletedIds = await folderStore.deleteFolder(id);
     if (deletedIds.length) {
       await store.clearFolderFromBuilds(deletedIds);
+    }
+    if (rootShared) {
+      _e.sender.send("sync-status", { status: "syncing", folderId: rootShared.id });
+      sharedLibrary.schedulePushFolderMeta(rootShared.id);
     }
     return deletedIds;
   });
