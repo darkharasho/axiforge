@@ -636,11 +636,15 @@ async function _connectSharedLibrary() {
   _el.sharedStatus.textContent = "";
   try {
     await window.desktopApi.setupSharedLibrary(org);
+    // connect returns immediately after creating folder stubs and firing the
+    // background pull — refresh state now so folders appear in the library
     await window.desktopApi.connectSharedLibrary();
+    await _callbacks.refreshLibraryState?.();
     await _loadSharedLibraryState();
+    _close();
+    _callbacks.navigateToPage?.("library");
   } catch (err) {
     _el.sharedStatus.textContent = `Error: ${err.message}`;
-  } finally {
     _el.sharedConnect.disabled = false;
     _el.sharedConnect.textContent = "Connect";
   }

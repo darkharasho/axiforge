@@ -290,6 +290,13 @@ initRenderPagesCallbacks({
 initSettingsCallbacks({
   refreshOnboardingStatus,
   render,
+  navigateToPage,
+  refreshLibraryState: async () => {
+    state.builds = await window.desktopApi.listBuilds();
+    state.comps = await window.desktopApi.listComps();
+    state.folders = await window.desktopApi.listFolders();
+    state.sharedLibraryConfig = await window.desktopApi.getSharedLibraryConfig().catch(() => null);
+  },
   onThemedBuildsToggle: (enabled) => {
     _themedBuildsEnabled = enabled;
     if (state.activePage === "editor") {
@@ -484,6 +491,22 @@ async function init() {
       if (status === "synced") {
         // "synced" is the default for shared-folder items — just clear any active status
         delete state[statusMap][id];
+        // Splice the updated item into state so library reflects the latest data
+        // (e.g. gamemode change from another user won't silently stale-filter on next render)
+        if (data.item) {
+          if (type === "build") {
+            const idx = state.builds.findIndex((b) => b.id === id);
+            if (idx >= 0) state.builds[idx] = data.item;
+            else state.builds.push(data.item);
+          } else {
+            const idx = state.comps.findIndex((c) => c.id === id);
+            if (idx >= 0) state.comps[idx] = data.item;
+            else state.comps.push(data.item);
+          }
+          // Re-render the visible page so the change is reflected immediately
+          if (state.activePage === "library") renderLibrary();
+          else if (state.activePage === "comps") renderComps();
+        }
       } else {
         state[statusMap][id] = status;
         if (status === "syncing") {

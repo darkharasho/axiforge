@@ -175,9 +175,9 @@ class SharedLibrary {
         }
         delete data._syncSubFolderName;
         data.folderId = restoreFolderId;
-        await this.buildStore.upsertBuild(data);
+        const savedBuild = await this.buildStore.upsertBuild(data);
         await this.syncStore.setSha(folderId, key, sha);
-        this._emit("sync-status", { status: "synced", type: "build", id: data.id, folderId });
+        this._emit("sync-status", { status: "synced", type: "build", id: data.id, folderId, item: savedBuild });
       } else if (relPath.startsWith("comps/")) {
         const restoreFolderId = data.folderId || folderId;
         if (restoreFolderId !== folderId) {
@@ -192,9 +192,9 @@ class SharedLibrary {
         }
         delete data._syncSubFolderName;
         data.folderId = restoreFolderId;
-        await this.compStore.upsertComp(data);
+        const savedComp = await this.compStore.upsertComp(data);
         await this.syncStore.setSha(folderId, key, sha);
-        this._emit("sync-status", { status: "synced", type: "comp", id: data.id, folderId });
+        this._emit("sync-status", { status: "synced", type: "comp", id: data.id, folderId, item: savedComp });
       }
     }
 

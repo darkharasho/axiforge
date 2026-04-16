@@ -1526,7 +1526,23 @@ app.whenReady().then(async () => {
       }
     }
 
-    await sharedLibrary.pullAll();
+    // Emit syncing immediately for each shared folder so the UI shows spinners
+    // before the pull begins, then fire the pull in the background so the
+    // connect IPC call returns right away and the renderer can navigate.
+    const sharedFolders = (await folderStore.listFolders()).filter((f) => f.shared);
+    for (const folder of sharedFolders) {
+      _e.sender.send("sync-status", { status: "syncing", folderId: folder.id });
+    }
+    sharedLibrary.pullAll().then(() => {
+      for (const folder of sharedFolders) {
+        _e.sender.send("sync-status", { status: "synced", folderId: folder.id });
+      }
+    }).catch((err) => {
+      console.error("[connect] pullAll failed:", err.message);
+      for (const folder of sharedFolders) {
+        _e.sender.send("sync-status", { status: "error", folderId: folder.id });
+      }
+    });
     return true;
   });
 
