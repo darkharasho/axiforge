@@ -8,11 +8,10 @@ for (const stream of [process.stdout, process.stderr]) {
 }
 const { app, BrowserWindow, ipcMain, dialog, clipboard, nativeTheme, nativeImage, screen } = require("electron");
 
-// Taskbar identity — set before app is ready so the compositor gives AxiForge
-// its own taskbar entry instead of grouping it with whatever process launched
-// electron (e.g. a VS Code terminal). On Wayland, Chromium derives app_id from
-// app.getName(); on X11, --class sets WM_CLASS.
-app.setName("AxiForge");
+// Taskbar identity on X11 — give AxiForge its own WM_CLASS so KDE/GNOME
+// don't group it with whatever process launched electron (e.g. a VS Code
+// terminal). Do NOT use app.setName() here: that would change app.getName()
+// and move userData to a new path, orphaning existing users' builds.
 app.commandLine.appendSwitch("class", "AxiForge");
 const { BuildStore } = require("./buildStore");
 const { FolderStore } = require("./folderStore");
