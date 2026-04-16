@@ -547,17 +547,16 @@ export function renderEditorMeta() {
     const rootShared = folderId ? _findRootSharedFolderInState(folderId) : null;
     const syncStatus = rootShared ? (state.folderSyncStatus[rootShared.id] || null) : null;
     if (syncStatus === "syncing") {
-      _el.syncStatus.className = "subnav__sync-status subnav__sync-status--syncing";
       _el.syncStatus.textContent = "Syncing\u2026";
+      _el.syncStatus.className = "subnav__sync-status subnav__sync-status--syncing subnav__sync-status--active";
     } else if (syncStatus === "synced") {
-      _el.syncStatus.className = "subnav__sync-status subnav__sync-status--synced";
       _el.syncStatus.textContent = "\u2713 Synced";
+      _el.syncStatus.className = "subnav__sync-status subnav__sync-status--synced subnav__sync-status--active";
     } else if (syncStatus === "error") {
-      _el.syncStatus.className = "subnav__sync-status subnav__sync-status--error";
       _el.syncStatus.textContent = "Sync failed";
+      _el.syncStatus.className = "subnav__sync-status subnav__sync-status--error subnav__sync-status--active";
     } else {
-      _el.syncStatus.className = "subnav__sync-status";
-      _el.syncStatus.textContent = "";
+      _el.syncStatus.classList.remove("subnav__sync-status--active");
     }
   }
 

@@ -324,10 +324,17 @@ body:has(.app-layout) {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  opacity: 0;
+  transform: translateY(-4px);
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease,
+              color 0.2s ease, background 0.2s ease, border-color 0.2s ease;
 }
 
-.subnav__sync-status:empty {
-  display: none;
+.subnav__sync-status--active {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
 }
 
 .subnav__sync-status--syncing {
