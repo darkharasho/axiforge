@@ -33,6 +33,7 @@ import {
   compPlusIcon,
   squaresIcon,
   shareIcon,
+  clockIcon,
 } from "./heroicons.js";
 
 let _callbacks = {};
@@ -162,6 +163,7 @@ function showBuildMenu(x, y, buildId, build) {
     _item(globeAltIcon, "Publish", null, () => _callbacks.onPublish?.(buildId)),
     _sep(),
     _item(informationCircleIcon, "Build Info", null, () => _callbacks.onBuildInfo?.(buildId)),
+    _item(clockIcon, "View History", null, () => _callbacks.onViewHistory?.(buildId)),
     ..._buildUnlinkOrDeleteItems(buildId, build),
   ];
   _showMenu(x, y, items);

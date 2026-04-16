@@ -26,6 +26,7 @@ import {
   wireSelectionEvents,
 } from "./selection.js";
 import { initDragDrop, wireDragDropEvents } from "./drag-drop.js";
+import { showHistoryPanel } from "./history-panel.js";
 import { compIcon } from "./heroicons.js";
 import { pushUndo, popUndo } from "./undo.js";
 import { handleAxicodeExport, handleAxicodeImport } from "./axicode-io.js";
@@ -71,6 +72,10 @@ export async function initLibrary(appCallbacks) {
   initContextMenu(shared);
   initDragDrop(shared);
 
+  // Re-render the library when a revert completes (fired by history-panel.js)
+  document.addEventListener("library:rerender", () => renderLibrary());
+  // Toast requests from history-panel.js (avoids circular import)
+  document.addEventListener("library:toast", (e) => showToast(e.detail?.message, e.detail?.type));
 }
 
 /**
@@ -1406,6 +1411,7 @@ function _buildSharedCallbacks() {
     onPasteJson: handlePasteJson,
     onPublish: handlePublish,
     onBuildInfo: handleBuildInfo,
+    onViewHistory: (buildId) => showHistoryPanel(buildId),
     onEditTags: handleEditTags,
 
     // Folder actions

@@ -17,6 +17,7 @@ const { BuildStore } = require("./buildStore");
 const { FolderStore } = require("./folderStore");
 const { CompStore } = require("./compStore");
 const { SyncStore } = require("./syncStore");
+const { BuildHistoryStore, summarizeBuildChange } = require("./buildHistoryStore");
 const { SharedLibrary } = require("./sharedLibrary");
 const { beginGitHubDeviceAuth, completeGitHubDeviceAuth } = require("./githubAuth");
 const {
@@ -58,6 +59,7 @@ const store = new BuildStore(dataDir);
 const folderStore = new FolderStore(dataDir);
 const compStore = new CompStore(dataDir);
 const syncStore = new SyncStore(dataDir);
+const buildHistoryStore = new BuildHistoryStore(dataDir);
 
 // On Windows, the taskbar follows the "system" theme (SystemUsesLightTheme)
 // while nativeTheme.shouldUseDarkColors follows the "app" theme. These can
@@ -236,6 +238,7 @@ app.whenReady().then(async () => {
   await folderStore.init();
   await compStore.init();
   await syncStore.init();
+  await buildHistoryStore.init();
   await initDiskCache(dataDir);
   initWikiClient(dataDir);
   await migrateCompGameModes(store, compStore);
@@ -256,6 +259,7 @@ app.whenReady().then(async () => {
 
   const sharedLibrary = new SharedLibrary({
     buildStore: store, compStore, folderStore, syncStore,
+    historyStore: buildHistoryStore,
     emit: (channel, data) => {
       const wins = BrowserWindow.getAllWindows();
       if (wins.length) wins[0].webContents.send(channel, data);
@@ -391,6 +395,17 @@ app.whenReady().then(async () => {
   ipcMain.handle("builds:save", async (_e, build) => {
     const existing = build.id ? (await store.listBuilds()).find((b) => b.id === build.id) : null;
     const oldFolderId = existing?.folderId ?? null;
+    // Capture history before overwriting (non-blocking — never fails the save)
+    if (existing) {
+      const auth = await getAuthRecord().catch(() => null);
+      buildHistoryStore.addEntry({
+        buildId: existing.id,
+        authorLogin: auth?.viewer?.login || "local",
+        source: "local",
+        summary: summarizeBuildChange(existing, build),
+        snapshot: existing,
+      }).catch((err) => console.warn("[history] addEntry failed:", err.message));
+    }
     const saved = await store.upsertBuild(build);
     if (saved.folderId) {
       await folderStore.touchFolders([saved.folderId]);
@@ -422,6 +437,7 @@ app.whenReady().then(async () => {
     const folderId = build?.folderId;
     await store.deleteBuild(id);
     await compStore.removeBuildFromComps(id);
+    buildHistoryStore.deleteHistory(id).catch((err) => console.warn("[history] deleteHistory failed:", err.message));
     if (folderId) {
       await folderStore.touchFolders([folderId]);
       const rootShared = await findRootSharedFolder(folderId);
@@ -432,6 +448,41 @@ app.whenReady().then(async () => {
       }
     }
     return true;
+  });
+
+  // Build history
+  ipcMain.handle("builds:get-history", async (_e, buildId) => {
+    return buildHistoryStore.getHistory(buildId);
+  });
+
+  ipcMain.handle("builds:revert", async (_e, buildId, historyEntryId) => {
+    const entries = await buildHistoryStore.getHistory(buildId);
+    const entry = entries.find((e) => e.id === historyEntryId);
+    if (!entry) throw new Error("History entry not found");
+
+    // Capture the current state before reverting so the revert itself is undoable
+    const currentBuilds = await store.listBuilds();
+    const currentBuild = currentBuilds.find((b) => b.id === buildId);
+    const auth = await getAuthRecord().catch(() => null);
+    if (currentBuild) {
+      buildHistoryStore.addEntry({
+        buildId,
+        authorLogin: auth?.viewer?.login || "local",
+        source: "revert",
+        summary: `reverted to ${new Date(entry.timestamp).toLocaleString()}`,
+        snapshot: currentBuild,
+      }).catch((err) => console.warn("[history] revert addEntry failed:", err.message));
+    }
+
+    const saved = await store.upsertBuild(entry.snapshot);
+    if (saved.folderId) {
+      await folderStore.touchFolders([saved.folderId]);
+    }
+    const rootShared = await findRootSharedFolder(saved.folderId);
+    if (rootShared) {
+      sharedLibrary.schedulePush("build", saved);
+    }
+    return saved;
   });
 
   // Folder CRUD

@@ -6,11 +6,12 @@ function api() {
 }
 
 class SharedLibrary {
-  constructor({ buildStore, compStore, folderStore, syncStore, emit }) {
+  constructor({ buildStore, compStore, folderStore, syncStore, historyStore, emit }) {
     this.buildStore = buildStore;
     this.compStore = compStore;
     this.folderStore = folderStore;
     this.syncStore = syncStore;
+    this.historyStore = historyStore || null;
     this._emit = typeof emit === "function" ? emit : () => {};
     this._pushTimers = new Map(); // debounce timers per build/comp ID
     this._pollTimer = null;
@@ -175,6 +176,20 @@ class SharedLibrary {
         }
         delete data._syncSubFolderName;
         data.folderId = restoreFolderId;
+        if (this.historyStore) {
+          const { summarizeBuildChange } = require("./buildHistoryStore");
+          const existingBuilds = await this.buildStore.listBuilds();
+          const existingBuild = existingBuilds.find((b) => b.id === data.id);
+          if (existingBuild) {
+            this.historyStore.addEntry({
+              buildId: data.id,
+              authorLogin: auth.org,
+              source: "shared-sync",
+              summary: summarizeBuildChange(existingBuild, data),
+              snapshot: existingBuild,
+            }).catch((err) => console.warn("[history] shared addEntry failed:", err.message));
+          }
+        }
         const savedBuild = await this.buildStore.upsertBuild(data);
         await this.syncStore.setSha(folderId, key, sha);
         this._emit("sync-status", { status: "synced", type: "build", id: data.id, folderId, item: savedBuild });
