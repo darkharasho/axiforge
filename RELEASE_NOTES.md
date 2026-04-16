@@ -1,3 +1,17 @@
+## Version v0.6.0 — April 16, 2026
+
+### New Features
+- **Persistent sync status on every item** — builds and comps in shared folders now always show a green checkmark (✓) next to their name, a spinner while actively syncing, or a warning icon if the last sync failed. This works across all library views (list, table, grid, icon, columns) and updates live as items sync — similar to how OneDrive shows per-file sync state. The status also appears correctly after a re-render, not just during the sync event.
+- **"Sync Now" syncs the entire folder tree** — right-clicking a shared folder (or any subfolder within it) and choosing "Sync Now" now pulls all builds, comps, and subfolders under the shared root, and shows the folder spinner while in progress.
+
+### Bug Fixes
+- **Push queue no longer silently swallows errors** — previously a failed push could cause subsequent items in the queue to run concurrently, risking SHA conflicts. The queue now correctly re-throws failures so serialization is maintained.
+- **Sharing a folder is now serialized with pending saves** — sharing a folder with existing builds no longer races with debounced push timers for the same items.
+- **Unsharing a folder cancels pending pushes** — any builds or comps that were queued to sync are now cancelled when their folder is unshared, preventing them from re-appearing on GitHub after removal.
+- **Unsharing fails cleanly if GitHub deletion errors** — if any file fails to delete during unshare, the folder is no longer incorrectly marked as unshared locally, leaving the state consistent.
+- **Force-push is now serialized** — the "force push" operation now goes through the same queue as normal pushes, preventing concurrent commits.
+- **Disconnecting cancels all pending syncs** — pending push timers are now cleared when you disconnect from the shared library, preventing spurious errors after disconnect.
+
 ## Version v0.5.4 — April 16, 2026
 
 ### Bug Fixes
