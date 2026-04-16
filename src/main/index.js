@@ -470,6 +470,7 @@ app.whenReady().then(async () => {
     const destRootShared = await findRootSharedFolder(folderId);
 
     if (destRootShared) {
+      _e.sender.send("sync-status", { status: "syncing", folderId: destRootShared.id });
       for (const build of movedBuilds) {
         sharedLibrary.schedulePush("build", build);
       }
@@ -480,6 +481,7 @@ app.whenReady().then(async () => {
       const srcRootShared = await findRootSharedFolder(srcId);
       // Only delete remotely if moving OUT of a different shared hierarchy
       if (srcRootShared && srcRootShared.id !== destRootShared?.id) {
+        _e.sender.send("sync-status", { status: "syncing", folderId: srcRootShared.id });
         for (const id of ids) {
           sharedLibrary.deleteBuildRemote(srcId, id).catch((err) => {
             console.error("Failed to delete remote build after move:", err.message);
