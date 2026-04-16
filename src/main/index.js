@@ -1576,6 +1576,7 @@ app.whenReady().then(async () => {
       if (type === "comp") return sharedLibrary.pushComp(item);
     });
   });
+});
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
