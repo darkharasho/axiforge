@@ -114,6 +114,27 @@ export function initSettingsModal() {
             <span class="settings-modal__cache-status" id="sm-cache-status"></span>
           </div>
         </div>
+        <div class="settings-modal__section" id="sm-shared-library-section">
+          <h4 class="settings-modal__section-title">
+            <svg class="settings-modal__section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            Shared Library
+          </h4>
+          <span class="settings-modal__error" id="sm-shared-status"></span>
+          <div id="sm-shared-setup">
+            <label class="settings-modal__label" for="sm-org-select">Organization</label>
+            <select class="settings-modal__select" id="sm-org-select">
+              <option value="">Select an organization...</option>
+            </select>
+            <button class="settings-modal__btn settings-modal__btn--secondary" id="sm-shared-connect" type="button">Connect</button>
+          </div>
+          <div id="sm-shared-connected" class="settings-modal__shared-connected--hidden">
+            <div class="settings-modal__shared-info">
+              <span class="settings-modal__shared-org" id="sm-shared-org-name"></span>
+              <span class="settings-modal__shared-repo"> / axibuilds-shared</span>
+            </div>
+            <button class="settings-modal__btn settings-modal__btn--danger" id="sm-shared-disconnect" type="button">Disconnect</button>
+          </div>
+        </div>
       </div>
       <div class="settings-modal__actions">
         <button class="settings-modal__btn settings-modal__btn--save" id="sm-save">Save</button>
@@ -141,12 +162,21 @@ export function initSettingsModal() {
     save:              document.getElementById("sm-save"),
     clearCache:        document.getElementById("sm-clear-cache"),
     cacheStatus:       document.getElementById("sm-cache-status"),
+    sharedStatus:      document.getElementById("sm-shared-status"),
+    sharedSetup:       document.getElementById("sm-shared-setup"),
+    sharedConnected:   document.getElementById("sm-shared-connected"),
+    orgSelect:         document.getElementById("sm-org-select"),
+    sharedConnect:     document.getElementById("sm-shared-connect"),
+    sharedDisconnect:  document.getElementById("sm-shared-disconnect"),
+    sharedOrgName:     document.getElementById("sm-shared-org-name"),
   };
   _el.themedBuilds = _overlay.querySelector("#sm-themed-builds");
 
   _el.close.addEventListener("click", _close);
   _el.save.addEventListener("click", _save);
   _el.clearCache.addEventListener("click", _clearCache);
+  _el.sharedConnect.addEventListener("click", _connectSharedLibrary);
+  _el.sharedDisconnect.addEventListener("click", _disconnectSharedLibrary);
 
   // Toggle thread ID input visibility for comp webhook
   _el.threadMode.addEventListener("change", (e) => {
@@ -207,6 +237,9 @@ export async function openSettingsModal() {
 
   // Populate publishing section
   _renderPublishing();
+
+  // Populate shared library section
+  _loadSharedLibraryState();
 
   _overlay.classList.remove("settings-modal-overlay--hidden");
   _escHandler = (e) => { if (e.key === "Escape") _close(); };
@@ -564,4 +597,57 @@ function _close() {
     document.removeEventListener("keydown", _escHandler);
     _escHandler = null;
   }
+}
+
+// ─── Shared Library section ──────────────────────────────────────────────────
+
+async function _loadSharedLibraryState() {
+  if (!_el.sharedSetup) return;
+  _el.sharedStatus.textContent = "";
+  const config = await window.desktopApi.getSharedLibraryConfig();
+  if (config?.orgName) {
+    _el.sharedSetup.style.display = "none";
+    _el.sharedConnected.classList.remove("settings-modal__shared-connected--hidden");
+    _el.sharedOrgName.textContent = config.orgName;
+  } else {
+    _el.sharedConnected.classList.add("settings-modal__shared-connected--hidden");
+    _el.sharedSetup.style.display = "";
+    const session = await window.desktopApi.getSession();
+    if (session) {
+      const orgs = await window.desktopApi.listOrgs();
+      _el.orgSelect.innerHTML = '<option value="">Select an organization...</option>';
+      for (const org of orgs) {
+        const opt = document.createElement("option");
+        opt.value = org.login;
+        opt.textContent = org.login;
+        _el.orgSelect.appendChild(opt);
+      }
+    } else {
+      _el.sharedStatus.textContent = "Log in to GitHub first to set up sharing.";
+    }
+  }
+}
+
+async function _connectSharedLibrary() {
+  const org = _el.orgSelect.value;
+  if (!org) return;
+  _el.sharedConnect.disabled = true;
+  _el.sharedConnect.textContent = "Connecting...";
+  _el.sharedStatus.textContent = "";
+  try {
+    await window.desktopApi.setupSharedLibrary(org);
+    await window.desktopApi.connectSharedLibrary();
+    await _loadSharedLibraryState();
+  } catch (err) {
+    _el.sharedStatus.textContent = `Error: ${err.message}`;
+  } finally {
+    _el.sharedConnect.disabled = false;
+    _el.sharedConnect.textContent = "Connect";
+  }
+}
+
+async function _disconnectSharedLibrary() {
+  if (!confirm("Disconnect from shared library? Your local copies will be kept.")) return;
+  await window.desktopApi.disconnectSharedLibrary();
+  await _loadSharedLibraryState();
 }
