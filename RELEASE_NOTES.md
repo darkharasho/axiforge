@@ -1,3 +1,8 @@
+## Version v0.5.1 — April 16, 2026
+
+### New Features
+- **Shared library permissions** — only org owners can unshare a shared folder or move builds and comps out of one. The "Unshare" and "Move to Folder" options are hidden from the menu for regular members, and drag-and-drop moves out of shared folders are silently blocked. Moving a comp into a shared folder now warns you if any of its referenced builds live outside the folder, and offers to move them together so everything stays in sync. Unsharing a folder now also removes all of its content from the GitHub repository.
+
 ## Version v0.5.0 — April 16, 2026
 
 ### New Features
