@@ -1,3 +1,8 @@
+## Version v0.6.1 — April 16, 2026
+
+### Bug Fixes
+- **App no longer crashes on launch** — a missing closing brace introduced in v0.6.0 caused a syntax error that prevented the app from starting. This patch resolves the crash.
+
 ## Version v0.6.0 — April 16, 2026
 
 ### New Features
