@@ -1828,6 +1828,27 @@
   color: #4caf50;
 }
 
+/* ── Content area folder sync indicators ─────────────────────────────────── */
+
+.lib-content-sync-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  vertical-align: middle;
+  margin-left: 4px;
+}
+
+.lib-content-sync-indicator--syncing {
+  color: var(--text-dim);
+}
+
+.lib-content-sync-indicator--synced {
+  color: #4caf50;
+}
+
 /* Spinner animation for syncing state */
 @keyframes sync-spin {
   to { transform: rotate(360deg); }

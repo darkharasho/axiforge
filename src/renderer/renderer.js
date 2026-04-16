@@ -78,8 +78,8 @@ const _syncCheckSvg = `<svg width="12" height="12" viewBox="0 0 20 20" fill="cur
 
 // Apply or remove a sync indicator on all sidebar/content folder elements for folderId.
 function _updateFolderSyncIndicators(folderId, status) {
-  const selector = `[data-navigate-folder="${CSS.escape(folderId)}"]`;
-  document.querySelectorAll(selector).forEach((navEl) => {
+  // Sidebar nav items
+  document.querySelectorAll(`[data-navigate-folder="${CSS.escape(folderId)}"]`).forEach((navEl) => {
     let badge = navEl.querySelector(".lib-nav-item__sync-indicator");
     if (!status) {
       badge?.remove();
@@ -88,7 +88,6 @@ function _updateFolderSyncIndicators(folderId, status) {
     if (!badge) {
       badge = document.createElement("span");
       badge.className = "lib-nav-item__sync-indicator";
-      // Insert just before the count badge (last child), or append
       const countEl = navEl.querySelector(".lib-nav-item__count");
       if (countEl) {
         navEl.insertBefore(badge, countEl);
@@ -99,6 +98,26 @@ function _updateFolderSyncIndicators(folderId, status) {
     badge.className = `lib-nav-item__sync-indicator lib-nav-item__sync-indicator--${status}`;
     badge.innerHTML = status === "syncing" ? _syncSpinnerSvg : status === "synced" ? _syncCheckSvg : "";
     badge.title = status === "syncing" ? "Syncing to shared library…" : status === "synced" ? "Synced" : "Sync error";
+  });
+
+  // Content area folder cards (list/table/grid/icon/columns views)
+  document.querySelectorAll(`[data-folder-id="${CSS.escape(folderId)}"]`).forEach((cardEl) => {
+    let badge = cardEl.querySelector(".lib-content-sync-indicator");
+    if (!status) {
+      badge?.remove();
+      return;
+    }
+    if (!badge) {
+      badge = document.createElement("span");
+      // Find the best anchor: a name/title/label span, or fall back to the card itself
+      const nameEl =
+        cardEl.querySelector(".lib-list-row__title, .lib-tv__name, .lib-grid-card__title, .lib-icon-item__label, .lib-col__name") ||
+        cardEl;
+      nameEl.appendChild(badge);
+    }
+    badge.className = `lib-content-sync-indicator lib-content-sync-indicator--${status}`;
+    badge.innerHTML = status === "syncing" ? _syncSpinnerSvg : status === "synced" ? _syncCheckSvg : "";
+    badge.title = status === "syncing" ? "Syncing…" : status === "synced" ? "Synced" : "Sync error";
   });
 }
 

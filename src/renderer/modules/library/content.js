@@ -176,6 +176,21 @@ function folderPathText(build) {
   return chain.join(" / ");
 }
 
+const _contentSyncSpinner = `<svg class="sync-spin" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 2a10 10 0 0 1 10 10"/></svg>`;
+const _contentSyncCheck = `<svg width="11" height="11" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd"/></svg>`;
+
+function contentSyncIndicatorHtml(folderId) {
+  const status = state.folderSyncStatus?.[folderId];
+  if (!status) return "";
+  if (status === "syncing") {
+    return `<span class="lib-content-sync-indicator lib-content-sync-indicator--syncing" title="Syncing\u2026">${_contentSyncSpinner}</span>`;
+  }
+  if (status === "synced") {
+    return `<span class="lib-content-sync-indicator lib-content-sync-indicator--synced" title="Synced">${_contentSyncCheck}</span>`;
+  }
+  return "";
+}
+
 /** Return HTML for the folder path breadcrumb shown in combined views. */
 function folderPathHtml(build) {
   if (!isCombinedView()) return "";
@@ -201,7 +216,7 @@ function renderListView(container) {
       (f) => `
         <div class="lib-list-row lib-list-row--folder" data-folder-id="${escapeHtml(f.id)}">
           <span class="lib-list-row__icon lib-list-row__icon--folder">${folderIcon}</span>
-          <span class="lib-list-row__title">${escapeHtml(f.name)}${f.shared ? `<span class="lib-shared-badge" title="Shared with ${escapeHtml(f.orgName || "org")}">${shareIcon}</span>` : ""}</span>
+          <span class="lib-list-row__title">${escapeHtml(f.name)}${f.shared ? `<span class="lib-shared-badge" title="Shared with ${escapeHtml(f.orgName || "org")}">${shareIcon}</span>` : ""}${contentSyncIndicatorHtml(f.id)}</span>
         </div>
       `
     )
@@ -300,7 +315,7 @@ function renderTableView(container) {
         <div class="lib-tv__row lib-tv__row--folder">
           <span class="lib-tv__action" data-toggle-table-folder="${escapeHtml(folder.id)}">${chevron}</span>
           <span class="lib-tv__icon"><span class="lib-table__folder-icon">${folderIcon}</span></span>
-          <span class="lib-tv__name">${escapeHtml(folder.name)}${folder.shared ? `<span class="lib-shared-badge" title="Shared with ${escapeHtml(folder.orgName || "org")}">${shareIcon}</span>` : ""}</span>
+          <span class="lib-tv__name">${escapeHtml(folder.name)}${folder.shared ? `<span class="lib-shared-badge" title="Shared with ${escapeHtml(folder.orgName || "org")}">${shareIcon}</span>` : ""}${contentSyncIndicatorHtml(folder.id)}</span>
           <span class="lib-tv__profession"></span>
           <span class="lib-tv__spec"></span>
           <span class="lib-tv__mode"></span>
@@ -427,7 +442,7 @@ function renderGridView(container) {
       (f) => `
         <div class="lib-grid-card lib-grid-card--folder" data-folder-id="${escapeHtml(f.id)}">
           <div class="lib-grid-card__folder-icon">${folderIcon}${f.shared ? `<span class="lib-shared-badge lib-shared-badge--grid" title="Shared with ${escapeHtml(f.orgName || "org")}">${shareIcon}</span>` : ""}</div>
-          <div class="lib-grid-card__title">${escapeHtml(f.name)}</div>
+          <div class="lib-grid-card__title">${escapeHtml(f.name)}${contentSyncIndicatorHtml(f.id)}</div>
         </div>
       `
     )
@@ -492,7 +507,7 @@ function renderIconView(container) {
       (f) => `
         <div class="lib-icon-item lib-icon-item--folder" data-folder-id="${escapeHtml(f.id)}">
           <div class="lib-icon-item__icon lib-icon-item__icon--folder">${folderIcon}${f.shared ? `<span class="lib-shared-badge lib-shared-badge--icon" title="Shared with ${escapeHtml(f.orgName || "org")}">${shareIcon}</span>` : ""}</div>
-          <div class="lib-icon-item__label">${escapeHtml(f.name)}</div>
+          <div class="lib-icon-item__label">${escapeHtml(f.name)}${contentSyncIndicatorHtml(f.id)}</div>
         </div>
       `
     )
@@ -579,7 +594,7 @@ function renderColumnsView(container) {
           <div class="lib-col__item lib-col__item--folder ${isSelected ? "lib-col__item--selected" : ""}"
                data-folder-id="${escapeHtml(f.id)}" data-col-index="${colIndex}">
             <span class="lib-col__icon lib-col__icon--folder">${folderIcon}</span>
-            <span class="lib-col__name">${escapeHtml(f.name)}${f.shared ? `<span class="lib-shared-badge" title="Shared with ${escapeHtml(f.orgName || "org")}">${shareIcon}</span>` : ""}</span>
+            <span class="lib-col__name">${escapeHtml(f.name)}${f.shared ? `<span class="lib-shared-badge" title="Shared with ${escapeHtml(f.orgName || "org")}">${shareIcon}</span>` : ""}${contentSyncIndicatorHtml(f.id)}</span>
             <span class="lib-col__chevron">${chevronRightIcon}</span>
           </div>
         `);
