@@ -1004,6 +1004,12 @@
   box-shadow: 0 0 8px rgba(212, 170, 68, 0.3);
 }
 
+/* Signet passive state: icon visible but no gold highlight */
+.equip-boons__icon--passive {
+  opacity: 1;
+  filter: none;
+}
+
 .equip-boons__icon img {
   width: 28px;
   height: 28px;
@@ -1043,6 +1049,11 @@
 
 .equip-boons__label--on {
   color: #d4aa44;
+}
+
+.equip-boons__label--off {
+  color: var(--muted);
+  opacity: 0.5;
 }
 
 .equip-boons__help {

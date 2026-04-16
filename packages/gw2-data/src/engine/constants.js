@@ -223,6 +223,26 @@ const SIGNET_PASSIVE_BUFFS = new Map([
 ]);
 
 // ---------------------------------------------------------------------------
+// Signet active effects
+// ---------------------------------------------------------------------------
+// What each signet grants when its active skill is used (not the passive).
+// Key = skill ID. Value:
+//   stats: { StatKey: amount } — direct flat stat boost for the active duration
+//   boons: { might: N }       — N stacks of Might (each gives +30 Power, +30 CondiDmg)
+//   boons: { fury: true }     — Fury boon (25% crit chance PvE / 20% WvW)
+// Signets whose active has no stat-relevant effect (launch, immob, revive, etc.) are omitted.
+// Source: https://wiki.guildwars2.com/wiki/Signet (PvE values)
+const SIGNET_ACTIVE_EFFECTS = new Map([
+  // Warrior
+  [14404, { boons: { might: 10 } }],                          // Signet of Might → 10× Might
+  [14410, { stats: { Precision: 360, Ferocity: 360 } }],      // Signet of Fury  → +360 Prec, +360 Fero
+  // Ranger
+  [12491, { boons: { might: 10 } }],                          // Signet of the Wild → 10× Might
+  // Elementalist
+  [5542,  { boons: { fury: true } }],                         // Signet of Fire  → Fury
+]);
+
+// ---------------------------------------------------------------------------
 // Boon / condition name sets
 // ---------------------------------------------------------------------------
 const BOON_NAMES = new Set([
@@ -289,6 +309,7 @@ module.exports = {
   FURY_CRIT_CHANCE_WVW,
   STACKING_SIGIL_DEFS,
   SIGNET_PASSIVE_BUFFS,
+  SIGNET_ACTIVE_EFFECTS,
   BOON_NAMES,
   CONDITION_NAMES,
   CONDITION_NAME_NORMALIZE,
