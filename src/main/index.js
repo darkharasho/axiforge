@@ -1456,7 +1456,8 @@ app.whenReady().then(async () => {
     const role = session
       ? await getOrgRole(session.token, auth.sharedLibrary.orgName, session.viewer.login)
       : null;
-    const isOwner = role === "admin";
+    // If getOrgRole failed (null), preserve the stored isOwner rather than overwriting with false
+    const isOwner = role === "admin" ? true : (role === "member" ? false : (auth.sharedLibrary.isOwner ?? false));
     await store.saveAuth({
       ...auth,
       sharedLibrary: { ...auth.sharedLibrary, isOwner },
@@ -1521,7 +1522,23 @@ app.whenReady().then(async () => {
 
   ipcMain.handle("shared-library:get-config", async () => {
     const auth = await getAuthRecord();
-    return auth?.sharedLibrary || null;
+    if (!auth?.sharedLibrary) return null;
+    // Self-heal: if isOwner is not stored, re-check from the org role API
+    if (!auth.sharedLibrary.isOwner) {
+      const { getOrgRole } = require("./githubApi");
+      const session = await getSession().catch(() => null);
+      if (session) {
+        const role = await getOrgRole(session.token, auth.sharedLibrary.orgName, session.viewer.login);
+        if (role === "admin") {
+          await store.saveAuth({
+            ...auth,
+            sharedLibrary: { ...auth.sharedLibrary, isOwner: true },
+          });
+          return { ...auth.sharedLibrary, isOwner: true };
+        }
+      }
+    }
+    return auth.sharedLibrary;
   });
 
   ipcMain.handle("shared-library:force-push", async (_e, type, item) => {

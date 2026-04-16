@@ -791,6 +791,7 @@ function navigateToPage(page) {
         state.builds = await window.desktopApi.listBuilds();
         state.comps = await window.desktopApi.listComps();
         state.folders = await window.desktopApi.listFolders();
+        state.sharedLibraryConfig = await window.desktopApi.getSharedLibraryConfig().catch(() => null);
         renderLibrary();
       }).catch((err) => {
         console.warn("[library] pull-on-navigate failed:", err);
