@@ -7,6 +7,13 @@ for (const stream of [process.stdout, process.stderr]) {
   stream?.on?.("error", (err) => { if (err.code !== "EPIPE") throw err; });
 }
 const { app, BrowserWindow, ipcMain, dialog, clipboard, nativeTheme, nativeImage, screen } = require("electron");
+
+// Taskbar identity — set before app is ready so the compositor gives AxiForge
+// its own taskbar entry instead of grouping it with whatever process launched
+// electron (e.g. a VS Code terminal). On Wayland, Chromium derives app_id from
+// app.getName(); on X11, --class sets WM_CLASS.
+app.setName("AxiForge");
+app.commandLine.appendSwitch("class", "AxiForge");
 const { BuildStore } = require("./buildStore");
 const { FolderStore } = require("./folderStore");
 const { CompStore } = require("./compStore");
