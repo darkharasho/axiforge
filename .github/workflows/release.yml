@@ -25,7 +25,7 @@ jobs:
         run: npm ci
 
       - name: Check main process syntax
-        run: node --check src/main/index.js
+        run: find src/main -name "*.js" | xargs -I{} node --check {}
 
       - name: Run tests
         run: npm test
