@@ -58,6 +58,7 @@ export async function initLibrary(appCallbacks) {
   try {
     await loadFolders();
     await loadPrefs();
+    state.sharedLibraryConfig = await window.desktopApi.getSharedLibraryConfig().catch(() => null);
   } catch (err) {
     console.warn("[library] init data load failed:", err);
   }
@@ -69,6 +70,7 @@ export async function initLibrary(appCallbacks) {
   initContent(shared);
   initContextMenu(shared);
   initDragDrop(shared);
+
 }
 
 /**
@@ -438,7 +440,7 @@ async function handleCutJson(idOrIds) {
 
 let _toastEl = null;
 let _toastTimer = null;
-function showToast(message, type = "success") {
+export function showToast(message, type = "success") {
   if (!_toastEl) {
     _toastEl = document.createElement("div");
     _toastEl.className = "lib-toast";
@@ -1110,6 +1112,19 @@ async function handleEditTags(idOrIds) {
 function handleOpenFolder(folderId) {
   state.currentFolder = { type: "custom", id: folderId };
   renderLibrary();
+
+  // Pull latest from remote when navigating to a shared folder
+  const folderObj = state.folders.find((f) => f.id === folderId);
+  if (folderObj?.shared) {
+    window.desktopApi.pullFolder(folderId).then(async () => {
+      state.builds = await window.desktopApi.listBuilds();
+      state.comps = await window.desktopApi.listComps();
+      state.folders = await window.desktopApi.listFolders();
+      renderLibrary();
+    }).catch(() => {
+      // Silently fail — will sync on next poll
+    });
+  }
 }
 
 async function handleMoveFolder(folderId, newParentId) {

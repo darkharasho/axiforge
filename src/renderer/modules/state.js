@@ -49,6 +49,8 @@ export const state = {
     viewMode: "expanded",
     boonCoverageCollapsed: false,
   },
+  sharedLibraryConfig: null,  // { orgName, repoName } or null
+  folderSyncStatus: {},  // map of folderId → "syncing"|"synced"|"error"
   skillSearch: "",
   catalogCache: new Map(),
   activeCatalog: null,

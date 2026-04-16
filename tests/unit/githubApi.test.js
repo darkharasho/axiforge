@@ -3,6 +3,7 @@
 const crypto = require("node:crypto");
 const {
   TARGET_REPO,
+  SHARED_REPO,
   getViewer,
   listTargets,
   ensureAxiForgeRepo,
@@ -11,6 +12,11 @@ const {
   ensurePagesWorkflow,
   publishSiteBundle,
   deleteFile,
+  ensureSharedRepo,
+  getRepoTree,
+  getFileContents,
+  putSharedFile,
+  deleteSharedFile,
 } = require("../../src/main/githubApi");
 
 const { createGithubMockFetch } = require("../helpers/mockFetch");
@@ -739,5 +745,99 @@ describe("deleteFile", () => {
   test("returns silently if file does not exist (404)", async () => {
     global.fetch = jest.fn(() => failRes(404));
     await deleteFile(FAKE_TOKEN, FAKE_OWNER, "site/builds/missing.enc", "main", "Remove");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Shared Library API
+// ---------------------------------------------------------------------------
+
+describe("ensureSharedRepo", () => {
+  test("returns repo name if repo already exists", async () => {
+    global.fetch = jest.fn()
+      .mockReturnValueOnce(okRes({ name: "axibuilds-shared" }))  // GET repo
+      .mockReturnValueOnce(okRes({ name: "axibuilds-shared" })); // waitForRepo poll
+    const name = await ensureSharedRepo(FAKE_TOKEN, "test-org");
+    expect(name).toBe("axibuilds-shared");
+  });
+
+  test("creates private repo if 404", async () => {
+    global.fetch = jest.fn()
+      .mockReturnValueOnce(failRes(404))                         // GET repo → 404
+      .mockReturnValueOnce(okRes({ name: "axibuilds-shared" }))  // POST create
+      .mockReturnValueOnce(okRes({ name: "axibuilds-shared" })); // waitForRepo
+    const name = await ensureSharedRepo(FAKE_TOKEN, "test-org");
+    expect(name).toBe("axibuilds-shared");
+    // Verify POST was to org endpoint with private: true
+    const postCall = global.fetch.mock.calls[1];
+    expect(postCall[0]).toContain("/orgs/test-org/repos");
+    const body = JSON.parse(postCall[1].body);
+    expect(body.private).toBe(true);
+  });
+});
+
+describe("getRepoTree", () => {
+  test("returns flat file list with SHAs", async () => {
+    const tree = [
+      { path: "folders/f1/meta.json", sha: "aaa", type: "blob" },
+      { path: "folders/f1/builds/b1.json", sha: "bbb", type: "blob" },
+      { path: "folders/f1", sha: "ccc", type: "tree" },
+    ];
+    global.fetch = jest.fn()
+      .mockReturnValueOnce(okRes({ object: { sha: "head-sha" } }))  // ref
+      .mockReturnValueOnce(okRes({ tree: { sha: "tree-sha" } }))    // commit
+      .mockReturnValueOnce(okRes({ tree, truncated: false }));       // tree
+    const result = await getRepoTree(FAKE_TOKEN, "test-org", "axibuilds-shared");
+    // Should only include blobs, not tree entries
+    expect(result).toHaveLength(2);
+    expect(result[0]).toEqual({ path: "folders/f1/meta.json", sha: "aaa" });
+  });
+});
+
+describe("putSharedFile", () => {
+  test("creates file when no SHA provided", async () => {
+    global.fetch = jest.fn()
+      .mockReturnValueOnce(okRes({ content: { sha: "new-sha" } }));  // PUT
+    const result = await putSharedFile(FAKE_TOKEN, "test-org", "axibuilds-shared", "folders/f1/builds/b1.json", '{"id":"b1"}', null);
+    expect(result.sha).toBe("new-sha");
+    const body = JSON.parse(global.fetch.mock.calls[0][1].body);
+    expect(body.sha).toBeUndefined();
+  });
+
+  test("updates file with SHA for optimistic locking", async () => {
+    global.fetch = jest.fn()
+      .mockReturnValueOnce(okRes({ content: { sha: "new-sha" } }));
+    await putSharedFile(FAKE_TOKEN, "test-org", "axibuilds-shared", "path.json", "{}", "old-sha");
+    const body = JSON.parse(global.fetch.mock.calls[0][1].body);
+    expect(body.sha).toBe("old-sha");
+  });
+
+  test("throws with status 409 on conflict", async () => {
+    global.fetch = jest.fn()
+      .mockReturnValueOnce(failRes(409, "Conflict"));
+    await expect(
+      putSharedFile(FAKE_TOKEN, "test-org", "axibuilds-shared", "path.json", "{}", "stale-sha")
+    ).rejects.toMatchObject({ status: 409 });
+  });
+});
+
+describe("deleteSharedFile", () => {
+  test("deletes file with SHA", async () => {
+    global.fetch = jest.fn()
+      .mockReturnValueOnce(okRes({}));
+    await deleteSharedFile(FAKE_TOKEN, "test-org", "axibuilds-shared", "path.json", "sha-123");
+    const body = JSON.parse(global.fetch.mock.calls[0][1].body);
+    expect(body.sha).toBe("sha-123");
+  });
+});
+
+describe("getFileContents", () => {
+  test("returns decoded file content", async () => {
+    const content = Buffer.from('{"id":"b1","title":"Test"}').toString("base64");
+    global.fetch = jest.fn()
+      .mockReturnValueOnce(okRes({ content, encoding: "base64", sha: "sha-abc" }));
+    const result = await getFileContents(FAKE_TOKEN, "test-org", "axibuilds-shared", "path.json");
+    expect(result.content).toBe('{"id":"b1","title":"Test"}');
+    expect(result.sha).toBe("sha-abc");
   });
 });

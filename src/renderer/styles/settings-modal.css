@@ -543,6 +543,112 @@
   color: var(--accent);
 }
 
+/* ── Select ──────────────────────────────────────────────────────────── */
+
+.settings-modal__select {
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 0.8rem;
+  padding: 8px 32px 8px 12px;
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-sm);
+  background: var(--input-bg);
+  color: var(--text);
+  outline: none;
+  font-family: inherit;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%23888'%3E%3Cpath fill-rule='evenodd' d='M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.168l3.71-3.938a.75.75 0 1 1 1.08 1.04l-4.25 4.5a.75.75 0 0 1-1.08 0l-4.25-4.5a.75.75 0 0 1 .02-1.06z' clip-rule='evenodd'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 16px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.settings-modal__select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.settings-modal__select option {
+  background: var(--bg-2);
+  color: var(--text);
+}
+
+/* ── Button variants ─────────────────────────────────────────────────── */
+
+.settings-modal__btn--secondary {
+  background: rgba(var(--accent-rgb), 0.08);
+  color: var(--accent);
+  border-color: rgba(var(--accent-rgb), 0.35);
+}
+
+.settings-modal__btn--secondary:hover {
+  background: rgba(var(--accent-rgb), 0.16);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.settings-modal__btn--danger {
+  background: rgba(197, 72, 95, 0.08);
+  color: var(--danger-text);
+  border-color: rgba(197, 72, 95, 0.3);
+}
+
+.settings-modal__btn--danger:hover {
+  background: rgba(197, 72, 95, 0.16);
+  border-color: var(--danger-text);
+  color: var(--danger-text);
+}
+
+/* ── Shared Library section ──────────────────────────────────────────── */
+
+.settings-modal__shared-connected--hidden {
+  display: none;
+}
+
+#sm-shared-setup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#sm-shared-setup .settings-modal__btn {
+  align-self: flex-start;
+}
+
+.settings-modal__shared-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+}
+
+.settings-modal__shared-org {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.settings-modal__shared-repo {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+#sm-shared-connected {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#sm-shared-connected .settings-modal__btn {
+  align-self: flex-start;
+}
+
 /* ── Themed builds toggle ─────────────────────────────────────────────── */
 .settings-modal__toggle {
   display: flex;

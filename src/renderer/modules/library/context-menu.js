@@ -4,7 +4,9 @@
 
 import { escapeHtml } from "../utils.js";
 import { state } from "../state.js";
+import { showConfirmModal } from "../confirm-modal.js";
 import { isSelected, getSelection, isCompSelected, getCompSelection } from "./selection.js";
+import { shareFolder, unshareFolder, pullFolder } from "./folder-store.js";
 import {
   playIcon,
   pencilIcon,
@@ -30,6 +32,7 @@ import {
   axiforgeIcon,
   compPlusIcon,
   squaresIcon,
+  shareIcon,
 } from "./heroicons.js";
 
 let _callbacks = {};
@@ -198,6 +201,9 @@ function showMultiCompSelectMenu(x, y, ids) {
 }
 
 function showFolderMenu(x, y, folderId, folder) {
+  const isShared = folder?.shared;
+  const hasSharedLibrary = !!state.sharedLibraryConfig;
+
   const items = [
     _item(folderOpenIcon, "Open Folder", null, () => _callbacks.onOpenFolder?.(folderId)),
     _item(pencilIcon, "Rename", "F2", () => _callbacks.onRenameFolder?.(folderId)),
@@ -215,6 +221,37 @@ function showFolderMenu(x, y, folderId, folder) {
     _sep(),
     _item(clipboardIcon, "Paste", "Ctrl+V", () => _callbacks.onPasteJson?.(folderId)),
     _sep(),
+    ...(isShared ? [
+      _item(shareIcon, "Sync Now", null, async () => {
+        await pullFolder(folderId);
+        _callbacks.onRefresh?.();
+      }),
+      _item(trashIcon, "Unshare Folder", null, async () => {
+        const confirmed = await showConfirmModal({
+          title: "Unshare Folder",
+          body: `Stop sharing <strong>${escapeHtml(folder?.name || folderId)}</strong>? Your local copies will be kept.`,
+          confirmLabel: "Unshare",
+          cancelLabel: "Cancel",
+        });
+        if (confirmed) {
+          await unshareFolder(folderId);
+          _callbacks.onRefresh?.();
+        }
+      }, true),
+    ] : hasSharedLibrary ? [
+      _item(shareIcon, "Share to Org", null, async () => {
+        const confirmed = await showConfirmModal({
+          title: "Share to Org",
+          body: `Share <strong>${escapeHtml(folder?.name || folderId)}</strong> to your org? All builds in this folder will be visible to org members.`,
+          confirmLabel: "Share",
+          cancelLabel: "Cancel",
+        });
+        if (confirmed) {
+          await shareFolder(folderId);
+          _callbacks.onRefresh?.();
+        }
+      }),
+    ] : []),
     _item(trashIcon, "Delete Folder", null, () => _callbacks.onDeleteFolder?.(folderId), true),
   ];
   _showMenu(x, y, items);

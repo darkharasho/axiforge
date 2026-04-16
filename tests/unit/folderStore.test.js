@@ -215,3 +215,47 @@ describe("FolderStore — touchFolders", () => {
     // Should not throw
   });
 });
+
+describe("FolderStore — shared folder fields", () => {
+  let store, dir;
+  beforeEach(async () => ({ store, dir } = await makeTempStore()));
+  afterEach(async () => cleanupDir(dir));
+
+  test("upsertFolder preserves shared field on create", async () => {
+    const folder = await store.upsertFolder({ name: "Shared", shared: true, orgName: "test-org" });
+    expect(folder.shared).toBe(true);
+    expect(folder.orgName).toBe("test-org");
+  });
+
+  test("upsertFolder preserves shared fields on update", async () => {
+    const folder = await store.upsertFolder({ name: "Shared", shared: true, orgName: "test-org" });
+    const updated = await store.upsertFolder({ id: folder.id, name: "Renamed", shared: true, orgName: "test-org", lastSyncedAt: "2026-01-01T00:00:00Z" });
+    expect(updated.shared).toBe(true);
+    expect(updated.orgName).toBe("test-org");
+    expect(updated.lastSyncedAt).toBe("2026-01-01T00:00:00Z");
+  });
+
+  test("shared defaults to undefined when not provided", async () => {
+    const folder = await store.upsertFolder({ name: "Personal" });
+    expect(folder.shared).toBeUndefined();
+  });
+
+  test("shared folders cannot have a parentId", async () => {
+    const parent = await store.upsertFolder({ name: "Parent" });
+    await expect(
+      store.upsertFolder({ name: "Shared", shared: true, orgName: "org", parentId: parent.id })
+    ).rejects.toThrow("Shared folders must be top-level");
+  });
+
+  test("non-shared folders can nest under shared folders", async () => {
+    const shared = await store.upsertFolder({ name: "Shared", shared: true, orgName: "org" });
+    const child = await store.upsertFolder({ name: "Child", parentId: shared.id });
+    expect(child.parentId).toBe(shared.id);
+    expect(child.shared).toBeUndefined();
+  });
+
+  test("caller-specified id is preserved on create", async () => {
+    const folder = await store.upsertFolder({ id: "custom-id-123", name: "Remote", shared: true, orgName: "org" });
+    expect(folder.id).toBe("custom-id-123");
+  });
+});

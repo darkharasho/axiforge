@@ -707,9 +707,12 @@ function openAddBuildModal(comp) {
 
   // Available builds: those not already in this comp
   const currentBuildIds = new Set(comp.buildIds || []);
+  const compFolder = comp.folderId ? state.folders?.find((f) => f.id === comp.folderId) : null;
   const available = state.builds.filter((b) => {
     if (currentBuildIds.has(b.id)) return false;
     if (comp.gameMode && b.gameMode !== comp.gameMode) return false;
+    // For shared comps, only show builds from the same folder
+    if (compFolder?.shared && b.folderId !== comp.folderId) return false;
     return true;
   });
 

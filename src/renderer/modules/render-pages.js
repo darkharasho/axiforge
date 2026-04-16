@@ -509,6 +509,17 @@ export function renderEditorForm() {
 // ---------------------------------------------------------------------------
 // renderEditorMeta
 // ---------------------------------------------------------------------------
+
+function _findRootSharedFolderInState(folderId) {
+  let current = state.folders.find((f) => f.id === folderId);
+  while (current) {
+    if (current.shared) return current;
+    if (!current.parentId) return null;
+    current = state.folders.find((f) => f.id === current.parentId);
+  }
+  return null;
+}
+
 export function renderEditorMeta() {
   if (state.editorDirty) {
     _el.saveDot.classList.remove("hidden");
@@ -528,6 +539,25 @@ export function renderEditorMeta() {
     }
     _el.saveStatus.classList.toggle("subnav__save-status--draft", isDraft);
     _el.saveStatus.classList.toggle("subnav__save-status--saved", !isDraft);
+  }
+
+  // Sync status for shared-folder builds
+  if (_el.syncStatus) {
+    const folderId = state.editor?.folderId;
+    const rootShared = folderId ? _findRootSharedFolderInState(folderId) : null;
+    const syncStatus = rootShared ? (state.folderSyncStatus[rootShared.id] || null) : null;
+    if (syncStatus === "syncing") {
+      _el.syncStatus.textContent = "Syncing\u2026";
+      _el.syncStatus.className = "subnav__sync-status subnav__sync-status--syncing subnav__sync-status--active";
+    } else if (syncStatus === "synced") {
+      _el.syncStatus.textContent = "\u2713 Synced";
+      _el.syncStatus.className = "subnav__sync-status subnav__sync-status--synced subnav__sync-status--active";
+    } else if (syncStatus === "error") {
+      _el.syncStatus.textContent = "Sync failed";
+      _el.syncStatus.className = "subnav__sync-status subnav__sync-status--error subnav__sync-status--active";
+    } else {
+      _el.syncStatus.classList.remove("subnav__sync-status--active");
+    }
   }
 
   // Published link button (inside share dropdown)

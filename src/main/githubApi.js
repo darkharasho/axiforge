@@ -485,8 +485,101 @@ async function deleteFile(token, owner, filePath, branch = "main", message = "Re
   });
 }
 
+// ---------------------------------------------------------------------------
+// Shared Library API
+// ---------------------------------------------------------------------------
+
+const SHARED_REPO = "axibuilds-shared";
+
+async function ensureSharedRepo(token, org) {
+  try {
+    await apiFetch(`/repos/${org}/${SHARED_REPO}`, token);
+    await waitForRepo(token, org, SHARED_REPO);
+    return SHARED_REPO;
+  } catch (err) {
+    if (err.status !== 404) throw err;
+  }
+
+  await apiFetch(`/orgs/${org}/repos`, token, {
+    method: "POST",
+    body: JSON.stringify({
+      name: SHARED_REPO,
+      private: true,
+      auto_init: true,
+      description: "AxiForge Shared Library — collaborative GW2 builds",
+    }),
+  }).catch(async (err) => {
+    if (err.status === 422) {
+      await apiFetch(`/repos/${org}/${SHARED_REPO}`, token);
+      return;
+    }
+    throw err;
+  });
+
+  await waitForRepo(token, org, SHARED_REPO);
+  return SHARED_REPO;
+}
+
+async function getRepoTree(token, owner, repo, branch = "main") {
+  const headRef = await apiFetch(
+    `/repos/${owner}/${repo}/git/ref/heads/${encodeURIComponent(branch)}`,
+    token
+  );
+  const headSha = headRef?.object?.sha;
+  if (!headSha) throw new Error(`Could not resolve ${owner}/${repo}@${branch}.`);
+
+  const headCommit = await apiFetch(`/repos/${owner}/${repo}/git/commits/${headSha}`, token);
+  const baseTreeSha = headCommit?.tree?.sha;
+  if (!baseTreeSha) throw new Error("Could not resolve repository tree.");
+
+  const treeData = await apiFetch(
+    `/repos/${owner}/${repo}/git/trees/${baseTreeSha}?recursive=1`,
+    token
+  );
+  const tree = Array.isArray(treeData?.tree) ? treeData.tree : [];
+  return tree
+    .filter((entry) => entry?.type === "blob" && entry?.path && entry?.sha)
+    .map((entry) => ({ path: entry.path, sha: entry.sha }));
+}
+
+async function getFileContents(token, owner, repo, filePath, branch = "main") {
+  const encodedPath = filePath.split("/").map((s) => encodeURIComponent(s)).join("/");
+  const data = await apiFetch(
+    `/repos/${owner}/${repo}/contents/${encodedPath}?ref=${encodeURIComponent(branch)}`,
+    token
+  );
+  const content = data?.encoding === "base64" && typeof data?.content === "string"
+    ? Buffer.from(data.content, "base64").toString("utf8")
+    : null;
+  return { content, sha: data?.sha || null };
+}
+
+async function putSharedFile(token, owner, repo, filePath, content, sha, branch = "main", message = "Update shared build") {
+  const encodedPath = filePath.split("/").map((s) => encodeURIComponent(s)).join("/");
+  const body = {
+    message,
+    content: Buffer.from(content, "utf8").toString("base64"),
+    branch,
+  };
+  if (sha) body.sha = sha;
+  const result = await apiFetch(`/repos/${owner}/${repo}/contents/${encodedPath}`, token, {
+    method: "PUT",
+    body: JSON.stringify(body),
+  });
+  return { sha: result?.content?.sha || null };
+}
+
+async function deleteSharedFile(token, owner, repo, filePath, sha, branch = "main", message = "Remove shared build") {
+  const encodedPath = filePath.split("/").map((s) => encodeURIComponent(s)).join("/");
+  await apiFetch(`/repos/${owner}/${repo}/contents/${encodedPath}`, token, {
+    method: "DELETE",
+    body: JSON.stringify({ message, sha, branch }),
+  });
+}
+
 module.exports = {
   TARGET_REPO,
+  SHARED_REPO,
   getViewer,
   listTargets,
   ensureAxiForgeRepo,
@@ -498,4 +591,9 @@ module.exports = {
   triggerPagesWorkflow,
   publishSiteBundle,
   deleteFile,
+  ensureSharedRepo,
+  getRepoTree,
+  getFileContents,
+  putSharedFile,
+  deleteSharedFile,
 };
