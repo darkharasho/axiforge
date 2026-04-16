@@ -15,7 +15,7 @@ describe("wiki parser condition variants (issue #207)", () => {
   });
 
   test("all condition name variants produce Buff facts", () => {
-    const variants = ["cripple", "blinded", "poisoned", "immobilized"];
+    const variants = ["chill", "cripple", "blinded", "poisoned", "immobilized"];
     for (const variant of variants) {
       const fact = mapWikiFactToApiFact(variant, ["3"], {}, false, true);
       expect(fact).not.toBeNull();

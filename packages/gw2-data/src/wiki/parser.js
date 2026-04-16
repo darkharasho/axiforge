@@ -63,7 +63,7 @@ const CONDITIONS = new Set([
   "bleeding",
   "blind", "blinded",
   "burning",
-  "chilled",
+  "chill", "chilled",
   "confusion",
   "cripple", "crippled",
   "fear",
