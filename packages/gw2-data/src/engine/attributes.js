@@ -16,6 +16,7 @@ const {
   FURY_CRIT_CHANCE_WVW,
   STACKING_SIGIL_DEFS,
   SIGNET_PASSIVE_BUFFS,
+  SIGNET_ACTIVE_EFFECTS,
   ALL_STAT_KEYS,
   CONVERSION_TARGET_MAP,
 } = require("./constants");
@@ -353,6 +354,8 @@ function computeAttributes(ctx, catalogs) {
   // Step 7: Signets
   // -------------------------------------------------------------------------
   const signetStats = zeroStats();
+  // Boons granted by activated signet active skills (aggregated for engine use).
+  const signetActiveBoons = { might: 0, fury: false };
   if (ctx.skills) {
     const skillIds = [
       ctx.skills.healId,
@@ -360,19 +363,40 @@ function computeAttributes(ctx, catalogs) {
       ctx.skills.eliteId,
     ].filter(Boolean).map(Number);
 
-    // Signet passives can be toggled off per-signet (e.g., to simulate active use).
-    // Absent/null activeSignets means all passives apply (backward compatible).
+    // Signet state per signet — three values:
+    //   undefined / "passive" / true  → passive bonus applies (default)
+    //   "active"                      → skill used: active effect applies, passive removed
+    //   "cooldown" / false            → on cooldown: passive removed, no active bonus yet
+    // Absent/null activeSignets → all passives apply (backward compatible).
     const activeSignets = ctx.activeSignets;
-    const isPassiveActive = (id) => {
-      if (!activeSignets) return true;
+    const getSignetState = (id) => {
+      if (!activeSignets) return "passive";
       const v = activeSignets instanceof Map ? activeSignets.get(id) : activeSignets[id];
-      return v !== false;
+      if (v === "active")   return "active";
+      if (v === "cooldown" || v === false) return "cooldown";
+      return "passive"; // undefined, true, "passive"
     };
 
     for (const skillId of skillIds) {
+      const state = getSignetState(skillId);
       const buff = SIGNET_PASSIVE_BUFFS.get(skillId);
-      if (buff && buff.stat in signetStats && isPassiveActive(skillId)) {
+      if (buff && buff.stat in signetStats && state === "passive") {
         signetStats[buff.stat] += buff.value;
+      }
+      // When signet active is used, apply its active-skill effect.
+      if (state === "active") {
+        const active = SIGNET_ACTIVE_EFFECTS.get(skillId);
+        if (active) {
+          if (active.stats) {
+            for (const [stat, val] of Object.entries(active.stats)) {
+              if (stat in signetStats) signetStats[stat] += val;
+            }
+          }
+          if (active.boons) {
+            if (active.boons.might) signetActiveBoons.might += active.boons.might;
+            if (active.boons.fury)  signetActiveBoons.fury = true;
+          }
+        }
       }
     }
   }
@@ -412,12 +436,12 @@ function computeAttributes(ctx, catalogs) {
   const traitStats = zeroStats();
   const traitDetails = []; // per-trait breakdown: { traitId, name, target, value }
   const modifiers = collectModifiers(ctx, catalogs, overrides);
-  const furyAssumed = Boolean(ctx.assumedBoons?.fury);
+  const furyAssumed = Boolean(ctx.assumedBoons?.fury) || signetActiveBoons.fury;
   const berserkActive = Boolean(ctx.berserkActive);
 
   for (const mod of modifiers) {
     if (mod.type !== "flatBonus") continue;
-    // Apply if: passive (condition === null), fury (when assumed), or berserk (when toggled)
+    // Apply if: passive (condition === null), fury (when assumed or from signet active), or berserk (when toggled)
     if (mod.condition === null
         || (mod.condition === "fury" && furyAssumed)
         || (mod.condition === "berserk" && berserkActive)) {
@@ -453,7 +477,10 @@ function computeAttributes(ctx, catalogs) {
   // Step 12: Boons — Might stacks, fury crit (handled in derived)
   // -------------------------------------------------------------------------
   const boonStats = zeroStats();
-  const mightStacks = ctx.assumedBoons?.might || 0;
+  // Total Might stacks = user-assumed + any from activated signet actives
+  const mightStacks = (ctx.assumedBoons?.might || 0) + signetActiveBoons.might;
+  // Fury = user-assumed OR granted by an activated signet active
+  const furyFromSignet = signetActiveBoons.fury;
 
   if (mightStacks > 0) {
     // Check for mightModifier overrides from traits
@@ -550,6 +577,7 @@ function computeAttributes(ctx, catalogs) {
     enrichment: enrichmentStats,
     utility: utilityStats,
     signets: signetStats,
+    signetActiveBoons,
     traits: traitStats,
     traitDetails,
     conversions: conversionStats,

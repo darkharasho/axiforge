@@ -913,7 +913,7 @@ describe("computeStatBreakdown — signet passive buffs", () => {
     expect(signetEntry).toBeUndefined();
   });
 
-  test("signet passive excluded when activeSignets entry is false", () => {
+  test("signet passive excluded when activeSignets entry is false (legacy)", () => {
     state.editor = makeEditor({});
     state.editor.skills = { healId: 0, utilityIds: [14404, 0, 0], eliteId: 0 };
     const entries = computeStatBreakdown("Power", null, null, { 14404: false });
@@ -921,12 +921,50 @@ describe("computeStatBreakdown — signet passive buffs", () => {
     expect(signetEntry).toBeUndefined();
   });
 
-  test("signet passive included when activeSignets entry is true", () => {
+  test("signet passive included when activeSignets entry is true (legacy)", () => {
     state.editor = makeEditor({});
     state.editor.skills = { healId: 0, utilityIds: [14404, 0, 0], eliteId: 0 };
     const entries = computeStatBreakdown("Power", null, null, { 14404: true });
     const signetEntry = entries.find((e) => e.source.includes("Signet"));
     expect(signetEntry).toBeDefined();
     expect(signetEntry.value).toBe(180);
+  });
+
+  test("signet 'cooldown' state excludes passive, adds no active entry", () => {
+    state.editor = makeEditor({});
+    state.editor.skills = { healId: 0, utilityIds: [14404, 0, 0], eliteId: 0 };
+    const entries = computeStatBreakdown("Power", null, null, { 14404: "cooldown" });
+    const signetEntry = entries.find((e) => e.source.includes("Signet"));
+    expect(signetEntry).toBeUndefined();
+  });
+
+  test("Signet of Fury 'active' state shows +360 Precision in breakdown", () => {
+    state.editor = makeEditor({});
+    state.editor.skills = { healId: 0, utilityIds: [14410, 0, 0], eliteId: 0 };
+    const entries = computeStatBreakdown("Precision", null, null, { 14410: "active" });
+    const activeEntry = entries.find((e) => e.source.includes("Signet Active"));
+    expect(activeEntry).toBeDefined();
+    expect(activeEntry.value).toBe(360);
+  });
+
+  test("Signet of Fury 'active' state shows +360 Ferocity in breakdown", () => {
+    state.editor = makeEditor({});
+    state.editor.skills = { healId: 0, utilityIds: [14410, 0, 0], eliteId: 0 };
+    const entries = computeStatBreakdown("Ferocity", null, null, { 14410: "active" });
+    const activeEntry = entries.find((e) => e.source.includes("Signet Active"));
+    expect(activeEntry).toBeDefined();
+    expect(activeEntry.value).toBe(360);
+  });
+
+  test("Signet of Might 'active' state shows Might boon contribution in Power breakdown", () => {
+    state.editor = makeEditor({});
+    state.editor.skills = { healId: 0, utilityIds: [14404, 0, 0], eliteId: 0 };
+    const entries = computeStatBreakdown("Power", null, null, { 14404: "active" });
+    // Passive Power gone, Might ×10 from active adds +300 Power
+    const passiveEntry = entries.find((e) => e.source === "Signet (Signet of Might)");
+    expect(passiveEntry).toBeUndefined();
+    const mightEntry = entries.find((e) => e.source.includes("Signet Active") && e.source.includes("Might"));
+    expect(mightEntry).toBeDefined();
+    expect(mightEntry.value).toBe(300);
   });
 });

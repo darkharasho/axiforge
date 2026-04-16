@@ -11,7 +11,7 @@ import {
 } from "./constants.js";
 import { escapeHtml } from "./utils.js";
 import { computeSlotStats, computeUpgradeModifiers, computeStatBreakdown } from "./stats.js";
-import { computeStats, computeBoons, computeFuryCritModifier, computePassiveCritModifier, computeFuryStatBonuses, computeMightPerStack, FURY_CRIT_CHANCE, FURY_CRIT_CHANCE_WVW, STACKING_SIGIL_DEFS, SIGNET_PASSIVE_BUFFS } from "./engine-bridge.js";
+import { computeStats, computeBoons, computeFuryCritModifier, computePassiveCritModifier, computeFuryStatBonuses, computeMightPerStack, FURY_CRIT_CHANCE, FURY_CRIT_CHANCE_WVW, STACKING_SIGIL_DEFS, SIGNET_PASSIVE_BUFFS, SIGNET_ACTIVE_EFFECTS } from "./engine-bridge.js";
 import { bindHoverPreview, selectDetail } from "./detail-panel.js";
 import { getProfessionSvg } from "./profession-icons.js";
 import { getSlotSvg } from "./slot-icons.js";
@@ -46,8 +46,9 @@ let _sigilStacks = {};
 export function getSigilStacks() { return _sigilStacks; }
 export function resetSigilStacks() { _sigilStacks = {}; }
 
-// Signet passive toggles — session-only, not persisted to builds.
-// { [skillId: number]: boolean }. Missing entry = passive active (default ON).
+// Signet state toggles — session-only, not persisted to builds.
+// { [skillId: number]: "passive"|"active"|"cooldown" }
+// Missing entry = "passive" (default). Cycle: passive → active → cooldown → passive.
 let _activeSignets = {};
 export function getActiveSignets() { return _activeSignets; }
 export function resetActiveSignets() { _activeSignets = {}; }
@@ -1497,8 +1498,10 @@ export function renderEquipmentPanel() {
     boonsSection.append(sigilBar);
   }
 
-  // Signet passive toggles — show icons for equipped stat-granting signets.
-  // Default ON (passive active); toggle OFF simulates using the active (passive disabled).
+  // Signet toggles — 3 states per signet:
+  //   "passive"  → passive bonus active (no outline, default)
+  //   "active"   → skill used: active effect applies (glowing outline)
+  //   "cooldown" → passive gone, active on cooldown (dimmed)
   const isUnderwaterSignets = Boolean(state.editor.underwaterMode);
   const activeSkillSlots = isUnderwaterSignets
     ? (state.editor.underwaterSkills || {})
@@ -1509,7 +1512,7 @@ export function renderEquipmentPanel() {
     activeSkillSlots.eliteId,
   ].filter(Boolean).map(Number).filter((id) => SIGNET_PASSIVE_BUFFS.has(id));
 
-  // Clean up toggle state for signets no longer equipped
+  // Clean up state for signets no longer equipped
   for (const key of Object.keys(_activeSignets)) {
     if (!equippedSignetIds.includes(Number(key))) delete _activeSignets[key];
   }
@@ -1517,7 +1520,7 @@ export function renderEquipmentPanel() {
   if (equippedSignetIds.length > 0) {
     const signetLabel = document.createElement("div");
     signetLabel.className = "equip-boons__sigil-label";
-    signetLabel.textContent = "Signet Passives";
+    signetLabel.textContent = "Signets";
     boonsSection.append(signetLabel);
 
     const signetBar = document.createElement("div");
@@ -1531,17 +1534,21 @@ export function renderEquipmentPanel() {
 
     for (const skillId of equippedSignetIds) {
       const buff = SIGNET_PASSIVE_BUFFS.get(skillId);
+      const activeEffect = SIGNET_ACTIVE_EFFECTS.get(skillId);
       const skillData = state.activeCatalog?.skillById?.get(skillId);
       const name = skillData?.name || `Signet ${skillId}`;
       const icon = skillData?.icon || "";
-      const isActive = _activeSignets[skillId] !== false;
+      const sigState = _activeSignets[skillId] || "passive"; // "passive" | "active" | "cooldown"
       const statLabel = STAT_LABELS[buff.stat] || buff.stat;
 
       const item = document.createElement("div");
       item.className = "equip-boons__item";
 
       const iconWrap = document.createElement("div");
-      iconWrap.className = "equip-boons__icon equip-boons__icon--sigil" + (isActive ? " equip-boons__icon--on" : "");
+      // passive = full-opacity icon (--passive); active = gold outline (--on); cooldown = dimmed (default)
+      iconWrap.className = "equip-boons__icon equip-boons__icon--sigil"
+        + (sigState === "passive"  ? " equip-boons__icon--passive" : "")
+        + (sigState === "active"   ? " equip-boons__icon--on" : "");
 
       if (icon) {
         const img = document.createElement("img");
@@ -1552,29 +1559,61 @@ export function renderEquipmentPanel() {
         iconWrap.append(img);
       }
 
+      // Build active effect description for tooltip
+      let activeEffectHtml = "";
+      if (activeEffect) {
+        if (activeEffect.stats) {
+          const parts = Object.entries(activeEffect.stats).map(([s, v]) => `+${v} ${STAT_LABELS[s] || s}`);
+          activeEffectHtml = `<div class="equip-boons__tip-effect">${parts.join(", ")}</div>`;
+        }
+        if (activeEffect.boons) {
+          const boonParts = [];
+          if (activeEffect.boons.might) boonParts.push(`Might ×${activeEffect.boons.might}`);
+          if (activeEffect.boons.fury)  boonParts.push("Fury");
+          if (boonParts.length) activeEffectHtml += `<div class="equip-boons__tip-effect">${boonParts.join(", ")}</div>`;
+        }
+      }
+
       // Tooltip
       const tooltip = document.createElement("div");
       tooltip.className = "equip-boons__tooltip";
-      tooltip.innerHTML = isActive
-        ? `<div class="equip-boons__tip-title">${escapeHtml(name)}</div>`
+      if (sigState === "passive") {
+        tooltip.innerHTML =
+          `<div class="equip-boons__tip-title">${escapeHtml(name)}</div>`
           + `<div class="equip-boons__tip-effect">+${buff.value} ${statLabel}</div>`
-          + `<div class="equip-boons__tip-note">Passive active. Click to simulate using the active (disables passive).</div>`
-        : `<div class="equip-boons__tip-title">${escapeHtml(name)}</div>`
-          + `<div class="equip-boons__tip-note">Passive disabled (simulating active use). Click to re-enable +${buff.value} ${statLabel}.</div>`;
+          + `<div class="equip-boons__tip-note">Passive active. Click to simulate using the active skill.</div>`;
+      } else if (sigState === "active") {
+        tooltip.innerHTML =
+          `<div class="equip-boons__tip-title">${escapeHtml(name)} — Active</div>`
+          + (activeEffectHtml || `<div class="equip-boons__tip-effect">Active skill used</div>`)
+          + `<div class="equip-boons__tip-note">Active effect applied. Click to set on cooldown.</div>`;
+      } else {
+        tooltip.innerHTML =
+          `<div class="equip-boons__tip-title">${escapeHtml(name)} — Cooldown</div>`
+          + `<div class="equip-boons__tip-note">On cooldown (no passive, active expired). Click to restore passive.</div>`;
+      }
       item.append(tooltip);
 
-      // Click handlers — click or right-click toggles
-      const toggle = () => {
-        _activeSignets[skillId] = !(_activeSignets[skillId] !== false);
+      // Click: passive → active → cooldown → passive
+      const cycleState = () => {
+        const cur = _activeSignets[skillId] || "passive";
+        _activeSignets[skillId] = cur === "passive" ? "active" : cur === "active" ? "cooldown" : "passive";
         _render();
       };
-      iconWrap.addEventListener("click", toggle);
-      iconWrap.addEventListener("contextmenu", (e) => { e.preventDefault(); toggle(); });
+      iconWrap.addEventListener("click", cycleState);
+      iconWrap.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
+        // Right-click goes backward: passive → cooldown → active → passive
+        const cur = _activeSignets[skillId] || "passive";
+        _activeSignets[skillId] = cur === "passive" ? "cooldown" : cur === "cooldown" ? "active" : "passive";
+        _render();
+      });
 
       item.append(iconWrap);
 
       const label = document.createElement("div");
-      label.className = "equip-boons__label" + (isActive ? " equip-boons__label--on" : "");
+      label.className = "equip-boons__label"
+        + (sigState === "passive" ? "" : sigState === "active" ? " equip-boons__label--on" : " equip-boons__label--off");
       label.textContent = name;
       item.append(label);
 

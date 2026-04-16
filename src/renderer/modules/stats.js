@@ -7,6 +7,7 @@ import {
   MIGHT_POWER_PER_STACK, MIGHT_CONDI_PER_STACK,
   AQUATIC_SLOTS, LAND_ONLY_SLOTS,
   SIGNET_PASSIVE_BUFFS,
+  SIGNET_ACTIVE_EFFECTS,
 } from "./engine-bridge.js";
 import { GW2_WEAPONS_BY_ID, getEffectiveStats } from "./constants.js";
 import {
@@ -281,7 +282,7 @@ export function computeStatBreakdown(statKey, assumedBoons = null, sigilStacks =
     }
   }
 
-  // Signet passive buffs
+  // Signet passive / active buffs
   const isUnderwater = Boolean(state.editor.underwaterMode);
   const skills = isUnderwater ? (state.editor.underwaterSkills || {}) : (state.editor.skills || {});
   const signetSkillIds = [
@@ -289,43 +290,65 @@ export function computeStatBreakdown(statKey, assumedBoons = null, sigilStacks =
     ...(skills.utilityIds || []),
     skills.eliteId,
   ].filter(Boolean).map(Number);
-  const isSignetPassiveActive = (id) => {
-    if (!activeSignets) return true;
+  const getSignetState = (id) => {
+    if (!activeSignets) return "passive";
     const v = activeSignets instanceof Map ? activeSignets.get(id) : activeSignets[id];
-    return v !== false;
+    if (v === "active")   return "active";
+    if (v === "cooldown" || v === false) return "cooldown";
+    return "passive";
   };
   for (const skillId of signetSkillIds) {
-    const buff = SIGNET_PASSIVE_BUFFS.get(skillId);
-    if (buff && buff.stat === statKey && isSignetPassiveActive(skillId)) {
-      const catalog = state.activeCatalog;
-      const skillData = catalog?.skillById?.get(skillId);
-      const name = skillData?.name || `Signet (${skillId})`;
-      entries.push({ source: `Signet (${name})`, value: buff.value, icon: skillData?.icon, category: "skill" });
+    const catalog = state.activeCatalog;
+    const skillData = catalog?.skillById?.get(skillId);
+    const name = skillData?.name || `Signet (${skillId})`;
+    const sigState = getSignetState(skillId);
+    // Passive contribution
+    if (sigState === "passive") {
+      const buff = SIGNET_PASSIVE_BUFFS.get(skillId);
+      if (buff && buff.stat === statKey) {
+        entries.push({ source: `Signet (${name})`, value: buff.value, icon: skillData?.icon, category: "skill" });
+      }
+    }
+    // Active-effect direct stat contribution
+    if (sigState === "active") {
+      const active = SIGNET_ACTIVE_EFFECTS.get(skillId);
+      if (active?.stats?.[statKey]) {
+        entries.push({ source: `Signet Active (${name})`, value: active.stats[statKey], icon: skillData?.icon, category: "skill" });
+      }
     }
   }
 
-  // Assumed boon contributions
-  if (assumedBoons) {
-    const mightStacks = assumedBoons.might || 0;
+  // Assumed boon contributions (including boons from activated signet actives)
+  const engineResult = computeStats(state, assumedBoons, sigilStacks, activeSignets);
+  const sigActBoons = engineResult.signetActiveBoons || { might: 0, fury: false };
+  {
+    const mightStacks = (assumedBoons?.might || 0) + sigActBoons.might;
     if (mightStacks > 0) {
       const mightValues = bridgeMightPerStack(state);
       if (statKey === "Power") {
-        entries.push({ source: `Boon (Might ×${mightStacks})`, value: mightStacks * mightValues.power, category: "boon" });
+        const assumedPart = (assumedBoons?.might || 0) * mightValues.power;
+        const signetPart = sigActBoons.might * mightValues.power;
+        if (assumedPart > 0) entries.push({ source: `Boon (Might ×${assumedBoons.might})`, value: assumedPart, category: "boon" });
+        if (signetPart > 0)  entries.push({ source: `Signet Active (Might ×${sigActBoons.might})`, value: signetPart, category: "boon" });
       }
       if (statKey === "ConditionDamage") {
-        entries.push({ source: `Boon (Might ×${mightStacks})`, value: mightStacks * mightValues.condi, category: "boon" });
+        const assumedPart = (assumedBoons?.might || 0) * mightValues.condi;
+        const signetPart = sigActBoons.might * mightValues.condi;
+        if (assumedPart > 0) entries.push({ source: `Boon (Might ×${assumedBoons.might})`, value: assumedPart, category: "boon" });
+        if (signetPart > 0)  entries.push({ source: `Signet Active (Might ×${sigActBoons.might})`, value: signetPart, category: "boon" });
       }
     }
-    if (assumedBoons.fury) {
+    const hasFury = assumedBoons?.fury || sigActBoons.fury;
+    if (hasFury) {
       const furyBonuses = bridgeFuryStatBonuses(state);
       if (furyBonuses[statKey]) {
-        entries.push({ source: "Boon (Fury)", value: furyBonuses[statKey], category: "boon" });
+        const label = sigActBoons.fury && !assumedBoons?.fury ? "Signet Active (Fury)" : "Boon (Fury)";
+        entries.push({ source: label, value: furyBonuses[statKey], category: "boon" });
       }
     }
   }
 
-  // Passive trait flat stat bonuses — per-trait breakdown from engine
-  const engineResult = computeStats(state, assumedBoons, sigilStacks, activeSignets);
+  // Passive trait flat stat bonuses — per-trait breakdown from engine (reuse result computed above)
   if (engineResult.traitDetails) {
     for (const detail of engineResult.traitDetails) {
       if (detail.target === statKey && detail.value) {
