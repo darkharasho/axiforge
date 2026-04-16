@@ -44,6 +44,27 @@ export async function reorderBuilds(updates) {
   state.builds = await window.desktopApi.listBuilds();
 }
 
+/** Share a folder to the org shared library. */
+export async function shareFolder(folderId) {
+  await window.desktopApi.shareFolder(folderId);
+  await loadFolders();
+  state.builds = await window.desktopApi.listBuilds();
+}
+
+/** Remove a folder from the org shared library. */
+export async function unshareFolder(folderId) {
+  await window.desktopApi.unshareFolder(folderId);
+  await loadFolders();
+}
+
+/** Pull the latest from remote for a shared folder. */
+export async function pullFolder(folderId) {
+  await window.desktopApi.pullFolder(folderId);
+  await loadFolders();
+  state.builds = await window.desktopApi.listBuilds();
+  state.comps = await window.desktopApi.listComps();
+}
+
 export async function reorderComps(updates) {
   await window.desktopApi.reorderComps(updates);
   state.comps = await window.desktopApi.listComps();

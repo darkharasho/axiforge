@@ -49,6 +49,7 @@ export const state = {
     viewMode: "expanded",
     boonCoverageCollapsed: false,
   },
+  sharedLibraryConfig: null,  // { orgName, repoName } or null
   skillSearch: "",
   catalogCache: new Map(),
   activeCatalog: null,

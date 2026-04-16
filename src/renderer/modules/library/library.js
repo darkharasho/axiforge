@@ -58,6 +58,7 @@ export async function initLibrary(appCallbacks) {
   try {
     await loadFolders();
     await loadPrefs();
+    state.sharedLibraryConfig = await window.desktopApi.getSharedLibraryConfig().catch(() => null);
   } catch (err) {
     console.warn("[library] init data load failed:", err);
   }
