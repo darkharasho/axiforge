@@ -912,4 +912,21 @@ describe("computeStatBreakdown — signet passive buffs", () => {
     const signetEntry = entries.find((e) => e.source.includes("Signet"));
     expect(signetEntry).toBeUndefined();
   });
+
+  test("signet passive excluded when activeSignets entry is false", () => {
+    state.editor = makeEditor({});
+    state.editor.skills = { healId: 0, utilityIds: [14404, 0, 0], eliteId: 0 };
+    const entries = computeStatBreakdown("Power", null, null, { 14404: false });
+    const signetEntry = entries.find((e) => e.source.includes("Signet"));
+    expect(signetEntry).toBeUndefined();
+  });
+
+  test("signet passive included when activeSignets entry is true", () => {
+    state.editor = makeEditor({});
+    state.editor.skills = { healId: 0, utilityIds: [14404, 0, 0], eliteId: 0 };
+    const entries = computeStatBreakdown("Power", null, null, { 14404: true });
+    const signetEntry = entries.find((e) => e.source.includes("Signet"));
+    expect(signetEntry).toBeDefined();
+    expect(signetEntry.value).toBe(180);
+  });
 });

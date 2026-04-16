@@ -117,7 +117,7 @@ function getExcludedSlots() {
  * Returns an array of { source: string, value: number } entries.
  * This is a UI-only function for hover tooltips.
  */
-export function computeStatBreakdown(statKey, assumedBoons = null, sigilStacks = null) {
+export function computeStatBreakdown(statKey, assumedBoons = null, sigilStacks = null, activeSignets = null) {
   const entries = [];
   const BASE_STATS = new Set(["Power", "Precision", "Toughness", "Vitality"]);
   if (BASE_STATS.has(statKey)) entries.push({ source: "Base", value: 1000, category: "base" });
@@ -254,7 +254,7 @@ export function computeStatBreakdown(statKey, assumedBoons = null, sigilStacks =
     if (utilDef) {
       const MAP = { "Condition Damage": "ConditionDamage", "Healing Power": "HealingPower" };
       // Percentage conversions — use engine totals for source stats
-      const totals = computeStats(state, assumedBoons, sigilStacks).total;
+      const totals = computeStats(state, assumedBoons, sigilStacks, activeSignets).total;
       const convRe = /Gain (Condition Damage|Healing Power|Power|Precision|Toughness|Vitality|Ferocity|Concentration|Expertise) Equal to (\d+(?:\.\d+)?)% of Your (Condition Damage|Healing Power|Power|Precision|Toughness|Vitality|Ferocity|Concentration|Expertise)/g;
       let m;
       while ((m = convRe.exec(utilDef.buff)) !== null) {
@@ -289,9 +289,14 @@ export function computeStatBreakdown(statKey, assumedBoons = null, sigilStacks =
     ...(skills.utilityIds || []),
     skills.eliteId,
   ].filter(Boolean).map(Number);
+  const isSignetPassiveActive = (id) => {
+    if (!activeSignets) return true;
+    const v = activeSignets instanceof Map ? activeSignets.get(id) : activeSignets[id];
+    return v !== false;
+  };
   for (const skillId of signetSkillIds) {
     const buff = SIGNET_PASSIVE_BUFFS.get(skillId);
-    if (buff && buff.stat === statKey) {
+    if (buff && buff.stat === statKey && isSignetPassiveActive(skillId)) {
       const catalog = state.activeCatalog;
       const skillData = catalog?.skillById?.get(skillId);
       const name = skillData?.name || `Signet (${skillId})`;
@@ -320,7 +325,7 @@ export function computeStatBreakdown(statKey, assumedBoons = null, sigilStacks =
   }
 
   // Passive trait flat stat bonuses — per-trait breakdown from engine
-  const engineResult = computeStats(state, assumedBoons, sigilStacks);
+  const engineResult = computeStats(state, assumedBoons, sigilStacks, activeSignets);
   if (engineResult.traitDetails) {
     for (const detail of engineResult.traitDetails) {
       if (detail.target === statKey && detail.value) {

@@ -39,7 +39,7 @@ function getOverrides() {
 /**
  * Transform renderer state.editor into the engine's build context shape.
  */
-export function buildEngineCtx(state, assumedBoons = null, sigilStacks = null) {
+export function buildEngineCtx(state, assumedBoons = null, sigilStacks = null, activeSignets = null) {
   const editor = state.editor || {};
   const equipment = editor.equipment || {};
   const isUnderwater = Boolean(editor.underwaterMode);
@@ -74,6 +74,7 @@ export function buildEngineCtx(state, assumedBoons = null, sigilStacks = null) {
     skills: isUnderwater ? (editor.underwaterSkills || {}) : (editor.skills || {}),
     assumedBoons,
     sigilStacks,
+    activeSignets,
     berserkActive,
   };
 }
@@ -101,8 +102,8 @@ export function buildEngineCatalogs(state) {
  * { base, equipment, food, runes, infusions, enrichment, utility, signets,
  *   traits, conversions, boons, sigils, total, derived }
  */
-export function computeStats(state, assumedBoons = null, sigilStacks = null) {
-  const ctx = buildEngineCtx(state, assumedBoons, sigilStacks);
+export function computeStats(state, assumedBoons = null, sigilStacks = null, activeSignets = null) {
+  const ctx = buildEngineCtx(state, assumedBoons, sigilStacks, activeSignets);
   const catalogs = buildEngineCatalogs(state);
   return computeAttributes(ctx, catalogs);
 }
