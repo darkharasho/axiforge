@@ -471,6 +471,16 @@ class SharedLibrary {
     };
     addChildren(folderId);
 
+    // Mark folder as shared locally before pushing builds so that
+    // pushBuild/_findRootShared can find this folder as the shared root.
+    await this.folderStore.upsertFolder({
+      id: folderId,
+      name: folder.name,
+      shared: true,
+      orgName: auth.org,
+      lastSyncedAt: new Date().toISOString(),
+    });
+
     const builds = await this.buildStore.listBuilds();
     for (const build of builds.filter((b) => folderTree.has(b.folderId))) {
       await this.pushBuild(build);
@@ -481,15 +491,6 @@ class SharedLibrary {
     for (const comp of comps.filter((c) => folderTree.has(c.folderId))) {
       await this.pushComp(comp);
     }
-
-    // Mark folder as shared locally
-    await this.folderStore.upsertFolder({
-      id: folderId,
-      name: folder.name,
-      shared: true,
-      orgName: auth.org,
-      lastSyncedAt: new Date().toISOString(),
-    });
   }
 
   async unshareFolder(folderId) {

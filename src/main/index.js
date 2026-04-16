@@ -1424,14 +1424,28 @@ app.whenReady().then(async () => {
   });
 
   ipcMain.handle("shared-library:share-folder", async (_e, folderId) => {
-    await sharedLibrary.shareFolder(folderId);
+    _e.sender.send("sync-status", { status: "syncing", folderId });
+    try {
+      await sharedLibrary.shareFolder(folderId);
+      _e.sender.send("sync-status", { status: "synced", folderId });
+    } catch (err) {
+      _e.sender.send("sync-status", { status: "error", folderId });
+      throw err;
+    }
     return true;
   });
 
   ipcMain.handle("shared-library:unshare-folder", async (_e, folderId) => {
     const auth = await getAuthRecord();
     if (!auth?.sharedLibrary?.isOwner) throw new Error("Only org owners can unshare folders.");
-    await sharedLibrary.unshareFolder(folderId);
+    _e.sender.send("sync-status", { status: "syncing", folderId });
+    try {
+      await sharedLibrary.unshareFolder(folderId);
+      _e.sender.send("sync-status", { status: "synced", folderId });
+    } catch (err) {
+      _e.sender.send("sync-status", { status: "error", folderId });
+      throw err;
+    }
     return true;
   });
 
