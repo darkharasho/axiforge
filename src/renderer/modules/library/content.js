@@ -15,6 +15,7 @@ import {
   chevronDownIcon,
   chevronRightIcon,
   compIcon,
+  shareIcon,
 } from "./heroicons.js";
 
 let _callbacks = {};
@@ -200,7 +201,7 @@ function renderListView(container) {
       (f) => `
         <div class="lib-list-row lib-list-row--folder" data-folder-id="${escapeHtml(f.id)}">
           <span class="lib-list-row__icon lib-list-row__icon--folder">${folderIcon}</span>
-          <span class="lib-list-row__title">${escapeHtml(f.name)}</span>
+          <span class="lib-list-row__title">${escapeHtml(f.name)}${f.shared ? `<span class="lib-shared-badge" title="Shared with ${escapeHtml(f.orgName || "org")}">${shareIcon}</span>` : ""}</span>
         </div>
       `
     )
@@ -299,7 +300,7 @@ function renderTableView(container) {
         <div class="lib-tv__row lib-tv__row--folder">
           <span class="lib-tv__action" data-toggle-table-folder="${escapeHtml(folder.id)}">${chevron}</span>
           <span class="lib-tv__icon"><span class="lib-table__folder-icon">${folderIcon}</span></span>
-          <span class="lib-tv__name">${escapeHtml(folder.name)}</span>
+          <span class="lib-tv__name">${escapeHtml(folder.name)}${folder.shared ? `<span class="lib-shared-badge" title="Shared with ${escapeHtml(folder.orgName || "org")}">${shareIcon}</span>` : ""}</span>
           <span class="lib-tv__profession"></span>
           <span class="lib-tv__spec"></span>
           <span class="lib-tv__mode"></span>
@@ -425,7 +426,7 @@ function renderGridView(container) {
     .map(
       (f) => `
         <div class="lib-grid-card lib-grid-card--folder" data-folder-id="${escapeHtml(f.id)}">
-          <div class="lib-grid-card__folder-icon">${folderIcon}</div>
+          <div class="lib-grid-card__folder-icon">${folderIcon}${f.shared ? `<span class="lib-shared-badge lib-shared-badge--grid" title="Shared with ${escapeHtml(f.orgName || "org")}">${shareIcon}</span>` : ""}</div>
           <div class="lib-grid-card__title">${escapeHtml(f.name)}</div>
         </div>
       `
@@ -490,7 +491,7 @@ function renderIconView(container) {
     .map(
       (f) => `
         <div class="lib-icon-item lib-icon-item--folder" data-folder-id="${escapeHtml(f.id)}">
-          <div class="lib-icon-item__icon lib-icon-item__icon--folder">${folderIcon}</div>
+          <div class="lib-icon-item__icon lib-icon-item__icon--folder">${folderIcon}${f.shared ? `<span class="lib-shared-badge lib-shared-badge--icon" title="Shared with ${escapeHtml(f.orgName || "org")}">${shareIcon}</span>` : ""}</div>
           <div class="lib-icon-item__label">${escapeHtml(f.name)}</div>
         </div>
       `
@@ -578,7 +579,7 @@ function renderColumnsView(container) {
           <div class="lib-col__item lib-col__item--folder ${isSelected ? "lib-col__item--selected" : ""}"
                data-folder-id="${escapeHtml(f.id)}" data-col-index="${colIndex}">
             <span class="lib-col__icon lib-col__icon--folder">${folderIcon}</span>
-            <span class="lib-col__name">${escapeHtml(f.name)}</span>
+            <span class="lib-col__name">${escapeHtml(f.name)}${f.shared ? `<span class="lib-shared-badge" title="Shared with ${escapeHtml(f.orgName || "org")}">${shareIcon}</span>` : ""}</span>
             <span class="lib-col__chevron">${chevronRightIcon}</span>
           </div>
         `);

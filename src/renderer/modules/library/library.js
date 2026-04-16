@@ -70,6 +70,7 @@ export async function initLibrary(appCallbacks) {
   initContent(shared);
   initContextMenu(shared);
   initDragDrop(shared);
+
 }
 
 /**
@@ -439,7 +440,7 @@ async function handleCutJson(idOrIds) {
 
 let _toastEl = null;
 let _toastTimer = null;
-function showToast(message, type = "success") {
+export function showToast(message, type = "success") {
   if (!_toastEl) {
     _toastEl = document.createElement("div");
     _toastEl.className = "lib-toast";

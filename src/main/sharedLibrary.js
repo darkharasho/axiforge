@@ -6,13 +6,23 @@ function api() {
 }
 
 class SharedLibrary {
-  constructor({ buildStore, compStore, folderStore, syncStore }) {
+  constructor({ buildStore, compStore, folderStore, syncStore, emit }) {
     this.buildStore = buildStore;
     this.compStore = compStore;
     this.folderStore = folderStore;
     this.syncStore = syncStore;
+    this._emit = typeof emit === "function" ? emit : () => {};
     this._pushTimers = new Map(); // debounce timers per build/comp ID
     this._pollTimer = null;
+  }
+
+  // Walk up the parentId chain to find the closest folder with shared:true
+  _findRootShared(folderId, folders) {
+    const folder = folders.find((f) => f.id === folderId);
+    if (!folder) return null;
+    if (folder.shared) return folder;
+    if (folder.parentId) return this._findRootShared(folder.parentId, folders);
+    return null;
   }
 
   async #getAuth() {
@@ -115,11 +125,36 @@ class SharedLibrary {
       const data = JSON.parse(content);
       const key = relPath.replace(/\.json$/, "");
       if (relPath.startsWith("builds/")) {
-        data.folderId = folderId;
+        // Restore subfolder if the build was in one
+        const restoreFolderId = data.folderId || folderId;
+        if (restoreFolderId !== folderId) {
+          const allFolders = await this.folderStore.listFolders();
+          if (!allFolders.find((f) => f.id === restoreFolderId)) {
+            await this.folderStore.upsertFolder({
+              id: restoreFolderId,
+              name: data._syncSubFolderName || "Subfolder",
+              parentId: folderId,
+            });
+          }
+        }
+        delete data._syncSubFolderName;
+        data.folderId = restoreFolderId;
         await this.buildStore.upsertBuild(data);
         await this.syncStore.setSha(folderId, key, sha);
       } else if (relPath.startsWith("comps/")) {
-        data.folderId = folderId;
+        const restoreFolderId = data.folderId || folderId;
+        if (restoreFolderId !== folderId) {
+          const allFolders = await this.folderStore.listFolders();
+          if (!allFolders.find((f) => f.id === restoreFolderId)) {
+            await this.folderStore.upsertFolder({
+              id: restoreFolderId,
+              name: data._syncSubFolderName || "Subfolder",
+              parentId: folderId,
+            });
+          }
+        }
+        delete data._syncSubFolderName;
+        data.folderId = restoreFolderId;
         await this.compStore.upsertComp(data);
         await this.syncStore.setSha(folderId, key, sha);
       }
@@ -153,16 +188,23 @@ class SharedLibrary {
     if (!auth) return { conflict: false };
 
     const folders = await this.folderStore.listFolders();
-    const folder = folders.find((f) => f.id === build.folderId && f.shared);
-    if (!folder) return { conflict: false };
+    const rootShared = this._findRootShared(build.folderId, folders);
+    if (!rootShared) return { conflict: false };
 
     const key = `builds/${build.id}`;
-    const filePath = `folders/${build.folderId}/${key}.json`;
-    const shas = await this.syncStore.getShas(build.folderId);
+    const filePath = `folders/${rootShared.id}/${key}.json`;
+    const shas = await this.syncStore.getShas(rootShared.id);
     const currentSha = shas[key] || null;
 
-    // Strip folderId from the stored JSON (it's implied by folder path)
-    const { folderId, compId, pinned, sortOrder, ...buildData } = build;
+    // Strip local-only fields; preserve folderId if in a subfolder so pull can restore it
+    const { compId, pinned, sortOrder, ...buildData } = build;
+    if (build.folderId === rootShared.id) {
+      delete buildData.folderId; // implied by folder path
+    } else {
+      // Include subfolder name so the other side can auto-create it
+      const subFolder = folders.find((f) => f.id === build.folderId);
+      if (subFolder) buildData._syncSubFolderName = subFolder.name;
+    }
     const content = JSON.stringify(buildData, null, 2);
 
     try {
@@ -171,7 +213,7 @@ class SharedLibrary {
         filePath, content, currentSha, "main",
         `Update build: ${build.title || build.id}`
       );
-      await this.syncStore.setSha(build.folderId, key, result.sha);
+      await this.syncStore.setSha(rootShared.id, key, result.sha);
       return { conflict: false };
     } catch (err) {
       if (err.status === 409) {
@@ -186,15 +228,21 @@ class SharedLibrary {
     if (!auth) return { conflict: false };
 
     const folders = await this.folderStore.listFolders();
-    const folder = folders.find((f) => f.id === comp.folderId && f.shared);
-    if (!folder) return { conflict: false };
+    const rootShared = this._findRootShared(comp.folderId, folders);
+    if (!rootShared) return { conflict: false };
 
     const key = `comps/${comp.id}`;
-    const filePath = `folders/${comp.folderId}/${key}.json`;
-    const shas = await this.syncStore.getShas(comp.folderId);
+    const filePath = `folders/${rootShared.id}/${key}.json`;
+    const shas = await this.syncStore.getShas(rootShared.id);
     const currentSha = shas[key] || null;
 
-    const { folderId, ...compData } = comp;
+    const { ...compData } = comp;
+    if (comp.folderId === rootShared.id) {
+      delete compData.folderId;
+    } else {
+      const subFolder = folders.find((f) => f.id === comp.folderId);
+      if (subFolder) compData._syncSubFolderName = subFolder.name;
+    }
     const content = JSON.stringify(compData, null, 2);
 
     try {
@@ -203,7 +251,7 @@ class SharedLibrary {
         filePath, content, currentSha, "main",
         `Update comp: ${comp.name || comp.id}`
       );
-      await this.syncStore.setSha(comp.folderId, key, result.sha);
+      await this.syncStore.setSha(rootShared.id, key, result.sha);
       return { conflict: false };
     } catch (err) {
       if (err.status === 409) {
@@ -217,16 +265,20 @@ class SharedLibrary {
     const auth = await this.#getAuth();
     if (!auth) return;
 
+    const folders = await this.folderStore.listFolders();
+    const rootShared = this._findRootShared(folderId, folders);
+    const rootId = rootShared?.id || folderId;
+
     const key = `builds/${buildId}`;
-    const filePath = `folders/${folderId}/${key}.json`;
-    const shas = await this.syncStore.getShas(folderId);
+    const filePath = `folders/${rootId}/${key}.json`;
+    const shas = await this.syncStore.getShas(rootId);
     const sha = shas[key];
     if (!sha) return;
 
     try {
       await api().deleteSharedFile(auth.token, auth.org, auth.repo, filePath, sha, "main",
         `Delete build: ${buildId}`);
-      await this.syncStore.removeSha(folderId, key);
+      await this.syncStore.removeSha(rootId, key);
     } catch (err) {
       if (err.status === 409) {
         return { conflict: true };
@@ -240,15 +292,19 @@ class SharedLibrary {
     if (!auth) return;
 
     const key = `comps/${compId}`;
-    const filePath = `folders/${folderId}/${key}.json`;
-    const shas = await this.syncStore.getShas(folderId);
+    const folders = await this.folderStore.listFolders();
+    const rootShared = this._findRootShared(folderId, folders);
+    const rootId = rootShared?.id || folderId;
+
+    const filePath = `folders/${rootId}/${key}.json`;
+    const shas = await this.syncStore.getShas(rootId);
     const sha = shas[key];
     if (!sha) return;
 
     try {
       await api().deleteSharedFile(auth.token, auth.org, auth.repo, filePath, sha, "main",
         `Delete comp: ${compId}`);
-      await this.syncStore.removeSha(folderId, key);
+      await this.syncStore.removeSha(rootId, key);
     } catch (err) {
       if (err.status === 409) {
         return { conflict: true };
@@ -284,15 +340,26 @@ class SharedLibrary {
     );
     await this.syncStore.setSha(folderId, "meta", metaResult.sha);
 
-    // Push all builds in this folder
+    // Push all builds in this folder and any subfolders
+    const allFolders = await this.folderStore.listFolders();
+    const folderTree = new Set([folderId]);
+    // collect all descendant folder IDs
+    const addChildren = (id) => {
+      for (const f of allFolders.filter((f) => f.parentId === id)) {
+        folderTree.add(f.id);
+        addChildren(f.id);
+      }
+    };
+    addChildren(folderId);
+
     const builds = await this.buildStore.listBuilds();
-    for (const build of builds.filter((b) => b.folderId === folderId)) {
+    for (const build of builds.filter((b) => folderTree.has(b.folderId))) {
       await this.pushBuild(build);
     }
 
-    // Push all comps in this folder
+    // Push all comps in this folder and subfolders
     const comps = await this.compStore.listComps();
-    for (const comp of comps.filter((c) => c.folderId === folderId)) {
+    for (const comp of comps.filter((c) => folderTree.has(c.folderId))) {
       await this.pushComp(comp);
     }
 
@@ -349,13 +416,20 @@ class SharedLibrary {
     this._pushTimers.set(key, setTimeout(async () => {
       this._pushTimers.delete(key);
       try {
+        let result;
         if (type === "build") {
-          await this.pushBuild(item);
+          result = await this.pushBuild(item);
         } else if (type === "comp") {
-          await this.pushComp(item);
+          result = await this.pushComp(item);
+        }
+        if (result?.conflict) {
+          this._emit("sync-conflict", { type, id: item.id, title: item.title || item.name, folderId: item.folderId });
+        } else {
+          this._emit("sync-status", { status: "synced", folderId: item.folderId });
         }
       } catch (err) {
         console.error(`Shared library push failed for ${key}:`, err.message);
+        this._emit("sync-status", { status: "error", folderId: item.folderId });
       }
     }, delayMs));
   }

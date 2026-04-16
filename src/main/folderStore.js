@@ -33,14 +33,6 @@ class FolderStore {
       throw new Error("Shared folders must be top-level");
     }
 
-    // Non-shared folders cannot nest under shared folders
-    if (parentId) {
-      const parentFolder = folders.find((f) => f.id === parentId);
-      if (parentFolder?.shared) {
-        throw new Error("Cannot nest folders under a shared folder");
-      }
-    }
-
     // Depth check
     if (parentId) {
       const depth = this.#getDepth(folders, parentId);

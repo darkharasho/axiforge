@@ -4,6 +4,7 @@
 
 import { escapeHtml } from "../utils.js";
 import { state } from "../state.js";
+import { showConfirmModal } from "../confirm-modal.js";
 import { isSelected, getSelection, isCompSelected, getCompSelection } from "./selection.js";
 import { shareFolder, unshareFolder, pullFolder } from "./folder-store.js";
 import {
@@ -226,14 +227,26 @@ function showFolderMenu(x, y, folderId, folder) {
         _callbacks.onRefresh?.();
       }),
       _item(trashIcon, "Unshare Folder", null, async () => {
-        if (confirm(`Stop sharing "${folder?.name || folderId}"? Your local copies will be kept.`)) {
+        const confirmed = await showConfirmModal({
+          title: "Unshare Folder",
+          body: `Stop sharing <strong>${escapeHtml(folder?.name || folderId)}</strong>? Your local copies will be kept.`,
+          confirmLabel: "Unshare",
+          cancelLabel: "Cancel",
+        });
+        if (confirmed) {
           await unshareFolder(folderId);
           _callbacks.onRefresh?.();
         }
       }, true),
     ] : hasSharedLibrary ? [
       _item(shareIcon, "Share to Org", null, async () => {
-        if (confirm(`Share "${folder?.name || folderId}" to your org? All builds in this folder will be visible to org members.`)) {
+        const confirmed = await showConfirmModal({
+          title: "Share to Org",
+          body: `Share <strong>${escapeHtml(folder?.name || folderId)}</strong> to your org? All builds in this folder will be visible to org members.`,
+          confirmLabel: "Share",
+          cancelLabel: "Cancel",
+        });
+        if (confirmed) {
           await shareFolder(folderId);
           _callbacks.onRefresh?.();
         }

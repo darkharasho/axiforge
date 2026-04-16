@@ -47,7 +47,7 @@ import { initDetailModal, openDetailModal } from "./modules/detail-modal.js";
 import { initConfirmModal } from "./modules/confirm-modal.js";
 import { initImportConflictModal } from "./modules/import-conflict-modal.js";
 import { initSettingsModal, initSettingsCallbacks } from "./modules/settings-modal.js";
-import { initLibrary, renderLibrary, handleLibraryKeydown } from "./modules/library/library.js";
+import { initLibrary, renderLibrary, handleLibraryKeydown, showToast } from "./modules/library/library.js";
 import { clearUndo as clearLibraryUndo } from "./modules/library/undo.js";
 import { initComps, loadComps, renderComps } from "./modules/comps/comps.js";
 import { getProfessionSvg } from "./modules/profession-icons.js";
@@ -58,6 +58,49 @@ import { PROFESSION_THEMES } from "./modules/constants.js";
 let _lastGameMode = "pve";
 let _stashedTheme = null;
 let _themedBuildsEnabled = false;
+
+// ── Sync-status helpers ──────────────────────────────────────────────────────
+
+// Walk up the parentId chain in state.folders to find the nearest folder with shared:true.
+function _findRootSharedFolderInState(folderId) {
+  let current = state.folders.find((f) => f.id === folderId);
+  while (current) {
+    if (current.shared) return current;
+    if (!current.parentId) return null;
+    current = state.folders.find((f) => f.id === current.parentId);
+  }
+  return null;
+}
+
+// Inline SVGs for sync indicators (no external imports needed)
+const _syncSpinnerSvg = `<svg class="sync-spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 2a10 10 0 0 1 10 10"/></svg>`;
+const _syncCheckSvg = `<svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd"/></svg>`;
+
+// Apply or remove a sync indicator on all sidebar/content folder elements for folderId.
+function _updateFolderSyncIndicators(folderId, status) {
+  const selector = `[data-navigate-folder="${CSS.escape(folderId)}"]`;
+  document.querySelectorAll(selector).forEach((navEl) => {
+    let badge = navEl.querySelector(".lib-nav-item__sync-indicator");
+    if (!status) {
+      badge?.remove();
+      return;
+    }
+    if (!badge) {
+      badge = document.createElement("span");
+      badge.className = "lib-nav-item__sync-indicator";
+      // Insert just before the count badge (last child), or append
+      const countEl = navEl.querySelector(".lib-nav-item__count");
+      if (countEl) {
+        navEl.insertBefore(badge, countEl);
+      } else {
+        navEl.appendChild(badge);
+      }
+    }
+    badge.className = `lib-nav-item__sync-indicator lib-nav-item__sync-indicator--${status}`;
+    badge.innerHTML = status === "syncing" ? _syncSpinnerSvg : status === "synced" ? _syncCheckSvg : "";
+    badge.title = status === "syncing" ? "Syncing to shared library…" : status === "synced" ? "Synced" : "Sync error";
+  });
+}
 
 // ── DOM element cache ────────────────────────────────────────────────────────
 
@@ -86,6 +129,7 @@ const el = {
   saveBuildBtn:      q("#saveBuildBtn"),
   saveDot:           q("#saveDot"),
   saveStatus:        q("#saveStatus"),
+  syncStatus:        q("#syncStatus"),
   editorSharePubLink: document.querySelector("#editorShareDropdown [data-action='copy-published-link']"),
   duplicateBuildBtn: q("#duplicateBuildBtn"),
   copyBuildBtn:      q("#copyBuildBtn"),
@@ -384,6 +428,37 @@ async function init() {
     importBuildJsonFromClipboard,
     render,
   });
+  // ── Global sync-status / conflict handlers ───────────────────────────────
+  // Registered once here (after initLibrary) so preload's removeAllListeners
+  // doesn't clobber a handler added in library.js.
+  window.desktopApi.onSyncStatus?.((data) => {
+    if (!data || typeof data !== "object") return;
+    const { status, folderId } = data;
+    if (!folderId || !status) return;
+
+    // Resolve to root shared folder so we key by the folder visible in the sidebar
+    const rootShared = _findRootSharedFolderInState(folderId);
+    const trackId = rootShared?.id || folderId;
+    state.folderSyncStatus[trackId] = status;
+
+    renderEditorMeta();
+    _updateFolderSyncIndicators(trackId, status);
+
+    if (status === "synced") {
+      setTimeout(() => {
+        if (state.folderSyncStatus[trackId] === "synced") {
+          delete state.folderSyncStatus[trackId];
+          renderEditorMeta();
+          _updateFolderSyncIndicators(trackId, null);
+        }
+      }, 3000);
+    }
+  });
+
+  window.desktopApi.onSyncConflict?.((data) => {
+    showToast(`Sync conflict on \u201c${data?.title || "item"}\u201d \u2014 pull to refresh`, "warning");
+  });
+
   initComps({
     navigateToPage,
     loadBuildIntoEditor,

@@ -247,11 +247,11 @@ describe("FolderStore — shared folder fields", () => {
     ).rejects.toThrow("Shared folders must be top-level");
   });
 
-  test("non-shared folders cannot nest under shared folders", async () => {
+  test("non-shared folders can nest under shared folders", async () => {
     const shared = await store.upsertFolder({ name: "Shared", shared: true, orgName: "org" });
-    await expect(
-      store.upsertFolder({ name: "Child", parentId: shared.id })
-    ).rejects.toThrow("Cannot nest folders under a shared folder");
+    const child = await store.upsertFolder({ name: "Child", parentId: shared.id });
+    expect(child.parentId).toBe(shared.id);
+    expect(child.shared).toBeUndefined();
   });
 
   test("caller-specified id is preserved on create", async () => {

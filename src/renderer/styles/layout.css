@@ -313,6 +313,40 @@ body:has(.app-layout) {
   border-color: rgba(var(--accent-rgb), 0.3);
 }
 
+.subnav__sync-status {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  padding: 3px 8px;
+  border-radius: 20px;
+  border: 1px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.subnav__sync-status:empty {
+  display: none;
+}
+
+.subnav__sync-status--syncing {
+  color: var(--text-dim);
+  border-color: var(--border);
+}
+
+.subnav__sync-status--synced {
+  color: #4caf50;
+  border-color: rgba(76, 175, 80, 0.35);
+  background: rgba(76, 175, 80, 0.08);
+}
+
+.subnav__sync-status--error {
+  color: #e57373;
+  border-color: rgba(229, 115, 115, 0.35);
+  background: rgba(229, 115, 115, 0.08);
+}
+
 .subnav__save-btn {
   display: flex;
   align-items: center;

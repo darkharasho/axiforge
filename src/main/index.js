@@ -239,7 +239,28 @@ app.whenReady().then(async () => {
   await initDiskCache(dataDir);
   initWikiClient(dataDir);
   await migrateCompGameModes(store, compStore);
-  const sharedLibrary = new SharedLibrary({ buildStore: store, compStore, folderStore, syncStore });
+
+  // Walk up parentId chain to find the closest ancestor with shared:true
+  async function findRootSharedFolder(folderId) {
+    if (!folderId) return null;
+    const folders = await folderStore.listFolders();
+    function walk(id) {
+      const f = folders.find((x) => x.id === id);
+      if (!f) return null;
+      if (f.shared) return f;
+      if (f.parentId) return walk(f.parentId);
+      return null;
+    }
+    return walk(folderId);
+  }
+
+  const sharedLibrary = new SharedLibrary({
+    buildStore: store, compStore, folderStore, syncStore,
+    emit: (channel, data) => {
+      const wins = BrowserWindow.getAllWindows();
+      if (wins.length) wins[0].webContents.send(channel, data);
+    },
+  });
   sharedLibrary.startPolling();
 
   // Restore last window position/size if valid
@@ -369,19 +390,17 @@ app.whenReady().then(async () => {
   ipcMain.handle("builds:list", async () => store.listBuilds());
   ipcMain.handle("builds:save", async (_e, build) => {
     const saved = await store.upsertBuild(build);
-    // Touch the folder this build belongs to
     if (saved.folderId) {
       await folderStore.touchFolders([saved.folderId]);
     }
-    // Trigger shared library push if in a shared folder
-    const folder = (await folderStore.listFolders()).find((f) => f.id === saved.folderId);
-    if (folder?.shared) {
+    const rootShared = await findRootSharedFolder(saved.folderId);
+    if (rootShared) {
+      _e.sender.send("sync-status", { status: "syncing", folderId: saved.folderId });
       sharedLibrary.schedulePush("build", saved);
     }
     return saved;
   });
   ipcMain.handle("builds:delete", async (_e, id) => {
-    // Check which folder this build is in before deleting
     const builds = await store.listBuilds();
     const build = builds.find((b) => b.id === id);
     const folderId = build?.folderId;
@@ -389,8 +408,8 @@ app.whenReady().then(async () => {
     await compStore.removeBuildFromComps(id);
     if (folderId) {
       await folderStore.touchFolders([folderId]);
-      const folder = (await folderStore.listFolders()).find((f) => f.id === folderId);
-      if (folder?.shared) {
+      const rootShared = await findRootSharedFolder(folderId);
+      if (rootShared) {
         sharedLibrary.deleteBuildRemote(folderId, id).catch((err) => {
           console.error("Shared library remote delete failed:", err.message);
         });
@@ -428,22 +447,21 @@ app.whenReady().then(async () => {
     )];
     await store.moveBuilds(ids, folderId);
 
-    // Handle shared folder sync boundaries
-    const folders = await folderStore.listFolders();
-    const destFolder = folders.find((f) => f.id === folderId);
+    // Handle shared folder sync — check full ancestor chain for both source and dest
     const movedBuilds = (await store.listBuilds()).filter((b) => ids.includes(b.id));
+    const destRootShared = await findRootSharedFolder(folderId);
 
-    // Moving INTO a shared folder: push each build
-    if (destFolder?.shared) {
+    if (destRootShared) {
       for (const build of movedBuilds) {
         sharedLibrary.schedulePush("build", build);
       }
     }
 
-    // Moving OUT OF a shared folder: delete remotely
     for (const srcId of sourceFolderIds) {
-      const srcFolder = folders.find((f) => f.id === srcId);
-      if (srcFolder?.shared && srcId !== folderId) {
+      if (srcId === folderId) continue;
+      const srcRootShared = await findRootSharedFolder(srcId);
+      // Only delete remotely if moving OUT of a different shared hierarchy
+      if (srcRootShared && srcRootShared.id !== destRootShared?.id) {
         for (const id of ids) {
           sharedLibrary.deleteBuildRemote(srcId, id).catch((err) => {
             console.error("Failed to delete remote build after move:", err.message);
@@ -469,10 +487,10 @@ app.whenReady().then(async () => {
   ipcMain.handle("comps:list", () => compStore.listComps());
   ipcMain.handle("comps:save", async (_e, comp) => {
     const saved = await compStore.upsertComp(comp);
-    // Trigger shared library push if in a shared folder
     if (saved.folderId) {
-      const folder = (await folderStore.listFolders()).find((f) => f.id === saved.folderId);
-      if (folder?.shared) {
+      const rootShared = await findRootSharedFolder(saved.folderId);
+      if (rootShared) {
+        _e.sender.send("sync-status", { status: "syncing", folderId: saved.folderId });
         sharedLibrary.schedulePush("comp", saved);
       }
     }
@@ -485,8 +503,8 @@ app.whenReady().then(async () => {
     await compStore.deleteComp(id);
     await store.clearCompFromBuilds([id]);
     if (folderId) {
-      const folder = (await folderStore.listFolders()).find((f) => f.id === folderId);
-      if (folder?.shared) {
+      const rootShared = await findRootSharedFolder(folderId);
+      if (rootShared) {
         sharedLibrary.deleteCompRemote(folderId, id).catch((err) => {
           console.error("Shared library remote comp delete failed:", err.message);
         });
