@@ -333,14 +333,21 @@ async function handleRename(buildId) {
   const el = document.querySelector(`#lib-content [data-build-id="${buildId}"]`);
   const newTitle = await startInlineRename(el, build.title || "");
   if (!newTitle) { renderLibrary(); return; }
-  await window.desktopApi.saveBuild({ ...build, title: newTitle });
-  state.builds = await window.desktopApi.listBuilds();
-  pushUndo({ type: "rename-build", undo: async () => {
-    const current = state.builds.find((b) => b.id === buildId);
-    if (current) await window.desktopApi.saveBuild({ ...current, title: oldTitle });
+  try {
+    await window.desktopApi.saveBuild({ ...build, title: newTitle });
     state.builds = await window.desktopApi.listBuilds();
-  }});
-  renderLibrary();
+    pushUndo({ type: "rename-build", undo: async () => {
+      const current = state.builds.find((b) => b.id === buildId);
+      if (current) await window.desktopApi.saveBuild({ ...current, title: oldTitle });
+      state.builds = await window.desktopApi.listBuilds();
+    }});
+  } catch (err) {
+    console.error("[library] rename failed:", err);
+    showToast("Rename failed — please try again.", "error");
+    state.builds = await window.desktopApi.listBuilds();
+  } finally {
+    renderLibrary();
+  }
 }
 
 async function handleDuplicate(buildId) {
@@ -1058,15 +1065,17 @@ async function handleMoveComps(compIds, folderId) {
 
   // Collect builds referenced by these comps that live outside the destination folder
   let buildsToMove = [];
+  // Builds already in the destination that still need their subfolder info re-synced
+  let buildsToResync = [];
   if (destIsShared) {
     const allBuildIds = compIds.flatMap((id) => {
       const c = state.comps.find((c) => c.id === id);
       return c?.buildIds || [];
     });
     const uniqueBuildIds = [...new Set(allBuildIds)];
-    buildsToMove = uniqueBuildIds
-      .map((bid) => state.builds?.find((b) => b.id === bid))
-      .filter((b) => b && b.folderId !== folderId);
+    const allRefBuilds = uniqueBuildIds.map((bid) => state.builds?.find((b) => b.id === bid)).filter(Boolean);
+    buildsToMove = allRefBuilds.filter((b) => b.folderId !== folderId);
+    buildsToResync = allRefBuilds.filter((b) => b.folderId === folderId);
 
     if (buildsToMove.length > 0) {
       const buildNames = buildsToMove
@@ -1098,9 +1107,13 @@ async function handleMoveComps(compIds, folderId) {
   for (const build of buildsToMove) {
     await window.desktopApi.saveBuild({ ...build, folderId: folderId ?? null });
   }
+  // Re-save builds already in the destination so their subfolder info syncs to GitHub
+  for (const build of buildsToResync) {
+    await window.desktopApi.saveBuild({ ...build });
+  }
 
   state.comps = await window.desktopApi.listComps();
-  if (buildsToMove.length > 0) {
+  if (buildsToMove.length > 0 || buildsToResync.length > 0) {
     state.builds = await window.desktopApi.listBuilds();
   }
 

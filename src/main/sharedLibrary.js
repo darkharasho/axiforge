@@ -14,6 +14,14 @@ class SharedLibrary {
     this._emit = typeof emit === "function" ? emit : () => {};
     this._pushTimers = new Map(); // debounce timers per build/comp ID
     this._pollTimer = null;
+    this._pushQueue = Promise.resolve(); // serializes GitHub API writes
+  }
+
+  // Serializes push operations to avoid concurrent commit conflicts on GitHub
+  _enqueuePush(fn) {
+    const next = this._pushQueue.then(() => fn()).catch(() => {});
+    this._pushQueue = next;
+    return next;
   }
 
   // Walk up the parentId chain to find the closest folder with shared:true
@@ -220,19 +228,34 @@ class SharedLibrary {
     }
     const content = JSON.stringify(buildData, null, 2);
 
-    try {
+    const attemptPush = async (sha) => {
       const result = await api().putSharedFile(
         auth.token, auth.org, auth.repo,
-        filePath, content, currentSha, "main",
+        filePath, content, sha, "main",
         `Update build: ${build.title || build.id}`
       );
       await this.syncStore.setSha(rootShared.id, key, result.sha);
       return { conflict: false };
+    };
+
+    try {
+      return await attemptPush(currentSha);
     } catch (err) {
-      if (err.status === 409) {
-        return { conflict: true };
+      if (err.status !== 409) throw err;
+      // SHA mismatch — fetch the current remote SHA and retry once
+      try {
+        const { sha: remoteSha } = await api().getFileContents(
+          auth.token, auth.org, auth.repo, filePath
+        );
+        await this.syncStore.setSha(rootShared.id, key, remoteSha);
+        return await attemptPush(remoteSha);
+      } catch (retryErr) {
+        if (retryErr.status === 404) {
+          // File was deleted remotely; push as new
+          return await attemptPush(null);
+        }
+        throw retryErr;
       }
-      throw err;
     }
   }
 
@@ -258,19 +281,32 @@ class SharedLibrary {
     }
     const content = JSON.stringify(compData, null, 2);
 
-    try {
+    const attemptPush = async (sha) => {
       const result = await api().putSharedFile(
         auth.token, auth.org, auth.repo,
-        filePath, content, currentSha, "main",
+        filePath, content, sha, "main",
         `Update comp: ${comp.name || comp.id}`
       );
       await this.syncStore.setSha(rootShared.id, key, result.sha);
       return { conflict: false };
+    };
+
+    try {
+      return await attemptPush(currentSha);
     } catch (err) {
-      if (err.status === 409) {
-        return { conflict: true };
+      if (err.status !== 409) throw err;
+      try {
+        const { sha: remoteSha } = await api().getFileContents(
+          auth.token, auth.org, auth.repo, filePath
+        );
+        await this.syncStore.setSha(rootShared.id, key, remoteSha);
+        return await attemptPush(remoteSha);
+      } catch (retryErr) {
+        if (retryErr.status === 404) {
+          return await attemptPush(null);
+        }
+        throw retryErr;
       }
-      throw err;
     }
   }
 
@@ -518,24 +554,26 @@ class SharedLibrary {
     if (this._pushTimers.has(key)) {
       clearTimeout(this._pushTimers.get(key));
     }
-    this._pushTimers.set(key, setTimeout(async () => {
+    this._pushTimers.set(key, setTimeout(() => {
       this._pushTimers.delete(key);
-      try {
-        let result;
-        if (type === "build") {
-          result = await this.pushBuild(item);
-        } else if (type === "comp") {
-          result = await this.pushComp(item);
+      this._enqueuePush(async () => {
+        try {
+          let result;
+          if (type === "build") {
+            result = await this.pushBuild(item);
+          } else if (type === "comp") {
+            result = await this.pushComp(item);
+          }
+          if (result?.conflict) {
+            this._emit("sync-conflict", { type, id: item.id, title: item.title || item.name, folderId: item.folderId });
+          } else {
+            this._emit("sync-status", { status: "synced", folderId: item.folderId });
+          }
+        } catch (err) {
+          console.error(`Shared library push failed for ${key}:`, err.message);
+          this._emit("sync-status", { status: "error", folderId: item.folderId });
         }
-        if (result?.conflict) {
-          this._emit("sync-conflict", { type, id: item.id, title: item.title || item.name, folderId: item.folderId });
-        } else {
-          this._emit("sync-status", { status: "synced", folderId: item.folderId });
-        }
-      } catch (err) {
-        console.error(`Shared library push failed for ${key}:`, err.message);
-        this._emit("sync-status", { status: "error", folderId: item.folderId });
-      }
+      });
     }, delayMs));
   }
 }
