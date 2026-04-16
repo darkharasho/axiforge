@@ -1452,3 +1452,161 @@ test.describe("Assumed Boons — trait AttributeConversion", () => {
     await window.waitForTimeout(300);
   });
 });
+
+// ─── Section 6I: Signet Passives ────────────────────────────────────────────
+
+test.describe("Equipment — Signet Passives", () => {
+  let app, window;
+
+  test.beforeAll(async () => {
+    ({ app, window } = await launchApp());
+    await goToEditor(window);
+    await selectProfession(window, "Necromancer");
+
+    // Equip Signet of Spite (id 10622, +180 Power) in the first utility slot.
+    const utilGroup = window.locator(".skill-group--utilities");
+    await expect(utilGroup).toBeVisible({ timeout: 5000 });
+    const utilitySlot = utilGroup.locator(".skill-slot").nth(1);
+    await utilitySlot.locator(".skill-icon-large").click();
+
+    const cselectOpen = window.locator(".cselect--skill-slot.cselect--open");
+    await expect(cselectOpen).toBeVisible({ timeout: 5000 });
+    await cselectOpen
+      .locator('.cselect__option:has-text("Signet of Spite")')
+      .first()
+      .click();
+    await window.waitForTimeout(500);
+
+    // Switch to equipment tab and wait for render.
+    await switchTab(window, "equipment");
+    await window.waitForFunction(
+      () => {
+        const panel = document.querySelector("#equipmentPanel");
+        return panel && panel.querySelector(".equip-section") !== null;
+      },
+      null,
+      { timeout: 10_000 }
+    );
+  });
+
+  test.afterAll(async () => {
+    await closeApp(app);
+  });
+
+  // Helper: read a stat value by exact label from the Attributes section.
+  async function getStat(statLabel) {
+    const panel = window.locator("#equipmentPanel");
+    const statsSection = panel.locator(".equip-section").filter({ hasText: "Attributes" }).first();
+    const rows = statsSection.locator(".equip-stat-row");
+    const count = await rows.count();
+    for (let i = 0; i < count; i++) {
+      const label = (await rows.nth(i).locator(".equip-stat-label").first().textContent()).trim();
+      if (label === statLabel) {
+        const val = await rows.nth(i).locator(".equip-stat-value").first().textContent();
+        return parseInt(val.replace(/,/g, ""), 10);
+      }
+    }
+    return null;
+  }
+
+  // 33. Signet passive toggle: default ON, click disables (Power -180), re-enables (Power restored)
+  test("signet passive toggle: active by default, toggle off then on affects Power by 180", async () => {
+    const panel = window.locator("#equipmentPanel");
+    const boonsSection = panel.locator(".equip-boons");
+    await expect(boonsSection).toBeVisible();
+
+    // "Signet Passives" section label is rendered.
+    const signetLabel = boonsSection.locator(".equip-boons__sigil-label", {
+      hasText: "Signet Passives",
+    });
+    await expect(signetLabel).toBeVisible();
+
+    // Signet of Spite item appears in the signet bar.
+    const signetItem = boonsSection
+      .locator(".equip-boons__item")
+      .filter({ hasText: "Signet of Spite" })
+      .first();
+    await expect(signetItem).toBeVisible();
+
+    const signetIcon = signetItem.locator(".equip-boons__icon--sigil");
+
+    // Default: passive active (--on class present).
+    const onInitially = await signetIcon.evaluate((el) =>
+      el.classList.contains("equip-boons__icon--on")
+    );
+    expect(onInitially).toBe(true);
+
+    // Power reflects +180 from Signet of Spite.
+    const powerWithPassive = await getStat("Power");
+    expect(powerWithPassive).not.toBeNull();
+
+    // Click icon to disable the passive.
+    await signetIcon.click();
+    await window.waitForTimeout(300);
+
+    // Icon marked off; Power drops by exactly 180.
+    const iconAfterOff = boonsSection
+      .locator(".equip-boons__item")
+      .filter({ hasText: "Signet of Spite" })
+      .first()
+      .locator(".equip-boons__icon--sigil");
+    const offAfterClick = await iconAfterOff.evaluate((el) =>
+      !el.classList.contains("equip-boons__icon--on")
+    );
+    expect(offAfterClick).toBe(true);
+    const powerWithoutPassive = await getStat("Power");
+    expect(powerWithoutPassive).toBe(powerWithPassive - 180);
+
+    // Right-click re-enables the passive.
+    await iconAfterOff.click({ button: "right" });
+    await window.waitForTimeout(300);
+
+    const iconAfterOn = boonsSection
+      .locator(".equip-boons__item")
+      .filter({ hasText: "Signet of Spite" })
+      .first()
+      .locator(".equip-boons__icon--sigil");
+    const onAgain = await iconAfterOn.evaluate((el) =>
+      el.classList.contains("equip-boons__icon--on")
+    );
+    expect(onAgain).toBe(true);
+    const powerRestored = await getStat("Power");
+    expect(powerRestored).toBe(powerWithPassive);
+  });
+
+  // 34. Unequipping the signet hides the Signet Passives section
+  test("Signet Passives section disappears when no stat-granting signet is equipped", async () => {
+    // Go back to the build tab and clear the utility slot.
+    await switchTab(window, "build");
+    await window.waitForTimeout(300);
+
+    const utilGroup = window.locator(".skill-group--utilities");
+    const utilitySlot = utilGroup.locator(".skill-slot").nth(1);
+    await utilitySlot.locator(".skill-icon-large").click();
+
+    const cselectOpen = window.locator(".cselect--skill-slot.cselect--open");
+    await expect(cselectOpen).toBeVisible({ timeout: 5000 });
+    // Pick a non-stat-granting utility (Plague Signet has no stat passive in the buff map).
+    await cselectOpen
+      .locator('.cselect__option:has-text("Plague Signet")')
+      .first()
+      .click();
+    await window.waitForTimeout(500);
+
+    await switchTab(window, "equipment");
+    await window.waitForFunction(
+      () => {
+        const panel = document.querySelector("#equipmentPanel");
+        return panel && panel.querySelector(".equip-section") !== null;
+      },
+      null,
+      { timeout: 10_000 }
+    );
+
+    const boonsSection = window.locator("#equipmentPanel .equip-boons");
+    const signetLabel = boonsSection.locator(".equip-boons__sigil-label", {
+      hasText: "Signet Passives",
+    });
+    await expect(signetLabel).toHaveCount(0);
+  });
+});

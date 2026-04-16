@@ -360,9 +360,18 @@ function computeAttributes(ctx, catalogs) {
       ctx.skills.eliteId,
     ].filter(Boolean).map(Number);
 
+    // Signet passives can be toggled off per-signet (e.g., to simulate active use).
+    // Absent/null activeSignets means all passives apply (backward compatible).
+    const activeSignets = ctx.activeSignets;
+    const isPassiveActive = (id) => {
+      if (!activeSignets) return true;
+      const v = activeSignets instanceof Map ? activeSignets.get(id) : activeSignets[id];
+      return v !== false;
+    };
+
     for (const skillId of skillIds) {
       const buff = SIGNET_PASSIVE_BUFFS.get(skillId);
-      if (buff && buff.stat in signetStats) {
+      if (buff && buff.stat in signetStats && isPassiveActive(skillId)) {
         signetStats[buff.stat] += buff.value;
       }
     }

@@ -11,7 +11,7 @@ import {
 } from "./constants.js";
 import { escapeHtml } from "./utils.js";
 import { computeSlotStats, computeUpgradeModifiers, computeStatBreakdown } from "./stats.js";
-import { computeStats, computeBoons, computeFuryCritModifier, computePassiveCritModifier, computeFuryStatBonuses, computeMightPerStack, FURY_CRIT_CHANCE, FURY_CRIT_CHANCE_WVW, STACKING_SIGIL_DEFS } from "./engine-bridge.js";
+import { computeStats, computeBoons, computeFuryCritModifier, computePassiveCritModifier, computeFuryStatBonuses, computeMightPerStack, FURY_CRIT_CHANCE, FURY_CRIT_CHANCE_WVW, STACKING_SIGIL_DEFS, SIGNET_PASSIVE_BUFFS } from "./engine-bridge.js";
 import { bindHoverPreview, selectDetail } from "./detail-panel.js";
 import { getProfessionSvg } from "./profession-icons.js";
 import { getSlotSvg } from "./slot-icons.js";
@@ -45,6 +45,12 @@ export function resetAssumedBoons() {
 let _sigilStacks = {};
 export function getSigilStacks() { return _sigilStacks; }
 export function resetSigilStacks() { _sigilStacks = {}; }
+
+// Signet passive toggles — session-only, not persisted to builds.
+// { [skillId: number]: boolean }. Missing entry = passive active (default ON).
+let _activeSignets = {};
+export function getActiveSignets() { return _activeSignets; }
+export function resetActiveSignets() { _activeSignets = {}; }
 
 let _boonsExpanded = false;
 
@@ -1491,9 +1497,96 @@ export function renderEquipmentPanel() {
     boonsSection.append(sigilBar);
   }
 
+  // Signet passive toggles — show icons for equipped stat-granting signets.
+  // Default ON (passive active); toggle OFF simulates using the active (passive disabled).
+  const isUnderwaterSignets = Boolean(state.editor.underwaterMode);
+  const activeSkillSlots = isUnderwaterSignets
+    ? (state.editor.underwaterSkills || {})
+    : (state.editor.skills || {});
+  const equippedSignetIds = [
+    activeSkillSlots.healId,
+    ...(activeSkillSlots.utilityIds || []),
+    activeSkillSlots.eliteId,
+  ].filter(Boolean).map(Number).filter((id) => SIGNET_PASSIVE_BUFFS.has(id));
+
+  // Clean up toggle state for signets no longer equipped
+  for (const key of Object.keys(_activeSignets)) {
+    if (!equippedSignetIds.includes(Number(key))) delete _activeSignets[key];
+  }
+
+  if (equippedSignetIds.length > 0) {
+    const signetLabel = document.createElement("div");
+    signetLabel.className = "equip-boons__sigil-label";
+    signetLabel.textContent = "Signet Passives";
+    boonsSection.append(signetLabel);
+
+    const signetBar = document.createElement("div");
+    signetBar.className = "equip-boons__bar equip-boons__bar--sigils";
+
+    const STAT_LABELS = {
+      Power: "Power", Precision: "Precision", Toughness: "Toughness", Vitality: "Vitality",
+      Ferocity: "Ferocity", ConditionDamage: "Condition Damage", HealingPower: "Healing Power",
+      Concentration: "Concentration", Expertise: "Expertise",
+    };
+
+    for (const skillId of equippedSignetIds) {
+      const buff = SIGNET_PASSIVE_BUFFS.get(skillId);
+      const skillData = state.activeCatalog?.skillById?.get(skillId);
+      const name = skillData?.name || `Signet ${skillId}`;
+      const icon = skillData?.icon || "";
+      const isActive = _activeSignets[skillId] !== false;
+      const statLabel = STAT_LABELS[buff.stat] || buff.stat;
+
+      const item = document.createElement("div");
+      item.className = "equip-boons__item";
+
+      const iconWrap = document.createElement("div");
+      iconWrap.className = "equip-boons__icon equip-boons__icon--sigil" + (isActive ? " equip-boons__icon--on" : "");
+
+      if (icon) {
+        const img = document.createElement("img");
+        img.src = icon;
+        img.alt = name;
+        img.width = 28;
+        img.height = 28;
+        iconWrap.append(img);
+      }
+
+      // Tooltip
+      const tooltip = document.createElement("div");
+      tooltip.className = "equip-boons__tooltip";
+      tooltip.innerHTML = isActive
+        ? `<div class="equip-boons__tip-title">${escapeHtml(name)}</div>`
+          + `<div class="equip-boons__tip-effect">+${buff.value} ${statLabel}</div>`
+          + `<div class="equip-boons__tip-note">Passive active. Click to simulate using the active (disables passive).</div>`
+        : `<div class="equip-boons__tip-title">${escapeHtml(name)}</div>`
+          + `<div class="equip-boons__tip-note">Passive disabled (simulating active use). Click to re-enable +${buff.value} ${statLabel}.</div>`;
+      item.append(tooltip);
+
+      // Click handlers — click or right-click toggles
+      const toggle = () => {
+        _activeSignets[skillId] = !(_activeSignets[skillId] !== false);
+        _render();
+      };
+      iconWrap.addEventListener("click", toggle);
+      iconWrap.addEventListener("contextmenu", (e) => { e.preventDefault(); toggle(); });
+
+      item.append(iconWrap);
+
+      const label = document.createElement("div");
+      label.className = "equip-boons__label" + (isActive ? " equip-boons__label--on" : "");
+      label.textContent = name;
+      item.append(label);
+
+      signetBar.append(item);
+    }
+
+    boonsSection.append(signetBar);
+  }
+
   // Attributes
   const statsSection = makeSection("Attributes");
-  const statsResult = computeStats(state, _assumedBoons, _sigilStacks);
+  const statsResult = computeStats(state, _assumedBoons, _sigilStacks, _activeSignets);
   const computed = statsResult.total;
   const traitBonuses = statsResult.conversions;
   const professionName = state.editor.profession;
@@ -1543,7 +1636,7 @@ export function renderEquipmentPanel() {
     leftEl.innerHTML = `<span class="equip-stat-label">${row.stat}</span><span class="equip-stat-value${isBoosted ? " equip-stat-value--boosted" : ""}">${(row.value || 0).toLocaleString()}</span>`;
 
     bindHoverPreview(leftEl, "equip-stat", () => {
-      const breakdown = computeStatBreakdown(row.key, _assumedBoons, _sigilStacks);
+      const breakdown = computeStatBreakdown(row.key, _assumedBoons, _sigilStacks, _activeSignets);
       if (!breakdown.length) return null;
       // Consolidate duplicate sources (e.g. 18x identical infusions → one line)
       const grouped = new Map();

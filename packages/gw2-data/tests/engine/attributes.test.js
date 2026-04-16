@@ -319,6 +319,44 @@ describe("computeAttributes", () => {
     expect(result.signets.Power).toBe(180);
   });
 
+  test("signet passive applied when activeSignets entry is true", () => {
+    const ctx = makeCtx({
+      skills: { healId: null, utilityIds: [9093], eliteId: null },
+      activeSignets: { 9093: true },
+    });
+    const result = computeAttributes(ctx, makeCatalogs());
+    expect(result.signets.Power).toBe(180);
+  });
+
+  test("signet passive skipped when activeSignets entry is false", () => {
+    const ctx = makeCtx({
+      skills: { healId: null, utilityIds: [9093], eliteId: null },
+      activeSignets: { 9093: false },
+    });
+    const result = computeAttributes(ctx, makeCatalogs());
+    expect(result.signets.Power).toBe(0);
+  });
+
+  test("signet passive applied when activeSignets is null (backward compat)", () => {
+    const ctx = makeCtx({
+      skills: { healId: null, utilityIds: [9093], eliteId: null },
+      activeSignets: null,
+    });
+    const result = computeAttributes(ctx, makeCatalogs());
+    expect(result.signets.Power).toBe(180);
+  });
+
+  test("activeSignets toggle is per-signet", () => {
+    // Bane Signet (9093) = +180 Power; Signet of Stone (12500) = +180 Toughness
+    const ctx = makeCtx({
+      skills: { healId: null, utilityIds: [9093, 12500], eliteId: null },
+      activeSignets: { 9093: true, 12500: false },
+    });
+    const result = computeAttributes(ctx, makeCatalogs());
+    expect(result.signets.Power).toBe(180);
+    expect(result.signets.Toughness).toBe(0);
+  });
+
   test("Pinnacle of Strength adds +10 Power per Might stack (40 instead of 30)", () => {
     const catalogs = makeCatalogs({
       traitById: new Map([[1453, {
