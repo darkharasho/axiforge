@@ -201,7 +201,7 @@ body:has(.app-layout) {
 .app-layout {
   display: grid;
   grid-template-columns: 54px 1fr;
-  height: calc(100vh - 42px);
+  height: calc(100vh - 40px);
   margin-top: 42px;
 }
 
@@ -452,7 +452,7 @@ body:has(.app-layout) {
 
 .page-content {
   overflow-y: auto;
-  height: calc(100vh - 42px);
+  height: calc(100vh - 40px);
 }
 
 .page {
