@@ -12,6 +12,7 @@ import {
   chevronDoubleLeftIcon,
   chevronDoubleRightIcon,
   compIcon,
+  shareIcon,
 } from "./heroicons.js";
 
 let _callbacks = {};
@@ -172,9 +173,24 @@ function renderMyFolders(expanded) {
     .filter((f) => f.parentId === null)
     .sort((a, b) => a.sortOrder - b.sortOrder);
 
-  const items = topLevel.map((f) => renderFolderItem(f, expanded, 0)).join("");
+  const sharedFolders = topLevel.filter((f) => f.shared);
+  const personalFolders = topLevel.filter((f) => !f.shared);
 
-  return `
+  const sharedItems = sharedFolders.map((f) => renderFolderItem(f, expanded, 0)).join("");
+  const personalItems = personalFolders.map((f) => renderFolderItem(f, expanded, 0)).join("");
+
+  let html = "";
+
+  if (sharedFolders.length > 0) {
+    html += `
+      <div class="lib-sidebar__section">
+        <div class="lib-sidebar__section-label">Shared Folders</div>
+        ${sharedItems}
+      </div>
+    `;
+  }
+
+  html += `
     <div class="lib-sidebar__section">
       <div class="lib-sidebar__section-header">
         <div class="lib-sidebar__section-label">My Folders</div>
@@ -182,9 +198,11 @@ function renderMyFolders(expanded) {
           ${folderPlusIcon}
         </button>
       </div>
-      ${items || `<div class="lib-sidebar__empty">No folders yet</div>`}
+      ${personalItems || `<div class="lib-sidebar__empty">No folders yet</div>`}
     </div>
   `;
+
+  return html;
 }
 
 function renderFolderItem(folder, expanded, depth) {
@@ -216,6 +234,7 @@ function renderFolderItem(folder, expanded, depth) {
         }
         <span class="lib-nav-item__icon">${isExpanded ? folderOpenIcon : folderIcon}</span>
         <span class="lib-nav-item__label">${escapeHtml(folder.name)}</span>
+        ${folder.shared ? `<span class="lib-nav-item__shared-badge" title="Shared with ${escapeHtml(folder.orgName || 'org')}">${shareIcon}</span>` : ""}
         <span class="lib-nav-item__count">${count}</span>
       </button>
       ${hasChildren && isExpanded ? `<div class="lib-nav-group">${childItems}</div>` : ""}
