@@ -1,3 +1,9 @@
+## Version v0.5.4 — April 16, 2026
+
+### Bug Fixes
+- **Sharing a folder now uploads all existing builds and comps** — when sharing a folder that already contained builds (including those in subfolders), none of the content was being pushed to GitHub. Only the folder metadata was uploaded. This is now fixed: all builds and comps in the folder and its subfolders are pushed when you share.
+- **Share and Unshare now show sync progress** — the spinner and checkmark indicators now appear in the sidebar and content area during share and unshare operations, the same as they do for regular saves.
+
 ## Version v0.5.3 — April 16, 2026
 
 ### Bug Fixes
