@@ -1,3 +1,8 @@
+## Version v0.5.3 — April 16, 2026
+
+### Bug Fixes
+- **"Unshare Folder" option now appears for org owners** — the option was missing from the shared folder context menu even when the user was an org owner. This was caused by a transient GitHub API failure during setup silently overwriting the owner flag with `false`. The app now self-heals the flag on the next library open and is more resilient to API failures when determining org role.
+
 ## Version v0.5.2 — April 16, 2026
 
 ### Bug Fixes
