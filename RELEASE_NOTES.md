@@ -1,3 +1,12 @@
+## Version v0.5.2 — April 16, 2026
+
+### Bug Fixes
+- **Renaming a build as a member no longer makes it disappear** — if saving failed for any reason the inline rename input would get stuck in the DOM. Now the library always re-renders correctly and shows an error toast if something goes wrong.
+- **Builds not fully syncing when moving a comp into a shared folder** — when multiple builds were pushed at the same time they could race and partially fail. Pushes are now serialized, and a failed push due to a stale SHA automatically retries using the latest remote SHA.
+- **Subfolder change not picked up during comp moves** — builds that were already in the destination subfolder would be skipped and their subfolder metadata on GitHub would go stale. They are now re-synced along with the rest.
+- **Sync failures are now visible** — when a push to GitHub fails (e.g. insufficient repository access), a toast notification is shown instead of failing silently.
+- **Library now pulls fresh data when you open it** — instead of waiting up to 5 minutes for the background poller, the shared library syncs immediately whenever you navigate to the library page.
+
 ## Version v0.5.1 — April 16, 2026
 
 ### New Features
