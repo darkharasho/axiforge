@@ -427,10 +427,36 @@ app.whenReady().then(async () => {
       builds.filter((b) => ids.includes(b.id) && b.folderId).map((b) => b.folderId)
     )];
     await store.moveBuilds(ids, folderId);
+
+    // Handle shared folder sync boundaries
+    const folders = await folderStore.listFolders();
+    const destFolder = folders.find((f) => f.id === folderId);
+    const movedBuilds = (await store.listBuilds()).filter((b) => ids.includes(b.id));
+
+    // Moving INTO a shared folder: push each build
+    if (destFolder?.shared) {
+      for (const build of movedBuilds) {
+        sharedLibrary.schedulePush("build", build);
+      }
+    }
+
+    // Moving OUT OF a shared folder: delete remotely
+    for (const srcId of sourceFolderIds) {
+      const srcFolder = folders.find((f) => f.id === srcId);
+      if (srcFolder?.shared && srcId !== folderId) {
+        for (const id of ids) {
+          sharedLibrary.deleteBuildRemote(srcId, id).catch((err) => {
+            console.error("Failed to delete remote build after move:", err.message);
+          });
+        }
+      }
+    }
+
     // Touch source and destination folders
     const touchIds = [...sourceFolderIds];
     if (folderId) touchIds.push(folderId);
     if (touchIds.length) await folderStore.touchFolders([...new Set(touchIds)]);
+    return true;
   });
   ipcMain.handle("builds:pin", (_e, ids, pinned) =>
     store.pinBuilds(ids, pinned),
