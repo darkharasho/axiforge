@@ -1,3 +1,15 @@
+## Version v0.4.2 — April 15, 2026
+
+### New Features
+- **Signet passive toggles** — the Equipment tab now includes a Signet Passives section alongside the boon and sigil toggles. Equipped stat-granting signets (Bane Signet, Signet of Might, Signet of Spite, and others) show a toggle that is on by default. Click or right-click to simulate using the signet's active, and the Attributes panel plus stat breakdown tooltips update immediately.
+
+### Bug Fixes
+- **Attributes showed wrong Crit Chance** — the displayed Critical Chance now matches the value used in calculations.
+- **Party Coverage missing boons** — boons applied by traits and signets now appear correctly in Party Coverage.
+- **Published comps re-encrypt on republish** — when a build inside a published comp is republished, the comp is now re-encrypted so viewers see the updated build.
+- **Immobilize not registering on Entangle** — the wiki parser now recognizes both "immobilize" and "chill" condition variants, so Entangle and similar skills report the correct conditions.
+- **KDE taskbar grouping** — the dev-mode window now shows its own taskbar icon in KDE/Wayland instead of being grouped with whichever process launched Electron.
+
 ## Version v0.4.1 — April 15, 2026
 
 ### New Features

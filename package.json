@@ -1,7 +1,7 @@
 {
   "name": "axiforge-desktop",
   "productName": "AxiForge",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "workspaces": ["packages/*"],
   "description": "GW2 build editor desktop app with GitHub Pages publishing",
   "main": "src/main/index.js",
