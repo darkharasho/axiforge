@@ -24,6 +24,23 @@ class FolderStore {
     const parentId =
       typeof input.parentId === "string" ? input.parentId : null;
 
+    const shared = input.shared === true;
+    const orgName = typeof input.orgName === "string" ? input.orgName : undefined;
+    const lastSyncedAt = typeof input.lastSyncedAt === "string" ? input.lastSyncedAt : undefined;
+
+    // Shared folders must be top-level
+    if (shared && parentId) {
+      throw new Error("Shared folders must be top-level");
+    }
+
+    // Non-shared folders cannot nest under shared folders
+    if (parentId) {
+      const parentFolder = folders.find((f) => f.id === parentId);
+      if (parentFolder?.shared) {
+        throw new Error("Cannot nest folders under a shared folder");
+      }
+    }
+
     // Depth check
     if (parentId) {
       const depth = this.#getDepth(folders, parentId);
@@ -44,6 +61,9 @@ class FolderStore {
       if (input.sortOrder !== undefined) {
         existing.sortOrder = Number(input.sortOrder) || 0;
       }
+      if (input.shared !== undefined) existing.shared = Boolean(input.shared);
+      if (input.orgName !== undefined) existing.orgName = input.orgName;
+      if (input.lastSyncedAt !== undefined) existing.lastSyncedAt = input.lastSyncedAt;
       // Ensure updatedAt is strictly greater than the previous value
       const prevUpdatedAt = existing.updatedAt;
       existing.updatedAt =
@@ -55,7 +75,7 @@ class FolderStore {
     }
 
     const folder = {
-      id: crypto.randomUUID(),
+      id: input.id || crypto.randomUUID(),
       name,
       parentId,
       sortOrder:
@@ -63,6 +83,9 @@ class FolderStore {
       createdAt: now,
       updatedAt: now,
     };
+    if (shared) folder.shared = true;
+    if (orgName) folder.orgName = orgName;
+    if (lastSyncedAt) folder.lastSyncedAt = lastSyncedAt;
     folders.push(folder);
     await this.#writeJson(this.foldersPath, folders);
     return { ...folder };
