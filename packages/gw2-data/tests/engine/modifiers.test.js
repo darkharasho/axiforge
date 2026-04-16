@@ -497,6 +497,29 @@ describe("collectModifiers()", () => {
     expect(mightMods[0]).toMatchObject({ power: 40, condition: null });
   });
 
+  it("ignores critChance for traits with ignoreCritChance override (issue #209)", () => {
+    // Traits like Precise Strike (1011), Hidden Killer (1215), and Burst Precision (1336)
+    // have percent:100 "Critical Chance Increase" facts that represent skill-specific bonuses,
+    // not passive crit chance increases. They must be excluded.
+    const traitId = 1011;
+    const trait = {
+      slot: "Minor",
+      description: "Opening Strike has an increased chance to critically strike.",
+      facts: [
+        { type: "Percent", text: "Critical Chance Increase", percent: 100 },
+      ],
+    };
+    const catalogs = makeCatalogs({ [traitId]: trait }, { 8: { minorTraits: [1011] } });
+    const ctx = makeCtx([{ specializationId: 8, majorChoices: {} }]);
+    const overrides = makeOverrides({
+      "trait:1011": { ignoreCritChance: true },
+    });
+
+    const mods = collectModifiers(ctx, catalogs, overrides);
+    const critMods = mods.filter((m) => m.type === "critChance");
+    expect(critMods).toHaveLength(0);
+  });
+
   it("collects passive critChance from non-fury traits (Pinnacle of Strength)", () => {
     const traitId = 1453;
     const trait = {

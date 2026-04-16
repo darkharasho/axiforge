@@ -61,3 +61,77 @@ describe("Critical Strike Chance formula (issue #193)", () => {
     expect(result.derived.critChance).toBeLessThan(6);
   });
 });
+
+describe("Skill-specific crit traits must not inflate crit chance (issue #209)", () => {
+  test("Precise Strike (trait 1011) does not add 100% crit chance", () => {
+    // Trait 1011 "Opening Strike has an increased chance to critically strike"
+    // The percent:100 fact means Opening Strike gets 100% crit, NOT a passive bonus
+    const catalogs = makeCatalogs();
+    catalogs.traitById = new Map([
+      [1011, {
+        id: 1011,
+        slot: "Minor",
+        description: "Opening Strike has an increased chance to critically strike.",
+        facts: [
+          { type: "Percent", text: "Critical Chance Increase", percent: 100 },
+        ],
+      }],
+    ]);
+    catalogs.specializationById = new Map([
+      [8, { minorTraits: [1011] }],
+    ]);
+
+    const ctx = makeCtx({
+      profession: "Ranger",
+      specializations: [{ specializationId: 8, majorChoices: {} }],
+    });
+
+    const result = computeAttributes(ctx, catalogs);
+    // Base crit is ~5%. With the bug, this would be 100%.
+    expect(result.derived.critChance).toBeLessThan(10);
+  });
+
+  test("Hidden Killer (trait 1215) does not add 100% crit chance", () => {
+    const catalogs = makeCatalogs();
+    catalogs.traitById = new Map([
+      [1215, {
+        id: 1215,
+        slot: "Major",
+        description: "Gain bonus critical-hit chance while stealthed.",
+        facts: [
+          { type: "Percent", text: "Critical Chance Increase", percent: 100 },
+        ],
+      }],
+    ]);
+
+    const ctx = makeCtx({
+      profession: "Thief",
+      specializations: [{ id: 35, majorChoices: { 3: 1215 } }],
+    });
+
+    const result = computeAttributes(ctx, catalogs);
+    expect(result.derived.critChance).toBeLessThan(10);
+  });
+
+  test("Burst Precision (trait 1336) does not add 100% crit chance", () => {
+    const catalogs = makeCatalogs();
+    catalogs.traitById = new Map([
+      [1336, {
+        id: 1336,
+        slot: "Major",
+        description: "Burst skills have an increased critical chance.",
+        facts: [
+          { type: "Percent", text: "Critical Chance Increase", percent: 100 },
+        ],
+      }],
+    ]);
+
+    const ctx = makeCtx({
+      profession: "Warrior",
+      specializations: [{ id: 36, majorChoices: { 3: 1336 } }],
+    });
+
+    const result = computeAttributes(ctx, catalogs);
+    expect(result.derived.critChance).toBeLessThan(10);
+  });
+});

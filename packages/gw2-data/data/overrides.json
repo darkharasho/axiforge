@@ -29,5 +29,17 @@
   "trait:1338": {
     "weaponConditional": { "weapons": ["greatsword", "spear"], "multiplier": 2 },
     "description": "Forceful Greatsword: double Power bonus while wielding greatsword or underwater spear"
+  },
+  "trait:1011": {
+    "ignoreCritChance": true,
+    "description": "Precise Strike: 100% crit chance applies to Opening Strike only, not passive"
+  },
+  "trait:1215": {
+    "ignoreCritChance": true,
+    "description": "Hidden Killer: 100% crit chance applies while stealthed only, not passive"
+  },
+  "trait:1336": {
+    "ignoreCritChance": true,
+    "description": "Burst Precision: 100% crit chance applies to Burst skills only, not passive"
   }
 }
