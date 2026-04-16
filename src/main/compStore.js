@@ -40,6 +40,7 @@ class CompStore {
       ...(typeof input.publishedFileId === "string" ? { publishedFileId: input.publishedFileId } : {}),
       ...(typeof input.publishedKey === "string" ? { publishedKey: input.publishedKey } : {}),
       ...(typeof input.publishedSlug === "string" ? { publishedSlug: input.publishedSlug } : {}),
+      ...(typeof input.boonCoverageHtml === "string" ? { boonCoverageHtml: input.boonCoverageHtml } : {}),
     };
 
     const existing = comps.find((c) => c.id === id);

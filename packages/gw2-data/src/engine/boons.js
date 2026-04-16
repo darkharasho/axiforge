@@ -60,8 +60,26 @@ function analyzeBoons(skills, traits, overrides, activeTraitIds) {
     activeTraitIds.has(2220);
 
   function processEntity(entity, type) {
-    const facts = entity.facts || [];
+    const baseFacts = entity.facts || [];
     const description = entity.description || "";
+
+    // Merge traited_facts when the required trait is active (mirrors detail-panel logic).
+    // Entries with an `overrides` index replace the base fact at that position;
+    // entries without `overrides` are appended (e.g., Specter Wells gaining Resistance).
+    let facts = baseFacts;
+    const traitedFacts = entity.traitedFacts || [];
+    if (traitedFacts.length && activeTraitIds && activeTraitIds.size) {
+      facts = [...baseFacts];
+      for (const tf of traitedFacts) {
+        if (!activeTraitIds.has(Number(tf.requires_trait))) continue;
+        const { requires_trait: _r, overrides, ...factData } = tf;
+        if (overrides !== undefined && overrides !== null && overrides >= 0 && overrides < facts.length) {
+          facts[overrides] = factData;
+        } else if (overrides === undefined || overrides === null) {
+          facts.push(factData);
+        }
+      }
+    }
 
     // Collect all boon names from this entity for ally classification
     const entityBoonNames = [];

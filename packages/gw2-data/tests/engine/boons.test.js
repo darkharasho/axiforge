@@ -108,6 +108,64 @@ describe("analyzeBoons", () => {
     expect(fury.sources[0].isAlly).toBe(true);
   });
 
+  test("includes traited_facts boons when required trait is active", () => {
+    const skills = [{
+      name: "Well of Gloom",
+      description: "Well. Shadowstep to your target location and drop a well that cripples foes and heals allies.",
+      icon: "",
+      facts: [
+        { type: "Buff", status: "Crippled", apply_count: 1, duration: 2 },
+      ],
+      traitedFacts: [
+        { type: "Buff", status: "Resistance", apply_count: 1, duration: 3, requires_trait: 2285 },
+      ],
+    }];
+    // Trait 2285 is active
+    const result = analyzeBoons(skills, [], new Map(), new Set([2285]));
+    const resistance = result.boons.find((b) => b.name === "Resistance");
+    expect(resistance).toBeDefined();
+    expect(resistance.sources).toHaveLength(1);
+    expect(resistance.sources[0].name).toBe("Well of Gloom");
+  });
+
+  test("excludes traited_facts boons when required trait is NOT active", () => {
+    const skills = [{
+      name: "Well of Gloom",
+      description: "Well. Shadowstep to your target location and drop a well that cripples foes and heals allies.",
+      icon: "",
+      facts: [
+        { type: "Buff", status: "Crippled", apply_count: 1, duration: 2 },
+      ],
+      traitedFacts: [
+        { type: "Buff", status: "Resistance", apply_count: 1, duration: 3, requires_trait: 2285 },
+      ],
+    }];
+    // Trait 2285 is NOT active
+    const result = analyzeBoons(skills, [], new Map(), new Set([1234]));
+    const resistance = result.boons.find((b) => b.name === "Resistance");
+    expect(resistance).toBeUndefined();
+  });
+
+  test("traited_facts with overrides index replaces base fact", () => {
+    const skills = [{
+      name: "Test Skill",
+      description: "Grant Might to allies.",
+      icon: "",
+      facts: [
+        { type: "Buff", status: "Might", apply_count: 3, duration: 8 },
+      ],
+      traitedFacts: [
+        { type: "Buff", status: "Might", apply_count: 5, duration: 10, requires_trait: 100, overrides: 0 },
+      ],
+    }];
+    const result = analyzeBoons(skills, [], new Map(), new Set([100]));
+    const might = result.boons.find((b) => b.name === "Might");
+    expect(might).toBeDefined();
+    expect(might.sources).toHaveLength(1);
+    expect(might.sources[0].stacks).toBe(5);
+    expect(might.sources[0].duration).toBe(10);
+  });
+
   test("sorts boons by display order, conditions alphabetically", () => {
     const skills = [{
       name: "Multi", description: "", icon: "",

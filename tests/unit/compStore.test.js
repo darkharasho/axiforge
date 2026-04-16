@@ -230,6 +230,35 @@ describe("CompStore — published fields", () => {
   });
 });
 
+describe("CompStore — boonCoverageHtml", () => {
+  let store, dir;
+  beforeEach(async () => ({ store, dir } = await makeTempStore()));
+  afterEach(async () => cleanupDir(dir));
+
+  test("persists boonCoverageHtml on upsert", async () => {
+    const comp = await store.upsertComp(makeComp({
+      boonCoverageHtml: "<div>coverage</div>",
+    }));
+    expect(comp.boonCoverageHtml).toBe("<div>coverage</div>");
+
+    const comps = await store.listComps();
+    expect(comps[0].boonCoverageHtml).toBe("<div>coverage</div>");
+  });
+
+  test("preserves boonCoverageHtml when updating other fields", async () => {
+    const created = await store.upsertComp(makeComp({
+      boonCoverageHtml: "<div>coverage</div>",
+    }));
+    const updated = await store.upsertComp({ ...created, name: "Renamed" });
+    expect(updated.boonCoverageHtml).toBe("<div>coverage</div>");
+  });
+
+  test("does not set boonCoverageHtml when not provided", async () => {
+    const comp = await store.upsertComp(makeComp());
+    expect(comp.boonCoverageHtml).toBeUndefined();
+  });
+});
+
 describe("CompStore — deleteComps (batch)", () => {
   let store, dir;
   beforeEach(async () => ({ store, dir } = await makeTempStore()));
