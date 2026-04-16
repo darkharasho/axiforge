@@ -1,3 +1,11 @@
+## Version v0.6.2 — April 16, 2026
+
+### New Features
+- **Connecting to a shared org automatically opens the library** — after clicking Connect, the settings modal closes and you're taken straight to the library with the shared folder already visible and showing its sync progress. Previously you had to navigate there manually.
+
+### Bug Fixes
+- **Builds and comps update live when another user changes them** — previously, a change synced from another user (such as a gamemode change) would be written to the local store but the library wouldn't reflect it until you navigated away and back. The library now updates immediately as items finish syncing, so nothing unexpectedly disappears from view.
+
 ## Version v0.6.1 — April 16, 2026
 
 ### Bug Fixes
