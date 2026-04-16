@@ -16,6 +16,8 @@ app.commandLine.appendSwitch("class", "AxiForge");
 const { BuildStore } = require("./buildStore");
 const { FolderStore } = require("./folderStore");
 const { CompStore } = require("./compStore");
+const { SyncStore } = require("./syncStore");
+const { SharedLibrary } = require("./sharedLibrary");
 const { beginGitHubDeviceAuth, completeGitHubDeviceAuth } = require("./githubAuth");
 const {
   TARGET_REPO,
@@ -55,6 +57,7 @@ const dataDir = path.join(app.getPath("userData"), "data");
 const store = new BuildStore(dataDir);
 const folderStore = new FolderStore(dataDir);
 const compStore = new CompStore(dataDir);
+const syncStore = new SyncStore(dataDir);
 
 // On Windows, the taskbar follows the "system" theme (SystemUsesLightTheme)
 // while nativeTheme.shouldUseDarkColors follows the "app" theme. These can
@@ -232,9 +235,12 @@ app.whenReady().then(async () => {
   await store.migrateCompIdToCompIds();
   await folderStore.init();
   await compStore.init();
+  await syncStore.init();
   await initDiskCache(dataDir);
   initWikiClient(dataDir);
   await migrateCompGameModes(store, compStore);
+  const sharedLibrary = new SharedLibrary({ buildStore: store, compStore, folderStore, syncStore });
+  sharedLibrary.startPolling();
 
   // Restore last window position/size if valid
   let savedBounds;
@@ -367,6 +373,11 @@ app.whenReady().then(async () => {
     if (saved.folderId) {
       await folderStore.touchFolders([saved.folderId]);
     }
+    // Trigger shared library push if in a shared folder
+    const folder = (await folderStore.listFolders()).find((f) => f.id === saved.folderId);
+    if (folder?.shared) {
+      sharedLibrary.schedulePush("build", saved);
+    }
     return saved;
   });
   ipcMain.handle("builds:delete", async (_e, id) => {
@@ -378,6 +389,12 @@ app.whenReady().then(async () => {
     await compStore.removeBuildFromComps(id);
     if (folderId) {
       await folderStore.touchFolders([folderId]);
+      const folder = (await folderStore.listFolders()).find((f) => f.id === folderId);
+      if (folder?.shared) {
+        sharedLibrary.deleteBuildRemote(folderId, id).catch((err) => {
+          console.error("Shared library remote delete failed:", err.message);
+        });
+      }
     }
     return true;
   });
@@ -424,10 +441,31 @@ app.whenReady().then(async () => {
 
   // Comp CRUD
   ipcMain.handle("comps:list", () => compStore.listComps());
-  ipcMain.handle("comps:save", (_e, comp) => compStore.upsertComp(comp));
+  ipcMain.handle("comps:save", async (_e, comp) => {
+    const saved = await compStore.upsertComp(comp);
+    // Trigger shared library push if in a shared folder
+    if (saved.folderId) {
+      const folder = (await folderStore.listFolders()).find((f) => f.id === saved.folderId);
+      if (folder?.shared) {
+        sharedLibrary.schedulePush("comp", saved);
+      }
+    }
+    return saved;
+  });
   ipcMain.handle("comps:delete", async (_e, id) => {
+    const comps = await compStore.listComps();
+    const comp = comps.find((c) => c.id === id);
+    const folderId = comp?.folderId;
     await compStore.deleteComp(id);
     await store.clearCompFromBuilds([id]);
+    if (folderId) {
+      const folder = (await folderStore.listFolders()).find((f) => f.id === folderId);
+      if (folder?.shared) {
+        sharedLibrary.deleteCompRemote(folderId, id).catch((err) => {
+          console.error("Shared library remote comp delete failed:", err.message);
+        });
+      }
+    }
   });
   ipcMain.handle("comps:reorder", (_e, updates) => compStore.reorderComps(updates));
   ipcMain.handle("comps:delete-batch", async (_e, ids) => {
@@ -1256,6 +1294,120 @@ app.whenReady().then(async () => {
 
   // .axicode file export/import
   registerAxicodeFileHandlers(win);
+
+  // ─── Shared Library ─────────────────────────────────────────────────────────
+  ipcMain.handle("shared-library:list-orgs", async () => {
+    const session = await getSession();
+    if (!session) return [];
+    const targets = await listTargets(session.token, session.viewer.login);
+    return targets.filter((t) => t.type === "org");
+  });
+
+  ipcMain.handle("shared-library:setup", async (_e, orgName) => {
+    const session = await getSession();
+    if (!session) throw new Error("Not logged in");
+    const { ensureSharedRepo } = require("./githubApi");
+    await ensureSharedRepo(session.token, orgName);
+    const auth = await getAuthRecord();
+    await store.saveAuth({
+      ...auth,
+      sharedLibrary: { orgName, repoName: "axibuilds-shared" },
+    });
+    return { orgName, repoName: "axibuilds-shared" };
+  });
+
+  ipcMain.handle("shared-library:share-folder", async (_e, folderId) => {
+    await sharedLibrary.shareFolder(folderId);
+    return true;
+  });
+
+  ipcMain.handle("shared-library:unshare-folder", async (_e, folderId) => {
+    await sharedLibrary.unshareFolder(folderId);
+    return true;
+  });
+
+  ipcMain.handle("shared-library:pull-folder", async (_e, folderId) => {
+    await sharedLibrary.pullFolder(folderId);
+    return true;
+  });
+
+  ipcMain.handle("shared-library:pull-all", async () => {
+    await sharedLibrary.pullAll();
+    return true;
+  });
+
+  ipcMain.handle("shared-library:connect", async () => {
+    const auth = await getAuthRecord();
+    if (!auth?.sharedLibrary?.orgName) throw new Error("No shared library configured");
+
+    const { getRepoTree, getFileContents } = require("./githubApi");
+    const tree = await getRepoTree(
+      auth.token, auth.sharedLibrary.orgName,
+      auth.sharedLibrary.repoName || "axibuilds-shared"
+    );
+
+    const folderMetas = [];
+    for (const entry of tree) {
+      const match = entry.path.match(/^folders\/([^/]+)\/meta\.json$/);
+      if (match) {
+        const { content } = await getFileContents(
+          auth.token, auth.sharedLibrary.orgName,
+          auth.sharedLibrary.repoName || "axibuilds-shared",
+          entry.path
+        );
+        if (content) folderMetas.push(JSON.parse(content));
+      }
+    }
+
+    // Create local folders for each remote folder (if they don't exist)
+    const localFolders = await folderStore.listFolders();
+    for (const meta of folderMetas) {
+      const existing = localFolders.find((f) => f.id === meta.id);
+      if (!existing) {
+        await folderStore.upsertFolder({
+          id: meta.id,
+          name: meta.name,
+          sortOrder: meta.sortOrder || 0,
+          shared: true,
+          orgName: auth.sharedLibrary.orgName,
+        });
+      } else if (!existing.shared) {
+        await folderStore.upsertFolder({
+          id: existing.id,
+          name: meta.name,
+          shared: true,
+          orgName: auth.sharedLibrary.orgName,
+        });
+      }
+    }
+
+    await sharedLibrary.pullAll();
+    return true;
+  });
+
+  ipcMain.handle("shared-library:disconnect", async () => {
+    sharedLibrary.stopPolling();
+    const auth = await getAuthRecord();
+    delete auth.sharedLibrary;
+    await store.saveAuth(auth);
+    // Unmark all shared folders
+    const folders = await folderStore.listFolders();
+    for (const f of folders.filter((f) => f.shared)) {
+      await folderStore.upsertFolder({ id: f.id, name: f.name, shared: false });
+    }
+    await syncStore.reset();
+    return true;
+  });
+
+  ipcMain.handle("shared-library:get-config", async () => {
+    const auth = await getAuthRecord();
+    return auth?.sharedLibrary || null;
+  });
+
+  ipcMain.handle("shared-library:force-push", async (_e, type, item) => {
+    if (type === "build") return sharedLibrary.pushBuild(item);
+    if (type === "comp") return sharedLibrary.pushComp(item);
+  });
 });
 
 app.on("window-all-closed", () => {

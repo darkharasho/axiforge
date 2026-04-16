@@ -108,4 +108,23 @@ contextBridge.exposeInMainWorld("desktopApi", {
     ipcRenderer.removeAllListeners("publish-progress");
     ipcRenderer.on("publish-progress", (_e, step) => cb(step));
   },
+  // Shared Library
+  listOrgs: () => ipcRenderer.invoke("shared-library:list-orgs"),
+  setupSharedLibrary: (orgName) => ipcRenderer.invoke("shared-library:setup", orgName),
+  shareFolder: (folderId) => ipcRenderer.invoke("shared-library:share-folder", folderId),
+  unshareFolder: (folderId) => ipcRenderer.invoke("shared-library:unshare-folder", folderId),
+  pullFolder: (folderId) => ipcRenderer.invoke("shared-library:pull-folder", folderId),
+  pullAllShared: () => ipcRenderer.invoke("shared-library:pull-all"),
+  connectSharedLibrary: () => ipcRenderer.invoke("shared-library:connect"),
+  disconnectSharedLibrary: () => ipcRenderer.invoke("shared-library:disconnect"),
+  getSharedLibraryConfig: () => ipcRenderer.invoke("shared-library:get-config"),
+  forcePush: (type, item) => ipcRenderer.invoke("shared-library:force-push", type, item),
+  onSyncConflict: (cb) => {
+    ipcRenderer.removeAllListeners("sync-conflict");
+    ipcRenderer.on("sync-conflict", (_e, data) => cb(data));
+  },
+  onSyncStatus: (cb) => {
+    ipcRenderer.removeAllListeners("sync-status");
+    ipcRenderer.on("sync-status", (_e, status) => cb(status));
+  },
 });
