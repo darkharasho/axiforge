@@ -1,3 +1,8 @@
+## Version v0.4.3 — April 15, 2026
+
+### Bug Fixes
+- **Builds appeared to disappear after updating to v0.4.2** — an internal app-name change in v0.4.2 caused Electron to store data under a new folder, leaving existing builds stranded at the previous location. This release restores the original data path so your builds reappear automatically on launch. No data was lost; if you want to verify, your builds live at `~/.config/axiforge-desktop/data/` on Linux and `%APPDATA%/axiforge-desktop/data/` on Windows.
+
 ## Version v0.4.2 — April 15, 2026
 
 ### New Features
