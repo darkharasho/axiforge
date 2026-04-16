@@ -1,3 +1,12 @@
+## Version v0.5.0 — April 16, 2026
+
+### New Features
+- **Shared build library via GitHub organizations** — org members can now share build folders with their entire organization. An admin sets up the shared library once from Settings → Shared Library, then any org member can connect and get all shared folders pulled down automatically. Changes sync in real time: saving a build pushes to GitHub within 2 seconds, and the app polls for remote changes every 5 minutes. Shared folders show a sync status indicator (spinner while syncing, checkmark when done) in the sidebar, content area, and build editor. Subfolders within shared folders are also synced via `meta.json`, so the full folder hierarchy is preserved for new members.
+- **Signet active skill effects** — signets now have a 3-state toggle: passive on, passive off, and active used. The "active" state simulates using the signet's active skill, showing the stat changes that result (e.g. Signet of Bane removes its passive power bonus and applies the active effect). The Attributes panel and stat breakdown tooltips update immediately when toggling.
+
+### Bug Fixes
+- Fixed a double-scrollbar issue on certain panel layouts caused by incorrect total height calculation.
+
 ## Version v0.4.3 — April 15, 2026
 
 ### Bug Fixes
