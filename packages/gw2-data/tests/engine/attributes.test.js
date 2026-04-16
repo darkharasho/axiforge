@@ -357,6 +357,75 @@ describe("computeAttributes", () => {
     expect(result.signets.Toughness).toBe(0);
   });
 
+  // ── 3-state signet tests ──────────────────────────────────────────────────
+
+  test("signet 'passive' string state applies passive bonus (same as true)", () => {
+    const ctx = makeCtx({
+      skills: { healId: null, utilityIds: [9093], eliteId: null },
+      activeSignets: { 9093: "passive" },
+    });
+    expect(computeAttributes(ctx, makeCatalogs()).signets.Power).toBe(180);
+  });
+
+  test("signet 'cooldown' state removes passive, applies no active effect", () => {
+    // Bane Signet (9093) has no SIGNET_ACTIVE_EFFECTS entry — cooldown = no bonus
+    const ctx = makeCtx({
+      skills: { healId: null, utilityIds: [9093], eliteId: null },
+      activeSignets: { 9093: "cooldown" },
+    });
+    const result = computeAttributes(ctx, makeCatalogs());
+    expect(result.signets.Power).toBe(0);
+  });
+
+  test("Signet of Fury 'active' state applies +360 Precision +360 Ferocity (not passive +180 Precision)", () => {
+    // Signet of Fury (14410): passive = +180 Precision; active = +360 Precision +360 Ferocity
+    const ctx = makeCtx({
+      skills: { healId: null, utilityIds: [14410], eliteId: null },
+      activeSignets: { 14410: "active" },
+    });
+    const result = computeAttributes(ctx, makeCatalogs());
+    expect(result.signets.Precision).toBe(360);
+    expect(result.signets.Ferocity).toBe(360);
+  });
+
+  test("Signet of Might 'active' state removes Power passive and adds 10 Might stacks to boons", () => {
+    // Signet of Might (14404): passive = +180 Power; active = 10× Might = +300 Power/Condi
+    const ctx = makeCtx({
+      skills: { healId: null, utilityIds: [14404], eliteId: null },
+      activeSignets: { 14404: "active" },
+    });
+    const result = computeAttributes(ctx, makeCatalogs());
+    // Passive Power gone
+    expect(result.signets.Power).toBe(0);
+    // Boon Power from 10× Might = 10 × 30 = 300
+    expect(result.boons.Power).toBe(300);
+    expect(result.boons.ConditionDamage).toBe(300);
+    // signetActiveBoons exposed for UI
+    expect(result.signetActiveBoons.might).toBe(10);
+  });
+
+  test("Signet of Fury 'cooldown' removes Precision passive with no active stats", () => {
+    const ctx = makeCtx({
+      skills: { healId: null, utilityIds: [14410], eliteId: null },
+      activeSignets: { 14410: "cooldown" },
+    });
+    const result = computeAttributes(ctx, makeCatalogs());
+    expect(result.signets.Precision).toBe(0);
+    expect(result.signets.Ferocity).toBe(0);
+  });
+
+  test("signetActiveBoons.might stacks with user assumedBoons.might", () => {
+    // User has 5 assumed Might stacks + Signet of Might active gives 10 more = 15 total
+    const ctx = makeCtx({
+      skills: { healId: null, utilityIds: [14404], eliteId: null },
+      activeSignets: { 14404: "active" },
+      assumedBoons: { might: 5 },
+    });
+    const result = computeAttributes(ctx, makeCatalogs());
+    // 15 × 30 = 450 Power from boons
+    expect(result.boons.Power).toBe(450);
+  });
+
   test("Pinnacle of Strength adds +10 Power per Might stack (40 instead of 30)", () => {
     const catalogs = makeCatalogs({
       traitById: new Map([[1453, {
