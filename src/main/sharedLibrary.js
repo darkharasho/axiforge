@@ -17,10 +17,13 @@ class SharedLibrary {
     this._pushQueue = Promise.resolve(); // serializes GitHub API writes
   }
 
-  // Serializes push operations to avoid concurrent commit conflicts on GitHub
+  // Serializes push operations to avoid concurrent commit conflicts on GitHub.
+  // Errors are caught so the queue itself never rejects (which would break the chain),
+  // but they are re-thrown to the caller so the caller can handle them.
   _enqueuePush(fn) {
-    const next = this._pushQueue.then(() => fn()).catch(() => {});
-    this._pushQueue = next;
+    const next = this._pushQueue.then(() => fn());
+    // Attach a no-op catch to _pushQueue so a failure doesn't prevent later items from running
+    this._pushQueue = next.catch(() => {});
     return next;
   }
 
@@ -48,8 +51,12 @@ class SharedLibrary {
   async pullFolder(folderId) {
     const auth = await this.#getAuth();
     if (!auth) return;
+    // Always pull from the root shared folder — subfolders don't have their own GitHub path
+    const folders = await this.folderStore.listFolders();
+    const rootShared = this._findRootShared(folderId, folders);
+    const targetId = rootShared?.id || folderId;
     const tree = await api().getRepoTree(auth.token, auth.org, auth.repo);
-    await this.#pullFolderWithTree(folderId, tree, auth);
+    await this.#pullFolderWithTree(targetId, tree, auth);
   }
 
   async pullAll() {
@@ -141,6 +148,14 @@ class SharedLibrary {
 
     for (const { relPath, sha } of changed) {
       const fullPath = `${prefix}${relPath}`;
+      // Emit per-item syncing so the UI shows a spinner on the item while it downloads
+      if (relPath.startsWith("builds/")) {
+        const itemId = relPath.replace("builds/", "").replace(/\.json$/, "");
+        this._emit("sync-status", { status: "syncing", type: "build", id: itemId, folderId });
+      } else if (relPath.startsWith("comps/")) {
+        const itemId = relPath.replace("comps/", "").replace(/\.json$/, "");
+        this._emit("sync-status", { status: "syncing", type: "comp", id: itemId, folderId });
+      }
       const { content } = await api().getFileContents(auth.token, auth.org, auth.repo, fullPath);
       if (!content) continue;
       const data = JSON.parse(content);
@@ -162,6 +177,7 @@ class SharedLibrary {
         data.folderId = restoreFolderId;
         await this.buildStore.upsertBuild(data);
         await this.syncStore.setSha(folderId, key, sha);
+        this._emit("sync-status", { status: "synced", type: "build", id: data.id, folderId });
       } else if (relPath.startsWith("comps/")) {
         const restoreFolderId = data.folderId || folderId;
         if (restoreFolderId !== folderId) {
@@ -178,6 +194,7 @@ class SharedLibrary {
         data.folderId = restoreFolderId;
         await this.compStore.upsertComp(data);
         await this.syncStore.setSha(folderId, key, sha);
+        this._emit("sync-status", { status: "synced", type: "comp", id: data.id, folderId });
       }
     }
 
@@ -441,6 +458,7 @@ class SharedLibrary {
   // ─── Share / unshare folder ─────────────────────────────────────────────────
 
   async shareFolder(folderId) {
+    return this._enqueuePush(async () => {
     const auth = await this.#getAuth();
     if (!auth) throw new Error("Not authenticated or no shared library configured");
 
@@ -491,32 +509,37 @@ class SharedLibrary {
     for (const comp of comps.filter((c) => folderTree.has(c.folderId))) {
       await this.pushComp(comp);
     }
+    }); // end _enqueuePush
   }
 
   async unshareFolder(folderId) {
+    // Cancel any pending debounced pushes for items in this folder to prevent them
+    // from re-uploading content to a folder we're about to remove from GitHub.
+    for (const [key, timer] of this._pushTimers) {
+      clearTimeout(timer);
+      this._pushTimers.delete(key);
+    }
+
     const folders = await this.folderStore.listFolders();
     const folder = folders.find((f) => f.id === folderId);
     if (!folder) return;
 
-    // Delete all files under folders/{folderId}/ from GitHub
+    // Delete all files under folders/{folderId}/ from GitHub.
+    // Throw on non-404 errors so we don't mark the folder unshared if cleanup fails.
     const auth = await this.#getAuth();
     if (auth) {
-      try {
-        const tree = await api().getRepoTree(auth.token, auth.org, auth.repo);
-        const prefix = `folders/${folderId}/`;
-        const filesToDelete = tree.filter((e) => e.path.startsWith(prefix));
-        for (const file of filesToDelete) {
-          try {
-            await api().deleteSharedFile(
-              auth.token, auth.org, auth.repo, file.path, file.sha, "main",
-              `Remove shared folder: ${folderId}`
-            );
-          } catch (err) {
-            if (err?.status !== 404) console.error(`Failed to delete ${file.path}:`, err.message);
-          }
+      const tree = await api().getRepoTree(auth.token, auth.org, auth.repo);
+      const prefix = `folders/${folderId}/`;
+      const filesToDelete = tree.filter((e) => e.path.startsWith(prefix));
+      for (const file of filesToDelete) {
+        try {
+          await api().deleteSharedFile(
+            auth.token, auth.org, auth.repo, file.path, file.sha, "main",
+            `Remove shared folder: ${folderId}`
+          );
+        } catch (err) {
+          if (err?.status !== 404) throw err; // 404 = already gone, anything else = real failure
         }
-      } catch (err) {
-        console.error("Failed to delete shared folder from GitHub:", err.message);
       }
     }
 
@@ -567,11 +590,15 @@ class SharedLibrary {
           }
           if (result?.conflict) {
             this._emit("sync-conflict", { type, id: item.id, title: item.title || item.name, folderId: item.folderId });
+            // Clear per-item syncing state even on conflict (conflict handled by separate toast)
+            this._emit("sync-status", { status: "synced", type, id: item.id, folderId: item.folderId });
           } else {
+            this._emit("sync-status", { status: "synced", type, id: item.id, folderId: item.folderId });
             this._emit("sync-status", { status: "synced", folderId: item.folderId });
           }
         } catch (err) {
           console.error(`Shared library push failed for ${key}:`, err.message);
+          this._emit("sync-status", { status: "error", type, id: item.id, folderId: item.folderId });
           this._emit("sync-status", { status: "error", folderId: item.folderId });
         }
       });

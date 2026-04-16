@@ -51,6 +51,8 @@ export const state = {
   },
   sharedLibraryConfig: null,  // { orgName, repoName } or null
   folderSyncStatus: {},  // map of folderId → "syncing"|"synced"|"error"
+  buildSyncStatus: {},   // map of buildId  → "syncing"|"synced"|"error"
+  compSyncStatus: {},    // map of compId   → "syncing"|"synced"|"error"
   skillSearch: "",
   catalogCache: new Map(),
   activeCatalog: null,

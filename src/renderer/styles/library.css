@@ -1849,6 +1849,10 @@
   color: #4caf50;
 }
 
+.lib-content-sync-indicator--error {
+  color: #e57373;
+}
+
 /* Spinner animation for syncing state */
 @keyframes sync-spin {
   to { transform: rotate(360deg); }

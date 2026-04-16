@@ -75,6 +75,29 @@ function _findRootSharedFolderInState(folderId) {
 // Inline SVGs for sync indicators (no external imports needed)
 const _syncSpinnerSvg = `<svg class="sync-spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 2a10 10 0 0 1 10 10"/></svg>`;
 const _syncCheckSvg = `<svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd"/></svg>`;
+const _syncErrorSvg = `<svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.346 0-2.189-1.458-1.515-2.625L8.485 2.495ZM10 5a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 10 5Zm0 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clip-rule="evenodd"/></svg>`;
+
+// Apply or remove a sync indicator on all content item elements for a build or comp.
+function _updateItemSyncIndicators(type, id, status) {
+  const attr = type === "build" ? `data-build-id` : `data-comp-id`;
+  document.querySelectorAll(`[${attr}="${CSS.escape(id)}"]`).forEach((cardEl) => {
+    let badge = cardEl.querySelector(".lib-content-sync-indicator");
+    if (!status) {
+      badge?.remove();
+      return;
+    }
+    if (!badge) {
+      badge = document.createElement("span");
+      const nameEl =
+        cardEl.querySelector(".lib-list-row__title, .lib-tv__name, .lib-grid-card__title, .lib-icon-item__label, .lib-col__name") ||
+        cardEl;
+      nameEl.appendChild(badge);
+    }
+    badge.className = `lib-content-sync-indicator lib-content-sync-indicator--${status}`;
+    badge.innerHTML = status === "syncing" ? _syncSpinnerSvg : status === "error" ? _syncErrorSvg : _syncCheckSvg;
+    badge.title = status === "syncing" ? "Syncing…" : status === "error" ? "Sync failed" : "Synced";
+  });
+}
 
 // Apply or remove a sync indicator on all sidebar/content folder elements for folderId.
 function _updateFolderSyncIndicators(folderId, status) {
@@ -452,9 +475,33 @@ async function init() {
   // doesn't clobber a handler added in library.js.
   window.desktopApi.onSyncStatus?.((data) => {
     if (!data || typeof data !== "object") return;
-    const { status, folderId } = data;
-    if (!folderId || !status) return;
+    const { status, folderId, type, id } = data;
+    if (!status) return;
 
+    // Per-item event (build or comp)
+    if (type && id) {
+      const statusMap = type === "build" ? "buildSyncStatus" : "compSyncStatus";
+      if (status === "synced") {
+        // "synced" is the default for shared-folder items — just clear any active status
+        delete state[statusMap][id];
+      } else {
+        state[statusMap][id] = status;
+        if (status === "syncing") {
+          // Safety: clear stuck syncing after 60s so the spinner doesn't hang forever
+          setTimeout(() => {
+            if (state[statusMap][id] === "syncing") {
+              delete state[statusMap][id];
+              _updateItemSyncIndicators(type, id, "synced");
+            }
+          }, 60000);
+        }
+      }
+      _updateItemSyncIndicators(type, id, status === "synced" ? "synced" : (state[statusMap][id] || "synced"));
+      return;
+    }
+
+    // Folder-level event
+    if (!folderId) return;
     // Resolve to root shared folder so we key by the folder visible in the sidebar
     const rootShared = _findRootSharedFolderInState(folderId);
     const trackId = rootShared?.id || folderId;

@@ -398,6 +398,7 @@ app.whenReady().then(async () => {
     const rootShared = await findRootSharedFolder(saved.folderId);
     if (rootShared) {
       _e.sender.send("sync-status", { status: "syncing", folderId: rootShared.id });
+      _e.sender.send("sync-status", { status: "syncing", type: "build", id: saved.id, folderId: rootShared.id });
       sharedLibrary.schedulePush("build", saved);
     }
     // If moved out of a shared folder (or into a different one), enforce ownership then delete remote
@@ -502,6 +503,7 @@ app.whenReady().then(async () => {
     if (destRootShared) {
       _e.sender.send("sync-status", { status: "syncing", folderId: destRootShared.id });
       for (const build of movedBuilds) {
+        _e.sender.send("sync-status", { status: "syncing", type: "build", id: build.id, folderId: destRootShared.id });
         sharedLibrary.schedulePush("build", build);
       }
     }
@@ -542,6 +544,7 @@ app.whenReady().then(async () => {
     const rootShared = await findRootSharedFolder(saved.folderId);
     if (rootShared) {
       _e.sender.send("sync-status", { status: "syncing", folderId: rootShared.id });
+      _e.sender.send("sync-status", { status: "syncing", type: "comp", id: saved.id, folderId: rootShared.id });
       sharedLibrary.schedulePush("comp", saved);
     }
     // If moved out of a shared folder (or into a different one), enforce ownership then delete remote
@@ -1450,7 +1453,14 @@ app.whenReady().then(async () => {
   });
 
   ipcMain.handle("shared-library:pull-folder", async (_e, folderId) => {
-    await sharedLibrary.pullFolder(folderId);
+    _e.sender.send("sync-status", { status: "syncing", folderId });
+    try {
+      await sharedLibrary.pullFolder(folderId);
+      _e.sender.send("sync-status", { status: "synced", folderId });
+    } catch (err) {
+      _e.sender.send("sync-status", { status: "error", folderId });
+      throw err;
+    }
     return true;
   });
 
@@ -1522,6 +1532,11 @@ app.whenReady().then(async () => {
 
   ipcMain.handle("shared-library:disconnect", async () => {
     sharedLibrary.stopPolling();
+    // Cancel all pending debounced pushes so they don't fire after disconnect
+    for (const [key, timer] of sharedLibrary._pushTimers) {
+      clearTimeout(timer);
+    }
+    sharedLibrary._pushTimers.clear();
     const auth = await getAuthRecord();
     delete auth.sharedLibrary;
     await store.saveAuth(auth);
@@ -1556,10 +1571,11 @@ app.whenReady().then(async () => {
   });
 
   ipcMain.handle("shared-library:force-push", async (_e, type, item) => {
-    if (type === "build") return sharedLibrary.pushBuild(item);
-    if (type === "comp") return sharedLibrary.pushComp(item);
+    return sharedLibrary._enqueuePush(async () => {
+      if (type === "build") return sharedLibrary.pushBuild(item);
+      if (type === "comp") return sharedLibrary.pushComp(item);
+    });
   });
-});
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();

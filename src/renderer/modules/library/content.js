@@ -178,6 +178,7 @@ function folderPathText(build) {
 
 const _contentSyncSpinner = `<svg class="sync-spin" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 2a10 10 0 0 1 10 10"/></svg>`;
 const _contentSyncCheck = `<svg width="11" height="11" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd"/></svg>`;
+const _contentSyncError = `<svg width="11" height="11" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.346 0-2.189-1.458-1.515-2.625L8.485 2.495ZM10 5a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 10 5Zm0 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clip-rule="evenodd"/></svg>`;
 
 function contentSyncIndicatorHtml(folderId) {
   const status = state.folderSyncStatus?.[folderId];
@@ -186,6 +187,35 @@ function contentSyncIndicatorHtml(folderId) {
     return `<span class="lib-content-sync-indicator lib-content-sync-indicator--syncing" title="Syncing\u2026">${_contentSyncSpinner}</span>`;
   }
   if (status === "synced") {
+    return `<span class="lib-content-sync-indicator lib-content-sync-indicator--synced" title="Synced">${_contentSyncCheck}</span>`;
+  }
+  return "";
+}
+
+// Walk up the folder hierarchy to check if an item is in a shared folder.
+function _isInSharedFolder(folderId) {
+  let current = state.folders.find((f) => f.id === folderId);
+  while (current) {
+    if (current.shared) return true;
+    if (!current.parentId) return false;
+    current = state.folders.find((f) => f.id === current.parentId);
+  }
+  return false;
+}
+
+// Returns the sync indicator HTML for a build or comp item.
+// Shows a persistent checkmark for shared-folder items, spinner while syncing, warning on error.
+function itemSyncIndicatorHtml(type, item) {
+  const statusMap = type === "build" ? state.buildSyncStatus : state.compSyncStatus;
+  const activeStatus = statusMap?.[item.id];
+  if (activeStatus === "syncing") {
+    return `<span class="lib-content-sync-indicator lib-content-sync-indicator--syncing" title="Syncing\u2026">${_contentSyncSpinner}</span>`;
+  }
+  if (activeStatus === "error") {
+    return `<span class="lib-content-sync-indicator lib-content-sync-indicator--error" title="Sync failed">${_contentSyncError}</span>`;
+  }
+  // Persistent checkmark for all items in a shared folder
+  if (_isInSharedFolder(item.folderId)) {
     return `<span class="lib-content-sync-indicator lib-content-sync-indicator--synced" title="Synced">${_contentSyncCheck}</span>`;
   }
   return "";
@@ -227,7 +257,7 @@ function renderListView(container) {
       (b) => `
         <div class="lib-list-row lib-list-row--build ${b.pinned ? "lib-list-row--pinned" : ""}" data-build-id="${escapeHtml(b.id)}">
           <span class="lib-list-row__spec-icon ${profClass(b.profession)}">${getSpecIcon(b)}</span>
-          <span class="lib-list-row__title">${escapeHtml(b.title || "Untitled")}${folderPathHtml(b)}</span>
+          <span class="lib-list-row__title">${escapeHtml(b.title || "Untitled")}${folderPathHtml(b)}${itemSyncIndicatorHtml("build", b)}</span>
           <span class="lib-list-row__pills">
             ${profPillHtml(b)}${eliteSpecPillHtml(b)}${gameModePillHtml(b)}${tagPillsHtml(b)}${roleBadgeHtml(b, state.upgradeCatalog)}
           </span>
@@ -243,7 +273,7 @@ function renderListView(container) {
       (c) => `
         <div class="lib-list-row lib-list-row--comp" data-comp-id="${escapeHtml(c.id)}">
           <span class="lib-list-row__spec-icon lib-list-row__comp-icon">${compIcon}</span>
-          <span class="lib-list-row__title">${escapeHtml(c.name || "Untitled Comp")}</span>
+          <span class="lib-list-row__title">${escapeHtml(c.name || "Untitled Comp")}${itemSyncIndicatorHtml("comp", c)}</span>
           ${compBadgeHtml(c)}
         </div>
       `
@@ -337,7 +367,7 @@ function renderTableView(container) {
         <div class="lib-tv__row lib-tv__row--build ${b.pinned ? "lib-tv__row--pinned" : ""}">
           <span class="lib-tv__action">${pinStarHtml(b)}</span>
           <span class="lib-tv__icon ${profClass(b.profession)}">${getSpecIcon(b)}</span>
-          <span class="lib-tv__name">${escapeHtml(b.title || "Untitled")}${folderPathHtml(b)}</span>
+          <span class="lib-tv__name">${escapeHtml(b.title || "Untitled")}${folderPathHtml(b)}${itemSyncIndicatorHtml("build", b)}</span>
           <span class="lib-tv__profession">${escapeHtml(b.profession || "")}</span>
           <span class="lib-tv__spec">${escapeHtml(eliteSpec || "")}</span>
           <span class="lib-tv__mode">${escapeHtml(gameModeLabel(b.gameMode || "pve"))}</span>
@@ -370,7 +400,7 @@ function renderTableView(container) {
         <div class="lib-tv__row lib-tv__row--comp">
           <span class="lib-tv__action" data-toggle-table-folder="${escapeHtml(c.id)}">${chevron}</span>
           <span class="lib-tv__icon lib-list-row__comp-icon">${compIcon}</span>
-          <span class="lib-tv__name">${escapeHtml(c.name || "Untitled Comp")}</span>
+          <span class="lib-tv__name">${escapeHtml(c.name || "Untitled Comp")}${itemSyncIndicatorHtml("comp", c)}</span>
           <span class="lib-tv__profession"><span class="lib-list-row__badge">${countLabel}</span></span>
           <span class="lib-tv__spec"></span>
           <span class="lib-tv__mode"></span>
@@ -456,7 +486,7 @@ function renderGridView(container) {
             <div class="lib-grid-card__spec-icon ${profClass(b.profession)}">${getSpecIcon(b)}</div>
             ${pinStarHtml(b)}
           </div>
-          <div class="lib-grid-card__title">${escapeHtml(b.title || "Untitled")}</div>
+          <div class="lib-grid-card__title">${escapeHtml(b.title || "Untitled")}${itemSyncIndicatorHtml("build", b)}</div>
           ${folderPathHtml(b)}
           <div class="lib-grid-card__pills">
             ${profPillHtml(b)}${eliteSpecPillHtml(b)}${gameModePillHtml(b)}${roleBadgeHtml(b, state.upgradeCatalog)}
@@ -473,7 +503,7 @@ function renderGridView(container) {
         <div class="lib-grid-card lib-grid-card--comp" data-comp-id="${escapeHtml(c.id)}">
           <div class="lib-grid-card__comp-icon">${compIcon}</div>
           <div class="lib-grid-card__comp-body">
-            <div class="lib-grid-card__title">${escapeHtml(c.name || "Untitled Comp")}</div>
+            <div class="lib-grid-card__title">${escapeHtml(c.name || "Untitled Comp")}${itemSyncIndicatorHtml("comp", c)}</div>
             ${compBadgeHtml(c)}
           </div>
         </div>
@@ -518,7 +548,7 @@ function renderIconView(container) {
       (b) => `
         <div class="lib-icon-item lib-icon-item--build ${b.pinned ? "lib-icon-item--pinned" : ""} ${profClass(b.profession)}" data-build-id="${escapeHtml(b.id)}">
           <div class="lib-icon-item__icon ${profClass(b.profession)}">${getSpecIcon(b)}</div>
-          <div class="lib-icon-item__label">${escapeHtml(b.title || "Untitled")}</div>
+          <div class="lib-icon-item__label">${escapeHtml(b.title || "Untitled")}${itemSyncIndicatorHtml("build", b)}</div>
           ${folderPathHtml(b)}
         </div>
       `
@@ -530,7 +560,7 @@ function renderIconView(container) {
       (c) => `
         <div class="lib-icon-item lib-icon-item--comp" data-comp-id="${escapeHtml(c.id)}">
           <div class="lib-icon-item__icon lib-icon-item__icon--comp">${compIcon}</div>
-          <div class="lib-icon-item__label">${escapeHtml(c.name || "Untitled Comp")}</div>
+          <div class="lib-icon-item__label">${escapeHtml(c.name || "Untitled Comp")}${itemSyncIndicatorHtml("comp", c)}</div>
         </div>
       `
     )
@@ -606,7 +636,7 @@ function renderColumnsView(container) {
           <div class="lib-col__item lib-col__item--comp ${isSelected ? "lib-col__item--selected" : ""}"
                data-comp-id="${escapeHtml(c.id)}" data-col-index="${colIndex}">
             <span class="lib-col__icon lib-col__icon--comp">${compIcon}</span>
-            <span class="lib-col__name">${escapeHtml(c.name || "Untitled Comp")}</span>
+            <span class="lib-col__name">${escapeHtml(c.name || "Untitled Comp")}${itemSyncIndicatorHtml("comp", c)}</span>
             <span class="lib-col__chevron">${chevronRightIcon}</span>
           </div>
         `);
@@ -617,7 +647,7 @@ function renderColumnsView(container) {
           <div class="lib-col__item lib-col__item--build ${profClass(b.profession)}"
                data-build-id="${escapeHtml(b.id)}" data-col-index="${colIndex}">
             <span class="lib-col__icon ${profClass(b.profession)}">${getSpecIcon(b)}</span>
-            <span class="lib-col__name">${escapeHtml(b.title || "Untitled")}${folderPathHtml(b)}</span>
+            <span class="lib-col__name">${escapeHtml(b.title || "Untitled")}${folderPathHtml(b)}${itemSyncIndicatorHtml("build", b)}</span>
             ${roleBadgeHtml(b, state.upgradeCatalog)}
           </div>
         `);
