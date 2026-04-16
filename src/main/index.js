@@ -617,6 +617,60 @@ app.whenReady().then(async () => {
     const redirectFile = buildRedirectFile(fileId, encKey, "b");
     const combinedBundle = { ...spaBundle, [encFile.filePath]: encFile.content, [redirectFile.filePath]: redirectFile.content };
 
+    // Re-encrypt any published comps that contain this build so their
+    // embedded build data stays in sync (notes, traits, equipment, etc.)
+    const allComps = await compStore.listComps();
+    const affectedComps = allComps.filter(
+      (c) => c.publishedFileId && (c.buildIds || []).includes(buildId)
+    );
+    if (affectedComps.length) {
+      const allBuilds = await store.listBuilds();
+      const themedBuildsOn = await store.getSetting("appearance.themedBuildPages");
+      const compTheme = await store.getSetting("appearance.theme");
+
+      for (const comp of affectedComps) {
+        const compBuildIds = new Set(comp.buildIds || []);
+        const compBuilds = allBuilds.filter((b) => compBuildIds.has(b.id));
+        const buildsMap = {};
+
+        for (const cb of compBuilds) {
+          let enriched;
+          if (cb.id === buildId) {
+            // Reuse the enriched build we already computed above
+            enriched = { ...enrichedBuild };
+          } else {
+            try {
+              const [cat, upCat] = await Promise.all([
+                getProfessionCatalog(cb.profession, "en"),
+                getUpgradeCatalog("en"),
+              ]);
+              enriched = serializeForPublish(cb, cat, upCat);
+            } catch {
+              continue; // Skip builds that fail to enrich — don't block the publish
+            }
+            try {
+              const { generateChatLink } = require("./buildChatLink.js");
+              enriched.chatLink = await generateChatLink(cb);
+            } catch { /* */ }
+          }
+
+          const cbFileId = cb.publishedFileId || generateFileId();
+          const cbEncKey = cb.publishedKey || generateEncryptionKey();
+          const cbSlug = slugifyBuildName(cb.title);
+          const buildTheme = themedBuildsOn && cb.profession && PROFESSION_THEME_IDS[cb.profession]
+            ? PROFESSION_THEME_IDS[cb.profession]
+            : compTheme;
+          const cbSpaUrl = `https://${owner}.github.io/${TARGET_REPO}/?n=${encodeURIComponent(cbSlug)}&b=${cbFileId}.${cbEncKey}${buildTheme ? `&t=${buildTheme}` : ""}`;
+          buildsMap[cb.id] = { ...enriched, spaUrl: cbSpaUrl };
+        }
+
+        const compPayload = serializeCompForPublish(comp, buildsMap);
+        if (comp.boonCoverageHtml) compPayload.boonCoverageHtml = comp.boonCoverageHtml;
+        const compEncFile = buildEncryptedCompFile(compPayload, comp.publishedFileId, comp.publishedKey);
+        combinedBundle[compEncFile.filePath] = compEncFile.content;
+      }
+    }
+
     progress("upload");
     await publishSiteBundle(session.token, owner, combinedBundle, branch, TARGET_REPO);
 
@@ -792,6 +846,7 @@ app.whenReady().then(async () => {
       publishedFileId: compFileId,
       publishedKey: compEncKey,
       publishedSlug: compSlug,
+      boonCoverageHtml: boonCoverageHtml || comp.boonCoverageHtml || "",
     });
 
     await patchAuthRecord({
