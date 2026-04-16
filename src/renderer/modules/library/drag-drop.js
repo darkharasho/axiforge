@@ -17,6 +17,46 @@ import { state } from "../state.js";
 import { isGameModeCompatible } from "./library.js";
 import { getSelection } from "./selection.js";
 
+/** True if folderId is within a shared folder tree. */
+function _isInSharedFolder(folderId) {
+  let current = state.folders.find((f) => f.id === folderId);
+  while (current) {
+    if (current.shared) return true;
+    if (!current.parentId) return false;
+    current = state.folders.find((f) => f.id === current.parentId);
+  }
+  return false;
+}
+
+/** True if current user is an org owner. */
+function _isOrgOwner() {
+  return !!state.sharedLibraryConfig?.isOwner;
+}
+
+/**
+ * Guard against dragging items out of a shared folder when not an owner.
+ * Returns true if the move is blocked.
+ */
+function _blockedBySharedOwnership(srcFolderId, destFolderId) {
+  if (!_isInSharedFolder(srcFolderId)) return false;
+  const destShared = _isInSharedFolder(destFolderId);
+  // Moving within the same shared tree is always allowed
+  const srcRoot = _findSharedRoot(srcFolderId);
+  const destRoot = destFolderId ? _findSharedRoot(destFolderId) : null;
+  if (srcRoot && destRoot && srcRoot === destRoot) return false;
+  return !_isOrgOwner();
+}
+
+function _findSharedRoot(folderId) {
+  let current = state.folders.find((f) => f.id === folderId);
+  while (current) {
+    if (current.shared) return current.id;
+    if (!current.parentId) return null;
+    current = state.folders.find((f) => f.id === current.parentId);
+  }
+  return null;
+}
+
 let _callbacks = {};
 let _sortableInstances = [];
 let _expandTimer = null;
@@ -110,19 +150,24 @@ export function wireDragDropEvents() {
 
     const compId = evt.item?.dataset?.compId;
     if (compId) {
+      const comp = state.comps?.find((c) => c.id === compId);
+      const compSrcFolderId = comp?.folderId || null;
       if (droppedOnTarget) {
         const folderEl = droppedOnTarget.closest("[data-folder-id]");
         if (folderEl) {
           _isDragging = false;
           _draggedCompId = null;
+          if (_blockedBySharedOwnership(compSrcFolderId, folderEl.dataset.folderId)) return;
           await _callbacks.onMoveComps?.([compId], folderEl.dataset.folderId);
           return;
         }
         const navTarget = droppedOnTarget.closest("[data-navigate-folder], [data-navigate-all], [data-navigate-root]");
         if (navTarget) {
+          const destFolderId = navTarget.dataset.navigateFolder || null;
           _isDragging = false;
           _draggedCompId = null;
-          await _callbacks.onMoveComps?.([compId], navTarget.dataset.navigateFolder || null);
+          if (_blockedBySharedOwnership(compSrcFolderId, destFolderId)) return;
+          await _callbacks.onMoveComps?.([compId], destFolderId);
           _callbacks.onRefresh?.();
           return;
         }
@@ -131,8 +176,7 @@ export function wireDragDropEvents() {
       const dropContainer = evt.to;
       const folderLi = dropContainer.closest("[data-folder-id]");
       const newFolderId = folderLi?.dataset.folderId || null;
-      const comp = state.comps?.find((c) => c.id === compId);
-      const oldFolderId = comp?.folderId || null;
+      const oldFolderId = compSrcFolderId;
 
       if (newFolderId !== oldFolderId) {
         await _callbacks.onMoveComps?.([compId], newFolderId);
@@ -192,7 +236,10 @@ export function wireDragDropEvents() {
             await _callbacks.onRemoveBuildFromComp?.(id, state.currentFolder.id);
           }
         } else {
-          await moveBuilds(idsToMove, folderId);
+          const srcFolderId = state.builds.find((b) => b.id === buildId)?.folderId || null;
+          if (!_blockedBySharedOwnership(srcFolderId, folderId)) {
+            await moveBuilds(idsToMove, folderId);
+          }
         }
         _callbacks.onRefresh?.();
         return;
@@ -213,7 +260,10 @@ export function wireDragDropEvents() {
           }
         } else {
           const folderId = navTarget.dataset.navigateFolder || null;
-          await moveBuilds(idsToMove, folderId);
+          const srcFolderId = state.builds.find((b) => b.id === buildId)?.folderId || null;
+          if (!_blockedBySharedOwnership(srcFolderId, folderId)) {
+            await moveBuilds(idsToMove, folderId);
+          }
         }
         _callbacks.onRefresh?.();
         return;
@@ -229,7 +279,9 @@ export function wireDragDropEvents() {
     const oldFolderId = build?.folderId || null;
 
     if (newFolderId !== oldFolderId) {
-      await moveBuilds([buildId], newFolderId);
+      if (!_blockedBySharedOwnership(oldFolderId, newFolderId)) {
+        await moveBuilds([buildId], newFolderId);
+      }
     } else {
       // Reordered within same container — save custom sort order
       const children = [...evt.to.children]

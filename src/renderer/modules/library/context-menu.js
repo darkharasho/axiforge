@@ -118,17 +118,36 @@ export function wireContextMenuEvents() {
   });
 }
 
+// ─── Ownership helpers ──────────────────────────────────────────────────────────
+
+/** Returns true if folderId (or any ancestor) is a shared folder. */
+function _isInSharedFolder(folderId) {
+  let current = state.folders.find((f) => f.id === folderId);
+  while (current) {
+    if (current.shared) return true;
+    if (!current.parentId) return false;
+    current = state.folders.find((f) => f.id === current.parentId);
+  }
+  return false;
+}
+
+/** Returns true if the current user is an org owner of the shared library. */
+function _isOrgOwner() {
+  return !!state.sharedLibraryConfig?.isOwner;
+}
+
 // ─── Menu builders ─────────────────────────────────────────────────────────────
 
 function showBuildMenu(x, y, buildId, build) {
   const isPinned = build?.pinned;
+  const canMove = !_isInSharedFolder(build?.folderId) || _isOrgOwner();
   const items = [
     _item(playIcon, "Load", null, () => _callbacks.onLoadBuild?.(buildId)),
     _item(pencilIcon, "Rename", "F2", () => _callbacks.onRename?.(buildId)),
     _item(documentDuplicateIcon, "Duplicate", "Ctrl+D", () => _callbacks.onDuplicate?.(buildId)),
     _sep(),
     _item(starIcon, isPinned ? "Unpin" : "Pin", null, () => _callbacks.onTogglePin?.(buildId, !isPinned)),
-    _submenuItem(folderArrowDownIcon, "Move to Folder", _buildMoveToFolderItems(buildId)),
+    ...(canMove ? [_submenuItem(folderArrowDownIcon, "Move to Folder", _buildMoveToFolderItems(buildId))] : []),
     _item(tagIcon, "Edit Tags", null, () => _callbacks.onEditTags?.(buildId)),
     _sep(),
     _item(clipboardDocumentIcon, "Copy", "Ctrl+C", () => _callbacks.onCopyJson?.(buildId)),
@@ -150,10 +169,15 @@ function showBuildMenu(x, y, buildId, build) {
 
 function showMultiSelectMenu(x, y, ids) {
   const count = ids.length;
+  const anyInShared = ids.some((id) => {
+    const b = state.builds.find((b) => b.id === id);
+    return b && _isInSharedFolder(b.folderId);
+  });
+  const canMove = !anyInShared || _isOrgOwner();
   const items = [
     _header(`${count} builds selected`),
     _sep(),
-    _submenuItem(folderArrowDownIcon, "Move to Folder", _buildMoveToFolderItems(ids)),
+    ...(canMove ? [_submenuItem(folderArrowDownIcon, "Move to Folder", _buildMoveToFolderItems(ids))] : []),
     _item(tagIcon, "Add Tags", null, () => _callbacks.onEditTags?.(ids)),
     _item(starIcon, "Pin All", null, () => _callbacks.onPinAll?.(ids, true)),
     _sep(),
@@ -167,12 +191,13 @@ function showMultiSelectMenu(x, y, ids) {
 }
 
 function showCompMenu(x, y, compId, comp) {
+  const canMove = !_isInSharedFolder(comp?.folderId) || _isOrgOwner();
   const items = [
     _item(playIcon, "Open", null, () => _callbacks.onOpenComp?.(compId)),
     _item(pencilIcon, "Rename", "F2", () => _callbacks.onRenameComp?.(compId)),
     _item(documentDuplicateIcon, "Duplicate", "Ctrl+D", () => _callbacks.onDuplicateComp?.(compId)),
     _sep(),
-    _submenuItem(folderArrowDownIcon, "Move to Folder", _buildMoveToFolderItemsForComps([compId])),
+    ...(canMove ? [_submenuItem(folderArrowDownIcon, "Move to Folder", _buildMoveToFolderItemsForComps([compId]))] : []),
     _sep(),
     _item(clipboardDocumentIcon, "Copy JSON", "Ctrl+C", () => _callbacks.onCopyCompJson?.(compId)),
     _item(scissorsIcon, "Cut", "Ctrl+X", () => _callbacks.onCutCompJson?.(compId)),
@@ -186,10 +211,15 @@ function showCompMenu(x, y, compId, comp) {
 
 function showMultiCompSelectMenu(x, y, ids) {
   const count = ids.length;
+  const anyInShared = ids.some((id) => {
+    const c = state.comps?.find((c) => c.id === id);
+    return c && _isInSharedFolder(c.folderId);
+  });
+  const canMove = !anyInShared || _isOrgOwner();
   const items = [
     _header(`${count} comps selected`),
     _sep(),
-    _submenuItem(folderArrowDownIcon, "Move to Folder", _buildMoveToFolderItemsForComps(ids)),
+    ...(canMove ? [_submenuItem(folderArrowDownIcon, "Move to Folder", _buildMoveToFolderItemsForComps(ids))] : []),
     _sep(),
     _item(clipboardDocumentIcon, "Copy JSON", "Ctrl+C", () => _callbacks.onCopyCompJson?.(ids)),
     _item(scissorsIcon, "Cut", "Ctrl+X", () => _callbacks.onCutCompJson?.(ids)),
@@ -226,18 +256,20 @@ function showFolderMenu(x, y, folderId, folder) {
         await pullFolder(folderId);
         _callbacks.onRefresh?.();
       }),
-      _item(trashIcon, "Unshare Folder", null, async () => {
-        const confirmed = await showConfirmModal({
-          title: "Unshare Folder",
-          body: `Stop sharing <strong>${escapeHtml(folder?.name || folderId)}</strong>? Your local copies will be kept.`,
-          confirmLabel: "Unshare",
-          cancelLabel: "Cancel",
-        });
-        if (confirmed) {
-          await unshareFolder(folderId);
-          _callbacks.onRefresh?.();
-        }
-      }, true),
+      ...(_isOrgOwner() ? [
+        _item(trashIcon, "Unshare Folder", null, async () => {
+          const confirmed = await showConfirmModal({
+            title: "Unshare Folder",
+            body: `Stop sharing <strong>${escapeHtml(folder?.name || folderId)}</strong>? Your local copies will be kept.`,
+            confirmLabel: "Unshare",
+            cancelLabel: "Cancel",
+          });
+          if (confirmed) {
+            await unshareFolder(folderId);
+            _callbacks.onRefresh?.();
+          }
+        }, true),
+      ] : []),
     ] : hasSharedLibrary ? [
       _item(shareIcon, "Share to Org", null, async () => {
         const confirmed = await showConfirmModal({

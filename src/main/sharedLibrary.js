@@ -461,6 +461,28 @@ class SharedLibrary {
     const folder = folders.find((f) => f.id === folderId);
     if (!folder) return;
 
+    // Delete all files under folders/{folderId}/ from GitHub
+    const auth = await this.#getAuth();
+    if (auth) {
+      try {
+        const tree = await api().getRepoTree(auth.token, auth.org, auth.repo);
+        const prefix = `folders/${folderId}/`;
+        const filesToDelete = tree.filter((e) => e.path.startsWith(prefix));
+        for (const file of filesToDelete) {
+          try {
+            await api().deleteSharedFile(
+              auth.token, auth.org, auth.repo, file.path, file.sha, "main",
+              `Remove shared folder: ${folderId}`
+            );
+          } catch (err) {
+            if (err?.status !== 404) console.error(`Failed to delete ${file.path}:`, err.message);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to delete shared folder from GitHub:", err.message);
+      }
+    }
+
     await this.folderStore.upsertFolder({
       id: folderId,
       name: folder.name,

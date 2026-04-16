@@ -569,6 +569,18 @@ async function putSharedFile(token, owner, repo, filePath, content, sha, branch 
   return { sha: result?.content?.sha || null };
 }
 
+async function getOrgRole(token, org, username) {
+  try {
+    const data = await apiFetch(
+      `/orgs/${encodeURIComponent(org)}/memberships/${encodeURIComponent(username)}`,
+      token
+    );
+    return data?.role || null; // "admin" | "member"
+  } catch {
+    return null;
+  }
+}
+
 async function deleteSharedFile(token, owner, repo, filePath, sha, branch = "main", message = "Remove shared build") {
   const encodedPath = filePath.split("/").map((s) => encodeURIComponent(s)).join("/");
   await apiFetch(`/repos/${owner}/${repo}/contents/${encodedPath}`, token, {
@@ -596,4 +608,5 @@ module.exports = {
   getFileContents,
   putSharedFile,
   deleteSharedFile,
+  getOrgRole,
 };

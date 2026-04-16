@@ -389,14 +389,29 @@ app.whenReady().then(async () => {
 
   ipcMain.handle("builds:list", async () => store.listBuilds());
   ipcMain.handle("builds:save", async (_e, build) => {
+    const existing = build.id ? (await store.listBuilds()).find((b) => b.id === build.id) : null;
+    const oldFolderId = existing?.folderId ?? null;
     const saved = await store.upsertBuild(build);
     if (saved.folderId) {
       await folderStore.touchFolders([saved.folderId]);
     }
     const rootShared = await findRootSharedFolder(saved.folderId);
     if (rootShared) {
-      _e.sender.send("sync-status", { status: "syncing", folderId: saved.folderId });
+      _e.sender.send("sync-status", { status: "syncing", folderId: rootShared.id });
       sharedLibrary.schedulePush("build", saved);
+    }
+    // If moved out of a shared folder (or into a different one), enforce ownership then delete remote
+    if (oldFolderId && oldFolderId !== saved.folderId) {
+      const oldRootShared = await findRootSharedFolder(oldFolderId);
+      if (oldRootShared && oldRootShared.id !== rootShared?.id) {
+        const auth = await getAuthRecord();
+        if (!auth?.sharedLibrary?.isOwner) {
+          throw new Error("Only org owners can move items out of shared folders.");
+        }
+        sharedLibrary.deleteBuildRemote(oldFolderId, saved.id).catch((err) => {
+          console.error("Failed to delete remote build after move:", err.message);
+        });
+      }
     }
     return saved;
   });
@@ -463,6 +478,21 @@ app.whenReady().then(async () => {
     const sourceFolderIds = [...new Set(
       builds.filter((b) => ids.includes(b.id) && b.folderId).map((b) => b.folderId)
     )];
+
+    // Block non-owners from moving builds out of a shared folder
+    const destRootSharedCheck = await findRootSharedFolder(folderId);
+    for (const srcId of sourceFolderIds) {
+      if (srcId === folderId) continue;
+      const srcRootShared = await findRootSharedFolder(srcId);
+      if (srcRootShared && srcRootShared.id !== destRootSharedCheck?.id) {
+        const auth = await getAuthRecord();
+        if (!auth?.sharedLibrary?.isOwner) {
+          throw new Error("Only org owners can move items out of shared folders.");
+        }
+        break;
+      }
+    }
+
     await store.moveBuilds(ids, folderId);
 
     // Handle shared folder sync — check full ancestor chain for both source and dest
@@ -506,12 +536,25 @@ app.whenReady().then(async () => {
   // Comp CRUD
   ipcMain.handle("comps:list", () => compStore.listComps());
   ipcMain.handle("comps:save", async (_e, comp) => {
+    const existing = comp.id ? (await compStore.listComps()).find((c) => c.id === comp.id) : null;
+    const oldFolderId = existing?.folderId ?? null;
     const saved = await compStore.upsertComp(comp);
-    if (saved.folderId) {
-      const rootShared = await findRootSharedFolder(saved.folderId);
-      if (rootShared) {
-        _e.sender.send("sync-status", { status: "syncing", folderId: saved.folderId });
-        sharedLibrary.schedulePush("comp", saved);
+    const rootShared = await findRootSharedFolder(saved.folderId);
+    if (rootShared) {
+      _e.sender.send("sync-status", { status: "syncing", folderId: rootShared.id });
+      sharedLibrary.schedulePush("comp", saved);
+    }
+    // If moved out of a shared folder (or into a different one), enforce ownership then delete remote
+    if (oldFolderId && oldFolderId !== saved.folderId) {
+      const oldRootShared = await findRootSharedFolder(oldFolderId);
+      if (oldRootShared && oldRootShared.id !== rootShared?.id) {
+        const auth = await getAuthRecord();
+        if (!auth?.sharedLibrary?.isOwner) {
+          throw new Error("Only org owners can move items out of shared folders.");
+        }
+        sharedLibrary.deleteCompRemote(oldFolderId, saved.id).catch((err) => {
+          console.error("Failed to delete remote comp after move:", err.message);
+        });
       }
     }
     return saved;
@@ -1375,9 +1418,9 @@ app.whenReady().then(async () => {
     const auth = await getAuthRecord();
     await store.saveAuth({
       ...auth,
-      sharedLibrary: { orgName, repoName: "axibuilds-shared" },
+      sharedLibrary: { orgName, repoName: "axibuilds-shared", isOwner: true },
     });
-    return { orgName, repoName: "axibuilds-shared" };
+    return { orgName, repoName: "axibuilds-shared", isOwner: true };
   });
 
   ipcMain.handle("shared-library:share-folder", async (_e, folderId) => {
@@ -1386,6 +1429,8 @@ app.whenReady().then(async () => {
   });
 
   ipcMain.handle("shared-library:unshare-folder", async (_e, folderId) => {
+    const auth = await getAuthRecord();
+    if (!auth?.sharedLibrary?.isOwner) throw new Error("Only org owners can unshare folders.");
     await sharedLibrary.unshareFolder(folderId);
     return true;
   });
@@ -1404,7 +1449,18 @@ app.whenReady().then(async () => {
     const auth = await getAuthRecord();
     if (!auth?.sharedLibrary?.orgName) throw new Error("No shared library configured");
 
-    const { getRepoTree, getFileContents } = require("./githubApi");
+    const { getRepoTree, getFileContents, getOrgRole } = require("./githubApi");
+
+    // Determine if this user is an org owner
+    const session = await getSession();
+    const role = session
+      ? await getOrgRole(session.token, auth.sharedLibrary.orgName, session.viewer.login)
+      : null;
+    const isOwner = role === "admin";
+    await store.saveAuth({
+      ...auth,
+      sharedLibrary: { ...auth.sharedLibrary, isOwner },
+    });
     const tree = await getRepoTree(
       auth.token, auth.sharedLibrary.orgName,
       auth.sharedLibrary.repoName || "axibuilds-shared"

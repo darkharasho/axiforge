@@ -1046,23 +1046,79 @@ async function handleDeleteComps(ids) {
 }
 
 async function handleMoveComps(compIds, folderId) {
-  const oldFolderIds = compIds.map((id) => {
+  // Check if destination is a shared folder (or inside one)
+  const destFolder = folderId ? state.folders.find((f) => f.id === folderId) : null;
+  const destIsShared = destFolder
+    ? (function isInSharedTree(f) {
+        if (!f) return false;
+        if (f.shared) return true;
+        return isInSharedTree(state.folders.find((p) => p.id === f.parentId));
+      })(destFolder)
+    : false;
+
+  // Collect builds referenced by these comps that live outside the destination folder
+  let buildsToMove = [];
+  if (destIsShared) {
+    const allBuildIds = compIds.flatMap((id) => {
+      const c = state.comps.find((c) => c.id === id);
+      return c?.buildIds || [];
+    });
+    const uniqueBuildIds = [...new Set(allBuildIds)];
+    buildsToMove = uniqueBuildIds
+      .map((bid) => state.builds?.find((b) => b.id === bid))
+      .filter((b) => b && b.folderId !== folderId);
+
+    if (buildsToMove.length > 0) {
+      const buildNames = buildsToMove
+        .slice(0, 5)
+        .map((b) => `<strong>${b.title || "Untitled"}</strong>`)
+        .join(", ");
+      const extra = buildsToMove.length > 5 ? ` and ${buildsToMove.length - 5} more` : "";
+      const confirmed = await showConfirmModal({
+        title: "Move builds to shared folder?",
+        body: `The comp${compIds.length > 1 ? "s" : ""} reference ${buildsToMove.length} build${buildsToMove.length > 1 ? "s" : ""} outside this folder: ${buildNames}${extra}.<br><br>Those builds will also be moved into the shared folder so they stay in sync for all members.`,
+        confirmLabel: "Move All",
+        cancelLabel: "Cancel",
+      });
+      if (!confirmed) return;
+    }
+  }
+
+  const oldCompFolderIds = compIds.map((id) => {
     const c = state.comps.find((c) => c.id === id);
     return { id, folderId: c?.folderId || null };
   });
+  const oldBuildFolderIds = buildsToMove.map((b) => ({ id: b.id, folderId: b.folderId }));
+
   for (const id of compIds) {
     const comp = state.comps.find((c) => c.id === id);
     if (!comp) continue;
     await window.desktopApi.saveComp({ ...comp, folderId: folderId ?? null });
   }
+  for (const build of buildsToMove) {
+    await window.desktopApi.saveBuild({ ...build, folderId: folderId ?? null });
+  }
+
   state.comps = await window.desktopApi.listComps();
-  pushUndo({ type: "move-comps", undo: async () => {
-    for (const { id, folderId } of oldFolderIds) {
-      const comp = state.comps.find((c) => c.id === id);
-      if (comp) await window.desktopApi.saveComp({ ...comp, folderId });
-    }
-    state.comps = await window.desktopApi.listComps();
-  }});
+  if (buildsToMove.length > 0) {
+    state.builds = await window.desktopApi.listBuilds();
+  }
+
+  pushUndo({
+    type: "move-comps",
+    undo: async () => {
+      for (const { id, folderId } of oldCompFolderIds) {
+        const comp = state.comps.find((c) => c.id === id);
+        if (comp) await window.desktopApi.saveComp({ ...comp, folderId });
+      }
+      for (const { id, folderId } of oldBuildFolderIds) {
+        const build = state.builds?.find((b) => b.id === id);
+        if (build) await window.desktopApi.saveBuild({ ...build, folderId });
+      }
+      state.comps = await window.desktopApi.listComps();
+      if (oldBuildFolderIds.length > 0) state.builds = await window.desktopApi.listBuilds();
+    },
+  });
   renderLibrary();
 }
 
