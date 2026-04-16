@@ -180,20 +180,43 @@ describe("SharedLibrary — pushBuild", () => {
     expect(shas["builds/b1"]).toBe("updated-sha");
   });
 
-  test("returns conflict info on 409", async () => {
+  test("retries with remote SHA on 409 and succeeds", async () => {
     const build = { id: "b1", title: "Mine", folderId: "f1" };
     const buildStore = mockBuildStore([build]);
     const compStore = mockCompStore([]);
     await folderStore.upsertFolder({ id: "f1", name: "Shared", shared: true, orgName: "test-org" });
     await syncStore.setShas("f1", { "builds/b1": "stale-sha" });
 
-    const err = new Error("Conflict");
-    err.status = 409;
-    githubApi.putSharedFile.mockRejectedValue(err);
+    const conflict = new Error("Conflict");
+    conflict.status = 409;
+    githubApi.putSharedFile
+      .mockRejectedValueOnce(conflict)       // first attempt fails
+      .mockResolvedValueOnce({ sha: "fresh-sha" }); // retry succeeds
+    githubApi.getFileContents.mockResolvedValue({ content: "{}", sha: "remote-sha" });
 
     const lib = new SharedLibrary({ buildStore, compStore, folderStore, syncStore });
     const result = await lib.pushBuild(build);
 
-    expect(result.conflict).toBe(true);
+    expect(result.conflict).toBe(false);
+    // SHA updated with the result of the successful retry
+    const shas = await syncStore.getShas("f1");
+    expect(shas["builds/b1"]).toBe("fresh-sha");
+    expect(githubApi.putSharedFile).toHaveBeenCalledTimes(2);
+  });
+
+  test("throws when 409 persists after retry", async () => {
+    const build = { id: "b1", title: "Mine", folderId: "f1" };
+    const buildStore = mockBuildStore([build]);
+    const compStore = mockCompStore([]);
+    await folderStore.upsertFolder({ id: "f1", name: "Shared", shared: true, orgName: "test-org" });
+    await syncStore.setShas("f1", { "builds/b1": "stale-sha" });
+
+    const conflict = new Error("Conflict");
+    conflict.status = 409;
+    githubApi.putSharedFile.mockRejectedValue(conflict);
+    githubApi.getFileContents.mockResolvedValue({ content: "{}", sha: "remote-sha" });
+
+    const lib = new SharedLibrary({ buildStore, compStore, folderStore, syncStore });
+    await expect(lib.pushBuild(build)).rejects.toThrow("Conflict");
   });
 });

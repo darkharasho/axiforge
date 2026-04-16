@@ -472,6 +472,10 @@ async function init() {
         }
       }, 3000);
     }
+
+    if (status === "error") {
+      showToast("Sync failed — check your connection or library access.", "error");
+    }
   });
 
   window.desktopApi.onSyncConflict?.((data) => {
@@ -781,6 +785,17 @@ function navigateToPage(page) {
   // Render library when navigating to library page
   if (page === "library") {
     renderLibrary();
+    // Eagerly pull shared library updates whenever the user opens the library
+    if (state.sharedLibraryConfig?.orgName) {
+      window.desktopApi.pullAllShared?.().then(async () => {
+        state.builds = await window.desktopApi.listBuilds();
+        state.comps = await window.desktopApi.listComps();
+        state.folders = await window.desktopApi.listFolders();
+        renderLibrary();
+      }).catch((err) => {
+        console.warn("[library] pull-on-navigate failed:", err);
+      });
+    }
   }
   // Render comps when navigating to comps page
   if (page === "comps") {
