@@ -1,3 +1,15 @@
+## Version v0.6.4 — April 16, 2026
+
+### New Features
+
+- **Shared builds publish to the org's site** — when you publish a build that lives in a shared org folder, it now always goes to that org's `axibuilds` repository (and the org's GitHub Pages site) regardless of your personal publishing target. Your personal publishing settings are unaffected.
+
+### Bug Fixes
+
+- **Publishing "Repository owner" dropdown now works** — the dropdown in Settings → Publishing was toggling open but the menu was invisible. The menu is now rendered via a portal (appended to `document.body`) so it escapes the modal's overflow and stacking-context constraints that were clipping it.
+
+---
+
 ## Version v0.6.3 — April 16, 2026
 
 ### New Features
