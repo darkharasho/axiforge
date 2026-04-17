@@ -4,6 +4,7 @@
 import { state } from "./state.js";
 import { renderCustomSelect } from "./custom-select.js";
 import { escapeHtml, delay } from "./utils.js";
+import { showConfirmModal } from "./confirm-modal.js";
 
 let _overlay = null;
 let _el = {};
@@ -238,7 +239,9 @@ export async function openSettingsModal() {
   // Populate publishing section
   _renderPublishing();
 
-  // Populate shared library section
+  // Populate shared library section — hide both while loading to avoid flash
+  if (_el.sharedSetup) _el.sharedSetup.style.display = "none";
+  if (_el.sharedConnected) _el.sharedConnected.style.display = "none";
   _loadSharedLibraryState();
 
   _overlay.classList.remove("settings-modal-overlay--hidden");
@@ -607,10 +610,10 @@ async function _loadSharedLibraryState() {
   const config = await window.desktopApi.getSharedLibraryConfig();
   if (config?.orgName) {
     _el.sharedSetup.style.display = "none";
-    _el.sharedConnected.classList.remove("settings-modal__shared-connected--hidden");
+    _el.sharedConnected.style.display = "";
     _el.sharedOrgName.textContent = config.orgName;
   } else {
-    _el.sharedConnected.classList.add("settings-modal__shared-connected--hidden");
+    _el.sharedConnected.style.display = "none";
     _el.sharedSetup.style.display = "";
     const session = await window.desktopApi.getSession();
     if (session) {
@@ -651,7 +654,22 @@ async function _connectSharedLibrary() {
 }
 
 async function _disconnectSharedLibrary() {
-  if (!confirm("Disconnect from shared library? Your local copies will be kept.")) return;
-  await window.desktopApi.disconnectSharedLibrary();
-  await _loadSharedLibraryState();
+  const confirmed = await showConfirmModal({
+    title: "Disconnect shared library?",
+    body: "Your local copies of shared builds and folders will be kept.",
+    confirmLabel: "Disconnect",
+    cancelLabel: "Cancel",
+  });
+  if (!confirmed) return;
+  _el.sharedDisconnect.disabled = true;
+  _el.sharedDisconnect.textContent = "Disconnecting…";
+  try {
+    await window.desktopApi.disconnectSharedLibrary();
+    await _loadSharedLibraryState();
+  } catch (err) {
+    _el.sharedStatus.textContent = `Error: ${err.message}`;
+  } finally {
+    _el.sharedDisconnect.disabled = false;
+    _el.sharedDisconnect.textContent = "Disconnect";
+  }
 }

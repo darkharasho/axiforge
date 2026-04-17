@@ -16,6 +16,9 @@ class SharedLibrary {
     this._pushTimers = new Map(); // debounce timers per build/comp ID
     this._pollTimer = null;
     this._pushQueue = Promise.resolve(); // serializes GitHub API writes
+    this._lastHeadSha = null; // cached HEAD SHA for cheap change detection
+    this._pullInProgress = false; // prevents concurrent pullAll() calls
+    this._rateLimitedUntil = null; // timestamp (ms) until which pulls are paused
   }
 
   // Serializes push operations to avoid concurrent commit conflicts on GitHub.
@@ -61,6 +64,18 @@ class SharedLibrary {
   }
 
   async pullAll() {
+    // Coalesce concurrent calls: if a pull is already running, skip rather
+    // than stacking up duplicate fetches that could race on upsertBuild.
+    if (this._pullInProgress) return;
+    this._pullInProgress = true;
+    try {
+      await this._pullAllInner();
+    } finally {
+      this._pullInProgress = false;
+    }
+  }
+
+  async _pullAllInner() {
     const auth = await this.#getAuth();
     if (!auth) return;
 
@@ -68,12 +83,48 @@ class SharedLibrary {
     const sharedFolders = folders.filter((f) => f.shared);
     if (!sharedFolders.length) return;
 
+    // Skip if we're in a rate-limit back-off window
+    if (this._rateLimitedUntil && Date.now() < this._rateLimitedUntil) return;
+
+    // Cheap HEAD-SHA check: one API call to see if anything changed at all.
+    // If the repo HEAD hasn't moved since the last pull we can bail immediately,
+    // which makes frequent polling and focus-triggered pulls essentially free.
+    try {
+      const headSha = await api().getHeadSha(auth.token, auth.org, auth.repo);
+      if (headSha && headSha === this._lastHeadSha) return;
+      this._lastHeadSha = headSha;
+    } catch (err) {
+      if (err.code === "GITHUB_UNAUTHORIZED") {
+        console.error("[shared-library] token expired — stopping poll");
+        this.stopPolling();
+        this._emit("sync-status", { status: "error", error: "auth" });
+        return;
+      }
+      if (err.code === "GITHUB_RATE_LIMITED") {
+        this._rateLimitedUntil = Date.now() + (err.retryAfterMs || 60_000);
+        console.warn(`[shared-library] rate limited — pausing pulls for ${Math.round((err.retryAfterMs || 60_000) / 1000)}s`);
+        return;
+      }
+      // Any other error on the lightweight check: continue to full pull anyway.
+    }
+
     // Fetch tree once for the entire repo (1 API call per poll)
     let tree;
     try {
       tree = await api().getRepoTree(auth.token, auth.org, auth.repo);
     } catch (err) {
-      // Transient error: retry once after 5 seconds
+      if (err.code === "GITHUB_UNAUTHORIZED") {
+        console.error("[shared-library] token expired — stopping poll");
+        this.stopPolling();
+        this._emit("sync-status", { status: "error", error: "auth" });
+        return;
+      }
+      if (err.code === "GITHUB_RATE_LIMITED") {
+        this._rateLimitedUntil = Date.now() + (err.retryAfterMs || 60_000);
+        console.warn(`[shared-library] rate limited — pausing pulls for ${Math.round((err.retryAfterMs || 60_000) / 1000)}s`);
+        return;
+      }
+      // Transient server error: retry once after 5 seconds
       if (err.status >= 500 && err.status < 600) {
         await new Promise((r) => setTimeout(r, 5000));
         try {
@@ -116,7 +167,11 @@ class SharedLibrary {
         if (metaSha !== file.sha) {
           const { content: metaContent } = await api().getFileContents(auth.token, auth.org, auth.repo, file.path);
           if (metaContent) {
-            const meta = JSON.parse(metaContent);
+            let meta;
+            try { meta = JSON.parse(metaContent); } catch (e) {
+              console.warn(`[shared-library] malformed meta.json for folder ${folderId} — skipping`);
+              continue;
+            }
             await this.folderStore.upsertFolder({
               id: folderId, name: meta.name, sortOrder: meta.sortOrder,
               shared: true, orgName: folder.orgName,
@@ -147,9 +202,8 @@ class SharedLibrary {
       }
     }
 
-    for (const { relPath, sha } of changed) {
-      const fullPath = `${prefix}${relPath}`;
-      // Emit per-item syncing so the UI shows a spinner on the item while it downloads
+    // Emit syncing for all changed items up-front so spinners appear immediately
+    for (const { relPath } of changed) {
       if (relPath.startsWith("builds/")) {
         const itemId = relPath.replace("builds/", "").replace(/\.json$/, "");
         this._emit("sync-status", { status: "syncing", type: "build", id: itemId, folderId });
@@ -157,12 +211,41 @@ class SharedLibrary {
         const itemId = relPath.replace("comps/", "").replace(/\.json$/, "");
         this._emit("sync-status", { status: "syncing", type: "comp", id: itemId, folderId });
       }
-      const { content } = await api().getFileContents(auth.token, auth.org, auth.repo, fullPath);
-      if (!content) continue;
-      const data = JSON.parse(content);
+    }
+
+    // Phase 1 — fetch all file contents in parallel (network I/O, safe to parallelise).
+    // Phase 2 — apply to the local store sequentially (the store does read-modify-write
+    // on a shared JSON file, so concurrent upserts would race and drop each other's writes).
+    const FETCH_CONCURRENCY = 4;
+    const fetched = [];
+    for (let i = 0; i < changed.length; i += FETCH_CONCURRENCY) {
+      const batch = await Promise.all(
+        changed.slice(i, i + FETCH_CONCURRENCY).map(async ({ relPath, sha }) => {
+          const fullPath = `${prefix}${relPath}`;
+          try {
+            const { content } = await api().getFileContents(auth.token, auth.org, auth.repo, fullPath);
+            if (!content) return null;
+            let data;
+            try { data = JSON.parse(content); } catch {
+              console.warn(`[shared-library] malformed JSON at ${fullPath} — skipping`);
+              return null;
+            }
+            return { relPath, sha, data };
+          } catch (err) {
+            console.error(`[shared-library] failed to fetch ${relPath}:`, err.message);
+            return null;
+          }
+        })
+      );
+      fetched.push(...batch);
+    }
+
+    // Phase 2 — apply writes sequentially to avoid store races
+    for (const item of fetched) {
+      if (!item) continue;
+      const { relPath, sha, data } = item;
       const key = relPath.replace(/\.json$/, "");
       if (relPath.startsWith("builds/")) {
-        // Restore subfolder if the build was in one
         const restoreFolderId = data.folderId || folderId;
         if (restoreFolderId !== folderId) {
           const allFolders = await this.folderStore.listFolders();
@@ -453,8 +536,9 @@ class SharedLibrary {
   // Debounced version — use from index.js when a subfolder is created/renamed/deleted.
   schedulePushFolderMeta(rootFolderId, delayMs = 2000) {
     const key = `meta:${rootFolderId}`;
-    if (this._pushTimers.has(key)) clearTimeout(this._pushTimers.get(key));
-    this._pushTimers.set(key, setTimeout(async () => {
+    const existing = this._pushTimers.get(key);
+    if (existing) clearTimeout(existing?.id ?? existing);
+    const timerId = setTimeout(async () => {
       this._pushTimers.delete(key);
       try {
         const result = await this.pushFolderMeta(rootFolderId);
@@ -467,7 +551,8 @@ class SharedLibrary {
         console.error(`Shared library folder meta push failed for ${rootFolderId}:`, err.message);
         this._emit("sync-status", { status: "error", folderId: rootFolderId });
       }
-    }, delayMs));
+    }, delayMs);
+    this._pushTimers.set(key, { id: timerId, scheduledAt: Date.now() });
   }
 
   // ─── Share / unshare folder ─────────────────────────────────────────────────
@@ -531,7 +616,7 @@ class SharedLibrary {
     // Cancel any pending debounced pushes for items in this folder to prevent them
     // from re-uploading content to a folder we're about to remove from GitHub.
     for (const [key, timer] of this._pushTimers) {
-      clearTimeout(timer);
+      clearTimeout(timer?.id ?? timer);
       this._pushTimers.delete(key);
     }
 
@@ -570,7 +655,14 @@ class SharedLibrary {
 
   // ─── Background poll ───────────────────────────────────────────────────────
 
-  startPolling(intervalMs = 5 * 60 * 1000) {
+  // Invalidate the cached HEAD SHA so the next pullAll() always does a full
+  // fetch even if the HEAD hasn't moved (used after a local push so other
+  // clients get their own changes reflected immediately on the next poll).
+  invalidateHeadShaCache() {
+    this._lastHeadSha = null;
+  }
+
+  startPolling(intervalMs = 60 * 1000) {
     this.stopPolling();
     this._pollTimer = setInterval(() => {
       this.pullAll().catch((err) => {
@@ -588,12 +680,20 @@ class SharedLibrary {
 
   // ─── Debounced push ────────────────────────────────────────────────────────
 
-  schedulePush(type, item, delayMs = 2000) {
+  schedulePush(type, item, delayMs = 2000, maxDelayMs = 10_000) {
     const key = `${type}:${item.id}`;
+    // If a timer is already running, reset the debounce but respect the max delay:
+    // don't push out the deadline if it's already been extended past maxDelayMs.
     if (this._pushTimers.has(key)) {
-      clearTimeout(this._pushTimers.get(key));
+      const existing = this._pushTimers.get(key);
+      const elapsed = Date.now() - existing.scheduledAt;
+      if (elapsed >= maxDelayMs - delayMs) {
+        // Already close to or past the max delay — let the existing timer fire.
+        return;
+      }
+      clearTimeout(existing.id);
     }
-    this._pushTimers.set(key, setTimeout(() => {
+    const timerId = setTimeout(() => {
       this._pushTimers.delete(key);
       this._enqueuePush(async () => {
         try {
@@ -603,6 +703,9 @@ class SharedLibrary {
           } else if (type === "comp") {
             result = await this.pushComp(item);
           }
+          // Invalidate HEAD SHA cache after any successful push so the next
+          // poll by this client doesn't skip its own freshly-landed commit.
+          this.invalidateHeadShaCache();
           if (result?.conflict) {
             this._emit("sync-conflict", { type, id: item.id, title: item.title || item.name, folderId: item.folderId });
             // Clear per-item syncing state even on conflict (conflict handled by separate toast)
@@ -617,7 +720,8 @@ class SharedLibrary {
           this._emit("sync-status", { status: "error", folderId: item.folderId });
         }
       });
-    }, delayMs));
+    }, delayMs);
+    this._pushTimers.set(key, { id: timerId, scheduledAt: Date.now() });
   }
 }
 

@@ -541,11 +541,15 @@ export function renderEditorMeta() {
     _el.saveStatus.classList.toggle("subnav__save-status--saved", !isDraft);
   }
 
-  // Sync status for shared-folder builds
+  // Sync status for shared-folder builds.
+  // Per-build status takes precedence over folder-level status so we show
+  // the most specific signal (e.g. "this build is syncing" beats "folder synced").
   if (_el.syncStatus) {
     const folderId = state.editor?.folderId;
     const rootShared = folderId ? _findRootSharedFolderInState(folderId) : null;
-    const syncStatus = rootShared ? (state.folderSyncStatus[rootShared.id] || null) : null;
+    const buildStatus = state.editor?.id ? (state.buildSyncStatus?.[state.editor.id] || null) : null;
+    const folderStatus = rootShared ? (state.folderSyncStatus[rootShared.id] || null) : null;
+    const syncStatus = buildStatus || folderStatus;
     if (syncStatus === "syncing") {
       _el.syncStatus.textContent = "Syncing\u2026";
       _el.syncStatus.className = "subnav__sync-status subnav__sync-status--syncing subnav__sync-status--active";

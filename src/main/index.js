@@ -267,6 +267,25 @@ app.whenReady().then(async () => {
   });
   sharedLibrary.startPolling();
 
+  // Pull immediately on startup so already-connected users see fresh data
+  // without waiting for the first 60-second poll tick.
+  sharedLibrary.pullAll().catch((err) => {
+    console.error("[startup-pull] error:", err.message);
+  });
+
+  // Pull on window focus so changes from other users arrive as soon as the
+  // user switches back to the app, rather than waiting for the next poll tick.
+  // Cooldown of 10s prevents rapid alt-tab churning from stacking API calls.
+  let _lastFocusPullAt = 0;
+  app.on("browser-window-focus", () => {
+    const now = Date.now();
+    if (now - _lastFocusPullAt < 10_000) return;
+    _lastFocusPullAt = now;
+    sharedLibrary.pullAll().catch((err) => {
+      console.error("[focus-pull] error:", err.message);
+    });
+  });
+
   // Restore last window position/size if valid
   let savedBounds;
   const b = await store.getSetting("windowBounds");
@@ -1520,7 +1539,7 @@ app.whenReady().then(async () => {
     return true;
   });
 
-  ipcMain.handle("shared-library:connect", async () => {
+  ipcMain.handle("shared-library:connect", async (_e) => {
     const auth = await getAuthRecord();
     if (!auth?.sharedLibrary?.orgName) throw new Error("No shared library configured");
 
@@ -1599,9 +1618,10 @@ app.whenReady().then(async () => {
 
   ipcMain.handle("shared-library:disconnect", async () => {
     sharedLibrary.stopPolling();
+    sharedLibrary.invalidateHeadShaCache(); // force fresh fetch on next connect
     // Cancel all pending debounced pushes so they don't fire after disconnect
     for (const [key, timer] of sharedLibrary._pushTimers) {
-      clearTimeout(timer);
+      clearTimeout(timer?.id ?? timer);
     }
     sharedLibrary._pushTimers.clear();
     const auth = await getAuthRecord();

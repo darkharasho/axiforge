@@ -220,3 +220,486 @@ describe("SharedLibrary — pushBuild", () => {
     await expect(lib.pushBuild(build)).rejects.toThrow("Conflict");
   });
 });
+
+// ─── pullAll — concurrency guard ────────────────────────────────────────────
+
+describe("SharedLibrary — pullAll concurrency guard", () => {
+  let dir, syncStore, folderStore;
+  beforeEach(async () => {
+    dir = await makeTempDir();
+    syncStore = new SyncStore(dir);
+    folderStore = new FolderStore(dir);
+    await syncStore.init();
+    await folderStore.init();
+  });
+  afterEach(() => cleanupDir(dir));
+
+  test("concurrent pullAll() calls only run one inner pull", async () => {
+    const buildStore = mockBuildStore([]);
+    const compStore = mockCompStore([]);
+    await folderStore.upsertFolder({ name: "Shared", shared: true, orgName: "test-org" });
+
+    // Make getHeadSha take long enough to overlap two calls
+    let getHeadShaCallCount = 0;
+    githubApi.getHeadSha.mockImplementation(async () => {
+      getHeadShaCallCount++;
+      await new Promise((r) => setTimeout(r, 20));
+      return "sha-abc";
+    });
+    githubApi.getRepoTree.mockResolvedValue([]);
+
+    const lib = new SharedLibrary({ buildStore, compStore, folderStore, syncStore });
+
+    // Fire two concurrent pullAll() calls
+    await Promise.all([lib.pullAll(), lib.pullAll()]);
+
+    // getHeadSha should only have been called once (second call was dropped by guard)
+    expect(getHeadShaCallCount).toBe(1);
+  });
+
+  test("_pullInProgress is reset to false after completion", async () => {
+    const buildStore = mockBuildStore([]);
+    const compStore = mockCompStore([]);
+    await folderStore.upsertFolder({ name: "Shared", shared: true, orgName: "test-org" });
+
+    githubApi.getHeadSha.mockResolvedValue("sha-1");
+    githubApi.getRepoTree.mockResolvedValue([]);
+
+    const lib = new SharedLibrary({ buildStore, compStore, folderStore, syncStore });
+    await lib.pullAll();
+    expect(lib._pullInProgress).toBe(false);
+  });
+
+  test("_pullInProgress is reset to false even if inner pull throws", async () => {
+    const buildStore = mockBuildStore([]);
+    const compStore = mockCompStore([]);
+    await folderStore.upsertFolder({ name: "Shared", shared: true, orgName: "test-org" });
+
+    githubApi.getHeadSha.mockRejectedValue(new Error("unexpected"));
+    // Non-UNAUTHORIZED non-RATE_LIMITED error falls through to getRepoTree
+    githubApi.getRepoTree.mockRejectedValue(new Error("network error"));
+
+    const lib = new SharedLibrary({ buildStore, compStore, folderStore, syncStore });
+    await lib.pullAll(); // should not throw
+    expect(lib._pullInProgress).toBe(false);
+  });
+
+  test("second pullAll() succeeds after the first completes", async () => {
+    const buildStore = mockBuildStore([]);
+    const compStore = mockCompStore([]);
+    await folderStore.upsertFolder({ name: "Shared", shared: true, orgName: "test-org" });
+
+    githubApi.getHeadSha
+      .mockResolvedValueOnce("sha-1")
+      .mockResolvedValueOnce("sha-2");
+    githubApi.getRepoTree.mockResolvedValue([]);
+
+    const lib = new SharedLibrary({ buildStore, compStore, folderStore, syncStore });
+    await lib.pullAll();
+    await lib.pullAll();
+    expect(githubApi.getHeadSha).toHaveBeenCalledTimes(2);
+  });
+});
+
+// ─── pullAll — HEAD SHA cache ────────────────────────────────────────────────
+
+describe("SharedLibrary — HEAD SHA cache", () => {
+  let dir, syncStore, folderStore;
+  beforeEach(async () => {
+    dir = await makeTempDir();
+    syncStore = new SyncStore(dir);
+    folderStore = new FolderStore(dir);
+    await syncStore.init();
+    await folderStore.init();
+  });
+  afterEach(() => cleanupDir(dir));
+
+  test("skips full pull when HEAD SHA has not changed", async () => {
+    const buildStore = mockBuildStore([]);
+    const compStore = mockCompStore([]);
+    await folderStore.upsertFolder({ name: "Shared", shared: true, orgName: "test-org" });
+
+    githubApi.getHeadSha.mockResolvedValue("same-sha");
+    githubApi.getRepoTree.mockResolvedValue([]);
+
+    const lib = new SharedLibrary({ buildStore, compStore, folderStore, syncStore });
+    await lib.pullAll(); // first call — populates _lastHeadSha
+    await lib.pullAll(); // second call — should skip getRepoTree
+
+    expect(githubApi.getRepoTree).toHaveBeenCalledTimes(1);
+  });
+
+  test("does full pull when HEAD SHA changes", async () => {
+    const buildStore = mockBuildStore([]);
+    const compStore = mockCompStore([]);
+    await folderStore.upsertFolder({ name: "Shared", shared: true, orgName: "test-org" });
+
+    githubApi.getHeadSha
+      .mockResolvedValueOnce("sha-1")
+      .mockResolvedValueOnce("sha-2");
+    githubApi.getRepoTree.mockResolvedValue([]);
+
+    const lib = new SharedLibrary({ buildStore, compStore, folderStore, syncStore });
+    await lib.pullAll();
+    await lib.pullAll();
+
+    expect(githubApi.getRepoTree).toHaveBeenCalledTimes(2);
+  });
+
+  test("invalidateHeadShaCache() forces next pull to fetch tree", async () => {
+    const buildStore = mockBuildStore([]);
+    const compStore = mockCompStore([]);
+    await folderStore.upsertFolder({ name: "Shared", shared: true, orgName: "test-org" });
+
+    githubApi.getHeadSha.mockResolvedValue("same-sha");
+    githubApi.getRepoTree.mockResolvedValue([]);
+
+    const lib = new SharedLibrary({ buildStore, compStore, folderStore, syncStore });
+    await lib.pullAll(); // first pull — caches sha
+    lib.invalidateHeadShaCache();
+    await lib.pullAll(); // second pull — cache invalidated, should fetch tree
+
+    expect(githubApi.getRepoTree).toHaveBeenCalledTimes(2);
+  });
+
+  test("null HEAD SHA from API does not short-circuit (always fetches tree)", async () => {
+    const buildStore = mockBuildStore([]);
+    const compStore = mockCompStore([]);
+    await folderStore.upsertFolder({ name: "Shared", shared: true, orgName: "test-org" });
+
+    // API returns null (e.g. empty repo)
+    githubApi.getHeadSha.mockResolvedValue(null);
+    githubApi.getRepoTree.mockResolvedValue([]);
+
+    const lib = new SharedLibrary({ buildStore, compStore, folderStore, syncStore });
+    await lib.pullAll();
+    await lib.pullAll();
+
+    // null SHA should not cause early return (condition: `headSha && headSha === this._lastHeadSha`)
+    expect(githubApi.getRepoTree).toHaveBeenCalledTimes(2);
+  });
+});
+
+// ─── pullAll — rate limit backoff ────────────────────────────────────────────
+
+describe("SharedLibrary — rate limit backoff", () => {
+  let dir, syncStore, folderStore;
+  beforeEach(async () => {
+    dir = await makeTempDir();
+    syncStore = new SyncStore(dir);
+    folderStore = new FolderStore(dir);
+    await syncStore.init();
+    await folderStore.init();
+  });
+  afterEach(() => cleanupDir(dir));
+
+  test("stops pulling when getHeadSha returns GITHUB_RATE_LIMITED", async () => {
+    const buildStore = mockBuildStore([]);
+    const compStore = mockCompStore([]);
+    await folderStore.upsertFolder({ name: "Shared", shared: true, orgName: "test-org" });
+
+    const rateLimitErr = new Error("Rate limited");
+    rateLimitErr.code = "GITHUB_RATE_LIMITED";
+    rateLimitErr.retryAfterMs = 60_000;
+    githubApi.getHeadSha.mockRejectedValue(rateLimitErr);
+    githubApi.getRepoTree.mockResolvedValue([]);
+
+    const lib = new SharedLibrary({ buildStore, compStore, folderStore, syncStore });
+    await lib.pullAll();
+
+    expect(githubApi.getRepoTree).not.toHaveBeenCalled();
+    expect(lib._rateLimitedUntil).toBeGreaterThan(Date.now());
+  });
+
+  test("skips pull while within rate-limit window", async () => {
+    const buildStore = mockBuildStore([]);
+    const compStore = mockCompStore([]);
+    await folderStore.upsertFolder({ name: "Shared", shared: true, orgName: "test-org" });
+
+    githubApi.getHeadSha.mockResolvedValue("sha-1");
+    githubApi.getRepoTree.mockResolvedValue([]);
+
+    const lib = new SharedLibrary({ buildStore, compStore, folderStore, syncStore });
+    // Set rate limit window far into the future
+    lib._rateLimitedUntil = Date.now() + 60_000;
+    await lib.pullAll();
+
+    expect(githubApi.getHeadSha).not.toHaveBeenCalled();
+    expect(githubApi.getRepoTree).not.toHaveBeenCalled();
+  });
+
+  test("resumes pulling after rate-limit window expires", async () => {
+    const buildStore = mockBuildStore([]);
+    const compStore = mockCompStore([]);
+    await folderStore.upsertFolder({ name: "Shared", shared: true, orgName: "test-org" });
+
+    githubApi.getHeadSha.mockResolvedValue("sha-new");
+    githubApi.getRepoTree.mockResolvedValue([]);
+
+    const lib = new SharedLibrary({ buildStore, compStore, folderStore, syncStore });
+    // Set rate limit window already expired
+    lib._rateLimitedUntil = Date.now() - 1;
+    await lib.pullAll();
+
+    expect(githubApi.getHeadSha).toHaveBeenCalled();
+  });
+
+  test("uses retryAfterMs from error when available", async () => {
+    const buildStore = mockBuildStore([]);
+    const compStore = mockCompStore([]);
+    await folderStore.upsertFolder({ name: "Shared", shared: true, orgName: "test-org" });
+
+    const rateLimitErr = new Error("Rate limited");
+    rateLimitErr.code = "GITHUB_RATE_LIMITED";
+    rateLimitErr.retryAfterMs = 120_000;
+    githubApi.getHeadSha.mockRejectedValue(rateLimitErr);
+
+    const lib = new SharedLibrary({ buildStore, compStore, folderStore, syncStore });
+    const before = Date.now();
+    await lib.pullAll();
+
+    // Should be ~120s from now (allow some slack)
+    expect(lib._rateLimitedUntil).toBeGreaterThan(before + 110_000);
+    expect(lib._rateLimitedUntil).toBeLessThan(before + 130_000);
+  });
+
+  test("defaults to 60s backoff when retryAfterMs is absent", async () => {
+    const buildStore = mockBuildStore([]);
+    const compStore = mockCompStore([]);
+    await folderStore.upsertFolder({ name: "Shared", shared: true, orgName: "test-org" });
+
+    const rateLimitErr = new Error("Rate limited");
+    rateLimitErr.code = "GITHUB_RATE_LIMITED";
+    // no retryAfterMs
+    githubApi.getHeadSha.mockRejectedValue(rateLimitErr);
+
+    const lib = new SharedLibrary({ buildStore, compStore, folderStore, syncStore });
+    const before = Date.now();
+    await lib.pullAll();
+
+    expect(lib._rateLimitedUntil).toBeGreaterThan(before + 55_000);
+    expect(lib._rateLimitedUntil).toBeLessThan(before + 65_000);
+  });
+});
+
+// ─── pullAll — 401 token expiry ──────────────────────────────────────────────
+
+describe("SharedLibrary — 401 token expiry handling", () => {
+  let dir, syncStore, folderStore;
+  beforeEach(async () => {
+    dir = await makeTempDir();
+    syncStore = new SyncStore(dir);
+    folderStore = new FolderStore(dir);
+    await syncStore.init();
+    await folderStore.init();
+  });
+  afterEach(() => cleanupDir(dir));
+
+  test("stops polling when getHeadSha returns GITHUB_UNAUTHORIZED", async () => {
+    const buildStore = mockBuildStore([]);
+    const compStore = mockCompStore([]);
+    await folderStore.upsertFolder({ name: "Shared", shared: true, orgName: "test-org" });
+
+    const unauthorizedErr = new Error("Unauthorized");
+    unauthorizedErr.code = "GITHUB_UNAUTHORIZED";
+    githubApi.getHeadSha.mockRejectedValue(unauthorizedErr);
+
+    const emitted = [];
+    const lib = new SharedLibrary({ buildStore, compStore, folderStore, syncStore, emit: (...a) => emitted.push(a) });
+    lib.startPolling(100); // start so there's something to stop
+    await lib.pullAll();
+
+    expect(lib._pollTimer).toBeNull();
+    expect(emitted).toContainEqual(["sync-status", { status: "error", error: "auth" }]);
+  });
+
+  test("stops polling when getRepoTree returns GITHUB_UNAUTHORIZED", async () => {
+    const buildStore = mockBuildStore([]);
+    const compStore = mockCompStore([]);
+    await folderStore.upsertFolder({ name: "Shared", shared: true, orgName: "test-org" });
+
+    // Let getHeadSha return a new SHA so it proceeds to getRepoTree
+    githubApi.getHeadSha.mockResolvedValue("sha-new");
+
+    const unauthorizedErr = new Error("Unauthorized");
+    unauthorizedErr.code = "GITHUB_UNAUTHORIZED";
+    githubApi.getRepoTree.mockRejectedValue(unauthorizedErr);
+
+    const emitted = [];
+    const lib = new SharedLibrary({ buildStore, compStore, folderStore, syncStore, emit: (...a) => emitted.push(a) });
+    lib.startPolling(100);
+    await lib.pullAll();
+
+    expect(lib._pollTimer).toBeNull();
+    expect(emitted).toContainEqual(["sync-status", { status: "error", error: "auth" }]);
+  });
+});
+
+// ─── schedulePush — timer shape and max-delay ────────────────────────────────
+
+describe("SharedLibrary — schedulePush timer shape", () => {
+  let dir, syncStore, folderStore;
+  beforeEach(async () => {
+    dir = await makeTempDir();
+    syncStore = new SyncStore(dir);
+    folderStore = new FolderStore(dir);
+    await syncStore.init();
+    await folderStore.init();
+  });
+  afterEach(() => cleanupDir(dir));
+
+  function makeLib(buildStore, compStore) {
+    return new SharedLibrary({ buildStore, compStore, folderStore, syncStore });
+  }
+
+  test("stores timer as {id, scheduledAt} object", () => {
+    const lib = makeLib(mockBuildStore(), mockCompStore());
+    const item = { id: "b1", folderId: "f1", title: "Build" };
+    const before = Date.now();
+    lib.schedulePush("build", item, 5000);
+    const timer = lib._pushTimers.get("build:b1");
+    expect(timer).toBeDefined();
+    expect(typeof timer.id).not.toBe("undefined");
+    expect(timer.scheduledAt).toBeGreaterThanOrEqual(before);
+    expect(timer.scheduledAt).toBeLessThanOrEqual(Date.now());
+    clearTimeout(timer.id);
+  });
+
+  test("reschedules debounce when called again within max-delay", () => {
+    jest.useFakeTimers();
+    try {
+      const lib = makeLib(mockBuildStore(), mockCompStore());
+      const item = { id: "b1", folderId: "f1", title: "Build" };
+      lib.schedulePush("build", item, 2000, 10_000);
+      const firstTimer = lib._pushTimers.get("build:b1");
+      lib.schedulePush("build", item, 2000, 10_000);
+      const secondTimer = lib._pushTimers.get("build:b1");
+      // Timer ID should have changed (re-scheduled)
+      expect(secondTimer.id).not.toBe(firstTimer.id);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test("does not reschedule when elapsed >= maxDelayMs - delayMs (lets existing timer fire)", () => {
+    jest.useFakeTimers();
+    try {
+      const lib = makeLib(mockBuildStore(), mockCompStore());
+      const item = { id: "b1", folderId: "f1", title: "Build" };
+      const delayMs = 2000;
+      const maxDelayMs = 4000;
+      lib.schedulePush("build", item, delayMs, maxDelayMs);
+      const firstTimer = lib._pushTimers.get("build:b1");
+
+      // Simulate that enough time has passed to trigger the max-delay ceiling
+      // scheduledAt set to enough in the past that elapsed >= maxDelayMs - delayMs
+      firstTimer.scheduledAt = Date.now() - (maxDelayMs - delayMs + 1);
+
+      lib.schedulePush("build", item, delayMs, maxDelayMs);
+      const secondTimer = lib._pushTimers.get("build:b1");
+
+      // Timer should NOT have changed — early return, existing timer kept
+      expect(secondTimer.id).toBe(firstTimer.id);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test("comp timer stored under 'comp:<id>' key", () => {
+    const lib = makeLib(mockBuildStore(), mockCompStore());
+    const item = { id: "c1", folderId: "f1", name: "Comp" };
+    lib.schedulePush("comp", item, 5000);
+    expect(lib._pushTimers.has("comp:c1")).toBe(true);
+    clearTimeout(lib._pushTimers.get("comp:c1").id);
+  });
+});
+
+// ─── schedulePushFolderMeta — timer shape ────────────────────────────────────
+
+describe("SharedLibrary — schedulePushFolderMeta timer shape", () => {
+  let dir, syncStore, folderStore;
+  beforeEach(async () => {
+    dir = await makeTempDir();
+    syncStore = new SyncStore(dir);
+    folderStore = new FolderStore(dir);
+    await syncStore.init();
+    await folderStore.init();
+  });
+  afterEach(() => cleanupDir(dir));
+
+  test("stores timer as {id, scheduledAt} object under meta:<folderId> key", () => {
+    const lib = new SharedLibrary({ buildStore: mockBuildStore(), compStore: mockCompStore(), folderStore, syncStore });
+    const before = Date.now();
+    lib.schedulePushFolderMeta("f1", 5000);
+    const timer = lib._pushTimers.get("meta:f1");
+    expect(timer).toBeDefined();
+    expect(typeof timer.id).not.toBe("undefined");
+    expect(timer.scheduledAt).toBeGreaterThanOrEqual(before);
+    clearTimeout(timer.id);
+  });
+
+  test("replaces existing meta timer (not duplicated)", () => {
+    jest.useFakeTimers();
+    try {
+      const lib = new SharedLibrary({ buildStore: mockBuildStore(), compStore: mockCompStore(), folderStore, syncStore });
+      lib.schedulePushFolderMeta("f1", 2000);
+      const first = lib._pushTimers.get("meta:f1");
+      lib.schedulePushFolderMeta("f1", 2000);
+      const second = lib._pushTimers.get("meta:f1");
+      expect(second.id).not.toBe(first.id);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+});
+
+// ─── unshareFolder — cancels pending timers ──────────────────────────────────
+
+describe("SharedLibrary — unshareFolder timer cancellation", () => {
+  let dir, syncStore, folderStore;
+  beforeEach(async () => {
+    dir = await makeTempDir();
+    syncStore = new SyncStore(dir);
+    folderStore = new FolderStore(dir);
+    await syncStore.init();
+    await folderStore.init();
+  });
+  afterEach(() => cleanupDir(dir));
+
+  test("clears all pending push timers before unsharing", async () => {
+    const buildStore = mockBuildStore([]);
+    const compStore = mockCompStore([]);
+    const folder = await folderStore.upsertFolder({ name: "Shared", shared: true, orgName: "test-org" });
+
+    githubApi.getRepoTree.mockResolvedValue([]);
+
+    const lib = new SharedLibrary({ buildStore, compStore, folderStore, syncStore });
+
+    // Queue up two timers (build + meta)
+    lib.schedulePush("build", { id: "b1", folderId: folder.id }, 60_000);
+    lib.schedulePushFolderMeta(folder.id, 60_000);
+    expect(lib._pushTimers.size).toBe(2);
+
+    await lib.unshareFolder(folder.id);
+
+    // All timers should have been cancelled and removed
+    expect(lib._pushTimers.size).toBe(0);
+  });
+
+  test("handles timer objects with {id, scheduledAt} shape without throwing", async () => {
+    const buildStore = mockBuildStore([]);
+    const compStore = mockCompStore([]);
+    const folder = await folderStore.upsertFolder({ name: "Shared", shared: true, orgName: "test-org" });
+
+    githubApi.getRepoTree.mockResolvedValue([]);
+
+    const lib = new SharedLibrary({ buildStore, compStore, folderStore, syncStore });
+
+    // Manually insert a timer with the object shape to confirm clearTimeout(timer?.id ?? timer) works
+    const tid = setTimeout(() => {}, 60_000);
+    lib._pushTimers.set("build:test", { id: tid, scheduledAt: Date.now() });
+
+    await expect(lib.unshareFolder(folder.id)).resolves.not.toThrow();
+    expect(lib._pushTimers.size).toBe(0);
+  });
+});

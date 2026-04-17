@@ -14,6 +14,7 @@ const {
   deleteFile,
   ensureSharedRepo,
   getRepoTree,
+  getHeadSha,
   getFileContents,
   putSharedFile,
   deleteSharedFile,
@@ -839,5 +840,161 @@ describe("getFileContents", () => {
     const result = await getFileContents(FAKE_TOKEN, "test-org", "axibuilds-shared", "path.json");
     expect(result.content).toBe('{"id":"b1","title":"Test"}');
     expect(result.sha).toBe("sha-abc");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// getHeadSha
+// ---------------------------------------------------------------------------
+
+describe("getHeadSha", () => {
+  afterEach(() => { delete global.fetch; });
+
+  test("returns SHA from ref object response", async () => {
+    global.fetch = jest.fn(() =>
+      okRes({ ref: "refs/heads/main", object: { sha: "abc123headsha", type: "commit" } })
+    );
+    const sha = await getHeadSha(FAKE_TOKEN, "test-org", "axibuilds-shared");
+    expect(sha).toBe("abc123headsha");
+  });
+
+  test("requests the correct ref path", async () => {
+    global.fetch = jest.fn(() =>
+      okRes({ object: { sha: "abc123" } })
+    );
+    await getHeadSha(FAKE_TOKEN, "test-org", "axibuilds-shared", "main");
+    const [url] = global.fetch.mock.calls[0];
+    expect(url).toContain("/repos/test-org/axibuilds-shared/git/ref/heads/main");
+  });
+
+  test("URL-encodes branch names containing special characters", async () => {
+    global.fetch = jest.fn(() =>
+      okRes({ object: { sha: "abc123" } })
+    );
+    await getHeadSha(FAKE_TOKEN, "test-org", "axibuilds-shared", "feature/my branch");
+    const [url] = global.fetch.mock.calls[0];
+    expect(url).toContain("feature%2Fmy%20branch");
+  });
+
+  test("returns null when response has no object.sha", async () => {
+    global.fetch = jest.fn(() => okRes({ ref: "refs/heads/main", object: {} }));
+    const sha = await getHeadSha(FAKE_TOKEN, "test-org", "axibuilds-shared");
+    expect(sha).toBeNull();
+  });
+
+  test("returns null when response is null", async () => {
+    global.fetch = jest.fn(() => okRes(null));
+    const sha = await getHeadSha(FAKE_TOKEN, "test-org", "axibuilds-shared");
+    expect(sha).toBeNull();
+  });
+
+  test("throws on non-OK response", async () => {
+    global.fetch = jest.fn(() => failRes(404, "Not Found"));
+    await expect(getHeadSha(FAKE_TOKEN, "test-org", "nonexistent-repo")).rejects.toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// apiFetch error codes (401, 403, 429)
+// ---------------------------------------------------------------------------
+
+describe("apiFetch error codes — 401 GITHUB_UNAUTHORIZED", () => {
+  afterEach(() => { delete global.fetch; });
+
+  test("error has code GITHUB_UNAUTHORIZED on 401", async () => {
+    global.fetch = jest.fn(() => failRes(401, "Bad credentials"));
+    const err = await getHeadSha(FAKE_TOKEN, "test-org", "axibuilds-shared").catch((e) => e);
+    expect(err.code).toBe("GITHUB_UNAUTHORIZED");
+  });
+
+  test("error has status 401", async () => {
+    global.fetch = jest.fn(() => failRes(401, "Bad credentials"));
+    const err = await getHeadSha(FAKE_TOKEN, "test-org", "axibuilds-shared").catch((e) => e);
+    expect(err.status).toBe(401);
+  });
+
+  test("401 error does NOT have retryAfterMs", async () => {
+    global.fetch = jest.fn(() => failRes(401, "Bad credentials"));
+    const err = await getHeadSha(FAKE_TOKEN, "test-org", "axibuilds-shared").catch((e) => e);
+    expect(err.retryAfterMs).toBeUndefined();
+  });
+});
+
+describe("apiFetch error codes — 403 GITHUB_RATE_LIMITED", () => {
+  afterEach(() => { delete global.fetch; });
+
+  test("error has code GITHUB_RATE_LIMITED on 403", async () => {
+    global.fetch = jest.fn(() => failRes(403, "Forbidden"));
+    const err = await getHeadSha(FAKE_TOKEN, "test-org", "axibuilds-shared").catch((e) => e);
+    expect(err.code).toBe("GITHUB_RATE_LIMITED");
+  });
+
+  test("error has status 403", async () => {
+    global.fetch = jest.fn(() => failRes(403, "rate limit exceeded"));
+    const err = await getHeadSha(FAKE_TOKEN, "test-org", "axibuilds-shared").catch((e) => e);
+    expect(err.status).toBe(403);
+  });
+
+  test("defaults retryAfterMs to 60000 when Retry-After header absent", async () => {
+    global.fetch = jest.fn(() => failRes(403, "rate limit exceeded"));
+    const err = await getHeadSha(FAKE_TOKEN, "test-org", "axibuilds-shared").catch((e) => e);
+    expect(err.retryAfterMs).toBe(60_000);
+  });
+
+  test("uses Retry-After header value (in seconds) when present", async () => {
+    global.fetch = jest.fn(() =>
+      Promise.resolve({
+        ok: false,
+        status: 403,
+        json: () => Promise.resolve({ message: "rate limited" }),
+        text: () => Promise.resolve(JSON.stringify({ message: "rate limited" })),
+        headers: makeHeaders({ "retry-after": "120" }),
+      })
+    );
+    const err = await getHeadSha(FAKE_TOKEN, "test-org", "axibuilds-shared").catch((e) => e);
+    expect(err.retryAfterMs).toBe(120_000);
+  });
+});
+
+describe("apiFetch error codes — 429 GITHUB_RATE_LIMITED", () => {
+  afterEach(() => { delete global.fetch; });
+
+  test("error has code GITHUB_RATE_LIMITED on 429", async () => {
+    global.fetch = jest.fn(() => failRes(429, "Too Many Requests"));
+    const err = await getHeadSha(FAKE_TOKEN, "test-org", "axibuilds-shared").catch((e) => e);
+    expect(err.code).toBe("GITHUB_RATE_LIMITED");
+  });
+
+  test("uses Retry-After header on 429", async () => {
+    global.fetch = jest.fn(() =>
+      Promise.resolve({
+        ok: false,
+        status: 429,
+        json: () => Promise.resolve({ message: "too many requests" }),
+        text: () => Promise.resolve(JSON.stringify({ message: "too many requests" })),
+        headers: makeHeaders({ "retry-after": "30" }),
+      })
+    );
+    const err = await getHeadSha(FAKE_TOKEN, "test-org", "axibuilds-shared").catch((e) => e);
+    expect(err.retryAfterMs).toBe(30_000);
+    expect(err.code).toBe("GITHUB_RATE_LIMITED");
+  });
+});
+
+describe("apiFetch error codes — other status codes", () => {
+  afterEach(() => { delete global.fetch; });
+
+  test("500 error has no GITHUB_UNAUTHORIZED or GITHUB_RATE_LIMITED code", async () => {
+    global.fetch = jest.fn(() => failRes(500, "Internal Server Error"));
+    const err = await getHeadSha(FAKE_TOKEN, "test-org", "axibuilds-shared").catch((e) => e);
+    expect(err.code).toBeUndefined();
+    expect(err.status).toBe(500);
+  });
+
+  test("404 error has no special code", async () => {
+    global.fetch = jest.fn(() => failRes(404, "Not Found"));
+    const err = await getHeadSha(FAKE_TOKEN, "test-org", "axibuilds-shared").catch((e) => e);
+    expect(err.code).toBeUndefined();
+    expect(err.status).toBe(404);
   });
 });

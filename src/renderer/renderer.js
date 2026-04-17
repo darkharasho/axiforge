@@ -506,6 +506,19 @@ async function init() {
           // Re-render the visible page so the change is reflected immediately
           if (state.activePage === "library") renderLibrary();
           else if (state.activePage === "comps") renderComps();
+          // If this build is currently open in the editor, hot-reload it
+          // so fields like notes are up-to-date without requiring a reopen.
+          // Skip if the user has unsaved local changes — don't silently
+          // discard their in-progress edits. A toast tells them to save first.
+          else if (type === "build" && state.activePage === "editor" && state.editor.id === id) {
+            if (!state.editorDirty) {
+              loadBuildIntoEditor(data.item);
+              renderEditor();
+              syncGameModeToggleUI(state.editor.gameMode || "pve");
+            } else {
+              showToast("This build was updated remotely. Save or discard your changes to apply it.", "info");
+            }
+          }
         }
       } else {
         state[statusMap][id] = status;
@@ -520,6 +533,10 @@ async function init() {
         }
       }
       _updateItemSyncIndicators(type, id, status === "synced" ? "synced" : (state[statusMap][id] || "synced"));
+      // If the build being viewed in the editor changed sync state, update the subnav badge
+      if (type === "build" && state.activePage === "editor" && state.editor.id === id) {
+        renderEditorMeta();
+      }
       return;
     }
 
@@ -852,6 +869,11 @@ function navigateToPage(page) {
   if (target) target.classList.remove("hidden");
   // Show/hide subnav for editor page
   el.subnav.classList.toggle("subnav--visible", page === "editor");
+  // Sync the game mode toggle buttons whenever we land on the editor so the
+  // highlight matches state.editor.gameMode (e.g. after loading a build from
+  // the library, which calls loadBuildIntoEditor then navigateToPage without
+  // calling syncGameModeToggleUI in between).
+  if (page === "editor") syncGameModeToggleUI(state.editor.gameMode || "pve");
   // Render library when navigating to library page
   if (page === "library") {
     renderLibrary();

@@ -27,6 +27,15 @@ async function apiFetch(path, token, init = {}) {
     err.path = path;
     err.oauthScopes = oauthScopes;
     err.acceptedOauthScopes = acceptedOauthScopes;
+    // Tag well-known transient/auth errors so callers can handle them distinctly
+    // without parsing message strings.
+    if (res.status === 401) err.code = "GITHUB_UNAUTHORIZED";
+    if (res.status === 403 || res.status === 429) {
+      err.code = "GITHUB_RATE_LIMITED";
+      // Respect Retry-After if GitHub provides it (in seconds)
+      const retryAfter = res.headers.get("retry-after");
+      err.retryAfterMs = retryAfter ? Number(retryAfter) * 1000 : 60_000;
+    }
     throw err;
   }
 
@@ -520,6 +529,16 @@ async function ensureSharedRepo(token, org) {
   return SHARED_REPO;
 }
 
+// Returns just the HEAD commit SHA for a branch — one API call, used as a
+// cheap change-detection check before doing a full tree fetch.
+async function getHeadSha(token, owner, repo, branch = "main") {
+  const headRef = await apiFetch(
+    `/repos/${owner}/${repo}/git/ref/heads/${encodeURIComponent(branch)}`,
+    token
+  );
+  return headRef?.object?.sha || null;
+}
+
 async function getRepoTree(token, owner, repo, branch = "main") {
   const headRef = await apiFetch(
     `/repos/${owner}/${repo}/git/ref/heads/${encodeURIComponent(branch)}`,
@@ -604,6 +623,7 @@ module.exports = {
   publishSiteBundle,
   deleteFile,
   ensureSharedRepo,
+  getHeadSha,
   getRepoTree,
   getFileContents,
   putSharedFile,

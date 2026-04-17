@@ -268,10 +268,19 @@ async function handleNewFolderInContent() {
   renderLibrary();
 }
 
-function handleLoadBuild(buildId) {
+async function handleLoadBuild(buildId) {
   if (!_app.confirmDiscardDirty?.("Load another build")) return;
+  // Always fetch from the store so we get the post-sync version, not a
+  // potentially stale in-memory copy (e.g. notes written by another user
+  // whose push landed after the last in-memory state update).
+  const freshBuilds = await window.desktopApi.listBuilds().catch(() => null);
+  if (freshBuilds) state.builds = freshBuilds;
   const build = state.builds.find((b) => b.id === buildId);
-  if (!build) return;
+  if (!build) {
+    showToast("Build not found — it may have been deleted.", "error");
+    renderLibrary();
+    return;
+  }
   _app.loadBuildIntoEditor?.(build);
   _app.navigateToPage?.("editor");
 }
