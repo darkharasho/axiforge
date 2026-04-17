@@ -1,3 +1,27 @@
+## Version v0.6.3 — April 16, 2026
+
+### New Features
+
+- **Build change history with revert support** — every save now records a timestamped history entry. Right-click any build in the library and choose **View History** to see a log of local saves and sync-received changes (with author and what changed). Each entry has a "Revert to this version" button to roll back to that snapshot.
+
+### Bug Fixes
+
+- **Game mode toggle no longer gets stuck** — loading a build from the library could leave the PvE/WvW buttons showing the wrong active state, causing clicks to silently do nothing. This is now fixed.
+- **Disconnect button in settings now works** — clicking Disconnect did nothing in some cases. Now shows a confirmation dialog and properly disconnects.
+- **Both settings sections no longer show at the same time** — the shared library setup and connected sections could briefly appear simultaneously when opening settings. Fixed.
+- **Synced notes and other fields now appear immediately when opening a build** — if a remote change arrived between the last library render and clicking Load, the build could open with stale data. A fresh fetch is now done at load time.
+- **Builds updated remotely no longer silently overwrite unsaved local edits** — if you have unsaved changes in the editor and another user syncs an update, you now get a toast notification instead of losing your work.
+
+### Other Changes
+
+- **Sync is much faster to detect changes** — polling now does a single lightweight API call (HEAD SHA check) first; a full tree fetch only happens when something actually changed. This makes the 60-second poll essentially free when nothing has changed.
+- **Changes from other users appear when you switch back to the app** — the app now pulls for updates when the window gains focus (with a 10-second cooldown), so you see fresh data as soon as you return from another window rather than waiting for the next poll.
+- **Sync starts immediately on launch** — on startup the app now pulls right away instead of waiting up to 60 seconds for the first poll tick.
+- **Concurrent sync requests are coalesced** — rapid focus switches or multiple triggers no longer stack up parallel fetches that could race and corrupt local data.
+- **Rate limit and auth errors are handled gracefully** — hitting the GitHub API rate limit pauses sync automatically and resumes after the backoff window. An expired token stops polling and surfaces an error in the UI instead of retrying indefinitely.
+
+---
+
 ## Version v0.6.2 — April 16, 2026
 
 ### New Features
