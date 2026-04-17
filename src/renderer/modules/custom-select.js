@@ -5,6 +5,34 @@ import { state } from "./state.js";
 let _bindHoverPreview = null;
 let _onError = (err) => console.error("[AxiForge cselect]", err);
 
+// Portal tracking: when a menu is moved to document.body to escape modal
+// overflow/stacking constraints, we remember where it came from so we can
+// restore it when the dropdown closes.
+const _portalledMenus = new WeakMap(); // root → { menu, originalParent }
+
+function _portalMenu(root, menu) {
+  _portalledMenus.set(root, { menu, parent: menu.parentNode });
+  menu.dataset.cselectPortal = "1"; // sentinel for outside-click handler
+  document.body.appendChild(menu);
+  menu.style.display = "block"; // .cselect__menu defaults display:none in CSS
+}
+
+function _restorePortaledMenu(root) {
+  const entry = _portalledMenus.get(root);
+  if (!entry) return null;
+  const { menu, parent } = entry;
+  delete menu.dataset.cselectPortal;
+  menu.style.display = "";
+  if (parent && menu.parentNode !== parent) parent.appendChild(menu);
+  _portalledMenus.delete(root);
+  return menu;
+}
+
+// Return the menu element whether it's inside root or portalled to body.
+function _getMenu(root) {
+  return _portalledMenus.get(root)?.menu ?? root.querySelector(".cselect__menu");
+}
+
 export function initCustomSelect({ bindHoverPreview, onError } = {}) {
   if (bindHoverPreview) _bindHoverPreview = bindHoverPreview;
   if (onError) _onError = onError;
@@ -238,18 +266,24 @@ export function toggleCustomSelect(root) {
   const currentlyOpen = state.openCustomSelect;
   if (currentlyOpen && currentlyOpen !== root) {
     currentlyOpen.classList.remove("cselect--open");
-    resetCustomSelectMenuPosition(currentlyOpen.querySelector(".cselect__menu"));
+    const prevMenu = _restorePortaledMenu(currentlyOpen) ?? currentlyOpen.querySelector(".cselect__menu");
+    resetCustomSelectMenuPosition(prevMenu);
   }
   const shouldOpen = !root.classList.contains("cselect--open");
   if (shouldOpen) {
     const menu = root.querySelector(".cselect__menu");
     const rect = getSelectAnchorRect(root);
     if (rect && menu) {
+      // Portal the menu to document.body so it escapes any ancestor overflow:hidden
+      // or stacking-context constraints (common when cselect is inside a modal).
+      _portalMenu(root, menu);
+
       const menuEstHeight = 300;
       const spaceBelow = window.innerHeight - rect.bottom;
       const spaceAbove = rect.top;
       const dropUp = spaceBelow < menuEstHeight + 8 && spaceAbove > spaceBelow;
       menu.style.position = "fixed";
+      menu.style.zIndex = "9999";
       const menuWidth = parseFloat(getComputedStyle(menu).minWidth) || 200;
       menu.style.left = `${Math.min(rect.left, window.innerWidth - menuWidth - 8)}px`;
       menu.style.right = "auto";
@@ -262,12 +296,13 @@ export function toggleCustomSelect(root) {
       }
     }
   } else {
-    resetCustomSelectMenuPosition(root.querySelector(".cselect__menu"));
+    const menu = _restorePortaledMenu(root) ?? root.querySelector(".cselect__menu");
+    resetCustomSelectMenuPosition(menu);
   }
   root.classList.toggle("cselect--open", shouldOpen);
   state.openCustomSelect = shouldOpen ? root : null;
   if (shouldOpen) {
-    const searchInput = root.querySelector(".cselect__search");
+    const searchInput = _getMenu(root)?.querySelector(".cselect__search");
     if (searchInput) searchInput.focus();
   }
 }
@@ -279,6 +314,7 @@ export function resetCustomSelectMenuPosition(menu) {
   menu.style.bottom = "";
   menu.style.left = "";
   menu.style.right = "";
+  menu.style.zIndex = "";
 }
 
 export function closeCustomSelect() {
@@ -286,7 +322,8 @@ export function closeCustomSelect() {
   if (!open) return;
   if (open.isConnected) {
     open.classList.remove("cselect--open");
-    resetCustomSelectMenuPosition(open.querySelector(".cselect__menu"));
+    const menu = _restorePortaledMenu(open) ?? open.querySelector(".cselect__menu");
+    resetCustomSelectMenuPosition(menu);
     const searchInput = open.querySelector(".cselect__search");
     if (searchInput) {
       searchInput.value = "";
