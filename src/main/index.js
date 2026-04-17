@@ -61,6 +61,16 @@ const compStore = new CompStore(dataDir);
 const syncStore = new SyncStore(dataDir);
 const buildHistoryStore = new BuildHistoryStore(dataDir);
 
+// Walk up the folder parentId chain to find the root folder with shared:true.
+// Returns the shared folder object (with orgName) or null if the build is personal.
+function _findRootSharedFolder(folderId, folders) {
+  if (!folderId) return null;
+  const folder = folders.find((f) => f.id === folderId);
+  if (!folder) return null;
+  if (folder.shared) return folder;
+  return _findRootSharedFolder(folder.parentId, folders);
+}
+
 // On Windows, the taskbar follows the "system" theme (SystemUsesLightTheme)
 // while nativeTheme.shouldUseDarkColors follows the "app" theme. These can
 // differ when the user picks "Custom" under Personalisation → Colors.
@@ -777,13 +787,20 @@ app.whenReady().then(async () => {
 
     const auth = await getAuthRecord();
     const branch = auth?.onboarding?.branch || "main";
-    const owner = auth?.onboarding?.targetOwner || session.viewer.login;
+    const personalOwner = auth?.onboarding?.targetOwner || session.viewer.login;
 
     // Load the build
     progress("loading");
     const builds = await store.listBuilds();
     const build = builds.find((b) => b.id === buildId);
     if (!build) throw new Error("Build not found.");
+
+    // Shared builds always publish to the org's axibuilds repo, regardless of
+    // what the user has set as their personal publishing target.
+    const allFolders = await folderStore.listFolders();
+    const sharedRoot = _findRootSharedFolder(build.folderId, allFolders);
+    const owner = sharedRoot ? sharedRoot.orgName : personalOwner;
+    const ownerType = sharedRoot ? "org" : "user";
 
     // Auto-populate build name if empty or default
     if (!build.title?.trim() || build.title === "Untitled Build") {
@@ -803,7 +820,7 @@ app.whenReady().then(async () => {
 
     // Ensure repo and site infrastructure exist
     progress("repo");
-    await ensureAxiForgeRepo(session.token, owner, "user");
+    await ensureAxiForgeRepo(session.token, owner, ownerType);
     await ensurePagesWorkflow(session.token, owner, branch, TARGET_REPO);
     await ensurePages(session.token, owner, branch, TARGET_REPO);
 
@@ -916,20 +933,24 @@ app.whenReady().then(async () => {
       : await store.getSetting("appearance.theme");
     const pagesUrl = `https://${owner}.github.io/${TARGET_REPO}/?n=${encodeURIComponent(newSlug)}&b=${fileId}.${encKey}${themeParam ? `&t=${themeParam}` : ""}`;
 
-    await patchAuthRecord({
-      onboarding: {
-        repoReady: true,
-        forkReady: true,
-        repoName: TARGET_REPO,
-        pagesReady: false,
-        pagesBuildStatus: "queued",
-        pagesBuildUpdatedAt: new Date().toISOString(),
-        pagesBuildError: null,
-        pagesUrl: `https://${owner}.github.io/${TARGET_REPO}/`,
-        branch,
-        targetOwner: owner,
-      },
-    });
+    // Only update the personal auth record for personal builds — shared builds
+    // publish to the org's repo and must not overwrite the user's personal target.
+    if (!sharedRoot) {
+      await patchAuthRecord({
+        onboarding: {
+          repoReady: true,
+          forkReady: true,
+          repoName: TARGET_REPO,
+          pagesReady: false,
+          pagesBuildStatus: "queued",
+          pagesBuildUpdatedAt: new Date().toISOString(),
+          pagesBuildError: null,
+          pagesUrl: `https://${owner}.github.io/${TARGET_REPO}/`,
+          branch,
+          targetOwner: owner,
+        },
+      });
+    }
 
     return {
       pagesUrl,

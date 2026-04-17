@@ -1390,13 +1390,19 @@ function wireEvents() {
 
   document.addEventListener("pointerdown", (event) => {
     if (event.target.closest(".cselect")) return;
+    if (event.target.closest("[data-cselect-portal]")) return; // portalled menu
     closeCustomSelect();
   });
 
   document.addEventListener("scroll", (event) => {
     // Don't close when scrolling inside the open dropdown's own list
     const open = state.openCustomSelect;
-    if (open && event.target instanceof Node && open.contains(event.target)) return;
+    if (open && event.target instanceof Node) {
+      if (open.contains(event.target)) return;
+      // Also allow scrolling inside a portalled menu (which lives in document.body)
+      const portal = document.querySelector("[data-cselect-portal]");
+      if (portal?.contains(event.target)) return;
+    }
     closeCustomSelect();
   }, { capture: true, passive: true });
 
