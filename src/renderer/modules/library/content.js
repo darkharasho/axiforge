@@ -148,6 +148,13 @@ function compBadgeHtml(comp) {
 }
 
 function emptyStateHtml() {
+  // If the current shared folder is actively syncing, tell the user to wait
+  const f = state.currentFolder;
+  if (f?.id && state.folderSyncStatus?.[f.id] === "syncing") {
+    return `<div class="lib-empty-state">
+      <p>Syncing shared library content\u2026</p>
+    </div>`;
+  }
   return `<div class="lib-empty-state">
     <p>No builds found.</p>
   </div>`;

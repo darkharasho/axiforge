@@ -703,3 +703,163 @@ describe("SharedLibrary — unshareFolder timer cancellation", () => {
     expect(lib._pushTimers.size).toBe(0);
   });
 });
+
+// ─── subfolder re-parenting on disconnect-reconnect ──────────────────────────
+
+describe("SharedLibrary — subfolder re-parenting on reconnect", () => {
+  let dir, syncStore, folderStore;
+  beforeEach(async () => {
+    dir = await makeTempDir();
+    syncStore = new SyncStore(dir);
+    folderStore = new FolderStore(dir);
+    await syncStore.init();
+    await folderStore.init();
+  });
+  afterEach(() => cleanupDir(dir));
+
+  test("re-links subfolder under shared root when it exists with wrong parentId", async () => {
+    // Scenario: user previously had 'sub-folder' as a root-level shared folder,
+    // then disconnected (shared: false, parentId: null). Now the org structure has
+    // 'sub-folder' as a SUBFOLDER of 'root-folder'. On pull, the subfolder must be
+    // re-linked under root-folder so builds appear in the right place.
+    const buildStore = mockBuildStore([]);
+    const compStore = mockCompStore([]);
+
+    // Root shared folder
+    const rootFolder = await folderStore.upsertFolder({
+      id: "root-folder",
+      name: "Org Root",
+      shared: true,
+      orgName: "test-org",
+    });
+
+    // Subfolder exists locally with no parent (former root-level shared folder after disconnect)
+    await folderStore.upsertFolder({
+      id: "sub-folder",
+      name: "SubFolderA",
+      // parentId: null — simulating post-disconnect state
+    });
+
+    // Remote: build stored under root-folder path but with folderId = sub-folder
+    githubApi.getRepoTree.mockResolvedValue([
+      { path: "folders/root-folder/builds/b1.json", sha: "b1-sha" },
+    ]);
+    githubApi.getFileContents.mockImplementation(async (_token, _org, _repo, filePath) => {
+      if (filePath === "folders/root-folder/builds/b1.json") {
+        return {
+          content: JSON.stringify({
+            id: "b1",
+            title: "Dev Build",
+            folderId: "sub-folder",
+            _syncSubFolderName: "SubFolderA",
+          }),
+          sha: "b1-sha",
+        };
+      }
+      return { content: null };
+    });
+
+    const lib = new SharedLibrary({ buildStore, compStore, folderStore, syncStore });
+    await lib.pullFolder(rootFolder.id);
+
+    // The subfolder should now be parented under root-folder
+    const folders = await folderStore.listFolders();
+    const subFolder = folders.find((f) => f.id === "sub-folder");
+    expect(subFolder).toBeDefined();
+    expect(subFolder.parentId).toBe("root-folder");
+
+    // Build should be placed in the subfolder
+    expect(buildStore.upsertBuild).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "b1", folderId: "sub-folder" })
+    );
+  });
+
+  test("does not re-link subfolder when parentId is already correct", async () => {
+    const buildStore = mockBuildStore([]);
+    const compStore = mockCompStore([]);
+
+    const rootFolder = await folderStore.upsertFolder({
+      id: "root-folder",
+      name: "Org Root",
+      shared: true,
+      orgName: "test-org",
+    });
+
+    // Subfolder correctly parented under root-folder
+    await folderStore.upsertFolder({
+      id: "sub-folder",
+      name: "SubFolderA",
+      parentId: "root-folder",
+    });
+
+    githubApi.getRepoTree.mockResolvedValue([
+      { path: "folders/root-folder/builds/b1.json", sha: "b1-sha" },
+    ]);
+    githubApi.getFileContents.mockImplementation(async (_token, _org, _repo, filePath) => {
+      if (filePath === "folders/root-folder/builds/b1.json") {
+        return {
+          content: JSON.stringify({
+            id: "b1",
+            title: "Dev Build",
+            folderId: "sub-folder",
+          }),
+          sha: "b1-sha",
+        };
+      }
+      return { content: null };
+    });
+
+    const lib = new SharedLibrary({ buildStore, compStore, folderStore, syncStore });
+    await lib.pullFolder(rootFolder.id);
+
+    // parentId should remain correct
+    const folders = await folderStore.listFolders();
+    const subFolder = folders.find((f) => f.id === "sub-folder");
+    expect(subFolder.parentId).toBe("root-folder");
+  });
+
+  test("re-links subfolder from meta.subfolders when it has wrong parentId", async () => {
+    const buildStore = mockBuildStore([]);
+    const compStore = mockCompStore([]);
+
+    const rootFolder = await folderStore.upsertFolder({
+      id: "root-folder",
+      name: "Org Root",
+      shared: true,
+      orgName: "test-org",
+    });
+
+    // Subfolder exists at root level (wrong parentId)
+    await folderStore.upsertFolder({
+      id: "sub-folder",
+      name: "SubFolderA",
+      // parentId: null — root-level personal folder after disconnect
+    });
+
+    // Remote: meta.json lists sub-folder as a subfolder of root-folder
+    const metaContent = JSON.stringify({
+      id: "root-folder",
+      name: "Org Root",
+      sortOrder: 0,
+      subfolders: [{ id: "sub-folder", name: "SubFolderA", parentId: "root-folder" }],
+    });
+
+    githubApi.getRepoTree.mockResolvedValue([
+      { path: "folders/root-folder/meta.json", sha: "meta-sha-new" },
+    ]);
+    githubApi.getFileContents.mockImplementation(async (_token, _org, _repo, filePath) => {
+      if (filePath === "folders/root-folder/meta.json") {
+        return { content: metaContent, sha: "meta-sha-new" };
+      }
+      return { content: null };
+    });
+
+    const lib = new SharedLibrary({ buildStore, compStore, folderStore, syncStore });
+    await lib.pullFolder(rootFolder.id);
+
+    const folders = await folderStore.listFolders();
+    const subFolder = folders.find((f) => f.id === "sub-folder");
+    expect(subFolder).toBeDefined();
+    expect(subFolder.parentId).toBe("root-folder");
+  });
+});
