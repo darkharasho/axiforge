@@ -704,6 +704,106 @@ describe("SharedLibrary — unshareFolder timer cancellation", () => {
   });
 });
 
+// ─── _syncAuthor — author attribution across users ───────────────────────────
+
+describe("SharedLibrary — _syncAuthor author attribution", () => {
+  let dir, syncStore, folderStore;
+  beforeEach(async () => {
+    dir = await makeTempDir();
+    syncStore = new SyncStore(dir);
+    folderStore = new FolderStore(dir);
+    await syncStore.init();
+    await folderStore.init();
+  });
+  afterEach(async () => cleanupDir(dir));
+
+  test("pushBuild embeds _syncAuthor when viewerLogin is known", async () => {
+    const folder = await folderStore.upsertFolder({ id: "f1", name: "Shared", shared: true, orgName: "test-org" });
+    const build = { id: "b1", title: "My Build", folderId: folder.id };
+    const buildStore = mockBuildStore([build]);
+    const compStore = mockCompStore([]);
+
+    githubApi.putSharedFile.mockResolvedValue({ sha: "new-sha" });
+
+    const lib = new SharedLibrary({ buildStore, compStore, folderStore, syncStore });
+    // Simulate auth with viewer login
+    buildStore.getAuth = jest.fn(async () => ({
+      token: "fake-token",
+      sharedLibrary: { orgName: "test-org", repoName: "axibuilds-shared" },
+      viewer: { login: "alice" },
+    }));
+
+    await lib.pushBuild(build);
+
+    const pushedContent = JSON.parse(githubApi.putSharedFile.mock.calls[0][4]);
+    expect(pushedContent._syncAuthor).toBe("alice");
+  });
+
+  test("pullFolder uses _syncAuthor from JSON for history entry, not org name", async () => {
+    const buildStore = mockBuildStore([{ id: "b1", title: "Old Title", folderId: "f1" }]);
+    const compStore = mockCompStore([]);
+    const folder = await folderStore.upsertFolder({ id: "f1", name: "Shared", shared: true, orgName: "test-org" });
+
+    const historyStore = { addEntry: jest.fn(async (e) => e) };
+    githubApi.getRepoTree.mockResolvedValue([
+      { path: "folders/f1/builds/b1.json", sha: "new-sha" },
+    ]);
+    githubApi.getFileContents.mockResolvedValue({
+      content: JSON.stringify({ id: "b1", title: "New Title", folderId: "f1", _syncAuthor: "bob" }),
+      sha: "new-sha",
+    });
+
+    const lib = new SharedLibrary({ buildStore, compStore, folderStore, syncStore, historyStore });
+    await lib.pullFolder(folder.id);
+
+    expect(historyStore.addEntry).toHaveBeenCalledWith(
+      expect.objectContaining({ authorLogin: "bob" })
+    );
+  });
+
+  test("pullFolder strips _syncAuthor before upserting build", async () => {
+    const buildStore = mockBuildStore([]);
+    const compStore = mockCompStore([]);
+    await folderStore.upsertFolder({ id: "f1", name: "Shared", shared: true, orgName: "test-org" });
+
+    githubApi.getRepoTree.mockResolvedValue([
+      { path: "folders/f1/builds/b1.json", sha: "b1-sha" },
+    ]);
+    githubApi.getFileContents.mockResolvedValue({
+      content: JSON.stringify({ id: "b1", title: "Build", _syncAuthor: "charlie" }),
+      sha: "b1-sha",
+    });
+
+    const lib = new SharedLibrary({ buildStore, compStore, folderStore, syncStore });
+    await lib.pullFolder("f1");
+
+    const upserted = buildStore.upsertBuild.mock.calls[0][0];
+    expect(upserted._syncAuthor).toBeUndefined();
+  });
+
+  test("pullFolder falls back to org name when _syncAuthor is absent", async () => {
+    const buildStore = mockBuildStore([{ id: "b1", title: "Old", folderId: "f1" }]);
+    const compStore = mockCompStore([]);
+    await folderStore.upsertFolder({ id: "f1", name: "Shared", shared: true, orgName: "test-org" });
+
+    const historyStore = { addEntry: jest.fn(async (e) => e) };
+    githubApi.getRepoTree.mockResolvedValue([
+      { path: "folders/f1/builds/b1.json", sha: "b1-sha" },
+    ]);
+    githubApi.getFileContents.mockResolvedValue({
+      content: JSON.stringify({ id: "b1", title: "New", folderId: "f1" }),
+      sha: "b1-sha",
+    });
+
+    const lib = new SharedLibrary({ buildStore, compStore, folderStore, syncStore, historyStore });
+    await lib.pullFolder("f1");
+
+    expect(historyStore.addEntry).toHaveBeenCalledWith(
+      expect.objectContaining({ authorLogin: "test-org" })
+    );
+  });
+});
+
 // ─── subfolder re-parenting on disconnect-reconnect ──────────────────────────
 
 describe("SharedLibrary — subfolder re-parenting on reconnect", () => {

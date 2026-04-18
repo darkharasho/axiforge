@@ -47,6 +47,7 @@ class SharedLibrary {
       token: auth.token,
       org: auth.sharedLibrary.orgName,
       repo: auth.sharedLibrary.repoName || "axibuilds-shared",
+      viewerLogin: auth.viewer?.login || null,
     };
   }
 
@@ -278,7 +279,9 @@ class SharedLibrary {
             });
           }
         }
+        const syncAuthor = data._syncAuthor || auth.org;
         delete data._syncSubFolderName;
+        delete data._syncAuthor;
         data.folderId = restoreFolderId;
         if (this.historyStore) {
           const { summarizeBuildChange } = require("./buildHistoryStore");
@@ -287,7 +290,7 @@ class SharedLibrary {
           if (existingBuild) {
             this.historyStore.addEntry({
               buildId: data.id,
-              authorLogin: auth.org,
+              authorLogin: syncAuthor,
               source: "shared-sync",
               summary: summarizeBuildChange(existingBuild, data),
               snapshot: existingBuild,
@@ -372,6 +375,8 @@ class SharedLibrary {
       const subFolder = folders.find((f) => f.id === build.folderId);
       if (subFolder) buildData._syncSubFolderName = subFolder.name;
     }
+    // Embed author so pull-side history entries show who made the change
+    if (auth.viewerLogin) buildData._syncAuthor = auth.viewerLogin;
     const content = JSON.stringify(buildData, null, 2);
 
     const attemptPush = async (sha) => {
@@ -425,6 +430,7 @@ class SharedLibrary {
       const subFolder = folders.find((f) => f.id === comp.folderId);
       if (subFolder) compData._syncSubFolderName = subFolder.name;
     }
+    if (auth.viewerLogin) compData._syncAuthor = auth.viewerLogin;
     const content = JSON.stringify(compData, null, 2);
 
     const attemptPush = async (sha) => {
