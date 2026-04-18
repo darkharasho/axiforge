@@ -1,3 +1,22 @@
+## Version v0.6.5 — April 17, 2026
+
+### New Features
+
+- **Shared comps publish to the org's site** — publishing a comp that lives in a shared org folder now routes to the org's `axibuilds` repository (matching the existing behavior for individual shared builds). The published URL is the same for every org member.
+- **Publish URLs sync to teammates automatically** — when you publish a shared build or comp, the published file ID, key, and slug are now pushed to the shared library repo. Teammates receive the canonical URL on their next sync and can share the link without having to publish the build themselves.
+- **Shared badge on comp list** — comps living in a shared org folder now show an amber "Shared" badge in the comp list alongside the game mode and publish status badges.
+
+### Bug Fixes
+
+- **Published comp missing a build link** — publishing a comp could result in one or more party line slots appearing empty (no link) on the published page. This happened when a build ID was present in a party line slot but missing from the comp's internal build list due to data divergence. The publish pipeline now uses the union of both sources so every filled slot always has a link.
+- **Discord webhook settings not saving** — entering a webhook URL in Settings and clicking Save would silently fail if the IPC call encountered an error, leaving the modal open with no feedback and losing the URL when the user closed it. The Save button now shows an inline error message on failure and re-enables so you can retry.
+- **Build history showed "local" for all shared changes** — the build history panel always displayed "local" as the author for changes synced from org members. It now shows the actual GitHub username of whoever made the change.
+- **Build history entries were too generic** — sync history entries all said "build updated" regardless of what changed. Each entry now lists the specific fields that were modified (title, profession, skills, equipment, etc.).
+- **Reconnecting an org folder didn't sync existing content** — connecting to a shared org folder for the first time (or after a disconnect) would show the empty folder without pulling the existing builds and comps stored remotely. Content is now fetched immediately on connect.
+- **Shared subfolder re-linked under wrong parent on reconnect** — when reconnecting to a shared org folder that contained subfolders, those subfolders could be re-linked under the wrong parent in the library tree. They are now correctly re-linked under the shared root.
+
+---
+
 ## Version v0.6.4 — April 16, 2026
 
 ### New Features
