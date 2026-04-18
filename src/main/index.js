@@ -37,7 +37,7 @@ const { getProfessionList, getProfessionCatalog, getUpgradeCatalog, getWikiSumma
 const { slugifyBuildName, generateFileId, generateEncryptionKey, getDefaultBuildName } = require("./buildEncryption");
 const { buildSpaBundle, buildEncryptedBuildFile, buildEncryptedCompFile, buildRedirectFile } = require("./siteBundle");
 const { serializeForPublish } = require("./buildPublish");
-const { serializeCompForPublish } = require("./compPublish");
+const { serializeCompForPublish, getCompPublishBuildIds } = require("./compPublish");
 const { initAutoUpdate } = require("./autoUpdate");
 const { registerAxicodeFileHandlers } = require("./axicodeFile");
 
@@ -870,7 +870,7 @@ app.whenReady().then(async () => {
       const compTheme = await store.getSetting("appearance.theme");
 
       for (const comp of affectedComps) {
-        const compBuildIds = new Set(comp.buildIds || []);
+        const compBuildIds = new Set(getCompPublishBuildIds(comp));
         const compBuilds = allBuilds.filter((b) => compBuildIds.has(b.id));
         const buildsMap = {};
 
@@ -984,7 +984,9 @@ app.whenReady().then(async () => {
     }
 
     const allBuilds = await store.listBuilds();
-    const buildIdSet = new Set(comp.buildIds || []);
+    // Use union of buildIds + all party line slot IDs so a build that ended up
+    // in a slot without being in buildIds (data divergence) is still published.
+    const buildIdSet = new Set(getCompPublishBuildIds(comp));
     const compBuilds = allBuilds.filter((b) => buildIdSet.has(b.id));
 
     // ── 2. Ensure repo infrastructure ─────────────────────────────────

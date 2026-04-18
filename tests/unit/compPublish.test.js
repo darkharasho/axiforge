@@ -1,6 +1,6 @@
 "use strict";
 
-const { serializeCompForPublish } = require("../../src/main/compPublish");
+const { serializeCompForPublish, getCompPublishBuildIds } = require("../../src/main/compPublish");
 
 function makeComp(overrides = {}) {
   return {
@@ -67,5 +67,77 @@ describe("serializeCompForPublish", () => {
     const buildsMap = { "build-1": makeBuildEntry("build-1", "https://x.io/?b=x.y") };
     const result = serializeCompForPublish(comp, buildsMap);
     expect(result.publishedKey).toBeUndefined();
+  });
+
+  test("slot referencing a build absent from buildsMap produces undefined entry — documents bug", () => {
+    // When a slot's buildId is not in buildsMap, comp.builds[buildId] is undefined.
+    // The SPA then renders an empty slot with no link. This test documents the root
+    // cause that getCompPublishBuildIds (and the publish handler) must defend against.
+    const comp = makeComp({
+      buildIds: ["build-1"],          // build-2 missing from buildIds
+      partyLines: [{ id: "line-1", capacity: 5, slots: ["build-1", "build-2"] }],
+    });
+    const buildsMap = {
+      "build-1": makeBuildEntry("build-1", "https://x.io/?b=a.k"),
+      // build-2 NOT in buildsMap because it was not in comp.buildIds
+    };
+    const result = serializeCompForPublish(comp, buildsMap);
+    expect(result.builds["build-1"]).toBeDefined();
+    expect(result.builds["build-2"]).toBeUndefined(); // empty slot — the bug
+  });
+});
+
+// ─── getCompPublishBuildIds ────────────────────────────────────────────────────
+
+describe("getCompPublishBuildIds", () => {
+  test("returns all buildIds when partyLines slots are a subset", () => {
+    const comp = makeComp(); // buildIds: [1,2,3], slots: [1,2]
+    const ids = getCompPublishBuildIds(comp);
+    expect(ids).toEqual(expect.arrayContaining(["build-1", "build-2", "build-3"]));
+  });
+
+  test("includes slot buildIds missing from comp.buildIds", () => {
+    const comp = makeComp({
+      buildIds: ["build-1"],
+      partyLines: [{ id: "l1", capacity: 5, slots: ["build-1", "build-2"] }],
+    });
+    const ids = getCompPublishBuildIds(comp);
+    expect(ids).toContain("build-1");
+    expect(ids).toContain("build-2"); // was in slot but not buildIds
+  });
+
+  test("deduplicates build IDs that appear in both buildIds and slots", () => {
+    const comp = makeComp({
+      buildIds: ["build-1", "build-2"],
+      partyLines: [{ id: "l1", capacity: 5, slots: ["build-1", "build-1", "build-2"] }],
+    });
+    const ids = getCompPublishBuildIds(comp);
+    const unique = [...new Set(ids)];
+    expect(ids).toHaveLength(unique.length);
+  });
+
+  test("handles comp with no partyLines", () => {
+    const comp = makeComp({ partyLines: [] });
+    const ids = getCompPublishBuildIds(comp);
+    expect(ids).toEqual(expect.arrayContaining(["build-1", "build-2", "build-3"]));
+  });
+
+  test("handles comp with missing buildIds and partyLines", () => {
+    const comp = { id: "c1", name: "Empty" };
+    const ids = getCompPublishBuildIds(comp);
+    expect(ids).toEqual([]);
+  });
+
+  test("handles slots with null/undefined entries gracefully", () => {
+    const comp = {
+      id: "c1", name: "Test",
+      buildIds: ["build-1"],
+      partyLines: [{ id: "l1", slots: ["build-1", null, undefined, "build-2"] }],
+    };
+    const ids = getCompPublishBuildIds(comp);
+    expect(ids).toContain("build-1");
+    expect(ids).toContain("build-2");
+    expect(ids).not.toContain(null);
+    expect(ids).not.toContain(undefined);
   });
 });
