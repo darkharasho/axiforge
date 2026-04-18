@@ -32,6 +32,10 @@ class BuildHistoryStore {
     await fs.writeFile(this.historyPath, JSON.stringify(data, null, 2), "utf-8");
   }
 
+  async getAllHistory() {
+    return this.#readAll();
+  }
+
   async getHistory(buildId) {
     const all = await this.#readAll();
     return all[buildId] || [];

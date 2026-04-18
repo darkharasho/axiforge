@@ -286,6 +286,7 @@ function showFolderMenu(x, y, folderId, folder) {
         }
       }),
     ] : []),
+    _item(clockIcon, "View History", null, () => _callbacks.onViewFolderHistory?.(folderId, folder?.name)),
     _item(trashIcon, "Delete Folder", null, () => _callbacks.onDeleteFolder?.(folderId), true),
   ];
   _showMenu(x, y, items);

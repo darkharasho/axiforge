@@ -484,6 +484,42 @@ app.whenReady().then(async () => {
     return buildHistoryStore.getHistory(buildId);
   });
 
+  ipcMain.handle("folders:get-history", async (_e, folderId) => {
+    const allFolders = await folderStore.listFolders();
+    const allBuilds = await store.listBuilds();
+    const allHistory = await buildHistoryStore.getAllHistory();
+
+    // Collect this folder and all its descendants
+    const folderIds = new Set();
+    const queue = [folderId];
+    while (queue.length > 0) {
+      const id = queue.shift();
+      folderIds.add(id);
+      for (const f of allFolders) {
+        if (f.parentId === id) queue.push(f.id);
+      }
+    }
+
+    // Build a title lookup for builds in those folders
+    const titleMap = {};
+    for (const b of allBuilds) {
+      if (folderIds.has(b.folderId)) titleMap[b.id] = b.title || b.id;
+    }
+
+    // Gather and annotate all history entries for those builds
+    const entries = [];
+    for (const [buildId, buildEntries] of Object.entries(allHistory)) {
+      if (!titleMap[buildId]) continue;
+      for (const entry of buildEntries) {
+        entries.push({ ...entry, buildTitle: titleMap[buildId] });
+      }
+    }
+
+    // Sort newest first
+    entries.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    return entries;
+  });
+
   ipcMain.handle("builds:revert", async (_e, buildId, historyEntryId) => {
     const entries = await buildHistoryStore.getHistory(buildId);
     const entry = entries.find((e) => e.id === historyEntryId);

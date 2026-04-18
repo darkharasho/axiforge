@@ -26,7 +26,7 @@ import {
   wireSelectionEvents,
 } from "./selection.js";
 import { initDragDrop, wireDragDropEvents } from "./drag-drop.js";
-import { showHistoryPanel } from "./history-panel.js";
+import { showHistoryPanel, showFolderHistoryPanel } from "./history-panel.js";
 import { compIcon } from "./heroicons.js";
 import { pushUndo, popUndo } from "./undo.js";
 import { handleAxicodeExport, handleAxicodeImport } from "./axicode-io.js";
@@ -1421,6 +1421,7 @@ function _buildSharedCallbacks() {
     onPublish: handlePublish,
     onBuildInfo: handleBuildInfo,
     onViewHistory: (buildId) => showHistoryPanel(buildId),
+    onViewFolderHistory: (folderId, folderName) => showFolderHistoryPanel(folderId, folderName),
     onEditTags: handleEditTags,
 
     // Folder actions

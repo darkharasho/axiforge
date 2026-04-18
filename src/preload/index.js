@@ -24,6 +24,7 @@ contextBridge.exposeInMainWorld("desktopApi", {
   saveBuild: (build) => ipcRenderer.invoke("builds:save", build),
   deleteBuild: (id) => ipcRenderer.invoke("builds:delete", id),
   getBuildHistory: (buildId) => ipcRenderer.invoke("builds:get-history", buildId),
+  getFolderHistory: (folderId) => ipcRenderer.invoke("folders:get-history", folderId),
   revertBuild: (buildId, historyEntryId) => ipcRenderer.invoke("builds:revert", buildId, historyEntryId),
   publishSite: () => ipcRenderer.invoke("builds:publish-site"),
   publishBuild: (buildId) => ipcRenderer.invoke("builds:publish-build", buildId),
