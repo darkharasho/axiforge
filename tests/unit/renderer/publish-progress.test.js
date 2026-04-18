@@ -247,3 +247,70 @@ describe("per-ID publish progress", () => {
     expect(state.publishProgress["comp-2"].currentStep).toBe("repo");
   });
 });
+
+describe("resolvePublishedUrl", () => {
+  let resolvePublishedUrl;
+
+  beforeAll(() => {
+    ({ resolvePublishedUrl } = renderPages);
+  });
+
+  const onboarding = { targetOwner: "personaluser", repoName: "axibuilds" };
+
+  const personalBuild = {
+    id: "b1",
+    folderId: null,
+    publishedSlug: "my-build",
+    publishedFileId: "abc123",
+    publishedKey: "key456",
+  };
+
+  const sharedBuild = {
+    id: "b2",
+    folderId: "folder-shared",
+    publishedSlug: "my-shared-build",
+    publishedFileId: "def789",
+    publishedKey: "orgkey",
+  };
+
+  const folders = [
+    { id: "folder-shared", parentId: null, shared: true, orgName: "myorg" },
+    { id: "folder-sub", parentId: "folder-shared", shared: false },
+  ];
+
+  test("personal build uses personal owner", () => {
+    const url = resolvePublishedUrl(personalBuild, onboarding, [], null);
+    expect(url).toContain("personaluser.github.io/axibuilds");
+    expect(url).toContain("my-build");
+    expect(url).toContain("abc123.key456");
+  });
+
+  test("shared build uses org owner from folder", () => {
+    const url = resolvePublishedUrl(sharedBuild, onboarding, folders, null);
+    expect(url).toContain("myorg.github.io/axibuilds");
+    expect(url).not.toContain("personaluser");
+    expect(url).toContain("my-shared-build");
+    expect(url).toContain("def789.orgkey");
+  });
+
+  test("build in subfolder of shared folder uses org owner", () => {
+    const subBuild = { ...sharedBuild, folderId: "folder-sub" };
+    const url = resolvePublishedUrl(subBuild, onboarding, folders, null);
+    expect(url).toContain("myorg.github.io/axibuilds");
+    expect(url).not.toContain("personaluser");
+  });
+
+  test("theme param is appended when provided", () => {
+    const url = resolvePublishedUrl(personalBuild, onboarding, [], "dark");
+    expect(url).toContain("&t=dark");
+  });
+
+  test("returns null when build has no publishedFileId", () => {
+    const unpublished = { ...personalBuild, publishedFileId: null };
+    expect(resolvePublishedUrl(unpublished, onboarding, [], null)).toBeNull();
+  });
+
+  test("returns null when owner and repo are not available", () => {
+    expect(resolvePublishedUrl(personalBuild, {}, [], null)).toBeNull();
+  });
+});

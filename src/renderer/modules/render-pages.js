@@ -577,15 +577,41 @@ export function renderEditorMeta() {
   }
 }
 
+/**
+ * Compute the published URL for a build.
+ * For shared builds (in a folder with shared:true), the org's axibuilds repo is the
+ * authoritative host. For personal builds, the personal publishing target is used.
+ *
+ * @param {object} build - Build record with publishedSlug, publishedFileId, publishedKey, folderId
+ * @param {object} onboarding - state.onboarding (targetOwner, repoName)
+ * @param {Array} folders - state.folders array
+ * @param {string|null} theme - current theme param value (or null)
+ * @returns {string|null}
+ */
+export function resolvePublishedUrl(build, onboarding, folders, theme) {
+  if (!build?.publishedSlug || !build?.publishedFileId || !build?.publishedKey) return null;
+
+  // For shared builds, use the org owner; for personal builds, use the personal owner.
+  let owner = onboarding?.targetOwner;
+  if (build.folderId) {
+    let current = (folders || []).find((f) => f.id === build.folderId);
+    while (current) {
+      if (current.shared && current.orgName) { owner = current.orgName; break; }
+      if (!current.parentId) break;
+      current = (folders || []).find((f) => f.id === current.parentId);
+    }
+  }
+
+  const repo = onboarding?.repoName;
+  if (!owner || !repo) return null;
+  return `https://${owner}.github.io/${repo}/?n=${encodeURIComponent(build.publishedSlug)}&b=${build.publishedFileId}.${build.publishedKey}${theme ? `&t=${theme}` : ""}`;
+}
+
 function _getPublishedUrl() {
   if (!state.editor.id) return null;
   const build = state.builds.find((b) => b.id === state.editor.id);
-  if (!build?.publishedSlug || !build?.publishedFileId || !build?.publishedKey) return null;
-  const owner = state.onboarding?.targetOwner;
-  const repo = state.onboarding?.repoName;
-  if (!owner || !repo) return null;
   const theme = document.documentElement.getAttribute("data-theme");
-  return `https://${owner}.github.io/${repo}/?n=${encodeURIComponent(build.publishedSlug)}&b=${build.publishedFileId}.${build.publishedKey}${theme ? `&t=${theme}` : ""}`;
+  return resolvePublishedUrl(build, state.onboarding, state.folders, theme);
 }
 
 // ---------------------------------------------------------------------------
