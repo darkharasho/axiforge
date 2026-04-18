@@ -176,15 +176,26 @@ class SharedLibrary {
               id: folderId, name: meta.name, sortOrder: meta.sortOrder,
               shared: true, orgName: folder.orgName,
             });
-            // Restore any subfolders listed in meta that don't exist locally
+            // Restore any subfolders listed in meta, creating or re-linking as needed
             if (Array.isArray(meta.subfolders)) {
               const allFolders = await this.folderStore.listFolders();
               for (const sf of meta.subfolders) {
-                if (!allFolders.find((f) => f.id === sf.id)) {
+                const correctParentId = sf.parentId || folderId;
+                const existing = allFolders.find((f) => f.id === sf.id);
+                if (!existing) {
                   await this.folderStore.upsertFolder({
                     id: sf.id,
                     name: sf.name,
-                    parentId: sf.parentId || folderId,
+                    parentId: correctParentId,
+                  });
+                } else if (existing.parentId !== correctParentId) {
+                  // Re-link under correct parent (handles disconnect-reconnect where a
+                  // former root shared folder is now a subfolder of a different shared root)
+                  await this.folderStore.upsertFolder({
+                    id: sf.id,
+                    name: sf.name,
+                    parentId: correctParentId,
+                    shared: false,
                   });
                 }
               }
@@ -249,11 +260,21 @@ class SharedLibrary {
         const restoreFolderId = data.folderId || folderId;
         if (restoreFolderId !== folderId) {
           const allFolders = await this.folderStore.listFolders();
-          if (!allFolders.find((f) => f.id === restoreFolderId)) {
+          const existingSubFolder = allFolders.find((f) => f.id === restoreFolderId);
+          if (!existingSubFolder) {
             await this.folderStore.upsertFolder({
               id: restoreFolderId,
               name: data._syncSubFolderName || "Subfolder",
               parentId: folderId,
+            });
+          } else if (existingSubFolder.parentId !== folderId) {
+            // Re-link under correct shared root (handles disconnect-reconnect where this
+            // folder previously existed as a root-level or differently-parented folder)
+            await this.folderStore.upsertFolder({
+              id: restoreFolderId,
+              name: data._syncSubFolderName || existingSubFolder.name,
+              parentId: folderId,
+              shared: false,
             });
           }
         }
@@ -280,11 +301,21 @@ class SharedLibrary {
         const restoreFolderId = data.folderId || folderId;
         if (restoreFolderId !== folderId) {
           const allFolders = await this.folderStore.listFolders();
-          if (!allFolders.find((f) => f.id === restoreFolderId)) {
+          const existingSubFolder = allFolders.find((f) => f.id === restoreFolderId);
+          if (!existingSubFolder) {
             await this.folderStore.upsertFolder({
               id: restoreFolderId,
               name: data._syncSubFolderName || "Subfolder",
               parentId: folderId,
+            });
+          } else if (existingSubFolder.parentId !== folderId) {
+            // Re-link under correct shared root (handles disconnect-reconnect where this
+            // folder previously existed as a root-level or differently-parented folder)
+            await this.folderStore.upsertFolder({
+              id: restoreFolderId,
+              name: data._syncSubFolderName || existingSubFolder.name,
+              parentId: folderId,
+              shared: false,
             });
           }
         }
