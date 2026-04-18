@@ -9,6 +9,19 @@ import { getEliteSpecName, profClass } from "../build-helpers.js";
 import { computeCompPartyCoverage } from "./comp-boon-coverage.js";
 import { BOON_DISPLAY_ORDER } from "../constants.js";
 
+// ─── Shared folder helpers ───────────────────────────────────────────────────
+
+function _isCompShared(comp) {
+  if (!comp.folderId) return false;
+  let current = (state.folders || []).find((f) => f.id === comp.folderId);
+  while (current) {
+    if (current.shared) return true;
+    if (!current.parentId) return false;
+    current = (state.folders || []).find((f) => f.id === current.parentId);
+  }
+  return false;
+}
+
 // ─── Module-level state (not persisted) ──────────────────────────────────────
 
 let _activeCtxMenu = null;
@@ -255,6 +268,11 @@ function renderExpandedRow(comp) {
     ? `<span class="comp-badge comp-badge--published">Published</span>`
     : `<span class="comp-badge comp-badge--draft">Draft</span>`;
 
+  // Shared badge
+  const sharedBadge = _isCompShared(comp)
+    ? `<span class="comp-badge comp-badge--shared">Shared</span>`
+    : "";
+
   // Relative timestamp
   const timeStr = relativeTime(comp.updatedAt);
 
@@ -279,6 +297,7 @@ function renderExpandedRow(comp) {
         <span class="comp-list-row__name">${name}</span>
         ${gmBadge}
         ${pubBadge}
+        ${sharedBadge}
         <span class="comp-list-row__spacer"></span>
         <span class="comp-list-row__time">${timeStr}</span>
       </div>
@@ -311,6 +330,10 @@ function renderCompactRow(comp) {
     ? `<span class="comp-badge comp-badge--published comp-badge--sm">Published</span>`
     : `<span class="comp-badge comp-badge--draft comp-badge--sm">Draft</span>`;
 
+  const sharedBadge = _isCompShared(comp)
+    ? `<span class="comp-badge comp-badge--shared comp-badge--sm">Shared</span>`
+    : "";
+
   const partySummary = getPartySummary(comp);
   const boonHtml = renderBoonIndicator(comp.id);
   const timeStr = relativeTime(comp.updatedAt);
@@ -321,6 +344,7 @@ function renderCompactRow(comp) {
       <span class="comp-list-row__name">${name}</span>
       ${gmBadge}
       ${pubBadge}
+      ${sharedBadge}
       <span class="comp-list-row__summary comp-list-row__summary--compact">${partySummary}</span>
       ${boonHtml}
       <span class="comp-list-row__spacer"></span>
