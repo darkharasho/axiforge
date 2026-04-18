@@ -17,6 +17,39 @@
 const fs = require("fs");
 const path = require("path");
 
+/**
+ * Regression test for issue #241 — confirm modal appears behind settings modal.
+ *
+ * Root cause: .settings-modal-overlay used --z-modal-confirm (1100), the same
+ * z-index as the confirm modal overlay. When both are open simultaneously the
+ * settings modal occludes the confirm modal because DOM order makes it paint
+ * on top at equal z-index.
+ *
+ * Fix: settings-modal-overlay must use --z-modal (1000) so the confirm modal
+ * at --z-modal-confirm (1100) always stacks above it.
+ */
+
+describe("settings-modal CSS — z-index below confirm modal (issue #241)", () => {
+  let css;
+
+  beforeAll(() => {
+    css = fs.readFileSync(
+      path.resolve(__dirname, "../../src/renderer/styles/settings-modal.css"),
+      "utf8"
+    );
+  });
+
+  test(".settings-modal-overlay uses --z-modal, not --z-modal-confirm", () => {
+    // Extract the .settings-modal-overlay rule block
+    const overlayBlock =
+      css.match(/\.settings-modal-overlay\s*\{[^}]*\}/)?.[0] || "";
+    expect(overlayBlock).toBeTruthy();
+    // Must use --z-modal so the confirm modal (--z-modal-confirm) can stack above it
+    expect(overlayBlock).toMatch(/z-index\s*:\s*var\(--z-modal\)/);
+    expect(overlayBlock).not.toMatch(/z-index\s*:\s*var\(--z-modal-confirm\)/);
+  });
+});
+
 describe("settings-modal dropdown CSS — no transform containing block", () => {
   let css;
 
