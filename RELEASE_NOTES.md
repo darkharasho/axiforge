@@ -1,3 +1,9 @@
+## Version v0.6.6 — April 18, 2026
+
+### Bug Fixes
+
+- **Disconnect org dialog no longer hides behind the settings window** — clicking Disconnect on an org now correctly shows the confirmation dialog on top of the settings modal instead of underneath it.
+
 ## Version v0.6.5 — April 17, 2026
 
 ### New Features
