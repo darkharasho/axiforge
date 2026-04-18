@@ -3,7 +3,7 @@
 .settings-modal-overlay {
   position: fixed;
   inset: 0;
-  z-index: var(--z-modal-confirm);
+  z-index: var(--z-modal);
   background: var(--overlay);
   display: flex;
   align-items: center;
