@@ -357,11 +357,21 @@
 
 .settings-modal__actions {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
   gap: 8px;
   padding: 14px 20px;
   border-top: 1px solid var(--line);
   flex-shrink: 0;
+}
+
+.settings-modal__save-status {
+  font-size: 0.78rem;
+  margin-right: auto;
+}
+
+.settings-modal__save-status--error {
+  color: var(--danger-text);
 }
 
 .settings-modal__btn {

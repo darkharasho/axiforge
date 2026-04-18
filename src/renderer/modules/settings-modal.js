@@ -138,7 +138,8 @@ export function initSettingsModal() {
         </div>
       </div>
       <div class="settings-modal__actions">
-        <button class="settings-modal__btn settings-modal__btn--save" id="sm-save">Save</button>
+        <span class="settings-modal__save-status" id="sm-save-status"></span>
+        <button class="settings-modal__btn settings-modal__btn--save" id="sm-save" type="button">Save</button>
       </div>
     </div>
   `;
@@ -161,6 +162,7 @@ export function initSettingsModal() {
     buildThreadId:     document.getElementById("sm-build-thread-id"),
     buildThreadError:  document.getElementById("sm-build-thread-error"),
     save:              document.getElementById("sm-save"),
+    saveStatus:        document.getElementById("sm-save-status"),
     clearCache:        document.getElementById("sm-clear-cache"),
     cacheStatus:       document.getElementById("sm-cache-status"),
     sharedStatus:      document.getElementById("sm-shared-status"),
@@ -232,6 +234,11 @@ export async function openSettingsModal() {
 
   // Themed build pages toggle
   _el.themedBuilds.checked = !!themedBuilds;
+
+  // Reset save button state
+  _el.save.disabled = false;
+  _el.saveStatus.textContent = "";
+  _el.saveStatus.className = "settings-modal__save-status";
 
   // Populate appearance section
   _renderThemeGrid();
@@ -582,15 +589,25 @@ async function _save() {
   _el.buildWebhookError.textContent = "";
   _el.threadError.textContent = "";
   _el.buildThreadError.textContent = "";
-  await Promise.all([
-    window.desktopApi.setSetting("discord.webhookUrl", url || null),
-    window.desktopApi.setSetting("discord.threadMode", mode),
-    window.desktopApi.setSetting("discord.threadId", mode === "custom" ? threadId : null),
-    window.desktopApi.setSetting("discord.buildWebhookUrl", buildUrl || null),
-    window.desktopApi.setSetting("discord.buildThreadMode", bMode),
-    window.desktopApi.setSetting("discord.buildThreadId", bMode === "custom" ? bThreadId : null),
-  ]);
-  _close();
+
+  _el.save.disabled = true;
+  _el.saveStatus.textContent = "";
+  _el.saveStatus.className = "settings-modal__save-status";
+  try {
+    await Promise.all([
+      window.desktopApi.setSetting("discord.webhookUrl", url || null),
+      window.desktopApi.setSetting("discord.threadMode", mode),
+      window.desktopApi.setSetting("discord.threadId", mode === "custom" ? threadId : null),
+      window.desktopApi.setSetting("discord.buildWebhookUrl", buildUrl || null),
+      window.desktopApi.setSetting("discord.buildThreadMode", bMode),
+      window.desktopApi.setSetting("discord.buildThreadId", bMode === "custom" ? bThreadId : null),
+    ]);
+    _close();
+  } catch (err) {
+    _el.saveStatus.textContent = "Save failed — please try again";
+    _el.saveStatus.className = "settings-modal__save-status settings-modal__save-status--error";
+    _el.save.disabled = false;
+  }
 }
 
 function _close() {
