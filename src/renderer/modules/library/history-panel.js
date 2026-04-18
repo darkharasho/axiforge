@@ -119,6 +119,15 @@ function _injectStyles() {
     }
     .history-panel__revert:hover:not(:disabled) { background: var(--accent, #7f849c); }
     .history-panel__revert:disabled { opacity: 0.4; cursor: not-allowed; }
+    .history-panel__entry-build {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--accent, #89b4fa);
+      margin-bottom: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
   `;
   document.head.appendChild(style);
 }
@@ -144,6 +153,69 @@ function _formatTime(iso) {
   } catch {
     return iso;
   }
+}
+
+export async function showFolderHistoryPanel(folderId, folderName) {
+  closeHistoryPanel();
+  _injectStyles();
+
+  const overlay = document.createElement("div");
+  overlay.className = "history-panel-overlay";
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) closeHistoryPanel();
+  });
+
+  const panel = document.createElement("div");
+  panel.className = "history-panel";
+  panel.setAttribute("role", "dialog");
+  panel.setAttribute("aria-label", "Folder History");
+
+  panel.innerHTML = `
+    <div class="history-panel__header">
+      <h2 class="history-panel__title">History: ${escapeHtml(folderName || "Folder")}</h2>
+      <button class="history-panel__close" aria-label="Close">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6L18 18"/></svg>
+      </button>
+    </div>
+    <div class="history-panel__list" id="history-panel-list">
+      <div class="history-panel__empty">Loading…</div>
+    </div>
+  `;
+
+  panel.querySelector(".history-panel__close").addEventListener("click", closeHistoryPanel);
+  overlay.appendChild(panel);
+  document.body.appendChild(overlay);
+  _panel = overlay;
+
+  _escHandler = (e) => { if (e.key === "Escape") closeHistoryPanel(); };
+  document.addEventListener("keydown", _escHandler);
+
+  try {
+    const entries = await window.desktopApi.getFolderHistory(folderId);
+    _renderFolderEntries(panel.querySelector("#history-panel-list"), entries);
+  } catch (err) {
+    panel.querySelector("#history-panel-list").innerHTML =
+      `<div class="history-panel__empty">Failed to load history.</div>`;
+  }
+}
+
+function _renderFolderEntries(listEl, entries) {
+  if (!entries || entries.length === 0) {
+    listEl.innerHTML = `<div class="history-panel__empty">No history yet.<br>Changes will appear here after syncs or saves.</div>`;
+    return;
+  }
+
+  listEl.innerHTML = entries.map((entry) => `
+    <div class="history-panel__entry">
+      <div class="history-panel__entry-meta">
+        <span class="history-panel__entry-time">${escapeHtml(_formatTime(entry.timestamp))}</span>
+        <span class="history-panel__badge ${_badgeClass(entry.source)}">${_badgeLabel(entry.source)}</span>
+        ${entry.authorLogin ? `<span class="history-panel__entry-time">${escapeHtml(entry.authorLogin)}</span>` : ""}
+      </div>
+      ${entry.buildTitle ? `<div class="history-panel__entry-build">${escapeHtml(entry.buildTitle)}</div>` : ""}
+      <div class="history-panel__entry-summary">${escapeHtml(entry.summary)}</div>
+    </div>
+  `).join("");
 }
 
 export async function showHistoryPanel(buildId) {
