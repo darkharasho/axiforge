@@ -231,7 +231,7 @@ describe("summarizeBuildChange", () => {
 
   test("detects gameMode change", () => {
     const after = { ...base, gameMode: "wvw" };
-    expect(summarizeBuildChange(base, after)).toBe("gameMode: pve → wvw");
+    expect(summarizeBuildChange(base, after)).toBe("game mode: pve → wvw");
   });
 
   test("treats missing gameMode as 'pve' for comparison", () => {
@@ -275,14 +275,63 @@ describe("summarizeBuildChange", () => {
     expect(summarizeBuildChange(base, after)).toBe("build updated");
   });
 
-  test("title change takes priority over profession change", () => {
+  test("reports all changes when multiple fields differ", () => {
     const after = { ...base, title: "Different", profession: "Warrior" };
-    // title is checked first
-    expect(summarizeBuildChange(base, after)).toBe('title: "My Build" → "Different"');
+    expect(summarizeBuildChange(base, after)).toBe('title: "My Build" → "Different"; profession: Guardian → Warrior');
   });
 
-  test("profession change takes priority over gameMode change", () => {
+  test("reports both profession and game mode when both change", () => {
     const after = { ...base, profession: "Warrior", gameMode: "wvw" };
-    expect(summarizeBuildChange(base, after)).toBe("profession: Guardian → Warrior");
+    expect(summarizeBuildChange(base, after)).toBe("profession: Guardian → Warrior; game mode: pve → wvw");
+  });
+
+  test("specific skill slot changes — heal and elite", () => {
+    const before = {
+      ...base,
+      skills: { heal: { id: 1 }, utility: [null, null, null], elite: { id: 10 } },
+    };
+    const after = {
+      ...base,
+      skills: { heal: { id: 2 }, utility: [null, null, null], elite: { id: 11 } },
+    };
+    expect(summarizeBuildChange(before, after)).toBe("heal, elite skills changed");
+  });
+
+  test("specific skill slot changes — single utility slot", () => {
+    const before = {
+      ...base,
+      skills: { heal: { id: 1 }, utility: [{ id: 5 }, { id: 6 }, { id: 7 }], elite: { id: 10 } },
+    };
+    const after = {
+      ...base,
+      skills: { heal: { id: 1 }, utility: [{ id: 5 }, { id: 99 }, { id: 7 }], elite: { id: 10 } },
+    };
+    expect(summarizeBuildChange(before, after)).toBe("utility 2 skill changed");
+  });
+
+  test("underwater skill changes use 'underwater' prefix", () => {
+    const before = { ...base, underwaterSkills: { heal: { id: 1 }, utility: [null, null, null], elite: { id: 10 } } };
+    const after  = { ...base, underwaterSkills: { heal: { id: 2 }, utility: [null, null, null], elite: { id: 10 } } };
+    expect(summarizeBuildChange(before, after)).toBe("underwater heal skill changed");
+  });
+
+  test("equipment stat package change is reported specifically", () => {
+    const before = { ...base, equipment: { statPackage: "Berserker", slots: {}, weapons: {}, runes: {}, sigils: {}, infusions: {} } };
+    const after  = { ...base, equipment: { statPackage: "Viper", slots: {}, weapons: {}, runes: {}, sigils: {}, infusions: {} } };
+    expect(summarizeBuildChange(before, after)).toBe("stat package: Berserker → Viper changed");
+  });
+
+  test("equipment rune and sigil changes are reported specifically", () => {
+    const before = { ...base, equipment: { slots: {}, weapons: {}, runes: { head: "Rune of X" }, sigils: {}, infusions: {} } };
+    const after  = { ...base, equipment: { slots: {}, weapons: {}, runes: { head: "Rune of Y" }, sigils: {}, infusions: {} } };
+    expect(summarizeBuildChange(before, after)).toBe("runes changed");
+  });
+
+  test("multiple equipment categories listed when multiple change", () => {
+    const before = { ...base, equipment: { slots: { head: "a" }, weapons: { mainhand: "x" }, runes: {}, sigils: {}, infusions: {} } };
+    const after  = { ...base, equipment: { slots: { head: "b" }, weapons: { mainhand: "y" }, runes: {}, sigils: {}, infusions: {} } };
+    const result = summarizeBuildChange(before, after);
+    expect(result).toContain("armor/trinkets");
+    expect(result).toContain("weapons");
   });
 });
