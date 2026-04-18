@@ -33,7 +33,14 @@ class BuildStore {
 
     const idx = builds.findIndex((b) => b.id === id);
     if (idx >= 0) {
-      next.createdAt = builds[idx].createdAt || next.createdAt;
+      const existing = builds[idx];
+      next.createdAt = existing.createdAt || next.createdAt;
+      // Preserve publish metadata from the existing record when the incoming save
+      // doesn't supply it (e.g. editor saves via serializeEditorToBuild which does
+      // not include these fields, so they would otherwise be wiped to "").
+      if (!next.publishedFileId && existing.publishedFileId) next.publishedFileId = existing.publishedFileId;
+      if (!next.publishedKey && existing.publishedKey) next.publishedKey = existing.publishedKey;
+      if (!next.publishedSlug && existing.publishedSlug) next.publishedSlug = existing.publishedSlug;
       builds[idx] = next;
     } else {
       builds.push(next);

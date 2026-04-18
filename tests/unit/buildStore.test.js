@@ -774,6 +774,33 @@ describe("BuildStore — publish metadata", () => {
     expect(found.publishedFileId).toBe("abc12345");
     expect(found.publishedKey).toBe("somekey");
   });
+
+  test("editor save (omitting publish fields) does not wipe publishedFileId/Key/Slug", async () => {
+    // Simulate a published build
+    await store.upsertBuild(makeBuild({
+      id: "build-pub-1",
+      title: "My Build",
+      publishedSlug: "my-build",
+      publishedFileId: "a1b2c3d4",
+      publishedKey: "SomeBase64EncryptionKey",
+    }));
+
+    // Simulate an editor save — serializeEditorToBuild() does NOT include publish fields
+    const afterSave = await store.upsertBuild({
+      id: "build-pub-1",
+      title: "My Build (notes updated)",
+      profession: "Warrior",
+      notes: "Updated notes",
+      // publishedFileId / publishedKey / publishedSlug intentionally absent
+    });
+
+    // Publish metadata must be preserved so republish reuses the same URL
+    expect(afterSave.publishedFileId).toBe("a1b2c3d4");
+    expect(afterSave.publishedKey).toBe("SomeBase64EncryptionKey");
+    expect(afterSave.publishedSlug).toBe("my-build");
+    // The edit itself was applied
+    expect(afterSave.notes).toBe("Updated notes");
+  });
 });
 
 // ---------------------------------------------------------------------------
