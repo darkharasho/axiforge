@@ -279,7 +279,7 @@ class SharedLibrary {
             });
           }
         }
-        const syncAuthor = data._syncAuthor || "unknown";
+        const syncAuthor = data._syncAuthor || auth.org || "unknown";
         delete data._syncSubFolderName;
         delete data._syncAuthor;
         data.folderId = restoreFolderId;

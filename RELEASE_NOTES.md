@@ -1,3 +1,10 @@
+## Version v0.6.7 — April 18, 2026
+
+### Bug Fixes
+
+- **Editing a build no longer generates a new published URL** — previously, saving any change to a build (notes, traits, equipment, etc.) would silently clear its publish metadata. The next time you published, axiforge treated the build as unpublished and generated a brand-new link — breaking any existing comp SPA links and Discord embeds pointing at the old URL. Builds now correctly reuse the same URL on every republish.
+- **Build history now shows the correct author for synced changes** — when a shared build was updated and synced from another org member without an embedded author tag, the history entry would show "unknown" instead of the org name. It now correctly attributes the change to the org.
+
 ## Version v0.6.6 — April 18, 2026
 
 ### Bug Fixes
