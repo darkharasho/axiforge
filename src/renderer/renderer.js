@@ -39,6 +39,7 @@ import {
   setPublishStatus, showError, runPagesBuildPoll, getSelectedTarget,
   showPublishProgress, advancePublishStep, completeAllPublishSteps,
   failPublishStep, showPublishResult, getPublishTargetId, syncPublishStatus,
+  resolvePublishedUrl,
 } from "./modules/render-pages.js";
 import { resolveEntityFacts } from "./modules/detail-panel.js";
 import { resetWikiResolution } from "./modules/wiki-updates.js";
@@ -1264,10 +1265,9 @@ function wireEvents() {
         if (!buildId) throw new Error("No build loaded");
         const build = state.builds.find((b) => b.id === buildId);
         if (!build?.publishedFileId) throw new Error("Build not published");
-        const config = await window.desktopApi.getConfig();
-        const slug = build.publishedSlug || "";
         const theme = document.documentElement.getAttribute("data-theme");
-        const url = `${config.pagesUrl}?n=${encodeURIComponent(slug)}&b=${build.publishedFileId}.${build.publishedKey}${theme ? `&t=${theme}` : ""}`;
+        const url = resolvePublishedUrl(build, state.onboarding, state.folders, theme);
+        if (!url) throw new Error("Could not resolve published URL");
         await window.desktopApi.writeClipboardText(url);
         flashItem(pubLinkItem, pubLinkDefault);
       } catch {
