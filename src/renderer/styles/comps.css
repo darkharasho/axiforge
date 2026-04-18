@@ -500,6 +500,12 @@
   border: 1px solid rgba(136, 136, 136, 0.2);
 }
 
+.comp-badge--shared {
+  color: #ffa726;
+  background: rgba(255, 167, 38, 0.1);
+  border: 1px solid rgba(255, 167, 38, 0.28);
+}
+
 /* ══ Profession Icons Strip ═════════════════════════════════════════════ */
 
 .comp-list-row__prof-icons {

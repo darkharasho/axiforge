@@ -37,7 +37,7 @@ const { getProfessionList, getProfessionCatalog, getUpgradeCatalog, getWikiSumma
 const { slugifyBuildName, generateFileId, generateEncryptionKey, getDefaultBuildName } = require("./buildEncryption");
 const { buildSpaBundle, buildEncryptedBuildFile, buildEncryptedCompFile, buildRedirectFile } = require("./siteBundle");
 const { serializeForPublish } = require("./buildPublish");
-const { serializeCompForPublish } = require("./compPublish");
+const { serializeCompForPublish, getCompPublishBuildIds } = require("./compPublish");
 const { initAutoUpdate } = require("./autoUpdate");
 const { registerAxicodeFileHandlers } = require("./axicodeFile");
 
@@ -870,7 +870,7 @@ app.whenReady().then(async () => {
       const compTheme = await store.getSetting("appearance.theme");
 
       for (const comp of affectedComps) {
-        const compBuildIds = new Set(comp.buildIds || []);
+        const compBuildIds = new Set(getCompPublishBuildIds(comp));
         const compBuilds = allBuilds.filter((b) => compBuildIds.has(b.id));
         const buildsMap = {};
 
@@ -919,13 +919,17 @@ app.whenReady().then(async () => {
     progress("deploy");
     await triggerPagesWorkflow(session.token, owner, branch, TARGET_REPO).catch(() => null);
 
-    // Update build with publish metadata
-    await store.upsertBuild({
+    // Update build with publish metadata and push to shared repo so teammates
+    // receive the published URL without needing to publish themselves.
+    const savedBuild = await store.upsertBuild({
       ...build,
       publishedSlug: newSlug,
       publishedFileId: fileId,
       publishedKey: encKey,
     });
+    if (sharedRoot) {
+      sharedLibrary.schedulePush("build", savedBuild);
+    }
 
     const themedBuilds = await store.getSetting("appearance.themedBuildPages");
     const themeParam = themedBuilds && build.profession && PROFESSION_THEME_IDS[build.profession]
@@ -969,7 +973,7 @@ app.whenReady().then(async () => {
 
     const auth = await getAuthRecord();
     const branch = auth?.onboarding?.branch || "main";
-    const owner = auth?.onboarding?.targetOwner || session.viewer.login;
+    const personalOwner = auth?.onboarding?.targetOwner || session.viewer.login;
 
     // ── 1. Load comp + its builds ──────────────────────────────────────
     const compTheme = await store.getSetting("appearance.theme");
@@ -983,13 +987,21 @@ app.whenReady().then(async () => {
       throw new Error("Comp name is required for publishing.");
     }
 
+    // Shared comps publish to the org's axibuilds repo so the URL is the same
+    // for all org members and doesn't change when a different user publishes.
+    const compSharedRoot = await findRootSharedFolder(comp.folderId);
+    const owner = compSharedRoot ? compSharedRoot.orgName : personalOwner;
+    const ownerType = compSharedRoot ? "org" : "user";
+
     const allBuilds = await store.listBuilds();
-    const buildIdSet = new Set(comp.buildIds || []);
+    // Use union of buildIds + all party line slot IDs so a build that ended up
+    // in a slot without being in buildIds (data divergence) is still published.
+    const buildIdSet = new Set(getCompPublishBuildIds(comp));
     const compBuilds = allBuilds.filter((b) => buildIdSet.has(b.id));
 
     // ── 2. Ensure repo infrastructure ─────────────────────────────────
     progress("repo");
-    await ensureAxiForgeRepo(session.token, owner, "user");
+    await ensureAxiForgeRepo(session.token, owner, ownerType);
     await ensurePagesWorkflow(session.token, owner, branch, TARGET_REPO);
     await ensurePages(session.token, owner, branch, TARGET_REPO);
 
@@ -1077,16 +1089,19 @@ app.whenReady().then(async () => {
     await triggerPagesWorkflow(session.token, owner, branch, TARGET_REPO).catch(() => null);
 
     // ── 8. Persist metadata (builds first, then comp) ─────────────────
+    // Push each newly-published build to the shared repo so teammates get the
+    // published URL without needing to publish themselves.
     for (const updatedBuild of updatedBuildRecords) {
-      await store.upsertBuild(updatedBuild);
+      const savedBuild = await store.upsertBuild(updatedBuild);
+      if (compSharedRoot) {
+        sharedLibrary.schedulePush("build", savedBuild);
+      }
     }
 
     const savedTheme = await store.getSetting("appearance.theme");
     const compPagesUrl = `https://${owner}.github.io/${TARGET_REPO}/?n=${encodeURIComponent(compSlug)}&c=${compFileId}.${compEncKey}${savedTheme ? `&t=${savedTheme}` : ""}`;
 
-
-
-    await compStore.upsertComp({
+    const savedComp = await compStore.upsertComp({
       ...comp,
       publishedFileId: compFileId,
       publishedKey: compEncKey,
@@ -1094,20 +1109,27 @@ app.whenReady().then(async () => {
       boonCoverageHtml: boonCoverageHtml || comp.boonCoverageHtml || "",
     });
 
-    await patchAuthRecord({
-      onboarding: {
-        repoReady: true,
-        forkReady: true,
-        repoName: TARGET_REPO,
-        pagesReady: false,
-        pagesBuildStatus: "queued",
-        pagesBuildUpdatedAt: new Date().toISOString(),
-        pagesBuildError: null,
-        pagesUrl: `https://${owner}.github.io/${TARGET_REPO}/`,
-        branch,
-        targetOwner: owner,
-      },
-    });
+    // Push comp publish metadata to shared repo so teammates get the URL.
+    // Skip personal auth record update for shared comps — the org's repo is the
+    // canonical publish target, not the user's personal publishing setup.
+    if (compSharedRoot) {
+      sharedLibrary.schedulePush("comp", savedComp);
+    } else {
+      await patchAuthRecord({
+        onboarding: {
+          repoReady: true,
+          forkReady: true,
+          repoName: TARGET_REPO,
+          pagesReady: false,
+          pagesBuildStatus: "queued",
+          pagesBuildUpdatedAt: new Date().toISOString(),
+          pagesBuildError: null,
+          pagesUrl: `https://${owner}.github.io/${TARGET_REPO}/`,
+          branch,
+          targetOwner: owner,
+        },
+      });
+    }
 
     return { pagesUrl: compPagesUrl, slug: compSlug, fileId: compFileId, changed: true };
   });
