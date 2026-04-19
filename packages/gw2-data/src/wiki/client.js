@@ -9,7 +9,7 @@ const {
 
 const WIKI_API_ROOT = "https://wiki.guildwars2.com/api.php";
 const USER_AGENT = "@axiapps/gw2-data (https://github.com/darkharasho/axiforge)";
-const DEFAULT_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+const DEFAULT_TTL_MS = 4 * 60 * 60 * 1000; // 4 hours
 const RATE_LIMIT_MS = 200;
 const MISSING_SENTINEL = "__WIKI_MISSING__";
 
