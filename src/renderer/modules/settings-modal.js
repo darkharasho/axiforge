@@ -139,7 +139,6 @@ export function initSettingsModal() {
       </div>
       <div class="settings-modal__actions">
         <span class="settings-modal__save-status" id="sm-save-status"></span>
-        <button class="settings-modal__btn settings-modal__btn--save" id="sm-save" type="button">Save</button>
       </div>
     </div>
   `;
@@ -161,7 +160,6 @@ export function initSettingsModal() {
     buildThreadMode:   document.getElementById("sm-build-thread-mode"),
     buildThreadId:     document.getElementById("sm-build-thread-id"),
     buildThreadError:  document.getElementById("sm-build-thread-error"),
-    save:              document.getElementById("sm-save"),
     saveStatus:        document.getElementById("sm-save-status"),
     clearCache:        document.getElementById("sm-clear-cache"),
     cacheStatus:       document.getElementById("sm-cache-status"),
@@ -175,23 +173,27 @@ export function initSettingsModal() {
   };
   _el.themedBuilds = _overlay.querySelector("#sm-themed-builds");
 
-  _el.close.addEventListener("click", _close);
-  _el.save.addEventListener("click", _save);
-  _el.clearCache.addEventListener("click", _clearCache);
+  const _debouncedSave = _debounce(_save, 600);
 
-  // Pressing Enter in either webhook URL field triggers save, matching user expectation.
-  _el.webhookUrl.addEventListener("keydown", (e) => { if (e.key === "Enter") _save(); });
-  _el.buildWebhookUrl.addEventListener("keydown", (e) => { if (e.key === "Enter") _save(); });
+  _el.close.addEventListener("click", _close);
+  _el.clearCache.addEventListener("click", _clearCache);
   _el.sharedConnect.addEventListener("click", _connectSharedLibrary);
   _el.sharedDisconnect.addEventListener("click", _disconnectSharedLibrary);
 
-  // Toggle thread ID input visibility for comp webhook
+  // Auto-save text inputs after user stops typing
+  _el.webhookUrl.addEventListener("input", _debouncedSave);
+  _el.threadId.addEventListener("input", _debouncedSave);
+  _el.buildWebhookUrl.addEventListener("input", _debouncedSave);
+  _el.buildThreadId.addEventListener("input", _debouncedSave);
+
+  // Toggle thread ID visibility and save immediately on radio change
   _el.threadMode.addEventListener("change", (e) => {
     _el.threadId.classList.toggle("settings-modal__thread-id-input--hidden", e.target.value !== "custom");
+    _save();
   });
-  // Toggle thread ID input visibility for build webhook
   _el.buildThreadMode.addEventListener("change", (e) => {
     _el.buildThreadId.classList.toggle("settings-modal__thread-id-input--hidden", e.target.value !== "custom");
+    _save();
   });
 
   // Toggle themed build pages
@@ -239,8 +241,6 @@ export async function openSettingsModal() {
   // Themed build pages toggle
   _el.themedBuilds.checked = !!themedBuilds;
 
-  // Reset save button state
-  _el.save.disabled = false;
   _el.saveStatus.textContent = "";
   _el.saveStatus.className = "settings-modal__save-status";
 
@@ -551,6 +551,22 @@ async function _clearCache() {
 
 // ─── Discord settings save ───────────────────────────────────────────────────
 
+function _debounce(fn, ms) {
+  let timer;
+  return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), ms); };
+}
+
+function _showSaved() {
+  _el.saveStatus.textContent = "\u2713 Saved";
+  _el.saveStatus.className = "settings-modal__save-status settings-modal__save-status--ok";
+  setTimeout(() => {
+    if (_el.saveStatus.textContent === "\u2713 Saved") {
+      _el.saveStatus.textContent = "";
+      _el.saveStatus.className = "settings-modal__save-status";
+    }
+  }, 2000);
+}
+
 async function _save() {
   const url = _el.webhookUrl.value.trim();
   const buildUrl = _el.buildWebhookUrl.value.trim();
@@ -594,9 +610,6 @@ async function _save() {
   _el.threadError.textContent = "";
   _el.buildThreadError.textContent = "";
 
-  _el.save.disabled = true;
-  _el.saveStatus.textContent = "";
-  _el.saveStatus.className = "settings-modal__save-status";
   try {
     await Promise.all([
       window.desktopApi.setSetting("discord.webhookUrl", url || null),
@@ -606,11 +619,10 @@ async function _save() {
       window.desktopApi.setSetting("discord.buildThreadMode", bMode),
       window.desktopApi.setSetting("discord.buildThreadId", bMode === "custom" ? bThreadId : null),
     ]);
-    _close();
+    _showSaved();
   } catch (err) {
     _el.saveStatus.textContent = "Save failed — please try again";
     _el.saveStatus.className = "settings-modal__save-status settings-modal__save-status--error";
-    _el.save.disabled = false;
   }
 }
 

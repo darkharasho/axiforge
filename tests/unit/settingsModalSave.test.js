@@ -3,7 +3,7 @@
 const fs = require("fs");
 const path = require("path");
 
-describe("settings-modal save button — defensive attributes", () => {
+describe("settings-modal — no explicit Save button (auto-saves)", () => {
   let src;
 
   beforeAll(() => {
@@ -13,14 +13,13 @@ describe("settings-modal save button — defensive attributes", () => {
     );
   });
 
-  test("Save button has explicit type='button' to prevent accidental form submission", () => {
-    // The Save button must have type="button". Without it, some browsers/Electron
-    // versions treat a button inside certain layouts as type="submit".
-    const saveButtonMatch = src.match(/id="sm-save"[^>]*>Save<\/button>|>Save<\/button>[^<]*id="sm-save"/);
-    // Find the sm-save button in the HTML template
-    const smSaveBtn = src.match(/<button[^>]+id="sm-save"[^>]*>Save<\/button>/);
-    expect(smSaveBtn).not.toBeNull();
-    expect(smSaveBtn[0]).toMatch(/type="button"/);
+  test("HTML template does not contain a Save button", () => {
+    // Settings auto-save — there is no explicit Save button to click.
+    expect(src).not.toMatch(/>Save<\/button>/);
+  });
+
+  test("sm-save-status element is present for Saved/error feedback", () => {
+    expect(src).toMatch(/id="sm-save-status"/);
   });
 });
 
@@ -35,7 +34,6 @@ describe("settings-modal _save — error handling", () => {
   });
 
   test("_save function contains try/catch around the setSetting calls", () => {
-    // Extract the _save function body and check for try/catch.
     // This guards against silent failures where the modal stays open with no
     // user feedback when IPC calls fail.
     const saveFnMatch = src.match(/async function _save\(\)\s*\{([\s\S]*?)(?=\n(?:function|async function|\/\/ ─))/);
@@ -50,16 +48,14 @@ describe("settings-modal _save — error handling", () => {
     const saveFnMatch = src.match(/async function _save\(\)\s*\{([\s\S]*?)(?=\n(?:function|async function|\/\/ ─))/);
     expect(saveFnMatch).not.toBeNull();
     const saveFnBody = saveFnMatch[1];
-    // Should have some error display in catch (not just console.error)
     const catchBlock = saveFnBody.match(/catch\s*\([^)]*\)\s*\{([^}]*)\}/s);
     expect(catchBlock).not.toBeNull();
-    // The catch block should reference an error display element, not just log
-    expect(catchBlock[1]).not.toMatch(/^\s*\/\//); // not just a comment
+    expect(catchBlock[1]).not.toMatch(/^\s*\/\//);
     expect(catchBlock[0]).toMatch(/textContent|showError|err/);
   });
 });
 
-describe("settings-modal webhook URL inputs — Enter key triggers save (issue #251)", () => {
+describe("settings-modal — auto-save on input (issue #251)", () => {
   let src;
 
   beforeAll(() => {
@@ -69,25 +65,25 @@ describe("settings-modal webhook URL inputs — Enter key triggers save (issue #
     );
   });
 
-  test("keydown Enter handler is attached to webhook URL inputs in initSettingsModal", () => {
-    // Users expect pressing Enter in a text field to confirm/save. Without this,
-    // they type the URL, press Enter, see nothing happen, close with X, and lose the URL.
-    // The handler must be wired in initSettingsModal (after _el is set) and call _save.
-    const initFnMatch = src.match(/export function initSettingsModal\(\)\s*\{([\s\S]*?)(?=\nexport )/);
-    expect(initFnMatch).not.toBeNull();
-    const initBody = initFnMatch[1];
-    // Must attach a keydown listener to one or both webhook URL inputs
-    expect(initBody).toMatch(/webhookUrl|sm-webhook-url/);
-    expect(initBody).toMatch(/keydown|keypress|key.*Enter/);
+  test("_debounce helper is defined in the module", () => {
+    // Auto-save debounces text input events to avoid firing on every keystroke.
+    expect(src).toMatch(/function _debounce\s*\(/);
   });
 
-  test("Enter key handler references _save (not just the click binding)", () => {
-    // The Enter key handler must be separate from the click handler, referencing _save
-    // in a keydown/keypress context, not just the existing click listener wiring.
+  test("webhook URL inputs are wired with debounced input event listener", () => {
+    // Users expect typing a URL and pausing to trigger a save automatically.
     const initFnMatch = src.match(/export function initSettingsModal\(\)\s*\{([\s\S]*?)(?=\nexport )/);
     expect(initFnMatch).not.toBeNull();
     const initBody = initFnMatch[1];
-    // Should have a keydown/keypress event listener that calls _save
-    expect(initBody).toMatch(/addEventListener\(['"](keydown|keypress)['"]/);
+    expect(initBody).toMatch(/webhookUrl.*addEventListener.*['"](input)['"]/);
+    expect(initBody).toMatch(/_debouncedSave/);
+  });
+
+  test("radio/select changes trigger immediate save", () => {
+    // Thread-mode radio changes should save without debounce delay.
+    const initFnMatch = src.match(/export function initSettingsModal\(\)\s*\{([\s\S]*?)(?=\nexport )/);
+    expect(initFnMatch).not.toBeNull();
+    const initBody = initFnMatch[1];
+    expect(initBody).toMatch(/threadMode.*addEventListener.*['"](change)['"]/);
   });
 });
