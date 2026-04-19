@@ -546,4 +546,29 @@ describe("collectModifiers()", () => {
       condition: null,
     });
   });
+
+  it("emits critChance with condition:'berserk' for berserkConditional trait (Smash Brawler)", () => {
+    const traitId = 2049;
+    const trait = {
+      slot: "Major",
+      description: "Smash Brawler",
+      facts: [
+        { type: "Percent", text: "Critical Chance Increase", percent: 15 },
+        { type: "Percent", text: "Critical Chance Increase", percent: 5 },
+      ],
+    };
+    const catalogs = makeCatalogs({ [traitId]: trait });
+    const ctx = makeCtx([{ id: 18, majorChoices: { 1: traitId } }]);
+    const overrides = makeOverrides({ "trait:2049": { berserkConditional: true } });
+
+    const mods = collectModifiers(ctx, catalogs, overrides);
+    const critMods = mods.filter((m) => m.type === "critChance");
+    expect(critMods).toHaveLength(1);
+    expect(critMods[0]).toMatchObject({
+      source: "trait:2049",
+      type: "critChance",
+      value: 15,
+      condition: "berserk",
+    });
+  });
 });

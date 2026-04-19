@@ -26,6 +26,10 @@
     "berserkConditional": true,
     "description": "Fatal Frenzy: stat bonuses only apply while in berserk mode"
   },
+  "trait:2049": {
+    "berserkConditional": true,
+    "description": "Smash Brawler: crit chance bonus only applies while in berserk mode"
+  },
   "trait:1338": {
     "weaponConditional": { "weapons": ["greatsword", "spear"], "multiplier": 2 },
     "description": "Forceful Greatsword: double Power bonus while wielding greatsword or underwater spear"

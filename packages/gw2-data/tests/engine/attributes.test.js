@@ -308,6 +308,35 @@ describe("computeAttributes", () => {
     expect(resultOn.traits.ConditionDamage).toBe(300);
   });
 
+  test("Smash Brawler crit chance only applies when berserkActive (issue #225)", () => {
+    // Trait 2049 must have berserkConditional:true in overrides.json for this test to pass.
+    // Base precision 1000 → crit = (1000-895)/21 = 5%. With Smash Brawler +15% while berserk = 20%.
+    const catalogs = makeCatalogs({
+      traitById: new Map([[2049, {
+        id: 2049,
+        slot: "Major",
+        description: "Smash Brawler",
+        facts: [
+          { type: "Percent", text: "Critical Chance Increase", percent: 15 },
+          { type: "Percent", text: "Critical Chance Increase", percent: 5 },
+        ],
+        specialization: 18,
+      }]]),
+      specializationById: new Map([[18, { id: 18, minorTraits: [] }]]),
+    });
+    const baseCtx = {
+      specializations: [{ id: 18, majorChoices: { 1: 2049 } }],
+    };
+
+    // Without berserk: no crit bonus from trait
+    const resultOff = computeAttributes(makeCtx({ ...baseCtx, berserkActive: false }), catalogs);
+    expect(resultOff.derived.critChance).toBeCloseTo(5, 5);
+
+    // With berserk: +15% crit from trait
+    const resultOn = computeAttributes(makeCtx({ ...baseCtx, berserkActive: true }), catalogs);
+    expect(resultOn.derived.critChance).toBeCloseTo(20, 5);
+  });
+
   test("signet passive buffs added", () => {
     const ctx = makeCtx({
       skills: { healId: null, utilityIds: [], eliteId: null },
