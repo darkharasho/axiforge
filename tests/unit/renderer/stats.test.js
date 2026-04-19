@@ -859,6 +859,75 @@ describe("computeEquipmentStats — signet passive buffs", () => {
 });
 
 // ---------------------------------------------------------------------------
+// computeStatBreakdown — utility conversion breakdown (issue #227)
+// ---------------------------------------------------------------------------
+
+describe("computeStatBreakdown — utility conversion uses pre-utility base (issue #227)", () => {
+  const mockCatalogConv = {
+    skillById: new Map(),
+    traitById: new Map(),
+    specializationById: new Map(),
+  };
+
+  beforeEach(() => {
+    state.activeCatalog = mockCatalogConv;
+    state.upgradeCatalog = {
+      foodById: new Map(),
+      utilityById: new Map([
+        // Utility with a flat Ferocity bonus AND a conversion from Ferocity to Power.
+        // The conversion must only use pre-utility Ferocity, NOT the flat bonus.
+        [99001, { id: 99001, name: "Test Conversion Oil",
+          buff: "Gain Power Equal to 10% of Your Ferocity | +200 Ferocity" }],
+        // Standard dual-conversion: Gain Power from Precision + Ferocity (no flat bonuses)
+        [99002, { id: 99002, name: "Test Sharpening Stone",
+          buff: "Gain Power Equal to 3% of Your Precision | Gain Power Equal to 6% of Your Ferocity" }],
+      ]),
+      runeById: new Map(),
+      infusionById: new Map(),
+      enrichmentById: new Map(),
+    };
+  });
+  afterEach(() => {
+    state.activeCatalog = null;
+    state.upgradeCatalog = null;
+  });
+
+  test("conversion uses pre-utility Ferocity, not inflated total including utility flat bonus", () => {
+    // Equipment Ferocity = 0 (no gear). Utility adds flat +200 Ferocity.
+    // Engine uses preConvBase.Ferocity = 0 for the conversion → Power += 0.
+    // Buggy code would use total.Ferocity = 200 → Power += 20.
+    state.editor = makeEditor({}, "", "99001");
+    const entries = computeStatBreakdown("Power");
+    const convEntry = entries.find((e) => e.source && e.source.includes("10% of Ferocity"));
+    // No conversion entry should appear (0 * 10% = 0 → filtered out)
+    expect(convEntry).toBeUndefined();
+  });
+
+  test("conversion uses equipment Ferocity correctly when no utility flat bonus", () => {
+    // Berserker's chest: Ferocity = 101. Utility converts 6% of Ferocity to Power.
+    // Correct: Power += round(101 * 0.06) = 6
+    state.editor = makeEditor({ chest: "Berserker's" }, "", "99002");
+    const entries = computeStatBreakdown("Power");
+    const convEntry = entries.find((e) => e.source && e.source.includes("6% of Ferocity"));
+    expect(convEntry).toBeDefined();
+    expect(convEntry.value).toBe(6); // round(101 * 0.06) = 6
+  });
+
+  test("conversion value matches engine total Power contribution", () => {
+    // With Berserker's chest, Precision = 1101, Ferocity = 101.
+    // Utility: +3% of Precision = round(1101 * 0.03) = 33, +6% of Ferocity = round(101 * 0.06) = 6.
+    // Engine total Power = 1000 + 141 (chest) + 33 + 6 = 1180.
+    // Breakdown Power entries must sum to 1180.
+    state.editor = makeEditor({ chest: "Berserker's" }, "", "99002");
+    const entries = computeStatBreakdown("Power");
+    const total = entries.reduce((s, e) => s + e.value, 0);
+    const { computeStats: getStats } = require("../../../src/renderer/modules/engine-bridge");
+    const engineTotal = getStats(state).total.Power;
+    expect(total).toBe(engineTotal);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // computeStatBreakdown — signet passive buff contributions (issue #174)
 // ---------------------------------------------------------------------------
 

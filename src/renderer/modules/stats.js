@@ -259,8 +259,17 @@ export function computeStatBreakdown(statKey, assumedBoons = null, sigilStacks =
     const utilDef = upgradeCatalog.utilityById?.get(Number(utilityId));
     if (utilDef) {
       const MAP = { "Condition Damage": "ConditionDamage", "Healing Power": "HealingPower" };
-      // Percentage conversions — use engine totals for source stats
-      const totals = computeStats(state, assumedBoons, sigilStacks, activeSignets).total;
+      // Percentage conversions — use pre-utility base stats to match the engine's
+      // preConvBase (base + equipment + food + runes + infusions + enrichment + signets).
+      // Using the full total inflates results because it includes the utility's own flat
+      // bonuses, trait conversions, and boon contributions.
+      const _er = computeStats(state, assumedBoons, sigilStacks, activeSignets);
+      const _STAT_KEYS = ["Power", "Precision", "Toughness", "Vitality", "Ferocity", "ConditionDamage", "Expertise", "Concentration", "HealingPower"];
+      const preUtilBase = {};
+      for (const _k of _STAT_KEYS) {
+        preUtilBase[_k] = (_er.base[_k] || 0) + (_er.equipment[_k] || 0) + (_er.food[_k] || 0) +
+          (_er.runes[_k] || 0) + (_er.infusions[_k] || 0) + (_er.enrichment[_k] || 0) + (_er.signets[_k] || 0);
+      }
       const convRe = /Gain (Condition Damage|Healing Power|Power|Precision|Toughness|Vitality|Ferocity|Concentration|Expertise) Equal to (\d+(?:\.\d+)?)% of Your (Condition Damage|Healing Power|Power|Precision|Toughness|Vitality|Ferocity|Concentration|Expertise)/g;
       let m;
       while ((m = convRe.exec(utilDef.buff)) !== null) {
@@ -268,7 +277,7 @@ export function computeStatBreakdown(statKey, assumedBoons = null, sigilStacks =
         if (targetKey !== statKey) continue;
         const pct = Number(m[2]) / 100;
         const sourceKey = MAP[m[3]] || m[3];
-        const sourceBase = (totals[sourceKey] || 0);
+        const sourceBase = (preUtilBase[sourceKey] || 0);
         const val = Math.round(sourceBase * pct);
         if (val) entries.push({ source: `${utilDef.name} (${m[2]}% of ${m[3]})`, value: val, category: "utility" });
       }

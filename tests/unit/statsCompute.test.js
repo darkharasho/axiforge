@@ -392,6 +392,49 @@ describe("computePublishStats", () => {
     expect(result.stats.Power).toBe(1000 + 5);
   });
 
+  // ── Utility conversion (issue #227) ────────────────────────────────────
+
+  test("utility conversion uses pre-utility base stats, not inflated mutated totals", () => {
+    // Utility adds +200 Ferocity flat AND converts 10% of Ferocity to Power.
+    // The conversion must use pre-utility Ferocity (0), not post-flat Ferocity (200).
+    const equipment = { slots: {}, runes: {}, infusions: {}, food: null, utility: "99001" };
+    const upgradeCatalog = {
+      runeById: new Map(), infusionById: new Map(), enrichmentById: new Map(),
+      foodById: new Map(),
+      utilityById: new Map([
+        [99001, { id: 99001, name: "Test Oil",
+          buff: "Gain Power Equal to 10% of Your Ferocity | +200 Ferocity" }],
+      ]),
+    };
+    const result = computePublishStats(equipment, upgradeCatalog, "Warrior");
+    // Engine preConvBase.Ferocity = 0 → Power += round(0 * 0.10) = 0
+    // Flat Ferocity = 200 added AFTER conversion pattern is processed
+    expect(result.stats.Power).toBe(1000);
+    expect(result.stats.Ferocity).toBe(200);
+  });
+
+  test("utility dual-conversion does not cross-contaminate when targets differ", () => {
+    // "Gain Power = 3% of Precision | Gain Ferocity = 3% of Precision"
+    // Both use Precision as source; modifying Power shouldn't affect Ferocity calc.
+    const equipment = {
+      slots: { chest: "Berserker's" }, runes: {}, infusions: {},
+      food: null, utility: "99002",
+    };
+    const upgradeCatalog = {
+      runeById: new Map(), infusionById: new Map(), enrichmentById: new Map(),
+      foodById: new Map(),
+      utilityById: new Map([
+        [99002, { id: 99002, name: "Furious Sharpening Stone",
+          buff: "Gain Power Equal to 3% of Your Precision | Gain Ferocity Equal to 3% of Your Precision" }],
+      ]),
+    };
+    const result = computePublishStats(equipment, upgradeCatalog, "Warrior");
+    // Berserker's chest: Power=141, Precision=101, Ferocity=101. Base Precision = 1000+101=1101.
+    // Power += round(1101 * 0.03) = 33; Ferocity += round(1101 * 0.03) = 33
+    expect(result.stats.Power).toBe(1000 + 141 + 33);
+    expect(result.stats.Ferocity).toBe(101 + 33);
+  });
+
   test("food with 'to All Attributes' adds to every stat", () => {
     const equipment = { slots: {}, runes: {}, infusions: {}, food: "91713", utility: "" };
     const upgradeCatalog = {
