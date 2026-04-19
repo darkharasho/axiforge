@@ -35,7 +35,10 @@ function collectActiveTraitIds(ctx, catalogs) {
       ? catalogs.specializationById.get(specId)
       : null;
     for (const minorId of specData?.minorTraits || []) {
-      if (minorId) ids.add(Number(minorId));
+      // minorTraits may be IDs (number) or enriched objects ({ id, name, ... })
+      // depending on whether the source is the GW2 API catalog or a serialized build.
+      const n = typeof minorId === "object" ? Number(minorId?.id) : Number(minorId);
+      if (n) ids.add(n);
     }
   }
 

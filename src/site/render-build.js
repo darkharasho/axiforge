@@ -155,6 +155,9 @@ function populateStateFromBuild(build) {
     })),
     specializationById: new Map((build.specializations || []).map(s => [s.id, {
       ...s,
+      // Normalize minorTraits to IDs so the engine's collectActiveTraitIds can use them.
+      // Published builds store minorTraits as enriched objects; the engine expects numbers.
+      minorTraits: (s.minorTraits || []).map(t => typeof t === "object" ? t.id : t),
       majorTraits: s.majorTraits || (s.majorTraitsByTier
         ? Object.values(s.majorTraitsByTier).flat().map(t => typeof t === "object" ? t.id : t)
         : []),
