@@ -1,3 +1,9 @@
+## Version v0.6.9 — April 19, 2026
+
+### Bug Fixes
+
+- **Published builds now match the app's attribute calculations** — trait conversion percentages and Might-per-stack overrides (e.g. Notoriety on Berserker) were being applied correctly in the app but ignored entirely in published web builds. Minor traits were silently skipped in the SPA due to a data format mismatch. Both the published build viewer and the stat engine now handle this correctly, so traits like Notoriety, Great Fortitude, and similar minor-trait stat modifiers will show the right numbers on your published builds.
+
 ## Version v0.6.8 — April 18, 2026
 
 ### Bug Fixes
