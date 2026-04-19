@@ -1,3 +1,9 @@
+## Version v0.6.8 — April 18, 2026
+
+### Bug Fixes
+
+- **Might boon tooltip now shows correct Condition Damage** — for builds using a trait that overrides Might's Power-per-stack bonus without changing Condition Damage (e.g. Pinnacle of Strength-style traits), the Condition Damage tooltip was showing `NaN` and `+undefined Condition Damage per stack`. It now correctly falls back to the standard +30 Condition Damage per stack.
+
 ## Version v0.6.7 — April 18, 2026
 
 ### Bug Fixes
