@@ -3,7 +3,7 @@
 const fs = require("fs");
 const path = require("path");
 
-describe("settings-modal save button — defensive attributes", () => {
+describe("settings-modal — no explicit Save button (auto-saves)", () => {
   let src;
 
   beforeAll(() => {
@@ -13,14 +13,13 @@ describe("settings-modal save button — defensive attributes", () => {
     );
   });
 
-  test("Save button has explicit type='button' to prevent accidental form submission", () => {
-    // The Save button must have type="button". Without it, some browsers/Electron
-    // versions treat a button inside certain layouts as type="submit".
-    const saveButtonMatch = src.match(/id="sm-save"[^>]*>Save<\/button>|>Save<\/button>[^<]*id="sm-save"/);
-    // Find the sm-save button in the HTML template
-    const smSaveBtn = src.match(/<button[^>]+id="sm-save"[^>]*>Save<\/button>/);
-    expect(smSaveBtn).not.toBeNull();
-    expect(smSaveBtn[0]).toMatch(/type="button"/);
+  test("HTML template does not contain a Save button", () => {
+    // Settings auto-save — there is no explicit Save button to click.
+    expect(src).not.toMatch(/>Save<\/button>/);
+  });
+
+  test("sm-save-status element is present for Saved/error feedback", () => {
+    expect(src).toMatch(/id="sm-save-status"/);
   });
 });
 
@@ -35,7 +34,6 @@ describe("settings-modal _save — error handling", () => {
   });
 
   test("_save function contains try/catch around the setSetting calls", () => {
-    // Extract the _save function body and check for try/catch.
     // This guards against silent failures where the modal stays open with no
     // user feedback when IPC calls fail.
     const saveFnMatch = src.match(/async function _save\(\)\s*\{([\s\S]*?)(?=\n(?:function|async function|\/\/ ─))/);
@@ -50,11 +48,42 @@ describe("settings-modal _save — error handling", () => {
     const saveFnMatch = src.match(/async function _save\(\)\s*\{([\s\S]*?)(?=\n(?:function|async function|\/\/ ─))/);
     expect(saveFnMatch).not.toBeNull();
     const saveFnBody = saveFnMatch[1];
-    // Should have some error display in catch (not just console.error)
     const catchBlock = saveFnBody.match(/catch\s*\([^)]*\)\s*\{([^}]*)\}/s);
     expect(catchBlock).not.toBeNull();
-    // The catch block should reference an error display element, not just log
-    expect(catchBlock[1]).not.toMatch(/^\s*\/\//); // not just a comment
+    expect(catchBlock[1]).not.toMatch(/^\s*\/\//);
     expect(catchBlock[0]).toMatch(/textContent|showError|err/);
+  });
+});
+
+describe("settings-modal — auto-save on input (issue #251)", () => {
+  let src;
+
+  beforeAll(() => {
+    src = fs.readFileSync(
+      path.resolve(__dirname, "../../src/renderer/modules/settings-modal.js"),
+      "utf8"
+    );
+  });
+
+  test("_debounce helper is defined in the module", () => {
+    // Auto-save debounces text input events to avoid firing on every keystroke.
+    expect(src).toMatch(/function _debounce\s*\(/);
+  });
+
+  test("webhook URL inputs are wired with debounced input event listener", () => {
+    // Users expect typing a URL and pausing to trigger a save automatically.
+    const initFnMatch = src.match(/export function initSettingsModal\(\)\s*\{([\s\S]*?)(?=\nexport )/);
+    expect(initFnMatch).not.toBeNull();
+    const initBody = initFnMatch[1];
+    expect(initBody).toMatch(/webhookUrl.*addEventListener.*['"](input)['"]/);
+    expect(initBody).toMatch(/_debouncedSave/);
+  });
+
+  test("radio/select changes trigger immediate save", () => {
+    // Thread-mode radio changes should save without debounce delay.
+    const initFnMatch = src.match(/export function initSettingsModal\(\)\s*\{([\s\S]*?)(?=\nexport )/);
+    expect(initFnMatch).not.toBeNull();
+    const initBody = initFnMatch[1];
+    expect(initBody).toMatch(/threadMode.*addEventListener.*['"](change)['"]/);
   });
 });
