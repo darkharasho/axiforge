@@ -200,13 +200,14 @@ function collectModifiers(ctx, catalogs, overrides) {
 
     // 6. "Critical Chance Increase" Percent facts — critChance
     //    Fury traits: condition = "fury" (applied only when fury is assumed)
+    //    Berserk traits: condition = "berserk" (applied only when berserk is active)
     //    Non-fury/non-berserk traits: condition = null (passive, always active)
     //    Skip traits with ignoreCritChance (skill-specific crit like Opening Strike, stealth, bursts)
     if (!override?.ignoreCritChance) {
       const critFacts = modeFacts.filter(
         (f) => f.type === "Percent" && f.text === "Critical Chance Increase" && f.percent
       );
-      if (critFacts.length > 0 && (fury || condition === null)) {
+      if (critFacts.length > 0 && (fury || condition === null || condition === "berserk")) {
         const idx = gameMode === "wvw" ? Math.min(1, critFacts.length - 1) : 0;
         modifiers.push({
           source,

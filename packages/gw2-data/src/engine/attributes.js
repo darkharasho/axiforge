@@ -552,6 +552,14 @@ function computeAttributes(ctx, catalogs) {
       }
     }
   }
+  // Berserk crit bonus (only when berserk mode is active)
+  if (berserkActive) {
+    for (const mod of modifiers) {
+      if (mod.type === "critChance" && mod.condition === "berserk") {
+        critBonus += mod.value;
+      }
+    }
+  }
 
   const critChance = Math.min(100, (total.Precision - 895) / 21 + critBonus);
   const critDamage = 150 + total.Ferocity / 15;
