@@ -28,7 +28,7 @@ const _catalogInflight = new Map();
 
 function initWikiClient(cacheDir) {
   const cache = new DiskCache(path.join(cacheDir, "wiki-facts"));
-  _wikiClient = new WikiClient({ cache });
+  _wikiClient = new WikiClient({ cache, cacheTTL: 7 * 24 * 60 * 60 * 1000 });
 }
 
 function getWikiClient() {

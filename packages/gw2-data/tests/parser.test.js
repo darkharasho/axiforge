@@ -187,6 +187,25 @@ describe("mapWikiFactToApiFact", () => {
     expect(fact).toEqual({ type: "Percent", text: "Recharge Reduced", percent: 15 });
   });
 
+  test("damage increase with alt label uses alt as text (Farsighted)", () => {
+    // {{skill fact|damage increase|alt=Damage Increase above Threshold|15|game mode=pve wvw}}
+    // The alt param should override the generated label, not be ignored.
+    const fact = mapWikiFactToApiFact(
+      "damage increase",
+      ["15"],
+      { alt: "Damage Increase above Threshold", "game mode": "pve wvw" },
+      false,
+      false
+    );
+    expect(fact).toEqual({ type: "Percent", text: "Damage Increase above Threshold", percent: 15 });
+  });
+
+  test("generic numeric fact with alt label uses alt as text", () => {
+    // alt param should work for generic Number facts too
+    const fact = mapWikiFactToApiFact("range threshold", ["600"], { alt: "Range Threshold" }, false, true);
+    expect(fact).toMatchObject({ text: "Range Threshold" });
+  });
+
   test("attribute gain/conversion", () => {
     const fact = mapWikiFactToApiFact(
       "gain",
@@ -502,5 +521,22 @@ describe("parseAllTaggedFacts", () => {
     const { facts } = parseAllTaggedFacts(wikitext);
     expect(facts).toHaveLength(1);
     expect(facts[0]._modes).toEqual(["pve", "wvw", "pvp"]);
+  });
+
+  test("Farsighted wikitext produces distinct labels for damage increase facts", () => {
+    // Regression test: trait 1000 (Farsighted, Ranger Marksmanship) uses alt= to label
+    // the above-threshold bonus differently from the base bonus.
+    const wikitext = [
+      "{{skill fact|damage increase|10|game mode=pve wvw}}",
+      "{{skill fact|damage increase|5|game mode=pvp}}",
+      "{{skill fact|damage increase|alt=Damage Increase above Threshold|15|game mode=pve wvw}}",
+      "{{skill fact|damage increase|alt=Damage Increase above Threshold|10|game mode=pvp}}",
+      "{{skill fact|Range Threshold|600}}",
+    ].join("\n");
+    const { facts } = parseAllTaggedFacts(wikitext);
+    const pveWvwFacts = facts.filter(f => f._modes.includes("pve") && !f._modes.includes("pvp") || f._modes.length === 3);
+    const labels = facts.filter(f => f._modes.includes("pve")).map(f => f.text);
+    expect(labels).toContain("Damage Increase");
+    expect(labels).toContain("Damage Increase above Threshold");
   });
 });
