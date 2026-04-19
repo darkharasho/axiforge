@@ -219,15 +219,17 @@ function computePublishStats(equipment, upgradeCatalog, profession, gameMode) {
     const utilDef = upgradeCatalog.utilityById?.get(Number(equipment.utility));
     if (utilDef) {
       const UTIL_MAP = { "Power": "Power", "Precision": "Precision", "Toughness": "Toughness", "Vitality": "Vitality", "Ferocity": "Ferocity", "Concentration": "Concentration", "Expertise": "Expertise", "Condition Damage": "ConditionDamage", "Healing Power": "HealingPower" };
-      // Pattern 1: conversion
+      // Pattern 1: conversion — snapshot source values so multiple conversions in the
+      // same buff don't cross-contaminate (e.g. A→B and B→A would inflate results).
+      const convBase = { ...totals };
       const convRe = /Gain (Condition Damage|Healing Power|Power|Precision|Toughness|Vitality|Ferocity|Concentration|Expertise) Equal to (\d+(?:\.\d+)?)% of Your (Condition Damage|Healing Power|Power|Precision|Toughness|Vitality|Ferocity|Concentration|Expertise)/g;
       let m;
       while ((m = convRe.exec(utilDef.buff)) !== null) {
         const targetKey = UTIL_MAP[m[1]];
         const pct = Number(m[2]) / 100;
         const sourceKey = UTIL_MAP[m[3]];
-        if (targetKey && sourceKey && totals[sourceKey] !== undefined) {
-          totals[targetKey] = (totals[targetKey] || 0) + Math.round(totals[sourceKey] * pct);
+        if (targetKey && sourceKey && convBase[sourceKey] !== undefined) {
+          totals[targetKey] = (totals[targetKey] || 0) + Math.round(convBase[sourceKey] * pct);
         }
       }
       // Pattern 2: conditional flat (writs)
