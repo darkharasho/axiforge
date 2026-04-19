@@ -235,6 +235,50 @@ describe("computeAttributes", () => {
     expect(result2.infusions.Power).toBe(10);  // 2 infusions × 5 Power (not 3!)
   });
 
+  test("offhand infusion not counted when mainhand has two-handed weapon (issue #226)", () => {
+    const catalogs = makeCatalogs({
+      infusionById: new Map([[49431, { name: "+5 Power", infixUpgrade: { attributes: [{ attribute: "Power", modifier: 5 }] } }]]),
+    });
+    // mainhand1 = greatsword (2H), offhand1 weapon is empty (locked) but has leftover infusion
+    const ctx = makeCtx({
+      activeWeaponSet: 1,
+      equipment: {
+        slots: {},
+        weapons: { mainhand1: "greatsword" },
+        runes: {},
+        infusions: {
+          mainhand1: [49431, 49431],
+          offhand1: [49431],  // ghost infusion from previous 1H+offhand setup
+        },
+      },
+    });
+    const result = computeAttributes(ctx, catalogs);
+    // Should count only 2 infusions (greatsword mainhand1), not 3 (+ ghost offhand)
+    expect(result.infusions.Power).toBe(10);
+  });
+
+  test("offhand infusion counted normally when mainhand is one-handed (issue #226)", () => {
+    const catalogs = makeCatalogs({
+      infusionById: new Map([[49431, { name: "+5 Power", infixUpgrade: { attributes: [{ attribute: "Power", modifier: 5 }] } }]]),
+    });
+    // mainhand1 = axe (1H), offhand1 = axe (1H), both with infusions
+    const ctx = makeCtx({
+      activeWeaponSet: 1,
+      equipment: {
+        slots: {},
+        weapons: { mainhand1: "axe", offhand1: "axe" },
+        runes: {},
+        infusions: {
+          mainhand1: [49431, ""],
+          offhand1: [49431],
+        },
+      },
+    });
+    const result = computeAttributes(ctx, catalogs);
+    // Both mainhand and offhand infusions should count
+    expect(result.infusions.Power).toBe(10);
+  });
+
   test("assumed Might boons add Power and ConditionDamage", () => {
     const ctx = makeCtx({ assumedBoons: { might: 25 } });
     const result = computeAttributes(ctx, makeCatalogs());

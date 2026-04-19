@@ -3,7 +3,7 @@
 import { state, createEmptyEditor } from "./state.js";
 import { parseTags, simplifyTrait, simplifySkill } from "./utils.js";
 import { getMajorTraitsByTier } from "./specializations.js";
-import { ANTIQUARY_PROLIFIC_PLUNDERER_TRAIT_ID, UNDERWATER_BLOCKED_LEGENDS } from "./constants.js";
+import { ANTIQUARY_PROLIFIC_PLUNDERER_TRAIT_ID, UNDERWATER_BLOCKED_LEGENDS, GW2_WEAPONS_BY_ID } from "./constants.js";
 
 // Normalize sigil array to correct shape for a given slot key.
 export function normalizeSigilArray(value, slotKey) {
@@ -308,6 +308,18 @@ export function enforceEditorConsistency(options = {}) {
         }
         if (equip.infusions?.[key] !== undefined) equip.infusions[key] = "";
       }
+    }
+
+    // Clear offhand infusions/sigils when the corresponding mainhand has a two-handed
+    // weapon equipped (offhand slot is locked — ghost upgrades contribute phantom stats).
+    for (const [mainKey, ofKey] of [["mainhand1", "offhand1"], ["mainhand2", "offhand2"]]) {
+      const mainWeapon = equip.weapons?.[mainKey] || "";
+      if (!mainWeapon) continue;
+      const isTwoHand = (profWeapons[mainWeapon]?.flags || []).includes("TwoHand")
+        || GW2_WEAPONS_BY_ID.get(mainWeapon)?.hand === "two";
+      if (!isTwoHand) continue;
+      if (equip.sigils?.[ofKey]?.some(Boolean)) equip.sigils[ofKey] = [""];
+      if (equip.infusions?.[ofKey]?.some?.(Boolean)) equip.infusions[ofKey] = [""];
     }
   }
 }

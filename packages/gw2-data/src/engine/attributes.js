@@ -313,6 +313,12 @@ function computeAttributes(ctx, catalogs) {
   if (equipment.infusions && catalogs.infusionById) {
     for (const [slotKey, infusionIds] of Object.entries(equipment.infusions)) {
       if (excluded.has(slotKey)) continue;
+      // Skip offhand infusions when the corresponding mainhand has a two-handed weapon
+      // (offhand is locked/empty when mainhand is 2H, so its infusions shouldn't count)
+      if (slotKey.startsWith("offhand") && !slotKey.startsWith("aquatic")) {
+        const mainhandKey = slotKey.replace("offhand", "mainhand");
+        if (TWO_HAND_WEAPON_TYPES.has(weapons[mainhandKey] || "")) continue;
+      }
       const ids = Array.isArray(infusionIds) ? infusionIds : [infusionIds];
       // Cap infusion slots for mainhand weapons: 2H = 2, 1H = 1
       let maxSlots = ids.length;

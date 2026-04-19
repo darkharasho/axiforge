@@ -193,6 +193,11 @@ export function computeStatBreakdown(statKey, assumedBoons = null, sigilStacks =
       .filter(([k]) => !EXCLUDED_SLOTS.has(k))
       .flatMap(([slotKey, v]) => {
         const ids = Array.isArray(v) ? v : [v];
+        // Skip offhand infusions when the corresponding mainhand has a two-handed weapon
+        if (slotKey.startsWith("offhand") && !slotKey.startsWith("aquatic")) {
+          const mainhandKey = slotKey.replace("offhand", "mainhand");
+          if (TWO_HAND_TYPES.has(weapons[mainhandKey] || "")) return [];
+        }
         if (slotKey.startsWith("mainhand") && !slotKey.startsWith("aquatic")) {
           const weaponType = weapons[slotKey] || "";
           if (weaponType && !TWO_HAND_TYPES.has(weaponType)) return ids.slice(0, 1);
