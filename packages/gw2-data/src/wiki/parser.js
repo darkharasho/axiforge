@@ -392,13 +392,13 @@ function mapWikiFactToApiFact(factType, positional, params, isWvw, isUniversal) 
   // Many wiki fact types carry a percentage value (e.g. "damage reduction|33").
   // Without this, they fall through to generic Number and lose the % suffix.
   if (PERCENT_TYPES.has(type)) {
-    const label = type.replace(/\b\w/g, (c) => c.toUpperCase());
+    const label = params.alt ? stripWikiMarkup(params.alt).trim() : type.replace(/\b\w/g, (c) => c.toUpperCase());
     return { type: "Percent", text: label, percent: pos0Num() };
   }
 
   // ── Unknown but has a numeric value ────────────────────────────────
   if (positional[0] && !isNaN(parseFloat(stripWikiMarkup(positional[0])))) {
-    const label = type.replace(/\b\w/g, (c) => c.toUpperCase());
+    const label = params.alt ? stripWikiMarkup(params.alt).trim() : type.replace(/\b\w/g, (c) => c.toUpperCase());
     // Heuristic: fact type names containing "increase", "reduction", "chance",
     // or "rate" are almost always percentages in GW2 wiki templates.
     if (/(?:increase|reduction|chance|rate|cost|drain)$/.test(type)) {
