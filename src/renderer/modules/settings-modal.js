@@ -178,6 +178,10 @@ export function initSettingsModal() {
   _el.close.addEventListener("click", _close);
   _el.save.addEventListener("click", _save);
   _el.clearCache.addEventListener("click", _clearCache);
+
+  // Pressing Enter in either webhook URL field triggers save, matching user expectation.
+  _el.webhookUrl.addEventListener("keydown", (e) => { if (e.key === "Enter") _save(); });
+  _el.buildWebhookUrl.addEventListener("keydown", (e) => { if (e.key === "Enter") _save(); });
   _el.sharedConnect.addEventListener("click", _connectSharedLibrary);
   _el.sharedDisconnect.addEventListener("click", _disconnectSharedLibrary);
 

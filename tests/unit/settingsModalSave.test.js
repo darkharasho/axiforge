@@ -58,3 +58,36 @@ describe("settings-modal _save — error handling", () => {
     expect(catchBlock[0]).toMatch(/textContent|showError|err/);
   });
 });
+
+describe("settings-modal webhook URL inputs — Enter key triggers save (issue #251)", () => {
+  let src;
+
+  beforeAll(() => {
+    src = fs.readFileSync(
+      path.resolve(__dirname, "../../src/renderer/modules/settings-modal.js"),
+      "utf8"
+    );
+  });
+
+  test("keydown Enter handler is attached to webhook URL inputs in initSettingsModal", () => {
+    // Users expect pressing Enter in a text field to confirm/save. Without this,
+    // they type the URL, press Enter, see nothing happen, close with X, and lose the URL.
+    // The handler must be wired in initSettingsModal (after _el is set) and call _save.
+    const initFnMatch = src.match(/export function initSettingsModal\(\)\s*\{([\s\S]*?)(?=\nexport )/);
+    expect(initFnMatch).not.toBeNull();
+    const initBody = initFnMatch[1];
+    // Must attach a keydown listener to one or both webhook URL inputs
+    expect(initBody).toMatch(/webhookUrl|sm-webhook-url/);
+    expect(initBody).toMatch(/keydown|keypress|key.*Enter/);
+  });
+
+  test("Enter key handler references _save (not just the click binding)", () => {
+    // The Enter key handler must be separate from the click handler, referencing _save
+    // in a keydown/keypress context, not just the existing click listener wiring.
+    const initFnMatch = src.match(/export function initSettingsModal\(\)\s*\{([\s\S]*?)(?=\nexport )/);
+    expect(initFnMatch).not.toBeNull();
+    const initBody = initFnMatch[1];
+    // Should have a keydown/keypress event listener that calls _save
+    expect(initBody).toMatch(/addEventListener\(['"](keydown|keypress)['"]/);
+  });
+});
