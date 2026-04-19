@@ -324,7 +324,7 @@ export function computeMightPerStack(state) {
   const mods = engineCollectModifiers(ctx, catalogs, overrides);
   for (const mod of mods) {
     if (mod.type === "mightModifier") {
-      return { power: mod.power, condi: mod.condi };
+      return { power: mod.power ?? MIGHT_POWER_PER_STACK, condi: mod.condi ?? MIGHT_CONDI_PER_STACK };
     }
   }
   return { power: MIGHT_POWER_PER_STACK, condi: MIGHT_CONDI_PER_STACK };

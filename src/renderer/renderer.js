@@ -88,10 +88,12 @@ function _updateItemSyncIndicators(type, id, status) {
       return;
     }
     if (!badge) {
+      // Only apply to actual library content cards (which have a named title element).
+      // Elements like comp-detail slot divs also carry data-build-id but are not
+      // library cards — skip them to avoid injecting badges into comp party lines.
+      const nameEl = cardEl.querySelector(".lib-list-row__title, .lib-tv__name, .lib-grid-card__title, .lib-icon-item__label, .lib-col__name");
+      if (!nameEl) return;
       badge = document.createElement("span");
-      const nameEl =
-        cardEl.querySelector(".lib-list-row__title, .lib-tv__name, .lib-grid-card__title, .lib-icon-item__label, .lib-col__name") ||
-        cardEl;
       nameEl.appendChild(badge);
     }
     badge.className = `lib-content-sync-indicator lib-content-sync-indicator--${status}`;
