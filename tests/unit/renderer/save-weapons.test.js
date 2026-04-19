@@ -197,3 +197,51 @@ describe("save round-trip — weapons survive", () => {
     expect(state.editor.equipment.weapons.mainhand2).toBe("axe");
   });
 });
+
+describe("enforceEditorConsistency — offhand infusion cleared when mainhand is two-handed (issue #226)", () => {
+  test("clears offhand1 infusion when mainhand1 has a TwoHand weapon", () => {
+    state.activeCatalog = makeWarriorCatalog();
+    state.editor.equipment.weapons.mainhand1 = "greatsword";
+    state.editor.equipment.weapons.offhand1 = ""; // locked by TwoHand
+    state.editor.equipment.infusions.mainhand1 = ["", ""];
+    state.editor.equipment.infusions.offhand1 = ["49431"]; // ghost infusion
+
+    enforceEditorConsistency();
+
+    expect(state.editor.equipment.infusions.offhand1).toEqual([""]);
+  });
+
+  test("clears offhand2 infusion when mainhand2 has a TwoHand weapon", () => {
+    state.activeCatalog = makeWarriorCatalog();
+    state.editor.equipment.weapons.mainhand2 = "hammer";
+    state.editor.equipment.weapons.offhand2 = ""; // locked by TwoHand
+    state.editor.equipment.infusions.mainhand2 = ["", ""];
+    state.editor.equipment.infusions.offhand2 = ["49431"]; // ghost infusion
+
+    enforceEditorConsistency();
+
+    expect(state.editor.equipment.infusions.offhand2).toEqual([""]);
+  });
+
+  test("preserves offhand1 infusion when mainhand1 is one-handed", () => {
+    state.activeCatalog = makeWarriorCatalog();
+    state.editor.equipment.weapons.mainhand1 = "sword";
+    state.editor.equipment.weapons.offhand1 = "axe";
+    state.editor.equipment.infusions.offhand1 = ["49431"];
+
+    enforceEditorConsistency();
+
+    expect(state.editor.equipment.infusions.offhand1).toEqual(["49431"]);
+  });
+
+  test("clears offhand sigil when mainhand has a TwoHand weapon", () => {
+    state.activeCatalog = makeWarriorCatalog();
+    state.editor.equipment.weapons.mainhand1 = "greatsword";
+    state.editor.equipment.weapons.offhand1 = "";
+    state.editor.equipment.sigils.offhand1 = ["12345"]; // ghost sigil
+
+    enforceEditorConsistency();
+
+    expect(state.editor.equipment.sigils.offhand1).toEqual([""]);
+  });
+});

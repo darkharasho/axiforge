@@ -613,6 +613,9 @@ export function renderEquipmentPanel() {
                 const ofKey = slotDef.key.replace("mainhand", "offhand");
                 equip.weapons[ofKey] = "";
                 equip.slots[ofKey] = "";
+                // Also clear offhand upgrades — locked offhand must not contribute ghost stats
+                if (equip.sigils?.[ofKey]) equip.sigils[ofKey] = [""];
+                if (Array.isArray(equip.infusions?.[ofKey])) equip.infusions[ofKey] = [""];
               }
               // Clear second sigil/infusion on the mainhand when swapping to one-handed
               if (!newFlags.includes("TwoHand") && equip.sigils?.[slotDef.key]) {
