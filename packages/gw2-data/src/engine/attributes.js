@@ -408,11 +408,10 @@ function computeAttributes(ctx, catalogs) {
   }
 
   // -------------------------------------------------------------------------
-  // Step 9: Pre-conversion totals (base + equipment + food + runes + infusions + enrichment + signets)
-  // (Utility is added after — but wait for its conversion to use pre-conv totals)
-  // Note: We compute pre-conv totals without utility first, then add utility (non-conversion parts)
-  // Actually per spec: utility conversion uses preConvTotal. We'll compute pre-conv WITHOUT utility,
-  // parse utility conversions using that, then add utility flat/writ parts separately.
+  // Step 9: Pre-conversion base (base + equipment + food + runes + infusions + enrichment + signets)
+  // Both utility conversions and trait conversions use this snapshot as their source so that
+  // neither can feed into the other (utility-converted stats don't inflate trait conversions
+  // and vice versa). Matches the fix for issue #227 (utility) extended to issue #228 (traits).
   // -------------------------------------------------------------------------
   const preConvBase = zeroStats();
   for (const key of ALL_STAT_KEYS) {
@@ -420,7 +419,7 @@ function computeAttributes(ctx, catalogs) {
       runeStats[key] + infusionStats[key] + enrichmentStats[key] + signetStats[key];
   }
 
-  // Parse utility buff using preConvBase as the "preConvTotal" for conversion
+  // Parse utility buff using preConvBase as the source for % conversions
   const utilityStats = zeroStats();
   if (equipment.utility && catalogs.utilityById) {
     const utility = catalogs.utilityById.get(equipment.utility);
@@ -428,12 +427,6 @@ function computeAttributes(ctx, catalogs) {
       const parsed = parseUtilityBuff(utility.buff, preConvBase);
       for (const key of ALL_STAT_KEYS) utilityStats[key] += parsed[key];
     }
-  }
-
-  // Recompute pre-conv totals including utility (for trait conversions)
-  const preConvTotal = zeroStats();
-  for (const key of ALL_STAT_KEYS) {
-    preConvTotal[key] = preConvBase[key] + utilityStats[key];
   }
 
   // -------------------------------------------------------------------------
@@ -468,11 +461,13 @@ function computeAttributes(ctx, catalogs) {
 
   // -------------------------------------------------------------------------
   // Step 11: Conversions — trait conversion modifiers
+  // Source is preConvBase (same snapshot used for utility conversions, issue #228):
+  // excludes utility stats so utility-derived bonuses don't inflate trait conversions.
   // -------------------------------------------------------------------------
   const conversionStats = zeroStats();
   for (const mod of modifiers) {
     if (mod.type !== "conversion") continue;
-    const sourceVal = preConvTotal[mod.sourceAttr] || 0;
+    const sourceVal = preConvBase[mod.sourceAttr] || 0;
     const bonus = Math.floor(sourceVal * mod.percent / 100);
     if (mod.target in conversionStats) {
       conversionStats[mod.target] += bonus;

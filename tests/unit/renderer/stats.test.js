@@ -1037,3 +1037,105 @@ describe("computeStatBreakdown — signet passive buffs", () => {
     expect(mightEntry.value).toBe(300);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Trait conversion uses preConvBase (issue #228)
+// ---------------------------------------------------------------------------
+
+describe("computeStatBreakdown — Great Fortitude trait conversion uses preConvBase (issue #228)", () => {
+  const TRAIT_ID = 1449;
+
+  const mockCatalog = {
+    skillById: new Map(),
+    traitById: new Map([
+      [TRAIT_ID, {
+        id: TRAIT_ID,
+        name: "Great Fortitude",
+        slot: "Major",
+        facts: [
+          { type: "BuffConversion", source: "Power", target: "Vitality",   percent: 10 },
+          { type: "BuffConversion", source: "Power", target: "CritDamage", percent: 10 },
+        ],
+      }],
+    ]),
+    specializationById: new Map([
+      [4, { id: 4, minorTraits: [] }],
+    ]),
+  };
+
+  beforeEach(() => {
+    state.activeCatalog = mockCatalog;
+    state.upgradeCatalog = {
+      foodById: new Map(),
+      utilityById: new Map([
+        // Utility adds +100 Power flat.
+        // Trait conversion source should be preConvBase (no utility), not preConvTotal.
+        [99001, { id: 99001, name: "Power Oil", buff: "+100 Power" }],
+      ]),
+      runeById: new Map(),
+      infusionById: new Map(),
+      enrichmentById: new Map(),
+    };
+  });
+  afterEach(() => {
+    state.activeCatalog = null;
+    state.upgradeCatalog = null;
+  });
+
+  function makeEditorWithTrait(slots = {}, utilityId = "") {
+    return {
+      profession: "Warrior",
+      gameMode: "pve",
+      equipment: {
+        slots,
+        food: "",
+        utility: utilityId,
+        weapons: {},
+        runes: {},
+        infusions: {},
+      },
+      specializations: [{ specializationId: 4, majorChoices: { 2: TRAIT_ID } }],
+      skills: { healId: 0, utilityIds: [0, 0, 0], eliteId: 0 },
+    };
+  }
+
+  test("trait conversion source is preConvBase — utility flat Power excluded (issue #228)", () => {
+    // Utility adds +100 Power flat.
+    // preConvBase.Power = 1000 (base only, no utility).
+    // Trait conversion (10% Power→Vitality) must use preConvBase → 100, not 110.
+    state.editor = makeEditorWithTrait({}, "99001");
+    const entries = computeStatBreakdown("Vitality");
+    const convEntry = entries.find((e) => e.category === "trait" && e.source === "Trait conversion");
+    expect(convEntry).toBeDefined();
+    // Correct: floor(1000 * 0.10) = 100 (preConvBase.Power)
+    // Bug: floor(1100 * 0.10) = 110 (preConvTotal includes utility +100)
+    expect(convEntry.value).toBe(100);
+  });
+
+  test("trait conversion source is preConvBase — utility flat Power excluded for Ferocity (issue #228)", () => {
+    // Same utility +100 Power. Ferocity conversion also uses preConvBase.Power.
+    state.editor = makeEditorWithTrait({}, "99001");
+    const entries = computeStatBreakdown("Ferocity");
+    const convEntry = entries.find((e) => e.category === "trait" && e.source === "Trait conversion");
+    expect(convEntry).toBeDefined();
+    expect(convEntry.value).toBe(100);
+  });
+
+  test("trait conversion total matches engine — preConvBase used consistently (issue #228)", () => {
+    // With Berserker's chest (+141 Power) and utility +100 Power:
+    // preConvBase.Power = 1000 + 141 = 1141
+    // Vitality conversion = floor(1141 * 0.10) = 114
+    // Ferocity conversion = floor(1141 * 0.10) = 114
+    // Engine total Vitality = 1000 (base) + 114 (conversion) = 1114
+    state.editor = makeEditorWithTrait({ chest: "Berserker's" }, "99001");
+    const vitalityEntries = computeStatBreakdown("Vitality");
+    const vConv = vitalityEntries.find((e) => e.category === "trait" && e.source === "Trait conversion");
+    expect(vConv).toBeDefined();
+    expect(vConv.value).toBe(114);
+
+    const ferocityEntries = computeStatBreakdown("Ferocity");
+    const fConv = ferocityEntries.find((e) => e.category === "trait" && e.source === "Trait conversion");
+    expect(fConv).toBeDefined();
+    expect(fConv.value).toBe(114);
+  });
+});

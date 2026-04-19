@@ -324,6 +324,76 @@ describe("computeAttributes", () => {
     expect(result.total.Power).toBe(1100);
   });
 
+  test("trait conversion does not include utility stats in source (issue #228)", () => {
+    // Utility adds +100 Power flat. Trait converts 10% Power → Vitality.
+    // The conversion source must be preConvBase (base+gear, no utility), not preConvTotal.
+    // If utility Power were included: floor(1100 * 0.10) = 110 (too much).
+    // Correct: floor(1000 * 0.10) = 100.
+    const catalogs = makeCatalogs({
+      traitById: new Map([[1449, {
+        id: 1449,
+        facts: [{ type: "BuffConversion", source: "Power", target: "Vitality", percent: 10 }],
+      }]]),
+      specializationById: new Map([[4, { id: 4, minorTraits: [] }]]),
+      utilityById: new Map([[99001, { id: 99001, buff: "+100 Power" }]]),
+    });
+    const ctx = makeCtx({
+      specializations: [{ id: 4, majorChoices: { 1: 1449 } }],
+      equipment: {
+        slots: {},
+        weapons: {},
+        runes: {},
+        infusions: {},
+        enrichment: null,
+        food: null,
+        utility: 99001,
+      },
+    });
+    const result = computeAttributes(ctx, catalogs);
+    // preConvBase.Power = 1000 (base only, utility excluded from trait conversion source)
+    expect(result.conversions.Vitality).toBe(100);
+    // Total Vitality = 1000 (base) + 100 (conversion) = 1100
+    expect(result.total.Vitality).toBe(1100);
+    // Utility Power is still present in the total (just excluded from conversion source)
+    expect(result.utility.Power).toBe(100);
+    expect(result.total.Power).toBe(1100); // 1000 base + 100 utility
+  });
+
+  test("Great Fortitude: dual conversion (Power→Vitality and Power→Ferocity) uses preConvBase (issue #228)", () => {
+    // Simulates Great Fortitude trait (id 1449) with a utility that adds Power.
+    // Both conversions must use preConvBase.Power (without utility's +100 Power).
+    const catalogs = makeCatalogs({
+      traitById: new Map([[1449, {
+        id: 1449,
+        facts: [
+          { type: "BuffConversion", source: "Power", target: "Vitality", percent: 10 },
+          { type: "BuffConversion", source: "Power", target: "CritDamage", percent: 10 },
+        ],
+      }]]),
+      specializationById: new Map([[4, { id: 4, minorTraits: [] }]]),
+      utilityById: new Map([[99001, { id: 99001, buff: "+100 Power" }]]),
+    });
+    const ctx = makeCtx({
+      specializations: [{ id: 4, majorChoices: { 1: 1449 } }],
+      equipment: {
+        slots: { chest: "Berserker's" },
+        weapons: {},
+        runes: {},
+        infusions: {},
+        enrichment: null,
+        food: null,
+        utility: 99001,
+      },
+    });
+    const result = computeAttributes(ctx, catalogs);
+    // preConvBase.Power = 1000 (base) + 141 (Berserker's chest) = 1141
+    // Utility adds +100 Power (NOT included in conversion source)
+    // Vitality from conversion: floor(1141 * 0.10) = 114
+    // Ferocity from conversion: floor(1141 * 0.10) = 114
+    expect(result.conversions.Vitality).toBe(114);
+    expect(result.conversions.Ferocity).toBe(114);
+  });
+
   test("berserk-conditional trait bonuses only apply when berserkActive", () => {
     const catalogs = makeCatalogs({
       traitById: new Map([[2046, {
