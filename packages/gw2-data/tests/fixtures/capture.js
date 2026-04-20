@@ -55,6 +55,7 @@ const TRAITS_TO_CAPTURE = [
   { id: 1510, wiki: "Flow like Water", note: "Weaver trait with split" },
   { id: 1502, wiki: "Swift Revenge", note: "Weaver trait" },
   { id: 264, wiki: "Burning Precision", note: "trait with condition" },
+  { id: 2049, wiki: "Smash Brawler", note: "Berserker berserk-conditional crit, WvW regression #259" },
 ];
 
 let lastRequestTime = 0;

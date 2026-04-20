@@ -15,6 +15,7 @@ const {
   FURY_CRIT_CHANCE,
   FURY_CRIT_CHANCE_WVW,
   BERSERK_CRIT_CHANCE,
+  BERSERK_CRIT_CHANCE_WVW,
   STACKING_SIGIL_DEFS,
   SIGNET_PASSIVE_BUFFS,
   SIGNET_ACTIVE_EFFECTS,
@@ -555,8 +556,9 @@ function computeAttributes(ctx, catalogs) {
     }
   }
   // Berserk crit bonus (only when berserk mode is active)
+  // WvW: base berserk crit is 0; crit comes from berserk-conditional traits (e.g. Smash Brawler WvW: +5%).
   if (berserkActive) {
-    critBonus += BERSERK_CRIT_CHANCE; // base +5% from Berserk mode
+    critBonus += gameMode === "wvw" ? BERSERK_CRIT_CHANCE_WVW : BERSERK_CRIT_CHANCE;
     for (const mod of modifiers) {
       if (mod.type === "critChance" && mod.condition === "berserk") {
         critBonus += mod.value;

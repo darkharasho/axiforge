@@ -694,6 +694,12 @@
             "percent": 10
           },
           {
+            "text": "Damage Increase",
+            "type": "Percent",
+            "icon": "https://render.guildwars2.com/file/61AA4919C4A7990903241B680A69530121E994C7/156657.png",
+            "percent": 7
+          },
+          {
             "text": "Duration Increase",
             "type": "Percent",
             "icon": "https://render.guildwars2.com/file/7B2193ACCF77E56C13E608191B082D68AA0FAA71/156659.png",
@@ -703,7 +709,7 @@
         "specialization": 41,
         "icon": "https://render.guildwars2.com/file/4505D3D02606283B02124C3304697304E663ECAE/1012275.png"
       },
-      "wikitext": "{{Trait infobox\n| description = Gain [[swiftness]] when using a [[Dual Attack]]. Deal increased [[strike damage]] to enemies while under the effects of swiftness or [[superspeed]].\n| facts = {{skill fact|damage increase|10}}{{skill fact|swiftness|4}}\n| line = Weaver\n| tier = Master\n| type = Major\n| position = 2\n| training order = 5\n| improves boon = Swiftness\n| improves effect = Superspeed\n| improves type = Dual Attack\n| id = 2061\n| requires = pof\n}}\n\n== Mechanics ==\n* Grants {{Swiftness}} at the end of the dual attack's animation. \n\n== Related [[skill]]s ==\n{{Related skills}}\n\n== Related [[trait]]s ==\n{{Related traits}}\n\n== Version history ==\n{{Version history table header|elementalist}}\n{{Version history table row|2023-08-22|Weaver}}\n* Reduced damage bonus from 15% to 10% in PvE only.\n{{Version history table row|2022-11-29|Elementalist}}\n* Increased damage bonus from 10% to 15% in PvE only.\n{{Version history table row|2021-05-11|General}}\n* Text on many damage-increasing profession traits, runes, and sigils has been clarified to indicate whether they increase outgoing strike damage, condition damage, or all damage, as appropriate.\n{{Version history table row|2019-07-16|Elementalist 2}}\n* Increased bonus damage from 7% to 10%.\n{{Version history table row|2017-09-22|Elementalist|r=y}}\n|}\n\n[[de:Schnelle Rache]]\n[[es:Venganza rápida]]\n[[fr:Vengeance rapide]]"
+      "wikitext": "{{Trait infobox\n| split = pve, wvw pvp\n| description = Gain [[swiftness]] when using a [[Dual Attack]]. Deal increased [[strike damage]] to enemies while under the effects of swiftness or [[superspeed]].\n| facts = {{skill fact|damage increase|7|game mode=pve}}{{skill fact|damage increase|10|game mode=wvw pvp}}{{skill fact|swiftness|4}}\n| line = Weaver\n| tier = Master\n| type = Major\n| position = 2\n| training order = 5\n| improves boon = Swiftness\n| improves effect = Superspeed\n| improves type = Dual Attack\n| id = 2061\n| requires = pof\n}}\n\n== Mechanics ==\n* Grants {{Swiftness}} at the end of the dual attack's animation. \n\n== Related [[skill]]s ==\n{{Related skills}}\n\n== Related [[trait]]s ==\n{{Related traits}}\n\n== Version history ==\n{{Version history table header|elementalist}}\n{{Version history table row|2026-04-14|Weaver}}\n* Reduced the strike damage bonus from 10% to 7% in PvE only.\n{{Version history table row|2023-08-22|Weaver}}\n* Reduced damage bonus from 15% to 10% in PvE only.\n{{Version history table row|2022-11-29|Elementalist}}\n* Increased damage bonus from 10% to 15% in PvE only.\n{{Version history table row|2021-05-11|General}}\n* Text on many damage-increasing profession traits, runes, and sigils has been clarified to indicate whether they increase outgoing strike damage, condition damage, or all damage, as appropriate.\n{{Version history table row|2019-07-16|Elementalist 2}}\n* Increased bonus damage from 7% to 10%.\n{{Version history table row|2017-09-22|Elementalist|r=y}}\n|}\n\n[[de:Schnelle Rache]]\n[[es:Venganza rápida]]\n[[fr:Vengeance rapide]]"
     },
     {
       "id": 264,
@@ -833,7 +839,64 @@
         "icon": "https://render.guildwars2.com/file/EB242E0D58000DD8DCB80B0F7B049F03C62299B6/1012292.png"
       },
       "wikitext": "{{Trait infobox\n| line = Fire\n| tier = Adept\n| type = Major\n| position = 1\n| recharge = 5\n| split = pve, wvw pvp\n| description = [[Burning]] you inflict has increased duration and your [[critical hit]]s gain a chance to inflict burning.\n| facts = {{skill fact|critical chance|33}}{{skill fact|burning|3|game mode = pve}}{{skill fact|burning|1|game mode = pvp wvw}}{{skill fact|duration increase|20%|game mode = pve}}{{skill fact|duration increase|15%|game mode = pvp wvw}}\n| training order = 2\n| improves condition = Burning\n| improves property = Critical hit\n| id = 296\n}}\n\n== Related [[skill]]s ==\n{{Related skills}}\n\n== Related [[trait]]s ==\n{{Related traits}}\n\n== Version history ==\n{{Version history table header|elementalist|type=trait}}\n{{Version history table row|2020-02-25|Elementalist}}\n* (Competitive split) Reduced bonus burning duration from 20% to 15%. Reduced burning duration from 3 seconds to 1 second.\n{{Version history table row|2019-07-16|Elementalist_2}}\n* Increased burning duration from 2 seconds to 3 seconds.\n{{Version history table row|2015-06-23|Elementalist}}\n* Updated this trait to reflect the introduction of the specialization mechanic.\n* Increased chance to 33%.\n* Increased burning duration to 2 seconds.\n* Increased cooldown to 5 seconds.\n* [[Ember's Might]] has been merged into this trait.\n** Burning duration is increased by 20%.\n{{Version history table row|release|r=y}}\n|}\n\n[[de:Brennende Präzision]]\n[[es:Precisión abrasadora]]\n[[fr:Précision ardente]]"
+    },
+    {
+      "id": 2049,
+      "wikiTitle": "Smash Brawler",
+      "note": "Berserker berserk-conditional crit, WvW regression #259",
+      "api": {
+        "id": 2049,
+        "tier": 1,
+        "order": 0,
+        "name": "Smash Brawler",
+        "description": "When you hit with a <c=@abilitytype>Primal Burst</c> skill, extend the duration of your berserk. Critical-hit chance is increased while berserk.",
+        "slot": "Major",
+        "facts": [
+          {
+            "text": "Duration Increase",
+            "type": "Time",
+            "icon": "https://render.guildwars2.com/file/7B2193ACCF77E56C13E608191B082D68AA0FAA71/156659.png",
+            "duration": 2
+          },
+          {
+            "text": "Apply Buff/Condition",
+            "type": "PrefixedBuff",
+            "icon": "https://render.guildwars2.com/file/7B2193ACCF77E56C13E608191B082D68AA0FAA71/156659.png",
+            "duration": 0,
+            "status": "Decapitate Duration Increase",
+            "description": "1 second",
+            "apply_count": 1,
+            "prefix": {
+              "text": "Apply Buff/Condition",
+              "icon": "https://render.guildwars2.com/file/93C1E158334AF969FCDCDFC3FD2625780C73B237/1058636.png",
+              "status": "Decapitate",
+              "description": "<c=@abilitytype>Primal Burst.</c> Gather your strength into a powerful attack. If it hits, gain might and recharge this skill."
+            }
+          },
+          {
+            "text": "Duration Increase",
+            "type": "Time",
+            "icon": "https://render.guildwars2.com/file/7B2193ACCF77E56C13E608191B082D68AA0FAA71/156659.png",
+            "duration": 1
+          },
+          {
+            "text": "Critical Chance Increase",
+            "type": "Percent",
+            "icon": "https://render.guildwars2.com/file/C2CEA567E0C43C199C782809544721AA12A6DF0A/2229323.png",
+            "percent": 15
+          },
+          {
+            "text": "Critical Chance Increase",
+            "type": "Percent",
+            "icon": "https://render.guildwars2.com/file/C2CEA567E0C43C199C782809544721AA12A6DF0A/2229323.png",
+            "percent": 5
+          }
+        ],
+        "specialization": 18,
+        "icon": "https://render.guildwars2.com/file/780ACDAE6E6AE10E53470AF821FD246E380E65EB/1029973.png"
+      },
+      "wikitext": "{{Trait infobox\n| split = pve, pvp, wvw\n| line = Berserker\n| tier = Adept\n| type = Major\n| position = 1\n| training order = 4\n| description = When you hit with a [[Primal Burst]] skill, extend the duration of your [[berserk]]. Critical-hit chance is increased while berserk.\n| facts = \n{{skill fact|Duration Increase|2|game mode=pve}}{{skill fact|Duration Increase|1|game mode=wvw pvp}}\n{{skill fact|Critical Chance Increase|15|game mode = pve pvp}}{{skill fact|Critical Chance Increase|5|game mode = wvw}}\n| improves skill = Berserk\n| improves type = Primal Burst\n| id = 2049\n| requires = hot\n}}\n\n== Mechanics ==\n* {{skill icon|Decapitate}} will extend berserk mode by 1 second in PvE.\n\n== Related [[skill]]s ==\n{{related skills}}\n\n== Version history ==\n{{Version history table header|warrior|type=trait}}\n{{Version history table row|2023-11-28|Berserker}}\n* This trait no longer extends berserk duration by a flat amount and instead causes Primal Burst skills to extend berserk duration by 2 seconds in PvE and 1 second in PvP and WvW when striking an enemy, once per skill. Decapitate will extend berserk mode by 1 second in PvE.\n{{Version history table row|2023-05-02|Warrior}}\n* This trait now grants 15% (5% in WvW) increased critical-strike chance while in berserk mode in addition to its current effect.\n{{Version history table row|2019-04-23|Warrior}}\n* This trait no longer reduces recharge of berserk mode and primal bursts. Instead, it extends the duration of berserk mode by 5 seconds.\n{{Version history table row|2017-05-16|Warrior}}\n* The cooldown reduction received from this trait has been reduced from 33% to 20%.\n{{Version history table row|2015-10-23|Berserker|r=y}}\n|}\n\n== Trivia ==\n* The name of this trait is likely a reference to the fighting game [[w:Super Smash Bros. Brawl|Super Smash Bros. Brawl]], while the icon of the trait resembles [[w:Ridley (Metroid)|Ridley]] from the [[w:Metroid|Metroid]] game series. Despite having only appeared in the franchise as a boss when the trait was introduced, Ridley became a playable fighter in the series' [[w:Super Smash Bros. Ultimate|2018 installment]].\n\n[[de:Raufbold zerschmettern]]\n[[es:Pendenciero aplastante]]\n[[fr:Bagarreur violent]]"
     }
   ],
-  "capturedAt": "2026-04-09T23:52:48.937Z"
+  "capturedAt": "2026-04-20T17:59:54.262Z"
 }

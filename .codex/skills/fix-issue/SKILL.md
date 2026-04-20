@@ -40,23 +40,37 @@ Start from:
 8. Add a repro test before implementing the fix.
 The test should fail before the fix and pass afterward.
 
+**For math/balance/number bugs:** use fixture-based tests backed by real GW2 API data
+rather than hand-crafted mocks. The fixture system is at
+`packages/gw2-data/tests/fixtures/` — add the relevant skill/trait IDs to `capture.js`
+and run it to capture live data. Assert expected values using wiki-verified constants
+(add named variables like `const SMASH_BRAWLER_CRIT_WVW = 5; // wiki-verified`).
+This makes the test self-documenting and removes the need for manual verification.
+
 9. Implement the minimal fix without unrelated refactors.
 
 10. Run tests, revise if needed, and re-run.
 Use at most two fix-and-retest cycles before reporting failure.
 
 11. Commit and push:
-- `git add src/ tests/`
+- `git add src/ tests/ packages/`
 - `git commit -m "fix: <issue title> (closes #<n>)"`
 - `git push -u origin fix/issue-<n>-<slug>`
 
 12. Open or reuse the PR for that branch and capture the PR URL.
 
-13. Stop for manual verification before finalizing.
+13. Manual verification checkpoint.
+
+**For math/balance bugs with fixture-backed tests:** skip manual testing.
+The fixture data comes from the live GW2 API and wiki-verified constants prove
+the expected values are correct. Proceed directly to step 14.
+
+**For UI/interaction bugs:** stop and ask the user to manually test.
 Tell the user what changed, how to reproduce the original bug, what to verify now, and include the PR URL.
 Wait for confirmation before proceeding.
 
-14. After confirmation, merge the PR, switch back to `main`, update the project item to `Done`, and post the closing issue comment.
+14. After confirmation (or immediately for fixture-backed math bugs), merge the PR,
+switch back to `main`, update the project item to `Done`, and post the closing issue comment.
 
 15. End by reporting `Merged: <url> - on main.`
 

@@ -17,6 +17,7 @@ export const {
   FURY_CRIT_CHANCE,
   FURY_CRIT_CHANCE_WVW,
   BERSERK_CRIT_CHANCE,
+  BERSERK_CRIT_CHANCE_WVW,
   STACKING_SIGIL_DEFS,
   SIGNET_PASSIVE_BUFFS,
   SIGNET_ACTIVE_EFFECTS,
@@ -307,7 +308,8 @@ export function computeBerserkCritModifier(state) {
   const catalogs = buildEngineCatalogs(state);
   const overrides = getOverrides();
   const mods = engineCollectModifiers(ctx, catalogs, overrides);
-  let bonus = BERSERK_CRIT_CHANCE;
+  const base = ctx.gameMode === "wvw" ? BERSERK_CRIT_CHANCE_WVW : BERSERK_CRIT_CHANCE;
+  let bonus = base;
   for (const mod of mods) {
     if (mod.type === "critChance" && mod.condition === "berserk") {
       bonus += mod.value;
