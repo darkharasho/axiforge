@@ -4,6 +4,13 @@ const crypto = require("node:crypto");
 
 class BuildStore {
   #settingsQueue = Promise.resolve();
+  #writeQueue = Promise.resolve();
+
+  #enqueue(fn) {
+    const next = this.#writeQueue.then(() => fn());
+    this.#writeQueue = next.catch(() => {});
+    return next;
+  }
 
   constructor(baseDir) {
     this.baseDir = baseDir;
@@ -26,73 +33,85 @@ class BuildStore {
   }
 
   async upsertBuild(input) {
-    const builds = await this.listBuilds();
-    const now = new Date().toISOString();
-    const id = input.id || crypto.randomUUID();
-    const next = normalizeBuild({ ...input, id, updatedAt: now }, input.createdAt || now);
+    return this.#enqueue(async () => {
+      const builds = await this.listBuilds();
+      const now = new Date().toISOString();
+      const id = input.id || crypto.randomUUID();
+      const next = normalizeBuild({ ...input, id, updatedAt: now }, input.createdAt || now);
 
-    const idx = builds.findIndex((b) => b.id === id);
-    if (idx >= 0) {
-      const existing = builds[idx];
-      next.createdAt = existing.createdAt || next.createdAt;
-      // Preserve publish metadata from the existing record when the incoming save
-      // doesn't supply it (e.g. editor saves via serializeEditorToBuild which does
-      // not include these fields, so they would otherwise be wiped to "").
-      if (!next.publishedFileId && existing.publishedFileId) next.publishedFileId = existing.publishedFileId;
-      if (!next.publishedKey && existing.publishedKey) next.publishedKey = existing.publishedKey;
-      if (!next.publishedSlug && existing.publishedSlug) next.publishedSlug = existing.publishedSlug;
-      builds[idx] = next;
-    } else {
-      builds.push(next);
-    }
+      const idx = builds.findIndex((b) => b.id === id);
+      if (idx >= 0) {
+        const existing = builds[idx];
+        next.createdAt = existing.createdAt || next.createdAt;
+        // Preserve fields that the editor save payload does not carry (serializeEditorToBuild
+        // omits folderId when falsy, and never includes publish metadata).
+        if (next.folderId === null && existing.folderId) next.folderId = existing.folderId;
+        if (!next.publishedFileId && existing.publishedFileId) next.publishedFileId = existing.publishedFileId;
+        if (!next.publishedKey && existing.publishedKey) next.publishedKey = existing.publishedKey;
+        if (!next.publishedSlug && existing.publishedSlug) next.publishedSlug = existing.publishedSlug;
+        builds[idx] = next;
+      } else {
+        builds.push(next);
+      }
 
-    await this.#writeJson(this.buildsPath, builds);
-    return next;
+      await this.#writeJson(this.buildsPath, builds);
+      return next;
+    });
   }
 
   async deleteBuild(id) {
-    const builds = await this.listBuilds();
-    const filtered = builds.filter((b) => b.id !== id);
-    await this.#writeJson(this.buildsPath, filtered);
+    return this.#enqueue(async () => {
+      const builds = await this.listBuilds();
+      const filtered = builds.filter((b) => b.id !== id);
+      await this.#writeJson(this.buildsPath, filtered);
+    });
   }
 
   async moveBuilds(ids, folderId) {
-    const builds = await this.#readJson(this.buildsPath, []);
-    for (const build of builds) {
-      if (ids.includes(build.id)) {
-        build.folderId = folderId;
+    return this.#enqueue(async () => {
+      const builds = await this.#readJson(this.buildsPath, []);
+      for (const build of builds) {
+        if (ids.includes(build.id)) {
+          build.folderId = folderId;
+        }
       }
-    }
-    await this.#writeJson(this.buildsPath, builds);
+      await this.#writeJson(this.buildsPath, builds);
+    });
   }
 
   async pinBuilds(ids, pinned) {
-    const builds = await this.#readJson(this.buildsPath, []);
-    for (const build of builds) {
-      if (ids.includes(build.id)) {
-        build.pinned = Boolean(pinned);
+    return this.#enqueue(async () => {
+      const builds = await this.#readJson(this.buildsPath, []);
+      for (const build of builds) {
+        if (ids.includes(build.id)) {
+          build.pinned = Boolean(pinned);
+        }
       }
-    }
-    await this.#writeJson(this.buildsPath, builds);
+      await this.#writeJson(this.buildsPath, builds);
+    });
   }
 
   async reorderBuilds(updates) {
-    const builds = await this.#readJson(this.buildsPath, []);
-    for (const { id, sortOrder } of updates) {
-      const build = builds.find((b) => b.id === id);
-      if (build) build.sortOrder = sortOrder;
-    }
-    await this.#writeJson(this.buildsPath, builds);
+    return this.#enqueue(async () => {
+      const builds = await this.#readJson(this.buildsPath, []);
+      for (const { id, sortOrder } of updates) {
+        const build = builds.find((b) => b.id === id);
+        if (build) build.sortOrder = sortOrder;
+      }
+      await this.#writeJson(this.buildsPath, builds);
+    });
   }
 
   async clearFolderFromBuilds(folderIds) {
-    const builds = await this.#readJson(this.buildsPath, []);
-    for (const build of builds) {
-      if (folderIds.includes(build.folderId)) {
-        build.folderId = null;
+    return this.#enqueue(async () => {
+      const builds = await this.#readJson(this.buildsPath, []);
+      for (const build of builds) {
+        if (folderIds.includes(build.folderId)) {
+          build.folderId = null;
+        }
       }
-    }
-    await this.#writeJson(this.buildsPath, builds);
+      await this.#writeJson(this.buildsPath, builds);
+    });
   }
 
   async clearCompFromBuilds(compIdsToRemove) {

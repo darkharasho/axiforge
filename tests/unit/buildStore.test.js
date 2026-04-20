@@ -1216,3 +1216,62 @@ describe("BuildStore — gameMode normalization", () => {
     expect(saved.specializations[0].majorChoices[1]).toBe(634);
   });
 });
+
+// ---------------------------------------------------------------------------
+// BuildStore — folderId preservation (issue #267)
+// ---------------------------------------------------------------------------
+
+describe("BuildStore — folderId preservation on update", () => {
+  let store, dir;
+
+  beforeEach(async () => { ({ store, dir } = await makeTempStore()); });
+  afterEach(async () => { await cleanupDir(dir); });
+
+  test("preserves folderId when update payload omits it", async () => {
+    // Simulates editor save: build is in a folder, editor serializes without
+    // folderId (serializeEditorToBuild returns folderId: undefined when state
+    // is falsy), so normalizeBuild turns it into null — the store must not
+    // clobber the stored folderId with null.
+    const created = await store.upsertBuild(makeBuild({ folderId: "folder-abc" }));
+    expect(created.folderId).toBe("folder-abc");
+
+    // Save without folderId (as the editor does)
+    const updated = await store.upsertBuild({ ...created, folderId: undefined, title: "Edited" });
+    expect(updated.folderId).toBe("folder-abc");
+
+    const builds = await store.listBuilds();
+    expect(builds[0].folderId).toBe("folder-abc");
+  });
+
+  test("allows explicitly moving a build to root (null folderId) via moveBuilds", async () => {
+    const created = await store.upsertBuild(makeBuild({ folderId: "folder-abc" }));
+    await store.moveBuilds([created.id], null);
+    const builds = await store.listBuilds();
+    expect(builds[0].folderId).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// BuildStore — concurrent write safety (issue #267)
+// ---------------------------------------------------------------------------
+
+describe("BuildStore — concurrent write safety", () => {
+  let store, dir;
+
+  beforeEach(async () => { ({ store, dir } = await makeTempStore()); });
+  afterEach(async () => { await cleanupDir(dir); });
+
+  test("concurrent upsertBuild calls do not lose builds", async () => {
+    // Without write serialization, concurrent reads of builds.json all see the
+    // same initial state, and the last write wins — earlier builds are dropped.
+    const N = 20;
+    await Promise.all(
+      Array.from({ length: N }, (_, i) =>
+        store.upsertBuild(makeBuild({ title: `Build ${i}` })),
+      ),
+    );
+
+    const builds = await store.listBuilds();
+    expect(builds).toHaveLength(N);
+  });
+});
