@@ -5,8 +5,18 @@ const fs = require("node:fs/promises");
 const crypto = require("node:crypto");
 
 class FolderStore {
+  #writeQueue = Promise.resolve();
+
   constructor(baseDir) {
     this.foldersPath = path.join(baseDir, "folders.json");
+  }
+
+  // Serialize all read-modify-write operations to prevent concurrent calls
+  // from racing on folders.json (last write wins without serialization).
+  #enqueue(fn) {
+    const next = this.#writeQueue.then(() => fn());
+    this.#writeQueue = next.catch(() => {});
+    return next;
   }
 
   async init() {
@@ -18,87 +28,93 @@ class FolderStore {
   }
 
   async upsertFolder(input) {
-    const folders = await this.listFolders();
-    const now = new Date().toISOString();
-    const name = String(input.name || "Untitled Folder").slice(0, 100);
-    const parentId =
-      typeof input.parentId === "string" ? input.parentId : null;
+    return this.#enqueue(async () => {
+      const folders = await this.listFolders();
+      const now = new Date().toISOString();
+      const name = String(input.name || "Untitled Folder").slice(0, 100);
+      const parentId =
+        typeof input.parentId === "string" ? input.parentId : null;
 
-    const shared = input.shared === true;
-    const orgName = typeof input.orgName === "string" ? input.orgName : undefined;
-    const lastSyncedAt = typeof input.lastSyncedAt === "string" ? input.lastSyncedAt : undefined;
+      const shared = input.shared === true;
+      const orgName = typeof input.orgName === "string" ? input.orgName : undefined;
+      const lastSyncedAt = typeof input.lastSyncedAt === "string" ? input.lastSyncedAt : undefined;
 
-    // Shared folders must be top-level
-    if (shared && parentId) {
-      throw new Error("Shared folders must be top-level");
-    }
-
-    // Depth check
-    if (parentId) {
-      const depth = this.#getDepth(folders, parentId);
-      if (depth >= 3) {
-        throw new Error(
-          "Maximum folder nesting depth (3) exceeded",
-        );
+      // Shared folders must be top-level
+      if (shared && parentId) {
+        throw new Error("Shared folders must be top-level");
       }
-    }
 
-    const existing = input.id
-      ? folders.find((f) => f.id === input.id)
-      : null;
-
-    if (existing) {
-      existing.name = name;
-      existing.parentId = parentId;
-      if (input.sortOrder !== undefined) {
-        existing.sortOrder = Number(input.sortOrder) || 0;
+      // Depth check
+      if (parentId) {
+        const depth = this.#getDepth(folders, parentId);
+        if (depth >= 3) {
+          throw new Error(
+            "Maximum folder nesting depth (3) exceeded",
+          );
+        }
       }
-      if (input.shared !== undefined) existing.shared = Boolean(input.shared);
-      if (input.orgName !== undefined) existing.orgName = input.orgName;
-      if (input.lastSyncedAt !== undefined) existing.lastSyncedAt = input.lastSyncedAt;
-      // Ensure updatedAt is strictly greater than the previous value
-      const prevUpdatedAt = existing.updatedAt;
-      existing.updatedAt =
-        now > prevUpdatedAt
-          ? now
-          : new Date(new Date(prevUpdatedAt).getTime() + 1).toISOString();
+
+      const existing = input.id
+        ? folders.find((f) => f.id === input.id)
+        : null;
+
+      if (existing) {
+        existing.name = name;
+        existing.parentId = parentId;
+        if (input.sortOrder !== undefined) {
+          existing.sortOrder = Number(input.sortOrder) || 0;
+        }
+        if (input.shared !== undefined) existing.shared = Boolean(input.shared);
+        if (input.orgName !== undefined) existing.orgName = input.orgName;
+        if (input.lastSyncedAt !== undefined) existing.lastSyncedAt = input.lastSyncedAt;
+        // Ensure updatedAt is strictly greater than the previous value
+        const prevUpdatedAt = existing.updatedAt;
+        existing.updatedAt =
+          now > prevUpdatedAt
+            ? now
+            : new Date(new Date(prevUpdatedAt).getTime() + 1).toISOString();
+        await this.#writeJson(this.foldersPath, folders);
+        return { ...existing };
+      }
+
+      const folder = {
+        id: input.id || crypto.randomUUID(),
+        name,
+        parentId,
+        sortOrder:
+          typeof input.sortOrder === "number" ? input.sortOrder : 0,
+        createdAt: now,
+        updatedAt: now,
+      };
+      if (shared) folder.shared = true;
+      if (orgName) folder.orgName = orgName;
+      if (lastSyncedAt) folder.lastSyncedAt = lastSyncedAt;
+      folders.push(folder);
       await this.#writeJson(this.foldersPath, folders);
-      return { ...existing };
-    }
-
-    const folder = {
-      id: input.id || crypto.randomUUID(),
-      name,
-      parentId,
-      sortOrder:
-        typeof input.sortOrder === "number" ? input.sortOrder : 0,
-      createdAt: now,
-      updatedAt: now,
-    };
-    if (shared) folder.shared = true;
-    if (orgName) folder.orgName = orgName;
-    if (lastSyncedAt) folder.lastSyncedAt = lastSyncedAt;
-    folders.push(folder);
-    await this.#writeJson(this.foldersPath, folders);
-    return { ...folder };
+      return { ...folder };
+    });
   }
 
   async deleteFolder(id) {
-    const folders = await this.listFolders();
-    const toDelete = this.#collectDescendants(folders, id);
-    if (!toDelete.length) return [];
-    const remaining = folders.filter((f) => !toDelete.includes(f.id));
-    await this.#writeJson(this.foldersPath, remaining);
-    return toDelete;
+    return this.#enqueue(async () => {
+      const folders = await this.listFolders();
+      const toDelete = this.#collectDescendants(folders, id);
+      if (!toDelete.length) return [];
+      const remaining = folders.filter((f) => !toDelete.includes(f.id));
+      await this.#writeJson(this.foldersPath, remaining);
+      return toDelete;
+    });
   }
 
   async reorderFolders(updates) {
-    const folders = await this.listFolders();
-    for (const { id, sortOrder } of updates) {
-      const folder = folders.find((f) => f.id === id);
-      if (folder) folder.sortOrder = sortOrder;
-    }
-    await this.#writeJson(this.foldersPath, folders);
+    return this.#enqueue(async () => {
+      const folders = await this.listFolders();
+      for (const { id, sortOrder } of updates) {
+        const folder = folders.find((f) => f.id === id);
+        if (folder) folder.sortOrder = sortOrder;
+      }
+      await this.#writeJson(this.foldersPath, folders);
+    });
   }
 
   async folderExists(id) {
@@ -112,14 +128,16 @@ class FolderStore {
    */
   async touchFolders(ids) {
     if (!ids.length) return;
-    const folders = await this.listFolders();
-    const now = new Date().toISOString();
-    for (const folder of folders) {
-      if (ids.includes(folder.id)) {
-        folder.updatedAt = now;
+    return this.#enqueue(async () => {
+      const folders = await this.listFolders();
+      const now = new Date().toISOString();
+      for (const folder of folders) {
+        if (ids.includes(folder.id)) {
+          folder.updatedAt = now;
+        }
       }
-    }
-    await this.#writeJson(this.foldersPath, folders);
+      await this.#writeJson(this.foldersPath, folders);
+    });
   }
 
   // --- Private helpers ---
