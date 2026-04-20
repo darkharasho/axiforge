@@ -1294,7 +1294,7 @@ test.describe("Equipment — Stats Display", () => {
     // = (1000 - 895) / 21.0
     // = 105 / 21.0
     // = 5.0%
-    const precisionRow = statsSection.locator(".equip-stat-row").nth(1); // Precision is second row
+    const precisionRow = statsSection.locator(".equip-stat-row").nth(3); // Precision is fourth row (after Power, Toughness, Vitality)
     const derivedCell = precisionRow.locator(".equip-stat-cell--derived");
     await expect(derivedCell).toBeVisible();
 
