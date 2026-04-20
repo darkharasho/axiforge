@@ -58,6 +58,17 @@ const KNOWN_SKILL_FACTS_OVERRIDES = new Map([
 // Fact list patches for traits the GW2 API returns with incorrect values.
 // Same pattern as KNOWN_SKILL_FACTS_OVERRIDES but keyed by trait ID.
 const KNOWN_TRAIT_FACTS_OVERRIDES = new Map([
+  // Blood Reaction (trait 2011, Berserker spec 18) — GW2 API returns 5 stale BuffConversion
+  // facts [12%, 10%, 5%] for Precision→Ferocity and [10%, 15%] for Power→ConditionDamage.
+  // Correct PvE values (per wiki): 7% Precision→Ferocity, 10% Power→ConditionDamage.
+  // Correct WvW values: 5% Precision→Ferocity, 10% Power→ConditionDamage.
+  // Convention: first fact = PvE (idx 0), second = WvW (idx 1) for dedup in modifiers.js.
+  // Wiki: https://wiki.guildwars2.com/wiki/Blood_Reaction
+  [2011, [
+    { type: "BuffConversion", text: "Attribute Conversion", icon: `${_IC}/0658D833944E69E62E08EB18A0B5407F722125BC/2229320.png`, percent: 7,  source: "Precision", target: "CritDamage"      },
+    { type: "BuffConversion", text: "Attribute Conversion", icon: `${_IC}/0658D833944E69E62E08EB18A0B5407F722125BC/2229320.png`, percent: 5,  source: "Precision", target: "CritDamage"      },
+    { type: "BuffConversion", text: "Attribute Conversion", icon: `${_IC}/0658D833944E69E62E08EB18A0B5407F722125BC/2229320.png`, percent: 10, source: "Power",     target: "ConditionDamage" },
+  ]],
   // Versatile Rage (trait 1415, Discipline spec 51) — GW2 API returns Recharge: 4s,
   // but in-game the skill has a 5s recharge. Wiki: https://wiki.guildwars2.com/wiki/Versatile_Rage
   [1415, [
