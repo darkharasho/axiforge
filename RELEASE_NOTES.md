@@ -1,3 +1,17 @@
+## Version v0.6.10 — April 19, 2026
+
+### Bug Fixes
+
+- **Attributes panel stat order now matches the in-game stat doll** — Precision and Crit Chance were displaying second (right after Power), but the in-game stat doll shows them after Toughness and Vitality. The order is now Power → Toughness → Vitality → Precision → Ferocity → …
+- **Healing Power now displays alongside Condition Damage** — Healing Power was shown as a standalone row at the bottom of the attributes panel. It now appears to the right of Condition Damage, matching the in-game layout.
+- **Discord webhook URL no longer requires clicking Save** — the webhook URL field now auto-saves as you type, and pressing Enter also triggers a save. The explicit Save button has been removed.
+- **Weapon swapping no longer adds a phantom infusion slot** — switching between a two-handed and one-handed weapon set was overcounting infusion slots, inflating stat totals.
+- **Utility buff conversion math corrected** — conversion percentages from utility items (e.g. sharpening stones) were slightly off due to floating-point rounding.
+- **Great Fortitude (Strength trait) conversion percentage corrected** — the stat conversion math for this trait was slightly off.
+- **Blood Reaction (Berserker trait) conversion percentage corrected** — the stat conversion math was slightly off, particularly in WvW and for Condition Damage builds.
+- **Ranger Marksmanship — Farsighted trait no longer shows duplicate fact labels** — the tooltip was displaying redundant entries for this trait.
+- **Wiki fact cache TTL extended to 7 days** — previously fact data was re-fetched too frequently (every 4 hours), causing unnecessary API calls and slower profession loading.
+
 ## Version v0.6.9 — April 19, 2026
 
 ### Bug Fixes
