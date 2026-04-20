@@ -843,7 +843,7 @@
     {
       "id": 2049,
       "wikiTitle": "Smash Brawler",
-      "note": "Berserker berserk-conditional crit, WvW regression #259",
+      "note": "berserkConditional critChance, WvW split — regression #259",
       "api": {
         "id": 2049,
         "tier": 1,
@@ -896,7 +896,343 @@
         "icon": "https://render.guildwars2.com/file/780ACDAE6E6AE10E53470AF821FD246E380E65EB/1029973.png"
       },
       "wikitext": "{{Trait infobox\n| split = pve, pvp, wvw\n| line = Berserker\n| tier = Adept\n| type = Major\n| position = 1\n| training order = 4\n| description = When you hit with a [[Primal Burst]] skill, extend the duration of your [[berserk]]. Critical-hit chance is increased while berserk.\n| facts = \n{{skill fact|Duration Increase|2|game mode=pve}}{{skill fact|Duration Increase|1|game mode=wvw pvp}}\n{{skill fact|Critical Chance Increase|15|game mode = pve pvp}}{{skill fact|Critical Chance Increase|5|game mode = wvw}}\n| improves skill = Berserk\n| improves type = Primal Burst\n| id = 2049\n| requires = hot\n}}\n\n== Mechanics ==\n* {{skill icon|Decapitate}} will extend berserk mode by 1 second in PvE.\n\n== Related [[skill]]s ==\n{{related skills}}\n\n== Version history ==\n{{Version history table header|warrior|type=trait}}\n{{Version history table row|2023-11-28|Berserker}}\n* This trait no longer extends berserk duration by a flat amount and instead causes Primal Burst skills to extend berserk duration by 2 seconds in PvE and 1 second in PvP and WvW when striking an enemy, once per skill. Decapitate will extend berserk mode by 1 second in PvE.\n{{Version history table row|2023-05-02|Warrior}}\n* This trait now grants 15% (5% in WvW) increased critical-strike chance while in berserk mode in addition to its current effect.\n{{Version history table row|2019-04-23|Warrior}}\n* This trait no longer reduces recharge of berserk mode and primal bursts. Instead, it extends the duration of berserk mode by 5 seconds.\n{{Version history table row|2017-05-16|Warrior}}\n* The cooldown reduction received from this trait has been reduced from 33% to 20%.\n{{Version history table row|2015-10-23|Berserker|r=y}}\n|}\n\n== Trivia ==\n* The name of this trait is likely a reference to the fighting game [[w:Super Smash Bros. Brawl|Super Smash Bros. Brawl]], while the icon of the trait resembles [[w:Ridley (Metroid)|Ridley]] from the [[w:Metroid|Metroid]] game series. Despite having only appeared in the franchise as a boss when the trait was introduced, Ridley became a playable fighter in the series' [[w:Super Smash Bros. Ultimate|2018 installment]].\n\n[[de:Raufbold zerschmettern]]\n[[es:Pendenciero aplastante]]\n[[fr:Bagarreur violent]]"
+    },
+    {
+      "id": 1719,
+      "wikiTitle": "Roiling Mists",
+      "note": "implicitFury: has fury critChance bonus but no Buff(Fury) API fact",
+      "api": {
+        "id": 1719,
+        "tier": 3,
+        "order": 2,
+        "name": "Roiling Mists",
+        "description": "Critical-hit chance is further increased while you are under the effect of fury. Convert a percentage of your outgoing critical strike damage into healing.",
+        "slot": "Major",
+        "facts": [
+          {
+            "text": "Percent",
+            "type": "Percent",
+            "icon": "https://render.guildwars2.com/file/B0CD8077991E4FB1622D2930337ED7F9B54211D5/156665.png",
+            "percent": 2
+          },
+          {
+            "text": "Percent",
+            "type": "Percent",
+            "icon": "https://render.guildwars2.com/file/B0CD8077991E4FB1622D2930337ED7F9B54211D5/156665.png",
+            "percent": 5
+          },
+          {
+            "text": "Percent",
+            "type": "Percent",
+            "icon": "https://render.guildwars2.com/file/B0CD8077991E4FB1622D2930337ED7F9B54211D5/156665.png",
+            "percent": 5
+          },
+          {
+            "text": "Critical Chance Increase",
+            "type": "Percent",
+            "icon": "https://render.guildwars2.com/file/C2CEA567E0C43C199C782809544721AA12A6DF0A/2229323.png",
+            "percent": 25
+          },
+          {
+            "text": "Critical Chance Increase",
+            "type": "Percent",
+            "icon": "https://render.guildwars2.com/file/C2CEA567E0C43C199C782809544721AA12A6DF0A/2229323.png",
+            "percent": 20
+          }
+        ],
+        "specialization": 3,
+        "icon": "https://render.guildwars2.com/file/EAEF09AF62A04394DB04BD555D2FEAAEA9E608E5/1012685.png"
+      },
+      "wikitext": "{{Trait infobox\n| line = Invocation\n| tier = Grandmaster\n| type = Major\n| position = 3\n| split = pve, wvw pvp\n| description = [[Critical Chance|Critical-hit chance]] is further increased while you are under the effect of [[fury]]. Convert a percentage of your outgoing critical strike damage into healing.\n| facts = {{skill fact|percent|2|game mode=pve}}{{skill fact|percent|5|game mode=wvw pvp}}\n{{skill fact|Critical Chance increase|25|game mode=pve}}{{skill fact|Critical Chance Increase|20|game mode=wvw pvp}}\n| training order = 12\n| improves boon = Fury\n| id = 1719\n| requires = hot\n}}\n\n== Notes ==\n* This trait increases the [[critical chance]] given by [[fury]] by a flat 25% in PvE, and 20% in WvW and PvP.\n\n== Version history ==\n{{Version history table header|revenant|type=trait}}\n{{Version history table row|2025-08-19|Revenant}}\n* Reduced the critical strike damage healing from 10% to 5% in PvP only.\n{{Version history table row|2025-04-15|Revenant_2}}\n* This trait now converts a percentage of your outgoing critical strike damage into healing in addition to its previous effect.\n{{Version history table row|2024-06-25|Revenant 2}}\n* Increased the bonus critical chance from 10% to 20% in PvP only.\n{{Version history table row|2022-06-30|Revenant}}\n* Increased the critical hit chance applied by this trait from +20% to +25% in PvE only.\n{{Version history table row|2022-06-28|Revenant}}\n* Trait changed to provide a flat increase of 20% to [[critical chance]] instead of doubling the effect of [[fury]]. 10% in PvP.\n{{Version history table row|2019-05-14|Revenant}}\n* Decreased bonus critical-hit chance from 100% to 50% in PvP.\n{{Version history table row|2018-05-22|Revenant}}\n* Fixed a bug in which this trait granted boons upon swapping legends.\n{{Version history table row|2015-10-23|Revenant|r=y}}\n|}\n\n[[de:Aufgewühlte Nebel]]\n[[es:Niebla arrolladora]]\n[[fr:Brumes tumultueuses]]"
+    },
+    {
+      "id": 1765,
+      "wikiTitle": "Notoriety",
+      "note": "mightOverride power+condi: +40P/+20CD per Might stack",
+      "api": {
+        "id": 1765,
+        "tier": 2,
+        "order": 1,
+        "name": "Notoriety",
+        "description": "Might grants you more power and less condition damage. Gain might when using a legendary stance skill.",
+        "slot": "Major",
+        "facts": [
+          {
+            "text": "Apply Buff/Condition",
+            "type": "Buff",
+            "icon": "https://render.guildwars2.com/file/2FA9DF9D6BC17839BBEA14723F1C53D645DDB5E1/102852.png",
+            "duration": 5,
+            "status": "Might",
+            "description": "Increased outgoing damage; stacks intensity.",
+            "apply_count": 2
+          },
+          {
+            "text": "Apply Buff/Condition",
+            "type": "Buff",
+            "icon": "https://render.guildwars2.com/file/2FA9DF9D6BC17839BBEA14723F1C53D645DDB5E1/102852.png",
+            "duration": 10,
+            "status": "Might",
+            "description": "Increased outgoing damage; stacks intensity.",
+            "apply_count": 2
+          },
+          {
+            "text": "Combat Only",
+            "type": "NoData",
+            "icon": "https://render.guildwars2.com/file/9352ED3244417304995F26CB01AE76BB7E547052/156661.png"
+          }
+        ],
+        "specialization": 15,
+        "icon": "https://render.guildwars2.com/file/1A720EC19CEDF654EDECB4616512F6CDF6A4BF06/1029959.png"
+      },
+      "wikitext": "{{Trait infobox\n| line = Devastation\n| tier = Master\n| type = Major\n| position = 2\n| split = pve wvw, pvp\n| description = [[Might]] grants you more [[power]] and less [[condition damage]]. Gain might when using a [[Utility skill#Revenant|legendary stance skill]].\n| facts = {{skill fact|might|stacks=2|10|game mode=pve wvw}}{{skill fact|might|stacks=2|5|game mode=pvp}}{{skill fact|combat}}\n| requires = hot\n| training order = 7\n| improves boon = Might\n| improves skill = Ancient Echo, Legendary Centaur Stance, True Nature (assassin), True Nature (centaur), True Nature (demon), True Nature (dragon), True Nature (dwarf)\n| improves type = Citadel Order, Elite skill, Healing skill, Utility skill\n| id = 1765\n}}\n\n== Notes ==\n* With this trait, each stack of [[Might]] grants 40 [[Power]] and 20 [[Condition Damage]] which adds up to 1000 Power and 500 Condition Damage with 25 stacks of Might.\n* Legendary stance skills are:\n** Healing skills, Utility skills, and Elite skills\n** Core [[Revenant]]: [[Ancient Echo]] (F2)\n** [[Herald]]: Only [[True Nature]] (F2) (not [[Facet of Nature]])\n** [[Renegade]]: All three [[Citadel Order]]-skills (F2, F3, F4)\n** All: Only the [[Legendary Centaur Stance]] (F1)\n{{anomaly|Only the Legendary Centaur Stance (F1) gives might, any other F1-stances do not.}}\n\n== Version history ==\n{{Version history table header|revenant}}\n{{Version history table row|2024-10-08|Revenant}}\n* Increased the might stacks from 1 to 2 in PvP and WvW.\n{{Version history table row|2020-02-25|}}\n* This trait no longer grants bonus might when using Legendary Assassin skills.\n{{Version history table row|2019-07-16|Revenant}}\n* Reduced might duration from 10 seconds to 5 seconds, and reduced the number of stacks applied by 1 in PvP only.\n{{Version history table row|2018-10-02|Revenant}}\n* This trait has been renamed Notoriety. In addition to its previous effect, it now causes might to grant revenants more power and less condition damage.\n{{Version history table row|2017-08-08|Revenant|name=Nefarious Momentum}}\n* Increased the might granted when using an assassin-stance skill from 2 to 3 stacks.\n* This trait now grants 2 stacks of might for 10 seconds when using a nonassassin stance skill.\n{{Version history table row|2015-10-23|Revenant|r=y|name=Nefarious Momentum}}\n|}\n\n[[de:Ruchlose Wucht]]\n[[es:Notoriedad]]\n[[fr:Notoriété]]"
+    },
+    {
+      "id": 1453,
+      "wikiTitle": "Pinnacle of Strength",
+      "note": "mightOverride power + passive critChance",
+      "api": {
+        "id": 1453,
+        "tier": 3,
+        "order": 0,
+        "name": "Pinnacle of Strength",
+        "description": "Might applied to you grants more power. Your critical-hit chance is increased.",
+        "slot": "Minor",
+        "facts": [
+          {
+            "type": "AttributeAdjust",
+            "icon": "https://render.guildwars2.com/file/D6CAECEA0FD5FADE04DD6970384ADC5DE309C506/2229322.png",
+            "value": 10,
+            "target": "Power"
+          },
+          {
+            "text": "Critical Chance Increase",
+            "type": "Percent",
+            "icon": "https://render.guildwars2.com/file/C2CEA567E0C43C199C782809544721AA12A6DF0A/2229323.png",
+            "percent": 5
+          }
+        ],
+        "specialization": 4,
+        "icon": "https://render.guildwars2.com/file/73003EC83C79150BAB1578A1F067F37C0F472D60/1012821.png"
+      },
+      "wikitext": "{{Trait infobox\n| icon = Stick and Move.png\n| description = [[Might]] applied to you grants more [[power]]. Your critical-hit chance is increased.\n| facts = {{skill fact|attribute|Power|10}}{{skill fact|Critical Chance Increase|5}}\n| line = Strength\n| tier = Grandmaster\n| type = Minor\n| training order = 9\n| improves boon = might\n| id = 1453\n}}\n\n== Related [[skill]]s ==\n{{related skills}}\n\n== Related [[trait]]s ==\n{{related traits}}\n\n== Version history ==\n{{Version history table header|warrior|type=trait}}\n{{Version history table row|2022-07-19|Warrior}}\n* This trait now gives 5% increased critical chance in addition to its other effects.\n{{Version history table row|2017-12-12|Warrior|r=y}}\n|}\n\n== Trivia ==\n* This trait replaced [[Stick and Move]].\n\n[[de:Gipfel der Stärke]]\n[[es:Fuerza titánica]]\n[[fr:Pic de force]]"
+    },
+    {
+      "id": 1338,
+      "wikiTitle": "Forceful Greatsword",
+      "note": "weaponConditional: double Power bonus on greatsword/spear",
+      "api": {
+        "id": 1338,
+        "tier": 2,
+        "order": 1,
+        "name": "Forceful Greatsword",
+        "description": "Gain power and a chance to gain might on critical strike. Double these bonuses while wielding a greatsword or underwater spear. Greatsword and underwater spear skills recharge faster.",
+        "slot": "Major",
+        "facts": [
+          {
+            "text": "Apply Buff/Condition",
+            "type": "Buff",
+            "icon": "https://render.guildwars2.com/file/2FA9DF9D6BC17839BBEA14723F1C53D645DDB5E1/102852.png",
+            "duration": 5,
+            "status": "Might",
+            "description": "Increased outgoing damage; stacks intensity.",
+            "apply_count": 1
+          },
+          {
+            "text": "Recharge Reduced",
+            "type": "Percent",
+            "icon": "https://render.guildwars2.com/file/AAB7C5387A08367C2F023F19FEE70E1556AD4375/1770202.png",
+            "percent": 20
+          },
+          {
+            "type": "AttributeAdjust",
+            "icon": "https://render.guildwars2.com/file/D6CAECEA0FD5FADE04DD6970384ADC5DE309C506/2229322.png",
+            "value": 120,
+            "target": "Power"
+          },
+          {
+            "text": "Chance on Critical Strike to Gain Might",
+            "type": "Percent",
+            "icon": "https://render.guildwars2.com/file/B0CD8077991E4FB1622D2930337ED7F9B54211D5/156665.png",
+            "percent": 50
+          }
+        ],
+        "specialization": 4,
+        "icon": "https://render.guildwars2.com/file/CDAE0E5A05570A05917304122E52C71BF5474FC5/1012814.png"
+      },
+      "wikitext": "{{Trait infobox\n| description = Gain [[power]] and a chance to gain [[might]] on [[Critical hit|critical strike]]. Double these bonuses while wielding a [[greatsword]] or underwater [[spear]]. Greatsword and underwater spear skills recharge faster.\n| facts = {{skill fact|percent|alt=Chance on Critical Strike to Gain Might|50}}{{skill fact|might|5}}{{skill fact|attribute|Power|120}}{{skill fact|Recharge Reduced|20}}\n| line = Strength\n| tier = Master\n| type = Major\n| position = 2\n| training order = 7\n| improves property = Critical hit\n| improves skill = Hundred Blades, Whirlwind Attack, Bladetrail, Rush, Mariner's Frenzy, Barbed Pull, Parry, Tsunami Slash\n| id = 1338\n}}\n== Notes ==\n{{Recharge table|profession=Warrior|skills=Greatsword Swing, Greatsword Slice, Brutal Strike, Hundred Blades, Whirlwind Attack, Bladetrail, Rush, Mariner's Frenzy, Barbed Pull, Parry, Tsunami Slash}}\n* The chance to gain Might on a critical hit and the Power gained are doubled when wielding a greatsword. The number of Might stacks and the duration of the applied might are not doubled.\n\n== Version history ==\n{{Version history table header|warrior|type=trait}}\n{{Version history table row|2024-06-25|Guild Wars 2 Wiki Notes}}\n* (Undocumented) Existing spear related trait descriptions were updated to specify underwater spears.\n{{Version history table row|2019-01-22|Warrior}}\n* Fixed a bug in which the previous version of this trait was still working in the background. Removed an unused skill fact. Fixed an issue that could cause the stats granted by this trait to update incorrectly.\n{{Version history table row|2018-12-11|Warrior}}\n* This trait no longer increases greatsword and spear damage by 10%. It now grants 120 power at level 80 and an additional 120 power if the warrior is wielding a greatsword or spear.\n{{Version history table row|2015-06-23|Warrior 2}}\n* Updated this trait to reflect the introduction of the specialization mechanic.\n* Added: Increases damage of greatsword and spear skills by 10%.\n{{Version history table row|release|r=y}}\n|}\n\n[[de:Mächtiges Großschwert]]\n[[es:Mandoble eficaz]]\n[[fr:Espadon puissant]]"
+    },
+    {
+      "id": 2046,
+      "wikiTitle": "Fatal Frenzy",
+      "note": "berserkConditional flatBonus: Ferocity/Precision while berserk",
+      "api": {
+        "id": 2046,
+        "tier": 3,
+        "order": 0,
+        "name": "Fatal Frenzy",
+        "description": "Berserk mode increases power and condition damage.",
+        "slot": "Minor",
+        "facts": [
+          {
+            "type": "AttributeAdjust",
+            "icon": "https://render.guildwars2.com/file/D6CAECEA0FD5FADE04DD6970384ADC5DE309C506/2229322.png",
+            "value": 300,
+            "target": "Power"
+          },
+          {
+            "type": "AttributeAdjust",
+            "icon": "https://render.guildwars2.com/file/0120CB042BFC2EA6A45BC3DB45155FECDDDE1910/2229318.png",
+            "value": 150,
+            "target": "ConditionDamage"
+          },
+          {
+            "type": "AttributeAdjust",
+            "icon": "https://render.guildwars2.com/file/0120CB042BFC2EA6A45BC3DB45155FECDDDE1910/2229318.png",
+            "value": 300,
+            "target": "ConditionDamage"
+          }
+        ],
+        "specialization": 18,
+        "icon": "https://render.guildwars2.com/file/A6EDB2AE070A9F43B60067771C21B251F86A49EE/1029977.png"
+      },
+      "wikitext": "{{Trait infobox\n| split = pve, pvp wvw\n| line = Berserker\n| tier = Grandmaster\n| type = Minor\n| description = [[Berserk]] mode increases [[power]] and [[Condition Damage|condition damage]].\n| facts =\n{{skill fact|attribute|Power|300}}\n{{skill fact|attribute|Condition Damage|150|game mode=pve}}{{skill fact|attribute|Condition Damage|300|game mode=wvw pvp}}\n| training order = 13\n| improves skill = Berserk\n| id = 2046\n| requires = hot\n}}\n\n== Version history ==\n{{Version history table header|warrior|type=trait}}\n{{Version history table row|2026-04-14|Berserker}}\n* Reduced the condition damage granted from 300 to 150 in PvE only. Increased the power from 150 to 300 in WvW only.\n{{Version history table row|2023-10-17|Berserker}}\n* Reduced the power bonus from 300 to 150 in WvW only.\n{{Version history table row|2022-10-04|Warrior}}\n* This trait no longer reduces toughness.\n{{Version history table row|2019-04-23|Warrior}}\n* This trait no longer gives boons. Instead, while in berserk mode, this trait reduces toughness by 300, increases power by 300, and increases condition damage by 300.\n{{Version history table row|2015-11-04|Warrior}}\n* This trait now grants 6 seconds of fury in addition to its previous effects.\n{{Version history table row|2015-10-23|Berserker|r=y}}\n|}\n\n== Trivia ==\n* The name of this trait is likely a reference to the fighting game series [[w:Fatal Fury (series)|Fatal Fury]].\n\n[[de:Fatale Raserei]]\n[[es:Frenesí letal]]\n[[fr:Frénésie fatale]]"
+    },
+    {
+      "id": 1449,
+      "wikiTitle": "Great Fortitude",
+      "note": "AttributeConversion: Toughness to Power",
+      "api": {
+        "id": 1449,
+        "tier": 2,
+        "order": 2,
+        "name": "Great Fortitude",
+        "description": "Gain vitality and ferocity based on a percentage of your power.",
+        "slot": "Major",
+        "facts": [
+          {
+            "text": "Attribute Conversion",
+            "type": "BuffConversion",
+            "icon": "https://render.guildwars2.com/file/CAE8B4C43FF9D203FA55016700420A0454DFFE02/2229325.png",
+            "percent": 10,
+            "source": "Power",
+            "target": "Vitality"
+          },
+          {
+            "text": "Attribute Conversion",
+            "type": "BuffConversion",
+            "icon": "https://render.guildwars2.com/file/CAE8B4C43FF9D203FA55016700420A0454DFFE02/2229325.png",
+            "percent": 10,
+            "source": "Power",
+            "target": "CritDamage"
+          }
+        ],
+        "specialization": 4,
+        "icon": "https://render.guildwars2.com/file/424B39CE4BFF056F3B2ED25F186A7FC5E69538E5/1012815.png"
+      },
+      "wikitext": "{{Trait infobox\n| line = Strength\n| tier = Master\n| type = Major\n| position = 3\n| description = Gain [[vitality]] and [[ferocity]] based on a percentage of your [[power]].\n| facts = {{skill fact|Gain|Vitality|Power|10}}{{skill fact|Gain|Ferocity|Power|10}}\n| training order = 8\n| id = 1449\n}}\n\n== Version history ==\n{{Version history table header|warrior|type=trait}}\n{{Version history table row|2021-05-11|Warrior}}\n* This trait now increases ferocity by 10% of vitality.\n** Wiki note: Actually increases ferocity by 10% of power instead.\n{{Version history table row|2015-06-23|Warrior 2}}\n* Updated this trait to reflect the introduction of the specialization mechanic.\n* This trait has been moved to the Master tier.\n* Increased the conversion rate from 7% to 10%.\n{{Version history table row|2013-12-10|Warrior 2}}\n* Increased the conversion rate from 5% to 7%.\n{{Version history table row|release|r=y}}\n|}\n\n[[Category:Gain X Based on Y]]\n[[de:Große Tapferkeit]]\n[[es:Gran fortaleza]]\n[[fr:Courage infini]]"
+    },
+    {
+      "id": 1016,
+      "wikiTitle": "Fang and Claw",
+      "note": "petStatOnly: AttributeAdjust applies to pet, not player",
+      "api": {
+        "id": 1016,
+        "tier": 2,
+        "order": 0,
+        "name": "Fang and Claw",
+        "description": "Feline, avian, and drake pets gain increased precision and ferocity. <c=@abilitytype>Beast</c> skills grant fury around the ranger.",
+        "slot": "Major",
+        "facts": [
+          {
+            "text": "Recharge",
+            "type": "Recharge",
+            "icon": "https://render.guildwars2.com/file/D767B963D120F077C3B163A05DC05A7317D7DB70/156651.png",
+            "value": 20
+          },
+          {
+            "text": "Apply Buff/Condition",
+            "type": "Buff",
+            "icon": "https://render.guildwars2.com/file/96D90DF84CAFE008233DD1C2606A12C1A0E68048/102842.png",
+            "duration": 8,
+            "status": "Fury",
+            "description": "Critical chance increased; stacks duration.",
+            "apply_count": 1
+          },
+          {
+            "text": "Apply Buff/Condition",
+            "type": "Buff",
+            "icon": "https://render.guildwars2.com/file/96D90DF84CAFE008233DD1C2606A12C1A0E68048/102842.png",
+            "duration": 6,
+            "status": "Fury",
+            "description": "Critical chance increased; stacks duration.",
+            "apply_count": 1
+          },
+          {
+            "text": "Radius",
+            "type": "Distance",
+            "icon": "https://render.guildwars2.com/file/B0CD8077991E4FB1622D2930337ED7F9B54211D5/156665.png",
+            "distance": 300
+          },
+          {
+            "text": "Number of Targets",
+            "type": "Number",
+            "icon": "https://render.guildwars2.com/file/BBE8191A494B0352259C10EADFDACCE177E6DA5B/1770208.png",
+            "value": 5
+          },
+          {
+            "type": "AttributeAdjust",
+            "icon": "https://render.guildwars2.com/file/C2CEA567E0C43C199C782809544721AA12A6DF0A/2229323.png",
+            "value": 420,
+            "target": "Precision"
+          },
+          {
+            "type": "AttributeAdjust",
+            "icon": "https://render.guildwars2.com/file/0658D833944E69E62E08EB18A0B5407F722125BC/2229320.png",
+            "value": 450,
+            "target": "CritDamage"
+          },
+          {
+            "type": "AttributeAdjust",
+            "icon": "https://render.guildwars2.com/file/C2CEA567E0C43C199C782809544721AA12A6DF0A/2229323.png",
+            "value": 315,
+            "target": "Precision"
+          },
+          {
+            "type": "AttributeAdjust",
+            "icon": "https://render.guildwars2.com/file/0658D833944E69E62E08EB18A0B5407F722125BC/2229320.png",
+            "value": 225,
+            "target": "CritDamage"
+          }
+        ],
+        "specialization": 30,
+        "icon": "https://render.guildwars2.com/file/F56EB274FA516609317A6540ABC20B6116C8051D/3613096.png"
+      },
+      "wikitext": "{{Trait infobox\n| split = pve, wvw pvp\n| line = Skirmishing\n| tier = Master\n| type = Major\n| position = 1\n| recharge = 20\n| description = [[Feline#Pets|Feline]], [[bird#Pets|avian]], and [[drake#Pets|drake]] pets gain additional [[precision]] and [[ferocity]]. [[Beast]] skills grant [[fury]] around the ranger.\n| facts = \n{{skill fact|fury|8|25|game mode=pve}}{{skill fact|fury|6|game mode=wvw pvp}}\n{{skill fact|attribute|precision|420|game mode=pve}}{{skill fact|attribute|precision|315|game mode=wvw pvp}}\n{{skill fact|attribute|ferocity|450|game mode=pve}}{{skill fact|attribute|ferocity|225|game mode=wvw pvp}}\n{{skill fact|targets|5}}\n{{skill fact|radius|300}}\n| training order = 6\n| id = 1016\n| improves type = Beast\n}}\n\n== Mechanics ==\n* Attributes gained are only granted to the pet, not the ranger. No attributes are gained by [[Soulbeast]] rangers in [[beastmode]].\n* Fury is granted regardless of the pet family. Being in combat is not required.\n\n== Affected pets ==\nReceiving the attribute boosts:\n* Avian\n** [[Juvenile Eagle]]\n** [[Juvenile Hawk]]\n** [[Juvenile Owl]]\n** [[Juvenile Raven]]\n** [[Juvenile White Raven]]\n** [[Juvenile Phoenix]]\n** [[Juvenile Raptor Swiftwing]]\n\n* Drake\n** [[Juvenile Ice Drake]]\n** [[Juvenile Marsh Drake]]\n** [[Juvenile Reef Drake]]\n** [[Juvenile River Drake]]\n** [[Juvenile Salamander Drake]]\n* Feline\n** [[Juvenile Cheetah]]\n** [[Juvenile Jaguar]]\n** [[Juvenile Jungle Stalker]]\n** [[Juvenile Lynx]]\n** [[Juvenile Sand Lion]]\n** [[Juvenile Snow Leopard]]\n** [[Juvenile Tiger]]\n** [[Juvenile Warclaw]]\n** [[Juvenile White Tiger]]\n\n== Related [[skill]]s ==\n{{related skills}}\n\n== Version history ==\n{{Version history table header|ranger|type=trait}}\n{{Version history table row|2025-04-15|Ranger_2|r=y}}\n* This trait replaces [[Spotter]] in Skirmishing. [[Feline#Pets|Feline]], [[bird#Pets|bird]], and [[drake#Pets|drake]] pets gain additional critical strike chance and critical strike damage. Grant fury to nearby allies when you use Beast skill.\n|}\n\n[[es:Colmillos y garras]]"
+    },
+    {
+      "id": 1011,
+      "wikiTitle": "Precise Strike",
+      "note": "ignoreCritChance: 100% crit is Opening Strike only, not passive",
+      "api": {
+        "id": 1011,
+        "tier": 3,
+        "order": 0,
+        "name": "Precise Strike",
+        "description": "Opening Strike has an increased chance to critically strike.",
+        "slot": "Minor",
+        "facts": [
+          {
+            "text": "Critical Chance Increase",
+            "type": "Percent",
+            "icon": "https://render.guildwars2.com/file/C2CEA567E0C43C199C782809544721AA12A6DF0A/2229323.png",
+            "percent": 100
+          }
+        ],
+        "specialization": 8,
+        "icon": "https://render.guildwars2.com/file/C16AC293515DD1CCD131A6F79206EB5E5FDD7747/1012629.png"
+      },
+      "wikitext": "{{Trait infobox\n| line = Marksmanship\n| tier = Grandmaster\n| type = Minor\n| description = [[Opening Strike]] has an increased chance to [[critical hit|critically strike]].\n| facts = {{skill fact|critical chance increase|100}}\n| training order = 9\n| improves trait = Opening Strike\n| id = 1011\n}}\n\n== Related [[trait]]s ==\n{{related traits}}\n\n== Version history ==\n{{Version history table header|ranger|type=trait}}\n{{Version history table row|2015-06-23|Ranger 2}}\n* Updated this trait to reflect the introduction of the specialization mechanic.\n{{Version history table row|2013-08-06|Ranger}}\n* This trait now functions correctly with Remorseless.\n{{Version history table row|release|r=y}}\n|}\n\n[[de:Präzisionsschlag]]\n[[es:Golpe preciso]]\n[[fr:Frappe précise]]"
     }
   ],
-  "capturedAt": "2026-04-20T17:59:54.262Z"
+  "capturedAt": "2026-04-20T18:09:48.647Z"
 }

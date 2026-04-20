@@ -55,7 +55,16 @@ const TRAITS_TO_CAPTURE = [
   { id: 1510, wiki: "Flow like Water", note: "Weaver trait with split" },
   { id: 1502, wiki: "Swift Revenge", note: "Weaver trait" },
   { id: 264, wiki: "Burning Precision", note: "trait with condition" },
-  { id: 2049, wiki: "Smash Brawler", note: "Berserker berserk-conditional crit, WvW regression #259" },
+  { id: 2049, wiki: "Smash Brawler", note: "berserkConditional critChance, WvW split — regression #259" },
+  // Override coverage: one fixture per override category
+  { id: 1719, wiki: "Roiling Mists", note: "implicitFury: has fury critChance bonus but no Buff(Fury) API fact" },
+  { id: 1765, wiki: "Notoriety", note: "mightOverride power+condi: +40P/+20CD per Might stack" },
+  { id: 1453, wiki: "Pinnacle of Strength", note: "mightOverride power + passive critChance" },
+  { id: 1338, wiki: "Forceful Greatsword", note: "weaponConditional: double Power bonus on greatsword/spear" },
+  { id: 2046, wiki: "Fatal Frenzy", note: "berserkConditional flatBonus: Ferocity/Precision while berserk" },
+  { id: 1449, wiki: "Great Fortitude", note: "AttributeConversion: Toughness to Power" },
+  { id: 1016, wiki: "Fang and Claw", note: "petStatOnly: AttributeAdjust applies to pet, not player" },
+  { id: 1011, wiki: "Precise Strike", note: "ignoreCritChance: 100% crit is Opening Strike only, not passive" },
 ];
 
 let lastRequestTime = 0;
