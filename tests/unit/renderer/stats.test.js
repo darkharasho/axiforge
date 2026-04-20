@@ -1241,4 +1241,76 @@ describe("Blood Reaction Berserker trait conversion % (issue #229)", () => {
     state.activeCatalog = null;
     state.upgradeCatalog = null;
   });
+
+  function makeBloodReactionCatalog() {
+    return {
+      traitById: new Map([
+        [BLOOD_REACTION_ID, {
+          id: BLOOD_REACTION_ID,
+          name: "Blood Reaction",
+          slot: "Major",
+          facts: [
+            { type: "BuffConversion", source: "Precision", target: "CritDamage",      percent: 7  },
+            { type: "BuffConversion", source: "Precision", target: "CritDamage",      percent: 5  },
+            { type: "BuffConversion", source: "Power",     target: "ConditionDamage",  percent: 10 },
+          ],
+        }],
+      ]),
+      specializationById: new Map([[BERSERKER_SPEC_ID, { id: BERSERKER_SPEC_ID, minorTraits: [] }]]),
+    };
+  }
+
+  function makeBloodReactionEditor(gameMode = "pve") {
+    return {
+      profession: "Warrior",
+      gameMode,
+      equipment: { slots: {}, food: "", utility: "", weapons: {}, runes: {}, infusions: {} },
+      specializations: [{ specializationId: BERSERKER_SPEC_ID, majorChoices: { 1: BLOOD_REACTION_ID } }],
+      skills: { healId: 0, utilityIds: [0, 0, 0], eliteId: 0 },
+    };
+  }
+
+  const emptyUpgrades = {
+    foodById: new Map(), utilityById: new Map(),
+    runeById: new Map(), infusionById: new Map(), enrichmentById: new Map(),
+  };
+
+  test("Blood Reaction WvW picks 5% Precision→Ferocity (idx=1)", () => {
+    state.activeCatalog = makeBloodReactionCatalog();
+    state.upgradeCatalog = emptyUpgrades;
+    state.editor = makeBloodReactionEditor("wvw");
+    // WvW dedup picks idx=1 from [7%, 5%] = 5%. Precision base = 1000. floor(1000 * 0.05) = 50.
+    const entries = computeStatBreakdown("Ferocity");
+    const convEntry = entries.find((e) => e.category === "trait" && e.source === "Trait conversion");
+    expect(convEntry).toBeDefined();
+    expect(convEntry.value).toBe(50);
+    state.activeCatalog = null;
+    state.upgradeCatalog = null;
+  });
+
+  test("Blood Reaction PvE produces 10% Power→ConditionDamage conversion", () => {
+    state.activeCatalog = makeBloodReactionCatalog();
+    state.upgradeCatalog = emptyUpgrades;
+    state.editor = makeBloodReactionEditor("pve");
+    // Power base = 1000. 10% of 1000 = 100 ConditionDamage from conversion.
+    const entries = computeStatBreakdown("ConditionDamage");
+    const convEntry = entries.find((e) => e.category === "trait" && e.source === "Trait conversion");
+    expect(convEntry).toBeDefined();
+    expect(convEntry.value).toBe(100);
+    state.activeCatalog = null;
+    state.upgradeCatalog = null;
+  });
+
+  test("Blood Reaction WvW also produces 10% Power→ConditionDamage conversion", () => {
+    state.activeCatalog = makeBloodReactionCatalog();
+    state.upgradeCatalog = emptyUpgrades;
+    state.editor = makeBloodReactionEditor("wvw");
+    // Only one Power→ConditionDamage fact, so WvW clamps to idx=0 = 10%. floor(1000 * 0.10) = 100.
+    const entries = computeStatBreakdown("ConditionDamage");
+    const convEntry = entries.find((e) => e.category === "trait" && e.source === "Trait conversion");
+    expect(convEntry).toBeDefined();
+    expect(convEntry.value).toBe(100);
+    state.activeCatalog = null;
+    state.upgradeCatalog = null;
+  });
 });
