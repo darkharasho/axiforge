@@ -1,0 +1,5371 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`Modifier output snapshots — all stat-affecting traits 214 Raging Storm [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": "fury",
+      "source": "trait:214",
+      "target": "Ferocity",
+      "type": "flatBonus",
+      "value": 180,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": "fury",
+      "source": "trait:214",
+      "target": "Ferocity",
+      "type": "flatBonus",
+      "value": 180,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 221 Zephyr's Speed [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:221",
+      "type": "critChance",
+      "value": 5,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:221",
+      "type": "critChance",
+      "value": 5,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 223 Aeromancer's Training [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:223",
+      "target": "Ferocity",
+      "type": "flatBonus",
+      "value": 150,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:223",
+      "target": "Ferocity",
+      "type": "flatBonus",
+      "value": 150,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 232 Ferocious Winds [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "percent": 7,
+      "source": "trait:232",
+      "sourceAttr": "Precision",
+      "target": "Ferocity",
+      "type": "conversion",
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "percent": 7,
+      "source": "trait:232",
+      "sourceAttr": "Precision",
+      "target": "Ferocity",
+      "type": "conversion",
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 263 Arcane Lightning [elementalist] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:263",
+      "target": "Ferocity",
+      "type": "flatBonus",
+      "value": 150,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:263",
+      "target": "Ferocity",
+      "type": "flatBonus",
+      "value": 150,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 275 Strength of Stone [elementalist] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "percent": 10,
+      "source": "trait:275",
+      "sourceAttr": "Toughness",
+      "target": "ConditionDamage",
+      "type": "conversion",
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "percent": 10,
+      "source": "trait:275",
+      "sourceAttr": "Toughness",
+      "target": "ConditionDamage",
+      "type": "conversion",
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 279 Earthen Blast [elementalist] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:279",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 1302,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:279",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 800,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 320 Empowering Flame [elementalist] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:320",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 150,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:320",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 150,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 325 Burning Rage [elementalist] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:325",
+      "target": "ConditionDamage",
+      "type": "flatBonus",
+      "value": 180,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:325",
+      "target": "ConditionDamage",
+      "type": "flatBonus",
+      "value": 180,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 334 Power Overwhelming [elementalist] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:334",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 150,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:334",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 150,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 349 Flow like Water [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:349",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 714,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:349",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 714,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 351 Healing Ripple [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:351",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 1042,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:351",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 1302,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 413 Compounding Chemicals [engineer] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:413",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 37,
+    },
+    {
+      "condition": null,
+      "source": "trait:413",
+      "target": "Concentration",
+      "type": "flatBonus",
+      "value": 240,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:413",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 37,
+    },
+    {
+      "condition": null,
+      "source": "trait:413",
+      "target": "Concentration",
+      "type": "flatBonus",
+      "value": 75,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 519 Energy Amplifier [engineer] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:519",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 250,
+    },
+    {
+      "condition": null,
+      "source": "trait:519",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 250,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:519",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 250,
+    },
+    {
+      "condition": null,
+      "source": "trait:519",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 250,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 536 Hematic Focus [engineer] 1`] = `
+{
+  "pve": [
+    {
+      "condition": "fury",
+      "source": "trait:536",
+      "type": "critChance",
+      "value": 15,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": "fury",
+      "source": "trait:536",
+      "type": "critChance",
+      "value": 10,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 549 Pure of Heart [guardian] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:549",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 645,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:549",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 516,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 551 Selfless Daring [guardian] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:551",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 129,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:551",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 129,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 557 Honorable Staff [guardian] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:557",
+      "target": "Concentration",
+      "type": "flatBonus",
+      "value": 120,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:557",
+      "target": "Concentration",
+      "type": "flatBonus",
+      "value": 60,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 558 Writ of Persistence [guardian] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:558",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 107,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:558",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 102,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 566 Right-Hand Strength [guardian] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:566",
+      "target": "Precision",
+      "type": "flatBonus",
+      "value": 80,
+    },
+    {
+      "condition": null,
+      "source": "trait:566",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 80,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:566",
+      "target": "Precision",
+      "type": "flatBonus",
+      "value": 80,
+    },
+    {
+      "condition": null,
+      "source": "trait:566",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 80,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 568 Radiant Power [guardian] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:568",
+      "target": "Ferocity",
+      "type": "flatBonus",
+      "value": 150,
+    },
+    {
+      "condition": null,
+      "source": "trait:568",
+      "type": "critChance",
+      "value": 10,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:568",
+      "target": "Ferocity",
+      "type": "flatBonus",
+      "value": 150,
+    },
+    {
+      "condition": null,
+      "source": "trait:568",
+      "type": "critChance",
+      "value": 10,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 580 Stalwart Defender [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:580",
+      "target": "Toughness",
+      "type": "flatBonus",
+      "value": 240,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:580",
+      "target": "Toughness",
+      "type": "flatBonus",
+      "value": 240,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 585 Altruistic Healing [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:585",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 69,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:585",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 69,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 586 Monk's Focus [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": "fury",
+      "source": "trait:586",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 1960,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": "fury",
+      "source": "trait:586",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 1720,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 587 Glacial Heart [guardian] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:587",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 647,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:587",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 647,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 620 Power of the Virtuous [guardian] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "percent": 13,
+      "source": "trait:620",
+      "sourceAttr": "Vitality",
+      "target": "ConditionDamage",
+      "type": "conversion",
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "percent": 7,
+      "source": "trait:620",
+      "sourceAttr": "Vitality",
+      "target": "ConditionDamage",
+      "type": "conversion",
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 628 Renewing Splendor [guardian] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:628",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 620,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:628",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 620,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 653 Zealous Blade [guardian] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:653",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 120,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:653",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 120,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 669 Chaotic Potency [mesmer] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:669",
+      "target": "ConditionDamage",
+      "type": "flatBonus",
+      "value": 120,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:669",
+      "target": "ConditionDamage",
+      "type": "flatBonus",
+      "value": 120,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 738 Restorative Mantras [mesmer] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:738",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 820,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:738",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 820,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 778 Transfusion [necromancer] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:778",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 404,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:778",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 404,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 783 Vampiric [necromancer] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:783",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 38,
+    },
+    {
+      "condition": null,
+      "source": "trait:783",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 38,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:783",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 50,
+    },
+    {
+      "condition": null,
+      "source": "trait:783",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 50,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 788 Overflowing Thirst [necromancer] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:788",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 325,
+    },
+    {
+      "condition": null,
+      "source": "trait:788",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 229,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:788",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 197,
+    },
+    {
+      "condition": null,
+      "source": "trait:788",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 229,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 789 Life from Death [necromancer] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:789",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 714,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:789",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 714,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 801 Lingering Curse [necromancer] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:801",
+      "target": "None",
+      "type": "flatBonus",
+      "value": 200,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:801",
+      "target": "None",
+      "type": "flatBonus",
+      "value": 200,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 803 Furious Demise [necromancer] 1`] = `
+{
+  "pve": [
+    {
+      "condition": "fury",
+      "source": "trait:803",
+      "target": "Precision",
+      "type": "flatBonus",
+      "value": 180,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": "fury",
+      "source": "trait:803",
+      "target": "Precision",
+      "type": "flatBonus",
+      "value": 180,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 810 Target the Weak [necromancer] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "percent": 13,
+      "source": "trait:810",
+      "sourceAttr": "Precision",
+      "target": "ConditionDamage",
+      "type": "conversion",
+    },
+    {
+      "condition": null,
+      "source": "trait:810",
+      "type": "critChance",
+      "value": 2,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "percent": 13,
+      "source": "trait:810",
+      "sourceAttr": "Precision",
+      "target": "ConditionDamage",
+      "type": "conversion",
+    },
+    {
+      "condition": null,
+      "source": "trait:810",
+      "type": "critChance",
+      "value": 2,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 829 Spiteful Fortitude [necromancer] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "percent": 10,
+      "source": "trait:829",
+      "sourceAttr": "Power",
+      "target": "Vitality",
+      "type": "conversion",
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "percent": 10,
+      "source": "trait:829",
+      "sourceAttr": "Power",
+      "target": "Vitality",
+      "type": "conversion",
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 855 Deadly Strength [necromancer] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:855",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 10,
+    },
+    {
+      "condition": null,
+      "source": "trait:855",
+      "target": "ConditionDamage",
+      "type": "flatBonus",
+      "value": 10,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:855",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 10,
+    },
+    {
+      "condition": null,
+      "source": "trait:855",
+      "target": "ConditionDamage",
+      "type": "flatBonus",
+      "value": 10,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 861 Vital Persistence [necromancer] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:861",
+      "target": "Vitality",
+      "type": "flatBonus",
+      "value": 180,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:861",
+      "target": "Vitality",
+      "type": "flatBonus",
+      "value": 180,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 893 Death Perception [necromancer] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:893",
+      "type": "critChance",
+      "value": 15,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:893",
+      "type": "critChance",
+      "value": 10,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 909 Signets of Suffering [necromancer] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:909",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 1413,
+    },
+    {
+      "condition": null,
+      "source": "trait:909",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 1413,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:909",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 997,
+    },
+    {
+      "condition": null,
+      "source": "trait:909",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 237,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 915 Awaken the Pain [necromancer] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:915",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 10,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:915",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 10,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 964 Windborne Notes [ranger] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:964",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 157,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:964",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 157,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 970 Honed Axes [ranger] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:970",
+      "target": "Ferocity",
+      "type": "flatBonus",
+      "value": 120,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:970",
+      "target": "Ferocity",
+      "type": "flatBonus",
+      "value": 120,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 978 Wellspring [ranger] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "percent": 7,
+      "source": "trait:978",
+      "sourceAttr": "Power",
+      "target": "HealingPower",
+      "type": "conversion",
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "percent": 7,
+      "source": "trait:978",
+      "sourceAttr": "Power",
+      "target": "HealingPower",
+      "type": "conversion",
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1011 Precise Strike [ranger] 1`] = `
+{
+  "pve": [],
+  "wvw": [],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1016 Fang and Claw [ranger] 1`] = `
+{
+  "pve": [],
+  "wvw": [],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1054 Evasive Purity [ranger] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1054",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 357,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1054",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 357,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1059 Lingering Magic [ranger] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1059",
+      "target": "Concentration",
+      "type": "flatBonus",
+      "value": 240,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1059",
+      "target": "Concentration",
+      "type": "flatBonus",
+      "value": 120,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1060 Allies' Aid [ranger] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1060",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 2240,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1060",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 2240,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1065 Pet's Prowess [ranger] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1065",
+      "target": "Ferocity",
+      "type": "flatBonus",
+      "value": 300,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1065",
+      "target": "Ferocity",
+      "type": "flatBonus",
+      "value": 300,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1068 Hunter's Tactics [ranger] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1068",
+      "type": "critChance",
+      "value": 10,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1068",
+      "type": "critChance",
+      "value": 10,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1072 Natural Healing [ranger] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1072",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 375,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1072",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 375,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1089 Rugged Growth [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1089",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 259,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1089",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 196,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1099 Arachnophobia [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1099",
+      "target": "Expertise",
+      "type": "flatBonus",
+      "value": 150,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1099",
+      "target": "Expertise",
+      "type": "flatBonus",
+      "value": 225,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1101 Ambidexterity [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1101",
+      "target": "ConditionDamage",
+      "type": "flatBonus",
+      "value": 120,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1101",
+      "target": "ConditionDamage",
+      "type": "flatBonus",
+      "value": 120,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1130 Leeching Venoms [thief] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1130",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 320,
+    },
+    {
+      "condition": null,
+      "source": "trait:1130",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 325,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1130",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 160,
+    },
+    {
+      "condition": null,
+      "source": "trait:1130",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 325,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1160 Shielding Restoration [thief] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1160",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 1044,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1160",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 1044,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1164 Deadly Ambition [thief] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1164",
+      "target": "ConditionDamage",
+      "type": "flatBonus",
+      "value": 180,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1164",
+      "target": "ConditionDamage",
+      "type": "flatBonus",
+      "value": 120,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1192 Swindler's Equilibrium [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1192",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 120,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1192",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 120,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1215 Hidden Killer [thief] 1`] = `
+{
+  "pve": [],
+  "wvw": [],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1232 Preparedness [thief] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1232",
+      "target": "Expertise",
+      "type": "flatBonus",
+      "value": 150,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1232",
+      "target": "Expertise",
+      "type": "flatBonus",
+      "value": 150,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1238 Assassin's Reward [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1238",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 151,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1238",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 151,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1245 Dagger Training [thief] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1245",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 80,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1245",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 80,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1268 Twin Fangs [thief] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1268",
+      "type": "critChance",
+      "value": 7,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1268",
+      "type": "critChance",
+      "value": 7,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1272 Practiced Tolerance [thief] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "percent": 10,
+      "source": "trait:1272",
+      "sourceAttr": "Precision",
+      "target": "Ferocity",
+      "type": "conversion",
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "percent": 15,
+      "source": "trait:1272",
+      "sourceAttr": "Precision",
+      "target": "Ferocity",
+      "type": "conversion",
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1276 Mug [thief] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1276",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 2460,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1276",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 2460,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1281 Keen Observer [thief] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1281",
+      "type": "critChance",
+      "value": 10,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1281",
+      "type": "critChance",
+      "value": 5,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1294 Merciful Ambush [thief] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1294",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 273,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1294",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 439,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1297 Shadow Savior [thief] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1297",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 596,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1297",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 596,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1300 Cloaked in Shadow [thief] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1300",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 130,
+    },
+    {
+      "condition": null,
+      "source": "trait:1300",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 194,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1300",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 130,
+    },
+    {
+      "condition": null,
+      "source": "trait:1300",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 194,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1333 Blademaster [warrior] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1333",
+      "target": "Expertise",
+      "type": "flatBonus",
+      "value": 120,
+    },
+    {
+      "condition": null,
+      "source": "trait:1333",
+      "target": "ConditionDamage",
+      "type": "flatBonus",
+      "value": 120,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1333",
+      "target": "Expertise",
+      "type": "flatBonus",
+      "value": 120,
+    },
+    {
+      "condition": null,
+      "source": "trait:1333",
+      "target": "ConditionDamage",
+      "type": "flatBonus",
+      "value": 120,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1336 Burst Precision [warrior] 1`] = `
+{
+  "pve": [],
+  "wvw": [],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1338 Forceful Greatsword [warrior] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1338",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 120,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1338",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 120,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1342 Furious Burst [warrior] 1`] = `
+{
+  "pve": [
+    {
+      "condition": "fury",
+      "source": "trait:1342",
+      "type": "critChance",
+      "value": 5,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": "fury",
+      "source": "trait:1342",
+      "type": "critChance",
+      "value": 5,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1343 Deep Strikes [warrior] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1343",
+      "target": "ConditionDamage",
+      "type": "flatBonus",
+      "value": 180,
+    },
+    {
+      "condition": null,
+      "source": "trait:1343",
+      "type": "critChance",
+      "value": 5,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1343",
+      "target": "ConditionDamage",
+      "type": "flatBonus",
+      "value": 180,
+    },
+    {
+      "condition": null,
+      "source": "trait:1343",
+      "type": "critChance",
+      "value": 10,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1369 Axe Mastery [warrior] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1369",
+      "target": "Ferocity",
+      "type": "flatBonus",
+      "value": 120,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1369",
+      "target": "Ferocity",
+      "type": "flatBonus",
+      "value": 120,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1375 Last Stand [warrior] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1375",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 1960,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1375",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 1960,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1449 Great Fortitude [warrior] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "percent": 10,
+      "source": "trait:1449",
+      "sourceAttr": "Power",
+      "target": "Vitality",
+      "type": "conversion",
+    },
+    {
+      "condition": null,
+      "percent": 10,
+      "source": "trait:1449",
+      "sourceAttr": "Power",
+      "target": "Ferocity",
+      "type": "conversion",
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "percent": 10,
+      "source": "trait:1449",
+      "sourceAttr": "Power",
+      "target": "Vitality",
+      "type": "conversion",
+    },
+    {
+      "condition": null,
+      "percent": 10,
+      "source": "trait:1449",
+      "sourceAttr": "Power",
+      "target": "Ferocity",
+      "type": "conversion",
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1453 Pinnacle of Strength [warrior] 1`] = `
+{
+  "pve": [
+    {
+      "condi": undefined,
+      "condition": null,
+      "power": 40,
+      "source": "trait:1453",
+      "type": "mightModifier",
+    },
+    {
+      "condition": null,
+      "source": "trait:1453",
+      "type": "critChance",
+      "value": 5,
+    },
+  ],
+  "wvw": [
+    {
+      "condi": undefined,
+      "condition": null,
+      "power": 40,
+      "source": "trait:1453",
+      "type": "mightModifier",
+    },
+    {
+      "condition": null,
+      "source": "trait:1453",
+      "type": "critChance",
+      "value": 5,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1454 Might Makes Right [warrior] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1454",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 133,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1454",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 133,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1455 Wounding Precision [warrior] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "percent": 7,
+      "source": "trait:1455",
+      "sourceAttr": "Precision",
+      "target": "Expertise",
+      "type": "conversion",
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "percent": 4,
+      "source": "trait:1455",
+      "sourceAttr": "Precision",
+      "target": "Expertise",
+      "type": "conversion",
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1470 Vigorous Shouts [warrior] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1470",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 1000,
+    },
+    {
+      "condition": null,
+      "percent": 13,
+      "source": "trait:1470",
+      "sourceAttr": "Power",
+      "target": "HealingPower",
+      "type": "conversion",
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1470",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 1000,
+    },
+    {
+      "condition": null,
+      "percent": 13,
+      "source": "trait:1470",
+      "sourceAttr": "Power",
+      "target": "HealingPower",
+      "type": "conversion",
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1471 Roaring Reveille [warrior] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1471",
+      "target": "Concentration",
+      "type": "flatBonus",
+      "value": 120,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1471",
+      "target": "Concentration",
+      "type": "flatBonus",
+      "value": 60,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1474 Soldier's Comfort [warrior] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1474",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 970,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1474",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 970,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1479 Shrug It Off [warrior] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1479",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 517,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1479",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 517,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1481 Mending Might [warrior] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1481",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 69,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1481",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 69,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1487 Arcane Restoration [elementalist] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1487",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 330,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1487",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 220,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1556 Kindled Zeal [guardian] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "percent": 10,
+      "source": "trait:1556",
+      "sourceAttr": "Power",
+      "target": "ConditionDamage",
+      "type": "conversion",
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "percent": 10,
+      "source": "trait:1556",
+      "sourceAttr": "Power",
+      "target": "ConditionDamage",
+      "type": "conversion",
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1683 Righteous Instincts [guardian] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1683",
+      "type": "critChance",
+      "value": 25,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1683",
+      "type": "critChance",
+      "value": 40,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1696 Terror [necromancer] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1696",
+      "target": "ConditionDamage",
+      "type": "flatBonus",
+      "value": 555,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1696",
+      "target": "ConditionDamage",
+      "type": "flatBonus",
+      "value": 555,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1697 Invigorating Bond [ranger] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1697",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 2580,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1697",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 820,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1700 Strider's Strength [ranger] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1700",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 120,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1700",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 120,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1704 Revealed Training [thief] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1704",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 80,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1704",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 120,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1705 Shadow Siphoning [thief] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1705",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 312,
+    },
+    {
+      "condition": null,
+      "source": "trait:1705",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 504,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1705",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 218,
+    },
+    {
+      "condition": null,
+      "source": "trait:1705",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 504,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1707 Dual Wielding [warrior] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1707",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 69,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1707",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 83,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1719 Roiling Mists [revenant] 1`] = `
+{
+  "pve": [
+    {
+      "condition": "fury",
+      "source": "trait:1719",
+      "type": "critChance",
+      "value": 25,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": "fury",
+      "source": "trait:1719",
+      "type": "critChance",
+      "value": 20,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1720 Fiendish Tenacity [revenant] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1720",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 394,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1720",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 196,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1743 Shining Aspects [revenant] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1743",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 640,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1743",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 640,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1746 Elevated Compassion [revenant] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1746",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 130,
+    },
+    {
+      "condition": null,
+      "percent": 13,
+      "source": "trait:1746",
+      "sourceAttr": "Power",
+      "target": "Concentration",
+      "type": "conversion",
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1746",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 130,
+    },
+    {
+      "condition": null,
+      "percent": 13,
+      "source": "trait:1746",
+      "sourceAttr": "Power",
+      "target": "Concentration",
+      "type": "conversion",
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1755 Battle Scarred [revenant] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1755",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 117,
+    },
+    {
+      "condition": null,
+      "source": "trait:1755",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 117,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1755",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 58,
+    },
+    {
+      "condition": null,
+      "source": "trait:1755",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 58,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1760 Rapid Flow [revenant] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1760",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 500,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1760",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 500,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1765 Notoriety [revenant] 1`] = `
+{
+  "pve": [
+    {
+      "condi": 20,
+      "condition": null,
+      "power": 40,
+      "source": "trait:1765",
+      "type": "mightModifier",
+    },
+  ],
+  "wvw": [
+    {
+      "condi": 20,
+      "condition": null,
+      "power": 40,
+      "source": "trait:1765",
+      "type": "mightModifier",
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1770 Versed in Stone [revenant] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "percent": 13,
+      "source": "trait:1770",
+      "sourceAttr": "Toughness",
+      "target": "Power",
+      "type": "conversion",
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "percent": 4,
+      "source": "trait:1770",
+      "sourceAttr": "Toughness",
+      "target": "Power",
+      "type": "conversion",
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1784 Glaring Resolve [revenant] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1784",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 643,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1784",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 643,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1788 Reinforced Potency [revenant] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1788",
+      "target": "Concentration",
+      "type": "flatBonus",
+      "value": 240,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1788",
+      "target": "Concentration",
+      "type": "flatBonus",
+      "value": 60,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1801 Seething Malice [revenant] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1801",
+      "target": "ConditionDamage",
+      "type": "flatBonus",
+      "value": 120,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1801",
+      "target": "ConditionDamage",
+      "type": "flatBonus",
+      "value": 240,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1815 Generous Abundance [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1815",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 783,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1815",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 271,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1816 Healer's Gift [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1816",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 197,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1816",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 197,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1817 Resilient Spirit [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1817",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 229,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1817",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 229,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1819 Words of Censure [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1819",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 261,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1819",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 261,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1821 Life Attunement [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1821",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 120,
+    },
+    {
+      "condition": null,
+      "percent": 7,
+      "source": "trait:1821",
+      "sourceAttr": "Healing",
+      "target": "Concentration",
+      "type": "conversion",
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1821",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 120,
+    },
+    {
+      "condition": null,
+      "percent": 4,
+      "source": "trait:1821",
+      "sourceAttr": "Healing",
+      "target": "Concentration",
+      "type": "conversion",
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1831 Primal Rage [warrior] 1`] = `
+{
+  "pve": [],
+  "wvw": [],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1834 Soothing Detonation [engineer] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1834",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 340,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1834",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 340,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1844 Vampiric Presence [necromancer] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1844",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 32,
+    },
+    {
+      "condition": null,
+      "source": "trait:1844",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 32,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1844",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 62,
+    },
+    {
+      "condition": null,
+      "source": "trait:1844",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 62,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1849 Applied Force [engineer] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1849",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 30,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1849",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 15,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1854 Chain Reactivity [engineer] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1854",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 500,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1854",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 1500,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1862 Live Vicariously [ranger] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1862",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 207,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1862",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 207,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1865 Chaotic Persistence [mesmer] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1865",
+      "target": "Concentration",
+      "type": "flatBonus",
+      "value": 250,
+    },
+    {
+      "condition": null,
+      "source": "trait:1865",
+      "target": "Expertise",
+      "type": "flatBonus",
+      "value": 100,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1865",
+      "target": "Concentration",
+      "type": "flatBonus",
+      "value": 150,
+    },
+    {
+      "condition": null,
+      "source": "trait:1865",
+      "target": "Expertise",
+      "type": "flatBonus",
+      "value": 250,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1866 Restorative Illusions [mesmer] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1866",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 219,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1866",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 219,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1876 Blood Renewal [necromancer] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1876",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 961,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1876",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 961,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1878 Chemical Rounds [engineer] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1878",
+      "target": "ConditionDamage",
+      "type": "flatBonus",
+      "value": 120,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1878",
+      "target": "ConditionDamage",
+      "type": "flatBonus",
+      "value": 120,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1884 Staff Master [thief] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1884",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 120,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1884",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 120,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1888 Vicious Quarry [ranger] 1`] = `
+{
+  "pve": [
+    {
+      "condition": "fury",
+      "source": "trait:1888",
+      "target": "Ferocity",
+      "type": "flatBonus",
+      "value": 250,
+    },
+    {
+      "condition": "fury",
+      "source": "trait:1888",
+      "type": "critChance",
+      "value": 15,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": "fury",
+      "source": "trait:1888",
+      "target": "Ferocity",
+      "type": "flatBonus",
+      "value": 250,
+    },
+    {
+      "condition": "fury",
+      "source": "trait:1888",
+      "type": "critChance",
+      "value": 10,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1896 Defender's Dogma [guardian] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1896",
+      "target": "Vitality",
+      "type": "flatBonus",
+      "value": 180,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1896",
+      "target": "Vitality",
+      "type": "flatBonus",
+      "value": 180,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1900 Pack Alpha [ranger] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1900",
+      "target": "None",
+      "type": "flatBonus",
+      "value": 300,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1900",
+      "target": "None",
+      "type": "flatBonus",
+      "value": 150,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1904 No Quarter [thief] 1`] = `
+{
+  "pve": [
+    {
+      "condition": "fury",
+      "source": "trait:1904",
+      "target": "Ferocity",
+      "type": "flatBonus",
+      "value": 250,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": "fury",
+      "source": "trait:1904",
+      "target": "Ferocity",
+      "type": "flatBonus",
+      "value": 300,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1908 Hunter's Fortification [guardian] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1908",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 453,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1908",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 453,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1914 High Caliber [engineer] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1914",
+      "type": "critChance",
+      "value": 15,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1914",
+      "type": "critChance",
+      "value": 10,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1915 Illusionary Inspiration [mesmer] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1915",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 212,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1915",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 106,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1923 No Scope [engineer] 1`] = `
+{
+  "pve": [
+    {
+      "condition": "fury",
+      "source": "trait:1923",
+      "target": "Ferocity",
+      "type": "flatBonus",
+      "value": 150,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": "fury",
+      "source": "trait:1923",
+      "target": "Ferocity",
+      "type": "flatBonus",
+      "value": 150,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1927 Flow of Time [elementalist] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1927",
+      "type": "critChance",
+      "value": 15,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1927",
+      "type": "critChance",
+      "value": 10,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1931 Last Rites [necromancer] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1931",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 150,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1931",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 50,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1932 Blighter's Boon [necromancer] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1932",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 133,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1932",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 133,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1933 Marauder's Resilience [thief] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "percent": 7,
+      "source": "trait:1933",
+      "sourceAttr": "Power",
+      "target": "Vitality",
+      "type": "conversion",
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "percent": 7,
+      "source": "trait:1933",
+      "sourceAttr": "Power",
+      "target": "Vitality",
+      "type": "conversion",
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1938 Gathered Focus [elementalist] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1938",
+      "target": "Concentration",
+      "type": "flatBonus",
+      "value": 240,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1938",
+      "target": "Concentration",
+      "type": "flatBonus",
+      "value": 120,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1944 Blast Shield [engineer] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1944",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 1508,
+    },
+    {
+      "condition": null,
+      "percent": 10,
+      "source": "trait:1944",
+      "sourceAttr": "Power",
+      "target": "Vitality",
+      "type": "conversion",
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1944",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 340,
+    },
+    {
+      "condition": null,
+      "percent": 10,
+      "source": "trait:1944",
+      "sourceAttr": "Power",
+      "target": "Vitality",
+      "type": "conversion",
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1971 System Shocker [engineer] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1971",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 724,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1971",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 362,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1974 Augury of Death [necromancer] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1974",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 172,
+    },
+    {
+      "condition": null,
+      "source": "trait:1974",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 156,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1974",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 172,
+    },
+    {
+      "condition": null,
+      "source": "trait:1974",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 156,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1981 Ex Machina [engineer] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1981",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 1034,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1981",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 1034,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1986 Elemental Bastion [elementalist] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1986",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 522,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1986",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 391,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 1987 All's Well That Ends Well [elementalist] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:1987",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 1310,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:1987",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 1310,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2002 Dead or Alive [warrior] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:2002",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 1680,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:2002",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 1680,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2004 Elemental Enchantment [elementalist] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:2004",
+      "target": "Concentration",
+      "type": "flatBonus",
+      "value": 180,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:2004",
+      "target": "Concentration",
+      "type": "flatBonus",
+      "value": 120,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2006 Thermal Vision [engineer] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:2006",
+      "target": "Expertise",
+      "type": "flatBonus",
+      "value": 150,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:2006",
+      "target": "Expertise",
+      "type": "flatBonus",
+      "value": 60,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2011 Blood Reaction [warrior] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "percent": 12,
+      "source": "trait:2011",
+      "sourceAttr": "Precision",
+      "target": "Ferocity",
+      "type": "conversion",
+    },
+    {
+      "condition": null,
+      "percent": 10,
+      "source": "trait:2011",
+      "sourceAttr": "Power",
+      "target": "ConditionDamage",
+      "type": "conversion",
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "percent": 10,
+      "source": "trait:2011",
+      "sourceAttr": "Precision",
+      "target": "Ferocity",
+      "type": "conversion",
+    },
+    {
+      "condition": null,
+      "percent": 12,
+      "source": "trait:2011",
+      "sourceAttr": "Power",
+      "target": "ConditionDamage",
+      "type": "conversion",
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2016 Cultivated Synergy [ranger] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:2016",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 1000,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:2016",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 1000,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2021 Reaper's Onslaught [necromancer] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:2021",
+      "target": "Ferocity",
+      "type": "flatBonus",
+      "value": 300,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:2021",
+      "target": "Ferocity",
+      "type": "flatBonus",
+      "value": 300,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2023 Escapist's Fortitude [thief] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:2023",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 684,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:2023",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 684,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2028 Soothing Power [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:2028",
+      "target": "Vitality",
+      "type": "flatBonus",
+      "value": 300,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:2028",
+      "target": "Vitality",
+      "type": "flatBonus",
+      "value": 300,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2046 Fatal Frenzy [warrior] 1`] = `
+{
+  "pve": [
+    {
+      "condition": "berserk",
+      "source": "trait:2046",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 300,
+    },
+    {
+      "condition": "berserk",
+      "source": "trait:2046",
+      "target": "ConditionDamage",
+      "type": "flatBonus",
+      "value": 150,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": "berserk",
+      "source": "trait:2046",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 300,
+    },
+    {
+      "condition": "berserk",
+      "source": "trait:2046",
+      "target": "ConditionDamage",
+      "type": "flatBonus",
+      "value": 300,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2049 Smash Brawler [warrior] 1`] = `
+{
+  "pve": [
+    {
+      "condition": "berserk",
+      "source": "trait:2049",
+      "type": "critChance",
+      "value": 15,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": "berserk",
+      "source": "trait:2049",
+      "type": "critChance",
+      "value": 5,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2052 Kinetic Accelerators [engineer] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "percent": 13,
+      "source": "trait:2052",
+      "sourceAttr": "Power",
+      "target": "Concentration",
+      "type": "conversion",
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "percent": 10,
+      "source": "trait:2052",
+      "sourceAttr": "Power",
+      "target": "Concentration",
+      "type": "conversion",
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2059 Feed from Corruption [mesmer] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:2059",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 1500,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:2059",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 1500,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2074 Fell Beacon [mesmer] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "percent": 7,
+      "source": "trait:2074",
+      "sourceAttr": "ConditionDamage",
+      "target": "Expertise",
+      "type": "conversion",
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "percent": 4,
+      "source": "trait:2074",
+      "sourceAttr": "ConditionDamage",
+      "target": "Expertise",
+      "type": "conversion",
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2077 Elemental Refreshment [elementalist] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:2077",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 1003,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:2077",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 260,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2080 Desert Empowerment [mesmer] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:2080",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 572,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:2080",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 385,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2093 Be Quick or Be Killed [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:2093",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 200,
+    },
+    {
+      "condition": null,
+      "source": "trait:2093",
+      "target": "Precision",
+      "type": "flatBonus",
+      "value": 200,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:2093",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 200,
+    },
+    {
+      "condition": null,
+      "source": "trait:2093",
+      "target": "Precision",
+      "type": "flatBonus",
+      "value": 200,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2115 Master's Fortitude [elementalist] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:2115",
+      "target": "Vitality",
+      "type": "flatBonus",
+      "value": 120,
+    },
+    {
+      "condition": null,
+      "percent": 5,
+      "source": "trait:2115",
+      "sourceAttr": "Power",
+      "target": "Vitality",
+      "type": "conversion",
+    },
+    {
+      "condition": null,
+      "percent": 5,
+      "source": "trait:2115",
+      "sourceAttr": "ConditionDamage",
+      "target": "Vitality",
+      "type": "conversion",
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:2115",
+      "target": "Vitality",
+      "type": "flatBonus",
+      "value": 120,
+    },
+    {
+      "condition": null,
+      "percent": 5,
+      "source": "trait:2115",
+      "sourceAttr": "Power",
+      "target": "Vitality",
+      "type": "conversion",
+    },
+    {
+      "condition": null,
+      "percent": 5,
+      "source": "trait:2115",
+      "sourceAttr": "ConditionDamage",
+      "target": "Vitality",
+      "type": "conversion",
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2118 Silent Scope [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:2118",
+      "target": "Precision",
+      "type": "flatBonus",
+      "value": 120,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:2118",
+      "target": "Precision",
+      "type": "flatBonus",
+      "value": 120,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2121 Sand Sage [mesmer] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:2121",
+      "target": "Concentration",
+      "type": "flatBonus",
+      "value": 225,
+    },
+    {
+      "condition": null,
+      "source": "trait:2121",
+      "target": "Expertise",
+      "type": "flatBonus",
+      "value": 225,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:2121",
+      "target": "Concentration",
+      "type": "flatBonus",
+      "value": 150,
+    },
+    {
+      "condition": null,
+      "source": "trait:2121",
+      "target": "Expertise",
+      "type": "flatBonus",
+      "value": 150,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2131 Elements of Rage [elementalist] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "percent": 13,
+      "source": "trait:2131",
+      "sourceAttr": "Vitality",
+      "target": "Precision",
+      "type": "conversion",
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "percent": 13,
+      "source": "trait:2131",
+      "sourceAttr": "Vitality",
+      "target": "Precision",
+      "type": "conversion",
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2135 Heat Therapy [engineer] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:2135",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 65,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:2135",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 39,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2138 Invigorating Strikes [elementalist] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:2138",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 894,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:2138",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 894,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2142 Brutal Momentum [revenant] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:2142",
+      "type": "critChance",
+      "value": 10,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:2142",
+      "type": "critChance",
+      "value": 15,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2148 Imbued Haste [guardian] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:2148",
+      "target": "ConditionDamage",
+      "type": "flatBonus",
+      "value": 250,
+    },
+    {
+      "condition": null,
+      "source": "trait:2148",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 250,
+    },
+    {
+      "condition": null,
+      "source": "trait:2148",
+      "target": "Vitality",
+      "type": "flatBonus",
+      "value": 250,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:2148",
+      "target": "ConditionDamage",
+      "type": "flatBonus",
+      "value": 150,
+    },
+    {
+      "condition": null,
+      "source": "trait:2148",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 150,
+    },
+    {
+      "condition": null,
+      "source": "trait:2148",
+      "target": "Vitality",
+      "type": "flatBonus",
+      "value": 150,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2152 Crystal Configuration: Eclipse [engineer] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:2152",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 2256,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:2152",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 1804,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2155 Eternal Bond [ranger] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:2155",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 701,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:2155",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 701,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2160 Premeditation [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:2160",
+      "target": "Concentration",
+      "type": "flatBonus",
+      "value": 180,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:2160",
+      "target": "Concentration",
+      "type": "flatBonus",
+      "value": 60,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2161 Predator's Cunning [ranger] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:2161",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 170,
+    },
+    {
+      "condition": null,
+      "source": "trait:2161",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 170,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:2161",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 170,
+    },
+    {
+      "condition": null,
+      "source": "trait:2161",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 170,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2168 Resolute Counter [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:2168",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 1620,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:2168",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 820,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2177 Superior Elements [elementalist] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:2177",
+      "type": "critChance",
+      "value": 15,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:2177",
+      "type": "critChance",
+      "value": 15,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2186 Alchemic Vigor [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:2186",
+      "target": "None",
+      "type": "flatBonus",
+      "value": 240,
+    },
+    {
+      "condition": null,
+      "source": "trait:2186",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 13,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:2186",
+      "target": "None",
+      "type": "flatBonus",
+      "value": 240,
+    },
+    {
+      "condition": null,
+      "source": "trait:2186",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 10,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2187 Conceited Curate [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:2187",
+      "target": "Vitality",
+      "type": "flatBonus",
+      "value": 180,
+    },
+    {
+      "condition": null,
+      "source": "trait:2187",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 272,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:2187",
+      "target": "Vitality",
+      "type": "flatBonus",
+      "value": 180,
+    },
+    {
+      "condition": null,
+      "source": "trait:2187",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 272,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2190 Power for Power [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:2190",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 120,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:2190",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 120,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2191 Searing Pact [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:2191",
+      "target": "ConditionDamage",
+      "type": "flatBonus",
+      "value": 120,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:2191",
+      "target": "ConditionDamage",
+      "type": "flatBonus",
+      "value": 120,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2192 Implacable Foe [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "percent": 13,
+      "source": "trait:2192",
+      "sourceAttr": "Vitality",
+      "target": "Ferocity",
+      "type": "conversion",
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "percent": 13,
+      "source": "trait:2192",
+      "sourceAttr": "Vitality",
+      "target": "Ferocity",
+      "type": "conversion",
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2193 Quiet Intensity [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "percent": 10,
+      "source": "trait:2193",
+      "sourceAttr": "Vitality",
+      "target": "Ferocity",
+      "type": "conversion",
+    },
+    {
+      "condition": "fury",
+      "source": "trait:2193",
+      "type": "critChance",
+      "value": 15,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "percent": 10,
+      "source": "trait:2193",
+      "sourceAttr": "Vitality",
+      "target": "Ferocity",
+      "type": "conversion",
+    },
+    {
+      "condition": "fury",
+      "source": "trait:2193",
+      "type": "critChance",
+      "value": 10,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2203 Doom Approaches [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:2203",
+      "target": "ConditionDamage",
+      "type": "flatBonus",
+      "value": 180,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:2203",
+      "target": "ConditionDamage",
+      "type": "flatBonus",
+      "value": 240,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2207 Sharpening Sorrow [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": "fury",
+      "source": "trait:2207",
+      "target": "Expertise",
+      "type": "flatBonus",
+      "value": 150,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": "fury",
+      "source": "trait:2207",
+      "target": "Expertise",
+      "type": "flatBonus",
+      "value": 150,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2209 Dark Gunslinger [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "percent": 10,
+      "source": "trait:2209",
+      "sourceAttr": "Vitality",
+      "target": "Expertise",
+      "type": "conversion",
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "percent": 13,
+      "source": "trait:2209",
+      "sourceAttr": "Vitality",
+      "target": "Expertise",
+      "type": "conversion",
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2218 Cascading Corruption [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:2218",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 240,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:2218",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 240,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2220 Twisted Medicine [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "percent": 13,
+      "source": "trait:2220",
+      "sourceAttr": "Vitality",
+      "target": "Concentration",
+      "type": "conversion",
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "percent": 13,
+      "source": "trait:2220",
+      "sourceAttr": "Vitality",
+      "target": "Concentration",
+      "type": "conversion",
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2228 Redemptor's Sermon [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:2228",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 2122,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:2228",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 1061,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2229 Empire Divided [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:2229",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 240,
+    },
+    {
+      "condition": null,
+      "source": "trait:2229",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 240,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:2229",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 240,
+    },
+    {
+      "condition": null,
+      "source": "trait:2229",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 240,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2253 Unshakable Mountain [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:2253",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 800,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:2253",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 800,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2254 Balance in Discord [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:2254",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 1162,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:2254",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 1162,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2264 Strength of Shadows [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "percent": 13,
+      "source": "trait:2264",
+      "sourceAttr": "Vitality",
+      "target": "Expertise",
+      "type": "conversion",
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "percent": 13,
+      "source": "trait:2264",
+      "sourceAttr": "Vitality",
+      "target": "Expertise",
+      "type": "conversion",
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2277 Nature's Shield [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:2277",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 1715,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:2277",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 1715,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2279 Mech Arms: Jade Cannons [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:2279",
+      "type": "critChance",
+      "value": 20,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:2279",
+      "type": "critChance",
+      "value": 5,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2280 Panaku's Ambition [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:2280",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 2122,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:2280",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 714,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2281 Mech Core: Barrier Engine [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:2281",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 217,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:2281",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 217,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2284 Second Opinion [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:2284",
+      "target": "ConditionDamage",
+      "type": "flatBonus",
+      "value": 90,
+    },
+    {
+      "condition": null,
+      "percent": 7,
+      "source": "trait:2284",
+      "sourceAttr": "ConditionDamage",
+      "target": "HealingPower",
+      "type": "conversion",
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:2284",
+      "target": "ConditionDamage",
+      "type": "flatBonus",
+      "value": 90,
+    },
+    {
+      "condition": null,
+      "percent": 7,
+      "source": "trait:2284",
+      "sourceAttr": "ConditionDamage",
+      "target": "HealingPower",
+      "type": "conversion",
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2285 Traversing Dusk [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:2285",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 645,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:2285",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 645,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2286 Natural Fortitude [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:2286",
+      "target": "Vitality",
+      "type": "flatBonus",
+      "value": 240,
+    },
+    {
+      "condition": null,
+      "source": "trait:2286",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 3517,
+    },
+    {
+      "condition": null,
+      "source": "trait:2286",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 3517,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:2286",
+      "target": "Vitality",
+      "type": "flatBonus",
+      "value": 240,
+    },
+    {
+      "condition": null,
+      "source": "trait:2286",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 1764,
+    },
+    {
+      "condition": null,
+      "source": "trait:2286",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 1764,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2290 Larcenous Torment [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:2290",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 99,
+    },
+    {
+      "condition": null,
+      "source": "trait:2290",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 99,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:2290",
+      "target": "Power",
+      "type": "flatBonus",
+      "value": 99,
+    },
+    {
+      "condition": null,
+      "source": "trait:2290",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 99,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2300 Hungering Darkness [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:2300",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 517,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:2300",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 773,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2326 Raconteur [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:2326",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 980,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:2326",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 660,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2337 Magpie's Defense [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:2337",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 2600,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:2337",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 2600,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2354 Spirit's Succor [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:2354",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 507,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:2354",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 507,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2358 Expanded Consciousness [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:2358",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 965,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:2358",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 165,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2362 Enterprising Aristocrat [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:2362",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 975,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:2362",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 975,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2371 Boon of Creation [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:2371",
+      "target": "Concentration",
+      "type": "flatBonus",
+      "value": 180,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:2371",
+      "target": "Concentration",
+      "type": "flatBonus",
+      "value": 60,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2378 Spirit's Gift [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:2378",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 850,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:2378",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 325,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2389 Hybrid Vigor [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:2389",
+      "target": "Vitality",
+      "type": "flatBonus",
+      "value": 240,
+    },
+    {
+      "condition": null,
+      "source": "trait:2389",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 1295,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:2389",
+      "target": "Vitality",
+      "type": "flatBonus",
+      "value": 240,
+    },
+    {
+      "condition": null,
+      "source": "trait:2389",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 783,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2394 Light's Gift [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:2394",
+      "target": "Vitality",
+      "type": "flatBonus",
+      "value": 180,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:2394",
+      "target": "Vitality",
+      "type": "flatBonus",
+      "value": 180,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2395 Innervating Alloy [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:2395",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 202,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:2395",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 1000,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2418 Inspiring Implements [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:2418",
+      "target": "Concentration",
+      "type": "flatBonus",
+      "value": 180,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:2418",
+      "target": "Concentration",
+      "type": "flatBonus",
+      "value": 60,
+    },
+  ],
+}
+`;
+
+exports[`Modifier output snapshots — all stat-affecting traits 2426 Invigorating Tempo [core] 1`] = `
+{
+  "pve": [
+    {
+      "condition": null,
+      "source": "trait:2426",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 660,
+    },
+  ],
+  "wvw": [
+    {
+      "condition": null,
+      "source": "trait:2426",
+      "target": "HealingPower",
+      "type": "flatBonus",
+      "value": 148,
+    },
+  ],
+}
+`;

@@ -183,11 +183,13 @@ describeIf("real data — trait parsing", () => {
     expect(burnFact.duration).toBe(1);
   });
 
-  test("Swift Revenge (1502): no split, has universal facts", () => {
+  test("Swift Revenge (1502): has WvW split (7% PvE / 10% WvW strike damage)", () => {
     const fixture = fixtures.traits.find((t) => t.id === 1502);
     const result = client.parseFacts(fixture.wikitext);
 
-    expect(result.splitGrouping).toBeNull();
+    // GW2 balance update: trait now has pve/wvw split for damage increase
+    expect(result.splitGrouping).not.toBeNull();
+    expect(result.splitGrouping.wvwHasSplit).toBe(true);
     expect(result.facts.length).toBeGreaterThan(0);
   });
 });
