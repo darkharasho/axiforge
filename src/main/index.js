@@ -436,6 +436,17 @@ app.whenReady().then(async () => {
       }).catch((err) => console.warn("[history] addEntry failed:", err.message));
     }
     const saved = await store.upsertBuild(build);
+    // Record creation for new builds so folder history panel shows the initial save.
+    if (!existing) {
+      const auth = await getAuthRecord().catch(() => null);
+      buildHistoryStore.addEntry({
+        buildId: saved.id,
+        authorLogin: auth?.viewer?.login || "local",
+        source: "local",
+        summary: "Created",
+        snapshot: saved,
+      }).catch((err) => console.warn("[history] addEntry failed:", err.message));
+    }
     if (saved.folderId) {
       await folderStore.touchFolders([saved.folderId]);
     }
