@@ -1,3 +1,9 @@
+## Version v0.6.11 — April 19, 2026
+
+### Bug Fixes
+
+- **Berserk mode now correctly adds +5% Critical Chance** — clicking the Berserk button was adding the +300 Power and +300 Condition Damage bonuses but not the base +5% Critical Chance that Berserk mode grants. Crit Chance in the Attributes panel now updates correctly when entering and leaving Berserk mode. Berserk-conditional trait bonuses (e.g. Smash Brawler's +15% crit while berserking) are also now reflected.
+
 ## Version v0.6.10 — April 19, 2026
 
 ### Bug Fixes
