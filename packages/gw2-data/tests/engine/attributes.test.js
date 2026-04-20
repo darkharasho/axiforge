@@ -451,6 +451,33 @@ describe("computeAttributes", () => {
     expect(resultOn.derived.critChance).toBeCloseTo(25, 5);
   });
 
+  test("Smash Brawler WvW: berserk gives only Smash Brawler's 5% — no double-count from base (issue #259)", () => {
+    // In WvW, BERSERK_CRIT_CHANCE_WVW = 0. The 5% comes entirely from Smash Brawler WvW fact.
+    // Base precision (1000) → (1000-895)/21 = 5%. With berserk + Smash Brawler WvW: +5% = 10% total.
+    const catalogs = makeCatalogs({
+      traitById: new Map([[2049, {
+        id: 2049,
+        slot: "Major",
+        description: "Smash Brawler",
+        facts: [
+          { type: "Percent", text: "Critical Chance Increase", percent: 15 }, // PvE
+          { type: "Percent", text: "Critical Chance Increase", percent: 5 },  // WvW
+        ],
+        specialization: 18,
+      }]]),
+      specializationById: new Map([[18, { id: 18, minorTraits: [] }]]),
+    });
+    const baseCtx = { specializations: [{ id: 18, majorChoices: { 1: 2049 } }] };
+
+    // Without berserk: no crit bonus
+    const resultOff = computeAttributes(makeCtx({ ...baseCtx, gameMode: "wvw", berserkActive: false }), catalogs);
+    expect(resultOff.derived.critChance).toBeCloseTo(5, 5);
+
+    // With berserk in WvW: only Smash Brawler WvW (5%) — base berserk crit is 0 in WvW
+    const resultOn = computeAttributes(makeCtx({ ...baseCtx, gameMode: "wvw", berserkActive: true }), catalogs);
+    expect(resultOn.derived.critChance).toBeCloseTo(10, 5); // 5% precision base + 5% Smash Brawler WvW
+  });
+
   test("base Berserk mode adds +5% crit chance even with no traits (issue #230)", () => {
     const catalogs = makeCatalogs({
       specializationById: new Map([[18, { id: 18, minorTraits: [] }]]),

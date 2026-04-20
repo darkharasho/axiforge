@@ -176,7 +176,8 @@ const MIGHT_POWER_PER_STACK = 30;
 const MIGHT_CONDI_PER_STACK = 30;
 const FURY_CRIT_CHANCE = 25;        // percentage points (PvE)
 const FURY_CRIT_CHANCE_WVW = 20;    // percentage points (WvW)
-const BERSERK_CRIT_CHANCE = 5;      // base crit from Berserk mode (Berserker elite spec)
+const BERSERK_CRIT_CHANCE = 5;      // base crit from Berserk mode in PvE (Berserker elite spec)
+const BERSERK_CRIT_CHANCE_WVW = 0;  // WvW: berserk has no inherent crit; bonus comes entirely from traits (Smash Brawler WvW: +5%)
 
 // ---------------------------------------------------------------------------
 // Stacking sigils
@@ -309,6 +310,7 @@ module.exports = {
   FURY_CRIT_CHANCE,
   FURY_CRIT_CHANCE_WVW,
   BERSERK_CRIT_CHANCE,
+  BERSERK_CRIT_CHANCE_WVW,
   STACKING_SIGIL_DEFS,
   SIGNET_PASSIVE_BUFFS,
   SIGNET_ACTIVE_EFFECTS,
