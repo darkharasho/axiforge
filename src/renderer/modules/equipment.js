@@ -1650,9 +1650,9 @@ export function renderEquipmentPanel() {
 
   const statRows = [
     { stat: "Power",           key: "Power",          value: computed.Power },
-    { stat: "Precision",       key: "Precision",      value: computed.Precision,       derived: "Crit Chance",      derivedVal: `${critChance.toFixed(2)}%` },
     { stat: "Toughness",       key: "Toughness",      value: computed.Toughness,       derived: "Armor",            derivedVal: armor.toLocaleString() },
     { stat: "Vitality",        key: "Vitality",       value: computed.Vitality,        derived: "Health",            derivedVal: health.toLocaleString() },
+    { stat: "Precision",       key: "Precision",      value: computed.Precision,       derived: "Crit Chance",      derivedVal: `${critChance.toFixed(2)}%` },
     { stat: "Ferocity",        key: "Ferocity",       value: computed.Ferocity,        derived: "Crit Damage",       derivedVal: `${critDamage.toFixed(0)}%` },
     { stat: "Condition Dmg",   key: "ConditionDamage", value: computed.ConditionDamage },
     { stat: "Expertise",       key: "Expertise",      value: computed.Expertise,       derived: "Cond. Duration",    derivedVal: `${condDuration.toFixed(1)}%` },

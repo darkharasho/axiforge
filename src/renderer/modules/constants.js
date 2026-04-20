@@ -410,6 +410,13 @@ export const PROFESSION_BASE_HP = {
   Elementalist: 1645, Tempest: 1645, Weaver: 1645, Catalyst: 1645,
 };
 
+// Attributes panel stat display order — matches in-game stat doll (issue #230).
+// Power, Toughness, Vitality come first; Precision/Crit Chance follows after Health.
+export const STAT_DISPLAY_KEYS = [
+  "Power", "Toughness", "Vitality", "Precision",
+  "Ferocity", "ConditionDamage", "Expertise", "Concentration", "HealingPower",
+];
+
 export const ANTIQUARY_OFFENSIVE_ARTIFACTS = [
   76582,  // Metal Legion Guitar
   76550,  // Forged Surfer Dash
