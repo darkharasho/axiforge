@@ -94,7 +94,7 @@
     },
     "derived": {
       "health": 15922,
-      "critChance": 35.19047619047619,
+      "critChance": 30.19047619047619,
       "critDamage": 150,
       "conditionDuration": 41.93333333333333,
       "boonDuration": 0,
