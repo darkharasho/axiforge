@@ -1226,9 +1226,12 @@ async function handleRenameFolder(folderId) {
   const folder = state.folders.find((f) => f.id === folderId);
   if (!folder) return;
   const oldName = folder.name;
-  // Find the folder's nav item in sidebar and replace label with inline input
-  const navItem = document.querySelector(`[data-navigate-folder="${folderId}"]`);
-  const newName = await insertInlineInput(navItem, folder.name || "");
+  // Prefer the content-area row so rename works when viewing inside a shared
+  // folder (where the sidebar may not have a nav item for the subfolder).
+  const contentEl = document.querySelector(`#lib-content [data-folder-id="${folderId}"]`);
+  const navItem = contentEl || document.querySelector(`[data-navigate-folder="${folderId}"]`);
+  const container = !navItem ? document.getElementById("lib-content") : null;
+  const newName = await insertInlineInput(navItem, folder.name || "", { container });
   if (!newName) { renderLibrary(); return; }
   await saveFolder({ ...folder, name: newName });
   pushUndo({ type: "rename-folder", undo: async () => {
@@ -1239,9 +1242,13 @@ async function handleRenameFolder(folderId) {
 }
 
 async function handleNewSubfolder(parentId) {
-  // Insert inline input in the content area after the parent folder row
-  const folderEl = document.querySelector(`#lib-content [data-folder-id="${parentId}"]`);
+  const content = document.getElementById("lib-content");
+  if (!content) return;
+  // Pass container so insertInlineInput detects the correct view type (grid/icon/list).
+  // Without container, view detection fails and the input uses sidebar styling.
+  const folderEl = content.querySelector(`[data-folder-id="${parentId}"]`);
   const name = await insertInlineInput(folderEl, "", {
+    container: content,
     className: "lib-content-inline-folder",
   });
   if (!name) { renderLibrary(); return; }
