@@ -308,6 +308,91 @@ describe("resolveEntityFacts — traited_facts overrides", () => {
 // ---------------------------------------------------------------------------
 // Edge cases
 // ---------------------------------------------------------------------------
+// WvW mode — traited_facts must NOT be applied to wvwFacts (issue #269)
+// ---------------------------------------------------------------------------
+
+describe("resolveEntityFacts — WvW mode traited_facts isolation", () => {
+  beforeEach(() => {
+    state.editor = { gameMode: "wvw", specializations: [] };
+    state.activeCatalog = null;
+  });
+  afterEach(() => {
+    state.editor = { gameMode: "pve", specializations: [] };
+  });
+
+  test("does not append traited_facts to wvwFacts when in WvW mode", () => {
+    // Mirrors the Dazzling Hammer (Radiant Forge 2) bug: a traited_fact for
+    // Alacrity (overrides: null) was appended to the WvW fact list even though
+    // the wiki's WvW split doesn't include Alacrity.  The GW2 API's traited_facts
+    // reference PvE fact positions and carry PvE-balanced values; they must not
+    // be applied when the base fact set is the WvW split.
+    const entity = {
+      facts: [
+        { type: "Buff", status: "Might", duration: 8, apply_count: 8, text: "Might" },
+        { type: "Buff", status: "Fury",  duration: 6, apply_count: 1, text: "Fury"  },
+      ],
+      wvwFacts: [
+        { type: "Buff", status: "Might", duration: 8, apply_count: 3, text: "Might" },
+        { type: "Buff", status: "Fury",  duration: 6, apply_count: 1, text: "Fury"  },
+      ],
+      traitedFacts: [
+        // Alacrity granted by a trait — no overrides index (appended)
+        { type: "Buff", status: "Alacrity", duration: 4, apply_count: 1, text: "Alacrity", requires_trait: 1234, overrides: null },
+        // Might upgraded by a trait — overrides PvE facts[0]
+        { type: "Buff", status: "Might", duration: 8, apply_count: 4, text: "Might", requires_trait: 1234, overrides: 0 },
+      ],
+    };
+
+    // Simulate trait 1234 being active
+    state.editor.specializations = [{ majorChoices: { 1: 1234 } }];
+
+    const result = resolveEntityFacts(entity);
+
+    // WvW result must be the wiki WvW facts only — no Alacrity, Might stays ×3
+    const statuses = result.map((f) => f.status).filter(Boolean);
+    expect(statuses).not.toContain("Alacrity");
+    expect(result.find((f) => f.status === "Might")?.apply_count).toBe(3);
+  });
+
+  test("does apply traited_facts in PvE mode (control)", () => {
+    state.editor = { gameMode: "pve", specializations: [{ majorChoices: { 1: 1234 } }] };
+
+    const entity = {
+      facts: [
+        { type: "Buff", status: "Might", duration: 8, apply_count: 8, text: "Might" },
+      ],
+      traitedFacts: [
+        { type: "Buff", status: "Alacrity", duration: 4, apply_count: 1, text: "Alacrity", requires_trait: 1234, overrides: null },
+      ],
+    };
+
+    const result = resolveEntityFacts(entity);
+    const statuses = result.map((f) => f.status).filter(Boolean);
+    expect(statuses).toContain("Alacrity");
+  });
+
+  test("does not apply traited_facts in PvP mode when pvpFacts are present", () => {
+    state.editor = { gameMode: "pvp", specializations: [{ majorChoices: { 1: 1234 } }] };
+
+    const entity = {
+      facts: [
+        { type: "Buff", status: "Might", duration: 8, apply_count: 8, text: "Might" },
+      ],
+      pvpFacts: [
+        { type: "Buff", status: "Might", duration: 8, apply_count: 3, text: "Might" },
+      ],
+      traitedFacts: [
+        { type: "Buff", status: "Alacrity", duration: 4, apply_count: 1, text: "Alacrity", requires_trait: 1234, overrides: null },
+      ],
+    };
+
+    const result = resolveEntityFacts(entity);
+    const statuses = result.map((f) => f.status).filter(Boolean);
+    expect(statuses).not.toContain("Alacrity");
+  });
+});
+
+// ---------------------------------------------------------------------------
 
 describe("resolveEntityFacts — edge cases", () => {
   test("returns empty array for entity with no facts", () => {

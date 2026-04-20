@@ -256,13 +256,17 @@ export function resolveEntityFacts(entity) {
   // PvP falls back to WvW facts (GW2 frequently shares WvW/PvP balance),
   // then to PvE facts as a last resort.
   let baseFacts;
+  let usingPveFacts = true;
   if (gameMode === "wvw" && Array.isArray(entity.wvwFacts)) {
     baseFacts = entity.wvwFacts;
+    usingPveFacts = false;
   } else if (gameMode === "pvp") {
     if (Array.isArray(entity.pvpFacts)) {
       baseFacts = entity.pvpFacts;
+      usingPveFacts = false;
     } else if (Array.isArray(entity.wvwFacts)) {
       baseFacts = entity.wvwFacts;
+      usingPveFacts = false;
     } else {
       baseFacts = Array.isArray(entity.facts) ? entity.facts : [];
     }
@@ -271,9 +275,13 @@ export function resolveEntityFacts(entity) {
   }
   const traitedFacts = Array.isArray(entity.traitedFacts) ? entity.traitedFacts : [];
 
-  // Apply traited_facts overrides when the required trait is active.
+  // Apply traited_facts overrides only when using PvE facts as the base.
+  // The GW2 API's traited_facts carry PvE-balanced values and reference PvE
+  // fact positions via overrides indices — applying them to WvW/PvP fact
+  // arrays misplaces overrides and surfaces PvE-only conditional effects
+  // (e.g. Alacrity) that do not exist in those game modes.
   let result = baseFacts;
-  if (traitedFacts.length) {
+  if (traitedFacts.length && usingPveFacts) {
     // Collect active trait IDs — both major choices and minor traits.
     const activeTraitIds = new Set();
     const catalog = state.activeCatalog;
