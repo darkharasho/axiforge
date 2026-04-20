@@ -174,8 +174,9 @@ const BUFF_FACT_TYPES = new Set(["Buff", "ApplyBuffCondition", "PrefixedBuff"]);
 // Assumed boon stat effects (per GW2 wiki, level 80)
 const MIGHT_POWER_PER_STACK = 30;
 const MIGHT_CONDI_PER_STACK = 30;
-const FURY_CRIT_CHANCE = 25;     // percentage points (PvE)
-const FURY_CRIT_CHANCE_WVW = 20; // percentage points (WvW)
+const FURY_CRIT_CHANCE = 25;        // percentage points (PvE)
+const FURY_CRIT_CHANCE_WVW = 20;    // percentage points (WvW)
+const BERSERK_CRIT_CHANCE = 5;      // base crit from Berserk mode (Berserker elite spec)
 
 // ---------------------------------------------------------------------------
 // Stacking sigils
@@ -307,6 +308,7 @@ module.exports = {
   MIGHT_CONDI_PER_STACK,
   FURY_CRIT_CHANCE,
   FURY_CRIT_CHANCE_WVW,
+  BERSERK_CRIT_CHANCE,
   STACKING_SIGIL_DEFS,
   SIGNET_PASSIVE_BUFFS,
   SIGNET_ACTIVE_EFFECTS,

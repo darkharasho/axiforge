@@ -16,6 +16,7 @@ export const {
   MIGHT_CONDI_PER_STACK,
   FURY_CRIT_CHANCE,
   FURY_CRIT_CHANCE_WVW,
+  BERSERK_CRIT_CHANCE,
   STACKING_SIGIL_DEFS,
   SIGNET_PASSIVE_BUFFS,
   SIGNET_ACTIVE_EFFECTS,
@@ -290,6 +291,25 @@ export function computePassiveCritModifier(state) {
   let bonus = 0;
   for (const mod of mods) {
     if (mod.type === "critChance" && mod.condition === null) {
+      bonus += mod.value;
+    }
+  }
+  return bonus;
+}
+
+/**
+ * Compute crit bonus from active Berserk mode: base +5% plus any berserk-conditional trait bonuses.
+ * Returns 0 when berserk is not active.
+ */
+export function computeBerserkCritModifier(state) {
+  const ctx = buildEngineCtx(state);
+  if (!ctx.berserkActive) return 0;
+  const catalogs = buildEngineCatalogs(state);
+  const overrides = getOverrides();
+  const mods = engineCollectModifiers(ctx, catalogs, overrides);
+  let bonus = BERSERK_CRIT_CHANCE;
+  for (const mod of mods) {
+    if (mod.type === "critChance" && mod.condition === "berserk") {
       bonus += mod.value;
     }
   }

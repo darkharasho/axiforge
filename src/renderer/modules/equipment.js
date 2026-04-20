@@ -11,7 +11,7 @@ import {
 } from "./constants.js";
 import { escapeHtml } from "./utils.js";
 import { computeSlotStats, computeUpgradeModifiers, computeStatBreakdown } from "./stats.js";
-import { computeStats, computeBoons, computeFuryCritModifier, computePassiveCritModifier, computeFuryStatBonuses, computeMightPerStack, FURY_CRIT_CHANCE, FURY_CRIT_CHANCE_WVW, STACKING_SIGIL_DEFS, SIGNET_PASSIVE_BUFFS, SIGNET_ACTIVE_EFFECTS } from "./engine-bridge.js";
+import { computeStats, computeBoons, computeFuryCritModifier, computePassiveCritModifier, computeBerserkCritModifier, computeFuryStatBonuses, computeMightPerStack, FURY_CRIT_CHANCE, FURY_CRIT_CHANCE_WVW, STACKING_SIGIL_DEFS, SIGNET_PASSIVE_BUFFS, SIGNET_ACTIVE_EFFECTS } from "./engine-bridge.js";
 import { bindHoverPreview, selectDetail } from "./detail-panel.js";
 import { getProfessionSvg } from "./profession-icons.js";
 import { getSlotSvg } from "./slot-icons.js";
@@ -1641,7 +1641,8 @@ export function renderEquipmentPanel() {
   const furyCritPct = (gm === "wvw" ? FURY_CRIT_CHANCE_WVW : FURY_CRIT_CHANCE) + computeFuryCritModifier(state);
   const furyCrit = _assumedBoons.fury ? furyCritPct : 0;
   const passiveCrit = computePassiveCritModifier(state);
-  const critChance = Math.min(100, ((computed.Precision || 1000) - 895) / 21.0 + popMod("Critical Chance") + furyCrit + passiveCrit);
+  const berserkCrit = computeBerserkCritModifier(state);
+  const critChance = Math.min(100, ((computed.Precision || 1000) - 895) / 21.0 + popMod("Critical Chance") + furyCrit + passiveCrit + berserkCrit);
   const critDamage = 150 + (computed.Ferocity || 0) / 15.0 + popMod("Critical Damage");
   const condDuration = (computed.Expertise || 0) / 15.0 + popMod("Condition Duration");
   const boonDuration = (computed.Concentration || 0) / 15.0 + popMod("Boon Duration");

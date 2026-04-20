@@ -442,13 +442,26 @@ describe("computeAttributes", () => {
       specializations: [{ id: 18, majorChoices: { 1: 2049 } }],
     };
 
-    // Without berserk: no crit bonus from trait
+    // Without berserk: no crit bonus from trait or berserk mode
     const resultOff = computeAttributes(makeCtx({ ...baseCtx, berserkActive: false }), catalogs);
     expect(resultOff.derived.critChance).toBeCloseTo(5, 5);
 
-    // With berserk: +15% crit from trait
+    // With berserk: +5% base berserk crit + +15% crit from Smash Brawler trait
     const resultOn = computeAttributes(makeCtx({ ...baseCtx, berserkActive: true }), catalogs);
-    expect(resultOn.derived.critChance).toBeCloseTo(20, 5);
+    expect(resultOn.derived.critChance).toBeCloseTo(25, 5);
+  });
+
+  test("base Berserk mode adds +5% crit chance even with no traits (issue #230)", () => {
+    const catalogs = makeCatalogs({
+      specializationById: new Map([[18, { id: 18, minorTraits: [] }]]),
+    });
+    const baseCtx = { specializations: [{ id: 18, majorChoices: {} }] };
+
+    const resultOff = computeAttributes(makeCtx({ ...baseCtx, berserkActive: false }), catalogs);
+    expect(resultOff.derived.critChance).toBeCloseTo(5, 5); // precision base only
+
+    const resultOn = computeAttributes(makeCtx({ ...baseCtx, berserkActive: true }), catalogs);
+    expect(resultOn.derived.critChance).toBeCloseTo(10, 5); // +5% from Berserk mode
   });
 
   test("signet passive buffs added", () => {

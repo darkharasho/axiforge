@@ -14,6 +14,7 @@ const {
   MIGHT_CONDI_PER_STACK,
   FURY_CRIT_CHANCE,
   FURY_CRIT_CHANCE_WVW,
+  BERSERK_CRIT_CHANCE,
   STACKING_SIGIL_DEFS,
   SIGNET_PASSIVE_BUFFS,
   SIGNET_ACTIVE_EFFECTS,
@@ -555,6 +556,7 @@ function computeAttributes(ctx, catalogs) {
   }
   // Berserk crit bonus (only when berserk mode is active)
   if (berserkActive) {
+    critBonus += BERSERK_CRIT_CHANCE; // base +5% from Berserk mode
     for (const mod of modifiers) {
       if (mod.type === "critChance" && mod.condition === "berserk") {
         critBonus += mod.value;
