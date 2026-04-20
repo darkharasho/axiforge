@@ -1139,3 +1139,178 @@ describe("computeStatBreakdown — Great Fortitude trait conversion uses preConv
     expect(fConv.value).toBe(114);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Blood Reaction (trait 2011) — issue #229
+// The GW2 API returns incorrect facts for Blood Reaction: [12%, 10%, 5%] for
+// Precision→Ferocity and [10%, 15%] for Power→ConditionDamage. The correct
+// PvE values are 7% and 10%. KNOWN_TRAIT_FACTS_OVERRIDES must patch them.
+// ---------------------------------------------------------------------------
+describe("Blood Reaction Berserker trait conversion % (issue #229)", () => {
+  const BLOOD_REACTION_ID = 2011;
+  const BERSERKER_SPEC_ID = 18;
+
+  test("KNOWN_TRAIT_FACTS_OVERRIDES has correct Blood Reaction facts", () => {
+    const { KNOWN_TRAIT_FACTS_OVERRIDES } = require("../../../src/main/gw2Data/overrides");
+    const facts = KNOWN_TRAIT_FACTS_OVERRIDES.get(BLOOD_REACTION_ID);
+    expect(facts).toBeDefined();
+    const precFacts = facts.filter((f) => f.source === "Precision" && f.target === "CritDamage");
+    expect(precFacts).toHaveLength(2);
+    expect(precFacts[0].percent).toBe(7);  // PvE
+    expect(precFacts[1].percent).toBe(5);  // WvW
+    const powerFacts = facts.filter((f) => f.source === "Power" && f.target === "ConditionDamage");
+    expect(powerFacts).toHaveLength(1);
+    expect(powerFacts[0].percent).toBe(10);
+  });
+
+  test("Blood Reaction correct facts produce 7% Precision→Ferocity conversion (issue #229)", () => {
+    const mockCatalog = {
+      traitById: new Map([
+        [BLOOD_REACTION_ID, {
+          id: BLOOD_REACTION_ID,
+          name: "Blood Reaction",
+          slot: "Major",
+          facts: [
+            { type: "BuffConversion", source: "Precision", target: "CritDamage",     percent: 7  },
+            { type: "BuffConversion", source: "Precision", target: "CritDamage",     percent: 5  },
+            { type: "BuffConversion", source: "Power",     target: "ConditionDamage", percent: 10 },
+          ],
+        }],
+      ]),
+      specializationById: new Map([[BERSERKER_SPEC_ID, { id: BERSERKER_SPEC_ID, minorTraits: [] }]]),
+    };
+    state.activeCatalog = mockCatalog;
+    state.upgradeCatalog = {
+      foodById: new Map(), utilityById: new Map(),
+      runeById: new Map(), infusionById: new Map(), enrichmentById: new Map(),
+    };
+    state.editor = {
+      profession: "Warrior",
+      gameMode: "pve",
+      equipment: { slots: {}, food: "", utility: "", weapons: {}, runes: {}, infusions: {} },
+      specializations: [{ specializationId: BERSERKER_SPEC_ID, majorChoices: { 1: BLOOD_REACTION_ID } }],
+      skills: { healId: 0, utilityIds: [0, 0, 0], eliteId: 0 },
+    };
+    // Precision base = 1000. 7% of 1000 = 70 Ferocity from conversion.
+    const entries = computeStatBreakdown("Ferocity");
+    const convEntry = entries.find((e) => e.category === "trait" && e.source === "Trait conversion");
+    expect(convEntry).toBeDefined();
+    // Bug: 12% of 1000 = 120. Correct: 7% of 1000 = 70.
+    expect(convEntry.value).toBe(70);
+
+    state.activeCatalog = null;
+    state.upgradeCatalog = null;
+  });
+
+  test("Blood Reaction bad API facts would produce too much Ferocity (demonstrates bug)", () => {
+    const mockCatalog = {
+      traitById: new Map([
+        [BLOOD_REACTION_ID, {
+          id: BLOOD_REACTION_ID,
+          name: "Blood Reaction",
+          slot: "Major",
+          facts: [
+            { type: "BuffConversion", source: "Precision", target: "CritDamage",     percent: 12 },
+            { type: "BuffConversion", source: "Precision", target: "CritDamage",     percent: 10 },
+            { type: "BuffConversion", source: "Precision", target: "CritDamage",     percent: 5  },
+            { type: "BuffConversion", source: "Power",     target: "ConditionDamage", percent: 10 },
+            { type: "BuffConversion", source: "Power",     target: "ConditionDamage", percent: 15 },
+          ],
+        }],
+      ]),
+      specializationById: new Map([[BERSERKER_SPEC_ID, { id: BERSERKER_SPEC_ID, minorTraits: [] }]]),
+    };
+    state.activeCatalog = mockCatalog;
+    state.upgradeCatalog = {
+      foodById: new Map(), utilityById: new Map(),
+      runeById: new Map(), infusionById: new Map(), enrichmentById: new Map(),
+    };
+    state.editor = {
+      profession: "Warrior",
+      gameMode: "pve",
+      equipment: { slots: {}, food: "", utility: "", weapons: {}, runes: {}, infusions: {} },
+      specializations: [{ specializationId: BERSERKER_SPEC_ID, majorChoices: { 1: BLOOD_REACTION_ID } }],
+      skills: { healId: 0, utilityIds: [0, 0, 0], eliteId: 0 },
+    };
+    // Bad API data: 12% of 1000 = 120 (too much; correct is 7% = 70)
+    const entries = computeStatBreakdown("Ferocity");
+    const convEntry = entries.find((e) => e.category === "trait" && e.source === "Trait conversion");
+    expect(convEntry).toBeDefined();
+    expect(convEntry.value).toBe(120);
+
+    state.activeCatalog = null;
+    state.upgradeCatalog = null;
+  });
+
+  function makeBloodReactionCatalog() {
+    return {
+      traitById: new Map([
+        [BLOOD_REACTION_ID, {
+          id: BLOOD_REACTION_ID,
+          name: "Blood Reaction",
+          slot: "Major",
+          facts: [
+            { type: "BuffConversion", source: "Precision", target: "CritDamage",      percent: 7  },
+            { type: "BuffConversion", source: "Precision", target: "CritDamage",      percent: 5  },
+            { type: "BuffConversion", source: "Power",     target: "ConditionDamage",  percent: 10 },
+          ],
+        }],
+      ]),
+      specializationById: new Map([[BERSERKER_SPEC_ID, { id: BERSERKER_SPEC_ID, minorTraits: [] }]]),
+    };
+  }
+
+  function makeBloodReactionEditor(gameMode = "pve") {
+    return {
+      profession: "Warrior",
+      gameMode,
+      equipment: { slots: {}, food: "", utility: "", weapons: {}, runes: {}, infusions: {} },
+      specializations: [{ specializationId: BERSERKER_SPEC_ID, majorChoices: { 1: BLOOD_REACTION_ID } }],
+      skills: { healId: 0, utilityIds: [0, 0, 0], eliteId: 0 },
+    };
+  }
+
+  const emptyUpgrades = {
+    foodById: new Map(), utilityById: new Map(),
+    runeById: new Map(), infusionById: new Map(), enrichmentById: new Map(),
+  };
+
+  test("Blood Reaction WvW picks 5% Precision→Ferocity (idx=1)", () => {
+    state.activeCatalog = makeBloodReactionCatalog();
+    state.upgradeCatalog = emptyUpgrades;
+    state.editor = makeBloodReactionEditor("wvw");
+    // WvW dedup picks idx=1 from [7%, 5%] = 5%. Precision base = 1000. floor(1000 * 0.05) = 50.
+    const entries = computeStatBreakdown("Ferocity");
+    const convEntry = entries.find((e) => e.category === "trait" && e.source === "Trait conversion");
+    expect(convEntry).toBeDefined();
+    expect(convEntry.value).toBe(50);
+    state.activeCatalog = null;
+    state.upgradeCatalog = null;
+  });
+
+  test("Blood Reaction PvE produces 10% Power→ConditionDamage conversion", () => {
+    state.activeCatalog = makeBloodReactionCatalog();
+    state.upgradeCatalog = emptyUpgrades;
+    state.editor = makeBloodReactionEditor("pve");
+    // Power base = 1000. 10% of 1000 = 100 ConditionDamage from conversion.
+    const entries = computeStatBreakdown("ConditionDamage");
+    const convEntry = entries.find((e) => e.category === "trait" && e.source === "Trait conversion");
+    expect(convEntry).toBeDefined();
+    expect(convEntry.value).toBe(100);
+    state.activeCatalog = null;
+    state.upgradeCatalog = null;
+  });
+
+  test("Blood Reaction WvW also produces 10% Power→ConditionDamage conversion", () => {
+    state.activeCatalog = makeBloodReactionCatalog();
+    state.upgradeCatalog = emptyUpgrades;
+    state.editor = makeBloodReactionEditor("wvw");
+    // Only one Power→ConditionDamage fact, so WvW clamps to idx=0 = 10%. floor(1000 * 0.10) = 100.
+    const entries = computeStatBreakdown("ConditionDamage");
+    const convEntry = entries.find((e) => e.category === "trait" && e.source === "Trait conversion");
+    expect(convEntry).toBeDefined();
+    expect(convEntry.value).toBe(100);
+    state.activeCatalog = null;
+    state.upgradeCatalog = null;
+  });
+});
