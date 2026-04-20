@@ -33,4 +33,9 @@ describe("Attributes panel stat display order (issue #230)", () => {
     const vitIdx = STAT_DISPLAY_KEYS.indexOf("Vitality");
     expect(toughIdx).toBeLessThan(vitIdx);
   });
+
+  test("HealingPower is not a standalone row (shares row with ConditionDamage)", () => {
+    expect(STAT_DISPLAY_KEYS).not.toContain("HealingPower");
+    expect(STAT_DISPLAY_KEYS).toContain("ConditionDamage");
+  });
 });

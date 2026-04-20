@@ -1654,10 +1654,9 @@ export function renderEquipmentPanel() {
     { stat: "Vitality",        key: "Vitality",       value: computed.Vitality,        derived: "Health",            derivedVal: health.toLocaleString() },
     { stat: "Precision",       key: "Precision",      value: computed.Precision,       derived: "Crit Chance",      derivedVal: `${critChance.toFixed(2)}%` },
     { stat: "Ferocity",        key: "Ferocity",       value: computed.Ferocity,        derived: "Crit Damage",       derivedVal: `${critDamage.toFixed(0)}%` },
-    { stat: "Condition Dmg",   key: "ConditionDamage", value: computed.ConditionDamage },
-    { stat: "Expertise",       key: "Expertise",      value: computed.Expertise,       derived: "Cond. Duration",    derivedVal: `${condDuration.toFixed(1)}%` },
-    { stat: "Concentration",   key: "Concentration",  value: computed.Concentration,   derived: "Boon Duration",     derivedVal: `${boonDuration.toFixed(1)}%` },
-    { stat: "Healing Power",   key: "HealingPower",   value: computed.HealingPower },
+    { stat: "Condition Dmg",   key: "ConditionDamage", value: computed.ConditionDamage,  derived: "Healing Power",    derivedKey: "HealingPower",  derivedVal: (computed.HealingPower || 0).toLocaleString() },
+    { stat: "Expertise",       key: "Expertise",      value: computed.Expertise,        derived: "Cond. Duration",   derivedVal: `${condDuration.toFixed(1)}%` },
+    { stat: "Concentration",   key: "Concentration",  value: computed.Concentration,    derived: "Boon Duration",    derivedVal: `${boonDuration.toFixed(1)}%` },
   ];
 
   const statsGrid = document.createElement("div");
@@ -1716,7 +1715,8 @@ export function renderEquipmentPanel() {
     if (row.derived) {
       const rightEl = document.createElement("div");
       rightEl.className = "equip-stat-cell equip-stat-cell--derived";
-      const isDerivedBoosted = (_assumedBoons.fury && row.derived === "Crit Chance");
+      const isDerivedBoosted = (_assumedBoons.fury && row.derived === "Crit Chance")
+        || (row.derivedKey && traitBonuses[row.derivedKey] > 0);
       rightEl.innerHTML = `<span class="equip-stat-label">${row.derived}</span><span class="equip-stat-value equip-stat-value--derived${isDerivedBoosted ? " equip-stat-value--boosted" : ""}">${row.derivedVal}</span>`;
       rowEl.append(rightEl);
     }

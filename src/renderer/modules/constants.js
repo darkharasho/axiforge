@@ -412,9 +412,10 @@ export const PROFESSION_BASE_HP = {
 
 // Attributes panel stat display order — matches in-game stat doll (issue #230).
 // Power, Toughness, Vitality come first; Precision/Crit Chance follows after Health.
+// Row keys in display order. ConditionDamage shares a row with HealingPower (right cell).
 export const STAT_DISPLAY_KEYS = [
   "Power", "Toughness", "Vitality", "Precision",
-  "Ferocity", "ConditionDamage", "Expertise", "Concentration", "HealingPower",
+  "Ferocity", "ConditionDamage", "Expertise", "Concentration",
 ];
 
 export const ANTIQUARY_OFFENSIVE_ARTIFACTS = [
