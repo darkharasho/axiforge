@@ -1,3 +1,9 @@
+## Version v0.6.12 — April 20, 2026
+
+### Bug Fixes
+
+- **Berserk button no longer gives +10% Critical Chance in WvW** — in WvW mode, clicking Berserk was adding +10% crit instead of the correct +5%. The base berserk crit is now correctly suppressed in WvW (where it comes entirely from traits like Smash Brawler's +5%), matching in-game behavior.
+
 ## Version v0.6.11 — April 19, 2026
 
 ### Bug Fixes
