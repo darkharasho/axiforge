@@ -243,6 +243,10 @@ async function migrateCompGameModes(buildStore, compStore) {
 }
 
 app.whenReady().then(async () => {
+  // Write version file so companion apps (e.g. AxiOM) can detect installed version
+  const fs = require('fs');
+  fs.writeFileSync(path.join(app.getPath('userData'), 'axiom-version'), app.getVersion(), 'utf8');
+
   await store.init();
   await store.migrateCompIdToCompIds();
   await folderStore.init();
