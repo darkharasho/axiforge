@@ -1,7 +1,9 @@
 {
   "name": "axiforge-desktop",
-  "version": "0.6.12",
-  "workspaces": ["packages/*"],
+  "version": "0.6.13",
+  "workspaces": [
+    "packages/*"
+  ],
   "description": "GW2 build editor desktop app with GitHub Pages publishing",
   "main": "src/main/index.js",
   "build": {
@@ -44,7 +46,8 @@
     },
     "nsis": {
       "oneClick": true,
-      "differentialPackage": true
+      "differentialPackage": true,
+      "runAfterFinish": false
     }
   },
   "scripts": {
