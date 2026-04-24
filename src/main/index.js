@@ -1696,6 +1696,15 @@ app.whenReady().then(async () => {
     // before the pull begins, then fire the pull in the background so the
     // connect IPC call returns right away and the renderer can navigate.
     const sharedFolders = (await folderStore.listFolders()).filter((f) => f.shared);
+
+    // Clear cached SHAs for all shared folders so connect always does a full
+    // re-download. This prevents the case where syncState.json has stale SHAs
+    // that match the remote (same blob hash) but local builds/comps were deleted.
+    for (const folder of sharedFolders) {
+      await syncStore.removeFolder(folder.id);
+    }
+    sharedLibrary.invalidateHeadShaCache();
+
     for (const folder of sharedFolders) {
       _e.sender.send("sync-status", { status: "syncing", folderId: folder.id });
     }
