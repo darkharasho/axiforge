@@ -554,6 +554,20 @@ async function init() {
     _updateFolderSyncIndicators(trackId, status);
 
     if (status === "synced") {
+      // Reload folders and builds so any subfolders or items created during
+      // the pull appear in state immediately (per-item events update state.builds
+      // incrementally, but state.folders never gets refreshed mid-pull).
+      Promise.all([
+        window.desktopApi.listFolders(),
+        window.desktopApi.listBuilds(),
+        window.desktopApi.listComps(),
+      ]).then(([folders, builds, comps]) => {
+        state.folders = folders;
+        state.builds = builds;
+        state.comps = comps;
+        if (state.activePage === "library") renderLibrary();
+        else if (state.activePage === "comps") renderComps();
+      }).catch(() => {});
       setTimeout(() => {
         if (state.folderSyncStatus[trackId] === "synced") {
           delete state.folderSyncStatus[trackId];
