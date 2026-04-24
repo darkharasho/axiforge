@@ -464,12 +464,23 @@ app.whenReady().then(async () => {
     const builds = await store.listBuilds();
     const build = builds.find((b) => b.id === id);
     const folderId = build?.folderId;
+    // Block non-owners from deleting builds in a shared folder — the handler
+    // used to propagate to the shared repo with no isOwner check, so a member
+    // deleting locally wiped the build from GitHub, and the admin's next sync
+    // saw "remote missing → delete locally," destroying the admin's copy too.
+    // Mirrors the move-out-of-shared check in builds:move.
+    const rootShared = folderId ? await findRootSharedFolder(folderId) : null;
+    if (rootShared) {
+      const auth = await getAuthRecord();
+      if (!auth?.sharedLibrary?.isOwner) {
+        throw new Error("Only org owners can delete from shared folders.");
+      }
+    }
     await store.deleteBuild(id);
     await compStore.removeBuildFromComps(id);
     buildHistoryStore.deleteHistory(id).catch((err) => console.warn("[history] deleteHistory failed:", err.message));
     if (folderId) {
       await folderStore.touchFolders([folderId]);
-      const rootShared = await findRootSharedFolder(folderId);
       if (rootShared) {
         sharedLibrary.deleteBuildRemote(folderId, id).catch((err) => {
           console.error("Shared library remote delete failed:", err.message);
@@ -682,15 +693,21 @@ app.whenReady().then(async () => {
     const comps = await compStore.listComps();
     const comp = comps.find((c) => c.id === id);
     const folderId = comp?.folderId;
+    // Same guard as builds:delete — members deleting locally must not wipe
+    // the comp from the shared repo.
+    const rootShared = folderId ? await findRootSharedFolder(folderId) : null;
+    if (rootShared) {
+      const auth = await getAuthRecord();
+      if (!auth?.sharedLibrary?.isOwner) {
+        throw new Error("Only org owners can delete from shared folders.");
+      }
+    }
     await compStore.deleteComp(id);
     await store.clearCompFromBuilds([id]);
-    if (folderId) {
-      const rootShared = await findRootSharedFolder(folderId);
-      if (rootShared) {
-        sharedLibrary.deleteCompRemote(folderId, id).catch((err) => {
-          console.error("Shared library remote comp delete failed:", err.message);
-        });
-      }
+    if (folderId && rootShared) {
+      sharedLibrary.deleteCompRemote(folderId, id).catch((err) => {
+        console.error("Shared library remote comp delete failed:", err.message);
+      });
     }
   });
   ipcMain.handle("comps:reorder", (_e, updates) => compStore.reorderComps(updates));
