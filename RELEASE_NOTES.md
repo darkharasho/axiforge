@@ -1,3 +1,9 @@
+## Version v0.6.17 — April 24, 2026
+
+### Bug Fixes
+
+- **Shared folder contents now appear correctly after syncing** — when a sync pull created new subfolders, the app's in-memory folder list wasn't refreshed, so builds and comps in those subfolders showed a count of 0 and the folder appeared empty. The folder list, builds, and comps are now reloaded from disk when a sync completes, ensuring all synced content is immediately visible.
+
 ## Version v0.6.16 — April 24, 2026
 
 ### Bug Fixes
