@@ -133,8 +133,10 @@ export function renderOnboarding() {
   _el.onboarding.innerHTML = "";
   if (!status) return;
 
-  // Device code display — shown during active login flow, hidden once authenticated
-  if (state.loginFlow.beginData && !status.isAuthenticated) {
+  // Device code display — show whenever a login flow is actively waiting for
+  // approval. Must not gate on !isAuthenticated: during re-authentication the
+  // user is already signed in, so that condition would hide the code.
+  if (state.loginFlow.beginData && state.loginFlow.pending) {
     const card = document.createElement("article");
     card.className = "status-card";
     const heading = document.createElement("h3");

@@ -676,6 +676,45 @@ describe("BuildStore — settings", () => {
     const exists = await fs.access(path.join(tmpDir, "settings.json")).then(() => true).catch(() => false);
     expect(exists).toBe(true);
   });
+
+  test("setSetting writes atomically so a crashed write cannot empty settings.json", async () => {
+    // Regression: on app quit, the window `close` handler fires
+    // `setSetting("windowBounds", ...)` fire-and-forget. If the process
+    // exits between fs.writeFile's truncate and write, settings.json is
+    // left empty — wiping webhook URLs and theme toggles. The fix writes
+    // to a tmp file and renames, so the main file is never truncated.
+    ({ dir } = (await makeTempStore()));
+    const store = new BuildStore(dir);
+    await store.init();
+    await store.setSetting("discord.webhookUrl", "https://discord.com/api/webhooks/123/abc");
+    await store.setSetting("appearance.themedBuildPages", true);
+
+    const settingsPath = path.join(dir, "settings.json");
+    const before = await fs.readFile(settingsPath, "utf8");
+
+    // Simulate an interrupted write by making rename fail. With the
+    // non-atomic implementation, writeFile would already have truncated
+    // settings.json before this failure, losing the prior values.
+    const realRename = fs.rename.bind(fs);
+    const renameSpy = jest.spyOn(fs, "rename").mockRejectedValueOnce(new Error("simulated crash"));
+    await store.setSetting("windowBounds", { x: 0, y: 0, width: 1600, height: 980 })
+      .catch(() => {}); // expected to reject
+    renameSpy.mockRestore();
+
+    // settings.json must be unchanged — crash did not clobber prior values
+    const after = await fs.readFile(settingsPath, "utf8");
+    expect(after).toBe(before);
+
+    // And a fresh store instance can still read the prior webhook + theme toggle
+    const store2 = new BuildStore(dir);
+    await store2.init();
+    expect(await store2.getSetting("discord.webhookUrl"))
+      .toBe("https://discord.com/api/webhooks/123/abc");
+    expect(await store2.getSetting("appearance.themedBuildPages")).toBe(true);
+
+    // Leftover .tmp from the aborted rename shouldn't interfere with subsequent reads
+    void realRename;
+  });
 });
 
 // ---------------------------------------------------------------------------

@@ -140,7 +140,14 @@ class BuildStore {
   }
 
   async #writeJson(filePath, data) {
-    await fs.writeFile(filePath, JSON.stringify(data, null, 2), "utf8");
+    // Atomic write: tmp file + rename. Prevents settings.json (and other
+    // stores) from being truncated to empty if the process is interrupted
+    // mid-write — notably the fire-and-forget setSetting("windowBounds") on
+    // window close, which could otherwise wipe webhook URLs and theme toggles
+    // when the app quits before fs.writeFile finishes flushing.
+    const tmp = `${filePath}.${process.pid}.${Date.now()}.tmp`;
+    await fs.writeFile(tmp, JSON.stringify(data, null, 2), "utf8");
+    await fs.rename(tmp, filePath);
   }
 
   async migrateCompIdToCompIds() {
