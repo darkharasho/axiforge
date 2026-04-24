@@ -1,3 +1,15 @@
+## Version v0.6.15 — April 23, 2026
+
+### Bug Fixes
+
+- **Members can no longer accidentally wipe shared org content** — a member deleting a build or comp from their local library was silently propagating that deletion to the shared GitHub repo, which then removed it from the admin's library on the next sync. Deletes in shared folders are now blocked for non-owners, matching how moves already worked.
+- **Webhook URLs and "themed build pages" toggle no longer reset on quit** — settings were written non-atomically, so an in-flight save during app quit could leave `settings.json` empty and lose webhooks, the theme toggle, and other preferences. Settings are now written atomically and survive shutdown.
+- **"Re-authenticate" now shows the GitHub device code** — clicking re-authenticate while already signed in opened the flow but never displayed the code to enter, making re-auth impossible. The code panel now appears during any active login flow.
+
+### Other Changes
+
+- Added `scripts/recover-shared-library.mjs` — a read-only recovery tool that walks a shared-library repo's commit history and writes the last pre-deletion version of every removed build/comp to `./recovered/` for manual restore.
+
 ## Version v0.6.12 — April 20, 2026
 
 ### Bug Fixes
