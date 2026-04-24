@@ -1,3 +1,9 @@
+## Version v0.6.16 — April 24, 2026
+
+### Bug Fixes
+
+- **Shared folder no longer appears empty after reconnecting** — if local build/comp data was deleted while sync state was still intact, reconnecting to the org would silently skip re-downloading everything (the SHA hashes matched the remote, so the app assumed it was up to date). Connecting to the org now always forces a full re-sync, so all shared content is reliably restored.
+
 ## Version v0.6.15 — April 23, 2026
 
 ### Bug Fixes
