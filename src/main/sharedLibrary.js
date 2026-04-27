@@ -295,6 +295,15 @@ class SharedLibrary {
               summary: summarizeBuildChange(existingBuild, data),
               snapshot: existingBuild,
             }).catch((err) => console.warn("[history] shared addEntry failed:", err.message));
+          } else {
+            // New build arriving for the first time — record creation so folder history is visible.
+            this.historyStore.addEntry({
+              buildId: data.id,
+              authorLogin: syncAuthor,
+              source: "shared-sync",
+              summary: "Created",
+              snapshot: data,
+            }).catch((err) => console.warn("[history] shared addEntry failed:", err.message));
           }
         }
         const savedBuild = await this.buildStore.upsertBuild(data);

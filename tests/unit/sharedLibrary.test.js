@@ -219,6 +219,34 @@ describe("SharedLibrary — pushBuild", () => {
     const lib = new SharedLibrary({ buildStore, compStore, folderStore, syncStore });
     await expect(lib.pushBuild(build)).rejects.toThrow("Conflict");
   });
+
+  test("build in subfolder of shared folder: commits to root shared folder path (issue #263)", async () => {
+    // Shared folder at root; subfolder is a child; build lives in subfolder.
+    // pushBuild must walk up to the shared root and use its ID in the file path.
+    const rootFolder = await folderStore.upsertFolder({ id: "root", name: "Shared", shared: true, orgName: "test-org" });
+    await folderStore.upsertFolder({ id: "sub", name: "SubFolder", parentId: "root" });
+    const build = { id: "b1", title: "New Build", folderId: "sub" };
+    const buildStore = mockBuildStore([build]);
+    const compStore = mockCompStore([]);
+
+    githubApi.putSharedFile.mockResolvedValue({ sha: "new-sha" });
+
+    const lib = new SharedLibrary({ buildStore, compStore, folderStore, syncStore });
+    await lib.pushBuild(build);
+
+    // File path must use root shared folder ID, not the subfolder ID
+    expect(githubApi.putSharedFile).toHaveBeenCalledWith(
+      "fake-token", "test-org", "axibuilds-shared",
+      "folders/root/builds/b1.json",  // root folder path, not "folders/sub/..."
+      expect.any(String),
+      null,
+      "main",
+      expect.any(String),
+    );
+    // SHA tracked under root shared folder
+    const shas = await syncStore.getShas("root");
+    expect(shas["builds/b1"]).toBe("new-sha");
+  });
 });
 
 // ─── pullAll — concurrency guard ────────────────────────────────────────────
@@ -800,6 +828,78 @@ describe("SharedLibrary — _syncAuthor author attribution", () => {
 
     expect(historyStore.addEntry).toHaveBeenCalledWith(
       expect.objectContaining({ authorLogin: "test-org" })
+    );
+  });
+});
+
+// ─── pullFolder — history entries for new builds (issue #263) ────────────────
+
+describe("SharedLibrary — pullFolder history for new builds", () => {
+  let dir, syncStore, folderStore;
+  beforeEach(async () => {
+    dir = await makeTempDir();
+    syncStore = new SyncStore(dir);
+    folderStore = new FolderStore(dir);
+    await syncStore.init();
+    await folderStore.init();
+  });
+  afterEach(async () => cleanupDir(dir));
+
+  test("records a Created history entry when a new build is pulled for the first time", async () => {
+    // Build does NOT exist in local store — this is a brand-new pull
+    const buildStore = mockBuildStore([]);
+    const compStore = mockCompStore([]);
+    await folderStore.upsertFolder({ id: "f1", name: "Shared", shared: true, orgName: "test-org" });
+
+    const historyStore = { addEntry: jest.fn(async (e) => e) };
+    githubApi.getRepoTree.mockResolvedValue([
+      { path: "folders/f1/builds/b1.json", sha: "b1-sha" },
+    ]);
+    githubApi.getFileContents.mockResolvedValue({
+      content: JSON.stringify({ id: "b1", title: "Shared Build", _syncAuthor: "alice" }),
+      sha: "b1-sha",
+    });
+
+    const lib = new SharedLibrary({ buildStore, compStore, folderStore, syncStore, historyStore });
+    await lib.pullFolder("f1");
+
+    // Before fix: historyStore.addEntry is NOT called for new builds (existingBuild check guards it)
+    // After fix: a Created entry IS added
+    expect(historyStore.addEntry).toHaveBeenCalledWith(
+      expect.objectContaining({
+        buildId: "b1",
+        source: "shared-sync",
+        summary: "Created",
+        authorLogin: "alice",
+      })
+    );
+  });
+
+  test("does not double-record history when an existing build is updated (update path unchanged)", async () => {
+    // Build already in local store — update path should still use summarizeBuildChange
+    const buildStore = mockBuildStore([{ id: "b1", title: "Old Title", folderId: "f1" }]);
+    const compStore = mockCompStore([]);
+    await folderStore.upsertFolder({ id: "f1", name: "Shared", shared: true, orgName: "test-org" });
+
+    const historyStore = { addEntry: jest.fn(async (e) => e) };
+    githubApi.getRepoTree.mockResolvedValue([
+      { path: "folders/f1/builds/b1.json", sha: "b1-sha" },
+    ]);
+    githubApi.getFileContents.mockResolvedValue({
+      content: JSON.stringify({ id: "b1", title: "New Title", folderId: "f1", _syncAuthor: "bob" }),
+      sha: "b1-sha",
+    });
+
+    const lib = new SharedLibrary({ buildStore, compStore, folderStore, syncStore, historyStore });
+    await lib.pullFolder("f1");
+
+    // Exactly one history call (the update entry, not a Created entry)
+    expect(historyStore.addEntry).toHaveBeenCalledTimes(1);
+    expect(historyStore.addEntry).toHaveBeenCalledWith(
+      expect.objectContaining({ buildId: "b1", source: "shared-sync", authorLogin: "bob" })
+    );
+    expect(historyStore.addEntry).not.toHaveBeenCalledWith(
+      expect.objectContaining({ summary: "Created" })
     );
   });
 });
