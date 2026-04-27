@@ -94,6 +94,16 @@ describe("SPA render-notes.js — catalogNotesMentions integration", () => {
   });
 });
 
+describe("SPA render-notes.js — cross-profession trait/skill mentions", () => {
+  test("merges catalogNotesTraits into traitById lookup", () => {
+    expect(renderNotesSrc).toMatch(/catalogNotesTraits/);
+  });
+
+  test("merges catalogNotesSkills into skillById lookup", () => {
+    expect(renderNotesSrc).toMatch(/catalogNotesSkills/);
+  });
+});
+
 describe("SPA render-build.js — catalogNotesMentions integration", () => {
   test("merges catalogNotesMentions into state.upgradeCatalog", () => {
     expect(renderBuildSrc).toMatch(/catalogNotesMentions/);

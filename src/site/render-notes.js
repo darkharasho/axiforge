@@ -30,8 +30,12 @@ export function renderNotes(build) {
   const skillById = new Map([
     ...(build.catalogSkills || []).map((s) => [s.id, s]),
     ...(build.catalogWeaponSkills || []).map((s) => [s.id, s]),
+    ...(build.catalogNotesSkills || []).map((s) => [s.id, s]),
   ]);
-  const traitById = new Map((build.catalogTraits || []).map((t) => [t.id, t]));
+  const traitById = new Map([
+    ...(build.catalogTraits || []).map((t) => [t.id, t]),
+    ...(build.catalogNotesTraits || []).map((t) => [t.id, t]),
+  ]);
   const runeById = new Map(Object.values(build.equipmentDisplay?.runes || {}).filter(Boolean).map((r) => [r.id, r]));
   const sigilById = new Map(Object.values(build.equipmentDisplay?.sigils || {}).flat().filter(Boolean).map((s) => [s.id, s]));
   const infusionById = new Map(Object.values(build.equipmentDisplay?.infusions || {}).flat().filter(Boolean).map((i) => [i.id, i]));

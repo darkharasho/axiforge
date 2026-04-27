@@ -36,7 +36,7 @@ const {
 const { getProfessionList, getProfessionCatalog, getUpgradeCatalog, getWikiSummary, getWikiRelatedData, initDiskCache, clearDiskCache, initWikiClient, clearCatalogCache } = require("./gw2Data");
 const { slugifyBuildName, generateFileId, generateEncryptionKey, getDefaultBuildName } = require("./buildEncryption");
 const { buildSpaBundle, buildEncryptedBuildFile, buildEncryptedCompFile, buildRedirectFile } = require("./siteBundle");
-const { serializeForPublish } = require("./buildPublish");
+const { serializeForPublish, loadCrossProfessionCatalogs } = require("./buildPublish");
 const { serializeCompForPublish, getCompPublishBuildIds } = require("./compPublish");
 const { initAutoUpdate } = require("./autoUpdate");
 const { registerAxicodeFileHandlers } = require("./axicodeFile");
@@ -891,7 +891,8 @@ app.whenReady().then(async () => {
         getProfessionCatalog(build.profession, "en"),
         getUpgradeCatalog("en"),
       ]);
-      enrichedBuild = serializeForPublish(build, catalog, upgradeCatalog);
+      const extraCatalogs = await loadCrossProfessionCatalogs(build.notes, build.profession, getProfessionCatalog);
+      enrichedBuild = serializeForPublish(build, catalog, upgradeCatalog, extraCatalogs);
     } catch (err) {
       throw new Error(
         `Failed to enrich build data: ${err?.message || err}. ` +
@@ -938,7 +939,8 @@ app.whenReady().then(async () => {
                 getProfessionCatalog(cb.profession, "en"),
                 getUpgradeCatalog("en"),
               ]);
-              enriched = serializeForPublish(cb, cat, upCat);
+              const cbExtras = await loadCrossProfessionCatalogs(cb.notes, cb.profession, getProfessionCatalog);
+              enriched = serializeForPublish(cb, cat, upCat, cbExtras);
             } catch {
               continue; // Skip builds that fail to enrich — don't block the publish
             }
@@ -1082,7 +1084,8 @@ app.whenReady().then(async () => {
           getProfessionCatalog(build.profession, "en"),
           getUpgradeCatalog("en"),
         ]);
-        enrichedBuild = serializeForPublish(build, catalog, upgradeCatalog);
+        const extraCatalogs = await loadCrossProfessionCatalogs(build.notes, build.profession, getProfessionCatalog);
+        enrichedBuild = serializeForPublish(build, catalog, upgradeCatalog, extraCatalogs);
       } catch (err) {
         throw new Error(
           `Failed to enrich build "${build.title || build.profession}": ${err?.message || err}. ` +

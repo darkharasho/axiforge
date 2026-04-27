@@ -347,6 +347,51 @@ function normalizeNotesMentions(notes, upgradeCatalog) {
   });
 }
 
+function resolveCrossProfessionMentions(notes, ownCatalog, extraCatalogs) {
+  if (!notes || !Array.isArray(extraCatalogs) || !extraCatalogs.length) {
+    return { traits: [], skills: [] };
+  }
+
+  const ownTraitIds = new Set((ownCatalog?.traits || []).map(t => t.id));
+  const ownSkillIds = new Set([
+    ...((ownCatalog?.skills || []).map(s => s.id)),
+    ...((ownCatalog?.weaponSkills || []).map(s => s.id)),
+  ]);
+
+  const wantedTraits = new Set();
+  const wantedSkills = new Set();
+  const mentionRegex = /@\[(\w+):(\d+):[^\]]+\]/g;
+  let m;
+  while ((m = mentionRegex.exec(notes)) !== null) {
+    const id = Number(m[2]);
+    if (m[1] === "trait" && !ownTraitIds.has(id)) wantedTraits.add(id);
+    else if (m[1] === "skill" && !ownSkillIds.has(id)) wantedSkills.add(id);
+  }
+
+  if (!wantedTraits.size && !wantedSkills.size) return { traits: [], skills: [] };
+
+  const traits = [];
+  const skills = [];
+  const seenT = new Set();
+  const seenS = new Set();
+  for (const cat of extraCatalogs) {
+    if (!cat) continue;
+    for (const t of cat.traits || []) {
+      if (wantedTraits.has(t.id) && !seenT.has(t.id)) {
+        traits.push(t);
+        seenT.add(t.id);
+      }
+    }
+    for (const s of [...(cat.skills || []), ...(cat.weaponSkills || [])]) {
+      if (wantedSkills.has(s.id) && !seenS.has(s.id)) {
+        skills.push(s);
+        seenS.add(s.id);
+      }
+    }
+  }
+  return { traits, skills };
+}
+
 function resolveNotesMentions(notes, upgradeCatalog, equipmentDisplay) {
   if (!notes || !upgradeCatalog) return [];
 
@@ -430,7 +475,7 @@ function resolveNotesMentions(notes, upgradeCatalog, equipmentDisplay) {
  * @param {object|null} upgradeCatalog - Catalog returned by getUpgradeCatalog(), or null
  * @returns {object} - New object with all build fields plus enrichment fields
  */
-function serializeForPublish(build, catalog, upgradeCatalog) {
+function serializeForPublish(build, catalog, upgradeCatalog, extraCatalogs = []) {
   const weapons = build.equipment?.weapons || {};
   const professionWeapons = catalog?.professionWeapons || {};
   const weaponSkillsArray = catalog?.weaponSkills || [];
@@ -710,7 +755,32 @@ function serializeForPublish(build, catalog, upgradeCatalog) {
     // Upgrade items referenced in notes mentions that aren't already in equipmentDisplay.
     // Allows the SPA to resolve @[relic:id:name] etc. for items not currently equipped.
     catalogNotesMentions: resolveNotesMentions(normalizedNotes, upgradeCatalog, equipmentDisplay),
+    // Cross-profession trait/skill mentions in notes — e.g. a Reaper build
+    // referencing a Guardian trait. Merged into the SPA's id lookups at render time.
+    ...(() => {
+      const x = resolveCrossProfessionMentions(normalizedNotes, catalog, extraCatalogs);
+      return {
+        catalogNotesTraits: x.traits,
+        catalogNotesSkills: x.skills,
+      };
+    })(),
   };
 }
 
-module.exports = { serializeForPublish };
+const PROFESSION_IDS = [
+  "Warrior", "Engineer", "Guardian", "Ranger", "Thief",
+  "Elementalist", "Mesmer", "Necromancer", "Revenant",
+];
+
+// Returns the foreign profession catalogs needed to resolve cross-profession
+// trait/skill mentions in a build's notes. Returns [] if notes contain no such
+// mentions, so the common case (no @[trait:]/@[skill:] in notes) avoids the
+// extra catalog loads.
+async function loadCrossProfessionCatalogs(notes, ownProfessionId, getProfessionCatalog, lang = "en") {
+  if (!notes || !/@\[(?:trait|skill):\d+:/.test(notes)) return [];
+  const others = PROFESSION_IDS.filter(p => p !== ownProfessionId);
+  const results = await Promise.allSettled(others.map(p => getProfessionCatalog(p, lang)));
+  return results.filter(r => r.status === "fulfilled").map(r => r.value);
+}
+
+module.exports = { serializeForPublish, loadCrossProfessionCatalogs };

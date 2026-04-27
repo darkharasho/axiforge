@@ -1,6 +1,6 @@
 "use strict";
 
-const { serializeForPublish } = require("../../src/main/buildPublish");
+const { serializeForPublish, loadCrossProfessionCatalogs } = require("../../src/main/buildPublish");
 
 function makeMockBuild() {
   return {
@@ -632,5 +632,89 @@ describe("serializeForPublish — axicode _traitChoices resolution", () => {
     expect(result.specializations[2].majorChoices[1]).toBe(2101);
     expect(result.specializations[2].majorChoices[2]).toBe(2076);
     expect(result.specializations[2].majorChoices[3]).toBe(2105);
+  });
+});
+
+describe("serializeForPublish — cross-profession notes mentions", () => {
+  // A Guardian trait (Shattered Aegis = 637) referenced from a Reaper build's
+  // notes. Without extra catalogs, the SPA can't resolve the icon/tooltip.
+  const guardianCatalog = {
+    professionWeapons: {},
+    weaponSkills: [],
+    skills: [{ id: 9145, name: "Shield of Wrath", icon: "sow.png" }],
+    traits: [{ id: 637, name: "Shattered Aegis", icon: "sa.png" }],
+    legends: [],
+    pets: [],
+    specializations: [],
+  };
+
+  test("emits empty catalogNotesTraits/Skills when notes have no cross-profession mentions", () => {
+    const build = { ...makeMockBuild(), notes: "no mentions here" };
+    const result = serializeForPublish(build, makeMockCatalog(), null, [guardianCatalog]);
+    expect(result.catalogNotesTraits).toEqual([]);
+    expect(result.catalogNotesSkills).toEqual([]);
+  });
+
+  test("does not duplicate a trait already present in own catalog", () => {
+    const ownCatalog = { ...makeMockCatalog(), traits: [{ id: 637, name: "Already Here", icon: "x.png" }] };
+    const build = { ...makeMockBuild(), notes: "see @[trait:637:Shattered Aegis] for details" };
+    const result = serializeForPublish(build, ownCatalog, null, [guardianCatalog]);
+    expect(result.catalogNotesTraits).toEqual([]);
+  });
+
+  test("resolves a foreign trait id from extraCatalogs into catalogNotesTraits", () => {
+    const build = { ...makeMockBuild(), notes: "watch out for @[trait:637:Shattered Aegis]" };
+    const result = serializeForPublish(build, makeMockCatalog(), null, [guardianCatalog]);
+    expect(result.catalogNotesTraits).toEqual([
+      { id: 637, name: "Shattered Aegis", icon: "sa.png" },
+    ]);
+  });
+
+  test("resolves a foreign skill id from extraCatalogs into catalogNotesSkills", () => {
+    const build = { ...makeMockBuild(), notes: "they may use @[skill:9145:Shield of Wrath] here" };
+    const result = serializeForPublish(build, makeMockCatalog(), null, [guardianCatalog]);
+    expect(result.catalogNotesSkills).toEqual([
+      { id: 9145, name: "Shield of Wrath", icon: "sow.png" },
+    ]);
+  });
+
+  test("ignores trait ids that aren't found in any catalog", () => {
+    const build = { ...makeMockBuild(), notes: "what is @[trait:999999:Unknown]" };
+    const result = serializeForPublish(build, makeMockCatalog(), null, [guardianCatalog]);
+    expect(result.catalogNotesTraits).toEqual([]);
+  });
+});
+
+describe("loadCrossProfessionCatalogs", () => {
+  test("returns [] for notes with no trait/skill mentions (skips fetches)", async () => {
+    const fetcher = jest.fn();
+    const result = await loadCrossProfessionCatalogs("just text", "Necromancer", fetcher);
+    expect(result).toEqual([]);
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  test("loads the 8 other profession catalogs when notes contain @[trait:]", async () => {
+    const fetcher = jest.fn().mockImplementation((p) => Promise.resolve({ profession: p }));
+    const result = await loadCrossProfessionCatalogs(
+      "see @[trait:637:Shattered Aegis]",
+      "Necromancer",
+      fetcher,
+    );
+    expect(fetcher).toHaveBeenCalledTimes(8);
+    expect(fetcher.mock.calls.map((c) => c[0])).not.toContain("Necromancer");
+    expect(result).toHaveLength(8);
+  });
+
+  test("tolerates failed catalog loads and returns the rest", async () => {
+    const fetcher = jest.fn().mockImplementation((p) =>
+      p === "Guardian" ? Promise.reject(new Error("network")) : Promise.resolve({ profession: p })
+    );
+    const result = await loadCrossProfessionCatalogs(
+      "see @[skill:9145:Shield of Wrath]",
+      "Necromancer",
+      fetcher,
+    );
+    expect(result).toHaveLength(7);
+    expect(result.map((c) => c.profession)).not.toContain("Guardian");
   });
 });
