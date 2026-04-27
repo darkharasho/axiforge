@@ -1,3 +1,13 @@
+## Version v0.6.20 — April 27, 2026
+
+### Bug Fixes
+
+- **Editing a build inside a folder no longer moves it to the root.** Saving edits now preserves the build's folder location.
+- **Subfolders inside shared folders now work correctly.** The rename input is reachable, new subfolders are created in the right parent (not the root), and renaming a subfolder no longer fails.
+- **New builds added to shared subfolders are now picked up by sync.** Previously the sync indicator showed a checkmark but no commit was made; the folder history now reflects the new build.
+- **Subfolders no longer drift out of their shared parent folder** after sync runs.
+- **Dazzling Hammer (Radiant Forge 2) shows the correct boon in WvW.** It no longer incorrectly displays Alacrity in WvW context.
+
 ## Version v0.6.19 — April 27, 2026
 
 ### New Features
