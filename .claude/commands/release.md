@@ -66,19 +66,13 @@ git push
 git push --tags
 ```
 
-## Step 5 — Create draft release
+## Step 5 — Report
 
-```bash
-gh release create v{version} \
-  --repo darkharasho/axiforge \
-  --title "v{version}" \
-  --draft \
-  --notes "{release_notes}"
-```
+Do NOT create a GitHub release here. The CI workflow handles that:
+- electron-builder creates the draft release (named `{version}` without the `v` prefix) when it uploads artifacts.
+- The `publish` job in `.github/workflows/release.yml` extracts the latest section from `RELEASE_NOTES.md`, writes it to that draft, and promotes it.
 
-Use a heredoc for the notes body to preserve formatting.
-
-## Step 6 — Report
+Creating a draft from this skill caused a name collision (this skill used `v{version}`, electron-builder uses `{version}`), producing duplicate releases and an empty published one.
 
 Tell the user:
 1. The version that was released
