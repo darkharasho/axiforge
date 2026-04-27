@@ -1,3 +1,9 @@
+## Version v0.6.19 — April 27, 2026
+
+### New Features
+
+- **"What's New" modal on update** — after installing a new version, axiforge now shows a release-notes summary covering everything since the last version you saw. Right-click the version label in the title bar to re-open the latest notes any time.
+
 ## Version v0.6.18 — April 26, 2026
 
 ### Bug Fixes
