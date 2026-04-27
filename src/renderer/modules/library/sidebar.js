@@ -411,8 +411,12 @@ export function insertInlineInput(afterEl, defaultValue = "", options = {}) {
     const input = row.querySelector("input");
     input.value = defaultValue;
 
-    input.focus();
-    if (defaultValue) input.select();
+    // Defer focus to next tick so any pending context-menu close event (which
+    // removes the menu element and may briefly redirect focus) has already fired.
+    setTimeout(() => {
+      input.focus();
+      if (defaultValue) input.select();
+    }, 0);
 
     let resolved = false;
     function finish(value) {
