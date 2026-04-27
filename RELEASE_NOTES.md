@@ -1,3 +1,9 @@
+## Version v0.6.18 — April 26, 2026
+
+### Bug Fixes
+
+- **Cross-profession trait and skill mentions now render correctly in published builds** — when a build's notes referenced a trait or skill from a different profession (e.g. a Reaper build mentioning Guardian's Shattered Aegis), the chip on the published page rendered without an icon or hover tooltip. Publishing now bakes the needed cross-profession entries into the build payload so these references resolve fully on the SPA.
+
 ## Version v0.6.17 — April 24, 2026
 
 ### Bug Fixes
