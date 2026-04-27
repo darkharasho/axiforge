@@ -50,6 +50,21 @@ function checkWithTimeout() {
 function initAutoUpdate(win) {
   mainWindow = win;
 
+  // Dev fake-update tester — simulate the update lifecycle so the titlebar UI
+  // and What's New modal can be exercised without a real release.
+  // Enable with `npm run dev:fake-update` (sets AXIFORGE_FAKE_UPDATE=1).
+  if (!app.isPackaged && process.env.AXIFORGE_FAKE_UPDATE) {
+    const fakeVersion = "99.0.0";
+    const realVersion = app.getVersion();
+    ipcMain.handle("updater:get-version", () => realVersion);
+    ipcMain.on("updater:check", () => runFakeUpdateSequence(fakeVersion));
+    ipcMain.on("updater:restart", () => {
+      send("update-not-available", { version: realVersion });
+    });
+    setTimeout(() => runFakeUpdateSequence(fakeVersion), CHECK_DELAY_MS);
+    return;
+  }
+
   // Dev mode — skip entirely, send fake "not available"
   if (!app.isPackaged) {
     send("update-not-available", { version: app.getVersion() });
@@ -122,6 +137,19 @@ function initAutoUpdate(win) {
   setTimeout(() => {
     checkWithTimeout().catch(() => {});
   }, CHECK_DELAY_MS);
+}
+
+function runFakeUpdateSequence(fakeVersion) {
+  send("update-available", { version: fakeVersion, releaseDate: new Date().toISOString() });
+  let percent = 0;
+  const tick = setInterval(() => {
+    percent = Math.min(100, percent + 12);
+    send("download-progress", { percent, transferred: percent * 1024, total: 100 * 1024 });
+    if (percent >= 100) {
+      clearInterval(tick);
+      setTimeout(() => send("update-downloaded", { version: fakeVersion }), 300);
+    }
+  }, 300);
 }
 
 module.exports = { initAutoUpdate };

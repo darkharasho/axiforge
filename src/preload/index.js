@@ -85,6 +85,8 @@ contextBridge.exposeInMainWorld("desktopApi", {
   getBuildDiscordCopyText: (buildId) => ipcRenderer.invoke("discord:build-copy-text", buildId),
   generateCompPlaintext: (compId) => ipcRenderer.invoke("comps:generate-plaintext", compId),
   getAppVersion: () => ipcRenderer.invoke("updater:get-version"),
+  getWhatsNew: () => ipcRenderer.invoke("app:get-whats-new"),
+  setLastSeenVersion: (version) => ipcRenderer.invoke("app:set-last-seen-version", version),
   checkForUpdates: () => ipcRenderer.send("updater:check"),
   restartApp: () => ipcRenderer.send("updater:restart"),
   onUpdateAvailable: (cb) => {

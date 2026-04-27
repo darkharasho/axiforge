@@ -44,6 +44,7 @@ import {
 import { resolveEntityFacts } from "./modules/detail-panel.js";
 import { resetWikiResolution } from "./modules/wiki-updates.js";
 import { initWikiModal, openWikiModal } from "./modules/wiki-modal.js";
+import { initWhatsNewModal, maybeAutoOpenWhatsNew } from "./modules/whats-new-modal.js";
 import { initDetailModal, openDetailModal } from "./modules/detail-modal.js";
 import { initConfirmModal } from "./modules/confirm-modal.js";
 import { initImportConflictModal } from "./modules/import-conflict-modal.js";
@@ -207,6 +208,7 @@ initDetailModal();
 initConfirmModal();
 initImportConflictModal();
 initSettingsModal();
+initWhatsNewModal();
 initDetailPanel(
   { detailHost: el.detailHost, hoverPreview: el.hoverPreview, expandBtn: el.detailExpandBtn },
   {
@@ -321,7 +323,9 @@ initSettingsCallbacks({
 (async function initUpdateUI() {
   if (typeof window === "undefined" || !window.desktopApi?.getAppVersion) return;
 
-  if (import.meta.env.DEV) {
+  const fakeUpdate = import.meta.env.VITE_AXIFORGE_FAKE_UPDATE === "1";
+
+  if (import.meta.env.DEV && !fakeUpdate) {
     if (el.updateVersionLabel) {
       el.updateVersionLabel.textContent = "dev";
       el.updateVersionLabel.classList.add("titlebar__dev-badge");
@@ -405,6 +409,10 @@ initSettingsCallbacks({
       }, 10000);
     });
   }
+
+  // Auto-open What's New modal when the version differs from lastSeenVersion.
+  // Right-click the version label to re-open the latest notes manually.
+  maybeAutoOpenWhatsNew(el.updateVersionLabel).catch(() => {});
 
   if (el.updateRestartBtn) {
     el.updateRestartBtn.addEventListener("click", () => {

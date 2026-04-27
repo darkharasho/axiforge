@@ -1216,6 +1216,73 @@ app.whenReady().then(async () => {
   ipcMain.handle("settings:get", async (_e, key) => store.getSetting(key));
   ipcMain.handle("settings:set", async (_e, key, value) => store.setSetting(key, value));
 
+  ipcMain.handle("app:get-whats-new", async () => {
+    const fs = require("node:fs");
+    const path = require("node:path");
+    const {
+      extractReleaseNotesRangeFromFile,
+      fetchGithubReleaseNotesRange,
+    } = require("./versionUtils");
+
+    const version = app.getVersion();
+    let lastSeenVersion = (await store.getSetting("lastSeenVersion")) || null;
+
+    // Dev fake-update tester: simulate having last seen the release
+    // immediately before the current one, so the modal shows only the
+    // latest section's delta — exactly what a real returning user sees
+    // after a single version bump.
+    if (process.env.AXIFORGE_FAKE_UPDATE) {
+      const fs = require("node:fs");
+      const path = require("node:path");
+      const { parseVersion, compareVersion } = require("./versionUtils");
+      try {
+        const raw = fs.readFileSync(path.join(process.cwd(), "RELEASE_NOTES.md"), "utf8");
+        const versions = [...raw.matchAll(/^##\s*Version\s+v?([0-9]+\.[0-9]+\.[0-9]+)/gm)]
+          .map((m) => m[1])
+          .map((v) => ({ str: v, parsed: parseVersion(v) }))
+          .filter((v) => v.parsed)
+          .sort((a, b) => compareVersion(b.parsed, a.parsed));
+        // Pick a synthetic lastSeenVersion a few releases back so the
+        // tester exercises the multi-version delta path. Override with
+        // AXIFORGE_FAKE_LAST_SEEN to pin a specific version (e.g. "0.6.15"),
+        // or set AXIFORGE_FAKE_GAP=N to control how many releases back.
+        const current = parseVersion(version);
+        const older = versions.filter((v) => current && compareVersion(v.parsed, current) < 0);
+        if (process.env.AXIFORGE_FAKE_LAST_SEEN) {
+          lastSeenVersion = process.env.AXIFORGE_FAKE_LAST_SEEN;
+        } else {
+          const gap = Math.max(1, Number(process.env.AXIFORGE_FAKE_GAP) || 3);
+          const target = older[Math.min(gap - 1, older.length - 1)];
+          lastSeenVersion = target ? target.str : null;
+        }
+      } catch { /* fall through to real lastSeenVersion */ }
+    }
+
+    let releaseNotes = await fetchGithubReleaseNotesRange(version, lastSeenVersion);
+    if (!releaseNotes) {
+      const basePath = app.isPackaged ? app.getAppPath() : process.cwd();
+      const notesPath = path.join(basePath, "RELEASE_NOTES.md");
+      try {
+        const rawNotes = fs.readFileSync(notesPath, "utf8");
+        releaseNotes = extractReleaseNotesRangeFromFile(rawNotes, version, lastSeenVersion);
+        if (!releaseNotes) {
+          // Fall back to the most-recent section so manual "What's New" never comes up empty
+          const sections = rawNotes.split(/\n(?=##\s*Version\s+v)/);
+          releaseNotes = (sections[0] || "").trim() || null;
+        }
+      } catch (err) {
+        console.warn("[Main] Failed to read RELEASE_NOTES.md:", err?.message || err);
+      }
+    }
+
+    return { version, lastSeenVersion, releaseNotes };
+  });
+
+  ipcMain.handle("app:set-last-seen-version", async (_e, version) => {
+    if (process.env.AXIFORGE_FAKE_UPDATE) return;
+    await store.setSetting("lastSeenVersion", version);
+  });
+
   ipcMain.handle("discord:share-comp", async (_e, compId) => {
     const { shareCompToDiscord } = require("./discordWebhook");
 

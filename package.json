@@ -26,7 +26,8 @@
       "public/**/*",
       "lib/**/*",
       "packages/**/*",
-      "package.json"
+      "package.json",
+      "RELEASE_NOTES.md"
     ],
     "extraResources": [
       {
@@ -54,6 +55,7 @@
     "start": "electron .",
     "dev": "npm run build:site && concurrently -k \"vite\" \"vite --config src/site/vite.config.js --port 3000\" \"wait-on tcp:5173 && APP_PROFILE=dev VITE_DEV_SERVER_URL=http://localhost:5173 electronmon .\"",
     "dev:clean": "node scripts/dev-clean.mjs",
+    "dev:fake-update": "npm run build:site && concurrently -k \"VITE_AXIFORGE_FAKE_UPDATE=1 vite\" \"vite --config src/site/vite.config.js --port 3000\" \"wait-on tcp:5173 && APP_PROFILE=dev AXIFORGE_FAKE_UPDATE=1 VITE_DEV_SERVER_URL=http://localhost:5173 electronmon .\"",
     "build:site": "vite build --config src/site/vite.config.js",
     "build:renderer": "vite build",
     "test": "jest",
