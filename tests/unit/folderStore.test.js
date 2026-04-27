@@ -259,3 +259,39 @@ describe("FolderStore — shared folder fields", () => {
     expect(folder.id).toBe("custom-id-123");
   });
 });
+
+// ---------------------------------------------------------------------------
+// FolderStore — concurrent write safety
+// ---------------------------------------------------------------------------
+
+describe("FolderStore — concurrent write safety", () => {
+  let store, dir;
+  beforeEach(async () => ({ store, dir } = await makeTempStore()));
+  afterEach(async () => cleanupDir(dir));
+
+  test("concurrent upsertFolder calls do not lose subfolder changes", async () => {
+    // Simulate the race between pullAll updating the root shared folder
+    // (lastSyncedAt) and the user creating a subfolder via folders:save.
+    // Without write serialization the last write wins and the subfolder
+    // created by the IPC handler is silently dropped.
+    await store.upsertFolder({
+      id: "shared-root",
+      name: "Shared Root",
+      shared: true,
+      orgName: "test-org",
+    });
+
+    // Fire N concurrent subfolder creations. Without a write queue each call
+    // reads the same initial state and the last write clobbers the rest.
+    const N = 20;
+    await Promise.all(
+      Array.from({ length: N }, (_, i) =>
+        store.upsertFolder({ name: `Sub${i}`, parentId: "shared-root" }),
+      ),
+    );
+
+    const folders = await store.listFolders();
+    const subs = folders.filter((f) => f.parentId === "shared-root");
+    expect(subs).toHaveLength(N);
+  });
+});
