@@ -1,3 +1,9 @@
+## Version v0.6.21 — April 30, 2026
+
+### Bug Fixes
+
+- **Fierce Blow tooltip now shows bonus damage to controlled or defiant foes.** The conditional damage variant was being collapsed against the base damage line and hidden from the tooltip.
+
 ## Version v0.6.20 — April 27, 2026
 
 ### Bug Fixes
