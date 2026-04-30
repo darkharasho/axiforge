@@ -64,6 +64,23 @@ describe("mapWikiFactToApiFact", () => {
     });
   });
 
+  test("damage with alt label uses alt as text (Fierce Blow bonus)", () => {
+    // {{skill fact|Damage|alt=Damage to Controlled Foes|coefficient=2.7|...}}
+    const fact = mapWikiFactToApiFact(
+      "damage",
+      [],
+      { alt: "Damage to Controlled Foes", coefficient: "2.7" },
+      false,
+      false
+    );
+    expect(fact).toEqual({
+      type: "Damage",
+      text: "Damage to Controlled Foes",
+      dmg_multiplier: 2.7,
+      hit_count: 1,
+    });
+  });
+
   test("damage with coefficient and hits", () => {
     const fact = mapWikiFactToApiFact(
       "damage",

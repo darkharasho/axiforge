@@ -199,9 +199,13 @@ function mapWikiFactToApiFact(factType, positional, params, isWvw, isUniversal) 
     const rawCoefficient = params.coefficient || positional[0] || "0";
     const coefficient = parseFloat(stripWikiMarkup(rawCoefficient));
     const hits = parseInt(stripWikiMarkup(params.hits) || "1", 10);
+    // `alt=` carries the conditional damage label (e.g. "Damage to Controlled Foes").
+    // Without this, the conditional variant collapses with the base "Damage" fact
+    // during dedup, hiding bonus-damage values from the tooltip.
+    const label = params.alt ? stripWikiMarkup(params.alt).trim() : "Damage";
     return {
       type: "Damage",
-      text: "Damage",
+      text: label,
       dmg_multiplier: coefficient,
       hit_count: hits,
     };
