@@ -1,3 +1,11 @@
+## Version v0.6.22 — April 30, 2026
+
+### Bug Fixes
+
+- **Shift+click to range-select inside a subfolder no longer kicks builds out to the main library.** The destination folder is now resolved from the current view context, so an in-place selection click can't accidentally move the build to root.
+- **Creating a new folder inside a shared folder no longer drops the new folder back to the root.** Same root cause as above — the freshly-created folder's parent is preserved.
+- **Auto-sync no longer interrupts a rename in progress.** Renaming a build right after pasting (or any other inline edit) used to get torn down when the background sync finished; the active inline input is now preserved while sync events arrive.
+
 ## Version v0.6.21 — April 30, 2026
 
 ### Bug Fixes
