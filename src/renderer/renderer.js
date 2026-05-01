@@ -74,6 +74,12 @@ function _findRootSharedFolderInState(folderId) {
   return null;
 }
 
+// True while the user is editing an inline rename / new-folder input.
+// Used to suppress sync-driven re-renders that would tear down the active input.
+function _inlineEditingActive() {
+  return !!document.querySelector(".lib-inline-input");
+}
+
 // Inline SVGs for sync indicators (no external imports needed)
 const _syncSpinnerSvg = `<svg class="sync-spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 2a10 10 0 0 1 10 10"/></svg>`;
 const _syncCheckSvg = `<svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd"/></svg>`;
@@ -514,8 +520,13 @@ async function init() {
             if (idx >= 0) state.comps[idx] = data.item;
             else state.comps.push(data.item);
           }
-          // Re-render the visible page so the change is reflected immediately
-          if (state.activePage === "library") renderLibrary();
+          // Re-render the visible page so the change is reflected immediately.
+          // Skip while an inline input is focused — the rename/new-folder flow
+          // re-renders on its own commit, and re-rendering now would tear down
+          // the active input mid-edit.
+          if (_inlineEditingActive()) {
+            // no-op: state is already updated; visible re-render deferred to commit
+          } else if (state.activePage === "library") renderLibrary();
           else if (state.activePage === "comps") renderComps();
           // If this build is currently open in the editor, hot-reload it
           // so fields like notes are up-to-date without requiring a reopen.
@@ -573,7 +584,10 @@ async function init() {
         state.folders = folders;
         state.builds = builds;
         state.comps = comps;
-        if (state.activePage === "library") renderLibrary();
+        if (_inlineEditingActive()) {
+          // Inline rename/new-folder in progress — skip the destructive re-render.
+          // The inline input's commit/cancel handler will renderLibrary() itself.
+        } else if (state.activePage === "library") renderLibrary();
         else if (state.activePage === "comps") renderComps();
       }).catch(() => {});
       setTimeout(() => {

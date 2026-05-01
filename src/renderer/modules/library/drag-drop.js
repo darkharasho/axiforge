@@ -47,6 +47,19 @@ function _blockedBySharedOwnership(srcFolderId, destFolderId) {
   return !_isOrgOwner();
 }
 
+// Resolve the semantic folder ID a sortable container belongs to.
+// In table view, build/comp/folder lists are nested under [data-folder-id].
+// In flat views (list/grid/icon/columns), the container has no folder ancestor —
+// it represents the current folder context, so use state.currentFolder.id.
+// Without this fallback, an in-place sortable end-event resolves the destination
+// to root and silently moves items out of any subfolder (custom or shared).
+function _containerFolderId(container) {
+  const folderEl = container?.closest?.("[data-folder-id]");
+  if (folderEl) return folderEl.dataset.folderId;
+  if (state.currentFolder?.type === "custom") return state.currentFolder.id;
+  return null;
+}
+
 function _findSharedRoot(folderId) {
   let current = state.folders.find((f) => f.id === folderId);
   while (current) {
@@ -123,8 +136,7 @@ export function wireDragDropEvents() {
       }
 
       const dropContainer = evt.to;
-      const parentLi = dropContainer.closest("[data-folder-id]");
-      const newParentId = parentLi?.dataset.folderId || null;
+      const newParentId = _containerFolderId(dropContainer);
       const folder = state.folders?.find((f) => f.id === draggedFolderId);
       const oldParentId = folder?.parentId || null;
 
@@ -174,8 +186,7 @@ export function wireDragDropEvents() {
       }
 
       const dropContainer = evt.to;
-      const folderLi = dropContainer.closest("[data-folder-id]");
-      const newFolderId = folderLi?.dataset.folderId || null;
+      const newFolderId = _containerFolderId(dropContainer);
       const oldFolderId = compSrcFolderId;
 
       if (newFolderId !== oldFolderId) {
@@ -272,8 +283,7 @@ export function wireDragDropEvents() {
 
     // Normal SortableJS reorder/move logic
     const dropContainer = evt.to;
-    const folderLi = dropContainer.closest("[data-folder-id]");
-    const newFolderId = folderLi?.dataset.folderId || null;
+    const newFolderId = _containerFolderId(dropContainer);
 
     const build = state.builds.find((b) => b.id === buildId);
     const oldFolderId = build?.folderId || null;
