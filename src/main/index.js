@@ -39,7 +39,6 @@ const { buildSpaBundle, buildEncryptedBuildFile, buildEncryptedCompFile, buildRe
 const { serializeForPublish, loadCrossProfessionCatalogs } = require("./buildPublish");
 const { serializeCompForPublish, getCompPublishBuildIds } = require("./compPublish");
 const { initAutoUpdate } = require("./autoUpdate");
-const { refreshLinuxDesktopEntry } = require("./desktopIntegration");
 const { registerAxicodeFileHandlers } = require("./axicodeFile");
 
 const PROFESSION_THEME_IDS = {
@@ -244,7 +243,6 @@ async function migrateCompGameModes(buildStore, compStore) {
 }
 
 app.whenReady().then(async () => {
-  refreshLinuxDesktopEntry();
   await store.init();
   await store.migrateCompIdToCompIds();
   await folderStore.init();
