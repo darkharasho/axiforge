@@ -1,6 +1,6 @@
 // Shared build display helpers — extracted from comp-detail.js for reuse.
 
-import { getProfessionSvg } from "./profession-icons.js";
+import { getProfessionSvg, getProfessionSvgColored } from "./profession-icons.js";
 
 export function getEliteSpecName(build) {
   if (!build.specializations) return null;
@@ -15,6 +15,13 @@ export function getSpecIcon(build) {
   const name = eliteSpec || build.profession;
   if (!name) return "";
   return getProfessionSvg(name) || "";
+}
+
+export function getSpecIconColored(build, color) {
+  const eliteSpec = getEliteSpecName(build);
+  const name = eliteSpec || build.profession;
+  if (!name) return "";
+  return getProfessionSvgColored(name, color) || "";
 }
 
 export function profClass(profession) {

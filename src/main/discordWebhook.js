@@ -50,15 +50,16 @@ function formatPartyGrid(emojis, partyIdx) {
 
 function buildCompEmbed(comp, builds, compUrl, buildUrls) {
   // Grid: one row of emojis per party line, broken at 5
+  const buildColors = comp.buildColors || {};
   const gridRows = [];
   (comp.partyLines || []).forEach((line, idx) => {
     const emojis = [];
-    for (const slotId of line.slots || []) {
+    (line.slots || []).forEach((slotId) => {
       const build = builds[slotId];
-      if (!build) continue;
-      const emoji = getDiscordEmoji(build);
+      if (!build) return;
+      const emoji = getDiscordEmoji(build, buildColors[slotId] || "normal");
       if (emoji) emojis.push(emoji);
-    }
+    });
     if (emojis.length > 0) gridRows.push(formatPartyGrid(emojis, idx));
   });
 
@@ -71,7 +72,7 @@ function buildCompEmbed(comp, builds, compUrl, buildUrls) {
       seen.add(slotId);
       const build = builds[slotId];
       if (!build) continue;
-      const emoji = getDiscordEmoji(build);
+      const emoji = getDiscordEmoji(build, buildColors[slotId] || "normal");
       const name = getDisplayName(build);
       const url = buildUrls[slotId];
       const nameStr = url ? `[${name}](${url})` : name;

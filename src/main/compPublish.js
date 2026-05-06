@@ -1,9 +1,9 @@
 "use strict";
 
 function serializeCompForPublish(comp, buildsMap) {
-  const { id, name, notes, tags, gameMode, partyLines } = comp;
+  const { id, name, notes, tags, gameMode, partyLines, buildColors } = comp;
   return {
-    id, name, notes, tags, gameMode, partyLines,
+    id, name, notes, tags, gameMode, partyLines, buildColors,
     builds: { ...buildsMap },
   };
 }

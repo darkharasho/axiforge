@@ -128,6 +128,70 @@ a.mini-card__name:hover .mini-card__name-arrow {
   padding-right: 24px;
 }
 
+/* ── Color picker (Condi / Heal) ──────────────────────────────────────────── */
+
+.mini-card__color-picker {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  font-size: 9px;
+  color: var(--text-dim);
+  background: var(--hover-subtle);
+  border-radius: var(--radius-xs);
+  padding: 1px 6px;
+  white-space: nowrap;
+  user-select: none;
+  position: relative;
+}
+.mini-card__color-picker:hover { background: var(--hover); }
+
+.mini-card__color-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.mini-card__color-label {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.mini-card__color-caret {
+  font-size: 7px;
+  opacity: 0.5;
+}
+
+.mini-card__color-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 2px;
+  background: var(--bg-raised, #2a2a2a);
+  border: 1px solid var(--border, #444);
+  border-radius: var(--radius-sm, 4px);
+  padding: 2px 0;
+  z-index: 200;
+  min-width: 90px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}
+
+.mini-card__color-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--text, #ccc);
+  white-space: nowrap;
+}
+.mini-card__color-option:hover { background: var(--hover-subtle); }
+.mini-card__color-option--active { font-weight: 700; }
+
 /* ── Copy build code button ────────────────────────────────────────────────── */
 
 .mini-card__btn-copy-code {
@@ -443,6 +507,10 @@ a.mini-card__name:hover .mini-card__name-arrow {
 }
 
 /* ── Missing variant ───────────────────────────────────────────────────────── */
+
+/* Slot color overrides for left accent */
+.mini-card[data-slot-color="red"]  { border-left-color: #d63a3a; }
+.mini-card[data-slot-color="blue"] { border-left-color: #3a8fd6; }
 
 .mini-card--missing {
   opacity: 0.5;

@@ -160,10 +160,113 @@ function getEliteSpecName(build) {
   return null;
 }
 
-function getDiscordEmoji(build) {
+// Red (Condi) emoji — hosted on server 1501659288479862894
+const DISCORD_EMOJI_RED = {
+  Elementalist: "<:ElementalistRed:1501659493480796414>",
+  Engineer:     "<:EngineerRed:1501659495175159869>",
+  Guardian:     "<:GuardianRed:1501659516952117368>",
+  Mesmer:       "<:MesmerRed:1501659527127367771>",
+  Necromancer:  "<:NecromancerRed:1501659545871585431>",
+  Ranger:       "<:RangerRed:1501659549206315140>",
+  Revenant:     "<:RevenantRed:1501659555874996504>",
+  Thief:        "<:ThiefRed:1501659586397081711>",
+  Warrior:      "<:WarriorRed:1501659608584814702>",
+  Amalgam:      "<:AmalgamRed:1501659455526539424>",
+  Antiquary:    "<:AntiquaryRed:1501659456394498240>",
+  Berserker:    "<:BerserkerRed:1501659457866694706>",
+  Bladesworn:   "<:BladeswornRed:1501659459154612376>",
+  Catalyst:     "<:CatalystRed:1501659460320366772>",
+  Chronomancer: "<:ChronomancerRed:1501659461364744262>",
+  Conduit:      "<:ConduitRed:1501659462853988492>",
+  Daredevil:    "<:DaredevilRed:1501659464451883118>",
+  Deadeye:      "<:DeadeyeRed:1501659488447631490>",
+  Dragonhunter: "<:DragonhunterRed:1501659489777090748>",
+  Druid:        "<:DruidRed:1501659491996012585>",
+  Evoker:       "<:EvokerRed:1501659497091825745>",
+  Firebrand:    "<:FirebrandRed:1501659498857889832>",
+  Galeshot:     "<:GaleshotRed:1501659500061524089>",
+  Harbinger:    "<:HarbingerRed:1501659518931701961>",
+  Herald:       "<:HeraldRed:1501659520668008643>",
+  Holosmith:    "<:HolosmithRed:1501659522299596942>",
+  Luminary:     "<:LuminaryRed:1501659523725660350>",
+  Mechanist:    "<:MechanistRed:1501659525319495836>",
+  Mirage:       "<:MirageRed:1501659528431927387>",
+  Paragon:      "<:ParagonRed:1501659547440250930>",
+  Reaper:       "<:ReaperRed:1501659551546609766>",
+  Renegade:     "<:RenegadeRed:1501659552926404780>",
+  Ritualist:    "<:RitualistRed:1501659556642684959>",
+  Scourge:      "<:ScourgeRed:1501659558966333543>",
+  Scrapper:     "<:ScrapperRed:1501659577593233730>",
+  Soulbeast:    "<:SoulbeastRed:1501659579681869855>",
+  Specter:      "<:SpecterRed:1501659580747481349>",
+  Spellbreaker: "<:SpellbreakerRed:1501659581854646393>",
+  Tempest:      "<:TempestRed:1501659583649677443>",
+  Troubadour:   "<:TroubadourRed:1501659587747647550>",
+  Untamed:      "<:UntamedRed:1501659588796350575>",
+  Vindicator:   "<:VindicatorRed:1501659605464256642>",
+  Virtuoso:     "<:VirtuosoRed:1501659606701576232>",
+  Weaver:       "<:WeaverRed:1501659610212335656>",
+  Willbender:   "<:WillbenderRed:1501659611659374813>",
+};
+
+// Blue (Heal) emoji — hosted on server 1501658803676905612
+const DISCORD_EMOJI_BLUE = {
+  Elementalist: "<:ElementalistBlue:1501658965728038942>",
+  Engineer:     "<:EngineerBlue:1501658968127439000>",
+  Guardian:     "<:GuardianBlue:1501659000100491335>",
+  Mesmer:       "<:MesmerBlue:1501659010984579074>",
+  Necromancer:  "<:NecromancerBlue:1501659015535394866>",
+  Ranger:       "<:RangerBlue:1501659035823509654>",
+  Revenant:     "<:RevenantBlue:1501659040164352041>",
+  Thief:        "<:ThiefBlue:1501659076323446785>",
+  Warrior:      "<:WarriorBlue:1501659082833137756>",
+  Amalgam:      "<:AmalgamBlue:1501658914784018522>",
+  Antiquary:    "<:AntiquaryBlue:1501658916659134684>",
+  Berserker:    "<:BerserkerBlue:1501658926305906818>",
+  Bladesworn:   "<:BladeswornBlue:1501658927992144002>",
+  Catalyst:     "<:CatalystBlue:1501658929233662137>",
+  Chronomancer: "<:ChronomancerBlue:1501658931062378617>",
+  Conduit:      "<:ConduitBlue:1501658932442300466>",
+  Daredevil:    "<:DaredevilBlue:1501658958618955866>",
+  Deadeye:      "<:DeadeyeBlue:1501658959768059934>",
+  Dragonhunter: "<:DragonhunterBlue:1501658961705963620>",
+  Druid:        "<:DruidBlue:1501658963962368060>",
+  Evoker:       "<:EvokerBlue:1501658970606010630>",
+  Firebrand:    "<:FirebrandBlue:1501658972636057620>",
+  Galeshot:     "<:GaleshotBlue:1501658974548660306>",
+  Harbinger:    "<:HarbingerBlue:1501659001400721429>",
+  Herald:       "<:HeraldBlue:1501659002927321158>",
+  Holosmith:    "<:HolosmithBlue:1501659004068429974>",
+  Luminary:     "<:LuminaryBlue:1501659005666201630>",
+  Mechanist:    "<:MechanistBlue:1501659009516834948>",
+  Mirage:       "<:MirageBlue:1501659013669064815>",
+  Paragon:      "<:ParagonBlue:1501659034485522593>",
+  Reaper:       "<:ReaperBlue:1501659036926476309>",
+  Renegade:     "<:RenegadeBlue:1501659038079778997>",
+  Ritualist:    "<:RitualistBlue:1501659041703661659>",
+  Scourge:      "<:ScourgeBlue:1501659043364737194>",
+  Scrapper:     "<:ScrapperBlue:1501659044711239700>",
+  Soulbeast:    "<:SoulbeastBlue:1501659045902159993>",
+  Specter:      "<:SpecterBlue:1501659069075820564>",
+  Spellbreaker: "<:SpellbreakerBlue:1501659070493622403>",
+  Tempest:      "<:TempestBlue:1501659073748144259>",
+  Troubadour:   "<:TroubadourBlue:1501659078265667744>",
+  Untamed:      "<:UntamedBlue:1501659079255527596>",
+  Vindicator:   "<:VindicatorBlue:1501659080417083462>",
+  Virtuoso:     "<:VirtuosoBlue:1501659081671442574>",
+  Weaver:       "<:WeaverBlue:1501659085236343025>",
+  Willbender:   "<:WillbenderBlue:1501659125619232800>",
+};
+
+function getDiscordEmoji(build, color) {
+  const map = color === "red" ? DISCORD_EMOJI_RED
+            : color === "blue" ? DISCORD_EMOJI_BLUE
+            : DISCORD_EMOJI;
   const elite = getEliteSpecName(build);
-  if (elite && DISCORD_EMOJI[elite]) return DISCORD_EMOJI[elite];
-  if (build.profession && DISCORD_EMOJI[build.profession]) return DISCORD_EMOJI[build.profession];
+  if (elite && map[elite]) return map[elite];
+  if (build.profession && map[build.profession]) return map[build.profession];
+  // Fall back to normal emoji if colored variant not found
+  if (color && color !== "normal") return getDiscordEmoji(build);
   return "";
 }
 

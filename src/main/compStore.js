@@ -28,6 +28,7 @@ class CompStore {
     const sortOrder = typeof input.sortOrder === "number" ? input.sortOrder : 0;
     const buildIds = Array.isArray(input.buildIds) ? input.buildIds : [];
     const gameMode = input.gameMode === "pve" || input.gameMode === "wvw" ? input.gameMode : null;
+    const VALID_SLOT_COLORS = ["normal", "red", "blue"];
     const partyLines = Array.isArray(input.partyLines)
       ? input.partyLines.map((pl) => ({
           id: pl.id || crypto.randomUUID(),
@@ -35,6 +36,27 @@ class CompStore {
           slots: Array.isArray(pl.slots) ? pl.slots : [],
         }))
       : [{ id: crypto.randomUUID(), capacity: 5, slots: [] }];
+
+    // Build-level color map (buildId -> "normal"|"red"|"blue")
+    // Migrate from legacy per-slot slotColors if buildColors not present
+    let buildColors = {};
+    if (input.buildColors && typeof input.buildColors === "object") {
+      for (const [k, v] of Object.entries(input.buildColors)) {
+        buildColors[k] = VALID_SLOT_COLORS.includes(v) ? v : "normal";
+      }
+    } else if (Array.isArray(input.partyLines)) {
+      // Migrate: first slot color wins for each buildId
+      for (const pl of input.partyLines) {
+        const colors = Array.isArray(pl.slotColors) ? pl.slotColors : [];
+        for (let i = 0; i < (pl.slots || []).length; i++) {
+          const sid = (pl.slots || [])[i];
+          const c = colors[i];
+          if (sid && !buildColors[sid] && c && c !== "normal" && VALID_SLOT_COLORS.includes(c)) {
+            buildColors[sid] = c;
+          }
+        }
+      }
+    }
 
     const publishedPatch = {
       ...(typeof input.publishedFileId === "string" ? { publishedFileId: input.publishedFileId } : {}),
@@ -46,7 +68,7 @@ class CompStore {
     const existing = comps.find((c) => c.id === id);
     if (existing) {
       Object.assign(existing, {
-        name, notes, tags, folderId, sortOrder, buildIds, partyLines, gameMode,
+        name, notes, tags, folderId, sortOrder, buildIds, partyLines, gameMode, buildColors,
         ...publishedPatch,
         updatedAt: now,
       });
@@ -56,7 +78,7 @@ class CompStore {
     }
 
     const comp = {
-      id, name, notes, tags, folderId, sortOrder, buildIds, partyLines, gameMode,
+      id, name, notes, tags, folderId, sortOrder, buildIds, partyLines, gameMode, buildColors,
       ...publishedPatch,
       createdAt: now, updatedAt: now,
     };

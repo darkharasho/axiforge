@@ -2,11 +2,12 @@
 
 import { escapeHtml } from "./utils.js";
 import { GW2_WEAPONS_BY_ID, GW2_RELICS_BY_LABEL } from "./constants.js";
-import { getProfessionSvg } from "./profession-icons.js";
+import { getProfessionSvg, getProfessionSvgColored } from "./profession-icons.js";
 import { getWeaponSvg } from "./weapon-icons.js";
 
 import {
   getSpecIcon,
+  getSpecIconColored,
   profClass,
   getDisplayName,
   resolveStatPackage,
@@ -18,15 +19,18 @@ import { roleBadgeHtml } from "./roleEstimator.js";
  * Return array of { name, isElite, svg } for each specialization on the build.
  * Elite specs get their own SVG icon; core specs get the profession icon as fallback.
  */
-function getSpecLineInfo(build) {
+function getSpecLineInfo(build, color) {
   if (!build.specializations) return [];
-  const profSvg = getProfessionSvg(build.profession) || "";
+  const getSvg = (name) => color && color !== "normal"
+    ? (getProfessionSvgColored(name, color) || "")
+    : (getProfessionSvg(name) || "");
+  const profSvg = getSvg(build.profession);
   return build.specializations
     .filter((s) => s && s.name)
     .map((s) => ({
       name: s.name,
       isElite: !!s.elite,
-      svg: getProfessionSvg(s.name) || profSvg,
+      svg: getSvg(s.name) || profSvg,
     }));
 }
 
@@ -105,9 +109,9 @@ function getWeaponSets(build) {
  * @returns {string} HTML string
  */
 export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
-  const { showActions = true, showMode = true, linkUrl = null, chatLink = null, linkBadge = null } = options;
+  const { showActions = true, showMode = true, linkUrl = null, chatLink = null, linkBadge = null, slotColor = null, showColorPicker = false } = options;
 
-  const icon = getSpecIcon(build);
+  const icon = slotColor && slotColor !== "normal" ? getSpecIconColored(build, slotColor) : getSpecIcon(build);
   const pClass = profClass(build.profession);
   const name = escapeHtml(getDisplayName(build));
   const gameMode = build.gameMode || "pve";
@@ -126,7 +130,7 @@ export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
     : "";
 
   // Left column: Specs as mini cards
-  const specs = getSpecLineInfo(build);
+  const specs = getSpecLineInfo(build, slotColor);
   let specColHtml = "";
   if (specs.length) {
     const specLines = specs.map((s) => {
@@ -237,8 +241,22 @@ export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
       </button>`
     : "";
 
+  // Color picker dropdown (Condi / Heal)
+  const colorPickerHtml = showColorPicker ? (() => {
+    const c = slotColor || "normal";
+    const dotColor = c === "red" ? "#d63a3a" : c === "blue" ? "#3a8fd6" : "transparent";
+    const dotStyle = c === "normal"
+      ? 'style="border:1px solid #666;background:transparent"'
+      : `style="background:${dotColor}"`;
+    return `<div class="mini-card__color-picker" data-action="color-picker" data-build-id="${escapeHtml(build.id)}" data-current="${c}" title="Icon color">
+      <span class="mini-card__color-dot" ${dotStyle}></span>
+      <span class="mini-card__color-label">${c === "red" ? "Condi" : c === "blue" ? "Heal" : "Default"}</span>
+      <span class="mini-card__color-caret">&#9662;</span>
+    </div>`;
+  })() : "";
+
   return `
-    <div class="mini-card ${pClass}" data-build-id="${escapeHtml(build.id)}">
+    <div class="mini-card ${pClass}" data-build-id="${escapeHtml(build.id)}"${slotColor && slotColor !== "normal" ? ` data-slot-color="${slotColor}"` : ""}>
       ${removeHtml}
       <div class="mini-card__icon">${icon}</div>
       <div class="mini-card__info">
@@ -248,6 +266,7 @@ export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
           ${tagPills}
           ${role}
           <div class="mini-card__pills">
+            ${colorPickerHtml}
             ${copyCodeHtml}
             ${modePill}
           </div>

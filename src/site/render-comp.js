@@ -7,8 +7,15 @@ import { initMobileDetection } from "./mobile.js";
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
-function getProfIcon(build) {
-  if (build.professionIcon) return build.professionIcon;
+const LINE_COLORS = { red: "#d63a3a", blue: "#3a8fd6" };
+
+function recolorSvg(svg, color) {
+  if (!color || color === "normal" || !LINE_COLORS[color]) return svg;
+  return svg.replace(/fill:#(?!000000)[0-9a-fA-F]{6}/gi, `fill:${LINE_COLORS[color]}`);
+}
+
+function getProfIcon(build, color) {
+  if (build.professionIcon) return recolorSvg(build.professionIcon, color);
   return `<span style="font-size:1.2em">${(build.profession || "?")[0]}</span>`;
 }
 
@@ -31,22 +38,23 @@ function getDisplayName(build) {
 
 // ── Party Lines ──────────────────────────────────────────────────────────
 
-function renderSlot(build) {
+function renderSlot(build, color) {
   if (!build) {
     return `<div class="comp-slot comp-slot--empty"></div>`;
   }
   const pClass = profClass(build.profession);
   const title = escapeHtml(getDisplayName(build));
+  const colorAttr = color && color !== "normal" ? ` data-slot-color="${color}"` : "";
   if (build.spaUrl) {
     return `
       <a href="${escapeHtml(build.spaUrl)}" target="_blank" rel="noopener"
-         class="comp-slot comp-slot--filled ${pClass}" title="${title}">
-        <span class="comp-slot__icon">${getProfIcon(build)}</span>
+         class="comp-slot comp-slot--filled ${pClass}"${colorAttr} title="${title}">
+        <span class="comp-slot__icon">${getProfIcon(build, color)}</span>
       </a>`;
   }
   return `
-    <div class="comp-slot comp-slot--filled ${pClass}" title="${title}">
-      <span class="comp-slot__icon">${getProfIcon(build)}</span>
+    <div class="comp-slot comp-slot--filled ${pClass}"${colorAttr} title="${title}">
+      <span class="comp-slot__icon">${getProfIcon(build, color)}</span>
     </div>`;
 }
 
@@ -54,7 +62,8 @@ function renderPartyLines(comp) {
   return (comp.partyLines || []).map((line, idx) => {
     const slots = line.slots || [];
     const capacity = line.capacity || 5;
-    const slotBoxes = slots.map((buildId) => renderSlot(comp.builds?.[buildId]));
+    const buildColors = comp.buildColors || {};
+    const slotBoxes = slots.map((buildId) => renderSlot(comp.builds?.[buildId], buildColors[buildId] || "normal"));
     for (let i = slots.length; i < capacity; i++) {
       slotBoxes.push(`<div class="comp-slot comp-slot--empty"></div>`);
     }
@@ -71,18 +80,20 @@ function renderPartyLines(comp) {
 
 // ── Pool Panel ───────────────────────────────────────────────────────────
 
-function renderPoolCard(build) {
+function renderPoolCard(build, slotColor) {
   // Render the shared mini card (no desktop action buttons in read-only SPA)
   return renderMiniBuildCard(build, null, {
     showActions: false,
     linkUrl: build.spaUrl || null,
     chatLink: build.chatLink || null,
+    slotColor: slotColor || null,
   });
 }
 
 function renderBuildPool(comp) {
   const builds = comp.builds || {};
-  const cards = Object.values(builds).map(renderPoolCard).join("");
+  const buildColors = comp.buildColors || {};
+  const cards = Object.entries(builds).map(([id, build]) => renderPoolCard(build, buildColors[id])).join("");
   return `
     <div class="comp-pool">
       <div class="comp-pool-header">

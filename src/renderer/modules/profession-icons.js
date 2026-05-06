@@ -64,3 +64,28 @@ const SVG_MAP = {
 export function getProfessionSvg(name) {
   return SVG_MAP[name] ?? null;
 }
+
+const LINE_COLORS = {
+  red:  "#d63a3a",
+  blue: "#3a8fd6",
+};
+
+const _colorCache = new Map();
+
+/**
+ * Returns the raw SVG with non-black fills replaced by the given line color.
+ * "normal" (or falsy) returns the original SVG unchanged.
+ */
+export function getProfessionSvgColored(name, color) {
+  const svg = SVG_MAP[name] ?? null;
+  if (!svg || !color || color === "normal") return svg;
+  const hex = LINE_COLORS[color];
+  if (!hex) return svg;
+  const key = `${name}_${color}`;
+  let cached = _colorCache.get(key);
+  if (!cached) {
+    cached = svg.replace(/fill:#(?!000000)[0-9a-fA-F]{6}/gi, `fill:${hex}`);
+    _colorCache.set(key, cached);
+  }
+  return cached;
+}

@@ -19,6 +19,7 @@ import { computeCompPartyCoverage, buildPartyCoverageHTML, bindPartyCoverageEven
 import {
   getEliteSpecName,
   getSpecIcon,
+  getSpecIconColored,
   profClass,
   getDisplayName,
   resolveStatPackage,
@@ -551,7 +552,7 @@ function renderTagsRow(comp) {
 function renderPartyLines(comp, totalCap) {
   const lines = comp.partyLines || [];
   const lineRows = lines
-    .map((pl, idx) => renderPartyLine(pl, idx, totalCap))
+    .map((pl, idx) => renderPartyLine(comp, pl, idx, totalCap))
     .join("");
 
   const canAdd = totalCap < 50;  // totalCap is now filled slots
@@ -584,7 +585,7 @@ const PARTY_NUMBER_EMOJIS = [
   "\uD83D\uDD1F",
 ];
 
-function renderPartyLine(pl, idx, totalCap) {
+function renderPartyLine(comp, pl, idx, totalCap) {
   const capacity = pl.capacity || 5;
   const slots = pl.slots || [];
 
@@ -595,11 +596,13 @@ function renderPartyLine(pl, idx, totalCap) {
     const buildId = slots[i];
     const build = resolveBuild(buildId);
     if (build) {
-      const icon = getSpecIcon(build);
+      const slotColor = (comp.buildColors || {})[buildId] || "normal";
+      const icon = getSpecIconColored(build, slotColor);
       const pClass = profClass(build.profession);
       const title = escapeHtml(build.title || "Untitled");
+      const colorAttr = slotColor !== "normal" ? ` data-slot-color="${slotColor}"` : "";
       slotBoxes.push(
-        `<div class="comp-slot comp-slot--filled ${pClass}" title="${title}"
+        `<div class="comp-slot comp-slot--filled ${pClass}" title="${title}"${colorAttr}
               data-action="click-filled-slot" data-line-id="${escapeHtml(pl.id)}" data-slot-idx="${i}" data-build-id="${escapeHtml(buildId)}">
           <span class="comp-slot__icon">${icon}</span>
         </div>`
@@ -662,6 +665,8 @@ function renderBuildPool(comp) {
     return name.includes(search) || prof.includes(search) || elite.includes(search);
   });
 
+  const buildColors = comp.buildColors || {};
+
   const cards = filtered.map((entry) => {
     if (entry.type === "missing") return renderMissingMiniBuildCard(entry.id);
     const b = entry.build;
@@ -676,6 +681,8 @@ function renderBuildPool(comp) {
     const label = totalComps > 1 ? `${totalComps} comps` : "linked";
     return renderMiniBuildCard(b, state.upgradeCatalog, {
       linkBadge: { label, tooltip },
+      slotColor: buildColors[b.id] || null,
+      showColorPicker: true,
     });
   }).join("");
 
@@ -1119,7 +1126,6 @@ function bindDetailEvents(container, comp) {
     });
   });
 
-
   // ── Filled slot click → open build ─────────────────────────────────────────
   container.querySelectorAll("[data-action='click-filled-slot']").forEach((slot) => {
     // Hover → show delayed build card
@@ -1226,6 +1232,46 @@ function bindPoolEvents(container, comp) {
       await saveAndSync(comp);
       state.builds = await window.desktopApi.listBuilds();
       _callbacks.onRerender?.();
+    });
+  });
+
+  // Pool card color picker dropdown
+  container.querySelectorAll("[data-action='color-picker']").forEach((picker) => {
+    picker.addEventListener("click", (e) => {
+      e.stopPropagation();
+      // Close any existing dropdown
+      document.querySelectorAll(".mini-card__color-menu").forEach((m) => m.remove());
+      const buildId = picker.dataset.buildId;
+      const current = picker.dataset.current || "normal";
+      const choices = [
+        { value: "normal", label: "Default", dot: "transparent", border: "1px solid #666" },
+        { value: "red", label: "Condi", dot: "#d63a3a", border: "none" },
+        { value: "blue", label: "Heal", dot: "#3a8fd6", border: "none" },
+      ];
+      const menu = document.createElement("div");
+      menu.className = "mini-card__color-menu";
+      for (const ch of choices) {
+        const opt = document.createElement("div");
+        opt.className = `mini-card__color-option${ch.value === current ? " mini-card__color-option--active" : ""}`;
+        opt.innerHTML = `<span class="mini-card__color-dot" style="background:${ch.dot};border:${ch.border}"></span>${ch.label}`;
+        opt.addEventListener("click", async (ev) => {
+          ev.stopPropagation();
+          menu.remove();
+          if (ch.value === current) return;
+          if (!comp.buildColors) comp.buildColors = {};
+          if (ch.value === "normal") {
+            delete comp.buildColors[buildId];
+          } else {
+            comp.buildColors[buildId] = ch.value;
+          }
+          await saveAndSync(comp);
+          _callbacks.onRerender?.();
+        });
+        menu.appendChild(opt);
+      }
+      picker.appendChild(menu);
+      const onDocClick = () => { menu.remove(); document.removeEventListener("click", onDocClick, true); };
+      setTimeout(() => document.addEventListener("click", onDocClick, true), 0);
     });
   });
 }
