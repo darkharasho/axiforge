@@ -1,6 +1,6 @@
 {
   "name": "axiforge-desktop",
-  "version": "0.6.23",
+  "version": "0.6.24",
   "workspaces": [
     "packages/*"
   ],

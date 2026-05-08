@@ -1,3 +1,9 @@
+## Version v0.6.24 — May 7, 2026
+
+### Bug Fixes
+
+- **Strider's Strength (and similar ranger/other-class traits) now correctly contributes its flat power bonus to your stats.** Some trait wiki pages use lowercase attribute names in their fact templates; the parser was emitting `target: "power"` instead of `"Power"`, so the modifier silently failed to apply. Fixes a class of trait bugs (Strider's Strength, Boon of Creation, Fang and Claw, Power for Power, Preparedness, and others).
+
 ## Version v0.6.22 — April 30, 2026
 
 ### Bug Fixes
