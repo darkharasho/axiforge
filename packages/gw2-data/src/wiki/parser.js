@@ -11,7 +11,11 @@ const WIKI_ATTR_MAP = {
   "Critical Damage": "CritDamage",
 };
 function normalizeAttr(name) {
-  return WIKI_ATTR_MAP[name] || name;
+  if (!name) return name;
+  // Wiki templates inconsistently use lowercase ("power") or capitalized ("Power")
+  // attribute names. Title-case before lookup so both forms produce the API stat key.
+  const titleCased = name.replace(/\b\w/g, (c) => c.toUpperCase());
+  return WIKI_ATTR_MAP[titleCased] || titleCased;
 }
 
 // Fact types to silently ignore

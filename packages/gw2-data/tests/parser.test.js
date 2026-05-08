@@ -306,6 +306,39 @@ describe("mapWikiFactToApiFact", () => {
     });
   });
 
+  test("flat attribute bonus title-cases lowercase attribute names", () => {
+    // Strider's Strength wiki uses lowercase: {{trait fact|attribute|power|120}}
+    // Engine stat keys are capitalized ("Power"), so target must be normalized.
+    const fact = mapWikiFactToApiFact(
+      "attribute",
+      ["power", "120"],
+      {},
+      true,
+      false
+    );
+    expect(fact).toMatchObject({
+      type: "AttributeAdjust",
+      target: "Power",
+      value: 120,
+    });
+  });
+
+  test("flat attribute bonus title-cases lowercase multi-word names", () => {
+    // {{trait fact|attribute|condition damage|300}} → "ConditionDamage"
+    const fact = mapWikiFactToApiFact(
+      "attribute",
+      ["condition damage", "300"],
+      {},
+      true,
+      false
+    );
+    expect(fact).toMatchObject({
+      type: "AttributeAdjust",
+      target: "ConditionDamage",
+      value: 300,
+    });
+  });
+
   test("effect produces Buff with status from positional[0] and duration from positional[1]", () => {
     const fact = mapWikiFactToApiFact("effect", ["Superspeed", "5"], { stacks: "2" }, true, false);
     expect(fact).toEqual({
