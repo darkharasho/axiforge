@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: 'Publish to GitHub Releases (uncheck for dry-run / signing test)'
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -74,11 +80,33 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: npx electron-builder ${{ matrix.args }} --publish always
+          # publish=always for tag-pushed releases; never for manual
+          # workflow_dispatch (artifacts upload separately for inspection)
+          PUBLISH_MODE: ${{ (github.event_name == 'push' || inputs.publish) && 'always' || 'never' }}
+        run: npx electron-builder ${{ matrix.args }} --publish $PUBLISH_MODE
+        shell: bash
+
+      - name: Upload dry-run artifacts
+        if: github.event_name == 'workflow_dispatch' && inputs.publish != true
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ matrix.platform }}
+          path: |
+            dist_out/*.exe
+            dist_out/*.AppImage
+            dist_out/*.dmg
+            dist_out/*.zip
+            dist_out/*.blockmap
+            dist_out/latest*.yml
+          if-no-files-found: ignore
+          retention-days: 7
 
   publish:
     needs: [build]
     runs-on: ubuntu-latest
+    # Only run for actual tag pushes — workflow_dispatch dry-runs upload
+    # artifacts in the build job and stop there.
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
     steps:
       - name: Checkout
         uses: actions/checkout@v4
