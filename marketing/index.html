@@ -19,6 +19,12 @@
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg" />
     <link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon-32.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body data-theme="molten-core">
@@ -26,8 +32,15 @@
 
     <header class="topbar">
       <a class="brand" href="#top" aria-label="AxiForge home">
-        <img class="brand-mark" src="./assets/axiforge-wordmark.png" alt="AxiForge" />
+        <img class="brand-mark" src="./assets/axiforge-wordmark.png" alt="" aria-hidden="true" />
+        <span class="brand-word">Axi<span class="brand-word__accent">Forge</span></span>
       </a>
+      <div class="theme-chips theme-chips--topbar" role="group" aria-label="Theme">
+        <button type="button" class="theme-chip" data-theme="molten-core" aria-pressed="true" title="Molten Core"></button>
+        <button type="button" class="theme-chip" data-theme="frostforge" aria-pressed="false" title="Frostforge"></button>
+        <button type="button" class="theme-chip" data-theme="verdant-crucible" aria-pressed="false" title="Verdant Crucible"></button>
+        <button type="button" class="theme-chip" data-theme="cinderfall" aria-pressed="false" title="Cinderfall"></button>
+      </div>
       <nav class="topbar-nav">
         <a class="nav-link" href="#features">Features</a>
         <a class="nav-link" href="#how">How it works</a>
@@ -58,13 +71,6 @@
           </span>
         </p>
 
-        <div class="theme-chips" role="group" aria-label="Preview accent">
-          <button type="button" class="theme-chip" data-theme="molten-core" aria-pressed="true" title="Molten Core"></button>
-          <button type="button" class="theme-chip" data-theme="frostforge" aria-pressed="false" title="Frostforge"></button>
-          <button type="button" class="theme-chip" data-theme="verdant-crucible" aria-pressed="false" title="Verdant Crucible"></button>
-          <button type="button" class="theme-chip" data-theme="cinderfall" aria-pressed="false" title="Cinderfall"></button>
-        </div>
-
         <figure class="hero-shot reveal">
           <img data-theme-shot="library" src="./assets/screenshots/library-molten-core.png" alt="AxiForge library — WvW folders, comps, and pinned builds at the root" />
         </figure>
@@ -89,32 +95,32 @@
         <h2 id="features-title" class="section-title">What's in the box</h2>
         <ul class="feature-grid">
           <li class="feature reveal">
-            <img class="feature-glyph" src="./assets/classes-svg/Guardian.svg" alt="" aria-hidden="true" />
+            <img class="feature-glyph" src="./assets/classes-svg/Catalyst.svg" alt="" aria-hidden="true" />
             <h3>Native build editor</h3>
             <p>Professions, three specialization lines with trait picks, heal / utility / elite skills — all wired to the live GW2 API.</p>
           </li>
           <li class="feature reveal">
-            <img class="feature-glyph" src="./assets/classes-svg/Mesmer.svg" alt="" aria-hidden="true" />
+            <img class="feature-glyph" src="./assets/classes-svg/Chronomancer.svg" alt="" aria-hidden="true" />
             <h3>Live wiki lookups</h3>
             <p>Click any trait or skill to surface the GW2 wiki summary inline — no tab-switching, no broken links.</p>
           </li>
           <li class="feature reveal">
-            <img class="feature-glyph" src="./assets/classes-svg/Engineer.svg" alt="" aria-hidden="true" />
+            <img class="feature-glyph" src="./assets/classes-svg/Scrapper.svg" alt="" aria-hidden="true" />
             <h3>Publish to your GitHub Pages</h3>
             <p>First-time setup wires a dedicated <code>axiforge</code> repo and Pages workflow automatically.</p>
           </li>
           <li class="feature reveal">
-            <img class="feature-glyph" src="./assets/classes-svg/Warrior.svg" alt="" aria-hidden="true" />
+            <img class="feature-glyph" src="./assets/classes-svg/Firebrand.svg" alt="" aria-hidden="true" />
             <h3>Team comps with party lines</h3>
             <p>Roster a GvG, plan a zerg, draft a havoc squad — drop builds into 5-slot party lines and check coverage at a glance.</p>
           </li>
           <li class="feature reveal">
-            <img class="feature-glyph" src="./assets/classes-svg/Elementalist.svg" alt="" aria-hidden="true" />
+            <img class="feature-glyph" src="./assets/classes-svg/Tempest.svg" alt="" aria-hidden="true" />
             <h3>Four full themes</h3>
             <p>Molten Core, Frostforge, Verdant Crucible, Cinderfall — plus accent overrides on top of any of them.</p>
           </li>
           <li class="feature reveal">
-            <img class="feature-glyph" src="./assets/classes-svg/Necromancer.svg" alt="" aria-hidden="true" />
+            <img class="feature-glyph" src="./assets/classes-svg/Druid.svg" alt="" aria-hidden="true" />
             <h3>Free, open source, no telemetry</h3>
             <p>MIT licensed. GitHub device-flow auth only — nothing else leaves your machine.</p>
           </li>

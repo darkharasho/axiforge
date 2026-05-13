@@ -106,21 +106,30 @@ code {
   position: sticky;
   top: 0;
   z-index: 50;
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
   padding: 0.9rem 1.25rem;
   background: color-mix(in srgb, var(--bg) 78%, transparent);
   backdrop-filter: saturate(140%) blur(10px);
   border-bottom: 1px solid var(--line);
 }
+.topbar .brand { justify-self: start; }
+.topbar .theme-chips--topbar { justify-self: center; margin: 0; }
+.topbar .topbar-nav { justify-self: end; }
 .wordmark {
   font-family: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
   font-weight: 700;
   letter-spacing: 0.02em;
   color: var(--text);
 }
-.brand { display: inline-flex; align-items: center; }
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--text);
+}
+.brand:hover { color: var(--text); }
 .brand-mark {
   height: 28px;
   width: auto;
@@ -128,6 +137,14 @@ code {
   filter: drop-shadow(0 0 12px rgba(var(--accent-rgb), 0.25));
 }
 .brand-mark--sm { height: 22px; }
+.brand-word {
+  font-family: "Cinzel", serif;
+  font-weight: 700;
+  font-size: 1.15rem;
+  letter-spacing: 0.08em;
+  line-height: 1;
+}
+.brand-word__accent { color: var(--accent); }
 .topbar-nav { display: flex; gap: 1.25rem; align-items: center; }
 .topbar-nav a { color: var(--text); }
 .nav-link {
@@ -135,8 +152,10 @@ code {
   font-size: 0.92rem;
 }
 .nav-link:hover { color: var(--text); }
-@media (max-width: 700px) {
+@media (max-width: 800px) {
   .nav-link:not(.topbar-cta) { display: none; }
+  .topbar { grid-template-columns: auto 1fr auto; }
+  .brand-word { display: none; }
 }
 .topbar-cta {
   background: linear-gradient(180deg, var(--accent), color-mix(in srgb, var(--accent) 70%, black));
