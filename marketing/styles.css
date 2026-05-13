@@ -95,8 +95,24 @@ code {
   letter-spacing: 0.02em;
   color: var(--text);
 }
-.topbar-nav { display: flex; gap: 1rem; align-items: center; }
+.brand { display: inline-flex; align-items: center; }
+.brand-mark {
+  height: 28px;
+  width: auto;
+  display: block;
+  filter: drop-shadow(0 0 12px rgba(var(--accent-rgb), 0.25));
+}
+.brand-mark--sm { height: 22px; }
+.topbar-nav { display: flex; gap: 1.25rem; align-items: center; }
 .topbar-nav a { color: var(--text); }
+.nav-link {
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+.nav-link:hover { color: var(--text); }
+@media (max-width: 700px) {
+  .nav-link:not(.topbar-cta) { display: none; }
+}
 .topbar-cta {
   background: linear-gradient(180deg, var(--accent), color-mix(in srgb, var(--accent) 70%, black));
   color: #1a0e08 !important;
@@ -400,4 +416,159 @@ button:focus-visible,
   outline: 2px solid var(--accent);
   outline-offset: 2px;
   border-radius: var(--radius-sm);
+}
+
+/* ── Hero CTA meta line ──────────────────────────────────────────────── */
+
+.cta-meta {
+  color: var(--muted);
+  font-size: 0.88rem;
+  margin: 0.75rem 0 0;
+  min-height: 1.2em;
+}
+.cta-meta a { color: var(--accent-2); }
+
+/* ── Profession strip ────────────────────────────────────────────────── */
+
+.profession-strip {
+  max-width: var(--max-w);
+  margin: 0 auto;
+  padding: 2.5rem 1.25rem 3rem;
+  text-align: center;
+}
+.strip-eyebrow {
+  font-family: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 0.78rem;
+  margin: 0 0 1.25rem;
+}
+.profession-row {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1rem;
+}
+.profession-row li {
+  background: var(--panel-gradient);
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  padding: 0.45rem;
+  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+.profession-row li:hover {
+  transform: translateY(-3px);
+  border-color: var(--accent);
+  box-shadow: 0 10px 24px rgba(var(--accent-rgb), 0.22);
+}
+.profession-row img {
+  width: 48px;
+  height: 48px;
+  display: block;
+  border-radius: 50%;
+}
+
+/* ── Feature glyph (corner class portrait inside feature card) ───────── */
+
+.feature { position: relative; overflow: hidden; }
+.feature-glyph {
+  position: absolute;
+  right: -14px;
+  bottom: -14px;
+  width: 110px;
+  height: 110px;
+  opacity: 0.14;
+  pointer-events: none;
+  filter: drop-shadow(0 0 18px rgba(var(--accent-rgb), 0.6));
+  transition: opacity 200ms ease, transform 200ms ease;
+}
+.feature:hover .feature-glyph {
+  opacity: 0.28;
+  transform: translate(-4px, -4px) rotate(-3deg);
+}
+
+/* ── Gallery grid ────────────────────────────────────────────────────── */
+
+section.gallery {
+  max-width: var(--max-w);
+  margin: 0 auto;
+  padding: 4rem 1.25rem;
+  border-top: 1px solid var(--line);
+}
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+.gallery-item {
+  margin: 0;
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.4);
+  transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
+}
+.gallery-item:hover {
+  transform: translateY(-3px);
+  border-color: var(--accent);
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.5),
+              0 0 30px rgba(var(--accent-rgb), 0.18);
+}
+.gallery-item img {
+  width: 100%;
+  display: block;
+  background: #0b0706;
+}
+.gallery-item figcaption {
+  padding: 0.7rem 1rem;
+  font-family: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  font-size: 0.85rem;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+  border-top: 1px solid var(--line);
+}
+@media (max-width: 700px) {
+  .gallery-grid { grid-template-columns: 1fr; }
+}
+
+/* ── All downloads (Download section) ────────────────────────────────── */
+
+.all-downloads {
+  list-style: none;
+  padding: 0;
+  margin: 1.25rem 0 0;
+  display: flex;
+  gap: 1.5rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.all-downloads a {
+  color: var(--text);
+  border-bottom: 1px dashed var(--line);
+  padding-bottom: 1px;
+}
+.all-downloads a:hover {
+  color: var(--accent-2);
+  border-bottom-color: var(--accent);
+}
+
+/* ── Update how-num to be larger, monospace looking ──────────────────── */
+
+.how-num {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin-bottom: 0.8rem;
+  color: var(--accent);
+}
+
+.gallery-item--wide { grid-column: 1 / -1; }
+.gallery-note {
+  color: var(--muted);
+  text-align: center;
+  font-size: 0.9rem;
 }

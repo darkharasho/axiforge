@@ -4,10 +4,16 @@ const REPO = "darkharasho/axiforge";
 const API_URL = `https://api.github.com/repos/${REPO}/releases/latest`;
 const THEME_KEY = "axiforge-marketing-theme";
 
+const OS_LABELS = {
+  win: "Download for Windows",
+  linux: "Download for Linux (.AppImage)",
+  mac: "Download for macOS (source)",
+};
+
 document.addEventListener("DOMContentLoaded", () => {
   initThemeSwitcher();
   initReveal();
-  detectOs();
+  applyOsLayout(detectOs());
   resolveLatestRelease().catch(() => {
     /* fallback links already in place */
   });
@@ -69,17 +75,39 @@ function initReveal() {
 
 function detectOs() {
   const ua = navigator.userAgent || "";
-  const isLinux = /Linux|X11/.test(ua) && !/Android/.test(ua);
-  if (!isLinux) return;
+  const platform = (navigator.userAgentData?.platform || navigator.platform || "").toLowerCase();
+  if (/mac/.test(platform) || /Mac OS/i.test(ua)) return "mac";
+  if (/win/.test(platform) || /Windows/i.test(ua)) return "win";
+  if (/linux/.test(platform) || /Linux|X11/.test(ua)) {
+    if (/Android/i.test(ua)) return "unknown";
+    return "linux";
+  }
+  return "unknown";
+}
 
-  document.querySelectorAll('[data-download="win"]').forEach((el) => {
-    el.classList.remove("cta-primary");
-    el.classList.add("cta-secondary");
+function applyOsLayout(os) {
+  document.body.dataset.os = os;
+
+  const primaryButtons = document.querySelectorAll("[data-os-primary]");
+  primaryButtons.forEach((btn) => {
+    if (os === "win" || os === "linux") {
+      btn.dataset.download = os;
+      btn.style.removeProperty("display");
+      const label = btn.querySelector("[data-os-label]");
+      if (label) label.textContent = OS_LABELS[os];
+    } else {
+      // macOS / unknown — hide hero primary; the Download section still
+      // lists every OS so visitors aren't dead-ended.
+      btn.style.display = "none";
+    }
   });
-  document.querySelectorAll('[data-download="linux"]').forEach((el) => {
-    el.classList.remove("cta-secondary");
-    el.classList.add("cta-primary");
-  });
+
+  // Surface the "see all downloads" line for non-Win/Linux visitors so
+  // they have a clear path forward from the hero.
+  if (os !== "win" && os !== "linux") {
+    const otherLine = document.querySelector("[data-os-other-line]");
+    if (otherLine) otherLine.hidden = false;
+  }
 }
 
 /* ── Release resolver ──────────────────────────────────────────────── */
@@ -92,6 +120,8 @@ async function resolveLatestRelease() {
   const winAsset = (data.assets || []).find((a) => /\.exe$/i.test(a.name));
   const linuxAsset = (data.assets || []).find((a) => /\.AppImage$/i.test(a.name));
 
+  const assetByOs = { win: winAsset, linux: linuxAsset };
+
   if (winAsset) {
     document.querySelectorAll('[data-download="win"]').forEach((el) => {
       el.href = winAsset.browser_download_url;
@@ -102,6 +132,13 @@ async function resolveLatestRelease() {
       el.href = linuxAsset.browser_download_url;
     });
   }
+
+  // Update OS-primary CTAs whose data-download was set by applyOsLayout()
+  document.querySelectorAll("[data-os-primary]").forEach((btn) => {
+    const target = btn.dataset.download;
+    const asset = assetByOs[target];
+    if (asset) btn.href = asset.browser_download_url;
+  });
 
   const version = (data.tag_name || data.name || "").trim();
   if (version) {

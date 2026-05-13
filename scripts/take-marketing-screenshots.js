@@ -111,55 +111,56 @@ async function run() {
   await window.setViewportSize(VIEWPORT);
   await window.waitForTimeout(500);
 
-  // Drive the editor on each iteration. Pattern: switch theme → go to editor →
-  // pick profession (waiting for spec cards to render) → screenshot.
-  async function editorShot(name, theme, profession) {
-    await setTheme(window, theme);
-    await goToEditor(window);
-    await window.waitForTimeout(300);
-    await selectProfession(window, profession);
-    await window.waitForTimeout(800);
-    await shot(window, name);
+  // The profession-picker click sequence is flaky in this standalone run
+  // (works fine in the e2e test suite). For now, capture views that don't
+  // require driving the editor's custom-select dropdowns: library, comps,
+  // and the editor opened by clicking a saved build (which auto-populates
+  // every field from the mock builds.json).
+  async function openFirstSavedBuild() {
+    const opened = await window.evaluate(() => {
+      const card = document.querySelector(
+        ".build-card, [data-build-id], .library-card, .builds-grid > *"
+      );
+      if (!card) return false;
+      card.click();
+      return true;
+    });
+    return opened;
   }
 
   try {
-    await editorShot("editor-guardian-molten", "molten-core", "Guardian");
-    await editorShot("editor-necromancer-cinderfall", "cinderfall", "Necromancer");
-    await editorShot("editor-elementalist-verdant", "verdant-crucible", "Elementalist");
-    await editorShot("editor-engineer-frostforge", "frostforge", "Engineer");
-
-    console.log("Editor — Warrior with traits picked…");
-    await setTheme(window, "molten-core");
-    await goToEditor(window);
-    await selectProfession(window, "Warrior");
-    await window.waitForTimeout(500);
-    try {
-      await addSpecialization(window, "Strength");
-      await selectTrait(window, 0, 1, 0).catch(() => {});
-      await selectTrait(window, 0, 2, 1).catch(() => {});
-      await selectTrait(window, 0, 3, 2).catch(() => {});
-      await window.waitForTimeout(400);
-    } catch (e) {
-      console.warn("  (skipped trait pick:", e.message, ")");
-    }
-    await shot(window, "editor-warrior-traits");
-
     console.log("Library (Molten Core)…");
     await setTheme(window, "molten-core");
     await goToLibrary(window);
-    // Click a folder in the sidebar so build cards render.
-    await window.evaluate(() => {
-      const items = Array.from(document.querySelectorAll(".sidebar-folder, .folder-item, [data-folder-id]"));
-      const target = items.find((el) => /raid/i.test(el.textContent || ""));
-      if (target) target.click();
-    });
-    await window.waitForTimeout(800);
+    await window.waitForTimeout(900);
     await shot(window, "library-molten");
 
-    console.log("Comps page…");
+    console.log("Library (Frostforge)…");
+    await setTheme(window, "frostforge");
+    await window.waitForTimeout(400);
+    await shot(window, "library-frostforge");
+
+    console.log("Comps (Molten Core)…");
+    await setTheme(window, "molten-core");
     await goToComps(window);
-    await window.waitForTimeout(700);
+    await window.waitForTimeout(900);
     await shot(window, "comps");
+
+    console.log("Editor opened from saved build…");
+    await goToLibrary(window);
+    await window.waitForTimeout(500);
+    const opened = await openFirstSavedBuild();
+    if (opened) {
+      await window.waitForTimeout(1500);
+      await shot(window, "editor-saved-build");
+    } else {
+      console.warn("  (no build card found in library — skipping editor shot)");
+    }
+
+    console.log("Editor (Cinderfall) from same saved build…");
+    await setTheme(window, "cinderfall");
+    await window.waitForTimeout(400);
+    await shot(window, "editor-saved-build-cinderfall");
   } catch (err) {
     console.error("Screenshot capture failed:", err);
     process.exitCode = 1;
