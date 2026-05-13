@@ -214,7 +214,7 @@ code {
 .theme-chip[data-theme="cinderfall"]       { background: #c0463c; }
 .theme-chip[aria-pressed="true"] {
   transform: scale(1.18);
-  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px currentColor;
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
 }
 .theme-chip:focus-visible {
   outline: 2px solid var(--accent);
@@ -286,7 +286,6 @@ section.download {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 1rem;
-  counter-reset: how;
 }
 .how-step {
   position: relative;

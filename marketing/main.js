@@ -1,8 +1,6 @@
 /* AxiForge marketing site — interactive bits */
 
 const REPO = "darkharasho/axiforge";
-const RELEASES_URL = `https://github.com/${REPO}/releases`;
-const LATEST_URL = `${RELEASES_URL}/latest`;
 const API_URL = `https://api.github.com/repos/${REPO}/releases/latest`;
 const THEME_KEY = "axiforge-marketing-theme";
 
