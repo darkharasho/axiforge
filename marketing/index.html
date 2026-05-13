@@ -187,16 +187,67 @@
     </main>
 
     <footer class="footer">
-      <div class="footer-row">
-        <img class="brand-mark brand-mark--sm" src="./assets/axiforge-wordmark.png" alt="AxiForge" />
-        <span class="footer-meta">MIT licensed · <span data-version>v0.6.24</span></span>
+      <div class="footer-top">
+        <div class="footer-brand">
+          <a class="brand" href="#top" aria-label="AxiForge home">
+            <img class="brand-mark brand-mark--sm" src="./assets/axiforge-wordmark.png" alt="" aria-hidden="true" />
+            <span class="brand-word">Axi<span class="brand-word__accent">Forge</span></span>
+          </a>
+          <p class="footer-tagline">
+            A desktop forge for Guild Wars 2 builds — yours to edit, yours to publish.
+          </p>
+          <p class="footer-meta">
+            MIT licensed · <span data-version>v0.6.24</span>
+          </p>
+        </div>
+
+        <nav class="footer-cols" aria-label="Footer">
+          <div class="footer-col">
+            <h4>Project</h4>
+            <ul>
+              <li><a href="https://github.com/darkharasho/axiforge" target="_blank" rel="noopener">GitHub</a></li>
+              <li><a href="https://github.com/darkharasho/axiforge/releases" target="_blank" rel="noopener">Releases</a></li>
+              <li><a href="https://github.com/darkharasho/axiforge#readme" target="_blank" rel="noopener">README</a></li>
+              <li><a href="https://github.com/darkharasho/axiforge/blob/main/LICENSE" target="_blank" rel="noopener">License</a></li>
+            </ul>
+          </div>
+
+          <div class="footer-col">
+            <h4>Community</h4>
+            <ul>
+              <li>
+                <a href="https://discord.gg/UjzMXMGXEg" target="_blank" rel="noopener" class="footer-link-icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M20.317 4.369A19.79 19.79 0 0 0 16.558 3a13.85 13.85 0 0 0-.659 1.336 18.27 18.27 0 0 0-5.799 0A13.85 13.85 0 0 0 9.44 3a19.74 19.74 0 0 0-3.759 1.369C2.13 9.625 1.276 14.737 1.703 19.78a19.9 19.9 0 0 0 5.993 3.026 14.5 14.5 0 0 0 1.282-2.071 12.86 12.86 0 0 1-2.018-.969c.169-.123.334-.252.493-.385a14.2 14.2 0 0 0 12.094 0c.16.133.325.262.493.385a12.9 12.9 0 0 1-2.02.97 14.5 14.5 0 0 0 1.282 2.07 19.86 19.86 0 0 0 5.994-3.025c.502-5.85-.838-10.916-3.979-15.413ZM8.515 16.738c-1.182 0-2.157-1.087-2.157-2.42 0-1.334.953-2.42 2.157-2.42 1.204 0 2.18 1.086 2.157 2.42 0 1.333-.953 2.42-2.157 2.42Zm6.97 0c-1.182 0-2.157-1.087-2.157-2.42 0-1.334.953-2.42 2.157-2.42s2.18 1.086 2.157 2.42c0 1.333-.953 2.42-2.157 2.42Z"/>
+                  </svg>
+                  Discord
+                </a>
+              </li>
+              <li><a href="https://github.com/darkharasho/axiforge/issues/new" target="_blank" rel="noopener">Report an issue</a></li>
+              <li><a href="https://github.com/darkharasho/axiforge/discussions" target="_blank" rel="noopener">Discussions</a></li>
+            </ul>
+          </div>
+
+          <div class="footer-col">
+            <h4>Download</h4>
+            <ul>
+              <li><a data-download="win" href="https://github.com/darkharasho/axiforge/releases/latest">Windows (.exe)</a></li>
+              <li><a data-download="linux" href="https://github.com/darkharasho/axiforge/releases/latest">Linux (.AppImage)</a></li>
+              <li><a href="https://github.com/darkharasho/axiforge/releases" target="_blank" rel="noopener">All releases</a></li>
+            </ul>
+          </div>
+        </nav>
       </div>
-      <div class="footer-row">
-        <a href="https://github.com/darkharasho/axiforge" target="_blank" rel="noopener">GitHub</a>
-        <a href="https://github.com/darkharasho/axiforge/releases" target="_blank" rel="noopener">Releases</a>
-        <a href="https://github.com/darkharasho/axiforge/issues/new" target="_blank" rel="noopener">Report an issue</a>
+
+      <div class="footer-bottom">
+        <p class="disclaimer">
+          Not affiliated with ArenaNet, NCsoft, or Guild Wars 2. All trademarks belong to their respective owners.
+        </p>
+        <p class="footer-built">
+          Built with <span aria-hidden="true">⚒</span> by
+          <a href="https://github.com/darkharasho" target="_blank" rel="noopener">darkharasho</a>.
+        </p>
       </div>
-      <p class="disclaimer">Not affiliated with ArenaNet, NCsoft, or Guild Wars 2.</p>
     </footer>
 
     <script src="./main.js" defer></script>
