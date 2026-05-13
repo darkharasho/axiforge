@@ -1,11 +1,42 @@
 /**
  * Mock data for marketing screenshots. Pre-seeded into the e2e profile's
  * data directory so the library/comps pages look lived-in.
+ *
+ * For the GvG 15v15 comp we use six real builds (Firebrand, Druid, Tempest,
+ * Reaper, Berserker, Troubadour) extracted from the developer's local app —
+ * they carry full traits / skills / weapons / gear and resolve in the comp
+ * detail slots. The remaining synthetic builds are minimal — enough to make
+ * the library page look populated.
  */
+
+const path = require("path");
+const fs = require("fs");
+const crypto = require("crypto");
 
 const now = Date.now();
 const isoDaysAgo = (d) => new Date(now - d * 86400_000).toISOString();
 const id = (n) => `mock-${n.toString(36).padStart(6, "0")}`;
+const lineId = () => `mock-line-${crypto.randomUUID().slice(0, 8)}`;
+
+const FIXTURE_BUILDS = JSON.parse(
+  fs.readFileSync(path.join(__dirname, "marketing-fixture-builds.json"), "utf-8")
+);
+
+// Re-stamp each fixture build's metadata so it slots cleanly into the mock
+// dataset (folder placement, updatedAt for ordering, etc.).
+function fixtureBuild(key, { folderId, daysAgo = 3 }) {
+  const src = FIXTURE_BUILDS[key];
+  if (!src) throw new Error(`Missing fixture build: ${key}`);
+  return {
+    ...src,
+    folderId,
+    compIds: [],
+    pinned: false,
+    sortOrder: 0,
+    updatedAt: isoDaysAgo(daysAgo),
+    createdAt: src.createdAt || isoDaysAgo(daysAgo + 30),
+  };
+}
 
 const FOLDERS = [
   { id: id(1), name: "Zerg", parentId: null, shared: false, createdAt: isoDaysAgo(45), updatedAt: isoDaysAgo(2) },
@@ -14,24 +45,29 @@ const FOLDERS = [
   { id: id(4), name: "GvG", parentId: null, shared: false, createdAt: isoDaysAgo(20), updatedAt: isoDaysAgo(3) },
 ];
 
-const BUILDS = [
-  ["Heal Firebrand (Zerg)", "Guardian", ["Heal", "Stab", "Zerg"], "wvw", id(1), 1],
-  ["Power Dragonhunter (GvG)", "Guardian", ["Power", "Burst", "GvG"], "wvw", id(4), 2],
-  ["Boon Scrapper", "Engineer", ["Quickness", "Cleanse", "Zerg"], "wvw", id(1), 3],
-  ["Condi Reaper", "Necromancer", ["Condi", "Pressure", "Havoc"], "wvw", id(2), 4],
-  ["Scourge Bomb", "Necromancer", ["Condi", "Bomb", "Zerg"], "wvw", id(1), 5],
-  ["Heal Tempest", "Elementalist", ["Heal", "Auras", "Zerg"], "wvw", id(1), 6],
-  ["Cele Weaver Roamer", "Elementalist", ["Cele", "Sustain", "Roam"], "wvw", id(3), 7],
-  ["Boon Chronomancer", "Mesmer", ["Quickness", "Pulls", "GvG"], "wvw", id(4), 8],
-  ["Power Soulbeast", "Ranger", ["Power", "Pick", "Roam"], "wvw", id(3), 9],
-  ["Mirage Roamer", "Mesmer", ["Condi", "Mobility", "Roam"], "wvw", id(3), 10],
-  ["Spellbreaker", "Warrior", ["Power", "Strip", "GvG"], "wvw", id(4), 11],
-  ["Daredevil Roamer", "Thief", ["Power", "+1", "Roam"], "wvw", id(3), 12],
-  ["Vindicator (Havoc)", "Revenant", ["Power", "Burst", "Havoc"], "wvw", id(2), 13],
-  ["Herald Boon", "Revenant", ["Boon DPS", "Frontline", "GvG"], "wvw", id(4), 14],
+// Real fixture builds (full data) — these are what populate the GvG comp.
+const realBuilds = [
+  fixtureBuild("firebrand",  { folderId: id(4), daysAgo: 2 }),
+  fixtureBuild("druid",      { folderId: id(4), daysAgo: 3 }),
+  fixtureBuild("tempest",    { folderId: id(1), daysAgo: 4 }),
+  fixtureBuild("reaper",     { folderId: id(4), daysAgo: 5 }),
+  fixtureBuild("berserker",  { folderId: id(4), daysAgo: 6 }),
+  fixtureBuild("troubadour", { folderId: id(4), daysAgo: 7 }),
 ];
 
-const buildEntries = BUILDS.map(([title, profession, tags, gameMode, folderId, n]) => ({
+// Synthetic library filler so the library page has volume.
+const SYNTHETIC = [
+  ["Boon Scrapper", "Engineer", ["Quickness", "Cleanse", "Zerg"], "wvw", id(1), 13],
+  ["Scourge Bomb", "Necromancer", ["Condi", "Bomb", "Zerg"], "wvw", id(1), 14],
+  ["Cele Weaver Roamer", "Elementalist", ["Cele", "Sustain", "Roam"], "wvw", id(3), 15],
+  ["Mirage Roamer", "Mesmer", ["Condi", "Mobility", "Roam"], "wvw", id(3), 16],
+  ["Spellbreaker", "Warrior", ["Power", "Strip", "GvG"], "wvw", id(4), 17],
+  ["Daredevil Roamer", "Thief", ["Power", "+1", "Roam"], "wvw", id(3), 18],
+  ["Vindicator (Havoc)", "Revenant", ["Power", "Burst", "Havoc"], "wvw", id(2), 19],
+  ["Herald Boon", "Revenant", ["Boon DPS", "Frontline", "GvG"], "wvw", id(4), 20],
+];
+
+const syntheticBuilds = SYNTHETIC.map(([title, profession, tags, gameMode, folderId, n]) => ({
   id: id(100 + n),
   version: 2,
   title,
@@ -52,15 +88,27 @@ const buildEntries = BUILDS.map(([title, profession, tags, gameMode, folderId, n
   publishedKey: "",
   folderId,
   compIds: [],
-  pinned: n <= 2,
+  pinned: false,
+  sortOrder: 0,
 }));
 
-const compSlot = (buildId, role) => ({ buildId, role });
-const compLine = (capacity, ...slots) => ({
-  id: id(900 + Math.floor(Math.random() * 99)),
+const ALL_BUILDS = [...realBuilds, ...syntheticBuilds];
+
+// Build-id shortcuts for the comp slot wiring below.
+const B = Object.fromEntries(
+  Object.entries(FIXTURE_BUILDS).map(([k, v]) => [k, v.id])
+);
+
+// Slots are an array of buildId strings, per the comp-detail renderer
+// (src/renderer/modules/comps/comp-detail.js — `const buildId = slots[i]`).
+const compLine = (capacity, ...buildIds) => ({
+  id: lineId(),
   capacity,
-  slots: slots.map((s) => (typeof s === "string" ? compSlot(s, "") : s)),
+  slots: buildIds,
 });
+
+const GVG_LINE_A = [B.firebrand, B.druid, B.tempest,    B.reaper, B.troubadour];
+const GVG_LINE_B = [B.firebrand, B.druid, B.berserker,  B.reaper, B.troubadour];
 
 const COMPS = [
   {
@@ -70,23 +118,11 @@ const COMPS = [
     tags: ["Zerg", "Frontline"],
     folderId: null,
     sortOrder: 0,
-    buildIds: [id(101), id(105), id(103), id(106), id(111)],
+    buildIds: [B.firebrand, B.tempest, id(113), id(114), id(117)],
     gameMode: "wvw",
     partyLines: [
-      compLine(5,
-        { buildId: id(101), role: "Heal FB" },
-        { buildId: id(105), role: "Scourge Bomb" },
-        { buildId: id(103), role: "Boon Scrapper" },
-        { buildId: id(106), role: "Heal Tempest" },
-        { buildId: id(111), role: "Spellbreaker" }
-      ),
-      compLine(5,
-        { buildId: id(101), role: "Heal FB" },
-        { buildId: id(105), role: "Scourge Bomb" },
-        { buildId: id(103), role: "Boon Scrapper" },
-        { buildId: id(106), role: "Heal Tempest" },
-        { buildId: id(111), role: "Spellbreaker" }
-      ),
+      compLine(5, B.firebrand, id(114), id(113), B.tempest, id(117)),
+      compLine(5, B.firebrand, id(114), id(113), B.tempest, id(117)),
     ],
     createdAt: isoDaysAgo(15),
     updatedAt: isoDaysAgo(2),
@@ -94,34 +130,17 @@ const COMPS = [
   {
     id: id(51),
     name: "GvG 15v15",
-    notes: "Power Dragonhunter spike + Chrono pulls + Herald boons + Spellbreaker rip",
+    notes: "Firebrand / Druid / Tempest / Reaper / Troubadour — mirrored with a Berserker swap on lines 2 and 4.",
     tags: ["GvG", "Roster"],
     folderId: null,
     sortOrder: 1,
-    buildIds: [id(102), id(108), id(114), id(111), id(101)],
+    buildIds: Object.values(B),
     gameMode: "wvw",
     partyLines: [
-      compLine(5,
-        { buildId: id(101), role: "Heal FB" },
-        { buildId: id(102), role: "Power DH" },
-        { buildId: id(108), role: "Chrono Pulls" },
-        { buildId: id(114), role: "Herald Boon" },
-        { buildId: id(111), role: "Spellbreaker" }
-      ),
-      compLine(5,
-        { buildId: id(101), role: "Heal FB" },
-        { buildId: id(102), role: "Power DH" },
-        { buildId: id(108), role: "Chrono Pulls" },
-        { buildId: id(114), role: "Herald Boon" },
-        { buildId: id(111), role: "Spellbreaker" }
-      ),
-      compLine(5,
-        { buildId: id(101), role: "Heal FB" },
-        { buildId: id(102), role: "Power DH" },
-        { buildId: id(108), role: "Chrono Pulls" },
-        { buildId: id(114), role: "Herald Boon" },
-        { buildId: id(111), role: "Spellbreaker" }
-      ),
+      compLine(5, ...GVG_LINE_A),
+      compLine(5, ...GVG_LINE_B),
+      compLine(5, ...GVG_LINE_A),
+      compLine(5, ...GVG_LINE_B),
     ],
     createdAt: isoDaysAgo(40),
     updatedAt: isoDaysAgo(5),
@@ -129,29 +148,20 @@ const COMPS = [
   {
     id: id(52),
     name: "Havoc Squad",
-    notes: "5-man pick group — Vindi spike, Condi Reaper pressure, Daredevil +1",
+    notes: "5-man pick group — Reaper pressure, Berserker burst, Troubadour cover, Druid heal, Firebrand stab.",
     tags: ["Havoc"],
     folderId: null,
     sortOrder: 2,
-    buildIds: [id(113), id(104), id(112), id(101), id(108)],
+    buildIds: [B.firebrand, B.druid, B.berserker, B.reaper, B.troubadour],
     gameMode: "wvw",
     partyLines: [
-      compLine(5,
-        { buildId: id(101), role: "Heal FB" },
-        { buildId: id(113), role: "Vindicator" },
-        { buildId: id(104), role: "Condi Reaper" },
-        { buildId: id(112), role: "Daredevil" },
-        { buildId: id(108), role: "Boon Chrono" }
-      ),
+      compLine(5, B.firebrand, B.druid, B.berserker, B.reaper, B.troubadour),
     ],
     createdAt: isoDaysAgo(8),
     updatedAt: isoDaysAgo(1),
   },
 ];
 
-// Read the *actual* current version from package.json so lastSeenVersion
-// always matches — the What's New modal compares strict equality and opens
-// whenever they differ. Match exactly to suppress it.
 const APP_VERSION = require("../package.json").version;
 
 const SETTINGS = {
@@ -159,4 +169,4 @@ const SETTINGS = {
   "appearance.theme": "molten-core",
 };
 
-module.exports = { FOLDERS, BUILDS: buildEntries, COMPS, SETTINGS };
+module.exports = { FOLDERS, BUILDS: ALL_BUILDS, COMPS, SETTINGS };

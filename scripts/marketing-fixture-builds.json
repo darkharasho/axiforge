@@ -1,0 +1,2521 @@
+{
+  "firebrand": {
+    "id": "943b476c-45e4-4ce6-837d-d3df5c7a4983",
+    "version": 2,
+    "title": "Wanderer's Firebrand",
+    "profession": "Guardian",
+    "specializations": [
+      {
+        "id": 42,
+        "name": "Zeal",
+        "elite": false,
+        "icon": "",
+        "background": "",
+        "minorTraits": [],
+        "majorChoices": {
+          "1": 634,
+          "2": 653,
+          "3": 637
+        },
+        "majorTraitsByTier": {
+          "1": [],
+          "2": [],
+          "3": []
+        }
+      },
+      {
+        "id": 46,
+        "name": "Virtues",
+        "elite": false,
+        "icon": "",
+        "background": "",
+        "minorTraits": [],
+        "majorChoices": {
+          "1": 624,
+          "2": 603,
+          "3": 612
+        },
+        "majorTraitsByTier": {
+          "1": [],
+          "2": [],
+          "3": []
+        }
+      },
+      {
+        "id": 62,
+        "name": "Firebrand",
+        "elite": true,
+        "icon": "",
+        "background": "",
+        "minorTraits": [],
+        "majorChoices": {
+          "1": 2101,
+          "2": 2076,
+          "3": 2159
+        },
+        "majorTraitsByTier": {
+          "1": [],
+          "2": [],
+          "3": []
+        }
+      }
+    ],
+    "skills": {
+      "heal": {
+        "id": 41714,
+        "name": "Mantra of Solace",
+        "icon": "",
+        "description": "",
+        "slot": "",
+        "type": "",
+        "specialization": 0
+      },
+      "utility": [
+        {
+          "id": 9084,
+          "name": "\"Advance!\"",
+          "icon": "",
+          "description": "",
+          "slot": "",
+          "type": "",
+          "specialization": 0
+        },
+        {
+          "id": 40915,
+          "name": "Mantra of Potence",
+          "icon": "",
+          "description": "",
+          "slot": "",
+          "type": "",
+          "specialization": 0
+        },
+        {
+          "id": 9153,
+          "name": "\"Stand Your Ground!\"",
+          "icon": "",
+          "description": "",
+          "slot": "",
+          "type": "",
+          "specialization": 0
+        }
+      ],
+      "elite": {
+        "id": 43357,
+        "name": "Mantra of Liberation",
+        "icon": "",
+        "description": "",
+        "slot": "",
+        "type": "",
+        "specialization": 0
+      }
+    },
+    "underwaterSkills": {
+      "heal": {
+        "id": 41714,
+        "name": "Mantra of Solace",
+        "icon": "",
+        "description": "",
+        "slot": "",
+        "type": "",
+        "specialization": 0
+      },
+      "utility": [
+        {
+          "id": 9084,
+          "name": "\"Advance!\"",
+          "icon": "",
+          "description": "",
+          "slot": "",
+          "type": "",
+          "specialization": 0
+        },
+        {
+          "id": 9153,
+          "name": "\"Stand Your Ground!\"",
+          "icon": "",
+          "description": "",
+          "slot": "",
+          "type": "",
+          "specialization": 0
+        },
+        {
+          "id": 9128,
+          "name": "Sanctuary",
+          "icon": "",
+          "description": "",
+          "slot": "",
+          "type": "",
+          "specialization": 0
+        }
+      ],
+      "elite": {
+        "id": 43357,
+        "name": "Mantra of Liberation",
+        "icon": "",
+        "description": "",
+        "slot": "",
+        "type": "",
+        "specialization": 0
+      }
+    },
+    "equipment": {
+      "statPackage": "Wanderer",
+      "relic": "Relic of Altruism",
+      "food": "91835",
+      "utility": "81157",
+      "slots": {
+        "head": "Wanderer",
+        "shoulders": "Wanderer",
+        "chest": "Wanderer",
+        "hands": "Wanderer",
+        "legs": "Wanderer",
+        "feet": "Wanderer",
+        "breather": "Wanderer",
+        "mainhand1": "Wanderer",
+        "mainhand2": "Wanderer",
+        "offhand2": "Wanderer",
+        "amulet": "Wanderer",
+        "ring1": "Wanderer",
+        "ring2": "Wanderer",
+        "accessory1": "Wanderer",
+        "accessory2": "Wanderer",
+        "back": "Wanderer"
+      },
+      "weapons": {
+        "mainhand1": "spear",
+        "mainhand2": "axe",
+        "offhand2": "shield"
+      },
+      "runes": {
+        "head": "89999",
+        "shoulders": "89999",
+        "chest": "89999",
+        "hands": "89999",
+        "legs": "89999",
+        "feet": "89999",
+        "breather": "89999"
+      },
+      "sigils": {
+        "mainhand1": [
+          "24600",
+          "72339"
+        ],
+        "offhand1": [
+          "72339"
+        ],
+        "mainhand2": [
+          "24575",
+          "72339"
+        ],
+        "offhand2": [
+          "72339"
+        ],
+        "aquatic1": [
+          "24575",
+          ""
+        ],
+        "aquatic2": [
+          "",
+          ""
+        ]
+      },
+      "infusions": {
+        "head": "86986",
+        "shoulders": "86986",
+        "chest": "86986",
+        "hands": "86986",
+        "legs": "86986",
+        "feet": "86986",
+        "breather": [
+          "86986"
+        ],
+        "mainhand1": [
+          "86986",
+          "86986"
+        ],
+        "offhand1": [
+          "86986"
+        ],
+        "mainhand2": [
+          "86986",
+          "86986"
+        ],
+        "offhand2": [
+          "86986"
+        ],
+        "aquatic1": [
+          "",
+          ""
+        ],
+        "aquatic2": [
+          "",
+          ""
+        ],
+        "ring1": [
+          "86986",
+          "86986",
+          "86986"
+        ],
+        "ring2": [
+          "86986",
+          "86986",
+          "86986"
+        ],
+        "accessory1": "86986",
+        "accessory2": "86986",
+        "back": [
+          "86986",
+          "86986"
+        ]
+      },
+      "enrichment": ""
+    },
+    "tags": [],
+    "notes": "",
+    "images": {},
+    "createdAt": "2026-03-23T15:53:40.097Z",
+    "updatedAt": "2026-03-23T16:00:33.734Z",
+    "buildUrl": "",
+    "gameMode": "wvw",
+    "publishedSlug": "",
+    "publishedFileId": "",
+    "publishedKey": "",
+    "folderId": null,
+    "compIds": [],
+    "pinned": false,
+    "sortOrder": 19,
+    "selectedLegends": [
+      "",
+      ""
+    ],
+    "selectedUnderwaterLegends": [
+      "",
+      ""
+    ],
+    "activeLegendSlot": 0,
+    "selectedPets": {
+      "terrestrial1": 0,
+      "terrestrial2": 0,
+      "aquatic1": 0,
+      "aquatic2": 0
+    },
+    "morphSkillIds": [
+      0,
+      0,
+      0
+    ]
+  },
+  "tempest": {
+    "id": "f49103ca-5ab3-4dfb-8a27-baae63db6cf2",
+    "version": 2,
+    "title": "Scepter/Warhorn Tempest",
+    "profession": "Elementalist",
+    "specializations": [
+      {
+        "id": 31,
+        "name": "Fire",
+        "elite": false,
+        "icon": "https://render.guildwars2.com/file/B4BDAB2452DEF1A34615DDC4F30A157DADC743C5/1011986.png",
+        "background": "https://render.guildwars2.com/file/6BB3E8FDEA6E679050D59E411A4AA956D347B045/1012038.png",
+        "minorTraits": [
+          {
+            "id": 320,
+            "name": "Empowering Flame",
+            "icon": "https://render.guildwars2.com/file/7F0BD23838FA4E0CD2336B04C7E5AB0ED03358EB/1012315.png",
+            "description": "Gain power while in fire attunement.",
+            "tier": 1
+          },
+          {
+            "id": 318,
+            "name": "Sunspot",
+            "icon": "https://render.guildwars2.com/file/1405047ED70DE30F80B1F6304A787B215BB50878/1012316.png",
+            "description": "Gain a fire aura, and damage nearby foes when you attune to fire.\nAlso triggers on overload skills.",
+            "tier": 2
+          },
+          {
+            "id": 319,
+            "name": "Pyromancer's Training",
+            "icon": "https://render.guildwars2.com/file/7C751D2FA513070209F24809D5232757000B1546/2175044.png",
+            "description": "Your fire-weapon skills gain reduced recharge. Deal increased strike damage to burning foes.",
+            "tier": 3
+          }
+        ],
+        "majorChoices": {
+          "1": 296,
+          "2": 334,
+          "3": 1510
+        },
+        "majorTraitsByTier": {
+          "1": [
+            {
+              "id": 296,
+              "name": "Burning Precision",
+              "icon": "https://render.guildwars2.com/file/774471FA3841BB90EB6F935A76D8017A0C4B005E/1012306.png",
+              "description": "Burning you inflict has increased duration and your critical hits gain a chance to inflict burning.",
+              "tier": 1
+            },
+            {
+              "id": 328,
+              "name": "Conjurer",
+              "icon": "https://render.guildwars2.com/file/6BE466F790D5410D2E10512B1F0A523EEEB776B0/1012307.png",
+              "description": "Gain fire aura when an ally picks up a conjured weapon.",
+              "tier": 1
+            },
+            {
+              "id": 335,
+              "name": "Burning Fire",
+              "icon": "https://render.guildwars2.com/file/0850B1BC61637D04045533CCDACFB5796F47B4CF/1012308.png",
+              "description": "Cast Lesser Cleansing Fire when you have a number of\u00a0conditions\u00a0on you.",
+              "tier": 1
+            }
+          ],
+          "2": [
+            {
+              "id": 325,
+              "name": "Burning Rage",
+              "icon": "https://render.guildwars2.com/file/AB4E6CB3066DFF2D3C179B026C9BC371799E5D67/2175045.png",
+              "description": "Sunspot inflicts burning, and its radius is increased. Your condition damage is increased.",
+              "tier": 2
+            },
+            {
+              "id": 340,
+              "name": "Smothering Auras",
+              "icon": "https://render.guildwars2.com/file/32EB577B3EC6D2AC0AC4EDB4A799EE5E4F2B1341/1012310.png",
+              "description": "Fire auras have increased duration. Applying auras to allies removes conditions, and transmuting auras removes conditions from nearby allies.",
+              "tier": 2
+            },
+            {
+              "id": 334,
+              "name": "Power Overwhelming",
+              "icon": "https://render.guildwars2.com/file/5D0937674DCD7AAAE80B4D243AFBDC753DFF220B/1012311.png",
+              "description": "While at or above the might threshold, gain increased power. Power bonuses are doubled while attuned to fire.",
+              "tier": 2
+            }
+          ],
+          "3": [
+            {
+              "id": 1510,
+              "name": "Persisting Flames",
+              "icon": "https://render.guildwars2.com/file/38496307B7C27BCB08D6800F2A699B4998DD1935/1012312.png",
+              "description": "Fire fields created by weapon skills last longer. Whenever your fire fields hit a foe or you inflict burning, gain increased strike damage for a duration.",
+              "tier": 3
+            },
+            {
+              "id": 294,
+              "name": "Pyromancer's Puissance",
+              "icon": "https://render.guildwars2.com/file/998095CB1FD2CF0164B8A36BABFDB911DF08DB02/1012313.png",
+              "description": "Gain might for using any skill while attuned to fire. When leaving fire attunement or successfully completing a fire overload, unleash a Flame Expulsion.",
+              "tier": 3
+            },
+            {
+              "id": 1675,
+              "name": "Inferno",
+              "icon": "https://render.guildwars2.com/file/150B4E2CB4039B33152D496FF04E9B1644E22E0A/1012314.png",
+              "description": "Burning you inflict scales off of your power instead of your condition damage.",
+              "tier": 3
+            }
+          ]
+        }
+      },
+      {
+        "id": 41,
+        "name": "Air",
+        "elite": false,
+        "icon": "https://render.guildwars2.com/file/D3DB62FF6055021A717F3C6A0C19502F2C4EC1FF/1011983.png",
+        "background": "https://render.guildwars2.com/file/97BE972EC832ABC4F8645FF4A063EFF89B2942B8/1012034.png",
+        "minorTraits": [
+          {
+            "id": 221,
+            "name": "Zephyr's Speed",
+            "icon": "https://render.guildwars2.com/file/9B55449FC8EF093FE4925DDE9BF41B5A6298BAAA/1012279.png",
+            "description": "Your chance to critically strike is increased. While attuned to air, your movement speed is also increased.",
+            "tier": 1
+          },
+          {
+            "id": 222,
+            "name": "Electric Discharge",
+            "icon": "https://render.guildwars2.com/file/F4622EE8300028599369D4084EA7A2774D250DEA/1012280.png",
+            "description": "Strike your target with a bolt of lightning when attuning to air.\nAlso triggers on overload skills.",
+            "tier": 2
+          },
+          {
+            "id": 223,
+            "name": "Aeromancer's Training",
+            "icon": "https://render.guildwars2.com/file/B07EBE9F0136026A2C710C1405C528DB4AC37936/2175041.png",
+            "description": "Gain ferocity, and gain additional ferocity while attuned to air. Air weapon skills get a reduced recharge time.",
+            "tier": 3
+          }
+        ],
+        "majorChoices": {
+          "1": 232,
+          "2": 214,
+          "3": 1503
+        },
+        "majorTraitsByTier": {
+          "1": [
+            {
+              "id": 227,
+              "name": "Zephyr's Boon",
+              "icon": "https://render.guildwars2.com/file/0542900C005EB41CEDFAF003D91A9104D479A848/1012270.png",
+              "description": "Grant boons to allies you grant auras to.",
+              "tier": 1
+            },
+            {
+              "id": 224,
+              "name": "One with Air",
+              "icon": "https://render.guildwars2.com/file/200BAEAD2FCD181E102556B02AF5F326EC583DD0/1012271.png",
+              "description": "Gain superspeed when attuning to air.",
+              "tier": 1
+            },
+            {
+              "id": 232,
+              "name": "Ferocious Winds",
+              "icon": "https://render.guildwars2.com/file/A0EB166CD43079B2F7206ED305FD6C3D049BB704/1012272.png",
+              "description": "Gain ferocity based on your precision.",
+              "tier": 1
+            }
+          ],
+          "2": [
+            {
+              "id": 229,
+              "name": "Inscription",
+              "icon": "https://render.guildwars2.com/file/0157D1D40CF9B505B907DB95149F767A6FDB09DD/1012273.png",
+              "description": "Gain boons upon casting a glyph based on your attunement. Gain resistance when attuning to air.",
+              "tier": 2
+            },
+            {
+              "id": 214,
+              "name": "Raging Storm",
+              "icon": "https://render.guildwars2.com/file/74A414B378B54431EF183A37DA37CCFFFC0E04BD/2175040.png",
+              "description": "Critically striking a foe grants fury. Gain ferocity while under the effects of fury.",
+              "tier": 2
+            },
+            {
+              "id": 1502,
+              "name": "Stormsoul",
+              "icon": "https://render.guildwars2.com/file/4505D3D02606283B02124C3304697304E663ECAE/1012275.png",
+              "description": "Deal increased strike damage to disabled or defiant foes. Outgoing stun duration increased. \nDisables include stun, daze, knockback, pull, knockdown, sink, float, launch, taunt, and fear.",
+              "tier": 2
+            }
+          ],
+          "3": [
+            {
+              "id": 226,
+              "name": "Bolt to the Heart",
+              "icon": "https://render.guildwars2.com/file/3E4E727D6D23DFEF4205F272A15E2136799DE291/1012276.png",
+              "description": "Deal increased strike damage to enemies below the health threshold.",
+              "tier": 3
+            },
+            {
+              "id": 1503,
+              "name": "Fresh Air",
+              "icon": "https://render.guildwars2.com/file/FA64C9F2750F986E52E8376F22EDBA3844A8C603/1012277.png",
+              "description": "Recharge air attunement on a critical hit. Gain a ferocity boost when attuning to air.",
+              "tier": 3
+            },
+            {
+              "id": 1672,
+              "name": "Lightning Rod",
+              "icon": "https://render.guildwars2.com/file/0D26024404D06BBB0A3BD70340251740C73E0F2C/1012278.png",
+              "description": "Cast Lightning Rod when you disable a foe.\nDisables include stun, daze, knockback, pull, knockdown, sink, float, launch, taunt, and fear.",
+              "tier": 3
+            }
+          ]
+        }
+      },
+      {
+        "id": 48,
+        "name": "Tempest",
+        "elite": true,
+        "icon": "https://render.guildwars2.com/file/D1970ABC09D07B4275C7E47DDD0EDC0F4CFC050C/1029930.png",
+        "background": "https://render.guildwars2.com/file/D22197110A38F5651AA3F4C23914A197DD2C5BA1/1029936.png",
+        "minorTraits": [
+          {
+            "id": 2025,
+            "name": "Singularity",
+            "icon": "https://render.guildwars2.com/file/B5B020BD12E7A490DE9551FA06D920AC4F9A6036/1029952.png",
+            "description": "Attain elemental singularity by remaining in an attunement for a period of time. Upon attaining singularity, you may overload the attunement to your vicinity. Gain access to Shouts.",
+            "tier": 1
+          },
+          {
+            "id": 1938,
+            "name": "Gathered Focus",
+            "icon": "https://render.guildwars2.com/file/410EF84D7D37FBE72E1D2AB026249E1050CD70AF/2207774.png",
+            "description": "Your concentration is increased.",
+            "tier": 2
+          },
+          {
+            "id": 1948,
+            "name": "Hardy Conduit",
+            "icon": "https://render.guildwars2.com/file/F61B0203A07CDF17A3613731EE93F6C09410E825/1029953.png",
+            "description": "Overloads grant protection to nearby allies. Protection gains increased damage reduction.",
+            "tier": 3
+          }
+        ],
+        "majorChoices": {
+          "1": 1886,
+          "2": 1891,
+          "3": 1839
+        },
+        "majorTraitsByTier": {
+          "1": [
+            {
+              "id": 1952,
+              "name": "Gale Song",
+              "icon": "https://render.guildwars2.com/file/65ED3B2F3816172BC7E23598DA93A0731D6D0245/1029943.png",
+              "description": "Grant protection to nearby allies when you use a healing skill.",
+              "tier": 1
+            },
+            {
+              "id": 1962,
+              "name": "Latent Stamina",
+              "icon": "https://render.guildwars2.com/file/BA1F1D070867AC48FE57F876315657DDA25A044E/1029944.png",
+              "description": "Grant vigor to nearby allies when attuning to water. Restore endurance to allies you grant vigor.",
+              "tier": 1
+            },
+            {
+              "id": 1886,
+              "name": "Unstable Conduit",
+              "icon": "https://render.guildwars2.com/file/51765B3330426700C8A2E580B23637CA9CD728FB/1029945.png",
+              "description": "Overloads grant an aura based on your attunement.",
+              "tier": 1
+            }
+          ],
+          "2": [
+            {
+              "id": 1891,
+              "name": "Tempestuous Aria",
+              "icon": "https://render.guildwars2.com/file/0C2A72B848A7FBB596DE6096B4C45814D3266EEB/1029946.png",
+              "description": "Using a shout grants allies might. Granting an aura to an ally increases your outgoing damage for a period of time.",
+              "tier": 2
+            },
+            {
+              "id": 1902,
+              "name": "Harmonious Conduit",
+              "icon": "https://render.guildwars2.com/file/DC03410B07E666C9F8AECFEDCE9855C65136E597/1029948.png",
+              "description": "Gain stability and swiftness when starting an overload.",
+              "tier": 2
+            },
+            {
+              "id": 2015,
+              "name": "Invigorating Torrents",
+              "icon": "https://render.guildwars2.com/file/053DD3F436F333340672EB1F7F951F540ADFDBC4/1029947.png",
+              "description": "Auras you grant also grant regeneration and vigor.",
+              "tier": 2
+            }
+          ],
+          "3": [
+            {
+              "id": 1839,
+              "name": "Transcendent Tempest",
+              "icon": "https://render.guildwars2.com/file/0C79A761B446E53CAB6DA4B320D12D656B5E1151/2207773.png",
+              "description": "Time to attain singularity is reduced. Upon successfully completing an overload, gain increased damage.",
+              "tier": 3
+            },
+            {
+              "id": 2033,
+              "name": "Lucid Singularity",
+              "icon": "https://render.guildwars2.com/file/2E3AEA68A85501D1209EABD2E1603C0151ED9292/1029951.png",
+              "description": "Apply boons to nearby allies while channeling overloads and when successfully completing an overload channel.",
+              "tier": 3
+            },
+            {
+              "id": 1986,
+              "name": "Elemental Bastion",
+              "icon": "https://render.guildwars2.com/file/570FD4DD0094280F906ACAAD37705E9B0F4ADA63/1029949.png",
+              "description": "Heal allies you grant an aura to. Grant frost aura to nearby allies when struck while below the health threshold.",
+              "tier": 3
+            }
+          ]
+        }
+      }
+    ],
+    "skills": {
+      "heal": {
+        "id": 21656,
+        "name": "Arcane Brilliance",
+        "icon": "https://render.guildwars2.com/file/09A60F4FF1020AD1CB78FC7FF21F10306AF7DF0E/699524.png",
+        "description": "Arcane. Blast the area, hitting foes with critical damage and healing yourself. Healing effectiveness is increased per target hit. If this skill finishes a combo, you heal an additional amount.",
+        "slot": "Heal",
+        "type": "Heal",
+        "specialization": 0
+      },
+      "utility": [
+        {
+          "id": 5635,
+          "name": "Arcane Echo",
+          "icon": "https://render.guildwars2.com/file/AD24BD1B231424D2A8F223A6F899AC34D6AAAB26/103356.png",
+          "description": "Arcane. The next weapon skill you use has significantly reduced recharge, and this skill's recharge is increased by the original recharge of the affected skill.",
+          "slot": "Utility",
+          "type": "Utility",
+          "specialization": 0
+        },
+        {
+          "id": 30047,
+          "name": "\"Eye of the Storm!\"",
+          "icon": "https://render.guildwars2.com/file/0A4809D69EDAD4FC34F9D46A035096B2EA48D412/1029990.png",
+          "description": "Shout. Imbue your voice with the element of air, massively increasing speed and breaking stun for nearby allies.",
+          "slot": "Utility",
+          "type": "Utility",
+          "specialization": 48
+        },
+        {
+          "id": 5734,
+          "name": "Glyph of Storms",
+          "icon": "https://render.guildwars2.com/file/53207A9159611359DD9E4001F530F63CA7627FAD/103393.png",
+          "description": "Glyph. Create a storm based on your attunement.",
+          "slot": "Utility",
+          "type": "Utility",
+          "specialization": 0
+        }
+      ],
+      "elite": {
+        "id": 29968,
+        "name": "\"Rebound!\"",
+        "icon": "https://render.guildwars2.com/file/7B1B6E07A10B0FE8CED391354390EE993F51C3F7/1029984.png",
+        "description": "Shout. Shout and infuse your allies with arcane energy. Allies who would take lethal damage while this is active ignore the deathblow and are healed instead. If the effect expires naturally, grant an aura based on your current attunement.",
+        "slot": "Elite",
+        "type": "Elite",
+        "specialization": 48
+      }
+    },
+    "underwaterSkills": {
+      "heal": null,
+      "utility": [],
+      "elite": null
+    },
+    "equipment": {
+      "statPackage": "",
+      "relic": "Relic of Fireworks",
+      "food": "91734",
+      "utility": "43451",
+      "slots": {
+        "head": "Berserker's",
+        "shoulders": "Berserker's",
+        "chest": "Berserker's",
+        "hands": "Berserker's",
+        "legs": "Berserker's",
+        "feet": "Berserker's",
+        "mainhand1": "Marauder's",
+        "offhand1": "Marauder's",
+        "mainhand2": "Marauder's",
+        "offhand2": "Marauder's",
+        "back": "Marauder's",
+        "amulet": "Marauder's",
+        "ring1": "Marauder's",
+        "ring2": "Marauder's",
+        "accessory1": "Marauder's",
+        "accessory2": "Marauder's",
+        "breather": "Berserker's",
+        "aquatic1": "Marauder's",
+        "aquatic2": ""
+      },
+      "weapons": {
+        "mainhand1": "scepter",
+        "offhand1": "warhorn",
+        "mainhand2": "scepter",
+        "offhand2": "warhorn",
+        "aquatic1": "trident",
+        "aquatic2": ""
+      },
+      "runes": {
+        "head": "24836",
+        "shoulders": "24836",
+        "chest": "24836",
+        "hands": "24836",
+        "legs": "24836",
+        "feet": "24836",
+        "breather": "24836"
+      },
+      "sigils": {
+        "mainhand1": [
+          "67341",
+          "24618"
+        ],
+        "offhand1": [
+          "24618"
+        ],
+        "mainhand2": [
+          "24615",
+          ""
+        ],
+        "offhand2": [
+          "24618"
+        ],
+        "aquatic1": [
+          "67341",
+          "24618"
+        ],
+        "aquatic2": [
+          "",
+          ""
+        ]
+      },
+      "infusions": {
+        "head": "43255",
+        "shoulders": "43255",
+        "chest": "43255",
+        "hands": "43255",
+        "legs": "43255",
+        "feet": "43255",
+        "mainhand1": [
+          "43254",
+          "43255"
+        ],
+        "offhand1": [
+          "43255"
+        ],
+        "mainhand2": [
+          "43255",
+          ""
+        ],
+        "offhand2": [
+          "43255"
+        ],
+        "back": [
+          "87218",
+          ""
+        ],
+        "ring1": [
+          "43254",
+          "43254",
+          "43254"
+        ],
+        "ring2": [
+          "43255",
+          "43254",
+          "43254"
+        ],
+        "accessory1": "43254",
+        "accessory2": "43255",
+        "breather": [
+          "43255"
+        ],
+        "aquatic1": [
+          "43255",
+          "43255"
+        ],
+        "aquatic2": [
+          "",
+          ""
+        ]
+      },
+      "enrichment": ""
+    },
+    "tags": [],
+    "notes": "",
+    "images": {},
+    "createdAt": "2026-03-23T15:55:40.260Z",
+    "updatedAt": "2026-03-27T03:06:50.497Z",
+    "buildUrl": "",
+    "gameMode": "wvw",
+    "publishedSlug": "",
+    "publishedFileId": "",
+    "publishedKey": "",
+    "folderId": null,
+    "compIds": [],
+    "pinned": false,
+    "sortOrder": 10,
+    "selectedLegends": [
+      "",
+      ""
+    ],
+    "selectedUnderwaterLegends": [
+      "",
+      ""
+    ],
+    "activeLegendSlot": 0,
+    "selectedPets": {
+      "terrestrial1": 0,
+      "terrestrial2": 0,
+      "aquatic1": 0,
+      "aquatic2": 0
+    },
+    "morphSkillIds": [
+      0,
+      0,
+      0
+    ]
+  },
+  "troubadour": {
+    "id": "e58fc1a9-22ad-4084-9bc6-5910226a4a4e",
+    "version": 2,
+    "title": "Support Troubadour",
+    "profession": "Mesmer",
+    "specializations": [
+      {
+        "id": 45,
+        "name": "Chaos",
+        "elite": false,
+        "icon": "https://render.guildwars2.com/file/7FD4DF076AFB31793EFA07220B35B427B3D406C3/1012000.png",
+        "background": "https://render.guildwars2.com/file/B20B7C6DDC30F72207D9BE4FB87C2FDCDC292E90/1012051.png",
+        "minorTraits": [
+          {
+            "id": 666,
+            "name": "Metaphysical Rejuvenation",
+            "icon": "https://render.guildwars2.com/file/9B6532A6F2ABBFB54649681E02B57F2313F3EF73/1012471.png",
+            "description": "Grant regeneration to nearby allies when you use a healing skill.",
+            "tier": 1
+          },
+          {
+            "id": 667,
+            "name": "Illusionary Membrane",
+            "icon": "https://render.guildwars2.com/file/0DF6A27A24B01D069DCD7609ADD305C7C557A82A/1012472.png",
+            "description": "Gain chaos aura when you use your Shatter skill 2. Chaos aura grants you increased condition damage for a period of time.",
+            "tier": 2
+          },
+          {
+            "id": 1865,
+            "name": "Chaotic Persistence",
+            "icon": "https://render.guildwars2.com/file/68A0B5BB7BA2BEDAD81167CFC95A9C6D551FE151/1012473.png",
+            "description": "Gain concentration and expertise while affected by regeneration.",
+            "tier": 3
+          }
+        ],
+        "majorChoices": {
+          "1": 675,
+          "2": 668,
+          "3": 1687
+        },
+        "majorTraitsByTier": {
+          "1": [
+            {
+              "id": 670,
+              "name": "Method of Madness",
+              "icon": "https://render.guildwars2.com/file/319D02A993BE08CEFA0798C256AE6F972D623749/1012462.png",
+              "description": "Cast Lesser Chaos Storm when you use a healing skill.",
+              "tier": 1
+            },
+            {
+              "id": 675,
+              "name": "Illusionary Defense",
+              "icon": "https://render.guildwars2.com/file/0E25FD2E32E05D360DB1785818965A4439C1F445/1012463.png",
+              "description": "Grant protection to nearby allies when you use Shatter skill 2.",
+              "tier": 1
+            },
+            {
+              "id": 677,
+              "name": "Master of Manipulation",
+              "icon": "https://render.guildwars2.com/file/E875372EA24AF0529E29430D0F38A90F4AA5F4F9/1012464.png",
+              "description": "Manipulations grant aegis to yourself and nearby allies.",
+              "tier": 1
+            }
+          ],
+          "2": [
+            {
+              "id": 673,
+              "name": "Auspicious Anguish",
+              "icon": "https://render.guildwars2.com/file/67E22C14059400490834D1AF7F2C69A75D31E6AA/1012465.png",
+              "description": "Convert damaging conditions to boons whenever you gain Distortion or become disabled.\nThis trait can only trigger when disabled once per interval.\nDisables include stun, daze, knockback, pull, knockdown, sink, float, launch, taunt, and fear.",
+              "tier": 2
+            },
+            {
+              "id": 668,
+              "name": "Chaotic Transference",
+              "icon": "https://render.guildwars2.com/file/C86C0AD576C6DDBBCC08D0110930E46FBC269908/1012466.png",
+              "description": "Gaining chaos aura grants boons to nearby allies.",
+              "tier": 2
+            },
+            {
+              "id": 669,
+              "name": "Chaotic Potency",
+              "icon": "https://render.guildwars2.com/file/4BAB6E9C6C672B740742CA1BCE8013C95F1829B6/1012467.png",
+              "description": "Gain condition damage. Gain additional condition damage while wielding a staff. Staff and trident skills gain reduced recharge.",
+              "tier": 2
+            }
+          ],
+          "3": [
+            {
+              "id": 671,
+              "name": "Chaotic Interruption",
+              "icon": "https://render.guildwars2.com/file/0214AD1DC21171D73D24D25CD1EC71D14296F2F5/1012468.png",
+              "description": "When you interrupt a foe, recharge one of your equipped-weapon skills at random.\nOnly affects weapon skills that are recharging.",
+              "tier": 3
+            },
+            {
+              "id": 674,
+              "name": "Prismatic Understanding",
+              "icon": "https://render.guildwars2.com/file/41F5AC92387E4CCAF30628E0A5FDB37FB5F50B34/1012469.png",
+              "description": "Increased stealth duration from mesmer skills. Gain random boons while you are in stealth.",
+              "tier": 3
+            },
+            {
+              "id": 1687,
+              "name": "Bountiful Disillusionment",
+              "icon": "https://render.guildwars2.com/file/CC2E110B0C40A8D3AF607F59099856760CA5E9DC/1012470.png",
+              "description": "Gain stability when you use a Shatter skill. Grant an additional boon to nearby allies based on which Shatter is used.",
+              "tier": 3
+            }
+          ]
+        }
+      },
+      {
+        "id": 23,
+        "name": "Inspiration",
+        "elite": false,
+        "icon": "https://render.guildwars2.com/file/BCC2C316C4FC2823679E0FD062C5A87E96E460CC/1012004.png",
+        "background": "https://render.guildwars2.com/file/DC30B4FF5377E80F21F4E912E8D548B004C95042/1012059.png",
+        "minorTraits": [
+          {
+            "id": 757,
+            "name": "Mender's Purity",
+            "icon": "https://render.guildwars2.com/file/05AB640373CFD462B305061165617C0D0FE0A878/1012531.png",
+            "description": "Cast Lesser Power Cleanse when you use a healing skill.",
+            "tier": 1
+          },
+          {
+            "id": 1852,
+            "name": "Inspiring Distortion",
+            "icon": "https://render.guildwars2.com/file/7BA394DC345278D4912EEAE94F072A06B9C932F2/1012532.png",
+            "description": "Grant aegis to other nearby allies whenever you give yourself distortion or use Shatter skill 4.",
+            "tier": 2
+          },
+          {
+            "id": 1915,
+            "name": "Illusionary Inspiration",
+            "icon": "https://render.guildwars2.com/file/090D289158520416A4402EBE9C92257E1309020D/1012533.png",
+            "description": "Increase healing to other allies. Summoning an illusion heals all allies around you.\n\nVirtuoso: Triggers when stocking a blade.",
+            "tier": 3
+          }
+        ],
+        "majorChoices": {
+          "1": 738,
+          "2": 740,
+          "3": 1866
+        },
+        "majorTraitsByTier": {
+          "1": [
+            {
+              "id": 756,
+              "name": "Medic's Feedback",
+              "icon": "https://render.guildwars2.com/file/4A1C386EE156DAACE137FB07060CC507EEE1E0B4/1012522.png",
+              "description": "Cast Feedback while reviving an ally. Feedback revives allies inside its dome.",
+              "tier": 1
+            },
+            {
+              "id": 738,
+              "name": "Restorative Mantras",
+              "icon": "https://render.guildwars2.com/file/2636BEBF0E35923BC4407739D0DC7DC223932F0C/1012523.png",
+              "description": "Heals allies around you when you use a charge of a mantra.",
+              "tier": 1
+            },
+            {
+              "id": 744,
+              "name": "Sympathetic Visage",
+              "icon": "https://render.guildwars2.com/file/FA0AE3A437419F325D682180687C5C7FF014602D/1012524.png",
+              "description": "Phantasms take conditions from you when summoned.",
+              "tier": 1
+            }
+          ],
+          "2": [
+            {
+              "id": 751,
+              "name": "Warden's Feedback",
+              "icon": "https://render.guildwars2.com/file/D4A345BC1A72A50B7C7449B7759BAB15664064F7/1012525.png",
+              "description": "Focus weapon skills reflect projectiles. Reduces recharge on focus weapon skills.",
+              "tier": 2
+            },
+            {
+              "id": 740,
+              "name": "Ego Restoration",
+              "icon": "https://render.guildwars2.com/file/A2B419927562110402010EEF084BF953905D54E5/1012529.png",
+              "description": "Create a clone when you use a healing skill.",
+              "tier": 2
+            },
+            {
+              "id": 1980,
+              "name": "Temporal Enchanter",
+              "icon": "https://render.guildwars2.com/file/1503DDC5B62526D71901E3A7F891A6F4445D80C8/1012527.png",
+              "description": "When you cast a glamour, allies near the glamour gain resistance and superspeed.",
+              "tier": 2
+            }
+          ],
+          "3": [
+            {
+              "id": 2005,
+              "name": "Mental Defense",
+              "icon": "https://render.guildwars2.com/file/EC7602C0FABB72AFB01379563ED7FB76079BB9CA/1012528.png",
+              "description": "Shatter skill 4 grants boons and breaks allies out of stuns.",
+              "tier": 3
+            },
+            {
+              "id": 1866,
+              "name": "Restorative Illusions",
+              "icon": "https://render.guildwars2.com/file/99A30379D5040427FD0FBC5DEDB6950376AB5B1C/1012526.png",
+              "description": "Heal and cleanse conditions from yourself and nearby allies when you use a Shatter skill.",
+              "tier": 3
+            },
+            {
+              "id": 752,
+              "name": "Blurred Inscriptions",
+              "icon": "https://render.guildwars2.com/file/B6C6AAC9506E3904F7CEEDC82629D2BEE54A7EF3/1012490.png",
+              "description": "Signets have improved active effects, and activating one grants you distortion.",
+              "tier": 3
+            }
+          ]
+        }
+      },
+      {
+        "id": 73,
+        "name": "Troubadour",
+        "elite": true,
+        "icon": "https://render.guildwars2.com/file/0FDD99E8B7A7FB4B06186C0756E02C0515520F75/3679899.png",
+        "background": "https://render.guildwars2.com/file/A9AF4BB7BC18AB4871B7D69EBEDEB344CD59D3DE/3679908.png",
+        "minorTraits": [
+          {
+            "id": 2386,
+            "name": "Wandering Minstrel",
+            "icon": "https://render.guildwars2.com/file/20B247166125BF0E03E65372F7C5ECE23207A208/3679976.png",
+            "description": "Build up notes instead of summoning clones. Shatters are replaced by Instrument skills, which consume notes to continue playing. Gain access to Tales.\n\nWhile out of combat, you will automatically generate a note every 10 seconds.",
+            "tier": 1
+          },
+          {
+            "id": 2424,
+            "name": "Symphonic Resonance",
+            "icon": "https://render.guildwars2.com/file/AF276ECB07996BF5343A513FF2E52F3BE1CBAD0B/3679978.png",
+            "description": "Instruments provide bonuses while playing in the background.",
+            "tier": 2
+          },
+          {
+            "id": 2374,
+            "name": "Harmonize",
+            "icon": "https://render.guildwars2.com/file/4BE6ED63233DEB2D5801D5D66BB202E202A6A27F/3679977.png",
+            "description": "Gain a note when you use a phantasm skill.",
+            "tier": 3
+          }
+        ],
+        "majorChoices": {
+          "1": 2326,
+          "2": 2367,
+          "3": 2441
+        },
+        "majorTraitsByTier": {
+          "1": [
+            {
+              "id": 2427,
+              "name": "Mayhem",
+              "icon": "https://render.guildwars2.com/file/A31842FADE40E64D553D230C0922E43D58495209/3679967.png",
+              "description": "Flustering Flute now applies torment. Dodging reduces the recharge of Flustering Flute.",
+              "tier": 1
+            },
+            {
+              "id": 2326,
+              "name": "Raconteur",
+              "icon": "https://render.guildwars2.com/file/77005B6DA7C4266CECE0BABD357E0F283D3E7F53/3679971.png",
+              "description": "Tales heal and grant protection to nearby allies.",
+              "tier": 1
+            },
+            {
+              "id": 2432,
+              "name": "Syncopate",
+              "icon": "https://render.guildwars2.com/file/42C9802D696B9670A0155DDF0FD2480CD9FBC473/3679969.png",
+              "description": "Deafening Drum releases an additional quick wave after a delay. Deal damage to enemies you disable.",
+              "tier": 1
+            }
+          ],
+          "2": [
+            {
+              "id": 2343,
+              "name": "Shredding",
+              "icon": "https://render.guildwars2.com/file/EF2D16FDF29BDCFEEC96503E0145BE1A9846F04C/3679970.png",
+              "description": "Lively Lute fires an additional wave at your enemy. The lute's damage bonus is increased.",
+              "tier": 2
+            },
+            {
+              "id": 2367,
+              "name": "Life of the Party",
+              "icon": "https://render.guildwars2.com/file/0D59A15F3F7F2671456A36C41A1737A94F050665/3679968.png",
+              "description": "Lively Lute and Crescendo grant boons to affected allies.",
+              "tier": 2
+            },
+            {
+              "id": 2422,
+              "name": "Love Song",
+              "icon": "https://render.guildwars2.com/file/1CC50D6BDDE64580522F0D396D194C020AC50DCE/3679972.png",
+              "description": "Harmonious Harp's distortion lasts longer. Strike damage from nearby enemies is reduced while the harp is playing in the background.",
+              "tier": 2
+            }
+          ],
+          "3": [
+            {
+              "id": 2353,
+              "name": "Fortissimo",
+              "icon": "https://render.guildwars2.com/file/57A93CAD1CDC7A45BA3B3BEB1739BDC7765109D6/3679973.png",
+              "description": "After using Crescendo, gain a note every interval for a duration. Gain increased attributes for each instrument you have playing.",
+              "tier": 3
+            },
+            {
+              "id": 2414,
+              "name": "Call and Response",
+              "icon": "https://render.guildwars2.com/file/1C96474AC3D5C74E05B724E8FF9DF9FC0ADCAFC2/3679974.png",
+              "description": "When you use an instrument above the note threshold, create an afterimage that plays that instrument after a delay.",
+              "tier": 3
+            },
+            {
+              "id": 2441,
+              "name": "Altered Chord",
+              "icon": "https://render.guildwars2.com/file/57FB13067F3039331F0C03A63B0D07242F0C72C4/3679975.png",
+              "description": "Crescendo prompts your last-played instrument to take the spotlight, augmenting Crescendo's effects. Playing an instrument recharges Crescendo if a note was consumed.",
+              "tier": 3
+            }
+          ]
+        }
+      }
+    ],
+    "skills": {
+      "heal": {
+        "id": 76695,
+        "name": "Tale of the Second Scion",
+        "icon": "https://render.guildwars2.com/file/F12BF59E070FB12D2EAAA209596C52C4D76C4E97/3680158.png",
+        "description": "Tale. Deliver the story of Aurene and the dragon cycle, rejuvenating nearby allies and increasing their incoming healing.",
+        "slot": "Heal",
+        "type": "Heal",
+        "specialization": 73
+      },
+      "utility": [
+        {
+          "id": 10237,
+          "name": "Mantra of Concentration",
+          "icon": "https://render.guildwars2.com/file/61E737065C9CFD372F58E1CD3BA748D6D5A02EF5/103751.png",
+          "description": "Mantra. Meditate, charging a spell that will break stuns and grant stability to nearby allies. Grant boons to nearby allies when this spell fully charges.",
+          "slot": "Utility",
+          "type": "Utility",
+          "specialization": 0
+        },
+        {
+          "id": 76850,
+          "name": "Tale of the Soulkeeper",
+          "icon": "https://render.guildwars2.com/file/AC9DC59D1CEF42DFD47CED6CE429041C7FADBBE7/3680164.png",
+          "description": "Tale. Rouse allies with the legend of Almorra Soulkeeper, granting offensive boons.",
+          "slot": "Utility",
+          "type": "Utility",
+          "specialization": 73
+        },
+        {
+          "id": 76611,
+          "name": "Tale of the Honorable Rogue",
+          "icon": "https://render.guildwars2.com/file/37EF1C69AC3D935333FCD8FC637729CEBE2A460E/3680165.png",
+          "description": "Tale. Quote the escapades of Dougal Keane, causing nearby allies to become extraordinarily nimble with a burst of speed.",
+          "slot": "Utility",
+          "type": "Utility",
+          "specialization": 73
+        }
+      ],
+      "elite": {
+        "id": 76971,
+        "name": "Tale of the August Queen",
+        "icon": "https://render.guildwars2.com/file/3FE0BC0317E63419FBCCC374A0D0A358E3A225F7/3680157.png",
+        "description": "Tale. Retell how Queen Jennah protected her city in their time of need, granting allies distortion and chaos aura.",
+        "slot": "Elite",
+        "type": "Elite",
+        "specialization": 73
+      }
+    },
+    "underwaterSkills": {
+      "heal": null,
+      "utility": [],
+      "elite": null
+    },
+    "equipment": {
+      "statPackage": "Minstrel's",
+      "relic": "Relic of the Monk",
+      "food": "91737",
+      "utility": "81157",
+      "slots": {
+        "head": "Minstrel's",
+        "shoulders": "Minstrel's",
+        "chest": "Minstrel's",
+        "hands": "Minstrel's",
+        "legs": "Minstrel's",
+        "feet": "Minstrel's",
+        "mainhand1": "Minstrel's",
+        "offhand1": "",
+        "mainhand2": "Minstrel's",
+        "offhand2": "Minstrel's",
+        "back": "Minstrel's",
+        "amulet": "Minstrel's",
+        "ring1": "Minstrel's",
+        "ring2": "Minstrel's",
+        "accessory1": "Minstrel's",
+        "accessory2": "Minstrel's",
+        "breather": "Minstrel's",
+        "aquatic1": "",
+        "aquatic2": ""
+      },
+      "weapons": {
+        "mainhand1": "rifle",
+        "offhand1": "",
+        "mainhand2": "sword",
+        "offhand2": "shield",
+        "aquatic1": "",
+        "aquatic2": ""
+      },
+      "runes": {
+        "head": "24839",
+        "shoulders": "24839",
+        "chest": "24839",
+        "hands": "24839",
+        "legs": "24839",
+        "feet": "24839",
+        "breather": "24839"
+      },
+      "sigils": {
+        "mainhand1": [
+          "74326",
+          "82876"
+        ],
+        "offhand1": [
+          ""
+        ],
+        "mainhand2": [
+          "82876",
+          ""
+        ],
+        "offhand2": [
+          "24582"
+        ],
+        "aquatic1": [
+          "",
+          ""
+        ],
+        "aquatic2": [
+          "",
+          ""
+        ]
+      },
+      "infusions": {
+        "head": "86986",
+        "shoulders": "86986",
+        "chest": "86986",
+        "hands": "86986",
+        "legs": "86986",
+        "feet": "86986",
+        "mainhand1": [
+          "86986",
+          "86986"
+        ],
+        "offhand1": [
+          ""
+        ],
+        "mainhand2": [
+          "86986",
+          "86986"
+        ],
+        "offhand2": [
+          "86986"
+        ],
+        "back": [
+          "86986",
+          "86986"
+        ],
+        "ring1": [
+          "43250",
+          "43250",
+          "43250"
+        ],
+        "ring2": [
+          "43250",
+          "43250",
+          "43250"
+        ],
+        "accessory1": "43250",
+        "accessory2": "86986",
+        "breather": [
+          "86986"
+        ],
+        "aquatic1": [
+          "",
+          ""
+        ],
+        "aquatic2": [
+          "",
+          ""
+        ]
+      },
+      "enrichment": ""
+    },
+    "tags": [],
+    "notes": "# Support Troubadour Guide\n\n---\n\n## General Description\n**Role**: Primary Stab, Boons, Damage Mitigation\n**Responsibilities**: Troubadours are the primary stability provider for the squad. Along with being the highest generation of stability, it provides boons, barriers, and healing to support the squad. It can also mitigate a large amount of incoming damage through blocks and invulns.\n**Positioning**: You are one of the tankiest roles in the squad with a lot of survivability. Be sure to stack on the commander as much as you can to help mitigate damage.\n\n---\n\n## Pre-Engage:\n- As one of the two stability sources in your party, we encourage you to talk with your Firebrand in your line to discuss who does the first source of stab.\n- Generally, troubadours do not have anything to do during might or swiftness stacking.\n- Provide stability (such as charging @[skill:10237:Mantra of Concentration]) at around 1200 range during engage and cover the stability. This means applying boons right after using your stab skill so it is less likely to get stripped/corrupted. Consider standing back while charging to prevent getting interrupted.\n![image](~img:3)\n- The first hit from an enemy zerg is typically the hardest. Using @[skill:72008:Singularity Shot] on engage can help mitigate damage and give your druid breathing room to heal the squad up.\n\n---\n\n## Rotation:\n### Stability Skills:\n- @[skill:10237:Mantra of Concentration] - Cast time required\n  - Charging mantra is a very strong stab. Unlike firebrands, troubs should use up all mantra stacks.\n  - @[skill:10238:Power Break] - Instantaneous, 2 stacks.\n- @[skill:76931:Crescendo] - Cast time required\n- @[skill:76611:Tale of the Honorable Rogue] - Instantaneous\n- All instrument skills (F1-F4) - Cast time required, very short duration (Self stab).\n### Barrier Application:\n- @[skill:76931:Crescendo] \n- @[skill:72008:Singularity Shot] \n### Stability Rotation:\nStability Rotations vary from player to player. Below are examples of what it might look like. Note that you can weave additional weapon skills into the stability rotation not shown in the demo.\n\nhttps://www.youtube.com/watch?v=eqt1NVM5aNo\n\n---\n\n## During Fight:\n- On wells calls, use @[skill:30643:Tides of Time] to try and stun enemy zerg on top of our wells.\n- On august queen calls, channel @[skill:76971:Tale of the August Queen] prior to moving into the spot to reduce the chance of getting interrupted. Also take into consideration if you have quickness or not (i.e. if you have a harbinger in your party).\n- <u>Do not burn all your stab skills at once, space them out.</u> If done correctly, you and your Firebrand should be able to cover gaps between each other. Anything over 10 stacks of stab is a waste.\n- When using @[skill:30769:Echo of Memory] and @[skill:29649:Deja Vu] (Both Shield 4 stacks), <u>be up front with the commander if not further to get the most out of your blocks</u>. Being 300 range behind the commander while blocking is not effective. Some great opportunities to use them include but not limited to:\n  - While we\u2019re standing and grinding against enemy zerg at close range.\n  - When making large movements like crossing tons of damage.\n  - When the squad is shoving into enemy zerg for a spike.\n- Cooldown for @[skill:30769:Echo of Memory] only starts after the buff expires or after using @[skill:29649:Deja Vu] ; this adds 10 seconds to the CD if the flip isn't used. Make sure to have an enemy targeted to spawn the phantasm.\n- Casting @[skill:77077:Harmonious Harp] mitigates damage, make sure to walk out in front while casting it.\n\n---\n\n## Tips & Tricks:\n- If we\u2019re kiting/the enemy kited and you used @[skill:10237:Mantra of Concentration] and we happen to be out of combat, the cooldown can be reset/reduced by quickly swapping the skill on your skill bar. Pro tip: Right-clicking allows you to swap the skill.\n- The last played instrument modifies @[skill:76931:Crescendo] via @[trait:2441:Altered Chord] , @[skill:77079:Deafening Drum] (3 second daze) & @[skill:77077:Harmonious Harp] (Heal) are both very good; don\u2019t delay @[skill:76931:Crescendo] or @[skill:77077:Harmonious Harp]  for it though, manipulate it with your instrument order.\n- Phantasms generate 2 notes due to @[trait:2374:Harmonize] , the first instantly and the second on a delay when the phantasm dies.\n- Troubs have 5 CC skills (flute, drum, rifle 4, drum-empowered crescendo, shield 5). Make sure to use them while we clash.\n- Do not double click @[skill:72008:Singularity Shot] unless you need portal. The CD is increased.\n- Using Notes Effectively:\n  - @[skill:77077:Harmonious Harp] - Strong healing, should be used with 3 notes (3 note harp doubles the healing of 1 note harp).\n  - @[skill:76552:Lively Lute] - Use it off CD with at least 2 notes to maintain buff.\n  - @[skill:76746:Flustering Flute] & @[skill:77079:Deafening Drum] - Use with 0 or 1 note. Note: Using it with 1 note helps Crescendo to recharge faster.\n- Casting @[skill:76850:Tale of the Soulkeeper] or @[skill:76611:Tale of the Honorable Rogue] provides notes if @[skill:76552:Lively Lute] or @[skill:77079:Deafening Drum] are playing, respectively. Consider this while going through your rotation.\n\n---\n\n## Example Gameplay:\n\nhttps://youtu.be/zvQ4dRkcHgI?si=v-SZuUU938tcORch",
+    "images": {},
+    "createdAt": "2026-03-23T15:52:56.355Z",
+    "updatedAt": "2026-04-24T18:21:36.335Z",
+    "buildUrl": "",
+    "gameMode": "wvw",
+    "publishedSlug": "",
+    "publishedFileId": "",
+    "publishedKey": "",
+    "folderId": null,
+    "compIds": [],
+    "pinned": false,
+    "sortOrder": 0,
+    "selectedLegends": [
+      "",
+      ""
+    ],
+    "selectedUnderwaterLegends": [
+      "",
+      ""
+    ],
+    "activeLegendSlot": 0,
+    "selectedPets": {
+      "terrestrial1": 0,
+      "terrestrial2": 0,
+      "aquatic1": 0,
+      "aquatic2": 0
+    },
+    "morphSkillIds": [
+      0,
+      0,
+      0
+    ]
+  },
+  "druid": {
+    "id": "f231af41-8473-4921-af2f-a7be1156ed88",
+    "version": 2,
+    "title": "Heal Druid",
+    "profession": "Ranger",
+    "specializations": [
+      {
+        "id": 25,
+        "name": "Nature Magic",
+        "elite": false,
+        "icon": "https://render.guildwars2.com/file/DC7A387D9AB3EACCDA35AEA872E4EA1007139612/1012015.png",
+        "background": "https://render.guildwars2.com/file/01B5C3050EAFB0C47065C333C8AA2B4255374DA7/1012081.png",
+        "minorTraits": [
+          {
+            "id": 1055,
+            "name": "Rejuvenation",
+            "icon": "https://render.guildwars2.com/file/04744A052966FD205B5909E7BE037F22115C0250/1012639.png",
+            "description": "Beast skills grant regeneration around the ranger.",
+            "tier": 1
+          },
+          {
+            "id": 1056,
+            "name": "Fortifying Bond",
+            "icon": "https://render.guildwars2.com/file/2541965232254704A07C295AF9D81EEC05B620AE/1012640.png",
+            "description": "When you gain a boon, it is shared with your pet.",
+            "tier": 2
+          },
+          {
+            "id": 1059,
+            "name": "Lingering Magic",
+            "icon": "https://render.guildwars2.com/file/FD403AD8DE225A21440C77F7DC9433080B910AB8/1012641.png",
+            "description": "You and your pet gain increased concentration. Regeneration you apply is more effective.",
+            "tier": 3
+          }
+        ],
+        "majorChoices": {
+          "1": 978,
+          "2": 964,
+          "3": 1038
+        },
+        "majorTraitsByTier": {
+          "1": [
+            {
+              "id": 1062,
+              "name": "Bountiful Hunter",
+              "icon": "https://render.guildwars2.com/file/03559445FF973DE04DAB39FB64DE0D96063409E2/1012630.png",
+              "description": "You deal increased strike damage for each boon affecting you. Your pet deals increased strike damage for each boon affecting it.",
+              "tier": 1
+            },
+            {
+              "id": 978,
+              "name": "Wellspring",
+              "icon": "https://render.guildwars2.com/file/E9A2CD7164FA3BFBB549B9B9DA2238007EA1720B/1012631.png",
+              "description": "Grant regeneration to nearby allies when you use a healing skill. You and your pet gain healing power based on power.",
+              "tier": 1
+            },
+            {
+              "id": 1060,
+              "name": "Allies' Aid",
+              "icon": "https://render.guildwars2.com/file/6F2F55CAEDEC8046D5EBE8A84FCB6A734F0835B9/1012632.png",
+              "description": "Cast \"Search and Rescue!\" when you begin reviving an ally. Moa pets grant barrier to nearby allies with their Beast skill.",
+              "tier": 1
+            }
+          ],
+          "2": [
+            {
+              "id": 1054,
+              "name": "Evasive Purity",
+              "icon": "https://render.guildwars2.com/file/C374B3F2C1BCFCB0B164FF0567FB6CC1B31B9651/1012633.png",
+              "description": "Dodging removes a condition from you. Heal yourself if you remove a condition this way.",
+              "tier": 2
+            },
+            {
+              "id": 965,
+              "name": "Spirited Arrival",
+              "icon": "https://render.guildwars2.com/file/5599287FC8FCB4ECB31B73625605072B7234269A/1012634.png",
+              "description": "Grant boons to nearby allies when swapping pets.",
+              "tier": 2
+            },
+            {
+              "id": 964,
+              "name": "Windborne Notes",
+              "icon": "https://render.guildwars2.com/file/E4A570C5B180415A581007A004037FEBFC99CE4B/1012635.png",
+              "description": "Grant nearby allies regeneration when you use a warhorn skill. Heal allies when you grant them regeneration.",
+              "tier": 2
+            }
+          ],
+          "3": [
+            {
+              "id": 1038,
+              "name": "Nature's Vengeance",
+              "icon": "https://render.guildwars2.com/file/FE6272D67567A04F0D2013927551306DE4940FE4/1012636.png",
+              "description": "Spirits slam again when they finish shaking.",
+              "tier": 3
+            },
+            {
+              "id": 1988,
+              "name": "Protective Ward",
+              "icon": "https://render.guildwars2.com/file/9B7002D2715C18EF2E0E3AD6409B93F223EFDD02/1012637.png",
+              "description": "Cast Lesser \"Guard!\" when you swap pets.",
+              "tier": 3
+            },
+            {
+              "id": 1697,
+              "name": "Invigorating Bond",
+              "icon": "https://render.guildwars2.com/file/625D22F52902A007CA6A037D0149251A2943C56E/1012638.png",
+              "description": "Beast skills heal allies around the ranger.",
+              "tier": 3
+            }
+          ]
+        }
+      },
+      {
+        "id": 32,
+        "name": "Beastmastery",
+        "elite": false,
+        "icon": "https://render.guildwars2.com/file/02D851E1D7186112786D0F67910B58FACB5CCCF6/1012012.png",
+        "background": "https://render.guildwars2.com/file/4727784BBF467241CA9F29E4FEDE487FD33E2809/1012075.png",
+        "minorTraits": [
+          {
+            "id": 1900,
+            "name": "Pack Alpha",
+            "icon": "https://render.guildwars2.com/file/2D7C48769DB9EC5A024E3427E797577F4ACF0576/1012615.png",
+            "description": "Your pet's attributes are improved and pet skills gain recharge reduction.\nImproved attributes are power, condition damage, precision, toughness, and vitality.",
+            "tier": 1
+          },
+          {
+            "id": 974,
+            "name": "Loud Whistle",
+            "icon": "https://render.guildwars2.com/file/9434BE3CBBD1A8CB3C1AA1004C7AB0267AF83F4F/1012616.png",
+            "description": "While your health is above the threshold, your pet deals increased strike damage. Your pet swap gains recharge reduction.",
+            "tier": 2
+          },
+          {
+            "id": 1065,
+            "name": "Pet's Prowess",
+            "icon": "https://render.guildwars2.com/file/7D3EA005DDE41D017CACFFACA12DA9F160685228/1012617.png",
+            "description": "Your pet moves faster and deals more damage on critical hits.",
+            "tier": 3
+          }
+        ],
+        "majorChoices": {
+          "1": 1861,
+          "2": 975,
+          "3": 1945
+        },
+        "majorTraitsByTier": {
+          "1": [
+            {
+              "id": 1861,
+              "name": "Go for the Eyes",
+              "icon": "https://render.guildwars2.com/file/437F14AB08659C986724464E7550699A735D49A9/1012607.png",
+              "description": "Nearby foes are blinded by Beast abilities.",
+              "tier": 1
+            },
+            {
+              "id": 1072,
+              "name": "Natural Healing",
+              "icon": "https://render.guildwars2.com/file/E10A27535DAC0BBFFCB205BFBBC9D30F68BE0C07/1012611.png",
+              "description": "Your pet recovers health each interval.",
+              "tier": 1
+            },
+            {
+              "id": 1606,
+              "name": "Resounding Timbre",
+              "icon": "https://render.guildwars2.com/file/BE4759B39AD22947535D1F1E3B090D180F200BA0/1012608.png",
+              "description": "Commands copy boons from yourself to your pet.\nSoulbeast: when merged, extend the duration of boons on yourself instead.",
+              "tier": 1
+            }
+          ],
+          "2": [
+            {
+              "id": 975,
+              "name": "Wilting Strike",
+              "icon": "https://render.guildwars2.com/file/32230CE64A4007F6301E9C93B393CF5328101C15/1012609.png",
+              "description": "Beast abilities inflict weakness on those struck.\nThis effect will only occur once on each target struck by an ability.",
+              "tier": 2
+            },
+            {
+              "id": 1047,
+              "name": "Bestial Rage",
+              "icon": "https://render.guildwars2.com/file/D10A0BFF47D14345DD6C41DD0FF6F256659DF7C2/1012610.png",
+              "description": "Gain might and fury when you disable a foe.",
+              "tier": 2
+            },
+            {
+              "id": 970,
+              "name": "Honed Axes",
+              "icon": "https://render.guildwars2.com/file/08106C6618C43B927DD90C97BB643843E2DCBA14/1012614.png",
+              "description": "You and your pet gain ferocity. Axe skills gain reduced recharge, and you gain additional ferocity while wielding an axe.",
+              "tier": 2
+            }
+          ],
+          "3": [
+            {
+              "id": 1945,
+              "name": "Beastly Warden",
+              "icon": "https://render.guildwars2.com/file/EF61D1061135B1EC57FDFD94795ED125D43962E1/1012612.png",
+              "description": "Beast abilities taunt nearby foes. Ursine and porcine pets deal increased damage and have increased health.",
+              "tier": 3
+            },
+            {
+              "id": 968,
+              "name": "Zephyr's Speed",
+              "icon": "https://render.guildwars2.com/file/DFCFB305E50B1A1824B4D81108BAD072C5BA010C/1012613.png",
+              "description": "Cast Lesser Quickening Zephyr when you swap pets.",
+              "tier": 3
+            },
+            {
+              "id": 1066,
+              "name": "Go for the Throat",
+              "icon": "https://render.guildwars2.com/file/B90D71093775FE4C2263B5C42F175FEA6C7925FE/1012606.png",
+              "description": "When you strike an enemy with a Beast ability, cast Lesser \"Sic 'Em!\" on the enemy.",
+              "tier": 3
+            }
+          ]
+        }
+      },
+      {
+        "id": 5,
+        "name": "Druid",
+        "elite": true,
+        "icon": "https://render.guildwars2.com/file/BE10CB10D8446208729934F3F1BD3A54BEED9AD6/1012013.png",
+        "background": "https://render.guildwars2.com/file/306D6ED9D3F09FF5552609EC7DA2046ECD114F90/1012077.png",
+        "minorTraits": [
+          {
+            "id": 1874,
+            "name": "Celestial Being",
+            "icon": "https://render.guildwars2.com/file/51AAAF39FF1D79505AD6BD532A44AAF1C9A75E9B/1128539.png",
+            "description": "Gain access to Glyphs. Become a celestial avatar once you gain enough astral force. Generate astral force by healing allies and damaging foes.",
+            "tier": 1
+          },
+          {
+            "id": 1862,
+            "name": "Live Vicariously",
+            "icon": "https://render.guildwars2.com/file/F2A3C305087AFA5141FABEF5FB09AD05CCE8A46A/1128540.png",
+            "description": "When you heal an ally, you are also healed.",
+            "tier": 2
+          },
+          {
+            "id": 1992,
+            "name": "Natural Mender",
+            "icon": "https://render.guildwars2.com/file/ECB17C0FAE20B0F77EE9043BE449546A6FB41ABE/1128541.png",
+            "description": "Increase healing to other allies. Gain astral force each interval while not in celestial avatar form.",
+            "tier": 3
+          }
+        ],
+        "majorChoices": {
+          "1": 1868,
+          "2": 2053,
+          "3": 2058
+        },
+        "majorTraitsByTier": {
+          "1": [
+            {
+              "id": 1868,
+              "name": "Druidic Clarity",
+              "icon": "https://render.guildwars2.com/file/5851BCCB60F70B42FEC1FF4E05F8C90722C2DB90/1128530.png",
+              "description": "Becoming a celestial avatar removes conditions from you and nearby allies.",
+              "tier": 1
+            },
+            {
+              "id": 2016,
+              "name": "Cultivated Synergy",
+              "icon": "https://render.guildwars2.com/file/9DAD4D2E74CDD1C5196848BCBE63BC12CE534B68/1128531.png",
+              "description": "Using your heal skill, heals allies around you and your pet.",
+              "tier": 1
+            },
+            {
+              "id": 1935,
+              "name": "Blood Moon",
+              "icon": "https://render.guildwars2.com/file/65C6E74A0A26786A243867FB79C63DAF0650CEDB/1128532.png",
+              "description": "Daze enemies when you become a celestial avatar. Inflict bleeding on enemies you immobilize or disable.",
+              "tier": 1
+            }
+          ],
+          "2": [
+            {
+              "id": 2053,
+              "name": "Celestial Shadow",
+              "icon": "https://render.guildwars2.com/file/93010741F5F7F22A0F20EB4EBA14F9D3B1321059/1128533.png",
+              "description": "Grant superspeed and stealth to nearby allies when leaving celestial avatar form.",
+              "tier": 2
+            },
+            {
+              "id": 2001,
+              "name": "Verdant Etching",
+              "icon": "https://render.guildwars2.com/file/0BCB5CC47934D9A526600EC87E1966CEDED13514/1128534.png",
+              "description": "Glyphs grant protection to nearby allies.",
+              "tier": 2
+            },
+            {
+              "id": 2056,
+              "name": "Natural Balance",
+              "icon": "https://render.guildwars2.com/file/5F953BAC2C7EB3340B4EAA9A7D9633320BAB29A6/1128535.png",
+              "description": "Upon entering and leaving celestial avatar form, deal increased damage and increase boon duration for a brief period.",
+              "tier": 2
+            }
+          ],
+          "3": [
+            {
+              "id": 2057,
+              "name": "Grace of the Land",
+              "icon": "https://render.guildwars2.com/file/D1E507697A2FFD0AC9F6D5CA74C403D69A4E0E4E/1128536.png",
+              "description": "Grant boons to allies within the radius of your Celestial Avatar skills.",
+              "tier": 3
+            },
+            {
+              "id": 2058,
+              "name": "Lingering Light",
+              "icon": "https://render.guildwars2.com/file/01BBD8CADBC6E9BBED46A2D9026976316CA8EAD9/1128537.png",
+              "description": "While in Celestial Avatar form, your healing of others is significantly increased. Healing another player with a Celestial Avatar skill reduces the cooldown of Celestial Avatar. \nCooldown can only be reduced once per outgoing heal and will occur even if the affected player is at full health.",
+              "tier": 3
+            },
+            {
+              "id": 2055,
+              "name": "Eclipse",
+              "icon": "https://render.guildwars2.com/file/4ED26C00F5552D91B246DEE5F23E0C03ABA81820/1128538.png",
+              "description": "Your Celestial Avatar skills are offensively augmented. Striking enemies grants additional astral force.",
+              "tier": 3
+            }
+          ]
+        }
+      }
+    ],
+    "skills": {
+      "heal": {
+        "id": 12489,
+        "name": "Healing Spring",
+        "icon": "https://render.guildwars2.com/file/F6C2FD7E78EE0D9178AEAEF8B1666477D1E92C99/103544.png",
+        "description": "Trap. Heals you and your pet. Place a trap that grants regeneration and cures conditions on allies.",
+        "slot": "Heal",
+        "type": "Heal",
+        "specialization": 0
+      },
+      "utility": [
+        {
+          "id": 12497,
+          "name": "Frost Spirit",
+          "icon": "https://render.guildwars2.com/file/527D04E6562149B046DE7D41F312FE0100BF446E/103995.png",
+          "description": "Spirit. Summon a frost spirit at a target location and apply resistance to nearby allies. The spirit will slam the ground and then shake, granting boons to nearby allies.",
+          "slot": "Utility",
+          "type": "Utility",
+          "specialization": 0
+        },
+        {
+          "id": 31322,
+          "name": "Glyph of Alignment",
+          "icon": "https://render.guildwars2.com/file/580715C2B8F00800A4D23615DD1E019050BF4B50/1128635.png",
+          "description": "Glyph. Damage and impair foes, or heal and remove conditions from allies.",
+          "slot": "Utility",
+          "type": "Utility",
+          "specialization": 5
+        },
+        {
+          "id": 12502,
+          "name": "Signet of Renewal",
+          "icon": "https://render.guildwars2.com/file/B83DDE1DD9F3DC65590D7EA207F0604F26B1BCA7/103590.png",
+          "description": "Signet Passive: You and your pet recover health. \nSignet Active: Grant resistance and resolution to your pet; it pulls conditions from nearby allies to itself.",
+          "slot": "Utility",
+          "type": "Utility",
+          "specialization": 0
+        }
+      ],
+      "elite": {
+        "id": 12569,
+        "name": "Spirit of Nature",
+        "icon": "https://render.guildwars2.com/file/E23D450D539B92FE0D36DEDF1B2D6010A961E612/104011.png",
+        "description": "Spirit. Summon a spirit at a target point and convert conditions on allies into boons. The spirit will slam the ground and then shake, granting boons to nearby allies.",
+        "slot": "Elite",
+        "type": "Elite",
+        "specialization": 0
+      }
+    },
+    "underwaterSkills": {
+      "heal": {
+        "id": 21773,
+        "name": "Water Spirit",
+        "icon": "https://render.guildwars2.com/file/FA9E444D3AEA9B06F70B96DBBA459A5AB1165BB5/699530.png",
+        "description": "Spirit. Summon a water spirit at a target location and heal yourself and your pet. The spirit will slam the ground and then shake, granting boons to nearby allies.",
+        "slot": "Heal",
+        "type": "Heal",
+        "specialization": 0
+      },
+      "utility": [
+        {
+          "id": 12497,
+          "name": "Frost Spirit",
+          "icon": "https://render.guildwars2.com/file/527D04E6562149B046DE7D41F312FE0100BF446E/103995.png",
+          "description": "Spirit. Summon a frost spirit at a target location and apply resistance to nearby allies. The spirit will slam the ground and then shake, granting boons to nearby allies.",
+          "slot": "Utility",
+          "type": "Utility",
+          "specialization": 0
+        },
+        {
+          "id": 12631,
+          "name": "\"Protect Me!\"",
+          "icon": "https://render.guildwars2.com/file/41121EEEF99A6F50130E323EA107024C53A809BD/104023.png",
+          "description": "Command. Gain protection and barrier while breaking allies out of stuns.",
+          "slot": "Utility",
+          "type": "Utility",
+          "specialization": 0
+        },
+        {
+          "id": 12502,
+          "name": "Signet of Renewal",
+          "icon": "https://render.guildwars2.com/file/B83DDE1DD9F3DC65590D7EA207F0604F26B1BCA7/103590.png",
+          "description": "Signet Passive: You and your pet recover health. \nSignet Active: Grant resistance and resolution to your pet; it pulls conditions from nearby allies to itself.",
+          "slot": "Utility",
+          "type": "Utility",
+          "specialization": 0
+        }
+      ],
+      "elite": {
+        "id": 12569,
+        "name": "Spirit of Nature",
+        "icon": "https://render.guildwars2.com/file/E23D450D539B92FE0D36DEDF1B2D6010A961E612/104011.png",
+        "description": "Spirit. Summon a spirit at a target point and convert conditions on allies into boons. The spirit will slam the ground and then shake, granting boons to nearby allies.",
+        "slot": "Elite",
+        "type": "Elite",
+        "specialization": 0
+      }
+    },
+    "equipment": {
+      "statPackage": "Minstrel's",
+      "relic": "Relic of Karakosa",
+      "food": "91690",
+      "utility": "67528",
+      "slots": {
+        "head": "Minstrel's",
+        "shoulders": "Minstrel's",
+        "chest": "Minstrel's",
+        "hands": "Minstrel's",
+        "legs": "Minstrel's",
+        "feet": "Minstrel's",
+        "mainhand1": "Minstrel's",
+        "offhand1": "",
+        "mainhand2": "Minstrel's",
+        "offhand2": "Minstrel's",
+        "back": "Minstrel's",
+        "amulet": "Minstrel's",
+        "ring1": "Minstrel's",
+        "ring2": "Minstrel's",
+        "accessory1": "Minstrel's",
+        "accessory2": "Minstrel's",
+        "breather": "Minstrel's",
+        "aquatic1": "",
+        "aquatic2": ""
+      },
+      "weapons": {
+        "mainhand1": "staff",
+        "offhand1": "",
+        "mainhand2": "mace",
+        "offhand2": "warhorn",
+        "aquatic1": "",
+        "aquatic2": ""
+      },
+      "runes": {
+        "head": "24842",
+        "shoulders": "24842",
+        "chest": "24842",
+        "hands": "24842",
+        "legs": "24842",
+        "feet": "24842",
+        "breather": "24842"
+      },
+      "sigils": {
+        "mainhand1": [
+          "74326",
+          "72339"
+        ],
+        "offhand1": [
+          ""
+        ],
+        "mainhand2": [
+          "24584",
+          "72339"
+        ],
+        "offhand2": [
+          "72339"
+        ],
+        "aquatic1": [
+          "",
+          ""
+        ],
+        "aquatic2": [
+          "24584",
+          ""
+        ]
+      },
+      "infusions": {
+        "head": "43250",
+        "shoulders": "43250",
+        "chest": "43250",
+        "hands": "43250",
+        "legs": "43250",
+        "feet": "43250",
+        "mainhand1": [
+          "43250",
+          "43250"
+        ],
+        "offhand1": [
+          ""
+        ],
+        "mainhand2": [
+          "43250",
+          "43250"
+        ],
+        "offhand2": [
+          "43250"
+        ],
+        "back": [
+          "43250",
+          "43250"
+        ],
+        "ring1": [
+          "43250",
+          "43250",
+          "43250"
+        ],
+        "ring2": [
+          "43250",
+          "43250",
+          "43250"
+        ],
+        "accessory1": "43250",
+        "accessory2": "43250",
+        "breather": [
+          "43250"
+        ],
+        "aquatic1": [
+          "",
+          ""
+        ],
+        "aquatic2": [
+          "",
+          ""
+        ]
+      },
+      "enrichment": ""
+    },
+    "tags": [],
+    "notes": "# Heal Druid Guide\n\n---\n\n## General Description:\n**Role**: Heals, Cleanse, Resurrect, Damage Mitigation\n**Responsibilities**: Druids are the primary healer and cleanser. They provide resurrect utility through their elite skill and additional damage mitigation through their pets.\n**Positioning**: Stay close to the center of stack. With full minstrels gear, you have high toughness and a pet that mitigates damage.\n\n---\n\n## Pre-Engage:\n- When the commander calls for might stacks, use @[skill:12621:Call of the Wild] and @[skill:71963:Oaken Cudgel] to blast fire fields for might.\n- If you notice your party line does not have swiftness, you can also use @[skill:12621:Call of the Wild] to provide swiftness.\n- Right before melee engage/cross movement, cast @[skill:31700:Vine Surge] to catch enemy zerg with immob. You can also throw it into where the enemy zerg is veiling to catch stragglers.\n- If people are getting caught with immobs during initial push, you can also cast @[skill:12497:Frost Spirit]  to provide early resistance.\n- Enter @[skill:31869:Celestial Avatar] (CA) on clash.\n\n---\n\n## Rotation:\n- When in CA, spam @[skill:31796:Cosmic Ray] to heal. **DO NOT USE @[skill:32253:Rejuvenating Tides]**. \n- Use @[skill:32242:Seed of Life] and @[skill:31318:Lunar Impact] for cleanses and @[relic:101268:Relic of Karakosa] proc for heals.\n- Use @[skill:12489:Healing Spring] on initial melee clashes. It provides heals, cleanses, and regeneration.\n- Outside of CA, rotation through your weapon skills to provide enough heals to return to CA. Skills to use include:\n  - @[skill:31496:Sublime Conversion] + @[skill:31535:Ancestral Grace] - Provides a water field and blast finisher, lots of heals.\n  - @[skill:12621:Call of the Wild] , @[skill:71963:Oaken Cudgel] (This is a movement skill, be careful when using), @[skill:71999:Flourish]\n  - @[skill:12620:Hunter's Call] procs @[trait:964:Windborne Notes] , which provides regen\n  - Rotating through the above should be more than enough to get back into CA.\n- Back to spamming @[skill:31796:Cosmic Ray] \n\n---\n\n## Tips & Tricks:\n- Use @[skill:31700:Vine Surge]  on wells calls or when trying to catch enemy tail. Enemies without resistance will be caught with immob. \n- Cast @[skill:12569:Spirit of Nature]  on downed allies based on your party order or as directed by the commander.\n  - <u>Note: there is a decent cast time on the skill so you will need to cast it preemptively.</u> Trying to use spirit on downed allies after they\u2019ve been downed will likely result in them being cleaved out before they can get resurrected. This is especially true on the initial clash where the damage is the highest.\n- Use pet skills on CD to proc @[trait:1055:Rejuvenation] . Swap pets when one's dead.\n\n---\n\n## Example Gameplay:\nhttps://www.youtube.com/watch?v=ofUWy6cV3Do\n\nhttps://www.youtube.com/watch?v=DIl7zPaQegA\n\nhttp://youtube.com/watch?v=n9uRhY_mRl0&feature=youtu.be",
+    "images": {},
+    "createdAt": "2026-03-23T15:53:11.946Z",
+    "updatedAt": "2026-04-24T18:21:36.367Z",
+    "buildUrl": "",
+    "gameMode": "wvw",
+    "publishedSlug": "",
+    "publishedFileId": "",
+    "publishedKey": "",
+    "folderId": null,
+    "compIds": [],
+    "pinned": false,
+    "sortOrder": 0,
+    "selectedLegends": [
+      "",
+      ""
+    ],
+    "selectedUnderwaterLegends": [
+      "",
+      ""
+    ],
+    "activeLegendSlot": 0,
+    "selectedPets": {
+      "terrestrial1": 24,
+      "terrestrial2": 5,
+      "aquatic1": 5,
+      "aquatic2": 45
+    },
+    "morphSkillIds": [
+      0,
+      0,
+      0
+    ]
+  },
+  "berserker": {
+    "id": "aab04d31-8a05-4d83-b4e4-4f324b06ac58",
+    "version": 2,
+    "title": "Break Berserker",
+    "profession": "Warrior",
+    "specializations": [
+      {
+        "id": 4,
+        "name": "Strength",
+        "elite": false,
+        "icon": "",
+        "background": "",
+        "minorTraits": [],
+        "majorChoices": {
+          "1": 1444,
+          "2": 1338,
+          "3": 1437
+        },
+        "majorTraitsByTier": {
+          "1": [],
+          "2": [],
+          "3": []
+        }
+      },
+      {
+        "id": 51,
+        "name": "Discipline",
+        "elite": false,
+        "icon": "",
+        "background": "",
+        "minorTraits": [],
+        "majorChoices": {
+          "1": 1413,
+          "2": 1489,
+          "3": 1657
+        },
+        "majorTraitsByTier": {
+          "1": [],
+          "2": [],
+          "3": []
+        }
+      },
+      {
+        "id": 18,
+        "name": "Berserker",
+        "elite": true,
+        "icon": "",
+        "background": "",
+        "minorTraits": [],
+        "majorChoices": {
+          "1": 2049,
+          "2": 2011,
+          "3": 1928
+        },
+        "majorTraitsByTier": {
+          "1": [],
+          "2": [],
+          "3": []
+        }
+      }
+    ],
+    "skills": {
+      "heal": {
+        "id": 30189,
+        "name": "Blood Reckoning",
+        "icon": "",
+        "description": "",
+        "slot": "",
+        "type": "",
+        "specialization": 0
+      },
+      "utility": [
+        {
+          "id": 14410,
+          "name": "Signet of Fury",
+          "icon": "",
+          "description": "",
+          "slot": "",
+          "type": "",
+          "specialization": 0
+        },
+        {
+          "id": 14404,
+          "name": "Signet of Might",
+          "icon": "",
+          "description": "",
+          "slot": "",
+          "type": "",
+          "specialization": 0
+        },
+        {
+          "id": 14412,
+          "name": "Balanced Stance",
+          "icon": "",
+          "description": "",
+          "slot": "",
+          "type": "",
+          "specialization": 0
+        }
+      ],
+      "elite": {
+        "id": 14355,
+        "name": "Signet of Rage",
+        "icon": "",
+        "description": "",
+        "slot": "",
+        "type": "",
+        "specialization": 0
+      }
+    },
+    "underwaterSkills": {
+      "heal": null,
+      "utility": [
+        null,
+        null,
+        null
+      ],
+      "elite": null
+    },
+    "equipment": {
+      "statPackage": "",
+      "relic": "Relic of the Warrior",
+      "food": "91734",
+      "utility": "43451",
+      "slots": {
+        "head": "Berserker's",
+        "shoulders": "Berserker's",
+        "chest": "Berserker's",
+        "hands": "Berserker's",
+        "legs": "Berserker's",
+        "feet": "Berserker's",
+        "breather": "Berserker's",
+        "mainhand1": "Berserker's",
+        "offhand1": "Berserker's",
+        "mainhand2": "Berserker's",
+        "aquatic1": "Berserker's",
+        "aquatic2": "Berserker's",
+        "amulet": "Assassin's",
+        "ring1": "Assassin's",
+        "ring2": "Assassin's",
+        "accessory1": "Assassin's",
+        "accessory2": "Assassin's",
+        "back": "Assassin's"
+      },
+      "weapons": {
+        "mainhand1": "dagger",
+        "offhand1": "axe",
+        "mainhand2": "greatsword",
+        "aquatic1": "spear"
+      },
+      "runes": {
+        "head": "24836",
+        "shoulders": "24836",
+        "chest": "24836",
+        "hands": "24836",
+        "legs": "24836",
+        "feet": "24836",
+        "breather": "24836"
+      },
+      "sigils": {
+        "mainhand1": [
+          "24597",
+          "24572"
+        ],
+        "offhand1": [
+          "24572"
+        ],
+        "mainhand2": [
+          "24548",
+          "24575"
+        ],
+        "offhand2": [
+          "24575"
+        ],
+        "aquatic1": [
+          "24548",
+          "24575"
+        ],
+        "aquatic2": [
+          "",
+          ""
+        ]
+      },
+      "infusions": {
+        "head": "43254",
+        "shoulders": "43254",
+        "chest": "43254",
+        "hands": "43254",
+        "legs": "43254",
+        "feet": "43254",
+        "breather": [
+          "43254"
+        ],
+        "mainhand1": [
+          "43254",
+          "43254"
+        ],
+        "offhand1": [
+          "43254"
+        ],
+        "mainhand2": [
+          "43254",
+          "43254"
+        ],
+        "offhand2": [
+          "43254"
+        ],
+        "aquatic1": [
+          "43254",
+          "43254"
+        ],
+        "aquatic2": [
+          "43254",
+          "43254"
+        ],
+        "ring1": [
+          "43254",
+          "43254",
+          "43254"
+        ],
+        "ring2": [
+          "43254",
+          "43254",
+          "43254"
+        ],
+        "accessory1": "43254",
+        "accessory2": "43254",
+        "back": [
+          "43254",
+          "43254"
+        ]
+      },
+      "enrichment": ""
+    },
+    "tags": [],
+    "notes": "",
+    "images": {},
+    "createdAt": "2026-03-28T07:20:58.541Z",
+    "updatedAt": "2026-03-31T03:27:04.652Z",
+    "buildUrl": "",
+    "gameMode": "wvw",
+    "publishedSlug": "",
+    "publishedFileId": "",
+    "publishedKey": "",
+    "folderId": null,
+    "compIds": [],
+    "pinned": false,
+    "sortOrder": 1,
+    "selectedLegends": [
+      "",
+      ""
+    ],
+    "selectedUnderwaterLegends": [
+      "",
+      ""
+    ],
+    "activeLegendSlot": 0,
+    "selectedPets": {
+      "terrestrial1": 0,
+      "terrestrial2": 0,
+      "aquatic1": 0,
+      "aquatic2": 0
+    },
+    "morphSkillIds": [
+      0,
+      0,
+      0
+    ]
+  },
+  "reaper": {
+    "id": "1ee591d1-bec7-415a-9aaa-f88731aaae89",
+    "version": 2,
+    "title": "Reaper",
+    "profession": "Necromancer",
+    "specializations": [
+      {
+        "id": 39,
+        "name": "Curses",
+        "elite": false,
+        "icon": "",
+        "background": "",
+        "minorTraits": [],
+        "majorChoices": {
+          "1": 815,
+          "2": 1693,
+          "3": 813
+        },
+        "majorTraitsByTier": {
+          "1": [],
+          "2": [],
+          "3": []
+        }
+      },
+      {
+        "id": 50,
+        "name": "Soul Reaping",
+        "elite": false,
+        "icon": "",
+        "background": "",
+        "minorTraits": [],
+        "majorChoices": {
+          "1": 875,
+          "2": 894,
+          "3": 893
+        },
+        "majorTraitsByTier": {
+          "1": [],
+          "2": [],
+          "3": []
+        }
+      },
+      {
+        "id": 34,
+        "name": "Reaper",
+        "elite": true,
+        "icon": "",
+        "background": "",
+        "minorTraits": [],
+        "majorChoices": {
+          "1": 2020,
+          "2": 1969,
+          "3": 2021
+        },
+        "majorTraitsByTier": {
+          "1": [],
+          "2": [],
+          "3": []
+        }
+      }
+    ],
+    "skills": {
+      "heal": {
+        "id": 30488,
+        "name": "\"Your Soul Is Mine!\"",
+        "icon": "",
+        "description": "",
+        "slot": "",
+        "type": "",
+        "specialization": 0
+      },
+      "utility": [
+        {
+          "id": 10545,
+          "name": "Well of Corruption",
+          "icon": "",
+          "description": "",
+          "slot": "",
+          "type": "",
+          "specialization": 0
+        },
+        {
+          "id": 10546,
+          "name": "Well of Suffering",
+          "icon": "",
+          "description": "",
+          "slot": "",
+          "type": "",
+          "specialization": 0
+        },
+        {
+          "id": 29666,
+          "name": "\"Nothing Can Save You!\"",
+          "icon": "",
+          "description": "",
+          "slot": "",
+          "type": "",
+          "specialization": 0
+        }
+      ],
+      "elite": {
+        "id": 30105,
+        "name": "\"Chilled to the Bone!\"",
+        "icon": "",
+        "description": "",
+        "slot": "",
+        "type": "",
+        "specialization": 0
+      }
+    },
+    "underwaterSkills": {
+      "heal": {
+        "id": 30488,
+        "name": "\"Your Soul Is Mine!\"",
+        "icon": "",
+        "description": "",
+        "slot": "",
+        "type": "",
+        "specialization": 0
+      },
+      "utility": [
+        {
+          "id": 10545,
+          "name": "Well of Corruption",
+          "icon": "",
+          "description": "",
+          "slot": "",
+          "type": "",
+          "specialization": 0
+        },
+        {
+          "id": 10612,
+          "name": "Signet of the Locust",
+          "icon": "",
+          "description": "",
+          "slot": "",
+          "type": "",
+          "specialization": 0
+        },
+        {
+          "id": 29666,
+          "name": "\"Nothing Can Save You!\"",
+          "icon": "",
+          "description": "",
+          "slot": "",
+          "type": "",
+          "specialization": 0
+        }
+      ],
+      "elite": {
+        "id": 30105,
+        "name": "\"Chilled to the Bone!\"",
+        "icon": "",
+        "description": "",
+        "slot": "",
+        "type": "",
+        "specialization": 0
+      }
+    },
+    "equipment": {
+      "statPackage": "",
+      "relic": "Relic of Fireworks",
+      "food": "91835",
+      "utility": "99845",
+      "slots": {
+        "head": "Berserker's",
+        "shoulders": "Berserker's",
+        "chest": "Berserker's",
+        "hands": "Berserker's",
+        "legs": "Berserker's",
+        "feet": "Berserker's",
+        "breather": "Berserker's",
+        "mainhand1": "Berserker's",
+        "mainhand2": "Berserker's",
+        "amulet": "Assassin's",
+        "ring1": "Berserker's",
+        "ring2": "Berserker's",
+        "accessory1": "Marauder's",
+        "accessory2": "Marauder's",
+        "back": "Assassin's"
+      },
+      "weapons": {
+        "mainhand1": "spear",
+        "mainhand2": "greatsword"
+      },
+      "runes": {
+        "head": "24836",
+        "shoulders": "24836",
+        "chest": "24836",
+        "hands": "24836",
+        "legs": "24836",
+        "feet": "24836",
+        "breather": "24836"
+      },
+      "sigils": {
+        "mainhand1": [
+          "24548",
+          "24575"
+        ],
+        "offhand1": [
+          "24575"
+        ],
+        "mainhand2": [
+          "24597",
+          "24548"
+        ],
+        "offhand2": [
+          "24548"
+        ],
+        "aquatic1": [
+          "24575",
+          ""
+        ],
+        "aquatic2": [
+          "",
+          ""
+        ]
+      },
+      "infusions": {
+        "head": "43255",
+        "shoulders": "43255",
+        "chest": "43255",
+        "hands": "43255",
+        "legs": "43255",
+        "feet": "43254",
+        "breather": [
+          "43255"
+        ],
+        "mainhand1": [
+          "43254",
+          "43254"
+        ],
+        "offhand1": [
+          "43254"
+        ],
+        "mainhand2": [
+          "43254",
+          "43254"
+        ],
+        "offhand2": [
+          "43254"
+        ],
+        "aquatic1": [
+          "",
+          ""
+        ],
+        "aquatic2": [
+          "",
+          ""
+        ],
+        "ring1": [
+          "43254",
+          "43254",
+          "43254"
+        ],
+        "ring2": [
+          "43254",
+          "43254",
+          "43254"
+        ],
+        "accessory1": "43254",
+        "accessory2": "43254",
+        "back": [
+          "43254",
+          "43254"
+        ]
+      },
+      "enrichment": ""
+    },
+    "tags": [],
+    "notes": "",
+    "images": {},
+    "createdAt": "2026-04-19T18:31:18.354Z",
+    "updatedAt": "2026-05-01T00:18:07.564Z",
+    "buildUrl": "",
+    "gameMode": "wvw",
+    "publishedSlug": "",
+    "publishedFileId": "",
+    "publishedKey": "",
+    "folderId": null,
+    "compIds": [],
+    "pinned": false,
+    "sortOrder": 0,
+    "selectedLegends": [
+      "",
+      ""
+    ],
+    "selectedUnderwaterLegends": [
+      "",
+      ""
+    ],
+    "activeLegendSlot": 0,
+    "selectedPets": {
+      "terrestrial1": 0,
+      "terrestrial2": 0,
+      "aquatic1": 0,
+      "aquatic2": 0
+    },
+    "morphSkillIds": [
+      0,
+      0,
+      0
+    ]
+  }
+}
