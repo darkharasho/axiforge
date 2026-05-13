@@ -7,7 +7,7 @@ const THEME_KEY = "axiforge-marketing-theme";
 const OS_LABELS = {
   win: "Download for Windows",
   linux: "Download for Linux (.AppImage)",
-  mac: "Download for macOS (source)",
+  mac: "Download for macOS",
 };
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -97,21 +97,21 @@ function applyOsLayout(os) {
 
   const primaryButtons = document.querySelectorAll("[data-os-primary]");
   primaryButtons.forEach((btn) => {
-    if (os === "win" || os === "linux") {
+    if (os === "win" || os === "linux" || os === "mac") {
       btn.dataset.download = os;
       btn.style.removeProperty("display");
       const label = btn.querySelector("[data-os-label]");
       if (label) label.textContent = OS_LABELS[os];
     } else {
-      // macOS / unknown — hide hero primary; the Download section still
-      // lists every OS so visitors aren't dead-ended.
+      // Unknown OS — hide hero primary; the Download section still lists
+      // every OS so visitors aren't dead-ended.
       btn.style.display = "none";
     }
   });
 
-  // Surface the "see all downloads" line for non-Win/Linux visitors so
-  // they have a clear path forward from the hero.
-  if (os !== "win" && os !== "linux") {
+  // Surface the "see all downloads" line for unknown-OS visitors so they
+  // have a clear path forward from the hero.
+  if (os !== "win" && os !== "linux" && os !== "mac") {
     const otherLine = document.querySelector("[data-os-other-line]");
     if (otherLine) otherLine.hidden = false;
   }
@@ -126,8 +126,12 @@ async function resolveLatestRelease() {
 
   const winAsset = (data.assets || []).find((a) => /\.exe$/i.test(a.name));
   const linuxAsset = (data.assets || []).find((a) => /\.AppImage$/i.test(a.name));
+  // Prefer arm64 for the macOS primary CTA since most Macs sold since
+  // 2020 are Apple silicon; fall back to any .dmg if no arch in the name.
+  const macAssets = (data.assets || []).filter((a) => /\.dmg$/i.test(a.name));
+  const macAsset = macAssets.find((a) => /arm64/i.test(a.name)) || macAssets[0];
 
-  const assetByOs = { win: winAsset, linux: linuxAsset };
+  const assetByOs = { win: winAsset, linux: linuxAsset, mac: macAsset };
 
   if (winAsset) {
     document.querySelectorAll('[data-download="win"]').forEach((el) => {
@@ -137,6 +141,11 @@ async function resolveLatestRelease() {
   if (linuxAsset) {
     document.querySelectorAll('[data-download="linux"]').forEach((el) => {
       el.href = linuxAsset.browser_download_url;
+    });
+  }
+  if (macAsset) {
+    document.querySelectorAll('[data-download="mac"]').forEach((el) => {
+      el.href = macAsset.browser_download_url;
     });
   }
 

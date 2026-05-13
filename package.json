@@ -9,7 +9,7 @@
   "build": {
     "appId": "com.darkharasho.axiforge",
     "productName": "AxiForge",
-    "icon": "public/img/AxiForge-White.png",
+    "icon": "build/icon.png",
     "directories": {
       "output": "dist_out"
     },
@@ -49,6 +49,22 @@
       "oneClick": true,
       "differentialPackage": true,
       "runAfterFinish": false
+    },
+    "mac": {
+      "category": "public.app-category.utilities",
+      "target": [
+        { "target": "dmg",  "arch": ["x64", "arm64"] },
+        { "target": "zip",  "arch": ["x64", "arm64"] }
+      ],
+      "artifactName": "AxiForge-${version}-${arch}.${ext}",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "notarize": true
+    },
+    "dmg": {
+      "writeUpdateInfo": false
     }
   },
   "scripts": {
@@ -74,7 +90,8 @@
     "test:spa:debug": "PWDEBUG=1 npx playwright test --config tests/spa/playwright.config.js",
     "build:app": "npm run build:site && npm run build:renderer && electron-builder --publish never",
     "build:app:linux": "npm run build:site && npm run build:renderer && electron-builder --linux --publish never",
-    "build:app:win": "npm run build:site && npm run build:renderer && electron-builder --win --publish never"
+    "build:app:win": "npm run build:site && npm run build:renderer && electron-builder --win --publish never",
+    "build:app:mac": "npm run build:site && npm run build:renderer && electron-builder --mac --publish never"
   },
   "jest": {
     "testEnvironment": "node",
