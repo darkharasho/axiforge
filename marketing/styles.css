@@ -21,17 +21,42 @@
   --max-w: 1180px;
 }
 
+/* Full theme overrides — backgrounds, panels, hairlines, and accents all
+   shift together so the marketing page matches the in-app theme it's
+   advertising. Palettes mirror src/renderer/styles/themes.css. */
+
 [data-theme="frostforge"] {
+  --bg: #060a0e;
+  --bg-2: #080c12;
+  --panel: #10151c;
+  --panel-2: #0c1118;
+  --line: #1a2230;
+  --line-soft: #141c26;
+  --panel-gradient: linear-gradient(180deg, rgba(16, 21, 28, 0.95), rgba(12, 17, 24, 0.95));
   --accent: #5898d0;
   --accent-2: #88c8e8;
   --accent-rgb: 88, 152, 208;
 }
 [data-theme="verdant-crucible"] {
+  --bg: #060c08;
+  --bg-2: #080e0a;
+  --panel: #101a14;
+  --panel-2: #0c1610;
+  --line: #1a2c20;
+  --line-soft: #14241a;
+  --panel-gradient: linear-gradient(180deg, rgba(16, 26, 20, 0.95), rgba(12, 22, 16, 0.95));
   --accent: #48b070;
   --accent-2: #60c888;
   --accent-rgb: 72, 176, 112;
 }
 [data-theme="cinderfall"] {
+  --bg: #0c0708;
+  --bg-2: #100a0a;
+  --panel: #1a1012;
+  --panel-2: #140c0e;
+  --line: #2a1820;
+  --line-soft: #20141a;
+  --panel-gradient: linear-gradient(180deg, rgba(26, 16, 18, 0.95), rgba(20, 12, 14, 0.95));
   --accent: #c0463c;
   --accent-2: #e07060;
   --accent-rgb: 192, 70, 60;
@@ -85,7 +110,7 @@ code {
   align-items: center;
   justify-content: space-between;
   padding: 0.9rem 1.25rem;
-  background: rgba(14, 8, 6, 0.78);
+  background: color-mix(in srgb, var(--bg) 78%, transparent);
   backdrop-filter: saturate(140%) blur(10px);
   border-bottom: 1px solid var(--line);
 }
