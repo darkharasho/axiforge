@@ -56,6 +56,7 @@
         { "target": "dmg",  "arch": ["x64", "arm64"] },
         { "target": "zip",  "arch": ["x64", "arm64"] }
       ],
+      "artifactName": "AxiForge-${version}-${arch}.${ext}",
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
       "entitlements": "build/entitlements.mac.plist",
