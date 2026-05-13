@@ -140,17 +140,38 @@ async function run() {
     await window.waitForTimeout(400);
     await shot(window, "library-frostforge");
 
-    console.log("Comps (Molten Core)…");
+    console.log("Comps list (Molten Core)…");
     await setTheme(window, "molten-core");
     await goToComps(window);
     await window.waitForTimeout(900);
     await shot(window, "comps");
 
+    console.log("Comp detail — GvG 15v15…");
+    // Click into the comp with the most parties (GvG 15v15 — 3 lines)
+    const opened = await window.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll(".comp-list-row"));
+      const target = rows.find((r) => /GvG 15v15/.test(r.textContent || "")) || rows[0];
+      if (!target) return false;
+      target.click();
+      return true;
+    });
+    if (opened) {
+      await window.waitForTimeout(1200);
+      await shot(window, "comp-detail-gvg");
+    } else {
+      console.warn("  (no comp row found)");
+    }
+
+    console.log("Comp detail (Frostforge)…");
+    await setTheme(window, "frostforge");
+    await window.waitForTimeout(400);
+    await shot(window, "comp-detail-frostforge");
+
     console.log("Editor opened from saved build…");
     await goToLibrary(window);
     await window.waitForTimeout(500);
-    const opened = await openFirstSavedBuild();
-    if (opened) {
+    const buildOpened = await openFirstSavedBuild();
+    if (buildOpened) {
       await window.waitForTimeout(1500);
       await shot(window, "editor-saved-build");
     } else {
