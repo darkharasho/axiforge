@@ -40,6 +40,13 @@ function applyTheme(theme) {
   document.querySelectorAll(".theme-chip").forEach((chip) => {
     chip.setAttribute("aria-pressed", String(chip.dataset.theme === theme));
   });
+  // Swap every themed screenshot to the matching theme variant. Each
+  // <img data-theme-shot="view-name"> resolves to
+  // ./assets/screenshots/<view-name>-<theme>.png
+  document.querySelectorAll("[data-theme-shot]").forEach((img) => {
+    const view = img.dataset.themeShot;
+    img.src = `./assets/screenshots/${view}-${theme}.png`;
+  });
 }
 
 function safeStorageGet(key) {

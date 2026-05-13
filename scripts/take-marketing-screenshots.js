@@ -128,60 +128,49 @@ async function run() {
     return opened;
   }
 
+  const THEMES = ["molten-core", "frostforge", "verdant-crucible", "cinderfall"];
+
+  // Set the current view up, then iterate through every theme capturing
+  // the same frame so the marketing page's theme switcher can swap them
+  // in unison. setup() runs once before the loop.
+  async function captureAllThemes(viewName, setup) {
+    await setup();
+    for (const theme of THEMES) {
+      await setTheme(window, theme);
+      await window.waitForTimeout(450);
+      await shot(window, `${viewName}-${theme}`);
+    }
+  }
+
   try {
-    console.log("Library (Molten Core)…");
-    await setTheme(window, "molten-core");
-    await goToLibrary(window);
-    await window.waitForTimeout(900);
-    await shot(window, "library-molten");
-
-    console.log("Library (Frostforge)…");
-    await setTheme(window, "frostforge");
-    await window.waitForTimeout(400);
-    await shot(window, "library-frostforge");
-
-    console.log("Comps list (Molten Core)…");
-    await setTheme(window, "molten-core");
-    await goToComps(window);
-    await window.waitForTimeout(900);
-    await shot(window, "comps");
-
-    console.log("Comp detail — GvG 15v15…");
-    // Click into the comp with the most parties (GvG 15v15 — 3 lines)
-    const opened = await window.evaluate(() => {
-      const rows = Array.from(document.querySelectorAll(".comp-list-row"));
-      const target = rows.find((r) => /GvG 15v15/.test(r.textContent || "")) || rows[0];
-      if (!target) return false;
-      target.click();
-      return true;
+    await captureAllThemes("library", async () => {
+      console.log("View: library");
+      await setTheme(window, "molten-core");
+      await goToLibrary(window);
+      await window.waitForTimeout(900);
     });
-    if (opened) {
+
+    await captureAllThemes("comps", async () => {
+      console.log("View: comps list");
+      await goToComps(window);
+      await window.waitForTimeout(900);
+    });
+
+    await captureAllThemes("comp-detail-gvg", async () => {
+      console.log("View: comp detail — GvG 15v15");
+      // Need to be on comps list first; open the target comp.
+      await goToComps(window);
+      await window.waitForTimeout(500);
+      const ok = await window.evaluate(() => {
+        const rows = Array.from(document.querySelectorAll(".comp-list-row"));
+        const target = rows.find((r) => /GvG 15v15/.test(r.textContent || "")) || rows[0];
+        if (!target) return false;
+        target.click();
+        return true;
+      });
+      if (!ok) throw new Error("no comp row to open");
       await window.waitForTimeout(1200);
-      await shot(window, "comp-detail-gvg");
-    } else {
-      console.warn("  (no comp row found)");
-    }
-
-    console.log("Comp detail (Frostforge)…");
-    await setTheme(window, "frostforge");
-    await window.waitForTimeout(400);
-    await shot(window, "comp-detail-frostforge");
-
-    console.log("Editor opened from saved build…");
-    await goToLibrary(window);
-    await window.waitForTimeout(500);
-    const buildOpened = await openFirstSavedBuild();
-    if (buildOpened) {
-      await window.waitForTimeout(1500);
-      await shot(window, "editor-saved-build");
-    } else {
-      console.warn("  (no build card found in library — skipping editor shot)");
-    }
-
-    console.log("Editor (Cinderfall) from same saved build…");
-    await setTheme(window, "cinderfall");
-    await window.waitForTimeout(400);
-    await shot(window, "editor-saved-build-cinderfall");
+    });
   } catch (err) {
     console.error("Screenshot capture failed:", err);
     process.exitCode = 1;

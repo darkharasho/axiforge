@@ -46,13 +46,16 @@ const FOLDERS = [
 ];
 
 // Real fixture builds (full data) — these are what populate the GvG comp.
+// Three live at the library root (folderId: null) so the library's "All
+// Builds" view shows real builds inline next to the folders + comps; the
+// other three sit inside the GvG folder.
 const realBuilds = [
-  fixtureBuild("firebrand",  { folderId: id(4), daysAgo: 2 }),
-  fixtureBuild("druid",      { folderId: id(4), daysAgo: 3 }),
+  fixtureBuild("firebrand",  { folderId: null,  daysAgo: 1 }),
+  fixtureBuild("druid",      { folderId: null,  daysAgo: 2 }),
+  fixtureBuild("troubadour", { folderId: null,  daysAgo: 3 }),
   fixtureBuild("tempest",    { folderId: id(1), daysAgo: 4 }),
   fixtureBuild("reaper",     { folderId: id(4), daysAgo: 5 }),
   fixtureBuild("berserker",  { folderId: id(4), daysAgo: 6 }),
-  fixtureBuild("troubadour", { folderId: id(4), daysAgo: 7 }),
 ];
 
 // Synthetic library filler so the library page has volume.
