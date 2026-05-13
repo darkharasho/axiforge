@@ -1,3 +1,10 @@
+## Version v0.6.25 — May 13, 2026
+
+### Features
+
+- **Native macOS builds.** Signed (Developer ID Application) and notarized by Apple — Apple silicon (`arm64`) and Intel (`x64`) `.dmg` and `.zip` artifacts now ship alongside Windows and Linux on every release. Auto-update via `latest-mac.yml` is wired for both architectures.
+- **Marketing site at [darkharasho.github.io/axiforge](https://darkharasho.github.io/axiforge/).** Single-page overview with a theme-aware screenshot gallery (Molten Core / Frostforge / Verdant Crucible / Cinderfall), the live release version, OS-targeted download CTA, profession iconography, and Discord link in the footer.
+
 ## Version v0.6.24 — May 7, 2026
 
 ### Bug Fixes
