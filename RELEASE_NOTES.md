@@ -1,3 +1,9 @@
+## Version v0.6.26 — May 14, 2026
+
+### Features
+
+- **Latest relics now show up.** The relic catalog used to be a hand-maintained list, so anything ANet added after the last manual update was invisible. We now sync the full set straight from the GW2 wiki — this release picks up 8 missing relics (Galdra, Cruel Overseer, Director, Doyen, Fractal, Nightmare, Sacred Grounds, Wayfinder, Watch) and corrects 6 item IDs that had drifted from the wiki's canonical values (Citadel, Flock, Water, Necromancer, Living City, Fireworks).
+
 ## Version v0.6.25 — May 13, 2026
 
 ### Features
