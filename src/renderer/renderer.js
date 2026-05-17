@@ -530,6 +530,9 @@ async function init() {
     raw.relicById = new Map((raw.relics || []).map((r) => [r.id, r]));
     raw.relicByName = new Map((raw.relics || []).map((r) => [r.name, r]));
     state.upgradeCatalog = raw;
+    // Editor was rendered before the catalog finished loading — re-render so
+    // catalog-only relics (and any other catalog-derived UI) show correctly.
+    try { renderEquipmentPanel(); } catch { /* editor may not be mounted */ }
   }).catch((err) => {
     console.warn("Failed to load upgrade catalog:", err);
   });

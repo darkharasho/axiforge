@@ -535,8 +535,8 @@ async function importGw2SkillsBuild(url, name, folderId, gameMode) {
   const resolvedUtility    = equipment.utility    ? toId(utilityByName, equipment.utility)    : "";
   const resolvedEnrichment = equipment.enrichment ? toId(infusionByName, equipment.enrichment) : "";
 
-  // Relic is stored as a label string matching GW2_RELICS (e.g. "Relic of the Scholar").
-  // gw2skills stores short names; prefix "Relic of " if needed.
+  // Relic is stored as a label string matching the upgrade catalog's relic name
+  // (e.g. "Relic of the Scholar"). gw2skills stores short names; prefix if needed.
   let resolvedRelic = equipment.relic || "";
   if (resolvedRelic && !resolvedRelic.startsWith("Relic of ")) {
     resolvedRelic = `Relic of ${resolvedRelic}`;

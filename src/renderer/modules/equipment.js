@@ -2,7 +2,6 @@ import { state } from "./state.js";
 import {
   STAT_COMBOS, STAT_COMBOS_BY_LABEL, SLOT_WEIGHTS, EQUIP_ARMOR_SLOTS, EQUIP_WEAPON_SETS,
   EQUIP_TRINKET_SLOTS, EQUIP_UNDERWATER_SLOTS, GW2_WEAPONS, GW2_WEAPONS_BY_ID,
-  GW2_RELICS, GW2_RELICS_BY_LABEL,
   PROFESSION_WEIGHT, ARMOR_DEFENSE_BY_WEIGHT,
   LEGENDARY_ARMOR_ICONS, _WK,
   PROFESSION_BASE_HP,
@@ -1744,14 +1743,29 @@ export function renderEquipmentPanel() {
 
   // Trinkets — row1 (4 cols): Back, Accessory 1, Accessory 2, Relic
   //            row2 (3 cols): Amulet, Ring 1, Ring 2
-  const relicItems = [
-    { value: "", label: "— None —" },
-    ...GW2_RELICS.map((r) => ({ value: r.label, label: r.label, icon: r.icon })),
-  ];
+
+  // Resolve a relic by label from the live wiki-synced catalog.
+  function lookupRelic(label) {
+    if (!label) return null;
+    const fromCatalog = state.upgradeCatalog?.relicByName?.get(label);
+    if (!fromCatalog) return null;
+    return { label: fromCatalog.name, icon: fromCatalog.icon, facts: fromCatalog.facts, description: fromCatalog.description };
+  }
+
+  function getRelicItems() {
+    const relics = state.upgradeCatalog?.relics;
+    if (!relics) return [{ value: "", label: "— Loading… —", subtitle: "Relic data not yet loaded" }];
+    return [
+      { value: "", label: "— None —" },
+      ...relics
+        .map((r) => ({ value: r.name, label: r.name, icon: r.icon }))
+        .sort((a, b) => a.label.localeCompare(b.label)),
+    ];
+  }
 
   function makeRelicSlot() {
     const currentRelic = equip.relic || "";
-    const relicDef = GW2_RELICS_BY_LABEL.get(currentRelic);
+    const relicDef = lookupRelic(currentRelic);
     const wrapper = document.createElement("div");
     wrapper.className = "equip-slot equip-slot--compact";
     wrapper.setAttribute("role", "button");
@@ -1794,13 +1808,12 @@ export function renderEquipmentPanel() {
       _markEditorChanged();
       renderEquipmentPanel();
     }, {
-      items: relicItems, searchPlaceholder: "Search relics…",
+      items: getRelicItems(), searchPlaceholder: "Search relics…",
       hoverProvider: (opt) => {
-        const rDef = GW2_RELICS_BY_LABEL.get(opt.value);
+        const rDef = lookupRelic(opt.value);
         return ["equip-relic", () => {
           if (!rDef) return null;
-          const catalogRelic = state.upgradeCatalog?.relicByName?.get(rDef.label);
-          return { name: rDef.label, icon: rDef.icon, description: catalogRelic?.description || "", facts: catalogRelic?.facts || [] };
+          return { name: rDef.label, icon: rDef.icon, description: rDef.description || "", facts: rDef.facts || [] };
         }];
       },
     });
@@ -1810,10 +1823,9 @@ export function renderEquipmentPanel() {
     }
 
     bindHoverPreview(wrapper, "equip-relic", () => {
-      const rDef = GW2_RELICS_BY_LABEL.get(equip.relic || "");
+      const rDef = lookupRelic(equip.relic || "");
       if (!rDef) return null;
-      const catalogRelic = state.upgradeCatalog?.relicByName?.get(rDef.label);
-      return { name: rDef.label, icon: rDef.icon, description: catalogRelic?.description || "", facts: catalogRelic?.facts || [] };
+      return { name: rDef.label, icon: rDef.icon, description: rDef.description || "", facts: rDef.facts || [] };
     });
 
     return wrapper;

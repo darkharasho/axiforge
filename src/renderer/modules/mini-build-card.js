@@ -1,7 +1,7 @@
 // Mini Build Card — reusable compact build summary card.
 
 import { escapeHtml } from "./utils.js";
-import { GW2_WEAPONS_BY_ID, GW2_RELICS_BY_LABEL } from "./constants.js";
+import { GW2_WEAPONS_BY_ID } from "./constants.js";
 import { getProfessionSvg, getProfessionSvgColored } from "./profession-icons.js";
 import { getWeaponSvg } from "./weapon-icons.js";
 
@@ -35,12 +35,11 @@ function getSpecLineInfo(build, color) {
 }
 
 /**
- * Resolve the relic icon URL from GW2_RELICS_BY_LABEL, or null.
+ * Resolve the relic icon URL from the live wiki-synced catalog.
  */
-function getRelicIcon(relicName) {
+function getRelicIcon(relicName, upgradeCatalog) {
   if (!relicName) return null;
-  const entry = GW2_RELICS_BY_LABEL.get(relicName);
-  return entry?.icon || null;
+  return upgradeCatalog?.relicByName?.get(relicName)?.icon || null;
 }
 
 /**
@@ -193,7 +192,7 @@ export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
   }
 
   const relicName = build.equipment?.relic || "";
-  const relicIconUrl = getRelicIcon(relicName);
+  const relicIconUrl = getRelicIcon(relicName, upgradeCatalog);
   let relicRowHtml = "";
   if (relicName) {
     const relicIcon = relicIconUrl
