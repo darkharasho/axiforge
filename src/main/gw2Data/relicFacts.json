@@ -1,6 +1,29 @@
 {
-  "updatedAt": "2026-04-07T04:19:43.655Z",
+  "updatedAt": "2026-05-17T04:28:35.588Z",
   "relics": {
+    "99965": {
+      "name": "Relic of the Flock",
+      "facts": [
+        {
+          "type": "AttributeAdjust",
+          "text": "Healing",
+          "target": "Healing",
+          "value": 1460,
+          "coefficient": 1,
+          "hit_count": 1
+        },
+        {
+          "type": "Number",
+          "text": "Number of Targets",
+          "value": 5
+        },
+        {
+          "type": "Radius",
+          "text": "Radius",
+          "distance": 600
+        }
+      ]
+    },
     "99997": {
       "name": "Relic of Isgarren",
       "facts": [
@@ -158,6 +181,44 @@
         }
       ]
     },
+    "100153": {
+      "name": "Relic of the Fractal",
+      "facts": [
+        {
+          "type": "Buff",
+          "text": "Burning",
+          "status": "Burning",
+          "duration": 8,
+          "apply_count": 1
+        },
+        {
+          "type": "Buff",
+          "text": "Burning",
+          "status": "Burning",
+          "duration": 4,
+          "apply_count": 1
+        },
+        {
+          "type": "Buff",
+          "text": "Torment",
+          "status": "Torment",
+          "duration": 8,
+          "apply_count": 1
+        },
+        {
+          "type": "Buff",
+          "text": "Torment",
+          "status": "Torment",
+          "duration": 6,
+          "apply_count": 1
+        },
+        {
+          "type": "Recharge",
+          "text": "Recharge",
+          "value": 20
+        }
+      ]
+    },
     "100158": {
       "name": "Relic of the Mirage",
       "facts": [
@@ -230,14 +291,14 @@
       "name": "Relic of the Weaver",
       "facts": [
         {
-          "type": "Time",
-          "text": "Duration",
-          "duration": 4
-        },
-        {
           "type": "Percent",
           "text": "Damage Increase",
           "percent": 10
+        },
+        {
+          "type": "Time",
+          "text": "Duration",
+          "duration": 4
         }
       ]
     },
@@ -290,13 +351,7 @@
     },
     "100238": {
       "name": "Relic of the Lich",
-      "facts": [
-        {
-          "type": "Recharge",
-          "text": "Cooldown",
-          "value": 60
-        }
-      ]
+      "facts": []
     },
     "100248": {
       "name": "Relic of the Citadel",
@@ -372,13 +427,7 @@
     },
     "100311": {
       "name": "Relic of the Ogre",
-      "facts": [
-        {
-          "type": "Recharge",
-          "text": "Cooldown",
-          "value": 60
-        }
-      ]
+      "facts": []
     },
     "100345": {
       "name": "Relic of the Daredevil",
@@ -513,13 +562,7 @@
     },
     "100403": {
       "name": "Relic of the Golemancer",
-      "facts": [
-        {
-          "type": "Recharge",
-          "text": "Cooldown",
-          "value": 60
-        }
-      ]
+      "facts": []
     },
     "100411": {
       "name": "Relic of the Trooper",
@@ -624,6 +667,58 @@
       "name": "Relic of Dwayna",
       "facts": []
     },
+    "100448": {
+      "name": "Relic of the Citadel",
+      "facts": [
+        {
+          "type": "Number",
+          "text": "Defiance Break",
+          "value": 400
+        },
+        {
+          "type": "Damage",
+          "text": "Damage",
+          "dmg_multiplier": 0.9,
+          "hit_count": 1
+        },
+        {
+          "type": "Damage",
+          "text": "Damage",
+          "dmg_multiplier": 0.01,
+          "hit_count": 1
+        },
+        {
+          "type": "Number",
+          "text": "Minimum Stun",
+          "value": 1
+        },
+        {
+          "type": "Number",
+          "text": "Maximum Stun",
+          "value": 3
+        },
+        {
+          "type": "Number",
+          "text": "Number of Targets",
+          "value": 5
+        },
+        {
+          "type": "Radius",
+          "text": "Blast Radius",
+          "distance": 240
+        },
+        {
+          "type": "Range",
+          "text": "Range",
+          "value": 600
+        },
+        {
+          "type": "Recharge",
+          "text": "Recharge",
+          "value": 30
+        }
+      ]
+    },
     "100450": {
       "name": "Relic of the Chronomancer",
       "facts": [
@@ -704,26 +799,20 @@
     },
     "100479": {
       "name": "Relic of the Privateer",
-      "facts": [
-        {
-          "type": "Recharge",
-          "text": "Cooldown",
-          "value": 60
-        }
-      ]
+      "facts": []
     },
     "100527": {
       "name": "Relic of the Brawler",
       "facts": [
         {
-          "type": "Time",
-          "text": "Duration",
-          "duration": 4
-        },
-        {
           "type": "Percent",
           "text": "Damage Increase",
           "percent": 10
+        },
+        {
+          "type": "Time",
+          "text": "Duration",
+          "duration": 4
         },
         {
           "type": "Recharge",
@@ -839,6 +928,52 @@
         }
       ]
     },
+    "100579": {
+      "name": "Relic of the Nightmare",
+      "facts": [
+        {
+          "type": "Damage",
+          "text": "Damage",
+          "dmg_multiplier": 0.9,
+          "hit_count": 1
+        },
+        {
+          "type": "Damage",
+          "text": "Damage",
+          "dmg_multiplier": 0.01,
+          "hit_count": 1
+        },
+        {
+          "type": "Buff",
+          "text": "Poisoned",
+          "status": "Poisoned",
+          "duration": 8,
+          "apply_count": 1
+        },
+        {
+          "type": "Buff",
+          "text": "Fear",
+          "status": "Fear",
+          "duration": 2,
+          "apply_count": 1
+        },
+        {
+          "type": "Recharge",
+          "text": "Recharge",
+          "value": 30
+        }
+      ]
+    },
+    "100580": {
+      "name": "Relic of the Necromancer",
+      "facts": [
+        {
+          "type": "Percent",
+          "text": "Movement Speed Decrease",
+          "percent": 50
+        }
+      ]
+    },
     "100614": {
       "name": "Relic of Evasion",
       "facts": [
@@ -893,6 +1028,26 @@
           "type": "Radius",
           "text": "Radius",
           "distance": 600
+        }
+      ]
+    },
+    "100659": {
+      "name": "Relic of the Water",
+      "facts": [
+        {
+          "type": "Number",
+          "text": "Conditions Removed",
+          "value": 2
+        },
+        {
+          "type": "Radius",
+          "text": "Radius",
+          "distance": 360
+        },
+        {
+          "type": "Recharge",
+          "text": "Recharge",
+          "value": 20
         }
       ]
     },
@@ -1248,14 +1403,14 @@
       "name": "Relic of the Deadeye",
       "facts": [
         {
-          "type": "Time",
-          "text": "Duration",
-          "duration": 8
-        },
-        {
           "type": "Percent",
           "text": "Damage Increase",
           "percent": 10
+        },
+        {
+          "type": "Time",
+          "text": "Duration",
+          "duration": 8
         }
       ]
     },
@@ -1336,11 +1491,6 @@
           "apply_count": 1
         },
         {
-          "type": "Range",
-          "text": "Range",
-          "value": 1
-        },
-        {
           "type": "Recharge",
           "text": "Recharge",
           "value": 30
@@ -1351,11 +1501,6 @@
       "name": "Relic of Fireworks",
       "facts": [
         {
-          "type": "Time",
-          "text": "Duration",
-          "duration": 6
-        },
-        {
           "type": "Percent",
           "text": "Damage Increase",
           "percent": 7
@@ -1364,6 +1509,11 @@
           "type": "Percent",
           "text": "Damage Increase",
           "percent": 10
+        },
+        {
+          "type": "Time",
+          "text": "Duration",
+          "duration": 6
         }
       ]
     },
@@ -1695,6 +1845,35 @@
         }
       ]
     },
+    "101943": {
+      "name": "Relic of the Wayfinder",
+      "facts": [
+        {
+          "type": "Buff",
+          "text": "Superspeed",
+          "status": "Superspeed",
+          "duration": 4,
+          "apply_count": 1
+        },
+        {
+          "type": "Buff",
+          "text": "Superspeed",
+          "status": "Superspeed",
+          "duration": 10,
+          "apply_count": 1
+        },
+        {
+          "type": "Percent",
+          "text": "Movement Speed Increase",
+          "percent": 25
+        },
+        {
+          "type": "Percent",
+          "text": "Noncombat Movement Speed Increase",
+          "percent": 33
+        }
+      ]
+    },
     "101955": {
       "name": "Relic of Zakiros",
       "facts": [
@@ -1900,14 +2079,14 @@
       "name": "Relic of the Claw",
       "facts": [
         {
-          "type": "Time",
-          "text": "Duration",
-          "duration": 8
-        },
-        {
           "type": "Percent",
           "text": "Damage Increase",
           "percent": 7
+        },
+        {
+          "type": "Time",
+          "text": "Duration",
+          "duration": 8
         }
       ]
     },
@@ -2130,11 +2309,6 @@
       "name": "Relic of Fire",
       "facts": [
         {
-          "type": "Time",
-          "text": "Duration",
-          "duration": 4
-        },
-        {
           "type": "Percent",
           "text": "Damage Increase",
           "percent": 7
@@ -2143,6 +2317,11 @@
           "type": "Percent",
           "text": "Damage Increase",
           "percent": 10
+        },
+        {
+          "type": "Time",
+          "text": "Duration",
+          "duration": 4
         },
         {
           "type": "Recharge",
@@ -2243,6 +2422,16 @@
       ]
     },
     "104928": {
+      "name": "Relic of the Living City",
+      "facts": [
+        {
+          "type": "Time",
+          "text": "Duration",
+          "duration": 5
+        }
+      ]
+    },
+    "104938": {
       "name": "Relic of the Living City",
       "facts": [
         {
@@ -2565,6 +2754,36 @@
           "value": 10.5
         }
       ]
+    },
+    "109264": {
+      "name": "Relic of Galdra",
+      "facts": []
+    },
+    "109267": {
+      "name": "Relic of the Sacred Grounds",
+      "facts": []
+    },
+    "109351": {
+      "name": "Relic of the Director",
+      "facts": []
+    },
+    "109522": {
+      "name": "Relic of the Doyen",
+      "facts": []
+    },
+    "109664": {
+      "name": "Relic of the Cruel Overseer",
+      "facts": [
+        {
+          "type": "Time",
+          "text": "Duration",
+          "duration": 8
+        }
+      ]
+    },
+    "109709": {
+      "name": "Relic of Watch",
+      "facts": []
     }
   }
 }

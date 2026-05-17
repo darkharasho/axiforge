@@ -1,0 +1,12 @@
+{
+  "_comment": "Per-relic overrides applied on top of the wiki-synced relicFacts.json during sync. Each entry REPLACES the wiki's facts array for that relic id. Use sparingly — only when the wiki page renders facts ambiguously (e.g. labeling Stack Duration as just 'Duration') or omits values the game actually has. Regenerate by running: node scripts/sync-relic-facts.mjs",
+  "100916": {
+    "_reason": "Wiki labels Stack Duration as 'Duration' and omits Maximum Stacks. Verified in #136.",
+    "name": "Relic of the Thief",
+    "facts": [
+      { "type": "Percent", "text": "Damage Increase", "percent": 1 },
+      { "type": "Time", "text": "Stack Duration", "duration": 6 },
+      { "type": "Number", "text": "Maximum Stacks", "value": 5 }
+    ]
+  }
+}
