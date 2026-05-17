@@ -138,6 +138,17 @@ async function main() {
   const nextRelics = { ...prevRelics };
   for (const [id, entry] of results) nextRelics[String(id)] = entry;
 
+  // On a full sync (no --limit / --id), prune entries that aren't in
+  // RELIC_ITEM_IDS — they're leftovers from IDs the wiki has since rotated.
+  const isFullSync = limit === Infinity && requestedIds.length === 0;
+  const removed = [];
+  if (isFullSync) {
+    const valid = new Set(RELIC_ITEM_IDS.map(String));
+    for (const id of Object.keys(nextRelics)) {
+      if (!valid.has(id)) { delete nextRelics[id]; removed.push(id); }
+    }
+  }
+
   // Stable id-sorted output for clean diffs.
   const sortedKeys = Object.keys(nextRelics).sort((a, b) => Number(a) - Number(b));
   const sortedRelics = Object.fromEntries(sortedKeys.map((k) => [k, nextRelics[k]]));
@@ -146,7 +157,8 @@ async function main() {
   await writeFile(TARGET, JSON.stringify(next, null, 2) + "\n");
 
   console.log(`Done.`);
-  console.log(`  added: ${added.length}, changed: ${changed.length}, overrides: ${overrideCount}, errors: ${errors.length}`);
+  console.log(`  added: ${added.length}, changed: ${changed.length}, overrides: ${overrideCount}, removed: ${removed.length}, errors: ${errors.length}`);
+  if (removed.length) console.log(`  - ${removed.join(", ")}`);
   if (added.length) console.log(`  + ${added.join(", ")}`);
   if (changed.length) console.log(`  ~ ${changed.join(", ")}`);
   if (errors.length) {

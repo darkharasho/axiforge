@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-05-17T04:28:35.588Z",
+  "updatedAt": "2026-05-17T04:45:53.652Z",
   "relics": {
     "99965": {
       "name": "Relic of the Flock",
@@ -243,16 +243,6 @@
         }
       ]
     },
-    "100165": {
-      "name": "Relic of the Necromancer",
-      "facts": [
-        {
-          "type": "Percent",
-          "text": "Movement Speed Decrease",
-          "percent": 50
-        }
-      ]
-    },
     "100177": {
       "name": "Relic of Peitha",
       "facts": [
@@ -352,78 +342,6 @@
     "100238": {
       "name": "Relic of the Lich",
       "facts": []
-    },
-    "100248": {
-      "name": "Relic of the Citadel",
-      "facts": [
-        {
-          "type": "Number",
-          "text": "Defiance Break",
-          "value": 400
-        },
-        {
-          "type": "Damage",
-          "text": "Damage",
-          "dmg_multiplier": 0.9,
-          "hit_count": 1
-        },
-        {
-          "type": "Damage",
-          "text": "Damage",
-          "dmg_multiplier": 0.01,
-          "hit_count": 1
-        },
-        {
-          "type": "Number",
-          "text": "Minimum Stun",
-          "value": 1
-        },
-        {
-          "type": "Number",
-          "text": "Maximum Stun",
-          "value": 3
-        },
-        {
-          "type": "Number",
-          "text": "Number of Targets",
-          "value": 5
-        },
-        {
-          "type": "Radius",
-          "text": "Blast Radius",
-          "distance": 240
-        },
-        {
-          "type": "Range",
-          "text": "Range",
-          "value": 600
-        },
-        {
-          "type": "Recharge",
-          "text": "Recharge",
-          "value": 30
-        }
-      ]
-    },
-    "100262": {
-      "name": "Relic of Fireworks",
-      "facts": [
-        {
-          "type": "Time",
-          "text": "Duration",
-          "duration": 6
-        },
-        {
-          "type": "Percent",
-          "text": "Damage Increase",
-          "percent": 7
-        },
-        {
-          "type": "Percent",
-          "text": "Damage Increase",
-          "percent": 10
-        }
-      ]
     },
     "100311": {
       "name": "Relic of the Ogre",
@@ -821,26 +739,6 @@
         }
       ]
     },
-    "100531": {
-      "name": "Relic of the Water",
-      "facts": [
-        {
-          "type": "Number",
-          "text": "Conditions Removed",
-          "value": 2
-        },
-        {
-          "type": "Radius",
-          "text": "Radius",
-          "distance": 360
-        },
-        {
-          "type": "Recharge",
-          "text": "Recharge",
-          "value": 20
-        }
-      ]
-    },
     "100542": {
       "name": "Relic of the Cavalier",
       "facts": [
@@ -1005,29 +903,6 @@
           "type": "Recharge",
           "text": "Recharge",
           "value": 30
-        }
-      ]
-    },
-    "100633": {
-      "name": "Relic of the Flock",
-      "facts": [
-        {
-          "type": "AttributeAdjust",
-          "text": "Healing",
-          "target": "Healing",
-          "value": 1460,
-          "coefficient": 1,
-          "hit_count": 1
-        },
-        {
-          "type": "Number",
-          "text": "Number of Targets",
-          "value": 5
-        },
-        {
-          "type": "Radius",
-          "text": "Radius",
-          "distance": 600
         }
       ]
     },
@@ -2418,16 +2293,6 @@
           "type": "Time",
           "text": "Duration",
           "duration": 3
-        }
-      ]
-    },
-    "104928": {
-      "name": "Relic of the Living City",
-      "facts": [
-        {
-          "type": "Time",
-          "text": "Duration",
-          "duration": 5
         }
       ]
     },
