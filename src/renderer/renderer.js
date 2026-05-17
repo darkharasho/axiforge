@@ -199,8 +199,9 @@ const el = {
   winMax:            q("#winMax"),
   winClose:          q("#winClose"),
   titlebar:          q("#titlebar"),
-  updateVersionLabel: q("#updateVersionLabel"),
-  updateProgressLabel: q("#updateProgressLabel"),
+  updateVersionLabel:  q("#updateVersionLabel"),
+  updateStatusPill:    q("#updateStatusPill"),
+  updateStatusPillText:q("#updateStatusPillText"),
   updateRestartBtn:    q("#updateRestartBtn"),
 };
 
@@ -344,75 +345,127 @@ initSettingsCallbacks({
     if (el.updateVersionLabel) el.updateVersionLabel.textContent = `v${version}`;
   } catch { /* not available in web builds */ }
 
-  let errorTimeout = null;
+  // State machine: idle | checking | available | downloading | downloaded | error | unsupported
+  let state = "idle";
+  let errorResetTimer = null;
 
-  window.desktopApi.onUpdateAvailable?.((info) => {
-    if (el.updateVersionLabel) el.updateVersionLabel.textContent = `v${info.version} available`;
+  const UNSUPPORTED_REASONS = {
+    "dev": "Auto-updates disabled in development builds.",
+    "linux-non-appimage": "Auto-updates require the AppImage build on Linux.",
+    "portable": "Auto-updates are not available in portable builds.",
+  };
+
+  function setPill(text, variant /* "default" | "muted" | "error" | "static" */) {
+    if (!el.updateStatusPill || !el.updateStatusPillText) return;
+    el.updateStatusPillText.textContent = text;
+    el.updateStatusPill.classList.remove("hidden", "titlebar__pill--muted", "titlebar__pill--error", "titlebar__pill--static");
+    if (variant === "muted") el.updateStatusPill.classList.add("titlebar__pill--muted");
+    else if (variant === "error") el.updateStatusPill.classList.add("titlebar__pill--error");
+    else if (variant === "static") el.updateStatusPill.classList.add("titlebar__pill--static");
+  }
+
+  function hidePill() {
+    el.updateStatusPill?.classList.add("hidden");
+  }
+
+  function showRestartBtn() {
+    el.updateRestartBtn?.classList.remove("hidden");
+  }
+
+  function hideRestartBtn() {
+    el.updateRestartBtn?.classList.add("hidden");
+  }
+
+  function applyState(next, payload) {
+    state = next;
+    if (errorResetTimer) { clearTimeout(errorResetTimer); errorResetTimer = null; }
+
+    switch (next) {
+      case "idle":
+        hidePill();
+        hideRestartBtn();
+        break;
+      case "checking":
+        hidePill(); // brief hide-then-show forces CSS transition restart
+        setPill("Checking…", "default");
+        hideRestartBtn();
+        break;
+      case "available":
+        setPill("Updating…", "default");
+        hideRestartBtn();
+        break;
+      case "downloading": {
+        const pct = Math.max(0, Math.min(100, Math.round(payload?.percent ?? 0)));
+        setPill(`Updating ${pct}%`, "default");
+        hideRestartBtn();
+        break;
+      }
+      case "downloaded":
+        hidePill();
+        showRestartBtn();
+        break;
+      case "error":
+        setPill("Update failed", "error");
+        hideRestartBtn();
+        errorResetTimer = setTimeout(() => applyState("idle"), 5000);
+        break;
+      case "unsupported": {
+        const reason = payload?.reason;
+        setPill("Auto-updates disabled", "static");
+        if (el.updateStatusPill) {
+          el.updateStatusPill.title = UNSUPPORTED_REASONS[reason] || "Auto-updates are unavailable.";
+        }
+        hideRestartBtn();
+        break;
+      }
+    }
+  }
+
+  window.desktopApi.onUpdateChecking?.(() => {
+    if (state === "downloaded" || state === "downloading") return; // don't downgrade
+    applyState("checking");
   });
 
-  window.desktopApi.onUpdateNotAvailable?.((info) => {
-    if (el.updateVersionLabel) el.updateVersionLabel.textContent = `v${info.version}`;
+  window.desktopApi.onUpdateAvailable?.(() => {
+    if (state === "downloaded") return;
+    applyState("available");
+  });
+
+  window.desktopApi.onUpdateNotAvailable?.(async (info) => {
+    if (state === "downloaded" || state === "downloading") return;
+    if (el.updateVersionLabel && info?.version) {
+      el.updateVersionLabel.textContent = `v${info.version}`;
+    }
+    applyState("idle");
   });
 
   window.desktopApi.onDownloadProgress?.((info) => {
-    if (el.updateProgressLabel) {
-      el.updateProgressLabel.textContent = `Updating... ${Math.round(info.percent)}%`;
-      el.updateProgressLabel.classList.add("visible");
-    }
-    if (el.updateVersionLabel) el.updateVersionLabel.style.opacity = "0";
+    applyState("downloading", info);
   });
 
   window.desktopApi.onUpdateDownloaded?.(() => {
-    if (el.updateProgressLabel) {
-      el.updateProgressLabel.textContent = "";
-      el.updateProgressLabel.classList.remove("visible");
-    }
-    if (el.updateVersionLabel) el.updateVersionLabel.style.opacity = "";
-    if (el.updateRestartBtn) {
-      el.updateRestartBtn.classList.remove("hidden");
-      // Trigger reflow before adding visible class for transition
-      void el.updateRestartBtn.offsetWidth;
-      el.updateRestartBtn.classList.add("visible");
-    }
+    applyState("downloaded");
   });
 
-  window.desktopApi.onUpdateError?.((info) => {
-    if (errorTimeout) clearTimeout(errorTimeout);
-    if (el.updateVersionLabel) {
-      el.updateVersionLabel.classList.add("titlebar__version--error");
-      el.updateVersionLabel.textContent = "Update failed";
-    }
-    if (el.updateProgressLabel) {
-      el.updateProgressLabel.textContent = "";
-      el.updateProgressLabel.classList.remove("visible");
-    }
-    errorTimeout = setTimeout(async () => {
-      if (el.updateVersionLabel) {
-        el.updateVersionLabel.classList.remove("titlebar__version--error");
-        try {
-          const version = await window.desktopApi.getAppVersion();
-          el.updateVersionLabel.textContent = `v${version}`;
-        } catch {
-          el.updateVersionLabel.textContent = "";
-        }
-      }
-    }, 5000);
+  window.desktopApi.onUpdateError?.(() => {
+    if (state === "downloaded") return; // already have a working download
+    applyState("error");
+  });
+
+  window.desktopApi.onUpdateUnsupported?.((info) => {
+    applyState("unsupported", info);
   });
 
   if (el.updateVersionLabel) {
-    el.updateVersionLabel.style.cursor = "pointer";
     el.updateVersionLabel.title = "Click to check for updates";
     el.updateVersionLabel.addEventListener("click", () => {
       if (el.updateVersionLabel.classList.contains("titlebar__dev-badge")) return;
-      const prev = el.updateVersionLabel.textContent;
-      el.updateVersionLabel.textContent = "Checking...";
+      if (state === "downloaded") {
+        // Update already downloaded; nudge user to restart instead.
+        return;
+      }
+      applyState("checking");
       window.desktopApi.checkForUpdates?.();
-      // Restore after timeout if no update event fires
-      setTimeout(() => {
-        if (el.updateVersionLabel.textContent === "Checking...") {
-          el.updateVersionLabel.textContent = prev;
-        }
-      }, 10000);
     });
   }
 

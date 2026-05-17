@@ -19,8 +19,14 @@
         <span>Axi<span class="titlebar__brand-accent">Forge</span></span>
         <span class="titlebar__beta-badge">beta</span>
         <span id="updateVersionLabel" class="titlebar__version no-drag"></span>
-        <span id="updateProgressLabel" class="titlebar__progress no-drag"></span>
-        <button id="updateRestartBtn" class="titlebar__restart-btn hidden no-drag" type="button">Restart to update</button>
+        <span id="updateStatusPill" class="titlebar__pill hidden no-drag">
+          <span class="titlebar__pill-spinner" aria-hidden="true"></span>
+          <span id="updateStatusPillText" class="titlebar__pill-text"></span>
+        </span>
+        <button id="updateRestartBtn" class="titlebar__restart-btn hidden no-drag" type="button">
+          <span class="titlebar__restart-icon" aria-hidden="true"></span>
+          <span>Restart to Update</span>
+        </button>
       </div>
       <div class="titlebar__controls no-drag">
         <button id="workspaceBtn" class="titlebar__workspace-btn" type="button" title="Workspace">

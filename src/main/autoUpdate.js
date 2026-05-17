@@ -24,8 +24,14 @@ let mainWindow = null;
 let retryAttempts = 0;
 
 function send(channel, data) {
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send(channel, data);
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  const wc = mainWindow.webContents;
+  if (wc.isLoading()) {
+    wc.once("did-finish-load", () => {
+      if (!mainWindow.isDestroyed()) wc.send(channel, data);
+    });
+  } else {
+    wc.send(channel, data);
   }
 }
 
@@ -65,15 +71,23 @@ function initAutoUpdate(win) {
     return;
   }
 
-  // Dev mode — skip entirely, send fake "not available"
+  // Dev mode — auto-updates can't run
   if (!app.isPackaged) {
-    send("update-not-available", { version: app.getVersion() });
+    ipcMain.handle("updater:get-version", () => app.getVersion());
+    ipcMain.on("updater:check", () => {
+      send("update-unsupported", { reason: "dev", version: app.getVersion() });
+    });
+    send("update-unsupported", { reason: "dev", version: app.getVersion() });
     return;
   }
 
   // Linux without AppImage — auto-update will error
   if (process.platform === "linux" && !process.env.APPIMAGE) {
-    send("update-not-available", { version: app.getVersion() });
+    ipcMain.handle("updater:get-version", () => app.getVersion());
+    ipcMain.on("updater:check", () => {
+      send("update-unsupported", { reason: "linux-non-appimage", version: app.getVersion() });
+    });
+    send("update-unsupported", { reason: "linux-non-appimage", version: app.getVersion() });
     return;
   }
 
@@ -81,6 +95,10 @@ function initAutoUpdate(win) {
 
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
+
+  autoUpdater.on("checking-for-update", () => {
+    send("update-checking", {});
+  });
 
   autoUpdater.on("update-available", (info) => {
     send("update-available", {

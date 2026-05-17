@@ -72,59 +72,85 @@
   color: var(--text-dim);
 }
 
-.titlebar__progress {
+/* Status pill: used for checking / downloading / error / unsupported states */
+.titlebar__pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-family: system-ui, sans-serif;
   font-size: 0.6rem;
   font-weight: 600;
   letter-spacing: 0.04em;
-  color: var(--gold);
-  opacity: 0;
-  transform: translateY(4px);
-  transition: opacity 0.3s ease, transform 0.3s ease;
-  pointer-events: none;
+  padding: 2px 8px;
+  border-radius: 4px;
+  line-height: 1.4;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
 
-.titlebar__progress.visible {
-  opacity: 1;
-  transform: translateY(0);
+.titlebar__pill--muted {
+  border-color: color-mix(in srgb, var(--text-dim) 50%, transparent);
+  background: color-mix(in srgb, var(--text-dim) 12%, transparent);
+  color: var(--text-light);
+}
+
+.titlebar__pill--error {
+  border-color: color-mix(in srgb, var(--danger) 55%, transparent);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  color: var(--danger-text);
+}
+
+.titlebar__pill-spinner {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  border-top-color: transparent;
+  animation: titlebar-pill-spin 0.8s linear infinite;
+}
+
+.titlebar__pill--static .titlebar__pill-spinner,
+.titlebar__pill--error .titlebar__pill-spinner {
+  display: none;
+}
+
+@keyframes titlebar-pill-spin {
+  to { transform: rotate(360deg); }
 }
 
 .titlebar__restart-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-family: system-ui, sans-serif;
   font-size: 0.6rem;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--gold);
-  border: 1px solid color-mix(in srgb, var(--gold) 60%, transparent);
-  border-radius: 3px;
-  padding: 2px 8px;
+  border: 1px solid var(--gold);
+  border-radius: 4px;
+  padding: 2px 10px;
   line-height: 1.4;
-  background: transparent;
+  background: color-mix(in srgb, var(--gold) 18%, transparent);
   cursor: pointer;
-  opacity: 0;
-  transform: translateX(8px);
-  transition: opacity 0.4s ease, transform 0.4s ease, background 0.15s ease, border-color 0.15s ease;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
   -webkit-font-smoothing: antialiased;
 }
 
-.titlebar__restart-btn.visible {
-  opacity: 1;
-  transform: translateX(0);
-}
-
 .titlebar__restart-btn:hover {
-  background: color-mix(in srgb, var(--gold) 15%, transparent);
-  border-color: var(--gold);
+  background: color-mix(in srgb, var(--gold) 30%, transparent);
+  transform: translateY(-1px);
 }
 
-.titlebar__update-status .hidden {
-  display: none;
-}
-
-.titlebar__version--error {
-  color: var(--danger-text);
-  transition: opacity 0.3s ease;
+.titlebar__restart-icon {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 6px currentColor;
 }
 
 .titlebar__logo {

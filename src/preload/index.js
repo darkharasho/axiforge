@@ -89,6 +89,14 @@ contextBridge.exposeInMainWorld("desktopApi", {
   setLastSeenVersion: (version) => ipcRenderer.invoke("app:set-last-seen-version", version),
   checkForUpdates: () => ipcRenderer.send("updater:check"),
   restartApp: () => ipcRenderer.send("updater:restart"),
+  onUpdateChecking: (cb) => {
+    ipcRenderer.removeAllListeners("update-checking");
+    ipcRenderer.on("update-checking", (_e, info) => cb(info));
+  },
+  onUpdateUnsupported: (cb) => {
+    ipcRenderer.removeAllListeners("update-unsupported");
+    ipcRenderer.on("update-unsupported", (_e, info) => cb(info));
+  },
   onUpdateAvailable: (cb) => {
     ipcRenderer.removeAllListeners("update-available");
     ipcRenderer.on("update-available", (_e, info) => cb(info));
