@@ -1,3 +1,9 @@
+## Version v0.6.27 — May 16, 2026
+
+### Bug Fixes
+
+- **The update button now actually shows up.** Clicking the version label in the titlebar used to flash "Checking…" and silently revert, with the "Restart to Update" button quietly fading in later in a way that was easy to miss. Updating now shows a clear status pill the whole way through — *Checking…* → *Updating X%* — and the **Restart to Update** button appears immediately and prominently once the download is done. On platforms where auto-updates can't run (dev builds, non-AppImage Linux), the titlebar now explicitly says *Auto-updates disabled* with a tooltip explaining why, instead of silently doing nothing.
+
 ## Version v0.6.26 — May 14, 2026
 
 ### Features
