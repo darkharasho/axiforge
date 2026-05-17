@@ -242,34 +242,7 @@ export const LEGENDARY_ARMOR_ICONS = {
   },
 };
 
-export const GW2_FOOD = [
-  { id: 91734, label: "Peppercorn-Crusted Sous-Vide Steak",            icon: `${_RW}/EBFB0A55087C48E905D4ED9E6BE549DA6D9560F4/2191071.png`, buff: "-10% Incoming Damage | +100 Power | +70 Ferocity" },
-  { id: 91805, label: "Cilantro Lime Sous-Vide Steak",                 icon: `${_RW}/D2C00407A3FFE06251BDE9DC13525FE167ABA3E6/2191069.png`, buff: "66% Chance to Life Steal on Crit | +100 Power | +70 Precision" },
-  { id: 41569, label: "Bowl of Sweet and Spicy Butternut Squash Soup", icon: `${_RW}/FD0A2497B8C711A73AE9A6020118A895091E68E5/561719.png`,   buff: "+100 Power | +70 Ferocity" },
-  { id: 12469, label: "Plate of Truffle Steak Dinner",                 icon: `${_RW}/67CFD9FD4B17A44CC4EC99C2DF276CF0A46C7B0D/433658.png`,   buff: "+200 Power for 30s on Kill | +70 Ferocity" },
-  { id: 12485, label: "Bowl of Fancy Potato and Leek Soup",            icon: `${_RW}/AD7A1D7FAEE6E6F3AA9061CFDC90A418633DDD5C/433672.png`,   buff: "+100 Precision | +70 Condition Damage" },
-  { id: 86997, label: "Plate of Beef Rendang",                         icon: `${_RW}/ED54F2CA2B6AEAE258C90A20BB213E60956CDD13/1947191.png`,  buff: "+100 Condition Damage | +70 Expertise" },
-  { id: 96578, label: "Plate of Kimchi Pancakes",                      icon: `${_RW}/D64959DDB9D89E6A4FE321EC2965B6C72B557575/2594835.png`,  buff: "+15% Increased Bleeding Duration | +70 Condition Damage" },
-  { id: 91703, label: "Mint-Pear Cured Meat Flatbread",                icon: `${_RW}/F56EAF0DD0CFF41CE402282E37F20F4D22501358/2191048.png`,  buff: "+10% Outgoing Healing | +100 Condition Damage | +70 Expertise" },
-  { id: 91784, label: "Clove-Spiced Pear and Cured Meat Flatbread",    icon: `${_RW}/CE437DB26797C84F9127C9D190720311EB614512/2191047.png`,  buff: "-20% Incoming Condition Duration | +100 Condition Damage | +70 Expertise" },
-  { id: 91727, label: "Mint and Veggie Flatbread",                     icon: `${_RW}/FCB44856734BE45744C8B10509CF710BBBE13C7B/2191027.png`,  buff: "+10% Outgoing Healing | +100 Expertise | +70 Condition Damage" },
-  { id: 68634, label: "Delicious Rice Ball",                           icon: `${_RW}/3FF95B9A7DA10501B9BA5AB7FEB24BFF65357B24/1341426.png`,  buff: "+100 Healing Power | +10% Outgoing Healing" },
-  { id: 91758, label: "Eggs Benedict with Mint-Parsley Sauce",         icon: `${_RW}/247DFE7FA45A2DF9B24E5515C3BDB96D28ED213B/2191053.png`,  buff: "+10% Outgoing Healing | +100 Concentration | +70 Expertise" },
-  { id: 91690, label: "Bowl of Fruit Salad with Mint Garnish",         icon: `${_RW}/1D44545301F3BB1C046898EA08D5906EB369DD0A/2191059.png`,  buff: "+10% Outgoing Healing | +100 Healing Power | +70 Concentration" },
-  { id: 12471, label: "Bowl of Seaweed Salad",                         icon: `${_RW}/0D442C30D4E29832725800E22990BA111D05E0BE/219455.png`,    buff: "60% to Gain Swiftness on Kill | +5% Damage While Moving" },
-];
-
-export const GW2_UTILITY = [
-  { id: 78305, label: "Superior Sharpening Stone",  icon: `${_RW}/91AC9F70D30C5E3E22635DF4F30CAFA1F6F803A0/219361.png`, buff: "Gain Power Equal to 3% of Your Precision | Gain Power Equal to 6% of Your Ferocity" },
-  { id: 67530, label: "Furious Sharpening Stone",   icon: `${_RW}/91AC9F70D30C5E3E22635DF4F30CAFA1F6F803A0/219361.png`, buff: "Gain Power Equal to 3% of Your Precision | Gain Ferocity Equal to 3% of Your Precision" },
-  { id: 67531, label: "Bountiful Sharpening Stone", icon: `${_RW}/91AC9F70D30C5E3E22635DF4F30CAFA1F6F803A0/219361.png`, buff: "Gain Power Equal to 6% of Your Healing Power | Gain Power Equal to 8% of Your Concentration" },
-  { id: 67528, label: "Bountiful Maintenance Oil",  icon: `${_RW}/BA57FF7A052FFE37669F97A815BD28089FCFF0AD/219367.png`, buff: "Gain 0.6% Healing to Allies per 100 Healing Power | Gain 0.8% per 100 Concentration" },
-  { id: 67529, label: "Furious Maintenance Oil",    icon: `${_RW}/BA57FF7A052FFE37669F97A815BD28089FCFF0AD/219367.png`, buff: "Gain Concentration Equal to 3% of Your Precision | Gain Healing Power Equal to 3% of Your Precision" },
-];
-
 export const GW2_WEAPONS_BY_ID    = new Map(GW2_WEAPONS.map((w) => [w.id, w]));
-export const GW2_FOOD_BY_LABEL    = new Map(GW2_FOOD.map((f) => [f.label, f]));
-export const GW2_UTILITY_BY_LABEL = new Map(GW2_UTILITY.map((u) => [u.label, u]));
 
 export const PROFESSION_CONCEPT_ART = {
   Elementalist: `${_WK}/5/5e/Elementalist_04_concept_art.png`,
