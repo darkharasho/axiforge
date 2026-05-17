@@ -1,43 +1,193 @@
-// Curated upgrade item IDs for GW2 API fetching.
-// All Exotic-rarity Superior Runes/Sigils (unique icons), plus Infusions and Enrichments.
+// Upgrade item IDs for GW2 API fetching.
+// Runes, sigils, and relics are wiki-synced — regenerate with:
+//   node scripts/sync-upgrade-ids.mjs [relics|runes|sigils]
+// Infusions, enrichments, food, and utility lists are still hand-curated
+// because the wiki categories don't cleanly map to the picker subset we want.
 
 const RUNE_ITEM_IDS = [
-  // Classic Superior Runes (Exotic)
-  24687, 24688, 24691, 24696, 24699, 24702, 24703, 24708, 24711, 24714,
-  24717, 24720, 24723, 24726, 24729, 24732, 24735, 24738, 24741, 24744,
-  24747, 24750, 24753, 24756, 24757, 24762, 24765, 24768, 24771, 24776,
-  24779, 24782, 24785, 24788, 24791, 24794, 24797, 24800, 24803, 24806,
-  24812, 24815, 24818, 24821, 24824, 24827, 24830, 24833, 24836, 24839,
-  24842, 24845, 24848, 24851, 24854, 24857, 24860, // Monk, Aristocracy, Nightmare, Forgeman, Baelfire, Sanctuary, Orr
-  // Festival / LW1 era
-  36044, 38206, 47908, 49460, // Mad King, Altruism, Sunless, Resistance
-  // HoT / PoF / LW era
-  44951, 44956, 44957, 67339, 67342, 67344, 67912, // +Defender
-  68437, 69370, 70450, 70600, 70829, 71276, 71425, // +Revenant, Druid, Reaper, Scrapper
-  72852, 72912, 73399, 73653, 74978, 76100, 76166, 76813, // +Thorns, Durability, Herald, Surging
-  // PoF elite spec runes
-  81091, 82633, 82791, 83338, 83367, 83423, 83502, 83663, 83964, // Nature's Bounty, Holosmith, Deadeye, Firebrand, Cavalier, Weaver, Renegade, Scourge, Soulbeast
-  84127, 84171, 84749, 85713, // Mirage, Rebirth, Spellbreaker, Stars
-  // IBS / Festival
-  88118, 89999, // Zephyrite, Fireworks
+  24687, // Superior Rune of the Afflicted
+  24688, // Superior Rune of the Lich
+  24691, // Superior Rune of the Traveler
+  24696, // Superior Rune of the Flock
+  24699, // Superior Rune of the Dolyak
+  24702, // Superior Rune of the Pack
+  24703, // Superior Rune of Infiltration
+  24708, // Superior Rune of Mercy
+  24711, // Superior Rune of Vampirism
+  24714, // Superior Rune of Strength
+  24717, // Superior Rune of Rage
+  24720, // Superior Rune of Speed
+  24723, // Superior Rune of the Eagle
+  24726, // Superior Rune of Rata Sum
+  24729, // Superior Rune of Hoelbrak
+  24732, // Superior Rune of Divinity
+  24735, // Superior Rune of the Grove
+  24738, // Superior Rune of Scavenging
+  24741, // Superior Rune of the Citadel
+  24744, // Superior Rune of the Earth
+  24747, // Superior Rune of the Fire
+  24750, // Superior Rune of the Air
+  24753, // Superior Rune of the Ice
+  24756, // Superior Rune of the Ogre
+  24757, // Superior Rune of the Undead
+  24762, // Superior Rune of the Krait
+  24765, // Superior Rune of Balthazar
+  24768, // Superior Rune of Dwayna
+  24771, // Superior Rune of Melandru
+  24776, // Superior Rune of Lyssa
+  24779, // Superior Rune of Grenth
+  24782, // Superior Rune of the Privateer
+  24785, // Superior Rune of the Golemancer
+  24788, // Superior Rune of the Centaur
+  24791, // Superior Rune of the Wurm
+  24794, // Superior Rune of Svanir
+  24797, // Superior Rune of the Flame Legion
+  24800, // Superior Rune of the Elementalist
+  24803, // Superior Rune of the Mesmer
+  24806, // Superior Rune of the Necromancer
+  24812, // Superior Rune of the Engineer
+  24815, // Superior Rune of the Ranger
+  24818, // Superior Rune of the Thief
+  24821, // Superior Rune of the Warrior
+  24824, // Superior Rune of the Guardian
+  24827, // Superior Rune of the Trooper
+  24830, // Superior Rune of the Adventurer
+  24833, // Superior Rune of the Brawler
+  24836, // Superior Rune of the Scholar
+  24839, // Superior Rune of the Water
+  24842, // Superior Rune of the Monk
+  24845, // Superior Rune of the Aristocracy
+  24848, // Superior Rune of the Nightmare
+  24851, // Superior Rune of the Forgeman
+  24854, // Superior Rune of the Baelfire
+  24857, // Superior Rune of Sanctuary
+  24860, // Superior Rune of Orr
+  36044, // Superior Rune of the Mad King
+  38206, // Superior Rune of Altruism
+  44951, // Superior Rune of Exuberance
+  44956, // Superior Rune of Tormenting
+  44957, // Superior Rune of Perplexity
+  47908, // Superior Rune of the Sunless
+  48907, // Superior Rune of Antitoxin
+  49460, // Superior Rune of Resistance
+  67339, // Superior Rune of the Trapper
+  67342, // Superior Rune of Radiance
+  67344, // Superior Rune of Evasion
+  67912, // Superior Rune of the Defender
+  68437, // Superior Rune of Snowfall
+  69370, // Superior Rune of the Revenant
+  70450, // Superior Rune of the Druid
+  70600, // Superior Rune of Leadership
+  70829, // Superior Rune of the Reaper
+  71276, // Superior Rune of the Scrapper
+  71425, // Superior Rune of the Berserker
+  72852, // Superior Rune of the Daredevil
+  72912, // Superior Rune of Thorns
+  73399, // Superior Rune of the Chronomancer
+  73653, // Superior Rune of Durability
+  74978, // Superior Rune of the Dragonhunter
+  76100, // Superior Rune of the Herald
+  76166, // Superior Rune of the Tempest
+  76813, // Superior Rune of Surging
+  81091, // Superior Rune of Nature's Bounty
+  82633, // Superior Rune of the Holosmith
+  82791, // Superior Rune of the Deadeye
+  83338, // Superior Rune of the Firebrand
+  83367, // Superior Rune of the Cavalier
+  83423, // Superior Rune of the Weaver
+  83502, // Superior Rune of the Renegade
+  83663, // Superior Rune of the Scourge
+  83964, // Superior Rune of the Soulbeast
+  84127, // Superior Rune of the Mirage
+  84171, // Superior Rune of the Rebirth
+  84749, // Superior Rune of the Spellbreaker
+  85713, // Superior Rune of the Stars
+  88118, // Superior Rune of the Zephyrite
+  89999, // Superior Rune of Fireworks
 ];
 
 const SIGIL_ITEM_IDS = [
-  // Classic Superior Sigils (Exotic)
-  24548, 24551, 24554, 24555, 24560, 24561, 24562, 24567, 24570, 24571,
-  24572, 24575, 24578, 24580, 24582, 24583, 24584, 24589, 24591, 24592,
-  24594, 24597, 24599, 24600, 24601, 24605, 24607, 24609, 24612, 24615,
-  24618, 24621, 24624, 24627, 24630, 24632, 24636, 24639, 24642, 24645,
-  24648, 24651, 24654, 24655, 24658, 24661, 24664, 24667, 24672, 24675,
-  24678, 24681, 24684, 24809, 24865, 24868, // +Celerity, Impact
-  // Festival / LW1 era
-  36053, 37912, 38294, // Night, Karka Slaying, Generosity
-  // HoT / PoF / LW era
-  44944, 44947, 44950, 48911, 49457, // Bursting, Renewal, Malice, Torment, Momentum
-  67340, 67341, 67343, 67913, 68436, // Cleansing, Cruelty, Incapacitation, Blight, Mischief
-  70825, 71130, 72092, 72339, 72872, 73532, 74326, // Draining, Ruthlessness, Agility, Concentration, Absorption, Rending, Transference
-  81045, 82876, 84505, 86170, // Bounty, Frenzy, Severance, Stars
-  91339, // Hologram Slaying (Exotic)
+  24548, // Superior Sigil of Fire
+  24551, // Superior Sigil of Water
+  24554, // Superior Sigil of Air
+  24555, // Superior Sigil of Ice
+  24560, // Superior Sigil of Earth
+  24561, // Superior Sigil of Rage
+  24562, // Superior Sigil of Strength
+  24567, // Superior Sigil of Frailty
+  24570, // Superior Sigil of Blood
+  24571, // Superior Sigil of Purity
+  24572, // Superior Sigil of Nullification
+  24575, // Superior Sigil of Bloodlust
+  24578, // Superior Sigil of Corruption
+  24580, // Superior Sigil of Perception
+  24582, // Superior Sigil of Life
+  24583, // Superior Sigil of Demons
+  24584, // Superior Sigil of Benevolence
+  24589, // Superior Sigil of Speed
+  24591, // Superior Sigil of Luck
+  24592, // Superior Sigil of Stamina
+  24594, // Superior Sigil of Restoration
+  24597, // Superior Sigil of Hydromancy
+  24599, // Superior Sigil of Leeching
+  24600, // Superior Sigil of Vision
+  24601, // Superior Sigil of Battle
+  24605, // Superior Sigil of Geomancy
+  24607, // Superior Sigil of Energy
+  24609, // Superior Sigil of Doom
+  24612, // Superior Sigil of Agony
+  24615, // Superior Sigil of Force
+  24618, // Superior Sigil of Accuracy
+  24621, // Superior Sigil of Peril
+  24624, // Superior Sigil of Smoldering
+  24627, // Superior Sigil of Hobbling
+  24630, // Superior Sigil of Chilling
+  24632, // Superior Sigil of Venom
+  24636, // Superior Sigil of Debility
+  24639, // Superior Sigil of Paralyzation
+  24642, // Superior Sigil of Undead Slaying
+  24645, // Superior Sigil of Centaur Slaying
+  24648, // Superior Sigil of Grawl Slaying
+  24651, // Superior Sigil of Icebrood Slaying
+  24654, // Superior Sigil of Destroyer Slaying
+  24655, // Superior Sigil of Ogre Slaying
+  24658, // Superior Sigil of Serpent Slaying
+  24661, // Superior Sigil of Elemental Slaying
+  24664, // Superior Sigil of Demon Slaying
+  24667, // Superior Sigil of Wrath
+  24672, // Superior Sigil of Mad Scientists
+  24675, // Superior Sigil of Smothering
+  24678, // Superior Sigil of Justice
+  24681, // Superior Sigil of Dreams
+  24684, // Superior Sigil of Sorrow
+  24809, // Superior Sigil of Ghost Slaying
+  24865, // Superior Sigil of Celerity
+  24868, // Superior Sigil of Impact
+  36053, // Superior Sigil of the Night
+  37912, // Superior Sigil of Karka Slaying
+  38294, // Superior Sigil of Generosity
+  44944, // Superior Sigil of Bursting
+  44947, // Superior Sigil of Renewal
+  44950, // Superior Sigil of Malice
+  48911, // Superior Sigil of Torment
+  49457, // Superior Sigil of Momentum
+  67340, // Superior Sigil of Cleansing
+  67341, // Superior Sigil of Cruelty
+  67343, // Superior Sigil of Incapacitation
+  67913, // Superior Sigil of Blight
+  68436, // Superior Sigil of Mischief
+  70825, // Superior Sigil of Draining
+  71130, // Superior Sigil of Ruthlessness
+  72092, // Superior Sigil of Agility
+  72339, // Superior Sigil of Concentration
+  72872, // Superior Sigil of Absorption
+  73532, // Superior Sigil of Rending
+  74326, // Superior Sigil of Transference
+  81045, // Superior Sigil of Bounty
+  82876, // Superior Sigil of Frenzy
+  84505, // Superior Sigil of Severance
+  86170, // Superior Sigil of the Stars
+  91339, // Superior Sigil of Hologram Slaying
 ];
 
 const INFUSION_ITEM_IDS = [
