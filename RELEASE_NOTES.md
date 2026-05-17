@@ -1,3 +1,13 @@
+## Version v0.6.28 — May 16, 2026
+
+### Bug Fixes
+
+- **All the latest relics now show up in the editor.** Previously the editor's relic picker read from a hand-maintained list while the notes tab read from the live wiki-synced catalog — so newly added relics like Galdra, Sacred Grounds, Director, Doyen, Watch, and the rest only appeared in notes. The editor now reads from the same live catalog as everything else, so any relic the wiki knows about is selectable, icon-rendered, and hover-previewable in the build editor too.
+
+### Behind the scenes
+
+- Relic, rune, sigil, legend, profession, and specialization data are now refreshable from the wiki/GW2 API with single-command sync scripts instead of hand-maintained snapshots. Future game updates that add new items show up in the app as soon as the sync runs, with no manual list edits needed. Picked up 14 missing relic fact entries and 2 new profession skills (Jet, Tail Whip) on the first refresh.
+
 ## Version v0.6.27 — May 16, 2026
 
 ### Bug Fixes
