@@ -1,3 +1,9 @@
+## Version v0.6.29 — May 19, 2026
+
+### Bug Fixes
+
+- **Decade Enhancement Station and Super Sharpening Polygon now appear in the utility picker.** Both grant the +3% to All Attributes Enhancement buff, but the GW2 API mislabels their item type, so they were being filtered out. They (and any future Enhancement-slot consumables that get similarly mislabeled) will now show up.
+
 ## Version v0.6.28 — May 16, 2026
 
 ### Bug Fixes
