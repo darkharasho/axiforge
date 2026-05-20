@@ -999,7 +999,7 @@ async function getUpgradeCatalog(lang = "en") {
         return mapped;
       }).sort((a, b) => a.name.localeCompare(b.name)),
       foods: foodItems.filter((item) => item.details?.type === "Food").map(mapFood).sort((a, b) => a.name.localeCompare(b.name)),
-      utilities: utilityItems.filter((item) => item.details?.type === "Utility").map(mapUtility).sort((a, b) => a.name.localeCompare(b.name)),
+      utilities: utilityItems.filter((item) => item.details?.type === "Utility" || item.details?.name === "Enhancement").map(mapUtility).sort((a, b) => a.name.localeCompare(b.name)),
     };
 
     catalog.runeById = new Map(catalog.runes.map((r) => [r.id, r]));
