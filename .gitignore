@@ -6,3 +6,4 @@ dist/
 .superpowers/
 dist_out/
 public/builds/
+graphify-out/
