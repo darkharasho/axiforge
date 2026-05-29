@@ -1,3 +1,9 @@
+## Version v0.6.30 — May 28, 2026
+
+### Bug Fixes
+
+- **Food and utility mention chips in notes now show the right name and category in their hover card.** Previously a food chip could pop up a card labeled "Skill" with a different consumable's name if the stored mention had drifted from the live catalog. The chip name is now sourced from the resolved entity, and food/utility hover cards label themselves correctly.
+
 ## Version v0.6.29 — May 19, 2026
 
 ### Bug Fixes
