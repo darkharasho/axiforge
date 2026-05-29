@@ -589,6 +589,8 @@ export function getHoverMetaLine(kind, entity) {
   if (kind === "equip-sigil") return "Sigil";
   if (kind === "equip-infusion") return "Infusion";
   if (kind === "equip-enrichment") return "Enrichment";
+  if (kind === "equip-food") return "Food";
+  if (kind === "equip-utility") return "Utility";
   if (kind === "spec") return entity?.elite ? "Elite Specialization" : "Specialization";
   const type = String(entity?.type || "").trim();
   const slot = String(entity?.slot || "").trim();

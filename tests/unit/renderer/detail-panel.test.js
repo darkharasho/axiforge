@@ -426,3 +426,15 @@ describe("formatFactHtml — ComboFinisher / ComboField", () => {
     expect(html).not.toContain("Combo Field: 0");
   });
 });
+
+describe("getHoverMetaLine — food/utility consumables", () => {
+  test("equip-food returns 'Food' meta label, not 'Skill'", () => {
+    const entity = { id: 91805, name: "Cilantro Lime Sous-Vide Steak" };
+    expect(detailPanel.getHoverMetaLine("equip-food", entity)).toBe("Food");
+  });
+
+  test("equip-utility returns 'Utility' meta label, not 'Skill'", () => {
+    const entity = { id: 78305, name: "Superior Sharpening Stone" };
+    expect(detailPanel.getHoverMetaLine("equip-utility", entity)).toBe("Utility");
+  });
+});

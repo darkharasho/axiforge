@@ -591,7 +591,10 @@ function renderPreview(markdown, container) {
     }
     const icon = resolved?.icon || "";
     const iconHtml = icon ? `<img class="notes-mention__icon" src="${icon}" alt="">` : "";
-    return `<span class="notes-mention" data-type="${resolvedCategory}" data-id="${resolvedId}">${iconHtml}${escapeHtml(decodeHtmlEntities(name))} <span class="notes-mention__label">${resolvedCategory}</span></span>`;
+    // Prefer the resolved entity's current name so the chip can't drift from what
+    // the hover card resolves by id (e.g. when the stored markdown name is stale).
+    const displayName = resolved?.name || resolved?.label || name;
+    return `<span class="notes-mention" data-type="${resolvedCategory}" data-id="${resolvedId}">${iconHtml}${escapeHtml(decodeHtmlEntities(displayName))} <span class="notes-mention__label">${resolvedCategory}</span></span>`;
   });
 
   container.innerHTML = html;
