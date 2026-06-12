@@ -37,7 +37,7 @@ function readJsonBody(req) {
   return new Promise((resolve, reject) => {
     const chunks = [];
     let size = 0;
-    // Change 2: use a rejected flag; stop accumulating once over limit, reject on "end"
+    // Over-limit bodies: stop accumulating but keep draining so "end" fires and the 413 can be delivered.
     // so the response can still be sent (req.destroy() races the response write).
     let rejected = false;
     req.on("data", (chunk) => {
