@@ -57,6 +57,28 @@ if (APP_PROFILE && !app.isPackaged) {
   app.setPath("userData", profileUserData);
 }
 
+const cliFlags = parseCliFlags(process.argv);
+
+// Single instance: a second launch hands its argv to the running instance and
+// exits. A later *windowed* launch against a running headless instance opens
+// the window in the existing process (see "second-instance" below).
+const gotInstanceLock = app.requestSingleInstanceLock();
+if (!gotInstanceLock) {
+  app.quit();
+}
+
+app.on("second-instance", (_event, argv) => {
+  if (parseCliFlags(argv).headless) return; // services already running — nothing to show
+  const existing = BrowserWindow.getAllWindows()[0];
+  if (existing) {
+    if (existing.isMinimized()) existing.restore();
+    existing.show();
+    existing.focus();
+  } else {
+    openMainWindow();
+  }
+});
+
 const dataDir = path.join(app.getPath("userData"), "data");
 const store = new BuildStore(dataDir);
 const folderStore = new FolderStore(dataDir);
@@ -290,8 +312,30 @@ function asHttpResult(promise, { badInput = false } = {}) {
 }
 
 let localApi = null;
+let mainWindow = null;
+let axicodeHandlersRegistered = false;
+
+// Creates (or focuses) the main window. Used by normal startup, the macOS
+// "activate" handler, and "second-instance" when a windowed launch hits a
+// running headless instance. Safe to call before whenReady resolves only via
+// those electron events, which all fire after ready.
+function openMainWindow(savedBounds) {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.show();
+    mainWindow.focus();
+    return mainWindow;
+  }
+  mainWindow = createWindow(savedBounds);
+  initAutoUpdate(mainWindow);
+  if (!axicodeHandlersRegistered) {
+    registerAxicodeFileHandlers(mainWindow);
+    axicodeHandlersRegistered = true;
+  }
+  return mainWindow;
+}
 
 app.whenReady().then(async () => {
+  if (!gotInstanceLock) return; // a second launch — the running instance handles it
   await store.init();
   await store.migrateCompIdToCompIds();
   await folderStore.init();
@@ -359,13 +403,16 @@ app.whenReady().then(async () => {
     if (isOnScreen) savedBounds = b;
   }
 
-  const win = createWindow(savedBounds);
-  initAutoUpdate(win);
+  if (!cliFlags.headless) {
+    openMainWindow(savedBounds);
+  } else {
+    console.log("[headless] started without a window — services and local API only");
+  }
 
   // Update window icon when system theme changes (light ↔ dark)
   nativeTheme.on("updated", () => {
     const icon = nativeImage.createFromPath(getIconPath());
-    win?.setIcon(icon);
+    mainWindow?.setIcon(icon);
   });
 
   // Pre-warm all profession catalogs in the background so class switching is instant.
@@ -1699,9 +1746,6 @@ app.whenReady().then(async () => {
     return true;
   });
 
-  // .axicode file export/import
-  registerAxicodeFileHandlers(win);
-
   // ─── Shared Library ─────────────────────────────────────────────────────────
   handle("shared-library:list-orgs", async () => {
     const session = await getSession();
@@ -1966,11 +2010,14 @@ app.on("will-quit", () => {
 });
 
 app.on("window-all-closed", () => {
+  // A headless-launched instance keeps services + the local API running when
+  // the user closes a window that was opened into it later.
+  if (cliFlags.headless) return;
   if (process.platform !== "darwin") app.quit();
 });
 
 app.on("activate", () => {
-  if (BrowserWindow.getAllWindows().length === 0) createWindow();
+  if (BrowserWindow.getAllWindows().length === 0) openMainWindow();
 });
 
 async function isPagesUrlReachable(url) {
