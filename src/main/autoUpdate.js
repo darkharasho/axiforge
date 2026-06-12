@@ -20,15 +20,18 @@ const CHECK_DELAY_MS = 3000;
 const CHECK_TIMEOUT_MS = 30000;
 const RETRY_DELAY_MS = 2000;
 
-let mainWindow = null;
+// Late-bound window getter so windows created after init (headless adoption,
+// macOS activate reopen) are picked up automatically. Set once by initAutoUpdate.
+let getWin = () => null;
 let retryAttempts = 0;
 
 function send(channel, data) {
-  if (!mainWindow || mainWindow.isDestroyed()) return;
-  const wc = mainWindow.webContents;
+  const win = getWin();
+  if (!win || win.isDestroyed()) return;
+  const wc = win.webContents;
   if (wc.isLoading()) {
     wc.once("did-finish-load", () => {
-      if (!mainWindow.isDestroyed()) wc.send(channel, data);
+      if (!win.isDestroyed()) wc.send(channel, data);
     });
   } else {
     wc.send(channel, data);
@@ -53,8 +56,11 @@ function checkWithTimeout() {
   ]);
 }
 
-function initAutoUpdate(win) {
-  mainWindow = win;
+// Call once per process with a getter that returns the current main window
+// (or null). Registers ipcMain handlers and autoUpdater listeners exactly once;
+// later windows are reached through the getter, never by re-initializing.
+function initAutoUpdate(getWindow) {
+  getWin = typeof getWindow === "function" ? getWindow : () => getWindow;
 
   // Dev fake-update tester — simulate the update lifecycle so the titlebar UI
   // and What's New modal can be exercised without a real release.

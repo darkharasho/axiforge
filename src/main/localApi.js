@@ -37,8 +37,8 @@ function readJsonBody(req) {
   return new Promise((resolve, reject) => {
     const chunks = [];
     let size = 0;
-    // Over-limit bodies: stop accumulating but keep draining so "end" fires and the 413 can be delivered.
-    // so the response can still be sent (req.destroy() races the response write).
+    // Over-limit bodies: stop accumulating but keep draining so "end" fires and
+    // the 413 can be delivered (req.destroy() would race the response write).
     let rejected = false;
     req.on("data", (chunk) => {
       if (rejected) return; // keep draining so "end" fires; just don't accumulate
@@ -78,7 +78,7 @@ function matchRoute(routes, method, pathname) {
     let ok = true;
     for (let i = 0; i < patSegs.length; i++) {
       if (patSegs[i].startsWith(":")) {
-        // Change 5: malformed percent-escapes → 400 (matchRoute is called inside the
+        // Malformed percent-escapes → 400 (matchRoute is called inside the
         // request try block, so throwing here is safe). When a route with a param
         // segment matches, a malformed escape like "/builds/%" raises 400 here.
         try {
@@ -242,7 +242,7 @@ function createLocalApi({ token, version, ops }) {
   if (!token) throw new Error("createLocalApi requires a token");
   if (!ops) throw new Error("createLocalApi requires an ops object");
 
-  // Change 1: Timing-safe auth — compute expected digest once at startup.
+  // Timing-safe auth — compute expected digest once at startup.
   const expectedAuth = crypto.createHash("sha256").update(`Bearer ${token}`).digest();
   function isAuthorized(header) {
     const actual = crypto.createHash("sha256").update(header || "").digest();
@@ -265,7 +265,7 @@ function createLocalApi({ token, version, ops }) {
       const result = await match.handler({ params: match.params, query: url.searchParams, body });
       sendJson(res, 200, result === undefined ? { ok: true } : result);
     } catch (err) {
-      // Change 3: guard against double-write if headers were already sent.
+      // Guard against double-write if headers were already sent.
       if (!res.headersSent) sendJson(res, err?.statusCode || 500, { error: err?.message || "Internal error" });
     }
   });
@@ -275,7 +275,7 @@ function createLocalApi({ token, version, ops }) {
       return new Promise((resolve, reject) => {
         server.once("error", reject);
         server.listen(0, "127.0.0.1", () => {
-          // Change 4: remove the startup-only error listener and attach a persistent one.
+          // Remove the startup-only error listener and attach a persistent one.
           server.removeListener("error", reject);
           server.on("error", (err) => console.error("[local-api] server error:", err?.message || err));
           resolve({ port: server.address().port });

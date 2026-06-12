@@ -84,7 +84,7 @@ app.on("second-instance", (_event, argv) => {
     } else {
       openMainWindow();
     }
-  });
+  }).catch((err) => console.error("[startup] adoption failed:", err));
 });
 
 const dataDir = path.join(app.getPath("userData"), "data");
@@ -322,6 +322,7 @@ function asHttpResult(promise, { badInput = false } = {}) {
 let localApi = null;
 let mainWindow = null;
 let axicodeHandlersRegistered = false;
+let autoUpdateInitialized = false;
 // Last validated window bounds, loaded during whenReady. Module-level so
 // windows adopted later (activate / second-instance into a headless instance)
 // restore the saved position too.
@@ -341,7 +342,14 @@ function openMainWindow(savedBounds = lastSavedBounds) {
   mainWindow.on("closed", () => {
     mainWindow = null;
   });
-  initAutoUpdate(mainWindow);
+  // Init once per process — re-running would re-register ipcMain.handle
+  // ("updater:get-version" throws on duplicate registration) and duplicate
+  // autoUpdater listeners. The getter late-binds so reopened windows still
+  // receive updater events.
+  if (!autoUpdateInitialized) {
+    initAutoUpdate(() => mainWindow);
+    autoUpdateInitialized = true;
+  }
   if (!axicodeHandlersRegistered) {
     registerAxicodeFileHandlers(() => mainWindow);
     axicodeHandlersRegistered = true;
@@ -2039,7 +2047,7 @@ app.on("activate", () => {
   // half-initialized process.
   readyWork.then(() => {
     if (BrowserWindow.getAllWindows().length === 0) openMainWindow();
-  });
+  }).catch((err) => console.error("[startup] adoption failed:", err));
 });
 
 async function isPagesUrlReachable(url) {
