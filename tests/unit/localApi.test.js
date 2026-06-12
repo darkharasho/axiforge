@@ -5,6 +5,7 @@ const fs = require("node:fs/promises");
 const os = require("node:os");
 const { BuildStore } = require("../../src/main/buildStore");
 const { CompStore } = require("../../src/main/compStore");
+const { FolderStore } = require("../../src/main/folderStore");
 const { createLocalApi, generateToken } = require("../../src/main/localApi");
 
 // Minimal ops stub — individual endpoint groups get real stores in later tests.
@@ -359,5 +360,70 @@ describe("local API — comps endpoints", () => {
   test("DELETE /comps/:id returns 404 for an unknown comp", async () => {
     const res = await req(port, token, "DELETE", "/comps/nope");
     expect(res.status).toBe(404);
+  });
+});
+
+describe("local API — import endpoints", () => {
+  let api, token, port;
+  const importedChatLinks = [];
+  const importedGw2Skills = [];
+
+  beforeEach(async () => {
+    importedChatLinks.length = 0;
+    importedGw2Skills.length = 0;
+    ({ api, token, port } = await startApi({
+      importChatLink: async (link, name, folderId, gameMode) => {
+        importedChatLinks.push({ link, name, folderId, gameMode });
+        return { id: "imported-1", title: name || "Imported Build", gameMode: gameMode || "pve" };
+      },
+      importGw2Skills: async (url, name, folderId, gameMode) => {
+        importedGw2Skills.push({ url, name, folderId, gameMode });
+        return { id: "imported-2", title: name || "Imported Build", gameMode: gameMode || "pve" };
+      },
+    }));
+  });
+
+  afterEach(async () => {
+    await api.stop();
+  });
+
+  test("POST /import/chat-link forwards link, name, folderId, gameMode", async () => {
+    const res = await req(port, token, "POST", "/import/chat-link", {
+      link: "[&DQg1KTIlIjY=]",
+      name: "Imported Hammer",
+      folderId: "folder-1",
+      gameMode: "wvw",
+    });
+    expect(res.status).toBe(200);
+    expect((await res.json()).id).toBe("imported-1");
+    expect(importedChatLinks).toEqual([
+      { link: "[&DQg1KTIlIjY=]", name: "Imported Hammer", folderId: "folder-1", gameMode: "wvw" },
+    ]);
+  });
+
+  test("POST /import/chat-link requires a link", async () => {
+    const res = await req(port, token, "POST", "/import/chat-link", { name: "No Link" });
+    expect(res.status).toBe(400);
+    expect(importedChatLinks).toHaveLength(0);
+  });
+
+  test("POST /import/gw2skills forwards url, name, folderId, gameMode", async () => {
+    const res = await req(port, token, "POST", "/import/gw2skills", {
+      url: "http://gw2skills.net/editor/?ABC",
+      name: "Imported gw2skills",
+      folderId: null,
+      gameMode: "pve",
+    });
+    expect(res.status).toBe(200);
+    expect((await res.json()).id).toBe("imported-2");
+    expect(importedGw2Skills).toEqual([
+      { url: "http://gw2skills.net/editor/?ABC", name: "Imported gw2skills", folderId: null, gameMode: "pve" },
+    ]);
+  });
+
+  test("POST /import/gw2skills requires a url", async () => {
+    const res = await req(port, token, "POST", "/import/gw2skills", {});
+    expect(res.status).toBe(400);
+    expect(importedGw2Skills).toHaveLength(0);
   });
 });

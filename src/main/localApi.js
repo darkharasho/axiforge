@@ -203,6 +203,26 @@ function buildRoutes({ version, ops }) {
         return { text: await ops.compPlaintext(params.id) };
       },
     },
+
+    // ── Imports ──────────────────────────────────────────────────────────
+    {
+      method: "POST", pattern: "/import/chat-link",
+      handler: async ({ body }) => {
+        if (!body?.link || typeof body.link !== "string") {
+          throw httpError(400, "Body must include a chat link string: { link }");
+        }
+        return ops.importChatLink(body.link, body.name ?? null, body.folderId ?? null, body.gameMode ?? null);
+      },
+    },
+    {
+      method: "POST", pattern: "/import/gw2skills",
+      handler: async ({ body }) => {
+        if (!body?.url || typeof body.url !== "string") {
+          throw httpError(400, "Body must include a gw2skills editor URL: { url }");
+        }
+        return ops.importGw2Skills(body.url, body.name ?? null, body.folderId ?? null, body.gameMode ?? null);
+      },
+    },
   ];
 }
 
