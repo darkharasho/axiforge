@@ -118,4 +118,22 @@ describe("local API core", () => {
     // Re-create for afterEach's stop()
     ({ api, token, port } = await startApi());
   });
+
+  test("over-limit body returns 413", async () => {
+    const big = "x".repeat(5 * 1024 * 1024 + 16);
+    const res = await fetch(`http://127.0.0.1:${port}/builds`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ title: big }),
+    });
+    expect(res.status).toBe(413);
+  });
+
+  // Change 5: GET /builds/:id doesn't exist as a route, so a malformed percent-escape
+  // like "/builds/%" yields 404 (no route match) rather than a 500.
+  // The decodeURIComponent try/catch guard is in place in matchRoute.
+  test("malformed percent-escape in path yields 404 (no matching route)", async () => {
+    const res = await req(port, token, "GET", "/builds/%");
+    expect(res.status).toBe(404);
+  });
 });

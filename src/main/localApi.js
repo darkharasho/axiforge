@@ -37,16 +37,23 @@ function readJsonBody(req) {
   return new Promise((resolve, reject) => {
     const chunks = [];
     let size = 0;
+    // Change 2: use a rejected flag; stop accumulating once over limit, reject on "end"
+    // so the response can still be sent (req.destroy() races the response write).
+    let rejected = false;
     req.on("data", (chunk) => {
+      if (rejected) return; // keep draining so "end" fires; just don't accumulate
       size += chunk.length;
       if (size > MAX_BODY_BYTES) {
-        reject(httpError(413, "Request body too large"));
-        req.destroy();
+        rejected = true;
+        // Don't push further chunks; keep draining so "end" fires and we can respond.
         return;
       }
       chunks.push(chunk);
     });
     req.on("end", () => {
+      if (rejected) {
+        return reject(httpError(413, "Request body too large"));
+      }
       const raw = Buffer.concat(chunks).toString("utf8");
       if (!raw) return resolve(null);
       try {
@@ -71,7 +78,15 @@ function matchRoute(routes, method, pathname) {
     let ok = true;
     for (let i = 0; i < patSegs.length; i++) {
       if (patSegs[i].startsWith(":")) {
-        params[patSegs[i].slice(1)] = decodeURIComponent(segs[i]);
+        // Change 5: malformed percent-escapes → 400 (matchRoute is called inside the
+        // request try block, so throwing here is safe). A GET /builds/% still yields
+        // 404 because no route captures that pattern, but the guard is in place.
+        try {
+          params[patSegs[i].slice(1)] = decodeURIComponent(segs[i]);
+        } catch (e) {
+          if (e instanceof URIError) throw httpError(400, "Malformed URL escape in path");
+          throw e;
+        }
       } else if (patSegs[i] !== segs[i]) {
         ok = false;
         break;
@@ -104,11 +119,18 @@ function createLocalApi({ token, version, ops }) {
   if (!token) throw new Error("createLocalApi requires a token");
   if (!ops) throw new Error("createLocalApi requires an ops object");
 
+  // Change 1: Timing-safe auth — compute expected digest once at startup.
+  const expectedAuth = crypto.createHash("sha256").update(`Bearer ${token}`).digest();
+  function isAuthorized(header) {
+    const actual = crypto.createHash("sha256").update(header || "").digest();
+    return crypto.timingSafeEqual(actual, expectedAuth);
+  }
+
   const routes = buildRoutes({ version, ops });
 
   const server = http.createServer(async (req, res) => {
     try {
-      if ((req.headers["authorization"] || "") !== `Bearer ${token}`) {
+      if (!isAuthorized(req.headers["authorization"])) {
         return sendJson(res, 401, { error: "Unauthorized" });
       }
       const url = new URL(req.url, "http://127.0.0.1");
@@ -120,7 +142,8 @@ function createLocalApi({ token, version, ops }) {
       const result = await match.handler({ params: match.params, query: url.searchParams, body });
       sendJson(res, 200, result === undefined ? { ok: true } : result);
     } catch (err) {
-      sendJson(res, err?.statusCode || 500, { error: err?.message || "Internal error" });
+      // Change 3: guard against double-write if headers were already sent.
+      if (!res.headersSent) sendJson(res, err?.statusCode || 500, { error: err?.message || "Internal error" });
     }
   });
 
@@ -128,7 +151,12 @@ function createLocalApi({ token, version, ops }) {
     start() {
       return new Promise((resolve, reject) => {
         server.once("error", reject);
-        server.listen(0, "127.0.0.1", () => resolve({ port: server.address().port }));
+        server.listen(0, "127.0.0.1", () => {
+          // Change 4: remove the startup-only error listener and attach a persistent one.
+          server.removeListener("error", reject);
+          server.on("error", (err) => console.error("[local-api] server error:", err?.message || err));
+          resolve({ port: server.address().port });
+        });
       });
     },
     stop() {
