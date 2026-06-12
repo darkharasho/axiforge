@@ -291,4 +291,4 @@ function createLocalApi({ token, version, ops }) {
   };
 }
 
-module.exports = { createLocalApi, generateToken };
+module.exports = { createLocalApi, generateToken, httpError };

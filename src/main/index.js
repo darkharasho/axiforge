@@ -40,6 +40,9 @@ const { serializeForPublish, loadCrossProfessionCatalogs } = require("./buildPub
 const { serializeCompForPublish, getCompPublishBuildIds } = require("./compPublish");
 const { initAutoUpdate } = require("./autoUpdate");
 const { registerAxicodeFileHandlers } = require("./axicodeFile");
+const { createLocalApi, generateToken, httpError } = require("./localApi");
+const { writeDiscoveryFile, removeDiscoveryFileSync } = require("./localApiDiscovery");
+const { parseCliFlags } = require("./cliFlags");
 
 const PROFESSION_THEME_IDS = {
   Guardian: "prof-guardian", Warrior: "prof-warrior", Necromancer: "prof-necromancer",
@@ -242,6 +245,51 @@ async function migrateCompGameModes(buildStore, compStore) {
   }
 }
 
+// Send an event to every open window. No-op when headless (zero windows).
+function broadcast(channel, data) {
+  for (const w of BrowserWindow.getAllWindows()) {
+    w.webContents.send(channel, data);
+  }
+}
+
+// IPC registry: handle() registers with ipcMain AND records the handler so the
+// local API can call the exact same function via invokeLocal(). This keeps the
+// HTTP endpoints thin wrappers over the existing handlers — history capture,
+// shared-library sync, ownership guards, and publish flows are all reused.
+const ipcRegistry = new Map();
+function handle(channel, fn) {
+  ipcRegistry.set(channel, fn);
+  ipcMain.handle(channel, fn);
+}
+function invokeLocal(channel, ...args) {
+  const fn = ipcRegistry.get(channel);
+  if (!fn) return Promise.reject(new Error(`No handler registered for ${channel}`));
+  // Handlers expect an event whose sender.send() emits progress/sync events;
+  // for API-originated calls, fan those out to any open windows.
+  const fakeEvent = { sender: { send: broadcast } };
+  return Promise.resolve(fn(fakeEvent, ...args));
+}
+
+// Maps handler failures to HTTP statuses for API-originated calls:
+// - decode/parse failures of user input → 400
+// - "not found" errors → 404
+// - handlers that resolve { success: false, error } → throw with the given message
+function asHttpResult(promise, { badInput = false } = {}) {
+  return Promise.resolve(promise).then((result) => {
+    if (result && typeof result === "object" && result.success === false && result.error) {
+      throw httpError(badInput ? 400 : 500, result.error);
+    }
+    return result;
+  }, (err) => {
+    const msg = err?.message || String(err);
+    if (/not found/i.test(msg)) throw httpError(404, msg);
+    if (badInput) throw httpError(400, msg);
+    throw err;
+  });
+}
+
+let localApi = null;
+
 app.whenReady().then(async () => {
   await store.init();
   await store.migrateCompIdToCompIds();
@@ -335,7 +383,7 @@ app.whenReady().then(async () => {
     }
   })();
 
-  ipcMain.handle("app:get-config", async () => {
+  handle("app:get-config", async () => {
     const auth = await getAuthRecord();
     return {
       pagesUrl: auth?.onboarding?.pagesUrl || "",
@@ -343,12 +391,12 @@ app.whenReady().then(async () => {
     };
   });
 
-  ipcMain.handle("window:minimize", (event) => {
+  handle("window:minimize", (event) => {
     BrowserWindow.fromWebContents(event.sender)?.minimize();
     return true;
   });
 
-  ipcMain.handle("window:toggle-maximize", (event) => {
+  handle("window:toggle-maximize", (event) => {
     const win = BrowserWindow.fromWebContents(event.sender);
     if (!win) return false;
     if (win.isMaximized()) win.unmaximize();
@@ -356,16 +404,16 @@ app.whenReady().then(async () => {
     return win.isMaximized();
   });
 
-  ipcMain.handle("window:is-maximized", (event) => {
+  handle("window:is-maximized", (event) => {
     return BrowserWindow.fromWebContents(event.sender)?.isMaximized() || false;
   });
 
-  ipcMain.handle("window:close", (event) => {
+  handle("window:close", (event) => {
     BrowserWindow.fromWebContents(event.sender)?.close();
     return true;
   });
 
-  ipcMain.handle("window:open-preview", (_event, url, opts = {}) => {
+  handle("window:open-preview", (_event, url, opts = {}) => {
     const mobile = opts.mobile === true;
     const preview = new BrowserWindow({
       width: mobile ? 390 : 1600,
@@ -381,22 +429,22 @@ app.whenReady().then(async () => {
     return true;
   });
 
-  ipcMain.handle("clipboard:write-text", (_event, text) => {
+  handle("clipboard:write-text", (_event, text) => {
     clipboard.writeText(String(text || ""));
     return true;
   });
-  ipcMain.handle("clipboard:read-text", () => {
+  handle("clipboard:read-text", () => {
     return clipboard.readText();
   });
 
-  ipcMain.handle("auth:get-session", async () => getSession());
+  handle("auth:get-session", async () => getSession());
 
-  ipcMain.handle("auth:begin-login", async () => {
+  handle("auth:begin-login", async () => {
     const clientId = process.env.GITHUB_OAUTH_CLIENT_ID || "Ov23li30QPR3mAwgSUvv";
     return beginGitHubDeviceAuth(clientId);
   });
 
-  ipcMain.handle("auth:complete-login", async (_e, beginData) => {
+  handle("auth:complete-login", async (_e, beginData) => {
     const clientId = process.env.GITHUB_OAUTH_CLIENT_ID || "Ov23li30QPR3mAwgSUvv";
     const token = await completeGitHubDeviceAuth(
       clientId,
@@ -415,13 +463,13 @@ app.whenReady().then(async () => {
     return { viewer };
   });
 
-  ipcMain.handle("auth:logout", async () => {
+  handle("auth:logout", async () => {
     await store.clearAuth();
     return true;
   });
 
-  ipcMain.handle("builds:list", async () => store.listBuilds());
-  ipcMain.handle("builds:save", async (_e, build) => {
+  handle("builds:list", async () => store.listBuilds());
+  handle("builds:save", async (_e, build) => {
     const existing = build.id ? (await store.listBuilds()).find((b) => b.id === build.id) : null;
     const oldFolderId = existing?.folderId ?? null;
     // Capture history before overwriting (non-blocking — never fails the save)
@@ -471,7 +519,7 @@ app.whenReady().then(async () => {
     }
     return saved;
   });
-  ipcMain.handle("builds:delete", async (_e, id) => {
+  handle("builds:delete", async (_e, id) => {
     const builds = await store.listBuilds();
     const build = builds.find((b) => b.id === id);
     const folderId = build?.folderId;
@@ -502,11 +550,11 @@ app.whenReady().then(async () => {
   });
 
   // Build history
-  ipcMain.handle("builds:get-history", async (_e, buildId) => {
+  handle("builds:get-history", async (_e, buildId) => {
     return buildHistoryStore.getHistory(buildId);
   });
 
-  ipcMain.handle("folders:get-history", async (_e, folderId) => {
+  handle("folders:get-history", async (_e, folderId) => {
     const allFolders = await folderStore.listFolders();
     const allBuilds = await store.listBuilds();
     const allHistory = await buildHistoryStore.getAllHistory();
@@ -542,7 +590,7 @@ app.whenReady().then(async () => {
     return entries;
   });
 
-  ipcMain.handle("builds:revert", async (_e, buildId, historyEntryId) => {
+  handle("builds:revert", async (_e, buildId, historyEntryId) => {
     const entries = await buildHistoryStore.getHistory(buildId);
     const entry = entries.find((e) => e.id === historyEntryId);
     if (!entry) throw new Error("History entry not found");
@@ -573,8 +621,8 @@ app.whenReady().then(async () => {
   });
 
   // Folder CRUD
-  ipcMain.handle("folders:list", () => folderStore.listFolders());
-  ipcMain.handle("folders:save", async (_e, folder) => {
+  handle("folders:list", () => folderStore.listFolders());
+  handle("folders:save", async (_e, folder) => {
     const saved = await folderStore.upsertFolder(folder);
     // If this folder lives inside a shared folder, sync the folder structure
     if (saved.parentId) {
@@ -586,7 +634,7 @@ app.whenReady().then(async () => {
     }
     return saved;
   });
-  ipcMain.handle("folders:delete", async (_e, id) => {
+  handle("folders:delete", async (_e, id) => {
     // Capture parent before deletion to determine shared ancestry
     const allFolders = await folderStore.listFolders();
     const target = allFolders.find((f) => f.id === id);
@@ -602,12 +650,12 @@ app.whenReady().then(async () => {
     }
     return deletedIds;
   });
-  ipcMain.handle("folders:reorder", (_e, updates) =>
+  handle("folders:reorder", (_e, updates) =>
     folderStore.reorderFolders(updates),
   );
 
   // Build library operations
-  ipcMain.handle("builds:move", async (_e, ids, folderId) => {
+  handle("builds:move", async (_e, ids, folderId) => {
     if (folderId !== null) {
       const exists = await folderStore.folderExists(folderId);
       if (!exists) throw new Error(`Folder not found: ${folderId}`);
@@ -666,16 +714,16 @@ app.whenReady().then(async () => {
     if (touchIds.length) await folderStore.touchFolders([...new Set(touchIds)]);
     return true;
   });
-  ipcMain.handle("builds:pin", (_e, ids, pinned) =>
+  handle("builds:pin", (_e, ids, pinned) =>
     store.pinBuilds(ids, pinned),
   );
-  ipcMain.handle("builds:reorder", (_e, updates) =>
+  handle("builds:reorder", (_e, updates) =>
     store.reorderBuilds(updates),
   );
 
   // Comp CRUD
-  ipcMain.handle("comps:list", () => compStore.listComps());
-  ipcMain.handle("comps:save", async (_e, comp) => {
+  handle("comps:list", () => compStore.listComps());
+  handle("comps:save", async (_e, comp) => {
     const existing = comp.id ? (await compStore.listComps()).find((c) => c.id === comp.id) : null;
     const oldFolderId = existing?.folderId ?? null;
     const saved = await compStore.upsertComp(comp);
@@ -700,7 +748,7 @@ app.whenReady().then(async () => {
     }
     return saved;
   });
-  ipcMain.handle("comps:delete", async (_e, id) => {
+  handle("comps:delete", async (_e, id) => {
     const comps = await compStore.listComps();
     const comp = comps.find((c) => c.id === id);
     const folderId = comp?.folderId;
@@ -721,17 +769,17 @@ app.whenReady().then(async () => {
       });
     }
   });
-  ipcMain.handle("comps:reorder", (_e, updates) => compStore.reorderComps(updates));
-  ipcMain.handle("comps:delete-batch", async (_e, ids) => {
+  handle("comps:reorder", (_e, updates) => compStore.reorderComps(updates));
+  handle("comps:delete-batch", async (_e, ids) => {
     await compStore.deleteComps(ids);
     if (ids.length) {
       await store.clearCompFromBuilds(ids);
     }
   });
-  ipcMain.handle("comps:add-tags", (_e, ids, tags) => compStore.addTagsToComps(ids, tags));
-  ipcMain.handle("comps:remove-tags", (_e, ids, tags) => compStore.removeTagsFromComps(ids, tags));
+  handle("comps:add-tags", (_e, ids, tags) => compStore.addTagsToComps(ids, tags));
+  handle("comps:remove-tags", (_e, ids, tags) => compStore.removeTagsFromComps(ids, tags));
 
-  ipcMain.handle("comps:get-published-url", async (_e, compId) => {
+  handle("comps:get-published-url", async (_e, compId) => {
     const comps = await compStore.listComps();
     const comp = comps.find((c) => c.id === compId);
     if (!comp?.publishedFileId) return null;
@@ -744,42 +792,42 @@ app.whenReady().then(async () => {
     return `https://${owner}.github.io/${repo}/?n=${encodeURIComponent(slug)}&c=${comp.publishedFileId}.${comp.publishedKey}${theme ? `&t=${theme}` : ""}`;
   });
 
-  ipcMain.handle("builds:generate-chat-link", async (_e, build) => {
+  handle("builds:generate-chat-link", async (_e, build) => {
     const { generateChatLink } = require("./buildChatLink.js");
     return generateChatLink(build);
   });
-  ipcMain.handle("builds:prewarm-chat-links", async (_e, builds) => {
+  handle("builds:prewarm-chat-links", async (_e, builds) => {
     const { prewarmChatLinks } = require("./buildChatLink.js");
     prewarmChatLinks(builds); // fire-and-forget
   });
-  ipcMain.handle("builds:preview-chat-link", async (_e, link) => {
+  handle("builds:preview-chat-link", async (_e, link) => {
     const { previewChatLink } = require("./buildChatLink.js");
     return previewChatLink(link);
   });
-  ipcMain.handle("builds:import-chat-link", async (_e, link, name, folderId, gameMode) => {
+  handle("builds:import-chat-link", async (_e, link, name, folderId, gameMode) => {
     const { decodeChatLinkToBuild } = require("./buildChatLink.js");
     const build = await decodeChatLinkToBuild(link, name, folderId, gameMode);
     return store.upsertBuild(build);
   });
-  ipcMain.handle("builds:import-gw2skills", async (_e, url, name, folderId, gameMode) => {
+  handle("builds:import-gw2skills", async (_e, url, name, folderId, gameMode) => {
     const { importGw2SkillsBuild } = require("./gw2skillsImport.js");
     const build = await importGw2SkillsBuild(url, name, folderId, gameMode);
     return store.upsertBuild(build);
   });
-  ipcMain.handle("builds:encode-share-code", async (_e, build) => {
+  handle("builds:encode-share-code", async (_e, build) => {
     const { encodeShareCode } = require("@axiapps/code");
     return encodeShareCode(build);
   });
-  ipcMain.handle("builds:decode-share-code", async (_e, code) => {
+  handle("builds:decode-share-code", async (_e, code) => {
     const { decodeShareCode } = require("@axiapps/code");
     return decodeShareCode(code);
   });
-  ipcMain.handle("builds:is-share-code", async (_e, text) => {
+  handle("builds:is-share-code", async (_e, text) => {
     const { isValidShareCode } = require("@axiapps/code");
     return isValidShareCode(text);
   });
 
-  ipcMain.handle("comps:encode-share-code", async (_e, compId) => {
+  handle("comps:encode-share-code", async (_e, compId) => {
     const { encodeComp } = require("./compCodec.js");
     const comps = await compStore.listComps();
     const comp = comps.find((c) => c.id === compId);
@@ -792,7 +840,7 @@ app.whenReady().then(async () => {
     return code;
   });
 
-  ipcMain.handle("comps:import-share-code", async (_e, code) => {
+  handle("comps:import-share-code", async (_e, code) => {
     const { decodeComp, isValidCompCode } = require("./compCodec.js");
     if (!isValidCompCode(code)) throw new Error("Invalid comp share code format");
     const decoded = decodeComp(code);
@@ -840,7 +888,7 @@ app.whenReady().then(async () => {
     return result;
   });
 
-  ipcMain.handle("builds:publish-build", async (event, buildId) => {
+  handle("builds:publish-build", async (event, buildId) => {
     const sender = event.sender;
     const progress = (step) => sender.send("publish-progress", { id: buildId, step });
 
@@ -1030,7 +1078,7 @@ app.whenReady().then(async () => {
     };
   });
 
-  ipcMain.handle("comps:publish-comp", async (event, compId, boonCoverageHtml) => {
+  handle("comps:publish-comp", async (event, compId, boonCoverageHtml) => {
     const sender = event.sender;
     const progress = (step) => sender.send("publish-progress", { id: compId, step });
 
@@ -1201,15 +1249,15 @@ app.whenReady().then(async () => {
     return { pagesUrl: compPagesUrl, slug: compSlug, fileId: compFileId, changed: true };
   });
 
-  ipcMain.handle("gw2:list-professions", async () => getProfessionList("en"));
-  ipcMain.handle("gw2:get-profession-catalog", async (_e, professionId, gameMode) =>
+  handle("gw2:list-professions", async () => getProfessionList("en"));
+  handle("gw2:get-profession-catalog", async (_e, professionId, gameMode) =>
     getProfessionCatalog(professionId, "en", gameMode)
   );
-  ipcMain.handle("gw2:get-upgrade-catalog", async () => getUpgradeCatalog("en"));
-  ipcMain.handle("gw2:clear-cache", async () => { clearCatalogCache(); return clearDiskCache(); });
-  ipcMain.handle("wiki:get-summary", async (_e, title) => getWikiSummary(title));
-  ipcMain.handle("wiki:get-related-data", async (_e, title) => getWikiRelatedData(title));
-  ipcMain.handle("wiki:resolve-entity-facts", async (_e, entityNames) => {
+  handle("gw2:get-upgrade-catalog", async () => getUpgradeCatalog("en"));
+  handle("gw2:clear-cache", async () => { clearCatalogCache(); return clearDiskCache(); });
+  handle("wiki:get-summary", async (_e, title) => getWikiSummary(title));
+  handle("wiki:get-related-data", async (_e, title) => getWikiRelatedData(title));
+  handle("wiki:resolve-entity-facts", async (_e, entityNames) => {
     const { getWikiClient } = require("./gw2Data/catalog");
     const { resolveEntityFacts } = require("../../packages/gw2-data/src/wiki/resolver");
     const client = getWikiClient();
@@ -1224,10 +1272,10 @@ app.whenReady().then(async () => {
     }
     return serialized;
   });
-  ipcMain.handle("settings:get", async (_e, key) => store.getSetting(key));
-  ipcMain.handle("settings:set", async (_e, key, value) => store.setSetting(key, value));
+  handle("settings:get", async (_e, key) => store.getSetting(key));
+  handle("settings:set", async (_e, key, value) => store.setSetting(key, value));
 
-  ipcMain.handle("app:get-whats-new", async () => {
+  handle("app:get-whats-new", async () => {
     const fs = require("node:fs");
     const path = require("node:path");
     const {
@@ -1289,12 +1337,12 @@ app.whenReady().then(async () => {
     return { version, lastSeenVersion, releaseNotes };
   });
 
-  ipcMain.handle("app:set-last-seen-version", async (_e, version) => {
+  handle("app:set-last-seen-version", async (_e, version) => {
     if (process.env.AXIFORGE_FAKE_UPDATE) return;
     await store.setSetting("lastSeenVersion", version);
   });
 
-  ipcMain.handle("discord:share-comp", async (_e, compId) => {
+  handle("discord:share-comp", async (_e, compId) => {
     const { shareCompToDiscord } = require("./discordWebhook");
 
     // 1. Load webhook URL and thread settings
@@ -1344,7 +1392,7 @@ app.whenReady().then(async () => {
     });
   });
 
-  ipcMain.handle("discord:share-build", async (_e, buildId) => {
+  handle("discord:share-build", async (_e, buildId) => {
     const { shareBuildToDiscord } = require("./discordWebhook");
     const { generateChatLink } = require("./buildChatLink.js");
 
@@ -1424,7 +1472,7 @@ app.whenReady().then(async () => {
     });
   });
 
-  ipcMain.handle("discord:build-copy-text", async (_e, buildId) => {
+  handle("discord:build-copy-text", async (_e, buildId) => {
     const { formatBuildDiscordCopy } = require("./discordWebhook");
 
     const allBuilds = await store.listBuilds();
@@ -1446,7 +1494,7 @@ app.whenReady().then(async () => {
     return formatBuildDiscordCopy(build, buildUrl);
   });
 
-  ipcMain.handle("comps:generate-plaintext", async (_e, compId) => {
+  handle("comps:generate-plaintext", async (_e, compId) => {
     const { getDisplayName, getDiscordEmoji } = require("./discordEmoji");
 
     const allComps = await compStore.listComps();
@@ -1535,8 +1583,8 @@ app.whenReady().then(async () => {
     return out.join("\n");
   });
 
-  ipcMain.handle("onboarding:status", async () => getOnboardingStatus());
-  ipcMain.handle("onboarding:list-targets", async () => {
+  handle("onboarding:status", async () => getOnboardingStatus());
+  handle("onboarding:list-targets", async () => {
     const session = await getSession();
     if (!session) return [];
     return listTargets(session.token, session.viewer.login);
@@ -1604,15 +1652,15 @@ app.whenReady().then(async () => {
     return getOnboardingStatus();
   }
 
-  ipcMain.handle("onboarding:setup-repo-pages", async (_e, targetOwner, ownerType = "user") =>
+  handle("onboarding:setup-repo-pages", async (_e, targetOwner, ownerType = "user") =>
     setupRepoPages(targetOwner, ownerType)
   );
 
-  ipcMain.handle("onboarding:setup-fork-pages", async (_e, targetOwner, ownerType = "user") =>
+  handle("onboarding:setup-fork-pages", async (_e, targetOwner, ownerType = "user") =>
     setupRepoPages(targetOwner, ownerType)
   );
 
-  ipcMain.handle("onboarding:poll-pages-status", async () => {
+  handle("onboarding:poll-pages-status", async () => {
     const session = await getSession();
     if (!session) {
       throw new Error("Authenticate with GitHub before checking Pages status.");
@@ -1641,7 +1689,7 @@ app.whenReady().then(async () => {
     };
   });
 
-  ipcMain.handle("dialog:error", async (_e, title, body) => {
+  handle("dialog:error", async (_e, title, body) => {
     await dialog.showMessageBox({
       type: "error",
       title: title || "Error",
@@ -1654,14 +1702,14 @@ app.whenReady().then(async () => {
   registerAxicodeFileHandlers(win);
 
   // ─── Shared Library ─────────────────────────────────────────────────────────
-  ipcMain.handle("shared-library:list-orgs", async () => {
+  handle("shared-library:list-orgs", async () => {
     const session = await getSession();
     if (!session) return [];
     const targets = await listTargets(session.token, session.viewer.login);
     return targets.filter((t) => t.type === "org");
   });
 
-  ipcMain.handle("shared-library:setup", async (_e, orgName) => {
+  handle("shared-library:setup", async (_e, orgName) => {
     const session = await getSession();
     if (!session) throw new Error("Not logged in");
     const { ensureSharedRepo } = require("./githubApi");
@@ -1674,7 +1722,7 @@ app.whenReady().then(async () => {
     return { orgName, repoName: "axibuilds-shared", isOwner: true };
   });
 
-  ipcMain.handle("shared-library:share-folder", async (_e, folderId) => {
+  handle("shared-library:share-folder", async (_e, folderId) => {
     _e.sender.send("sync-status", { status: "syncing", folderId });
     try {
       await sharedLibrary.shareFolder(folderId);
@@ -1686,7 +1734,7 @@ app.whenReady().then(async () => {
     return true;
   });
 
-  ipcMain.handle("shared-library:unshare-folder", async (_e, folderId) => {
+  handle("shared-library:unshare-folder", async (_e, folderId) => {
     const auth = await getAuthRecord();
     if (!auth?.sharedLibrary?.isOwner) throw new Error("Only org owners can unshare folders.");
     _e.sender.send("sync-status", { status: "syncing", folderId });
@@ -1700,7 +1748,7 @@ app.whenReady().then(async () => {
     return true;
   });
 
-  ipcMain.handle("shared-library:pull-folder", async (_e, folderId) => {
+  handle("shared-library:pull-folder", async (_e, folderId) => {
     _e.sender.send("sync-status", { status: "syncing", folderId });
     try {
       await sharedLibrary.pullFolder(folderId);
@@ -1712,12 +1760,12 @@ app.whenReady().then(async () => {
     return true;
   });
 
-  ipcMain.handle("shared-library:pull-all", async () => {
+  handle("shared-library:pull-all", async () => {
     await sharedLibrary.pullAll();
     return true;
   });
 
-  ipcMain.handle("shared-library:connect", async (_e) => {
+  handle("shared-library:connect", async (_e) => {
     const auth = await getAuthRecord();
     if (!auth?.sharedLibrary?.orgName) throw new Error("No shared library configured");
 
@@ -1803,7 +1851,7 @@ app.whenReady().then(async () => {
     return true;
   });
 
-  ipcMain.handle("shared-library:disconnect", async () => {
+  handle("shared-library:disconnect", async () => {
     sharedLibrary.stopPolling();
     sharedLibrary.invalidateHeadShaCache(); // force fresh fetch on next connect
     // Cancel all pending debounced pushes so they don't fire after disconnect
@@ -1823,7 +1871,7 @@ app.whenReady().then(async () => {
     return true;
   });
 
-  ipcMain.handle("shared-library:get-config", async () => {
+  handle("shared-library:get-config", async () => {
     const auth = await getAuthRecord();
     if (!auth?.sharedLibrary) return null;
     // Self-heal: if isOwner is not stored, re-check from the org role API
@@ -1844,12 +1892,76 @@ app.whenReady().then(async () => {
     return auth.sharedLibrary;
   });
 
-  ipcMain.handle("shared-library:force-push", async (_e, type, item) => {
+  handle("shared-library:force-push", async (_e, type, item) => {
     return sharedLibrary._enqueuePush(async () => {
       if (type === "build") return sharedLibrary.pushBuild(item);
       if (type === "comp") return sharedLibrary.pushComp(item);
     });
   });
+
+  // ─── Local API (consumed by AxiVale and other local Axi apps) ─────────────
+  const apiToken = generateToken();
+  localApi = createLocalApi({
+    token: apiToken,
+    version: app.getVersion(),
+    ops: {
+      listBuilds: () => invokeLocal("builds:list"),
+      saveBuild: (build) => asHttpResult(invokeLocal("builds:save", build)),
+      deleteBuild: (id) => asHttpResult(invokeLocal("builds:delete", id)),
+      publishBuild: (id) => asHttpResult(invokeLocal("builds:publish-build", id)),
+      generateChatLink: (build) =>
+        asHttpResult(invokeLocal("builds:generate-chat-link", build), { badInput: true }),
+      listComps: () => invokeLocal("comps:list"),
+      saveComp: (comp) => asHttpResult(invokeLocal("comps:save", comp)),
+      deleteComp: (id) => asHttpResult(invokeLocal("comps:delete", id)),
+      publishComp: (id, boonCoverageHtml) =>
+        asHttpResult(invokeLocal("comps:publish-comp", id, boonCoverageHtml)),
+      compPlaintext: (id) => asHttpResult(invokeLocal("comps:generate-plaintext", id)),
+      importChatLink: (link, name, folderId, gameMode) =>
+        asHttpResult(invokeLocal("builds:import-chat-link", link, name, folderId, gameMode), { badInput: true }),
+      importGw2Skills: (url, name, folderId, gameMode) =>
+        asHttpResult(invokeLocal("builds:import-gw2skills", url, name, folderId, gameMode), { badInput: true }),
+      listProfessions: () => getProfessionList("en"),
+      getProfessionCatalog: (id, gameMode) => getProfessionCatalog(id, "en", gameMode),
+      getUpgradeCatalog: () => getUpgradeCatalog("en"),
+      listFolders: () => folderStore.listFolders(),
+    },
+  });
+  try {
+    const { port } = await localApi.start();
+    await writeDiscoveryFile(dataDir, {
+      port,
+      token: apiToken,
+      exePath: app.getPath("exe"),
+      version: app.getVersion(),
+      pid: process.pid,
+    });
+    console.log(`[local-api] listening on 127.0.0.1:${port}`);
+  } catch (err) {
+    // The app must stay fully usable without the API (e.g. port exhaustion).
+    console.error("[local-api] failed to start:", err?.message || err);
+  }
+
+  // axiom install-detection convention: write the current version to
+  // <userData>/axiom-version so axiom (and AxiVale's launcher) can detect the
+  // installed app on Linux. AxiForge did not previously write this file.
+  try {
+    require("node:fs").writeFileSync(
+      path.join(app.getPath("userData"), "axiom-version"),
+      app.getVersion(),
+      "utf8",
+    );
+  } catch (err) {
+    console.warn("[axiom-version] write failed:", err?.message || err);
+  }
+});
+
+app.on("will-quit", () => {
+  // Invalidate discovery on clean shutdown so clients never talk to a dead
+  // port. Stale files from crashes are handled by clients via /health checks
+  // and are overwritten on the next startup.
+  removeDiscoveryFileSync(dataDir);
+  if (localApi) localApi.stop().catch(() => {});
 });
 
 app.on("window-all-closed", () => {
