@@ -145,6 +145,46 @@ function buildRoutes({ version, ops }) {
         return { chatLink: await ops.generateChatLink(build) };
       },
     },
+
+    // ── Comps ────────────────────────────────────────────────────────────
+    { method: "GET", pattern: "/comps", handler: async () => ops.listComps() },
+    {
+      method: "POST", pattern: "/comps",
+      handler: async ({ body }) => {
+        if (!body || typeof body !== "object" || Array.isArray(body)) {
+          throw httpError(400, "Request body must be a comp object");
+        }
+        return ops.saveComp(body);
+      },
+    },
+    {
+      method: "GET", pattern: "/comps/:id",
+      handler: async ({ params }) => {
+        const comps = await ops.listComps();
+        const comp = comps.find((c) => c.id === params.id);
+        if (!comp) throw httpError(404, `Comp not found: ${params.id}`);
+        return comp;
+      },
+    },
+    {
+      method: "DELETE", pattern: "/comps/:id",
+      handler: async ({ params }) => {
+        const comps = await ops.listComps();
+        if (!comps.some((c) => c.id === params.id)) {
+          throw httpError(404, `Comp not found: ${params.id}`);
+        }
+        await ops.deleteComp(params.id);
+        return { ok: true };
+      },
+    },
+    {
+      method: "POST", pattern: "/comps/:id/publish",
+      handler: async ({ params, body }) => ops.publishComp(params.id, body?.boonCoverageHtml),
+    },
+    {
+      method: "GET", pattern: "/comps/:id/plaintext",
+      handler: async ({ params }) => ({ text: await ops.compPlaintext(params.id) }),
+    },
   ];
 }
 

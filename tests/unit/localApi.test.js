@@ -244,3 +244,93 @@ describe("local API — builds endpoints", () => {
     expect(res.status).toBe(404);
   });
 });
+
+describe("local API — comps endpoints", () => {
+  let api, token, port, dir, compStore;
+  const publishedComps = [];
+
+  beforeEach(async () => {
+    dir = await fs.mkdtemp(path.join(os.tmpdir(), "axiforge-api-comps-"));
+    compStore = new CompStore(dir);
+    await compStore.init();
+    publishedComps.length = 0;
+    ({ api, token, port } = await startApi({
+      listComps: () => compStore.listComps(),
+      saveComp: (c) => compStore.upsertComp(c),
+      deleteComp: (id) => compStore.deleteComp(id),
+      publishComp: async (id, boonCoverageHtml) => {
+        publishedComps.push({ id, boonCoverageHtml });
+        return { pagesUrl: `https://example.test/?c=${id}`, slug: "comp", fileId: "c1", changed: true };
+      },
+      compPlaintext: async (id) => {
+        const comps = await compStore.listComps();
+        const comp = comps.find((c) => c.id === id);
+        if (!comp) throw new Error("Comp not found");
+        return `**${comp.name}**\n\n**Comp**\n(empty)\n\n**Builds**\n(none)`;
+      },
+    }));
+  });
+
+  afterEach(async () => {
+    await api.stop();
+    await fs.rm(dir, { recursive: true, force: true });
+  });
+
+  test("GET /comps returns an empty list initially", async () => {
+    const res = await req(port, token, "GET", "/comps");
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual([]);
+  });
+
+  test("POST /comps creates a comp through CompStore normalization", async () => {
+    const res = await req(port, token, "POST", "/comps", { name: "Zerg Comp", gameMode: "wvw" });
+    expect(res.status).toBe(200);
+    const saved = await res.json();
+    expect(saved.id).toMatch(/^[0-9a-f-]{36}$/);
+    expect(saved.name).toBe("Zerg Comp");
+    expect(saved.partyLines).toHaveLength(1); // CompStore default party line
+    expect(await compStore.listComps()).toHaveLength(1);
+  });
+
+  test("GET /comps/:id returns the comp, 404 when missing", async () => {
+    const created = await compStore.upsertComp({ name: "Findable Comp" });
+    const found = await req(port, token, "GET", `/comps/${created.id}`);
+    expect(found.status).toBe(200);
+    expect((await found.json()).name).toBe("Findable Comp");
+
+    const missing = await req(port, token, "GET", "/comps/does-not-exist");
+    expect(missing.status).toBe(404);
+  });
+
+  test("DELETE /comps/:id removes the comp", async () => {
+    const created = await compStore.upsertComp({ name: "Doomed Comp" });
+    const res = await req(port, token, "DELETE", `/comps/${created.id}`);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ ok: true });
+    expect(await compStore.listComps()).toHaveLength(0);
+  });
+
+  test("POST /comps/:id/publish forwards optional boonCoverageHtml", async () => {
+    const created = await compStore.upsertComp({ name: "Pub Comp" });
+    const res = await req(port, token, "POST", `/comps/${created.id}/publish`, {
+      boonCoverageHtml: "<table></table>",
+    });
+    expect(res.status).toBe(200);
+    expect((await res.json()).pagesUrl).toContain(created.id);
+    expect(publishedComps).toEqual([{ id: created.id, boonCoverageHtml: "<table></table>" }]);
+  });
+
+  test("POST /comps/:id/publish works without a body", async () => {
+    const created = await compStore.upsertComp({ name: "Pub Comp 2" });
+    const res = await req(port, token, "POST", `/comps/${created.id}/publish`);
+    expect(res.status).toBe(200);
+    expect(publishedComps[0].boonCoverageHtml).toBeUndefined();
+  });
+
+  test("GET /comps/:id/plaintext returns { text }", async () => {
+    const created = await compStore.upsertComp({ name: "Plain Comp" });
+    const res = await req(port, token, "GET", `/comps/${created.id}/plaintext`);
+    expect(res.status).toBe(200);
+    expect((await res.json()).text).toContain("**Plain Comp**");
+  });
+});
