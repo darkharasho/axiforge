@@ -282,8 +282,9 @@ function asHttpResult(promise, { badInput = false } = {}) {
     return result;
   }, (err) => {
     const msg = err?.message || String(err);
-    if (/not found/i.test(msg)) throw httpError(404, msg);
-    if (badInput) throw httpError(400, msg);
+    if (/^(Build|Comp|Folder|History entry) not found/i.test(msg)) throw httpError(404, msg);
+    const ioCodes = ["ENOENT", "EACCES", "EPERM", "ENOSPC", "EMFILE"];
+    if (badInput && !ioCodes.includes(err?.code)) throw httpError(400, msg);
     throw err;
   });
 }
@@ -1910,7 +1911,7 @@ app.whenReady().then(async () => {
       deleteBuild: (id) => asHttpResult(invokeLocal("builds:delete", id)),
       publishBuild: (id) => asHttpResult(invokeLocal("builds:publish-build", id)),
       generateChatLink: (build) =>
-        asHttpResult(invokeLocal("builds:generate-chat-link", build), { badInput: true }),
+        asHttpResult(invokeLocal("builds:generate-chat-link", build)),
       listComps: () => invokeLocal("comps:list"),
       saveComp: (comp) => asHttpResult(invokeLocal("comps:save", comp)),
       deleteComp: (id) => asHttpResult(invokeLocal("comps:delete", id)),
