@@ -36,6 +36,10 @@ describe("localApiDiscovery", () => {
     await writeDiscoveryFile(dir, info);
     const raw = await fs.readFile(path.join(dir, "local-api.json"), "utf8");
     expect(JSON.parse(raw)).toEqual(info);
+    const st = await fs.stat(path.join(dir, "local-api.json"));
+    if (process.platform !== "win32") {
+      expect(st.mode & 0o777).toBe(0o600);
+    }
   });
 
   test("writeDiscoveryFile creates the data dir and overwrites stale files", async () => {

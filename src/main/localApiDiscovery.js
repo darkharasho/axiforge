@@ -12,7 +12,7 @@ function discoveryFilePath(dataDir) {
 
 // Atomic write (tmp + rename), same pattern as BuildStore#writeJson, so a
 // reader never sees a partially-written file. Mode 0o600 keeps the token
-// owner-readable only.
+// owner-readable only. On Windows the mode option is a no-op; the file falls back to default ACLs.
 async function writeDiscoveryFile(dataDir, info) {
   await fs.promises.mkdir(dataDir, { recursive: true });
   const target = discoveryFilePath(dataDir);
@@ -26,8 +26,10 @@ async function writeDiscoveryFile(dataDir, info) {
 function removeDiscoveryFileSync(dataDir) {
   try {
     fs.unlinkSync(discoveryFilePath(dataDir));
-  } catch {
-    // Already gone (crashed previous run, first launch) — nothing to do.
+  } catch (err) {
+    if (err && err.code !== "ENOENT") {
+      console.warn("[local-api] failed to remove discovery file:", err.message);
+    }
   }
 }
 
