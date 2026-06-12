@@ -427,3 +427,62 @@ describe("local API — import endpoints", () => {
     expect(importedGw2Skills).toHaveLength(0);
   });
 });
+
+describe("local API — catalog and folders endpoints", () => {
+  let api, token, port, dir, folderStore;
+  const catalogCalls = [];
+
+  beforeEach(async () => {
+    dir = await fs.mkdtemp(path.join(os.tmpdir(), "axiforge-api-catalog-"));
+    folderStore = new FolderStore(dir);
+    await folderStore.init();
+    catalogCalls.length = 0;
+    ({ api, token, port } = await startApi({
+      listProfessions: async () => [{ id: "Guardian", name: "Guardian" }],
+      getProfessionCatalog: async (id, gameMode) => {
+        catalogCalls.push({ id, gameMode });
+        return { profession: { id, name: id }, specializations: [], skills: [] };
+      },
+      getUpgradeCatalog: async () => ({ runes: [], sigils: [], relics: [] }),
+      listFolders: () => folderStore.listFolders(),
+    }));
+  });
+
+  afterEach(async () => {
+    await api.stop();
+    await fs.rm(dir, { recursive: true, force: true });
+  });
+
+  test("GET /catalog/professions returns the profession list", async () => {
+    const res = await req(port, token, "GET", "/catalog/professions");
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual([{ id: "Guardian", name: "Guardian" }]);
+  });
+
+  test("GET /catalog/professions/:id passes id and gameMode query", async () => {
+    const res = await req(port, token, "GET", "/catalog/professions/Necromancer?gameMode=wvw");
+    expect(res.status).toBe(200);
+    expect((await res.json()).profession.id).toBe("Necromancer");
+    expect(catalogCalls).toEqual([{ id: "Necromancer", gameMode: "wvw" }]);
+  });
+
+  test("GET /catalog/professions/:id omits gameMode when not given", async () => {
+    await req(port, token, "GET", "/catalog/professions/Warrior");
+    expect(catalogCalls).toEqual([{ id: "Warrior", gameMode: undefined }]);
+  });
+
+  test("GET /catalog/upgrades returns the upgrade catalog", async () => {
+    const res = await req(port, token, "GET", "/catalog/upgrades");
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ runes: [], sigils: [], relics: [] });
+  });
+
+  test("GET /folders returns folders from the store", async () => {
+    await folderStore.upsertFolder({ name: "WvW Builds" });
+    const res = await req(port, token, "GET", "/folders");
+    expect(res.status).toBe(200);
+    const folders = await res.json();
+    expect(folders).toHaveLength(1);
+    expect(folders[0].name).toBe("WvW Builds");
+  });
+});

@@ -223,6 +223,18 @@ function buildRoutes({ version, ops }) {
         return ops.importGw2Skills(body.url, body.name ?? null, body.folderId ?? null, body.gameMode ?? null);
       },
     },
+
+    // ── Catalog ──────────────────────────────────────────────────────────
+    { method: "GET", pattern: "/catalog/professions", handler: async () => ops.listProfessions() },
+    {
+      method: "GET", pattern: "/catalog/professions/:id",
+      handler: async ({ params, query }) =>
+        ops.getProfessionCatalog(params.id, query.get("gameMode") || undefined),
+    },
+    { method: "GET", pattern: "/catalog/upgrades", handler: async () => ops.getUpgradeCatalog() },
+
+    // ── Folders ──────────────────────────────────────────────────────────
+    { method: "GET", pattern: "/folders", handler: async () => ops.listFolders() },
   ];
 }
 
