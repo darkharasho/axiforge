@@ -112,6 +112,39 @@ function buildRoutes({ version, ops }) {
         return ops.saveBuild(body);
       },
     },
+    {
+      method: "GET", pattern: "/builds/:id",
+      handler: async ({ params }) => {
+        const builds = await ops.listBuilds();
+        const build = builds.find((b) => b.id === params.id);
+        if (!build) throw httpError(404, `Build not found: ${params.id}`);
+        return build;
+      },
+    },
+    {
+      method: "DELETE", pattern: "/builds/:id",
+      handler: async ({ params }) => {
+        const builds = await ops.listBuilds();
+        if (!builds.some((b) => b.id === params.id)) {
+          throw httpError(404, `Build not found: ${params.id}`);
+        }
+        await ops.deleteBuild(params.id);
+        return { ok: true };
+      },
+    },
+    {
+      method: "POST", pattern: "/builds/:id/publish",
+      handler: async ({ params }) => ops.publishBuild(params.id),
+    },
+    {
+      method: "POST", pattern: "/builds/:id/chat-link",
+      handler: async ({ params }) => {
+        const builds = await ops.listBuilds();
+        const build = builds.find((b) => b.id === params.id);
+        if (!build) throw httpError(404, `Build not found: ${params.id}`);
+        return { chatLink: await ops.generateChatLink(build) };
+      },
+    },
   ];
 }
 

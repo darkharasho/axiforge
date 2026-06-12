@@ -1,5 +1,11 @@
 "use strict";
 
+const path = require("node:path");
+const fs = require("node:fs/promises");
+const os = require("node:os");
+const { BuildStore } = require("../../src/main/buildStore");
+const { CompStore } = require("../../src/main/compStore");
+const { FolderStore } = require("../../src/main/folderStore");
 const { createLocalApi, generateToken } = require("../../src/main/localApi");
 
 // Minimal ops stub — individual endpoint groups get real stores in later tests.
@@ -129,11 +135,112 @@ describe("local API core", () => {
     expect(res.status).toBe(413);
   });
 
-  // Change 5: GET /builds/:id doesn't exist as a route, so a malformed percent-escape
-  // like "/builds/%" yields 404 (no route match) rather than a 500.
-  // The decodeURIComponent try/catch guard is in place in matchRoute.
-  test("malformed percent-escape in path yields 404 (no matching route)", async () => {
+  // Change 5: The decodeURIComponent try/catch guard is in place in matchRoute.
+  // Now that GET /builds/:id exists, a malformed percent-escape like "/builds/%"
+  // matches the route pattern and triggers 400 (malformed escape) rather than 404.
+  test("malformed percent-escape in path yields 400 (decodeURIComponent guard fires)", async () => {
     const res = await req(port, token, "GET", "/builds/%");
+    expect(res.status).toBe(400);
+  });
+});
+
+describe("local API — builds endpoints", () => {
+  let api, token, port, dir, store;
+  const published = [];
+  const chatLinked = [];
+
+  beforeEach(async () => {
+    dir = await fs.mkdtemp(path.join(os.tmpdir(), "axiforge-api-builds-"));
+    store = new BuildStore(dir);
+    await store.init();
+    published.length = 0;
+    chatLinked.length = 0;
+    ({ api, token, port } = await startApi({
+      listBuilds: () => store.listBuilds(),
+      saveBuild: (b) => store.upsertBuild(b),
+      deleteBuild: (id) => store.deleteBuild(id),
+      publishBuild: async (id) => {
+        published.push(id);
+        return { pagesUrl: `https://example.test/?b=${id}`, slug: "test", fileId: "f1", changed: true };
+      },
+      generateChatLink: async (build) => {
+        chatLinked.push(build.id);
+        return "[&DQg1KTIlIjbBEgAAgQAAAEABAAC1EgAAtRIAAAAAAAAAAAAAAAAAAAAAAAA=]";
+      },
+    }));
+  });
+
+  afterEach(async () => {
+    await api.stop();
+    await fs.rm(dir, { recursive: true, force: true });
+  });
+
+  test("GET /builds returns an empty list initially", async () => {
+    const res = await req(port, token, "GET", "/builds");
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual([]);
+  });
+
+  test("POST /builds creates a build through BuildStore normalization", async () => {
+    const res = await req(port, token, "POST", "/builds", {
+      title: "API Test Build",
+      profession: "Warrior",
+      tags: ["wvw"],
+    });
+    expect(res.status).toBe(200);
+    const saved = await res.json();
+    expect(saved.id).toMatch(/^[0-9a-f-]{36}$/);
+    expect(saved.title).toBe("API Test Build");
+    expect(saved.gameMode).toBe("pve"); // normalizeBuild default
+    const onDisk = await store.listBuilds();
+    expect(onDisk).toHaveLength(1);
+  });
+
+  test("POST /builds with an existing id updates the build", async () => {
+    const created = await store.upsertBuild({ title: "Before", profession: "Ranger" });
+    const res = await req(port, token, "POST", "/builds", { ...created, title: "After" });
+    const updated = await res.json();
+    expect(updated.id).toBe(created.id);
+    expect(updated.title).toBe("After");
+    expect(await store.listBuilds()).toHaveLength(1);
+  });
+
+  test("GET /builds/:id returns the build, 404 when missing", async () => {
+    const created = await store.upsertBuild({ title: "Findable", profession: "Thief" });
+    const found = await req(port, token, "GET", `/builds/${created.id}`);
+    expect(found.status).toBe(200);
+    expect((await found.json()).title).toBe("Findable");
+
+    const missing = await req(port, token, "GET", "/builds/does-not-exist");
+    expect(missing.status).toBe(404);
+  });
+
+  test("DELETE /builds/:id removes the build", async () => {
+    const created = await store.upsertBuild({ title: "Doomed", profession: "Mesmer" });
+    const res = await req(port, token, "DELETE", `/builds/${created.id}`);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ ok: true });
+    expect(await store.listBuilds()).toHaveLength(0);
+  });
+
+  test("POST /builds/:id/publish delegates to ops.publishBuild", async () => {
+    const created = await store.upsertBuild({ title: "Pub", profession: "Guardian" });
+    const res = await req(port, token, "POST", `/builds/${created.id}/publish`);
+    expect(res.status).toBe(200);
+    expect((await res.json()).pagesUrl).toContain(created.id);
+    expect(published).toEqual([created.id]);
+  });
+
+  test("POST /builds/:id/chat-link looks up the build and returns { chatLink }", async () => {
+    const created = await store.upsertBuild({ title: "Linkable", profession: "Engineer" });
+    const res = await req(port, token, "POST", `/builds/${created.id}/chat-link`);
+    expect(res.status).toBe(200);
+    expect((await res.json()).chatLink).toMatch(/^\[&/);
+    expect(chatLinked).toEqual([created.id]);
+  });
+
+  test("POST /builds/:id/chat-link returns 404 for an unknown build", async () => {
+    const res = await req(port, token, "POST", "/builds/nope/chat-link");
     expect(res.status).toBe(404);
   });
 });
