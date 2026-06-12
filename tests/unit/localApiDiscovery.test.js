@@ -57,4 +57,18 @@ describe("localApiDiscovery", () => {
     expect(fsSync.existsSync(path.join(dir, "local-api.json"))).toBe(false);
     expect(() => removeDiscoveryFileSync(dir)).not.toThrow();
   });
+
+  test("removeDiscoveryFileSync skips removal when ownerPid does not match the file's pid", async () => {
+    await writeDiscoveryFile(dir, { port: 1, token: "t", exePath: "x", version: "0", pid: 1234 });
+    removeDiscoveryFileSync(dir, { ownerPid: 9999 });
+    expect(fsSync.existsSync(path.join(dir, "local-api.json"))).toBe(true);
+    const parsed = JSON.parse(await fs.readFile(path.join(dir, "local-api.json"), "utf8"));
+    expect(parsed.pid).toBe(1234);
+  });
+
+  test("removeDiscoveryFileSync removes the file when ownerPid matches", async () => {
+    await writeDiscoveryFile(dir, { port: 1, token: "t", exePath: "x", version: "0", pid: 1234 });
+    removeDiscoveryFileSync(dir, { ownerPid: 1234 });
+    expect(fsSync.existsSync(path.join(dir, "local-api.json"))).toBe(false);
+  });
 });

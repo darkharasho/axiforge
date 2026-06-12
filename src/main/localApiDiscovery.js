@@ -23,9 +23,22 @@ async function writeDiscoveryFile(dataDir, info) {
 
 // Synchronous removal — called from app "will-quit", where async work is not
 // guaranteed to complete before the process exits.
-function removeDiscoveryFileSync(dataDir) {
+// When ownerPid is provided, the file is only removed if it belongs to that
+// pid — a lock-losing second launch must never delete the running instance's
+// live discovery file.
+function removeDiscoveryFileSync(dataDir, { ownerPid } = {}) {
   try {
-    fs.unlinkSync(discoveryFilePath(dataDir));
+    const target = discoveryFilePath(dataDir);
+    if (ownerPid != null) {
+      try {
+        const parsed = JSON.parse(fs.readFileSync(target, "utf8"));
+        if (parsed.pid !== ownerPid) return; // someone else's live file — leave it
+      } catch (readErr) {
+        if (readErr && readErr.code === "ENOENT") return; // nothing to remove
+        // Unreadable/corrupt file: fall through and remove it.
+      }
+    }
+    fs.unlinkSync(target);
   } catch (err) {
     if (err && err.code !== "ENOENT") {
       console.warn("[local-api] failed to remove discovery file:", err.message);

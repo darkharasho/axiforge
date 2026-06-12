@@ -3,12 +3,20 @@ const fs = require("node:fs/promises");
 const path = require("node:path");
 const { encodeAxicodeFile, decodeAxicodeFile } = require("@axiapps/code");
 
-function registerAxicodeFileHandlers(mainWindow) {
+// Takes a getter so dialogs always parent to the *current* main window rather
+// than a closure over the first one (which may have been destroyed). A missing
+// or destroyed window falls back to a parentless dialog.
+function registerAxicodeFileHandlers(getWin) {
+  function currentWindow() {
+    const win = getWin();
+    return win && !win.isDestroyed() ? win : undefined;
+  }
+
   ipcMain.handle("axicode-file:export", async (_e, { builds, folders, comps }) => {
     const now = new Date();
     const stamp = now.toISOString().slice(0, 19).replace(/[T:]/g, "-");
     const defaultName = `axiforge-export-${stamp}.axicode`;
-    const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+    const { canceled, filePath } = await dialog.showSaveDialog(currentWindow(), {
       title: "Export .axicode File",
       defaultPath: defaultName,
       filters: [{ name: "AxiCode Files", extensions: ["axicode"] }],
@@ -21,7 +29,7 @@ function registerAxicodeFileHandlers(mainWindow) {
   });
 
   ipcMain.handle("axicode-file:import", async () => {
-    const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+    const { canceled, filePaths } = await dialog.showOpenDialog(currentWindow(), {
       title: "Import .axicode File",
       filters: [{ name: "AxiCode Files", extensions: ["axicode"] }],
       properties: ["openFile"],

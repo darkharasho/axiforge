@@ -57,6 +57,10 @@ if (APP_PROFILE && !app.isPackaged) {
   app.setPath("userData", profileUserData);
 }
 
+// Note: --headless is also a Chromium switch; Electron forwards unknown
+// switches to Chromium. In practice the main process controls window creation
+// so this is benign, but if platform quirks appear, rename to --no-window
+// (coordinate with AxiVale's launcher).
 const cliFlags = parseCliFlags(process.argv);
 
 // Single instance: a second launch hands its argv to the running instance and
@@ -69,14 +73,18 @@ if (!gotInstanceLock) {
 
 app.on("second-instance", (_event, argv) => {
   if (parseCliFlags(argv).headless) return; // services already running — nothing to show
-  const existing = BrowserWindow.getAllWindows()[0];
-  if (existing) {
-    if (existing.isMinimized()) existing.restore();
-    existing.show();
-    existing.focus();
-  } else {
-    openMainWindow();
-  }
+  // Wait for startup init (stores, IPC handlers) so an adopted window never
+  // opens against a half-initialized process.
+  readyWork.then(() => {
+    const existing = BrowserWindow.getAllWindows()[0];
+    if (existing) {
+      if (existing.isMinimized()) existing.restore();
+      existing.show();
+      existing.focus();
+    } else {
+      openMainWindow();
+    }
+  });
 });
 
 const dataDir = path.join(app.getPath("userData"), "data");
@@ -314,27 +322,34 @@ function asHttpResult(promise, { badInput = false } = {}) {
 let localApi = null;
 let mainWindow = null;
 let axicodeHandlersRegistered = false;
+// Last validated window bounds, loaded during whenReady. Module-level so
+// windows adopted later (activate / second-instance into a headless instance)
+// restore the saved position too.
+let lastSavedBounds = null;
 
 // Creates (or focuses) the main window. Used by normal startup, the macOS
 // "activate" handler, and "second-instance" when a windowed launch hits a
 // running headless instance. Safe to call before whenReady resolves only via
 // those electron events, which all fire after ready.
-function openMainWindow(savedBounds) {
+function openMainWindow(savedBounds = lastSavedBounds) {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.show();
     mainWindow.focus();
     return mainWindow;
   }
   mainWindow = createWindow(savedBounds);
+  mainWindow.on("closed", () => {
+    mainWindow = null;
+  });
   initAutoUpdate(mainWindow);
   if (!axicodeHandlersRegistered) {
-    registerAxicodeFileHandlers(mainWindow);
+    registerAxicodeFileHandlers(() => mainWindow);
     axicodeHandlersRegistered = true;
   }
   return mainWindow;
 }
 
-app.whenReady().then(async () => {
+const readyWork = app.whenReady().then(async () => {
   if (!gotInstanceLock) return; // a second launch — the running instance handles it
   await store.init();
   await store.migrateCompIdToCompIds();
@@ -390,7 +405,6 @@ app.whenReady().then(async () => {
   });
 
   // Restore last window position/size if valid
-  let savedBounds;
   const b = await store.getSetting("windowBounds");
   if (b && typeof b.x === "number" && typeof b.y === "number" &&
       typeof b.width === "number" && typeof b.height === "number") {
@@ -400,11 +414,11 @@ app.whenReady().then(async () => {
       b.y < bounds.y + bounds.height &&
       b.y + b.height > bounds.y
     );
-    if (isOnScreen) savedBounds = b;
+    if (isOnScreen) lastSavedBounds = b;
   }
 
   if (!cliFlags.headless) {
-    openMainWindow(savedBounds);
+    openMainWindow(lastSavedBounds);
   } else {
     console.log("[headless] started without a window — services and local API only");
   }
@@ -2002,10 +2016,14 @@ app.whenReady().then(async () => {
 });
 
 app.on("will-quit", () => {
+  // A second launch that lost the single-instance lock must never clean up
+  // state owned by the running instance.
+  if (!gotInstanceLock) return;
   // Invalidate discovery on clean shutdown so clients never talk to a dead
   // port. Stale files from crashes are handled by clients via /health checks
-  // and are overwritten on the next startup.
-  removeDiscoveryFileSync(dataDir);
+  // and are overwritten on the next startup. The ownerPid guard ensures we
+  // only remove a file this process wrote.
+  removeDiscoveryFileSync(dataDir, { ownerPid: process.pid });
   if (localApi) localApi.stop().catch(() => {});
 });
 
@@ -2017,7 +2035,11 @@ app.on("window-all-closed", () => {
 });
 
 app.on("activate", () => {
-  if (BrowserWindow.getAllWindows().length === 0) openMainWindow();
+  // Wait for startup init so an adopted window never opens against a
+  // half-initialized process.
+  readyWork.then(() => {
+    if (BrowserWindow.getAllWindows().length === 0) openMainWindow();
+  });
 });
 
 async function isPagesUrlReachable(url) {
