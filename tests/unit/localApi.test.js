@@ -5,7 +5,6 @@ const fs = require("node:fs/promises");
 const os = require("node:os");
 const { BuildStore } = require("../../src/main/buildStore");
 const { CompStore } = require("../../src/main/compStore");
-const { FolderStore } = require("../../src/main/folderStore");
 const { createLocalApi, generateToken } = require("../../src/main/localApi");
 
 // Minimal ops stub — individual endpoint groups get real stores in later tests.
@@ -243,6 +242,17 @@ describe("local API — builds endpoints", () => {
     const res = await req(port, token, "POST", "/builds/nope/chat-link");
     expect(res.status).toBe(404);
   });
+
+  test("POST /builds/:id/publish returns 404 for an unknown build", async () => {
+    const res = await req(port, token, "POST", "/builds/nope/publish");
+    expect(res.status).toBe(404);
+    expect(published).toHaveLength(0);
+  });
+
+  test("DELETE /builds/:id returns 404 for an unknown build", async () => {
+    const res = await req(port, token, "DELETE", "/builds/nope");
+    expect(res.status).toBe(404);
+  });
 });
 
 describe("local API — comps endpoints", () => {
@@ -332,5 +342,22 @@ describe("local API — comps endpoints", () => {
     const res = await req(port, token, "GET", `/comps/${created.id}/plaintext`);
     expect(res.status).toBe(200);
     expect((await res.json()).text).toContain("**Plain Comp**");
+  });
+
+  test("POST /comps/:id/publish returns 404 for an unknown comp", async () => {
+    const res = await req(port, token, "POST", "/comps/nope/publish");
+    expect(res.status).toBe(404);
+    expect(publishedComps).toHaveLength(0);
+  });
+
+  test("GET /comps/:id/plaintext returns 404 for an unknown comp", async () => {
+    const res = await req(port, token, "GET", "/comps/nope/plaintext");
+    expect(res.status).toBe(404);
+    expect(publishedComps).toHaveLength(0);
+  });
+
+  test("DELETE /comps/:id returns 404 for an unknown comp", async () => {
+    const res = await req(port, token, "DELETE", "/comps/nope");
+    expect(res.status).toBe(404);
   });
 });

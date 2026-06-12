@@ -79,8 +79,8 @@ function matchRoute(routes, method, pathname) {
     for (let i = 0; i < patSegs.length; i++) {
       if (patSegs[i].startsWith(":")) {
         // Change 5: malformed percent-escapes → 400 (matchRoute is called inside the
-        // request try block, so throwing here is safe). A GET /builds/% still yields
-        // 404 because no route captures that pattern, but the guard is in place.
+        // request try block, so throwing here is safe). When a route with a param
+        // segment matches, a malformed escape like "/builds/%" raises 400 here.
         try {
           params[patSegs[i].slice(1)] = decodeURIComponent(segs[i]);
         } catch (e) {
@@ -134,7 +134,13 @@ function buildRoutes({ version, ops }) {
     },
     {
       method: "POST", pattern: "/builds/:id/publish",
-      handler: async ({ params }) => ops.publishBuild(params.id),
+      handler: async ({ params }) => {
+        const builds = await ops.listBuilds();
+        if (!builds.some((b) => b.id === params.id)) {
+          throw httpError(404, `Build not found: ${params.id}`);
+        }
+        return ops.publishBuild(params.id);
+      },
     },
     {
       method: "POST", pattern: "/builds/:id/chat-link",
@@ -179,11 +185,23 @@ function buildRoutes({ version, ops }) {
     },
     {
       method: "POST", pattern: "/comps/:id/publish",
-      handler: async ({ params, body }) => ops.publishComp(params.id, body?.boonCoverageHtml),
+      handler: async ({ params, body }) => {
+        const comps = await ops.listComps();
+        if (!comps.some((c) => c.id === params.id)) {
+          throw httpError(404, `Comp not found: ${params.id}`);
+        }
+        return ops.publishComp(params.id, body?.boonCoverageHtml);
+      },
     },
     {
       method: "GET", pattern: "/comps/:id/plaintext",
-      handler: async ({ params }) => ({ text: await ops.compPlaintext(params.id) }),
+      handler: async ({ params }) => {
+        const comps = await ops.listComps();
+        if (!comps.some((c) => c.id === params.id)) {
+          throw httpError(404, `Comp not found: ${params.id}`);
+        }
+        return { text: await ops.compPlaintext(params.id) };
+      },
     },
   ];
 }
