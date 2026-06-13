@@ -87,3 +87,12 @@ export const shareIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2
 
 // Clock icon — used for build history menu item
 export const clockIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-13a.75.75 0 0 0-1.5 0v5c0 .414.336.75.75.75h4a.75.75 0 0 0 0-1.5h-3.25V5Z" clip-rule="evenodd"/></svg>`;
+
+// Lucide-style numbered square badge for party-line labels. Lucide has no 0–9 glyphs,
+// so this draws one in Lucide's idiom: a thin rounded square (stroke) with a centered
+// digit. Used in the comp editor and the published SPA so party numbers look consistent.
+export function partyNumberIcon(n) {
+  const label = String(n);
+  const fontSize = label.length > 1 ? 9 : 12;
+  return `<svg class="comp-line__num" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Party ${label}"><rect x="3" y="3" width="18" height="18" rx="5"/><text x="12" y="12" text-anchor="middle" dominant-baseline="central" stroke="none" fill="currentColor" font-size="${fontSize}" font-weight="700" font-family="inherit">${label}</text></svg>`;
+}

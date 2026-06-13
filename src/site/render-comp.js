@@ -4,6 +4,7 @@ import { escapeHtml } from "./main.js";
 import { renderMiniBuildCard } from "../renderer/modules/mini-build-card.js";
 import { formatFactHtml } from "../renderer/modules/detail-panel.js";
 import { initMobileDetection } from "./mobile.js";
+import { partyNumberIcon } from "../renderer/modules/library/heroicons.js";
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -38,6 +39,73 @@ function getDisplayName(build) {
 
 // ── Party Lines ──────────────────────────────────────────────────────────
 
+// A slot id is either a build id or a category reference "tag:<id>".
+const TAG_PREFIX = "tag:";
+const isTagSlot = (id) => typeof id === "string" && id.startsWith(TAG_PREFIX);
+
+// A tag slot is a single placeholder showing the category icon; its tooltip lists the
+// member builds so hovering reveals the options, matching the desktop app.
+function renderTagSlot(category, builds) {
+  if (!category) return `<div class="comp-slot comp-slot--empty"></div>`;
+  const name = category.name || "Tag";
+  const members = (category.buildIds || [])
+    .map((id) => builds?.[id])
+    .filter(Boolean)
+    .map((b) => getDisplayName(b));
+  // title is a no-JS fallback; the rich popover (bound in renderCompPage) is primary.
+  const title = members.length ? `${name}: ${members.join(", ")}` : name;
+  const inner = category.icon
+    ? `<img class="comp-slot__tag-img" src="${escapeHtml(category.icon)}" alt="${escapeHtml(name)}" />`
+    : `<span class="comp-slot__tag-text">${escapeHtml(name.slice(0, 3))}</span>`;
+  return `
+    <div class="comp-slot comp-slot--filled comp-slot--tag" title="${escapeHtml(title)}"
+         data-category-id="${escapeHtml(category.id || "")}">
+      <span class="comp-slot__icon">${inner}</span>
+    </div>`;
+}
+
+// ── Tag-slot hover popover (parity with the desktop app) ───────────────────
+let _tagHoverData = new Map();   // categoryId → { name, builds: [{ name, icon, pClass }] }
+let _tagHoverEl = null;
+
+function buildTagHoverData(comp) {
+  _tagHoverData = new Map();
+  for (const cat of (comp.categories || [])) {
+    const builds = (cat.buildIds || [])
+      .map((id) => comp.builds?.[id])
+      .filter(Boolean)
+      .map((b) => ({ name: getDisplayName(b), icon: getProfIcon(b, "normal"), pClass: profClass(b.profession) }));
+    _tagHoverData.set(cat.id, { name: cat.name || "Tag", builds });
+  }
+}
+
+function hideTagHover() {
+  if (_tagHoverEl) { _tagHoverEl.remove(); _tagHoverEl = null; }
+}
+
+function showTagHover(slotEl) {
+  const data = _tagHoverData.get(slotEl.dataset.categoryId);
+  if (!data) return;
+  hideTagHover();
+  const rows = data.builds.length
+    ? data.builds.map((b) => `<div class="comp-tag-pop__row ${b.pClass}">
+        <span class="comp-tag-pop__icon">${b.icon}</span>
+        <span class="comp-tag-pop__name">${escapeHtml(b.name)}</span>
+      </div>`).join("")
+    : `<div class="comp-tag-pop__empty">No builds in this tag</div>`;
+  const el = document.createElement("div");
+  el.className = "comp-tag-pop";
+  el.innerHTML = `<div class="comp-tag-pop__title">${escapeHtml(data.name)}</div>${rows}`;
+  document.body.appendChild(el);
+  const r = slotEl.getBoundingClientRect();
+  const er = el.getBoundingClientRect();
+  let left = r.left;
+  if (left + er.width > window.innerWidth - 8) left = Math.max(8, window.innerWidth - er.width - 8);
+  el.style.left = `${left}px`;
+  el.style.top = `${r.bottom + 6}px`;
+  _tagHoverEl = el;
+}
+
 function renderSlot(build, color) {
   if (!build) {
     return `<div class="comp-slot comp-slot--empty"></div>`;
@@ -63,13 +131,18 @@ function renderPartyLines(comp) {
     const slots = line.slots || [];
     const capacity = line.capacity || 5;
     const buildColors = comp.buildColors || {};
-    const slotBoxes = slots.map((buildId) => renderSlot(comp.builds?.[buildId], buildColors[buildId] || "normal"));
+    const categoryById = new Map((comp.categories || []).map((c) => [c.id, c]));
+    const slotBoxes = slots.map((slotId) =>
+      isTagSlot(slotId)
+        ? renderTagSlot(categoryById.get(slotId.slice(TAG_PREFIX.length)), comp.builds)
+        : renderSlot(comp.builds?.[slotId], buildColors[slotId] || "normal")
+    );
     for (let i = slots.length; i < capacity; i++) {
       slotBoxes.push(`<div class="comp-slot comp-slot--empty"></div>`);
     }
     return `
       <div class="comp-line">
-        <span class="comp-line__label">P${idx + 1}</span>
+        <span class="comp-line__label">${partyNumberIcon(idx + 1)}</span>
         <div class="comp-line__slots">${slotBoxes.join("")}</div>
         <div class="comp-line__controls">
           <span class="comp-line__count">${slots.length} / ${capacity}</span>
@@ -485,6 +558,14 @@ export function renderCompPage(app, comp) {
         </div>
       </div>
     </div>`;
+
+  // Bind tag-slot hover popovers (lists the builds the tag stands for)
+  buildTagHoverData(comp);
+  app.querySelectorAll(".comp-slot--tag").forEach((slot) => {
+    slot.removeAttribute("title"); // suppress the native tooltip in favor of the rich popover
+    slot.addEventListener("mouseenter", () => showTagHover(slot));
+    slot.addEventListener("mouseleave", hideTagHover);
+  });
 
   // Bind build code copy buttons
   app.querySelectorAll(".mini-card__btn-copy-code").forEach(btn => {

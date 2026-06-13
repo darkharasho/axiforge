@@ -343,8 +343,16 @@ async function publishSiteBundle(token, owner, bundle, branch = "main", repo = T
   const nextPathSet = new Set(entries.map(([filePath]) => filePath));
   const treeEntries = [];
 
+  // buildSpaBundle() base64-encodes binary assets (images, fonts) and leaves text files
+  // as utf8. Decode binaries back to their real bytes here, otherwise the base64 string
+  // itself gets committed as the file content and images deploy as undecodable text.
+  const BINARY_EXTS = [".png", ".jpg", ".jpeg", ".gif", ".ico", ".woff", ".woff2", ".ttf", ".eot"];
+  const isBinaryPath = (p) => BINARY_EXTS.includes(p.slice(p.lastIndexOf(".")).toLowerCase());
+
   for (const [filePath, content] of entries) {
-    const contentBuffer = Buffer.from(content, "utf8");
+    const contentBuffer = isBinaryPath(filePath)
+      ? Buffer.from(content, "base64")
+      : Buffer.from(content, "utf8");
     const blobSha = computeGitBlobSha(contentBuffer);
     const existingSha = existingByPath.get(filePath);
     if (existingSha === blobSha) continue;

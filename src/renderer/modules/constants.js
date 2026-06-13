@@ -402,6 +402,21 @@ export const BOON_CONDITION_ICONS = {
   Poison:         `${_RW}/559B0AF9FB5E1243D2649FAAE660CCB338AACC19/102840.png`,
 };
 
+// Selectable icons for comp build categories ("tags"). Sourced from the EWW Discord
+// guild's custom role/boon emoji — the same icons used on raid signups — but downloaded
+// into public/img/tags/ and referenced by relative path so they render natively without
+// hotlinking Discord's CDN. The path "img/tags/<key>.png" resolves identically in the
+// desktop renderer and the published SPA (both use base "./" + publicDir public).
+// The Discord emoji IDs (for the plaintext export) live in src/main/discordEmoji.js.
+// Order is roles → boons → markers for the picker grid.
+export const COMP_TAG_ICONS = [
+  { name: "Strips",    url: "img/tags/strips.png" },
+  { name: "Utility",   url: "img/tags/utility.png" },
+  { name: "Stability", url: "img/tags/stability.png" },
+  { name: "Might",     url: "img/tags/might.png" },
+  { name: "Regen",     url: "img/tags/regen.png" },
+];
+
 // Assumed boon stat effects (per GW2 wiki, level 80)
 export const MIGHT_MAX_STACKS = 25;
 export const STABILITY_MAX_STACKS = 25;

@@ -13,7 +13,8 @@ import {
   restorePublishProgress,
 } from "../render-pages.js";
 import { roleBadgeHtml } from "../roleEstimator.js";
-import { axiforgeIcon, checkIcon, chevronDownIcon, arrowUpTrayIcon, clipboardDocumentIcon, globeAltIcon } from "../library/heroicons.js";
+import { COMP_TAG_ICONS } from "../constants.js";
+import { axiforgeIcon, checkIcon, chevronDownIcon, arrowUpTrayIcon, clipboardDocumentIcon, globeAltIcon, partyNumberIcon } from "../library/heroicons.js";
 import { renderMiniBuildCard, renderMissingMiniBuildCard } from "../mini-build-card.js";
 import { computeCompPartyCoverage, buildPartyCoverageHTML, bindPartyCoverageEvents, closePartyCoverageExpand } from "./comp-boon-coverage.js";
 import {
@@ -302,6 +303,46 @@ export function getTotalFilledSlots(comp) {
   return comp.partyLines.reduce((sum, pl) => sum + (pl.slots || []).length, 0);
 }
 
+// A party-line slot holds either a build id (a UUID) or a category reference encoded
+// as "tag:<categoryId>". Category UUIDs never contain the prefix, so the encoding is
+// unambiguous. A tag slot is a single placeholder showing the category's icon — it
+// stands for "one of these builds" rather than expanding into every member.
+export const TAG_SLOT_PREFIX = "tag:";
+
+export function isTagSlot(slotId) {
+  return typeof slotId === "string" && slotId.startsWith(TAG_SLOT_PREFIX);
+}
+
+export function tagSlotCategoryId(slotId) {
+  return isTagSlot(slotId) ? slotId.slice(TAG_SLOT_PREFIX.length) : null;
+}
+
+export function makeTagSlot(categoryId) {
+  return TAG_SLOT_PREFIX + categoryId;
+}
+
+/**
+ * Pure data mutation: drop a category onto a party line as a single icon slot.
+ * Mirrors the single-build drop rules — expands the line's capacity to fit and refuses
+ * to push total filled slots past the global cap of 50. The category must exist on the
+ * comp.
+ *
+ * @returns {boolean} whether a slot was added.
+ */
+export function addCategorySlotToLine(comp, categoryId, lineId) {
+  const line = (comp.partyLines || []).find((pl) => pl.id === lineId);
+  if (!line) return false;
+  const category = (comp.categories || []).find((c) => c.id === categoryId);
+  if (!category) return false;
+  if (getTotalFilledSlots(comp) >= 50) return false;
+
+  line.slots = [...(line.slots || []), makeTagSlot(categoryId)];
+  if (line.slots.length > (line.capacity || 5)) {
+    line.capacity = line.slots.length;
+  }
+  return true;
+}
+
 /**
  * Pure data mutation: move a build slot from one party line to another.
  * Expands the destination line's capacity if it is already full.
@@ -376,6 +417,7 @@ export function renderCompDetail() {
   destroyCompDragDrop();
   closeCompCtxMenu();
   closeHoverCard();
+  closeCategoryHoverCard();
   closePartyCoverageExpand();
   if (_cleanupResize) { _cleanupResize(); _cleanupResize = null; }
   if (_saveStatusInterval) { clearInterval(_saveStatusInterval); _saveStatusInterval = null; }
@@ -464,6 +506,13 @@ export function renderCompDetail() {
       _justDropped = true;
       setTimeout(() => { _justDropped = false; }, 200);
       line.slots = [...slots, buildId];
+      await saveAndSync(comp);
+      _callbacks.onRerender?.();
+    },
+    async onDropCategoryToLine(categoryId, lineId) {
+      if (!addCategorySlotToLine(comp, categoryId, lineId)) return;
+      _justDropped = true;
+      setTimeout(() => { _justDropped = false; }, 200);
       await saveAndSync(comp);
       _callbacks.onRerender?.();
     },
@@ -578,13 +627,6 @@ function renderPartyLines(comp, totalCap) {
   `;
 }
 
-const PARTY_NUMBER_EMOJIS = [
-  "\u0031\uFE0F\u20E3", "\u0032\uFE0F\u20E3", "\u0033\uFE0F\u20E3",
-  "\u0034\uFE0F\u20E3", "\u0035\uFE0F\u20E3", "\u0036\uFE0F\u20E3",
-  "\u0037\uFE0F\u20E3", "\u0038\uFE0F\u20E3", "\u0039\uFE0F\u20E3",
-  "\uD83D\uDD1F",
-];
-
 function renderPartyLine(comp, pl, idx, totalCap) {
   const capacity = pl.capacity || 5;
   const slots = pl.slots || [];
@@ -594,6 +636,21 @@ function renderPartyLine(comp, pl, idx, totalCap) {
   // Filled slots
   for (let i = 0; i < slots.length && i < capacity; i++) {
     const buildId = slots[i];
+    if (isTagSlot(buildId)) {
+      const category = (comp.categories || []).find((c) => c.id === tagSlotCategoryId(buildId));
+      const label = escapeHtml(category?.name || "Tag");
+      const iconHtml = category?.icon
+        ? `<img class="comp-slot__tag-img" src="${escapeHtml(category.icon)}" alt="${label}" draggable="false" />`
+        : `<span class="comp-slot__tag-text">${label.slice(0, 3)}</span>`;
+      slotBoxes.push(
+        `<div class="comp-slot comp-slot--filled comp-slot--tag" title="${label}"
+              data-action="click-filled-slot" data-line-id="${escapeHtml(pl.id)}" data-slot-idx="${i}"
+              data-build-id="${escapeHtml(buildId)}" data-tag-slot="${escapeHtml(tagSlotCategoryId(buildId) || "")}">
+          <span class="comp-slot__icon">${iconHtml}</span>
+        </div>`
+      );
+      continue;
+    }
     const build = resolveBuild(buildId);
     if (build) {
       const slotColor = (comp.buildColors || {})[buildId] || "normal";
@@ -632,7 +689,7 @@ function renderPartyLine(comp, pl, idx, totalCap) {
   const multiRow = filledCount > 5;
   return `
     <div class="comp-line${multiRow ? " comp-line--multirow" : ""}" data-line-id="${escapeHtml(pl.id)}">
-      <span class="comp-line__label">${PARTY_NUMBER_EMOJIS[idx] || `P${idx + 1}`}</span>
+      <span class="comp-line__label">${partyNumberIcon(idx + 1)}</span>
       <div class="comp-line__slots" data-capacity="${capacity}">${slotBoxes.join("")}</div>
       <div class="comp-line__controls">
         <button type="button" class="comp-line__btn" data-action="duplicate-line"
@@ -696,9 +753,47 @@ function renderBuildPool(comp) {
           <button type="button" class="comp-pool-add" data-action="pool-add">+ Add</button>
         </div>
       </div>
+      ${renderCategoryRow(comp)}
       <div class="comp-pool-list">
         ${cards || '<p class="comp-pool-empty">No builds in pool</p>'}
       </div>
+    </div>
+  `;
+}
+
+// ─── Build Categories ─────────────────────────────────────────────────────────
+// A category is a comp-scoped, named group of the comp's own builds. Each renders
+// as a draggable chip; dropping it on a line adds all of its builds at once. The
+// chip count reflects only builds still present in the pool.
+
+function categoryBuildCount(comp, category) {
+  const inComp = new Set(comp.buildIds || []);
+  return (category.buildIds || []).filter((id) => inComp.has(id)).length;
+}
+
+function renderCategoryRow(comp) {
+  const categories = comp.categories || [];
+  const chips = categories.map((cat) => {
+    const count = categoryBuildCount(comp, cat);
+    const name = escapeHtml(cat.name || "Untitled");
+    const iconHtml = cat.icon
+      ? `<img class="comp-cat-chip__icon" src="${escapeHtml(cat.icon)}" alt="" draggable="false" />`
+      : "";
+    return `
+      <div class="comp-cat-chip" data-category-id="${escapeHtml(cat.id)}"
+           title="Drag onto a line to add its icon · click to edit">
+        ${iconHtml}
+        <span class="comp-cat-chip__name">${name}</span>
+        <span class="comp-cat-chip__count">${count}</span>
+      </div>
+    `;
+  }).join("");
+
+  return `
+    <div class="comp-cat-row">
+      <span class="comp-cat-row__label">Tags</span>
+      <div class="comp-cat-list">${chips}</div>
+      <button type="button" class="comp-cat-add" data-action="cat-add" title="New tag">+ Tag</button>
     </div>
   `;
 }
@@ -846,6 +941,211 @@ function openAddBuildModal(comp) {
   });
 
   document.body.appendChild(overlay);
+}
+
+// ─── Category Editor Modal ────────────────────────────────────────────────────
+
+function openCategoryModal(comp, categoryId) {
+  document.querySelector(".comp-picker-overlay")?.remove();
+
+  const existing = categoryId
+    ? (comp.categories || []).find((c) => c.id === categoryId)
+    : null;
+  const isEdit = !!existing;
+
+  const overlay = document.createElement("div");
+  overlay.className = "comp-picker-overlay";
+
+  let name = existing?.name || "";
+  let icon = existing?.icon || "";
+  const selected = new Set(existing?.buildIds || []);
+
+  // Only the comp's own builds can belong to a category.
+  const compBuildIds = new Set(comp.buildIds || []);
+  const compBuilds = state.builds.filter((b) => compBuildIds.has(b.id));
+
+  function renderRows() {
+    if (compBuilds.length === 0) {
+      return '<p class="comp-picker-empty">Add builds to the comp first</p>';
+    }
+    return compBuilds.map((b) => {
+      const icon = getSpecIcon(b);
+      const pClass = profClass(b.profession);
+      const checked = selected.has(b.id) ? "checked" : "";
+      const displayName = escapeHtml(getDisplayName(b));
+      const gear = escapeHtml(resolveStatPackage(b));
+      return `
+        <label class="comp-picker-row ${pClass}" data-build-id="${escapeHtml(b.id)}">
+          <input type="checkbox" class="comp-picker-row__checkbox" value="${escapeHtml(b.id)}" ${checked} />
+          <span class="comp-picker-row__icon">${icon}</span>
+          <span class="comp-picker-row__name">${displayName}</span>
+          <span class="comp-picker-row__prof">${gear}</span>
+        </label>
+      `;
+    }).join("");
+  }
+
+  function renderIconGrid() {
+    const isCustom = icon && !COMP_TAG_ICONS.some((opt) => opt.url === icon);
+    const noneSel = !icon ? " comp-cat-icon-opt--active" : "";
+    const options = COMP_TAG_ICONS.map((opt) => {
+      const active = opt.url === icon ? " comp-cat-icon-opt--active" : "";
+      return `<button type="button" class="comp-cat-icon-opt${active}" data-icon-url="${escapeHtml(opt.url)}" title="${escapeHtml(opt.name)}">
+        <img src="${escapeHtml(opt.url)}" alt="${escapeHtml(opt.name)}" draggable="false" />
+      </button>`;
+    }).join("");
+    return `
+      <div class="comp-cat-icon-label">Icon</div>
+      <div class="comp-cat-icon-grid">
+        <button type="button" class="comp-cat-icon-opt comp-cat-icon-opt--none${noneSel}" data-icon-url="" title="No icon">∅</button>
+        ${options}
+      </div>
+      <input type="text" class="comp-cat-icon-custom" placeholder="…or paste a custom image URL"
+             value="${isCustom ? escapeHtml(icon) : ""}" />
+    `;
+  }
+
+  function render() {
+    overlay.innerHTML = `
+      <div class="comp-picker-modal">
+        <div class="comp-picker-modal__header">
+          <span class="comp-picker-modal__title">${isEdit ? "Edit Tag" : "New Tag"}</span>
+          <input type="text" class="comp-picker-modal__search comp-cat-name-input"
+                 placeholder="Tag name (e.g. DPS, Heals)" value="${escapeHtml(name)}" maxlength="60" />
+        </div>
+        <div class="comp-cat-icon-picker">
+          ${renderIconGrid()}
+        </div>
+        <div class="comp-picker-modal__list">
+          ${renderRows()}
+        </div>
+        <div class="comp-picker-modal__footer">
+          ${isEdit ? `<button type="button" class="comp-picker-modal__btn comp-picker-modal__btn--delete" data-action="cat-delete">Delete</button>` : ""}
+          <span class="comp-cat-modal__spacer"></span>
+          <button type="button" class="comp-picker-modal__btn comp-picker-modal__btn--cancel" data-action="cat-cancel">Cancel</button>
+          <button type="button" class="comp-picker-modal__btn comp-picker-modal__btn--add" data-action="cat-save">Save</button>
+        </div>
+      </div>
+    `;
+
+    const nameInput = overlay.querySelector(".comp-cat-name-input");
+    nameInput?.addEventListener("input", (e) => { name = e.target.value; });
+
+    // Icon grid: pick a built-in emoji (re-render to move the highlight)
+    overlay.querySelectorAll(".comp-cat-icon-opt").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        icon = btn.dataset.iconUrl || "";
+        render();
+      });
+    });
+
+    // Custom URL overrides the grid selection
+    const customInput = overlay.querySelector(".comp-cat-icon-custom");
+    customInput?.addEventListener("input", (e) => {
+      icon = e.target.value.trim();
+      // Update grid highlight without stealing focus from the URL field
+      overlay.querySelectorAll(".comp-cat-icon-opt").forEach((b) => {
+        b.classList.toggle("comp-cat-icon-opt--active", (b.dataset.iconUrl || "") === icon);
+      });
+    });
+
+    overlay.querySelectorAll(".comp-picker-row__checkbox").forEach((cb) => {
+      cb.addEventListener("change", () => {
+        if (cb.checked) selected.add(cb.value);
+        else selected.delete(cb.value);
+      });
+    });
+
+    overlay.querySelector("[data-action='cat-cancel']")?.addEventListener("click", () => overlay.remove());
+
+    overlay.querySelector("[data-action='cat-delete']")?.addEventListener("click", async () => {
+      comp.categories = (comp.categories || []).filter((c) => c.id !== categoryId);
+      // Drop any line slots that referenced the deleted tag
+      const token = makeTagSlot(categoryId);
+      for (const line of (comp.partyLines || [])) {
+        line.slots = (line.slots || []).filter((id) => id !== token);
+      }
+      await saveAndSync(comp);
+      overlay.remove();
+      _callbacks.onRerender?.();
+    });
+
+    overlay.querySelector("[data-action='cat-save']")?.addEventListener("click", async () => {
+      const trimmed = name.trim();
+      if (!trimmed) {
+        nameInput?.focus();
+        nameInput?.classList.add("comp-cat-name-input--error");
+        return;
+      }
+      const buildIds = compBuilds.filter((b) => selected.has(b.id)).map((b) => b.id);
+      if (!Array.isArray(comp.categories)) comp.categories = [];
+      if (isEdit) {
+        existing.name = trimmed;
+        existing.icon = icon;
+        existing.buildIds = buildIds;
+      } else {
+        comp.categories.push({ id: crypto.randomUUID(), name: trimmed, icon, buildIds });
+      }
+      await saveAndSync(comp);
+      overlay.remove();
+      _callbacks.onRerender?.();
+    });
+  }
+
+  render();
+
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) overlay.remove();
+  });
+
+  document.body.appendChild(overlay);
+  overlay.querySelector(".comp-cat-name-input")?.focus();
+}
+
+// ─── Category Hover Card ──────────────────────────────────────────────────────
+
+let _catHoverTimer = null;
+let _activeCatHoverCard = null;
+
+function closeCategoryHoverCard() {
+  if (_catHoverTimer) { clearTimeout(_catHoverTimer); _catHoverTimer = null; }
+  if (_activeCatHoverCard) { _activeCatHoverCard.remove(); _activeCatHoverCard = null; }
+}
+
+function showCategoryHoverCard(chipEl, comp, category) {
+  closeCategoryHoverCard();
+  const inComp = new Set(comp.buildIds || []);
+  const builds = (category.buildIds || [])
+    .filter((id) => inComp.has(id))
+    .map((id) => state.builds.find((b) => b.id === id))
+    .filter(Boolean);
+
+  const card = document.createElement("div");
+  card.className = "comp-cat-hover-card";
+  const rows = builds.length
+    ? builds.map((b) => {
+        const pClass = profClass(b.profession);
+        return `<div class="comp-cat-hover__row ${pClass}">
+          <span class="comp-cat-hover__icon">${getSpecIcon(b)}</span>
+          <span class="comp-cat-hover__name">${escapeHtml(getDisplayName(b))}</span>
+        </div>`;
+      }).join("")
+    : `<div class="comp-cat-hover__empty">No builds in this tag</div>`;
+  card.innerHTML = `
+    <div class="comp-cat-hover__title">${escapeHtml(category.name || "Untitled")}</div>
+    ${rows}
+  `;
+  document.body.appendChild(card);
+
+  const rect = chipEl.getBoundingClientRect();
+  card.style.left = `${rect.left}px`;
+  card.style.top = `${rect.bottom + 6}px`;
+  // Keep within viewport horizontally
+  const cardRect = card.getBoundingClientRect();
+  if (cardRect.right > window.innerWidth - 8) {
+    card.style.left = `${Math.max(8, window.innerWidth - cardRect.width - 8)}px`;
+  }
+  _activeCatHoverCard = card;
 }
 
 // ─── Event binding ────────────────────────────────────────────────────────────
@@ -1128,18 +1428,34 @@ function bindDetailEvents(container, comp) {
 
   // ── Filled slot click → open build ─────────────────────────────────────────
   container.querySelectorAll("[data-action='click-filled-slot']").forEach((slot) => {
-    // Hover → show delayed build card
+    const tagCategoryId = slot.dataset.tagSlot || null;
+
+    // Hover → show delayed card (build details, or the tag's build options)
     slot.addEventListener("mouseenter", () => {
+      if (tagCategoryId) {
+        const category = (comp.categories || []).find((c) => c.id === tagCategoryId);
+        if (!category) return;
+        _catHoverTimer = setTimeout(() => showCategoryHoverCard(slot, comp, category), 400);
+        return;
+      }
       const build = resolveBuild(slot.dataset.buildId);
       if (!build) return;
       _hoverTimer = setTimeout(() => showSlotHoverCard(slot, build), 600);
     });
-    slot.addEventListener("mouseleave", closeHoverCard);
+    slot.addEventListener("mouseleave", () => {
+      closeHoverCard();
+      closeCategoryHoverCard();
+    });
 
-    // Left click → open build in editor
+    // Left click → open the build (or edit the tag) in place
     slot.addEventListener("click", (e) => {
       closeHoverCard();
+      closeCategoryHoverCard();
       e.stopPropagation();
+      if (tagCategoryId) {
+        openCategoryModal(comp, tagCategoryId);
+        return;
+      }
       const buildId = slot.dataset.buildId;
       const build = buildId ? resolveBuild(buildId) : null;
       if (build) {
@@ -1199,6 +1515,29 @@ function bindPoolEvents(container, comp) {
     openAddBuildModal(comp);
   });
 
+  // New-tag button
+  container.querySelector("[data-action='cat-add']")?.addEventListener("click", () => {
+    openCategoryModal(comp, null);
+  });
+
+  // Tag chips: click to edit, hover to preview the builds they hold.
+  container.querySelectorAll(".comp-cat-chip").forEach((chip) => {
+    const categoryId = chip.dataset.categoryId;
+    chip.addEventListener("click", () => {
+      // SortableJS suppresses the click that follows a real drag, so a click here
+      // is a genuine click → open the editor.
+      closeCategoryHoverCard();
+      openCategoryModal(comp, categoryId);
+    });
+    chip.addEventListener("mouseenter", () => {
+      const category = (comp.categories || []).find((c) => c.id === categoryId);
+      if (!category) return;
+      closeCategoryHoverCard();
+      _catHoverTimer = setTimeout(() => showCategoryHoverCard(chip, comp, category), 350);
+    });
+    chip.addEventListener("mouseleave", closeCategoryHoverCard);
+  });
+
   // Pool card open buttons
   container.querySelectorAll("[data-action='pool-open']").forEach((btn) => {
     btn.addEventListener("click", (e) => {
@@ -1223,10 +1562,13 @@ function bindPoolEvents(container, comp) {
         await window.desktopApi.saveBuild({ ...build, compIds: newCompIds });
       }
 
-      // Remove from buildIds and party line slots
+      // Remove from buildIds, party line slots, and any category membership
       comp.buildIds = (comp.buildIds || []).filter((id) => id !== buildId);
       for (const line of (comp.partyLines || [])) {
         line.slots = (line.slots || []).filter((id) => id !== buildId);
+      }
+      for (const cat of (comp.categories || [])) {
+        cat.buildIds = (cat.buildIds || []).filter((id) => id !== buildId);
       }
 
       await saveAndSync(comp);

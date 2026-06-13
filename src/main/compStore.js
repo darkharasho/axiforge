@@ -58,6 +58,22 @@ class CompStore {
       }
     }
 
+    // Comp-scoped build categories: [{ id, name, buildIds }]. These let a comp group
+    // a subset of its own builds under a named tag that can be dragged into a line as
+    // a unit. Only buildIds — membership is resolved against comp.buildIds at use time.
+    const categories = Array.isArray(input.categories)
+      ? input.categories
+          .filter((c) => c && typeof c === "object")
+          .map((c) => ({
+            id: typeof c.id === "string" ? c.id : crypto.randomUUID(),
+            name: String(c.name || "").slice(0, 60),
+            icon: typeof c.icon === "string" ? c.icon.slice(0, 2000) : "",
+            buildIds: Array.isArray(c.buildIds)
+              ? c.buildIds.filter((x) => typeof x === "string")
+              : [],
+          }))
+      : [];
+
     const publishedPatch = {
       ...(typeof input.publishedFileId === "string" ? { publishedFileId: input.publishedFileId } : {}),
       ...(typeof input.publishedKey === "string" ? { publishedKey: input.publishedKey } : {}),
@@ -68,7 +84,7 @@ class CompStore {
     const existing = comps.find((c) => c.id === id);
     if (existing) {
       Object.assign(existing, {
-        name, notes, tags, folderId, sortOrder, buildIds, partyLines, gameMode, buildColors,
+        name, notes, tags, folderId, sortOrder, buildIds, partyLines, gameMode, buildColors, categories,
         ...publishedPatch,
         updatedAt: now,
       });
@@ -78,7 +94,7 @@ class CompStore {
     }
 
     const comp = {
-      id, name, notes, tags, folderId, sortOrder, buildIds, partyLines, gameMode, buildColors,
+      id, name, notes, tags, folderId, sortOrder, buildIds, partyLines, gameMode, buildColors, categories,
       ...publishedPatch,
       createdAt: now, updatedAt: now,
     };

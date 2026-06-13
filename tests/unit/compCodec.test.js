@@ -1,4 +1,4 @@
-const { isValidCompCode, encodeComp, decodeComp } = require("../../src/main/compCodec");
+const { isValidCompCode, encodeComp, decodeComp, remapImportedComp } = require("../../src/main/compCodec");
 
 describe("isValidCompCode", () => {
   test("returns true for valid comp code format", () => {
@@ -251,6 +251,83 @@ describe("round-trip integration", () => {
     const code = encodeComp(comp, {});
     const decoded = decodeComp(code);
     expect(decoded.gameMode).toBeNull();
+  });
+
+  // ── Sharing with comp-scoped categories + tag slots ──────────────────────
+  // Simulates the full export → import path: encode in the app's stored shape, decode,
+  // then run the same remap the import IPC handler uses to rebuild a stored comp.
+  function importFromCode(code) {
+    const decoded = decodeComp(code);
+    // The import handler creates a new build per decoded build object and records the
+    // object → new id mapping. Reproduce that here with deterministic fake ids.
+    const buildRefToId = new Map();
+    decoded.builds.forEach((b, i) => buildRefToId.set(b, `new-build-${i}`));
+    const { partyLines, categories } = remapImportedComp(decoded, buildRefToId);
+    return { decoded, partyLines, categories };
+  }
+
+  test("shares a comp's categories and tag slots end-to-end (export → decode → remap)", () => {
+    const comp = {
+      name: "Tagged Raid",
+      gameMode: "wvw",
+      buildIds: ["a", "b"],
+      categories: [
+        { id: "cat-dps", name: "DPS", icon: "img/tags/might.png", buildIds: ["a", "b"] },
+        { id: "cat-strip", name: "Strips", icon: "img/tags/strips.png", buildIds: ["a"] },
+      ],
+      partyLines: [
+        { id: "p1", capacity: 5, slots: ["a", "tag:cat-dps"] },
+        { id: "p2", capacity: 5, slots: ["tag:cat-strip", "b"] },
+      ],
+    };
+    const builds = { a: buildA, b: buildB };
+
+    const code = encodeComp(comp, builds);
+    const { partyLines, categories } = importFromCode(code);
+
+    // Both categories survive with name + icon, members remapped to new ids
+    expect(categories).toHaveLength(2);
+    expect(categories[0]).toMatchObject({ id: "cat-dps", name: "DPS", icon: "img/tags/might.png" });
+    expect(categories[0].buildIds).toHaveLength(2);
+    expect(categories[0].buildIds.every((id) => id.startsWith("new-build-"))).toBe(true);
+    expect(categories[1]).toMatchObject({ id: "cat-strip", name: "Strips" });
+    expect(categories[1].buildIds).toHaveLength(1);
+
+    // Tag slots come back as "tag:<categoryId>" in the right positions
+    expect(partyLines[0].slots[1]).toBe("tag:cat-dps");
+    expect(partyLines[1].slots[0]).toBe("tag:cat-strip");
+    // Build slots remapped to new ids (not tag tokens)
+    expect(partyLines[0].slots[0]).toMatch(/^new-build-/);
+    expect(partyLines[1].slots[1]).toMatch(/^new-build-/);
+  });
+
+  test("shares a category whose member build never appears in a line", () => {
+    // buildB is only referenced via the category, not any slot — it must still encode.
+    const comp = {
+      name: "Bench Tag",
+      gameMode: "wvw",
+      buildIds: ["a", "b"],
+      categories: [{ id: "c", name: "Backup", icon: "", buildIds: ["b"] }],
+      partyLines: [{ id: "p1", capacity: 5, slots: ["a", "tag:c"] }],
+    };
+    const { decoded, categories, partyLines } = importFromCode(encodeComp(comp, { a: buildA, b: buildB }));
+
+    expect(decoded.builds).toHaveLength(2); // both builds encoded
+    expect(categories[0].buildIds).toHaveLength(1); // the bench build resolved
+    expect(partyLines[0].slots[1]).toBe("tag:c");
+  });
+
+  test("remapImportedComp drops a tag slot whose category was lost", () => {
+    // Defensive: a marker with no surviving category id still yields a token, but a
+    // build ref absent from the map is dropped.
+    const decoded = {
+      partyLines: [{ capacity: 5, slots: [{}, "ghost-ref", { __tagCategoryId: "c1" }] }],
+      categories: [{ id: "c1", name: "X", icon: "", builds: ["ghost-ref"] }],
+    };
+    const { partyLines, categories } = remapImportedComp(decoded, new Map());
+    // ghost-ref not in map → dropped; the {} slot is not a tag marker and not in map → dropped
+    expect(partyLines[0].slots).toEqual(["tag:c1"]);
+    expect(categories[0].buildIds).toEqual([]);
   });
 
   test("wvw gameMode round-trips correctly", () => {
