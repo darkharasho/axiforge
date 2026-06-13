@@ -1,3 +1,14 @@
+## Version v0.7.2 — June 13, 2026
+
+### New Features
+
+- **Build tags for compositions** — Group a comp's builds into named tags (e.g. DPS, Strips, Stability, Might, Regen) with role icons, then drag a whole tag onto a party line as a single icon slot that stands for "one of these builds." Hover a tag — on a chip or in a line — to see exactly which builds it covers. Tags carry through everywhere: the editor, published and shared comps, share codes, and the Discord signup export (where each tag shows its emoji).
+- **Cleaner party-line numbers** — Party lines now use crisp numbered badges instead of emoji, in both the app and on published pages.
+
+### Bug Fixes
+
+- **Fixed broken images on published pages** — Images and fonts (favicons, logos, and the new tag icons) were being uploaded in a corrupted form and failed to display on the published site. They now render correctly.
+
 ## Version v0.6.30 — May 28, 2026
 
 ### Bug Fixes
