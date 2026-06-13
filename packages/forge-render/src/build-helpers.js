@@ -25,8 +25,11 @@ export function getSpecIconColored(build, color) {
 }
 
 export function profClass(profession) {
-  if (!profession) return "";
-  return `lib-prof--${profession.toLowerCase()}`;
+  const slug = String(profession || "")
+    .toLowerCase()
+    .replace(/[^a-z-]/g, "");
+  if (!slug) return "";
+  return `lib-prof--${slug}`;
 }
 
 export function getDisplayName(build) {

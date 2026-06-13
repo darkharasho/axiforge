@@ -37,6 +37,20 @@ describe("@axiapps/forge-render mini build card", () => {
     expect(html).toContain("&lt;img");
   });
 
+  test("sanitizes the profession class slug against attribute injection", () => {
+    const html = renderMiniBuildCard(
+      { ...build, profession: 'Warrior" onmouseover="x' },
+      null,
+      { showActions: false }
+    );
+    // The quote and space are stripped, so the payload can never escape the
+    // class attribute: no `" onmouseover="x"` ends up in the markup.
+    expect(html).not.toContain('"x"');
+    expect(html).not.toContain('onmouseover=');
+    expect(html).not.toContain('" onmouseover');
+    expect(html).toContain('class="mini-card lib-prof--warrioronmouseoverx"');
+  });
+
   test("renders the missing-build placeholder", () => {
     expect(renderMissingMiniBuildCard("deadbeefdeadbeef")).toContain("Missing Build");
   });
