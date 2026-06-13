@@ -101,6 +101,11 @@ function buildRoutes({ version, ops }) {
   return [
     { method: "GET", pattern: "/health", handler: async () => ({ ok: true, version }) },
 
+    // Graceful release for a headless instance an embedder (e.g. AxiVale) spawned:
+    // quit only if no window was ever promoted, so we never kill a window the user
+    // opened via AxiOM. ops.quitIfHeadless() owns the window check + the actual quit.
+    { method: "POST", pattern: "/lifecycle/quit-if-headless", handler: async () => ops.quitIfHeadless() },
+
     // ── Builds ───────────────────────────────────────────────────────────
     { method: "GET", pattern: "/builds", handler: async () => ops.listBuilds() },
     {

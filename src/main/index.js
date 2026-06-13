@@ -1976,6 +1976,13 @@ const readyWork = app.whenReady().then(async () => {
     token: apiToken,
     version: app.getVersion(),
     ops: {
+      // Quit only if still windowless (never promoted to a real window via a
+      // second-instance/AxiOM launch). Defer the quit so the 200 flushes first.
+      quitIfHeadless: () => {
+        const promoted = BrowserWindow.getAllWindows().length > 0;
+        if (!promoted) setTimeout(() => app.quit(), 50);
+        return { quitting: !promoted };
+      },
       listBuilds: () => invokeLocal("builds:list"),
       saveBuild: (build) => asHttpResult(invokeLocal("builds:save", build)),
       deleteBuild: (id) => asHttpResult(invokeLocal("builds:delete", id)),
