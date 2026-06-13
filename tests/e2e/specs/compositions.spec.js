@@ -463,3 +463,85 @@ test.describe("Compositions — Boon Coverage", () => {
     await window.waitForTimeout(200);
   });
 });
+
+// ── Section 17C: Build Tags (comp-scoped categories) ─────────────────────────
+
+test.describe("Compositions — Build Tags", () => {
+  let app, window;
+
+  const tagBuildA = makeTestBuild({ title: "Reaper DPS", profession: "Necromancer" });
+  const tagBuildB = makeTestBuild({ title: "Spellbreaker", profession: "Warrior" });
+  const tLineId = uuid();
+  const catId = uuid();
+
+  const taggedComp = makeTestComp({
+    name: "Tag Test Comp",
+    buildIds: [tagBuildA.id, tagBuildB.id],
+    categories: [
+      { id: catId, name: "DPS", icon: "img/tags/strips.png", buildIds: [tagBuildA.id, tagBuildB.id] },
+    ],
+    partyLines: [
+      { id: tLineId, capacity: 5, slots: [tagBuildA.id, `tag:${catId}`] },
+    ],
+  });
+
+  tagBuildA.compIds = [taggedComp.id];
+  tagBuildB.compIds = [taggedComp.id];
+
+  test.beforeAll(async () => {
+    cleanDataDir();
+    seedBuildFile(tagBuildA);
+    seedBuildFile(tagBuildB);
+    seedCompFile(taggedComp);
+    ({ app, window } = await launchApp({ clean: false }));
+    await goToComps(window);
+    await openFirstComp(window);
+  });
+
+  test.afterAll(async () => { await closeApp(app); });
+
+  test("a seeded tag slot renders as a single icon slot in the line", async () => {
+    const tagSlot = window.locator(
+      `.comp-line[data-line-id="${tLineId}"] .comp-slot--tag`
+    );
+    await expect(tagSlot).toHaveCount(1);
+    await expect(tagSlot.locator("img.comp-slot__tag-img")).toHaveAttribute("src", "img/tags/strips.png");
+  });
+
+  test("the category chip shows in the pool with its member count", async () => {
+    const chip = window.locator(`.comp-cat-chip[data-category-id="${catId}"]`);
+    await expect(chip).toBeVisible();
+    await expect(chip.locator(".comp-cat-chip__name")).toHaveText("DPS");
+    await expect(chip.locator(".comp-cat-chip__count")).toHaveText("2");
+  });
+
+  test("party-line label renders the Lucide-style numbered badge", async () => {
+    const label = window.locator(`.comp-line[data-line-id="${tLineId}"] .comp-line__label`);
+    await expect(label.locator("svg.comp-line__num")).toHaveCount(1);
+  });
+
+  test("creating a new tag via the modal adds a chip", async () => {
+    await window.locator("[data-action='cat-add']").click();
+    const modal = window.locator(".comp-picker-modal");
+    await expect(modal).toBeVisible();
+
+    await modal.locator(".comp-cat-name-input").fill("Heals");
+    // pick the first built-in icon option (skip the "none" ∅ option)
+    await modal.locator(".comp-cat-icon-opt[data-icon-url]").first().click();
+    // assign one build
+    await modal.locator(".comp-picker-row__checkbox").first().check();
+    await modal.locator("[data-action='cat-save']").click();
+
+    await expect(window.locator(".comp-cat-chip", { hasText: "Heals" })).toBeVisible({ timeout: 3000 });
+  });
+
+  test("hovering a tag chip shows the build options popover", async () => {
+    const chip = window.locator(`.comp-cat-chip[data-category-id="${catId}"]`);
+    await chip.hover();
+    const hoverCard = window.locator(".comp-cat-hover-card");
+    await expect(hoverCard).toBeVisible({ timeout: 3000 });
+    await expect(hoverCard.locator(".comp-cat-hover__title")).toHaveText("DPS");
+    await expect(hoverCard.locator(".comp-cat-hover__row")).toHaveCount(2);
+    await window.locator(".comp-detail__topbar").hover();
+  });
+});

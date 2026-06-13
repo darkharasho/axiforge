@@ -1,9 +1,12 @@
 "use strict";
 
 function serializeCompForPublish(comp, buildsMap) {
-  const { id, name, notes, tags, gameMode, partyLines, buildColors } = comp;
+  const { id, name, notes, tags, gameMode, partyLines, buildColors, categories } = comp;
   return {
     id, name, notes, tags, gameMode, partyLines, buildColors,
+    // Comp-scoped build categories, so published comps can render tag slots
+    // (the "tag:<id>" entries in partyLines.slots) with their icon and hover.
+    categories: categories || [],
     builds: { ...buildsMap },
   };
 }
@@ -21,7 +24,8 @@ function serializeCompForPublish(comp, buildsMap) {
 function getCompPublishBuildIds(comp) {
   const fromBuildIds = (comp.buildIds || []);
   const fromSlots = (comp.partyLines || [])
-    .flatMap((l) => (l.slots || []).filter(Boolean));
+    // Slots may hold category references ("tag:<id>") — those aren't builds, skip them.
+    .flatMap((l) => (l.slots || []).filter((s) => s && !String(s).startsWith("tag:")));
   return [...new Set([...fromBuildIds, ...fromSlots])];
 }
 

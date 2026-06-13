@@ -89,6 +89,35 @@ describe("CompStore — upsertComp", () => {
     expect(comp.name.length).toBe(140);
   });
 
+  test("defaults categories to an empty array", async () => {
+    const comp = await store.upsertComp(makeComp());
+    expect(comp.categories).toEqual([]);
+  });
+
+  test("normalizes and persists build categories (id, name, icon, buildIds)", async () => {
+    const comp = await store.upsertComp(makeComp({
+      categories: [
+        { name: "DPS", icon: "img/tags/dps.png", buildIds: ["b1", "b2"] },
+        // malformed entries are coerced: missing fields, non-string ids dropped
+        { name: "x".repeat(200), buildIds: ["b3", 42, null] },
+        "not-an-object",
+      ],
+    }));
+    expect(comp.categories).toHaveLength(2);
+    const [dps, second] = comp.categories;
+    expect(dps.id).toBeTruthy();
+    expect(dps.name).toBe("DPS");
+    expect(dps.icon).toBe("img/tags/dps.png");
+    expect(dps.buildIds).toEqual(["b1", "b2"]);
+    expect(second.name.length).toBe(60);
+    expect(second.icon).toBe("");
+    expect(second.buildIds).toEqual(["b3"]);
+
+    // survives a round-trip through the store
+    const reloaded = (await store.listComps()).find((c) => c.id === comp.id);
+    expect(reloaded.categories).toEqual(comp.categories);
+  });
+
   test("truncates notes to 100000 chars", async () => {
     const comp = await store.upsertComp(makeComp({ notes: "x".repeat(110000) }));
     expect(comp.notes.length).toBe(100000);

@@ -38,6 +38,19 @@ describe("serializeCompForPublish", () => {
     expect(result.partyLines).toEqual(comp.partyLines);
   });
 
+  test("includes comp categories so published comps can render tag slots", () => {
+    const categories = [
+      { id: "cat-dps", name: "DPS", icon: "img/tags/might.png", buildIds: ["build-1"] },
+    ];
+    const result = serializeCompForPublish(makeComp({ categories }), {});
+    expect(result.categories).toEqual(categories);
+  });
+
+  test("defaults categories to an empty array when the comp has none", () => {
+    const result = serializeCompForPublish(makeComp({ categories: undefined }), {});
+    expect(result.categories).toEqual([]);
+  });
+
   test("includes all builds in buildsMap regardless of party line assignment", () => {
     const comp = makeComp();
     const buildsMap = {
@@ -139,5 +152,17 @@ describe("getCompPublishBuildIds", () => {
     expect(ids).toContain("build-2");
     expect(ids).not.toContain(null);
     expect(ids).not.toContain(undefined);
+  });
+
+  test("excludes category tag slots ('tag:<id>') — they are not builds", () => {
+    const comp = {
+      id: "c1", name: "Test",
+      buildIds: ["build-1"],
+      partyLines: [{ id: "l1", slots: ["build-1", "tag:cat-dps", "build-2"] }],
+    };
+    const ids = getCompPublishBuildIds(comp);
+    expect(ids).toContain("build-1");
+    expect(ids).toContain("build-2");
+    expect(ids.some((id) => String(id).startsWith("tag:"))).toBe(false);
   });
 });

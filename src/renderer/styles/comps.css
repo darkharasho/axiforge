@@ -1043,6 +1043,15 @@
   text-align: right;
 }
 
+.comp-line__num {
+  width: 20px;
+  height: 20px;
+  display: block;
+  color: var(--muted);
+}
+
+.comp-line--multirow .comp-line__num { color: var(--text); }
+
 .comp-line--multirow .comp-line__label {
   background: var(--panel-2);
   color: var(--text);
@@ -1301,6 +1310,272 @@
   font-size: 13px;
   padding: 20px 0;
   text-align: center;
+}
+
+/* ── Build category (tag) chips ───────────────────────────────────────────── */
+.comp-cat-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 6px 0 8px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--line);
+}
+
+.comp-cat-row__label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+}
+
+.comp-cat-list {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.comp-cat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--text);
+  cursor: grab;
+  user-select: none;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.comp-cat-chip:hover {
+  background: var(--line);
+  border-color: var(--muted);
+}
+
+.comp-cat-chip:active {
+  cursor: grabbing;
+}
+
+.comp-cat-chip__icon {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.comp-cat-chip__count {
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--muted);
+  background: var(--bg-2);
+  border-radius: 999px;
+}
+
+/* SortableJS fallback ghost while dragging a chip */
+.comp-cat-drag-ghost {
+  opacity: 0.9;
+  box-shadow: var(--shadow-md);
+}
+
+.comp-cat-add {
+  background: transparent;
+  border: 1px dashed var(--line);
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 12px;
+  color: var(--muted);
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.comp-cat-add:hover {
+  background: var(--panel-2);
+  color: var(--text);
+  border-color: var(--muted);
+}
+
+/* ── Category hover preview ────────────────────────────────────────────────── */
+.comp-cat-hover-card {
+  position: fixed;
+  z-index: var(--z-modal);
+  min-width: 180px;
+  max-width: 260px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  box-shadow: var(--shadow-md);
+  padding: 8px;
+  pointer-events: none;
+  animation: comp-hover-in 0.14s ease;
+}
+
+.comp-cat-hover__title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.comp-cat-hover__row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+  border-left: 3px solid var(--line);
+  padding-left: 6px;
+}
+
+.comp-cat-hover__row.lib-prof--guardian     { border-left-color: #6ea8ff; }
+.comp-cat-hover__row.lib-prof--warrior      { border-left-color: #ff9944; }
+.comp-cat-hover__row.lib-prof--necromancer  { border-left-color: #4dca7a; }
+.comp-cat-hover__row.lib-prof--engineer     { border-left-color: #cc8844; }
+.comp-cat-hover__row.lib-prof--ranger       { border-left-color: #77cc55; }
+.comp-cat-hover__row.lib-prof--thief        { border-left-color: #cc6677; }
+.comp-cat-hover__row.lib-prof--mesmer       { border-left-color: #b07acc; }
+.comp-cat-hover__row.lib-prof--elementalist { border-left-color: #dd5555; }
+.comp-cat-hover__row.lib-prof--revenant     { border-left-color: #aa6655; }
+
+.comp-cat-hover__icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.comp-cat-hover__icon img,
+.comp-cat-hover__icon svg {
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+}
+
+.comp-cat-hover__name {
+  font-size: 12px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.comp-cat-hover__empty {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+/* Category modal extras (reuses .comp-picker-modal) */
+.comp-cat-modal__spacer { flex: 1; }
+
+.comp-cat-name-input--error {
+  border-color: #d63a3a !important;
+}
+
+.comp-picker-modal__btn--delete {
+  color: #e06464;
+}
+
+.comp-picker-modal__btn--delete:hover {
+  background: rgba(214, 58, 58, 0.12);
+}
+
+/* ── Tag slot in a party line ──────────────────────────────────────────────── */
+.comp-slot--tag {
+  background: var(--panel-2);
+  border-style: dashed;
+}
+
+.comp-slot__tag-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.comp-slot__tag-text {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* ── Icon picker (category editor) ─────────────────────────────────────────── */
+.comp-cat-icon-picker {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.comp-cat-icon-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+
+.comp-cat-icon-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 34px);
+  gap: 6px;
+  max-height: 132px;
+  overflow-y: auto;
+}
+
+.comp-cat-icon-opt {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  color: var(--muted);
+  transition: border-color 0.12s, background 0.12s;
+}
+
+.comp-cat-icon-opt:hover {
+  border-color: var(--muted);
+}
+
+.comp-cat-icon-opt img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.comp-cat-icon-opt--none {
+  font-size: 16px;
+}
+
+.comp-cat-icon-opt--active {
+  border-color: var(--accent, #6ea8ff);
+  background: color-mix(in srgb, var(--accent, #6ea8ff) 18%, transparent);
+}
+
+.comp-cat-icon-custom {
+  margin-top: 8px;
+  width: 100%;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xs);
+  padding: 5px 8px;
+  font-size: 12px;
+  color: var(--text);
+  font-family: inherit;
 }
 
 

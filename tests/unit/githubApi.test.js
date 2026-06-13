@@ -537,6 +537,38 @@ describe("publishSiteBundle — SHA deduplication", () => {
     expect(result.files).not.toContain("site/invalid");
   });
 
+  test("commits binary (image) entries as their real bytes, not base64-as-text", async () => {
+    // buildSpaBundle() hands binary assets to publishSiteBundle already base64-encoded.
+    // Regression: they must be decoded before committing, or the image deploys as
+    // undecodable base64 text (naturalWidth=0 in the browser).
+    const pngBytes = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3, 4]);
+    const pngBase64 = pngBytes.toString("base64");
+
+    let blobBody = null;
+    global.fetch = jest.fn((url, options) => {
+      const urlStr = String(url);
+      const method = (options?.method || "GET").toUpperCase();
+      if (urlStr.includes(`/repos/${FAKE_OWNER}/${FAKE_REPO}`) && method === "GET" && !urlStr.includes("/git/")) return okRes({ name: FAKE_REPO });
+      if (urlStr.includes("/git/ref/heads/") && method === "GET") return okRes({ object: { sha: HEAD_SHA } });
+      if (urlStr.includes(`/git/commits/${HEAD_SHA}`) && method === "GET") return okRes({ tree: { sha: TREE_SHA } });
+      if (urlStr.includes(`/git/trees/${TREE_SHA}`) && method === "GET") return okRes({ tree: [] });
+      if (urlStr.includes("/git/blobs") && method === "POST") { blobBody = JSON.parse(options.body); return okRes({ sha: "blobsha" }); }
+      if (urlStr.includes("/git/trees") && method === "POST") return okRes({ sha: "newtreesha" });
+      if (urlStr.includes("/git/commits") && method === "POST") return okRes({ sha: "newcommitsha" });
+      if (urlStr.includes("/git/refs/heads/") && method === "PATCH") return okRes({ object: { sha: "newcommitsha" } });
+      return okRes({});
+    });
+
+    await publishSiteBundle(FAKE_TOKEN, FAKE_OWNER, { "site/img/tags/might.png": pngBase64 });
+
+    expect(blobBody).not.toBeNull();
+    expect(blobBody.encoding).toBe("base64");
+    // The committed base64 must round-trip to the ORIGINAL bytes — i.e. equal the input
+    // base64 — not the base64 of the base64 string (the old double-encoding bug).
+    expect(blobBody.content).toBe(pngBase64);
+    expect(Buffer.from(blobBody.content, "base64").equals(pngBytes)).toBe(true);
+  });
+
   test("files property lists all published file paths", async () => {
     global.fetch = buildMockFetch({ existingFiles: {} });
     const bundle = {

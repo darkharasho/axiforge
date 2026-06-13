@@ -128,6 +128,44 @@ describe("decodeCompCode", () => {
     expect(decoded.partyLines[0].slots[0].profession).toBe("Warrior");
   });
 
+  test("round-trips comp-scoped categories and tag slots", () => {
+    const comp = {
+      name: "Tagged Comp",
+      gameMode: "wvw",
+      buildIds: ["b1"],
+      categories: [
+        { id: "cat-dps", name: "DPS", icon: "img/tags/dps.png", buildIds: ["b1"] },
+      ],
+      // line holds a real build, then a tag slot referencing the category
+      partyLines: [{ id: "line1", capacity: 5, slots: ["b1", "tag:cat-dps"] }],
+    };
+    const builds = { b1: mockBuild };
+
+    const decoded = decodeCompCode(encodeCompCode(comp, builds));
+
+    expect(decoded).not.toBeNull();
+    // Category survives with name/icon and its member build remapped to a decoded ref
+    expect(decoded.categories).toHaveLength(1);
+    expect(decoded.categories[0].id).toBe("cat-dps");
+    expect(decoded.categories[0].name).toBe("DPS");
+    expect(decoded.categories[0].icon).toBe("img/tags/dps.png");
+    expect(decoded.categories[0].builds[0].profession).toBe("Warrior");
+    // The tag slot decodes to a marker the import layer turns into "tag:<id>"
+    expect(decoded.partyLines[0].slots).toHaveLength(2);
+    expect(decoded.partyLines[0].slots[0].profession).toBe("Warrior");
+    expect(decoded.partyLines[0].slots[1]).toEqual({ __tagCategoryId: "cat-dps" });
+  });
+
+  test("a comp with no categories omits the cat field (backward-compatible)", () => {
+    const comp = {
+      name: "Plain", gameMode: "pve",
+      partyLines: [{ id: "l1", capacity: 5, slots: ["b1"] }],
+      buildIds: ["b1"],
+    };
+    const decoded = decodeCompCode(encodeCompCode(comp, { b1: mockBuild }));
+    expect(decoded.categories).toEqual([]);
+  });
+
   test("deduplicates builds — same build in multiple slots shares reference", () => {
     const comp = {
       name: "Dedup Test",

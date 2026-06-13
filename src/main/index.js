@@ -941,17 +941,17 @@ const readyWork = app.whenReady().then(async () => {
       buildRefToId.set(build, saved.id);
     }
 
-    // Map party line slots from decoded build refs to new build IDs
-    const partyLines = decoded.partyLines.map((line) => ({
-      capacity: line.capacity,
-      slots: line.slots.map((buildRef) => buildRefToId.get(buildRef)).filter(Boolean),
-    }));
+    // Remap decoded build refs → new build IDs for both party-line slots and categories.
+    // Tag slots arrive as { __tagCategoryId } markers and become "tag:<categoryId>" tokens.
+    const { remapImportedComp } = require("./compCodec.js");
+    const { partyLines, categories } = remapImportedComp(decoded, buildRefToId);
 
-    // Update the comp with buildIds and partyLines
+    // Update the comp with buildIds, partyLines, and categories
     const updated = await compStore.upsertComp({
       ...comp,
       buildIds: newBuildIds,
       partyLines,
+      categories,
     });
 
     // Return comp ID + warning count for UI feedback
@@ -1569,7 +1569,7 @@ const readyWork = app.whenReady().then(async () => {
   });
 
   handle("comps:generate-plaintext", async (_e, compId) => {
-    const { getDisplayName, getDiscordEmoji } = require("./discordEmoji");
+    const { getDisplayName, getDiscordEmoji, tagEmojiMention } = require("./discordEmoji");
 
     const allComps = await compStore.listComps();
     const comp = allComps.find((c) => c.id === compId);
@@ -1603,10 +1603,24 @@ const readyWork = app.whenReady().then(async () => {
       "\uD83D\uDD1F",
     ];
     const buildColors = comp.buildColors || {};
+
+    // A slot can be a category reference ("tag:<id>") instead of a build. Render it as
+    // the category's custom Discord emoji so it shows up on signups exactly like the
+    // built-in role icons. Derive the <:name:id> mention from the stored emoji CDN URL.
+    const TAG_PREFIX = "tag:";
+    const categoryById = new Map((comp.categories || []).map((c) => [c.id, c]));
+    const mentionForCategory = (category) => tagEmojiMention(category?.icon, category?.name);
+
     const gridRows = [];
     (comp.partyLines || []).forEach((line, idx) => {
       const emojis = [];
       (line.slots || []).forEach((slotId) => {
+        if (typeof slotId === "string" && slotId.startsWith(TAG_PREFIX)) {
+          const cat = categoryById.get(slotId.slice(TAG_PREFIX.length));
+          const mention = cat ? mentionForCategory(cat) : null;
+          if (mention) emojis.push(mention);
+          return;
+        }
         const build = buildsMap[slotId];
         if (!build) return;
         const emoji = getDiscordEmoji(build, buildColors[slotId] || "normal");
@@ -1632,6 +1646,13 @@ const readyWork = app.whenReady().then(async () => {
       for (const slotId of line.slots || []) {
         if (seen.has(slotId)) continue;
         seen.add(slotId);
+        if (typeof slotId === "string" && slotId.startsWith(TAG_PREFIX)) {
+          const cat = categoryById.get(slotId.slice(TAG_PREFIX.length));
+          if (!cat) continue;
+          const mention = mentionForCategory(cat);
+          legendLines.push(`${mention ? mention + " " : ""}${cat.name} _(tag)_`);
+          continue;
+        }
         const build = buildsMap[slotId];
         if (!build) continue;
         const emoji = getDiscordEmoji(build, buildColors[slotId] || "normal");

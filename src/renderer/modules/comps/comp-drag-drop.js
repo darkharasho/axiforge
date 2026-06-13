@@ -62,6 +62,32 @@ export function wireCompDragDrop(callbacks) {
     );
   }
 
+  // ── Tag chip sortable (clone mode) ───────────────────────────────
+  // Category chips share the "comp-builds" group so they can be dropped onto lines.
+  // The chip carries data-category-id; the line onAdd handler routes it to
+  // onDropCategoryToLine, which expands it into its member builds.
+  const catListEl = document.querySelector(".comp-cat-list");
+  if (catListEl) {
+    _sortableInstances.push(
+      new Sortable(catListEl, {
+        group: { name: "comp-builds", pull: "clone", put: false },
+        sort: false,
+        animation: 150,
+        forceFallback: true,
+        fallbackClass: "comp-cat-drag-ghost",
+        draggable: ".comp-cat-chip",
+        onStart() {
+          _addDraggingClass();
+          document.querySelector(".comp-line-trash")?.classList.add("comp-line-trash--visible");
+        },
+        onEnd() {
+          collapseHoverExpanded();
+          document.querySelector(".comp-line-trash")?.classList.remove("comp-line-trash--visible");
+        },
+      })
+    );
+  }
+
   // ── Party line slots sortable (one per line) ─────────────────────
   document.querySelectorAll(".comp-line__slots").forEach((lineSlotsEl) => {
     _sortableInstances.push(
@@ -93,7 +119,12 @@ export function wireCompDragDrop(callbacks) {
         },
         onAdd(evt) {
           const toLineId = lineSlotsEl.closest("[data-line-id]")?.dataset.lineId;
-          if (evt.item.classList.contains("comp-slot--filled")) {
+          if (evt.item.dataset.categoryId) {
+            // Tag chip dropped onto line → expand into its member builds
+            const categoryId = evt.item.dataset.categoryId;
+            evt.item.remove();
+            callbacks.onDropCategoryToLine?.(categoryId, toLineId);
+          } else if (evt.item.classList.contains("comp-slot--filled")) {
             // Slot moved from another line (or returned to original line)
             const fromLineId = evt.item.dataset.lineId;
             const fromSlotIdx = parseInt(evt.item.dataset.slotIdx, 10);
@@ -127,6 +158,11 @@ export function wireCompDragDrop(callbacks) {
         group: { name: "comp-builds", pull: false, put: true },
         animation: 150,
         onAdd(evt) {
+          // A tag chip dragged here is meaningless (nothing to remove) — just discard it.
+          if (evt.item.dataset.categoryId) {
+            evt.item.remove();
+            return;
+          }
           const lineId = evt.item.dataset.lineId;
           const slotIdx = parseInt(evt.item.dataset.slotIdx, 10);
           evt.item.remove();

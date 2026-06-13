@@ -274,4 +274,33 @@ function getDisplayName(build) {
   return build.title || getEliteSpecName(build) || build.profession || "Untitled";
 }
 
-module.exports = { getDiscordEmoji, getDisplayName, getEliteSpecName, getSpecLineEmoji, DISCORD_EMOJI };
+// Comp build-tag icons → EWW Discord custom emoji IDs, keyed by the icon path stored on
+// the category (img/tags/<key>.png). The PNGs themselves live in public/img/tags/ for
+// native in-app and SPA rendering; these IDs are only needed to render a tag as a real
+// Discord emoji in the plaintext signup export.
+const TAG_EMOJI_IDS = {
+  "img/tags/strips.png":    "1434444303756820520",
+  "img/tags/utility.png":   "1443686727347601438",
+  "img/tags/stability.png": "1434444302137954374",
+  "img/tags/might.png":     "1434444297255518389",
+  "img/tags/regen.png":     "1434444299071918111",
+};
+
+// Resolve a category's stored icon to a Discord emoji mention for the plaintext export.
+// Built-in icons map by path; a custom Discord-CDN URL still works via its embedded id.
+function tagEmojiMention(iconPath, name) {
+  let id = TAG_EMOJI_IDS[iconPath];
+  let animated = "";
+  if (!id) {
+    const m = String(iconPath || "").match(/emojis\/(\d+)\.(png|gif)/);
+    if (m) { id = m[1]; animated = m[2] === "gif" ? "a" : ""; }
+  }
+  if (!id) return null;
+  const safe = String(name || "tag").replace(/[^a-zA-Z0-9_]/g, "_").slice(0, 32) || "tag";
+  return `<${animated}:${safe}:${id}>`;
+}
+
+module.exports = {
+  getDiscordEmoji, getDisplayName, getEliteSpecName, getSpecLineEmoji, DISCORD_EMOJI,
+  TAG_EMOJI_IDS, tagEmojiMention,
+};

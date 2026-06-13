@@ -85,6 +85,33 @@
 
 /* Comp slots are read-only in the SPA — no drag/grab cursor */
 .comp-slot--filled { cursor: default; }
+.comp-slot--tag { border-style: dashed; }
+
+/* Lucide-style numbered party-line badge */
+.comp-line__num { width: 20px; height: 20px; display: block; color: var(--muted); }
+
+/* Tag-slot hover popover (parity with the desktop app) */
+.comp-tag-pop {
+  position: fixed;
+  z-index: 9999;
+  min-width: 170px;
+  max-width: 260px;
+  background: var(--panel, #1b1e25);
+  border: 1px solid var(--line, #2d313b);
+  border-radius: 7px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  padding: 8px;
+  pointer-events: none;
+}
+.comp-tag-pop__title { font-size: 12px; font-weight: 600; color: var(--text, #e6e8ee); margin-bottom: 6px; }
+.comp-tag-pop__row { display: flex; align-items: center; gap: 6px; padding: 2px 0 2px 6px; border-left: 3px solid var(--line, #2d313b); }
+.comp-tag-pop__icon { width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; }
+.comp-tag-pop__icon svg, .comp-tag-pop__icon img { width: 18px; height: 18px; }
+.comp-tag-pop__name { font-size: 12px; color: var(--text, #e6e8ee); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.comp-tag-pop__empty { font-size: 12px; color: var(--muted, #9aa3b2); }
+.comp-slot--tag .comp-slot__icon { display: flex; align-items: center; justify-content: center; }
+.comp-slot__tag-img { width: 26px; height: 26px; object-fit: contain; }
+.comp-slot__tag-text { font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--muted); }
 a.comp-slot { text-decoration: none; color: inherit; cursor: pointer; }
 .mini-card { cursor: default; }
 .comp-line__label { cursor: default; }

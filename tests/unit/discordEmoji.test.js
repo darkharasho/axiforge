@@ -1,6 +1,6 @@
 "use strict";
 
-const { getDiscordEmoji, getDisplayName } = require("../../src/main/discordEmoji");
+const { getDiscordEmoji, getDisplayName, tagEmojiMention } = require("../../src/main/discordEmoji");
 
 describe("getDiscordEmoji", () => {
   test("returns elite spec emoji when build has elite specialization", () => {
@@ -72,5 +72,36 @@ describe("getDisplayName", () => {
 
   test("falls back to Untitled", () => {
     expect(getDisplayName({})).toBe("Untitled");
+  });
+});
+
+describe("tagEmojiMention", () => {
+  test("maps a built-in tag icon path to its Discord emoji mention", () => {
+    expect(tagEmojiMention("img/tags/strips.png", "Strips")).toBe("<:Strips:1434444303756820520>");
+    expect(tagEmojiMention("img/tags/might.png", "Might")).toBe("<:Might:1434444297255518389>");
+  });
+
+  test("sanitizes the emoji name (Discord allows only [A-Za-z0-9_])", () => {
+    expect(tagEmojiMention("img/tags/regen.png", "Regen / Heal!")).toBe("<:Regen___Heal_:1434444299071918111>");
+  });
+
+  test("falls back to 'tag' when no usable name is given", () => {
+    expect(tagEmojiMention("img/tags/utility.png", "")).toBe("<:tag:1443686727347601438>");
+  });
+
+  test("returns null for an unknown icon path", () => {
+    expect(tagEmojiMention("img/tags/nope.png", "Nope")).toBeNull();
+    expect(tagEmojiMention("", "X")).toBeNull();
+    expect(tagEmojiMention(undefined, "X")).toBeNull();
+  });
+
+  test("derives an id from a raw Discord CDN url (custom icon fallback)", () => {
+    expect(tagEmojiMention("https://cdn.discordapp.com/emojis/123456789012345678.png", "Custom"))
+      .toBe("<:Custom:123456789012345678>");
+  });
+
+  test("uses the animated prefix for a .gif CDN url", () => {
+    expect(tagEmojiMention("https://cdn.discordapp.com/emojis/999.gif", "Anim"))
+      .toBe("<a:Anim:999>");
   });
 });
