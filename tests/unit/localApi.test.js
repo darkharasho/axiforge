@@ -23,6 +23,7 @@ function stubOps(overrides = {}) {
     compPlaintext: async () => "",
     importChatLink: async () => ({}),
     importGw2Skills: async () => ({}),
+    parseGw2Skills: async () => ({}),
     listProfessions: async () => [],
     getProfessionCatalog: async () => ({}),
     getUpgradeCatalog: async () => ({}),
@@ -367,10 +368,12 @@ describe("local API — import endpoints", () => {
   let api, token, port;
   const importedChatLinks = [];
   const importedGw2Skills = [];
+  const parsedGw2Skills = [];
 
   beforeEach(async () => {
     importedChatLinks.length = 0;
     importedGw2Skills.length = 0;
+    parsedGw2Skills.length = 0;
     ({ api, token, port } = await startApi({
       importChatLink: async (link, name, folderId, gameMode) => {
         importedChatLinks.push({ link, name, folderId, gameMode });
@@ -379,6 +382,10 @@ describe("local API — import endpoints", () => {
       importGw2Skills: async (url, name, folderId, gameMode) => {
         importedGw2Skills.push({ url, name, folderId, gameMode });
         return { id: "imported-2", title: name || "Imported Build", gameMode: gameMode || "pve" };
+      },
+      parseGw2Skills: async (url, gameMode) => {
+        parsedGw2Skills.push({ url, gameMode });
+        return { id: undefined, profession: "Guardian", gameMode: gameMode || "pve", equipment: {} };
       },
     }));
   });
@@ -425,6 +432,32 @@ describe("local API — import endpoints", () => {
     const res = await req(port, token, "POST", "/import/gw2skills", {});
     expect(res.status).toBe(400);
     expect(importedGw2Skills).toHaveLength(0);
+  });
+
+  test("POST /import/gw2skills/parse returns the parsed build (not saved) and forwards url + gameMode", async () => {
+    const res = await req(port, token, "POST", "/import/gw2skills/parse", {
+      url: "http://gw2skills.net/editor/?ABC",
+      gameMode: "wvw",
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.profession).toBe("Guardian");
+    expect(body.gameMode).toBe("wvw");
+    expect(parsedGw2Skills).toEqual([{ url: "http://gw2skills.net/editor/?ABC", gameMode: "wvw" }]);
+  });
+
+  test("POST /import/gw2skills/parse defaults gameMode to undefined when omitted", async () => {
+    const res = await req(port, token, "POST", "/import/gw2skills/parse", {
+      url: "http://gw2skills.net/editor/?ABC",
+    });
+    expect(res.status).toBe(200);
+    expect(parsedGw2Skills).toEqual([{ url: "http://gw2skills.net/editor/?ABC", gameMode: undefined }]);
+  });
+
+  test("POST /import/gw2skills/parse requires a url", async () => {
+    const res = await req(port, token, "POST", "/import/gw2skills/parse", {});
+    expect(res.status).toBe(400);
+    expect(parsedGw2Skills).toHaveLength(0);
   });
 });
 

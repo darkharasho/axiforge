@@ -884,6 +884,10 @@ const readyWork = app.whenReady().then(async () => {
     const build = await importGw2SkillsBuild(url, name, folderId, gameMode);
     return store.upsertBuild(build);
   });
+  handle("builds:parse-gw2skills", async (_e, url, gameMode) => {
+    const { parseGw2Skills } = require("./gw2skillsImport.js");
+    return parseGw2Skills(url, { gameMode });
+  });
   handle("builds:encode-share-code", async (_e, build) => {
     const { encodeShareCode } = require("@axiapps/code");
     return encodeShareCode(build);
@@ -1988,6 +1992,8 @@ const readyWork = app.whenReady().then(async () => {
         asHttpResult(invokeLocal("builds:import-chat-link", link, name, folderId, gameMode), { badInput: true }),
       importGw2Skills: (url, name, folderId, gameMode) =>
         asHttpResult(invokeLocal("builds:import-gw2skills", url, name, folderId, gameMode), { badInput: true }),
+      parseGw2Skills: (url, gameMode) =>
+        asHttpResult(invokeLocal("builds:parse-gw2skills", url, gameMode), { badInput: true }),
       listProfessions: () => getProfessionList("en"),
       getProfessionCatalog: (id, gameMode) => getProfessionCatalog(id, "en", gameMode),
       getUpgradeCatalog: () => getUpgradeCatalog("en"),
