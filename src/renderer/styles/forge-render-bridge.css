@@ -1,0 +1,27 @@
+.forge-render {
+  --fr-panel: var(--panel);
+  --fr-panel-2: var(--panel-2);
+  --fr-line: var(--line);
+  --fr-line-soft: var(--line-soft);
+  --fr-text: var(--text);
+  --fr-text-light: var(--text-light);
+  --fr-text-dim: var(--text-dim);
+  --fr-muted: var(--muted);
+  --fr-accent-rgb: var(--accent-rgb);
+  --fr-accent: var(--accent);
+  --fr-gold: var(--gold);
+  --fr-danger-text: var(--danger-text);
+  --fr-hover-subtle: var(--hover-subtle);
+  --fr-hover-accent: var(--hover-accent);
+  --fr-radius-sm: var(--radius-sm);
+  --fr-radius-xs: var(--radius-xs);
+  --fr-surface: var(--surface);
+  --fr-panel-gradient: var(--panel-gradient);
+  --fr-z-tooltip: var(--z-tooltip);
+  --fr-bg-raised: var(--bg-raised);
+  --fr-bg-surface: var(--bg-surface);
+  --fr-bg-tertiary: var(--bg-tertiary);
+  --fr-border: var(--border);
+  --fr-hover: var(--hover);
+  --fr-text-secondary: var(--text-secondary);
+}

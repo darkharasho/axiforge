@@ -11,8 +11,8 @@
 @import "../renderer/styles/notes.css";
 @import "../renderer/styles/detail-panel.css";
 @import "../renderer/styles/comps.css";
-@import "../renderer/styles/mini-build-card.css";
-@import "../renderer/styles/role-badge.css";
+@import "../../packages/forge-render/src/forge-render.css";
+@import "../renderer/styles/forge-render-bridge.css";
 @import "./site-mobile.css";
 
 /* ── Mini card SPA overrides ─────────────────────────────────────────── */

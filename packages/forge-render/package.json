@@ -1,0 +1,29 @@
+{
+  "name": "@axiapps/forge-render",
+  "version": "0.1.0",
+  "description": "Framework-free AxiForge build/comp card renderers + scoped CSS, shared with AxiVale and AxiBridge",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./forge-render.css": "./src/forge-render.css"
+  },
+  "scripts": {
+    "test": "jest"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": ["**/packages/forge-render/tests/**/*.test.js"],
+    "clearMocks": true
+  },
+  "license": "MIT",
+  "keywords": ["gw2", "guild-wars-2", "build-card", "axiforge", "axivale"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/darkharasho/axiforge",
+    "directory": "packages/forge-render"
+  },
+  "dependencies": {
+    "@axiapps/gw2-data": "file:../gw2-data",
+    "gw2-class-icons": "^0.3.0"
+  }
+}

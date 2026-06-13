@@ -1,0 +1,767 @@
+/* @axiapps/forge-render — generated once by scripts/extract-forge-render-css.mjs,
+   hand-maintained afterwards. All selectors are scoped under .forge-render and
+   all theme variables are namespaced --fr-* with baked-in AxiForge dark
+   defaults, so embedding apps (AxiVale) can't collide with these styles. */
+/* ── Mini Build Card ─────────────────────────────────────────────────────────
+   Reusable compact card showing build summary: specs, weapons, gear, relic.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+.forge-render .mini-card {
+  display: flex;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--fr-panel-2, #101114);
+  border-radius: var(--fr-radius-sm, 6px);
+  cursor: grab;
+  border-left: 3px solid currentColor;
+  position: relative;
+  transition: background 0.12s;
+}
+
+.forge-render .mini-card:hover {
+  background: var(--fr-panel, #141518);
+}
+
+/* ── Icon ──────────────────────────────────────────────────────────────────── */
+
+.forge-render .mini-card__icon {
+  width: 40px;
+  height: 40px;
+  background: var(--fr-hover-subtle, rgba(255, 255, 255, 0.05));
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  align-self: flex-start;
+  margin-top: 2px;
+}
+
+.forge-render .mini-card__icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* ── Info area ─────────────────────────────────────────────────────────────── */
+
+.forge-render .mini-card__info {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── Header row: name + tags + role + mode ─────────────────────────────────── */
+
+.forge-render .mini-card__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.forge-render .mini-card__name {
+  all: unset;
+  font-size: 13px;
+  color: var(--fr-text-light, #aeafb8);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  flex-shrink: 1;
+}
+
+/* When the name is a button or link (clickable link to build) */
+.forge-render button.mini-card__name,
+.forge-render a.mini-card__name {
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.forge-render button.mini-card__name:hover,
+.forge-render a.mini-card__name:hover {
+  color: var(--fr-text, #e2e3e8);
+}
+
+.forge-render .mini-card__name-arrow {
+  font-size: 11px;
+  opacity: 0;
+  transition: opacity 0.15s;
+  margin-left: 2px;
+}
+
+.forge-render button.mini-card__name:hover .mini-card__name-arrow,
+.forge-render a.mini-card__name:hover .mini-card__name-arrow {
+  opacity: 1;
+}
+
+.forge-render .mini-card__tag {
+  font-size: 9px;
+  border-radius: var(--fr-radius-xs, 4px);
+  padding: 1px 6px;
+  background: var(--fr-hover-subtle, rgba(255, 255, 255, 0.05));
+  border: none;
+  color: var(--fr-text-dim, #646670);
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.forge-render .mini-card__mode {
+  font-size: 9px;
+  color: var(--fr-text-dim, #646670);
+  background: var(--fr-hover-subtle, rgba(255, 255, 255, 0.05));
+  border: none;
+  border-radius: var(--fr-radius-xs, 4px);
+  padding: 1px 6px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+/* ── Right-side pills (role + mode) ────────────────────────────────────────── */
+
+.forge-render .mini-card__pills {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  margin-left: auto;
+  padding-right: 24px;
+}
+
+/* ── Color picker (Condi / Heal) ──────────────────────────────────────────── */
+
+.forge-render .mini-card__color-picker {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  font-size: 9px;
+  color: var(--fr-text-dim, #646670);
+  background: var(--fr-hover-subtle, rgba(255, 255, 255, 0.05));
+  border-radius: var(--fr-radius-xs, 4px);
+  padding: 1px 6px;
+  white-space: nowrap;
+  user-select: none;
+  position: relative;
+}
+.forge-render .mini-card__color-picker:hover { background: var(--fr-hover, rgba(255, 255, 255, 0.05)); }
+
+.forge-render .mini-card__color-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.forge-render .mini-card__color-label {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.forge-render .mini-card__color-caret {
+  font-size: 7px;
+  opacity: 0.5;
+}
+
+.forge-render .mini-card__color-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 2px;
+  background: var(--fr-bg-raised, #2a2a2a);
+  border: 1px solid var(--fr-border, #444);
+  border-radius: var(--fr-radius-sm, 6px);
+  padding: 2px 0;
+  z-index: 200;
+  min-width: 90px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}
+
+.forge-render .mini-card__color-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--fr-text, #e2e3e8);
+  white-space: nowrap;
+}
+.forge-render .mini-card__color-option:hover { background: var(--fr-hover-subtle, rgba(255, 255, 255, 0.05)); }
+.forge-render .mini-card__color-option--active { font-weight: 700; }
+
+/* ── Copy build code button ────────────────────────────────────────────────── */
+
+.forge-render .mini-card__btn-copy-code {
+  background: var(--fr-hover-subtle, rgba(255, 255, 255, 0.05));
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: var(--fr-text-dim, #646670);
+  padding: 1px 7px;
+  font-size: 9px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.forge-render .mini-card__btn-copy-code:hover {
+  background: var(--fr-hover-accent, rgba(200, 152, 72, 0.12));
+  color: var(--fr-text, #e2e3e8);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+.forge-render .mini-card__btn-copy-code--copied {
+  border-color: var(--fr-accent, rgb(200, 152, 72));
+  color: var(--fr-accent, rgb(200, 152, 72));
+}
+
+/* ── Two-Column Layout (specs left, gear right) ────────────────────────────── */
+
+.forge-render .mini-card__columns {
+  display: flex;
+  gap: 24px;
+  margin-top: 6px;
+}
+
+.forge-render .mini-card__info {
+  container-type: inline-size;
+}
+
+/* Left column: label + vertical spec list */
+.forge-render .mini-card__col-left {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+  align-items: flex-start;
+}
+
+.forge-render .mini-card__col-left .mini-card__detail-label {
+  margin-top: 2px;
+}
+
+.forge-render .mini-card__spec-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Right column: weapons, gear, relic stacked */
+.forge-render .mini-card__col-right {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+/* Drop to single stacked column when narrow */
+@container (max-width: 320px) {
+  .forge-render .mini-card__columns {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .forge-render .mini-card__col-left {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+}
+
+.forge-render .mini-card__cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.forge-render .mini-card__detail-label {
+  font-size: 9px;
+  color: var(--fr-text-dim, #646670);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  min-width: 36px;
+  flex-shrink: 0;
+}
+
+/* ── Spec lines (vertical) ──────────────────────────────────────────────────── */
+
+.forge-render .mini-card__spec-line {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.forge-render .mini-card__spec-pip {
+  width: 18px;
+  height: 18px;
+  border-radius: var(--fr-radius-xs, 4px);
+  background: rgba(136, 153, 187, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  font-weight: 600;
+  color: var(--fr-muted, #828490);
+  flex-shrink: 0;
+}
+
+.forge-render .mini-card__spec-pip svg {
+  width: 14px;
+  height: 14px;
+}
+
+.forge-render .mini-card__spec-pip--elite {
+  background: rgba(200, 169, 110, 0.15);
+  color: var(--fr-gold, #e8b050);
+  border: 1px solid rgba(200, 169, 110, 0.25);
+}
+
+.forge-render .mini-card__spec-pip--elite svg {
+  width: 14px;
+  height: 14px;
+}
+
+.forge-render .mini-card__spec-name {
+  font-size: 11px;
+  color: var(--fr-muted, #828490);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.forge-render .mini-card__spec-name--elite {
+  color: var(--fr-gold, #e8b050);
+  font-weight: 500;
+}
+
+
+/* ── Weapon group ──────────────────────────────────────────────────────────── */
+
+.forge-render .mini-card__weap-group {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.forge-render .mini-card__weap-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #fff;
+}
+
+.forge-render .mini-card__weap-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.forge-render .mini-card__weap-icon svg,
+.forge-render .mini-card__weap-icon svg path,
+.forge-render .mini-card__weap-icon svg g {
+  fill: #fff !important;
+  color: #fff !important;
+}
+
+.forge-render .mini-card__weap-name {
+  font-size: 11px;
+  color: var(--fr-accent, rgb(200, 152, 72));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.forge-render .mini-card__weap-sep {
+  color: var(--fr-line-soft, #181920);
+  margin: 0 2px;
+  font-size: 11px;
+}
+
+.forge-render .mini-card__weap-div {
+  color: var(--fr-line-soft, #181920);
+  margin: 0 4px;
+  font-size: 11px;
+}
+
+/* ── Gear icons & text ─────────────────────────────────────────────────────── */
+
+.forge-render .mini-card__gear-icon {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  flex-shrink: 0;
+}
+
+.forge-render .mini-card__gear-icon--stat {
+  background: rgba(200, 169, 110, 0.15);
+  color: var(--fr-gold, #e8b050);
+}
+
+.forge-render .mini-card__gear-icon--rune {
+  background: rgba(166, 187, 222, 0.12);
+  color: var(--fr-muted, #828490);
+}
+
+.forge-render .mini-card__gear-icon--relic {
+  background: rgba(170, 136, 204, 0.12);
+  color: #aa88cc;
+}
+
+.forge-render .mini-card__gear-img {
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+
+.forge-render .mini-card__stat {
+  font-size: 11px;
+  color: var(--fr-gold, #e8b050);
+  white-space: nowrap;
+}
+
+.forge-render .mini-card__equip {
+  font-size: 11px;
+  color: var(--fr-muted, #828490);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.forge-render .mini-card__relic {
+  font-size: 11px;
+  color: #aa88cc;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.forge-render .mini-card__sep {
+  font-size: 11px;
+  color: var(--fr-line-soft, #181920);
+  margin: 0 3px;
+}
+
+/* ── Remove button (absolute top-right) ────────────────────────────────────── */
+
+.forge-render .mini-card__btn-remove {
+  all: unset;
+  cursor: pointer;
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--fr-text-dim, #646670);
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--fr-radius-xs, 4px);
+  z-index: 1;
+  opacity: 0;
+  transition: color 0.15s, background 0.15s, opacity 0.15s;
+}
+
+.forge-render .mini-card:hover .mini-card__btn-remove {
+  opacity: 1;
+}
+
+.forge-render .mini-card__btn-remove:hover {
+  color: var(--fr-danger-text, #f87171);
+  background: rgba(197, 72, 95, 0.12);
+}
+
+/* ── Link badge (comp reference indicator) ────────────────────────────────── */
+
+.forge-render .mini-card__link-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  color: var(--fr-text-dim, #646670);
+  background: var(--fr-bg-tertiary, rgba(255, 255, 255, 0.06));
+  padding: 1px 6px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.forge-render .mini-card__link-badge svg {
+  opacity: 0.7;
+}
+
+/* ── Missing variant ───────────────────────────────────────────────────────── */
+
+/* Slot color overrides for left accent */
+.forge-render .mini-card[data-slot-color="red"] { border-left-color: #d63a3a; }
+.forge-render .mini-card[data-slot-color="blue"] { border-left-color: #3a8fd6; }
+
+.forge-render .mini-card--missing {
+  opacity: 0.5;
+  border-left-color: var(--fr-line, #1e1f24);
+  cursor: default;
+}
+
+.forge-render .mini-card__icon--missing {
+  color: var(--fr-text-dim, #646670);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.forge-render .mini-card__name--missing {
+  color: var(--fr-text-dim, #646670);
+  font-style: italic;
+}
+
+
+/* src/renderer/styles/role-badge.css */
+/* Role badge pill — used in library cards and comp detail. */
+
+.forge-render .role-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  white-space: nowrap;
+  border: none;
+  line-height: 1.5;
+  flex-shrink: 0;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.forge-render .role-badge--power-dps {
+  background: rgba(220, 80, 80, 0.15);
+  color: #e87070;
+}
+
+.forge-render .role-badge--condi-dps {
+  background: rgba(185, 80, 220, 0.15);
+  color: #cc80e8;
+}
+
+.forge-render .role-badge--boon-support {
+  background: rgba(72, 160, 255, 0.15);
+  color: #72aaff;
+}
+
+.forge-render .role-badge--heal-support {
+  background: rgba(77, 202, 122, 0.15);
+  color: #4dca7a;
+}
+
+.forge-render .role-badge--hybrid {
+  background: rgba(200, 169, 110, 0.15);
+  color: #c8a96e;
+}
+
+.forge-render .role-badge--unknown {
+  background: rgba(130, 130, 130, 0.08);
+  color: #888;
+}
+
+/* Compact variant used inside comp party line slots */
+.forge-render .comp-slot .role-badge {
+  font-size: 0.58rem;
+  padding: 0 5px;
+  line-height: 1.4;
+  border-radius: 4px;
+}
+
+
+.forge-render .hover-preview {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: var(--fr-z-tooltip, 120);
+  width: min(360px, calc(100vw - 16px));
+  border: 1px solid var(--fr-line, #1e1f24);
+  border-radius: 11px;
+  background:
+    var(--fr-panel-gradient, linear-gradient(180deg, rgba(20, 21, 24, 0.95), rgba(16, 17, 20, 0.95))),
+    var(--fr-surface, rgba(10, 11, 14, 0.92));
+  box-shadow:
+    0 12px 28px rgba(0, 0, 0, 0.72),
+    0 0 0 1px rgba(var(--fr-accent-rgb, 200, 152, 72), 0.12) inset;
+  padding: 10px;
+  pointer-events: none;
+}
+
+.forge-render .hover-preview__head {
+  display: grid;
+  grid-template-columns: 56px 1fr auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.forge-render .hover-preview__timings {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-self: start;
+  margin-top: 2px;
+}
+
+.forge-render .hover-preview__timing {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.82rem;
+  color: var(--fr-text-secondary, #b0b0b0);
+  white-space: nowrap;
+}
+
+.forge-render .hover-preview__timing img {
+  width: 16px;
+  height: 16px;
+  opacity: 0.85;
+}
+
+.forge-render .hover-preview__icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 10px;
+  border: 1px solid var(--fr-line, #1e1f24);
+  object-fit: cover;
+}
+
+.forge-render .hover-preview__title {
+  margin: 0;
+  font-size: 0.99rem;
+  color: var(--fr-text, #e2e3e8);
+}
+
+.forge-render .hover-preview__meta {
+  margin: 4px 0 0;
+  font-size: 0.71rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--fr-muted, #828490);
+}
+
+.forge-render .hover-preview__desc {
+  margin: 9px 0 0;
+  font-size: 0.78rem;
+  color: var(--fr-text, #e2e3e8);
+  line-height: 1.34;
+}
+
+.forge-render .hover-preview__bonuses {
+  margin: 9px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 2px;
+  font-size: 0.78rem;
+  line-height: 1.34;
+}
+
+.forge-render .hover-preview__bonus--active {
+  color: #6fdc6f;
+}
+
+.forge-render .hover-preview__bonus--inactive {
+  color: var(--fr-text-dim, #646670);
+}
+
+/* Stat breakdown list (attribute hover) */
+.forge-render .hover-preview__breakdown {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--fr-text, #e2e3e8);
+  display: grid;
+  gap: 2px;
+}
+
+.forge-render .hover-preview__breakdown li {
+  font-size: 0.74rem;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.forge-render .hover-preview__facts {
+  margin: 8px 0 0;
+  padding-left: 16px;
+  color: var(--fr-text, #e2e3e8);
+  display: grid;
+  gap: 3px;
+}
+
+.forge-render .hover-preview__facts li {
+  font-size: 0.74rem;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.forge-render .hover-preview__chain-divider {
+  text-align: center;
+  color: var(--fr-text-dim, #646670);
+  font-size: 0.65rem;
+  margin: 5px 0 1px;
+  letter-spacing: 3px;
+  border-top: 1px solid var(--fr-line-soft, #181920);
+  padding-top: 5px;
+}
+
+.forge-render .hover-preview__trait-skill-divider {
+  text-align: center;
+  color: #6a8a5a;
+  font-size: 0.55rem;
+  margin: 8px 0 4px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  border-top: 1px solid rgba(100, 140, 90, 0.3);
+  padding-top: 5px;
+}
+
+.forge-render .hover-preview__trait-skill-divider + .trait-skill-list {
+  padding: 0 6px 4px;
+}
+
+.forge-render .hover-preview__head--chained {
+  margin-top: 2px;
+}
+
+
+/* ── Comp card (chat embeds) ─────────────────────────────────────────── */
+.forge-render .comp-card { display: flex; flex-direction: column; gap: 10px; }
+.forge-render .comp-card__head { display: flex; align-items: baseline; gap: 8px; }
+.forge-render .comp-card__name { font-size: 14px; font-weight: 600; color: var(--fr-text-light, #aeafb8); }
+.forge-render .comp-card__tag { font-size: 10px; padding: 1px 7px; border-radius: 999px;
+  border: 1px solid var(--fr-line, #1e1f24); color: var(--fr-muted, #828490); }
+.forge-render .comp-card__lines { display: flex; flex-direction: column; gap: 6px; }
+.forge-render .comp-line { display: flex; align-items: center; gap: 8px; }
+.forge-render .comp-line__label { font-size: 10px; color: var(--fr-muted, #828490); width: 20px; flex-shrink: 0; }
+.forge-render .comp-line__slots { display: flex; gap: 4px; flex-wrap: wrap; }
+.forge-render .comp-line__count { margin-left: auto; font-size: 10px; color: var(--fr-muted, #828490); }
+.forge-render .comp-slot { width: 30px; height: 30px; border-radius: var(--fr-radius-xs, 4px);
+  display: flex; align-items: center; justify-content: center;
+  background: var(--fr-panel-2, #101114); border: 1px solid var(--fr-line, #1e1f24); }
+.forge-render .comp-slot--empty { border-style: dashed; opacity: 0.45; }
+.forge-render .comp-slot__icon svg { width: 20px; height: 20px; }
+.forge-render .comp-card__pool { display: flex; flex-direction: column; gap: 8px; }

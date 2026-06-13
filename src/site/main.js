@@ -6,6 +6,9 @@ import { setReadOnly as setEquipmentReadOnly } from "@renderer/modules/equipment
 import { setReadOnly as setSpecsReadOnly } from "@renderer/modules/specializations.js";
 import { setReadOnly as setDetailReadOnly } from "@renderer/modules/detail-panel.js";
 
+// Scope class for @axiapps/forge-render styles (mini cards, role badges, hover previews).
+document.body.classList.add("forge-render");
+
 const VALID_THEMES = new Set([
   "molten-core", "frostforge", "verdant-crucible", "cinderfall",
   "copper", "cobalt", "mithril", "rose-gold",

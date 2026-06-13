@@ -57,6 +57,9 @@ import { getEliteSpecName, profClass } from "./modules/build-helpers.js";
 import { renderMiniBuildCard } from "./modules/mini-build-card.js";
 import { PROFESSION_THEMES } from "./modules/constants.js";
 
+// Scope class for @axiapps/forge-render styles (mini cards, role badges, hover previews).
+document.body.classList.add("forge-render");
+
 let _lastGameMode = "pve";
 let _stashedTheme = null;
 let _themedBuildsEnabled = false;
