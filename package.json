@@ -1,6 +1,6 @@
 {
   "name": "axiforge-desktop",
-  "version": "0.6.30",
+  "version": "0.7.0",
   "workspaces": [
     "packages/*"
   ],
@@ -53,8 +53,20 @@
     "mac": {
       "category": "public.app-category.utilities",
       "target": [
-        { "target": "dmg",  "arch": ["x64", "arm64"] },
-        { "target": "zip",  "arch": ["x64", "arm64"] }
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
       ],
       "artifactName": "AxiForge-${version}-${arch}.${ext}",
       "hardenedRuntime": true,
