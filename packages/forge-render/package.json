@@ -2,7 +2,10 @@
   "name": "@axiapps/forge-render",
   "version": "0.1.0",
   "description": "Framework-free AxiForge build/comp card renderers + scoped CSS, shared with AxiVale and AxiBridge",
+  "type": "module",
   "main": "src/index.js",
+  "files": ["src"],
+  "publishConfig": { "access": "public" },
   "exports": {
     ".": "./src/index.js",
     "./forge-render.css": "./src/forge-render.css"
@@ -24,7 +27,7 @@
     "directory": "packages/forge-render"
   },
   "dependencies": {
-    "@axiapps/gw2-data": "file:../gw2-data",
+    "@axiapps/gw2-data": "^0.1.2",
     "gw2-class-icons": "^0.3.0"
   }
 }
