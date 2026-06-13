@@ -421,17 +421,15 @@ function _extractMorphSkillIds(extra) {
 // ── Main import function ───────────────────────────────────────────────────────
 
 /**
- * Fetch and decode a gw2skills.net editor URL into an axiforge build object,
- * then persist it to the build store.
+ * Fetch and decode a gw2skills.net editor URL into an axiforge build object.
+ * READ-ONLY: returns the assembled (normalize-ready) build; never writes a store.
  *
- * @param {string}      url       full gw2skills.net editor URL
- * @param {string}      name      display name for the imported build
- * @param {string|null} folderId
- * @param {string}      gameMode  fallback game mode ("pve"/"wvw"/"pvp")
- * @returns {Promise<object>}     saved axiforge build
+ * @param {string} url  full gw2skills.net editor URL
+ * @param {{ name?: string, folderId?: (string|null), gameMode?: string }} [opts]
+ * @returns {Promise<object>} the assembled axiforge build object (not saved)
  */
-
-async function importGw2SkillsBuild(url, name, folderId, gameMode) {
+async function parseGw2Skills(url, opts = {}) {
+  const { name = null, folderId = null, gameMode } = opts;
   // Normalize to English site
   const normalizedUrl = url.replace(/^https?:\/\/(?:www\.)?gw2skills\.net/, "https://en.gw2skills.net");
 
@@ -592,8 +590,24 @@ async function importGw2SkillsBuild(url, name, folderId, gameMode) {
   };
 }
 
+/**
+ * Backward-compatible positional wrapper around parseGw2Skills.
+ * The store write is performed by the caller (IPC handler / local-API op),
+ * not here — parse and import return the same object; only the caller differs.
+ *
+ * @param {string}      url
+ * @param {string}      name
+ * @param {string|null} folderId
+ * @param {string}      gameMode
+ * @returns {Promise<object>} assembled axiforge build object
+ */
+async function importGw2SkillsBuild(url, name, folderId, gameMode) {
+  return parseGw2Skills(url, { name, folderId, gameMode });
+}
+
 module.exports = {
   importGw2SkillsBuild,
+  parseGw2Skills,
   // Exported for unit tests
   _parsePreloadFromHtml,
   _buildStatLookup,

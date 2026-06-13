@@ -366,3 +366,159 @@ describe("_extractMorphSkillIds", () => {
     expect(_extractMorphSkillIds([0, 0, 1515, 0, 0])).toEqual([77103, 0, 0]);  // Shred
   });
 });
+
+// ── parseGw2Skills (read-only assembly; no store write) ───────────────────────
+
+describe("parseGw2Skills", () => {
+  const HTML = `
+    <script>
+    var SI = null;
+    E = new BuildEditor({
+      version: "9.1.2",
+      dbid: 1772970067,
+      showinfo: SI || undefined,
+      preload: {
+        chatlink: "DQYfHSkb",
+        mode: "wvw",
+        weapon: [0, 0, 0, 0, 0, 0],
+        equipment: {
+          weapon: {}, armor: {}, trinket: {},
+          buff: { food: 534, utility: 40 },
+          relic: 0
+        },
+        extra: [0, 0, 0, 0, 0, 0]
+      }
+    });
+    </script>`;
+
+  // Minimal db json with the tables _buildStatLookup / upgrade / buff / weapon read.
+  const DB = {
+    profile:  { desc: ["id", "img", "profile", "name"], rows: [] },
+    prfltype: { desc: ["id", "key", "name"], rows: [] },
+    upgrade:  { desc: ["id", "img", "x", "type", "name"], rows: [] },
+    buff:     { desc: ["id", "img", "x", "y", "z", "name"],
+                rows: [[534, "j", 5, 80, 1, "Cilantro Lime Sous-Vide Steak"],
+                       [40,  "b", 5, 80, 2, "Toxic Focusing Crystal"]] },
+    weapon:   { desc: ["id", "key", "type"], rows: [] },
+  };
+
+  const UPGRADE_CATALOG = {
+    runes: [], sigils: [], infusions: [], enrichments: [],
+    foods: [{ id: 1234, name: "Cilantro Lime Sous-Vide Steak" }],
+    utilities: [{ id: 5678, name: "Toxic Focusing Crystal" }],
+  };
+
+  // The decoded build template the chat link would produce.
+  const BUILD_TEMPLATE = {
+    title: "My WvW Build",
+    profession: "Guardian",
+    specializations: [{ id: 16, name: "Radiance", elite: false }],
+    skills: { heal: { id: 9158 }, utility: [null, null, null], elite: null },
+    equipment: { weapons: {} },
+  };
+
+  let mod;
+  let httpsCalls;
+  let decodeCalls;
+
+  beforeEach(() => {
+    jest.resetModules();
+    httpsCalls = [];
+    decodeCalls = [];
+
+    // https.request → return our fixed HTML / db json based on the requested path.
+    jest.doMock("https", () => ({
+      request: (opts, cb) => {
+        const path = opts.path || "";
+        httpsCalls.push(path);
+        const body = path.includes("/ajax/db/") ? JSON.stringify(DB) : HTML;
+        const res = {
+          statusCode: 200,
+          headers: {},
+          on: (ev, fn) => {
+            if (ev === "data") fn(body);
+            if (ev === "end") fn();
+            return res;
+          },
+        };
+        cb(res);
+        return { on: () => {}, end: () => {}, destroy: () => {} };
+      },
+    }));
+
+    jest.doMock("../../src/main/buildChatLink.js", () => ({
+      decodeChatLinkToBuild: (link, name, folderId, gameMode) => {
+        decodeCalls.push({ link, name, folderId, gameMode });
+        return Promise.resolve({ ...BUILD_TEMPLATE, title: name || BUILD_TEMPLATE.title });
+      },
+    }));
+
+    jest.doMock("../../src/main/gw2Data", () => ({
+      getUpgradeCatalog: () => Promise.resolve(UPGRADE_CATALOG),
+    }));
+
+    mod = require("../../src/main/gw2skillsImport");
+  });
+
+  afterEach(() => {
+    jest.dontMock("https");
+    jest.dontMock("../../src/main/buildChatLink.js");
+    jest.dontMock("../../src/main/gw2Data");
+    jest.resetModules();
+  });
+
+  it("returns a complete assembled build object without saving it", async () => {
+    const build = await mod.parseGw2Skills("https://gw2skills.net/editor/?abc", {
+      name: "My WvW Build",
+    });
+    // Carries the decoded template fields through
+    expect(build.profession).toBe("Guardian");
+    expect(build.title).toBe("My WvW Build");
+    expect(Array.isArray(build.specializations)).toBe(true);
+    // Game mode comes from preload.mode ("wvw") here, overriding the gameMode opt
+    expect(build.gameMode).toBe("wvw");
+    // Equipment was assembled (resolved buff name → catalog id)
+    expect(build.equipment.food).toBe("1234");
+    expect(build.equipment.utility).toBe("5678");
+    // Amalgam morph ids present (all zero here)
+    expect(build.morphSkillIds).toEqual([0, 0, 0]);
+  });
+
+  it("passes name/folderId/gameMode through to the chat-link decoder", async () => {
+    await mod.parseGw2Skills("https://gw2skills.net/editor/?abc", {
+      name: "Named",
+      folderId: "folder-7",
+      gameMode: "pve",
+    });
+    // preload.mode is "wvw" so the decoder receives the resolved "wvw" mode
+    expect(decodeCalls[0]).toMatchObject({ name: "Named", folderId: "folder-7", gameMode: "wvw" });
+  });
+
+  it("falls back to the gameMode option when preload.mode is unset", async () => {
+    // Re-mock https to emit HTML whose preload has no mode field.
+    jest.dontMock("https");
+    jest.resetModules();
+    const htmlNoMode = HTML.replace('mode: "wvw",', "");
+    jest.doMock("https", () => ({
+      request: (opts, cb) => {
+        const path = opts.path || "";
+        const body = path.includes("/ajax/db/") ? JSON.stringify(DB) : htmlNoMode;
+        const res = {
+          statusCode: 200, headers: {},
+          on: (ev, fn) => { if (ev === "data") fn(body); if (ev === "end") fn(); return res; },
+        };
+        cb(res);
+        return { on: () => {}, end: () => {}, destroy: () => {} };
+      },
+    }));
+    jest.doMock("../../src/main/buildChatLink.js", () => ({
+      decodeChatLinkToBuild: () => Promise.resolve({ ...BUILD_TEMPLATE, equipment: { weapons: {} } }),
+    }));
+    jest.doMock("../../src/main/gw2Data", () => ({
+      getUpgradeCatalog: () => Promise.resolve(UPGRADE_CATALOG),
+    }));
+    const mod2 = require("../../src/main/gw2skillsImport");
+    const build = await mod2.parseGw2Skills("https://gw2skills.net/editor/?abc", { gameMode: "pve" });
+    expect(build.gameMode).toBe("pve");
+  });
+});
