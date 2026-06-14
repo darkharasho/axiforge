@@ -9,6 +9,7 @@ const {
   mapWikiFactToApiFact,
   parseInfoboxParams,
 } = require("./wiki/parser");
+const { parseFactsByMode, groupFactsByMode } = require("./wiki/resolver");
 const { parseRelatedItems, parseRelatedGroups } = require("./wiki/relations");
 const { mergeFacts } = require("./facts/merge");
 const { buildMatchTables, valueChanged, VALUE_KEYS } = require("./facts/match");
@@ -33,6 +34,10 @@ module.exports = {
   parseWikitextFacts,
   mapWikiFactToApiFact,
   parseInfoboxParams,
+
+  // Resolver (mode-split: PvE/WvW/PvP facts the GW2 API lacks)
+  parseFactsByMode,
+  groupFactsByMode,
 
   // Relations
   parseRelatedItems,
