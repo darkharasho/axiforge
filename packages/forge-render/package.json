@@ -1,6 +1,6 @@
 {
   "name": "@axiapps/forge-render",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Framework-free AxiForge build/comp card renderers + scoped CSS, shared with AxiVale and AxiBridge",
   "type": "module",
   "main": "src/index.js",

@@ -609,6 +609,13 @@
   pointer-events: none;
 }
 
+/* createHoverPreview() starts the card with the "hidden" class and removes it on
+   hover. Without this rule the fixed-position card paints at the top-left corner
+   until first hovered (one per rendered card). */
+.forge-render .hover-preview.hidden {
+  display: none;
+}
+
 .forge-render .hover-preview__head {
   display: grid;
   grid-template-columns: 56px 1fr auto;
