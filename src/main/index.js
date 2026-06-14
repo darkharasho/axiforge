@@ -888,6 +888,11 @@ const readyWork = app.whenReady().then(async () => {
     const { parseGw2Skills } = require("./gw2skillsImport.js");
     return parseGw2Skills(url, { gameMode });
   });
+  handle("builds:parse-chat-link", async (_e, link, gameMode) => {
+    const { decodeChatLinkToBuild } = require("./buildChatLink.js");
+    // Decode only — no store.upsertBuild, so meta builds never pollute the library.
+    return decodeChatLinkToBuild(link, null, null, gameMode);
+  });
   handle("builds:encode-share-code", async (_e, build) => {
     const { encodeShareCode } = require("@axiapps/code");
     return encodeShareCode(build);
@@ -2022,6 +2027,8 @@ const readyWork = app.whenReady().then(async () => {
         asHttpResult(invokeLocal("builds:import-gw2skills", url, name, folderId, gameMode), { badInput: true }),
       parseGw2Skills: (url, gameMode) =>
         asHttpResult(invokeLocal("builds:parse-gw2skills", url, gameMode), { badInput: true }),
+      parseChatLink: (link, gameMode) =>
+        asHttpResult(invokeLocal("builds:parse-chat-link", link, gameMode), { badInput: true }),
       listProfessions: () => getProfessionList("en"),
       getProfessionCatalog: (id, gameMode) => getProfessionCatalog(id, "en", gameMode),
       getUpgradeCatalog: () => getUpgradeCatalog("en"),

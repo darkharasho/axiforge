@@ -237,6 +237,15 @@ function buildRoutes({ version, ops }) {
         return ops.parseGw2Skills(body.url, body.gameMode ?? undefined);
       },
     },
+    {
+      method: "POST", pattern: "/import/chat-link/parse",
+      handler: async ({ body }) => {
+        if (!body?.link || typeof body.link !== "string") {
+          throw httpError(400, "Body must include a chat link string: { link }");
+        }
+        return ops.parseChatLink(body.link, body.gameMode ?? undefined);
+      },
+    },
 
     // ── Catalog ──────────────────────────────────────────────────────────
     { method: "GET", pattern: "/catalog/professions", handler: async () => ops.listProfessions() },

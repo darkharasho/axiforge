@@ -24,6 +24,7 @@ function stubOps(overrides = {}) {
     importChatLink: async () => ({}),
     importGw2Skills: async () => ({}),
     parseGw2Skills: async () => ({}),
+    parseChatLink: async () => ({}),
     listProfessions: async () => [],
     getProfessionCatalog: async () => ({}),
     getUpgradeCatalog: async () => ({}),
@@ -369,11 +370,13 @@ describe("local API — import endpoints", () => {
   const importedChatLinks = [];
   const importedGw2Skills = [];
   const parsedGw2Skills = [];
+  const parsedChatLinks = [];
 
   beforeEach(async () => {
     importedChatLinks.length = 0;
     importedGw2Skills.length = 0;
     parsedGw2Skills.length = 0;
+    parsedChatLinks.length = 0;
     ({ api, token, port } = await startApi({
       importChatLink: async (link, name, folderId, gameMode) => {
         importedChatLinks.push({ link, name, folderId, gameMode });
@@ -386,6 +389,10 @@ describe("local API — import endpoints", () => {
       parseGw2Skills: async (url, gameMode) => {
         parsedGw2Skills.push({ url, gameMode });
         return { id: undefined, profession: "Guardian", gameMode: gameMode || "pve", equipment: {} };
+      },
+      parseChatLink: async (link, gameMode) => {
+        parsedChatLinks.push({ link, gameMode });
+        return { profession: "Guardian", gameMode };
       },
     }));
   });
@@ -458,6 +465,23 @@ describe("local API — import endpoints", () => {
     const res = await req(port, token, "POST", "/import/gw2skills/parse", {});
     expect(res.status).toBe(400);
     expect(parsedGw2Skills).toHaveLength(0);
+  });
+
+  test("POST /import/chat-link/parse returns the parsed build (not saved) and forwards link + gameMode", async () => {
+    const res = await req(port, token, "POST", "/import/chat-link/parse", {
+      link: "[&DQEAAA==]",
+      gameMode: "wvw",
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toEqual({ profession: "Guardian", gameMode: "wvw" });
+    expect(parsedChatLinks).toEqual([{ link: "[&DQEAAA==]", gameMode: "wvw" }]);
+  });
+
+  test("POST /import/chat-link/parse requires a link", async () => {
+    const res = await req(port, token, "POST", "/import/chat-link/parse", {});
+    expect(res.status).toBe(400);
+    expect(parsedChatLinks).toHaveLength(0);
   });
 });
 
