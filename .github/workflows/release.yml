@@ -123,6 +123,9 @@ jobs:
             capture { print }
           ' RELEASE_NOTES.md)
 
+          # Match the release for this tag whether electron-builder left it as a draft
+          # or already published it (it publishes non-draft when --publish always). The
+          # PATCH below is idempotent — it just (re)writes the notes and ensures it's live.
           release_id=$(gh api graphql -f query='
             query($owner:String!,$repo:String!){
               repository(owner:$owner,name:$repo){
@@ -131,15 +134,14 @@ jobs:
                 }
               }
             }' -F owner=darkharasho -F repo=axiforge \
-            --jq ".data.repository.releases.nodes[] | select(.tagName==\"$tag\" and .isDraft==true) | .databaseId" | head -1)
+            --jq ".data.repository.releases.nodes[] | select(.tagName==\"$tag\") | .databaseId" | head -1)
 
           if [ -z "$release_id" ]; then
-            echo "No draft found for tag $tag" >&2
+            echo "No release found for tag $tag (expected electron-builder to have created it)" >&2
             exit 1
           fi
 
           gh api -X PATCH "repos/darkharasho/axiforge/releases/$release_id" \
-            -f name="$tag" \
             -f body="$notes" \
             -F draft=false
 
