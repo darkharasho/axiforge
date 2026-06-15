@@ -1,3 +1,9 @@
+## Version v0.7.4 — June 14, 2026
+
+### Bug Fixes
+
+- **Build-card decodes no longer time out when started in the background** — When a companion app (e.g. AxiVale) launches AxiForge headless just to decode a build, the startup catalog pre-warm is now skipped so it doesn't compete with (and rate-limit) that decode. Build-template decoding is also timed and logged for easier diagnosis.
+
 ## Version v0.7.3 — June 14, 2026
 
 ### New Features

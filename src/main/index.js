@@ -439,19 +439,24 @@ const readyWork = app.whenReady().then(async () => {
 
   // Pre-warm all profession catalogs in the background so class switching is instant.
   // Runs sequentially with a short delay between each to avoid hammering the GW2 API.
-  (async () => {
-    const PROFESSION_IDS = ["Guardian","Warrior","Engineer","Ranger","Thief","Elementalist","Mesmer","Necromancer","Revenant"];
-    // Small initial delay to let the window load first
-    await new Promise((r) => setTimeout(r, 3000));
-    for (const id of PROFESSION_IDS) {
-      try {
-        await getProfessionCatalog(id, "en");
-      } catch {
-        // Ignore errors — pre-warming is best-effort
+  // SKIPPED in headless: there's no UI to make snappy, and the pre-warm burst
+  // competes with (and 429-throttles) the on-demand decodes the headless instance
+  // was spawned to serve — making build-card decodes time out.
+  if (!cliFlags.headless) {
+    (async () => {
+      const PROFESSION_IDS = ["Guardian","Warrior","Engineer","Ranger","Thief","Elementalist","Mesmer","Necromancer","Revenant"];
+      // Small initial delay to let the window load first
+      await new Promise((r) => setTimeout(r, 3000));
+      for (const id of PROFESSION_IDS) {
+        try {
+          await getProfessionCatalog(id, "en");
+        } catch {
+          // Ignore errors — pre-warming is best-effort
+        }
+        await new Promise((r) => setTimeout(r, 400));
       }
-      await new Promise((r) => setTimeout(r, 400));
-    }
-  })();
+    })();
+  }
 
   handle("app:get-config", async () => {
     const auth = await getAuthRecord();
@@ -891,7 +896,17 @@ const readyWork = app.whenReady().then(async () => {
   handle("builds:parse-chat-link", async (_e, link, gameMode) => {
     const { decodeChatLinkToBuild } = require("./buildChatLink.js");
     // Decode only — no store.upsertBuild, so meta builds never pollute the library.
-    return decodeChatLinkToBuild(link, null, null, gameMode);
+    // Timed + logged: AxiVale renders build cards through this, and a slow/hung
+    // decode shows up to the user as "AxiForge timed out" — so surface it here.
+    const t0 = Date.now();
+    try {
+      const build = await decodeChatLinkToBuild(link, null, null, gameMode);
+      console.log(`[parse-chat-link] decoded in ${Date.now() - t0}ms (gameMode=${gameMode ?? "default"})`);
+      return build;
+    } catch (err) {
+      console.error(`[parse-chat-link] FAILED after ${Date.now() - t0}ms:`, err?.message || err);
+      throw err;
+    }
   });
   handle("builds:encode-share-code", async (_e, build) => {
     const { encodeShareCode } = require("@axiapps/code");

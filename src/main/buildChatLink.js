@@ -128,9 +128,15 @@ function patchFetchFor429() {
 let _gw2Api = null;
 async function getApi() {
   if (!_gw2Api) {
-    patchFetchFor429();
-    const { DefaultGw2ApiClient } = await import("gw2buildlink");
-    _gw2Api = new DefaultGw2ApiClient();
+    try {
+      patchFetchFor429();
+      const { DefaultGw2ApiClient } = await import("gw2buildlink");
+      _gw2Api = new DefaultGw2ApiClient();
+    } catch (err) {
+      // Surface a silent import/fetch failure instead of hanging the decode.
+      console.error("[buildChatLink] gw2buildlink client init failed:", err?.message || err);
+      throw err;
+    }
   }
   return _gw2Api;
 }
