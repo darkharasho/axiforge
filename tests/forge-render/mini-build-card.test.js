@@ -54,4 +54,35 @@ describe("@axiapps/forge-render mini build card", () => {
   test("renders the missing-build placeholder", () => {
     expect(renderMissingMiniBuildCard("deadbeefdeadbeef")).toContain("Missing Build");
   });
+
+  test("renders selected-trait icons, a skills row, and a chat-code bar with copy", () => {
+    const enriched = {
+      ...build,
+      specializations: [
+        { name: "Strength", selectedTraits: [{ id: 1, name: "Peak Performance", icon: "https://render.guildwars2.com/file/A/1.png" }] },
+        { name: "Berserker", elite: true, selectedTraits: [{ id: 2, name: "Bloody Roar", icon: "https://render.guildwars2.com/file/B/2.png" }] },
+      ],
+      skills: {
+        heal: { id: 10, name: "Blood Reckoning", icon: "https://render.guildwars2.com/file/C/h.png" },
+        utility: [{ id: 11, name: "Balanced Stance", icon: "https://render.guildwars2.com/file/D/u.png" }],
+        elite: { id: 12, name: "Battle Standard", icon: "https://render.guildwars2.com/file/E/e.png" },
+      },
+      chatCode: "[&DQIRGgYZIzaU...]",
+    };
+    const html = renderMiniBuildCard(enriched, null, { showActions: false, chatLink: enriched.chatCode });
+    expect(html).toContain("mini-card__trait-icon");
+    expect(html).toContain("/file/A/1.png");
+    expect(html).toContain("mini-card__skills");
+    expect(html).toContain("/file/C/h.png");
+    expect(html).toContain("mini-card__chatbar");
+    expect(html).toContain("[&amp;DQIRGgYZIzaU...]");
+    expect(html).toContain("mini-card__chatcopy");
+  });
+
+  test("omits trait/skill/chat sections when the build lacks that data", () => {
+    const html = renderMiniBuildCard(build, null, { showActions: false });
+    expect(html).not.toContain("mini-card__trait-icon");
+    expect(html).not.toContain("mini-card__skills");
+    expect(html).not.toContain("mini-card__chatbar");
+  });
 });

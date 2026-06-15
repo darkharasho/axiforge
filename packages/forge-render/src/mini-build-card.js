@@ -31,7 +31,18 @@ function getSpecLineInfo(build, color) {
       name: s.name,
       isElite: !!s.elite,
       svg: getSvg(s.name) || profSvg,
+      // Selected major traits ({id,name,icon}) for the card's trait-icon row.
+      traits: (s.selectedTraits || []).filter((t) => t && t.icon),
     }));
+}
+
+// heal/utility/elite skills with icons, flattened for the card's skills row.
+function getSkillRow(build) {
+  const set = build.skills;
+  if (!set) return [];
+  return [set.heal, ...(set.utility || []), set.elite]
+    .filter((sk) => sk && sk.icon)
+    .map((sk) => ({ name: sk.name || "", icon: sk.icon }));
 }
 
 /**
@@ -136,7 +147,11 @@ export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
       const pipClass = s.isElite ? "mini-card__spec-pip mini-card__spec-pip--elite" : "mini-card__spec-pip";
       const nameClass = s.isElite ? "mini-card__spec-name mini-card__spec-name--elite" : "mini-card__spec-name";
       const pipContent = s.svg || escapeHtml(s.name.charAt(0).toUpperCase());
-      return `<div class="mini-card__spec-line"><span class="${pipClass}">${pipContent}</span><span class="${nameClass}">${escapeHtml(s.name)}</span></div>`;
+      const traitIcons = (s.traits || [])
+        .map((t) => `<img class="mini-card__trait-icon" src="${escapeHtml(t.icon)}" alt="" title="${escapeHtml(t.name || "")}" loading="lazy">`)
+        .join("");
+      const traitHtml = traitIcons ? `<span class="mini-card__trait-icons">${traitIcons}</span>` : "";
+      return `<div class="mini-card__spec-line"><span class="${pipClass}">${pipContent}</span><span class="${nameClass}">${escapeHtml(s.name)}</span>${traitHtml}</div>`;
     }).join("");
 
     specColHtml = `
@@ -210,6 +225,19 @@ export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
     ? `<div class="mini-card__col-right">${weapRowHtml}${statRowHtml}${runeRowHtml}${relicRowHtml}</div>`
     : "";
 
+  // Skills row (heal / utilities / elite) with icons.
+  const skillRow = getSkillRow(build);
+  const skillsRowHtml = skillRow.length
+    ? `<div class="mini-card__skills"><span class="mini-card__detail-label">Skills</span>${skillRow
+        .map((sk) => `<span class="mini-card__skill" title="${escapeHtml(sk.name)}"><img class="mini-card__skill-icon" src="${escapeHtml(sk.icon)}" alt="" loading="lazy"></span>`)
+        .join("")}</div>`
+    : "";
+
+  // Chat-code bar: the in-game build code, surfaced with a copy button.
+  const chatBarHtml = chatLink
+    ? `<div class="mini-card__chatbar"><code class="mini-card__chatcode">${escapeHtml(chatLink)}</code><button type="button" class="mini-card__chatcopy" data-chat-link="${escapeHtml(chatLink)}" title="Copy build chat code">Copy</button></div>`
+    : "";
+
   // Title is a clickable link to open the build
   const titleHtml = showActions
     ? `<button type="button" class="mini-card__name" data-action="pool-open"
@@ -274,6 +302,8 @@ export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
           ${specColHtml}
           ${rightColHtml}
         </div>
+        ${skillsRowHtml}
+        ${chatBarHtml}
       </div>
     </div>
   `;

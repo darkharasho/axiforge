@@ -776,3 +776,29 @@
 .forge-render .comp-slot__tag-img { width: 22px; height: 22px; object-fit: contain; }
 .forge-render .comp-slot__tag-text { font-size: 9px; font-weight: 700; text-transform: uppercase; color: var(--fr-muted, #8a8f98); }
 .forge-render .comp-card__pool { display: flex; flex-direction: column; gap: 8px; }
+
+/* --- Build card: class-colored left accent --- */
+.forge-render .mini-card.lib-prof--elementalist { border-left-color: #f68a87; }
+.forge-render .mini-card.lib-prof--engineer     { border-left-color: #d09c59; }
+.forge-render .mini-card.lib-prof--guardian     { border-left-color: #72c1d9; }
+.forge-render .mini-card.lib-prof--mesmer       { border-left-color: #b679d5; }
+.forge-render .mini-card.lib-prof--necromancer  { border-left-color: #52a76f; }
+.forge-render .mini-card.lib-prof--ranger       { border-left-color: #8cdc82; }
+.forge-render .mini-card.lib-prof--revenant     { border-left-color: #d16e5a; }
+.forge-render .mini-card.lib-prof--thief        { border-left-color: #c08f95; }
+.forge-render .mini-card.lib-prof--warrior      { border-left-color: #ffd166; }
+
+/* --- Build card: selected-trait icons in spec lines --- */
+.forge-render .mini-card__trait-icons { display: inline-flex; gap: 3px; margin-left: 6px; vertical-align: middle; }
+.forge-render .mini-card__trait-icon { width: 18px; height: 18px; border-radius: 3px; border: 1px solid var(--fr-line, #2a2d36); object-fit: cover; }
+
+/* --- Build card: skills row --- */
+.forge-render .mini-card__skills { display: flex; align-items: center; gap: 5px; margin-top: 8px; flex-wrap: wrap; }
+.forge-render .mini-card__skill { display: inline-flex; }
+.forge-render .mini-card__skill-icon { width: 26px; height: 26px; border-radius: 4px; border: 1px solid var(--fr-line, #2a2d36); object-fit: cover; }
+
+/* --- Build card: chat-code bar with copy --- */
+.forge-render .mini-card__chatbar { display: flex; align-items: center; gap: 8px; margin-top: 10px; background: var(--fr-panel, #15161b); border: 1px solid var(--fr-line, #2a2d36); border-radius: 4px; padding: 5px 8px; }
+.forge-render .mini-card__chatcode { flex: 1; min-width: 0; font-size: 10px; font-family: ui-monospace, monospace; color: var(--fr-muted, #8fb0c9); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.forge-render .mini-card__chatcopy { flex: 0 0 auto; font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fr-accent, #e0a526); background: none; border: 1px solid var(--fr-accent, #e0a526); border-radius: 3px; padding: 3px 9px; cursor: pointer; }
+.forge-render .mini-card__chatcopy:hover { background: rgba(224, 165, 38, 0.12); }
