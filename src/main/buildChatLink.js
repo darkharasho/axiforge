@@ -124,6 +124,29 @@ function patchFetchFor429() {
   };
 }
 
+// Resolve name + icon for a set of trait/skill ids via the GW2 API (icons are the
+// official render.guildwars2.com URLs — same source AxiForge uses everywhere).
+// gw2buildlink's own helpers drop the icon, so we fetch directly here.
+async function fetchNameIcons(kind, ids) {
+  const map = new Map();
+  const unique = [...new Set(ids.filter((n) => Number.isFinite(n) && n > 0))];
+  if (unique.length === 0) return map;
+  try {
+    for (let i = 0; i < unique.length; i += 150) {
+      const chunk = unique.slice(i, i + 150);
+      const res = await globalThis.fetch(
+        `https://api.guildwars2.com/v2/${kind}?ids=${chunk.join(",")}&lang=en&v=latest`
+      );
+      if (!res.ok) continue;
+      const arr = await res.json();
+      for (const e of arr) map.set(e.id, { id: e.id, name: e.name, icon: e.icon || null });
+    }
+  } catch {
+    /* network/parse failure → callers fall back to id-only data */
+  }
+  return map;
+}
+
 // Singleton API client — profession/spec/skill data cached across all calls in the session.
 let _gw2Api = null;
 async function getApi() {
@@ -258,17 +281,42 @@ async function decodeChatLinkToBuild(link, name, folderId, gameMode) {
     };
   }
 
+  const skills = mapSkillSet(decoded.skills?.terrestrial);
+  const underwaterSkills = mapSkillSet(decoded.skills?.aquatic);
+
+  // Enrich with name+icon so the build card can render selected traits and skills
+  // with their official GW2 icons (resolved here in AxiForge, not the client).
+  const traitIds = specializations.flatMap((s) => Object.values(s.majorChoices));
+  const skillIds = [skills, underwaterSkills].flatMap((set) =>
+    [set.heal, ...(set.utility ?? []), set.elite].filter(Boolean).map((s) => s.id)
+  );
+  const [traitInfo, skillInfo] = await Promise.all([
+    fetchNameIcons("traits", traitIds),
+    fetchNameIcons("skills", skillIds),
+  ]);
+  for (const spec of specializations) {
+    spec.selectedTraits = [1, 2, 3]
+      .map((tier) => spec.majorChoices[tier])
+      .filter((id) => id > 0)
+      .map((id) => traitInfo.get(id) || { id, name: null, icon: null });
+  }
+  const addSkillIcons = (set) => {
+    const enrich = (s) => (s ? { ...s, icon: skillInfo.get(s.id)?.icon || null } : s);
+    return { heal: enrich(set.heal), utility: (set.utility ?? []).map(enrich), elite: enrich(set.elite) };
+  };
+
   return {
     title: name,
     profession: decoded.profession.id,
     specializations,
-    skills: mapSkillSet(decoded.skills?.terrestrial),
-    underwaterSkills: mapSkillSet(decoded.skills?.aquatic),
+    skills: addSkillIcons(skills),
+    underwaterSkills: addSkillIcons(underwaterSkills),
     equipment: { weapons },
     selectedLegends,
     selectedUnderwaterLegends,
     selectedPets,
     morphSkillIds: [0, 0, 0],
+    chatCode: link,
     ...(folderId ? { folderId } : {}),
     ...(gameMode ? { gameMode } : {}),
   };
