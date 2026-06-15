@@ -84,6 +84,29 @@ describe("@axiapps/forge-render mini build card", () => {
     expect(html).toContain("mini-card__skill-div"); // weapon|utility divider
     expect(html).toContain("mini-card__chatbar");
     expect(html).toContain("[&amp;DQIRGgYZIzaU...]");
+    // The chatbar is the only copy affordance — no redundant header button.
+    expect(html).not.toContain("mini-card__btn-copy-code");
+  });
+
+  test("renders page-scraped gear (weapons+sigils, stats, rune) with its own icons", () => {
+    const withGear = {
+      ...build,
+      scrapedGear: {
+        weapons: [{ type: "Scepter", name: "Scepter", icon: null, sigils: [{ name: "Sigil of Force", icon: "https://render.guildwars2.com/file/G/s.png" }] }],
+        rune: { name: "Superior Rune of Divinity", icon: "https://render.guildwars2.com/file/G/r.png", count: 6 },
+        sigils: [],
+        stats: "Celestial",
+        infusions: [],
+        weaponSkills: [],
+      },
+    };
+    const html = renderMiniBuildCard(withGear, null, { showActions: false });
+    expect(html).toContain("Scepter");
+    expect(html).toContain("/file/G/s.png"); // sigil icon
+    expect(html).toContain("Celestial");
+    expect(html).toContain("Superior Rune of Divinity");
+    expect(html).toContain("x6");
+    expect(html).toContain("/file/G/r.png"); // rune icon
   });
 
   test("omits trait/skill/chat sections when the build lacks that data", () => {

@@ -36,6 +36,28 @@ function getSpecLineInfo(build, color) {
     }));
 }
 
+// Right column from page-scraped gear ({weapons,rune,stats,infusions}); each
+// piece already carries its icon, so no catalog is needed. "" when no gear.
+function renderScrapedGear(gear) {
+  if (!gear) return "";
+  const rows = [];
+  const img = (icon) => (icon ? `<img class="mini-card__gear-img" src="${escapeHtml(icon)}" alt="" loading="lazy">` : "");
+  for (const w of gear.weapons || []) {
+    const sig = (w.sigils || []).map((s) => img(s.icon)).join("");
+    rows.push(`<div class="mini-card__cell"><span class="mini-card__detail-label">${escapeHtml(w.type || "Weapon")}</span>${sig}<span class="mini-card__equip">${(w.sigils || []).map((s) => escapeHtml(s.name)).join(", ")}</span></div>`);
+  }
+  if (gear.stats) {
+    rows.push(`<div class="mini-card__cell"><span class="mini-card__detail-label">Stats</span><span class="mini-card__stat">${escapeHtml(gear.stats)}</span></div>`);
+  }
+  if (gear.rune) {
+    rows.push(`<div class="mini-card__cell"><span class="mini-card__detail-label">Rune</span>${img(gear.rune.icon)}<span class="mini-card__equip">${escapeHtml(gear.rune.name)}${gear.rune.count ? ` x${gear.rune.count}` : ""}</span></div>`);
+  }
+  if ((gear.infusions || []).length) {
+    rows.push(`<div class="mini-card__cell"><span class="mini-card__detail-label">Infusions</span>${gear.infusions.map((i) => img(i.icon)).join("")}</div>`);
+  }
+  return rows.length ? `<div class="mini-card__col-right">${rows.join("")}</div>` : "";
+}
+
 // heal/utility/elite skills with icons, flattened for the card's skills row.
 function getSkillRow(build) {
   const set = build.skills;
@@ -221,9 +243,14 @@ export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
       </div>`;
   }
 
-  const rightColHtml = (weapRowHtml || statRowHtml || runeRowHtml || relicRowHtml)
-    ? `<div class="mini-card__col-right">${weapRowHtml}${statRowHtml}${runeRowHtml}${relicRowHtml}</div>`
-    : "";
+  // Scraped gear (from a meta build page's armory embeds) carries its own icons,
+  // so render it directly; this wins over the catalog-driven rows when present.
+  const scrapedColHtml = renderScrapedGear(build.scrapedGear);
+  const rightColHtml = scrapedColHtml
+    ? scrapedColHtml
+    : (weapRowHtml || statRowHtml || runeRowHtml || relicRowHtml)
+      ? `<div class="mini-card__col-right">${weapRowHtml}${statRowHtml}${runeRowHtml}${relicRowHtml}</div>`
+      : "";
 
   // Top skills row: first weapon set's skills, then heal/utilities/elite — big
   // icons with names. Weapon skills come from the enriched build (build.weaponSkills).
@@ -264,13 +291,8 @@ export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
               data-build-id="${escapeHtml(build.id)}" title="Unlink from comp">&times;</button>`
     : "";
 
-  // Copy build code button (SPA comp view)
-  const copyCodeHtml = chatLink
-    ? `<button type="button" class="mini-card__btn-copy-code" data-chat-link="${escapeHtml(chatLink)}" title="Copy build code">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-        <span>Code</span>
-      </button>`
-    : "";
+  // The build chat code is surfaced via the chatbar (below the columns), so no
+  // redundant header copy-code button is rendered.
 
   // Color picker dropdown (Condi / Heal)
   const colorPickerHtml = showColorPicker ? (() => {
@@ -298,7 +320,6 @@ export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
           ${role}
           <div class="mini-card__pills">
             ${colorPickerHtml}
-            ${copyCodeHtml}
             ${modePill}
           </div>
         </div>
