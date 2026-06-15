@@ -288,7 +288,7 @@
   color: var(--fr-text-dim, #646670);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  min-width: 36px;
+  min-width: 58px;
   flex-shrink: 0;
 }
 
@@ -337,6 +337,9 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  /* Fixed width so the trait-icon groups that follow line up across rows. */
+  width: 86px;
+  flex-shrink: 0;
 }
 
 .forge-render .mini-card__spec-name--elite {
