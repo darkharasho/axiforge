@@ -1,3 +1,9 @@
+## Version v0.7.3 — June 14, 2026
+
+### New Features
+
+- **Build-preview API for companion apps** — Added a read-only endpoint that decodes an in-game build template chat code into a build *without* saving it to your library. Companion tools (e.g. AxiVale) can now render an exact build card straight from a chat code, without cluttering your AxiForge builds.
+
 ## Version v0.7.2 — June 13, 2026
 
 ### New Features
