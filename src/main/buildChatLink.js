@@ -147,6 +147,34 @@ async function fetchNameIcons(kind, ids) {
   return map;
 }
 
+// The 5 weapon skills (slots 1-5) for an equipped weapon set, with name + icon.
+// weaponTypes is the set's [mainhand, offhand] (offhand may be undefined / a 2H).
+async function resolveWeaponSkills(professionId, weaponTypes) {
+  const types = weaponTypes.filter(Boolean);
+  if (types.length === 0) return [];
+  const slotNum = { Weapon_1: 1, Weapon_2: 2, Weapon_3: 3, Weapon_4: 4, Weapon_5: 5 };
+  try {
+    const res = await globalThis.fetch(
+      `https://api.guildwars2.com/v2/professions/${encodeURIComponent(professionId)}?v=latest`
+    );
+    if (!res.ok) return [];
+    const prof = await res.json();
+    const bySlot = {};
+    for (const wt of types) {
+      const w = prof.weapons?.[wt];
+      for (const sk of w?.skills ?? []) {
+        const n = slotNum[sk.slot];
+        if (n && !bySlot[n]) bySlot[n] = sk.id; // mainhand fills 1-3, offhand 4-5
+      }
+    }
+    const ids = [1, 2, 3, 4, 5].map((n) => bySlot[n]).filter(Boolean);
+    const info = await fetchNameIcons("skills", ids);
+    return ids.map((id) => info.get(id)).filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
 // Singleton API client — profession/spec/skill data cached across all calls in the session.
 let _gw2Api = null;
 async function getApi() {
@@ -305,12 +333,16 @@ async function decodeChatLinkToBuild(link, name, folderId, gameMode) {
     return { heal: enrich(set.heal), utility: (set.utility ?? []).map(enrich), elite: enrich(set.elite) };
   };
 
+  // First terrestrial weapon set's skills (slots 1-5), for the card's top row.
+  const weaponSkills = await resolveWeaponSkills(decoded.profession.id, [weapons.mainhand1, weapons.offhand1]);
+
   return {
     title: name,
     profession: decoded.profession.id,
     specializations,
     skills: addSkillIcons(skills),
     underwaterSkills: addSkillIcons(underwaterSkills),
+    weaponSkills,
     equipment: { weapons },
     selectedLegends,
     selectedUnderwaterLegends,

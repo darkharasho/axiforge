@@ -148,7 +148,7 @@ export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
       const nameClass = s.isElite ? "mini-card__spec-name mini-card__spec-name--elite" : "mini-card__spec-name";
       const pipContent = s.svg || escapeHtml(s.name.charAt(0).toUpperCase());
       const traitIcons = (s.traits || [])
-        .map((t) => `<img class="mini-card__trait-icon" src="${escapeHtml(t.icon)}" alt="" title="${escapeHtml(t.name || "")}" loading="lazy">`)
+        .map((t) => `<span class="mini-card__trait" data-name="${escapeHtml(t.name || "")}"><img class="mini-card__trait-icon" src="${escapeHtml(t.icon)}" alt="" loading="lazy"></span>`)
         .join("");
       const traitHtml = traitIcons ? `<span class="mini-card__trait-icons">${traitIcons}</span>` : "";
       return `<div class="mini-card__spec-line"><span class="${pipClass}">${pipContent}</span><span class="${nameClass}">${escapeHtml(s.name)}</span>${traitHtml}</div>`;
@@ -225,13 +225,17 @@ export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
     ? `<div class="mini-card__col-right">${weapRowHtml}${statRowHtml}${runeRowHtml}${relicRowHtml}</div>`
     : "";
 
-  // Skills row (heal / utilities / elite) with icons.
-  const skillRow = getSkillRow(build);
-  const skillsRowHtml = skillRow.length
-    ? `<div class="mini-card__skills"><span class="mini-card__detail-label">Skills</span>${skillRow
-        .map((sk) => `<span class="mini-card__skill" title="${escapeHtml(sk.name)}"><img class="mini-card__skill-icon" src="${escapeHtml(sk.icon)}" alt="" loading="lazy"></span>`)
-        .join("")}</div>`
-    : "";
+  // Top skills row: first weapon set's skills, then heal/utilities/elite — big
+  // icons with names. Weapon skills come from the enriched build (build.weaponSkills).
+  const weaponSkills = (build.weaponSkills || []).filter((s) => s && s.icon);
+  const utilSkills = getSkillRow(build);
+  const skillCell = (sk) =>
+    `<span class="mini-card__skill" title="${escapeHtml(sk.name || "")}"><img class="mini-card__skill-icon" src="${escapeHtml(sk.icon)}" alt="" loading="lazy"><span class="mini-card__skill-name">${escapeHtml(sk.name || "")}</span></span>`;
+  let skillsRowHtml = "";
+  if (weaponSkills.length || utilSkills.length) {
+    const divider = weaponSkills.length && utilSkills.length ? '<span class="mini-card__skill-div"></span>' : "";
+    skillsRowHtml = `<div class="mini-card__skills">${weaponSkills.map(skillCell).join("")}${divider}${utilSkills.map(skillCell).join("")}</div>`;
+  }
 
   // Chat-code bar: the in-game build code, surfaced with a copy button.
   const chatBarHtml = chatLink
@@ -298,11 +302,11 @@ export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
             ${modePill}
           </div>
         </div>
+        ${skillsRowHtml}
         <div class="mini-card__columns">
           ${specColHtml}
           ${rightColHtml}
         </div>
-        ${skillsRowHtml}
         ${chatBarHtml}
       </div>
     </div>
