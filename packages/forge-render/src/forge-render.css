@@ -507,6 +507,18 @@
   flex-shrink: 0;
   white-space: nowrap;
   vertical-align: middle;
+  text-decoration: none;
+}
+
+/* Anchor variant (a linkUrl was supplied) is interactive. */
+.forge-render a.mini-card__link-badge {
+  cursor: pointer;
+  transition: color 0.12s ease, background 0.12s ease;
+}
+
+.forge-render a.mini-card__link-badge:hover {
+  color: var(--fr-text, #c7c9d1);
+  background: var(--fr-bg-hover, rgba(255, 255, 255, 0.12));
 }
 
 .forge-render .mini-card__link-badge svg {

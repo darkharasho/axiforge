@@ -109,6 +109,37 @@ describe("@axiapps/forge-render mini build card", () => {
     expect(html).toContain("/file/G/r.png"); // rune icon
   });
 
+  test("renders a relic row in the scraped-gear column when present", () => {
+    const withRelic = {
+      ...build,
+      scrapedGear: {
+        weapons: [],
+        rune: null,
+        sigils: [],
+        stats: "Celestial",
+        infusions: [],
+        weaponSkills: [],
+        relic: { name: "Relic of the Water", icon: "https://render.guildwars2.com/file/G/relic.png" },
+      },
+    };
+    const html = renderMiniBuildCard(withRelic, null, { showActions: false });
+    expect(html).toContain("mini-card__relic");
+    expect(html).toContain("Relic of the Water");
+    expect(html).toContain("/file/G/relic.png");
+  });
+
+  test("renders the source link-badge as a clickable anchor when linkUrl is given", () => {
+    const html = renderMiniBuildCard(build, null, {
+      showActions: false,
+      linkUrl: "https://metabattle.com/wiki/Build:Firebrand",
+      linkBadge: { label: "MetaBattle", tooltip: "Source: https://metabattle.com/wiki/Build:Firebrand" },
+    });
+    expect(html).toContain('<a class="mini-card__link-badge"');
+    expect(html).toContain('href="https://metabattle.com/wiki/Build:Firebrand"');
+    expect(html).toContain('target="_blank"');
+    expect(html).toContain("MetaBattle");
+  });
+
   test("omits trait/skill/chat sections when the build lacks that data", () => {
     const html = renderMiniBuildCard(build, null, { showActions: false });
     expect(html).not.toContain("mini-card__trait-icon");

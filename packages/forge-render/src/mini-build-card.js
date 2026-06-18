@@ -52,6 +52,9 @@ function renderScrapedGear(gear) {
   if (gear.rune) {
     rows.push(`<div class="mini-card__cell"><span class="mini-card__detail-label">Rune</span>${img(gear.rune.icon)}<span class="mini-card__equip">${escapeHtml(gear.rune.name)}${gear.rune.count ? ` x${gear.rune.count}` : ""}</span></div>`);
   }
+  if (gear.relic) {
+    rows.push(`<div class="mini-card__cell"><span class="mini-card__detail-label">Relic</span>${img(gear.relic.icon)}<span class="mini-card__relic">${escapeHtml(gear.relic.name)}</span></div>`);
+  }
   if ((gear.infusions || []).length) {
     rows.push(`<div class="mini-card__cell"><span class="mini-card__detail-label">Infusions</span>${gear.infusions.map((i) => img(i.icon)).join("")}</div>`);
   }
@@ -277,10 +280,19 @@ export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
       ? `<a href="${escapeHtml(linkUrl)}" target="_blank" rel="noopener" class="mini-card__name" title="Open build">${name} <span class="mini-card__name-arrow">&#8599;</span></a>`
       : `<span class="mini-card__name">${name}</span>`;
 
-  // Link badge — shows this build is a reference, not owned by the comp
+  // Link badge — shows this build is a reference, not owned by the comp. When a
+  // linkUrl is supplied it renders as a real anchor so it's natively clickable
+  // (no host-side click handler needed); otherwise it stays a plain span.
+  const linkBadgeSvg =
+    '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>';
   const linkBadgeHtml = linkBadge
-    ? `<span class="mini-card__link-badge" title="${escapeHtml(linkBadge.tooltip)}">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+    ? linkUrl
+      ? `<a class="mini-card__link-badge" href="${escapeHtml(linkUrl)}" target="_blank" rel="noopener" title="${escapeHtml(linkBadge.tooltip)}">
+        ${linkBadgeSvg}
+        ${escapeHtml(linkBadge.label)}
+      </a>`
+      : `<span class="mini-card__link-badge" title="${escapeHtml(linkBadge.tooltip)}">
+        ${linkBadgeSvg}
         ${escapeHtml(linkBadge.label)}
       </span>`
     : "";
