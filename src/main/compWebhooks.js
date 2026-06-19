@@ -12,7 +12,7 @@ function makeId() {
 // into a one-entry list the first time (then persisting so it's idempotent).
 async function getCompWebhooks(store) {
   const existing = await store.getSetting("discord.compWebhooks");
-  if (Array.isArray(existing) && existing.length) return existing;
+  if (Array.isArray(existing)) return existing;
 
   const url = await store.getSetting("discord.webhookUrl");
   if (url && WEBHOOK_RE.test(url)) {
@@ -56,7 +56,9 @@ async function shareCompToWebhooks(webhooks, webhookIds, shareOne) {
     }
     try {
       const r = await shareOne(w);
-      results.push({ id: w.id, name: w.name, success: !!r.success, error: r.success ? undefined : r.error });
+      const entry = { id: w.id, name: w.name, success: !!r.success };
+      if (!r.success) entry.error = r.error;
+      results.push(entry);
     } catch (err) {
       results.push({ id: w.id, name: w.name, success: false, error: err.message });
     }
@@ -64,4 +66,4 @@ async function shareCompToWebhooks(webhooks, webhookIds, shareOne) {
   return { success: results.some((r) => r.success), results };
 }
 
-module.exports = { WEBHOOK_RE, makeId, getCompWebhooks, shareCompToWebhooks };
+module.exports = { WEBHOOK_RE, getCompWebhooks, shareCompToWebhooks };

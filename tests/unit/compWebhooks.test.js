@@ -61,7 +61,7 @@ describe("shareCompToWebhooks", () => {
     const called = [];
     const out = await shareCompToWebhooks(webhooks, ["w2"], async (w) => { called.push(w.id); return { success: true }; });
     expect(called).toEqual(["w2"]);
-    expect(out).toEqual({ success: true, results: [{ id: "w2", name: "B", success: true, error: undefined }] });
+    expect(out).toEqual({ success: true, results: [{ id: "w2", name: "B", success: true }] });
   });
 
   test("empty/missing ids posts to all", async () => {
