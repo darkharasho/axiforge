@@ -1436,16 +1436,13 @@ const readyWork = app.whenReady().then(async () => {
     await store.setSetting("lastSeenVersion", version);
   });
 
-  handle("discord:share-comp", async (_e, compId) => {
+  handle("discord:share-comp", async (_e, compId, webhookIds) => {
     const { shareCompToDiscord } = require("./discordWebhook");
+    const { getCompWebhooks, shareCompToWebhooks } = require("./compWebhooks");
 
-    // 1. Load webhook URL and thread settings
-    const [webhookUrl, threadMode, threadId] = await Promise.all([
-      store.getSetting("discord.webhookUrl"),
-      store.getSetting("discord.threadMode"),
-      store.getSetting("discord.threadId"),
-    ]);
-    if (!webhookUrl || !/^https:\/\/(discord\.com|discordapp\.com)\/api\/webhooks\//.test(webhookUrl)) {
+    // 1. Load configured comp webhooks (migrates legacy single webhook if needed)
+    const webhooks = await getCompWebhooks(store);
+    if (!webhooks.length) {
       return { success: false, error: "Discord webhook URL is not configured or invalid" };
     }
 
@@ -1479,11 +1476,19 @@ const readyWork = app.whenReady().then(async () => {
       }
     }
 
-    // 6. Share
-    return shareCompToDiscord(comp, buildsMap, compUrl, buildUrls, webhookUrl, {
-      threadMode: threadMode || "none",
-      threadId: threadMode === "custom" ? threadId : null,
-    });
+    // 6. Post to each selected webhook (or all when webhookIds is empty/omitted)
+    return shareCompToWebhooks(webhooks, webhookIds, (w) =>
+      shareCompToDiscord(comp, buildsMap, compUrl, buildUrls, w.url, {
+        threadMode: w.threadMode || "none",
+        threadId: w.threadMode === "custom" ? w.threadId : null,
+      })
+    );
+  });
+
+  handle("discord:list-comp-webhooks", async () => {
+    const { getCompWebhooks } = require("./compWebhooks");
+    const webhooks = await getCompWebhooks(store);
+    return webhooks.map((w) => ({ id: w.id, name: w.name }));
   });
 
   handle("discord:share-build", async (_e, buildId) => {

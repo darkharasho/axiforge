@@ -36,7 +36,9 @@ the existing `settings.json` (via `BuildStore.getSetting`/`setSetting`):
 A helper `getCompWebhooks()` returns the array and performs a one-time
 migration:
 
-- If `discord.compWebhooks` is present and non-empty → return it.
+- If `discord.compWebhooks` is present (any array, including an explicitly
+  empty `[]` — a user who deleted all webhooks) → return it as-is, no
+  re-migration.
 - Else if legacy `discord.webhookUrl` is set → build a single entry
   `{ id, name: "Default", url: <webhookUrl>, threadMode: <discord.threadMode || "none">, threadId: <discord.threadId || null> }`,
   persist it to `discord.compWebhooks`, and return it.

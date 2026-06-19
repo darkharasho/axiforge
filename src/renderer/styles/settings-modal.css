@@ -709,3 +709,25 @@
   color: var(--text-dim, #888);
   font-size: 12px;
 }
+
+/* ── Comp webhook list editor ─────────────────────────────────────────────── */
+
+.settings-modal__webhook-row {
+  border: 1px solid var(--border, rgba(255,255,255,0.1));
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.settings-modal__webhook-head {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.settings-modal__webhook-name { flex: 1; }
+.settings-modal__webhook-remove {
+  flex: 0 0 auto;
+  padding: 4px 10px;
+}

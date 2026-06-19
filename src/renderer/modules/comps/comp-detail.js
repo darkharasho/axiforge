@@ -142,6 +142,41 @@ function showDiscordStatus(msg, isError = false) {
   }
 }
 
+// ─── Webhook Picker ───────────────────────────────────────────────────────────
+
+// Multi-select webhook picker. Resolves to an array of selected ids, or null if cancelled.
+function pickCompWebhooks(webhooks) {
+  return new Promise((resolve) => {
+    const overlay = document.createElement("div");
+    overlay.className = "comp-webhook-picker-overlay";
+    overlay.innerHTML = `
+      <div class="comp-webhook-picker" role="dialog" aria-label="Choose webhooks">
+        <div class="comp-webhook-picker__title">Share to which Discord webhook(s)?</div>
+        <div class="comp-webhook-picker__list">
+          ${webhooks.map((w) => `
+            <label class="comp-webhook-picker__item">
+              <input type="checkbox" value="${w.id}" checked>
+              <span>${escapeHtml(w.name || "(unnamed)")}</span>
+            </label>`).join("")}
+        </div>
+        <div class="comp-webhook-picker__actions">
+          <button class="comp-webhook-picker__btn" data-act="cancel" type="button">Cancel</button>
+          <button class="comp-webhook-picker__btn comp-webhook-picker__btn--primary" data-act="post" type="button">Post</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+
+    const close = (val) => { overlay.remove(); resolve(val); };
+    overlay.addEventListener("click", (e) => { if (e.target === overlay) close(null); });
+    overlay.querySelector("[data-act='cancel']").addEventListener("click", () => close(null));
+    overlay.querySelector("[data-act='post']").addEventListener("click", () => {
+      const ids = Array.from(overlay.querySelectorAll("input[type='checkbox']:checked")).map((cb) => cb.value);
+      if (!ids.length) return; // require at least one
+      close(ids);
+    });
+  });
+}
+
 // ─── Context Menu ────────────────────────────────────────────────────────────
 
 function closeCompCtxMenu() {
@@ -1297,20 +1332,35 @@ function bindDetailEvents(container, comp) {
     const embedBtn = shareDropdown.querySelector("[data-action='share-discord']");
     const embedBtnDefault = embedBtn?.innerHTML;
     embedBtn?.addEventListener("click", async () => {
-      const webhookUrl = await window.desktopApi.getSetting("discord.webhookUrl");
-      if (!webhookUrl) {
-        showDiscordStatus("Set webhook URL in Settings first", true);
+      const webhooks = await window.desktopApi.listCompWebhooks();
+      if (!webhooks || !webhooks.length) {
+        showDiscordStatus("Add a Discord webhook in Settings first", true);
         return;
       }
+
+      let webhookIds;
+      if (webhooks.length === 1) {
+        webhookIds = [webhooks[0].id];
+      } else {
+        webhookIds = await pickCompWebhooks(webhooks);
+        if (!webhookIds) return; // cancelled
+      }
+
       embedBtn.disabled = true;
       embedBtn.innerHTML = "Sharing...";
       try {
-        const result = await window.desktopApi.shareCompToDiscord(comp.id);
+        const result = await window.desktopApi.shareCompToDiscord(comp.id, webhookIds);
         if (result.success) {
+          const failed = (result.results || []).filter((r) => !r.success);
           flashItem(embedBtn, embedBtnDefault);
-          showDiscordStatus("Shared to Discord!");
+          showDiscordStatus(failed.length
+            ? `Shared, but ${failed.length} failed: ${failed.map((r) => r.name).join(", ")}`
+            : "Shared to Discord!", failed.length > 0);
         } else {
-          showDiscordStatus(result.error || "Failed to share", true);
+          const msg = (result.results && result.results.length)
+            ? result.results.map((r) => `${r.name}: ${r.error}`).join("; ")
+            : (result.error || "Failed to share");
+          showDiscordStatus(msg, true);
           embedBtn.innerHTML = embedBtnDefault;
         }
       } catch (err) {

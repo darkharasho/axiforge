@@ -71,19 +71,32 @@ describe("settings-modal — auto-save on input (issue #251)", () => {
   });
 
   test("webhook URL inputs are wired with debounced input event listener", () => {
-    // Users expect typing a URL and pausing to trigger a save automatically.
+    // Build webhook: typing a URL and pausing should trigger a debounced save.
     const initFnMatch = src.match(/export function initSettingsModal\(\)\s*\{([\s\S]*?)(?=\nexport )/);
     expect(initFnMatch).not.toBeNull();
     const initBody = initFnMatch[1];
-    expect(initBody).toMatch(/webhookUrl.*addEventListener.*['"](input)['"]/);
+    expect(initBody).toMatch(/buildWebhookUrl.*addEventListener.*['"](input)['"]/);
     expect(initBody).toMatch(/_debouncedSave/);
+
+    // Comp webhooks: each rendered row's URL input is wired with _debouncedSaveWebhooks.
+    const renderFnMatch = src.match(/function _renderCompWebhooks\(\)\s*\{([\s\S]*?)\n\}/);
+    expect(renderFnMatch).not.toBeNull();
+    const renderBody = renderFnMatch[1];
+    expect(renderBody).toMatch(/addEventListener\(['"]input['"]/);
+    expect(renderBody).toMatch(/_debouncedSaveWebhooks/);
   });
 
   test("radio/select changes trigger immediate save", () => {
-    // Thread-mode radio changes should save without debounce delay.
+    // Build thread-mode: radio changes in init should wire a change listener.
     const initFnMatch = src.match(/export function initSettingsModal\(\)\s*\{([\s\S]*?)(?=\nexport )/);
     expect(initFnMatch).not.toBeNull();
     const initBody = initFnMatch[1];
-    expect(initBody).toMatch(/threadMode.*addEventListener.*['"](change)['"]/);
+    expect(initBody).toMatch(/buildThreadMode.*addEventListener.*['"](change)['"]/);
+
+    // Comp rows: the thread-mode element in each row is wired with a change listener.
+    const renderFnMatch = src.match(/function _renderCompWebhooks\(\)\s*\{([\s\S]*?)\n\}/);
+    expect(renderFnMatch).not.toBeNull();
+    const renderBody = renderFnMatch[1];
+    expect(renderBody).toMatch(/\[data-field='thread-mode'\].*addEventListener.*['"](change)['"]/);
   });
 });
