@@ -1,3 +1,13 @@
+## Version v0.8.1 — June 19, 2026
+
+### New Features
+
+- **Manage multiple build webhooks** — The Settings → Discord panel now lets you add several build webhooks (name, URL, channel/thread routing) just like comp webhooks, instead of a single field. When you share a build to Discord and have more than one webhook, you pick which to post to. Your existing single build webhook is migrated automatically.
+
+### Bug Fixes
+
+- **AxiForge no longer occasionally fails to open** — Launching the app right as a background (headless) instance was shutting down could silently do nothing. The window now always opens.
+
 ## Version v0.8.0 — June 19, 2026
 
 ### New Features
