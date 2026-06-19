@@ -11,6 +11,9 @@ let _el = {};
 let _escHandler = null;
 let _callbacks = {};
 
+let _compWebhooks = [];
+let _debouncedSaveWebhooks = () => {};
+
 const WEBHOOK_RE = /^https:\/\/(discord\.com|discordapp\.com)\/api\/webhooks\//;
 
 const THEMES = [
@@ -80,16 +83,9 @@ export function initSettingsModal() {
             Discord
           </h4>
           <div class="settings-modal__subsection">
-            <label class="settings-modal__sublabel">Comp Webhook</label>
-            <input type="text" class="settings-modal__input" id="sm-webhook-url" placeholder="https://discord.com/api/webhooks/..." autocomplete="off" spellcheck="false">
-            <span class="settings-modal__error" id="sm-webhook-error"></span>
-            <div class="settings-modal__thread-inline" id="sm-thread-mode">
-              <label class="settings-modal__pill"><input type="radio" name="sm-thread-mode" value="none"><span>Channel</span></label>
-              <label class="settings-modal__pill"><input type="radio" name="sm-thread-mode" value="auto"><span>New Post</span></label>
-              <label class="settings-modal__pill"><input type="radio" name="sm-thread-mode" value="custom"><span>Thread ID</span></label>
-              <input type="text" class="settings-modal__input settings-modal__thread-id-input settings-modal__thread-id-input--hidden" id="sm-thread-id" placeholder="Thread ID" autocomplete="off" spellcheck="false">
-            </div>
-            <span class="settings-modal__error" id="sm-thread-error"></span>
+            <label class="settings-modal__sublabel">Comp Webhooks</label>
+            <div id="sm-comp-webhooks"></div>
+            <button class="settings-modal__btn settings-modal__btn--secondary" id="sm-add-comp-webhook" type="button">+ Add Webhook</button>
           </div>
           <div class="settings-modal__subsection">
             <label class="settings-modal__sublabel">Build Webhook</label>
@@ -150,11 +146,8 @@ export function initSettingsModal() {
     targetPicker:   document.getElementById("sm-target-picker"),
     setupRow:       document.getElementById("sm-setup-row"),
     publishSection: document.getElementById("sm-publishing-section"),
-    webhookUrl:        document.getElementById("sm-webhook-url"),
-    webhookError:      document.getElementById("sm-webhook-error"),
-    threadMode:        document.getElementById("sm-thread-mode"),
-    threadId:          document.getElementById("sm-thread-id"),
-    threadError:       document.getElementById("sm-thread-error"),
+    compWebhooks:      document.getElementById("sm-comp-webhooks"),
+    addCompWebhook:    document.getElementById("sm-add-comp-webhook"),
     buildWebhookUrl:   document.getElementById("sm-build-webhook-url"),
     buildWebhookError: document.getElementById("sm-build-webhook-error"),
     buildThreadMode:   document.getElementById("sm-build-thread-mode"),
@@ -174,6 +167,13 @@ export function initSettingsModal() {
   _el.themedBuilds = _overlay.querySelector("#sm-themed-builds");
 
   const _debouncedSave = _debounce(_save, 600);
+  _debouncedSaveWebhooks = _debounce(_saveCompWebhooks, 600);
+
+  _el.addCompWebhook.addEventListener("click", () => {
+    _compWebhooks.push({ id: _newWebhookId(), name: "", url: "", threadMode: "none", threadId: null });
+    _renderCompWebhooks();
+    _saveCompWebhooks();
+  });
 
   _el.close.addEventListener("click", _close);
   _el.clearCache.addEventListener("click", _clearCache);
@@ -181,16 +181,10 @@ export function initSettingsModal() {
   _el.sharedDisconnect.addEventListener("click", _disconnectSharedLibrary);
 
   // Auto-save text inputs after user stops typing
-  _el.webhookUrl.addEventListener("input", _debouncedSave);
-  _el.threadId.addEventListener("input", _debouncedSave);
   _el.buildWebhookUrl.addEventListener("input", _debouncedSave);
   _el.buildThreadId.addEventListener("input", _debouncedSave);
 
   // Toggle thread ID visibility and save immediately on radio change
-  _el.threadMode.addEventListener("change", (e) => {
-    _el.threadId.classList.toggle("settings-modal__thread-id-input--hidden", e.target.value !== "custom");
-    _save();
-  });
   _el.buildThreadMode.addEventListener("change", (e) => {
     _el.buildThreadId.classList.toggle("settings-modal__thread-id-input--hidden", e.target.value !== "custom");
     _save();
@@ -208,25 +202,17 @@ export async function openSettingsModal() {
   if (!_overlay) return;
 
   // Load current values
-  const [webhookUrl, buildWebhookUrl, threadMode, threadId, buildThreadMode, buildThreadId, themedBuilds] = await Promise.all([
-    window.desktopApi.getSetting("discord.webhookUrl"),
+  const [compWebhooks, buildWebhookUrl, buildThreadMode, buildThreadId, themedBuilds] = await Promise.all([
+    window.desktopApi.getSetting("discord.compWebhooks"),
     window.desktopApi.getSetting("discord.buildWebhookUrl"),
-    window.desktopApi.getSetting("discord.threadMode"),
-    window.desktopApi.getSetting("discord.threadId"),
     window.desktopApi.getSetting("discord.buildThreadMode"),
     window.desktopApi.getSetting("discord.buildThreadId"),
     window.desktopApi.getSetting("appearance.themedBuildPages"),
   ]);
 
-  // Comp webhook
-  _el.webhookUrl.value = webhookUrl || "";
-  _el.webhookError.textContent = "";
-  const mode = threadMode || "none";
-  const radio = _el.threadMode.querySelector(`input[value="${mode}"]`);
-  if (radio) radio.checked = true;
-  _el.threadId.classList.toggle("settings-modal__thread-id-input--hidden", mode !== "custom");
-  _el.threadId.value = threadId || "";
-  _el.threadError.textContent = "";
+  // Comp webhooks
+  _compWebhooks = Array.isArray(compWebhooks) ? compWebhooks.map((w) => ({ ...w })) : [];
+  _renderCompWebhooks();
 
   // Build webhook
   _el.buildWebhookUrl.value = buildWebhookUrl || "";
@@ -258,7 +244,6 @@ export async function openSettingsModal() {
   _overlay.classList.remove("settings-modal-overlay--hidden");
   _escHandler = (e) => { if (e.key === "Escape") _close(); };
   document.addEventListener("keydown", _escHandler);
-  _el.webhookUrl.focus();
 }
 
 // ─── Theme grid ─────────────────────────────────────────────────────────────
@@ -567,35 +552,97 @@ function _showSaved() {
   }, 2000);
 }
 
+function _newWebhookId() {
+  return "wh-" + Math.abs(Date.now() ^ (Math.floor(Math.random() * 1e9))).toString(36);
+}
+
+function _renderCompWebhooks() {
+  const c = _el.compWebhooks;
+  if (!_compWebhooks.length) {
+    c.innerHTML = `<p class="settings-modal__hint">No webhooks yet. Add one to share comps to Discord.</p>`;
+    return;
+  }
+  c.innerHTML = _compWebhooks.map((w) => {
+    const mode = w.threadMode || "none";
+    const hidden = mode === "custom" ? "" : " settings-modal__thread-id-input--hidden";
+    const checked = (m) => (mode === m ? " checked" : "");
+    return `
+      <div class="settings-modal__webhook-row" data-id="${escapeHtml(w.id)}">
+        <div class="settings-modal__webhook-head">
+          <input type="text" class="settings-modal__input settings-modal__webhook-name" data-field="name" placeholder="Name (e.g. WvW Guild)" value="${escapeHtml(w.name || "")}" autocomplete="off" spellcheck="false">
+          <button class="settings-modal__btn settings-modal__btn--danger settings-modal__webhook-remove" type="button" title="Remove">✕</button>
+        </div>
+        <input type="text" class="settings-modal__input" data-field="url" placeholder="https://discord.com/api/webhooks/..." value="${escapeHtml(w.url || "")}" autocomplete="off" spellcheck="false">
+        <span class="settings-modal__error" data-field="url-error"></span>
+        <div class="settings-modal__thread-inline" data-field="thread-mode">
+          <label class="settings-modal__pill"><input type="radio" name="wh-mode-${escapeHtml(w.id)}" value="none"${checked("none")}><span>Channel</span></label>
+          <label class="settings-modal__pill"><input type="radio" name="wh-mode-${escapeHtml(w.id)}" value="auto"${checked("auto")}><span>New Post</span></label>
+          <label class="settings-modal__pill"><input type="radio" name="wh-mode-${escapeHtml(w.id)}" value="custom"${checked("custom")}><span>Thread ID</span></label>
+          <input type="text" class="settings-modal__input settings-modal__thread-id-input${hidden}" data-field="thread-id" placeholder="Thread ID" value="${escapeHtml(w.threadId || "")}" autocomplete="off" spellcheck="false">
+        </div>
+        <span class="settings-modal__error" data-field="thread-error"></span>
+      </div>`;
+  }).join("");
+
+  // Wire each row
+  c.querySelectorAll(".settings-modal__webhook-row").forEach((row) => {
+    const id = row.getAttribute("data-id");
+    row.querySelector("[data-field='name']").addEventListener("input", _debouncedSaveWebhooks);
+    row.querySelector("[data-field='url']").addEventListener("input", _debouncedSaveWebhooks);
+    row.querySelector("[data-field='thread-id']").addEventListener("input", _debouncedSaveWebhooks);
+    row.querySelector("[data-field='thread-mode']").addEventListener("change", (e) => {
+      const tid = row.querySelector("[data-field='thread-id']");
+      tid.classList.toggle("settings-modal__thread-id-input--hidden", e.target.value !== "custom");
+      _saveCompWebhooks();
+    });
+    row.querySelector(".settings-modal__webhook-remove").addEventListener("click", () => {
+      _compWebhooks = _compWebhooks.filter((w) => w.id !== id);
+      _renderCompWebhooks();
+      _saveCompWebhooks();
+    });
+  });
+}
+
+// Reads the current DOM rows, validates, and persists the array.
+async function _saveCompWebhooks() {
+  const rows = Array.from(_el.compWebhooks.querySelectorAll(".settings-modal__webhook-row"));
+  const next = [];
+  for (const row of rows) {
+    const id = row.getAttribute("data-id");
+    const name = row.querySelector("[data-field='name']").value.trim();
+    const url = row.querySelector("[data-field='url']").value.trim();
+    const mode = row.querySelector("[data-field='thread-mode'] input:checked")?.value || "none";
+    const threadId = row.querySelector("[data-field='thread-id']").value.trim();
+    const urlErr = row.querySelector("[data-field='url-error']");
+    const threadErr = row.querySelector("[data-field='thread-error']");
+    urlErr.textContent = "";
+    threadErr.textContent = "";
+
+    if (url && !WEBHOOK_RE.test(url)) { urlErr.textContent = "Must be a Discord webhook URL"; return; }
+    if (mode === "custom" && !threadId) { threadErr.textContent = "Thread ID is required"; return; }
+    if (mode === "custom" && !/^\d+$/.test(threadId)) { threadErr.textContent = "Must be a numeric Discord ID"; return; }
+
+    next.push({ id, name, url, threadMode: mode, threadId: mode === "custom" ? threadId : null });
+  }
+  _compWebhooks = next;
+  try {
+    await window.desktopApi.setSetting("discord.compWebhooks", next);
+    _showSaved();
+  } catch {
+    _el.saveStatus.textContent = "Save failed — please try again";
+    _el.saveStatus.className = "settings-modal__save-status settings-modal__save-status--error";
+  }
+}
+
 async function _save() {
-  const url = _el.webhookUrl.value.trim();
   const buildUrl = _el.buildWebhookUrl.value.trim();
-  const mode = _el.threadMode.querySelector("input:checked")?.value || "none";
-  const threadId = _el.threadId.value.trim();
   const bMode = _el.buildThreadMode.querySelector("input:checked")?.value || "none";
   const bThreadId = _el.buildThreadId.value.trim();
 
-  // Validate webhook URLs
-  if (url && !WEBHOOK_RE.test(url)) {
-    _el.webhookError.textContent = "Must be a Discord webhook URL";
-    return;
-  }
   if (buildUrl && !WEBHOOK_RE.test(buildUrl)) {
     _el.buildWebhookError.textContent = "Must be a Discord webhook URL";
     return;
   }
-
-  // Validate comp thread ID
-  if (mode === "custom" && !threadId) {
-    _el.threadError.textContent = "Thread ID is required";
-    return;
-  }
-  if (mode === "custom" && !/^\d+$/.test(threadId)) {
-    _el.threadError.textContent = "Must be a numeric Discord ID";
-    return;
-  }
-
-  // Validate build thread ID
   if (bMode === "custom" && !bThreadId) {
     _el.buildThreadError.textContent = "Thread ID is required";
     return;
@@ -605,16 +652,11 @@ async function _save() {
     return;
   }
 
-  _el.webhookError.textContent = "";
   _el.buildWebhookError.textContent = "";
-  _el.threadError.textContent = "";
   _el.buildThreadError.textContent = "";
 
   try {
     await Promise.all([
-      window.desktopApi.setSetting("discord.webhookUrl", url || null),
-      window.desktopApi.setSetting("discord.threadMode", mode),
-      window.desktopApi.setSetting("discord.threadId", mode === "custom" ? threadId : null),
       window.desktopApi.setSetting("discord.buildWebhookUrl", buildUrl || null),
       window.desktopApi.setSetting("discord.buildThreadMode", bMode),
       window.desktopApi.setSetting("discord.buildThreadId", bMode === "custom" ? bThreadId : null),
