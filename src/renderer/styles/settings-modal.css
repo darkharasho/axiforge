@@ -416,6 +416,7 @@
   justify-content: space-between;
   padding: 12px 24px;
   border-top: 1px solid var(--line);
+  flex-shrink: 0;
 }
 
 .settings-modal__save-status {
