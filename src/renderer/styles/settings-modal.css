@@ -58,7 +58,7 @@
   color: var(--text);
   padding: 6px 10px 16px;
 }
-.settings-modal__brand-icon { width: 17px; height: 17px; color: var(--accent); flex: none; }
+.settings-modal__brand svg { width: 17px; height: 17px; color: var(--accent); flex: none; }
 .settings-modal__nav { display: flex; flex-direction: column; gap: 2px; }
 .settings-modal__nav-item {
   display: flex;
@@ -96,36 +96,6 @@
 .settings-modal__pane--active { display: block; animation: sm-section-in 0.18s ease both; }
 .settings-modal__action-buttons { display: flex; gap: 8px; }
 
-/* ── Header ──────────────────────────────────────────────────────────────── */
-
-.settings-modal__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--line);
-  flex-shrink: 0;
-}
-
-.settings-modal__title {
-  font-family: "Outfit", sans-serif;
-  font-size: 1rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  color: var(--text);
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.settings-modal__title-icon {
-  width: 18px;
-  height: 18px;
-  color: var(--accent);
-  flex-shrink: 0;
-}
-
 .settings-modal__close {
   position: absolute;
   top: 14px;
@@ -152,48 +122,11 @@
 
 .settings-modal__body { flex: 1; overflow: auto; padding: 20px 24px; }
 
-/* ── Section cards ───────────────────────────────────────────────────────── */
-
-.settings-modal__section {
-  background: var(--panel);
-  border: 1px solid var(--line-soft);
-  border-radius: 10px;
-  padding: 14px 16px;
-  opacity: 0;
-  transform: translateY(6px);
-  animation: sm-section-in 0.3s ease-out forwards;
-}
-
-.settings-modal__section:nth-child(1) { animation-delay: 0.04s; }
-.settings-modal__section:nth-child(2) { animation-delay: 0.08s; }
-.settings-modal__section:nth-child(3) { animation-delay: 0.12s; }
-.settings-modal__section:nth-child(4) { animation-delay: 0.16s; }
-
 @keyframes sm-section-in {
   to {
     opacity: 1;
     transform: none;
   }
-}
-
-.settings-modal__section-title {
-  font-family: "Outfit", sans-serif;
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--accent);
-  margin: 0 0 12px;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-}
-
-.settings-modal__section-icon {
-  width: 14px;
-  height: 14px;
-  flex-shrink: 0;
-  opacity: 0.85;
 }
 
 /* ── Labels & inputs ─────────────────────────────────────────────────────── */
