@@ -1,3 +1,10 @@
+## Version v0.8.0 — June 19, 2026
+
+### New Features
+
+- **Share builds to multiple Discord webhooks** — Build shares can now fan out to several Discord webhooks at once, just like comp shares. Pick which webhooks to post to when sharing, and manage them in Settings. Your existing single build-webhook setting is migrated automatically.
+- **Webhook routing for companion apps** — Companion apps (e.g. AxiVale) can list the configured comp/build webhooks over the local API and target specific webhooks when triggering a comp or build share, so a share lands in exactly the right Discord(s).
+
 ## Version v0.7.6 — June 18, 2026
 
 ### New Features
