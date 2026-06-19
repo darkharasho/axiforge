@@ -71,4 +71,15 @@ describe("settings-modal — sidebar nav structure", () => {
       "Post comps and builds to Discord channels via webhooks."
     );
   });
+
+  test("Close and Done buttons both hide the overlay", () => {
+    const overlay = document.querySelector(".settings-modal-overlay");
+    overlay.classList.remove("settings-modal-overlay--hidden");
+    document.getElementById("sm-cancel").click();
+    expect(overlay.classList.contains("settings-modal-overlay--hidden")).toBe(true);
+
+    overlay.classList.remove("settings-modal-overlay--hidden");
+    document.getElementById("sm-done").click();
+    expect(overlay.classList.contains("settings-modal-overlay--hidden")).toBe(true);
+  });
 });

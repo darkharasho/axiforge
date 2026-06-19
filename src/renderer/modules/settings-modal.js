@@ -179,6 +179,8 @@ export function initSettingsModal() {
   _el.addBuildWebhook.addEventListener("click", () => _addWebhook("build"));
 
   _el.close.addEventListener("click", _close);
+  document.getElementById("sm-cancel").addEventListener("click", _close);
+  document.getElementById("sm-done").addEventListener("click", _close);
   _el.clearCache.addEventListener("click", _clearCache);
   _el.sharedConnect.addEventListener("click", _connectSharedLibrary);
   _el.sharedDisconnect.addEventListener("click", _disconnectSharedLibrary);
