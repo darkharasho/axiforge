@@ -113,6 +113,35 @@ describe("buildCompEmbed", () => {
     expect(embed.color).toBe(0xDC143C);
   });
 
+  test("shows builds in the comp that are not placed in any line", () => {
+    // b3 is in buildIds but not in any party line slot
+    const compWithExtra = {
+      ...comp,
+      partyLines: [{ id: "p1", capacity: 5, slots: ["b1", "b2"] }],
+      buildIds: ["b1", "b2", "b3"],
+    };
+    const embed = buildCompEmbed(compWithExtra, builds, compUrl, buildUrls);
+    // Legend lists the unplaced build
+    const lines = embed.fields[1].value.split("\n").filter(Boolean);
+    expect(lines).toHaveLength(3);
+    expect(embed.fields[1].value).toContain("Condi Scourge");
+    // Grid gets an extra "➕" row for unassigned builds
+    const rows = embed.fields[0].value.split("\n");
+    expect(rows.some((r) => r.startsWith("➕"))).toBe(true);
+  });
+
+  test("does not duplicate placed builds listed in buildIds", () => {
+    const compWithBuildIds = {
+      ...comp,
+      buildIds: ["b1", "b2", "b3"], // all already placed in lines
+    };
+    const embed = buildCompEmbed(compWithBuildIds, builds, compUrl, buildUrls);
+    const lines = embed.fields[1].value.split("\n").filter(Boolean);
+    expect(lines).toHaveLength(3);
+    const rows = embed.fields[0].value.split("\n");
+    expect(rows.some((r) => r.startsWith("➕"))).toBe(false);
+  });
+
   test("splits builds across multiple fields when exceeding 1024 chars", () => {
     const manyBuilds = {};
     const slots = [];

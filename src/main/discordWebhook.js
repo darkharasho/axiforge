@@ -52,9 +52,12 @@ function buildCompEmbed(comp, builds, compUrl, buildUrls) {
   // Grid: one row of emojis per party line, broken at 5
   const buildColors = comp.buildColors || {};
   const gridRows = [];
+  const placed = new Set();
   (comp.partyLines || []).forEach((line, idx) => {
     const emojis = [];
     (line.slots || []).forEach((slotId) => {
+      // Slots may hold category references ("tag:<id>") — those aren't builds.
+      if (slotId) placed.add(slotId);
       const build = builds[slotId];
       if (!build) return;
       const emoji = getDiscordEmoji(build, buildColors[slotId] || "normal");
@@ -62,6 +65,22 @@ function buildCompEmbed(comp, builds, compUrl, buildUrls) {
     });
     if (emojis.length > 0) gridRows.push(formatPartyGrid(emojis, idx));
   });
+
+  // Builds that belong to the comp but aren't placed in any line.
+  const extraBuildIds = (comp.buildIds || []).filter(
+    (id) => id && !placed.has(id) && builds[id]
+  );
+
+  // Extra grid row for unassigned builds, broken into rows of 5
+  const extraEmojis = [];
+  for (const id of extraBuildIds) {
+    const emoji = getDiscordEmoji(builds[id], buildColors[id] || "normal");
+    if (emoji) extraEmojis.push(emoji);
+  }
+  for (let i = 0; i < extraEmojis.length; i += 5) {
+    const chunk = extraEmojis.slice(i, i + 5).join(" ");
+    gridRows.push(`➕ ${chunk}`);
+  }
 
   // Legend: one line per unique build
   const seen = new Set();
@@ -78,6 +97,17 @@ function buildCompEmbed(comp, builds, compUrl, buildUrls) {
       const nameStr = url ? `[${name}](${url})` : name;
       legendLines.push(`${emoji} ${nameStr}`);
     }
+  }
+  // Append unassigned builds to the legend so they're listed too
+  for (const id of extraBuildIds) {
+    if (seen.has(id)) continue;
+    seen.add(id);
+    const build = builds[id];
+    const emoji = getDiscordEmoji(build, buildColors[id] || "normal");
+    const name = getDisplayName(build);
+    const url = buildUrls[id];
+    const nameStr = url ? `[${name}](${url})` : name;
+    legendLines.push(`${emoji} ${nameStr}`);
   }
 
   // Grid in left inline field, legend split across right-column fields

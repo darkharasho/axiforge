@@ -1632,9 +1632,11 @@ const readyWork = app.whenReady().then(async () => {
     const mentionForCategory = (category) => tagEmojiMention(category?.icon, category?.name);
 
     const gridRows = [];
+    const placed = new Set();
     (comp.partyLines || []).forEach((line, idx) => {
       const emojis = [];
       (line.slots || []).forEach((slotId) => {
+        if (slotId) placed.add(slotId);
         if (typeof slotId === "string" && slotId.startsWith(TAG_PREFIX)) {
           const cat = categoryById.get(slotId.slice(TAG_PREFIX.length));
           const mention = cat ? mentionForCategory(cat) : null;
@@ -1659,6 +1661,19 @@ const readyWork = app.whenReady().then(async () => {
       }
     });
 
+    // Builds in the comp but not placed in any line \u2014 still show them.
+    const extraBuildIds = (comp.buildIds || []).filter(
+      (id) => id && !placed.has(id) && buildsMap[id]
+    );
+    const extraEmojis = [];
+    for (const id of extraBuildIds) {
+      const emoji = getDiscordEmoji(buildsMap[id], buildColors[id] || "normal");
+      if (emoji) extraEmojis.push(emoji);
+    }
+    for (let i = 0; i < extraEmojis.length; i += 5) {
+      gridRows.push(`\u2795 ${extraEmojis.slice(i, i + 5).join(" ")}`);
+    }
+
     // Builds legend: one line per unique build with emoji + linked name
     const seen = new Set();
     const legendLines = [];
@@ -1681,6 +1696,17 @@ const readyWork = app.whenReady().then(async () => {
         const nameStr = url ? `[${name}](${url})` : name;
         legendLines.push(emoji ? `${emoji} ${nameStr}` : nameStr);
       }
+    }
+    // Append unplaced builds to the legend so they're listed too
+    for (const id of extraBuildIds) {
+      if (seen.has(id)) continue;
+      seen.add(id);
+      const build = buildsMap[id];
+      const emoji = getDiscordEmoji(build, buildColors[id] || "normal");
+      const name = getDisplayName(build);
+      const url = buildUrls[id];
+      const nameStr = url ? `[${name}](${url})` : name;
+      legendLines.push(emoji ? `${emoji} ${nameStr}` : nameStr);
     }
 
     const compName = comp.name || "Untitled Comp";
