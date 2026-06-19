@@ -42,98 +42,111 @@ const SETUP_STEPS = [
   { key: "poll", label: "Waiting for Pages to go live" },
 ];
 
+const ICON = {
+  gear:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
+  appearance: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r="2.5"/><path d="M17.5 10.5 21 3"/><path d="M3 21l5.5-5.5"/><circle cx="8" cy="16" r="3"/><path d="M12 12c-2-2.67-4-4-6-4a4 4 0 1 0 0 8c2 0 4-1.33 6-4z"/></svg>`,
+  discord:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`,
+  publishing: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>`,
+  shared:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
+  data:       `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>`,
+  close:      `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18L18 6M6 6L18 18"/></svg>`,
+};
+
+const CATEGORIES = [
+  { id: "appearance",     label: "Appearance",     desc: "Theme and build-page appearance.",                       icon: ICON.appearance },
+  { id: "discord",        label: "Discord",        desc: "Post comps and builds to Discord channels via webhooks.", icon: ICON.discord },
+  { id: "publishing",     label: "Publishing",     desc: "Publish your builds to a public web page.",              icon: ICON.publishing },
+  { id: "shared-library", label: "Shared Library", desc: "Share a build library with your organization.",          icon: ICON.shared },
+  { id: "data",           label: "Data & Cache",   desc: "Manage cached GW2 API data.",                            icon: ICON.data },
+];
+
 export function initSettingsCallbacks(callbacks) {
   _callbacks = callbacks;
 }
 
 export function initSettingsModal() {
   if (typeof document === "undefined") return;
-  if (_overlay) return;
+  if (_overlay) {
+    if (!_overlay.isConnected) document.body.appendChild(_overlay);
+    return;
+  }
 
   _overlay = document.createElement("div");
   _overlay.className = "settings-modal-overlay settings-modal-overlay--hidden";
+  const navHtml = CATEGORIES.map((c, i) =>
+    `<button type="button" class="settings-modal__nav-item${i === 0 ? " settings-modal__nav-item--active" : ""}" data-pane="${c.id}">${c.icon}<span>${c.label}</span></button>`
+  ).join("");
+
   _overlay.innerHTML = `
     <div class="settings-modal">
-      <div class="settings-modal__header">
-        <h3 class="settings-modal__title">
-          <svg class="settings-modal__title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-          Settings
-        </h3>
-        <button class="settings-modal__close" id="sm-close"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18L18 6M6 6L18 18"/></svg></button>
-      </div>
-      <div class="settings-modal__body">
-        <div class="settings-modal__section" id="sm-appearance-section">
-          <h4 class="settings-modal__section-title">
-            <svg class="settings-modal__section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r="2.5"/><path d="M17.5 10.5 21 3"/><path d="M3 21l5.5-5.5"/><circle cx="8" cy="16" r="3"/><path d="M12 12c-2-2.67-4-4-6-4a4 4 0 1 0 0 8c2 0 4-1.33 6-4z"/></svg>
-            Appearance
-          </h4>
-          <div class="settings-modal__theme-grid" id="sm-theme-grid"></div>
-          <label class="settings-modal__toggle" id="sm-themed-builds-toggle">
-            <input type="checkbox" class="settings-modal__toggle-input" id="sm-themed-builds">
-            <span class="settings-modal__toggle-switch"></span>
-            <span class="settings-modal__toggle-text">Themed build pages</span>
-          </label>
+      <aside class="settings-modal__sidebar">
+        <div class="settings-modal__brand">${ICON.gear}<span>Settings</span></div>
+        <nav class="settings-modal__nav" id="sm-nav">${navHtml}</nav>
+      </aside>
+      <div class="settings-modal__main">
+        <div class="settings-modal__main-header">
+          <h3 class="settings-modal__pane-title" id="sm-pane-title">${CATEGORIES[0].label}</h3>
+          <p class="settings-modal__pane-desc" id="sm-pane-desc">${CATEGORIES[0].desc}</p>
+          <button class="settings-modal__close" id="sm-close">${ICON.close}</button>
         </div>
-        <div class="settings-modal__section" id="sm-publishing-section">
-          <h4 class="settings-modal__section-title">
-            <svg class="settings-modal__section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
-            Publishing
-          </h4>
-          <label class="settings-modal__label">Repository owner</label>
-          <div id="sm-target-picker"></div>
-          <div id="sm-setup-row" class="settings-modal__setup-row"></div>
-        </div>
-        <div class="settings-modal__section">
-          <h4 class="settings-modal__section-title">
-            <svg class="settings-modal__section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-            Discord
-          </h4>
-          <div class="settings-modal__subsection">
-            <label class="settings-modal__sublabel">Comp Webhooks</label>
-            <div id="sm-comp-webhooks"></div>
-            <button class="settings-modal__btn settings-modal__btn--secondary" id="sm-add-comp-webhook" type="button">+ Add Webhook</button>
-          </div>
-          <div class="settings-modal__subsection">
-            <label class="settings-modal__sublabel">Build Webhooks</label>
-            <div id="sm-build-webhooks"></div>
-            <button class="settings-modal__btn settings-modal__btn--secondary" id="sm-add-build-webhook" type="button">+ Add Webhook</button>
-          </div>
-        </div>
-        <div class="settings-modal__section">
-          <h4 class="settings-modal__section-title">
-            <svg class="settings-modal__section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
-            Data
-          </h4>
-          <p class="settings-modal__hint">GW2 API responses are cached for 24 hours to speed up launch times.</p>
-          <div class="settings-modal__cache-row">
-            <button class="settings-modal__btn" id="sm-clear-cache" type="button">Clear API Cache</button>
-            <span class="settings-modal__cache-status" id="sm-cache-status"></span>
-          </div>
-        </div>
-        <div class="settings-modal__section" id="sm-shared-library-section">
-          <h4 class="settings-modal__section-title">
-            <svg class="settings-modal__section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-            Shared Library
-          </h4>
-          <span class="settings-modal__error" id="sm-shared-status"></span>
-          <div id="sm-shared-setup">
-            <label class="settings-modal__label" for="sm-org-select">Organization</label>
-            <select class="settings-modal__select" id="sm-org-select">
-              <option value="">Select an organization...</option>
-            </select>
-            <button class="settings-modal__btn settings-modal__btn--secondary" id="sm-shared-connect" type="button">Connect</button>
-          </div>
-          <div id="sm-shared-connected" class="settings-modal__shared-connected--hidden">
-            <div class="settings-modal__shared-info">
-              <span class="settings-modal__shared-org" id="sm-shared-org-name"></span>
-              <span class="settings-modal__shared-repo"> / axibuilds-shared</span>
+        <div class="settings-modal__body">
+          <section class="settings-modal__pane settings-modal__pane--active" data-pane="appearance" id="sm-appearance-section">
+            <div class="settings-modal__theme-grid" id="sm-theme-grid"></div>
+            <label class="settings-modal__toggle" id="sm-themed-builds-toggle">
+              <input type="checkbox" class="settings-modal__toggle-input" id="sm-themed-builds">
+              <span class="settings-modal__toggle-switch"></span>
+              <span class="settings-modal__toggle-text">Themed build pages</span>
+            </label>
+          </section>
+          <section class="settings-modal__pane" data-pane="discord">
+            <div class="settings-modal__subsection">
+              <label class="settings-modal__sublabel">Comp Webhooks</label>
+              <div id="sm-comp-webhooks"></div>
+              <button class="settings-modal__btn settings-modal__btn--secondary" id="sm-add-comp-webhook" type="button">+ Add Webhook</button>
             </div>
-            <button class="settings-modal__btn settings-modal__btn--danger" id="sm-shared-disconnect" type="button">Disconnect</button>
+            <div class="settings-modal__subsection">
+              <label class="settings-modal__sublabel">Build Webhooks</label>
+              <div id="sm-build-webhooks"></div>
+              <button class="settings-modal__btn settings-modal__btn--secondary" id="sm-add-build-webhook" type="button">+ Add Webhook</button>
+            </div>
+          </section>
+          <section class="settings-modal__pane" data-pane="publishing" id="sm-publishing-section">
+            <label class="settings-modal__label">Repository owner</label>
+            <div id="sm-target-picker"></div>
+            <div id="sm-setup-row" class="settings-modal__setup-row"></div>
+          </section>
+          <section class="settings-modal__pane" data-pane="shared-library" id="sm-shared-library-section">
+            <span class="settings-modal__error" id="sm-shared-status"></span>
+            <div id="sm-shared-setup">
+              <label class="settings-modal__label" for="sm-org-select">Organization</label>
+              <select class="settings-modal__select" id="sm-org-select">
+                <option value="">Select an organization...</option>
+              </select>
+              <button class="settings-modal__btn settings-modal__btn--secondary" id="sm-shared-connect" type="button">Connect</button>
+            </div>
+            <div id="sm-shared-connected" class="settings-modal__shared-connected--hidden">
+              <div class="settings-modal__shared-info">
+                <span class="settings-modal__shared-org" id="sm-shared-org-name"></span>
+                <span class="settings-modal__shared-repo"> / axibuilds-shared</span>
+              </div>
+              <button class="settings-modal__btn settings-modal__btn--danger" id="sm-shared-disconnect" type="button">Disconnect</button>
+            </div>
+          </section>
+          <section class="settings-modal__pane" data-pane="data">
+            <p class="settings-modal__hint">GW2 API responses are cached for 24 hours to speed up launch times.</p>
+            <div class="settings-modal__cache-row">
+              <button class="settings-modal__btn" id="sm-clear-cache" type="button">Clear API Cache</button>
+              <span class="settings-modal__cache-status" id="sm-cache-status"></span>
+            </div>
+          </section>
+        </div>
+        <div class="settings-modal__actions">
+          <span class="settings-modal__save-status" id="sm-save-status"></span>
+          <div class="settings-modal__action-buttons">
+            <button class="settings-modal__btn" id="sm-cancel" type="button">Close</button>
+            <button class="settings-modal__btn settings-modal__btn--save" id="sm-done" type="button">Done</button>
           </div>
         </div>
-      </div>
-      <div class="settings-modal__actions">
-        <span class="settings-modal__save-status" id="sm-save-status"></span>
       </div>
     </div>
   `;
