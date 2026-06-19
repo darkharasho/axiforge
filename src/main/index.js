@@ -73,6 +73,10 @@ if (!gotInstanceLock) {
 
 app.on("second-instance", (_event, argv) => {
   if (parseCliFlags(argv).headless) return; // services already running — nothing to show
+  // A windowed launch is being adopted by this instance. Claim it synchronously
+  // so a pending headless quit (quitIfHeadless) aborts instead of killing the
+  // process before the window opens.
+  windowPending = true;
   // Wait for startup init (stores, IPC handlers) so an adopted window never
   // opens against a half-initialized process.
   readyWork.then(() => {
@@ -84,7 +88,8 @@ app.on("second-instance", (_event, argv) => {
     } else {
       openMainWindow();
     }
-  }).catch((err) => console.error("[startup] adoption failed:", err));
+  }).catch((err) => console.error("[startup] adoption failed:", err))
+    .finally(() => { windowPending = false; });
 });
 
 const dataDir = path.join(app.getPath("userData"), "data");
@@ -321,6 +326,11 @@ function asHttpResult(promise, { badInput = false } = {}) {
 
 let localApi = null;
 let mainWindow = null;
+// True once a windowed launch has been delegated to this (headless) instance via
+// "second-instance" but before its window finishes opening. Guards against a
+// headless quit (quitIfHeadless's deferred app.quit) racing the promotion and
+// killing the process before the user's window appears.
+let windowPending = false;
 let axicodeHandlersRegistered = false;
 let autoUpdateInitialized = false;
 // Last validated window bounds, loaded during whenReady. Module-level so
@@ -2054,10 +2064,18 @@ const readyWork = app.whenReady().then(async () => {
     version: app.getVersion(),
     ops: {
       // Quit only if still windowless (never promoted to a real window via a
-      // second-instance/AxiOM launch). Defer the quit so the 200 flushes first.
+      // second-instance/AxiOM launch). Defer the quit so the 200 flushes first,
+      // and re-check at fire time: a windowed launch may have been delegated to
+      // this instance in the interim (window already open, or windowPending set
+      // synchronously by "second-instance"). Quitting then would silently drop
+      // the user's launch — the intermittent "AppImage won't open" symptom.
       quitIfHeadless: () => {
-        const promoted = BrowserWindow.getAllWindows().length > 0;
-        if (!promoted) setTimeout(() => app.quit(), 50);
+        const promoted = BrowserWindow.getAllWindows().length > 0 || windowPending;
+        if (!promoted) {
+          setTimeout(() => {
+            if (BrowserWindow.getAllWindows().length === 0 && !windowPending) app.quit();
+          }, 50);
+        }
         return { quitting: !promoted };
       },
       listBuilds: () => invokeLocal("builds:list"),
