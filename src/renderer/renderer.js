@@ -47,6 +47,7 @@ import { initWikiModal, openWikiModal } from "./modules/wiki-modal.js";
 import { initWhatsNewModal, maybeAutoOpenWhatsNew } from "./modules/whats-new-modal.js";
 import { initDetailModal, openDetailModal } from "./modules/detail-modal.js";
 import { initConfirmModal } from "./modules/confirm-modal.js";
+import { pickWebhooks } from "./modules/webhook-picker.js";
 import { initImportConflictModal } from "./modules/import-conflict-modal.js";
 import { initSettingsModal, initSettingsCallbacks } from "./modules/settings-modal.js";
 import { initLibrary, renderLibrary, handleLibraryKeydown, showToast } from "./modules/library/library.js";
@@ -1294,13 +1295,21 @@ function wireEvents() {
     discordEmbedItem?.addEventListener("click", async () => {
       if (discordEmbedItem.classList.contains("editor-share-dropdown__item--copied")) return;
       try {
-        const webhookUrl = await window.desktopApi.getSetting("discord.buildWebhookUrl");
-        if (!webhookUrl) {
-          showError(new Error("Set build webhook URL in Settings first."));
+        const webhooks = await window.desktopApi.listBuildWebhooks();
+        if (!webhooks || !webhooks.length) {
+          showError(new Error("Add a build webhook in Settings first."));
           return;
         }
         const buildId = state.editor?.id;
         if (!buildId) throw new Error("No build loaded");
+
+        let webhookIds;
+        if (webhooks.length === 1) {
+          webhookIds = [webhooks[0].id];
+        } else {
+          webhookIds = await pickWebhooks(webhooks);
+          if (!webhookIds) return; // cancelled
+        }
 
         // Auto-save + publish if not yet published
         let build = state.builds.find((b) => b.id === buildId);
@@ -1335,7 +1344,7 @@ function wireEvents() {
         }
 
         discordEmbedItem.innerHTML = "Sharing...";
-        const result = await window.desktopApi.shareBuildToDiscord(buildId);
+        const result = await window.desktopApi.shareBuildToDiscord(buildId, webhookIds);
         if (result.success) {
           flashItem(discordEmbedItem, discordEmbedDefault);
         } else {

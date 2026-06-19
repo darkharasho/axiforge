@@ -23,7 +23,7 @@ describe("settings-modal — no explicit Save button (auto-saves)", () => {
   });
 });
 
-describe("settings-modal _save — error handling", () => {
+describe("settings-modal _saveWebhooks — error handling", () => {
   let src;
 
   beforeAll(() => {
@@ -33,25 +33,31 @@ describe("settings-modal _save — error handling", () => {
     );
   });
 
-  test("_save function contains try/catch around the setSetting calls", () => {
+  test("_saveWebhooks function contains try/catch around the setSetting call", () => {
     // This guards against silent failures where the modal stays open with no
     // user feedback when IPC calls fail.
-    const saveFnMatch = src.match(/async function _save\(\)\s*\{([\s\S]*?)(?=\n(?:function|async function|\/\/ ─))/);
+    const saveFnMatch = src.match(/async function _saveWebhooks\(kind\)\s*\{([\s\S]*?)\n\}/);
     expect(saveFnMatch).not.toBeNull();
     const saveFnBody = saveFnMatch[1];
     expect(saveFnBody).toMatch(/try\s*\{/);
-    expect(saveFnBody).toMatch(/catch\s*\(/);
+    expect(saveFnBody).toMatch(/catch\s*\{/);
   });
 
-  test("_save shows a user-visible error when setSetting fails", () => {
-    // Verify the catch block in _save sets a visible error, not just logs to console.
-    const saveFnMatch = src.match(/async function _save\(\)\s*\{([\s\S]*?)(?=\n(?:function|async function|\/\/ ─))/);
+  test("_saveWebhooks shows a user-visible error when setSetting fails", () => {
+    // Verify the catch block sets a visible error, not just logs to console.
+    const saveFnMatch = src.match(/async function _saveWebhooks\(kind\)\s*\{([\s\S]*?)\n\}/);
     expect(saveFnMatch).not.toBeNull();
-    const saveFnBody = saveFnMatch[1];
-    const catchBlock = saveFnBody.match(/catch\s*\([^)]*\)\s*\{([^}]*)\}/s);
+    const catchBlock = saveFnMatch[1].match(/catch\s*\{([^}]*)\}/s);
     expect(catchBlock).not.toBeNull();
     expect(catchBlock[1]).not.toMatch(/^\s*\/\//);
-    expect(catchBlock[0]).toMatch(/textContent|showError|err/);
+    expect(catchBlock[0]).toMatch(/textContent|saveStatus/);
+  });
+
+  test("comp and build webhooks both persist to their own array setting", () => {
+    // The generic saver is parameterized by kind; each kind has its own setting key.
+    expect(src).toMatch(/discord\.compWebhooks/);
+    expect(src).toMatch(/discord\.buildWebhooks/);
+    expect(src).toMatch(/setSetting\(WEBHOOK_KINDS\[kind\]\.setting/);
   });
 });
 
@@ -70,33 +76,30 @@ describe("settings-modal — auto-save on input (issue #251)", () => {
     expect(src).toMatch(/function _debounce\s*\(/);
   });
 
-  test("webhook URL inputs are wired with debounced input event listener", () => {
-    // Build webhook: typing a URL and pausing should trigger a debounced save.
+  test("both comp and build add-webhook buttons are wired", () => {
     const initFnMatch = src.match(/export function initSettingsModal\(\)\s*\{([\s\S]*?)(?=\nexport )/);
     expect(initFnMatch).not.toBeNull();
     const initBody = initFnMatch[1];
-    expect(initBody).toMatch(/buildWebhookUrl.*addEventListener.*['"](input)['"]/);
-    expect(initBody).toMatch(/_debouncedSave/);
+    expect(initBody).toMatch(/addCompWebhook.*addEventListener.*['"](click)['"]/);
+    expect(initBody).toMatch(/addBuildWebhook.*addEventListener.*['"](click)['"]/);
+    // Both debounced savers are wired up.
+    expect(initBody).toMatch(/_debouncedSaveWebhooks\.comp/);
+    expect(initBody).toMatch(/_debouncedSaveWebhooks\.build/);
+  });
 
-    // Comp webhooks: each rendered row's URL input is wired with _debouncedSaveWebhooks.
-    const renderFnMatch = src.match(/function _renderCompWebhooks\(\)\s*\{([\s\S]*?)\n\}/);
+  test("each rendered webhook row's URL input is wired with the debounced saver", () => {
+    const renderFnMatch = src.match(/function _renderWebhooks\(kind\)\s*\{([\s\S]*?)\n\}/);
     expect(renderFnMatch).not.toBeNull();
     const renderBody = renderFnMatch[1];
     expect(renderBody).toMatch(/addEventListener\(['"]input['"]/);
-    expect(renderBody).toMatch(/_debouncedSaveWebhooks/);
+    expect(renderBody).toMatch(/debSave/);
   });
 
-  test("radio/select changes trigger immediate save", () => {
-    // Build thread-mode: radio changes in init should wire a change listener.
-    const initFnMatch = src.match(/export function initSettingsModal\(\)\s*\{([\s\S]*?)(?=\nexport )/);
-    expect(initFnMatch).not.toBeNull();
-    const initBody = initFnMatch[1];
-    expect(initBody).toMatch(/buildThreadMode.*addEventListener.*['"](change)['"]/);
-
-    // Comp rows: the thread-mode element in each row is wired with a change listener.
-    const renderFnMatch = src.match(/function _renderCompWebhooks\(\)\s*\{([\s\S]*?)\n\}/);
+  test("thread-mode radio changes trigger an immediate save", () => {
+    const renderFnMatch = src.match(/function _renderWebhooks\(kind\)\s*\{([\s\S]*?)\n\}/);
     expect(renderFnMatch).not.toBeNull();
     const renderBody = renderFnMatch[1];
     expect(renderBody).toMatch(/\[data-field='thread-mode'\].*addEventListener.*['"](change)['"]/);
+    expect(renderBody).toMatch(/_saveWebhooks\(kind\)/);
   });
 });

@@ -30,6 +30,7 @@ import { showHistoryPanel, showFolderHistoryPanel } from "./history-panel.js";
 import { compIcon } from "./heroicons.js";
 import { pushUndo, popUndo } from "./undo.js";
 import { handleAxicodeExport, handleAxicodeImport } from "./axicode-io.js";
+import { pickWebhooks } from "../webhook-picker.js";
 
 // ─── App-level callbacks (injected at init) ────────────────────────────────────
 
@@ -523,10 +524,18 @@ async function handleDiscordCopy(buildId) {
 
 async function handleDiscordEmbed(buildId) {
   try {
-    const webhookUrl = await window.desktopApi.getSetting("discord.buildWebhookUrl");
-    if (!webhookUrl) {
-      showToast("Set build webhook URL in Settings first", "error");
+    const webhooks = await window.desktopApi.listBuildWebhooks();
+    if (!webhooks || !webhooks.length) {
+      showToast("Add a build webhook in Settings first", "error");
       return;
+    }
+
+    let webhookIds;
+    if (webhooks.length === 1) {
+      webhookIds = [webhooks[0].id];
+    } else {
+      webhookIds = await pickWebhooks(webhooks);
+      if (!webhookIds) return; // cancelled
     }
 
     // Auto-publish if not yet published
@@ -538,7 +547,7 @@ async function handleDiscordEmbed(buildId) {
       renderLibrary();
     }
 
-    const result = await window.desktopApi.shareBuildToDiscord(buildId);
+    const result = await window.desktopApi.shareBuildToDiscord(buildId, webhookIds);
     if (result.success) {
       showToast("Shared to Discord!");
     } else {
