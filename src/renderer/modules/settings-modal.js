@@ -66,10 +66,7 @@ export function initSettingsCallbacks(callbacks) {
 
 export function initSettingsModal() {
   if (typeof document === "undefined") return;
-  if (_overlay) {
-    if (!_overlay.isConnected) document.body.appendChild(_overlay);
-    return;
-  }
+  if (_overlay) return;
 
   _overlay = document.createElement("div");
   _overlay.className = "settings-modal-overlay settings-modal-overlay--hidden";

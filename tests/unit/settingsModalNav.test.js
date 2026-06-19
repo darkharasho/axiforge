@@ -13,11 +13,13 @@ jest.mock("../../src/renderer/modules/utils.js", () => ({
 }));
 jest.mock("../../src/renderer/modules/confirm-modal.js", () => ({ showConfirmModal: jest.fn() }));
 
-const { initSettingsModal } = require("../../src/renderer/modules/settings-modal.js");
-
 describe("settings-modal — sidebar nav structure", () => {
+  let initSettingsModal;
+
   beforeEach(() => {
+    jest.resetModules();
     document.body.innerHTML = "";
+    ({ initSettingsModal } = require("../../src/renderer/modules/settings-modal.js"));
     initSettingsModal();
   });
 
