@@ -156,6 +156,19 @@ function buildRoutes({ version, ops }) {
         return { chatLink: await ops.generateChatLink(build) };
       },
     },
+    {
+      // Share an already-published build to the configured Discord webhook
+      // (rich embed). Precondition failures (webhook unset, build not published)
+      // surface as 400 via asHttpResult; success returns { success: true }.
+      method: "POST", pattern: "/builds/:id/share-discord",
+      handler: async ({ params }) => {
+        const builds = await ops.listBuilds();
+        if (!builds.some((b) => b.id === params.id)) {
+          throw httpError(404, `Build not found: ${params.id}`);
+        }
+        return ops.shareBuildToDiscord(params.id);
+      },
+    },
 
     // ── Comps ────────────────────────────────────────────────────────────
     { method: "GET", pattern: "/comps", handler: async () => ops.listComps() },
@@ -196,6 +209,20 @@ function buildRoutes({ version, ops }) {
           throw httpError(404, `Comp not found: ${params.id}`);
         }
         return ops.publishComp(params.id, body?.boonCoverageHtml);
+      },
+    },
+    {
+      // Share an already-published comp to the configured Discord webhook (rich
+      // embed with the party grid + build legend). Precondition failures (webhook
+      // unset, comp not published) surface as 400 via asHttpResult; success
+      // returns { success: true }.
+      method: "POST", pattern: "/comps/:id/share-discord",
+      handler: async ({ params }) => {
+        const comps = await ops.listComps();
+        if (!comps.some((c) => c.id === params.id)) {
+          throw httpError(404, `Comp not found: ${params.id}`);
+        }
+        return ops.shareCompToDiscord(params.id);
       },
     },
     {

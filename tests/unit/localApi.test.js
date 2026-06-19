@@ -15,11 +15,13 @@ function stubOps(overrides = {}) {
     saveBuild: async (b) => b,
     deleteBuild: async () => true,
     publishBuild: async () => ({}),
+    shareBuildToDiscord: async () => ({ success: true }),
     generateChatLink: async () => "",
     listComps: async () => [],
     saveComp: async (c) => c,
     deleteComp: async () => undefined,
     publishComp: async () => ({}),
+    shareCompToDiscord: async () => ({ success: true }),
     compPlaintext: async () => "",
     importChatLink: async () => ({}),
     importGw2Skills: async () => ({}),
@@ -150,6 +152,7 @@ describe("local API — builds endpoints", () => {
   let api, token, port, dir, store;
   const published = [];
   const chatLinked = [];
+  const sharedBuilds = [];
 
   beforeEach(async () => {
     dir = await fs.mkdtemp(path.join(os.tmpdir(), "axiforge-api-builds-"));
@@ -157,6 +160,7 @@ describe("local API — builds endpoints", () => {
     await store.init();
     published.length = 0;
     chatLinked.length = 0;
+    sharedBuilds.length = 0;
     ({ api, token, port } = await startApi({
       listBuilds: () => store.listBuilds(),
       saveBuild: (b) => store.upsertBuild(b),
@@ -164,6 +168,10 @@ describe("local API — builds endpoints", () => {
       publishBuild: async (id) => {
         published.push(id);
         return { pagesUrl: `https://example.test/?b=${id}`, slug: "test", fileId: "f1", changed: true };
+      },
+      shareBuildToDiscord: async (id) => {
+        sharedBuilds.push(id);
+        return { success: true };
       },
       generateChatLink: async (build) => {
         chatLinked.push(build.id);
@@ -252,6 +260,20 @@ describe("local API — builds endpoints", () => {
     expect(published).toHaveLength(0);
   });
 
+  test("POST /builds/:id/share-discord delegates to ops.shareBuildToDiscord", async () => {
+    const created = await store.upsertBuild({ title: "Shareable", profession: "Revenant" });
+    const res = await req(port, token, "POST", `/builds/${created.id}/share-discord`);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ success: true });
+    expect(sharedBuilds).toEqual([created.id]);
+  });
+
+  test("POST /builds/:id/share-discord returns 404 for an unknown build", async () => {
+    const res = await req(port, token, "POST", "/builds/nope/share-discord");
+    expect(res.status).toBe(404);
+    expect(sharedBuilds).toHaveLength(0);
+  });
+
   test("DELETE /builds/:id returns 404 for an unknown build", async () => {
     const res = await req(port, token, "DELETE", "/builds/nope");
     expect(res.status).toBe(404);
@@ -261,12 +283,14 @@ describe("local API — builds endpoints", () => {
 describe("local API — comps endpoints", () => {
   let api, token, port, dir, compStore;
   const publishedComps = [];
+  const sharedComps = [];
 
   beforeEach(async () => {
     dir = await fs.mkdtemp(path.join(os.tmpdir(), "axiforge-api-comps-"));
     compStore = new CompStore(dir);
     await compStore.init();
     publishedComps.length = 0;
+    sharedComps.length = 0;
     ({ api, token, port } = await startApi({
       listComps: () => compStore.listComps(),
       saveComp: (c) => compStore.upsertComp(c),
@@ -274,6 +298,10 @@ describe("local API — comps endpoints", () => {
       publishComp: async (id, boonCoverageHtml) => {
         publishedComps.push({ id, boonCoverageHtml });
         return { pagesUrl: `https://example.test/?c=${id}`, slug: "comp", fileId: "c1", changed: true };
+      },
+      shareCompToDiscord: async (id) => {
+        sharedComps.push(id);
+        return { success: true };
       },
       compPlaintext: async (id) => {
         const comps = await compStore.listComps();
@@ -351,6 +379,20 @@ describe("local API — comps endpoints", () => {
     const res = await req(port, token, "POST", "/comps/nope/publish");
     expect(res.status).toBe(404);
     expect(publishedComps).toHaveLength(0);
+  });
+
+  test("POST /comps/:id/share-discord delegates to ops.shareCompToDiscord", async () => {
+    const created = await compStore.upsertComp({ name: "Shareable Comp" });
+    const res = await req(port, token, "POST", `/comps/${created.id}/share-discord`);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ success: true });
+    expect(sharedComps).toEqual([created.id]);
+  });
+
+  test("POST /comps/:id/share-discord returns 404 for an unknown comp", async () => {
+    const res = await req(port, token, "POST", "/comps/nope/share-discord");
+    expect(res.status).toBe(404);
+    expect(sharedComps).toHaveLength(0);
   });
 
   test("GET /comps/:id/plaintext returns 404 for an unknown comp", async () => {

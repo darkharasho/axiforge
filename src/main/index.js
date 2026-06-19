@@ -2028,6 +2028,8 @@ const readyWork = app.whenReady().then(async () => {
       saveBuild: (build) => asHttpResult(invokeLocal("builds:save", build)),
       deleteBuild: (id) => asHttpResult(invokeLocal("builds:delete", id)),
       publishBuild: (id) => asHttpResult(invokeLocal("builds:publish-build", id)),
+      shareBuildToDiscord: (id) =>
+        asHttpResult(invokeLocal("discord:share-build", id), { badInput: true }),
       generateChatLink: (build) =>
         asHttpResult(invokeLocal("builds:generate-chat-link", build)),
       listComps: () => invokeLocal("comps:list"),
@@ -2035,6 +2037,8 @@ const readyWork = app.whenReady().then(async () => {
       deleteComp: (id) => asHttpResult(invokeLocal("comps:delete", id)),
       publishComp: (id, boonCoverageHtml) =>
         asHttpResult(invokeLocal("comps:publish-comp", id, boonCoverageHtml)),
+      shareCompToDiscord: (id) =>
+        asHttpResult(invokeLocal("discord:share-comp", id), { badInput: true }),
       compPlaintext: (id) => asHttpResult(invokeLocal("comps:generate-plaintext", id)),
       importChatLink: (link, name, folderId, gameMode) =>
         asHttpResult(invokeLocal("builds:import-chat-link", link, name, folderId, gameMode), { badInput: true }),
