@@ -123,6 +123,15 @@ jobs:
             capture { print }
           ' RELEASE_NOTES.md)
 
+          # Fail loudly if RELEASE_NOTES.md has no section for this tag. Without this,
+          # a release cut without notes (e.g. a manual chore(release) commit) silently
+          # publishes an empty GitHub body and a generic "new version available" Discord
+          # post — which is how v0.7.5 shipped with no notes.
+          if [ -z "$(printf '%s' "$notes" | tr -d '[:space:]')" ]; then
+            echo "::error::No RELEASE_NOTES.md section found for $tag. Add a '## Version $tag — <date>' entry and re-run." >&2
+            exit 1
+          fi
+
           # Match the release for this tag whether electron-builder left it as a draft
           # or already published it (it publishes non-draft when --publish always). The
           # PATCH below is idempotent — it just (re)writes the notes and ensures it's live.

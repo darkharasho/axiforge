@@ -4,6 +4,13 @@
 
 - **Comp shares now include every build, even bench/unassigned ones** — When sharing a comp to Discord (embed or copyable post), builds that belong to the comp but aren't placed in a party line are now shown too, in a dedicated ➕ row in the grid and in the Builds list.
 
+## Version v0.7.5 — June 18, 2026
+
+### New Features
+
+- **Share comps and builds to Discord over HTTP** — Companion apps can now trigger a Discord share for a comp or build through the local API.
+- **Richer build cards** — The forge-render build card now shows selected traits, skills, gear, a class accent, and the chat code, with a clickable source link badge and page-scraped gear/relics.
+
 ## Version v0.7.4 — June 14, 2026
 
 ### Bug Fixes
