@@ -161,13 +161,19 @@ function buildRoutes({ version, ops }) {
       // (rich embed). Precondition failures (webhook unset, build not published)
       // surface as 400 via asHttpResult; success returns { success: true }.
       method: "POST", pattern: "/builds/:id/share-discord",
-      handler: async ({ params }) => {
+      handler: async ({ params, body }) => {
         const builds = await ops.listBuilds();
         if (!builds.some((b) => b.id === params.id)) {
           throw httpError(404, `Build not found: ${params.id}`);
         }
-        return ops.shareBuildToDiscord(params.id);
+        return ops.shareBuildToDiscord(params.id, body?.webhook_ids);
       },
+    },
+    {
+      // List the configured comp + build Discord webhooks ({ comp, build } of
+      // { id, name }) so clients can target specific ones on a share.
+      method: "GET", pattern: "/discord/webhooks",
+      handler: async () => ops.listDiscordWebhooks(),
     },
 
     // ── Comps ────────────────────────────────────────────────────────────
@@ -217,12 +223,12 @@ function buildRoutes({ version, ops }) {
       // unset, comp not published) surface as 400 via asHttpResult; success
       // returns { success: true }.
       method: "POST", pattern: "/comps/:id/share-discord",
-      handler: async ({ params }) => {
+      handler: async ({ params, body }) => {
         const comps = await ops.listComps();
         if (!comps.some((c) => c.id === params.id)) {
           throw httpError(404, `Comp not found: ${params.id}`);
         }
-        return ops.shareCompToDiscord(params.id);
+        return ops.shareCompToDiscord(params.id, body?.webhook_ids);
       },
     },
     {

@@ -22,6 +22,7 @@ function stubOps(overrides = {}) {
     deleteComp: async () => undefined,
     publishComp: async () => ({}),
     shareCompToDiscord: async () => ({ success: true }),
+    listDiscordWebhooks: async () => ({ comp: [], build: [] }),
     compPlaintext: async () => "",
     importChatLink: async () => ({}),
     importGw2Skills: async () => ({}),
@@ -169,8 +170,8 @@ describe("local API — builds endpoints", () => {
         published.push(id);
         return { pagesUrl: `https://example.test/?b=${id}`, slug: "test", fileId: "f1", changed: true };
       },
-      shareBuildToDiscord: async (id) => {
-        sharedBuilds.push(id);
+      shareBuildToDiscord: async (id, webhookIds) => {
+        sharedBuilds.push({ id, webhookIds });
         return { success: true };
       },
       generateChatLink: async (build) => {
@@ -265,7 +266,14 @@ describe("local API — builds endpoints", () => {
     const res = await req(port, token, "POST", `/builds/${created.id}/share-discord`);
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ success: true });
-    expect(sharedBuilds).toEqual([created.id]);
+    expect(sharedBuilds).toEqual([{ id: created.id, webhookIds: undefined }]);
+  });
+
+  test("POST /builds/:id/share-discord forwards webhook_ids from the body", async () => {
+    const created = await store.upsertBuild({ title: "Targeted", profession: "Ranger" });
+    const res = await req(port, token, "POST", `/builds/${created.id}/share-discord`, { webhook_ids: ["w1", "w2"] });
+    expect(res.status).toBe(200);
+    expect(sharedBuilds).toContainEqual({ id: created.id, webhookIds: ["w1", "w2"] });
   });
 
   test("POST /builds/:id/share-discord returns 404 for an unknown build", async () => {
@@ -299,8 +307,8 @@ describe("local API — comps endpoints", () => {
         publishedComps.push({ id, boonCoverageHtml });
         return { pagesUrl: `https://example.test/?c=${id}`, slug: "comp", fileId: "c1", changed: true };
       },
-      shareCompToDiscord: async (id) => {
-        sharedComps.push(id);
+      shareCompToDiscord: async (id, webhookIds) => {
+        sharedComps.push({ id, webhookIds });
         return { success: true };
       },
       compPlaintext: async (id) => {
@@ -386,7 +394,24 @@ describe("local API — comps endpoints", () => {
     const res = await req(port, token, "POST", `/comps/${created.id}/share-discord`);
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ success: true });
-    expect(sharedComps).toEqual([created.id]);
+    expect(sharedComps).toEqual([{ id: created.id, webhookIds: undefined }]);
+  });
+
+  test("POST /comps/:id/share-discord forwards webhook_ids from the body", async () => {
+    const created = await compStore.upsertComp({ name: "Targeted Comp" });
+    const res = await req(port, token, "POST", `/comps/${created.id}/share-discord`, { webhook_ids: ["c1"] });
+    expect(res.status).toBe(200);
+    expect(sharedComps).toContainEqual({ id: created.id, webhookIds: ["c1"] });
+  });
+
+  test("GET /discord/webhooks returns the comp + build webhook lists", async () => {
+    const { api: a, token: t, port: p } = await startApi({
+      listDiscordWebhooks: async () => ({ comp: [{ id: "c1", name: "DEFI" }], build: [{ id: "b1", name: "EWW" }] }),
+    });
+    const res = await req(p, t, "GET", "/discord/webhooks");
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ comp: [{ id: "c1", name: "DEFI" }], build: [{ id: "b1", name: "EWW" }] });
+    await a.stop();
   });
 
   test("POST /comps/:id/share-discord returns 404 for an unknown comp", async () => {
