@@ -183,12 +183,31 @@ export function initSettingsModal() {
   _el.sharedConnect.addEventListener("click", _connectSharedLibrary);
   _el.sharedDisconnect.addEventListener("click", _disconnectSharedLibrary);
 
+  _overlay.querySelector("#sm-nav").addEventListener("click", (e) => {
+    const item = e.target.closest(".settings-modal__nav-item");
+    if (item) _switchPane(item.dataset.pane);
+  });
+
   // Toggle themed build pages
   _el.themedBuilds.addEventListener("change", async () => {
     const enabled = _el.themedBuilds.checked;
     await window.desktopApi.setSetting("appearance.themedBuildPages", enabled);
     if (_callbacks.onThemedBuildsToggle) _callbacks.onThemedBuildsToggle(enabled);
   });
+}
+
+function _switchPane(id) {
+  const cat = CATEGORIES.find((c) => c.id === id) || CATEGORIES[0];
+  for (const item of _overlay.querySelectorAll(".settings-modal__nav-item")) {
+    item.classList.toggle("settings-modal__nav-item--active", item.dataset.pane === cat.id);
+  }
+  for (const pane of _overlay.querySelectorAll(".settings-modal__pane")) {
+    pane.classList.toggle("settings-modal__pane--active", pane.dataset.pane === cat.id);
+  }
+  const title = document.getElementById("sm-pane-title");
+  const desc = document.getElementById("sm-pane-desc");
+  if (title) title.textContent = cat.label;
+  if (desc) desc.textContent = cat.desc;
 }
 
 export async function openSettingsModal() {

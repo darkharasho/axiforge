@@ -55,4 +55,20 @@ describe("settings-modal — sidebar nav structure", () => {
       expect(document.getElementById(id)).not.toBeNull();
     }
   });
+
+  test("clicking a nav item activates its pane and updates the header", () => {
+    document.querySelector('.settings-modal__nav-item[data-pane="discord"]').click();
+
+    const activeNav = document.querySelector(".settings-modal__nav-item--active");
+    expect(activeNav.dataset.pane).toBe("discord");
+
+    const activePanes = [...document.querySelectorAll(".settings-modal__pane--active")];
+    expect(activePanes).toHaveLength(1);
+    expect(activePanes[0].dataset.pane).toBe("discord");
+
+    expect(document.getElementById("sm-pane-title").textContent).toBe("Discord");
+    expect(document.getElementById("sm-pane-desc").textContent).toBe(
+      "Post comps and builds to Discord channels via webhooks."
+    );
+  });
 });
