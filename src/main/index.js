@@ -1491,17 +1491,14 @@ const readyWork = app.whenReady().then(async () => {
     return webhooks.map((w) => ({ id: w.id, name: w.name }));
   });
 
-  handle("discord:share-build", async (_e, buildId) => {
+  handle("discord:share-build", async (_e, buildId, webhookIds) => {
     const { shareBuildToDiscord } = require("./discordWebhook");
+    const { getBuildWebhooks, shareBuildToWebhooks } = require("./buildWebhooks");
     const { generateChatLink } = require("./buildChatLink.js");
 
-    // 1. Load webhook URL and thread settings
-    const [webhookUrl, threadMode, threadId] = await Promise.all([
-      store.getSetting("discord.buildWebhookUrl"),
-      store.getSetting("discord.buildThreadMode"),
-      store.getSetting("discord.buildThreadId"),
-    ]);
-    if (!webhookUrl || !/^https:\/\/(discord\.com|discordapp\.com)\/api\/webhooks\//.test(webhookUrl)) {
+    // 1. Load configured build webhooks (migrates the legacy single webhook if needed)
+    const webhooks = await getBuildWebhooks(store);
+    if (!webhooks.length) {
       return { success: false, error: "Build webhook URL is not configured or invalid" };
     }
 
@@ -1556,19 +1553,27 @@ const readyWork = app.whenReady().then(async () => {
     const { estimateRole } = require("./statsCompute");
     const role = estimateRole(build);
 
-    // 8. Share
-    return shareBuildToDiscord(build, buildUrl, chatLink, {
-      professionIconUrl,
-      specIconUrl,
-      eliteSpecName,
-      gameMode: build.gameMode || "pve",
-      role,
-      catalog,
-      upgradeCatalog,
-    }, webhookUrl, {
-      threadMode: threadMode || "none",
-      threadId: threadMode === "custom" ? threadId : null,
-    });
+    // 8. Post to each selected webhook (or all when webhookIds is empty/omitted)
+    return shareBuildToWebhooks(webhooks, webhookIds, (w) =>
+      shareBuildToDiscord(build, buildUrl, chatLink, {
+        professionIconUrl,
+        specIconUrl,
+        eliteSpecName,
+        gameMode: build.gameMode || "pve",
+        role,
+        catalog,
+        upgradeCatalog,
+      }, w.url, {
+        threadMode: w.threadMode || "none",
+        threadId: w.threadMode === "custom" ? w.threadId : null,
+      })
+    );
+  });
+
+  handle("discord:list-build-webhooks", async () => {
+    const { getBuildWebhooks } = require("./buildWebhooks");
+    const webhooks = await getBuildWebhooks(store);
+    return webhooks.map((w) => ({ id: w.id, name: w.name }));
   });
 
   handle("discord:build-copy-text", async (_e, buildId) => {
