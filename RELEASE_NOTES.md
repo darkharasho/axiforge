@@ -1,3 +1,9 @@
+## Version v0.9.0 — June 19, 2026
+
+### New Features
+
+- **Redesigned Settings** — Settings has been reorganized from a single cramped, scrolling panel into a roomier window with a category sidebar. Pick a category — Appearance, Discord, Publishing, Shared Library, or Data & Cache — from the left and its options show on the right, each with a short description so it's clear what you're changing. The theme picker and Discord webhook editors now have room to breathe, and there's a clear Close/Done footer. All your existing settings carry over unchanged.
+
 ## Version v0.8.1 — June 19, 2026
 
 ### New Features
