@@ -8,7 +8,7 @@ export default defineConfig({
   root: path.resolve(__dirname, "src/renderer"),
   base: "./",
   server: {
-    port: 5173,
+    port: 5174,
     strictPort: true,
   },
   optimizeDeps: {
