@@ -1,3 +1,8 @@
+## Version v0.9.1 — June 21, 2026
+
+### New app icon
+AxiForge has a fresh look — a duotone **anvil** mark, part of a cohesive icon redesign across the Axi suite. The new icon ships everywhere: installer, taskbar/dock, and the in-app titlebar. No functional changes in this release.
+
 ## Version v0.9.0 — June 19, 2026
 
 ### New Features
