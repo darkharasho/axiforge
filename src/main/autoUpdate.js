@@ -11,6 +11,24 @@ function getAutoUpdater() {
   return _autoUpdater;
 }
 
+// Persistent updater log. Writes to the app's userData/logs directory so users can
+// share it when an update silently fails to install (e.g. ~/AppData/Roaming/AxiForge/
+// logs/auto-update.log on Windows). Lazy-loaded for the same init-order reason above.
+let _log = null;
+function getLog() {
+  if (!_log) {
+    _log = require("electron-log");
+    try {
+      _log.transports.file.fileName = "auto-update.log";
+      _log.transports.file.level = "info";
+    } catch { /* electron-log not fully initialized in some test envs */ }
+  }
+  return _log;
+}
+function log(...args) {
+  try { getLog().info("[auto-update]", ...args); } catch { /* never let logging throw */ }
+}
+
 const RETRY_ERRORS = [
   "ECONNRESET", "ETIMEDOUT", "ENOTFOUND", "EPIPE",
   "socket hang up", "ERR_HTTP2_SERVER_REFUSED_STREAM",
@@ -99,14 +117,23 @@ function initAutoUpdate(getWindow) {
 
   const autoUpdater = getAutoUpdater();
 
+  autoUpdater.logger = getLog();
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
+  log(`initialized — current version ${app.getVersion()}, platform ${process.platform}`);
+
+  // Tracks whether a download finished this session. An error AFTER this point is an
+  // install/apply failure (the download succeeded), not a check/download failure — the
+  // two are surfaced differently so a post-download failure isn't silently swallowed.
+  let downloadCompleted = false;
 
   autoUpdater.on("checking-for-update", () => {
+    log("checking for update");
     send("update-checking", {});
   });
 
   autoUpdater.on("update-available", (info) => {
+    log(`update available: ${info.version}`);
     send("update-available", {
       version: info.version,
       releaseDate: info.releaseDate,
@@ -114,18 +141,29 @@ function initAutoUpdate(getWindow) {
   });
 
   autoUpdater.on("update-not-available", (info) => {
+    log(`no update available (latest is ${info.version})`);
     send("update-not-available", { version: info.version });
   });
 
   autoUpdater.on("error", (err) => {
+    const message = String(err?.message || err);
     if (isRetryableError(err) && retryAttempts < 1) {
       retryAttempts++;
+      log(`retryable error, retrying once: ${message}`);
       setTimeout(() => {
         checkWithTimeout().catch(() => {});
       }, RETRY_DELAY_MS);
       return;
     }
-    send("update-error", { message: String(err?.message || err) });
+    if (downloadCompleted) {
+      // Download succeeded but install/apply failed — this is the silent
+      // "downloads then does nothing, re-downloads next launch" failure mode.
+      log(`install failed after successful download: ${message}`);
+      send("update-install-error", { message });
+      return;
+    }
+    log(`update error: ${message}`);
+    send("update-error", { message });
   });
 
   autoUpdater.on("download-progress", (progress) => {
@@ -137,6 +175,8 @@ function initAutoUpdate(getWindow) {
   });
 
   autoUpdater.on("update-downloaded", (info) => {
+    downloadCompleted = true;
+    log(`update downloaded: ${info.version} — staged for install on quit/restart`);
     send("update-downloaded", {
       version: info.version,
       releaseNotes: info.releaseNotes,
@@ -150,6 +190,7 @@ function initAutoUpdate(getWindow) {
   });
 
   ipcMain.on("updater:restart", () => {
+    log("user requested restart-to-install — calling quitAndInstall()");
     getAutoUpdater().quitAndInstall();
   });
 

@@ -6,7 +6,7 @@ require("dotenv").config({ path: path.resolve(__dirname, "../../.env") });
 for (const stream of [process.stdout, process.stderr]) {
   stream?.on?.("error", (err) => { if (err.code !== "EPIPE") throw err; });
 }
-const { app, BrowserWindow, ipcMain, dialog, clipboard, nativeTheme, nativeImage, screen } = require("electron");
+const { app, BrowserWindow, ipcMain, dialog, clipboard, nativeTheme, nativeImage, screen, shell } = require("electron");
 
 // Taskbar identity on X11 — give AxiForge its own WM_CLASS so KDE/GNOME
 // don't group it with whatever process launched electron (e.g. a VS Code
@@ -496,6 +496,15 @@ const readyWork = app.whenReady().then(async () => {
   handle("window:close", (event) => {
     BrowserWindow.fromWebContents(event.sender)?.close();
     return true;
+  });
+
+  handle("app:open-external", (_event, url) => {
+    // Only open http(s) links externally — never file:// or other schemes from the renderer.
+    if (typeof url === "string" && /^https?:\/\//i.test(url)) {
+      shell.openExternal(url);
+      return true;
+    }
+    return false;
   });
 
   handle("window:open-preview", (_event, url, opts = {}) => {

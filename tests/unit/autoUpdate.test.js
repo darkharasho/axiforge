@@ -30,6 +30,13 @@ jest.mock("electron-updater", () => ({
   get autoUpdater() { return _autoUpdaterMock; },
 }));
 
+// Stub electron-log so updater logging is exercised without writing files or
+// spamming the test console.
+jest.mock("electron-log", () => ({
+  info: jest.fn(),
+  transports: { file: {} },
+}));
+
 // ── Test helpers ───────────────────────────────────────────────────────────
 
 function makeAutoUpdaterMock() {
@@ -219,6 +226,21 @@ describe("autoUpdate — normal packaged flow", () => {
     _autoUpdaterMock.emit("error", new Error("boom"));
 
     expect(sentData(win.webContents, "update-error")).toEqual({ message: "boom" });
+  });
+
+  test("error AFTER a completed download emits update-install-error, not update-error", () => {
+    const win = makeWindowMock();
+    loadModule().initAutoUpdate(win);
+
+    // Download finished, then the install/apply step fails.
+    _autoUpdaterMock.emit("update-downloaded", { version: "1.2.4" });
+    win.webContents.send.mockClear();
+    _autoUpdaterMock.emit("error", new Error("Cannot run installer"));
+
+    expect(sentData(win.webContents, "update-install-error")).toEqual({
+      message: "Cannot run installer",
+    });
+    expect(sentChannels(win.webContents)).not.toContain("update-error");
   });
 
   test("retryable network error retries once before emitting update-error", async () => {

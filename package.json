@@ -47,7 +47,7 @@
     },
     "nsis": {
       "oneClick": true,
-      "differentialPackage": true,
+      "differentialPackage": false,
       "runAfterFinish": false
     },
     "mac": {
@@ -145,6 +145,7 @@
   "dependencies": {
     "@axiapps/code": "*",
     "dotenv": "^17.3.1",
+    "electron-log": "^5.4.4",
     "electron-updater": "^6.8.3",
     "gw2-class-icons": "^0.3.0",
     "gw2buildlink": "^0.3.0",

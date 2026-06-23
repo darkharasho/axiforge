@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld("desktopApi", {
   isMaximizedWindow: () => ipcRenderer.invoke("window:is-maximized"),
   closeWindow: () => ipcRenderer.invoke("window:close"),
   openPreviewWindow: (url, opts) => ipcRenderer.invoke("window:open-preview", url, opts),
+  openExternal: (url) => ipcRenderer.invoke("app:open-external", url),
   writeClipboardText: (text) => ipcRenderer.invoke("clipboard:write-text", text),
   readClipboardText: () => ipcRenderer.invoke("clipboard:read-text"),
   getSession: () => ipcRenderer.invoke("auth:get-session"),
@@ -114,6 +115,10 @@ contextBridge.exposeInMainWorld("desktopApi", {
   onUpdateError: (cb) => {
     ipcRenderer.removeAllListeners("update-error");
     ipcRenderer.on("update-error", (_e, info) => cb(info));
+  },
+  onUpdateInstallError: (cb) => {
+    ipcRenderer.removeAllListeners("update-install-error");
+    ipcRenderer.on("update-install-error", (_e, info) => cb(info));
   },
   onDownloadProgress: (cb) => {
     ipcRenderer.removeAllListeners("download-progress");
