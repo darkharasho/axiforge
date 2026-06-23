@@ -363,6 +363,10 @@ initSettingsCallbacks({
     if (!el.updateStatusPill || !el.updateStatusPillText) return;
     el.updateStatusPillText.textContent = text;
     el.updateStatusPill.classList.remove("hidden", "titlebar__pill--muted", "titlebar__pill--error", "titlebar__pill--static");
+    // Clear any click affordance left over from the install-error state.
+    el.updateStatusPill.onclick = null;
+    el.updateStatusPill.style.cursor = "";
+    el.updateStatusPill.title = "";
     if (variant === "muted") el.updateStatusPill.classList.add("titlebar__pill--muted");
     else if (variant === "error") el.updateStatusPill.classList.add("titlebar__pill--error");
     else if (variant === "static") el.updateStatusPill.classList.add("titlebar__pill--static");
@@ -413,6 +417,23 @@ initSettingsCallbacks({
         hideRestartBtn();
         errorResetTimer = setTimeout(() => applyState("idle"), 5000);
         break;
+      case "install-error":
+        // Download succeeded but the install couldn't be applied. Unlike a transient
+        // check/download error this is sticky — the user needs to act (reinstall
+        // manually), so it stays visible and points them at the releases page.
+        setPill("Update couldn't install — click to download", "error");
+        if (el.updateStatusPill) {
+          el.updateStatusPill.title =
+            "The update downloaded but couldn't be installed automatically. " +
+            "Click to open the downloads page and reinstall manually.";
+          el.updateStatusPill.classList.add("no-drag");
+          el.updateStatusPill.style.cursor = "pointer";
+          el.updateStatusPill.onclick = () => {
+            window.desktopApi.openExternal?.("https://github.com/darkharasho/axiforge/releases/latest");
+          };
+        }
+        hideRestartBtn();
+        break;
       case "unsupported": {
         const reason = payload?.reason;
         setPill("Auto-updates disabled", "static");
@@ -454,6 +475,12 @@ initSettingsCallbacks({
   window.desktopApi.onUpdateError?.(() => {
     if (state === "downloaded") return; // already have a working download
     applyState("error");
+  });
+
+  window.desktopApi.onUpdateInstallError?.(() => {
+    // Download succeeded but applying it failed — surface a sticky, actionable pill
+    // instead of the transient "Update failed" so the user can reinstall manually.
+    applyState("install-error");
   });
 
   window.desktopApi.onUpdateUnsupported?.((info) => {
