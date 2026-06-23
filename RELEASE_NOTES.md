@@ -1,3 +1,10 @@
+## Version v0.9.2 — June 23, 2026
+
+### Bug Fixes
+
+- **Updates install reliably again** — Some updates would download to 100% and then do nothing, never installing and re-downloading every time the app launched. Updates now ship as full installers that apply correctly. If an install ever does fail, the titlebar now shows a clear "Update couldn't install — click to download" prompt that takes you to the latest version, and update problems are written to a log file so they can be diagnosed.
+- **Refreshed titlebar logo** — The in-app titlebar now uses the new anvil glyph to match the updated app icon.
+
 ## Version v0.9.1 — June 21, 2026
 
 ### New app icon
