@@ -1,3 +1,9 @@
+## Version v0.9.3 — June 23, 2026
+
+### Bug Fixes
+
+- **Shared comp pages load again** — Opening a shared build/comp link could show a blank page with "(e.weaponSkills || []).filter is not a function" instead of the builds. The build cards now read weapon skills correctly from published data, so shared folders render their builds as expected.
+
 ## Version v0.9.2 — June 23, 2026
 
 ### Bug Fixes
