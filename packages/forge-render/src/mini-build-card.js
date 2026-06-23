@@ -71,6 +71,23 @@ function getSkillRow(build) {
 }
 
 /**
+ * Normalize a build's weaponSkills into a flat array for the card's top skill row.
+ * Published builds store it as { set1, set2, aquatic1, aquatic2 } (each an array);
+ * desktop/older callers may pass a flat array or nothing. Picks the first non-empty
+ * land weapon set, falling back to aquatic.
+ */
+function normalizeWeaponSkills(ws) {
+  if (Array.isArray(ws)) return ws;
+  if (ws && typeof ws === "object") {
+    for (const key of ["set1", "set2", "aquatic1", "aquatic2"]) {
+      const set = ws[key];
+      if (Array.isArray(set) && set.length) return set;
+    }
+  }
+  return [];
+}
+
+/**
  * Resolve the relic icon URL from the live wiki-synced catalog.
  */
 function getRelicIcon(relicName, upgradeCatalog) {
@@ -256,8 +273,10 @@ export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
       : "";
 
   // Top skills row: first weapon set's skills, then heal/utilities/elite — big
-  // icons with names. Weapon skills come from the enriched build (build.weaponSkills).
-  const weaponSkills = (build.weaponSkills || []).filter((s) => s && s.icon);
+  // icons with names. Published builds carry weaponSkills as a structured object
+  // ({ set1, set2, aquatic1, aquatic2 }); older/desktop callers may pass a flat
+  // array or nothing. Normalize to the first non-empty land weapon set.
+  const weaponSkills = normalizeWeaponSkills(build.weaponSkills).filter((s) => s && s.icon);
   const utilSkills = getSkillRow(build);
   const skillCell = (sk) =>
     `<span class="mini-card__skill" title="${escapeHtml(sk.name || "")}"><img class="mini-card__skill-icon" src="${escapeHtml(sk.icon)}" alt="" loading="lazy"><span class="mini-card__skill-name">${escapeHtml(sk.name || "")}</span></span>`;

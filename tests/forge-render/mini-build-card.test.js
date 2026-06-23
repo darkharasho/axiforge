@@ -88,6 +88,39 @@ describe("@axiapps/forge-render mini build card", () => {
     expect(html).not.toContain("mini-card__btn-copy-code");
   });
 
+  test("renders weapon skills when weaponSkills is the published object shape ({ set1, set2, ... })", () => {
+    // Published builds (buildPublish.js) carry weaponSkills as a structured object,
+    // not a flat array. The card must read the first non-empty land set without crashing.
+    const published = {
+      ...build,
+      weaponSkills: {
+        set1: [{ id: 100, name: "Hundred Blades", icon: "https://render.guildwars2.com/file/W/hb.png" }],
+        set2: [],
+        aquatic1: [],
+        aquatic2: [],
+      },
+    };
+    const html = renderMiniBuildCard(published, null, { showActions: false });
+    expect(html).toContain("mini-card__skills");
+    expect(html).toContain("/file/W/hb.png");
+    expect(html).toContain("Hundred Blades");
+  });
+
+  test("falls back to set2 / aquatic when set1 is empty in the published object shape", () => {
+    const published = {
+      ...build,
+      weaponSkills: {
+        set1: [],
+        set2: [{ id: 200, name: "Whirling Defense", icon: "https://render.guildwars2.com/file/W/wd.png" }],
+        aquatic1: [],
+        aquatic2: [],
+      },
+    };
+    const html = renderMiniBuildCard(published, null, { showActions: false });
+    expect(html).toContain("/file/W/wd.png");
+    expect(html).toContain("Whirling Defense");
+  });
+
   test("renders page-scraped gear (weapons+sigils, stats, rune) with its own icons", () => {
     const withGear = {
       ...build,
