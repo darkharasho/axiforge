@@ -1338,38 +1338,6 @@ function wireEvents() {
           if (!webhookIds) return; // cancelled
         }
 
-        // Auto-save + publish if not yet published
-        let build = state.builds.find((b) => b.id === buildId);
-        if (!build?.publishedFileId) {
-          el.publishSiteBtn.disabled = true;
-          state.publishProgress[buildId] = { currentStep: "saving" };
-          showPublishProgress(buildId);
-          advancePublishStep("saving");
-
-          if (state.editorDirty) {
-            const serialized = serializeEditorToBuild();
-            await window.desktopApi.saveBuild({ ...serialized, id: buildId });
-            state.builds = await window.desktopApi.listBuilds();
-            captureEditorBaseline();
-          }
-
-          const pubResult = await window.desktopApi.publishBuild(buildId);
-          advancePublishStep("pages");
-
-          if (pubResult?.pagesUrl) {
-            state.publishProgress[buildId] = { ...state.publishProgress[buildId], result: pubResult.pagesUrl };
-            showPublishResult(pubResult.pagesUrl);
-          } else {
-            state.publishProgress[buildId] = { ...state.publishProgress[buildId], result: "complete" };
-            completeAllPublishSteps();
-          }
-
-          state.builds = await window.desktopApi.listBuilds();
-          renderBuildList();
-          renderEditorMeta();
-          el.publishSiteBtn.disabled = false;
-        }
-
         discordEmbedItem.innerHTML = "Sharing...";
         const result = await window.desktopApi.shareBuildToDiscord(buildId, webhookIds);
         if (result.success) {
