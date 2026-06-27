@@ -105,3 +105,34 @@ describe("buildEncryptedBuildFile", () => {
     expect(result.content).not.toContain("My Secret Build");
   });
 });
+
+const { computeSpaVersion, SITE_VERSION_PATH } = require("../../src/main/siteBundle");
+
+const shell = {
+  "site/index.html": "<html>a</html>",
+  "site/assets/app.js": "console.log(1)",
+};
+
+describe("computeSpaVersion", () => {
+  test("is deterministic for identical shell files", () => {
+    expect(computeSpaVersion({ ...shell })).toBe(computeSpaVersion({ ...shell }));
+  });
+  test("changes when a shell file changes", () => {
+    expect(computeSpaVersion(shell)).not.toBe(
+      computeSpaVersion({ ...shell, "site/index.html": "<html>b</html>" })
+    );
+  });
+  test("ignores per-build data, redirects, and the marker itself", () => {
+    const withData = {
+      ...shell,
+      "site/builds/abc.enc": "ENCRYPTED",
+      "site/comps/def.enc": "ENCRYPTED",
+      "site/r/abc/index.html": "<meta>",
+      [SITE_VERSION_PATH]: "deadbeef",
+    };
+    expect(computeSpaVersion(withData)).toBe(computeSpaVersion(shell));
+  });
+  test("returns a 12-char hex string", () => {
+    expect(computeSpaVersion(shell)).toMatch(/^[0-9a-f]{12}$/);
+  });
+});
