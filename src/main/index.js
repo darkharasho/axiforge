@@ -1159,6 +1159,16 @@ const readyWork = app.whenReady().then(async () => {
       throw new Error("Published, but the link did not go live in time. Try again in a minute.");
     }
 
+    // On a shell-changed publish (first ever, or the SPA app itself updated) the
+    // site shell is served by the Pages workflow, not raw — wait for it too so the
+    // shared page itself (not just the build data) is live before we mark published.
+    if (publishResult.shellChanged) {
+      const shellLive = await pollUrlLive(`https://${owner}.github.io/${TARGET_REPO}/`, { timeoutMs: 180000 });
+      if (!shellLive) {
+        throw new Error("Published, but the site did not go live in time. Try again in a minute.");
+      }
+    }
+
     // Update build with publish metadata and push to shared repo so teammates
     // receive the published URL without needing to publish themselves.
     const savedBuild = await store.upsertBuild({
@@ -1299,7 +1309,7 @@ const readyWork = app.whenReady().then(async () => {
       spaBundle[encFile.filePath] = encFile.content;
 
       if (!build.publishedFileId || build.publishedSlug !== slug) {
-        updatedBuildRecords.push({ ...build, publishedFileId: fileId, publishedKey: encKey, publishedSlug: slug });
+        updatedBuildRecords.push({ ...build, publishedFileId: fileId, publishedKey: encKey, publishedSlug: slug, __stampPublishedAt: true });
       }
 
       // Always add redirect file (idempotent — overwrites if already exists)
