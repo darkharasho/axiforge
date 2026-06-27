@@ -1,4 +1,5 @@
 import "./styles.css";
+import { resolveDataBase } from "./rawBase.js";
 import { renderBuildPage } from "./render-build.js";
 import { renderCompPage } from "./render-comp.js";
 import { setReadOnly as setSkillsReadOnly } from "@renderer/modules/skills.js";
@@ -76,12 +77,9 @@ function showError(msg) {
 // ── Fetch & Decrypt ──────────────────────────────────────────────────────
 async function loadBuild(fileId, base64urlKey) {
   try {
-    // In local dev, ?remoteBase= tells us where to fetch the .enc file from the deployed site
     const params = new URLSearchParams(location.search);
-    const remoteBase = params.get("remoteBase") || "";
-    const buildUrl = remoteBase
-      ? `${remoteBase}builds/${encodeURIComponent(fileId)}.enc`
-      : `builds/${encodeURIComponent(fileId)}.enc`;
+    const base = resolveDataBase(location, params);
+    const buildUrl = `${base}builds/${encodeURIComponent(fileId)}.enc`;
     const res = await fetch(buildUrl, { cache: "no-store" });
     if (!res.ok) throw new Error("Build not found (HTTP " + res.status + ")");
     const base64Data = await res.text();
@@ -95,10 +93,8 @@ async function loadBuild(fileId, base64urlKey) {
 async function loadComp(fileId, base64urlKey) {
   try {
     const params = new URLSearchParams(location.search);
-    const remoteBase = params.get("remoteBase") || "";
-    const compUrl = remoteBase
-      ? `${remoteBase}comps/${encodeURIComponent(fileId)}.enc`
-      : `comps/${encodeURIComponent(fileId)}.enc`;
+    const base = resolveDataBase(location, params);
+    const compUrl = `${base}comps/${encodeURIComponent(fileId)}.enc`;
     const res = await fetch(compUrl, { cache: "no-store" });
     if (!res.ok) throw new Error("Comp not found (HTTP " + res.status + ")");
     const base64Data = await res.text();
