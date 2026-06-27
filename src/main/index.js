@@ -43,6 +43,7 @@ const { registerAxicodeFileHandlers } = require("./axicodeFile");
 const { createLocalApi, generateToken, httpError } = require("./localApi");
 const { writeDiscoveryFile, removeDiscoveryFileSync } = require("./localApiDiscovery");
 const { parseCliFlags } = require("./cliFlags");
+const { shareRejectionReason } = require("./shareGate");
 
 const PROFESSION_THEME_IDS = {
   Guardian: "prof-guardian", Warrior: "prof-warrior", Necromancer: "prof-necromancer",
@@ -1153,6 +1154,7 @@ const readyWork = app.whenReady().then(async () => {
       publishedSlug: newSlug,
       publishedFileId: fileId,
       publishedKey: encKey,
+      __stampPublishedAt: true,
     });
     if (sharedRoot) {
       sharedLibrary.schedulePush("build", savedBuild);
@@ -1335,6 +1337,7 @@ const readyWork = app.whenReady().then(async () => {
       publishedKey: compEncKey,
       publishedSlug: compSlug,
       boonCoverageHtml: boonCoverageHtml || comp.boonCoverageHtml || "",
+      __stampPublishedAt: true,
     });
 
     // Push comp publish metadata to shared repo so teammates get the URL.
@@ -1469,9 +1472,9 @@ const readyWork = app.whenReady().then(async () => {
     const allComps = await compStore.listComps();
     const comp = allComps.find((c) => c.id === compId);
     if (!comp) return { success: false, error: "Comp not found" };
-    if (!comp.publishedFileId || !comp.publishedKey || !comp.publishedSlug) {
-      return { success: false, error: "Comp must be published before sharing" };
-    }
+    if (!comp.publishedSlug) return { success: false, error: "Comp must be published before sharing" };
+    const compReject = shareRejectionReason(comp, "Comp");
+    if (compReject) return { success: false, error: compReject };
 
     // 3. Resolve owner for URL construction (matches existing publish pattern)
     const auth = await getAuthRecord();
@@ -1525,9 +1528,8 @@ const readyWork = app.whenReady().then(async () => {
     const allBuilds = await store.listBuilds();
     const build = allBuilds.find((b) => b.id === buildId);
     if (!build) return { success: false, error: "Build not found" };
-    if (!build.publishedFileId || !build.publishedKey) {
-      return { success: false, error: "Build must be published before sharing" };
-    }
+    const buildReject = shareRejectionReason(build, "Build");
+    if (buildReject) return { success: false, error: buildReject };
 
     // 3. Resolve owner for URL construction
     const auth = await getAuthRecord();
