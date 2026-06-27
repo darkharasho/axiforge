@@ -32,6 +32,7 @@ const {
   triggerPagesWorkflow,
   publishSiteBundle,
   deleteFile,
+  pollUrlLive,
 } = require("./githubApi");
 const { getProfessionList, getProfessionCatalog, getUpgradeCatalog, getWikiSummary, getWikiRelatedData, initDiskCache, clearDiskCache, initWikiClient, clearCatalogCache } = require("./gw2Data");
 const { slugifyBuildName, generateFileId, generateEncryptionKey, getDefaultBuildName } = require("./buildEncryption");
@@ -1145,6 +1146,17 @@ const readyWork = app.whenReady().then(async () => {
     if (publishResult.shellChanged) {
       progress("deploy");
       await triggerPagesWorkflow(session.token, owner, branch, TARGET_REPO).catch(() => null);
+    }
+
+    // Confirm the encrypted build is actually reachable before we mark the
+    // build as published. The SPA reads it from raw.githubusercontent.com, which
+    // reflects the commit within seconds. Only after it's live do we stamp
+    // publishedAt — so "published" always means "the shared link works".
+    progress("pages");
+    const rawBuildUrl = `https://raw.githubusercontent.com/${owner}/${TARGET_REPO}/${branch}/site/builds/${fileId}.enc`;
+    const live = await pollUrlLive(rawBuildUrl);
+    if (!live) {
+      throw new Error("Published, but the link did not go live in time. Try again in a minute.");
     }
 
     // Update build with publish metadata and push to shared repo so teammates

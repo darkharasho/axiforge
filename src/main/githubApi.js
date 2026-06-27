@@ -623,6 +623,23 @@ async function getOrgRole(token, org, username) {
   }
 }
 
+async function pollUrlLive(url, opts = {}) {
+  const fetchImpl = opts.fetchImpl || globalThis.fetch;
+  const delayImpl = opts.delayImpl || ((ms) => new Promise((r) => setTimeout(r, ms)));
+  const nowImpl = opts.nowImpl || Date.now;
+  const intervalMs = opts.intervalMs ?? 3000;
+  const timeoutMs = opts.timeoutMs ?? 90000;
+  const deadline = nowImpl() + timeoutMs;
+  for (;;) {
+    try {
+      const res = await fetchImpl(`${url}${url.includes("?") ? "&" : "?"}t=${nowImpl()}`, { cache: "no-store" });
+      if (res && res.ok) return true;
+    } catch { /* network hiccup mid-deploy — keep polling */ }
+    if (nowImpl() >= deadline) return false;
+    await delayImpl(intervalMs);
+  }
+}
+
 async function deleteSharedFile(token, owner, repo, filePath, sha, branch = "main", message = "Remove shared build") {
   const encodedPath = filePath.split("/").map((s) => encodeURIComponent(s)).join("/");
   await apiFetch(`/repos/${owner}/${repo}/contents/${encodedPath}`, token, {
@@ -652,4 +669,5 @@ module.exports = {
   putSharedFile,
   deleteSharedFile,
   getOrgRole,
+  pollUrlLive,
 };
