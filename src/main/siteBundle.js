@@ -92,4 +92,19 @@ function buildRedirectFile(fileId, encKey, type) {
   };
 }
 
-module.exports = { getSiteDistDir, buildSpaBundle, buildEncryptedBuildFile, buildEncryptedCompFile, buildRedirectFile, computeSpaVersion, SITE_VERSION_PATH };
+function partitionBundleForPublish(bundle, remoteVersion) {
+  const localVersion = bundle[SITE_VERSION_PATH];
+  const shellChanged = !remoteVersion || remoteVersion !== localVersion;
+  if (shellChanged) return { shellChanged: true, filesToPublish: { ...bundle } };
+  const filesToPublish = {};
+  for (const [p, content] of Object.entries(bundle)) {
+    // Shell unchanged: only re-publish per-build/comp/redirect data.
+    // Shell files AND the version marker are dropped.
+    if (p.startsWith("site/builds/") || p.startsWith("site/comps/") || p.startsWith("site/r/")) {
+      filesToPublish[p] = content;
+    }
+  }
+  return { shellChanged: false, filesToPublish };
+}
+
+module.exports = { getSiteDistDir, buildSpaBundle, buildEncryptedBuildFile, buildEncryptedCompFile, buildRedirectFile, computeSpaVersion, SITE_VERSION_PATH, partitionBundleForPublish };

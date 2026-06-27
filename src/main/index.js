@@ -1141,11 +1141,11 @@ const readyWork = app.whenReady().then(async () => {
     }
 
     progress("upload");
-    await publishSiteBundle(session.token, owner, combinedBundle, branch, TARGET_REPO);
-
-    // Trigger Pages rebuild
-    progress("deploy");
-    await triggerPagesWorkflow(session.token, owner, branch, TARGET_REPO).catch(() => null);
+    const publishResult = await publishSiteBundle(session.token, owner, combinedBundle, branch, TARGET_REPO);
+    if (publishResult.shellChanged) {
+      progress("deploy");
+      await triggerPagesWorkflow(session.token, owner, branch, TARGET_REPO).catch(() => null);
+    }
 
     // Update build with publish metadata and push to shared repo so teammates
     // receive the published URL without needing to publish themselves.
@@ -1312,11 +1312,13 @@ const readyWork = app.whenReady().then(async () => {
 
     // ── 6. Upload everything in one commit ────────────────────────────
     progress("upload");
-    await publishSiteBundle(session.token, owner, spaBundle, branch, TARGET_REPO);
+    const compPublishResult = await publishSiteBundle(session.token, owner, spaBundle, branch, TARGET_REPO);
 
     // ── 7. Trigger Pages rebuild ───────────────────────────────────────
-    progress("deploy");
-    await triggerPagesWorkflow(session.token, owner, branch, TARGET_REPO).catch(() => null);
+    if (compPublishResult.shellChanged) {
+      progress("deploy");
+      await triggerPagesWorkflow(session.token, owner, branch, TARGET_REPO).catch(() => null);
+    }
 
     // ── 8. Persist metadata (builds first, then comp) ─────────────────
     // Push each newly-published build to the shared repo so teammates get the

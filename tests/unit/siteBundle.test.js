@@ -107,6 +107,7 @@ describe("buildEncryptedBuildFile", () => {
 });
 
 const { computeSpaVersion, SITE_VERSION_PATH } = require("../../src/main/siteBundle");
+const { partitionBundleForPublish } = require("../../src/main/siteBundle");
 
 const shell = {
   "site/index.html": "<html>a</html>",
@@ -134,5 +135,31 @@ describe("computeSpaVersion", () => {
   });
   test("returns a 12-char hex string", () => {
     expect(computeSpaVersion(shell)).toMatch(/^[0-9a-f]{12}$/);
+  });
+});
+
+describe("partitionBundleForPublish", () => {
+  const bundle = {
+    [SITE_VERSION_PATH]: "abc123",
+    "site/index.html": "<html>",
+    "site/builds/x/build.json": "{}",
+    "site/comps/y/comp.json": "{}",
+    "site/r/z": "redirect",
+  };
+
+  test("shellChanged=true when remoteVersion differs", () => {
+    const { shellChanged, filesToPublish } = partitionBundleForPublish(bundle, "old");
+    expect(shellChanged).toBe(true);
+    expect(filesToPublish).toEqual(bundle);
+  });
+
+  test("shellChanged=false when remoteVersion matches: omits shell + version marker, keeps data", () => {
+    const { shellChanged, filesToPublish } = partitionBundleForPublish(bundle, "abc123");
+    expect(shellChanged).toBe(false);
+    expect(filesToPublish["site/builds/x/build.json"]).toBe("{}");
+    expect(filesToPublish["site/comps/y/comp.json"]).toBe("{}");
+    expect(filesToPublish["site/r/z"]).toBe("redirect");
+    expect(filesToPublish["site/index.html"]).toBeUndefined();
+    expect(filesToPublish[SITE_VERSION_PATH]).toBeUndefined();
   });
 });
