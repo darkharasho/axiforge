@@ -21,6 +21,23 @@ describe("shareDisabledTooltip", () => {
   });
 });
 
+const { compShareDisabledTooltip } = require("../../../src/renderer/modules/share-gate");
+
+describe("compShareDisabledTooltip", () => {
+  test("never published", () => {
+    expect(compShareDisabledTooltip({ publishedFileId: "", updatedAt: "t", publishedAt: null }))
+      .toBe("Publish this comp first");
+  });
+  test("stale", () => {
+    expect(compShareDisabledTooltip({ publishedFileId: "x", updatedAt: "t2", publishedAt: "t1" }))
+      .toBe("Publish your latest changes first");
+  });
+  test("shareable → null", () => {
+    expect(compShareDisabledTooltip({ publishedFileId: "x", updatedAt: "t1", publishedAt: "t1" }))
+      .toBeNull();
+  });
+});
+
 // Parity: the renderer's inline predicate must agree with the canonical CJS helper.
 describe("share-gate parity with buildPublishState", () => {
   const matrix = [

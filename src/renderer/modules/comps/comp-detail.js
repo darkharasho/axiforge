@@ -17,6 +17,7 @@ import { COMP_TAG_ICONS } from "../constants.js";
 import { axiforgeIcon, checkIcon, chevronDownIcon, arrowUpTrayIcon, clipboardDocumentIcon, globeAltIcon, partyNumberIcon } from "../library/heroicons.js";
 import { renderMiniBuildCard, renderMissingMiniBuildCard } from "../mini-build-card.js";
 import { pickWebhooks } from "../webhook-picker.js";
+import { compShareDisabledTooltip } from "../share-gate.js";
 import { computeCompPartyCoverage, buildPartyCoverageHTML, bindPartyCoverageEvents, closePartyCoverageExpand } from "./comp-boon-coverage.js";
 import {
   getEliteSpecName,
@@ -439,6 +440,7 @@ export function renderCompDetail() {
   const totalCap = getTotalFilledSlots(comp);
   const notesOpen = state.compNotesOpen || false;
   const notesBtnClass = notesOpen ? "comp-detail__notes-btn comp-detail__notes-btn--active" : "comp-detail__notes-btn";
+  const compShareTip = compShareDisabledTooltip(comp);
 
   container.innerHTML = `
     <div class="comp-detail">
@@ -456,7 +458,7 @@ export function renderCompDetail() {
             <button type="button" class="comp-share-dropdown__item" data-action="copy-share-code">
               ${axiforgeIcon} AxiCode
             </button>
-            <button type="button" class="comp-share-dropdown__item" data-action="share-discord">
+            <button type="button" class="comp-share-dropdown__item" data-action="share-discord"${compShareTip ? ` disabled title="${compShareTip}"` : ""}>
               ${arrowUpTrayIcon} Discord Embed
             </button>
             <button type="button" class="comp-share-dropdown__item" data-action="copy-plaintext">
