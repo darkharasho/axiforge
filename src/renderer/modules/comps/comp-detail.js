@@ -461,7 +461,7 @@ export function renderCompDetail() {
             <button type="button" class="comp-share-dropdown__item" data-action="share-discord"${compShareTip ? ` disabled title="${compShareTip}"` : ""}>
               ${arrowUpTrayIcon} Discord Embed
             </button>
-            <button type="button" class="comp-share-dropdown__item" data-action="copy-plaintext">
+            <button type="button" class="comp-share-dropdown__item" data-action="copy-plaintext"${compShareTip ? ` disabled title="${compShareTip}"` : ""}>
               ${clipboardDocumentIcon} Discord Plaintext
             </button>
             <div class="comp-share-dropdown__divider"></div>
