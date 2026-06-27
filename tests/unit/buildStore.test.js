@@ -1275,3 +1275,37 @@ describe("BuildStore — concurrent write safety", () => {
     expect(builds).toHaveLength(N);
   });
 });
+
+describe("BuildStore — publishedAt", () => {
+  let dir, store;
+  afterEach(async () => { if (dir) await cleanupDir(dir); });
+
+  test("publishedAt defaults to null on a normal save", async () => {
+    ({ store, dir } = await makeTempStore());
+    const saved = await store.upsertBuild(makeBuild());
+    expect(saved.publishedAt).toBeNull();
+  });
+
+  test("__stampPublishedAt stamps publishedAt equal to updatedAt", async () => {
+    ({ store, dir } = await makeTempStore());
+    const saved = await store.upsertBuild({ ...makeBuild(), __stampPublishedAt: true });
+    expect(saved.publishedAt).toBe(saved.updatedAt);
+    expect(saved.publishedAt).not.toBeNull();
+  });
+
+  test("the __stampPublishedAt flag is not persisted on the record", async () => {
+    ({ store, dir } = await makeTempStore());
+    const saved = await store.upsertBuild({ ...makeBuild(), __stampPublishedAt: true });
+    expect("__stampPublishedAt" in saved).toBe(false);
+  });
+
+  test("publishedAt is preserved across a later normal save (becomes stale)", async () => {
+    ({ store, dir } = await makeTempStore());
+    const published = await store.upsertBuild({ ...makeBuild(), __stampPublishedAt: true });
+    // A later edit + save: same id, no stamp flag.
+    await new Promise((r) => setTimeout(r, 5));
+    const edited = await store.upsertBuild({ ...makeBuild(), id: published.id, title: "Edited" });
+    expect(edited.publishedAt).toBe(published.publishedAt); // unchanged
+    expect(edited.updatedAt).not.toBe(edited.publishedAt);  // stale
+  });
+});

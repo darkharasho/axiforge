@@ -37,18 +37,21 @@ class BuildStore {
       const builds = await this.listBuilds();
       const now = new Date().toISOString();
       const id = input.id || crypto.randomUUID();
-      const next = normalizeBuild({ ...input, id, updatedAt: now }, input.createdAt || now);
+      const stampPublishedAt = input.__stampPublishedAt === true;
+      const cleaned = { ...input };
+      delete cleaned.__stampPublishedAt;
+      const next = normalizeBuild({ ...cleaned, id, updatedAt: now }, input.createdAt || now);
+      if (stampPublishedAt) next.publishedAt = now;
 
       const idx = builds.findIndex((b) => b.id === id);
       if (idx >= 0) {
         const existing = builds[idx];
         next.createdAt = existing.createdAt || next.createdAt;
-        // Preserve fields that the editor save payload does not carry (serializeEditorToBuild
-        // omits folderId when falsy, and never includes publish metadata).
         if (next.folderId === null && existing.folderId) next.folderId = existing.folderId;
         if (!next.publishedFileId && existing.publishedFileId) next.publishedFileId = existing.publishedFileId;
         if (!next.publishedKey && existing.publishedKey) next.publishedKey = existing.publishedKey;
         if (!next.publishedSlug && existing.publishedSlug) next.publishedSlug = existing.publishedSlug;
+        if (!next.publishedAt && existing.publishedAt) next.publishedAt = existing.publishedAt;
         builds[idx] = next;
       } else {
         builds.push(next);
@@ -222,6 +225,7 @@ function normalizeBuild(input, fallbackCreatedAt) {
     publishedSlug: asString(input.publishedSlug, 200),
     publishedFileId: asString(input.publishedFileId, 20),
     publishedKey: asString(input.publishedKey, 100),
+    publishedAt: asIso(input.publishedAt) || null,
     // Library organization fields
     folderId:
       typeof input.folderId === "string" ? input.folderId : null,

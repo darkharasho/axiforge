@@ -32,6 +32,7 @@ const {
   triggerPagesWorkflow,
   publishSiteBundle,
   deleteFile,
+  pollUrlLive,
 } = require("./githubApi");
 const { getProfessionList, getProfessionCatalog, getUpgradeCatalog, getWikiSummary, getWikiRelatedData, initDiskCache, clearDiskCache, initWikiClient, clearCatalogCache } = require("./gw2Data");
 const { slugifyBuildName, generateFileId, generateEncryptionKey, getDefaultBuildName } = require("./buildEncryption");
@@ -43,6 +44,7 @@ const { registerAxicodeFileHandlers } = require("./axicodeFile");
 const { createLocalApi, generateToken, httpError } = require("./localApi");
 const { writeDiscoveryFile, removeDiscoveryFileSync } = require("./localApiDiscovery");
 const { parseCliFlags } = require("./cliFlags");
+const { shareRejectionReason } = require("./shareGate");
 
 const PROFESSION_THEME_IDS = {
   Guardian: "prof-guardian", Warrior: "prof-warrior", Necromancer: "prof-necromancer",
@@ -1140,11 +1142,32 @@ const readyWork = app.whenReady().then(async () => {
     }
 
     progress("upload");
-    await publishSiteBundle(session.token, owner, combinedBundle, branch, TARGET_REPO);
+    const publishResult = await publishSiteBundle(session.token, owner, combinedBundle, branch, TARGET_REPO);
+    if (publishResult.shellChanged) {
+      progress("deploy");
+      await triggerPagesWorkflow(session.token, owner, branch, TARGET_REPO).catch(() => null);
+    }
 
-    // Trigger Pages rebuild
-    progress("deploy");
-    await triggerPagesWorkflow(session.token, owner, branch, TARGET_REPO).catch(() => null);
+    // Confirm the encrypted build is actually reachable before we mark the
+    // build as published. The SPA reads it from raw.githubusercontent.com, which
+    // reflects the commit within seconds. Only after it's live do we stamp
+    // publishedAt — so "published" always means "the shared link works".
+    progress("pages");
+    const rawBuildUrl = `https://raw.githubusercontent.com/${owner}/${TARGET_REPO}/${branch}/site/builds/${fileId}.enc`;
+    const live = await pollUrlLive(rawBuildUrl);
+    if (!live) {
+      throw new Error("Published, but the link did not go live in time. Try again in a minute.");
+    }
+
+    // On a shell-changed publish (first ever, or the SPA app itself updated) the
+    // site shell is served by the Pages workflow, not raw — wait for it too so the
+    // shared page itself (not just the build data) is live before we mark published.
+    if (publishResult.shellChanged) {
+      const shellLive = await pollUrlLive(`https://${owner}.github.io/${TARGET_REPO}/`, { timeoutMs: 180000 });
+      if (!shellLive) {
+        throw new Error("Published, but the site did not go live in time. Try again in a minute.");
+      }
+    }
 
     // Update build with publish metadata and push to shared repo so teammates
     // receive the published URL without needing to publish themselves.
@@ -1153,6 +1176,7 @@ const readyWork = app.whenReady().then(async () => {
       publishedSlug: newSlug,
       publishedFileId: fileId,
       publishedKey: encKey,
+      __stampPublishedAt: true,
     });
     if (sharedRoot) {
       sharedLibrary.schedulePush("build", savedBuild);
@@ -1285,7 +1309,7 @@ const readyWork = app.whenReady().then(async () => {
       spaBundle[encFile.filePath] = encFile.content;
 
       if (!build.publishedFileId || build.publishedSlug !== slug) {
-        updatedBuildRecords.push({ ...build, publishedFileId: fileId, publishedKey: encKey, publishedSlug: slug });
+        updatedBuildRecords.push({ ...build, publishedFileId: fileId, publishedKey: encKey, publishedSlug: slug, __stampPublishedAt: true });
       }
 
       // Always add redirect file (idempotent — overwrites if already exists)
@@ -1310,11 +1334,13 @@ const readyWork = app.whenReady().then(async () => {
 
     // ── 6. Upload everything in one commit ────────────────────────────
     progress("upload");
-    await publishSiteBundle(session.token, owner, spaBundle, branch, TARGET_REPO);
+    const compPublishResult = await publishSiteBundle(session.token, owner, spaBundle, branch, TARGET_REPO);
 
     // ── 7. Trigger Pages rebuild ───────────────────────────────────────
-    progress("deploy");
-    await triggerPagesWorkflow(session.token, owner, branch, TARGET_REPO).catch(() => null);
+    if (compPublishResult.shellChanged) {
+      progress("deploy");
+      await triggerPagesWorkflow(session.token, owner, branch, TARGET_REPO).catch(() => null);
+    }
 
     // ── 8. Persist metadata (builds first, then comp) ─────────────────
     // Push each newly-published build to the shared repo so teammates get the
@@ -1335,6 +1361,7 @@ const readyWork = app.whenReady().then(async () => {
       publishedKey: compEncKey,
       publishedSlug: compSlug,
       boonCoverageHtml: boonCoverageHtml || comp.boonCoverageHtml || "",
+      __stampPublishedAt: true,
     });
 
     // Push comp publish metadata to shared repo so teammates get the URL.
@@ -1469,9 +1496,9 @@ const readyWork = app.whenReady().then(async () => {
     const allComps = await compStore.listComps();
     const comp = allComps.find((c) => c.id === compId);
     if (!comp) return { success: false, error: "Comp not found" };
-    if (!comp.publishedFileId || !comp.publishedKey || !comp.publishedSlug) {
-      return { success: false, error: "Comp must be published before sharing" };
-    }
+    if (!comp.publishedSlug) return { success: false, error: "Comp must be published before sharing" };
+    const compReject = shareRejectionReason(comp, "Comp");
+    if (compReject) return { success: false, error: compReject };
 
     // 3. Resolve owner for URL construction (matches existing publish pattern)
     const auth = await getAuthRecord();
@@ -1525,9 +1552,8 @@ const readyWork = app.whenReady().then(async () => {
     const allBuilds = await store.listBuilds();
     const build = allBuilds.find((b) => b.id === buildId);
     if (!build) return { success: false, error: "Build not found" };
-    if (!build.publishedFileId || !build.publishedKey) {
-      return { success: false, error: "Build must be published before sharing" };
-    }
+    const buildReject = shareRejectionReason(build, "Build");
+    if (buildReject) return { success: false, error: buildReject };
 
     // 3. Resolve owner for URL construction
     const auth = await getAuthRecord();

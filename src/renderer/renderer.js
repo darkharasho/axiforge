@@ -46,7 +46,7 @@ import { resetWikiResolution } from "./modules/wiki-updates.js";
 import { initWikiModal, openWikiModal } from "./modules/wiki-modal.js";
 import { initWhatsNewModal, maybeAutoOpenWhatsNew } from "./modules/whats-new-modal.js";
 import { initDetailModal, openDetailModal } from "./modules/detail-modal.js";
-import { initConfirmModal } from "./modules/confirm-modal.js";
+import { initConfirmModal, showConfirmModal } from "./modules/confirm-modal.js";
 import { pickWebhooks } from "./modules/webhook-picker.js";
 import { initImportConflictModal } from "./modules/import-conflict-modal.js";
 import { initSettingsModal, initSettingsCallbacks } from "./modules/settings-modal.js";
@@ -1338,38 +1338,6 @@ function wireEvents() {
           if (!webhookIds) return; // cancelled
         }
 
-        // Auto-save + publish if not yet published
-        let build = state.builds.find((b) => b.id === buildId);
-        if (!build?.publishedFileId) {
-          el.publishSiteBtn.disabled = true;
-          state.publishProgress[buildId] = { currentStep: "saving" };
-          showPublishProgress(buildId);
-          advancePublishStep("saving");
-
-          if (state.editorDirty) {
-            const serialized = serializeEditorToBuild();
-            await window.desktopApi.saveBuild({ ...serialized, id: buildId });
-            state.builds = await window.desktopApi.listBuilds();
-            captureEditorBaseline();
-          }
-
-          const pubResult = await window.desktopApi.publishBuild(buildId);
-          advancePublishStep("pages");
-
-          if (pubResult?.pagesUrl) {
-            state.publishProgress[buildId] = { ...state.publishProgress[buildId], result: pubResult.pagesUrl };
-            showPublishResult(pubResult.pagesUrl);
-          } else {
-            state.publishProgress[buildId] = { ...state.publishProgress[buildId], result: "complete" };
-            completeAllPublishSteps();
-          }
-
-          state.builds = await window.desktopApi.listBuilds();
-          renderBuildList();
-          renderEditorMeta();
-          el.publishSiteBtn.disabled = false;
-        }
-
         discordEmbedItem.innerHTML = "Sharing...";
         const result = await window.desktopApi.shareBuildToDiscord(buildId, webhookIds);
         if (result.success) {
@@ -1447,6 +1415,20 @@ function wireEvents() {
     if (!buildId) {
       showError(new Error("Save the build first before publishing."));
       return;
+    }
+    const isFirstPublishEver = !state.builds.some((b) => b.publishedFileId);
+    if (isFirstPublishEver) {
+      const proceed = await showConfirmModal({
+        title: "Publishing puts your build online",
+        body:
+          "<p>Publishing uploads this build to your own GitHub Pages site so the shareable link " +
+          "(including Discord) actually works for other people.</p>" +
+          "<p>It uses the one-time GitHub sign-in you already set up, and takes a few seconds. " +
+          "Your build link stays private unless you share it.</p>",
+        confirmLabel: "Publish now",
+        cancelLabel: "Cancel",
+      });
+      if (!proceed) return;
     }
     let lastStep = "saving";
     try {

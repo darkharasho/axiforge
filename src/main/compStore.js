@@ -20,6 +20,7 @@ class CompStore {
   async upsertComp(input) {
     const comps = await this.listComps();
     const now = new Date().toISOString();
+    const stampPublishedAt = input.__stampPublishedAt === true;
     const id = input.id || crypto.randomUUID();
     const name = String(input.name || "Untitled Comp").slice(0, 140);
     const notes = String(input.notes || "").slice(0, 100000);
@@ -88,6 +89,7 @@ class CompStore {
         ...publishedPatch,
         updatedAt: now,
       });
+      if (stampPublishedAt) existing.publishedAt = now;
       existing.createdAt = existing.createdAt || now;
       await this.#writeJson(this.compsPath, comps);
       return { ...existing };
@@ -98,6 +100,7 @@ class CompStore {
       ...publishedPatch,
       createdAt: now, updatedAt: now,
     };
+    if (stampPublishedAt) comp.publishedAt = now;
     comps.push(comp);
     await this.#writeJson(this.compsPath, comps);
     return comp;

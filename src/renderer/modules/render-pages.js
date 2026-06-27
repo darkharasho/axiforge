@@ -7,6 +7,7 @@ import { showConfirmModal } from "./confirm-modal.js";
 import { openSettingsModal } from "./settings-modal.js";
 import { computeUnsavedChangeSummary } from "./editor.js";
 import { getProfessionSvg } from "./profession-icons.js";
+import { shareDisabledTooltip } from "./share-gate.js";
 
 // ---------------------------------------------------------------------------
 // DOM refs — injected by the host (renderer.js) after DOM is ready
@@ -576,6 +577,16 @@ export function renderEditorMeta() {
       _el.editorSharePubLink.disabled = true;
       _el.editorSharePubLink.title = "Publish first";
     }
+  }
+
+  // Discord share buttons — disabled until build is published and has no unsaved/unpublished changes
+  const _shareBuild = state.builds.find((b) => b.id === state.editor?.id);
+  const _shareTip = shareDisabledTooltip(_shareBuild, Boolean(state.editorDirty));
+  for (const action of ["discord-copy", "discord-embed"]) {
+    const btn = document.querySelector(`#editorShareDropdown [data-action='${action}']`);
+    if (!btn) continue;
+    if (_shareTip) { btn.disabled = true; btn.title = _shareTip; }
+    else { btn.disabled = false; btn.removeAttribute("title"); }
   }
 }
 

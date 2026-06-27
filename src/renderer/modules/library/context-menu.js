@@ -3,6 +3,7 @@
 // the appropriate menu. All actions are delegated to caller-provided callbacks.
 
 import { escapeHtml } from "../utils.js";
+import { shareDisabledTooltip } from "../share-gate.js";
 import { state } from "../state.js";
 import { showConfirmModal } from "../confirm-modal.js";
 import { isSelected, getSelection, isCompSelected, getCompSelection } from "./selection.js";
@@ -142,6 +143,7 @@ function _isOrgOwner() {
 function showBuildMenu(x, y, buildId, build) {
   const isPinned = build?.pinned;
   const canMove = !_isInSharedFolder(build?.folderId) || _isOrgOwner();
+  const shareTip = shareDisabledTooltip(build, false);
   const items = [
     _item(playIcon, "Load", null, () => _callbacks.onLoadBuild?.(buildId)),
     _item(pencilIcon, "Rename", "F2", () => _callbacks.onRename?.(buildId)),
@@ -156,8 +158,8 @@ function showBuildMenu(x, y, buildId, build) {
     _item(linkIcon, "Copy Chat Link", null, () => _callbacks.onCopyChatLink?.(buildId)),
     _item(axiforgeIcon, "Copy AxiCode", null, () => _callbacks.onCopyShareCode?.(buildId)),
     _submenuItem(arrowUpTrayIcon, "Share to Discord", [
-      _item(clipboardDocumentIcon, "Copy Link", null, () => _callbacks.onDiscordCopy?.(buildId)),
-      _item(arrowUpTrayIcon, "Discord Embed", null, () => _callbacks.onDiscordEmbed?.(buildId)),
+      _item(clipboardDocumentIcon, "Copy Link", null, () => _callbacks.onDiscordCopy?.(buildId), false, shareTip),
+      _item(arrowUpTrayIcon, "Discord Embed", null, () => _callbacks.onDiscordEmbed?.(buildId), false, shareTip),
     ]),
     _item(arrowUpTrayIcon, "Export (.axicode)", null, () => _callbacks.onExportAxicode?.("selection")),
     _item(globeAltIcon, "Publish", null, () => _callbacks.onPublish?.(buildId)),
@@ -465,9 +467,10 @@ function _repositionMenu(menu, x, y) {
 
 // ─── Item factories ────────────────────────────────────────────────────────────
 
-function _item(icon, label, shortcut, onClick, danger = false) {
+function _item(icon, label, shortcut, onClick, danger = false, disabledTooltip = null) {
   const el = document.createElement("div");
-  el.className = "lib-ctx-item" + (danger ? " lib-ctx-item--danger" : "");
+  el.className = "lib-ctx-item" + (danger ? " lib-ctx-item--danger" : "") + (disabledTooltip ? " lib-ctx-item--disabled" : "");
+  if (disabledTooltip) el.title = disabledTooltip;
 
   el.innerHTML =
     `<span class="lib-ctx-item__icon">${icon || ""}</span>` +
@@ -476,6 +479,7 @@ function _item(icon, label, shortcut, onClick, danger = false) {
 
   el.addEventListener("click", (e) => {
     e.stopPropagation();
+    if (disabledTooltip) return; // disabled: no-op
     closeMenu();
     onClick?.();
   });

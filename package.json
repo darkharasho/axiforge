@@ -119,6 +119,10 @@
       "^.+/packages/forge-render/.+\\.js$": [
         "babel-jest",
         {}
+      ],
+      "^.+/src/site/.+\\.js$": [
+        "babel-jest",
+        {}
       ]
     },
     "transformIgnorePatterns": [

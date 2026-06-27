@@ -2,6 +2,7 @@ const GH_REST = "https://api.github.com";
 const TARGET_REPO = "axibuilds";
 const USER_AGENT = "axiforge-desktop";
 const crypto = require("node:crypto");
+const { partitionBundleForPublish, SITE_VERSION_PATH } = require("./siteBundle");
 
 async function apiFetch(path, token, init = {}) {
   const res = await fetch(`${GH_REST}${path}`, {
@@ -340,7 +341,17 @@ async function publishSiteBundle(token, owner, bundle, branch = "main", repo = T
     }
   }
 
-  const nextPathSet = new Set(entries.map(([filePath]) => filePath));
+  let remoteVersion = null;
+  try {
+    const verFile = await apiFetch(`/repos/${owner}/${repo}/contents/${SITE_VERSION_PATH}?ref=${encodeURIComponent(branch)}`, token);
+    if (verFile?.content) remoteVersion = Buffer.from(verFile.content, "base64").toString("utf8").trim();
+  } catch { /* no marker yet → treat as shell changed */ }
+  const { shellChanged, filesToPublish } = partitionBundleForPublish(bundle || {}, remoteVersion);
+  const publishEntries = Object.entries(filesToPublish).filter(
+    ([filePath, content]) => filePath && typeof content === "string"
+  );
+
+  const nextPathSet = new Set(publishEntries.map(([filePath]) => filePath));
   const treeEntries = [];
 
   // buildSpaBundle() base64-encodes binary assets (images, fonts) and leaves text files
@@ -349,7 +360,7 @@ async function publishSiteBundle(token, owner, bundle, branch = "main", repo = T
   const BINARY_EXTS = [".png", ".jpg", ".jpeg", ".gif", ".ico", ".woff", ".woff2", ".ttf", ".eot"];
   const isBinaryPath = (p) => BINARY_EXTS.includes(p.slice(p.lastIndexOf(".")).toLowerCase());
 
-  for (const [filePath, content] of entries) {
+  for (const [filePath, content] of publishEntries) {
     const contentBuffer = isBinaryPath(filePath)
       ? Buffer.from(content, "base64")
       : Buffer.from(content, "utf8");
@@ -367,22 +378,25 @@ async function publishSiteBundle(token, owner, bundle, branch = "main", repo = T
     treeEntries.push({ path: filePath, sha: blob.sha });
   }
 
-  for (const entry of existingTree) {
-    if (!entry?.path || entry?.type !== "blob") continue;
-    const isLegacyRootNoJekyll = entry.path === ".nojekyll";
-    const isEncBuild = (entry.path.startsWith("site/builds/") || entry.path.startsWith("site/comps/")) && entry.path.endsWith(".enc");
-    const isRedirect = entry.path.startsWith("site/r/");
-    const isStaleSiteFile = entry.path.startsWith("site/") && !nextPathSet.has(entry.path) && !isEncBuild && !isRedirect;
-    if (!isLegacyRootNoJekyll && !isStaleSiteFile) continue;
-    treeEntries.push({ path: entry.path, sha: null });
+  if (shellChanged) {
+    for (const entry of existingTree) {
+      if (!entry?.path || entry?.type !== "blob") continue;
+      const isLegacyRootNoJekyll = entry.path === ".nojekyll";
+      const isEncBuild = (entry.path.startsWith("site/builds/") || entry.path.startsWith("site/comps/")) && entry.path.endsWith(".enc");
+      const isRedirect = entry.path.startsWith("site/r/");
+      const isStaleSiteFile = entry.path.startsWith("site/") && !nextPathSet.has(entry.path) && !isEncBuild && !isRedirect;
+      if (!isLegacyRootNoJekyll && !isStaleSiteFile) continue;
+      treeEntries.push({ path: entry.path, sha: null });
+    }
   }
 
   if (!treeEntries.length) {
     return {
       commitSha: headSha,
-      files: entries.map(([filePath]) => filePath),
+      files: publishEntries.map(([filePath]) => filePath),
       pagesUrl: `https://${owner}.github.io/${repo}/`,
       changed: false,
+      shellChanged,
     };
   }
 
@@ -418,9 +432,10 @@ async function publishSiteBundle(token, owner, bundle, branch = "main", repo = T
 
   return {
     commitSha: commit.sha,
-    files: entries.map(([filePath]) => filePath),
+    files: publishEntries.map(([filePath]) => filePath),
     pagesUrl: `https://${owner}.github.io/${repo}/`,
     changed: true,
+    shellChanged,
   };
 }
 
@@ -608,6 +623,23 @@ async function getOrgRole(token, org, username) {
   }
 }
 
+async function pollUrlLive(url, opts = {}) {
+  const fetchImpl = opts.fetchImpl || globalThis.fetch;
+  const delayImpl = opts.delayImpl || ((ms) => new Promise((r) => setTimeout(r, ms)));
+  const nowImpl = opts.nowImpl || Date.now;
+  const intervalMs = opts.intervalMs ?? 3000;
+  const timeoutMs = opts.timeoutMs ?? 90000;
+  const deadline = nowImpl() + timeoutMs;
+  for (;;) {
+    try {
+      const res = await fetchImpl(`${url}${url.includes("?") ? "&" : "?"}t=${nowImpl()}`, { cache: "no-store" });
+      if (res && res.ok) return true;
+    } catch { /* network hiccup mid-deploy — keep polling */ }
+    if (nowImpl() >= deadline) return false;
+    await delayImpl(intervalMs);
+  }
+}
+
 async function deleteSharedFile(token, owner, repo, filePath, sha, branch = "main", message = "Remove shared build") {
   const encodedPath = filePath.split("/").map((s) => encodeURIComponent(s)).join("/");
   await apiFetch(`/repos/${owner}/${repo}/contents/${encodedPath}`, token, {
@@ -637,4 +669,5 @@ module.exports = {
   putSharedFile,
   deleteSharedFile,
   getOrgRole,
+  pollUrlLive,
 };

@@ -1,9 +1,29 @@
 "use strict";
 
+const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
 const { app } = require("electron");
 const { encryptBuild } = require("./buildEncryption");
+
+const SITE_VERSION_PATH = "site/site-version";
+
+function isShellPath(p) {
+  if (p === SITE_VERSION_PATH) return false;
+  if (p.startsWith("site/builds/") || p.startsWith("site/comps/") || p.startsWith("site/r/")) return false;
+  return true;
+}
+
+function computeSpaVersion(bundle) {
+  const hash = crypto.createHash("sha256");
+  for (const rel of Object.keys(bundle).filter(isShellPath).sort()) {
+    hash.update(rel);
+    hash.update("\0");
+    hash.update(String(bundle[rel]));
+    hash.update("\0");
+  }
+  return hash.digest("hex").slice(0, 12);
+}
 
 // Resolve dist/site directory — packaged app uses resourcesPath, dev uses project root
 function getSiteDistDir() {
@@ -21,6 +41,7 @@ function buildSpaBundle() {
   const files = {};
   walkDir(distDir, distDir, files);
   files["site/.nojekyll"] = "\n";
+  files[SITE_VERSION_PATH] = computeSpaVersion(files);
   return files;
 }
 
@@ -71,4 +92,19 @@ function buildRedirectFile(fileId, encKey, type) {
   };
 }
 
-module.exports = { getSiteDistDir, buildSpaBundle, buildEncryptedBuildFile, buildEncryptedCompFile, buildRedirectFile };
+function partitionBundleForPublish(bundle, remoteVersion) {
+  const localVersion = bundle[SITE_VERSION_PATH];
+  const shellChanged = !remoteVersion || remoteVersion !== localVersion;
+  if (shellChanged) return { shellChanged: true, filesToPublish: { ...bundle } };
+  const filesToPublish = {};
+  for (const [p, content] of Object.entries(bundle)) {
+    // Shell unchanged: only re-publish per-build/comp/redirect data.
+    // Shell files AND the version marker are dropped.
+    if (p.startsWith("site/builds/") || p.startsWith("site/comps/") || p.startsWith("site/r/")) {
+      filesToPublish[p] = content;
+    }
+  }
+  return { shellChanged: false, filesToPublish };
+}
+
+module.exports = { getSiteDistDir, buildSpaBundle, buildEncryptedBuildFile, buildEncryptedCompFile, buildRedirectFile, computeSpaVersion, SITE_VERSION_PATH, partitionBundleForPublish };

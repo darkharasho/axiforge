@@ -538,15 +538,6 @@ async function handleDiscordEmbed(buildId) {
       if (!webhookIds) return; // cancelled
     }
 
-    // Auto-publish if not yet published
-    let build = state.builds.find((b) => b.id === buildId);
-    if (!build?.publishedFileId) {
-      showToast("Publishing first...");
-      await window.desktopApi.publishBuild(buildId);
-      state.builds = await window.desktopApi.listBuilds();
-      renderLibrary();
-    }
-
     const result = await window.desktopApi.shareBuildToDiscord(buildId, webhookIds);
     if (result.success) {
       showToast("Shared to Discord!");
