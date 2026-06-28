@@ -1431,8 +1431,12 @@ function wireEvents() {
       if (!proceed) return;
     }
     let lastStep = "saving";
+    // Share relies on a finished publish — block it while one is in flight.
+    const shareTrigger = el.editorShareDropdown?.querySelector(".editor-share-dropdown__trigger");
     try {
       el.publishSiteBtn.disabled = true;
+      if (shareTrigger) shareTrigger.disabled = true;
+      el.editorShareDropdown?.classList.remove("editor-share-dropdown--open");
       state.publishProgress[buildId] = { currentStep: "saving" };
       showPublishProgress(buildId);
       advancePublishStep("saving");
@@ -1471,6 +1475,7 @@ function wireEvents() {
       showError(err);
     } finally {
       el.publishSiteBtn.disabled = false;
+      if (shareTrigger) shareTrigger.disabled = false;
     }
   });
 
