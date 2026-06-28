@@ -1,3 +1,9 @@
+## Version v0.9.5 — June 27, 2026
+
+### Bug Fixes
+
+- **WvW/PvP skill cooldowns now show correctly** — Skill tooltips previously showed the PvE cooldown even in WvW and PvP for skills whose competitive cooldown change is only noted in the wiki's version history (for example Smoke Vent, which is 15s in PvE but 25s in WvW/PvP). These split cooldowns are now read from the version history and shown for the right game mode.
+
 ## Version v0.9.4 — June 27, 2026
 
 ### New Features
