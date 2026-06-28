@@ -51,14 +51,112 @@ function parseInfoboxTimings(wikitext) {
     }
     // Mode-specific overrides: `| recharge wvw = 40`, `| recharge pvp = 40`
     const modeRe = new RegExp(`\\|\\s*${param}\\s+(pve|wvw|pvp)\\s*=\\s*([\\d.]+)`, "gi");
+    const explicit = new Set();
     let m;
     while ((m = modeRe.exec(wikitext)) !== null) {
       const mode = m[1].toLowerCase();
       const val = parseFloat(m[2]);
-      if (!isNaN(val)) result[param][mode] = val;
+      if (!isNaN(val)) {
+        result[param][mode] = val;
+        explicit.add(mode);
+      }
+    }
+    // Fallback: derive competitive recharge splits from version-history prose for
+    // skills whose split is documented only in the changelog (no `| recharge wvw =`).
+    // Explicit infobox overrides always win — they are the most current source.
+    if (param === "recharge") {
+      const vh = parseVersionHistoryRecharge(wikitext);
+      for (const mode of ["wvw", "pvp"]) {
+        if (vh[mode] != null && !explicit.has(mode)) result.recharge[mode] = vh[mode];
+      }
     }
   }
   return result;
+}
+
+/**
+ * Parse a version-history date token into an ISO-sortable string.
+ * Real tokens look like `2024-10-08`; the original release is tagged `release`
+ * (treated as the oldest possible date so any dated change supersedes it).
+ *
+ * @param {string} token
+ * @returns {string}
+ */
+function _vhDateKey(token) {
+  const t = (token || "").trim().toLowerCase();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(t)) return t;
+  return "0000-00-00";
+}
+
+/**
+ * Derive WvW/PvP recharge values from version-history prose, for skills whose
+ * competitive split is documented ONLY in the changelog and never as a
+ * machine-readable infobox param (`| recharge wvw =`) — e.g. Smoke Vent, whose
+ * infobox carries only `| recharge = 15` while the WvW/PvP value (25s) lives in
+ * a 2024-10-08 history bullet.
+ *
+ * Strategy: walk each dated `{{Version history table row|DATE|...}}` block and
+ * its bullets, collecting every "cooldown/recharge ... to N seconds [in MODES]"
+ * statement. For WvW and PvP independently, emit an override ONLY when the most
+ * recent recharge change affecting that mode is competitive-scoped (a genuine
+ * split). If the newest recharge change is all-mode, the infobox base is the
+ * current value, so no split is emitted. PvE is never sourced here — the infobox
+ * is authoritative for it.
+ *
+ * @param {string} wikitext
+ * @returns {{ pve: null, wvw: number|null, pvp: number|null }}
+ */
+function parseVersionHistoryRecharge(wikitext) {
+  const out = { pve: null, wvw: null, pvp: null };
+  const vhIdx = wikitext.search(/==\s*Version history\s*==/i);
+  const scope = vhIdx >= 0 ? wikitext.slice(vhIdx) : wikitext;
+
+  // Split into dated blocks: each row template introduces the bullets that follow it.
+  const rowRe = /\{\{\s*Version history table row\s*\|\s*([^|}]+)/gi;
+  const rows = [];
+  let rm;
+  while ((rm = rowRe.exec(scope)) !== null) {
+    rows.push({ date: _vhDateKey(rm[1]), start: rm.index });
+  }
+  if (rows.length === 0) return out;
+
+  // Track, per affected scope, the newest dated recharge change.
+  // newestForMode[mode] = { date, value, competitive } where competitive=true
+  // means the change targeted only WvW/PvP (a split), false means all-mode.
+  const newest = { wvw: null, pvp: null };
+
+  const changeRe = /(?:cool\s*down|cooldown|recharge)\b[^.]*?\bto\s+([\d.]+)\s+seconds?\b([^.]*)/gi;
+
+  for (let i = 0; i < rows.length; i++) {
+    const text = scope.slice(rows[i].start, i + 1 < rows.length ? rows[i + 1].start : undefined);
+    const date = rows[i].date;
+    let cm;
+    while ((cm = changeRe.exec(text)) !== null) {
+      const value = parseFloat(cm[1]);
+      if (isNaN(value)) continue;
+      const tail = (cm[2] || "").toLowerCase();
+      const hasWvw = /\bwvw\b/.test(tail) || /\bcompetitive\b/.test(tail);
+      const hasPvp = /\bpvp\b/.test(tail) || /\bcompetitive\b/.test(tail);
+      const hasPve = /\bpve\b/.test(tail);
+      // No mode qualifier (and not PvE-only) => an all-mode change.
+      const allMode = !hasWvw && !hasPvp && !hasPve;
+
+      for (const mode of ["wvw", "pvp"]) {
+        const affects = allMode || (mode === "wvw" ? hasWvw : hasPvp);
+        if (!affects) continue;
+        const prev = newest[mode];
+        if (!prev || date >= prev.date) {
+          newest[mode] = { date, value, competitive: !allMode };
+        }
+      }
+    }
+  }
+
+  for (const mode of ["wvw", "pvp"]) {
+    const n = newest[mode];
+    if (n && n.competitive) out[mode] = n.value;
+  }
+  return out;
 }
 
 /**
@@ -349,4 +447,4 @@ async function resolveEntityFacts(client, idToTitle, options = {}) {
   return result;
 }
 
-module.exports = { groupFactsByMode, parseFactsByMode, resolveEntityFacts, isDisambiguation, extractInfoboxId };
+module.exports = { groupFactsByMode, parseFactsByMode, parseVersionHistoryRecharge, resolveEntityFacts, isDisambiguation, extractInfoboxId };

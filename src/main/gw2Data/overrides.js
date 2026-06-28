@@ -55,6 +55,19 @@ const KNOWN_SKILL_FACTS_OVERRIDES = new Map([
   ]],
 ]);
 
+// Per-mode recharge (cooldown) overrides keyed by skill ID — a last-resort safety
+// net for skills whose WvW/PvP cooldown split the resolver cannot derive.
+//
+// The resolver already handles two upstream sources automatically:
+//   1. Infobox params:        `| recharge wvw = 25`
+//   2. Version-history prose:  "Increased the cooldown ... to 25 seconds in PvP and WvW."
+// Add an entry here ONLY when both of those are absent or phrased so unusually
+// that parseVersionHistoryRecharge() misses the split. Values are in seconds.
+// Any omitted mode falls back to the wiki/API recharge for that mode.
+//   e.g. [6159, { wvw: 25, pvp: 25 }]  // Smoke Vent — handled by version history, kept as example only
+const KNOWN_SKILL_RECHARGE_OVERRIDES = new Map([
+]);
+
 // Fact list patches for traits the GW2 API returns with incorrect values.
 // Same pattern as KNOWN_SKILL_FACTS_OVERRIDES but keyed by trait ID.
 const KNOWN_TRAIT_FACTS_OVERRIDES = new Map([
@@ -462,6 +475,7 @@ module.exports = {
   _IC,
   FACT_ICONS,
   KNOWN_SKILL_FACTS_OVERRIDES,
+  KNOWN_SKILL_RECHARGE_OVERRIDES,
   KNOWN_TRAIT_FACTS_OVERRIDES,
   KNOWN_SKILL_SPEC_OVERRIDES,
   KNOWN_SKILL_SLOT_OVERRIDES,

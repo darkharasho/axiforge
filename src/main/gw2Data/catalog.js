@@ -75,12 +75,34 @@ function _transferIcons(apiFacts, wikiFacts) {
   }
 }
 
-function applyWikiFacts(entity, wikiFactsById, overridesMap) {
-  // Emergency overrides always win
-  if (overridesMap.has(entity.id)) return;
+// Apply a curated per-mode recharge override. Wins over wiki/API and applies
+// even to skills whose facts come from KNOWN_SKILL_FACTS_OVERRIDES. Omitted modes
+// fall back to the existing recharge (wvw/pvp default to pve when unset).
+function _applyRechargeOverride(entity, rechargeOverrides) {
+  const ov = rechargeOverrides && rechargeOverrides.get(entity.id);
+  if (!ov) return;
+  const base = entity.recharge || {};
+  const pve = ov.pve != null ? ov.pve : (base.pve ?? null);
+  entity.recharge = {
+    pve,
+    wvw: ov.wvw != null ? ov.wvw : (base.wvw ?? pve),
+    pvp: ov.pvp != null ? ov.pvp : (base.pvp ?? pve),
+  };
+}
+
+function applyWikiFacts(entity, wikiFactsById, overridesMap, rechargeOverrides) {
+  // Emergency fact overrides always win, but recharge overrides still apply.
+  if (overridesMap.has(entity.id)) {
+    _applyRechargeOverride(entity, rechargeOverrides);
+    return;
+  }
 
   const wikiFacts = wikiFactsById.get(entity.id);
-  if (!wikiFacts) return; // No wiki page — keep API facts
+  if (!wikiFacts) {
+    // No wiki page — keep API facts, but a recharge override may still apply.
+    _applyRechargeOverride(entity, rechargeOverrides);
+    return;
+  }
 
   // Only replace facts if wiki actually has fact templates
   if (wikiFacts.pve.length > 0) {
@@ -101,11 +123,15 @@ function applyWikiFacts(entity, wikiFactsById, overridesMap) {
   // Infobox timings (recharge, activation) — per-mode
   if (wikiFacts.recharge) entity.recharge = wikiFacts.recharge;
   if (wikiFacts.activation) entity.activation = wikiFacts.activation;
+
+  // Curated recharge override wins over wiki-derived values.
+  _applyRechargeOverride(entity, rechargeOverrides);
 }
 
 const {
   KNOWN_SKILL_DESCRIPTION_OVERRIDES,
   KNOWN_SKILL_FACTS_OVERRIDES,
+  KNOWN_SKILL_RECHARGE_OVERRIDES,
   KNOWN_TRAIT_FACTS_OVERRIDES,
   KNOWN_SKILL_SPEC_OVERRIDES,
   KNOWN_SKILL_SLOT_OVERRIDES,
@@ -837,13 +863,13 @@ async function _buildProfessionCatalog(professionId, lang = "en", gameMode = "pv
   }
 
   for (const s of mappedSkills) {
-    applyWikiFacts(s, wikiFactsById, KNOWN_SKILL_FACTS_OVERRIDES);
+    applyWikiFacts(s, wikiFactsById, KNOWN_SKILL_FACTS_OVERRIDES, KNOWN_SKILL_RECHARGE_OVERRIDES);
   }
   for (const t of mappedTraits) {
     applyWikiFacts(t, wikiFactsById, KNOWN_TRAIT_FACTS_OVERRIDES);
   }
   for (const ws of mappedWeaponSkills) {
-    applyWikiFacts(ws, wikiFactsById, KNOWN_SKILL_FACTS_OVERRIDES);
+    applyWikiFacts(ws, wikiFactsById, KNOWN_SKILL_FACTS_OVERRIDES, KNOWN_SKILL_RECHARGE_OVERRIDES);
   }
   // Apply wiki facts to pet skills (nested inside pets[].skills[])
   for (const pet of pets) {
@@ -1030,4 +1056,5 @@ module.exports = {
   getWikiClient,
   clearCatalogCache,
   _transferIcons,
+  _applyRechargeOverride,
 };

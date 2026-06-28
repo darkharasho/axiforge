@@ -3,6 +3,7 @@
 const {
   groupFactsByMode,
   parseFactsByMode,
+  parseVersionHistoryRecharge,
   resolveEntityFacts,
   isDisambiguation,
   extractInfoboxId,
@@ -114,6 +115,114 @@ describe("parseFactsByMode", () => {
     // wvw/pvp should have the universal damage fact
     expect(result.wvw.length).toBeGreaterThan(0);
     expect(result.pvp.length).toBeGreaterThan(0);
+  });
+});
+
+describe("parseVersionHistoryRecharge", () => {
+  // Real Smoke Vent (id 6159) version history — the WvW/PvP split lives ONLY here,
+  // never in the infobox (`| recharge = 15` is the only recharge param).
+  const SMOKE_VENT_VH = [
+    "== Version history ==",
+    "{{Version history table header|engineer}}",
+    "{{Version history table row|2025-06-24|Engineer 2}}",
+    "*This skill has been moved to the toolbelt slot.",
+    "{{Version history table row|2024-10-08|Engineer}}",
+    "* This skill now breaks stun. Increased the cooldown from 15 seconds to 25 seconds in PvP and WvW.",
+    "{{Version history table row|2020-07-07|Engineer}}",
+    "* Reduced cooldown from 20 seconds to 15 seconds.",
+    "{{Version history table row|2013-10-15|Engineer}}",
+    "* This skill now has a range indicator.",
+    "{{Version history table row|release|r=y}}",
+    "|}",
+  ].join("\n");
+
+  test("extracts WvW/PvP split from version-history prose (Smoke Vent)", () => {
+    const result = parseVersionHistoryRecharge(SMOKE_VENT_VH);
+    expect(result.wvw).toBe(25);
+    expect(result.pvp).toBe(25);
+  });
+
+  test("returns null for modes with no recharge changes", () => {
+    const result = parseVersionHistoryRecharge(SMOKE_VENT_VH);
+    // PvE must never be sourced from version history (infobox is authoritative)
+    expect(result.pve).toBeNull();
+  });
+
+  test("returns all-null when no version history present", () => {
+    const result = parseVersionHistoryRecharge("{{skill fact|damage|0.8}}\n| recharge = 10");
+    expect(result).toEqual({ pve: null, wvw: null, pvp: null });
+  });
+
+  test("a later all-mode recharge change supersedes an earlier competitive split", () => {
+    const vh = [
+      "== Version history ==",
+      "{{Version history table row|2025-01-01|Test}}",
+      "* Reduced the cooldown to 12 seconds.",
+      "{{Version history table row|2024-10-08|Test}}",
+      "* Increased the cooldown from 15 seconds to 25 seconds in PvP and WvW.",
+      "|}",
+    ].join("\n");
+    // The 2025 all-mode change is newer than the 2024 split, so no split should be emitted.
+    const result = parseVersionHistoryRecharge(vh);
+    expect(result.wvw).toBeNull();
+    expect(result.pvp).toBeNull();
+  });
+
+  test("handles WvW-only split", () => {
+    const vh = [
+      "{{Version history table row|2024-10-08|Test}}",
+      "* Increased the cooldown to 30 seconds in WvW.",
+      "|}",
+    ].join("\n");
+    const result = parseVersionHistoryRecharge(vh);
+    expect(result.wvw).toBe(30);
+    expect(result.pvp).toBeNull();
+  });
+
+  test("treats 'competitive' as both WvW and PvP", () => {
+    const vh = [
+      "{{Version history table row|2024-10-08|Test}}",
+      "* Increased the recharge to 18 seconds in competitive game modes.",
+      "|}",
+    ].join("\n");
+    const result = parseVersionHistoryRecharge(vh);
+    expect(result.wvw).toBe(18);
+    expect(result.pvp).toBe(18);
+  });
+});
+
+describe("parseFactsByMode version-history recharge fallback", () => {
+  test("populates recharge.wvw/pvp from version history when infobox has no split", () => {
+    const wikitext = [
+      "{{Skill infobox",
+      "| recharge = 15",
+      "| id = 6159",
+      "}}",
+      "{{skill fact|blinded|5}}",
+      "== Version history ==",
+      "{{Version history table row|2024-10-08|Engineer}}",
+      "* Increased the cooldown from 15 seconds to 25 seconds in PvP and WvW.",
+      "|}",
+    ].join("\n");
+    const result = parseFactsByMode(wikitext);
+    expect(result.recharge.pve).toBe(15);
+    expect(result.recharge.wvw).toBe(25);
+    expect(result.recharge.pvp).toBe(25);
+  });
+
+  test("explicit infobox recharge split wins over version history", () => {
+    const wikitext = [
+      "{{Skill infobox",
+      "| recharge = 15",
+      "| recharge wvw = 20",
+      "}}",
+      "== Version history ==",
+      "{{Version history table row|2024-10-08|Test}}",
+      "* Increased the cooldown to 25 seconds in WvW.",
+      "|}",
+    ].join("\n");
+    const result = parseFactsByMode(wikitext);
+    expect(result.recharge.wvw).toBe(20);
   });
 });
 
