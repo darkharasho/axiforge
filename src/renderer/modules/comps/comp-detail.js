@@ -1211,6 +1211,10 @@ function bindDetailEvents(container, comp) {
     // Point publish ticker at the comp-local status element
     const compEl = container.querySelector("#compPublishStatus");
     if (compEl) setPublishStatusEl(compEl);
+    // Share relies on a finished publish — block it while one is in flight.
+    const shareTriggerBtn = container.querySelector("[data-action='share-toggle']");
+    if (shareTriggerBtn) shareTriggerBtn.disabled = true;
+    container.querySelector(".comp-share-dropdown")?.classList.remove("comp-share-dropdown--open");
     try {
       state.publishProgress[comp.id] = { currentStep: "saving" };
       showPublishProgress(comp.id);
@@ -1240,6 +1244,8 @@ function bindDetailEvents(container, comp) {
         state.publishProgress[comp.id].error = { step: "loading", message: err.message };
       }
       failPublishStep("loading", err.message);
+    } finally {
+      if (shareTriggerBtn) shareTriggerBtn.disabled = false;
     }
   });
 
