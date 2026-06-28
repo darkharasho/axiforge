@@ -1,3 +1,17 @@
+## Version v0.9.4 — June 27, 2026
+
+### New Features
+
+- **Publishing is much faster** — Re-publishing a build now finishes in a few seconds instead of waiting on a full site rebuild. The app only re-uploads what actually changed and reads your published builds straight from GitHub, so updates go live almost immediately.
+- **Share to Discord only after publishing** — The "Share to Discord" options are now disabled until a build (or comp) has been published, and they disable again whenever you have saved changes that haven't been published yet. This stops broken or out-of-date links from being shared. The buttons tell you what's needed ("Publish this build first" / "Publish your latest changes first").
+- **First-time publish explainer** — The first time you publish, a short note explains what publishing does (it puts your build online so the shareable link works) before it runs.
+- **Share is blocked during an active publish** — While a publish is in progress, the share menu is disabled until it finishes.
+
+### Bug Fixes
+
+- **Shared links no longer 404 right after publishing** — Publishing now waits until your build is actually live on the web before marking it published, so the link you share works immediately instead of showing "not found" for the first minute.
+- **Discord "Plaintext" share no longer leaks an old link** — The plaintext Discord option is now held to the same rule as the rest, so it can't hand out a link to an outdated version of a comp.
+
 ## Version v0.9.3 — June 23, 2026
 
 ### Bug Fixes
