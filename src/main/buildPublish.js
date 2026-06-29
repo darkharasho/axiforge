@@ -711,6 +711,13 @@ function serializeForPublish(build, catalog, upgradeCatalog, extraCatalogs = [])
         name: legend.name || "",
         icon: swapSkill?.icon || "",
         swap: swapSkill ? { id: swapSkill.id, name: swapSkill.name, icon: swapSkill.icon } : null,
+        // Heal/utility/elite skill IDs the active legend grants. The SPA renderer
+        // builds the Revenant skill-bar options from these (skills.js reads
+        // activeLegend.heal/utilities/elite); without them the published build
+        // shows an empty skill bar (#283).
+        heal: legend.heal || 0,
+        utilities: Array.isArray(legend.utilities) ? legend.utilities : [],
+        elite: legend.elite || 0,
       };
     });
 

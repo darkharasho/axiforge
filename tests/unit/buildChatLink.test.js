@@ -106,6 +106,44 @@ describe("mapBuildToTemplateInput", () => {
     expect(input.revenantLegends).toBeUndefined();
   });
 
+  // Revenant skill slots are driven by the active legend in-game; the legend's
+  // heal/utility/elite skill IDs are NOT in the profession's skills_by_palette,
+  // so passing them makes gw2buildlink throw "Skill <id> is not available for
+  // profession Revenant" and no chat link is produced (issue #283).
+  it("omits heal/utility/elite skill palettes for Revenant (legends drive the bar)", () => {
+    const build = {
+      ...baseBuild,
+      profession: "Revenant",
+      selectedLegends: ["Legend2", "Legend3"],
+      // Legend skills synced into the selection — must not reach the encoder.
+      skills: {
+        heal: { id: 26937 },
+        utility: [{ id: 29209 }, { id: 28231 }, { id: 27107 }],
+        elite: { id: 28406 },
+      },
+      underwaterSkills: { heal: { id: 26937 }, utility: [], elite: null },
+    };
+    const input = mapBuildToTemplateInput(build);
+    expect(input.revenantLegends).toEqual([2, 3, undefined, undefined]);
+    expect(input.skills.terrestrial).toEqual({
+      heal: undefined,
+      utilities: [undefined, undefined, undefined],
+      elite: undefined,
+    });
+    expect(input.skills.aquatic).toEqual({
+      heal: undefined,
+      utilities: [undefined, undefined, undefined],
+      elite: undefined,
+    });
+  });
+
+  it("still maps heal/utility/elite skills for non-Revenant professions", () => {
+    const input = mapBuildToTemplateInput(baseBuild);
+    expect(input.skills.terrestrial.heal).toBe(9083);
+    expect(input.skills.terrestrial.utilities).toEqual([9093, 9150, 9153]);
+    expect(input.skills.terrestrial.elite).toBe(30461);
+  });
+
   it("maps ranger pets", () => {
     const build = {
       ...baseBuild,

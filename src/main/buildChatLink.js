@@ -45,10 +45,20 @@ function mapBuildToTemplateInput(build) {
     };
   };
 
-  const skills = {
-    terrestrial: mapSkillSet(build.skills),
-    aquatic: mapSkillSet(build.underwaterSkills),
-  };
+  // Revenant skill slots are determined by the active legend in-game — the
+  // legend's heal/utility/elite skill IDs are NOT part of the profession's
+  // skills_by_palette, so passing them makes gw2buildlink throw "Skill <id> is
+  // not available for profession Revenant" and no chat link is produced (#283).
+  // The legend codes (revenantLegends below) already encode the skill bar, so
+  // leave the palette slots empty for Revenant.
+  const profLower = (build.profession || "").toLowerCase();
+  const emptySkillSet = () => ({ heal: undefined, utilities: [undefined, undefined, undefined], elite: undefined });
+  const skills = profLower === "revenant"
+    ? { terrestrial: emptySkillSet(), aquatic: emptySkillSet() }
+    : {
+        terrestrial: mapSkillSet(build.skills),
+        aquatic: mapSkillSet(build.underwaterSkills),
+      };
 
   // Weapons — flatten object to array, filter empties.
   const weaponSlots = ["mainhand1", "offhand1", "mainhand2", "offhand2", "aquatic1", "aquatic2"];
@@ -63,7 +73,6 @@ function mapBuildToTemplateInput(build) {
     .filter((w) => KNOWN_WEAPONS.has(w));
 
   // Revenant legends — only for Revenant profession.
-  const profLower = (build.profession || "").toLowerCase();
   let revenantLegends;
   if (profLower === "revenant") {
     const legends = build.selectedLegends || ["", ""];

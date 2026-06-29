@@ -166,9 +166,14 @@ function populateStateFromBuild(build) {
     traitById:          new Map(allTraits.map(t => [t.id, t])),
     legends:            (build.legendDisplay || []).map(l => ({
       id: l.id, name: l.name, icon: l.icon, swap: l.swap?.id || null,
+      heal: l.heal || 0, utilities: Array.isArray(l.utilities) ? l.utilities : [], elite: l.elite || 0,
     })),
+    // heal/utilities/elite drive the Revenant skill-bar options in the shared
+    // renderer (skills.js reads activeLegend.heal/utilities/elite). Without them
+    // the published build renders an empty skill bar (#283).
     legendById:         new Map((build.legendDisplay || []).map(l => [l.id, {
       id: l.id, name: l.name, icon: l.icon, swap: l.swap?.id || null,
+      heal: l.heal || 0, utilities: Array.isArray(l.utilities) ? l.utilities : [], elite: l.elite || 0,
     }])),
     pets:               (build.petDisplay || []).map(p => ({ id: p.id, name: p.name, icon: p.icon, skills: p.skills || [] })),
     petById:            new Map((build.petDisplay || []).map(p => [p.id, p])),
