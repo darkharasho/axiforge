@@ -1,3 +1,10 @@
+## Version v0.9.6 — June 29, 2026
+
+### Bug Fixes
+
+- **Revenant builds now generate chat links** — Generating an in-game chat link for a Revenant build previously failed silently because the legend skills couldn't be encoded. Revenant skills are now encoded with the correct legend skill palettes, so the chat link works and imports into the game with the right heal, utility, and elite skills for the active legend.
+- **Revenant skills now show on published builds** — Published Revenant builds rendered an empty skill bar. The heal, utility, and elite skills for each legend are now included when publishing, so the skill bar displays correctly. Builds shared before this fix will also render once the published site is updated.
+
 ## Version v0.9.5 — June 27, 2026
 
 ### Bug Fixes
