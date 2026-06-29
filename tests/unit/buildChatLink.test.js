@@ -106,6 +106,69 @@ describe("mapBuildToTemplateInput", () => {
     expect(input.revenantLegends).toBeUndefined();
   });
 
+  // Revenant skill slots use a FIXED set of palette IDs; the active legend
+  // resolves the concrete skill in-game. The legend's actual skill IDs (e.g.
+  // 26937) are NOT in the profession's skills_by_palette, so passing them made
+  // gw2buildlink throw and produce no link; leaving them empty dropped the
+  // skills from the imported build — both were issue #283.
+  it("uses fixed legend palette IDs for Revenant terrestrial skills", () => {
+    const build = {
+      ...baseBuild,
+      profession: "Revenant",
+      selectedLegends: ["Legend2", "Legend3"],
+      selectedUnderwaterLegends: ["", ""],
+      // Legend skill IDs synced into the selection — must NOT reach the encoder.
+      skills: {
+        heal: { id: 26937 },
+        utility: [{ id: 29209 }, { id: 28231 }, { id: 27107 }],
+        elite: { id: 28406 },
+      },
+      underwaterSkills: { heal: { id: 26937 }, utility: [], elite: null },
+    };
+    const input = mapBuildToTemplateInput(build);
+    expect(input.revenantLegends).toEqual([2, 3, undefined, undefined]);
+    // Fixed Revenant palettes (heal 4572, utilities 4564/4614/4651, elite 4554).
+    expect(input.skills.terrestrial).toEqual({
+      heal: 4572,
+      utilities: [4564, 4614, 4651],
+      elite: 4554,
+    });
+    // No aquatic legend → aquatic slots stay empty.
+    expect(input.skills.aquatic).toEqual({
+      heal: undefined,
+      utilities: [undefined, undefined, undefined],
+      elite: undefined,
+    });
+    // Second terrestrial legend present → its inactive utility palettes are set;
+    // no aquatic legends → aquatic inactive slots stay empty.
+    expect(input.revenantInactiveSkills).toEqual([4564, 4614, 4651, undefined, undefined, undefined]);
+  });
+
+  it("fills aquatic Revenant palettes when an underwater legend is slotted", () => {
+    const build = {
+      ...baseBuild,
+      profession: "Revenant",
+      selectedLegends: ["Legend2", ""],
+      selectedUnderwaterLegends: ["Legend3", ""],
+      skills: { heal: { id: 26937 }, utility: [], elite: null },
+      underwaterSkills: { heal: { id: 26974 }, utility: [], elite: null },
+    };
+    const input = mapBuildToTemplateInput(build);
+    expect(input.skills.aquatic).toEqual({
+      heal: 4572,
+      utilities: [4564, 4614, 4651],
+      elite: 4554,
+    });
+    expect(input.revenantInactiveSkills).toEqual([undefined, undefined, undefined, undefined, undefined, undefined]);
+  });
+
+  it("still maps heal/utility/elite skills for non-Revenant professions", () => {
+    const input = mapBuildToTemplateInput(baseBuild);
+    expect(input.skills.terrestrial.heal).toBe(9083);
+    expect(input.skills.terrestrial.utilities).toEqual([9093, 9150, 9153]);
+    expect(input.skills.terrestrial.elite).toBe(30461);
+  });
+
   it("maps ranger pets", () => {
     const build = {
       ...baseBuild,

@@ -33,6 +33,78 @@ describe("renderer Revenant mechanics — Alliance Tactics fallback", () => {
   });
 });
 
+describe("renderer Revenant skill options — published-build legend fallback (#283)", () => {
+  const { buildMechanicSlotsForRender } = require("../../../src/renderer/modules/skills");
+
+  // A published build shared before the publish serializer carried legend
+  // heal/utilities/elite stores only { id, swap } per legend. Without a fallback
+  // to the saved skill IDs, the Revenant skill bar renders no heal/utility/elite.
+  const healSkill = { id: 26937, name: "Enchanted Daggers", icon: "ed.png", slot: "Heal" };
+  const util1 = { id: 29209, name: "Riposting Shadows", icon: "rs.png", slot: "Utility" };
+  const util2 = { id: 28231, name: "Phase Traversal", icon: "pt.png", slot: "Utility" };
+  const util3 = { id: 27107, name: "Impossible Odds", icon: "io.png", slot: "Utility" };
+  const eliteSkill = { id: 28406, name: "Jade Winds", icon: "jw.png", slot: "Elite" };
+  const swapSkill = { id: 28134, name: "Legendary Assassin Stance", icon: "shiro.png" };
+  const allSkills = [healSkill, util1, util2, util3, eliteSkill, swapSkill];
+
+  function makeCatalog(legend) {
+    return {
+      skills: allSkills,
+      legends: [legend],
+      legendById: new Map([[legend.id, legend]]),
+      skillById: new Map(allSkills.map((s) => [s.id, s])),
+      specializationById: new Map(),
+    };
+  }
+
+  function makeEditor() {
+    return {
+      profession: "Revenant",
+      specializations: [],
+      skills: { healId: 26937, utilityIds: [29209, 28231, 27107], eliteId: 28406 },
+      selectedLegends: ["Legend2", "Legend3"],
+      activeLegendSlot: 0,
+      allianceTacticsForm: 0,
+      equipment: { weapons: {} },
+    };
+  }
+
+  function resolveOptions(legend) {
+    const catalog = makeCatalog(legend);
+    const editor = makeEditor();
+    return buildMechanicSlotsForRender({
+      catalog,
+      options: { heal: [], utility: [], elite: [], profession: [] },
+      editor,
+      utilitySelection: editor.skills.utilityIds,
+      equippedWeapons: {},
+      mhKey: "mainhand1",
+      ohKey: "offhand1",
+      activeAttunement: "Fire",
+      activeKit: 0,
+      underwaterMode: false,
+    }).options;
+  }
+
+  test("falls back to saved skill IDs when the legend lacks heal/utilities/elite", () => {
+    // Old published build: legend only has id + swap.
+    const opts = resolveOptions({ id: "Legend2", swap: 28134 });
+    expect(opts.heal.map((s) => s.id)).toEqual([26937]);
+    expect(opts.utility.map((s) => s.id)).toEqual([29209, 28231, 27107]);
+    expect(opts.elite.map((s) => s.id)).toEqual([28406]);
+  });
+
+  test("uses the legend's own skills when present (newly published builds)", () => {
+    const opts = resolveOptions({
+      id: "Legend2", swap: 28134,
+      heal: 26937, utilities: [29209, 28231, 27107], elite: 28406,
+    });
+    expect(opts.heal.map((s) => s.id)).toEqual([26937]);
+    expect(opts.utility.map((s) => s.id)).toEqual([29209, 28231, 27107]);
+    expect(opts.elite.map((s) => s.id)).toEqual([28406]);
+  });
+});
+
 createMechanicsSuite("Revenant", [
   { specId: 0, expected: [] },
   { specId: 52, expected: [] },

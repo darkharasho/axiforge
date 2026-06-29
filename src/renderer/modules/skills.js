@@ -538,9 +538,17 @@ export function buildMechanicSlotsForRender({
         }
         return skill;
       };
-      nextOptions.heal = [ls(activeLegend.heal)].filter(Boolean);
-      nextOptions.utility = (activeLegend.utilities || []).map(ls).filter(Boolean);
-      nextOptions.elite = [ls(activeLegend.elite)].filter(Boolean);
+      // Fall back to the saved active-legend skill IDs when the legend catalog
+      // lacks heal/utilities/elite. Published builds shared before the publish
+      // serializer carried these fields store only the swap skill per legend, so
+      // without this fallback their Revenant skill bar renders empty (#283).
+      const legendSkillSource = underwaterMode ? editor.underwaterSkills : editor.skills;
+      const fbUtilities = (activeLegend.utilities && activeLegend.utilities.length)
+        ? activeLegend.utilities
+        : (legendSkillSource?.utilityIds || []);
+      nextOptions.heal = [ls(activeLegend.heal || legendSkillSource?.healId)].filter(Boolean);
+      nextOptions.utility = fbUtilities.map(ls).filter(Boolean);
+      nextOptions.elite = [ls(activeLegend.elite || legendSkillSource?.eliteId)].filter(Boolean);
     }
   } else if (isRanger) {
     // When underwater, show aquatic pet slots instead of terrestrial

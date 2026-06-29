@@ -508,6 +508,61 @@ describe("serializeForPublish", () => {
   });
 });
 
+// ── Revenant legend display ─────────────────────────────────────────────────
+
+describe("serializeForPublish — Revenant legendDisplay", () => {
+  // The published SPA derives the Revenant heal/utility/elite skill bar from the
+  // legend's heal/utilities/elite skill IDs (skills.js builds the slot options
+  // from activeLegend.heal/utilities/elite). If legendDisplay omits those IDs,
+  // the published build shows no skills (issue #283).
+  function makeRevenantBuild() {
+    return {
+      title: "Power Herald",
+      profession: "Revenant",
+      specializations: [],
+      skills: {
+        heal: { id: 26937, name: "Enchanted Daggers", icon: "ed.png" },
+        utility: [{ id: 29209 }, { id: 28231 }, { id: 27107 }],
+        elite: { id: 28406, name: "Jade Winds", icon: "jw.png" },
+      },
+      equipment: { weapons: {}, runes: {}, sigils: {}, slots: {}, infusions: {} },
+      gameMode: "pve",
+      selectedLegends: ["Legend2", "Legend3"],
+      selectedPets: { terrestrial1: 0, terrestrial2: 0, aquatic1: 0, aquatic2: 0 },
+    };
+  }
+
+  function makeRevenantCatalog() {
+    return {
+      professionWeapons: {},
+      weaponSkills: [],
+      skills: [
+        { id: 28134, name: "Legendary Assassin Stance", icon: "shiro.png" },
+        { id: 28419, name: "Legendary Dwarf Stance", icon: "jalis.png" },
+      ],
+      legends: [
+        { id: "Legend2", swap: 28134, heal: 26937, utilities: [29209, 28231, 27107], elite: 28406 },
+        { id: "Legend3", swap: 28419, heal: 26974, utilities: [28379, 29148, 28231], elite: 28287 },
+      ],
+      pets: [],
+      specializations: [],
+    };
+  }
+
+  test("legendDisplay carries heal/utilities/elite skill IDs so the SPA can render the bar", () => {
+    const result = serializeForPublish(makeRevenantBuild(), makeRevenantCatalog(), null);
+    expect(result.legendDisplay).toHaveLength(2);
+    const shiro = result.legendDisplay.find(l => l.id === "Legend2");
+    expect(shiro.heal).toBe(26937);
+    expect(shiro.utilities).toEqual([29209, 28231, 27107]);
+    expect(shiro.elite).toBe(28406);
+    const jalis = result.legendDisplay.find(l => l.id === "Legend3");
+    expect(jalis.heal).toBe(26974);
+    expect(jalis.utilities).toEqual([28379, 29148, 28231]);
+    expect(jalis.elite).toBe(28287);
+  });
+});
+
 // ── _traitChoices resolution and spec enrichment ────────────────────────────
 
 describe("serializeForPublish — axicode _traitChoices resolution", () => {
