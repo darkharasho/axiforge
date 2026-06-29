@@ -8,6 +8,30 @@ function parseLegendCode(legendStr) {
   return match ? Number(match[1]) : undefined;
 }
 
+// Revenant skill slots use a FIXED set of palette IDs regardless of legend —
+// the active legend is what determines which concrete skill each palette shows
+// in-game. GW2's API never maps legend skills (e.g. Enchanted Daggers 26937)
+// into Revenant's skills_by_palette, so passing the skill IDs makes gw2buildlink
+// throw "Skill <id> is not available for profession Revenant" (no link at all),
+// while leaving the slots empty drops the skills from the imported build — both
+// were issue #283. These are the only heal/utility/elite palettes Revenant
+// exposes; the utility order is canonical.
+// Source: https://wiki.guildwars2.com/wiki/Chat_link_format/skill_palette_table
+const REVENANT_HEAL_PALETTE = 4572;
+const REVENANT_UTILITY_PALETTES = [4564, 4614, 4651];
+const REVENANT_ELITE_PALETTE = 4554;
+
+function revenantPaletteSkillSet(hasActiveLegend) {
+  if (!hasActiveLegend) {
+    return { heal: undefined, utilities: [undefined, undefined, undefined], elite: undefined };
+  }
+  return {
+    heal: REVENANT_HEAL_PALETTE,
+    utilities: [...REVENANT_UTILITY_PALETTES],
+    elite: REVENANT_ELITE_PALETTE,
+  };
+}
+
 /**
  * Map an axiforge build object to gw2buildlink's BuildTemplateInput.
  */
@@ -45,16 +69,19 @@ function mapBuildToTemplateInput(build) {
     };
   };
 
-  // Revenant skill slots are determined by the active legend in-game — the
-  // legend's heal/utility/elite skill IDs are NOT part of the profession's
-  // skills_by_palette, so passing them makes gw2buildlink throw "Skill <id> is
-  // not available for profession Revenant" and no chat link is produced (#283).
-  // The legend codes (revenantLegends below) already encode the skill bar, so
-  // leave the palette slots empty for Revenant.
   const profLower = (build.profession || "").toLowerCase();
-  const emptySkillSet = () => ({ heal: undefined, utilities: [undefined, undefined, undefined], elite: undefined });
-  const skills = profLower === "revenant"
-    ? { terrestrial: emptySkillSet(), aquatic: emptySkillSet() }
+  const isRevenant = profLower === "revenant";
+  const legends = build.selectedLegends || ["", ""];
+  const uwLegends = build.selectedUnderwaterLegends || ["", ""];
+
+  // For Revenant, fill the skill slots with the fixed legend palettes (see
+  // REVENANT_* constants above) for whichever environment has an active legend.
+  // For every other profession, map the build's selected skill IDs as usual.
+  const skills = isRevenant
+    ? {
+        terrestrial: revenantPaletteSkillSet(parseLegendCode(legends[0]) !== undefined),
+        aquatic: revenantPaletteSkillSet(parseLegendCode(uwLegends[0]) !== undefined),
+      }
     : {
         terrestrial: mapSkillSet(build.skills),
         aquatic: mapSkillSet(build.underwaterSkills),
@@ -74,14 +101,23 @@ function mapBuildToTemplateInput(build) {
 
   // Revenant legends — only for Revenant profession.
   let revenantLegends;
-  if (profLower === "revenant") {
-    const legends = build.selectedLegends || ["", ""];
-    const uwLegends = build.selectedUnderwaterLegends || ["", ""];
+  let revenantInactiveSkills;
+  if (isRevenant) {
     revenantLegends = [
       parseLegendCode(legends[0]),
       parseLegendCode(legends[1]),
       parseLegendCode(uwLegends[0]),
       parseLegendCode(uwLegends[1]),
+    ];
+    // The inactive legend's 3 utility palettes (terrestrial then aquatic) are
+    // stored in the profession-specific bytes so utilities keep their order
+    // across a legend swap. Same fixed palettes; only present when a second
+    // legend is slotted for that environment.
+    const inactiveUtils = (hasSecondLegend) =>
+      hasSecondLegend ? [...REVENANT_UTILITY_PALETTES] : [undefined, undefined, undefined];
+    revenantInactiveSkills = [
+      ...inactiveUtils(parseLegendCode(legends[1]) !== undefined),
+      ...inactiveUtils(parseLegendCode(uwLegends[1]) !== undefined),
     ];
   }
 
@@ -103,6 +139,7 @@ function mapBuildToTemplateInput(build) {
     skills,
     weapons: weapons.length > 0 ? weapons : undefined,
     revenantLegends,
+    revenantInactiveSkills,
     rangerPets,
   };
 }
