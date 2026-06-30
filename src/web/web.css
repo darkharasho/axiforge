@@ -20,6 +20,20 @@
   margin-top: 0 !important;
 }
 
+/* Cap + center the editor on large/ultrawide screens so it doesn't stretch edge
+   to edge. Below 1600px these resolve to plain 32px side padding; above, the
+   gutters grow to keep the content (and the top bar's controls) aligned. */
+.is-web .page-content {
+  max-width: 1600px;
+  width: 100%;
+  margin-inline: auto;
+  padding-inline: 32px;
+  box-sizing: border-box;
+}
+.is-web .web-topbar {
+  padding-inline: max(32px, calc((100vw - 1600px) / 2 + 32px));
+}
+
 .web-topbar {
   position: sticky;
   top: 0;
