@@ -83,10 +83,25 @@ const TWO_HAND_WEAPON_IDS = new Set([
   "greatsword", "hammer", "longbow", "rifle", "shortbow", "staff", "spear",
 ]);
 
+// Base HP at level 80 EXCLUDING the base-Vitality contribution.
+// Health = baseHP + Vitality * 10, where base Vitality (1000) already accounts
+// for 10,000 HP that IS NOT in these numbers. Using the full in-game base HP here
+// (e.g. 19212) would double-count those 10,000 HP. Keep in sync with the renderer's
+// PROFESSION_BASE_HP in src/renderer/modules/constants.js (the source of truth),
+// including elite-spec keys since build.profession may be an elite-spec name.
+// High (9212): Warrior, Necromancer → 9212 + 10000 = 19212
+// Medium (5922): Revenant, Engineer, Ranger, Mesmer → 5922 + 10000 = 15922
+// Low (1645): Guardian, Thief, Elementalist → 1645 + 10000 = 11645
 const PROFESSION_BASE_HP = {
-  Warrior: 19212, Necromancer: 19212, Revenant: 15922,
-  Engineer: 15922, Ranger: 15922, Mesmer: 15922,
-  Guardian: 11645, Thief: 11645, Elementalist: 11645,
+  Warrior: 9212, Berserker: 9212, Spellbreaker: 9212, Bladesworn: 9212, Paragon: 9212,
+  Necromancer: 9212, Reaper: 9212, Scourge: 9212, Harbinger: 9212,
+  Revenant: 5922, Herald: 5922, Renegade: 5922, Vindicator: 5922,
+  Engineer: 5922, Scrapper: 5922, Holosmith: 5922, Mechanist: 5922,
+  Ranger: 5922, Druid: 5922, Soulbeast: 5922, Untamed: 5922,
+  Mesmer: 5922, Chronomancer: 5922, Mirage: 5922, Virtuoso: 5922,
+  Guardian: 1645, Dragonhunter: 1645, Firebrand: 1645, Willbender: 1645,
+  Thief: 1645, Daredevil: 1645, Deadeye: 1645, Specter: 1645, Antiquary: 1645,
+  Elementalist: 1645, Tempest: 1645, Weaver: 1645, Catalyst: 1645,
 };
 
 // In WvW, Celestial gear does not grant Expertise or Concentration.
@@ -248,7 +263,7 @@ function computePublishStats(equipment, upgradeCatalog, profession, gameMode) {
   }
 
   // Derived stats
-  const baseHP = PROFESSION_BASE_HP[profession] || 11645;
+  const baseHP = PROFESSION_BASE_HP[profession] || 9212;
   const health = baseHP + totals.Vitality * 10;
   const critChance = ((totals.Precision - 1000) / 21 + 5).toFixed(2) + "%";
   const critDamage = (150 + totals.Ferocity / 15).toFixed(1) + "%";

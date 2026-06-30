@@ -49,20 +49,27 @@ describe("computePublishStats", () => {
 
   test("derived stat: Health uses profession base HP + Vitality * 10 (Necromancer)", () => {
     const result = computePublishStats(makeFullBerserkerEquipment(), null, "Necromancer");
-    // Necromancer base HP = 19212, Vitality = 1000
-    expect(result.stats.Health).toBe(19212 + 1000 * 10);
+    // Necromancer level-80 base HP at 1000 Vitality = 19212 (game truth).
+    // baseHP (excl. base vitality) = 9212; 9212 + 1000*10 = 19212.
+    expect(result.stats.Health).toBe(9212 + 1000 * 10);
   });
 
   test("derived stat: Health uses correct base HP for Warrior", () => {
     const result = computePublishStats(makeFullBerserkerEquipment(), null, "Warrior");
-    // Warrior base HP = 19212
-    expect(result.stats.Health).toBe(19212 + 1000 * 10);
+    // Warrior level-80 base HP at 1000 Vitality = 19212 (game truth).
+    expect(result.stats.Health).toBe(9212 + 1000 * 10);
   });
 
   test("derived stat: Health uses correct base HP for Elementalist", () => {
     const result = computePublishStats(makeFullBerserkerEquipment(), null, "Elementalist");
-    // Elementalist base HP = 11645
-    expect(result.stats.Health).toBe(11645 + 1000 * 10);
+    // Elementalist level-80 base HP at 1000 Vitality = 11645 (game truth).
+    expect(result.stats.Health).toBe(1645 + 1000 * 10);
+  });
+
+  test("derived stat: Health for an elite-spec profession name (Specter, issue from Discord)", () => {
+    // build.profession may be an elite-spec name; Specter is a Thief spec → 11645 at 1000 Vitality.
+    const result = computePublishStats(makeFullBerserkerEquipment(), null, "Specter");
+    expect(result.stats.Health).toBe(1645 + 1000 * 10);
   });
 
   test("derived stat: CritChance computed from Precision", () => {
@@ -130,9 +137,9 @@ describe("computePublishStats", () => {
     expect(result.stats.ConditionDamage).toBe(0);
   });
 
-  test("unknown profession falls back to Elementalist base HP (11645)", () => {
+  test("unknown profession falls back to 9212 base HP (matches renderer default)", () => {
     const result = computePublishStats(makeFullBerserkerEquipment(), null, "UnknownProf");
-    expect(result.stats.Health).toBe(11645 + 1000 * 10);
+    expect(result.stats.Health).toBe(9212 + 1000 * 10);
   });
 
   test("rune bonuses are added when upgradeCatalog is provided", () => {
