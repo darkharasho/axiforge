@@ -5,15 +5,19 @@
 .is-web #updateVersionLabel,
 .is-web .leftnav,                 /* full left nav (library/editor/comps switch) */
 .is-web #saveBuildBtn,            /* explicit save — no library to save into on web */
-.is-web [data-desktop-only] {
+.is-web [data-desktop-only],
+.is-web .titlebar {                 /* desktop window-chrome header; brand moves to the web top bar */
   display: none !important;
 }
 
 /* .app-layout is a grid (nav-column 1fr). Hiding .leftnav removes its grid item,
    so the page content would auto-place into the narrow nav column and collapse.
-   Drop the nav column so the editor spans the full width. */
+   Drop the nav column so the editor spans the full width. Its top margin existed
+   to clear the fixed titlebar (now hidden), so zero it — the sticky top bar
+   already offsets the content. */
 .is-web .app-layout {
   grid-template-columns: 1fr !important;
+  margin-top: 0 !important;
 }
 
 .web-topbar {
@@ -41,5 +45,25 @@
   color: #1a1a1a;
   border-color: transparent;
 }
-.web-topbar__cta { margin-left: auto; opacity: 0.85; text-decoration: none; }
+.web-topbar__brand {
+  margin-right: auto;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  font-family: "Cinzel", serif;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  font-size: 18px;
+}
+.web-topbar__brand-accent { color: var(--accent, #c8a85a); }
+.web-topbar__beta {
+  font-family: "DM Sans", system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent, #c8a85a);
+  opacity: 0.8;
+}
+.web-topbar__cta { opacity: 0.85; text-decoration: none; }
 .web-topbar__cta:hover { opacity: 1; text-decoration: underline; }
