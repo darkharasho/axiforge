@@ -1,0 +1,14 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "axiforge-playground",
+  "compatibility_date": "2026-06-29",
+  // Pure static SPA (no Worker script): serve the Vite web build, falling back to
+  // index.html for any path. Static-asset serving on Workers is free + unlimited.
+  "assets": {
+    "directory": "./dist/web",
+    "not_found_handling": "single-page-application"
+  },
+  // Custom domain — axi.link DNS is already on Cloudflare, so the first deploy
+  // provisions build.axi.link + its DNS record.
+  "routes": [{ "pattern": "build.axi.link", "custom_domain": true }]
+}

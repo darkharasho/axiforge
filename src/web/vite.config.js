@@ -77,6 +77,9 @@ export default defineConfig({
     rollupOptions: {
       input: path.resolve(repoRoot, "src/renderer/index.generated.html"),
     },
-    commonjsOptions: { include: [/packages\/gw2-data/, /node_modules/] },
+    // @axiapps/code (packages/axicode) is CommonJS and imported with named ESM
+    // imports by share.js; include it so rollup synthesizes its named exports at
+    // build time (dev relies on optimizeDeps pre-bundling instead).
+    commonjsOptions: { include: [/packages\/gw2-data/, /packages\/axicode/, /node_modules/] },
   },
 });

@@ -109,8 +109,9 @@
     "gen:web-html": "node scripts/gen-web-html.mjs",
     "dev:web": "npm run gen:web-html && vite --config src/web/vite.config.js",
     "bake:catalogs": "node scripts/bake-catalogs.mjs",
-    "build:web": "npm run bake:catalogs && npm run gen:web-html && vite build --config src/web/vite.config.js",
-    "test:playground": "npx playwright test --config tests/playground/playwright.config.js"
+    "build:web": "npm run bake:catalogs && npm run gen:web-html && vite build --config src/web/vite.config.js && node -e \"require('fs').copyFileSync('dist/web/index.generated.html','dist/web/index.html')\"",
+    "test:playground": "npx playwright test --config tests/playground/playwright.config.js",
+    "deploy:web": "npm run build:web && wrangler deploy"
   },
   "jest": {
     "testEnvironment": "node",
@@ -181,6 +182,7 @@
     "jsdom": "^29.0.1",
     "playwright": "^1.58.2",
     "vite": "^7.1.5",
-    "wait-on": "^8.0.5"
+    "wait-on": "^8.0.5",
+    "wrangler": "^4.105.0"
   }
 }
