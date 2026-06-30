@@ -44,6 +44,26 @@ test("buildToHash then hashToBuild round-trips (with leading #)", async () => {
   expect(back.profession).toBe("Guardian");
 });
 
+test("the b= param is URL-safe (base64url only) — survives address bar / Discord", async () => {
+  const api = createShareApi();
+  const named = { ...BUILD, title: "WvW Power Core Necro" };
+  const hash = await api.buildToHash(named);
+  const params = new URLSearchParams(hash);
+  const b = params.get("b");
+  // Only base64url characters — no <, >, %, &, +, # etc. that mangle in transit.
+  expect(b).toMatch(/^[A-Za-z0-9_-]+$/);
+  // Name still round-trips and the build decodes.
+  const back = await api.hashToBuild("#" + hash);
+  expect(back.profession).toBe("Guardian");
+  expect(back.title).toBe("WvW Power Core Necro");
+});
+
+test("name is carried and restored via the n= param", async () => {
+  const api = createShareApi();
+  const hash = await api.buildToHash({ ...BUILD, title: "My Build" });
+  expect(await api.hashToBuild("#" + hash).then((b) => b.title)).toBe("My Build");
+});
+
 test("hashToBuild returns null for empty or invalid hash", async () => {
   const api = createShareApi();
   expect(await api.hashToBuild("")).toBeNull();

@@ -12,23 +12,51 @@ import {
   decodeChatLinkToBuild,
 } from "../../main/buildChatLink.js";
 
+// The AxiForge share code uses a printable-ASCII alphabet full of URL-hostile
+// characters ("<", ">", "%", "&", "+", "#", "?", "!", "*", ...). Percent-encoding
+// them survives a clean copy of the share-link button, but NOT a round-trip
+// through a browser address bar or Discord's link parser — a lone "%" or a raw
+// "<" corrupts the URL irrecoverably. base64url (A-Za-z0-9-_ only) is immune to
+// all of that, so the `b=` param carries the code base64url-encoded.
+function b64urlEncode(str) {
+  return btoa(str).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+function b64urlDecode(s) {
+  let t = String(s).replace(/-/g, "+").replace(/_/g, "/");
+  while (t.length % 4) t += "=";
+  return atob(t);
+}
+
 export function createShareApi() {
+  // Recover the raw share code from a `b=` value, accepting (in order): a
+  // base64url-encoded code (current format), or a raw code (legacy links whose
+  // percent-encoding happened to survive).
+  function codeFromBParam(bParam) {
+    if (!bParam) return null;
+    try {
+      const decoded = b64urlDecode(bParam);
+      if (isValidShareCode(decoded)) return decoded;
+    } catch { /* not base64url */ }
+    if (isValidShareCode(bParam)) return bParam; // legacy raw code
+    return null;
+  }
+
   async function hashToBuild(hash) {
     const raw = String(hash || "").replace(/^#/, "").trim();
     if (!raw) return null;
-    // New format: "b=<code>&n=<name>" (URLSearchParams). Legacy: the bare code.
-    // The share code itself doesn't carry the build name, so it rides as `n=`.
+    // Format: "b=<base64url-code>&n=<name>". Legacy: a bare (percent-encoded) code.
     let code, name;
     if (/(^|&)b=/.test(raw)) {
       const params = new URLSearchParams(raw);
-      code = params.get("b") || "";
+      code = codeFromBParam(params.get("b") || "");
       name = params.get("n") || "";
     } else {
-      try { code = decodeURIComponent(raw); } catch { code = raw; }
+      let bare = raw;
+      try { bare = decodeURIComponent(raw); } catch { /* already raw */ }
+      code = isValidShareCode(bare) ? bare : null;
     }
     if (!code) return null;
     try {
-      if (!isValidShareCode(code)) return null;
       const build = decodeShareCode(code);
       if (name) build.title = name;
       return build;
@@ -56,7 +84,7 @@ export function createShareApi() {
     // share code, so it travels as a readable `n=` param (hashToBuild reads it back).
     buildToHash: async (build) => {
       const params = new URLSearchParams();
-      params.set("b", encodeShareCode(build));
+      params.set("b", b64urlEncode(encodeShareCode(build))); // URL-safe alphabet
       // serializeEditorToBuild defaults an unnamed build's title to "Untitled
       // Build" — treat that (and empty) as no name so it doesn't pollute the URL.
       const name = String(build?.title || "").trim();
