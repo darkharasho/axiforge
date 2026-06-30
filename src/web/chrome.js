@@ -8,6 +8,11 @@ import { createShareApi } from "./webApi/share.js";
 const share = createShareApi();
 const RELEASES_URL = "https://github.com/darkharasho/axiforge/releases/latest";
 
+// Icons mirror the desktop app's share menu (chat-link hexagon, AxiCode sparkles).
+const ICON_LINK = `<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 11.5a3 3 0 0 0 4.24 0l2-2a3 3 0 1 0-4.24-4.24l-1 1"/><path d="M11.5 8.5a3 3 0 0 0-4.24 0l-2 2a3 3 0 1 0 4.24 4.24l1-1"/></svg>`;
+const ICON_CHAT = `<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2.5L16.5 6.25V13.75L10 17.5L3.5 13.75V6.25L10 2.5Z"/><path d="M6.25 7.9H8.75M11.25 7.9H13.75"/><circle cx="10" cy="7.9" r="1.25" fill="currentColor" stroke="none"/><path d="M6.25 10H8.75M11.25 10H13.75"/><circle cx="10" cy="10" r="1.25" fill="currentColor" stroke="none"/><path d="M6.25 12.1H8.75M11.25 12.1H13.75"/><circle cx="10" cy="12.1" r="1.25" fill="currentColor" stroke="none"/></svg>`;
+const ICON_AXI = `<svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path d="M15.98 1.804a1 1 0 0 0-1.96 0l-.24 1.192a1 1 0 0 1-.784.785l-1.192.238a1 1 0 0 0 0 1.962l1.192.238a1 1 0 0 1 .785.785l.238 1.192a1 1 0 0 0 1.962 0l.238-1.192a1 1 0 0 1 .785-.785l1.192-.238a1 1 0 0 0 0-1.962l-1.192-.238a1 1 0 0 1-.785-.785l-.238-1.192ZM6.949 5.684a1 1 0 0 0-1.898 0l-.683 2.051a1 1 0 0 1-.633.633l-2.051.683a1 1 0 0 0 0 1.898l2.051.684a1 1 0 0 1 .633.632l.683 2.051a1 1 0 0 0 1.898 0l.683-2.051a1 1 0 0 1 .633-.633l2.051-.683a1 1 0 0 0 0-1.898l-2.051-.683a1 1 0 0 1-.633-.633L6.95 5.684ZM13.949 13.684a1 1 0 0 0-1.898 0l-.184.551a1 1 0 0 1-.632.633l-.551.183a1 1 0 0 0 0 1.898l.551.183a1 1 0 0 1 .633.633l.183.551a1 1 0 0 0 1.898 0l.184-.551a1 1 0 0 1 .632-.633l.551-.183a1 1 0 0 0 0-1.898l-.551-.184a1 1 0 0 1-.633-.632l-.183-.551Z"/></svg>`;
+
 function debounce(fn, ms) {
   let t;
   return (...args) => {
@@ -32,9 +37,10 @@ function navigateToEditor() {
 }
 
 function flash(btn, msg) {
-  const prev = btn.textContent;
-  btn.textContent = msg;
-  setTimeout(() => { btn.textContent = prev; }, 1500);
+  const label = btn.querySelector(".web-topbar__btn-label") || btn;
+  const prev = label.textContent;
+  label.textContent = msg;
+  setTimeout(() => { label.textContent = prev; }, 1500);
 }
 
 function mountTopBar() {
@@ -46,8 +52,9 @@ function mountTopBar() {
       <span class="web-topbar__name">Axi<span class="web-topbar__brand-accent">Forge</span></span>
       <span class="web-topbar__beta">Playground</span>
     </span>
-    <button id="webCopyLink" type="button" class="web-topbar__btn web-topbar__btn--primary">Copy share link</button>
-    <button id="webCopyChat" type="button" class="web-topbar__btn">Copy chat code</button>
+    <button id="webCopyLink" type="button" class="web-topbar__btn web-topbar__btn--primary">${ICON_LINK}<span class="web-topbar__btn-label">Copy share link</span></button>
+    <button id="webCopyAxi" type="button" class="web-topbar__btn">${ICON_AXI}<span class="web-topbar__btn-label">Copy axi code</span></button>
+    <button id="webCopyChat" type="button" class="web-topbar__btn">${ICON_CHAT}<span class="web-topbar__btn-label">Copy chat code</span></button>
     <a id="webGetApp" class="web-topbar__cta" href="${RELEASES_URL}" target="_blank" rel="noopener noreferrer">Get the desktop app</a>
   `;
   document.body.prepend(bar);
@@ -60,6 +67,17 @@ function mountTopBar() {
       flash(bar.querySelector("#webCopyLink"), "Link copied!");
     } catch {
       flash(bar.querySelector("#webCopyLink"), "Couldn't copy link");
+    }
+  });
+
+  bar.querySelector("#webCopyAxi").addEventListener("click", async () => {
+    try {
+      const build = serializeEditorToBuild();
+      const code = await share.encodeShareCode(build); // raw AxiCode share code
+      await window.desktopApi.writeClipboardText(code);
+      flash(bar.querySelector("#webCopyAxi"), "AxiCode copied!");
+    } catch {
+      flash(bar.querySelector("#webCopyAxi"), "Couldn't copy code");
     }
   });
 
