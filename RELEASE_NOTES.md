@@ -1,3 +1,14 @@
+## Version v0.10.1 — June 30, 2026
+
+### New Features
+
+- **Published build pages now use the AxiForge logo as their favicon** — matching the desktop app and the new web Playground.
+
+### Bug Fixes
+
+- **Shared Playground links no longer come up empty** — links from the web Playground ([build.axi.link](https://build.axi.link)) now use a fully URL-safe encoding, so they survive being pasted into Discord or a browser address bar. Builds shared before this fix may still load empty; just re-copy the link to get a working one.
+
+
 ## Version v0.10.0 — June 30, 2026
 
 ### New Features
