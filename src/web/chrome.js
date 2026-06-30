@@ -6,7 +6,7 @@ import { state } from "../renderer/modules/state.js";
 import { createShareApi } from "./webApi/share.js";
 
 const share = createShareApi();
-const RELEASES_URL = "https://github.com/darkharasho/axiforge/releases/latest";
+const MARKETING_URL = "https://darkharasho.github.io/axiforge/";
 
 // Icons mirror the desktop app's share menu (chat-link hexagon, AxiCode sparkles).
 const ICON_LINK = `<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 11.5a3 3 0 0 0 4.24 0l2-2a3 3 0 1 0-4.24-4.24l-1 1"/><path d="M11.5 8.5a3 3 0 0 0-4.24 0l-2 2a3 3 0 1 0 4.24 4.24l1-1"/></svg>`;
@@ -55,7 +55,7 @@ function mountTopBar() {
     <button id="webCopyLink" type="button" class="web-topbar__btn web-topbar__btn--primary">${ICON_LINK}<span class="web-topbar__btn-label">Copy share link</span></button>
     <button id="webCopyAxi" type="button" class="web-topbar__btn">${ICON_AXI}<span class="web-topbar__btn-label">Copy axi code</span></button>
     <button id="webCopyChat" type="button" class="web-topbar__btn">${ICON_CHAT}<span class="web-topbar__btn-label">Copy chat code</span></button>
-    <a id="webGetApp" class="web-topbar__cta" href="${RELEASES_URL}" target="_blank" rel="noopener noreferrer">Get the desktop app</a>
+    <a id="webGetApp" class="web-topbar__cta" href="${MARKETING_URL}" target="_blank" rel="noopener noreferrer">Get the desktop app</a>
   `;
   document.body.prepend(bar);
 
