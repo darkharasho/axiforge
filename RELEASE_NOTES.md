@@ -1,3 +1,10 @@
+## Version v0.10.0 — June 30, 2026
+
+### New Features
+
+- **AxiForge Playground (web)** — build and share Guild Wars 2 builds right in your browser at [build.axi.link](https://build.axi.link), no install required. Pick a profession or elite spec, set up your specializations, skills, and gear with the same editor as the desktop app, and share what you make three ways: a link, an in-game chat code, or an AxiCode. Builds are transient and travel entirely in the share link — open someone's link to load their build instantly and tweak your own copy. The desktop app remains the home for saved build libraries and publishing.
+
+
 ## Version v0.9.6 — June 29, 2026
 
 ### Bug Fixes
