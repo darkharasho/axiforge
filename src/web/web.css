@@ -7,7 +7,8 @@
 .is-web #saveBuildBtn,            /* explicit save — no library to save into on web */
 .is-web [data-desktop-only],
 .is-web .titlebar,                  /* desktop window-chrome header; brand moves to the web top bar */
-.is-web .subnav__item[data-subtab="comps"] {  /* no comps in the single-build playground */
+.is-web .subnav__item[data-subtab="comps"],   /* no comps in the single-build playground */
+.is-web .subnav__item[data-subtab="notes"] {  /* notes don't travel in a shared build */
   display: none !important;
 }
 
@@ -89,14 +90,13 @@
 .web-topbar__cta { opacity: 0.85; text-decoration: none; white-space: nowrap; }
 .web-topbar__cta:hover { opacity: 1; text-decoration: underline; }
 
-/* Single-build playground: no title or tags fields — just the profession picker.
-   Keep the profession select at a sensible width instead of spanning the row. */
-.is-web .toolbar-grid > label:has(#editorTitle),
+/* Single-build playground: keep Build Title + Profession, drop Tags. Two even
+   columns instead of the desktop's three. */
 .is-web .toolbar-grid > label:has(#tagsInput) {
   display: none !important;
 }
 .is-web .toolbar-grid {
-  grid-template-columns: minmax(0, 460px) !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
 }
 
 /* Skill/profession dropdown menus size to their option text; skill options carry

@@ -14,14 +14,24 @@ import {
 
 export function createShareApi() {
   async function hashToBuild(hash) {
-    let code = String(hash || "").replace(/^#/, "").trim();
+    const raw = String(hash || "").replace(/^#/, "").trim();
+    if (!raw) return null;
+    // New format: "b=<code>&n=<name>" (URLSearchParams). Legacy: the bare code.
+    // The share code itself doesn't carry the build name, so it rides as `n=`.
+    let code, name;
+    if (/(^|&)b=/.test(raw)) {
+      const params = new URLSearchParams(raw);
+      code = params.get("b") || "";
+      name = params.get("n") || "";
+    } else {
+      try { code = decodeURIComponent(raw); } catch { code = raw; }
+    }
     if (!code) return null;
-    // The share code contains chars ("<", ":") the browser percent-encodes in
-    // location.hash, so decode before validating (buildToHash encodes to match).
-    try { code = decodeURIComponent(code); } catch { /* already raw */ }
     try {
       if (!isValidShareCode(code)) return null;
-      return decodeShareCode(code);
+      const build = decodeShareCode(code);
+      if (name) build.title = name;
+      return build;
     } catch {
       return null;
     }
@@ -42,8 +52,15 @@ export function createShareApi() {
     importGw2Skills: async () => {
       throw new Error("Importing from gw2skills.net is not available in the web playground.");
     },
-    // URL-fragment-safe form of the share code (hashToBuild decodes it back).
-    buildToHash: async (build) => encodeURIComponent(encodeShareCode(build)),
+    // URL-fragment form: "b=<code>&n=<name>". The build name is not part of the
+    // share code, so it travels as a readable `n=` param (hashToBuild reads it back).
+    buildToHash: async (build) => {
+      const params = new URLSearchParams();
+      params.set("b", encodeShareCode(build));
+      const name = String(build?.title || "").trim();
+      if (name) params.set("n", name);
+      return params.toString();
+    },
     hashToBuild,
   };
 }

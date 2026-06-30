@@ -15,11 +15,21 @@ let out = srcHtml
     '<script type="module" src="./renderer.js"></script>',
     '<script type="module" src="../web/main-web.js"></script>'
   )
-  .replace("<body>", '<body class="is-web">');
+  .replace("<body>", '<body class="is-web">')
+  // Favicon: the desktop HTML has none (it's an Electron window). Use the AxiForge
+  // glyph (crisp SVG) with a PNG fallback; both ship in src/web/public/.
+  .replace(
+    "</head>",
+    '  <link rel="icon" type="image/svg+xml" href="/svg/axiforge-glyph.svg" />\n' +
+      '    <link rel="alternate icon" href="/favicon.png" />\n  </head>'
+  );
 
 // Sanity guard: fail loudly if the renderer script tag moves/renames.
 if (!out.includes('src="../web/main-web.js"')) {
   throw new Error("gen-web-html: renderer.js script tag not found — update the replace target.");
+}
+if (!out.includes('rel="icon"')) {
+  throw new Error("gen-web-html: </head> not found — favicon link not injected.");
 }
 
 writeFileSync(resolve(root, "src/renderer/index.generated.html"), out);
