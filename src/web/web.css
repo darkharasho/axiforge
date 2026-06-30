@@ -6,7 +6,8 @@
 .is-web .leftnav,                 /* full left nav (library/editor/comps switch) */
 .is-web #saveBuildBtn,            /* explicit save — no library to save into on web */
 .is-web [data-desktop-only],
-.is-web .titlebar {                 /* desktop window-chrome header; brand moves to the web top bar */
+.is-web .titlebar,                  /* desktop window-chrome header; brand moves to the web top bar */
+.is-web .subnav__item[data-subtab="comps"] {  /* no comps in the single-build playground */
   display: none !important;
 }
 
@@ -62,13 +63,15 @@
 .web-topbar__brand {
   margin-right: auto;
   display: inline-flex;
-  align-items: baseline;
+  align-items: center;
   gap: 8px;
   font-family: "Cinzel", serif;
   font-weight: 700;
   letter-spacing: 0.04em;
   font-size: 18px;
 }
+.web-topbar__logo { height: 24px; width: auto; display: block; }
+.web-topbar__name { white-space: nowrap; }          /* keep "AxiForge" as one word */
 .web-topbar__brand-accent { color: var(--accent, #c8a85a); }
 .web-topbar__beta {
   font-family: "DM Sans", system-ui, sans-serif;

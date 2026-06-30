@@ -41,7 +41,11 @@ function mountTopBar() {
   const bar = document.createElement("div");
   bar.className = "web-topbar no-drag";
   bar.innerHTML = `
-    <span class="web-topbar__brand">Axi<span class="web-topbar__brand-accent">Forge</span><span class="web-topbar__beta">Playground</span></span>
+    <span class="web-topbar__brand">
+      <img class="web-topbar__logo" src="/svg/axiforge-glyph.svg" alt="" aria-hidden="true" />
+      <span class="web-topbar__name">Axi<span class="web-topbar__brand-accent">Forge</span></span>
+      <span class="web-topbar__beta">Playground</span>
+    </span>
     <button id="webCopyLink" type="button" class="web-topbar__btn web-topbar__btn--primary">Copy share link</button>
     <button id="webCopyChat" type="button" class="web-topbar__btn">Copy chat code</button>
     <a id="webGetApp" class="web-topbar__cta" href="${RELEASES_URL}" target="_blank" rel="noopener noreferrer">Get the desktop app</a>
