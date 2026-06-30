@@ -24,22 +24,42 @@ describe("computePublishStats", () => {
     expect(result.modifiers).toEqual([]);
   });
 
+  // NOTE: the fixture fills BOTH weapon sets, but only the active set (set 1)
+  // contributes — the engine excludes mainhand2/offhand2, matching the in-game
+  // stat panel. So totals reflect 14 contributing slots (2 weapon slots, not 4).
   test("full Berserker's gear: Power total", () => {
     const result = computePublishStats(makeFullBerserkerEquipment(), null, "Necromancer");
-    // Base 1000 + all slot primary contributions (ascended weights)
-    expect(result.stats.Power).toBe(2631);
+    // Base 1000 + primary (p) contributions across active slots = 1381
+    expect(result.stats.Power).toBe(2381);
   });
 
   test("full Berserker's gear: Precision total", () => {
     const result = computePublishStats(makeFullBerserkerEquipment(), null, "Necromancer");
-    // Base 1000 + all slot secondary contributions (ascended weights)
-    expect(result.stats.Precision).toBe(2141);
+    // Base 1000 + secondary (s) contributions across active slots = 961
+    expect(result.stats.Precision).toBe(1961);
   });
 
   test("full Berserker's gear: Ferocity total", () => {
     const result = computePublishStats(makeFullBerserkerEquipment(), null, "Necromancer");
-    // Base 0 + all slot secondary contributions (ascended weights)
-    expect(result.stats.Ferocity).toBe(1141);
+    // Base 0 + secondary (s) contributions across active slots = 961
+    expect(result.stats.Ferocity).toBe(961);
+  });
+
+  test("inactive weapon set is excluded (only the active set contributes)", () => {
+    // Set 1 = Berserker's sword/dagger, Set 2 = a Vitality set; with activeWeaponSet 1
+    // the set-2 stats must NOT appear.
+    const equipment = {
+      slots: { mainhand1: "Berserker's", offhand1: "Berserker's", mainhand2: "Soldier's", offhand2: "Soldier's" },
+      runes: {}, infusions: {},
+    };
+    const set1Only = computePublishStats(equipment, null, "Necromancer", "pve", { activeWeaponSet: 1 });
+    // Soldier's grants Vitality; if set 2 leaked in, Vitality would exceed base 1000.
+    expect(set1Only.stats.Vitality).toBe(1000);
+    expect(set1Only.stats.Ferocity).toBe(90 + 90); // both set-1 Berserker's weapons (s)
+    // Switching to set 2 swaps which weapons contribute.
+    const set2Only = computePublishStats(equipment, null, "Necromancer", "pve", { activeWeaponSet: 2 });
+    expect(set2Only.stats.Vitality).toBe(1000 + 90 + 90); // Soldier's Vitality (s) from both set-2 weapons
+    expect(set2Only.stats.Ferocity).toBe(0);
   });
 
   test("full Berserker's gear: Vitality stays at base (no Vitality in Berserker's)", () => {
@@ -72,16 +92,40 @@ describe("computePublishStats", () => {
     expect(result.stats.Health).toBe(1645 + 1000 * 10);
   });
 
+  test("trait conversions flow through to published stats (the Discord condi gap)", () => {
+    // A trait that converts 10% of Vitality into Condition Damage. The old publish
+    // path ignored traits entirely, so published condi stats were under-reported
+    // versus the in-app panel / game. Now they must be included.
+    const activeCatalog = {
+      traitById: new Map([[500, {
+        id: 500, name: "Test Conversion",
+        facts: [{ type: "BuffConversion", source: "Vitality", target: "ConditionDamage", percent: 10 }],
+      }]]),
+      skillById: new Map(),
+      specializationById: new Map([[4, { id: 4, minorTraits: [] }]]),
+    };
+    const opts = {
+      activeCatalog,
+      specializations: [{ id: 4, majorChoices: { 1: 500 } }],
+    };
+    // Base Vitality 1000 → +100 Condition Damage from the conversion.
+    const withTrait = computePublishStats({ slots: {}, runes: {}, infusions: {} }, null, "Necromancer", "pve", opts);
+    expect(withTrait.stats.ConditionDamage).toBe(100);
+    // Without the spec selected, no conversion is applied.
+    const without = computePublishStats({ slots: {}, runes: {}, infusions: {} }, null, "Necromancer");
+    expect(without.stats.ConditionDamage).toBe(0);
+  });
+
   test("derived stat: CritChance computed from Precision", () => {
     const result = computePublishStats(makeFullBerserkerEquipment(), null, "Necromancer");
-    // Precision = 2141 => (2141 - 1000) / 21 + 5 = 54.333... + 5 = 59.33%
-    expect(result.stats.CritChance).toBe("59.33%");
+    // Precision = 1961 (active set) => (1961 - 895) / 21 = 50.76%
+    expect(result.stats.CritChance).toBe("50.76%");
   });
 
   test("derived stat: CritDamage computed from Ferocity", () => {
     const result = computePublishStats(makeFullBerserkerEquipment(), null, "Necromancer");
-    // Ferocity = 1141 => 150 + 1141/15 = 150 + 76.066... = 226.1%
-    expect(result.stats.CritDamage).toBe("226.1%");
+    // Ferocity = 961 (active set) => 150 + 961/15 = 150 + 64.066... = 214.1%
+    expect(result.stats.CritDamage).toBe("214.1%");
   });
 
   test("derived stat: BoonDuration is 0.0% for Berserker's (no Concentration)", () => {
@@ -137,9 +181,11 @@ describe("computePublishStats", () => {
     expect(result.stats.ConditionDamage).toBe(0);
   });
 
-  test("unknown profession falls back to 9212 base HP (matches renderer default)", () => {
+  test("unknown profession falls back to 0 base HP (engine default)", () => {
+    // Real builds always carry a valid profession; the engine uses a 0 base for
+    // anything it doesn't recognize (only base-Vitality HP remains).
     const result = computePublishStats(makeFullBerserkerEquipment(), null, "UnknownProf");
-    expect(result.stats.Health).toBe(9212 + 1000 * 10);
+    expect(result.stats.Health).toBe(0 + 1000 * 10);
   });
 
   test("rune bonuses are added when upgradeCatalog is provided", () => {
@@ -187,12 +233,12 @@ describe("computePublishStats", () => {
     for (const slot of ALL_STAT_SLOTS) slots[slot] = "Viper's";
     const equipment = { slots, runes: {}, infusions: {} };
     const result = computePublishStats(equipment, null, "Necromancer");
-    // Major stats (Power, CondDmg) sum of p4 across all 16 slots = 1381
-    expect(result.stats.Power).toBe(1000 + 1381);
-    expect(result.stats.ConditionDamage).toBe(1381);
-    // Minor stats (Precision, Expertise) sum of s4 across all 16 slots = 750
-    expect(result.stats.Precision).toBe(1000 + 750);
-    expect(result.stats.Expertise).toBe(750);
+    // Active set only (14 slots): major (Power, CondDmg) sum of p4 = 1167
+    expect(result.stats.Power).toBe(1000 + 1167);
+    expect(result.stats.ConditionDamage).toBe(1167);
+    // Minor stats (Precision, Expertise) sum of s4 across active slots = 632
+    expect(result.stats.Precision).toBe(1000 + 632);
+    expect(result.stats.Expertise).toBe(632);
   });
 
   test("full Celestial gear: all 9 stats equal", () => {
@@ -200,15 +246,15 @@ describe("computePublishStats", () => {
     for (const slot of ALL_STAT_SLOTS) slots[slot] = "Celestial";
     const equipment = { slots, runes: {}, infusions: {} };
     const result = computePublishStats(equipment, null, "Necromancer");
-    // Celestial: all stats get c weight, sum across 16 slots = 756
-    expect(result.stats.Ferocity).toBe(756);
-    expect(result.stats.ConditionDamage).toBe(756);
-    expect(result.stats.HealingPower).toBe(756);
-    expect(result.stats.Expertise).toBe(756);
-    expect(result.stats.Concentration).toBe(756);
+    // Celestial: all stats get c weight; active set only (14 slots) = 638
+    expect(result.stats.Ferocity).toBe(638);
+    expect(result.stats.ConditionDamage).toBe(638);
+    expect(result.stats.HealingPower).toBe(638);
+    expect(result.stats.Expertise).toBe(638);
+    expect(result.stats.Concentration).toBe(638);
     // Base stats get +1000
-    expect(result.stats.Power).toBe(1000 + 756);
-    expect(result.stats.Precision).toBe(1000 + 756);
+    expect(result.stats.Power).toBe(1000 + 638);
+    expect(result.stats.Precision).toBe(1000 + 638);
   });
 
   // ── New stat sets (issue #133) ──────────────────────────────────────────
