@@ -8,7 +8,9 @@
 .is-web [data-desktop-only],
 .is-web .titlebar,                  /* desktop window-chrome header; brand moves to the web top bar */
 .is-web .subnav__item[data-subtab="comps"],   /* no comps in the single-build playground */
-.is-web .subnav__item[data-subtab="notes"] {  /* notes don't travel in a shared build */
+.is-web .subnav__item[data-subtab="notes"],    /* notes don't travel in a shared build */
+.is-web #publishSiteBtn,                        /* publishing is desktop-only */
+.is-web #editorShareDropdown {                  /* sharing handled by the web top bar */
   display: none !important;
 }
 
