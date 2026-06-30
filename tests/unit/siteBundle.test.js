@@ -75,19 +75,23 @@ describe("buildSpaBundle", () => {
 
 describe("getSiteDistDir — packaged path", () => {
   test("uses process.resourcesPath/site when app.isPackaged is true", () => {
-    jest.resetModules();
-    jest.doMock("electron", () => ({ app: { isPackaged: true } }), { virtual: true });
+    // getSiteDistDir reads app.isPackaged at call time on the electron mock that
+    // siteBundle captured at load (`const { app } = require("electron")`). The
+    // test requires the SAME cached mock, so toggling app.isPackaged is enough —
+    // no jest.resetModules()/doMock, which was flaky under parallel workers (the
+    // factory re-minted a fresh mock and the re-mock could fail to apply).
+    const { app } = require("electron");
+    const { getSiteDistDir } = require("../../src/main/siteBundle");
+    const origPackaged = app.isPackaged;
     const origResources = process.resourcesPath;
+    app.isPackaged = true;
     process.resourcesPath = "/mock/resources";
     try {
-      const { getSiteDistDir } = require("../../src/main/siteBundle");
       expect(getSiteDistDir()).toBe(path.join("/mock/resources", "site"));
     } finally {
+      app.isPackaged = origPackaged;
       if (origResources === undefined) delete process.resourcesPath;
       else process.resourcesPath = origResources;
-      // Restore original mock for remaining tests
-      jest.resetModules();
-      jest.mock("electron", () => ({ app: { isPackaged: false } }), { virtual: true });
     }
   });
 });
