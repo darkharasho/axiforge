@@ -104,7 +104,10 @@
     "build:app": "npm run build:site && npm run build:renderer && electron-builder --publish never",
     "build:app:linux": "npm run build:site && npm run build:renderer && electron-builder --linux --publish never",
     "build:app:win": "npm run build:site && npm run build:renderer && electron-builder --win --publish never",
-    "build:app:mac": "npm run build:site && npm run build:renderer && electron-builder --mac --publish never"
+    "build:app:mac": "npm run build:site && npm run build:renderer && electron-builder --mac --publish never",
+    "gen:web-html": "node scripts/gen-web-html.mjs",
+    "dev:web": "npm run gen:web-html && vite --config src/web/vite.config.js",
+    "build:web": "npm run bake:catalogs && npm run gen:web-html && vite build --config src/web/vite.config.js"
   },
   "jest": {
     "testEnvironment": "node",
