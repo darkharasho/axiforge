@@ -27,7 +27,8 @@
       "lib/**/*",
       "packages/**/*",
       "package.json",
-      "RELEASE_NOTES.md"
+      "RELEASE_NOTES.md",
+      "!src/web/public/catalogs/**"
     ],
     "extraResources": [
       {
@@ -107,6 +108,7 @@
     "build:app:mac": "npm run build:site && npm run build:renderer && electron-builder --mac --publish never",
     "gen:web-html": "node scripts/gen-web-html.mjs",
     "dev:web": "npm run gen:web-html && vite --config src/web/vite.config.js",
+    "bake:catalogs": "node scripts/bake-catalogs.mjs",
     "build:web": "npm run bake:catalogs && npm run gen:web-html && vite build --config src/web/vite.config.js"
   },
   "jest": {
