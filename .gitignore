@@ -7,3 +7,7 @@ dist/
 dist_out/
 public/builds/
 graphify-out/
+src/renderer/index.generated.html
+src/web/public/catalogs/
+test-results/
+playwright-report/
