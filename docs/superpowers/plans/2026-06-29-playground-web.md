@@ -577,7 +577,7 @@ git commit -m "feat(web): single transient build persistence over localStorage"
 - Test: `tests/web/share.test.js`
 
 **Interfaces:**
-- Consumes: `@axiapps/code` (`encodeShareCode`, `decodeShareCode`, `isShareCode`), and `src/main/buildChatLink.js` (`generateChatLink`, `previewChatLink`, `importChatLink`). These are pure-JS / CORS-safe (chat link uses `gw2buildlink` against `api.guildwars2.com`).
+- Consumes: `@axiapps/code` (`encodeShareCode`, `decodeShareCode`, `isShareCode`), and `src/main/buildChatLink.js` (verified exports: `generateChatLink`, `previewChatLink`, `decodeChatLinkToBuild`, `mapBuildToTemplateInput`, `prewarmChatLinks` — note there is **no** `importChatLink` here; it lives in the main process IPC handler). `buildChatLink.js` has no top-level `electron`/`fs` require (it uses dynamic `import("gw2buildlink")`), so it is browser/Jest importable. Chat link uses `gw2buildlink` against `api.guildwars2.com` (CORS-safe).
 - Produces: `createShareApi() → { encodeShareCode, decodeShareCode, isShareCode, generateChatLink, previewChatLink, importChatLink, importGw2Skills, buildToHash, hashToBuild }` where:
   - `encodeShareCode(build): Promise<string>`
   - `decodeShareCode(code): Promise<Build>`
@@ -642,7 +642,7 @@ const { encodeShareCode, decodeShareCode, isShareCode } = require("@axiapps/code
 const {
   generateChatLink,
   previewChatLink,
-  importChatLink,
+  decodeChatLinkToBuild,
 } = require("../../main/buildChatLink.js");
 
 function createShareApi() {
@@ -663,8 +663,12 @@ function createShareApi() {
     isShareCode: async (text) => Boolean(isShareCode(text)),
     generateChatLink: async (build) => generateChatLink(build),
     previewChatLink: async (link) => previewChatLink(link),
-    importChatLink: async (link, name, folderId, gameMode) =>
-      importChatLink(link, name, folderId, gameMode),
+    importChatLink: async (link, name, folderId, gameMode) => {
+      // Build the desktop's importChatLink shape from the pure decoder.
+      const build = await decodeChatLinkToBuild(link);
+      if (!build) throw new Error("Could not import that chat link.");
+      return { ...build, name: name || build.name, folderId: folderId ?? null, gameMode: gameMode || build.gameMode || "pve" };
+    },
     importGw2Skills: async () => {
       throw new Error("Importing from gw2skills.net is not available in the web playground.");
     },
@@ -676,11 +680,10 @@ function createShareApi() {
 module.exports = { createShareApi };
 ```
 
-Note: confirm `src/main/buildChatLink.js` exports `generateChatLink`, `previewChatLink`, `importChatLink` and has no `electron`/`fs` import at module top. If it does, import the specific pure functions or guard them. Verify before Step 4:
+Note (already verified): `src/main/buildChatLink.js` exports `{ generateChatLink, prewarmChatLinks, previewChatLink, decodeChatLinkToBuild, mapBuildToTemplateInput }` and has **no** top-level `electron`/`fs` require (it dynamically imports `gw2buildlink`), so it loads fine in Vite and Jest. Re-confirm if the file changed:
 ```bash
-grep -nE "module.exports|require\((\"|')electron|require\((\"|')(node:)?fs" src/main/buildChatLink.js
+grep -n "module.exports" src/main/buildChatLink.js
 ```
-If it requires `electron`/`fs` at the top level, extract the pure chat-link functions into the import path or stub those requires in this module's load path; adjust the test accordingly.
 
 - [ ] **Step 4: Run the test to verify it passes**
 
