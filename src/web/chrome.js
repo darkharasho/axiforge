@@ -90,4 +90,5 @@ export async function initWebChrome(sharedBuild) {
   const onEdit = debounce(syncHashFromEditor, 400);
   document.addEventListener("input", onEdit);
   document.addEventListener("change", onEdit);
+  document.addEventListener("click", onEdit);
 }
