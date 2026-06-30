@@ -57,8 +57,10 @@ export function createShareApi() {
     buildToHash: async (build) => {
       const params = new URLSearchParams();
       params.set("b", encodeShareCode(build));
+      // serializeEditorToBuild defaults an unnamed build's title to "Untitled
+      // Build" — treat that (and empty) as no name so it doesn't pollute the URL.
       const name = String(build?.title || "").trim();
-      if (name) params.set("n", name);
+      if (name && name !== "Untitled Build") params.set("n", name);
       return params.toString();
     },
     hashToBuild,

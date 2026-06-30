@@ -129,6 +129,10 @@ export async function initWebChrome(sharedBuild) {
     try { await loadBuildIntoEditor(sharedBuild); } catch { /* fall through to fresh editor */ }
   }
   navigateToEditor();
+  // Ghost-text the title as "Untitled Build" (the desktop placeholder is a sample
+  // build name); the field stays empty so an unnamed build isn't named in the URL.
+  const titleInput = document.querySelector("#editorTitle");
+  if (titleInput) titleInput.placeholder = "Untitled Build";
   mountTopBar();
   const onEdit = debounce(syncHashFromEditor, 400);
   document.addEventListener("input", onEdit);
