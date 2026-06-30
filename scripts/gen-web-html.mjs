@@ -14,7 +14,8 @@ let out = srcHtml
   .replace(
     '<script type="module" src="./renderer.js"></script>',
     '<script type="module" src="../web/main-web.js"></script>'
-  );
+  )
+  .replace("<body>", '<body class="is-web">');
 
 // Sanity guard: fail loudly if the renderer script tag moves/renames.
 if (!out.includes('src="../web/main-web.js"')) {

@@ -1,0 +1,38 @@
+/* Web playground chrome + hide desktop-only / library UI. Scoped under body.is-web. */
+.is-web .titlebar__controls,
+.is-web #updateStatusPill,
+.is-web #updateRestartBtn,
+.is-web #updateVersionLabel,
+.is-web .leftnav,                 /* full left nav (library/editor/comps switch) */
+.is-web #saveBuildBtn,            /* explicit save — no library to save into on web */
+.is-web [data-desktop-only] {
+  display: none !important;
+}
+
+.web-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  background: var(--panel, #14161c);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.web-topbar__btn {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+}
+.web-topbar__btn--primary {
+  background: var(--accent, #c8a85a);
+  color: #1a1a1a;
+  border-color: transparent;
+}
+.web-topbar__cta { margin-left: auto; opacity: 0.85; text-decoration: none; }
+.web-topbar__cta:hover { opacity: 1; text-decoration: underline; }
