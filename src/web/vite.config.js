@@ -1,6 +1,7 @@
 import { defineConfig } from "vite";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { readFileSync } from "node:fs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..", "..");
@@ -14,6 +15,11 @@ export default defineConfig({
   optimizeDeps: {
     include: ["sortablejs", "@axiapps/gw2-data/engine"],
     exclude: ["@axiapps/gw2-data"],
+  },
+  define: {
+    __APP_VERSION__: JSON.stringify(
+      JSON.parse(readFileSync(path.resolve(repoRoot, "package.json"), "utf8")).version
+    ),
   },
   server: { port: 5180, strictPort: true },
   build: {

@@ -1,15 +1,8 @@
-// Web entry. Installs a browser desktopApi BEFORE importing the renderer, which
-// self-runs init() on import. This file's seam is replaced by the real one in Task 8.
+import { createWebApi } from "./webApi/index.js";
+
+/* global __APP_VERSION__ */
 window.__AXIFORGE_WEB__ = true;
-window.desktopApi = new Proxy(
-  {},
-  {
-    get() {
-      // Until Task 8, every call resolves to a harmless empty value so the
-      // renderer can boot without throwing.
-      return async () => undefined;
-    },
-  }
-);
+const appVersion = typeof __APP_VERSION__ !== "undefined" ? __APP_VERSION__ : "web";
+window.desktopApi = createWebApi({ appVersion });
 
 await import("../renderer/renderer.js");
