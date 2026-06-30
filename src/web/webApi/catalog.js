@@ -28,4 +28,4 @@ function createCatalogApi({ fetchImpl = globalThis.fetch.bind(globalThis), base 
   };
 }
 
-module.exports = { createCatalogApi };
+export { createCatalogApi };

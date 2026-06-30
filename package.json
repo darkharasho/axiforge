@@ -109,7 +109,8 @@
     "gen:web-html": "node scripts/gen-web-html.mjs",
     "dev:web": "npm run gen:web-html && vite --config src/web/vite.config.js",
     "bake:catalogs": "node scripts/bake-catalogs.mjs",
-    "build:web": "npm run bake:catalogs && npm run gen:web-html && vite build --config src/web/vite.config.js"
+    "build:web": "npm run bake:catalogs && npm run gen:web-html && vite build --config src/web/vite.config.js",
+    "test:playground": "npx playwright test --config tests/playground/playwright.config.js"
   },
   "jest": {
     "testEnvironment": "node",
@@ -126,6 +127,10 @@
         {}
       ],
       "^.+/src/site/.+\\.js$": [
+        "babel-jest",
+        {}
+      ],
+      "^.+/src/web/.+\\.js$": [
         "babel-jest",
         {}
       ]

@@ -50,8 +50,8 @@ function mountTopBar() {
   bar.querySelector("#webCopyLink").addEventListener("click", async () => {
     try {
       const build = serializeEditorToBuild();
-      const code = await share.encodeShareCode(build);
-      await window.desktopApi.writeClipboardText(`${location.origin}${location.pathname}#${code}`);
+      const frag = await share.buildToHash(build); // URL-fragment-safe encoded code
+      await window.desktopApi.writeClipboardText(`${location.origin}${location.pathname}#${frag}`);
       flash(bar.querySelector("#webCopyLink"), "Link copied!");
     } catch {
       flash(bar.querySelector("#webCopyLink"), "Couldn't copy link");
@@ -81,7 +81,27 @@ export async function seedDraftFromHash() {
 
 // Run AFTER the renderer has booted. sharedBuild is the value seedDraftFromHash
 // returned (or null).
+// The renderer's init() is async and runs after this module's import resolves.
+// loadBuildIntoEditor resolves the profession against state.professions, which is
+// empty until init() finishes loading it — so wait for it (and the editor nav
+// button) before loading a shared build, or the profession resolves to "".
+async function whenRendererReady(timeoutMs = 10000) {
+  const start = performance.now();
+  while (performance.now() - start < timeoutMs) {
+    if (
+      Array.isArray(state.professions) &&
+      state.professions.length > 0 &&
+      document.querySelector('.leftnav__item[data-page="editor"]')
+    ) {
+      return true;
+    }
+    await new Promise((r) => setTimeout(r, 50));
+  }
+  return false;
+}
+
 export async function initWebChrome(sharedBuild) {
+  await whenRendererReady();
   if (sharedBuild) {
     try { await loadBuildIntoEditor(sharedBuild); } catch { /* fall through to fresh editor */ }
   }
@@ -91,4 +111,9 @@ export async function initWebChrome(sharedBuild) {
   document.addEventListener("input", onEdit);
   document.addEventListener("change", onEdit);
   document.addEventListener("click", onEdit);
+  // Convergence safety net: an edit's triggering event can fire before the async
+  // catalog load finishes (so the build isn't encodable yet and the debounced
+  // sync silently no-ops). A low-frequency re-sync guarantees the share hash
+  // catches up once the build becomes encodable, even with no further interaction.
+  setInterval(syncHashFromEditor, 1500);
 }

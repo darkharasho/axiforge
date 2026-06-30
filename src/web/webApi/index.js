@@ -1,13 +1,13 @@
-const { createCatalogApi } = require("./catalog.js");
-const { createDraftApi } = require("./draft.js");
-const { createShareApi } = require("./share.js");
-const { createSettingsApi } = require("./settings.js");
-const { createSystemApi } = require("./system.js");
-const { createStubsApi } = require("./stubs.js");
+import { createCatalogApi } from "./catalog.js";
+import { createDraftApi } from "./draft.js";
+import { createShareApi } from "./share.js";
+import { createSettingsApi } from "./settings.js";
+import { createSystemApi } from "./system.js";
+import { createStubsApi } from "./stubs.js";
 
 // Assemble the full browser desktopApi. Order matters: stubs provide safe defaults
 // for desktop-only methods; the real modules override where they share a name.
-function createWebApi({ appVersion } = {}) {
+export function createWebApi({ appVersion } = {}) {
   const catalog = createCatalogApi();
   const draft = createDraftApi();
   const share = createShareApi();
@@ -24,5 +24,3 @@ function createWebApi({ appVersion } = {}) {
     ...system,
   };
 }
-
-module.exports = { createWebApi };

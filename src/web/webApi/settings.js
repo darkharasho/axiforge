@@ -20,4 +20,4 @@ function createSettingsApi({ storage = window.localStorage } = {}) {
   };
 }
 
-module.exports = { createSettingsApi, SETTINGS_KEY };
+export { createSettingsApi, SETTINGS_KEY };

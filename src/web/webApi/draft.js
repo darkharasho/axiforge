@@ -50,4 +50,4 @@ function createDraftApi({ storage = window.localStorage } = {}) {
   };
 }
 
-module.exports = { createDraftApi, DRAFT_KEY, DRAFT_ID };
+export { createDraftApi, DRAFT_KEY, DRAFT_ID };

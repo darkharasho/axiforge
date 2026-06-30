@@ -1,17 +1,24 @@
 // Share + chat-link seam for the web playground. Wraps the same pure-JS encoders
 // the desktop uses (@axiapps/code) and the chat-link generator (gw2buildlink via
 // src/main/buildChatLink.js), plus URL-hash helpers for transient sharing.
-const { encodeShareCode, decodeShareCode, isValidShareCode } = require("@axiapps/code");
-const {
+import { encodeShareCode, decodeShareCode, isValidShareCode } from "@axiapps/code";
+// buildChatLink.js is first-party CommonJS. babel-jest handles its named imports
+// via CJS interop; for the browser bundle a small Vite plugin (see
+// src/web/vite.config.js) rewrites its lone `module.exports` line to an ESM
+// `export`, so these named imports resolve in Vite dev + build too.
+import {
   generateChatLink,
   previewChatLink,
   decodeChatLinkToBuild,
-} = require("../../main/buildChatLink.js");
+} from "../../main/buildChatLink.js";
 
-function createShareApi() {
+export function createShareApi() {
   async function hashToBuild(hash) {
-    const code = String(hash || "").replace(/^#/, "").trim();
+    let code = String(hash || "").replace(/^#/, "").trim();
     if (!code) return null;
+    // The share code contains chars ("<", ":") the browser percent-encodes in
+    // location.hash, so decode before validating (buildToHash encodes to match).
+    try { code = decodeURIComponent(code); } catch { /* already raw */ }
     try {
       if (!isValidShareCode(code)) return null;
       return decodeShareCode(code);
@@ -35,9 +42,8 @@ function createShareApi() {
     importGw2Skills: async () => {
       throw new Error("Importing from gw2skills.net is not available in the web playground.");
     },
-    buildToHash: async (build) => encodeShareCode(build),
+    // URL-fragment-safe form of the share code (hashToBuild decodes it back).
+    buildToHash: async (build) => encodeURIComponent(encodeShareCode(build)),
     hashToBuild,
   };
 }
-
-module.exports = { createShareApi };

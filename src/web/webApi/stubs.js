@@ -86,4 +86,4 @@ function createStubsApi() {
   };
 }
 
-module.exports = { createStubsApi };
+export { createStubsApi };
