@@ -9,6 +9,13 @@
   display: none !important;
 }
 
+/* .app-layout is a grid (nav-column 1fr). Hiding .leftnav removes its grid item,
+   so the page content would auto-place into the narrow nav column and collapse.
+   Drop the nav column so the editor spans the full width. */
+.is-web .app-layout {
+  grid-template-columns: 1fr !important;
+}
+
 .web-topbar {
   position: sticky;
   top: 0;
