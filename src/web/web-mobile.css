@@ -108,6 +108,88 @@
   }
 }
 
+/* Task 6: Equipment reflow + sticky stat summary on phone
+ * Actual class names discovered by DOM inspection after picking Core Guardian
+ * and clicking the Equipment subtab:
+ *   #equipmentPanel          — root container
+ *   .equip-layout            — CSS grid with 3 columns (left | art | right)
+ *   .equip-col--left         — Armor/Weapons/Trinkets/Consumables sections
+ *   .equip-col--art          — decorative art column (hidden on phone)
+ *   .equip-col--right        — Attributes stats section
+ *   .equip-section.panel     — each named section (wraps .equip-stats)
+ *   .equip-slot              — individual gear slot row (44px min tap target)
+ *   .equip-stats             — computed attributes table (inside .equip-col--right)
+ *
+ * Sticky strategy: #subtab-equipment is the scrolling container (overflow-y:auto).
+ * .equip-layout stacks to a single column. .equip-col--right is positioned
+ * sticky at the bottom so the stats summary stays visible while scrolling gear.
+ */
+@media (max-width: 600px) {
+  /* Allow the equipment subtab to scroll vertically */
+  .is-web #subtab-equipment {
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  /* equipmentPanel itself must not create overflow */
+  .is-web #equipmentPanel {
+    overflow-x: hidden;
+    width: 100%;
+  }
+
+  /* Collapse the 3-column grid to a single column */
+  .is-web .equip-layout {
+    display: flex !important;
+    flex-direction: column;
+    width: 100%;
+    overflow-x: hidden;
+  }
+
+  /* Hide the decorative art column — it's pure artwork, not interactive */
+  .is-web .equip-col--art {
+    display: none !important;
+  }
+
+  /* Left and right cols take full width */
+  .is-web .equip-col--left,
+  .is-web .equip-col--right {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  /* Gear slots: ensure 44px minimum tap target */
+  .is-web .equip-slot {
+    min-height: 44px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Sticky attributes summary: pinned at the bottom of the viewport
+   * while the gear list above scrolls. Solid background hides content
+   * scrolling behind it. */
+  .is-web .equip-col--right {
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+    background: var(--panel, #14161c);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    padding-top: 4px;
+  }
+
+  /* Condense the attributes table font/padding so the sticky bar
+   * doesn't consume too much of the phone viewport */
+  .is-web .equip-stats {
+    font-size: 12px;
+  }
+  .is-web .equip-stat-row {
+    padding-block: 2px;
+  }
+  .is-web .equip-section__head {
+    padding-block: 4px;
+  }
+}
+
 /* Task 5: Traits reflow — stack the 3 specialization lines on phone
  * Actual class names discovered by DOM inspection after picking Core Guardian
  * and selecting a specialization:

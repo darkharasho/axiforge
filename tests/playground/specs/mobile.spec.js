@@ -96,3 +96,19 @@ test("build subtab has no horizontal overflow after picking a profession", async
   });
   expect(overflow).toBeLessThanOrEqual(1);
 });
+
+// ---------------------------------------------------------------------------
+// Task 6: Equipment reflow + sticky stat summary
+// ---------------------------------------------------------------------------
+
+test("equipment subtab is single-column with no overflow on phone", async ({ page }) => {
+  await page.goto(ENTRY);
+  await pickCoreGuardian(page);
+  await page.locator('.subnav__item[data-subtab="equipment"]').click();
+  await expect(page.locator("#subtab-equipment")).toBeVisible();
+  const overflow = await page.evaluate(() => {
+    const el = document.querySelector("#equipmentPanel");
+    return el.scrollWidth - el.clientWidth;
+  });
+  expect(overflow).toBeLessThanOrEqual(1);
+});
