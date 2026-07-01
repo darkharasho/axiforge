@@ -1,0 +1,5 @@
+/* src/web/web-mobile.css
+ * Playground mobile layer. EVERYTHING here must be scoped under `body.is-web`
+ * so it never affects the desktop Electron renderer. Imported only by main-web.js.
+ * Breakpoints: phone <=600px, tablet 601-1024px, desktop >1024px (untouched).
+ */
