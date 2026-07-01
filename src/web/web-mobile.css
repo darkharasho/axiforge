@@ -39,6 +39,19 @@
 }
 
 @media (max-width: 600px) {
+  /* The desktop .page-content keeps 32px side padding (web.css) which wastes
+   * ~64px of width on a phone. Tighten it so content uses the full screen. */
+  .is-web .page-content {
+    padding-inline: 10px;
+  }
+
+  /* Prevent iOS Safari's auto-zoom when any menu search field is focused
+   * (it zooms whenever the focused input's font-size is < 16px). Belt-and-
+   * suspenders alongside skipping autofocus on touch in custom-select.js. */
+  .is-web .cselect__search {
+    font-size: 16px;
+  }
+
   .is-web .web-topbar {
     padding-inline: 12px;
     gap: 6px;

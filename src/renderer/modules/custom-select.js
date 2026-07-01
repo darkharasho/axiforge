@@ -303,7 +303,14 @@ export function toggleCustomSelect(root) {
   state.openCustomSelect = shouldOpen ? root : null;
   if (shouldOpen) {
     const searchInput = _getMenu(root)?.querySelector(".cselect__search");
-    if (searchInput) searchInput.focus();
+    // Autofocus the search on desktop (fine pointer) only. On touch devices
+    // (coarse pointer, e.g. iOS Safari) focusing the input auto-zooms and pops
+    // the on-screen keyboard, which shifts the position:fixed menu off-screen —
+    // it appears to "zoom in and disappear". matchMedia is guarded so the jsdom
+    // test env (no matchMedia) keeps the desktop autofocus behavior.
+    const isCoarsePointer =
+      typeof window.matchMedia === "function" && window.matchMedia("(pointer: coarse)").matches;
+    if (searchInput && !isCoarsePointer) searchInput.focus();
   }
 }
 
