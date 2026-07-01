@@ -21,6 +21,16 @@ test("page has no horizontal overflow at phone width", async ({ page }) => {
   expect(overflow).toBeLessThanOrEqual(1); // allow 1px rounding
 });
 
+test("web topbar fits without overflow and hides button labels on phone", async ({ page }) => {
+  await page.goto(ENTRY);
+  const bar = page.locator(".web-topbar");
+  await expect(bar).toBeVisible({ timeout: READY_TIMEOUT });
+  const barBox = await bar.boundingBox();
+  expect(barBox.width).toBeLessThanOrEqual(391); // within 390 viewport (+1 rounding)
+  // Button text labels collapse to icon-only on phone.
+  await expect(page.locator(".web-topbar__btn-label").first()).toBeHidden();
+});
+
 test("subnav Build/Equipment tabs are tappable and switch subtabs", async ({ page }) => {
   await page.goto(ENTRY);
   await expect(page.locator(".web-topbar")).toBeVisible({ timeout: READY_TIMEOUT });

@@ -25,3 +25,27 @@
     border-bottom-color: var(--accent, #c8a85a);
   }
 }
+
+@media (max-width: 600px) {
+  .is-web .web-topbar {
+    padding-inline: 12px;
+    gap: 6px;
+  }
+  .is-web .web-topbar__btn-label {
+    display: none;
+  }
+  .is-web .web-topbar__btn {
+    padding: 8px;            /* icon-only, keep 44px-ish target */
+    min-width: 40px;
+    justify-content: center;
+  }
+  .is-web .web-topbar__cta {
+    display: none;           /* "Get desktop app" not essential on phone */
+  }
+  .is-web .web-topbar__brand {
+    font-size: 15px;
+  }
+  .is-web .web-topbar__beta {
+    display: none;
+  }
+}
