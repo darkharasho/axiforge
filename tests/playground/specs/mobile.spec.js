@@ -20,3 +20,18 @@ test("page has no horizontal overflow at phone width", async ({ page }) => {
   );
   expect(overflow).toBeLessThanOrEqual(1); // allow 1px rounding
 });
+
+test("subnav Build/Equipment tabs are tappable and switch subtabs", async ({ page }) => {
+  await page.goto(ENTRY);
+  await expect(page.locator(".web-topbar")).toBeVisible({ timeout: READY_TIMEOUT });
+  const buildTab = page.locator('.subnav__item[data-subtab="build"]');
+  const equipTab = page.locator('.subnav__item[data-subtab="equipment"]');
+  await expect(buildTab).toBeVisible();
+  await expect(equipTab).toBeVisible();
+  // Each tab must be at least 44px tall (touch target).
+  const box = await equipTab.boundingBox();
+  expect(box.height).toBeGreaterThanOrEqual(44);
+  await equipTab.click();
+  await expect(page.locator("#subtab-equipment")).toBeVisible();
+  await expect(page.locator("#subtab-build")).toBeHidden();
+});

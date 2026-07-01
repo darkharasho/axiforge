@@ -3,3 +3,25 @@
  * so it never affects the desktop Electron renderer. Imported only by main-web.js.
  * Breakpoints: phone <=600px, tablet 601-1024px, desktop >1024px (untouched).
  */
+
+@media (max-width: 1024px) {
+  .is-web .subnav {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    gap: 0;
+    padding: 0;
+    min-height: 0;
+  }
+  .is-web .subnav__item {
+    flex: 1 1 0;
+    justify-content: center;
+    min-height: 48px;
+    border-radius: 0;
+    font-size: 13px;
+    border-bottom: 2px solid transparent;
+  }
+  .is-web .subnav__item--active {
+    border-bottom-color: var(--accent, #c8a85a);
+  }
+}
