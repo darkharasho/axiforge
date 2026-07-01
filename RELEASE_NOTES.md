@@ -1,3 +1,9 @@
+## Version v0.10.3 — June 30, 2026
+
+### New Features
+
+- **The web Playground and shared build/comp pages now work on phones and tablets** — [build.axi.link](https://build.axi.link) and published build/comp links are now mobile-friendly instead of being a squished desktop layout. On a phone you get a single-column layout with tabbed Build/Equipment sections, full-size tap targets for skills, traits, and gear, a stat summary that stays pinned as you scroll, and skill/trait detail popups that open as full-width bottom sheets. On a tablet the builder lays skills and traits out side by side. Profession and skill pickers now open reliably on touch. The desktop app is unchanged.
+
 ## Version v0.10.2 — June 30, 2026
 
 ### Bug Fixes
