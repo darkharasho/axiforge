@@ -325,13 +325,23 @@
     max-width: 100%;
   }
 
-  /* Keep the desktop trait grid intact but let each spec card be its OWN
-   * horizontal scroll container — the tiers stay in a single row and scroll
-   * sideways rather than wrapping (which looked broken). */
-  .is-web .spec-card__body {
+  /* Keep the desktop trait grid intact but let each spec card scroll sideways.
+   * Scroll the PANEL (wrapper), not the body: the connecting-line SVG is
+   * position:absolute inset:0 inside the body and is drawn from the body's
+   * width at render time. If the body itself scrolls, that SVG only covers the
+   * visible area and the 2nd/3rd columns lose their lines. Scrolling the panel
+   * lets the body keep its full natural width so the connectors span every
+   * column, while the panel reveals them via horizontal scroll. */
+  .is-web .spec-card__panel {
     overflow-x: auto;
-    justify-content: start; /* start at the left so scroll reveals the rest */
-    max-width: 100%;
+  }
+  .is-web .spec-card__body {
+    /* Size the grid to its content (not the available width) so the body's own
+     * box — and therefore the inset:0 connector SVG drawn from it — spans every
+     * column. Otherwise the grid stays viewport-wide while its columns overflow,
+     * and the connector only covers the first (visible) column. */
+    width: max-content;
+    max-width: none;
   }
 
   /* Ensure trait buttons meet the ≥44px touch target on phone
