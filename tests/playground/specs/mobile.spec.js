@@ -112,3 +112,45 @@ test("equipment subtab is single-column with no overflow on phone", async ({ pag
   });
   expect(overflow).toBeLessThanOrEqual(1);
 });
+
+test("equipment stat summary is sticky and stays in view while gear scrolls", async ({ page }) => {
+  await page.goto(ENTRY);
+  await pickCoreGuardian(page);
+  await page.locator('.subnav__item[data-subtab="equipment"]').click();
+  await expect(page.locator("#subtab-equipment")).toBeVisible();
+
+  // 1. Verify position:sticky is applied to the stats column
+  const isSticky = await page.evaluate(() => {
+    const el = document.querySelector(".equip-col--right");
+    return window.getComputedStyle(el).position === "sticky";
+  });
+  expect(isSticky).toBe(true);
+
+  // 2. Verify .page-content is the scroll container with content to scroll
+  //    (no intermediate element should intercept the scroll).
+  const isScrollable = await page.evaluate(() => {
+    const el = document.querySelector(".page-content");
+    return el.scrollHeight > el.clientHeight;
+  });
+  expect(isScrollable).toBe(true);
+
+  // 3. Verify sticky pinning: scroll .page-content (the real scroll container)
+  //    partway through the gear list and confirm the stats panel is visible
+  //    within the scroll container's client area (pinned at bottom).
+  const isPinnedAfterScroll = await page.evaluate(async () => {
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    const scroller = document.querySelector(".page-content");
+    const equipRight = document.querySelector(".equip-col--right");
+
+    // Scroll to middle of the gear list
+    scroller.scrollTop = Math.floor(scroller.scrollHeight / 2);
+    await sleep(150);
+
+    const rect = equipRight.getBoundingClientRect();
+    const scrollerRect = scroller.getBoundingClientRect();
+    // The stats panel's bottom must be at or within the scroll container's bottom
+    // (sticky pins to the scroll container's visible bottom, not raw window bottom)
+    return rect.bottom <= scrollerRect.bottom + 1; // +1 for sub-pixel rounding
+  });
+  expect(isPinnedAfterScroll).toBe(true);
+});

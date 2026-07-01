@@ -120,29 +120,49 @@
  *   .equip-slot              — individual gear slot row (44px min tap target)
  *   .equip-stats             — computed attributes table (inside .equip-col--right)
  *
- * Sticky strategy: #subtab-equipment is the scrolling container (overflow-y:auto).
- * .equip-layout stacks to a single column. .equip-col--right is positioned
- * sticky at the bottom so the stats summary stays visible while scrolling gear.
+ * Sticky strategy (verified in browser):
+ *   The real scroll container is .page-content (overflow-y:auto, bounded height).
+ *   For position:sticky to work on .equip-col--right, no intermediate element
+ *   in the chain may create its own scroll context.
+ *
+ *   The original overflow-x:hidden on .equip-layout was the killer: setting any
+ *   overflow axis to non-visible forces the other axis to auto, silently making
+ *   .equip-layout a new scroll container — and a sticky element cannot escape
+ *   its own scroll container. Fix: use width constraints (width:100%; min-width:0)
+ *   instead of overflow-x:hidden so the element clips x-overflow without
+ *   establishing a scroll context.
+ *
+ *   #subtab-equipment and #equipmentPanel similarly must not create new overflow
+ *   contexts — keep them at overflow:visible so .page-content remains the sole
+ *   scroll container that sticky is relative to.
+ *
+ *   .equip-col--right itself is ~1100px tall (the full attributes column), which
+ *   would consume the entire phone screen. Cap it at max-height:50vh with its own
+ *   internal scroll so the sticky bar is a usable "peek" panel at the bottom.
  */
 @media (max-width: 600px) {
-  /* Allow the equipment subtab to scroll vertically */
+  /* Remove any overflow context — .page-content is the scroll container. */
   .is-web #subtab-equipment {
-    overflow-y: auto;
-    overflow-x: hidden;
+    overflow: visible;
   }
 
-  /* equipmentPanel itself must not create overflow */
+  /* Must not create an intermediate scroll context. */
   .is-web #equipmentPanel {
-    overflow-x: hidden;
+    overflow: visible;
     width: 100%;
   }
 
-  /* Collapse the 3-column grid to a single column */
+  /* Collapse the 3-column grid to a single column.
+   * IMPORTANT: do NOT use overflow-x:hidden here — that silently forces
+   * overflow-y:auto and creates an intermediate scroll container that
+   * breaks position:sticky in the parent .page-content scroll container.
+   * width:100%; min-width:0 prevents horizontal overflow without a new
+   * scroll context. */
   .is-web .equip-layout {
     display: flex !important;
     flex-direction: column;
     width: 100%;
-    overflow-x: hidden;
+    min-width: 0;
   }
 
   /* Hide the decorative art column — it's pure artwork, not interactive */
@@ -165,9 +185,12 @@
     box-sizing: border-box;
   }
 
-  /* Sticky attributes summary: pinned at the bottom of the viewport
-   * while the gear list above scrolls. Solid background hides content
-   * scrolling behind it. */
+  /* Sticky attributes summary: pinned at the bottom of .page-content
+   * while the gear list above scrolls. max-height:50vh caps the panel so
+   * it fits within the phone screen and doesn't prevent sticky pinning
+   * (the natural column is ~1100px; without a cap it would extend below
+   * the scroll container, meaning the sticky bottom boundary is never
+   * reachable before the user scrolls past it entirely). */
   .is-web .equip-col--right {
     position: sticky;
     bottom: 0;
@@ -175,6 +198,8 @@
     background: var(--panel, #14161c);
     border-top: 1px solid rgba(255, 255, 255, 0.08);
     padding-top: 4px;
+    max-height: 50vh;
+    overflow-y: auto;
   }
 
   /* Condense the attributes table font/padding so the sticky bar
