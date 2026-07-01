@@ -44,10 +44,19 @@ class StatusDisplay {
     this.recent = []; // { icon, color, label, text }
     this._interval = null;
     this._started = false;
+    // The dashboard relies on the alternate screen buffer and cursor control,
+    // which only make sense on an interactive terminal. Under CI (or any piped/
+    // redirected run) those escape sequences turn the log into noise, so fall
+    // back to plain, append-only progress lines instead.
+    this._quiet = !process.stdout.isTTY || !!process.env.CI;
   }
 
   start() {
     this._started = true;
+    if (this._quiet) {
+      console.log(`Auditing ${this.total} entities (progress printed as findings arrive)...`);
+      return;
+    }
     // Switch to alternate screen buffer and hide cursor
     process.stdout.write(ALT_SCREEN_ON + HIDE_CURSOR);
     this._interval = setInterval(() => this._render(), 200);
@@ -57,7 +66,7 @@ class StatusDisplay {
   stop() {
     if (this._interval) clearInterval(this._interval);
     this._interval = null;
-    if (this._started) {
+    if (this._started && !this._quiet) {
       // Final render before leaving
       this._render();
       // Restore original screen buffer and show cursor
@@ -75,6 +84,12 @@ class StatusDisplay {
   }
 
   addRecent(icon, color, label, text) {
+    if (this._quiet) {
+      // Append-only: surface each finding immediately so CI logs show drift
+      // as it's discovered, without any cursor manipulation.
+      console.log(`  [${this.completed}/${this.total}] ${label.trim()}: ${text}`);
+      return;
+    }
     this.recent.unshift({ icon, color, label, text });
     if (this.recent.length > MAX_RECENT) this.recent.pop();
   }
