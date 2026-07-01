@@ -45,3 +45,34 @@ test("subnav Build/Equipment tabs are tappable and switch subtabs", async ({ pag
   await expect(page.locator("#subtab-equipment")).toBeVisible();
   await expect(page.locator("#subtab-build")).toBeHidden();
 });
+
+// ---------------------------------------------------------------------------
+// Task 4: Skills reflow within the Build subtab
+// ---------------------------------------------------------------------------
+
+async function pickCoreGuardian(page) {
+  await expect(page.locator(".web-topbar")).toBeVisible({ timeout: READY_TIMEOUT });
+  await page.evaluate(async () => {
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    document.querySelector("#professionSelect button").click();
+    await sleep(200);
+    const portal = document.querySelector('[data-cselect-portal="1"]');
+    const opt = [...(portal?.querySelectorAll(".cselect__option") || [])].find(
+      (b) => b.textContent.trim() === "Core Guardian"
+    );
+    opt?.click();
+  });
+  await expect(page.locator("#professionSelect button").first()).toContainText("Core Guardian", {
+    timeout: READY_TIMEOUT,
+  });
+}
+
+test("build subtab has no horizontal overflow after picking a profession", async ({ page }) => {
+  await page.goto(ENTRY);
+  await pickCoreGuardian(page);
+  const overflow = await page.evaluate(() => {
+    const el = document.querySelector("#subtab-build");
+    return el.scrollWidth - el.clientWidth;
+  });
+  expect(overflow).toBeLessThanOrEqual(1);
+});

@@ -49,3 +49,56 @@
     display: none;
   }
 }
+
+/* Task 4: Skills reflow within the Build subtab
+ * Actual class names discovered by DOM inspection after picking Core Guardian:
+ *   .toolbar-grid           — 2-col grid (title | profession picker)
+ *   .skills-bar             — flex row with 3 cols: weapon-col, orb-col, util-col
+ *   .skills-bar__weapon-col — flex col containing profession-mechanics-bar + weapon-row
+ *   .skills-bar__weapon-row — flex row containing weapon-swap-btn + skill-group--weapons
+ *   .skills-bar__orb-col    — flex col with health orb
+ *   .skills-bar__util-col   — flex col with boon-coverage + skill-group--utilities
+ *   .skill-group            — flex row of .skill-slot tiles (36×36 at desktop)
+ *   .skill-slot             — individual skill icon tile
+ */
+@media (max-width: 600px) {
+  /* Single-column layout: title row, then profession picker row */
+  .is-web .toolbar-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Skills bar stacks vertically instead of side-by-side columns */
+  .is-web #skillsHost {
+    overflow-x: hidden;
+  }
+  .is-web .skills-bar {
+    flex-direction: column;
+  }
+  .is-web .skills-bar__weapon-col,
+  .is-web .skills-bar__orb-col,
+  .is-web .skills-bar__util-col {
+    width: 100%;
+  }
+
+  /* Weapon row and skill groups wrap so slots don't overflow */
+  .is-web .skills-bar__weapon-row,
+  .is-web .skill-group {
+    flex-wrap: wrap;
+  }
+
+  /* Ensure skill slots meet minimum 44px touch target */
+  .is-web .skill-slot {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* Specs + detail panels stack vertically (normally side-by-side columns) */
+  .is-web .specs-with-detail {
+    flex-direction: column;
+    overflow-x: hidden;
+  }
+  .is-web .specs-with-detail .panel {
+    width: 100%;
+    min-width: 0;
+  }
+}
