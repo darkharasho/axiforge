@@ -210,16 +210,13 @@
 
   /* Collapsible Attributes panel (replaces the old always-sticky right column).
    * The Attributes section is reliably the FIRST section in .equip-col--right.
-   * On phone it's pinned to the bottom of the scroll container as a compact bar
-   * showing just its "Attributes" header; tapping the header toggles
-   * body.attrs-expanded (see web-mobile.js) to reveal the stats. The rest of
-   * the right column (boons, trinkets, consumables) flows normally above it. */
+   * On phone it's collapsed by default to a compact bar showing just its
+   * "Attributes" header; tapping the header toggles body.attrs-expanded (see
+   * web-mobile.js) to reveal the stats. Kept in normal flow (not sticky): a
+   * first-child sticky-bottom element un-pins once you scroll past its
+   * container, which read as the bar "disappearing" at the bottom of the list. */
   .is-web .equip-col--right > .equip-section:first-child {
-    position: sticky;
-    bottom: 0;
-    z-index: 10;
     background: var(--panel, #14161c);
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
   }
 
   /* Header reads as a tappable toggle with a chevron affordance. */

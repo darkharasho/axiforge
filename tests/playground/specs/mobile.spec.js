@@ -230,7 +230,7 @@ test("equipment subtab is single-column with no overflow on phone", async ({ pag
   expect(overflow).toBeLessThanOrEqual(1);
 });
 
-test("attributes panel is collapsed by default and its header stays pinned", async ({ page }) => {
+test("attributes panel is collapsed by default", async ({ page }) => {
   await page.goto(ENTRY);
   await pickCoreGuardian(page);
   await page.locator('.subnav__item[data-subtab="equipment"]').click();
@@ -243,18 +243,10 @@ test("attributes panel is collapsed by default and its header stays pinned", asy
     ".equip-col--right > .equip-section:first-child .equip-stats"
   );
 
-  // Collapsed by default: the stats table is hidden, but the header is present.
+  // Collapsed by default: the stats table is hidden, but the header is present
+  // (so the user can tap it to reveal the stats).
   await expect(attrsHead).toBeVisible();
   await expect(attrsStats).toBeHidden();
-
-  // The Attributes section is pinned (sticky) to the bottom of the scroll container.
-  const isSticky = await page.evaluate(() => {
-    const el = document.querySelector(
-      ".equip-col--right > .equip-section:first-child"
-    );
-    return window.getComputedStyle(el).position === "sticky";
-  });
-  expect(isSticky).toBe(true);
 });
 
 test("tapping the attributes header expands and collapses the stats", async ({ page }) => {
