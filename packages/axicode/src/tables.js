@@ -24,12 +24,21 @@ const TWO_HANDED = new Set([11, 12, 13, 14, 15, 16, 18]);
 function isWeaponTwoHanded(idx) { return TWO_HANDED.has(idx); }
 
 // Stat combo table — index 0 = empty, 1-21 = stats.
+// APPEND-ONLY. Indices 0-21 are frozen for backward compatibility with v1 share
+// codes (5-bit stat field). Entries 22+ are only reachable via v2 codes (6-bit
+// field) — see CURRENT_VERSION/statBits in index.js. Never reorder or remove;
+// only append new combos at the end (6 bits allows up to index 63).
 const STAT_COMBOS_ORDERED = [
   "",
   "Berserker's", "Marauder's", "Assassin's", "Valkyrie", "Dragon's",
   "Viper's", "Grieving", "Sinister", "Dire", "Rabid", "Carrion",
   "Trailblazer's", "Knight's", "Soldier's", "Cleric's", "Minstrel's",
   "Harrier's", "Ritualist's", "Seraph", "Zealot's", "Celestial",
+  // ── v2 additions (indices 22+) ──
+  "Sentinel's", "Wanderer's", "Diviner's", "Crusader", "Giver's",
+  "Apothecary's", "Magi's", "Shaman's", "Rampager's", "Cavalier's",
+  "Nomad's", "Settler's", "Captain's", "Vigilant", "Apostate's",
+  "Plaguedoctor's", "Marshal's", "Demolisher", "Commander's",
 ];
 const _statIdx = new Map(STAT_COMBOS_ORDERED.map((s, i) => [s, i]));
 function statToIndex(label) { return _statIdx.get(label) ?? 0; }
