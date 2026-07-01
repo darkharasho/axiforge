@@ -215,6 +215,20 @@
   }
 }
 
+/* Task 7: Custom-select menu height cap on mobile
+ * Cap the portalled menu so it cannot overflow the phone viewport vertically.
+ * The menu is portalled to document.body at position:fixed; without a max-height
+ * it can extend beyond the bottom of the screen on small phones.
+ * overflow-y:auto enables scrolling through long option lists (e.g. profession picker
+ * with 9 professions × multiple elite specs). Scoped to .is-web so desktop is unaffected.
+ */
+@media (max-width: 1024px) {
+  .is-web .cselect__menu {
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+}
+
 /* Task 5: Traits reflow — stack the 3 specialization lines on phone
  * Actual class names discovered by DOM inspection after picking Core Guardian
  * and selecting a specialization:

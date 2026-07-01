@@ -70,6 +70,21 @@ async function pickCoreGuardian(page) {
 
 
 // ---------------------------------------------------------------------------
+// Task 7: Custom-select touch fix + menu height cap
+// ---------------------------------------------------------------------------
+
+test("profession select opens on a real tap", async ({ page }) => {
+  await page.goto(ENTRY);
+  await expect(page.locator(".web-topbar")).toBeVisible({ timeout: READY_TIMEOUT });
+  await page.locator("#professionSelect button").first().tap(); // real touch, not .evaluate click
+  const portal = page.locator('[data-cselect-portal="1"]');
+  await expect(portal).toBeVisible({ timeout: 5000 });
+  // Menu stays within the viewport height.
+  const box = await portal.boundingBox();
+  expect(box.height).toBeLessThanOrEqual(844);
+});
+
+// ---------------------------------------------------------------------------
 // Task 5: Traits reflow — stack the 3 specialization lines
 // ---------------------------------------------------------------------------
 
