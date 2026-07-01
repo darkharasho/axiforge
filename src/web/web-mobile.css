@@ -299,8 +299,19 @@
     inset: auto 0 0 0 !important;   /* pin to bottom, full width */
     width: 100% !important;
     max-width: 100% !important;
+    height: 85vh !important;        /* explicit height so flex children fill the sheet */
     max-height: 85vh !important;
     border-radius: 14px 14px 0 0 !important;
+    overflow: hidden !important;    /* root clips at max-height; body scrolls below */
+  }
+
+  /* The modal body (flex:1 child) must scroll within the 85 vh sheet.
+   * detail-modal-body already has overflow-y:auto in base CSS; wiki-modal-body
+   * has overflow:hidden and needs an explicit override here.  Both get the same
+   * rule so the pattern is consistent and the toolbar stays fixed at the top. */
+  .is-web .detail-modal-body,
+  .is-web .wiki-modal-body {
     overflow-y: auto !important;
+    min-height: 0;                  /* flex child must shrink below its content height */
   }
 }

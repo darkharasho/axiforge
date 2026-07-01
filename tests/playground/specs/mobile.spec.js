@@ -150,6 +150,54 @@ test("skill detail modal is near-fullscreen on phone", async ({ page }) => {
   expect(box.width).toBeGreaterThanOrEqual(390 * 0.9); // >=90% of viewport width
 });
 
+test("detail modal body is scrollable when content overflows in bottom sheet", async ({ page }) => {
+  await page.goto(ENTRY);
+  await pickCoreGuardian(page);
+  const opened = await page.evaluate(async () => {
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    const slots = [...document.querySelectorAll("#skillsHost .skill-slot")];
+    const filledSlot = slots.find((s) => s.querySelector("img"));
+    const btn = (filledSlot || slots[0])?.querySelector("button") || filledSlot || slots[0];
+    if (!btn) return false;
+    btn.click();
+    await sleep(400);
+    const expandBtn = document.querySelector("#detail-expand-btn");
+    if (!expandBtn || expandBtn.disabled) return false;
+    expandBtn.click();
+    await sleep(400);
+    return true;
+  });
+  if (!opened) {
+    test.skip(true, "No filled skill slot found to open detail modal");
+  }
+  const modal = page.locator(".detail-modal").first();
+  await expect(modal).toBeVisible({ timeout: 5000 });
+
+  const scrollResult = await page.evaluate(async () => {
+    const body = document.querySelector(".detail-modal-body");
+    if (!body) return { error: "no body" };
+    const style = window.getComputedStyle(body);
+    const before = body.scrollTop;
+    // Attempt to scroll to the end of the content
+    body.scrollTop = body.scrollHeight;
+    await new Promise((r) => setTimeout(r, 100));
+    const after = body.scrollTop;
+    return {
+      overflowY: style.overflowY,
+      scrollHeight: body.scrollHeight,
+      clientHeight: body.clientHeight,
+      scrollable: body.scrollHeight > body.clientHeight,
+      scrollMoved: after > before || body.scrollHeight <= body.clientHeight, // also passes if content fits
+    };
+  });
+  // The body must have overflow-y:auto and scrollTop must respond to programmatic scroll.
+  expect(scrollResult.overflowY).toBe("auto");
+  // If content overflows, scrollTop must have moved (content is reachable, not clipped).
+  if (scrollResult.scrollable) {
+    expect(scrollResult.scrollMoved).toBe(true);
+  }
+});
+
 // ---------------------------------------------------------------------------
 // Task 6: Equipment reflow + sticky stat summary
 // ---------------------------------------------------------------------------
