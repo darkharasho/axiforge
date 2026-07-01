@@ -42,7 +42,7 @@
   /* The desktop .page-content keeps 32px side padding (web.css) which wastes
    * ~64px of width on a phone. Tighten it so content uses the full screen. */
   .is-web .page-content {
-    padding-inline: 10px;
+    padding-inline: 6px;
   }
 
   /* Prevent iOS Safari's auto-zoom when any menu search field is focused
@@ -95,6 +95,15 @@
   /* Skills bar stacks vertically instead of side-by-side columns */
   .is-web #skillsHost {
     overflow-x: hidden;
+  }
+
+  /* The Land/Water toggle is position:absolute (top-left of #skillsHost) on
+   * desktop, where the mechanic bar has room beside it. On phone the stacked
+   * layout put it directly on top of the F1–F4 attunement keys. Drop it into
+   * normal flow so it sits above the skills bar instead of overlapping. */
+  .is-web #skillsHost .underwater-toggle {
+    position: static;
+    margin-bottom: 8px;
   }
   .is-web .skills-bar {
     flex-direction: column;
@@ -316,21 +325,13 @@
     max-width: 100%;
   }
 
-  /* The spec-card__body uses a fixed-width CSS grid that overflows at phone
-   * widths. Switch to flex-wrap so trait tiers reflow beneath the emblem. */
+  /* Keep the desktop trait grid intact but let each spec card be its OWN
+   * horizontal scroll container — the tiers stay in a single row and scroll
+   * sideways rather than wrapping (which looked broken). */
   .is-web .spec-card__body {
-    display: flex;
-    flex-wrap: wrap;
-    column-gap: 8px;
-    row-gap: 8px;
-    justify-content: flex-start;
-    align-items: flex-start;
-  }
-
-  /* Minor and major trait columns keep their natural width but can wrap */
-  .is-web .trait-minor-anchor,
-  .is-web .trait-column--major {
-    flex-shrink: 0;
+    overflow-x: auto;
+    justify-content: start; /* start at the left so scroll reveals the rest */
+    max-width: 100%;
   }
 
   /* Ensure trait buttons meet the ≥44px touch target on phone
@@ -357,6 +358,40 @@
   }
   .is-web #subtab-build .toolbar-grid {
     grid-column: 1 / -1; /* title + profession picker span both columns */
+  }
+}
+
+/* Sticky :hover fix for touch devices.
+ * On touch, :hover latches after a tap and doesn't clear until you tap
+ * elsewhere — so tapped skill icons kept a gold glow, trait icons stayed
+ * brightened, tabs/buttons kept their hover tint. On hover-incapable devices
+ * we re-assert the resting appearance so nothing stays "stuck on". Scoped to
+ * .is-web; desktop (hover: hover) is unaffected. */
+@media (hover: none) {
+  .is-web .skill-slot:hover .skill-icon-large,
+  .is-web .skill-icon-large:hover {
+    border-color: rgba(210, 180, 80, 0.5); /* base .skill-icon-large border */
+    box-shadow: none;
+  }
+  .is-web .trait-column--major .trait-btn:not(.trait-btn--active):not(.trait-btn--always):hover img {
+    filter: grayscale(60%) brightness(0.7); /* base (non-hover) filter */
+  }
+  .is-web .subnav__item:hover {
+    background: transparent;
+    color: var(--text-dim);
+  }
+  .is-web .subnav__item--active:hover {
+    color: var(--text);
+  }
+  .is-web .underwater-toggle__btn:hover:not(.underwater-toggle__btn--active) {
+    background: transparent;
+    color: var(--text-dim);
+  }
+  .is-web .web-topbar__btn:hover {
+    background: transparent;
+  }
+  .is-web .web-topbar__btn--primary:hover {
+    background: var(--accent, #c8a85a);
   }
 }
 
