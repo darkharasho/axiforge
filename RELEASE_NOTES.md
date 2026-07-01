@@ -1,3 +1,9 @@
+## Version v0.11.0 — July 1, 2026
+
+### New Features
+
+- **Relic and upgrade data now stays current on its own.** Relic tooltip details and the rune, sigil, relic, and food item lists are refreshed in the background from the latest game and wiki data, so new or rebalanced items show up without waiting for an app update. If you're offline, the app falls back to the data it shipped with.
+
 ## Version v0.10.4 — June 30, 2026
 
 ### Bug Fixes
