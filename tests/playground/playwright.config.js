@@ -25,5 +25,9 @@ module.exports = {
       name: "mobile",
       use: { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true },
     },
+    {
+      name: "tablet",
+      use: { viewport: { width: 768, height: 1024 }, hasTouch: true },
+    },
   ],
 };

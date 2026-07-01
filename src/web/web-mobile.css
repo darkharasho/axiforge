@@ -281,6 +281,24 @@
   }
 }
 
+/* Task 9: Tablet 2-column build layout (601–1024px)
+ * At tablet widths the Build subtab switches from a single-column stack to a
+ * 2-column CSS grid: skills (column 1) | traits (column 2).  The toolbar-grid
+ * (title + profession picker) spans both columns so it always reads full-width.
+ * Scoped under .is-web so the desktop Electron renderer is never affected.
+ */
+@media (min-width: 601px) and (max-width: 1024px) {
+  .is-web #subtab-build {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    align-items: start;
+  }
+  .is-web #subtab-build .toolbar-grid {
+    grid-column: 1 / -1; /* title + profession picker span both columns */
+  }
+}
+
 /* Task 8: Detail/wiki modals as bottom sheets on phone
  * Real modal root class names (found in detail-modal.css / wiki-modal.css):
  *   .detail-modal  — inside .detail-modal-overlay  (position:fixed; inset:24px on desktop)
