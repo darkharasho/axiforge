@@ -1,3 +1,9 @@
+## Version v0.10.2 — June 30, 2026
+
+### Bug Fixes
+
+- **Published build pages now show the correct attributes** — the stats on a shared/published build now match what you see in the app and in-game. Previously they could be off: Health was inflated (base Vitality was counted twice), both weapon sets were added together instead of just your active set, and stat bonuses/conversions from your traits were ignored (which under-reported things like Condition Damage on condi builds). Published pages now use the same stat engine as the desktop app.
+
 ## Version v0.10.1 — June 30, 2026
 
 ### New Features
