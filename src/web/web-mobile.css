@@ -280,3 +280,27 @@
     min-height: 44px;
   }
 }
+
+/* Task 8: Detail/wiki modals as bottom sheets on phone
+ * Real modal root class names (found in detail-modal.css / wiki-modal.css):
+ *   .detail-modal  — inside .detail-modal-overlay  (position:fixed; inset:24px on desktop)
+ *   .wiki-modal    — inside .wiki-modal-overlay     (position:fixed; inset:24px on desktop)
+ * On phone both modals render as near-fullscreen bottom sheets:
+ *   - Pinned to the bottom with full viewport width
+ *   - Max-height 85vh so some of the underlying page is visible above it
+ *   - Rounded top corners for the sheet aesthetic
+ *   - overflow-y:auto so long content is scrollable within the sheet
+ * Scoped under .is-web so the desktop Electron renderer is never affected.
+ */
+@media (max-width: 600px) {
+  .is-web .detail-modal,
+  .is-web .wiki-modal {
+    position: fixed !important;
+    inset: auto 0 0 0 !important;   /* pin to bottom, full width */
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 85vh !important;
+    border-radius: 14px 14px 0 0 !important;
+    overflow-y: auto !important;
+  }
+}

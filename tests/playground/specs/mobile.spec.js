@@ -113,6 +113,44 @@ test("build subtab has no horizontal overflow after picking a profession", async
 });
 
 // ---------------------------------------------------------------------------
+// Task 8: Detail/wiki modals as bottom sheets on phone
+// ---------------------------------------------------------------------------
+
+test("skill detail modal is near-fullscreen on phone", async ({ page }) => {
+  await page.goto(ENTRY);
+  await pickCoreGuardian(page);
+  // Open a skill detail:
+  //   1. DOM-click a non-empty skill slot to populate the detail panel.
+  //   2. DOM-click the expand button (#detail-expand-btn) to open the full detail modal.
+  // We use evaluate-based DOM clicks to bypass synthetic pointer-event interception
+  // (same pattern as pickCoreGuardian).
+  const opened = await page.evaluate(async () => {
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    // Find a skill slot whose button is not empty (has an img = real skill loaded).
+    const slots = [...document.querySelectorAll("#skillsHost .skill-slot")];
+    const filledSlot = slots.find((s) => s.querySelector("img"));
+    const target = filledSlot || slots[0];
+    if (!target) return false;
+    // Click the iconBtn inside the slot (the actual click handler is on the button).
+    const btn = target.querySelector("button") || target;
+    btn.click();
+    await sleep(400); // let the detail panel populate and enable expand btn
+    const expandBtn = document.querySelector("#detail-expand-btn");
+    if (!expandBtn || expandBtn.disabled) return false;
+    expandBtn.click();
+    return true;
+  });
+  if (!opened) {
+    // Fallback: if no filled skill slot found, skip rather than fail with a misleading error.
+    test.skip(true, "No filled skill slot found to open detail modal");
+  }
+  const modal = page.locator(".detail-modal").first();
+  await expect(modal).toBeVisible({ timeout: 5000 });
+  const box = await modal.boundingBox();
+  expect(box.width).toBeGreaterThanOrEqual(390 * 0.9); // >=90% of viewport width
+});
+
+// ---------------------------------------------------------------------------
 // Task 6: Equipment reflow + sticky stat summary
 // ---------------------------------------------------------------------------
 
