@@ -12,6 +12,9 @@
     gap: 0;
     padding: 0;
     min-height: 0;
+    /* Let the actions block (game-mode toggle, overflow menu) wrap to its own
+     * row instead of riding alongside the tabs and overflowing the viewport. */
+    flex-wrap: wrap;
   }
   .is-web .subnav__item {
     flex: 1 1 0;
@@ -23,6 +26,15 @@
   }
   .is-web .subnav__item--active {
     border-bottom-color: var(--accent, #c8a85a);
+  }
+  /* Actions (game-mode toggle + overflow) drop below the tabs, full-width and
+   * centered, so nothing is clipped off the right edge on narrow phones. */
+  .is-web .subnav__actions {
+    flex: 1 0 100%;
+    margin-left: 0;
+    justify-content: center;
+    flex-wrap: wrap;
+    padding: 6px 8px;
   }
 }
 
@@ -185,25 +197,64 @@
     box-sizing: border-box;
   }
 
-  /* Sticky attributes summary: pinned at the bottom of .page-content
-   * while the gear list above scrolls. max-height:50vh caps the panel so
-   * it fits within the phone screen and doesn't prevent sticky pinning
-   * (the natural column is ~1100px; without a cap it would extend below
-   * the scroll container, meaning the sticky bottom boundary is never
-   * reachable before the user scrolls past it entirely). */
-  .is-web .equip-col--right {
+  /* Upgrade slot rows (rune/sigil/infusion buttons) must wrap and shrink so
+   * they don't overflow the narrow single column. Previously these were hidden
+   * by the old sticky right-column's overflow clip; now that the column flows
+   * normally they need to fit on their own. */
+  .is-web .equip-upgrade-slots {
+    flex-wrap: wrap;
+    flex-shrink: 1;   /* base rule is flex:0 0 auto — allow it to shrink to fit */
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  /* Collapsible Attributes panel (replaces the old always-sticky right column).
+   * The Attributes section is reliably the FIRST section in .equip-col--right.
+   * On phone it's pinned to the bottom of the scroll container as a compact bar
+   * showing just its "Attributes" header; tapping the header toggles
+   * body.attrs-expanded (see web-mobile.js) to reveal the stats. The rest of
+   * the right column (boons, trinkets, consumables) flows normally above it. */
+  .is-web .equip-col--right > .equip-section:first-child {
     position: sticky;
     bottom: 0;
     z-index: 10;
     background: var(--panel, #14161c);
     border-top: 1px solid rgba(255, 255, 255, 0.08);
-    padding-top: 4px;
-    max-height: 50vh;
+  }
+
+  /* Header reads as a tappable toggle with a chevron affordance. */
+  .is-web .equip-col--right > .equip-section:first-child > .equip-section__head {
+    cursor: pointer;
+    padding-block: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 44px;
+    box-sizing: border-box;
+  }
+  .is-web .equip-col--right > .equip-section:first-child > .equip-section__head::after {
+    content: "\25B4"; /* ▴ up-triangle: points up when collapsed (tap to open) */
+    margin-left: auto;
+    font-size: 12px;
+    opacity: 0.7;
+    transition: transform 0.15s ease;
+  }
+  body.is-web.attrs-expanded .equip-col--right > .equip-section:first-child > .equip-section__head::after {
+    transform: rotate(180deg);
+  }
+
+  /* Collapsed by default: hide the stats table; expanded reveals it, scrollable
+   * and height-capped so it stays a "peek" panel that never fills the screen. */
+  .is-web .equip-col--right > .equip-section:first-child .equip-stats {
+    display: none;
+  }
+  body.is-web.attrs-expanded .equip-col--right > .equip-section:first-child .equip-stats {
+    display: grid;
+    max-height: 45vh;
     overflow-y: auto;
   }
 
-  /* Condense the attributes table font/padding so the sticky bar
-   * doesn't consume too much of the phone viewport */
+  /* Condense the attributes table font/padding on phone. */
   .is-web .equip-stats {
     font-size: 12px;
   }

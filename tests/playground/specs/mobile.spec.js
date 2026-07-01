@@ -46,6 +46,22 @@ test("subnav Build/Equipment tabs are tappable and switch subtabs", async ({ pag
   await expect(page.locator("#subtab-build")).toBeHidden();
 });
 
+test("subnav actions (game-mode toggle) are not clipped off the right edge", async ({ page }) => {
+  await page.goto(ENTRY);
+  await expect(page.locator(".web-topbar")).toBeVisible({ timeout: READY_TIMEOUT });
+  // The subnav actions block (game-mode toggle + overflow) must wrap onto its
+  // own row and stay within the viewport — it must not extend past the right
+  // edge (which clips it, unreachable). scrollWidth misses this because the
+  // overflow is clipped, so check the element's right edge directly.
+  const withinViewport = await page.evaluate(() => {
+    const el = document.querySelector(".subnav__actions");
+    if (!el) return true; // nothing to clip
+    const vw = document.documentElement.clientWidth;
+    return el.getBoundingClientRect().right <= vw + 1;
+  });
+  expect(withinViewport).toBe(true);
+});
+
 // ---------------------------------------------------------------------------
 // Task 4: Skills reflow within the Build subtab
 // ---------------------------------------------------------------------------
@@ -214,44 +230,53 @@ test("equipment subtab is single-column with no overflow on phone", async ({ pag
   expect(overflow).toBeLessThanOrEqual(1);
 });
 
-test("equipment stat summary is sticky and stays in view while gear scrolls", async ({ page }) => {
+test("attributes panel is collapsed by default and its header stays pinned", async ({ page }) => {
   await page.goto(ENTRY);
   await pickCoreGuardian(page);
   await page.locator('.subnav__item[data-subtab="equipment"]').click();
   await expect(page.locator("#subtab-equipment")).toBeVisible();
 
-  // 1. Verify position:sticky is applied to the stats column
+  const attrsHead = page.locator(
+    ".equip-col--right > .equip-section:first-child > .equip-section__head"
+  );
+  const attrsStats = page.locator(
+    ".equip-col--right > .equip-section:first-child .equip-stats"
+  );
+
+  // Collapsed by default: the stats table is hidden, but the header is present.
+  await expect(attrsHead).toBeVisible();
+  await expect(attrsStats).toBeHidden();
+
+  // The Attributes section is pinned (sticky) to the bottom of the scroll container.
   const isSticky = await page.evaluate(() => {
-    const el = document.querySelector(".equip-col--right");
+    const el = document.querySelector(
+      ".equip-col--right > .equip-section:first-child"
+    );
     return window.getComputedStyle(el).position === "sticky";
   });
   expect(isSticky).toBe(true);
+});
 
-  // 2. Verify .page-content is the scroll container with content to scroll
-  //    (no intermediate element should intercept the scroll).
-  const isScrollable = await page.evaluate(() => {
-    const el = document.querySelector(".page-content");
-    return el.scrollHeight > el.clientHeight;
-  });
-  expect(isScrollable).toBe(true);
+test("tapping the attributes header expands and collapses the stats", async ({ page }) => {
+  await page.goto(ENTRY);
+  await pickCoreGuardian(page);
+  await page.locator('.subnav__item[data-subtab="equipment"]').click();
+  await expect(page.locator("#subtab-equipment")).toBeVisible();
 
-  // 3. Verify sticky pinning: scroll .page-content (the real scroll container)
-  //    partway through the gear list and confirm the stats panel is visible
-  //    within the scroll container's client area (pinned at bottom).
-  const isPinnedAfterScroll = await page.evaluate(async () => {
-    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-    const scroller = document.querySelector(".page-content");
-    const equipRight = document.querySelector(".equip-col--right");
+  const attrsHead = page.locator(
+    ".equip-col--right > .equip-section:first-child > .equip-section__head"
+  );
+  const attrsStats = page.locator(
+    ".equip-col--right > .equip-section:first-child .equip-stats"
+  );
 
-    // Scroll to middle of the gear list
-    scroller.scrollTop = Math.floor(scroller.scrollHeight / 2);
-    await sleep(150);
+  await expect(attrsStats).toBeHidden();
 
-    const rect = equipRight.getBoundingClientRect();
-    const scrollerRect = scroller.getBoundingClientRect();
-    // The stats panel's bottom must be at or within the scroll container's bottom
-    // (sticky pins to the scroll container's visible bottom, not raw window bottom)
-    return rect.bottom <= scrollerRect.bottom + 1; // +1 for sub-pixel rounding
-  });
-  expect(isPinnedAfterScroll).toBe(true);
+  // Tap to expand.
+  await attrsHead.tap();
+  await expect(attrsStats).toBeVisible();
+
+  // Tap again to collapse.
+  await attrsHead.tap();
+  await expect(attrsStats).toBeHidden();
 });

@@ -2,59 +2,60 @@
 
 let installed = false;
 
-/** Wire collapsible sections + custom-select touch fix. Idempotent. */
+/** Wire touch-friendly custom-select opening + collapsible attributes panel. Idempotent. */
 export function initWebMobile() {
   if (installed) return;
   installed = true;
 
-  // Some touch browsers don't synthesize a click that the custom-select opens on.
-  // Bridge pointerup -> click on select triggers (web build only).
+  // ── Custom-select: reliable open on touch (esp. iOS Safari) ──────────────
   //
-  // Double-fire prevention: after our bridge calls trigger.click() (which opens the
-  // menu synchronously), the browser also synthesizes a subsequent click event from
-  // the touch gesture. We suppress that second click in the capture phase — preventing
-  // it from reaching the cselect's own listener which would toggle the menu closed.
+  // The cselect trigger opens on a `click` (custom-select.js). On iOS Safari a
+  // tap generates the click at the END of the gesture via hit-testing at that
+  // moment — but our menu can open earlier, so a naive "open on pointerup" fix
+  // suffers the classic ghost-click: iOS then dispatches its delayed click at
+  // the point where a menu OPTION now sits, instantly closing or mis-selecting.
   //
-  // Sequence:
-  //   1. pointerup fires → bridge calls trigger.click() → cselect opens (flag not set yet)
-  //   2. Bridge sets _csBridgePending = true AFTER our click completes
-  //   3. Browser synthesizes click → capture handler sees flag → suppresses it → clears flag
+  // Canonical fix: handle `touchend` on the trigger, call preventDefault() to
+  // suppress the compatibility mouse/click sequence entirely (no ghost click),
+  // then invoke the trigger's own click() to open the menu exactly once.
+  // Options inside the portalled menu are NOT triggers, so their taps fall
+  // through to the native click that performs selection.
   //
-  // Desktop guard: e.pointerType !== "touch" exits early, so mouse/keyboard on desktop is
-  // completely unaffected. The capture handler also only acts when the flag is set.
+  // Desktop is untouched: mouse never fires touchend, so the existing click
+  // listener handles everything as before.
   document.addEventListener(
-    "pointerup",
+    "touchend",
     (e) => {
-      if (e.pointerType !== "touch") return;
+      // Ignore multi-touch / gestures that leave fingers down.
+      if (e.touches && e.touches.length > 0) return;
       const trigger = e.target.closest?.(".cselect__trigger, #professionSelect button");
       if (!trigger) return;
-      const alreadyOpen = document.querySelector('[data-cselect-portal="1"]');
-      if (!alreadyOpen) {
-        // Fire the click first (opens the menu synchronously via cselect's click listener),
-        // THEN set the flag so the browser's subsequent synthetic click gets suppressed.
-        // Use try/finally so the flag is always set even if trigger.click() throws.
-        try {
-          trigger.click();
-        } finally {
-          trigger._csBridgePending = true;
-        }
-      }
+      // Suppress the synthesized mouse/click sequence (prevents the ghost click
+      // that would land on a menu option and immediately close/mis-select).
+      if (e.cancelable) e.preventDefault();
+      // Open (or toggle) the select via its own click handler — exactly once.
+      trigger.click();
     },
-    { passive: true }
+    { passive: false }
   );
 
-  // Capture-phase click handler: suppress the browser-synthesized click that follows
-  // our bridge's trigger.click(), so the cselect doesn't toggle the menu closed.
-  document.addEventListener(
-    "click",
-    (e) => {
-      const trigger = e.target.closest?.(".cselect__trigger, #professionSelect button");
-      if (!trigger || !trigger._csBridgePending) return;
-      // Consume the flag — only suppress once per bridge fire.
-      trigger._csBridgePending = false;
-      e.stopPropagation();
-      e.preventDefault();
-    },
-    { capture: true }
-  );
+  // ── Collapsible Attributes panel on phone ────────────────────────────────
+  //
+  // On phone the Equipment tab shows a collapsed "Attributes" bar pinned at the
+  // bottom; tapping its header expands the stats. State lives as a class on
+  // <body> (stable across the frequent #equipmentPanel re-renders). The
+  // Attributes section is reliably the first section in .equip-col--right.
+  document.addEventListener("click", (e) => {
+    const head = e.target.closest?.(".equip-section__head");
+    if (!head) return;
+    const section = head.closest(".equip-section");
+    const rightCol = section?.parentElement;
+    const isAttributes =
+      rightCol?.classList.contains("equip-col--right") &&
+      rightCol.firstElementChild === section;
+    if (!isAttributes) return;
+    // Only meaningful at the phone breakpoint where the panel is collapsible.
+    if (!window.matchMedia("(max-width: 600px)").matches) return;
+    document.body.classList.toggle("attrs-expanded");
+  });
 }
