@@ -32,8 +32,12 @@ export function initWebMobile() {
       if (!alreadyOpen) {
         // Fire the click first (opens the menu synchronously via cselect's click listener),
         // THEN set the flag so the browser's subsequent synthetic click gets suppressed.
-        trigger.click();
-        trigger._csBridgePending = true;
+        // Use try/finally so the flag is always set even if trigger.click() throws.
+        try {
+          trigger.click();
+        } finally {
+          trigger._csBridgePending = true;
+        }
       }
     },
     { passive: true }
