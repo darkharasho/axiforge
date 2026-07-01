@@ -75,11 +75,10 @@ describe("buildSpaBundle", () => {
 
 describe("getSiteDistDir — packaged path", () => {
   test("uses process.resourcesPath/site when app.isPackaged is true", () => {
-    // getSiteDistDir reads app.isPackaged at call time on the electron mock that
-    // siteBundle captured at load (`const { app } = require("electron")`). The
-    // test requires the SAME cached mock, so toggling app.isPackaged is enough —
-    // no jest.resetModules()/doMock, which was flaky under parallel workers (the
-    // factory re-minted a fresh mock and the re-mock could fail to apply).
+    // getSiteDistDir now reads `require("electron").app.isPackaged` at CALL time, so it
+    // sees this file's mocked electron singleton — the same object we mutate here — no
+    // matter when siteBundle was first loaded. (The old version captured `app` at module
+    // load, which raced with worker scheduling and fell through to the dev path in CI.)
     const { app } = require("electron");
     const { getSiteDistDir } = require("../../src/main/siteBundle");
     const origPackaged = app.isPackaged;

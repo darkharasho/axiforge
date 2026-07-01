@@ -3,7 +3,6 @@
 const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
-const { app } = require("electron");
 const { encryptBuild } = require("./buildEncryption");
 
 const SITE_VERSION_PATH = "site/site-version";
@@ -25,9 +24,14 @@ function computeSpaVersion(bundle) {
   return hash.digest("hex").slice(0, 12);
 }
 
-// Resolve dist/site directory — packaged app uses resourcesPath, dev uses project root
+// Resolve dist/site directory — packaged app uses resourcesPath, dev uses project root.
+// electron is required lazily and read at call time: at module-load time under jest the
+// active "electron" mock depends on worker scheduling, and outside Electron `require
+// ("electron")` returns the binary path string (no `.app`) — both are handled here as dev.
 function getSiteDistDir() {
-  if (typeof app !== "undefined" && app.isPackaged) {
+  let app;
+  try { app = require("electron").app; } catch { /* not running under Electron */ }
+  if (app && app.isPackaged) {
     return path.join(process.resourcesPath, "site");
   }
   return path.join(__dirname, "../../dist/site");
