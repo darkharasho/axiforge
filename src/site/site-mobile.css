@@ -664,3 +664,182 @@
     padding: 0 8px 8px;
   }
 }
+
+/* ── Phone refinements (≤600px) ──────────────────────────────────────────
+   Scoped to #app.mobile (set by mobile.js) so desktop is never affected.
+   This block sits BELOW the 1024px block and refines further for narrow
+   phones (~390px), where some elements still overflow or feel cramped.
+   ──────────────────────────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+
+  /* === Global safety net === */
+  /* Prevent any child from punching past the viewport */
+  #app.mobile * {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Relax padding so the 12px on each side doesn't eat too much room */
+  #app.mobile#app {
+    padding: 0 8px;
+  }
+
+  /* === Build view: header === */
+  /* Build code input: make it shrink instead of enforcing a fixed width */
+  #app.mobile .build-code-group {
+    width: 100%;
+  }
+
+  #app.mobile .build-code-group__input {
+    width: 0;
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  /* Build header: title can get quite large; bring it down a notch */
+  #app.mobile .build-header__info h1 {
+    font-size: 1.25rem;
+  }
+
+  /* === Build view: specs-with-detail ===
+     The 1024px block already sets flex-direction:column so this should be
+     safe, but pin detail-panel width explicitly to avoid any flex base-size
+     blowout. */
+  #app.mobile .detail-panel {
+    width: 100% !important;
+    flex-basis: auto !important;
+  }
+
+  /* spec-card body: with 8px padding on each side, 374px is our content width.
+     Make sure spec cards don't try to render at a fixed scale that causes
+     horizontal scrolling — 0.85 is a comfortable fit for ~374px content. */
+  #app.mobile .spec-card {
+    --spec-scale: 0.85;
+  }
+
+  /* === Build view: equipment layout ===
+     The 1024px block already collapses equip-layout to 1fr.
+     At 600px the right equip column can still have enough room, but
+     ensure we don't double-pad. */
+  #app.mobile .equip-col,
+  #app.mobile .equip-col--right {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  /* Equip stats table: allow horizontal scroll if it's too wide */
+  #app.mobile .equip-stats {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* === Comp view: body panels ===
+     At 600px the party/pool panels stack (1024px handles flex-direction:column).
+     Make sure pool panel doesn't enforce a min-width that causes blowout. */
+  #app.mobile .comp-detail__party-panel,
+  #app.mobile .comp-detail__pool-panel {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  /* === Comp view: party lines ===
+     Each line is a flex row: number label + slots + controls.
+     At 390px, 5 slots × 42px + gaps = 230px, so they still fit, but the
+     controls (count badge) can push things over. Send controls below the slots
+     and let slots wrap freely. */
+  #app.mobile .comp-line {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  #app.mobile .comp-line__slots {
+    /* Remove the hard max-width so it can use all available width */
+    max-width: 100%;
+    flex-wrap: wrap;
+  }
+
+  #app.mobile .comp-line__controls {
+    width: 100%;
+    margin-left: 0;
+    padding-top: 0;
+    justify-content: flex-end;
+  }
+
+  /* === Comp view: pool cards ===
+     .comp-pool-list is already flex-col so pool cards stack; just make sure
+     the forge-render wrapper doesn't constrain width. */
+  #app.mobile .forge-render {
+    max-width: 100%;
+  }
+
+  #app.mobile .forge-render .mini-card {
+    /* Guard against long build names or wide skill-icon strips */
+    overflow: hidden;
+  }
+
+  #app.mobile .forge-render .mini-card__name {
+    /* Allow name to wrap rather than overflow */
+    white-space: normal;
+    word-break: break-word;
+  }
+
+  /* === Comp view: boon coverage === */
+  /* Party coverage header: profs + boons on one row can overflow.
+     Let it wrap so the boon icons move to a second line rather than scrolling. */
+  #app.mobile .party-cov__line-header {
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px;
+  }
+
+  #app.mobile .party-cov__header-boons {
+    /* Already flex-wrapped in 1024px block; at 600px give it full width
+       so it wraps clearly below the prof icons. */
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  #app.mobile .party-cov__line-body {
+    padding: 4px 8px 12px;
+  }
+
+  /* Pills: already wrap; at phone size reduce gap slightly */
+  #app.mobile .party-cov__pills {
+    gap: 4px;
+  }
+
+  /* Source rows in expanded boon panel: keep them from overflowing */
+  #app.mobile .party-cov__src-row {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  /* Expand panel: allow horizontal scroll as a final safety net */
+  #app.mobile .party-cov__expand--open {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* === Comp view: notes / tags row === */
+  #app.mobile .comp-detail__notes-panel {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #app.mobile .comp-detail__tags-row {
+    flex-wrap: wrap;
+  }
+
+  /* === Skill bar: shrink skill icons a bit more on very narrow phones === */
+  #app.mobile .skill-icon-large {
+    width: 48px;
+    height: 48px;
+  }
+
+  #app.mobile .skill-select-overlay {
+    width: 48px;
+    height: 48px;
+  }
+}
