@@ -128,6 +128,58 @@ async function fetchCachedJson(key, url, ttlMs) {
   return data;
 }
 
+// ─── Remote data snapshots (relicFacts, upgradeIds) ─────────────────────────
+
+// Wiki/API-derived data snapshots are published to a hosted URL so updates
+// reach users without an app release. loadSnapshot fetches remote-first, reuses
+// the same memory+disk cache as the API layer, VALIDATES the payload before
+// trusting it (a truncated/broken publish must never override the shipped copy),
+// and falls back to the baked-in file — or a stale-but-valid cache when offline.
+const SNAPSHOT_TIMEOUT_MS = 8000;
+
+async function loadSnapshot(key, url, ttlMs, { validate, fallback } = {}) {
+  const ok = (v) => {
+    if (v == null) return false;
+    try { return typeof validate === "function" ? !!validate(v) : true; }
+    catch { return false; }
+  };
+  const bakeFallback = async () =>
+    (typeof fallback === "function" ? await fallback() : fallback);
+
+  // L1/L2: fresh, valid cache
+  const memHit = cache.get(key);
+  if (memHit && Date.now() < memHit.expiresAt && ok(memHit.value)) {
+    return { value: memHit.value, source: "cache" };
+  }
+  const diskHit = _diskCache[key];
+  if (diskHit && Date.now() < diskHit.expiresAt && ok(diskHit.value)) {
+    cache.set(key, diskHit);
+    return { value: diskHit.value, source: "cache" };
+  }
+
+  // L3: network
+  try {
+    const res = await fetch(url, {
+      headers: { Accept: "application/json", "User-Agent": USER_AGENT },
+      signal: AbortSignal.timeout(SNAPSHOT_TIMEOUT_MS),
+    });
+    if (!res.ok) throw new Error(`snapshot ${key}: HTTP ${res.status}`);
+    const data = await res.json();
+    if (!ok(data)) throw new Error(`snapshot ${key}: failed validation`);
+    const entry = { value: data, expiresAt: Date.now() + ttlMs };
+    cache.set(key, entry);
+    _diskCache[key] = entry;
+    _scheduleDiskFlush();
+    return { value: data, source: "remote" };
+  } catch (err) {
+    // Offline / bad publish: prefer a stale-but-valid cache over the shipped
+    // copy (it's likely newer), else fall back to the baked-in file.
+    if (diskHit && ok(diskHit.value)) return { value: diskHit.value, source: "stale", error: err };
+    if (memHit && ok(memHit.value)) return { value: memHit.value, source: "stale", error: err };
+    return { value: await bakeFallback(), source: "baked", error: err };
+  }
+}
+
 async function fetchJson(url) {
   const RETRYABLE = new Set([429, 500, 502, 503, 504]);
   let lastErr;
@@ -185,6 +237,7 @@ module.exports = {
   clearDiskCache,
   fetchGw2ByIds,
   fetchCachedJson,
+  loadSnapshot,
   fetchJson,
   dedupeNumbers,
   chunk,
