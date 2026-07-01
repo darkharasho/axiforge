@@ -100,7 +100,7 @@ async function main() {
     if (!r) continue;
     const s = r.data.summary;
     tableRows.push(
-      `| ${t.label} | ${s[t.checked]} | ${s.matches} | ${s.mismatches} | ${s.missing_from_splits} | ${s.errors} |`
+      `| ${t.label} | ${s[t.checked]} | ${s.matches} | ${s.mismatches} | ${s.missing_from_splits} | ${s.no_split} | ${s.errors} |`
     );
     if (!seen.has(r.file)) {
       seen.add(r.file);
@@ -116,9 +116,11 @@ async function main() {
   }
 
   if (tableRows.length) {
-    out.push("| Type | Checked | Match | Mismatch | New (wiki-only) | Errors |");
-    out.push("| --- | --- | --- | --- | --- | --- |");
+    out.push("| Type | Checked | Match | Mismatch | New (wiki-only) | Skipped | Errors |");
+    out.push("| --- | --- | --- | --- | --- | --- | --- |");
     out.push(...tableRows);
+    out.push("");
+    out.push("_Skipped = not reliably machine-checkable (e.g. hand-curated signet passives the wiki renders in an incomparable shape)._");
     out.push("");
   }
 

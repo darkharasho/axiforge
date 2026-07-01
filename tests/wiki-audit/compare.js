@@ -116,8 +116,20 @@ function compareEntity(wikiFacts, splitEntry, opts = {}) {
  * Compare wiki-scraped relic/signet facts against stored snapshot data
  * (relicFacts.json / signetPassives.json).
  * Simpler than compareEntity — no WvW toggle semantics, just direct fact comparison.
+ *
+ * @param {object[]} wikiFacts
+ * @param {object[]|null} storedFacts
+ * @param {object} [opts]
+ * @param {boolean} [opts.lenient=false] — high-signal mode for signets. Signet
+ *   passives come in shapes the generic parser can't reproduce from the wiki
+ *   (percent-vs-number, prose-only, non-self-named rows), while
+ *   signetPassives.json is hand-curated. In lenient mode we only flag a genuine
+ *   value change on a *matched* fact — an extraction gap (wiki produced nothing,
+ *   or facts the parser couldn't pair) is reported as a skip, not drift, so the
+ *   audit stays high-signal. Relics leave this off and stay strict.
  */
-function compareRelicFacts(wikiFacts, storedFacts) {
+function compareRelicFacts(wikiFacts, storedFacts, opts = {}) {
+  const lenient = opts.lenient === true;
   const result = {
     category: "match",
     fact_diffs: [],
@@ -131,6 +143,14 @@ function compareRelicFacts(wikiFacts, storedFacts) {
   // Both empty — nothing to compare
   if (wFacts.length === 0 && sFacts.length === 0) {
     result.category = "no_split";
+    return result;
+  }
+
+  // Wiki extraction produced nothing but we have stored facts. In lenient mode
+  // this is a crawler/parser gap, not drift — skip rather than false-flag.
+  if (lenient && wFacts.length === 0 && sFacts.length > 0) {
+    result.category = "no_split";
+    result.splits_only_facts = sFacts;
     return result;
   }
 
@@ -150,8 +170,13 @@ function compareRelicFacts(wikiFacts, storedFacts) {
     if (si === undefined) continue;
     const wf = wFacts[wi];
     const sf = sFacts[si];
-    const fields = {};
 
+    // Lenient (signets): a matched pair of different types (e.g. wiki Percent
+    // vs curated Number) is a representation mismatch, not value drift — the
+    // matcher paired them by text. Skip it rather than report a false diff.
+    if (lenient && wf.type !== sf.type) continue;
+
+    const fields = {};
     for (const key of SPLIT_VALUE_KEYS) {
       const wVal = wf[key];
       const sVal = sf[key];
@@ -179,7 +204,16 @@ function compareRelicFacts(wikiFacts, storedFacts) {
     }
   }
 
-  if (result.fact_diffs.length || result.wiki_only_facts.length || result.splits_only_facts.length) {
+  // Strict (relics): any diff or unmatched fact on either side is drift.
+  // Lenient (signets): only a value change on a *matched* fact is drift;
+  // unmatched facts are extraction/shape gaps and are recorded for visibility
+  // but don't raise the category.
+  const isMismatch = lenient
+    ? result.fact_diffs.length > 0
+    : result.fact_diffs.length > 0 ||
+      result.wiki_only_facts.length > 0 ||
+      result.splits_only_facts.length > 0;
+  if (isMismatch) {
     result.category = "mismatch";
   }
 
