@@ -92,13 +92,70 @@
     min-height: 44px;
   }
 
-  /* Specs + detail panels stack vertically (normally side-by-side columns) */
+  /* Specs + detail panels stack vertically (normally side-by-side columns).
+   * Narrowed from `.panel` (Task 4 generic rule) to the real child names
+   * discovered by DOM inspection: section.panel.specs-panel and
+   * section.panel.detail-panel. This avoids fighting the Task 5 stacking
+   * rules and is precise about which elements get full width. */
   .is-web .specs-with-detail {
     flex-direction: column;
     overflow-x: hidden;
   }
-  .is-web .specs-with-detail .panel {
+  .is-web .specs-panel,
+  .is-web .detail-panel {
     width: 100%;
     min-width: 0;
+  }
+}
+
+/* Task 5: Traits reflow — stack the 3 specialization lines on phone
+ * Actual class names discovered by DOM inspection after picking Core Guardian
+ * and selecting a specialization:
+ *   #specializationsHost (.specializations-host) — CSS grid of spec-card articles
+ *   .spec-card           — each specialization line (article element)
+ *   .spec-card__body     — CSS grid with fixed calc() columns (emblem + 3× minor+major)
+ *   .spec-emblem         — the specialization icon button (top-left of card)
+ *   .trait-minor-anchor  — minor trait column (Adept/Master/Grandmaster minor slot)
+ *   .trait-column--major — major trait column (3 buttons per tier)
+ *   .trait-btn           — individual trait button (already ≥44px high at desktop)
+ * The .specs-with-detail children are section.panel.specs-panel + section.panel.detail-panel.
+ * The Task 4 `.specs-with-detail .panel { width:100% }` rule above has been
+ * narrowed to .specs-panel + .detail-panel so it doesn't conflict here.
+ */
+@media (max-width: 600px) {
+  /* Ensure each spec-card fills the full width of its container */
+  .is-web #specializationsHost {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .is-web #specializationsHost > .spec-card {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  /* The spec-card__body uses a fixed-width CSS grid that overflows at phone
+   * widths. Switch to flex-wrap so trait tiers reflow beneath the emblem. */
+  .is-web .spec-card__body {
+    display: flex;
+    flex-wrap: wrap;
+    column-gap: 8px;
+    row-gap: 8px;
+    justify-content: flex-start;
+    align-items: flex-start;
+  }
+
+  /* Minor and major trait columns keep their natural width but can wrap */
+  .is-web .trait-minor-anchor,
+  .is-web .trait-column--major {
+    flex-shrink: 0;
+  }
+
+  /* Ensure trait buttons meet the ≥44px touch target on phone
+   * (at desktop they're already 55px high; minor anchors are 44px wide,
+   * confirming they already meet the target — enforce min just in case). */
+  .is-web .trait-btn {
+    min-width: 44px;
+    min-height: 44px;
   }
 }

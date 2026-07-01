@@ -67,6 +67,26 @@ async function pickCoreGuardian(page) {
   });
 }
 
+
+
+// ---------------------------------------------------------------------------
+// Task 5: Traits reflow — stack the 3 specialization lines
+// ---------------------------------------------------------------------------
+
+test("specialization lines stack vertically on phone", async ({ page }) => {
+  await page.goto(ENTRY);
+  await pickCoreGuardian(page);
+  // Read the direct specialization children and assert they stack (increasing top).
+  const tops = await page.evaluate(() => {
+    const host = document.querySelector("#specializationsHost");
+    const lines = [...host.children].filter((c) => c.getBoundingClientRect().height > 20);
+    return lines.slice(0, 3).map((l) => Math.round(l.getBoundingClientRect().top));
+  });
+  for (let i = 1; i < tops.length; i++) {
+    expect(tops[i]).toBeGreaterThan(tops[i - 1]);
+  }
+});
+
 test("build subtab has no horizontal overflow after picking a profession", async ({ page }) => {
   await page.goto(ENTRY);
   await pickCoreGuardian(page);
