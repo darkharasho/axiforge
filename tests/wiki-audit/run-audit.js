@@ -170,7 +170,9 @@ async function crawlWithWorkers(browser, entities, splitsIndex, relicFactsData, 
         const wikiFacts = crawlResult.facts
           .map((f) => parseFactText(f.name, f.valueText, f.titleAttr))
           .filter(Boolean);
-        const cmp = compareRelicFacts(wikiFacts, storedEntry?.facts || null);
+        // Lenient: signet passives are hand-curated and not reliably machine-
+        // extractable, so only flag a genuine value change on a matched fact.
+        const cmp = compareRelicFacts(wikiFacts, storedEntry?.facts || null, { lenient: true });
 
         switch (cmp.category) {
           case "match": summary.matches++; break;
