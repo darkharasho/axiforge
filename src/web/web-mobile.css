@@ -1,0 +1,335 @@
+/* src/web/web-mobile.css
+ * Playground mobile layer. EVERYTHING here must be scoped under `body.is-web`
+ * so it never affects the desktop Electron renderer. Imported only by main-web.js.
+ * Breakpoints: phone <=600px, tablet 601-1024px, desktop >1024px (untouched).
+ */
+
+@media (max-width: 1024px) {
+  .is-web .subnav {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    gap: 0;
+    padding: 0;
+    min-height: 0;
+  }
+  .is-web .subnav__item {
+    flex: 1 1 0;
+    justify-content: center;
+    min-height: 48px;
+    border-radius: 0;
+    font-size: 13px;
+    border-bottom: 2px solid transparent;
+  }
+  .is-web .subnav__item--active {
+    border-bottom-color: var(--accent, #c8a85a);
+  }
+}
+
+@media (max-width: 600px) {
+  .is-web .web-topbar {
+    padding-inline: 12px;
+    gap: 6px;
+  }
+  .is-web .web-topbar__btn-label {
+    display: none;
+  }
+  .is-web .web-topbar__btn {
+    padding: 8px;            /* icon-only, keep 44px-ish target */
+    min-width: 40px;
+    justify-content: center;
+  }
+  .is-web .web-topbar__cta {
+    display: none;           /* "Get desktop app" not essential on phone */
+  }
+  .is-web .web-topbar__brand {
+    font-size: 15px;
+  }
+  .is-web .web-topbar__beta {
+    display: none;
+  }
+}
+
+/* Task 4: Skills reflow within the Build subtab
+ * Actual class names discovered by DOM inspection after picking Core Guardian:
+ *   .toolbar-grid           — 2-col grid (title | profession picker)
+ *   .skills-bar             — flex row with 3 cols: weapon-col, orb-col, util-col
+ *   .skills-bar__weapon-col — flex col containing profession-mechanics-bar + weapon-row
+ *   .skills-bar__weapon-row — flex row containing weapon-swap-btn + skill-group--weapons
+ *   .skills-bar__orb-col    — flex col with health orb
+ *   .skills-bar__util-col   — flex col with boon-coverage + skill-group--utilities
+ *   .skill-group            — flex row of .skill-slot tiles (36×36 at desktop)
+ *   .skill-slot             — individual skill icon tile
+ */
+@media (max-width: 600px) {
+  /* Single-column layout: title row, then profession picker row */
+  .is-web .toolbar-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Skills bar stacks vertically instead of side-by-side columns */
+  .is-web #skillsHost {
+    overflow-x: hidden;
+  }
+  .is-web .skills-bar {
+    flex-direction: column;
+  }
+  .is-web .skills-bar__weapon-col,
+  .is-web .skills-bar__orb-col,
+  .is-web .skills-bar__util-col {
+    width: 100%;
+  }
+
+  /* Weapon row and skill groups wrap so slots don't overflow */
+  .is-web .skills-bar__weapon-row,
+  .is-web .skill-group {
+    flex-wrap: wrap;
+  }
+
+  /* Ensure skill slots meet minimum 44px touch target */
+  .is-web .skill-slot {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* Specs + detail panels stack vertically (normally side-by-side columns).
+   * Narrowed from `.panel` (Task 4 generic rule) to the real child names
+   * discovered by DOM inspection: section.panel.specs-panel and
+   * section.panel.detail-panel. This avoids fighting the Task 5 stacking
+   * rules and is precise about which elements get full width. */
+  .is-web .specs-with-detail {
+    flex-direction: column;
+    overflow-x: hidden;
+  }
+  .is-web .specs-panel,
+  .is-web .detail-panel {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+/* Task 6: Equipment reflow + sticky stat summary on phone
+ * Actual class names discovered by DOM inspection after picking Core Guardian
+ * and clicking the Equipment subtab:
+ *   #equipmentPanel          — root container
+ *   .equip-layout            — CSS grid with 3 columns (left | art | right)
+ *   .equip-col--left         — Armor/Weapons/Trinkets/Consumables sections
+ *   .equip-col--art          — decorative art column (hidden on phone)
+ *   .equip-col--right        — Attributes stats section
+ *   .equip-section.panel     — each named section (wraps .equip-stats)
+ *   .equip-slot              — individual gear slot row (44px min tap target)
+ *   .equip-stats             — computed attributes table (inside .equip-col--right)
+ *
+ * Sticky strategy (verified in browser):
+ *   The real scroll container is .page-content (overflow-y:auto, bounded height).
+ *   For position:sticky to work on .equip-col--right, no intermediate element
+ *   in the chain may create its own scroll context.
+ *
+ *   The original overflow-x:hidden on .equip-layout was the killer: setting any
+ *   overflow axis to non-visible forces the other axis to auto, silently making
+ *   .equip-layout a new scroll container — and a sticky element cannot escape
+ *   its own scroll container. Fix: use width constraints (width:100%; min-width:0)
+ *   instead of overflow-x:hidden so the element clips x-overflow without
+ *   establishing a scroll context.
+ *
+ *   #subtab-equipment and #equipmentPanel similarly must not create new overflow
+ *   contexts — keep them at overflow:visible so .page-content remains the sole
+ *   scroll container that sticky is relative to.
+ *
+ *   .equip-col--right itself is ~1100px tall (the full attributes column), which
+ *   would consume the entire phone screen. Cap it at max-height:50vh with its own
+ *   internal scroll so the sticky bar is a usable "peek" panel at the bottom.
+ */
+@media (max-width: 600px) {
+  /* Remove any overflow context — .page-content is the scroll container. */
+  .is-web #subtab-equipment {
+    overflow: visible;
+  }
+
+  /* Must not create an intermediate scroll context. */
+  .is-web #equipmentPanel {
+    overflow: visible;
+    width: 100%;
+  }
+
+  /* Collapse the 3-column grid to a single column.
+   * IMPORTANT: do NOT use overflow-x:hidden here — that silently forces
+   * overflow-y:auto and creates an intermediate scroll container that
+   * breaks position:sticky in the parent .page-content scroll container.
+   * width:100%; min-width:0 prevents horizontal overflow without a new
+   * scroll context. */
+  .is-web .equip-layout {
+    display: flex !important;
+    flex-direction: column;
+    width: 100%;
+    min-width: 0;
+  }
+
+  /* Hide the decorative art column — it's pure artwork, not interactive */
+  .is-web .equip-col--art {
+    display: none !important;
+  }
+
+  /* Left and right cols take full width */
+  .is-web .equip-col--left,
+  .is-web .equip-col--right {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  /* Gear slots: ensure 44px minimum tap target */
+  .is-web .equip-slot {
+    min-height: 44px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Sticky attributes summary: pinned at the bottom of .page-content
+   * while the gear list above scrolls. max-height:50vh caps the panel so
+   * it fits within the phone screen and doesn't prevent sticky pinning
+   * (the natural column is ~1100px; without a cap it would extend below
+   * the scroll container, meaning the sticky bottom boundary is never
+   * reachable before the user scrolls past it entirely). */
+  .is-web .equip-col--right {
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+    background: var(--panel, #14161c);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    padding-top: 4px;
+    max-height: 50vh;
+    overflow-y: auto;
+  }
+
+  /* Condense the attributes table font/padding so the sticky bar
+   * doesn't consume too much of the phone viewport */
+  .is-web .equip-stats {
+    font-size: 12px;
+  }
+  .is-web .equip-stat-row {
+    padding-block: 2px;
+  }
+  .is-web .equip-section__head {
+    padding-block: 4px;
+  }
+}
+
+/* Task 7: Custom-select menu height cap on mobile
+ * Cap the portalled menu so it cannot overflow the phone viewport vertically.
+ * The menu is portalled to document.body at position:fixed; without a max-height
+ * it can extend beyond the bottom of the screen on small phones.
+ * overflow-y:auto enables scrolling through long option lists (e.g. profession picker
+ * with 9 professions × multiple elite specs). Scoped to .is-web so desktop is unaffected.
+ */
+@media (max-width: 1024px) {
+  .is-web .cselect__menu {
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+}
+
+/* Task 5: Traits reflow — stack the 3 specialization lines on phone
+ * Actual class names discovered by DOM inspection after picking Core Guardian
+ * and selecting a specialization:
+ *   #specializationsHost (.specializations-host) — CSS grid of spec-card articles
+ *   .spec-card           — each specialization line (article element)
+ *   .spec-card__body     — CSS grid with fixed calc() columns (emblem + 3× minor+major)
+ *   .spec-emblem         — the specialization icon button (top-left of card)
+ *   .trait-minor-anchor  — minor trait column (Adept/Master/Grandmaster minor slot)
+ *   .trait-column--major — major trait column (3 buttons per tier)
+ *   .trait-btn           — individual trait button (already ≥44px high at desktop)
+ * The .specs-with-detail children are section.panel.specs-panel + section.panel.detail-panel.
+ * The Task 4 `.specs-with-detail .panel { width:100% }` rule above has been
+ * narrowed to .specs-panel + .detail-panel so it doesn't conflict here.
+ */
+@media (max-width: 600px) {
+  /* Ensure each spec-card fills the full width of its container */
+  .is-web #specializationsHost {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .is-web #specializationsHost > .spec-card {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  /* The spec-card__body uses a fixed-width CSS grid that overflows at phone
+   * widths. Switch to flex-wrap so trait tiers reflow beneath the emblem. */
+  .is-web .spec-card__body {
+    display: flex;
+    flex-wrap: wrap;
+    column-gap: 8px;
+    row-gap: 8px;
+    justify-content: flex-start;
+    align-items: flex-start;
+  }
+
+  /* Minor and major trait columns keep their natural width but can wrap */
+  .is-web .trait-minor-anchor,
+  .is-web .trait-column--major {
+    flex-shrink: 0;
+  }
+
+  /* Ensure trait buttons meet the ≥44px touch target on phone
+   * (at desktop they're already 55px high; minor anchors are 44px wide,
+   * confirming they already meet the target — enforce min just in case). */
+  .is-web .trait-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+/* Task 9: Tablet 2-column build layout (601–1024px)
+ * At tablet widths the Build subtab switches from a single-column stack to a
+ * 2-column CSS grid: skills (column 1) | traits (column 2).  The toolbar-grid
+ * (title + profession picker) spans both columns so it always reads full-width.
+ * Scoped under .is-web so the desktop Electron renderer is never affected.
+ */
+@media (min-width: 601px) and (max-width: 1024px) {
+  .is-web #subtab-build {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    align-items: start;
+  }
+  .is-web #subtab-build .toolbar-grid {
+    grid-column: 1 / -1; /* title + profession picker span both columns */
+  }
+}
+
+/* Task 8: Detail/wiki modals as bottom sheets on phone
+ * Real modal root class names (found in detail-modal.css / wiki-modal.css):
+ *   .detail-modal  — inside .detail-modal-overlay  (position:fixed; inset:24px on desktop)
+ *   .wiki-modal    — inside .wiki-modal-overlay     (position:fixed; inset:24px on desktop)
+ * On phone both modals render as near-fullscreen bottom sheets:
+ *   - Pinned to the bottom with full viewport width
+ *   - Max-height 85vh so some of the underlying page is visible above it
+ *   - Rounded top corners for the sheet aesthetic
+ *   - overflow-y:auto so long content is scrollable within the sheet
+ * Scoped under .is-web so the desktop Electron renderer is never affected.
+ */
+@media (max-width: 600px) {
+  .is-web .detail-modal,
+  .is-web .wiki-modal {
+    position: fixed !important;
+    inset: auto 0 0 0 !important;   /* pin to bottom, full width */
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 85vh !important;        /* explicit height so flex children fill the sheet */
+    max-height: 85vh !important;
+    border-radius: 14px 14px 0 0 !important;
+    overflow: hidden !important;    /* root clips at max-height; body scrolls below */
+  }
+
+  /* The modal body (flex:1 child) must scroll within the 85 vh sheet.
+   * detail-modal-body already has overflow-y:auto in base CSS; wiki-modal-body
+   * has overflow:hidden and needs an explicit override here.  Both get the same
+   * rule so the pattern is consistent and the toolbar stays fixed at the top. */
+  .is-web .detail-modal-body,
+  .is-web .wiki-modal-body {
+    overflow-y: auto !important;
+    min-height: 0;                  /* flex child must shrink below its content height */
+  }
+}
