@@ -426,3 +426,76 @@ describe("error handling", () => {
     expect(() => decodeShareCode("<AxiForge:Test:!!!invalid z85 chars!!!>")).toThrow();
   });
 });
+
+// ── Extended stat combos (regression: share code dropped combos outside the
+// original 20-entry table, e.g. Plaguedoctor's/Wanderer's — see condi-support
+// Spectre report where Power/Prec/Tough/Vit came back at base) ────────────────
+
+describe("extended stat combos round-trip", () => {
+  function makeBuild(overrides) {
+    const base = JSON.parse(JSON.stringify(BERSERKER_BUILD));
+    return Object.assign(base, overrides);
+  }
+
+  // Every combo the app (src/renderer/modules/constants.js) can assign.
+  const APP_STAT_COMBOS = [
+    "Berserker's", "Marauder's", "Assassin's", "Valkyrie", "Dragon's",
+    "Viper's", "Grieving", "Sinister", "Dire", "Rabid", "Carrion",
+    "Trailblazer's", "Knight's", "Soldier's", "Sentinel's", "Wanderer's",
+    "Diviner's", "Cleric's", "Minstrel's", "Harrier's", "Ritualist's",
+    "Seraph", "Crusader", "Zealot's", "Giver's", "Celestial", "Apothecary's",
+    "Magi's", "Shaman's", "Rampager's", "Cavalier's", "Nomad's", "Settler's",
+    "Captain's", "Vigilant", "Apostate's", "Plaguedoctor's", "Marshal's",
+    "Demolisher", "Commander's",
+  ];
+
+  test.each(APP_STAT_COMBOS)("uniform statPackage %s survives round-trip", (combo) => {
+    const build = makeBuild({});
+    build.equipment.statPackage = combo;
+    build.equipment.slots = {};
+    const decoded = decodeShareCode(encodeShareCode(build));
+    expect(decoded.equipment.statPackage).toBe(combo);
+  });
+
+  test("per-slot mix using extended combos round-trips", () => {
+    const build = makeBuild({});
+    build.equipment.statPackage = "";
+    build.equipment.slots = {
+      head: "Plaguedoctor's", shoulders: "Plaguedoctor's", chest: "Plaguedoctor's",
+      hands: "Plaguedoctor's", legs: "Plaguedoctor's", feet: "Plaguedoctor's",
+      back: "Wanderer's", amulet: "Ritualist's",
+      ring1: "Wanderer's", ring2: "Ritualist's",
+      accessory1: "Plaguedoctor's", accessory2: "Plaguedoctor's",
+      mainhand1: "Trailblazer's",
+    };
+    const decoded = decodeShareCode(encodeShareCode(build));
+    expect(decoded.equipment.slots.head).toBe("Plaguedoctor's");
+    expect(decoded.equipment.slots.back).toBe("Wanderer's");
+    expect(decoded.equipment.slots.amulet).toBe("Ritualist's");
+    expect(decoded.equipment.slots.mainhand1).toBe("Trailblazer's");
+  });
+});
+
+// ── Backward compatibility: v1 codes (5-bit stat field) must still decode after
+// the v2 bump to a 6-bit stat field. This is a real code produced by the v1
+// encoder; do not regenerate it. ─────────────────────────────────────────────
+
+describe("version compatibility", () => {
+  const V1_BERSERKER_CODE =
+    "<AxiForge:Warrior:6AFm+0000e5qHKw00000&7WSlF=C=J0000000000Z!Oq-0000000000>";
+
+  test("legacy v1 code still decodes with correct stat package", () => {
+    const decoded = decodeShareCode(V1_BERSERKER_CODE);
+    expect(decoded.profession).toBe("Warrior");
+    expect(decoded.equipment.statPackage).toBe("Berserker's");
+  });
+
+  test("new codes are emitted as version 2", () => {
+    const { BitReader } = require("../src/bitBuffer");
+    const { z85Decode } = require("../src/z85");
+    const code = encodeShareCode(BERSERKER_BUILD);
+    const payload = code.slice(code.indexOf(":", 10) + 1, -1);
+    const r = new BitReader(z85Decode(payload));
+    expect(r.read(4)).toBe(2);
+  });
+});

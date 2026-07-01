@@ -13,7 +13,15 @@ const {
 } = require("./tables");
 
 const SHARE_CODE_PREFIX = "<AxiForge:";
-const CURRENT_VERSION = 1;
+// v2 widened the equipment-stat field from 5 to 6 bits so all ~40 gear stat
+// combos the app supports fit (v1's 5-bit field capped the table at 32, silently
+// dropping combos like Plaguedoctor's/Wanderer's to index 0 = "no stat").
+const CURRENT_VERSION = 2;
+// Bits used for each equipment-stat index, keyed by code version.
+function statBitsForVersion(version) {
+  return version >= 2 ? 6 : 5;
+}
+const STAT_BITS = statBitsForVersion(CURRENT_VERSION);
 
 const GAME_MODES = ["pve", "pvp", "wvw"];
 const ATTUNEMENTS = ["Fire", "Water", "Air", "Earth"];
@@ -179,20 +187,20 @@ function encodeShareCode(build) {
   if (!perSlotStats) {
     // Uniform stat: use statPackage, or derive from slots if all slots share the same stat
     const uniformStat = build.equipment.statPackage || (nonEmptyStats.length > 0 ? nonEmptyStats[0] : "");
-    w.write(statToIndex(uniformStat), 5);
+    w.write(statToIndex(uniformStat), STAT_BITS);
   } else {
     // Per-slot stats: armor, trinkets, weapons (conditional)
     for (const slot of ["head", "shoulders", "chest", "hands", "legs", "feet"]) {
-      w.write(statToIndex(slots[slot] || ""), 5);
+      w.write(statToIndex(slots[slot] || ""), STAT_BITS);
     }
     for (const slot of ["back", "amulet", "ring1", "ring2", "accessory1", "accessory2"]) {
-      w.write(statToIndex(slots[slot] || ""), 5);
+      w.write(statToIndex(slots[slot] || ""), STAT_BITS);
     }
-    w.write(statToIndex(slots.mainhand1 || ""), 5);
-    if (hasOffhand1) w.write(statToIndex(slots.offhand1 || ""), 5);
+    w.write(statToIndex(slots.mainhand1 || ""), STAT_BITS);
+    if (hasOffhand1) w.write(statToIndex(slots.offhand1 || ""), STAT_BITS);
     if (hasWeaponSet2) {
-      w.write(statToIndex(slots.mainhand2 || ""), 5);
-      if (hasOffhand2) w.write(statToIndex(slots.offhand2 || ""), 5);
+      w.write(statToIndex(slots.mainhand2 || ""), STAT_BITS);
+      if (hasOffhand2) w.write(statToIndex(slots.offhand2 || ""), STAT_BITS);
     }
   }
 
@@ -380,9 +388,11 @@ function decodeShareCode(code) {
   const r = new BitReader(bytes);
 
   const version = r.read(4);
-  if (version !== 1) {
+  if (version !== 1 && version !== 2) {
     throw new Error("This build code requires a newer version of AxiForge");
   }
+  // v1 packed each equipment-stat index in 5 bits; v2 uses 6 (see CURRENT_VERSION).
+  const statBits = statBitsForVersion(version);
 
   const flags = r.read(8);
   const hasUnderwater = !!(flags & 1);
@@ -444,19 +454,19 @@ function decodeShareCode(code) {
   let statPackage = "";
   const slotsOut = {};
   if (!perSlotStats) {
-    statPackage = indexToStat(r.read(5));
+    statPackage = indexToStat(r.read(statBits));
   } else {
     for (const slot of ["head", "shoulders", "chest", "hands", "legs", "feet"]) {
-      slotsOut[slot] = indexToStat(r.read(5));
+      slotsOut[slot] = indexToStat(r.read(statBits));
     }
     for (const slot of ["back", "amulet", "ring1", "ring2", "accessory1", "accessory2"]) {
-      slotsOut[slot] = indexToStat(r.read(5));
+      slotsOut[slot] = indexToStat(r.read(statBits));
     }
-    slotsOut.mainhand1 = indexToStat(r.read(5));
-    if (hasOffhand1) slotsOut.offhand1 = indexToStat(r.read(5));
+    slotsOut.mainhand1 = indexToStat(r.read(statBits));
+    if (hasOffhand1) slotsOut.offhand1 = indexToStat(r.read(statBits));
     if (hasWeaponSet2) {
-      slotsOut.mainhand2 = indexToStat(r.read(5));
-      if (hasOffhand2) slotsOut.offhand2 = indexToStat(r.read(5));
+      slotsOut.mainhand2 = indexToStat(r.read(statBits));
+      if (hasOffhand2) slotsOut.offhand2 = indexToStat(r.read(statBits));
     }
   }
 
