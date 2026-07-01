@@ -723,8 +723,18 @@ function serializeForPublish(build, catalog, upgradeCatalog, extraCatalogs = [])
 
   const equipmentDisplay = resolveEquipmentDisplay(build.equipment, upgradeCatalog);
   const equipmentIcons = resolveEquipmentIcons(build);
+  // Pass full build context so the engine applies trait flat bonuses/conversions
+  // and excludes the inactive weapon set — matching the in-app Attributes panel.
+  const specializationById = new Map((catalog?.specializations || []).map(s => [s.id, s]));
   const { stats: computedStats, modifiers: statModifiers } = computePublishStats(
-    build.equipment, upgradeCatalog, build.profession, build.gameMode
+    build.equipment, upgradeCatalog, build.profession, build.gameMode,
+    {
+      specializations: enrichedSpecializations,
+      skills: enrichedSkills,
+      activeCatalog: { traitById, skillById, specializationById },
+      underwaterMode: build.underwaterMode,
+      activeWeaponSet: build.activeWeaponSet,
+    }
   );
 
   // Normalize generic @[item:id:name] → @[rune:id:name] etc. before publish

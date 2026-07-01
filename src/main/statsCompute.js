@@ -1,7 +1,17 @@
 "use strict";
 
-// Embed static constants
-// For 4-stat combos: first 2 stats are major (0.3 multiplier), last 2 are minor (0.165 multiplier)
+// Published-build stat computation. Delegates to the shared @axiapps/gw2-data
+// engine so the published page matches the in-app Attributes panel exactly —
+// the renderer uses the same engine via engine-bridge.js. A previous hand-rolled
+// reimplementation here diverged from the engine (it double-counted the inactive
+// weapon set, skipped trait flat bonuses/conversions, and double-counted base
+// Vitality in Health), causing published pages to disagree with the game/app.
+const { computeAttributes } = require("@axiapps/gw2-data/engine");
+
+// ---------------------------------------------------------------------------
+// Stat combos + slot weights — retained ONLY for the lightweight estimateRole()
+// heuristic below. The authoritative stat math lives in the engine.
+// For 4-stat combos: first 2 stats are major (p4), last 2 are minor (s4).
 const _STAT_COMBOS_ENTRIES = [
   ["Berserker's", { stats: ["Power", "Precision", "Ferocity"] }],
   ["Marauder's", { stats: ["Power", "Precision", "Vitality", "Ferocity"] }],
@@ -55,9 +65,7 @@ const STAT_COMBOS_BY_LABEL = new Map(
   })
 );
 
-// Ascended/Legendary stat weights per slot.
-// p/s = 3-stat major/minor; p4/s4 = 4-stat major/minor; c = Celestial per-stat.
-// Derived from GW2 API attribute_adjustment × stat multipliers (0.35/0.25/0.3/0.165).
+// Ascended/Legendary stat weights per slot (estimateRole heuristic only).
 const SLOT_WEIGHTS = {
   head:       { p: 63,  s: 45,  p4: 54,  s4: 30, c: 30 },
   shoulders:  { p: 47,  s: 34,  p4: 40,  s4: 22, c: 22 },
@@ -83,192 +91,114 @@ const TWO_HAND_WEAPON_IDS = new Set([
   "greatsword", "hammer", "longbow", "rifle", "shortbow", "staff", "spear",
 ]);
 
-const PROFESSION_BASE_HP = {
-  Warrior: 19212, Necromancer: 19212, Revenant: 15922,
-  Engineer: 15922, Ranger: 15922, Mesmer: 15922,
-  Guardian: 11645, Thief: 11645, Elementalist: 11645,
-};
-
-// In WvW, Celestial gear does not grant Expertise or Concentration.
-const _WVW_CELESTIAL_EXCLUDED = new Set(["Expertise", "Concentration"]);
-function _getEffectiveStats(comboLabel, combo, gameMode) {
-  if (gameMode === "wvw" && comboLabel === "Celestial") {
-    return combo.stats.filter((s) => !_WVW_CELESTIAL_EXCLUDED.has(s));
-  }
-  return combo.stats;
+// ---------------------------------------------------------------------------
+// Build the engine's `catalogs` shape from the publish-side catalogs.
+// activeCatalog (profession catalog) supplies trait/skill/spec maps; the
+// upgradeCatalog supplies rune/food/utility/infusion/enrichment maps.
+// ---------------------------------------------------------------------------
+function _buildEngineCatalogs(upgradeCatalog, activeCatalog) {
+  return {
+    traitById: activeCatalog?.traitById || new Map(),
+    skillById: activeCatalog?.skillById || new Map(),
+    specializationById: activeCatalog?.specializationById || new Map(),
+    runeById: upgradeCatalog?.runeById || new Map(),
+    foodById: upgradeCatalog?.foodById || new Map(),
+    utilityById: upgradeCatalog?.utilityById || new Map(),
+    infusionById: upgradeCatalog?.infusionById || new Map(),
+    enrichmentById: upgradeCatalog?.enrichmentById || new Map(),
+  };
 }
 
-function computePublishStats(equipment, upgradeCatalog, profession, gameMode) {
+// Map a published skill selection ({ heal, utility:[], elite } of refs/ids) into
+// the engine's ctx.skills shape ({ healId, utilityIds:[], eliteId }) so equipped
+// signets contribute their passive stat buffs. Tolerates plain ids or {id} refs.
+function _toEngineSkills(skills) {
+  if (!skills) return { healId: 0, utilityIds: [], eliteId: 0 };
+  // Already in engine shape.
+  if ("healId" in skills || "utilityIds" in skills || "eliteId" in skills) {
+    return {
+      healId: Number(skills.healId) || 0,
+      utilityIds: (skills.utilityIds || []).map((x) => Number(x) || 0),
+      eliteId: Number(skills.eliteId) || 0,
+    };
+  }
+  const idOf = (ref) => (ref && typeof ref === "object" ? Number(ref.id) : Number(ref)) || 0;
+  return {
+    healId: idOf(skills.heal),
+    utilityIds: (Array.isArray(skills.utility) ? skills.utility : []).map(idOf),
+    eliteId: idOf(skills.elite),
+  };
+}
+
+/**
+ * Compute the stat block embedded in a published build.
+ *
+ * @param {object|null} equipment - build.equipment
+ * @param {object|null} upgradeCatalog - rune/food/utility/infusion/enrichment maps
+ * @param {string} profession - build.profession (may be an elite-spec name)
+ * @param {string} gameMode - "pve" | "wvw" | "pvp"
+ * @param {object} [opts] - additional context so traits/conversions apply:
+ *   { specializations, skills, activeCatalog, underwaterMode, activeWeaponSet }
+ * @returns {{ stats: object, modifiers: array }}
+ *
+ * Published pages show the unbuffed baseline (assumed boons/sigil stacks are not
+ * persisted), which matches the app's default Attributes panel.
+ */
+function computePublishStats(equipment, upgradeCatalog, profession, gameMode, opts = {}) {
   if (!equipment) return { stats: {}, modifiers: [] };
 
-  const gm = gameMode || "pve";
-  const slots = equipment.slots || {};
-  const totals = {
-    Power: 1000, Precision: 1000, Toughness: 1000, Vitality: 1000,
-    Ferocity: 0, ConditionDamage: 0, Expertise: 0, Concentration: 0, HealingPower: 0,
+  const ctx = {
+    profession: profession || "",
+    gameMode: gameMode || "pve",
+    underwaterMode: Boolean(opts.underwaterMode),
+    activeWeaponSet: Number(opts.activeWeaponSet) || 1,
+    specializations: (opts.specializations || []).map((s) => ({
+      id: s?.specializationId || s?.id,
+      specializationId: s?.specializationId,
+      majorChoices: s?.majorChoices || {},
+      minorTraits: s?.minorTraits,
+    })),
+    equipment: {
+      slots: equipment.slots || {},
+      weapons: equipment.weapons || {},
+      runes: equipment.runes || {},
+      sigils: equipment.sigils || {},
+      infusions: equipment.infusions || {},
+      enrichment: equipment.enrichment ? Number(equipment.enrichment) : null,
+      food: equipment.food ? Number(equipment.food) : null,
+      utility: equipment.utility ? Number(equipment.utility) : null,
+    },
+    skills: _toEngineSkills(opts.skills),
+    // Static baseline — no assumed boons / sigil stacks / signet actives.
+    assumedBoons: null,
+    sigilStacks: null,
+    activeSignets: null,
+    berserkActive: false,
   };
 
-  // Equipment slot contributions
-  const weapons = equipment.weapons || {};
-  for (const [slotKey, comboLabel] of Object.entries(slots)) {
-    if (!comboLabel) continue;
-    const combo = STAT_COMBOS_BY_LABEL.get(comboLabel);
-    let w = SLOT_WEIGHTS[slotKey];
-    if (!combo || !w) continue;
-    // Use 2h weights when a two-handed weapon is equipped in a mainhand slot
-    if (slotKey.startsWith("mainhand") && TWO_HAND_WEAPON_IDS.has(weapons[slotKey])) {
-      w = TWO_HAND_WEIGHTS;
-    }
-    const stats = _getEffectiveStats(comboLabel, combo, gm);
-    const n = stats.length;
-    if (n <= 3) {
-      totals[stats[0]] = (totals[stats[0]] || 0) + w.p;
-      for (let i = 1; i < n; i++) totals[stats[i]] = (totals[stats[i]] || 0) + w.s;
-    } else if (n === 4) {
-      // 2-2 pattern: first 2 stats are major, last 2 are minor
-      totals[stats[0]] = (totals[stats[0]] || 0) + w.p4;
-      totals[stats[1]] = (totals[stats[1]] || 0) + w.p4;
-      totals[stats[2]] = (totals[stats[2]] || 0) + w.s4;
-      totals[stats[3]] = (totals[stats[3]] || 0) + w.s4;
-    } else {
-      for (const stat of stats) totals[stat] = (totals[stat] || 0) + w.c;
-    }
-  }
-
-  // Food flat stat contributions
-  if (equipment.food && upgradeCatalog) {
-    const foodDef = upgradeCatalog.foodById?.get(Number(equipment.food));
-    if (foodDef) {
-      const foodStatMap = { "Condition Damage": "ConditionDamage", "Healing Power": "HealingPower", "Healing": "HealingPower" };
-      const ALL_STAT_KEYS = ["Power", "Precision", "Toughness", "Vitality", "Ferocity", "ConditionDamage", "HealingPower", "Concentration", "Expertise"];
-      const re = /\+(\d+)\s+(Condition Damage|Healing Power|Healing|Power|Precision|Toughness|Vitality|Ferocity|Concentration|Expertise|to All Attributes)/g;
-      let m;
-      while ((m = re.exec(foodDef.buff)) !== null) {
-        if (m[2] === "to All Attributes") {
-          for (const key of ALL_STAT_KEYS) totals[key] += Number(m[1]);
-        } else {
-          const key = foodStatMap[m[2]] || m[2];
-          if (totals[key] !== undefined) totals[key] += Number(m[1]);
-        }
-      }
-    }
-  }
-
-  // Infusion/enrichment stat contributions (via infix_upgrade.attributes)
-  if (upgradeCatalog) {
-    const toStatKey = (attr) => attr === "Healing" ? "HealingPower" : attr === "BoonDuration" ? "Concentration" : attr === "ConditionDuration" ? "Expertise" : attr;
-    const addInfixAttributes = (infixUpgrade) => {
-      if (!infixUpgrade?.attributes) return;
-      for (const attr of infixUpgrade.attributes) {
-        const key = toStatKey(attr.attribute);
-        if (totals[key] !== undefined) totals[key] += attr.modifier || 0;
-      }
-    };
-
-    // Infusions — cap mainhand weapon slots to 1 infusion for 1H weapons (issue #201)
-    const infusions = equipment.infusions || {};
-    for (const [slotKey, v] of Object.entries(infusions)) {
-      const ids = Array.isArray(v) ? v : [v];
-      let maxSlots = ids.length;
-      if (slotKey.startsWith("mainhand")) {
-        const weaponType = weapons[slotKey] || "";
-        if (weaponType && !TWO_HAND_WEAPON_IDS.has(weaponType)) maxSlots = 1;
-      }
-      const limit = Math.min(ids.length, maxSlots);
-      for (let i = 0; i < limit; i++) {
-        const id = ids[i];
-        if (!id) continue;
-        const def = upgradeCatalog.infusionById?.get(Number(id));
-        if (def) addInfixAttributes(def.infixUpgrade);
-      }
-    }
-    // Enrichment
-    if (equipment.enrichment) {
-      const def = upgradeCatalog.enrichmentById?.get(Number(equipment.enrichment));
-      if (def) addInfixAttributes(def.infixUpgrade);
-    }
-    // Rune bonuses
-    const runes = equipment.runes || {};
-    const runeCounts = new Map();
-    for (const id of Object.values(runes)) {
-      if (!id) continue;
-      runeCounts.set(String(id), (runeCounts.get(String(id)) || 0) + 1);
-    }
-    const RUNE_STAT_MAP = { "Power": "Power", "Precision": "Precision", "Toughness": "Toughness", "Vitality": "Vitality", "Ferocity": "Ferocity", "Concentration": "Concentration", "Expertise": "Expertise", "Condition Damage": "ConditionDamage", "Healing Power": "HealingPower", "Healing": "HealingPower" };
-    const ALL_STAT_KEYS = ["Power", "Precision", "Toughness", "Vitality", "Ferocity", "ConditionDamage", "HealingPower", "Concentration", "Expertise"];
-    const RUNE_RE = /\+(\d+)\s+(Condition Damage|Healing Power|Healing|Power|Precision|Toughness|Vitality|Ferocity|Concentration|Expertise|to All Stats)/;
-    for (const [runeId, count] of runeCounts) {
-      const runeDef = upgradeCatalog.runeById?.get(Number(runeId));
-      if (!runeDef?.bonuses?.length) continue;
-      for (const bonus of runeDef.bonuses.slice(0, Math.min(count, 6))) {
-        const m = RUNE_RE.exec(bonus);
-        if (!m) continue;
-        const value = Number(m[1]);
-        if (m[2] === "to All Stats") {
-          for (const key of ALL_STAT_KEYS) totals[key] += value;
-        } else {
-          const key = RUNE_STAT_MAP[m[2]];
-          if (key && totals[key] !== undefined) totals[key] += value;
-        }
-      }
-    }
-  }
-
-  // Utility consumable contributions
-  if (equipment.utility && upgradeCatalog) {
-    const utilDef = upgradeCatalog.utilityById?.get(Number(equipment.utility));
-    if (utilDef) {
-      const UTIL_MAP = { "Power": "Power", "Precision": "Precision", "Toughness": "Toughness", "Vitality": "Vitality", "Ferocity": "Ferocity", "Concentration": "Concentration", "Expertise": "Expertise", "Condition Damage": "ConditionDamage", "Healing Power": "HealingPower" };
-      // Pattern 1: conversion — snapshot source values so multiple conversions in the
-      // same buff don't cross-contaminate (e.g. A→B and B→A would inflate results).
-      const convBase = { ...totals };
-      const convRe = /Gain (Condition Damage|Healing Power|Power|Precision|Toughness|Vitality|Ferocity|Concentration|Expertise) Equal to (\d+(?:\.\d+)?)% of Your (Condition Damage|Healing Power|Power|Precision|Toughness|Vitality|Ferocity|Concentration|Expertise)/g;
-      let m;
-      while ((m = convRe.exec(utilDef.buff)) !== null) {
-        const targetKey = UTIL_MAP[m[1]];
-        const pct = Number(m[2]) / 100;
-        const sourceKey = UTIL_MAP[m[3]];
-        if (targetKey && sourceKey && convBase[sourceKey] !== undefined) {
-          totals[targetKey] = (totals[targetKey] || 0) + Math.round(convBase[sourceKey] * pct);
-        }
-      }
-      // Pattern 2: conditional flat (writs)
-      const writRe = /Gain (\d+) (Condition Damage|Healing Power|Power|Precision|Toughness|Vitality|Ferocity|Concentration|Expertise) When Health/g;
-      while ((m = writRe.exec(utilDef.buff)) !== null) {
-        const key = UTIL_MAP[m[2]];
-        if (key) totals[key] = (totals[key] || 0) + Number(m[1]);
-      }
-      // Pattern 3: flat bonuses
-      const flatRe = /\+(\d+)\s+(Condition Damage|Healing Power|Power|Precision|Toughness|Vitality|Ferocity|Concentration|Expertise)/g;
-      while ((m = flatRe.exec(utilDef.buff)) !== null) {
-        const key = UTIL_MAP[m[2]];
-        if (key) totals[key] = (totals[key] || 0) + Number(m[1]);
-      }
-    }
-  }
-
-  // Derived stats
-  const baseHP = PROFESSION_BASE_HP[profession] || 11645;
-  const health = baseHP + totals.Vitality * 10;
-  const critChance = ((totals.Precision - 1000) / 21 + 5).toFixed(2) + "%";
-  const critDamage = (150 + totals.Ferocity / 15).toFixed(1) + "%";
-  const boonDuration = (totals.Concentration / 15).toFixed(1) + "%";
-  const condDuration = (totals.Expertise / 15).toFixed(1) + "%";
+  const catalogs = _buildEngineCatalogs(upgradeCatalog, opts.activeCatalog);
+  const eng = computeAttributes(ctx, catalogs);
+  const t = eng.total;
+  const d = eng.derived;
 
   const stats = {
-    ...totals,
-    Health: health,
-    CritChance: critChance,
-    CritDamage: critDamage,
-    BoonDuration: boonDuration,
-    ConditionDuration: condDuration,
+    Power: t.Power,
+    Precision: t.Precision,
+    Toughness: t.Toughness,
+    Vitality: t.Vitality,
+    Ferocity: t.Ferocity,
+    ConditionDamage: t.ConditionDamage,
+    Expertise: t.Expertise,
+    Concentration: t.Concentration,
+    HealingPower: t.HealingPower,
+    Health: d.health,
+    CritChance: d.critChance.toFixed(2) + "%",
+    CritDamage: d.critDamage.toFixed(1) + "%",
+    BoonDuration: d.boonDuration.toFixed(1) + "%",
+    ConditionDuration: d.conditionDuration.toFixed(1) + "%",
   };
 
-  // Collect modifier text lines (non-stat buffs from upgrades)
-  const modifiers = [];
-  // TODO: parse modifier lines from rune/sigil/food buff text if needed
-
-  return { stats, modifiers };
+  return { stats, modifiers: [] };
 }
 
 // ── Lightweight role estimation (mirrors renderer roleEstimator.js) ──────────
