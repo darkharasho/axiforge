@@ -1,3 +1,10 @@
+## Version v0.10.4 — June 30, 2026
+
+### Bug Fixes
+
+- **Shared and published builds no longer lose their gear stats** — when a build used one of the less-common stat combos (Plaguedoctor's, Wanderer's, Diviner's, Apothecary's, Magi's, Marshal's, Sentinel's, and others), the share code and shared/published links silently dropped that gear, so the build showed base Power/Precision/Toughness/Vitality instead of its real attributes. Share codes now carry every stat combo the app supports. Old links can't be repaired — re-share affected builds to generate a corrected link. Existing links still open normally.
+- **More mobile fixes for the web Playground and shared pages** — follow-up polish from iOS testing: tighter side padding, the attributes panel now collapses inline reliably, the profession/stat dropdowns no longer zoom-and-disappear on iOS, the subnav no longer overflows, land/water toggles no longer overlap, traits scroll correctly, and the specialization connector lines line up across all columns on phones.
+
 ## Version v0.10.3 — June 30, 2026
 
 ### New Features
