@@ -7,6 +7,12 @@ import { resolve, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 
+// Bake from the repo's committed snapshots, not the remote copies on `main`, so
+// the web bundle is deterministic and reflects the branch being built. (Desktop
+// gets runtime freshness via remote-first loading; the web bundle refreshes on
+// its normal redeploy.)
+process.env.AXIFORGE_DISABLE_REMOTE_DATA = "1";
+
 const require = createRequire(import.meta.url);
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(__dirname, "..");

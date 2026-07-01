@@ -2,12 +2,56 @@ const {
   GW2_API_ROOT,
   fetchCachedJson,
   fetchGw2ByIds,
+  loadSnapshot,
   dedupeNumbers,
 } = require("./fetch");
 const { WikiClient } = require("../../../packages/gw2-data/src/wiki/client");
 const { DiskCache } = require("../../../packages/gw2-data/src/wiki/cache");
 const { resolveEntityFacts } = require("../../../packages/gw2-data/src/wiki/resolver");
 const path = require("node:path");
+
+// ─── Runtime data snapshots ─────────────────────────────────────────────────
+// The wiki-derived, drift-prone data (relic facts + upgrade item IDs) is fetched
+// remote-first from the committed copies on `main`, so a data refresh reaches
+// users without an app release. The baked-in files are always the fallback.
+// Disabled under jest (JEST_WORKER_ID is set) so unit tests stay offline and
+// deterministic, and via AXIFORGE_DISABLE_REMOTE_DATA=1 for manual override.
+const REMOTE_DATA_BASE =
+  process.env.AXIFORGE_DATA_BASE ||
+  "https://raw.githubusercontent.com/darkharasho/axiforge/main/src/main/gw2Data";
+const REMOTE_DATA_TTL = 1000 * 60 * 60 * 6; // 6 hours
+const REMOTE_DATA_ENABLED =
+  !process.env.JEST_WORKER_ID && process.env.AXIFORGE_DISABLE_REMOTE_DATA !== "1";
+
+// Sanity floors: reject a remote snapshot whose lists collapsed (truncated or
+// broken publish). Baked counts are ~2-3x these; the floors only catch disasters.
+function _isNonEmptyArray(v, min) {
+  return Array.isArray(v) && v.length >= min;
+}
+function validateUpgradeIds(v) {
+  return (
+    v && typeof v === "object" &&
+    _isNonEmptyArray(v.RUNE_ITEM_IDS, 40) &&
+    _isNonEmptyArray(v.SIGIL_ITEM_IDS, 30) &&
+    _isNonEmptyArray(v.RELIC_ITEM_IDS, 40) &&
+    _isNonEmptyArray(v.FOOD_ITEM_IDS, 100)
+  );
+}
+function validateRelicFacts(v) {
+  return v && typeof v === "object" && v.relics &&
+    typeof v.relics === "object" && Object.keys(v.relics).length >= 40;
+}
+// Remote upgradeIds.json stores WVW_INFUSION_IDS as an array; the baked module
+// exports it as a Set. Normalize whichever we got back to the shapes callers expect.
+function hydrateUpgradeIds(ids) {
+  return {
+    ...ids,
+    WVW_INFUSION_IDS:
+      ids.WVW_INFUSION_IDS instanceof Set
+        ? ids.WVW_INFUSION_IDS
+        : new Set(ids.WVW_INFUSION_IDS || []),
+  };
+}
 
 // Static snapshots of stable GW2 API data — these change only with expansions.
 // To update: re-fetch from the API and overwrite the JSON files.
@@ -959,10 +1003,33 @@ async function getUpgradeCatalog(lang = "en") {
   if (_upgradeCatalogPromise) return _upgradeCatalogPromise;
 
   _upgradeCatalogPromise = (async () => {
-    const { RUNE_ITEM_IDS, SIGIL_ITEM_IDS, INFUSION_ITEM_IDS, WVW_INFUSION_IDS, ENRICHMENT_ITEM_IDS, FOOD_ITEM_IDS, UTILITY_ITEM_IDS, RELIC_ITEM_IDS } = require("./upgradeIds");
     const { FOOD_BUFF_OVERRIDES } = require("./foodOverrides");
-    const _relicFactsPath = require("path").join(__dirname, "relicFacts.json");
-    const _relicFactsData = JSON.parse(require("fs").readFileSync(_relicFactsPath, "utf8"));
+    const bakedUpgradeIds = require("./upgradeIds");
+    const readBakedRelicFacts = () =>
+      JSON.parse(require("fs").readFileSync(path.join(__dirname, "relicFacts.json"), "utf8"));
+
+    // Remote-first with baked fallback (see REMOTE_DATA_* above). When disabled
+    // (tests / manual override) use the baked files directly.
+    let upgradeIdsData = bakedUpgradeIds;
+    let _relicFactsData;
+    if (REMOTE_DATA_ENABLED) {
+      const [uid, rf] = await Promise.all([
+        loadSnapshot("snapshot:upgradeIds", `${REMOTE_DATA_BASE}/upgradeIds.json`, REMOTE_DATA_TTL, {
+          validate: validateUpgradeIds,
+          fallback: () => bakedUpgradeIds,
+        }),
+        loadSnapshot("snapshot:relicFacts", `${REMOTE_DATA_BASE}/relicFacts.json`, REMOTE_DATA_TTL, {
+          validate: validateRelicFacts,
+          fallback: readBakedRelicFacts,
+        }),
+      ]);
+      upgradeIdsData = uid.value;
+      _relicFactsData = rf.value;
+    } else {
+      _relicFactsData = readBakedRelicFacts();
+    }
+
+    const { RUNE_ITEM_IDS, SIGIL_ITEM_IDS, INFUSION_ITEM_IDS, WVW_INFUSION_IDS, ENRICHMENT_ITEM_IDS, FOOD_ITEM_IDS, UTILITY_ITEM_IDS, RELIC_ITEM_IDS } = hydrateUpgradeIds(upgradeIdsData);
     const _relicFactsIndex = _relicFactsData.relics || {};
 
     const [runeItems, sigilItems, infusionItems, enrichmentItems, foodItems, utilityItems, relicItems] = await Promise.all([
