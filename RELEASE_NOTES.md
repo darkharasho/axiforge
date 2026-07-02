@@ -1,3 +1,9 @@
+## Version v0.11.1 — July 2, 2026
+
+### Bug Fixes
+
+- **Fixed AxiForge failing to launch on Linux (and potentially Windows).** The v0.11.0 build shipped without a data module the app needs at startup, so the AppImage crashed immediately — from AxiOM the app would flip to "Focus" and do nothing but spawn dead background processes, and launching from a terminal reported `Cannot find module '@axiapps/gw2-data/engine'`. The missing module is now bundled with the app, and a safeguard was added so this whole class of packaging gap gets caught before a release ships.
+
 ## Version v0.11.0 — July 1, 2026
 
 ### New Features
