@@ -64,6 +64,57 @@ test("name is carried and restored via the n= param", async () => {
   expect(await api.hashToBuild("#" + hash).then((b) => b.title)).toBe("My Build");
 });
 
+// A build with real heal/utility/elite skills, in the nested shape the editor and
+// build store use (serializeEditorToBuild / loadBuildIntoEditor / saveBuild).
+const BUILD_WITH_SKILLS = {
+  ...BUILD,
+  title: "WvW Power Core Necro",
+  profession: "Necromancer",
+  gameMode: "wvw",
+  skills: {
+    heal: { id: 10561 },
+    utility: [{ id: 10547 }, { id: 10557 }, { id: 19117 }],
+    elite: { id: 10553 },
+  },
+};
+
+test("heal, utility, and elite skills survive buildToHash → hashToBuild", async () => {
+  const api = createShareApi();
+  const hash = await api.buildToHash(BUILD_WITH_SKILLS);
+  const back = await api.hashToBuild("#" + hash);
+  // Skills must come back in the nested shape loadBuildIntoEditor/saveBuild read
+  // — NOT the codec's flat { healId, utilityIds, eliteId }.
+  expect(back.skills.heal).toEqual({ id: 10561 });
+  expect(back.skills.utility.map((s) => s.id)).toEqual([10547, 10557, 19117]);
+  expect(back.skills.elite).toEqual({ id: 10553 });
+});
+
+test("underwater skills are also nested on hash load", async () => {
+  const api = createShareApi();
+  const withUw = {
+    ...BUILD_WITH_SKILLS,
+    underwaterSkills: {
+      heal: { id: 10561 },
+      utility: [{ id: 10547 }],
+      elite: { id: 10553 },
+    },
+  };
+  const hash = await api.buildToHash(withUw);
+  const back = await api.hashToBuild("#" + hash);
+  expect(back.underwaterSkills.heal).toEqual({ id: 10561 });
+  expect(back.underwaterSkills.utility.map((s) => s.id)).toEqual([10547]);
+  expect(back.underwaterSkills.elite).toEqual({ id: 10553 });
+});
+
+test("empty skills decode to the nested empty shape (no crash, no phantom ids)", async () => {
+  const api = createShareApi();
+  const hash = await api.buildToHash(BUILD);
+  const back = await api.hashToBuild("#" + hash);
+  expect(back.skills.heal).toBeNull();
+  expect(back.skills.utility).toEqual([]);
+  expect(back.skills.elite).toBeNull();
+});
+
 test("hashToBuild returns null for empty or invalid hash", async () => {
   const api = createShareApi();
   expect(await api.hashToBuild("")).toBeNull();

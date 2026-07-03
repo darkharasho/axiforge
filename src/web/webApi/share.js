@@ -27,6 +27,24 @@ function b64urlDecode(s) {
   return atob(t);
 }
 
+// The codec returns skills in a FLAT shape ({ healId, utilityIds:[…], eliteId }),
+// but the editor + build store everywhere else expect a NESTED shape
+// ({ heal:{id}, utility:[{id}…], elite:{id} }). The desktop clipboard-import path
+// bridges this with normalizeImportedSkills; the web hash-load path used to skip
+// it, so opening a shared link dropped every skill (heal/utility/elite) — and the
+// editor's auto-resync then rewrote the URL with a skill-less code. Nest here so a
+// decoded shared build matches what loadBuildIntoEditor/saveBuild read.
+function nestSkills(flat) {
+  const s = flat && typeof flat === "object" ? flat : {};
+  const ref = (id) => (Number(id) > 0 ? { id: Number(id) } : null);
+  const ids = Array.isArray(s.utilityIds) ? s.utilityIds : [];
+  return {
+    heal: ref(s.healId),
+    utility: ids.slice(0, 3).map((id) => ref(id)).filter(Boolean),
+    elite: ref(s.eliteId),
+  };
+}
+
 export function createShareApi() {
   // Recover the raw share code from a `b=` value, accepting (in order): a
   // base64url-encoded code (current format), or a raw code (legacy links whose
@@ -58,6 +76,10 @@ export function createShareApi() {
     if (!code) return null;
     try {
       const build = decodeShareCode(code);
+      // Codec emits flat skills; the editor/store expect nested. Convert both the
+      // terrestrial and underwater sets so nothing is dropped on load.
+      build.skills = nestSkills(build.skills);
+      build.underwaterSkills = nestSkills(build.underwaterSkills);
       if (name) build.title = name;
       return build;
     } catch {
