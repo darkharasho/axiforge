@@ -143,7 +143,12 @@ function collectModifiers(ctx, catalogs, overrides) {
       : trait.facts;
 
     const fury = isFuryTrait(trait, traitId, overrides);
+    // A trait may *apply* Fury (Buff/Fury fact) yet grant its own stat bonuses
+    // unconditionally. Furious Demise, for example, grants fury on shroud entry
+    // but its +180 Precision is a flat passive — not "while you have fury". The
+    // unconditionalStats override opts such fury-granting traits out of fury-gating.
     const condition = override?.berserkConditional ? "berserk"
+      : override?.unconditionalStats ? null
       : fury ? "fury" : null;
 
     // 4. AttributeAdjust facts — flatBonus

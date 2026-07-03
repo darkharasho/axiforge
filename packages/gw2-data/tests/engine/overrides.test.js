@@ -14,8 +14,14 @@ describe("overrides module", () => {
       expect(overrides).toBeInstanceOf(Map);
     });
 
-    it("contains exactly 12 entries", () => {
-      expect(overrides.size).toBe(12);
+    it("contains exactly 13 entries", () => {
+      expect(overrides.size).toBe(13);
+    });
+
+    it("trait:803 has unconditionalStats: true", () => {
+      const entry = overrides.get("trait:803");
+      expect(entry).toBeDefined();
+      expect(entry.unconditionalStats).toBe(true);
     });
 
     it("trait:1719 has implicitFury: true", () => {

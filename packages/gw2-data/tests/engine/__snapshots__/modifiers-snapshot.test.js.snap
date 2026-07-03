@@ -893,7 +893,7 @@ exports[`Modifier output snapshots — all stat-affecting traits 803 Furious Dem
 {
   "pve": [
     {
-      "condition": "fury",
+      "condition": null,
       "source": "trait:803",
       "target": "Precision",
       "type": "flatBonus",
@@ -902,7 +902,7 @@ exports[`Modifier output snapshots — all stat-affecting traits 803 Furious Dem
   ],
   "wvw": [
     {
-      "condition": "fury",
+      "condition": null,
       "source": "trait:803",
       "target": "Precision",
       "type": "flatBonus",

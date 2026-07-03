@@ -148,6 +148,32 @@ describe("collectModifiers()", () => {
     expect(flatMods[0].target).toBe("Ferocity");
   });
 
+  it("keeps flat bonuses unconditional for fury-granter traits (unconditionalStats override)", () => {
+    // Furious Demise (803): grants Fury on shroud entry, but its +180 Precision
+    // is a flat passive that must not be gated behind assumed fury.
+    const traitId = 803;
+    const trait = {
+      slot: "Minor",
+      description: "Gain fury when entering shroud. Gain additional precision.",
+      facts: [
+        { type: "Buff", status: "Fury" },
+        { type: "AttributeAdjust", target: "Precision", value: 180 },
+      ],
+    };
+    const catalogs = makeCatalogs({ [traitId]: trait });
+    const ctx = makeCtx([{ id: 1, majorChoices: { 1: traitId } }]);
+    const overrides = makeOverrides({ "trait:803": { unconditionalStats: true } });
+
+    const mods = collectModifiers(ctx, catalogs, overrides);
+    const flatMods = mods.filter((m) => m.type === "flatBonus");
+    expect(flatMods).toHaveLength(1);
+    expect(flatMods[0]).toMatchObject({
+      target: "Precision",
+      value: 180,
+      condition: null,
+    });
+  });
+
   it("excludes pet stat traits (trait 1016 via overrides)", () => {
     const traitId = 1016;
     const trait = {

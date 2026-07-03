@@ -465,7 +465,10 @@ describe("computeFuryStatBonuses — flat stat bonuses while Fury active", () =>
     expect(computeFuryStatBonuses("wvw")).toEqual({ Ferocity: 300 });
   });
 
-  test("returns Precision from Furious Demise (Necromancer)", () => {
+  test("excludes Furious Demise Precision (unconditional, not fury-gated)", () => {
+    // Furious Demise (803) applies Fury on shroud entry but its +180 Precision
+    // is a flat passive. It must NOT be counted as a fury-conditional bonus —
+    // the unconditionalStats override folds it into the base total instead.
     const furiousDemise = {
       id: 803,
       facts: [
@@ -480,7 +483,7 @@ describe("computeFuryStatBonuses — flat stat bonuses while Fury active", () =>
     state.editor.specializations = [
       { specializationId: 1, majorChoices: { 1: 803 } },
     ];
-    expect(computeFuryStatBonuses()).toEqual({ Precision: 180 });
+    expect(computeFuryStatBonuses()).toEqual({});
   });
 
   test("maps ConditionDuration target to Expertise (Sharpening Sorrow)", () => {

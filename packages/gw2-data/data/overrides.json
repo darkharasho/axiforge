@@ -7,6 +7,10 @@
     "petStatOnly": true,
     "description": "Fang and Claw: AttributeAdjust facts apply to pets, not player"
   },
+  "trait:803": {
+    "unconditionalStats": true,
+    "description": "Furious Demise: grants Fury on shroud entry, but its +180 Precision is a flat unconditional bonus (not gated by having fury)"
+  },
   "trait:1765": {
     "mightOverride": { "power": 40, "condi": 20 },
     "description": "Notoriety: modifies Might per-stack values (+40P/+20CD instead of +30P/+30CD)"
