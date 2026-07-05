@@ -598,3 +598,146 @@ describe("collectModifiers()", () => {
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// Trait heal-amount facts vs Healing Power stat facts (issue: GW2Skills-imported
+// Spectre build showed 3020 Healing Power — trait heal amounts like Shadow
+// Savior's 596 were counted as flat Healing Power stat bonuses)
+// ---------------------------------------------------------------------------
+
+describe("collectModifiers() — heal-amount facts are not stat bonuses", () => {
+  function modsForTrait(traitId, trait, ctxExtra = {}) {
+    const catalogs = makeCatalogs({ [traitId]: trait });
+    const ctx = { ...makeCtx([{ id: 20, majorChoices: { 1: traitId } }]), ...ctxExtra };
+    return collectModifiers(ctx, catalogs, makeOverrides());
+  }
+
+  it("ignores heal-amount facts (target Healing, text 'Healing') — Shadow Savior", () => {
+    const mods = modsForTrait(1297, {
+      slot: "Major",
+      facts: [
+        { text: "Healing", type: "AttributeAdjust", value: 596, target: "Healing" },
+        { text: "Radius", type: "Distance", distance: 360 },
+      ],
+    });
+    expect(mods.filter((m) => m.type === "flatBonus")).toHaveLength(0);
+  });
+
+  it("ignores barrier and life-siphon facts (target Healing, other texts)", () => {
+    const mods = modsForTrait(1160, {
+      slot: "Major",
+      facts: [
+        { text: "Barrier", type: "AttributeAdjust", value: 1044, target: "Healing" },
+        { text: "Life Siphon Healing", type: "AttributeAdjust", value: 325, target: "Healing" },
+      ],
+    });
+    expect(mods.filter((m) => m.type === "flatBonus")).toHaveLength(0);
+  });
+
+  it("keeps textless target-Healing facts as HealingPower stat bonuses — Imbued Haste", () => {
+    const mods = modsForTrait(2148, {
+      slot: "Major",
+      facts: [
+        { type: "AttributeAdjust", value: 250, target: "Healing" },
+        { type: "AttributeAdjust", value: 150, target: "Healing" },
+      ],
+    }, { gameMode: "wvw" });
+    const heal = mods.filter((m) => m.type === "flatBonus" && m.target === "HealingPower");
+    expect(heal).toHaveLength(1);
+    expect(heal[0].value).toBe(150); // WvW split picks index 1
+  });
+
+  it("keeps 'Healing Power …' texted facts as stat bonuses — Last Rites style", () => {
+    const mods = modsForTrait(1931, {
+      slot: "Major",
+      facts: [
+        { text: "Healing Power above 75% Health", type: "AttributeAdjust", value: 150, target: "Healing" },
+      ],
+    });
+    const heal = mods.filter((m) => m.type === "flatBonus" && m.target === "HealingPower");
+    expect(heal).toHaveLength(1);
+    expect(heal[0].value).toBe(150);
+  });
+
+  it("keeps textless AttributeAdjust facts for other targets — Preparedness", () => {
+    const mods = modsForTrait(1232, {
+      slot: "Minor",
+      facts: [
+        { type: "AttributeAdjust", value: 150, target: "ConditionDuration" },
+      ],
+    });
+    const exp = mods.filter((m) => m.type === "flatBonus" && m.target === "Expertise");
+    expect(exp).toHaveLength(1);
+    expect(exp[0].value).toBe(150);
+  });
+
+  it("ignores life-siphon damage amounts (target Power) — Vampiric Presence", () => {
+    const mods = modsForTrait(1844, {
+      slot: "Minor",
+      facts: [
+        { text: "Life Siphon Damage", type: "AttributeAdjust", value: 32, target: "Power" },
+        { text: "Damage while in Shroud", type: "AttributeAdjust", value: 62, target: "Power" },
+      ],
+    });
+    expect(mods.filter((m) => m.type === "flatBonus")).toHaveLength(0);
+  });
+
+  it("keeps attribute-named texted facts — Zealous Blade, Aeromancer's Training", () => {
+    const mods = modsForTrait(646, {
+      slot: "Major",
+      facts: [
+        { text: "Power While Wielding Greatsword", type: "AttributeAdjust", value: 120, target: "Power" },
+        { text: "Additional Ferocity", type: "AttributeAdjust", value: 150, target: "CritDamage" },
+      ],
+    });
+    const flat = mods.filter((m) => m.type === "flatBonus");
+    expect(flat.map((m) => [m.target, m.value]).sort()).toEqual([["Ferocity", 150], ["Power", 120]]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Second Opinion (2284) — condition damage doubled while wielding a scepter.
+// Uses the real overrides.json entry + real API fact shape.
+// ---------------------------------------------------------------------------
+
+describe("collectModifiers() — Second Opinion weaponConditional (real overrides)", () => {
+  const { loadOverrides } = require("../../src/engine/overrides");
+  const OVERRIDES = loadOverrides();
+  const TRAIT = {
+    slot: "Major",
+    facts: [
+      { text: "Attribute Conversion", type: "BuffConversion", percent: 7, source: "ConditionDamage", target: "Healing" },
+      { type: "AttributeAdjust", value: 90, target: "ConditionDamage" },
+      { text: "Additional Condition Damage", type: "AttributeAdjust", value: 90, target: "ConditionDamage" },
+    ],
+  };
+
+  function mods(weapons, gameMode = "wvw") {
+    const catalogs = makeCatalogs({ 2284: TRAIT });
+    const ctx = {
+      ...makeCtx([{ id: 71, majorChoices: { 1: 2284 } }], gameMode),
+      equipment: { weapons },
+      activeWeaponSet: 1,
+      underwaterMode: false,
+    };
+    return collectModifiers(ctx, catalogs, OVERRIDES);
+  }
+
+  it("without a scepter: +90 Condition Damage", () => {
+    const condi = mods({ mainhand1: "dagger" }).filter((m) => m.type === "flatBonus" && m.target === "ConditionDamage");
+    expect(condi).toHaveLength(1);
+    expect(condi[0].value).toBe(90);
+  });
+
+  it("with a scepter in the active set: doubled to +180 Condition Damage", () => {
+    const condi = mods({ mainhand1: "scepter", offhand1: "pistol" }).filter((m) => m.type === "flatBonus" && m.target === "ConditionDamage");
+    expect(condi).toHaveLength(1);
+    expect(condi[0].value).toBe(180);
+  });
+
+  it("keeps the 7% ConditionDamage → HealingPower conversion", () => {
+    const conv = mods({ mainhand1: "scepter" }).filter((m) => m.type === "conversion");
+    expect(conv).toHaveLength(1);
+    expect(conv[0]).toMatchObject({ sourceAttr: "ConditionDamage", target: "HealingPower", percent: 7 });
+  });
+});

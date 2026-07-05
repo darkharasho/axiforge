@@ -60,6 +60,32 @@ function isFuryTrait(trait, traitId, overrides) {
   return trait.facts?.some((f) => f.type === "Buff" && f.status === "Fury") || false;
 }
 
+// Attribute name a fact's text must mention (per target) to count as a stat bonus.
+const _ATTR_TEXT_BY_TARGET = {
+  Power: "Power", Precision: "Precision", Toughness: "Toughness", Vitality: "Vitality",
+  Ferocity: "Ferocity", CritDamage: "Ferocity",
+  ConditionDamage: "Condition Damage",
+  Expertise: "Expertise", ConditionDuration: "Expertise",
+  Concentration: "Concentration", BoonDuration: "Concentration",
+  Healing: "Healing Power", HealingPower: "Healing Power",
+};
+
+/**
+ * Trait skill-amount facts (heal, barrier, life-siphon damage/heal) share the
+ * AttributeAdjust fact type with stat bonuses but carry a describing text
+ * ("Healing", "Barrier", "Life Siphon Damage", "Damage while in Shroud", ...).
+ * Genuine stat facts either omit text entirely (Imbued Haste, Preparedness) or
+ * name the attribute ("Additional Condition Damage", "Healing Power below 50%
+ * Health"). Verified against every AttributeAdjust trait fact in the GW2 API.
+ */
+function _isSkillAmountFact(fact) {
+  const text = fact.text;
+  if (!text) return false;
+  const attrName = _ATTR_TEXT_BY_TARGET[fact.target];
+  if (!attrName) return false; // unknown target — leave to downstream mapping
+  return !text.includes(attrName);
+}
+
 /**
  * Return the set of weapon type strings for the active weapon set.
  */
@@ -157,6 +183,7 @@ function collectModifiers(ctx, catalogs, overrides) {
       const byTarget = new Map();
       for (const fact of modeFacts) {
         if (fact.type !== "AttributeAdjust" || !fact.target || fact.value == null) continue;
+        if (_isSkillAmountFact(fact)) continue;
         if (!byTarget.has(fact.target)) byTarget.set(fact.target, []);
         byTarget.get(fact.target).push(fact.value);
       }
@@ -242,4 +269,4 @@ function collectModifiers(ctx, catalogs, overrides) {
   return modifiers;
 }
 
-module.exports = { collectActiveTraitIds, isFuryTrait, collectModifiers };
+module.exports = { collectActiveTraitIds, isFuryTrait, collectModifiers, isSkillAmountFact: _isSkillAmountFact };

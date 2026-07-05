@@ -234,6 +234,10 @@ const _WEAPON_SLOT_MAP = {
   w32: "aquatic2",
 };
 
+// preload.weapon = [mainhand1_id, offhand1_id, mainhand2_id, offhand2_id, aquatic1_id?, aquatic2_id?]
+// weapon table type: 0=offhand-only, 1=one-handed (either), 2=two-handed, 3=underwater
+const _PRELOAD_WEAPON_SLOTS = ["mainhand1", "offhand1", "mainhand2", "offhand2", "aquatic1", "aquatic2"];
+
 const _TRINKET_SLOT_MAP = {
   amulet:   "amulet",
   ring1:    "ring1",
@@ -257,7 +261,7 @@ const _INF_COUNTS = {
  * Map a gw2skills preload.equipment object to axiforge equipment fields.
  * Exported for unit testing.
  */
-function _mapEquipment(eq, statLookup, upgradeMap, upgradeNameIdx, buffMap, buffNameIdx) {
+function _mapEquipment(eq, statLookup, upgradeMap, upgradeNameIdx, buffMap, buffNameIdx, twoHandedSlots = new Set()) {
   const slots = {};
   const runes = {};
   const sigils = {};
@@ -305,14 +309,19 @@ function _mapEquipment(eq, statLookup, upgradeMap, upgradeNameIdx, buffMap, buff
   // ── Weapons ──────────────────────────────────────────────────────────────────
   for (const [gw2Slot, axSlot] of Object.entries(_WEAPON_SLOT_MAP)) {
     const piece = eq.weapon?.[gw2Slot];
-    if (!piece || piece.item?.[0] == null) continue;
+    // gw2skills emits offhand entries with item id 0 that mirror a two-handed
+    // mainhand's second sigil/infusion — skip them entirely to avoid phantom upgrades
+    if (!piece || !piece.item?.[0]) continue;
 
     const s = statName(piece.item[0]);
     if (s) slots[axSlot] = s;
 
-    // Sigils: offhand slots get 1, all others get 2
+    // Sigils: gw2skills lists the whole set's sigil pair on the mainhand entry
+    // and repeats the offhand's own sigil on the offhand entry. A weapon only
+    // has 2 sigil slots of its own when it is two-handed (aquatic weapons always are).
     const isOffhand = axSlot.startsWith("offhand");
-    const sigilCount = isOffhand ? 1 : 2;
+    const isTwoHanded = axSlot.startsWith("aquatic") || twoHandedSlots.has(axSlot);
+    const sigilCount = (isOffhand || !isTwoHanded) ? 1 : 2;
     const sigilArr = [];
     for (let i = 0; i < sigilCount; i++) {
       const sigilId = piece.up?.[i]?.[0];
@@ -320,15 +329,11 @@ function _mapEquipment(eq, statLookup, upgradeMap, upgradeNameIdx, buffMap, buff
     }
     sigils[axSlot] = sigilArr;
 
-    // Infusions
-    const infCount = _INF_COUNTS[axSlot] ?? 1;
-    if (infCount === 1) {
-      infusions[axSlot] = [infName(piece.inf?.[0]) || ""];
-    } else {
-      const arr = [];
-      for (let i = 0; i < infCount; i++) arr.push(infName(piece.inf?.[i]) || "");
-      infusions[axSlot] = arr;
-    }
+    // Infusions: same set-level packing as sigils — 1 slot per 1H weapon, 2 for 2H
+    const infCount = (isOffhand || !isTwoHanded) ? 1 : (_INF_COUNTS[axSlot] ?? 1);
+    const arr = [];
+    for (let i = 0; i < infCount; i++) arr.push(infName(piece.inf?.[i]) || "");
+    infusions[axSlot] = arr;
   }
 
   // ── Trinkets ─────────────────────────────────────────────────────────────────
@@ -494,8 +499,18 @@ async function parseGw2Skills(url, opts = {}) {
 
   const eq = preload.equipment || {};
 
+  // ── Which mainhand slots hold two-handed weapons? ──────────────────────────
+  // Needed by _mapEquipment: gw2skills packs the set's sigil/infusion pair on the
+  // mainhand entry, but only a 2H weapon actually owns both slots.
+  const twoHandedSlots = new Set();
+  (preload.weapon || []).forEach((weaponId, i) => {
+    const axSlot = _PRELOAD_WEAPON_SLOTS[i];
+    if (!axSlot || !axSlot.startsWith("mainhand")) return;
+    if (weaponTypeMap.get(weaponId)?.type === 2) twoHandedSlots.add(axSlot);
+  });
+
   // ── Map equipment (returns name strings for upgrades) ──────────────────────
-  const equipment = _mapEquipment(eq, statLookup, expandedUpgradeMap, upgradeNameIdx, buffMap, buffNameIdx);
+  const equipment = _mapEquipment(eq, statLookup, expandedUpgradeMap, upgradeNameIdx, buffMap, buffNameIdx, twoHandedSlots);
 
   // ── Resolve upgrade names → GW2 numeric item IDs ──────────────────────────
   const runeByName     = new Map(upgradeCatalog.runes.map(r => [r.name, String(r.id)]));
@@ -541,9 +556,6 @@ async function parseGw2Skills(url, opts = {}) {
   }
 
   // ── Weapon types from preload.weapon array ────────────────────────────────
-  // preload.weapon = [mainhand1_id, offhand1_id, mainhand2_id, offhand2_id, aquatic1_id?, aquatic2_id?]
-  // weapon table type: 0=offhand-only, 1=one-handed (either), 2=two-handed, 3=underwater
-  const _PRELOAD_WEAPON_SLOTS = ["mainhand1", "offhand1", "mainhand2", "offhand2", "aquatic1", "aquatic2"];
   const weapons = { ...buildTemplate.equipment?.weapons };
   (preload.weapon || []).forEach((weaponId, i) => {
     if (!weaponId) return;

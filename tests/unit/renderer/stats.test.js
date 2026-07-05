@@ -1314,3 +1314,47 @@ describe("Blood Reaction Berserker trait conversion % (issue #229)", () => {
     state.upgradeCatalog = null;
   });
 });
+
+// ---------------------------------------------------------------------------
+// computeUpgradeModifiers — identical sigils never stack (in-game rule).
+// GW2Skills imports used to duplicate a set's sigil onto both weapons, showing
+// +20% Boon Duration from a single Sigil of Concentration.
+// ---------------------------------------------------------------------------
+
+describe("computeUpgradeModifiers — duplicate identical sigils count once", () => {
+  const { computeUpgradeModifiers } = require("../../../src/renderer/modules/stats");
+
+  afterEach(() => {
+    state.upgradeCatalog = null;
+  });
+
+  function setup(sigils) {
+    state.editor = makeEditor();
+    state.editor.equipment.weapons = { mainhand1: "scepter", offhand1: "pistol" };
+    state.editor.equipment.sigils = sigils;
+    state.editor.activeWeaponSet = 1;
+    state.upgradeCatalog = {
+      runeById: new Map(),
+      sigilById: new Map([
+        [72339, { id: 72339, name: "Superior Sigil of Concentration", buffDescription: "+10% Boon Duration" }],
+        [24618, { id: 24618, name: "Superior Sigil of Battle", buffDescription: "+10% Boon Duration" }],
+      ]),
+      infusionById: new Map(),
+      enrichmentById: new Map(),
+      foodById: new Map(),
+      utilityById: new Map(),
+    };
+  }
+
+  test("same sigil on both active weapons counts once", () => {
+    setup({ mainhand1: ["72339"], offhand1: ["72339"] });
+    const mods = computeUpgradeModifiers();
+    expect(mods.get("Boon Duration")).toBe(10);
+  });
+
+  test("two different sigils still both apply", () => {
+    setup({ mainhand1: ["72339"], offhand1: ["24618"] });
+    const mods = computeUpgradeModifiers();
+    expect(mods.get("Boon Duration")).toBe(20);
+  });
+});

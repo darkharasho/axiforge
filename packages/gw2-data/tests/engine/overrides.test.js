@@ -14,8 +14,14 @@ describe("overrides module", () => {
       expect(overrides).toBeInstanceOf(Map);
     });
 
-    it("contains exactly 13 entries", () => {
-      expect(overrides.size).toBe(13);
+    it("contains exactly 14 entries", () => {
+      expect(overrides.size).toBe(14);
+    });
+
+    it("trait:2284 has weaponConditional doubling on scepter (Second Opinion)", () => {
+      const entry = overrides.get("trait:2284");
+      expect(entry).toBeDefined();
+      expect(entry.weaponConditional).toEqual({ weapons: ["scepter"], multiplier: 2 });
     });
 
     it("trait:803 has unconditionalStats: true", () => {

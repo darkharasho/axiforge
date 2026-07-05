@@ -20,7 +20,7 @@
  */
 
 const path = require("path");
-const { collectModifiers } = require("../../src/engine/modifiers");
+const { collectModifiers, isSkillAmountFact } = require("../../src/engine/modifiers");
 const { loadOverrides } = require("../../src/engine/overrides");
 const { CONVERSION_TARGET_MAP } = require("../../src/engine/constants");
 
@@ -77,8 +77,10 @@ function groupFacts(facts, keyFn, minCount = 2) {
 // ---------------------------------------------------------------------------
 
 describe("Property: AttributeAdjust WvW split (all applicable traits)", () => {
+  // Skill amounts (heal, barrier, life-siphon damage) are not stat bonuses —
+  // mirror the engine's filter when generating expectations.
   const ATTR_KEY = (f) =>
-    f.type === "AttributeAdjust" && f.target ? f.target : null;
+    f.type === "AttributeAdjust" && f.target && !isSkillAmountFact(f) ? f.target : null;
 
   for (const fixture of BROAD.traits) {
     const override = getOverride(fixture.id);

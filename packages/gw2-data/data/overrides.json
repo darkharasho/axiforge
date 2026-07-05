@@ -12,18 +12,25 @@
     "description": "Furious Demise: grants Fury on shroud entry, but its +180 Precision is a flat unconditional bonus (not gated by having fury)"
   },
   "trait:1765": {
-    "mightOverride": { "power": 40, "condi": 20 },
+    "mightOverride": {
+      "power": 40,
+      "condi": 20
+    },
     "description": "Notoriety: modifies Might per-stack values (+40P/+20CD instead of +30P/+30CD)"
   },
   "trait:2220": {
-    "allyTargeted": ["elixir"],
+    "allyTargeted": [
+      "elixir"
+    ],
     "description": "Twisted Medicine: elixir skills become ally-targeted"
   },
   "trait:1831": {
     "description": "Primal Rage: grants access to Primal Bursts (no burst recharge reduction)"
   },
   "trait:1453": {
-    "mightOverride": { "power": 40 },
+    "mightOverride": {
+      "power": 40
+    },
     "description": "Pinnacle of Strength: Might grants +10 bonus Power per stack (40P instead of 30P), +5% passive crit chance"
   },
   "trait:2046": {
@@ -35,7 +42,13 @@
     "description": "Smash Brawler: crit chance bonus only applies while in berserk mode"
   },
   "trait:1338": {
-    "weaponConditional": { "weapons": ["greatsword", "spear"], "multiplier": 2 },
+    "weaponConditional": {
+      "weapons": [
+        "greatsword",
+        "spear"
+      ],
+      "multiplier": 2
+    },
     "description": "Forceful Greatsword: double Power bonus while wielding greatsword or underwater spear"
   },
   "trait:1011": {
@@ -49,5 +62,14 @@
   "trait:1336": {
     "ignoreCritChance": true,
     "description": "Burst Precision: 100% crit chance applies to Burst skills only, not passive"
+  },
+  "trait:2284": {
+    "weaponConditional": {
+      "weapons": [
+        "scepter"
+      ],
+      "multiplier": 2
+    },
+    "description": "Second Opinion: +90 Condition Damage, doubled to +180 while wielding a scepter"
   }
 }

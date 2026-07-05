@@ -279,12 +279,31 @@ describe("_mapEquipment", () => {
     expect(result.runes.feet).toBe("Superior Rune of the Scholar");
   });
 
-  it("maps weapon sigils (mainhand = 2 slots)", () => {
-    expect(result.sigils.mainhand1).toEqual(["Superior Sigil of Force", "Superior Sigil of Accuracy"]);
+  it("maps weapon sigils (1H mainhand = 1 slot; gw2skills lists the set's pair on the mainhand)", () => {
+    expect(result.sigils.mainhand1).toEqual(["Superior Sigil of Force"]);
   });
 
   it("maps weapon sigils (offhand = 1 slot)", () => {
     expect(result.sigils.offhand1).toEqual(["Superior Sigil of Accuracy"]);
+  });
+
+  it("maps weapon sigils (2H mainhand = 2 slots; phantom empty offhand entry skipped)", () => {
+    const twoHandEq = {
+      weapon: {
+        w21: { item: [191, 1], up: [[5, 0], [29, 0]], inf: [344, 344] },
+        // gw2skills emits an offhand entry with no item that mirrors the 2H's
+        // second sigil/infusion — it must not produce phantom upgrades
+        w22: { item: [0, 0], up: [[29, 0]], inf: [344, 0] },
+      },
+      buff: { food: 0, utility: 0 },
+      relic: 0,
+    };
+    const r = _mapEquipment(twoHandEq, statLookup, upgradeMap, upgradeNameIdx, buffMap, buffNameIdx, new Set(["mainhand2"]));
+    expect(r.sigils.mainhand2).toEqual(["Superior Sigil of Force", "Superior Sigil of Accuracy"]);
+    expect(r.sigils.offhand2).toBeUndefined();
+    expect(r.infusions.mainhand2).toEqual(["+5 Agony Infusion", "+5 Agony Infusion"]);
+    expect(r.infusions.offhand2).toBeUndefined();
+    expect(r.slots.offhand2).toBeUndefined();
   });
 
   it("maps food and utility", () => {
@@ -309,8 +328,8 @@ describe("_mapEquipment", () => {
     expect(result.infusions.accessory1).toBe("+5 Agony Infusion");
   });
 
-  it("maps weapon infusions (array)", () => {
-    expect(result.infusions.mainhand1).toEqual(["+5 Agony Infusion", "+5 Agony Infusion"]);
+  it("maps weapon infusions (1H weapons get 1 slot each)", () => {
+    expect(result.infusions.mainhand1).toEqual(["+5 Agony Infusion"]);
     expect(result.infusions.offhand1).toEqual(["+5 Agony Infusion"]);
   });
 

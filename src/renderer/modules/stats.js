@@ -444,8 +444,9 @@ export function computeUpgradeModifiers() {
       ...(Array.isArray(sigils[ohKey]) ? sigils[ohKey] : []),
     ].filter(Boolean);
   }
-  for (const sigilId of activeSigilIds) {
-    const def = upgradeCatalog.sigilById?.get(Number(sigilId));
+  // Identical sigils never stack in-game — count each sigil ID once per set
+  for (const sigilId of new Set(activeSigilIds.map(Number))) {
+    const def = upgradeCatalog.sigilById?.get(sigilId);
     const desc = def?.buffDescription || "";
     const m = PCT_RE.exec(desc);
     if (m) addMod(m[2], Number(m[1]));
