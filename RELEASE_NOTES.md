@@ -1,3 +1,12 @@
+## Version v0.11.2 — July 5, 2026
+
+### Bug Fixes
+
+- **Builds imported from GW2Skills now show correct attributes.** Imported builds could display badly inflated Healing Power (trait heal amounts — like Shadow Savior's or Traversing Dusk's heals — were being counted as Healing Power stat bonuses), too-low Condition Damage on Specter (Second Opinion's bonus is now correctly doubled while wielding a scepter), and too-high Boon Duration (the import duplicated a weapon set's sigils onto both weapons, double-counting Sigil of Concentration). The same cleanup also removes phantom Power and Condition Damage that life-siphon and fear damage numbers were adding on some Necromancer and Thief builds.
+- **Duplicate identical sigils no longer stack.** Matching the in-game rule, equipping the same sigil twice now counts it once — this also corrects the stats of builds imported before this fix, without needing a re-import.
+- **Furious Demise's +180 Precision now always applies** instead of being incorrectly gated behind having Fury.
+- **Shared build links opened in the web app no longer lose their skills.**
+
 ## Version v0.11.1 — July 2, 2026
 
 ### Bug Fixes
