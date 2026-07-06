@@ -63,7 +63,14 @@ async function shareCompToWebhooks(webhooks, webhookIds, shareOne) {
       results.push({ id: w.id, name: w.name, success: false, error: err.message });
     }
   }
-  return { success: results.some((r) => r.success), results };
+  const out = { success: results.some((r) => r.success), results };
+  if (!out.success) {
+    // Surface the real failure reason(s) — the renderer shows out.error in the
+    // error dialog and previously fell back to a bare "Failed to share".
+    const errors = [...new Set(results.map((r) => r.error).filter(Boolean))];
+    if (errors.length) out.error = errors.join(" · ");
+  }
+  return out;
 }
 
 module.exports = { WEBHOOK_RE, getCompWebhooks, shareCompToWebhooks };

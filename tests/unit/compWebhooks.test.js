@@ -98,3 +98,31 @@ describe("shareCompToWebhooks", () => {
     expect(WEBHOOK_RE.test("https://example.com")).toBe(false);
   });
 });
+
+describe("shareCompToWebhooks — error propagation (Discord 'Failed to share' dialog)", () => {
+  const webhooks = [
+    { id: "w1", name: "A", url: "https://discord.com/api/webhooks/1/aaa" },
+    { id: "w2", name: "B", url: "https://discord.com/api/webhooks/2/bbb" },
+  ];
+
+  it("sets a top-level error when every webhook fails, so the UI can show the real reason", async () => {
+    const out = await shareCompToWebhooks(webhooks, null, async (w) =>
+      ({ success: false, error: w.id === "w1" ? "Webhook URL is invalid or has been deleted" : "Discord returned status 400: thread_name" }));
+    expect(out.success).toBe(false);
+    expect(out.error).toContain("Webhook URL is invalid or has been deleted");
+    expect(out.error).toContain("Discord returned status 400");
+  });
+
+  it("deduplicates identical per-webhook errors", async () => {
+    const out = await shareCompToWebhooks(webhooks, null, async () =>
+      ({ success: false, error: "Rate limited by Discord. Try again in a few seconds." }));
+    expect(out.error).toBe("Rate limited by Discord. Try again in a few seconds.");
+  });
+
+  it("sets no top-level error when at least one webhook succeeds", async () => {
+    const out = await shareCompToWebhooks(webhooks, null, async (w) =>
+      (w.id === "w1" ? { success: true } : { success: false, error: "boom" }));
+    expect(out.success).toBe(true);
+    expect(out.error).toBeUndefined();
+  });
+});
