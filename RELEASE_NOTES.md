@@ -1,3 +1,9 @@
+## Version v0.11.3 — July 5, 2026
+
+### Bug Fixes
+
+- **Fixed missing trait stat bonuses introduced in v0.11.2** — the healing-amount cleanup in v0.11.2 was too aggressive and silently dropped a dozen legitimate trait bonuses across six professions, most visibly Thief's Preparedness (+150 Expertise), which showed Expertise 206 instead of 357. All affected trait bonuses (including Fang and Claw, Silent Scope, Soothing Power, and Boon of Creation) apply correctly again.
+
 ## Version v0.11.2 — July 5, 2026
 
 ### Bug Fixes
