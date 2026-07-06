@@ -1,3 +1,9 @@
+## Version v0.11.4 — July 5, 2026
+
+### Bug Fixes
+
+- **Discord sharing now tells you why it failed.** When sharing a build or comp to Discord failed, the app showed a generic "Failed to share" dialog and discarded the actual reason. The dialog now shows Discord's real response — for example a deleted webhook URL, a thread-mode mismatch, or a rate limit — so the problem can be fixed in Settings instead of guessed at.
+
 ## Version v0.11.3 — July 5, 2026
 
 ### Bug Fixes
