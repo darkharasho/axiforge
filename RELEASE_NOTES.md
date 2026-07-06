@@ -1,3 +1,9 @@
+## Version v0.11.5 — July 6, 2026
+
+### Bug Fixes
+
+- **The new AxiForge icon now shows up everywhere.** Discord share embeds and the app's window/taskbar icon were still using the old wordmark logo. Both now use the new duotone anvil icon, so shared builds and the running app match the installer and website branding.
+
 ## Version v0.11.4 — July 5, 2026
 
 ### Bug Fixes
