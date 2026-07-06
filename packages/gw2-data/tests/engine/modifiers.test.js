@@ -741,3 +741,45 @@ describe("collectModifiers() — Second Opinion weaponConditional (real override
     expect(conv[0]).toMatchObject({ sourceAttr: "ConditionDamage", target: "HealingPower", percent: 7 });
   });
 });
+
+// ---------------------------------------------------------------------------
+// Regression (v0.11.2): wiki-enriched facts carry lowercase attribute texts
+// ("expertise", "condition Damage") — the skill-amount filter dropped them,
+// zeroing Preparedness +150 Expertise and 11 other trait bonuses.
+// ---------------------------------------------------------------------------
+
+describe("collectModifiers() — wiki-enriched lowercase fact texts are stat bonuses", () => {
+  function modsForTrait(traitId, trait) {
+    const catalogs = makeCatalogs({ [traitId]: trait });
+    const ctx = makeCtx([{ id: 44, majorChoices: { 1: traitId } }], "wvw");
+    return collectModifiers(ctx, catalogs, makeOverrides());
+  }
+
+  it("keeps lowercase attribute-named texts — Preparedness (wiki-enriched)", () => {
+    const mods = modsForTrait(1232, {
+      slot: "Minor",
+      facts: [{ type: "AttributeAdjust", text: "expertise", target: "Expertise", value: 150 }],
+    });
+    const exp = mods.filter((m) => m.type === "flatBonus" && m.target === "Expertise");
+    expect(exp).toHaveLength(1);
+    expect(exp[0].value).toBe(150);
+  });
+
+  it("keeps mixed-case texts — 'condition Damage'", () => {
+    const mods = modsForTrait(999, {
+      slot: "Major",
+      facts: [{ type: "AttributeAdjust", text: "condition Damage", target: "ConditionDamage", value: 120 }],
+    });
+    const condi = mods.filter((m) => m.type === "flatBonus" && m.target === "ConditionDamage");
+    expect(condi).toHaveLength(1);
+    expect(condi[0].value).toBe(120);
+  });
+
+  it("still drops heal amounts case-insensitively — 'healing' text on target Healing", () => {
+    const mods = modsForTrait(1297, {
+      slot: "Major",
+      facts: [{ type: "AttributeAdjust", text: "healing", target: "Healing", value: 596 }],
+    });
+    expect(mods.filter((m) => m.type === "flatBonus")).toHaveLength(0);
+  });
+});

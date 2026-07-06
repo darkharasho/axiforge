@@ -74,16 +74,19 @@ const _ATTR_TEXT_BY_TARGET = {
  * Trait skill-amount facts (heal, barrier, life-siphon damage/heal) share the
  * AttributeAdjust fact type with stat bonuses but carry a describing text
  * ("Healing", "Barrier", "Life Siphon Damage", "Damage while in Shroud", ...).
- * Genuine stat facts either omit text entirely (Imbued Haste, Preparedness) or
- * name the attribute ("Additional Condition Damage", "Healing Power below 50%
- * Health"). Verified against every AttributeAdjust trait fact in the GW2 API.
+ * Genuine stat facts either omit text entirely (Imbued Haste), name the
+ * attribute ("Additional Condition Damage", "Healing Power below 50% Health"),
+ * or — when wiki-enriched — carry the lowercase attribute name ("expertise",
+ * "condition Damage"), so the comparison must be case-insensitive. Verified
+ * against every AttributeAdjust trait fact in the GW2 API and the
+ * wiki-enriched catalogs of all nine professions.
  */
 function _isSkillAmountFact(fact) {
   const text = fact.text;
   if (!text) return false;
   const attrName = _ATTR_TEXT_BY_TARGET[fact.target];
   if (!attrName) return false; // unknown target — leave to downstream mapping
-  return !text.includes(attrName);
+  return !text.toLowerCase().includes(attrName.toLowerCase());
 }
 
 /**
