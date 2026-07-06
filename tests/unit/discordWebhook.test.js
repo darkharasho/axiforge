@@ -46,7 +46,7 @@ describe("buildCompEmbed", () => {
     expect(embed.fields[1].inline).toBe(true);
     expect(embed.author.name).toBe("AxiForge");
     expect(embed.author.url).toContain("github.com");
-    expect(embed.author.icon_url).toMatch(/AxiForge-White\.png$/);
+    expect(embed.author.icon_url).toMatch(/favicon\.png$/);
   });
 
   test("grid field has one row per party line", () => {

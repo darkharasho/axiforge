@@ -6,7 +6,7 @@ require("dotenv").config({ path: path.resolve(__dirname, "../../.env") });
 for (const stream of [process.stdout, process.stderr]) {
   stream?.on?.("error", (err) => { if (err.code !== "EPIPE") throw err; });
 }
-const { app, BrowserWindow, ipcMain, dialog, clipboard, nativeTheme, nativeImage, screen, shell } = require("electron");
+const { app, BrowserWindow, ipcMain, dialog, clipboard, screen, shell } = require("electron");
 
 // Taskbar identity on X11 — give AxiForge its own WM_CLASS so KDE/GNOME
 // don't group it with whatever process launched electron (e.g. a VS Code
@@ -111,32 +111,8 @@ function _findRootSharedFolder(folderId, folders) {
   return _findRootSharedFolder(folder.parentId, folders);
 }
 
-// On Windows, the taskbar follows the "system" theme (SystemUsesLightTheme)
-// while nativeTheme.shouldUseDarkColors follows the "app" theme. These can
-// differ when the user picks "Custom" under Personalisation → Colors.
-function isWindowsTaskbarDark() {
-  try {
-    const out = require("child_process").execSync(
-      'reg query "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize" /v SystemUsesLightTheme',
-      { encoding: "utf8", windowsHide: true, timeout: 2000 },
-    );
-    const match = out.match(/SystemUsesLightTheme\s+REG_DWORD\s+0x([0-9a-fA-F]+)/);
-    return match ? parseInt(match[1], 16) === 0 : nativeTheme.shouldUseDarkColors;
-  } catch {
-    return nativeTheme.shouldUseDarkColors;
-  }
-}
-
 function getIconPath() {
-  let variant;
-  if (process.platform === "linux") {
-    variant = "White";
-  } else if (process.platform === "win32") {
-    variant = isWindowsTaskbarDark() ? "White" : "Black";
-  } else {
-    variant = nativeTheme.shouldUseDarkColors ? "White" : "Black";
-  }
-  return path.join(__dirname, `../../public/img/AxiForge-${variant}.png`);
+  return path.join(__dirname, "../../public/favicon.png");
 }
 
 function createWindow(savedBounds) {
@@ -442,12 +418,6 @@ const readyWork = app.whenReady().then(async () => {
   } else {
     console.log("[headless] started without a window — services and local API only");
   }
-
-  // Update window icon when system theme changes (light ↔ dark)
-  nativeTheme.on("updated", () => {
-    const icon = nativeImage.createFromPath(getIconPath());
-    mainWindow?.setIcon(icon);
-  });
 
   // Pre-warm all profession catalogs in the background so class switching is instant.
   // Runs sequentially with a short delay between each to avoid hammering the GW2 API.
