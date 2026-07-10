@@ -1,8 +1,14 @@
+import { Buffer as NodeBuffer } from "buffer";
 import "./web.css";
 import "./web-mobile.css";
 import { createWebApi } from "./webApi/index.js";
 import { seedDraftFromHash, initWebChrome } from "./chrome.js";
 import { initWebMobile } from "./web-mobile.js";
+
+// gw2buildlink (GW2 chat-code encode/decode) uses Node's Buffer for base64,
+// which the browser doesn't provide — without this, "Copy chat code" throws
+// "Buffer is not defined". Polyfill it before any chat-link call runs.
+if (typeof globalThis.Buffer === "undefined") globalThis.Buffer = NodeBuffer;
 
 /* global __APP_VERSION__ */
 window.__AXIFORGE_WEB__ = true;
