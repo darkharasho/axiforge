@@ -1,3 +1,10 @@
+## Version v0.11.6 — July 11, 2026
+
+### Bug Fixes
+
+- **Spellbreaker no longer starts with inflated stats.** Selecting the Spellbreaker specialization was adding its Attacker's Insight bonus to your baseline as if it were always active, so a fresh build showed 1250 power in PvE and 1150 in WvW instead of 1000 (Precision and Ferocity were affected too). Attacker's Insight is an in-combat stacking buff you build up, so it's no longer counted in the passive baseline.
+- **Chat codes now generate in the web build.** Copying a GW2 chat code from the web Playground could silently fail; the underlying encoding now works in the browser.
+
 ## Version v0.11.5 — July 6, 2026
 
 ### Bug Fixes
