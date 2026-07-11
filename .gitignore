@@ -11,3 +11,4 @@ src/renderer/index.generated.html
 src/web/public/catalogs/
 test-results/
 playwright-report/
+.playwright-mcp/
