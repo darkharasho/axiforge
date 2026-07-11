@@ -71,5 +71,9 @@
       "multiplier": 2
     },
     "description": "Second Opinion: +90 Condition Damage, doubled to +180 while wielding a scepter"
+  },
+  "trait:2130": {
+    "stackingBuffStats": true,
+    "description": "Attacker's Insight (Spellbreaker minor): its AttributeAdjust facts report the 5-stack max total (250 P/P/F in PvE, 150 in WvW) of an earned in-combat stacking buff, not a passive bonus — exclude from the baseline so a fresh Spellbreaker starts at 1000 power"
   }
 }

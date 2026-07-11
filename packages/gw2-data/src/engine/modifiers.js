@@ -182,7 +182,10 @@ function collectModifiers(ctx, catalogs, overrides) {
 
     // 4. AttributeAdjust facts — flatBonus
     //    Skip for traits with mightOverride (the bonus is folded into per-stack values)
-    if (!override?.mightOverride) {
+    //    Skip for stackingBuffStats traits: their AttributeAdjust facts report the
+    //    max-stack total of an earned, in-combat stacking buff (e.g. Attacker's
+    //    Insight), not a passive bonus — counting them would inflate the baseline.
+    if (!override?.mightOverride && !override?.stackingBuffStats) {
       const byTarget = new Map();
       for (const fact of modeFacts) {
         if (fact.type !== "AttributeAdjust" || !fact.target || fact.value == null) continue;

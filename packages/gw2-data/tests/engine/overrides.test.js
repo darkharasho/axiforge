@@ -14,8 +14,14 @@ describe("overrides module", () => {
       expect(overrides).toBeInstanceOf(Map);
     });
 
-    it("contains exactly 14 entries", () => {
-      expect(overrides.size).toBe(14);
+    it("contains exactly 15 entries", () => {
+      expect(overrides.size).toBe(15);
+    });
+
+    it("trait:2130 excludes stacking-buff stats from the baseline (Attacker's Insight)", () => {
+      const entry = overrides.get("trait:2130");
+      expect(entry).toBeDefined();
+      expect(entry.stackingBuffStats).toBe(true);
     });
 
     it("trait:2284 has weaponConditional doubling on scepter (Second Opinion)", () => {

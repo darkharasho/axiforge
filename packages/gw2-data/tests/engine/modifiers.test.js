@@ -174,6 +174,37 @@ describe("collectModifiers()", () => {
     });
   });
 
+  it("excludes stacking-buff stats from the passive baseline (stackingBuffStats override)", () => {
+    // Attacker's Insight (2130): a Spellbreaker minor whose AttributeAdjust facts
+    // report the max-stack (5×50) total of an earned, in-combat stacking buff.
+    // It must NOT contribute a flat passive bonus.
+    const traitId = 2130;
+    const trait = {
+      slot: "Minor",
+      description: "Gain Insight when disabling foes or removing boons.",
+      facts: [
+        { type: "Buff", text: "Attacker's Insight (effect)", apply_count: 1, description: "50 Power, 50 Precision, 50 Ferocity" },
+        { type: "Number", text: "Maximum Stacks", value: 5 },
+        { type: "AttributeAdjust", target: "Power", value: 250 },
+        { type: "AttributeAdjust", target: "Precision", value: 250 },
+        { type: "AttributeAdjust", target: "Ferocity", value: 250 },
+      ],
+    };
+    const catalogs = makeCatalogs({ [traitId]: trait });
+    const ctx = makeCtx([{ id: 61, majorChoices: { 1: traitId } }], "pve");
+
+    // Without the override, the max-stack stats leak in as a flat passive bonus.
+    const leaked = collectModifiers(ctx, catalogs, makeOverrides())
+      .filter((m) => m.type === "flatBonus");
+    expect(leaked).toHaveLength(3);
+
+    // With the override, no flat passive bonus is emitted.
+    const overrides = makeOverrides({ "trait:2130": { stackingBuffStats: true } });
+    const flatMods = collectModifiers(ctx, catalogs, overrides)
+      .filter((m) => m.type === "flatBonus");
+    expect(flatMods).toHaveLength(0);
+  });
+
   it("excludes pet stat traits (trait 1016 via overrides)", () => {
     const traitId = 1016;
     const trait = {
