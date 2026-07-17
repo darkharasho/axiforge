@@ -1,6 +1,9 @@
 // Serves the playground's GW2 data from baked static JSON (see scripts/bake-catalogs.mjs).
 // No runtime GW2/wiki calls. Results are memoized in memory for the session.
-function createCatalogApi({ fetchImpl = globalThis.fetch.bind(globalThis), base = "./catalogs" } = {}) {
+// base is root-absolute ("/catalogs") so it resolves correctly no matter the
+// page path — short links render the SPA at /b/<slug>, where a relative
+// "./catalogs" would wrongly resolve against /b/<slug>/.
+function createCatalogApi({ fetchImpl = globalThis.fetch.bind(globalThis), base = "/catalogs" } = {}) {
   const memo = new Map();
 
   async function loadJson(file) {

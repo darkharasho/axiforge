@@ -1,13 +1,31 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "axiforge-playground",
+  // The Playground SPA + a small Worker for build-share short links. The Worker
+  // handles /api/shorten, /api/b/<slug> and /b/<slug>; every other path is served
+  // straight from the Vite build (./dist/web) as a static asset.
+  "main": "workers/share-shortener/src/index.js",
   "compatibility_date": "2026-06-29",
-  // Pure static SPA (no Worker script): serve the Vite web build, falling back to
-  // index.html for any path. Static-asset serving on Workers is free + unlimited.
+  // @axiapps/code (used to validate share codes in the Worker) pulls in Buffer.
+  "compatibility_flags": ["nodejs_compat"],
   "assets": {
     "directory": "./dist/web",
-    "not_found_handling": "single-page-application"
+    "binding": "ASSETS",
+    // SPA fallback: unmatched paths return index.html so client routing works.
+    "not_found_handling": "single-page-application",
+    // Route ONLY these to the Worker. Without this, top-level navigations to
+    // /b/<slug> (Sec-Fetch-Mode: navigate) would hit the SPA fallback and skip
+    // the Worker entirely. Everything else is served as a static asset.
+    "run_worker_first": ["/api/*", "/b/*"]
   },
+  // slug -> { code, name } store for short links.
+  "kv_namespaces": [
+    {
+      "binding": "SHARE_SLUGS",
+      "id": "9de700fddbf44c3a9d271c8e7309a147",
+      "preview_id": "b559de0fa5cb426bb5fa8456dc9a1380"
+    }
+  ],
   // Custom domain — axi.link DNS is already on Cloudflare, so the first deploy
   // provisions build.axi.link + its DNS record.
   "routes": [{ "pattern": "build.axi.link", "custom_domain": true }]
