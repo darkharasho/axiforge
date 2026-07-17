@@ -45,7 +45,23 @@ function nestSkills(flat) {
   };
 }
 
-export function createShareApi() {
+// The build name is not part of the share code. Both the URL-hash and short-link
+// forms carry it as a readable side value — but serializeEditorToBuild defaults an
+// unnamed build's title to "Untitled Build", so treat that (and empty) as "no name"
+// rather than polluting the URL / slug input with a placeholder.
+function shareName(build) {
+  const name = String(build?.title || "").trim();
+  return name && name !== "Untitled Build" ? name : "";
+}
+
+export function createShareApi(deps = {}) {
+  // Networked short links need a fetch + endpoints; all are injectable so the
+  // seam is testable in node and the endpoints can move without touching callers.
+  const fetchImpl =
+    deps.fetch || (typeof fetch !== "undefined" ? fetch.bind(globalThis) : null);
+  const shortenEndpoint = deps.shortenEndpoint || "/api/shorten";
+  const resolveEndpoint = deps.resolveEndpoint || "/api/b/";
+
   // Recover the raw share code from a `b=` value, accepting (in order): a
   // base64url-encoded code (current format), or a raw code (legacy links whose
   // percent-encoding happened to survive).
@@ -107,12 +123,59 @@ export function createShareApi() {
     buildToHash: async (build) => {
       const params = new URLSearchParams();
       params.set("b", b64urlEncode(encodeShareCode(build))); // URL-safe alphabet
-      // serializeEditorToBuild defaults an unnamed build's title to "Untitled
-      // Build" — treat that (and empty) as no name so it doesn't pollute the URL.
-      const name = String(build?.title || "").trim();
-      if (name && name !== "Untitled Build") params.set("n", name);
+      const name = shareName(build);
+      if (name) params.set("n", name);
       return params.toString();
     },
     hashToBuild,
+    // Mint a short link (build.axi.link/b/<slug>) by POSTing the raw share code
+    // to the Worker. Returns the absolute URL, or null on ANY failure so the
+    // caller can fall back to the serverless #b= form — sharing never hard-fails
+    // offline or when the Worker is down. This is on-demand only (the Copy-link
+    // button); the live editor hash-sync stays #b= to avoid a request per edit.
+    buildToShortLink: async (build) => {
+      if (!fetchImpl) return null;
+      let code;
+      try {
+        code = encodeShareCode(build);
+      } catch {
+        return null;
+      }
+      const name = shareName(build);
+      const body = name ? { code, name } : { code };
+      try {
+        const res = await fetchImpl(shortenEndpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (!res || !res.ok) return null;
+        const data = await res.json();
+        const url = data && data.url;
+        return typeof url === "string" && url ? url : null;
+      } catch {
+        return null;
+      }
+    },
+    // Resolve a slug (bare "Ab3xK9c" or a "/b/Ab3xK9c" path) back to a build via
+    // the Worker, then run the SAME decode + nestSkills path hashToBuild uses.
+    slugToBuild: async (slugOrPath) => {
+      const slug = String(slugOrPath || "").replace(/^\/?b\//, "").trim();
+      if (!slug || !fetchImpl) return null;
+      try {
+        const res = await fetchImpl(resolveEndpoint + encodeURIComponent(slug));
+        if (!res || !res.ok) return null;
+        const data = await res.json();
+        const code = data && data.code;
+        if (!code || !isValidShareCode(code)) return null;
+        const build = decodeShareCode(code);
+        build.skills = nestSkills(build.skills);
+        build.underwaterSkills = nestSkills(build.underwaterSkills);
+        if (data.name) build.title = data.name;
+        return build;
+      } catch {
+        return null;
+      }
+    },
   };
 }

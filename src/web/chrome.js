@@ -62,8 +62,16 @@ function mountTopBar() {
   bar.querySelector("#webCopyLink").addEventListener("click", async () => {
     try {
       const build = serializeEditorToBuild();
-      const frag = await share.buildToHash(build); // URL-fragment-safe encoded code
-      await window.desktopApi.writeClipboardText(`${location.origin}${location.pathname}#${frag}`);
+      // Prefer a short link (build.axi.link/b/<slug>) — low-entropy URLs don't
+      // trip Google Safe Browsing's phishing heuristic the way the long #b=
+      // base64 blob does. Fall back to the serverless #b= form if the shortener
+      // is unreachable so copying still works offline.
+      let url = await share.buildToShortLink(build);
+      if (!url) {
+        const frag = await share.buildToHash(build);
+        url = `${location.origin}${location.pathname}#${frag}`;
+      }
+      await window.desktopApi.writeClipboardText(url);
       flash(bar.querySelector("#webCopyLink"), "Link copied!");
     } catch {
       flash(bar.querySelector("#webCopyLink"), "Couldn't copy link");
@@ -93,9 +101,15 @@ function mountTopBar() {
   });
 }
 
-// Returns the shared build if the page opened with a valid #code, else null.
+// Returns the shared build if the page opened with a valid share URL, else null.
+// Two entry shapes: a short link (build.axi.link/b/<slug>, resolved via the
+// Worker) or the serverless #b= fragment. The short-link path is tried first
+// since that's the default the Copy-link button now emits.
 export async function seedDraftFromHash() {
-  const build = await share.hashToBuild(location.hash);
+  const slugMatch = location.pathname.match(/\/b\/([A-Za-z0-9]+)\/?$/);
+  const build = slugMatch
+    ? await share.slugToBuild(slugMatch[1])
+    : await share.hashToBuild(location.hash);
   if (!build) return null;
   build.id = "web-draft";
   await window.desktopApi.saveBuild(build);
