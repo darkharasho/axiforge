@@ -153,7 +153,13 @@ jobs:
           git checkout -B "$BRANCH"
           git add src/main/gw2Data
           git commit -m "chore(data): sync GW2 API/wiki snapshots ($DATE)"
-          git push --force-with-lease origin "$BRANCH"
+          # Plain --force, NOT --force-with-lease: actions/checkout does a shallow
+          # single-branch fetch (main only), so there's no remote-tracking ref for
+          # $BRANCH. --force-with-lease then reads a missing/stale lease and rejects
+          # with "stale info" on every run after the branch first exists remotely.
+          # The branch is bot-owned and recreated each run (runs are serialized by
+          # the concurrency group), so a plain force push is safe and intended.
+          git push --force origin "$BRANCH"
 
           {
             echo "Automated refresh of the GW2 data snapshots from the API and wiki. These ship to users at runtime (remote-first data loading), so merging updates the live data without an app release."
