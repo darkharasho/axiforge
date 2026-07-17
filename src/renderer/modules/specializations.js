@@ -135,6 +135,29 @@ export function drawSpecConnector(body) {
   body.prepend(svg);
 }
 
+// Bodies we've already wired an observer to (keyed weakly so re-rendered cards
+// don't accumulate observers, and detached bodies get GC'd with their observer).
+const _observedBodies = typeof WeakSet !== "undefined" ? new WeakSet() : null;
+
+// Redraw a body's connector whenever its box changes size — window resize,
+// browser/OS ZOOM (which does NOT fire a window 'resize' event), --spec-scale,
+// or image/font reflow. The SVG viewBox + path are baked in pixel coords at draw
+// time and preserveAspectRatio="none" skews them if the panel later scales, so
+// the connector must be recomputed from fresh geometry on every size change.
+// RAF-debounced, idempotent per body, and guarded for the jsdom test env.
+export function observeSpecConnector(body) {
+  if (!body || !_observedBodies) return;
+  if (typeof ResizeObserver !== "function") return;
+  if (_observedBodies.has(body)) return;
+  _observedBodies.add(body);
+  let raf = 0;
+  const ro = new ResizeObserver(() => {
+    cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(() => drawSpecConnector(body));
+  });
+  ro.observe(body);
+}
+
 export function renderSpecializations() {
   const catalog = state.activeCatalog;
   if (!_el.specializationsHost) return;
@@ -434,6 +457,7 @@ export function renderSpecializations() {
   if (_el.specializationsHost) {
     for (const body of _el.specializationsHost.querySelectorAll(".spec-card__body")) {
       drawSpecConnector(body);
+      observeSpecConnector(body);
     }
   }
   // Also schedule a single-rAF refinement pass in case layout shifts after images load.
