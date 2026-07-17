@@ -11,7 +11,11 @@ const webSrcDir = path.resolve(repoRoot, "src/web");
 // resolve exactly as in the desktop build. The HTML input is the generated web entry.
 export default defineConfig({
   root: path.resolve(repoRoot, "src/renderer"),
-  base: "./",
+  // Absolute base: the playground is served at the build.axi.link ROOT, and
+  // short-link URLs render the SPA shell at a nested path (/b/<slug>). A relative
+  // "./" base would resolve assets against /b/<slug>/ and fail to load, so pin
+  // asset URLs to the domain root.
+  base: "/",
   publicDir: path.resolve(repoRoot, "src/web/public"),
   optimizeDeps: {
     // Pre-bundle node_module CJS deps that ESM playground files import, so Vite
