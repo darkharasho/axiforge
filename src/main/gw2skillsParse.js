@@ -1,14 +1,20 @@
 "use strict";
 
-const JSON5 = require("json5");
+const acorn = require("acorn");
 const { decodeChatLinkToBuild } = require("./buildChatLink.js");
 
 // ── Page parser ──────────────────────────────────────────────────────────────
 // gw2skills embeds `new BuildEditor({ ..., preload: {…} })` in the page. The
 // top-level arg contains JS expressions (e.g. `showinfo: SI || undefined`) that
 // only a real evaluator could handle — but `preload` itself is plain data. So we
-// extract ONLY the balanced-brace `preload` sub-object and parse it with JSON5
-// (unquoted keys, trailing commas). This is browser/Worker-safe (no `vm`/eval).
+// extract ONLY the balanced-brace `preload` sub-object and evaluate it.
+//
+// The preload is a JS object literal, NOT JSON — it uses NUMERIC keys
+// (`skill: {8:1687, 6:1589}`), which JSON5 rejects outright. Rather than a
+// fragile sanitizer, parse it with a real JS parser (acorn) into an AST and walk
+// the AST as pure data. This matches the tolerance of the desktop's original
+// `vm` eval WITHOUT `eval`/`new Function` (both blocked in Cloudflare Workers),
+// and — unlike a regex — never touches the contents of string values.
 function _extractBalancedObject(src, fromIndex) {
   let depth = 0, start = -1;
   for (let i = fromIndex; i < src.length; i++) {
@@ -17,6 +23,50 @@ function _extractBalancedObject(src, fromIndex) {
     else if (c === "}") { depth--; if (depth === 0) return src.slice(start, i + 1); }
   }
   return null;
+}
+
+// Evaluate a restricted, data-only AST node (object/array/literal). Anything
+// beyond plain data (calls, member access, etc.) throws — we only accept the
+// value shapes gw2skills emits in `preload`.
+function _evalDataNode(node) {
+  switch (node.type) {
+    case "ObjectExpression": {
+      const obj = {};
+      for (const prop of node.properties) {
+        if (prop.type !== "Property") throw new Error(`unexpected ${prop.type}`);
+        // Key is an Identifier (`chatlink`), a string Literal (`"w11"`), or a
+        // numeric Literal (`8`) — all become string object keys.
+        const key = prop.key.type === "Identifier" ? prop.key.name : String(_evalDataNode(prop.key));
+        obj[key] = _evalDataNode(prop.value);
+      }
+      return obj;
+    }
+    case "ArrayExpression":
+      // Elisions (holes) present as null elements.
+      return node.elements.map((el) => (el == null ? null : _evalDataNode(el)));
+    case "Literal":
+      return node.value;
+    case "UnaryExpression": {
+      const v = _evalDataNode(node.argument);
+      if (node.operator === "-") return -v;
+      if (node.operator === "+") return +v;
+      if (node.operator === "!") return !v;
+      throw new Error(`unsupported unary operator ${node.operator}`);
+    }
+    case "Identifier":
+      if (node.name === "undefined") return undefined;
+      if (node.name === "Infinity") return Infinity;
+      if (node.name === "NaN") return NaN;
+      throw new Error(`unexpected identifier ${node.name}`);
+    default:
+      throw new Error(`unsupported node ${node.type}`);
+  }
+}
+
+function _evalObjectLiteral(literal) {
+  // Wrap in parens so a leading `{` is parsed as an object expression, not a block.
+  const expr = acorn.parseExpressionAt(`(${literal})`, 0, { ecmaVersion: 2022 });
+  return _evalDataNode(expr);
 }
 
 function parsePreloadFromHtml(html) {
@@ -34,12 +84,9 @@ function parsePreloadFromHtml(html) {
   const literal = colon === -1 ? null : _extractBalancedObject(html, colon + 1);
   if (!literal) throw new Error("Could not extract preload object");
 
-  // JSON5 supports unquoted keys/trailing commas but NOT bare `undefined`.
-  // gw2skills occasionally emits `key: undefined`; normalize to null before parse.
-  const cleaned = literal.replace(/\bundefined\b/g, "null");
   let preload;
   try {
-    preload = JSON5.parse(cleaned);
+    preload = _evalObjectLiteral(literal);
   } catch (err) {
     throw new Error(`Failed to parse gw2skills preload: ${err.message}`);
   }

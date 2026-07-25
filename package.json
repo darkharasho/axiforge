@@ -160,6 +160,7 @@
   "dependencies": {
     "@axiapps/code": "*",
     "@axiapps/gw2-data": "*",
+    "acorn": "^8.17.0",
     "dotenv": "^17.3.1",
     "electron-log": "^5.4.4",
     "electron-updater": "^6.8.3",
