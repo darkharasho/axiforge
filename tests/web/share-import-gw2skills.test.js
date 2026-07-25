@@ -1,11 +1,6 @@
 const { createShareApi } = require("../../src/web/webApi/share.js");
 
-// Records the URLs it's called with and returns a scripted response. The gw2skills
-// happy path additionally decodes the chat link against the live GW2 API from the
-// browser, which a unit test must not do — so these tests cover what lives in
-// share.js: routing the gw2skills fetches through the Worker proxy, and surfacing
-// the proxy's error. The end-to-end parse is covered by gw2skillsParse's own tests.
-function recordingFetch(response) {
+function fakeFetch(response) {
   const calls = [];
   const fn = async (url) => {
     calls.push(url);
@@ -13,7 +8,6 @@ function recordingFetch(response) {
       ok: response.ok ?? true,
       status: response.status ?? 200,
       json: async () => response.body,
-      text: async () => response.text ?? "",
     };
   };
   fn.calls = calls;
@@ -21,24 +15,25 @@ function recordingFetch(response) {
 }
 
 describe("share.importGw2Skills", () => {
-  it("routes the gw2skills fetch through the Worker proxy (never fetches gw2skills.net directly)", async () => {
-    const fetchImpl = recordingFetch({ ok: false, status: 502, body: { error: "gw2skills.net could not be reached." } });
-    const share = createShareApi({ fetch: fetchImpl, getUpgradeCatalog: async () => ({}) });
-    await expect(
-      share.importGw2Skills("https://en.gw2skills.net/editor/?abc", "My Build", null, "pve")
-    ).rejects.toThrow();
-    // First network call is the proxy with the gw2skills page URL encoded in it.
+  it("makes one request to the Worker with the url + gameMode, returns the Worker-resolved build", async () => {
+    const build = { profession: "Guardian", title: "x", gameMode: "wvw" };
+    const fetchImpl = fakeFetch({ body: { build } });
+    const share = createShareApi({ fetch: fetchImpl });
+    const out = await share.importGw2Skills("https://en.gw2skills.net/editor/?abc", "My Build", null, "pve");
+    expect(fetchImpl.calls).toHaveLength(1);
     expect(fetchImpl.calls[0]).toContain("/api/gw2skills?url=");
-    expect(fetchImpl.calls[0]).toContain(encodeURIComponent("https://en.gw2skills.net/editor/?abc"));
+    expect(fetchImpl.calls[0]).toContain("gameMode=pve"); // editor mode as fallback
+    expect(out.profession).toBe("Guardian");
+    expect(out.name).toBe("My Build");
+    expect(out.gameMode).toBe("wvw"); // Worker's preload mode wins over the fallback
   });
 
-  it("surfaces the proxy's error message", async () => {
+  it("surfaces the Worker's error + detail", async () => {
     const share = createShareApi({
-      fetch: recordingFetch({ ok: false, status: 502, body: { error: "gw2skills.net responded 429." } }),
-      getUpgradeCatalog: async () => ({}),
+      fetch: fakeFetch({ ok: false, status: 502, body: { error: "gw2skills.net could not be reached.", detail: "429" } }),
     });
     await expect(
       share.importGw2Skills("https://en.gw2skills.net/editor/?abc")
-    ).rejects.toThrow(/429/);
+    ).rejects.toThrow(/could not be reached.*429/);
   });
 });

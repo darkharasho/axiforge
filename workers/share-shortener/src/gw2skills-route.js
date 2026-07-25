@@ -1,61 +1,70 @@
 "use strict";
 
-// GET /api/gw2skills?url=<gw2skills url> -> the raw text of that gw2skills.net
-// resource (page HTML or ajax db JSON).
+// GET /api/gw2skills?url=<gw2skills editor url>&gameMode=<pve|wvw|pvp> -> { build }
 //
-// Why a dumb proxy and not a full parse here: the browser can't fetch gw2skills
-// .net (no CORS), but decoding the build's chat link needs many api.guildwars2
-// .com calls — and those 429 from Cloudflare's shared egress IPs. The browser,
-// by contrast, reaches the GW2 API fine over CORS from the user's own IP (this
-// is exactly how chat-link import already works on web). So the Worker only
-// proxies the CORS-blocked gw2skills.net fetches; ALL parsing + GW2-API decoding
-// happens client-side.
+// The whole import runs server-side: fetch the gw2skills page + ajax db (both
+// CORS-blocked in the browser) AND decode the build's chat link against the GW2
+// API. The chat-link decode used to run client-side because Cloudflare's shared
+// egress IPs 429 on api.guildwars2.com — that's now solved by edge-caching the
+// GW2 API responses (see buildChatLink.js's fetch wrapper), so the browser makes
+// a single same-origin request and never has to reach gw2skills.net or the GW2
+// API itself.
 //
-// Written as CommonJS (matching slug.js) so Jest can `require()` it directly.
+// CommonJS (matching slug.js) so Jest can `require()` it directly.
+const { parseGw2Skills } = require("../../../src/main/gw2skillsParse.js");
+
 const json = (obj, status = 200) =>
   new Response(JSON.stringify(obj), {
     status,
     headers: { "content-type": "application/json; charset=utf-8" },
   });
 
-// Only proxy gw2skills.net (and its language subdomains) — never an arbitrary
-// host, or this is an open SSRF proxy.
-const GW2SKILLS_HOST = /(^|\.)gw2skills\.net$/i;
+const GW2SKILLS_RE = /^https?:\/\/(?:[a-z]{2}\.)?gw2skills\.net\/editor\//i;
 
-// `deps.fetch` is injected in tests; production defaults to global fetch.
-async function handleGw2Skills(rawUrl, env, deps = {}) {
-  let parsed;
-  try {
-    parsed = new URL(rawUrl);
-  } catch {
-    return json({ error: "A gw2skills.net URL is required." }, 400);
+// `deps.fetchText` / `deps.getUpgradeCatalog` are injected in tests.
+async function handleGw2Skills(url, env, deps = {}) {
+  if (!url || !GW2SKILLS_RE.test(url)) {
+    return json({ error: "A gw2skills.net editor URL is required." }, 400);
   }
-  if (!/^https?:$/.test(parsed.protocol) || !GW2SKILLS_HOST.test(parsed.hostname)) {
-    return json({ error: "Only gw2skills.net URLs can be imported." }, 400);
-  }
-  const doFetch = deps.fetch || fetch;
-  let res;
-  try {
-    res = await doFetch(parsed.href, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; AxiForge/1.0)",
-        Referer: "https://en.gw2skills.net/",
-        Accept: "text/html,application/json,*/*",
-      },
+  const fetchText =
+    deps.fetchText ||
+    (async (u) => {
+      const r = await fetch(u, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (compatible; AxiForge/1.0)",
+          Referer: "https://en.gw2skills.net/",
+          Accept: "text/html,application/json,*/*",
+        },
+      });
+      if (!r.ok) throw new Error(`gw2skills responded ${r.status}`);
+      return r.text();
     });
+  // Baked catalog served from the SPA's own assets (same shape as desktop's
+  // getUpgradeCatalog("en")). The SPA `not_found_handling` can return index.html
+  // with a 200 for a missing asset, so also reject a non-JSON response.
+  const getUpgradeCatalog =
+    deps.getUpgradeCatalog ||
+    (async () => {
+      const r = await env.ASSETS.fetch(new Request(new URL("/catalogs/upgrades.json", "https://build.axi.link")));
+      if (!r.ok || !(r.headers.get("content-type") || "").includes("json")) {
+        throw new Error("upgrade catalog unavailable");
+      }
+      return r.json();
+    });
+  try {
+    const build = await parseGw2Skills(url, { fetchText, getUpgradeCatalog, gameMode: deps.gameMode });
+    return json({ build });
   } catch (err) {
-    return json({ error: "gw2skills.net could not be reached.", detail: String((err && err.message) || err) }, 502);
+    const msg = String((err && err.message) || err);
+    const upstream = /responded \d+|fetch|network|429|unavailable/i.test(msg);
+    return json(
+      {
+        error: upstream ? "gw2skills.net could not be reached." : "Couldn't read that gw2skills build.",
+        detail: msg,
+      },
+      upstream ? 502 : 400
+    );
   }
-  if (!res.ok) {
-    return json({ error: `gw2skills.net responded ${res.status}.` }, 502);
-  }
-  const body = await res.text();
-  // Pass the upstream content-type through (text/html for the page, JSON for the
-  // ajax db) so the client can treat each appropriately.
-  return new Response(body, {
-    status: 200,
-    headers: { "content-type": res.headers.get("content-type") || "text/plain; charset=utf-8" },
-  });
 }
 
 module.exports = { handleGw2Skills };
