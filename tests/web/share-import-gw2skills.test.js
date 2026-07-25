@@ -1,13 +1,19 @@
 const { createShareApi } = require("../../src/web/webApi/share.js");
 
-function fakeFetch(response) {
+// Records the URLs it's called with and returns a scripted response. The gw2skills
+// happy path additionally decodes the chat link against the live GW2 API from the
+// browser, which a unit test must not do — so these tests cover what lives in
+// share.js: routing the gw2skills fetches through the Worker proxy, and surfacing
+// the proxy's error. The end-to-end parse is covered by gw2skillsParse's own tests.
+function recordingFetch(response) {
   const calls = [];
   const fn = async (url) => {
     calls.push(url);
     return {
       ok: response.ok ?? true,
-      json: async () => response.body,
       status: response.status ?? 200,
+      json: async () => response.body,
+      text: async () => response.text ?? "",
     };
   };
   fn.calls = calls;
@@ -15,30 +21,24 @@ function fakeFetch(response) {
 }
 
 describe("share.importGw2Skills", () => {
-  it("threads gameMode as a fallback query param and returns the Worker-resolved mode", async () => {
-    const build = { profession: "Guardian", title: "x", gameMode: "wvw" };
-    const fetchImpl = fakeFetch({ body: { build } });
-    const share = createShareApi({ fetch: fetchImpl });
-    const out = await share.importGw2Skills("https://en.gw2skills.net/editor/?abc", "My Build", null, "pve");
-    // The editor's current mode ("pve") is passed through as a fallback query
-    // param, NOT used to override the Worker's resolved mode.
-    expect(fetchImpl.calls[0]).toContain("gameMode=pve");
-    expect(out.profession).toBe("Guardian");
-    expect(out.name).toBe("My Build");
-    expect(out.gameMode).toBe("wvw");
+  it("routes the gw2skills fetch through the Worker proxy (never fetches gw2skills.net directly)", async () => {
+    const fetchImpl = recordingFetch({ ok: false, status: 502, body: { error: "gw2skills.net could not be reached." } });
+    const share = createShareApi({ fetch: fetchImpl, getUpgradeCatalog: async () => ({}) });
+    await expect(
+      share.importGw2Skills("https://en.gw2skills.net/editor/?abc", "My Build", null, "pve")
+    ).rejects.toThrow();
+    // First network call is the proxy with the gw2skills page URL encoded in it.
+    expect(fetchImpl.calls[0]).toContain("/api/gw2skills?url=");
+    expect(fetchImpl.calls[0]).toContain(encodeURIComponent("https://en.gw2skills.net/editor/?abc"));
   });
 
-  it("defaults to pve when the Worker's build has no gameMode", async () => {
-    const build = { profession: "Guardian", title: "x" };
-    const share = createShareApi({ fetch: fakeFetch({ body: { build } }) });
-    const out = await share.importGw2Skills("https://en.gw2skills.net/editor/?abc", "My Build", null, "wvw");
-    expect(out.gameMode).toBe("pve");
-  });
-
-  it("throws a clear error when the worker returns an error", async () => {
+  it("surfaces the proxy's error message", async () => {
     const share = createShareApi({
-      fetch: fakeFetch({ ok: false, status: 502, body: { error: "gw2skills.net could not be reached." } }),
+      fetch: recordingFetch({ ok: false, status: 502, body: { error: "gw2skills.net responded 429." } }),
+      getUpgradeCatalog: async () => ({}),
     });
-    await expect(share.importGw2Skills("https://en.gw2skills.net/editor/?abc")).rejects.toThrow(/gw2skills/i);
+    await expect(
+      share.importGw2Skills("https://en.gw2skills.net/editor/?abc")
+    ).rejects.toThrow(/429/);
   });
 });

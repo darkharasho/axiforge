@@ -10,8 +10,10 @@ import { createAxicodeApi } from "./axicode.js";
 // for desktop-only methods; the real modules override where they share a name.
 export function createWebApi({ appVersion } = {}) {
   const catalog = createCatalogApi();
+  // gw2skills import (in share) parses client-side and needs the upgrade catalog;
+  // reuse the memoized catalog rather than a second network fetch.
   const draft = createDraftApi();
-  const share = createShareApi();
+  const share = createShareApi({ getUpgradeCatalog: catalog.getUpgradeCatalog });
   const settings = createSettingsApi();
   const system = createSystemApi({ appVersion });
   const stubs = createStubsApi();
