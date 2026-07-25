@@ -17,6 +17,11 @@ export default defineConfig({
   // asset URLs to the domain root.
   base: "/",
   publicDir: path.resolve(repoRoot, "src/web/public"),
+  resolve: {
+    alias: {
+      zlib: path.resolve(repoRoot, "src/web/shims/zlib.js"),
+    },
+  },
   optimizeDeps: {
     // Pre-bundle node_module CJS deps that ESM playground files import, so Vite
     // synthesizes their named exports (avoids "does not provide named export").
