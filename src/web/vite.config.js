@@ -28,7 +28,7 @@ export default defineConfig({
     // First-party CJS (src/main/buildChatLink.js) is handled by the transform
     // plugin below instead — optimizeDeps does not reliably pre-bundle a
     // first-party file referenced by relative path.
-    include: ["sortablejs", "@axiapps/gw2-data/engine", "@axiapps/code"],
+    include: ["sortablejs", "@axiapps/gw2-data/engine", "@axiapps/code", "acorn"],
     exclude: ["@axiapps/gw2-data"],
   },
   define: {
@@ -59,6 +59,23 @@ export default defineConfig({
               /module\.exports\s*=\s*\{([\s\S]*?)\}\s*;?/,
               "export {$1};"
             ),
+            map: null,
+          };
+        }
+        // src/main/gw2skillsParse.js is first-party CommonJS imported by the web
+        // share API (client-side gw2skills import). Unlike buildChatLink it has
+        // top-level requires, so rewrite those to ESM imports too, plus its
+        // module.exports. On disk it stays CJS for Electron main + Jest + the
+        // Worker bundle (which esbuild handles natively).
+        if (file.endsWith("/src/main/gw2skillsParse.js")) {
+          return {
+            code: code
+              .replace(/const acorn = require\("acorn"\);/, 'import * as acorn from "acorn";')
+              .replace(
+                /const \{ decodeChatLinkToBuild \} = require\("\.\/buildChatLink\.js"\);/,
+                'import { decodeChatLinkToBuild } from "./buildChatLink.js";'
+              )
+              .replace(/module\.exports\s*=\s*\{([\s\S]*?)\}\s*;?/, "export {$1};"),
             map: null,
           };
         }

@@ -11,6 +11,9 @@ import {
   previewChatLink,
   decodeChatLinkToBuild,
 } from "../../main/buildChatLink.js";
+// Static (not dynamic) import: a lazy import() chunk can 404 -> SPA-fallback
+// text/html for a tab left open across a deploy; bundling it in avoids that.
+import { parseGw2Skills } from "../../main/gw2skillsParse.js";
 
 // The AxiForge share code uses a printable-ASCII alphabet full of URL-hostile
 // characters ("<", ">", "%", "&", "+", "#", "?", "!", "*", ...). Percent-encoding
@@ -61,9 +64,16 @@ export function createShareApi(deps = {}) {
     deps.fetch || (typeof fetch !== "undefined" ? fetch.bind(globalThis) : null);
   const shortenEndpoint = deps.shortenEndpoint || "/api/shorten";
   const resolveEndpoint = deps.resolveEndpoint || "/api/b/";
-  // gw2skills import endpoint — the Worker does the whole import server-side and
-  // returns { build } (see importGw2Skills).
+  // gw2skills import: the Worker is a CORS proxy for gw2skills.net text; the
+  // parse + GW2-API chat-link decode run here in the browser (see importGw2Skills).
   const gw2skillsProxy = deps.gw2skillsProxy || "/api/gw2skills";
+  const getUpgradeCatalog =
+    deps.getUpgradeCatalog ||
+    (async () => {
+      const r = await fetchImpl("/catalogs/upgrades.json");
+      if (!r || !r.ok) throw new Error("upgrade catalog unavailable");
+      return r.json();
+    });
 
   // Recover the raw share code from a `b=` value, accepting (in order): a
   // base64url-encoded code (current format), or a raw code (legacy links whose
@@ -120,26 +130,27 @@ export function createShareApi(deps = {}) {
     },
     importGw2Skills: async (url, name, folderId, gameMode) => {
       if (!fetchImpl) throw new Error("Importing from gw2skills.net is not available here.");
-      // One same-origin request: the Worker does the whole import server-side
-      // (scrape gw2skills + decode the chat link against the edge-cached GW2 API)
-      // and returns the finished build. Nothing here depends on the browser being
-      // able to reach gw2skills.net or api.guildwars2.com. The editor's current
-      // mode rides along as a fallback; the Worker gives preload.mode precedence.
-      let reqUrl = `${gw2skillsProxy}?url=${encodeURIComponent(url)}`;
-      if (gameMode) reqUrl += `&gameMode=${encodeURIComponent(gameMode)}`;
-      let res;
-      try {
-        res = await fetchImpl(reqUrl);
-      } catch {
-        throw new Error("gw2skills import is unavailable right now.");
-      }
-      let data = null;
-      try { data = await res.json(); } catch { /* non-JSON */ }
-      if (!res.ok || !data || !data.build) {
-        const base = (data && data.error) || "Couldn't import that gw2skills build.";
-        throw new Error(data && data.detail ? `${base} (${data.detail})` : base);
-      }
-      const build = data.build;
+      // Run the FULL parse here in the browser. gw2skills.net itself is CORS-
+      // blocked, so those two fetches (page + ajax db) go through the Worker
+      // proxy; but the chat-link decode inside parseGw2Skills hits api.guildwars2
+      // .com, which only works from the user's browser (CORS + a non-rate-limited
+      // IP — Cloudflare's shared IPs get 429'd). Same reason chat-link import runs
+      // client-side. The Worker never touches the GW2 API.
+      const fetchText = async (u) => {
+        let res;
+        try {
+          res = await fetchImpl(`${gw2skillsProxy}?url=${encodeURIComponent(u)}`);
+        } catch {
+          throw new Error("gw2skills.net could not be reached.");
+        }
+        if (!res.ok) {
+          let msg = "gw2skills.net could not be reached.";
+          try { const j = await res.json(); if (j && j.error) msg = j.error; } catch { /* non-JSON */ }
+          throw new Error(msg);
+        }
+        return res.text();
+      };
+      const build = await parseGw2Skills(url, { fetchText, getUpgradeCatalog, name, folderId, gameMode });
       return {
         ...build,
         name: name || build.name || build.title,

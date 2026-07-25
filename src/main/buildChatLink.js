@@ -160,19 +160,13 @@ function patchFetchFor429() {
   globalThis.fetch = async function rateLimitedFetch(url, opts) {
     const isGw2 = typeof url === "string" && url.includes("api.guildwars2.com");
     if (!isGw2) return _origFetch(url, opts);
-    // GW2 API data (professions/skills/traits/items) is effectively static, so
-    // edge-cache it. This is what lets the Cloudflare Worker decode server-side
-    // without 429'ing from a shared egress IP — after the first fetch, the (often
-    // shared, e.g. professions?ids=all) response is served from Cloudflare's cache
-    // for a day. `cf` is honored only in Workers; Node/browsers ignore it.
-    const cachedOpts = { ...opts, cf: { cacheTtl: 86400, cacheEverything: true } };
     for (let attempt = 0; attempt < 4; attempt++) {
-      const res = await _origFetch(url, cachedOpts);
+      const res = await _origFetch(url, opts);
       if (res.status !== 429) return res;
       const wait = 1000 * Math.pow(2, attempt); // 1s, 2s, 4s, 8s
       await new Promise((r) => setTimeout(r, wait));
     }
-    return _origFetch(url, cachedOpts); // final attempt — let it throw if still 429
+    return _origFetch(url, opts); // final attempt — let it throw if still 429
   };
 }
 
