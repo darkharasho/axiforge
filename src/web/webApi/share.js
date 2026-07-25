@@ -61,6 +61,7 @@ export function createShareApi(deps = {}) {
     deps.fetch || (typeof fetch !== "undefined" ? fetch.bind(globalThis) : null);
   const shortenEndpoint = deps.shortenEndpoint || "/api/shorten";
   const resolveEndpoint = deps.resolveEndpoint || "/api/b/";
+  const gw2skillsEndpoint = deps.gw2skillsEndpoint || "/api/gw2skills";
 
   // Recover the raw share code from a `b=` value, accepting (in order): a
   // base64url-encoded code (current format), or a raw code (legacy links whose
@@ -115,8 +116,31 @@ export function createShareApi(deps = {}) {
       if (!build) throw new Error("Could not import that chat link.");
       return { ...build, name: name || build.name, folderId: folderId ?? null, gameMode: gameMode || build.gameMode || "pve" };
     },
-    importGw2Skills: async () => {
-      throw new Error("Importing from gw2skills.net is not available in the web playground.");
+    importGw2Skills: async (url, name, folderId, gameMode) => {
+      if (!fetchImpl) throw new Error("Importing from gw2skills.net is not available here.");
+      // The Worker (like desktop's parseGw2Skills) gives preload.mode precedence
+      // over this fallback — threading it as a query param reproduces the same
+      // precedence instead of clobbering the Worker's resolved mode afterward.
+      let reqUrl = `${gw2skillsEndpoint}?url=${encodeURIComponent(url)}`;
+      if (gameMode) reqUrl += `&gameMode=${encodeURIComponent(gameMode)}`;
+      let res;
+      try {
+        res = await fetchImpl(reqUrl);
+      } catch {
+        throw new Error("gw2skills import is unavailable right now.");
+      }
+      let data = null;
+      try { data = await res.json(); } catch { /* non-JSON */ }
+      if (!res.ok || !data || !data.build) {
+        throw new Error((data && data.error) || "Couldn't import that gw2skills build.");
+      }
+      const build = data.build;
+      return {
+        ...build,
+        name: name || build.name || build.title,
+        folderId: folderId ?? null,
+        gameMode: build.gameMode || "pve",
+      };
     },
     // URL-fragment form: "b=<code>&n=<name>". The build name is not part of the
     // share code, so it travels as a readable `n=` param (hashToBuild reads it back).

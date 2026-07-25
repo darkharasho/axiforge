@@ -89,6 +89,14 @@ export default {
       return handleShorten(request, env);
     }
 
+    if (pathname === "/api/gw2skills") {
+      if (request.method !== "GET") return json({ error: "method not allowed" }, 405);
+      const { handleGw2Skills } = await import("./gw2skills-route.js");
+      return handleGw2Skills(url.searchParams.get("url") || "", env, {
+        gameMode: url.searchParams.get("gameMode") || undefined,
+      });
+    }
+
     const resolveMatch = pathname.match(/^\/api\/b\/([^/]+)$/);
     if (resolveMatch) {
       if (request.method !== "GET") return json({ error: "method not allowed" }, 405);

@@ -3,6 +3,7 @@
 
 import { state } from "../state.js";
 import { normalizeImportedSkills } from "../editor.js";
+import { escapeHtml } from "../utils.js";
 
 import {
   loadFolders,
@@ -598,6 +599,13 @@ async function handleImportGw2Skills(targetFolderId) {
   try {
     const gameMode = state.editor?.gameMode || "pve";
     const saved = await window.desktopApi.importGw2Skills(result.url, result.name, folderId, gameMode);
+    if (window.__AXIFORGE_WEB__) {
+      if (_app.confirmDiscardDirty && !_app.confirmDiscardDirty("Load imported build")) return;
+      _app.loadBuildIntoEditor?.(saved);
+      _app.navigateToPage?.("editor");
+      showToast(`"${saved.title || saved.name || "Build"}" loaded`);
+      return;
+    }
     await addImportedBuildToActiveComp(saved);
     state.builds = await window.desktopApi.listBuilds();
     renderLibrary();
@@ -657,6 +665,26 @@ async function handleExportAxicodeFolder(folderId) {
 }
 
 async function handleImportAxicodeFile(targetFolderId) {
+  if (window.__AXIFORGE_WEB__) {
+    const result = await window.desktopApi.importAxicodeFile();
+    if (!result || result.cancelled) return;
+    if (result.error) {
+      showToast(result.error, "error");
+      return;
+    }
+    const builds = result.builds || [];
+    if (builds.length === 0) {
+      showToast("No builds found in that file.", "error");
+      return;
+    }
+    const chosen = builds.length === 1 ? builds[0] : await showAxicodeBuildPickerModal(builds);
+    if (!chosen) return;
+    if (_app.confirmDiscardDirty && !_app.confirmDiscardDirty("Load imported build")) return;
+    _app.loadBuildIntoEditor?.(chosen);
+    _app.navigateToPage?.("editor");
+    showToast(`"${chosen.title || chosen.name || "Build"}" loaded`);
+    return;
+  }
   const folderId = targetFolderId ?? (state.currentFolder?.type === "custom" ? state.currentFolder.id : null);
   await handleAxicodeImport(folderId, renderLibrary, showToast);
 }
@@ -1687,6 +1715,53 @@ function showGw2SkillsImportModal() {
     overlay.querySelector('[data-action="cancel"]').addEventListener("click", () => dismiss(null));
     importBtn.addEventListener("click", () => {
       dismiss({ url: urlInput.value.trim(), name: nameInput.value.trim() || "Imported Build" });
+    });
+    overlay.addEventListener("click", (e) => { if (e.target === overlay) dismiss(null); });
+  });
+}
+
+function showAxicodeBuildPickerModal(builds) {
+  return new Promise((resolve) => {
+    const overlay = document.createElement("div");
+    overlay.className = "confirm-modal-overlay";
+    const rows = builds
+      .map((build, i) => {
+        const label = escapeHtml(build.title || build.name || "Untitled");
+        return `<button class="confirm-modal__btn" data-index="${i}" style="width:100%;text-align:left;margin-bottom:6px;">${label}</button>`;
+      })
+      .join("");
+    overlay.innerHTML = `
+      <div class="confirm-modal" style="width:460px;max-width:90vw;">
+        <div class="confirm-modal__header">
+          <h3 class="confirm-modal__title">Choose a build to import</h3>
+        </div>
+        <div class="confirm-modal__body" style="display:flex;flex-direction:column;gap:4px;max-height:50vh;overflow-y:auto;">
+          ${rows}
+        </div>
+        <div class="confirm-modal__actions">
+          <button class="confirm-modal__btn" data-action="cancel">Cancel</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    function dismiss(result) {
+      document.removeEventListener("keydown", onKey);
+      overlay.remove();
+      resolve(result);
+    }
+
+    function onKey(e) {
+      if (e.key === "Escape") dismiss(null);
+    }
+
+    document.addEventListener("keydown", onKey);
+    overlay.querySelector('[data-action="cancel"]').addEventListener("click", () => dismiss(null));
+    overlay.querySelectorAll("[data-index]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const idx = Number(btn.dataset.index);
+        dismiss(builds[idx]);
+      });
     });
     overlay.addEventListener("click", (e) => { if (e.target === overlay) dismiss(null); });
   });
