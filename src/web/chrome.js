@@ -61,9 +61,16 @@ function mountTopBar() {
         <button type="button" class="web-topbar__menu-item" data-import="axicode" role="menuitem">${ICON_AXI}<span>From .axicode file…</span></button>
       </div>
     </div>
-    <button id="webCopyLink" type="button" class="web-topbar__btn web-topbar__btn--primary">${ICON_LINK}<span class="web-topbar__btn-label">Copy share link</span></button>
-    <button id="webCopyAxi" type="button" class="web-topbar__btn">${ICON_AXI}<span class="web-topbar__btn-label">Copy axi code</span></button>
-    <button id="webCopyChat" type="button" class="web-topbar__btn">${ICON_CHAT}<span class="web-topbar__btn-label">Copy chat code</span></button>
+    <div class="web-topbar__split" id="webCopySplit">
+      <button id="webCopyLink" type="button" class="web-topbar__btn web-topbar__btn--primary web-topbar__split-main">${ICON_LINK}<span class="web-topbar__btn-label">Copy share link</span></button>
+      <button id="webCopyMore" type="button" class="web-topbar__btn web-topbar__btn--primary web-topbar__split-toggle" aria-haspopup="true" aria-expanded="false" aria-label="More copy options">
+        <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8l5 5 5-5"/></svg>
+      </button>
+      <div class="web-topbar__menu-list" role="menu">
+        <button id="webCopyAxi" type="button" class="web-topbar__menu-item" role="menuitem">${ICON_AXI}<span>Copy axi code</span></button>
+        <button id="webCopyChat" type="button" class="web-topbar__menu-item" role="menuitem">${ICON_CHAT}<span>Copy chat code</span></button>
+      </div>
+    </div>
     <a id="webGetApp" class="web-topbar__cta" href="${MARKETING_URL}" target="_blank" rel="noopener noreferrer">Get the desktop app</a>
   `;
   document.body.prepend(bar);
@@ -95,6 +102,29 @@ function mountTopBar() {
       if (item.dataset.import === "gw2skills") handleImportGw2Skills(null);
       else if (item.dataset.import === "axicode") handleImportAxicodeFile(null);
     });
+  });
+
+  // Split "Copy" control: the primary button copies the share link; the attached
+  // caret reveals axi/chat code copy options (which keep their original handlers).
+  const copySplit = bar.querySelector("#webCopySplit");
+  const copyMore = bar.querySelector("#webCopyMore");
+  const closeCopyMenu = () => {
+    copySplit.classList.remove("web-topbar__split--open");
+    copyMore.setAttribute("aria-expanded", "false");
+  };
+  copyMore.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const open = copySplit.classList.toggle("web-topbar__split--open");
+    copyMore.setAttribute("aria-expanded", open ? "true" : "false");
+  });
+  copySplit.querySelectorAll(".web-topbar__menu-item").forEach((item) =>
+    item.addEventListener("click", closeCopyMenu)
+  );
+  document.addEventListener("click", (e) => {
+    if (!copySplit.contains(e.target)) closeCopyMenu();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeCopyMenu();
   });
 
   bar.querySelector("#webCopyLink").addEventListener("click", async () => {

@@ -132,7 +132,9 @@ export function createShareApi(deps = {}) {
       let data = null;
       try { data = await res.json(); } catch { /* non-JSON */ }
       if (!res.ok || !data || !data.build) {
-        throw new Error((data && data.error) || "Couldn't import that gw2skills build.");
+        const base = (data && data.error) || "Couldn't import that gw2skills build.";
+        // Include the Worker's diagnostic detail so the toast is actionable.
+        throw new Error(data && data.detail ? `${base} (${data.detail})` : base);
       }
       const build = data.build;
       return {

@@ -128,6 +128,23 @@
 .web-topbar__menu-item:hover { background: rgba(255, 255, 255, 0.08); }
 .web-topbar__menu-item svg { flex: 0 0 auto; opacity: 0.85; }
 
+/* Split "Copy" button: primary "Copy share link" + attached caret dropdown for
+   the axi/chat code options. */
+.web-topbar__split { position: relative; display: inline-flex; }
+.web-topbar__split-main {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+.web-topbar__split-toggle {
+  padding-inline: 7px;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  border-left: 1px solid rgba(0, 0, 0, 0.22);
+}
+/* Menu hangs from the right edge so it can't overflow past the top bar. */
+.web-topbar__split .web-topbar__menu-list { left: auto; right: 0; }
+.web-topbar__split--open .web-topbar__menu-list { display: flex; }
+
 /* Single-build playground: keep Build Title + Profession, drop Tags. Two even
    columns instead of the desktop's three. */
 .is-web .toolbar-grid > label:has(#tagsInput) {

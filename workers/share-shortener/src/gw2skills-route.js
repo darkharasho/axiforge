@@ -53,8 +53,14 @@ async function handleGw2Skills(url, env, deps = {}) {
   } catch (err) {
     const msg = String((err && err.message) || err);
     const upstream = /responded \d+|fetch|network/i.test(msg);
+    // Surface the underlying reason as `detail` so the client can show a specific
+    // message (e.g. "Could not find dbid" / a json5 parse error) instead of a
+    // dead-end generic failure. The message is scrape/parse diagnostics, not secret.
     return json(
-      { error: upstream ? "gw2skills.net could not be reached." : "Couldn't read that gw2skills build." },
+      {
+        error: upstream ? "gw2skills.net could not be reached." : "Couldn't read that gw2skills build.",
+        detail: msg,
+      },
       upstream ? 502 : 400
     );
   }

@@ -613,7 +613,7 @@ export async function handleImportGw2Skills(targetFolderId) {
     showToast(`"${saved.title}" imported`);
   } catch (err) {
     console.error("GW2Skills import failed:", err);
-    showToast("GW2Skills import failed", "error");
+    showToast(err?.message ? `GW2Skills import failed: ${err.message}` : "GW2Skills import failed", "error");
   }
 }
 
