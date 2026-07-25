@@ -598,6 +598,12 @@ async function handleImportGw2Skills(targetFolderId) {
   try {
     const gameMode = state.editor?.gameMode || "pve";
     const saved = await window.desktopApi.importGw2Skills(result.url, result.name, folderId, gameMode);
+    if (window.__AXIFORGE_WEB__) {
+      _app.loadBuildIntoEditor?.(saved);
+      _app.navigateToPage?.("editor");
+      showToast(`"${saved.title || saved.name || "Build"}" loaded`);
+      return;
+    }
     await addImportedBuildToActiveComp(saved);
     state.builds = await window.desktopApi.listBuilds();
     renderLibrary();
