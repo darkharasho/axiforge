@@ -3,6 +3,7 @@
 // boots. Reads the live editor via the renderer's own module exports.
 import { serializeEditorToBuild, loadBuildIntoEditor } from "../renderer/modules/editor.js";
 import { state } from "../renderer/modules/state.js";
+import { handleImportGw2Skills, handleImportAxicodeFile } from "../renderer/modules/library/library.js";
 import { createShareApi } from "./webApi/share.js";
 
 const share = createShareApi();
@@ -12,6 +13,7 @@ const MARKETING_URL = "https://darkharasho.github.io/axiforge/";
 const ICON_LINK = `<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 11.5a3 3 0 0 0 4.24 0l2-2a3 3 0 1 0-4.24-4.24l-1 1"/><path d="M11.5 8.5a3 3 0 0 0-4.24 0l-2 2a3 3 0 1 0 4.24 4.24l1-1"/></svg>`;
 const ICON_CHAT = `<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2.5L16.5 6.25V13.75L10 17.5L3.5 13.75V6.25L10 2.5Z"/><path d="M6.25 7.9H8.75M11.25 7.9H13.75"/><circle cx="10" cy="7.9" r="1.25" fill="currentColor" stroke="none"/><path d="M6.25 10H8.75M11.25 10H13.75"/><circle cx="10" cy="10" r="1.25" fill="currentColor" stroke="none"/><path d="M6.25 12.1H8.75M11.25 12.1H13.75"/><circle cx="10" cy="12.1" r="1.25" fill="currentColor" stroke="none"/></svg>`;
 const ICON_AXI = `<svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path d="M15.98 1.804a1 1 0 0 0-1.96 0l-.24 1.192a1 1 0 0 1-.784.785l-1.192.238a1 1 0 0 0 0 1.962l1.192.238a1 1 0 0 1 .785.785l.238 1.192a1 1 0 0 0 1.962 0l.238-1.192a1 1 0 0 1 .785-.785l1.192-.238a1 1 0 0 0 0-1.962l-1.192-.238a1 1 0 0 1-.785-.785l-.238-1.192ZM6.949 5.684a1 1 0 0 0-1.898 0l-.683 2.051a1 1 0 0 1-.633.633l-2.051.683a1 1 0 0 0 0 1.898l2.051.684a1 1 0 0 1 .633.632l.683 2.051a1 1 0 0 0 1.898 0l.683-2.051a1 1 0 0 1 .633-.633l2.051-.683a1 1 0 0 0 0-1.898l-2.051-.683a1 1 0 0 1-.633-.633L6.95 5.684ZM13.949 13.684a1 1 0 0 0-1.898 0l-.184.551a1 1 0 0 1-.632.633l-.551.183a1 1 0 0 0 0 1.898l.551.183a1 1 0 0 1 .633.633l.183.551a1 1 0 0 0 1.898 0l.184-.551a1 1 0 0 1 .632-.633l.551-.183a1 1 0 0 0 0-1.898l-.551-.184a1 1 0 0 1-.633-.632l-.183-.551Z"/></svg>`;
+const ICON_IMPORT = `<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2.5v9m0 0 3-3m-3 3-3-3"/><path d="M3.5 13.5v2a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1v-2"/></svg>`;
 
 function debounce(fn, ms) {
   let t;
@@ -52,12 +54,48 @@ function mountTopBar() {
       <span class="web-topbar__name">Axi<span class="web-topbar__brand-accent">Forge</span></span>
       <span class="web-topbar__beta">Playground</span>
     </span>
+    <div class="web-topbar__menu" id="webImportMenu">
+      <button id="webImportBtn" type="button" class="web-topbar__btn" aria-haspopup="true" aria-expanded="false">${ICON_IMPORT}<span class="web-topbar__btn-label">Import build</span></button>
+      <div class="web-topbar__menu-list" role="menu">
+        <button type="button" class="web-topbar__menu-item" data-import="gw2skills" role="menuitem">${ICON_CHAT}<span>From gw2skills.net…</span></button>
+        <button type="button" class="web-topbar__menu-item" data-import="axicode" role="menuitem">${ICON_AXI}<span>From .axicode file…</span></button>
+      </div>
+    </div>
     <button id="webCopyLink" type="button" class="web-topbar__btn web-topbar__btn--primary">${ICON_LINK}<span class="web-topbar__btn-label">Copy share link</span></button>
     <button id="webCopyAxi" type="button" class="web-topbar__btn">${ICON_AXI}<span class="web-topbar__btn-label">Copy axi code</span></button>
     <button id="webCopyChat" type="button" class="web-topbar__btn">${ICON_CHAT}<span class="web-topbar__btn-label">Copy chat code</span></button>
     <a id="webGetApp" class="web-topbar__cta" href="${MARKETING_URL}" target="_blank" rel="noopener noreferrer">Get the desktop app</a>
   `;
   document.body.prepend(bar);
+
+  const importMenu = bar.querySelector("#webImportMenu");
+  const importBtn = bar.querySelector("#webImportBtn");
+  const closeImportMenu = () => {
+    importMenu.classList.remove("web-topbar__menu--open");
+    importBtn.setAttribute("aria-expanded", "false");
+  };
+  importBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const open = importMenu.classList.toggle("web-topbar__menu--open");
+    importBtn.setAttribute("aria-expanded", open ? "true" : "false");
+  });
+  // Dismiss the menu on any outside click or Escape.
+  document.addEventListener("click", (e) => {
+    if (!importMenu.contains(e.target)) closeImportMenu();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeImportMenu();
+  });
+  importMenu.querySelectorAll("[data-import]").forEach((item) => {
+    item.addEventListener("click", () => {
+      closeImportMenu();
+      // The library handlers (shared with desktop) carry the __AXIFORGE_WEB__
+      // branch: prompt/pick → import via the web API → loadBuildIntoEditor.
+      // There is no library on web, so folderId is null.
+      if (item.dataset.import === "gw2skills") handleImportGw2Skills(null);
+      else if (item.dataset.import === "axicode") handleImportAxicodeFile(null);
+    });
+  });
 
   bar.querySelector("#webCopyLink").addEventListener("click", async () => {
     try {

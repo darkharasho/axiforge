@@ -92,6 +92,42 @@
 .web-topbar__cta { opacity: 0.85; text-decoration: none; white-space: nowrap; }
 .web-topbar__cta:hover { opacity: 1; text-decoration: underline; }
 
+/* Import dropdown in the web top bar (the library toolbar's import menu is hidden
+   on web, so this is the single-build playground's entry point for importing). */
+.web-topbar__menu { position: relative; display: inline-flex; }
+.web-topbar__menu-list {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 210px;
+  display: none;
+  flex-direction: column;
+  padding: 6px;
+  gap: 2px;
+  background: var(--panel, #14161c);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  z-index: 60;
+}
+.web-topbar__menu--open .web-topbar__menu-list { display: flex; }
+.web-topbar__menu-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 7px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  white-space: nowrap;
+}
+.web-topbar__menu-item:hover { background: rgba(255, 255, 255, 0.08); }
+.web-topbar__menu-item svg { flex: 0 0 auto; opacity: 0.85; }
+
 /* Single-build playground: keep Build Title + Profession, drop Tags. Two even
    columns instead of the desktop's three. */
 .is-web .toolbar-grid > label:has(#tagsInput) {

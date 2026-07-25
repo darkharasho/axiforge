@@ -591,7 +591,7 @@ async function handleImportChatLink(targetFolderId) {
   }
 }
 
-async function handleImportGw2Skills(targetFolderId) {
+export async function handleImportGw2Skills(targetFolderId) {
   const folderId = targetFolderId ?? (state.currentFolder?.type === "custom" ? state.currentFolder.id : null);
   const result = await showGw2SkillsImportModal();
   if (!result) return;
@@ -664,7 +664,7 @@ async function handleExportAxicodeFolder(folderId) {
   await handleAxicodeExport(null, folderId, showToast);
 }
 
-async function handleImportAxicodeFile(targetFolderId) {
+export async function handleImportAxicodeFile(targetFolderId) {
   if (window.__AXIFORGE_WEB__) {
     const result = await window.desktopApi.importAxicodeFile();
     if (!result || result.cancelled) return;
