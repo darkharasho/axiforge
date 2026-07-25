@@ -4,6 +4,7 @@ import { createShareApi } from "./share.js";
 import { createSettingsApi } from "./settings.js";
 import { createSystemApi } from "./system.js";
 import { createStubsApi } from "./stubs.js";
+import { createAxicodeApi } from "./axicode.js";
 
 // Assemble the full browser desktopApi. Order matters: stubs provide safe defaults
 // for desktop-only methods; the real modules override where they share a name.
@@ -14,6 +15,7 @@ export function createWebApi({ appVersion } = {}) {
   const settings = createSettingsApi();
   const system = createSystemApi({ appVersion });
   const stubs = createStubsApi();
+  const axicode = createAxicodeApi();
 
   return {
     ...stubs,
@@ -22,5 +24,6 @@ export function createWebApi({ appVersion } = {}) {
     ...share,
     ...settings,
     ...system,
+    ...axicode,
   };
 }
