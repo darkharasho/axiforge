@@ -158,8 +158,17 @@ function patchFetchFor429() {
   if (_fetchPatched) return;
   _fetchPatched = true;
   globalThis.fetch = async function rateLimitedFetch(url, opts) {
-    const isGw2 = typeof url === "string" && url.includes("api.guildwars2.com");
+    const urlStr = typeof url === "string" ? url : url && url.url;
+    const isGw2 = typeof urlStr === "string" && urlStr.includes("api.guildwars2.com");
     if (!isGw2) return _origFetch(url, opts);
+    // Baked mode (web/Worker): a host installs __GW2_BAKED_FETCH__ to answer GW2
+    // API requests from static data — no live call (Cloudflare IPs 429; browser
+    // calls are fragile). Desktop leaves it unset and uses the live API below.
+    const baked = globalThis.__GW2_BAKED_FETCH__;
+    if (typeof baked === "function") {
+      const res = await baked(urlStr);
+      if (res) return res;
+    }
     for (let attempt = 0; attempt < 4; attempt++) {
       const res = await _origFetch(url, opts);
       if (res.status !== 429) return res;

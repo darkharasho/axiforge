@@ -109,9 +109,10 @@
     "gen:web-html": "node scripts/gen-web-html.mjs",
     "dev:web": "npm run gen:web-html && vite --config src/web/vite.config.js",
     "bake:catalogs": "node scripts/bake-catalogs.mjs",
-    "build:web": "npm run bake:catalogs && npm run gen:web-html && vite build --config src/web/vite.config.js && node -e \"require('fs').copyFileSync('dist/web/index.generated.html','dist/web/index.html')\"",
+    "build:web": "npm run bake:catalogs && npm run bake:gw2api && npm run gen:web-html && vite build --config src/web/vite.config.js && node -e \"require('fs').copyFileSync('dist/web/index.generated.html','dist/web/index.html')\"",
     "test:playground": "npx playwright test --config tests/playground/playwright.config.js",
-    "deploy:web": "npm run build:web && wrangler deploy"
+    "deploy:web": "npm run build:web && wrangler deploy",
+    "bake:gw2api": "node scripts/bake-gw2api.mjs"
   },
   "jest": {
     "testEnvironment": "node",

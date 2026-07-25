@@ -1,62 +1,64 @@
 "use strict";
 
-// The Worker route is a thin CORS proxy for gw2skills.net (all parsing + the
-// GW2-API chat-link decode happen client-side, where CORS works and the IP isn't
-// rate-limited). So these tests cover the proxy contract: host allow-listing,
-// pass-through of the upstream body, and upstream-error handling.
-const { handleGw2Skills } = require("../../workers/share-shortener/src/gw2skills-route.js");
-
-describe("handleGw2Skills (gw2skills.net proxy)", () => {
-  it("rejects a non-gw2skills host with 400 and never fetches it", async () => {
-    let fetched = false;
-    const res = await handleGw2Skills("https://evil.example/x", {}, {
-      fetch: async () => { fetched = true; return new Response("nope"); },
-    });
-    expect(res.status).toBe(400);
-    expect(fetched).toBe(false);
-  });
-
-  it("rejects a malformed url with 400", async () => {
-    const res = await handleGw2Skills("not a url", {}, { fetch: async () => new Response("x") });
-    expect(res.status).toBe(400);
-  });
-
-  it("proxies a gw2skills.net url, passing the body and content-type through", async () => {
-    const res = await handleGw2Skills("https://en.gw2skills.net/editor/?abc", {}, {
-      fetch: async (href) => {
-        expect(href).toBe("https://en.gw2skills.net/editor/?abc");
-        return new Response("<html>build editor</html>", {
-          status: 200,
-          headers: { "content-type": "text/html; charset=utf-8" },
-        });
+// The route runs the full gw2skillsParse pipeline server-side. The chat-link
+// decode (decodeChatLinkToBuild) is exercised end-to-end against baked GW2 API
+// data elsewhere; here we mock it (as tests/unit/gw2skillsImport.test.js does) so
+// the route contract can be tested without shipping the baked datasets into Jest.
+function stubEnv() {
+  return {
+    ASSETS: {
+      fetch: async (req) => {
+        const path = new URL(req.url).pathname;
+        if (path.endsWith("upgrades.json")) {
+          return new Response(
+            JSON.stringify({ runes: [], sigils: [], infusions: [], enrichments: [], foods: [], utilities: [] }),
+            { headers: { "content-type": "application/json; charset=utf-8" } }
+          );
+        }
+        return new Response("[]", { headers: { "content-type": "application/json" } });
       },
-    });
-    expect(res.status).toBe(200);
-    expect(res.headers.get("content-type")).toContain("text/html");
-    expect(await res.text()).toBe("<html>build editor</html>");
+    },
+  };
+}
+
+describe("handleGw2Skills (server-side parse, baked decode)", () => {
+  afterEach(() => {
+    delete globalThis.__GW2_BAKED_FETCH__;
+    jest.dontMock("../../src/main/buildChatLink.js");
+    jest.resetModules();
   });
 
-  it("also proxies the ajax db sub-resource", async () => {
-    const res = await handleGw2Skills("https://en.gw2skills.net/ajax/db/en.1780959497.json", {}, {
-      fetch: async () => new Response('{"upgrade":{}}', { headers: { "content-type": "application/json" } }),
-    });
-    expect(res.status).toBe(200);
-    expect(await res.text()).toBe('{"upgrade":{}}');
+  it("rejects a non-gw2skills url with 400", async () => {
+    const { handleGw2Skills } = require("../../workers/share-shortener/src/gw2skills-route.js");
+    const res = await handleGw2Skills("https://evil.example/x", stubEnv(), { fetchText: async () => "" });
+    expect(res.status).toBe(400);
   });
 
-  it("returns 502 when gw2skills is unreachable", async () => {
-    const res = await handleGw2Skills("https://en.gw2skills.net/editor/?abc", {}, {
-      fetch: async () => { throw new Error("network down"); },
-    });
-    expect(res.status).toBe(502);
+  it("installs the baked GW2-API hook so decode never hits the live API", async () => {
+    let sawBakedHook = false;
+    jest.doMock("../../src/main/buildChatLink.js", () => ({
+      decodeChatLinkToBuild: async () => {
+        sawBakedHook = typeof globalThis.__GW2_BAKED_FETCH__ === "function";
+        return { profession: "Guardian", specializations: [], equipment: { weapons: {} } };
+      },
+    }));
+    const { handleGw2Skills } = require("../../workers/share-shortener/src/gw2skills-route.js");
+    const html = `new BuildEditor({ dbid: 1, showinfo: SI, preload: { chatlink: "DQYfHSkb", mode: "pve", equipment: {} } })`;
+    const fetchText = async (u) =>
+      u.includes("/ajax/db/") ? JSON.stringify({ upgrade: { desc: [], rows: [] } }) : html;
+    const res = await handleGw2Skills("https://en.gw2skills.net/editor/?abc", stubEnv(), { fetchText });
+    expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.error).toMatch(/could not be reached/i);
+    expect(body.build).toBeTruthy();
+    expect(body.build.profession).toBeDefined();
+    expect(sawBakedHook).toBe(true); // decode ran with the baked hook installed
   });
 
-  it("returns 502 when gw2skills responds non-2xx", async () => {
-    const res = await handleGw2Skills("https://en.gw2skills.net/editor/?abc", {}, {
-      fetch: async () => new Response("rate limited", { status: 429 }),
-    });
+  it("returns 502 with a detail when the upstream fetch fails", async () => {
+    const { handleGw2Skills } = require("../../workers/share-shortener/src/gw2skills-route.js");
+    const fetchText = async () => { throw new Error("Failed to fetch: network down"); };
+    const res = await handleGw2Skills("https://en.gw2skills.net/editor/?abc", stubEnv(), { fetchText });
     expect(res.status).toBe(502);
+    expect((await res.json()).detail).toMatch(/network down/);
   });
 });
