@@ -165,6 +165,7 @@
     "electron-updater": "^6.8.3",
     "gw2-class-icons": "^0.3.0",
     "gw2buildlink": "^0.3.0",
+    "json5": "^2.2.3",
     "marked": "^17.0.4",
     "sortablejs": "^1.15.7"
   },
