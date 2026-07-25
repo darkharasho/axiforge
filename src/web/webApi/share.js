@@ -11,6 +11,9 @@ import {
   previewChatLink,
   decodeChatLinkToBuild,
 } from "../../main/buildChatLink.js";
+// Static (not dynamic) import: a lazy import() chunk can 404 -> SPA-fallback
+// text/html for a tab left open across a deploy; bundling it in avoids that.
+import { parseGw2Skills } from "../../main/gw2skillsParse.js";
 
 // The AxiForge share code uses a printable-ASCII alphabet full of URL-hostile
 // characters ("<", ">", "%", "&", "+", "#", "?", "!", "*", ...). Percent-encoding
@@ -147,7 +150,6 @@ export function createShareApi(deps = {}) {
         }
         return res.text();
       };
-      const { parseGw2Skills } = await import("../../main/gw2skillsParse.js");
       const build = await parseGw2Skills(url, { fetchText, getUpgradeCatalog, name, folderId, gameMode });
       return {
         ...build,
