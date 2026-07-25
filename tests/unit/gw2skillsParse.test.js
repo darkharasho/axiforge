@@ -54,4 +54,29 @@ describe("parsePreloadFromHtml (acorn core)", () => {
     expect(() => parsePreloadFromHtml(`<script>new BuildEditor({ dbid: 1, showinfo: SI })</script>`))
       .toThrow(/preload/i);
   });
+  // gear-only / profession-less builds have chatlink: null — parse must still
+  // return the preload (parseGw2Skills falls back to it), not throw.
+  it("does not require a chatlink (gear-only builds have chatlink: null)", () => {
+    const r = parsePreloadFromHtml(makeHtml(`{ chatlink: null, mode: "pvp", profession: 0, equipment: {} }`));
+    expect(r.preload.chatlink).toBeNull();
+    expect(r.preload.mode).toBe("pvp");
+  });
+});
+
+describe("_baseBuildFromPreload", () => {
+  const { _baseBuildFromPreload } = require("../../src/main/gw2skillsParse.js");
+  const db = { profession: { desc: ["id", "name"], rows: [[7, "Engineer"], [1, "Elementalist"]] } };
+
+  it("builds a minimal base from the preload's profession (no chat link needed)", () => {
+    const base = _baseBuildFromPreload({ profession: 7 }, db, "Gear Set", null, "pvp");
+    expect(base.profession).toBe("Engineer");
+    expect(base.title).toBe("Gear Set");
+    expect(base.gameMode).toBe("pvp");
+    expect(base.skills).toEqual({ heal: null, utility: [], elite: null });
+    expect(base.specializations).toEqual([]);
+  });
+
+  it("returns null when there is no profession (nothing importable)", () => {
+    expect(_baseBuildFromPreload({ profession: 0 }, db, null, null, "pvp")).toBeNull();
+  });
 });

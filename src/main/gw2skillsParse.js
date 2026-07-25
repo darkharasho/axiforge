@@ -90,8 +90,46 @@ function parsePreloadFromHtml(html) {
   } catch (err) {
     throw new Error(`Failed to parse gw2skills preload: ${err.message}`);
   }
-  if (!preload || !preload.chatlink) throw new Error("No chatlink in gw2skills preload");
+  if (!preload) throw new Error("No preload found in BuildEditor args");
+  // NOTE: preload.chatlink may be null — gw2skills omits the GW2 chat link for
+  // gear-only / profession-less builds. parseGw2Skills falls back to the preload's
+  // own fields in that case (see _baseBuildFromPreload).
   return { preload, dbid };
+}
+
+// A minimal base build assembled directly from the preload, for gw2skills builds
+// that have no GW2 chat link (gear-only / incomplete builds). Profession comes
+// from the db's profession table; skills/traits are NOT recoverable without the
+// chat link (they live in gw2skills' proprietary qlink), so they stay empty and
+// the equipment/stat mapping fills in the rest. Returns null if there's no
+// profession — then there's genuinely nothing to import as a build.
+function _baseBuildFromPreload(preload, db, name, folderId, gameMode) {
+  const profTable = db && db.profession;
+  let professionName = "";
+  if (profTable && Array.isArray(profTable.rows) && Array.isArray(profTable.desc)) {
+    const idIdx = profTable.desc.indexOf("id");
+    const nameIdx = profTable.desc.indexOf("name");
+    const row = profTable.rows.find((r) => r[idIdx] === preload.profession);
+    if (row) professionName = row[nameIdx] || "";
+  }
+  if (!professionName) return null;
+  const emptySkills = () => ({ heal: null, utility: [], elite: null });
+  return {
+    title: name,
+    profession: professionName,
+    specializations: [],
+    skills: emptySkills(),
+    underwaterSkills: emptySkills(),
+    weaponSkills: [],
+    equipment: { weapons: {} },
+    selectedLegends: ["", ""],
+    selectedUnderwaterLegends: ["", ""],
+    selectedPets: { terrestrial1: 0, terrestrial2: 0, aquatic1: 0, aquatic2: 0 },
+    morphSkillIds: [0, 0, 0],
+    chatCode: "",
+    ...(folderId ? { folderId } : {}),
+    ...(gameMode ? { gameMode } : {}),
+  };
 }
 
 // ── Stat name lookup ───────────────────────────────────────────────────────────
@@ -443,13 +481,21 @@ async function parseGw2Skills(url, deps = {}) {
     return raw;
   }
 
-  // Decode build template (profession, specs, traits, skills)
-  const chatLink = `[&${preload.chatlink}]`;
-  const [buildTemplate, db, upgradeCatalog] = await Promise.all([
-    decodeChatLinkToBuild(chatLink, name, folderId, buildGameMode),
+  // Decode the build template (profession, specs, traits, skills) from the GW2
+  // chat link. Gear-only / profession-less gw2skills builds have no chat link —
+  // fall back to a minimal base assembled from the preload itself.
+  const chatLink = preload.chatlink ? `[&${preload.chatlink}]` : null;
+  const [decoded, db, upgradeCatalog] = await Promise.all([
+    chatLink ? decodeChatLinkToBuild(chatLink, name, folderId, buildGameMode) : Promise.resolve(null),
     fetchDb(dbid),
     getUpgradeCatalog(),
   ]);
+  const buildTemplate = decoded || _baseBuildFromPreload(preload, db, name, folderId, buildGameMode);
+  if (!buildTemplate) {
+    throw new Error(
+      "This gw2skills build has no profession or skills to import — it looks like a gear-only or empty template."
+    );
+  }
 
   // ── Build gw2skills lookup helpers ──────────────────────────────────────────
   const statLookup = _buildStatLookup(db);
@@ -605,5 +651,5 @@ module.exports = {
   parsePreloadFromHtml,
   parseGw2Skills,
   _buildStatLookup, _normalizeStatName, _lookupUpgradeName,
-  _lookupBuffName, _mapEquipment, _extractMorphSkillIds,
+  _lookupBuffName, _mapEquipment, _extractMorphSkillIds, _baseBuildFromPreload,
 };
