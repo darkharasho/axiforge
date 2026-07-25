@@ -7,7 +7,14 @@
 // and require the route module fresh (via jest.resetModules) after mocking so
 // gw2skillsParse.js's `require("./buildChatLink.js")` picks up the stub.
 function stubEnv(upgrades) {
-  return { ASSETS: { fetch: async () => new Response(JSON.stringify(upgrades)) } };
+  return {
+    ASSETS: {
+      fetch: async () =>
+        new Response(JSON.stringify(upgrades), {
+          headers: { "content-type": "application/json; charset=utf-8" },
+        }),
+    },
+  };
 }
 
 describe("handleGw2Skills", () => {

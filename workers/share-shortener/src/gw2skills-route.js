@@ -38,11 +38,17 @@ async function handleGw2Skills(url, env, deps = {}) {
   const getUpgradeCatalog = async () => {
     const assetUrl = new URL("/catalogs/upgrades.json", "https://build.axi.link");
     const r = await env.ASSETS.fetch(new Request(assetUrl));
-    if (!r.ok) throw new Error("upgrade catalog unavailable");
+    // Under the SPA's `not_found_handling`, a missing asset can resolve to
+    // index.html with a 200 status instead of a 404 — so also reject when the
+    // response isn't actually JSON, or this masquerades as a generic parse
+    // error instead of the upstream/operational failure it really is.
+    if (!r.ok || !(r.headers.get("content-type") || "").includes("json")) {
+      throw new Error("upgrade catalog unavailable");
+    }
     return r.json();
   };
   try {
-    const build = await parseGw2Skills(url, { fetchText, getUpgradeCatalog });
+    const build = await parseGw2Skills(url, { fetchText, getUpgradeCatalog, gameMode: deps.gameMode });
     return json({ build });
   } catch (err) {
     const msg = String((err && err.message) || err);

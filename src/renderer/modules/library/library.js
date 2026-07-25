@@ -600,6 +600,7 @@ async function handleImportGw2Skills(targetFolderId) {
     const gameMode = state.editor?.gameMode || "pve";
     const saved = await window.desktopApi.importGw2Skills(result.url, result.name, folderId, gameMode);
     if (window.__AXIFORGE_WEB__) {
+      if (_app.confirmDiscardDirty && !_app.confirmDiscardDirty("Load imported build")) return;
       _app.loadBuildIntoEditor?.(saved);
       _app.navigateToPage?.("editor");
       showToast(`"${saved.title || saved.name || "Build"}" loaded`);
@@ -678,6 +679,7 @@ async function handleImportAxicodeFile(targetFolderId) {
     }
     const chosen = builds.length === 1 ? builds[0] : await showAxicodeBuildPickerModal(builds);
     if (!chosen) return;
+    if (_app.confirmDiscardDirty && !_app.confirmDiscardDirty("Load imported build")) return;
     _app.loadBuildIntoEditor?.(chosen);
     _app.navigateToPage?.("editor");
     showToast(`"${chosen.title || chosen.name || "Build"}" loaded`);

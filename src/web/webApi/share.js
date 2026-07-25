@@ -118,9 +118,14 @@ export function createShareApi(deps = {}) {
     },
     importGw2Skills: async (url, name, folderId, gameMode) => {
       if (!fetchImpl) throw new Error("Importing from gw2skills.net is not available here.");
+      // The Worker (like desktop's parseGw2Skills) gives preload.mode precedence
+      // over this fallback — threading it as a query param reproduces the same
+      // precedence instead of clobbering the Worker's resolved mode afterward.
+      let reqUrl = `${gw2skillsEndpoint}?url=${encodeURIComponent(url)}`;
+      if (gameMode) reqUrl += `&gameMode=${encodeURIComponent(gameMode)}`;
       let res;
       try {
-        res = await fetchImpl(`${gw2skillsEndpoint}?url=${encodeURIComponent(url)}`);
+        res = await fetchImpl(reqUrl);
       } catch {
         throw new Error("gw2skills import is unavailable right now.");
       }
@@ -134,7 +139,7 @@ export function createShareApi(deps = {}) {
         ...build,
         name: name || build.name || build.title,
         folderId: folderId ?? null,
-        gameMode: gameMode || build.gameMode || "pve",
+        gameMode: build.gameMode || "pve",
       };
     },
     // URL-fragment form: "b=<code>&n=<name>". The build name is not part of the
