@@ -77,6 +77,10 @@ async function crawlWithWorkers(browser, entities, splitsIndex, relicFactsData, 
     skills_checked: 0, traits_checked: 0, relics_checked: 0, signets_checked: 0, total_checked: 0,
     matches: 0, mismatches: 0, missing_from_splits: 0,
     missing_from_wiki: 0, no_split: 0, errors: 0,
+    // Fact-bearing (relic/signet) pages that crawled with zero wiki facts.
+    // Used to detect an IP-blocked crawl (the wiki serves empty pages), which
+    // would otherwise flag every entry as spurious drift.
+    wiki_empty: 0,
   };
   const discrepancies = [];
   const errors = [];
@@ -128,6 +132,7 @@ async function crawlWithWorkers(browser, entities, splitsIndex, relicFactsData, 
         const wikiFacts = crawlResult.facts
           .map((f) => parseFactText(f.name, f.valueText, f.titleAttr))
           .filter(Boolean);
+        if (wikiFacts.length === 0) summary.wiki_empty++;
         const cmp = compareRelicFacts(wikiFacts, storedEntry?.facts || null);
 
         switch (cmp.category) {
@@ -170,6 +175,7 @@ async function crawlWithWorkers(browser, entities, splitsIndex, relicFactsData, 
         const wikiFacts = crawlResult.facts
           .map((f) => parseFactText(f.name, f.valueText, f.titleAttr))
           .filter(Boolean);
+        if (wikiFacts.length === 0) summary.wiki_empty++;
         // Lenient: signet passives are hand-curated and not reliably machine-
         // extractable, so only flag a genuine value change on a matched fact.
         const cmp = compareRelicFacts(wikiFacts, storedEntry?.facts || null, { lenient: true });
@@ -363,10 +369,19 @@ async function main() {
   // 6. Close browser
   await browser.close();
 
-  // 7. Write report
+  // 7. Detect an IP-blocked crawl: the wiki serves datacenter/CI IPs a
+  // near-empty page, so fact-bearing pages crawl with zero facts and every
+  // entry compares as spurious drift. If most fact-bearing pages came back
+  // empty, mark the report inconclusive so the summary doesn't report a wall
+  // of phantom mismatches.
+  const factChecked = summary.relics_checked + summary.signets_checked;
+  const crawlBlocked = factChecked >= 10 && summary.wiki_empty >= factChecked * 0.8;
+
+  // 8. Write report
   const report = {
     timestamp,
     duration_ms: Date.now() - startTime,
+    crawl_blocked: crawlBlocked,
     summary,
     discrepancies,
     errors,
@@ -374,7 +389,14 @@ async function main() {
 
   const reportPath = await writeReport(report, incremental);
 
-  // 8. Print summary
+  if (crawlBlocked) {
+    console.warn(
+      `\n⚠ Wiki crawl appears BLOCKED: ${summary.wiki_empty}/${factChecked} fact-bearing pages returned no facts. ` +
+        `Audit is INCONCLUSIVE — treat flagged drift as noise and re-run from a non-blocked IP.`,
+    );
+  }
+
+  // 9. Print summary
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
   console.log("── Summary ──");
   console.log(`  Checked:             ${summary.total_checked} (${summary.skills_checked} skills, ${summary.traits_checked} traits, ${summary.relics_checked} relics, ${summary.signets_checked} signets)`);

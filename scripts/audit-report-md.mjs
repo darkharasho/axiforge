@@ -95,15 +95,25 @@ async function main() {
   const tableRows = [];
   const allDiscrepancies = [];
 
+  const blockedTypes = [];
   for (const t of TYPES) {
     const r = chosen.get(t.key);
     if (!r) continue;
     const s = r.data.summary;
+    // A blocked crawl (wiki served empty pages to the runner IP) makes every
+    // fact-bearing entry look like drift. Mark it inconclusive and don't count
+    // its phantom mismatches toward the flagged total.
+    const blocked = !!r.data.crawl_blocked;
     tableRows.push(
-      `| ${t.label} | ${s[t.checked]} | ${s.matches} | ${s.mismatches} | ${s.missing_from_splits} | ${s.no_split} | ${s.errors} |`
+      `| ${t.label} | ${s[t.checked]} | ${s.matches} | ${s.mismatches} | ${s.missing_from_splits} | ${s.no_split} | ${s.errors} |` +
+        (blocked ? " ⚠️ crawl blocked — inconclusive" : "")
     );
     if (!seen.has(r.file)) {
       seen.add(r.file);
+      if (blocked) {
+        if (!blockedTypes.includes(t.label)) blockedTypes.push(t.label);
+        continue; // skip phantom mismatches/discrepancies from a blocked crawl
+      }
       totalMismatch += s.mismatches || 0;
       totalMissing += s.missing_from_splits || 0;
       totalErrors += s.errors || 0;
@@ -124,9 +134,20 @@ async function main() {
     out.push("");
   }
 
+  if (blockedTypes.length) {
+    out.push(
+      `> ⚠️ **Wiki crawl blocked** for ${blockedTypes.join(", ")} — the wiki served the runner IP empty pages, so those types are **inconclusive** this run (not counted below). Re-run the audit from a non-blocked IP.`
+    );
+    out.push("");
+  }
+
   const flagged = totalMismatch + totalMissing;
   if (flagged === 0 && totalErrors === 0) {
-    out.push("✅ No drift detected — committed snapshots match the wiki.");
+    out.push(
+      blockedTypes.length
+        ? "✅ No drift detected in the types that crawled successfully."
+        : "✅ No drift detected — committed snapshots match the wiki."
+    );
   } else {
     out.push(
       `⚠️ **${flagged}** entit${flagged === 1 ? "y" : "ies"} flagged for review` +
