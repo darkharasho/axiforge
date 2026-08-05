@@ -66,6 +66,7 @@ jobs:
         run: node scripts/sync-upgrade-ids.mjs
 
       - name: Sync relic facts (wiki scrape)
+        id: relicfacts
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.sync }}
         continue-on-error: true
         run: node scripts/sync-relic-facts.mjs
@@ -93,8 +94,18 @@ jobs:
 
       - name: Build audit summary
         id: summary
+        env:
+          # 'failure' when the relic-facts crawl collapsed (the wiki blocks CI
+          # IPs) and the in-script guard refused to overwrite relicFacts.json.
+          RELICFACTS_OUTCOME: ${{ steps.relicfacts.outcome }}
         run: |
           node scripts/audit-report-md.mjs > audit-summary.md
+          if [ "$RELICFACTS_OUTCOME" = "failure" ]; then
+            {
+              echo
+              echo "> ⚠️ **Relic facts were not refreshed this run.** The wiki blocks GitHub Actions IPs, so the crawl came back empty and the guard in \`sync-relic-facts.mjs\` preserved the existing \`relicFacts.json\` (fail-safe). To update relic facts, run \`node scripts/sync-relic-facts.mjs\` locally (a non-blocked IP) and commit the result."
+            } >> audit-summary.md
+          fi
           cat audit-summary.md
 
       - name: Upload audit reports
