@@ -1,8 +1,11 @@
 // Upgrade item IDs for GW2 API fetching.
-// Runes, sigils, and relics are wiki-synced — regenerate with:
-//   node scripts/sync-upgrade-ids.mjs [relics|runes|sigils]
-// Infusions, enrichments, food, and utility lists are still hand-curated
-// because the wiki categories don't cleanly map to the picker subset we want.
+// Runes, sigils, and relics are fully wiki-synced (block rewritten); food and
+// utility are additively synced — the curated lower-tier entries are kept and
+// only new Exotic/Ascended stat items get appended (marked "auto-added").
+// Regenerate with:
+//   node scripts/sync-upgrade-ids.mjs [relics|runes|sigils|food|utility]
+// Infusions and enrichments remain fully hand-curated because the wiki
+// categories don't cleanly map to the picker subset we want.
 
 const RUNE_ITEM_IDS = [
   24687, // Superior Rune of the Afflicted
@@ -279,6 +282,8 @@ const FOOD_ITEM_IDS = [
   92078, 95277, 95421, 95520, 95556, 95847, 95942, 96285, 96578, 96707,
   96793, 96898, 96916, 97200, 97282, 97422, 97472, 97592, 97767, 97771,
   97826, 98924, 99785, 99794, 99804, 105402,
+  107101, // New Year Rice Cake (auto-added)
+  109776, // Elder Draco-Pop (auto-added)
 ];
 
 // Utility consumables (sharpening stones, maintenance oils, tuning crystals, writs, etc.)
