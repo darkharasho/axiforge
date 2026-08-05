@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-05-17T04:45:53.652Z",
+  "updatedAt": "2026-08-05T17:49:57.708Z",
   "relics": {
     "99965": {
       "name": "Relic of the Flock",
@@ -2622,19 +2622,110 @@
     },
     "109264": {
       "name": "Relic of Galdra",
-      "facts": []
+      "facts": [
+        {
+          "type": "Damage",
+          "text": "Damage",
+          "dmg_multiplier": 0.2,
+          "hit_count": 1
+        },
+        {
+          "type": "Damage",
+          "text": "Damage",
+          "dmg_multiplier": 0.1,
+          "hit_count": 1
+        },
+        {
+          "type": "Buff",
+          "text": "Burning",
+          "status": "Burning",
+          "duration": 10,
+          "apply_count": 1
+        },
+        {
+          "type": "Buff",
+          "text": "Burning",
+          "status": "Burning",
+          "duration": 6,
+          "apply_count": 1
+        },
+        {
+          "type": "Number",
+          "text": "Number of Targets",
+          "value": 5
+        },
+        {
+          "type": "Recharge",
+          "text": "Recharge",
+          "value": 30
+        }
+      ]
     },
     "109267": {
       "name": "Relic of the Sacred Grounds",
-      "facts": []
+      "facts": [
+        {
+          "type": "Buff",
+          "text": "Protection",
+          "status": "Protection",
+          "duration": 4,
+          "apply_count": 1
+        },
+        {
+          "type": "Buff",
+          "text": "Protection",
+          "status": "Protection",
+          "duration": 3,
+          "apply_count": 1
+        }
+      ]
     },
     "109351": {
       "name": "Relic of the Director",
-      "facts": []
+      "facts": [
+        {
+          "type": "Percent",
+          "text": "Damage Increase",
+          "percent": 10
+        },
+        {
+          "type": "Buff",
+          "text": "Vulnerability",
+          "status": "Vulnerability",
+          "duration": 8,
+          "apply_count": 1
+        },
+        {
+          "type": "Time",
+          "text": "Duration",
+          "duration": 6
+        },
+        {
+          "type": "Recharge",
+          "text": "Recharge",
+          "value": 15
+        }
+      ]
     },
     "109522": {
       "name": "Relic of the Doyen",
-      "facts": []
+      "facts": [
+        {
+          "type": "Percent",
+          "text": "Damage Reduced",
+          "percent": 15
+        },
+        {
+          "type": "Percent",
+          "text": "Damage Reduced",
+          "percent": 10
+        },
+        {
+          "type": "Percent",
+          "text": "Damage Reduced",
+          "percent": 7
+        }
+      ]
     },
     "109664": {
       "name": "Relic of the Cruel Overseer",
@@ -2648,7 +2739,22 @@
     },
     "109709": {
       "name": "Relic of Watch",
-      "facts": []
+      "facts": [
+        {
+          "type": "Buff",
+          "text": "Weakness",
+          "status": "Weakness",
+          "duration": 3,
+          "apply_count": 1
+        },
+        {
+          "type": "Buff",
+          "text": "Weakness",
+          "status": "Weakness",
+          "duration": 2,
+          "apply_count": 1
+        }
+      ]
     }
   }
 }
