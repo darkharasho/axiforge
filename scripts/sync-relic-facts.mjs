@@ -120,6 +120,24 @@ async function main() {
   const prev = JSON.parse(await readFile(TARGET, "utf8"));
   const prevRelics = prev.relics || {};
 
+  // Collapse guard. The wiki intermittently blocks datacenter/CI IPs, serving a
+  // near-empty page that crawls "successfully" as 0 facts for every relic. That
+  // would silently blank out good data (the relic count stays constant, so the
+  // count-based sanity gate can't catch it). If the crawl recovered far fewer
+  // facts than we already have, abort WITHOUT writing so the existing file — and
+  // the running app's tooltips — stay intact. Only guards a full sync.
+  const isFullRun = limit === Infinity && requestedIds.length === 0;
+  const crawledFacts = [...results.values()].reduce((n, r) => n + r.facts.length, 0);
+  const prevFacts = Object.values(prevRelics).reduce((n, r) => n + (r.facts?.length || 0), 0);
+  if (isFullRun && prevFacts > 0 && crawledFacts < prevFacts * 0.2) {
+    console.error(
+      `\n✗ Crawl recovered only ${crawledFacts} facts across ${results.size} relics ` +
+        `(existing file has ${prevFacts}). The wiki likely blocked this IP — ` +
+        `refusing to overwrite relicFacts.json.`,
+    );
+    process.exit(1);
+  }
+
   // Apply manual overrides last — for relics whose wiki pages omit or
   // mislabel facts the game actually has.
   const overrides = JSON.parse(await readFile(OVERRIDES, "utf8"));
@@ -140,9 +158,8 @@ async function main() {
 
   // On a full sync (no --limit / --id), prune entries that aren't in
   // RELIC_ITEM_IDS — they're leftovers from IDs the wiki has since rotated.
-  const isFullSync = limit === Infinity && requestedIds.length === 0;
   const removed = [];
-  if (isFullSync) {
+  if (isFullRun) {
     const valid = new Set(RELIC_ITEM_IDS.map(String));
     for (const id of Object.keys(nextRelics)) {
       if (!valid.has(id)) { delete nextRelics[id]; removed.push(id); }

@@ -16,6 +16,10 @@ const DROP_TOLERANCE = 0.2; // flag if a metric drops by more than 20%
 const CHECKS = {
   "src/main/gw2Data/relicFacts.json": {
     relics: (j) => Object.keys(j.relics || {}).length,
+    // Facts total, not just relic count: an IP-blocked wiki crawl keeps every
+    // relic key but blanks its facts to [], which the count metric can't see.
+    relic_facts: (j) =>
+      Object.values(j.relics || {}).reduce((n, r) => n + (r.facts?.length || 0), 0),
   },
   "src/main/gw2Data/upgradeIds.json": {
     RUNE_ITEM_IDS: (j) => (j.RUNE_ITEM_IDS || []).length,
