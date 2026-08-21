@@ -48,7 +48,7 @@ import { initWhatsNewModal, maybeAutoOpenWhatsNew } from "./modules/whats-new-mo
 import { initDetailModal, openDetailModal } from "./modules/detail-modal.js";
 import { initConfirmModal, showConfirmModal } from "./modules/confirm-modal.js";
 import { initChoiceModal, showChoiceModal } from "./modules/choice-modal.js";
-import { loadTeamState, teamRootFor } from "./modules/teams.js";
+import { loadTeamState, seedSyncStatusFromOutbox, teamRootFor } from "./modules/teams.js";
 import { applyBadge } from "./modules/sync-status.js";
 import { pickWebhooks } from "./modules/webhook-picker.js";
 import { initImportConflictModal } from "./modules/import-conflict-modal.js";
@@ -151,6 +151,15 @@ async function _openConflict(type, id) {
     return;
   }
   delete state.conflicts[`${type}:${id}`];
+  // Clear the badge here rather than waiting for a "synced" event: resolving a
+  // remote delete finishes without one, which would strand a dead bolt badge.
+  if (type === "folder") {
+    delete state.folderSyncStatus[id];
+    _updateFolderSyncIndicators(id, null);
+  } else {
+    delete state[type === "build" ? "buildSyncStatus" : "compSyncStatus"][id];
+    _updateItemSyncIndicators(type, id, null);
+  }
 }
 
 // Conflict badges rendered as HTML (library re-render) have no onclick of their
@@ -158,15 +167,17 @@ async function _openConflict(type, id) {
 // card's own click listener (open the build) never sees the badge click.
 function _wireConflictBadgeDelegation() {
   document.addEventListener("click", (e) => {
-    const badge = e.target.closest?.(".lib-content-sync-indicator--conflict");
+    const badge = e.target.closest?.(".lib-content-sync-indicator--conflict, .lib-nav-item__sync-indicator--conflict");
     if (!badge) return;
-    const host = badge.closest("[data-build-id], [data-comp-id]");
+    const host = badge.closest("[data-build-id], [data-comp-id], [data-folder-id], [data-navigate-folder]");
     if (!host) return;
     e.stopPropagation();
     e.preventDefault();
     const buildId = host.getAttribute("data-build-id");
+    const compId = host.getAttribute("data-comp-id");
     if (buildId) _openConflict("build", buildId);
-    else _openConflict("comp", host.getAttribute("data-comp-id"));
+    else if (compId) _openConflict("comp", compId);
+    else _openConflict("folder", host.getAttribute("data-folder-id") || host.getAttribute("data-navigate-folder"));
   }, true);
 }
 
@@ -186,23 +197,6 @@ function _showSyncBanner(text) {
 function _hideSyncBanner() {
   const banner = document.getElementById("sync-banner");
   if (banner) banner.hidden = true;
-}
-
-// Restore badges for work that is still queued (or conflicted) after a restart.
-function _seedSyncStatusFromOutbox() {
-  for (const [teamId, entries] of Object.entries(state.outbox || {})) {
-    for (const entry of entries || []) {
-      const { itemId, type } = entry;
-      if (type !== "build" && type !== "comp") continue;
-      const statusMap = type === "build" ? "buildSyncStatus" : "compSyncStatus";
-      state[statusMap][itemId] = entry.conflict ? "conflict" : "pending";
-      if (!entry.conflict) continue;
-      const item = (type === "build" ? state.builds : state.comps).find((i) => i.id === itemId);
-      state.conflicts[`${type}:${itemId}`] = {
-        teamId, itemId, type, title: item?.title || item?.name || "", current: entry.conflict,
-      };
-    }
-  }
 }
 
 // ── DOM element cache ────────────────────────────────────────────────────────
@@ -631,7 +625,7 @@ async function init() {
     render,
   });
   // Badges for anything still queued (or conflicted) from a previous session.
-  _seedSyncStatusFromOutbox();
+  seedSyncStatusFromOutbox();
   _wireConflictBadgeDelegation();
   // Coming back online: drain and re-pull immediately rather than waiting for
   // the next poll tick.
@@ -756,10 +750,13 @@ async function init() {
     // Resolve to root shared folder so we key by the folder visible in the sidebar
     const rootShared = _findRootSharedFolderInState(folderId);
     const trackId = rootShared?.id || folderId;
-    state.folderSyncStatus[trackId] = status;
+    // An unresolved folder conflict outranks the ambient folder status — losing
+    // the badge would leave the user no way back into the resolution modal.
+    const shown = state.conflicts[`folder:${trackId}`] ? "conflict" : status;
+    state.folderSyncStatus[trackId] = shown;
 
     renderEditorMeta();
-    _updateFolderSyncIndicators(trackId, status);
+    _updateFolderSyncIndicators(trackId, shown);
 
     if (status === "synced") {
       // Reload folders and builds so any subfolders or items created during
@@ -796,6 +793,13 @@ async function init() {
   window.desktopApi.onSyncConflict?.((data) => {
     if (!data?.itemId) return;
     state.conflicts[`${data.type}:${data.itemId}`] = data;
+    // Main suppresses the matching sync-status "conflict" event for folders, so
+    // paint the folder badge here — without it a dismissed modal would leave the
+    // folder silently stuck out of sync with nothing to click.
+    if (data.type === "folder") {
+      state.folderSyncStatus[data.itemId] = "conflict";
+      _updateFolderSyncIndicators(data.itemId, "conflict");
+    }
     _openConflict(data.type, data.itemId);
   });
 

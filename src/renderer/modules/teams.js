@@ -43,3 +43,36 @@ export async function loadTeamState() {
   // listTeams reconciles membership, so roots may have been created or detached.
   state.folders = await window.desktopApi.listFolders();
 }
+
+/**
+ * Restore badges for work still queued (or conflicted) after a restart, from
+ * state.outbox. Only conflicts are seeded for folders: a conflicted entry is
+ * sticky until the user resolves it, whereas a pending folder op has no
+ * per-item "synced" event to clear its badge again (main suppresses those for
+ * type "folder"), so a pending folder clock would never go away.
+ */
+export function seedSyncStatusFromOutbox() {
+  for (const [teamId, entries] of Object.entries(state.outbox || {})) {
+    for (const entry of entries || []) {
+      const { itemId, type } = entry;
+      if (type !== "build" && type !== "comp" && type !== "folder") continue;
+      if (type === "folder") {
+        if (!entry.conflict) continue;
+        state.folderSyncStatus[itemId] = "conflict";
+      } else {
+        const statusMap = type === "build" ? "buildSyncStatus" : "compSyncStatus";
+        state[statusMap][itemId] = entry.conflict ? "conflict" : "pending";
+        if (!entry.conflict) continue;
+      }
+      state.conflicts[`${type}:${itemId}`] = {
+        teamId, itemId, type, title: _itemTitle(type, itemId), current: entry.conflict,
+      };
+    }
+  }
+}
+
+function _itemTitle(type, itemId) {
+  const list = type === "build" ? state.builds : type === "comp" ? state.comps : state.folders;
+  const item = (list || []).find((i) => i.id === itemId);
+  return item?.title || item?.name || "";
+}
