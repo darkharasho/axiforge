@@ -166,7 +166,14 @@ class SharedLibrary {
       if (relPath === "meta.json") {
         const metaSha = localShas["meta"];
         if (metaSha !== file.sha) {
-          const { content: metaContent } = await api().getFileContents(auth.token, auth.org, auth.repo, file.path);
+          let metaContent = null;
+          try {
+            ({ content: metaContent } = await api().getFileContents(auth.token, auth.org, auth.repo, file.path));
+          } catch (err) {
+            // A failed meta fetch must not abort the whole folder pull — builds
+            // and comps can still sync; meta is retried on the next poll.
+            console.warn(`[shared-library] failed to fetch meta.json for folder ${folderId}:`, err.message);
+          }
           if (metaContent) {
             let meta;
             try { meta = JSON.parse(metaContent); } catch (e) {
@@ -342,6 +349,16 @@ class SharedLibrary {
     for (const [key, _sha] of Object.entries(localShas)) {
       const relPathWithExt = `${key}.json`;
       if (!remotePaths.has(relPathWithExt) && key !== "meta") {
+        // The tree was fetched at the start of the pull; a push from this client
+        // (or a teammate) may have created this file since. Confirm the file is
+        // really gone before deleting locally — otherwise a brand-new build gets
+        // deleted here and resurrected on the next poll.
+        const stillRemote = await this.#confirmRemoteFile(auth, `${prefix}${relPathWithExt}`);
+        if (stillRemote === null) continue; // couldn't verify (network) — leave it alone
+        if (stillRemote) {
+          await this.syncStore.setSha(folderId, key, stillRemote);
+          continue;
+        }
         if (key.startsWith("builds/")) {
           const buildId = key.replace("builds/", "");
           await this.buildStore.deleteBuild(buildId);
@@ -358,6 +375,30 @@ class SharedLibrary {
       id: folderId, name: folder.name, shared: true,
       orgName: folder.orgName, lastSyncedAt: new Date().toISOString(),
     });
+  }
+
+  // Returns the current remote SHA if the file exists, false if it is gone
+  // (404), or null if the check itself failed and nothing can be concluded.
+  async #confirmRemoteFile(auth, filePath) {
+    try {
+      const { sha } = await api().getFileContents(auth.token, auth.org, auth.repo, filePath);
+      return sha || false;
+    } catch (err) {
+      if (err?.status === 404) return false;
+      console.warn(`[shared-library] could not verify ${filePath} before delete:`, err.message);
+      return null;
+    }
+  }
+
+  // Resolve the SHA to delete a remote file with: the tracked one, or — if we
+  // never recorded one (push failed, sync state reset) — the live remote SHA.
+  // Without this fallback the remote copy survives and the item resurrects on
+  // every member's next pull.
+  async #resolveDeleteSha(auth, rootId, key, filePath) {
+    const shas = await this.syncStore.getShas(rootId);
+    if (shas[key]) return shas[key];
+    const remote = await this.#confirmRemoteFile(auth, filePath);
+    return remote || null;
   }
 
   // ─── Push ───────────────────────────────────────────────────────────────────
@@ -481,8 +522,7 @@ class SharedLibrary {
 
     const key = `builds/${buildId}`;
     const filePath = `folders/${rootId}/${key}.json`;
-    const shas = await this.syncStore.getShas(rootId);
-    const sha = shas[key];
+    const sha = await this.#resolveDeleteSha(auth, rootId, key, filePath);
     if (!sha) return;
 
     try {
@@ -492,6 +532,10 @@ class SharedLibrary {
     } catch (err) {
       if (err.status === 409) {
         return { conflict: true };
+      }
+      if (err.status === 404) {
+        await this.syncStore.removeSha(rootId, key);
+        return;
       }
       throw err;
     }
@@ -507,8 +551,7 @@ class SharedLibrary {
     const rootId = rootShared?.id || folderId;
 
     const filePath = `folders/${rootId}/${key}.json`;
-    const shas = await this.syncStore.getShas(rootId);
-    const sha = shas[key];
+    const sha = await this.#resolveDeleteSha(auth, rootId, key, filePath);
     if (!sha) return;
 
     try {
@@ -518,6 +561,10 @@ class SharedLibrary {
     } catch (err) {
       if (err.status === 409) {
         return { conflict: true };
+      }
+      if (err.status === 404) {
+        await this.syncStore.removeSha(rootId, key);
+        return;
       }
       throw err;
     }

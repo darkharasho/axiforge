@@ -110,15 +110,95 @@ describe("SharedLibrary — pullFolder", () => {
     });
     await syncStore.setShas("f1", { "builds/b1": "old-sha" });
 
-    // Remote tree has no builds
+    // Remote tree has no builds, and a direct check confirms the file is gone
     githubApi.getRepoTree.mockResolvedValue([
       { path: "folders/f1/meta.json", sha: "meta-sha" },
     ]);
+    githubApi.getFileContents.mockRejectedValue(Object.assign(new Error("Not Found"), { status: 404 }));
 
     const lib = new SharedLibrary({ buildStore, compStore, folderStore, syncStore });
     await lib.pullFolder("f1");
 
     expect(buildStore.deleteBuild).toHaveBeenCalledWith("b1");
+    expect(await syncStore.getShas("f1")).toEqual({});
+  });
+
+  test("does NOT delete a tracked build that is missing from the (stale) tree but still exists remotely", async () => {
+    // Race: the tree was fetched before this client's own push of b1 landed.
+    const buildStore = mockBuildStore([{ id: "b1", title: "Fresh", folderId: "f1" }]);
+    const compStore = mockCompStore([]);
+    await folderStore.upsertFolder({ id: "f1", name: "Shared", shared: true, orgName: "test-org" });
+    await syncStore.setShas("f1", { "builds/b1": "pushed-sha" });
+
+    githubApi.getRepoTree.mockResolvedValue([{ path: "folders/f1/meta.json", sha: "meta-sha" }]);
+    githubApi.getFileContents.mockResolvedValue({ content: "{}", sha: "pushed-sha-2" });
+
+    const lib = new SharedLibrary({ buildStore, compStore, folderStore, syncStore });
+    await lib.pullFolder("f1");
+
+    expect(buildStore.deleteBuild).not.toHaveBeenCalled();
+    expect((await syncStore.getShas("f1"))["builds/b1"]).toBe("pushed-sha-2");
+  });
+
+  test("does NOT delete locally when the existence check fails for a non-404 reason", async () => {
+    const buildStore = mockBuildStore([{ id: "b1", title: "Keep", folderId: "f1" }]);
+    const compStore = mockCompStore([]);
+    await folderStore.upsertFolder({ id: "f1", name: "Shared", shared: true, orgName: "test-org" });
+    await syncStore.setShas("f1", { "builds/b1": "sha" });
+
+    githubApi.getRepoTree.mockResolvedValue([{ path: "folders/f1/meta.json", sha: "meta-sha" }]);
+    githubApi.getFileContents.mockRejectedValue(Object.assign(new Error("boom"), { status: 502 }));
+
+    const lib = new SharedLibrary({ buildStore, compStore, folderStore, syncStore });
+    await lib.pullFolder("f1");
+
+    expect(buildStore.deleteBuild).not.toHaveBeenCalled();
+    expect((await syncStore.getShas("f1"))["builds/b1"]).toBe("sha");
+  });
+});
+
+describe("SharedLibrary — remote delete without a tracked SHA", () => {
+  let dir, syncStore, folderStore;
+  beforeEach(async () => {
+    dir = await makeTempDir();
+    syncStore = new SyncStore(dir);
+    folderStore = new FolderStore(dir);
+    await syncStore.init();
+    await folderStore.init();
+    jest.clearAllMocks();
+  });
+  afterEach(async () => cleanupDir(dir));
+
+  test("deleteBuildRemote looks up the live SHA and deletes when nothing is tracked", async () => {
+    await folderStore.upsertFolder({ id: "f1", name: "Shared", shared: true, orgName: "test-org" });
+    githubApi.getFileContents.mockResolvedValue({ content: "{}", sha: "live-sha" });
+    githubApi.deleteSharedFile.mockResolvedValue(undefined);
+
+    const lib = new SharedLibrary({ buildStore: mockBuildStore([]), compStore: mockCompStore([]), folderStore, syncStore });
+    await lib.deleteBuildRemote("f1", "b1");
+
+    expect(githubApi.deleteSharedFile).toHaveBeenCalledWith(
+      "fake-token", "test-org", "axibuilds-shared", "folders/f1/builds/b1.json", "live-sha", "main", expect.any(String),
+    );
+  });
+
+  test("deleteBuildRemote is a no-op when the file truly does not exist remotely", async () => {
+    await folderStore.upsertFolder({ id: "f1", name: "Shared", shared: true, orgName: "test-org" });
+    githubApi.getFileContents.mockRejectedValue(Object.assign(new Error("Not Found"), { status: 404 }));
+
+    const lib = new SharedLibrary({ buildStore: mockBuildStore([]), compStore: mockCompStore([]), folderStore, syncStore });
+    await lib.deleteBuildRemote("f1", "b1");
+    expect(githubApi.deleteSharedFile).not.toHaveBeenCalled();
+  });
+
+  test("deleteCompRemote clears a stale tracked SHA when the remote returns 404", async () => {
+    await folderStore.upsertFolder({ id: "f1", name: "Shared", shared: true, orgName: "test-org" });
+    await syncStore.setShas("f1", { "comps/c1": "stale" });
+    githubApi.deleteSharedFile.mockRejectedValue(Object.assign(new Error("Not Found"), { status: 404 }));
+
+    const lib = new SharedLibrary({ buildStore: mockBuildStore([]), compStore: mockCompStore([]), folderStore, syncStore });
+    await lib.deleteCompRemote("f1", "c1");
+    expect(await syncStore.getShas("f1")).toEqual({});
   });
 });
 
