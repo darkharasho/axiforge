@@ -3,6 +3,7 @@
 const path = require("node:path");
 const fs = require("node:fs/promises");
 const crypto = require("node:crypto");
+const { readJsonFile, writeJsonAtomic } = require("./jsonFile");
 
 class FolderStore {
   #writeQueue = Promise.resolve();
@@ -175,12 +176,12 @@ class FolderStore {
   }
 
   async #readJson(filePath) {
-    const raw = await fs.readFile(filePath, "utf-8");
-    return JSON.parse(raw);
+    const data = await readJsonFile(filePath, []);
+    return Array.isArray(data) ? data : [];
   }
 
   async #writeJson(filePath, data) {
-    await fs.writeFile(filePath, JSON.stringify(data, null, 2), "utf-8");
+    await writeJsonAtomic(filePath, data);
   }
 }
 

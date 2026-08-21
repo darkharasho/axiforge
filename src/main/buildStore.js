@@ -1,6 +1,7 @@
 const fs = require("node:fs/promises");
 const path = require("node:path");
 const crypto = require("node:crypto");
+const { readJsonFile, writeJsonAtomic } = require("./jsonFile");
 
 class BuildStore {
   #settingsQueue = Promise.resolve();
@@ -118,18 +119,20 @@ class BuildStore {
   }
 
   async clearCompFromBuilds(compIdsToRemove) {
-    const builds = await this.#readJson(this.buildsPath, []);
-    const removeSet = new Set(compIdsToRemove);
-    let changed = false;
-    for (const build of builds) {
-      const arr = Array.isArray(build.compIds) ? build.compIds : [];
-      const filtered = arr.filter((id) => !removeSet.has(id));
-      if (filtered.length !== arr.length) {
-        build.compIds = filtered;
-        changed = true;
+    return this.#enqueue(async () => {
+      const builds = await this.#readJson(this.buildsPath, []);
+      const removeSet = new Set(compIdsToRemove);
+      let changed = false;
+      for (const build of builds) {
+        const arr = Array.isArray(build.compIds) ? build.compIds : [];
+        const filtered = arr.filter((id) => !removeSet.has(id));
+        if (filtered.length !== arr.length) {
+          build.compIds = filtered;
+          changed = true;
+        }
       }
-    }
-    if (changed) await this.#writeJson(this.buildsPath, builds);
+      if (changed) await this.#writeJson(this.buildsPath, builds);
+    });
   }
 
   async getAuth() {
@@ -154,22 +157,45 @@ class BuildStore {
 
   async #readJson(filePath, fallback) {
     try {
-      const text = await fs.readFile(filePath, "utf8");
-      return JSON.parse(text);
+      return await readJsonFile(filePath, fallback);
     } catch {
       return fallback;
     }
   }
 
   async #writeJson(filePath, data) {
-    // Atomic write: tmp file + rename. Prevents settings.json (and other
-    // stores) from being truncated to empty if the process is interrupted
-    // mid-write — notably the fire-and-forget setSetting("windowBounds") on
-    // window close, which could otherwise wipe webhook URLs and theme toggles
-    // when the app quits before fs.writeFile finishes flushing.
-    const tmp = `${filePath}.${process.pid}.${Date.now()}.tmp`;
-    await fs.writeFile(tmp, JSON.stringify(data, null, 2), "utf8");
-    await fs.rename(tmp, filePath);
+    // Atomic write (tmp + rename) with a one-generation .bak, see jsonFile.js.
+    await writeJsonAtomic(filePath, data);
+  }
+
+  /**
+   * Stamp publish metadata onto a build WITHOUT touching the rest of the
+   * record or bumping updatedAt. The publish flow takes a snapshot of the
+   * build, spends seconds-to-minutes uploading it, then records the result —
+   * re-upserting the snapshot would clobber any save made in between.
+   *
+   * `snapshotUpdatedAt` is the updatedAt of the snapshot that was actually
+   * published. publishedAt is set to it, so if the build was saved again
+   * during the publish, `updatedAt !== publishedAt` and the build correctly
+   * reads as stale (needs re-publish) instead of falsely fresh.
+   */
+  async markPublished(id, { publishedFileId, publishedKey, publishedSlug, snapshotUpdatedAt }) {
+    return this.#enqueue(async () => {
+      const builds = await this.listBuilds();
+      const idx = builds.findIndex((b) => b.id === id);
+      if (idx < 0) return null;
+      const existing = builds[idx];
+      const next = {
+        ...existing,
+        publishedFileId: publishedFileId || existing.publishedFileId,
+        publishedKey: publishedKey || existing.publishedKey,
+        publishedSlug: publishedSlug || existing.publishedSlug,
+        publishedAt: asIso(snapshotUpdatedAt) || existing.updatedAt,
+      };
+      builds[idx] = next;
+      await this.#writeJson(this.buildsPath, builds);
+      return next;
+    });
   }
 
   async migrateCompIdToCompIds() {

@@ -3,33 +3,45 @@
 const path = require("node:path");
 const fs = require("node:fs/promises");
 const crypto = require("node:crypto");
+const { readJsonFile, writeJsonAtomic } = require("./jsonFile");
 
 const HISTORY_CAP = 50; // max entries per build
 
 class BuildHistoryStore {
+  #writeQueue = Promise.resolve();
+
   constructor(baseDir) {
     this.historyPath = path.join(baseDir, "build-history.json");
+  }
+
+  // addEntry is fire-and-forget from several places (local save, shared pull);
+  // serialize so concurrent read-modify-writes don't drop each other's entries.
+  #enqueue(fn) {
+    const next = this.#writeQueue.then(() => fn());
+    this.#writeQueue = next.catch(() => {});
+    return next;
   }
 
   async init() {
     try {
       await fs.access(this.historyPath);
     } catch {
-      await fs.writeFile(this.historyPath, "{}", "utf-8");
+      await writeJsonAtomic(this.historyPath, {}, { backup: false });
     }
   }
 
   async #readAll() {
     try {
-      const raw = await fs.readFile(this.historyPath, "utf-8");
-      return JSON.parse(raw);
+      const data = await readJsonFile(this.historyPath, {});
+      return data && typeof data === "object" && !Array.isArray(data) ? data : {};
     } catch {
       return {};
     }
   }
 
   async #writeAll(data) {
-    await fs.writeFile(this.historyPath, JSON.stringify(data, null, 2), "utf-8");
+    // History snapshots can be large; skip the .bak generation for this file.
+    await writeJsonAtomic(this.historyPath, data, { backup: false });
   }
 
   async getAllHistory() {
@@ -42,32 +54,36 @@ class BuildHistoryStore {
   }
 
   async addEntry({ buildId, authorLogin, source, summary, snapshot }) {
-    const all = await this.#readAll();
-    if (!all[buildId]) all[buildId] = [];
-    const entry = {
-      id: crypto.randomUUID(),
-      buildId,
-      timestamp: new Date().toISOString(),
-      authorLogin: authorLogin || "local",
-      source: source || "local",
-      summary: summary || "build updated",
-      snapshot,
-    };
-    // Newest first; cap at HISTORY_CAP entries
-    all[buildId].unshift(entry);
-    if (all[buildId].length > HISTORY_CAP) {
-      all[buildId] = all[buildId].slice(0, HISTORY_CAP);
-    }
-    await this.#writeAll(all);
-    return entry;
+    return this.#enqueue(async () => {
+      const all = await this.#readAll();
+      if (!all[buildId]) all[buildId] = [];
+      const entry = {
+        id: crypto.randomUUID(),
+        buildId,
+        timestamp: new Date().toISOString(),
+        authorLogin: authorLogin || "local",
+        source: source || "local",
+        summary: summary || "build updated",
+        snapshot,
+      };
+      // Newest first; cap at HISTORY_CAP entries
+      all[buildId].unshift(entry);
+      if (all[buildId].length > HISTORY_CAP) {
+        all[buildId] = all[buildId].slice(0, HISTORY_CAP);
+      }
+      await this.#writeAll(all);
+      return entry;
+    });
   }
 
   async deleteHistory(buildId) {
-    const all = await this.#readAll();
-    if (all[buildId]) {
-      delete all[buildId];
-      await this.#writeAll(all);
-    }
+    return this.#enqueue(async () => {
+      const all = await this.#readAll();
+      if (all[buildId]) {
+        delete all[buildId];
+        await this.#writeAll(all);
+      }
+    });
   }
 }
 

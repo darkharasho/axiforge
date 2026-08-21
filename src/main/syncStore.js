@@ -2,27 +2,39 @@
 
 const path = require("node:path");
 const fs = require("node:fs/promises");
+const { readJsonFile, writeJsonAtomic } = require("./jsonFile");
 
 class SyncStore {
+  #writeQueue = Promise.resolve();
+
   constructor(baseDir) {
     this.syncPath = path.join(baseDir, "syncState.json");
+  }
+
+  // Serialize every read-modify-write. Pulls and pushes run concurrently and
+  // both update SHAs; without this, interleaved setSha() calls drop each
+  // other's writes and the lost SHA shows up later as a spurious 409/refetch.
+  #enqueue(fn) {
+    const next = this.#writeQueue.then(() => fn());
+    this.#writeQueue = next.catch(() => {});
+    return next;
   }
 
   async init() {
     try {
       await fs.access(this.syncPath);
     } catch {
-      await fs.writeFile(this.syncPath, "{}", "utf-8");
+      await writeJsonAtomic(this.syncPath, {}, { backup: false });
     }
   }
 
   async getState() {
-    const raw = await fs.readFile(this.syncPath, "utf-8");
-    return JSON.parse(raw);
+    const data = await readJsonFile(this.syncPath, {});
+    return data && typeof data === "object" && !Array.isArray(data) ? data : {};
   }
 
   async #write(state) {
-    await fs.writeFile(this.syncPath, JSON.stringify(state, null, 2), "utf-8");
+    await writeJsonAtomic(this.syncPath, state, { backup: false });
   }
 
   async getShas(folderId) {
@@ -31,36 +43,46 @@ class SyncStore {
   }
 
   async setShas(folderId, shas) {
-    const state = await this.getState();
-    if (!state[folderId]) state[folderId] = {};
-    state[folderId].remoteShas = { ...shas };
-    await this.#write(state);
+    return this.#enqueue(async () => {
+      const state = await this.getState();
+      if (!state[folderId]) state[folderId] = {};
+      state[folderId].remoteShas = { ...shas };
+      await this.#write(state);
+    });
   }
 
   async setSha(folderId, filePath, sha) {
-    const state = await this.getState();
-    if (!state[folderId]) state[folderId] = {};
-    if (!state[folderId].remoteShas) state[folderId].remoteShas = {};
-    state[folderId].remoteShas[filePath] = sha;
-    await this.#write(state);
+    return this.#enqueue(async () => {
+      const state = await this.getState();
+      if (!state[folderId]) state[folderId] = {};
+      if (!state[folderId].remoteShas) state[folderId].remoteShas = {};
+      state[folderId].remoteShas[filePath] = sha;
+      await this.#write(state);
+    });
   }
 
   async removeSha(folderId, filePath) {
-    const state = await this.getState();
-    if (state[folderId]?.remoteShas) {
-      delete state[folderId].remoteShas[filePath];
-      await this.#write(state);
-    }
+    return this.#enqueue(async () => {
+      const state = await this.getState();
+      if (state[folderId]?.remoteShas) {
+        delete state[folderId].remoteShas[filePath];
+        await this.#write(state);
+      }
+    });
   }
 
   async removeFolder(folderId) {
-    const state = await this.getState();
-    delete state[folderId];
-    await this.#write(state);
+    return this.#enqueue(async () => {
+      const state = await this.getState();
+      delete state[folderId];
+      await this.#write(state);
+    });
   }
 
   async reset() {
-    await fs.writeFile(this.syncPath, "{}", "utf-8");
+    return this.#enqueue(async () => {
+      await this.#write({});
+    });
   }
 }
 
