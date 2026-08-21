@@ -71,6 +71,42 @@ describe("TeamSync — conflicts", () => {
     await h.sync.resolveConflict("t", "nope", "mine");
     expect(h.api.putItem).not.toHaveBeenCalled();
   });
+
+  // ─── fix round 1, item 1: resolveConflict honours the queuedAt token ───────
+
+  test("resolveConflict('theirs') passes the entry's queuedAt token to syncStore.dequeue", async () => {
+    h = await makeHarness();
+    await conflicted(h);
+    const [entry] = await h.syncStore.listOutbox("t");
+    const dequeueSpy = jest.spyOn(h.syncStore, "dequeue");
+    await h.sync.resolveConflict("t", "b1", "theirs");
+    expect(dequeueSpy).toHaveBeenCalledWith("t", "b1", { queuedAt: entry.queuedAt });
+  });
+
+  test("resolveConflict('mine') passes the entry's queuedAt token to syncStore.patchOutbox", async () => {
+    h = await makeHarness();
+    await conflicted(h);
+    const [entry] = await h.syncStore.listOutbox("t");
+    const patchSpy = jest.spyOn(h.syncStore, "patchOutbox");
+    h.api.putItem.mockResolvedValueOnce({ version: 3, seq: 10 });
+    await h.sync.resolveConflict("t", "b1", "mine");
+    expect(patchSpy).toHaveBeenCalledWith("t", "b1", { conflict: null, attempts: 0, nextAttemptAt: null }, { queuedAt: entry.queuedAt });
+  });
+
+  test("resolveConflict('theirs') is a no-op when a re-enqueue has since replaced the conflicted entry", async () => {
+    h = await makeHarness();
+    await conflicted(h);
+    // A re-edit races the pending conflict: enqueue() unconditionally
+    // replaces the outbox entry with a fresh one (later queuedAt, no
+    // conflict) — resolveConflict must not clobber it.
+    await h.buildStore.upsertBuild({ id: "b1", title: "Newer edit", folderId: "t" });
+    await h.sync.enqueue("t", "b1", "build", "put");
+    const outboxBefore = await h.syncStore.listOutbox("t");
+    expect(outboxBefore[0].conflict).toBeNull();
+    await h.sync.resolveConflict("t", "b1", "theirs");
+    expect(await h.syncStore.listOutbox("t")).toEqual(outboxBefore); // untouched — no dequeue, no apply
+    expect((await h.buildStore.listBuilds())[0].title).toBe("Newer edit"); // local edit not overwritten by "current"
+  });
 });
 
 describe("TeamSync — share folder to team / stop sharing", () => {
@@ -139,6 +175,33 @@ describe("TeamSync — share folder to team / stop sharing", () => {
     expect(await h.sync.canDelete("mem", "mine")).toBe(true);
     expect(await h.sync.canDelete("mem", "theirs")).toBe(false);
     expect(await h.sync.canDelete("mem", "unsynced")).toBe(true);
+  });
+
+  // ─── fix round 1, item 2: shareFolderToTeam top-level / not-already-shared guard ─
+
+  test("shareFolderToTeam rejects a nested (non-top-level) personal folder without calling api.bulk", async () => {
+    h = await makeHarness();
+    await h.folderStore.upsertFolder({ id: "team-1", name: "EWW", shared: true, teamId: "team-1", role: "owner" });
+    await h.folderStore.upsertFolder({ id: "p", name: "P" });
+    await h.folderStore.upsertFolder({ id: "p-sub", name: "Sub", parentId: "p" });
+    await expect(h.sync.shareFolderToTeam("p-sub", "team-1")).rejects.toThrow("SHARE_NOT_TOP_LEVEL");
+    expect(h.api.bulk).not.toHaveBeenCalled();
+  });
+
+  test("shareFolderToTeam rejects a folder nested under an existing team root without calling api.bulk", async () => {
+    h = await makeHarness();
+    await h.folderStore.upsertFolder({ id: "team-1", name: "EWW", shared: true, teamId: "team-1", role: "owner" });
+    await h.folderStore.upsertFolder({ id: "shared-sub", name: "Shared", parentId: "team-1" });
+    await expect(h.sync.shareFolderToTeam("shared-sub", "team-1")).rejects.toThrow("SHARE_ALREADY_IN_TEAM");
+    expect(h.api.bulk).not.toHaveBeenCalled();
+  });
+
+  test("shareFolderToTeam rejects a folder that is itself a team root without calling api.bulk", async () => {
+    h = await makeHarness();
+    await h.folderStore.upsertFolder({ id: "team-1", name: "EWW", shared: true, teamId: "team-1", role: "owner" });
+    await h.folderStore.upsertFolder({ id: "team-2", name: "Other", shared: true, teamId: "team-2", role: "owner" });
+    await expect(h.sync.shareFolderToTeam("team-2", "team-1")).rejects.toThrow("SHARE_ALREADY_IN_TEAM");
+    expect(h.api.bulk).not.toHaveBeenCalled();
   });
 });
 

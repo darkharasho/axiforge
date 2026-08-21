@@ -591,11 +591,17 @@ class TeamSync {
     const entry = team.outbox[itemId];
     if (!entry || !entry.conflict) return;
     const remote = entry.conflict;
+    const queuedAt = entry.queuedAt;
     const folders = await this.folderStore.listFolders();
     const root = this.rootFolderForTeam(teamId, folders);
-    if (!root) { await this.syncStore.dequeue(teamId, itemId); return; }
+    if (!root) { await this.syncStore.dequeue(teamId, itemId, { queuedAt }); return; }
     if (choice === "theirs") {
-      await this.syncStore.dequeue(teamId, itemId);
+      // Guarded: if the entry we're resolving has since been replaced by a
+      // fresh enqueue (a re-edit racing this call), the dequeue is a no-op —
+      // do NOT apply the stale `current` over the newer local edit. The
+      // fresh entry has no conflict and will flush/conflict on its own.
+      const dequeued = await this.syncStore.dequeue(teamId, itemId, { queuedAt });
+      if (!dequeued) return;
       if (remote && remote.id) {
         await this.syncStore.removeVersion(teamId, itemId); // force apply even if versions matched
         await this._applyItem(teamId, root, remote, await this.getSession());
@@ -608,7 +614,8 @@ class TeamSync {
     } else {
       await this.syncStore.removeVersion(teamId, itemId); // re-create over a tombstone
     }
-    await this.syncStore.patchOutbox(teamId, itemId, { conflict: null, attempts: 0, nextAttemptAt: null });
+    const patched = await this.syncStore.patchOutbox(teamId, itemId, { conflict: null, attempts: 0, nextAttemptAt: null }, { queuedAt });
+    if (!patched) return; // stale — a fresher entry replaced this one; let its own flush drive it
     await this.flushTeam(teamId);
   }
 
@@ -632,7 +639,12 @@ class TeamSync {
     if (!root) throw new Error("Team not found locally.");
     const folder = folders.find((f) => f.id === folderId);
     if (!folder) throw new Error("Folder not found.");
-    if (folder.teamId) throw new Error("This folder is a team root.");
+    // Must be a top-level personal folder that isn't already part of a team.
+    // Check "already in a team" first so a folder nested under a team root
+    // reports that (more specific) reason rather than the generic
+    // not-top-level one.
+    if (folder.teamId || this.teamRootFor(folderId, folders)) throw new Error("SHARE_ALREADY_IN_TEAM");
+    if (folder.parentId) throw new Error("SHARE_NOT_TOP_LEVEL");
 
     const treeIds = this.collectFolderTree(folderId, folders);
     const treeSet = new Set(treeIds);
