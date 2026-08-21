@@ -287,7 +287,7 @@ export function renderBuildList() {
           (opts) => window.desktopApi.publishBuild(build.id, opts),
           (login) => showConfirmModal({ title: "Publish under your account?", body: publishedByOtherBody(escapeHtml(login)), confirmLabel: "Publish anyway", cancelLabel: "Cancel" }),
         );
-        if (!result) { delete state.publishProgress[build.id]; renderBuildList(); return; }
+        if (!result) { clearPublishProgress(build.id); renderBuildList(); return; }
 
         advancePublishStep("pages");
 
@@ -712,6 +712,14 @@ export function syncPublishStatus(id) {
     _el.publishStatus.innerHTML = "";
     delete _el.publishStatus.dataset.publishId;
   }
+}
+
+export function clearPublishProgress(id) {
+  if (state.publishProgress[id]) {
+    delete state.publishProgress[id];
+  }
+  _el.publishStatus.innerHTML = "";
+  delete _el.publishStatus.dataset.publishId;
 }
 
 // ---------------------------------------------------------------------------

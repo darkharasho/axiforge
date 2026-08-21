@@ -12,6 +12,7 @@ import {
   completeAllPublishSteps,
   setPublishStatusEl,
   restorePublishProgress,
+  clearPublishProgress,
 } from "../render-pages.js";
 import { roleBadgeHtml } from "../roleEstimator.js";
 import { COMP_TAG_ICONS } from "../constants.js";
@@ -1232,7 +1233,7 @@ function bindDetailEvents(container, comp) {
         (opts) => window.desktopApi.publishComp(comp.id, boonCoverageHtml, opts),
         (login) => showConfirmModal({ title: "Publish under your account?", body: publishedByOtherBody(escapeHtml(login)), confirmLabel: "Publish anyway", cancelLabel: "Cancel" }),
       );
-      if (!result) { delete state.publishProgress[comp.id]; return; }
+      if (!result) { clearPublishProgress(comp.id); return; }
 
       advancePublishStep("pages");
       if (result?.pagesUrl) {
