@@ -91,7 +91,10 @@ class TeamSync {
 
   teamRootFor(folderId, folders) {
     let current = folderId ? folders.find((f) => f.id === folderId) : null;
+    const visited = new Set();
     while (current) {
+      if (visited.has(current.id)) return null; // cyclic parentId chain — no team root here
+      visited.add(current.id);
       if (current.teamId) return current;
       if (!current.parentId) return null;
       current = folders.find((f) => f.id === current.parentId);
@@ -115,10 +118,16 @@ class TeamSync {
       await this.folderStore.upsertFolder({ id: existing.id, name: team.name, parentId: null, shared: true, teamId: team.id, role });
       return existing.id;
     }
-    await this.folderStore.upsertFolder({
-      id: existing ? existing.id : team.id, name: team.name, parentId: null,
-      sortOrder: existing ? existing.sortOrder : 0, shared: true, teamId: team.id, role,
-    });
+    // Skip the upsert (and its updatedAt bump) when nothing actually changed —
+    // pullAll/listTeams run on every poll tick and would otherwise touch every
+    // root folder every 30s.
+    const unchanged = existing && existing.name === team.name && existing.role === role && existing.teamId === team.id;
+    if (!unchanged) {
+      await this.folderStore.upsertFolder({
+        id: existing ? existing.id : team.id, name: team.name, parentId: null,
+        sortOrder: existing ? existing.sortOrder : 0, shared: true, teamId: team.id, role,
+      });
+    }
     return existing ? existing.id : team.id;
   }
 
@@ -311,7 +320,7 @@ class TeamSync {
         await this.syncStore.dequeue(teamId, itemId);
         const error = code === "SYNC_FORBIDDEN" ? "forbidden" : code === "SYNC_TOO_LARGE" ? "too_large" : "invalid";
         this._emit("sync-status", { status: "error", type, id: itemId, folderId: root.id, error, message: err.message });
-        if (code === "SYNC_FORBIDDEN") this.pullTeam(teamId).catch(() => {}); // restore server state locally
+        if (code === "SYNC_FORBIDDEN") await this.pullTeam(teamId).catch(() => {}); // restore server state locally
         return false;
       }
       if (code === "SYNC_UNAUTHORIZED") {
@@ -328,8 +337,182 @@ class TeamSync {
     }
   }
 
-  // ─── Placeholders completed in later tasks ──────────────────────────────────
-  async pullTeam(teamId) { await this.api.changes(teamId, 0, PAGE_SIZE); } // replaced in Task 6
+  // ─── Pull ───────────────────────────────────────────────────────────────────
+
+  pullTeam(teamId) {
+    const key = `pull:${teamId}`;
+    if (this._inflight.has(key)) return this._inflight.get(key);
+    const p = this._pullTeamInner(teamId).finally(() => this._inflight.delete(key));
+    this._inflight.set(key, p);
+    return p;
+  }
+
+  async _pullTeamInner(teamId) {
+    const session = await this.getSession();
+    if (!session) return;
+    const folders = await this.folderStore.listFolders();
+    const root = this.rootFolderForTeam(teamId, folders);
+    if (!root) return;
+    let { cursor } = await this.syncStore.getTeam(teamId);
+    // Set once the server tells us our cursor predates a tombstone purge
+    // (R1 / spec §2.4). While set, every item id we see is recorded so that,
+    // once the full re-pull from 0 completes, anything NOT seen can be
+    // pruned locally (it was purged from the server's change log).
+    let resyncSeen = null;
+    for (;;) {
+      let page;
+      try {
+        page = await this.api.changes(teamId, cursor, PAGE_SIZE);
+      } catch (err) {
+        if (err.code === "SYNC_UNAUTHORIZED") { await this._handleUnauthorized(); }
+        throw err;
+      }
+      if (page.resync && resyncSeen === null) {
+        resyncSeen = new Set();
+        cursor = 0;
+        continue;
+      }
+      for (const item of page.items) {
+        if (resyncSeen) resyncSeen.add(item.id);
+        this._emit("sync-status", { status: "syncing", type: item.type, id: item.id, folderId: root.id });
+        try {
+          await this._applyItem(teamId, root, item, session);
+        } catch (err) {
+          console.error(`[team-sync] apply ${item.type} ${item.id} failed:`, err.message);
+        }
+      }
+      cursor = page.nextSeq;
+      await this.syncStore.setCursor(teamId, cursor);
+      if (!page.hasMore) break;
+    }
+    if (resyncSeen) await this._pruneUnseen(teamId, root, resyncSeen);
+    await this.folderStore.upsertFolder({ id: root.id, name: root.name, parentId: null, shared: true, teamId, role: root.role, lastSyncedAt: new Date(this._now()).toISOString() });
+    this._emit("sync-status", { status: "synced", folderId: root.id });
+  }
+
+  // Delete an item from every local store it can appear in, mirroring a
+  // server-side tombstone. Shared by `_applyItem` (real tombstones) and
+  // `_pruneUnseen` (resync — items no longer present on the server).
+  async _applyTombstone(teamId, root, type, id) {
+    if (type === "build") {
+      await this.buildStore.deleteBuild(id);
+      await this.compStore.removeBuildFromComps(id);
+      if (this.historyStore) this.historyStore.deleteHistory(id).catch(() => {});
+    } else if (type === "comp") {
+      await this.compStore.deleteComp(id);
+      await this.buildStore.clearCompFromBuilds([id]);
+    } else if (type === "folder") {
+      const removed = await this.folderStore.deleteFolder(id);
+      if (removed.length) await this.buildStore.clearFolderFromBuilds(removed);
+    }
+    await this.syncStore.removeVersion(teamId, id);
+    this._emit("sync-status", { status: "synced", type, id, folderId: root.id, removed: true });
+  }
+
+  // R1: after a full resync re-pull from 0, drop anything under the team
+  // root that the server no longer has and that isn't awaiting an outbox
+  // flush (a pending local write is left alone — the flush will 409/resolve
+  // it against the server's current state).
+  async _pruneUnseen(teamId, root, seenIds) {
+    const team = await this.syncStore.getTeam(teamId);
+    const folders = await this.folderStore.listFolders();
+    const teamFolderIds = new Set(
+      folders.filter((f) => f.id === root.id || (this.teamRootFor(f.id, folders) || {}).id === root.id).map((f) => f.id),
+    );
+    const builds = await this.buildStore.listBuilds();
+    const comps = await this.compStore.listComps();
+    const candidates = [
+      ...comps.filter((c) => teamFolderIds.has(c.folderId)).map((c) => ({ type: "comp", id: c.id })),
+      ...builds.filter((b) => teamFolderIds.has(b.folderId)).map((b) => ({ type: "build", id: b.id })),
+      ...folders.filter((f) => teamFolderIds.has(f.id) && f.id !== root.id).map((f) => ({ type: "folder", id: f.id })),
+    ];
+    for (const { type, id } of candidates) {
+      if (seenIds.has(id) || team.outbox[id]) continue;
+      await this._applyTombstone(teamId, root, type, id);
+    }
+  }
+
+  async _applyItem(teamId, root, item, session) {
+    const known = await this.syncStore.getVersion(teamId, item.id);
+    if (known && known.version === item.version) return;                 // our own write echoed back
+    const team = await this.syncStore.getTeam(teamId);
+    if (team.outbox[item.id]) return;                                     // local change pending — flush decides
+    const createdBy = item.createdBy ? item.createdBy.userId : null;
+    const author = (item.updatedBy && item.updatedBy.login) || "teammate";
+    const folderId = item.parentId || root.id;
+
+    if (item.deleted) {
+      await this._applyTombstone(teamId, root, item.type, item.id);
+      return;
+    }
+
+    const body = item.body || {};
+    let saved = null;
+    if (item.type === "folder") {
+      saved = await this.folderStore.upsertFolder({ id: item.id, name: body.name, sortOrder: body.sortOrder, parentId: folderId });
+    } else if (item.type === "build") {
+      if (this.historyStore) {
+        const { summarizeBuildChange } = require("./buildHistoryStore");
+        const existing = (await this.buildStore.listBuilds()).find((b) => b.id === item.id);
+        this.historyStore.addEntry({
+          buildId: item.id, authorLogin: author, source: "team-sync",
+          summary: existing ? summarizeBuildChange(existing, { ...body, folderId }) : "Created",
+          snapshot: existing || { ...body, id: item.id, folderId },
+        }).catch((err) => console.warn("[history] team-sync addEntry failed:", err.message));
+      }
+      saved = await this.buildStore.upsertBuild({ ...body, id: item.id, folderId });
+    } else if (item.type === "comp") {
+      saved = await this.compStore.upsertComp({ ...body, id: item.id, folderId });
+    }
+    await this.syncStore.setVersion(teamId, item.id, { version: item.version, createdBy });
+    this._emit("sync-status", { status: "synced", type: item.type, id: item.id, folderId: root.id, item: saved });
+  }
+
+  async pullAll() {
+    await this.flushAll();
+    const session = await this.getSession();
+    if (!session) return;
+    const folders = await this.folderStore.listFolders();
+    for (const root of folders.filter((f) => f.teamId)) {
+      const teamId = root.teamId;
+      try {
+        await this.pullTeam(teamId);
+        await this.syncStore.setFailures(teamId, 0);
+      } catch (err) {
+        if (err.code === "SYNC_UNAUTHORIZED") return;
+        // R2: the team is gone for us (deleted, or we were removed) — let
+        // listTeams() detach the root folder locally. This isn't a transient
+        // failure, so it doesn't count toward FAILURES_BEFORE_TOAST.
+        if (err.code === "SYNC_FORBIDDEN" || err.code === "SYNC_NOT_FOUND") {
+          try { await this.listTeams(); } catch (err2) { console.warn(`[team-sync] listTeams after ${err.code} failed:`, err2.message); }
+          continue;
+        }
+        const failures = (await this.syncStore.getTeam(teamId)).failures + 1;
+        await this.syncStore.setFailures(teamId, failures);
+        console.warn(`[team-sync] pull ${teamId} failed (${failures}):`, err.message);
+        if (failures === FAILURES_BEFORE_TOAST) this._emit("sync-status", { status: "error", error: "pull", folderId: root.id });
+      }
+    }
+  }
+
+  startPolling(intervalMs = POLL_INTERVAL_MS) {
+    this.stopPolling();
+    const tick = async () => {
+      this._pollTimer = null;
+      try { await this.pullAll(); } catch (err) { console.error("[team-sync] poll error:", err.message); }
+      if (!(await this.getSession())) return; // unauthorized mid-poll: stay stopped
+      this._pollTimer = this._setTimeout(tick, intervalMs);
+    };
+    this._pollTimer = this._setTimeout(tick, intervalMs);
+  }
+
+  async onFocus() {
+    const now = this._now();
+    if (now - this._lastFocusPullAt < FOCUS_COOLDOWN_MS) return;
+    this._lastFocusPullAt = now;
+    await this.pullAll().catch(() => {});
+  }
+
   stopPolling() {
     if (this._pollTimer) { this._clearTimeout(this._pollTimer); this._pollTimer = null; }
   }

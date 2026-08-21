@@ -110,6 +110,27 @@ describe("TeamSync — mapping helpers and bodies", () => {
     expect(sync.parentIdFor("a", "t")).toBe("a");
   });
 
+  test("teamRootFor terminates on a parentId cycle (R5)", () => {
+    const folders = [
+      { id: "x", name: "X", parentId: "y" },
+      { id: "y", name: "Y", parentId: "x" },
+    ];
+    const sync = new TeamSync({});
+    expect(sync.teamRootFor("x", folders)).toBeNull();
+  });
+
+  test("_ensureRootFolder does not bump updatedAt when name/role/teamId are unchanged (R5)", async () => {
+    h = await makeHarness();
+    h.api.listTeams.mockResolvedValue([
+      { team: { id: "team-1", name: "EWW", inviteCode: "X", seq: 3 }, role: "owner" },
+    ]);
+    await h.sync.listTeams();
+    const before = (await h.folderStore.listFolders()).find((f) => f.id === "team-1").updatedAt;
+    await h.sync.listTeams();
+    const after = (await h.folderStore.listFolders()).find((f) => f.id === "team-1").updatedAt;
+    expect(after).toBe(before);
+  });
+
   test("bodies strip local-only fields and keep publish metadata", () => {
     const build = { id: "b", title: "B", folderId: "f", pinned: true, sortOrder: 3, compIds: ["c"], publishedFileId: "x", publishedOwner: "me", equipment: {} };
     expect(TeamSync.buildBody(build)).toEqual({ id: "b", title: "B", publishedFileId: "x", publishedOwner: "me", equipment: {} });
