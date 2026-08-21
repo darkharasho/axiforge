@@ -55,4 +55,39 @@ function decideCompBuildPublish({ build, owner, force = false, slug }) {
   return { foreignOwner: null, needsRecord };
 }
 
-module.exports = { assertCanMoveOutOfTeam, decideCompBuildPublish };
+/**
+ * Refuse to move `folderId` under `newParentId` when any folder in its subtree
+ * would end up deeper than `maxDepth` (FolderStore's rule: a folder may only be
+ * created when its parent's depth < maxDepth, root folders being depth 1).
+ * FolderStore checks only the moved folder itself, so a legal-looking move can
+ * carry grandchildren past the limit — locally tolerated, but every teammate's
+ * pull then throws on those folders and their sync stalls.
+ *
+ * @param {{folders: object[], folderId: string, newParentId: string|null, maxDepth?: number}} args
+ */
+function assertFolderTreeFits({ folders, folderId, newParentId, maxDepth = 3 }) {
+  let parentDepth = 0;
+  for (let cur = newParentId; cur; ) {
+    parentDepth += 1;
+    const parent = folders.find((f) => f.id === cur);
+    cur = parent ? parent.parentId : null;
+    if (parentDepth > maxDepth) break;
+  }
+  // Relative depth of every descendant (BFS so parents are visited first).
+  const rel = new Map([[folderId, 0]]);
+  const queue = [folderId];
+  let maxRel = 0;
+  while (queue.length) {
+    const id = queue.shift();
+    for (const f of folders) {
+      if (f.parentId !== id || rel.has(f.id)) continue;
+      const d = rel.get(id) + 1;
+      rel.set(f.id, d);
+      if (d > maxRel) maxRel = d;
+      queue.push(f.id);
+    }
+  }
+  if (parentDepth + 1 + maxRel > maxDepth) throw new Error("FOLDER_TOO_DEEP");
+}
+
+module.exports = { assertCanMoveOutOfTeam, assertFolderTreeFits, decideCompBuildPublish };

@@ -47,7 +47,7 @@ const { writeDiscoveryFile, removeDiscoveryFileSync } = require("./localApiDisco
 const { parseCliFlags } = require("./cliFlags");
 const { shareRejectionReason } = require("./shareGate");
 const { shortUrl, publishedOwnerFor } = require("./shortUrl");
-const { assertCanMoveOutOfTeam, decideCompBuildPublish } = require("./teamGuards");
+const { assertCanMoveOutOfTeam, assertFolderTreeFits, decideCompBuildPublish } = require("./teamGuards");
 
 const PROFESSION_THEME_IDS = {
   Guardian: "prof-guardian", Warrior: "prof-warrior", Necromancer: "prof-necromancer",
@@ -586,9 +586,10 @@ const readyWork = app.whenReady().then(async () => {
     }
     // Guard BEFORE the local write: a refusal after the upsert would leave the
     // build locally moved with nothing tombstoned in the source team.
-    // upsertBuild replaces the whole record, so the new folder is build.folderId.
+    // upsertBuild PRESERVES the existing folder when the payload's folderId is
+    // null/undefined (buildStore.js), so a partial save is NOT a move to personal.
     const { oldRoot, newRoot } = await assertCanMoveOutOfTeam({ teamSync, findTeamRoot }, {
-      itemId: build.id, oldFolderId, newFolderId: build.folderId ?? null, label: "build",
+      itemId: build.id, oldFolderId, newFolderId: build.folderId ?? oldFolderId, label: "build",
     });
     const saved = await store.upsertBuild(build);
     // Record creation for new builds so folder history panel shows the initial save.
@@ -708,9 +709,15 @@ const readyWork = app.whenReady().then(async () => {
       throw new Error("Rename or move the team from Settings → Teams.");
     }
     const oldParentId = existing?.parentId ?? null;
-    // Guard BEFORE the local write — see builds:save.
+    const newParentId = folder.parentId ?? null;
+    // Guards BEFORE the local write — see builds:save. The depth check covers
+    // the whole subtree (upsertFolder only checks the moved folder itself): a
+    // too-deep tree pushed into a team can never be applied by teammates.
+    if (existing && newParentId !== oldParentId) {
+      assertFolderTreeFits({ folders: await folderStore.listFolders(), folderId: folder.id, newParentId });
+    }
     const { oldRoot, newRoot } = await assertCanMoveOutOfTeam({ teamSync, findTeamRoot }, {
-      itemId: folder.id, oldFolderId: oldParentId, newFolderId: folder.parentId ?? null, label: "folder",
+      itemId: folder.id, oldFolderId: oldParentId, newFolderId: newParentId, label: "folder",
     });
     const saved = await folderStore.upsertFolder(folder);
     if (newRoot && newRoot.id !== oldRoot?.id) {

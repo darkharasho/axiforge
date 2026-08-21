@@ -107,3 +107,17 @@ test("polling is stopped on quit and only started when a team session exists", (
   expect(MAIN).toMatch(/app\.on\("will-quit"[\s\S]{0,900}teamSyncRef\.stopPolling\(\)/);
   expect(MAIN).toMatch(/if \(await teamSync\.getSession\(\)\) teamSync\.startPolling\(\);/);
 });
+
+test("folders:save checks the whole subtree's depth BEFORE the local write", () => {
+  const src = handlerSource("folders:save");
+  const guard = src.indexOf("assertFolderTreeFits(");
+  const write = src.indexOf("folderStore.upsertFolder(");
+  expect(guard).toBeGreaterThan(-1);
+  expect(guard).toBeLessThan(write);
+});
+
+test("builds:save treats a missing folderId as 'unchanged' (upsertBuild preserves it), not as a move to personal", () => {
+  const src = handlerSource("builds:save");
+  expect(src).toContain("newFolderId: build.folderId ?? oldFolderId");
+  expect(src).not.toContain("newFolderId: build.folderId ?? null");
+});

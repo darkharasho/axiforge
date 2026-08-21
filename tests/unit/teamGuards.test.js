@@ -1,5 +1,5 @@
 "use strict";
-const { assertCanMoveOutOfTeam, decideCompBuildPublish } = require("../../src/main/teamGuards");
+const { assertCanMoveOutOfTeam, assertFolderTreeFits, decideCompBuildPublish } = require("../../src/main/teamGuards");
 
 // findTeamRoot stub: folder ids are "<team>/<name>"; "p/..." means personal.
 function makeDeps({ canDelete = async () => true } = {}) {
@@ -96,4 +96,29 @@ test("a foreign owner without a usable published copy is published normally", ()
   const noKey = { publishedOwner: "alice", publishedFileId: "f" };
   expect(decideCompBuildPublish({ build: noKey, owner: "bob", force: false, slug: "s" }))
     .toEqual({ foreignOwner: null, needsRecord: true });
+});
+
+describe("assertFolderTreeFits", () => {
+  // a (depth 1) → b (2) → c (3); x is a top-level folder with child x1 and grandchild x2.
+  const folders = [
+    { id: "a", parentId: null }, { id: "b", parentId: "a" }, { id: "c", parentId: "b" },
+    { id: "x", parentId: null }, { id: "x1", parentId: "x" }, { id: "x2", parentId: "x1" },
+    { id: "y", parentId: null },
+  ];
+  test("a leaf folder can move under a depth-2 parent (lands at depth 3)", () => {
+    expect(() => assertFolderTreeFits({ folders, folderId: "y", newParentId: "b" })).not.toThrow();
+  });
+  test("a folder with one level of children fits under a top-level parent", () => {
+    expect(() => assertFolderTreeFits({ folders, folderId: "x1", newParentId: "a" })).not.toThrow();
+  });
+  test("a folder whose grandchildren would exceed the limit is refused", () => {
+    // x has height 2 (x1, x2); under a (depth 1) → x=2, x1=3, x2=4 → too deep.
+    expect(() => assertFolderTreeFits({ folders, folderId: "x", newParentId: "a" })).toThrow("FOLDER_TOO_DEEP");
+  });
+  test("a leaf cannot move under a depth-3 parent", () => {
+    expect(() => assertFolderTreeFits({ folders, folderId: "y", newParentId: "c" })).toThrow("FOLDER_TOO_DEEP");
+  });
+  test("moving to top level never fails on depth", () => {
+    expect(() => assertFolderTreeFits({ folders, folderId: "x", newParentId: null })).not.toThrow();
+  });
 });

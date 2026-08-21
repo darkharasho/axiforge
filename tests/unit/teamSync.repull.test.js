@@ -149,3 +149,29 @@ describe("TeamSync — enqueueFolderTree", () => {
     h.sync.stopPolling();
   });
 });
+
+describe("TeamSync — _fullRepull vs an in-flight incremental pull", () => {
+  test("waits for the running pull, then pulls from 0 so its cursor reset is not overwritten", async () => {
+    h = await makeHarness();
+    await seedTeam(h);
+    await h.syncStore.setCursor("t", 10);
+    let releaseFirst;
+    const firstPage = new Promise((resolve) => { releaseFirst = resolve; });
+    h.api.changes
+      .mockReturnValueOnce(firstPage)                                                           // incremental pull, held open
+      .mockResolvedValueOnce({ items: [item({ id: "b1", seq: 3 })], nextSeq: 3, hasMore: false }); // the from-0 repair pull
+
+    const incremental = h.sync.pullTeam("t");          // in flight
+    const repair = h.sync._fullRepull("t");            // must not reset the cursor underneath it
+    for (let i = 0; i < 200 && h.api.changes.mock.calls.length < 1; i++) await new Promise((r) => setImmediate(r));
+    for (let i = 0; i < 50; i++) await new Promise((r) => setImmediate(r)); // give the repair every chance to (wrongly) race
+    expect(h.api.changes).toHaveBeenCalledTimes(1);    // repair is waiting, not racing
+    releaseFirst({ items: [], nextSeq: 42, hasMore: false });
+    await incremental;
+    await repair;
+
+    expect(h.api.changes.mock.calls.map((c) => c[1])).toEqual([10, 0]);
+    expect((await h.syncStore.getTeam("t")).cursor).toBe(3);   // the repair pull's nextSeq, not 42
+    expect((await h.buildStore.listBuilds()).map((b) => b.id)).toEqual(["b1"]);
+  });
+});

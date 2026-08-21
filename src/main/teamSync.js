@@ -295,7 +295,7 @@ class TeamSync {
       // the stored cursor returns nothing and the local mutation the IPC
       // handler already applied would diverge from the server forever. Pull
       // the whole team from 0 instead so every rejected change is repaired.
-      await this._fullRepull(teamId).catch(() => {});
+      await this._fullRepull(teamId).catch((err3) => console.warn("[team-sync] repair pull failed:", err3.message));
     }
     if (root && !(await this.syncStore.listOutbox(teamId)).length) {
       this._emit("sync-status", { status: "synced", folderId: root.id });
@@ -404,6 +404,12 @@ class TeamSync {
   // Because `since === 0` the server never sets `resync`, so `_pruneUnseen`
   // does NOT run — pending local-only work must survive this.
   async _fullRepull(teamId) {
+    // A poll's incremental pull may already be in flight (pulls and flushes
+    // de-dupe on different keys). Let it finish first, otherwise it would
+    // overwrite our cursor reset with its own nextSeq and no from-0 pull would
+    // ever happen.
+    const inflight = this._inflight.get(`pull:${teamId}`);
+    if (inflight) await inflight.catch(() => {});
     await this.syncStore.setCursor(teamId, 0);
     return this.pullTeam(teamId);
   }
