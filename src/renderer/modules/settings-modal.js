@@ -725,7 +725,7 @@ async function _loadTeamsState() {
 }
 
 async function _renderTeamsList() {
-  const teams = await window.desktopApi.listTeams().catch((err) => { _setTeamsStatus(`Error: ${err.message}`, true); return []; });
+  const teams = await window.desktopApi.listTeams().catch((err) => { _setTeamsStatus(`Error: ${err?.message || String(err)}`, true); return []; });
   _el.teamsList.innerHTML = teams.length ? teams.map(({ team, role }) => `
     <div class="sm-team" data-team-id="${escapeHtml(team.id)}" data-role="${role}">
       <div class="sm-team__head">
@@ -820,13 +820,25 @@ async function _createTeam() {
   _el.teamCreate.disabled = true;
   try {
     const { team } = await window.desktopApi.createTeam(name);
-    await window.desktopApi.writeClipboardText(team.inviteCode);
-    _setTeamsStatus(`Team "${team.name}" created. Invite code ${team.inviteCode} copied — share it with your team.`);
+    // The team is already created server-side at this point — a clipboard
+    // failure (permission denial, sandboxed/headless) must not be reported
+    // as an overall failure, and must not skip refreshing state below.
+    let copied = true;
+    try {
+      await window.desktopApi.writeClipboardText(team.inviteCode);
+    } catch {
+      copied = false;
+    }
+    _setTeamsStatus(
+      copied
+        ? `Team "${team.name}" created. Invite code ${team.inviteCode} copied — share it with your team.`
+        : `Team "${team.name}" created. Invite code: ${team.inviteCode} — share it with your team.`
+    );
     _el.teamCreateName.value = "";
     await _renderTeamsList();
     await _callbacks.refreshLibraryState?.();
   } catch (err) {
-    _setTeamsStatus(`Error: ${err.message}`, true);
+    _setTeamsStatus(`Error: ${err?.message || String(err)}`, true);
   } finally {
     _el.teamCreate.disabled = false;
   }

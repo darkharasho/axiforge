@@ -70,6 +70,24 @@ describe("settings-modal — Teams pane", () => {
     expect(api.joinTeam).toHaveBeenCalledWith("ZZZZZZZZZZ");
   });
 
+  test("create team still succeeds when the clipboard write fails: team appears in the list and status is not an error", async () => {
+    api.getTeamSession.mockResolvedValue({ login: "me", userId: "u1" });
+    api.writeClipboardText.mockRejectedValueOnce(new Error("clipboard denied"));
+    api.listTeams.mockResolvedValue([
+      { team: { id: "t1", name: "EWW", inviteCode: "ABCDEFGHJK" }, role: "owner" },
+    ]);
+    mod.openSettingsModal({ initialPane: "teams" });
+    await flush();
+    document.getElementById("sm-team-create-name").value = "EWW";
+    document.getElementById("sm-team-create").click();
+    await flush(); await flush();
+    expect(api.createTeam).toHaveBeenCalledWith("EWW");
+    const status = document.getElementById("sm-teams-status");
+    expect(status.textContent).toContain("ABCDEFGHJK");
+    expect(status.textContent).not.toMatch(/^Error/);
+    expect(document.querySelectorAll(".sm-team")).toHaveLength(1);
+  });
+
   test("team list: owner sees rotate/rename/delete and member rows with Remove; member sees Leave only", async () => {
     api.getTeamSession.mockResolvedValue({ login: "me", userId: "u1" });
     api.listTeams.mockResolvedValue([
