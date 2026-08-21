@@ -55,6 +55,42 @@ describe("items", () => {
     expect(list.items[0]).toMatchObject({ id: "b1", deleted: false, version: 3, body: { x: 1 } });
   });
 
+  test("un-tombstone race: loser (stale pre-read) gets 409 with current, no data loss", async () => {
+    const { env, deps, owner, member, teamId } = await setup();
+    await put(env, deps, owner, teamId, "b1", { type: "build", body: { v: 1 }, baseVersion: null }); // v1, seq1
+    expect((await del(env, deps, owner, teamId, "b1", 1)).status).toBe(200); // tombstoned, v2, seq2
+
+    // Winner: a real concurrent writer un-deletes b1 first.
+    const winner = await put(env, deps, member, teamId, "b1", { type: "build", body: { winner: true }, baseVersion: null });
+    expect(winner.status).toBe(201);
+    expect(await winner.json()).toEqual({ version: 3, seq: 3 });
+
+    // Loser: simulate a writer whose pre-batch read of `items` observed the row
+    // still tombstoned (stale snapshot), so it takes the create-over-tombstone
+    // branch. Its guarded `UPDATE ... WHERE deleted = 1` matches 0 rows because
+    // the winner already un-deleted the row — this must not be reported as a
+    // silent success with someone else's data.
+    const staleEnv = {
+      ...env,
+      SYNC_DB: {
+        ...env.SYNC_DB,
+        prepare(sql) {
+          if (sql === "SELECT version, deleted FROM items WHERE team_id = ? AND id = ?") {
+            return { bind: () => ({ first: async () => ({ version: 2, deleted: 1 }) }) };
+          }
+          return env.SYNC_DB.prepare(sql);
+        },
+      },
+    };
+    const loser = await items.writeItem(staleEnv, deps, owner, teamId, { itemId: "b1", type: "build", body: { loser: true }, baseVersion: null });
+    expect(loser.status).toBe(409);
+    expect(loser.current).toMatchObject({ id: "b1", version: 3, body: { winner: true } });
+
+    // No data loss: the winner's write is the one that survives.
+    const list = await (await changes(env, deps, owner, teamId)).json();
+    expect(list.items.find((i) => i.id === "b1").body).toEqual({ winner: true });
+  });
+
   test("validation: bad type 400, parent must be a live folder in the team 400, oversize 413, boonCoverageHtml stripped", async () => {
     const { env, deps, owner, teamId } = await setup();
     expect((await put(env, deps, owner, teamId, "x", { type: "thing", body: {}, baseVersion: null })).status).toBe(400);
@@ -145,5 +181,19 @@ describe("items", () => {
     for (let i = 0; i < 120; i++) await put(env, deps, owner, teamId, `b${i}`, { type: "build", body: {}, baseVersion: null });
     const r = await put(env, deps, owner, teamId, "late", { type: "build", body: {}, baseVersion: null });
     expect(r.status).toBe(429);
+  });
+
+  test("write rate limit charges bulk per item: a 50-item bulk plus 71 singles trips 429 on the 71st", async () => {
+    const { env, deps, owner, teamId } = await setup();
+    const bulk = await items.bulkItems(jreq("POST", { items: Array.from({ length: 50 }, (_, i) => ({ itemId: `x${i}`, type: "build", body: {}, baseVersion: null })) }), env, deps, owner, { teamId });
+    expect(bulk.status).toBe(200);
+    const { results } = await bulk.json();
+    expect(results.every((r) => r.status === 201)).toBe(true); // 50 quota consumed, 70 left of 120
+    for (let i = 0; i < 70; i++) {
+      const r = await put(env, deps, owner, teamId, `y${i}`, { type: "build", body: {}, baseVersion: null });
+      expect(r.status).toBe(201);
+    }
+    const r71 = await put(env, deps, owner, teamId, "y70", { type: "build", body: {}, baseVersion: null });
+    expect(r71.status).toBe(429);
   });
 });

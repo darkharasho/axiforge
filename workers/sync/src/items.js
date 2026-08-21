@@ -51,8 +51,8 @@ async function memberOr403(env, teamId, auth) {
   return { membership: m };
 }
 
-async function writeLimited(env, deps, auth) {
-  const rl = await checkRateLimit(env.SYNC_RL, `write:${auth.user.id}`, WRITES_PER_MIN, 60, deps);
+async function writeLimited(env, deps, auth, cost = 1) {
+  const rl = await checkRateLimit(env.SYNC_RL, `write:${auth.user.id}`, WRITES_PER_MIN, 60, deps, cost);
   if (rl.ok) return null;
   return errorResponse("rate_limited", "Too many changes too quickly. Try again shortly.", 429, { "Retry-After": String(rl.retryAfterSeconds) });
 }
@@ -87,10 +87,11 @@ async function writeItem(env, deps, auth, teamId, { itemId, type, parentId, body
 
   const bump = db.prepare("UPDATE teams SET seq = seq + 1 WHERE id = ?").bind(teamId);
   const seqSub = "(SELECT seq FROM teams WHERE id = ?)";
-  let write, created;
+  let write, created, isInsert;
   if (!existing) {
     if (base !== null) return { status: 409, current: null, message: "Item does not exist (baseVersion must be null to create)." };
     created = true;
+    isInsert = true;
     write = db.prepare(
       `INSERT INTO items (team_id, id, type, parent_id, body, version, seq, deleted, created_by, updated_by, updated_at)
        VALUES (?, ?, ?, ?, ?, 1, ${seqSub}, 0, ?, ?, ?)`
@@ -98,6 +99,7 @@ async function writeItem(env, deps, auth, teamId, { itemId, type, parentId, body
   } else if (existing.deleted === 1) {
     if (base !== null) return { status: 409, current: await currentItem(env, teamId, itemId) };
     created = true;
+    isInsert = false;
     write = db.prepare(
       `UPDATE items SET type = ?, parent_id = ?, body = ?, version = version + 1, seq = ${seqSub}, deleted = 0,
               created_by = ?, updated_by = ?, updated_at = ?
@@ -106,6 +108,7 @@ async function writeItem(env, deps, auth, teamId, { itemId, type, parentId, body
   } else {
     if (base === null || base !== existing.version) return { status: 409, current: await currentItem(env, teamId, itemId) };
     created = false;
+    isInsert = false;
     write = db.prepare(
       `UPDATE items SET type = ?, parent_id = ?, body = ?, version = version + 1, seq = ${seqSub}, updated_by = ?, updated_at = ?
         WHERE team_id = ? AND id = ? AND version = ? AND deleted = 0`
@@ -123,8 +126,10 @@ async function writeItem(env, deps, auth, teamId, { itemId, type, parentId, body
     }
     throw err;
   }
-  if (!created && results[1].meta.changes === 0) {
-    // Lost the race between our SELECT and the guarded UPDATE.
+  if (!isInsert && results[1].meta.changes === 0) {
+    // Lost the race between our SELECT and the guarded UPDATE — someone else already
+    // wrote this row (either a version bump or an un-tombstone) between our read and
+    // our batch. Report as a conflict rather than silently discarding our write.
     return { status: 409, current: await currentItem(env, teamId, itemId) };
   }
   const row = results[2].results[0];
@@ -238,12 +243,14 @@ async function deleteItem(request, env, deps, auth, params) {
 async function bulkItems(request, env, deps, auth, params) {
   const { error } = await memberOr403(env, params.teamId, auth);
   if (error) return error;
-  const limited = await writeLimited(env, deps, auth);
-  if (limited) return limited;
   const body = await readJson(request);
   const list = body && Array.isArray(body.items) ? body.items : null;
   if (!list) return errorResponse("invalid", "items must be an array.");
   if (list.length > MAX_BULK) return errorResponse("invalid", `At most ${MAX_BULK} items per bulk request.`);
+  // Charge the rate limiter once per item (after validating the list) so a bulk
+  // request cannot be used to write far more than WRITES_PER_MIN items per minute.
+  const limited = await writeLimited(env, deps, auth, list.length);
+  if (limited) return limited;
   const results = [];
   for (const entry of list) {
     const r = await writeItem(env, deps, auth, params.teamId, entry || {});
