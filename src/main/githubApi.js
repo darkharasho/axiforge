@@ -64,8 +64,9 @@ async function listTargets(token, viewerLogin) {
 
 async function ensureAxiForgeRepo(token, owner, ownerType = "user") {
   try {
+    // The GET succeeding *is* the readiness check — no need to sleep and poll
+    // again (that added a flat 1.5s to every publish).
     await apiFetch(`/repos/${owner}/${TARGET_REPO}`, token);
-    await waitForRepo(token, owner, TARGET_REPO);
     return TARGET_REPO;
   } catch (err) {
     if (err.status !== 404) throw err;
@@ -309,6 +310,11 @@ async function getRepo(token, owner, repo = TARGET_REPO) {
   return apiFetch(`/repos/${owner}/${repo}`, token);
 }
 
+// Max attempts to land the publish commit when another writer moves the branch
+// between our HEAD read and our ref update (two org members publishing at once,
+// or a publish racing the Pages workflow). Each retry rebases on the new HEAD.
+const PUBLISH_COMMIT_ATTEMPTS = 4;
+
 async function publishSiteBundle(token, owner, bundle, branch = "main", repo = TARGET_REPO) {
   await ensureAxiForgeRepo(token, owner);
   const entries = Object.entries(bundle || {}).filter(
@@ -318,6 +324,28 @@ async function publishSiteBundle(token, owner, bundle, branch = "main", repo = T
     throw new Error("Nothing to publish.");
   }
 
+  let lastErr = null;
+  for (let attempt = 1; attempt <= PUBLISH_COMMIT_ATTEMPTS; attempt += 1) {
+    try {
+      return await publishSiteBundleOnce(token, owner, bundle, branch, repo);
+    } catch (err) {
+      if (!isNonFastForward(err) || attempt === PUBLISH_COMMIT_ATTEMPTS) throw err;
+      lastErr = err;
+      await delay(500 * attempt);
+    }
+  }
+  throw lastErr;
+}
+
+// GitHub rejects a non-fast-forward ref update (when force is false) with 422
+// "Update is not a fast forward". Treat that — and only that — as retryable.
+function isNonFastForward(err) {
+  if (!err || err.status !== 422) return false;
+  const msg = String(err.message || err.data?.message || "").toLowerCase();
+  return msg.includes("fast forward") || msg.includes("fast-forward");
+}
+
+async function publishSiteBundleOnce(token, owner, bundle, branch, repo) {
   const headRef = await apiFetch(`/repos/${owner}/${repo}/git/ref/heads/${encodeURIComponent(branch)}`, token);
   const headSha = headRef?.object?.sha;
   if (!headSha) {
@@ -422,11 +450,15 @@ async function publishSiteBundle(token, owner, bundle, branch = "main", repo = T
     }),
   });
 
+  // Fast-forward only. A forced update would silently discard any commit that
+  // landed since we read HEAD — i.e. someone else's freshly published build —
+  // and their share link would 404. On a non-fast-forward 422 the caller
+  // retries from a fresh HEAD (see publishSiteBundle).
   await apiFetch(`/repos/${owner}/${repo}/git/refs/heads/${encodeURIComponent(branch)}`, token, {
     method: "PATCH",
     body: JSON.stringify({
       sha: commit.sha,
-      force: true,
+      force: false,
     }),
   });
 
@@ -526,7 +558,6 @@ const SHARED_REPO = "axibuilds-shared";
 async function ensureSharedRepo(token, org) {
   try {
     await apiFetch(`/repos/${org}/${SHARED_REPO}`, token);
-    await waitForRepo(token, org, SHARED_REPO);
     return SHARED_REPO;
   } catch (err) {
     if (err.status !== 404) throw err;

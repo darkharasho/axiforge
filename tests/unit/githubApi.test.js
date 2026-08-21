@@ -1030,3 +1030,88 @@ describe("apiFetch error codes — other status codes", () => {
     expect(err.status).toBe(404);
   });
 });
+
+// ---------------------------------------------------------------------------
+// publishSiteBundle — concurrent-writer safety (fast-forward only + retry)
+// ---------------------------------------------------------------------------
+
+describe("publishSiteBundle — fast-forward ref update", () => {
+  afterEach(() => { delete global.fetch; });
+
+  function makeFetch({ failPatchTimes = 0 } = {}) {
+    let head = "head-1";
+    let patchCalls = 0;
+    const patches = [];
+    const fetchMock = jest.fn((url, options) => {
+      const urlStr = String(url);
+      const method = (options?.method || "GET").toUpperCase();
+      if (urlStr.includes("/git/ref/heads/") && method === "GET") return okRes({ object: { sha: head } });
+      if (urlStr.includes("/git/commits/") && method === "GET") return okRes({ tree: { sha: `tree-${head}` } });
+      if (urlStr.includes("/git/trees/") && method === "GET") return okRes({ tree: [] });
+      if (urlStr.includes("/git/blobs") && method === "POST") return okRes({ sha: "blob" });
+      if (urlStr.includes("/git/trees") && method === "POST") return okRes({ sha: "newtree" });
+      if (urlStr.includes("/git/commits") && method === "POST") return okRes({ sha: `commit-on-${head}` });
+      if (urlStr.includes("/git/refs/heads/") && method === "PATCH") {
+        patches.push(JSON.parse(options.body));
+        patchCalls += 1;
+        if (patchCalls <= failPatchTimes) {
+          head = `head-${patchCalls + 1}`; // someone else moved the branch
+          return failRes(422, "Update is not a fast forward");
+        }
+        return okRes({ object: { sha: JSON.parse(options.body).sha } });
+      }
+      if (urlStr.includes("/contents/")) return failRes(404);
+      return okRes({ name: FAKE_REPO });
+    });
+    return { fetchMock, patches };
+  }
+
+  test("never force-pushes the branch", async () => {
+    const { fetchMock, patches } = makeFetch();
+    global.fetch = fetchMock;
+    await publishSiteBundle(FAKE_TOKEN, FAKE_OWNER, { "site/builds/x.enc": "data" });
+    expect(patches).toHaveLength(1);
+    expect(patches[0].force).toBe(false);
+  });
+
+  test("retries from the new HEAD when the branch moved underneath us", async () => {
+    const { fetchMock, patches } = makeFetch({ failPatchTimes: 2 });
+    global.fetch = fetchMock;
+    const result = await publishSiteBundle(FAKE_TOKEN, FAKE_OWNER, { "site/builds/x.enc": "data" });
+    expect(patches.map((p) => p.sha)).toEqual(["commit-on-head-1", "commit-on-head-2", "commit-on-head-3"]);
+    expect(result.commitSha).toBe("commit-on-head-3");
+    expect(result.changed).toBe(true);
+  });
+
+  test("gives up after the retry budget and surfaces the error", async () => {
+    const { fetchMock } = makeFetch({ failPatchTimes: 99 });
+    global.fetch = fetchMock;
+    await expect(publishSiteBundle(FAKE_TOKEN, FAKE_OWNER, { "site/builds/x.enc": "data" }))
+      .rejects.toThrow(/fast forward/i);
+  });
+
+  test("does not retry unrelated errors", async () => {
+    global.fetch = jest.fn((url, options) => {
+      const urlStr = String(url);
+      const method = (options?.method || "GET").toUpperCase();
+      if (urlStr.includes("/git/ref/heads/") && method === "GET") return failRes(500, "kaboom");
+      return okRes({ name: FAKE_REPO });
+    });
+    await expect(publishSiteBundle(FAKE_TOKEN, FAKE_OWNER, { "site/builds/x.enc": "data" }))
+      .rejects.toThrow("kaboom");
+    const refGets = global.fetch.mock.calls.filter(([u, o]) => String(u).includes("/git/ref/heads/") && !(o?.method));
+    expect(refGets).toHaveLength(1);
+  });
+});
+
+describe("ensureAxiForgeRepo — fast path", () => {
+  afterEach(() => { delete global.fetch; });
+
+  test("makes exactly one request and no delay when the repo already exists", async () => {
+    global.fetch = jest.fn(() => okRes({ name: FAKE_REPO }));
+    const started = Date.now();
+    await ensureAxiForgeRepo(FAKE_TOKEN, FAKE_OWNER);
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+    expect(Date.now() - started).toBeLessThan(500);
+  });
+});

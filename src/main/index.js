@@ -37,6 +37,7 @@ const {
 const { getProfessionList, getProfessionCatalog, getUpgradeCatalog, getWikiSummary, getWikiRelatedData, initDiskCache, clearDiskCache, initWikiClient, clearCatalogCache } = require("./gw2Data");
 const { slugifyBuildName, generateFileId, generateEncryptionKey, getDefaultBuildName } = require("./buildEncryption");
 const { buildSpaBundle, buildEncryptedBuildFile, buildEncryptedCompFile, buildRedirectFile } = require("./siteBundle");
+const { snapshotDaily } = require("./jsonFile");
 const { serializeForPublish, loadCrossProfessionCatalogs } = require("./buildPublish");
 const { serializeCompForPublish, getCompPublishBuildIds } = require("./compPublish");
 const { initAutoUpdate } = require("./autoUpdate");
@@ -100,6 +101,33 @@ const folderStore = new FolderStore(dataDir);
 const compStore = new CompStore(dataDir);
 const syncStore = new SyncStore(dataDir);
 const buildHistoryStore = new BuildHistoryStore(dataDir);
+
+// Publishing infrastructure (repo, Pages workflow file, Pages config) only needs
+// verifying once per owner per process. Re-checking it on every publish cost
+// several round trips (~2-4s) for no benefit. If a later publish hits a 404
+// (repo deleted, Pages disabled) the cache is cleared and the full check reruns.
+const _publishInfraVerified = new Set();
+async function ensurePublishInfra(token, owner, ownerType, branch) {
+  const key = `${owner}/${branch}`;
+  if (_publishInfraVerified.has(key)) return;
+  await ensureAxiForgeRepo(token, owner, ownerType);
+  await ensurePagesWorkflow(token, owner, branch, TARGET_REPO);
+  await ensurePages(token, owner, branch, TARGET_REPO);
+  _publishInfraVerified.add(key);
+}
+function invalidatePublishInfra(owner, branch) {
+  _publishInfraVerified.delete(`${owner}/${branch}`);
+}
+
+// Publishes from this process are serialized. Two overlapping publishes (a comp
+// and one of its builds, or two quick clicks) both read HEAD, build a commit on
+// it, and race to move the ref — the loser's files vanish from the site.
+let _publishQueue = Promise.resolve();
+function enqueuePublish(fn) {
+  const next = _publishQueue.then(() => fn());
+  _publishQueue = next.catch(() => {});
+  return next;
+}
 
 // Walk up the folder parentId chain to find the root folder with shared:true.
 // Returns the shared folder object (with orgName) or null if the build is personal.
@@ -353,6 +381,9 @@ const readyWork = app.whenReady().then(async () => {
   await compStore.init();
   await syncStore.init();
   await buildHistoryStore.init();
+  // Once-a-day snapshot of the user's library (kept 7 days) under data/backups/.
+  // Cheap insurance on top of the per-write .bak generation in jsonFile.js.
+  snapshotDaily(dataDir, ["builds.json", "comps.json", "folders.json", "settings.json"]).catch(() => {});
   await initDiskCache(dataDir);
   initWikiClient(dataDir);
   await migrateCompGameModes(store, compStore);
@@ -973,7 +1004,8 @@ const readyWork = app.whenReady().then(async () => {
     return result;
   });
 
-  handle("builds:publish-build", async (event, buildId) => {
+  handle("builds:publish-build", (event, buildId) => enqueuePublish(() => publishBuildImpl(event, buildId)));
+  async function publishBuildImpl(event, buildId) {
     const sender = event.sender;
     const progress = (step) => sender.send("publish-progress", { id: buildId, step });
 
@@ -1003,7 +1035,10 @@ const readyWork = app.whenReady().then(async () => {
     if (!build.title?.trim() || build.title === "Untitled Build") {
       const defaultName = getDefaultBuildName(build.specializations, build.profession);
       build.title = defaultName;
-      await store.upsertBuild(build);
+      const renamed = await store.upsertBuild(build);
+      // Keep the snapshot's updatedAt in step with what was just written, so the
+      // publishedAt stamped at the end matches and the build reads as fresh.
+      build.updatedAt = renamed.updatedAt;
     }
 
     // Validate
@@ -1015,11 +1050,9 @@ const readyWork = app.whenReady().then(async () => {
     const encKey = build.publishedKey || generateEncryptionKey();
     const newSlug = slugifyBuildName(build.title);
 
-    // Ensure repo and site infrastructure exist
+    // Ensure repo and site infrastructure exist (cached after the first success)
     progress("repo");
-    await ensureAxiForgeRepo(session.token, owner, ownerType);
-    await ensurePagesWorkflow(session.token, owner, branch, TARGET_REPO);
-    await ensurePages(session.token, owner, branch, TARGET_REPO);
+    await ensurePublishInfra(session.token, owner, ownerType, branch);
 
     // Build combined bundle: SPA files + encrypted build in one commit.
     // publishSiteBundle compares SHA hashes and skips unchanged files,
@@ -1112,7 +1145,13 @@ const readyWork = app.whenReady().then(async () => {
     }
 
     progress("upload");
-    const publishResult = await publishSiteBundle(session.token, owner, combinedBundle, branch, TARGET_REPO);
+    let publishResult;
+    try {
+      publishResult = await publishSiteBundle(session.token, owner, combinedBundle, branch, TARGET_REPO);
+    } catch (err) {
+      if (err?.status === 404) invalidatePublishInfra(owner, branch);
+      throw err;
+    }
     if (publishResult.shellChanged) {
       progress("deploy");
       await triggerPagesWorkflow(session.token, owner, branch, TARGET_REPO).catch(() => null);
@@ -1139,15 +1178,18 @@ const readyWork = app.whenReady().then(async () => {
       }
     }
 
-    // Update build with publish metadata and push to shared repo so teammates
-    // receive the published URL without needing to publish themselves.
-    const savedBuild = await store.upsertBuild({
-      ...build,
+    // Record publish metadata and push to shared repo so teammates receive the
+    // published URL without needing to publish themselves. markPublished patches
+    // only the publish fields — it must NOT re-upsert the `build` snapshot, which
+    // would clobber any save the user made while the upload was in flight. If
+    // such a save happened, publishedAt (= snapshot updatedAt) != updatedAt and
+    // the build correctly shows as needing a re-publish.
+    const savedBuild = (await store.markPublished(buildId, {
       publishedSlug: newSlug,
       publishedFileId: fileId,
       publishedKey: encKey,
-      __stampPublishedAt: true,
-    });
+      snapshotUpdatedAt: build.updatedAt,
+    })) || build;
     if (sharedRoot) {
       sharedLibrary.schedulePush("build", savedBuild);
     }
@@ -1183,9 +1225,10 @@ const readyWork = app.whenReady().then(async () => {
       fileId,
       changed: true,
     };
-  });
+  }
 
-  handle("comps:publish-comp", async (event, compId, boonCoverageHtml) => {
+  handle("comps:publish-comp", (event, compId, boonCoverageHtml) => enqueuePublish(() => publishCompImpl(event, compId, boonCoverageHtml)));
+  async function publishCompImpl(event, compId, boonCoverageHtml) {
     const sender = event.sender;
     const progress = (step) => sender.send("publish-progress", { id: compId, step });
 
@@ -1220,11 +1263,9 @@ const readyWork = app.whenReady().then(async () => {
     const buildIdSet = new Set(getCompPublishBuildIds(comp));
     const compBuilds = allBuilds.filter((b) => buildIdSet.has(b.id));
 
-    // ── 2. Ensure repo infrastructure ─────────────────────────────────
+    // ── 2. Ensure repo infrastructure (cached after first success) ─────
     progress("repo");
-    await ensureAxiForgeRepo(session.token, owner, ownerType);
-    await ensurePagesWorkflow(session.token, owner, branch, TARGET_REPO);
-    await ensurePages(session.token, owner, branch, TARGET_REPO);
+    await ensurePublishInfra(session.token, owner, ownerType, branch);
 
     // ── 3. Build SPA bundle ────────────────────────────────────────────
     progress("site");
@@ -1279,7 +1320,7 @@ const readyWork = app.whenReady().then(async () => {
       spaBundle[encFile.filePath] = encFile.content;
 
       if (!build.publishedFileId || build.publishedSlug !== slug) {
-        updatedBuildRecords.push({ ...build, publishedFileId: fileId, publishedKey: encKey, publishedSlug: slug, __stampPublishedAt: true });
+        updatedBuildRecords.push({ id: build.id, publishedFileId: fileId, publishedKey: encKey, publishedSlug: slug, snapshotUpdatedAt: build.updatedAt });
       }
 
       // Always add redirect file (idempotent — overwrites if already exists)
@@ -1304,7 +1345,13 @@ const readyWork = app.whenReady().then(async () => {
 
     // ── 6. Upload everything in one commit ────────────────────────────
     progress("upload");
-    const compPublishResult = await publishSiteBundle(session.token, owner, spaBundle, branch, TARGET_REPO);
+    let compPublishResult;
+    try {
+      compPublishResult = await publishSiteBundle(session.token, owner, spaBundle, branch, TARGET_REPO);
+    } catch (err) {
+      if (err?.status === 404) invalidatePublishInfra(owner, branch);
+      throw err;
+    }
 
     // ── 7. Trigger Pages rebuild ───────────────────────────────────────
     if (compPublishResult.shellChanged) {
@@ -1315,9 +1362,9 @@ const readyWork = app.whenReady().then(async () => {
     // ── 8. Persist metadata (builds first, then comp) ─────────────────
     // Push each newly-published build to the shared repo so teammates get the
     // published URL without needing to publish themselves.
-    for (const updatedBuild of updatedBuildRecords) {
-      const savedBuild = await store.upsertBuild(updatedBuild);
-      if (compSharedRoot) {
+    for (const { id, ...patch } of updatedBuildRecords) {
+      const savedBuild = await store.markPublished(id, patch);
+      if (savedBuild && compSharedRoot) {
         sharedLibrary.schedulePush("build", savedBuild);
       }
     }
@@ -1325,14 +1372,15 @@ const readyWork = app.whenReady().then(async () => {
     const savedTheme = await store.getSetting("appearance.theme");
     const compPagesUrl = `https://${owner}.github.io/${TARGET_REPO}/?n=${encodeURIComponent(compSlug)}&c=${compFileId}.${compEncKey}${savedTheme ? `&t=${savedTheme}` : ""}`;
 
-    const savedComp = await compStore.upsertComp({
-      ...comp,
+    // Patch publish fields only — never re-upsert the pre-publish snapshot
+    // (see builds:publish-build for why).
+    const savedComp = (await compStore.markPublished(compId, {
       publishedFileId: compFileId,
       publishedKey: compEncKey,
       publishedSlug: compSlug,
       boonCoverageHtml: boonCoverageHtml || comp.boonCoverageHtml || "",
-      __stampPublishedAt: true,
-    });
+      snapshotUpdatedAt: comp.updatedAt,
+    })) || comp;
 
     // Push comp publish metadata to shared repo so teammates get the URL.
     // Skip personal auth record update for shared comps — the org's repo is the
@@ -1357,7 +1405,7 @@ const readyWork = app.whenReady().then(async () => {
     }
 
     return { pagesUrl: compPagesUrl, slug: compSlug, fileId: compFileId, changed: true };
-  });
+  }
 
   handle("gw2:list-professions", async () => getProfessionList("en"));
   handle("gw2:get-profession-catalog", async (_e, professionId, gameMode) =>
