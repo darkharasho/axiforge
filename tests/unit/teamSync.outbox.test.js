@@ -262,4 +262,24 @@ describe("TeamSync — outbox", () => {
     expect(await h.syncStore.listOutbox("t")).toEqual([]);
     expect(spy).toHaveBeenCalledTimes(2);
   });
+
+  // ─── R6.2 ───────────────────────────────────────────────────────────────────
+
+  test("R6.2: two forbidden entries in one flush trigger only ONE reconcile + re-pull", async () => {
+    h = await makeHarness();
+    await seedTeam(h);
+    await h.buildStore.upsertBuild({ id: "b1", title: "A", folderId: "t" });
+    await h.buildStore.upsertBuild({ id: "b2", title: "B", folderId: "t" });
+    await h.syncStore.setVersion("t", "b1", { version: 1, createdBy: "someone-else" });
+    await h.syncStore.setVersion("t", "b2", { version: 1, createdBy: "someone-else" });
+    h.api.deleteItem.mockRejectedValue(apiError("SYNC_FORBIDDEN", { message: "Only the team owner or the item's creator can delete it." }));
+    h.api.listTeams.mockResolvedValue([{ team: { id: "t", name: "T" }, role: "member" }]);
+    await h.sync.enqueue("t", "b1", "build", "delete");
+    await h.sync.enqueue("t", "b2", "build", "delete");
+    await h.advance(FLUSH_DEBOUNCE_MS);
+    expect(await h.syncStore.listOutbox("t")).toEqual([]);
+    expect(h.events.filter((e) => e.status === "error" && e.error === "forbidden")).toHaveLength(2); // still one per-item error each
+    expect(h.api.listTeams).toHaveBeenCalledTimes(1); // ONE reconcile for both entries
+    expect(h.api.changes).toHaveBeenCalledTimes(1); // ONE re-pull for both entries
+  });
 });

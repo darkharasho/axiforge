@@ -209,4 +209,43 @@ describe("TeamSync — pull", () => {
     expect((await h.folderStore.listFolders())[0]).toMatchObject({ shared: false });
     expect((await h.syncStore.getTeam("t")).failures).toBe(0);
   });
+
+  // ─── R6.1 ───────────────────────────────────────────────────────────────────
+
+  test("R6.1: pullAll() called again while one is in flight returns the SAME promise (re-entrancy guard)", async () => {
+    h = await makeHarness();
+    await seedTeam(h);
+    let resolve;
+    h.api.changes.mockImplementationOnce(() => new Promise((r) => { resolve = () => r({ items: [], nextSeq: 0, hasMore: false }); }));
+    const flushSpy = jest.spyOn(h.sync, "flushAll");
+    const p1 = h.sync.pullAll();
+    const p2 = h.sync.pullAll();
+    expect(p2).toBe(p1); // no second pass was started
+    while (!resolve) await new Promise((r) => setImmediate(r));
+    resolve();
+    await Promise.all([p1, p2]);
+    expect(flushSpy).toHaveBeenCalledTimes(1);
+    expect(h.api.changes).toHaveBeenCalledTimes(1); // one team, one pull attempt
+    // A pullAll() called AFTER the first has settled starts a genuinely new pass.
+    const p3 = h.sync.pullAll();
+    expect(p3).not.toBe(p1);
+    await p3;
+    expect(h.api.changes).toHaveBeenCalledTimes(2);
+  });
+
+  // ─── R6.3 ───────────────────────────────────────────────────────────────────
+
+  test("R6.3: a remote item authored by the current session user records no history, even when its version is not locally known", async () => {
+    h = await makeHarness();
+    await seedTeam(h);
+    await h.buildStore.upsertBuild({ id: "b1", title: "Old", folderId: "t" });
+    // No local version recorded for b1 (never synced from this device), but
+    // the remote item's updatedBy IS the current session user — e.g. pushed
+    // from another device under the same account.
+    h.api.changes.mockResolvedValueOnce({ items: [item({ id: "b1", version: 5, seq: 5, body: { id: "b1", title: "New" }, updatedBy: { userId: "me", login: "me" } })], nextSeq: 5, hasMore: false });
+    await h.sync.pullTeam("t");
+    expect(await h.historyStore.getHistory("b1")).toEqual([]);
+    expect((await h.buildStore.listBuilds()).find((b) => b.id === "b1").title).toBe("New"); // still applied
+    expect(await h.syncStore.getVersion("t", "b1")).toEqual({ version: 5, createdBy: "u-vette" });
+  });
 });

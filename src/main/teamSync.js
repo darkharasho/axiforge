@@ -45,9 +45,16 @@ class TeamSync {
     this._inflight = new Map();      // teamId → Promise (flush)
     this._flushAgain = new Set();    // teamId → another flush was requested while one was in flight
     this._pullInProgress = new Set();
+    this._pullAllInflight = null; // R6.1: pullAll() re-entrancy guard
     this._pollTimer = null;
     this._lastFocusPullAt = 0;
     this._stopped = false;
+  }
+
+  // Promise wrapper around this._setTimeout, so rate-limit backoffs in
+  // shareFolderToTeam() drive off the same fake-timer plumbing tests use.
+  _wait(ms) {
+    return new Promise((resolve) => this._setTimeout(resolve, ms));
   }
 
   // ─── Session ────────────────────────────────────────────────────────────────
@@ -272,10 +279,19 @@ class TeamSync {
     const nowMs = this._now();
     const entries = (await this.syncStore.listOutbox(teamId))
       .filter((e) => !e.conflict && (!e.nextAttemptAt || Date.parse(e.nextAttemptAt) <= nowMs));
+    // R6.2: FORBIDDEN/NOT_FOUND entries request a repull via `needsRepull`
+    // instead of each doing its own listTeams()+pullTeam() inline — N such
+    // entries in one flush would otherwise serialize N full pulls.
+    let needsRepull = false;
     for (const entry of entries) {
       if (!root) { await this.syncStore.dequeue(teamId, entry.itemId, { queuedAt: entry.queuedAt }); continue; } // team detached
-      const stop = await this._flushEntry(teamId, root, entry, session);
-      if (stop) return;
+      const result = await this._flushEntry(teamId, root, entry, session);
+      if (result.needsRepull) needsRepull = true;
+      if (result.stop) return;
+    }
+    if (needsRepull) {
+      try { await this.listTeams(); } catch (err2) { console.warn("[team-sync] reconcile after forbidden/not-found failed:", err2.message); }
+      await this.pullTeam(teamId).catch(() => {}); // restore server state locally
     }
     if (root && !(await this.syncStore.listOutbox(teamId)).length) {
       this._emit("sync-status", { status: "synced", folderId: root.id });
@@ -304,7 +320,7 @@ class TeamSync {
     try {
       if (op === "put") {
         const local = await this._loadLocal(type, itemId);
-        if (!local) { await this.syncStore.dequeue(teamId, itemId, { queuedAt }); return false; }
+        if (!local) { await this.syncStore.dequeue(teamId, itemId, { queuedAt }); return { stop: false, needsRepull: false }; }
         const { body, parentId } = this._payloadFor(type, local, root);
         const res = await this.api.putItem(teamId, itemId, { type, parentId, body, baseVersion });
         // The server write really happened — record the new version even if a
@@ -314,7 +330,7 @@ class TeamSync {
         await this.syncStore.dequeue(teamId, itemId, { queuedAt });
         if (type !== "folder") this._emit("sync-status", { status: "synced", type, id: itemId, folderId: root.id, item: local });
       } else {
-        if (baseVersion === null) { await this.syncStore.dequeue(teamId, itemId, { queuedAt }); return false; } // never reached the server
+        if (baseVersion === null) { await this.syncStore.dequeue(teamId, itemId, { queuedAt }); return { stop: false, needsRepull: false }; } // never reached the server
         try {
           await this.api.deleteItem(teamId, itemId, baseVersion);
         } catch (err) {
@@ -324,37 +340,35 @@ class TeamSync {
         await this.syncStore.dequeue(teamId, itemId, { queuedAt });
         if (type !== "folder") this._emit("sync-status", { status: "synced", type, id: itemId, folderId: root.id });
       }
-      return false;
+      return { stop: false, needsRepull: false };
     } catch (err) {
       const code = err && err.code;
       if (code === "SYNC_CONFLICT") {
         await this.syncStore.patchOutbox(teamId, itemId, { conflict: err.current || { deleted: true } }, { queuedAt });
         this._emit("sync-conflict", { teamId, itemId, type, title: await title(), current: err.current || null });
         if (type !== "folder") this._emit("sync-status", { status: "conflict", type, id: itemId, folderId: root.id });
-        return false;
+        return { stop: false, needsRepull: false };
       }
       // FORBIDDEN and NOT_FOUND both mean "the server doesn't recognize this
       // write" (removed from the team, or the item/team no longer exists) —
       // handle them identically: drop the entry, surface a per-item error,
-      // then reconcile team membership and re-pull so the local state
-      // matches the server's.
+      // and ask the caller (_flushTeamInner) to reconcile team membership
+      // and re-pull ONCE after the whole flush, not once per entry (R6.2).
       if (code === "SYNC_FORBIDDEN" || code === "SYNC_NOT_FOUND") {
         await this.syncStore.dequeue(teamId, itemId, { queuedAt });
         const error = code === "SYNC_FORBIDDEN" ? "forbidden" : "not_found";
         this._emit("sync-status", { status: "error", type, id: itemId, folderId: root.id, error, message: err.message });
-        try { await this.listTeams(); } catch (err2) { console.warn("[team-sync] reconcile after", code, "failed:", err2.message); }
-        await this.pullTeam(teamId).catch(() => {}); // restore server state locally
-        return false;
+        return { stop: false, needsRepull: true };
       }
       if (code === "SYNC_TOO_LARGE" || code === "SYNC_INVALID") {
         await this.syncStore.dequeue(teamId, itemId, { queuedAt });
         const error = code === "SYNC_TOO_LARGE" ? "too_large" : "invalid";
         this._emit("sync-status", { status: "error", type, id: itemId, folderId: root.id, error, message: err.message });
-        return false;
+        return { stop: false, needsRepull: false };
       }
       if (code === "SYNC_UNAUTHORIZED") {
         await this._handleUnauthorized();
-        return true;
+        return { stop: true, needsRepull: false };
       }
       // SYNC_OFFLINE / SYNC_RATE_LIMITED / unknown: keep and back off
       const attempts = (entry.attempts || 0) + 1;
@@ -362,7 +376,7 @@ class TeamSync {
       await this.syncStore.patchOutbox(teamId, itemId, { attempts, nextAttemptAt: new Date(this._now() + delay).toISOString() }, { queuedAt });
       if (type !== "folder") this._emit("sync-status", { status: "pending", type, id: itemId, folderId: root.id });
       this._emit("sync-status", { status: "pending", folderId: root.id });
-      return false;
+      return { stop: false, needsRepull: false };
     }
   }
 
@@ -475,12 +489,18 @@ class TeamSync {
       return;
     }
 
+    // R6.3: don't rely solely on the version-echo check above for history
+    // attribution — an item we've never synced locally (known == null) but
+    // that we ourselves authored (e.g. pushed from another device under the
+    // same account) must not be recorded as a teammate's change either.
+    const isOwnWrite = !!(item.updatedBy && session && item.updatedBy.userId === session.userId);
+
     const body = item.body || {};
     let saved = null;
     if (item.type === "folder") {
       saved = await this.folderStore.upsertFolder({ id: item.id, name: body.name, sortOrder: body.sortOrder, parentId: folderId });
     } else if (item.type === "build") {
-      if (this.historyStore) {
+      if (this.historyStore && !isOwnWrite) {
         const { summarizeBuildChange } = require("./buildHistoryStore");
         const existing = (await this.buildStore.listBuilds()).find((b) => b.id === item.id);
         this.historyStore.addEntry({
@@ -497,7 +517,19 @@ class TeamSync {
     this._emit("sync-status", { status: "synced", type: item.type, id: item.id, folderId: root.id, item: saved });
   }
 
-  async pullAll() {
+  // R6.1: onFocus() can overlap a slow scheduled poll tick; without this
+  // guard two concurrent pullAll() calls race on getTeam().failures /
+  // setFailures (a lost update breaks the "exactly one pull-error at 3"
+  // guarantee). A call made while one is already running gets the SAME
+  // in-flight promise instead of starting a second pass.
+  pullAll() {
+    if (this._pullAllInflight) return this._pullAllInflight;
+    const p = this._pullAllInner().finally(() => { this._pullAllInflight = null; });
+    this._pullAllInflight = p;
+    return p;
+  }
+
+  async _pullAllInner() {
     await this.flushAll();
     const session = await this.getSession();
     if (!session) return;
@@ -550,6 +582,162 @@ class TeamSync {
     for (const { id } of this._flushTimers.values()) this._clearTimeout(id);
     this._flushTimers.clear();
     this._flushAgain.clear();
+  }
+
+  // ─── Conflicts ──────────────────────────────────────────────────────────────
+
+  async resolveConflict(teamId, itemId, choice) {
+    const team = await this.syncStore.getTeam(teamId);
+    const entry = team.outbox[itemId];
+    if (!entry || !entry.conflict) return;
+    const remote = entry.conflict;
+    const folders = await this.folderStore.listFolders();
+    const root = this.rootFolderForTeam(teamId, folders);
+    if (!root) { await this.syncStore.dequeue(teamId, itemId); return; }
+    if (choice === "theirs") {
+      await this.syncStore.dequeue(teamId, itemId);
+      if (remote && remote.id) {
+        await this.syncStore.removeVersion(teamId, itemId); // force apply even if versions matched
+        await this._applyItem(teamId, root, remote, await this.getSession());
+      }
+      return;
+    }
+    // "mine": adopt the server's version as our base and push again now.
+    if (remote && !remote.deleted && remote.version) {
+      await this.syncStore.setVersion(teamId, itemId, { version: remote.version, createdBy: remote.createdBy ? remote.createdBy.userId : null });
+    } else {
+      await this.syncStore.removeVersion(teamId, itemId); // re-create over a tombstone
+    }
+    await this.syncStore.patchOutbox(teamId, itemId, { conflict: null, attempts: 0, nextAttemptAt: null });
+    await this.flushTeam(teamId);
+  }
+
+  // ─── Sharing folders ────────────────────────────────────────────────────────
+
+  collectFolderTree(folderId, folders) {
+    const out = [folderId];
+    const queue = [folderId];
+    while (queue.length) {
+      const id = queue.shift();
+      for (const f of folders) if (f.parentId === id) { out.push(f.id); queue.push(f.id); }
+    }
+    return out;
+  }
+
+  async shareFolderToTeam(folderId, teamId, onProgress) {
+    const session = await this.getSession();
+    if (!session) throw new Error("Team sync is not enabled.");
+    const folders = await this.folderStore.listFolders();
+    const root = this.rootFolderForTeam(teamId, folders);
+    if (!root) throw new Error("Team not found locally.");
+    const folder = folders.find((f) => f.id === folderId);
+    if (!folder) throw new Error("Folder not found.");
+    if (folder.teamId) throw new Error("This folder is a team root.");
+
+    const treeIds = this.collectFolderTree(folderId, folders);
+    const treeSet = new Set(treeIds);
+    const builds = (await this.buildStore.listBuilds()).filter((b) => treeSet.has(b.folderId));
+    const comps = (await this.compStore.listComps()).filter((c) => treeSet.has(c.folderId));
+
+    // Folders first (parents before children — collectFolderTree is BFS), then items.
+    const items = [];
+    for (const id of treeIds) {
+      const f = folders.find((x) => x.id === id);
+      const parentId = id === folderId ? null : f.parentId;
+      items.push({ itemId: id, type: "folder", parentId, body: TeamSync.folderBody(f), baseVersion: null });
+    }
+    for (const b of builds) items.push({ itemId: b.id, type: "build", parentId: b.folderId, body: TeamSync.buildBody(b), baseVersion: null });
+    for (const c of comps) items.push({ itemId: c.id, type: "comp", parentId: c.folderId, body: TeamSync.compBody(c), baseVersion: null });
+
+    const failed = [];
+    let done = 0;
+    const MAX_RATE_LIMIT_WAITS = 5;
+    for (let i = 0; i < items.length; i += 50) {
+      const batch = items.slice(i, i + 50);
+      // R3: the server charges bulk writes per item against a per-user
+      // writes/min budget, so a large share can hit SYNC_RATE_LIMITED on a
+      // later batch. Retry the SAME batch after waiting, instead of failing
+      // the whole share or skipping items.
+      let results;
+      let waits = 0;
+      for (;;) {
+        try {
+          ({ results } = await this.api.bulk(teamId, batch));
+          break;
+        } catch (err) {
+          if (err && err.code === "SYNC_RATE_LIMITED" && waits < MAX_RATE_LIMIT_WAITS) {
+            waits += 1;
+            await this._wait(err.retryAfterMs || 60_000);
+            continue;
+          }
+          throw err;
+        }
+      }
+      for (const r of results) {
+        if (r.status === 200 || r.status === 201) {
+          await this.syncStore.setVersion(teamId, r.itemId, { version: r.version, createdBy: session.userId });
+        } else if (r.status === 409 && r.current && !r.current.deleted) {
+          // R3: someone else (or a retried earlier attempt) already put this
+          // item in the team — treat it as uploaded so re-running the share
+          // after a partial failure is idempotent instead of piling up
+          // "Already exists" failures forever.
+          await this.syncStore.setVersion(teamId, r.itemId, { version: r.current.version, createdBy: (r.current.createdBy && r.current.createdBy.userId) || session.userId });
+        } else {
+          failed.push({ itemId: r.itemId, status: r.status, message: r.message || (r.status === 409 ? "Already exists in the team." : "Rejected.") });
+        }
+      }
+      done += batch.length;
+      if (onProgress) onProgress({ done, total: items.length });
+    }
+
+    // Re-parent the folder under the team root. Its subtree keeps its structure.
+    await this.folderStore.upsertFolder({ id: folderId, name: folder.name, parentId: root.id, sortOrder: folder.sortOrder });
+    this._emit("sync-status", { status: "synced", folderId: root.id });
+    return { uploaded: items.length - failed.length, failed };
+  }
+
+  // Owner only (enforced by the caller / server). The folder tree stays on disk
+  // as personal data; teammates receive tombstones.
+  async stopSharing(folderId) {
+    const folders = await this.folderStore.listFolders();
+    const folder = folders.find((f) => f.id === folderId);
+    if (!folder) throw new Error("Folder not found.");
+    const root = this.teamRootFor(folderId, folders);
+    if (!root || root.id === folderId) throw new Error("Not a shared sub-folder of a team.");
+    const teamId = root.teamId;
+    const known = await this.syncStore.getVersion(teamId, folderId);
+    if (known) {
+      try {
+        await this.api.deleteItem(teamId, folderId, known.version);
+      } catch (err) {
+        if (err.code !== "SYNC_NOT_FOUND") throw err;
+      }
+    }
+    const treeIds = this.collectFolderTree(folderId, folders);
+    const treeSet = new Set(treeIds);
+    const itemIds = [
+      ...treeIds,
+      ...(await this.buildStore.listBuilds()).filter((b) => treeSet.has(b.folderId)).map((b) => b.id),
+      ...(await this.compStore.listComps()).filter((c) => treeSet.has(c.folderId)).map((c) => c.id),
+    ];
+    for (const id of itemIds) {
+      await this.syncStore.removeVersion(teamId, id);
+      await this.syncStore.dequeue(teamId, id);
+    }
+    await this.folderStore.upsertFolder({ id: folderId, name: folder.name, parentId: null, sortOrder: folder.sortOrder });
+    this._emit("sync-status", { status: "synced", folderId: root.id });
+  }
+
+  // Client-side mirror of the server rule, for UX (the server is the authority).
+  async canDelete(teamId, itemId) {
+    const folders = await this.folderStore.listFolders();
+    const root = this.rootFolderForTeam(teamId, folders);
+    if (!root) return true;
+    if (root.role === "owner") return true;
+    const known = await this.syncStore.getVersion(teamId, itemId);
+    if (!known) return true; // never synced — nothing to protect
+    const session = await this.getSession();
+    return !!session && known.createdBy === session.userId;
   }
 }
 
