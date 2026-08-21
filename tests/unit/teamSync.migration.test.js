@@ -74,6 +74,66 @@ describe("TeamSync — migration", () => {
     expect(h.api.deleteTeam).toHaveBeenCalledWith("root0");
   });
 
+  test("a thrown upload error rolls back the created team and leaves local legacy state untouched", async () => {
+    h = await makeHarness();
+    await seedLegacy(h);
+    h.api.createTeam.mockResolvedValue({ team: { id: "root0", name: "gw2eww", inviteCode: "X", seq: 0 }, role: "owner" });
+    h.api.deleteTeam.mockResolvedValue({});
+    h.api.bulk.mockRejectedValue(h.apiError("SYNC_OFFLINE", { message: "Network error" }));
+    await expect(h.sync.migrateOrgLibrary({ teamName: "gw2eww" })).rejects.toMatchObject({ code: "SYNC_OFFLINE" });
+    expect(h.api.deleteTeam).toHaveBeenCalledWith("root0");
+    const root = (await h.folderStore.listFolders()).find((f) => f.id === "root0");
+    expect(root.teamId).toBeUndefined();
+    expect(root.orgName).toBe("gw2eww");
+    expect((await h.buildStore.getAuth()).sharedLibrary).toBeDefined();
+  });
+
+  test("a failed rollback surfaces so the user can delete the stray team by hand", async () => {
+    h = await makeHarness();
+    await seedLegacy(h);
+    h.api.createTeam.mockResolvedValue({ team: { id: "root0", name: "gw2eww", inviteCode: "X", seq: 0 }, role: "owner" });
+    h.api.deleteTeam.mockRejectedValue(h.apiError("SYNC_OFFLINE", { message: "Network error" }));
+    h.api.bulk.mockImplementation(async (_t, items) => ({ results: items.map((it) => it.itemId === "b0" ? { itemId: "b0", status: 413, message: "too large" } : { itemId: it.itemId, status: 201, version: 1, seq: 1 }) }));
+    await expect(h.sync.migrateOrgLibrary({ teamName: "gw2eww" })).rejects.toThrow(/gw2eww.*root0.*could not be removed/s);
+    const root = (await h.folderStore.listFolders()).find((f) => f.id === "root0");
+    expect(root.teamId).toBeUndefined();
+    expect(root.orgName).toBe("gw2eww");
+  });
+
+  test("a 409 on the reused team id falls back to the team we already own", async () => {
+    h = await makeHarness();
+    await seedLegacy(h);
+    h.api.createTeam.mockRejectedValue(h.apiError("SYNC_CONFLICT", { message: "That team id is already in use." }));
+    h.api.listTeams.mockResolvedValue([{ team: { id: "root0", name: "gw2eww", inviteCode: "X", seq: 0 }, role: "owner" }]);
+    h.api.bulk.mockImplementation(async (_t, items) => ({ results: items.map((it) => ({ itemId: it.itemId, status: 201, version: 1, seq: 1 })) }));
+    const out = await h.sync.migrateOrgLibrary({ teamName: "gw2eww" });
+    expect(out).toMatchObject({ teamId: "root0", failed: [], foldersMigrated: 1 });
+    expect(h.api.deleteTeam).not.toHaveBeenCalled();
+    const root = (await h.folderStore.listFolders()).find((f) => f.id === "root0");
+    expect(root).toMatchObject({ shared: true, teamId: "root0", role: "owner" });
+  });
+
+  test("a 409 for a team we do NOT own is still a hard failure", async () => {
+    h = await makeHarness();
+    await seedLegacy(h);
+    h.api.createTeam.mockRejectedValue(h.apiError("SYNC_CONFLICT", { message: "That team id is already in use." }));
+    h.api.listTeams.mockResolvedValue([]);
+    await expect(h.sync.migrateOrgLibrary({ teamName: "gw2eww" })).rejects.toMatchObject({ code: "SYNC_CONFLICT" });
+    expect(h.api.bulk).not.toHaveBeenCalled();
+    expect((await h.folderStore.listFolders()).find((f) => f.id === "root0").orgName).toBe("gw2eww");
+  });
+
+  test("a too-deep root is refused BEFORE any team is created", async () => {
+    h = await makeHarness();
+    await seedLegacy(h, { roots: 2 });
+    await h.folderStore.upsertFolder({ id: "root0-grandchild", name: "Deep", parentId: "root0-sub" });
+    const before = await h.folderStore.listFolders();
+    await expect(h.sync.migrateOrgLibrary({ teamName: "gw2eww" })).rejects.toThrow(/nested too deeply/);
+    expect(h.api.createTeam).not.toHaveBeenCalled();
+    expect(h.api.bulk).not.toHaveBeenCalled();
+    expect(await h.folderStore.listFolders()).toHaveLength(before.length);
+  });
+
   test("rate limits are retried inside the migration upload (shared _bulkUpload path)", async () => {
     h = await makeHarness();
     await seedLegacy(h);

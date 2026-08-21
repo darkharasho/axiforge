@@ -211,8 +211,10 @@ export function initSettingsModal() {
     if (item) _switchPane(item.dataset.pane);
   });
 
-  // Upload progress for the legacy-library migration (share-to-team progress
-  // for a single folder is surfaced in the library, not here).
+  // Upload progress for the legacy-library migration. Preload's
+  // onTeamShareProgress does removeAllListeners, so there can only ever be one
+  // listener for this channel — this is it, and it ignores anything that isn't
+  // a migration (single-folder share progress currently has no other consumer).
   window.desktopApi?.onTeamShareProgress?.((p) => {
     if (p && p.migration && _el.teamsStatus) _setTeamsStatus(`Uploading ${p.done}/${p.total}…`);
   });
@@ -780,7 +782,7 @@ async function _loadTeamsState() {
   }
   _el.teamsUser.textContent = session.login;
   await _renderTeamsList();
-  _renderLegacyMigration?.(); // Task 6
+  await _renderLegacyMigration();
 }
 
 async function _renderTeamsList() {
