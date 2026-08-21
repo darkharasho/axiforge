@@ -301,6 +301,19 @@ describe("team fields", () => {
   beforeEach(async () => ({ store, dir } = await makeTempStore()));
   afterEach(async () => cleanupDir(dir));
 
+  test("clearLegacyFields removes orgName/lastSyncedAt", async () => {
+    await store.upsertFolder({ id: "legacy", name: "Old", shared: true, orgName: "gw2eww", lastSyncedAt: "2026-01-01T00:00:00.000Z" });
+    const cleared = await store.clearLegacyFields("legacy");
+    expect(cleared.orgName).toBeUndefined();
+    expect(cleared.lastSyncedAt).toBeUndefined();
+    expect(cleared).toMatchObject({ id: "legacy", name: "Old", shared: true });
+    const stored = (await store.listFolders()).find((f) => f.id === "legacy");
+    expect(stored.orgName).toBeUndefined();
+    expect(stored.lastSyncedAt).toBeUndefined();
+    // unknown ids are a no-op, not a throw
+    expect(await store.clearLegacyFields("nope")).toBeNull();
+  });
+
   test("persists teamId/role on create and update; null clears", async () => {
     const f = await store.upsertFolder({ id: "team-1", name: "EWW", shared: true, teamId: "team-1", role: "owner" });
     expect(f).toMatchObject({ shared: true, teamId: "team-1", role: "owner" });

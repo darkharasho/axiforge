@@ -10,6 +10,7 @@
 //   * Pull never overwrites an item that has a pending outbox entry.
 
 const { SyncApi } = require("./syncApi");
+const migration = require("./teamSyncMigration");
 
 const POLL_INTERVAL_MS = 30_000;
 const FOCUS_COOLDOWN_MS = 10_000;
@@ -121,6 +122,10 @@ class TeamSync {
   async _ensureRootFolder(team, role) {
     const folders = await this.folderStore.listFolders();
     const existing = this.rootFolderForTeam(team.id, folders) || folders.find((f) => f.id === team.id);
+    // R17: a folder that is now a team root can't also be a GitHub-org shared
+    // folder. Joiners never run the migration, so this is where their legacy
+    // root loses `orgName` (and with it the orphan banner).
+    if (existing && existing.orgName) await this.folderStore.clearLegacyFields(existing.id);
     if (existing && existing.parentId) {
       // A migrated/old folder that is nested cannot be a team root — re-root it.
       await this.folderStore.upsertFolder({ id: existing.id, name: team.name, parentId: null, shared: true, teamId: team.id, role });
@@ -146,7 +151,8 @@ class TeamSync {
     const folders = await this.folderStore.listFolders();
     const root = this.rootFolderForTeam(teamId, folders);
     if (root) {
-      await this.folderStore.upsertFolder({ id: root.id, name: root.name, parentId: null, shared: false, teamId: null, role: null, orgName: undefined, lastSyncedAt: undefined });
+      await this.folderStore.upsertFolder({ id: root.id, name: root.name, parentId: null, shared: false, teamId: null, role: null });
+      await this.folderStore.clearLegacyFields(root.id); // R6: upsert ignores `orgName: undefined`
       // No actor identity is available here: a detach is inferred from the team
       // disappearing from listTeams (or from the user leaving/deleting it), not
       // from a tombstone that would carry an `updated_by` login. The folder name
@@ -772,6 +778,20 @@ class TeamSync {
     for (const b of builds) items.push({ itemId: b.id, type: "build", parentId: b.folderId, body: TeamSync.buildBody(b), baseVersion: null });
     for (const c of comps) items.push({ itemId: c.id, type: "comp", parentId: c.folderId, body: TeamSync.compBody(c), baseVersion: null });
 
+    const { uploaded, failed } = await this._bulkUpload(teamId, items, onProgress);
+
+    // Re-parent the folder under the team root. Its subtree keeps its structure.
+    await this.folderStore.upsertFolder({ id: folderId, name: folder.name, parentId: root.id, sortOrder: folder.sortOrder });
+    this._emit("sync-status", { status: "synced", folderId: root.id });
+    return { uploaded, failed };
+  }
+
+  // Upload `items` (already ordered parents-before-children) to the team in
+  // batches, recording versions for everything the server accepted. Shared by
+  // shareFolderToTeam and the legacy-library migration.
+  async _bulkUpload(teamId, items, onProgress) {
+    const session = await this.getSession();
+    if (!session) throw new Error("Team sync is not enabled.");
     const failed = [];
     let done = 0;
     const MAX_RATE_LIMIT_WAITS = 5;
@@ -812,10 +832,6 @@ class TeamSync {
       done += batch.length;
       if (onProgress) onProgress({ done, total: items.length });
     }
-
-    // Re-parent the folder under the team root. Its subtree keeps its structure.
-    await this.folderStore.upsertFolder({ id: folderId, name: folder.name, parentId: root.id, sortOrder: folder.sortOrder });
-    this._emit("sync-status", { status: "synced", folderId: root.id });
     return { uploaded: items.length - failed.length, failed };
   }
 
@@ -850,6 +866,14 @@ class TeamSync {
     await this.folderStore.upsertFolder({ id: folderId, name: folder.name, parentId: null, sortOrder: folder.sortOrder });
     this._emit("sync-status", { status: "synced", folderId: root.id });
   }
+
+  // ─── Legacy GitHub-org library migration ────────────────────────────────────
+  // The logic lives in teamSyncMigration.js (this file is big enough); these
+  // are thin delegates so IPC and callers keep a single entry point.
+
+  legacyStatus() { return migration.legacyStatus(this); }
+  migrateOrgLibrary(opts, onProgress) { return migration.migrateOrgLibrary(this, opts, onProgress); }
+  cleanupLegacyFolders() { return migration.cleanupLegacyFolders(this); }
 
   // Client-side mirror of the server rule, for UX (the server is the authority).
   async canDelete(teamId, itemId) {

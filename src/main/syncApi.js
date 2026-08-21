@@ -66,7 +66,10 @@ class SyncApi {
   loginGithub(githubToken) { return this.#request("POST", "/auth/github", { body: { token: githubToken }, auth: false }); }
   logout() { return this.#request("DELETE", "/auth/session"); }
 
-  createTeam(name) { return this.#request("POST", "/teams", { body: { name } }); }
+  // `opts.id` asks the server to use a client-chosen team id (migration reuses
+  // the legacy shared folder's id so teammates re-link in place). The server
+  // may ignore it or answer 409 if it is taken.
+  createTeam(name, opts = {}) { return this.#request("POST", "/teams", { body: { name, ...(opts && opts.id ? { id: opts.id } : {}) } }); }
   joinTeam(inviteCode) { return this.#request("POST", "/teams/join", { body: { inviteCode } }); }
   listTeams() { return this.#request("GET", "/teams"); }
   listMembers(teamId) { return this.#request("GET", `/teams/${encodeURIComponent(teamId)}/members`); }

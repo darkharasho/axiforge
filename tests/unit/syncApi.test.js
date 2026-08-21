@@ -64,6 +64,16 @@ describe("SyncApi", () => {
     await expect(api.listTeams()).rejects.toMatchObject({ code: "SYNC_OFFLINE", status: 0 });
   });
 
+  test("createTeam sends the name, and a client-chosen id only when given", async () => {
+    const fetchImpl = jest.fn(async () => res(201, { team: { id: "t" }, role: "owner" }));
+    const api = makeApi(fetchImpl);
+    await api.createTeam("EWW");
+    expect(fetchImpl.mock.calls[0][0]).toBe("http://x/api/sync/teams");
+    expect(JSON.parse(fetchImpl.mock.calls[0][1].body)).toEqual({ name: "EWW" });
+    await api.createTeam("EWW", { id: "0f1e2d3c-4b5a-6978-8796-a5b4c3d2e1f0" });
+    expect(JSON.parse(fetchImpl.mock.calls[1][1].body)).toEqual({ name: "EWW", id: "0f1e2d3c-4b5a-6978-8796-a5b4c3d2e1f0" });
+  });
+
   test("query building for changes and deleteItem", async () => {
     const fetchImpl = jest.fn(async () => res(200, { items: [], nextSeq: 0, hasMore: false }));
     const api = makeApi(fetchImpl);

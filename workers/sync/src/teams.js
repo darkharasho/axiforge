@@ -27,13 +27,21 @@ async function requireMembership(env, teamId, userId) {
   return { team, role };
 }
 
-// POST /teams { name }
+// POST /teams { name, id? }
+// `id` lets a client migrating its old GitHub-org library keep the folder id it
+// already has (so teammates re-link in place). It must look like a UUID and
+// must not be taken; anything else is ignored / rejected.
 async function createTeam(request, env, deps, auth) {
   const body = await readJson(request);
   const name = cleanName(body && body.name);
   if (!name) return errorResponse("invalid", `Team name must be 1–${MAX_TEAM_NAME} characters.`);
   const now = nowIso(deps);
-  const id = uuid();
+  const requestedId = body && typeof body.id === "string" && /^[0-9a-f-]{36}$/i.test(body.id) ? body.id : null;
+  if (requestedId) {
+    const taken = await env.SYNC_DB.prepare("SELECT id FROM teams WHERE id = ?").bind(requestedId).first();
+    if (taken) return errorResponse("conflict", "That team id is already in use.");
+  }
+  const id = requestedId || uuid();
   // Invite codes are UNIQUE; retry a couple of times on the (astronomically rare) collision.
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const code = inviteCode();

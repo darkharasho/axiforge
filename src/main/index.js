@@ -431,6 +431,10 @@ const readyWork = app.whenReady().then(async () => {
   // Polling is meaningless without a team session (pullAll is a no-op then), and
   // teams:enable starts it as soon as the user opts in.
   if (await teamSync.getSession()) teamSync.startPolling();
+  // Startup housekeeping: folders that already live in a team can't still be
+  // GitHub-org shared folders. Non-destructive — nothing is deleted, only the
+  // dead `orgName`/`lastSyncedAt` fields (and the stale auth blob) go away.
+  teamSync.cleanupLegacyFolders().catch((err) => console.warn("[legacy-cleanup]", err.message));
   // Flush anything left in the outbox from a previous run, then pull.
   teamSync.pullAll().catch((err) => console.error("[startup-pull] error:", err.message));
   app.on("browser-window-focus", () => { teamSync.onFocus(); });
@@ -1952,6 +1956,9 @@ const readyWork = app.whenReady().then(async () => {
     if (root?.role !== "owner") throw new Error("Only the team owner can stop sharing a folder.");
     return teamSync.stopSharing(folderId);
   });
+  handle("teams:legacy-status", () => teamSync.legacyStatus());
+  handle("teams:migrate-org-library", (_e, opts) =>
+    teamSync.migrateOrgLibrary(opts || {}, (p) => _e.sender.send("team-share-progress", { migration: true, ...p })));
   handle("teams:pull", (_e, teamId) => teamSync.pullTeam(teamId));
   handle("teams:pull-all", () => teamSync.pullAll());
   handle("teams:resolve-conflict", (_e, teamId, itemId, choice) => teamSync.resolveConflict(teamId, itemId, choice));

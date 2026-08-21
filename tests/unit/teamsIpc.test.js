@@ -4,7 +4,7 @@ const path = require("node:path");
 const MAIN = fs.readFileSync(path.join(__dirname, "../../src/main/index.js"), "utf8");
 const PRELOAD = fs.readFileSync(path.join(__dirname, "../../src/preload/index.js"), "utf8");
 
-const CHANNELS = ["teams:get-session", "teams:enable", "teams:disable", "teams:list", "teams:create", "teams:join", "teams:leave", "teams:delete", "teams:rename", "teams:members", "teams:remove-member", "teams:rotate-invite", "teams:share-folder", "teams:stop-sharing", "teams:pull", "teams:pull-all", "teams:resolve-conflict", "teams:outbox"];
+const CHANNELS = ["teams:get-session", "teams:enable", "teams:disable", "teams:list", "teams:create", "teams:join", "teams:leave", "teams:delete", "teams:rename", "teams:members", "teams:remove-member", "teams:rotate-invite", "teams:share-folder", "teams:stop-sharing", "teams:pull", "teams:pull-all", "teams:resolve-conflict", "teams:outbox", "teams:legacy-status", "teams:migrate-org-library"];
 
 test("every teams:* channel is handled in main and exposed in preload", () => {
   for (const ch of CHANNELS) {
@@ -18,6 +18,12 @@ test("main no longer references the GitHub-org engine or its IPC", () => {
   expect(MAIN).not.toMatch(/handle\("shared-library:/);
   expect(MAIN).not.toMatch(/sharedLibrary\.isOwner/);
   expect(MAIN).not.toMatch(/schedulePush\(|deleteBuildRemote\(|deleteCompRemote\(|schedulePushFolderMeta\(/);
+});
+
+test("the migration handler forwards progress on the team-share-progress channel", () => {
+  const src = MAIN.slice(MAIN.indexOf('handle("teams:migrate-org-library"'));
+  expect(src.slice(0, 400)).toContain('team-share-progress');
+  expect(src.slice(0, 400)).toContain('migration: true');
 });
 
 test("mutating handlers enqueue outbox ops", () => {

@@ -102,6 +102,23 @@ class FolderStore {
     });
   }
 
+  // Drop the fields the retired GitHub-org shared library left on a folder.
+  // `upsertFolder` treats `orgName: undefined` as "leave as is", so clearing
+  // them needs its own operation. Returns the updated folder, or null when the
+  // id is unknown.
+  async clearLegacyFields(id) {
+    return this.#enqueue(async () => {
+      const folders = await this.listFolders();
+      const folder = folders.find((f) => f.id === id);
+      if (!folder) return null;
+      if (folder.orgName === undefined && folder.lastSyncedAt === undefined) return { ...folder };
+      delete folder.orgName;
+      delete folder.lastSyncedAt;
+      await this.#writeJson(this.foldersPath, folders);
+      return { ...folder };
+    });
+  }
+
   async deleteFolder(id) {
     return this.#enqueue(async () => {
       const folders = await this.listFolders();

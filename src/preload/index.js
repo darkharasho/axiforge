@@ -143,6 +143,8 @@ contextBridge.exposeInMainWorld("desktopApi", {
   rotateInvite: (teamId) => ipcRenderer.invoke("teams:rotate-invite", teamId),
   shareFolderToTeam: (folderId, teamId) => ipcRenderer.invoke("teams:share-folder", folderId, teamId),
   stopSharingFolder: (folderId) => ipcRenderer.invoke("teams:stop-sharing", folderId),
+  legacyLibraryStatus: () => ipcRenderer.invoke("teams:legacy-status"),
+  migrateOrgLibrary: (opts) => ipcRenderer.invoke("teams:migrate-org-library", opts),
   pullTeam: (teamId) => ipcRenderer.invoke("teams:pull", teamId),
   pullAllTeams: () => ipcRenderer.invoke("teams:pull-all"),
   resolveConflict: (teamId, itemId, choice) => ipcRenderer.invoke("teams:resolve-conflict", teamId, itemId, choice),

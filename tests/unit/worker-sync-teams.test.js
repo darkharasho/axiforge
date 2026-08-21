@@ -37,6 +37,20 @@ describe("teams", () => {
     expect((await teams.createTeam(req("POST", { name: "x".repeat(81) }), env, deps, owner, {})).status).toBe(400);
   });
 
+  test("create with a client-supplied id uses it; duplicate → 409", async () => {
+    const { env, deps, owner, member } = await setup();
+    const id = "0f1e2d3c-4b5a-6978-8796-a5b4c3d2e1f0";
+    const res = await teams.createTeam(req("POST", { name: "EWW", id }), env, deps, owner, {});
+    expect(res.status).toBe(201);
+    expect((await res.json()).team.id).toBe(id);
+    const dup = await teams.createTeam(req("POST", { name: "Other", id }), env, deps, member, {});
+    expect(dup.status).toBe(409);
+    // a non-uuid id is ignored, not an error
+    const odd = await teams.createTeam(req("POST", { name: "Odd", id: "../evil" }), env, deps, owner, {});
+    expect(odd.status).toBe(201);
+    expect((await odd.json()).team.id).not.toBe("../evil");
+  });
+
   test("join by invite code → member; idempotent; unknown code 404; members don't see the invite code", async () => {
     const { env, deps, owner, member } = await setup();
     const { team } = await (await teams.createTeam(req("POST", { name: "EWW" }), env, deps, owner, {})).json();
