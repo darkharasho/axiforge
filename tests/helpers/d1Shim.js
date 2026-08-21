@@ -1,6 +1,17 @@
 "use strict";
 // Minimal D1 + KV test doubles built on node:sqlite so Worker handlers can be
 // tested under Jest without miniflare. Only the API surface the Worker uses.
+
+// node:sqlite is still experimental, so requiring it prints an ExperimentalWarning
+// to stderr. Node emits that specific warning through an internal path that does
+// not go through the public `process.emitWarning` / `warning` event (verified: a
+// monkey-patched `process.emitWarning` and a `process.on('warning', ...)` listener
+// both silently miss it, even after `removeAllListeners`), so it cannot be filtered
+// from JS at require time. It's suppressed instead via the `--disable-warning=
+// ExperimentalWarning` Node flag in the `test`/`test:watch`/`test:coverage` npm
+// scripts (package.json), which — unlike a runtime patch — actually reaches the
+// warning before Node decides whether to print it.
+
 const { DatabaseSync } = require("node:sqlite");
 const fs = require("node:fs");
 const path = require("node:path");

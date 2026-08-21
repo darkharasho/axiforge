@@ -43,3 +43,19 @@ test("a too-large cost is rejected without incrementing the counter", async () =
   for (let i = 0; i < 4; i++) expect((await checkRateLimit(kv, "d", 5, 60, {}, 1)).ok).toBe(true);
   expect((await checkRateLimit(kv, "d", 5, 60, {}, 1)).ok).toBe(false);
 });
+
+test("KV that throws on get/put fails open (allows the request) instead of rejecting the write", async () => {
+  const throwingKv = {
+    async get() { throw new Error("KV unavailable"); },
+    async put() { throw new Error("KV unavailable"); },
+  };
+  const r = await checkRateLimit(throwingKv, "e", 5, 60, {});
+  expect(r.ok).toBe(true);
+});
+
+test("KV that throws only on put still fails open after a successful get", async () => {
+  const kv = createTestKV();
+  const flakyPut = { get: kv.get.bind(kv), async put() { throw new Error("KV put failed"); } };
+  const r = await checkRateLimit(flakyPut, "f", 5, 60, {});
+  expect(r.ok).toBe(true);
+});

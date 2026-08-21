@@ -97,6 +97,7 @@ CREATE TABLE teams (
   name          TEXT NOT NULL,
   invite_code   TEXT NOT NULL UNIQUE,      -- 10 chars, Crockford base32, no vowels
   seq           INTEGER NOT NULL DEFAULT 0,
+  purged_seq    INTEGER NOT NULL DEFAULT 0, -- highest seq the daily purge has removed tombstones through
   created_by    TEXT NOT NULL REFERENCES users(id),
   created_at    TEXT NOT NULL
 );
@@ -128,7 +129,11 @@ A **team is a library**. Locally it is one root folder; its subfolders are
 `folder` items with `parent_id`. A user may belong to many teams (one root
 folder each). Deletes are tombstones (`deleted=1`, `body=NULL`, new `seq`) so
 a lagging client still learns about them; a daily cron trigger purges
-tombstones older than 30 days.
+tombstones older than 30 days. Before deleting a team's tombstones, the purge
+raises `teams.purged_seq` to the highest `seq` among the rows it is about to
+remove (only ever raised, never lowered). This lets `GET /changes` detect a
+client whose cursor now falls inside a purge gap and tell it to resync — see
+§1.4 and §2.4.
 
 ### 1.3 Auth
 
@@ -147,19 +152,22 @@ tombstones older than 30 days.
 
 All JSON. Errors: `{ error: { code, message } }` with codes
 `unauthorized`, `forbidden`, `not_found`, `conflict`, `too_large`,
-`invalid`, `rate_limited`.
+`invalid`, `rate_limited`, `unavailable` (502; an upstream like GitHub is
+down or erroring), `internal` (500; unhandled Worker error).
 
 ```
 POST   /teams                      {name}                → {team, role:'owner'}
 POST   /teams/join                 {inviteCode}          → {team, role:'member'}  (idempotent if already a member)
-GET    /teams                                            → [{team, role, seq}]
+GET    /teams                                            → [{team:{..., seq}, role}]
 PATCH  /teams/:id                  {name}                owner
 DELETE /teams/:id                                        owner   (hard delete, cascades)
 GET    /teams/:id/members                                → [{userId, login, displayName, avatarUrl, role, joinedAt}]
-DELETE /teams/:id/members/:userId                        owner, or self (leave). Last owner cannot leave.
+DELETE /teams/:id/members/:userId                        owner, or self (leave). Last owner cannot leave (403).
 POST   /teams/:id/invite/rotate                          owner → {inviteCode}
 
-GET    /teams/:id/changes?since=<seq>&limit=<n≤200>      → {items:[Item], nextSeq, hasMore}
+GET    /teams/:id/changes?since=<seq>&limit=<n≤200>      → {resync, items:[Item], nextSeq, hasMore}
+                                   `resync: true` (`since` fell inside a purge gap) → items:[], nextSeq: since,
+                                   hasMore: false; client must do a full resync (§2.4). Otherwise `resync: false`.
 PUT    /teams/:id/items/:itemId    {type, parentId, body, baseVersion}
                                    201 created / 200 updated → {version, seq}
                                    409 → {error, current: Item}
@@ -181,6 +189,8 @@ createdBy:{userId,login}, updatedBy:{userId,login}, updatedAt }`.
   Clients send `baseVersion` = the version they last saw. Mismatch → 409 with
   the current item. `baseVersion: null` means "create": 409 if a live item
   already exists; allowed (and un-tombstones) if the existing row is deleted.
+  Un-tombstoning sets `created_by` to the re-creator (not the original
+  creator), since that determines who may later delete the item under §1.6.
 - Deleting a folder item tombstones the folder and every descendant item in one
   batch (each gets its own `seq`), so clients see ordinary tombstones.
 - `parentId` must be NULL or a live `folder` item in the same team, else 400.
@@ -303,7 +313,12 @@ Flush:
 ### 2.4 Pull
 
 `pullTeam(teamId)`:
-1. `GET /changes?since=cursor&limit=200`, loop while `hasMore`.
+1. `GET /changes?since=cursor&limit=200`, loop while `hasMore`. If the server
+   returns `resync: true` (the cursor fell inside a purge gap — see §1.2/§1.4),
+   the client pulls again from `since=0`, replaces local team state (deleting
+   local team items absent from the result; outbox entries for those deleted
+   items are dropped), and stores the new cursor — instead of applying the
+   (empty) page as an incremental update.
 2. Apply items sequentially (stores are write-queued). For each item:
    - skip if `versions[id] === item.version` (our own write echoed back);
    - skip if `outbox[id]` exists (local wins until the flush resolves it; that

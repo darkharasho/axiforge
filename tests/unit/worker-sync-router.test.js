@@ -69,4 +69,14 @@ describe("sync router", () => {
     expect(res.status).toBe(500);
     expect((await res.json()).error.code).toBe("internal");
   });
+
+  test("a malformed percent-encoded path segment → 400 invalid, not a thrown 500", async () => {
+    const { env, deps } = await setup();
+    // "%" not followed by two hex digits makes decodeURIComponent throw.
+    const res = await handleSync(new Request("https://build.axi.link/api/sync/teams/%E0%A4%A/members", {
+      headers: { Authorization: "Bearer whatever" },
+    }), env, deps);
+    expect(res.status).toBe(400);
+    expect((await res.json()).error.code).toBe("invalid");
+  });
 });

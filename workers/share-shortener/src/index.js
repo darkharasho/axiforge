@@ -121,6 +121,10 @@ export default {
   // Daily: drop team-sync tombstones older than 30 days.
   async scheduled(_event, env, ctx) {
     const { purgeTombstones } = await import("../../sync/src/purge.js");
-    ctx.waitUntil(purgeTombstones(env).then((r) => console.log(`[sync] purged ${r.deleted} tombstones`)));
+    ctx.waitUntil(
+      purgeTombstones(env)
+        .then((r) => console.log(`[sync] purged ${r.deleted} tombstones`))
+        .catch((err) => console.error("[sync] purge failed", err))
+    );
   },
 };

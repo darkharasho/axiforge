@@ -16,7 +16,7 @@
     // Route ONLY these to the Worker. Without this, top-level navigations to
     // /b/<slug> (Sec-Fetch-Mode: navigate) would hit the SPA fallback and skip
     // the Worker entirely. Everything else is served as a static asset.
-    "run_worker_first": ["/api/*", "/b/*", "/api/sync/*"]
+    "run_worker_first": ["/api/*", "/b/*"]
   },
   // slug -> { code, name } store for short links.
   "kv_namespaces": [

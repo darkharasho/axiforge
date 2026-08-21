@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS teams (
   name          TEXT NOT NULL,
   invite_code   TEXT NOT NULL UNIQUE,
   seq           INTEGER NOT NULL DEFAULT 0,
+  purged_seq    INTEGER NOT NULL DEFAULT 0,
   created_by    TEXT NOT NULL REFERENCES users(id),
   created_at    TEXT NOT NULL
 );

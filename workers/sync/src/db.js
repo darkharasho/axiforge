@@ -13,6 +13,7 @@ const STATUS_FOR_CODE = {
   too_large: 413,
   invalid: 400,
   rate_limited: 429,
+  unavailable: 502,
 };
 
 function uuid() {

@@ -129,7 +129,7 @@ async function removeMember(_request, env, _deps, auth, params) {
   if (!target) return errorResponse("not_found", "That user is not a member.");
   if (target.role === "owner") {
     const owners = await env.SYNC_DB.prepare("SELECT COUNT(*) AS c FROM memberships WHERE team_id = ? AND role = 'owner'").bind(params.teamId).first("c");
-    if (owners <= 1) return errorResponse("conflict", "The last owner cannot leave. Delete the team or promote someone first.");
+    if (owners <= 1) return errorResponse("forbidden", "The last owner cannot leave. Delete the team or promote someone first.");
   }
   await env.SYNC_DB.prepare("DELETE FROM memberships WHERE team_id = ? AND user_id = ?").bind(params.teamId, params.userId).run();
   return new Response(null, { status: 204 });

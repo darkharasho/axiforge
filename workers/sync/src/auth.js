@@ -1,8 +1,10 @@
 "use strict";
 const { uuid, nowIso, sha256Hex, randomToken, json, errorResponse } = require("./db");
+const { checkRateLimit } = require("./ratelimit");
 
 const SESSION_TTL_MS = 90 * 24 * 60 * 60 * 1000; // 90 days, sliding
 const SESSION_BUMP_MS = 60 * 60 * 1000;          // bump expiry at most hourly
+const LOGIN_LIMIT_PER_MIN = 10;
 
 async function readJson(request) {
   try { return await request.json(); } catch { return null; }
@@ -15,19 +17,28 @@ function publicUser(row) {
 // POST /auth/github { token } — verify with GitHub, upsert user+identity, mint session.
 async function handleGithubLogin(request, env, deps = {}) {
   const fetchImpl = deps.fetchImpl || fetch;
+  const ip = request.headers.get("cf-connecting-ip") || "unknown";
+  const rl = await checkRateLimit(env.SYNC_RL, `login:${ip}`, LOGIN_LIMIT_PER_MIN, 60, deps);
+  if (!rl.ok) return errorResponse("rate_limited", "Too many login attempts. Try again shortly.", 429, { "Retry-After": String(rl.retryAfterSeconds) });
   const body = await readJson(request);
   const token = body && typeof body.token === "string" ? body.token : "";
   if (!token) return errorResponse("invalid", "Missing GitHub token.");
 
-  const ghRes = await fetchImpl("https://api.github.com/user", {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: "application/vnd.github+json",
-      "User-Agent": "axiforge-sync",
-      "X-GitHub-Api-Version": "2022-11-28",
-    },
-  });
-  if (!ghRes.ok) return errorResponse("unauthorized", "GitHub rejected the token.");
+  let ghRes;
+  try {
+    ghRes = await fetchImpl("https://api.github.com/user", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/vnd.github+json",
+        "User-Agent": "axiforge-sync",
+        "X-GitHub-Api-Version": "2022-11-28",
+      },
+    });
+  } catch {
+    return errorResponse("unavailable", "GitHub is unavailable. Try again shortly.");
+  }
+  if (ghRes.status === 401 || ghRes.status === 403) return errorResponse("unauthorized", "GitHub rejected the token.");
+  if (!ghRes.ok) return errorResponse("unavailable", "GitHub is unavailable. Try again shortly.");
   const gh = await ghRes.json();
   if (!gh || typeof gh.id !== "number" || !gh.login) return errorResponse("unauthorized", "GitHub returned no user.");
 
@@ -46,11 +57,23 @@ async function handleGithubLogin(request, env, deps = {}) {
       db.prepare("UPDATE identities SET login = ? WHERE provider = 'github' AND provider_user_id = ?").bind(gh.login, providerUserId),
     ]);
   } else {
+    // Two concurrent first-logins for the same GitHub user can both reach here.
+    // ON CONFLICT DO NOTHING means the loser's identity insert is silently
+    // skipped instead of throwing a PK violation; re-read afterward to find out
+    // who actually won and adopt their user id (dropping our own orphan row).
     userId = uuid();
     await db.batch([
       db.prepare("INSERT INTO users (id, display_name, avatar_url, created_at) VALUES (?, ?, ?, ?)").bind(userId, displayName, avatarUrl, now),
-      db.prepare("INSERT INTO identities (provider, provider_user_id, user_id, login) VALUES ('github', ?, ?, ?)").bind(providerUserId, userId, gh.login),
+      db.prepare(
+        "INSERT INTO identities (provider, provider_user_id, user_id, login) VALUES ('github', ?, ?, ?) ON CONFLICT (provider, provider_user_id) DO NOTHING"
+      ).bind(providerUserId, userId, gh.login),
     ]);
+    const owner = await db.prepare("SELECT user_id FROM identities WHERE provider = 'github' AND provider_user_id = ?").bind(providerUserId).first();
+    if (owner.user_id !== userId) {
+      await db.prepare("DELETE FROM users WHERE id = ?").bind(userId).run();
+      userId = owner.user_id;
+      await db.prepare("UPDATE users SET display_name = ?, avatar_url = ? WHERE id = ?").bind(displayName, avatarUrl, userId).run();
+    }
   }
 
   const sessionToken = randomToken();

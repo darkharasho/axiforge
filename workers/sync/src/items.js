@@ -12,15 +12,20 @@ const TYPES = new Set(["folder", "build", "comp"]);
 
 function bytes(str) { return new TextEncoder().encode(str).length; }
 
+const LOGINS_CHUNK = 90; // stay well under D1's 100-bound-parameter-per-statement limit
+
 async function loginsFor(env, userIds) {
   const ids = [...new Set(userIds)].filter(Boolean);
   if (!ids.length) return new Map();
-  const placeholders = ids.map(() => "?").join(",");
-  const { results } = await env.SYNC_DB.prepare(
-    `SELECT user_id, login FROM identities WHERE user_id IN (${placeholders}) ORDER BY provider = 'github' DESC`
-  ).bind(...ids).all();
   const map = new Map();
-  for (const r of results) if (!map.has(r.user_id)) map.set(r.user_id, r.login);
+  for (let i = 0; i < ids.length; i += LOGINS_CHUNK) {
+    const chunk = ids.slice(i, i + LOGINS_CHUNK);
+    const placeholders = chunk.map(() => "?").join(",");
+    const { results } = await env.SYNC_DB.prepare(
+      `SELECT user_id, login FROM identities WHERE user_id IN (${placeholders}) ORDER BY provider = 'github' DESC`
+    ).bind(...chunk).all();
+    for (const r of results) if (!map.has(r.user_id)) map.set(r.user_id, r.login);
+  }
   return map;
 }
 
@@ -73,16 +78,31 @@ async function writeItem(env, deps, auth, teamId, { itemId, type, parentId, body
   }
   const text = JSON.stringify(body);
   if (bytes(text) > MAX_BODY_BYTES) {
-    return { status: 413, message: `This ${type} (${type} ${itemId}) is too large to sync (limit ${MAX_BODY_BYTES / 1_000_000} MB).` };
+    return { status: 413, message: `This ${type} (${itemId}) is too large to sync (limit ${MAX_BODY_BYTES / 1_000_000} MB).` };
   }
   if (parentId) {
     const parent = await env.SYNC_DB.prepare("SELECT type, deleted FROM items WHERE team_id = ? AND id = ?").bind(teamId, parentId).first();
     if (!parent || parent.deleted === 1 || parent.type !== "folder") return { status: 400, message: "parentId must be a live folder in this team." };
+    if (type === "folder") {
+      // Walk parent_id up from parentId; if we reach itemId, this move would
+      // create a cycle (a folder becoming its own ancestor).
+      let cursor = parentId;
+      let hops = 0;
+      while (cursor) {
+        if (cursor === itemId) return { status: 400, message: "A folder cannot be moved inside itself." };
+        hops += 1;
+        if (hops > 64) return { status: 400, message: "A folder cannot be moved inside itself." };
+        const row = await env.SYNC_DB.prepare(
+          "SELECT parent_id FROM items WHERE team_id = ? AND id = ? AND deleted = 0"
+        ).bind(teamId, cursor).first();
+        cursor = row ? row.parent_id : null;
+      }
+    }
   }
 
   const db = env.SYNC_DB;
   const now = nowIso(deps);
-  const existing = await db.prepare("SELECT version, deleted FROM items WHERE team_id = ? AND id = ?").bind(teamId, itemId).first();
+  const existing = await db.prepare("SELECT version, deleted, type FROM items WHERE team_id = ? AND id = ?").bind(teamId, itemId).first();
   const base = baseVersion ?? null;
 
   const bump = db.prepare("UPDATE teams SET seq = seq + 1 WHERE id = ?").bind(teamId);
@@ -107,6 +127,7 @@ async function writeItem(env, deps, auth, teamId, { itemId, type, parentId, body
     ).bind(type, parentId, text, teamId, auth.user.id, auth.user.id, now, teamId, itemId);
   } else {
     if (base === null || base !== existing.version) return { status: 409, current: await currentItem(env, teamId, itemId) };
+    if (type !== existing.type) return { status: 400, message: `Cannot change item type from "${existing.type}" to "${type}".` };
     created = false;
     isInsert = false;
     write = db.prepare(
@@ -138,13 +159,20 @@ async function writeItem(env, deps, auth, teamId, { itemId, type, parentId, body
 
 // GET /teams/:teamId/changes?since=&limit=
 async function getChanges(request, env, _deps, auth, params) {
-  const { error } = await memberOr403(env, params.teamId, auth);
+  const { error, membership } = await memberOr403(env, params.teamId, auth);
   if (error) return error;
   const url = new URL(request.url);
   const since = Number(url.searchParams.get("since") || 0);
   const limit = url.searchParams.has("limit") ? Number(url.searchParams.get("limit")) : MAX_PAGE;
   if (!Number.isInteger(since) || since < 0) return errorResponse("invalid", "since must be a non-negative integer.");
   if (!Number.isInteger(limit) || limit < 1 || limit > MAX_PAGE) return errorResponse("invalid", `limit must be 1–${MAX_PAGE}.`);
+  // A purge may have removed tombstones the client hasn't seen yet — if its
+  // cursor sits inside the purged range, incremental sync would silently miss
+  // those deletes. Tell it to do a full resync instead. `since = 0` (a client
+  // starting fresh) never needs this — it will see current state either way.
+  if (since > 0 && since < membership.team.purged_seq) {
+    return json({ resync: true, items: [], nextSeq: since, hasMore: false });
+  }
   const { results } = await env.SYNC_DB.prepare(
     "SELECT * FROM items WHERE team_id = ? AND seq > ? ORDER BY seq LIMIT ?"
   ).bind(params.teamId, since, limit + 1).all();
@@ -152,21 +180,33 @@ async function getChanges(request, env, _deps, auth, params) {
   const page = hasMore ? results.slice(0, limit) : results;
   const logins = await loginsFor(env, page.flatMap((r) => [r.created_by, r.updated_by]));
   return json({
+    resync: false,
     items: page.map((r) => itemWire(r, logins)),
     nextSeq: page.length ? page[page.length - 1].seq : since,
     hasMore,
   });
 }
 
+// Reject an oversize request before buffering/parsing its body. `content-length`
+// is attacker-controlled (can be absent or wrong), so this is a cheap early-out,
+// not the authoritative check — the real limit is enforced on the parsed body.
+function contentLengthTooLarge(request, maxBytes) {
+  const len = Number(request.headers.get("content-length") || 0);
+  return Number.isFinite(len) && len > maxBytes;
+}
+
 // PUT /teams/:teamId/items/:itemId
 async function putItem(request, env, deps, auth, params) {
   const { error } = await memberOr403(env, params.teamId, auth);
   if (error) return error;
+  if (contentLengthTooLarge(request, MAX_BODY_BYTES * 1.1)) {
+    return errorResponse("too_large", `Request body is too large (limit ${MAX_BODY_BYTES / 1_000_000} MB).`);
+  }
   const limited = await writeLimited(env, deps, auth);
   if (limited) return limited;
   const body = await readJson(request);
   if (!body) return errorResponse("invalid", "Invalid JSON.");
-  const result = await writeItem(env, deps, auth, params.teamId, { itemId: params.itemId, ...body });
+  const result = await writeItem(env, deps, auth, params.teamId, { ...body, itemId: params.itemId });
   return writeResultResponse(result);
 }
 
@@ -191,10 +231,13 @@ async function collectTree(env, teamId, rootId) {
     byParent.set(r.parent_id, list);
   }
   const out = [];
+  const visited = new Set([rootId]);
   const queue = [rootId];
   while (queue.length) {
     const pid = queue.shift();
     for (const child of byParent.get(pid) || []) {
+      if (visited.has(child.id)) continue; // cycle guard: never revisit a node
+      visited.add(child.id);
       out.push(child);
       if (child.type === "folder") queue.push(child.id);
     }
@@ -226,23 +269,44 @@ async function deleteItem(request, env, deps, auth, params) {
 
   const now = nowIso(deps);
   const stmts = [];
+  // Only the root row is guarded by baseVersion — a client can only have seen
+  // (and thus can only race on) the version it read for the item it asked to
+  // delete. Descendants are collateral and stay unguarded, as before.
+  let rootUpdateIndex = -1;
   for (const r of [row, ...descendants]) {
+    const isRoot = r.id === row.id;
     stmts.push(db.prepare("UPDATE teams SET seq = seq + 1 WHERE id = ?").bind(params.teamId));
-    stmts.push(db.prepare(
+    if (isRoot) rootUpdateIndex = stmts.length;
+    const guard = isRoot ? " AND version = ?" : "";
+    const stmt = db.prepare(
       `UPDATE items SET deleted = 1, body = NULL, version = version + 1, seq = (SELECT seq FROM teams WHERE id = ?), updated_by = ?, updated_at = ?
-        WHERE team_id = ? AND id = ? AND deleted = 0`
-    ).bind(params.teamId, auth.user.id, now, params.teamId, r.id));
+        WHERE team_id = ? AND id = ? AND deleted = 0${guard}`
+    );
+    stmts.push(isRoot
+      ? stmt.bind(params.teamId, auth.user.id, now, params.teamId, r.id, baseVersion)
+      : stmt.bind(params.teamId, auth.user.id, now, params.teamId, r.id));
   }
   stmts.push(db.prepare("SELECT version, seq FROM items WHERE team_id = ? AND id = ?").bind(params.teamId, params.itemId));
   const results = await db.batch(stmts);
+  if (results[rootUpdateIndex].meta.changes === 0) {
+    // Lost the race between our pre-read and this batch — someone else wrote
+    // the root item in between. Report as a conflict rather than silently
+    // tombstoning descendants under a stale root version.
+    return json({ error: { code: "conflict", message: "Item was changed since you last saw it." }, current: await currentItem(env, params.teamId, params.itemId) }, 409);
+  }
   const out = results[results.length - 1].results[0];
   return json({ version: out.version, seq: out.seq });
 }
+
+const MAX_BULK_BODY_BYTES = 16_000_000;
 
 // POST /teams/:teamId/items:bulk { items: [...] }
 async function bulkItems(request, env, deps, auth, params) {
   const { error } = await memberOr403(env, params.teamId, auth);
   if (error) return error;
+  if (contentLengthTooLarge(request, MAX_BULK_BODY_BYTES)) {
+    return errorResponse("too_large", `Request body is too large (limit ${MAX_BULK_BODY_BYTES / 1_000_000} MB).`);
+  }
   const body = await readJson(request);
   const list = body && Array.isArray(body.items) ? body.items : null;
   if (!list) return errorResponse("invalid", "items must be an array.");
@@ -259,4 +323,4 @@ async function bulkItems(request, env, deps, auth, params) {
   return json({ results });
 }
 
-module.exports = { getChanges, putItem, deleteItem, bulkItems, writeItem, itemWire, MAX_BODY_BYTES, MAX_PAGE, MAX_BULK };
+module.exports = { getChanges, putItem, deleteItem, bulkItems, writeItem, itemWire, MAX_BODY_BYTES, MAX_PAGE, MAX_BULK, MAX_BULK_BODY_BYTES };

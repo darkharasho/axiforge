@@ -69,7 +69,7 @@ describe("teams", () => {
 
     expect((await teams.listMembers(req("GET"), env, deps, other, p)).status).toBe(403);
     expect((await teams.removeMember(req("DELETE"), env, deps, member, { ...p, userId: "u-owner" })).status).toBe(403);
-    expect((await teams.removeMember(req("DELETE"), env, deps, owner, { ...p, userId: "u-owner" })).status).toBe(409); // last owner
+    expect((await teams.removeMember(req("DELETE"), env, deps, owner, { ...p, userId: "u-owner" })).status).toBe(403); // last owner
     expect((await teams.removeMember(req("DELETE"), env, deps, member, { ...p, userId: "u-mem" })).status).toBe(204); // leave
     await teams.joinTeam(req("POST", { inviteCode: team.inviteCode }), env, deps, member, {});
     expect((await teams.removeMember(req("DELETE"), env, deps, owner, { ...p, userId: "u-mem" })).status).toBe(204); // kick

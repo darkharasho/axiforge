@@ -40,7 +40,12 @@ async function handleSync(request, env, deps = {}) {
       if (!match) continue;
       pathMatched = true;
       if (m !== method) continue;
-      const params = Object.fromEntries(Object.entries(match.groups || {}).map(([k, v]) => [k, decodeURIComponent(v)]));
+      let params;
+      try {
+        params = Object.fromEntries(Object.entries(match.groups || {}).map(([k, v]) => [k, decodeURIComponent(v)]));
+      } catch {
+        return errorResponse("invalid", "Malformed URL.");
+      }
       let session = null;
       if (requiresAuth) {
         session = await auth.authenticate(request, env, deps);

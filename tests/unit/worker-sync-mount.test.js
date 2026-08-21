@@ -11,6 +11,8 @@ test("Worker entry dispatches /api/sync/* to handleSync before asset fallback an
   expect(src).toMatch(/import\("\.\.\/\.\.\/sync\/src\/router\.js"\)/);
   expect(src).toMatch(/async scheduled\(/);
   expect(src).toMatch(/purgeTombstones/);
+  // A failed purge must not become an unhandled rejection inside ctx.waitUntil.
+  expect(src).toMatch(/purgeTombstones\(env\)[\s\S]*?\.catch\(/);
   expect(src.indexOf("/api/sync/")).toBeLessThan(src.indexOf("env.ASSETS.fetch(request)"));
 });
 
@@ -19,6 +21,7 @@ test("wrangler.jsonc binds SYNC_DB, SYNC_RL, routes /api/sync/* to the Worker, a
   expect(raw).toMatch(/"binding":\s*"SYNC_DB"/);
   expect(raw).toMatch(/"migrations_dir":\s*"workers\/sync\/migrations"/);
   expect(raw).toMatch(/"binding":\s*"SYNC_RL"/);
-  expect(raw).toMatch(/"\/api\/sync\/\*"/);
+  // /api/sync/* is a subset of /api/*, already routed to the Worker — no separate entry needed.
+  expect(raw).toMatch(/"run_worker_first":\s*\[\s*"\/api\/\*",\s*"\/b\/\*"\s*\]/);
   expect(raw).toMatch(/"crons":\s*\[\s*"0 4 \* \* \*"\s*\]/);
 });

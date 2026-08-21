@@ -101,7 +101,7 @@ describe("items", () => {
     expect((await put(env, deps, owner, teamId, "b2", { type: "build", parentId: "f1", body: {}, baseVersion: null })).status).toBe(201);
     const big = await put(env, deps, owner, teamId, "big", { type: "build", body: { blob: "x".repeat(1_500_001) }, baseVersion: null });
     expect(big.status).toBe(413);
-    expect((await big.json()).error.message).toMatch(/build big/);
+    expect((await big.json()).error.message).toMatch(/This build \(big\) is too large/);
     await put(env, deps, owner, teamId, "c1", { type: "comp", body: { name: "C", boonCoverageHtml: "<div>huge</div>" }, baseVersion: null });
     const list = await (await changes(env, deps, owner, teamId)).json();
     expect(list.items.find((i) => i.id === "c1").body).toEqual({ name: "C" });
@@ -195,5 +195,122 @@ describe("items", () => {
     }
     const r71 = await put(env, deps, owner, teamId, "y70", { type: "build", body: {}, baseVersion: null });
     expect(r71.status).toBe(429);
+  });
+
+  test("folder cycles: PUT that would move a folder inside its own descendant → 400; a cycle seeded directly in SQL doesn't hang DELETE and tombstones every reachable row", async () => {
+    const { env, deps, owner, teamId } = await setup();
+    await put(env, deps, owner, teamId, "a", { type: "folder", body: { name: "A" }, baseVersion: null });
+    await put(env, deps, owner, teamId, "b", { type: "folder", parentId: "a", body: { name: "B" }, baseVersion: null });
+    // a -> b already; moving a under b would make a its own (indirect) ancestor.
+    const cyclic = await put(env, deps, owner, teamId, "a", { type: "folder", parentId: "b", body: { name: "A" }, baseVersion: 1 });
+    expect(cyclic.status).toBe(400);
+    expect((await cyclic.json()).error.message).toMatch(/cannot be moved inside itself/);
+
+    // Seed a genuine cycle directly (bypassing the guard) to prove collectTree/DELETE
+    // terminate instead of looping forever, and still tombstone everything reachable.
+    await env.SYNC_DB.prepare("UPDATE items SET parent_id = 'b' WHERE team_id = ? AND id = 'a'").bind(teamId).run();
+    const del1 = await del(env, deps, owner, teamId, "a", 1);
+    expect(del1.status).toBe(200);
+    const list = await (await changes(env, deps, owner, teamId)).json();
+    expect(list.items.filter((i) => i.deleted).map((i) => i.id).sort()).toEqual(["a", "b"]);
+  });
+
+  test("delete version guard: a write landing between the pre-read and the batch is not silently tombstoned — 409 with current", async () => {
+    const { env, deps, owner, teamId } = await setup();
+    await put(env, deps, owner, teamId, "b1", { type: "build", body: { v: 1 }, baseVersion: null }); // v1, seq1
+
+    let batchCalls = 0;
+    const racingEnv = {
+      ...env,
+      SYNC_DB: {
+        ...env.SYNC_DB,
+        prepare: (sql) => env.SYNC_DB.prepare(sql),
+        async batch(stmts) {
+          batchCalls += 1;
+          if (batchCalls === 1) {
+            // A concurrent writer bumps the row between our pre-read and this batch.
+            await put(env, deps, owner, teamId, "b1", { type: "build", body: { v: 2 }, baseVersion: 1 });
+          }
+          return env.SYNC_DB.batch(stmts);
+        },
+      },
+    };
+    const res = await items.deleteItem(jreq("DELETE", undefined, "https://x/?baseVersion=1"), racingEnv, deps, owner, { teamId, itemId: "b1" });
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body.error.code).toBe("conflict");
+    expect(body.current).toMatchObject({ id: "b1", version: 2, body: { v: 2 } });
+    // The concurrent write survives; the item is not tombstoned.
+    const list = await (await changes(env, deps, owner, teamId)).json();
+    expect(list.items.find((i) => i.id === "b1")).toMatchObject({ deleted: false, version: 2 });
+  });
+
+  test("path itemId wins over a conflicting body itemId", async () => {
+    const { env, deps, owner, teamId } = await setup();
+    const res = await put(env, deps, owner, teamId, "b1", { type: "build", body: {}, baseVersion: null, itemId: "other" });
+    expect(res.status).toBe(201);
+    const list = await (await changes(env, deps, owner, teamId)).json();
+    expect(list.items.map((i) => i.id)).toEqual(["b1"]);
+  });
+
+  test("PUT cannot change an existing item's type", async () => {
+    const { env, deps, owner, teamId } = await setup();
+    await put(env, deps, owner, teamId, "b1", { type: "build", body: {}, baseVersion: null });
+    const res = await put(env, deps, owner, teamId, "b1", { type: "folder", body: { name: "x" }, baseVersion: 1 });
+    expect(res.status).toBe(400);
+    expect((await res.json()).error.message).toMatch(/change item type/);
+  });
+
+  test("body-size pre-check: an oversize content-length is rejected with 413 before parsing, for PUT and bulk", async () => {
+    const { env, deps, owner, teamId } = await setup();
+    const bigPut = new Request("https://x/", {
+      method: "PUT",
+      headers: { "content-type": "application/json", "content-length": String(items.MAX_BODY_BYTES * 2) },
+      body: JSON.stringify({ type: "build", body: {}, baseVersion: null }),
+    });
+    const putRes = await items.putItem(bigPut, env, deps, owner, { teamId, itemId: "b1" });
+    expect(putRes.status).toBe(413);
+
+    const bigBulk = new Request("https://x/", {
+      method: "POST",
+      headers: { "content-type": "application/json", "content-length": String(items.MAX_BULK_BODY_BYTES + 1) },
+      body: JSON.stringify({ items: [] }),
+    });
+    const bulkRes = await items.bulkItems(bigBulk, env, deps, owner, { teamId });
+    expect(bulkRes.status).toBe(413);
+  });
+
+  test("changes: resync=true when the cursor falls inside a purge gap; since=0 never resyncs", async () => {
+    const { env, deps, owner, teamId } = await setup();
+    await put(env, deps, owner, teamId, "b1", { type: "build", body: {}, baseVersion: null }); // seq1
+    await env.SYNC_DB.prepare("UPDATE teams SET purged_seq = 5 WHERE id = ?").bind(teamId).run();
+
+    const stale = await (await changes(env, deps, owner, teamId, 3)).json();
+    expect(stale).toEqual({ resync: true, items: [], nextSeq: 3, hasMore: false });
+
+    const fresh = await (await changes(env, deps, owner, teamId, 0)).json();
+    expect(fresh.resync).toBe(false);
+    expect(fresh.items).toHaveLength(1);
+
+    const pastPurge = await (await changes(env, deps, owner, teamId, 5)).json();
+    expect(pastPurge.resync).toBe(false); // since === purged_seq, not < it
+  });
+
+  test("loginsFor chunks its IN list so a page with >90 distinct authors still resolves every login", async () => {
+    const { env, deps, owner, teamId } = await setup();
+    const AUTHORS = 95;
+    for (let i = 0; i < AUTHORS; i++) {
+      const id = `u-many-${i}`;
+      await env.SYNC_DB.prepare("INSERT INTO users (id, display_name, avatar_url, created_at) VALUES (?, ?, NULL, ?)").bind(id, `many${i}`, "2026-08-21T12:00:00.000Z").run();
+      await env.SYNC_DB.prepare("INSERT INTO identities (provider, provider_user_id, user_id, login) VALUES ('github', ?, ?, ?)").bind(id, id, `many${i}`).run();
+      const r = await items.writeItem(env, deps, { user: { id, login: `many${i}` } }, teamId, { itemId: `b-many-${i}`, type: "build", body: {}, baseVersion: null });
+      expect(r.status).toBe(201);
+    }
+    const list = await (await changes(env, deps, owner, teamId, 0, 200)).json();
+    expect(list.items).toHaveLength(AUTHORS);
+    for (const item of list.items) {
+      const idx = Number(item.id.replace("b-many-", ""));
+      expect(item.createdBy.login).toBe(`many${idx}`);
+    }
   });
 });

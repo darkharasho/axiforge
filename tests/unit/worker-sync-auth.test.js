@@ -1,6 +1,6 @@
 "use strict";
 const { handleGithubLogin, authenticate, handleLogout, SESSION_TTL_MS } = require("../../workers/sync/src/auth");
-const { createTestD1 } = require("../helpers/d1Shim");
+const { createTestD1, createTestKV } = require("../helpers/d1Shim");
 
 function ghFetch(user) {
   return async (url, init) => {
@@ -17,11 +17,11 @@ async function setup() {
   await db.applyMigrations();
   let t = Date.parse("2026-08-21T12:00:00Z");
   const deps = { fetchImpl: ghFetch(GH_USER), now: () => t, advance: (ms) => { t += ms; } };
-  return { env: { SYNC_DB: db }, deps, db };
+  return { env: { SYNC_DB: db, SYNC_RL: createTestKV({ now: () => t }) }, deps, db };
 }
-function loginReq(token) {
+function loginReq(token, ip = "1.2.3.4") {
   return new Request("https://build.axi.link/api/sync/auth/github", {
-    method: "POST", headers: { "content-type": "application/json", "user-agent": "AxiForge/0.12.0 linux" },
+    method: "POST", headers: { "content-type": "application/json", "user-agent": "AxiForge/0.12.0 linux", "cf-connecting-ip": ip },
     body: JSON.stringify({ token }),
   });
 }
@@ -92,5 +92,45 @@ describe("auth", () => {
     const res = await handleLogout(authedReq(sessionToken), env, deps, auth);
     expect(res.status).toBe(204);
     expect(await authenticate(authedReq(sessionToken), env, deps)).toBeNull();
+  });
+
+  test("login is rate limited per IP (10/min) with Retry-After", async () => {
+    const { env, deps } = await setup();
+    for (let i = 0; i < 10; i++) await handleGithubLogin(loginReq("gh-good", "9.9.9.9"), env, deps);
+    const r = await handleGithubLogin(loginReq("gh-good", "9.9.9.9"), env, deps);
+    expect(r.status).toBe(429);
+    expect(r.headers.get("Retry-After")).toBeTruthy();
+    // A different IP is unaffected.
+    const other = await handleGithubLogin(loginReq("gh-good", "8.8.8.8"), env, deps);
+    expect(other.status).toBe(200);
+  });
+
+  test("GitHub 401/403 → unauthorized; other non-2xx or a thrown fetch → unavailable (502)", async () => {
+    const { env, deps } = await setup();
+    const forbidden = await handleGithubLogin(loginReq("gh-good"), { ...env }, { ...deps, fetchImpl: async () => new Response("{}", { status: 403 }) });
+    expect(forbidden.status).toBe(401);
+    expect((await forbidden.json()).error.code).toBe("unauthorized");
+
+    const serverError = await handleGithubLogin(loginReq("gh-good"), { ...env }, { ...deps, fetchImpl: async () => new Response("oops", { status: 502 }) });
+    expect(serverError.status).toBe(502);
+    expect((await serverError.json()).error.code).toBe("unavailable");
+
+    const thrown = await handleGithubLogin(loginReq("gh-good"), { ...env }, { ...deps, fetchImpl: async () => { throw new Error("network down"); } });
+    expect(thrown.status).toBe(502);
+    expect((await thrown.json()).error.code).toBe("unavailable");
+  });
+
+  test("first-login race: two concurrent first logins for the same GitHub user converge on one user row, no 500", async () => {
+    const { env, deps, db } = await setup();
+    const [r1, r2] = await Promise.all([
+      handleGithubLogin(loginReq("gh-good"), env, deps),
+      handleGithubLogin(loginReq("gh-good"), env, deps),
+    ]);
+    expect(r1.status).toBe(200);
+    expect(r2.status).toBe(200);
+    const [b1, b2] = await Promise.all([r1.json(), r2.json()]);
+    expect(b1.user.id).toBe(b2.user.id);
+    expect(await db.prepare("SELECT COUNT(*) AS c FROM users").first("c")).toBe(1);
+    expect(await db.prepare("SELECT COUNT(*) AS c FROM identities").first("c")).toBe(1);
   });
 });
