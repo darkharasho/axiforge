@@ -217,7 +217,8 @@ describe("items", () => {
 
   test("delete version guard: a write landing between the pre-read and the batch is not silently tombstoned — 409 with current", async () => {
     const { env, deps, owner, teamId } = await setup();
-    await put(env, deps, owner, teamId, "b1", { type: "build", body: { v: 1 }, baseVersion: null }); // v1, seq1
+    await put(env, deps, owner, teamId, "b1", { type: "folder", body: { v: 1 }, baseVersion: null }); // v1, seq1
+    await put(env, deps, owner, teamId, "c1", { type: "build", parentId: "b1", body: {}, baseVersion: null }); // child
 
     let batchCalls = 0;
     const racingEnv = {
@@ -229,7 +230,7 @@ describe("items", () => {
           batchCalls += 1;
           if (batchCalls === 1) {
             // A concurrent writer bumps the row between our pre-read and this batch.
-            await put(env, deps, owner, teamId, "b1", { type: "build", body: { v: 2 }, baseVersion: 1 });
+            await put(env, deps, owner, teamId, "b1", { type: "folder", body: { v: 2 }, baseVersion: 1 });
           }
           return env.SYNC_DB.batch(stmts);
         },
@@ -240,9 +241,15 @@ describe("items", () => {
     const body = await res.json();
     expect(body.error.code).toBe("conflict");
     expect(body.current).toMatchObject({ id: "b1", version: 2, body: { v: 2 } });
-    // The concurrent write survives; the item is not tombstoned.
+    // The concurrent write survives; neither the folder nor its child is tombstoned.
     const list = await (await changes(env, deps, owner, teamId)).json();
     expect(list.items.find((i) => i.id === "b1")).toMatchObject({ deleted: false, version: 2 });
+    expect(list.items.find((i) => i.id === "c1")).toMatchObject({ deleted: false, version: 1 });
+    // A retry with the fresh version tombstones the whole tree.
+    const retry = await items.deleteItem(jreq("DELETE", undefined, "https://x/?baseVersion=2"), env, deps, owner, { teamId, itemId: "b1" });
+    expect(retry.status).toBe(200);
+    const after = await (await changes(env, deps, owner, teamId)).json();
+    expect(after.items.filter((i) => ["b1", "c1"].includes(i.id)).every((i) => i.deleted)).toBe(true);
   });
 
   test("path itemId wins over a conflicting body itemId", async () => {
@@ -296,9 +303,9 @@ describe("items", () => {
     expect(pastPurge.resync).toBe(false); // since === purged_seq, not < it
   });
 
-  test("loginsFor chunks its IN list so a page with >90 distinct authors still resolves every login", async () => {
+  test("loginsFor chunks its IN list so a page with >100 distinct authors still resolves every login", async () => {
     const { env, deps, owner, teamId } = await setup();
-    const AUTHORS = 95;
+    const AUTHORS = 105;
     for (let i = 0; i < AUTHORS; i++) {
       const id = `u-many-${i}`;
       await env.SYNC_DB.prepare("INSERT INTO users (id, display_name, avatar_url, created_at) VALUES (?, ?, NULL, ?)").bind(id, `many${i}`, "2026-08-21T12:00:00.000Z").run();
@@ -306,7 +313,16 @@ describe("items", () => {
       const r = await items.writeItem(env, deps, { user: { id, login: `many${i}` } }, teamId, { itemId: `b-many-${i}`, type: "build", body: {}, baseVersion: null });
       expect(r.status).toBe(201);
     }
-    const list = await (await changes(env, deps, owner, teamId, 0, 200)).json();
+    // D1 caps bound parameters at 100 per statement; make the shim enforce it so
+    // this test fails if chunking regresses.
+    const realPrepare = env.SYNC_DB.prepare.bind(env.SYNC_DB);
+    const strictEnv = { ...env, SYNC_DB: { ...env.SYNC_DB, prepare: (sql) => {
+      const stmt = realPrepare(sql);
+      const realBind = stmt.bind.bind(stmt);
+      stmt.bind = (...args) => { if (args.length > 100) throw new Error(`too many SQL variables: ${args.length}`); return realBind(...args); };
+      return stmt;
+    } } };
+    const list = await (await changes(strictEnv, deps, owner, teamId, 0, 200)).json();
     expect(list.items).toHaveLength(AUTHORS);
     for (const item of list.items) {
       const idx = Number(item.id.replace("b-many-", ""));

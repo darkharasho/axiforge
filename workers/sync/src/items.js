@@ -271,27 +271,38 @@ async function deleteItem(request, env, deps, auth, params) {
   const stmts = [];
   // Only the root row is guarded by baseVersion — a client can only have seen
   // (and thus can only race on) the version it read for the item it asked to
-  // delete. Descendants are collateral and stay unguarded, as before.
+  // delete. Descendants are collateral and carry no version guard of their own.
+  // Descendants only flip if the root actually flipped in this same batch:
+  // every descendant statement (and its seq bump) is conditioned on the root
+  // row now being tombstoned at baseVersion + 1 by this request. If the root
+  // guard misses, the whole cascade is a no-op and we report 409 with no
+  // partial tombstones left behind.
+  const rootFlipped = "EXISTS (SELECT 1 FROM items WHERE team_id = ? AND id = ? AND deleted = 1 AND version = ? AND updated_by = ? AND updated_at = ?)";
+  const rootFlippedArgs = [params.teamId, row.id, baseVersion + 1, auth.user.id, now];
   let rootUpdateIndex = -1;
   for (const r of [row, ...descendants]) {
     const isRoot = r.id === row.id;
-    stmts.push(db.prepare("UPDATE teams SET seq = seq + 1 WHERE id = ?").bind(params.teamId));
-    if (isRoot) rootUpdateIndex = stmts.length;
-    const guard = isRoot ? " AND version = ?" : "";
-    const stmt = db.prepare(
-      `UPDATE items SET deleted = 1, body = NULL, version = version + 1, seq = (SELECT seq FROM teams WHERE id = ?), updated_by = ?, updated_at = ?
-        WHERE team_id = ? AND id = ? AND deleted = 0${guard}`
-    );
-    stmts.push(isRoot
-      ? stmt.bind(params.teamId, auth.user.id, now, params.teamId, r.id, baseVersion)
-      : stmt.bind(params.teamId, auth.user.id, now, params.teamId, r.id));
+    if (isRoot) {
+      stmts.push(db.prepare("UPDATE teams SET seq = seq + 1 WHERE id = ?").bind(params.teamId));
+      rootUpdateIndex = stmts.length;
+      stmts.push(db.prepare(
+        `UPDATE items SET deleted = 1, body = NULL, version = version + 1, seq = (SELECT seq FROM teams WHERE id = ?), updated_by = ?, updated_at = ?
+          WHERE team_id = ? AND id = ? AND deleted = 0 AND version = ?`
+      ).bind(params.teamId, auth.user.id, now, params.teamId, r.id, baseVersion));
+    } else {
+      stmts.push(db.prepare(`UPDATE teams SET seq = seq + 1 WHERE id = ? AND ${rootFlipped}`).bind(params.teamId, ...rootFlippedArgs));
+      stmts.push(db.prepare(
+        `UPDATE items SET deleted = 1, body = NULL, version = version + 1, seq = (SELECT seq FROM teams WHERE id = ?), updated_by = ?, updated_at = ?
+          WHERE team_id = ? AND id = ? AND deleted = 0 AND ${rootFlipped}`
+      ).bind(params.teamId, auth.user.id, now, params.teamId, r.id, ...rootFlippedArgs));
+    }
   }
   stmts.push(db.prepare("SELECT version, seq FROM items WHERE team_id = ? AND id = ?").bind(params.teamId, params.itemId));
   const results = await db.batch(stmts);
   if (results[rootUpdateIndex].meta.changes === 0) {
     // Lost the race between our pre-read and this batch — someone else wrote
-    // the root item in between. Report as a conflict rather than silently
-    // tombstoning descendants under a stale root version.
+    // the root item in between. The descendant statements were conditioned on
+    // the root flip, so nothing was tombstoned.
     return json({ error: { code: "conflict", message: "Item was changed since you last saw it." }, current: await currentItem(env, params.teamId, params.itemId) }, 409);
   }
   const out = results[results.length - 1].results[0];

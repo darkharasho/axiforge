@@ -12,7 +12,7 @@ test("Worker entry dispatches /api/sync/* to handleSync before asset fallback an
   expect(src).toMatch(/async scheduled\(/);
   expect(src).toMatch(/purgeTombstones/);
   // A failed purge must not become an unhandled rejection inside ctx.waitUntil.
-  expect(src).toMatch(/purgeTombstones\(env\)[\s\S]*?\.catch\(/);
+  expect(src).toMatch(/purgeTombstones\(env\)\s*\.then\([\s\S]*?\)\s*\.catch\(/);
   expect(src.indexOf("/api/sync/")).toBeLessThan(src.indexOf("env.ASSETS.fetch(request)"));
 });
 
