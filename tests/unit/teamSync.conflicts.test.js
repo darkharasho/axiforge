@@ -107,6 +107,32 @@ describe("TeamSync — conflicts", () => {
     expect(await h.syncStore.listOutbox("t")).toEqual(outboxBefore); // untouched — no dequeue, no apply
     expect((await h.buildStore.listBuilds())[0].title).toBe("Newer edit"); // local edit not overwritten by "current"
   });
+
+  // ─── I7: a tombstone/null `current` must clear the stale version ────────────
+
+  test("resolveConflict('theirs') on a conflict with no remote id clears the stored version so the next edit re-creates", async () => {
+    h = await makeHarness();
+    await h.folderStore.upsertFolder({ id: "t", name: "T", shared: true, teamId: "t", role: "member" });
+    await h.buildStore.upsertBuild({ id: "b1", title: "Mine", folderId: "t" });
+    await h.syncStore.setVersion("t", "b1", { version: 1, createdBy: "u-me" });
+    // 409 with `current: null` — the flush stores `{ deleted: true }` (no id).
+    h.api.putItem.mockRejectedValueOnce(apiError("SYNC_CONFLICT"));
+    await h.sync.enqueue("t", "b1", "build", "put");
+    await h.advance(FLUSH_DEBOUNCE_MS);
+    expect((await h.syncStore.listOutbox("t"))[0].conflict).toEqual({ deleted: true });
+
+    await h.sync.resolveConflict("t", "b1", "theirs");
+    expect(await h.syncStore.listOutbox("t")).toEqual([]);
+    expect(await h.syncStore.getVersion("t", "b1")).toBeNull();
+
+    // The next edit must go up as a create, not as an update against a version
+    // the server no longer has (which would 409 forever).
+    h.api.putItem.mockResolvedValueOnce({ version: 1, seq: 12 });
+    await h.sync.enqueue("t", "b1", "build", "put");
+    await h.advance(FLUSH_DEBOUNCE_MS);
+    expect(h.api.putItem).toHaveBeenCalledTimes(2);
+    expect(h.api.putItem.mock.calls[1][2].baseVersion).toBeNull();
+  });
 });
 
 describe("TeamSync — share folder to team / stop sharing", () => {
@@ -202,6 +228,31 @@ describe("TeamSync — share folder to team / stop sharing", () => {
     await h.folderStore.upsertFolder({ id: "team-2", name: "Other", shared: true, teamId: "team-2", role: "owner" });
     await expect(h.sync.shareFolderToTeam("team-2", "team-1")).rejects.toThrow("SHARE_ALREADY_IN_TEAM");
     expect(h.api.bulk).not.toHaveBeenCalled();
+  });
+
+  // ─── I2: the shared tree must fit under the team root's depth budget ────────
+
+  test("shareFolderToTeam rejects a tree with grandchildren (would exceed max folder depth) without calling api.bulk", async () => {
+    h = await makeHarness();
+    await h.folderStore.upsertFolder({ id: "team-1", name: "EWW", shared: true, teamId: "team-1", role: "owner" });
+    await h.folderStore.upsertFolder({ id: "p", name: "P" });
+    await h.folderStore.upsertFolder({ id: "p-sub", name: "Sub", parentId: "p" });
+    await h.folderStore.upsertFolder({ id: "p-sub-sub", name: "SubSub", parentId: "p-sub" });
+    await expect(h.sync.shareFolderToTeam("p", "team-1")).rejects.toThrow("SHARE_TOO_DEEP");
+    expect(h.api.bulk).not.toHaveBeenCalled();
+    // nothing was moved
+    expect((await h.folderStore.listFolders()).find((f) => f.id === "p").parentId).toBeNull();
+  });
+
+  test("shareFolderToTeam accepts a tree that is only one level deep", async () => {
+    h = await makeHarness();
+    await h.folderStore.upsertFolder({ id: "team-1", name: "EWW", shared: true, teamId: "team-1", role: "owner" });
+    await h.folderStore.upsertFolder({ id: "p", name: "P" });
+    await h.folderStore.upsertFolder({ id: "p-sub", name: "Sub", parentId: "p" });
+    h.api.bulk.mockImplementation(async (_t, items) => ({ results: items.map((it) => ({ itemId: it.itemId, status: 201, version: 1, seq: 1 })) }));
+    const out = await h.sync.shareFolderToTeam("p", "team-1");
+    expect(out).toEqual({ uploaded: 2, failed: [] });
+    expect((await h.folderStore.listFolders()).find((f) => f.id === "p").parentId).toBe("team-1");
   });
 });
 

@@ -291,7 +291,11 @@ class TeamSync {
     }
     if (needsRepull) {
       try { await this.listTeams(); } catch (err2) { console.warn("[team-sync] reconcile after forbidden/not-found failed:", err2.message); }
-      await this.pullTeam(teamId).catch(() => {}); // restore server state locally
+      // C2: a rejected write produced NO new seq, so an incremental pull from
+      // the stored cursor returns nothing and the local mutation the IPC
+      // handler already applied would diverge from the server forever. Pull
+      // the whole team from 0 instead so every rejected change is repaired.
+      await this._fullRepull(teamId).catch(() => {});
     }
     if (root && !(await this.syncStore.listOutbox(teamId)).length) {
       this._emit("sync-status", { status: "synced", folderId: root.id });
@@ -355,7 +359,12 @@ class TeamSync {
       // and ask the caller (_flushTeamInner) to reconcile team membership
       // and re-pull ONCE after the whole flush, not once per entry (R6.2).
       if (code === "SYNC_FORBIDDEN" || code === "SYNC_NOT_FOUND") {
-        await this.syncStore.dequeue(teamId, itemId, { queuedAt });
+        const dequeued = await this.syncStore.dequeue(teamId, itemId, { queuedAt });
+        // C2: drop the recorded version too, so the full re-pull that follows
+        // re-applies the server's copy instead of skipping it as an echo of a
+        // write that never actually landed. Only when the entry we flushed is
+        // still the current one — a fresher enqueue must keep its baseVersion.
+        if (dequeued) await this.syncStore.removeVersion(teamId, itemId);
         const error = code === "SYNC_FORBIDDEN" ? "forbidden" : "not_found";
         this._emit("sync-status", { status: "error", type, id: itemId, folderId: root.id, error, message: err.message });
         return { stop: false, needsRepull: true };
@@ -390,6 +399,15 @@ class TeamSync {
     return p;
   }
 
+  // C2: replay the team's whole change log from seq 0. Used after a write the
+  // server rejected (403/404), where an incremental pull would return nothing.
+  // Because `since === 0` the server never sets `resync`, so `_pruneUnseen`
+  // does NOT run — pending local-only work must survive this.
+  async _fullRepull(teamId) {
+    await this.syncStore.setCursor(teamId, 0);
+    return this.pullTeam(teamId);
+  }
+
   async _pullTeamInner(teamId) {
     const session = await this.getSession();
     if (!session) return;
@@ -415,6 +433,13 @@ class TeamSync {
         cursor = 0;
         continue;
       }
+      // I1: if applying an item throws we must NOT persist a cursor past it —
+      // that would lose the change forever. Stop at the first failure, park the
+      // cursor just before it, and throw so pullAll()'s failure counting (and
+      // the 3-strike `pull-error` toast) surfaces the problem. The next poll
+      // replays from that item; everything before it was already applied and
+      // re-applying is idempotent.
+      let failed = null;
       for (const item of page.items) {
         if (resyncSeen) resyncSeen.add(item.id);
         this._emit("sync-status", { status: "syncing", type: item.type, id: item.id, folderId: root.id });
@@ -422,7 +447,14 @@ class TeamSync {
           await this._applyItem(teamId, root, item, session);
         } catch (err) {
           console.error(`[team-sync] apply ${item.type} ${item.id} failed:`, err.message);
+          failed = item;
+          break;
         }
+      }
+      if (failed) {
+        const before = Number.isInteger(failed.seq) ? failed.seq - 1 : cursor;
+        await this.syncStore.setCursor(teamId, before);
+        throw new Error(`PULL_APPLY_FAILED:${failed.type}:${failed.id}`);
       }
       cursor = page.nextSeq;
       await this.syncStore.setCursor(teamId, cursor);
@@ -456,6 +488,10 @@ class TeamSync {
   // root that the server no longer has and that isn't awaiting an outbox
   // flush (a pending local write is left alone — the flush will 409/resolve
   // it against the server's current state).
+  //
+  // Known gap: an item whose outbox entry was DROPPED by a 413/403 (spec §5
+  // says it should stay on disk as local-only data) has no pending entry left,
+  // so a later resync prune deletes it locally. Documented, not fixed here.
   async _pruneUnseen(teamId, root, seenIds) {
     const team = await this.syncStore.getTeam(teamId);
     const folders = await this.folderStore.listFolders();
@@ -477,7 +513,12 @@ class TeamSync {
 
   async _applyItem(teamId, root, item, session) {
     const known = await this.syncStore.getVersion(teamId, item.id);
-    if (known && known.version === item.version) return;                 // our own write echoed back
+    // Our own write echoed back — but only if the item is actually still here.
+    // C2: after a rejected local mutation (403/404) the item can be MISSING
+    // locally while its version is still known (e.g. the descendants of a
+    // folder delete the server refused); the re-pull must restore those, so a
+    // version match alone is not enough to skip.
+    if (known && known.version === item.version && (await this._loadLocal(item.type, item.id))) return;
     const team = await this.syncStore.getTeam(teamId);
     if (team.outbox[item.id]) return;                                     // local change pending — flush decides
     const createdBy = item.createdBy ? item.createdBy.userId : null;
@@ -605,7 +646,14 @@ class TeamSync {
       if (remote && remote.id) {
         await this.syncStore.removeVersion(teamId, itemId); // force apply even if versions matched
         await this._applyItem(teamId, root, remote, await this.getSession());
+        return;
       }
+      // I7: a 409 with `current: null` is stored as a bare `{ deleted: true }`
+      // — there is nothing to apply, but the recorded version is now stale
+      // (the server no longer has that item), so every future edit would 409
+      // forever. Drop it; the local copy stays as a personal-looking copy in
+      // the team folder and the next edit re-creates it with baseVersion null.
+      await this.syncStore.removeVersion(teamId, itemId);
       return;
     }
     // "mine": adopt the server's version as our base and push again now.
@@ -631,6 +679,40 @@ class TeamSync {
     return out;
   }
 
+  // Depth of every folder in `collectFolderTree(folderId, ...)` RELATIVE to
+  // `folderId` (the root of the tree is 0).
+  _relativeDepths(folderId, folders) {
+    const depths = new Map([[folderId, 0]]);
+    for (const id of this.collectFolderTree(folderId, folders)) {
+      if (id === folderId) continue;
+      const f = folders.find((x) => x.id === id);
+      depths.set(id, (depths.get(f && f.parentId) || 0) + 1);
+    }
+    return depths;
+  }
+
+  // Queue a whole folder subtree for the team. "put" walks the tree (parents
+  // before children, then its builds, then its comps); "delete" queues a single
+  // folder delete — the server cascades to descendants.
+  async enqueueFolderTree(teamId, folderId, op) {
+    if (op === "delete") {
+      await this.enqueue(teamId, folderId, "folder", "delete");
+      return { count: 1 };
+    }
+    const folders = await this.folderStore.listFolders();
+    const treeIds = this.collectFolderTree(folderId, folders);
+    const treeSet = new Set(treeIds);
+    let count = 0;
+    for (const id of treeIds) { await this.enqueue(teamId, id, "folder", "put"); count += 1; }
+    for (const b of (await this.buildStore.listBuilds()).filter((x) => treeSet.has(x.folderId))) {
+      await this.enqueue(teamId, b.id, "build", "put"); count += 1;
+    }
+    for (const c of (await this.compStore.listComps()).filter((x) => treeSet.has(x.folderId))) {
+      await this.enqueue(teamId, c.id, "comp", "put"); count += 1;
+    }
+    return { count };
+  }
+
   async shareFolderToTeam(folderId, teamId, onProgress) {
     const session = await this.getSession();
     if (!session) throw new Error("Team sync is not enabled.");
@@ -645,6 +727,14 @@ class TeamSync {
     // not-top-level one.
     if (folder.teamId || this.teamRootFor(folderId, folders)) throw new Error("SHARE_ALREADY_IN_TEAM");
     if (folder.parentId) throw new Error("SHARE_NOT_TOP_LEVEL");
+
+    // I2: sharing re-parents this folder under the team root, so the tree gains
+    // a level. folderStore rejects an upsert whose parent is already at depth 3
+    // (team root = 1, shared folder = 2, its children = 3), which means a
+    // grandchild of `folderId` would land at depth 4 and be silently dropped on
+    // every teammate's pull. Refuse before uploading anything.
+    const depths = this._relativeDepths(folderId, folders);
+    for (const d of depths.values()) if (d >= 2) throw new Error("SHARE_TOO_DEEP");
 
     const treeIds = this.collectFolderTree(folderId, folders);
     const treeSet = new Set(treeIds);
