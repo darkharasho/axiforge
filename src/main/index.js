@@ -47,6 +47,7 @@ const { writeDiscoveryFile, removeDiscoveryFileSync } = require("./localApiDisco
 const { parseCliFlags } = require("./cliFlags");
 const { shareRejectionReason } = require("./shareGate");
 const { shortUrl, publishedOwnerFor } = require("./shortUrl");
+const { assertCanMoveOutOfTeam, decideCompBuildPublish } = require("./teamGuards");
 
 const PROFESSION_THEME_IDS = {
   Guardian: "prof-guardian", Warrior: "prof-warrior", Necromancer: "prof-necromancer",
@@ -300,7 +301,7 @@ function broadcast(channel, data) {
 // IPC registry: handle() registers with ipcMain AND records the handler so the
 // local API can call the exact same function via invokeLocal(). This keeps the
 // HTTP endpoints thin wrappers over the existing handlers — history capture,
-// shared-library sync, ownership guards, and publish flows are all reused.
+// team sync outbox, ownership guards, and publish flows are all reused.
 const ipcRegistry = new Map();
 function handle(channel, fn) {
   ipcRegistry.set(channel, fn);
@@ -336,6 +337,29 @@ function asHttpResult(promise, { badInput = false } = {}) {
 
 let localApi = null;
 let mainWindow = null;
+// Set once TeamSync is constructed during startup, so app-level lifecycle hooks
+// (will-quit) can reach the instance that lives inside the ready handler.
+let teamSyncRef = null;
+
+// Sync events go to the focused-most window (the same target TeamSync itself
+// uses for its own events).
+function teamSyncEmit(channel, data) {
+  const wins = BrowserWindow.getAllWindows();
+  if (wins.length) wins[0].webContents.send(channel, data);
+}
+
+// Outbox enqueues are best-effort: the local write already succeeded, so a
+// failure to record the sync op must not turn a successful mutation into an IPC
+// rejection (the renderer would roll back UI that is actually persisted). Report
+// it as a sync error instead — the next full push/pull reconciles.
+async function safeEnqueue(fn, ctx) {
+  try {
+    return await fn();
+  } catch (err) {
+    console.error("[team-sync] enqueue failed:", ctx, err.message);
+    teamSyncEmit("sync-status", { status: "error", error: "outbox", ...ctx, message: err.message });
+  }
+}
 // True once a windowed launch has been delegated to this (headless) instance via
 // "second-instance" but before its window finishes opening. Guards against a
 // headless quit (quitIfHeadless's deferred app.quit) racing the promotion and
@@ -401,12 +425,12 @@ const readyWork = app.whenReady().then(async () => {
   const teamSync = new TeamSync({
     buildStore: store, compStore, folderStore, syncStore,
     historyStore: buildHistoryStore,
-    emit: (channel, data) => {
-      const wins = BrowserWindow.getAllWindows();
-      if (wins.length) wins[0].webContents.send(channel, data);
-    },
+    emit: teamSyncEmit,
   });
-  teamSync.startPolling();
+  teamSyncRef = teamSync;
+  // Polling is meaningless without a team session (pullAll is a no-op then), and
+  // teams:enable starts it as soon as the user opts in.
+  if (await teamSync.getSession()) teamSync.startPolling();
   // Flush anything left in the outbox from a previous run, then pull.
   teamSync.pullAll().catch((err) => console.error("[startup-pull] error:", err.message));
   app.on("browser-window-focus", () => { teamSync.onFocus(); });
@@ -560,6 +584,12 @@ const readyWork = app.whenReady().then(async () => {
         snapshot: existing,
       }).catch((err) => console.warn("[history] addEntry failed:", err.message));
     }
+    // Guard BEFORE the local write: a refusal after the upsert would leave the
+    // build locally moved with nothing tombstoned in the source team.
+    // upsertBuild replaces the whole record, so the new folder is build.folderId.
+    const { oldRoot, newRoot } = await assertCanMoveOutOfTeam({ teamSync, findTeamRoot }, {
+      itemId: build.id, oldFolderId, newFolderId: build.folderId ?? null, label: "build",
+    });
     const saved = await store.upsertBuild(build);
     // Record creation for new builds so folder history panel shows the initial save.
     if (!existing) {
@@ -575,17 +605,10 @@ const readyWork = app.whenReady().then(async () => {
     if (saved.folderId) {
       await folderStore.touchFolders([saved.folderId]);
     }
-    const teamRoot = await findTeamRoot(saved.folderId);
-    if (teamRoot) await teamSync.enqueue(teamRoot.teamId, saved.id, "build", "put");
+    if (newRoot) await safeEnqueue(() => teamSync.enqueue(newRoot.teamId, saved.id, "build", "put"), { type: "build", id: saved.id });
     // Moved out of a team (or into a different one): tombstone it there.
-    if (oldFolderId && oldFolderId !== saved.folderId) {
-      const oldRoot = await findTeamRoot(oldFolderId);
-      if (oldRoot && oldRoot.id !== teamRoot?.id) {
-        if (!(await teamSync.canDelete(oldRoot.teamId, saved.id))) {
-          throw new Error("Only the team owner or the build's creator can move it out of the team.");
-        }
-        await teamSync.enqueue(oldRoot.teamId, saved.id, "build", "delete");
-      }
+    if (oldRoot && oldRoot.id !== newRoot?.id) {
+      await safeEnqueue(() => teamSync.enqueue(oldRoot.teamId, saved.id, "build", "delete"), { type: "build", id: saved.id });
     }
     return saved;
   });
@@ -601,7 +624,7 @@ const readyWork = app.whenReady().then(async () => {
     await compStore.removeBuildFromComps(id);
     buildHistoryStore.deleteHistory(id).catch((err) => console.warn("[history] deleteHistory failed:", err.message));
     if (folderId) await folderStore.touchFolders([folderId]);
-    if (teamRoot) await teamSync.enqueue(teamRoot.teamId, id, "build", "delete");
+    if (teamRoot) await safeEnqueue(() => teamSync.enqueue(teamRoot.teamId, id, "build", "delete"), { type: "build", id });
     return true;
   });
 
@@ -670,17 +693,35 @@ const readyWork = app.whenReady().then(async () => {
       await folderStore.touchFolders([saved.folderId]);
     }
     const teamRoot = await findTeamRoot(saved.folderId);
-    if (teamRoot) await teamSync.enqueue(teamRoot.teamId, saved.id, "build", "put");
+    if (teamRoot) await safeEnqueue(() => teamSync.enqueue(teamRoot.teamId, saved.id, "build", "put"), { type: "build", id: saved.id });
     return saved;
   });
 
   // Folder CRUD
   handle("folders:list", () => folderStore.listFolders());
   handle("folders:save", async (_e, folder) => {
+    const existing = folder.id ? (await folderStore.listFolders()).find((f) => f.id === folder.id) : null;
+    // A team's root folder is owned by the team record: re-parenting it would
+    // orphan the share, and a local rename is silently reverted by the next
+    // _ensureRootFolder. Both go through teams:rename / Settings → Teams.
+    if (existing?.teamId && (folder.parentId || folder.name !== existing.name)) {
+      throw new Error("Rename or move the team from Settings → Teams.");
+    }
+    const oldParentId = existing?.parentId ?? null;
+    // Guard BEFORE the local write — see builds:save.
+    const { oldRoot, newRoot } = await assertCanMoveOutOfTeam({ teamSync, findTeamRoot }, {
+      itemId: folder.id, oldFolderId: oldParentId, newFolderId: folder.parentId ?? null, label: "folder",
+    });
     const saved = await folderStore.upsertFolder(folder);
-    if (saved.parentId) {
-      const teamRoot = await findTeamRoot(saved.parentId);
-      if (teamRoot) await teamSync.enqueue(teamRoot.teamId, saved.id, "folder", "put");
+    if (newRoot && newRoot.id !== oldRoot?.id) {
+      // Entering a team: the whole subtree is new to that team, not just this folder.
+      await safeEnqueue(() => teamSync.enqueueFolderTree(newRoot.teamId, saved.id, "put"), { type: "folder", id: saved.id });
+    } else if (newRoot) {
+      await safeEnqueue(() => teamSync.enqueue(newRoot.teamId, saved.id, "folder", "put"), { type: "folder", id: saved.id });
+    }
+    if (oldRoot && oldRoot.id !== newRoot?.id) {
+      // Leaving a team: one folder tombstone; the server cascades to descendants.
+      await safeEnqueue(() => teamSync.enqueueFolderTree(oldRoot.teamId, saved.id, "delete"), { type: "folder", id: saved.id });
     }
     return saved;
   });
@@ -695,7 +736,7 @@ const readyWork = app.whenReady().then(async () => {
     const deletedIds = await folderStore.deleteFolder(id);
     if (deletedIds.length) await store.clearFolderFromBuilds(deletedIds);
     // One tombstone for the folder; the server cascades to descendants.
-    if (teamRoot) await teamSync.enqueue(teamRoot.teamId, id, "folder", "delete");
+    if (teamRoot) await safeEnqueue(() => teamSync.enqueue(teamRoot.teamId, id, "folder", "delete"), { type: "folder", id });
     return deletedIds;
   });
   handle("folders:reorder", async (_e, updates) => {
@@ -704,7 +745,7 @@ const readyWork = app.whenReady().then(async () => {
     for (const { id } of updates) {
       const f = folders.find((x) => x.id === id);
       const teamRoot = f?.parentId ? _findTeamRoot(f.parentId, folders) : null;
-      if (teamRoot) await teamSync.enqueue(teamRoot.teamId, id, "folder", "put");
+      if (teamRoot) await safeEnqueue(() => teamSync.enqueue(teamRoot.teamId, id, "folder", "put"), { type: "folder", id });
     }
   });
 
@@ -736,13 +777,13 @@ const readyWork = app.whenReady().then(async () => {
     await store.moveBuilds(ids, folderId);
 
     if (destRoot) {
-      for (const id of ids) await teamSync.enqueue(destRoot.teamId, id, "build", "put");
+      for (const id of ids) await safeEnqueue(() => teamSync.enqueue(destRoot.teamId, id, "build", "put"), { type: "build", id });
     }
     for (const srcId of sourceFolderIds) {
       if (srcId === folderId) continue;
       const srcRoot = await findTeamRoot(srcId);
       if (srcRoot && srcRoot.id !== destRoot?.id) {
-        for (const id of ids) await teamSync.enqueue(srcRoot.teamId, id, "build", "delete");
+        for (const id of ids) await safeEnqueue(() => teamSync.enqueue(srcRoot.teamId, id, "build", "delete"), { type: "build", id });
       }
     }
 
@@ -764,17 +805,14 @@ const readyWork = app.whenReady().then(async () => {
   handle("comps:save", async (_e, comp) => {
     const existing = comp.id ? (await compStore.listComps()).find((c) => c.id === comp.id) : null;
     const oldFolderId = existing?.folderId ?? null;
+    // Guard BEFORE the local write — see builds:save.
+    const { oldRoot, newRoot } = await assertCanMoveOutOfTeam({ teamSync, findTeamRoot }, {
+      itemId: comp.id, oldFolderId, newFolderId: comp.folderId ?? null, label: "comp",
+    });
     const saved = await compStore.upsertComp(comp);
-    const teamRoot = await findTeamRoot(saved.folderId);
-    if (teamRoot) await teamSync.enqueue(teamRoot.teamId, saved.id, "comp", "put");
-    if (oldFolderId && oldFolderId !== saved.folderId) {
-      const oldRoot = await findTeamRoot(oldFolderId);
-      if (oldRoot && oldRoot.id !== teamRoot?.id) {
-        if (!(await teamSync.canDelete(oldRoot.teamId, saved.id))) {
-          throw new Error("Only the team owner or the comp's creator can move it out of the team.");
-        }
-        await teamSync.enqueue(oldRoot.teamId, saved.id, "comp", "delete");
-      }
+    if (newRoot) await safeEnqueue(() => teamSync.enqueue(newRoot.teamId, saved.id, "comp", "put"), { type: "comp", id: saved.id });
+    if (oldRoot && oldRoot.id !== newRoot?.id) {
+      await safeEnqueue(() => teamSync.enqueue(oldRoot.teamId, saved.id, "comp", "delete"), { type: "comp", id: saved.id });
     }
     return saved;
   });
@@ -788,7 +826,7 @@ const readyWork = app.whenReady().then(async () => {
     }
     await compStore.deleteComp(id);
     await store.clearCompFromBuilds([id]);
-    if (teamRoot) await teamSync.enqueue(teamRoot.teamId, id, "comp", "delete");
+    if (teamRoot) await safeEnqueue(() => teamSync.enqueue(teamRoot.teamId, id, "comp", "delete"), { type: "comp", id });
   });
   handle("comps:reorder", (_e, updates) => compStore.reorderComps(updates));
   handle("comps:delete-batch", async (_e, ids) => {
@@ -806,10 +844,29 @@ const readyWork = app.whenReady().then(async () => {
     }
     await compStore.deleteComps(ids);
     if (ids.length) await store.clearCompFromBuilds(ids);
-    for (const [teamId, id] of teamOps) await teamSync.enqueue(teamId, id, "comp", "delete");
+    for (const [teamId, id] of teamOps) await safeEnqueue(() => teamSync.enqueue(teamId, id, "comp", "delete"), { type: "comp", id });
   });
-  handle("comps:add-tags", (_e, ids, tags) => compStore.addTagsToComps(ids, tags));
-  handle("comps:remove-tags", (_e, ids, tags) => compStore.removeTagsFromComps(ids, tags));
+  // Tag edits are a real mutation of the comp record, so team comps must be
+  // pushed too — otherwise teammates never see the new tags.
+  async function enqueueCompPuts(ids) {
+    const comps = await compStore.listComps();
+    const folders = await folderStore.listFolders();
+    for (const id of ids) {
+      const comp = comps.find((c) => c.id === id);
+      const teamRoot = comp?.folderId ? _findTeamRoot(comp.folderId, folders) : null;
+      if (teamRoot) await safeEnqueue(() => teamSync.enqueue(teamRoot.teamId, id, "comp", "put"), { type: "comp", id });
+    }
+  }
+  handle("comps:add-tags", async (_e, ids, tags) => {
+    const res = await compStore.addTagsToComps(ids, tags);
+    await enqueueCompPuts(ids);
+    return res;
+  });
+  handle("comps:remove-tags", async (_e, ids, tags) => {
+    const res = await compStore.removeTagsFromComps(ids, tags);
+    await enqueueCompPuts(ids);
+    return res;
+  });
 
   handle("comps:get-published-url", async (_e, compId) => {
     const comps = await compStore.listComps();
@@ -839,12 +896,18 @@ const readyWork = app.whenReady().then(async () => {
   handle("builds:import-chat-link", async (_e, link, name, folderId, gameMode) => {
     const { decodeChatLinkToBuild } = require("./buildChatLink.js");
     const build = await decodeChatLinkToBuild(link, name, folderId, gameMode);
-    return store.upsertBuild(build);
+    const saved = await store.upsertBuild(build);
+    const teamRoot = await findTeamRoot(saved.folderId);
+    if (teamRoot) await safeEnqueue(() => teamSync.enqueue(teamRoot.teamId, saved.id, "build", "put"), { type: "build", id: saved.id });
+    return saved;
   });
   handle("builds:import-gw2skills", async (_e, url, name, folderId, gameMode) => {
     const { importGw2SkillsBuild } = require("./gw2skillsImport.js");
     const build = await importGw2SkillsBuild(url, name, folderId, gameMode);
-    return store.upsertBuild(build);
+    const saved = await store.upsertBuild(build);
+    const teamRoot = await findTeamRoot(saved.folderId);
+    if (teamRoot) await safeEnqueue(() => teamSync.enqueue(teamRoot.teamId, saved.id, "build", "put"), { type: "build", id: saved.id });
+    return saved;
   });
   handle("builds:parse-gw2skills", async (_e, url, gameMode) => {
     const { parseGw2Skills } = require("./gw2skillsImport.js");
@@ -1126,7 +1189,7 @@ const readyWork = app.whenReady().then(async () => {
       publishedOwner: owner,
       snapshotUpdatedAt: build.updatedAt,
     })) || build;
-    if (teamRoot) await teamSync.enqueue(teamRoot.teamId, savedBuild.id, "build", "put");
+    if (teamRoot) await safeEnqueue(() => teamSync.enqueue(teamRoot.teamId, savedBuild.id, "build", "put"), { type: "build", id: savedBuild.id });
 
     const themedBuilds = await store.getSetting("appearance.themedBuildPages");
     const themeParam = themedBuilds && build.profession && PROFESSION_THEME_IDS[build.profession]
@@ -1205,6 +1268,9 @@ const readyWork = app.whenReady().then(async () => {
     // ── 4. Publish unpublished builds, enrich all builds ──────────────
     const buildsMap = {};
     const updatedBuildRecords = [];
+    // Builds already published by a teammate: linked, never re-uploaded (see
+    // decideCompBuildPublish). Surfaced so the UI can explain the split.
+    const skippedForeignBuilds = [];
     const unpublishedBuilds = compBuilds.filter((b) => !b.publishedFileId);
 
     for (let i = 0; i < compBuilds.length; i++) {
@@ -1238,19 +1304,34 @@ const readyWork = app.whenReady().then(async () => {
         // Chat link unavailable — SPA will hide the build code widget
       }
 
-      const fileId = build.publishedFileId || generateFileId();
-      const encKey = build.publishedKey || generateEncryptionKey();
       const slug = slugifyBuildName(build.title);
       const buildTheme = themedBuildsOn && build.profession && PROFESSION_THEME_IDS[build.profession]
         ? PROFESSION_THEME_IDS[build.profession]
         : compTheme;
+      const { foreignOwner, needsRecord } = decideCompBuildPublish({ build, owner, force: opts.force, slug });
+
+      if (foreignOwner) {
+        // Keep the existing URL stable: link to the other user's published copy
+        // rather than re-uploading the bytes under our owner (which would leave
+        // publishedOwner pointing at a copy we no longer maintain).
+        const fSlug = build.publishedSlug || slug;
+        buildsMap[build.id] = {
+          ...enrichedBuild,
+          spaUrl: `https://${foreignOwner}.github.io/${TARGET_REPO}/?n=${encodeURIComponent(fSlug)}&b=${build.publishedFileId}.${build.publishedKey}${buildTheme ? `&t=${buildTheme}` : ""}`,
+        };
+        skippedForeignBuilds.push({ id: build.id, title: build.title || build.profession || "Build", owner: foreignOwner });
+        continue;
+      }
+
+      const fileId = build.publishedFileId || generateFileId();
+      const encKey = build.publishedKey || generateEncryptionKey();
       const spaUrl = `https://${owner}.github.io/${TARGET_REPO}/?n=${encodeURIComponent(slug)}&b=${fileId}.${encKey}${buildTheme ? `&t=${buildTheme}` : ""}`;
 
       // Always re-encrypt with latest enriched data (traits may have been fixed)
       const encFile = buildEncryptedBuildFile(enrichedBuild, fileId, encKey);
       spaBundle[encFile.filePath] = encFile.content;
 
-      if (!build.publishedFileId || build.publishedSlug !== slug) {
+      if (needsRecord) {
         updatedBuildRecords.push({ id: build.id, publishedFileId: fileId, publishedKey: encKey, publishedSlug: slug, publishedOwner: owner, snapshotUpdatedAt: build.updatedAt });
       }
 
@@ -1296,7 +1377,7 @@ const readyWork = app.whenReady().then(async () => {
     for (const { id, ...patch } of updatedBuildRecords) {
       const savedBuild = await store.markPublished(id, patch);
       if (savedBuild && compTeamRoot) {
-        await teamSync.enqueue(compTeamRoot.teamId, savedBuild.id, "build", "put");
+        await safeEnqueue(() => teamSync.enqueue(compTeamRoot.teamId, savedBuild.id, "build", "put"), { type: "build", id: savedBuild.id });
       }
     }
 
@@ -1317,7 +1398,7 @@ const readyWork = app.whenReady().then(async () => {
     // Push comp publish metadata to shared repo so teammates get the URL.
     // Skip personal auth record update for shared comps — the org's repo is the
     // canonical publish target, not the user's personal publishing setup.
-    if (compTeamRoot) await teamSync.enqueue(compTeamRoot.teamId, savedComp.id, "comp", "put");
+    if (compTeamRoot) await safeEnqueue(() => teamSync.enqueue(compTeamRoot.teamId, savedComp.id, "comp", "put"), { type: "comp", id: savedComp.id });
     await patchAuthRecord({
       onboarding: {
         repoReady: true,
@@ -1333,7 +1414,7 @@ const readyWork = app.whenReady().then(async () => {
       },
     });
 
-    return { pagesUrl: compPagesUrl, slug: compSlug, fileId: compFileId, changed: true };
+    return { pagesUrl: compPagesUrl, slug: compSlug, fileId: compFileId, changed: true, skippedForeignBuilds };
   }
 
   handle("gw2:list-professions", async () => getProfessionList("en"));
@@ -1967,6 +2048,8 @@ app.on("will-quit", () => {
   // only remove a file this process wrote.
   removeDiscoveryFileSync(dataDir, { ownerPid: process.pid });
   if (localApi) localApi.stop().catch(() => {});
+  // Stop the team-sync poll timer so a pending tick can't fire mid-teardown.
+  if (teamSyncRef) teamSyncRef.stopPolling();
 });
 
 app.on("window-all-closed", () => {

@@ -39,3 +39,71 @@ test("GitHub-org sync code is gone", () => {
   const ss = fs.readFileSync(path.join(__dirname, "../../src/main/syncStore.js"), "utf8");
   expect(ss).not.toMatch(/remoteShas/);
 });
+
+// Source slice for one handler: from its handle("...") to the next top-level
+// handle( at the same indentation.
+function handlerSource(channel) {
+  const start = MAIN.indexOf(`handle("${channel}"`);
+  expect(start).toBeGreaterThan(-1);
+  const next = MAIN.indexOf('\n  handle("', start + 1);
+  return MAIN.slice(start, next === -1 ? MAIN.length : next);
+}
+
+test("ownership guards run BEFORE the local write in save handlers", () => {
+  const cases = [
+    ["builds:save", "store.upsertBuild("],
+    ["comps:save", "compStore.upsertComp("],
+    ["folders:save", "folderStore.upsertFolder("],
+  ];
+  for (const [channel, writeCall] of cases) {
+    const src = handlerSource(channel);
+    const guard = src.indexOf("assertCanMoveOutOfTeam(");
+    const write = src.indexOf(writeCall);
+    expect(guard).toBeGreaterThan(-1);
+    expect(write).toBeGreaterThan(-1);
+    expect(guard).toBeLessThan(write);
+  }
+});
+
+test("folders:save handles cross-team folder moves via enqueueFolderTree", () => {
+  const src = handlerSource("folders:save");
+  expect(src).toContain('enqueueFolderTree(');
+  expect(src).toMatch(/enqueueFolderTree\([^)]*"put"\)/);
+  expect(src).toMatch(/enqueueFolderTree\([^)]*"delete"\)/);
+  // Team root folders can only be renamed/moved from Settings → Teams.
+  expect(src).toContain("Rename or move the team from Settings");
+});
+
+test("every outbox enqueue is wrapped in safeEnqueue so a failed enqueue cannot fail the IPC", () => {
+  expect(MAIN).toContain("async function safeEnqueue(");
+  const re = /teamSync\.(enqueue|enqueueFolderTree)\(/g;
+  let m;
+  let seen = 0;
+  while ((m = re.exec(MAIN))) {
+    seen++;
+    const lineStart = MAIN.lastIndexOf("\n", m.index) + 1;
+    const line = MAIN.slice(lineStart, m.index);
+    expect(line).toContain("safeEnqueue(() =>");
+  }
+  expect(seen).toBeGreaterThanOrEqual(10);
+});
+
+test("tag and import handlers enqueue their mutations", () => {
+  // Tag handlers go through the shared enqueueCompPuts helper (itself safeEnqueue-wrapped).
+  for (const ch of ["comps:add-tags", "comps:remove-tags"]) {
+    expect(handlerSource(ch)).toContain("enqueueCompPuts(");
+  }
+  for (const ch of ["builds:import-chat-link", "builds:import-gw2skills"]) {
+    expect(handlerSource(ch)).toContain("safeEnqueue(");
+  }
+});
+
+test("comp publishing leaves builds published by someone else alone", () => {
+  expect(MAIN).toContain("decideCompBuildPublish(");
+  expect(MAIN).toContain("skippedForeignBuilds");
+});
+
+test("polling is stopped on quit and only started when a team session exists", () => {
+  expect(MAIN).toMatch(/app\.on\("will-quit"[\s\S]{0,900}teamSyncRef\.stopPolling\(\)/);
+  expect(MAIN).toMatch(/if \(await teamSync\.getSession\(\)\) teamSync\.startPolling\(\);/);
+});
