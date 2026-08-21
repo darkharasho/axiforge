@@ -70,3 +70,58 @@ describe("SyncStore — getShas / setShas", () => {
     expect(await store.getShas("folder-1")).toEqual({});
   });
 });
+
+describe("SyncStore — team scope (cursor / versions / outbox)", () => {
+  let store, dir;
+  beforeEach(async () => ({ store, dir } = await makeTempStore()));
+  afterEach(async () => cleanupDir(dir));
+
+  test("getTeam defaults", async () => {
+    expect(await store.getTeam("t1")).toEqual({ cursor: 0, versions: {}, outbox: {}, failures: 0 });
+  });
+
+  test("cursor / versions / failures round-trip", async () => {
+    await store.setCursor("t1", 42);
+    await store.setVersion("t1", "b1", { version: 3, createdBy: "u1" });
+    await store.setFailures("t1", 2);
+    const t = await store.getTeam("t1");
+    expect(t.cursor).toBe(42);
+    expect(t.versions.b1).toEqual({ version: 3, createdBy: "u1" });
+    expect(await store.getVersion("t1", "b1")).toEqual({ version: 3, createdBy: "u1" });
+    expect(t.failures).toBe(2);
+    await store.removeVersion("t1", "b1");
+    expect(await store.getVersion("t1", "b1")).toBeNull();
+  });
+
+  test("enqueue creates an entry with queuedAt/attempts; delete supersedes put; put after delete replaces it", async () => {
+    const e = await store.enqueue("t1", "b1", { type: "build", op: "put" });
+    expect(e).toMatchObject({ type: "build", op: "put", attempts: 0, nextAttemptAt: null, conflict: null });
+    expect(typeof e.queuedAt).toBe("string");
+    await store.enqueue("t1", "b1", { type: "build", op: "delete" });
+    expect((await store.listOutbox("t1"))[0]).toMatchObject({ itemId: "b1", op: "delete" });
+    await store.enqueue("t1", "b1", { type: "build", op: "put" });
+    expect((await store.listOutbox("t1"))[0]).toMatchObject({ itemId: "b1", op: "put", attempts: 0, conflict: null });
+  });
+
+  test("patchOutbox / dequeue / listOutbox ordering by queuedAt", async () => {
+    await store.enqueue("t1", "b1", { type: "build", op: "put" });
+    await new Promise((r) => setTimeout(r, 3));
+    await store.enqueue("t1", "c1", { type: "comp", op: "put" });
+    await store.patchOutbox("t1", "b1", { attempts: 2, nextAttemptAt: "2030-01-01T00:00:00.000Z", conflict: { version: 5 } });
+    const list = await store.listOutbox("t1");
+    expect(list.map((x) => x.itemId)).toEqual(["b1", "c1"]);
+    expect(list[0]).toMatchObject({ attempts: 2, conflict: { version: 5 } });
+    await store.dequeue("t1", "b1");
+    expect((await store.listOutbox("t1")).map((x) => x.itemId)).toEqual(["c1"]);
+    await store.dequeue("t1", "nope"); // no throw
+  });
+
+  test("removeTeam / listTeamIds; concurrent writes do not lose entries", async () => {
+    await Promise.all(Array.from({ length: 20 }, (_, i) => store.enqueue("t1", `b${i}`, { type: "build", op: "put" })));
+    expect((await store.listOutbox("t1")).length).toBe(20);
+    await store.setCursor("t2", 1);
+    expect((await store.listTeamIds()).sort()).toEqual(["t1", "t2"]);
+    await store.removeTeam("t1");
+    expect(await store.listTeamIds()).toEqual(["t2"]);
+  });
+});

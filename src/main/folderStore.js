@@ -39,6 +39,8 @@ class FolderStore {
       const shared = input.shared === true;
       const orgName = typeof input.orgName === "string" ? input.orgName : undefined;
       const lastSyncedAt = typeof input.lastSyncedAt === "string" ? input.lastSyncedAt : undefined;
+      const teamId = typeof input.teamId === "string" ? input.teamId : (input.teamId === null ? null : undefined);
+      const role = input.role === "owner" || input.role === "member" ? input.role : (input.role === null ? null : undefined);
 
       // Shared folders must be top-level
       if (shared && parentId) {
@@ -68,6 +70,8 @@ class FolderStore {
         if (input.shared !== undefined) existing.shared = Boolean(input.shared);
         if (input.orgName !== undefined) existing.orgName = input.orgName;
         if (input.lastSyncedAt !== undefined) existing.lastSyncedAt = input.lastSyncedAt;
+        if (teamId !== undefined) { if (teamId === null) delete existing.teamId; else existing.teamId = teamId; }
+        if (role !== undefined) { if (role === null) delete existing.role; else existing.role = role; }
         // Ensure updatedAt is strictly greater than the previous value
         const prevUpdatedAt = existing.updatedAt;
         existing.updatedAt =
@@ -90,6 +94,8 @@ class FolderStore {
       if (shared) folder.shared = true;
       if (orgName) folder.orgName = orgName;
       if (lastSyncedAt) folder.lastSyncedAt = lastSyncedAt;
+      if (teamId) folder.teamId = teamId;
+      if (role) folder.role = role;
       folders.push(folder);
       await this.#writeJson(this.foldersPath, folders);
       return { ...folder };

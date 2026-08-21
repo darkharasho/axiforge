@@ -295,3 +295,20 @@ describe("FolderStore — concurrent write safety", () => {
     expect(subs).toHaveLength(N);
   });
 });
+
+describe("team fields", () => {
+  let store, dir;
+  beforeEach(async () => ({ store, dir } = await makeTempStore()));
+  afterEach(async () => cleanupDir(dir));
+
+  test("persists teamId/role on create and update; null clears", async () => {
+    const f = await store.upsertFolder({ id: "team-1", name: "EWW", shared: true, teamId: "team-1", role: "owner" });
+    expect(f).toMatchObject({ shared: true, teamId: "team-1", role: "owner" });
+    const kept = await store.upsertFolder({ id: "team-1", name: "EWW renamed", shared: true });
+    expect(kept).toMatchObject({ teamId: "team-1", role: "owner" });
+    const cleared = await store.upsertFolder({ id: "team-1", name: "EWW", shared: false, teamId: null, role: null });
+    expect(cleared.teamId).toBeUndefined();
+    expect(cleared.role).toBeUndefined();
+    expect(cleared.shared).toBe(false);
+  });
+});
