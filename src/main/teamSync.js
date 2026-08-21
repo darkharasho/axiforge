@@ -404,14 +404,25 @@ class TeamSync {
   // Because `since === 0` the server never sets `resync`, so `_pruneUnseen`
   // does NOT run — pending local-only work must survive this.
   async _fullRepull(teamId) {
+    const key = `pull:${teamId}`;
     // A poll's incremental pull may already be in flight (pulls and flushes
     // de-dupe on different keys). Let it finish first, otherwise it would
     // overwrite our cursor reset with its own nextSeq and no from-0 pull would
-    // ever happen.
-    const inflight = this._inflight.get(`pull:${teamId}`);
-    if (inflight) await inflight.catch(() => {});
-    await this.syncStore.setCursor(teamId, 0);
-    return this.pullTeam(teamId);
+    // ever happen. Loop: another pull may have been started while we waited.
+    for (;;) {
+      const inflight = this._inflight.get(key);
+      if (!inflight) break;
+      await inflight.catch(() => {});
+    }
+    // Claim the pull slot synchronously (no await between the loop exiting and
+    // the set), so a poll tick that fires between our cursor reset and our
+    // from-0 pull joins this promise instead of racing it with a stale cursor.
+    const p = (async () => {
+      await this.syncStore.setCursor(teamId, 0);
+      await this._pullTeamInner(teamId);
+    })().finally(() => this._inflight.delete(key));
+    this._inflight.set(key, p);
+    return p;
   }
 
   async _pullTeamInner(teamId) {

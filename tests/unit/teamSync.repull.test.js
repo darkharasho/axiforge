@@ -174,4 +174,33 @@ describe("TeamSync — _fullRepull vs an in-flight incremental pull", () => {
     expect((await h.syncStore.getTeam("t")).cursor).toBe(3);   // the repair pull's nextSeq, not 42
     expect((await h.buildStore.listBuilds()).map((b) => b.id)).toEqual(["b1"]);
   });
+
+  test("a poll tick that fires in the drain→reset window cannot starve the from-0 pull", async () => {
+    h = await makeHarness();
+    await seedTeam(h);
+    await h.syncStore.setCursor("t", 10);
+    let releaseFirst;
+    const firstPage = new Promise((resolve) => { releaseFirst = resolve; });
+    h.api.changes
+      .mockReturnValueOnce(firstPage)
+      .mockImplementation(async (_teamId, since) => (since === 0
+        ? { items: [item({ id: "b1", seq: 3 })], nextSeq: 3, hasMore: false }
+        : { items: [], nextSeq: 42, hasMore: false }));
+
+    const incremental = h.sync.pullTeam("t");
+    const repair = h.sync._fullRepull("t");
+    for (let i = 0; i < 200 && h.api.changes.mock.calls.length < 1; i++) await new Promise((r) => setImmediate(r));
+    releaseFirst({ items: [], nextSeq: 42, hasMore: false });
+    await incremental;
+    // The 30 s poll timer fires the instant the drained pull settles — before
+    // the repair has reset the cursor. If the repair does not own the pull
+    // slot, this poll claims it with the stale cursor and the repair's
+    // pullTeam() merely joins it: no from-0 pull ever happens.
+    const poll = h.sync.pullTeam("t");
+    await Promise.all([repair, poll]);
+
+    expect(h.api.changes.mock.calls.map((c) => c[1])).toContain(0);
+    expect((await h.syncStore.getTeam("t")).cursor).toBe(3);
+    expect((await h.buildStore.listBuilds()).map((b) => b.id)).toEqual(["b1"]);
+  });
 });
