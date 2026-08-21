@@ -1,3 +1,20 @@
+## Version v0.11.7 — August 20, 2026
+
+### Bug Fixes
+
+- **Warrior sword now shows the right skills.** After the sword rework, skill slot 3 was blank and the F1 burst showed Eviscerate (the axe burst) instead of Bloodthirster. The app was still using the weapon data it shipped with, which pointed slot 3 at a skill the patch deleted.
+- **Game data now updates itself between releases.** Profession, weapon-skill, and specialization data is refreshed in the background from the live snapshot — the same way relic and upgrade data already worked — so future balance patches show up without waiting for an app update. Offline, the app falls back to the data it shipped with.
+- **GW2Skills imports handle more pages.** Builds whose GW2Skills page has no chat link (gear-only or PvP builds) now import from the page itself instead of failing, and pages that previously failed to parse now import correctly. When an import genuinely can't work, the app says why instead of showing a generic error.
+- **Trait connector lines no longer skew when zoomed.** Changing browser or OS zoom left the lines between trait icons drawn from stale geometry; they now redraw whenever the specialization panel changes size.
+- **Refreshed consumables and item data.** The food and utility pickers now pick up newly released items automatically — this run adds New Year Rice Cake, Elder Draco-Pop, and Snow Diamond Ornament — alongside a refresh of relic, rune, and sigil data.
+
+### Web Playground
+
+These are already live at [build.axi.link](https://build.axi.link):
+
+- **Import builds on the web.** The Playground now has an Import button that takes a GW2Skills URL or an `.axicode` file (with a picker when the file holds multiple builds) and loads it straight into the editor.
+- **Shorter share links.** Copying a build link now produces a short `build.axi.link/b/…` link instead of a long one, which also stops browsers from flagging shared links as suspicious. Existing long links still open normally.
+
 ## Version v0.11.6 — July 11, 2026
 
 ### Bug Fixes
