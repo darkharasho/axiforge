@@ -159,8 +159,8 @@ test("library UI is wired to teams", () => {
   const sb = fs.readFileSync(path.join(__dirname, "../../src/renderer/modules/library/sidebar.js"), "utf8");
   expect(sb).toContain("Team Folders");
   expect(sb).toContain("teamLabel(");
-  // R4: content.js keeps an `orgName` reference for the Task 6 orphan banner,
-  // so we assert the badges are team-driven instead.
+  // No assertion on orgName — Task 6 adds an orphan banner keyed on it (R4).
+  // Assert the badges are team-driven instead.
   const ct = fs.readFileSync(path.join(__dirname, "../../src/renderer/modules/library/content.js"), "utf8");
   expect(ct).toContain("teamLabel(");
   expect(ct).not.toMatch(/Shared with \$\{escapeHtml\(/);

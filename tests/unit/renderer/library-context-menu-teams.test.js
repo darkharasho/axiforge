@@ -203,3 +203,29 @@ test("multi-select move is allowed when only personal + owned-team items are sel
     .dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true }));
   expect(labels(document.querySelector(".lib-ctx-menu"))).not.toContain("Move to Folder");
 });
+
+test("Pull now toasts and still refreshes when the pull fails, with no unhandled rejection", async () => {
+  const unhandled = [];
+  const onUnhandled = (err) => unhandled.push(err);
+  process.on("unhandledRejection", onUnhandled);
+
+  let refreshed = 0;
+  initContextMenu({ onToast: (m, type) => toasts.push({ m, type }), onRefresh: () => { refreshed++; } });
+  folderStore.pullTeamFor.mockRejectedValueOnce(new Error("SYNC_OFFLINE"));
+
+  const menu = openFolderMenu("t");
+  itemFor(menu, "Pull now").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  await new Promise((r) => setTimeout(r, 0));
+
+  expect(toasts).toEqual([{ m: "SYNC_OFFLINE", type: "error" }]);
+  expect(refreshed).toBe(1);
+  expect(unhandled).toEqual([]);
+  process.off("unhandledRejection", onUnhandled);
+});
+
+test("a right-click on an unknown folder id offers no team actions", () => {
+  const l = labels(openFolderMenu("does-not-exist"));
+  expect(l).not.toContain("Share to team…");
+  expect(l).not.toContain("Pull now");
+  expect(l).not.toContain("Stop sharing");
+});

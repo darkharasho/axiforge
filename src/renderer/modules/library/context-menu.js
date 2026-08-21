@@ -252,9 +252,11 @@ function showFolderMenu(x, y, folderId, folder) {
     ..._folderTeamItems(folderId, folder, teamRoot, isTeamRoot),
     _item(clockIcon, "View History", null, () => _callbacks.onViewFolderHistory?.(folderId, folder?.name)),
     // A team root is only removable by leaving/deleting the team itself.
-    isTeamRoot
-      ? _item(trashIcon, "Delete Folder", null, null, true, "Leave or delete the team in Settings → Teams")
-      : _item(trashIcon, "Delete Folder", null, () => _callbacks.onDeleteFolder?.(folderId), true),
+    _item(
+      trashIcon, "Delete Folder", null,
+      isTeamRoot ? null : () => _callbacks.onDeleteFolder?.(folderId), true,
+      isTeamRoot ? "Leave or delete the team in Settings → Teams" : null,
+    ),
   ];
   _showMenu(x, y, items);
 }
@@ -271,7 +273,11 @@ function _folderTeamItems(folderId, folder, teamRoot, isTeamRoot) {
   if (teamRoot) {
     return [
       _item(shareIcon, "Pull now", null, async () => {
-        await pullTeamFor(folderId);
+        try {
+          await pullTeamFor(folderId);
+        } catch (err) {
+          _toast(err?.message || "Could not pull the latest from the team.", "error");
+        }
         _callbacks.onRefresh?.();
       }),
       ...(isTeamRoot && isTeamOwner(folderId) ? [
@@ -297,7 +303,7 @@ function _folderTeamItems(folderId, folder, teamRoot, isTeamRoot) {
   if (!state.teamSession) return [];
 
   // Only top-level personal folders can become a team root.
-  if (folder?.parentId) return [];
+  if (!folder || folder.parentId) return [];
 
   return [
     _item(shareIcon, "Share to team…", null, async () => {
