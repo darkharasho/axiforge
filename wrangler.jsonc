@@ -16,7 +16,7 @@
     // Route ONLY these to the Worker. Without this, top-level navigations to
     // /b/<slug> (Sec-Fetch-Mode: navigate) would hit the SPA fallback and skip
     // the Worker entirely. Everything else is served as a static asset.
-    "run_worker_first": ["/api/*", "/b/*"]
+    "run_worker_first": ["/api/*", "/b/*", "/api/sync/*"]
   },
   // slug -> { code, name } store for short links.
   "kv_namespaces": [
@@ -24,8 +24,23 @@
       "binding": "SHARE_SLUGS",
       "id": "9de700fddbf44c3a9d271c8e7309a147",
       "preview_id": "b559de0fa5cb426bb5fa8456dc9a1380"
+    },
+    {
+      "binding": "SYNC_RL",
+      "id": "REPLACE_WITH_ID_FROM_wrangler_kv_namespace_create",
+      "preview_id": "REPLACE_WITH_PREVIEW_ID"
     }
   ],
+  // Team sync (workers/sync): D1 for teams/items, KV for rate-limit counters.
+  "d1_databases": [
+    {
+      "binding": "SYNC_DB",
+      "database_name": "axiforge-sync",
+      "database_id": "REPLACE_WITH_ID_FROM_wrangler_d1_create",
+      "migrations_dir": "workers/sync/migrations"
+    }
+  ],
+  "triggers": { "crons": ["0 4 * * *"] },
   // Custom domain — axi.link DNS is already on Cloudflare, so the first deploy
   // provisions build.axi.link + its DNS record.
   "routes": [{ "pattern": "build.axi.link", "custom_domain": true }]

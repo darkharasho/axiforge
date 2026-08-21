@@ -80,9 +80,16 @@ async function serveShell(request, env) {
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const { pathname } = url;
+
+    // Team sync API (workers/sync). Checked first: it owns everything under /api/sync/.
+    if (pathname.startsWith("/api/sync/")) {
+      const { handleSync } = await import("../../sync/src/router.js");
+      const res = await handleSync(request, env);
+      if (res) return res;
+    }
 
     if (pathname === "/api/shorten") {
       if (request.method !== "POST") return json({ error: "method not allowed" }, 405);
@@ -109,5 +116,11 @@ export default {
 
     // Everything else: static assets (the built SPA).
     return env.ASSETS.fetch(request);
+  },
+
+  // Daily: drop team-sync tombstones older than 30 days.
+  async scheduled(_event, env, ctx) {
+    const { purgeTombstones } = await import("../../sync/src/purge.js");
+    ctx.waitUntil(purgeTombstones(env).then((r) => console.log(`[sync] purged ${r.deleted} tombstones`)));
   },
 };
