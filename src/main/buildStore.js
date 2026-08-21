@@ -53,6 +53,7 @@ class BuildStore {
         if (!next.publishedKey && existing.publishedKey) next.publishedKey = existing.publishedKey;
         if (!next.publishedSlug && existing.publishedSlug) next.publishedSlug = existing.publishedSlug;
         if (!next.publishedAt && existing.publishedAt) next.publishedAt = existing.publishedAt;
+        if (!next.publishedOwner && existing.publishedOwner) next.publishedOwner = existing.publishedOwner;
         builds[idx] = next;
       } else {
         builds.push(next);
@@ -179,7 +180,7 @@ class BuildStore {
    * during the publish, `updatedAt !== publishedAt` and the build correctly
    * reads as stale (needs re-publish) instead of falsely fresh.
    */
-  async markPublished(id, { publishedFileId, publishedKey, publishedSlug, snapshotUpdatedAt }) {
+  async markPublished(id, { publishedFileId, publishedKey, publishedSlug, publishedOwner, snapshotUpdatedAt }) {
     return this.#enqueue(async () => {
       const builds = await this.listBuilds();
       const idx = builds.findIndex((b) => b.id === id);
@@ -190,6 +191,7 @@ class BuildStore {
         publishedFileId: publishedFileId || existing.publishedFileId,
         publishedKey: publishedKey || existing.publishedKey,
         publishedSlug: publishedSlug || existing.publishedSlug,
+        publishedOwner: publishedOwner || existing.publishedOwner || "",
         publishedAt: asIso(snapshotUpdatedAt) || existing.updatedAt,
       };
       builds[idx] = next;
@@ -252,6 +254,7 @@ function normalizeBuild(input, fallbackCreatedAt) {
     publishedFileId: asString(input.publishedFileId, 20),
     publishedKey: asString(input.publishedKey, 100),
     publishedAt: asIso(input.publishedAt) || null,
+    publishedOwner: asString(input.publishedOwner, 80),
     // Library organization fields
     folderId:
       typeof input.folderId === "string" ? input.folderId : null,

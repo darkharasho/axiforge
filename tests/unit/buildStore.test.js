@@ -1309,3 +1309,18 @@ describe("BuildStore — publishedAt", () => {
     expect(edited.updatedAt).not.toBe(edited.publishedAt);  // stale
   });
 });
+
+describe("publishedOwner", () => {
+  let dir, store;
+  afterEach(async () => { if (dir) await cleanupDir(dir); });
+
+  test("normalizes, preserves across saves, and is stamped by markPublished", async () => {
+    ({ store, dir } = await makeTempStore());
+    const saved = await store.upsertBuild({ title: "B", publishedOwner: "gw2eww" });
+    expect(saved.publishedOwner).toBe("gw2eww");
+    const again = await store.upsertBuild({ ...saved, publishedOwner: "" });
+    expect(again.publishedOwner).toBe("gw2eww");
+    const stamped = await store.markPublished(saved.id, { publishedFileId: "f", publishedKey: "k", publishedSlug: "b", publishedOwner: "darkharasho", snapshotUpdatedAt: again.updatedAt });
+    expect(stamped.publishedOwner).toBe("darkharasho");
+  });
+});

@@ -11,4 +11,11 @@ function shortUrl(owner, repo, fileId) {
   return `https://${owner}.github.io/${repo}/r/${fileId}`;
 }
 
-module.exports = { shortUrl };
+// Links must point at the account the item was actually published under, not
+// whatever the current user's publishing target is (a teammate's build is on
+// the teammate's Pages site).
+function publishedOwnerFor(record, fallbackOwner) {
+  return (record && record.publishedOwner) || fallbackOwner;
+}
+
+module.exports = { shortUrl, publishedOwnerFor };

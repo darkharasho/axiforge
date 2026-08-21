@@ -401,3 +401,16 @@ describe("CompStore — removeBuildFromComps — gameMode unlock", () => {
     expect(comps[0].gameMode).toBe("pve");
   });
 });
+
+describe("publishedOwner", () => {
+  let store, dir;
+  beforeEach(async () => ({ store, dir } = await makeTempStore()));
+  afterEach(async () => cleanupDir(dir));
+
+  test("upsert keeps it and markPublished sets it", async () => {
+    const c = await store.upsertComp({ name: "C", publishedOwner: "gw2eww" });
+    expect(c.publishedOwner).toBe("gw2eww");
+    const stamped = await store.markPublished(c.id, { publishedFileId: "f", publishedKey: "k", publishedSlug: "c", publishedOwner: "other", snapshotUpdatedAt: c.updatedAt });
+    expect(stamped.publishedOwner).toBe("other");
+  });
+});

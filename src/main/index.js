@@ -46,6 +46,7 @@ const { createLocalApi, generateToken, httpError } = require("./localApi");
 const { writeDiscoveryFile, removeDiscoveryFileSync } = require("./localApiDiscovery");
 const { parseCliFlags } = require("./cliFlags");
 const { shareRejectionReason } = require("./shareGate");
+const { shortUrl, publishedOwnerFor } = require("./shortUrl");
 
 const PROFESSION_THEME_IDS = {
   Guardian: "prof-guardian", Warrior: "prof-warrior", Necromancer: "prof-necromancer",
@@ -881,7 +882,7 @@ const readyWork = app.whenReady().then(async () => {
     const comp = comps.find((c) => c.id === compId);
     if (!comp?.publishedFileId) return null;
     const auth = await getAuthRecord();
-    const owner = auth?.onboarding?.targetOwner;
+    const owner = publishedOwnerFor(comp, auth?.onboarding?.targetOwner);
     if (!owner) throw new Error("GitHub publishing not configured.");
     const repo = auth?.onboarding?.repoName || TARGET_REPO;
     const slug = comp.publishedSlug || "";
@@ -1188,6 +1189,7 @@ const readyWork = app.whenReady().then(async () => {
       publishedSlug: newSlug,
       publishedFileId: fileId,
       publishedKey: encKey,
+      publishedOwner: owner,
       snapshotUpdatedAt: build.updatedAt,
     })) || build;
     if (sharedRoot) {
@@ -1320,7 +1322,7 @@ const readyWork = app.whenReady().then(async () => {
       spaBundle[encFile.filePath] = encFile.content;
 
       if (!build.publishedFileId || build.publishedSlug !== slug) {
-        updatedBuildRecords.push({ id: build.id, publishedFileId: fileId, publishedKey: encKey, publishedSlug: slug, snapshotUpdatedAt: build.updatedAt });
+        updatedBuildRecords.push({ id: build.id, publishedFileId: fileId, publishedKey: encKey, publishedSlug: slug, publishedOwner: owner, snapshotUpdatedAt: build.updatedAt });
       }
 
       // Always add redirect file (idempotent — overwrites if already exists)
@@ -1378,6 +1380,7 @@ const readyWork = app.whenReady().then(async () => {
       publishedFileId: compFileId,
       publishedKey: compEncKey,
       publishedSlug: compSlug,
+      publishedOwner: owner,
       boonCoverageHtml: boonCoverageHtml || comp.boonCoverageHtml || "",
       snapshotUpdatedAt: comp.updatedAt,
     })) || comp;
@@ -1526,8 +1529,7 @@ const readyWork = app.whenReady().then(async () => {
     const repo = auth?.onboarding?.repoName || TARGET_REPO;
 
     // 4. Build comp URL — use GitHub Pages short redirect
-    const { shortUrl } = require("./shortUrl");
-    const compUrl = shortUrl(owner, repo, comp.publishedFileId);
+    const compUrl = shortUrl(publishedOwnerFor(comp, owner), repo, comp.publishedFileId);
 
     // 5. Load builds and construct maps — use short URLs
     const allBuilds = await store.listBuilds();
@@ -1536,7 +1538,7 @@ const readyWork = app.whenReady().then(async () => {
     for (const build of allBuilds) {
       buildsMap[build.id] = build;
       if (build.publishedFileId) {
-        buildUrls[build.id] = shortUrl(owner, repo, build.publishedFileId);
+        buildUrls[build.id] = shortUrl(publishedOwnerFor(build, owner), repo, build.publishedFileId);
       }
     }
 
@@ -1581,8 +1583,7 @@ const readyWork = app.whenReady().then(async () => {
     const repo = auth?.onboarding?.repoName || TARGET_REPO;
 
     // 4. Build URL
-    const { shortUrl } = require("./shortUrl");
-    const buildUrl = shortUrl(owner, repo, build.publishedFileId);
+    const buildUrl = shortUrl(publishedOwnerFor(build, owner), repo, build.publishedFileId);
 
     // 5. Generate chat link
     let chatLink = null;
@@ -1653,8 +1654,7 @@ const readyWork = app.whenReady().then(async () => {
       const owner = auth?.onboarding?.targetOwner || session?.viewer?.login;
       if (owner) {
         const repo = auth?.onboarding?.repoName || TARGET_REPO;
-        const { shortUrl } = require("./shortUrl");
-        buildUrl = shortUrl(owner, repo, build.publishedFileId);
+        buildUrl = shortUrl(publishedOwnerFor(build, owner), repo, build.publishedFileId);
       }
     }
 
@@ -1679,10 +1679,9 @@ const readyWork = app.whenReady().then(async () => {
     const buildsMap = {};
     const buildUrls = {};
     if (hasUrls) {
-      const { shortUrl } = require("./shortUrl");
       for (const b of allBuilds) {
         buildsMap[b.id] = b;
-        if (b.publishedFileId) buildUrls[b.id] = shortUrl(owner, repo, b.publishedFileId);
+        if (b.publishedFileId) buildUrls[b.id] = shortUrl(publishedOwnerFor(b, owner), repo, b.publishedFileId);
       }
     } else {
       for (const b of allBuilds) buildsMap[b.id] = b;
@@ -1784,7 +1783,7 @@ const readyWork = app.whenReady().then(async () => {
 
     const compName = comp.name || "Untitled Comp";
     const compUrl = hasUrls && comp.publishedFileId
-      ? require("./shortUrl").shortUrl(owner, repo, comp.publishedFileId)
+      ? shortUrl(publishedOwnerFor(comp, owner), repo, comp.publishedFileId)
       : null;
     const title = compUrl ? `**[${compName}](${compUrl})**` : `**${compName}**`;
     const out = [title];

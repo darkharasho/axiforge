@@ -93,6 +93,7 @@ class CompStore {
         ...(typeof input.publishedKey === "string" ? { publishedKey: input.publishedKey } : {}),
         ...(typeof input.publishedSlug === "string" ? { publishedSlug: input.publishedSlug } : {}),
         ...(typeof input.boonCoverageHtml === "string" ? { boonCoverageHtml: input.boonCoverageHtml } : {}),
+        ...(typeof input.publishedOwner === "string" ? { publishedOwner: input.publishedOwner } : {}),
       };
 
       const existing = comps.find((c) => c.id === id);
@@ -217,7 +218,7 @@ class CompStore {
    * Stamp publish metadata onto a comp without re-upserting a stale snapshot
    * or bumping updatedAt. See BuildStore.markPublished for the rationale.
    */
-  async markPublished(id, { publishedFileId, publishedKey, publishedSlug, boonCoverageHtml, snapshotUpdatedAt }) {
+  async markPublished(id, { publishedFileId, publishedKey, publishedSlug, publishedOwner, boonCoverageHtml, snapshotUpdatedAt }) {
     return this.#enqueue(async () => {
       const comps = await this.listComps();
       const existing = comps.find((c) => c.id === id);
@@ -225,6 +226,7 @@ class CompStore {
       if (publishedFileId) existing.publishedFileId = publishedFileId;
       if (publishedKey) existing.publishedKey = publishedKey;
       if (publishedSlug) existing.publishedSlug = publishedSlug;
+      if (publishedOwner) existing.publishedOwner = publishedOwner;
       if (typeof boonCoverageHtml === "string") existing.boonCoverageHtml = boonCoverageHtml;
       existing.publishedAt = snapshotUpdatedAt || existing.updatedAt;
       await this.#writeJson(this.compsPath, comps);
