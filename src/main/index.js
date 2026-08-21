@@ -18,7 +18,7 @@ const { FolderStore } = require("./folderStore");
 const { CompStore } = require("./compStore");
 const { SyncStore } = require("./syncStore");
 const { BuildHistoryStore, summarizeBuildChange } = require("./buildHistoryStore");
-const { SharedLibrary } = require("./sharedLibrary");
+const { TeamSync } = require("./teamSync");
 const { beginGitHubDeviceAuth, completeGitHubDeviceAuth } = require("./githubAuth");
 const {
   TARGET_REPO,
@@ -132,12 +132,15 @@ function enqueuePublish(fn) {
 
 // Walk up the folder parentId chain to find the root folder with shared:true.
 // Returns the shared folder object (with orgName) or null if the build is personal.
-function _findRootSharedFolder(folderId, folders) {
-  if (!folderId) return null;
-  const folder = folders.find((f) => f.id === folderId);
-  if (!folder) return null;
-  if (folder.shared) return folder;
-  return _findRootSharedFolder(folder.parentId, folders);
+// Team root for a folder from an already-loaded folder list (walks parentId).
+function _findTeamRoot(folderId, folders) {
+  let current = folderId ? folders.find((f) => f.id === folderId) : null;
+  while (current) {
+    if (current.teamId) return current;
+    if (!current.parentId) return null;
+    current = folders.find((f) => f.id === current.parentId);
+  }
+  return null;
 }
 
 function getIconPath() {
@@ -389,21 +392,13 @@ const readyWork = app.whenReady().then(async () => {
   initWikiClient(dataDir);
   await migrateCompGameModes(store, compStore);
 
-  // Walk up parentId chain to find the closest ancestor with shared:true
-  async function findRootSharedFolder(folderId) {
+  // Team root for a folder (walks parentId). Null for personal folders.
+  async function findTeamRoot(folderId) {
     if (!folderId) return null;
-    const folders = await folderStore.listFolders();
-    function walk(id) {
-      const f = folders.find((x) => x.id === id);
-      if (!f) return null;
-      if (f.shared) return f;
-      if (f.parentId) return walk(f.parentId);
-      return null;
-    }
-    return walk(folderId);
+    return teamSync.teamRootFor(folderId, await folderStore.listFolders());
   }
 
-  const sharedLibrary = new SharedLibrary({
+  const teamSync = new TeamSync({
     buildStore: store, compStore, folderStore, syncStore,
     historyStore: buildHistoryStore,
     emit: (channel, data) => {
@@ -411,26 +406,10 @@ const readyWork = app.whenReady().then(async () => {
       if (wins.length) wins[0].webContents.send(channel, data);
     },
   });
-  sharedLibrary.startPolling();
-
-  // Pull immediately on startup so already-connected users see fresh data
-  // without waiting for the first 60-second poll tick.
-  sharedLibrary.pullAll().catch((err) => {
-    console.error("[startup-pull] error:", err.message);
-  });
-
-  // Pull on window focus so changes from other users arrive as soon as the
-  // user switches back to the app, rather than waiting for the next poll tick.
-  // Cooldown of 10s prevents rapid alt-tab churning from stacking API calls.
-  let _lastFocusPullAt = 0;
-  app.on("browser-window-focus", () => {
-    const now = Date.now();
-    if (now - _lastFocusPullAt < 10_000) return;
-    _lastFocusPullAt = now;
-    sharedLibrary.pullAll().catch((err) => {
-      console.error("[focus-pull] error:", err.message);
-    });
-  });
+  teamSync.startPolling();
+  // Flush anything left in the outbox from a previous run, then pull.
+  teamSync.pullAll().catch((err) => console.error("[startup-pull] error:", err.message));
+  app.on("browser-window-focus", () => { teamSync.onFocus(); });
 
   // Restore last window position/size if valid
   const b = await store.getSetting("windowBounds");
@@ -596,23 +575,16 @@ const readyWork = app.whenReady().then(async () => {
     if (saved.folderId) {
       await folderStore.touchFolders([saved.folderId]);
     }
-    const rootShared = await findRootSharedFolder(saved.folderId);
-    if (rootShared) {
-      _e.sender.send("sync-status", { status: "syncing", folderId: rootShared.id });
-      _e.sender.send("sync-status", { status: "syncing", type: "build", id: saved.id, folderId: rootShared.id });
-      sharedLibrary.schedulePush("build", saved);
-    }
-    // If moved out of a shared folder (or into a different one), enforce ownership then delete remote
+    const teamRoot = await findTeamRoot(saved.folderId);
+    if (teamRoot) await teamSync.enqueue(teamRoot.teamId, saved.id, "build", "put");
+    // Moved out of a team (or into a different one): tombstone it there.
     if (oldFolderId && oldFolderId !== saved.folderId) {
-      const oldRootShared = await findRootSharedFolder(oldFolderId);
-      if (oldRootShared && oldRootShared.id !== rootShared?.id) {
-        const auth = await getAuthRecord();
-        if (!auth?.sharedLibrary?.isOwner) {
-          throw new Error("Only org owners can move items out of shared folders.");
+      const oldRoot = await findTeamRoot(oldFolderId);
+      if (oldRoot && oldRoot.id !== teamRoot?.id) {
+        if (!(await teamSync.canDelete(oldRoot.teamId, saved.id))) {
+          throw new Error("Only the team owner or the build's creator can move it out of the team.");
         }
-        sharedLibrary.deleteBuildRemote(oldFolderId, saved.id).catch((err) => {
-          console.error("Failed to delete remote build after move:", err.message);
-        });
+        await teamSync.enqueue(oldRoot.teamId, saved.id, "build", "delete");
       }
     }
     return saved;
@@ -621,29 +593,15 @@ const readyWork = app.whenReady().then(async () => {
     const builds = await store.listBuilds();
     const build = builds.find((b) => b.id === id);
     const folderId = build?.folderId;
-    // Block non-owners from deleting builds in a shared folder — the handler
-    // used to propagate to the shared repo with no isOwner check, so a member
-    // deleting locally wiped the build from GitHub, and the admin's next sync
-    // saw "remote missing → delete locally," destroying the admin's copy too.
-    // Mirrors the move-out-of-shared check in builds:move.
-    const rootShared = folderId ? await findRootSharedFolder(folderId) : null;
-    if (rootShared) {
-      const auth = await getAuthRecord();
-      if (!auth?.sharedLibrary?.isOwner) {
-        throw new Error("Only org owners can delete from shared folders.");
-      }
+    const teamRoot = folderId ? await findTeamRoot(folderId) : null;
+    if (teamRoot && !(await teamSync.canDelete(teamRoot.teamId, id))) {
+      throw new Error("Only the team owner or the build's creator can delete it from the team.");
     }
     await store.deleteBuild(id);
     await compStore.removeBuildFromComps(id);
     buildHistoryStore.deleteHistory(id).catch((err) => console.warn("[history] deleteHistory failed:", err.message));
-    if (folderId) {
-      await folderStore.touchFolders([folderId]);
-      if (rootShared) {
-        sharedLibrary.deleteBuildRemote(folderId, id).catch((err) => {
-          console.error("Shared library remote delete failed:", err.message);
-        });
-      }
-    }
+    if (folderId) await folderStore.touchFolders([folderId]);
+    if (teamRoot) await teamSync.enqueue(teamRoot.teamId, id, "build", "delete");
     return true;
   });
 
@@ -711,10 +669,8 @@ const readyWork = app.whenReady().then(async () => {
     if (saved.folderId) {
       await folderStore.touchFolders([saved.folderId]);
     }
-    const rootShared = await findRootSharedFolder(saved.folderId);
-    if (rootShared) {
-      sharedLibrary.schedulePush("build", saved);
-    }
+    const teamRoot = await findTeamRoot(saved.folderId);
+    if (teamRoot) await teamSync.enqueue(teamRoot.teamId, saved.id, "build", "put");
     return saved;
   });
 
@@ -722,35 +678,35 @@ const readyWork = app.whenReady().then(async () => {
   handle("folders:list", () => folderStore.listFolders());
   handle("folders:save", async (_e, folder) => {
     const saved = await folderStore.upsertFolder(folder);
-    // If this folder lives inside a shared folder, sync the folder structure
     if (saved.parentId) {
-      const rootShared = await findRootSharedFolder(saved.parentId);
-      if (rootShared) {
-        _e.sender.send("sync-status", { status: "syncing", folderId: rootShared.id });
-        sharedLibrary.schedulePushFolderMeta(rootShared.id);
-      }
+      const teamRoot = await findTeamRoot(saved.parentId);
+      if (teamRoot) await teamSync.enqueue(teamRoot.teamId, saved.id, "folder", "put");
     }
     return saved;
   });
   handle("folders:delete", async (_e, id) => {
-    // Capture parent before deletion to determine shared ancestry
     const allFolders = await folderStore.listFolders();
     const target = allFolders.find((f) => f.id === id);
-    const rootShared = target?.parentId ? await findRootSharedFolder(target.parentId) : null;
-
+    if (target?.teamId) throw new Error("Leave or delete the team from Settings → Teams instead.");
+    const teamRoot = target?.parentId ? _findTeamRoot(target.parentId, allFolders) : null;
+    if (teamRoot && !(await teamSync.canDelete(teamRoot.teamId, id))) {
+      throw new Error("Only the team owner or the folder's creator can delete it from the team.");
+    }
     const deletedIds = await folderStore.deleteFolder(id);
-    if (deletedIds.length) {
-      await store.clearFolderFromBuilds(deletedIds);
-    }
-    if (rootShared) {
-      _e.sender.send("sync-status", { status: "syncing", folderId: rootShared.id });
-      sharedLibrary.schedulePushFolderMeta(rootShared.id);
-    }
+    if (deletedIds.length) await store.clearFolderFromBuilds(deletedIds);
+    // One tombstone for the folder; the server cascades to descendants.
+    if (teamRoot) await teamSync.enqueue(teamRoot.teamId, id, "folder", "delete");
     return deletedIds;
   });
-  handle("folders:reorder", (_e, updates) =>
-    folderStore.reorderFolders(updates),
-  );
+  handle("folders:reorder", async (_e, updates) => {
+    await folderStore.reorderFolders(updates);
+    const folders = await folderStore.listFolders();
+    for (const { id } of updates) {
+      const f = folders.find((x) => x.id === id);
+      const teamRoot = f?.parentId ? _findTeamRoot(f.parentId, folders) : null;
+      if (teamRoot) await teamSync.enqueue(teamRoot.teamId, id, "folder", "put");
+    }
+  });
 
   // Build library operations
   handle("builds:move", async (_e, ids, folderId) => {
@@ -764,45 +720,29 @@ const readyWork = app.whenReady().then(async () => {
       builds.filter((b) => ids.includes(b.id) && b.folderId).map((b) => b.folderId)
     )];
 
-    // Block non-owners from moving builds out of a shared folder
-    const destRootSharedCheck = await findRootSharedFolder(folderId);
+    const destRoot = await findTeamRoot(folderId);
     for (const srcId of sourceFolderIds) {
       if (srcId === folderId) continue;
-      const srcRootShared = await findRootSharedFolder(srcId);
-      if (srcRootShared && srcRootShared.id !== destRootSharedCheck?.id) {
-        const auth = await getAuthRecord();
-        if (!auth?.sharedLibrary?.isOwner) {
-          throw new Error("Only org owners can move items out of shared folders.");
+      const srcRoot = await findTeamRoot(srcId);
+      if (srcRoot && srcRoot.id !== destRoot?.id) {
+        for (const id of ids) {
+          if (!(await teamSync.canDelete(srcRoot.teamId, id))) {
+            throw new Error("Only the team owner or the build's creator can move it out of the team.");
+          }
         }
-        break;
       }
     }
 
     await store.moveBuilds(ids, folderId);
 
-    // Handle shared folder sync — check full ancestor chain for both source and dest
-    const movedBuilds = (await store.listBuilds()).filter((b) => ids.includes(b.id));
-    const destRootShared = await findRootSharedFolder(folderId);
-
-    if (destRootShared) {
-      _e.sender.send("sync-status", { status: "syncing", folderId: destRootShared.id });
-      for (const build of movedBuilds) {
-        _e.sender.send("sync-status", { status: "syncing", type: "build", id: build.id, folderId: destRootShared.id });
-        sharedLibrary.schedulePush("build", build);
-      }
+    if (destRoot) {
+      for (const id of ids) await teamSync.enqueue(destRoot.teamId, id, "build", "put");
     }
-
     for (const srcId of sourceFolderIds) {
       if (srcId === folderId) continue;
-      const srcRootShared = await findRootSharedFolder(srcId);
-      // Only delete remotely if moving OUT of a different shared hierarchy
-      if (srcRootShared && srcRootShared.id !== destRootShared?.id) {
-        _e.sender.send("sync-status", { status: "syncing", folderId: srcRootShared.id });
-        for (const id of ids) {
-          sharedLibrary.deleteBuildRemote(srcId, id).catch((err) => {
-            console.error("Failed to delete remote build after move:", err.message);
-          });
-        }
+      const srcRoot = await findTeamRoot(srcId);
+      if (srcRoot && srcRoot.id !== destRoot?.id) {
+        for (const id of ids) await teamSync.enqueue(srcRoot.teamId, id, "build", "delete");
       }
     }
 
@@ -825,23 +765,15 @@ const readyWork = app.whenReady().then(async () => {
     const existing = comp.id ? (await compStore.listComps()).find((c) => c.id === comp.id) : null;
     const oldFolderId = existing?.folderId ?? null;
     const saved = await compStore.upsertComp(comp);
-    const rootShared = await findRootSharedFolder(saved.folderId);
-    if (rootShared) {
-      _e.sender.send("sync-status", { status: "syncing", folderId: rootShared.id });
-      _e.sender.send("sync-status", { status: "syncing", type: "comp", id: saved.id, folderId: rootShared.id });
-      sharedLibrary.schedulePush("comp", saved);
-    }
-    // If moved out of a shared folder (or into a different one), enforce ownership then delete remote
+    const teamRoot = await findTeamRoot(saved.folderId);
+    if (teamRoot) await teamSync.enqueue(teamRoot.teamId, saved.id, "comp", "put");
     if (oldFolderId && oldFolderId !== saved.folderId) {
-      const oldRootShared = await findRootSharedFolder(oldFolderId);
-      if (oldRootShared && oldRootShared.id !== rootShared?.id) {
-        const auth = await getAuthRecord();
-        if (!auth?.sharedLibrary?.isOwner) {
-          throw new Error("Only org owners can move items out of shared folders.");
+      const oldRoot = await findTeamRoot(oldFolderId);
+      if (oldRoot && oldRoot.id !== teamRoot?.id) {
+        if (!(await teamSync.canDelete(oldRoot.teamId, saved.id))) {
+          throw new Error("Only the team owner or the comp's creator can move it out of the team.");
         }
-        sharedLibrary.deleteCompRemote(oldFolderId, saved.id).catch((err) => {
-          console.error("Failed to delete remote comp after move:", err.message);
-        });
+        await teamSync.enqueue(oldRoot.teamId, saved.id, "comp", "delete");
       }
     }
     return saved;
@@ -850,29 +782,31 @@ const readyWork = app.whenReady().then(async () => {
     const comps = await compStore.listComps();
     const comp = comps.find((c) => c.id === id);
     const folderId = comp?.folderId;
-    // Same guard as builds:delete — members deleting locally must not wipe
-    // the comp from the shared repo.
-    const rootShared = folderId ? await findRootSharedFolder(folderId) : null;
-    if (rootShared) {
-      const auth = await getAuthRecord();
-      if (!auth?.sharedLibrary?.isOwner) {
-        throw new Error("Only org owners can delete from shared folders.");
-      }
+    const teamRoot = folderId ? await findTeamRoot(folderId) : null;
+    if (teamRoot && !(await teamSync.canDelete(teamRoot.teamId, id))) {
+      throw new Error("Only the team owner or the comp's creator can delete it from the team.");
     }
     await compStore.deleteComp(id);
     await store.clearCompFromBuilds([id]);
-    if (folderId && rootShared) {
-      sharedLibrary.deleteCompRemote(folderId, id).catch((err) => {
-        console.error("Shared library remote comp delete failed:", err.message);
-      });
-    }
+    if (teamRoot) await teamSync.enqueue(teamRoot.teamId, id, "comp", "delete");
   });
   handle("comps:reorder", (_e, updates) => compStore.reorderComps(updates));
   handle("comps:delete-batch", async (_e, ids) => {
-    await compStore.deleteComps(ids);
-    if (ids.length) {
-      await store.clearCompFromBuilds(ids);
+    const comps = await compStore.listComps();
+    const folders = await folderStore.listFolders();
+    const teamOps = [];
+    for (const id of ids) {
+      const comp = comps.find((c) => c.id === id);
+      const teamRoot = comp?.folderId ? _findTeamRoot(comp.folderId, folders) : null;
+      if (!teamRoot) continue;
+      if (!(await teamSync.canDelete(teamRoot.teamId, id))) {
+        throw new Error(`Only the team owner or the comp's creator can delete "${comp.name}" from the team.`);
+      }
+      teamOps.push([teamRoot.teamId, id]);
     }
+    await compStore.deleteComps(ids);
+    if (ids.length) await store.clearCompFromBuilds(ids);
+    for (const [teamId, id] of teamOps) await teamSync.enqueue(teamId, id, "comp", "delete");
   });
   handle("comps:add-tags", (_e, ids, tags) => compStore.addTagsToComps(ids, tags));
   handle("comps:remove-tags", (_e, ids, tags) => compStore.removeTagsFromComps(ids, tags));
@@ -1005,8 +939,8 @@ const readyWork = app.whenReady().then(async () => {
     return result;
   });
 
-  handle("builds:publish-build", (event, buildId) => enqueuePublish(() => publishBuildImpl(event, buildId)));
-  async function publishBuildImpl(event, buildId) {
+  handle("builds:publish-build", (event, buildId, opts) => enqueuePublish(() => publishBuildImpl(event, buildId, opts || {})));
+  async function publishBuildImpl(event, buildId, opts = {}) {
     const sender = event.sender;
     const progress = (step) => sender.send("publish-progress", { id: buildId, step });
 
@@ -1025,12 +959,12 @@ const readyWork = app.whenReady().then(async () => {
     const build = builds.find((b) => b.id === buildId);
     if (!build) throw new Error("Build not found.");
 
-    // Shared builds always publish to the org's axibuilds repo, regardless of
-    // what the user has set as their personal publishing target.
-    const allFolders = await folderStore.listFolders();
-    const sharedRoot = _findRootSharedFolder(build.folderId, allFolders);
-    const owner = sharedRoot ? sharedRoot.orgName : personalOwner;
-    const ownerType = sharedRoot ? "org" : "user";
+    const owner = personalOwner;
+    const ownerType = "user";
+    if (build.publishedOwner && build.publishedOwner !== owner && !opts.force) {
+      throw new Error(`PUBLISHED_BY_OTHER:${build.publishedOwner}`);
+    }
+    const teamRoot = await findTeamRoot(build.folderId);
 
     // Auto-populate build name if empty or default
     if (!build.title?.trim() || build.title === "Untitled Build") {
@@ -1192,9 +1126,7 @@ const readyWork = app.whenReady().then(async () => {
       publishedOwner: owner,
       snapshotUpdatedAt: build.updatedAt,
     })) || build;
-    if (sharedRoot) {
-      sharedLibrary.schedulePush("build", savedBuild);
-    }
+    if (teamRoot) await teamSync.enqueue(teamRoot.teamId, savedBuild.id, "build", "put");
 
     const themedBuilds = await store.getSetting("appearance.themedBuildPages");
     const themeParam = themedBuilds && build.profession && PROFESSION_THEME_IDS[build.profession]
@@ -1202,24 +1134,20 @@ const readyWork = app.whenReady().then(async () => {
       : await store.getSetting("appearance.theme");
     const pagesUrl = `https://${owner}.github.io/${TARGET_REPO}/?n=${encodeURIComponent(newSlug)}&b=${fileId}.${encKey}${themeParam ? `&t=${themeParam}` : ""}`;
 
-    // Only update the personal auth record for personal builds — shared builds
-    // publish to the org's repo and must not overwrite the user's personal target.
-    if (!sharedRoot) {
-      await patchAuthRecord({
-        onboarding: {
-          repoReady: true,
-          forkReady: true,
-          repoName: TARGET_REPO,
-          pagesReady: false,
-          pagesBuildStatus: "queued",
-          pagesBuildUpdatedAt: new Date().toISOString(),
-          pagesBuildError: null,
-          pagesUrl: `https://${owner}.github.io/${TARGET_REPO}/`,
-          branch,
-          targetOwner: owner,
-        },
-      });
-    }
+    await patchAuthRecord({
+      onboarding: {
+        repoReady: true,
+        forkReady: true,
+        repoName: TARGET_REPO,
+        pagesReady: false,
+        pagesBuildStatus: "queued",
+        pagesBuildUpdatedAt: new Date().toISOString(),
+        pagesBuildError: null,
+        pagesUrl: `https://${owner}.github.io/${TARGET_REPO}/`,
+        branch,
+        targetOwner: owner,
+      },
+    });
 
     return {
       pagesUrl,
@@ -1229,8 +1157,8 @@ const readyWork = app.whenReady().then(async () => {
     };
   }
 
-  handle("comps:publish-comp", (event, compId, boonCoverageHtml) => enqueuePublish(() => publishCompImpl(event, compId, boonCoverageHtml)));
-  async function publishCompImpl(event, compId, boonCoverageHtml) {
+  handle("comps:publish-comp", (event, compId, boonCoverageHtml, opts) => enqueuePublish(() => publishCompImpl(event, compId, boonCoverageHtml, opts || {})));
+  async function publishCompImpl(event, compId, boonCoverageHtml, opts = {}) {
     const sender = event.sender;
     const progress = (step) => sender.send("publish-progress", { id: compId, step });
 
@@ -1253,11 +1181,12 @@ const readyWork = app.whenReady().then(async () => {
       throw new Error("Comp name is required for publishing.");
     }
 
-    // Shared comps publish to the org's axibuilds repo so the URL is the same
-    // for all org members and doesn't change when a different user publishes.
-    const compSharedRoot = await findRootSharedFolder(comp.folderId);
-    const owner = compSharedRoot ? compSharedRoot.orgName : personalOwner;
-    const ownerType = compSharedRoot ? "org" : "user";
+    const owner = personalOwner;
+    const ownerType = "user";
+    if (comp.publishedOwner && comp.publishedOwner !== owner && !opts.force) {
+      throw new Error(`PUBLISHED_BY_OTHER:${comp.publishedOwner}`);
+    }
+    const compTeamRoot = await findTeamRoot(comp.folderId);
 
     const allBuilds = await store.listBuilds();
     // Use union of buildIds + all party line slot IDs so a build that ended up
@@ -1366,8 +1295,8 @@ const readyWork = app.whenReady().then(async () => {
     // published URL without needing to publish themselves.
     for (const { id, ...patch } of updatedBuildRecords) {
       const savedBuild = await store.markPublished(id, patch);
-      if (savedBuild && compSharedRoot) {
-        sharedLibrary.schedulePush("build", savedBuild);
+      if (savedBuild && compTeamRoot) {
+        await teamSync.enqueue(compTeamRoot.teamId, savedBuild.id, "build", "put");
       }
     }
 
@@ -1388,24 +1317,21 @@ const readyWork = app.whenReady().then(async () => {
     // Push comp publish metadata to shared repo so teammates get the URL.
     // Skip personal auth record update for shared comps — the org's repo is the
     // canonical publish target, not the user's personal publishing setup.
-    if (compSharedRoot) {
-      sharedLibrary.schedulePush("comp", savedComp);
-    } else {
-      await patchAuthRecord({
-        onboarding: {
-          repoReady: true,
-          forkReady: true,
-          repoName: TARGET_REPO,
-          pagesReady: false,
-          pagesBuildStatus: "queued",
-          pagesBuildUpdatedAt: new Date().toISOString(),
-          pagesBuildError: null,
-          pagesUrl: `https://${owner}.github.io/${TARGET_REPO}/`,
-          branch,
-          targetOwner: owner,
-        },
-      });
-    }
+    if (compTeamRoot) await teamSync.enqueue(compTeamRoot.teamId, savedComp.id, "comp", "put");
+    await patchAuthRecord({
+      onboarding: {
+        repoReady: true,
+        forkReady: true,
+        repoName: TARGET_REPO,
+        pagesReady: false,
+        pagesBuildStatus: "queued",
+        pagesBuildUpdatedAt: new Date().toISOString(),
+        pagesBuildError: null,
+        pagesUrl: `https://${owner}.github.io/${TARGET_REPO}/`,
+        branch,
+        targetOwner: owner,
+      },
+    });
 
     return { pagesUrl: compPagesUrl, slug: compSlug, fileId: compFileId, changed: true };
   }
@@ -1911,202 +1837,40 @@ const readyWork = app.whenReady().then(async () => {
     return true;
   });
 
-  // ─── Shared Library ─────────────────────────────────────────────────────────
-  handle("shared-library:list-orgs", async () => {
+  // ─── Teams (team sync) ─────────────────────────────────────────────────────
+  handle("teams:get-session", () => teamSync.getSession());
+  handle("teams:enable", async () => {
     const session = await getSession();
-    if (!session) return [];
-    const targets = await listTargets(session.token, session.viewer.login);
-    return targets.filter((t) => t.type === "org");
+    if (!session) throw new Error("Log in with GitHub first.");
+    const user = await teamSync.enableWithGithub(session.token);
+    teamSync.startPolling();
+    teamSync.pullAll().catch(() => {});
+    return user;
   });
-
-  handle("shared-library:setup", async (_e, orgName) => {
-    const session = await getSession();
-    if (!session) throw new Error("Not logged in");
-    const { ensureSharedRepo } = require("./githubApi");
-    await ensureSharedRepo(session.token, orgName);
-    const auth = await getAuthRecord();
-    await store.saveAuth({
-      ...auth,
-      sharedLibrary: { orgName, repoName: "axibuilds-shared", isOwner: true },
-    });
-    return { orgName, repoName: "axibuilds-shared", isOwner: true };
+  handle("teams:disable", () => teamSync.disable());
+  handle("teams:list", () => teamSync.listTeams());
+  handle("teams:create", (_e, name) => teamSync.createTeam(name));
+  handle("teams:join", (_e, code) => teamSync.joinTeam(code));
+  handle("teams:leave", (_e, teamId) => teamSync.leaveTeam(teamId));
+  handle("teams:delete", (_e, teamId) => teamSync.deleteTeam(teamId));
+  handle("teams:rename", (_e, teamId, name) => teamSync.renameTeam(teamId, name));
+  handle("teams:members", (_e, teamId) => teamSync.listMembers(teamId));
+  handle("teams:remove-member", (_e, teamId, userId) => teamSync.removeMember(teamId, userId));
+  handle("teams:rotate-invite", (_e, teamId) => teamSync.rotateInvite(teamId));
+  handle("teams:share-folder", (_e, folderId, teamId) =>
+    teamSync.shareFolderToTeam(folderId, teamId, (p) => _e.sender.send("team-share-progress", { folderId, ...p })));
+  handle("teams:stop-sharing", async (_e, folderId) => {
+    const root = await findTeamRoot(folderId);
+    if (root?.role !== "owner") throw new Error("Only the team owner can stop sharing a folder.");
+    return teamSync.stopSharing(folderId);
   });
-
-  handle("shared-library:share-folder", async (_e, folderId) => {
-    _e.sender.send("sync-status", { status: "syncing", folderId });
-    try {
-      await sharedLibrary.shareFolder(folderId);
-      _e.sender.send("sync-status", { status: "synced", folderId });
-    } catch (err) {
-      _e.sender.send("sync-status", { status: "error", folderId });
-      throw err;
-    }
-    return true;
-  });
-
-  handle("shared-library:unshare-folder", async (_e, folderId) => {
-    const auth = await getAuthRecord();
-    if (!auth?.sharedLibrary?.isOwner) throw new Error("Only org owners can unshare folders.");
-    _e.sender.send("sync-status", { status: "syncing", folderId });
-    try {
-      await sharedLibrary.unshareFolder(folderId);
-      _e.sender.send("sync-status", { status: "synced", folderId });
-    } catch (err) {
-      _e.sender.send("sync-status", { status: "error", folderId });
-      throw err;
-    }
-    return true;
-  });
-
-  handle("shared-library:pull-folder", async (_e, folderId) => {
-    _e.sender.send("sync-status", { status: "syncing", folderId });
-    try {
-      await sharedLibrary.pullFolder(folderId);
-      _e.sender.send("sync-status", { status: "synced", folderId });
-    } catch (err) {
-      _e.sender.send("sync-status", { status: "error", folderId });
-      throw err;
-    }
-    return true;
-  });
-
-  handle("shared-library:pull-all", async () => {
-    await sharedLibrary.pullAll();
-    return true;
-  });
-
-  handle("shared-library:connect", async (_e) => {
-    const auth = await getAuthRecord();
-    if (!auth?.sharedLibrary?.orgName) throw new Error("No shared library configured");
-
-    const { getRepoTree, getFileContents, getOrgRole } = require("./githubApi");
-
-    // Determine if this user is an org owner
-    const session = await getSession();
-    const role = session
-      ? await getOrgRole(session.token, auth.sharedLibrary.orgName, session.viewer.login)
-      : null;
-    // If getOrgRole failed (null), preserve the stored isOwner rather than overwriting with false
-    const isOwner = role === "admin" ? true : (role === "member" ? false : (auth.sharedLibrary.isOwner ?? false));
-    await store.saveAuth({
-      ...auth,
-      sharedLibrary: { ...auth.sharedLibrary, isOwner },
-    });
-    const tree = await getRepoTree(
-      auth.token, auth.sharedLibrary.orgName,
-      auth.sharedLibrary.repoName || "axibuilds-shared"
-    );
-
-    const folderMetas = [];
-    for (const entry of tree) {
-      const match = entry.path.match(/^folders\/([^/]+)\/meta\.json$/);
-      if (match) {
-        const { content } = await getFileContents(
-          auth.token, auth.sharedLibrary.orgName,
-          auth.sharedLibrary.repoName || "axibuilds-shared",
-          entry.path
-        );
-        if (content) folderMetas.push(JSON.parse(content));
-      }
-    }
-
-    // Create local folders for each remote folder (if they don't exist)
-    const localFolders = await folderStore.listFolders();
-    for (const meta of folderMetas) {
-      const existing = localFolders.find((f) => f.id === meta.id);
-      if (!existing) {
-        await folderStore.upsertFolder({
-          id: meta.id,
-          name: meta.name,
-          sortOrder: meta.sortOrder || 0,
-          shared: true,
-          orgName: auth.sharedLibrary.orgName,
-        });
-      } else if (!existing.shared) {
-        await folderStore.upsertFolder({
-          id: existing.id,
-          name: meta.name,
-          shared: true,
-          orgName: auth.sharedLibrary.orgName,
-        });
-      }
-    }
-
-    // Emit syncing immediately for each shared folder so the UI shows spinners
-    // before the pull begins, then fire the pull in the background so the
-    // connect IPC call returns right away and the renderer can navigate.
-    const sharedFolders = (await folderStore.listFolders()).filter((f) => f.shared);
-
-    // Clear cached SHAs for all shared folders so connect always does a full
-    // re-download. This prevents the case where syncState.json has stale SHAs
-    // that match the remote (same blob hash) but local builds/comps were deleted.
-    for (const folder of sharedFolders) {
-      await syncStore.removeFolder(folder.id);
-    }
-    sharedLibrary.invalidateHeadShaCache();
-
-    for (const folder of sharedFolders) {
-      _e.sender.send("sync-status", { status: "syncing", folderId: folder.id });
-    }
-    sharedLibrary.pullAll().then(() => {
-      for (const folder of sharedFolders) {
-        _e.sender.send("sync-status", { status: "synced", folderId: folder.id });
-      }
-    }).catch((err) => {
-      console.error("[connect] pullAll failed:", err.message);
-      for (const folder of sharedFolders) {
-        _e.sender.send("sync-status", { status: "error", folderId: folder.id });
-      }
-    });
-    return true;
-  });
-
-  handle("shared-library:disconnect", async () => {
-    sharedLibrary.stopPolling();
-    sharedLibrary.invalidateHeadShaCache(); // force fresh fetch on next connect
-    // Cancel all pending debounced pushes so they don't fire after disconnect
-    for (const [key, timer] of sharedLibrary._pushTimers) {
-      clearTimeout(timer?.id ?? timer);
-    }
-    sharedLibrary._pushTimers.clear();
-    const auth = await getAuthRecord();
-    delete auth.sharedLibrary;
-    await store.saveAuth(auth);
-    // Unmark all shared folders
-    const folders = await folderStore.listFolders();
-    for (const f of folders.filter((f) => f.shared)) {
-      await folderStore.upsertFolder({ id: f.id, name: f.name, shared: false });
-    }
-    await syncStore.reset();
-    return true;
-  });
-
-  handle("shared-library:get-config", async () => {
-    const auth = await getAuthRecord();
-    if (!auth?.sharedLibrary) return null;
-    // Self-heal: if isOwner is not stored, re-check from the org role API
-    if (!auth.sharedLibrary.isOwner) {
-      const { getOrgRole } = require("./githubApi");
-      const session = await getSession().catch(() => null);
-      if (session) {
-        const role = await getOrgRole(session.token, auth.sharedLibrary.orgName, session.viewer.login);
-        if (role === "admin") {
-          await store.saveAuth({
-            ...auth,
-            sharedLibrary: { ...auth.sharedLibrary, isOwner: true },
-          });
-          return { ...auth.sharedLibrary, isOwner: true };
-        }
-      }
-    }
-    return auth.sharedLibrary;
-  });
-
-  handle("shared-library:force-push", async (_e, type, item) => {
-    return sharedLibrary._enqueuePush(async () => {
-      if (type === "build") return sharedLibrary.pushBuild(item);
-      if (type === "comp") return sharedLibrary.pushComp(item);
-    });
+  handle("teams:pull", (_e, teamId) => teamSync.pullTeam(teamId));
+  handle("teams:pull-all", () => teamSync.pullAll());
+  handle("teams:resolve-conflict", (_e, teamId, itemId, choice) => teamSync.resolveConflict(teamId, itemId, choice));
+  handle("teams:outbox", async () => {
+    const out = {};
+    for (const teamId of await syncStore.listTeamIds()) out[teamId] = await syncStore.listOutbox(teamId);
+    return out;
   });
 
   // ─── Local API (consumed by AxiVale and other local Axi apps) ─────────────
