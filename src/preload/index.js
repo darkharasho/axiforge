@@ -28,7 +28,7 @@ contextBridge.exposeInMainWorld("desktopApi", {
   getFolderHistory: (folderId) => ipcRenderer.invoke("folders:get-history", folderId),
   revertBuild: (buildId, historyEntryId) => ipcRenderer.invoke("builds:revert", buildId, historyEntryId),
   publishSite: () => ipcRenderer.invoke("builds:publish-site"),
-  publishBuild: (buildId) => ipcRenderer.invoke("builds:publish-build", buildId),
+  publishBuild: (buildId, opts) => ipcRenderer.invoke("builds:publish-build", buildId, opts || {}),
 
   // Folder operations
   listFolders: () => ipcRenderer.invoke("folders:list"),
@@ -45,7 +45,7 @@ contextBridge.exposeInMainWorld("desktopApi", {
   deleteComps: (ids) => ipcRenderer.invoke("comps:delete-batch", ids),
   addTagsToComps: (ids, tags) => ipcRenderer.invoke("comps:add-tags", ids, tags),
   removeTagsFromComps: (ids, tags) => ipcRenderer.invoke("comps:remove-tags", ids, tags),
-  publishComp: (compId, boonCoverageHtml) => ipcRenderer.invoke("comps:publish-comp", compId, boonCoverageHtml),
+  publishComp: (compId, html, opts) => ipcRenderer.invoke("comps:publish-comp", compId, html, opts || {}),
   getCompPublishedUrl: (compId) => ipcRenderer.invoke("comps:get-published-url", compId),
 
   // Build library operations

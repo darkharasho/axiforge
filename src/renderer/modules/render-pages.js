@@ -8,6 +8,7 @@ import { openSettingsModal } from "./settings-modal.js";
 import { computeUnsavedChangeSummary } from "./editor.js";
 import { getProfessionSvg } from "./profession-icons.js";
 import { shareDisabledTooltip } from "./share-gate.js";
+import { publishWithOwnerCheck, publishedByOtherBody } from "./publish-guard.js";
 
 // ---------------------------------------------------------------------------
 // DOM refs — injected by the host (renderer.js) after DOM is ready
@@ -282,7 +283,11 @@ export function renderBuildList() {
           await _callbacks.reloadBuilds();
         }
 
-        const result = await window.desktopApi.publishBuild(build.id);
+        const result = await publishWithOwnerCheck(
+          (opts) => window.desktopApi.publishBuild(build.id, opts),
+          (login) => showConfirmModal({ title: "Publish under your account?", body: publishedByOtherBody(escapeHtml(login)), confirmLabel: "Publish anyway", cancelLabel: "Cancel" }),
+        );
+        if (!result) { delete state.publishProgress[build.id]; renderBuildList(); return; }
 
         advancePublishStep("pages");
 
