@@ -27,8 +27,8 @@
     },
     {
       "binding": "SYNC_RL",
-      "id": "REPLACE_WITH_ID_FROM_wrangler_kv_namespace_create",
-      "preview_id": "REPLACE_WITH_PREVIEW_ID"
+      "id": "eaecf0c40e3f4f4eaa70e88549ec67e7",
+      "preview_id": "742850a18fef492d8c81f9c73b76c37a"
     }
   ],
   // Team sync (workers/sync): D1 for teams/items, KV for rate-limit counters.
@@ -36,7 +36,7 @@
     {
       "binding": "SYNC_DB",
       "database_name": "axiforge-sync",
-      "database_id": "REPLACE_WITH_ID_FROM_wrangler_d1_create",
+      "database_id": "f5a42b9b-2a7c-4cde-ad82-57091eb73e37",
       "migrations_dir": "workers/sync/migrations"
     }
   ],
