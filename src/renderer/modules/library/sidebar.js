@@ -4,6 +4,7 @@ import { state } from "../state.js";
 import { escapeHtml } from "../utils.js";
 import { countBuildsInFolder } from "./folder-store.js";
 import { badgeHtml } from "../sync-status.js";
+import { teamLabel } from "../teams.js";
 import {
   folderIcon,
   folderOpenIcon,
@@ -174,19 +175,19 @@ function renderMyFolders(expanded) {
     .filter((f) => f.parentId === null)
     .sort((a, b) => a.sortOrder - b.sortOrder);
 
-  const sharedFolders = topLevel.filter((f) => f.shared);
-  const personalFolders = topLevel.filter((f) => !f.shared);
+  const teamFolders = topLevel.filter((f) => f.teamId);
+  const personalFolders = topLevel.filter((f) => !f.teamId);
 
-  const sharedItems = sharedFolders.map((f) => renderFolderItem(f, expanded, 0)).join("");
+  const teamItems = teamFolders.map((f) => renderFolderItem(f, expanded, 0)).join("");
   const personalItems = personalFolders.map((f) => renderFolderItem(f, expanded, 0)).join("");
 
   let html = "";
 
-  if (sharedFolders.length > 0) {
+  if (teamFolders.length > 0) {
     html += `
       <div class="lib-sidebar__section">
-        <div class="lib-sidebar__section-label">Shared Folders</div>
-        ${sharedItems}
+        <div class="lib-sidebar__section-label">Team Folders</div>
+        ${teamItems}
       </div>
     `;
   }
@@ -235,7 +236,7 @@ function renderFolderItem(folder, expanded, depth) {
         }
         <span class="lib-nav-item__icon">${isExpanded ? folderOpenIcon : folderIcon}</span>
         <span class="lib-nav-item__label">${escapeHtml(folder.name)}</span>
-        ${folder.shared ? `<span class="lib-nav-item__shared-badge" title="Shared with ${escapeHtml(folder.orgName || 'org')}">${shareIcon}</span>` : ""}
+        ${folder.teamId ? `<span class="lib-nav-item__shared-badge" title="${escapeHtml(teamLabel(folder))}">${shareIcon}</span>` : ""}
         ${_renderSyncIndicator(folder.id)}
         <span class="lib-nav-item__count">${count}</span>
       </button>

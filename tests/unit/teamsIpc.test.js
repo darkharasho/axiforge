@@ -148,3 +148,20 @@ test("the migrated renderer files no longer use the shared-library compat shims 
     expect(PRELOAD).not.toContain(name);
   }
 });
+
+test("library UI is wired to teams", () => {
+  const cm = fs.readFileSync(path.join(__dirname, "../../src/renderer/modules/library/context-menu.js"), "utf8");
+  expect(cm).toContain("Share to team…");
+  expect(cm).toContain("Stop sharing");
+  expect(cm).toContain("Pull now");
+  expect(cm).toContain("shareFolderToTeam(");
+  expect(cm).toContain("stopSharingFolder(");
+  const sb = fs.readFileSync(path.join(__dirname, "../../src/renderer/modules/library/sidebar.js"), "utf8");
+  expect(sb).toContain("Team Folders");
+  expect(sb).toContain("teamLabel(");
+  // R4: content.js keeps an `orgName` reference for the Task 6 orphan banner,
+  // so we assert the badges are team-driven instead.
+  const ct = fs.readFileSync(path.join(__dirname, "../../src/renderer/modules/library/content.js"), "utf8");
+  expect(ct).toContain("teamLabel(");
+  expect(ct).not.toMatch(/Shared with \$\{escapeHtml\(/);
+});

@@ -1096,21 +1096,14 @@ async function handleDeleteComps(ids) {
 }
 
 async function handleMoveComps(compIds, folderId) {
-  // Check if destination is a shared folder (or inside one)
-  const destFolder = folderId ? state.folders.find((f) => f.id === folderId) : null;
-  const destIsShared = destFolder
-    ? (function isInSharedTree(f) {
-        if (!f) return false;
-        if (f.shared) return true;
-        return isInSharedTree(state.folders.find((p) => p.id === f.parentId));
-      })(destFolder)
-    : false;
+  // Check if the destination is a team folder (or inside one)
+  const destIsTeam = !!teamRootFor(folderId);
 
   // Collect builds referenced by these comps that live outside the destination folder
   let buildsToMove = [];
   // Builds already in the destination that still need their subfolder info re-synced
   let buildsToResync = [];
-  if (destIsShared) {
+  if (destIsTeam) {
     const allBuildIds = compIds.flatMap((id) => {
       const c = state.comps.find((c) => c.id === id);
       return c?.buildIds || [];
@@ -1127,8 +1120,8 @@ async function handleMoveComps(compIds, folderId) {
         .join(", ");
       const extra = buildsToMove.length > 5 ? ` and ${buildsToMove.length - 5} more` : "";
       const confirmed = await showConfirmModal({
-        title: "Move builds to shared folder?",
-        body: `The comp${compIds.length > 1 ? "s" : ""} reference ${buildsToMove.length} build${buildsToMove.length > 1 ? "s" : ""} outside this folder: ${buildNames}${extra}.<br><br>Those builds will also be moved into the shared folder so they stay in sync for all members.`,
+        title: "Move builds into the team folder?",
+        body: `The comp${compIds.length > 1 ? "s" : ""} reference ${buildsToMove.length} build${buildsToMove.length > 1 ? "s" : ""} outside this folder: ${buildNames}${extra}.<br><br>Those builds will also be moved into the team folder so they stay in sync for everyone.`,
         confirmLabel: "Move All",
         cancelLabel: "Cancel",
       });
@@ -1300,6 +1293,11 @@ function handleNewBuildInFolder(folderId) {
 
 async function handleDeleteFolder(folderId) {
   const folder = state.folders.find((f) => f.id === folderId);
+  // A team root folder goes away by leaving/deleting the team, not from here.
+  if (teamRootFor(folderId)?.id === folderId) {
+    showToast("Leave or delete the team in Settings → Teams.", "info");
+    return;
+  }
   const name = folder?.name || "this folder";
   const confirmed = await showConfirm(
     `Delete folder "${name}"?`,
@@ -1477,6 +1475,7 @@ function _buildSharedCallbacks() {
 
     // Refresh (used by drag-drop)
     onRefresh: renderLibrary,
+    onToast: showToast,
   };
 }
 

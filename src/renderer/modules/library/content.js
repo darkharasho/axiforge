@@ -6,6 +6,7 @@ import { roleBadgeHtml } from '../roleEstimator.js';
 import { getVisibleBuilds, getVisibleFolders, getVisibleComps } from "./folder-store.js";
 import { getProfessionSvg } from "../profession-icons.js";
 import { badgeHtml } from "../sync-status.js";
+import { teamRootFor, teamLabel } from "../teams.js";
 import { clearSelection, handleBuildClick, handleCompClick, updateSelectionVisuals } from "./selection.js";
 import { wireDragDropEvents } from "./drag-drop.js";
 import {
@@ -149,11 +150,11 @@ function compBadgeHtml(comp) {
 }
 
 function emptyStateHtml() {
-  // If the current shared folder is actively syncing, tell the user to wait
+  // If the current team folder is actively syncing, tell the user to wait
   const f = state.currentFolder;
   if (f?.id && state.folderSyncStatus?.[f.id] === "syncing") {
     return `<div class="lib-empty-state">
-      <p>Syncing shared library content\u2026</p>
+      <p>Syncing team content\u2026</p>
     </div>`;
   }
   return `<div class="lib-empty-state">
@@ -188,17 +189,6 @@ function contentSyncIndicatorHtml(folderId) {
   return badgeHtml("lib-content-sync-indicator", state.folderSyncStatus?.[folderId]);
 }
 
-// Walk up the folder hierarchy to check if an item is in a shared folder.
-function _isInSharedFolder(folderId) {
-  let current = state.folders.find((f) => f.id === folderId);
-  while (current) {
-    if (current.shared) return true;
-    if (!current.parentId) return false;
-    current = state.folders.find((f) => f.id === current.parentId);
-  }
-  return false;
-}
-
 // Returns the sync indicator HTML for a build or comp item.
 // Shows a persistent checkmark for shared-folder items, spinner while syncing, warning on error.
 function itemSyncIndicatorHtml(type, item) {
@@ -208,7 +198,7 @@ function itemSyncIndicatorHtml(type, item) {
   // a more specific status (syncing / pending / conflict / error).
   return badgeHtml(
     "lib-content-sync-indicator",
-    activeStatus || (_isInSharedFolder(item.folderId) ? "synced" : null),
+    activeStatus || (teamRootFor(item.folderId) ? "synced" : null),
   );
 }
 
@@ -237,7 +227,7 @@ function renderListView(container) {
       (f) => `
         <div class="lib-list-row lib-list-row--folder" data-folder-id="${escapeHtml(f.id)}">
           <span class="lib-list-row__icon lib-list-row__icon--folder">${folderIcon}</span>
-          <span class="lib-list-row__title">${escapeHtml(f.name)}${f.shared ? `<span class="lib-shared-badge" title="Shared with ${escapeHtml(f.orgName || "org")}">${shareIcon}</span>` : ""}${contentSyncIndicatorHtml(f.id)}</span>
+          <span class="lib-list-row__title">${escapeHtml(f.name)}${f.teamId ? `<span class="lib-shared-badge" title="${escapeHtml(teamLabel(f))}">${shareIcon}</span>` : ""}${contentSyncIndicatorHtml(f.id)}</span>
         </div>
       `
     )
@@ -336,7 +326,7 @@ function renderTableView(container) {
         <div class="lib-tv__row lib-tv__row--folder">
           <span class="lib-tv__action" data-toggle-table-folder="${escapeHtml(folder.id)}">${chevron}</span>
           <span class="lib-tv__icon"><span class="lib-table__folder-icon">${folderIcon}</span></span>
-          <span class="lib-tv__name">${escapeHtml(folder.name)}${folder.shared ? `<span class="lib-shared-badge" title="Shared with ${escapeHtml(folder.orgName || "org")}">${shareIcon}</span>` : ""}${contentSyncIndicatorHtml(folder.id)}</span>
+          <span class="lib-tv__name">${escapeHtml(folder.name)}${folder.teamId ? `<span class="lib-shared-badge" title="${escapeHtml(teamLabel(folder))}">${shareIcon}</span>` : ""}${contentSyncIndicatorHtml(folder.id)}</span>
           <span class="lib-tv__profession"></span>
           <span class="lib-tv__spec"></span>
           <span class="lib-tv__mode"></span>
@@ -462,7 +452,7 @@ function renderGridView(container) {
     .map(
       (f) => `
         <div class="lib-grid-card lib-grid-card--folder" data-folder-id="${escapeHtml(f.id)}">
-          <div class="lib-grid-card__folder-icon">${folderIcon}${f.shared ? `<span class="lib-shared-badge lib-shared-badge--grid" title="Shared with ${escapeHtml(f.orgName || "org")}">${shareIcon}</span>` : ""}</div>
+          <div class="lib-grid-card__folder-icon">${folderIcon}${f.teamId ? `<span class="lib-shared-badge lib-shared-badge--grid" title="${escapeHtml(teamLabel(f))}">${shareIcon}</span>` : ""}</div>
           <div class="lib-grid-card__title">${escapeHtml(f.name)}${contentSyncIndicatorHtml(f.id)}</div>
         </div>
       `
@@ -527,7 +517,7 @@ function renderIconView(container) {
     .map(
       (f) => `
         <div class="lib-icon-item lib-icon-item--folder" data-folder-id="${escapeHtml(f.id)}">
-          <div class="lib-icon-item__icon lib-icon-item__icon--folder">${folderIcon}${f.shared ? `<span class="lib-shared-badge lib-shared-badge--icon" title="Shared with ${escapeHtml(f.orgName || "org")}">${shareIcon}</span>` : ""}</div>
+          <div class="lib-icon-item__icon lib-icon-item__icon--folder">${folderIcon}${f.teamId ? `<span class="lib-shared-badge lib-shared-badge--icon" title="${escapeHtml(teamLabel(f))}">${shareIcon}</span>` : ""}</div>
           <div class="lib-icon-item__label">${escapeHtml(f.name)}${contentSyncIndicatorHtml(f.id)}</div>
         </div>
       `
@@ -615,7 +605,7 @@ function renderColumnsView(container) {
           <div class="lib-col__item lib-col__item--folder ${isSelected ? "lib-col__item--selected" : ""}"
                data-folder-id="${escapeHtml(f.id)}" data-col-index="${colIndex}">
             <span class="lib-col__icon lib-col__icon--folder">${folderIcon}</span>
-            <span class="lib-col__name">${escapeHtml(f.name)}${f.shared ? `<span class="lib-shared-badge" title="Shared with ${escapeHtml(f.orgName || "org")}">${shareIcon}</span>` : ""}${contentSyncIndicatorHtml(f.id)}</span>
+            <span class="lib-col__name">${escapeHtml(f.name)}${f.teamId ? `<span class="lib-shared-badge" title="${escapeHtml(teamLabel(f))}">${shareIcon}</span>` : ""}${contentSyncIndicatorHtml(f.id)}</span>
             <span class="lib-col__chevron">${chevronRightIcon}</span>
           </div>
         `);
