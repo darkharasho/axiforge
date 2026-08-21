@@ -198,6 +198,136 @@ class TeamSync {
   static compBody(comp) { return omit(comp, COMP_LOCAL_FIELDS); }
   static folderBody(folder) { return { name: folder.name, sortOrder: folder.sortOrder || 0 }; }
 
+  // ─── Outbox ─────────────────────────────────────────────────────────────────
+
+  async enqueue(teamId, itemId, type, op) {
+    await this.syncStore.enqueue(teamId, itemId, { type, op });
+    const folders = await this.folderStore.listFolders();
+    const root = this.rootFolderForTeam(teamId, folders);
+    const folderId = root ? root.id : teamId;
+    this._emit("sync-status", { status: "syncing", folderId });
+    if (type !== "folder") this._emit("sync-status", { status: "syncing", type, id: itemId, folderId });
+    this.scheduleFlush(teamId);
+  }
+
+  // Debounce per team: reset on each call, but never push the deadline past
+  // FLUSH_MAX_DELAY_MS from the first call (continuous edits still sync).
+  scheduleFlush(teamId, delayMs = FLUSH_DEBOUNCE_MS) {
+    const existing = this._flushTimers.get(teamId);
+    const now = this._now();
+    let firstScheduledAt = now;
+    if (existing) {
+      firstScheduledAt = existing.firstScheduledAt;
+      if (now - firstScheduledAt >= FLUSH_MAX_DELAY_MS - delayMs) return; // let it fire
+      this._clearTimeout(existing.id);
+    }
+    const id = this._setTimeout(async () => {
+      this._flushTimers.delete(teamId);
+      await this.flushTeam(teamId).catch((err) => console.error("[team-sync] flush failed:", err.message));
+    }, delayMs);
+    this._flushTimers.set(teamId, { id, firstScheduledAt });
+  }
+
+  flushTeam(teamId) {
+    if (this._inflight.has(teamId)) return this._inflight.get(teamId);
+    const p = this._flushTeamInner(teamId).finally(() => this._inflight.delete(teamId));
+    this._inflight.set(teamId, p);
+    return p;
+  }
+
+  async flushAll() {
+    for (const teamId of await this.syncStore.listTeamIds()) {
+      await this.flushTeam(teamId).catch(() => {});
+    }
+  }
+
+  async _flushTeamInner(teamId) {
+    const session = await this.getSession();
+    if (!session) return;
+    const folders = await this.folderStore.listFolders();
+    const root = this.rootFolderForTeam(teamId, folders);
+    const nowMs = this._now();
+    const entries = (await this.syncStore.listOutbox(teamId))
+      .filter((e) => !e.conflict && (!e.nextAttemptAt || Date.parse(e.nextAttemptAt) <= nowMs));
+    for (const entry of entries) {
+      if (!root) { await this.syncStore.dequeue(teamId, entry.itemId); continue; } // team detached
+      const stop = await this._flushEntry(teamId, root, entry, session);
+      if (stop) return;
+    }
+    if (root && !(await this.syncStore.listOutbox(teamId)).length) {
+      this._emit("sync-status", { status: "synced", folderId: root.id });
+    }
+  }
+
+  async _loadLocal(type, itemId) {
+    if (type === "build") return (await this.buildStore.listBuilds()).find((b) => b.id === itemId) || null;
+    if (type === "comp") return (await this.compStore.listComps()).find((c) => c.id === itemId) || null;
+    if (type === "folder") return (await this.folderStore.listFolders()).find((f) => f.id === itemId) || null;
+    return null;
+  }
+
+  _payloadFor(type, local, root) {
+    if (type === "build") return { body: TeamSync.buildBody(local), parentId: this.parentIdFor(local.folderId, root.id) };
+    if (type === "comp") return { body: TeamSync.compBody(local), parentId: this.parentIdFor(local.folderId, root.id) };
+    return { body: TeamSync.folderBody(local), parentId: this.parentIdFor(local.parentId, root.id) };
+  }
+
+  // Returns true if the flush loop must stop (auth lost).
+  async _flushEntry(teamId, root, entry, session) {
+    const { itemId, type, op } = entry;
+    const known = await this.syncStore.getVersion(teamId, itemId);
+    const baseVersion = known ? known.version : null;
+    const title = async () => { const l = await this._loadLocal(type, itemId); return (l && (l.title || l.name)) || itemId; };
+    try {
+      if (op === "put") {
+        const local = await this._loadLocal(type, itemId);
+        if (!local) { await this.syncStore.dequeue(teamId, itemId); return false; }
+        const { body, parentId } = this._payloadFor(type, local, root);
+        const res = await this.api.putItem(teamId, itemId, { type, parentId, body, baseVersion });
+        await this.syncStore.setVersion(teamId, itemId, { version: res.version, createdBy: known ? known.createdBy : session.userId });
+        await this.syncStore.dequeue(teamId, itemId);
+        if (type !== "folder") this._emit("sync-status", { status: "synced", type, id: itemId, folderId: root.id, item: local });
+      } else {
+        if (baseVersion === null) { await this.syncStore.dequeue(teamId, itemId); return false; } // never reached the server
+        try {
+          await this.api.deleteItem(teamId, itemId, baseVersion);
+        } catch (err) {
+          if (err.code !== "SYNC_NOT_FOUND") throw err; // already gone = success
+        }
+        await this.syncStore.removeVersion(teamId, itemId);
+        await this.syncStore.dequeue(teamId, itemId);
+        if (type !== "folder") this._emit("sync-status", { status: "synced", type, id: itemId, folderId: root.id });
+      }
+      return false;
+    } catch (err) {
+      const code = err && err.code;
+      if (code === "SYNC_CONFLICT") {
+        await this.syncStore.patchOutbox(teamId, itemId, { conflict: err.current || { deleted: true } });
+        this._emit("sync-conflict", { teamId, itemId, type, title: await title(), current: err.current || null });
+        if (type !== "folder") this._emit("sync-status", { status: "conflict", type, id: itemId, folderId: root.id });
+        return false;
+      }
+      if (code === "SYNC_FORBIDDEN" || code === "SYNC_TOO_LARGE" || code === "SYNC_INVALID") {
+        await this.syncStore.dequeue(teamId, itemId);
+        const error = code === "SYNC_FORBIDDEN" ? "forbidden" : code === "SYNC_TOO_LARGE" ? "too_large" : "invalid";
+        this._emit("sync-status", { status: "error", type, id: itemId, folderId: root.id, error, message: err.message });
+        if (code === "SYNC_FORBIDDEN") this.pullTeam(teamId).catch(() => {}); // restore server state locally
+        return false;
+      }
+      if (code === "SYNC_UNAUTHORIZED") {
+        await this._handleUnauthorized();
+        return true;
+      }
+      // SYNC_OFFLINE / SYNC_RATE_LIMITED / unknown: keep and back off
+      const attempts = (entry.attempts || 0) + 1;
+      const delay = err.retryAfterMs || Math.min(BACKOFF_BASE_MS * 2 ** attempts, BACKOFF_MAX_MS);
+      await this.syncStore.patchOutbox(teamId, itemId, { attempts, nextAttemptAt: new Date(this._now() + delay).toISOString() });
+      if (type !== "folder") this._emit("sync-status", { status: "pending", type, id: itemId, folderId: root.id });
+      this._emit("sync-status", { status: "pending", folderId: root.id });
+      return false;
+    }
+  }
+
   // ─── Placeholders completed in later tasks ──────────────────────────────────
   async pullTeam(teamId) { await this.api.changes(teamId, 0, PAGE_SIZE); } // replaced in Task 6
   stopPolling() {
