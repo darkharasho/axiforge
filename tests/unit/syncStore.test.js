@@ -36,41 +36,6 @@ describe("SyncStore — init", () => {
   });
 });
 
-describe("SyncStore — getShas / setShas", () => {
-  let store, dir;
-  beforeEach(async () => ({ store, dir } = await makeTempStore()));
-  afterEach(async () => cleanupDir(dir));
-
-  test("getShas returns empty object for unknown folder", async () => {
-    expect(await store.getShas("unknown")).toEqual({});
-  });
-
-  test("setShas persists and retrieves SHA map", async () => {
-    const shas = { "builds/b1": "sha-111", "comps/c1": "sha-222" };
-    await store.setShas("folder-1", shas);
-    expect(await store.getShas("folder-1")).toEqual(shas);
-  });
-
-  test("setSha updates a single entry", async () => {
-    await store.setShas("folder-1", { "builds/b1": "sha-111" });
-    await store.setSha("folder-1", "builds/b2", "sha-222");
-    const shas = await store.getShas("folder-1");
-    expect(shas).toEqual({ "builds/b1": "sha-111", "builds/b2": "sha-222" });
-  });
-
-  test("removeSha deletes a single entry", async () => {
-    await store.setShas("folder-1", { "builds/b1": "sha-111", "builds/b2": "sha-222" });
-    await store.removeSha("folder-1", "builds/b1");
-    expect(await store.getShas("folder-1")).toEqual({ "builds/b2": "sha-222" });
-  });
-
-  test("removeFolder removes entire folder entry", async () => {
-    await store.setShas("folder-1", { "builds/b1": "sha-111" });
-    await store.removeFolder("folder-1");
-    expect(await store.getShas("folder-1")).toEqual({});
-  });
-});
-
 describe("SyncStore — team scope (cursor / versions / outbox)", () => {
   let store, dir;
   beforeEach(async () => ({ store, dir } = await makeTempStore()));

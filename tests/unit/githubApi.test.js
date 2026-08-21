@@ -3,7 +3,6 @@
 const crypto = require("node:crypto");
 const {
   TARGET_REPO,
-  SHARED_REPO,
   getViewer,
   listTargets,
   ensureAxiForgeRepo,
@@ -12,12 +11,6 @@ const {
   ensurePagesWorkflow,
   publishSiteBundle,
   deleteFile,
-  ensureSharedRepo,
-  getRepoTree,
-  getHeadSha,
-  getFileContents,
-  putSharedFile,
-  deleteSharedFile,
 } = require("../../src/main/githubApi");
 
 const { createGithubMockFetch } = require("../helpers/mockFetch");
@@ -782,151 +775,6 @@ describe("deleteFile", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Shared Library API
-// ---------------------------------------------------------------------------
-
-describe("ensureSharedRepo", () => {
-  test("returns repo name if repo already exists", async () => {
-    global.fetch = jest.fn()
-      .mockReturnValueOnce(okRes({ name: "axibuilds-shared" }))  // GET repo
-      .mockReturnValueOnce(okRes({ name: "axibuilds-shared" })); // waitForRepo poll
-    const name = await ensureSharedRepo(FAKE_TOKEN, "test-org");
-    expect(name).toBe("axibuilds-shared");
-  });
-
-  test("creates private repo if 404", async () => {
-    global.fetch = jest.fn()
-      .mockReturnValueOnce(failRes(404))                         // GET repo → 404
-      .mockReturnValueOnce(okRes({ name: "axibuilds-shared" }))  // POST create
-      .mockReturnValueOnce(okRes({ name: "axibuilds-shared" })); // waitForRepo
-    const name = await ensureSharedRepo(FAKE_TOKEN, "test-org");
-    expect(name).toBe("axibuilds-shared");
-    // Verify POST was to org endpoint with private: true
-    const postCall = global.fetch.mock.calls[1];
-    expect(postCall[0]).toContain("/orgs/test-org/repos");
-    const body = JSON.parse(postCall[1].body);
-    expect(body.private).toBe(true);
-  });
-});
-
-describe("getRepoTree", () => {
-  test("returns flat file list with SHAs", async () => {
-    const tree = [
-      { path: "folders/f1/meta.json", sha: "aaa", type: "blob" },
-      { path: "folders/f1/builds/b1.json", sha: "bbb", type: "blob" },
-      { path: "folders/f1", sha: "ccc", type: "tree" },
-    ];
-    global.fetch = jest.fn()
-      .mockReturnValueOnce(okRes({ object: { sha: "head-sha" } }))  // ref
-      .mockReturnValueOnce(okRes({ tree: { sha: "tree-sha" } }))    // commit
-      .mockReturnValueOnce(okRes({ tree, truncated: false }));       // tree
-    const result = await getRepoTree(FAKE_TOKEN, "test-org", "axibuilds-shared");
-    // Should only include blobs, not tree entries
-    expect(result).toHaveLength(2);
-    expect(result[0]).toEqual({ path: "folders/f1/meta.json", sha: "aaa" });
-  });
-});
-
-describe("putSharedFile", () => {
-  test("creates file when no SHA provided", async () => {
-    global.fetch = jest.fn()
-      .mockReturnValueOnce(okRes({ content: { sha: "new-sha" } }));  // PUT
-    const result = await putSharedFile(FAKE_TOKEN, "test-org", "axibuilds-shared", "folders/f1/builds/b1.json", '{"id":"b1"}', null);
-    expect(result.sha).toBe("new-sha");
-    const body = JSON.parse(global.fetch.mock.calls[0][1].body);
-    expect(body.sha).toBeUndefined();
-  });
-
-  test("updates file with SHA for optimistic locking", async () => {
-    global.fetch = jest.fn()
-      .mockReturnValueOnce(okRes({ content: { sha: "new-sha" } }));
-    await putSharedFile(FAKE_TOKEN, "test-org", "axibuilds-shared", "path.json", "{}", "old-sha");
-    const body = JSON.parse(global.fetch.mock.calls[0][1].body);
-    expect(body.sha).toBe("old-sha");
-  });
-
-  test("throws with status 409 on conflict", async () => {
-    global.fetch = jest.fn()
-      .mockReturnValueOnce(failRes(409, "Conflict"));
-    await expect(
-      putSharedFile(FAKE_TOKEN, "test-org", "axibuilds-shared", "path.json", "{}", "stale-sha")
-    ).rejects.toMatchObject({ status: 409 });
-  });
-});
-
-describe("deleteSharedFile", () => {
-  test("deletes file with SHA", async () => {
-    global.fetch = jest.fn()
-      .mockReturnValueOnce(okRes({}));
-    await deleteSharedFile(FAKE_TOKEN, "test-org", "axibuilds-shared", "path.json", "sha-123");
-    const body = JSON.parse(global.fetch.mock.calls[0][1].body);
-    expect(body.sha).toBe("sha-123");
-  });
-});
-
-describe("getFileContents", () => {
-  test("returns decoded file content", async () => {
-    const content = Buffer.from('{"id":"b1","title":"Test"}').toString("base64");
-    global.fetch = jest.fn()
-      .mockReturnValueOnce(okRes({ content, encoding: "base64", sha: "sha-abc" }));
-    const result = await getFileContents(FAKE_TOKEN, "test-org", "axibuilds-shared", "path.json");
-    expect(result.content).toBe('{"id":"b1","title":"Test"}');
-    expect(result.sha).toBe("sha-abc");
-  });
-});
-
-// ---------------------------------------------------------------------------
-// getHeadSha
-// ---------------------------------------------------------------------------
-
-describe("getHeadSha", () => {
-  afterEach(() => { delete global.fetch; });
-
-  test("returns SHA from ref object response", async () => {
-    global.fetch = jest.fn(() =>
-      okRes({ ref: "refs/heads/main", object: { sha: "abc123headsha", type: "commit" } })
-    );
-    const sha = await getHeadSha(FAKE_TOKEN, "test-org", "axibuilds-shared");
-    expect(sha).toBe("abc123headsha");
-  });
-
-  test("requests the correct ref path", async () => {
-    global.fetch = jest.fn(() =>
-      okRes({ object: { sha: "abc123" } })
-    );
-    await getHeadSha(FAKE_TOKEN, "test-org", "axibuilds-shared", "main");
-    const [url] = global.fetch.mock.calls[0];
-    expect(url).toContain("/repos/test-org/axibuilds-shared/git/ref/heads/main");
-  });
-
-  test("URL-encodes branch names containing special characters", async () => {
-    global.fetch = jest.fn(() =>
-      okRes({ object: { sha: "abc123" } })
-    );
-    await getHeadSha(FAKE_TOKEN, "test-org", "axibuilds-shared", "feature/my branch");
-    const [url] = global.fetch.mock.calls[0];
-    expect(url).toContain("feature%2Fmy%20branch");
-  });
-
-  test("returns null when response has no object.sha", async () => {
-    global.fetch = jest.fn(() => okRes({ ref: "refs/heads/main", object: {} }));
-    const sha = await getHeadSha(FAKE_TOKEN, "test-org", "axibuilds-shared");
-    expect(sha).toBeNull();
-  });
-
-  test("returns null when response is null", async () => {
-    global.fetch = jest.fn(() => okRes(null));
-    const sha = await getHeadSha(FAKE_TOKEN, "test-org", "axibuilds-shared");
-    expect(sha).toBeNull();
-  });
-
-  test("throws on non-OK response", async () => {
-    global.fetch = jest.fn(() => failRes(404, "Not Found"));
-    await expect(getHeadSha(FAKE_TOKEN, "test-org", "nonexistent-repo")).rejects.toThrow();
-  });
-});
-
-// ---------------------------------------------------------------------------
 // apiFetch error codes (401, 403, 429)
 // ---------------------------------------------------------------------------
 
@@ -935,19 +783,19 @@ describe("apiFetch error codes — 401 GITHUB_UNAUTHORIZED", () => {
 
   test("error has code GITHUB_UNAUTHORIZED on 401", async () => {
     global.fetch = jest.fn(() => failRes(401, "Bad credentials"));
-    const err = await getHeadSha(FAKE_TOKEN, "test-org", "axibuilds-shared").catch((e) => e);
+    const err = await getViewer(FAKE_TOKEN).catch((e) => e);
     expect(err.code).toBe("GITHUB_UNAUTHORIZED");
   });
 
   test("error has status 401", async () => {
     global.fetch = jest.fn(() => failRes(401, "Bad credentials"));
-    const err = await getHeadSha(FAKE_TOKEN, "test-org", "axibuilds-shared").catch((e) => e);
+    const err = await getViewer(FAKE_TOKEN).catch((e) => e);
     expect(err.status).toBe(401);
   });
 
   test("401 error does NOT have retryAfterMs", async () => {
     global.fetch = jest.fn(() => failRes(401, "Bad credentials"));
-    const err = await getHeadSha(FAKE_TOKEN, "test-org", "axibuilds-shared").catch((e) => e);
+    const err = await getViewer(FAKE_TOKEN).catch((e) => e);
     expect(err.retryAfterMs).toBeUndefined();
   });
 });
@@ -957,19 +805,19 @@ describe("apiFetch error codes — 403 GITHUB_RATE_LIMITED", () => {
 
   test("error has code GITHUB_RATE_LIMITED on 403", async () => {
     global.fetch = jest.fn(() => failRes(403, "Forbidden"));
-    const err = await getHeadSha(FAKE_TOKEN, "test-org", "axibuilds-shared").catch((e) => e);
+    const err = await getViewer(FAKE_TOKEN).catch((e) => e);
     expect(err.code).toBe("GITHUB_RATE_LIMITED");
   });
 
   test("error has status 403", async () => {
     global.fetch = jest.fn(() => failRes(403, "rate limit exceeded"));
-    const err = await getHeadSha(FAKE_TOKEN, "test-org", "axibuilds-shared").catch((e) => e);
+    const err = await getViewer(FAKE_TOKEN).catch((e) => e);
     expect(err.status).toBe(403);
   });
 
   test("defaults retryAfterMs to 60000 when Retry-After header absent", async () => {
     global.fetch = jest.fn(() => failRes(403, "rate limit exceeded"));
-    const err = await getHeadSha(FAKE_TOKEN, "test-org", "axibuilds-shared").catch((e) => e);
+    const err = await getViewer(FAKE_TOKEN).catch((e) => e);
     expect(err.retryAfterMs).toBe(60_000);
   });
 
@@ -983,7 +831,7 @@ describe("apiFetch error codes — 403 GITHUB_RATE_LIMITED", () => {
         headers: makeHeaders({ "retry-after": "120" }),
       })
     );
-    const err = await getHeadSha(FAKE_TOKEN, "test-org", "axibuilds-shared").catch((e) => e);
+    const err = await getViewer(FAKE_TOKEN).catch((e) => e);
     expect(err.retryAfterMs).toBe(120_000);
   });
 });
@@ -993,7 +841,7 @@ describe("apiFetch error codes — 429 GITHUB_RATE_LIMITED", () => {
 
   test("error has code GITHUB_RATE_LIMITED on 429", async () => {
     global.fetch = jest.fn(() => failRes(429, "Too Many Requests"));
-    const err = await getHeadSha(FAKE_TOKEN, "test-org", "axibuilds-shared").catch((e) => e);
+    const err = await getViewer(FAKE_TOKEN).catch((e) => e);
     expect(err.code).toBe("GITHUB_RATE_LIMITED");
   });
 
@@ -1007,7 +855,7 @@ describe("apiFetch error codes — 429 GITHUB_RATE_LIMITED", () => {
         headers: makeHeaders({ "retry-after": "30" }),
       })
     );
-    const err = await getHeadSha(FAKE_TOKEN, "test-org", "axibuilds-shared").catch((e) => e);
+    const err = await getViewer(FAKE_TOKEN).catch((e) => e);
     expect(err.retryAfterMs).toBe(30_000);
     expect(err.code).toBe("GITHUB_RATE_LIMITED");
   });
@@ -1018,14 +866,14 @@ describe("apiFetch error codes — other status codes", () => {
 
   test("500 error has no GITHUB_UNAUTHORIZED or GITHUB_RATE_LIMITED code", async () => {
     global.fetch = jest.fn(() => failRes(500, "Internal Server Error"));
-    const err = await getHeadSha(FAKE_TOKEN, "test-org", "axibuilds-shared").catch((e) => e);
+    const err = await getViewer(FAKE_TOKEN).catch((e) => e);
     expect(err.code).toBeUndefined();
     expect(err.status).toBe(500);
   });
 
   test("404 error has no special code", async () => {
     global.fetch = jest.fn(() => failRes(404, "Not Found"));
-    const err = await getHeadSha(FAKE_TOKEN, "test-org", "axibuilds-shared").catch((e) => e);
+    const err = await getViewer(FAKE_TOKEN).catch((e) => e);
     expect(err.code).toBeUndefined();
     expect(err.status).toBe(404);
   });

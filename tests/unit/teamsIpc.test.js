@@ -29,3 +29,13 @@ test("mutating handlers enqueue outbox ops", () => {
 test("publish handlers guard against publishing a teammate's item without force", () => {
   expect(MAIN.match(/PUBLISHED_BY_OTHER:/g).length).toBeGreaterThanOrEqual(2);
 });
+
+test("GitHub-org sync code is gone", () => {
+  expect(fs.existsSync(path.join(__dirname, "../../src/main/sharedLibrary.js"))).toBe(false);
+  const gh = fs.readFileSync(path.join(__dirname, "../../src/main/githubApi.js"), "utf8");
+  for (const fn of ["ensureSharedRepo", "getRepoTree", "putSharedFile", "deleteSharedFile", "getOrgRole", "getHeadSha", "SHARED_REPO"]) {
+    expect(gh).not.toContain(fn);
+  }
+  const ss = fs.readFileSync(path.join(__dirname, "../../src/main/syncStore.js"), "utf8");
+  expect(ss).not.toMatch(/remoteShas/);
+});
