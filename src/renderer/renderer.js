@@ -356,6 +356,7 @@ initSettingsCallbacks({
     await loadTeamState();
   },
   hideSyncBanner: _hideSyncBanner,
+  onTeamSyncEnabled: _hideSyncBanner,
   onThemedBuildsToggle: (enabled) => {
     _themedBuildsEnabled = enabled;
     if (state.activePage === "editor") {
