@@ -5,6 +5,7 @@ import { escapeHtml, formatRelativeTime } from "../utils.js";
 import { roleBadgeHtml } from '../roleEstimator.js';
 import { getVisibleBuilds, getVisibleFolders, getVisibleComps } from "./folder-store.js";
 import { getProfessionSvg } from "../profession-icons.js";
+import { badgeHtml } from "../sync-status.js";
 import { clearSelection, handleBuildClick, handleCompClick, updateSelectionVisuals } from "./selection.js";
 import { wireDragDropEvents } from "./drag-drop.js";
 import {
@@ -183,20 +184,8 @@ function folderPathText(build) {
   return chain.join(" / ");
 }
 
-const _contentSyncSpinner = `<svg class="sync-spin" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 2a10 10 0 0 1 10 10"/></svg>`;
-const _contentSyncCheck = `<svg width="11" height="11" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd"/></svg>`;
-const _contentSyncError = `<svg width="11" height="11" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.346 0-2.189-1.458-1.515-2.625L8.485 2.495ZM10 5a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 10 5Zm0 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clip-rule="evenodd"/></svg>`;
-
 function contentSyncIndicatorHtml(folderId) {
-  const status = state.folderSyncStatus?.[folderId];
-  if (!status) return "";
-  if (status === "syncing") {
-    return `<span class="lib-content-sync-indicator lib-content-sync-indicator--syncing" title="Syncing\u2026">${_contentSyncSpinner}</span>`;
-  }
-  if (status === "synced") {
-    return `<span class="lib-content-sync-indicator lib-content-sync-indicator--synced" title="Synced">${_contentSyncCheck}</span>`;
-  }
-  return "";
+  return badgeHtml("lib-content-sync-indicator", state.folderSyncStatus?.[folderId]);
 }
 
 // Walk up the folder hierarchy to check if an item is in a shared folder.
@@ -215,17 +204,12 @@ function _isInSharedFolder(folderId) {
 function itemSyncIndicatorHtml(type, item) {
   const statusMap = type === "build" ? state.buildSyncStatus : state.compSyncStatus;
   const activeStatus = statusMap?.[item.id];
-  if (activeStatus === "syncing") {
-    return `<span class="lib-content-sync-indicator lib-content-sync-indicator--syncing" title="Syncing\u2026">${_contentSyncSpinner}</span>`;
-  }
-  if (activeStatus === "error") {
-    return `<span class="lib-content-sync-indicator lib-content-sync-indicator--error" title="Sync failed">${_contentSyncError}</span>`;
-  }
-  // Persistent checkmark for all items in a shared folder
-  if (_isInSharedFolder(item.folderId)) {
-    return `<span class="lib-content-sync-indicator lib-content-sync-indicator--synced" title="Synced">${_contentSyncCheck}</span>`;
-  }
-  return "";
+  // Persistent checkmark for all items in a shared folder, unless the item has
+  // a more specific status (syncing / pending / conflict / error).
+  return badgeHtml(
+    "lib-content-sync-indicator",
+    activeStatus || (_isInSharedFolder(item.folderId) ? "synced" : null),
+  );
 }
 
 /** Return HTML for the folder path breadcrumb shown in combined views. */

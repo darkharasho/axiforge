@@ -3,6 +3,7 @@
 import { state } from "../state.js";
 import { escapeHtml } from "../utils.js";
 import { countBuildsInFolder } from "./folder-store.js";
+import { badgeHtml } from "../sync-status.js";
 import {
   folderIcon,
   folderOpenIcon,
@@ -243,19 +244,8 @@ function renderFolderItem(folder, expanded, depth) {
   `;
 }
 
-const _sidebarSyncSpinner = `<svg class="sync-spin" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 2a10 10 0 0 1 10 10"/></svg>`;
-const _sidebarSyncCheck = `<svg width="11" height="11" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd"/></svg>`;
-
 function _renderSyncIndicator(folderId) {
-  const syncStatus = state.folderSyncStatus?.[folderId];
-  if (!syncStatus) return "";
-  if (syncStatus === "syncing") {
-    return `<span class="lib-nav-item__sync-indicator lib-nav-item__sync-indicator--syncing" title="Syncing\u2026">${_sidebarSyncSpinner}</span>`;
-  }
-  if (syncStatus === "synced") {
-    return `<span class="lib-nav-item__sync-indicator lib-nav-item__sync-indicator--synced" title="Synced">${_sidebarSyncCheck}</span>`;
-  }
-  return "";
+  return badgeHtml("lib-nav-item__sync-indicator", state.folderSyncStatus?.[folderId]);
 }
 
 function gameModeLabel(id) {

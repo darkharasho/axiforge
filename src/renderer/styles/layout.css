@@ -583,3 +583,28 @@ body:has(.app-layout) {
   background: rgba(var(--accent-2-rgb), 0.15);
   color: var(--accent-2);
 }
+
+/* ── Sync banner ─────────────────────────────────────────────────────────── */
+/* Session-level sync notice (e.g. signed out) above the app layout. */
+
+.sync-banner {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 6px 14px;
+  background: #3a2a0a;
+  color: #f5d78e;
+  font-size: 0.8rem;
+}
+
+.sync-banner[hidden] {
+  display: none;
+}
+
+.sync-banner__close {
+  margin-left: auto;
+  background: none;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+}

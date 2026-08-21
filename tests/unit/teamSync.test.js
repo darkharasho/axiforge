@@ -64,7 +64,7 @@ describe("TeamSync — teams ↔ root folders", () => {
     expect(old.teamId).toBeUndefined();
     expect(folders.find((f) => f.id === "sub").parentId).toBe("old"); // subtree kept as personal
     expect(await h.syncStore.listTeamIds()).not.toContain("old");
-    expect(h.events).toContainEqual(expect.objectContaining({ channel: "sync-status", status: "detached", folderId: "old" }));
+    expect(h.events).toContainEqual(expect.objectContaining({ channel: "sync-status", status: "detached", folderId: "old", name: "Old" }));
   });
 
   test("leaveTeam / deleteTeam detach locally (data kept as personal)", async () => {

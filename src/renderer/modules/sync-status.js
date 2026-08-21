@@ -21,3 +21,41 @@ export function describeSyncStatus(status) {
   const d = DESCRIPTORS[status];
   return d ? { className: `--${status}`, svg: d.svg, title: d.title } : null;
 }
+
+/**
+ * Create / update / remove the badge element inside `host`.
+ * The single source of badge markup for every sync indicator site.
+ * @param {Element} host - element the badge lives in
+ * @param {string|null} status - a SYNC_STATUSES value, or null/unknown to remove
+ * @param {{ className?: string, onClick?: () => void }} [options]
+ */
+export function applyBadge(host, status, { className, onClick } = {}) {
+  let badge = host.querySelector(`.${className}`);
+  const d = describeSyncStatus(status);
+  if (!d) {
+    badge?.remove();
+    return;
+  }
+  if (!badge) {
+    badge = document.createElement("span");
+    host.appendChild(badge);
+  }
+  badge.className = `${className} ${className}${d.className}`;
+  badge.innerHTML = d.svg;
+  badge.title = d.title;
+  const clickable = status === "conflict" && !!onClick;
+  badge.onclick = clickable ? (e) => { e.stopPropagation(); onClick(); } : null;
+  badge.style.cursor = clickable ? "pointer" : "";
+}
+
+/**
+ * Same badge as applyBadge, as an HTML string, for the render paths that build
+ * their markup by concatenation (library sidebar / content cards).
+ * @returns {string} the badge markup, or "" for a status with no badge
+ */
+export function badgeHtml(className, status) {
+  const d = describeSyncStatus(status);
+  if (!d) return "";
+  const cursor = status === "conflict" ? ` style="cursor:pointer"` : "";
+  return `<span class="${className} ${className}${d.className}" title="${d.title}"${cursor}>${d.svg}</span>`;
+}

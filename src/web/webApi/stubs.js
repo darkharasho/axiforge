@@ -57,6 +57,12 @@ function createStubsApi() {
     shareFolder: noop,
     unshareFolder: noop,
     listOrgs: async () => [],
+    // teams (team sync)
+    getTeamSession: async () => null,
+    listTeams: async () => [],
+    listOutbox: async () => ({}),
+    pullAllTeams: noop,
+    resolveConflict: noop,
     // updater + progress/sync events
     checkForUpdates: onEvent,
     restartApp: onEvent,

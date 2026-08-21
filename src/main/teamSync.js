@@ -147,7 +147,11 @@ class TeamSync {
     const root = this.rootFolderForTeam(teamId, folders);
     if (root) {
       await this.folderStore.upsertFolder({ id: root.id, name: root.name, parentId: null, shared: false, teamId: null, role: null, orgName: undefined, lastSyncedAt: undefined });
-      this._emit("sync-status", { status: "detached", folderId: root.id });
+      // No actor identity is available here: a detach is inferred from the team
+      // disappearing from listTeams (or from the user leaving/deleting it), not
+      // from a tombstone that would carry an `updated_by` login. The folder name
+      // is what the renderer needs to name the folder in its toast.
+      this._emit("sync-status", { status: "detached", folderId: root.id, name: root.name });
     }
     await this.syncStore.removeTeam(teamId);
   }

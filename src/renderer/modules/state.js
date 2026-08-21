@@ -56,6 +56,7 @@ export const state = {
   folderSyncStatus: {},   // folderId → "syncing"|"synced"|"pending"|"conflict"|"error"
   buildSyncStatus: {},    // buildId  → same
   compSyncStatus: {},     // compId   → same
+  conflicts: {},          // "<type>:<id>" → { teamId, itemId, type, title, current }
   skillSearch: "",
   catalogCache: new Map(),
   activeCatalog: null,

@@ -1853,6 +1853,21 @@
   color: #e57373;
 }
 
+/* Queued locally / diverged from the team copy — shared by both badge sites. */
+.lib-content-sync-indicator--pending,
+.lib-nav-item__sync-indicator--pending {
+  color: var(--muted);
+}
+
+.lib-content-sync-indicator--conflict,
+.lib-nav-item__sync-indicator--conflict {
+  color: #f0b232;
+}
+
+.lib-nav-item__sync-indicator--error {
+  color: #e57373;
+}
+
 /* Spinner animation for syncing state */
 @keyframes sync-spin {
   to { transform: rotate(360deg); }

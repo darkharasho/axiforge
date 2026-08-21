@@ -231,3 +231,19 @@ export function simplifySkill(skill) {
     specialization: Number(skill.specialization) || 0,
   };
 }
+
+/**
+ * Coarse "N minutes ago" phrasing for sync timestamps. Unlike
+ * formatRelativeTime (compact "5m ago" for badges/lists) this reads as prose
+ * inside a sentence, e.g. the conflict modal's "…was changed by X 5 minutes ago".
+ */
+export function relativeTime(iso) {
+  const ms = Date.now() - new Date(iso).getTime();
+  if (!Number.isFinite(ms) || ms < 60_000) return "just now";
+  const mins = Math.floor(ms / 60_000);
+  if (mins < 60) return `${mins} minute${mins === 1 ? "" : "s"} ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+  const days = Math.floor(hours / 24);
+  return `${days} day${days === 1 ? "" : "s"} ago`;
+}
