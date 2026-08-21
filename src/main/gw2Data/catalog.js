@@ -53,17 +53,70 @@ function hydrateUpgradeIds(ids) {
   };
 }
 
-// Static snapshots of stable GW2 API data — these change only with expansions.
-// To update: re-fetch from the API and overwrite the JSON files.
+// Snapshots of GW2 API data baked into the app. professions.json is NOT static:
+// balance patches replace weapon skill IDs (e.g. the 2026 Warrior/Thief sword
+// reworks swapped Weapon_3 and the Warrior sword bursts), and a stale snapshot
+// renders an empty skill slot plus a wrong burst. So these load remote-first
+// from `main` like the other drift-prone data — see REMOTE_DATA_* above.
 let PROFESSIONS_STATIC = require("./professions.json");
 let SPECIALIZATIONS_STATIC = require("./specializations.json");
 let LEGENDS_STATIC = require("./legends.json");
+
+// Set once _setStaticData injects data, so a remote refresh never clobbers it.
+let _staticDataInjected = false;
 
 // Allow tests to inject mock data instead of the on-disk snapshots.
 function _setStaticData({ professions, specializations, legends } = {}) {
   PROFESSIONS_STATIC = professions || require("./professions.json");
   SPECIALIZATIONS_STATIC = specializations || require("./specializations.json");
   LEGENDS_STATIC = legends || require("./legends.json");
+  _staticDataInjected = true;
+  _professionDataPromise = null;
+}
+
+// Sanity floors for the remote profession snapshots. A profession missing its
+// weapons/skills lists would blank out the whole editor, so reject the payload
+// and keep the baked copy rather than serve a half-empty catalog.
+function validateProfessions(v) {
+  return (
+    Array.isArray(v) && v.length >= 9 &&
+    v.every((p) =>
+      p && typeof p === "object" && typeof p.id === "string" && p.id &&
+      _isNonEmptyArray(p.skills, 1) &&
+      p.weapons && typeof p.weapons === "object" && Object.keys(p.weapons).length > 0
+    )
+  );
+}
+function validateSpecializations(v) {
+  return (
+    Array.isArray(v) && v.length >= 60 &&
+    v.every((s) => s && typeof s === "object" && Number(s.id) > 0 && typeof s.name === "string")
+  );
+}
+
+// Refresh PROFESSIONS_STATIC / SPECIALIZATIONS_STATIC from `main` (6h TTL, baked
+// fallback). Awaited by every catalog entry point; the promise is memoized so
+// concurrent callers share one fetch.
+let _professionDataPromise = null;
+function ensureProfessionData() {
+  if (!REMOTE_DATA_ENABLED || _staticDataInjected) return Promise.resolve();
+  if (!_professionDataPromise) {
+    _professionDataPromise = Promise.all([
+      loadSnapshot("snapshot:professions", `${REMOTE_DATA_BASE}/professions.json`, REMOTE_DATA_TTL, {
+        validate: validateProfessions,
+        fallback: () => require("./professions.json"),
+      }),
+      loadSnapshot("snapshot:specializations", `${REMOTE_DATA_BASE}/specializations.json`, REMOTE_DATA_TTL, {
+        validate: validateSpecializations,
+        fallback: () => require("./specializations.json"),
+      }),
+    ]).then(([prof, spec]) => {
+      if (_staticDataInjected) return;
+      PROFESSIONS_STATIC = prof.value;
+      SPECIALIZATIONS_STATIC = spec.value;
+    }).catch(() => { /* keep baked copies */ });
+  }
+  return _professionDataPromise;
 }
 
 let _wikiClient = null;
@@ -236,6 +289,7 @@ const PET_ID_TO_FAMILY = new Map([
 ]);
 
 async function getProfessionList(lang = "en") {
+  await ensureProfessionData();
   return PROFESSIONS_STATIC
     .filter((entry) => entry?.id)
     .map((entry) => ({
@@ -248,7 +302,8 @@ async function getProfessionList(lang = "en") {
 }
 
 async function _buildProfessionCatalog(professionId, lang = "en", gameMode = "pve") {
-  // Step 1: look up profession from static snapshot — this data rarely changes.
+  // Step 1: look up the profession from the snapshot (remote-first, baked fallback).
+  await ensureProfessionData();
   const profession = PROFESSIONS_STATIC.find((p) => p.id === professionId);
   if (!profession?.id) {
     throw new Error(`Unknown profession "${professionId}".`);
@@ -1124,4 +1179,6 @@ module.exports = {
   clearCatalogCache,
   _transferIcons,
   _applyRechargeOverride,
+  _validateProfessions: validateProfessions,
+  _validateSpecializations: validateSpecializations,
 };
