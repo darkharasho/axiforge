@@ -121,3 +121,30 @@ test("builds:save treats a missing folderId as 'unchanged' (upsertBuild preserve
   expect(src).toContain("newFolderId: build.folderId ?? oldFolderId");
   expect(src).not.toContain("newFolderId: build.folderId ?? null");
 });
+
+test("the migrated renderer files no longer use the shared-library compat shims and preload no longer defines them", () => {
+  // Scoped to the files migrated in this task. settings-modal.js is rewritten
+  // in a later task and still holds the old shared-library pane.
+  const migrated = [
+    "modules/teams.js",
+    "modules/choice-modal.js",
+    "modules/sync-status.js",
+    "modules/state.js",
+    "renderer.js",
+    "modules/library/library.js",
+    "modules/library/folder-store.js",
+    "modules/library/context-menu.js",
+    "modules/library/drag-drop.js",
+  ].map((f) => path.join(__dirname, "../../src/renderer", f));
+  const src = migrated.map((f) => fs.readFileSync(f, "utf8")).join("\n");
+  for (const name of [
+    "getSharedLibraryConfig(", "pullAllShared(", "desktopApi.pullFolder(", "desktopApi.shareFolder(",
+    "desktopApi.unshareFolder(", "listOrgs(", "setupSharedLibrary(", "connectSharedLibrary(",
+    "disconnectSharedLibrary(", "forcePush(", "sharedLibraryConfig",
+  ]) {
+    expect(src).not.toContain(name);
+  }
+  for (const name of ["getSharedLibraryConfig", "pullAllShared", "listOrgs", "setupSharedLibrary", "connectSharedLibrary", "disconnectSharedLibrary", "forcePush"]) {
+    expect(PRELOAD).not.toContain(name);
+  }
+});

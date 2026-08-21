@@ -7,7 +7,8 @@ import { shareDisabledTooltip } from "../share-gate.js";
 import { state } from "../state.js";
 import { showConfirmModal } from "../confirm-modal.js";
 import { isSelected, getSelection, isCompSelected, getCompSelection } from "./selection.js";
-import { shareFolder, unshareFolder, pullFolder } from "./folder-store.js";
+import { shareFolderToTeam, stopSharingFolder, pullTeamFor } from "./folder-store.js";
+import { isTeamOwner, teamRootFor } from "../teams.js";
 import {
   playIcon,
   pencilIcon,
@@ -133,16 +134,11 @@ function _isInSharedFolder(folderId) {
   return false;
 }
 
-/** Returns true if the current user is an org owner of the shared library. */
-function _isOrgOwner() {
-  return !!state.sharedLibraryConfig?.isOwner;
-}
-
 // ─── Menu builders ─────────────────────────────────────────────────────────────
 
 function showBuildMenu(x, y, buildId, build) {
   const isPinned = build?.pinned;
-  const canMove = !_isInSharedFolder(build?.folderId) || _isOrgOwner();
+  const canMove = !_isInSharedFolder(build?.folderId) || isTeamOwner(build?.folderId);
   const shareTip = shareDisabledTooltip(build, false);
   const items = [
     _item(playIcon, "Load", null, () => _callbacks.onLoadBuild?.(buildId)),
@@ -173,11 +169,9 @@ function showBuildMenu(x, y, buildId, build) {
 
 function showMultiSelectMenu(x, y, ids) {
   const count = ids.length;
-  const anyInShared = ids.some((id) => {
-    const b = state.builds.find((b) => b.id === id);
-    return b && _isInSharedFolder(b.folderId);
-  });
-  const canMove = !anyInShared || _isOrgOwner();
+  const selected = ids.map((id) => state.builds.find((b) => b.id === id)).filter(Boolean);
+  const anyInShared = selected.some((b) => _isInSharedFolder(b.folderId));
+  const canMove = !anyInShared || selected.every((b) => isTeamOwner(b.folderId));
   const items = [
     _header(`${count} builds selected`),
     _sep(),
@@ -195,7 +189,7 @@ function showMultiSelectMenu(x, y, ids) {
 }
 
 function showCompMenu(x, y, compId, comp) {
-  const canMove = !_isInSharedFolder(comp?.folderId) || _isOrgOwner();
+  const canMove = !_isInSharedFolder(comp?.folderId) || isTeamOwner(comp?.folderId);
   const items = [
     _item(playIcon, "Open", null, () => _callbacks.onOpenComp?.(compId)),
     _item(pencilIcon, "Rename", "F2", () => _callbacks.onRenameComp?.(compId)),
@@ -215,11 +209,9 @@ function showCompMenu(x, y, compId, comp) {
 
 function showMultiCompSelectMenu(x, y, ids) {
   const count = ids.length;
-  const anyInShared = ids.some((id) => {
-    const c = state.comps?.find((c) => c.id === id);
-    return c && _isInSharedFolder(c.folderId);
-  });
-  const canMove = !anyInShared || _isOrgOwner();
+  const selected = ids.map((id) => state.comps?.find((c) => c.id === id)).filter(Boolean);
+  const anyInShared = selected.some((c) => _isInSharedFolder(c.folderId));
+  const canMove = !anyInShared || selected.every((c) => isTeamOwner(c.folderId));
   const items = [
     _header(`${count} comps selected`),
     _sep(),
@@ -235,8 +227,9 @@ function showMultiCompSelectMenu(x, y, ids) {
 }
 
 function showFolderMenu(x, y, folderId, folder) {
-  const isShared = folder?.shared;
-  const hasSharedLibrary = !!state.sharedLibraryConfig;
+  const isShared = !!teamRootFor(folderId);
+  // Task 4 replaces this with a real team picker; for now share to the only/first team.
+  const shareTargetTeamId = state.teams?.[0]?.team?.id || null;
 
   const items = [
     _item(folderOpenIcon, "Open Folder", null, () => _callbacks.onOpenFolder?.(folderId)),
@@ -257,33 +250,33 @@ function showFolderMenu(x, y, folderId, folder) {
     _sep(),
     ...(isShared ? [
       _item(shareIcon, "Sync Now", null, async () => {
-        await pullFolder(folderId);
+        await pullTeamFor(folderId);
         _callbacks.onRefresh?.();
       }),
-      ...(_isOrgOwner() ? [
-        _item(trashIcon, "Unshare Folder", null, async () => {
+      ...(isTeamOwner(folderId) ? [
+        _item(trashIcon, "Stop Sharing", null, async () => {
           const confirmed = await showConfirmModal({
-            title: "Unshare Folder",
-            body: `Stop sharing <strong>${escapeHtml(folder?.name || folderId)}</strong>? Your local copies will be kept.`,
-            confirmLabel: "Unshare",
+            title: "Stop Sharing",
+            body: `Stop sharing <strong>${escapeHtml(folder?.name || folderId)}</strong> with the team? Your local copies will be kept.`,
+            confirmLabel: "Stop Sharing",
             cancelLabel: "Cancel",
           });
           if (confirmed) {
-            await unshareFolder(folderId);
+            await stopSharingFolder(folderId);
             _callbacks.onRefresh?.();
           }
         }, true),
       ] : []),
-    ] : hasSharedLibrary ? [
-      _item(shareIcon, "Share to Org", null, async () => {
+    ] : shareTargetTeamId ? [
+      _item(shareIcon, "Share to Team", null, async () => {
         const confirmed = await showConfirmModal({
-          title: "Share to Org",
-          body: `Share <strong>${escapeHtml(folder?.name || folderId)}</strong> to your org? All builds in this folder will be visible to org members.`,
+          title: "Share to Team",
+          body: `Share <strong>${escapeHtml(folder?.name || folderId)}</strong> with your team? Everything in this folder will be visible to team members.`,
           confirmLabel: "Share",
           cancelLabel: "Cancel",
         });
         if (confirmed) {
-          await shareFolder(folderId);
+          await shareFolderToTeam(folderId, shareTargetTeamId);
           _callbacks.onRefresh?.();
         }
       }),

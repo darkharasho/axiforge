@@ -1,4 +1,5 @@
 import { state } from "../state.js";
+import { teamRootFor } from "../teams.js";
 
 /** Load all folders from main process into state.folders. */
 export async function loadFolders() {
@@ -44,22 +45,25 @@ export async function reorderBuilds(updates) {
   state.builds = await window.desktopApi.listBuilds();
 }
 
-/** Share a folder to the org shared library. */
-export async function shareFolder(folderId) {
-  await window.desktopApi.shareFolder(folderId);
+/** Share a personal folder (and its subtree) to a team. */
+export async function shareFolderToTeam(folderId, teamId) {
+  const result = await window.desktopApi.shareFolderToTeam(folderId, teamId);
   await loadFolders();
   state.builds = await window.desktopApi.listBuilds();
+  state.comps = await window.desktopApi.listComps();
+  return result; // { uploaded, failed }
 }
 
-/** Remove a folder from the org shared library. */
-export async function unshareFolder(folderId) {
-  await window.desktopApi.unshareFolder(folderId);
+/** Owner only: remove a sub-folder tree from its team; local copies stay. */
+export async function stopSharingFolder(folderId) {
+  await window.desktopApi.stopSharingFolder(folderId);
   await loadFolders();
 }
 
-/** Pull the latest from remote for a shared folder. */
-export async function pullFolder(folderId) {
-  await window.desktopApi.pullFolder(folderId);
+/** Pull the latest for the team that contains folderId. */
+export async function pullTeamFor(folderId) {
+  const root = teamRootFor(folderId);
+  if (root) await window.desktopApi.pullTeam(root.teamId);
   await loadFolders();
   state.builds = await window.desktopApi.listBuilds();
   state.comps = await window.desktopApi.listComps();

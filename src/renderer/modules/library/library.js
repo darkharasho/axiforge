@@ -14,6 +14,7 @@ import {
 } from "./folder-store.js";
 
 import { showConfirmModal } from "../confirm-modal.js";
+import { loadTeamState, teamRootFor } from "../teams.js";
 import { initToolbar, renderToolbar, renderFilters } from "./toolbar.js";
 import { initSidebar, renderSidebar, insertInlineInput } from "./sidebar.js";
 import { initContent, renderContent } from "./content.js";
@@ -61,7 +62,7 @@ export async function initLibrary(appCallbacks) {
   try {
     await loadFolders();
     await loadPrefs();
-    state.sharedLibraryConfig = await window.desktopApi.getSharedLibraryConfig().catch(() => null);
+    await loadTeamState();
   } catch (err) {
     console.warn("[library] init data load failed:", err);
   }
@@ -1224,17 +1225,20 @@ function handleOpenFolder(folderId) {
   state.currentFolder = { type: "custom", id: folderId };
   renderLibrary();
 
-  // Pull latest from remote when navigating to a shared folder
+  // Pull latest from remote when navigating into a team folder
   const folderObj = state.folders.find((f) => f.id === folderId);
-  if (folderObj?.shared) {
-    window.desktopApi.pullFolder(folderId).then(async () => {
-      state.builds = await window.desktopApi.listBuilds();
-      state.comps = await window.desktopApi.listComps();
-      state.folders = await window.desktopApi.listFolders();
-      renderLibrary();
-    }).catch(() => {
-      // Silently fail — will sync on next poll
-    });
+  if (folderObj) {
+    const root = teamRootFor(folderId);
+    if (root) {
+      window.desktopApi.pullTeam(root.teamId).then(async () => {
+        state.builds = await window.desktopApi.listBuilds();
+        state.comps = await window.desktopApi.listComps();
+        state.folders = await window.desktopApi.listFolders();
+        renderLibrary();
+      }).catch(() => {
+        // Silently fail — will sync on next poll
+      });
+    }
   }
 }
 

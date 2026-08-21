@@ -25,7 +25,8 @@ jest.mock("../../../src/renderer/modules/state.js", () => ({
     builds: [],
     comps: [],
     currentFolder: null,
-    sharedLibraryConfig: { isOwner: true },
+    teams: [],
+    teamSession: null,
   },
 }));
 
@@ -84,7 +85,7 @@ describe("drag-drop onEnd in flat-view subfolder context", () => {
   });
 
   test("in-place build sortable end inside shared subfolder does NOT move build to root", async () => {
-    state.folders = [{ id: "shared-1", name: "Shared", parentId: null, shared: true, orgName: "org" }];
+    state.folders = [{ id: "shared-1", name: "Shared", parentId: null, shared: true, teamId: "team-1", role: "owner" }];
     state.builds = [makeBuild("b-1", "shared-1")];
     state.currentFolder = { type: "custom", id: "shared-1" };
 
@@ -104,7 +105,7 @@ describe("drag-drop onEnd in flat-view subfolder context", () => {
     const onMoveFolder = jest.fn();
     dragDrop.initDragDrop({ onMoveFolder, onRefresh: jest.fn() });
     state.folders = [
-      { id: "shared-1", name: "Shared", parentId: null, shared: true },
+      { id: "shared-1", name: "Shared", parentId: null, shared: true, teamId: "team-1", role: "owner" },
       { id: "child-1", name: "Child", parentId: "shared-1" },
     ];
     state.currentFolder = { type: "custom", id: "shared-1" };

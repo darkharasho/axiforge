@@ -16,6 +16,7 @@ import { expandTableFolder } from "./content.js";
 import { state } from "../state.js";
 import { isGameModeCompatible } from "./library.js";
 import { getSelection } from "./selection.js";
+import { isTeamOwner } from "../teams.js";
 
 /** True if folderId is within a shared folder tree. */
 function _isInSharedFolder(folderId) {
@@ -26,11 +27,6 @@ function _isInSharedFolder(folderId) {
     current = state.folders.find((f) => f.id === current.parentId);
   }
   return false;
-}
-
-/** True if current user is an org owner. */
-function _isOrgOwner() {
-  return !!state.sharedLibraryConfig?.isOwner;
 }
 
 /**
@@ -44,7 +40,7 @@ function _blockedBySharedOwnership(srcFolderId, destFolderId) {
   const srcRoot = _findSharedRoot(srcFolderId);
   const destRoot = destFolderId ? _findSharedRoot(destFolderId) : null;
   if (srcRoot && destRoot && srcRoot === destRoot) return false;
-  return !_isOrgOwner();
+  return !isTeamOwner(srcFolderId);
 }
 
 // Resolve the semantic folder ID a sortable container belongs to.

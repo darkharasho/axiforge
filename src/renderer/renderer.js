@@ -47,6 +47,8 @@ import { initWikiModal, openWikiModal } from "./modules/wiki-modal.js";
 import { initWhatsNewModal, maybeAutoOpenWhatsNew } from "./modules/whats-new-modal.js";
 import { initDetailModal, openDetailModal } from "./modules/detail-modal.js";
 import { initConfirmModal, showConfirmModal } from "./modules/confirm-modal.js";
+import { initChoiceModal } from "./modules/choice-modal.js";
+import { loadTeamState, teamRootFor } from "./modules/teams.js";
 import { pickWebhooks } from "./modules/webhook-picker.js";
 import { initImportConflictModal } from "./modules/import-conflict-modal.js";
 import { initSettingsModal, initSettingsCallbacks } from "./modules/settings-modal.js";
@@ -67,15 +69,9 @@ let _themedBuildsEnabled = false;
 
 // ── Sync-status helpers ──────────────────────────────────────────────────────
 
-// Walk up the parentId chain in state.folders to find the nearest folder with shared:true.
+// Nearest ancestor (or self) that is a team root folder.
 function _findRootSharedFolderInState(folderId) {
-  let current = state.folders.find((f) => f.id === folderId);
-  while (current) {
-    if (current.shared) return current;
-    if (!current.parentId) return null;
-    current = state.folders.find((f) => f.id === current.parentId);
-  }
-  return null;
+  return teamRootFor(folderId);
 }
 
 // True while the user is editing an inline rename / new-folder input.
@@ -217,6 +213,7 @@ initCustomSelect({ bindHoverPreview, onError: showError });
 initWikiModal();
 initDetailModal();
 initConfirmModal();
+initChoiceModal();
 initImportConflictModal();
 initSettingsModal();
 initWhatsNewModal();
@@ -311,7 +308,7 @@ initSettingsCallbacks({
     state.builds = await window.desktopApi.listBuilds();
     state.comps = await window.desktopApi.listComps();
     state.folders = await window.desktopApi.listFolders();
-    state.sharedLibraryConfig = await window.desktopApi.getSharedLibraryConfig().catch(() => null);
+    await loadTeamState();
   },
   onThemedBuildsToggle: (enabled) => {
     _themedBuildsEnabled = enabled;
@@ -1003,13 +1000,12 @@ function navigateToPage(page) {
   // Render library when navigating to library page
   if (page === "library") {
     renderLibrary();
-    // Eagerly pull shared library updates whenever the user opens the library
-    if (state.sharedLibraryConfig?.orgName) {
-      window.desktopApi.pullAllShared?.().then(async () => {
+    // Eagerly pull team updates whenever the user opens the library
+    if (state.teamSession) {
+      window.desktopApi.pullAllTeams().then(async () => {
         state.builds = await window.desktopApi.listBuilds();
         state.comps = await window.desktopApi.listComps();
-        state.folders = await window.desktopApi.listFolders();
-        state.sharedLibraryConfig = await window.desktopApi.getSharedLibraryConfig().catch(() => null);
+        await loadTeamState();
         renderLibrary();
       }).catch((err) => {
         console.warn("[library] pull-on-navigate failed:", err);

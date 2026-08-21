@@ -151,17 +151,6 @@ contextBridge.exposeInMainWorld("desktopApi", {
     ipcRenderer.removeAllListeners("team-share-progress");
     ipcRenderer.on("team-share-progress", (_e, p) => cb(p));
   },
-  // Compat shims — removed in Plan 3 when the renderer moves to teams:*.
-  getSharedLibraryConfig: () => Promise.resolve(null),
-  pullAllShared: () => ipcRenderer.invoke("teams:pull-all"),
-  pullFolder: () => ipcRenderer.invoke("teams:pull-all"),
-  shareFolder: () => Promise.reject(new Error("Use Share to team…")),
-  unshareFolder: () => Promise.reject(new Error("Use Stop sharing")),
-  listOrgs: () => Promise.resolve([]),
-  setupSharedLibrary: () => Promise.reject(new Error("Shared libraries are now Teams — see Settings → Teams.")),
-  connectSharedLibrary: () => Promise.resolve(true),
-  disconnectSharedLibrary: () => Promise.resolve(true),
-  forcePush: () => Promise.resolve({ conflict: false }),
   onSyncConflict: (cb) => {
     ipcRenderer.removeAllListeners("sync-conflict");
     ipcRenderer.on("sync-conflict", (_e, data) => cb(data));
