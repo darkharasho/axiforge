@@ -12,3 +12,6 @@ src/web/public/catalogs/
 test-results/
 playwright-report/
 .playwright-mcp/
+
+# wrangler local state (d1 --local, wrangler dev)
+.wrangler/
