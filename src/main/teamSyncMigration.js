@@ -86,10 +86,12 @@ async function migrateOrgLibrary(teamSync, { teamId = null, teamName = null } = 
   let teamRootId = null;
   let createdTeam = null;     // { team, role } when this call created the team
   let createdRootFolderId = null; // a brand-new local root folder we may have to roll back
+  let teamRole = "owner";
   if (targetTeamId) {
     const root = teamSync.rootFolderForTeam(targetTeamId, folders);
     if (!root) throw new Error("Team not found locally.");
     teamRootId = root.id;
+    teamRole = root.role || "owner";
   } else {
     // A single legacy root becomes the team root itself: we ask the server to
     // reuse its id so teammates whose local copy has the same folder id
@@ -98,11 +100,14 @@ async function migrateOrgLibrary(teamSync, { teamId = null, teamName = null } = 
     const out = await teamSync.api.createTeam(teamName || status.orgName || "My team", reuseId ? { id: reuseId } : {});
     createdTeam = out;
     targetTeamId = out.team.id;
+    teamRole = out.role || "owner";
     if (reuseId) {
       teamRootId = reuseId; // flipped to a team root only on success (R5c)
     } else {
+      const idsBefore = new Set(folders.map((f) => f.id));
       teamRootId = await teamSync._ensureRootFolder(out.team, out.role);
-      createdRootFolderId = teamRootId;
+      // Only a folder we actually created may be rolled back on failure.
+      createdRootFolderId = idsBefore.has(teamRootId) ? null : teamRootId;
       folders = await teamSync.folderStore.listFolders();
     }
   }
@@ -151,14 +156,13 @@ async function migrateOrgLibrary(teamSync, { teamId = null, teamName = null } = 
   }
 
   // (c) Everything landed — flip local state over to the team.
-  const role = createdTeam ? createdTeam.role : (teamSync.rootFolderForTeam(targetTeamId, await teamSync.folderStore.listFolders()) || {}).role || "owner";
   for (const { root } of perRoot) {
     const current = (await teamSync.folderStore.listFolders()).find((f) => f.id === root.id);
     if (!current) continue;
     if (root.id === teamRootId) {
       await teamSync.folderStore.upsertFolder({
         id: current.id, name: (createdTeam && createdTeam.team.name) || current.name, parentId: null,
-        sortOrder: current.sortOrder, shared: true, teamId: targetTeamId, role,
+        sortOrder: current.sortOrder, shared: true, teamId: targetTeamId, role: teamRole,
       });
     } else {
       // Becomes a plain folder under the team root (team membership is carried

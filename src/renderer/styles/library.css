@@ -1877,3 +1877,29 @@
   animation: sync-spin 0.8s linear infinite;
   transform-origin: center;
 }
+
+/* ── Library banners (e.g. an orphaned legacy GitHub-org folder) ─────────── */
+.lib-banner {
+  padding: 8px 12px;
+  border-radius: var(--radius-sm, 6px);
+  background: rgba(240, 178, 50, .12);
+  color: #f5d78e;
+  font-size: .8rem;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.lib-banner__btn {
+  background: rgba(255, 255, 255, .08);
+  border: 1px solid rgba(255, 255, 255, .16);
+  color: inherit;
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: .72rem;
+  cursor: pointer;
+}
+
+.lib-banner__btn:hover { background: rgba(255, 255, 255, .14); }

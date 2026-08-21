@@ -5,6 +5,7 @@ import { state } from "./state.js";
 import { renderCustomSelect } from "./custom-select.js";
 import { escapeHtml, delay } from "./utils.js";
 import { showConfirmModal } from "./confirm-modal.js";
+import { showChoiceModal } from "./choice-modal.js";
 
 let _overlay = null;
 let _el = {};
@@ -210,6 +211,12 @@ export function initSettingsModal() {
     if (item) _switchPane(item.dataset.pane);
   });
 
+  // Upload progress for the legacy-library migration (share-to-team progress
+  // for a single folder is surfaced in the library, not here).
+  window.desktopApi?.onTeamShareProgress?.((p) => {
+    if (p && p.migration && _el.teamsStatus) _setTeamsStatus(`Uploading ${p.done}/${p.total}…`);
+  });
+
   // Toggle themed build pages
   _el.themedBuilds.addEventListener("change", async () => {
     const enabled = _el.themedBuilds.checked;
@@ -218,8 +225,60 @@ export function initSettingsModal() {
   });
 }
 
-// Filled in by Task 6 (legacy GitHub-org library migration prompt).
-let _renderLegacyMigration = async () => {};
+// ─── Legacy GitHub-org library migration ─────────────────────────────────────
+
+async function _renderLegacyMigration() {
+  const box = _el.teamsMigrate;
+  if (!box) return;
+  const status = await window.desktopApi.legacyLibraryStatus?.().catch(() => ({ hasLegacy: false })) || { hasLegacy: false };
+  const folders = status.folders || [];
+  box.hidden = !status.hasLegacy || !folders.length;
+  if (box.hidden) { box.innerHTML = ""; return; }
+  const counts = folders.map((f) => `${escapeHtml(f.name)} (${f.builds} builds, ${f.comps} comps)`).join(", ");
+  box.innerHTML = `
+    <div class="sm-migrate">
+      <strong>Move your GitHub org library to a team.</strong>
+      <p class="settings-modal__hint">Shared folders from <strong>${escapeHtml(status.orgName || "your org")}</strong> — ${counts} — will be uploaded to a team you own. Teammates join with the invite code. The GitHub repo is left untouched.</p>
+      <div class="sm-teams-row">
+        <button class="settings-modal__btn" id="sm-migrate-new" type="button">Create team "${escapeHtml(status.orgName || "My team")}" and migrate</button>
+        <button class="settings-modal__btn settings-modal__btn--secondary" id="sm-migrate-existing" type="button">Migrate into existing team…</button>
+      </div>
+    </div>`;
+  box.querySelector("#sm-migrate-new").addEventListener("click", () => _runMigration({ teamName: status.orgName }));
+  box.querySelector("#sm-migrate-existing").addEventListener("click", async () => {
+    const teams = await window.desktopApi.listTeams().catch(() => []);
+    if (!teams.length) { _setTeamsStatus("Create or join a team first.", true); return; }
+    const teamId = await showChoiceModal({
+      title: "Migrate into which team?",
+      body: "",
+      choices: teams.map(({ team }) => ({ id: team.id, label: team.name })),
+    });
+    if (teamId) _runMigration({ teamId });
+  });
+}
+
+async function _runMigration(opts) {
+  for (const id of ["sm-migrate-new", "sm-migrate-existing"]) {
+    const btn = document.getElementById(id);
+    if (btn) btn.disabled = true;
+  }
+  _setTeamsStatus("Migrating…");
+  try {
+    const out = await window.desktopApi.migrateOrgLibrary(opts);
+    _setTeamsStatus(
+      out.failed.length
+        ? `Migrated with ${out.failed.length} failures: ${out.failed.map((f) => f.message).join("; ")}`
+        : `Migrated ${out.foldersMigrated} folder(s), ${out.uploaded} items. Share the invite code from the team list below.`,
+      out.failed.length > 0,
+    );
+    await _renderTeamsList();
+    await _renderLegacyMigration();
+    await _callbacks.refreshLibraryState?.();
+  } catch (err) {
+    _setTeamsStatus(`Error: ${err?.message || String(err)}`, true);
+    await _renderLegacyMigration();
+  }
+}
 
 function _switchPane(id) {
   const cat = CATEGORIES.find((c) => c.id === id) || CATEGORIES[0];

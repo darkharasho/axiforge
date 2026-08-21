@@ -52,7 +52,7 @@ import { loadTeamState, seedSyncStatusFromOutbox, teamRootFor } from "./modules/
 import { applyBadge } from "./modules/sync-status.js";
 import { pickWebhooks } from "./modules/webhook-picker.js";
 import { initImportConflictModal } from "./modules/import-conflict-modal.js";
-import { initSettingsModal, initSettingsCallbacks } from "./modules/settings-modal.js";
+import { initSettingsModal, initSettingsCallbacks, openSettingsModal } from "./modules/settings-modal.js";
 import { initLibrary, renderLibrary, handleLibraryKeydown, showToast } from "./modules/library/library.js";
 import { clearUndo as clearLibraryUndo } from "./modules/library/undo.js";
 import { initComps, loadComps, renderComps } from "./modules/comps/comps.js";
@@ -624,6 +624,7 @@ async function init() {
     copyBuildJsonToClipboard,
     importBuildJsonFromClipboard,
     render,
+    openSettings: (pane) => openSettingsModal({ initialPane: pane }),
   });
   // Badges for anything still queued (or conflicted) from a previous session.
   seedSyncStatusFromOutbox();

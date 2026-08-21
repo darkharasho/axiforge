@@ -53,7 +53,8 @@ let _app = {};
  *   duplicateCurrentBuild: function,
  *   copyBuildJsonToClipboard: function,
  *   importBuildJsonFromClipboard: function,
- *   render: function
+ *   render: function,
+ *   openSettings?: function
  * }} appCallbacks
  */
 export async function initLibrary(appCallbacks) {
@@ -1366,6 +1367,9 @@ async function savePrefs() {
 
 function _buildSharedCallbacks() {
   return {
+    // Open a Settings pane (used by the legacy-library orphan banner).
+    onOpenSettings: (pane) => _app.openSettings?.(pane),
+
     // Toolbar
     onNewBuild: handleNewBuild,
     onNewFolder: handleNewFolderInContent,

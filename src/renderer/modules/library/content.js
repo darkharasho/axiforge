@@ -68,11 +68,31 @@ export function renderContent() {
       break;
   }
 
+  renderLegacyOrphanBanner(container);
+
   // Re-init SortableJS on the new DOM
   wireDragDropEvents();
 
   // Re-apply selection visuals after DOM replacement
   updateSelectionVisuals();
+}
+
+// A folder left behind by the retired GitHub-org shared library: it still
+// carries `orgName` but is not part of any team, so nothing syncs it any more.
+// The owner migrates it from Settings → Teams; everyone else joins with an
+// invite code.
+function renderLegacyOrphanBanner(container) {
+  const current = state.currentFolder;
+  if (!current || current.type !== "custom") return;
+  const folder = (state.folders || []).find((f) => f.id === current.id);
+  if (!folder || !folder.orgName || folder.teamId) return;
+  container.insertAdjacentHTML("afterbegin", `
+    <div class="lib-banner lib-banner--info">This library moved to Teams \u2014 join with the owner's invite code. <button type="button" class="lib-banner__btn" data-open-settings="teams">Open Teams</button></div>`);
+  const btn = container.querySelector("[data-open-settings]");
+  btn?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    _callbacks.onOpenSettings?.(btn.dataset.openSettings);
+  });
 }
 
 // ─── Shared helpers ────────────────────────────────────────────────────────────

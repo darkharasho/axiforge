@@ -116,6 +116,52 @@ describe("settings-modal — Teams pane", () => {
     expect(api.rotateInvite).toHaveBeenCalledWith("t1");
   });
 
+  test("legacy org library: the migrate prompt appears, runs the migration and hides itself", async () => {
+    api.getTeamSession.mockResolvedValue({ login: "me", userId: "u1" });
+    api.legacyLibraryStatus.mockResolvedValue({ hasLegacy: true, orgName: "gw2eww", folders: [{ id: "root0", name: "Root", builds: 3, comps: 1 }] });
+    api.migrateOrgLibrary = jest.fn(async () => ({ teamId: "t1", uploaded: 4, failed: [], foldersMigrated: 1 }));
+    mod.openSettingsModal({ initialPane: "teams" });
+    await flush(); await flush();
+    const box = document.getElementById("sm-teams-migrate");
+    expect(box.hidden).toBe(false);
+    expect(box.textContent).toContain("gw2eww");
+    expect(box.textContent).toContain("3 builds");
+    api.legacyLibraryStatus.mockResolvedValue({ hasLegacy: false });
+    document.getElementById("sm-migrate-new").click();
+    await flush(); await flush(); await flush();
+    expect(api.migrateOrgLibrary).toHaveBeenCalledWith({ teamName: "gw2eww" });
+    expect(document.getElementById("sm-teams-status").textContent).toContain("Migrated");
+    expect(box.hidden).toBe(true);
+  });
+
+  test("legacy org library: failures are reported and the prompt stays", async () => {
+    api.getTeamSession.mockResolvedValue({ login: "me", userId: "u1" });
+    api.legacyLibraryStatus.mockResolvedValue({ hasLegacy: true, orgName: "gw2eww", folders: [{ id: "root0", name: "Root", builds: 1, comps: 0 }] });
+    api.migrateOrgLibrary = jest.fn(async () => ({ teamId: "t1", uploaded: 0, failed: [{ itemId: "b0", status: 413, message: "too large" }], foldersMigrated: 1 }));
+    mod.openSettingsModal({ initialPane: "teams" });
+    await flush(); await flush();
+    document.getElementById("sm-migrate-new").click();
+    await flush(); await flush(); await flush();
+    const status = document.getElementById("sm-teams-status");
+    expect(status.textContent).toContain("too large");
+    expect(document.getElementById("sm-teams-migrate").hidden).toBe(false);
+  });
+
+  test("legacy org library: migrating into an existing team asks which team", async () => {
+    const { showChoiceModal } = require("../../src/renderer/modules/choice-modal.js");
+    showChoiceModal.mockResolvedValue("t9");
+    api.getTeamSession.mockResolvedValue({ login: "me", userId: "u1" });
+    api.listTeams.mockResolvedValue([{ team: { id: "t9", name: "Guild" }, role: "owner" }]);
+    api.legacyLibraryStatus.mockResolvedValue({ hasLegacy: true, orgName: "gw2eww", folders: [{ id: "root0", name: "Root", builds: 1, comps: 0 }] });
+    api.migrateOrgLibrary = jest.fn(async () => ({ teamId: "t9", uploaded: 2, failed: [], foldersMigrated: 1 }));
+    mod.openSettingsModal({ initialPane: "teams" });
+    await flush(); await flush();
+    document.getElementById("sm-migrate-existing").click();
+    await flush(); await flush(); await flush();
+    expect(showChoiceModal).toHaveBeenCalled();
+    expect(api.migrateOrgLibrary).toHaveBeenCalledWith({ teamId: "t9" });
+  });
+
   test("sign out asks for confirmation then calls disableTeamSync", async () => {
     api.getTeamSession.mockResolvedValue({ login: "me", userId: "u1" });
     mod.openSettingsModal({ initialPane: "teams" });
