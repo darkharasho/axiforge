@@ -116,6 +116,33 @@ describe("SyncStore — team scope (cursor / versions / outbox)", () => {
     await store.dequeue("t1", "nope"); // no throw
   });
 
+  test("enqueue twice at the same instant still yields distinct queuedAt", async () => {
+    const [e1, e2] = await Promise.all([
+      store.enqueue("t1", "b1", { type: "build", op: "put" }),
+      store.enqueue("t1", "b1", { type: "build", op: "put" }),
+    ]);
+    expect(e1.queuedAt).not.toBe(e2.queuedAt);
+    const stored = (await store.listOutbox("t1"))[0];
+    expect(stored.queuedAt).toBe(e2.queuedAt > e1.queuedAt ? e2.queuedAt : e1.queuedAt);
+  });
+
+  test("dequeue with a stale queuedAt token is a no-op and returns false", async () => {
+    const e1 = await store.enqueue("t1", "b1", { type: "build", op: "put" });
+    const e2 = await store.enqueue("t1", "b1", { type: "build", op: "put" }); // replaces e1
+    expect(await store.dequeue("t1", "b1", { queuedAt: e1.queuedAt })).toBe(false);
+    expect((await store.listOutbox("t1"))[0]).toMatchObject({ itemId: "b1" });
+    expect((await store.listOutbox("t1"))[0].queuedAt).toBe(e2.queuedAt);
+    expect(await store.dequeue("t1", "b1", { queuedAt: e2.queuedAt })).toBe(true);
+    expect(await store.listOutbox("t1")).toEqual([]);
+  });
+
+  test("patchOutbox with a stale queuedAt token is a no-op and returns false", async () => {
+    const e1 = await store.enqueue("t1", "b1", { type: "build", op: "put" });
+    await store.enqueue("t1", "b1", { type: "build", op: "put" }); // replaces e1
+    expect(await store.patchOutbox("t1", "b1", { attempts: 9 }, { queuedAt: e1.queuedAt })).toBe(false);
+    expect((await store.listOutbox("t1"))[0].attempts).toBe(0);
+  });
+
   test("removeTeam / listTeamIds; concurrent writes do not lose entries", async () => {
     await Promise.all(Array.from({ length: 20 }, (_, i) => store.enqueue("t1", `b${i}`, { type: "build", op: "put" })));
     expect((await store.listOutbox("t1")).length).toBe(20);

@@ -19,6 +19,8 @@ describe("TeamSync — outbox", () => {
     expect((await h.syncStore.listOutbox("t"))[0]).toMatchObject({ itemId: "b1", op: "put" });
     expect(h.api.putItem).not.toHaveBeenCalled();
     expect(h.events).toContainEqual(expect.objectContaining({ status: "syncing", type: "build", id: "b1", folderId: "t" }));
+    h.sync.stopPolling();
+    expect(h.sync._flushTimers.size).toBe(0); // fix 4: stopPolling clears pending debounce timers
   });
 
   test("flush reads the LATEST body from the store and sends parentId relative to the team root", async () => {
@@ -194,5 +196,70 @@ describe("TeamSync — outbox", () => {
     await h.sync.enqueue("t", "sub", "folder", "put");
     await h.advance(FLUSH_DEBOUNCE_MS);
     expect(h.api.putItem.mock.calls[0][2]).toEqual({ type: "folder", parentId: null, body: { name: "Sub", sortOrder: 0 }, baseVersion: null });
+  });
+
+  // ─── fix round 1 ────────────────────────────────────────────────────────────
+
+  test("fix 1: a re-enqueue during an in-flight flush is not lost (queuedAt-guarded dequeue)", async () => {
+    h = await makeHarness();
+    await seedTeam(h);
+    await h.buildStore.upsertBuild({ id: "b1", title: "v1", folderId: "t" });
+    let resolvePut;
+    h.api.putItem.mockImplementationOnce(() => new Promise((r) => { resolvePut = r; }));
+    await h.sync.enqueue("t", "b1", "build", "put");
+    const flushPromise = h.sync.flushTeam("t"); // starts flushing the ORIGINAL entry
+    while (h.api.putItem.mock.calls.length === 0) await new Promise((r) => setImmediate(r));
+    // A second edit races the in-flight flush: it must produce a fresh outbox
+    // entry that the stale flush cannot dequeue out from under it.
+    await h.buildStore.upsertBuild({ id: "b1", title: "v2", folderId: "t" });
+    await h.sync.enqueue("t", "b1", "build", "put");
+    resolvePut({ version: 1, seq: 1 });
+    await flushPromise;
+    const [e] = await h.syncStore.listOutbox("t");
+    expect(e).toBeTruthy(); // NOT dropped by the stale flush's dequeue
+    expect(e.attempts).toBe(0);
+    expect(await h.syncStore.getVersion("t", "b1")).toEqual({ version: 1, createdBy: "me" }); // still recorded despite the stale dequeue no-op
+    h.api.putItem.mockResolvedValueOnce({ version: 2, seq: 2 });
+    await h.sync.flushTeam("t");
+    expect(h.api.putItem).toHaveBeenCalledTimes(2);
+    expect(h.api.putItem.mock.calls[1][2].baseVersion).toBe(1); // sent with the version the first flush recorded
+    expect(h.api.putItem.mock.calls[1][2].body.title).toBe("v2");
+    expect(await h.syncStore.listOutbox("t")).toEqual([]);
+  });
+
+  test("fix 2: SYNC_NOT_FOUND on put drops the entry, emits a per-item error, and reconciles teams", async () => {
+    h = await makeHarness();
+    await seedTeam(h);
+    await h.buildStore.upsertBuild({ id: "b1", title: "A", folderId: "t" });
+    h.api.listTeams.mockResolvedValue([{ team: { id: "t", name: "T" }, role: "member" }]);
+    h.api.putItem.mockRejectedValueOnce(apiError("SYNC_NOT_FOUND"));
+    await h.sync.enqueue("t", "b1", "build", "put");
+    await h.advance(FLUSH_DEBOUNCE_MS);
+    expect(await h.syncStore.listOutbox("t")).toEqual([]); // dropped, no retry scheduled
+    expect(h.events).toContainEqual(expect.objectContaining({ status: "error", type: "build", id: "b1", error: "not_found" }));
+    expect(h.api.listTeams).toHaveBeenCalledTimes(1); // reconciliation
+    expect(h.api.changes).toHaveBeenCalled(); // re-pull requested
+  });
+
+  test("fix 3: flushTeam re-runs after an in-flight flush when called again mid-flight", async () => {
+    h = await makeHarness();
+    await seedTeam(h);
+    await h.buildStore.upsertBuild({ id: "b1", title: "A", folderId: "t" });
+    let resolvePut;
+    h.api.putItem.mockImplementationOnce(() => new Promise((r) => { resolvePut = r; }));
+    h.api.putItem.mockResolvedValue({ version: 1, seq: 1 });
+    const spy = jest.spyOn(h.sync, "_flushTeamInner");
+    await h.sync.enqueue("t", "b1", "build", "put");
+    const flushPromise = h.sync.flushTeam("t");
+    while (h.api.putItem.mock.calls.length === 0) await new Promise((r) => setImmediate(r));
+    await h.buildStore.upsertBuild({ id: "b2", title: "B", folderId: "t" });
+    await h.sync.enqueue("t", "b2", "build", "put"); // schedules a debounce timer, does not itself flush
+    const secondCall = h.sync.flushTeam("t"); // requests a re-run while the first pass is in flight
+    expect(secondCall).toBe(flushPromise);
+    resolvePut({ version: 1, seq: 1 });
+    await flushPromise;
+    expect(h.api.putItem).toHaveBeenCalledTimes(2); // b1 (first pass) + b2 (re-run pass)
+    expect(await h.syncStore.listOutbox("t")).toEqual([]);
+    expect(spy).toHaveBeenCalledTimes(2);
   });
 });

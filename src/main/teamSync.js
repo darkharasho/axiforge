@@ -43,6 +43,7 @@ class TeamSync {
     this._clearTimeout = clearTimeoutImpl || clearTimeout;
     this._flushTimers = new Map();   // teamId → { id, scheduledAt }
     this._inflight = new Map();      // teamId → Promise (flush)
+    this._flushAgain = new Set();    // teamId → another flush was requested while one was in flight
     this._pullInProgress = new Set();
     this._pollTimer = null;
     this._lastFocusPullAt = 0;
@@ -237,9 +238,22 @@ class TeamSync {
     this._flushTimers.set(teamId, { id, firstScheduledAt });
   }
 
+  // If a flush is already in flight for this team, record that another pass
+  // is wanted and return the SAME promise — it resolves only once the
+  // in-flight pass AND the follow-up pass it triggers have both completed, so
+  // callers that enqueue mid-flush and then await flushTeam() see their item
+  // actually sent, not just "a" flush finishing.
   flushTeam(teamId) {
-    if (this._inflight.has(teamId)) return this._inflight.get(teamId);
-    const p = this._flushTeamInner(teamId).finally(() => this._inflight.delete(teamId));
+    if (this._inflight.has(teamId)) {
+      this._flushAgain.add(teamId);
+      return this._inflight.get(teamId);
+    }
+    const run = async () => {
+      do {
+        await this._flushTeamInner(teamId);
+      } while (this._flushAgain.delete(teamId));
+    };
+    const p = run().finally(() => this._inflight.delete(teamId));
     this._inflight.set(teamId, p);
     return p;
   }
@@ -259,7 +273,7 @@ class TeamSync {
     const entries = (await this.syncStore.listOutbox(teamId))
       .filter((e) => !e.conflict && (!e.nextAttemptAt || Date.parse(e.nextAttemptAt) <= nowMs));
     for (const entry of entries) {
-      if (!root) { await this.syncStore.dequeue(teamId, entry.itemId); continue; } // team detached
+      if (!root) { await this.syncStore.dequeue(teamId, entry.itemId, { queuedAt: entry.queuedAt }); continue; } // team detached
       const stop = await this._flushEntry(teamId, root, entry, session);
       if (stop) return;
     }
@@ -283,44 +297,59 @@ class TeamSync {
 
   // Returns true if the flush loop must stop (auth lost).
   async _flushEntry(teamId, root, entry, session) {
-    const { itemId, type, op } = entry;
+    const { itemId, type, op, queuedAt } = entry;
     const known = await this.syncStore.getVersion(teamId, itemId);
     const baseVersion = known ? known.version : null;
     const title = async () => { const l = await this._loadLocal(type, itemId); return (l && (l.title || l.name)) || itemId; };
     try {
       if (op === "put") {
         const local = await this._loadLocal(type, itemId);
-        if (!local) { await this.syncStore.dequeue(teamId, itemId); return false; }
+        if (!local) { await this.syncStore.dequeue(teamId, itemId, { queuedAt }); return false; }
         const { body, parentId } = this._payloadFor(type, local, root);
         const res = await this.api.putItem(teamId, itemId, { type, parentId, body, baseVersion });
+        // The server write really happened — record the new version even if a
+        // fresher enqueue (different queuedAt) has since replaced this entry;
+        // that fresh entry will be flushed next with the updated baseVersion.
         await this.syncStore.setVersion(teamId, itemId, { version: res.version, createdBy: known ? known.createdBy : session.userId });
-        await this.syncStore.dequeue(teamId, itemId);
+        await this.syncStore.dequeue(teamId, itemId, { queuedAt });
         if (type !== "folder") this._emit("sync-status", { status: "synced", type, id: itemId, folderId: root.id, item: local });
       } else {
-        if (baseVersion === null) { await this.syncStore.dequeue(teamId, itemId); return false; } // never reached the server
+        if (baseVersion === null) { await this.syncStore.dequeue(teamId, itemId, { queuedAt }); return false; } // never reached the server
         try {
           await this.api.deleteItem(teamId, itemId, baseVersion);
         } catch (err) {
           if (err.code !== "SYNC_NOT_FOUND") throw err; // already gone = success
         }
         await this.syncStore.removeVersion(teamId, itemId);
-        await this.syncStore.dequeue(teamId, itemId);
+        await this.syncStore.dequeue(teamId, itemId, { queuedAt });
         if (type !== "folder") this._emit("sync-status", { status: "synced", type, id: itemId, folderId: root.id });
       }
       return false;
     } catch (err) {
       const code = err && err.code;
       if (code === "SYNC_CONFLICT") {
-        await this.syncStore.patchOutbox(teamId, itemId, { conflict: err.current || { deleted: true } });
+        await this.syncStore.patchOutbox(teamId, itemId, { conflict: err.current || { deleted: true } }, { queuedAt });
         this._emit("sync-conflict", { teamId, itemId, type, title: await title(), current: err.current || null });
         if (type !== "folder") this._emit("sync-status", { status: "conflict", type, id: itemId, folderId: root.id });
         return false;
       }
-      if (code === "SYNC_FORBIDDEN" || code === "SYNC_TOO_LARGE" || code === "SYNC_INVALID") {
-        await this.syncStore.dequeue(teamId, itemId);
-        const error = code === "SYNC_FORBIDDEN" ? "forbidden" : code === "SYNC_TOO_LARGE" ? "too_large" : "invalid";
+      // FORBIDDEN and NOT_FOUND both mean "the server doesn't recognize this
+      // write" (removed from the team, or the item/team no longer exists) —
+      // handle them identically: drop the entry, surface a per-item error,
+      // then reconcile team membership and re-pull so the local state
+      // matches the server's.
+      if (code === "SYNC_FORBIDDEN" || code === "SYNC_NOT_FOUND") {
+        await this.syncStore.dequeue(teamId, itemId, { queuedAt });
+        const error = code === "SYNC_FORBIDDEN" ? "forbidden" : "not_found";
         this._emit("sync-status", { status: "error", type, id: itemId, folderId: root.id, error, message: err.message });
-        if (code === "SYNC_FORBIDDEN") await this.pullTeam(teamId).catch(() => {}); // restore server state locally
+        try { await this.listTeams(); } catch (err2) { console.warn("[team-sync] reconcile after", code, "failed:", err2.message); }
+        await this.pullTeam(teamId).catch(() => {}); // restore server state locally
+        return false;
+      }
+      if (code === "SYNC_TOO_LARGE" || code === "SYNC_INVALID") {
+        await this.syncStore.dequeue(teamId, itemId, { queuedAt });
+        const error = code === "SYNC_TOO_LARGE" ? "too_large" : "invalid";
+        this._emit("sync-status", { status: "error", type, id: itemId, folderId: root.id, error, message: err.message });
         return false;
       }
       if (code === "SYNC_UNAUTHORIZED") {
@@ -330,7 +359,7 @@ class TeamSync {
       // SYNC_OFFLINE / SYNC_RATE_LIMITED / unknown: keep and back off
       const attempts = (entry.attempts || 0) + 1;
       const delay = err.retryAfterMs || Math.min(BACKOFF_BASE_MS * 2 ** attempts, BACKOFF_MAX_MS);
-      await this.syncStore.patchOutbox(teamId, itemId, { attempts, nextAttemptAt: new Date(this._now() + delay).toISOString() });
+      await this.syncStore.patchOutbox(teamId, itemId, { attempts, nextAttemptAt: new Date(this._now() + delay).toISOString() }, { queuedAt });
       if (type !== "folder") this._emit("sync-status", { status: "pending", type, id: itemId, folderId: root.id });
       this._emit("sync-status", { status: "pending", folderId: root.id });
       return false;
@@ -513,8 +542,14 @@ class TeamSync {
     await this.pullAll().catch(() => {});
   }
 
+  // Called on disable() (and directly by callers that want to fully halt
+  // background sync) — also clears any pending debounced flushes and the
+  // flush-again markers so nothing fires after this returns.
   stopPolling() {
     if (this._pollTimer) { this._clearTimeout(this._pollTimer); this._pollTimer = null; }
+    for (const { id } of this._flushTimers.values()) this._clearTimeout(id);
+    this._flushTimers.clear();
+    this._flushAgain.clear();
   }
 }
 

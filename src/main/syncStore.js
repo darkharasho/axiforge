@@ -126,17 +126,43 @@ class SyncStore {
   removeVersion(teamId, itemId) { return this.#mutateTeam(teamId, (t) => { delete t.versions[itemId]; }); }
 
   // A new op for an item replaces any pending one (delete supersedes put; a put
-  // after a delete is a re-create) and resets retry/conflict state.
+  // after a delete is a re-create) and resets retry/conflict state. `queuedAt`
+  // is also the optimistic token a flush in flight against the PREVIOUS entry
+  // must present to dequeue()/patchOutbox() it — this guarantees a re-enqueue
+  // that races an in-flight flush gets a strictly later queuedAt, so the stale
+  // flush's token never matches and can't clobber the fresh entry.
   enqueue(teamId, itemId, { type, op }) {
     return this.#mutateTeam(teamId, (t) => {
-      const entry = { type, op, queuedAt: new Date().toISOString(), attempts: 0, nextAttemptAt: null, conflict: null };
+      const prev = t.outbox[itemId];
+      const prevAtMs = prev ? Date.parse(prev.queuedAt) : 0;
+      const queuedAtMs = Math.max(Date.now(), prevAtMs + 1);
+      const entry = { type, op, queuedAt: new Date(queuedAtMs).toISOString(), attempts: 0, nextAttemptAt: null, conflict: null };
       t.outbox[itemId] = entry;
       return { ...entry };
     });
   }
-  dequeue(teamId, itemId) { return this.#mutateTeam(teamId, (t) => { delete t.outbox[itemId]; }); }
-  patchOutbox(teamId, itemId, patch) {
-    return this.#mutateTeam(teamId, (t) => { if (t.outbox[itemId]) Object.assign(t.outbox[itemId], patch); });
+  // Both guards are optimistic-concurrency: when { queuedAt } is passed, the
+  // mutation only applies if the stored entry's queuedAt still matches — a
+  // stale caller (flushing an entry that has since been replaced by a fresh
+  // enqueue) becomes a no-op instead of clobbering the new entry. Returns
+  // whether the mutation applied.
+  dequeue(teamId, itemId, { queuedAt } = {}) {
+    return this.#mutateTeam(teamId, (t) => {
+      const cur = t.outbox[itemId];
+      if (!cur) return false;
+      if (queuedAt !== undefined && cur.queuedAt !== queuedAt) return false;
+      delete t.outbox[itemId];
+      return true;
+    });
+  }
+  patchOutbox(teamId, itemId, patch, { queuedAt } = {}) {
+    return this.#mutateTeam(teamId, (t) => {
+      const cur = t.outbox[itemId];
+      if (!cur) return false;
+      if (queuedAt !== undefined && cur.queuedAt !== queuedAt) return false;
+      Object.assign(cur, patch);
+      return true;
+    });
   }
   async listOutbox(teamId) {
     const t = await this.getTeam(teamId);
