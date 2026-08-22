@@ -1,4 +1,6 @@
-const GH_REST = "https://api.github.com";
+// Overridable so E2E tests can point the real GitHub REST calls (getViewer,
+// publish, etc.) at a local mock instead of the live API. Unset in production.
+const GH_REST = process.env.AXIFORGE_GITHUB_API_ROOT || "https://api.github.com";
 const TARGET_REPO = "axibuilds";
 const USER_AGENT = "axiforge-desktop";
 const crypto = require("node:crypto");

@@ -11,6 +11,20 @@ async function handle(req, res) {
   const url = new URL(req.url, "http://x");
   const p = url.pathname.replace(/^\/api\/sync/, "");
   const body = ["POST", "PUT", "PATCH"].includes(req.method) ? await readBody(req) : {};
+  // Stands in for the real GitHub REST API (api.github.com), reachable via
+  // AXIFORGE_GITHUB_API_ROOT. Only `/user` is mocked — that's the one endpoint
+  // `teams:enable`'s getSession()/getViewer() call actually needs. Unauthenticated
+  // on purpose: this is a stub of GitHub, not of the team-sync backend, so it
+  // doesn't check the `Bearer e2e-session` header the routes below require.
+  if (req.method === "GET" && p === "/user") {
+    return json(res, 200, { login: "e2e", id: 1, avatar_url: null, html_url: "https://github.com/e2e" });
+  }
+  // Test-only hook so specs get a clean `db` between cases (team IDs are
+  // `team-${db.teams.size + 1}`, so leftover state could collide). Playwright's
+  // globalSetup runs this server in a different process than the spec files
+  // (which run in worker processes), so specs can't just `require(...).reset()`
+  // — they have to hit it over HTTP like any other route.
+  if (req.method === "POST" && p === "/__reset") { reset(); return json(res, 204, {}); }
   if (req.method === "POST" && p === "/auth/github") return json(res, 200, { sessionToken: "e2e-session", user: { id: "u1", login: "e2e", displayName: "E2E", avatarUrl: null } });
   if (!/^Bearer e2e-session$/.test(req.headers.authorization || "")) return json(res, 401, { error: { code: "unauthorized", message: "no" } });
   if (req.method === "DELETE" && p === "/auth/session") return json(res, 204, {});
@@ -50,5 +64,4 @@ function start() {
 }
 function stop() { return new Promise((r) => (server ? server.close(r) : r())); }
 function reset() { db.teams.clear(); db.items.clear(); db.seq.clear(); }
-function putCount(teamId) { return (db.items.get(teamId) || new Map()).size; }
-module.exports = { start, stop, reset, putCount, PORT };
+module.exports = { start, stop, PORT };

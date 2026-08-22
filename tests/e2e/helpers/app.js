@@ -38,6 +38,11 @@ async function launchApp({ clean = true, env: envOverride = {} } = {}) {
       GW2_API_ROOT: `http://localhost:${MOCK_PORT}/v2`,
       VITE_DEV_SERVER_URL: `http://localhost:${VITE_PORT}`,
       AXIFORGE_SYNC_BASE: `http://localhost:${SYNC_PORT}/api/sync`,
+      // Reuses the sync mock server (it's the same process, just an unprefixed
+      // `/user` route) instead of spinning up a third server for one endpoint.
+      // getSession()'s getViewer() call is the only real-GitHub-API hop that
+      // `teams:enable` makes; everything else it does goes through AXIFORGE_SYNC_BASE.
+      AXIFORGE_GITHUB_API_ROOT: `http://localhost:${SYNC_PORT}`,
       // Keep catalog builds offline and fast: the wiki fact pass and the remote
       // data snapshot are both network-bound and would outrun the readiness wait
       // below on a freshly wiped DATA_DIR.
