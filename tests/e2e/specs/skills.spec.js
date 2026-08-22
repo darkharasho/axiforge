@@ -1,7 +1,15 @@
 const { test, expect } = require("playwright/test");
 const { launchApp, closeApp } = require("../helpers/app");
 const { goToEditor } = require("../helpers/nav");
-const { selectProfession } = require("../helpers/editor");
+const {
+  openMenu,
+  closeOpenSelect,
+  selectProfession,
+  fillSpecializations,
+  changeSpecialization,
+  selectSkill,
+  equipMainhandWeapon,
+} = require("../helpers/editor");
 
 // Professions with full catalog fixture data (skills, traits, specializations).
 const CATALOGED = ["Necromancer", "Elementalist", "Revenant"];
@@ -18,6 +26,9 @@ test.describe("Skills — Base skill slots", () => {
     ({ app, window } = await launchApp());
     await goToEditor(window);
     await selectProfession(window, "Necromancer");
+    // Skill slots start empty — the editor picks nothing for you — so equip a heal
+    // skill for the tests below that assert on a populated slot.
+    await selectSkill(window, ".skill-group--utilities .skill-slot", "Well of Blood");
   });
 
   test.afterAll(async () => {
@@ -39,7 +50,7 @@ test.describe("Skills — Base skill slots", () => {
     const iconBtn = healSlot.locator(".skill-icon-large");
     await expect(iconBtn).toBeVisible();
 
-    // Since Necromancer auto-selects a heal skill, it should have an img
+    // beforeAll equipped a heal skill, so the slot renders its icon
     const img = iconBtn.locator("img");
     const imgCount = await img.count();
     expect(imgCount).toBeGreaterThan(0);
@@ -93,7 +104,7 @@ test.describe("Skills — Base skill slots", () => {
     const count = await iconBtns.count();
     expect(count).toBe(5);
 
-    // At least the heal slot (auto-assigned) should have an icon from the API
+    // The heal slot equipped in beforeAll should have an icon from the API
     const healIcon = iconBtns.first();
     const imgs = healIcon.locator("img");
     const imgCount = await imgs.count();
@@ -114,21 +125,18 @@ test.describe("Skills — Base skill slots", () => {
     const iconBtn = healSlot.locator(".skill-icon-large");
     await iconBtn.click();
 
-    // The cselect overlay should open (contains cselect--skill-slot)
-    const cselectOpen = window.locator(".cselect--skill-slot.cselect--open");
-    await expect(cselectOpen).toBeVisible({ timeout: 3000 });
+    // The cselect overlay should open (wrapper gets .cselect--skill-slot.cselect--open),
+    // but its menu is portalled to document.body — read options from there.
+    await expect(window.locator(".cselect--skill-slot.cselect--open")).toBeVisible({ timeout: 3000 });
+    const menu = openMenu(window);
+    await menu.waitFor({ state: "visible", timeout: 3000 });
 
     // There should be skill options in the dropdown
-    const options = cselectOpen.locator(".cselect__option");
+    const options = menu.locator(".cselect__option");
     const optionCount = await options.count();
     expect(optionCount).toBeGreaterThan(0);
 
-    // Close the dropdown by calling closeCustomSelect via evaluate
-    await window.evaluate(() => {
-      const open = document.querySelector(".cselect--open");
-      if (open) open.classList.remove("cselect--open");
-    });
-    await window.waitForTimeout(300);
+    await closeOpenSelect(window);
   });
 
   // 6. Picker filters skills by profession/mode
@@ -138,11 +146,12 @@ test.describe("Skills — Base skill slots", () => {
     const healSlot = utilGroup.locator(".skill-slot").first();
     await healSlot.locator(".skill-icon-large").click();
 
-    const cselectOpen = window.locator(".cselect--skill-slot.cselect--open");
-    await expect(cselectOpen).toBeVisible({ timeout: 3000 });
+    await expect(window.locator(".cselect--skill-slot.cselect--open")).toBeVisible({ timeout: 3000 });
+    const menu = openMenu(window);
+    await menu.waitFor({ state: "visible", timeout: 3000 });
 
     // All options should be Necromancer heal skills
-    const optionLabels = await cselectOpen.locator(".cselect__option .cselect__label").allTextContents();
+    const optionLabels = await menu.locator(".cselect__option .cselect__label").allTextContents();
     expect(optionLabels.length).toBeGreaterThan(0);
 
     // Known Necromancer heal skills: "Summon Blood Fiend", "Consume Conditions", "Well of Blood"
@@ -157,12 +166,7 @@ test.describe("Skills — Base skill slots", () => {
       expect(label).not.toContain("Glyph of Elemental Harmony");
     }
 
-    // Close the dropdown
-    await window.evaluate(() => {
-      const open = document.querySelector(".cselect--open");
-      if (open) open.classList.remove("cselect--open");
-    });
-    await window.waitForTimeout(300);
+    await closeOpenSelect(window);
   });
 
   // 7. Selected skill updates immediately
@@ -176,11 +180,12 @@ test.describe("Skills — Base skill slots", () => {
 
     // Open the picker and choose a different skill
     await iconBtn.click();
-    const cselectOpen = window.locator(".cselect--skill-slot.cselect--open");
-    await expect(cselectOpen).toBeVisible({ timeout: 3000 });
+    await expect(window.locator(".cselect--skill-slot.cselect--open")).toBeVisible({ timeout: 3000 });
+    const menu = openMenu(window);
+    await menu.waitFor({ state: "visible", timeout: 3000 });
 
     // Find an option that is NOT currently selected
-    const options = cselectOpen.locator(".cselect__option:not(.cselect__option--selected)");
+    const options = menu.locator(".cselect__option:not(.cselect__option--selected)");
     const optionCount = await options.count();
     expect(optionCount).toBeGreaterThan(0);
 
@@ -377,6 +382,10 @@ test.describe("Skills — Profession mechanics", () => {
   // 13. Warrior: Burst skill (F1)
   test("Warrior: profession mechanics display", async () => {
     await selectProfession(window, "Warrior");
+    // Warrior's F1 burst is weapon-specific: skills.js deliberately renders NO mechanic
+    // (and hence no mechanics bar) while the mainhand is empty, which is how a fresh
+    // build starts. Equip a weapon so there is a burst to show.
+    await equipMainhandWeapon(window, "Greatsword");
     const mechBar = window.locator(".profession-mechanics-bar");
     await expect(mechBar).toBeVisible();
     // Warrior has F1 burst + potentially F2 from elite specs
@@ -389,6 +398,9 @@ test.describe("Skills — Profession mechanics", () => {
   // 14. Engineer: Tool belt skills (F1-F5)
   test("Engineer: profession mechanics display", async () => {
     await selectProfession(window, "Engineer");
+    // The Engineer tool belt is derived from equipped utility skills — with an empty
+    // skill bar there are no F-slots and therefore no mechanics bar.
+    await selectSkill(window, ".skill-group--utilities .skill-slot", "Healing Turret");
     const mechBar = window.locator(".profession-mechanics-bar");
     await expect(mechBar).toBeVisible();
     // Engineer has tool belt F1-F5 derived from equipped skills
@@ -447,57 +459,19 @@ test.describe("Skills — Profession mechanics", () => {
     const mechBar = window.locator(".profession-mechanics-bar");
     await expect(mechBar).toBeVisible();
 
-    // Wait for spec cards to be fully rendered
-    await window.waitForFunction(
-      () => document.querySelectorAll("#specializationsHost article.spec-card").length === 3,
-      null,
-      { timeout: 5000 }
-    );
+    // Only the third slot accepts an elite spec, and the editor opens with all three
+    // slots empty — put a known elite spec in it so there is an F1 mechanic to change.
+    await fillSpecializations(window, ["Spite", "Curses", "Reaper"]);
 
     // Capture the current F1 mechanic title
     const f1Icon = mechBar.locator(".skill-slot").first().locator(".skill-icon--profession");
     const beforeTitle = await f1Icon.getAttribute("title");
     expect(beforeTitle).toBeTruthy();
 
-    // Identify the current elite spec name so we can pick a different one
-    const specCards = window.locator("article.spec-card");
-    const eliteSlot = specCards.nth(2);
-    const currentEliteTitle = await eliteSlot.locator(".spec-emblem").getAttribute("title");
+    // Swap the elite spec — the F1 mechanic should follow it
+    // (Reaper's Shroud → Desert Shroud etc.)
+    await changeSpecialization(window, 2, "Scourge");
 
-    // Open the elite spec dropdown using the same pattern as changeSpec() in specializations.spec.js.
-    // Click the emblem, which proxies to the cselect trigger.
-    // Use evaluate() for the click to avoid pointer-event interception races after profession switch.
-    await window.evaluate((idx) => {
-      const card = document.querySelectorAll("article.spec-card")[idx];
-      if (card) card.querySelector(".spec-emblem").click();
-    }, 2);
-    await window.waitForSelector(".cselect--open", { timeout: 5000 });
-
-    // Pick a Necromancer elite spec that is NOT the current one.
-    // Available elite specs: Reaper, Scourge, Harbinger, Ritualist
-    const eliteOptions = ["Scourge", "Reaper", "Harbinger", "Ritualist"];
-    let picked = false;
-    for (const specName of eliteOptions) {
-      if (specName === currentEliteTitle) continue;
-      const option = window.locator(`.cselect--open .cselect__option:has-text("${specName}")`);
-      if ((await option.count()) > 0) {
-        await option.click();
-        await window.waitForTimeout(500);
-        picked = true;
-        break;
-      }
-    }
-
-    // If somehow no elite spec was different (shouldn't happen), close and skip
-    if (!picked) {
-      await window.evaluate(() => {
-        const open = document.querySelector(".cselect--open");
-        if (open) open.classList.remove("cselect--open");
-      });
-    }
-
-    // The F1 mechanic should have changed after switching elite spec
-    expect(picked).toBe(true);
     const afterTitle = await mechBar
       .locator(".skill-slot")
       .first()

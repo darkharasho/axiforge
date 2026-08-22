@@ -38,6 +38,18 @@ async function captureProfessionCatalog(professions, profName, outFile) {
   ];
   const skills = await fetchByIds("skills", [...new Set(skillIds)]);
 
+  // Toolbelt skills are referenced by id from the skill that grants them and are
+  // never listed on the profession itself. Without them the Engineer mechanics bar
+  // resolves every F-slot to null and never renders. Same shape as the legend-skill
+  // pass below: follow the references and pull in whatever is still missing.
+  const captured = new Set(skills.map((s) => s.id));
+  const toolbeltIds = [...new Set(
+    skills.map((s) => s.toolbelt_skill).filter((id) => id && !captured.has(id))
+  )];
+  if (toolbeltIds.length) {
+    skills.push(...(await fetchByIds("skills", toolbeltIds)));
+  }
+
   const catalog = { profession: prof, specializations: specs, traits, skills };
   await fs.writeFile(path.join(OUT, outFile), JSON.stringify(catalog, null, 2));
   console.log(`  Saved ${profName}: ${specs.length} specs, ${traits.length} traits, ${skills.length} skills`);

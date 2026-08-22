@@ -129,14 +129,22 @@ let _wikiClient = null;
 const _catalogCache = new Map();
 const _catalogInflight = new Map();
 
+// Mirrors GW2_API_ROOT: lets an offline/E2E run point wiki lookups at a local
+// stand-in instead of wiki.guildwars2.com. Unset in production.
+const WIKI_API_ROOT_OVERRIDE = process.env.AXIFORGE_WIKI_API_ROOT || undefined;
+
 function initWikiClient(cacheDir) {
   const cache = new DiskCache(path.join(cacheDir, "wiki-facts"));
-  _wikiClient = new WikiClient({ cache, cacheTTL: 7 * 24 * 60 * 60 * 1000 });
+  _wikiClient = new WikiClient({
+    cache,
+    cacheTTL: 7 * 24 * 60 * 60 * 1000,
+    wikiApiRoot: WIKI_API_ROOT_OVERRIDE,
+  });
 }
 
 function getWikiClient() {
   if (!_wikiClient) {
-    _wikiClient = new WikiClient();
+    _wikiClient = new WikiClient({ wikiApiRoot: WIKI_API_ROOT_OVERRIDE });
   }
   return _wikiClient;
 }

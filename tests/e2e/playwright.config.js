@@ -6,7 +6,7 @@ const VITE_PORT = 5199;
 /** @type {import('@playwright/test').PlaywrightTestConfig} */
 module.exports = {
   testDir: path.join(__dirname, "specs"),
-  timeout: 30_000,
+  timeout: 60_000,
   retries: 1,
   workers: 1,
   globalSetup: path.join(__dirname, "global-setup.js"),

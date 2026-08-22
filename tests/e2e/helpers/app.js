@@ -6,6 +6,14 @@ const { PORT: MOCK_PORT } = require("../mock-server/server");
 const { PORT: SYNC_PORT } = require("../mock-sync-server");
 
 const VITE_PORT = 5199;
+
+// Wiki fact resolution is off by default (see AXIFORGE_DISABLE_WIKI below). Specs that
+// assert PvE/WvW split behaviour need it on, pointed at the mock's stand-in wiki:
+//   launchApp({ env: WIKI_ENABLED_ENV })
+const WIKI_ENABLED_ENV = {
+  AXIFORGE_DISABLE_WIKI: "0",
+  AXIFORGE_WIKI_API_ROOT: `http://localhost:${MOCK_PORT}/wiki-api.php`,
+};
 const APP_NAME = "axiforge-desktop";
 const DATA_DIR = getDataDir();
 
@@ -76,4 +84,4 @@ async function closeApp(app) {
   if (app) await app.close();
 }
 
-module.exports = { launchApp, closeApp, cleanDataDir, DATA_DIR };
+module.exports = { WIKI_ENABLED_ENV, launchApp, closeApp, cleanDataDir, DATA_DIR };

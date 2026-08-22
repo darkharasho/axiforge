@@ -1,0 +1,5 @@
+{
+  "_comment": "Stand-in wiki pages for the E2E mock wiki (tests/e2e/mock-server). Only titles listed here exist; every other title comes back as `missing`, which the resolver skips so the entity keeps its API facts. Keep these minimal — they exist to give the PvE/WvW split specs deterministic split data offline, not to mirror the real wiki.",
+  "Dread": "{{Trait infobox\n| id = 919\n| profession = Necromancer\n| specialization = Spite\n| tier = 3\n}}\nInflicting fear on a foe gives you boons and increases your strike damage for a short time.\n\n{{skill fact|recharge|10}}\n{{skill fact|percent|15|game mode=pve}}\n{{skill fact|percent|10|game mode=wvw}}\n{{skill fact|percent|10|game mode=pvp}}\n",
+  "Close to Death": "{{Trait infobox\n| id = 853\n| profession = Necromancer\n| specialization = Spite\n| tier = 3\n}}\nDeal increased strike damage to foes below the health threshold.\n\n{{skill fact|percent|20|game mode=pve}}\n{{skill fact|percent|10|game mode=wvw}}\n{{skill fact|percent|10|game mode=pvp}}\n"
+}
