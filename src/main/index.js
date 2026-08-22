@@ -148,6 +148,12 @@ function getIconPath() {
   return path.join(__dirname, "../../public/favicon.png");
 }
 
+// E2E runs launch a fresh Electron process per spec file. Mapping and focusing a
+// real window each time steals the desktop's focus dozens of times per suite, so
+// AXIFORGE_HIDE_WINDOW=1 keeps the window unmapped. Playwright drives the page over
+// CDP, which does not require the window to be visible.
+const HIDE_WINDOW = process.env.AXIFORGE_HIDE_WINDOW === "1";
+
 function createWindow(savedBounds) {
   const win = new BrowserWindow({
     width: savedBounds?.width ?? 1600,
@@ -175,7 +181,7 @@ function createWindow(savedBounds) {
   });
 
   win.once("ready-to-show", () => {
-    win.show();
+    if (!HIDE_WINDOW) win.show();
   });
 
   win.webContents.on("will-attach-webview", (event, webPreferences, params) => {

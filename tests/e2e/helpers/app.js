@@ -3,6 +3,7 @@ const path = require("path");
 const fs = require("fs");
 const os = require("os");
 const { PORT: MOCK_PORT } = require("../mock-server/server");
+const { PORT: SYNC_PORT } = require("../mock-sync-server");
 
 const VITE_PORT = 5199;
 const APP_NAME = "axiforge-desktop";
@@ -20,7 +21,7 @@ function cleanDataDir() {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
-async function launchApp({ clean = true } = {}) {
+async function launchApp({ clean = true, env: envOverride = {} } = {}) {
   if (clean) cleanDataDir();
 
   // Build env without ELECTRON_RUN_AS_NODE which VS Code/Claude sets in its shell
@@ -36,22 +37,30 @@ async function launchApp({ clean = true } = {}) {
       APP_PROFILE: "e2e-test",
       GW2_API_ROOT: `http://localhost:${MOCK_PORT}/v2`,
       VITE_DEV_SERVER_URL: `http://localhost:${VITE_PORT}`,
+      AXIFORGE_SYNC_BASE: `http://localhost:${SYNC_PORT}/api/sync`,
+      // Keep catalog builds offline and fast: the wiki fact pass and the remote
+      // data snapshot are both network-bound and would outrun the readiness wait
+      // below on a freshly wiped DATA_DIR.
+      AXIFORGE_DISABLE_WIKI: "1",
+      AXIFORGE_DISABLE_REMOTE_DATA: "1",
+      // Never map the window: without this every spec's launch steals desktop focus.
+      // Playwright drives the renderer over CDP, which does not need a visible window.
+      AXIFORGE_HIDE_WINDOW: "1",
+      ...envOverride,
     },
   });
   const window = await app.firstWindow();
   await window.waitForLoadState("domcontentloaded");
-  // Wait for init() to fully complete — specifically for setProfession() to have fetched the
-  // profession catalog and populated #specializationsHost with real spec cards.
+  // Wait for init() to fully complete — specifically for listProfessions() to have
+  // resolved and renderEditorForm() to have populated the profession selector.
   // This proves the full async init chain has finished:
-  //   listProfessions() → renderEditorForm() → refreshOnboardingStatus() → initLibrary() →
-  //   loadComps() → setProfession() → getCatalog() → renderEditor() → renderSpecializations()
-  // Without this wait, tests race against the background setProfession() call from init(),
-  // which can overwrite state.activeCatalog and state.editor.specializations mid-test.
-  // We wait for article.spec-card (real spec cards) rather than any children, since the
-  // static HTML already contains skeleton markup (div.skel-spec-card) that would satisfy
-  // a naive children.length > 0 check before init() has run at all.
+  //   listBuilds()/listProfessions() -> renderEditorForm() -> refreshOnboardingStatus() ->
+  //   initLibrary() -> loadComps() -> render()
+  // We wait on the profession selector's real options (.cselect__option) rather than on
+  // spec cards: the app opens on the library page with NO profession selected, so
+  // #specializationsHost legitimately stays in its empty state until a test picks one.
   await window.waitForFunction(
-    () => !!document.querySelector("#specializationsHost article.spec-card"),
+    () => document.querySelectorAll("#professionSelect .cselect__option").length > 0,
     null,
     { timeout: 30_000 }
   );

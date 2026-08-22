@@ -1,15 +1,19 @@
 async function selectProfession(window, name) {
   // #professionSelect is a grouped custom select — professions are group headers,
-  // options underneath are "Core {Profession}" + elite specs. Use the search input
-  // to filter, then click the option whose label contains the profession name.
+  // options underneath are "Core {Profession}" + elite specs. Opening it portals the
+  // menu to document.body (custom-select.js `_portalMenu`) so it escapes ancestor
+  // overflow/stacking constraints, so the search input and options must be located
+  // via the portal sentinel, NOT scoped under #professionSelect.
   await window.click("#professionSelect .cselect__trigger");
-  const search = window.locator("#professionSelect .cselect__search");
+  const menu = window.locator('.cselect__menu[data-cselect-portal="1"]');
+  await menu.waitFor({ state: "visible", timeout: 5_000 });
+  const search = menu.locator(".cselect__search");
   if (await search.isVisible()) {
     await search.fill(name);
     await window.waitForTimeout(200);
   }
   // Click the option containing the profession name (e.g. "Core Necromancer" or "Necromancer")
-  const option = window.locator(`#professionSelect .cselect__option:has-text("${name}") >> visible=true`).first();
+  const option = menu.locator(`.cselect__option:has-text("${name}") >> visible=true`).first();
   await option.click();
   // Wait for catalog to load — spec cards appear when setProfession() completes
   await window.waitForFunction(

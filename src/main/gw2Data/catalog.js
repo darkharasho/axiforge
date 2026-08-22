@@ -23,6 +23,12 @@ const REMOTE_DATA_TTL = 1000 * 60 * 60 * 6; // 6 hours
 const REMOTE_DATA_ENABLED =
   !process.env.JEST_WORKER_ID && process.env.AXIFORGE_DISABLE_REMOTE_DATA !== "1";
 
+// Wiki fact resolution walks every skill/trait/pet-skill title for a profession and
+// is by far the slowest part of a cold catalog build. AXIFORGE_DISABLE_WIKI=1 skips
+// it so offline/E2E runs build catalogs from API facts alone, deterministically and
+// without hitting wiki.guildwars2.com.
+const WIKI_FACTS_ENABLED = process.env.AXIFORGE_DISABLE_WIKI !== "1";
+
 // Sanity floors: reject a remote snapshot whose lists collapsed (truncated or
 // broken publish). Baked counts are ~2-3x these; the floors only catch disasters.
 function _isNonEmptyArray(v, min) {
@@ -954,11 +960,13 @@ async function _buildProfessionCatalog(professionId, lang = "en", gameMode = "pv
   }
 
   let wikiFactsById = new Map();
-  try {
-    const client = getWikiClient();
-    wikiFactsById = await resolveEntityFacts(client, idToTitle, { profession: profession.name || professionId });
-  } catch (err) {
-    try { console.warn("[catalog] Wiki fact resolution failed, using API facts:", err.message); } catch (_) {}
+  if (WIKI_FACTS_ENABLED) {
+    try {
+      const client = getWikiClient();
+      wikiFactsById = await resolveEntityFacts(client, idToTitle, { profession: profession.name || professionId });
+    } catch (err) {
+      try { console.warn("[catalog] Wiki fact resolution failed, using API facts:", err.message); } catch (_) {}
+    }
   }
 
   for (const s of mappedSkills) {
