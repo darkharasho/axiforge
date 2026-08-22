@@ -8,6 +8,11 @@ const MAX_BODY_BYTES = 1_500_000;
 const MAX_PAGE = 200;
 const MAX_BULK = 50;
 const WRITES_PER_MIN = 120;
+// Polling ceiling for the change log. Clients poll every 30s per team, so this
+// is orders of magnitude above normal use; it exists so an authenticated client
+// cannot hammer the change log. Generous enough that a full paginated resync of
+// a very large team (MAX_PAGE items per request) still fits in one window.
+const CHANGE_READS_PER_MIN = 240;
 const TYPES = new Set(["folder", "build", "comp"]);
 
 function bytes(str) { return new TextEncoder().encode(str).length; }
@@ -158,9 +163,11 @@ async function writeItem(env, deps, auth, teamId, { itemId, type, parentId, body
 }
 
 // GET /teams/:teamId/changes?since=&limit=
-async function getChanges(request, env, _deps, auth, params) {
+async function getChanges(request, env, deps, auth, params) {
   const { error, membership } = await memberOr403(env, params.teamId, auth);
   if (error) return error;
+  const rl = await checkRateLimit(env.SYNC_RL, `changes:${auth.user.id}`, CHANGE_READS_PER_MIN, 60, deps);
+  if (!rl.ok) return errorResponse("rate_limited", "Too many sync requests. Try again shortly.", 429, { "Retry-After": String(rl.retryAfterSeconds) });
   const url = new URL(request.url);
   const since = Number(url.searchParams.get("since") || 0);
   const limit = url.searchParams.has("limit") ? Number(url.searchParams.get("limit")) : MAX_PAGE;
