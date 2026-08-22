@@ -236,17 +236,16 @@ async function getAuthRecord() {
 }
 
 async function patchAuthRecord(patch) {
-  const current = await getAuthRecord();
-  const next = {
+  // updateAuth serializes the read-modify-write against every other auth writer
+  // (team sync's 401 handler, the legacy migration, login).
+  return store.updateAuth((current) => ({
     ...current,
     ...patch,
     onboarding: {
       ...(current.onboarding || {}),
       ...((patch && patch.onboarding) || {}),
     },
-  };
-  await store.saveAuth(next);
-  return next;
+  }));
 }
 
 async function getOnboardingStatus() {
@@ -564,13 +563,12 @@ const readyWork = app.whenReady().then(async () => {
       beginData?.expiresIn
     );
     const viewer = await getViewer(token);
-    const previous = await getAuthRecord();
-    await store.saveAuth({
+    await store.updateAuth((previous) => ({
       ...previous,
       token,
       viewer,
       onboarding: previous.onboarding || {},
-    });
+    }));
     return { viewer };
   });
 
@@ -1936,7 +1934,14 @@ const readyWork = app.whenReady().then(async () => {
   });
 
   // ─── Teams (team sync) ─────────────────────────────────────────────────────
-  handle("teams:get-session", () => teamSync.getSession());
+  // Only the identity fields — never the 90-day bearer token. The main process
+  // attaches it itself (syncApi.js); handing it to the renderer would turn any
+  // future script injection into a durable, off-machine credential for every
+  // team the user belongs to.
+  handle("teams:get-session", async () => {
+    const s = await teamSync.getSession();
+    return s ? { userId: s.userId, login: s.login } : null;
+  });
   handle("teams:enable", async () => {
     const session = await getSession();
     if (!session) throw new Error("Log in with GitHub first.");
@@ -1955,8 +1960,16 @@ const readyWork = app.whenReady().then(async () => {
   handle("teams:members", (_e, teamId) => teamSync.listMembers(teamId));
   handle("teams:remove-member", (_e, teamId, userId) => teamSync.removeMember(teamId, userId));
   handle("teams:rotate-invite", (_e, teamId) => teamSync.rotateInvite(teamId));
+  // A destroyed/reloading WebContents makes send() throw; that throw would
+  // propagate out of the upload and be read as an upload failure (which, for the
+  // migration, deletes a team whose items all landed).
+  const progressTo = (sender, extra) => (p) => {
+    try {
+      if (sender && !sender.isDestroyed?.()) sender.send("team-share-progress", { ...extra, ...p });
+    } catch { /* renderer went away mid-upload — never fail the upload for it */ }
+  };
   handle("teams:share-folder", (_e, folderId, teamId) =>
-    teamSync.shareFolderToTeam(folderId, teamId, (p) => _e.sender.send("team-share-progress", { folderId, ...p })));
+    teamSync.shareFolderToTeam(folderId, teamId, progressTo(_e.sender, { folderId })));
   handle("teams:stop-sharing", async (_e, folderId) => {
     const root = await findTeamRoot(folderId);
     if (root?.role !== "owner") throw new Error("Only the team owner can stop sharing a folder.");
@@ -1964,7 +1977,7 @@ const readyWork = app.whenReady().then(async () => {
   });
   handle("teams:legacy-status", () => teamSync.legacyStatus());
   handle("teams:migrate-org-library", (_e, opts) =>
-    teamSync.migrateOrgLibrary(opts || {}, (p) => _e.sender.send("team-share-progress", { migration: true, ...p })));
+    teamSync.migrateOrgLibrary(opts || {}, progressTo(_e.sender, { migration: true })));
   handle("teams:pull", (_e, teamId) => teamSync.pullTeam(teamId));
   handle("teams:pull-all", () => teamSync.pullAll());
   handle("teams:resolve-conflict", (_e, teamId, itemId, choice) => teamSync.resolveConflict(teamId, itemId, choice));

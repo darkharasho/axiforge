@@ -13,8 +13,27 @@
 // failed — a partial failure leaves the library exactly as it was so the user
 // can simply run the migration again.
 
+// Every folder that still carries GitHub-org legacy markers and is not part of
+// a team. m6: a legacy folder is NOT required to be top-level — the old sync
+// could leave one nested, and requiring `!parentId` made it permanently
+// unmigratable while `cleanupLegacyFolders` still dropped `auth.sharedLibrary`
+// (destroying the only remaining "you have a legacy library" signal).
+// A legacy folder that sits inside ANOTHER legacy folder is part of that root's
+// tree, not a root of its own.
 function legacyRootsIn(folders) {
-  return folders.filter((f) => f.orgName && !f.teamId && !f.parentId);
+  const legacy = folders.filter((f) => f.orgName && !f.teamId);
+  const legacyIds = new Set(legacy.map((f) => f.id));
+  const hasLegacyAncestor = (f) => {
+    const seen = new Set([f.id]);
+    let cur = f.parentId ? folders.find((x) => x.id === f.parentId) : null;
+    while (cur && !seen.has(cur.id)) {
+      seen.add(cur.id);
+      if (legacyIds.has(cur.id)) return true;
+      cur = cur.parentId ? folders.find((x) => x.id === cur.parentId) : null;
+    }
+    return false;
+  };
+  return legacy.filter((f) => !hasLegacyAncestor(f));
 }
 
 async function legacyStatus(teamSync) {
@@ -52,7 +71,10 @@ function itemsForTree(teamSync, rootId, teamRootId, folders, builds, comps) {
   for (const id of treeIds) {
     if (id === teamRootId) continue;
     const f = folders.find((x) => x.id === id);
-    items.push({ itemId: id, type: "folder", parentId: teamSync.parentIdFor(f.parentId, teamRootId), body: S.folderBody(f), baseVersion: null });
+    // The tree's own root always lands directly under the team root — its local
+    // parent (m6: a legacy root may be nested) is not part of the team.
+    const parentId = id === rootId ? null : teamSync.parentIdFor(f.parentId, teamRootId);
+    items.push({ itemId: id, type: "folder", parentId, body: S.folderBody(f), baseVersion: null });
   }
   for (const b of builds) {
     if (treeSet.has(b.folderId)) items.push({ itemId: b.id, type: "build", parentId: teamSync.parentIdFor(b.folderId, teamRootId), body: S.buildBody(b), baseVersion: null });
@@ -67,15 +89,28 @@ function itemsForTree(teamSync, rootId, teamRootId, folders, builds, comps) {
  * @param {object} teamSync
  * @param {{ teamId?: string, teamName?: string }} opts  target team (existing id, or a name to create)
  * @param {(p: { done: number, total: number, foldersDone: number, foldersTotal: number }) => void} [onProgress]
- * @returns {Promise<{ teamId: string, uploaded: number, failed: object[], foldersMigrated: number }>}
+ * @returns {Promise<{ teamId: string, uploaded: number, failed: object[], skipped: object[], foldersMigrated: number, note?: string }>}
  */
 async function migrateOrgLibrary(teamSync, { teamId = null, teamName = null } = {}, onProgress) {
   const session = await teamSync.getSession();
   if (!session) throw new Error("Enable team sync first.");
+  // m2: one migration at a time. Two overlapping runs race on the same team id
+  // and each other's rollback (run A can delete the team run B just committed
+  // to). pullTeam/flushTeam have the same guard.
+  if (teamSync._migrationInProgress) throw new Error("A library migration is already running.");
   const status = await legacyStatus(teamSync);
   const roots = status.folders;
   if (!status.hasLegacy || !roots.length) throw new Error("Nothing to migrate.");
 
+  teamSync._migrationInProgress = true;
+  try {
+    return await runMigration(teamSync, { teamId, teamName }, onProgress, { status, roots });
+  } finally {
+    teamSync._migrationInProgress = false;
+  }
+}
+
+async function runMigration(teamSync, { teamId, teamName }, onProgress, { status, roots }) {
   let folders = await teamSync.folderStore.listFolders();
 
   // A single legacy root becomes the team root itself (nothing gets deeper);
@@ -100,6 +135,14 @@ async function migrateOrgLibrary(teamSync, { teamId = null, teamName = null } = 
   let createdTeam = null;     // { team, role } when this call created the team
   let createdRootFolderId = null; // a brand-new local root folder we may have to roll back
   let teamRole = "owner";
+  // M2 belt-and-braces: snapshot the legacy markers of every root we are about
+  // to migrate, so a rollback can put them back even if something else cleared
+  // them behind our back.
+  const legacySnapshot = roots.map((r) => {
+    const f = folders.find((x) => x.id === r.id);
+    return f ? { id: f.id, orgName: f.orgName, lastSyncedAt: f.lastSyncedAt } : null;
+  }).filter(Boolean);
+
   if (targetTeamId) {
     const root = teamSync.rootFolderForTeam(targetTeamId, folders);
     if (!root) throw new Error("Team not found locally.");
@@ -148,42 +191,60 @@ async function migrateOrgLibrary(teamSync, { teamId = null, teamName = null } = 
   const perRoot = roots.map((r) => ({ root: r, items: itemsForTree(teamSync, r.id, teamRootId, folders, builds, comps) }));
   const total = perRoot.reduce((n, x) => n + x.items.length, 0);
   const failed = [];
+  const skipped = [];
+  const uploadedIds = [];
   let uploaded = 0;
   let base = 0;
   let foldersDone = 0;
-  const rollback = () => rollbackCreatedTeam(teamSync, { teamId: targetTeamId, teamName: createdTeam && createdTeam.team.name, createdRootFolderId });
+  const rollbackTeam = () => rollbackCreatedTeam(teamSync, {
+    teamId: targetTeamId, teamName: createdTeam && createdTeam.team.name, createdRootFolderId, legacySnapshot,
+  });
+  // M1: when the team already existed (or was adopted from an earlier run) we
+  // must NOT delete it — but the items this run pushed are the user's private
+  // library and would stay live and visible to every teammate. Take them back
+  // out again.
+  const rollbackItems = () => rollbackUploadedItems(teamSync, targetTeamId, uploadedIds);
+  const undo = async () => (createdTeam ? rollbackTeam() : rollbackItems());
+  // M3: `onProgress` is an IPC send to a WebContents that may be destroyed
+  // mid-upload. A throw here used to propagate into the catch below and roll
+  // back a team whose items had all landed.
+  const report = (p) => { if (onProgress) { try { onProgress(p); } catch { /* ignore */ } } };
+
   try {
     for (const { items } of perRoot) {
       const res = await teamSync._bulkUpload(targetTeamId, items, (p) => {
-        if (onProgress) onProgress({ done: base + p.done, total, foldersDone, foldersTotal: roots.length });
-      });
+        report({ done: base + p.done, total, foldersDone, foldersTotal: roots.length });
+      }, { skipOversize: true });
       uploaded += res.uploaded;
       failed.push(...res.failed);
+      skipped.push(...res.skipped);
+      uploadedIds.push(...res.uploadedIds);
       base += items.length;
       foldersDone += 1;
-      if (onProgress) onProgress({ done: base, total, foldersDone, foldersTotal: roots.length });
+      report({ done: base, total, foldersDone, foldersTotal: roots.length });
     }
   } catch (err) {
     // _bulkUpload THROWS (rather than reporting per-item failures) on offline,
     // 5xx and exhausted rate-limit waits. Roll the created team back here too:
     // otherwise it survives half-populated, blocks the id on the retry, and the
     // next poll would adopt the local root as its root folder.
-    if (createdTeam) {
-      const problem = await rollback();
-      if (problem) { problem.cause = err; throw problem; }
-    }
+    const problem = await undo();
+    if (problem) { problem.cause = err; throw problem; }
     throw err;
   }
 
   if (failed.length) {
     // Leave the local library untouched so the user can retry. A team we
     // created in this call would otherwise block the retry (its id is taken),
-    // so roll it back — nothing local points at it yet.
-    if (createdTeam) {
-      const problem = await rollback();
-      if (problem) { problem.failed = failed; throw problem; }
-    }
-    return { teamId: targetTeamId, uploaded, failed, foldersMigrated: 0 };
+    // so roll it back — and for a pre-existing team, take the items back out.
+    const problem = await undo();
+    if (problem) { problem.failed = failed; throw problem; }
+    return {
+      teamId: targetTeamId, uploaded, failed, skipped, foldersMigrated: 0,
+      // m7: "Migrated with N failures" never told the user that NOTHING moved
+      // locally and that the partial upload was undone.
+      note: `Nothing was moved: ${failed.length} item${failed.length === 1 ? "" : "s"} could not be uploaded, and everything this run had already uploaded was removed again. Your library is exactly as it was — fix the problem and run the migration again.`,
+    };
   }
 
   // (c) Everything landed — flip local state over to the team.
@@ -203,13 +264,19 @@ async function migrateOrgLibrary(teamSync, { teamId = null, teamName = null } = 
   }
   await clearLegacy(teamSync);
   teamSync._emit("sync-status", { status: "synced", folderId: teamRootId });
-  return { teamId: targetTeamId, uploaded, failed, foldersMigrated: roots.length };
+  const out = { teamId: targetTeamId, uploaded, failed, skipped, foldersMigrated: roots.length };
+  if (skipped.length) {
+    // m5 / spec §5: an item the server will never accept stays on disk as
+    // local-only data rather than blocking the whole migration.
+    out.note = `${skipped.length} item${skipped.length === 1 ? " was" : "s were"} too large for the sync server and stayed on this computer only. Everything else is now in the team.`;
+  }
+  return out;
 }
 
 // Undo a team this run created after the migration failed, so the user can
 // simply run it again. Returns an Error to throw when the SERVER-side delete
 // failed — that team now needs manual attention and must not be swallowed.
-async function rollbackCreatedTeam(teamSync, { teamId, teamName, createdRootFolderId }) {
+async function rollbackCreatedTeam(teamSync, { teamId, teamName, createdRootFolderId, legacySnapshot }) {
   let deleteError = null;
   try {
     await teamSync.api.deleteTeam(teamId);
@@ -218,10 +285,57 @@ async function rollbackCreatedTeam(teamSync, { teamId, teamName, createdRootFold
   }
   if (createdRootFolderId) await teamSync.folderStore.deleteFolder(createdRootFolderId).catch(() => {});
   await teamSync.syncStore.removeTeam(teamId).catch(() => {});
+  await restoreLegacyFields(teamSync, legacySnapshot, teamId);
   if (!deleteError) return null;
   return new Error(
     `Migration failed and the team "${teamName || teamId}" (${teamId}) could not be removed: ${deleteError.message} ` +
-    "Delete it in Settings \u2192 Teams before trying the migration again."
+    "Delete it in Settings → Teams before trying the migration again."
+  );
+}
+
+// M2: something else (a concurrent listTeams(), a poll) may have converted a
+// legacy root into a team root while we were uploading. After a rollback that
+// team no longer exists, so put the legacy markers back — otherwise the folder
+// is pinned to a dead team with no legacy fields and the migration can never be
+// re-run.
+async function restoreLegacyFields(teamSync, legacySnapshot, deadTeamId) {
+  if (!legacySnapshot || !legacySnapshot.length) return;
+  const folders = await teamSync.folderStore.listFolders();
+  for (const snap of legacySnapshot) {
+    if (!snap.orgName) continue;
+    const f = folders.find((x) => x.id === snap.id);
+    if (!f) continue;
+    if (f.orgName === snap.orgName && !f.teamId) continue; // untouched
+    await teamSync.folderStore.upsertFolder({
+      id: f.id, name: f.name, parentId: f.parentId || null, sortOrder: f.sortOrder,
+      shared: !f.parentId, orgName: snap.orgName,
+      ...(snap.lastSyncedAt ? { lastSyncedAt: snap.lastSyncedAt } : {}),
+      ...(f.teamId === deadTeamId ? { teamId: null, role: null } : {}),
+    }).catch(() => {});
+  }
+}
+
+// M1: remove the items THIS run pushed into a team it did not create. Deleted
+// in reverse upload order so children go before their parents. Returns an Error
+// to throw when some items could not be removed — they are live in the team and
+// the user has to know.
+async function rollbackUploadedItems(teamSync, teamId, uploadedIds) {
+  if (!uploadedIds || !uploadedIds.length) return null;
+  const stuck = [];
+  for (const itemId of [...uploadedIds].reverse()) {
+    try {
+      const known = await teamSync.syncStore.getVersion(teamId, itemId);
+      await teamSync.api.deleteItem(teamId, itemId, known ? known.version : undefined);
+    } catch (err) {
+      if (!err || err.code !== "SYNC_NOT_FOUND") { stuck.push(itemId); continue; }
+    }
+    await teamSync.syncStore.removeVersion(teamId, itemId).catch(() => {});
+    await teamSync.syncStore.dequeue(teamId, itemId).catch(() => {});
+  }
+  if (!stuck.length) return null;
+  return new Error(
+    `Migration failed after ${uploadedIds.length} item${uploadedIds.length === 1 ? "" : "s"} had already been uploaded, and ${stuck.length} of them could not be removed from the team again. ` +
+    "Those items are visible to your teammates right now. Delete them from the team folder, or run the migration again to finish it."
   );
 }
 
@@ -236,11 +350,14 @@ async function clearLegacy(teamSync) {
 }
 
 async function clearAuthSharedLibrary(teamSync) {
-  const auth = await teamSync.buildStore.getAuth();
-  if (!auth || auth.sharedLibrary === undefined) return;
-  const next = { ...auth };
-  delete next.sharedLibrary;
-  await teamSync.buildStore.saveAuth(next);
+  // m4: one serialized read-modify-write. Startup runs cleanupLegacyFolders()
+  // and pullAll() concurrently; a get-then-save here could otherwise write back
+  // a session token that pullAll's 401 handler had just deleted.
+  await teamSync.buildStore.updateAuth((auth) => {
+    if (!auth || auth.sharedLibrary === undefined) return undefined;
+    delete auth.sharedLibrary;
+    return auth;
+  });
 }
 
 // Startup housekeeping (non-destructive): a folder that is now part of a team

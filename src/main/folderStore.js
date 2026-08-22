@@ -114,6 +114,11 @@ class FolderStore {
       if (folder.orgName === undefined && folder.lastSyncedAt === undefined) return { ...folder };
       delete folder.orgName;
       delete folder.lastSyncedAt;
+      // Every other mutator bumps updatedAt (strictly monotonic); this one used
+      // not to, which would hide the change from any updatedAt-based diff.
+      const now = new Date().toISOString();
+      const prev = folder.updatedAt;
+      folder.updatedAt = !prev || now > prev ? now : new Date(new Date(prev).getTime() + 1).toISOString();
       await this.#writeJson(this.foldersPath, folders);
       return { ...folder };
     });
