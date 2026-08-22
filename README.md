@@ -15,6 +15,7 @@ Electron app for creating Guild Wars 2 builds, publishing a static build site, a
 - Data-driven editor catalog from Guild Wars 2 API
 - Wiki summary panel for selected traits/skills
 - Static site publish to `site/*` in your `axiforge` repo
+- **Team Sync** — share folders with teammates and sync edits in real time. See [`workers/sync/README.md`](workers/sync/README.md) for the backend architecture.
 
 ## Setup
 
