@@ -131,6 +131,100 @@ describe("TeamSync — mapping helpers and bodies", () => {
     expect(after).toBe(before);
   });
 
+  // ── SECURITY: an id match is not permission to absorb a folder ─────────────
+
+  test("joining a team whose id collides with an ORDINARY personal folder does not absorb it", async () => {
+    h = await makeHarness();
+    await h.folderStore.upsertFolder({ id: "secret-id", name: "My private stuff" });
+    await h.buildStore.upsertBuild({ id: "b1", title: "Mine", folderId: "secret-id" });
+    h.api.joinTeam.mockResolvedValue({ team: { id: "secret-id", name: "WvW Squad", seq: 0 }, role: "member" });
+    h.api.changes.mockResolvedValue({ items: [], nextSeq: 0, hasMore: false });
+    await h.sync.joinTeam("ABCDEFGHJK");
+    const folders = await h.folderStore.listFolders();
+    const personal = folders.find((f) => f.id === "secret-id");
+    expect(personal).toMatchObject({ name: "My private stuff" });
+    expect(personal.teamId).toBeUndefined();
+    expect(personal.shared).toBeFalsy();
+    // a fresh root was created instead, with an id of its own
+    const root = folders.find((f) => f.teamId === "secret-id");
+    expect(root).toBeTruthy();
+    expect(root.id).not.toBe("secret-id");
+    expect(root).toMatchObject({ name: "WvW Squad", role: "member", shared: true });
+    // the private build is still outside the team
+    expect(h.sync.teamRootFor("secret-id", folders)).toBeNull();
+  });
+
+  test("a LEGACY org root with the same id is still adopted (the migration's re-link)", async () => {
+    h = await makeHarness();
+    await h.folderStore.upsertFolder({ id: "legacy-id", name: "Old shared", shared: true, orgName: "gw2eww" });
+    h.api.joinTeam.mockResolvedValue({ team: { id: "legacy-id", name: "EWW", seq: 0 }, role: "member" });
+    h.api.changes.mockResolvedValue({ items: [], nextSeq: 0, hasMore: false });
+    await h.sync.joinTeam("ABCDEFGHJK");
+    const folders = await h.folderStore.listFolders();
+    expect(folders.filter((f) => f.teamId === "legacy-id")).toHaveLength(1);
+    expect(folders.find((f) => f.id === "legacy-id")).toMatchObject({ teamId: "legacy-id", role: "member" });
+    expect(folders.find((f) => f.id === "legacy-id").orgName).toBeUndefined();
+  });
+
+  // ── _bulkUpload ────────────────────────────────────────────────────────────
+
+  test("a 409 on the FIRST attempt re-sends the local body against the server version (m1)", async () => {
+    h = await makeHarness();
+    const items = [{ itemId: "b1", type: "build", parentId: null, body: { title: "local" }, baseVersion: null }];
+    const calls = [];
+    h.api.bulk.mockImplementation(async (_t, sent) => {
+      calls.push(sent.map((i) => [i.itemId, i.baseVersion, i.body.title]));
+      if (calls.length === 1) return { results: [{ itemId: "b1", status: 409, current: { version: 7, createdBy: { userId: "other" } } }] };
+      return { results: [{ itemId: "b1", status: 200, version: 8 }] };
+    });
+    const out = await h.sync._bulkUpload("t1", items);
+    expect(calls).toEqual([[["b1", null, "local"]], [["b1", 7, "local"]]]);
+    expect(out).toMatchObject({ uploaded: 1, failed: [] });
+    expect(await h.syncStore.getVersion("t1", "b1")).toMatchObject({ version: 8 });
+  });
+
+  test("a 409 on the RE-SEND keeps the server copy so a re-run stays idempotent", async () => {
+    h = await makeHarness();
+    const items = [{ itemId: "b1", type: "build", parentId: null, body: { title: "local" }, baseVersion: null }];
+    h.api.bulk.mockImplementation(async () => ({ results: [{ itemId: "b1", status: 409, current: { version: 7, createdBy: { userId: "other" } } }] }));
+    const out = await h.sync._bulkUpload("t1", items);
+    expect(h.api.bulk).toHaveBeenCalledTimes(2);
+    expect(out).toMatchObject({ uploaded: 1, failed: [] });
+    expect(await h.syncStore.getVersion("t1", "b1")).toMatchObject({ version: 7, createdBy: "other" });
+  });
+
+  test("a whole-batch 413 is split and retried; only a lone item that 413s is unshippable (m5)", async () => {
+    h = await makeHarness();
+    const items = Array.from({ length: 4 }, (_, i) => ({ itemId: `b${i}`, type: "build", parentId: null, body: {}, baseVersion: null }));
+    h.api.bulk.mockImplementation(async (_t, sent) => {
+      if (sent.length > 1) throw h.apiError("SYNC_TOO_LARGE", { message: "Body too large" });
+      if (sent[0].itemId === "b2") throw h.apiError("SYNC_TOO_LARGE", { message: "Body too large" });
+      return { results: sent.map((i) => ({ itemId: i.itemId, status: 201, version: 1 })) };
+    });
+    const out = await h.sync._bulkUpload("t1", items, null, { skipOversize: true });
+    expect(out.uploaded).toBe(3);
+    expect(out.failed).toEqual([]);
+    expect(out.skipped).toEqual([{ itemId: "b2", status: 413, message: "This item is too large for the sync server." }]);
+    expect(out.uploadedIds.sort()).toEqual(["b0", "b1", "b3"]);
+  });
+
+  test("without skipOversize a 413 is still a hard failure (share path unchanged)", async () => {
+    h = await makeHarness();
+    const items = [{ itemId: "b1", type: "build", parentId: null, body: {}, baseVersion: null }];
+    h.api.bulk.mockResolvedValue({ results: [{ itemId: "b1", status: 413, message: "Too large" }] });
+    const out = await h.sync._bulkUpload("t1", items);
+    expect(out.failed).toEqual([{ itemId: "b1", status: 413, message: "Too large" }]);
+    expect(out.skipped).toEqual([]);
+  });
+
+  test("a throwing progress listener never fails an upload (M3)", async () => {
+    h = await makeHarness();
+    const items = [{ itemId: "b1", type: "build", parentId: null, body: {}, baseVersion: null }];
+    h.api.bulk.mockResolvedValue({ results: [{ itemId: "b1", status: 201, version: 1 }] });
+    const out = await h.sync._bulkUpload("t1", items, () => { throw new Error("Object has been destroyed"); });
+    expect(out.uploaded).toBe(1);
+  });
+
   test("bodies strip local-only fields and keep publish metadata", () => {
     const build = { id: "b", title: "B", folderId: "f", pinned: true, sortOrder: 3, compIds: ["c"], publishedFileId: "x", publishedOwner: "me", equipment: {} };
     expect(TeamSync.buildBody(build)).toEqual({ id: "b", title: "B", publishedFileId: "x", publishedOwner: "me", equipment: {} });

@@ -23,8 +23,16 @@ jest.mock("../../../src/renderer/modules/teams.js", () => {
   const { state } = require("../../../src/renderer/modules/state.js");
   return {
     loadTeamState: jest.fn(async () => {}),
-    // Real enough for these tests: a folder is "in a team" when it carries teamId.
-    teamRootFor: (id) => state.folders.find((f) => f.id === id && f.teamId) || null,
+    // Real enough for these tests: walk up to the nearest folder carrying teamId.
+    teamRootFor: (id) => {
+      let cur = state.folders.find((f) => f.id === id) || null;
+      while (cur) {
+        if (cur.teamId) return cur;
+        if (!cur.parentId) return null;
+        cur = state.folders.find((f) => f.id === cur.parentId) || null;
+      }
+      return null;
+    },
   };
 });
 
@@ -36,6 +44,7 @@ const { initShareModal, openShareModal, closeShareModal } =
 
 const PERSONAL = { id: "p", name: "Personal", parentId: null };
 const TEAM_ROOT = { id: "t", name: "EWW", parentId: null, shared: true, teamId: "t", role: "owner" };
+const TEAM_SUB = { id: "sub", name: "Raids", parentId: "t" };
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -53,7 +62,7 @@ beforeEach(() => {
     rotateInvite: jest.fn(async () => ({ inviteCode: "ROTATED456" })),
     writeClipboardText: jest.fn(async () => {}),
   };
-  state.folders = [PERSONAL, TEAM_ROOT];
+  state.folders = [PERSONAL, TEAM_ROOT, TEAM_SUB];
   state.teams = [{ team: { id: "t", name: "EWW", inviteCode: "ABCDE12345" }, role: "owner" }];
   state.teamSession = { userId: "u1", login: "me" };
   initShareModal();
@@ -179,9 +188,9 @@ test("rotating swaps the code in place", async () => {
 });
 
 test("a member sees no invite code and no destructive actions", async () => {
-  state.folders = [{ ...TEAM_ROOT, role: "member" }];
+  state.folders = [{ ...TEAM_ROOT, role: "member" }, TEAM_SUB];
   state.teams = [{ team: { id: "t", name: "EWW", inviteCode: "ABCDE12345" }, role: "member" }];
-  await openShareModal("t");
+  await openShareModal("sub");
   expect(document.querySelector("#shm-invite-code")).toBeFalsy();
   expect(act("stop-sharing")).toBeFalsy();
   expect(act("pull")).toBeTruthy();
@@ -189,15 +198,24 @@ test("a member sees no invite code and no destructive actions", async () => {
   expect(document.querySelectorAll('[data-act="remove-member"]')).toHaveLength(0);
 });
 
-test("stop sharing closes the dialog once it succeeds", async () => {
+// TeamSync.stopSharing rejects a team ROOT ("Not a shared sub-folder of a team"),
+// so the affordance belongs on a SUB-folder and must be handed the sub-folder's
+// own id — not the root's.
+test("stop sharing un-shares the sub-folder the dialog was opened on", async () => {
   const onRefresh = jest.fn();
-  await openShareModal("t", { onRefresh });
+  await openShareModal("sub", { onRefresh });
   act("stop-sharing").dispatchEvent(new MouseEvent("click", { bubbles: true }));
   await flush();
 
-  expect(folderStore.stopSharingFolder).toHaveBeenCalledWith("t");
+  expect(folderStore.stopSharingFolder).toHaveBeenCalledWith("sub");
   expect(onRefresh).toHaveBeenCalled();
   expect(document.querySelector(".shm-overlay").className).toContain("shm-overlay--hidden");
+});
+
+test("the team ROOT gets no Stop sharing button — the engine refuses it", async () => {
+  await openShareModal("t");
+  expect(act("pull")).toBeTruthy();
+  expect(act("stop-sharing")).toBeFalsy();
 });
 
 test("a failed share surfaces the error inline instead of throwing it away", async () => {
@@ -210,6 +228,64 @@ test("a failed share surfaces the error inline instead of throwing it away", asy
 
   expect(document.querySelector("#shm-status").textContent).toBe("SYNC_OFFLINE");
   expect(act("share").disabled).toBe(false);
+});
+
+test("retrying a failed new-team share reuses the team instead of creating another", async () => {
+  folderStore.shareFolderToTeam.mockRejectedValueOnce(new Error("SYNC_OFFLINE"));
+  teams.loadTeamState.mockImplementation(async () => {
+    state.teams = [
+      { team: { id: "t", name: "EWW", inviteCode: "ABCDE12345" }, role: "owner" },
+      { team: { id: "new", name: "Fresh Team", inviteCode: "NEWCODE123" }, role: "owner" },
+    ];
+  });
+  await openShareModal("p");
+  const newOption = body().querySelector('input[value="__new"]');
+  newOption.checked = true;
+  newOption.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  document.querySelector("#shm-new-team").value = "Fresh Team";
+
+  act("share").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  await flush();
+  expect(window.desktopApi.createTeam).toHaveBeenCalledTimes(1);
+  expect(document.querySelector("#shm-status").textContent).toBe("SYNC_OFFLINE");
+  // The picker re-rendered and preselected the team that now exists.
+  expect(body().querySelector('input[value="new"]').checked).toBe(true);
+
+  // Retry: no second team, and the share goes to the one already created.
+  act("share").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  await flush();
+  expect(window.desktopApi.createTeam).toHaveBeenCalledTimes(1);
+  expect(folderStore.shareFolderToTeam).toHaveBeenLastCalledWith("p", "new");
+});
+
+test("enabling sync from here clears the signed-out banner Settings owns", async () => {
+  const onTeamSyncEnabled = jest.fn();
+  initShareModal({ onTeamSyncEnabled });
+  state.teamSession = null;
+  await openShareModal("p");
+  teams.loadTeamState.mockImplementation(async () => { state.teamSession = { login: "me" }; });
+
+  act("enable").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  await flush();
+
+  expect(onTeamSyncEnabled).toHaveBeenCalled();
+});
+
+test("re-opening does not stack Escape listeners", async () => {
+  await openShareModal("p");
+  await openShareModal("t");
+  const removeSpy = jest.spyOn(document, "removeEventListener");
+  closeShareModal();
+  // One handler in, one handler out.
+  const keydownRemovals = removeSpy.mock.calls.filter(([type]) => type === "keydown");
+  expect(keydownRemovals).toHaveLength(1);
+  removeSpy.mockRestore();
+
+  // The stale handler from the first open must be gone, so Escape after a close
+  // cannot re-close (and the overlay stays as-is).
+  await openShareModal("p");
+  document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+  expect(document.querySelector(".shm-overlay").className).toContain("shm-overlay--hidden");
 });
 
 test("Escape closes the dialog", async () => {

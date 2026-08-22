@@ -314,6 +314,16 @@ describe("team fields", () => {
     expect(await store.clearLegacyFields("nope")).toBeNull();
   });
 
+  test("clearLegacyFields bumps updatedAt like every other mutator", async () => {
+    const before = await store.upsertFolder({ id: "legacy", name: "Old", shared: true, orgName: "gw2eww" });
+    const cleared = await store.clearLegacyFields("legacy");
+    expect(new Date(cleared.updatedAt).getTime()).toBeGreaterThan(new Date(before.updatedAt).getTime() - 1);
+    expect(cleared.updatedAt).not.toBe(before.updatedAt);
+    // a no-op clear must not churn updatedAt
+    const again = await store.clearLegacyFields("legacy");
+    expect(again.updatedAt).toBe(cleared.updatedAt);
+  });
+
   test("persists teamId/role on create and update; null clears", async () => {
     const f = await store.upsertFolder({ id: "team-1", name: "EWW", shared: true, teamId: "team-1", role: "owner" });
     expect(f).toMatchObject({ shared: true, teamId: "team-1", role: "owner" });

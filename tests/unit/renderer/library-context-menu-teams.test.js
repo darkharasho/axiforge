@@ -4,8 +4,10 @@
  * Task 4 (Team Sync UI): the folder context menu must gate the team actions on
  * the *item's* team root and the user's role in it:
  *   - team folder            → "Share…" + "Pull now"
- *   - team ROOT + owner      → "Stop sharing" and a disabled "Delete Folder"
- *   - team sub-folder        → no "Stop sharing" (root only)
+ *   - team ROOT              → no "Stop sharing" (TeamSync.stopSharing refuses a
+ *                              root; the root goes by leaving/deleting the team)
+ *                              and a disabled "Delete Folder"
+ *   - team SUB-folder + owner→ "Stop sharing", called with the sub-folder's id
  *   - team folder as member  → no "Stop sharing"
  *   - top-level personal     → "Share…", signed in or not (the modal handles sign-in)
  *   - nested personal folder → no team actions (only a top-level folder can be a root)
@@ -89,31 +91,34 @@ function itemFor(menu, label) {
     .find((el) => el.querySelector(".lib-ctx-item__label")?.textContent === label);
 }
 
-test("owner on the team root gets Pull now + Stop sharing, and Delete Folder is disabled", () => {
+test("owner on the team root gets Pull now but NOT Stop sharing, and Delete Folder is disabled", () => {
   const menu = openFolderMenu("t");
   const l = labels(menu);
   expect(l).toContain("Share…");
   expect(l).toContain("Pull now");
-  expect(l).toContain("Stop sharing");
+  // TeamSync.stopSharing throws "Not a shared sub-folder of a team." for a root,
+  // so offering it here was a guaranteed-failure affordance.
+  expect(l).not.toContain("Stop sharing");
 
   const del = itemFor(menu, "Delete Folder");
   expect(del.className).toContain("lib-ctx-item--disabled");
   expect(del.title).toBe("Leave or delete the team in Settings → Teams");
 });
 
-test("owner on a team SUB-folder gets Pull now but not Stop sharing, and can delete it", () => {
+test("owner on a team SUB-folder gets Pull now AND Stop sharing, and can delete it", () => {
   const menu = openFolderMenu("a");
   const l = labels(menu);
   expect(l).toContain("Pull now");
-  expect(l).not.toContain("Stop sharing");
+  expect(l).toContain("Stop sharing");
   expect(itemFor(menu, "Delete Folder").className).not.toContain("lib-ctx-item--disabled");
 });
 
-test("a member gets Pull now but never Stop sharing", () => {
-  const menu = openFolderMenu("m");
-  const l = labels(menu);
-  expect(l).toContain("Pull now");
-  expect(l).not.toContain("Stop sharing");
+test("a member gets Pull now but never Stop sharing, on the root or a sub-folder", () => {
+  expect(labels(openFolderMenu("m"))).toContain("Pull now");
+  expect(labels(openFolderMenu("m"))).not.toContain("Stop sharing");
+
+  state.folders = [...state.folders, { id: "ms", name: "Theirs", parentId: "m" }];
+  expect(labels(openFolderMenu("ms"))).not.toContain("Stop sharing");
 });
 
 test("a top-level personal folder offers Share…, signed in or not", () => {
@@ -156,17 +161,18 @@ test("Share… on a team folder opens the same modal (invite code + members)", (
   expect(openShareModal).toHaveBeenCalledWith("t", expect.objectContaining({ onRefresh: expect.any(Function) }));
 });
 
-test("Stop sharing only calls through once confirmed", async () => {
+test("Stop sharing only calls through once confirmed, with the SUB-folder's id", async () => {
   showConfirmModal.mockResolvedValueOnce(false);
-  let menu = openFolderMenu("t");
+  let menu = openFolderMenu("a");
   itemFor(menu, "Stop sharing").dispatchEvent(new MouseEvent("click", { bubbles: true }));
   await new Promise((r) => setTimeout(r, 0));
   expect(folderStore.stopSharingFolder).not.toHaveBeenCalled();
 
-  menu = openFolderMenu("t");
+  menu = openFolderMenu("a");
   itemFor(menu, "Stop sharing").dispatchEvent(new MouseEvent("click", { bubbles: true }));
   await new Promise((r) => setTimeout(r, 0));
-  expect(folderStore.stopSharingFolder).toHaveBeenCalledWith("t");
+  // Not "t": TeamSync.stopSharing rejects the team root outright.
+  expect(folderStore.stopSharingFolder).toHaveBeenCalledWith("a");
 });
 
 test("multi-select move is allowed when only personal + owned-team items are selected (R3a)", () => {

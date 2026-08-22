@@ -267,18 +267,29 @@ describe("per-ID publish progress", () => {
     expect(statusEl.dataset.publishId).toBeUndefined();
   });
 
-  test("clearPublishProgress is safe when publish entry doesn't exist", () => {
-    const { state } = stateModule;
+  test("clearPublishProgress leaves a ticker owned by another item alone", () => {
     const statusEl = makeStatusEl();
     renderPages.initRenderPagesDom({ publishStatus: statusEl });
 
-    // Attempt to clear a non-existent entry
+    // comp A owns the ticker; cancelling comp B's publish must not wipe it.
+    statusEl.innerHTML = "<div>A publishing…</div>";
+    statusEl.dataset.publishId = "comp-a";
+
+    renderPages.clearPublishProgress("comp-b");
+
+    expect(statusEl.innerHTML).toBe("<div>A publishing\u2026</div>");
+    expect(statusEl.dataset.publishId).toBe("comp-a");
+  });
+
+  test("clearPublishProgress is safe when the ticker is unowned", () => {
+    const statusEl = makeStatusEl();
+    renderPages.initRenderPagesDom({ publishStatus: statusEl });
+
     statusEl.innerHTML = "<div>old</div>";
-    statusEl.dataset.publishId = "old-id";
+    delete statusEl.dataset.publishId;
 
     renderPages.clearPublishProgress("nonexistent-id");
 
-    // DOM should still be cleared
     expect(statusEl.innerHTML).toBe("");
     expect(statusEl.dataset.publishId).toBeUndefined();
   });

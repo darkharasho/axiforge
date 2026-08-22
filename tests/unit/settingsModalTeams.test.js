@@ -5,6 +5,9 @@ jest.mock("../../src/renderer/modules/custom-select.js", () => ({ renderCustomSe
 jest.mock("../../src/renderer/modules/utils.js", () => ({ escapeHtml: (s) => String(s), delay: () => Promise.resolve(), relativeTime: () => "just now" }));
 jest.mock("../../src/renderer/modules/confirm-modal.js", () => ({ showConfirmModal: jest.fn(async () => true) }));
 jest.mock("../../src/renderer/modules/choice-modal.js", () => ({ showChoiceModal: jest.fn() }));
+// Electron's renderer has no window.prompt(); everything that asks for a string
+// goes through the modal helper, so that is what the rename path must call.
+jest.mock("../../src/renderer/modules/prompt-modal.js", () => ({ showPrompt: jest.fn() }));
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -160,6 +163,88 @@ describe("settings-modal — Teams pane", () => {
     await flush(); await flush(); await flush();
     expect(showChoiceModal).toHaveBeenCalled();
     expect(api.migrateOrgLibrary).toHaveBeenCalledWith({ teamId: "t9" });
+  });
+
+  test("rename uses the modal prompt, never window.prompt (Electron throws on it)", async () => {
+    const { showPrompt } = require("../../src/renderer/modules/prompt-modal.js");
+    showPrompt.mockResolvedValue("EWW Reloaded");
+    // Exactly what Electron does — if the handler still called it, the catch
+    // would paint "Error: prompt() is and will not be supported."
+    window.prompt = () => { throw new Error("prompt() is and will not be supported."); };
+    api.getTeamSession.mockResolvedValue({ login: "me", userId: "u1" });
+    api.listTeams.mockResolvedValue([{ team: { id: "t1", name: "EWW", inviteCode: "ABCDEFGHJK" }, role: "owner" }]);
+    mod.openSettingsModal({ initialPane: "teams" });
+    await flush(); await flush();
+
+    document.querySelector(".sm-team [data-act='rename']").click();
+    await flush(); await flush();
+
+    expect(showPrompt).toHaveBeenCalledWith("New team name", "EWW");
+    expect(api.renameTeam).toHaveBeenCalledWith("t1", "EWW Reloaded");
+    expect(document.getElementById("sm-teams-status").textContent).not.toMatch(/^Error/);
+  });
+
+  test("cancelling the rename prompt changes nothing", async () => {
+    const { showPrompt } = require("../../src/renderer/modules/prompt-modal.js");
+    showPrompt.mockResolvedValue(null);
+    api.getTeamSession.mockResolvedValue({ login: "me", userId: "u1" });
+    api.listTeams.mockResolvedValue([{ team: { id: "t1", name: "EWW", inviteCode: "ABCDEFGHJK" }, role: "owner" }]);
+    mod.openSettingsModal({ initialPane: "teams" });
+    await flush(); await flush();
+    document.querySelector(".sm-team [data-act='rename']").click();
+    await flush(); await flush();
+    expect(api.renameTeam).not.toHaveBeenCalled();
+  });
+
+  test("a non-Error rejection still reaches the status line", async () => {
+    api.getTeamSession.mockResolvedValue({ login: "me", userId: "u1" });
+    api.listTeams.mockResolvedValue([{ team: { id: "t1", name: "Guild" }, role: "member" }]);
+    // `err.message` on a bare string is undefined, so this used to render the
+    // useless "Error: undefined" — and an undefined rejection threw inside the
+    // catch outright, showing nothing at all.
+    api.leaveTeam.mockRejectedValue("SYNC_OFFLINE");
+    mod.openSettingsModal({ initialPane: "teams" });
+    await flush(); await flush();
+    document.querySelector(".sm-team [data-act='leave']").click();
+    await flush(); await flush();
+    expect(document.getElementById("sm-teams-status").textContent).toContain("SYNC_OFFLINE");
+  });
+
+  test("legacy org library: a FAILED status probe leaves the migration prompt up", async () => {
+    api.getTeamSession.mockResolvedValue({ login: "me", userId: "u1" });
+    api.legacyLibraryStatus.mockResolvedValue({ hasLegacy: true, orgName: "gw2eww", folders: [{ id: "root0", name: "Root", builds: 1, comps: 0 }] });
+    api.migrateOrgLibrary = jest.fn(async () => { throw new Error("SYNC_OFFLINE"); });
+    mod.openSettingsModal({ initialPane: "teams" });
+    await flush(); await flush();
+    const box = document.getElementById("sm-teams-migrate");
+    expect(box.hidden).toBe(false);
+
+    // The migration fails AND the re-probe from its error path can't reach main.
+    // "Couldn't check" must not be read as "nothing to migrate" — that would take
+    // the only entry point to migration away while the org library is still there.
+    api.legacyLibraryStatus.mockRejectedValue(new Error("EPIPE"));
+    document.getElementById("sm-migrate-new").click();
+    await flush(); await flush(); await flush();
+
+    expect(document.getElementById("sm-teams-status").textContent).toContain("SYNC_OFFLINE");
+    expect(box.hidden).toBe(false);
+    expect(box.textContent).toContain("gw2eww");
+  });
+
+  test("returning to the Teams pane re-checks the GitHub session", async () => {
+    // Signed out of GitHub when Settings opened → the enable button is disabled.
+    api.getSession.mockResolvedValue(null);
+    mod.openSettingsModal({ initialPane: "teams" });
+    await flush(); await flush();
+    expect(document.getElementById("sm-teams-enable").disabled).toBe(true);
+
+    // Signing in elsewhere used to leave it disabled for the life of the modal.
+    api.getSession.mockResolvedValue({ viewer: { login: "me" } });
+    document.querySelector('.settings-modal__nav-item[data-pane="appearance"]').click();
+    await flush();
+    document.querySelector('.settings-modal__nav-item[data-pane="teams"]').click();
+    await flush(); await flush();
+    expect(document.getElementById("sm-teams-enable").disabled).toBe(false);
   });
 
   test("sign out asks for confirmation then calls disableTeamSync", async () => {
