@@ -157,14 +157,21 @@ test("the migrated renderer files no longer use the shared-library compat shims 
 
 test("library UI is wired to teams", () => {
   const cm = fs.readFileSync(path.join(__dirname, "../../src/renderer/modules/library/context-menu.js"), "utf8");
-  expect(cm).toContain("Share to team…");
+  expect(cm).toContain("Share…");
   expect(cm).toContain("Stop sharing");
   expect(cm).toContain("Pull now");
-  expect(cm).toContain("shareFolderToTeam(");
   expect(cm).toContain("stopSharingFolder(");
+  // Sharing itself moved into the share modal, which the menu hands off to.
+  expect(cm).toContain("openShareModal(");
+  const shm = fs.readFileSync(path.join(__dirname, "../../src/renderer/modules/library/share-modal.js"), "utf8");
+  expect(shm).toContain("shareFolderToTeam(");
+  expect(shm).toContain("rotateInvite(");
+  expect(shm).toContain("listTeamMembers(");
   const sb = fs.readFileSync(path.join(__dirname, "../../src/renderer/modules/library/sidebar.js"), "utf8");
   expect(sb).toContain("Team Folders");
   expect(sb).toContain("teamLabel(");
+  // context-menu.js dispatches on data-folder-id; without it the sidebar has no menu.
+  expect(sb).toContain("data-folder-id=");
   // No assertion on orgName — Task 6 adds an orphan banner keyed on it (R4).
   // Assert the badges are team-driven instead.
   const ct = fs.readFileSync(path.join(__dirname, "../../src/renderer/modules/library/content.js"), "utf8");

@@ -7,9 +7,9 @@ import { shareDisabledTooltip } from "../share-gate.js";
 import { state } from "../state.js";
 import { showConfirmModal } from "../confirm-modal.js";
 import { isSelected, getSelection, isCompSelected, getCompSelection } from "./selection.js";
-import { shareFolderToTeam, stopSharingFolder, pullTeamFor } from "./folder-store.js";
+import { stopSharingFolder, pullTeamFor } from "./folder-store.js";
 import { isTeamOwner, teamRootFor } from "../teams.js";
-import { showChoiceModal } from "../choice-modal.js";
+import { openShareModal } from "./share-modal.js";
 import {
   playIcon,
   pencilIcon,
@@ -80,46 +80,62 @@ export function closeMenu() {
 }
 
 /**
- * Wire contextmenu listener to #lib-content.
- * Call this after #lib-content is rendered.
+ * Wire contextmenu listeners to the library's two right-clickable surfaces:
+ * #lib-content (the list page) and #lib-sidebar (the folder tree). Both dispatch
+ * through the same handler, so a sidebar folder gets the identical menu its row
+ * on the list page gets. Call this after #lib-content is rendered.
+ *
+ * Both containers survive their own re-renders (only innerHTML is replaced), so
+ * one listener each outlives every render.
  */
 export function wireContextMenuEvents() {
-  const container = document.getElementById("lib-content");
-  if (!container) return;
+  _bindOnce(document.getElementById("lib-content"));
+  _bindOnce(document.getElementById("lib-sidebar"));
+}
 
-  container.addEventListener("contextmenu", (e) => {
-    e.preventDefault();
+/**
+ * renderLibrary() calls wireContextMenuEvents() on every render, so binding
+ * unconditionally would stack one listener per render for the life of the
+ * session. The marker keeps it to one per element.
+ */
+function _bindOnce(el) {
+  if (!el || el.dataset.ctxBound === "1") return;
+  el.dataset.ctxBound = "1";
+  el.addEventListener("contextmenu", _onContextMenu);
+}
 
-    const buildEl = e.target.closest("[data-build-id]");
-    const folderEl = e.target.closest("[data-folder-id]");
-    const compEl = e.target.closest("[data-comp-id]");
+function _onContextMenu(e) {
+  e.preventDefault();
 
-    if (buildEl) {
-      const buildId = buildEl.dataset.buildId;
-      // Multi-select: build is part of a selection with >1 items
-      if (isSelected(buildId) && getSelection().length > 1) {
-        showMultiSelectMenu(e.clientX, e.clientY, getSelection());
-      } else {
-        const build = state.builds.find((b) => b.id === buildId);
-        showBuildMenu(e.clientX, e.clientY, buildId, build);
-      }
-    } else if (compEl) {
-      const compId = compEl.dataset.compId;
-      // Multi-select: comp is part of a selection with >1 items
-      if (isCompSelected(compId) && getCompSelection().length > 1) {
-        showMultiCompSelectMenu(e.clientX, e.clientY, getCompSelection());
-      } else {
-        const comp = state.comps?.find((c) => c.id === compId);
-        showCompMenu(e.clientX, e.clientY, compId, comp);
-      }
-    } else if (folderEl) {
-      const folderId = folderEl.dataset.folderId;
-      const folder = state.folders.find((f) => f.id === folderId);
-      showFolderMenu(e.clientX, e.clientY, folderId, folder);
+  const buildEl = e.target.closest("[data-build-id]");
+  const folderEl = e.target.closest("[data-folder-id]");
+  const compEl = e.target.closest("[data-comp-id]");
+
+  if (buildEl) {
+    const buildId = buildEl.dataset.buildId;
+    // Multi-select: build is part of a selection with >1 items
+    if (isSelected(buildId) && getSelection().length > 1) {
+      showMultiSelectMenu(e.clientX, e.clientY, getSelection());
     } else {
-      showEmptyMenu(e.clientX, e.clientY);
+      const build = state.builds.find((b) => b.id === buildId);
+      showBuildMenu(e.clientX, e.clientY, buildId, build);
     }
-  });
+  } else if (compEl) {
+    const compId = compEl.dataset.compId;
+    // Multi-select: comp is part of a selection with >1 items
+    if (isCompSelected(compId) && getCompSelection().length > 1) {
+      showMultiCompSelectMenu(e.clientX, e.clientY, getCompSelection());
+    } else {
+      const comp = state.comps?.find((c) => c.id === compId);
+      showCompMenu(e.clientX, e.clientY, compId, comp);
+    }
+  } else if (folderEl) {
+    const folderId = folderEl.dataset.folderId;
+    const folder = state.folders.find((f) => f.id === folderId);
+    showFolderMenu(e.clientX, e.clientY, folderId, folder);
+  } else {
+    showEmptyMenu(e.clientX, e.clientY);
+  }
 }
 
 // ─── Ownership helpers ──────────────────────────────────────────────────────────
@@ -262,17 +278,21 @@ function showFolderMenu(x, y, folderId, folder) {
 }
 
 /**
- * Team actions for a folder menu.
- * Inside a team: "Pull now" always, plus "Stop sharing" for the team OWNER on
- * the team ROOT only (sub-folders are removed by deleting them). Outside a
- * team: "Share to team…" once the user has a team session.
+ * Team actions for a folder menu. "Share…" opens the share modal either way —
+ * it shows the invite code and members for a folder already in a team, and the
+ * team picker for one that isn't. Inside a team we also offer "Pull now", plus
+ * "Stop sharing" for the team OWNER on the team ROOT only (sub-folders are
+ * removed by deleting them).
  */
 function _folderTeamItems(folderId, folder, teamRoot, isTeamRoot) {
   const label = escapeHtml(folder?.name || folderId);
 
   if (teamRoot) {
     return [
-      _item(shareIcon, "Pull now", null, async () => {
+      _item(shareIcon, "Share…", null, () => {
+        openShareModal(folderId, { onRefresh: () => _callbacks.onRefresh?.() });
+      }),
+      _item(arrowDownTrayIcon, "Pull now", null, async () => {
         try {
           await pullTeamFor(folderId);
         } catch (err) {
@@ -300,46 +320,14 @@ function _folderTeamItems(folderId, folder, teamRoot, isTeamRoot) {
     ];
   }
 
-  if (!state.teamSession) return [];
-
   // Only top-level personal folders can become a team root.
   if (!folder || folder.parentId) return [];
 
+  // No team-session gate: the modal signs the user in itself, so the action is
+  // never a dead end that sends them to Settings and back.
   return [
-    _item(shareIcon, "Share to team…", null, async () => {
-      if (!state.teams?.length) {
-        _toast("Create or join a team in Settings → Teams first.", "info");
-        return;
-      }
-      let teamId = state.teams[0].team.id;
-      if (state.teams.length > 1) {
-        teamId = await showChoiceModal({
-          title: "Share to which team?",
-          body: `Share <strong>${label}</strong> and everything in it.`,
-          choices: state.teams.map(({ team }) => ({ id: team.id, label: team.name })),
-        });
-        if (!teamId) return;
-      } else {
-        const ok = await showConfirmModal({
-          title: `Share to ${escapeHtml(state.teams[0].team.name)}?`,
-          body: `<strong>${label}</strong> and all builds and comps inside it will be visible and editable by everyone in the team.`,
-          confirmLabel: "Share",
-          cancelLabel: "Cancel",
-        });
-        if (!ok) return;
-      }
-      try {
-        const { uploaded = 0, failed = [] } = (await shareFolderToTeam(folderId, teamId)) || {};
-        _toast(
-          failed.length
-            ? `Shared ${uploaded} items; ${failed.length} failed: ${failed.map((f) => f.message).join("; ")}`
-            : `Shared ${uploaded} items to the team.`,
-          failed.length ? "warning" : "success",
-        );
-      } catch (err) {
-        _toast(err?.message || "Sharing to the team failed.", "error");
-      }
-      _callbacks.onRefresh?.();
+    _item(shareIcon, "Share…", null, () => {
+      openShareModal(folderId, { onRefresh: () => _callbacks.onRefresh?.() });
     }),
   ];
 }

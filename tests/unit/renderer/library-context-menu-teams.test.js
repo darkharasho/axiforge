@@ -3,12 +3,12 @@
  *
  * Task 4 (Team Sync UI): the folder context menu must gate the team actions on
  * the *item's* team root and the user's role in it:
- *   - team folder            → "Pull now"
+ *   - team folder            → "Share…" + "Pull now"
  *   - team ROOT + owner      → "Stop sharing" and a disabled "Delete Folder"
  *   - team sub-folder        → no "Stop sharing" (root only)
  *   - team folder as member  → no "Stop sharing"
- *   - personal folder        → "Share to team…" (only with a team session)
- *   - no team session        → none of the above
+ *   - top-level personal     → "Share…", signed in or not (the modal handles sign-in)
+ *   - nested personal folder → no team actions (only a top-level folder can be a root)
  */
 "use strict";
 
@@ -27,8 +27,8 @@ jest.mock("../../../src/renderer/modules/library/folder-store.js", () => ({
 jest.mock("../../../src/renderer/modules/confirm-modal.js", () => ({
   showConfirmModal: jest.fn(async () => true),
 }));
-jest.mock("../../../src/renderer/modules/choice-modal.js", () => ({
-  showChoiceModal: jest.fn(async () => null),
+jest.mock("../../../src/renderer/modules/library/share-modal.js", () => ({
+  openShareModal: jest.fn(),
 }));
 jest.mock("../../../src/renderer/modules/library/selection.js", () => ({
   isSelected: jest.fn(() => false),
@@ -39,7 +39,7 @@ jest.mock("../../../src/renderer/modules/library/selection.js", () => ({
 
 const { state } = require("../../../src/renderer/modules/state.js");
 const folderStore = require("../../../src/renderer/modules/library/folder-store.js");
-const { showChoiceModal } = require("../../../src/renderer/modules/choice-modal.js");
+const { openShareModal } = require("../../../src/renderer/modules/library/share-modal.js");
 const { showConfirmModal } = require("../../../src/renderer/modules/confirm-modal.js");
 const { wireContextMenuEvents, closeMenu, initContextMenu } =
   require("../../../src/renderer/modules/library/context-menu.js");
@@ -48,6 +48,7 @@ const OWNED_ROOT = { id: "t", name: "EWW", parentId: null, shared: true, teamId:
 const OWNED_SUB = { id: "a", name: "Sub", parentId: "t" };
 const MEMBER_ROOT = { id: "m", name: "Guild", parentId: null, shared: true, teamId: "m", role: "member" };
 const PERSONAL = { id: "p", name: "Personal", parentId: null };
+const PERSONAL_SUB = { id: "ps", name: "Nested", parentId: "p" };
 
 let toasts;
 
@@ -58,7 +59,7 @@ beforeEach(() => {
   selection.getSelection.mockReturnValue([]);
   closeMenu();
   toasts = [];
-  state.folders = [OWNED_ROOT, OWNED_SUB, MEMBER_ROOT, PERSONAL];
+  state.folders = [OWNED_ROOT, OWNED_SUB, MEMBER_ROOT, PERSONAL, PERSONAL_SUB];
   state.builds = [];
   state.comps = [];
   state.currentFolder = null;
@@ -91,9 +92,9 @@ function itemFor(menu, label) {
 test("owner on the team root gets Pull now + Stop sharing, and Delete Folder is disabled", () => {
   const menu = openFolderMenu("t");
   const l = labels(menu);
+  expect(l).toContain("Share…");
   expect(l).toContain("Pull now");
   expect(l).toContain("Stop sharing");
-  expect(l).not.toContain("Share to team…");
 
   const del = itemFor(menu, "Delete Folder");
   expect(del.className).toContain("lib-ctx-item--disabled");
@@ -105,7 +106,6 @@ test("owner on a team SUB-folder gets Pull now but not Stop sharing, and can del
   const l = labels(menu);
   expect(l).toContain("Pull now");
   expect(l).not.toContain("Stop sharing");
-  expect(l).not.toContain("Share to team…");
   expect(itemFor(menu, "Delete Folder").className).not.toContain("lib-ctx-item--disabled");
 });
 
@@ -116,57 +116,44 @@ test("a member gets Pull now but never Stop sharing", () => {
   expect(l).not.toContain("Stop sharing");
 });
 
-test("a personal folder offers Share to team… when signed in", () => {
-  expect(labels(openFolderMenu("p"))).toContain("Share to team…");
-});
+test("a top-level personal folder offers Share…, signed in or not", () => {
+  expect(labels(openFolderMenu("p"))).toContain("Share…");
 
-test("with no team session none of the team actions appear", () => {
+  // The old menu hid the item without a session, which made the action a dead
+  // end that sent the user to Settings. The modal signs them in itself now.
   state.teamSession = null;
   state.teams = [];
   const l = labels(openFolderMenu("p"));
-  expect(l).not.toContain("Share to team…");
+  expect(l).toContain("Share…");
   expect(l).not.toContain("Pull now");
   expect(l).not.toContain("Stop sharing");
 });
 
-test("signed in with no teams: Share to team… points the user at Settings → Teams", async () => {
-  state.teams = [];
+test("a nested personal folder offers no team actions — only a top-level folder can be a team root", () => {
+  const l = labels(openFolderMenu("ps"));
+  expect(l).not.toContain("Share…");
+  expect(l).not.toContain("Pull now");
+});
+
+test("Share… hands off to the share modal with the folder and a refresh callback", () => {
+  let refreshed = 0;
+  initContextMenu({ onToast: () => {}, onRefresh: () => { refreshed++; } });
   const menu = openFolderMenu("p");
-  itemFor(menu, "Share to team…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
-  await Promise.resolve();
+  itemFor(menu, "Share…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+  expect(openShareModal).toHaveBeenCalledTimes(1);
+  const [folderId, opts] = openShareModal.mock.calls[0];
+  expect(folderId).toBe("p");
+  opts.onRefresh();
+  expect(refreshed).toBe(1);
+  // The menu no longer shares anything itself — that lives in the modal.
   expect(folderStore.shareFolderToTeam).not.toHaveBeenCalled();
-  expect(toasts[0].m).toContain("Settings → Teams");
 });
 
-test("one team: Share to team… confirms and shares to that team", async () => {
-  const menu = openFolderMenu("p");
-  itemFor(menu, "Share to team…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
-  await new Promise((r) => setTimeout(r, 0));
-  expect(showConfirmModal).toHaveBeenCalled();
-  expect(showChoiceModal).not.toHaveBeenCalled();
-  expect(folderStore.shareFolderToTeam).toHaveBeenCalledWith("p", "t");
-});
-
-test("several teams: Share to team… asks which team, and a dismissed picker shares nothing", async () => {
-  state.teams = [
-    { team: { id: "t", name: "EWW" }, role: "owner" },
-    { team: { id: "m", name: "Guild" }, role: "member" },
-  ];
-  showChoiceModal.mockResolvedValueOnce("m");
-  let menu = openFolderMenu("p");
-  itemFor(menu, "Share to team…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
-  await new Promise((r) => setTimeout(r, 0));
-  expect(showChoiceModal.mock.calls[0][0].choices).toEqual([
-    { id: "t", label: "EWW" },
-    { id: "m", label: "Guild" },
-  ]);
-  expect(folderStore.shareFolderToTeam).toHaveBeenCalledWith("p", "m");
-
-  showChoiceModal.mockResolvedValueOnce(null);
-  menu = openFolderMenu("p");
-  itemFor(menu, "Share to team…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
-  await new Promise((r) => setTimeout(r, 0));
-  expect(folderStore.shareFolderToTeam).toHaveBeenCalledTimes(1);
+test("Share… on a team folder opens the same modal (invite code + members)", () => {
+  const menu = openFolderMenu("t");
+  itemFor(menu, "Share…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  expect(openShareModal).toHaveBeenCalledWith("t", expect.objectContaining({ onRefresh: expect.any(Function) }));
 });
 
 test("Stop sharing only calls through once confirmed", async () => {
@@ -225,7 +212,7 @@ test("Pull now toasts and still refreshes when the pull fails, with no unhandled
 
 test("a right-click on an unknown folder id offers no team actions", () => {
   const l = labels(openFolderMenu("does-not-exist"));
-  expect(l).not.toContain("Share to team…");
+  expect(l).not.toContain("Share…");
   expect(l).not.toContain("Pull now");
   expect(l).not.toContain("Stop sharing");
 });

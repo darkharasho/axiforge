@@ -229,6 +229,9 @@ function renderFolderItem(folder, expanded, depth) {
         class="lib-nav-item ${isActive ? "lib-nav-item--active" : ""}"
         style="padding-left: ${16 + indent}px"
         data-navigate-folder="${escapeHtml(folder.id)}"
+        ${/* data-folder-id is what context-menu.js dispatches on, so right-clicking
+             a sidebar folder gets the same menu as its row on the list page. */ ""}
+        data-folder-id="${escapeHtml(folder.id)}"
       >
         ${hasChildren
           ? `<span class="lib-nav-item__chevron" data-toggle-folder="${escapeHtml(folder.id)}">${isExpanded ? chevronDownIcon : chevronRightIcon}</span>`

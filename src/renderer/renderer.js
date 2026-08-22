@@ -52,6 +52,7 @@ import { loadTeamState, seedSyncStatusFromOutbox, teamRootFor } from "./modules/
 import { applyBadge } from "./modules/sync-status.js";
 import { pickWebhooks } from "./modules/webhook-picker.js";
 import { initImportConflictModal } from "./modules/import-conflict-modal.js";
+import { initShareModal } from "./modules/library/share-modal.js";
 import { initSettingsModal, initSettingsCallbacks, openSettingsModal } from "./modules/settings-modal.js";
 import { initLibrary, renderLibrary, handleLibraryKeydown, showToast } from "./modules/library/library.js";
 import { clearUndo as clearLibraryUndo } from "./modules/library/undo.js";
@@ -260,6 +261,7 @@ initDetailModal();
 initConfirmModal();
 initChoiceModal();
 initImportConflictModal();
+initShareModal();
 initSettingsModal();
 initWhatsNewModal();
 initDetailPanel(

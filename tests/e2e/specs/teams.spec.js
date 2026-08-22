@@ -30,6 +30,20 @@ function resetSyncServer() {
   });
 }
 
+
+/** Settings → Teams: sign in and create a team, the way a user would. */
+async function enableSyncAndCreateTeam(window, name) {
+  await window.click("#workspaceBtn");
+  await window.click('.ws-menu-item:has-text("Settings")');
+  await window.click(".settings-modal__nav-item[data-pane='teams']");
+  await window.click("#sm-teams-enable");
+  await expect(window.locator("#sm-teams-on")).toBeVisible();
+  await window.fill("#sm-team-create-name", name);
+  await window.click("#sm-team-create");
+  await expect(window.locator(".sm-team__name", { hasText: name })).toBeVisible();
+  await window.click("#sm-close");
+}
+
 test.describe("Teams", () => {
   test.beforeEach(async () => {
     // The mock server's `db` persists across tests in this file (it lives in
@@ -102,6 +116,70 @@ test.describe("Teams", () => {
     ({ app, window } = await launchApp({ clean: false, env: unreachable }));
     const outbox = await window.evaluate(() => desktopApi.listOutbox());
     expect(Object.values(outbox).flat().length).toBe(1);
+    await closeApp(app);
+  });
+
+  test("sidebar right-click → Share… opens the share modal with the invite code", async () => {
+    cleanDataDir();
+    seedGithubAuth();
+    const { app, window } = await launchApp({ clean: false });
+    await enableSyncAndCreateTeam(window, "Sidebar Team");
+    await window.click(".leftnav__item[data-page='library']");
+
+    // The whole point of the feature: the LEFT SIDEBAR is right-clickable, not
+    // just the list page. context-menu.js dispatches on data-folder-id, which
+    // sidebar.js now emits alongside data-navigate-folder.
+    const sidebarFolder = window.locator(".lib-sidebar [data-folder-id]", { hasText: "Sidebar Team" });
+    await sidebarFolder.click({ button: "right" });
+    const menu = window.locator(".lib-ctx-menu").first();
+    await expect(menu).toBeVisible();
+    await menu.locator(".lib-ctx-item__label", { hasText: "Share" }).first().click();
+
+    await expect(window.locator(".shm")).toBeVisible();
+    await expect(window.locator("#shm-title")).toHaveText(/Sharing "Sidebar Team"/);
+    await expect(window.locator("#shm-invite-code")).not.toBeEmpty();
+    // Members load asynchronously from the mock server.
+    await expect(window.locator(".shm__member-name", { hasText: "e2e" })).toBeVisible();
+
+    await window.keyboard.press("Escape");
+    await expect(window.locator(".shm")).toBeHidden();
+    await closeApp(app);
+  });
+
+  test("list-page right-click → Share… reaches the same modal", async () => {
+    cleanDataDir();
+    seedGithubAuth();
+    const { app, window } = await launchApp({ clean: false });
+    await enableSyncAndCreateTeam(window, "List Team");
+    await window.click(".leftnav__item[data-page='library']");
+
+    await window.locator("#lib-content [data-folder-id]").first().click({ button: "right" });
+    const menu = window.locator(".lib-ctx-menu").first();
+    await expect(menu).toBeVisible();
+    await menu.locator(".lib-ctx-item__label", { hasText: "Share" }).first().click();
+    await expect(window.locator("#shm-invite-code")).not.toBeEmpty();
+    await closeApp(app);
+  });
+
+  test("signed out → Share… offers to enable sync instead of dead-ending", async () => {
+    cleanDataDir();
+    // No auth.json at all: the app has never signed in to GitHub.
+    const { app, window } = await launchApp({ clean: false });
+    await window.click(".leftnav__item[data-page='library']");
+    await window.click("#lib-new-folder-btn");
+    await window.fill(".lib-inline-input", "Solo Folder");
+    await window.keyboard.press("Enter");
+
+    const folder = window.locator(".lib-sidebar [data-folder-id]", { hasText: "Solo Folder" });
+    await expect(folder).toBeVisible();
+    await folder.click({ button: "right" });
+    const menu = window.locator(".lib-ctx-menu").first();
+    await menu.locator(".lib-ctx-item__label", { hasText: "Share" }).first().click();
+
+    // Before this feature the menu item was hidden entirely without a team
+    // session, so the only path was Settings → Teams.
+    await expect(window.locator(".shm")).toBeVisible();
+    await expect(window.locator('[data-act="enable"]')).toBeVisible();
     await closeApp(app);
   });
 });
