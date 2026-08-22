@@ -5,7 +5,6 @@ test("auth + onboarding report signed-out / unconfigured", async () => {
   expect(await s.getSession()).toEqual({ signedIn: false });
   expect(await s.getOnboardingStatus()).toEqual({ configured: false });
   expect(await s.listTargets()).toEqual([]);
-  expect(await s.getSharedLibraryConfig()).toBeNull();
 });
 
 test("event registrars accept a callback and do not throw", () => {

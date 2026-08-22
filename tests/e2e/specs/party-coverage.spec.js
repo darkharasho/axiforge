@@ -1,21 +1,12 @@
 const { test, expect } = require("playwright/test");
 const { launchApp, closeApp, cleanDataDir } = require("../helpers/app");
+const { openFirstComp } = require("../helpers/comps");
 const { goToComps } = require("../helpers/nav");
 const { seedBuildFile, seedCompFile } = require("../helpers/data");
 const { makeTestBuild, makeTestComp, uuid } = require("../helpers/builds");
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-async function waitForCompDetail(window) {
-  await window.waitForSelector(".comp-detail", { timeout: 5000 });
-  await window.waitForTimeout(300);
-}
-
-async function openFirstComp(window) {
-  const row = window.locator(".comp-list-row[data-comp-id]").first();
-  await row.dblclick();
-  await waitForCompDetail(window);
-}
 
 async function waitForPartyCoverage(window) {
   await window.waitForFunction(

@@ -2,6 +2,14 @@
 // Fixed-window counter in KV. Key = `${key}:${windowStart}`; value = count; TTL =
 // window. KV is eventually consistent, so this is a soft limit — fine for
 // abuse-dampening, not for billing.
+//
+// Deliberate, known limitations:
+//  * The read-modify-write below is NOT atomic and KV has no CAS, so N
+//    concurrent requests in the same window can all observe the same count and
+//    all pass. The real ceiling is therefore "limit per serialised round".
+//    Making it exact needs a Durable Object, which is out of scope here.
+//  * A KV error fails OPEN (see the catches): a KV outage must not block every
+//    write in the Worker.
 
 async function checkRateLimit(kv, key, limit, windowSeconds, deps = {}, cost = 1) {
   if (!kv) return { ok: true, retryAfterSeconds: 0 };

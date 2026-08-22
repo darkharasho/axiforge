@@ -3,7 +3,7 @@
 // Application-level orchestration (init, wireEvents, setProfession, etc.) lives here.
 
 import { state, createEmptyEditor } from "./modules/state.js";
-import { delay, wireTagInput, escapeHtml } from "./modules/utils.js";
+import { delay, wireTagInput, escapeHtml, relativeTime } from "./modules/utils.js";
 import { injectSkeleton } from "./modules/skeleton.js";
 
 import { initCustomSelect, closeCustomSelect } from "./modules/custom-select.js";
@@ -39,17 +39,22 @@ import {
   setPublishStatus, showError, runPagesBuildPoll, getSelectedTarget,
   showPublishProgress, advancePublishStep, completeAllPublishSteps,
   failPublishStep, showPublishResult, getPublishTargetId, syncPublishStatus,
-  resolvePublishedUrl,
+  resolvePublishedUrl, clearPublishProgress,
 } from "./modules/render-pages.js";
+import { publishWithOwnerCheck, publishedByOtherBody } from "./modules/publish-guard.js";
 import { resolveEntityFacts } from "./modules/detail-panel.js";
 import { resetWikiResolution } from "./modules/wiki-updates.js";
 import { initWikiModal, openWikiModal } from "./modules/wiki-modal.js";
 import { initWhatsNewModal, maybeAutoOpenWhatsNew } from "./modules/whats-new-modal.js";
 import { initDetailModal, openDetailModal } from "./modules/detail-modal.js";
 import { initConfirmModal, showConfirmModal } from "./modules/confirm-modal.js";
+import { initChoiceModal, showChoiceModal } from "./modules/choice-modal.js";
+import { loadTeamState, seedSyncStatusFromOutbox, teamRootFor } from "./modules/teams.js";
+import { applyBadge } from "./modules/sync-status.js";
 import { pickWebhooks } from "./modules/webhook-picker.js";
 import { initImportConflictModal } from "./modules/import-conflict-modal.js";
-import { initSettingsModal, initSettingsCallbacks } from "./modules/settings-modal.js";
+import { initShareModal } from "./modules/library/share-modal.js";
+import { initSettingsModal, initSettingsCallbacks, openSettingsModal } from "./modules/settings-modal.js";
 import { initLibrary, renderLibrary, handleLibraryKeydown, showToast } from "./modules/library/library.js";
 import { clearUndo as clearLibraryUndo } from "./modules/library/undo.js";
 import { initComps, loadComps, renderComps } from "./modules/comps/comps.js";
@@ -64,18 +69,15 @@ document.body.classList.add("forge-render");
 let _lastGameMode = "pve";
 let _stashedTheme = null;
 let _themedBuildsEnabled = false;
+// One "couldn't queue a change" toast per session — every failed enqueue after
+// the first would say the same thing.
+let _outboxToastShown = false;
 
 // ── Sync-status helpers ──────────────────────────────────────────────────────
 
-// Walk up the parentId chain in state.folders to find the nearest folder with shared:true.
+// Nearest ancestor (or self) that is a team root folder.
 function _findRootSharedFolderInState(folderId) {
-  let current = state.folders.find((f) => f.id === folderId);
-  while (current) {
-    if (current.shared) return current;
-    if (!current.parentId) return null;
-    current = state.folders.find((f) => f.id === current.parentId);
-  }
-  return null;
+  return teamRootFor(folderId);
 }
 
 // True while the user is editing an inline rename / new-folder input.
@@ -84,78 +86,137 @@ function _inlineEditingActive() {
   return !!document.querySelector(".lib-inline-input");
 }
 
-// Inline SVGs for sync indicators (no external imports needed)
-const _syncSpinnerSvg = `<svg class="sync-spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 2a10 10 0 0 1 10 10"/></svg>`;
-const _syncCheckSvg = `<svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd"/></svg>`;
-const _syncErrorSvg = `<svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.346 0-2.189-1.458-1.515-2.625L8.485 2.495ZM10 5a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 10 5Zm0 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clip-rule="evenodd"/></svg>`;
-
 // Apply or remove a sync indicator on all content item elements for a build or comp.
 function _updateItemSyncIndicators(type, id, status) {
   const attr = type === "build" ? `data-build-id` : `data-comp-id`;
   document.querySelectorAll(`[${attr}="${CSS.escape(id)}"]`).forEach((cardEl) => {
-    let badge = cardEl.querySelector(".lib-content-sync-indicator");
-    if (!status) {
-      badge?.remove();
-      return;
-    }
-    if (!badge) {
-      // Only apply to actual library content cards (which have a named title element).
-      // Elements like comp-detail slot divs also carry data-build-id but are not
-      // library cards — skip them to avoid injecting badges into comp party lines.
-      const nameEl = cardEl.querySelector(".lib-list-row__title, .lib-tv__name, .lib-grid-card__title, .lib-icon-item__label, .lib-col__name");
-      if (!nameEl) return;
-      badge = document.createElement("span");
-      nameEl.appendChild(badge);
-    }
-    badge.className = `lib-content-sync-indicator lib-content-sync-indicator--${status}`;
-    badge.innerHTML = status === "syncing" ? _syncSpinnerSvg : status === "error" ? _syncErrorSvg : _syncCheckSvg;
-    badge.title = status === "syncing" ? "Syncing…" : status === "error" ? "Sync failed" : "Synced";
+    // Only apply to actual library content cards (which have a named title element).
+    // Elements like comp-detail slot divs also carry data-build-id but are not
+    // library cards — skip them to avoid injecting badges into comp party lines.
+    const nameEl = cardEl.querySelector(".lib-list-row__title, .lib-tv__name, .lib-grid-card__title, .lib-icon-item__label, .lib-col__name");
+    if (!nameEl) return;
+    applyBadge(nameEl, status, {
+      className: "lib-content-sync-indicator",
+      onClick: () => _openConflict(type, id),
+    });
   });
 }
 
 // Apply or remove a sync indicator on all sidebar/content folder elements for folderId.
 function _updateFolderSyncIndicators(folderId, status) {
-  // Sidebar nav items
+  // Sidebar nav items — the badge sits before the item count, so seed an empty
+  // placeholder at that position and let applyBadge fill (or remove) it.
   document.querySelectorAll(`[data-navigate-folder="${CSS.escape(folderId)}"]`).forEach((navEl) => {
-    let badge = navEl.querySelector(".lib-nav-item__sync-indicator");
-    if (!status) {
-      badge?.remove();
-      return;
-    }
-    if (!badge) {
-      badge = document.createElement("span");
-      badge.className = "lib-nav-item__sync-indicator";
+    if (status && !navEl.querySelector(".lib-nav-item__sync-indicator")) {
+      const placeholder = document.createElement("span");
+      placeholder.className = "lib-nav-item__sync-indicator";
       const countEl = navEl.querySelector(".lib-nav-item__count");
-      if (countEl) {
-        navEl.insertBefore(badge, countEl);
-      } else {
-        navEl.appendChild(badge);
-      }
+      if (countEl) navEl.insertBefore(placeholder, countEl);
+      else navEl.appendChild(placeholder);
     }
-    badge.className = `lib-nav-item__sync-indicator lib-nav-item__sync-indicator--${status}`;
-    badge.innerHTML = status === "syncing" ? _syncSpinnerSvg : status === "synced" ? _syncCheckSvg : "";
-    badge.title = status === "syncing" ? "Syncing to shared library…" : status === "synced" ? "Synced" : "Sync error";
+    applyBadge(navEl, status, { className: "lib-nav-item__sync-indicator" });
   });
 
-  // Content area folder cards (list/table/grid/icon/columns views)
-  document.querySelectorAll(`[data-folder-id="${CSS.escape(folderId)}"]`).forEach((cardEl) => {
-    let badge = cardEl.querySelector(".lib-content-sync-indicator");
-    if (!status) {
-      badge?.remove();
-      return;
-    }
-    if (!badge) {
-      badge = document.createElement("span");
-      // Find the best anchor: a name/title/label span, or fall back to the card itself
-      const nameEl =
-        cardEl.querySelector(".lib-list-row__title, .lib-tv__name, .lib-grid-card__title, .lib-icon-item__label, .lib-col__name") ||
-        cardEl;
-      nameEl.appendChild(badge);
-    }
-    badge.className = `lib-content-sync-indicator lib-content-sync-indicator--${status}`;
-    badge.innerHTML = status === "syncing" ? _syncSpinnerSvg : status === "synced" ? _syncCheckSvg : "";
-    badge.title = status === "syncing" ? "Syncing…" : status === "synced" ? "Synced" : "Sync error";
+  // Content area folder cards (list/table/grid/icon/columns views).
+  // Scoped to #lib-content on purpose: sidebar nav buttons carry data-folder-id
+  // too (so right-click hits the same menu), and an unscoped query would paint
+  // them a SECOND badge here on top of the nav badge above.
+  const content = document.getElementById("lib-content");
+  if (!content) return;
+  content.querySelectorAll(`[data-folder-id="${CSS.escape(folderId)}"]`).forEach((cardEl) => {
+    // Find the best anchor: a name/title/label span, or fall back to the card itself
+    const nameEl =
+      cardEl.querySelector(".lib-list-row__title, .lib-tv__name, .lib-grid-card__title, .lib-icon-item__label, .lib-col__name") ||
+      cardEl;
+    applyBadge(nameEl, status, { className: "lib-content-sync-indicator" });
   });
+}
+
+// ── Sync conflict resolution ─────────────────────────────────────────────────
+
+// True while a conflict modal is on screen. A second sync-conflict event would
+// otherwise call showChoiceModal again, which dismisses the open one as
+// "cancelled" out from under whoever was mid-read. The unresolved conflict keeps
+// its clickable badge, so nothing is lost by deferring.
+let _conflictModalOpen = false;
+
+// Open the "keep mine / take theirs" modal for a conflicted item. Dismissing it
+// leaves the item conflicted — the badge stays clickable and reopens this.
+async function _openConflict(type, id) {
+  const c = state.conflicts[`${type}:${id}`];
+  if (!c) return;
+  if (_conflictModalOpen) return;
+  const by = c.current?.updatedBy?.login || "a teammate";
+  const when = c.current?.updatedAt ? relativeTime(c.current.updatedAt) : "just now";
+  _conflictModalOpen = true;
+  let choice;
+  try {
+    choice = await showChoiceModal({
+      title: "Sync conflict",
+      body: `<strong>${escapeHtml(c.title || "This item")}</strong> was changed by <strong>${escapeHtml(by)}</strong> ${when} while you were editing.`
+        + (c.current?.deleted ? "<br><br>It was <em>deleted</em> on the team." : ""),
+      choices: [
+        { id: "mine", label: "Keep mine" },
+        { id: "theirs", label: "Take theirs", danger: true },
+      ],
+    });
+  } finally {
+    _conflictModalOpen = false;
+  }
+  if (!choice) return;
+  try {
+    await window.desktopApi.resolveConflict(c.teamId, c.itemId, choice);
+  } catch (err) {
+    showToast(`Couldn't resolve the conflict: ${err.message}`, "error");
+    return;
+  }
+  delete state.conflicts[`${type}:${id}`];
+  // Clear the badge here rather than waiting for a "synced" event: resolving a
+  // remote delete finishes without one, which would strand a dead bolt badge.
+  if (type === "folder") {
+    delete state.folderSyncStatus[id];
+    _updateFolderSyncIndicators(id, null);
+  } else {
+    delete state[type === "build" ? "buildSyncStatus" : "compSyncStatus"][id];
+    _updateItemSyncIndicators(type, id, null);
+  }
+}
+
+// Conflict badges rendered as HTML (library re-render) have no onclick of their
+// own; one delegated listener covers them. It runs in the capture phase so the
+// card's own click listener (open the build) never sees the badge click.
+function _wireConflictBadgeDelegation() {
+  document.addEventListener("click", (e) => {
+    const badge = e.target.closest?.(".lib-content-sync-indicator--conflict, .lib-nav-item__sync-indicator--conflict");
+    if (!badge) return;
+    const host = badge.closest("[data-build-id], [data-comp-id], [data-folder-id], [data-navigate-folder]");
+    if (!host) return;
+    e.stopPropagation();
+    e.preventDefault();
+    const buildId = host.getAttribute("data-build-id");
+    const compId = host.getAttribute("data-comp-id");
+    if (buildId) _openConflict("build", buildId);
+    else if (compId) _openConflict("comp", compId);
+    else _openConflict("folder", host.getAttribute("data-folder-id") || host.getAttribute("data-navigate-folder"));
+  }, true);
+}
+
+// ── Sync banner ──────────────────────────────────────────────────────────────
+
+// Persistent, dismissible bar for session-level sync problems (signed out).
+function _showSyncBanner(text) {
+  const banner = document.getElementById("sync-banner");
+  if (!banner) return;
+  banner.innerHTML = `<span class="sync-banner__text"></span>`
+    + `<button type="button" class="sync-banner__close" aria-label="Dismiss">\u00d7</button>`;
+  banner.querySelector(".sync-banner__text").textContent = text;
+  banner.querySelector(".sync-banner__close").addEventListener("click", _hideSyncBanner);
+  banner.hidden = false;
+}
+
+function _hideSyncBanner() {
+  const banner = document.getElementById("sync-banner");
+  if (banner) banner.hidden = true;
 }
 
 // ── DOM element cache ────────────────────────────────────────────────────────
@@ -217,7 +278,9 @@ initCustomSelect({ bindHoverPreview, onError: showError });
 initWikiModal();
 initDetailModal();
 initConfirmModal();
+initChoiceModal();
 initImportConflictModal();
+initShareModal({ onTeamSyncEnabled: _hideSyncBanner });
 initSettingsModal();
 initWhatsNewModal();
 initDetailPanel(
@@ -311,8 +374,10 @@ initSettingsCallbacks({
     state.builds = await window.desktopApi.listBuilds();
     state.comps = await window.desktopApi.listComps();
     state.folders = await window.desktopApi.listFolders();
-    state.sharedLibraryConfig = await window.desktopApi.getSharedLibraryConfig().catch(() => null);
+    await loadTeamState();
   },
+  hideSyncBanner: _hideSyncBanner,
+  onTeamSyncEnabled: _hideSyncBanner,
   onThemedBuildsToggle: (enabled) => {
     _themedBuildsEnabled = enabled;
     if (state.activePage === "editor") {
@@ -580,7 +645,17 @@ async function init() {
     copyBuildJsonToClipboard,
     importBuildJsonFromClipboard,
     render,
+    openSettings: (pane) => openSettingsModal({ initialPane: pane }),
   });
+  // Badges for anything still queued (or conflicted) from a previous session.
+  seedSyncStatusFromOutbox();
+  _wireConflictBadgeDelegation();
+  // Coming back online: drain and re-pull immediately rather than waiting for
+  // the next poll tick.
+  window.addEventListener("online", () => {
+    window.desktopApi.pullAllTeams?.().catch(() => {});
+  });
+
   // ── Global sync-status / conflict handlers ───────────────────────────────
   // Registered once here (after initLibrary) so preload's removeAllListeners
   // doesn't clobber a handler added in library.js.
@@ -589,12 +664,51 @@ async function init() {
     const { status, folderId, type, id } = data;
     if (!status) return;
 
+    // Session-level signals, ahead of any per-item / per-folder routing.
+    if (data.error === "auth") {
+      _showSyncBanner("Team sync signed out \u2014 open Settings \u2192 Teams to sign in again.");
+      return;
+    }
+    if (data.error === "pull") {
+      // Main only emits this once per failure streak, so no extra throttling here.
+      showToast("Couldn't reach the team sync server \u2014 changes will sync when it's back.", "warning");
+      return;
+    }
+    if (data.error === "outbox") {
+      // The local write succeeded; only the sync bookkeeping failed. Say so once
+      // per session and mark the item so the user knows it isn't queued.
+      if (!_outboxToastShown) {
+        _outboxToastShown = true;
+        showToast("Couldn't queue a change for sync.", "error");
+      }
+      if (type && id) {
+        state[type === "build" ? "buildSyncStatus" : "compSyncStatus"][id] = "error";
+        _updateItemSyncIndicators(type, id, "error");
+      }
+      return;
+    }
+    // Carries a folderId, so it must be handled before the folder-level branch.
+    if (status === "detached") {
+      const folderName = data.name || "A folder";
+      showToast(
+        data.login
+          ? `${data.login} stopped sharing \u201c${folderName}\u201d`
+          : `\u201c${folderName}\u201d is no longer shared.`,
+        "info",
+      );
+      loadTeamState()
+        .then(() => { if (state.activePage === "library") renderLibrary(); })
+        .catch(() => {});
+      return;
+    }
+
     // Per-item event (build or comp)
     if (type && id) {
       const statusMap = type === "build" ? "buildSyncStatus" : "compSyncStatus";
       if (status === "synced") {
         // "synced" is the default for shared-folder items — just clear any active status
         delete state[statusMap][id];
+        delete state.conflicts[`${type}:${id}`];
         // Splice the updated item into state so library reflects the latest data
         // (e.g. gamemode change from another user won't silently stale-filter on next render)
         if (data.item) {
@@ -632,7 +746,9 @@ async function init() {
       } else {
         state[statusMap][id] = status;
         if (status === "syncing") {
-          // Safety: clear stuck syncing after 60s so the spinner doesn't hang forever
+          // Safety: clear stuck syncing after 60s so the spinner doesn't hang
+          // forever. "pending"/"conflict" are steady states, not in-flight work,
+          // so they must survive until the outbox actually drains.
           setTimeout(() => {
             if (state[statusMap][id] === "syncing") {
               delete state[statusMap][id];
@@ -640,8 +756,20 @@ async function init() {
             }
           }, 60000);
         }
+        // forbidden / not_found / too_large / invalid carry a human-readable
+        // reason the generic folder-level toast can't express.
+        if (status === "error" && data.message) showToast(data.message, "error");
       }
-      _updateItemSyncIndicators(type, id, status === "synced" ? "synced" : (state[statusMap][id] || "synced"));
+        _updateItemSyncIndicators(type, id, state[statusMap][id] || "synced");
+      if (status === "synced") {
+        // The check is painted imperatively but the state entry is already gone,
+        // so the next renderLibrary() would silently drop it. Clear it on a timer
+        // instead, matching the folder badge's 3s life (:782) — the badge and the
+        // state it renders from then agree.
+        setTimeout(() => {
+          if (!state[statusMap][id]) _updateItemSyncIndicators(type, id, null);
+        }, 3000);
+      }
       // If the build being viewed in the editor changed sync state, update the subnav badge
       if (type === "build" && state.activePage === "editor" && state.editor.id === id) {
         renderEditorMeta();
@@ -654,10 +782,13 @@ async function init() {
     // Resolve to root shared folder so we key by the folder visible in the sidebar
     const rootShared = _findRootSharedFolderInState(folderId);
     const trackId = rootShared?.id || folderId;
-    state.folderSyncStatus[trackId] = status;
+    // An unresolved folder conflict outranks the ambient folder status — losing
+    // the badge would leave the user no way back into the resolution modal.
+    const shown = state.conflicts[`folder:${trackId}`] ? "conflict" : status;
+    state.folderSyncStatus[trackId] = shown;
 
     renderEditorMeta();
-    _updateFolderSyncIndicators(trackId, status);
+    _updateFolderSyncIndicators(trackId, shown);
 
     if (status === "synced") {
       // Reload folders and builds so any subfolders or items created during
@@ -692,7 +823,16 @@ async function init() {
   });
 
   window.desktopApi.onSyncConflict?.((data) => {
-    showToast(`Sync conflict on \u201c${data?.title || "item"}\u201d \u2014 pull to refresh`, "warning");
+    if (!data?.itemId) return;
+    state.conflicts[`${data.type}:${data.itemId}`] = data;
+    // Main suppresses the matching sync-status "conflict" event for folders, so
+    // paint the folder badge here — without it a dismissed modal would leave the
+    // folder silently stuck out of sync with nothing to click.
+    if (data.type === "folder") {
+      state.folderSyncStatus[data.itemId] = "conflict";
+      _updateFolderSyncIndicators(data.itemId, "conflict");
+    }
+    _openConflict(data.type, data.itemId);
   });
 
   initComps({
@@ -1003,13 +1143,12 @@ function navigateToPage(page) {
   // Render library when navigating to library page
   if (page === "library") {
     renderLibrary();
-    // Eagerly pull shared library updates whenever the user opens the library
-    if (state.sharedLibraryConfig?.orgName) {
-      window.desktopApi.pullAllShared?.().then(async () => {
+    // Eagerly pull team updates whenever the user opens the library
+    if (state.teamSession) {
+      window.desktopApi.pullAllTeams().then(async () => {
         state.builds = await window.desktopApi.listBuilds();
         state.comps = await window.desktopApi.listComps();
-        state.folders = await window.desktopApi.listFolders();
-        state.sharedLibraryConfig = await window.desktopApi.getSharedLibraryConfig().catch(() => null);
+        await loadTeamState();
         renderLibrary();
       }).catch((err) => {
         console.warn("[library] pull-on-navigate failed:", err);
@@ -1448,8 +1587,21 @@ function wireEvents() {
         captureEditorBaseline();
       }
 
-      // The main process sends progress events for loading, repo, site, encrypt, upload, deploy
-      const result = await window.desktopApi.publishBuild(buildId);
+      // The main process sends progress events for loading, repo, site, encrypt, upload, deploy.
+      // A team build already published by a teammate throws PUBLISHED_BY_OTHER:<login>;
+      // publishWithOwnerCheck turns that into a confirm + an explicit force retry
+      // instead of surfacing the raw sentinel as an error (spec §2.8).
+      const result = await publishWithOwnerCheck(
+        (opts) => window.desktopApi.publishBuild(buildId, opts),
+        (login) => showConfirmModal({
+          title: "Publish under your account?",
+          body: publishedByOtherBody(login),
+          confirmLabel: "Publish anyway",
+          cancelLabel: "Cancel",
+        }),
+      );
+      // Declined the confirm — not a failure, so drop the ticker silently.
+      if (!result) { clearPublishProgress(buildId); return; }
 
       // Mark all upload steps done, advance to Pages polling
       advancePublishStep("pages");

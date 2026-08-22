@@ -1,11 +1,34 @@
-const GH_REST = "https://api.github.com";
+const GITHUB_REST = "https://api.github.com";
+
+// Overridable so E2E tests can point the real GitHub REST calls (getViewer,
+// publish, etc.) at a local mock instead of the live API.
+//
+// SECURITY: these calls carry the user's GitHub token, so a packaged build must
+// NEVER honour the override — otherwise a tampered .desktop file / launcher
+// wrapper exfiltrates a durable credential without touching a byte of code.
+// Deliberately gated on `isPackaged` alone and not also on APP_PROFILE: anyone
+// who can set AXIFORGE_GITHUB_API_ROOT can set APP_PROFILE=e2e too.
+function ghRest() {
+  const override = process.env.AXIFORGE_GITHUB_API_ROOT;
+  if (!override) return GITHUB_REST;
+  let packaged = false;
+  try {
+    const electron = require("electron");
+    packaged = !!(electron && electron.app && electron.app.isPackaged);
+  } catch { /* not running under Electron (unit tests, scripts) */ }
+  if (packaged) {
+    console.warn("[github] ignoring AXIFORGE_GITHUB_API_ROOT in a packaged build");
+    return GITHUB_REST;
+  }
+  return override;
+}
 const TARGET_REPO = "axibuilds";
 const USER_AGENT = "axiforge-desktop";
 const crypto = require("node:crypto");
 const { partitionBundleForPublish, SITE_VERSION_PATH } = require("./siteBundle");
 
 async function apiFetch(path, token, init = {}) {
-  const res = await fetch(`${GH_REST}${path}`, {
+  const res = await fetch(`${ghRest()}${path}`, {
     ...init,
     headers: {
       Accept: "application/vnd.github+json",

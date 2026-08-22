@@ -5,6 +5,8 @@ import { state } from "./state.js";
 import { renderCustomSelect } from "./custom-select.js";
 import { escapeHtml, delay } from "./utils.js";
 import { showConfirmModal } from "./confirm-modal.js";
+import { showChoiceModal } from "./choice-modal.js";
+import { showPrompt } from "./prompt-modal.js";
 
 let _overlay = null;
 let _el = {};
@@ -56,7 +58,7 @@ const CATEGORIES = [
   { id: "appearance",     label: "Appearance",     desc: "Theme and build-page appearance.",                       icon: ICON.appearance },
   { id: "discord",        label: "Discord",        desc: "Post comps and builds to Discord channels via webhooks.", icon: ICON.discord },
   { id: "publishing",     label: "Publishing",     desc: "Publish your builds to a public web page.",              icon: ICON.publishing },
-  { id: "shared-library", label: "Shared Library", desc: "Share a build library with your organization.",          icon: ICON.shared },
+  { id: "teams",          label: "Teams",          desc: "Share build libraries with your team.",                  icon: ICON.shared },
   { id: "data",           label: "Data & Cache",   desc: "Manage cached GW2 API data.",                            icon: ICON.data },
 ];
 
@@ -112,21 +114,33 @@ export function initSettingsModal() {
             <div id="sm-target-picker"></div>
             <div id="sm-setup-row" class="settings-modal__setup-row"></div>
           </section>
-          <section class="settings-modal__pane" data-pane="shared-library" id="sm-shared-library-section">
-            <span class="settings-modal__error" id="sm-shared-status"></span>
-            <div id="sm-shared-setup">
-              <label class="settings-modal__label" for="sm-org-select">Organization</label>
-              <select class="settings-modal__select" id="sm-org-select">
-                <option value="">Select an organization...</option>
-              </select>
-              <button class="settings-modal__btn settings-modal__btn--secondary" id="sm-shared-connect" type="button">Connect</button>
+          <section class="settings-modal__pane" data-pane="teams" id="sm-teams-section">
+            <span class="settings-modal__error" id="sm-teams-status" aria-live="polite"></span>
+            <div id="sm-teams-migrate" hidden></div>
+            <div id="sm-teams-off">
+              <p class="settings-modal__hint">Teams let a group share build folders. Changes sync in seconds; everyone in the team can edit. Uses your GitHub sign-in.</p>
+              <button class="settings-modal__btn settings-modal__btn--secondary" id="sm-teams-enable" type="button">Enable team sync</button>
             </div>
-            <div id="sm-shared-connected" class="settings-modal__shared-connected--hidden">
-              <div class="settings-modal__shared-info">
-                <span class="settings-modal__shared-org" id="sm-shared-org-name"></span>
-                <span class="settings-modal__shared-repo"> / axibuilds-shared</span>
+            <div id="sm-teams-on" hidden>
+              <div class="settings-modal__shared-info"><span>Signed in as</span> <span class="settings-modal__shared-org" id="sm-teams-user"></span></div>
+              <div class="sm-teams-forms">
+                <div class="sm-teams-form">
+                  <label class="settings-modal__label" for="sm-team-create-name">Create a team</label>
+                  <div class="sm-teams-row">
+                    <input class="settings-modal__input" id="sm-team-create-name" maxlength="80" placeholder="Team name">
+                    <button class="settings-modal__btn" id="sm-team-create" type="button">Create</button>
+                  </div>
+                </div>
+                <div class="sm-teams-form">
+                  <label class="settings-modal__label" for="sm-team-join-code">Join with an invite code</label>
+                  <div class="sm-teams-row">
+                    <input class="settings-modal__input" id="sm-team-join-code" maxlength="10" placeholder="ABCDEFGHJK" autocapitalize="characters">
+                    <button class="settings-modal__btn" id="sm-team-join" type="button">Join</button>
+                  </div>
+                </div>
               </div>
-              <button class="settings-modal__btn settings-modal__btn--danger" id="sm-shared-disconnect" type="button">Disconnect</button>
+              <div id="sm-teams-list" class="sm-teams-list"></div>
+              <button class="settings-modal__btn settings-modal__btn--danger" id="sm-teams-signout" type="button">Sign out of team sync</button>
             </div>
           </section>
           <section class="settings-modal__pane" data-pane="data">
@@ -162,13 +176,18 @@ export function initSettingsModal() {
     saveStatus:        document.getElementById("sm-save-status"),
     clearCache:        document.getElementById("sm-clear-cache"),
     cacheStatus:       document.getElementById("sm-cache-status"),
-    sharedStatus:      document.getElementById("sm-shared-status"),
-    sharedSetup:       document.getElementById("sm-shared-setup"),
-    sharedConnected:   document.getElementById("sm-shared-connected"),
-    orgSelect:         document.getElementById("sm-org-select"),
-    sharedConnect:     document.getElementById("sm-shared-connect"),
-    sharedDisconnect:  document.getElementById("sm-shared-disconnect"),
-    sharedOrgName:     document.getElementById("sm-shared-org-name"),
+    teamsStatus:       document.getElementById("sm-teams-status"),
+    teamsOff:          document.getElementById("sm-teams-off"),
+    teamsEnable:       document.getElementById("sm-teams-enable"),
+    teamsOn:           document.getElementById("sm-teams-on"),
+    teamsUser:         document.getElementById("sm-teams-user"),
+    teamCreateName:    document.getElementById("sm-team-create-name"),
+    teamCreate:        document.getElementById("sm-team-create"),
+    teamJoinCode:      document.getElementById("sm-team-join-code"),
+    teamJoin:          document.getElementById("sm-team-join"),
+    teamsList:         document.getElementById("sm-teams-list"),
+    teamsSignout:      document.getElementById("sm-teams-signout"),
+    teamsMigrate:      document.getElementById("sm-teams-migrate"),
   };
   _el.themedBuilds = _overlay.querySelector("#sm-themed-builds");
 
@@ -182,12 +201,23 @@ export function initSettingsModal() {
   document.getElementById("sm-cancel").addEventListener("click", _close);
   document.getElementById("sm-done").addEventListener("click", _close);
   _el.clearCache.addEventListener("click", _clearCache);
-  _el.sharedConnect.addEventListener("click", _connectSharedLibrary);
-  _el.sharedDisconnect.addEventListener("click", _disconnectSharedLibrary);
+  _el.teamsEnable.addEventListener("click", _enableTeams);
+  _el.teamCreate.addEventListener("click", _createTeam);
+  _el.teamJoin.addEventListener("click", _joinTeam);
+  _el.teamsSignout.addEventListener("click", _signOutTeams);
+  _el.teamsList.addEventListener("click", _onTeamsListClick);
 
   _overlay.querySelector("#sm-nav").addEventListener("click", (e) => {
     const item = e.target.closest(".settings-modal__nav-item");
     if (item) _switchPane(item.dataset.pane);
+  });
+
+  // Upload progress for the legacy-library migration. Preload's
+  // onTeamShareProgress does removeAllListeners, so there can only ever be one
+  // listener for this channel — this is it, and it ignores anything that isn't
+  // a migration (single-folder share progress currently has no other consumer).
+  window.desktopApi?.onTeamShareProgress?.((p) => {
+    if (p && p.migration && _el.teamsStatus) _setTeamsStatus(`Uploading ${p.done}/${p.total}…`);
   });
 
   // Toggle themed build pages
@@ -198,8 +228,75 @@ export function initSettingsModal() {
   });
 }
 
+// ─── Legacy GitHub-org library migration ─────────────────────────────────────
+
+async function _renderLegacyMigration() {
+  const box = _el.teamsMigrate;
+  if (!box) return;
+  // "Couldn't check" is not "nothing to migrate": collapsing the two would take
+  // the only entry point to migration away on a transient IPC error. On a probe
+  // failure leave whatever is already rendered alone.
+  let status;
+  try {
+    status = (await window.desktopApi.legacyLibraryStatus?.()) || { hasLegacy: false };
+  } catch {
+    return;
+  }
+  const folders = status.folders || [];
+  box.hidden = !status.hasLegacy || !folders.length;
+  if (box.hidden) { box.innerHTML = ""; return; }
+  const counts = folders.map((f) => `${escapeHtml(f.name)} (${f.builds} builds, ${f.comps} comps)`).join(", ");
+  box.innerHTML = `
+    <div class="sm-migrate">
+      <strong>Move your GitHub org library to a team.</strong>
+      <p class="settings-modal__hint">Shared folders from <strong>${escapeHtml(status.orgName || "your org")}</strong> — ${counts} — will be uploaded to a team you own. Teammates join with the invite code. The GitHub repo is left untouched.</p>
+      <div class="sm-teams-row">
+        <button class="settings-modal__btn" id="sm-migrate-new" type="button">Create team "${escapeHtml(status.orgName || "My team")}" and migrate</button>
+        <button class="settings-modal__btn settings-modal__btn--secondary" id="sm-migrate-existing" type="button">Migrate into existing team…</button>
+      </div>
+    </div>`;
+  box.querySelector("#sm-migrate-new").addEventListener("click", () => _runMigration({ teamName: status.orgName }));
+  box.querySelector("#sm-migrate-existing").addEventListener("click", async () => {
+    const teams = await window.desktopApi.listTeams().catch(() => []);
+    if (!teams.length) { _setTeamsStatus("Create or join a team first.", true); return; }
+    const teamId = await showChoiceModal({
+      title: "Migrate into which team?",
+      body: "",
+      choices: teams.map(({ team }) => ({ id: team.id, label: team.name })),
+    });
+    if (teamId) _runMigration({ teamId });
+  });
+}
+
+async function _runMigration(opts) {
+  for (const id of ["sm-migrate-new", "sm-migrate-existing"]) {
+    const btn = document.getElementById(id);
+    if (btn) btn.disabled = true;
+  }
+  _setTeamsStatus("Migrating…");
+  try {
+    const out = await window.desktopApi.migrateOrgLibrary(opts);
+    // `note` explains an outcome the counts alone read as a no-op — a partial
+    // failure leaves the library untouched (foldersMigrated: 0) on purpose, so
+    // without it "Migrated 0 folder(s)" looks like nothing happened at all.
+    const summary = out.failed.length
+      ? `Migrated with ${out.failed.length} failures: ${out.failed.map((f) => f.message).join("; ")}`
+      : `Migrated ${out.foldersMigrated} folder(s), ${out.uploaded} items. Share the invite code from the team list below.`;
+    _setTeamsStatus(out.note ? `${summary} ${out.note}` : summary, out.failed.length > 0);
+    await _renderTeamsList();
+    await _renderLegacyMigration();
+    await _callbacks.refreshLibraryState?.();
+  } catch (err) {
+    _setTeamsStatus(`Error: ${err?.message || String(err)}`, true);
+    await _renderLegacyMigration();
+  }
+}
+
 function _switchPane(id) {
   const cat = CATEGORIES.find((c) => c.id === id) || CATEGORIES[0];
+  // Signing in to GitHub elsewhere while Settings is open would otherwise leave
+  // "Enable team sync" disabled for the life of the modal.
+  if (cat.id === "teams") _loadTeamsState().catch(() => {});
   for (const item of _overlay.querySelectorAll(".settings-modal__nav-item")) {
     item.classList.toggle("settings-modal__nav-item--active", item.dataset.pane === cat.id);
   }
@@ -212,7 +309,7 @@ function _switchPane(id) {
   if (desc) desc.textContent = cat.desc;
 }
 
-export async function openSettingsModal() {
+export async function openSettingsModal({ initialPane } = {}) {
   if (!_overlay) return;
 
   // Load current values
@@ -242,14 +339,14 @@ export async function openSettingsModal() {
   // Populate publishing section
   _renderPublishing();
 
-  // Populate shared library section — hide both while loading to avoid flash
-  if (_el.sharedSetup) _el.sharedSetup.style.display = "none";
-  if (_el.sharedConnected) _el.sharedConnected.style.display = "none";
-  _loadSharedLibraryState();
+  // Populate Teams section
+  _loadTeamsState();
 
   _overlay.classList.remove("settings-modal-overlay--hidden");
   _escHandler = (e) => { if (e.key === "Escape") _close(); };
   document.addEventListener("keydown", _escHandler);
+
+  if (initialPane) _switchPane(initialPane);
 }
 
 // ─── Theme grid ─────────────────────────────────────────────────────────────
@@ -677,74 +774,176 @@ function _close() {
   }
 }
 
-// ─── Shared Library section ──────────────────────────────────────────────────
+// ─── Teams section ───────────────────────────────────────────────────────────
 
-async function _loadSharedLibraryState() {
-  if (!_el.sharedSetup) return;
-  _el.sharedStatus.textContent = "";
-  const config = await window.desktopApi.getSharedLibraryConfig();
-  if (config?.orgName) {
-    _el.sharedSetup.style.display = "none";
-    _el.sharedConnected.style.display = "";
-    _el.sharedOrgName.textContent = config.orgName;
-  } else {
-    _el.sharedConnected.style.display = "none";
-    _el.sharedSetup.style.display = "";
-    const session = await window.desktopApi.getSession();
-    if (session) {
-      const orgs = await window.desktopApi.listOrgs();
-      _el.orgSelect.innerHTML = '<option value="">Select an organization...</option>';
-      for (const org of orgs) {
-        const opt = document.createElement("option");
-        opt.value = org.login;
-        opt.textContent = org.login;
-        _el.orgSelect.appendChild(opt);
-      }
-    } else {
-      _el.sharedStatus.textContent = "Log in to GitHub first to set up sharing.";
+function _setTeamsStatus(text, isError = false) {
+  _el.teamsStatus.textContent = text || "";
+  _el.teamsStatus.classList.toggle("settings-modal__error--ok", !isError && !!text);
+}
+
+async function _loadTeamsState() {
+  if (!_el.teamsOff) return;
+  _setTeamsStatus("");
+  const session = await window.desktopApi.getTeamSession().catch(() => null);
+  _el.teamsOff.hidden = !!session;
+  _el.teamsOn.hidden = !session;
+  if (!session) {
+    const gh = await window.desktopApi.getSession().catch(() => null);
+    _el.teamsEnable.disabled = !gh;
+    if (!gh) _setTeamsStatus("Log in to GitHub (Publishing) first — team sync uses that sign-in.", true);
+    return;
+  }
+  _el.teamsUser.textContent = session.login;
+  await _renderTeamsList();
+  await _renderLegacyMigration();
+}
+
+async function _renderTeamsList() {
+  const teams = await window.desktopApi.listTeams().catch((err) => { _setTeamsStatus(`Error: ${err?.message || String(err)}`, true); return []; });
+  _el.teamsList.innerHTML = teams.length ? teams.map(({ team, role }) => `
+    <div class="sm-team" data-team-id="${escapeHtml(team.id)}" data-role="${role}">
+      <div class="sm-team__head">
+        <span class="sm-team__name">${escapeHtml(team.name)}</span>
+        <span class="sm-team__role">${role}</span>
+        ${role === "owner" ? `<code class="sm-team__invite" title="Invite code">${escapeHtml(team.inviteCode || "")}</code>
+          <button class="settings-modal__btn settings-modal__btn--small" data-act="copy-invite" type="button">Copy</button>
+          <button class="settings-modal__btn settings-modal__btn--small" data-act="rotate" type="button" title="Invalidate the old code">Rotate</button>` : ""}
+        <button class="settings-modal__btn settings-modal__btn--small" data-act="members" type="button">Members</button>
+        ${role === "owner" ? `<button class="settings-modal__btn settings-modal__btn--small" data-act="rename" type="button">Rename</button>
+          <button class="settings-modal__btn settings-modal__btn--small settings-modal__btn--danger" data-act="delete" type="button">Delete team</button>`
+        : `<button class="settings-modal__btn settings-modal__btn--small settings-modal__btn--danger" data-act="leave" type="button">Leave</button>`}
+      </div>
+      <div class="sm-team__members" hidden></div>
+    </div>`).join("") : `<p class="settings-modal__hint">You're not in any team yet. Create one and share the invite code, or paste a code to join.</p>`;
+}
+
+async function _onTeamsListClick(e) {
+  const btn = e.target.closest("[data-act]");
+  if (!btn) return;
+  const row = btn.closest(".sm-team");
+  const teamId = row?.dataset.teamId;
+  const memberRow = btn.closest(".sm-team__member");
+  const act = btn.dataset.act;
+  try {
+    if (act === "copy-invite") {
+      await window.desktopApi.writeClipboardText(row.querySelector(".sm-team__invite").textContent);
+      _setTeamsStatus("Invite code copied.");
+    } else if (act === "rotate") {
+      if (!(await showConfirmModal({ title: "Rotate invite code?", body: "The old code stops working immediately. Anyone already in the team stays.", confirmLabel: "Rotate", cancelLabel: "Cancel" }))) return;
+      const { inviteCode } = await window.desktopApi.rotateInvite(teamId);
+      row.querySelector(".sm-team__invite").textContent = inviteCode;
+      _setTeamsStatus("New invite code generated.");
+    } else if (act === "members") {
+      const box = row.querySelector(".sm-team__members");
+      if (!box.hidden) { box.hidden = true; return; }
+      const members = await window.desktopApi.listTeamMembers(teamId);
+      const isOwner = row.dataset.role === "owner";
+      box.innerHTML = members.map((m) => `
+        <div class="sm-team__member" data-user-id="${escapeHtml(m.userId)}">
+          <span>${escapeHtml(m.login)}</span><span class="sm-team__role">${m.role}</span>
+          ${isOwner && m.role !== "owner" ? `<button class="settings-modal__btn settings-modal__btn--small settings-modal__btn--danger" data-act="remove" type="button">Remove</button>` : ""}
+        </div>`).join("");
+      box.hidden = false;
+    } else if (act === "remove") {
+      const userId = memberRow.dataset.userId;
+      const login = memberRow.querySelector("span").textContent;
+      if (!(await showConfirmModal({ title: `Remove ${login}?`, body: "They keep their local copies but stop receiving updates.", confirmLabel: "Remove", cancelLabel: "Cancel" }))) return;
+      await window.desktopApi.removeTeamMember(teamId, userId);
+      memberRow.remove();
+    } else if (act === "rename") {
+      // Electron's renderer has no window.prompt() — it throws, and the catch
+      // below would paint the throw as the failure. Use the modal helper.
+      const name = await showPrompt("New team name", row.querySelector(".sm-team__name").textContent);
+      if (!name?.trim()) return;
+      await window.desktopApi.renameTeam(teamId, name.trim());
+      await _renderTeamsList();
+      await _callbacks.refreshLibraryState?.();
+    } else if (act === "delete") {
+      if (!(await showConfirmModal({ title: "Delete this team?", body: "Every member loses the shared folder. Everyone's local copies are kept as personal folders.", confirmLabel: "Delete team", cancelLabel: "Cancel" }))) return;
+      await window.desktopApi.deleteTeam(teamId);
+      await _renderTeamsList();
+      await _callbacks.refreshLibraryState?.();
+    } else if (act === "leave") {
+      if (!(await showConfirmModal({ title: "Leave this team?", body: "Your local copy of the folder is kept as a personal folder.", confirmLabel: "Leave", cancelLabel: "Cancel" }))) return;
+      await window.desktopApi.leaveTeam(teamId);
+      await _renderTeamsList();
+      await _callbacks.refreshLibraryState?.();
     }
+  } catch (err) {
+    _setTeamsStatus(`Error: ${err?.message || String(err)}`, true);
   }
 }
 
-async function _connectSharedLibrary() {
-  const org = _el.orgSelect.value;
-  if (!org) return;
-  _el.sharedConnect.disabled = true;
-  _el.sharedConnect.textContent = "Connecting...";
-  _el.sharedStatus.textContent = "";
+async function _enableTeams() {
+  _el.teamsEnable.disabled = true;
+  _el.teamsEnable.textContent = "Enabling…";
   try {
-    await window.desktopApi.setupSharedLibrary(org);
-    // connect returns immediately after creating folder stubs and firing the
-    // background pull — refresh state now so folders appear in the library
-    await window.desktopApi.connectSharedLibrary();
+    await window.desktopApi.enableTeamSync();
+    _callbacks.onTeamSyncEnabled?.();
     await _callbacks.refreshLibraryState?.();
-    await _loadSharedLibraryState();
-    _close();
-    _callbacks.navigateToPage?.("library");
+    await _loadTeamsState();
   } catch (err) {
-    _el.sharedStatus.textContent = `Error: ${err.message}`;
-    _el.sharedConnect.disabled = false;
-    _el.sharedConnect.textContent = "Connect";
+    _setTeamsStatus(`Error: ${err?.message || String(err)}`, true);
+  } finally {
+    _el.teamsEnable.disabled = false;
+    _el.teamsEnable.textContent = "Enable team sync";
   }
 }
 
-async function _disconnectSharedLibrary() {
-  const confirmed = await showConfirmModal({
-    title: "Disconnect shared library?",
-    body: "Your local copies of shared builds and folders will be kept.",
-    confirmLabel: "Disconnect",
-    cancelLabel: "Cancel",
-  });
-  if (!confirmed) return;
-  _el.sharedDisconnect.disabled = true;
-  _el.sharedDisconnect.textContent = "Disconnecting…";
+async function _createTeam() {
+  const name = _el.teamCreateName.value.trim();
+  if (!name) { _setTeamsStatus("Enter a team name.", true); return; }
+  _el.teamCreate.disabled = true;
   try {
-    await window.desktopApi.disconnectSharedLibrary();
-    await _loadSharedLibraryState();
+    const { team } = await window.desktopApi.createTeam(name);
+    // The team is already created server-side at this point — a clipboard
+    // failure (permission denial, sandboxed/headless) must not be reported
+    // as an overall failure, and must not skip refreshing state below.
+    let copied = true;
+    try {
+      await window.desktopApi.writeClipboardText(team.inviteCode);
+    } catch {
+      copied = false;
+    }
+    _setTeamsStatus(
+      copied
+        ? `Team "${team.name}" created. Invite code ${team.inviteCode} copied — share it with your team.`
+        : `Team "${team.name}" created. Invite code: ${team.inviteCode} — share it with your team.`
+    );
+    _el.teamCreateName.value = "";
+    await _renderTeamsList();
+    await _callbacks.refreshLibraryState?.();
   } catch (err) {
-    _el.sharedStatus.textContent = `Error: ${err.message}`;
+    _setTeamsStatus(`Error: ${err?.message || String(err)}`, true);
   } finally {
-    _el.sharedDisconnect.disabled = false;
-    _el.sharedDisconnect.textContent = "Disconnect";
+    _el.teamCreate.disabled = false;
+  }
+}
+
+async function _joinTeam() {
+  const code = _el.teamJoinCode.value.trim().toUpperCase();
+  if (code.length !== 10) { _setTeamsStatus("Invite codes are 10 characters.", true); return; }
+  _el.teamJoin.disabled = true;
+  try {
+    const { team } = await window.desktopApi.joinTeam(code);
+    _setTeamsStatus(`Joined "${team.name}". Its folder is in your library.`);
+    _el.teamJoinCode.value = "";
+    await _renderTeamsList();
+    await _callbacks.refreshLibraryState?.();
+  } catch (err) {
+    _setTeamsStatus(`Error: ${err?.message || String(err)}`, true);
+  } finally {
+    _el.teamJoin.disabled = false;
+  }
+}
+
+async function _signOutTeams() {
+  if (!(await showConfirmModal({ title: "Sign out of team sync?", body: "Team folders stay on this computer but stop syncing until you sign in again.", confirmLabel: "Sign out", cancelLabel: "Cancel" }))) return;
+  try {
+    await window.desktopApi.disableTeamSync();
+    await _callbacks.refreshLibraryState?.();
+    await _loadTeamsState();
+  } catch (err) {
+    _setTeamsStatus(`Error: ${err?.message || String(err)}`, true);
   }
 }

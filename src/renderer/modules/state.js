@@ -49,10 +49,14 @@ export const state = {
     viewMode: "expanded",
     boonCoverageCollapsed: false,
   },
-  sharedLibraryConfig: null,  // { orgName, repoName } or null
-  folderSyncStatus: {},  // map of folderId → "syncing"|"synced"|"error"
-  buildSyncStatus: {},   // map of buildId  → "syncing"|"synced"|"error"
-  compSyncStatus: {},    // map of compId   → "syncing"|"synced"|"error"
+  // Team sync state (see modules/teams.js)
+  teamSession: null,      // { sessionToken, userId, login } or null
+  teams: [],              // [{ team: { id, name, inviteCode?, seq }, role }]
+  outbox: {},             // teamId → [{ itemId, type, op, conflict }]
+  folderSyncStatus: {},   // folderId → "syncing"|"synced"|"pending"|"conflict"|"error"
+  buildSyncStatus: {},    // buildId  → same
+  compSyncStatus: {},     // compId   → same
+  conflicts: {},          // "<type>:<id>" → { teamId, itemId, type, title, current }
   skillSearch: "",
   catalogCache: new Map(),
   activeCatalog: null,

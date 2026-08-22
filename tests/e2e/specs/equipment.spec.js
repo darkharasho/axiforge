@@ -2,11 +2,20 @@ const { test, expect } = require("playwright/test");
 const { launchApp, closeApp } = require("../helpers/app");
 const { goToEditor } = require("../helpers/nav");
 const { switchTab } = require("../helpers/nav");
-const { selectProfession } = require("../helpers/editor");
+const {
+  selectProfession,
+  fillSpecializations,
+  selectSkill,
+  selectTrait,
+} = require("../helpers/editor");
 
-// Helper: navigate to editor and switch to equipment tab
-async function goToEquipment(window) {
+// Helper: navigate to editor and switch to equipment tab.
+// A profession is selected first: the weapon and upgrade pickers are driven by the
+// profession's catalog, so on a profession-less build they render empty and the
+// weapon slot overlays swallow clicks meant for the sigil buttons.
+async function goToEquipment(window, profession = "Necromancer") {
   await goToEditor(window);
+  await selectProfession(window, profession);
   await switchTab(window, "equipment");
   // Wait for the equipment panel to render real content (not skeleton)
   await window.waitForFunction(
@@ -1215,6 +1224,11 @@ test.describe("Equipment — Stats Display", () => {
   });
 
   // 29. Power, Precision, Ferocity, Toughness, Vitality, Condition Damage, Expertise, Healing Power, Concentration calculate correctly
+  //
+  // The grid renders 8 rows, not 9: each row pairs a primary attribute with a derived
+  // readout (Toughness/Armor, Precision/Crit Chance, ...), and Healing Power is the
+  // derived half of the Condition Dmg row rather than a row of its own
+  // (equipment.js `statRows`). All 9 attributes are still on screen.
   test("all 9 attribute stats display correctly with base values", async () => {
     const panel = window.locator("#equipmentPanel");
     const statsSection = panel.locator(".equip-section").filter({ hasText: "Attributes" }).first();
@@ -1222,18 +1236,17 @@ test.describe("Equipment — Stats Display", () => {
 
     const rows = statsSection.locator(".equip-stat-row");
     const count = await rows.count();
-    expect(count).toBe(9); // 9 stat rows
+    expect(count).toBe(8);
 
     const expectedStats = [
       { label: "Power", baseValue: 1000 },
-      { label: "Precision", baseValue: 1000 },
       { label: "Toughness", baseValue: 1000 },
       { label: "Vitality", baseValue: 1000 },
+      { label: "Precision", baseValue: 1000 },
       { label: "Ferocity", baseValue: 0 },
       { label: "Condition Dmg", baseValue: 0 },
       { label: "Expertise", baseValue: 0 },
       { label: "Concentration", baseValue: 0 },
-      { label: "Healing Power", baseValue: 0 },
     ];
 
     for (let i = 0; i < expectedStats.length; i++) {
@@ -1243,6 +1256,13 @@ test.describe("Equipment — Stats Display", () => {
       expect(label.trim()).toBe(expectedStats[i].label);
       expect(parseInt(value.replace(/,/g, ""))).toBe(expectedStats[i].baseValue);
     }
+
+    // The 9th attribute: Healing Power rides along on the Condition Dmg row.
+    const condRow = rows.nth(expectedStats.findIndex((s) => s.label === "Condition Dmg"));
+    const derivedLabel = await condRow.locator(".equip-stat-label").nth(1).textContent();
+    const derivedValue = await condRow.locator(".equip-stat-value--derived").first().textContent();
+    expect(derivedLabel.trim()).toBe("Healing Power");
+    expect(parseInt(derivedValue.replace(/,/g, ""))).toBe(0);
   });
 
   // 30. Stats break down by source (hover preview)
@@ -1337,35 +1357,9 @@ test.describe("Assumed Boons — trait AttributeConversion", () => {
     // Start on the build tab
     await goToEditor(window);
     await selectProfession(window, "Warrior");
-    // After selectProfession, Warrior gets default spec selections. The first slot
-    // typically gets "Strength" by default (first core spec in the fixture).
-    // Verify slot 0 has "Strength" (it's selected by default); if not, open the
-    // cselect and pick it. The cselect__trigger needs force:true because the
-    // spec-select-overlay has pointer-events:none via the cselect-host class.
-    // Check if slot 0 already has Strength
-    const slot0HasStrength = await window.evaluate(() => {
-      const card = document.querySelectorAll(".spec-card")[0];
-      if (!card) return false;
-      const label = card.querySelector(".cselect__label");
-      return label ? label.textContent.includes("Strength") : false;
-    });
-    if (!slot0HasStrength) {
-      // Open the spec picker for slot 0 using the cselect
-      const firstCardTrigger = window.locator(".spec-card").nth(0).locator(".cselect__trigger");
-      await firstCardTrigger.click({ force: true });
-      // Wait for the cselect menu to open
-      await window.waitForFunction(
-        () => {
-          const open = document.querySelector(".cselect--open");
-          return open && open.closest(".spec-card") !== null;
-        },
-        null,
-        { timeout: 5000 }
-      );
-      // Click the "Strength" option
-      await window.click('.cselect--open .cselect__option:has-text("Strength")');
-      await window.waitForTimeout(500);
-    }
+    // The editor opens with empty slots — Great Fortitude lives in Strength, so put it
+    // in slot 0 explicitly rather than hoping for a default that no longer exists.
+    await fillSpecializations(window, ["Strength"]);
     // Select Great Fortitude: trait id 1449, tier 2 (major col index 1), col 2 (0-indexed).
     // Major trait columns (.trait-column--major) are indexed 0=tier1, 1=tier2, 2=tier3.
     // Within each column, trait buttons are indexed 0, 1, 2 (left to right).
@@ -1466,15 +1460,7 @@ test.describe("Equipment — Signet Passives", () => {
     // Equip Signet of Spite (id 10622, +180 Power) in the first utility slot.
     const utilGroup = window.locator(".skill-group--utilities");
     await expect(utilGroup).toBeVisible({ timeout: 5000 });
-    const utilitySlot = utilGroup.locator(".skill-slot").nth(1);
-    await utilitySlot.locator(".skill-icon-large").click();
-
-    const cselectOpen = window.locator(".cselect--skill-slot.cselect--open");
-    await expect(cselectOpen).toBeVisible({ timeout: 5000 });
-    await cselectOpen
-      .locator('.cselect__option:has-text("Signet of Spite")')
-      .first()
-      .click();
+    await selectSkill(window, ".skill-group--utilities .skill-slot >> nth=1", "Signet of Spite");
     await window.waitForTimeout(500);
 
     // Switch to equipment tab and wait for render.
@@ -1509,15 +1495,15 @@ test.describe("Equipment — Signet Passives", () => {
     return null;
   }
 
-  // 33. Signet passive toggle: default ON, click disables (Power -180), re-enables (Power restored)
-  test("signet passive toggle: active by default, toggle off then on affects Power by 180", async () => {
+  // 33. Signet state cycle: passive by default, cooldown drops Power by 180, back to passive restores it
+  test("signet state cycle: passive by default, cooldown drops Power by 180", async () => {
     const panel = window.locator("#equipmentPanel");
     const boonsSection = panel.locator(".equip-boons");
     await expect(boonsSection).toBeVisible();
 
-    // "Signet Passives" section label is rendered.
+    // "Signets" section label is rendered.
     const signetLabel = boonsSection.locator(".equip-boons__sigil-label", {
-      hasText: "Signet Passives",
+      hasText: "Signets",
     });
     await expect(signetLabel).toBeVisible();
 
@@ -1528,69 +1514,61 @@ test.describe("Equipment — Signet Passives", () => {
       .first();
     await expect(signetItem).toBeVisible();
 
-    const signetIcon = signetItem.locator(".equip-boons__icon--sigil");
+    // Re-resolve the icon after each state change: _render() rebuilds the bar.
+    const icon = () =>
+      boonsSection
+        .locator(".equip-boons__item")
+        .filter({ hasText: "Signet of Spite" })
+        .first()
+        .locator(".equip-boons__icon--sigil");
 
-    // Default: passive active (--on class present).
-    const onInitially = await signetIcon.evaluate((el) =>
-      el.classList.contains("equip-boons__icon--on")
+    // A signet is a three-state cycle — passive → active → cooldown — and it starts
+    // on passive. "active" applies the signet's *active* skill effect on top, so the
+    // clean way to isolate the passive's +180 is passive ↔ cooldown, which is exactly
+    // what right-click (passive → cooldown) and then left-click (cooldown → passive) do.
+    const passiveInitially = await icon().evaluate((el) =>
+      el.classList.contains("equip-boons__icon--passive")
     );
-    expect(onInitially).toBe(true);
+    expect(passiveInitially).toBe(true);
 
-    // Power reflects +180 from Signet of Spite.
+    // Power reflects +180 from Signet of Spite's passive.
     const powerWithPassive = await getStat("Power");
     expect(powerWithPassive).not.toBeNull();
 
-    // Click icon to disable the passive.
-    await signetIcon.click();
+    // Right-click puts the signet on cooldown: no passive, no active.
+    await icon().click({ button: "right" });
     await window.waitForTimeout(300);
 
-    // Icon marked off; Power drops by exactly 180.
-    const iconAfterOff = boonsSection
-      .locator(".equip-boons__item")
-      .filter({ hasText: "Signet of Spite" })
-      .first()
-      .locator(".equip-boons__icon--sigil");
-    const offAfterClick = await iconAfterOff.evaluate((el) =>
-      !el.classList.contains("equip-boons__icon--on")
+    const onCooldown = await icon().evaluate(
+      (el) =>
+        !el.classList.contains("equip-boons__icon--passive") &&
+        !el.classList.contains("equip-boons__icon--on")
     );
-    expect(offAfterClick).toBe(true);
+    expect(onCooldown).toBe(true);
     const powerWithoutPassive = await getStat("Power");
     expect(powerWithoutPassive).toBe(powerWithPassive - 180);
 
-    // Right-click re-enables the passive.
-    await iconAfterOff.click({ button: "right" });
+    // Left-click from cooldown wraps back to passive.
+    await icon().click();
     await window.waitForTimeout(300);
 
-    const iconAfterOn = boonsSection
-      .locator(".equip-boons__item")
-      .filter({ hasText: "Signet of Spite" })
-      .first()
-      .locator(".equip-boons__icon--sigil");
-    const onAgain = await iconAfterOn.evaluate((el) =>
-      el.classList.contains("equip-boons__icon--on")
+    const passiveAgain = await icon().evaluate((el) =>
+      el.classList.contains("equip-boons__icon--passive")
     );
-    expect(onAgain).toBe(true);
-    const powerRestored = await getStat("Power");
-    expect(powerRestored).toBe(powerWithPassive);
+    expect(passiveAgain).toBe(true);
+    expect(await getStat("Power")).toBe(powerWithPassive);
   });
 
-  // 34. Unequipping the signet hides the Signet Passives section
-  test("Signet Passives section disappears when no stat-granting signet is equipped", async () => {
+  // 34. Unequipping the signet hides the Signets section
+  test("Signets section disappears when no stat-granting signet is equipped", async () => {
     // Go back to the build tab and clear the utility slot.
     await switchTab(window, "build");
     await window.waitForTimeout(300);
 
-    const utilGroup = window.locator(".skill-group--utilities");
-    const utilitySlot = utilGroup.locator(".skill-slot").nth(1);
-    await utilitySlot.locator(".skill-icon-large").click();
-
-    const cselectOpen = window.locator(".cselect--skill-slot.cselect--open");
-    await expect(cselectOpen).toBeVisible({ timeout: 5000 });
     // Pick a non-stat-granting utility (Plague Signet has no stat passive in the buff map).
-    await cselectOpen
-      .locator('.cselect__option:has-text("Plague Signet")')
-      .first()
-      .click();
+    // Goes through the shared helper: skill menus are portalled to <body>, so the
+    // ".cselect--open .cselect__option" shape silently matches nothing.
+    await selectSkill(window, ".skill-group--utilities .skill-slot >> nth=1", "Plague Signet");
     await window.waitForTimeout(500);
 
     await switchTab(window, "equipment");
@@ -1605,7 +1583,7 @@ test.describe("Equipment — Signet Passives", () => {
 
     const boonsSection = window.locator("#equipmentPanel .equip-boons");
     const signetLabel = boonsSection.locator(".equip-boons__sigil-label", {
-      hasText: "Signet Passives",
+      hasText: "Signets",
     });
     await expect(signetLabel).toHaveCount(0);
   });

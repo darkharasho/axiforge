@@ -599,21 +599,7 @@
   color: var(--danger-text);
 }
 
-/* ── Shared Library section ──────────────────────────────────────────── */
-
-.settings-modal__shared-connected--hidden {
-  display: none;
-}
-
-#sm-shared-setup {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-#sm-shared-setup .settings-modal__btn {
-  align-self: flex-start;
-}
+/* ── Teams section ────────────────────────────────────────────────────── */
 
 .settings-modal__shared-info {
   display: flex;
@@ -624,6 +610,7 @@
   border: 1px solid var(--input-border);
   border-radius: var(--radius-sm);
   font-size: 0.8rem;
+  margin-bottom: 12px;
 }
 
 .settings-modal__shared-org {
@@ -631,20 +618,21 @@
   color: var(--text);
 }
 
-.settings-modal__shared-repo {
-  color: var(--muted);
-  font-size: 0.75rem;
-}
-
-#sm-shared-connected {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-#sm-shared-connected .settings-modal__btn {
-  align-self: flex-start;
-}
+.sm-teams-forms { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0; }
+.sm-teams-row { display: flex; gap: 8px; }
+.sm-teams-row .settings-modal__input { flex: 1; }
+.sm-teams-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+.sm-team { padding: 10px 12px; background: var(--input-bg); border: 1px solid var(--input-border); border-radius: var(--radius-sm); font-size: 0.8rem; }
+.sm-team__head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.sm-team__name { font-weight: 700; color: var(--text); }
+.sm-team__role { color: var(--muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: .04em; }
+.sm-team__invite { font-family: var(--mono, monospace); letter-spacing: .08em; padding: 2px 6px; border-radius: 4px; background: rgba(255,255,255,.06); }
+.sm-team__members { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; }
+.sm-team__member { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-top: 1px solid rgba(255,255,255,.06); }
+.settings-modal__btn--small { padding: 3px 8px; font-size: 0.72rem; }
+.settings-modal__error--ok { color: var(--text); }
+.sm-migrate { padding: 10px 12px; margin-bottom: 12px; background: rgba(240,178,50,.12); border: 1px solid rgba(240,178,50,.28); border-radius: var(--radius-sm); font-size: 0.8rem; }
+.sm-migrate .settings-modal__hint { margin: 6px 0 10px; }
 
 /* ── Themed builds toggle ─────────────────────────────────────────────── */
 .settings-modal__toggle {

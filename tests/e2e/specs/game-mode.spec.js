@@ -1,13 +1,19 @@
 const { test, expect } = require("playwright/test");
-const { launchApp, closeApp } = require("../helpers/app");
+const { launchApp, closeApp, WIKI_ENABLED_ENV } = require("../helpers/app");
 const { goToEditor } = require("../helpers/nav");
-const { selectProfession, setGameMode } = require("../helpers/editor");
+const {
+  selectProfession,
+  fillSpecializations,
+  setGameMode,
+} = require("../helpers/editor");
 
 test.describe("Game Mode Toggle", () => {
   let app, window;
 
   test.beforeAll(async () => {
-    ({ app, window } = await launchApp());
+    // These specs assert PvE/WvW split behaviour, and splits only exist on
+    // wiki-derived facts — the default E2E env turns that pass off.
+    ({ app, window } = await launchApp({ env: WIKI_ENABLED_ENV }));
     await goToEditor(window);
     // Ensure Necromancer is selected (has good WvW split coverage in fixtures)
     await selectProfession(window, "Necromancer");
@@ -106,16 +112,16 @@ test.describe("Game Mode Toggle", () => {
     // Close the app
     await closeApp(app);
 
-    // Relaunch without cleaning data (preserves settings)
-    ({ app, window } = await launchApp({ clean: false }));
+    // Relaunch without cleaning data (preserves settings). The env has to be carried
+    // over too: every test after this one runs against this instance, and dropping
+    // WIKI_ENABLED_ENV here silently leaves them without any split data.
+    ({ app, window } = await launchApp({ clean: false, env: WIKI_ENABLED_ENV }));
     await goToEditor(window);
 
-    // Wait for spec cards to ensure init is complete
-    await window.waitForFunction(
-      () => !!document.querySelector("#specializationsHost article.spec-card"),
-      null,
-      { timeout: 15_000 },
-    );
+    // launchApp() already waited for init to finish. Spec cards are NOT a restart
+    // signal: a relaunch reopens with no profession selected, so #specializationsHost
+    // stays in its empty state until something picks one.
+    await window.waitForSelector(".game-mode-toggle__btn--active", { timeout: 15_000 });
 
     // The WvW button should still be active after restart
     const wvwBtnAfter = window.locator('.game-mode-toggle__btn[data-mode="wvw"]');
@@ -141,20 +147,18 @@ test.describe("Game Mode Toggle", () => {
     await setGameMode(window, "pve");
     await selectProfession(window, "Necromancer");
 
-    // Click an active major trait button to populate the detail panel.
-    // The trait buttons with .trait-btn--active are the currently selected traits.
-    // Within the first spec card (Spite), the active traits include "Dread" which has a WvW split.
+    // Selecting a profession leaves all three slots empty, so fill them before
+    // reaching for traits.
+    await fillSpecializations(window, ["Spite", "Curses", "Death Magic"]);
+
+    // Click a grandmaster trait in Spite ("Dread" has a known WvW split) to populate
+    // the detail panel. Nothing is selected until the user picks it.
     const specCards = window.locator("#specializationsHost article.spec-card");
     const spiteCard = specCards.nth(0);
+    const grandmasterTraits = spiteCard.locator(".trait-column--major").nth(2).locator(".trait-btn");
+    expect(await grandmasterTraits.count()).toBe(3);
 
-    // Click the last active major trait in Spite (tier 3 = "Dread" which has WvW split).
-    // Active major traits are in .trait-column--major and have .trait-btn--active.
-    const activeMajorTraits = spiteCard.locator(".trait-column--major .trait-btn--active");
-    const activeCount = await activeMajorTraits.count();
-    expect(activeCount).toBeGreaterThan(0);
-
-    // Click the last one (tier 3, which should be "Dread" with a known WvW split)
-    await activeMajorTraits.last().click();
+    await grandmasterTraits.first().click();
     await window.waitForTimeout(500);
 
     // Verify the detail panel shows content (PvE data)
@@ -162,9 +166,16 @@ test.describe("Game Mode Toggle", () => {
     const pveDetailHtml = await detailHost.innerHTML();
     expect(pveDetailHtml).toContain("detail-card");
 
-    // Check that the detail panel does NOT show "WvW split" badge in PvE mode
-    const pveSplitBadge = await detailHost.locator(".split-badge").count();
-    expect(pveSplitBadge).toBe(0);
+    // The "WvW split" badge marks the *entity* as having a split, so it shows in
+    // every mode — detail-panel.js sets hasSplit straight off the trait. What changes
+    // per mode is the fact values, which is what the rest of this test checks.
+    const splitBadge = detailHost.locator(".split-badge");
+    expect(await splitBadge.count()).toBeGreaterThan(0);
+    expect(await splitBadge.first().textContent()).toContain("WvW split");
+
+    // Dread's PvE damage modifier.
+    const pveFacts = await detailHost.locator(".facts-list").innerText();
+    expect(pveFacts).toContain("15%");
 
     // Now switch to WvW mode — the catalog reloads with balance splits
     await setGameMode(window, "wvw");
@@ -176,12 +187,10 @@ test.describe("Game Mode Toggle", () => {
       { timeout: 15_000 },
     );
 
-    // The detail panel should now show the WvW split badge
-    // (the game mode toggle handler refreshes the detail panel from the new catalog)
-    const wvwSplitBadge = await detailHost.locator(".split-badge").count();
-    expect(wvwSplitBadge).toBeGreaterThan(0);
-    const splitText = await detailHost.locator(".split-badge").first().textContent();
-    expect(splitText).toContain("WvW split");
+    // The same trait now reports its WvW value, and still carries the badge.
+    await expect(detailHost.locator(".facts-list")).toContainText("10%");
+    expect(await detailHost.locator(".facts-list").innerText()).not.toContain("15%");
+    expect(await detailHost.locator(".split-badge").count()).toBeGreaterThan(0);
 
     // Restore PvE mode
     await setGameMode(window, "pve");
@@ -200,12 +209,15 @@ test.describe("Game Mode Toggle", () => {
       { timeout: 15_000 },
     );
 
-    // Click an active major trait to populate the detail panel.
-    // Use a trait with a known WvW split so the facts will change on mode switch.
+    // Re-selecting the profession cleared the slots — refill before reaching for traits.
+    await fillSpecializations(window, ["Spite", "Curses", "Death Magic"]);
+
+    // Click a grandmaster trait to populate the detail panel. Use one with a known WvW
+    // split so the facts actually change on the mode switch below.
     const specCards = window.locator("#specializationsHost article.spec-card");
     const spiteCard = specCards.nth(0);
-    const activeMajorTraits = spiteCard.locator(".trait-column--major .trait-btn--active");
-    await activeMajorTraits.last().click();
+    const grandmasterTraits = spiteCard.locator(".trait-column--major").nth(2).locator(".trait-btn");
+    await grandmasterTraits.first().click();
     await window.waitForTimeout(500);
 
     // Verify the detail panel has a facts list

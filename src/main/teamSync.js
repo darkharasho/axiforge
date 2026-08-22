@@ -10,6 +10,7 @@
 //   * Pull never overwrites an item that has a pending outbox entry.
 
 const { SyncApi } = require("./syncApi");
+const migration = require("./teamSyncMigration");
 
 const POLL_INTERVAL_MS = 30_000;
 const FOCUS_COOLDOWN_MS = 10_000;
@@ -45,6 +46,7 @@ class TeamSync {
     this._inflight = new Map();      // teamId → Promise (flush)
     this._flushAgain = new Set();    // teamId → another flush was requested while one was in flight
     this._pullInProgress = new Set();
+    this._migrationInProgress = false; // M2: listTeams() must not adopt/detach mid-migration
     this._pullAllInflight = null; // R6.1: pullAll() re-entrancy guard
     this._pollTimer = null;
     this._lastFocusPullAt = 0;
@@ -68,30 +70,27 @@ class TeamSync {
 
   async enableWithGithub(githubToken) {
     const { sessionToken, user } = await this.api.loginGithub(githubToken);
-    const auth = await this.buildStore.getAuth();
-    await this.buildStore.saveAuth({ ...auth, sync: { sessionToken, userId: user.id, login: user.login } });
+    await this.buildStore.updateAuth((auth) => ({ ...auth, sync: { sessionToken, userId: user.id, login: user.login } }));
     return user;
   }
 
   async disable() {
     this.stopPolling();
     try { await this.api.logout(); } catch { /* best effort — the session expires on its own */ }
-    const auth = await this.buildStore.getAuth();
-    const next = { ...auth };
-    delete next.sync;
-    await this.buildStore.saveAuth(next);
+    await this.buildStore.updateAuth((auth) => { delete auth.sync; return auth; });
   }
 
   // Called on SYNC_UNAUTHORIZED: forget the session but keep outbox + cursors so
   // a re-login resumes where we left off.
   async _handleUnauthorized() {
     this.stopPolling();
-    const auth = await this.buildStore.getAuth();
-    if (auth && auth.sync) {
-      const next = { ...auth };
-      delete next.sync;
-      await this.buildStore.saveAuth(next);
-    }
+    // m4: read-modify-write inside the store's auth queue, so a concurrent
+    // writer (the startup legacy cleanup) cannot put the dead token back.
+    await this.buildStore.updateAuth((auth) => {
+      if (!auth || !auth.sync) return undefined;
+      delete auth.sync;
+      return auth;
+    });
     this._emit("sync-status", { status: "error", error: "auth" });
   }
 
@@ -118,25 +117,52 @@ class TeamSync {
     return folderId && folderId !== rootId ? folderId : null;
   }
 
-  async _ensureRootFolder(team, role) {
+  // `adoptById`: the caller (the legacy-library migration) explicitly chose the
+  // local folder whose id equals `team.id`. Without it, an id match alone is NOT
+  // permission to absorb a folder — see the comment below.
+  async _ensureRootFolder(team, role, { adoptById = false } = {}) {
     const folders = await this.folderStore.listFolders();
-    const existing = this.rootFolderForTeam(team.id, folders) || folders.find((f) => f.id === team.id);
-    if (existing && existing.parentId) {
-      // A migrated/old folder that is nested cannot be a team root — re-root it.
-      await this.folderStore.upsertFolder({ id: existing.id, name: team.name, parentId: null, shared: true, teamId: team.id, role });
+    let existing = this.rootFolderForTeam(team.id, folders);
+    const sameId = folders.find((f) => f.id === team.id) || null;
+    // SECURITY (R18): team ids are client-supplied (`POST /teams { id }`, added
+    // for the migration's "re-link in place"), and local folder ids leak in
+    // `.axicode` exports. So "a local folder happens to have this id" is
+    // attacker-choosable and must never, on its own, turn a private folder into
+    // a team root. Adopt by id only when the folder is demonstrably a legacy
+    // GitHub-org root (`orgName`) or the user picked it in the migration flow.
+    if (!existing && sameId && (adoptById || sameId.orgName)) existing = sameId;
+    // An unrelated personal folder already owns this id: leave it alone and give
+    // the team root a fresh id of its own.
+    const idTaken = !existing && !!sameId;
+
+    if (existing) {
+      // R17: a folder that is now a team root can't also be a GitHub-org shared
+      // folder. Joiners never run the migration, so this is where their legacy
+      // root loses `orgName` (and with it the orphan banner).
+      if (existing.orgName) await this.folderStore.clearLegacyFields(existing.id);
+      if (existing.parentId) {
+        // A migrated/old folder that is nested cannot be a team root — re-root it.
+        await this.folderStore.upsertFolder({ id: existing.id, name: team.name, parentId: null, shared: true, teamId: team.id, role });
+        return existing.id;
+      }
+      // Skip the upsert (and its updatedAt bump) when nothing actually changed —
+      // pullAll/listTeams run on every poll tick and would otherwise touch every
+      // root folder every 30s.
+      const unchanged = existing.name === team.name && existing.role === role && existing.teamId === team.id;
+      if (!unchanged) {
+        await this.folderStore.upsertFolder({
+          id: existing.id, name: team.name, parentId: null,
+          sortOrder: existing.sortOrder, shared: true, teamId: team.id, role,
+        });
+      }
       return existing.id;
     }
-    // Skip the upsert (and its updatedAt bump) when nothing actually changed —
-    // pullAll/listTeams run on every poll tick and would otherwise touch every
-    // root folder every 30s.
-    const unchanged = existing && existing.name === team.name && existing.role === role && existing.teamId === team.id;
-    if (!unchanged) {
-      await this.folderStore.upsertFolder({
-        id: existing ? existing.id : team.id, name: team.name, parentId: null,
-        sortOrder: existing ? existing.sortOrder : 0, shared: true, teamId: team.id, role,
-      });
-    }
-    return existing ? existing.id : team.id;
+
+    const created = await this.folderStore.upsertFolder({
+      id: idTaken ? undefined : team.id, name: team.name, parentId: null,
+      sortOrder: 0, shared: true, teamId: team.id, role,
+    });
+    return created.id;
   }
 
   // Root folder becomes a personal folder; its contents stay on disk.
@@ -146,8 +172,13 @@ class TeamSync {
     const folders = await this.folderStore.listFolders();
     const root = this.rootFolderForTeam(teamId, folders);
     if (root) {
-      await this.folderStore.upsertFolder({ id: root.id, name: root.name, parentId: null, shared: false, teamId: null, role: null, orgName: undefined, lastSyncedAt: undefined });
-      this._emit("sync-status", { status: "detached", folderId: root.id });
+      await this.folderStore.upsertFolder({ id: root.id, name: root.name, parentId: null, shared: false, teamId: null, role: null });
+      await this.folderStore.clearLegacyFields(root.id); // R6: upsert ignores `orgName: undefined`
+      // No actor identity is available here: a detach is inferred from the team
+      // disappearing from listTeams (or from the user leaving/deleting it), not
+      // from a tombstone that would carry an `updated_by` login. The folder name
+      // is what the renderer needs to name the folder in its toast.
+      this._emit("sync-status", { status: "detached", folderId: root.id, name: root.name });
     }
     await this.syncStore.removeTeam(teamId);
   }
@@ -173,6 +204,12 @@ class TeamSync {
       if (err.code === "SYNC_UNAUTHORIZED") await this._handleUnauthorized();
       throw err;
     }
+    // M2: a migration owns the local folder <-> team mapping until it finishes
+    // (or rolls back). Adopting a legacy root here mid-run would strip its
+    // legacy markers and strand it on a team a rollback is about to delete, and
+    // detaching would fight the migration's own bookkeeping. The next poll
+    // reconciles everything a few seconds later.
+    if (this._migrationInProgress) return list;
     const seen = new Set();
     for (const { team, role } of list) {
       seen.add(team.id);
@@ -768,51 +805,123 @@ class TeamSync {
     for (const b of builds) items.push({ itemId: b.id, type: "build", parentId: b.folderId, body: TeamSync.buildBody(b), baseVersion: null });
     for (const c of comps) items.push({ itemId: c.id, type: "comp", parentId: c.folderId, body: TeamSync.compBody(c), baseVersion: null });
 
+    const { uploaded, failed } = await this._bulkUpload(teamId, items, onProgress);
+
+    // Re-parent the folder under the team root. Its subtree keeps its structure.
+    await this.folderStore.upsertFolder({ id: folderId, name: folder.name, parentId: root.id, sortOrder: folder.sortOrder });
+    this._emit("sync-status", { status: "synced", folderId: root.id });
+    return { uploaded, failed };
+  }
+
+  // Upload `items` (already ordered parents-before-children) to the team in
+  // batches, recording versions for everything the server accepted. Shared by
+  // shareFolderToTeam and the legacy-library migration.
+  /**
+   * Upload `items` (already ordered parents-before-children) to the team in
+   * batches, recording versions for everything the server accepted. Shared by
+   * shareFolderToTeam and the legacy-library migration.
+   *
+   * @param {object} [opts]
+   * @param {boolean} [opts.skipOversize] report 413s in `skipped` (the item
+   *   stays on disk as local-only data, spec §5) instead of failing the run.
+   * @returns {Promise<{ uploaded: number, failed: object[], skipped: object[], uploadedIds: string[] }>}
+   */
+  async _bulkUpload(teamId, items, onProgress, { skipOversize = false } = {}) {
+    const session = await this.getSession();
+    if (!session) throw new Error("Team sync is not enabled.");
     const failed = [];
+    const skipped = [];
+    const uploadedIds = [];
     let done = 0;
     const MAX_RATE_LIMIT_WAITS = 5;
-    for (let i = 0; i < items.length; i += 50) {
-      const batch = items.slice(i, i + 50);
-      // R3: the server charges bulk writes per item against a per-user
-      // writes/min budget, so a large share can hit SYNC_RATE_LIMITED on a
-      // later batch. Retry the SAME batch after waiting, instead of failing
-      // the whole share or skipping items.
-      let results;
+
+    const accept = async (itemId, version, createdBy) => {
+      await this.syncStore.setVersion(teamId, itemId, { version, createdBy });
+      uploadedIds.push(itemId);
+    };
+    const tooLarge = (itemId, message) => {
+      const entry = { itemId, status: 413, message: message || "Too large for the sync server." };
+      (skipOversize ? skipped : failed).push(entry);
+    };
+
+    // R3: the server charges bulk writes per item against a per-user
+    // writes/min budget, so a large share can hit SYNC_RATE_LIMITED on a
+    // later batch. Retry the SAME batch after waiting, instead of failing
+    // the whole share or skipping items. Returns null when the server
+    // rejected the whole BODY as too large (the caller splits and retries).
+    const rawBulk = async (batch) => {
       let waits = 0;
       for (;;) {
         try {
-          ({ results } = await this.api.bulk(teamId, batch));
-          break;
+          const { results } = await this.api.bulk(teamId, batch);
+          return results;
         } catch (err) {
           if (err && err.code === "SYNC_RATE_LIMITED" && waits < MAX_RATE_LIMIT_WAITS) {
             waits += 1;
             await this._wait(err.retryAfterMs || 60_000);
             continue;
           }
+          if (err && err.code === "SYNC_TOO_LARGE") return null;
           throw err;
         }
       }
+    };
+
+    const sendBatch = async (batch, isRetry = false) => {
+      const results = await rawBulk(batch);
+      if (results === null) {
+        // m5: the client batches by COUNT, the Worker caps the body by BYTES —
+        // 50 large-but-legal items 413 as a whole. Halve and retry; only an
+        // item that 413s on its own is genuinely unshippable.
+        if (batch.length > 1) {
+          const mid = Math.ceil(batch.length / 2);
+          await sendBatch(batch.slice(0, mid), isRetry);
+          await sendBatch(batch.slice(mid), isRetry);
+          return;
+        }
+        tooLarge(batch[0].itemId, "This item is too large for the sync server.");
+        return;
+      }
+      const retry = [];
       for (const r of results) {
         if (r.status === 200 || r.status === 201) {
-          await this.syncStore.setVersion(teamId, r.itemId, { version: r.version, createdBy: session.userId });
+          await accept(r.itemId, r.version, session.userId);
         } else if (r.status === 409 && r.current && !r.current.deleted) {
-          // R3: someone else (or a retried earlier attempt) already put this
-          // item in the team — treat it as uploaded so re-running the share
-          // after a partial failure is idempotent instead of piling up
-          // "Already exists" failures forever.
-          await this.syncStore.setVersion(teamId, r.itemId, { version: r.current.version, createdBy: (r.current.createdBy && r.current.createdBy.userId) || session.userId });
+          const serverBy = (r.current.createdBy && r.current.createdBy.userId) || session.userId;
+          const src = batch.find((it) => it.itemId === r.itemId);
+          if (isRetry || !src) {
+            // R3: we already re-sent this item against the server's version and
+            // it conflicted again (or we cannot re-send it) — someone raced us.
+            // Take the server copy so a re-run is idempotent instead of piling
+            // up "Already exists" failures forever.
+            await accept(r.itemId, r.current.version, serverBy);
+          } else {
+            // m1: a 409 on the FIRST attempt means the id already existed in
+            // this team before we sent anything. Recording the server version
+            // and calling it "uploaded" would silently discard the local body
+            // (the next pull would overwrite it). Re-send with the server's
+            // version as the base so our local content wins.
+            retry.push({ ...src, baseVersion: r.current.version });
+          }
+        } else if (r.status === 413) {
+          tooLarge(r.itemId, r.message);
         } else {
           failed.push({ itemId: r.itemId, status: r.status, message: r.message || (r.status === 409 ? "Already exists in the team." : "Rejected.") });
         }
       }
-      done += batch.length;
-      if (onProgress) onProgress({ done, total: items.length });
-    }
+      if (retry.length) await sendBatch(retry, true);
+    };
 
-    // Re-parent the folder under the team root. Its subtree keeps its structure.
-    await this.folderStore.upsertFolder({ id: folderId, name: folder.name, parentId: root.id, sortOrder: folder.sortOrder });
-    this._emit("sync-status", { status: "synced", folderId: root.id });
-    return { uploaded: items.length - failed.length, failed };
+    for (let i = 0; i < items.length; i += 50) {
+      const batch = items.slice(i, i + 50);
+      await sendBatch(batch);
+      done += batch.length;
+      // M3: a progress listener (an IPC send to a WebContents that may have been
+      // destroyed) must never be able to fail an upload — the migration treats a
+      // throw here as "the upload failed" and rolls a good team back.
+      if (onProgress) { try { onProgress({ done, total: items.length }); } catch { /* ignore */ } }
+    }
+    return { uploaded: uploadedIds.length, failed, skipped, uploadedIds };
   }
 
   // Owner only (enforced by the caller / server). The folder tree stays on disk
@@ -846,6 +955,14 @@ class TeamSync {
     await this.folderStore.upsertFolder({ id: folderId, name: folder.name, parentId: null, sortOrder: folder.sortOrder });
     this._emit("sync-status", { status: "synced", folderId: root.id });
   }
+
+  // ─── Legacy GitHub-org library migration ────────────────────────────────────
+  // The logic lives in teamSyncMigration.js (this file is big enough); these
+  // are thin delegates so IPC and callers keep a single entry point.
+
+  legacyStatus() { return migration.legacyStatus(this); }
+  migrateOrgLibrary(opts, onProgress) { return migration.migrateOrgLibrary(this, opts, onProgress); }
+  cleanupLegacyFolders() { return migration.cleanupLegacyFolders(this); }
 
   // Client-side mirror of the server rule, for UX (the server is the authority).
   async canDelete(teamId, itemId) {

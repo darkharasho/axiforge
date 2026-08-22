@@ -282,6 +282,9 @@ export function renderBuildList() {
           await _callbacks.reloadBuilds();
         }
 
+        // NOTE: renderBuildList() early-returns in the shipping app (#lib-content
+        // always exists), so this legacy card is dead code. The live editor
+        // Publish button in renderer.js owns the publish-by-other guard.
         const result = await window.desktopApi.publishBuild(build.id);
 
         advancePublishStep("pages");
@@ -707,6 +710,18 @@ export function syncPublishStatus(id) {
     _el.publishStatus.innerHTML = "";
     delete _el.publishStatus.dataset.publishId;
   }
+}
+
+export function clearPublishProgress(id) {
+  if (state.publishProgress[id]) {
+    delete state.publishProgress[id];
+  }
+  // Only blank the ticker when it is actually showing *this* item. Cancelling
+  // the publish-by-other confirm for comp B must not wipe comp A's in-flight
+  // progress display out from under it.
+  if (_el.publishStatus?.dataset?.publishId && _el.publishStatus.dataset.publishId !== String(id)) return;
+  _el.publishStatus.innerHTML = "";
+  delete _el.publishStatus.dataset.publishId;
 }
 
 // ---------------------------------------------------------------------------

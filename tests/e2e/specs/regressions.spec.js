@@ -1,24 +1,20 @@
 const { test, expect } = require("playwright/test");
 const { launchApp, closeApp, cleanDataDir } = require("../helpers/app");
+const { openFirstComp } = require("../helpers/comps");
 const { goToEditor, goToComps, switchTab } = require("../helpers/nav");
-const { selectProfession, setTitle, saveBuild, setGameMode } = require("../helpers/editor");
+const {
+  openMenu,
+  closeOpenSelect,
+  selectProfession,
+  setTitle,
+  saveBuild,
+  setGameMode,
+} = require("../helpers/editor");
 const { seedBuildFile, seedCompFile } = require("../helpers/data");
 const { makeTestBuild, makeTestComp, uuid } = require("../helpers/builds");
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-/** Wait for comp detail view to render. */
-async function waitForCompDetail(window) {
-  await window.waitForSelector(".comp-detail", { timeout: 5000 });
-  await window.waitForTimeout(300);
-}
-
-/** Open first comp in the list. */
-async function openFirstComp(window) {
-  const row = window.locator(".comp-list-row[data-comp-id]").first();
-  await row.dblclick();
-  await waitForCompDetail(window);
-}
 
 /** Navigate to editor equipment tab. */
 async function goToEquipment(window) {
@@ -104,11 +100,14 @@ test.describe("Overload skill selection updates reference panel", () => {
     const iconBtn = healSlot.locator(".skill-icon-large");
     await iconBtn.click();
 
-    const cselectOpen = window.locator(".cselect--skill-slot.cselect--open");
-    await expect(cselectOpen).toBeVisible({ timeout: 5000 });
+    // The wrapper keeps .cselect--open, but its menu is portalled to document.body —
+    // options must be read from the portalled menu, not from under the wrapper.
+    await expect(window.locator(".cselect--skill-slot.cselect--open")).toBeVisible({ timeout: 5000 });
+    const menu = openMenu(window);
+    await menu.waitFor({ state: "visible", timeout: 5000 });
 
     // Pick the first available heal skill
-    const firstOption = cselectOpen.locator(".cselect__option").first();
+    const firstOption = menu.locator(".cselect__option").first();
     await firstOption.click();
     await window.waitForTimeout(500);
 
@@ -143,28 +142,25 @@ test.describe("Elementalist flip skills filtering", () => {
     const iconBtn = healSlot.locator(".skill-icon-large");
     await iconBtn.click();
 
-    const cselectOpen = window.locator(".cselect--skill-slot.cselect--open");
-    await expect(cselectOpen).toBeVisible({ timeout: 5000 });
+    // The wrapper keeps .cselect--open, but its menu is portalled to document.body.
+    await expect(window.locator(".cselect--skill-slot.cselect--open")).toBeVisible({ timeout: 5000 });
+    const menu = openMenu(window);
+    await menu.waitFor({ state: "visible", timeout: 5000 });
 
     // Count the available options — flip skills should be excluded
-    const optionCount = await cselectOpen.locator(".cselect__option").count();
+    const optionCount = await menu.locator(".cselect__option").count();
     expect(optionCount).toBeGreaterThan(0);
 
     // Get all option texts and verify none are known flip skill names
     // (Overload skills are mechanic skills, not equippable — they should not appear as heal options)
-    const optionTexts = await cselectOpen.locator(".cselect__option .cselect__label").allTextContents();
+    const optionTexts = await menu.locator(".cselect__option .cselect__label").allTextContents();
     const flipIndicators = ["Overload Fire", "Overload Water", "Overload Air", "Overload Earth"];
     for (const flip of flipIndicators) {
       const found = optionTexts.some((t) => t.includes(flip));
       expect(found, `Flip skill "${flip}" should not appear in heal picker`).toBe(false);
     }
 
-    // Close the dropdown
-    await window.evaluate(() => {
-      const open = document.querySelector(".cselect--open");
-      if (open) open.classList.remove("cselect--open");
-    });
-    await window.waitForTimeout(300);
+    await closeOpenSelect(window);
   });
 });
 

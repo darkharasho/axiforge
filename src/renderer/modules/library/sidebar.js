@@ -3,6 +3,8 @@
 import { state } from "../state.js";
 import { escapeHtml } from "../utils.js";
 import { countBuildsInFolder } from "./folder-store.js";
+import { badgeHtml } from "../sync-status.js";
+import { teamLabel } from "../teams.js";
 import {
   folderIcon,
   folderOpenIcon,
@@ -173,19 +175,19 @@ function renderMyFolders(expanded) {
     .filter((f) => f.parentId === null)
     .sort((a, b) => a.sortOrder - b.sortOrder);
 
-  const sharedFolders = topLevel.filter((f) => f.shared);
-  const personalFolders = topLevel.filter((f) => !f.shared);
+  const teamFolders = topLevel.filter((f) => f.teamId);
+  const personalFolders = topLevel.filter((f) => !f.teamId);
 
-  const sharedItems = sharedFolders.map((f) => renderFolderItem(f, expanded, 0)).join("");
+  const teamItems = teamFolders.map((f) => renderFolderItem(f, expanded, 0)).join("");
   const personalItems = personalFolders.map((f) => renderFolderItem(f, expanded, 0)).join("");
 
   let html = "";
 
-  if (sharedFolders.length > 0) {
+  if (teamFolders.length > 0) {
     html += `
       <div class="lib-sidebar__section">
-        <div class="lib-sidebar__section-label">Shared Folders</div>
-        ${sharedItems}
+        <div class="lib-sidebar__section-label">Team Folders</div>
+        ${teamItems}
       </div>
     `;
   }
@@ -227,6 +229,9 @@ function renderFolderItem(folder, expanded, depth) {
         class="lib-nav-item ${isActive ? "lib-nav-item--active" : ""}"
         style="padding-left: ${16 + indent}px"
         data-navigate-folder="${escapeHtml(folder.id)}"
+        ${/* data-folder-id is what context-menu.js dispatches on, so right-clicking
+             a sidebar folder gets the same menu as its row on the list page. */ ""}
+        data-folder-id="${escapeHtml(folder.id)}"
       >
         ${hasChildren
           ? `<span class="lib-nav-item__chevron" data-toggle-folder="${escapeHtml(folder.id)}">${isExpanded ? chevronDownIcon : chevronRightIcon}</span>`
@@ -234,7 +239,7 @@ function renderFolderItem(folder, expanded, depth) {
         }
         <span class="lib-nav-item__icon">${isExpanded ? folderOpenIcon : folderIcon}</span>
         <span class="lib-nav-item__label">${escapeHtml(folder.name)}</span>
-        ${folder.shared ? `<span class="lib-nav-item__shared-badge" title="Shared with ${escapeHtml(folder.orgName || 'org')}">${shareIcon}</span>` : ""}
+        ${folder.teamId ? `<span class="lib-nav-item__shared-badge" title="${escapeHtml(teamLabel(folder))}">${shareIcon}</span>` : ""}
         ${_renderSyncIndicator(folder.id)}
         <span class="lib-nav-item__count">${count}</span>
       </button>
@@ -243,19 +248,8 @@ function renderFolderItem(folder, expanded, depth) {
   `;
 }
 
-const _sidebarSyncSpinner = `<svg class="sync-spin" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 2a10 10 0 0 1 10 10"/></svg>`;
-const _sidebarSyncCheck = `<svg width="11" height="11" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd"/></svg>`;
-
 function _renderSyncIndicator(folderId) {
-  const syncStatus = state.folderSyncStatus?.[folderId];
-  if (!syncStatus) return "";
-  if (syncStatus === "syncing") {
-    return `<span class="lib-nav-item__sync-indicator lib-nav-item__sync-indicator--syncing" title="Syncing\u2026">${_sidebarSyncSpinner}</span>`;
-  }
-  if (syncStatus === "synced") {
-    return `<span class="lib-nav-item__sync-indicator lib-nav-item__sync-indicator--synced" title="Synced">${_sidebarSyncCheck}</span>`;
-  }
-  return "";
+  return badgeHtml("lib-nav-item__sync-indicator", state.folderSyncStatus?.[folderId]);
 }
 
 function gameModeLabel(id) {

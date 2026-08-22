@@ -3,9 +3,33 @@ const path = require("node:path");
 const crypto = require("node:crypto");
 const { readJsonFile, writeJsonAtomic } = require("./jsonFile");
 
+// Electron's OS-keyring-backed encryption, when it is actually usable.
+// Deliberately re-checked on every call (not cached): `isEncryptionAvailable()`
+// is only meaningful after app-ready, and buildStore is also loaded outside
+// Electron entirely (unit tests, scripts), where `require("electron")` resolves
+// to a path string with no `safeStorage` on it.
+function usableSafeStorage() {
+  try {
+    const electron = require("electron");
+    const ss = electron && electron.safeStorage;
+    if (ss && typeof ss.isEncryptionAvailable === "function" && ss.isEncryptionAvailable()) return ss;
+  } catch { /* not running under Electron */ }
+  return null;
+}
+
 class BuildStore {
   #settingsQueue = Promise.resolve();
   #writeQueue = Promise.resolve();
+  // auth.json is read-modify-written from several places at once (startup
+  // cleanup, pullAll's 401 handler, the legacy migration). Without its own
+  // queue, a stale write can resurrect a session token that was just deleted.
+  #authQueue = Promise.resolve();
+
+  #enqueueAuth(fn) {
+    const next = this.#authQueue.then(() => fn());
+    this.#authQueue = next.catch(() => {});
+    return next;
+  }
 
   #enqueue(fn) {
     const next = this.#writeQueue.then(() => fn());
@@ -137,15 +161,72 @@ class BuildStore {
   }
 
   async getAuth() {
-    return this.#readJson(this.authPath, {});
+    return this.#enqueueAuth(() => this.#readAuth());
   }
 
   async saveAuth(auth) {
-    await this.#writeJson(this.authPath, auth || {});
+    return this.#enqueueAuth(() => this.#writeAuth(auth || {}));
   }
 
   async clearAuth() {
-    await this.#writeJson(this.authPath, {});
+    return this.#enqueueAuth(() => this.#writeAuth({}));
+  }
+
+  /**
+   * Read-modify-write auth.json as one serialized step. Every caller that
+   * mutates part of the auth blob must use this instead of getAuth()+saveAuth(),
+   * or two overlapping callers clobber each other's field.
+   * @param {(auth: object) => object|void|Promise<object|void>} mutate
+   *   receives a shallow copy; return the object to persist (or nothing to skip
+   *   the write). It runs INSIDE the auth queue, so it must not call
+   *   getAuth/saveAuth/updateAuth itself.
+   */
+  async updateAuth(mutate) {
+    return this.#enqueueAuth(async () => {
+      const current = await this.#readAuth();
+      const next = await mutate({ ...current });
+      if (next === undefined || next === null) return current;
+      await this.#writeAuth(next);
+      return next;
+    });
+  }
+
+  // auth.json holds long-lived credentials (the GitHub PAT and the 90-day team
+  // sync session token), so it is encrypted at rest with the OS keyring when
+  // one is available. Both directions stay compatible with plaintext:
+  //   * reading transparently accepts an existing plaintext file;
+  //   * writing falls back to plaintext when safeStorage is unavailable
+  //     (a Linux box with no keyring, which is common).
+  async #readAuth() {
+    const data = await this.#readJson(this.authPath, {});
+    if (!data || typeof data !== "object") return {};
+    if (data.__enc !== "safeStorage" || typeof data.data !== "string") return data; // plaintext (legacy or no-keyring)
+    const ss = usableSafeStorage();
+    if (!ss) {
+      console.warn("[auth] auth.json is encrypted but the OS keyring is unavailable; sign in again to recreate it.");
+      return {};
+    }
+    try {
+      return JSON.parse(ss.decryptString(Buffer.from(data.data, "base64"))) || {};
+    } catch (err) {
+      // Never delete the file — a keyring that comes back later can still read it.
+      console.warn("[auth] could not decrypt auth.json:", err.message);
+      return {};
+    }
+  }
+
+  async #writeAuth(auth) {
+    const ss = usableSafeStorage();
+    if (ss) {
+      try {
+        const encrypted = ss.encryptString(JSON.stringify(auth));
+        await this.#writeJson(this.authPath, { __enc: "safeStorage", data: Buffer.from(encrypted).toString("base64") });
+        return;
+      } catch (err) {
+        console.warn("[auth] safeStorage encryption failed, storing in plaintext:", err.message);
+      }
+    }
+    await this.#writeJson(this.authPath, auth);
   }
 
   async #ensureFile(filePath, fallback) {

@@ -1,23 +1,11 @@
 const { test, expect } = require("playwright/test");
 const { launchApp, closeApp } = require("../helpers/app");
 const { goToEditor } = require("../helpers/nav");
-const { selectProfession } = require("../helpers/editor");
-
-/**
- * Change the specialization in a given slot by clicking the spec emblem
- * (which forwards to the cselect trigger), waiting for the dropdown, and
- * clicking the option with the desired name.
- */
-async function changeSpec(window, slotIndex, specName) {
-  const card = window.locator("article.spec-card").nth(slotIndex);
-  // Click the emblem button — it proxies to the cselect trigger
-  await card.locator(".spec-emblem").click();
-  // Wait for the dropdown to open
-  await window.waitForSelector(".cselect--open", { timeout: 3000 });
-  // Click the option matching the desired specialization name
-  await window.click(`.cselect--open .cselect__option:has-text("${specName}")`);
-  await window.waitForTimeout(500);
-}
+const {
+  selectProfession,
+  fillSpecializations,
+  changeSpecialization,
+} = require("../helpers/editor");
 
 /**
  * Click a major trait button within a spec card.
@@ -40,6 +28,10 @@ test.describe("Specializations & Traits", () => {
     ({ app, window } = await launchApp());
     await goToEditor(window);
     await selectProfession(window, "Necromancer");
+    // The editor opens with three empty slots — every assertion in this file is about
+    // a chosen specialization (emblem, trait columns, minor anchors, connectors), so
+    // fill them here rather than in each test.
+    await fillSpecializations(window, ["Spite", "Curses", "Death Magic"]);
   });
 
   test.afterAll(async () => {
@@ -48,7 +40,7 @@ test.describe("Specializations & Traits", () => {
 
   // ── Test 1: Can select 0–3 specializations ────────────────────────────────
   test("can select 0-3 specializations", async () => {
-    // After selecting Necromancer, the app auto-fills 3 specialization slots.
+    // beforeAll filled all three slots; the host always renders exactly 3 cards.
     const specCards = window.locator("#specializationsHost article.spec-card");
     const count = await specCards.count();
     expect(count).toBe(3);
@@ -63,19 +55,21 @@ test.describe("Specializations & Traits", () => {
     // First, capture the current spec name in slot 0.
     const originalTitle = await specCards.nth(0).locator(".spec-emblem").getAttribute("title");
 
-    // Change slot 0 to "Death Magic" (a core Necromancer spec).
-    await changeSpec(window, 0, "Death Magic");
+    // Change slot 0 to "Blood Magic" — a core Necromancer spec no other slot holds
+    // (occupied specs render as disabled options).
+    await changeSpecialization(window, 0, "Blood Magic");
 
-    // The emblem title should now be "Death Magic"
+    // The emblem title should now be "Blood Magic"
     const newTitle = await specCards.nth(0).locator(".spec-emblem").getAttribute("title");
-    expect(newTitle).toBe("Death Magic");
+    expect(newTitle).toBe("Blood Magic");
     expect(newTitle).not.toBe(originalTitle);
 
     // Still 3 spec cards
     expect(await specCards.count()).toBe(3);
 
-    // Restore to original for subsequent tests
-    await selectProfession(window, "Necromancer");
+    // Restore to original for subsequent tests. Re-selecting the profession would
+    // clear all three slots, not just this one.
+    await changeSpecialization(window, 0, originalTitle);
   });
 
   // ── Test 2: Specialization cards display with background images ───────────
@@ -117,7 +111,8 @@ test.describe("Specializations & Traits", () => {
   test("each tier has 3 major trait options and can select 1 per tier", async () => {
     const card = window.locator("article.spec-card").first();
 
-    // Check all 3 tiers
+    // Check all 3 tiers. Choosing a specialization sets majorChoices to {1:0,2:0,3:0} —
+    // no trait is picked for you — so each tier starts with 3 options and none active.
     const majorColumns = card.locator(".trait-column--major");
     for (let tier = 0; tier < 3; tier++) {
       const column = majorColumns.nth(tier);
@@ -125,7 +120,9 @@ test.describe("Specializations & Traits", () => {
       // Each tier should have exactly 3 major trait options
       expect(await traitBtns.count()).toBe(3);
 
-      // Exactly one should be active
+      // Picking one makes it the tier's only active trait
+      await traitBtns.nth(0).click();
+      await window.waitForTimeout(200);
       const activeBtns = column.locator(".trait-btn--active");
       expect(await activeBtns.count()).toBe(1);
     }
@@ -157,6 +154,12 @@ test.describe("Specializations & Traits", () => {
   test("selected traits show visual indicator", async () => {
     const card = window.locator("article.spec-card").first();
     const majorColumns = card.locator(".trait-column--major");
+
+    // Pick one major per tier — nothing is selected until the user chooses.
+    for (let tier = 0; tier < 3; tier++) {
+      await majorColumns.nth(tier).locator(".trait-btn").nth(2).click();
+      await window.waitForTimeout(200);
+    }
 
     for (let tier = 0; tier < 3; tier++) {
       const column = majorColumns.nth(tier);
@@ -289,7 +292,7 @@ test.describe("Specializations & Traits", () => {
     // Change the spec in slot 0 to a different one
     const currentTitle = await window.locator("article.spec-card").nth(0).locator(".spec-emblem").getAttribute("title");
     const targetSpec = currentTitle === "Blood Magic" ? "Soul Reaping" : "Blood Magic";
-    await changeSpec(window, 0, targetSpec);
+    await changeSpecialization(window, 0, targetSpec);
 
     // After changing, the connector should be present on the new card
     const newCard0Body = window.locator("article.spec-card").nth(0).locator(".spec-card__body");
@@ -330,29 +333,30 @@ test.describe("Specializations & Traits", () => {
       activeTraitTitles.push(await activeBtn.getAttribute("title"));
     }
 
-    // Now change slot 0 to a different specialization
+    // Now change slot 0 to a specialization no other slot holds — occupied specs are
+    // rendered as disabled options.
     const currentSpecTitle = await card.locator(".spec-emblem").getAttribute("title");
-    const targetSpec = currentSpecTitle === "Curses" ? "Death Magic" : "Curses";
-    await changeSpec(window, 0, targetSpec);
+    const targetSpec = currentSpecTitle === "Soul Reaping" ? "Spite" : "Soul Reaping";
+    await changeSpecialization(window, 0, targetSpec);
 
     // The spec should have changed
     const newSpecTitle = await window.locator("article.spec-card").first().locator(".spec-emblem").getAttribute("title");
     expect(newSpecTitle).toBe(targetSpec);
 
-    // The traits should be reset — the new spec has different traits entirely,
-    // and the major choices should be the defaults (first trait in each tier).
+    // The traits should be cleared: swapping a slot resets majorChoices to
+    // {1:0, 2:0, 3:0}, so the new spec starts with nothing selected in any tier.
     const newCard = window.locator("article.spec-card").first();
     const newMajorColumns = newCard.locator(".trait-column--major");
 
     for (let tier = 0; tier < 3; tier++) {
       const column = newMajorColumns.nth(tier);
-      // There should be exactly 1 active trait per tier
-      const activeCount = await column.locator(".trait-btn--active").count();
-      expect(activeCount).toBe(1);
+      expect(await column.locator(".trait-btn--active").count()).toBe(0);
 
-      // The active trait should be different from the old ones (different spec entirely)
-      const newActiveTitle = await column.locator(".trait-btn--active").first().getAttribute("title");
-      expect(newActiveTitle).not.toBe(activeTraitTitles[tier]);
+      // None of the previously chosen traits survived the swap
+      const titles = await column.locator(".trait-btn").evaluateAll((els) =>
+        els.map((el) => el.getAttribute("title")),
+      );
+      expect(titles).not.toContain(activeTraitTitles[tier]);
     }
   });
 });

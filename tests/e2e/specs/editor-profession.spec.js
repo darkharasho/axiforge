@@ -1,7 +1,12 @@
 const { test, expect } = require("playwright/test");
 const { launchApp, closeApp } = require("../helpers/app");
 const { goToEditor } = require("../helpers/nav");
-const { selectProfession, setTitle } = require("../helpers/editor");
+const {
+  openCustomSelect,
+  selectProfession,
+  fillSpecializations,
+  setTitle,
+} = require("../helpers/editor");
 
 const ALL_PROFESSIONS = [
   "Guardian",
@@ -32,15 +37,14 @@ test.describe("Editor — Profession & Metadata", () => {
 
   // ── Test 1: All 9 professions are selectable ──────────────────────────────
   test("all 9 professions selectable", async () => {
-    // Open the custom-select dropdown (grouped: professions are group headers)
-    await window.click("#professionSelect .cselect__trigger");
-    await window.waitForSelector("#professionSelect .cselect--open", { timeout: 5_000 });
+    // Open the custom-select dropdown (grouped: professions are group headers).
+    // The open menu lives on document.body, not under #professionSelect.
+    const menu = await openCustomSelect(window, "#professionSelect");
 
     // Gather all group header labels — each profession should have a group
-    const groupLabels = await window.$$eval(
-      "#professionSelect .cselect__group-header .cselect__label",
-      (els) => els.map((el) => el.textContent.trim()),
-    );
+    const groupLabels = (
+      await menu.locator(".cselect__group-header .cselect__label").allTextContents()
+    ).map((text) => text.trim());
 
     for (const name of ALL_PROFESSIONS) {
       expect(groupLabels, `Missing profession group: ${name}`).toContain(name);
@@ -64,19 +68,14 @@ test.describe("Editor — Profession & Metadata", () => {
   // ── Test 3: Profession icons display with correct styling ─────────────────
   test("profession icons display with correct styling", async () => {
     // Open the dropdown and check that each option has an icon element
-    await window.click("#professionSelect .cselect__trigger");
-    await window.waitForSelector("#professionSelect .cselect--open", { timeout: 5_000 });
+    const menu = await openCustomSelect(window, "#professionSelect");
 
     // Each option should have a .cselect__icon (SVG spans via iconSvg)
-    const iconCount = await window.$$eval(
-      "#professionSelect .cselect__option .cselect__icon",
-      (els) => els.length,
-    );
+    const iconCount = await menu.locator(".cselect__option .cselect__icon").count();
     expect(iconCount).toBeGreaterThanOrEqual(ALL_PROFESSIONS.length);
 
     // Icons are SVG spans (.cselect__icon--svg), not <img> elements
-    const svgIcons = await window.$$eval(
-      "#professionSelect .cselect__option .cselect__icon--svg",
+    const svgIcons = await menu.locator(".cselect__option .cselect__icon--svg").evaluateAll(
       (els) => els.map((el) => ({ hasSvg: !!el.querySelector("svg"), className: el.className })),
     );
     expect(svgIcons.length).toBeGreaterThanOrEqual(ALL_PROFESSIONS.length);
@@ -97,30 +96,23 @@ test.describe("Editor — Profession & Metadata", () => {
 
   // ── Test 4: Switching professions clears previous selections ──────────────
   test("switching professions clears previous selections", async () => {
-    // Start with Necromancer
+    // Start with Necromancer and actually pick specs — the editor opens blank, so
+    // comparing untouched slots across two professions would compare two identical
+    // sets of empty placeholders and prove nothing.
     await selectProfession(window, "Necromancer");
+    await fillSpecializations(window, ["Spite", "Curses", "Death Magic"]);
 
-    // Grab the spec-card content for Necromancer
-    const necroSpecs = await window.$$eval(
-      "#specializationsHost article.spec-card",
-      (els) => els.map((el) => el.textContent),
-    );
-    expect(necroSpecs.length).toBeGreaterThan(0);
+    const emblems = window.locator("#specializationsHost article.spec-card .spec-emblem");
+    const necroSpecs = await emblems.evaluateAll((els) => els.map((el) => el.getAttribute("title")));
+    expect(necroSpecs).toEqual(["Spite", "Curses", "Death Magic"]);
 
     // Switch to Elementalist (also has catalog fixture data)
     await selectProfession(window, "Elementalist");
 
-    // The spec cards should now be different from Necromancer
-    const eleSpecs = await window.$$eval(
-      "#specializationsHost article.spec-card",
-      (els) => els.map((el) => el.textContent),
-    );
-    expect(eleSpecs.length).toBeGreaterThan(0);
-
-    // At least the content should differ (different profession's specializations)
-    const necroJoined = necroSpecs.join("|");
-    const eleJoined = eleSpecs.join("|");
-    expect(eleJoined).not.toBe(necroJoined);
+    // Necromancer's specializations are gone — every slot is back to its placeholder
+    expect(await emblems.count()).toBe(0);
+    const emptyCards = window.locator("#specializationsHost article.spec-card--empty");
+    expect(await emptyCards.count()).toBe(3);
   });
 
   // ── Test 5: Loading skeletons appear during catalog fetches ────────────────

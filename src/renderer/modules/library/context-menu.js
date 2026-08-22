@@ -7,7 +7,9 @@ import { shareDisabledTooltip } from "../share-gate.js";
 import { state } from "../state.js";
 import { showConfirmModal } from "../confirm-modal.js";
 import { isSelected, getSelection, isCompSelected, getCompSelection } from "./selection.js";
-import { shareFolder, unshareFolder, pullFolder } from "./folder-store.js";
+import { stopSharingFolder, pullTeamFor } from "./folder-store.js";
+import { isTeamOwner, teamRootFor } from "../teams.js";
+import { openShareModal } from "./share-modal.js";
 import {
   playIcon,
   pencilIcon,
@@ -78,71 +80,85 @@ export function closeMenu() {
 }
 
 /**
- * Wire contextmenu listener to #lib-content.
- * Call this after #lib-content is rendered.
+ * Wire contextmenu listeners to the library's two right-clickable surfaces:
+ * #lib-content (the list page) and #lib-sidebar (the folder tree). Both dispatch
+ * through the same handler, so a sidebar folder gets the identical menu its row
+ * on the list page gets. Call this after #lib-content is rendered.
+ *
+ * Both containers survive their own re-renders (only innerHTML is replaced), so
+ * one listener each outlives every render.
  */
 export function wireContextMenuEvents() {
-  const container = document.getElementById("lib-content");
-  if (!container) return;
+  _bindOnce(document.getElementById("lib-content"));
+  _bindOnce(document.getElementById("lib-sidebar"));
+}
 
-  container.addEventListener("contextmenu", (e) => {
-    e.preventDefault();
+/**
+ * renderLibrary() calls wireContextMenuEvents() on every render, so binding
+ * unconditionally would stack one listener per render for the life of the
+ * session. The marker keeps it to one per element.
+ */
+function _bindOnce(el) {
+  if (!el || el.dataset.ctxBound === "1") return;
+  el.dataset.ctxBound = "1";
+  el.addEventListener("contextmenu", _onContextMenu);
+}
 
-    const buildEl = e.target.closest("[data-build-id]");
-    const folderEl = e.target.closest("[data-folder-id]");
-    const compEl = e.target.closest("[data-comp-id]");
+function _onContextMenu(e) {
+  e.preventDefault();
 
-    if (buildEl) {
-      const buildId = buildEl.dataset.buildId;
-      // Multi-select: build is part of a selection with >1 items
-      if (isSelected(buildId) && getSelection().length > 1) {
-        showMultiSelectMenu(e.clientX, e.clientY, getSelection());
-      } else {
-        const build = state.builds.find((b) => b.id === buildId);
-        showBuildMenu(e.clientX, e.clientY, buildId, build);
-      }
-    } else if (compEl) {
-      const compId = compEl.dataset.compId;
-      // Multi-select: comp is part of a selection with >1 items
-      if (isCompSelected(compId) && getCompSelection().length > 1) {
-        showMultiCompSelectMenu(e.clientX, e.clientY, getCompSelection());
-      } else {
-        const comp = state.comps?.find((c) => c.id === compId);
-        showCompMenu(e.clientX, e.clientY, compId, comp);
-      }
-    } else if (folderEl) {
-      const folderId = folderEl.dataset.folderId;
-      const folder = state.folders.find((f) => f.id === folderId);
-      showFolderMenu(e.clientX, e.clientY, folderId, folder);
+  const buildEl = e.target.closest("[data-build-id]");
+  const folderEl = e.target.closest("[data-folder-id]");
+  const compEl = e.target.closest("[data-comp-id]");
+
+  if (buildEl) {
+    const buildId = buildEl.dataset.buildId;
+    // Multi-select: build is part of a selection with >1 items
+    if (isSelected(buildId) && getSelection().length > 1) {
+      showMultiSelectMenu(e.clientX, e.clientY, getSelection());
     } else {
-      showEmptyMenu(e.clientX, e.clientY);
+      const build = state.builds.find((b) => b.id === buildId);
+      showBuildMenu(e.clientX, e.clientY, buildId, build);
     }
-  });
+  } else if (compEl) {
+    const compId = compEl.dataset.compId;
+    // Multi-select: comp is part of a selection with >1 items
+    if (isCompSelected(compId) && getCompSelection().length > 1) {
+      showMultiCompSelectMenu(e.clientX, e.clientY, getCompSelection());
+    } else {
+      const comp = state.comps?.find((c) => c.id === compId);
+      showCompMenu(e.clientX, e.clientY, compId, comp);
+    }
+  } else if (folderEl) {
+    const folderId = folderEl.dataset.folderId;
+    const folder = state.folders.find((f) => f.id === folderId);
+    showFolderMenu(e.clientX, e.clientY, folderId, folder);
+  } else {
+    showEmptyMenu(e.clientX, e.clientY);
+  }
 }
 
 // ─── Ownership helpers ──────────────────────────────────────────────────────────
 
-/** Returns true if folderId (or any ancestor) is a shared folder. */
-function _isInSharedFolder(folderId) {
-  let current = state.folders.find((f) => f.id === folderId);
-  while (current) {
-    if (current.shared) return true;
-    if (!current.parentId) return false;
-    current = state.folders.find((f) => f.id === current.parentId);
-  }
-  return false;
+/**
+ * True when the item may be moved: items in personal folders always can, items
+ * inside a team folder only when the current user owns that team.
+ */
+function _canMoveFrom(folderId) {
+  return !teamRootFor(folderId) || isTeamOwner(folderId);
 }
 
-/** Returns true if the current user is an org owner of the shared library. */
-function _isOrgOwner() {
-  return !!state.sharedLibraryConfig?.isOwner;
+/** Toast without importing library.js (which imports this module). */
+function _toast(message, type = "success") {
+  if (_callbacks.onToast) _callbacks.onToast(message, type);
+  else document.dispatchEvent(new CustomEvent("library:toast", { detail: { message, type } }));
 }
 
 // ─── Menu builders ─────────────────────────────────────────────────────────────
 
 function showBuildMenu(x, y, buildId, build) {
   const isPinned = build?.pinned;
-  const canMove = !_isInSharedFolder(build?.folderId) || _isOrgOwner();
+  const canMove = _canMoveFrom(build?.folderId);
   const shareTip = shareDisabledTooltip(build, false);
   const items = [
     _item(playIcon, "Load", null, () => _callbacks.onLoadBuild?.(buildId)),
@@ -173,11 +189,8 @@ function showBuildMenu(x, y, buildId, build) {
 
 function showMultiSelectMenu(x, y, ids) {
   const count = ids.length;
-  const anyInShared = ids.some((id) => {
-    const b = state.builds.find((b) => b.id === id);
-    return b && _isInSharedFolder(b.folderId);
-  });
-  const canMove = !anyInShared || _isOrgOwner();
+  const selected = ids.map((id) => state.builds.find((b) => b.id === id)).filter(Boolean);
+  const canMove = selected.every((b) => _canMoveFrom(b.folderId));
   const items = [
     _header(`${count} builds selected`),
     _sep(),
@@ -195,7 +208,7 @@ function showMultiSelectMenu(x, y, ids) {
 }
 
 function showCompMenu(x, y, compId, comp) {
-  const canMove = !_isInSharedFolder(comp?.folderId) || _isOrgOwner();
+  const canMove = _canMoveFrom(comp?.folderId);
   const items = [
     _item(playIcon, "Open", null, () => _callbacks.onOpenComp?.(compId)),
     _item(pencilIcon, "Rename", "F2", () => _callbacks.onRenameComp?.(compId)),
@@ -215,11 +228,8 @@ function showCompMenu(x, y, compId, comp) {
 
 function showMultiCompSelectMenu(x, y, ids) {
   const count = ids.length;
-  const anyInShared = ids.some((id) => {
-    const c = state.comps?.find((c) => c.id === id);
-    return c && _isInSharedFolder(c.folderId);
-  });
-  const canMove = !anyInShared || _isOrgOwner();
+  const selected = ids.map((id) => state.comps?.find((c) => c.id === id)).filter(Boolean);
+  const canMove = selected.every((c) => _canMoveFrom(c.folderId));
   const items = [
     _header(`${count} comps selected`),
     _sep(),
@@ -235,8 +245,8 @@ function showMultiCompSelectMenu(x, y, ids) {
 }
 
 function showFolderMenu(x, y, folderId, folder) {
-  const isShared = folder?.shared;
-  const hasSharedLibrary = !!state.sharedLibraryConfig;
+  const teamRoot = teamRootFor(folderId);
+  const isTeamRoot = teamRoot?.id === folderId;
 
   const items = [
     _item(folderOpenIcon, "Open Folder", null, () => _callbacks.onOpenFolder?.(folderId)),
@@ -255,43 +265,72 @@ function showFolderMenu(x, y, folderId, folder) {
     _sep(),
     _item(clipboardIcon, "Paste", "Ctrl+V", () => _callbacks.onPasteJson?.(folderId)),
     _sep(),
-    ...(isShared ? [
-      _item(shareIcon, "Sync Now", null, async () => {
-        await pullFolder(folderId);
-        _callbacks.onRefresh?.();
-      }),
-      ...(_isOrgOwner() ? [
-        _item(trashIcon, "Unshare Folder", null, async () => {
-          const confirmed = await showConfirmModal({
-            title: "Unshare Folder",
-            body: `Stop sharing <strong>${escapeHtml(folder?.name || folderId)}</strong>? Your local copies will be kept.`,
-            confirmLabel: "Unshare",
-            cancelLabel: "Cancel",
-          });
-          if (confirmed) {
-            await unshareFolder(folderId);
-            _callbacks.onRefresh?.();
-          }
-        }, true),
-      ] : []),
-    ] : hasSharedLibrary ? [
-      _item(shareIcon, "Share to Org", null, async () => {
-        const confirmed = await showConfirmModal({
-          title: "Share to Org",
-          body: `Share <strong>${escapeHtml(folder?.name || folderId)}</strong> to your org? All builds in this folder will be visible to org members.`,
-          confirmLabel: "Share",
-          cancelLabel: "Cancel",
-        });
-        if (confirmed) {
-          await shareFolder(folderId);
-          _callbacks.onRefresh?.();
-        }
-      }),
-    ] : []),
+    ..._folderTeamItems(folderId, folder, teamRoot, isTeamRoot),
     _item(clockIcon, "View History", null, () => _callbacks.onViewFolderHistory?.(folderId, folder?.name)),
-    _item(trashIcon, "Delete Folder", null, () => _callbacks.onDeleteFolder?.(folderId), true),
+    // A team root is only removable by leaving/deleting the team itself.
+    _item(
+      trashIcon, "Delete Folder", null,
+      isTeamRoot ? null : () => _callbacks.onDeleteFolder?.(folderId), true,
+      isTeamRoot ? "Leave or delete the team in Settings → Teams" : null,
+    ),
   ];
   _showMenu(x, y, items);
+}
+
+/**
+ * Team actions for a folder menu. "Share…" opens the share modal either way —
+ * it shows the invite code and members for a folder already in a team, and the
+ * team picker for one that isn't. Inside a team we also offer "Pull now", plus
+ * "Stop sharing" for the team OWNER on a team SUB-folder — that is what the
+ * engine supports (TeamSync.stopSharing rejects a team root outright); the root
+ * itself is unshared by leaving/deleting the team in Settings → Teams.
+ */
+function _folderTeamItems(folderId, folder, teamRoot, isTeamRoot) {
+  const label = escapeHtml(folder?.name || folderId);
+
+  if (teamRoot) {
+    return [
+      _item(shareIcon, "Share…", null, () => {
+        openShareModal(folderId, { onRefresh: () => _callbacks.onRefresh?.() });
+      }),
+      _item(arrowDownTrayIcon, "Pull now", null, async () => {
+        try {
+          await pullTeamFor(folderId);
+        } catch (err) {
+          _toast(err?.message || "Could not pull the latest from the team.", "error");
+        }
+        _callbacks.onRefresh?.();
+      }),
+      ...(!isTeamRoot && teamRoot && isTeamOwner(folderId) ? [
+        _item(trashIcon, "Stop sharing", null, async () => {
+          const ok = await showConfirmModal({
+            title: "Stop sharing this folder?",
+            body: `<strong>${label}</strong> and everything in it will be removed from the team. Your copy stays in this folder; teammates lose it.`,
+            confirmLabel: "Stop sharing",
+            cancelLabel: "Cancel",
+          });
+          if (!ok) return;
+          try {
+            await stopSharingFolder(folderId);
+          } catch (err) {
+            _toast(err?.message || "Could not stop sharing this folder.", "error");
+          }
+          _callbacks.onRefresh?.();
+        }, true),
+      ] : []),
+    ];
+  }
+
+  // Only top-level personal folders can become a team root.
+  if (!folder || folder.parentId) return [];
+
+  // No team-session gate: the modal signs the user in itself, so the action is
+  // never a dead end that sends them to Settings and back.
+  return [
+    _item(shareIcon, "Share…", null, () => {
+      openShareModal(folderId, { onRefresh: () => _callbacks.onRefresh?.() });
+    }),
+  ];
 }
 
 function showEmptyMenu(x, y) {

@@ -1,3 +1,18 @@
+## Unreleased
+
+### Teams replace GitHub-org shared libraries
+
+- **Share folders with a team, no GitHub org needed.** Settings → Teams: enable with your GitHub sign-in, create a team, share the 10-character invite code. Every member can edit; changes sync in seconds.
+- **Nothing is lost offline.** Edits made while offline show a clock badge and sync automatically when you're back — across restarts too.
+- **Conflicts are yours to settle.** If two people edit the same build, you choose *Keep mine* or *Take theirs* instead of one silently overwriting the other.
+- **Moving from an org library:** owners open Settings → Teams → *Move your GitHub org library to a team*; members join with the invite code and their existing folder re-links in place. The old GitHub repo is left untouched.
+- Team builds publish under the account of whoever clicks Publish; re-publishing someone else's build asks first.
+
+### Reliability
+
+- Publishing no longer overwrites edits you make while it's running, and two people publishing at once can no longer knock each other's links offline.
+- Library files are written atomically with a rolling backup and a daily snapshot (`data/backups/`), so a crash or corrupt file can't wipe your builds.
+
 ## Version v0.11.7 — August 20, 2026
 
 ### Bug Fixes

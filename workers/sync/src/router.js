@@ -20,6 +20,7 @@ const ROUTES = [
   ["DELETE", /^\/teams\/(?<teamId>[^/]+)$/,                      teams.deleteTeam,       true],
   ["GET",    /^\/teams\/(?<teamId>[^/]+)\/members$/,             teams.listMembers,      true],
   ["DELETE", /^\/teams\/(?<teamId>[^/]+)\/members\/(?<userId>[^/]+)$/, teams.removeMember, true],
+  ["PATCH",  /^\/teams\/(?<teamId>[^/]+)\/members\/(?<userId>[^/]+)$/, teams.setMemberRole, true],
   ["POST",   /^\/teams\/(?<teamId>[^/]+)\/invite\/rotate$/,      teams.rotateInvite,     true],
   ["GET",    /^\/teams\/(?<teamId>[^/]+)\/changes$/,             items.getChanges,       true],
   ["PUT",    /^\/teams\/(?<teamId>[^/]+)\/items\/(?<itemId>[^/:]+)$/, items.putItem,      true],

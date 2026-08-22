@@ -14,6 +14,8 @@ import {
 } from "./folder-store.js";
 
 import { showConfirmModal } from "../confirm-modal.js";
+import { showPrompt } from "../prompt-modal.js";
+import { loadTeamState, teamRootFor } from "../teams.js";
 import { initToolbar, renderToolbar, renderFilters } from "./toolbar.js";
 import { initSidebar, renderSidebar, insertInlineInput } from "./sidebar.js";
 import { initContent, renderContent } from "./content.js";
@@ -52,7 +54,8 @@ let _app = {};
  *   duplicateCurrentBuild: function,
  *   copyBuildJsonToClipboard: function,
  *   importBuildJsonFromClipboard: function,
- *   render: function
+ *   render: function,
+ *   openSettings?: function
  * }} appCallbacks
  */
 export async function initLibrary(appCallbacks) {
@@ -61,7 +64,7 @@ export async function initLibrary(appCallbacks) {
   try {
     await loadFolders();
     await loadPrefs();
-    state.sharedLibraryConfig = await window.desktopApi.getSharedLibraryConfig().catch(() => null);
+    await loadTeamState();
   } catch (err) {
     console.warn("[library] init data load failed:", err);
   }
@@ -1095,21 +1098,14 @@ async function handleDeleteComps(ids) {
 }
 
 async function handleMoveComps(compIds, folderId) {
-  // Check if destination is a shared folder (or inside one)
-  const destFolder = folderId ? state.folders.find((f) => f.id === folderId) : null;
-  const destIsShared = destFolder
-    ? (function isInSharedTree(f) {
-        if (!f) return false;
-        if (f.shared) return true;
-        return isInSharedTree(state.folders.find((p) => p.id === f.parentId));
-      })(destFolder)
-    : false;
+  // Check if the destination is a team folder (or inside one)
+  const destIsTeam = !!teamRootFor(folderId);
 
   // Collect builds referenced by these comps that live outside the destination folder
   let buildsToMove = [];
   // Builds already in the destination that still need their subfolder info re-synced
   let buildsToResync = [];
-  if (destIsShared) {
+  if (destIsTeam) {
     const allBuildIds = compIds.flatMap((id) => {
       const c = state.comps.find((c) => c.id === id);
       return c?.buildIds || [];
@@ -1126,8 +1122,8 @@ async function handleMoveComps(compIds, folderId) {
         .join(", ");
       const extra = buildsToMove.length > 5 ? ` and ${buildsToMove.length - 5} more` : "";
       const confirmed = await showConfirmModal({
-        title: "Move builds to shared folder?",
-        body: `The comp${compIds.length > 1 ? "s" : ""} reference ${buildsToMove.length} build${buildsToMove.length > 1 ? "s" : ""} outside this folder: ${buildNames}${extra}.<br><br>Those builds will also be moved into the shared folder so they stay in sync for all members.`,
+        title: "Move builds into the team folder?",
+        body: `The comp${compIds.length > 1 ? "s" : ""} reference ${buildsToMove.length} build${buildsToMove.length > 1 ? "s" : ""} outside this folder: ${buildNames}${extra}.<br><br>Those builds will also be moved into the team folder so they stay in sync for everyone.`,
         confirmLabel: "Move All",
         cancelLabel: "Cancel",
       });
@@ -1224,17 +1220,20 @@ function handleOpenFolder(folderId) {
   state.currentFolder = { type: "custom", id: folderId };
   renderLibrary();
 
-  // Pull latest from remote when navigating to a shared folder
+  // Pull latest from remote when navigating into a team folder
   const folderObj = state.folders.find((f) => f.id === folderId);
-  if (folderObj?.shared) {
-    window.desktopApi.pullFolder(folderId).then(async () => {
-      state.builds = await window.desktopApi.listBuilds();
-      state.comps = await window.desktopApi.listComps();
-      state.folders = await window.desktopApi.listFolders();
-      renderLibrary();
-    }).catch(() => {
-      // Silently fail — will sync on next poll
-    });
+  if (folderObj) {
+    const root = teamRootFor(folderId);
+    if (root) {
+      window.desktopApi.pullTeam(root.teamId).then(async () => {
+        state.builds = await window.desktopApi.listBuilds();
+        state.comps = await window.desktopApi.listComps();
+        state.folders = await window.desktopApi.listFolders();
+        renderLibrary();
+      }).catch(() => {
+        // Silently fail — will sync on next poll
+      });
+    }
   }
 }
 
@@ -1296,6 +1295,11 @@ function handleNewBuildInFolder(folderId) {
 
 async function handleDeleteFolder(folderId) {
   const folder = state.folders.find((f) => f.id === folderId);
+  // A team root folder goes away by leaving/deleting the team, not from here.
+  if (teamRootFor(folderId)?.id === folderId) {
+    showToast("Leave or delete the team in Settings → Teams.", "info");
+    return;
+  }
   const name = folder?.name || "this folder";
   const confirmed = await showConfirm(
     `Delete folder "${name}"?`,
@@ -1364,6 +1368,9 @@ async function savePrefs() {
 
 function _buildSharedCallbacks() {
   return {
+    // Open a Settings pane (used by the legacy-library orphan banner).
+    onOpenSettings: (pane) => _app.openSettings?.(pane),
+
     // Toolbar
     onNewBuild: handleNewBuild,
     onNewFolder: handleNewFolderInContent,
@@ -1473,56 +1480,12 @@ function _buildSharedCallbacks() {
 
     // Refresh (used by drag-drop)
     onRefresh: renderLibrary,
+    onToast: showToast,
   };
 }
 
 // ─── Dialog helpers (Electron doesn't support window.prompt/confirm/alert) ────
-
-/**
- * Show a text-input prompt via a modal. Returns the entered string or null if cancelled.
- */
-function showPrompt(title, defaultValue = "") {
-  return new Promise((resolve) => {
-    const overlay = document.createElement("div");
-    overlay.className = "confirm-modal-overlay";
-    overlay.innerHTML = `
-      <div class="confirm-modal">
-        <div class="confirm-modal__header">
-          <h3 class="confirm-modal__title">${title}</h3>
-        </div>
-        <div class="confirm-modal__body">
-          <input type="text" class="confirm-modal__input" value="" style="width:100%;padding:6px 8px;background:var(--input-bg);border:1px solid var(--input-border);border-radius:4px;color:var(--text);font-size:0.9rem;outline:none;" />
-        </div>
-        <div class="confirm-modal__actions">
-          <button class="confirm-modal__btn" data-action="cancel">Cancel</button>
-          <button class="confirm-modal__btn confirm-modal__btn--confirm" data-action="ok">OK</button>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(overlay);
-
-    const input = overlay.querySelector("input");
-    input.value = defaultValue;
-    input.focus();
-    input.select();
-
-    function dismiss(value) {
-      document.removeEventListener("keydown", onKey);
-      overlay.remove();
-      resolve(value);
-    }
-
-    function onKey(e) {
-      if (e.key === "Escape") dismiss(null);
-      if (e.key === "Enter") dismiss(input.value.trim() || null);
-    }
-
-    document.addEventListener("keydown", onKey);
-    overlay.querySelector('[data-action="cancel"]').addEventListener("click", () => dismiss(null));
-    overlay.querySelector('[data-action="ok"]').addEventListener("click", () => dismiss(input.value.trim() || null));
-    overlay.addEventListener("click", (e) => { if (e.target === overlay) dismiss(null); });
-  });
-}
+// showPrompt lives in ../prompt-modal.js — settings-modal.js needs it too.
 
 function showImportModal() {
   return new Promise((resolve) => {

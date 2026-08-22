@@ -26,14 +26,14 @@ describe("settings-modal — sidebar nav structure", () => {
   test("renders five nav items in order", () => {
     const items = [...document.querySelectorAll(".settings-modal__nav-item")];
     expect(items.map((b) => b.dataset.pane)).toEqual([
-      "appearance", "discord", "publishing", "shared-library", "data",
+      "appearance", "discord", "publishing", "teams", "data",
     ]);
   });
 
   test("renders a matching pane for every nav item", () => {
     const panes = [...document.querySelectorAll(".settings-modal__pane")];
     expect(panes.map((p) => p.dataset.pane).sort()).toEqual(
-      ["appearance", "data", "discord", "publishing", "shared-library"]
+      ["appearance", "data", "discord", "publishing", "teams"]
     );
   });
 
@@ -49,8 +49,8 @@ describe("settings-modal — sidebar nav structure", () => {
       "sm-close", "sm-theme-grid", "sm-target-picker", "sm-setup-row",
       "sm-comp-webhooks", "sm-add-comp-webhook", "sm-build-webhooks",
       "sm-add-build-webhook", "sm-save-status", "sm-clear-cache", "sm-cache-status",
-      "sm-shared-status", "sm-shared-setup", "sm-shared-connected", "sm-org-select",
-      "sm-shared-connect", "sm-shared-disconnect", "sm-shared-org-name", "sm-themed-builds",
+      "sm-teams-status", "sm-teams-enable", "sm-team-create", "sm-team-join",
+      "sm-teams-list", "sm-teams-signout", "sm-themed-builds",
     ]) {
       expect(document.getElementById(id)).not.toBeNull();
     }

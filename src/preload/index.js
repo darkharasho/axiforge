@@ -1,5 +1,20 @@
 const { contextBridge, ipcRenderer } = require("electron");
 
+// ipcRenderer.invoke rejects with "Error invoking remote method '<channel>':
+// Error: <message>". Handlers word their errors for the user (the migration's
+// rollback message tells them exactly what to do next), so strip the wrapper
+// before the renderer ever sees it.
+const REMOTE_PREFIX = /^Error invoking remote method '[^']*':\s*(?:[A-Za-z]*Error:\s*)?/;
+function invoke(channel, ...args) {
+  return ipcRenderer.invoke(channel, ...args).catch((err) => {
+    if (err && typeof err.message === "string") {
+      const stripped = err.message.replace(REMOTE_PREFIX, "");
+      if (stripped !== err.message) { try { err.message = stripped; } catch { /* frozen */ } }
+    }
+    throw err;
+  });
+}
+
 contextBridge.exposeInMainWorld("desktopApi", {
   getConfig: () => ipcRenderer.invoke("app:get-config"),
   minimizeWindow: () => ipcRenderer.invoke("window:minimize"),
@@ -28,7 +43,7 @@ contextBridge.exposeInMainWorld("desktopApi", {
   getFolderHistory: (folderId) => ipcRenderer.invoke("folders:get-history", folderId),
   revertBuild: (buildId, historyEntryId) => ipcRenderer.invoke("builds:revert", buildId, historyEntryId),
   publishSite: () => ipcRenderer.invoke("builds:publish-site"),
-  publishBuild: (buildId) => ipcRenderer.invoke("builds:publish-build", buildId),
+  publishBuild: (buildId, opts) => ipcRenderer.invoke("builds:publish-build", buildId, opts || {}),
 
   // Folder operations
   listFolders: () => ipcRenderer.invoke("folders:list"),
@@ -45,7 +60,7 @@ contextBridge.exposeInMainWorld("desktopApi", {
   deleteComps: (ids) => ipcRenderer.invoke("comps:delete-batch", ids),
   addTagsToComps: (ids, tags) => ipcRenderer.invoke("comps:add-tags", ids, tags),
   removeTagsFromComps: (ids, tags) => ipcRenderer.invoke("comps:remove-tags", ids, tags),
-  publishComp: (compId, boonCoverageHtml) => ipcRenderer.invoke("comps:publish-comp", compId, boonCoverageHtml),
+  publishComp: (compId, html, opts) => ipcRenderer.invoke("comps:publish-comp", compId, html, opts || {}),
   getCompPublishedUrl: (compId) => ipcRenderer.invoke("comps:get-published-url", compId),
 
   // Build library operations
@@ -129,39 +144,30 @@ contextBridge.exposeInMainWorld("desktopApi", {
     ipcRenderer.on("publish-progress", (_e, step) => cb(step));
   },
   // Teams (team sync)
-  getTeamSession: () => ipcRenderer.invoke("teams:get-session"),
-  enableTeamSync: () => ipcRenderer.invoke("teams:enable"),
-  disableTeamSync: () => ipcRenderer.invoke("teams:disable"),
-  listTeams: () => ipcRenderer.invoke("teams:list"),
-  createTeam: (name) => ipcRenderer.invoke("teams:create", name),
-  joinTeam: (code) => ipcRenderer.invoke("teams:join", code),
-  leaveTeam: (teamId) => ipcRenderer.invoke("teams:leave", teamId),
-  deleteTeam: (teamId) => ipcRenderer.invoke("teams:delete", teamId),
-  renameTeam: (teamId, name) => ipcRenderer.invoke("teams:rename", teamId, name),
-  listTeamMembers: (teamId) => ipcRenderer.invoke("teams:members", teamId),
-  removeTeamMember: (teamId, userId) => ipcRenderer.invoke("teams:remove-member", teamId, userId),
-  rotateInvite: (teamId) => ipcRenderer.invoke("teams:rotate-invite", teamId),
-  shareFolderToTeam: (folderId, teamId) => ipcRenderer.invoke("teams:share-folder", folderId, teamId),
-  stopSharingFolder: (folderId) => ipcRenderer.invoke("teams:stop-sharing", folderId),
-  pullTeam: (teamId) => ipcRenderer.invoke("teams:pull", teamId),
-  pullAllTeams: () => ipcRenderer.invoke("teams:pull-all"),
-  resolveConflict: (teamId, itemId, choice) => ipcRenderer.invoke("teams:resolve-conflict", teamId, itemId, choice),
-  listOutbox: () => ipcRenderer.invoke("teams:outbox"),
+  getTeamSession: () => invoke("teams:get-session"),
+  enableTeamSync: () => invoke("teams:enable"),
+  disableTeamSync: () => invoke("teams:disable"),
+  listTeams: () => invoke("teams:list"),
+  createTeam: (name) => invoke("teams:create", name),
+  joinTeam: (code) => invoke("teams:join", code),
+  leaveTeam: (teamId) => invoke("teams:leave", teamId),
+  deleteTeam: (teamId) => invoke("teams:delete", teamId),
+  renameTeam: (teamId, name) => invoke("teams:rename", teamId, name),
+  listTeamMembers: (teamId) => invoke("teams:members", teamId),
+  removeTeamMember: (teamId, userId) => invoke("teams:remove-member", teamId, userId),
+  rotateInvite: (teamId) => invoke("teams:rotate-invite", teamId),
+  shareFolderToTeam: (folderId, teamId) => invoke("teams:share-folder", folderId, teamId),
+  stopSharingFolder: (folderId) => invoke("teams:stop-sharing", folderId),
+  legacyLibraryStatus: () => invoke("teams:legacy-status"),
+  migrateOrgLibrary: (opts) => invoke("teams:migrate-org-library", opts),
+  pullTeam: (teamId) => invoke("teams:pull", teamId),
+  pullAllTeams: () => invoke("teams:pull-all"),
+  resolveConflict: (teamId, itemId, choice) => invoke("teams:resolve-conflict", teamId, itemId, choice),
+  listOutbox: () => invoke("teams:outbox"),
   onTeamShareProgress: (cb) => {
     ipcRenderer.removeAllListeners("team-share-progress");
     ipcRenderer.on("team-share-progress", (_e, p) => cb(p));
   },
-  // Compat shims — removed in Plan 3 when the renderer moves to teams:*.
-  getSharedLibraryConfig: () => Promise.resolve(null),
-  pullAllShared: () => ipcRenderer.invoke("teams:pull-all"),
-  pullFolder: () => ipcRenderer.invoke("teams:pull-all"),
-  shareFolder: () => Promise.reject(new Error("Use Share to team…")),
-  unshareFolder: () => Promise.reject(new Error("Use Stop sharing")),
-  listOrgs: () => Promise.resolve([]),
-  setupSharedLibrary: () => Promise.reject(new Error("Shared libraries are now Teams — see Settings → Teams.")),
-  connectSharedLibrary: () => Promise.resolve(true),
-  disconnectSharedLibrary: () => Promise.resolve(true),
-  forcePush: () => Promise.resolve({ conflict: false }),
   onSyncConflict: (cb) => {
     ipcRenderer.removeAllListeners("sync-conflict");
     ipcRenderer.on("sync-conflict", (_e, data) => cb(data));

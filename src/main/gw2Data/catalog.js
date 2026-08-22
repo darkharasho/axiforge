@@ -23,6 +23,12 @@ const REMOTE_DATA_TTL = 1000 * 60 * 60 * 6; // 6 hours
 const REMOTE_DATA_ENABLED =
   !process.env.JEST_WORKER_ID && process.env.AXIFORGE_DISABLE_REMOTE_DATA !== "1";
 
+// Wiki fact resolution walks every skill/trait/pet-skill title for a profession and
+// is by far the slowest part of a cold catalog build. AXIFORGE_DISABLE_WIKI=1 skips
+// it so offline/E2E runs build catalogs from API facts alone, deterministically and
+// without hitting wiki.guildwars2.com.
+const WIKI_FACTS_ENABLED = process.env.AXIFORGE_DISABLE_WIKI !== "1";
+
 // Sanity floors: reject a remote snapshot whose lists collapsed (truncated or
 // broken publish). Baked counts are ~2-3x these; the floors only catch disasters.
 function _isNonEmptyArray(v, min) {
@@ -123,14 +129,22 @@ let _wikiClient = null;
 const _catalogCache = new Map();
 const _catalogInflight = new Map();
 
+// Mirrors GW2_API_ROOT: lets an offline/E2E run point wiki lookups at a local
+// stand-in instead of wiki.guildwars2.com. Unset in production.
+const WIKI_API_ROOT_OVERRIDE = process.env.AXIFORGE_WIKI_API_ROOT || undefined;
+
 function initWikiClient(cacheDir) {
   const cache = new DiskCache(path.join(cacheDir, "wiki-facts"));
-  _wikiClient = new WikiClient({ cache, cacheTTL: 7 * 24 * 60 * 60 * 1000 });
+  _wikiClient = new WikiClient({
+    cache,
+    cacheTTL: 7 * 24 * 60 * 60 * 1000,
+    wikiApiRoot: WIKI_API_ROOT_OVERRIDE,
+  });
 }
 
 function getWikiClient() {
   if (!_wikiClient) {
-    _wikiClient = new WikiClient();
+    _wikiClient = new WikiClient({ wikiApiRoot: WIKI_API_ROOT_OVERRIDE });
   }
   return _wikiClient;
 }
@@ -299,6 +313,22 @@ async function getProfessionList(lang = "en") {
       iconBig: entry.icon_big || "",
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/**
+ * Decide which specialization a profession skill belongs to.
+ *
+ * Order matters, and so does how "absent" is distinguished from zero. A curated
+ * override of 0 means "this skill is core" — an authoritative answer, not a
+ * missing one — so it is tested with `!== undefined`. Using `||` here would let
+ * a falsy 0 fall through to the trait tag and re-lock a core skill behind an
+ * elite spec (see Distortion, the Mesmer F4 shatter, which Chronomancer traits
+ * reference).
+ */
+function _resolveSkillSpecialization(skill, ref, traitTag) {
+  const override = KNOWN_SKILL_SPEC_OVERRIDES.get(skill.id);
+  if (override !== undefined) return override;
+  return ref?.specialization || traitTag?.specialization || skill.specialization || 0;
 }
 
 async function _buildProfessionCatalog(professionId, lang = "en", gameMode = "pve") {
@@ -478,7 +508,7 @@ async function _buildProfessionCatalog(professionId, lang = "en", gameMode = "pv
     return {
       ...skill,
       slot: KNOWN_SKILL_SLOT_OVERRIDES.get(skill.id) || ref?.slot || skill.slot || "",
-      specialization: KNOWN_SKILL_SPEC_OVERRIDES.get(skill.id) || ref?.specialization || traitTag?.specialization || skill.specialization || 0,
+      specialization: _resolveSkillSpecialization(skill, ref, traitTag),
       type: ref?.type || skill.type || "",
     };
   });
@@ -954,11 +984,13 @@ async function _buildProfessionCatalog(professionId, lang = "en", gameMode = "pv
   }
 
   let wikiFactsById = new Map();
-  try {
-    const client = getWikiClient();
-    wikiFactsById = await resolveEntityFacts(client, idToTitle, { profession: profession.name || professionId });
-  } catch (err) {
-    try { console.warn("[catalog] Wiki fact resolution failed, using API facts:", err.message); } catch (_) {}
+  if (WIKI_FACTS_ENABLED) {
+    try {
+      const client = getWikiClient();
+      wikiFactsById = await resolveEntityFacts(client, idToTitle, { profession: profession.name || professionId });
+    } catch (err) {
+      try { console.warn("[catalog] Wiki fact resolution failed, using API facts:", err.message); } catch (_) {}
+    }
   }
 
   for (const s of mappedSkills) {
@@ -1179,6 +1211,7 @@ module.exports = {
   clearCatalogCache,
   _transferIcons,
   _applyRechargeOverride,
+  _resolveSkillSpecialization,
   _validateProfessions: validateProfessions,
   _validateSpecializations: validateSpecializations,
 };

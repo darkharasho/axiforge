@@ -5,6 +5,8 @@ import { escapeHtml, formatRelativeTime } from "../utils.js";
 import { roleBadgeHtml } from '../roleEstimator.js';
 import { getVisibleBuilds, getVisibleFolders, getVisibleComps } from "./folder-store.js";
 import { getProfessionSvg } from "../profession-icons.js";
+import { badgeHtml } from "../sync-status.js";
+import { teamRootFor, teamLabel } from "../teams.js";
 import { clearSelection, handleBuildClick, handleCompClick, updateSelectionVisuals } from "./selection.js";
 import { wireDragDropEvents } from "./drag-drop.js";
 import {
@@ -66,11 +68,31 @@ export function renderContent() {
       break;
   }
 
+  renderLegacyOrphanBanner(container);
+
   // Re-init SortableJS on the new DOM
   wireDragDropEvents();
 
   // Re-apply selection visuals after DOM replacement
   updateSelectionVisuals();
+}
+
+// A folder left behind by the retired GitHub-org shared library: it still
+// carries `orgName` but is not part of any team, so nothing syncs it any more.
+// The owner migrates it from Settings → Teams; everyone else joins with an
+// invite code.
+function renderLegacyOrphanBanner(container) {
+  const current = state.currentFolder;
+  if (!current || current.type !== "custom") return;
+  const folder = (state.folders || []).find((f) => f.id === current.id);
+  if (!folder || !folder.orgName || folder.teamId) return;
+  container.insertAdjacentHTML("afterbegin", `
+    <div class="lib-banner lib-banner--info">This library moved to Teams \u2014 join with the owner's invite code. <button type="button" class="lib-banner__btn" data-open-settings="teams">Open Teams</button></div>`);
+  const btn = container.querySelector("[data-open-settings]");
+  btn?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    _callbacks.onOpenSettings?.(btn.dataset.openSettings);
+  });
 }
 
 // ─── Shared helpers ────────────────────────────────────────────────────────────
@@ -148,11 +170,11 @@ function compBadgeHtml(comp) {
 }
 
 function emptyStateHtml() {
-  // If the current shared folder is actively syncing, tell the user to wait
+  // If the current team folder is actively syncing, tell the user to wait
   const f = state.currentFolder;
   if (f?.id && state.folderSyncStatus?.[f.id] === "syncing") {
     return `<div class="lib-empty-state">
-      <p>Syncing shared library content\u2026</p>
+      <p>Syncing team content\u2026</p>
     </div>`;
   }
   return `<div class="lib-empty-state">
@@ -183,31 +205,8 @@ function folderPathText(build) {
   return chain.join(" / ");
 }
 
-const _contentSyncSpinner = `<svg class="sync-spin" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 2a10 10 0 0 1 10 10"/></svg>`;
-const _contentSyncCheck = `<svg width="11" height="11" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd"/></svg>`;
-const _contentSyncError = `<svg width="11" height="11" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.346 0-2.189-1.458-1.515-2.625L8.485 2.495ZM10 5a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 10 5Zm0 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clip-rule="evenodd"/></svg>`;
-
 function contentSyncIndicatorHtml(folderId) {
-  const status = state.folderSyncStatus?.[folderId];
-  if (!status) return "";
-  if (status === "syncing") {
-    return `<span class="lib-content-sync-indicator lib-content-sync-indicator--syncing" title="Syncing\u2026">${_contentSyncSpinner}</span>`;
-  }
-  if (status === "synced") {
-    return `<span class="lib-content-sync-indicator lib-content-sync-indicator--synced" title="Synced">${_contentSyncCheck}</span>`;
-  }
-  return "";
-}
-
-// Walk up the folder hierarchy to check if an item is in a shared folder.
-function _isInSharedFolder(folderId) {
-  let current = state.folders.find((f) => f.id === folderId);
-  while (current) {
-    if (current.shared) return true;
-    if (!current.parentId) return false;
-    current = state.folders.find((f) => f.id === current.parentId);
-  }
-  return false;
+  return badgeHtml("lib-content-sync-indicator", state.folderSyncStatus?.[folderId]);
 }
 
 // Returns the sync indicator HTML for a build or comp item.
@@ -215,17 +214,12 @@ function _isInSharedFolder(folderId) {
 function itemSyncIndicatorHtml(type, item) {
   const statusMap = type === "build" ? state.buildSyncStatus : state.compSyncStatus;
   const activeStatus = statusMap?.[item.id];
-  if (activeStatus === "syncing") {
-    return `<span class="lib-content-sync-indicator lib-content-sync-indicator--syncing" title="Syncing\u2026">${_contentSyncSpinner}</span>`;
-  }
-  if (activeStatus === "error") {
-    return `<span class="lib-content-sync-indicator lib-content-sync-indicator--error" title="Sync failed">${_contentSyncError}</span>`;
-  }
-  // Persistent checkmark for all items in a shared folder
-  if (_isInSharedFolder(item.folderId)) {
-    return `<span class="lib-content-sync-indicator lib-content-sync-indicator--synced" title="Synced">${_contentSyncCheck}</span>`;
-  }
-  return "";
+  // Persistent checkmark for all items in a shared folder, unless the item has
+  // a more specific status (syncing / pending / conflict / error).
+  return badgeHtml(
+    "lib-content-sync-indicator",
+    activeStatus || (teamRootFor(item.folderId) ? "synced" : null),
+  );
 }
 
 /** Return HTML for the folder path breadcrumb shown in combined views. */
@@ -253,7 +247,7 @@ function renderListView(container) {
       (f) => `
         <div class="lib-list-row lib-list-row--folder" data-folder-id="${escapeHtml(f.id)}">
           <span class="lib-list-row__icon lib-list-row__icon--folder">${folderIcon}</span>
-          <span class="lib-list-row__title">${escapeHtml(f.name)}${f.shared ? `<span class="lib-shared-badge" title="Shared with ${escapeHtml(f.orgName || "org")}">${shareIcon}</span>` : ""}${contentSyncIndicatorHtml(f.id)}</span>
+          <span class="lib-list-row__title">${escapeHtml(f.name)}${f.teamId ? `<span class="lib-shared-badge" title="${escapeHtml(teamLabel(f))}">${shareIcon}</span>` : ""}${contentSyncIndicatorHtml(f.id)}</span>
         </div>
       `
     )
@@ -352,7 +346,7 @@ function renderTableView(container) {
         <div class="lib-tv__row lib-tv__row--folder">
           <span class="lib-tv__action" data-toggle-table-folder="${escapeHtml(folder.id)}">${chevron}</span>
           <span class="lib-tv__icon"><span class="lib-table__folder-icon">${folderIcon}</span></span>
-          <span class="lib-tv__name">${escapeHtml(folder.name)}${folder.shared ? `<span class="lib-shared-badge" title="Shared with ${escapeHtml(folder.orgName || "org")}">${shareIcon}</span>` : ""}${contentSyncIndicatorHtml(folder.id)}</span>
+          <span class="lib-tv__name">${escapeHtml(folder.name)}${folder.teamId ? `<span class="lib-shared-badge" title="${escapeHtml(teamLabel(folder))}">${shareIcon}</span>` : ""}${contentSyncIndicatorHtml(folder.id)}</span>
           <span class="lib-tv__profession"></span>
           <span class="lib-tv__spec"></span>
           <span class="lib-tv__mode"></span>
@@ -478,7 +472,7 @@ function renderGridView(container) {
     .map(
       (f) => `
         <div class="lib-grid-card lib-grid-card--folder" data-folder-id="${escapeHtml(f.id)}">
-          <div class="lib-grid-card__folder-icon">${folderIcon}${f.shared ? `<span class="lib-shared-badge lib-shared-badge--grid" title="Shared with ${escapeHtml(f.orgName || "org")}">${shareIcon}</span>` : ""}</div>
+          <div class="lib-grid-card__folder-icon">${folderIcon}${f.teamId ? `<span class="lib-shared-badge lib-shared-badge--grid" title="${escapeHtml(teamLabel(f))}">${shareIcon}</span>` : ""}</div>
           <div class="lib-grid-card__title">${escapeHtml(f.name)}${contentSyncIndicatorHtml(f.id)}</div>
         </div>
       `
@@ -543,7 +537,7 @@ function renderIconView(container) {
     .map(
       (f) => `
         <div class="lib-icon-item lib-icon-item--folder" data-folder-id="${escapeHtml(f.id)}">
-          <div class="lib-icon-item__icon lib-icon-item__icon--folder">${folderIcon}${f.shared ? `<span class="lib-shared-badge lib-shared-badge--icon" title="Shared with ${escapeHtml(f.orgName || "org")}">${shareIcon}</span>` : ""}</div>
+          <div class="lib-icon-item__icon lib-icon-item__icon--folder">${folderIcon}${f.teamId ? `<span class="lib-shared-badge lib-shared-badge--icon" title="${escapeHtml(teamLabel(f))}">${shareIcon}</span>` : ""}</div>
           <div class="lib-icon-item__label">${escapeHtml(f.name)}${contentSyncIndicatorHtml(f.id)}</div>
         </div>
       `
@@ -631,7 +625,7 @@ function renderColumnsView(container) {
           <div class="lib-col__item lib-col__item--folder ${isSelected ? "lib-col__item--selected" : ""}"
                data-folder-id="${escapeHtml(f.id)}" data-col-index="${colIndex}">
             <span class="lib-col__icon lib-col__icon--folder">${folderIcon}</span>
-            <span class="lib-col__name">${escapeHtml(f.name)}${f.shared ? `<span class="lib-shared-badge" title="Shared with ${escapeHtml(f.orgName || "org")}">${shareIcon}</span>` : ""}${contentSyncIndicatorHtml(f.id)}</span>
+            <span class="lib-col__name">${escapeHtml(f.name)}${f.teamId ? `<span class="lib-shared-badge" title="${escapeHtml(teamLabel(f))}">${shareIcon}</span>` : ""}${contentSyncIndicatorHtml(f.id)}</span>
             <span class="lib-col__chevron">${chevronRightIcon}</span>
           </div>
         `);

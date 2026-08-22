@@ -246,6 +246,53 @@ describe("per-ID publish progress", () => {
     expect(state.publishProgress["comp-1"].currentStep).toBe("builds");
     expect(state.publishProgress["comp-2"].currentStep).toBe("repo");
   });
+
+  test("clearPublishProgress clears both state and DOM", () => {
+    const { state } = stateModule;
+    const statusEl = makeStatusEl();
+    renderPages.initRenderPagesDom({ publishStatus: statusEl });
+
+    // Set up active publish state and DOM
+    state.publishProgress["build-123"] = { currentStep: "saving" };
+    statusEl.innerHTML = "<div>Publishing...</div>";
+    statusEl.dataset.publishId = "build-123";
+
+    // Clear it
+    renderPages.clearPublishProgress("build-123");
+
+    // Verify state is cleared
+    expect(state.publishProgress["build-123"]).toBeUndefined();
+    // Verify DOM is cleared
+    expect(statusEl.innerHTML).toBe("");
+    expect(statusEl.dataset.publishId).toBeUndefined();
+  });
+
+  test("clearPublishProgress leaves a ticker owned by another item alone", () => {
+    const statusEl = makeStatusEl();
+    renderPages.initRenderPagesDom({ publishStatus: statusEl });
+
+    // comp A owns the ticker; cancelling comp B's publish must not wipe it.
+    statusEl.innerHTML = "<div>A publishing…</div>";
+    statusEl.dataset.publishId = "comp-a";
+
+    renderPages.clearPublishProgress("comp-b");
+
+    expect(statusEl.innerHTML).toBe("<div>A publishing\u2026</div>");
+    expect(statusEl.dataset.publishId).toBe("comp-a");
+  });
+
+  test("clearPublishProgress is safe when the ticker is unowned", () => {
+    const statusEl = makeStatusEl();
+    renderPages.initRenderPagesDom({ publishStatus: statusEl });
+
+    statusEl.innerHTML = "<div>old</div>";
+    delete statusEl.dataset.publishId;
+
+    renderPages.clearPublishProgress("nonexistent-id");
+
+    expect(statusEl.innerHTML).toBe("");
+    expect(statusEl.dataset.publishId).toBeUndefined();
+  });
 });
 
 describe("resolvePublishedUrl", () => {

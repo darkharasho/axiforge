@@ -2,6 +2,7 @@
 
 import { state } from "../state.js";
 import { escapeHtml } from "../utils.js";
+import { showConfirmModal } from "../confirm-modal.js";
 import { wireCompDragDrop, destroyCompDragDrop } from "./comp-drag-drop.js";
 import {
   showPublishProgress,
@@ -11,6 +12,7 @@ import {
   completeAllPublishSteps,
   setPublishStatusEl,
   restorePublishProgress,
+  clearPublishProgress,
 } from "../render-pages.js";
 import { roleBadgeHtml } from "../roleEstimator.js";
 import { COMP_TAG_ICONS } from "../constants.js";
@@ -19,6 +21,7 @@ import { renderMiniBuildCard, renderMissingMiniBuildCard } from "../mini-build-c
 import { pickWebhooks } from "../webhook-picker.js";
 import { compShareDisabledTooltip } from "../share-gate.js";
 import { computeCompPartyCoverage, buildPartyCoverageHTML, bindPartyCoverageEvents, closePartyCoverageExpand } from "./comp-boon-coverage.js";
+import { publishWithOwnerCheck, publishedByOtherBody } from "../publish-guard.js";
 import {
   getEliteSpecName,
   getSpecIcon,
@@ -1226,7 +1229,12 @@ function bindDetailEvents(container, comp) {
         );
         boonCoverageHtml = buildPartyCoverageHTML(covData);
       } catch { /* skip if computation fails */ }
-      const result = await window.desktopApi.publishComp(comp.id, boonCoverageHtml);
+      const result = await publishWithOwnerCheck(
+        (opts) => window.desktopApi.publishComp(comp.id, boonCoverageHtml, opts),
+        (login) => showConfirmModal({ title: "Publish under your account?", body: publishedByOtherBody(login), confirmLabel: "Publish anyway", cancelLabel: "Cancel" }),
+      );
+      if (!result) { clearPublishProgress(comp.id); return; }
+
       advancePublishStep("pages");
       if (result?.pagesUrl) {
         state.publishProgress[comp.id] = { ...state.publishProgress[comp.id], result: result.pagesUrl };

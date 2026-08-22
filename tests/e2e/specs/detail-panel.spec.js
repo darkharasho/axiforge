@@ -1,15 +1,24 @@
 const { test, expect } = require("playwright/test");
-const { launchApp, closeApp } = require("../helpers/app");
+const { launchApp, closeApp, WIKI_ENABLED_ENV } = require("../helpers/app");
 const { goToEditor } = require("../helpers/nav");
-const { selectProfession, setGameMode } = require("../helpers/editor");
+const {
+  selectProfession,
+  fillSpecializations,
+  setGameMode,
+} = require("../helpers/editor");
 
 test.describe("Detail Panel", () => {
   let app, window;
 
   test.beforeAll(async () => {
-    ({ app, window } = await launchApp());
+    // These specs assert PvE/WvW split behaviour, and splits only exist on
+    // wiki-derived facts — the default E2E env turns that pass off.
+    ({ app, window } = await launchApp({ env: WIKI_ENABLED_ENV }));
     await goToEditor(window);
     await selectProfession(window, "Necromancer");
+    // Every test here inspects the panel for a trait, and traits only exist once a
+    // specialization is chosen — the editor opens with all three slots empty.
+    await fillSpecializations(window, ["Spite", "Curses", "Death Magic"]);
   });
 
   test.afterAll(async () => {
@@ -190,14 +199,15 @@ test.describe("Detail Panel", () => {
       { timeout: 15_000 },
     );
 
-    // Click a trait with a known WvW split (last active major trait in Spite/first spec)
+    // Click a trait with a known WvW split (grandmaster tier of Spite/first spec).
+    // Pick it explicitly: no trait is selected until the user chooses one, so looking
+    // for an already-active button would depend on whatever an earlier test clicked.
     const specCards = window.locator("#specializationsHost article.spec-card");
     const spiteCard = specCards.nth(0);
-    const activeMajorTraits = spiteCard.locator(".trait-column--major .trait-btn--active");
-    const activeCount = await activeMajorTraits.count();
-    expect(activeCount).toBeGreaterThan(0);
+    const grandmasterTraits = spiteCard.locator(".trait-column--major").nth(2).locator(".trait-btn");
+    expect(await grandmasterTraits.count()).toBe(3);
 
-    await activeMajorTraits.last().click();
+    await grandmasterTraits.first().click();
     await window.waitForTimeout(500);
 
     // Verify the detail panel has a facts list

@@ -5,6 +5,10 @@ const FIXTURES = path.join(__dirname, "..", "fixtures");
 
 const professions = JSON.parse(fs.readFileSync(path.join(FIXTURES, "professions.json"), "utf-8"));
 
+// Stand-in wiki pages, keyed by title. Anything absent is reported `missing`, which
+// resolveEntityFacts() skips — so the entity simply keeps its API facts.
+const wikiPages = JSON.parse(fs.readFileSync(path.join(FIXTURES, "wiki-pages.json"), "utf-8"));
+
 const catalogs = {};
 for (const file of fs.readdirSync(FIXTURES)) {
   const match = file.match(/^(.+)-catalog\.json$/);
@@ -94,7 +98,35 @@ function handleRequest(method, url) {
     return [];
   }
 
+  if (pathname === "/wiki-api.php") {
+    return handleWikiQuery(url);
+  }
+
   return null;
+}
+
+/**
+ * Minimal stand-in for the MediaWiki `action=query&prop=revisions` call that
+ * WikiClient.getWikitextBatch() makes. Only the fields the client reads are
+ * produced: query.pages[].title, .missing, and .revisions[0]["*"].
+ */
+function handleWikiQuery(url) {
+  const params = new URL(url, "http://localhost").searchParams;
+  const titles = (params.get("titles") || "").split("|").filter(Boolean);
+
+  const pages = {};
+  titles.forEach((title, index) => {
+    // Negative page ids are what MediaWiki itself uses for missing pages.
+    const wikitext = Object.prototype.hasOwnProperty.call(wikiPages, title) && title !== "_comment"
+      ? wikiPages[title]
+      : null;
+    pages[wikitext === null ? -(index + 1) : index + 1] =
+      wikitext === null
+        ? { title, missing: "" }
+        : { title, revisions: [{ "*": wikitext }] };
+  });
+
+  return { query: { pages } };
 }
 
 module.exports = { handleRequest };

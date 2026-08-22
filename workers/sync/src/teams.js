@@ -5,6 +5,44 @@ const { checkRateLimit } = require("./ratelimit");
 
 const MAX_TEAM_NAME = 80;
 const JOIN_LIMIT_PER_MIN = 10;
+// Team creation is cheap for us but unbounded creation is a capacity/abuse
+// problem, so it gets its own per-user hourly ceiling. Well above anything a
+// human does by hand (the migration flow creates at most one).
+const CREATE_LIMIT_PER_HOUR = 20;
+const INVITE_ATTEMPTS = 3;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const ROLES = new Set(["owner", "member"]); // must stay in sync with the memberships.role CHECK constraint
+
+// D1/SQLite report a UNIQUE violation as e.g.
+//   "D1_ERROR: UNIQUE constraint failed: teams.invite_code: SQLITE_CONSTRAINT"
+// so the offending column is recoverable from the message. Anything we cannot
+// positively identify is treated as "not a collision" and propagates.
+function uniqueViolationTarget(err) {
+  const msg = String((err && err.message) || err || "");
+  const m = /UNIQUE constraint failed:\s*([A-Za-z0-9_.,\s]+)/i.exec(msg);
+  return m ? m[1].trim() : "";
+}
+function isInviteCodeCollision(err) {
+  return /\bteams\.invite_code\b/i.test(uniqueViolationTarget(err));
+}
+function isTeamIdCollision(err) {
+  return /\bteams\.(id|rowid)\b/i.test(uniqueViolationTarget(err));
+}
+
+// Runs `attempt(code)` with a fresh invite code, retrying ONLY on an
+// invite_code UNIQUE violation. Every other error propagates on the first try.
+async function withInviteCode(attempt) {
+  let lastErr;
+  for (let i = 0; i < INVITE_ATTEMPTS; i += 1) {
+    try {
+      return await attempt(inviteCode());
+    } catch (err) {
+      if (!isInviteCodeCollision(err)) throw err;
+      lastErr = err;
+    }
+  }
+  throw lastErr;
+}
 
 function teamWire(row, { includeInvite }) {
   const t = { id: row.id, name: row.name, seq: row.seq, createdAt: row.created_at };
@@ -27,28 +65,40 @@ async function requireMembership(env, teamId, userId) {
   return { team, role };
 }
 
-// POST /teams { name }
+// POST /teams { name, id? }
+// `id` lets a client migrating its old GitHub-org library keep the folder id it
+// already has (so teammates re-link in place). It must look like a UUID and
+// must not be taken; anything else is ignored / rejected.
 async function createTeam(request, env, deps, auth) {
+  const rl = await checkRateLimit(env.SYNC_RL, `create:${auth.user.id}`, CREATE_LIMIT_PER_HOUR, 3600, deps);
+  if (!rl.ok) return errorResponse("rate_limited", "Too many teams created. Try again later.", 429, { "Retry-After": String(rl.retryAfterSeconds) });
   const body = await readJson(request);
   const name = cleanName(body && body.name);
   if (!name) return errorResponse("invalid", `Team name must be 1–${MAX_TEAM_NAME} characters.`);
   const now = nowIso(deps);
-  const id = uuid();
-  // Invite codes are UNIQUE; retry a couple of times on the (astronomically rare) collision.
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    const code = inviteCode();
+  const requestedId = body && typeof body.id === "string" && UUID_RE.test(body.id) ? body.id : null;
+  if (requestedId) {
+    const taken = await env.SYNC_DB.prepare("SELECT id FROM teams WHERE id = ?").bind(requestedId).first();
+    if (taken) return errorResponse("conflict", "That team id is already in use.");
+  }
+  const id = requestedId || uuid();
+  // Invite codes are UNIQUE; retry a couple of times on the (astronomically
+  // rare) collision. The SELECT above is check-then-insert, so a concurrent
+  // create of the same requested id still has to be caught here — and it must
+  // surface as the same 409, because the client's adoption path keys on it.
+  return withInviteCode(async (code) => {
     try {
       await env.SYNC_DB.batch([
         env.SYNC_DB.prepare("INSERT INTO teams (id, name, invite_code, seq, created_by, created_at) VALUES (?, ?, ?, 0, ?, ?)").bind(id, name, code, auth.user.id, now),
         env.SYNC_DB.prepare("INSERT INTO memberships (team_id, user_id, role, joined_at) VALUES (?, ?, 'owner', ?)").bind(id, auth.user.id, now),
       ]);
-      const row = await env.SYNC_DB.prepare("SELECT * FROM teams WHERE id = ?").bind(id).first();
-      return json({ team: teamWire(row, { includeInvite: true }), role: "owner" }, 201);
     } catch (err) {
-      if (attempt === 2) throw err;
+      if (isTeamIdCollision(err)) return errorResponse("conflict", "That team id is already in use.");
+      throw err; // invite-code collisions are retried by withInviteCode; everything else propagates
     }
-  }
-  return errorResponse("invalid", "Could not create team.", 500);
+    const row = await env.SYNC_DB.prepare("SELECT * FROM teams WHERE id = ?").bind(id).first();
+    return json({ team: teamWire(row, { includeInvite: true }), role: "owner" }, 201);
+  });
 }
 
 // POST /teams/join { inviteCode }
@@ -129,7 +179,7 @@ async function removeMember(_request, env, _deps, auth, params) {
   if (!target) return errorResponse("not_found", "That user is not a member.");
   if (target.role === "owner") {
     const owners = await env.SYNC_DB.prepare("SELECT COUNT(*) AS c FROM memberships WHERE team_id = ? AND role = 'owner'").bind(params.teamId).first("c");
-    if (owners <= 1) return errorResponse("forbidden", "The last owner cannot leave. Delete the team or promote someone first.");
+    if (owners <= 1) return errorResponse("forbidden", "The last owner cannot leave. Promote another member to owner first, or delete the team.");
   }
   await env.SYNC_DB.prepare("DELETE FROM memberships WHERE team_id = ? AND user_id = ?").bind(params.teamId, params.userId).run();
   return new Response(null, { status: 204 });
@@ -139,9 +189,30 @@ async function removeMember(_request, env, _deps, auth, params) {
 async function rotateInvite(_request, env, _deps, auth, params) {
   const { error } = await ownerOnly(env, params.teamId, auth);
   if (error) return error;
-  const code = inviteCode();
-  await env.SYNC_DB.prepare("UPDATE teams SET invite_code = ? WHERE id = ?").bind(code, params.teamId).run();
-  return json({ inviteCode: code });
+  return withInviteCode(async (code) => {
+    await env.SYNC_DB.prepare("UPDATE teams SET invite_code = ? WHERE id = ?").bind(code, params.teamId).run();
+    return json({ inviteCode: code });
+  });
 }
 
-module.exports = { createTeam, joinTeam, listTeams, renameTeam, deleteTeam, listMembers, removeMember, rotateInvite, requireMembership, MAX_TEAM_NAME };
+// PATCH /teams/:teamId/members/:userId { role } — owner-only role change.
+// Without this a sole owner is trapped: removeMember refuses to drop the last
+// owner, so their only exit is deleting the team (and everyone's data with it).
+async function setMemberRole(request, env, _deps, auth, params) {
+  const { error } = await ownerOnly(env, params.teamId, auth);
+  if (error) return error;
+  const body = await readJson(request);
+  const role = body && typeof body.role === "string" ? body.role.trim().toLowerCase() : "";
+  if (!ROLES.has(role)) return errorResponse("invalid", "role must be \"owner\" or \"member\".");
+  const target = await requireMembership(env, params.teamId, params.userId);
+  if (!target) return errorResponse("not_found", "That user is not a member.");
+  if (target.role === role) return json({ userId: params.userId, role });
+  if (target.role === "owner") {
+    const owners = await env.SYNC_DB.prepare("SELECT COUNT(*) AS c FROM memberships WHERE team_id = ? AND role = 'owner'").bind(params.teamId).first("c");
+    if (owners <= 1) return errorResponse("forbidden", "The last owner cannot be demoted. Promote another member first.");
+  }
+  await env.SYNC_DB.prepare("UPDATE memberships SET role = ? WHERE team_id = ? AND user_id = ?").bind(role, params.teamId, params.userId).run();
+  return json({ userId: params.userId, role });
+}
+
+module.exports = { createTeam, joinTeam, listTeams, renameTeam, deleteTeam, listMembers, removeMember, setMemberRole, rotateInvite, requireMembership, MAX_TEAM_NAME };

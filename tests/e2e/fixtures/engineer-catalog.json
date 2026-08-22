@@ -15910,6 +15910,2279 @@
       ],
       "id": 69565,
       "chat_link": "[&Br0PAQA=]"
+    },
+    {
+      "name": "Detonate Elixir H",
+      "description": "Burst a bottle of Elixir H, granting protection, regeneration, and swiftness to allies.",
+      "icon": "https://render.guildwars2.com/file/7835AE041957D0DCCB7B2373CA76A90864017E09/103481.png",
+      "type": "Toolbelt",
+      "weapon_type": "None",
+      "professions": [
+        "Engineer"
+      ],
+      "slot": "Toolbelt",
+      "flags": [],
+      "id": 6119,
+      "chat_link": "[&BucXAAA=]"
+    },
+    {
+      "name": "Bandage Self",
+      "facts": [
+        {
+          "text": "Recharge",
+          "type": "Recharge",
+          "icon": "https://render.guildwars2.com/file/D767B963D120F077C3B163A05DC05A7317D7DB70/156651.png",
+          "value": 17
+        },
+        {
+          "text": "Healing",
+          "type": "AttributeAdjust",
+          "icon": "https://render.guildwars2.com/file/D4347C52157B040943051D7E09DEAD7AF63D4378/156662.png",
+          "value": 4920,
+          "target": "Healing"
+        }
+      ],
+      "description": "Bandage your wounds and heal yourself.",
+      "icon": "https://render.guildwars2.com/file/0C982310320AC3E2584E20727CB645D1C53C1906/102826.png",
+      "type": "Toolbelt",
+      "weapon_type": "None",
+      "slot": "Toolbelt",
+      "professions": [
+        "Engineer"
+      ],
+      "flags": [],
+      "id": 29772,
+      "chat_link": "[&Bkx0AAA=]",
+      "traited_facts": [
+        {
+          "text": "Apply Buff/Condition",
+          "type": "Buff",
+          "icon": "https://render.guildwars2.com/file/CD77D1FAB7B270223538A8F8ECDA1CFB044D65F4/102834.png",
+          "duration": 4,
+          "status": "Protection",
+          "description": "Incoming strike damage decreased by 33%; stacks duration.",
+          "apply_count": 1,
+          "requires_trait": 1999
+        },
+        {
+          "text": "Apply Buff/Condition",
+          "type": "Buff",
+          "icon": "https://render.guildwars2.com/file/CD77D1FAB7B270223538A8F8ECDA1CFB044D65F4/102834.png",
+          "duration": 3,
+          "status": "Protection",
+          "description": "Incoming strike damage decreased by 33%; stacks duration.",
+          "apply_count": 1,
+          "requires_trait": 1999
+        },
+        {
+          "text": "Apply Buff/Condition",
+          "type": "Buff",
+          "icon": "https://render.guildwars2.com/file/E04392C3D8ED985125973AEB99D8460C483263F9/103458.png",
+          "duration": 10,
+          "status": "Superspeed",
+          "description": "Movement speed is greatly increased. Maximum duration: 10s",
+          "apply_count": 1,
+          "requires_trait": 2014
+        },
+        {
+          "text": "Apply Buff/Condition",
+          "type": "Buff",
+          "icon": "https://render.guildwars2.com/file/E04392C3D8ED985125973AEB99D8460C483263F9/103458.png",
+          "duration": 7,
+          "status": "Superspeed",
+          "description": "Movement speed is greatly increased. Maximum duration: 10s",
+          "apply_count": 1,
+          "requires_trait": 2014
+        },
+        {
+          "text": "Apply Buff/Condition",
+          "type": "Buff",
+          "icon": "https://render.guildwars2.com/file/E04392C3D8ED985125973AEB99D8460C483263F9/103458.png",
+          "duration": 6,
+          "status": "Superspeed",
+          "description": "Movement speed is greatly increased. Maximum duration: 10s",
+          "apply_count": 1,
+          "requires_trait": 2014
+        },
+        {
+          "text": "Apply Buff/Condition",
+          "type": "Buff",
+          "icon": "https://render.guildwars2.com/file/E04392C3D8ED985125973AEB99D8460C483263F9/103458.png",
+          "duration": 5,
+          "status": "Superspeed",
+          "description": "Movement speed is greatly increased. Maximum duration: 10s",
+          "apply_count": 1,
+          "requires_trait": 2014
+        },
+        {
+          "text": "Radius",
+          "type": "Distance",
+          "icon": "https://render.guildwars2.com/file/B0CD8077991E4FB1622D2930337ED7F9B54211D5/156665.png",
+          "distance": 240,
+          "requires_trait": 2014
+        }
+      ]
+    },
+    {
+      "name": "Static Shock",
+      "facts": [
+        {
+          "text": "Range",
+          "type": "Range",
+          "icon": "https://render.guildwars2.com/file/0AAB34BEB1C9F4A25EC612DDBEACF3E20B2810FA/156666.png",
+          "value": 180
+        },
+        {
+          "text": "Recharge",
+          "type": "Recharge",
+          "icon": "https://render.guildwars2.com/file/D767B963D120F077C3B163A05DC05A7317D7DB70/156651.png",
+          "value": 20
+        },
+        {
+          "text": "Damage",
+          "type": "Damage",
+          "icon": "https://render.guildwars2.com/file/61AA4919C4A7990903241B680A69530121E994C7/156657.png",
+          "hit_count": 1,
+          "dmg_multiplier": 1
+        },
+        {
+          "text": "Stun",
+          "type": "Time",
+          "icon": "https://render.guildwars2.com/file/1999B9DB355005D2DD19F66DFFBAA6D466057508/522727.png",
+          "duration": 2
+        }
+      ],
+      "description": "Use your A.E.D. to stun an enemy.",
+      "icon": "https://render.guildwars2.com/file/C79E3806E41C32ABA80D6BCC274123F10BCF1AD7/699526.png",
+      "type": "Toolbelt",
+      "weapon_type": "None",
+      "professions": [
+        "Engineer"
+      ],
+      "slot": "Toolbelt",
+      "flags": [],
+      "id": 21661,
+      "chat_link": "[&Bp1UAAA=]",
+      "traited_facts": [
+        {
+          "text": "Apply Buff/Condition",
+          "type": "Buff",
+          "icon": "https://render.guildwars2.com/file/E04392C3D8ED985125973AEB99D8460C483263F9/103458.png",
+          "duration": 7,
+          "status": "Superspeed",
+          "description": "Movement speed is greatly increased. Maximum duration: 10s",
+          "apply_count": 1,
+          "requires_trait": 2014
+        },
+        {
+          "text": "Apply Buff/Condition",
+          "type": "Buff",
+          "icon": "https://render.guildwars2.com/file/E04392C3D8ED985125973AEB99D8460C483263F9/103458.png",
+          "duration": 4,
+          "status": "Superspeed",
+          "description": "Movement speed is greatly increased. Maximum duration: 10s",
+          "apply_count": 1,
+          "requires_trait": 2014
+        },
+        {
+          "text": "Apply Buff/Condition",
+          "type": "Buff",
+          "icon": "https://render.guildwars2.com/file/CD77D1FAB7B270223538A8F8ECDA1CFB044D65F4/102834.png",
+          "duration": 4,
+          "status": "Protection",
+          "description": "Incoming strike damage decreased by 33%; stacks duration.",
+          "apply_count": 1,
+          "requires_trait": 1999
+        },
+        {
+          "text": "Apply Buff/Condition",
+          "type": "Buff",
+          "icon": "https://render.guildwars2.com/file/CD77D1FAB7B270223538A8F8ECDA1CFB044D65F4/102834.png",
+          "duration": 3,
+          "status": "Protection",
+          "description": "Incoming strike damage decreased by 33%; stacks duration.",
+          "apply_count": 1,
+          "requires_trait": 1999
+        }
+      ]
+    },
+    {
+      "name": "Regenerating Mist",
+      "facts": [
+        {
+          "text": "Recharge",
+          "type": "Recharge",
+          "icon": "https://render.guildwars2.com/file/D767B963D120F077C3B163A05DC05A7317D7DB70/156651.png",
+          "value": 18
+        },
+        {
+          "text": "Apply Buff/Condition",
+          "type": "Buff",
+          "icon": "https://render.guildwars2.com/file/F69996772B9E18FD18AD0AABAB25D7E3FC42F261/102835.png",
+          "duration": 3,
+          "status": "Regeneration",
+          "description": "Gain health every second; stacks duration.",
+          "apply_count": 2
+        },
+        {
+          "text": "Radius",
+          "type": "Distance",
+          "icon": "https://render.guildwars2.com/file/B0CD8077991E4FB1622D2930337ED7F9B54211D5/156665.png",
+          "distance": 480
+        },
+        {
+          "text": "Number of Targets",
+          "type": "Number",
+          "icon": "https://render.guildwars2.com/file/BBE8191A494B0352259C10EADFDACCE177E6DA5B/1770208.png",
+          "value": 5
+        },
+        {
+          "text": "Combo Field",
+          "type": "ComboField",
+          "icon": "https://render.guildwars2.com/file/59E0DB6A699810641C959926ADFEF73E08CC255B/156655.png",
+          "field_type": "Water"
+        }
+      ],
+      "description": "Release a mist of healing liquid to regenerate nearby allies.",
+      "icon": "https://render.guildwars2.com/file/D7F356D2A7C6B42FF295CDA6765B0B45F508541A/103463.png",
+      "type": "Toolbelt",
+      "weapon_type": "None",
+      "slot": "Toolbelt",
+      "professions": [
+        "Engineer"
+      ],
+      "flags": [],
+      "id": 6176,
+      "chat_link": "[&BiAYAAA=]",
+      "traited_facts": [
+        {
+          "text": "Apply Buff/Condition",
+          "type": "Buff",
+          "icon": "https://render.guildwars2.com/file/CD77D1FAB7B270223538A8F8ECDA1CFB044D65F4/102834.png",
+          "duration": 4,
+          "status": "Protection",
+          "description": "Incoming strike damage decreased by 33%; stacks duration.",
+          "apply_count": 1,
+          "requires_trait": 1999
+        },
+        {
+          "text": "Apply Buff/Condition",
+          "type": "Buff",
+          "icon": "https://render.guildwars2.com/file/CD77D1FAB7B270223538A8F8ECDA1CFB044D65F4/102834.png",
+          "duration": 3,
+          "status": "Protection",
+          "description": "Incoming strike damage decreased by 33%; stacks duration.",
+          "apply_count": 1,
+          "requires_trait": 1999
+        },
+        {
+          "text": "Apply Buff/Condition",
+          "type": "Buff",
+          "icon": "https://render.guildwars2.com/file/E04392C3D8ED985125973AEB99D8460C483263F9/103458.png",
+          "duration": 7,
+          "status": "Superspeed",
+          "description": "Movement speed is greatly increased. Maximum duration: 10s",
+          "apply_count": 1,
+          "requires_trait": 2014
+        },
+        {
+          "text": "Apply Buff/Condition",
+          "type": "Buff",
+          "icon": "https://render.guildwars2.com/file/E04392C3D8ED985125973AEB99D8460C483263F9/103458.png",
+          "duration": 4,
+          "status": "Superspeed",
+          "description": "Movement speed is greatly increased. Maximum duration: 10s",
+          "apply_count": 1,
+          "requires_trait": 2014
+        }
+      ]
+    },
+    {
+      "name": "Surprise Shot",
+      "facts": [
+        {
+          "text": "Range",
+          "type": "Range",
+          "icon": "https://render.guildwars2.com/file/0AAB34BEB1C9F4A25EC612DDBEACF3E20B2810FA/156666.png",
+          "value": 1000
+        },
+        {
+          "text": "Recharge",
+          "type": "Recharge",
+          "icon": "https://render.guildwars2.com/file/D767B963D120F077C3B163A05DC05A7317D7DB70/156651.png",
+          "value": 8
+        },
+        {
+          "text": "Damage",
+          "type": "Damage",
+          "icon": "https://render.guildwars2.com/file/61AA4919C4A7990903241B680A69530121E994C7/156657.png",
+          "hit_count": 1,
+          "dmg_multiplier": 1
+        },
+        {
+          "text": "Combo Finisher",
+          "type": "ComboFinisher",
+          "icon": "https://render.guildwars2.com/file/A513F3653D33FBA4220D2D307799F8A327A36A3B/156656.png",
+          "percent": 100,
+          "finisher_type": "Projectile"
+        }
+      ],
+      "description": "Fire a bullet out of your belt.",
+      "icon": "https://render.guildwars2.com/file/FBBFE42D0BD0745F56BF30483240E67F0994562C/103254.png",
+      "type": "Toolbelt",
+      "weapon_type": "None",
+      "slot": "Toolbelt",
+      "professions": [
+        "Engineer"
+      ],
+      "flags": [],
+      "id": 6178,
+      "chat_link": "[&BiIYAAA=]"
+    },
+    {
+      "name": "Throw Napalm",
+      "facts": [
+        {
+          "text": "Range",
+          "type": "Range",
+          "icon": "https://render.guildwars2.com/file/0AAB34BEB1C9F4A25EC612DDBEACF3E20B2810FA/156666.png",
+          "value": 900
+        },
+        {
+          "text": "Recharge",
+          "type": "Recharge",
+          "icon": "https://render.guildwars2.com/file/D767B963D120F077C3B163A05DC05A7317D7DB70/156651.png",
+          "value": 25
+        },
+        {
+          "text": "Damage",
+          "type": "Damage",
+          "icon": "https://render.guildwars2.com/file/61AA4919C4A7990903241B680A69530121E994C7/156657.png",
+          "hit_count": 1,
+          "dmg_multiplier": 0.7
+        },
+        {
+          "text": "Apply Buff/Condition",
+          "type": "Buff",
+          "icon": "https://render.guildwars2.com/file/B47BF5803FED2718D7474EAF9617629AD068EE10/102849.png",
+          "duration": 4,
+          "status": "Burning",
+          "description": "Deals damage every second; stacks intensity.",
+          "apply_count": 1
+        },
+        {
+          "text": "Apply Buff/Condition",
+          "type": "Buff",
+          "icon": "https://render.guildwars2.com/file/B47BF5803FED2718D7474EAF9617629AD068EE10/102849.png",
+          "duration": 2,
+          "status": "Burning",
+          "description": "Deals damage every second; stacks intensity.",
+          "apply_count": 1
+        },
+        {
+          "text": "Pulses",
+          "type": "Number",
+          "icon": "https://render.guildwars2.com/file/9352ED3244417304995F26CB01AE76BB7E547052/156661.png",
+          "value": 3
+        },
+        {
+          "text": "Duration",
+          "type": "Time",
+          "icon": "https://render.guildwars2.com/file/7B2193ACCF77E56C13E608191B082D68AA0FAA71/156659.png",
+          "duration": 3
+        },
+        {
+          "text": "Radius",
+          "type": "Distance",
+          "icon": "https://render.guildwars2.com/file/B0CD8077991E4FB1622D2930337ED7F9B54211D5/156665.png",
+          "distance": 180
+        },
+        {
+          "text": "Number of Targets",
+          "type": "Number",
+          "icon": "https://render.guildwars2.com/file/BBE8191A494B0352259C10EADFDACCE177E6DA5B/1770208.png",
+          "value": 5
+        },
+        {
+          "text": "Combo Field",
+          "type": "ComboField",
+          "icon": "https://render.guildwars2.com/file/59E0DB6A699810641C959926ADFEF73E08CC255B/156655.png",
+          "field_type": "Fire"
+        }
+      ],
+      "description": "Throw a ball of napalm that explodes on impact, burning foes around target location.",
+      "icon": "https://render.guildwars2.com/file/F0A8380340E1E64FAFAAE87053422136664528CC/103205.png",
+      "type": "Toolbelt",
+      "weapon_type": "None",
+      "slot": "Toolbelt",
+      "professions": [
+        "Engineer"
+      ],
+      "flags": [],
+      "id": 6181,
+      "chat_link": "[&BiUYAAA=]"
+    },
+    {
+      "name": "Net Attack",
+      "facts": [
+        {
+          "text": "Range",
+          "type": "Range",
+          "icon": "https://render.guildwars2.com/file/0AAB34BEB1C9F4A25EC612DDBEACF3E20B2810FA/156666.png",
+          "value": 600
+        },
+        {
+          "text": "Recharge",
+          "type": "Recharge",
+          "icon": "https://render.guildwars2.com/file/D767B963D120F077C3B163A05DC05A7317D7DB70/156651.png",
+          "value": 38
+        },
+        {
+          "text": "Apply Buff/Condition",
+          "type": "Buff",
+          "icon": "https://render.guildwars2.com/file/397A613651BFCA2832B6469CE34735580A2C120E/102844.png",
+          "duration": 3,
+          "status": "Immobile",
+          "description": "Unable to move; stacks duration.",
+          "apply_count": 1
+        }
+      ],
+      "description": "Fire a net from your belt to immobilize your foe.",
+      "icon": "https://render.guildwars2.com/file/A47830A4152F5F5DEC5D22975DE0449A57F2D570/102982.png",
+      "type": "Toolbelt",
+      "weapon_type": "None",
+      "slot": "Toolbelt",
+      "professions": [
+        "Engineer"
+      ],
+      "flags": [],
+      "id": 6179,
+      "chat_link": "[&BiMYAAA=]"
+    },
+    {
+      "name": "Rumble",
+      "facts": [
+        {
+          "text": "Range",
+          "type": "Range",
+          "icon": "https://render.guildwars2.com/file/0AAB34BEB1C9F4A25EC612DDBEACF3E20B2810FA/156666.png",
+          "value": 240
+        },
+        {
+          "text": "Recharge",
+          "type": "Recharge",
+          "icon": "https://render.guildwars2.com/file/D767B963D120F077C3B163A05DC05A7317D7DB70/156651.png",
+          "value": 38
+        },
+        {
+          "text": "StunBreak",
+          "type": "StunBreak",
+          "icon": "https://render.guildwars2.com/file/DCF0719729165FD8910E034CA4E0780F90582D15/156654.png",
+          "value": true
+        },
+        {
+          "text": "Damage",
+          "type": "Damage",
+          "icon": "https://render.guildwars2.com/file/61AA4919C4A7990903241B680A69530121E994C7/156657.png",
+          "hit_count": 1,
+          "dmg_multiplier": 1
+        },
+        {
+          "text": "Apply Buff/Condition",
+          "type": "Buff",
+          "icon": "https://render.guildwars2.com/file/3D3A1C2D6D791C05179AB871902D28782C65C244/415959.png",
+          "duration": 1,
+          "status": "Stability",
+          "description": "Cannot be knocked down, pushed back, pulled, launched, stunned, dazed, floated, sunk, feared, or taunted.",
+          "apply_count": 1
+        },
+        {
+          "text": "Number of Targets",
+          "type": "Number",
+          "icon": "https://render.guildwars2.com/file/BBE8191A494B0352259C10EADFDACCE177E6DA5B/1770208.png",
+          "value": 5
+        },
+        {
+          "text": "Combo Finisher",
+          "type": "ComboFinisher",
+          "icon": "https://render.guildwars2.com/file/A513F3653D33FBA4220D2D307799F8A327A36A3B/156656.png",
+          "percent": 100,
+          "finisher_type": "Blast"
+        }
+      ],
+      "description": "Release a shock wave of inertial force to damage nearby foes.",
+      "icon": "https://render.guildwars2.com/file/2F1CF7CA4E58215911CF5797F7939FEF51D9CB45/102977.png",
+      "type": "Toolbelt",
+      "weapon_type": "None",
+      "slot": "Toolbelt",
+      "professions": [
+        "Engineer"
+      ],
+      "flags": [],
+      "id": 6180,
+      "chat_link": "[&BiQYAAA=]"
+    },
+    {
+      "name": "Rocket",
+      "facts": [
+        {
+          "text": "Range",
+          "type": "Range",
+          "icon": "https://render.guildwars2.com/file/0AAB34BEB1C9F4A25EC612DDBEACF3E20B2810FA/156666.png",
+          "value": 1500
+        },
+        {
+          "text": "Recharge",
+          "type": "Recharge",
+          "icon": "https://render.guildwars2.com/file/D767B963D120F077C3B163A05DC05A7317D7DB70/156651.png",
+          "value": 25
+        },
+        {
+          "text": "Damage",
+          "type": "Damage",
+          "icon": "https://render.guildwars2.com/file/61AA4919C4A7990903241B680A69530121E994C7/156657.png",
+          "hit_count": 1,
+          "dmg_multiplier": 2.25
+        },
+        {
+          "text": "Radius",
+          "type": "Distance",
+          "icon": "https://render.guildwars2.com/file/B0CD8077991E4FB1622D2930337ED7F9B54211D5/156665.png",
+          "distance": 240
+        },
+        {
+          "text": "Number of Targets",
+          "type": "Number",
+          "icon": "https://render.guildwars2.com/file/BBE8191A494B0352259C10EADFDACCE177E6DA5B/1770208.png",
+          "value": 5
+        },
+        {
+          "text": "Explosion",
+          "type": "NoData",
+          "icon": "https://render.guildwars2.com/file/450630987A0566D4A7A491EDA4DCDF57D9396854/1770203.png"
+        }
+      ],
+      "description": "Fire a rocket out of your belt that explodes on impact.",
+      "icon": "https://render.guildwars2.com/file/4AD55892CDF01D61ECE318DD33304F531603D048/103935.png",
+      "type": "Toolbelt",
+      "weapon_type": "None",
+      "slot": "Toolbelt",
+      "professions": [
+        "Engineer"
+      ],
+      "flags": [],
+      "id": 6177,
+      "chat_link": "[&BiEYAAA=]"
+    },
+    {
+      "name": "Detonate Elixir B",
+      "description": "Burst the bottle to grant stability and one of the following boons to allies: fury, might, resolution, or swiftness.",
+      "icon": "https://render.guildwars2.com/file/7835AE041957D0DCCB7B2373CA76A90864017E09/103481.png",
+      "type": "Toolbelt",
+      "weapon_type": "None",
+      "professions": [
+        "Engineer"
+      ],
+      "slot": "Toolbelt",
+      "flags": [],
+      "id": 6082,
+      "chat_link": "[&BsIXAAA=]"
+    },
+    {
+      "name": "Detonate Elixir U",
+      "facts": [
+        {
+          "text": "Number of Targets",
+          "type": "Number",
+          "icon": "https://render.guildwars2.com/file/BBE8191A494B0352259C10EADFDACCE177E6DA5B/1770208.png",
+          "value": 5
+        },
+        {
+          "text": "Apply Buff/Condition",
+          "type": "Buff",
+          "icon": "https://render.guildwars2.com/file/D4AB6401A6D6917C3D4F230764452BCCE1035B0D/1012835.png",
+          "duration": 3,
+          "status": "Quickness",
+          "description": "Skills and actions are faster.",
+          "apply_count": 1
+        },
+        {
+          "text": "Radius",
+          "type": "Distance",
+          "icon": "https://render.guildwars2.com/file/B0CD8077991E4FB1622D2930337ED7F9B54211D5/156665.png",
+          "distance": 360
+        }
+      ],
+      "description": "Elixir. Detonate Elixir U, causing it to grant allies superspeed and break them out of stun.",
+      "icon": "https://render.guildwars2.com/file/7835AE041957D0DCCB7B2373CA76A90864017E09/103481.png",
+      "type": "Toolbelt",
+      "weapon_type": "None",
+      "professions": [
+        "Engineer"
+      ],
+      "slot": "Toolbelt",
+      "flags": [],
+      "id": 6088,
+      "chat_link": "[&BsgXAAA=]",
+      "categories": [
+        "Elixir"
+      ],
+      "traited_facts": [
+        {
+          "text": "Apply Buff/Condition",
+          "type": "Buff",
+          "icon": "https://render.guildwars2.com/file/E04392C3D8ED985125973AEB99D8460C483263F9/103458.png",
+          "duration": 4,
+          "status": "Superspeed",
+          "description": "Movement speed is greatly increased. Maximum duration: 10s",
+          "apply_count": 1,
+          "requires_trait": 473,
+          "overrides": 1
+        }
+      ]
+    },
+    {
+      "name": "Detonate Elixir S",
+      "description": "Elixir. Burst the bottle, granting allies stealth.",
+      "icon": "https://render.guildwars2.com/file/7835AE041957D0DCCB7B2373CA76A90864017E09/103481.png",
+      "type": "Toolbelt",
+      "weapon_type": "None",
+      "professions": [
+        "Engineer"
+      ],
+      "slot": "Toolbelt",
+      "flags": [],
+      "id": 6084,
+      "chat_link": "[&BsQXAAA=]",
+      "categories": [
+        "Elixir"
+      ]
+    },
+    {
+      "name": "Detonate Elixir C",
+      "description": "Elixir. Burst the bottle, converting conditions into boons for allies in your area.",
+      "icon": "https://render.guildwars2.com/file/960EC09F42A2654FD767FF30D41ECC4C08F62AA3/103414.png",
+      "type": "Toolbelt",
+      "weapon_type": "None",
+      "professions": [
+        "Engineer"
+      ],
+      "slot": "Toolbelt",
+      "flags": [],
+      "id": 6078,
+      "chat_link": "[&Br4XAAA=]",
+      "categories": [
+        "Elixir"
+      ]
+    },
+    {
+      "name": "Detonate Elixir R",
+      "description": "Elixir. Burst the bottle, reviving allies.",
+      "icon": "https://render.guildwars2.com/file/7835AE041957D0DCCB7B2373CA76A90864017E09/103481.png",
+      "type": "Toolbelt",
+      "weapon_type": "None",
+      "professions": [
+        "Engineer"
+      ],
+      "slot": "Toolbelt",
+      "flags": [],
+      "id": 6086,
+      "chat_link": "[&BsYXAAA=]",
+      "categories": [
+        "Elixir"
+      ]
+    },
+    {
+      "name": "Grenade Barrage",
+      "facts": [
+        {
+          "text": "Range",
+          "type": "Range",
+          "icon": "https://render.guildwars2.com/file/0AAB34BEB1C9F4A25EC612DDBEACF3E20B2810FA/156666.png",
+          "value": 900
+        },
+        {
+          "text": "Recharge",
+          "type": "Recharge",
+          "icon": "https://render.guildwars2.com/file/D767B963D120F077C3B163A05DC05A7317D7DB70/156651.png",
+          "value": 25
+        },
+        {
+          "text": "Damage",
+          "type": "Damage",
+          "icon": "https://render.guildwars2.com/file/61AA4919C4A7990903241B680A69530121E994C7/156657.png",
+          "hit_count": 1,
+          "dmg_multiplier": 0.6
+        },
+        {
+          "text": "Number of Grenades",
+          "type": "Number",
+          "icon": "https://render.guildwars2.com/file/BBE8191A494B0352259C10EADFDACCE177E6DA5B/1770208.png",
+          "value": 6
+        },
+        {
+          "text": "Number of Targets",
+          "type": "Number",
+          "icon": "https://render.guildwars2.com/file/BBE8191A494B0352259C10EADFDACCE177E6DA5B/1770208.png",
+          "value": 5
+        },
+        {
+          "text": "Explosion Radius",
+          "type": "Distance",
+          "icon": "https://render.guildwars2.com/file/B0CD8077991E4FB1622D2930337ED7F9B54211D5/156665.png",
+          "distance": 120
+        },
+        {
+          "text": "Explosion",
+          "type": "NoData",
+          "icon": "https://render.guildwars2.com/file/450630987A0566D4A7A491EDA4DCDF57D9396854/1770203.png"
+        }
+      ],
+      "description": "Throw several grenades at once.",
+      "icon": "https://render.guildwars2.com/file/5B2AB667667749BC1BC7AEFD27362E3E0E0F2FE6/103294.png",
+      "type": "Toolbelt",
+      "weapon_type": "None",
+      "professions": [
+        "Engineer"
+      ],
+      "slot": "Toolbelt",
+      "flags": [],
+      "id": 6172,
+      "chat_link": "[&BhwYAAA=]"
+    },
+    {
+      "name": "Smoke Bomb",
+      "facts": [
+        {
+          "text": "Recharge",
+          "type": "Recharge",
+          "icon": "https://render.guildwars2.com/file/D767B963D120F077C3B163A05DC05A7317D7DB70/156651.png",
+          "value": 20
+        },
+        {
+          "text": "Apply Buff/Condition",
+          "type": "Buff",
+          "icon": "https://render.guildwars2.com/file/09770136BB76FD0DBE1CC4267DEED54774CB20F6/102837.png",
+          "duration": 3,
+          "status": "Blinded",
+          "description": "Next outgoing attack misses; stacks duration.",
+          "apply_count": 1
+        },
+        {
+          "text": "Pulses",
+          "type": "Number",
+          "icon": "https://render.guildwars2.com/file/9352ED3244417304995F26CB01AE76BB7E547052/156661.png",
+          "value": 3
+        },
+        {
+          "text": "Duration",
+          "type": "Time",
+          "icon": "https://render.guildwars2.com/file/7B2193ACCF77E56C13E608191B082D68AA0FAA71/156659.png",
+          "duration": 4
+        },
+        {
+          "text": "Radius",
+          "type": "Distance",
+          "icon": "https://render.guildwars2.com/file/B0CD8077991E4FB1622D2930337ED7F9B54211D5/156665.png",
+          "distance": 240
+        },
+        {
+          "text": "Number of Targets",
+          "type": "Number",
+          "icon": "https://render.guildwars2.com/file/BBE8191A494B0352259C10EADFDACCE177E6DA5B/1770208.png",
+          "value": 5
+        },
+        {
+          "text": "Fuse Time",
+          "type": "Time",
+          "icon": "https://render.guildwars2.com/file/7B2193ACCF77E56C13E608191B082D68AA0FAA71/156659.png",
+          "duration": 1
+        },
+        {
+          "text": "Interval",
+          "type": "Time",
+          "icon": "https://render.guildwars2.com/file/B75E91EB22E0DFCC1D08030204055946506D56F6/1770206.png",
+          "duration": 2
+        },
+        {
+          "text": "Explosion",
+          "type": "NoData",
+          "icon": "https://render.guildwars2.com/file/450630987A0566D4A7A491EDA4DCDF57D9396854/1770203.png"
+        },
+        {
+          "text": "Combo Field",
+          "type": "ComboField",
+          "icon": "https://render.guildwars2.com/file/59E0DB6A699810641C959926ADFEF73E08CC255B/156655.png",
+          "field_type": "Smoke"
+        }
+      ],
+      "description": "Set a timed charge that creates a cloud of smoke, blinding nearby foes.",
+      "icon": "https://render.guildwars2.com/file/2D0B6AC204047FE40504BFD7B0B1E015FEF75C2F/103405.png",
+      "type": "Toolbelt",
+      "weapon_type": "None",
+      "slot": "Toolbelt",
+      "professions": [
+        "Engineer"
+      ],
+      "flags": [],
+      "id": 5824,
+      "chat_link": "[&BsAWAAA=]"
+    },
+    {
+      "name": "Smoke Vent",
+      "facts": [
+        {
+          "text": "Recharge",
+          "type": "Recharge",
+          "icon": "https://render.guildwars2.com/file/D767B963D120F077C3B163A05DC05A7317D7DB70/156651.png",
+          "value": 15
+        },
+        {
+          "text": "StunBreak",
+          "type": "StunBreak",
+          "icon": "https://render.guildwars2.com/file/DCF0719729165FD8910E034CA4E0780F90582D15/156654.png",
+          "value": true
+        },
+        {
+          "text": "Apply Buff/Condition",
+          "type": "Buff",
+          "icon": "https://render.guildwars2.com/file/09770136BB76FD0DBE1CC4267DEED54774CB20F6/102837.png",
+          "duration": 5,
+          "status": "Blinded",
+          "description": "Next outgoing attack misses; stacks duration.",
+          "apply_count": 1
+        },
+        {
+          "text": "Radius",
+          "type": "Distance",
+          "icon": "https://render.guildwars2.com/file/B0CD8077991E4FB1622D2930337ED7F9B54211D5/156665.png",
+          "distance": 180
+        },
+        {
+          "text": "Number of Targets",
+          "type": "Number",
+          "icon": "https://render.guildwars2.com/file/BBE8191A494B0352259C10EADFDACCE177E6DA5B/1770208.png",
+          "value": 5
+        }
+      ],
+      "description": "Vent smoke from your flamethrower, blinding nearby foes.",
+      "icon": "https://render.guildwars2.com/file/8027942FE405D7B0CC2EA60AE109AC6C9EDAD566/103299.png",
+      "type": "Toolbelt",
+      "weapon_type": "None",
+      "slot": "Toolbelt",
+      "professions": [
+        "Engineer"
+      ],
+      "flags": [],
+      "id": 6159,
+      "chat_link": "[&Bg8YAAA=]"
+    },
+    {
+      "name": "Healing Mist",
+      "facts": [
+        {
+          "text": "Recharge",
+          "type": "Recharge",
+          "icon": "https://render.guildwars2.com/file/D767B963D120F077C3B163A05DC05A7317D7DB70/156651.png",
+          "value": 20
+        },
+        {
+          "text": "StunBreak",
+          "type": "StunBreak",
+          "icon": "https://render.guildwars2.com/file/DCF0719729165FD8910E034CA4E0780F90582D15/156654.png",
+          "value": true
+        },
+        {
+          "text": "Apply Buff/Condition",
+          "type": "Buff",
+          "icon": "https://render.guildwars2.com/file/F69996772B9E18FD18AD0AABAB25D7E3FC42F261/102835.png",
+          "duration": 10,
+          "status": "Regeneration",
+          "description": "Gain health every second; stacks duration.",
+          "apply_count": 1
+        },
+        {
+          "text": "Radius",
+          "type": "Distance",
+          "icon": "https://render.guildwars2.com/file/B0CD8077991E4FB1622D2930337ED7F9B54211D5/156665.png",
+          "distance": 240
+        },
+        {
+          "text": "Number of Targets",
+          "type": "Number",
+          "icon": "https://render.guildwars2.com/file/BBE8191A494B0352259C10EADFDACCE177E6DA5B/1770208.png",
+          "value": 5
+        }
+      ],
+      "description": "Elixir. Vent a healing mist, granting regeneration to yourself and allies.",
+      "icon": "https://render.guildwars2.com/file/F877C354CBE4413DD7FA205D78B96C90110F4D32/103452.png",
+      "type": "Toolbelt",
+      "weapon_type": "None",
+      "slot": "Toolbelt",
+      "professions": [
+        "Engineer"
+      ],
+      "flags": [],
+      "id": 5966,
+      "chat_link": "[&Bk4XAAA=]",
+      "categories": [
+        "Elixir"
+      ],
+      "traited_facts": [
+        {
+          "text": "Apply Buff/Condition",
+          "type": "Buff",
+          "icon": "https://render.guildwars2.com/file/F69996772B9E18FD18AD0AABAB25D7E3FC42F261/102835.png",
+          "duration": 12,
+          "status": "Regeneration",
+          "description": "Gain health every second; stacks duration.",
+          "apply_count": 1,
+          "requires_trait": 473,
+          "overrides": 2
+        },
+        {
+          "text": "Apply Buff/Condition",
+          "type": "Buff",
+          "icon": "https://render.guildwars2.com/file/2FA9DF9D6BC17839BBEA14723F1C53D645DDB5E1/102852.png",
+          "duration": 15,
+          "status": "Might",
+          "description": "Increased outgoing damage; stacks intensity.",
+          "apply_count": 2,
+          "requires_trait": 473
+        }
+      ]
+    },
+    {
+      "name": "Throw Wrench",
+      "facts": [
+        {
+          "text": "Range",
+          "type": "Range",
+          "icon": "https://render.guildwars2.com/file/0AAB34BEB1C9F4A25EC612DDBEACF3E20B2810FA/156666.png",
+          "value": 900
+        },
+        {
+          "text": "Recharge",
+          "type": "Recharge",
+          "icon": "https://render.guildwars2.com/file/D767B963D120F077C3B163A05DC05A7317D7DB70/156651.png",
+          "value": 20
+        },
+        {
+          "text": "Damage",
+          "type": "Damage",
+          "icon": "https://render.guildwars2.com/file/61AA4919C4A7990903241B680A69530121E994C7/156657.png",
+          "hit_count": 1,
+          "dmg_multiplier": 1.5
+        },
+        {
+          "text": "Apply Buff/Condition",
+          "type": "Buff",
+          "icon": "https://render.guildwars2.com/file/3A394C1A0A3257EB27A44842DDEEF0DF000E1241/102850.png",
+          "duration": 5,
+          "status": "Vulnerability",
+          "description": "Damage and condition damage taken are increased; stacks intensity.",
+          "apply_count": 2
+        },
+        {
+          "text": "Apply Buff/Condition",
+          "type": "Buff",
+          "icon": "https://render.guildwars2.com/file/070325E519C178D502A8160523766070D30C0C19/102838.png",
+          "duration": 2,
+          "status": "Crippled",
+          "description": "Movement speed decreased by 50%; stacks duration.",
+          "apply_count": 1
+        },
+        {
+          "text": "Number of Targets",
+          "type": "Number",
+          "icon": "https://render.guildwars2.com/file/BBE8191A494B0352259C10EADFDACCE177E6DA5B/1770208.png",
+          "value": 5
+        },
+        {
+          "text": "Combo Finisher",
+          "type": "ComboFinisher",
+          "icon": "https://render.guildwars2.com/file/A513F3653D33FBA4220D2D307799F8A327A36A3B/156656.png",
+          "percent": 100,
+          "finisher_type": "Projectile"
+        }
+      ],
+      "description": "Throw a wrench that returns to you, striking foes each way.",
+      "icon": "https://render.guildwars2.com/file/C6D4C7EEA64C91B323B7FF9AE107EA7656A1DCD3/103472.png",
+      "type": "Toolbelt",
+      "weapon_type": "None",
+      "slot": "Toolbelt",
+      "professions": [
+        "Engineer"
+      ],
+      "flags": [],
+      "id": 5999,
+      "chat_link": "[&Bm8XAAA=]",
+      "traited_facts": [
+        {
+          "text": "Damage",
+          "type": "Damage",
+          "icon": "https://render.guildwars2.com/file/61AA4919C4A7990903241B680A69530121E994C7/156657.png",
+          "requires_trait": 531,
+          "hit_count": 1,
+          "dmg_multiplier": 1.1,
+          "overrides": 2
+        }
+      ]
+    },
+    {
+      "name": "Detonate Mine Field",
+      "facts": [
+        {
+          "text": "Damage per Mine",
+          "type": "Damage",
+          "icon": "https://render.guildwars2.com/file/61AA4919C4A7990903241B680A69530121E994C7/156657.png",
+          "hit_count": 1,
+          "dmg_multiplier": 0.77
+        },
+        {
+          "text": "Explosion Radius",
+          "type": "Distance",
+          "icon": "https://render.guildwars2.com/file/B0CD8077991E4FB1622D2930337ED7F9B54211D5/156665.png",
+          "distance": 180
+        },
+        {
+          "text": "Number of Targets",
+          "type": "Number",
+          "icon": "https://render.guildwars2.com/file/BBE8191A494B0352259C10EADFDACCE177E6DA5B/1770208.png",
+          "value": 5
+        },
+        {
+          "text": "Explosion",
+          "type": "NoData",
+          "icon": "https://render.guildwars2.com/file/450630987A0566D4A7A491EDA4DCDF57D9396854/1770203.png"
+        }
+      ],
+      "description": "Detonate your mine, damaging nearby foes.",
+      "icon": "https://render.guildwars2.com/file/D97BF56EBB6D074BFEFC11E103D6D1F2360C6A17/102902.png",
+      "type": "Toolbelt",
+      "weapon_type": "None",
+      "professions": [
+        "Engineer"
+      ],
+      "slot": "Toolbelt",
+      "flags": [],
+      "id": 6166,
+      "chat_link": "[&BhYYAAA=]"
+    },
+    {
+      "name": "Flashbang",
+      "facts": [
+        {
+          "text": "Range",
+          "type": "Range",
+          "icon": "https://render.guildwars2.com/file/0AAB34BEB1C9F4A25EC612DDBEACF3E20B2810FA/156666.png",
+          "value": 900
+        },
+        {
+          "text": "Recharge",
+          "type": "Recharge",
+          "icon": "https://render.guildwars2.com/file/D767B963D120F077C3B163A05DC05A7317D7DB70/156651.png",
+          "value": 20
+        },
+        {
+          "text": "Reveal Radius",
+          "type": "Distance",
+          "icon": "https://render.guildwars2.com/file/B0CD8077991E4FB1622D2930337ED7F9B54211D5/156665.png",
+          "distance": 600
+        },
+        {
+          "text": "Apply Buff/Condition",
+          "type": "Buff",
+          "icon": "https://render.guildwars2.com/file/62BFF65D1CE99B1B2B0928152BCC596EAC0D372B/102887.png",
+          "duration": 6,
+          "status": "Revealed",
+          "description": "You cannot stealth",
+          "apply_count": 1
+        },
+        {
+          "text": "Number of Targets",
+          "type": "Number",
+          "icon": "https://render.guildwars2.com/file/BBE8191A494B0352259C10EADFDACCE177E6DA5B/1770208.png",
+          "value": 5
+        },
+        {
+          "text": "Explosion",
+          "type": "NoData",
+          "icon": "https://render.guildwars2.com/file/450630987A0566D4A7A491EDA4DCDF57D9396854/1770203.png"
+        },
+        {
+          "text": "Radius",
+          "type": "Distance",
+          "icon": "https://render.guildwars2.com/file/B0CD8077991E4FB1622D2930337ED7F9B54211D5/156665.png",
+          "distance": 180
+        },
+        {
+          "text": "Damage",
+          "type": "Damage",
+          "icon": "https://render.guildwars2.com/file/61AA4919C4A7990903241B680A69530121E994C7/156657.png",
+          "hit_count": 1,
+          "dmg_multiplier": 1
+        },
+        {
+          "text": "Daze",
+          "type": "Time",
+          "icon": "https://render.guildwars2.com/file/9AE125E930C92FEA0DD99E7EBAEDE4CF5EC556B6/433474.png",
+          "duration": 2
+        },
+        {
+          "text": "Apply Buff/Condition",
+          "type": "Buff",
+          "icon": "https://render.guildwars2.com/file/09770136BB76FD0DBE1CC4267DEED54774CB20F6/102837.png",
+          "duration": 3,
+          "status": "Blinded",
+          "description": "Next outgoing attack misses; stacks duration.",
+          "apply_count": 1
+        }
+      ],
+      "description": "Throw an explosive at the target area, dazing and blinding enemies on impact. Remove stealth and reveal enemies in a larger area around the impact.",
+      "icon": "https://render.guildwars2.com/file/A86BC2376541159FFE9E62E5C6544403EAB302A7/1128590.png",
+      "type": "Toolbelt",
+      "weapon_type": "None",
+      "professions": [
+        "Engineer"
+      ],
+      "slot": "Toolbelt",
+      "flags": [],
+      "id": 76500,
+      "chat_link": "[&BtQqAQA=]"
+    },
+    {
+      "name": "Rocket Kick",
+      "facts": [
+        {
+          "text": "Range",
+          "type": "Range",
+          "icon": "https://render.guildwars2.com/file/0AAB34BEB1C9F4A25EC612DDBEACF3E20B2810FA/156666.png",
+          "value": 300
+        },
+        {
+          "text": "Recharge",
+          "type": "Recharge",
+          "icon": "https://render.guildwars2.com/file/D767B963D120F077C3B163A05DC05A7317D7DB70/156651.png",
+          "value": 15
+        },
+        {
+          "text": "Damage",
+          "type": "Damage",
+          "icon": "https://render.guildwars2.com/file/61AA4919C4A7990903241B680A69530121E994C7/156657.png",
+          "hit_count": 1,
+          "dmg_multiplier": 1
+        },
+        {
+          "text": "Apply Buff/Condition",
+          "type": "Buff",
+          "icon": "https://render.guildwars2.com/file/B47BF5803FED2718D7474EAF9617629AD068EE10/102849.png",
+          "duration": 8,
+          "status": "Burning",
+          "description": "Deals damage every second; stacks intensity.",
+          "apply_count": 2
+        },
+        {
+          "text": "Number of Targets",
+          "type": "Number",
+          "icon": "https://render.guildwars2.com/file/BBE8191A494B0352259C10EADFDACCE177E6DA5B/1770208.png",
+          "value": 5
+        }
+      ],
+      "description": "Use your rocket boots to do an explosive kick that burns foes.",
+      "icon": "https://render.guildwars2.com/file/183D3C1B6E1931B1D1EDCB3A236D7DFF77A19DD0/103465.png",
+      "type": "Toolbelt",
+      "weapon_type": "None",
+      "slot": "Toolbelt",
+      "professions": [
+        "Engineer"
+      ],
+      "flags": [],
+      "id": 5983,
+      "chat_link": "[&Bl8XAAA=]"
+    },
+    {
+      "name": "Launch Personal Battering Ram",
+      "facts": [
+        {
+          "text": "Range",
+          "type": "Range",
+          "icon": "https://render.guildwars2.com/file/0AAB34BEB1C9F4A25EC612DDBEACF3E20B2810FA/156666.png",
+          "value": 900
+        },
+        {
+          "text": "Recharge",
+          "type": "Recharge",
+          "icon": "https://render.guildwars2.com/file/D767B963D120F077C3B163A05DC05A7317D7DB70/156651.png",
+          "value": 12
+        },
+        {
+          "text": "Damage",
+          "type": "Damage",
+          "icon": "https://render.guildwars2.com/file/61AA4919C4A7990903241B680A69530121E994C7/156657.png",
+          "hit_count": 1,
+          "dmg_multiplier": 1.5
+        },
+        {
+          "text": "Apply Buff/Condition",
+          "type": "Buff",
+          "icon": "https://render.guildwars2.com/file/070325E519C178D502A8160523766070D30C0C19/102838.png",
+          "duration": 6,
+          "status": "Crippled",
+          "description": "Movement speed decreased by 50%; stacks duration.",
+          "apply_count": 1
+        },
+        {
+          "text": "Apply Buff/Condition",
+          "type": "Buff",
+          "icon": "https://render.guildwars2.com/file/9AE125E930C92FEA0DD99E7EBAEDE4CF5EC556B6/433474.png",
+          "duration": 1,
+          "status": "Daze",
+          "description": "Unable to activate skills.",
+          "apply_count": 1
+        },
+        {
+          "text": "Combo Finisher",
+          "type": "ComboFinisher",
+          "icon": "https://render.guildwars2.com/file/A513F3653D33FBA4220D2D307799F8A327A36A3B/156656.png",
+          "percent": 100,
+          "finisher_type": "Projectile"
+        }
+      ],
+      "description": "Shoot a ram's head in front of you, impairing any struck foes.",
+      "icon": "https://render.guildwars2.com/file/7BE020D4435EB013414641E55ABC237F7CF858E8/103464.png",
+      "type": "Toolbelt",
+      "weapon_type": "None",
+      "slot": "Toolbelt",
+      "professions": [
+        "Engineer"
+      ],
+      "flags": [],
+      "id": 5982,
+      "chat_link": "[&Bl4XAAA=]"
+    },
+    {
+      "name": "Superspeed",
+      "facts": [
+        {
+          "text": "Recharge",
+          "type": "Recharge",
+          "icon": "https://render.guildwars2.com/file/D767B963D120F077C3B163A05DC05A7317D7DB70/156651.png",
+          "value": 20
+        },
+        {
+          "text": "StunBreak",
+          "type": "StunBreak",
+          "icon": "https://render.guildwars2.com/file/DCF0719729165FD8910E034CA4E0780F90582D15/156654.png",
+          "value": true
+        },
+        {
+          "text": "Apply Buff/Condition",
+          "type": "Buff",
+          "icon": "https://render.guildwars2.com/file/E04392C3D8ED985125973AEB99D8460C483263F9/103458.png",
+          "duration": 5,
+          "status": "Superspeed",
+          "description": "Movement speed is greatly increased. Maximum duration: 10s",
+          "apply_count": 1
+        }
+      ],
+      "description": "Activate your slick shoes, enabling you to move at superior speeds.",
+      "icon": "https://render.guildwars2.com/file/E04392C3D8ED985125973AEB99D8460C483263F9/103458.png",
+      "type": "Toolbelt",
+      "weapon_type": "None",
+      "slot": "Toolbelt",
+      "professions": [
+        "Engineer"
+      ],
+      "flags": [],
+      "id": 5973,
+      "chat_link": "[&BlUXAAA=]"
+    },
+    {
+      "name": "Med Pack Drop",
+      "facts": [
+        {
+          "text": "Range",
+          "type": "Range",
+          "icon": "https://render.guildwars2.com/file/0AAB34BEB1C9F4A25EC612DDBEACF3E20B2810FA/156666.png",
+          "value": 900
+        },
+        {
+          "text": "Recharge",
+          "type": "Recharge",
+          "icon": "https://render.guildwars2.com/file/D767B963D120F077C3B163A05DC05A7317D7DB70/156651.png",
+          "value": 50
+        },
+        {
+          "text": "Healing",
+          "type": "AttributeAdjust",
+          "icon": "https://render.guildwars2.com/file/D4347C52157B040943051D7E09DEAD7AF63D4378/156662.png",
+          "value": 1302,
+          "target": "Healing"
+        },
+        {
+          "text": "Conditions Removed",
+          "type": "Number",
+          "icon": "https://render.guildwars2.com/file/9352ED3244417304995F26CB01AE76BB7E547052/156661.png",
+          "value": 14
+        },
+        {
+          "text": "Number of Impacts",
+          "type": "Number",
+          "icon": "https://render.guildwars2.com/file/9352ED3244417304995F26CB01AE76BB7E547052/156661.png",
+          "value": 6
+        },
+        {
+          "text": "Duration",
+          "type": "Time",
+          "icon": "https://render.guildwars2.com/file/7B2193ACCF77E56C13E608191B082D68AA0FAA71/156659.png",
+          "duration": 60
+        },
+        {
+          "text": "Radius",
+          "type": "Distance",
+          "icon": "https://render.guildwars2.com/file/B0CD8077991E4FB1622D2930337ED7F9B54211D5/156665.png",
+          "distance": 240
+        },
+        {
+          "text": "Number of Allied Targets",
+          "type": "Number",
+          "icon": "https://render.guildwars2.com/file/BBE8191A494B0352259C10EADFDACCE177E6DA5B/1770208.png",
+          "value": 5
+        }
+      ],
+      "description": "Call down a supply drop of med packs into a target area.",
+      "icon": "https://render.guildwars2.com/file/51DC5A050A99BCAA72FDF51DD6402C18249FB816/1012858.png",
+      "type": "Toolbelt",
+      "weapon_type": "None",
+      "slot": "Toolbelt",
+      "professions": [
+        "Engineer"
+      ],
+      "flags": [],
+      "id": 29716,
+      "chat_link": "[&BhR0AAA=]"
+    },
+    {
+      "name": "Detonate Elixir X",
+      "description": "Elixir. Transform. Burst the bottle, transforming enemies.",
+      "icon": "https://render.guildwars2.com/file/7835AE041957D0DCCB7B2373CA76A90864017E09/103481.png",
+      "type": "Toolbelt",
+      "weapon_type": "None",
+      "professions": [
+        "Engineer"
+      ],
+      "slot": "Toolbelt",
+      "flags": [],
+      "id": 29722,
+      "chat_link": "[&Bhp0AAA=]",
+      "categories": [
+        "Elixir",
+        "Transform"
+      ]
+    },
+    {
+      "name": "Orbital Strike",
+      "facts": [
+        {
+          "text": "Range",
+          "type": "Range",
+          "icon": "https://render.guildwars2.com/file/0AAB34BEB1C9F4A25EC612DDBEACF3E20B2810FA/156666.png",
+          "value": 1500
+        },
+        {
+          "text": "Recharge",
+          "type": "Recharge",
+          "icon": "https://render.guildwars2.com/file/D767B963D120F077C3B163A05DC05A7317D7DB70/156651.png",
+          "value": 40
+        },
+        {
+          "text": "Radius",
+          "type": "Distance",
+          "icon": "https://render.guildwars2.com/file/B0CD8077991E4FB1622D2930337ED7F9B54211D5/156665.png",
+          "distance": 360
+        },
+        {
+          "text": "Damage",
+          "type": "Damage",
+          "icon": "https://render.guildwars2.com/file/61AA4919C4A7990903241B680A69530121E994C7/156657.png",
+          "hit_count": 1,
+          "dmg_multiplier": 1.33
+        },
+        {
+          "text": "Number of Targets",
+          "type": "Number",
+          "icon": "https://render.guildwars2.com/file/BBE8191A494B0352259C10EADFDACCE177E6DA5B/1770208.png",
+          "value": 5
+        },
+        {
+          "text": "Unblockable",
+          "type": "NoData",
+          "icon": "https://render.guildwars2.com/file/BA65F2F5A073EB4BCC79085916B978DC0B096A0B/2248876.png"
+        },
+        {
+          "text": "Combo Finisher",
+          "type": "ComboFinisher",
+          "icon": "https://render.guildwars2.com/file/A513F3653D33FBA4220D2D307799F8A327A36A3B/156656.png",
+          "percent": 100,
+          "finisher_type": "Blast"
+        }
+      ],
+      "description": "Call down energy from the sky to blast an area.",
+      "icon": "https://render.guildwars2.com/file/99CFD7B1B200DCC508172BC8A3C2EE970C06493E/1012854.png",
+      "type": "Toolbelt",
+      "weapon_type": "None",
+      "slot": "Toolbelt",
+      "professions": [
+        "Engineer"
+      ],
+      "flags": [],
+      "id": 30599,
+      "chat_link": "[&Bod3AAA=]"
+    },
+    {
+      "name": "Reconstruction Field",
+      "facts": [
+        {
+          "text": "Recharge",
+          "type": "Recharge",
+          "icon": "https://render.guildwars2.com/file/D767B963D120F077C3B163A05DC05A7317D7DB70/156651.png",
+          "value": 25
+        },
+        {
+          "text": "Radius",
+          "type": "Distance",
+          "icon": "https://render.guildwars2.com/file/B0CD8077991E4FB1622D2930337ED7F9B54211D5/156665.png",
+          "distance": 300
+        },
+        {
+          "text": "Apply Buff/Condition",
+          "type": "Buff",
+          "icon": "https://render.guildwars2.com/file/CD77D1FAB7B270223538A8F8ECDA1CFB044D65F4/102834.png",
+          "duration": 2,
+          "status": "Protection",
+          "description": "Incoming strike damage decreased by 33%; stacks duration.",
+          "apply_count": 1
+        },
+        {
+          "text": "Number of Allied Targets",
+          "type": "Number",
+          "icon": "https://render.guildwars2.com/file/BBE8191A494B0352259C10EADFDACCE177E6DA5B/1770208.png",
+          "value": 5
+        },
+        {
+          "text": "Pulses",
+          "type": "Number",
+          "icon": "https://render.guildwars2.com/file/9352ED3244417304995F26CB01AE76BB7E547052/156661.png",
+          "value": 3
+        },
+        {
+          "text": "Combo Field",
+          "type": "ComboField",
+          "icon": "https://render.guildwars2.com/file/59E0DB6A699810641C959926ADFEF73E08CC255B/156655.png",
+          "field_type": "Water"
+        },
+        {
+          "text": "Duration",
+          "type": "Time",
+          "icon": "https://render.guildwars2.com/file/7B2193ACCF77E56C13E608191B082D68AA0FAA71/156659.png",
+          "duration": 2
+        }
+      ],
+      "description": "Establish a defensive field, granting protection to allies in its area.",
+      "icon": "https://render.guildwars2.com/file/F857BC1EDD46D0CC0ECE722E0C9722E37654632C/1058595.png",
+      "type": "Toolbelt",
+      "weapon_type": "None",
+      "slot": "Toolbelt",
+      "professions": [
+        "Engineer"
+      ],
+      "flags": [],
+      "id": 29505,
+      "chat_link": "[&BkFzAAA=]",
+      "traited_facts": [
+        {
+          "text": "Apply Buff/Condition",
+          "type": "Buff",
+          "icon": "https://render.guildwars2.com/file/CD77D1FAB7B270223538A8F8ECDA1CFB044D65F4/102834.png",
+          "duration": 4,
+          "status": "Protection",
+          "description": "Incoming strike damage decreased by 33%; stacks duration.",
+          "apply_count": 1,
+          "requires_trait": 1999
+        },
+        {
+          "text": "Apply Buff/Condition",
+          "type": "Buff",
+          "icon": "https://render.guildwars2.com/file/CD77D1FAB7B270223538A8F8ECDA1CFB044D65F4/102834.png",
+          "duration": 3,
+          "status": "Protection",
+          "description": "Incoming strike damage decreased by 33%; stacks duration.",
+          "apply_count": 1,
+          "requires_trait": 1999
+        },
+        {
+          "text": "Apply Buff/Condition",
+          "type": "Buff",
+          "icon": "https://render.guildwars2.com/file/E04392C3D8ED985125973AEB99D8460C483263F9/103458.png",
+          "duration": 7,
+          "status": "Superspeed",
+          "description": "Movement speed is greatly increased. Maximum duration: 10s",
+          "apply_count": 1,
+          "requires_trait": 2014
+        },
+        {
+          "text": "Apply Buff/Condition",
+          "type": "Buff",
+          "icon": "https://render.guildwars2.com/file/E04392C3D8ED985125973AEB99D8460C483263F9/103458.png",
+          "duration": 4,
+          "status": "Superspeed",
+          "description": "Movement speed is greatly increased. Maximum duration: 10s",
+          "apply_count": 1,
+          "requires_trait": 2014
+        }
+      ]
+    },
+    {
+      "name": "Defense Field",
+      "facts": [
+        {
+          "text": "Recharge",
+          "type": "Recharge",
+          "icon": "https://render.guildwars2.com/file/D767B963D120F077C3B163A05DC05A7317D7DB70/156651.png",
+          "value": 25
+        },
+        {
+          "text": "Radius",
+          "type": "Distance",
+          "icon": "https://render.guildwars2.com/file/B0CD8077991E4FB1622D2930337ED7F9B54211D5/156665.png",
+          "distance": 240
+        },
+        {
+          "text": "Duration",
+          "type": "Time",
+          "icon": "https://render.guildwars2.com/file/7B2193ACCF77E56C13E608191B082D68AA0FAA71/156659.png",
+          "duration": 5
+        },
+        {
+          "text": "Blocks Missiles",
+          "type": "NoData",
+          "icon": "https://render.guildwars2.com/file/9352ED3244417304995F26CB01AE76BB7E547052/156661.png"
+        },
+        {
+          "text": "Apply Buff/Condition",
+          "type": "Buff",
+          "icon": "https://render.guildwars2.com/file/3D3A1C2D6D791C05179AB871902D28782C65C244/415959.png",
+          "duration": 6,
+          "status": "Stability",
+          "description": "Cannot be knocked down, pushed back, pulled, launched, stunned, dazed, floated, sunk, feared, or taunted.",
+          "apply_count": 3
+        },
+        {
+          "text": "Number of Allied Targets",
+          "type": "Number",
+          "icon": "https://render.guildwars2.com/file/BBE8191A494B0352259C10EADFDACCE177E6DA5B/1770208.png",
+          "value": 5
+        }
+      ],
+      "description": "Project a defensive dome and grant stability to allies in the area.",
+      "icon": "https://render.guildwars2.com/file/0D0C05CAE794150306C01DA4C9D09B11260DA79D/1058598.png",
+      "type": "Toolbelt",
+      "weapon_type": "None",
+      "professions": [
+        "Engineer"
+      ],
+      "slot": "Toolbelt",
+      "flags": [],
+      "specialization": 43,
+      "id": 68280,
+      "chat_link": "[&BrgKAQA=]"
+    },
+    {
+      "name": "Chemical Field",
+      "facts": [
+        {
+          "text": "Recharge",
+          "type": "Recharge",
+          "icon": "https://render.guildwars2.com/file/D767B963D120F077C3B163A05DC05A7317D7DB70/156651.png",
+          "value": 20
+        },
+        {
+          "text": "Apply Buff/Condition",
+          "type": "Buff",
+          "icon": "https://render.guildwars2.com/file/559B0AF9FB5E1243D2649FAAE660CCB338AACC19/102840.png",
+          "duration": 8,
+          "status": "Poisoned",
+          "description": "Deals damage every second; decreases healing effectiveness by 33%; damage stacks intensity.",
+          "apply_count": 1
+        },
+        {
+          "text": "Pulses",
+          "type": "Number",
+          "icon": "https://render.guildwars2.com/file/9352ED3244417304995F26CB01AE76BB7E547052/156661.png",
+          "value": 4
+        },
+        {
+          "text": "Duration",
+          "type": "Time",
+          "icon": "https://render.guildwars2.com/file/7B2193ACCF77E56C13E608191B082D68AA0FAA71/156659.png",
+          "duration": 6
+        },
+        {
+          "text": "Radius",
+          "type": "Distance",
+          "icon": "https://render.guildwars2.com/file/B0CD8077991E4FB1622D2930337ED7F9B54211D5/156665.png",
+          "distance": 300
+        },
+        {
+          "text": "Number of Targets",
+          "type": "Number",
+          "icon": "https://render.guildwars2.com/file/BBE8191A494B0352259C10EADFDACCE177E6DA5B/1770208.png",
+          "value": 5
+        },
+        {
+          "text": "Combo Field",
+          "type": "ComboField",
+          "icon": "https://render.guildwars2.com/file/59E0DB6A699810641C959926ADFEF73E08CC255B/156655.png",
+          "field_type": "Poison"
+        }
+      ],
+      "description": "Generate a poison cloud.",
+      "icon": "https://render.guildwars2.com/file/AEE9E230E4265D49ADE03C6C7BB0F7CC4E59A10B/1058596.png",
+      "type": "Toolbelt",
+      "weapon_type": "None",
+      "slot": "Toolbelt",
+      "professions": [
+        "Engineer"
+      ],
+      "flags": [],
+      "id": 30279,
+      "chat_link": "[&Bkd2AAA=]"
+    },
+    {
+      "name": "Bypass Coating",
+      "facts": [
+        {
+          "text": "Recharge",
+          "type": "Recharge",
+          "icon": "https://render.guildwars2.com/file/D767B963D120F077C3B163A05DC05A7317D7DB70/156651.png",
+          "value": 20
+        },
+        {
+          "text": "StunBreak",
+          "type": "StunBreak",
+          "icon": "https://render.guildwars2.com/file/DCF0719729165FD8910E034CA4E0780F90582D15/156654.png",
+          "value": true
+        },
+        {
+          "text": "Apply Buff/Condition",
+          "type": "Buff",
+          "icon": "https://render.guildwars2.com/file/E04392C3D8ED985125973AEB99D8460C483263F9/103458.png",
+          "duration": 3,
+          "status": "Superspeed",
+          "description": "Movement speed is greatly increased. Maximum duration: 10s",
+          "apply_count": 1
+        },
+        {
+          "text": "Radius",
+          "type": "Distance",
+          "icon": "https://render.guildwars2.com/file/B0CD8077991E4FB1622D2930337ED7F9B54211D5/156665.png",
+          "distance": 240
+        },
+        {
+          "text": "Number of Allied Targets",
+          "type": "Number",
+          "icon": "https://render.guildwars2.com/file/BBE8191A494B0352259C10EADFDACCE177E6DA5B/1770208.png",
+          "value": 5
+        }
+      ],
+      "description": "Splash a hypercoating on nearby allies, granting superspeed.",
+      "icon": "https://render.guildwars2.com/file/9980FCE89CC479C45825F1E362DED036A9EC7164/1128589.png",
+      "type": "Toolbelt",
+      "weapon_type": "None",
+      "slot": "Toolbelt",
+      "professions": [
+        "Engineer"
+      ],
+      "flags": [],
+      "id": 29665,
+      "chat_link": "[&BuFzAAA=]"
+    },
+    {
+      "name": "Spare Capacitor",
+      "facts": [
+        {
+          "text": "Recharge",
+          "type": "Recharge",
+          "icon": "https://render.guildwars2.com/file/D767B963D120F077C3B163A05DC05A7317D7DB70/156651.png",
+          "value": 24
+        },
+        {
+          "text": "Damage",
+          "type": "Damage",
+          "icon": "https://render.guildwars2.com/file/61AA4919C4A7990903241B680A69530121E994C7/156657.png",
+          "hit_count": 4,
+          "dmg_multiplier": 0.3
+        },
+        {
+          "text": "Apply Buff/Condition",
+          "type": "Buff",
+          "icon": "https://render.guildwars2.com/file/9AE125E930C92FEA0DD99E7EBAEDE4CF5EC556B6/433474.png",
+          "duration": 2,
+          "status": "Daze",
+          "description": "Unable to activate skills.",
+          "apply_count": 1
+        },
+        {
+          "text": "Radius",
+          "type": "Distance",
+          "icon": "https://render.guildwars2.com/file/B0CD8077991E4FB1622D2930337ED7F9B54211D5/156665.png",
+          "distance": 300
+        },
+        {
+          "text": "Combo Field",
+          "type": "ComboField",
+          "icon": "https://render.guildwars2.com/file/59E0DB6A699810641C959926ADFEF73E08CC255B/156655.png",
+          "field_type": "Lightning"
+        },
+        {
+          "text": "Pulses",
+          "type": "Number",
+          "icon": "https://render.guildwars2.com/file/9352ED3244417304995F26CB01AE76BB7E547052/156661.png",
+          "value": 4
+        }
+      ],
+      "description": "Set down a lightning capacitor to daze and damage foes near it.",
+      "icon": "https://render.guildwars2.com/file/919392F16619ABBD2D7CC463B35A3ADFB07BCD1A/1128591.png",
+      "type": "Toolbelt",
+      "weapon_type": "None",
+      "slot": "Toolbelt",
+      "professions": [
+        "Engineer"
+      ],
+      "flags": [],
+      "id": 31167,
+      "chat_link": "[&Br95AAA=]"
+    },
+    {
+      "name": "Flashbang",
+      "facts": [
+        {
+          "text": "Range",
+          "type": "Range",
+          "icon": "https://render.guildwars2.com/file/0AAB34BEB1C9F4A25EC612DDBEACF3E20B2810FA/156666.png",
+          "value": 900
+        },
+        {
+          "text": "Recharge",
+          "type": "Recharge",
+          "icon": "https://render.guildwars2.com/file/D767B963D120F077C3B163A05DC05A7317D7DB70/156651.png",
+          "value": 20
+        },
+        {
+          "text": "Reveal Radius",
+          "type": "Distance",
+          "icon": "https://render.guildwars2.com/file/B0CD8077991E4FB1622D2930337ED7F9B54211D5/156665.png",
+          "distance": 600
+        },
+        {
+          "text": "Apply Buff/Condition",
+          "type": "Buff",
+          "icon": "https://render.guildwars2.com/file/62BFF65D1CE99B1B2B0928152BCC596EAC0D372B/102887.png",
+          "duration": 6,
+          "status": "Revealed",
+          "description": "You cannot stealth",
+          "apply_count": 1
+        },
+        {
+          "text": "Number of Targets",
+          "type": "Number",
+          "icon": "https://render.guildwars2.com/file/BBE8191A494B0352259C10EADFDACCE177E6DA5B/1770208.png",
+          "value": 5
+        },
+        {
+          "text": "Explosion",
+          "type": "NoData",
+          "icon": "https://render.guildwars2.com/file/450630987A0566D4A7A491EDA4DCDF57D9396854/1770203.png"
+        },
+        {
+          "text": "Radius",
+          "type": "Distance",
+          "icon": "https://render.guildwars2.com/file/B0CD8077991E4FB1622D2930337ED7F9B54211D5/156665.png",
+          "distance": 180
+        },
+        {
+          "text": "Damage",
+          "type": "Damage",
+          "icon": "https://render.guildwars2.com/file/61AA4919C4A7990903241B680A69530121E994C7/156657.png",
+          "hit_count": 1,
+          "dmg_multiplier": 1
+        },
+        {
+          "text": "Daze",
+          "type": "Time",
+          "icon": "https://render.guildwars2.com/file/9AE125E930C92FEA0DD99E7EBAEDE4CF5EC556B6/433474.png",
+          "duration": 2
+        },
+        {
+          "text": "Apply Buff/Condition",
+          "type": "Buff",
+          "icon": "https://render.guildwars2.com/file/09770136BB76FD0DBE1CC4267DEED54774CB20F6/102837.png",
+          "duration": 3,
+          "status": "Blinded",
+          "description": "Next outgoing attack misses; stacks duration.",
+          "apply_count": 1
+        }
+      ],
+      "description": "Throw an explosive at the target area, dazing and blinding enemies on impact. Remove stealth and reveal enemies in a larger area around the impact.",
+      "icon": "https://render.guildwars2.com/file/A86BC2376541159FFE9E62E5C6544403EAB302A7/1128590.png",
+      "type": "Toolbelt",
+      "weapon_type": "None",
+      "slot": "Toolbelt",
+      "professions": [
+        "Engineer"
+      ],
+      "flags": [],
+      "id": 30262,
+      "chat_link": "[&BjZ2AAA=]"
+    },
+    {
+      "name": "Cauterize",
+      "facts": [
+        {
+          "text": "Recharge",
+          "type": "Recharge",
+          "icon": "https://render.guildwars2.com/file/D767B963D120F077C3B163A05DC05A7317D7DB70/156651.png",
+          "value": 30
+        },
+        {
+          "text": "<c=@abilitytype>Heat Threshold</c>",
+          "type": "Number",
+          "icon": "https://render.guildwars2.com/file/1BA1F3645206FB4BE92C5AD6326054250DC7D0DB/1770205.png",
+          "value": 50
+        },
+        {
+          "text": "Conditions Removed",
+          "type": "Number",
+          "icon": "https://render.guildwars2.com/file/9352ED3244417304995F26CB01AE76BB7E547052/156661.png",
+          "value": 3
+        },
+        {
+          "text": "Conditions Removed",
+          "type": "Number",
+          "icon": "https://render.guildwars2.com/file/9352ED3244417304995F26CB01AE76BB7E547052/156661.png",
+          "value": 2
+        },
+        {
+          "text": "<c=@abilitytype>Additional Conditions above 50% Heat</c>",
+          "type": "Number",
+          "icon": "https://render.guildwars2.com/file/9352ED3244417304995F26CB01AE76BB7E547052/156661.png",
+          "value": 3
+        },
+        {
+          "text": "<c=@abilitytype>Additional Conditions above 50% Heat</c>",
+          "type": "Number",
+          "icon": "https://render.guildwars2.com/file/9352ED3244417304995F26CB01AE76BB7E547052/156661.png",
+          "value": 2
+        },
+        {
+          "text": "Apply Buff/Condition",
+          "type": "Buff",
+          "icon": "https://render.guildwars2.com/file/B47BF5803FED2718D7474EAF9617629AD068EE10/102849.png",
+          "duration": 3,
+          "status": "Burning",
+          "description": "Deals damage every second; stacks intensity.",
+          "apply_count": 1
+        }
+      ],
+      "description": "Use a laser to burn off conditions and set yourself on fire for each condition removed. Removes additional conditions if above the heat threshold.",
+      "icon": "https://render.guildwars2.com/file/923048741863452B14360357FDD603A9DA04F7B9/1770394.png",
+      "type": "Toolbelt",
+      "weapon_type": "None",
+      "slot": "Toolbelt",
+      "professions": [
+        "Engineer"
+      ],
+      "flags": [],
+      "id": 43845,
+      "chat_link": "[&BkWrAAA=]",
+      "traited_facts": [
+        {
+          "text": "<c=@abilitytype>Additional Conditions above 100% Heat</c>",
+          "type": "Number",
+          "icon": "https://render.guildwars2.com/file/9352ED3244417304995F26CB01AE76BB7E547052/156661.png",
+          "value": 6,
+          "requires_trait": 2137
+        },
+        {
+          "text": "<c=@abilitytype>Additional Conditions above 100% Heat</c>",
+          "type": "Number",
+          "icon": "https://render.guildwars2.com/file/9352ED3244417304995F26CB01AE76BB7E547052/156661.png",
+          "value": 4,
+          "requires_trait": 2137
+        }
+      ]
+    },
+    {
+      "name": "Particle Accelerator",
+      "facts": [
+        {
+          "text": "Range",
+          "type": "Range",
+          "icon": "https://render.guildwars2.com/file/0AAB34BEB1C9F4A25EC612DDBEACF3E20B2810FA/156666.png",
+          "value": 1000
+        },
+        {
+          "text": "Recharge",
+          "type": "Recharge",
+          "icon": "https://render.guildwars2.com/file/D767B963D120F077C3B163A05DC05A7317D7DB70/156651.png",
+          "value": 8
+        },
+        {
+          "text": "Damage",
+          "type": "Damage",
+          "icon": "https://render.guildwars2.com/file/61AA4919C4A7990903241B680A69530121E994C7/156657.png",
+          "hit_count": 1,
+          "dmg_multiplier": 1
+        },
+        {
+          "text": "Apply Buff/Condition",
+          "type": "Buff",
+          "icon": "https://render.guildwars2.com/file/20CFC14967E67F7A3FD4A4B8722B4CF5B8565E11/102836.png",
+          "duration": 3,
+          "status": "Swiftness",
+          "description": "Movement speed increased by 33%; stacks duration.",
+          "apply_count": 1
+        },
+        {
+          "text": "Apply Buff/Condition",
+          "type": "Buff",
+          "icon": "https://render.guildwars2.com/file/070325E519C178D502A8160523766070D30C0C19/102838.png",
+          "duration": 3,
+          "status": "Crippled",
+          "description": "Movement speed decreased by 50%; stacks duration.",
+          "apply_count": 1
+        },
+        {
+          "text": "Number of Targets",
+          "type": "Number",
+          "icon": "https://render.guildwars2.com/file/BBE8191A494B0352259C10EADFDACCE177E6DA5B/1770208.png",
+          "value": 5
+        },
+        {
+          "text": "<c=@abilitytype>Velocity Increase above 50% Heat</c>",
+          "type": "Percent",
+          "icon": "https://render.guildwars2.com/file/9352ED3244417304995F26CB01AE76BB7E547052/156661.png",
+          "percent": 100
+        },
+        {
+          "text": "<c=@abilitytype>Damage Increase above 50% Heat</c>",
+          "type": "Percent",
+          "icon": "https://render.guildwars2.com/file/61AA4919C4A7990903241B680A69530121E994C7/156657.png",
+          "percent": 10
+        },
+        {
+          "text": "<c=@abilitytype>Damage Increase above 50% Heat</c>",
+          "type": "Percent",
+          "icon": "https://render.guildwars2.com/file/61AA4919C4A7990903241B680A69530121E994C7/156657.png",
+          "percent": 5
+        },
+        {
+          "text": "Combo Finisher",
+          "type": "ComboFinisher",
+          "icon": "https://render.guildwars2.com/file/A513F3653D33FBA4220D2D307799F8A327A36A3B/156656.png",
+          "percent": 100,
+          "finisher_type": "Projectile"
+        }
+      ],
+      "description": "Fire a crippling bolt of light at your target. Allies the bolt passes through are granted swiftness. Projectile velocity and damage increased while above the heat threshold.",
+      "icon": "https://render.guildwars2.com/file/1C03EBDDD56EC42F4E42DB5BA9E2CB0AFAA1AFE6/1770396.png",
+      "type": "Toolbelt",
+      "weapon_type": "None",
+      "slot": "Toolbelt",
+      "professions": [
+        "Engineer"
+      ],
+      "flags": [],
+      "id": 45732,
+      "chat_link": "[&BqSyAAA=]",
+      "traited_facts": [
+        {
+          "text": "<c=@abilitytype>Damage Increase above 100% Heat</c>",
+          "type": "Percent",
+          "icon": "https://render.guildwars2.com/file/61AA4919C4A7990903241B680A69530121E994C7/156657.png",
+          "percent": 35,
+          "requires_trait": 2137
+        },
+        {
+          "text": "<c=@abilitytype>Damage Increase above 100% Heat</c>",
+          "type": "Percent",
+          "icon": "https://render.guildwars2.com/file/61AA4919C4A7990903241B680A69530121E994C7/156657.png",
+          "percent": 10,
+          "requires_trait": 2137
+        }
+      ]
+    },
+    {
+      "name": "Blade Burst",
+      "facts": [
+        {
+          "text": "Range",
+          "type": "Range",
+          "icon": "https://render.guildwars2.com/file/0AAB34BEB1C9F4A25EC612DDBEACF3E20B2810FA/156666.png",
+          "value": 600
+        },
+        {
+          "text": "Recharge",
+          "type": "Recharge",
+          "icon": "https://render.guildwars2.com/file/D767B963D120F077C3B163A05DC05A7317D7DB70/156651.png",
+          "value": 20
+        },
+        {
+          "text": "Damage",
+          "type": "Damage",
+          "icon": "https://render.guildwars2.com/file/61AA4919C4A7990903241B680A69530121E994C7/156657.png",
+          "hit_count": 1,
+          "dmg_multiplier": 0.8
+        },
+        {
+          "text": "Number of Targets",
+          "type": "Number",
+          "icon": "https://render.guildwars2.com/file/BBE8191A494B0352259C10EADFDACCE177E6DA5B/1770208.png",
+          "value": 5
+        },
+        {
+          "text": "Apply Buff/Condition",
+          "type": "Buff",
+          "icon": "https://render.guildwars2.com/file/79FF0046A5F9ADA3B4C4EC19ADB4CB124D5F0021/102848.png",
+          "duration": 6,
+          "status": "Bleeding",
+          "description": "Deals damage every second; stacks intensity.",
+          "apply_count": 1
+        },
+        {
+          "text": "<c=@abilitytype>Damage Increase above 50% Heat</c>",
+          "type": "Percent",
+          "icon": "https://render.guildwars2.com/file/61AA4919C4A7990903241B680A69530121E994C7/156657.png",
+          "percent": 25
+        }
+      ],
+      "description": "Fire holographic blades at foes within range. Damage increased while over the heat threshold.",
+      "icon": "https://render.guildwars2.com/file/1C472B68AAFFA6E50C29524CC7EF5B6AB5532803/1770393.png",
+      "type": "Toolbelt",
+      "weapon_type": "None",
+      "slot": "Toolbelt",
+      "professions": [
+        "Engineer"
+      ],
+      "flags": [],
+      "id": 42163,
+      "chat_link": "[&BrOkAAA=]",
+      "traited_facts": [
+        {
+          "text": "<c=@abilitytype>Damage Increase above 100% Heat</c>",
+          "type": "Percent",
+          "icon": "https://render.guildwars2.com/file/61AA4919C4A7990903241B680A69530121E994C7/156657.png",
+          "percent": 35,
+          "requires_trait": 2137
+        }
+      ]
+    },
+    {
+      "name": "Prismatic Singularity",
+      "facts": [
+        {
+          "text": "Recharge",
+          "type": "Recharge",
+          "icon": "https://render.guildwars2.com/file/D767B963D120F077C3B163A05DC05A7317D7DB70/156651.png",
+          "value": 30
+        },
+        {
+          "text": "Pull Damage",
+          "type": "Damage",
+          "icon": "https://render.guildwars2.com/file/61AA4919C4A7990903241B680A69530121E994C7/156657.png",
+          "hit_count": 1,
+          "dmg_multiplier": 0.1
+        },
+        {
+          "text": "Explosion Damage",
+          "type": "Damage",
+          "icon": "https://render.guildwars2.com/file/61AA4919C4A7990903241B680A69530121E994C7/156657.png",
+          "hit_count": 1,
+          "dmg_multiplier": 1.4
+        },
+        {
+          "text": "Explosion Damage",
+          "type": "Damage",
+          "icon": "https://render.guildwars2.com/file/61AA4919C4A7990903241B680A69530121E994C7/156657.png",
+          "hit_count": 1,
+          "dmg_multiplier": 0.5
+        },
+        {
+          "text": "<c=@abilitytype>Radius and Pull Increase above 50% Heat</c>",
+          "type": "Number",
+          "icon": "https://render.guildwars2.com/file/B0CD8077991E4FB1622D2930337ED7F9B54211D5/156665.png",
+          "value": 120
+        },
+        {
+          "text": "Radius",
+          "type": "Distance",
+          "icon": "https://render.guildwars2.com/file/B0CD8077991E4FB1622D2930337ED7F9B54211D5/156665.png",
+          "distance": 240
+        },
+        {
+          "text": "Pull",
+          "type": "Number",
+          "icon": "https://render.guildwars2.com/file/D5F6EBC4630F0E10F3DDB7A6DBB63592CD4B00BC/2440717.png",
+          "value": 240
+        },
+        {
+          "text": "Number of Targets",
+          "type": "Number",
+          "icon": "https://render.guildwars2.com/file/BBE8191A494B0352259C10EADFDACCE177E6DA5B/1770208.png",
+          "value": 5
+        },
+        {
+          "text": "Explosion",
+          "type": "NoData",
+          "icon": "https://render.guildwars2.com/file/450630987A0566D4A7A491EDA4DCDF57D9396854/1770203.png"
+        },
+        {
+          "text": "Blast Radius",
+          "type": "Number",
+          "icon": "https://render.guildwars2.com/file/9352ED3244417304995F26CB01AE76BB7E547052/156661.png",
+          "value": 120
+        }
+      ],
+      "description": "Collapse a ring of holograms to pull foes into a single point. The ring explodes when it fully collapses. Radius and pull distance increased while above the heat threshold.",
+      "icon": "https://render.guildwars2.com/file/73598056EABE0B310F0C0A7ABD7CEE6657555EDB/1770397.png",
+      "type": "Toolbelt",
+      "weapon_type": "None",
+      "slot": "Toolbelt",
+      "professions": [
+        "Engineer"
+      ],
+      "flags": [],
+      "id": 41843,
+      "chat_link": "[&BnOjAAA=]",
+      "traited_facts": [
+        {
+          "text": "<c=@abilitytype>Explosion Damage Increase above 100% Heat</c>",
+          "type": "Percent",
+          "icon": "https://render.guildwars2.com/file/61AA4919C4A7990903241B680A69530121E994C7/156657.png",
+          "percent": 25,
+          "requires_trait": 2137
+        },
+        {
+          "text": "<c=@abilitytype>Explosion Damage Increase above 100% Heat</c>",
+          "type": "Percent",
+          "icon": "https://render.guildwars2.com/file/61AA4919C4A7990903241B680A69530121E994C7/156657.png",
+          "percent": 10,
+          "requires_trait": 2137
+        }
+      ]
+    },
+    {
+      "name": "Flash Spark",
+      "facts": [
+        {
+          "text": "Recharge",
+          "type": "Recharge",
+          "icon": "https://render.guildwars2.com/file/D767B963D120F077C3B163A05DC05A7317D7DB70/156651.png",
+          "value": 25
+        },
+        {
+          "text": "Radius",
+          "type": "Distance",
+          "icon": "https://render.guildwars2.com/file/B0CD8077991E4FB1622D2930337ED7F9B54211D5/156665.png",
+          "distance": 240
+        },
+        {
+          "text": "Apply Buff/Condition",
+          "type": "Buff",
+          "icon": "https://render.guildwars2.com/file/09770136BB76FD0DBE1CC4267DEED54774CB20F6/102837.png",
+          "duration": 3,
+          "status": "Blinded",
+          "description": "Next outgoing attack misses; stacks duration.",
+          "apply_count": 1
+        },
+        {
+          "text": "Apply Buff/Condition",
+          "type": "Buff",
+          "icon": "https://render.guildwars2.com/file/62405ED2322E80A4A95663BA6C6804DB0962E6B0/867451.png",
+          "duration": 4,
+          "status": "Light Aura",
+          "description": "When struck, you gain resolution. Incoming condition damage is reduced by 10%. <c=@reminder>(Cooldown: 1 Second )</c>",
+          "apply_count": 1
+        },
+        {
+          "text": "Number of Targets",
+          "type": "Number",
+          "icon": "https://render.guildwars2.com/file/BBE8191A494B0352259C10EADFDACCE177E6DA5B/1770208.png",
+          "value": 5
+        }
+      ],
+      "description": "Release a blinding burst of light from your holographic emitter. While above the heat threshold, gain light aura.",
+      "icon": "https://render.guildwars2.com/file/B60A1EE87D721F1DE1A3A293F8407B71DE0B51FB/1770395.png",
+      "type": "Toolbelt",
+      "weapon_type": "None",
+      "slot": "Toolbelt",
+      "professions": [
+        "Engineer"
+      ],
+      "flags": [],
+      "id": 43176,
+      "chat_link": "[&BqioAAA=]",
+      "traited_facts": [
+        {
+          "text": "Apply Buff/Condition",
+          "type": "Buff",
+          "icon": "https://render.guildwars2.com/file/62405ED2322E80A4A95663BA6C6804DB0962E6B0/867451.png",
+          "duration": 6,
+          "status": "Light Aura",
+          "description": "When struck, you gain resolution. Incoming condition damage is reduced by 10%. <c=@reminder>(Cooldown: 1 Second )</c>",
+          "apply_count": 1,
+          "requires_trait": 2137
+        }
+      ]
+    },
+    {
+      "name": "Symbiotic Shielding",
+      "facts": [
+        {
+          "text": "Recharge",
+          "type": "Recharge",
+          "icon": "https://render.guildwars2.com/file/D767B963D120F077C3B163A05DC05A7317D7DB70/156651.png",
+          "value": 25
+        },
+        {
+          "text": "Barrier",
+          "type": "AttributeAdjust",
+          "icon": "https://render.guildwars2.com/file/357922487919E8E84B914EAC13D5796DDDC42D14/1770209.png",
+          "value": 2250,
+          "target": "Healing"
+        },
+        {
+          "text": "Apply Buff/Condition",
+          "type": "Buff",
+          "icon": "https://render.guildwars2.com/file/33D27C7FE0017F70749DE84576F56F381DDF0C30/2261524.png",
+          "duration": 4,
+          "status": "Magnetic Aura",
+          "description": "Reflect projectiles with magnetic energy.",
+          "apply_count": 1
+        }
+      ],
+      "description": "Gain barrier and magnetic aura.",
+      "icon": "https://render.guildwars2.com/file/2BB11D20C5590A2BA1039107273224F6BE0536E6/3680133.png",
+      "type": "Toolbelt",
+      "weapon_type": "None",
+      "slot": "Toolbelt",
+      "professions": [
+        "Engineer"
+      ],
+      "flags": [],
+      "id": 76613,
+      "chat_link": "[&BkUrAQA=]"
     }
   ]
 }
