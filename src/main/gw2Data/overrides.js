@@ -155,6 +155,10 @@ const KNOWN_SKILL_SPEC_OVERRIDES = new Map([
   // Without overrides they pass the spec filter for all warrior builds (lockSpec=0 → !lockSpec=true).
   [71922, 74], [71932, 74], [71950, 74], [72029, 74],  // Path to Victory variants
   // Harrier's Toss variants moved to top of map (overridden to spec 0 for underwater mode)
+  // Distortion (Mesmer F4) is a CORE shatter, but Chronomancer (spec 40) traits list it in
+  // trait.skills, so the trait tag map claims it for Chrono. Pin it to core or non-Chrono
+  // mesmers lose their fourth F-slot entirely.
+  [10192, 0],
 ]);
 
 // The GW2 profession API assigns incorrect slot values to Weaver's 4 attunement button skills.

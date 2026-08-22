@@ -307,6 +307,22 @@ async function getProfessionList(lang = "en") {
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
+/**
+ * Decide which specialization a profession skill belongs to.
+ *
+ * Order matters, and so does how "absent" is distinguished from zero. A curated
+ * override of 0 means "this skill is core" — an authoritative answer, not a
+ * missing one — so it is tested with `!== undefined`. Using `||` here would let
+ * a falsy 0 fall through to the trait tag and re-lock a core skill behind an
+ * elite spec (see Distortion, the Mesmer F4 shatter, which Chronomancer traits
+ * reference).
+ */
+function _resolveSkillSpecialization(skill, ref, traitTag) {
+  const override = KNOWN_SKILL_SPEC_OVERRIDES.get(skill.id);
+  if (override !== undefined) return override;
+  return ref?.specialization || traitTag?.specialization || skill.specialization || 0;
+}
+
 async function _buildProfessionCatalog(professionId, lang = "en", gameMode = "pve") {
   // Step 1: look up the profession from the snapshot (remote-first, baked fallback).
   await ensureProfessionData();
@@ -484,7 +500,7 @@ async function _buildProfessionCatalog(professionId, lang = "en", gameMode = "pv
     return {
       ...skill,
       slot: KNOWN_SKILL_SLOT_OVERRIDES.get(skill.id) || ref?.slot || skill.slot || "",
-      specialization: KNOWN_SKILL_SPEC_OVERRIDES.get(skill.id) || ref?.specialization || traitTag?.specialization || skill.specialization || 0,
+      specialization: _resolveSkillSpecialization(skill, ref, traitTag),
       type: ref?.type || skill.type || "",
     };
   });
@@ -1187,6 +1203,7 @@ module.exports = {
   clearCatalogCache,
   _transferIcons,
   _applyRechargeOverride,
+  _resolveSkillSpecialization,
   _validateProfessions: validateProfessions,
   _validateSpecializations: validateSpecializations,
 };
