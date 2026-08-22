@@ -1,4 +1,4 @@
-## Unreleased
+## Version v0.12.0 — August 22, 2026
 
 ### Teams replace GitHub-org shared libraries
 
@@ -12,6 +12,10 @@
 
 - Publishing no longer overwrites edits you make while it's running, and two people publishing at once can no longer knock each other's links offline.
 - Library files are written atomically with a rolling backup and a daily snapshot (`data/backups/`), so a crash or corrupt file can't wipe your builds.
+
+### Bug Fixes
+
+- **Core Mesmer has its fourth shatter back.** Distortion was missing from the F-slots on any Mesmer build without Chronomancer, leaving three shatters instead of four. It was being treated as a Chronomancer skill even though the game data lists it as core.
 
 ## Version v0.11.7 — August 20, 2026
 
