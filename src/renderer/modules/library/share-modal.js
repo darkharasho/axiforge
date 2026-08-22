@@ -22,9 +22,19 @@ let _escHandler = null;
 let _folderId = null;
 let _onRefresh = null;
 let _copyTimer = null;
+// A team created by the "New team…" path but whose folder upload then failed.
+// Remembered so a retry reuses it instead of creating a duplicate every click.
+let _pendingNewTeamId = null;
+let _onTeamSyncEnabled = null;
 
-export function initShareModal() {
+/**
+ * @param {{ onTeamSyncEnabled?: Function }} [callbacks]
+ *   onTeamSyncEnabled — same hook Settings fires, so the "signed out" banner
+ *   comes down when the user signs in from here instead.
+ */
+export function initShareModal(callbacks = {}) {
   if (typeof document === "undefined") return;
+  if (callbacks.onTeamSyncEnabled) _onTeamSyncEnabled = callbacks.onTeamSyncEnabled;
   if (_overlay) return;
 
   _overlay = document.createElement("div");
@@ -59,8 +69,12 @@ export async function openShareModal(folderId, opts = {}) {
 
   _folderId = folderId;
   _onRefresh = opts.onRefresh || null;
+  _pendingNewTeamId = null;
 
   _overlay.classList.remove("shm-overlay--hidden");
+  // Re-opening without an intervening close would otherwise orphan the previous
+  // handler permanently.
+  if (_escHandler) document.removeEventListener("keydown", _escHandler);
   _escHandler = (e) => { if (e.key === "Escape") closeShareModal(); };
   document.addEventListener("keydown", _escHandler);
 
@@ -76,6 +90,7 @@ export function closeShareModal() {
   }
   if (_copyTimer) { clearTimeout(_copyTimer); _copyTimer = null; }
   _folderId = null;
+  _pendingNewTeamId = null;
 }
 
 // ─── Rendering ─────────────────────────────────────────────────────────────────
@@ -136,9 +151,14 @@ function _renderPicker(folder) {
   const teams = state.teams || [];
   // Preselect the first team: with one team — the common case — sharing is then
   // a single click, and nobody meets an empty picker that refuses to submit.
-  const options = teams.map(({ team }, i) => `
+  // After a failed "New team…" attempt the team already exists — preselect it so
+  // the retry shares into it rather than creating another one.
+  const preselect = _pendingNewTeamId && teams.some(({ team }) => team.id === _pendingNewTeamId)
+    ? _pendingNewTeamId
+    : teams[0]?.team?.id || null;
+  const options = teams.map(({ team }) => `
     <label class="shm__team-option">
-      <input type="radio" name="shm-team" value="${escapeHtml(team.id)}" ${i === 0 ? "checked" : ""}>
+      <input type="radio" name="shm-team" value="${escapeHtml(team.id)}" ${team.id === preselect ? "checked" : ""}>
       <span class="shm__team-name">${escapeHtml(team.name)}</span>
     </label>
   `).join("");
@@ -166,6 +186,9 @@ function _renderPicker(folder) {
 function _renderShared(teamRoot) {
   const record = _teamRecord(teamRoot);
   const isOwner = teamRoot.role === "owner";
+  // The engine only un-shares a SUB-folder of a team; the root is unshared by
+  // leaving or deleting the team in Settings → Teams.
+  const canStopSharing = isOwner && teamRoot.id !== _folderId;
   return `
     <div class="shm__section">
       <div class="shm__section-label">Invite</div>
@@ -177,7 +200,7 @@ function _renderShared(teamRoot) {
     </div>
     <div class="shm__footer">
       <button class="shm__btn" data-act="pull" type="button">Pull now</button>
-      ${isOwner ? `<button class="shm__btn shm__btn--danger" data-act="stop-sharing" type="button">Stop sharing</button>` : ""}
+      ${canStopSharing ? `<button class="shm__btn shm__btn--danger" data-act="stop-sharing" type="button">Stop sharing</button>` : ""}
     </div>
   `;
 }
@@ -215,8 +238,10 @@ async function _loadMembers(teamRoot) {
     box.innerHTML = `<p class="shm__hint">Could not load members: ${escapeHtml(err?.message || String(err))}</p>`;
     return;
   }
-  // The dialog may have closed or moved on while the request was in flight.
-  if (!_overlay.querySelector("#shm-members")) return;
+  // The dialog may have closed or re-rendered while the request was in flight.
+  // Test the captured node itself — a re-render replaces #shm-members, so a
+  // presence check would pass while `box` is detached.
+  if (!box.isConnected) return;
 
   const isOwner = teamRoot.role === "owner";
   box.innerHTML = members.map((m) => `
@@ -260,6 +285,9 @@ async function _handleEnable(btn) {
   await _busy(btn, "Enabling…", async () => {
     await window.desktopApi.enableTeamSync();
     await loadTeamState();
+    // Same hook Settings fires — without it the "team sync signed out" banner
+    // stays up telling a freshly signed-in user they are signed out.
+    _onTeamSyncEnabled?.();
     _onRefresh?.();
     _render();
   });
@@ -272,13 +300,30 @@ async function _handleShare(btn) {
   await _busy(btn, "Sharing…", async () => {
     let teamId = choice.value;
     if (teamId === "__new") {
-      const name = _overlay.querySelector("#shm-new-team")?.value.trim();
-      if (!name) { _setStatus("Enter a name for the new team.", true); return; }
-      const { team } = await window.desktopApi.createTeam(name);
-      teamId = team.id;
-      await loadTeamState();
+      // A previous attempt may already have created the team and only failed on
+      // the upload. Reuse it — otherwise every retry leaves an orphan team.
+      if (_pendingNewTeamId) {
+        teamId = _pendingNewTeamId;
+      } else {
+        const name = _overlay.querySelector("#shm-new-team")?.value.trim();
+        if (!name) { _setStatus("Enter a name for the new team.", true); return; }
+        const { team } = await window.desktopApi.createTeam(name);
+        teamId = team.id;
+        _pendingNewTeamId = team.id;
+        await loadTeamState();
+      }
     }
-    const { uploaded = 0, failed = [] } = (await shareFolderToTeam(_folderId, teamId)) || {};
+    let result;
+    try {
+      result = (await shareFolderToTeam(_folderId, teamId)) || {};
+    } catch (err) {
+      // Re-render so the picker reflects the team that now exists (and
+      // preselects it); _busy's catch paints the error after this returns.
+      _render();
+      throw err;
+    }
+    const { uploaded = 0, failed = [] } = result;
+    _pendingNewTeamId = null;
     await loadTeamState();
     _onRefresh?.();
     _render();
@@ -358,17 +403,20 @@ async function _handlePull(btn) {
 }
 
 async function _handleStopSharing() {
+  const folder = _folder();
   const teamRoot = teamRootFor(_folderId);
-  if (!teamRoot) return;
+  // Only a sub-folder can be un-shared — the root is handled by leaving/deleting
+  // the team, and stopSharingFolder rejects it outright.
+  if (!folder || !teamRoot || teamRoot.id === _folderId) return;
   const ok = await showConfirmModal({
     title: "Stop sharing this folder?",
-    body: `<strong>${escapeHtml(teamRoot.name)}</strong> and everything in it will be removed from the team. Your copy becomes a personal folder; teammates lose it.`,
+    body: `<strong>${escapeHtml(folder.name)}</strong> and everything in it will be removed from the team. Your copy stays in this folder; teammates lose it.`,
     confirmLabel: "Stop sharing",
     cancelLabel: "Cancel",
   });
   if (!ok) return;
   try {
-    await stopSharingFolder(teamRoot.id);
+    await stopSharingFolder(_folderId);
     await loadTeamState();
     _onRefresh?.();
     closeShareModal();

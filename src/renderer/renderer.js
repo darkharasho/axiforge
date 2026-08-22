@@ -39,8 +39,9 @@ import {
   setPublishStatus, showError, runPagesBuildPoll, getSelectedTarget,
   showPublishProgress, advancePublishStep, completeAllPublishSteps,
   failPublishStep, showPublishResult, getPublishTargetId, syncPublishStatus,
-  resolvePublishedUrl,
+  resolvePublishedUrl, clearPublishProgress,
 } from "./modules/render-pages.js";
+import { publishWithOwnerCheck, publishedByOtherBody } from "./modules/publish-guard.js";
 import { resolveEntityFacts } from "./modules/detail-panel.js";
 import { resetWikiResolution } from "./modules/wiki-updates.js";
 import { initWikiModal, openWikiModal } from "./modules/wiki-modal.js";
@@ -116,8 +117,13 @@ function _updateFolderSyncIndicators(folderId, status) {
     applyBadge(navEl, status, { className: "lib-nav-item__sync-indicator" });
   });
 
-  // Content area folder cards (list/table/grid/icon/columns views)
-  document.querySelectorAll(`[data-folder-id="${CSS.escape(folderId)}"]`).forEach((cardEl) => {
+  // Content area folder cards (list/table/grid/icon/columns views).
+  // Scoped to #lib-content on purpose: sidebar nav buttons carry data-folder-id
+  // too (so right-click hits the same menu), and an unscoped query would paint
+  // them a SECOND badge here on top of the nav badge above.
+  const content = document.getElementById("lib-content");
+  if (!content) return;
+  content.querySelectorAll(`[data-folder-id="${CSS.escape(folderId)}"]`).forEach((cardEl) => {
     // Find the best anchor: a name/title/label span, or fall back to the card itself
     const nameEl =
       cardEl.querySelector(".lib-list-row__title, .lib-tv__name, .lib-grid-card__title, .lib-icon-item__label, .lib-col__name") ||
@@ -128,22 +134,35 @@ function _updateFolderSyncIndicators(folderId, status) {
 
 // ── Sync conflict resolution ─────────────────────────────────────────────────
 
+// True while a conflict modal is on screen. A second sync-conflict event would
+// otherwise call showChoiceModal again, which dismisses the open one as
+// "cancelled" out from under whoever was mid-read. The unresolved conflict keeps
+// its clickable badge, so nothing is lost by deferring.
+let _conflictModalOpen = false;
+
 // Open the "keep mine / take theirs" modal for a conflicted item. Dismissing it
 // leaves the item conflicted — the badge stays clickable and reopens this.
 async function _openConflict(type, id) {
   const c = state.conflicts[`${type}:${id}`];
   if (!c) return;
+  if (_conflictModalOpen) return;
   const by = c.current?.updatedBy?.login || "a teammate";
   const when = c.current?.updatedAt ? relativeTime(c.current.updatedAt) : "just now";
-  const choice = await showChoiceModal({
-    title: "Sync conflict",
-    body: `<strong>${escapeHtml(c.title || "This item")}</strong> was changed by <strong>${escapeHtml(by)}</strong> ${when} while you were editing.`
-      + (c.current?.deleted ? "<br><br>It was <em>deleted</em> on the team." : ""),
-    choices: [
-      { id: "mine", label: "Keep mine" },
-      { id: "theirs", label: "Take theirs", danger: true },
-    ],
-  });
+  _conflictModalOpen = true;
+  let choice;
+  try {
+    choice = await showChoiceModal({
+      title: "Sync conflict",
+      body: `<strong>${escapeHtml(c.title || "This item")}</strong> was changed by <strong>${escapeHtml(by)}</strong> ${when} while you were editing.`
+        + (c.current?.deleted ? "<br><br>It was <em>deleted</em> on the team." : ""),
+      choices: [
+        { id: "mine", label: "Keep mine" },
+        { id: "theirs", label: "Take theirs", danger: true },
+      ],
+    });
+  } finally {
+    _conflictModalOpen = false;
+  }
   if (!choice) return;
   try {
     await window.desktopApi.resolveConflict(c.teamId, c.itemId, choice);
@@ -261,7 +280,7 @@ initDetailModal();
 initConfirmModal();
 initChoiceModal();
 initImportConflictModal();
-initShareModal();
+initShareModal({ onTeamSyncEnabled: _hideSyncBanner });
 initSettingsModal();
 initWhatsNewModal();
 initDetailPanel(
@@ -741,7 +760,16 @@ async function init() {
         // reason the generic folder-level toast can't express.
         if (status === "error" && data.message) showToast(data.message, "error");
       }
-      _updateItemSyncIndicators(type, id, status === "synced" ? "synced" : (state[statusMap][id] || "synced"));
+        _updateItemSyncIndicators(type, id, state[statusMap][id] || "synced");
+      if (status === "synced") {
+        // The check is painted imperatively but the state entry is already gone,
+        // so the next renderLibrary() would silently drop it. Clear it on a timer
+        // instead, matching the folder badge's 3s life (:782) — the badge and the
+        // state it renders from then agree.
+        setTimeout(() => {
+          if (!state[statusMap][id]) _updateItemSyncIndicators(type, id, null);
+        }, 3000);
+      }
       // If the build being viewed in the editor changed sync state, update the subnav badge
       if (type === "build" && state.activePage === "editor" && state.editor.id === id) {
         renderEditorMeta();
@@ -1559,8 +1587,21 @@ function wireEvents() {
         captureEditorBaseline();
       }
 
-      // The main process sends progress events for loading, repo, site, encrypt, upload, deploy
-      const result = await window.desktopApi.publishBuild(buildId);
+      // The main process sends progress events for loading, repo, site, encrypt, upload, deploy.
+      // A team build already published by a teammate throws PUBLISHED_BY_OTHER:<login>;
+      // publishWithOwnerCheck turns that into a confirm + an explicit force retry
+      // instead of surfacing the raw sentinel as an error (spec §2.8).
+      const result = await publishWithOwnerCheck(
+        (opts) => window.desktopApi.publishBuild(buildId, opts),
+        (login) => showConfirmModal({
+          title: "Publish under your account?",
+          body: publishedByOtherBody(login),
+          confirmLabel: "Publish anyway",
+          cancelLabel: "Cancel",
+        }),
+      );
+      // Declined the confirm — not a failure, so drop the ticker silently.
+      if (!result) { clearPublishProgress(buildId); return; }
 
       // Mark all upload steps done, advance to Pages polling
       advancePublishStep("pages");

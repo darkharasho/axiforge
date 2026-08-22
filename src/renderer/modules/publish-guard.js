@@ -1,3 +1,5 @@
+import { escapeHtml } from "./utils.js";
+
 const PREFIX = "PUBLISHED_BY_OTHER:";
 
 /**
@@ -17,6 +19,14 @@ export async function publishWithOwnerCheck(invoke, confirm) {
   }
 }
 
+/**
+ * Confirm-modal body for the publish-by-other prompt.
+ *
+ * `login` is teammate-controlled data and the result is fed to innerHTML, so the
+ * escaping lives HERE rather than at each call site — a new call site that
+ * forgot would otherwise be a stored XSS in a renderer with full desktopApi
+ * access.
+ */
 export function publishedByOtherBody(login) {
-  return `This was published by <strong>${login}</strong>. Publishing from your account creates a new link; the old one keeps working but won't update.`;
+  return `This was published by <strong>${escapeHtml(login)}</strong>. Publishing from your account creates a new link; the old one keeps working but won't update.`;
 }

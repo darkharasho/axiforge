@@ -8,7 +8,6 @@ import { openSettingsModal } from "./settings-modal.js";
 import { computeUnsavedChangeSummary } from "./editor.js";
 import { getProfessionSvg } from "./profession-icons.js";
 import { shareDisabledTooltip } from "./share-gate.js";
-import { publishWithOwnerCheck, publishedByOtherBody } from "./publish-guard.js";
 
 // ---------------------------------------------------------------------------
 // DOM refs — injected by the host (renderer.js) after DOM is ready
@@ -283,11 +282,10 @@ export function renderBuildList() {
           await _callbacks.reloadBuilds();
         }
 
-        const result = await publishWithOwnerCheck(
-          (opts) => window.desktopApi.publishBuild(build.id, opts),
-          (login) => showConfirmModal({ title: "Publish under your account?", body: publishedByOtherBody(escapeHtml(login)), confirmLabel: "Publish anyway", cancelLabel: "Cancel" }),
-        );
-        if (!result) { clearPublishProgress(build.id); renderBuildList(); return; }
+        // NOTE: renderBuildList() early-returns in the shipping app (#lib-content
+        // always exists), so this legacy card is dead code. The live editor
+        // Publish button in renderer.js owns the publish-by-other guard.
+        const result = await window.desktopApi.publishBuild(build.id);
 
         advancePublishStep("pages");
 
@@ -718,6 +716,10 @@ export function clearPublishProgress(id) {
   if (state.publishProgress[id]) {
     delete state.publishProgress[id];
   }
+  // Only blank the ticker when it is actually showing *this* item. Cancelling
+  // the publish-by-other confirm for comp B must not wipe comp A's in-flight
+  // progress display out from under it.
+  if (_el.publishStatus?.dataset?.publishId && _el.publishStatus.dataset.publishId !== String(id)) return;
   _el.publishStatus.innerHTML = "";
   delete _el.publishStatus.dataset.publishId;
 }

@@ -14,6 +14,7 @@ import {
 } from "./folder-store.js";
 
 import { showConfirmModal } from "../confirm-modal.js";
+import { showPrompt } from "../prompt-modal.js";
 import { loadTeamState, teamRootFor } from "../teams.js";
 import { initToolbar, renderToolbar, renderFilters } from "./toolbar.js";
 import { initSidebar, renderSidebar, insertInlineInput } from "./sidebar.js";
@@ -1484,52 +1485,7 @@ function _buildSharedCallbacks() {
 }
 
 // ─── Dialog helpers (Electron doesn't support window.prompt/confirm/alert) ────
-
-/**
- * Show a text-input prompt via a modal. Returns the entered string or null if cancelled.
- */
-function showPrompt(title, defaultValue = "") {
-  return new Promise((resolve) => {
-    const overlay = document.createElement("div");
-    overlay.className = "confirm-modal-overlay";
-    overlay.innerHTML = `
-      <div class="confirm-modal">
-        <div class="confirm-modal__header">
-          <h3 class="confirm-modal__title">${title}</h3>
-        </div>
-        <div class="confirm-modal__body">
-          <input type="text" class="confirm-modal__input" value="" style="width:100%;padding:6px 8px;background:var(--input-bg);border:1px solid var(--input-border);border-radius:4px;color:var(--text);font-size:0.9rem;outline:none;" />
-        </div>
-        <div class="confirm-modal__actions">
-          <button class="confirm-modal__btn" data-action="cancel">Cancel</button>
-          <button class="confirm-modal__btn confirm-modal__btn--confirm" data-action="ok">OK</button>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(overlay);
-
-    const input = overlay.querySelector("input");
-    input.value = defaultValue;
-    input.focus();
-    input.select();
-
-    function dismiss(value) {
-      document.removeEventListener("keydown", onKey);
-      overlay.remove();
-      resolve(value);
-    }
-
-    function onKey(e) {
-      if (e.key === "Escape") dismiss(null);
-      if (e.key === "Enter") dismiss(input.value.trim() || null);
-    }
-
-    document.addEventListener("keydown", onKey);
-    overlay.querySelector('[data-action="cancel"]').addEventListener("click", () => dismiss(null));
-    overlay.querySelector('[data-action="ok"]').addEventListener("click", () => dismiss(input.value.trim() || null));
-    overlay.addEventListener("click", (e) => { if (e.target === overlay) dismiss(null); });
-  });
-}
+// showPrompt lives in ../prompt-modal.js — settings-modal.js needs it too.
 
 function showImportModal() {
   return new Promise((resolve) => {

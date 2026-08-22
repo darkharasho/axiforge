@@ -1231,7 +1231,7 @@ function bindDetailEvents(container, comp) {
       } catch { /* skip if computation fails */ }
       const result = await publishWithOwnerCheck(
         (opts) => window.desktopApi.publishComp(comp.id, boonCoverageHtml, opts),
-        (login) => showConfirmModal({ title: "Publish under your account?", body: publishedByOtherBody(escapeHtml(login)), confirmLabel: "Publish anyway", cancelLabel: "Cancel" }),
+        (login) => showConfirmModal({ title: "Publish under your account?", body: publishedByOtherBody(login), confirmLabel: "Publish anyway", cancelLabel: "Cancel" }),
       );
       if (!result) { clearPublishProgress(comp.id); return; }
 

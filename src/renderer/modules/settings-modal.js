@@ -6,6 +6,7 @@ import { renderCustomSelect } from "./custom-select.js";
 import { escapeHtml, delay } from "./utils.js";
 import { showConfirmModal } from "./confirm-modal.js";
 import { showChoiceModal } from "./choice-modal.js";
+import { showPrompt } from "./prompt-modal.js";
 
 let _overlay = null;
 let _el = {};
@@ -232,7 +233,15 @@ export function initSettingsModal() {
 async function _renderLegacyMigration() {
   const box = _el.teamsMigrate;
   if (!box) return;
-  const status = await window.desktopApi.legacyLibraryStatus?.().catch(() => ({ hasLegacy: false })) || { hasLegacy: false };
+  // "Couldn't check" is not "nothing to migrate": collapsing the two would take
+  // the only entry point to migration away on a transient IPC error. On a probe
+  // failure leave whatever is already rendered alone.
+  let status;
+  try {
+    status = (await window.desktopApi.legacyLibraryStatus?.()) || { hasLegacy: false };
+  } catch {
+    return;
+  }
   const folders = status.folders || [];
   box.hidden = !status.hasLegacy || !folders.length;
   if (box.hidden) { box.innerHTML = ""; return; }
@@ -267,12 +276,13 @@ async function _runMigration(opts) {
   _setTeamsStatus("Migrating…");
   try {
     const out = await window.desktopApi.migrateOrgLibrary(opts);
-    _setTeamsStatus(
-      out.failed.length
-        ? `Migrated with ${out.failed.length} failures: ${out.failed.map((f) => f.message).join("; ")}`
-        : `Migrated ${out.foldersMigrated} folder(s), ${out.uploaded} items. Share the invite code from the team list below.`,
-      out.failed.length > 0,
-    );
+    // `note` explains an outcome the counts alone read as a no-op — a partial
+    // failure leaves the library untouched (foldersMigrated: 0) on purpose, so
+    // without it "Migrated 0 folder(s)" looks like nothing happened at all.
+    const summary = out.failed.length
+      ? `Migrated with ${out.failed.length} failures: ${out.failed.map((f) => f.message).join("; ")}`
+      : `Migrated ${out.foldersMigrated} folder(s), ${out.uploaded} items. Share the invite code from the team list below.`;
+    _setTeamsStatus(out.note ? `${summary} ${out.note}` : summary, out.failed.length > 0);
     await _renderTeamsList();
     await _renderLegacyMigration();
     await _callbacks.refreshLibraryState?.();
@@ -284,6 +294,9 @@ async function _runMigration(opts) {
 
 function _switchPane(id) {
   const cat = CATEGORIES.find((c) => c.id === id) || CATEGORIES[0];
+  // Signing in to GitHub elsewhere while Settings is open would otherwise leave
+  // "Enable team sync" disabled for the life of the modal.
+  if (cat.id === "teams") _loadTeamsState().catch(() => {});
   for (const item of _overlay.querySelectorAll(".settings-modal__nav-item")) {
     item.classList.toggle("settings-modal__nav-item--active", item.dataset.pane === cat.id);
   }
@@ -838,7 +851,9 @@ async function _onTeamsListClick(e) {
       await window.desktopApi.removeTeamMember(teamId, userId);
       memberRow.remove();
     } else if (act === "rename") {
-      const name = window.prompt("New team name", row.querySelector(".sm-team__name").textContent);
+      // Electron's renderer has no window.prompt() — it throws, and the catch
+      // below would paint the throw as the failure. Use the modal helper.
+      const name = await showPrompt("New team name", row.querySelector(".sm-team__name").textContent);
       if (!name?.trim()) return;
       await window.desktopApi.renameTeam(teamId, name.trim());
       await _renderTeamsList();
@@ -855,7 +870,7 @@ async function _onTeamsListClick(e) {
       await _callbacks.refreshLibraryState?.();
     }
   } catch (err) {
-    _setTeamsStatus(`Error: ${err.message}`, true);
+    _setTeamsStatus(`Error: ${err?.message || String(err)}`, true);
   }
 }
 
@@ -868,7 +883,7 @@ async function _enableTeams() {
     await _callbacks.refreshLibraryState?.();
     await _loadTeamsState();
   } catch (err) {
-    _setTeamsStatus(`Error: ${err.message}`, true);
+    _setTeamsStatus(`Error: ${err?.message || String(err)}`, true);
   } finally {
     _el.teamsEnable.disabled = false;
     _el.teamsEnable.textContent = "Enable team sync";
@@ -916,7 +931,7 @@ async function _joinTeam() {
     await _renderTeamsList();
     await _callbacks.refreshLibraryState?.();
   } catch (err) {
-    _setTeamsStatus(`Error: ${err.message}`, true);
+    _setTeamsStatus(`Error: ${err?.message || String(err)}`, true);
   } finally {
     _el.teamJoin.disabled = false;
   }
@@ -929,6 +944,6 @@ async function _signOutTeams() {
     await _callbacks.refreshLibraryState?.();
     await _loadTeamsState();
   } catch (err) {
-    _setTeamsStatus(`Error: ${err.message}`, true);
+    _setTeamsStatus(`Error: ${err?.message || String(err)}`, true);
   }
 }

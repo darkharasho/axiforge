@@ -47,16 +47,6 @@ function createStubsApi() {
       p.catch(() => {}); // Suppress unhandled rejection for test
       return p;
     },
-    // shared library
-    getSharedLibraryConfig: async () => null,
-    connectSharedLibrary: noop,
-    disconnectSharedLibrary: noop,
-    setupSharedLibrary: noop,
-    pullAllShared: noop,
-    pullFolder: noop,
-    shareFolder: noop,
-    unshareFolder: noop,
-    listOrgs: async () => [],
     // teams (team sync)
     getTeamSession: async () => null,
     listTeams: async () => [],

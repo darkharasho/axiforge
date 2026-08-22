@@ -281,8 +281,9 @@ function showFolderMenu(x, y, folderId, folder) {
  * Team actions for a folder menu. "Share…" opens the share modal either way —
  * it shows the invite code and members for a folder already in a team, and the
  * team picker for one that isn't. Inside a team we also offer "Pull now", plus
- * "Stop sharing" for the team OWNER on the team ROOT only (sub-folders are
- * removed by deleting them).
+ * "Stop sharing" for the team OWNER on a team SUB-folder — that is what the
+ * engine supports (TeamSync.stopSharing rejects a team root outright); the root
+ * itself is unshared by leaving/deleting the team in Settings → Teams.
  */
 function _folderTeamItems(folderId, folder, teamRoot, isTeamRoot) {
   const label = escapeHtml(folder?.name || folderId);
@@ -300,11 +301,11 @@ function _folderTeamItems(folderId, folder, teamRoot, isTeamRoot) {
         }
         _callbacks.onRefresh?.();
       }),
-      ...(isTeamRoot && isTeamOwner(folderId) ? [
+      ...(!isTeamRoot && teamRoot && isTeamOwner(folderId) ? [
         _item(trashIcon, "Stop sharing", null, async () => {
           const ok = await showConfirmModal({
             title: "Stop sharing this folder?",
-            body: `<strong>${label}</strong> and everything in it will be removed from the team. Your copy becomes a personal folder; teammates lose it.`,
+            body: `<strong>${label}</strong> and everything in it will be removed from the team. Your copy stays in this folder; teammates lose it.`,
             confirmLabel: "Stop sharing",
             cancelLabel: "Cancel",
           });
