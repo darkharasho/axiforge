@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-08-05T17:49:57.708Z",
+  "updatedAt": "2026-09-03T15:57:01.493Z",
   "relics": {
     "99965": {
       "name": "Relic of the Flock",
@@ -1967,794 +1967,139 @@
     },
     "103763": {
       "name": "Relic of Geysers",
-      "facts": [
-        {
-          "type": "Number",
-          "text": "Endurance Gained",
-          "value": 15
-        },
-        {
-          "type": "Number",
-          "text": "Endurance Gained",
-          "value": 10
-        },
-        {
-          "type": "Recharge",
-          "text": "Recharge",
-          "value": 5
-        }
-      ]
+      "facts": []
     },
     "103872": {
       "name": "Relic of Mount Balrior",
-      "facts": [
-        {
-          "type": "Percent",
-          "text": "Damage Increase",
-          "percent": 15
-        },
-        {
-          "type": "Radius",
-          "text": "Radius",
-          "distance": 240
-        },
-        {
-          "type": "Recharge",
-          "text": "Recharge",
-          "value": 30
-        }
-      ]
+      "facts": []
     },
     "103901": {
       "name": "Relic of the Mists Tide",
-      "facts": [
-        {
-          "type": "Number",
-          "text": "Conditions Removed",
-          "value": 2
-        },
-        {
-          "type": "Number",
-          "text": "Conditions Removed",
-          "value": 1
-        }
-      ]
+      "facts": []
     },
     "103977": {
       "name": "Relic of the Beehive",
-      "facts": [
-        {
-          "type": "Damage",
-          "text": "Damage",
-          "dmg_multiplier": 4,
-          "hit_count": 1
-        },
-        {
-          "type": "Buff",
-          "text": "Poisoned",
-          "status": "Poisoned",
-          "duration": 4,
-          "apply_count": 1
-        },
-        {
-          "type": "Number",
-          "text": "Number of Targets",
-          "value": 5
-        },
-        {
-          "type": "Radius",
-          "text": "Blast Radius",
-          "distance": 240
-        },
-        {
-          "type": "Recharge",
-          "text": "Recharge",
-          "value": 30
-        }
-      ]
+      "facts": []
     },
     "103984": {
       "name": "Relic of Reunification",
-      "facts": [
-        {
-          "type": "Time",
-          "text": "Duration",
-          "duration": 4
-        },
-        {
-          "type": "Time",
-          "text": "Duration",
-          "duration": 4
-        },
-        {
-          "type": "Recharge",
-          "text": "Recharge",
-          "value": 20
-        }
-      ]
+      "facts": []
     },
     "104022": {
       "name": "Relic of the Steamshrieker",
-      "facts": [
-        {
-          "type": "Buff",
-          "text": "Burning",
-          "status": "Burning",
-          "duration": 5,
-          "apply_count": 1
-        },
-        {
-          "type": "Buff",
-          "text": "Burning",
-          "status": "Burning",
-          "duration": 4,
-          "apply_count": 1
-        },
-        {
-          "type": "Number",
-          "text": "Number of Targets",
-          "value": 5
-        },
-        {
-          "type": "Radius",
-          "text": "Radius",
-          "distance": 240
-        }
-      ]
+      "facts": []
     },
     "104241": {
       "name": "Relic of the Eagle",
-      "facts": [
-        {
-          "type": "Percent",
-          "text": "Damage Increase",
-          "percent": 10
-        }
-      ]
+      "facts": []
     },
     "104256": {
       "name": "Relic of Altruism",
-      "facts": [
-        {
-          "type": "Buff",
-          "text": "Might",
-          "status": "Might",
-          "duration": 10,
-          "apply_count": 1
-        },
-        {
-          "type": "Buff",
-          "text": "Might",
-          "status": "Might",
-          "duration": 8,
-          "apply_count": 1
-        },
-        {
-          "type": "Buff",
-          "text": "Fury",
-          "status": "Fury",
-          "duration": 10,
-          "apply_count": 1
-        },
-        {
-          "type": "Buff",
-          "text": "Fury",
-          "status": "Fury",
-          "duration": 5,
-          "apply_count": 1
-        },
-        {
-          "type": "Number",
-          "text": "Number of Targets",
-          "value": 5
-        },
-        {
-          "type": "Radius",
-          "text": "Radius",
-          "distance": 300
-        },
-        {
-          "type": "Recharge",
-          "text": "Recharge",
-          "value": 20
-        }
-      ]
+      "facts": []
     },
     "104424": {
       "name": "Relic of Thorns",
-      "facts": [
-        {
-          "type": "Time",
-          "text": "Duration",
-          "duration": 30
-        },
-        {
-          "type": "Time",
-          "text": "Duration",
-          "duration": 30
-        },
-        {
-          "type": "Recharge",
-          "text": "Recharge",
-          "value": 5
-        }
-      ]
+      "facts": []
     },
     "104501": {
       "name": "Relic of Fire",
-      "facts": [
-        {
-          "type": "Percent",
-          "text": "Damage Increase",
-          "percent": 7
-        },
-        {
-          "type": "Percent",
-          "text": "Damage Increase",
-          "percent": 10
-        },
-        {
-          "type": "Time",
-          "text": "Duration",
-          "duration": 4
-        },
-        {
-          "type": "Recharge",
-          "text": "Recharge",
-          "value": 20
-        }
-      ]
+      "facts": []
     },
     "104733": {
       "name": "Relic of the Phenom",
-      "facts": [
-        {
-          "type": "Buff",
-          "text": "Protection",
-          "status": "Protection",
-          "duration": 3,
-          "apply_count": 1
-        }
-      ]
+      "facts": []
     },
     "104800": {
       "name": "Relic of Bloodstone",
-      "facts": [
-        {
-          "type": "Percent",
-          "text": "Bloodstone Fervor Damage Increase",
-          "percent": 7
-        },
-        {
-          "type": "Percent",
-          "text": "Bloodstone Fervor Damage Increase",
-          "percent": 10
-        },
-        {
-          "type": "Time",
-          "text": "Duration",
-          "duration": 10
-        },
-        {
-          "type": "Time",
-          "text": "Duration",
-          "duration": 8
-        },
-        {
-          "type": "Damage",
-          "text": "Damage",
-          "dmg_multiplier": 3,
-          "hit_count": 1
-        },
-        {
-          "type": "Damage",
-          "text": "Damage",
-          "dmg_multiplier": 2,
-          "hit_count": 1
-        },
-        {
-          "type": "Buff",
-          "text": "Bleeding",
-          "status": "Bleeding",
-          "duration": 6,
-          "apply_count": 1
-        },
-        {
-          "type": "Number",
-          "text": "Number of Targets",
-          "value": 5
-        },
-        {
-          "type": "Radius",
-          "text": "Radius",
-          "distance": 240
-        }
-      ]
+      "facts": []
     },
     "104848": {
       "name": "Relic of Bava Nisos",
-      "facts": [
-        {
-          "type": "Number",
-          "text": "Conditions Removed",
-          "value": 2
-        }
-      ]
+      "facts": []
     },
     "104849": {
       "name": "Relic of Agony",
-      "facts": [
-        {
-          "type": "Time",
-          "text": "Duration",
-          "duration": 5
-        },
-        {
-          "type": "Time",
-          "text": "Duration",
-          "duration": 3
-        }
-      ]
+      "facts": []
     },
     "104938": {
       "name": "Relic of the Living City",
-      "facts": [
-        {
-          "type": "Time",
-          "text": "Duration",
-          "duration": 5
-        }
-      ]
+      "facts": []
     },
     "104994": {
       "name": "Relic of Mistburn",
-      "facts": [
-        {
-          "type": "Buff",
-          "text": "Might",
-          "status": "Might",
-          "duration": 8,
-          "apply_count": 1
-        },
-        {
-          "type": "Percent",
-          "text": "Critical Chance Increase",
-          "percent": 10
-        },
-        {
-          "type": "Percent",
-          "text": "Critical Chance Increase",
-          "percent": 5
-        },
-        {
-          "type": "Recharge",
-          "text": "Recharge",
-          "value": 1
-        }
-      ]
+      "facts": []
     },
     "105585": {
       "name": "Relic of the First Revenant",
-      "facts": [
-        {
-          "type": "Percent",
-          "text": "Damage Reduced",
-          "percent": 33
-        }
-      ]
+      "facts": []
     },
     "105652": {
       "name": "Relic of Castora",
-      "facts": [
-        {
-          "type": "Percent",
-          "text": "Healing Increase",
-          "percent": 25
-        },
-        {
-          "type": "Percent",
-          "text": "Healing Increase",
-          "percent": 20
-        }
-      ]
+      "facts": []
     },
     "106206": {
       "name": "Relic of the Mist Stranger",
-      "facts": [
-        {
-          "type": "Number",
-          "text": "Life Siphon Damage",
-          "value": 105
-        },
-        {
-          "type": "Number",
-          "text": "Life Siphon Damage",
-          "value": 41
-        },
-        {
-          "type": "Number",
-          "text": "Life Siphon Healing",
-          "value": 98
-        },
-        {
-          "type": "Number",
-          "text": "Life Siphon Healing",
-          "value": 34
-        }
-      ]
+      "facts": []
     },
     "106221": {
       "name": "Relic of the Pirate Queen",
-      "facts": [
-        {
-          "type": "Buff",
-          "text": "Quickness",
-          "status": "Quickness",
-          "duration": 5,
-          "apply_count": 1
-        },
-        {
-          "type": "Buff",
-          "text": "Quickness",
-          "status": "Quickness",
-          "duration": 0,
-          "apply_count": 1
-        },
-        {
-          "type": "Recharge",
-          "text": "Recharge",
-          "value": 1
-        }
-      ]
+      "facts": []
     },
     "106355": {
       "name": "Relic of the Scoundrel",
-      "facts": [
-        {
-          "type": "Time",
-          "text": "Duration",
-          "duration": 8
-        }
-      ]
+      "facts": []
     },
     "106364": {
       "name": "Relic of the Biomancer",
-      "facts": [
-        {
-          "type": "AttributeAdjust",
-          "text": "Healing",
-          "target": "Healing",
-          "value": 133,
-          "coefficient": 0.01,
-          "hit_count": 1
-        },
-        {
-          "type": "AttributeAdjust",
-          "text": "Healing",
-          "target": "Healing",
-          "value": 69,
-          "coefficient": 0.01,
-          "hit_count": 1
-        }
-      ]
+      "facts": []
     },
     "106916": {
       "name": "Relic of Shackles",
-      "facts": [
-        {
-          "type": "Number",
-          "text": "Defiance Break",
-          "value": 100
-        },
-        {
-          "type": "Damage",
-          "text": "Damage",
-          "dmg_multiplier": 3,
-          "hit_count": 1
-        },
-        {
-          "type": "Damage",
-          "text": "Damage",
-          "dmg_multiplier": 1.5,
-          "hit_count": 1
-        },
-        {
-          "type": "Buff",
-          "text": "Revealed",
-          "status": "Revealed",
-          "duration": 5,
-          "apply_count": 1
-        },
-        {
-          "type": "Buff",
-          "text": "Stun",
-          "status": "Stun",
-          "duration": 1,
-          "apply_count": 1
-        }
-      ]
+      "facts": []
     },
     "106920": {
       "name": "Relic of the Nautical Beast",
-      "facts": [
-        {
-          "type": "Damage",
-          "text": "Damage",
-          "dmg_multiplier": 1.5,
-          "hit_count": 1
-        },
-        {
-          "type": "Damage",
-          "text": "Damage",
-          "dmg_multiplier": 1,
-          "hit_count": 1
-        },
-        {
-          "type": "AttributeAdjust",
-          "text": "Healing",
-          "target": "Healing",
-          "value": 1610,
-          "coefficient": 1,
-          "hit_count": 1
-        },
-        {
-          "type": "AttributeAdjust",
-          "text": "Healing",
-          "target": "Healing",
-          "value": 778,
-          "coefficient": 0.5,
-          "hit_count": 1
-        },
-        {
-          "type": "Number",
-          "text": "Number of Targets",
-          "value": 5
-        },
-        {
-          "type": "Number",
-          "text": "Number of Allied Targets",
-          "value": 5
-        }
-      ]
+      "facts": []
     },
     "107030": {
       "name": "Relic of Fog",
-      "facts": [
-        {
-          "type": "Time",
-          "text": "Duration",
-          "duration": 5
-        }
-      ]
+      "facts": []
     },
     "107061": {
       "name": "Relic of the Coral Heart",
-      "facts": [
-        {
-          "type": "Damage",
-          "text": "Damage",
-          "dmg_multiplier": 0.4,
-          "hit_count": 1
-        },
-        {
-          "type": "Damage",
-          "text": "Damage",
-          "dmg_multiplier": 0.5,
-          "hit_count": 1
-        },
-        {
-          "type": "Time",
-          "text": "Duration",
-          "duration": 6
-        },
-        {
-          "type": "Recharge",
-          "text": "Recharge",
-          "value": 20
-        }
-      ]
+      "facts": []
     },
     "107124": {
       "name": "Relic of the Forest Dweller",
-      "facts": [
-        {
-          "type": "Number",
-          "text": "Defiance Break",
-          "value": 300
-        },
-        {
-          "type": "Number",
-          "text": "Defiance Break",
-          "value": 150
-        },
-        {
-          "type": "Damage",
-          "text": "Damage",
-          "dmg_multiplier": 1,
-          "hit_count": 1
-        },
-        {
-          "type": "Damage",
-          "text": "Damage",
-          "dmg_multiplier": 0.01,
-          "hit_count": 1
-        },
-        {
-          "type": "Buff",
-          "text": "Float",
-          "status": "Float",
-          "duration": 3,
-          "apply_count": 1
-        },
-        {
-          "type": "Buff",
-          "text": "Float",
-          "status": "Float",
-          "duration": 0,
-          "apply_count": 1
-        },
-        {
-          "type": "Number",
-          "text": "Number of Targets",
-          "value": 3
-        },
-        {
-          "type": "Range",
-          "text": "Range",
-          "value": 600
-        },
-        {
-          "type": "Recharge",
-          "text": "Recharge",
-          "value": 30
-        }
-      ]
+      "facts": []
     },
     "107192": {
       "name": "Relic of the Alliance",
-      "facts": [
-        {
-          "type": "Number",
-          "text": "Recharge Time Reduced",
-          "value": 10.5
-        }
-      ]
+      "facts": []
     },
     "109264": {
       "name": "Relic of Galdra",
-      "facts": [
-        {
-          "type": "Damage",
-          "text": "Damage",
-          "dmg_multiplier": 0.2,
-          "hit_count": 1
-        },
-        {
-          "type": "Damage",
-          "text": "Damage",
-          "dmg_multiplier": 0.1,
-          "hit_count": 1
-        },
-        {
-          "type": "Buff",
-          "text": "Burning",
-          "status": "Burning",
-          "duration": 10,
-          "apply_count": 1
-        },
-        {
-          "type": "Buff",
-          "text": "Burning",
-          "status": "Burning",
-          "duration": 6,
-          "apply_count": 1
-        },
-        {
-          "type": "Number",
-          "text": "Number of Targets",
-          "value": 5
-        },
-        {
-          "type": "Recharge",
-          "text": "Recharge",
-          "value": 30
-        }
-      ]
+      "facts": []
     },
     "109267": {
       "name": "Relic of the Sacred Grounds",
-      "facts": [
-        {
-          "type": "Buff",
-          "text": "Protection",
-          "status": "Protection",
-          "duration": 4,
-          "apply_count": 1
-        },
-        {
-          "type": "Buff",
-          "text": "Protection",
-          "status": "Protection",
-          "duration": 3,
-          "apply_count": 1
-        }
-      ]
+      "facts": []
     },
     "109351": {
       "name": "Relic of the Director",
-      "facts": [
-        {
-          "type": "Percent",
-          "text": "Damage Increase",
-          "percent": 10
-        },
-        {
-          "type": "Buff",
-          "text": "Vulnerability",
-          "status": "Vulnerability",
-          "duration": 8,
-          "apply_count": 1
-        },
-        {
-          "type": "Time",
-          "text": "Duration",
-          "duration": 6
-        },
-        {
-          "type": "Recharge",
-          "text": "Recharge",
-          "value": 15
-        }
-      ]
+      "facts": []
     },
     "109522": {
       "name": "Relic of the Doyen",
-      "facts": [
-        {
-          "type": "Percent",
-          "text": "Damage Reduced",
-          "percent": 15
-        },
-        {
-          "type": "Percent",
-          "text": "Damage Reduced",
-          "percent": 10
-        },
-        {
-          "type": "Percent",
-          "text": "Damage Reduced",
-          "percent": 7
-        }
-      ]
+      "facts": []
     },
     "109664": {
       "name": "Relic of the Cruel Overseer",
-      "facts": [
-        {
-          "type": "Time",
-          "text": "Duration",
-          "duration": 8
-        }
-      ]
+      "facts": []
     },
     "109709": {
       "name": "Relic of Watch",
-      "facts": [
-        {
-          "type": "Buff",
-          "text": "Weakness",
-          "status": "Weakness",
-          "duration": 3,
-          "apply_count": 1
-        },
-        {
-          "type": "Buff",
-          "text": "Weakness",
-          "status": "Weakness",
-          "duration": 2,
-          "apply_count": 1
-        }
-      ]
+      "facts": []
     }
   }
 }
