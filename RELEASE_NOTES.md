@@ -1,3 +1,16 @@
+## Version v0.13.0 — September 4, 2026
+
+### Restore any version from folder history
+
+- **Every history entry can be rolled back.** Shared-folder history rows now have a *Restore this version* action, including the newest one — that's the "undo the last change a teammate synced" case. Only legacy entries recorded before snapshots existed stay unavailable.
+- **Restoring asks first, inline.** A second click in the row confirms, so a stray click can't overwrite work.
+- **Teammates' changes are labelled correctly.** Synced edits were showing the LOCAL badge because the panel matched an older internal name for the sync source.
+- Both history panels were restyled as a timeline, with source-tinted markers and proper theme colors.
+
+### Bug Fixes
+
+- **Scourge's F5 now swaps with Herald of Sorrow.** Taking the trait left F5 showing Desert Shroud everywhere — icon, name, hover card and detail panel — instead of Sandstorm Shroud. The game data models the swap as a skill flip, and the app was filtering flipped skills out of the F-slot list entirely; a selected major trait can now replace its mechanic slot. This fixes the pattern generally, not just Scourge.
+
 ## Version v0.12.0 — August 22, 2026
 
 ### Teams replace GitHub-org shared libraries
