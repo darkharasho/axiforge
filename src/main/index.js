@@ -979,10 +979,38 @@ const readyWork = app.whenReady().then(async () => {
     if (teamRoot) await safeEnqueue(() => teamSync.enqueue(teamRoot.teamId, saved.id, "build", "put"), { type: "build", id: saved.id });
     return saved;
   });
+  // Takes either kind of published link. A build returns the saved build, as it
+  // always has; a comp returns { kind: "comp", ... } because it writes several
+  // records at once and the caller needs all of them to refresh.
   handle("builds:import-axi-link", async (_e, link, name, folderId, gameMode) => {
-    const { importAxiLink } = require("./axiLinkImport.js");
-    const build = await importAxiLink(link, { name, folderId, gameMode });
-    const saved = await store.upsertBuild(build);
+    const { importAxiAny } = require("./axiLinkImport.js");
+    const imported = await importAxiAny(link, { name, folderId, gameMode });
+
+    if (imported.kind === "comp") {
+      // A comp arrives as a comp plus every build it references, so dropping it
+      // loose into the current folder would scatter four or five builds among
+      // whatever is already there. It gets its own folder, and `folderId` — the
+      // folder the user was looking at — becomes that folder's PARENT.
+      const { comp, builds } = imported;
+      const folder = await folderStore.upsertFolder({ name: comp.name, parentId: folderId ?? null });
+      const savedBuilds = [];
+      for (const build of builds) savedBuilds.push(await store.upsertBuild({ ...build, folderId: folder.id }));
+      const savedComp = await compStore.upsertComp({ ...comp, folderId: folder.id });
+
+      // Importing into a team folder shares the whole thing, not just the comp —
+      // teammates would otherwise see a comp whose builds do not exist for them.
+      const teamRoot = await findTeamRoot(folder.id);
+      if (teamRoot) {
+        await safeEnqueue(() => teamSync.enqueue(teamRoot.teamId, folder.id, "folder", "put"), { type: "folder", id: folder.id });
+        for (const b of savedBuilds) {
+          await safeEnqueue(() => teamSync.enqueue(teamRoot.teamId, b.id, "build", "put"), { type: "build", id: b.id });
+        }
+        await safeEnqueue(() => teamSync.enqueue(teamRoot.teamId, savedComp.id, "comp", "put"), { type: "comp", id: savedComp.id });
+      }
+      return { kind: "comp", comp: savedComp, builds: savedBuilds, folder };
+    }
+
+    const saved = await store.upsertBuild(imported.build);
     const teamRoot = await findTeamRoot(saved.folderId);
     if (teamRoot) await safeEnqueue(() => teamSync.enqueue(teamRoot.teamId, saved.id, "build", "put"), { type: "build", id: saved.id });
     return saved;

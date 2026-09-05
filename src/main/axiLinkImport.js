@@ -1,6 +1,7 @@
 "use strict";
 
 const https = require("https");
+const crypto = require("node:crypto");
 const { decryptBuild } = require("./buildEncryption.js");
 
 // ── HTTP ──────────────────────────────────────────────────────────────────────
@@ -170,7 +171,92 @@ function toImportedBuild(payload, { name, folderId, gameMode } = {}) {
   return build;
 }
 
-async function fetchPayload({ fileId, key, bases, dir }, fetchText) {
+/**
+ * Fields a published comp carries that must NOT ride along into a local copy.
+ * Same reasoning as NOT_MINE: these describe the publisher's copy, and keeping
+ * them would make the import masquerade as the original — pointing at someone
+ * else's published file, sitting in a folder that does not exist here, or
+ * arriving pre-trashed. `builds` comes off because it is unpacked separately,
+ * and `boonCoverageHtml` because it is a rendered snapshot of the publisher's
+ * comp that this copy regenerates for itself.
+ */
+const COMP_NOT_MINE = [
+  "id", "createdAt", "updatedAt", "folderId", "sortOrder", "builds", "boonCoverageHtml",
+  "publishedSlug", "publishedFileId", "publishedKey", "publishedAt", "publishedOwner",
+  "deletedAt", "trashBatchId", "trashRoot",
+];
+
+/**
+ * Unpacks a decrypted comp payload into a local comp plus its builds.
+ *
+ * A published comp is self-contained — serializeCompForPublish embeds every
+ * referenced build under `builds`, keyed by the PUBLISHER's build id. Those ids
+ * mean nothing in this library, so each build gets a fresh one and every
+ * reference to it is rewritten to match: buildIds, party-line slots,
+ * buildColors, and category membership. Miss any one of those and the comp
+ * arrives with empty slots next to builds that did import.
+ *
+ * Category ids are kept as-is. They are comp-scoped, and "tag:<id>" slots point
+ * at them, so reminting would only risk breaking that pairing for no gain.
+ *
+ * READ-ONLY, like toImportedBuild: the ids minted here are real (the caller
+ * passes them straight to upsertBuild/upsertComp, both of which honour a
+ * supplied id), but nothing is written.
+ *
+ * @returns {{comp: object, builds: object[]}}
+ */
+function toImportedComp(payload, { name, folderId, gameMode } = {}, newId = () => crypto.randomUUID()) {
+  if (!payload || typeof payload !== "object" || !payload.partyLines) {
+    throw new Error("That link decrypted, but there's no comp inside it.");
+  }
+  const compId = newId();
+  const compGameMode = payload.gameMode || gameMode || "pve";
+
+  // Publisher id -> local id, built while normalising each embedded build.
+  const idMap = new Map();
+  const builds = [];
+  for (const [publishedId, raw] of Object.entries(payload.builds || {})) {
+    if (!raw || typeof raw !== "object" || !raw.profession) continue;
+    const build = toImportedBuild(raw, { folderId, gameMode: compGameMode });
+    build.id = newId();
+    build.compIds = [compId];
+    idMap.set(publishedId, build.id);
+    builds.push(build);
+  }
+
+  // A slot holds a build id, a "tag:<categoryId>" marker, or nothing. A build id
+  // the payload did not carry (a build that failed to enrich at publish time)
+  // becomes an empty slot rather than a dangling reference.
+  const remapSlot = (slot) => {
+    if (typeof slot !== "string" || !slot) return null;
+    if (slot.startsWith("tag:")) return slot;
+    return idMap.get(slot) || null;
+  };
+
+  const comp = { ...payload };
+  for (const field of COMP_NOT_MINE) delete comp[field];
+  comp.id = compId;
+  comp.name = name || payload.name || "Imported Comp";
+  comp.folderId = folderId ?? null;
+  comp.gameMode = compGameMode;
+  comp.buildIds = builds.map((b) => b.id);
+  comp.partyLines = (payload.partyLines || []).map((line) => ({
+    ...line,
+    slots: (line.slots || []).map(remapSlot),
+  }));
+  comp.buildColors = Object.fromEntries(
+    Object.entries(payload.buildColors || {})
+      .map(([id, color]) => [idMap.get(id), color])
+      .filter(([id]) => id)
+  );
+  comp.categories = (payload.categories || []).map((cat) => ({
+    ...cat,
+    buildIds: (cat.buildIds || []).map((id) => idMap.get(id)).filter(Boolean),
+  }));
+  return { comp, builds };
+}
+
+async function fetchPayload({ fileId, key, bases, dir }, fetchText, noun = "build") {
   const failures = [];
   for (const base of bases) {
     let res;
@@ -189,28 +275,33 @@ async function fetchPayload({ fileId, key, bases, dir }, fetchText) {
     } catch {
       // Reached the file but could not open it: the key in the link is wrong or
       // truncated. Trying the next base would only repeat that, so stop here.
-      throw new Error("Couldn't decrypt that build — the link looks incomplete or was edited.");
+      throw new Error(`Couldn't decrypt that ${noun} — the link looks incomplete or was edited.`);
     }
   }
   throw new Error(
     failures.includes("HTTP 404")
-      ? "That build isn't published anymore (the link's file is gone)."
-      : `Couldn't reach that build (${failures[0] || "no response"}).`
+      ? `That ${noun} isn't published anymore (the link's file is gone).`
+      : `Couldn't reach that ${noun} (${failures[0] || "no response"}).`
   );
 }
 
 /**
- * Import a build from a published AxiForge link (the SPA pages the app publishes
- * to GitHub Pages, e.g. https://<user>.github.io/axibuilds/?n=…&b=<id>.<key>).
+ * Import from a published AxiForge link — the SPA pages the app publishes to
+ * GitHub Pages, e.g. https://<user>.github.io/axibuilds/?n=…&b=<id>.<key> for a
+ * build or ?c=<id>.<key> for a comp.
  *
- * READ-ONLY: returns the assembled, normalize-ready build. The caller writes it,
- * matching how the chat-link and gw2skills imports are wired.
+ * READ-ONLY: returns the assembled, normalize-ready records. The caller writes
+ * them, matching how the chat-link and gw2skills imports are wired.
+ *
+ * A comp brings its builds with it (see toImportedComp), so the two kinds return
+ * different shapes and the caller has to branch — hence the explicit `kind`.
  *
  * @param {string} link
  * @param {{name?: string, folderId?: string|null, gameMode?: string}} [opts]
- * @param {{fetchText?: Function}} [deps] injection point for tests
+ * @param {{fetchText?: Function, newId?: Function}} [deps] injection point for tests
+ * @returns {Promise<{kind: "build", build: object} | {kind: "comp", comp: object, builds: object[]}>}
  */
-async function importAxiLink(link, opts = {}, deps = {}) {
+async function importAxiAny(link, opts = {}, deps = {}) {
   const fetchText = deps.fetchText || httpsGetStatus;
   let parsed = parseAxiLink(link);
 
@@ -218,20 +309,42 @@ async function importAxiLink(link, opts = {}, deps = {}) {
     const resolved = await resolveShortLink(link, fetchText);
     parsed = { ...parsed, ...resolved };
   }
+
   if (parsed.kind === "comp") {
-    throw new Error("That's a link to a comp, not a build. Open the comp and copy a build's link.");
+    const payload = await fetchPayload({ ...parsed, dir: "comps" }, fetchText, "comp");
+    // The link's `n=` param is a slug, not a title — see below.
+    const { comp, builds } = toImportedComp(payload, opts, deps.newId);
+    return { kind: "comp", comp, builds };
   }
 
   const payload = await fetchPayload({ ...parsed, dir: "builds" }, fetchText);
   // The link's `n=` param is a slug ("u-chrono"), not a title — the payload
   // carries the real name, so only an explicit name from the user overrides it.
-  return toImportedBuild(payload, { name: opts.name, folderId: opts.folderId, gameMode: opts.gameMode });
+  const build = toImportedBuild(payload, { name: opts.name, folderId: opts.folderId, gameMode: opts.gameMode });
+  return { kind: "build", build };
+}
+
+/**
+ * Build-only wrapper, kept for the callers that can only handle a build (the
+ * local HTTP API's importAxiLink, which answers with a single build record).
+ */
+async function importAxiLink(link, opts = {}, deps = {}) {
+  const wrongKind = () =>
+    new Error("That's a link to a comp, not a build. Open the comp and copy a build's link.");
+  // Named without a wasted fetch when the link says so outright. A /r/ short
+  // link doesn't, so that one is only caught after it has been resolved.
+  if (parseAxiLink(link).kind === "comp") throw wrongKind();
+  const result = await importAxiAny(link, opts, deps);
+  if (result.kind !== "build") throw wrongKind();
+  return result.build;
 }
 
 module.exports = {
+  importAxiAny,
   importAxiLink,
   // Test surface
   _parseAxiLink: parseAxiLink,
   _toImportedBuild: toImportedBuild,
+  _toImportedComp: toImportedComp,
   _resolveShortLink: resolveShortLink,
 };

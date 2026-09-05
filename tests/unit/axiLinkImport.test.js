@@ -1,6 +1,6 @@
 "use strict";
 
-const { importAxiLink, _parseAxiLink, _toImportedBuild } = require("../../src/main/axiLinkImport");
+const { importAxiLink, importAxiAny, _parseAxiLink, _toImportedBuild, _toImportedComp } = require("../../src/main/axiLinkImport");
 const { encryptBuild, generateEncryptionKey } = require("../../src/main/buildEncryption");
 
 const LINK = "https://someone.github.io/axibuilds/?n=u-chrono&b=f4c38d4f.KEY&t=prof-mesmer";
@@ -176,5 +176,155 @@ describe("importAxiLink", () => {
     });
     const build = await importAxiLink(LINK.replace("KEY", key), { folderId: "f1" }, { fetchText });
     expect(build.folderId).toBe("f1");
+  });
+});
+
+// ── toImportedComp ───────────────────────────────────────────────────────────
+
+// A published comp is self-contained: serializeCompForPublish embeds every build
+// it references, keyed by the PUBLISHER's build id. Those ids mean nothing in
+// this library, so the whole point of this function is that every reference to
+// them is rewritten in step — miss one and the comp arrives with empty slots
+// beside builds that imported fine.
+describe("_toImportedComp", () => {
+  const ids = () => { let n = 0; return () => `local-${++n}`; };
+
+  const PUBLISHED = {
+    id: "their-comp",
+    name: "1200 Range Comp",
+    gameMode: "wvw",
+    createdAt: "2026-01-01T00:00:00.000Z",
+    publishedFileId: "e4369a53",
+    publishedKey: "secret",
+    publishedOwner: "someone",
+    boonCoverageHtml: "<div>their render</div>",
+    folderId: "not-my-folder",
+    partyLines: [
+      { id: "line-1", capacity: 5, slots: ["b-chrono", "tag:cat-1", "b-evoker", null, ""] },
+    ],
+    buildColors: { "b-chrono": "red", "b-evoker": "blue" },
+    categories: [{ id: "cat-1", name: "Support", buildIds: ["b-chrono"] }],
+    builds: {
+      "b-chrono": { id: "b-chrono", profession: "Mesmer", title: "U Chrono", gameMode: "wvw" },
+      "b-evoker": { id: "b-evoker", profession: "Elementalist", title: "P Evoker", gameMode: "wvw" },
+    },
+  };
+
+  test("rewrites every reference to a build in step with the build's new id", () => {
+    const { comp, builds } = _toImportedComp(PUBLISHED, {}, ids());
+    const [chrono, evoker] = builds.map((b) => b.id);
+    expect(comp.buildIds).toEqual([chrono, evoker]);
+    expect(comp.partyLines[0].slots).toEqual([chrono, "tag:cat-1", evoker, null, null]);
+    expect(comp.buildColors).toEqual({ [chrono]: "red", [evoker]: "blue" });
+    expect(comp.categories[0].buildIds).toEqual([chrono]);
+    // Nothing anywhere still points at the publisher's ids.
+    expect(JSON.stringify(comp)).not.toMatch(/b-chrono|b-evoker/);
+  });
+
+  test("wires each build back to the comp so it shows as a member", () => {
+    const { comp, builds } = _toImportedComp(PUBLISHED, {}, ids());
+    for (const build of builds) expect(build.compIds).toEqual([comp.id]);
+  });
+
+  test("a slot pointing at a build the payload didn't carry empties rather than dangles", () => {
+    // Publishing skips a build that fails to enrich, so its slot arrives with an
+    // id nothing will ever resolve. An empty slot is honest; a dangling one is not.
+    const payload = { ...PUBLISHED, partyLines: [{ id: "l", capacity: 5, slots: ["b-chrono", "b-missing"] }] };
+    const { comp, builds } = _toImportedComp(payload, {}, ids());
+    expect(comp.partyLines[0].slots).toEqual([builds[0].id, null]);
+  });
+
+  test("strips the original's identity so this copy is not a second publisher", () => {
+    const { comp, builds } = _toImportedComp(PUBLISHED, {}, ids());
+    for (const gone of [
+      "publishedFileId", "publishedKey", "publishedOwner", "publishedAt", "publishedSlug",
+      "createdAt", "updatedAt", "sortOrder", "builds", "deletedAt", "trashRoot",
+    ]) {
+      expect(comp).not.toHaveProperty(gone);
+    }
+    expect(comp.id).not.toBe("their-comp");
+    // A rendered snapshot of THEIR comp; this copy regenerates its own.
+    expect(comp).not.toHaveProperty("boonCoverageHtml");
+    for (const build of builds) expect(build).not.toHaveProperty("publishedFileId");
+  });
+
+  test("keeps the published name and game mode unless the user supplied one", () => {
+    expect(_toImportedComp(PUBLISHED, {}, ids()).comp.name).toBe("1200 Range Comp");
+    expect(_toImportedComp(PUBLISHED, { name: "Mine" }, ids()).comp.name).toBe("Mine");
+    // A WvW comp imported while the editor sits on PvE is still a WvW comp.
+    expect(_toImportedComp(PUBLISHED, { gameMode: "pve" }, ids()).comp.gameMode).toBe("wvw");
+  });
+
+  test("the comp's game mode carries to builds that don't state their own", () => {
+    const payload = { ...PUBLISHED, builds: { "b-x": { profession: "Mesmer", title: "X" } } };
+    expect(_toImportedComp(payload, {}, ids()).builds[0].gameMode).toBe("wvw");
+  });
+
+  test("refuses a payload that decrypted to something that isn't a comp", () => {
+    expect(() => _toImportedComp({ hello: "world" })).toThrow(/no comp inside/i);
+  });
+});
+
+// ── importAxiAny (comp links) ────────────────────────────────────────────────
+
+describe("importAxiAny with a comp link", () => {
+  const key = generateEncryptionKey();
+  const COMP_LINK = `https://someone.github.io/axibuilds/?n=1200-range&c=e4369a53.${key}`;
+  const published = {
+    name: "1200 Range Comp",
+    gameMode: "wvw",
+    partyLines: [{ id: "l", capacity: 5, slots: ["b-chrono"] }],
+    builds: { "b-chrono": { id: "b-chrono", profession: "Mesmer", title: "U Chrono" } },
+  };
+
+  function serve(routes) {
+    return jest.fn(async (url) => routes[url] || { status: 404, body: "" });
+  }
+
+  test("reads the comp out of comps/, not builds/, and brings its builds with it", async () => {
+    const fetchText = serve({
+      "https://raw.githubusercontent.com/someone/axibuilds/main/site/comps/e4369a53.enc": {
+        status: 200,
+        body: encryptBuild(published, key),
+      },
+    });
+    const result = await importAxiAny(COMP_LINK, {}, { fetchText });
+    expect(result.kind).toBe("comp");
+    expect(result.comp.name).toBe("1200 Range Comp");
+    expect(result.builds).toHaveLength(1);
+    expect(result.builds[0].title).toBe("U Chrono");
+    // One fetch: a published comp carries its builds, so there is nothing to chase.
+    expect(fetchText).toHaveBeenCalledTimes(1);
+  });
+
+  test("says the comp is gone rather than the build", async () => {
+    await expect(importAxiAny(COMP_LINK, {}, { fetchText: serve({}) }))
+      .rejects.toThrow(/that comp isn't published anymore/i);
+  });
+
+  test("a /r/ short link that redirects to a comp imports as a comp", async () => {
+    const fetchText = serve({
+      "https://someone.github.io/axibuilds/r/e4369a53/": {
+        status: 200,
+        body: `<!DOCTYPE html><meta http-equiv=refresh content="0;url=../../?c=e4369a53.${key}">`,
+      },
+      "https://raw.githubusercontent.com/someone/axibuilds/main/site/comps/e4369a53.enc": {
+        status: 200,
+        body: encryptBuild(published, key),
+      },
+    });
+    const result = await importAxiAny("https://someone.github.io/axibuilds/r/e4369a53/", {}, { fetchText });
+    expect(result.kind).toBe("comp");
+  });
+
+  test("a build link still comes back as a build", async () => {
+    const fetchText = serve({
+      "https://raw.githubusercontent.com/someone/axibuilds/main/site/builds/f4c38d4f.enc": {
+        status: 200,
+        body: encryptBuild({ profession: "Mesmer", title: "U Chrono" }, key),
+      },
+    });
+    const result = await importAxiAny(LINK.replace("KEY", key), {}, { fetchText });
+    expect(result).toMatchObject({ kind: "build", build: { title: "U Chrono" } });
   });
 });

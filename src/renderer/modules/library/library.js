@@ -719,6 +719,19 @@ async function handleImportAxiLink(targetFolderId) {
     // A blank name keeps the published build's own title — unlike a share code,
     // a published link carries the real name inside the payload.
     const saved = await window.desktopApi.importAxiLink(result.url, result.name || "", folderId, gameMode);
+    // A comp link brings the comp AND every build it uses, landing in a folder of
+    // its own — so there is a new folder to pick up and no single build to slot
+    // into the comp being edited.
+    if (saved?.kind === "comp") {
+      state.builds = await window.desktopApi.listBuilds();
+      state.comps = await window.desktopApi.listComps();
+      state.folders = await window.desktopApi.listFolders();
+      renderLibrary();
+      window.desktopApi.prewarmChatLinks?.(saved.builds);
+      const n = saved.builds.length;
+      showToast(`"${saved.comp.name}" imported with ${n} build${n === 1 ? "" : "s"}`);
+      return;
+    }
     await addImportedBuildToActiveComp(saved);
     state.builds = await window.desktopApi.listBuilds();
     renderLibrary();
@@ -1876,7 +1889,7 @@ function showAxiLinkImportModal() {
         </div>
         <div class="confirm-modal__body" style="display:flex;flex-direction:column;gap:10px;">
           <div>
-            <label style="display:block;font-size:0.8rem;color:var(--muted);margin-bottom:4px;">Published build link</label>
+            <label style="display:block;font-size:0.8rem;color:var(--muted);margin-bottom:4px;">Published build or comp link</label>
             <input
               type="text"
               id="axilink-url-input"
@@ -1886,7 +1899,7 @@ function showAxiLinkImportModal() {
             <div id="axilink-url-status" style="font-size:0.75rem;min-height:1.2em;margin-top:3px;color:var(--text-dim);"></div>
           </div>
           <div>
-            <label style="display:block;font-size:0.8rem;color:var(--muted);margin-bottom:4px;">Build Name <span style="color:var(--text-dim);">(optional)</span></label>
+            <label style="display:block;font-size:0.8rem;color:var(--muted);margin-bottom:4px;">Name <span style="color:var(--text-dim);">(optional)</span></label>
             <input
               type="text"
               id="axilink-name-input"
@@ -1925,9 +1938,10 @@ function showAxiLinkImportModal() {
       // bare #id.key hash, or a /r/<id>/ short link.
       const isComp = /[?&]c=[^.&]+\.[^&]/.test(val);
       const isBuild = /[?&](?:b|legacy)=[^.&]+\.[^&]/.test(val) || /#[^.#]+\.[^#]/.test(val) || /\/r\/[^/]+\/?$/.test(val);
-      if (isComp) { setStatus("That's a comp link — open the comp and copy a build's link", "#c55"); return; }
-      if (!isBuild) { setStatus("Not an AxiForge build link", "#c55"); return; }
-      setStatus("\u2713 Valid AxiForge link", "#5a5");
+      if (!isComp && !isBuild) { setStatus("Not an AxiForge build or comp link", "#c55"); return; }
+      // A short link (/r/<id>/) can be either — only the redirect it serves says
+      // which, and that is a network round-trip the import itself makes.
+      setStatus(isComp ? "\u2713 Comp link — imports the comp and its builds into a new folder" : "\u2713 Valid AxiForge link", "#5a5");
       urlValid = true;
       importBtn.disabled = false;
     });
