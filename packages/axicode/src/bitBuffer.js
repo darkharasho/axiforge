@@ -8,6 +8,12 @@ class BitWriter {
   }
 
   write(value, numBits) {
+    // Writing bit-by-bit means an out-of-range value would silently wrap to a
+    // different, structurally valid code rather than fail. Refuse instead: a
+    // share code that is quietly wrong is worse than one that errors.
+    if (!Number.isInteger(value) || value < 0 || value >= 2 ** numBits) {
+      throw new RangeError(`Value ${value} does not fit in ${numBits} bits`);
+    }
     for (let i = numBits - 1; i >= 0; i--) {
       const bit = (value >> i) & 1;
       this._currentByte |= bit << this._bitPos;

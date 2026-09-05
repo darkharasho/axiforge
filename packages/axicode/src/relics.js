@@ -1,7 +1,21 @@
 "use strict";
-// Alphabetically sorted relic labels.
-// Source: GW2 in-game relics list
-// MUST be kept in sync when relics are added/removed.
+// Relic labels, in share-code index order (index 0 of the wire table is the
+// empty slot, so entry N here encodes as index N+1).
+//
+// APPEND-ONLY. A share code stores the index, not the label, so moving any
+// entry silently changes what every already-published code decodes to. Indices
+// 1-106 happen to be alphabetical because that is how the table was first
+// built; that is history, NOT a rule to maintain. Add new relics at the END,
+// even when it breaks the alphabetical run, and never reorder or delete.
+// 7 bits allows up to index 127.
+//
+// This list is the wire format only — the relic picker is populated from the
+// live wiki catalog (state.upgradeCatalog.relics), so the order here has no
+// effect on what the user sees.
+//
+// Source: GW2 in-game relics list. Anything the app can select must appear
+// here or it is silently dropped when shared; tests/unit/shareCodeTables.test.js
+// enforces both that and the frozen prefix.
 module.exports = [
   "Relic of Agony",
   "Relic of Akeem",
@@ -109,4 +123,11 @@ module.exports = [
   "Relic of the Weaver",
   "Relic of the Wizard's Tower",
   "Relic of the Zephyrite",
+  // ── appended after the alphabetical run (see APPEND-ONLY note above) ──
+  "Relic of Galdra",
+  "Relic of the Sacred Grounds",
+  "Relic of the Director",
+  "Relic of the Doyen",
+  "Relic of the Cruel Overseer",
+  "Relic of Watch",
 ];

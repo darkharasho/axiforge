@@ -44,7 +44,8 @@ const _statIdx = new Map(STAT_COMBOS_ORDERED.map((s, i) => [s, i]));
 function statToIndex(label) { return _statIdx.get(label) ?? 0; }
 function indexToStat(idx) { return STAT_COMBOS_ORDERED[idx] || ""; }
 
-// Relic table — sorted alphabetically per spec.
+// Relic table — index 0 = empty, 1+ = relics.
+// APPEND-ONLY; see the note in relics.js. 7-bit field, so up to index 127.
 const _relicLabels = require("./relics");
 const RELICS_SORTED = ["", ..._relicLabels];
 const _relicIdx = new Map(RELICS_SORTED.map((r, i) => [r, i]));

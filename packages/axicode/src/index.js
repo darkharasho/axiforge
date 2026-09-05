@@ -150,8 +150,13 @@ function encodeShareCode(build) {
   w.write(flags, 8);
 
   // Core build
-  w.write(professionToIndex(build.profession), 4);
-  w.write(GAME_MODES.indexOf(build.gameMode), 2);
+  // An unknown profession/game mode has always encoded as the field's all-ones
+  // value, which decodes back to empty/"pve". Keep writing that sentinel
+  // explicitly now that BitWriter refuses to wrap a -1 around.
+  const profIdx = professionToIndex(build.profession);
+  w.write(profIdx >= 0 ? profIdx : 0b1111, 4);
+  const gameModeIdx = GAME_MODES.indexOf(build.gameMode);
+  w.write(gameModeIdx >= 0 ? gameModeIdx : 0b11, 2);
 
   for (let i = 0; i < 3; i++) {
     const spec = build.specializations[i];
