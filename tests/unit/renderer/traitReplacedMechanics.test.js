@@ -10,8 +10,12 @@
  * pool — so without an explicit rule the slot can never resolve to it.
  */
 
-const rawNecro = require("../../../src/web/public/catalogs/Necromancer-pve.json");
-const rawEle = require("../../../src/web/public/catalogs/Elementalist-pve.json");
+// Fixtures, not the baked catalogs under src/web/public/catalogs — those are
+// gitignored build artifacts, so requiring them passes locally and fails in CI.
+// Trimmed from the real baked data (profession-mechanic skills, their flip
+// targets, and the two traits under test) by scripts/gen-mechanics-fixtures.mjs.
+const rawNecro = require("../../fixtures/catalogs/Necromancer-mechanics.json");
+const rawEle = require("../../fixtures/catalogs/Elementalist-mechanics.json");
 const {
   buildMechanicSlotsForRender,
   getSkillOptionsByType,

@@ -1,0 +1,519 @@
+{
+ "profession": {
+  "id": "Necromancer"
+ },
+ "professionWeapons": {},
+ "specializations": [
+  {
+   "id": 60,
+   "name": "Scourge",
+   "elite": true,
+   "profession": "Necromancer"
+  }
+ ],
+ "traits": [
+  {
+   "id": 2123,
+   "name": "Herald of Sorrow",
+   "slot": "Major",
+   "tier": 2,
+   "specialization": 60,
+   "traitSkillIds": [
+    54870
+   ]
+  }
+ ],
+ "skills": [
+  {
+   "id": 10574,
+   "name": "Death Shroud",
+   "slot": "Profession_1",
+   "type": "Profession",
+   "specialization": 0,
+   "flipSkill": 10585,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Necromancer"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 30792,
+   "name": "Reaper's Shroud",
+   "slot": "Profession_1",
+   "type": "Profession",
+   "specialization": 34,
+   "flipSkill": 30961,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Necromancer"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 40813,
+   "name": "Nefarious Favor",
+   "slot": "Profession_2",
+   "type": "Profession",
+   "specialization": 60,
+   "flipSkill": 0,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Necromancer"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 43448,
+   "name": "Sand Cascade",
+   "slot": "Profession_3",
+   "type": "Profession",
+   "specialization": 60,
+   "flipSkill": 0,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Necromancer"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 44428,
+   "name": "Garish Pillar",
+   "slot": "Profession_4",
+   "type": "Profession",
+   "specialization": 60,
+   "flipSkill": 0,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Necromancer"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 44663,
+   "name": "Desert Shroud",
+   "slot": "Profession_5",
+   "type": "Profession",
+   "specialization": 60,
+   "flipSkill": 54870,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Necromancer"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 44946,
+   "name": "Manifest Sand Shade",
+   "slot": "Profession_1",
+   "type": "Profession",
+   "specialization": 60,
+   "flipSkill": 0,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Necromancer"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 42297,
+   "name": "Manifest Sand Shade",
+   "slot": "Profession_1",
+   "type": "Profession",
+   "specialization": 60,
+   "flipSkill": 0,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Necromancer"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 46474,
+   "name": "Manifest Sand Shade",
+   "slot": "Profession_1",
+   "type": "Profession",
+   "specialization": 60,
+   "flipSkill": 0,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Necromancer"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 46473,
+   "name": "Manifest Sand Shade",
+   "slot": "Profession_1",
+   "type": "Profession",
+   "specialization": 60,
+   "flipSkill": 0,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Necromancer"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 62567,
+   "name": "Harbinger Shroud",
+   "slot": "Profession_1",
+   "type": "Profession",
+   "specialization": 64,
+   "flipSkill": 62540,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Necromancer"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 77238,
+   "name": "Ritualist's Shroud",
+   "slot": "Profession_1",
+   "type": "Profession",
+   "specialization": 76,
+   "flipSkill": 76933,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Necromancer"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 10585,
+   "name": "End Death Shroud",
+   "slot": "Profession_1",
+   "type": "Profession",
+   "specialization": 0,
+   "flipSkill": 0,
+   "inProfessionEndpoint": false,
+   "professions": [
+    "Necromancer"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 46473,
+   "name": "Manifest Sand Shade",
+   "slot": "Profession_1",
+   "type": "Profession",
+   "specialization": 60,
+   "flipSkill": 0,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Necromancer"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 76933,
+   "name": "Exit Ritualist's Shroud",
+   "slot": "Profession_1",
+   "type": "Profession",
+   "specialization": 0,
+   "flipSkill": 0,
+   "inProfessionEndpoint": false,
+   "professions": [
+    "Necromancer"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 76647,
+   "name": "Innervate Preservation",
+   "slot": "Profession_4",
+   "type": "Profession",
+   "specialization": 76,
+   "flipSkill": 76602,
+   "inProfessionEndpoint": false,
+   "professions": [
+    "Necromancer"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 30792,
+   "name": "Reaper's Shroud",
+   "slot": "Profession_1",
+   "type": "Profession",
+   "specialization": 34,
+   "flipSkill": 30961,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Necromancer"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 42297,
+   "name": "Manifest Sand Shade",
+   "slot": "Profession_1",
+   "type": "Profession",
+   "specialization": 60,
+   "flipSkill": 0,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Necromancer"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 40813,
+   "name": "Nefarious Favor",
+   "slot": "Profession_2",
+   "type": "Profession",
+   "specialization": 60,
+   "flipSkill": 0,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Necromancer"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 76732,
+   "name": "Innervate Wanderlust",
+   "slot": "Profession_3",
+   "type": "Profession",
+   "specialization": 76,
+   "flipSkill": 0,
+   "inProfessionEndpoint": false,
+   "professions": [
+    "Necromancer"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 46474,
+   "name": "Manifest Sand Shade",
+   "slot": "Profession_1",
+   "type": "Profession",
+   "specialization": 60,
+   "flipSkill": 0,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Necromancer"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 77238,
+   "name": "Ritualist's Shroud",
+   "slot": "Profession_1",
+   "type": "Profession",
+   "specialization": 76,
+   "flipSkill": 76933,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Necromancer"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 76758,
+   "name": "Innervate Wanderlust",
+   "slot": "Profession_3",
+   "type": "Profession",
+   "specialization": 76,
+   "flipSkill": 76732,
+   "inProfessionEndpoint": false,
+   "professions": [
+    "Necromancer"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 62567,
+   "name": "Harbinger Shroud",
+   "slot": "Profession_1",
+   "type": "Profession",
+   "specialization": 64,
+   "flipSkill": 62540,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Necromancer"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 30961,
+   "name": "Exit Reaper's Shroud",
+   "slot": "Profession_1",
+   "type": "Profession",
+   "specialization": 0,
+   "flipSkill": 0,
+   "inProfessionEndpoint": false,
+   "professions": [
+    "Necromancer"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 54870,
+   "name": "Sandstorm Shroud",
+   "slot": "Profession_5",
+   "type": "Profession",
+   "specialization": 60,
+   "flipSkill": 0,
+   "inProfessionEndpoint": false,
+   "professions": [
+    "Necromancer"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 44663,
+   "name": "Desert Shroud",
+   "slot": "Profession_5",
+   "type": "Profession",
+   "specialization": 60,
+   "flipSkill": 54870,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Necromancer"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 43448,
+   "name": "Sand Cascade",
+   "slot": "Profession_3",
+   "type": "Profession",
+   "specialization": 60,
+   "flipSkill": 0,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Necromancer"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 44428,
+   "name": "Garish Pillar",
+   "slot": "Profession_4",
+   "type": "Profession",
+   "specialization": 60,
+   "flipSkill": 0,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Necromancer"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 77003,
+   "name": "Innervate Anguish",
+   "slot": "Profession_2",
+   "type": "Profession",
+   "specialization": 76,
+   "flipSkill": 0,
+   "inProfessionEndpoint": false,
+   "professions": [
+    "Necromancer"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 77050,
+   "name": "Innervate Anguish",
+   "slot": "Profession_2",
+   "type": "Profession",
+   "specialization": 76,
+   "flipSkill": 77003,
+   "inProfessionEndpoint": false,
+   "professions": [
+    "Necromancer"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 10574,
+   "name": "Death Shroud",
+   "slot": "Profession_1",
+   "type": "Profession",
+   "specialization": 0,
+   "flipSkill": 10585,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Necromancer"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 44946,
+   "name": "Manifest Sand Shade",
+   "slot": "Profession_1",
+   "type": "Profession",
+   "specialization": 60,
+   "flipSkill": 0,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Necromancer"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 76602,
+   "name": "Innervate Preservation",
+   "slot": "Profession_4",
+   "type": "Profession",
+   "specialization": 76,
+   "flipSkill": 0,
+   "inProfessionEndpoint": false,
+   "professions": [
+    "Necromancer"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 62540,
+   "name": "Exit Harbinger Shroud",
+   "slot": "Profession_1",
+   "type": "Profession",
+   "specialization": 0,
+   "flipSkill": 0,
+   "inProfessionEndpoint": false,
+   "professions": [
+    "Necromancer"
+   ],
+   "attunement": "",
+   "icon": ""
+  }
+ ],
+ "weaponSkills": []
+}

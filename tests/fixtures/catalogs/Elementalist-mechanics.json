@@ -1,0 +1,648 @@
+{
+ "profession": {
+  "id": "Elementalist"
+ },
+ "professionWeapons": {},
+ "specializations": [
+  {
+   "id": 48,
+   "name": "Tempest",
+   "elite": true,
+   "profession": "Elementalist"
+  }
+ ],
+ "traits": [
+  {
+   "id": 2025,
+   "name": "Singularity",
+   "slot": "Minor",
+   "tier": 1,
+   "specialization": 48,
+   "traitSkillIds": [
+    29706,
+    29415,
+    29719,
+    29618
+   ]
+  }
+ ],
+ "skills": [
+  {
+   "id": 5494,
+   "name": "Air Attunement",
+   "slot": "Profession_3",
+   "type": "Profession",
+   "specialization": 0,
+   "flipSkill": 29719,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Elementalist"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 5495,
+   "name": "Earth Attunement",
+   "slot": "Profession_4",
+   "type": "Profession",
+   "specialization": 0,
+   "flipSkill": 29618,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Elementalist"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 5492,
+   "name": "Fire Attunement",
+   "slot": "Profession_1",
+   "type": "Profession",
+   "specialization": 0,
+   "flipSkill": 29706,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Elementalist"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 5493,
+   "name": "Water Attunement",
+   "slot": "Profession_2",
+   "type": "Profession",
+   "specialization": 0,
+   "flipSkill": 29415,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Elementalist"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 62940,
+   "name": "Deploy Jade Sphere",
+   "slot": "Profession_5",
+   "type": "Profession",
+   "specialization": 67,
+   "flipSkill": 0,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Elementalist"
+   ],
+   "attunement": "Air",
+   "icon": ""
+  },
+  {
+   "id": 63439,
+   "name": "Deploy Jade Sphere",
+   "slot": "Profession_5",
+   "type": "Profession",
+   "specialization": 67,
+   "flipSkill": 0,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Elementalist"
+   ],
+   "attunement": "Air",
+   "icon": ""
+  },
+  {
+   "id": 63459,
+   "name": "Deploy Jade Sphere",
+   "slot": "Profession_5",
+   "type": "Profession",
+   "specialization": 67,
+   "flipSkill": 0,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Elementalist"
+   ],
+   "attunement": "Air",
+   "icon": ""
+  },
+  {
+   "id": 62813,
+   "name": "Deploy Jade Sphere",
+   "slot": "Profession_5",
+   "type": "Profession",
+   "specialization": 67,
+   "flipSkill": 0,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Elementalist"
+   ],
+   "attunement": "Fire",
+   "icon": ""
+  },
+  {
+   "id": 63458,
+   "name": "Deploy Jade Sphere",
+   "slot": "Profession_5",
+   "type": "Profession",
+   "specialization": 67,
+   "flipSkill": 0,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Elementalist"
+   ],
+   "attunement": "Fire",
+   "icon": ""
+  },
+  {
+   "id": 63396,
+   "name": "Deploy Jade Sphere",
+   "slot": "Profession_5",
+   "type": "Profession",
+   "specialization": 67,
+   "flipSkill": 0,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Elementalist"
+   ],
+   "attunement": "Fire",
+   "icon": ""
+  },
+  {
+   "id": 62723,
+   "name": "Deploy Jade Sphere",
+   "slot": "Profession_5",
+   "type": "Profession",
+   "specialization": 67,
+   "flipSkill": 0,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Elementalist"
+   ],
+   "attunement": "Water",
+   "icon": ""
+  },
+  {
+   "id": 63416,
+   "name": "Deploy Jade Sphere",
+   "slot": "Profession_5",
+   "type": "Profession",
+   "specialization": 67,
+   "flipSkill": 0,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Elementalist"
+   ],
+   "attunement": "Water",
+   "icon": ""
+  },
+  {
+   "id": 63461,
+   "name": "Deploy Jade Sphere",
+   "slot": "Profession_5",
+   "type": "Profession",
+   "specialization": 67,
+   "flipSkill": 0,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Elementalist"
+   ],
+   "attunement": "Water",
+   "icon": ""
+  },
+  {
+   "id": 62837,
+   "name": "Deploy Jade Sphere",
+   "slot": "Profession_5",
+   "type": "Profession",
+   "specialization": 67,
+   "flipSkill": 0,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Elementalist"
+   ],
+   "attunement": "Earth",
+   "icon": ""
+  },
+  {
+   "id": 63454,
+   "name": "Deploy Jade Sphere",
+   "slot": "Profession_5",
+   "type": "Profession",
+   "specialization": 67,
+   "flipSkill": 0,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Elementalist"
+   ],
+   "attunement": "Earth",
+   "icon": ""
+  },
+  {
+   "id": 63472,
+   "name": "Deploy Jade Sphere",
+   "slot": "Profession_5",
+   "type": "Profession",
+   "specialization": 67,
+   "flipSkill": 0,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Elementalist"
+   ],
+   "attunement": "Earth",
+   "icon": ""
+  },
+  {
+   "id": 76643,
+   "name": "Ignite",
+   "slot": "Profession_5",
+   "type": "Profession",
+   "specialization": 80,
+   "flipSkill": 77074,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Elementalist"
+   ],
+   "attunement": "Fire",
+   "icon": ""
+  },
+  {
+   "id": 75399,
+   "name": "Deploy Jade Sphere",
+   "slot": "Profession_5",
+   "type": "Profession",
+   "specialization": 67,
+   "flipSkill": 0,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Elementalist"
+   ],
+   "attunement": "Air",
+   "icon": ""
+  },
+  {
+   "id": 75394,
+   "name": "Deploy Jade Sphere",
+   "slot": "Profession_5",
+   "type": "Profession",
+   "specialization": 67,
+   "flipSkill": 0,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Elementalist"
+   ],
+   "attunement": "Air",
+   "icon": ""
+  },
+  {
+   "id": 75391,
+   "name": "Deploy Jade Sphere",
+   "slot": "Profession_5",
+   "type": "Profession",
+   "specialization": 67,
+   "flipSkill": 0,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Elementalist"
+   ],
+   "attunement": "Fire",
+   "icon": ""
+  },
+  {
+   "id": 75395,
+   "name": "Deploy Jade Sphere",
+   "slot": "Profession_5",
+   "type": "Profession",
+   "specialization": 67,
+   "flipSkill": 0,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Elementalist"
+   ],
+   "attunement": "Fire",
+   "icon": ""
+  },
+  {
+   "id": 75406,
+   "name": "Deploy Jade Sphere",
+   "slot": "Profession_5",
+   "type": "Profession",
+   "specialization": 67,
+   "flipSkill": 0,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Elementalist"
+   ],
+   "attunement": "Water",
+   "icon": ""
+  },
+  {
+   "id": 75392,
+   "name": "Deploy Jade Sphere",
+   "slot": "Profession_5",
+   "type": "Profession",
+   "specialization": 67,
+   "flipSkill": 0,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Elementalist"
+   ],
+   "attunement": "Water",
+   "icon": ""
+  },
+  {
+   "id": 75405,
+   "name": "Deploy Jade Sphere",
+   "slot": "Profession_5",
+   "type": "Profession",
+   "specialization": 67,
+   "flipSkill": 0,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Elementalist"
+   ],
+   "attunement": "Earth",
+   "icon": ""
+  },
+  {
+   "id": 75407,
+   "name": "Deploy Jade Sphere",
+   "slot": "Profession_5",
+   "type": "Profession",
+   "specialization": 67,
+   "flipSkill": 0,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Elementalist"
+   ],
+   "attunement": "Earth",
+   "icon": ""
+  },
+  {
+   "id": 76580,
+   "name": "Air Attunement",
+   "slot": "Profession_3",
+   "type": "Profession",
+   "specialization": 56,
+   "flipSkill": 0,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Elementalist"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 76988,
+   "name": "Water Attunement",
+   "slot": "Profession_2",
+   "type": "Profession",
+   "specialization": 56,
+   "flipSkill": 0,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Elementalist"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 76703,
+   "name": "Fire Attunement",
+   "slot": "Profession_1",
+   "type": "Profession",
+   "specialization": 56,
+   "flipSkill": 0,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Elementalist"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 77082,
+   "name": "Earth Attunement",
+   "slot": "Profession_4",
+   "type": "Profession",
+   "specialization": 56,
+   "flipSkill": 0,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Elementalist"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 76585,
+   "name": "Conflagration",
+   "slot": "Profession_5",
+   "type": "Profession",
+   "specialization": 56,
+   "flipSkill": 0,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Elementalist"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 76811,
+   "name": "Buoyant Deluge",
+   "slot": "Profession_5",
+   "type": "Profession",
+   "specialization": 56,
+   "flipSkill": 0,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Elementalist"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 77089,
+   "name": "Lightning Blitz",
+   "slot": "Profession_5",
+   "type": "Profession",
+   "specialization": 56,
+   "flipSkill": 0,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Elementalist"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 76707,
+   "name": "Seismic Impact",
+   "slot": "Profession_5",
+   "type": "Profession",
+   "specialization": 56,
+   "flipSkill": 0,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Elementalist"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 80231,
+   "name": "Unravel",
+   "slot": "Profession_5",
+   "type": "Profession",
+   "specialization": 56,
+   "flipSkill": 0,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Elementalist"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 29719,
+   "name": "Overload Air",
+   "slot": "Profession_3",
+   "type": "Profession",
+   "specialization": 0,
+   "flipSkill": 0,
+   "inProfessionEndpoint": false,
+   "professions": [
+    "Elementalist"
+   ],
+   "attunement": "Air",
+   "icon": ""
+  },
+  {
+   "id": 29618,
+   "name": "Overload Earth",
+   "slot": "Profession_4",
+   "type": "Profession",
+   "specialization": 0,
+   "flipSkill": 0,
+   "inProfessionEndpoint": false,
+   "professions": [
+    "Elementalist"
+   ],
+   "attunement": "Earth",
+   "icon": ""
+  },
+  {
+   "id": 29706,
+   "name": "Overload Fire",
+   "slot": "Profession_1",
+   "type": "Profession",
+   "specialization": 0,
+   "flipSkill": 0,
+   "inProfessionEndpoint": false,
+   "professions": [
+    "Elementalist"
+   ],
+   "attunement": "Fire",
+   "icon": ""
+  },
+  {
+   "id": 29415,
+   "name": "Overload Water",
+   "slot": "Profession_2",
+   "type": "Profession",
+   "specialization": 0,
+   "flipSkill": 0,
+   "inProfessionEndpoint": false,
+   "professions": [
+    "Elementalist"
+   ],
+   "attunement": "Water",
+   "icon": ""
+  },
+  {
+   "id": 77225,
+   "name": "Splash",
+   "slot": "Profession_5",
+   "type": "",
+   "specialization": 80,
+   "flipSkill": 77357,
+   "inProfessionEndpoint": true,
+   "professions": [],
+   "attunement": "Water",
+   "icon": ""
+  },
+  {
+   "id": 77370,
+   "name": "Zap",
+   "slot": "Profession_5",
+   "type": "",
+   "specialization": 80,
+   "flipSkill": 76618,
+   "inProfessionEndpoint": true,
+   "professions": [],
+   "attunement": "Air",
+   "icon": ""
+  },
+  {
+   "id": 77226,
+   "name": "Calcify",
+   "slot": "Profession_5",
+   "type": "",
+   "specialization": 80,
+   "flipSkill": 76681,
+   "inProfessionEndpoint": true,
+   "professions": [],
+   "attunement": "Earth",
+   "icon": ""
+  },
+  {
+   "id": 77074,
+   "name": "Conflagration",
+   "slot": "",
+   "type": "Profession",
+   "specialization": 80,
+   "flipSkill": 0,
+   "inProfessionEndpoint": false,
+   "professions": [],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 77357,
+   "name": "Buoyant Deluge",
+   "slot": "",
+   "type": "Profession",
+   "specialization": 80,
+   "flipSkill": 0,
+   "inProfessionEndpoint": false,
+   "professions": [],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 76618,
+   "name": "Lightning Blitz",
+   "slot": "",
+   "type": "Profession",
+   "specialization": 80,
+   "flipSkill": 0,
+   "inProfessionEndpoint": false,
+   "professions": [],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 76681,
+   "name": "Seismic Impact",
+   "slot": "",
+   "type": "Profession",
+   "specialization": 80,
+   "flipSkill": 0,
+   "inProfessionEndpoint": false,
+   "professions": [],
+   "attunement": "",
+   "icon": ""
+  }
+ ],
+ "weaponSkills": []
+}
