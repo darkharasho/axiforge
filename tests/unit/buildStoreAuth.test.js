@@ -24,17 +24,24 @@ jest.mock("electron", () => ({
   },
 }));
 
-const { BuildStore } = require("../../src/main/buildStore");
+const { BuildStore, resetSafeStorageWarnings } = require("../../src/main/buildStore");
 
 let dir, store;
 beforeEach(async () => {
   keyring.available = false;
   keyring.corrupt = false;
+  resetSafeStorageWarnings();
   dir = await fs.mkdtemp(path.join(os.tmpdir(), "axiforge-auth-"));
   store = new BuildStore(dir);
   await store.init();
 });
 afterEach(async () => { await fs.rm(dir, { recursive: true, force: true }); });
+
+// The plaintext fallback warns by design, so most tests here trip it. Keep it out
+// of the run output; the suite below spies on it again to assert it happened.
+let quietWarn;
+beforeEach(() => { quietWarn = jest.spyOn(console, "warn").mockImplementation(() => {}); });
+afterEach(() => { quietWarn.mockRestore(); });
 
 const raw = () => fs.readFile(path.join(dir, "auth.json"), "utf8");
 
@@ -131,5 +138,47 @@ describe("updateAuth serialization (m4)", () => {
     const out = await store.updateAuth(() => undefined);
     expect(out).toEqual({ token: "gh" });
     expect(await raw()).toBe(before);
+  });
+});
+
+// Falling back to plaintext is a supported outcome, but a SILENT fallback is not:
+// it puts a live GitHub PAT and team-sync session token on disk in the clear with
+// nothing in the log to say so. Each distinct reason must announce itself once.
+describe("the plaintext fallback is never silent", () => {
+  let warn;
+  beforeEach(() => { warn = jest.spyOn(console, "warn").mockImplementation(() => {}); });
+  afterEach(() => { warn.mockRestore(); });
+
+  const lines = () => warn.mock.calls.map((c) => c.join(" "));
+
+  test("no keyring: says so, once, however many writes follow", async () => {
+    await store.saveAuth({ token: "ghp_x" });
+    await store.saveAuth({ token: "ghp_y" });
+    await store.updateAuth((a) => ({ ...a, sync: { sessionToken: "s" } }));
+    expect(lines().filter((l) => /no OS keyring available/.test(l))).toHaveLength(1);
+    // ...and the fallback itself still works exactly as before.
+    expect(await store.getAuth()).toEqual({ token: "ghp_y", sync: { sessionToken: "s" } });
+  });
+
+  test("isEncryptionAvailable() throwing is reported, not swallowed", async () => {
+    const ss = require("electron").safeStorage;
+    const spy = jest.spyOn(ss, "isEncryptionAvailable").mockImplementation(() => { throw new Error("dbus is down"); });
+    await store.saveAuth({ token: "ghp_x" });
+    spy.mockRestore();
+    expect(lines().some((l) => /isEncryptionAvailable\(\) threw/.test(l) && /dbus is down/.test(l))).toBe(true);
+    expect(await store.getAuth()).toEqual({ token: "ghp_x" }); // write survived
+  });
+
+  test("an Electron with no safeStorage at all is reported", async () => {
+    const electron = require("electron");
+    const real = electron.safeStorage;
+    delete electron.safeStorage;
+    try {
+      await store.saveAuth({ token: "ghp_x" });
+    } finally {
+      electron.safeStorage = real;
+    }
+    expect(lines().some((l) => /no usable safeStorage/.test(l))).toBe(true);
+    expect(JSON.parse(await raw())).toEqual({ token: "ghp_x" });
   });
 });

@@ -8,13 +8,56 @@ const { readJsonFile, writeJsonAtomic } = require("./jsonFile");
 // is only meaningful after app-ready, and buildStore is also loaded outside
 // Electron entirely (unit tests, scripts), where `require("electron")` resolves
 // to a path string with no `safeStorage` on it.
+//
+// Every path that gives up on encryption says so exactly once. A bare `catch {}`
+// here used to make "no keyring on this box" (expected, supported) and "Electron
+// is broken and threw" (not expected) look identical from the outside: both
+// quietly wrote a real GitHub PAT and team-sync session token to disk in the
+// clear, with nothing in the log to say it had happened.
+const warnedReasons = new Set();
+function warnOnce(reason, ...args) {
+  if (warnedReasons.has(reason)) return;
+  warnedReasons.add(reason);
+  console.warn(...args);
+}
+
 function usableSafeStorage() {
+  let electron;
   try {
-    const electron = require("electron");
-    const ss = electron && electron.safeStorage;
-    if (ss && typeof ss.isEncryptionAvailable === "function" && ss.isEncryptionAvailable()) return ss;
-  } catch { /* not running under Electron */ }
+    electron = require("electron");
+  } catch (err) {
+    // Genuinely absent is the normal case for unit tests and CLI scripts and is
+    // not worth a word. A broken install ("Electron failed to install correctly")
+    // is a different animal and must not pass silently.
+    if (err?.code !== "MODULE_NOT_FOUND") {
+      warnOnce("require", "[auth] could not load Electron; auth.json will be stored in plaintext:", err?.message || err);
+    }
+    return null;
+  }
+  // Outside Electron the module resolves to the path of the binary, a string.
+  // Also expected, also silent.
+  if (!electron || typeof electron !== "object") return null;
+  const ss = electron.safeStorage;
+  if (!ss || typeof ss.isEncryptionAvailable !== "function") {
+    warnOnce("missing", "[auth] Electron exposes no usable safeStorage; auth.json will be stored in plaintext.");
+    return null;
+  }
+  try {
+    if (ss.isEncryptionAvailable()) return ss;
+  } catch (err) {
+    warnOnce("check", "[auth] safeStorage.isEncryptionAvailable() threw; auth.json will be stored in plaintext:", err?.message || err);
+    return null;
+  }
+  // The deliberate, supported fallback: a Linux box with no keyring. Still said
+  // once, so "why is my token in plaintext?" is answerable from the log.
+  warnOnce("unavailable", "[auth] no OS keyring available; auth.json will be stored in plaintext.");
   return null;
+}
+
+// Tests only: the warn-once state is module-global by design (these run on every
+// auth read and write), so a suite that asserts on the warnings has to clear it.
+function resetSafeStorageWarnings() {
+  warnedReasons.clear();
 }
 
 class BuildStore {
@@ -613,4 +656,4 @@ function asIso(value) {
   return d.toISOString();
 }
 
-module.exports = { BuildStore };
+module.exports = { BuildStore, resetSafeStorageWarnings };
