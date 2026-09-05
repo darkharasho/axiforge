@@ -1,3 +1,20 @@
+## Version v0.15.0 — September 5, 2026
+
+### Import a build from an AxiForge link
+
+- **Paste a published AxiForge link and get the build.** The same treatment GW2Skills links already had, now for our own share links — *Import → AxiForge Link*, also in the folder and library context menus. Paste `https://<user>.github.io/<site>/?b=…` and the build lands in your library.
+- **It works the moment the link does.** The build is read from the same place the site reads it from, so a link a teammate published seconds ago imports immediately rather than waiting on the page to redeploy.
+- **The imported copy is yours.** It comes in without the original's publish identity, so re-publishing your copy can't overwrite the build you got it from. Short `/r/…` links work too, and a link to a comp says so instead of failing with a mysterious error.
+
+### Bug Fixes
+
+- **Deleting inside a comp no longer destroys the builds.** The comp view only ever offered *Unlink from Comp*, but the Delete key ignored that and hard-deleted the underlying builds — from a view that never showed a Delete option at all. Delete now unlinks, matching the menu and what dragging an entry out already did.
+- **Builds and comps stranded by an older folder delete come back.** Before the Trash existed, deleting a folder left the comps inside it pointing at a folder that was gone, which made them render in no view at all — still on disk, invisible everywhere. Anything orphaned this way is now returned to the root at startup.
+- **A blocked drag no longer looks frozen.** Dropping a folder somewhere it can't go (too deep, or a folder you don't own) left the item painted where you dropped it with no message, as if the drag had hung halfway. Every refused drop now snaps back and says why.
+- **Typing in comp notes stops losing focus.** The notes autosave triggered a team sync whose status update re-rendered the page and destroyed the textarea mid-word. Any focused text field now holds the re-render off until you leave it.
+- **Failed updates say what went wrong.** The pill said "Update failed" and vanished after five seconds, which left the log file as the only diagnostic. The reason is now in the pill's tooltip and it stays up long enough to read.
+- **A failed update download can no longer take the app down with it.** An interrupted download — the ordinary outcome of a flaky connection on a 110 MB installer — escaped as an unhandled rejection and killed the main process. A check that timed out also left the titlebar stuck on "Checking…" for the rest of the session.
+
 ## Version v0.14.0 — September 5, 2026
 
 ### Deleting is no longer permanent
