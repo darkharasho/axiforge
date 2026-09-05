@@ -19,11 +19,14 @@ const DEST = "tests/fixtures/catalogs";
 
 // Keep only what a mechanics test resolves against.
 const TARGETS = [
-  { profession: "Necromancer", specIds: [60], traitIds: [2123] },  // Scourge / Herald of Sorrow
+  // Scourge / Herald of Sorrow (F5 replacement) + Curses / Lingering Curse (scepter 3).
+  { profession: "Necromancer", specIds: [60, 39], traitIds: [2123, 801], weapons: ["scepter"] },
   { profession: "Elementalist", specIds: [48], traitIds: [2025] }, // Tempest / Singularity
+  // Virtues / Glacial Heart replaces hammer 2 Mighty Blow with Glacial Blow.
+  { profession: "Guardian", specIds: [46], traitIds: [587], weapons: ["hammer"] },
 ];
 
-function trim({ profession, specIds, traitIds }) {
+function trim({ profession, specIds, traitIds, weapons = [] }) {
   const catalog = JSON.parse(fs.readFileSync(`${SOURCE}/${profession}-pve.json`, "utf8"));
   const skills = catalog.skills || [];
 
@@ -65,9 +68,35 @@ function trim({ profession, specIds, traitIds }) {
     weaponSkills: [],
   };
 
+  // Weapon fixtures for the trait-replaced weapon-skill tests. professionWeapons drives
+  // slot resolution; weaponSkills is what the slots resolve against.
+  const keepWeapon = new Set();
+  for (const [name, data] of Object.entries(catalog.professionWeapons || {})) {
+    if (!weapons.includes(name.toLowerCase())) continue;
+    out.professionWeapons[name] = {
+      flags: data.flags || [],
+      skills: (data.skills || []).map((r) => ({ id: r.id, slot: r.slot, attunement: r.attunement || "" })),
+    };
+    for (const ref of (data.skills || [])) keepWeapon.add(Number(ref.id));
+  }
+  const weaponById = new Map((catalog.weaponSkills || []).map((s) => [Number(s.id), s]));
+  // Flip targets are the whole point here — a replacement is only ever reachable as one.
+  for (const id of [...keepWeapon]) {
+    const flip = Number(weaponById.get(id)?.flipSkill) || 0;
+    if (flip) keepWeapon.add(flip);
+  }
+  out.weaponSkills = [...keepWeapon]
+    .map((id) => weaponById.get(id))
+    .filter(Boolean)
+    .map((s) => ({
+      id: s.id, name: s.name, slot: s.slot, weaponType: s.weaponType || "",
+      flipSkill: s.flipSkill || 0, attunement: s.attunement || "",
+      dualWield: s.dualWield || "", flags: s.flags || [], icon: "",
+    }));
+
   const path = `${DEST}/${profession}-mechanics.json`;
   fs.writeFileSync(path, `${JSON.stringify(out, null, 1)}\n`);
-  console.log(`${path} — ${out.skills.length} skills, ${out.traits.length} traits`);
+  console.log(`${path} — ${out.skills.length} skills, ${out.weaponSkills.length} weapon skills, ${out.traits.length} traits`);
 }
 
 fs.mkdirSync(DEST, { recursive: true });

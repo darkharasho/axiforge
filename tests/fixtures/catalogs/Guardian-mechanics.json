@@ -1,0 +1,588 @@
+{
+ "profession": {
+  "id": "Guardian"
+ },
+ "professionWeapons": {
+  "hammer": {
+   "flags": [
+    "TwoHand"
+   ],
+   "skills": [
+    {
+     "id": 9159,
+     "slot": "Weapon_1",
+     "attunement": ""
+    },
+    {
+     "id": 9194,
+     "slot": "Weapon_2",
+     "attunement": ""
+    },
+    {
+     "id": 9260,
+     "slot": "Weapon_3",
+     "attunement": ""
+    },
+    {
+     "id": 9124,
+     "slot": "Weapon_4",
+     "attunement": ""
+    },
+    {
+     "id": 9195,
+     "slot": "Weapon_5",
+     "attunement": ""
+    }
+   ]
+  }
+ },
+ "specializations": [
+  {
+   "id": 46,
+   "name": "Virtues",
+   "elite": false,
+   "profession": "Guardian"
+  }
+ ],
+ "traits": [
+  {
+   "id": 587,
+   "name": "Glacial Heart",
+   "slot": "Major",
+   "tier": 2,
+   "specialization": 46,
+   "traitSkillIds": [
+    53482
+   ]
+  }
+ ],
+ "skills": [
+  {
+   "id": 9115,
+   "name": "Virtue of Justice",
+   "slot": "Profession_1",
+   "type": "Profession",
+   "specialization": 0,
+   "flipSkill": 29887,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Guardian"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 9118,
+   "name": "Virtue of Courage",
+   "slot": "Profession_3",
+   "type": "Profession",
+   "specialization": 0,
+   "flipSkill": 9268,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Guardian"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 9120,
+   "name": "Virtue of Resolve",
+   "slot": "Profession_2",
+   "type": "Profession",
+   "specialization": 0,
+   "flipSkill": 9250,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Guardian"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 44364,
+   "name": "Tome of Justice",
+   "slot": "Profession_1",
+   "type": "Profession",
+   "specialization": 62,
+   "flipSkill": 68647,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Guardian"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 41780,
+   "name": "Tome of Resolve",
+   "slot": "Profession_2",
+   "type": "Profession",
+   "specialization": 62,
+   "flipSkill": 68648,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Guardian"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 42259,
+   "name": "Tome of Courage",
+   "slot": "Profession_3",
+   "type": "Profession",
+   "specialization": 62,
+   "flipSkill": 68650,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Guardian"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 42371,
+   "name": "Tome of Courage",
+   "slot": "Profession_3",
+   "type": "Profession",
+   "specialization": 62,
+   "flipSkill": 0,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Guardian"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 41380,
+   "name": "Stow Tome",
+   "slot": "Profession_1",
+   "type": "Profession",
+   "specialization": 62,
+   "flipSkill": 0,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Guardian"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 62668,
+   "name": "Rushing Justice",
+   "slot": "Profession_1",
+   "type": "Profession",
+   "specialization": 65,
+   "flipSkill": 62618,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Guardian"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 62603,
+   "name": "Flowing Resolve",
+   "slot": "Profession_2",
+   "type": "Profession",
+   "specialization": 65,
+   "flipSkill": 62528,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Guardian"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 62648,
+   "name": "Crashing Courage",
+   "slot": "Profession_3",
+   "type": "Profession",
+   "specialization": 65,
+   "flipSkill": 62532,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Guardian"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 78837,
+   "name": "Radiant Justice",
+   "slot": "Profession_1",
+   "type": "Profession",
+   "specialization": 81,
+   "flipSkill": 29887,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Guardian"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 78604,
+   "name": "Radiant Resolve",
+   "slot": "Profession_2",
+   "type": "Profession",
+   "specialization": 81,
+   "flipSkill": 78514,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Guardian"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 78358,
+   "name": "Radiant Courage",
+   "slot": "Profession_3",
+   "type": "Profession",
+   "specialization": 81,
+   "flipSkill": 78770,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Guardian"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 77073,
+   "name": "Enter Radiant Forge",
+   "slot": "Profession_4",
+   "type": "Profession",
+   "specialization": 81,
+   "flipSkill": 76616,
+   "inProfessionEndpoint": true,
+   "professions": [
+    "Guardian"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 29887,
+   "name": "Spear of Justice",
+   "slot": "Profession_1",
+   "type": "Profession",
+   "specialization": 27,
+   "flipSkill": 33134,
+   "inProfessionEndpoint": false,
+   "professions": [
+    "Guardian"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 9268,
+   "name": "Virtue of Courage",
+   "slot": "Profession_3",
+   "type": "Profession",
+   "specialization": 0,
+   "flipSkill": 0,
+   "inProfessionEndpoint": false,
+   "professions": [
+    "Guardian"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 9250,
+   "name": "Virtue of Resolve",
+   "slot": "Profession_2",
+   "type": "Profession",
+   "specialization": 0,
+   "flipSkill": 0,
+   "inProfessionEndpoint": false,
+   "professions": [
+    "Guardian"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 68647,
+   "name": "Tome of Justice",
+   "slot": "Profession_1",
+   "type": "Profession",
+   "specialization": 62,
+   "flipSkill": 0,
+   "inProfessionEndpoint": false,
+   "professions": [
+    "Guardian"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 68648,
+   "name": "Tome of Resolve",
+   "slot": "Profession_2",
+   "type": "Profession",
+   "specialization": 62,
+   "flipSkill": 0,
+   "inProfessionEndpoint": false,
+   "professions": [
+    "Guardian"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 68650,
+   "name": "Tome of Courage",
+   "slot": "Profession_3",
+   "type": "Profession",
+   "specialization": 62,
+   "flipSkill": 0,
+   "inProfessionEndpoint": false,
+   "professions": [
+    "Guardian"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 62618,
+   "name": "Willbender Flames",
+   "slot": "Profession_1",
+   "type": "Profession",
+   "specialization": 65,
+   "flipSkill": 0,
+   "inProfessionEndpoint": false,
+   "professions": [
+    "Guardian"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 62528,
+   "name": "Willbender Flames",
+   "slot": "Profession_2",
+   "type": "Profession",
+   "specialization": 65,
+   "flipSkill": 0,
+   "inProfessionEndpoint": false,
+   "professions": [
+    "Guardian"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 62532,
+   "name": "Crashing Courage",
+   "slot": "Profession_3",
+   "type": "Profession",
+   "specialization": 65,
+   "flipSkill": 0,
+   "inProfessionEndpoint": false,
+   "professions": [
+    "Guardian"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 78514,
+   "name": "Radiant Resolve",
+   "slot": "Profession_2",
+   "type": "Profession",
+   "specialization": 81,
+   "flipSkill": 0,
+   "inProfessionEndpoint": false,
+   "professions": [
+    "Guardian"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 78770,
+   "name": "Radiant Courage",
+   "slot": "Profession_3",
+   "type": "Profession",
+   "specialization": 81,
+   "flipSkill": 0,
+   "inProfessionEndpoint": false,
+   "professions": [
+    "Guardian"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 76616,
+   "name": "Exit Radiant Forge",
+   "slot": "Profession_4",
+   "type": "Profession",
+   "specialization": 81,
+   "flipSkill": 0,
+   "inProfessionEndpoint": false,
+   "professions": [
+    "Guardian"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 53482,
+   "name": "Glacial Blow",
+   "slot": "Weapon_2",
+   "type": "Weapon",
+   "specialization": 0,
+   "flipSkill": 0,
+   "inProfessionEndpoint": false,
+   "professions": [
+    "Guardian"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 33134,
+   "name": "Hunter's Verdict",
+   "slot": "Profession_1",
+   "type": "Profession",
+   "specialization": 27,
+   "flipSkill": 0,
+   "inProfessionEndpoint": false,
+   "professions": [
+    "Guardian"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 30783,
+   "name": "Wings of Resolve",
+   "slot": "Profession_2",
+   "type": "Profession",
+   "specialization": 27,
+   "flipSkill": 30225,
+   "inProfessionEndpoint": false,
+   "professions": [
+    "Guardian"
+   ],
+   "attunement": "",
+   "icon": ""
+  },
+  {
+   "id": 30029,
+   "name": "Shield of Courage",
+   "slot": "Profession_3",
+   "type": "Profession",
+   "specialization": 27,
+   "flipSkill": 30039,
+   "inProfessionEndpoint": false,
+   "professions": [
+    "Guardian"
+   ],
+   "attunement": "",
+   "icon": ""
+  }
+ ],
+ "weaponSkills": [
+  {
+   "id": 9159,
+   "name": "Hammer Swing",
+   "slot": "Weapon_1",
+   "weaponType": "Hammer",
+   "flipSkill": 9160,
+   "attunement": "",
+   "dualWield": "",
+   "flags": [
+    "NoUnderwater"
+   ],
+   "icon": ""
+  },
+  {
+   "id": 9194,
+   "name": "Mighty Blow",
+   "slot": "Weapon_2",
+   "weaponType": "Hammer",
+   "flipSkill": 53482,
+   "attunement": "",
+   "dualWield": "",
+   "flags": [
+    "NoUnderwater"
+   ],
+   "icon": ""
+  },
+  {
+   "id": 9260,
+   "name": "Zealot's Embrace",
+   "slot": "Weapon_3",
+   "weaponType": "Hammer",
+   "flipSkill": 0,
+   "attunement": "",
+   "dualWield": "",
+   "flags": [
+    "NoUnderwater"
+   ],
+   "icon": ""
+  },
+  {
+   "id": 9124,
+   "name": "Banish",
+   "slot": "Weapon_4",
+   "weaponType": "Hammer",
+   "flipSkill": 0,
+   "attunement": "",
+   "dualWield": "",
+   "flags": [
+    "NoUnderwater"
+   ],
+   "icon": ""
+  },
+  {
+   "id": 9195,
+   "name": "Ring of Warding",
+   "slot": "Weapon_5",
+   "weaponType": "Hammer",
+   "flipSkill": 0,
+   "attunement": "",
+   "dualWield": "",
+   "flags": [
+    "NoUnderwater"
+   ],
+   "icon": ""
+  },
+  {
+   "id": 9160,
+   "name": "Hammer Bash",
+   "slot": "Weapon_1",
+   "weaponType": "Hammer",
+   "flipSkill": 9161,
+   "attunement": "",
+   "dualWield": "",
+   "flags": [
+    "NoUnderwater"
+   ],
+   "icon": ""
+  },
+  {
+   "id": 53482,
+   "name": "Glacial Blow",
+   "slot": "Weapon_2",
+   "weaponType": "Hammer",
+   "flipSkill": 0,
+   "attunement": "",
+   "dualWield": "",
+   "flags": [
+    "NoUnderwater"
+   ],
+   "icon": ""
+  }
+ ]
+}

@@ -92,3 +92,110 @@ describe("trait-replaced profession mechanics", () => {
     expect(ids[0]).toBe(FIRE_ATTUNEMENT);
   });
 });
+
+/**
+ * The same replacement rule on the weapon bar.
+ *
+ * Glacial Heart (587) turns Guardian hammer 2 Mighty Blow (9194) into Glacial
+ * Blow (53482); Lingering Curse (801) turns Necromancer scepter 3 Feast of
+ * Corruption (10709) into Devouring Darkness (51647). Both replacements exist in
+ * weaponSkillById but are only reachable as the base skill's flip target, so
+ * nothing resolves a slot to them without an explicit pass.
+ */
+const {
+  applyTraitWeaponReplacements,
+  getSelectedMajorTraitSkillIds,
+} = require("../../../src/renderer/modules/skills");
+const {
+  resolveEquippedWeaponSkills,
+} = require("../../../src/renderer/modules/equipment-weapon-skills");
+const rawGuardian = require("../../fixtures/catalogs/Guardian-mechanics.json");
+
+const GLACIAL_HEART = 587;
+const MIGHTY_BLOW = 9194;
+const GLACIAL_BLOW = 53482;
+const VIRTUES = 46;
+const LINGERING_CURSE = 801;
+const CURSES = 39;
+const FEAST_OF_CORRUPTION = 10709;
+const DEVOURING_DARKNESS = 51647;
+
+function weaponIds(raw, weapons, specializations) {
+  const catalog = normalizeCatalog(raw);
+  const {
+    getEquippedWeaponSkills,
+  } = require("../../../src/renderer/modules/skills");
+  const skills = getEquippedWeaponSkills(catalog, weapons);
+  return applyTraitWeaponReplacements(catalog, skills, specializations)
+    .map((s) => Number(s?.id) || 0);
+}
+
+describe("trait-replaced weapon skills", () => {
+  test("hammer 2 is Mighty Blow without Glacial Heart", () => {
+    const ids = weaponIds(rawGuardian, { mainhand: "hammer", offhand: "" },
+      [{ specializationId: VIRTUES, majorChoices: { 1: 0, 2: 0, 3: 0 } }]);
+    expect(ids[1]).toBe(MIGHTY_BLOW);
+  });
+
+  test("Glacial Heart replaces hammer 2 with Glacial Blow", () => {
+    const ids = weaponIds(rawGuardian, { mainhand: "hammer", offhand: "" },
+      [{ specializationId: VIRTUES, majorChoices: { 1: 0, 2: GLACIAL_HEART, 3: 0 } }]);
+    expect(ids[1]).toBe(GLACIAL_BLOW);
+  });
+
+  test("Glacial Heart leaves the rest of the hammer bar alone", () => {
+    const weapons = { mainhand: "hammer", offhand: "" };
+    const untraited = weaponIds(rawGuardian, weapons,
+      [{ specializationId: VIRTUES, majorChoices: {} }]);
+    const traited = weaponIds(rawGuardian, weapons,
+      [{ specializationId: VIRTUES, majorChoices: { 2: GLACIAL_HEART } }]);
+    expect(traited.filter((_, i) => i !== 1)).toEqual(untraited.filter((_, i) => i !== 1));
+  });
+
+  test("auto-attack chains are not treated as replacements", () => {
+    // Hammer Swing (9159) flips to Hammer Bash — that is the auto-attack chain, and no
+    // trait grants it, so slot 1 must stay on the chain's first step.
+    const ids = weaponIds(rawGuardian, { mainhand: "hammer", offhand: "" },
+      [{ specializationId: VIRTUES, majorChoices: { 2: GLACIAL_HEART } }]);
+    expect(ids[0]).toBe(9159);
+  });
+
+  test("Lingering Curse replaces scepter 3 with Devouring Darkness", () => {
+    const weapons = { mainhand: "scepter", offhand: "" };
+    const untraited = weaponIds(rawNecro, weapons,
+      [{ specializationId: CURSES, majorChoices: {} }]);
+    const traited = weaponIds(rawNecro, weapons,
+      [{ specializationId: CURSES, majorChoices: { 3: LINGERING_CURSE } }]);
+    expect(untraited[2]).toBe(FEAST_OF_CORRUPTION);
+    expect(traited[2]).toBe(DEVOURING_DARKNESS);
+  });
+
+  test("a major trait counted under the wrong spec line does not replace", () => {
+    // majorChoices left behind after a line is swapped would otherwise apply a trait the
+    // build no longer has. Glacial Heart belongs to Virtues (46), not Scourge (60).
+    const ids = weaponIds(rawGuardian, { mainhand: "hammer", offhand: "" },
+      [{ specializationId: 60, majorChoices: { 2: GLACIAL_HEART } }]);
+    expect(ids[1]).toBe(MIGHTY_BLOW);
+  });
+
+  test("the equipment panel resolves the replacement too", () => {
+    // Same slots are rendered by equipment.js via a different entry point.
+    const catalog = normalizeCatalog(rawGuardian);
+    catalog.professionWeapons = rawGuardian.professionWeapons;
+    const editor = {
+      equipment: { weapons: { mainhand1: "hammer", offhand1: "" } },
+      activeWeaponSet: 1,
+      specializations: [{ specializationId: VIRTUES, majorChoices: { 2: GLACIAL_HEART } }],
+    };
+    const ids = resolveEquippedWeaponSkills(catalog, editor).map((s) => Number(s?.id) || 0);
+    expect(ids[1]).toBe(GLACIAL_BLOW);
+  });
+
+  test("minor traits never count as replacements", () => {
+    // Singularity (2025) is a minor granting the Overloads; its skills must not appear.
+    const catalog = normalizeCatalog(rawEle);
+    const ids = getSelectedMajorTraitSkillIds(catalog,
+      [{ specializationId: 48, majorChoices: { 1: 2025 } }]);
+    expect(ids.size).toBe(0);
+  });
+});

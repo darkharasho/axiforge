@@ -3,7 +3,7 @@
  * Extracts weapon resolution logic so both the skills bar and equipment panel
  * can display weapon skills without duplication.
  */
-import { getEquippedWeaponSkills } from "./skills.js";
+import { getEquippedWeaponSkills, applyTraitWeaponReplacements } from "./skills.js";
 
 /**
  * Given a catalog and editor state, resolve the 5 weapon skills for the
@@ -26,21 +26,26 @@ export function resolveEquippedWeaponSkills(catalog, editor) {
     return spec?.elite && spec?.name === "Weaver";
   });
 
+  // A selected major trait can replace a weapon skill outright (Glacial Heart turns hammer 2
+  // into Glacial Blow), so the equipment panel has to apply the same swap the skill bar does.
+  const withTraitSwaps = (skills) =>
+    applyTraitWeaponReplacements(catalog, skills, editor.specializations);
+
   if (isUnderwater) {
     const activeAquatic = activeWeaponSet === 2 ? "aquatic2" : "aquatic1";
-    return getEquippedWeaponSkills(catalog, {
+    return withTraitSwaps(getEquippedWeaponSkills(catalog, {
       mainhand: equippedWeapons[activeAquatic] || "",
       offhand: "",
-    }, activeAttunement, "", false, true);
+    }, activeAttunement, "", false, true));
   }
 
   const mhKey = activeWeaponSet === 2 ? "mainhand2" : "mainhand1";
   const ohKey = activeWeaponSet === 2 ? "offhand2" : "offhand1";
 
-  return getEquippedWeaponSkills(catalog, {
+  return withTraitSwaps(getEquippedWeaponSkills(catalog, {
     mainhand: equippedWeapons[mhKey] || "",
     offhand: equippedWeapons[ohKey] || "",
-  }, activeAttunement, activeAttunement2, isWeaver, false);
+  }, activeAttunement, activeAttunement2, isWeaver, false));
 }
 
 /**
@@ -78,11 +83,16 @@ export function resolveAllWeaponSkills(catalog, editor) {
   const seen = new Set();
   const all = [];
 
+  // Trait replacements apply here too: boon coverage should read the skill the build
+  // actually has on the bar, not the one it replaced.
+  const withTraitSwaps = (skills) =>
+    applyTraitWeaponReplacements(catalog, skills, editor.specializations);
+
   if (isWeaver) {
     // For Weaver, iterate all attunement pairs (including same-element)
     for (const att1 of attunements) {
       for (const att2 of attunements) {
-        const skills = getEquippedWeaponSkills(catalog, weapons, att1, att2, true, isUnderwater);
+        const skills = withTraitSwaps(getEquippedWeaponSkills(catalog, weapons, att1, att2, true, isUnderwater));
         for (const s of skills) {
           if (s && !seen.has(s.id)) { seen.add(s.id); all.push(s); }
         }
@@ -90,7 +100,7 @@ export function resolveAllWeaponSkills(catalog, editor) {
     }
   } else {
     for (const att of attunements) {
-      const skills = getEquippedWeaponSkills(catalog, weapons, att, "", false, isUnderwater);
+      const skills = withTraitSwaps(getEquippedWeaponSkills(catalog, weapons, att, "", false, isUnderwater));
       for (const s of skills) {
         if (s && !seen.has(s.id)) { seen.add(s.id); all.push(s); }
       }

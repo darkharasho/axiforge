@@ -318,6 +318,56 @@ export function applyUnleashWeaponFlip(catalog, weaponSkills) {
   });
 }
 
+/**
+ * Skill ids granted by the MAJOR traits this build has actually selected.
+ *
+ * A major trait can replace a skill outright, and the API models the replacement
+ * as a flip: Guardian hammer's Mighty Blow (9194) lists Glacial Blow (53482) as
+ * its flipSkill, and Glacial Heart (587) lists 53482 among its trait skills.
+ * Nothing on the replaced skill marks that flip as trait-gated, so the selected
+ * traits are the only way to tell a replacement from a real chain.
+ *
+ * Minor traits are excluded: they are auto-granted, and their flip targets
+ * (Tempest's Overloads, Dragonhunter's Spear of Justice) are held/activated
+ * states of the slot skill rather than permanent replacements.
+ */
+export function getSelectedMajorTraitSkillIds(catalog, specializations) {
+  const ids = new Set();
+  for (const entry of specializations || []) {
+    const specId = Number(entry?.specializationId) || 0;
+    if (!specId) continue;
+    for (const traitId of Object.values(entry?.majorChoices || {})) {
+      const trait = catalog?.traitById?.get(Number(traitId) || 0);
+      // The specialization check drops majorChoices left behind when a line is swapped.
+      if (!trait || trait.slot !== "Major" || Number(trait.specialization) !== specId) continue;
+      for (const skillId of (trait.traitSkillIds || [])) ids.add(Number(skillId));
+    }
+  }
+  return ids;
+}
+
+/**
+ * Swap weapon skills that a selected major trait replaces for their replacement.
+ *
+ * Two exist in the game: Glacial Heart (587) turns Guardian hammer 2 Mighty Blow
+ * into Glacial Blow, and Lingering Curse (801) turns Necromancer scepter 3 Feast
+ * of Corruption into Devouring Darkness. Both replacements sit in the weapon
+ * catalog already but are only ever reachable as the base skill's flip target, so
+ * nothing resolves the slot to them without this pass.
+ *
+ * Every path that shows weapon skills must run this, not just the skill bar:
+ * the equipment panel and boon-coverage analysis read the same slots.
+ */
+export function applyTraitWeaponReplacements(catalog, weaponSkills, specializations) {
+  const grantedIds = getSelectedMajorTraitSkillIds(catalog, specializations);
+  if (grantedIds.size === 0) return weaponSkills;
+  return weaponSkills.map((skill) => {
+    const flipId = Number(skill?.flipSkill) || 0;
+    if (!flipId || !grantedIds.has(flipId)) return skill;
+    return catalog?.weaponSkillById?.get(flipId) || catalog?.skillById?.get(flipId) || skill;
+  });
+}
+
 // Returns the offensive and defensive artifact pools for Antiquary's Skritt Swipe.
 // Currently the pools are fixed; hook is here for future trait-based modifications.
 export function getAntiquaryArtifactPools(_catalog, _editor) {
@@ -812,40 +862,27 @@ export function buildMechanicSlotsForRender({
     }
   }
 
-  // A selected major trait can replace a profession mechanic outright. The API models the
-  // replacement as a flip: Scourge's F5 Desert Shroud (44663) lists Sandstorm Shroud (54870)
-  // as its flipSkill, and Herald of Sorrow (2123) lists 54870 among its trait skills. The
+  // A selected major trait can replace a profession mechanic outright: Scourge's F5 Desert
+  // Shroud (44663) becomes Sandstorm Shroud (54870) with Herald of Sorrow (2123). The
   // replacement is a flip target with no profession-endpoint entry, so getSkillOptionsByType
   // drops it from the candidate pool and the slot can never resolve to it on its own.
-  // Minor traits are excluded: their flip targets (Tempest Overloads, Dragonhunter's Spear of
-  // Justice) are held/activated states of the slot skill, not permanent replacements.
-  const selectedMajorTraitIds = new Set(
-    Object.values(eliteSpecEntry?.majorChoices || {}).map(Number).filter(Boolean)
-  );
-  if (eliteSpecId && selectedMajorTraitIds.size > 0) {
-    const traitReplacements = new Map(); // replaced skill's flipSkill id → replacement skill
-    for (const traitId of selectedMajorTraitIds) {
-      const trait = catalog.traitById?.get(traitId);
-      if (!trait || trait.slot !== "Major" || Number(trait.specialization) !== eliteSpecId) continue;
-      for (const skillId of (trait.traitSkillIds || [])) {
-        const replacement = catalog.skillById.get(Number(skillId));
-        if (replacement) traitReplacements.set(Number(skillId), replacement);
-      }
-    }
-    if (traitReplacements.size > 0) {
-      mechSlots = mechSlots.map((slot) => {
-        const flipId = Number(slot?.skill?.flipSkill) || 0;
-        const replacement = flipId ? traitReplacements.get(flipId) : null;
-        if (!replacement) return slot;
-        return {
-          ...slot,
-          skill: replacement,
-          // Only static slots key their sourceId off the displayed skill; toolbelt slots
-          // point at the utility that grants them and must keep pointing there.
-          sourceId: slot.sourceId === slot.skill.id ? replacement.id : slot.sourceId,
-        };
-      });
-    }
+  // See getSelectedMajorTraitSkillIds for why only major traits count.
+  const traitGrantedSkillIds = getSelectedMajorTraitSkillIds(catalog, editor.specializations);
+  if (traitGrantedSkillIds.size > 0) {
+    mechSlots = mechSlots.map((slot) => {
+      const flipId = Number(slot?.skill?.flipSkill) || 0;
+      const replacement = flipId && traitGrantedSkillIds.has(flipId)
+        ? catalog.skillById.get(flipId)
+        : null;
+      if (!replacement) return slot;
+      return {
+        ...slot,
+        skill: replacement,
+        // Only static slots key their sourceId off the displayed skill; toolbelt slots
+        // point at the utility that grants them and must keep pointing there.
+        sourceId: slot.sourceId === slot.skill.id ? replacement.id : slot.sourceId,
+      };
+    });
   }
 
   return { mechSlots, options: nextOptions, eliteSpecId, isWeaver, isToolbelt, isRanger };
@@ -1386,6 +1423,11 @@ export function renderSkills() {
       offhand: equippedWeapons[ohKey] || "",
     }, activeAttunement, activeAttunement2, isWeaver, false);
   }
+
+  // A selected major trait can replace a weapon skill outright (Glacial Heart, Lingering
+  // Curse). Applied before the unleash swap: the replacement is the slot's permanent
+  // identity, while unleashing is a temporary state layered on top of it.
+  weaponSkills = applyTraitWeaponReplacements(catalog, weaponSkills, state.editor.specializations);
 
   // Untamed: when Unleash Ranger is active, swap weapon skills to unleashed flip variants.
   if (resolvedKit === 63147) {

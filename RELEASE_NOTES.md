@@ -11,6 +11,7 @@
 
 - **Scourge's F5 now swaps with Herald of Sorrow.** Taking the trait left F5 showing Desert Shroud everywhere — icon, name, hover card and detail panel — instead of Sandstorm Shroud. The game data models the swap as a skill flip, and the app was filtering flipped skills out of the F-slot list entirely; a selected major trait can now replace its mechanic slot. This fixes the pattern generally, not just Scourge.
 - **Skill tooltips no longer invent combos.** Hovering a skill that a trait *replaces* showed the replacement as a chained follow-up card, as if you got both in sequence. Affects Scourge's Desert Shroud, Guardian hammer's Mighty Blow (Glacial Heart) and Necromancer scepter's Feast of Corruption (Lingering Curse). Genuine chains, like Tempest's Overloads, still show.
+- **Trait-replaced weapon skills now show on the bar.** Glacial Heart left Guardian hammer 2 as Mighty Blow instead of Glacial Blow, and Lingering Curse left Necromancer scepter 3 as Feast of Corruption instead of Devouring Darkness. Same root cause as the Scourge F5 swap, on the weapon path — the skill bar, the equipment panel and boon coverage all resolve the replacement now.
 
 ## Version v0.12.0 — August 22, 2026
 

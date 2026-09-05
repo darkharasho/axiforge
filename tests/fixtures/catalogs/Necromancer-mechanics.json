@@ -2,8 +2,37 @@
  "profession": {
   "id": "Necromancer"
  },
- "professionWeapons": {},
+ "professionWeapons": {
+  "scepter": {
+   "flags": [
+    "Mainhand"
+   ],
+   "skills": [
+    {
+     "id": 10698,
+     "slot": "Weapon_1",
+     "attunement": ""
+    },
+    {
+     "id": 10532,
+     "slot": "Weapon_2",
+     "attunement": ""
+    },
+    {
+     "id": 10709,
+     "slot": "Weapon_3",
+     "attunement": ""
+    }
+   ]
+  }
+ },
  "specializations": [
+  {
+   "id": 39,
+   "name": "Curses",
+   "elite": false,
+   "profession": "Necromancer"
+  },
   {
    "id": 60,
    "name": "Scourge",
@@ -12,6 +41,16 @@
   }
  ],
  "traits": [
+  {
+   "id": 801,
+   "name": "Lingering Curse",
+   "slot": "Major",
+   "tier": 3,
+   "specialization": 39,
+   "traitSkillIds": [
+    51647
+   ]
+  },
   {
    "id": 2123,
    "name": "Herald of Sorrow",
@@ -513,7 +552,88 @@
    ],
    "attunement": "",
    "icon": ""
+  },
+  {
+   "id": 51647,
+   "name": "Devouring Darkness",
+   "slot": "Weapon_3",
+   "type": "Weapon",
+   "specialization": 0,
+   "flipSkill": 0,
+   "inProfessionEndpoint": false,
+   "professions": [
+    "Necromancer"
+   ],
+   "attunement": "",
+   "icon": ""
   }
  ],
- "weaponSkills": []
+ "weaponSkills": [
+  {
+   "id": 10698,
+   "name": "Blood Curse",
+   "slot": "Weapon_1",
+   "weaponType": "Scepter",
+   "flipSkill": 10699,
+   "attunement": "",
+   "dualWield": "",
+   "flags": [
+    "NoUnderwater"
+   ],
+   "icon": ""
+  },
+  {
+   "id": 10532,
+   "name": "Grasping Dead",
+   "slot": "Weapon_2",
+   "weaponType": "Scepter",
+   "flipSkill": 0,
+   "attunement": "",
+   "dualWield": "",
+   "flags": [
+    "GroundTargeted",
+    "NoUnderwater"
+   ],
+   "icon": ""
+  },
+  {
+   "id": 10709,
+   "name": "Feast of Corruption",
+   "slot": "Weapon_3",
+   "weaponType": "Scepter",
+   "flipSkill": 51647,
+   "attunement": "",
+   "dualWield": "",
+   "flags": [
+    "NoUnderwater"
+   ],
+   "icon": ""
+  },
+  {
+   "id": 10699,
+   "name": "Rending Curse",
+   "slot": "Weapon_1",
+   "weaponType": "Scepter",
+   "flipSkill": 10552,
+   "attunement": "",
+   "dualWield": "",
+   "flags": [
+    "NoUnderwater"
+   ],
+   "icon": ""
+  },
+  {
+   "id": 51647,
+   "name": "Devouring Darkness",
+   "slot": "Weapon_3",
+   "weaponType": "Scepter",
+   "flipSkill": 0,
+   "attunement": "",
+   "dualWield": "",
+   "flags": [
+    "NoUnderwater"
+   ],
+   "icon": ""
+  }
+ ]
 }
