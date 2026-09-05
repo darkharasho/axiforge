@@ -812,6 +812,42 @@ export function buildMechanicSlotsForRender({
     }
   }
 
+  // A selected major trait can replace a profession mechanic outright. The API models the
+  // replacement as a flip: Scourge's F5 Desert Shroud (44663) lists Sandstorm Shroud (54870)
+  // as its flipSkill, and Herald of Sorrow (2123) lists 54870 among its trait skills. The
+  // replacement is a flip target with no profession-endpoint entry, so getSkillOptionsByType
+  // drops it from the candidate pool and the slot can never resolve to it on its own.
+  // Minor traits are excluded: their flip targets (Tempest Overloads, Dragonhunter's Spear of
+  // Justice) are held/activated states of the slot skill, not permanent replacements.
+  const selectedMajorTraitIds = new Set(
+    Object.values(eliteSpecEntry?.majorChoices || {}).map(Number).filter(Boolean)
+  );
+  if (eliteSpecId && selectedMajorTraitIds.size > 0) {
+    const traitReplacements = new Map(); // replaced skill's flipSkill id → replacement skill
+    for (const traitId of selectedMajorTraitIds) {
+      const trait = catalog.traitById?.get(traitId);
+      if (!trait || trait.slot !== "Major" || Number(trait.specialization) !== eliteSpecId) continue;
+      for (const skillId of (trait.traitSkillIds || [])) {
+        const replacement = catalog.skillById.get(Number(skillId));
+        if (replacement) traitReplacements.set(Number(skillId), replacement);
+      }
+    }
+    if (traitReplacements.size > 0) {
+      mechSlots = mechSlots.map((slot) => {
+        const flipId = Number(slot?.skill?.flipSkill) || 0;
+        const replacement = flipId ? traitReplacements.get(flipId) : null;
+        if (!replacement) return slot;
+        return {
+          ...slot,
+          skill: replacement,
+          // Only static slots key their sourceId off the displayed skill; toolbelt slots
+          // point at the utility that grants them and must keep pointing there.
+          sourceId: slot.sourceId === slot.skill.id ? replacement.id : slot.sourceId,
+        };
+      });
+    }
+  }
+
   return { mechSlots, options: nextOptions, eliteSpecId, isWeaver, isToolbelt, isRanger };
 }
 
