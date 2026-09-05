@@ -511,11 +511,22 @@ initSettingsCallbacks({
         hidePill();
         showRestartBtn();
         break;
-      case "error":
+      case "error": {
         setPill("Update failed", "error");
+        // The main process knows exactly why the update failed and used to drop
+        // that on the floor, leaving "Update failed" as the only thing a user
+        // could report back. Carry the reason in the tooltip so it is one hover
+        // away, and stay up long enough to actually be hovered.
+        if (el.updateStatusPill) {
+          const reason = String(payload?.message || "").trim();
+          el.updateStatusPill.title = reason
+            ? `Update failed: ${reason}`
+            : "The update check failed. It will try again on the next launch.";
+        }
         hideRestartBtn();
-        errorResetTimer = setTimeout(() => applyState("idle"), 5000);
+        errorResetTimer = setTimeout(() => applyState("idle"), 15000);
         break;
+      }
       case "install-error":
         // Download succeeded but the install couldn't be applied. Unlike a transient
         // check/download error this is sticky — the user needs to act (reinstall
@@ -571,9 +582,9 @@ initSettingsCallbacks({
     applyState("downloaded");
   });
 
-  window.desktopApi.onUpdateError?.(() => {
+  window.desktopApi.onUpdateError?.((info) => {
     if (state === "downloaded") return; // already have a working download
-    applyState("error");
+    applyState("error", info);
   });
 
   window.desktopApi.onUpdateInstallError?.(() => {
