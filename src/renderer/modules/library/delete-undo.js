@@ -81,3 +81,26 @@ export async function restoreFolderDeletion(snapshot, api) {
   for (const folder of snapshot.folders) await api.saveFolder(folder);
   for (const { folderId, ids } of snapshot.buildMoves) await api.moveBuilds(ids, folderId);
 }
+
+/**
+ * comps:delete also runs store.clearCompFromBuilds, which strips the comp id
+ * from every build's compIds. Restoring the comp alone would leave the build
+ * side still unlinked, so capture both.
+ *
+ * @param {string[]} ids - comp ids about to be deleted
+ * @param {{comps: object[], builds: object[]}} state
+ */
+export function captureCompDeletion(ids, { comps = [], builds = [] } = {}) {
+  const idSet = new Set(ids);
+  const doomed = comps.filter((c) => idSet.has(c.id));
+  const linked = builds.filter((b) => (b.compIds || []).some((id) => idSet.has(id)));
+  return { comps: clone(doomed), builds: clone(linked) };
+}
+
+export async function restoreCompDeletion(snapshot, api) {
+  if (!snapshot) return;
+  // Comps first: a build listing a comp that doesn't exist yet renders as a
+  // dangling membership until the next refresh.
+  for (const comp of snapshot.comps) await api.saveComp(comp);
+  for (const build of snapshot.builds) await api.saveBuild(build);
+}

@@ -32,11 +32,18 @@ import { initDragDrop, wireDragDropEvents } from "./drag-drop.js";
 import { showHistoryPanel, showFolderHistoryPanel } from "./history-panel.js";
 import { compIcon } from "./heroicons.js";
 import { pushUndo, popUndo, applyUndo } from "./undo.js";
+// Toast lives in its own module so the Undo affordance is testable without
+// pulling all of library.js into a DOM. Re-exported: it is imported from here
+// all over the renderer.
+import { showToast } from "./toast.js";
+export { showToast };
 import {
   captureBuildDeletion,
   restoreBuildDeletion,
   captureFolderDeletion,
   restoreFolderDeletion,
+  captureCompDeletion,
+  restoreCompDeletion,
 } from "./delete-undo.js";
 import { handleAxicodeExport, handleAxicodeImport } from "./axicode-io.js";
 import { pickWebhooks } from "../webhook-picker.js";
@@ -228,10 +235,50 @@ export async function handleLibraryKeydown(e) {
     case "Z":
       if (ctrl) {
         e.preventDefault();
-        await applyUndo(popUndo(), { toast: showToast, render: renderLibrary });
+        await runUndo();
       }
       break;
   }
+}
+
+// ─── Undo plumbing ─────────────────────────────────────────────────────────────
+
+// Naming helpers for the toasts below. A toast that says what it acted on
+// ("Moved 3 builds to Raids") is worth far more than "Done!" when the next thing
+// the user has to decide is whether to hit Undo.
+function countLabel(n, noun) {
+  return n === 1 ? `1 ${noun}` : `${n} ${noun}s`;
+}
+function folderLabel(folderId) {
+  if (!folderId) return "All Builds";
+  return state.folders?.find((f) => f.id === folderId)?.name || "that folder";
+}
+function compLabel(compId) {
+  return `"${state.comps?.find((c) => c.id === compId)?.name || "Untitled Comp"}"`;
+}
+
+/** The one place undo is applied — Ctrl+Z and the toast's Undo button both land here. */
+function runUndo() {
+  return applyUndo(popUndo(), { toast: showToast, render: renderLibrary });
+}
+
+/**
+ * Record an undoable action and tell the user it happened, with the reversal
+ * offered inline.
+ *
+ * Undo was previously invisible: ten of the twelve reversible actions gave no
+ * feedback at all, so dragging a build into the wrong folder looked identical to
+ * nothing happening. Announcing the action IS the discovery mechanism for undo,
+ * so the two belong in one call rather than being remembered separately at each
+ * call site.
+ *
+ * @param {{type: string, label?: string, undo: () => Promise<void>}} action
+ *        `label` is what the user is told after undoing ("Move undone").
+ * @param {string} doneMessage - what just happened ("Moved 3 builds")
+ */
+function pushUndoable(action, doneMessage) {
+  pushUndo(action);
+  showToast(doneMessage, "success", { label: "Undo", onClick: runUndo });
 }
 
 // ─── Action handlers ───────────────────────────────────────────────────────────
@@ -356,11 +403,11 @@ async function handleRename(buildId) {
   try {
     await window.desktopApi.saveBuild({ ...build, title: newTitle });
     state.builds = await window.desktopApi.listBuilds();
-    pushUndo({ type: "rename-build", undo: async () => {
+    pushUndoable({ type: "rename-build", label: `Renamed back to "${oldTitle}"`, undo: async () => {
       const current = state.builds.find((b) => b.id === buildId);
       if (current) await window.desktopApi.saveBuild({ ...current, title: oldTitle });
       state.builds = await window.desktopApi.listBuilds();
-    }});
+    }}, `Renamed to "${newTitle}"`);
   } catch (err) {
     console.error("[library] rename failed:", err);
     showToast("Rename failed — please try again.", "error");
@@ -400,13 +447,13 @@ async function handleMoveTo(ids, folderId) {
     return { id, folderId: b?.folderId || null };
   });
   await moveBuilds(ids, folderId);
-  pushUndo({ type: "move-builds", undo: async () => {
+  pushUndoable({ type: "move-builds", label: countLabel(ids.length, "build") + " moved back", undo: async () => {
     for (const { id, folderId } of oldFolderIds) {
       const build = state.builds.find((b) => b.id === id);
       if (build) await window.desktopApi.saveBuild({ ...build, folderId });
     }
     state.builds = await window.desktopApi.listBuilds();
-  }});
+  }}, `Moved ${countLabel(ids.length, "build")} to ${folderLabel(folderId)}`);
   renderLibrary();
 }
 
@@ -449,15 +496,15 @@ async function handleDelete(ids) {
   }
   state.builds = await window.desktopApi.listBuilds();
   clearSelection();
-  pushUndo({
+  pushUndoable({
     type: "delete-builds",
-    label: count === 1 ? "Restored 1 build" : `Restored ${count} builds`,
+    label: `Restored ${countLabel(count, "build")}`,
     undo: async () => {
       await restoreBuildDeletion(snapshot, _restoreApi);
       state.builds = await window.desktopApi.listBuilds();
       state.comps = await window.desktopApi.listComps();
     },
-  });
+  }, `Deleted ${countLabel(count, "build")}`);
   renderLibrary();
 }
 
@@ -485,27 +532,6 @@ async function handleCutJson(idOrIds) {
   const json = JSON.stringify(builds.length === 1 ? builds[0] : builds, null, 2);
   await window.desktopApi.writeClipboardText(json);
   showToast(builds.length === 1 ? "Build cut!" : `${builds.length} builds cut!`);
-}
-
-let _toastEl = null;
-let _toastTimer = null;
-export function showToast(message, type = "success") {
-  if (!_toastEl) {
-    _toastEl = document.createElement("div");
-    _toastEl.className = "lib-toast";
-    document.body.appendChild(_toastEl);
-  }
-  _toastEl.textContent = message;
-  _toastEl.className = `lib-toast lib-toast--${type}`;
-  // Force reflow so transition fires even if toast is already visible
-  void _toastEl.offsetWidth;
-  _toastEl.classList.add("lib-toast--visible");
-  clearTimeout(_toastTimer);
-  if (type !== "loading") {
-    _toastTimer = setTimeout(() => {
-      _toastEl.classList.remove("lib-toast--visible");
-    }, 2000);
-  }
 }
 
 async function handleCopyShareCode(idOrIds) {
@@ -827,7 +853,7 @@ async function handlePasteJson(targetId) {
       } else {
         await moveBuilds(idsToMove, folderId);
       }
-      pushUndo({ type: "cut-paste", undo: async () => {
+      pushUndoable({ type: "cut-paste", label: "Move undone", undo: async () => {
         for (const { id, folderId, compIds } of oldLocations) {
           const build = state.builds.find((b) => b.id === id);
           if (build) await window.desktopApi.saveBuild({ ...build, folderId, compIds });
@@ -839,10 +865,9 @@ async function handlePasteJson(targetId) {
         }
         state.builds = await window.desktopApi.listBuilds();
         state.comps = await window.desktopApi.listComps();
-      }});
+      }}, `Moved ${countLabel(filteredToMove.length, "build")}`);
       clearSelection();
       renderLibrary();
-      showToast(filteredToMove.length === 1 ? "Build moved!" : `${filteredToMove.length} builds moved!`);
       return;
     }
 
@@ -910,14 +935,13 @@ async function handlePasteJson(targetId) {
     state.builds = await window.desktopApi.listBuilds();
     if (compId) state.comps = await window.desktopApi.listComps();
     if (pastedIds.length > 0) {
-      pushUndo({ type: "paste", undo: async () => {
+      pushUndoable({ type: "paste", label: "Paste undone", undo: async () => {
         for (const id of pastedIds) await window.desktopApi.deleteBuild(id);
         state.builds = await window.desktopApi.listBuilds();
         if (compId) state.comps = await window.desktopApi.listComps();
-      }});
+      }}, `Pasted ${countLabel(savedCount, "build")}`);
     }
     renderLibrary();
-    showToast(savedCount === 1 ? "Build pasted!" : `${savedCount} builds pasted!`);
   } catch (err) {
     console.error("Paste failed:", err);
     showToast("Paste failed", "error");
@@ -986,11 +1010,11 @@ async function handleRenameComp(compId) {
   if (!newName) { renderLibrary(); return; }
   await window.desktopApi.saveComp({ ...comp, name: newName });
   state.comps = await window.desktopApi.listComps();
-  pushUndo({ type: "rename-comp", undo: async () => {
+  pushUndoable({ type: "rename-comp", label: `Renamed back to "${oldName}"`, undo: async () => {
     const current = state.comps?.find((c) => c.id === compId);
     if (current) await window.desktopApi.saveComp({ ...current, name: oldName });
     state.comps = await window.desktopApi.listComps();
-  }});
+  }}, `Renamed to "${newName}"`);
   renderLibrary();
 }
 
@@ -1048,7 +1072,7 @@ async function handleDropBuildsOnComp(buildIds, compId) {
   }
   state.builds = await window.desktopApi.listBuilds();
   state.comps = await window.desktopApi.listComps();
-  pushUndo({ type: "move-to-comp", undo: async () => {
+  pushUndoable({ type: "move-to-comp", label: "Move undone", undo: async () => {
     for (const old of oldStates) {
       const current = state.builds.find((b) => b.id === old.id);
       if (current) await window.desktopApi.saveBuild({ ...current, compIds: old.compIds, folderId: old.folderId });
@@ -1062,7 +1086,7 @@ async function handleDropBuildsOnComp(buildIds, compId) {
     }
     state.builds = await window.desktopApi.listBuilds();
     state.comps = await window.desktopApi.listComps();
-  }});
+  }}, `Added ${countLabel(oldStates.length, "build")} to ${compLabel(compId)}`);
   clearSelection();
   renderLibrary();
 }
@@ -1091,7 +1115,7 @@ async function handleRemoveBuildFromComp(buildId, compId) {
   }
   state.builds = await window.desktopApi.listBuilds();
   state.comps = await window.desktopApi.listComps();
-  pushUndo({ type: "remove-from-comp", undo: async () => {
+  pushUndoable({ type: "remove-from-comp", label: "Build put back", undo: async () => {
     const current = state.builds.find((b) => b.id === buildId);
     if (current) {
       const restoredCompIds = [...new Set([...(current.compIds || []), compId])];
@@ -1102,21 +1126,36 @@ async function handleRemoveBuildFromComp(buildId, compId) {
     if (c) await window.desktopApi.saveComp({ ...c, buildIds: oldCompBuildIds, partyLines: oldCompPartyLines, gameMode: oldGameMode });
     state.builds = await window.desktopApi.listBuilds();
     state.comps = await window.desktopApi.listComps();
-  }});
+  }}, `Removed from ${compLabel(compId)}`);
   renderLibrary();
 }
 
 async function handleDeleteComps(ids) {
   const count = ids.length;
   const label = count === 1 ? "this comp" : `${count} comps`;
-  const confirmed = await showConfirm(`Delete ${label}?`, "This cannot be undone.");
+  const confirmed = await showConfirm(
+    `Delete ${label}?`,
+    "You can undo this with Ctrl+Z. The builds themselves are not deleted.",
+  );
   if (!confirmed) return;
+  // Snapshot before the delete: comps:delete also strips the comp id from every
+  // build's compIds, and that cascade isn't recoverable from post-delete state.
+  const snapshot = captureCompDeletion(ids, { comps: state.comps, builds: state.builds });
   for (const id of ids) {
     await window.desktopApi.deleteComp(id);
   }
   state.comps = await window.desktopApi.listComps();
   state.builds = await window.desktopApi.listBuilds();
   clearSelection();
+  pushUndoable({
+    type: "delete-comps",
+    label: `Restored ${countLabel(count, "comp")}`,
+    undo: async () => {
+      await restoreCompDeletion(snapshot, _restoreApi);
+      state.comps = await window.desktopApi.listComps();
+      state.builds = await window.desktopApi.listBuilds();
+    },
+  }, `Deleted ${countLabel(count, "comp")}`);
   renderLibrary();
 }
 
@@ -1178,8 +1217,9 @@ async function handleMoveComps(compIds, folderId) {
     state.builds = await window.desktopApi.listBuilds();
   }
 
-  pushUndo({
+  pushUndoable({
     type: "move-comps",
+    label: countLabel(compIds.length, "comp") + " moved back",
     undo: async () => {
       for (const { id, folderId } of oldCompFolderIds) {
         const comp = state.comps.find((c) => c.id === id);
@@ -1192,7 +1232,7 @@ async function handleMoveComps(compIds, folderId) {
       state.comps = await window.desktopApi.listComps();
       if (oldBuildFolderIds.length > 0) state.builds = await window.desktopApi.listBuilds();
     },
-  });
+  }, `Moved ${countLabel(compIds.length, "comp")} to ${folderLabel(folderId)}`);
   renderLibrary();
 }
 
@@ -1265,10 +1305,10 @@ async function handleMoveFolder(folderId, newParentId) {
   if (!folder) return;
   const oldParentId = folder.parentId || null;
   await saveFolder({ ...folder, parentId: newParentId ?? null });
-  pushUndo({ type: "move-folder", undo: async () => {
+  pushUndoable({ type: "move-folder", label: "Folder moved back", undo: async () => {
     const current = state.folders.find((f) => f.id === folderId);
     if (current) await saveFolder({ ...current, parentId: oldParentId });
-  }});
+  }}, `Moved "${folderLabel(folderId)}" to ${folderLabel(newParentId)}`);
   renderLibrary();
 }
 
@@ -1284,10 +1324,10 @@ async function handleRenameFolder(folderId) {
   const newName = await insertInlineInput(navItem, folder.name || "", { container });
   if (!newName) { renderLibrary(); return; }
   await saveFolder({ ...folder, name: newName });
-  pushUndo({ type: "rename-folder", undo: async () => {
+  pushUndoable({ type: "rename-folder", label: `Renamed back to "${oldName}"`, undo: async () => {
     const current = state.folders.find((f) => f.id === folderId);
     if (current) await saveFolder({ ...current, name: oldName });
-  }});
+  }}, `Renamed to "${newName}"`);
   renderLibrary();
 }
 
@@ -1341,7 +1381,7 @@ async function handleDeleteFolder(folderId) {
   if (wasViewing) {
     state.currentFolder = null;
   }
-  pushUndo({
+  pushUndoable({
     type: "delete-folder",
     label: `Restored folder "${name}"`,
     undo: async () => {
@@ -1350,7 +1390,7 @@ async function handleDeleteFolder(folderId) {
         state.currentFolder = state.folders.find((f) => f.id === folderId) || null;
       }
     },
-  });
+  }, `Deleted folder "${name}"`);
   renderLibrary();
 }
 

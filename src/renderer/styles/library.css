@@ -1722,6 +1722,31 @@
 }
 .lib-toast--success { border-color: var(--accent); color: var(--accent); }
 .lib-toast--error   { border-color: var(--danger);  color: var(--danger);  }
+
+/* A toast carrying an Undo button has to take pointer events back off the base
+   rule above, or the button can't be clicked (and hover can't pause the timer). */
+.lib-toast--interactive {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.lib-toast__action {
+  background: none;
+  border: none;
+  /* currentColor, not --line: the toast recolours itself per type, and a fixed
+     dark divider disappears against the accent-tinted text. */
+  border-left: 1px solid color-mix(in srgb, currentColor 35%, transparent);
+  padding: 2px 2px 2px 10px;
+  margin: 0;
+  font: inherit;
+  font-weight: 600;
+  color: inherit;
+  cursor: pointer;
+  opacity: 0.85;
+}
+.lib-toast__action:hover { opacity: 1; text-decoration: underline; }
+.lib-toast__action:focus-visible { outline: 1px solid currentColor; outline-offset: 2px; }
 .lib-toast--loading {
   display: flex;
   align-items: center;

@@ -5,6 +5,8 @@ const {
   restoreBuildDeletion,
   captureFolderDeletion,
   restoreFolderDeletion,
+  captureCompDeletion,
+  restoreCompDeletion,
 } = require("../../../src/renderer/modules/library/delete-undo.js");
 
 // A recording stand-in for window.desktopApi. Restore is defined by the calls it
@@ -163,5 +165,83 @@ describe("folder delete undo", () => {
     const lastFolder = order.lastIndexOf("folder:f3");
     const firstMove = order.findIndex((o) => o.startsWith("move:"));
     expect(lastFolder).toBeLessThan(firstMove);
+  });
+});
+
+describe("comp delete undo", () => {
+  test("restores the comp with its party lines intact", async () => {
+    const comp = {
+      id: "c1",
+      name: "Zerg Comp",
+      folderId: "f1",
+      gameMode: "wvw",
+      buildIds: ["b1", "b2"],
+      partyLines: [{ id: "l1", slots: ["b1", null, "b2", null, null] }],
+    };
+    const snapshot = captureCompDeletion(["c1"], { comps: [comp], builds: [] });
+
+    const api = fakeApi();
+    await restoreCompDeletion(snapshot, api);
+
+    expect(api.calls.saveComp).toHaveLength(1);
+    expect(api.calls.saveComp[0]).toMatchObject({
+      id: "c1",
+      name: "Zerg Comp",
+      gameMode: "wvw",
+      buildIds: ["b1", "b2"],
+      partyLines: [{ id: "l1", slots: ["b1", null, "b2", null, null] }],
+    });
+  });
+
+  test("re-links the builds the delete unlinked", async () => {
+    // comps:delete also runs store.clearCompFromBuilds, stripping the comp id
+    // from every build's compIds. Restoring only the comp would leave the two
+    // sides disagreeing about the membership.
+    const comp = { id: "c1", name: "Zerg Comp", buildIds: ["b1"] };
+    const builds = [
+      { id: "b1", title: "Scourge", compIds: ["c1", "c2"] },
+      { id: "b9", title: "Unrelated", compIds: ["c2"] },
+    ];
+    const snapshot = captureCompDeletion(["c1"], { comps: [comp], builds });
+
+    const api = fakeApi();
+    await restoreCompDeletion(snapshot, api);
+
+    expect(api.calls.saveBuild).toHaveLength(1);
+    expect(api.calls.saveBuild[0]).toMatchObject({ id: "b1", compIds: ["c1", "c2"] });
+  });
+
+  test("restores every comp in a multi-select delete", async () => {
+    const comps = [
+      { id: "c1", name: "A", buildIds: [] },
+      { id: "c2", name: "B", buildIds: [] },
+    ];
+    const snapshot = captureCompDeletion(["c1", "c2"], { comps, builds: [] });
+
+    const api = fakeApi();
+    await restoreCompDeletion(snapshot, api);
+
+    expect(api.calls.saveComp.map((c) => c.id)).toEqual(["c1", "c2"]);
+  });
+
+  test("snapshot is a deep copy, so later edits cannot corrupt a pending undo", async () => {
+    const comp = { id: "c1", name: "Zerg Comp", buildIds: ["b1"], partyLines: [{ slots: ["b1"] }] };
+    const snapshot = captureCompDeletion(["c1"], { comps: [comp], builds: [] });
+
+    comp.name = "MUTATED";
+    comp.partyLines[0].slots.push("b2");
+
+    const api = fakeApi();
+    await restoreCompDeletion(snapshot, api);
+
+    expect(api.calls.saveComp[0].name).toBe("Zerg Comp");
+    expect(api.calls.saveComp[0].partyLines[0].slots).toEqual(["b1"]);
+  });
+
+  test("ignores ids that are not present", async () => {
+    const snapshot = captureCompDeletion(["nope"], { comps: [], builds: [] });
+    const api = fakeApi();
+    await restoreCompDeletion(snapshot, api);
+    expect(api.calls.saveComp).toEqual([]);
   });
 });
