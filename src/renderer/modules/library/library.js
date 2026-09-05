@@ -157,7 +157,18 @@ export async function handleLibraryKeydown(e) {
       const sel = getSelection();
       if (sel.length > 0) {
         e.preventDefault();
-        handleDelete(sel);
+        // Inside a comp the selection is the comp's *membership*, not a folder
+        // of builds. Dragging out and the context menu both unlink there, so
+        // Delete must too — hard-deleting the underlying builds from a view
+        // that never offers a Delete item is how people lose their library.
+        if (state.currentFolder?.type === "comp") {
+          const compId = state.currentFolder.id;
+          (async () => {
+            for (const id of sel) await handleRemoveBuildFromComp(id, compId);
+          })();
+        } else {
+          handleDelete(sel);
+        }
       }
       break;
     }
