@@ -30,6 +30,7 @@ const os = require("node:os");
 const fs = require("node:fs");
 const fsp = require("node:fs/promises");
 const path = require("node:path");
+const { waitFor } = require("../helpers/waitFor");
 
 // Per-load context; the electron mock closes over this (reassigned by loadMain).
 let mockCtx = null;
@@ -579,7 +580,7 @@ describe("polling lifecycle", () => {
   test("a team session makes startup reconcile with the server, and will-quit halts sync", async () => {
     const { TeamSync } = await loadMain(teamTree());
     // Startup runs pullAll(), which asks the server for this team's changes.
-    for (let i = 0; i < 200 && !mockApi.changes.mock.calls.length; i += 1) await new Promise((r) => setImmediate(r));
+    await waitFor(() => mockApi.changes.mock.calls.length > 0, { label: "startup pullAll reached api.changes" });
     expect(mockApi.changes).toHaveBeenCalledWith(TEAM_ID, 3, expect.any(Number));
 
     const stopSpy = jest.spyOn(TeamSync.prototype, "stopPolling");

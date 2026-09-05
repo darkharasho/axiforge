@@ -1,5 +1,6 @@
 "use strict";
 const { makeHarness, apiError } = require("../helpers/teamSyncHarness");
+const { waitFor, settle } = require("../helpers/waitFor");
 const { FLUSH_DEBOUNCE_MS } = require("../../src/main/teamSync");
 
 let h;
@@ -163,8 +164,8 @@ describe("TeamSync — _fullRepull vs an in-flight incremental pull", () => {
 
     const incremental = h.sync.pullTeam("t");          // in flight
     const repair = h.sync._fullRepull("t");            // must not reset the cursor underneath it
-    for (let i = 0; i < 200 && h.api.changes.mock.calls.length < 1; i++) await new Promise((r) => setImmediate(r));
-    for (let i = 0; i < 50; i++) await new Promise((r) => setImmediate(r)); // give the repair every chance to (wrongly) race
+    await waitFor(() => h.api.changes.mock.calls.length >= 1, { label: "incremental pull reached api.changes" });
+    await settle(); // give the repair every chance to (wrongly) race
     expect(h.api.changes).toHaveBeenCalledTimes(1);    // repair is waiting, not racing
     releaseFirst({ items: [], nextSeq: 42, hasMore: false });
     await incremental;
@@ -189,7 +190,7 @@ describe("TeamSync — _fullRepull vs an in-flight incremental pull", () => {
 
     const incremental = h.sync.pullTeam("t");
     const repair = h.sync._fullRepull("t");
-    for (let i = 0; i < 200 && h.api.changes.mock.calls.length < 1; i++) await new Promise((r) => setImmediate(r));
+    await waitFor(() => h.api.changes.mock.calls.length >= 1, { label: "incremental pull reached api.changes" });
     releaseFirst({ items: [], nextSeq: 42, hasMore: false });
     await incremental;
     // The 30 s poll timer fires the instant the drained pull settles — before
