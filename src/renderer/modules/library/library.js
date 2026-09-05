@@ -31,7 +31,13 @@ import {
 import { initDragDrop, wireDragDropEvents } from "./drag-drop.js";
 import { showHistoryPanel, showFolderHistoryPanel } from "./history-panel.js";
 import { compIcon } from "./heroicons.js";
-import { pushUndo, popUndo } from "./undo.js";
+import { pushUndo, popUndo, applyUndo } from "./undo.js";
+import {
+  captureBuildDeletion,
+  restoreBuildDeletion,
+  captureFolderDeletion,
+  restoreFolderDeletion,
+} from "./delete-undo.js";
 import { handleAxicodeExport, handleAxicodeImport } from "./axicode-io.js";
 import { pickWebhooks } from "../webhook-picker.js";
 
@@ -222,12 +228,7 @@ export async function handleLibraryKeydown(e) {
     case "Z":
       if (ctrl) {
         e.preventDefault();
-        const action = popUndo();
-        if (action) {
-          await action.undo();
-          renderLibrary();
-          showToast("Undone!");
-        }
+        await applyUndo(popUndo(), { toast: showToast, render: renderLibrary });
       }
       break;
   }
@@ -409,6 +410,15 @@ async function handleMoveTo(ids, folderId) {
   renderLibrary();
 }
 
+// The desktopApi surface delete-undo needs. saveFolder/moveBuilds come from
+// folder-store so the restore also refreshes state.folders / state.builds.
+const _restoreApi = {
+  saveBuild: (b) => window.desktopApi.saveBuild(b),
+  saveComp: (c) => window.desktopApi.saveComp(c),
+  saveFolder: (f) => saveFolder(f),
+  moveBuilds: (ids, folderId) => moveBuilds(ids, folderId),
+};
+
 async function handleDelete(ids) {
   const count = ids.length;
   const label = count === 1 ? "this build" : `${count} builds`;
@@ -420,21 +430,34 @@ async function handleDelete(ids) {
       for (const cid of build.compIds) affectedComps.add(cid);
     }
   }
-  let detail = "This cannot be undone.";
+  let detail = "You can undo this with Ctrl+Z, though version history won't come back.";
   if (affectedComps.size > 0) {
     const compNames = [...affectedComps]
       .map((cid) => (state.comps || []).find((c) => c.id === cid)?.name || "Untitled Comp")
       .join(", ");
-    detail = `${count === 1 ? "This build is" : "These builds are"} linked to ${affectedComps.size} comp${affectedComps.size !== 1 ? "s" : ""}: ${compNames}. Deleting will remove ${count === 1 ? "it" : "them"} from ${affectedComps.size === 1 ? "that comp" : "those comps"}. This cannot be undone.`;
+    detail = `${count === 1 ? "This build is" : "These builds are"} linked to ${affectedComps.size} comp${affectedComps.size !== 1 ? "s" : ""}: ${compNames}. Deleting will remove ${count === 1 ? "it" : "them"} from ${affectedComps.size === 1 ? "that comp" : "those comps"}. You can undo this with Ctrl+Z, though version history won't come back.`;
   }
 
   const confirmed = await showConfirm(`Delete ${label}?`, detail);
   if (!confirmed) return;
+  // Snapshot before the delete: builds:delete also strips the build from every
+  // comp's buildIds and party-line slots, and that cascade isn't recoverable
+  // from post-delete state.
+  const snapshot = captureBuildDeletion(ids, { builds: state.builds, comps: state.comps });
   for (const id of ids) {
     await window.desktopApi.deleteBuild(id);
   }
   state.builds = await window.desktopApi.listBuilds();
   clearSelection();
+  pushUndo({
+    type: "delete-builds",
+    label: count === 1 ? "Restored 1 build" : `Restored ${count} builds`,
+    undo: async () => {
+      await restoreBuildDeletion(snapshot, _restoreApi);
+      state.builds = await window.desktopApi.listBuilds();
+      state.comps = await window.desktopApi.listComps();
+    },
+  });
   renderLibrary();
 }
 
@@ -1303,14 +1326,31 @@ async function handleDeleteFolder(folderId) {
   const name = folder?.name || "this folder";
   const confirmed = await showConfirm(
     `Delete folder "${name}"?`,
-    "Builds inside will be moved to the root.",
+    "Builds inside will be moved to the root. You can undo this with Ctrl+Z.",
   );
   if (!confirmed) return;
+  // folders:delete cascades to descendants and nulls the folderId of every build
+  // in the subtree, so both have to be captured while they still exist.
+  const snapshot = captureFolderDeletion(folderId, {
+    folders: state.folders,
+    builds: state.builds,
+  });
+  const wasViewing = state.currentFolder?.id === folderId;
   await deleteFolder(folderId);
   // If we're currently viewing the deleted folder, go back to root
-  if (state.currentFolder?.id === folderId) {
+  if (wasViewing) {
     state.currentFolder = null;
   }
+  pushUndo({
+    type: "delete-folder",
+    label: `Restored folder "${name}"`,
+    undo: async () => {
+      await restoreFolderDeletion(snapshot, _restoreApi);
+      if (wasViewing) {
+        state.currentFolder = state.folders.find((f) => f.id === folderId) || null;
+      }
+    },
+  });
   renderLibrary();
 }
 
