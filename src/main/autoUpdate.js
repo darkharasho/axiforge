@@ -64,14 +64,44 @@ function isRetryableError(err) {
   return false;
 }
 
+const TIMEOUT_MESSAGE = "Update check timed out";
+
 function checkWithTimeout() {
   const autoUpdater = getAutoUpdater();
+  // With autoDownload on, checkForUpdates() resolves the moment the manifest is
+  // read and hands back a downloadPromise that is already in flight. electron-
+  // updater reports download failures through the "error" event AND re-throws
+  // on that promise, so leaving it unattended turns every failed download — the
+  // ordinary outcome on a flaky connection — into an unhandled rejection that
+  // takes the main process down. The listener above already tells the user;
+  // this only has to keep the rejection from escaping.
+  const check = autoUpdater.checkForUpdates().then((result) => {
+    result?.downloadPromise?.catch(() => {});
+    return result;
+  });
   return Promise.race([
-    autoUpdater.checkForUpdates(),
+    check,
     new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("Update check timed out")), CHECK_TIMEOUT_MS)
+      setTimeout(() => reject(new Error(TIMEOUT_MESSAGE)), CHECK_TIMEOUT_MS)
     ),
   ]);
+}
+
+/**
+ * Runs a check and makes sure the outcome is visible somewhere.
+ *
+ * A rejection from checkForUpdates() has already gone out through the "error"
+ * event, so it needs nothing more. The race timeout has not — it fires inside
+ * this module, and swallowing it left the titlebar pill on "Checking..." for
+ * the rest of the session with nothing written to the log.
+ */
+function runCheck() {
+  return checkWithTimeout().catch((err) => {
+    const message = String(err?.message || err);
+    if (message !== TIMEOUT_MESSAGE) return;
+    log(`update check timed out after ${CHECK_TIMEOUT_MS}ms`);
+    send("update-error", { message });
+  });
 }
 
 // Call once per process with a getter that returns the current main window
@@ -151,7 +181,7 @@ function initAutoUpdate(getWindow) {
       retryAttempts++;
       log(`retryable error, retrying once: ${message}`);
       setTimeout(() => {
-        checkWithTimeout().catch(() => {});
+        runCheck();
       }, RETRY_DELAY_MS);
       return;
     }
@@ -186,7 +216,7 @@ function initAutoUpdate(getWindow) {
   // IPC handlers
   ipcMain.on("updater:check", () => {
     retryAttempts = 0;
-    checkWithTimeout().catch(() => {});
+    runCheck();
   });
 
   ipcMain.on("updater:restart", () => {
@@ -200,7 +230,7 @@ function initAutoUpdate(getWindow) {
 
   // Auto-check after delay
   setTimeout(() => {
-    checkWithTimeout().catch(() => {});
+    runCheck();
   }, CHECK_DELAY_MS);
 }
 

@@ -310,6 +310,62 @@ describe("autoUpdate — normal packaged flow", () => {
     jest.useRealTimers();
   });
 
+  test("a failed download does not escape as an unhandled rejection", async () => {
+    // With autoDownload on, checkForUpdates() resolves as soon as the manifest
+    // is read and hands back a downloadPromise that is already in flight. If
+    // nothing ever attaches a handler to it, a failed download — the ordinary
+    // outcome on a flaky connection — takes the whole main process down.
+    // Fake the clock (so the 30s race timer stays fake and afterEach clears it)
+    // but leave process.nextTick real — unhandledRejection is emitted from the
+    // tick queue, and a faked nextTick would never drain it.
+    jest.useFakeTimers({ doNotFake: ["nextTick"] });
+    const rejections = [];
+    const onUnhandled = (err) => rejections.push(err);
+    process.on("unhandledRejection", onUnhandled);
+    try {
+      const win = makeWindowMock();
+      _autoUpdaterMock.checkForUpdates = jest.fn(() =>
+        Promise.resolve({
+          isUpdateAvailable: true,
+          downloadPromise: Promise.reject(new Error("net::ERR_CONNECTION_RESET")),
+        })
+      );
+      loadModule().initAutoUpdate(win);
+      _ipcHandlers["updater:check"]();
+      // unhandledRejection is emitted once the microtask queue drains, which is
+      // independent of the fake clock — so the 30s race timer stays fake and
+      // afterEach can clear it.
+      await new Promise((resolve) => process.nextTick(resolve));
+      await new Promise((resolve) => process.nextTick(resolve));
+      expect(rejections).toEqual([]);
+    } finally {
+      process.off("unhandledRejection", onUnhandled);
+    }
+  });
+
+  test("a check that never answers reports the timeout instead of hanging", async () => {
+    // The 30s race rejects inside this module, so it never reaches
+    // autoUpdater.on("error"). Swallowed, it leaves the pill on "Checking..."
+    // forever with nothing written to the log.
+    jest.useFakeTimers();
+    const win = makeWindowMock();
+    _autoUpdaterMock.checkForUpdates = jest.fn(() => new Promise(() => {}));
+    loadModule().initAutoUpdate(win);
+
+    jest.advanceTimersByTime(3100);
+    await Promise.resolve();
+    expect(sentChannels(win.webContents)).not.toContain("update-error");
+
+    jest.advanceTimersByTime(30100);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(sentData(win.webContents, "update-error")).toEqual({
+      message: "Update check timed out",
+    });
+
+    jest.useRealTimers();
+  });
+
   test("updater:restart calls autoUpdater.quitAndInstall", () => {
     const win = makeWindowMock();
     loadModule().initAutoUpdate(win);
