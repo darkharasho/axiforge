@@ -1,6 +1,6 @@
 import { state } from "./state.js";
 import { WEAPON_STRENGTH_MIDPOINT, BOON_CONDITION_ICONS, FACT_TYPE_ICONS } from "./constants.js";
-import { escapeHtml, tierLabel, normalizeText, stripGw2Markup } from "./utils.js";
+import { escapeHtml, tierLabel, normalizeText, stripGw2Markup, getMajorTraitGrantedSkillIds } from "./utils.js";
 import { computeUpgradeModifiers } from "./stats.js";
 import { getAssumedBoons } from "./equipment.js";
 import { BUFF_FACT_TYPES, computeStats } from "./engine-bridge.js";
@@ -524,8 +524,17 @@ export function showHoverPreview(kind, entity, x, y) {
   const suppressElemNonTempestFlip = (state.editor?.profession ?? "") === "Elementalist"
     && _activeEliteSpecId !== 48
     && /^Profession_[1-4]$/.test(entity.slot || "");
+  // A major trait can replace a profession mechanic outright, and the API models that
+  // replacement as a flip too (Scourge's Desert Shroud flips to Sandstorm Shroud, which
+  // Herald of Sorrow grants). A replacement is not a chain — you get one skill or the
+  // other, never both in sequence — so showing the flip target as a chained card claims
+  // a combo that does not exist. Selection is irrelevant: untraited you never get the
+  // replacement, traited the slot already shows it in place of the hovered skill.
+  const suppressTraitReplacementFlip = kind === "skill"
+    && getMajorTraitGrantedSkillIds(_flipCat).has(Number(entity.flipSkill) || 0);
   const chainCards = [buildSkillCard(entity, kind, false, dmgStats)];
-  if (kind === "skill" && entity.flipSkill && !suppressMismatchedEliteFlip && !suppressElemNonTempestFlip) {
+  if (kind === "skill" && entity.flipSkill && !suppressMismatchedEliteFlip && !suppressElemNonTempestFlip
+      && !suppressTraitReplacementFlip) {
     const catalog = state.activeCatalog;
     const lookupSkill = (id) => catalog?.skillById?.get(id) || catalog?.weaponSkillById?.get(id);
     const exitPattern = /^(Exit|Leave|Deactivate|Stow)\b/i;

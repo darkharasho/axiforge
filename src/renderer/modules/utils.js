@@ -247,3 +247,35 @@ export function relativeTime(iso) {
   const days = Math.floor(hours / 24);
   return `${days} day${days === 1 ? "" : "s"} ago`;
 }
+
+/**
+ * Skill ids that a MAJOR trait grants, for the whole catalog.
+ *
+ * The GW2 API models a major trait swapping a profession mechanic as a flip:
+ * Scourge's Desert Shroud (44663) lists Sandstorm Shroud (54870) as its
+ * flipSkill, and Herald of Sorrow (2123) lists 54870 among its trait skills.
+ * A replacement is not a chain — you get one skill or the other, never both in
+ * sequence — so callers use this to tell "this flip is a replacement" from
+ * "this flip is a real chained state".
+ *
+ * Minor traits are excluded on purpose. They are auto-granted, and their flip
+ * targets (Tempest's Overloads, Dragonhunter's Spear of Justice) genuinely are
+ * held/activated states of the slot skill.
+ *
+ * Memoized per catalog: this scans every trait, and hover previews call it on
+ * each mouse-over.
+ */
+const EMPTY_ID_SET = new Set();
+const _majorTraitSkillIdCache = new WeakMap();
+export function getMajorTraitGrantedSkillIds(catalog) {
+  if (!catalog || !catalog.traitById) return EMPTY_ID_SET;
+  const cached = _majorTraitSkillIdCache.get(catalog);
+  if (cached) return cached;
+  const ids = new Set();
+  for (const trait of catalog.traitById.values()) {
+    if (trait?.slot !== "Major") continue;
+    for (const skillId of (trait.traitSkillIds || [])) ids.add(Number(skillId));
+  }
+  _majorTraitSkillIdCache.set(catalog, ids);
+  return ids;
+}

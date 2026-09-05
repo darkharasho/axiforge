@@ -438,3 +438,125 @@ describe("getHoverMetaLine — food/utility consumables", () => {
     expect(detailPanel.getHoverMetaLine("equip-utility", entity)).toBe("Utility");
   });
 });
+
+// ── showHoverPreview — flip-chain suppression for trait-replaced mechanics ─────
+//
+// Same root cause as the Scourge F5 slot bug: the API models a major trait
+// swapping a profession mechanic as a flip.  Desert Shroud (44663) lists
+// Sandstorm Shroud (54870) as its flipSkill, and Herald of Sorrow (2123) lists
+// 54870 among its trait skills.  But a replacement is not a chain — you get one
+// skill or the other, never both in sequence — so rendering the flip target as
+// a chained card claims a combo that does not exist.
+//
+// Minor traits are the opposite case and must keep chaining: Tempest's
+// Overloads and Dragonhunter's Spear of Justice are auto-granted held/activated
+// states of the slot skill, which is exactly what a chain card describes.
+
+describe("showHoverPreview — flip-chain suppression for trait-replaced mechanics", () => {
+  const skill = (over) => ({
+    icon: "", iconFallback: "", description: "", facts: [], traitedFacts: [],
+    type: "Profession", professions: ["Necromancer"], attunement: "",
+    weaponType: "", hasSplit: false, specialization: 60, flipSkill: 0, ...over,
+  });
+
+  const DESERT_SHROUD   = skill({ id: 44663, name: "Desert Shroud",   slot: "Profession_5", flipSkill: 54870 });
+  const SANDSTORM_SHROUD = skill({ id: 54870, name: "Sandstorm Shroud", slot: "Profession_5" });
+  // A minor-granted flip: a held state of the slot skill, not a replacement.
+  const HELD_SLOT_SKILL = skill({ id: 44001, name: "Held Slot Skill", slot: "Profession_1", flipSkill: 44002 });
+  const HELD_STATE      = skill({ id: 44002, name: "Held State",      slot: "Profession_1" });
+
+  const MOCK_CATALOG = {
+    specializationById: new Map([[60, { id: 60, name: "Scourge", elite: true }]]),
+    skillById: new Map([
+      [54870, SANDSTORM_SHROUD],
+      [44002, HELD_STATE],
+    ]),
+    weaponSkillById: new Map(),
+    traitById: new Map([
+      [2123, { id: 2123, name: "Herald of Sorrow", slot: "Major", specialization: 60, traitSkillIds: [54870] }],
+      [2124, { id: 2124, name: "A Minor",          slot: "Minor", specialization: 60, traitSkillIds: [44002] }],
+    ]),
+  };
+
+  let savedEditor;
+  let savedCatalog;
+  let savedWindow;
+  let savedDocument;
+  let mockHover;
+
+  beforeEach(() => {
+    savedEditor   = state.editor;
+    savedCatalog  = state.activeCatalog;
+    savedWindow   = global.window;
+    savedDocument = global.document;
+
+    global.window = { innerWidth: 1920, innerHeight: 1080 };
+    global.document = {
+      createElement(tag) {
+        if (tag === "textarea") {
+          const el = { _html: "", value: "" };
+          Object.defineProperty(el, "innerHTML", {
+            set(v) { el._html = v; el.value = v; },
+            get() { return el._html; },
+          });
+          return el;
+        }
+        return {};
+      },
+    };
+
+    mockHover = {
+      innerHTML: "",
+      style: {},
+      classList: {
+        _classes: new Set(),
+        add(c)      { this._classes.add(c); },
+        remove(c)   { this._classes.delete(c); },
+        contains(c) { return this._classes.has(c); },
+      },
+      getBoundingClientRect: () => ({ width: 200, height: 100 }),
+    };
+
+    detailPanel.initDetailPanel({ hoverPreview: mockHover }, {});
+
+    state.activeCatalog = MOCK_CATALOG;
+    state.editor = {
+      profession: "Necromancer",
+      specializations: [{ specializationId: 60, majorChoices: {} }],
+      skills: { healId: 0, utilityIds: [0, 0, 0], eliteId: 0 },
+      activeWeaponSet: 1,
+      equipment: {
+        slots: {},
+        weapons: { mainhand1: "", offhand1: "", mainhand2: "", offhand2: "" },
+      },
+    };
+  });
+
+  afterEach(() => {
+    state.editor        = savedEditor;
+    state.activeCatalog = savedCatalog;
+    global.window       = savedWindow;
+    global.document     = savedDocument;
+  });
+
+  test("does not chain a major trait's replacement onto the skill it replaces", () => {
+    detailPanel.showHoverPreview("skill", DESERT_SHROUD, 100, 100);
+    expect(mockHover.innerHTML).toContain("Desert Shroud");
+    expect(mockHover.innerHTML).not.toContain("hover-preview__chain-divider");
+    expect(mockHover.innerHTML).not.toContain("Sandstorm Shroud");
+  });
+
+  test("suppression does not depend on the trait being selected", () => {
+    // The chain is wrong either way: untraited you never get the replacement,
+    // traited the slot already shows it instead of the skill being hovered.
+    state.editor.specializations = [{ specializationId: 60, majorChoices: { 1: 2123 } }];
+    detailPanel.showHoverPreview("skill", DESERT_SHROUD, 100, 100);
+    expect(mockHover.innerHTML).not.toContain("Sandstorm Shroud");
+  });
+
+  test("still chains a flip target granted by a minor trait", () => {
+    detailPanel.showHoverPreview("skill", HELD_SLOT_SKILL, 100, 100);
+    expect(mockHover.innerHTML).toContain("hover-preview__chain-divider");
+    expect(mockHover.innerHTML).toContain("Held State");
+  });
+});
