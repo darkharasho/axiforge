@@ -51,15 +51,94 @@ class BuildStore {
     await this.#ensureFile(this.settingsPath, {});
   }
 
-  async listBuilds() {
+  // Every write path below reads the list, mutates it and writes the whole array
+  // back. They MUST go through this raw reader: reading through the
+  // trash-filtered listBuilds() would drop trashed builds on the next save.
+  async #readAllBuilds() {
     const data = await this.#readJson(this.buildsPath, []);
     if (!Array.isArray(data)) return [];
     return data.map((entry) => normalizeBuild(entry, entry?.createdAt));
   }
 
+  async listBuilds() {
+    return (await this.#readAllBuilds()).filter((b) => !b.deletedAt);
+  }
+
+  async listTrashedBuilds() {
+    return (await this.#readAllBuilds()).filter((b) => b.deletedAt);
+  }
+
+  /**
+   * Soft-delete: stamp the build rather than removing it, so restore is just
+   * clearing the stamp and every field (published links, comp membership,
+   * folder) survives untouched.
+   *
+   * @param {string[]} ids
+   * @param {{at?: string, batchId?: string}} [opts] - `batchId` ties a cascade
+   *        (a folder and everything inside it) together so restore is one act.
+   */
+  async trashBuilds(ids, { at, batchId, root = true } = {}) {
+    return this.#enqueue(async () => {
+      const idSet = new Set(ids);
+      const builds = await this.#readAllBuilds();
+      const stamp = at || new Date().toISOString();
+      const trashed = [];
+      for (const build of builds) {
+        if (!idSet.has(build.id) || build.deletedAt) continue;
+        build.deletedAt = stamp;
+        if (batchId) build.trashBatchId = batchId;
+        build.trashRoot = root;
+        trashed.push(build);
+      }
+      if (trashed.length) await this.#writeJson(this.buildsPath, builds);
+      return trashed;
+    });
+  }
+
+  async restoreBuilds(ids) {
+    return this.#enqueue(async () => {
+      const idSet = new Set(ids);
+      const builds = await this.#readAllBuilds();
+      const restored = [];
+      for (const build of builds) {
+        if (!idSet.has(build.id) || !build.deletedAt) continue;
+        build.deletedAt = null;
+        build.trashBatchId = "";
+        build.trashRoot = false;
+        restored.push(build);
+      }
+      if (restored.length) await this.#writeJson(this.buildsPath, builds);
+      return restored;
+    });
+  }
+
+  /**
+   * Permanently remove trashed builds. This is the ONLY place a build leaves
+   * disk for good, so it is also where history deletion belongs.
+   *
+   * @param {string} [before] - ISO cutoff; omit to ignore age.
+   * @param {string[]} [ids] - restrict to these ids; omit for all of them.
+   * @returns {Promise<string[]>} ids actually removed
+   */
+  async purgeTrashedBuilds(before, ids) {
+    return this.#enqueue(async () => {
+      const builds = await this.#readAllBuilds();
+      const idSet = ids ? new Set(ids) : null;
+      const doomed = builds.filter(
+        (b) => b.deletedAt
+          && (!before || b.deletedAt < before)
+          && (!idSet || idSet.has(b.id)),
+      );
+      if (!doomed.length) return [];
+      const doomedIds = new Set(doomed.map((b) => b.id));
+      await this.#writeJson(this.buildsPath, builds.filter((b) => !doomedIds.has(b.id)));
+      return [...doomedIds];
+    });
+  }
+
   async upsertBuild(input) {
     return this.#enqueue(async () => {
-      const builds = await this.listBuilds();
+      const builds = await this.#readAllBuilds();
       const now = new Date().toISOString();
       const id = input.id || crypto.randomUUID();
       const stampPublishedAt = input.__stampPublishedAt === true;
@@ -90,7 +169,7 @@ class BuildStore {
 
   async deleteBuild(id) {
     return this.#enqueue(async () => {
-      const builds = await this.listBuilds();
+      const builds = await this.#readAllBuilds();
       const filtered = builds.filter((b) => b.id !== id);
       await this.#writeJson(this.buildsPath, filtered);
     });
@@ -100,7 +179,9 @@ class BuildStore {
     return this.#enqueue(async () => {
       const builds = await this.#readJson(this.buildsPath, []);
       for (const build of builds) {
-        if (ids.includes(build.id)) {
+        // A trashed build's folderId is the snapshot restore puts it back to;
+        // a bulk move must not rewrite it.
+        if (ids.includes(build.id) && !build.deletedAt) {
           build.folderId = folderId;
         }
       }
@@ -263,7 +344,7 @@ class BuildStore {
    */
   async markPublished(id, { publishedFileId, publishedKey, publishedSlug, publishedOwner, snapshotUpdatedAt }) {
     return this.#enqueue(async () => {
-      const builds = await this.listBuilds();
+      const builds = await this.#readAllBuilds();
       const idx = builds.findIndex((b) => b.id === id);
       if (idx < 0) return null;
       const existing = builds[idx];
@@ -341,6 +422,13 @@ function normalizeBuild(input, fallbackCreatedAt) {
       typeof input.folderId === "string" ? input.folderId : null,
     compIds: normalizeCompIds(input),
     pinned: Boolean(input.pinned),
+    // Trash stamps. normalizeBuild drops anything it does not name, so these
+    // have to be carried explicitly or a trashed build silently un-trashes.
+    deletedAt: asIso(input.deletedAt) || null,
+    trashBatchId: asString(input.trashBatchId, 64),
+    // True only for what the user deleted directly; false for items a folder
+    // delete dragged along, which the trash view rolls up under the folder.
+    trashRoot: Boolean(input.trashRoot),
     sortOrder:
       typeof input.sortOrder === "number" && Number.isFinite(input.sortOrder)
         ? input.sortOrder

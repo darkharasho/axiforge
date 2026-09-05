@@ -1928,3 +1928,112 @@
 }
 
 .lib-banner__btn:hover { background: rgba(255, 255, 255, .14); }
+
+/* ── Trash view ──────────────────────────────────────────────────────────── */
+
+.lib-trash {
+  padding: 16px 20px;
+}
+
+.lib-trash__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 12px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.lib-trash__hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.lib-trash__list {
+  display: flex;
+  flex-direction: column;
+}
+
+.lib-trash__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.lib-trash__row:hover { background: var(--panel-2); }
+
+.lib-trash__icon {
+  display: flex;
+  color: var(--text-dim);
+}
+.lib-trash__icon svg { width: 18px; height: 18px; }
+
+.lib-trash__text { flex: 1; min-width: 0; }
+
+.lib-trash__name {
+  color: var(--text-light);
+  font-size: 13px;
+  /* A trashed item is not live content, so it does not get the full --text. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lib-trash__meta {
+  color: var(--text-dim);
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+/* Running out of time to restore — the meta line is the thing to notice. */
+.lib-trash__row--expiring .lib-trash__meta { color: var(--danger-text); }
+
+.lib-trash__actions {
+  display: flex;
+  gap: 6px;
+  /* Revealed on hover so a long trash list reads as a list, not a wall of
+     buttons — but always present for keyboard users. */
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+.lib-trash__row:hover .lib-trash__actions,
+.lib-trash__actions:focus-within { opacity: 1; }
+.lib-trash__header .lib-trash__btn { opacity: 1; }
+
+.lib-trash__btn {
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 4px 10px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--text-light);
+  cursor: pointer;
+}
+.lib-trash__btn:hover { border-color: var(--muted); color: var(--text); }
+.lib-trash__btn--danger:hover { border-color: var(--danger); color: var(--danger-text); }
+.lib-trash__btn:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
+
+.lib-trash--empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 64px 20px;
+  text-align: center;
+}
+.lib-trash__empty-icon { color: var(--text-dim); }
+.lib-trash__empty-icon svg { width: 32px; height: 32px; }
+.lib-trash__empty-title { margin: 4px 0 0; color: var(--text-light); font-size: 14px; }
+.lib-trash__empty-hint { margin: 0; color: var(--text-dim); font-size: 12px; max-width: 40ch; }
+
+/* Trash sits at the bottom of the sidebar, away from the folders above it. */
+.lib-sidebar__section--trash {
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid var(--line-soft);
+}

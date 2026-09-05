@@ -9,6 +9,7 @@ import { badgeHtml } from "../sync-status.js";
 import { teamRootFor, teamLabel } from "../teams.js";
 import { clearSelection, handleBuildClick, handleCompClick, updateSelectionVisuals } from "./selection.js";
 import { wireDragDropEvents } from "./drag-drop.js";
+import { renderTrashView } from "./trash-view.js";
 import {
   folderIcon,
   starIcon,
@@ -46,6 +47,17 @@ export function initContent(callbacks) {
 export function renderContent() {
   const container = document.getElementById("lib-content");
   if (!container) return;
+
+  // The trash holds records the rest of the library no longer knows about, so
+  // it bypasses the view modes entirely — see trash-view.js.
+  if (state.currentFolder?.type === "trash") {
+    renderTrashView(container, state.trashItems || [], {
+      onRestore: (ref) => _callbacks.onTrashRestore?.(ref),
+      onPurge: (ref) => _callbacks.onTrashPurge?.(ref),
+      onEmpty: () => _callbacks.onTrashEmpty?.(),
+    });
+    return;
+  }
 
   const viewMode = state.libraryPrefs.viewMode || "list";
 

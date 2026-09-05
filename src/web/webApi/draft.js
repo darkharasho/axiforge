@@ -28,6 +28,12 @@ function createDraftApi({ storage = window.localStorage } = {}) {
     deleteBuild: async () => {
       storage.removeItem(DRAFT_KEY);
     },
+    // The web build is a single draft, not a library, so there is nothing to
+    // stage. These exist so the shared library code can call them unguarded.
+    listTrash: async () => [],
+    restoreFromTrash: async () => ({ builds: [], comps: [], folders: [] }),
+    purgeFromTrash: async () => ({ builds: [], comps: [], folders: [] }),
+    emptyTrash: async () => ({ builds: [], comps: [], folders: [] }),
     getBuildHistory: async () => [],
     getFolderHistory: async () => [],
     revertBuild: async () => null,

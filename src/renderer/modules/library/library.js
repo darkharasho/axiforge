@@ -37,14 +37,6 @@ import { pushUndo, popUndo, applyUndo } from "./undo.js";
 // all over the renderer.
 import { showToast } from "./toast.js";
 export { showToast };
-import {
-  captureBuildDeletion,
-  restoreBuildDeletion,
-  captureFolderDeletion,
-  restoreFolderDeletion,
-  captureCompDeletion,
-  restoreCompDeletion,
-} from "./delete-undo.js";
 import { handleAxicodeExport, handleAxicodeImport } from "./axicode-io.js";
 import { pickWebhooks } from "../webhook-picker.js";
 
@@ -78,6 +70,7 @@ export async function initLibrary(appCallbacks) {
     await loadFolders();
     await loadPrefs();
     await loadTeamState();
+    await refreshTrash();
   } catch (err) {
     console.warn("[library] init data load failed:", err);
   }
@@ -101,6 +94,7 @@ export async function initLibrary(appCallbacks) {
  * Call when navigating to the library page or when data changes.
  */
 export function renderLibrary() {
+  refreshTrashBadge();
   renderSidebar();
   renderToolbar();
   renderFilters();
@@ -457,55 +451,90 @@ async function handleMoveTo(ids, folderId) {
   renderLibrary();
 }
 
-// The desktopApi surface delete-undo needs. saveFolder/moveBuilds come from
-// folder-store so the restore also refreshes state.folders / state.builds.
-const _restoreApi = {
-  saveBuild: (b) => window.desktopApi.saveBuild(b),
-  saveComp: (c) => window.desktopApi.saveComp(c),
-  saveFolder: (f) => saveFolder(f),
-  moveBuilds: (ids, folderId) => moveBuilds(ids, folderId),
-};
-
 async function handleDelete(ids) {
   const count = ids.length;
-  const label = count === 1 ? "this build" : `${count} builds`;
-
-  const affectedComps = new Set();
-  for (const id of ids) {
-    const build = state.builds.find((b) => b.id === id);
-    if (build && Array.isArray(build.compIds)) {
-      for (const cid of build.compIds) affectedComps.add(cid);
-    }
-  }
-  let detail = "You can undo this with Ctrl+Z, though version history won't come back.";
-  if (affectedComps.size > 0) {
-    const compNames = [...affectedComps]
-      .map((cid) => (state.comps || []).find((c) => c.id === cid)?.name || "Untitled Comp")
-      .join(", ");
-    detail = `${count === 1 ? "This build is" : "These builds are"} linked to ${affectedComps.size} comp${affectedComps.size !== 1 ? "s" : ""}: ${compNames}. Deleting will remove ${count === 1 ? "it" : "them"} from ${affectedComps.size === 1 ? "that comp" : "those comps"}. You can undo this with Ctrl+Z, though version history won't come back.`;
-  }
-
-  const confirmed = await showConfirm(`Delete ${label}?`, detail);
-  if (!confirmed) return;
-  // Snapshot before the delete: builds:delete also strips the build from every
-  // comp's buildIds and party-line slots, and that cascade isn't recoverable
-  // from post-delete state.
-  const snapshot = captureBuildDeletion(ids, { builds: state.builds, comps: state.comps });
+  // No confirm: the delete is staged in the trash for 30 days and the toast
+  // below offers the reversal inline. A dialog here would be asking the user to
+  // approve something that has not actually been destroyed.
   for (const id of ids) {
     await window.desktopApi.deleteBuild(id);
   }
   state.builds = await window.desktopApi.listBuilds();
+  state.comps = await window.desktopApi.listComps();
   clearSelection();
   pushUndoable({
     type: "delete-builds",
     label: `Restored ${countLabel(count, "build")}`,
     undo: async () => {
-      await restoreBuildDeletion(snapshot, _restoreApi);
+      await window.desktopApi.restoreFromTrash({ builds: ids });
       state.builds = await window.desktopApi.listBuilds();
       state.comps = await window.desktopApi.listComps();
     },
-  }, `Deleted ${countLabel(count, "build")}`);
+  }, `Moved ${countLabel(count, "build")} to Trash`);
   renderLibrary();
+}
+
+// ─── Trash ───────────────────────────────────────────────────────────────────
+
+async function refreshTrash() {
+  state.trashItems = (await window.desktopApi.listTrash?.()) || [];
+}
+
+/**
+ * Keep the sidebar's Trash count honest without making every delete remember to
+ * update it. Re-renders the sidebar only when the count actually moved, so this
+ * cannot loop.
+ */
+function refreshTrashBadge() {
+  const before = (state.trashItems || []).length;
+  refreshTrash()
+    .then(() => {
+      if ((state.trashItems || []).length !== before) renderSidebar();
+    })
+    .catch(() => {});
+}
+
+/** Reload everything the trash can have put back or taken away. */
+async function reloadAfterTrashChange() {
+  state.builds = await window.desktopApi.listBuilds();
+  state.comps = await window.desktopApi.listComps();
+  await loadFolders();
+  await refreshTrash();
+  renderLibrary();
+}
+
+async function handleTrashRestore({ type, id }) {
+  const key = type === "folder" ? "folders" : type === "comp" ? "comps" : "builds";
+  await window.desktopApi.restoreFromTrash({ [key]: [id] });
+  await reloadAfterTrashChange();
+  showToast("Put back", "success");
+}
+
+async function handleTrashPurge({ type, id }) {
+  const item = (state.trashItems || []).find((i) => i.id === id);
+  const name = item?.name || "this item";
+  // The one delete that really is unrecoverable still asks first.
+  const confirmed = await showConfirm(
+    `Permanently delete "${name}"?`,
+    "This cannot be undone.",
+  );
+  if (!confirmed) return;
+  const key = type === "folder" ? "folders" : type === "comp" ? "comps" : "builds";
+  await window.desktopApi.purgeFromTrash({ [key]: [id] });
+  await reloadAfterTrashChange();
+  showToast("Deleted permanently", "success");
+}
+
+async function handleTrashEmpty() {
+  const count = (state.trashItems || []).length;
+  const confirmed = await showConfirm(
+    `Permanently delete ${count === 1 ? "1 item" : `${count} items`}?`,
+    "Emptying the trash cannot be undone.",
+  );
+  if (!confirmed) return;
+  await window.desktopApi.emptyTrash();
+  await reloadAfterTrashChange();
+  showToast("Trash emptied", "success");
 }
 
 let _cutIds = [];
@@ -1132,15 +1161,6 @@ async function handleRemoveBuildFromComp(buildId, compId) {
 
 async function handleDeleteComps(ids) {
   const count = ids.length;
-  const label = count === 1 ? "this comp" : `${count} comps`;
-  const confirmed = await showConfirm(
-    `Delete ${label}?`,
-    "You can undo this with Ctrl+Z. The builds themselves are not deleted.",
-  );
-  if (!confirmed) return;
-  // Snapshot before the delete: comps:delete also strips the comp id from every
-  // build's compIds, and that cascade isn't recoverable from post-delete state.
-  const snapshot = captureCompDeletion(ids, { comps: state.comps, builds: state.builds });
   for (const id of ids) {
     await window.desktopApi.deleteComp(id);
   }
@@ -1151,11 +1171,11 @@ async function handleDeleteComps(ids) {
     type: "delete-comps",
     label: `Restored ${countLabel(count, "comp")}`,
     undo: async () => {
-      await restoreCompDeletion(snapshot, _restoreApi);
+      await window.desktopApi.restoreFromTrash({ comps: ids });
       state.comps = await window.desktopApi.listComps();
       state.builds = await window.desktopApi.listBuilds();
     },
-  }, `Deleted ${countLabel(count, "comp")}`);
+  }, `Moved ${countLabel(count, "comp")} to Trash`);
   renderLibrary();
 }
 
@@ -1364,33 +1384,27 @@ async function handleDeleteFolder(folderId) {
     return;
   }
   const name = folder?.name || "this folder";
-  const confirmed = await showConfirm(
-    `Delete folder "${name}"?`,
-    "Builds inside will be moved to the root. You can undo this with Ctrl+Z.",
-  );
-  if (!confirmed) return;
-  // folders:delete cascades to descendants and nulls the folderId of every build
-  // in the subtree, so both have to be captured while they still exist.
-  const snapshot = captureFolderDeletion(folderId, {
-    folders: state.folders,
-    builds: state.builds,
-  });
+  // The subtree and everything in it goes to the trash as one batch, so the
+  // builds inside keep their folder and come back with it.
   const wasViewing = state.currentFolder?.id === folderId;
   await deleteFolder(folderId);
-  // If we're currently viewing the deleted folder, go back to root
   if (wasViewing) {
     state.currentFolder = null;
   }
+  state.builds = await window.desktopApi.listBuilds();
+  state.comps = await window.desktopApi.listComps();
   pushUndoable({
     type: "delete-folder",
     label: `Restored folder "${name}"`,
     undo: async () => {
-      await restoreFolderDeletion(snapshot, _restoreApi);
+      await window.desktopApi.restoreFromTrash({ folders: [folderId] });
+      state.builds = await window.desktopApi.listBuilds();
+      state.comps = await window.desktopApi.listComps();
       if (wasViewing) {
         state.currentFolder = state.folders.find((f) => f.id === folderId) || null;
       }
     },
-  }, `Deleted folder "${name}"`);
+  }, `Moved "${name}" to Trash`);
   renderLibrary();
 }
 
@@ -1451,6 +1465,11 @@ function _buildSharedCallbacks() {
     // Open a Settings pane (used by the legacy-library orphan banner).
     onOpenSettings: (pane) => _app.openSettings?.(pane),
 
+    // Trash
+    onTrashRestore: handleTrashRestore,
+    onTrashPurge: handleTrashPurge,
+    onTrashEmpty: handleTrashEmpty,
+
     // Toolbar
     onNewBuild: handleNewBuild,
     onNewFolder: handleNewFolderInContent,
@@ -1503,8 +1522,11 @@ function _buildSharedCallbacks() {
       renderLibrary();
     },
 
-    onNavigate(folder) {
+    async onNavigate(folder) {
       state.currentFolder = folder || null;
+      // The trash lives in the main process, not in state.builds — it has to be
+      // fetched on the way in, and again after anything changes it.
+      if (folder?.type === "trash") await refreshTrash();
       clearSelection();
       savePrefs();
       renderLibrary();

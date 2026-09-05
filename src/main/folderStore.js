@@ -24,13 +24,88 @@ class FolderStore {
     await this.#ensureFile(this.foldersPath, "[]");
   }
 
-  async listFolders() {
+  // Raw reader for every write path — see the note in buildStore: rewriting the
+  // array after a trash-filtered read would erase trashed folders.
+  async #readAllFolders() {
     return this.#readJson(this.foldersPath);
+  }
+
+  async listFolders() {
+    return (await this.#readAllFolders()).filter((f) => !f.deletedAt);
+  }
+
+  async listTrashedFolders() {
+    return (await this.#readAllFolders()).filter((f) => f.deletedAt);
+  }
+
+  /**
+   * Trash a folder and everything under it as one act. The descendants carry
+   * the same batch id but are NOT batch roots, so the trash view shows the one
+   * folder the user deleted rather than a row per descendant.
+   *
+   * @param {{at?: string, batchId?: string}} [opts]
+   * @returns {Promise<string[]>} ids of every folder trashed
+   */
+  async trashFolderTree(id, { at, batchId } = {}) {
+    return this.#enqueue(async () => {
+      const folders = await this.#readAllFolders();
+      // Descend over live folders only, so an already-trashed child is not
+      // re-stamped into this batch and dragged back out by its restore.
+      const subtree = this.#collectDescendants(folders.filter((f) => !f.deletedAt), id);
+      if (!subtree.length) return [];
+      const subtreeSet = new Set(subtree);
+      const stamp = at || new Date().toISOString();
+      for (const folder of folders) {
+        if (!subtreeSet.has(folder.id)) continue;
+        folder.deletedAt = stamp;
+        if (batchId) folder.trashBatchId = batchId;
+        folder.trashRoot = folder.id === id;
+      }
+      await this.#writeJson(this.foldersPath, folders);
+      return subtree;
+    });
+  }
+
+  async restoreFolders(ids) {
+    return this.#enqueue(async () => {
+      const idSet = new Set(ids);
+      const folders = await this.#readAllFolders();
+      const restored = [];
+      for (const folder of folders) {
+        if (!idSet.has(folder.id) || !folder.deletedAt) continue;
+        delete folder.deletedAt;
+        delete folder.trashBatchId;
+        delete folder.trashRoot;
+        restored.push(folder);
+      }
+      if (restored.length) await this.#writeJson(this.foldersPath, folders);
+      return restored;
+    });
+  }
+
+  /**
+   * @param {string} [before] - ISO cutoff; omit to ignore age.
+   * @param {string[]} [ids] - restrict to these ids; omit for all of them.
+   */
+  async purgeTrashedFolders(before, ids) {
+    return this.#enqueue(async () => {
+      const folders = await this.#readAllFolders();
+      const idSet = ids ? new Set(ids) : null;
+      const doomed = folders.filter(
+        (f) => f.deletedAt
+          && (!before || f.deletedAt < before)
+          && (!idSet || idSet.has(f.id)),
+      );
+      if (!doomed.length) return [];
+      const doomedIds = new Set(doomed.map((f) => f.id));
+      await this.#writeJson(this.foldersPath, folders.filter((f) => !doomedIds.has(f.id)));
+      return [...doomedIds];
+    });
   }
 
   async upsertFolder(input) {
     return this.#enqueue(async () => {
-      const folders = await this.listFolders();
+      const folders = await this.#readAllFolders();
       const now = new Date().toISOString();
       const name = String(input.name || "Untitled Folder").slice(0, 100);
       const parentId =
@@ -108,7 +183,7 @@ class FolderStore {
   // id is unknown.
   async clearLegacyFields(id) {
     return this.#enqueue(async () => {
-      const folders = await this.listFolders();
+      const folders = await this.#readAllFolders();
       const folder = folders.find((f) => f.id === id);
       if (!folder) return null;
       if (folder.orgName === undefined && folder.lastSyncedAt === undefined) return { ...folder };
@@ -126,7 +201,7 @@ class FolderStore {
 
   async deleteFolder(id) {
     return this.#enqueue(async () => {
-      const folders = await this.listFolders();
+      const folders = await this.#readAllFolders();
       const toDelete = this.#collectDescendants(folders, id);
       if (!toDelete.length) return [];
       const remaining = folders.filter((f) => !toDelete.includes(f.id));
@@ -137,7 +212,7 @@ class FolderStore {
 
   async reorderFolders(updates) {
     return this.#enqueue(async () => {
-      const folders = await this.listFolders();
+      const folders = await this.#readAllFolders();
       for (const { id, sortOrder } of updates) {
         const folder = folders.find((f) => f.id === id);
         if (folder) folder.sortOrder = sortOrder;
@@ -158,7 +233,7 @@ class FolderStore {
   async touchFolders(ids) {
     if (!ids.length) return;
     return this.#enqueue(async () => {
-      const folders = await this.listFolders();
+      const folders = await this.#readAllFolders();
       const now = new Date().toISOString();
       for (const folder of folders) {
         if (ids.includes(folder.id)) {

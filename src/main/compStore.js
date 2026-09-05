@@ -25,13 +25,79 @@ class CompStore {
     await this.#ensureFile(this.compsPath, "[]");
   }
 
-  async listComps() {
+  // Raw reader for every write path. They rewrite the whole array, so reading
+  // through the trash-filtered listComps() would erase trashed comps on save.
+  async #readAllComps() {
     return this.#readJson(this.compsPath);
+  }
+
+  async listComps() {
+    return (await this.#readAllComps()).filter((c) => !c.deletedAt);
+  }
+
+  async listTrashedComps() {
+    return (await this.#readAllComps()).filter((c) => c.deletedAt);
+  }
+
+  /** @param {{at?: string, batchId?: string, root?: boolean}} [opts] */
+  async trashComps(ids, { at, batchId, root = true } = {}) {
+    return this.#enqueue(async () => {
+      const idSet = new Set(ids);
+      const comps = await this.#readAllComps();
+      const stamp = at || new Date().toISOString();
+      const trashed = [];
+      for (const comp of comps) {
+        if (!idSet.has(comp.id) || comp.deletedAt) continue;
+        comp.deletedAt = stamp;
+        if (batchId) comp.trashBatchId = batchId;
+        comp.trashRoot = root;
+        trashed.push(comp);
+      }
+      if (trashed.length) await this.#writeJson(this.compsPath, comps);
+      return trashed;
+    });
+  }
+
+  async restoreComps(ids) {
+    return this.#enqueue(async () => {
+      const idSet = new Set(ids);
+      const comps = await this.#readAllComps();
+      const restored = [];
+      for (const comp of comps) {
+        if (!idSet.has(comp.id) || !comp.deletedAt) continue;
+        delete comp.deletedAt;
+        delete comp.trashBatchId;
+        delete comp.trashRoot;
+        restored.push(comp);
+      }
+      if (restored.length) await this.#writeJson(this.compsPath, comps);
+      return restored;
+    });
+  }
+
+  /**
+   * @param {string} [before] - ISO cutoff; omit to ignore age.
+   * @param {string[]} [ids] - restrict to these ids; omit for all of them.
+   */
+  async purgeTrashedComps(before, ids) {
+    return this.#enqueue(async () => {
+      const comps = await this.#readAllComps();
+      const idSet = ids ? new Set(ids) : null;
+      const doomed = comps.filter(
+        (c) => c.deletedAt
+          && (!before || c.deletedAt < before)
+          && (!idSet || idSet.has(c.id)),
+      );
+      if (!doomed.length) return [];
+      const doomedIds = new Set(doomed.map((c) => c.id));
+      await this.#writeJson(this.compsPath, comps.filter((c) => !doomedIds.has(c.id)));
+      return [...doomedIds];
+    });
   }
 
   async upsertComp(input) {
     return this.#enqueue(async () => {
-      const comps = await this.listComps();
+      const comps = await this.#readAllComps();
       const now = new Date().toISOString();
       const stampPublishedAt = input.__stampPublishedAt === true;
       const id = input.id || crypto.randomUUID();
@@ -123,7 +189,7 @@ class CompStore {
 
   async deleteComp(id) {
     return this.#enqueue(async () => {
-      const comps = await this.listComps();
+      const comps = await this.#readAllComps();
       const filtered = comps.filter((c) => c.id !== id);
       await this.#writeJson(this.compsPath, filtered);
     });
@@ -131,7 +197,7 @@ class CompStore {
 
   async reorderComps(updates) {
     return this.#enqueue(async () => {
-      const comps = await this.listComps();
+      const comps = await this.#readAllComps();
       for (const { id, sortOrder } of updates) {
         const comp = comps.find((c) => c.id === id);
         if (comp) comp.sortOrder = sortOrder;
@@ -142,7 +208,7 @@ class CompStore {
 
   async deleteComps(ids) {
     return this.#enqueue(async () => {
-      const comps = await this.listComps();
+      const comps = await this.#readAllComps();
       const idSet = new Set(ids);
       const filtered = comps.filter((c) => !idSet.has(c.id));
       await this.#writeJson(this.compsPath, filtered);
@@ -151,7 +217,7 @@ class CompStore {
 
   async addTagsToComps(ids, tags) {
     return this.#enqueue(async () => {
-      const comps = await this.listComps();
+      const comps = await this.#readAllComps();
       const idSet = new Set(ids);
       const now = new Date().toISOString();
       let changed = false;
@@ -173,7 +239,7 @@ class CompStore {
 
   async removeTagsFromComps(ids, tags) {
     return this.#enqueue(async () => {
-      const comps = await this.listComps();
+      const comps = await this.#readAllComps();
       const idSet = new Set(ids);
       const tagsToRemove = new Set(tags);
       const now = new Date().toISOString();
@@ -193,7 +259,7 @@ class CompStore {
 
   async removeBuildFromComps(buildId) {
     return this.#enqueue(async () => {
-      const comps = await this.listComps();
+      const comps = await this.#readAllComps();
       let changed = false;
       for (const comp of comps) {
         if (comp.buildIds.includes(buildId)) {
@@ -220,7 +286,7 @@ class CompStore {
    */
   async markPublished(id, { publishedFileId, publishedKey, publishedSlug, publishedOwner, boonCoverageHtml, snapshotUpdatedAt }) {
     return this.#enqueue(async () => {
-      const comps = await this.listComps();
+      const comps = await this.#readAllComps();
       const existing = comps.find((c) => c.id === id);
       if (!existing) return null;
       if (publishedFileId) existing.publishedFileId = publishedFileId;

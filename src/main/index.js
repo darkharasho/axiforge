@@ -16,6 +16,7 @@ app.commandLine.appendSwitch("class", "AxiForge");
 const { BuildStore } = require("./buildStore");
 const { FolderStore } = require("./folderStore");
 const { CompStore } = require("./compStore");
+const { createTrash } = require("./trash");
 const { SyncStore } = require("./syncStore");
 const { BuildHistoryStore, summarizeBuildChange } = require("./buildHistoryStore");
 const { TeamSync } = require("./teamSync");
@@ -103,6 +104,15 @@ const folderStore = new FolderStore(dataDir);
 const compStore = new CompStore(dataDir);
 const syncStore = new SyncStore(dataDir);
 const buildHistoryStore = new BuildHistoryStore(dataDir);
+// Deleting anything in the library stages it here for 30 days rather than
+// destroying it. See trash.js for why the comp-unlink and history deletion that
+// used to run on delete are deferred until purge.
+const trash = createTrash({
+  buildStore: store,
+  compStore,
+  folderStore,
+  historyStore: buildHistoryStore,
+});
 
 // Publishing infrastructure (repo, Pages workflow file, Pages config) only needs
 // verifying once per owner per process. Re-checking it on every publish cost
@@ -414,6 +424,9 @@ const readyWork = app.whenReady().then(async () => {
   await compStore.init();
   await syncStore.init();
   await buildHistoryStore.init();
+  // Sweep anything past the retention window. Never blocks startup: a failed
+  // sweep means items linger in the trash, which is harmless.
+  trash.purgeExpired().catch((err) => console.warn("[trash] sweep failed:", err.message));
   // Once-a-day snapshot of the user's library (kept 7 days) under data/backups/.
   // Cheap insurance on top of the per-write .bak generation in jsonFile.js.
   snapshotDaily(dataDir, ["builds.json", "comps.json", "folders.json", "settings.json"]).catch(() => {});
@@ -629,13 +642,46 @@ const readyWork = app.whenReady().then(async () => {
     if (teamRoot && !(await teamSync.canDelete(teamRoot.teamId, id))) {
       throw new Error("Only the team owner or the build's creator can delete it from the team.");
     }
-    await store.deleteBuild(id);
-    await compStore.removeBuildFromComps(id);
-    buildHistoryStore.deleteHistory(id).catch((err) => console.warn("[history] deleteHistory failed:", err.message));
+    // Staged in the trash, not destroyed. The comp unlink and history deletion
+    // that used to run here now wait for the purge, so a restore inside the
+    // retention window brings the build back whole.
+    await trash.trashBuilds([id]);
     if (folderId) await folderStore.touchFolders([folderId]);
     if (teamRoot) await safeEnqueue(() => teamSync.enqueue(teamRoot.teamId, id, "build", "delete"), { type: "build", id });
     return true;
   });
+
+  // ── Trash ──────────────────────────────────────────────────────────────────
+  handle("trash:list", async () => trash.listTrash());
+
+  handle("trash:restore", async (_e, selection) => {
+    const restored = await trash.restore(selection || {});
+    // A team item was tombstoned for the team when it was trashed, so bringing
+    // it back locally has to push it again or only this machine sees it.
+    const [builds, comps, folders] = await Promise.all([
+      store.listBuilds(), compStore.listComps(), folderStore.listFolders(),
+    ]);
+    const enqueuePut = async (id, type, folderId) => {
+      const teamRoot = folderId ? _findTeamRoot(folderId, folders) : null;
+      if (teamRoot) await safeEnqueue(() => teamSync.enqueue(teamRoot.teamId, id, type, "put"), { type, id });
+    };
+    for (const id of restored.folders) {
+      const folder = folders.find((f) => f.id === id);
+      if (folder?.parentId) await enqueuePut(id, "folder", folder.parentId);
+    }
+    for (const id of restored.builds) {
+      await enqueuePut(id, "build", builds.find((b) => b.id === id)?.folderId);
+    }
+    for (const id of restored.comps) {
+      await enqueuePut(id, "comp", comps.find((c) => c.id === id)?.folderId);
+    }
+    return restored;
+  });
+
+  // No team op on purge: the tombstone already went out when the item was
+  // trashed, so the team stopped seeing it then.
+  handle("trash:purge", async (_e, selection) => trash.purge(selection || {}));
+  handle("trash:empty", async () => trash.empty());
 
   // Build history
   handle("builds:get-history", async (_e, buildId) => {
@@ -748,8 +794,9 @@ const readyWork = app.whenReady().then(async () => {
     if (teamRoot && !(await teamSync.canDelete(teamRoot.teamId, id))) {
       throw new Error("Only the team owner or the folder's creator can delete it from the team.");
     }
-    const deletedIds = await folderStore.deleteFolder(id);
-    if (deletedIds.length) await store.clearFolderFromBuilds(deletedIds);
+    // Trashes the subtree plus the builds and comps inside it, under one batch,
+    // so restoring the folder brings its contents back with it.
+    const { folders: deletedIds } = await trash.trashFolder(id);
     // One tombstone for the folder; the server cascades to descendants.
     if (teamRoot) await safeEnqueue(() => teamSync.enqueue(teamRoot.teamId, id, "folder", "delete"), { type: "folder", id });
     return deletedIds;
@@ -839,8 +886,7 @@ const readyWork = app.whenReady().then(async () => {
     if (teamRoot && !(await teamSync.canDelete(teamRoot.teamId, id))) {
       throw new Error("Only the team owner or the comp's creator can delete it from the team.");
     }
-    await compStore.deleteComp(id);
-    await store.clearCompFromBuilds([id]);
+    await trash.trashComps([id]);
     if (teamRoot) await safeEnqueue(() => teamSync.enqueue(teamRoot.teamId, id, "comp", "delete"), { type: "comp", id });
   });
   handle("comps:reorder", (_e, updates) => compStore.reorderComps(updates));
@@ -857,8 +903,7 @@ const readyWork = app.whenReady().then(async () => {
       }
       teamOps.push([teamRoot.teamId, id]);
     }
-    await compStore.deleteComps(ids);
-    if (ids.length) await store.clearCompFromBuilds(ids);
+    await trash.trashComps(ids);
     for (const [teamId, id] of teamOps) await safeEnqueue(() => teamSync.enqueue(teamId, id, "comp", "delete"), { type: "comp", id });
   });
   // Tag edits are a real mutation of the comp record, so team comps must be

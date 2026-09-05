@@ -15,6 +15,7 @@ import {
   chevronDoubleRightIcon,
   compIcon,
   shareIcon,
+  trashIcon,
 } from "./heroicons.js";
 
 let _callbacks = {};
@@ -65,6 +66,7 @@ export function renderSidebar() {
     <nav class="lib-sidebar__nav">
       ${renderSmartFolders(profExpanded, modeExpanded)}
       ${renderMyFolders(expanded)}
+      ${renderTrashNav()}
     </nav>
   `;
 
@@ -170,6 +172,25 @@ function renderSmartFolders(profExpanded, modeExpanded) {
   `;
 }
 
+// Pinned to the bottom of the sidebar, the way every file manager places it.
+// The count is deliberately absent when empty: a "Trash 0" badge is noise.
+function renderTrashNav() {
+  const isActive = state.currentFolder?.type === "trash";
+  const count = (state.trashItems || []).length;
+  return `
+    <div class="lib-sidebar__section lib-sidebar__section--trash">
+      <button type="button"
+        class="lib-nav-item ${isActive ? "lib-nav-item--active" : ""}"
+        data-navigate-trash="1"
+      >
+        <span class="lib-nav-item__icon">${trashIcon}</span>
+        <span class="lib-nav-item__label">Trash</span>
+        ${count > 0 ? `<span class="lib-nav-item__count">${count}</span>` : ""}
+      </button>
+    </div>
+  `;
+}
+
 function renderMyFolders(expanded) {
   const topLevel = state.folders
     .filter((f) => f.parentId === null)
@@ -265,6 +286,10 @@ function bindSidebarEvents(container) {
   // Collapse
   container.querySelector("#lib-sidebar-collapse")?.addEventListener("click", () => {
     _callbacks.onPrefsChange?.({ sidebarOpen: false });
+  });
+
+  container.querySelectorAll("[data-navigate-trash]").forEach((el) => {
+    el.addEventListener("click", () => _callbacks.onNavigate?.({ type: "trash", id: "__trash" }));
   });
 
   // Navigate to All Builds

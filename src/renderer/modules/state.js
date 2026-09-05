@@ -22,7 +22,8 @@ export const state = {
   buildSearch: "",
   // Library state
   folders: [],
-  currentFolder: null,      // { type: "smart"|"custom", id: string } or null (root)
+  currentFolder: null,      // { type: "smart"|"custom"|"trash", id: string } or null (root)
+  trashItems: [],           // rows for the trash view; refreshed on navigate
   libraryPrefs: {
     viewMode: "list",
     sortField: "sortOrder",
