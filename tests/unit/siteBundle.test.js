@@ -18,7 +18,13 @@ beforeAll(() => {
 });
 
 // Mock electron app for siteBundle.js
-jest.mock("electron", () => ({ app: { isPackaged: false } }), { virtual: true });
+// NOT `{ virtual: true }`: electron is a real devDependency, and a virtual mock
+// registers under a module id derived from this directory instead of the resolved
+// path. Jest shares its module-id cache across every file in a worker, so that
+// poisons the ordinary `jest.mock("electron")` in whichever file runs next --
+// which is what used to make buildStoreAuth.test.js fail intermittently. See
+// tests/unit/testMockHygiene.test.js.
+jest.mock("electron", () => ({ app: { isPackaged: false } }));
 
 const { buildSpaBundle, buildEncryptedBuildFile } = require("../../src/main/siteBundle");
 
