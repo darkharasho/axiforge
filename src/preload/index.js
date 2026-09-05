@@ -80,6 +80,7 @@ contextBridge.exposeInMainWorld("desktopApi", {
   previewChatLink: (link) => ipcRenderer.invoke("builds:preview-chat-link", link),
   importChatLink: (link, name, folderId, gameMode) => ipcRenderer.invoke("builds:import-chat-link", link, name, folderId, gameMode),
   importGw2Skills: (url, name, folderId, gameMode) => ipcRenderer.invoke("builds:import-gw2skills", url, name, folderId, gameMode),
+  importAxiLink: (link, name, folderId, gameMode) => ipcRenderer.invoke("builds:import-axi-link", link, name, folderId, gameMode),
   encodeShareCode: (build) => ipcRenderer.invoke("builds:encode-share-code", build),
   decodeShareCode: (code) => ipcRenderer.invoke("builds:decode-share-code", code),
   isShareCode: (text) => ipcRenderer.invoke("builds:is-share-code", text),

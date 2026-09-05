@@ -85,6 +85,9 @@ export function renderToolbar() {
           <button type="button" class="lib-import-dropdown__item" data-import-type="gw2skills">
             ${arrowDownTrayIcon} GW2Skills
           </button>
+          <button type="button" class="lib-import-dropdown__item" data-import-type="axilink">
+            ${linkIcon} AxiForge Link
+          </button>
           <button type="button" class="lib-import-dropdown__item" data-import-type="sharecode">
             ${axiforgeIcon} AxiCode
           </button>
@@ -424,6 +427,7 @@ function bindToolbarEvents(container) {
       importDropdown.classList.remove("lib-import-dropdown--open");
       if (item.dataset.importType === "chatlink") _callbacks.onImportChatLink?.();
       else if (item.dataset.importType === "gw2skills") _callbacks.onImportGw2Skills?.();
+      else if (item.dataset.importType === "axilink") _callbacks.onImportAxiLink?.();
       else if (item.dataset.importType === "sharecode") _callbacks.onImportShareCode?.();
       else if (item.dataset.importType === "axicode-file") _callbacks.onImportAxicodeFile?.();
     });

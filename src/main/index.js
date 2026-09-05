@@ -979,6 +979,14 @@ const readyWork = app.whenReady().then(async () => {
     if (teamRoot) await safeEnqueue(() => teamSync.enqueue(teamRoot.teamId, saved.id, "build", "put"), { type: "build", id: saved.id });
     return saved;
   });
+  handle("builds:import-axi-link", async (_e, link, name, folderId, gameMode) => {
+    const { importAxiLink } = require("./axiLinkImport.js");
+    const build = await importAxiLink(link, { name, folderId, gameMode });
+    const saved = await store.upsertBuild(build);
+    const teamRoot = await findTeamRoot(saved.folderId);
+    if (teamRoot) await safeEnqueue(() => teamSync.enqueue(teamRoot.teamId, saved.id, "build", "put"), { type: "build", id: saved.id });
+    return saved;
+  });
   handle("builds:parse-gw2skills", async (_e, url, gameMode) => {
     const { parseGw2Skills } = require("./gw2skillsImport.js");
     return parseGw2Skills(url, { gameMode });
@@ -2087,6 +2095,8 @@ const readyWork = app.whenReady().then(async () => {
         asHttpResult(invokeLocal("builds:import-chat-link", link, name, folderId, gameMode), { badInput: true }),
       importGw2Skills: (url, name, folderId, gameMode) =>
         asHttpResult(invokeLocal("builds:import-gw2skills", url, name, folderId, gameMode), { badInput: true }),
+      importAxiLink: (link, name, folderId, gameMode) =>
+        asHttpResult(invokeLocal("builds:import-axi-link", link, name, folderId, gameMode), { badInput: true }),
       parseGw2Skills: (url, gameMode) =>
         asHttpResult(invokeLocal("builds:parse-gw2skills", url, gameMode), { badInput: true }),
       parseChatLink: (link, gameMode) =>

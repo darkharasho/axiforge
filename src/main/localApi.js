@@ -262,6 +262,15 @@ function buildRoutes({ version, ops }) {
       },
     },
     {
+      method: "POST", pattern: "/import/axi-link",
+      handler: async ({ body }) => {
+        if (!body?.link || typeof body.link !== "string") {
+          throw httpError(400, "Body must include a published AxiForge build link: { link }");
+        }
+        return ops.importAxiLink(body.link, body.name ?? null, body.folderId ?? null, body.gameMode ?? null);
+      },
+    },
+    {
       method: "POST", pattern: "/import/gw2skills/parse",
       handler: async ({ body }) => {
         if (!body?.url || typeof body.url !== "string") {

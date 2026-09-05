@@ -709,6 +709,27 @@ export async function handleImportGw2Skills(targetFolderId) {
   }
 }
 
+async function handleImportAxiLink(targetFolderId) {
+  const folderId = targetFolderId ?? (state.currentFolder?.type === "custom" ? state.currentFolder.id : null);
+  const result = await showAxiLinkImportModal();
+  if (!result) return;
+  showToast("Importing from AxiForge link\u2026", "loading");
+  try {
+    const gameMode = state.editor?.gameMode || "pve";
+    // A blank name keeps the published build's own title — unlike a share code,
+    // a published link carries the real name inside the payload.
+    const saved = await window.desktopApi.importAxiLink(result.url, result.name || "", folderId, gameMode);
+    await addImportedBuildToActiveComp(saved);
+    state.builds = await window.desktopApi.listBuilds();
+    renderLibrary();
+    window.desktopApi.prewarmChatLinks?.([saved]);
+    showToast(`"${saved.title}" imported`);
+  } catch (err) {
+    console.error("AxiForge link import failed:", err);
+    showToast(err?.message ? `Import failed: ${err.message}` : "Import failed", "error");
+  }
+}
+
 async function handleImportShareCode(targetFolderId) {
   const folderId = targetFolderId ?? (state.currentFolder?.type === "custom" ? state.currentFolder.id : null);
   const result = await showShareCodeImportModal();
@@ -1568,6 +1589,7 @@ function _buildSharedCallbacks() {
     onDiscordEmbed: handleDiscordEmbed,
     onImportChatLink: handleImportChatLink,
     onImportGw2Skills: handleImportGw2Skills,
+    onImportAxiLink: handleImportAxiLink,
     onImportShareCode: handleImportShareCode,
     onExportAxicode: handleExportAxicode,
     onExportAxicodeFolder: handleExportAxicodeFolder,
@@ -1839,6 +1861,95 @@ function showAxicodeBuildPickerModal(builds) {
         dismiss(builds[idx]);
       });
     });
+    overlay.addEventListener("click", (e) => { if (e.target === overlay) dismiss(null); });
+  });
+}
+
+function showAxiLinkImportModal() {
+  return new Promise((resolve) => {
+    const overlay = document.createElement("div");
+    overlay.className = "confirm-modal-overlay";
+    overlay.innerHTML = `
+      <div class="confirm-modal" style="width:460px;max-width:90vw;">
+        <div class="confirm-modal__header">
+          <h3 class="confirm-modal__title">Import from AxiForge Link</h3>
+        </div>
+        <div class="confirm-modal__body" style="display:flex;flex-direction:column;gap:10px;">
+          <div>
+            <label style="display:block;font-size:0.8rem;color:var(--muted);margin-bottom:4px;">Published build link</label>
+            <input
+              type="text"
+              id="axilink-url-input"
+              placeholder="https://someone.github.io/axibuilds/?n=...&amp;b=..."
+              style="width:100%;padding:6px 8px;background:var(--input-bg);border:1px solid var(--input-border);border-radius:4px;color:var(--text);font-size:0.9rem;outline:none;box-sizing:border-box;"
+            />
+            <div id="axilink-url-status" style="font-size:0.75rem;min-height:1.2em;margin-top:3px;color:var(--text-dim);"></div>
+          </div>
+          <div>
+            <label style="display:block;font-size:0.8rem;color:var(--muted);margin-bottom:4px;">Build Name <span style="color:var(--text-dim);">(optional)</span></label>
+            <input
+              type="text"
+              id="axilink-name-input"
+              placeholder="Keep the published name"
+              style="width:100%;padding:6px 8px;background:var(--input-bg);border:1px solid var(--input-border);border-radius:4px;color:var(--text);font-size:0.9rem;outline:none;box-sizing:border-box;"
+            />
+          </div>
+        </div>
+        <div class="confirm-modal__actions">
+          <button class="confirm-modal__btn" data-action="cancel">Cancel</button>
+          <button class="confirm-modal__btn confirm-modal__btn--primary" data-action="import" disabled>Import</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    const urlInput = overlay.querySelector("#axilink-url-input");
+    const nameInput = overlay.querySelector("#axilink-name-input");
+    const statusEl = overlay.querySelector("#axilink-url-status");
+    const importBtn = overlay.querySelector('[data-action="import"]');
+    let urlValid = false;
+
+    urlInput.focus();
+
+    function setStatus(msg, color) {
+      statusEl.textContent = msg;
+      statusEl.style.color = color;
+    }
+
+    urlInput.addEventListener("input", () => {
+      const val = urlInput.value.trim();
+      importBtn.disabled = true;
+      urlValid = false;
+      if (!val) { setStatus("", "#556"); return; }
+      // Mirrors what parseAxiLink accepts: a ?b=/?c=/?legacy= ref, the oldest
+      // bare #id.key hash, or a /r/<id>/ short link.
+      const isComp = /[?&]c=[^.&]+\.[^&]/.test(val);
+      const isBuild = /[?&](?:b|legacy)=[^.&]+\.[^&]/.test(val) || /#[^.#]+\.[^#]/.test(val) || /\/r\/[^/]+\/?$/.test(val);
+      if (isComp) { setStatus("That's a comp link — open the comp and copy a build's link", "#c55"); return; }
+      if (!isBuild) { setStatus("Not an AxiForge build link", "#c55"); return; }
+      setStatus("\u2713 Valid AxiForge link", "#5a5");
+      urlValid = true;
+      importBtn.disabled = false;
+    });
+
+    function submit() {
+      dismiss({ url: urlInput.value.trim(), name: nameInput.value.trim() });
+    }
+
+    function dismiss(result) {
+      document.removeEventListener("keydown", onKey);
+      overlay.remove();
+      resolve(result);
+    }
+
+    function onKey(e) {
+      if (e.key === "Escape") dismiss(null);
+      if (e.key === "Enter" && urlValid) submit();
+    }
+
+    document.addEventListener("keydown", onKey);
+    overlay.querySelector('[data-action="cancel"]').addEventListener("click", () => dismiss(null));
+    importBtn.addEventListener("click", submit);
     overlay.addEventListener("click", (e) => { if (e.target === overlay) dismiss(null); });
   });
 }
