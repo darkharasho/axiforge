@@ -1,3 +1,23 @@
+## Version v0.14.0 — September 5, 2026
+
+### Deleting is no longer permanent
+
+- **Everything you delete goes to Trash for 30 days.** Builds, comps and folders now land in a Trash entry at the bottom of the library sidebar, where each row offers *Put Back* or *Delete Permanently*. Rows with under a week left are tinted so an expiry never sneaks up on you.
+- **Restoring a build brings its version history back with it.** Deleting used to unlink the build from its comps and wipe its history immediately — that's what made a delete unrecoverable. Both now wait until the item is permanently deleted.
+- **Deleting a folder restores as one act.** The folder, its subfolders and everything inside come back together, as a single Trash row rather than one per item.
+- **"Are you sure?" is gone from ordinary deletes.** With a Trash to fall back on, the confirm dialog was just friction. The one on *Delete Permanently* stays, because that one really is final.
+- **Teammates stop seeing what you deleted**, and putting it back re-shares it.
+
+### Undo, where you can actually find it
+
+- **Every reversible action now offers an Undo button in its toast.** The library had twelve undoable actions and no way to discover them — dragging a build into the wrong folder looked exactly like nothing happening. The toast now names what happened ("Moved 3 builds to Raids") and carries the reversal, sticking around long enough to reach and pausing while you hover it.
+- **Deleting a comp is undoable too.** It was the last delete still claiming it couldn't be undone.
+
+### Bug Fixes
+
+- **Six relics were silently dropped from shared builds.** Relic of Galdra, of the Sacred Grounds, of the Director, of the Doyen, of the Cruel Overseer and of Watch could be selected in the app but were missing from the share format, so sharing a build using one quietly removed it. All six now encode correctly, and existing share links are unaffected.
+- **A share code can no longer come out subtly wrong.** Anything the share format can't represent now reports a copy failure instead of producing a valid-looking code that decodes to the wrong gear.
+
 ## Version v0.13.0 — September 4, 2026
 
 ### Restore any version from folder history
