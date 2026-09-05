@@ -21,8 +21,11 @@ const BACKOFF_MAX_MS = 5 * 60_000;
 const PAGE_SIZE = 200;
 const FAILURES_BEFORE_TOAST = 3;
 
-const BUILD_LOCAL_FIELDS = ["folderId", "pinned", "sortOrder", "compIds"];
-const COMP_LOCAL_FIELDS = ["folderId", "sortOrder", "boonCoverageHtml"];
+// Archiving is a personal "get this out of my way", not a statement about the
+// team's library, so the stamps stay on this machine like `pinned` does.
+const ARCHIVE_FIELDS = ["archivedAt", "archiveBatchId", "archiveRoot"];
+const BUILD_LOCAL_FIELDS = ["folderId", "pinned", "sortOrder", "compIds", ...ARCHIVE_FIELDS];
+const COMP_LOCAL_FIELDS = ["folderId", "sortOrder", "boonCoverageHtml", ...ARCHIVE_FIELDS];
 
 function omit(obj, keys) {
   const out = { ...obj };

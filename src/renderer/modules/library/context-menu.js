@@ -21,6 +21,7 @@ import {
   globeAltIcon,
   informationCircleIcon,
   trashIcon,
+  archiveArrowDownIcon,
   folderOpenIcon,
   folderPlusIcon,
   documentPlusIcon,
@@ -221,6 +222,7 @@ function showCompMenu(x, y, compId, comp) {
     _item(arrowUpTrayIcon, "Export (.axicode)", null, () => _callbacks.onExportAxicode?.("selection")),
     _item(clipboardIcon, "Paste", "Ctrl+V", () => _callbacks.onPasteJson?.(compId)),
     _sep(),
+    _item(archiveArrowDownIcon, "Archive", null, () => _callbacks.onArchive?.({ comps: [compId] })),
     _item(trashIcon, "Delete", "Del", () => _callbacks.onDeleteComps?.([compId]), true),
   ];
   _showMenu(x, y, items);
@@ -239,6 +241,7 @@ function showMultiCompSelectMenu(x, y, ids) {
     _item(scissorsIcon, "Cut", "Ctrl+X", () => _callbacks.onCutCompJson?.(ids)),
     _item(arrowUpTrayIcon, "Export (.axicode)", null, () => _callbacks.onExportAxicode?.("selection")),
     _sep(),
+    _item(archiveArrowDownIcon, `Archive ${count} Comps`, null, () => _callbacks.onArchive?.({ comps: ids })),
     _item(trashIcon, `Delete ${count} Comps`, null, () => _callbacks.onDeleteComps?.(ids), true),
   ];
   _showMenu(x, y, items);
@@ -268,6 +271,15 @@ function showFolderMenu(x, y, folderId, folder) {
     _sep(),
     ..._folderTeamItems(folderId, folder, teamRoot, isTeamRoot),
     _item(clockIcon, "View History", null, () => _callbacks.onViewFolderHistory?.(folderId, folder?.name)),
+    // Archiving a team root would hide a folder the rest of the team still
+    // works in, and the stamp is local, so they would never know why it went
+    // quiet for you. Leaving the team is the honest way out.
+    _item(
+      archiveArrowDownIcon, "Archive Folder", null,
+      isTeamRoot ? null : () => _callbacks.onArchive?.({ folder: folderId }),
+      false,
+      isTeamRoot ? "Leave the team in Settings \u2192 Teams instead" : null,
+    ),
     // A team root is only removable by leaving/deleting the team itself.
     _item(
       trashIcon, "Delete Folder", null,
@@ -390,6 +402,7 @@ function _buildUnlinkOrDeleteItems(buildId, build) {
       );
     }
   }
+  items.push(_item(archiveArrowDownIcon, "Archive", null, () => _callbacks.onArchive?.({ builds: [buildId] })));
   items.push(_item(trashIcon, "Delete", "Del", () => _callbacks.onDelete?.([buildId]), true));
   return items;
 }
@@ -424,6 +437,7 @@ function _multiSelectUnlinkOrDeleteItems(ids) {
       }),
     );
   }
+  items.push(_item(archiveArrowDownIcon, `Archive ${count} Builds`, null, () => _callbacks.onArchive?.({ builds: ids })));
   items.push(_item(trashIcon, `Delete ${count} Builds`, null, () => _callbacks.onDelete?.(ids), true));
   return items;
 }

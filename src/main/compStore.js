@@ -39,6 +39,35 @@ class CompStore {
     return (await this.#readAllComps()).filter((c) => c.deletedAt);
   }
 
+  async listArchivedComps() {
+    return (await this.#readAllComps()).filter((c) => c.archivedAt && !c.deletedAt);
+  }
+
+  /** @see BuildStore#setBuildsArchived - same contract, same reasoning. */
+  async setCompsArchived(ids, archived, { at, batchId, root = true } = {}) {
+    return this.#enqueue(async () => {
+      const idSet = new Set(ids);
+      const comps = await this.#readAllComps();
+      const stamp = at || new Date().toISOString();
+      const changed = [];
+      for (const comp of comps) {
+        if (!idSet.has(comp.id) || Boolean(comp.archivedAt) === archived) continue;
+        if (archived) {
+          comp.archivedAt = stamp;
+          if (batchId) comp.archiveBatchId = batchId;
+          comp.archiveRoot = root;
+        } else {
+          delete comp.archivedAt;
+          delete comp.archiveBatchId;
+          delete comp.archiveRoot;
+        }
+        changed.push(comp);
+      }
+      if (changed.length) await this.#writeJson(this.compsPath, comps);
+      return changed;
+    });
+  }
+
   /** @param {{at?: string, batchId?: string, root?: boolean}} [opts] */
   async trashComps(ids, { at, batchId, root = true } = {}) {
     return this.#enqueue(async () => {

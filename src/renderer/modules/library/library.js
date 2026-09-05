@@ -71,6 +71,7 @@ export async function initLibrary(appCallbacks) {
     await loadPrefs();
     await loadTeamState();
     await refreshTrash();
+    await refreshArchive();
   } catch (err) {
     console.warn("[library] init data load failed:", err);
   }
@@ -546,6 +547,84 @@ async function handleTrashEmpty() {
   await window.desktopApi.emptyTrash();
   await reloadAfterTrashChange();
   showToast("Trash emptied", "success");
+}
+
+// ─── Archive ─────────────────────────────────────────────────────────────────
+// The archive is the trash's opposite number: nothing is staged for removal and
+// nothing expires, so there is no confirm and no countdown. Archived records
+// stay live in main (see archive.js) -- they are filtered out of the library
+// views in folder-store.js -- which is why every handler here only has to
+// reload state and re-render.
+
+async function refreshArchive() {
+  state.archiveItems = (await window.desktopApi.listArchive?.()) || [];
+}
+
+/** Reload everything an archive change can have hidden or brought back. */
+async function reloadAfterArchiveChange() {
+  state.builds = await window.desktopApi.listBuilds();
+  state.comps = await window.desktopApi.listComps();
+  await loadFolders();
+  await refreshArchive();
+  renderLibrary();
+}
+
+/**
+ * @param {{builds?: string[], comps?: string[], folder?: string}} target
+ */
+async function handleArchive(target) {
+  const { builds = [], comps = [], folder = null } = target || {};
+  let label = "";
+
+  if (folder) {
+    const name = state.folders.find((f) => f.id === folder)?.name || "Folder";
+    const result = await window.desktopApi.archiveFolder(folder);
+    // Say what went with it. "Archived Raids" reads as if the builds inside are
+    // still on the shelf somewhere, and they are not.
+    const carried = (result?.builds?.length || 0) + (result?.comps?.length || 0);
+    label = carried
+      ? `Archived "${name}" and ${countLabel(carried, "item")} inside it`
+      : `Archived "${name}"`;
+  } else if (comps.length) {
+    await window.desktopApi.archiveComps(comps);
+    label = `Archived ${countLabel(comps.length, "comp")}`;
+  } else if (builds.length) {
+    await window.desktopApi.archiveBuilds(builds);
+    label = `Archived ${countLabel(builds.length, "build")}`;
+  } else {
+    return;
+  }
+
+  clearSelection();
+  await reloadAfterArchiveChange();
+  pushUndoable({
+    type: "archive",
+    label: "Unarchived",
+    undo: async () => {
+      await window.desktopApi.restoreFromArchive(
+        folder ? { folders: [folder] } : comps.length ? { comps } : { builds },
+      );
+      await reloadAfterArchiveChange();
+    },
+  }, label);
+}
+
+async function handleArchiveRestore({ type, id }) {
+  const key = type === "folder" ? "folders" : type === "comp" ? "comps" : "builds";
+  await window.desktopApi.restoreFromArchive({ [key]: [id] });
+  await reloadAfterArchiveChange();
+  showToast("Back in your library", "success");
+}
+
+/**
+ * Opening straight out of the archive, without un-archiving first. An archived
+ * build is a working build -- this is the whole point of an archive over a
+ * trash -- so looking one up should not cost you a round trip through the
+ * library. Navigating away leaves it archived.
+ */
+function handleArchiveOpen({ type, id }) {
+  if (type === "comp") return handleOpenComp(id);
+  return handleLoadBuild(id);
 }
 
 let _cutIds = [];
@@ -1515,6 +1594,11 @@ function _buildSharedCallbacks() {
     onTrashPurge: handleTrashPurge,
     onTrashEmpty: handleTrashEmpty,
 
+    // Archive
+    onArchive: handleArchive,
+    onArchiveRestore: handleArchiveRestore,
+    onArchiveOpen: handleArchiveOpen,
+
     // Toolbar
     onNewBuild: handleNewBuild,
     onNewFolder: handleNewFolderInContent,
@@ -1572,6 +1656,7 @@ function _buildSharedCallbacks() {
       // The trash lives in the main process, not in state.builds — it has to be
       // fetched on the way in, and again after anything changes it.
       if (folder?.type === "trash") await refreshTrash();
+      if (folder?.type === "archive") await refreshArchive();
       clearSelection();
       savePrefs();
       renderLibrary();

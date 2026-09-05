@@ -112,6 +112,42 @@ class BuildStore {
   }
 
   /**
+   * Archived builds, minus anything that has since been deleted -- a build can
+   * carry both stamps, and the trash wins because it is the one on a clock.
+   */
+  async listArchivedBuilds() {
+    return (await this.#readAllBuilds()).filter((b) => b.archivedAt && !b.deletedAt);
+  }
+
+  /**
+   * Stamp or clear the archive marker. Deliberately NOT a delete: listBuilds()
+   * keeps returning these, so comps, publishing and team sync are untouched and
+   * only the library view has to care.
+   *
+   * @param {string[]} ids
+   * @param {boolean} archived
+   * @param {{at?: string, batchId?: string, root?: boolean}} [opts] - `batchId`
+   *        ties a folder cascade together so un-archiving is one act.
+   */
+  async setBuildsArchived(ids, archived, { at, batchId, root = true } = {}) {
+    return this.#enqueue(async () => {
+      const idSet = new Set(ids);
+      const builds = await this.#readAllBuilds();
+      const stamp = at || new Date().toISOString();
+      const changed = [];
+      for (const build of builds) {
+        if (!idSet.has(build.id) || Boolean(build.archivedAt) === archived) continue;
+        build.archivedAt = archived ? stamp : null;
+        build.archiveBatchId = archived && batchId ? batchId : "";
+        build.archiveRoot = archived ? root : false;
+        changed.push(build);
+      }
+      if (changed.length) await this.#writeJson(this.buildsPath, builds);
+      return changed;
+    });
+  }
+
+  /**
    * Soft-delete: stamp the build rather than removing it, so restore is just
    * clearing the stamp and every field (published links, comp membership,
    * folder) survives untouched.
@@ -200,6 +236,22 @@ class BuildStore {
         if (!next.publishedSlug && existing.publishedSlug) next.publishedSlug = existing.publishedSlug;
         if (!next.publishedAt && existing.publishedAt) next.publishedAt = existing.publishedAt;
         if (!next.publishedOwner && existing.publishedOwner) next.publishedOwner = existing.publishedOwner;
+        // The trash and archive stamps are local -- they are stripped from the
+        // synced body -- so a team pull, or any caller upserting a partial
+        // record, arrives without them. Carrying them over is what stops a
+        // teammate's edit from resurrecting a build you deleted or dragging one
+        // you archived back into the library. Clearing a stamp goes through
+        // restoreBuilds / setBuildsArchived, never through here.
+        if (!next.deletedAt && existing.deletedAt) {
+          next.deletedAt = existing.deletedAt;
+          next.trashBatchId = existing.trashBatchId || "";
+          next.trashRoot = Boolean(existing.trashRoot);
+        }
+        if (!next.archivedAt && existing.archivedAt) {
+          next.archivedAt = existing.archivedAt;
+          next.archiveBatchId = existing.archiveBatchId || "";
+          next.archiveRoot = Boolean(existing.archiveRoot);
+        }
         builds[idx] = next;
       } else {
         builds.push(next);
@@ -472,6 +524,13 @@ function normalizeBuild(input, fallbackCreatedAt) {
     // True only for what the user deleted directly; false for items a folder
     // delete dragged along, which the trash view rolls up under the folder.
     trashRoot: Boolean(input.trashRoot),
+    // Archive stamps. Unlike the trash, an archived build is still a live
+    // record everywhere in main -- comps resolve it, team sync carries it, a
+    // published link still works. The stamp only tells the library to keep it
+    // out of the way. Same allowlist caveat as above: name it or lose it.
+    archivedAt: asIso(input.archivedAt) || null,
+    archiveBatchId: asString(input.archiveBatchId, 64),
+    archiveRoot: Boolean(input.archiveRoot),
     sortOrder:
       typeof input.sortOrder === "number" && Number.isFinite(input.sortOrder)
         ? input.sortOrder

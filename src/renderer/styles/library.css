@@ -2031,6 +2031,113 @@
 .lib-trash__empty-title { margin: 4px 0 0; color: var(--text-light); font-size: 14px; }
 .lib-trash__empty-hint { margin: 0; color: var(--text-dim); font-size: 12px; max-width: 40ch; }
 
+/* ── Archive view ────────────────────────────────────────────────────────── */
+/* Structurally the trash view, tuned in the two places the difference shows:
+   the name reads at full --text because an archived item IS live content, and
+   the primary action is a positive accent rather than a danger red. */
+
+.lib-archive { padding: 16px 20px; }
+
+.lib-archive__header {
+  padding-bottom: 12px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.lib-archive__hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.lib-archive__list {
+  display: flex;
+  flex-direction: column;
+}
+
+.lib-archive__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.lib-archive__row:hover { background: var(--panel-2); }
+
+.lib-archive__icon {
+  display: flex;
+  color: var(--text-dim);
+}
+.lib-archive__icon svg { width: 18px; height: 18px; }
+
+.lib-archive__text { flex: 1; min-width: 0; }
+
+.lib-archive__name {
+  color: var(--text);
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lib-archive__meta {
+  color: var(--text-dim);
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+.lib-archive__actions {
+  display: flex;
+  gap: 6px;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+.lib-archive__row:hover .lib-archive__actions,
+.lib-archive__actions:focus-within { opacity: 1; }
+
+.lib-archive__btn {
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 4px 10px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--text-light);
+  cursor: pointer;
+}
+.lib-archive__btn:hover { border-color: var(--muted); color: var(--text); }
+.lib-archive__btn--primary:hover { border-color: var(--accent); color: var(--accent); }
+.lib-archive__btn:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
+
+.lib-archive--empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 64px 20px;
+  text-align: center;
+}
+.lib-archive__empty-icon { color: var(--text-dim); }
+.lib-archive__empty-icon svg { width: 32px; height: 32px; }
+.lib-archive__empty-title { margin: 4px 0 0; color: var(--text-light); font-size: 14px; }
+.lib-archive__empty-hint { margin: 0; color: var(--text-dim); font-size: 12px; max-width: 46ch; }
+
+/* Archive and Trash both live at the bottom of the sidebar. The `margin-top:
+   auto` has to be on whichever comes first, so it is claimed here and the trash
+   below only takes it when the archive is absent (which it is until something
+   is archived). */
+.lib-sidebar__section--archive {
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid var(--line-soft);
+}
+.lib-sidebar__section--archive + .lib-sidebar__section--trash {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
 /* Trash sits at the bottom of the sidebar, away from the folders above it. */
 .lib-sidebar__section--trash {
   margin-top: auto;

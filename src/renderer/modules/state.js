@@ -24,6 +24,7 @@ export const state = {
   folders: [],
   currentFolder: null,      // { type: "smart"|"custom"|"trash", id: string } or null (root)
   trashItems: [],           // rows for the trash view; refreshed on navigate
+  archiveItems: [],         // rows for the archive view; refreshed on navigate
   libraryPrefs: {
     viewMode: "list",
     sortField: "sortOrder",

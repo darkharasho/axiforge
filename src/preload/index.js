@@ -44,6 +44,13 @@ contextBridge.exposeInMainWorld("desktopApi", {
   restoreFromTrash: (selection) => ipcRenderer.invoke("trash:restore", selection),
   purgeFromTrash: (selection) => ipcRenderer.invoke("trash:purge", selection),
   emptyTrash: () => ipcRenderer.invoke("trash:empty"),
+  // Archive. Nothing here removes anything; it only moves items out of the
+  // library view and back.
+  listArchive: () => ipcRenderer.invoke("archive:list"),
+  archiveBuilds: (ids) => ipcRenderer.invoke("archive:builds", ids),
+  archiveComps: (ids) => ipcRenderer.invoke("archive:comps", ids),
+  archiveFolder: (id) => ipcRenderer.invoke("archive:folder", id),
+  restoreFromArchive: (selection) => ipcRenderer.invoke("archive:restore", selection),
   getBuildHistory: (buildId) => ipcRenderer.invoke("builds:get-history", buildId),
   getFolderHistory: (folderId) => ipcRenderer.invoke("folders:get-history", folderId),
   revertBuild: (buildId, historyEntryId) => ipcRenderer.invoke("builds:revert", buildId, historyEntryId),

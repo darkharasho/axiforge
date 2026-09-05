@@ -75,11 +75,39 @@ export async function reorderComps(updates) {
 }
 
 /**
+ * Archived records are still live everywhere else in the app -- a comp resolves
+ * an archived build, a published link still works, team sync still carries it.
+ * The stamp means one thing: keep it out of the library. So `state.builds` and
+ * friends stay complete and the browsing views read through these three instead.
+ *
+ * Anything that BROWSES the library (grids, trees, sidebar counts, search) must
+ * go through here. Anything that RESOLVES a specific record by id -- the comp
+ * editor looking up its slots, drag-drop, history -- must not, or an archived
+ * build vanishes out of the middle of a comp you still use.
+ */
+export const isArchived = (record) => Boolean(record?.archivedAt);
+
+/** The builds the library should draw right now. @see isArchived */
+export function libraryBuilds() {
+  return (state.builds || []).filter((b) => !b.archivedAt);
+}
+
+/** The comps the library should draw right now. @see isArchived */
+export function libraryComps() {
+  return (state.comps || []).filter((c) => !c.archivedAt);
+}
+
+/** The folders the library should draw right now. @see isArchived */
+export function libraryFolders() {
+  return (state.folders || []).filter((f) => !f.archivedAt);
+}
+
+/**
  * Get builds for the current folder/filter context.
  * Applies smart folder filtering, custom folder filtering, search, and sort.
  */
 export function getVisibleBuilds() {
-  let builds = [...state.builds];
+  let builds = libraryBuilds();
 
   // Filter by current folder
   const folder = state.currentFolder;
@@ -185,12 +213,12 @@ export function getVisibleFolders() {
 
   // At root or "all builds" smart folder: show top-level custom folders
   if (!folder || folder.type === "all") {
-    folders = state.folders
+    folders = libraryFolders()
       .filter((f) => f.parentId === null)
       .sort((a, b) => a.sortOrder - b.sortOrder);
   } else if (folder.type === "custom") {
     // Inside a custom folder: show its children
-    folders = state.folders
+    folders = libraryFolders()
       .filter((f) => f.parentId === folder.id)
       .sort((a, b) => a.sortOrder - b.sortOrder);
   } else {
@@ -206,7 +234,7 @@ export function getVisibleFolders() {
       if (f.name.toLowerCase().includes(query)) return true;
       // Check if any builds in this folder (recursively) match the search
       const folderIds = collectFolderIds(f.id);
-      return state.builds.some((b) => {
+      return libraryBuilds().some((b) => {
         if (!folderIds.includes(b.folderId)) return false;
         const haystack = [b.title || "", b.profession || "", ...(b.tags || [])].join(" ").toLowerCase();
         return haystack.includes(query);
@@ -222,7 +250,7 @@ export function getVisibleFolders() {
  */
 export function countBuildsInFolder(folderId) {
   const allFolderIds = collectFolderIds(folderId);
-  return state.builds.filter((b) => allFolderIds.includes(b.folderId)).length;
+  return libraryBuilds().filter((b) => allFolderIds.includes(b.folderId)).length;
 }
 
 /**
@@ -231,7 +259,7 @@ export function countBuildsInFolder(folderId) {
  */
 export function getVisibleComps() {
   const folder = state.currentFolder;
-  let comps = [...(state.comps || [])];
+  let comps = libraryComps();
 
   if (folder) {
     if (folder.type === "custom") {

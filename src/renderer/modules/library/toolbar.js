@@ -3,6 +3,7 @@
 import { state } from "../state.js";
 import { escapeHtml, formatRelativeTime } from "../utils.js";
 import { getProfessionSvg } from "../profession-icons.js";
+import { libraryBuilds } from "./folder-store.js";
 import {
   magnifyingGlassIcon,
   plusIcon,
@@ -140,7 +141,10 @@ export function renderFilters() {
 
   // Collect unique professions and their elite specs from builds
   const profMap = new Map(); // profession → Set of elite specs
-  for (const b of state.builds) {
+  // Facets come from what is actually browsable. A filter offering a profession
+  // that only archived builds have would come back empty every time.
+  const builds = libraryBuilds();
+  for (const b of builds) {
     if (!b.profession) continue;
     if (!profMap.has(b.profession)) profMap.set(b.profession, new Set());
     const spec = _getEliteSpec(b);
@@ -148,8 +152,8 @@ export function renderFilters() {
   }
   const professions = [...profMap.keys()].sort();
 
-  const gameModes = [...new Set(state.builds.map((b) => b.gameMode || "pve").filter(Boolean))].sort();
-  const tags = [...new Set(state.builds.flatMap((b) => b.tags || []).filter(Boolean))].sort();
+  const gameModes = [...new Set(builds.map((b) => b.gameMode || "pve").filter(Boolean))].sort();
+  const tags = [...new Set(builds.flatMap((b) => b.tags || []).filter(Boolean))].sort();
 
   if (professions.length === 0 && gameModes.length === 0 && tags.length === 0) {
     container.innerHTML = "";

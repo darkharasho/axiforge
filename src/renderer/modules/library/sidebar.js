@@ -2,7 +2,7 @@
 
 import { state } from "../state.js";
 import { escapeHtml } from "../utils.js";
-import { countBuildsInFolder } from "./folder-store.js";
+import { countBuildsInFolder, libraryBuilds, libraryComps, libraryFolders } from "./folder-store.js";
 import { badgeHtml } from "../sync-status.js";
 import { teamLabel } from "../teams.js";
 import {
@@ -16,6 +16,7 @@ import {
   compIcon,
   shareIcon,
   trashIcon,
+  archiveIcon,
 } from "./heroicons.js";
 
 let _callbacks = {};
@@ -66,6 +67,7 @@ export function renderSidebar() {
     <nav class="lib-sidebar__nav">
       ${renderSmartFolders(profExpanded, modeExpanded)}
       ${renderMyFolders(expanded)}
+      ${renderArchiveNav()}
       ${renderTrashNav()}
     </nav>
   `;
@@ -80,14 +82,15 @@ function renderSmartFolders(profExpanded, modeExpanded) {
   const allActive = !current || current.type === "all";
   const allCompsActive = current?.id === "__all-comps";
 
-  const totalBuilds = state.builds.length;
-  const totalComps = (state.comps || []).length;
+  const builds = libraryBuilds();
+  const totalBuilds = builds.length;
+  const totalComps = libraryComps().length;
 
   // Build profession items
-  const professions = [...new Set(state.builds.map((b) => b.profession).filter(Boolean))].sort();
+  const professions = [...new Set(builds.map((b) => b.profession).filter(Boolean))].sort();
   const profItems = professions
     .map((prof) => {
-      const count = state.builds.filter((b) => b.profession === prof).length;
+      const count = builds.filter((b) => b.profession === prof).length;
       const isActive = current?.type === "smart-profession" && current.id === prof;
       return `
         <button type="button"
@@ -103,10 +106,10 @@ function renderSmartFolders(profExpanded, modeExpanded) {
     .join("");
 
   // Build game mode items
-  const gameModes = [...new Set(state.builds.map((b) => b.gameMode || "pve").filter(Boolean))].sort();
+  const gameModes = [...new Set(builds.map((b) => b.gameMode || "pve").filter(Boolean))].sort();
   const modeItems = gameModes
     .map((mode) => {
-      const count = state.builds.filter((b) => (b.gameMode || "pve") === mode).length;
+      const count = builds.filter((b) => (b.gameMode || "pve") === mode).length;
       const isActive = current?.type === "smart-gamemode" && current.id === mode;
       const label = gameModeLabel(mode);
       return `
@@ -172,6 +175,28 @@ function renderSmartFolders(profExpanded, modeExpanded) {
   `;
 }
 
+// Sits just above the trash: both are "not in my library right now", and the
+// pair reads as a spectrum -- put away on the left, on its way out on the right.
+// Hidden entirely when empty, unlike the trash, because an archive nobody has
+// used is a feature they have not met yet rather than a place they expect.
+function renderArchiveNav() {
+  const isActive = state.currentFolder?.type === "archive";
+  const count = (state.archiveItems || []).length;
+  if (!count && !isActive) return "";
+  return `
+    <div class="lib-sidebar__section lib-sidebar__section--archive">
+      <button type="button"
+        class="lib-nav-item ${isActive ? "lib-nav-item--active" : ""}"
+        data-navigate-archive="1"
+      >
+        <span class="lib-nav-item__icon">${archiveIcon}</span>
+        <span class="lib-nav-item__label">Archive</span>
+        ${count > 0 ? `<span class="lib-nav-item__count">${count}</span>` : ""}
+      </button>
+    </div>
+  `;
+}
+
 // Pinned to the bottom of the sidebar, the way every file manager places it.
 // The count is deliberately absent when empty: a "Trash 0" badge is noise.
 function renderTrashNav() {
@@ -192,7 +217,7 @@ function renderTrashNav() {
 }
 
 function renderMyFolders(expanded) {
-  const topLevel = state.folders
+  const topLevel = libraryFolders()
     .filter((f) => f.parentId === null)
     .sort((a, b) => a.sortOrder - b.sortOrder);
 
@@ -233,7 +258,7 @@ function renderFolderItem(folder, expanded, depth) {
   const isActive = current?.type === "custom" && current.id === folder.id;
   const isExpanded = expanded.has(folder.id);
   const count = countBuildsInFolder(folder.id);
-  const children = state.folders
+  const children = libraryFolders()
     .filter((f) => f.parentId === folder.id)
     .sort((a, b) => a.sortOrder - b.sortOrder);
   const hasChildren = children.length > 0;
@@ -286,6 +311,10 @@ function bindSidebarEvents(container) {
   // Collapse
   container.querySelector("#lib-sidebar-collapse")?.addEventListener("click", () => {
     _callbacks.onPrefsChange?.({ sidebarOpen: false });
+  });
+
+  container.querySelectorAll("[data-navigate-archive]").forEach((el) => {
+    el.addEventListener("click", () => _callbacks.onNavigate?.({ type: "archive", id: "__archive" }));
   });
 
   container.querySelectorAll("[data-navigate-trash]").forEach((el) => {

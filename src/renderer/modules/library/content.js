@@ -3,13 +3,14 @@
 import { state } from "../state.js";
 import { escapeHtml, formatRelativeTime } from "../utils.js";
 import { roleBadgeHtml } from '../roleEstimator.js';
-import { getVisibleBuilds, getVisibleFolders, getVisibleComps } from "./folder-store.js";
+import { getVisibleBuilds, getVisibleFolders, getVisibleComps, libraryBuilds, libraryComps, libraryFolders } from "./folder-store.js";
 import { getProfessionSvg } from "../profession-icons.js";
 import { badgeHtml } from "../sync-status.js";
 import { teamRootFor, teamLabel } from "../teams.js";
 import { clearSelection, handleBuildClick, handleCompClick, updateSelectionVisuals } from "./selection.js";
 import { wireDragDropEvents } from "./drag-drop.js";
 import { renderTrashView } from "./trash-view.js";
+import { renderArchiveView } from "./archive-view.js";
 import {
   folderIcon,
   starIcon,
@@ -55,6 +56,16 @@ export function renderContent() {
       onRestore: (ref) => _callbacks.onTrashRestore?.(ref),
       onPurge: (ref) => _callbacks.onTrashPurge?.(ref),
       onEmpty: () => _callbacks.onTrashEmpty?.(),
+    });
+    return;
+  }
+
+  // The archive is a flat list of what the user put away, for the same reason:
+  // none of the folder nesting or drag-drop below applies to it.
+  if (state.currentFolder?.type === "archive") {
+    renderArchiveView(container, state.archiveItems || [], {
+      onRestore: (ref) => _callbacks.onArchiveRestore?.(ref),
+      onOpen: (ref) => _callbacks.onArchiveOpen?.(ref),
     });
     return;
   }
@@ -326,10 +337,10 @@ function renderTableView(container) {
 
     let childrenHtml = "";
     if (isExpanded) {
-      const childFolders = state.folders
+      const childFolders = libraryFolders()
         .filter((f) => f.parentId === folder.id)
         .sort((a, b) => a.sortOrder - b.sortOrder);
-      const folderBuilds = state.builds
+      const folderBuilds = libraryBuilds()
         .filter((b) => b.folderId === folder.id)
         .sort((a, b) => {
           if (a.pinned && !b.pinned) return -1;
@@ -342,7 +353,7 @@ function renderTableView(container) {
           return 0;
         });
 
-      const folderComps = (state.comps || [])
+      const folderComps = libraryComps()
         .filter((c) => c.folderId === folder.id)
         .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
       const items = childFolders.map((f) => renderTreeFolder(f)).join("")
@@ -612,15 +623,15 @@ function renderColumnsView(container) {
       break; // comps are flat — no further nesting
     }
 
-    const childFolders = state.folders
+    const childFolders = libraryFolders()
       .filter((f) => f.parentId === selectedId)
       .sort((a, b) => a.sortOrder - b.sortOrder);
 
-    const childBuilds = state.builds
+    const childBuilds = libraryBuilds()
       .filter((b) => b.folderId === selectedId)
       .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
 
-    const childComps = (state.comps || [])
+    const childComps = libraryComps()
       .filter((c) => c.folderId === selectedId)
       .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
 

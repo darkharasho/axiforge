@@ -17,6 +17,7 @@ const { BuildStore } = require("./buildStore");
 const { FolderStore } = require("./folderStore");
 const { CompStore } = require("./compStore");
 const { createTrash } = require("./trash");
+const { createArchive } = require("./archive");
 const { SyncStore } = require("./syncStore");
 const { BuildHistoryStore, summarizeBuildChange } = require("./buildHistoryStore");
 const { TeamSync } = require("./teamSync");
@@ -114,6 +115,10 @@ const trash = createTrash({
   folderStore,
   historyStore: buildHistoryStore,
 });
+// The archive is the trash's opposite number: nothing is staged for removal and
+// nothing expires. See archive.js for why archived records stay live here and
+// are hidden in the renderer instead.
+const archive = createArchive({ buildStore: store, compStore, folderStore });
 
 // Publishing infrastructure (repo, Pages workflow file, Pages config) only needs
 // verifying once per owner per process. Re-checking it on every publish cost
@@ -687,6 +692,17 @@ const readyWork = app.whenReady().then(async () => {
     }
     return restored;
   });
+
+  // ── Archive ────────────────────────────────────────────────────────────────
+  // No team ops anywhere in here. Archiving does not remove anything -- the
+  // records stay live and stay synced -- and the stamp itself is local, so a
+  // teammate's library is unaffected by what you tidy away in yours.
+  handle("archive:list", async () => archive.listArchive());
+
+  handle("archive:builds", async (_e, ids) => archive.archiveBuilds(ids || []));
+  handle("archive:comps", async (_e, ids) => archive.archiveComps(ids || []));
+  handle("archive:folder", async (_e, id) => archive.archiveFolder(id));
+  handle("archive:restore", async (_e, selection) => archive.unarchive(selection || {}));
 
   // No team op on purge: the tombstone already went out when the item was
   // trashed, so the team stopped seeing it then.
