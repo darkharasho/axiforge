@@ -17,6 +17,7 @@ import { state } from "../state.js";
 import { isGameModeCompatible } from "./library.js";
 import { getSelection } from "./selection.js";
 import { isTeamOwner } from "../teams.js";
+import { showToast } from "./toast.js";
 
 /** True if folderId is within a shared folder tree. */
 function _isInSharedFolder(folderId) {
@@ -41,6 +42,30 @@ function _blockedBySharedOwnership(srcFolderId, destFolderId) {
   const destRoot = destFolderId ? _findSharedRoot(destFolderId) : null;
   if (srcRoot && destRoot && srcRoot === destRoot) return false;
   return !isTeamOwner(srcFolderId);
+}
+
+/**
+ * Refuse a blocked move and say why. Returns true when the caller must bail.
+ * Silently returning left the item painted in its new spot with no explanation.
+ */
+function _refuseSharedMove(srcFolderId, destFolderId, label) {
+  if (!_blockedBySharedOwnership(srcFolderId, destFolderId)) return false;
+  showToast(`Only the team owner can move a ${label} out of a shared folder.`, "error");
+  return true;
+}
+
+/** Turn a main-process rejection into something a user can act on. */
+function _dropErrorMessage(err) {
+  const raw = String(err?.message || err || "");
+  // Electron wraps IPC rejections as "Error invoking remote method 'x': Error: <real>".
+  const msg = raw
+    .replace(/^Error invoking remote method '[^']*':\s*/, "")
+    .replace(/^Error:\s*/, "")
+    .trim();
+  if (/FOLDER_TOO_DEEP|Maximum folder nesting depth/i.test(msg)) {
+    return "Folders can only be nested 3 levels deep \u2014 that move would go deeper.";
+  }
+  return msg || "That move couldn't be completed.";
 }
 
 // Resolve the semantic folder ID a sortable container belongs to.
@@ -98,6 +123,10 @@ export function wireDragDropEvents() {
     document.addEventListener("pointermove", _onPointerMove);
   };
 
+  // SortableJS has already moved the DOM node by the time this runs, so every
+  // exit path — refused, blocked, cancelled or thrown — has to repaint from
+  // state. Without that the item sits wherever it was dropped while the data
+  // says otherwise, which reads as "the drag froze halfway".
   const onEnd = async (evt) => {
     document.removeEventListener("pointermove", _onPointerMove);
     clearTimeout(_expandTimer);
@@ -111,22 +140,34 @@ export function wireDragDropEvents() {
       _hoverTarget = null;
     }
 
+    try {
+      await _applyDrop(evt, droppedOnTarget);
+    } catch (err) {
+      // Main-process guards (team ownership, folder depth) reject by throwing.
+      // Swallowing that left the user with a silently reverted-but-not-repainted
+      // drag and no idea why.
+      showToast(_dropErrorMessage(err), "error");
+    } finally {
+      _isDragging = false;
+      _draggedBuildId = null;
+      _draggedCompId = null;
+      _draggedFolderId = null;
+      _callbacks.onRefresh?.();
+    }
+  };
+
+  const _applyDrop = async (evt, droppedOnTarget) => {
     const draggedFolderId = evt.item?.dataset?.folderId;
     if (draggedFolderId) {
       if (droppedOnTarget) {
         const targetFolderEl = droppedOnTarget.closest("[data-folder-id]");
         if (targetFolderEl && !_isFolderSelfOrDescendant(targetFolderEl.dataset.folderId, draggedFolderId)) {
-          _isDragging = false;
-          _draggedFolderId = null;
           await _callbacks.onMoveFolder?.(draggedFolderId, targetFolderEl.dataset.folderId);
           return;
         }
         const navTarget = droppedOnTarget.closest("[data-navigate-folder], [data-navigate-all], [data-navigate-root]");
         if (navTarget) {
-          _isDragging = false;
-          _draggedFolderId = null;
           await _callbacks.onMoveFolder?.(draggedFolderId, navTarget.dataset.navigateFolder || null);
-          _callbacks.onRefresh?.();
           return;
         }
       }
@@ -136,8 +177,13 @@ export function wireDragDropEvents() {
       const folder = state.folders?.find((f) => f.id === draggedFolderId);
       const oldParentId = folder?.parentId || null;
 
-      if (newParentId !== oldParentId && !_isFolderSelfOrDescendant(newParentId, draggedFolderId)) {
-        await _callbacks.onMoveFolder?.(draggedFolderId, newParentId);
+      if (newParentId !== oldParentId) {
+        // A drop into the folder's own subtree is simply refused; the repaint in
+        // the finally block puts it back. It must NOT fall through to the
+        // reorder branch, which would renumber a container the folder isn't in.
+        if (!_isFolderSelfOrDescendant(newParentId, draggedFolderId)) {
+          await _callbacks.onMoveFolder?.(draggedFolderId, newParentId);
+        }
       } else {
         const children = [...evt.to.children]
           .map((el) => el.dataset?.folderId)
@@ -149,10 +195,6 @@ export function wireDragDropEvents() {
           state.libraryPrefs.sortDirection = "asc";
         }
       }
-
-      _isDragging = false;
-      _draggedFolderId = null;
-      _callbacks.onRefresh?.();
       return;
     }
 
@@ -163,20 +205,15 @@ export function wireDragDropEvents() {
       if (droppedOnTarget) {
         const folderEl = droppedOnTarget.closest("[data-folder-id]");
         if (folderEl) {
-          _isDragging = false;
-          _draggedCompId = null;
-          if (_blockedBySharedOwnership(compSrcFolderId, folderEl.dataset.folderId)) return;
+          if (_refuseSharedMove(compSrcFolderId, folderEl.dataset.folderId, "comp")) return;
           await _callbacks.onMoveComps?.([compId], folderEl.dataset.folderId);
           return;
         }
         const navTarget = droppedOnTarget.closest("[data-navigate-folder], [data-navigate-all], [data-navigate-root]");
         if (navTarget) {
           const destFolderId = navTarget.dataset.navigateFolder || null;
-          _isDragging = false;
-          _draggedCompId = null;
-          if (_blockedBySharedOwnership(compSrcFolderId, destFolderId)) return;
+          if (_refuseSharedMove(compSrcFolderId, destFolderId, "comp")) return;
           await _callbacks.onMoveComps?.([compId], destFolderId);
-          _callbacks.onRefresh?.();
           return;
         }
       }
@@ -186,6 +223,7 @@ export function wireDragDropEvents() {
       const oldFolderId = compSrcFolderId;
 
       if (newFolderId !== oldFolderId) {
+        if (_refuseSharedMove(oldFolderId, newFolderId, "comp")) return;
         await _callbacks.onMoveComps?.([compId], newFolderId);
       } else {
         const children = [...evt.to.children]
@@ -198,41 +236,29 @@ export function wireDragDropEvents() {
           state.libraryPrefs.sortDirection = "asc";
         }
       }
-
-      _isDragging = false;
-      _draggedCompId = null;
-      _callbacks.onRefresh?.();
       return;
     }
 
     const buildId = evt.item?.dataset?.buildId;
-    if (!buildId) {
-      _isDragging = false;
-      _draggedBuildId = null;
-      return;
-    }
+    if (!buildId) return;
 
     // Check if we were hovering over a folder, comp, or nav target when dropped
     if (droppedOnTarget) {
       const compEl = droppedOnTarget.closest("[data-comp-id]");
       if (compEl) {
-        const compId = compEl.dataset.compId;
-        _isDragging = false;
-        _draggedBuildId = null;
+        const targetCompId = compEl.dataset.compId;
         // Use multi-selection if the dragged build is part of one
         const selected = getSelection();
         const buildIds = selected.length > 1 && selected.includes(buildId)
           ? selected
           : [buildId];
-        await _callbacks.onDropBuildsOnComp?.(buildIds, compId);
+        await _callbacks.onDropBuildsOnComp?.(buildIds, targetCompId);
         return;
       }
 
       const folderEl = droppedOnTarget.closest("[data-folder-id]");
       if (folderEl) {
         const folderId = folderEl.dataset.folderId;
-        _isDragging = false;
-        _draggedBuildId = null;
         const selected = getSelection();
         const idsToMove = selected.length > 1 && selected.includes(buildId)
           ? selected
@@ -244,18 +270,14 @@ export function wireDragDropEvents() {
           }
         } else {
           const srcFolderId = state.builds.find((b) => b.id === buildId)?.folderId || null;
-          if (!_blockedBySharedOwnership(srcFolderId, folderId)) {
-            await moveBuilds(idsToMove, folderId);
-          }
+          if (_refuseSharedMove(srcFolderId, folderId, "build")) return;
+          await moveBuilds(idsToMove, folderId);
         }
-        _callbacks.onRefresh?.();
         return;
       }
 
       const navTarget = droppedOnTarget.closest("[data-navigate-folder], [data-navigate-all], [data-navigate-root]");
       if (navTarget) {
-        _isDragging = false;
-        _draggedBuildId = null;
         const selected = getSelection();
         const idsToMove = selected.length > 1 && selected.includes(buildId)
           ? selected
@@ -268,11 +290,9 @@ export function wireDragDropEvents() {
         } else {
           const folderId = navTarget.dataset.navigateFolder || null;
           const srcFolderId = state.builds.find((b) => b.id === buildId)?.folderId || null;
-          if (!_blockedBySharedOwnership(srcFolderId, folderId)) {
-            await moveBuilds(idsToMove, folderId);
-          }
+          if (_refuseSharedMove(srcFolderId, folderId, "build")) return;
+          await moveBuilds(idsToMove, folderId);
         }
-        _callbacks.onRefresh?.();
         return;
       }
     }
@@ -285,9 +305,8 @@ export function wireDragDropEvents() {
     const oldFolderId = build?.folderId || null;
 
     if (newFolderId !== oldFolderId) {
-      if (!_blockedBySharedOwnership(oldFolderId, newFolderId)) {
-        await moveBuilds([buildId], newFolderId);
-      }
+      if (_refuseSharedMove(oldFolderId, newFolderId, "build")) return;
+      await moveBuilds([buildId], newFolderId);
     } else {
       // Reordered within same container — save custom sort order
       const children = [...evt.to.children]
@@ -301,12 +320,6 @@ export function wireDragDropEvents() {
         state.libraryPrefs.sortDirection = "asc";
       }
     }
-
-    _isDragging = false;
-    _draggedBuildId = null;
-    _draggedCompId = null;
-    _draggedFolderId = null;
-    _callbacks.onRefresh?.();
   };
 
   const onMove = (evt) => {

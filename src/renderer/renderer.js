@@ -82,9 +82,43 @@ function _findRootSharedFolderInState(folderId) {
 
 // True while the user is editing an inline rename / new-folder input.
 // Used to suppress sync-driven re-renders that would tear down the active input.
+// True while the user is mid-edit in something a full re-render would destroy:
+// the library's inline rename/new-folder input, or any focused text control —
+// notably the comp notes textarea, which auto-saves on a debounce and so
+// triggers the very sync-status event whose re-render would blur it.
 function _inlineEditingActive() {
-  return !!document.querySelector(".lib-inline-input");
+  if (document.querySelector(".lib-inline-input")) return true;
+  const el = document.activeElement;
+  if (!el || el === document.body) return false;
+  if (el.isContentEditable) return true;
+  if (el.tagName === "TEXTAREA") return true;
+  if (el.tagName === "INPUT") {
+    const type = (el.type || "text").toLowerCase();
+    return !["checkbox", "radio", "button", "submit", "reset", "range", "color", "file"].includes(type);
+  }
+  return false;
 }
+
+// A re-render deferred by _inlineEditingActive() still has to happen, or the
+// remote change sits invisible until something else repaints. Hold the thunk
+// and flush it once focus leaves the field.
+let _deferredRender = null;
+
+function _renderActivePage() {
+  if (state.activePage === "library") renderLibrary();
+  else if (state.activePage === "comps") renderComps();
+}
+
+function _flushDeferredRender() {
+  // focusout fires before focus lands on the next element, so let it settle.
+  setTimeout(() => {
+    if (!_deferredRender || _inlineEditingActive()) return;
+    const fn = _deferredRender;
+    _deferredRender = null;
+    fn();
+  }, 0);
+}
+document.addEventListener("focusout", _flushDeferredRender);
 
 // Apply or remove a sync indicator on all content item elements for a build or comp.
 function _updateItemSyncIndicators(type, id, status) {
@@ -726,7 +760,9 @@ async function init() {
           // re-renders on its own commit, and re-rendering now would tear down
           // the active input mid-edit.
           if (_inlineEditingActive()) {
-            // no-op: state is already updated; visible re-render deferred to commit
+            // State is already updated; the visible re-render waits for the
+            // field to lose focus (or for the inline input's own commit).
+            _deferredRender = _renderActivePage;
           } else if (state.activePage === "library") renderLibrary();
           else if (state.activePage === "comps") renderComps();
           // If this build is currently open in the editor, hot-reload it
@@ -803,8 +839,9 @@ async function init() {
         state.builds = builds;
         state.comps = comps;
         if (_inlineEditingActive()) {
-          // Inline rename/new-folder in progress — skip the destructive re-render.
-          // The inline input's commit/cancel handler will renderLibrary() itself.
+          // Inline rename / notes editing in progress — skip the destructive
+          // re-render and replay it when the field is done.
+          _deferredRender = _renderActivePage;
         } else if (state.activePage === "library") renderLibrary();
         else if (state.activePage === "comps") renderComps();
       }).catch(() => {});
