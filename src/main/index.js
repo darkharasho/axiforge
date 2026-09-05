@@ -39,6 +39,7 @@ const { getProfessionList, getProfessionCatalog, getUpgradeCatalog, getWikiSumma
 const { slugifyBuildName, generateFileId, generateEncryptionKey, getDefaultBuildName } = require("./buildEncryption");
 const { buildSpaBundle, buildEncryptedBuildFile, buildEncryptedCompFile, buildRedirectFile } = require("./siteBundle");
 const { snapshotDaily } = require("./jsonFile");
+const { repairOrphans } = require("./orphanRepair");
 const { serializeForPublish, loadCrossProfessionCatalogs } = require("./buildPublish");
 const { serializeCompForPublish, getCompPublishBuildIds } = require("./compPublish");
 const { initAutoUpdate } = require("./autoUpdate");
@@ -433,6 +434,15 @@ const readyWork = app.whenReady().then(async () => {
   await initDiskCache(dataDir);
   initWikiClient(dataDir);
   await migrateCompGameModes(store, compStore);
+  // Records whose folder was hard-deleted by a pre-0.14.0 release are on disk
+  // but unreachable from every view. Send them back to the root so they exist
+  // again as far as the user is concerned.
+  repairOrphans({ buildStore: store, compStore, folderStore })
+    .then(({ builds, comps, folders }) => {
+      const total = builds.length + comps.length + folders.length;
+      if (total) console.warn(`[orphan-repair] reattached ${total} orphaned record(s) to the root`);
+    })
+    .catch((err) => console.warn("[orphan-repair] failed:", err.message));
 
   // Team root for a folder (walks parentId). Null for personal folders.
   async function findTeamRoot(folderId) {
