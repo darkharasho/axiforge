@@ -1,3 +1,21 @@
+## Version v0.16.0 — September 5, 2026
+
+### An archive, so putting something away is not deleting it
+
+- **Archive builds, comps and folders instead of deleting them.** The only way to clear something out of the library used to be deleting it, so people were deleting things they still wanted — old season comps, superseded variants, a build a comp still references. *Archive* is in the right-click menu for builds, comps and folders, and archived items live under a new **Archive** entry in the sidebar.
+- **An archived record is still a live record.** Comps still resolve it, published links still work, team sync still carries it, and nothing ever expires. The only thing archiving changes is that it stops cluttering your library views. That is the whole difference from the Trash, which is a 30-day staging area for things you meant to get rid of.
+- **Archiving a folder takes its contents with it**, and un-archiving any part brings the whole batch back — so a folder can't go away and leave its builds floating loose.
+
+### Import a whole comp from a published link
+
+- **Paste a published comp link and get the comp.** Comp links used to be rejected with "that's a link to a comp, not a build". They now import in full — the comp and every build it uses, in one go.
+- **It arrives in its own folder**, named after the comp, so a comp's worth of builds doesn't scatter through whatever you were looking at. Import into a team folder and the folder, the builds and the comp are all shared together.
+- **The imported copy is yours**, with fresh ids throughout, so re-publishing it can't overwrite the comp you got it from.
+
+### Bug Fixes
+
+- **A teammate's edit no longer resurrects a build you deleted.** Deletions are local, and the synced copy of a build carried no record of one — so the next edit anyone made to that build brought it back into your library.
+
 ## Version v0.15.0 — September 5, 2026
 
 ### Import a build from an AxiForge link
