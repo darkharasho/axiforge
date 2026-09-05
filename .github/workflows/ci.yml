@@ -1,0 +1,44 @@
+# Tests used to run ONLY on tag push (release.yml), so the first time anything
+# went red was mid-release, with a tag already cut. This runs the same checks on
+# every push to main and every PR, so a break is caught before it can block a
+# release. Tag pushes don't match `branches:`, so this never doubles up with
+# release.yml.
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+# A newer push to the same branch/PR supersedes the older run.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Same two checks release.yml gates on, in the same order and on the same
+      # node version. Keep them in sync: anything added there belongs here too.
+      - name: Check main process syntax
+        run: find src/main -name "*.js" | xargs -I{} node --check {}
+
+      - name: Run tests
+        run: npm test

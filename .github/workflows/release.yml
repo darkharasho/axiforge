@@ -154,9 +154,14 @@ jobs:
     # !cancelled() rather than the default success(): paired with fail-fast: false,
     # this lets a release go out with the platforms that did build when one platform
     # fails. The asset check below annotates whatever is missing so a partial release
-    # is never silent. If no platform built, electron-builder created no release and
-    # the lookup step fails loudly.
-    if: ${{ !cancelled() && github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
+    # is never silent.
+    #
+    # But !cancelled() is also true when `build` was SKIPPED because `test` failed, so
+    # publish used to run with nothing to publish and die on "No release found for tag"
+    # — a second, misleading red X on top of the real failure (v0.15.0). Gate on the
+    # aggregated result instead: 'failure' means at least one platform built, so carry
+    # on; 'skipped'/'cancelled' means none did, so there is nothing to do.
+    if: ${{ !cancelled() && needs.build.result != 'skipped' && needs.build.result != 'cancelled' && github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
