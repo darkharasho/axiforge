@@ -39,6 +39,10 @@ jobs:
   build:
     needs: [test]
     strategy:
+      # One platform's failure must not cancel the others. mac signing depends on
+      # secrets that expire (CSC_LINK / CSC_KEY_PASSWORD); with fail-fast the linux
+      # and windows builds got cancelled mid-flight and nothing shipped at all.
+      fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
@@ -106,7 +110,13 @@ jobs:
     runs-on: ubuntu-latest
     # Only run for actual tag pushes — workflow_dispatch dry-runs upload
     # artifacts in the build job and stop there.
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    #
+    # !cancelled() rather than the default success(): paired with fail-fast: false,
+    # this lets a release go out with the platforms that did build when one platform
+    # fails. The asset check below annotates whatever is missing so a partial release
+    # is never silent. If no platform built, electron-builder created no release and
+    # the lookup step fails loudly.
+    if: ${{ !cancelled() && github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -153,6 +163,26 @@ jobs:
           gh api -X PATCH "repos/darkharasho/axiforge/releases/$release_id" \
             -f body="$notes" \
             -F draft=false
+
+      - name: Flag missing platform artifacts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+          assets=$(gh release view "$tag" --json assets --jq '.assets[].name')
+
+          # A build matrix job can fail without cancelling the others now, so a release
+          # can go out missing a platform. Say which, rather than letting users find out.
+          missing=""
+          printf '%s' "$assets" | grep -q '\.exe$'      || missing="$missing windows"
+          printf '%s' "$assets" | grep -q '\.AppImage$' || missing="$missing linux"
+          printf '%s' "$assets" | grep -qE '\.(dmg|zip)$' || missing="$missing macos"
+
+          if [ -n "$missing" ]; then
+            echo "::warning::Release $tag is missing artifacts for:$missing — check the build job for those platforms."
+          else
+            echo "All platform artifacts present for $tag."
+          fi
 
       - name: Post to Discord
         if: ${{ vars.DISCORD_WEBHOOK_URL != '' }}
