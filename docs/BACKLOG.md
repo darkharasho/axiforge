@@ -582,3 +582,13 @@ Status key: `[ ]` open · `[x]` done · `[~]` in progress · `[?]` needs repro s
   team-root upsert in `teamSync._pullTeamInner`), so the two meanings have to be
   separated carefully rather than by the same one-line guard. `buildStore` and
   `compStore` now both carry the folder over; `folderStore` is the odd one out.
+
+- [ ] **Cache sync sessions in KV so `authenticate()` stops hitting D1 on every
+  request.** Every authenticated sync call — including each client's 30-second
+  poll — costs a `sessions JOIN users JOIN identities` round trip to D1 before
+  any handler runs. Migration 0005 makes that join cheap, but the read still
+  happens N times per member per minute, and D1 row reads are the metered
+  resource that took the whole service down on 2026-09-06 (see the incident
+  entry above). A short-TTL KV entry keyed by token hash would cut the steady
+  state to roughly zero D1 reads for polls that return no changes. Needs care on
+  logout/expiry: the KV copy has to be deleted, not just left to age out.
