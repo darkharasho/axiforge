@@ -27,6 +27,11 @@ jest.mock("../../../src/renderer/modules/library/folder-store", () => ({
   getVisibleFolders: () => [],
   getVisibleBuilds: () => [],
   getVisibleComps: jest.fn(() => []),
+  // The child-column path and the stale-stack prune both reach for these; the
+  // mock only ever covered the three above because no test had drilled in yet.
+  libraryFolders: jest.fn(() => []),
+  libraryBuilds: jest.fn(() => []),
+  libraryComps: jest.fn(() => []),
 }));
 jest.mock("../../../src/renderer/modules/profession-icons", () => ({
   getProfessionSvg: () => "",
@@ -51,7 +56,7 @@ jest.mock("../../../src/renderer/modules/library/heroicons", () => ({
 }));
 
 const { state } = require("../../../src/renderer/modules/state");
-const { getVisibleComps } = require("../../../src/renderer/modules/library/folder-store");
+const { getVisibleComps, libraryComps, libraryFolders } = require("../../../src/renderer/modules/library/folder-store");
 const { initContent, renderContent } = require("../../../src/renderer/modules/library/content");
 
 describe("Columns view — comp double-click", () => {
@@ -73,6 +78,10 @@ describe("Columns view — comp double-click", () => {
     state.libraryPrefs = { viewMode: "columns" };
 
     getVisibleComps.mockReturnValue(state.comps);
+    // These have to agree with state, or the stale-stack prune in
+    // renderColumnsView correctly decides the selected comp no longer exists.
+    libraryComps.mockReturnValue(state.comps);
+    libraryFolders.mockReturnValue(state.folders);
   });
 
   test("double-clicking a comp in columns view should NOT call onOpenComp", () => {

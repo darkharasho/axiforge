@@ -1,5 +1,6 @@
 import { state } from "../state.js";
 import { showConfirmModal } from "../confirm-modal.js";
+import { showPrompt } from "../prompt-modal.js";
 import { initCompList, renderCompList, clearCompSelection } from "./comp-list.js";
 import { initCompDetail, renderCompDetail } from "./comp-detail.js";
 
@@ -39,7 +40,11 @@ export function initComps(appCallbacks) {
       renderComps();
     },
     onRenameComp: async (id, currentName) => {
-      const newName = prompt("Rename comp:", currentName || "");
+      // NOT window.prompt(): Chromium in Electron does not implement it. It
+      // returns null and logs "prompt() is and will not be supported", so
+      // right-click -> Rename on this page silently did nothing. Every other
+      // dialog in the app already goes through these modals for that reason.
+      const newName = await showPrompt("Rename comp", currentName || "");
       if (!newName || newName === currentName) return;
       const existing = state.comps.find((c) => c.id === id);
       if (existing) {

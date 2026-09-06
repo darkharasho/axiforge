@@ -1,6 +1,7 @@
 "use strict";
 
 const https = require("https");
+const http = require("http");
 const crypto = require("node:crypto");
 const { decryptBuild } = require("./buildEncryption.js");
 
@@ -15,9 +16,14 @@ function httpsGetStatus(url, redirectCount = 0) {
   if (redirectCount > 5) return Promise.reject(new Error("Too many redirects"));
   return new Promise((resolve, reject) => {
     const parsed = new URL(url);
-    const req = https.request(
+    // Honour the URL's own scheme. Every real link is https, but `remoteBase=`
+    // lets a caller point this anywhere, and forcing https on an http base
+    // fails as an opaque socket error rather than a fetch of the named host.
+    const transport = parsed.protocol === "http:" ? http : https;
+    const req = transport.request(
       {
         hostname: parsed.hostname,
+        port: parsed.port || undefined,
         path: parsed.pathname + parsed.search,
         method: "GET",
         headers: {
@@ -224,9 +230,13 @@ function toImportedComp(payload, { name, folderId, gameMode } = {}, newId = () =
     builds.push(build);
   }
 
-  // A slot holds a build id, a "tag:<categoryId>" marker, or nothing. A build id
-  // the payload did not carry (a build that failed to enrich at publish time)
-  // becomes an empty slot rather than a dangling reference.
+  // A slot holds a build id or a "tag:<categoryId>" marker. A build id the
+  // payload did not carry (a build that failed to enrich at publish time) has to
+  // vanish, not become a hole: `slots` is a DENSE list of what is filled -- the
+  // comp editor splices on removal and pads with empty boxes beyond
+  // slots.length -- so a null left in the middle is a shape nothing downstream
+  // handles. renderPartyLine read `buildId.length` off it and took the whole
+  // comps page down with an unhandled TypeError.
   const remapSlot = (slot) => {
     if (typeof slot !== "string" || !slot) return null;
     if (slot.startsWith("tag:")) return slot;
@@ -242,7 +252,7 @@ function toImportedComp(payload, { name, folderId, gameMode } = {}, newId = () =
   comp.buildIds = builds.map((b) => b.id);
   comp.partyLines = (payload.partyLines || []).map((line) => ({
     ...line,
-    slots: (line.slots || []).map(remapSlot),
+    slots: (line.slots || []).map(remapSlot).filter(Boolean),
   }));
   comp.buildColors = Object.fromEntries(
     Object.entries(payload.buildColors || {})

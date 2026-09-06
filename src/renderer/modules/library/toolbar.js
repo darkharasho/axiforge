@@ -47,6 +47,23 @@ export function renderToolbar() {
   const searchVal = escapeHtml(state.buildSearch || "");
   const insideComp = state.currentFolder?.type === "comp";
 
+  // The trash and the archive bypass the view modes entirely (see
+  // renderContent), so every control here is inert in them: search filters
+  // nothing, sorting reorders nothing, the view toggle switches between
+  // renderers that never run, and New/Import/Export act on a library you are
+  // not currently looking at. Worse, typing in the search box left
+  // state.buildSearch set with no visible effect until you navigated back out
+  // and found the library mysteriously filtered. Show the breadcrumb alone.
+  if (isListlessView()) {
+    container.innerHTML = `
+      <div class="lib-toolbar__breadcrumb">
+        ${renderBreadcrumb()}
+      </div>
+    `;
+    bindToolbarEvents(container);
+    return;
+  }
+
   container.innerHTML = `
     <div class="lib-toolbar__breadcrumb">
       ${renderBreadcrumb()}
@@ -131,11 +148,27 @@ export function renderToolbar() {
 }
 
 /**
+ * Views that hold records the library's list renderers never draw — the trash
+ * and the archive. @see renderToolbar
+ */
+function isListlessView() {
+  const type = state.currentFolder?.type;
+  return type === "trash" || type === "archive";
+}
+
+/**
  * Render filter dropdowns into #lib-filters.
  */
 export function renderFilters() {
   const container = document.getElementById("lib-filters");
   if (!container) return;
+
+  // Same reason as the toolbar controls: a Class/Mode/Tags filter cannot narrow
+  // a list that is not being drawn from libraryBuilds() in the first place.
+  if (isListlessView()) {
+    container.innerHTML = "";
+    return;
+  }
 
   const activeFilters = state.libraryPrefs.activeFilters || {};
 
@@ -279,6 +312,18 @@ function renderBreadcrumb() {
 
   if (!folder || folder.type === "all") {
     // At root — just highlight "All Builds"
+    return parts.join("");
+  }
+
+  // The trash and the archive are places you navigate TO, so the breadcrumb has
+  // to say so. Falling through to the generic tail below left "All Builds"
+  // rendered as a plain, un-highlighted crumb — the exact same header the root
+  // shows — while the pane underneath was showing the archive.
+  if (folder.type === "trash" || folder.type === "archive") {
+    parts.push(`<span class="lib-breadcrumb__sep">${chevronRightIcon}</span>`);
+    parts.push(
+      `<span class="lib-breadcrumb__item lib-breadcrumb__item--current">${folder.type === "trash" ? "Trash" : "Archive"}</span>`
+    );
     return parts.join("");
   }
 

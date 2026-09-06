@@ -54,6 +54,8 @@ contextBridge.exposeInMainWorld("desktopApi", {
   getBuildHistory: (buildId) => ipcRenderer.invoke("builds:get-history", buildId),
   getFolderHistory: (folderId) => ipcRenderer.invoke("folders:get-history", folderId),
   revertBuild: (buildId, historyEntryId) => ipcRenderer.invoke("builds:revert", buildId, historyEntryId),
+  getCompHistory: (compId) => ipcRenderer.invoke("comps:get-history", compId),
+  revertComp: (compId, historyEntryId) => ipcRenderer.invoke("comps:revert", compId, historyEntryId),
   publishSite: () => ipcRenderer.invoke("builds:publish-site"),
   publishBuild: (buildId, opts) => ipcRenderer.invoke("builds:publish-build", buildId, opts || {}),
 
@@ -174,6 +176,8 @@ contextBridge.exposeInMainWorld("desktopApi", {
   legacyLibraryStatus: () => invoke("teams:legacy-status"),
   migrateOrgLibrary: (opts) => invoke("teams:migrate-org-library", opts),
   pullTeam: (teamId) => invoke("teams:pull", teamId),
+  listTeamTrash: (teamId) => invoke("teams:trash", teamId),
+  restoreFromTeamTrash: (teamId, itemId) => invoke("teams:trash-restore", teamId, itemId),
   pullAllTeams: () => invoke("teams:pull-all"),
   resolveConflict: (teamId, itemId, choice) => invoke("teams:resolve-conflict", teamId, itemId, choice),
   listOutbox: () => invoke("teams:outbox"),

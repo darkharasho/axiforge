@@ -2,7 +2,7 @@
 .titlebar {
   position: fixed;
   inset: 0 0 auto 0;
-  height: 42px;
+  height: var(--titlebar-h);
   z-index: 50;
   display: flex;
   align-items: center;
@@ -227,8 +227,7 @@ body:has(.app-layout) {
 .app-layout {
   display: grid;
   grid-template-columns: 54px 1fr;
-  height: calc(100vh - 40px);
-  margin-top: 42px;
+  height: calc(100vh - var(--titlebar-h));
 }
 
 .subnav {
@@ -519,7 +518,7 @@ body:has(.app-layout) {
 
 .page-content {
   overflow-y: auto;
-  height: calc(100vh - 40px);
+  height: calc(100vh - var(--titlebar-h));
 }
 
 .page {

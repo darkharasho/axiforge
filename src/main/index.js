@@ -20,6 +20,7 @@ const { createTrash } = require("./trash");
 const { createArchive } = require("./archive");
 const { SyncStore } = require("./syncStore");
 const { BuildHistoryStore, summarizeBuildChange } = require("./buildHistoryStore");
+const { CompHistoryStore, summarizeCompChange } = require("./compHistoryStore");
 const { TeamSync } = require("./teamSync");
 const { beginGitHubDeviceAuth, completeGitHubDeviceAuth } = require("./githubAuth");
 const {
@@ -106,6 +107,7 @@ const folderStore = new FolderStore(dataDir);
 const compStore = new CompStore(dataDir);
 const syncStore = new SyncStore(dataDir);
 const buildHistoryStore = new BuildHistoryStore(dataDir);
+const compHistoryStore = new CompHistoryStore(dataDir);
 // Deleting anything in the library stages it here for 30 days rather than
 // destroying it. See trash.js for why the comp-unlink and history deletion that
 // used to run on delete are deferred until purge.
@@ -114,6 +116,7 @@ const trash = createTrash({
   compStore,
   folderStore,
   historyStore: buildHistoryStore,
+  compHistoryStore,
 });
 // The archive is the trash's opposite number: nothing is staged for removal and
 // nothing expires. See archive.js for why archived records stay live here and
@@ -430,6 +433,7 @@ const readyWork = app.whenReady().then(async () => {
   await compStore.init();
   await syncStore.init();
   await buildHistoryStore.init();
+  await compHistoryStore.init();
   // Sweep anything past the retention window. Never blocks startup: a failed
   // sweep means items linger in the trash, which is harmless.
   trash.purgeExpired().catch((err) => console.warn("[trash] sweep failed:", err.message));
@@ -458,6 +462,9 @@ const readyWork = app.whenReady().then(async () => {
   const teamSync = new TeamSync({
     buildStore: store, compStore, folderStore, syncStore,
     historyStore: buildHistoryStore,
+    compHistoryStore,
+    // A teammate's delete stages in the trash, exactly like your own.
+    trash,
     emit: teamSyncEmit,
   });
   teamSyncRef = teamSync;
@@ -716,8 +723,15 @@ const readyWork = app.whenReady().then(async () => {
 
   handle("folders:get-history", async (_e, folderId) => {
     const allFolders = await folderStore.listFolders();
-    const allBuilds = await store.listBuilds();
+    // Trashed builds included on purpose. A deletion is the single most useful
+    // thing this panel can show — especially in a shared folder, where someone
+    // else performed it — and listBuilds() filters trashed records out, so the
+    // build simply vanished from its own folder's history the moment it was
+    // deleted, taking every earlier entry with it.
+    const allBuilds = [...(await store.listBuilds()), ...(await store.listTrashedBuilds())];
+    const allComps = [...(await compStore.listComps()), ...(await compStore.listTrashedComps())];
     const allHistory = await buildHistoryStore.getAllHistory();
+    const allCompHistory = await compHistoryStore.getAllHistory();
 
     // Collect this folder and all its descendants
     const folderIds = new Set();
@@ -732,8 +746,11 @@ const readyWork = app.whenReady().then(async () => {
 
     // Build a title lookup for builds in those folders
     const titleMap = {};
+    const deletedIds = new Set();
     for (const b of allBuilds) {
-      if (folderIds.has(b.folderId)) titleMap[b.id] = b.title || b.id;
+      if (!folderIds.has(b.folderId)) continue;
+      titleMap[b.id] = b.title || b.id;
+      if (b.deletedAt) deletedIds.add(b.id);
     }
 
     // Gather and annotate all history entries for those builds
@@ -741,7 +758,31 @@ const readyWork = app.whenReady().then(async () => {
     for (const [buildId, buildEntries] of Object.entries(allHistory)) {
       if (!titleMap[buildId]) continue;
       for (const entry of buildEntries) {
-        entries.push({ ...entry, buildTitle: titleMap[buildId] });
+        // `buildDeleted` lets the panel say the build is currently in the trash,
+        // so "Restore this version" reads as the undelete it is.
+        entries.push({ ...entry, recordKind: "build", buildTitle: titleMap[buildId], buildDeleted: deletedIds.has(buildId) });
+      }
+    }
+
+    // Comps in those folders, alongside the builds. A comp is the thing a squad
+    // actually argues over, so its history belongs in the same timeline rather
+    // than a second panel nobody opens.
+    const compNames = {};
+    const deletedCompIds = new Set();
+    for (const c of allComps) {
+      if (!folderIds.has(c.folderId)) continue;
+      compNames[c.id] = c.name || c.id;
+      if (c.deletedAt) deletedCompIds.add(c.id);
+    }
+    for (const [compId, compEntries] of Object.entries(allCompHistory)) {
+      if (!compNames[compId]) continue;
+      for (const entry of compEntries) {
+        entries.push({
+          ...entry,
+          recordKind: "comp",
+          buildTitle: compNames[compId],
+          buildDeleted: deletedCompIds.has(compId),
+        });
       }
     }
 
@@ -750,10 +791,54 @@ const readyWork = app.whenReady().then(async () => {
     return entries;
   });
 
+  handle("comps:get-history", async (_e, compId) => compHistoryStore.getHistory(compId));
+
+  handle("comps:revert", async (_e, compId, historyEntryId) => {
+    const entries = await compHistoryStore.getHistory(compId);
+    const entry = entries.find((e) => e.id === historyEntryId);
+    if (!entry) throw new Error("History entry not found");
+
+    // Same as builds:revert — a comp sitting in the trash has to come out of it,
+    // or upsertComp carries the deletedAt stamp over and the revert writes a
+    // comp nothing will draw.
+    const trashedComps = await compStore.listTrashedComps();
+    if (trashedComps.some((c) => c.id === compId)) {
+      await trash.restore({ comps: [compId] });
+    }
+
+    const current = (await compStore.listComps()).find((c) => c.id === compId);
+    const auth = await getAuthRecord().catch(() => null);
+    if (current) {
+      compHistoryStore.addEntry({
+        compId,
+        authorLogin: auth?.viewer?.login || "local",
+        source: "revert",
+        summary: `reverted to ${new Date(entry.timestamp).toLocaleString()}`,
+        snapshot: current,
+      }).catch((err) => console.warn("[comp-history] revert addEntry failed:", err.message));
+    }
+
+    const saved = await compStore.upsertComp(entry.snapshot);
+    const teamRoot = await findTeamRoot(saved.folderId);
+    if (teamRoot) await safeEnqueue(() => teamSync.enqueue(teamRoot.teamId, saved.id, "comp", "put"), { type: "comp", id: saved.id });
+    return saved;
+  });
+
   handle("builds:revert", async (_e, buildId, historyEntryId) => {
     const entries = await buildHistoryStore.getHistory(buildId);
     const entry = entries.find((e) => e.id === historyEntryId);
     if (!entry) throw new Error("History entry not found");
+
+    // Restoring a version of a build that is currently in the trash has to take
+    // it OUT of the trash — otherwise upsertBuild carries the deletedAt stamp
+    // over (it does that on purpose, so a teammate's edit can't resurrect
+    // something you deleted) and the revert writes a build nothing will draw.
+    // This is the undelete path for a shared folder: a teammate deletes a
+    // build, you open the folder history, and put that version back.
+    const trashedBuilds = await store.listTrashedBuilds();
+    if (trashedBuilds.some((b) => b.id === buildId)) {
+      await trash.restore({ builds: [buildId] });
+    }
 
     // Capture the current state before reverting so the revert itself is undoable
     const currentBuilds = await store.listBuilds();
@@ -890,14 +975,45 @@ const readyWork = app.whenReady().then(async () => {
 
   // Comp CRUD
   handle("comps:list", () => compStore.listComps());
+  // Comp summaries name the builds that moved ("removed Heal Druid") rather than
+  // counting them, which needs a title lookup the comp itself does not carry.
+  async function compBuildTitleResolver() {
+    const builds = await store.listBuilds();
+    const byId = new Map(builds.map((b) => [b.id, b.title]));
+    return (id) => byId.get(id);
+  }
+
   handle("comps:save", async (_e, comp) => {
     const existing = comp.id ? (await compStore.listComps()).find((c) => c.id === comp.id) : null;
     const oldFolderId = existing?.folderId ?? null;
+    // Capture history before overwriting (non-blocking — never fails the save),
+    // exactly as builds:save does.
+    if (existing) {
+      const auth = await getAuthRecord().catch(() => null);
+      const titleOf = await compBuildTitleResolver();
+      compHistoryStore.addEntry({
+        compId: existing.id,
+        authorLogin: auth?.viewer?.login || "local",
+        source: "local",
+        summary: summarizeCompChange(existing, comp, titleOf),
+        snapshot: existing,
+      }).catch((err) => console.warn("[comp-history] addEntry failed:", err.message));
+    }
     // Guard BEFORE the local write — see builds:save.
     const { oldRoot, newRoot } = await assertCanMoveOutOfTeam({ teamSync, findTeamRoot }, {
       itemId: comp.id, oldFolderId, newFolderId: comp.folderId ?? null, label: "comp",
     });
     const saved = await compStore.upsertComp(comp);
+    if (!existing) {
+      const auth = await getAuthRecord().catch(() => null);
+      compHistoryStore.addEntry({
+        compId: saved.id,
+        authorLogin: auth?.viewer?.login || "local",
+        source: "local",
+        summary: "Created",
+        snapshot: saved,
+      }).catch((err) => console.warn("[comp-history] addEntry failed:", err.message));
+    }
     if (newRoot) await safeEnqueue(() => teamSync.enqueue(newRoot.teamId, saved.id, "comp", "put"), { type: "comp", id: saved.id });
     if (oldRoot && oldRoot.id !== newRoot?.id) {
       await safeEnqueue(() => teamSync.enqueue(oldRoot.teamId, saved.id, "comp", "delete"), { type: "comp", id: saved.id });
@@ -2086,6 +2202,10 @@ const readyWork = app.whenReady().then(async () => {
   handle("teams:migrate-org-library", (_e, opts) =>
     teamSync.migrateOrgLibrary(opts || {}, progressTo(_e.sender, { migration: true })));
   handle("teams:pull", (_e, teamId) => teamSync.pullTeam(teamId));
+  // The shared trash. @see teamSync.listTeamTrash for why this is server-backed
+  // rather than assembled from the local trash.
+  handle("teams:trash", (_e, teamId) => teamSync.listTeamTrash(teamId));
+  handle("teams:trash-restore", (_e, teamId, itemId) => teamSync.restoreFromTeamTrash(teamId, itemId));
   handle("teams:pull-all", () => teamSync.pullAll());
   handle("teams:resolve-conflict", (_e, teamId, itemId, choice) => teamSync.resolveConflict(teamId, itemId, choice));
   handle("teams:outbox", async () => {

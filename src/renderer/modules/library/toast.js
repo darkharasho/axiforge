@@ -8,6 +8,12 @@
 
 const PLAIN_MS = 2000;
 const ACTION_MS = 6000; // long enough to notice a button, reach it and click
+// A failure has to be READ, and reading takes longer than registering that a
+// thing you just asked for worked. Two seconds is fine for "Build copied!" and
+// far too short for "That build isn't published anymore (the link's file is
+// gone)" — which is the only account the user ever gets of why an import did
+// nothing. Errors and warnings get the same window as an Undo button.
+const PROBLEM_MS = 6000;
 
 let _toastEl = null;
 let _msgEl = null;
@@ -66,12 +72,20 @@ export function showToast(message, type = "success", action = null) {
   _toastEl.className = `lib-toast lib-toast--${type}`;
   // .lib-toast is pointer-events:none so it never blocks the UI behind it; a
   // toast carrying a button has to opt back in or the button is unclickable.
+  // Errors deliberately do NOT opt in: the mouseenter-to-hold below would be
+  // nice to have, but it costs pointer-events:auto on a bar sitting at
+  // bottom-centre, and swallowing clicks on the library for six seconds is a
+  // worse problem than the one the longer timeout already solves.
   if (action?.label) _toastEl.classList.add("lib-toast--interactive");
   // Force reflow so transition fires even if toast is already visible
   void _toastEl.offsetWidth;
   _toastEl.classList.add("lib-toast--visible");
 
-  _dismissMs = type === "loading" ? Infinity : action?.label ? ACTION_MS : PLAIN_MS;
+  _dismissMs =
+    type === "loading" ? Infinity
+    : action?.label ? ACTION_MS
+    : type === "error" || type === "warning" ? PROBLEM_MS
+    : PLAIN_MS;
   _scheduleDismiss(_dismissMs);
 }
 

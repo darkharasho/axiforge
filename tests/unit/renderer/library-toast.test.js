@@ -128,3 +128,50 @@ describe("undo affordance", () => {
     expect(toastEl().classList.contains("lib-toast--visible")).toBe(true);
   });
 });
+
+describe("failures get long enough to read", () => {
+  // A failure toast is often the ONLY account the user gets of why an action did
+  // nothing — "That build isn't published anymore (the link's file is gone)" is
+  // a whole sentence delivered in the two seconds "Build copied!" needs. Errors
+  // and warnings get the Undo window instead.
+  test("an error dwells past the plain 2s", () => {
+    showToast("That build isn't published anymore (the link's file is gone).", "error");
+
+    jest.advanceTimersByTime(2000);
+    expect(toastEl().classList.contains("lib-toast--visible")).toBe(true);
+
+    jest.advanceTimersByTime(4000);
+    expect(toastEl().classList.contains("lib-toast--visible")).toBe(false);
+  });
+
+  test("a warning gets the same window", () => {
+    showToast("Leave or delete the team in Settings → Teams.", "warning");
+    jest.advanceTimersByTime(2000);
+    expect(toastEl().classList.contains("lib-toast--visible")).toBe(true);
+    jest.advanceTimersByTime(4000);
+    expect(toastEl().classList.contains("lib-toast--visible")).toBe(false);
+  });
+
+  test("a success toast is unchanged", () => {
+    showToast("Build copied!", "success");
+    jest.advanceTimersByTime(2000);
+    expect(toastEl().classList.contains("lib-toast--visible")).toBe(false);
+  });
+
+  test("an error still never blocks clicks on the library behind it", () => {
+    // .lib-toast is pointer-events:none. Opting an error back in would buy the
+    // mouseenter-to-hold at the price of swallowing every click at
+    // bottom-centre for six seconds — a worse problem than the one the longer
+    // timeout solves.
+    showToast("Import failed", "error");
+    expect(toastEl().classList.contains("lib-toast--interactive")).toBe(false);
+  });
+
+  test("an error carrying an action keeps the action's window, not a longer one", () => {
+    showToast("Couldn't undo that.", "error", { label: "Retry", onClick: () => {} });
+    jest.advanceTimersByTime(5999);
+    expect(toastEl().classList.contains("lib-toast--visible")).toBe(true);
+    jest.advanceTimersByTime(2);
+    expect(toastEl().classList.contains("lib-toast--visible")).toBe(false);
+  });
+});

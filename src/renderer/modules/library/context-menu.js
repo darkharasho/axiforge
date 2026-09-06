@@ -222,6 +222,8 @@ function showCompMenu(x, y, compId, comp) {
     _item(arrowUpTrayIcon, "Export (.axicode)", null, () => _callbacks.onExportAxicode?.("selection")),
     _item(clipboardIcon, "Paste", "Ctrl+V", () => _callbacks.onPasteJson?.(compId)),
     _sep(),
+    _item(clockIcon, "View History", null, () => _callbacks.onViewCompHistory?.(compId)),
+    _sep(),
     _item(archiveArrowDownIcon, "Archive", null, () => _callbacks.onArchive?.({ comps: [compId] })),
     _item(trashIcon, "Delete", "Del", () => _callbacks.onDeleteComps?.([compId]), true),
   ];

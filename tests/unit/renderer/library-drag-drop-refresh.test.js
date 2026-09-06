@@ -30,6 +30,7 @@ jest.mock("../../../src/renderer/modules/state.js", () => ({
 const { state } = require("../../../src/renderer/modules/state.js");
 const dragDrop = require("../../../src/renderer/modules/library/drag-drop.js");
 const folderStore = require("../../../src/renderer/modules/library/folder-store.js");
+const selection = require("../../../src/renderer/modules/library/selection.js");
 const toast = require("../../../src/renderer/modules/library/toast.js");
 
 let onRefresh;
@@ -127,5 +128,53 @@ describe("drag-drop onEnd always repaints", () => {
     // container the dragged folder does not belong to.
     expect(folderStore.reorderFolders).not.toHaveBeenCalled();
     expect(onRefresh).toHaveBeenCalled();
+  });
+});
+
+describe("a container-to-container drop carries the whole selection", () => {
+  // Every drop path that goes through a hover target already honoured the
+  // multi-selection. The plain SortableJS branch — reached when the drop had no
+  // hover target at all — moved only the dragged build and silently left the
+  // rest behind. The COLUMNS view hits that branch for every move, because a
+  // .lib-col is neither inside a [data-folder-id] nor a nav target, so
+  // shift-selecting several builds and dragging them out of a folder moved
+  // exactly one of them.
+  beforeEach(() => {
+    state.folders = [{ id: "src", name: "Source", parentId: null }];
+    state.builds = [
+      { id: "b1", title: "One", folderId: "src" },
+      { id: "b2", title: "Two", folderId: "src" },
+      { id: "b3", title: "Three", folderId: "src" },
+    ];
+    state.currentFolder = null; // columns view browses from the root
+    selection.clearSelection();
+  });
+
+  test("moves every selected build, not just the one under the cursor", async () => {
+    selection.handleBuildClick("b1", {});
+    selection.handleBuildClick("b2", { ctrlKey: true });
+    expect(selection.getSelection().sort()).toEqual(["b1", "b2"]);
+
+    const item = document.createElement("li");
+    item.dataset.buildId = "b1";
+    const to = document.createElement("ul"); // a bare .lib-col — no folder id
+    await fireOnEnd({ item, to });
+
+    expect(folderStore.moveBuilds).toHaveBeenCalledTimes(1);
+    const [ids, dest] = folderStore.moveBuilds.mock.calls[0];
+    expect([...ids].sort()).toEqual(["b1", "b2"]);
+    expect(dest).toBeNull();
+  });
+
+  test("a build dragged on its own still moves alone, even with others selected", async () => {
+    selection.handleBuildClick("b2", {});
+    selection.handleBuildClick("b3", { ctrlKey: true });
+
+    const item = document.createElement("li");
+    item.dataset.buildId = "b1"; // not part of the selection
+    const to = document.createElement("ul");
+    await fireOnEnd({ item, to });
+
+    expect(folderStore.moveBuilds).toHaveBeenCalledWith(["b1"], null);
   });
 });

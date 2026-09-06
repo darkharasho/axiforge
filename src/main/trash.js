@@ -18,12 +18,13 @@ const DAY_MS = 86400000;
  *   • deferred cleanup — unlinking a build from its comps and deleting its
  *     version history used to happen at delete time, which is exactly what made
  *     a delete unrecoverable. Both now wait until purge, so a restore inside the
- *     retention window brings back the build AND its history;
+ *     retention window brings back the record AND its history — comps included,
+ *     which is why compHistoryStore is injected alongside the build one;
  *   • retention — the startup sweep that finally purges anything past the window.
  *
  * Stores are injected so this is testable against real stores in a temp dir.
  */
-function createTrash({ buildStore, compStore, folderStore, historyStore }) {
+function createTrash({ buildStore, compStore, folderStore, historyStore, compHistoryStore }) {
   async function readTrash() {
     const [builds, comps, folders] = await Promise.all([
       buildStore.listTrashedBuilds(),
@@ -178,6 +179,9 @@ function createTrash({ buildStore, compStore, folderStore, historyStore }) {
       for (const id of builds) {
         await compStore.removeBuildFromComps(id);
         await historyStore.deleteHistory(id).catch(() => {});
+      }
+      for (const id of comps) {
+        await compHistoryStore?.deleteHistory(id).catch(() => {});
       }
       if (comps.length) await buildStore.clearCompFromBuilds(comps);
       if (folders.length) await buildStore.clearFolderFromBuilds(folders);

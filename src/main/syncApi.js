@@ -82,6 +82,12 @@ class SyncApi {
   putItem(teamId, itemId, payload) { return this.#request("PUT", `/teams/${encodeURIComponent(teamId)}/items/${encodeURIComponent(itemId)}`, { body: payload }); }
   deleteItem(teamId, itemId, baseVersion) { return this.#request("DELETE", `/teams/${encodeURIComponent(teamId)}/items/${encodeURIComponent(itemId)}`, { query: { baseVersion } }); }
   bulk(teamId, items) { return this.#request("POST", `/teams/${encodeURIComponent(teamId)}/items:bulk`, { body: { items } }); }
+
+  // The shared team trash. Unlike every other read here this one is not part of
+  // the sync loop — it is only fetched when somebody opens the trash — so it has
+  // no cursor and no incremental form.
+  listTrash(teamId) { return this.#request("GET", `/teams/${encodeURIComponent(teamId)}/trash`); }
+  restoreItem(teamId, itemId) { return this.#request("POST", `/teams/${encodeURIComponent(teamId)}/trash/${encodeURIComponent(itemId)}/restore`); }
 }
 
 module.exports = { SyncApi, SyncApiError, DEFAULT_BASE_URL };

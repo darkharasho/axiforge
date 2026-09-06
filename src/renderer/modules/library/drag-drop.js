@@ -105,6 +105,29 @@ export function initDragDrop(callbacks) {
 }
 
 /**
+ * Remove any drag ghost SortableJS abandoned on <body>.
+ *
+ * With forceFallback + fallbackOnBody, Sortable drags a full clone of the row
+ * (`ghostEl`) parented to <body> and positioned fixed. It removes that clone in
+ * _onDrop -- but only inside `if (evt)`, and `destroy()` calls `_onDrop()` with
+ * no event, then nulls the reference. So destroying an instance mid-drag strands
+ * the clone permanently: nothing holds a handle to it any more, it is not inside
+ * #lib-content, and every later render replaces #lib-content's innerHTML without
+ * touching it. The user sees a phantom build row pinned at its old coordinates,
+ * floating over the Archive, the Trash and every folder they visit.
+ *
+ * A render CAN land mid-drag -- the table view's hover-to-auto-expand calls
+ * renderContent() from the pointermove handler, and a sync push can repaint at
+ * any moment -- so this runs wherever we destroy, rather than trying to prove
+ * no such render exists.
+ */
+function _removeStrandedDragGhosts() {
+  document
+    .querySelectorAll("body > .lib-drag-fallback, body > .lib-drag-active")
+    .forEach((el) => el.remove());
+}
+
+/**
  * Initialize SortableJS on all sortable containers.
  * Called after every render.
  */
@@ -114,6 +137,7 @@ export function wireDragDropEvents() {
     try { s.destroy(); } catch { /* dead DOM */ }
   });
   _sortableInstances = [];
+  _removeStrandedDragGhosts();
 
   const onStart = (evt) => {
     _isDragging = true;
@@ -306,7 +330,16 @@ export function wireDragDropEvents() {
 
     if (newFolderId !== oldFolderId) {
       if (_refuseSharedMove(oldFolderId, newFolderId, "build")) return;
-      await moveBuilds([buildId], newFolderId);
+      // Honour the multi-selection, like every droppedOnTarget branch above.
+      // This branch used to move the single dragged build and silently leave
+      // the rest of the selection behind — which is what made shift-clicking
+      // several builds in the COLUMNS view and dragging them out of a folder
+      // look broken. Columns are the common case because a .lib-col is not
+      // inside a [data-folder-id] and is not a nav target, so a column-to-column
+      // drag has no hover target and always lands here.
+      const selected = getSelection();
+      const idsToMove = selected.length > 1 && selected.includes(buildId) ? selected : [buildId];
+      await moveBuilds(idsToMove, newFolderId);
     } else {
       // Reordered within same container — save custom sort order
       const children = [...evt.to.children]
@@ -347,6 +380,14 @@ export function wireDragDropEvents() {
     forceFallback: true,
     fallbackClass: "lib-drag-fallback",
     fallbackOnBody: true,
+    // How far the pointer must travel before a press becomes a drag. Sortable
+    // defaults this to 0, so with forceFallback a click that wobbles by one
+    // pixel started a real drag — people were reordering and re-foldering
+    // things they only meant to select. A native OS drag threshold is 4-5px;
+    // this is deliberately a touch above that, because the cost of a missed
+    // drag (press again) is far lower than the cost of an accidental one
+    // (a build silently moved into another folder).
+    fallbackTolerance: 8,
     swapThreshold: 0.65,
     onStart,
     onEnd,

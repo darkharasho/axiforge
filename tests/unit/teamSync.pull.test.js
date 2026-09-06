@@ -68,7 +68,10 @@ describe("TeamSync — pull", () => {
     expect(await h.syncStore.getVersion("t", "b2")).toBeNull(); // not recorded — flush will 409 and resolve it
   });
 
-  test("tombstones delete locally: build removed from comps, folder cascade, versions dropped", async () => {
+  // A teammate's delete stages in the trash, exactly like your own. It used to
+  // hard-delete the record and its history the moment the tombstone landed, so
+  // the one delete you did NOT perform was the only one you could not undo.
+  test("tombstones stage locally: gone from the library, recoverable from the trash", async () => {
     h = await makeHarness();
     await seedTeam(h);
     await h.folderStore.upsertFolder({ id: "f1", name: "F", parentId: "t" });
@@ -80,11 +83,117 @@ describe("TeamSync — pull", () => {
       item({ id: "f1", type: "folder", deleted: true, body: null, version: 2, seq: 8 }),
     ], nextSeq: 8, hasMore: false });
     await h.sync.pullTeam("t");
+
+    // Out of every library view...
     expect(await h.buildStore.listBuilds()).toEqual([]);
-    expect((await h.compStore.listComps())[0].buildIds).toEqual([]);
     expect((await h.folderStore.listFolders()).map((f) => f.id)).toEqual(["t"]);
     expect(await h.syncStore.getVersion("t", "b1")).toBeNull();
     expect(await h.syncStore.getVersion("t", "f1")).toBeNull();
+
+    // ...but staged, not destroyed. The server cascades a folder delete into a
+    // tombstone per item, so each arrives as its own act and gets its own trash
+    // row — every one of them independently restorable.
+    const rows = await h.trash.listTrash();
+    expect(rows.map((r) => `${r.type}:${r.id}`).sort()).toEqual(["build:b1", "folder:f1"]);
+    expect((await h.buildStore.listTrashedBuilds()).map((b) => b.id)).toEqual(["b1"]);
+
+    // The comp still names it: the unlink waits for the purge so a restore
+    // brings the build back INTO its comp rather than beside it.
+    expect((await h.compStore.listComps())[0].buildIds).toEqual(["b1"]);
+
+    // And its history survives, carrying the deletion itself.
+    const history = await h.historyStore.getHistory("b1");
+    expect(history.some((e) => e.summary === "Deleted")).toBe(true);
+  });
+
+  test("a teammate's delete is undoable — putting it back restores the build and its comp slot", async () => {
+    h = await makeHarness();
+    await seedTeam(h);
+    await h.buildStore.upsertBuild({ id: "b1", title: "B", folderId: "t" });
+    await h.compStore.upsertComp({ id: "c1", name: "C", folderId: "t", buildIds: ["b1"], partyLines: [{ id: "l", capacity: 5, slots: ["b1"] }] });
+    await h.syncStore.setVersion("t", "b1", { version: 1, createdBy: "x" });
+    h.api.changes.mockResolvedValueOnce({ items: [
+      item({ id: "b1", deleted: true, body: null, version: 2, seq: 7 }),
+    ], nextSeq: 7, hasMore: false });
+    await h.sync.pullTeam("t");
+    expect(await h.buildStore.listBuilds()).toEqual([]);
+
+    await h.trash.restore({ builds: ["b1"] });
+
+    const builds = await h.buildStore.listBuilds();
+    expect(builds.map((b) => b.id)).toEqual(["b1"]);
+    expect(builds[0].title).toBe("B");
+    expect((await h.compStore.listComps())[0].partyLines[0].slots).toEqual(["b1"]);
+  });
+
+  test("a teammate's comp edit is recorded, with what actually moved", async () => {
+    h = await makeHarness();
+    await seedTeam(h);
+    await h.buildStore.upsertBuild({ id: "b1", title: "Heal Druid", folderId: "t" });
+    await h.buildStore.upsertBuild({ id: "b2", title: "Firebrand", folderId: "t" });
+    await h.compStore.upsertComp({
+      id: "c1", name: "Squad", folderId: "t", buildIds: ["b1"],
+      partyLines: [{ id: "l", capacity: 5, slots: ["b1"] }],
+    });
+    h.api.changes.mockResolvedValueOnce({ items: [item({
+      id: "c1", type: "comp", version: 2, seq: 3, updatedBy: who("iruixos"),
+      body: { id: "c1", name: "Squad", buildIds: ["b1", "b2"], partyLines: [{ id: "l", capacity: 5, slots: ["b1", "b2"] }] },
+    })], nextSeq: 3, hasMore: false });
+    await h.sync.pullTeam("t");
+
+    const [entry] = await h.compHistoryStore.getHistory("c1");
+    expect(entry.authorLogin).toBe("iruixos");
+    expect(entry.source).toBe("team-sync");
+    // Named, not counted — that is the difference between a log and a useful one.
+    expect(entry.summary).toContain("added Firebrand");
+  });
+
+  test("a teammate's comp delete is staged and recorded like a build's", async () => {
+    h = await makeHarness();
+    await seedTeam(h);
+    await h.compStore.upsertComp({ id: "c1", name: "Squad", folderId: "t", partyLines: [] });
+    await h.syncStore.setVersion("t", "c1", { version: 1, createdBy: "x" });
+    h.api.changes.mockResolvedValueOnce({ items: [
+      item({ id: "c1", type: "comp", deleted: true, body: null, version: 2, seq: 4, updatedBy: who("iruixos") }),
+    ], nextSeq: 4, hasMore: false });
+    await h.sync.pullTeam("t");
+
+    expect(await h.compStore.listComps()).toEqual([]);
+    expect((await h.trash.listTrash()).map((r) => r.id)).toEqual(["c1"]);
+    const entry = (await h.compHistoryStore.getHistory("c1")).find((e) => e.summary === "Deleted");
+    expect(entry.authorLogin).toBe("iruixos");
+    expect(entry.snapshot.name).toBe("Squad");
+  });
+
+  test("purging a comp finally drops its history", async () => {
+    // Deferred to purge on purpose, exactly like a build's — a restore inside
+    // the retention window has to bring the history back with the comp.
+    h = await makeHarness();
+    await seedTeam(h);
+    await h.compStore.upsertComp({ id: "c1", name: "Squad", folderId: "t", partyLines: [] });
+    await h.compHistoryStore.addEntry({ compId: "c1", summary: "Created", snapshot: { id: "c1" } });
+    await h.trash.trashComps(["c1"]);
+    expect(await h.compHistoryStore.getHistory("c1")).toHaveLength(1);
+
+    await h.trash.purge({ comps: ["c1"] });
+    expect(await h.compHistoryStore.getHistory("c1")).toEqual([]);
+  });
+
+  test("the deletion is attributed to whoever performed it", async () => {
+    h = await makeHarness();
+    await seedTeam(h);
+    await h.buildStore.upsertBuild({ id: "b1", title: "B", folderId: "t" });
+    await h.syncStore.setVersion("t", "b1", { version: 1, createdBy: "x" });
+    h.api.changes.mockResolvedValueOnce({ items: [
+      item({ id: "b1", deleted: true, body: null, version: 2, seq: 7, updatedBy: who("iruixos") }),
+    ], nextSeq: 7, hasMore: false });
+    await h.sync.pullTeam("t");
+
+    const entry = (await h.historyStore.getHistory("b1")).find((e) => e.summary === "Deleted");
+    expect(entry.authorLogin).toBe("iruixos");
+    expect(entry.source).toBe("team-sync");
+    // The snapshot is what makes it restorable from the history panel.
+    expect(entry.snapshot.title).toBe("B");
   });
 
   test("remote update of a build records a history entry with the remote author", async () => {

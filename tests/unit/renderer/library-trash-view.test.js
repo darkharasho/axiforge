@@ -138,3 +138,99 @@ describe("trash view — helpers", () => {
     expect(daysLeft("2020-01-01T00:00:00.000Z", NOW)).toBe(0);
   });
 });
+
+// ─── The shared team trash ────────────────────────────────────────────────────
+//
+// A second list, from the server, answering a different question: your rows are
+// "what did I remove", these are "what did the TEAM remove". Only the server can
+// answer that for everyone — a teammate who was offline when the tombstone
+// landed has no local copy to offer back.
+
+function teamItem(overrides = {}) {
+  return {
+    teamId: "t1",
+    teamName: "EWW",
+    type: "build",
+    id: "tb1",
+    name: "Mate's Reaper",
+    carried: 0,
+    deletedAt: "2026-09-04T12:00:00.000Z",
+    deletedBy: { userId: "u-mate", login: "mate" },
+    ...overrides,
+  };
+}
+
+describe("team trash section", () => {
+  test("lists team deletions alongside your own", () => {
+    const el = render([item()], { teamItems: [teamItem()] });
+    expect(el.querySelectorAll("[data-trash-row]")).toHaveLength(1);
+    expect(el.querySelectorAll("[data-team-trash-row]")).toHaveLength(1);
+    expect(el.querySelector("[data-team-trash-row] .lib-trash__name").textContent).toBe("Mate's Reaper");
+  });
+
+  test("says who removed it, so it does not read as your own deletion", () => {
+    const el = render([], { teamItems: [teamItem()] });
+    expect(el.querySelector("[data-team-trash-row] .lib-trash__meta").textContent).toContain("deleted by mate");
+  });
+
+  test("a folder delete says how much went with it", () => {
+    const el = render([], { teamItems: [teamItem({ type: "folder", name: "Raids", carried: 4 })] });
+    const meta = el.querySelector("[data-team-trash-row] .lib-trash__meta").textContent;
+    expect(meta).toContain("Folder, with everything inside it");
+    expect(meta).toContain("4 items went with it");
+  });
+
+  test("offers no permanent delete — that is the team's retention, not one member's", () => {
+    const el = render([], { teamItems: [teamItem()] });
+    const row = el.querySelector("[data-team-trash-row]");
+    expect(row.querySelector("[data-trash-purge]")).toBeNull();
+    expect(row.querySelector("[data-team-trash-restore]").textContent.trim()).toBe("Put Back");
+  });
+
+  test("Put Back reports the team and the item, not just the item", () => {
+    const calls = [];
+    const el = render([], { teamItems: [teamItem()], onTeamRestore: (ref) => calls.push(ref) });
+    el.querySelector("[data-team-trash-restore]").click();
+    expect(calls).toEqual([{ teamId: "t1", id: "tb1" }]);
+  });
+
+  test("does not claim the trash is empty while the team has rows in it", () => {
+    // The empty state would otherwise render above a visible list.
+    const el = render([], { teamItems: [teamItem()] });
+    expect(el.querySelector(".lib-trash--empty")).toBeNull();
+    expect(el.textContent).toContain("You have not deleted anything");
+    expect(el.querySelectorAll("[data-team-trash-row]")).toHaveLength(1);
+  });
+
+  test("with nothing anywhere, the ordinary empty state still shows", () => {
+    const el = render([], { teamItems: [] });
+    expect(el.querySelector(".lib-trash--empty")).not.toBeNull();
+  });
+
+  test("names arrive as text, never as markup", () => {
+    const el = render([], { teamItems: [teamItem({ name: '<img src=x onerror="boom()">' })] });
+    expect(el.querySelector("[data-team-trash-row] img")).toBeNull();
+    expect(el.querySelector("[data-team-trash-row] .lib-trash__name").textContent).toContain("<img");
+  });
+});
+
+describe("team trash — who may put it back", () => {
+  test("a row you may not restore says so instead of offering a 403", () => {
+    const el = render([], { teamItems: [teamItem({ canRestore: false })] });
+    const btn = el.querySelector("[data-team-trash-restore]");
+    expect(btn.disabled).toBe(true);
+    expect(btn.getAttribute("title")).toMatch(/owner, the item's creator, or whoever deleted it/);
+  });
+
+  test("a row you may restore is live", () => {
+    const el = render([], { teamItems: [teamItem({ canRestore: true })] });
+    expect(el.querySelector("[data-team-trash-restore]").disabled).toBe(false);
+  });
+
+  test("an older server that says nothing about it leaves the button alone", () => {
+    // canRestore is additive; a client ahead of the Worker must not lock
+    // everybody out of their own trash.
+    const el = render([], { teamItems: [teamItem()] });
+    expect(el.querySelector("[data-team-trash-restore]").disabled).toBe(false);
+  });
+});

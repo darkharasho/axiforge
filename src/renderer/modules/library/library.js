@@ -29,7 +29,7 @@ import {
   wireSelectionEvents,
 } from "./selection.js";
 import { initDragDrop, wireDragDropEvents } from "./drag-drop.js";
-import { showHistoryPanel, showFolderHistoryPanel } from "./history-panel.js";
+import { showHistoryPanel, showCompHistoryPanel, showFolderHistoryPanel } from "./history-panel.js";
 import { compIcon } from "./heroicons.js";
 import { pushUndo, popUndo, applyUndo } from "./undo.js";
 // Toast lives in its own module so the Undo affordance is testable without
@@ -351,11 +351,15 @@ async function handleLoadBuild(buildId) {
 function startInlineRename(itemEl, currentValue) {
   if (!itemEl) return Promise.resolve(null);
   // Find the title element — different classes per view type
+  // One entry per view mode. A missing class here is a SILENT failure — Rename
+  // resolves null and the menu item looks broken — which is what happened to
+  // the columns view (.lib-col__name) for as long as it has existed.
   const titleEl =
     itemEl.querySelector(".lib-list-row__title") ||
     itemEl.querySelector(".lib-grid-card__title") ||
     itemEl.querySelector(".lib-icon-item__label") ||
-    itemEl.querySelector(".lib-tv__name");
+    itemEl.querySelector(".lib-tv__name") ||
+    itemEl.querySelector(".lib-col__name");
   if (!titleEl) return Promise.resolve(null);
 
   return new Promise((resolve) => {
@@ -490,6 +494,37 @@ async function handleDelete(ids) {
 
 async function refreshTrash() {
   state.trashItems = (await window.desktopApi.listTrash?.()) || [];
+  await refreshTeamTrash();
+}
+
+/**
+ * What the TEAM deleted, from the server.
+ *
+ * Separate from the local trash because it answers a different question, and
+ * because only the server can answer it for everyone: a teammate who was
+ * offline when the tombstone landed, or who joined afterwards, has no local
+ * copy to offer back. Failures are swallowed — the trash must still open when
+ * you are offline, showing your own rows.
+ */
+async function refreshTeamTrash() {
+  const roots = (state.folders || []).filter((f) => f.teamId && !f.parentId);
+  if (!roots.length || !window.desktopApi.listTeamTrash) {
+    state.teamTrashItems = [];
+    return;
+  }
+  const perTeam = await Promise.all(
+    roots.map(async (root) => {
+      try {
+        const rows = await window.desktopApi.listTeamTrash(root.teamId);
+        return (rows || []).map((r) => ({ ...r, teamId: root.teamId, teamName: root.name }));
+      } catch {
+        return [];
+      }
+    })
+  );
+  state.teamTrashItems = perTeam
+    .flat()
+    .sort((a, b) => String(b.deletedAt).localeCompare(String(a.deletedAt)));
 }
 
 /**
@@ -513,6 +548,21 @@ async function reloadAfterTrashChange() {
   await loadFolders();
   await refreshTrash();
   renderLibrary();
+}
+
+/**
+ * Undo a team deletion for everyone, not just here. The server restores the
+ * item and the pull that follows brings it back into this library the same way
+ * any other teammate's write arrives.
+ */
+async function handleTeamTrashRestore({ teamId, id }) {
+  try {
+    await window.desktopApi.restoreFromTeamTrash(teamId, id);
+    await reloadAfterTrashChange();
+    showToast("Back for the whole team", "success");
+  } catch (err) {
+    showToast(err?.message || "Couldn't restore that.", "error");
+  }
 }
 
 async function handleTrashRestore({ type, id }) {
@@ -595,6 +645,11 @@ async function handleArchive(target) {
     return;
   }
 
+  // Same as the delete path: an archived comp you are standing inside stops
+  // resolving, and the view empties out with no explanation. @see handleDeleteComps
+  if (state.currentFolder?.type === "comp" && comps.includes(state.currentFolder.id)) {
+    state.currentFolder = null;
+  }
   clearSelection();
   await reloadAfterArchiveChange();
   pushUndoable({
@@ -1288,6 +1343,13 @@ async function handleDeleteComps(ids) {
   for (const id of ids) {
     await window.desktopApi.deleteComp(id);
   }
+  // Standing inside one of these comps means currentFolder now names a record
+  // that no longer exists. getVisibleBuilds resolves that id to nothing and
+  // returns an EMPTY list, so the page reads as "all my builds vanished" until
+  // you navigate somewhere else. handleDeleteFolder has always stepped out for
+  // exactly this reason; the comp and archive paths never did.
+  const wasViewing = state.currentFolder?.type === "comp" && ids.includes(state.currentFolder.id);
+  if (wasViewing) state.currentFolder = null;
   state.comps = await window.desktopApi.listComps();
   state.builds = await window.desktopApi.listBuilds();
   clearSelection();
@@ -1591,6 +1653,7 @@ function _buildSharedCallbacks() {
 
     // Trash
     onTrashRestore: handleTrashRestore,
+    onTeamTrashRestore: handleTeamTrashRestore,
     onTrashPurge: handleTrashPurge,
     onTrashEmpty: handleTrashEmpty,
 
@@ -1696,6 +1759,7 @@ function _buildSharedCallbacks() {
     onPublish: handlePublish,
     onBuildInfo: handleBuildInfo,
     onViewHistory: (buildId) => showHistoryPanel(buildId),
+    onViewCompHistory: (compId) => showCompHistoryPanel(compId),
     onViewFolderHistory: (folderId, folderName) => showFolderHistoryPanel(folderId, folderName),
     onEditTags: handleEditTags,
 

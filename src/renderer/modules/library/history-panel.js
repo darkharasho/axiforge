@@ -142,6 +142,10 @@ function _injectStyles() {
     .history-panel__badge--local { background: var(--hover-subtle, rgba(255,255,255,0.05)); color: var(--text-dim, #646670); }
     .history-panel__badge--sync { background: rgba(var(--accent-2-rgb, 100,170,240), 0.14); color: var(--accent-2, #64aaf0); }
     .history-panel__badge--revert { background: rgba(var(--accent-rgb, 200,152,72), 0.14); color: var(--accent, #c89848); }
+    .history-panel__badge--deleted { background: rgba(var(--danger-rgb, 214,92,92), 0.14); color: var(--danger, #d65c5c); }
+    /* The build is in the trash: dim the entry so the list reads at a glance,
+       but keep it fully legible — this is the row you came here to act on. */
+    .history-panel__entry--deleted .history-panel__entry-build { color: var(--danger, #d65c5c); }
     .history-panel__entry-build {
       font-size: 11px;
       font-weight: 600;
@@ -310,19 +314,25 @@ function _renderFolderEntries(listEl, entries) {
     // last change" case. Only entries written before snapshots were stored
     // (legacy history files) have nothing to restore.
     const reason = entry.snapshot ? "" : "This entry has no saved snapshot to restore";
+    // A build sitting in the trash is still listed here, and restoring one of
+    // its versions takes it back out — so the button has to say that rather
+    // than "Restore this version", which reads as a no-op on something that
+    // looks gone.
+    const label = entry.buildDeleted ? "Bring it back" : "Restore this version";
     return `
-    <div class="history-panel__entry" data-entry-id="${escapeHtml(entry.id)}">
+    <div class="history-panel__entry${entry.buildDeleted ? " history-panel__entry--deleted" : ""}" data-entry-id="${escapeHtml(entry.id)}">
       <span class="history-panel__dot ${_dotClass(entry.source)}"></span>
       <div class="history-panel__entry-meta">
         <span class="history-panel__entry-time">${escapeHtml(_formatTime(entry.timestamp))}</span>
         <span class="history-panel__badge ${_badgeClass(entry.source)}">${_badgeLabel(entry.source)}</span>
         ${entry.authorLogin ? `<span class="history-panel__entry-time">${escapeHtml(entry.authorLogin)}</span>` : ""}
+        ${entry.buildDeleted ? `<span class="history-panel__badge history-panel__badge--deleted">in trash</span>` : ""}
       </div>
       ${entry.buildTitle ? `<div class="history-panel__entry-build">${escapeHtml(entry.buildTitle)}</div>` : ""}
       <div class="history-panel__entry-summary">${escapeHtml(entry.summary)}</div>
       <div class="history-panel__actions">
         <button class="history-panel__revert" ${reason ? `disabled title="${escapeHtml(reason)}"` : ""}>
-          Restore this version
+          ${label}
         </button>
       </div>
     </div>
@@ -344,10 +354,13 @@ function _renderFolderEntries(listEl, entries) {
 function _askFolderRevert(row, entry) {
   const actions = row.querySelector(".history-panel__actions");
   const buildLabel = entry.buildTitle ? `"${entry.buildTitle}"` : "this build";
+  const question = entry.buildDeleted
+    ? `Bring ${escapeHtml(buildLabel)} back out of the trash, as it was at this point? Teammates will see it again on their next sync.`
+    : `Restore ${escapeHtml(buildLabel)} to how it was before this change? Teammates will see it on their next sync.`;
   actions.innerHTML = `
     <div class="history-panel__confirm">
       <div class="history-panel__confirm-text">
-        Restore ${escapeHtml(buildLabel)} to how it was before this change? Teammates will see it on their next sync.
+        ${question}
       </div>
       <div class="history-panel__confirm-buttons">
         <button class="history-panel__revert history-panel__confirm-no">Cancel</button>
@@ -363,7 +376,7 @@ function _askFolderRevert(row, entry) {
 
 function _resetFolderRevert(row, entry) {
   const actions = row.querySelector(".history-panel__actions");
-  actions.innerHTML = `<button class="history-panel__revert">Restore this version</button>`;
+  actions.innerHTML = `<button class="history-panel__revert">${entry.buildDeleted ? "Bring it back" : "Restore this version"}</button>`;
   actions.querySelector(".history-panel__revert")
     .addEventListener("click", () => _askFolderRevert(row, entry));
 }
@@ -373,12 +386,19 @@ async function _doFolderRevert(row, entry) {
   yes.disabled = true;
   yes.textContent = "Restoring…";
   try {
-    const saved = await window.desktopApi.revertBuild(entry.buildId, entry.id);
-    // library:rerender draws from state.builds, so refresh it the way the
-    // per-build panel does — otherwise the revert isn't visible until reload.
-    const idx = state.builds.findIndex((b) => b.id === saved.id);
-    if (idx >= 0) state.builds[idx] = saved;
-    else state.builds.push(saved);
+    // The folder timeline carries both kinds. A comp entry has to go back
+    // through comps:revert or it would be handed to the build store, which has
+    // never heard of it.
+    const isComp = entry.recordKind === "comp";
+    const saved = isComp
+      ? await window.desktopApi.revertComp(entry.compId, entry.id)
+      : await window.desktopApi.revertBuild(entry.buildId, entry.id);
+    // library:rerender draws from state, so refresh it the way the per-record
+    // panel does — otherwise the revert isn't visible until reload.
+    const collection = isComp ? state.comps : state.builds;
+    const idx = collection.findIndex((r) => r.id === saved.id);
+    if (idx >= 0) collection[idx] = saved;
+    else collection.push(saved);
     document.dispatchEvent(new CustomEvent("library:rerender"));
     closeHistoryPanel();
     document.dispatchEvent(new CustomEvent("library:toast", { detail: { message: "Restored!" } }));
@@ -391,11 +411,39 @@ async function _doFolderRevert(row, entry) {
 }
 
 export async function showHistoryPanel(buildId) {
+  const build = state.builds.find((b) => b.id === buildId);
+  return _showRecordHistory({
+    kind: "build",
+    id: buildId,
+    label: "Build",
+    title: build?.title || "Build",
+    fetch: (id) => window.desktopApi.getBuildHistory(id),
+    revert: (id, entryId) => window.desktopApi.revertBuild(id, entryId),
+    collection: () => state.builds,
+  });
+}
+
+/**
+ * The same panel for a comp. Comps had no history at all until now — the thing
+ * a squad actually argues over, and the thing one drag can restructure, kept no
+ * record of who changed what.
+ */
+export async function showCompHistoryPanel(compId) {
+  const comp = (state.comps || []).find((c) => c.id === compId);
+  return _showRecordHistory({
+    kind: "comp",
+    id: compId,
+    label: "Comp",
+    title: comp?.name || "Comp",
+    fetch: (id) => window.desktopApi.getCompHistory(id),
+    revert: (id, entryId) => window.desktopApi.revertComp(id, entryId),
+    collection: () => state.comps,
+  });
+}
+
+async function _showRecordHistory({ kind, id, label, title, fetch, revert, collection }) {
   closeHistoryPanel();
   _injectStyles();
-
-  const build = state.builds.find((b) => b.id === buildId);
-  const title = build?.title || "Build";
 
   const overlay = document.createElement("div");
   overlay.className = "history-panel-overlay";
@@ -406,7 +454,7 @@ export async function showHistoryPanel(buildId) {
   const panel = document.createElement("div");
   panel.className = "history-panel";
   panel.setAttribute("role", "dialog");
-  panel.setAttribute("aria-label", "Build History");
+  panel.setAttribute("aria-label", `${label} History`);
 
   panel.innerHTML = `
     <div class="history-panel__header">
@@ -430,15 +478,15 @@ export async function showHistoryPanel(buildId) {
 
   // Fetch and render history
   try {
-    const entries = await window.desktopApi.getBuildHistory(buildId);
-    _renderEntries(panel.querySelector("#history-panel-list"), buildId, entries);
+    const entries = await fetch(id);
+    _renderEntries(panel.querySelector("#history-panel-list"), { id, kind, revert, collection }, entries);
   } catch (err) {
     panel.querySelector("#history-panel-list").innerHTML =
       `<div class="history-panel__empty">Failed to load history.</div>`;
   }
 }
 
-function _renderEntries(listEl, buildId, entries) {
+function _renderEntries(listEl, record, entries) {
   if (!entries || entries.length === 0) {
     listEl.innerHTML = `<div class="history-panel__empty">No history yet.<br>Changes will appear here after saves.</div>`;
     return;
@@ -467,11 +515,12 @@ function _renderEntries(listEl, buildId, entries) {
       btn.disabled = true;
       btn.textContent = "Reverting…";
       try {
-        const saved = await window.desktopApi.revertBuild(buildId, btn.dataset.entryId);
+        const saved = await record.revert(record.id, btn.dataset.entryId);
         // Update state and re-render library
-        const idx = state.builds.findIndex((b) => b.id === saved.id);
-        if (idx >= 0) state.builds[idx] = saved;
-        else state.builds.push(saved);
+        const list = record.collection();
+        const idx = list.findIndex((r) => r.id === saved.id);
+        if (idx >= 0) list[idx] = saved;
+        else list.push(saved);
         // Trigger library re-render via a custom event the renderer listens to
         document.dispatchEvent(new CustomEvent("library:rerender"));
         closeHistoryPanel();

@@ -34,12 +34,15 @@ function omit(obj, keys) {
 }
 
 class TeamSync {
-  constructor({ buildStore, compStore, folderStore, syncStore, historyStore, api, emit, now, setTimeoutImpl, clearTimeoutImpl } = {}) {
+  constructor({ buildStore, compStore, folderStore, syncStore, historyStore, compHistoryStore, trash, api, emit, now, setTimeoutImpl, clearTimeoutImpl } = {}) {
     this.buildStore = buildStore;
     this.compStore = compStore;
     this.folderStore = folderStore;
     this.syncStore = syncStore;
     this.historyStore = historyStore || null;
+    this.compHistoryStore = compHistoryStore || null;
+    // Required before any tombstone can be applied — see _applyTombstone.
+    this.trash = trash || null;
     this.api = api || new SyncApi({ getToken: async () => (await this.getSession())?.sessionToken || null });
     this._emit = typeof emit === "function" ? emit : () => {};
     this._now = now || Date.now;
@@ -522,20 +525,65 @@ class TeamSync {
     this._emit("sync-status", { status: "synced", folderId: root.id });
   }
 
-  // Delete an item from every local store it can appear in, mirroring a
-  // server-side tombstone. Shared by `_applyItem` (real tombstones) and
-  // `_pruneUnseen` (resync — items no longer present on the server).
-  async _applyTombstone(teamId, root, type, id) {
+  /**
+   * Apply a server-side tombstone locally — by STAGING the item in the trash,
+   * exactly as a local delete does.
+   *
+   * This used to destroy: `buildStore.deleteBuild` filters the record straight
+   * out of builds.json, and `historyStore.deleteHistory` took its entire version
+   * history with it. So a delete you performed yourself was recoverable for 30
+   * days while the identical delete performed by a teammate was unrecoverable
+   * the instant it arrived — no trash row, no undo, no history, nothing on
+   * screen to say it had happened. In a shared folder that is the delete that
+   * matters most, because you did not do it and may not agree with it.
+   *
+   * Nothing here enqueues anything: the team has already removed the item, so
+   * this is purely local catch-up. Putting it back from the trash re-pushes it
+   * (see the trash:restore handler), which is the undelete.
+   *
+   * A folder trashes its whole subtree under one batch id rather than clearing
+   * folderId off the builds inside it — the old behaviour dumped a teammate's
+   * folder contents loose into your root.
+   *
+   * Shared by `_applyItem` (real tombstones) and `_pruneUnseen` (resync — items
+   * no longer present on the server).
+   *
+   * @param {string} author login to attribute the deletion to in history
+   */
+  async _applyTombstone(teamId, root, type, id, author = "teammate") {
+    if (!this.trash) {
+      // Deliberately NOT falling back to the old destructive path: silently
+      // hard-deleting a teammate's item because of a wiring mistake is the
+      // exact failure this method exists to stop.
+      throw new Error("teamSync: no trash wired — refusing to apply a tombstone destructively");
+    }
+
     if (type === "build") {
-      await this.buildStore.deleteBuild(id);
-      await this.compStore.removeBuildFromComps(id);
-      if (this.historyStore) this.historyStore.deleteHistory(id).catch(() => {});
+      // Record WHO removed it before it leaves the library views, so the folder
+      // history panel can show the deletion and offer it back.
+      if (this.historyStore) {
+        const existing = (await this.buildStore.listBuilds()).find((b) => b.id === id);
+        if (existing) {
+          await this.historyStore.addEntry({
+            buildId: id, authorLogin: author, source: "team-sync",
+            summary: "Deleted", snapshot: existing,
+          }).catch((err) => console.warn("[history] tombstone addEntry failed:", err.message));
+        }
+      }
+      await this.trash.trashBuilds([id]);
     } else if (type === "comp") {
-      await this.compStore.deleteComp(id);
-      await this.buildStore.clearCompFromBuilds([id]);
+      if (this.compHistoryStore) {
+        const existing = (await this.compStore.listComps()).find((c) => c.id === id);
+        if (existing) {
+          await this.compHistoryStore.addEntry({
+            compId: id, authorLogin: author, source: "team-sync",
+            summary: "Deleted", snapshot: existing,
+          }).catch((err) => console.warn("[comp-history] tombstone addEntry failed:", err.message));
+        }
+      }
+      await this.trash.trashComps([id]);
     } else if (type === "folder") {
-      const removed = await this.folderStore.deleteFolder(id);
-      if (removed.length) await this.buildStore.clearFolderFromBuilds(removed);
+      await this.trash.trashFolder(id);
     }
     await this.syncStore.removeVersion(teamId, id);
     this._emit("sync-status", { status: "synced", type, id, folderId: root.id, removed: true });
@@ -557,10 +605,14 @@ class TeamSync {
     );
     const builds = await this.buildStore.listBuilds();
     const comps = await this.compStore.listComps();
+    // Folders FIRST, so a pruned folder claims its contents into one trash
+    // batch and the per-item candidates below then find them already staged and
+    // skip. The other order produces a trash row per build instead of the one
+    // row for the folder the user would recognise.
     const candidates = [
+      ...folders.filter((f) => teamFolderIds.has(f.id) && f.id !== root.id).map((f) => ({ type: "folder", id: f.id })),
       ...comps.filter((c) => teamFolderIds.has(c.folderId)).map((c) => ({ type: "comp", id: c.id })),
       ...builds.filter((b) => teamFolderIds.has(b.folderId)).map((b) => ({ type: "build", id: b.id })),
-      ...folders.filter((f) => teamFolderIds.has(f.id) && f.id !== root.id).map((f) => ({ type: "folder", id: f.id })),
     ];
     for (const { type, id } of candidates) {
       if (seenIds.has(id) || team.outbox[id]) continue;
@@ -583,7 +635,7 @@ class TeamSync {
     const folderId = item.parentId || root.id;
 
     if (item.deleted) {
-      await this._applyTombstone(teamId, root, item.type, item.id);
+      await this._applyTombstone(teamId, root, item.type, item.id, author);
       return;
     }
 
@@ -609,10 +661,71 @@ class TeamSync {
       }
       saved = await this.buildStore.upsertBuild({ ...body, id: item.id, folderId });
     } else if (item.type === "comp") {
+      // Same attribution rule as builds: a teammate's restructuring of a comp is
+      // exactly the change someone will want to look up later.
+      if (this.compHistoryStore && !isOwnWrite) {
+        const { summarizeCompChange } = require("./compHistoryStore.js");
+        const existing = (await this.compStore.listComps()).find((c) => c.id === item.id);
+        const builds = await this.buildStore.listBuilds();
+        const titleOf = (id) => builds.find((b) => b.id === id)?.title;
+        await this.compHistoryStore.addEntry({
+          compId: item.id, authorLogin: author, source: "team-sync",
+          summary: existing ? summarizeCompChange(existing, { ...body, folderId }, titleOf) : "Created",
+          snapshot: existing || { ...body, id: item.id, folderId },
+        }).catch((err) => console.warn("[comp-history] team-sync addEntry failed:", err.message));
+      }
       saved = await this.compStore.upsertComp({ ...body, id: item.id, folderId });
     }
     await this.syncStore.setVersion(teamId, item.id, { version: item.version, createdBy });
     this._emit("sync-status", { status: "synced", type: item.type, id: item.id, folderId: root.id, item: saved });
+  }
+
+  /**
+   * The team's shared trash: what everyone deleted, and the content to put back.
+   *
+   * Deliberately server-backed rather than assembled from local copies. The
+   * local trash can only offer back what THIS machine happened to hold when the
+   * tombstone arrived — a teammate who was offline, or who joined afterwards,
+   * has nothing at all. The server kept the body, so it can answer for everyone.
+   */
+  async listTeamTrash(teamId) {
+    const res = await this.api.listTrash(teamId);
+    return (res && res.items) || [];
+  }
+
+  /**
+   * Undo a team deletion for the whole team.
+   *
+   * The restore is an ordinary write server-side, so it reaches every client —
+   * including this one — through the normal changes feed. Pulling straight
+   * afterwards just means the user does not have to wait for the next poll.
+   */
+  async restoreFromTeamTrash(teamId, itemId) {
+    const res = await this.api.restoreItem(teamId, itemId);
+
+    // The same items are almost certainly sitting in the LOCAL trash too — the
+    // tombstone staged them here when it arrived. upsertBuild deliberately
+    // carries a trash stamp over from the existing record, so that a teammate's
+    // edit cannot resurrect something you deleted; without clearing the stamp
+    // first, the pull below would write the restored body onto a record that
+    // stays invisible. An explicit team restore is the one case where "bring it
+    // back" is exactly what was asked for.
+    const ids = new Set(res?.restored || [itemId]);
+    if (this.trash && ids.size) {
+      const [builds, comps, folders] = await Promise.all([
+        this.buildStore.listTrashedBuilds(),
+        this.compStore.listTrashedComps(),
+        this.folderStore.listTrashedFolders(),
+      ]);
+      const pick = (records) => records.filter((r) => ids.has(r.id)).map((r) => r.id);
+      const selection = { builds: pick(builds), comps: pick(comps), folders: pick(folders) };
+      if (selection.builds.length || selection.comps.length || selection.folders.length) {
+        await this.trash.restore(selection);
+      }
+    }
+
+    await this.pullTeam(teamId).catch(() => {});
+    return res;
   }
 
   // R6.1: onFocus() can overlap a slow scheduled poll tick; without this

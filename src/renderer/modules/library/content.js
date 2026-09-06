@@ -25,6 +25,42 @@ import {
 let _callbacks = {};
 const _tableExpandedFolders = new Set();
 let _columnSelectedFolders = []; // tracks selected folder at each column depth
+// Which navigation context the column stack above was built for. The stack is a
+// path RELATIVE to column 0, so it is only meaningful while column 0 stays put.
+let _columnsContextKey = null;
+
+/** A stable key for "what column 0 is currently showing". */
+function _navContextKey() {
+  const f = state.currentFolder;
+  return f ? `${f.type}:${f.id}` : "root";
+}
+
+/**
+ * Keep the column stack honest before drawing it.
+ *
+ * Two ways it used to go wrong, both of which show up as duplicated or ghost
+ * columns that stay until you switch view modes:
+ *
+ *  - Navigating (sidebar, breadcrumb, a drop on a nav target) moves column 0
+ *    without touching the stack. Drill into "Raids", then click "Raids" in the
+ *    sidebar, and column 0 becomes Raids' contents while the stack still says
+ *    "show Raids' contents next" — so you get the same column twice.
+ *  - A selected id can stop resolving (deleted, trashed, archived, or removed
+ *    by a teammate's sync), leaving an empty column with nothing to click that
+ *    would ever clear it.
+ */
+function _pruneColumnSelections() {
+  const key = _navContextKey();
+  if (key !== _columnsContextKey) {
+    _columnsContextKey = key;
+    _columnSelectedFolders = [];
+    return;
+  }
+  const idx = _columnSelectedFolders.findIndex(
+    (id) => id && !libraryFolders().some((f) => f.id === id) && !libraryComps().some((c) => c.id === id)
+  );
+  if (idx !== -1) _columnSelectedFolders = _columnSelectedFolders.slice(0, idx);
+}
 
 /** Expand a folder in the table view (used by drag-drop to auto-expand on hover). */
 export function expandTableFolder(folderId) {
@@ -56,6 +92,8 @@ export function renderContent() {
       onRestore: (ref) => _callbacks.onTrashRestore?.(ref),
       onPurge: (ref) => _callbacks.onTrashPurge?.(ref),
       onEmpty: () => _callbacks.onTrashEmpty?.(),
+      teamItems: state.teamTrashItems || [],
+      onTeamRestore: (ref) => _callbacks.onTeamTrashRestore?.(ref),
     });
     return;
   }
@@ -600,6 +638,7 @@ function renderIconView(container) {
 function renderColumnsView(container) {
   // Build columns: first column is the current navigation context,
   // subsequent columns are based on selected folders in _columnSelectedFolders
+  _pruneColumnSelections();
   const columns = [];
 
   // Column 0: root level (folders + builds + comps at current navigation context)

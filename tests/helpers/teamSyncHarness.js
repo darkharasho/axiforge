@@ -7,6 +7,8 @@ const { CompStore } = require("../../src/main/compStore");
 const { FolderStore } = require("../../src/main/folderStore");
 const { SyncStore } = require("../../src/main/syncStore");
 const { BuildHistoryStore } = require("../../src/main/buildHistoryStore");
+const { CompHistoryStore } = require("../../src/main/compHistoryStore");
+const { createTrash } = require("../../src/main/trash");
 const { SyncApiError } = require("../../src/main/syncApi");
 const { TeamSync } = require("../../src/main/teamSync");
 
@@ -31,7 +33,8 @@ async function makeHarness({ session = { sessionToken: "sess", userId: "me", log
   const folderStore = new FolderStore(dir);
   const syncStore = new SyncStore(dir);
   const historyStore = new BuildHistoryStore(dir);
-  await Promise.all([buildStore.init(), compStore.init(), folderStore.init(), syncStore.init(), historyStore.init()]);
+  const compHistoryStore = new CompHistoryStore(dir);
+  await Promise.all([buildStore.init(), compStore.init(), folderStore.init(), syncStore.init(), historyStore.init(), compHistoryStore.init()]);
   if (session) await buildStore.saveAuth({ token: "gh", viewer: { login: "me" }, sync: session });
   const api = fakeApi();
   const events = [];
@@ -40,7 +43,10 @@ async function makeHarness({ session = { sessionToken: "sess", userId: "me", log
   const timers = [];
   const setTimeoutImpl = (fn, ms) => { const t = { fn, at: nowMs + ms, cleared: false }; timers.push(t); return t; };
   const clearTimeoutImpl = (t) => { if (t) t.cleared = true; };
-  const sync = new TeamSync({ buildStore, compStore, folderStore, syncStore, historyStore, api, emit, now: () => nowMs, setTimeoutImpl, clearTimeoutImpl });
+  // The real trash, not a stub: an incoming tombstone stages the item exactly
+  // as a local delete does, and the tests care that it is recoverable.
+  const trash = createTrash({ buildStore, compStore, folderStore, historyStore, compHistoryStore });
+  const sync = new TeamSync({ buildStore, compStore, folderStore, syncStore, historyStore, compHistoryStore, trash, api, emit, now: () => nowMs, setTimeoutImpl, clearTimeoutImpl });
   // Fire every timer due at or before nowMs+ms (in order), awaiting async callbacks.
   async function advance(ms) {
     nowMs += ms;
@@ -52,7 +58,7 @@ async function makeHarness({ session = { sessionToken: "sess", userId: "me", log
     }
   }
   const cleanup = () => { sync.stopPolling(); return fs.rm(dir, { recursive: true, force: true }); };
-  return { dir, buildStore, compStore, folderStore, syncStore, historyStore, api, events, sync, advance, now: () => nowMs, cleanup, apiError };
+  return { dir, buildStore, compStore, folderStore, syncStore, historyStore, compHistoryStore, trash, api, events, sync, advance, now: () => nowMs, cleanup, apiError };
 }
 
 module.exports = { makeHarness, fakeApi, apiError };

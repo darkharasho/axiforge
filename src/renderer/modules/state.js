@@ -23,7 +23,9 @@ export const state = {
   // Library state
   folders: [],
   currentFolder: null,      // { type: "smart"|"custom"|"trash", id: string } or null (root)
-  trashItems: [],           // rows for the trash view; refreshed on navigate
+  trashItems: [],
+  // What the TEAM deleted, from the server — see library.js refreshTeamTrash.
+  teamTrashItems: [],           // rows for the trash view; refreshed on navigate
   archiveItems: [],         // rows for the archive view; refreshed on navigate
   libraryPrefs: {
     viewMode: "list",

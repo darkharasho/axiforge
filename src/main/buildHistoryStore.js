@@ -1,89 +1,18 @@
 "use strict";
 
-const path = require("node:path");
-const fs = require("node:fs/promises");
-const crypto = require("node:crypto");
-const { readJsonFile, writeJsonAtomic } = require("./jsonFile");
+const { HistoryStore } = require("./historyStore");
 
-const HISTORY_CAP = 50; // max entries per build
-
-class BuildHistoryStore {
-  #writeQueue = Promise.resolve();
-
+/**
+ * Version history for builds.
+ *
+ * The storage half lives in HistoryStore, shared with comps — the two were
+ * byte-for-byte the same logic and drifted apart the moment one of them grew a
+ * feature. What stays here is what is actually about builds: the file it lives
+ * in, the `buildId` key its entries carry, and summarizeBuildChange below.
+ */
+class BuildHistoryStore extends HistoryStore {
   constructor(baseDir) {
-    this.historyPath = path.join(baseDir, "build-history.json");
-  }
-
-  // addEntry is fire-and-forget from several places (local save, shared pull);
-  // serialize so concurrent read-modify-writes don't drop each other's entries.
-  #enqueue(fn) {
-    const next = this.#writeQueue.then(() => fn());
-    this.#writeQueue = next.catch(() => {});
-    return next;
-  }
-
-  async init() {
-    try {
-      await fs.access(this.historyPath);
-    } catch {
-      await writeJsonAtomic(this.historyPath, {}, { backup: false });
-    }
-  }
-
-  async #readAll() {
-    try {
-      const data = await readJsonFile(this.historyPath, {});
-      return data && typeof data === "object" && !Array.isArray(data) ? data : {};
-    } catch {
-      return {};
-    }
-  }
-
-  async #writeAll(data) {
-    // History snapshots can be large; skip the .bak generation for this file.
-    await writeJsonAtomic(this.historyPath, data, { backup: false });
-  }
-
-  async getAllHistory() {
-    return this.#readAll();
-  }
-
-  async getHistory(buildId) {
-    const all = await this.#readAll();
-    return all[buildId] || [];
-  }
-
-  async addEntry({ buildId, authorLogin, source, summary, snapshot }) {
-    return this.#enqueue(async () => {
-      const all = await this.#readAll();
-      if (!all[buildId]) all[buildId] = [];
-      const entry = {
-        id: crypto.randomUUID(),
-        buildId,
-        timestamp: new Date().toISOString(),
-        authorLogin: authorLogin || "local",
-        source: source || "local",
-        summary: summary || "build updated",
-        snapshot,
-      };
-      // Newest first; cap at HISTORY_CAP entries
-      all[buildId].unshift(entry);
-      if (all[buildId].length > HISTORY_CAP) {
-        all[buildId] = all[buildId].slice(0, HISTORY_CAP);
-      }
-      await this.#writeAll(all);
-      return entry;
-    });
-  }
-
-  async deleteHistory(buildId) {
-    return this.#enqueue(async () => {
-      const all = await this.#readAll();
-      if (all[buildId]) {
-        delete all[buildId];
-        await this.#writeAll(all);
-      }
-    });
+    super(baseDir, { fileName: "build-history.json", idField: "buildId", defaultSummary: "build updated" });
   }
 }
 

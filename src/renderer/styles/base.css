@@ -41,6 +41,16 @@
   --hover-accent-strong: rgba(var(--accent-rgb), 0.2);
   --focus-ring: rgba(var(--accent-rgb), 0.26);
 
+  /* ── Layout ───────────────────────────────────────────────────────────── */
+  /* The fixed titlebar's height. Everything below it is positioned against
+     this, and it used to be written out by hand in five places — as 42px in
+     two of them and 40px in the other three. The 2px difference made
+     .app-layout taller than the space under the titlebar, so the page could
+     scroll those 2px and slide the left nav's first icon up underneath it.
+     Windows saw it most because fractional display scaling rounds the two
+     numbers apart even further. */
+  --titlebar-h: 42px;
+
   /* ── Radius ───────────────────────────────────────────────────────────── */
   --radius: 14px;
   --radius-sm: 6px;
@@ -101,6 +111,17 @@ body {
   font-family: "DM Sans", system-ui, sans-serif;
   background: var(--bg);
   color: var(--text);
+}
+
+/* Clear the fixed titlebar with PADDING, not a margin on the first child.
+   .app-layout used to carry `margin-top: 42px`, and an adjoining top margin
+   collapses out through a parent that has no top padding or border — so the
+   42px landed on <body> instead of inside it, made <html> 42px taller than the
+   viewport, and let the whole document scroll. Scroll it and the layout slides
+   up underneath the titlebar, clipping the left nav's first icon. Padding here
+   both reserves the space and blocks the collapsing that caused it. */
+body {
+  padding-top: var(--titlebar-h);
 }
 
 /* Ambient gradient layer — uses transform (GPU-composited) instead of

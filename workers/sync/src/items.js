@@ -39,7 +39,11 @@ function itemWire(row, logins) {
     id: row.id,
     type: row.type,
     parentId: row.parent_id,
-    body: row.body ? JSON.parse(row.body) : null,
+    // A tombstone keeps its body on the server now (that is what backs the team
+    // trash), but the changes feed must not start shipping it: clients branch on
+    // `deleted` and would only pay for bytes they throw away. The trash endpoint
+    // is the one place the retained body is handed out.
+    body: row.deleted === 1 ? null : row.body ? JSON.parse(row.body) : null,
     version: row.version,
     seq: row.seq,
     deleted: row.deleted === 1,
@@ -275,6 +279,10 @@ async function deleteItem(request, env, deps, auth, params) {
   }
 
   const now = nowIso(deps);
+  // The id of the item actually deleted. Descendants of a folder delete carry
+  // the same batch, so the trash can show the one folder the user removed and
+  // restore the whole subtree as a single act. @see listTrash / restoreItem
+  const batch = row.id;
   const stmts = [];
   // Only the root row is guarded by baseVersion — a client can only have seen
   // (and thus can only race on) the version it read for the item it asked to
@@ -293,15 +301,17 @@ async function deleteItem(request, env, deps, auth, params) {
       stmts.push(db.prepare("UPDATE teams SET seq = seq + 1 WHERE id = ?").bind(params.teamId));
       rootUpdateIndex = stmts.length;
       stmts.push(db.prepare(
-        `UPDATE items SET deleted = 1, body = NULL, version = version + 1, seq = (SELECT seq FROM teams WHERE id = ?), updated_by = ?, updated_at = ?
+        `UPDATE items SET deleted = 1, version = version + 1, seq = (SELECT seq FROM teams WHERE id = ?), updated_by = ?, updated_at = ?,
+                deleted_at = ?, deleted_by = ?, delete_batch = ?
           WHERE team_id = ? AND id = ? AND deleted = 0 AND version = ?`
-      ).bind(params.teamId, auth.user.id, now, params.teamId, r.id, baseVersion));
+      ).bind(params.teamId, auth.user.id, now, now, auth.user.id, batch, params.teamId, r.id, baseVersion));
     } else {
       stmts.push(db.prepare(`UPDATE teams SET seq = seq + 1 WHERE id = ? AND ${rootFlipped}`).bind(params.teamId, ...rootFlippedArgs));
       stmts.push(db.prepare(
-        `UPDATE items SET deleted = 1, body = NULL, version = version + 1, seq = (SELECT seq FROM teams WHERE id = ?), updated_by = ?, updated_at = ?
+        `UPDATE items SET deleted = 1, version = version + 1, seq = (SELECT seq FROM teams WHERE id = ?), updated_by = ?, updated_at = ?,
+                deleted_at = ?, deleted_by = ?, delete_batch = ?
           WHERE team_id = ? AND id = ? AND deleted = 0 AND ${rootFlipped}`
-      ).bind(params.teamId, auth.user.id, now, params.teamId, r.id, ...rootFlippedArgs));
+      ).bind(params.teamId, auth.user.id, now, now, auth.user.id, batch, params.teamId, r.id, ...rootFlippedArgs));
     }
   }
   stmts.push(db.prepare("SELECT version, seq FROM items WHERE team_id = ? AND id = ?").bind(params.teamId, params.itemId));
@@ -341,4 +351,120 @@ async function bulkItems(request, env, deps, auth, params) {
   return json({ results });
 }
 
-module.exports = { getChanges, putItem, deleteItem, bulkItems, writeItem, itemWire, MAX_BODY_BYTES, MAX_PAGE, MAX_BULK, MAX_BULK_BODY_BYTES };
+// ── Team trash ────────────────────────────────────────────────────────────────
+//
+// A delete used to be final for everyone the moment it synced. Now the tombstone
+// keeps its body for the retention window purgeTombstones already enforced, so
+// the team can undo one — including the teammate who was offline when it
+// happened, or who joined afterwards, neither of whom has a local copy to
+// restore from.
+
+const MAX_TRASH = 500;
+
+/**
+ * One row per thing somebody actually deleted.
+ *
+ * Deleting a folder cascades to its subtree, so the descendants are tombstoned
+ * under the same `delete_batch` as the folder. Listing them all would show a
+ * teammate twenty rows for one act; a batch root is the row whose batch is its
+ * own id, and that is the only kind listed.
+ *
+ * GET /teams/:teamId/trash
+ */
+async function listTrash(request, env, deps, auth, params) {
+  const { membership, error } = await memberOr403(env, params.teamId, auth);
+  if (error) return error;
+
+  const { results } = await env.SYNC_DB.prepare(
+    `SELECT id, type, parent_id, body, version, deleted_at, deleted_by, delete_batch,
+            (SELECT COUNT(*) FROM items d
+              WHERE d.team_id = i.team_id AND d.deleted = 1 AND d.delete_batch = i.delete_batch AND d.id <> i.id) AS carried,
+            (SELECT COUNT(*) FROM items d
+              WHERE d.team_id = i.team_id AND d.deleted = 1 AND d.delete_batch = i.delete_batch AND d.created_by <> ?) AS not_mine
+       FROM items i
+      WHERE i.team_id = ? AND i.deleted = 1 AND i.delete_batch = i.id
+      ORDER BY i.deleted_at DESC
+      LIMIT ?`
+  ).bind(auth.user.id, params.teamId, MAX_TRASH).all();
+
+  const isOwner = membership.role === "owner";
+  const logins = await loginsFor(env, results.map((r) => r.deleted_by).filter(Boolean));
+  return json({
+    items: results.map((row) => {
+      const body = row.body ? JSON.parse(row.body) : null;
+      return {
+        id: row.id,
+        type: row.type,
+        parentId: row.parent_id,
+        // Just enough to render a row. The full body comes back on restore.
+        name: (body && (body.title || body.name)) || null,
+        version: row.version,
+        carried: row.carried,
+        deletedAt: row.deleted_at,
+        deletedBy: { userId: row.deleted_by, login: logins.get(row.deleted_by) || null },
+        // The client cannot work the rule out for itself — it does not know who
+        // created each descendant of a folder delete — and a Put Back button
+        // that answers 403 is worse than one that explains itself. Same rule as
+        // restoreItem below; keep the two in step.
+        canRestore: isOwner || row.deleted_by === auth.user.id || row.not_mine === 0,
+      };
+    }),
+  });
+}
+
+/**
+ * Put a deleted item — and everything its delete took with it — back.
+ *
+ * Every restored row gets its own version and seq bump, so it reaches other
+ * clients through the ordinary changes feed as a normal write. There is no
+ * baseVersion guard: a tombstone cannot be concurrently edited, and the only
+ * race worth caring about (someone re-creating the id with a PUT) already
+ * un-deletes the row, after which this is a no-op.
+ *
+ * POST /teams/:teamId/trash/:itemId/restore
+ */
+async function restoreItem(request, env, deps, auth, params) {
+  const { membership, error } = await memberOr403(env, params.teamId, auth);
+  if (error) return error;
+  const limited = await writeLimited(env, deps, auth);
+  if (limited) return limited;
+
+  const db = env.SYNC_DB;
+  const row = await db.prepare(
+    "SELECT * FROM items WHERE team_id = ? AND id = ? AND deleted = 1"
+  ).bind(params.teamId, params.itemId).first();
+  if (!row) return errorResponse("not_found", "Nothing deleted with that id.");
+  if (!row.body) {
+    // Tombstoned before this feature existed, so the content is genuinely gone.
+    return errorResponse("not_found", "That item was deleted before the team trash existed, so there is nothing left to restore.");
+  }
+
+  const batch = row.delete_batch || row.id;
+  const { results: members } = await db.prepare(
+    "SELECT id, created_by FROM items WHERE team_id = ? AND deleted = 1 AND delete_batch = ?"
+  ).bind(params.teamId, batch).all();
+
+  // Same rule as deleting, plus the person who deleted it — undoing your own
+  // action should never need the owner.
+  const isOwner = membership.role === "owner";
+  const deletedIt = row.deleted_by === auth.user.id;
+  if (!isOwner && !deletedIt && members.some((r) => r.created_by !== auth.user.id)) {
+    return errorResponse("forbidden", "Only the team owner, the item's creator, or whoever deleted it can restore it.");
+  }
+
+  const now = nowIso(deps);
+  const stmts = [];
+  for (const member of members) {
+    stmts.push(db.prepare("UPDATE teams SET seq = seq + 1 WHERE id = ?").bind(params.teamId));
+    stmts.push(db.prepare(
+      `UPDATE items SET deleted = 0, version = version + 1, seq = (SELECT seq FROM teams WHERE id = ?),
+              updated_by = ?, updated_at = ?, deleted_at = NULL, deleted_by = NULL, delete_batch = NULL
+        WHERE team_id = ? AND id = ? AND deleted = 1`
+    ).bind(params.teamId, auth.user.id, now, params.teamId, member.id));
+  }
+  stmts.push(db.prepare("SELECT version, seq FROM items WHERE team_id = ? AND id = ?").bind(params.teamId, params.itemId));
+  const out = (await db.batch(stmts)).at(-1).results[0];
+  return json({ version: out.version, seq: out.seq, restored: members.map((m) => m.id) });
+}
+
+module.exports = { getChanges, putItem, deleteItem, bulkItems, listTrash, restoreItem, writeItem, itemWire, MAX_BODY_BYTES, MAX_PAGE, MAX_BULK, MAX_BULK_BODY_BYTES, MAX_TRASH };

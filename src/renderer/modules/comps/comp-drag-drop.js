@@ -38,6 +38,9 @@ export function wireCompDragDrop(callbacks) {
         sort: false,
         animation: 150,
         forceFallback: true,
+        // Same threshold as the library list — Sortable defaults it to 0, so a
+        // click that wobbles a pixel starts a real drag. See drag-drop.js.
+        fallbackTolerance: 8,
         fallbackClass: "comp-drag-icon-ghost",
         draggable: ".mini-card",
         onStart(evt) {
@@ -74,6 +77,9 @@ export function wireCompDragDrop(callbacks) {
         sort: false,
         animation: 150,
         forceFallback: true,
+        // Same threshold as the library list — Sortable defaults it to 0, so a
+        // click that wobbles a pixel starts a real drag. See drag-drop.js.
+        fallbackTolerance: 8,
         fallbackClass: "comp-cat-drag-ghost",
         draggable: ".comp-cat-chip",
         onStart() {

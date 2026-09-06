@@ -8,7 +8,7 @@
 
 .lib-page {
   display: flex;
-  height: calc(100vh - 40px);
+  height: calc(100vh - var(--titlebar-h));
   min-height: 0;
   overflow: hidden;
 }
@@ -53,6 +53,11 @@
   border-bottom: 1px solid var(--line-soft);
   flex-shrink: 0;
   flex-wrap: wrap;
+  /* The trash and archive drop the controls (they act on a list those views do
+     not draw), leaving the breadcrumb alone — 8px shorter than a row of buttons.
+     Pin the height so the whole content pane doesn't jump every time you step
+     into the Archive and back out. */
+  min-height: 46px;
 }
 
 .lib-toolbar__breadcrumb {
@@ -2013,6 +2018,15 @@
   color: var(--text-light);
   cursor: pointer;
 }
+/* The team's own deletions, below your personal rows. Separated by a rule and
+   a little air so the two lists never read as one. */
+.lib-trash__team {
+  margin-top: 18px;
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+.lib-trash__btn--primary:hover { border-color: var(--accent); color: var(--accent); }
+
 .lib-trash__btn:hover { border-color: var(--muted); color: var(--text); }
 .lib-trash__btn--danger:hover { border-color: var(--danger); color: var(--danger-text); }
 .lib-trash__btn:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }

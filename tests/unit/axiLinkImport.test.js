@@ -214,7 +214,10 @@ describe("_toImportedComp", () => {
     const { comp, builds } = _toImportedComp(PUBLISHED, {}, ids());
     const [chrono, evoker] = builds.map((b) => b.id);
     expect(comp.buildIds).toEqual([chrono, evoker]);
-    expect(comp.partyLines[0].slots).toEqual([chrono, "tag:cat-1", evoker, null, null]);
+    // Dense, with no holes: `slots` lists what is FILLED and the comp editor
+    // pads the rest of the row with empty boxes. A null left in place is a shape
+    // the renderer does not handle -- see the "empties rather than dangles" test.
+    expect(comp.partyLines[0].slots).toEqual([chrono, "tag:cat-1", evoker]);
     expect(comp.buildColors).toEqual({ [chrono]: "red", [evoker]: "blue" });
     expect(comp.categories[0].buildIds).toEqual([chrono]);
     // Nothing anywhere still points at the publisher's ids.
@@ -229,9 +232,16 @@ describe("_toImportedComp", () => {
   test("a slot pointing at a build the payload didn't carry empties rather than dangles", () => {
     // Publishing skips a build that fails to enrich, so its slot arrives with an
     // id nothing will ever resolve. An empty slot is honest; a dangling one is not.
+    //
+    // "Empty" means ABSENT, not null. `slots` is dense everywhere else in the
+    // app -- the editor splices on removal and renders empty boxes past
+    // slots.length -- and renderPartyLine used to read `.length` straight off
+    // the entry, so a null here took the entire comps page down with an
+    // unhandled TypeError the moment the imported comp was opened.
     const payload = { ...PUBLISHED, partyLines: [{ id: "l", capacity: 5, slots: ["b-chrono", "b-missing"] }] };
     const { comp, builds } = _toImportedComp(payload, {}, ids());
-    expect(comp.partyLines[0].slots).toEqual([builds[0].id, null]);
+    expect(comp.partyLines[0].slots).toEqual([builds[0].id]);
+    expect(comp.partyLines[0].slots).not.toContain(null);
   });
 
   test("strips the original's identity so this copy is not a second publisher", () => {

@@ -645,6 +645,19 @@ function renderPartyLine(comp, pl, idx, totalCap) {
   // Filled slots
   for (let i = 0; i < slots.length && i < capacity; i++) {
     const buildId = slots[i];
+    // `slots` is meant to be dense — the editor splices on removal and pads with
+    // empty boxes past slots.length — but a record can still arrive with a hole
+    // in it (an import, a sync payload, a hand-edited comps.json). Draw the hole
+    // as an empty slot instead of reading .length off null, which threw out of
+    // renderCompDetail and left the whole comps page blank.
+    if (!buildId) {
+      slotBoxes.push(
+        `<div class="comp-slot comp-slot--empty" data-action="click-empty-slot" data-line-id="${escapeHtml(pl.id)}">
+          <span class="comp-slot__plus">+</span>
+        </div>`
+      );
+      continue;
+    }
     if (isTagSlot(buildId)) {
       const category = (comp.categories || []).find((c) => c.id === tagSlotCategoryId(buildId));
       const label = escapeHtml(category?.name || "Tag");
