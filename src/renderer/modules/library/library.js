@@ -15,6 +15,7 @@ import {
 
 import { showConfirmModal } from "../confirm-modal.js";
 import { showChoiceModal } from "../choice-modal.js";
+import { showFormModal } from "../form-modal.js";
 import { askAboutDuplicates, summarizeImport } from "./import-dedupe.js";
 import { showPrompt } from "../prompt-modal.js";
 import { loadTeamState, teamRootFor } from "../teams.js";
@@ -1812,439 +1813,197 @@ function _buildSharedCallbacks() {
 // ─── Dialog helpers (Electron doesn't support window.prompt/confirm/alert) ────
 // showPrompt lives in ../prompt-modal.js — settings-modal.js needs it too.
 
+function fieldHtml({ id, label, placeholder, statusId }) {
+  return `
+          <div>
+            <label style="display:block;font-size:0.8rem;color:var(--muted);margin-bottom:4px;">${label}</label>
+            <input
+              type="text"
+              id="${id}"
+              placeholder="${placeholder}"
+              style="width:100%;padding:6px 8px;background:var(--input-bg);border:1px solid var(--input-border);border-radius:4px;color:var(--text);font-size:0.9rem;outline:none;box-sizing:border-box;"
+            />
+            ${statusId ? `<div id="${statusId}" style="font-size:0.75rem;min-height:1.2em;margin-top:3px;color:var(--text-dim);"></div>` : ""}
+          </div>`;
+}
+
+// A name field that stops auto-filling itself once the user has typed in it.
+function autoNameField(input) {
+  input.addEventListener("input", () => { input.dataset.autoFilled = "0"; });
+  return (name) => {
+    if (!input.value || input.dataset.autoFilled === "1") {
+      input.value = name;
+      input.dataset.autoFilled = "1";
+    }
+  };
+}
+
+function statusSetter(el) {
+  return (msg, color) => { el.textContent = msg; el.style.color = color; };
+}
+
 function showImportModal() {
-  return new Promise((resolve) => {
-    const overlay = document.createElement("div");
-    overlay.className = "confirm-modal-overlay";
-    overlay.innerHTML = `
-      <div class="confirm-modal" style="width:420px;max-width:90vw;">
-        <div class="confirm-modal__header">
-          <h3 class="confirm-modal__title">Import Build Link</h3>
-        </div>
-        <div class="confirm-modal__body" style="display:flex;flex-direction:column;gap:10px;">
-          <div>
-            <label style="display:block;font-size:0.8rem;color:var(--muted);margin-bottom:4px;">Build Link</label>
-            <input
-              type="text"
-              id="import-link-input"
-              placeholder="Paste [&amp;...] chat link here"
-              style="width:100%;padding:6px 8px;background:var(--input-bg);border:1px solid var(--input-border);border-radius:4px;color:var(--text);font-size:0.9rem;outline:none;box-sizing:border-box;"
-            />
-            <div id="import-link-status" style="font-size:0.75rem;min-height:1.2em;margin-top:3px;color:var(--text-dim);"></div>
-          </div>
-          <div>
-            <label style="display:block;font-size:0.8rem;color:var(--muted);margin-bottom:4px;">Build Name</label>
-            <input
-              type="text"
-              id="import-name-input"
-              placeholder="Build name"
-              style="width:100%;padding:6px 8px;background:var(--input-bg);border:1px solid var(--input-border);border-radius:4px;color:var(--text);font-size:0.9rem;outline:none;box-sizing:border-box;"
-            />
-          </div>
-        </div>
-        <div class="confirm-modal__actions">
-          <button class="confirm-modal__btn" data-action="cancel">Cancel</button>
-          <button class="confirm-modal__btn confirm-modal__btn--primary" data-action="import" disabled>Import</button>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(overlay);
+  return showFormModal({
+    title: "Import Build Link",
+    width: 420,
+    confirmLabel: "Import",
+    body:
+      fieldHtml({ id: "import-link-input", label: "Build Link", placeholder: "Paste [&amp;...] chat link here", statusId: "import-link-status" })
+      + fieldHtml({ id: "import-name-input", label: "Build Name", placeholder: "Build name" }),
+    setup: ({ overlay, confirm }) => {
+      const linkInput = overlay.querySelector("#import-link-input");
+      const nameInput = overlay.querySelector("#import-name-input");
+      const setStatus = statusSetter(overlay.querySelector("#import-link-status"));
+      const suggestName = autoNameField(nameInput);
+      let previewTimer = null;
 
-    const linkInput = overlay.querySelector("#import-link-input");
-    const nameInput = overlay.querySelector("#import-name-input");
-    const statusEl = overlay.querySelector("#import-link-status");
-    const importBtn = overlay.querySelector('[data-action="import"]');
-    let previewTimer = null;
-    let linkValid = false;
-
-    linkInput.focus();
-
-    function setStatus(msg, color) {
-      statusEl.textContent = msg;
-      statusEl.style.color = color;
-    }
-
-    linkInput.addEventListener("input", () => {
-      const val = linkInput.value.trim();
-      clearTimeout(previewTimer);
-      importBtn.disabled = true;
-      linkValid = false;
-      if (!val) { setStatus("", "#556"); return; }
-      if (!val.startsWith("[&") || !val.endsWith("]")) {
-        setStatus("Not a valid chat link format", "#c55");
-        return;
-      }
-      setStatus("Decoding\u2026", "#889");
-      previewTimer = setTimeout(async () => {
-        try {
-          const { profession, eliteSpec } = await window.desktopApi.previewChatLink(val);
-          const autoName = eliteSpec ? `Imported ${eliteSpec}` : `Imported ${profession}`;
-          if (!nameInput.value || nameInput.dataset.autoFilled === "1") {
-            nameInput.value = autoName;
-            nameInput.dataset.autoFilled = "1";
-          }
-          setStatus(`\u2713 ${profession}${eliteSpec ? ` \u2014 ${eliteSpec}` : ""}`, "#5a5");
-          linkValid = true;
-          importBtn.disabled = false;
-        } catch {
-          setStatus("Could not decode link", "#c55");
+      linkInput.addEventListener("input", () => {
+        const val = linkInput.value.trim();
+        clearTimeout(previewTimer);
+        confirm.disabled = true;
+        if (!val) { setStatus("", "#556"); return; }
+        if (!val.startsWith("[&") || !val.endsWith("]")) {
+          setStatus("Not a valid chat link format", "#c55");
+          return;
         }
-      }, 400);
-    });
+        setStatus("Decoding…", "#889");
+        previewTimer = setTimeout(async () => {
+          try {
+            const { profession, eliteSpec } = await window.desktopApi.previewChatLink(val);
+            suggestName(eliteSpec ? `Imported ${eliteSpec}` : `Imported ${profession}`);
+            setStatus(`✓ ${profession}${eliteSpec ? ` — ${eliteSpec}` : ""}`, "#5a5");
+            confirm.disabled = false;
+          } catch {
+            setStatus("Could not decode link", "#c55");
+          }
+        }, 400);
+      });
 
-    nameInput.addEventListener("input", () => {
-      nameInput.dataset.autoFilled = "0";
-    });
-
-    function dismiss(result) {
-      document.removeEventListener("keydown", onKey);
-      overlay.remove();
-      resolve(result);
-    }
-
-    function onKey(e) {
-      if (e.key === "Escape") dismiss(null);
-      if (e.key === "Enter" && linkValid) {
-        dismiss({ link: linkInput.value.trim(), name: nameInput.value.trim() || "Imported Build" });
-      }
-    }
-
-    document.addEventListener("keydown", onKey);
-    overlay.querySelector('[data-action="cancel"]').addEventListener("click", () => dismiss(null));
-    importBtn.addEventListener("click", () => {
-      dismiss({ link: linkInput.value.trim(), name: nameInput.value.trim() || "Imported Build" });
-    });
+      return () => ({ link: linkInput.value.trim(), name: nameInput.value.trim() || "Imported Build" });
+    },
   });
 }
 
 function showGw2SkillsImportModal() {
-  return new Promise((resolve) => {
-    const overlay = document.createElement("div");
-    overlay.className = "confirm-modal-overlay";
-    overlay.innerHTML = `
-      <div class="confirm-modal" style="width:460px;max-width:90vw;">
-        <div class="confirm-modal__header">
-          <h3 class="confirm-modal__title">Import from GW2Skills</h3>
-        </div>
-        <div class="confirm-modal__body" style="display:flex;flex-direction:column;gap:10px;">
-          <div>
-            <label style="display:block;font-size:0.8rem;color:var(--muted);margin-bottom:4px;">GW2Skills URL</label>
-            <input
-              type="text"
-              id="gw2s-url-input"
-              placeholder="https://gw2skills.net/editor/?..."
-              style="width:100%;padding:6px 8px;background:var(--input-bg);border:1px solid var(--input-border);border-radius:4px;color:var(--text);font-size:0.9rem;outline:none;box-sizing:border-box;"
-            />
-            <div id="gw2s-url-status" style="font-size:0.75rem;min-height:1.2em;margin-top:3px;color:var(--text-dim);"></div>
-          </div>
-          <div>
-            <label style="display:block;font-size:0.8rem;color:var(--muted);margin-bottom:4px;">Build Name</label>
-            <input
-              type="text"
-              id="gw2s-name-input"
-              placeholder="Build name"
-              style="width:100%;padding:6px 8px;background:var(--input-bg);border:1px solid var(--input-border);border-radius:4px;color:var(--text);font-size:0.9rem;outline:none;box-sizing:border-box;"
-            />
-          </div>
-        </div>
-        <div class="confirm-modal__actions">
-          <button class="confirm-modal__btn" data-action="cancel">Cancel</button>
-          <button class="confirm-modal__btn confirm-modal__btn--primary" data-action="import" disabled>Import</button>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(overlay);
+  return showFormModal({
+    title: "Import from GW2Skills",
+    width: 460,
+    confirmLabel: "Import",
+    body:
+      fieldHtml({ id: "gw2s-url-input", label: "GW2Skills URL", placeholder: "https://gw2skills.net/editor/?...", statusId: "gw2s-url-status" })
+      + fieldHtml({ id: "gw2s-name-input", label: "Build Name", placeholder: "Build name" }),
+    setup: ({ overlay, confirm }) => {
+      const urlInput = overlay.querySelector("#gw2s-url-input");
+      const nameInput = overlay.querySelector("#gw2s-name-input");
+      const setStatus = statusSetter(overlay.querySelector("#gw2s-url-status"));
+      autoNameField(nameInput);
 
-    const urlInput = overlay.querySelector("#gw2s-url-input");
-    const nameInput = overlay.querySelector("#gw2s-name-input");
-    const statusEl = overlay.querySelector("#gw2s-url-status");
-    const importBtn = overlay.querySelector('[data-action="import"]');
-    let urlValid = false;
+      urlInput.addEventListener("input", () => {
+        const val = urlInput.value.trim();
+        confirm.disabled = true;
+        if (!val) { setStatus("", "#556"); return; }
+        if (!val.includes("gw2skills.net/editor/?") || val.split("?")[1]?.length < 5) {
+          setStatus("Not a valid GW2Skills URL", "#c55");
+          return;
+        }
+        setStatus("✓ Valid GW2Skills URL", "#5a5");
+        confirm.disabled = false;
+      });
 
-    urlInput.focus();
-
-    function setStatus(msg, color) {
-      statusEl.textContent = msg;
-      statusEl.style.color = color;
-    }
-
-    urlInput.addEventListener("input", () => {
-      const val = urlInput.value.trim();
-      importBtn.disabled = true;
-      urlValid = false;
-      if (!val) { setStatus("", "#556"); return; }
-      if (!val.includes("gw2skills.net/editor/?") || val.split("?")[1]?.length < 5) {
-        setStatus("Not a valid GW2Skills URL", "#c55");
-        return;
-      }
-      setStatus("\u2713 Valid GW2Skills URL", "#5a5");
-      urlValid = true;
-      importBtn.disabled = false;
-    });
-
-    nameInput.addEventListener("input", () => {
-      nameInput.dataset.autoFilled = "0";
-    });
-
-    function dismiss(result) {
-      document.removeEventListener("keydown", onKey);
-      overlay.remove();
-      resolve(result);
-    }
-
-    function onKey(e) {
-      if (e.key === "Escape") dismiss(null);
-      if (e.key === "Enter" && urlValid) {
-        dismiss({ url: urlInput.value.trim(), name: nameInput.value.trim() || "Imported Build" });
-      }
-    }
-
-    document.addEventListener("keydown", onKey);
-    overlay.querySelector('[data-action="cancel"]').addEventListener("click", () => dismiss(null));
-    importBtn.addEventListener("click", () => {
-      dismiss({ url: urlInput.value.trim(), name: nameInput.value.trim() || "Imported Build" });
-    });
-    overlay.addEventListener("click", (e) => { if (e.target === overlay) dismiss(null); });
+      return () => ({ url: urlInput.value.trim(), name: nameInput.value.trim() || "Imported Build" });
+    },
   });
 }
 
 function showAxicodeBuildPickerModal(builds) {
-  return new Promise((resolve) => {
-    const overlay = document.createElement("div");
-    overlay.className = "confirm-modal-overlay";
-    const rows = builds
-      .map((build, i) => {
-        const label = escapeHtml(build.title || build.name || "Untitled");
-        return `<button class="confirm-modal__btn" data-index="${i}" style="width:100%;text-align:left;margin-bottom:6px;">${label}</button>`;
-      })
-      .join("");
-    overlay.innerHTML = `
-      <div class="confirm-modal" style="width:460px;max-width:90vw;">
-        <div class="confirm-modal__header">
-          <h3 class="confirm-modal__title">Choose a build to import</h3>
-        </div>
-        <div class="confirm-modal__body" style="display:flex;flex-direction:column;gap:4px;max-height:50vh;overflow-y:auto;">
-          ${rows}
-        </div>
-        <div class="confirm-modal__actions">
-          <button class="confirm-modal__btn" data-action="cancel">Cancel</button>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(overlay);
+  const rows = builds
+    .map((build, i) => {
+      const label = escapeHtml(build.title || build.name || "Untitled");
+      return `<button class="confirm-modal__btn" data-index="${i}" style="width:100%;text-align:left;margin-bottom:6px;">${label}</button>`;
+    })
+    .join("");
 
-    function dismiss(result) {
-      document.removeEventListener("keydown", onKey);
-      overlay.remove();
-      resolve(result);
-    }
-
-    function onKey(e) {
-      if (e.key === "Escape") dismiss(null);
-    }
-
-    document.addEventListener("keydown", onKey);
-    overlay.querySelector('[data-action="cancel"]').addEventListener("click", () => dismiss(null));
-    overlay.querySelectorAll("[data-index]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const idx = Number(btn.dataset.index);
-        dismiss(builds[idx]);
+  return showFormModal({
+    title: "Choose a build to import",
+    width: 460,
+    // Every row is its own confirm, so there is no single button to press.
+    body: `<div style="display:flex;flex-direction:column;gap:4px;max-height:50vh;overflow-y:auto;">${rows}</div>`,
+    setup: ({ overlay, close }) => {
+      overlay.querySelectorAll("[data-index]").forEach((btn) => {
+        btn.addEventListener("click", () => close(builds[Number(btn.dataset.index)]));
       });
-    });
-    overlay.addEventListener("click", (e) => { if (e.target === overlay) dismiss(null); });
+    },
   });
 }
 
 function showAxiLinkImportModal() {
-  return new Promise((resolve) => {
-    const overlay = document.createElement("div");
-    overlay.className = "confirm-modal-overlay";
-    overlay.innerHTML = `
-      <div class="confirm-modal" style="width:460px;max-width:90vw;">
-        <div class="confirm-modal__header">
-          <h3 class="confirm-modal__title">Import from AxiForge Link</h3>
-        </div>
-        <div class="confirm-modal__body" style="display:flex;flex-direction:column;gap:10px;">
-          <div>
-            <label style="display:block;font-size:0.8rem;color:var(--muted);margin-bottom:4px;">Published build or comp link</label>
-            <input
-              type="text"
-              id="axilink-url-input"
-              placeholder="https://someone.github.io/axibuilds/?n=...&amp;b=..."
-              style="width:100%;padding:6px 8px;background:var(--input-bg);border:1px solid var(--input-border);border-radius:4px;color:var(--text);font-size:0.9rem;outline:none;box-sizing:border-box;"
-            />
-            <div id="axilink-url-status" style="font-size:0.75rem;min-height:1.2em;margin-top:3px;color:var(--text-dim);"></div>
-          </div>
-          <div>
-            <label style="display:block;font-size:0.8rem;color:var(--muted);margin-bottom:4px;">Name <span style="color:var(--text-dim);">(optional)</span></label>
-            <input
-              type="text"
-              id="axilink-name-input"
-              placeholder="Keep the published name"
-              style="width:100%;padding:6px 8px;background:var(--input-bg);border:1px solid var(--input-border);border-radius:4px;color:var(--text);font-size:0.9rem;outline:none;box-sizing:border-box;"
-            />
-          </div>
-        </div>
-        <div class="confirm-modal__actions">
-          <button class="confirm-modal__btn" data-action="cancel">Cancel</button>
-          <button class="confirm-modal__btn confirm-modal__btn--primary" data-action="import" disabled>Import</button>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(overlay);
+  return showFormModal({
+    title: "Import from AxiForge Link",
+    width: 460,
+    confirmLabel: "Import",
+    body:
+      fieldHtml({ id: "axilink-url-input", label: "Published build or comp link", placeholder: "https://someone.github.io/axibuilds/?n=...&amp;b=...", statusId: "axilink-url-status" })
+      + fieldHtml({ id: "axilink-name-input", label: `Name <span style="color:var(--text-dim);">(optional)</span>`, placeholder: "Keep the published name" }),
+    setup: ({ overlay, confirm }) => {
+      const urlInput = overlay.querySelector("#axilink-url-input");
+      const nameInput = overlay.querySelector("#axilink-name-input");
+      const setStatus = statusSetter(overlay.querySelector("#axilink-url-status"));
 
-    const urlInput = overlay.querySelector("#axilink-url-input");
-    const nameInput = overlay.querySelector("#axilink-name-input");
-    const statusEl = overlay.querySelector("#axilink-url-status");
-    const importBtn = overlay.querySelector('[data-action="import"]');
-    let urlValid = false;
+      urlInput.addEventListener("input", () => {
+        const val = urlInput.value.trim();
+        confirm.disabled = true;
+        if (!val) { setStatus("", "#556"); return; }
+        // Mirrors what parseAxiLink accepts: a ?b=/?c=/?legacy= ref, the oldest
+        // bare #id.key hash, or a /r/<id>/ short link.
+        const isComp = /[?&]c=[^.&]+\.[^&]/.test(val);
+        const isBuild = /[?&](?:b|legacy)=[^.&]+\.[^&]/.test(val) || /#[^.#]+\.[^#]/.test(val) || /\/r\/[^/]+\/?$/.test(val);
+        if (!isComp && !isBuild) { setStatus("Not an AxiForge build or comp link", "#c55"); return; }
+        // A short link (/r/<id>/) can be either — only the redirect it serves says
+        // which, and that is a network round-trip the import itself makes.
+        setStatus(isComp ? "✓ Comp link — imports the comp and its builds into a new folder" : "✓ Valid AxiForge link", "#5a5");
+        confirm.disabled = false;
+      });
 
-    urlInput.focus();
-
-    function setStatus(msg, color) {
-      statusEl.textContent = msg;
-      statusEl.style.color = color;
-    }
-
-    urlInput.addEventListener("input", () => {
-      const val = urlInput.value.trim();
-      importBtn.disabled = true;
-      urlValid = false;
-      if (!val) { setStatus("", "#556"); return; }
-      // Mirrors what parseAxiLink accepts: a ?b=/?c=/?legacy= ref, the oldest
-      // bare #id.key hash, or a /r/<id>/ short link.
-      const isComp = /[?&]c=[^.&]+\.[^&]/.test(val);
-      const isBuild = /[?&](?:b|legacy)=[^.&]+\.[^&]/.test(val) || /#[^.#]+\.[^#]/.test(val) || /\/r\/[^/]+\/?$/.test(val);
-      if (!isComp && !isBuild) { setStatus("Not an AxiForge build or comp link", "#c55"); return; }
-      // A short link (/r/<id>/) can be either — only the redirect it serves says
-      // which, and that is a network round-trip the import itself makes.
-      setStatus(isComp ? "\u2713 Comp link — imports the comp and its builds into a new folder" : "\u2713 Valid AxiForge link", "#5a5");
-      urlValid = true;
-      importBtn.disabled = false;
-    });
-
-    function submit() {
-      dismiss({ url: urlInput.value.trim(), name: nameInput.value.trim() });
-    }
-
-    function dismiss(result) {
-      document.removeEventListener("keydown", onKey);
-      overlay.remove();
-      resolve(result);
-    }
-
-    function onKey(e) {
-      if (e.key === "Escape") dismiss(null);
-      if (e.key === "Enter" && urlValid) submit();
-    }
-
-    document.addEventListener("keydown", onKey);
-    overlay.querySelector('[data-action="cancel"]').addEventListener("click", () => dismiss(null));
-    importBtn.addEventListener("click", submit);
-    overlay.addEventListener("click", (e) => { if (e.target === overlay) dismiss(null); });
+      return () => ({ url: urlInput.value.trim(), name: nameInput.value.trim() });
+    },
   });
 }
 
 function showShareCodeImportModal() {
-  return new Promise((resolve) => {
-    const overlay = document.createElement("div");
-    overlay.className = "confirm-modal-overlay";
-    overlay.innerHTML = `
-      <div class="confirm-modal" style="width:420px;max-width:90vw;">
-        <div class="confirm-modal__header">
-          <h3 class="confirm-modal__title">Import AxiCode</h3>
-        </div>
-        <div class="confirm-modal__body" style="display:flex;flex-direction:column;gap:10px;">
-          <div>
-            <label style="display:block;font-size:0.8rem;color:var(--muted);margin-bottom:4px;">AxiCode</label>
-            <input
-              type="text"
-              id="sharecode-input"
-              placeholder="Paste <AxiForge:...> AxiCode here"
-              style="width:100%;padding:6px 8px;background:var(--input-bg);border:1px solid var(--input-border);border-radius:4px;color:var(--text);font-size:0.9rem;outline:none;box-sizing:border-box;"
-            />
-            <div id="sharecode-status" style="font-size:0.75rem;min-height:1.2em;margin-top:3px;color:var(--text-dim);"></div>
-          </div>
-          <div>
-            <label style="display:block;font-size:0.8rem;color:var(--muted);margin-bottom:4px;">Build Name</label>
-            <input
-              type="text"
-              id="sharecode-name-input"
-              placeholder="Build name"
-              style="width:100%;padding:6px 8px;background:var(--input-bg);border:1px solid var(--input-border);border-radius:4px;color:var(--text);font-size:0.9rem;outline:none;box-sizing:border-box;"
-            />
-          </div>
-        </div>
-        <div class="confirm-modal__actions">
-          <button class="confirm-modal__btn" data-action="cancel">Cancel</button>
-          <button class="confirm-modal__btn confirm-modal__btn--primary" data-action="import" disabled>Import</button>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(overlay);
+  return showFormModal({
+    title: "Import AxiCode",
+    width: 420,
+    confirmLabel: "Import",
+    body:
+      fieldHtml({ id: "sharecode-input", label: "AxiCode", placeholder: "Paste &lt;AxiForge:...&gt; AxiCode here", statusId: "sharecode-status" })
+      + fieldHtml({ id: "sharecode-name-input", label: "Build Name", placeholder: "Build name" }),
+    setup: ({ overlay, confirm }) => {
+      const codeInput = overlay.querySelector("#sharecode-input");
+      const nameInput = overlay.querySelector("#sharecode-name-input");
+      const setStatus = statusSetter(overlay.querySelector("#sharecode-status"));
+      const suggestName = autoNameField(nameInput);
 
-    const codeInput = overlay.querySelector("#sharecode-input");
-    const nameInput = overlay.querySelector("#sharecode-name-input");
-    const statusEl = overlay.querySelector("#sharecode-status");
-    const importBtn = overlay.querySelector('[data-action="import"]');
-    let codeValid = false;
-
-    codeInput.focus();
-
-    function setStatus(msg, color) {
-      statusEl.textContent = msg;
-      statusEl.style.color = color;
-    }
-
-    codeInput.addEventListener("input", () => {
-      const val = codeInput.value.trim();
-      importBtn.disabled = true;
-      codeValid = false;
-      if (!val) { setStatus("", "#556"); return; }
-      if (!val.startsWith("<AxiForge:") || !val.endsWith(">")) {
-        setStatus("Not a valid AxiCode format", "#c55");
-        return;
-      }
-      // Extract the label (part between first : and second :)
-      const inner = val.slice(1, -1); // remove < and >
-      const parts = inner.split(":");
-      const label = parts.length >= 2 ? parts[1] : "";
-      if (label) {
-        setStatus(`\u2713 ${label}`, "#5a5");
-        if (!nameInput.value || nameInput.dataset.autoFilled === "1") {
-          nameInput.value = `Imported ${label}`;
-          nameInput.dataset.autoFilled = "1";
+      codeInput.addEventListener("input", () => {
+        const val = codeInput.value.trim();
+        confirm.disabled = true;
+        if (!val) { setStatus("", "#556"); return; }
+        if (!val.startsWith("<AxiForge:") || !val.endsWith(">")) {
+          setStatus("Not a valid AxiCode format", "#c55");
+          return;
         }
-      } else {
-        setStatus("\u2713 Valid AxiCode", "#5a5");
-      }
-      codeValid = true;
-      importBtn.disabled = false;
-    });
+        // The label is the part between the first and second colon.
+        const label = val.slice(1, -1).split(":")[1] || "";
+        if (label) {
+          setStatus(`✓ ${label}`, "#5a5");
+          suggestName(`Imported ${label}`);
+        } else {
+          setStatus("✓ Valid AxiCode", "#5a5");
+        }
+        confirm.disabled = false;
+      });
 
-    nameInput.addEventListener("input", () => {
-      nameInput.dataset.autoFilled = "0";
-    });
-
-    function dismiss(result) {
-      document.removeEventListener("keydown", onKey);
-      overlay.remove();
-      resolve(result);
-    }
-
-    function onKey(e) {
-      if (e.key === "Escape") dismiss(null);
-      if (e.key === "Enter" && codeValid) {
-        dismiss({ code: codeInput.value.trim(), name: nameInput.value.trim() || "Imported Build" });
-      }
-    }
-
-    document.addEventListener("keydown", onKey);
-    overlay.querySelector('[data-action="cancel"]').addEventListener("click", () => dismiss(null));
-    importBtn.addEventListener("click", () => {
-      dismiss({ code: codeInput.value.trim(), name: nameInput.value.trim() || "Imported Build" });
-    });
-    overlay.addEventListener("click", (e) => { if (e.target === overlay) dismiss(null); });
+      return () => ({ code: codeInput.value.trim(), name: nameInput.value.trim() || "Imported Build" });
+    },
   });
 }
 

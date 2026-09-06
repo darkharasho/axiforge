@@ -21,7 +21,7 @@ test("OK resolves the trimmed input and tears the overlay down", async () => {
   const p = showPrompt("New team name", "EWW");
   expect(input().value).toBe("EWW");
   input().value = "  EWW Reloaded  ";
-  btn("ok").click();
+  btn("confirm").click();
   await expect(p).resolves.toBe("EWW Reloaded");
   expect(overlay()).toBeNull();
 });
@@ -37,7 +37,7 @@ test("Cancel, Escape and an empty OK all resolve null", async () => {
 
   p = showPrompt("Name");
   input().value = "   ";
-  btn("ok").click();
+  btn("confirm").click();
   await expect(p).resolves.toBeNull();
 });
 

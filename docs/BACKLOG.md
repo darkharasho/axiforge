@@ -365,6 +365,18 @@ Status key: `[ ]` open · `[x]` done · `[~]` in progress · `[?]` needs repro s
   `docs/TESTING.md` describes the new tiering. The nightly job's runner
   specifics are unverified until it first fires.
 
-- [ ] **Two different confirm modals.** `confirm-modal.js` renders `#cm-confirm`
-  while `showConfirmModal()` builds a fresh `.confirm-modal-overlay`. Callers
-  pick one more or less at random, and tests have to know which.
+- [x] **Two different confirm modals.** Done 2026-09-05. The premise was half
+  wrong: `showConfirmModal()` *is* the `#cm-confirm` singleton — they are one
+  function in one file. The real duplication was next door. Six dialogs — the
+  four import dialogs, the AxiCode build picker and `showPrompt` — each carried
+  their own copy of the overlay scaffolding (create, append, Escape, backdrop
+  click, remove the listener), and the copies had drifted: **Import Build Link
+  was the only one you could not dismiss by clicking outside it**, and the
+  picker was the only one that ignored Enter. That scaffolding is now
+  `src/renderer/modules/form-modal.js`, and all six use it, so a dialog's
+  confirm button is `[data-action="confirm"]` everywhere and Enter submits
+  exactly when that button would (validity is the button's `disabled` state and
+  nothing else — no more separate `linkValid` flags to fall out of step).
+  `tests/unit/renderer/form-modal.test.js` pins the shared behaviour. `showPrompt`
+  keeps its contract but its OK button is now accent rather than danger red —
+  renaming a folder was never destructive.

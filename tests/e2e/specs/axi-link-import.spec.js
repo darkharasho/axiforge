@@ -78,7 +78,7 @@ async function openImportModal(window, link) {
 
 async function importLink(window, link) {
   await openImportModal(window, link);
-  await window.click('.confirm-modal__btn[data-action="import"]');
+  await window.click('.confirm-modal__btn[data-action="confirm"]');
   await window.waitForTimeout(2_000);
 }
 
@@ -99,7 +99,7 @@ test.describe("AxiForge link import — the modal", () => {
     // Before v0.16.0 this path answered "that's a link to a comp, not a build".
     await openImportModal(window, `http://localhost:${PUB_PORT}/axibuilds/?c=abc.def`);
     await expect(window.locator("#axilink-url-status")).toContainText("Comp link");
-    await expect(window.locator('.confirm-modal__btn[data-action="import"]')).toBeEnabled();
+    await expect(window.locator('.confirm-modal__btn[data-action="confirm"]')).toBeEnabled();
     await window.keyboard.press("Escape");
   });
 
@@ -112,7 +112,7 @@ test.describe("AxiForge link import — the modal", () => {
   test("something that is not a link at all is refused, with Import disabled", async () => {
     await openImportModal(window, "https://example.com/not-a-build");
     await expect(window.locator("#axilink-url-status")).toContainText("Not an AxiForge build or comp link");
-    await expect(window.locator('.confirm-modal__btn[data-action="import"]')).toBeDisabled();
+    await expect(window.locator('.confirm-modal__btn[data-action="confirm"]')).toBeDisabled();
     await window.keyboard.press("Escape");
   });
 });
@@ -148,7 +148,7 @@ test.describe("AxiForge link import — a build", () => {
     const link = publishBuild(makeTestBuild({ title: "Their Name", profession: "Warrior" }));
     await openImportModal(window, link);
     await window.fill("#axilink-name-input", "My Name");
-    await window.click('.confirm-modal__btn[data-action="import"]');
+    await window.click('.confirm-modal__btn[data-action="confirm"]');
     await window.waitForTimeout(2_000);
 
     await expect(window.locator(".lib-list-row__title", { hasText: "My Name" })).toBeVisible();
@@ -157,7 +157,7 @@ test.describe("AxiForge link import — a build", () => {
 
   test("a link whose file is gone says so instead of failing silently", async () => {
     await openImportModal(window, `http://localhost:${PUB_PORT}/axibuilds/?b=missing.${"k".repeat(43)}`);
-    await window.click('.confirm-modal__btn[data-action="import"]');
+    await window.click('.confirm-modal__btn[data-action="confirm"]');
     // Asserted without a settling wait on purpose: an error toast is dismissed
     // after the same 2s a success toast gets, so anything that sleeps first is
     // racing the disappearance rather than the failure.
@@ -190,7 +190,7 @@ test.describe("AxiForge link import — a comp brings its builds", () => {
     ({ app, window } = await launchApp({ clean: false }));
     await goToLibrary(window);
     await openImportModal(window, publishComp(comp, [memberA, memberB]));
-    await window.click('.confirm-modal__btn[data-action="import"]');
+    await window.click('.confirm-modal__btn[data-action="confirm"]');
     await window.locator(".lib-toast--visible", { hasText: "imported with" }).waitFor({ timeout: 15_000 });
     importToast = (await window.locator(".lib-toast--visible").textContent()) || "";
     await window.waitForTimeout(500);
