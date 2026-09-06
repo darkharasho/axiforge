@@ -40,6 +40,11 @@
       "migrations_dir": "workers/sync/migrations"
     }
   ],
+  // Workers Logs. Without this the Worker keeps no server-side record at all,
+  // so a member reporting "my item won't sync" leaves nothing to look at — and
+  // prod D1 is not reachable from here either. Sampling stays at 1 (keep
+  // everything): this Worker's traffic is a handful of teams polling every 30s.
+  "observability": { "enabled": true, "head_sampling_rate": 1 },
   "triggers": { "crons": ["0 4 * * *"] },
   // Custom domain — axi.link DNS is already on Cloudflare, so the first deploy
   // provisions build.axi.link + its DNS record.

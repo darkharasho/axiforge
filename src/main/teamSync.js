@@ -437,6 +437,13 @@ class TeamSync {
       // SYNC_OFFLINE / SYNC_RATE_LIMITED / unknown: keep and back off
       const attempts = (entry.attempts || 0) + 1;
       const delay = err.retryAfterMs || Math.min(BACKOFF_BASE_MS * 2 ** attempts, BACKOFF_MAX_MS);
+      // The only branch here that surfaces nothing a person can read: the badge
+      // says "Waiting to sync" whether this is a dropped wifi packet or the
+      // server answering 500 forever, and it retries silently until it works.
+      // Log the reason so a stuck item can be diagnosed from the main-process
+      // log instead of guessing. Every other branch carries its message into a
+      // sync-status event, so this is the one that needs it.
+      console.warn(`[team-sync] ${teamId}: ${type} ${itemId} not sent (${code || "unknown"}${err && err.status ? ` ${err.status}` : ""}): ${err && err.message}; attempt ${attempts}, retrying in ${Math.round(delay / 1000)}s`);
       await this.syncStore.patchOutbox(teamId, itemId, { attempts, nextAttemptAt: new Date(this._now() + delay).toISOString() }, { queuedAt });
       if (type !== "folder") this._emit("sync-status", { status: "pending", type, id: itemId, folderId: root.id });
       this._emit("sync-status", { status: "pending", folderId: root.id });
