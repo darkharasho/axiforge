@@ -90,11 +90,14 @@ contextBridge.exposeInMainWorld("desktopApi", {
   importChatLink: (link, name, folderId, gameMode) => ipcRenderer.invoke("builds:import-chat-link", link, name, folderId, gameMode),
   importGw2Skills: (url, name, folderId, gameMode) => ipcRenderer.invoke("builds:import-gw2skills", url, name, folderId, gameMode),
   importAxiLink: (link, name, folderId, gameMode) => ipcRenderer.invoke("builds:import-axi-link", link, name, folderId, gameMode),
+  previewAxiLink: (link, name, folderId, gameMode) => ipcRenderer.invoke("builds:preview-axi-link", link, name, folderId, gameMode),
+  commitAxiImport: (token, opts) => ipcRenderer.invoke("builds:commit-axi-import", token, opts),
   encodeShareCode: (build) => ipcRenderer.invoke("builds:encode-share-code", build),
   decodeShareCode: (code) => ipcRenderer.invoke("builds:decode-share-code", code),
   isShareCode: (text) => ipcRenderer.invoke("builds:is-share-code", text),
   encodeCompShareCode: (compId) => ipcRenderer.invoke("comps:encode-share-code", compId),
-  importCompShareCode: (code) => ipcRenderer.invoke("comps:import-share-code", code),
+  previewCompShareCode: (code) => ipcRenderer.invoke("comps:preview-share-code", code),
+  importCompShareCode: (code, opts) => ipcRenderer.invoke("comps:import-share-code", code, opts),
   // .axicode file export/import
   exportAxicodeFile: (builds, folders, comps) =>
     ipcRenderer.invoke("axicode-file:export", { builds, folders, comps }),

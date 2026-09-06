@@ -1111,41 +1111,135 @@ const readyWork = app.whenReady().then(async () => {
     if (teamRoot) await safeEnqueue(() => teamSync.enqueue(teamRoot.teamId, saved.id, "build", "put"), { type: "build", id: saved.id });
     return saved;
   });
-  // Takes either kind of published link. A build returns the saved build, as it
-  // always has; a comp returns { kind: "comp", ... } because it writes several
-  // records at once and the caller needs all of them to refresh.
-  handle("builds:import-axi-link", async (_e, link, name, folderId, gameMode) => {
-    const { importAxiAny } = require("./axiLinkImport.js");
-    const imported = await importAxiAny(link, { name, folderId, gameMode });
+  // Importing into a team folder can only reuse builds that ALREADY live in
+  // that same team. Pointing the comp at a build outside it would leave every
+  // teammate with a comp referencing a build they cannot see — the exact thing
+  // the "share the whole thing, not just the comp" rule below exists to avoid.
+  async function reuseEligibility(destFolderId) {
+    const teamRoot = await findTeamRoot(destFolderId);
+    if (!teamRoot) return undefined;
+    const folders = await folderStore.listFolders();
+    return (build) => {
+      if (!build.folderId) return false;
+      const root = teamSync.teamRootFor(build.folderId, folders);
+      return Boolean(root) && root.teamId === teamRoot.teamId;
+    };
+  }
 
+  // A previewed import, waiting on the user to say what to do about the
+  // duplicates it found. Held in memory rather than re-fetched on commit: the
+  // local build ids are minted during the fetch, so a second fetch would mint
+  // different ones and every id the preview just reported would be stale.
+  const pendingAxiImports = new Map();
+  const AXI_PREVIEW_TTL_MS = 10 * 60 * 1000;
+  function stashAxiImport(entry) {
+    const cutoff = Date.now() - AXI_PREVIEW_TTL_MS;
+    for (const [key, held] of pendingAxiImports) {
+      if (held.at < cutoff) pendingAxiImports.delete(key);
+    }
+    const token = require("node:crypto").randomUUID();
+    pendingAxiImports.set(token, { ...entry, at: Date.now() });
+    return token;
+  }
+
+  async function writeAxiImport({ imported, folderId, reuse }) {
     if (imported.kind === "comp") {
       // A comp arrives as a comp plus every build it references, so dropping it
       // loose into the current folder would scatter four or five builds among
       // whatever is already there. It gets its own folder, and `folderId` — the
       // folder the user was looking at — becomes that folder's PARENT.
-      const { comp, builds } = imported;
+      const { applyBuildReuse } = require("./buildDedupe.js");
+      // Reused builds stay where they are — that is the whole point — so only
+      // what is left after the rewrite lands in the comp's new folder.
+      const { comp, builds, reused } = applyBuildReuse(imported, reuse);
       const folder = await folderStore.upsertFolder({ name: comp.name, parentId: folderId ?? null });
       const savedBuilds = [];
       for (const build of builds) savedBuilds.push(await store.upsertBuild({ ...build, folderId: folder.id }));
       const savedComp = await compStore.upsertComp({ ...comp, folderId: folder.id });
 
+      // A reused build now belongs to one more comp. compIds is what tells the
+      // library a build is in use, so without this the comp shows the build and
+      // the build denies the comp.
+      const savedReused = [];
+      for (const build of reused) {
+        const compIds = Array.isArray(build.compIds) ? build.compIds : [];
+        savedReused.push(
+          compIds.includes(savedComp.id)
+            ? build
+            : await store.upsertBuild({ ...build, compIds: [...compIds, savedComp.id] })
+        );
+      }
+
       // Importing into a team folder shares the whole thing, not just the comp —
       // teammates would otherwise see a comp whose builds do not exist for them.
+      // Reused builds are already in the team (reuseEligibility saw to that), but
+      // their compIds just changed, so they ride along too.
       const teamRoot = await findTeamRoot(folder.id);
       if (teamRoot) {
         await safeEnqueue(() => teamSync.enqueue(teamRoot.teamId, folder.id, "folder", "put"), { type: "folder", id: folder.id });
-        for (const b of savedBuilds) {
+        for (const b of [...savedBuilds, ...savedReused]) {
           await safeEnqueue(() => teamSync.enqueue(teamRoot.teamId, b.id, "build", "put"), { type: "build", id: b.id });
         }
         await safeEnqueue(() => teamSync.enqueue(teamRoot.teamId, savedComp.id, "comp", "put"), { type: "comp", id: savedComp.id });
       }
-      return { kind: "comp", comp: savedComp, builds: savedBuilds, folder };
+      return { kind: "comp", comp: savedComp, builds: savedBuilds, reused: savedReused, folder };
     }
+
+    // A build link that matched something you already have writes nothing: the
+    // answer to "you already have this" is the copy you already have, not a
+    // second one beside it.
+    const existing = reuse?.get(imported.build.id);
+    if (existing) return { ...existing, reusedExisting: true };
 
     const saved = await store.upsertBuild(imported.build);
     const teamRoot = await findTeamRoot(saved.folderId);
     if (teamRoot) await safeEnqueue(() => teamSync.enqueue(teamRoot.teamId, saved.id, "build", "put"), { type: "build", id: saved.id });
     return saved;
+  }
+
+  /**
+   * Look at a published link without writing anything, and report which of the
+   * builds it carries are already in the library. The assembled records are held
+   * under a token; `builds:commit-axi-import` finishes the job.
+   */
+  handle("builds:preview-axi-link", async (_e, link, name, folderId, gameMode) => {
+    const { importAxiAny } = require("./axiLinkImport.js");
+    const { planBuildReuse } = require("./buildDedupe.js");
+    const imported = await importAxiAny(link, { name, folderId, gameMode });
+
+    const incoming = imported.kind === "comp" ? imported.builds : [imported.build];
+    const eligible = await reuseEligibility(folderId);
+    const { reuse, duplicates } = planBuildReuse(incoming, await store.listBuilds(), { eligible });
+
+    const token = stashAxiImport({ imported, folderId, reuse });
+    return imported.kind === "comp"
+      ? {
+          kind: "comp",
+          token,
+          name: imported.comp.name,
+          buildCount: imported.builds.length,
+          duplicates,
+        }
+      : { kind: "build", token, name: imported.build.title, buildCount: 1, duplicates };
+  });
+
+  // `reuse: true` points the import at the builds the preview matched; false
+  // imports its own copies of everything, which is what always used to happen.
+  handle("builds:commit-axi-import", async (_e, token, opts = {}) => {
+    const entry = pendingAxiImports.get(token);
+    if (!entry) throw new Error("That import timed out — paste the link again.");
+    pendingAxiImports.delete(token);
+    return writeAxiImport({ ...entry, reuse: opts.reuse === true ? entry.reuse : null });
+  });
+
+  // Takes either kind of published link. A build returns the saved build, as it
+  // always has; a comp returns { kind: "comp", ... } because it writes several
+  // records at once and the caller needs all of them to refresh. No dedupe —
+  // this is the one-shot path, for callers with nobody to ask.
+  handle("builds:import-axi-link", async (_e, link, name, folderId, gameMode) => {
+    const { importAxiAny } = require("./axiLinkImport.js");
+    const imported = await importAxiAny(link, { name, folderId, gameMode });
+    return writeAxiImport({ imported, folderId, reuse: null });
   });
   handle("builds:parse-gw2skills", async (_e, url, gameMode) => {
     const { parseGw2Skills } = require("./gw2skillsImport.js");
@@ -1192,11 +1286,28 @@ const readyWork = app.whenReady().then(async () => {
     return code;
   });
 
-  handle("comps:import-share-code", async (_e, code) => {
+  function decodeCompCode(code) {
     const { decodeComp, isValidCompCode } = require("./compCodec.js");
     if (!isValidCompCode(code)) throw new Error("Invalid comp share code format");
     const decoded = decodeComp(code);
     if (!decoded) throw new Error("Failed to decode comp share code");
+    return decoded;
+  }
+
+  // The published-link twin of builds:preview-axi-link, minus the token: a share
+  // code decodes locally and deterministically, so the commit can just decode it
+  // again rather than hold the result in memory.
+  handle("comps:preview-share-code", async (_e, code) => {
+    const { planBuildReuse } = require("./buildDedupe.js");
+    const decoded = decodeCompCode(code);
+    const { duplicates } = planBuildReuse(decoded.builds, await store.listBuilds(), {
+      keyOf: (b) => b,
+    });
+    return { kind: "comp", name: decoded.name, buildCount: decoded.builds.length, duplicates };
+  });
+
+  handle("comps:import-share-code", async (_e, code, opts = {}) => {
+    const decoded = decodeCompCode(code);
 
     // Create the comp first (without builds) so we have an ID for compId wiring
     const comp = await compStore.upsertComp({
@@ -1206,16 +1317,34 @@ const readyWork = app.whenReady().then(async () => {
       partyLines: [],
     });
 
+    // A build the library already has is pointed at rather than copied, when the
+    // user said so (comps:preview-share-code is what they answered). Keyed by the
+    // decoded object because a decoded build has no id yet.
+    const { planBuildReuse } = require("./buildDedupe.js");
+    const { reuse } = opts.reuse === true
+      ? planBuildReuse(decoded.builds, await store.listBuilds(), { keyOf: (b) => b })
+      : { reuse: new Map() };
+
     // Create new builds for each unique decoded build, wiring compIds immediately
     const newBuildIds = [];
     const buildRefToId = new Map();
+    const reusedIds = new Set();
     for (const build of decoded.builds) {
-      const saved = await store.upsertBuild({
-        ...build,
-        title: build.title || "Imported Build",
-        compIds: [comp.id],
-      });
-      newBuildIds.push(saved.id);
+      const match = reuse.get(build);
+      const saved = match
+        ? await store.upsertBuild({
+            ...match,
+            compIds: [...new Set([...(match.compIds || []), comp.id])],
+          })
+        : await store.upsertBuild({
+            ...build,
+            title: build.title || "Imported Build",
+            compIds: [comp.id],
+          });
+      if (match) reusedIds.add(saved.id);
+      // A build matched twice is one roster entry, not two — same collapse
+      // applyBuildReuse makes on the published-link path.
+      if (!newBuildIds.includes(saved.id)) newBuildIds.push(saved.id);
       buildRefToId.set(build, saved.id);
     }
 
@@ -1233,7 +1362,11 @@ const readyWork = app.whenReady().then(async () => {
     });
 
     // Return comp ID + warning count for UI feedback
-    const result = { compId: updated.id };
+    const result = {
+      compId: updated.id,
+      reusedCount: reusedIds.size,
+      newCount: newBuildIds.length - reusedIds.size,
+    };
     if (decoded.failedBuildCount > 0) {
       result.warning = `${decoded.failedBuildCount} of ${decoded.failedBuildCount + decoded.builds.length} builds could not be decoded — they may require a newer version of AxiForge.`;
     }

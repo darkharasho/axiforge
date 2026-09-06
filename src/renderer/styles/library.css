@@ -2158,3 +2158,20 @@
   padding-top: 8px;
   border-top: 1px solid var(--line-soft);
 }
+
+/* ══ Import Dedupe ══════════════════════════════════════════════════════════
+   The list of builds an import would duplicate, inside the choice modal. Capped
+   and scrollable: a 10-line comp is a plausible import and would otherwise push
+   the buttons off the bottom of the dialog. */
+.import-dedupe__list {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  max-height: 180px;
+  overflow-y: auto;
+  font-size: 0.82rem;
+  color: var(--text-dim);
+}
+
+.import-dedupe__list li { margin-bottom: 4px; }
+
+.import-dedupe__list strong { color: var(--text); font-weight: 600; }

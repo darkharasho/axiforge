@@ -14,6 +14,8 @@ import {
 } from "./folder-store.js";
 
 import { showConfirmModal } from "../confirm-modal.js";
+import { showChoiceModal } from "../choice-modal.js";
+import { askAboutDuplicates, summarizeImport } from "./import-dedupe.js";
 import { showPrompt } from "../prompt-modal.js";
 import { loadTeamState, teamRootFor } from "../teams.js";
 import { initToolbar, renderToolbar, renderFilters } from "./toolbar.js";
@@ -35,7 +37,7 @@ import { pushUndo, popUndo, applyUndo } from "./undo.js";
 // Toast lives in its own module so the Undo affordance is testable without
 // pulling all of library.js into a DOM. Re-exported: it is imported from here
 // all over the renderer.
-import { showToast } from "./toast.js";
+import { showToast, hideToast } from "./toast.js";
 export { showToast };
 import { handleAxicodeExport, handleAxicodeImport } from "./axicode-io.js";
 import { pickWebhooks } from "../webhook-picker.js";
@@ -843,6 +845,32 @@ export async function handleImportGw2Skills(targetFolderId) {
   }
 }
 
+/**
+ * Fetch the link, ask about anything it would duplicate, then write it.
+ *
+ * Two round trips because the answer is only knowable after the fetch: nothing
+ * is written until the user has seen what the link actually carries. Falls back
+ * to the one-shot import where preview isn't wired (the web build), so that path
+ * keeps behaving exactly as it did.
+ *
+ * @returns {Promise<{saved: object|null, decision: string|null}>} a null `saved`
+ *   means the user backed out.
+ */
+async function runAxiImport(url, name, folderId, gameMode) {
+  if (!window.desktopApi.previewAxiLink) {
+    return { saved: await window.desktopApi.importAxiLink(url, name, folderId, gameMode), decision: null };
+  }
+  const preview = await window.desktopApi.previewAxiLink(url, name, folderId, gameMode);
+  const decision = await askAboutDuplicates(preview, showChoiceModal);
+  if (!decision) {
+    // The token is left to expire on its own; nothing was written.
+    hideToast();
+    return { saved: null, decision: null };
+  }
+  showToast("Importing from AxiForge link…", "loading");
+  return { saved: await window.desktopApi.commitAxiImport(preview.token, { reuse: decision === "reuse" }), decision };
+}
+
 async function handleImportAxiLink(targetFolderId) {
   const folderId = targetFolderId ?? (state.currentFolder?.type === "custom" ? state.currentFolder.id : null);
   const result = await showAxiLinkImportModal();
@@ -852,7 +880,8 @@ async function handleImportAxiLink(targetFolderId) {
     const gameMode = state.editor?.gameMode || "pve";
     // A blank name keeps the published build's own title — unlike a share code,
     // a published link carries the real name inside the payload.
-    const saved = await window.desktopApi.importAxiLink(result.url, result.name || "", folderId, gameMode);
+    const { saved, decision } = await runAxiImport(result.url, result.name || "", folderId, gameMode);
+    if (!saved) return; // backed out of the duplicate question
     // A comp link brings the comp AND every build it uses, landing in a folder of
     // its own — so there is a new folder to pick up and no single build to slot
     // into the comp being edited.
@@ -862,15 +891,14 @@ async function handleImportAxiLink(targetFolderId) {
       state.folders = await window.desktopApi.listFolders();
       renderLibrary();
       window.desktopApi.prewarmChatLinks?.(saved.builds);
-      const n = saved.builds.length;
-      showToast(`"${saved.comp.name}" imported with ${n} build${n === 1 ? "" : "s"}`);
+      showToast(summarizeImport(saved, decision));
       return;
     }
     await addImportedBuildToActiveComp(saved);
     state.builds = await window.desktopApi.listBuilds();
     renderLibrary();
     window.desktopApi.prewarmChatLinks?.([saved]);
-    showToast(`"${saved.title}" imported`);
+    showToast(summarizeImport(saved, decision));
   } catch (err) {
     console.error("AxiForge link import failed:", err);
     showToast(err?.message ? `Import failed: ${err.message}` : "Import failed", "error");

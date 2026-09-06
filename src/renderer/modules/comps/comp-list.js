@@ -9,6 +9,9 @@ import { getEliteSpecName, profClass } from "../build-helpers.js";
 import { computeCompPartyCoverage } from "./comp-boon-coverage.js";
 import { BOON_DISPLAY_ORDER } from "../constants.js";
 import { openCompTagPopover, collectAllCompTags } from "./comp-tags.js";
+import { showToast } from "../library/toast.js";
+import { showChoiceModal } from "../choice-modal.js";
+import { askAboutDuplicates } from "../library/import-dedupe.js";
 
 // ─── Shared folder helpers ───────────────────────────────────────────────────
 
@@ -835,11 +838,22 @@ async function handlePasteComp() {
     // Check if it's a comp share code
     if (trimmed.startsWith("<AxiForge:Comp:") && trimmed.endsWith(">")) {
       try {
-        const result = await window.desktopApi.importCompShareCode(trimmed);
+        // Ask before making a second copy of a build the library already has.
+        // The preview writes nothing, so backing out here leaves no trace.
+        const preview = await window.desktopApi.previewCompShareCode?.(trimmed);
+        const decision = preview ? await askAboutDuplicates(preview, showChoiceModal) : "copy";
+        if (!decision) return;
+        const result = await window.desktopApi.importCompShareCode(trimmed, { reuse: decision === "reuse" });
         state.comps = await window.desktopApi.listComps();
         state.builds = await window.desktopApi.listBuilds();
         if (result.warning) {
           window.desktopApi.showError?.("Partial Import", result.warning);
+        }
+        if (result.reusedCount) {
+          showToast(
+            `Comp imported \u2014 ${result.newCount} new build${result.newCount === 1 ? "" : "s"}, ` +
+            `${result.reusedCount} you already had`
+          );
         }
         const newComp = state.comps.find((c) => c.id === result.compId);
         if (newComp) {

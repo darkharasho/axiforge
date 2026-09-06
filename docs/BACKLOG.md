@@ -132,9 +132,39 @@ Status key: `[ ]` open · `[x]` done · `[~]` in progress · `[?]` needs repro s
     That was latent for every non-detail edit path, not just tags.
   - Covered by `tests/unit/renderer/comp-tags.test.js` (16).
 
-- [ ] **Dedupe on import.** When importing a comp (or anything) that brings
-  builds identical to ones already in the library, offer to reuse the existing
-  build instead of creating a duplicate.
+- [x] **Dedupe on import.** Done 2026-09-05. Importing three comps from the same
+  squad left three copies of the same Firebrand — a published comp carries every
+  build it references, and nothing ever asked whether you already had them.
+  - **Identity is the share code.** `src/main/buildDedupe.js` fingerprints a
+    build with `encodeShareCode`, which is already the app's definition of what
+    a build *is* (profession, mode, traits, skills, gear, runes, sigils,
+    infusions, relic) and deliberately carries none of what two people
+    reasonably differ on — title, notes, tags, folder. Hand-rolling a field list
+    would only have given the codec something to drift away from.
+  - One question, not one per build: "use the ones I have" or "import copies
+    anyway", naming both titles so you can see what you are choosing between. A
+    checklist of five identical Firebrands is a worse way to ask.
+  - Wired into both paths that bring builds along with a comp: published links
+    (`builds:preview-axi-link` → `builds:commit-axi-import`, with the assembled
+    records held under a token because the local ids are minted during the fetch
+    and a second fetch would mint different ones) and comp share codes
+    (`comps:preview-share-code`, no token — a code decodes locally and
+    deterministically, so the commit just decodes it again). A *build* link that
+    matches writes nothing at all and opens the copy you already have.
+  - Two guards worth knowing about. Trashed and archived builds are never
+    reused, or you get a comp full of builds you cannot see. And importing into
+    a **team** folder only reuses builds already inside that same team — pointing
+    the comp at a build outside it would leave every teammate with a comp
+    referencing a build they do not have.
+  - `hideToast()` is now exported: a "loading" toast has no dismiss timer, so
+    backing out of the duplicate question would have left "Importing…" on screen
+    forever.
+  - Covered by `tests/unit/buildDedupe.test.js` (19) and
+    `tests/unit/renderer/import-dedupe.test.js` (16).
+  - **Still open:** the `.axicode` file import matches on *id* only, so a file
+    from someone else's library re-imports content you already have as fresh
+    copies. Same module applies; it needs the renderer to fingerprint in batch
+    over IPC, and its conflict modal is per-item rather than one question.
 
 - [ ] **Per-folder team permissions.** Better admin controls — read / write /
   delete per folder within a teamspace, rather than one role for the whole team.

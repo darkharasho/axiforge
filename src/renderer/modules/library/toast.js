@@ -89,6 +89,15 @@ export function showToast(message, type = "success", action = null) {
   _scheduleDismiss(_dismissMs);
 }
 
+/**
+ * Take a toast down early. A "loading" toast has no timer — it waits for the
+ * thing it is announcing to finish — so anything that can be CANCELLED after
+ * raising one has to be able to clear it, or "Importing…" sits there forever.
+ */
+export function hideToast() {
+  _dismiss();
+}
+
 export function _resetToastForTests() {
   clearTimeout(_toastTimer);
   _toastEl?.remove();
