@@ -113,9 +113,24 @@ Status key: `[ ]` open · `[x]` done · `[~]` in progress · `[?]` needs repro s
   `tests/unit/compHistoryStore.test.js` (15), `teamSync.pull.test.js` and
   `tests/e2e/specs/comp-history.spec.js`.
 
-- [ ] **Tags on comps, shown on the comp view.** The store and the published SPA
-  already carry `comp.tags` (see `tests/spa/specs/comp-tags.spec.js`); what is
-  missing is the desktop UI to edit them and show them on the comp detail.
+- [x] **Tags on comps, shown on the comp view.** Done 2026-09-05. The store and
+  the published SPA already carried `comp.tags`; the desktop had a tag *filter*
+  and a bulk popover, but nowhere to tag one comp, and the detail's tag row
+  returned `""` when a comp had none — so the only way to add a comp's first tag
+  was to leave the comp, select it in the list, and use the bulk bar.
+  - The popover was lifted out of `comp-list.js` into `comps/comp-tags.js`, which
+    now owns the whole comp tag UI — the pill row and the editor together. It
+    still edits a *set*, because "tag these three" and "tag this one" are one
+    operation with a different list length; a box is checked only when every comp
+    in the set carries the tag.
+  - The detail row is always drawn now. Each pill gets a remove that appears on
+    hover, and a dashed **+ Add tags** / **+ Tag** button opens the popover.
+    **Edit Tags** is on the single-comp context menu too, anchored at the cursor.
+  - `loadComps()` now re-points `state.activeComp` at the freshly loaded record.
+    Every callback reloads the list and the detail renders from `activeComp`, so
+    without it a tag added from the detail vanished on the very next render.
+    That was latent for every non-detail edit path, not just tags.
+  - Covered by `tests/unit/renderer/comp-tags.test.js` (16).
 
 - [ ] **Dedupe on import.** When importing a comp (or anything) that brings
   builds identical to ones already in the library, offer to reuse the existing

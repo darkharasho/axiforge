@@ -8,6 +8,7 @@ import { getProfessionSvg } from "../profession-icons.js";
 import { getEliteSpecName, profClass } from "../build-helpers.js";
 import { computeCompPartyCoverage } from "./comp-boon-coverage.js";
 import { BOON_DISPLAY_ORDER } from "../constants.js";
+import { openCompTagPopover, collectAllCompTags } from "./comp-tags.js";
 
 // ─── Shared folder helpers ───────────────────────────────────────────────────
 
@@ -539,13 +540,8 @@ function renderEmptyState() {
 
 // ─── Collect Tags ────────────────────────────────────────────────────────────
 
-function collectAllTags() {
-  const tagSet = new Set();
-  for (const c of state.comps) {
-    if (c.tags) for (const t of c.tags) tagSet.add(t);
-  }
-  return [...tagSet].sort();
-}
+// The tag vocabulary is shared with the tag popover; one definition, not two.
+const collectAllTags = collectAllCompTags;
 
 // ─── Event Binding ───────────────────────────────────────────────────────────
 
@@ -718,87 +714,20 @@ function bindBulkBarEvents(container) {
       } else if (action === "export") {
         _callbacks.onExportComps?.(ids);
       } else if (action === "tag") {
-        showBulkTagPopover(btn, ids);
+        openTagPopover(btn, ids);
       }
     });
   });
 }
 
-// ─── Bulk Tag Popover ────────────────────────────────────────────────────────
+// ─── Tag Popover ─────────────────────────────────────────────────────────────
 
-function showBulkTagPopover(anchor, ids) {
-  // Close any existing popover
-  document.querySelector(".comp-bulk-tag-popover")?.remove();
-
-  const allTags = collectAllTags();
-  const popover = document.createElement("div");
-  popover.className = "comp-bulk-tag-popover";
-
-  // Determine which tags are on ALL selected comps
-  const selectedComps = state.comps.filter((c) => ids.includes(c.id));
-  const tagPresence = {};
-  for (const tag of allTags) {
-    tagPresence[tag] = selectedComps.every((c) => (c.tags || []).includes(tag));
-  }
-
-  popover.innerHTML = `
-    <div class="comp-bulk-tag-popover__header">Manage Tags</div>
-    <div class="comp-bulk-tag-popover__list">
-      ${allTags.map((t) => `
-        <label class="comp-bulk-tag-popover__item">
-          <input type="checkbox" data-bulk-tag="${escapeHtml(t)}" ${tagPresence[t] ? "checked" : ""} />
-          <span>${escapeHtml(t)}</span>
-        </label>
-      `).join("")}
-    </div>
-    <div class="comp-bulk-tag-popover__add">
-      <input type="text" placeholder="New tag\u2026" class="comp-bulk-tag-popover__input" />
-      <button type="button" class="comp-bulk-tag-popover__add-btn">Add</button>
-    </div>
-  `;
-
-  // Position below anchor
-  const rect = anchor.getBoundingClientRect();
-  popover.style.position = "fixed";
-  popover.style.top = `${rect.bottom + 4}px`;
-  popover.style.left = `${rect.left}px`;
-  popover.style.zIndex = "9999";
-  document.body.appendChild(popover);
-
-  // Tag toggle handlers
-  popover.querySelectorAll("[data-bulk-tag]").forEach((cb) => {
-    cb.addEventListener("change", async () => {
-      const tag = cb.dataset.bulkTag;
-      if (cb.checked) {
-        await _callbacks.onAddTags?.(ids, [tag]);
-      } else {
-        await _callbacks.onRemoveTags?.(ids, [tag]);
-      }
-    });
+function openTagPopover(anchor, ids) {
+  openCompTagPopover(anchor, {
+    ids,
+    onAddTags: (i, tags) => _callbacks.onAddTags?.(i, tags),
+    onRemoveTags: (i, tags) => _callbacks.onRemoveTags?.(i, tags),
   });
-
-  // Add new tag
-  const addBtn = popover.querySelector(".comp-bulk-tag-popover__add-btn");
-  const addInput = popover.querySelector(".comp-bulk-tag-popover__input");
-  if (addBtn && addInput) {
-    const doAdd = async () => {
-      const tag = addInput.value.trim();
-      if (!tag) return;
-      await _callbacks.onAddTags?.(ids, [tag]);
-      addInput.value = "";
-    };
-    addBtn.addEventListener("click", doAdd);
-    addInput.addEventListener("keydown", (e) => { if (e.key === "Enter") doAdd(); });
-  }
-
-  // Close on click outside
-  const onOutside = (e) => {
-    if (!popover.contains(e.target) && e.target !== anchor) {
-      popover.remove();
-      document.removeEventListener("mousedown", onOutside);
-    }
-  };
-  setTimeout(() => document.addEventListener("mousedown", onOutside), 0);
 }
 
 // ─── Context Menu ────────────────────────────────────────────────────────────
@@ -864,6 +793,7 @@ function showCompCtxMenu(x, y, comp) {
     ctxItem("Open", () => _callbacks.onOpenComp?.(comp)),
     ctxItem("Rename", () => _callbacks.onRenameComp?.(comp.id, comp.name)),
     ctxItem("Duplicate", () => _callbacks.onDuplicateComp?.(comp.id)),
+    ctxItem("Edit Tags", () => openTagPopover({ left: x, bottom: y }, [comp.id])),
     ctxSep(),
     ctxItem("Copy JSON", () => handleCopyCompJson(comp)),
     ctxItem("Copy AxiCode", () => handleCopyCompShareCode(comp.id)),

@@ -98,6 +98,16 @@ export function initComps(appCallbacks) {
   initCompDetail({
     onRerender: () => renderComps(),
     getCatalog: _app.getCatalog,
+    onAddTags: async (ids, tags) => {
+      await window.desktopApi.addTagsToComps(ids, tags);
+      await loadComps();
+      renderComps();
+    },
+    onRemoveTags: async (ids, tags) => {
+      await window.desktopApi.removeTagsFromComps(ids, tags);
+      await loadComps();
+      renderComps();
+    },
     onOpenBuild: (build) => {
       if (!build) return;
       if (_app.confirmDiscardDirty && !_app.confirmDiscardDirty("Load another build")) return;
@@ -109,6 +119,14 @@ export function initComps(appCallbacks) {
 
 export async function loadComps() {
   state.comps = await window.desktopApi.listComps();
+  // Re-point the open comp at the record we just loaded. Every callback that
+  // changes a comp reloads the list, and the detail view renders from
+  // state.activeComp — leave it pointing at the copy it was opened with and an
+  // edit made anywhere but in that object vanishes on the next render.
+  if (state.activeComp) {
+    const fresh = state.comps.find((c) => c.id === state.activeComp.id);
+    if (fresh) state.activeComp = fresh;
+  }
 }
 
 export function renderComps() {

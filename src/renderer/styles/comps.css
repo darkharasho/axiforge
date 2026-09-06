@@ -611,9 +611,9 @@
   background: rgba(200, 169, 110, 0.12);
 }
 
-/* ══ Bulk Tag Popover ════════════════════════════════════════════════════ */
+/* ══ Tag Popover ════════════════════════════════════════════════════ */
 
-.comp-bulk-tag-popover {
+.comp-tag-popover {
   background: var(--panel-2);
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -624,7 +624,7 @@
   box-shadow: var(--shadow-md);
 }
 
-.comp-bulk-tag-popover__header {
+.comp-tag-popover__header {
   font-size: 0.75rem;
   color: var(--text-dim);
   padding: 2px 4px 6px;
@@ -632,13 +632,13 @@
   margin-bottom: 6px;
 }
 
-.comp-bulk-tag-popover__list {
+.comp-tag-popover__list {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.comp-bulk-tag-popover__item {
+.comp-tag-popover__item {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -649,15 +649,15 @@
   cursor: pointer;
 }
 
-.comp-bulk-tag-popover__item:hover {
+.comp-tag-popover__item:hover {
   background: var(--panel-2);
 }
 
-.comp-bulk-tag-popover__item input {
+.comp-tag-popover__item input {
   accent-color: var(--gold);
 }
 
-.comp-bulk-tag-popover__add {
+.comp-tag-popover__add {
   display: flex;
   gap: 4px;
   margin-top: 6px;
@@ -665,7 +665,7 @@
   border-top: 1px solid var(--panel-2);
 }
 
-.comp-bulk-tag-popover__input {
+.comp-tag-popover__input {
   flex: 1;
   background: var(--bg-2);
   border: 1px solid var(--line);
@@ -677,11 +677,11 @@
   outline: none;
 }
 
-.comp-bulk-tag-popover__input:focus {
+.comp-tag-popover__input:focus {
   border-color: var(--accent);
 }
 
-.comp-bulk-tag-popover__add-btn {
+.comp-tag-popover__add-btn {
   all: unset;
   padding: 3px 8px;
   border-radius: var(--radius-xs);
@@ -691,7 +691,7 @@
   cursor: pointer;
 }
 
-.comp-bulk-tag-popover__add-btn:hover {
+.comp-tag-popover__add-btn:hover {
   background: rgba(200, 169, 110, 0.2);
 }
 
@@ -935,14 +935,62 @@
 }
 
 .comp-detail__tag {
-  display: inline-block;
-  padding: 2px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px 2px 10px;
   border-radius: 12px;
   font-size: 0.75rem;
   color: var(--gold);
   background: rgba(200, 169, 110, 0.1);
   border: 1px solid rgba(200, 169, 110, 0.25);
   white-space: nowrap;
+}
+
+/* Hidden until the pill is hovered: a row of tags is something you read far
+   more often than you edit, and a column of x's reads as clutter. */
+.comp-detail__tag-remove {
+  all: unset;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0 3px;
+  border-radius: 8px;
+  color: var(--text-dim);
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.comp-detail__tag:hover .comp-detail__tag-remove,
+.comp-detail__tag-remove:focus-visible {
+  opacity: 1;
+}
+
+.comp-detail__tag-remove:hover {
+  color: var(--danger, #e06c6c);
+  background: rgba(224, 108, 108, 0.15);
+}
+
+.comp-detail__tag-add {
+  all: unset;
+  cursor: pointer;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  border: 1px dashed rgba(200, 169, 110, 0.35);
+  white-space: nowrap;
+}
+
+.comp-detail__tag-add:hover {
+  color: var(--gold);
+  border-color: rgba(200, 169, 110, 0.45);
+  background: rgba(200, 169, 110, 0.08);
+}
+
+.comp-tag-popover__empty {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  padding: 4px;
 }
 
 /* ── Notes Panel ─────────────────────────────────────────────────── */

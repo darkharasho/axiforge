@@ -21,6 +21,7 @@ import { renderMiniBuildCard, renderMissingMiniBuildCard } from "../mini-build-c
 import { pickWebhooks } from "../webhook-picker.js";
 import { compShareDisabledTooltip } from "../share-gate.js";
 import { computeCompPartyCoverage, buildPartyCoverageHTML, bindPartyCoverageEvents, closePartyCoverageExpand } from "./comp-boon-coverage.js";
+import { openCompTagPopover, closeCompTagPopover, renderCompTagsRow } from "./comp-tags.js";
 import { publishWithOwnerCheck, publishedByOtherBody } from "../publish-guard.js";
 import {
   getEliteSpecName,
@@ -427,6 +428,7 @@ export function renderCompDetail() {
   closeHoverCard();
   closeCategoryHoverCard();
   closePartyCoverageExpand();
+  closeCompTagPopover();
   if (_cleanupResize) { _cleanupResize(); _cleanupResize = null; }
   if (_saveStatusInterval) { clearInterval(_saveStatusInterval); _saveStatusInterval = null; }
   _lastSavedAt = null;
@@ -479,7 +481,7 @@ export function renderCompDetail() {
         <button type="button" class="${notesBtnClass}" data-action="toggle-notes">Notes</button>
         <span class="comp-detail__slot-counter">${totalCap} / 50 slots</span>
       </div>
-      ${renderTagsRow(comp)}
+      ${renderCompTagsRow(comp)}
       ${notesOpen ? renderNotesPanel(comp) : ""}
       <div class="comp-detail__body">
         <div class="comp-detail__party-panel">
@@ -596,15 +598,6 @@ function renderNotesPanel(comp) {
                 placeholder="Add notes about this comp...">${escapeHtml(comp.notes || "")}</textarea>
     </div>
   `;
-}
-
-function renderTagsRow(comp) {
-  const tags = comp.tags || [];
-  if (tags.length === 0) return "";
-  const pills = tags
-    .map((t) => `<span class="comp-detail__tag">${escapeHtml(t)}</span>`)
-    .join("");
-  return `<div class="comp-detail__tags-row">${pills}</div>`;
 }
 
 function renderPartyLines(comp, totalCap) {
@@ -1179,6 +1172,21 @@ function bindDetailEvents(container, comp) {
     state.activeComp = null;
     state.compNotesOpen = false;
     _callbacks.onRerender?.();
+  });
+
+  // ── Tags ───────────────────────────────────────────────────────────────────
+  container.querySelector("[data-action='edit-tags']")?.addEventListener("click", (e) => {
+    openCompTagPopover(e.currentTarget, {
+      ids: [comp.id],
+      onAddTags: (ids, tags) => _callbacks.onAddTags?.(ids, tags),
+      onRemoveTags: (ids, tags) => _callbacks.onRemoveTags?.(ids, tags),
+    });
+  });
+  container.querySelectorAll("[data-action='remove-tag']").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      _callbacks.onRemoveTags?.([comp.id], [btn.dataset.tag]);
+    });
   });
 
   // ── Inline name editing ────────────────────────────────────────────────────
