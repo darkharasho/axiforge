@@ -1,3 +1,9 @@
+## Version v0.20.1 — September 6, 2026
+
+### Bug Fixes
+
+- **Comps in a team folder deleted themselves, and restoring them didn't stick.** Renaming a comp — or re-importing one over an existing comp from an `.axicode` file, which is how they get shared in the first place — sent a partial record that didn't mention which folder the comp was in. That was read as "moved to the library root", which for a comp in a team folder means "left the team", and a team-wide delete went out. Nobody asked for a delete; a rename caused it. Restoring from the local trash then couldn't put it back, because the comp no longer knew it belonged to a team, so the next sync replayed the deletion and it vanished again. A save that doesn't mention the folder now leaves the comp where it is. If you've already lost comps this way, restore them from the **team** trash rather than the local one — the server still has them, with their folder intact.
+
 ## Version v0.20.0 — September 6, 2026
 
 ### You can see where a build in a comp came from
