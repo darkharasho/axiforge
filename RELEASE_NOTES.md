@@ -1,3 +1,28 @@
+## Version v0.20.0 — September 6, 2026
+
+### You can see where a build in a comp came from
+
+- **A comp in one folder pulling a build out of another looked exactly like a comp using its own builds.** The only way to answer "where did this come from" was to leave the comp and go hunting. Now a build sitting outside its comp's folder carries a small chip naming the folder it came from — and only then, because a chip on every row is wallpaper by the third row.
+- **The library asks the opposite question**, so it gets the opposite chip: standing in a build's own folder, what you can't see is who *uses* it. The chip counts the comps, and turns accent-coloured when one of them lives somewhere else. It's drawn in all five view modes — list, table, grid, icon and columns.
+- **Either chip opens the full picture.** From a build, its home folder and every comp it appears in. From a comp, a matrix — one row per build, its home folder, and the other comps sharing it — with an *only outside builds* filter and rows that expand in place, so the comparison you opened it for survives the drill-down.
+
+### The library search reaches the whole subtree
+
+- **Typing in the search box only filtered the builds already in front of you.** A build two folders down was unreachable: its parent folder survived the filter, but nothing told you why, so you had to guess and click through. A query now changes what "here" means — builds and comps are gathered from the entire subtree beneath you and drawn flat, with their folder path. That also retired a mismatch nobody could have seen: the folder check searched fewer fields than the build filter, so a build matched by its *notes* kept neither its own row nor its parent's.
+
+### Folders
+
+- **The sidebar can be dragged wider.** 200px is fine until a folder is called "Raid Statics — Wednesday" or sits three levels deep. Drag the border (150–480px, remembered between sessions), double-click to reset, or focus it and use the arrow keys.
+- **Move to Folder offers every folder, not just the top level.** The submenu listed only root folders, which made dragging the sole way into a sub-folder. It now lists the whole tree, indented, with folders you can't write to greyed and labelled rather than missing.
+- **The Add Builds picker gives you enough to choose.** A name and a stat package doesn't tell two "Celestial Firebrand"s apart. Each row now shows where the build actually lives, its elite spec, gear, rune and game mode — and search covers all of it. The picker also says which rules are filtering the list and how many builds got through, instead of leaving you to infer it from an empty pane.
+
+### Bug Fixes
+
+- **A build plainly sitting in a comp reported "0 comps".** Two records answer that question and only one survives team sync, so on any machine that *pulled* a shared comp rather than authoring it, the comp knew its builds and the builds knew nothing. The picker badge, the build's Comps panel, and the right-click menu — which quietly dropped *Unlink from Comp* because it thought there was nothing to unlink — all read the wrong one. Membership now comes from the comp.
+- **A shared comp could only take builds from its own folder exactly**, so a comp in a team root couldn't use a build from a sub-folder of that same team. Eligibility is the team now, not the one folder.
+- **A drop in the columns view landed in whatever column 0 was showing**, not the column you dropped on — and because that folder was usually still on screen, the build looked like it had landed in two places at once. Two neighbours of the same bug went with it: a build dropped into a comp column now joins the comp instead of being re-foldered, and a folder or comp dropped there is refused rather than moved somewhere you never pointed at.
+- **The table view's ROLE column has always bled into TAGS.** It was the only column with no clipping rule, on a track too narrow for "HEAL SUPPORT". Widened and clipped. In the same pass, a long build name no longer ellipsises away the markers that follow it — the title is the only part of the cell that gives way now, because a marker that vanishes is worse than no marker.
+
 ## Version v0.19.0 — September 6, 2026
 
 ### Comp notes are real notes now
