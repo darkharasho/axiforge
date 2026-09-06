@@ -37,7 +37,11 @@ const access = require("../../../src/renderer/modules/library/access.js");
 const { wireContextMenuEvents, closeMenu, initContextMenu } =
   require("../../../src/renderer/modules/library/context-menu.js");
 
-const READ_ONLY = "Read-only — the team owner controls who can change this folder";
+// The tooltip leads with the one-line reason and then spells out what read
+// still allows; tests match the lead so the explainer can be reworded freely.
+const READ_ONLY = expect.stringMatching(
+  /^Read-only — the team owner controls who can change this folder\n/,
+);
 
 // A team the user is only allowed to read, and a personal folder beside it.
 const TEAM_ROOT = { id: "t", name: "EWW", parentId: null, shared: true, teamId: "t", role: "member" };
@@ -72,7 +76,7 @@ describe("access lookup", () => {
 
   test("read refuses a write and says why; write allows it", () => {
     expect(access.canWrite("ro")).toBe(false);
-    expect(access.writeDeniedReason("ro")).toBe(READ_ONLY);
+    expect(access.writeDeniedReason("ro")).toEqual(READ_ONLY);
     expect(access.canWrite("rw")).toBe(true);
     expect(access.writeDeniedReason("rw")).toBeNull();
   });
@@ -138,7 +142,7 @@ describe("the context menu greys what the folder refuses", () => {
     const menu = open("folder-id", "ro");
     for (const label of ["Rename", "New Sub-folder", "New Build in Folder", "Paste", "Delete Folder"]) {
       expect([label, disabled(menu, label)]).toEqual([label, true]);
-      expect(itemFor(menu, label).title).toBe(READ_ONLY);
+      expect(itemFor(menu, label).title).toEqual(READ_ONLY);
     }
   });
 
@@ -196,7 +200,7 @@ describe("the context menu greys what the folder refuses", () => {
     const el = itemFor(menu, "Import in Folder");
     expect(el.className).toContain("lib-ctx-item--disabled");
     expect(el.className).not.toContain("lib-ctx-item--submenu");
-    expect(el.title).toBe(READ_ONLY);
+    expect(el.title).toEqual(READ_ONLY);
   });
 
   test("the empty-area menu asks about the folder you are standing in", () => {

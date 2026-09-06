@@ -53,6 +53,30 @@ export function canWrite(folderId) {
 }
 
 /**
+ * What a read-only folder means, as the hover text on anything it refuses.
+ *
+ * The first line is the whole answer and is the only part a narrow tooltip
+ * needs; the rest is there because "read-only" left people guessing at the
+ * edges of it — whether they could still export, whether Duplicate counted as
+ * a change, whether the copy they made was theirs. Those are cheap to answer
+ * once, in the place they are already looking, and expensive to answer in
+ * Discord every time. Kept as literal newlines: a `title` renders them, and
+ * nothing here is worth a custom tooltip widget.
+ *
+ * Duplicate is called out by name because it is the one refusal that reads as
+ * a mistake — copying is allowed, so why not this? Because the duplicate lands
+ * back in the same folder. Copy-and-paste elsewhere is the move.
+ */
+const READ_ONLY_TOOLTIP = [
+  "Read-only — the team owner controls who can change this folder",
+  "",
+  "You can: open it, copy it, export it, share or publish it, and pin it.",
+  "You can't: rename, duplicate, retag, move, delete, or save changes to it.",
+  "",
+  "Copy it into a folder of your own and that copy is yours to edit.",
+].join("\n");
+
+/**
  * Why a write is refused here, or null when it isn't.
  *
  * Phrased as what is true rather than what failed — the user has not done
@@ -61,7 +85,7 @@ export function canWrite(folderId) {
  * takes.
  */
 export function writeDeniedReason(folderId) {
-  return canWrite(folderId) ? null : "Read-only — the team owner controls who can change this folder";
+  return canWrite(folderId) ? null : READ_ONLY_TOOLTIP;
 }
 
 /**
