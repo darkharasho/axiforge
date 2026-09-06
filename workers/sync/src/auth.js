@@ -4,7 +4,62 @@ const { checkRateLimit } = require("./ratelimit");
 
 const SESSION_TTL_MS = 90 * 24 * 60 * 60 * 1000; // 90 days, sliding
 const SESSION_BUMP_MS = 60 * 60 * 1000;          // bump expiry at most hourly
+const SESSION_CACHE_TTL_MS = 5 * 60 * 1000;      // see authenticate()
 const LOGIN_LIMIT_PER_MIN = 10;
+
+// Session cache. `authenticate()` runs before every handler, which makes its
+// `sessions JOIN users JOIN identities` read the most repeated query in the
+// service: each member's 30-second poll paid for it, and D1 bills row reads.
+// On 2026-09-06 that steady state exhausted the daily allowance and every
+// request began failing at authenticate() — an empty team list and a stuck
+// clock for everybody. Migration 0005 made the join cheap; this stops it
+// happening at all for the ~10 polls that fall inside one TTL.
+//
+// The cache lives in the KV namespace bound as SYNC_RL (already there for the
+// rate limiter) under its own `sess:` prefix, so no new binding is needed.
+//
+// Two consequences worth knowing:
+//  * A cached entry carries its own `expiresAt`, so a session that lapses — or
+//    is swept by `purgeTombstones` — is refused by the cached path too. Logout
+//    deletes the entry outright rather than waiting for the TTL, because a
+//    signed-out client that still authenticates is a real bug, not staleness.
+//  * The user's display name / avatar / login are a snapshot. A re-login that
+//    renames them leaves older sessions showing the previous values for up to
+//    one TTL. It self-heals, and no authorization decision reads these.
+const SESSION_CACHE_PREFIX = "sess:";
+
+// Every helper below fails OPEN. KV is a cache: if it is unavailable the only
+// correct outcome is to fall through to D1, never to reject a valid session.
+async function cacheGet(kv, tokenHash) {
+  if (!kv) return null;
+  try {
+    const raw = await kv.get(SESSION_CACHE_PREFIX + tokenHash);
+    return raw ? JSON.parse(raw) : null;
+  } catch (err) {
+    console.warn("[auth] session cache get failed:", err && err.message || err);
+    return null;
+  }
+}
+
+async function cachePut(kv, tokenHash, entry) {
+  if (!kv) return;
+  try {
+    await kv.put(SESSION_CACHE_PREFIX + tokenHash, JSON.stringify(entry), {
+      expirationTtl: Math.floor(SESSION_CACHE_TTL_MS / 1000),
+    });
+  } catch (err) {
+    console.warn("[auth] session cache put failed:", err && err.message || err);
+  }
+}
+
+async function cacheDelete(kv, tokenHash) {
+  if (!kv) return;
+  try {
+    await kv.delete(SESSION_CACHE_PREFIX + tokenHash);
+  } catch (err) {
+    console.warn("[auth] session cache delete failed:", err && err.message || err);
+  }
+}
 
 async function readJson(request) {
   try { return await request.json(); } catch { return null; }
@@ -93,6 +148,17 @@ async function authenticate(request, env, deps = {}) {
   const m = header.match(/^Bearer\s+(\S+)$/i);
   if (!m) return null;
   const tokenHash = await sha256Hex(m[1]);
+  const nowMs = (deps.now || Date.now)();
+
+  const cached = await cacheGet(env.SYNC_RL, tokenHash);
+  if (cached) {
+    // Still valid → answer without going near D1, which is the whole point.
+    if (Date.parse(cached.expiresAt) > nowMs) return { user: cached.user, sessionHash: tokenHash };
+    // Lapsed → drop it and fall through, so the D1 path below also deletes the
+    // dead row rather than leaving it for the nightly purge.
+    await cacheDelete(env.SYNC_RL, tokenHash);
+  }
+
   const row = await env.SYNC_DB.prepare(
     `SELECT s.token_hash, s.last_used_at, s.expires_at, u.id, u.display_name, u.avatar_url, i.login
        FROM sessions s
@@ -103,23 +169,33 @@ async function authenticate(request, env, deps = {}) {
       LIMIT 1`
   ).bind(tokenHash).first();
   if (!row) return null;
-  const nowMs = (deps.now || Date.now)();
   if (Date.parse(row.expires_at) <= nowMs) {
     await env.SYNC_DB.prepare("DELETE FROM sessions WHERE token_hash = ?").bind(tokenHash).run();
     return null;
   }
+  // The slide still runs on the cold read. A cache TTL far shorter than
+  // SESSION_BUMP_MS guarantees a miss lands inside every bump window, so an
+  // actively polling client keeps renewing exactly as it did before.
+  let expiresAt = row.expires_at;
   if (nowMs - Date.parse(row.last_used_at) >= SESSION_BUMP_MS) {
     const iso = new Date(nowMs).toISOString();
+    expiresAt = new Date(nowMs + SESSION_TTL_MS).toISOString();
     await env.SYNC_DB.prepare("UPDATE sessions SET last_used_at = ?, expires_at = ? WHERE token_hash = ?")
-      .bind(iso, new Date(nowMs + SESSION_TTL_MS).toISOString(), tokenHash).run();
+      .bind(iso, expiresAt, tokenHash).run();
   }
-  return { user: publicUser(row), sessionHash: tokenHash };
+  const user = publicUser(row);
+  // Cache the post-bump expiry, not the row's stale one.
+  await cachePut(env.SYNC_RL, tokenHash, { user, expiresAt });
+  return { user, sessionHash: tokenHash };
 }
 
 // DELETE /auth/session
 async function handleLogout(_request, env, _deps, auth) {
   await env.SYNC_DB.prepare("DELETE FROM sessions WHERE token_hash = ?").bind(auth.sessionHash).run();
+  // Evict rather than let it lapse: a signed-out token that still authenticates
+  // for the rest of the TTL would be a genuine hole, not mere staleness.
+  await cacheDelete(env.SYNC_RL, auth.sessionHash);
   return new Response(null, { status: 204 });
 }
 
-module.exports = { handleGithubLogin, authenticate, handleLogout, publicUser, readJson, SESSION_TTL_MS, SESSION_BUMP_MS };
+module.exports = { handleGithubLogin, authenticate, handleLogout, publicUser, readJson, SESSION_TTL_MS, SESSION_BUMP_MS, SESSION_CACHE_TTL_MS };

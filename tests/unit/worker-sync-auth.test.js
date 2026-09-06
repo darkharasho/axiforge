@@ -1,5 +1,5 @@
 "use strict";
-const { handleGithubLogin, authenticate, handleLogout, SESSION_TTL_MS } = require("../../workers/sync/src/auth");
+const { handleGithubLogin, authenticate, handleLogout, SESSION_TTL_MS, SESSION_CACHE_TTL_MS } = require("../../workers/sync/src/auth");
 const { createTestD1, createTestKV } = require("../helpers/d1Shim");
 
 function ghFetch(user) {
@@ -132,5 +132,110 @@ describe("auth", () => {
     expect(b1.user.id).toBe(b2.user.id);
     expect(await db.prepare("SELECT COUNT(*) AS c FROM users").first("c")).toBe(1);
     expect(await db.prepare("SELECT COUNT(*) AS c FROM identities").first("c")).toBe(1);
+  });
+});
+
+// The session cache. `authenticate()` runs before every handler, so its D1 read
+// is the single most repeated query in the service — a 30-second poll per member
+// paid for a `sessions JOIN users JOIN identities` round trip that almost always
+// returned the identical row. On 2026-09-06 that steady state exhausted D1's
+// daily row-read allowance and took team sync down for everybody.
+describe("auth session cache", () => {
+  // Wraps the D1 double to record every statement it is asked to prepare, so a
+  // test can assert that a request cost ZERO D1 round trips rather than merely
+  // that it returned the right answer.
+  function countingDb(db) {
+    const calls = [];
+    return Object.assign(Object.create(Object.getPrototypeOf(db)), db, {
+      prepare(sql) { calls.push(sql); return db.prepare(sql); },
+      _calls: calls,
+    });
+  }
+
+  async function loggedIn() {
+    const { env, deps, db } = await setup();
+    const { sessionToken } = await (await handleGithubLogin(loginReq("gh-good"), env, deps)).json();
+    const counting = countingDb(db);
+    return { env: { ...env, SYNC_DB: counting }, deps, db, counting, sessionToken, kv: env.SYNC_RL };
+  }
+
+  test("a second request inside the cache window resolves without touching D1", async () => {
+    const { env, deps, counting, sessionToken } = await loggedIn();
+
+    const first = await authenticate(authedReq(sessionToken), env, deps);
+    expect(first.user.login).toBe("vette");
+    expect(counting._calls.length).toBeGreaterThan(0); // the cold read happened
+
+    counting._calls.length = 0;
+    const second = await authenticate(authedReq(sessionToken), env, deps);
+    expect(second).toEqual(first);
+    expect(counting._calls).toEqual([]); // ...and the warm one cost nothing
+  });
+
+  test("the cache lapses, so D1 stays the source of truth", async () => {
+    const { env, deps, counting, sessionToken } = await loggedIn();
+    await authenticate(authedReq(sessionToken), env, deps);
+
+    deps.advance(SESSION_CACHE_TTL_MS + 1000);
+    counting._calls.length = 0;
+    const after = await authenticate(authedReq(sessionToken), env, deps);
+    expect(after.user.login).toBe("vette");
+    expect(counting._calls.length).toBeGreaterThan(0);
+  });
+
+  test("logout evicts the cached copy instead of leaving it to age out", async () => {
+    const { env, deps, sessionToken } = await loggedIn();
+    const auth = await authenticate(authedReq(sessionToken), env, deps);
+    await handleLogout(authedReq(sessionToken), env, deps, auth);
+    // Without eviction this returns the cached user for the rest of the TTL —
+    // a signed-out client that still passes authentication.
+    expect(await authenticate(authedReq(sessionToken), env, deps)).toBeNull();
+  });
+
+  test("a session that lapses inside its own cache window is refused, not served", async () => {
+    const { env, deps, sessionToken, db, counting } = await loggedIn();
+    // A session with less life left than the cache TTL: the entry written now
+    // outlives the session it describes. The cached path has to read the
+    // `expiresAt` it stored rather than assume a hit means "still valid".
+    await db.prepare("UPDATE sessions SET expires_at = ?")
+      .bind(new Date(Date.parse("2026-08-21T12:00:00Z") + 60 * 1000).toISOString()).run();
+    expect(await authenticate(authedReq(sessionToken), env, deps)).not.toBeNull();
+
+    deps.advance(2 * 60 * 1000); // past the session, still inside the cache TTL
+    expect(await authenticate(authedReq(sessionToken), env, deps)).toBeNull();
+    // ...and the dead row was actually reaped, not merely hidden.
+    expect(counting._calls.some((q) => /DELETE FROM sessions/.test(q))).toBe(true);
+    expect(await db.prepare("SELECT COUNT(*) AS c FROM sessions").first("c")).toBe(0);
+  });
+
+  test("a KV outage falls back to D1 rather than signing everybody out", async () => {
+    const { env, deps, sessionToken } = await loggedIn();
+    const broken = {
+      get: async () => { throw new Error("KV down"); },
+      put: async () => { throw new Error("KV down"); },
+      delete: async () => { throw new Error("KV down"); },
+    };
+    const a = await authenticate(authedReq(sessionToken), { ...env, SYNC_RL: broken }, deps);
+    expect(a.user.login).toBe("vette");
+  });
+
+  test("no KV binding at all still authenticates", async () => {
+    const { env, deps, sessionToken } = await loggedIn();
+    const a = await authenticate(authedReq(sessionToken), { ...env, SYNC_RL: undefined }, deps);
+    expect(a.user.login).toBe("vette");
+  });
+
+  test("caching does not stop the hourly expiry slide", async () => {
+    const { env, deps, db, sessionToken } = await loggedIn();
+    await authenticate(authedReq(sessionToken), env, deps);
+    const exp0 = await db.prepare("SELECT expires_at FROM sessions").first("expires_at");
+
+    // Poll steadily for just over an hour. Most of these are cache hits; the
+    // bump has to survive them and still land on the first miss past the hour.
+    for (let i = 0; i < 13; i++) {
+      deps.advance(5 * 60 * 1000);
+      await authenticate(authedReq(sessionToken), env, deps);
+    }
+    expect(await db.prepare("SELECT expires_at FROM sessions").first("expires_at")).not.toBe(exp0);
   });
 });

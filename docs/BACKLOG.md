@@ -583,12 +583,38 @@ Status key: `[ ]` open · `[x]` done · `[~]` in progress · `[?]` needs repro s
   separated carefully rather than by the same one-line guard. `buildStore` and
   `compStore` now both carry the folder over; `folderStore` is the odd one out.
 
-- [ ] **Cache sync sessions in KV so `authenticate()` stops hitting D1 on every
-  request.** Every authenticated sync call — including each client's 30-second
-  poll — costs a `sessions JOIN users JOIN identities` round trip to D1 before
-  any handler runs. Migration 0005 makes that join cheap, but the read still
-  happens N times per member per minute, and D1 row reads are the metered
-  resource that took the whole service down on 2026-09-06 (see the incident
-  entry above). A short-TTL KV entry keyed by token hash would cut the steady
-  state to roughly zero D1 reads for polls that return no changes. Needs care on
-  logout/expiry: the KV copy has to be deleted, not just left to age out.
+- [x] **Cache sync sessions in KV so `authenticate()` stops hitting D1 on every
+  request.** Done 2026-09-06. Every authenticated sync call — including each
+  client's 30-second poll — cost a `sessions JOIN users JOIN identities` round
+  trip to D1 before any handler ran, and D1 row reads are the metered resource
+  that took the whole service down on 2026-09-06. `authenticate()` now reads a
+  `sess:<tokenHash>` entry from the SYNC_RL namespace first (no new binding, own
+  prefix) with a 5-minute TTL, so roughly nine of every ten polls cost zero D1
+  reads. The entry stores the session's own `expiresAt`, so one that lapses
+  inside its cache window is refused and the dead row still reaped; logout
+  deletes the entry outright rather than leaving a signed-out token authenticating
+  for the rest of the TTL. Every KV helper fails OPEN — a KV outage falls back to
+  D1 instead of signing everybody out. The TTL is deliberately far below
+  `SESSION_BUMP_MS`, so a miss always lands inside the hourly window and the
+  sliding expiry is unchanged. Known and accepted: display name / avatar / login
+  are a snapshot and can trail a re-login by up to one TTL — no authorization
+  decision reads them. Covered by 7 new cases in
+  `tests/unit/worker-sync-auth.test.js`.
+
+- [x] **Apply migration 0005 and stop the D1 row-read outage.** Done 2026-09-06.
+  The service was down for every member from ~16:00 UTC — `authenticate()` threw
+  `D1_ERROR: exceeded D1's free tier daily row read limit` before any handler
+  ran, so the client showed "Internal error", an empty team list, and a
+  permanent "Waiting to sync" clock. Worker logs showed 1,428 such failures and
+  zero before 16:00, i.e. the midnight reset was healthy and burned through in
+  about sixteen hours. Cause: the two missing indexes in
+  `0005_read_amplifier_indexes.sql` — at 13 identities and 276 items that is
+  ~290 rows of pure overhead per authenticated request, and 13 live sessions
+  polling every 30s is ~37k requests/day, comfortably past the 5M row ceiling.
+  `0005` was applied to remote D1 through the Cloudflare MCP (the wrangler token
+  still lacks D1 permissions), with the `d1_migrations` ledger row (id 5)
+  inserted by hand so a later `wrangler d1 migrations apply` does not re-run it.
+  Verified: `identities_user` and `items_team_type` both present in
+  `sqlite_master`. The account is now on Workers Paid, which lifts the free-tier
+  ceiling — but the indexes and the session cache are what keep the steady-state
+  read volume flat as the team grows.
