@@ -22,5 +22,6 @@
 @import "./styles/settings-modal.css";
 @import "./styles/library.css";
 @import "./styles/comps.css";
+@import "./styles/build-sources.css";
 @import "../../packages/forge-render/src/forge-render.css";
 @import "./styles/forge-render-bridge.css";

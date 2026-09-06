@@ -158,10 +158,14 @@ function getWeaponSets(build) {
  * @param {Object} [options]
  * @param {boolean} [options.showActions=true] - Show open/remove buttons
  * @param {boolean} [options.showMode=true] - Show game mode pill
+ * @param {string} [options.sourceBadge] - Pre-rendered badge HTML shown beside
+ *   the link badge. The caller renders it because the badge's meaning depends
+ *   on renderer state (which folder the surrounding comp lives in) that this
+ *   package deliberately knows nothing about. Must already be escaped.
  * @returns {string} HTML string
  */
 export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
-  const { showActions = true, showMode = true, linkUrl = null, chatLink = null, linkBadge = null, slotColor = null, showColorPicker = false } = options;
+  const { showActions = true, showMode = true, linkUrl = null, chatLink = null, linkBadge = null, slotColor = null, showColorPicker = false, sourceBadge = "" } = options;
 
   const icon = slotColor && slotColor !== "normal" ? getSpecIconColored(build, slotColor) : getSpecIcon(build);
   const pClass = profClass(build.profession);
@@ -347,6 +351,7 @@ export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
         <div class="mini-card__header">
           ${titleHtml}
           ${linkBadgeHtml}
+          ${sourceBadge}
           ${tagPills}
           ${role}
           <div class="mini-card__pills">

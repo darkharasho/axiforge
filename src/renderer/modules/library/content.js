@@ -6,6 +6,9 @@ import { roleBadgeHtml } from '../roleEstimator.js';
 import { getVisibleBuilds, getVisibleFolders, getVisibleComps, libraryBuilds, libraryComps, libraryFolders, searchQuery, hasSearchQuery, buildMatchesQuery, compMatchesQuery } from "./folder-store.js";
 import { getProfessionSvg } from "../profession-icons.js";
 import { badgeHtml } from "../sync-status.js";
+import { buildUsageChipHtml, compSourceBadgeHtml, foreignFolderChipHtml } from "../build-source-chips.js";
+import { folderPathText } from "../build-sources.js";
+import { showBuildSourcesModal, showCompSourcesModal } from "../build-sources-modal.js";
 import { teamRootFor, teamLabel } from "../teams.js";
 import { clearSelection, handleBuildClick, handleCompClick, updateSelectionVisuals } from "./selection.js";
 import { wireDragDropEvents } from "./drag-drop.js";
@@ -224,10 +227,12 @@ function tagPillsHtml(build) {
     .join("");
 }
 
+// The bare build count used to be the whole story here. It hid the case that
+// actually matters -- a comp quietly sourcing half its roster from other
+// folders -- so the count now says so, and is clickable straight into the
+// sources matrix without entering the comp.
 function compBadgeHtml(comp) {
-  const count = (comp.buildIds || []).length;
-  const label = count === 1 ? "1 build" : `${count} builds`;
-  return `<span class="lib-list-row__badge">${label}</span>`;
+  return compSourceBadgeHtml(comp);
 }
 
 function emptyStateHtml() {
@@ -253,21 +258,7 @@ function isCombinedView() {
   return f.type === "smart-profession" || f.type === "smart-gamemode" || f.type === "all";
 }
 
-/** Build the folder ancestor chain for a build and return "Folder / Sub / …" or "". */
-function folderPathText(build) {
-  if (!build.folderId) return "";
-  const chain = [];
-  let id = build.folderId;
-  const visited = new Set();
-  while (id && !visited.has(id)) {
-    visited.add(id);
-    const folder = state.folders.find((f) => f.id === id);
-    if (!folder) break;
-    chain.unshift(folder.name);
-    id = folder.parentId;
-  }
-  return chain.join(" / ");
-}
+
 
 function contentSyncIndicatorHtml(folderId) {
   return badgeHtml("lib-content-sync-indicator", state.folderSyncStatus?.[folderId]);
@@ -289,7 +280,7 @@ function itemSyncIndicatorHtml(type, item) {
 /** Return HTML for the folder path breadcrumb shown in combined views. */
 function folderPathHtml(build) {
   if (!isCombinedView()) return "";
-  const path = folderPathText(build);
+  const path = folderPathText(build.folderId);
   if (!path) return "";
   return `<span class="lib-folder-path">${escapeHtml(path)}</span>`;
 }
@@ -324,7 +315,7 @@ function renderListView(container) {
           <span class="lib-list-row__spec-icon ${profClass(b.profession)}">${getSpecIcon(b)}</span>
           <span class="lib-list-row__title">${escapeHtml(b.title || "Untitled")}${folderPathHtml(b)}${itemSyncIndicatorHtml("build", b)}</span>
           <span class="lib-list-row__pills">
-            ${profPillHtml(b)}${eliteSpecPillHtml(b)}${gameModePillHtml(b)}${tagPillsHtml(b)}${roleBadgeHtml(b, state.upgradeCatalog)}
+            ${profPillHtml(b)}${eliteSpecPillHtml(b)}${gameModePillHtml(b)}${tagPillsHtml(b)}${roleBadgeHtml(b, state.upgradeCatalog)}${buildUsageChipHtml(b)}
           </span>
           <span class="lib-list-row__date" title="${escapeHtml(b.updatedAt || "")}">${formatDate(b.updatedAt)}</span>
           ${pinStarHtml(b)}
@@ -410,7 +401,7 @@ function renderTableView(container) {
         <div class="lib-tv__row lib-tv__row--folder">
           <span class="lib-tv__action" data-toggle-table-folder="${escapeHtml(folder.id)}">${chevron}</span>
           <span class="lib-tv__icon"><span class="lib-table__folder-icon">${folderIcon}</span></span>
-          <span class="lib-tv__name">${escapeHtml(folder.name)}${folder.teamId ? `<span class="lib-shared-badge" title="${escapeHtml(teamLabel(folder))}">${shareIcon}</span>` : ""}${contentSyncIndicatorHtml(folder.id)}</span>
+          <span class="lib-tv__name"><span class="lib-tv__title">${escapeHtml(folder.name)}</span>${folder.teamId ? `<span class="lib-shared-badge" title="${escapeHtml(teamLabel(folder))}">${shareIcon}</span>` : ""}${contentSyncIndicatorHtml(folder.id)}</span>
           <span class="lib-tv__profession"></span>
           <span class="lib-tv__spec"></span>
           <span class="lib-tv__mode"></span>
@@ -432,7 +423,7 @@ function renderTableView(container) {
         <div class="lib-tv__row lib-tv__row--build ${b.pinned ? "lib-tv__row--pinned" : ""}">
           <span class="lib-tv__action">${pinStarHtml(b)}</span>
           <span class="lib-tv__icon ${profClass(b.profession)}">${getSpecIcon(b)}</span>
-          <span class="lib-tv__name">${escapeHtml(b.title || "Untitled")}${folderPathHtml(b)}${itemSyncIndicatorHtml("build", b)}</span>
+          <span class="lib-tv__name"><span class="lib-tv__title">${escapeHtml(b.title || "Untitled")}</span>${folderPathHtml(b)}${itemSyncIndicatorHtml("build", b)}${buildUsageChipHtml(b, { compact: true })}</span>
           <span class="lib-tv__profession">${escapeHtml(b.profession || "")}</span>
           <span class="lib-tv__spec">${escapeHtml(eliteSpec || "")}</span>
           <span class="lib-tv__mode">${escapeHtml(gameModeLabel(b.gameMode || "pve"))}</span>
@@ -448,8 +439,6 @@ function renderTableView(container) {
   function renderTreeComp(c) {
     const compBuildIdSet = new Set(c.buildIds || []);
     const compBuilds = state.builds.filter((b) => compBuildIdSet.has(b.id));
-    const count = compBuilds.length;
-    const countLabel = count === 1 ? "1 build" : `${count} builds`;
     const tags = (c.tags || []).map((t) => escapeHtml(t)).join(", ");
     const isExpanded = _tableExpandedFolders.has(c.id);
     const chevron = isExpanded ? chevronDownIcon : chevronRightIcon;
@@ -465,8 +454,8 @@ function renderTableView(container) {
         <div class="lib-tv__row lib-tv__row--comp">
           <span class="lib-tv__action" data-toggle-table-folder="${escapeHtml(c.id)}">${chevron}</span>
           <span class="lib-tv__icon lib-list-row__comp-icon">${compIcon}</span>
-          <span class="lib-tv__name">${escapeHtml(c.name || "Untitled Comp")}${itemSyncIndicatorHtml("comp", c)}</span>
-          <span class="lib-tv__profession"><span class="lib-list-row__badge">${countLabel}</span></span>
+          <span class="lib-tv__name"><span class="lib-tv__title">${escapeHtml(c.name || "Untitled Comp")}</span>${itemSyncIndicatorHtml("comp", c)}</span>
+          <span class="lib-tv__profession">${compBadgeHtml(c)}</span>
           <span class="lib-tv__spec"></span>
           <span class="lib-tv__mode"></span>
           <span class="lib-tv__role"></span>
@@ -549,7 +538,7 @@ function renderGridView(container) {
         <div class="lib-grid-card lib-grid-card--build ${b.pinned ? "lib-grid-card--pinned" : ""} ${profClass(b.profession)}" data-build-id="${escapeHtml(b.id)}">
           <div class="lib-grid-card__header">
             <div class="lib-grid-card__spec-icon ${profClass(b.profession)}">${getSpecIcon(b)}</div>
-            ${pinStarHtml(b)}
+            ${buildUsageChipHtml(b, { compact: true })}${pinStarHtml(b)}
           </div>
           <div class="lib-grid-card__title">${escapeHtml(b.title || "Untitled")}${itemSyncIndicatorHtml("build", b)}</div>
           ${folderPathHtml(b)}
@@ -613,7 +602,7 @@ function renderIconView(container) {
       (b) => `
         <div class="lib-icon-item lib-icon-item--build ${b.pinned ? "lib-icon-item--pinned" : ""} ${profClass(b.profession)}" data-build-id="${escapeHtml(b.id)}">
           <div class="lib-icon-item__icon ${profClass(b.profession)}">${getSpecIcon(b)}</div>
-          <div class="lib-icon-item__label">${escapeHtml(b.title || "Untitled")}${itemSyncIndicatorHtml("build", b)}</div>
+          <div class="lib-icon-item__label">${escapeHtml(b.title || "Untitled")}${itemSyncIndicatorHtml("build", b)}${buildUsageChipHtml(b, { compact: true })}</div>
           ${folderPathHtml(b)}
         </div>
       `
@@ -727,13 +716,20 @@ function renderColumnsView(container) {
         `);
       }
 
+      // A column showing a COMP's roster asks the comp-side question -- "where
+      // did this build come from" -- while a column showing a folder asks the
+      // library-side one, "who uses this build".
+      const colComp = col.compId ? (state.comps || []).find((c) => c.id === col.compId) : null;
       for (const b of col.builds) {
+        const sourceChip = colComp
+          ? foreignFolderChipHtml(b, colComp)
+          : buildUsageChipHtml(b, { compact: true });
         items.push(`
           <div class="lib-col__item lib-col__item--build ${profClass(b.profession)}"
                data-build-id="${escapeHtml(b.id)}" data-col-index="${colIndex}">
             <span class="lib-col__icon ${profClass(b.profession)}">${getSpecIcon(b)}</span>
             <span class="lib-col__name">${escapeHtml(b.title || "Untitled")}${folderPathHtml(b)}${itemSyncIndicatorHtml("build", b)}</span>
-            ${roleBadgeHtml(b, state.upgradeCatalog)}
+            ${roleBadgeHtml(b, state.upgradeCatalog)}${sourceChip}
           </div>
         `);
       }
@@ -801,6 +797,29 @@ function bindContentEvents(container) {
       }
     });
   }
+
+  // Source chips sit INSIDE build rows and comp rows, both of which are
+  // clickable and draggable. They claim the click first so opening the sources
+  // modal never doubles as selecting or opening the row behind it.
+  container.querySelectorAll("[data-src-build]:not([data-bound]), [data-src-comp]:not([data-bound])").forEach((el) => {
+    el.dataset.bound = "1";
+    el.addEventListener("mousedown", (e) => e.stopPropagation());
+    el.addEventListener("click", (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      const buildId = el.dataset.srcBuild;
+      if (buildId) {
+        const build = state.builds.find((b) => b.id === buildId);
+        const comp = el.dataset.srcComp
+          ? (state.comps || []).find((c) => c.id === el.dataset.srcComp)
+          : null;
+        if (build) showBuildSourcesModal(build, comp);
+        return;
+      }
+      const comp = (state.comps || []).find((c) => c.id === el.dataset.srcComp);
+      if (comp) showCompSourcesModal(comp);
+    });
+  });
 
   // Child elements: use data-bound flag (children are replaced on re-render)
   container.querySelectorAll("[data-build-id]:not([data-bound])").forEach((el) => {

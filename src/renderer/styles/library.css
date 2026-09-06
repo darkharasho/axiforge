@@ -1061,7 +1061,7 @@
 .lib-tv__header,
 .lib-tv__row {
   display: grid;
-  grid-template-columns: 22px 22px 1fr 100px 100px 60px 80px 80px 80px 80px;
+  grid-template-columns: 22px 22px 1fr 100px 100px 60px 116px 80px 80px 80px;
   align-items: center;
   gap: 0;
   font-size: 0.85rem;
@@ -1143,12 +1143,35 @@
 }
 
 /* Name column */
+/* The name cell carries markers after the title (source chip, sync dot, shared
+ * badge). Laying it out as a flex row means the TITLE is the only thing that
+ * gives way when the column is narrow -- ellipsising a marker just hides it,
+ * which is the opposite of what a marker is for. */
 .lib-tv__name {
-  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
   overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
   padding: 0 8px;
+  font-weight: 500;
+}
+
+.lib-tv__title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lib-tv__name > *:not(.lib-tv__title) {
+  flex: 0 0 auto;
+}
+
+/* The header row has no title span -- it holds a sort button that must still
+ * fill the cell. */
+.lib-tv__header .lib-tv__name {
+  display: block;
 }
 
 /* Data columns */
@@ -1171,9 +1194,14 @@
   min-width: 60px;
 }
 
+/* ROLE is a fixed track, and the longest badge ("HEAL SUPPORT") does not fit in
+ * 80px. Every other column clips; this one had no overflow rule, so the badge
+ * silently bled into TAGS next door. Widen the track to fit the longest label
+ * and clip anyway, so nothing here can ever spill into a neighbour again. */
 .lib-tv__role {
   padding: 0 8px;
-  min-width: 80px;
+  min-width: 0;
+  overflow: hidden;
   display: flex;
   align-items: center;
 }

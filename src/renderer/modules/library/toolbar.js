@@ -5,6 +5,10 @@ import { escapeHtml, formatRelativeTime } from "../utils.js";
 import { getProfessionSvg } from "../profession-icons.js";
 import { libraryBuilds } from "./folder-store.js";
 import { writeDeniedReason, currentFolderId } from "./access.js";
+// One folder-ancestor walker for the whole renderer. There used to be three
+// near-identical copies (here, content.js, comp-detail.js) and only some of
+// them guarded against a parent cycle.
+import { folderChain as buildFolderChain } from "../build-sources.js";
 import {
   magnifyingGlassIcon,
   plusIcon,
@@ -391,20 +395,6 @@ function renderBreadcrumb() {
   }
 
   return parts.join("");
-}
-
-function buildFolderChain(folderId) {
-  const chain = [];
-  let id = folderId;
-  const visited = new Set();
-  while (id && !visited.has(id)) {
-    visited.add(id);
-    const folder = state.folders.find((f) => f.id === id);
-    if (!folder) break;
-    chain.unshift(folder);
-    id = folder.parentId;
-  }
-  return chain;
 }
 
 function gameModeLabel(id) {

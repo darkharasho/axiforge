@@ -26,6 +26,9 @@ import { renderCompTabs, mountCompNotes } from "./comp-notes.js";
 import { publishWithOwnerCheck, publishedByOtherBody } from "../publish-guard.js";
 import { teamRootFor } from "../teams.js";
 import { compsContainingBuild } from "./comp-membership.js";
+import { compSources, folderPathText } from "../build-sources.js";
+import { foreignFolderChipHtml } from "../build-source-chips.js";
+import { showCompSourcesModal, showBuildSourcesModal } from "../build-sources-modal.js";
 import {
   getEliteSpecName,
   getSpecIcon,
@@ -679,8 +682,15 @@ function renderPartyLine(comp, pl, idx, totalCap) {
       const pClass = profClass(build.profession);
       const title = escapeHtml(build.title || "Untitled");
       const colorAttr = slotColor !== "normal" ? ` data-slot-color="${slotColor}"` : "";
+      // A slot is a 42px icon box -- no room for the pool's folder chip. It gets
+      // a corner marker instead, and says where the build lives in its tooltip,
+      // so the fact survives at the one size where the chip cannot.
+      const foreign = (build.folderId || null) !== (comp.folderId || null);
+      const slotTitle = foreign
+        ? `${title} — from ${escapeHtml(folderPathText(build.folderId) || "Library root")}`
+        : title;
       slotBoxes.push(
-        `<div class="comp-slot comp-slot--filled ${pClass}" title="${title}"${colorAttr}
+        `<div class="comp-slot comp-slot--filled ${pClass} ${foreign ? "comp-slot--foreign" : ""}" title="${slotTitle}"${colorAttr}
               data-action="click-filled-slot" data-line-id="${escapeHtml(pl.id)}" data-slot-idx="${i}" data-build-id="${escapeHtml(buildId)}">
           <span class="comp-slot__icon">${icon}</span>
         </div>`
@@ -759,6 +769,7 @@ function renderBuildPool(comp) {
     const label = totalComps > 1 ? `${totalComps} comps` : "linked";
     return renderMiniBuildCard(b, state.upgradeCatalog, {
       linkBadge: { label, tooltip },
+      sourceBadge: foreignFolderChipHtml(b, comp),
       slotColor: buildColors[b.id] || null,
       showColorPicker: true,
     });
@@ -771,6 +782,7 @@ function renderBuildPool(comp) {
         <div class="comp-pool-header__right">
           <input type="text" class="comp-pool-search" placeholder="Search..."
                  value="${escapeHtml(state.compPoolSearch || "")}" data-action="pool-search" />
+          ${_sourcesButtonHtml(comp)}
           <button type="button" class="comp-pool-add" data-action="pool-add">+ Add</button>
         </div>
       </div>
@@ -780,6 +792,20 @@ function renderBuildPool(comp) {
       </div>
     </div>
   `;
+}
+
+/**
+ * The way into the sources matrix. Offered only when the comp actually draws on
+ * more than one folder -- for a comp whose builds all live beside it the matrix
+ * would be three rows all saying "here", which is a button that teaches you not
+ * to press it.
+ */
+function _sourcesButtonHtml(comp) {
+  const { externalCount } = compSources(comp);
+  if (!externalCount) return "";
+  return `<button type="button" class="comp-pool-sources" data-action="pool-sources"
+    title="${externalCount} build${externalCount === 1 ? "" : "s"} in this comp come from other folders"
+    >Sources <span class="comp-pool-sources__count">${externalCount}</span></button>`;
 }
 
 // ─── Build Categories ─────────────────────────────────────────────────────────
@@ -821,21 +847,6 @@ function renderCategoryRow(comp) {
 
 // ─── Add Build Picker Modal ──────────────────────────────────────────────────
 
-/** "WvW / Zerg / Frontline", or "" for a build sitting at the root. */
-function _folderPathText(folderId) {
-  const chain = [];
-  const seen = new Set();
-  let id = folderId;
-  while (id && !seen.has(id)) {
-    seen.add(id);
-    const folder = state.folders?.find((f) => f.id === id);
-    if (!folder) break;
-    chain.unshift(folder.name);
-    id = folder.parentId;
-  }
-  return chain.join(" / ");
-}
-
 /**
  * Everything the picker knows about a build, resolved once per row.
  *
@@ -850,7 +861,7 @@ function _pickerRowInfo(build) {
   return {
     team,
     comps,
-    folderPath: _folderPathText(build.folderId),
+    folderPath: folderPathText(build.folderId),
     elite: getEliteSpecName(build) || build.profession || "",
     gear: resolveStatPackage(build),
     rune: getRuneName(build) || "",
@@ -1669,6 +1680,23 @@ function bindPoolEvents(container, comp) {
   // Pool add button
   container.querySelector("[data-action='pool-add']")?.addEventListener("click", () => {
     openAddBuildModal(comp);
+  });
+
+  // ── Build sources ──────────────────────────────────────────────────────────
+  container.querySelector("[data-action='pool-sources']")?.addEventListener("click", () => {
+    showCompSourcesModal(comp);
+  });
+
+  // A folder chip sits inside a mini card that is itself clickable and
+  // draggable, so it has to claim the click before the card sees it.
+  container.querySelectorAll("[data-src-build]").forEach((chip) => {
+    chip.addEventListener("click", (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      const build = state.builds.find((b) => b.id === chip.dataset.srcBuild);
+      if (build) showBuildSourcesModal(build, comp);
+    });
+    chip.addEventListener("mousedown", (e) => e.stopPropagation());
   });
 
   // New-tag button

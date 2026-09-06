@@ -1,0 +1,393 @@
+/* AxiForge — build sources: the chips and the matrix modal.
+ *
+ * The chips exist to be scanned past. Everything below is sized so the loud
+ * variant catches the eye in a list of twenty rows and the quiet one reads as
+ * metadata -- which is why only --foreign and --external get the accent, and
+ * --local stays in the same grey as the pills beside it.
+ */
+
+/* ── Chips ─────────────────────────────────────────────────────────────────── */
+
+.src-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-dim);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  line-height: 1.5;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+
+.src-chip svg {
+  width: 9px;
+  height: 9px;
+  flex: 0 0 auto;
+}
+
+.src-chip:hover,
+.src-chip:focus-visible {
+  color: var(--text);
+  border-color: rgba(var(--accent-rgb), 0.5);
+  outline: none;
+}
+
+/* The two loud variants: a build sourced outside its comp's folder, and a build
+ * pulled into a comp that lives somewhere else. Same signal, both directions. */
+.src-chip--foreign,
+.src-chip--external {
+  background: rgba(var(--accent-rgb), 0.14);
+  border-color: rgba(var(--accent-rgb), 0.38);
+  color: var(--accent);
+}
+
+.src-chip--foreign:hover,
+.src-chip--external:hover,
+.src-chip--foreign:focus-visible,
+.src-chip--external:focus-visible {
+  background: rgba(var(--accent-rgb), 0.22);
+  border-color: rgba(var(--accent-rgb), 0.6);
+  color: var(--accent);
+}
+
+/* Compact chips are icon + number, so they need a tighter gap than the worded
+ * variant and a slightly larger glyph -- at 9px the 2x2 comp grid turns into a
+ * smudge, which was the whole problem with the bare digit it replaced. */
+.src-chip--compact {
+  gap: 3px;
+  padding: 2px 6px;
+  font-size: 10px;
+}
+
+.src-chip--compact svg:first-child {
+  width: 10px;
+  height: 10px;
+  opacity: 0.9;
+}
+
+/* Grid and icon cards float the chip in the card corner, where the pin star is
+ * on the other side. */
+.lib-grid-card__header .src-chip,
+.lib-icon-item__label .src-chip {
+  margin-left: auto;
+}
+
+.lib-icon-item__label .src-chip {
+  margin-left: 4px;
+}
+
+/* The comp row's build count, when the comp reaches outside its folder. */
+.lib-list-row__badge--sources {
+  cursor: pointer;
+}
+
+.src-external-count {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* A comp slot is a 42px icon box with no room for a chip, so the fact becomes a
+ * corner dot. Small, but the only marker that fits at that size. .comp-slot has
+ * no position of its own, so the marker needs one to anchor to. */
+.comp-slot--foreign {
+  position: relative;
+}
+
+.comp-slot--foreign::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 1.5px var(--panel);
+  pointer-events: none;
+}
+
+/* The way into the matrix, in the build pool header beside "+ Add". */
+.comp-pool-sources {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(var(--accent-rgb), 0.35);
+  background: rgba(var(--accent-rgb), 0.1);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.comp-pool-sources:hover {
+  background: rgba(var(--accent-rgb), 0.18);
+  border-color: rgba(var(--accent-rgb), 0.55);
+}
+
+.comp-pool-sources__count {
+  padding: 0 5px;
+  border-radius: 999px;
+  background: rgba(var(--accent-rgb), 0.25);
+  font-size: 10px;
+}
+
+/* ── Sources modal ─────────────────────────────────────────────────────────── */
+
+.bsm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal-confirm);
+  background: var(--overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.2s ease-out, visibility 0.2s;
+}
+
+.bsm-overlay--hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.bsm-panel {
+  width: min(780px, 92vw);
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+
+.bsm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel-2);
+}
+
+.bsm-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.bsm-subtitle {
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.bsm-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bsm-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 9px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text-light);
+  font-size: 11px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.bsm-toggle input {
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.bsm-close {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: var(--radius-xs);
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.bsm-close:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+}
+
+.bsm-body {
+  overflow-y: auto;
+}
+
+.bsm-empty,
+.bsm-none {
+  color: var(--text-dim);
+  font-size: 12px;
+}
+
+.bsm-empty {
+  margin: 0;
+  padding: 26px 16px;
+  text-align: center;
+}
+
+.bsm-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.bsm-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 9px 16px;
+  text-align: left;
+  background: var(--panel-2);
+  border-bottom: 1px solid var(--line);
+  color: var(--text-dim);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.bsm-table td {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--line-soft);
+  font-size: 12px;
+  color: var(--text);
+  vertical-align: middle;
+}
+
+.bsm-row {
+  cursor: pointer;
+}
+
+.bsm-row:hover td {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+/* The one visual job of the matrix: make the outside-sourced rows findable
+ * without reading a single cell. */
+.bsm-row--external td:first-child {
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.bsm-build {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.bsm-icon {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  border-radius: var(--radius-sm);
+  background: var(--bg-2);
+}
+
+.bsm-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.bsm-path {
+  font-size: 11.5px;
+  color: var(--accent);
+}
+
+.bsm-path--home {
+  color: var(--text-dim);
+}
+
+.bsm-other {
+  font-size: 11.5px;
+  color: var(--text-light);
+}
+
+/* ── Expanded row detail ───────────────────────────────────────────────────── */
+
+.bsm-detail-row td {
+  padding: 0 16px 14px;
+  background: var(--bg-2);
+}
+
+.bsm-detail-row .bsm-detail {
+  margin-left: 9px;
+  padding: 10px 0 2px 14px;
+  border-left: 2px solid rgba(var(--accent-rgb), 0.35);
+}
+
+.bsm-detail {
+  padding: 14px 16px;
+}
+
+.bsm-detail-label {
+  margin-bottom: 6px;
+  color: var(--text-dim);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.bsm-detail-label + .bsm-detail-label,
+.bsm-detail-home + .bsm-detail-label {
+  margin-top: 12px;
+}
+
+.bsm-detail-home {
+  font-size: 12px;
+  color: var(--accent);
+}
+
+.bsm-detail-comp {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 5px 0;
+  border-top: 1px solid var(--line-soft);
+  font-size: 11.5px;
+}
+
+.bsm-detail-comp__name {
+  color: var(--text);
+}
+
+.bsm-detail-comp__folder {
+  color: var(--text-dim);
+  text-align: right;
+}
+
+.bsm-detail-comp--self .bsm-detail-comp__name,
+.bsm-detail-comp--self .bsm-detail-comp__folder {
+  color: var(--accent);
+}
