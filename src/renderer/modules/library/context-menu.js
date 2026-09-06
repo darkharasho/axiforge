@@ -7,7 +7,7 @@ import { shareDisabledTooltip } from "../share-gate.js";
 import { state } from "../state.js";
 import { showConfirmModal } from "../confirm-modal.js";
 import { isSelected, getSelection, isCompSelected, getCompSelection } from "./selection.js";
-import { stopSharingFolder, pullTeamFor } from "./folder-store.js";
+import { stopSharingFolder, pullTeamFor, libraryFolders } from "./folder-store.js";
 import { isTeamOwner, teamRootFor } from "../teams.js";
 import { writeDeniedReason, currentFolderId } from "./access.js";
 import { openShareModal } from "./share-modal.js";
@@ -493,38 +493,72 @@ function _multiSelectUnlinkOrDeleteItems(ids, writeTip = null) {
 
 // ─── Move to Folder submenu items ──────────────────────────────────────────────
 
-function _buildMoveToFolderItems(buildIdOrIds) {
-  const ids = Array.isArray(buildIdOrIds) ? buildIdOrIds : [buildIdOrIds];
+/**
+ * Every folder in the library as one flat, indented, depth-first list --
+ * parents immediately above their children.
+ *
+ * "Move to Folder" used to offer top-level folders only, so anything nested was
+ * simply not a destination you could pick; you had to drag it. The alternative
+ * fix, a submenu per level, would need the submenu machinery to keep a stack
+ * (it tracks exactly one open submenu) and would bury grandchildren behind two
+ * hover targets. Folders nest three deep at most, so the whole tree fits in a
+ * list you can read at a glance.
+ *
+ * @param {(folderId: string) => void} onPick
+ */
+function _folderTreeItems(onPick) {
+  const byParent = new Map();
+  for (const f of libraryFolders()) {
+    const key = f.parentId ?? null;
+    if (!byParent.has(key)) byParent.set(key, []);
+    byParent.get(key).push(f);
+  }
+  for (const siblings of byParent.values()) {
+    siblings.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+  }
 
-  const topLevelFolders = state.folders
-    .filter((f) => f.parentId === null)
-    .sort((a, b) => a.sortOrder - b.sortOrder);
-
-  const items = [
-    _item(folderPlusIcon, "New Folder...", null, () => _callbacks.onNewFolderAndMove?.(ids)),
-    _sep(),
-    _item(homeIcon, "Root (no folder)", null, () => _callbacks.onMoveTo?.(ids, null)),
-    ...topLevelFolders.map((f) =>
-      _item(folderIcon, escapeHtml(f.name), null, () => _callbacks.onMoveTo?.(ids, f.id))
-    ),
-  ];
-
+  const items = [];
+  const walk = (parentId, depth) => {
+    for (const f of byParent.get(parentId) || []) {
+      items.push(_folderItem(f, depth, () => onPick(f.id)));
+      walk(f.id, depth + 1);
+    }
+  };
+  walk(null, 0);
   return items;
 }
 
-function _buildMoveToFolderItemsForComps(compIds) {
-  const topLevelFolders = state.folders
-    .filter((f) => f.parentId === null)
-    .sort((a, b) => a.sortOrder - b.sortOrder);
+/**
+ * One row of the folder tree, indented to show where it sits. A folder the user
+ * cannot write to is shown greyed with the reason rather than hidden -- the
+ * main process would reject the move anyway, and a silently missing destination
+ * reads as a bug.
+ */
+function _folderItem(folder, depth, onClick) {
+  const el = _item(folderIcon, escapeHtml(folder.name), null, onClick, false, writeDeniedReason(folder.id));
+  if (depth > 0) {
+    const icon = el.querySelector(".lib-ctx-item__icon");
+    if (icon) icon.style.marginLeft = `${depth * 14}px`;
+  }
+  return el;
+}
 
-  const items = [
-    _item(homeIcon, "Root (no folder)", null, () => _callbacks.onMoveComps?.(compIds, null)),
-    ...topLevelFolders.map((f) =>
-      _item(folderIcon, escapeHtml(f.name), null, () => _callbacks.onMoveComps?.(compIds, f.id))
-    ),
+function _buildMoveToFolderItems(buildIdOrIds) {
+  const ids = Array.isArray(buildIdOrIds) ? buildIdOrIds : [buildIdOrIds];
+
+  return [
+    _item(folderPlusIcon, "New Folder...", null, () => _callbacks.onNewFolderAndMove?.(ids)),
+    _sep(),
+    _item(homeIcon, "Root (no folder)", null, () => _callbacks.onMoveTo?.(ids, null)),
+    ..._folderTreeItems((folderId) => _callbacks.onMoveTo?.(ids, folderId)),
   ];
+}
 
-  return items;
+function _buildMoveToFolderItemsForComps(compIds) {
+  return [
+    _item(homeIcon, "Root (no folder)", null, () => _callbacks.onMoveComps?.(compIds, null)),
+    ..._folderTreeItems((folderId) => _callbacks.onMoveComps?.(compIds, folderId)),
+  ];
 }
 
 // ─── Menu rendering ────────────────────────────────────────────────────────────

@@ -25,6 +25,7 @@ jest.mock("../../../src/renderer/modules/library/folder-store.js", () => ({
   shareFolderToTeam: jest.fn(async () => ({ uploaded: 3, failed: [] })),
   stopSharingFolder: jest.fn(async () => {}),
   pullTeamFor: jest.fn(async () => {}),
+  libraryFolders: jest.fn(() => require("../../../src/renderer/modules/state.js").state.folders),
 }));
 jest.mock("../../../src/renderer/modules/confirm-modal.js", () => ({
   showConfirmModal: jest.fn(async () => true),
