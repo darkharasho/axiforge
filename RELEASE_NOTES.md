@@ -1,3 +1,11 @@
+## Version v0.18.1 — September 6, 2026
+
+### Bug Fixes
+
+- **Right-click → Rename on a shared folder did nothing at all.** Renaming a team's root folder is refused outright — a local rename of one gets reverted the next time the folder is checked against the team record — but the refusal never made it to the screen, and the inline text box had already closed by then. The result was a menu item that looked broken. It says why now. That silent path was never specific to teams: a rename refused because you only have read access in that folder was just as invisible, and it reports itself too.
+- **There is now a *Rename Team…* on a shared folder's right-click menu.** Renaming a team's root folder *is* renaming the team, so the gesture people reach for first goes where it always should have — to the same rename the *Manage team* dialog offers. If you're not the team owner it's greyed out with the reason, rather than failing after you've typed a new name.
+- **A release announcement no longer gets cut off before the bug fixes.** The Discord post was capped at a fixed length, so v0.18.0's notes stopped mid-sentence and announced none of the fixes — always the last section, so always the part that went missing. Long notes are split across as many posts as they need, on section boundaries.
+
 ## Version v0.18.0 — September 6, 2026
 
 ### One place to manage a team
