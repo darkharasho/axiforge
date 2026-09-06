@@ -561,8 +561,15 @@ class TeamSync {
     if (type === "build") {
       // Record WHO removed it before it leaves the library views, so the folder
       // history panel can show the deletion and offer it back.
+      //
+      // The trashed list is searched too, and that is not belt-and-braces: the
+      // server cascades a folder delete into a tombstone per item and emits the
+      // FOLDER first, so by the time a build's own tombstone lands the folder
+      // cascade has already staged it. Reading only listBuilds() meant the one
+      // delete most worth recording — a whole shared folder — recorded nothing.
       if (this.historyStore) {
-        const existing = (await this.buildStore.listBuilds()).find((b) => b.id === id);
+        const existing = (await this.buildStore.listBuilds()).find((b) => b.id === id)
+          || (await this.buildStore.listTrashedBuilds()).find((b) => b.id === id);
         if (existing) {
           await this.historyStore.addEntry({
             buildId: id, authorLogin: author, source: "team-sync",
@@ -573,7 +580,8 @@ class TeamSync {
       await this.trash.trashBuilds([id]);
     } else if (type === "comp") {
       if (this.compHistoryStore) {
-        const existing = (await this.compStore.listComps()).find((c) => c.id === id);
+        const existing = (await this.compStore.listComps()).find((c) => c.id === id)
+          || (await this.compStore.listTrashedComps()).find((c) => c.id === id);
         if (existing) {
           await this.compHistoryStore.addEntry({
             compId: id, authorLogin: author, source: "team-sync",

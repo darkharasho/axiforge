@@ -35,18 +35,44 @@ export function trashItemLabel(item) {
 
 const ICONS = { folder: folderIcon, comp: compIcon, build: documentDuplicateIcon };
 
-function rowHtml(item, now) {
+// Why a button that cannot work is better shown disabled than hidden: the item
+// IS in your trash, so an absent Put Back reads as a bug rather than a rule.
+const NO_RESTORE_TITLE =
+  "Only the team owner, the item's creator, or whoever deleted it can restore it";
+
+/** "deleted by mate", "4 items went with it" — what only the server knows. */
+function attributionBits(team) {
+  const bits = [];
+  if (!team) return bits;
+  const who = team.deletedBy?.login;
+  if (who) bits.push(`deleted by ${who}`);
+  if (team.carried > 0) bits.push(`${team.carried} item${team.carried === 1 ? "" : "s"} went with it`);
+  return bits;
+}
+
+/**
+ * @param {object} item - the local trash row
+ * @param {Date|string} now
+ * @param {object|null} team - the server's row for the same item, when this
+ *   delete also happened in a shared folder. Folded in rather than listed
+ *   separately: one deleted thing is one row, whichever side you look from.
+ */
+function rowHtml(item, now, team) {
   const left = daysLeft(item.deletedAt, now);
   const expiring = left <= EXPIRING_DAYS ? " lib-trash__row--expiring" : "";
+  const meta = [trashItemLabel(item), ...attributionBits(team), left === 1 ? "1 day left" : `${left} days left`];
+  // The server decides who may restore what, and it already told us — see
+  // teamSectionHtml. Same rule whichever list the row came from.
+  const blocked = team && team.canRestore === false ? ` disabled title="${NO_RESTORE_TITLE}"` : "";
   return `
     <div class="lib-trash__row${expiring}" data-trash-row="1" data-trash-type="${escapeHtml(item.type)}" data-trash-id="${escapeHtml(item.id)}">
       <span class="lib-trash__icon">${ICONS[item.type] || ICONS.build}</span>
       <div class="lib-trash__text">
         <div class="lib-trash__name"></div>
-        <div class="lib-trash__meta">${escapeHtml(trashItemLabel(item))} · ${left === 1 ? "1 day left" : `${left} days left`}</div>
+        <div class="lib-trash__meta">${escapeHtml(meta.join(" · "))}</div>
       </div>
       <div class="lib-trash__actions">
-        <button type="button" class="lib-trash__btn" data-trash-restore="1">Put Back</button>
+        <button type="button" class="lib-trash__btn" data-trash-restore="1"${blocked}>Put Back</button>
         <button type="button" class="lib-trash__btn lib-trash__btn--danger" data-trash-purge="1">Delete Permanently</button>
       </div>
     </div>
@@ -70,9 +96,7 @@ function teamSectionHtml(rows) {
       // The server decides who may restore what — the client cannot, because it
       // does not know who created each descendant of a folder delete. A button
       // that answers 403 is worse than one that says why up front.
-      const blocked = item.canRestore === false
-        ? ` disabled title="Only the team owner, the item's creator, or whoever deleted it can restore it"`
-        : "";
+      const blocked = item.canRestore === false ? ` disabled title="${NO_RESTORE_TITLE}"` : "";
       return `
     <div class="lib-trash__row" data-team-trash-row="1" data-team-id="${escapeHtml(item.teamId)}" data-trash-id="${escapeHtml(item.id)}">
       <span class="lib-trash__icon">${ICONS[item.type] || ICONS.build}</span>
@@ -98,11 +122,7 @@ function teamSectionHtml(rows) {
 
 /** "Comp · deleted by iruixos · 2 items went with it" */
 function teamMetaText(item) {
-  const bits = [trashItemLabel(item)];
-  const who = item.deletedBy?.login;
-  if (who) bits.push(`deleted by ${who}`);
-  if (item.carried > 0) bits.push(`${item.carried} item${item.carried === 1 ? "" : "s"} went with it`);
-  return bits.join(" · ");
+  return [trashItemLabel(item), ...attributionBits(item)].join(" · ");
 }
 
 /**
@@ -114,7 +134,19 @@ function teamMetaText(item) {
 export function renderTrashView(container, items, handlers = {}) {
   const { now = new Date(), onRestore, onPurge, onEmpty, teamItems = [], onTeamRestore } = handlers;
   const list = Array.isArray(items) ? items : [];
-  const teamList = Array.isArray(teamItems) ? teamItems : [];
+  const allTeam = Array.isArray(teamItems) ? teamItems : [];
+
+  // Deleting from a shared folder puts the item in BOTH lists — your local copy
+  // is staged AND the server tombstones it for the whole team — so it used to
+  // draw twice, with two Put Back buttons that did the same thing. Match them up
+  // by id and keep the local row: it is the richer one (a countdown, and the
+  // permanent delete of your own copy), and it takes the server's attribution
+  // and restore permission with it. Purge that local copy and the team row
+  // comes back on the next render, which is exactly right — the team's 30 days
+  // are still running and it is again the only way back.
+  const teamById = new Map(allTeam.map((row) => [row.id, row]));
+  const localIds = new Set(list.map((row) => row.id));
+  const teamList = allTeam.filter((row) => !localIds.has(row.id));
 
   function bindTeamRows() {
     container.querySelectorAll("[data-team-trash-row]").forEach((row, i) => {
@@ -158,7 +190,7 @@ export function renderTrashView(container, items, handlers = {}) {
         <p class="lib-trash__hint">Items are removed for good ${RETENTION_DAYS} days after you delete them.</p>
         <button type="button" class="lib-trash__btn lib-trash__btn--danger" data-trash-empty="1">Empty Trash</button>
       </div>
-      <div class="lib-trash__list">${list.map((item) => rowHtml(item, now)).join("")}</div>
+      <div class="lib-trash__list">${list.map((item) => rowHtml(item, now, teamById.get(item.id))).join("")}</div>
       ${teamSectionHtml(teamList)}
     </div>
   `;

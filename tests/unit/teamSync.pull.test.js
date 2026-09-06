@@ -78,9 +78,12 @@ describe("TeamSync — pull", () => {
     await h.buildStore.upsertBuild({ id: "b1", title: "B", folderId: "f1" });
     await h.compStore.upsertComp({ id: "c1", name: "C", folderId: "t", buildIds: ["b1"], partyLines: [{ id: "l", capacity: 5, slots: ["b1"] }] });
     for (const id of ["f1", "b1", "c1"]) await h.syncStore.setVersion("t", id, { version: 1, createdBy: "x" });
+    // The server cascades a folder delete into a tombstone per item, root FIRST
+    // (deleteItem bumps the folder's seq before any descendant's), which is what
+    // lets the local cascade below claim them all under one batch.
     h.api.changes.mockResolvedValueOnce({ items: [
-      item({ id: "b1", deleted: true, body: null, version: 2, seq: 7 }),
-      item({ id: "f1", type: "folder", deleted: true, body: null, version: 2, seq: 8 }),
+      item({ id: "f1", type: "folder", deleted: true, body: null, version: 2, seq: 7 }),
+      item({ id: "b1", deleted: true, body: null, version: 2, seq: 8 }),
     ], nextSeq: 8, hasMore: false });
     await h.sync.pullTeam("t");
 
@@ -90,12 +93,15 @@ describe("TeamSync — pull", () => {
     expect(await h.syncStore.getVersion("t", "b1")).toBeNull();
     expect(await h.syncStore.getVersion("t", "f1")).toBeNull();
 
-    // ...but staged, not destroyed. The server cascades a folder delete into a
-    // tombstone per item, so each arrives as its own act and gets its own trash
-    // row — every one of them independently restorable.
+    // ...but staged, not destroyed. The folder tombstone trashes its whole
+    // subtree under one batch, so the build's own tombstone arrives to find it
+    // already staged and the trash shows the one folder that was deleted —
+    // which is also what restores the build, since it goes back with the batch.
     const rows = await h.trash.listTrash();
-    expect(rows.map((r) => `${r.type}:${r.id}`).sort()).toEqual(["build:b1", "folder:f1"]);
-    expect((await h.buildStore.listTrashedBuilds()).map((b) => b.id)).toEqual(["b1"]);
+    expect(rows.map((r) => `${r.type}:${r.id}`)).toEqual(["folder:f1"]);
+    const trashedBuilds = await h.buildStore.listTrashedBuilds();
+    expect(trashedBuilds.map((b) => b.id)).toEqual(["b1"]);
+    expect(trashedBuilds[0].trashRoot).toBe(false);
 
     // The comp still names it: the unlink waits for the purge so a restore
     // brings the build back INTO its comp rather than beside it.
@@ -104,6 +110,31 @@ describe("TeamSync — pull", () => {
     // And its history survives, carrying the deletion itself.
     const history = await h.historyStore.getHistory("b1");
     expect(history.some((e) => e.summary === "Deleted")).toBe(true);
+  });
+
+  // The folder cascade stages the contents before their own tombstones arrive,
+  // which used to leave the deletion unrecorded for exactly the delete that
+  // most needs a name against it.
+  test("a teammate's folder delete still records who deleted the contents", async () => {
+    h = await makeHarness();
+    await seedTeam(h);
+    await h.folderStore.upsertFolder({ id: "f1", name: "Raids", parentId: "t" });
+    await h.buildStore.upsertBuild({ id: "b1", title: "B", folderId: "f1" });
+    await h.compStore.upsertComp({ id: "c1", name: "C", folderId: "f1", buildIds: [], partyLines: [] });
+    for (const id of ["f1", "b1", "c1"]) await h.syncStore.setVersion("t", id, { version: 1, createdBy: "x" });
+    h.api.changes.mockResolvedValueOnce({ items: [
+      item({ id: "f1", type: "folder", deleted: true, body: null, version: 2, seq: 7, updatedBy: who("iruixos") }),
+      item({ id: "b1", deleted: true, body: null, version: 2, seq: 8, updatedBy: who("iruixos") }),
+      item({ id: "c1", type: "comp", deleted: true, body: null, version: 2, seq: 9, updatedBy: who("iruixos") }),
+    ], nextSeq: 9, hasMore: false });
+    await h.sync.pullTeam("t");
+
+    expect((await h.trash.listTrash()).map((r) => `${r.type}:${r.id}`)).toEqual(["folder:f1"]);
+    const buildEntry = (await h.historyStore.getHistory("b1")).find((e) => e.summary === "Deleted");
+    expect(buildEntry).toMatchObject({ authorLogin: "iruixos", source: "team-sync" });
+    expect(buildEntry.snapshot).toMatchObject({ id: "b1", title: "B" });
+    const compEntry = (await h.compHistoryStore.getHistory("c1")).find((e) => e.summary === "Deleted");
+    expect(compEntry).toMatchObject({ authorLogin: "iruixos", source: "team-sync" });
   });
 
   test("a teammate's delete is undoable — putting it back restores the build and its comp slot", async () => {

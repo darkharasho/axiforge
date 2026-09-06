@@ -192,13 +192,30 @@ Status key: `[ ]` open · `[x]` done · `[~]` in progress · `[?]` needs repro s
   Covered by `tests/e2e/specs/team-delete-undo.spec.js` and
   `tests/unit/teamSync.pull.test.js`.
 
-- [ ] **Cosmetic follow-up to the above:** the server cascades a folder delete
-  into one tombstone per item, so a teammate deleting a folder produces a trash
-  row per item rather than the single folder row you would get deleting it
-  yourself. Every row is independently restorable, so nothing is lost — but
-  restoring the folder alone does not bring its builds with it. Fixing it means
-  either partitioning a changes batch (folders first) or letting `trashFolder`
-  adopt already-trashed descendants; both have sharp edges, hence deferred.
+- [x] **Follow-up to the above: one deleted thing, one row.** Done 2026-09-05.
+  Two separate problems hid behind "the trash shows it twice":
+  - **The duplicate row was the renderer's.** Deleting from a shared folder puts
+    the item in both lists at once — staged locally *and* tombstoned on the
+    server — and `renderTrashView` drew the local list and the team list one
+    after the other, so it appeared twice with two Put Back buttons doing the
+    same thing. They are now matched by id and the local row wins: it is the
+    richer one (a countdown, and the permanent delete of your own copy) and it
+    now carries the server's attribution and restore permission, so it still
+    says who removed it and still greys out Put Back when the team will not let
+    you. Purge your local copy and the team row comes back on the next render,
+    which is right — the team's 30 days are still running and it is again the
+    only way back.
+  - **The "row per item" claim was never true**, and the unit test that seemed to
+    prove it fed the tombstones in an order the server does not produce.
+    `deleteItem` bumps the folder's seq *before* any descendant's, so the folder
+    tombstone always arrives first and `trashFolder` claims the whole subtree
+    under one batch; each descendant's own tombstone then finds it already
+    staged and no-ops. The test now uses the real order.
+  - **What that ordering did break:** `_applyTombstone` looked the build up in
+    `listBuilds()` only, so once the folder cascade had staged it there was
+    nothing to snapshot and no **"Deleted"** history entry was written — the one
+    delete most worth a name against it, a whole shared folder, recorded
+    nothing. It falls back to the trashed list now. Same for comps.
 
 ## Housekeeping
 

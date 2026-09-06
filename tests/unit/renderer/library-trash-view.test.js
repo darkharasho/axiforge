@@ -207,6 +207,73 @@ describe("team trash section", () => {
     expect(el.querySelector(".lib-trash--empty")).not.toBeNull();
   });
 
+  // Deleting from a shared folder lands in both lists at once: staged locally
+  // AND tombstoned on the server. Two rows for one deleted thing, each with its
+  // own Put Back, is the bug this collapses.
+  describe("an item in both lists", () => {
+    const both = () => render([item({ id: "shared" })], {
+      teamItems: [teamItem({ id: "shared", name: "Power Berserker" })],
+    });
+
+    test("draws once, as your own row", () => {
+      const el = both();
+      expect(el.querySelectorAll("[data-trash-row]")).toHaveLength(1);
+      expect(el.querySelectorAll("[data-team-trash-row]")).toHaveLength(0);
+    });
+
+    test("keeps the countdown and the permanent delete the local row has", () => {
+      const el = both();
+      const row = el.querySelector("[data-trash-row]");
+      expect(row.querySelector(".lib-trash__meta").textContent).toContain("29 days left");
+      expect(row.querySelector("[data-trash-purge]")).not.toBeNull();
+    });
+
+    test("takes the server's attribution with it, so it still says who removed it", () => {
+      const el = render([item({ id: "shared", type: "folder" })], {
+        teamItems: [teamItem({ id: "shared", type: "folder", carried: 4 })],
+      });
+      const meta = el.querySelector("[data-trash-row] .lib-trash__meta").textContent;
+      expect(meta).toContain("deleted by mate");
+      expect(meta).toContain("4 items went with it");
+    });
+
+    test("Put Back still restores locally — one button, and it is the one that works", () => {
+      const calls = [];
+      const el = render([item({ id: "shared" })], {
+        teamItems: [teamItem({ id: "shared" })],
+        onRestore: (ref) => calls.push(ref),
+      });
+      el.querySelector("[data-trash-restore]").click();
+      expect(calls).toEqual([{ type: "build", id: "shared" }]);
+    });
+
+    test("says up front when the team will not let you restore it, rather than 403ing on click", () => {
+      const el = render([item({ id: "shared" })], {
+        teamItems: [teamItem({ id: "shared", canRestore: false })],
+      });
+      const btn = el.querySelector("[data-trash-restore]");
+      expect(btn.disabled).toBe(true);
+      expect(btn.title).toContain("Only the team owner");
+    });
+
+    test("purging your copy hands the item back to the team list", () => {
+      // Your local row is gone but the team's 30 days are still running, so the
+      // server row is once again the only way back.
+      const el = render([], { teamItems: [teamItem({ id: "shared" })] });
+      expect(el.querySelectorAll("[data-team-trash-row]")).toHaveLength(1);
+    });
+
+    test("an unrelated team deletion is still listed on its own", () => {
+      const el = render([item({ id: "shared" })], {
+        teamItems: [teamItem({ id: "shared" }), teamItem({ id: "other", name: "Mate's Scourge" })],
+      });
+      expect(el.querySelectorAll("[data-trash-row]")).toHaveLength(1);
+      const teamRows = el.querySelectorAll("[data-team-trash-row]");
+      expect(teamRows).toHaveLength(1);
+      expect(teamRows[0].querySelector(".lib-trash__name").textContent).toBe("Mate's Scourge");
+    });
+  });
+
   test("names arrive as text, never as markup", () => {
     const el = render([], { teamItems: [teamItem({ name: '<img src=x onerror="boom()">' })] });
     expect(el.querySelector("[data-team-trash-row] img")).toBeNull();
