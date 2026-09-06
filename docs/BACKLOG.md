@@ -152,9 +152,13 @@ Status key: `[ ]` open · `[x]` done · `[~]` in progress · `[?]` needs repro s
   `tests/unit/renderer/library-trash-view.test.js` and
   `tests/e2e/specs/team-delete-undo.spec.js`.
 
-- [ ] **Deploy the shared team trash.** `npx wrangler d1 migrations apply
-  axiforge-sync --remote` then `wrangler deploy`. Note the wrangler token lacks
-  D1 permissions, so the migration goes through the Cloudflare MCP.
+- [x] **Deploy the shared team trash.** Done 2026-09-05: migration
+  `0002_team_trash.sql` applied to remote D1 through the Cloudflare MCP (the
+  wrangler token lacks D1 permissions), with its `d1_migrations` ledger row
+  inserted by hand so a later `wrangler d1 migrations apply` doesn't re-run it.
+  Worker `axiforge-playground` deployed at version `22e80437`. Note this Worker
+  is shared with the Playground SPA, so `wrangler deploy` also republishes
+  `dist/web` — run `npm run build:web` first or you roll build.axi.link back.
 
 - [ ] **A back button when viewing a build.**
 
