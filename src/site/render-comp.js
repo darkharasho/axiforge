@@ -5,6 +5,7 @@ import { renderMiniBuildCard } from "../renderer/modules/mini-build-card.js";
 import { formatFactHtml } from "../renderer/modules/detail-panel.js";
 import { initMobileDetection } from "./mobile.js";
 import { partyNumberIcon } from "../renderer/modules/library/heroicons.js";
+import { renderNotes } from "./render-notes.js";
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -185,14 +186,6 @@ function renderTagsRow(comp) {
   if (!tags.length) return "";
   const pills = tags.map((t) => `<span class="comp-detail__tag">${escapeHtml(t)}</span>`).join("");
   return `<div class="comp-detail__tags-row">${pills}</div>`;
-}
-
-function renderNotes(comp) {
-  if (!comp.notes?.trim()) return "";
-  return `
-    <div class="comp-detail__notes-panel">
-      <pre class="comp-detail__notes-textarea" style="white-space:pre-wrap;resize:none;cursor:default;">${escapeHtml(comp.notes)}</pre>
-    </div>`;
 }
 
 // ── Party Coverage ───────────────────────────────────────────────────────
@@ -535,9 +528,23 @@ function bindPartyCoverageEvents(container, builds) {
 
 // ── Main Entry ───────────────────────────────────────────────────────────
 
+function bindCompTabs(app) {
+  const tabs = [...app.querySelectorAll("[data-comp-tab]")];
+  const panels = [...app.querySelectorAll("[data-comp-panel]")];
+  tabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      tabs.forEach((t) => t.classList.toggle("site-tab--active", t === tab));
+      panels.forEach((p) => {
+        p.classList.toggle("site-tab-content--active", p.dataset.compPanel === tab.dataset.compTab);
+      });
+    });
+  });
+}
+
 export function renderCompPage(app, comp) {
   const name = escapeHtml(comp.name || "Untitled Comp");
   const gameMode = comp.gameMode || "";
+  const hasNotes = Boolean(comp.notes?.trim());
 
   app.innerHTML = `
     <div class="comp-detail">
@@ -547,17 +554,29 @@ export function renderCompPage(app, comp) {
         ${gameMode ? `<span class="comp-detail__slot-counter">${escapeHtml(gameMode.toUpperCase())}</span>` : ""}
       </div>
       ${renderTagsRow(comp)}
-      ${renderNotes(comp)}
-      <div class="comp-detail__body">
-        <div class="comp-detail__party-panel">
-          ${renderPartyLines(comp)}
-          ${renderPartyCoverage(comp)}
-        </div>
-        <div class="comp-detail__pool-panel">
-          ${renderBuildPool(comp)}
+      ${hasNotes ? `
+      <div class="site-tabs">
+        <button type="button" class="site-tab site-tab--active" data-comp-tab="comp">COMP</button>
+        <button type="button" class="site-tab" data-comp-tab="notes">NOTES</button>
+      </div>` : ""}
+      <div class="site-tab-content site-tab-content--active" data-comp-panel="comp">
+        <div class="comp-detail__body">
+          <div class="comp-detail__party-panel">
+            ${renderPartyLines(comp)}
+            ${renderPartyCoverage(comp)}
+          </div>
+          <div class="comp-detail__pool-panel">
+            ${renderBuildPool(comp)}
+          </div>
         </div>
       </div>
+      ${hasNotes ? '<div class="site-tab-content comp-detail__notes-tab" data-comp-panel="notes"></div>' : ""}
     </div>`;
+
+  if (hasNotes) {
+    app.querySelector('[data-comp-panel="notes"]').append(renderNotes(comp));
+    bindCompTabs(app);
+  }
 
   // Bind tag-slot hover popovers (lists the builds the tag stands for)
   buildTagHoverData(comp);

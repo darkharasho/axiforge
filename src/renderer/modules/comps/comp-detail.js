@@ -22,6 +22,7 @@ import { pickWebhooks } from "../webhook-picker.js";
 import { compShareDisabledTooltip } from "../share-gate.js";
 import { computeCompPartyCoverage, buildPartyCoverageHTML, bindPartyCoverageEvents, closePartyCoverageExpand } from "./comp-boon-coverage.js";
 import { openCompTagPopover, closeCompTagPopover, renderCompTagsRow } from "./comp-tags.js";
+import { renderCompTabs, mountCompNotes } from "./comp-notes.js";
 import { publishWithOwnerCheck, publishedByOtherBody } from "../publish-guard.js";
 import {
   getEliteSpecName,
@@ -443,8 +444,7 @@ export function renderCompDetail() {
   if (!comp) return;
 
   const totalCap = getTotalFilledSlots(comp);
-  const notesOpen = state.compNotesOpen || false;
-  const notesBtnClass = notesOpen ? "comp-detail__notes-btn comp-detail__notes-btn--active" : "comp-detail__notes-btn";
+  const activeTab = state.compPrefs.detailTab === "notes" ? "notes" : "comp";
   const compShareTip = compShareDisabledTooltip(comp);
 
   container.innerHTML = `
@@ -478,11 +478,13 @@ export function renderCompDetail() {
         <button type="button" class="btn btn-primary" data-action="publish">Publish</button>
         <div class="publish-status" id="compPublishStatus"></div>
         <span class="comp-detail__discord-status" id="compDiscordStatus"></span>
-        <button type="button" class="${notesBtnClass}" data-action="toggle-notes">Notes</button>
         <span class="comp-detail__slot-counter">${totalCap} / 50 slots</span>
       </div>
       ${renderCompTagsRow(comp)}
-      ${notesOpen ? renderNotesPanel(comp) : ""}
+      ${renderCompTabs(activeTab, { hasNotes: Boolean(comp.notes?.trim()) })}
+      ${activeTab === "notes" ? `
+      <div class="comp-detail__notes-tab" id="compNotesMount"></div>
+      ` : `
       <div class="comp-detail__body">
         <div class="comp-detail__party-panel">
           ${renderPartyLines(comp, totalCap)}
@@ -492,11 +494,11 @@ export function renderCompDetail() {
           ${renderBuildPool(comp)}
         </div>
       </div>
+      `}
     </div>
   `;
 
   bindDetailEvents(container, comp);
-  wireResizeHandle(container);
 
   // Initialize save status badge from comp's updatedAt
   if (!_lastSavedAt && comp.updatedAt) {
@@ -504,6 +506,17 @@ export function renderCompDetail() {
   }
   updateSaveStatusText();
   startSaveStatusTicker();
+
+  // The Notes tab replaces the board, so none of the board wiring below applies.
+  if (activeTab === "notes") {
+    mountCompNotes(container.querySelector("#compNotesMount"), comp, (c) => {
+      if (_notesDebounceTimer) clearTimeout(_notesDebounceTimer);
+      _notesDebounceTimer = setTimeout(() => { saveAndSync(c); }, 300);
+    });
+    return;
+  }
+
+  wireResizeHandle(container);
 
   wireCompDragDrop({
     async onDropBuildToLine(buildId, lineId) {
@@ -589,15 +602,6 @@ export function renderCompDetail() {
       bindPartyCoverageEvents(bodyEl);
     })();
   }
-}
-
-function renderNotesPanel(comp) {
-  return `
-    <div class="comp-detail__notes-panel">
-      <textarea class="comp-detail__notes-textarea" data-action="notes-input"
-                placeholder="Add notes about this comp...">${escapeHtml(comp.notes || "")}</textarea>
-    </div>
-  `;
 }
 
 function renderPartyLines(comp, totalCap) {
@@ -1170,7 +1174,7 @@ function bindDetailEvents(container, comp) {
   container.querySelector("[data-action='back']")?.addEventListener("click", () => {
     state.compPage = "list";
     state.activeComp = null;
-    state.compNotesOpen = false;
+    state.compPrefs.detailTab = "comp";
     _callbacks.onRerender?.();
   });
 
@@ -1418,23 +1422,15 @@ function bindDetailEvents(container, comp) {
     });
   }
 
-  // ── Notes toggle ───────────────────────────────────────────────────────────
-  container.querySelector("[data-action='toggle-notes']")?.addEventListener("click", () => {
-    state.compNotesOpen = !state.compNotesOpen;
-    _callbacks.onRerender?.();
-  });
-
-  // ── Notes textarea auto-save ───────────────────────────────────────────────
-  const notesTextarea = container.querySelector("[data-action='notes-input']");
-  if (notesTextarea) {
-    notesTextarea.addEventListener("input", () => {
-      if (_notesDebounceTimer) clearTimeout(_notesDebounceTimer);
-      _notesDebounceTimer = setTimeout(async () => {
-        comp.notes = notesTextarea.value;
-        await saveAndSync(comp);
-      }, 300);
+  // ── Tabs ───────────────────────────────────────────────────────────────────
+  container.querySelectorAll("[data-comp-tab]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const tab = btn.dataset.compTab;
+      if (state.compPrefs.detailTab === tab) return;
+      state.compPrefs.detailTab = tab;
+      _callbacks.onRerender?.();
     });
-  }
+  });
 
   // Add line
   container.querySelector("[data-action='add-line']")?.addEventListener("click", async () => {

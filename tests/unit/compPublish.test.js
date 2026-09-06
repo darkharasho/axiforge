@@ -46,6 +46,39 @@ describe("serializeCompForPublish", () => {
     expect(result.categories).toEqual(categories);
   });
 
+  test("includes notes images so pasted screenshots survive publishing", () => {
+    const images = { 1: "data:image/jpeg;base64,AAAA" };
+    const result = serializeCompForPublish(makeComp({ images }), {});
+    expect(result.images).toEqual(images);
+  });
+
+  test("defaults images to an empty object when the comp has none", () => {
+    const result = serializeCompForPublish(makeComp({ images: undefined }), {});
+    expect(result.images).toEqual({});
+  });
+
+  test("bakes class icons for :Name: emoji used in the notes", () => {
+    const comp = makeComp({ notes: "Bring :Firebrand: and :Reaper: to mid" });
+    const result = serializeCompForPublish(comp, {});
+    expect(Object.keys(result.notesClassIcons).sort()).toEqual(["Firebrand", "Reaper"]);
+    expect(result.notesClassIcons.Firebrand).toMatch(/<svg/);
+  });
+
+  test("canonicalizes the emoji name so :firebrand: still resolves", () => {
+    const result = serializeCompForPublish(makeComp({ notes: "go :firebrand:" }), {});
+    expect(result.notesClassIcons.Firebrand).toMatch(/<svg/);
+  });
+
+  test("ignores :tokens: that are not class names", () => {
+    const result = serializeCompForPublish(makeComp({ notes: "ping :everyone: at :30:" }), {});
+    expect(result.notesClassIcons).toEqual({});
+  });
+
+  test("defaults notesClassIcons to an empty object when there are no notes", () => {
+    const result = serializeCompForPublish(makeComp({ notes: "" }), {});
+    expect(result.notesClassIcons).toEqual({});
+  });
+
   test("defaults categories to an empty array when the comp has none", () => {
     const result = serializeCompForPublish(makeComp({ categories: undefined }), {});
     expect(result.categories).toEqual([]);

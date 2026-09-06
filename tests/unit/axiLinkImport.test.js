@@ -258,6 +258,26 @@ describe("_toImportedComp", () => {
     for (const build of builds) expect(build).not.toHaveProperty("publishedFileId");
   });
 
+  test("keeps the notes and their pasted screenshots", () => {
+    const payload = {
+      ...PUBLISHED,
+      notes: "Bring :Firebrand: to mid\n\n![image](~img:1)",
+      images: { 1: "data:image/jpeg;base64,AAAA" },
+    };
+    const { comp } = _toImportedComp(payload, {}, ids());
+    expect(comp.notes).toBe("Bring :Firebrand: to mid\n\n![image](~img:1)");
+    expect(comp.images).toEqual({ 1: "data:image/jpeg;base64,AAAA" });
+  });
+
+  test("drops the baked class icons — this copy resolves its own", () => {
+    // notesClassIcons is a publish-time artifact like boonCoverageHtml: the app
+    // renders :Firebrand: from its own icon package, so carrying the publisher's
+    // SVGs around would just bloat every imported comp.
+    const payload = { ...PUBLISHED, notes: ":Firebrand:", notesClassIcons: { Firebrand: "<svg/>" } };
+    const { comp } = _toImportedComp(payload, {}, ids());
+    expect(comp).not.toHaveProperty("notesClassIcons");
+  });
+
   test("keeps the published name and game mode unless the user supplied one", () => {
     expect(_toImportedComp(PUBLISHED, {}, ids()).comp.name).toBe("1200 Range Comp");
     expect(_toImportedComp(PUBLISHED, { name: "Mine" }, ids()).comp.name).toBe("Mine");

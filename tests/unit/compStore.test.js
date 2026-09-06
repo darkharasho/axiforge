@@ -89,6 +89,26 @@ describe("CompStore — upsertComp", () => {
     expect(comp.name.length).toBe(140);
   });
 
+  test("persists notes images so pasted screenshots survive a reload", async () => {
+    const images = { 1: "data:image/jpeg;base64,AAAA" };
+    const created = await store.upsertComp(makeComp({ images }));
+    expect(created.images).toEqual(images);
+
+    const [reloaded] = await store.listComps();
+    expect(reloaded.images).toEqual(images);
+  });
+
+  test("keeps notes images when an existing comp is updated", async () => {
+    const created = await store.upsertComp(makeComp({ images: { 1: "data:image/jpeg;base64,AAAA" } }));
+    const updated = await store.upsertComp({ ...created, name: "Renamed" });
+    expect(updated.images).toEqual({ 1: "data:image/jpeg;base64,AAAA" });
+  });
+
+  test("defaults images to an empty object", async () => {
+    const comp = await store.upsertComp(makeComp());
+    expect(comp.images).toEqual({});
+  });
+
   test("defaults categories to an empty array", async () => {
     const comp = await store.upsertComp(makeComp());
     expect(comp.categories).toEqual([]);

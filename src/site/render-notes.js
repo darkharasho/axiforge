@@ -26,6 +26,11 @@ export function renderNotes(build) {
 
   let html = marked.parse(build.notes, { breaks: true, renderer });
 
+  // Resolve Discord-style class emoji (":Firebrand:") from the icons baked
+  // into the payload at publish time. Payloads published before class emoji
+  // existed simply have none, and the token stays as written.
+  html = renderClassEmoji(html, build.notesClassIcons);
+
   // Build lookup maps from enriched catalog data
   const skillById = new Map([
     ...(build.catalogSkills || []).map((s) => [s.id, s]),
@@ -126,6 +131,20 @@ export function renderNotes(build) {
   });
 
   return container;
+}
+
+// ── Class emoji ───────────────────────────────────────────────────────
+
+const CLASS_EMOJI_TOKEN = /:([A-Za-z]+):/g;
+
+function renderClassEmoji(html, classIcons) {
+  if (!classIcons) return html;
+  const byKey = new Map(Object.entries(classIcons).map(([name, svg]) => [name.toLowerCase(), { name, svg }]));
+  return html.replace(CLASS_EMOJI_TOKEN, (match, word) => {
+    const hit = byKey.get(word.toLowerCase());
+    if (!hit?.svg) return match;
+    return `<span class="notes-emoji" data-name="${hit.name}" title="${hit.name}">${hit.svg}</span>`;
+  });
 }
 
 // ── Image token resolution ────────────────────────────────────────────

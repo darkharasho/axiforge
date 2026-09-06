@@ -56,6 +56,7 @@ export const state = {
     filtersExpanded: false,
     viewMode: "expanded",
     boonCoverageCollapsed: false,
+    detailTab: "comp",   // "comp" | "notes" — active tab in the comp detail view
   },
   // Team sync state (see modules/teams.js)
   teamSession: null,      // { sessionToken, userId, login } or null

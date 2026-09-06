@@ -428,3 +428,45 @@
   word-wrap: break-word;
   pointer-events: none;
 }
+
+/* ── Class emoji (:Firebrand:) ─────────────────────────────────────────── */
+
+/* Class icons are inline SVGs with a hard-coded black fill, so the fill has to
+   be forced to the surrounding text colour. */
+.notes-emoji {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.3em;
+  height: 1.3em;
+  vertical-align: -0.3em;
+}
+
+.notes-emoji svg {
+  width: 100%;
+  height: 100%;
+}
+
+.notes-emoji svg,
+.notes-emoji svg g,
+.notes-emoji svg path {
+  fill: currentColor !important;
+}
+
+.notes-autocomplete__item-icon--svg {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text);
+}
+
+.notes-autocomplete__item-icon--svg svg {
+  width: 16px;
+  height: 16px;
+}
+
+.notes-autocomplete__item-icon--svg svg,
+.notes-autocomplete__item-icon--svg svg g,
+.notes-autocomplete__item-icon--svg svg path {
+  fill: currentColor !important;
+}

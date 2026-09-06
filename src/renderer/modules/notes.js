@@ -1,11 +1,16 @@
 // AxiForge — Notes tab module
 // Toolbar-driven markdown editor with @ mention autocomplete and preview toggle.
+//
+// The editor is document-agnostic: it reads and writes through a "doc" adapter
+// so the same UI backs both the Build Editor's Notes tab (state.editor) and the
+// Comp detail Notes tab (the active comp). See createNotesEditor().
 
 import { marked } from "marked";
 import { state } from "./state.js";
 import { bindHoverPreview } from "./detail-panel.js";
 import { decodeHtmlEntities } from "./utils.js";
 import { GW2_WEAPONS, GW2_WEAPONS_BY_ID } from "./constants.js";
+import { getProfessionSvg, PROFESSION_ICON_NAMES } from "./profession-icons.js";
 
 let _el = {};
 let _markEditorChanged = () => {};
@@ -15,15 +20,65 @@ let _autocompleteEl = null;
 let _autocompleteItems = [];
 let _autocompleteIndex = 0;
 let _mentionTriggerPos = -1;
+let _mentionTriggerKind = "@";   // "@" for catalog mentions, ":" for class emoji
+let _classEmoji = false;         // typeahead for :Firebrand: — comp notes only
 let _activeTextarea = null;
 
+const DEFAULT_PLACEHOLDER =
+  "Combo priorities, matchup notes, rotation...\n\nTip: Type @ to reference skills, traits, and items.";
+
+const DEFAULT_HINT =
+  "Type <strong>@</strong> to reference skills, traits, and items. <strong>Paste</strong> images from your clipboard. YouTube &amp; Twitch links auto-embed in preview.";
+
+// Adapter for the Build Editor, which stores notes on state.editor.
+const EDITOR_DOC = {
+  getText: () => state.editor.notes || "",
+  setText: (v) => { state.editor.notes = v; },
+  getImages: () => state.editor.images,
+  setImages: (v) => { state.editor.images = v; },
+  onChange: () => _markEditorChanged({ updateBuildList: true }),
+};
+
+// The document currently bound to the editor. Only one notes editor is on
+// screen at a time (Build Editor tab or Comp detail tab), so a single active
+// binding is enough. Defaults to the Build Editor so the exported
+// insertMarkdown() helper works without an explicit binding.
+let _doc = EDITOR_DOC;
+
+// The Build Editor's own panel and read-only flag, kept aside so rendering
+// another document (a comp) into a different mount doesn't hijack them.
+let _editorPanel = null;
+let _editorReadOnly = false;
+
 export function initNotes({ notesPanel }, { readOnly = false } = {}) {
+  _editorPanel = notesPanel;
+  _editorReadOnly = readOnly;
   _el = { notesPanel };
   _readOnly = readOnly;
 }
 
 export function initNotesCallbacks({ markEditorChanged }) {
   _markEditorChanged = markEditorChanged;
+}
+
+/**
+ * Bind the notes editor to an arbitrary document.
+ *
+ * @param {HTMLElement} mountEl     container the editor renders into
+ * @param {object} doc              { getText, setText, getImages, setImages, onChange }
+ * @param {object} [opts]           { readOnly, placeholder, hint }
+ * @returns {{ render: () => void }}
+ */
+export function createNotesEditor(mountEl, doc, opts = {}) {
+  return {
+    render() {
+      _el = { notesPanel: mountEl };
+      _doc = doc;
+      _readOnly = Boolean(opts.readOnly);
+      _classEmoji = Boolean(opts.classEmoji);
+      renderNotesEditor({ placeholder: opts.placeholder, hint: opts.hint });
+    },
+  };
 }
 
 // ── Toolbar SVG icons ────────────────────────────────────────────────────
@@ -178,8 +233,8 @@ export function insertMarkdown(action, textarea) {
 }
 
 function syncState(textarea) {
-  state.editor.notes = textarea.value;
-  _markEditorChanged({ updateBuildList: true });
+  _doc.setText(textarea.value);
+  _doc.onChange();
 }
 
 // ── Clipboard image paste ────────────────────────────────────────────────
@@ -207,10 +262,11 @@ function compressAndInsertImage(blob, textarea) {
     const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
 
     // Store in images map with next available key
-    if (!state.editor.images) state.editor.images = {};
-    const keys = Object.keys(state.editor.images).map(Number).filter((n) => !isNaN(n));
+    let images = _doc.getImages();
+    if (!images) { images = {}; _doc.setImages(images); }
+    const keys = Object.keys(images).map(Number).filter((n) => !isNaN(n));
     const nextKey = keys.length ? Math.max(...keys) + 1 : 1;
-    state.editor.images[nextKey] = dataUrl;
+    images[nextKey] = dataUrl;
 
     const start = textarea.selectionStart;
     const before = textarea.value.slice(0, start);
@@ -277,6 +333,14 @@ function buildToolbar(textarea) {
 // ── Render ────────────────────────────────────────────────────────────────
 
 export function renderNotesPanel() {
+  _el = { notesPanel: _editorPanel };
+  _readOnly = _editorReadOnly;
+  _doc = EDITOR_DOC;
+  _classEmoji = false;
+  renderNotesEditor();
+}
+
+function renderNotesEditor({ placeholder, hint } = {}) {
   if (!_el.notesPanel) return;
   _previewMode = false;
 
@@ -285,8 +349,8 @@ export function renderNotesPanel() {
 
   const textarea = document.createElement("textarea");
   textarea.className = "notes-textarea";
-  textarea.value = state.editor.notes || "";
-  textarea.placeholder = "Combo priorities, matchup notes, rotation...\n\nTip: Type @ to reference skills, traits, and items.";
+  textarea.value = _doc.getText();
+  textarea.placeholder = placeholder || DEFAULT_PLACEHOLDER;
 
   if (_readOnly) {
     textarea.readOnly = true;
@@ -358,23 +422,23 @@ export function renderNotesPanel() {
   });
 
   // Read-only mode: show preview immediately
-  if (_readOnly && state.editor.notes) {
+  if (_readOnly && _doc.getText()) {
     _previewMode = true;
     previewBtn.classList.add("notes-toolbar__preview--active");
     toolbar.querySelectorAll(".notes-toolbar__btn").forEach((btn) => { btn.disabled = true; });
     textarea.style.display = "none";
     previewDiv.style.display = "";
-    renderPreview(state.editor.notes, previewDiv);
+    renderPreview(_doc.getText(), previewDiv);
   }
 
   _el.notesPanel.innerHTML = "";
   _el.notesPanel.append(container);
 
   if (!_readOnly) {
-    const hint = document.createElement("div");
-    hint.className = "notes-feature-hint";
-    hint.innerHTML = "Type <strong>@</strong> to reference skills, traits, and items. <strong>Paste</strong> images from your clipboard. YouTube &amp; Twitch links auto-embed in preview.";
-    _el.notesPanel.append(hint);
+    const hintEl = document.createElement("div");
+    hintEl.className = "notes-feature-hint";
+    hintEl.innerHTML = hint || DEFAULT_HINT;
+    _el.notesPanel.append(hintEl);
   }
 }
 
@@ -454,6 +518,45 @@ function searchCatalog(query, maxResults = 8) {
   return results;
 }
 
+// ── Class emoji (:Firebrand:) ─────────────────────────────────────────────
+
+// Canonical name by lowercase name, so :firebrand: resolves like :Firebrand:.
+const CLASS_EMOJI_BY_KEY = new Map(
+  PROFESSION_ICON_NAMES.map((name) => [name.toLowerCase(), name])
+);
+
+// Discord-style token. Only names we can resolve become icons; anything else
+// (":everyone:", "10:30:") is left as written.
+const CLASS_EMOJI_TOKEN = /:([A-Za-z]+):/g;
+
+function searchClassEmoji(query, maxResults = 8) {
+  const results = [];
+  const q = query.toLowerCase();
+  for (const name of PROFESSION_ICON_NAMES) {
+    if (!nameMatches(name, q)) continue;
+    results.push({ kind: "emoji", name, svg: getProfessionSvg(name) });
+    if (results.length >= maxResults) break;
+  }
+  return results;
+}
+
+/**
+ * Replace :Name: tokens in rendered HTML with inline class icons. Applied to
+ * every notes preview — a class emoji pasted into build notes still renders,
+ * even though only comp notes offer the typeahead.
+ */
+export function renderClassEmoji(html) {
+  return html.replace(CLASS_EMOJI_TOKEN, (match, word) => {
+    const name = CLASS_EMOJI_BY_KEY.get(word.toLowerCase());
+    if (!name) return match;
+    return classEmojiHtml(name, getProfessionSvg(name));
+  });
+}
+
+export function classEmojiHtml(name, svg) {
+  return `<span class="notes-emoji" data-name="${name}" title="${name}">${svg || ""}</span>`;
+}
+
 // ── Autocomplete popup ────────────────────────────────────────────────────
 
 function getCaretCoords(textarea) {
@@ -482,7 +585,7 @@ function getCaretCoords(textarea) {
 }
 
 function showAutocomplete(textarea, query) {
-  const results = searchCatalog(query);
+  const results = _mentionTriggerKind === ":" ? searchClassEmoji(query) : searchCatalog(query);
   if (!results.length) { hideAutocomplete(); return; }
   _autocompleteItems = results;
   _autocompleteIndex = 0;
@@ -507,7 +610,13 @@ function renderAutocompleteItems() {
   _autocompleteItems.forEach((item, i) => {
     const row = document.createElement("div");
     row.className = "notes-autocomplete__item" + (i === _autocompleteIndex ? " notes-autocomplete__item--selected" : "");
-    if (item.icon) {
+    if (item.kind === "emoji") {
+      // Class icons are inline SVG strings, not image URLs.
+      const icon = document.createElement("span");
+      icon.className = "notes-autocomplete__item-icon notes-autocomplete__item-icon--svg";
+      icon.innerHTML = item.svg || "";
+      row.append(icon);
+    } else if (item.icon) {
       const icon = document.createElement("img");
       icon.className = "notes-autocomplete__item-icon";
       icon.src = item.icon;
@@ -521,7 +630,7 @@ function renderAutocompleteItems() {
     row.append(name);
     const cat = document.createElement("span");
     cat.className = "notes-autocomplete__item-category";
-    cat.textContent = item.category;
+    cat.textContent = item.category || "Class";
     row.append(cat);
     row.addEventListener("mousedown", (e) => {
       e.preventDefault();
@@ -536,7 +645,9 @@ function insertMention(item, textarea) {
   if (!ta || _mentionTriggerPos < 0) return;
   const before = ta.value.slice(0, _mentionTriggerPos);
   const after = ta.value.slice(ta.selectionEnd);
-  const mention = `@[${item.category.toLowerCase()}:${item.id}:${item.name}]`;
+  const mention = item.kind === "emoji"
+    ? `:${item.name}:`
+    : `@[${item.category.toLowerCase()}:${item.id}:${item.name}]`;
   ta.value = before + mention + " " + after;
   const newPos = before.length + mention.length + 1;
   ta.selectionStart = ta.selectionEnd = newPos;
@@ -550,6 +661,7 @@ function hideAutocomplete() {
   _autocompleteItems = [];
   _autocompleteIndex = 0;
   _mentionTriggerPos = -1;
+  _mentionTriggerKind = "@";
 }
 
 function detectMentionTrigger(textarea) {
@@ -557,13 +669,19 @@ function detectMentionTrigger(textarea) {
   const text = textarea.value;
   let i = pos - 1;
   // Allow spaces inside the query so multi-word names (e.g. "Weapon Swap") work.
-  while (i >= 0 && text[i] !== "@" && text[i] !== "\n") i--;
-  if (i >= 0 && text[i] === "@") {
-    if (i > 0 && /\w/.test(text[i - 1])) { hideAutocomplete(); return; }
-    const query = text.slice(i + 1, pos);
-    if (query.length >= 1) { _mentionTriggerPos = i; showAutocomplete(textarea, query); }
-    else hideAutocomplete();
-  } else hideAutocomplete();
+  // ":" only ever starts a single word, so it also stops the scan.
+  while (i >= 0 && text[i] !== "@" && text[i] !== ":" && text[i] !== "\n") i--;
+  const trigger = i >= 0 ? text[i] : null;
+  if (!trigger) { hideAutocomplete(); return; }
+  // A trigger glued to the end of a word is punctuation, not a mention
+  // ("Note:", "email@host").
+  if (i > 0 && /\w/.test(text[i - 1])) { hideAutocomplete(); return; }
+  if (trigger === ":" && !_classEmoji) { hideAutocomplete(); return; }
+  const query = text.slice(i + 1, pos);
+  if (!query.length) { hideAutocomplete(); return; }
+  _mentionTriggerPos = i;
+  _mentionTriggerKind = trigger;
+  showAutocomplete(textarea, query);
 }
 
 // ── Preview rendering ─────────────────────────────────────────────────
@@ -575,6 +693,9 @@ function renderPreview(markdown, container) {
   }
 
   let html = marked.parse(markdown, { breaks: true });
+
+  // Resolve :Firebrand: tokens into inline class icons
+  html = renderClassEmoji(html);
 
   // Resolve @[category:id:Name] patterns into mention chips
   html = html.replace(/@\[(\w+):([\w]+):([^\]]+)\]/g, (match, category, id, name) => {
@@ -600,7 +721,7 @@ function renderPreview(markdown, container) {
   container.innerHTML = html;
 
   // Resolve ~img:X tokens to actual data URLs
-  resolveImageTokens(container, state.editor.images);
+  resolveImageTokens(container, _doc.getImages());
 
   // Embed YouTube / Twitch videos (bare URLs or link-text-matches-URL links in their own <p>)
   embedYouTubeVideos(container);

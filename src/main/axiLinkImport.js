@@ -184,10 +184,12 @@ function toImportedBuild(payload, { name, folderId, gameMode } = {}) {
  * else's published file, sitting in a folder that does not exist here, or
  * arriving pre-trashed. `builds` comes off because it is unpacked separately,
  * and `boonCoverageHtml` because it is a rendered snapshot of the publisher's
- * comp that this copy regenerates for itself.
+ * comp that this copy regenerates for itself. `notesClassIcons` goes for the
+ * same reason -- baked SVGs the app already has locally.
  */
 const COMP_NOT_MINE = [
   "id", "createdAt", "updatedAt", "folderId", "sortOrder", "builds", "boonCoverageHtml",
+  "notesClassIcons",
   "publishedSlug", "publishedFileId", "publishedKey", "publishedAt", "publishedOwner",
   "deletedAt", "trashBatchId", "trashRoot",
 ];

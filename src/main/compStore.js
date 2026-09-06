@@ -132,6 +132,14 @@ class CompStore {
       const id = input.id || crypto.randomUUID();
       const name = String(input.name || "Untitled Comp").slice(0, 140);
       const notes = String(input.notes || "").slice(0, 100000);
+      // Screenshots pasted into the notes editor, keyed by the ~img:<key> tokens
+      // the notes markdown references. Values are data URLs.
+      const images = {};
+      if (input.images && typeof input.images === "object") {
+        for (const [k, v] of Object.entries(input.images)) {
+          if (typeof v === "string") images[k] = v;
+        }
+      }
       const tags = Array.isArray(input.tags) ? input.tags : [];
       const folderId = typeof input.folderId === "string" ? input.folderId : null;
       const sortOrder = typeof input.sortOrder === "number" ? input.sortOrder : 0;
@@ -194,7 +202,7 @@ class CompStore {
       const existing = comps.find((c) => c.id === id);
       if (existing) {
         Object.assign(existing, {
-          name, notes, tags, folderId, sortOrder, buildIds, partyLines, gameMode, buildColors, categories,
+          name, notes, images, tags, folderId, sortOrder, buildIds, partyLines, gameMode, buildColors, categories,
           ...publishedPatch,
           updatedAt: now,
         });
@@ -205,7 +213,7 @@ class CompStore {
       }
 
       const comp = {
-        id, name, notes, tags, folderId, sortOrder, buildIds, partyLines, gameMode, buildColors, categories,
+        id, name, notes, images, tags, folderId, sortOrder, buildIds, partyLines, gameMode, buildColors, categories,
         ...publishedPatch,
         createdAt: now, updatedAt: now,
       };

@@ -136,10 +136,14 @@
       "^.+/src/web/.+\\.js$": [
         "babel-jest",
         {}
+      ],
+      "^.+/node_modules/marked/.+\\.js$": [
+        "babel-jest",
+        {}
       ]
     },
     "transformIgnorePatterns": [
-      "/node_modules/"
+      "/node_modules/(?!marked/)"
     ],
     "collectCoverageFrom": [
       "src/main/**/*.js",
@@ -155,7 +159,8 @@
     "testTimeout": 15000,
     "clearMocks": true,
     "moduleNameMapper": {
-      "^.*\\?raw$": "<rootDir>/tests/helpers/rawMock.js"
+      "^.*\\?raw$": "<rootDir>/tests/helpers/rawMock.js",
+      "^@renderer/(.*)$": "<rootDir>/src/renderer/$1"
     }
   },
   "license": "MIT",

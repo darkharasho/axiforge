@@ -58,6 +58,12 @@ const SVG_MAP = {
 };
 
 /**
+ * Every profession and elite-spec name getProfessionSvg can resolve, sorted.
+ * Used by the notes editor to offer class icons as @ mentions.
+ */
+export const PROFESSION_ICON_NAMES = Object.keys(SVG_MAP).sort();
+
+/**
  * Returns the raw SVG string for a profession or elite spec name, or null if unknown.
  * @param {string} name — e.g. "Guardian", "Dragonhunter", "Elementalist"
  */

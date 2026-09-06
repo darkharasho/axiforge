@@ -823,7 +823,7 @@
   }
 
   /* === Comp view: notes / tags row === */
-  #app.mobile .comp-detail__notes-panel {
+  #app.mobile .comp-detail__notes-tab {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
   }
