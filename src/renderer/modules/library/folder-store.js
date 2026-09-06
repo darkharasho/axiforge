@@ -103,11 +103,57 @@ export function libraryFolders() {
 }
 
 /**
+ * The active library search, normalized -- "" when the box is empty.
+ *
+ * A query changes what "here" means: with the box empty you are browsing one
+ * level of the tree, but the moment you type, the library searches the whole
+ * subtree beneath you and draws the matches flat. Callers that scope by folder
+ * must check this, or a build two folders down is unreachable by search.
+ */
+export function searchQuery() {
+  return (state.buildSearch || "").trim().toLowerCase();
+}
+
+/** True when the library is showing search results rather than a folder level. */
+export function hasSearchQuery() {
+  return searchQuery() !== "";
+}
+
+/** Everything about a build the search box looks at. */
+export function buildMatchesQuery(build, query) {
+  if (!query) return true;
+  const haystack = [
+    build.title || "",
+    build.profession || "",
+    build.notes || "",
+    ...(build.tags || []),
+    ...((build.specializations || []).map((s) => s.name || "")),
+    build.gameMode || "",
+  ]
+    .join(" ")
+    .toLowerCase();
+  return haystack.includes(query);
+}
+
+/** Everything about a comp the search box looks at. */
+export function compMatchesQuery(comp, query) {
+  if (!query) return true;
+  const haystack = [comp.name || "", ...(comp.tags || [])].join(" ").toLowerCase();
+  return haystack.includes(query);
+}
+
+/** The folder itself plus every folder under it, as a Set of ids. */
+export function folderSubtreeIds(folderId) {
+  return new Set(collectFolderIds(folderId));
+}
+
+/**
  * Get builds for the current folder/filter context.
  * Applies smart folder filtering, custom folder filtering, search, and sort.
  */
 export function getVisibleBuilds() {
   let builds = libraryBuilds();
+  const query = searchQuery();
 
   // Filter by current folder
   const folder = state.currentFolder;
@@ -130,15 +176,18 @@ export function getVisibleBuilds() {
       );
     } else {
       if (folder.type === "custom") {
-        builds = builds.filter((b) => b.folderId === folder.id);
-      } else if (folder.type === "all") {
+        // Searching reaches through sub-folders, so the scope is the whole
+        // subtree rather than just the builds sitting at this level.
+        const scope = query ? folderSubtreeIds(folder.id) : new Set([folder.id]);
+        builds = builds.filter((b) => scope.has(b.folderId));
+      } else if (folder.type === "all" && !query) {
         // "all" type: show only root-level builds at top level;
         // builds inside folders appear under their expanded folder rows
         builds = builds.filter((b) => !b.folderId);
       }
     }
-  } else {
-    // Root: only show builds not in any folder
+  } else if (!query) {
+    // Root: only show builds not in any folder. A search spans the library.
     builds = builds.filter((b) => !b.folderId);
   }
 
@@ -166,22 +215,7 @@ export function getVisibleBuilds() {
   }
 
   // Apply search
-  const query = (state.buildSearch || "").trim().toLowerCase();
-  if (query) {
-    builds = builds.filter((b) => {
-      const haystack = [
-        b.title || "",
-        b.profession || "",
-        b.notes || "",
-        ...(b.tags || []),
-        ...((b.specializations || []).map((s) => s.name || "")),
-        b.gameMode || "",
-      ]
-        .join(" ")
-        .toLowerCase();
-      return haystack.includes(query);
-    });
-  }
+  if (query) builds = builds.filter((b) => buildMatchesQuery(b, query));
 
   // Sort — pinned items always first
   const { sortField, sortDirection } = state.libraryPrefs;
@@ -209,40 +243,39 @@ export function getVisibleBuilds() {
  */
 export function getVisibleFolders() {
   const folder = state.currentFolder;
+  const query = searchQuery();
   let folders;
 
-  // At root or "all builds" smart folder: show top-level custom folders
+  // At root or "all builds" smart folder: show top-level custom folders --
+  // or every folder, when a search is flattening the tree.
   if (!folder || folder.type === "all") {
-    folders = libraryFolders()
-      .filter((f) => f.parentId === null)
-      .sort((a, b) => a.sortOrder - b.sortOrder);
+    folders = query
+      ? libraryFolders()
+      : libraryFolders().filter((f) => f.parentId === null);
   } else if (folder.type === "custom") {
-    // Inside a custom folder: show its children
-    folders = libraryFolders()
-      .filter((f) => f.parentId === folder.id)
-      .sort((a, b) => a.sortOrder - b.sortOrder);
+    // Inside a custom folder: show its children, or its whole subtree when
+    // searching.
+    if (query) {
+      const scope = folderSubtreeIds(folder.id);
+      folders = libraryFolders().filter((f) => f.id !== folder.id && scope.has(f.id));
+    } else {
+      folders = libraryFolders().filter((f) => f.parentId === folder.id);
+    }
   } else {
     // Smart folders don't contain sub-folders
     return [];
   }
 
-  // Filter folders by search query: hide folders whose name doesn't match
-  // AND that contain no matching builds
-  const query = (state.buildSearch || "").trim().toLowerCase();
+  // A search flattens the tree, so a folder earns its row on its own name only.
+  // It no longer stands in for the builds inside it -- those now surface as
+  // results themselves, wherever they are nested.
   if (query) {
-    folders = folders.filter((f) => {
-      if (f.name.toLowerCase().includes(query)) return true;
-      // Check if any builds in this folder (recursively) match the search
-      const folderIds = collectFolderIds(f.id);
-      return libraryBuilds().some((b) => {
-        if (!folderIds.includes(b.folderId)) return false;
-        const haystack = [b.title || "", b.profession || "", ...(b.tags || [])].join(" ").toLowerCase();
-        return haystack.includes(query);
-      });
-    });
+    return folders
+      .filter((f) => (f.name || "").toLowerCase().includes(query))
+      .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
   }
 
-  return folders;
+  return folders.sort((a, b) => a.sortOrder - b.sortOrder);
 }
 
 /**
@@ -259,33 +292,31 @@ export function countBuildsInFolder(folderId) {
  */
 export function getVisibleComps() {
   const folder = state.currentFolder;
+  const query = searchQuery();
   let comps = libraryComps();
 
   if (folder) {
     if (folder.type === "custom") {
-      comps = comps.filter((c) => c.folderId === folder.id);
+      // Searching reaches through sub-folders; browsing shows this level only.
+      const scope = query ? folderSubtreeIds(folder.id) : new Set([folder.id]);
+      comps = comps.filter((c) => scope.has(c.folderId));
     } else if (folder.id === "__all-comps") {
       // Show all comps — no filter
     } else if (folder.type === "all") {
-      // "All Builds" view: show root-level comps (same as no folder)
-      comps = comps.filter((c) => !c.folderId);
+      // "All Builds" view: show root-level comps (same as no folder), unless a
+      // search is flattening the tree.
+      if (!query) comps = comps.filter((c) => !c.folderId);
     } else {
       // Other smart folders (profession, gamemode, comp drilldown) don't show comps
       return [];
     }
-  } else {
-    // Root: show comps with no folder
+  } else if (!query) {
+    // Root: show comps with no folder. A search spans the library.
     comps = comps.filter((c) => !c.folderId);
   }
 
   // Apply search
-  const query = (state.buildSearch || "").trim().toLowerCase();
-  if (query) {
-    comps = comps.filter((c) => {
-      const haystack = [c.name || "", ...(c.tags || [])].join(" ").toLowerCase();
-      return haystack.includes(query);
-    });
-  }
+  if (query) comps = comps.filter((c) => compMatchesQuery(c, query));
 
   // Sort by sortOrder (or name as fallback)
   comps.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));

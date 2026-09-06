@@ -3,7 +3,7 @@
 import { state } from "../state.js";
 import { escapeHtml, formatRelativeTime } from "../utils.js";
 import { roleBadgeHtml } from '../roleEstimator.js';
-import { getVisibleBuilds, getVisibleFolders, getVisibleComps, libraryBuilds, libraryComps, libraryFolders } from "./folder-store.js";
+import { getVisibleBuilds, getVisibleFolders, getVisibleComps, libraryBuilds, libraryComps, libraryFolders, searchQuery, hasSearchQuery, buildMatchesQuery, compMatchesQuery } from "./folder-store.js";
 import { getProfessionSvg } from "../profession-icons.js";
 import { badgeHtml } from "../sync-status.js";
 import { teamRootFor, teamLabel } from "../teams.js";
@@ -245,6 +245,9 @@ function emptyStateHtml() {
 
 /** True when the current view mixes builds from multiple folders (smart folders). */
 function isCombinedView() {
+  // Search results are drawn flat from across the tree, so each row has to say
+  // where it actually lives -- same reason the smart folders do.
+  if (hasSearchQuery()) return true;
   const f = state.currentFolder;
   if (!f) return false;
   return f.type === "smart-profession" || f.type === "smart-gamemode" || f.type === "all";
@@ -662,16 +665,23 @@ function renderColumnsView(container) {
       break; // comps are flat — no further nesting
     }
 
+    // Columns past the first are built straight from the stores, so they have
+    // to apply the search themselves.
+    const query = searchQuery();
+
     const childFolders = libraryFolders()
       .filter((f) => f.parentId === selectedId)
+      .filter((f) => !query || (f.name || "").toLowerCase().includes(query))
       .sort((a, b) => a.sortOrder - b.sortOrder);
 
     const childBuilds = libraryBuilds()
       .filter((b) => b.folderId === selectedId)
+      .filter((b) => buildMatchesQuery(b, query))
       .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
 
     const childComps = libraryComps()
       .filter((c) => c.folderId === selectedId)
+      .filter((c) => compMatchesQuery(c, query))
       .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
 
     columns.push({ folders: childFolders, builds: childBuilds, comps: childComps, parentId: selectedId });

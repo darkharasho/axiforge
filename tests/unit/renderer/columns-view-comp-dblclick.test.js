@@ -32,6 +32,10 @@ jest.mock("../../../src/renderer/modules/library/folder-store", () => ({
   libraryFolders: jest.fn(() => []),
   libraryBuilds: jest.fn(() => []),
   libraryComps: jest.fn(() => []),
+  searchQuery: jest.fn(() => ""),
+  hasSearchQuery: jest.fn(() => false),
+  buildMatchesQuery: jest.fn(() => true),
+  compMatchesQuery: jest.fn(() => true),
 }));
 jest.mock("../../../src/renderer/modules/profession-icons", () => ({
   getProfessionSvg: () => "",
