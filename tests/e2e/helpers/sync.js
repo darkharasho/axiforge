@@ -4,9 +4,10 @@
 // process that runs the specs, so specs cannot poke its `db` directly — every
 // hook is an HTTP call. Nothing here bypasses the server's authorization
 // rules: the hooks only stand in for other people and other processes.
-const { PORT } = require("../mock-sync-server");
+const { syncPort } = require("./ports");
 
-const BASE = `http://localhost:${PORT}/api/sync`;
+// This worker's own sync server. @see helpers/ports.js
+const BASE = `http://localhost:${syncPort()}/api/sync`;
 
 async function call(method, path, body) {
   const res = await fetch(BASE + path, {
@@ -39,6 +40,25 @@ const editAsTeammate = (teamId, itemId, login, body) =>
 /** Session token the server hands a given GitHub login — for direct authz probes. */
 const sessionTokenFor = (login) => `sess-u-${login}`;
 
+/**
+ * Open a session for `login`, so asUser() can act as them.
+ *
+ * Seeding a team creates the owner as a USER but not a session — only
+ * POST /auth/github does that, and only the running app calls it. A spec that
+ * wants a teammate to do something through the server's real authorization
+ * rules (rather than a behind-the-back hook) has to sign them in first.
+ * `gh-<login>` is the token convention the mock reads.
+ */
+async function signIn(login) {
+  const res = await fetch(`${BASE}/auth/github`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ token: `gh-${login}` }),
+  });
+  if (!res.ok) throw new Error(`signIn(${login}) → ${res.status}`);
+  return (await res.json()).sessionToken;
+}
+
 /** Raw authenticated request, so a spec can assert the server's own 403s. */
 async function asUser(login, method, path, { body, query } = {}) {
   const res = await fetch(BASE + path + (query ? `?${query}` : ""), {
@@ -53,4 +73,4 @@ async function asUser(login, method, path, { body, query } = {}) {
   return { status: res.status, body: text ? JSON.parse(text) : null };
 }
 
-module.exports = { resetSync, seedSync, syncState, editAsTeammate, sessionTokenFor, asUser, SYNC_BASE: BASE };
+module.exports = { resetSync, seedSync, syncState, editAsTeammate, sessionTokenFor, signIn, asUser, SYNC_BASE: BASE };

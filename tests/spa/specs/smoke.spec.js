@@ -27,6 +27,14 @@ test.describe("SPA smoke tests", () => {
     await expect(page.locator(".comp-detail__topbar")).toContainText("Smoke Test Comp");
     await expect(page.locator(".comp-line")).toBeVisible();
     await expect(page.locator(".comp-slot")).toHaveCount(5);
+
+    // The two occupied slots have to be OCCUPIED. Counting .comp-slot alone
+    // passes whether or not a single build resolved — the SPA renders an empty
+    // box for a slot it cannot look up — which is how a fixture that shipped
+    // `builds` as an array instead of a map went unnoticed: every comp spec was
+    // asserting on the chrome around five blank squares.
+    await expect(page.locator(".comp-slot--filled")).toHaveCount(2);
+    await expect(page.locator(".comp-slot--filled").first()).toHaveAttribute("title", /Build A|Build B/);
   });
 
   test("no console errors during build load", async ({ page }) => {

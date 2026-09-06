@@ -1,6 +1,7 @@
 const http = require("http");
 const { handleRequest } = require("./routes");
 
+// Stateless: every route is a read of fixture data, so all workers share one.
 const PORT = 9877;
 let server;
 

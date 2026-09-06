@@ -3,6 +3,7 @@
 const path = require("path");
 const fs = require("fs");
 const { serializeForPublish } = require("../../../src/main/buildPublish");
+const { serializeCompForPublish } = require("../../../src/main/compPublish");
 const {
   encryptBuild,
   generateFileId,
@@ -85,12 +86,28 @@ function generateBuildPayload(build, catalog) {
   return { fileId, encKey, base64Payload };
 }
 
+/**
+ * A published comp payload, shaped by the SAME serializer the app publishes
+ * with.
+ *
+ * This used to hand-roll `{ ...comp, builds: [enriched...] }` — an ARRAY. Every
+ * consumer keys that collection by build id: the SPA reads `comp.builds[slotId]`
+ * and the desktop importer reads `Object.entries(payload.builds)`. Against an
+ * array both come back empty, so a comp fixture rendered five blank slots and
+ * every assertion about the chrome around them still passed. Going through
+ * serializeCompForPublish means a fixture can only ever be the shape the app
+ * actually produces.
+ */
 function generateCompPayload(comp, builds) {
-  const enrichedBuilds = builds.map((b) => {
-    const catalog = loadCatalog(b.profession || "Necromancer");
-    return serializeForPublish(b, catalog, null);
-  });
-  const enrichedComp = { ...comp, builds: enrichedBuilds };
+  const buildsMap = Object.fromEntries(
+    builds.map((b) => [b.id, serializeForPublish(b, loadCatalog(b.profession || "Necromancer"), null)])
+  );
+  const enrichedComp = serializeCompForPublish(comp, buildsMap);
+  // The publisher attaches the rendered party-coverage snapshot AFTER
+  // serializing, because it is produced by the renderer rather than the store —
+  // see src/main/index.js. Mirror that, or a comp fixture silently loses its
+  // coverage panel.
+  if (comp.boonCoverageHtml) enrichedComp.boonCoverageHtml = comp.boonCoverageHtml;
   const fileId = generateFileId();
   const encKey = generateEncryptionKey();
   const base64Payload = encryptBuild(enrichedComp, encKey);

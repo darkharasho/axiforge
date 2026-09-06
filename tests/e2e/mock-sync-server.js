@@ -20,7 +20,11 @@
 // is available through the `/__*` test hooks at the bottom — never by relaxing
 // the authorization rules above.
 const http = require("http");
-const PORT = 9878;
+// One sync server per Playwright worker. The db below is module-level singleton
+// state and `resetSync()` wipes ALL of it, so two workers sharing one instance
+// would pull each other's teams out from under themselves. Each worker gets its
+// own process on its own port instead — see global-setup.js.
+const PORT = Number(process.env.MOCK_SYNC_PORT) || 9878;
 let server;
 
 // ─── State ──────────────────────────────────────────────────────────────────
@@ -359,12 +363,65 @@ async function handle(req, res) {
         return fail(res, 403, "forbidden", "Only the team owner or the item's creator can delete it.");
       }
       const now = new Date().toISOString();
+      // Body retained, batch stamped — this is what backs the shared team trash.
+      // @see workers/sync/src/items.js
       for (const r of [row, ...descendants]) {
-        r.deleted = true; r.body = null; r.version += 1; r.seq = nextSeq(teamId);
+        r.deleted = true; r.version += 1; r.seq = nextSeq(teamId);
         r.updatedBy = userId; r.updatedAt = now;
+        r.deletedAt = now; r.deletedBy = userId; r.deleteBatch = row.id;
       }
       return json(res, 200, { version: row.version, seq: row.seq });
     }
+  }
+
+  // GET /teams/:id/trash — one row per thing somebody actually deleted.
+  if ((m = p.match(/^\/teams\/([^/]+)\/trash$/)) && method === "GET") {
+    const [, teamId] = m;
+    if (!db.items.has(teamId)) return fail(res, 404, "not_found", "No such team.");
+    if (!memberRole(teamId, userId)) return fail(res, 403, "forbidden", "You are not a member of this team.");
+    const rows = [...db.items.get(teamId).values()].filter((r) => r.deleted && r.deleteBatch === r.id);
+    const isOwner = memberRole(teamId, userId) === "owner";
+    return json(res, 200, {
+      items: rows
+        .sort((a, b) => String(b.deletedAt).localeCompare(String(a.deletedAt)))
+        .map((r) => ({
+          id: r.id, type: r.type, parentId: r.parentId,
+          name: (r.body && (r.body.title || r.body.name)) || null,
+          version: r.version,
+          carried: [...db.items.get(teamId).values()].filter((d) => d.deleted && d.deleteBatch === r.deleteBatch && d.id !== r.id).length,
+          deletedAt: r.deletedAt,
+          deletedBy: { userId: r.deletedBy, login: db.users.get(r.deletedBy)?.login || null },
+          canRestore:
+            isOwner ||
+            r.deletedBy === userId ||
+            ![...db.items.get(teamId).values()]
+              .filter((d) => d.deleted && d.deleteBatch === r.deleteBatch)
+              .some((d) => d.createdBy !== userId),
+        })),
+    });
+  }
+
+  // POST /teams/:id/trash/:itemId/restore — undo a deletion for everyone.
+  if ((m = p.match(/^\/teams\/([^/]+)\/trash\/([^/]+)\/restore$/)) && method === "POST") {
+    const [, teamId, itemId] = m;
+    if (!db.items.has(teamId)) return fail(res, 404, "not_found", "No such team.");
+    const role = memberRole(teamId, userId);
+    if (!role) return fail(res, 403, "forbidden", "You are not a member of this team.");
+    const row = db.items.get(teamId).get(itemId);
+    if (!row || !row.deleted) return fail(res, 404, "not_found", "Nothing deleted with that id.");
+    if (!row.body) return fail(res, 404, "not_found", "That item was deleted before the team trash existed, so there is nothing left to restore.");
+    const batch = row.deleteBatch || row.id;
+    const members = [...db.items.get(teamId).values()].filter((r) => r.deleted && r.deleteBatch === batch);
+    if (role !== "owner" && row.deletedBy !== userId && members.some((r) => r.createdBy !== userId)) {
+      return fail(res, 403, "forbidden", "Only the team owner, the item's creator, or whoever deleted it can restore it.");
+    }
+    const now = new Date().toISOString();
+    for (const r of members) {
+      r.deleted = false; r.version += 1; r.seq = nextSeq(teamId);
+      r.updatedBy = userId; r.updatedAt = now;
+      r.deletedAt = null; r.deletedBy = null; r.deleteBatch = null;
+    }
+    return json(res, 200, { version: row.version, seq: row.seq, restored: members.map((r) => r.id) });
   }
 
   return fail(res, 404, "not_found", p);
@@ -444,3 +501,11 @@ function start() {
 function stop() { return new Promise((r) => (server ? server.close(r) : r())); }
 
 module.exports = { start, stop, PORT };
+
+// Run as `node mock-sync-server.js` with MOCK_SYNC_PORT set — global-setup
+// forks one of these per worker.
+if (require.main === module) {
+  start()
+    .then(() => process.send && process.send({ ready: true, port: PORT }))
+    .catch((err) => { console.error(err.message); process.exit(1); });
+}

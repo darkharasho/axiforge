@@ -173,24 +173,25 @@ test.describe("Library Basics", () => {
   });
 
   // 7. Delete build with confirmation
-  test("delete build with confirmation", async () => {
+  // Since v0.14.0 a delete is staged in the trash rather than destroyed, so it
+  // no longer asks first — the toast's Undo is the safety net. This spec waited
+  // on a confirm modal that stopped appearing three releases ago; see
+  // tests/e2e/specs/trash.spec.js for the full staged-delete contract.
+  test("delete build stages it in the trash, without a confirm", async () => {
     const countBefore = await countBuildRows(window);
 
-    // Find the copy row and delete it
     const copyRow = window.locator("[data-build-id]", { hasText: "(Copy)" }).first();
     await copyRow.click({ button: "right" });
     await window.waitForTimeout(200);
 
     const deleteItem = window.locator(".lib-ctx-item__label:text('Delete')");
     await deleteItem.click();
-    await window.waitForTimeout(200);
+    await window.waitForTimeout(400);
 
-    // Confirm the deletion
-    await confirmModal(window);
-    await window.waitForTimeout(300);
-
+    await expect(window.locator("#cm-confirm")).toBeHidden();
     const countAfter = await countBuildRows(window);
     expect(countAfter).toBe(countBefore - 1);
+    await expect(window.locator(".lib-toast--visible")).toContainText("Moved 1 build to Trash");
   });
 
   // 8. Pin/unpin builds (via context menu — the pin button is context-menu only)
@@ -292,10 +293,8 @@ test.describe("Folders", () => {
     await window.waitForTimeout(200);
     const deleteItem = window.locator(".lib-ctx-item__label:text('Delete Folder')");
     await deleteItem.click();
-    await window.waitForTimeout(200);
-
-    await confirmModal(window);
-    await window.waitForTimeout(500);
+    // No confirm since v0.14.0 — the folder is staged in the trash as one batch.
+    await window.waitForTimeout(600);
 
     // Folder should be gone
     const deletedFolder = window.locator("[data-folder-id]", { hasText: "Renamed Folder" });
@@ -439,6 +438,11 @@ test.describe("Copy/Cut/Paste", () => {
     expect(parsed.length).toBe(2);
   });
 
+  // The paste and cut-paste toasts were reworded in v0.14.0, when every
+  // reversible action grew an inline Undo: "pasted"/"moved" became "Pasted N
+  // build(s)" / "Moved N build(s)", and getToastText() now returns the Undo
+  // button's label appended to the message. Match the message, not the whole
+  // string.
   // 15. Ctrl+V pastes clipboard build with "(1)" suffix
   test('Ctrl+V pastes clipboard build with "(1)" suffix', async () => {
     // First, copy build A
@@ -457,7 +461,7 @@ test.describe("Copy/Cut/Paste", () => {
     await window.waitForTimeout(500);
 
     const toast = await getToastText(window);
-    expect(toast).toContain("pasted");
+    expect(toast).toMatch(/^Pasted \d+ build/);
 
     // A new build with "(1)" should exist
     const pastedRow = window.locator("[data-build-id]", { hasText: "Copy Build A (1)" });
@@ -519,7 +523,7 @@ test.describe("Copy/Cut/Paste", () => {
     await window.waitForTimeout(500);
 
     const toast = await getToastText(window);
-    expect(toast).toContain("moved");
+    expect(toast).toMatch(/^Moved \d+ build/);
 
     // Build should be in the folder
     const movedRow = window.locator(`[data-build-id="${buildC.id}"]`);
@@ -557,7 +561,7 @@ test.describe("Copy/Cut/Paste", () => {
     await window.waitForTimeout(500);
 
     const toast = await getToastText(window);
-    expect(toast).toContain("pasted");
+    expect(toast).toMatch(/^Pasted \d+ build/);
 
     // Build B should still be at root (not moved)
     const buildBRow = window.locator(`[data-build-id="${buildB.id}"]`);
@@ -618,7 +622,7 @@ test.describe("Copy/Cut/Paste", () => {
     await window.waitForTimeout(500);
 
     const toast = await getToastText(window);
-    expect(toast).toContain("2 builds pasted");
+    expect(toast).toContain("Pasted 2 builds");
 
     const countAfter = await countBuildRows(window);
     expect(countAfter).toBe(countBefore + 2);
@@ -663,7 +667,7 @@ test.describe("Copy/Cut/Paste", () => {
     await window.waitForTimeout(500);
 
     const pasteToast = await getToastText(window);
-    expect(pasteToast).toContain("pasted");
+    expect(pasteToast).toMatch(/^Pasted \d+ build/);
 
     const newCount = await buildRows.count();
     expect(newCount).toBe(count + 1);

@@ -3,7 +3,11 @@ const path = require("path");
 const fs = require("fs");
 const os = require("os");
 const { PORT: MOCK_PORT } = require("../mock-server/server");
-const { PORT: SYNC_PORT } = require("../mock-sync-server");
+const { workerIndex, syncPort } = require("./ports");
+
+// Per worker, not per suite: several Electron apps run at once and each needs a
+// sync server and a profile directory nobody else touches. @see ports.js
+const SYNC_PORT = syncPort();
 
 const VITE_PORT = 5199;
 
@@ -19,7 +23,10 @@ const DATA_DIR = getDataDir();
 
 function getDataDir() {
   const appData = process.env.XDG_CONFIG_HOME || path.join(os.homedir(), ".config");
-  return path.join(appData, `${APP_NAME}-e2e-test`, "data");
+  // Suffixed with the worker slot. Every spec calls cleanDataDir(), which wipes
+  // the directory outright — shared between parallel workers that is one spec
+  // deleting another's library mid-run.
+  return path.join(appData, `${APP_NAME}-e2e-test-w${workerIndex()}`, "data");
 }
 
 function cleanDataDir() {
@@ -42,7 +49,8 @@ async function launchApp({ clean = true, env: envOverride = {} } = {}) {
     args: ["."],
     env: {
       ...env,
-      APP_PROFILE: "e2e-test",
+      // Distinct per worker, so two apps never share an Electron userData dir.
+      APP_PROFILE: `e2e-test-w${workerIndex()}`,
       GW2_API_ROOT: `http://localhost:${MOCK_PORT}/v2`,
       VITE_DEV_SERVER_URL: `http://localhost:${VITE_PORT}`,
       AXIFORGE_SYNC_BASE: `http://localhost:${SYNC_PORT}/api/sync`,

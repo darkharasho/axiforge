@@ -1,6 +1,9 @@
 const { test, expect } = require("playwright/test");
 const { launchApp, closeApp, cleanDataDir, DATA_DIR } = require("../helpers/app");
-const { PORT: SYNC_PORT } = require("../mock-sync-server");
+const { syncPort } = require("../helpers/ports");
+
+// This worker's own sync server — the suite runs several at once.
+const SYNC_PORT = syncPort();
 const path = require("path");
 const fs = require("fs");
 const http = require("http");
