@@ -19,6 +19,7 @@ import { showFormModal } from "../form-modal.js";
 import { askAboutDuplicates, summarizeImport } from "./import-dedupe.js";
 import { showPrompt } from "../prompt-modal.js";
 import { loadTeamState, teamRootFor } from "../teams.js";
+import { promptRenameTeam } from "../team-modal.js";
 import { initToolbar, renderToolbar, renderFilters } from "./toolbar.js";
 import { initSidebar, renderSidebar, insertInlineInput } from "./sidebar.js";
 import { initContent, renderContent } from "./content.js";
@@ -1547,7 +1548,7 @@ async function handleMoveFolder(folderId, newParentId) {
   renderLibrary();
 }
 
-async function handleRenameFolder(folderId) {
+export async function handleRenameFolder(folderId) {
   const folder = state.folders.find((f) => f.id === folderId);
   if (!folder) return;
   const oldName = folder.name;
@@ -1558,11 +1559,32 @@ async function handleRenameFolder(folderId) {
   const container = !navItem ? document.getElementById("lib-content") : null;
   const newName = await insertInlineInput(navItem, folder.name || "", { container });
   if (!newName) { renderLibrary(); return; }
-  await saveFolder({ ...folder, name: newName });
+  // main refuses some renames outright — a team root, or a folder you only have
+  // read access to — and the rejection used to escape unhandled: the inline input
+  // had already removed itself, so a refused rename was indistinguishable from a
+  // menu item that did nothing at all. Every refusal has a reason; say it.
+  try {
+    await saveFolder({ ...folder, name: newName });
+  } catch (err) {
+    showToast(err?.message || "Could not rename that folder.", "error");
+    renderLibrary();
+    return;
+  }
   pushUndoable({ type: "rename-folder", label: `Renamed back to "${oldName}"`, undo: async () => {
     const current = state.folders.find((f) => f.id === folderId);
     if (current) await saveFolder({ ...current, name: oldName });
   }}, `Renamed to "${newName}"`);
+  renderLibrary();
+}
+
+async function handleRenameTeam(teamId) {
+  // Shares promptRenameTeam with the Manage team dialog rather than re-deriving
+  // it: a team rename also rewrites its root folder, so a second copy here would
+  // be a second chance for the two to disagree about what a rename does.
+  const err = await promptRenameTeam(teamId, { onRefresh: async () => {
+    await loadFolders();
+  } });
+  if (err) { showToast(err, "error"); return; }
   renderLibrary();
 }
 
@@ -1796,6 +1818,7 @@ function _buildSharedCallbacks() {
     onOpenFolder: handleOpenFolder,
     onMoveFolder: handleMoveFolder,
     onRenameFolder: handleRenameFolder,
+    onRenameTeam: handleRenameTeam,
     onNewSubfolder: handleNewSubfolder,
     onNewBuildInFolder: handleNewBuildInFolder,
     onDeleteFolder: handleDeleteFolder,

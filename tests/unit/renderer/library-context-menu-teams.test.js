@@ -222,3 +222,60 @@ test("a right-click on an unknown folder id offers no team actions", () => {
   expect(l).not.toContain("Pull now");
   expect(l).not.toContain("Stop sharing");
 });
+
+// ─── Renaming a team ──────────────────────────────────────────────────────────
+//
+// A team root cannot be renamed as a folder: folders:save throws outright, and
+// _ensureRootFolder would revert a local-only rename on the next pull. So the
+// Rename on a team root has to mean "rename the team" or it means nothing —
+// which is what it did before, silently, leaving people to conclude the app had
+// no way to rename a team at all.
+
+test("Rename on a team root renames the TEAM, not the folder", () => {
+  const onRenameTeam = jest.fn();
+  const onRenameFolder = jest.fn();
+  initContextMenu({ onToast: () => {}, onRenameTeam, onRenameFolder });
+
+  const menu = openFolderMenu("t");
+  expect(labels(menu)).toContain("Rename Team…");
+  expect(labels(menu)).not.toContain("Rename");
+
+  itemFor(menu, "Rename Team…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  expect(onRenameTeam).toHaveBeenCalledWith("t");
+  expect(onRenameFolder).not.toHaveBeenCalled();
+});
+
+test("a member sees why they cannot rename the team rather than a dead control", () => {
+  const onRenameTeam = jest.fn();
+  initContextMenu({ onToast: () => {}, onRenameTeam });
+
+  const item = itemFor(openFolderMenu("m"), "Rename Team…");
+  expect(item.className).toContain("lib-ctx-item--disabled");
+  expect(item.title).toBe("Only the team owner can rename the team");
+
+  item.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  expect(onRenameTeam).not.toHaveBeenCalled();
+});
+
+test("a team SUB-folder keeps the ordinary folder Rename", () => {
+  const onRenameTeam = jest.fn();
+  const onRenameFolder = jest.fn();
+  initContextMenu({ onToast: () => {}, onRenameTeam, onRenameFolder });
+
+  const menu = openFolderMenu("a");
+  expect(labels(menu)).toContain("Rename");
+  expect(labels(menu)).not.toContain("Rename Team…");
+
+  itemFor(menu, "Rename").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  expect(onRenameFolder).toHaveBeenCalledWith("a");
+  expect(onRenameTeam).not.toHaveBeenCalled();
+});
+
+test("a personal folder is untouched by any of this", () => {
+  const onRenameFolder = jest.fn();
+  initContextMenu({ onToast: () => {}, onRenameFolder });
+
+  const menu = openFolderMenu("p");
+  expect(labels(menu)).toContain("Rename");
+  expect(labels(menu)).not.toContain("Rename Team…");
+});

@@ -483,6 +483,44 @@ describe("as an owner", () => {
     expect(status()).not.toMatch(/^Error/);
   });
 
+  test("the rename is callable without the dialog, for the folder right-click", async () => {
+    // Renaming a team root folder IS renaming the team, so the library's
+    // right-click reaches the same call rather than growing a second one that
+    // could drift from it.
+    const { promptRenameTeam } = require("../../../src/renderer/modules/team-modal.js");
+    showPrompt.mockResolvedValue("EWW Reloaded");
+    const onRefresh = jest.fn();
+
+    const err = await promptRenameTeam("t1", { onRefresh });
+
+    expect(showPrompt).toHaveBeenCalledWith("New team name", "EWW");
+    expect(api.renameTeam).toHaveBeenCalledWith("t1", "EWW Reloaded");
+    expect(onRefresh).toHaveBeenCalled();
+    expect(err).toBeNull();
+  });
+
+  test("a failed rename hands the reason back rather than reporting it itself", async () => {
+    // The two callers report differently — a status line in the dialog, a toast
+    // in the library — and neither can show the other's.
+    const { promptRenameTeam } = require("../../../src/renderer/modules/team-modal.js");
+    showPrompt.mockResolvedValue("EWW Reloaded");
+    api.renameTeam.mockRejectedValue(new Error("Only the owner can rename a team."));
+
+    expect(await promptRenameTeam("t1", {})).toBe("Only the owner can rename a team.");
+  });
+
+  test("a refresh that throws does not make a completed rename look failed", async () => {
+    const { promptRenameTeam } = require("../../../src/renderer/modules/team-modal.js");
+    showPrompt.mockResolvedValue("EWW Reloaded");
+
+    const err = await promptRenameTeam("t1", {
+      onRefresh: async () => { throw new Error("library reload blew up"); },
+    });
+
+    expect(api.renameTeam).toHaveBeenCalled();
+    expect(err).toBeNull();
+  });
+
   test("cancelling the rename prompt changes nothing", async () => {
     showPrompt.mockResolvedValue(null);
     await openTeamModal("t1", { tab: "team" });

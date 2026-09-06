@@ -589,18 +589,40 @@ async function _handleRemoveMember(btn) {
   }
 }
 
-async function _handleRename() {
+/**
+ * Rename a team, from the Team tab or from a right-click on its shared folder.
+ * Renaming the root folder IS renaming the team — teamSync.renameTeam rewrites
+ * the folder from the server's answer, and _ensureRootFolder would revert a
+ * local-only rename anyway — so both gestures have to land on the same call.
+ *
+ * Returns null on success or when cancelled, or a message on failure: the two
+ * callers report it differently (a status line in the dialog, a toast in the
+ * library) and neither can show the other's.
+ */
+export async function promptRenameTeam(teamId, { onRefresh } = {}) {
+  const current = (state.teams || []).find((t) => t.team.id === teamId);
   // Electron's renderer has no window.prompt() — it throws. Use the modal helper.
-  const name = await showPrompt("New team name", _record()?.team?.name || "");
-  if (!name?.trim()) return;
+  const name = await showPrompt("New team name", current?.team?.name || "");
+  if (!name?.trim()) return null;
   try {
-    await window.desktopApi.renameTeam(_teamId, name.trim());
+    await window.desktopApi.renameTeam(teamId, name.trim());
     await loadTeamState();
-    _render();
-    await _refreshLibrary();
   } catch (err) {
-    _setStatus(err?.message || String(err), true);
+    return err?.message || String(err);
   }
+  try {
+    await onRefresh?.();
+  } catch {
+    // The caller's refresh failing must not read as the rename failing — the
+    // rename already went through, on the server and in the root folder.
+  }
+  return null;
+}
+
+async function _handleRename() {
+  const err = await promptRenameTeam(_teamId, { onRefresh: _onRefresh });
+  if (err) { _setStatus(err, true); return; }
+  _render();
 }
 
 async function _handlePull(btn) {

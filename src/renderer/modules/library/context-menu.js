@@ -289,7 +289,17 @@ function showFolderMenu(x, y, folderId, folder) {
 
   const items = [
     _item(folderOpenIcon, "Open Folder", null, () => _callbacks.onOpenFolder?.(folderId)),
-    _item(pencilIcon, "Rename", "F2", () => _callbacks.onRenameFolder?.(folderId), false, writeTip),
+    // Renaming a team ROOT is renaming the team — folders:save refuses a local
+    // rename of one outright and _ensureRootFolder would revert it anyway — so
+    // this gesture only means anything if it goes to the team rename. It used to
+    // dead-end here, which is how "there is no way to rename a team" came to
+    // feel true even though the Team tab has had one all along.
+    isTeamRoot
+      ? _item(pencilIcon, "Rename Team\u2026", "F2",
+          () => _callbacks.onRenameTeam?.(teamRoot.teamId),
+          false,
+          isTeamOwner(folderId) ? null : "Only the team owner can rename the team")
+      : _item(pencilIcon, "Rename", "F2", () => _callbacks.onRenameFolder?.(folderId), false, writeTip),
     _sep(),
     _item(folderPlusIcon, "New Sub-folder", null, () => _callbacks.onNewSubfolder?.(folderId), false, writeTip),
     _item(documentPlusIcon, "New Build in Folder", null, () => _callbacks.onNewBuildInFolder?.(folderId), false, writeTip),

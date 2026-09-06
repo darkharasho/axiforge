@@ -532,3 +532,26 @@ Status key: `[ ]` open · `[x]` done · `[~]` in progress · `[?]` needs repro s
   - Verified lossless against the v0.18.0 notes (every character survives the
     round trip) and unchanged for v0.14.0/v0.16.0/v0.17.0, which still go out as
     a single message.
+
+- [x] **Right-click → Rename on a shared folder did nothing** — 2026-09-06.
+  Reported as "we need some way of renaming a team". There has been one since the
+  Manage team dialog shipped — Team tab → Rename, owners only — but the gesture
+  people actually reach for dead-ended, so as far as anyone could tell there
+  wasn't.
+  - *Root cause, and the systemic half:* `folders:save` refuses a team root
+    outright ("Rename or move the team from Settings → Teams.") because a local
+    rename is reverted by the next `_ensureRootFolder`. `handleRenameFolder` had
+    no `try`/`catch`, so that rejection escaped unhandled — and the inline input
+    had already torn itself down by then, leaving the UI identical to a menu item
+    that does nothing. It now toasts the reason. This was never specific to team
+    roots: a read-only folder's refusal was equally invisible from this path.
+  - *The feature half:* renaming a team root folder **is** renaming the team —
+    `teamSync.renameTeam` rewrites the folder from the server's answer — so the
+    menu item on a root now says **Rename Team…** and goes to the team rename.
+    A non-owner gets it disabled with "Only the team owner can rename the team"
+    rather than a control that fails on click.
+  - Both entry points share `promptRenameTeam()` in `team-modal.js`. A second
+    copy in the library would have been a second chance for the two to disagree
+    about what renaming a team does to its folder.
+  - The regression test was checked against the unfixed code first: it fails
+    without the `catch`, which is the only thing that makes it worth keeping.
