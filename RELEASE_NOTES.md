@@ -1,3 +1,20 @@
+## Version v0.19.0 — September 6, 2026
+
+### Comp notes are real notes now
+
+- **Comp notes were a bare textarea; build notes have had a proper editor for a while.** Same kind of writing, two very different places to do it. The comp detail now has a **Comp | Notes** tab strip carrying the whole build-notes editor — markdown, the formatting toolbar, `@` mentions, pasted screenshots and video embeds. The tab shows a dot when there's something written in it, and remembers which tab you were on until you go Back.
+- **`@` resolves what a comp can actually mean** — runes, sigils, relics, food, utilities, infusions, weapons. It finds no skills or traits, which is the honest answer for a document that spans nine professions.
+- **Which is what `:Firebrand:` is for.** Typing `:fire` in comp notes offers Firebrand the way Discord offers an emoji, and the token draws as the class icon inline. A colon glued to a word — `Note:` — doesn't trigger it. The icons render everywhere notes do, build notes included, so one pasted out of a comp still draws; only comp notes offer the typeahead.
+- **The published page shows all of it.** Comp notes used to go out as raw text in a `<pre>`; they now render through the site's own notes renderer behind a **COMP | NOTES** tab bar, class icons and screenshots included.
+
+### Read-only says what you *can* do
+
+- **"Read-only — the team owner controls who can change this folder" told you that you were blocked and nothing else**, so the edges of it kept coming back as questions: can I still export it, is Duplicate a change, is the copy I made mine. The tooltip keeps that sentence first, then names what read still allows, what it doesn't, and the way out — copy it into a folder of your own and that copy is yours. One string, so it lands on every greyed control at once.
+
+### Bug Fixes
+
+- **A screenshot pasted into a comp survived until the next save and no further.** The comp store's field whitelist dropped the images on the way to disk, and publishing never carried them at all. Both fixed.
+
 ## Version v0.18.1 — September 6, 2026
 
 ### Bug Fixes

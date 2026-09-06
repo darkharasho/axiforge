@@ -555,3 +555,17 @@ Status key: `[ ]` open · `[x]` done · `[~]` in progress · `[?]` needs repro s
     about what renaming a team does to its folder.
   - The regression test was checked against the unfixed code first: it fails
     without the `catch`, which is the only thing that makes it worth keeping.
+
+- [ ] **`tests/unit/teamsIpc.test.js` is flaky under a loaded full-suite run.**
+  Four tests failed with "main process never finished startup" — `loadMain()`
+  asserts `mockCtx.handlers.has("teams:outbox")` right after requiring
+  `src/main/index.js`, so anything that makes startup slower or partial in a
+  busy worker takes the whole suite down. Passes alone, and passed on an
+  immediate re-run of the full suite, so it is timing, not order. Worth making
+  the wait explicit rather than assuming startup finished synchronously.
+  Seen while cutting v0.19.0.
+
+- [ ] **`tests/e2e/specs/editor-profession.spec.js:119` ("loading skeletons
+  appear during catalog fetches") was reported flaky by the nightly run** — it
+  failed once and passed on retry. The six hard failures in that same run were
+  stale specs and are fixed (cdb648c); this one is still open.
