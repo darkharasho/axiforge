@@ -1,3 +1,29 @@
+## Version v0.17.0 — September 5, 2026
+
+### A shared Trash for your team
+
+- **What a teammate deletes is recoverable now.** A synced delete used to destroy the content on the server, not just hide it — so if you were offline when it happened, or joined the team afterwards, there was nothing left anywhere to put back. Deleted team items are now kept for 30 days and listed in the Trash under their team, with who deleted them and when.
+- **Anyone with a claim on it can restore it**: the folder's owner, whoever made everything in it, or whoever deleted it. If it isn't yours to restore, *Put Back* says so rather than failing when you click it.
+- **A deleted folder comes back in one piece**, as a single row, rather than one row per build inside it.
+- Items deleted before this release can't be recovered — the content was already gone. The Trash says so instead of failing quietly.
+
+### Comps have version history
+
+- **Every comp change is recorded**, the same way builds and shared folders already were — who changed it, when, and what changed: builds added or removed, parties added, categories, slot colours, notes, tags.
+- **Roll back to any entry.** Reverting a comp that was deleted brings it back first.
+- **A deleted shared comp or build leaves a "Deleted" entry in the folder's history** with a *Bring it back* action, so a delete is visible in the record rather than just an absence.
+
+### Bug Fixes
+
+- **A build row could float over every library view until you restarted.** Switching between All Builds and the Archive mid-drag stranded the drag clone on the page with nothing left to remove it.
+- **A slight click-and-wobble moved builds and comps.** Dragging now needs about eight pixels of intent before it starts.
+- **Shift-click multiple builds and drag them out of a folder** — in the Columns view this moved only the one you grabbed.
+- **Right-click → Rename did nothing** in the Columns view, or on the Comps page (where it called a dialog Electron doesn't implement).
+- **The toolbar was live but inert in the Trash and the Archive.** Typing in search did nothing visible, then the library came back filtered for no apparent reason.
+- **Error toasts vanished in two seconds**, the same as "Build copied!" — often the only account you got of why an action did nothing. Errors and warnings now stay up for six.
+- **An imported comp with a slot that couldn't be resolved took the whole comps page down**, leaving a blank page until restart.
+- **The Windows titlebar cut into the library tab** in the left nav.
+
 ## Version v0.16.0 — September 5, 2026
 
 ### An archive, so putting something away is not deleting it
