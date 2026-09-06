@@ -9,6 +9,7 @@ import { showConfirmModal } from "../confirm-modal.js";
 import { isSelected, getSelection, isCompSelected, getCompSelection } from "./selection.js";
 import { stopSharingFolder, pullTeamFor, libraryFolders } from "./folder-store.js";
 import { isTeamOwner, teamRootFor } from "../teams.js";
+import { compsContainingBuild } from "../comps/comp-membership.js";
 import { writeDeniedReason, currentFolderId } from "./access.js";
 import { openShareModal } from "./share-modal.js";
 import {
@@ -423,7 +424,6 @@ function showEmptyMenu(x, y) {
 // ─── Build unlink / delete items ──────────────────────────────────────────────
 
 function _buildUnlinkOrDeleteItems(buildId, build, writeTip = null) {
-  const compIds = Array.isArray(build?.compIds) ? build.compIds : [];
   const inCompView = state.currentFolder?.type === "comp";
 
   if (inCompView) {
@@ -434,8 +434,9 @@ function _buildUnlinkOrDeleteItems(buildId, build, writeTip = null) {
   }
 
   const items = [];
-  if (compIds.length > 0) {
-    const comps = (state.comps || []).filter((c) => compIds.includes(c.id));
+  // Membership comes from the comps, not build.compIds -- see comp-membership.js.
+  const comps = compsContainingBuild(buildId);
+  if (comps.length > 0) {
     if (comps.length === 1) {
       const c = comps[0];
       items.push(
@@ -469,18 +470,14 @@ function _multiSelectUnlinkOrDeleteItems(ids, writeTip = null) {
   }
 
   const items = [];
-  const linkedIds = ids.filter((id) => {
-    const b = state.builds.find((x) => x.id === id);
-    return b && Array.isArray(b.compIds) && b.compIds.length > 0;
-  });
+  const linkedIds = ids.filter((id) => compsContainingBuild(id).length > 0);
 
   if (linkedIds.length > 0) {
     items.push(
       _item(squaresIcon, `Unlink ${linkedIds.length} from Comps`, null, () => {
         for (const id of linkedIds) {
-          const b = state.builds.find((x) => x.id === id);
-          for (const compId of (b?.compIds || [])) {
-            _callbacks.onRemoveBuildFromComp?.(id, compId);
+          for (const comp of compsContainingBuild(id)) {
+            _callbacks.onRemoveBuildFromComp?.(id, comp.id);
           }
         }
       }, false, writeTip),

@@ -60,6 +60,7 @@ import { initSettingsModal, initSettingsCallbacks, openSettingsModal } from "./m
 import { initLibrary, renderLibrary, handleLibraryKeydown, showToast } from "./modules/library/library.js";
 import { clearUndo as clearLibraryUndo } from "./modules/library/undo.js";
 import { initComps, loadComps, renderComps } from "./modules/comps/comps.js";
+import { compsContainingBuild } from "./modules/comps/comp-membership.js";
 import { getProfessionSvg } from "./modules/profession-icons.js";
 import { getEliteSpecName, profClass } from "./modules/build-helpers.js";
 import { renderMiniBuildCard } from "./modules/mini-build-card.js";
@@ -1287,8 +1288,10 @@ function renderCompsPanel() {
   const panel = el.compsPanel;
   if (!panel) return;
 
-  const compIds = state.editor.compIds || [];
-  const comps = (state.comps || []).filter((c) => compIds.includes(c.id));
+  // From the comps, not state.editor.compIds: a pulled team build carries no
+  // compIds at all (see comps/comp-membership.js), so this panel used to claim
+  // a shared build was in no comps while the comp listed it.
+  const comps = state.editor.id ? compsContainingBuild(state.editor.id) : [];
   if (comps.length === 0) {
     panel.innerHTML = `<div class="comps-tab__empty">
       <span class="comps-tab__empty-icon"><svg width="32" height="32" viewBox="0 0 16 16" fill="currentColor" opacity="0.3"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg></span>

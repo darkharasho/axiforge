@@ -1734,8 +1734,23 @@
   height: 20px;
 }
 
-.comp-picker-row__name {
+/* Two lines per row: what it is, then where it lives and what it's wearing. */
+.comp-picker-row__main {
   flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.comp-picker-row__title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.comp-picker-row__name {
   font-size: 13px;
   color: var(--text-light);
   overflow: hidden;
@@ -1744,7 +1759,10 @@
   min-width: 0;
 }
 
-.comp-picker-row__comp-count {
+.comp-picker-row__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
   font-size: 10px;
   color: var(--text-dim);
   background: var(--bg-tertiary, rgba(255, 255, 255, 0.08));
@@ -1752,12 +1770,64 @@
   border-radius: 8px;
   flex-shrink: 0;
   white-space: nowrap;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.comp-picker-row__prof {
+.comp-picker-row__badge svg {
+  width: 10px;
+  height: 10px;
+  flex-shrink: 0;
+}
+
+/* Shared and already-in-a-comp are the two facts that change whether you should
+   pick a build at all, so they don't get to look like the rest of the meta. */
+.comp-picker-row__badge--shared {
+  color: var(--accent, #7aa2f7);
+  background: color-mix(in srgb, var(--accent, #7aa2f7) 14%, transparent);
+}
+
+.comp-picker-row__badge--comps {
+  color: var(--gold, #d9b25f);
+  background: color-mix(in srgb, var(--gold, #d9b25f) 14%, transparent);
+}
+
+.comp-picker-row__meta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10.5px;
+  color: var(--text-dim);
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.comp-picker-row__where {
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 1;
+  min-width: 0;
+}
+
+.comp-picker-row__dot {
+  opacity: 0.45;
+  flex-shrink: 0;
+}
+
+.comp-picker-modal__scope {
+  padding: 6px 16px 8px;
   font-size: 11px;
   color: var(--text-dim);
-  flex-shrink: 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.comp-picker-modal__scope b {
+  color: var(--text-light);
+  font-weight: 600;
 }
 
 .comp-picker-modal__footer {

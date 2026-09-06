@@ -16,7 +16,7 @@ import {
 } from "../render-pages.js";
 import { roleBadgeHtml } from "../roleEstimator.js";
 import { COMP_TAG_ICONS } from "../constants.js";
-import { axiforgeIcon, checkIcon, chevronDownIcon, arrowUpTrayIcon, clipboardDocumentIcon, globeAltIcon, partyNumberIcon } from "../library/heroicons.js";
+import { axiforgeIcon, checkIcon, chevronDownIcon, arrowUpTrayIcon, clipboardDocumentIcon, globeAltIcon, partyNumberIcon, shareIcon } from "../library/heroicons.js";
 import { renderMiniBuildCard, renderMissingMiniBuildCard } from "../mini-build-card.js";
 import { pickWebhooks } from "../webhook-picker.js";
 import { compShareDisabledTooltip } from "../share-gate.js";
@@ -24,6 +24,8 @@ import { computeCompPartyCoverage, buildPartyCoverageHTML, bindPartyCoverageEven
 import { openCompTagPopover, closeCompTagPopover, renderCompTagsRow } from "./comp-tags.js";
 import { renderCompTabs, mountCompNotes } from "./comp-notes.js";
 import { publishWithOwnerCheck, publishedByOtherBody } from "../publish-guard.js";
+import { teamRootFor } from "../teams.js";
+import { compsContainingBuild } from "./comp-membership.js";
 import {
   getEliteSpecName,
   getSpecIcon,
@@ -819,7 +821,66 @@ function renderCategoryRow(comp) {
 
 // ─── Add Build Picker Modal ──────────────────────────────────────────────────
 
-function openAddBuildModal(comp) {
+/** "WvW / Zerg / Frontline", or "" for a build sitting at the root. */
+function _folderPathText(folderId) {
+  const chain = [];
+  const seen = new Set();
+  let id = folderId;
+  while (id && !seen.has(id)) {
+    seen.add(id);
+    const folder = state.folders?.find((f) => f.id === id);
+    if (!folder) break;
+    chain.unshift(folder.name);
+    id = folder.parentId;
+  }
+  return chain.join(" / ");
+}
+
+/**
+ * Everything the picker knows about a build, resolved once per row.
+ *
+ * The picker used to show a name, a stat package and a comp count, which is not
+ * enough to tell two "Celestial Firebrand"s apart -- you could not see which
+ * folder a build came from or whether picking it would pull a personal build
+ * into a team's comp.
+ */
+function _pickerRowInfo(build) {
+  const team = teamRootFor(build.folderId);
+  const comps = compsContainingBuild(build.id);
+  return {
+    team,
+    comps,
+    folderPath: _folderPathText(build.folderId),
+    elite: getEliteSpecName(build) || build.profession || "",
+    gear: resolveStatPackage(build),
+    rune: getRuneName(build) || "",
+    gameMode: (build.gameMode || "").toUpperCase(),
+  };
+}
+
+/**
+ * The picker silently drops builds on two rules -- game mode and, for a shared
+ * comp, folder. An empty list that does not say which rule emptied it reads as
+ * "you have no builds".
+ */
+function _emptyPickerReason(comp, teamRoot) {
+  const clauses = [];
+  if (comp.gameMode) clauses.push(`set to ${String(comp.gameMode).toUpperCase()}`);
+  if (teamRoot) clauses.push(`in ${teamRoot.name}`);
+  if (!clauses.length) return "No builds available to add — everything is already in this comp.";
+  return `No builds available to add. This comp only accepts builds ${clauses.join(" and ")}.`;
+}
+
+/** The same two rules, stated up front so a short list makes sense. */
+function _pickerScopeNote(comp, teamRoot, count) {
+  const clauses = [];
+  if (comp.gameMode) clauses.push(`<b>${escapeHtml(String(comp.gameMode).toUpperCase())}</b> builds`);
+  if (teamRoot) clauses.push(`builds shared with <b>${escapeHtml(teamRoot.name)}</b>`);
+  const scope = clauses.length ? `Showing ${clauses.join(" · ")}` : "Showing every build not already in this comp";
+  return `${scope} — ${count} available`;
+}
+
+export function openAddBuildModal(comp) {
   // Remove any existing modal
   document.querySelector(".comp-picker-overlay")?.remove();
 
@@ -828,12 +889,16 @@ function openAddBuildModal(comp) {
 
   // Available builds: those not already in this comp
   const currentBuildIds = new Set(comp.buildIds || []);
-  const compFolder = comp.folderId ? state.folders?.find((f) => f.id === comp.folderId) : null;
+  // A shared comp used to admit only builds whose folderId matched its own
+  // exactly, which locked out every sub-folder of the same team: a comp in the
+  // team root could not reference a build in <root>/Zerg even though the two
+  // sync to the same team and teammates resolve both. The constraint that
+  // actually matters is the team, not the folder.
+  const compTeamRoot = teamRootFor(comp.folderId);
   const available = state.builds.filter((b) => {
     if (currentBuildIds.has(b.id)) return false;
     if (comp.gameMode && b.gameMode !== comp.gameMode) return false;
-    // For shared comps, only show builds from the same folder
-    if (compFolder?.shared && b.folderId !== comp.folderId) return false;
+    if (compTeamRoot && teamRootFor(b.folderId)?.id !== compTeamRoot.id) return false;
     return true;
   });
 
@@ -844,34 +909,72 @@ function openAddBuildModal(comp) {
     const filtered = available.filter((b) => {
       if (!searchTerm) return true;
       const s = searchTerm.toLowerCase();
-      const name = (b.title || "").toLowerCase();
-      const prof = (b.profession || "").toLowerCase();
-      const elite = (getEliteSpecName(b) || "").toLowerCase();
-      return name.includes(s) || prof.includes(s) || elite.includes(s);
+      const info = _pickerRowInfo(b);
+      // Searchable by everything the row shows -- picking the right build often
+      // means going by its folder or its gear, not its name.
+      return [
+        b.title || "",
+        b.profession || "",
+        info.elite,
+        info.folderPath,
+        info.gear,
+        info.rune,
+        info.team?.name || "",
+        ...(b.tags || []),
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(s);
     });
 
     const rows = filtered.map((b) => {
-      const icon = getSpecIcon(b);
-      const pClass = profClass(b.profession);
+      const info = _pickerRowInfo(b);
       const checked = selected.has(b.id) ? "checked" : "";
-      const displayName = escapeHtml(getDisplayName(b));
-      const gear = escapeHtml(resolveStatPackage(b));
-      const otherCompCount = (b.compIds || []).length;
-      const compBadge = otherCompCount > 0
-        ? `<span class="comp-picker-row__comp-count" title="Used in ${otherCompCount} comp${otherCompCount === 1 ? "" : "s"}">${otherCompCount} comp${otherCompCount === 1 ? "" : "s"}</span>`
-        : "";
+
+      const badges = [];
+      if (info.team) {
+        badges.push(
+          `<span class="comp-picker-row__badge comp-picker-row__badge--shared"` +
+          ` title="Shared with ${escapeHtml(info.team.name)} (${escapeHtml(info.team.role || "member")})">` +
+          `${shareIcon}${escapeHtml(info.team.name)}</span>`
+        );
+      }
+      if (info.comps.length > 0) {
+        const names = info.comps.map((c) => c.name || "Untitled").join(", ");
+        badges.push(
+          `<span class="comp-picker-row__badge comp-picker-row__badge--comps"` +
+          ` title="Already in: ${escapeHtml(names)}">` +
+          `${info.comps.length} comp${info.comps.length === 1 ? "" : "s"}</span>`
+        );
+      }
+
+      // Second line: where it lives, then what it is. Blank entries drop out
+      // rather than leaving stray separators.
+      const meta = [
+        `<span class="comp-picker-row__where">${escapeHtml(info.folderPath || "Library root")}</span>`,
+        info.elite ? `<span>${escapeHtml(info.elite)}</span>` : "",
+        info.gear ? `<span>${escapeHtml(info.gear)}</span>` : "",
+        info.rune ? `<span>${escapeHtml(info.rune)}</span>` : "",
+        info.gameMode ? `<span>${escapeHtml(info.gameMode)}</span>` : "",
+      ].filter(Boolean).join('<span class="comp-picker-row__dot">·</span>');
+
       return `
-        <label class="comp-picker-row ${pClass}" data-build-id="${escapeHtml(b.id)}">
+        <label class="comp-picker-row ${profClass(b.profession)}" data-build-id="${escapeHtml(b.id)}">
           <input type="checkbox" class="comp-picker-row__checkbox" value="${escapeHtml(b.id)}" ${checked} />
-          <span class="comp-picker-row__icon">${icon}</span>
-          <span class="comp-picker-row__name">${displayName}</span>
-          ${compBadge}
-          <span class="comp-picker-row__prof">${gear}</span>
+          <span class="comp-picker-row__icon">${getSpecIcon(b)}</span>
+          <span class="comp-picker-row__main">
+            <span class="comp-picker-row__title">
+              <span class="comp-picker-row__name">${escapeHtml(getDisplayName(b))}</span>
+              ${badges.join("")}
+            </span>
+            <span class="comp-picker-row__meta">${meta}</span>
+          </span>
         </label>
       `;
     }).join("");
 
-    return rows || '<p class="comp-picker-empty">No builds available to add</p>';
+    if (rows) return rows;
+    return `<p class="comp-picker-empty">${escapeHtml(_emptyPickerReason(comp, compTeamRoot))}</p>`;
   }
 
   function render() {
@@ -879,9 +982,10 @@ function openAddBuildModal(comp) {
       <div class="comp-picker-modal">
         <div class="comp-picker-modal__header">
           <span class="comp-picker-modal__title">Add Builds to Comp</span>
-          <input type="text" class="comp-picker-modal__search" placeholder="Search builds..."
+          <input type="text" class="comp-picker-modal__search" placeholder="Search name, folder, gear, team..."
                  value="${escapeHtml(searchTerm)}" />
         </div>
+        <div class="comp-picker-modal__scope">${_pickerScopeNote(comp, compTeamRoot, available.length)}</div>
         <div class="comp-picker-modal__list">
           ${renderModalList()}
         </div>
