@@ -36,6 +36,35 @@ describe("TeamSync — pull", () => {
     expect(h.events).toContainEqual(expect.objectContaining({ status: "synced", folderId: "t" }));
   });
 
+  // The editor can't apply a teammate's change while you have unsaved work, so it
+  // has to say what is waiting. Only this side of the pull can answer that: the
+  // pre-change record is gone the moment the upsert lands.
+  test("a teammate's change is described in the event, our own echo is not", async () => {
+    h = await makeHarness();
+    await seedTeam(h);
+    const mine = await h.buildStore.upsertBuild({ id: "b1", title: "Mine", notes: "old", folderId: "t" });
+    h.api.changes.mockResolvedValueOnce({ items: [
+      item({ id: "b1", version: 2, seq: 2, body: { ...mine, notes: "new" } }),
+    ], nextSeq: 2, hasMore: false });
+    await h.sync.pullTeam("t");
+    expect(h.events).toContainEqual(expect.objectContaining({
+      status: "synced", type: "build", id: "b1", summary: "notes updated", author: "vette",
+    }));
+  });
+
+  test("our own write echoed back describes nothing — there is nobody to tell", async () => {
+    h = await makeHarness();
+    await seedTeam(h);
+    const mine = await h.buildStore.upsertBuild({ id: "b1", title: "Mine", notes: "old", folderId: "t" });
+    h.api.changes.mockResolvedValueOnce({ items: [
+      item({ id: "b1", version: 2, seq: 2, updatedBy: { userId: "me", login: "me" }, body: { ...mine, notes: "new" } }),
+    ], nextSeq: 2, hasMore: false });
+    await h.sync.pullTeam("t");
+    const synced = h.events.find((e) => e.status === "synced" && e.id === "b1");
+    expect(synced.summary).toBeUndefined();
+    expect(synced.author).toBeUndefined();
+  });
+
   test("pages until hasMore is false, persisting the cursor after each page", async () => {
     h = await makeHarness();
     await seedTeam(h);

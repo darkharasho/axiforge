@@ -52,6 +52,7 @@ import { initConfirmModal, showConfirmModal } from "./modules/confirm-modal.js";
 import { initChoiceModal, showChoiceModal } from "./modules/choice-modal.js";
 import { loadTeamState, seedSyncStatusFromOutbox, teamRootFor } from "./modules/teams.js";
 import { applyBadge } from "./modules/sync-status.js";
+import { describeIncomingChange } from "./modules/sync-summary.js";
 import { pickWebhooks } from "./modules/webhook-picker.js";
 import { initImportConflictModal } from "./modules/import-conflict-modal.js";
 import { initShareModal } from "./modules/library/share-modal.js";
@@ -789,7 +790,10 @@ async function init() {
               renderEditor();
               syncGameModeToggleUI(state.editor.gameMode || "pve");
             } else {
-              showToast("This build was updated remotely. Save or discard your changes to apply it.", "info");
+              showToast(
+                `${describeIncomingChange(data.author, data.summary)} Save or discard your changes to apply it.`,
+                "info",
+              );
             }
           }
         }

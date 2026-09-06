@@ -664,15 +664,24 @@ class TeamSync {
 
     const body = item.body || {};
     let saved = null;
+    // What actually changed, for the sync-status event below as well as history.
+    // It can only be worked out HERE: `existing` is the pre-change record, and
+    // the upsert a few lines down overwrites it. Null for our own writes — there
+    // is nobody to attribute and nothing to announce.
+    let summary = null;
     if (item.type === "folder") {
       saved = await this.folderStore.upsertFolder({ id: item.id, name: body.name, sortOrder: body.sortOrder, parentId: folderId });
     } else if (item.type === "build") {
-      if (this.historyStore && !isOwnWrite) {
+      let existing = null;
+      if (!isOwnWrite) {
         const { summarizeBuildChange } = require("./buildHistoryStore");
-        const existing = (await this.buildStore.listBuilds()).find((b) => b.id === item.id);
+        existing = (await this.buildStore.listBuilds()).find((b) => b.id === item.id) || null;
+        summary = existing ? summarizeBuildChange(existing, { ...body, folderId }) : "Created";
+      }
+      if (this.historyStore && !isOwnWrite) {
         this.historyStore.addEntry({
           buildId: item.id, authorLogin: author, source: "team-sync",
-          summary: existing ? summarizeBuildChange(existing, { ...body, folderId }) : "Created",
+          summary,
           snapshot: existing || { ...body, id: item.id, folderId },
         }).catch((err) => console.warn("[history] team-sync addEntry failed:", err.message));
       }
@@ -694,7 +703,10 @@ class TeamSync {
       saved = await this.compStore.upsertComp({ ...body, id: item.id, folderId });
     }
     await this.syncStore.setVersion(teamId, item.id, { version: item.version, createdBy });
-    this._emit("sync-status", { status: "synced", type: item.type, id: item.id, folderId: root.id, item: saved });
+    this._emit("sync-status", {
+      status: "synced", type: item.type, id: item.id, folderId: root.id, item: saved,
+      ...(summary ? { summary, author } : {}),
+    });
   }
 
   /**

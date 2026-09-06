@@ -275,9 +275,19 @@ Status key: `[ ]` open · `[x]` done · `[~]` in progress · `[?]` needs repro s
   tested without booting Electron (`tests/unit/renderer/editor-return.test.js`).
   Hidden on the web playground — the editor is the whole app there.
 
-- [ ] **Say what changed in the incoming-sync popup.** Right now it announces
-  that a change arrived without saying what it was. `summarizeBuildChange()`
-  already produces exactly this text for the history panel.
+- [x] **Say what changed in the incoming-sync popup.** Done 2026-09-05. The
+  toast shown when a teammate's change lands on a build you have unsaved work in
+  now names who changed it and what they changed — "vette changed this build —
+  notes updated." The description is computed in `teamSync._applyItem` and
+  carried on the `sync-status` event, because that is the only place it can be:
+  the pre-change record is gone the moment the upsert lands. It reuses the
+  `summarizeBuildChange()` the history entry already builds there, so the toast
+  and the history row cannot drift. Wording lives in
+  `renderer/modules/sync-summary.js` (tested without Electron): the history
+  panel's full "; "-joined list is cut to the first two clauses with a
+  "(+N more)" count, since a toast cannot carry a paragraph. Toasts also gained
+  a max-width and wrapping — they were `white-space: nowrap` with no bound, so
+  any sentence-length toast ran off both window edges.
 
 - [x] **Record deletes in history, and allow undelete from history for shared
   folders.** Deletes were not recorded at all, and a teammate's delete was

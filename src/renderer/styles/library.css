@@ -1719,7 +1719,12 @@
   transition: opacity 0.15s ease, transform 0.15s ease;
   pointer-events: none;
   z-index: var(--z-modal-confirm);
-  white-space: nowrap;
+  /* Toasts carry whole sentences now — a teammate's change description, a
+     refusal reason — not two words. Unbounded and unwrapped they run off both
+     window edges, since the toast is centred rather than anchored. */
+  max-width: min(560px, calc(100vw - 40px));
+  text-align: center;
+  white-space: normal;
 }
 .lib-toast--visible {
   opacity: 1;
