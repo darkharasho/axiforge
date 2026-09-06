@@ -76,10 +76,24 @@ function _dropErrorMessage(err) {
 // Without this fallback, an in-place sortable end-event resolves the destination
 // to root and silently moves items out of any subfolder (custom or shared).
 function _containerFolderId(container) {
+  // Columns view: each column is its own sortable and each one shows a
+  // DIFFERENT folder, so it must answer for itself. Falling through to
+  // state.currentFolder here sent every column-to-column drag to column 0's
+  // folder, wherever the user actually dropped it.
+  const colEl = container?.closest?.(".lib-col");
+  if (colEl && "colFolderId" in colEl.dataset) return colEl.dataset.colFolderId || null;
+
   const folderEl = container?.closest?.("[data-folder-id]");
   if (folderEl) return folderEl.dataset.folderId;
   if (state.currentFolder?.type === "custom") return state.currentFolder.id;
   return null;
+}
+
+// The comp a sortable container belongs to, if it is a comp column. Builds
+// dropped here join the comp; folders and comps have no business in one.
+function _containerCompId(container) {
+  const colEl = container?.closest?.(".lib-col");
+  return colEl?.dataset?.colCompId || null;
 }
 
 function _findSharedRoot(folderId) {
@@ -198,6 +212,7 @@ export function wireDragDropEvents() {
       }
 
       const dropContainer = evt.to;
+      if (_containerCompId(dropContainer)) return; // comps hold builds, not folders
       const newParentId = _containerFolderId(dropContainer);
       const folder = state.folders?.find((f) => f.id === draggedFolderId);
       const oldParentId = folder?.parentId || null;
@@ -244,6 +259,7 @@ export function wireDragDropEvents() {
       }
 
       const dropContainer = evt.to;
+      if (_containerCompId(dropContainer)) return; // comps don't nest
       const newFolderId = _containerFolderId(dropContainer);
       const oldFolderId = compSrcFolderId;
 
@@ -324,6 +340,15 @@ export function wireDragDropEvents() {
 
     // Normal SortableJS reorder/move logic
     const dropContainer = evt.to;
+
+    const destCompId = _containerCompId(dropContainer);
+    if (destCompId) {
+      const selected = getSelection();
+      const idsToAdd = selected.length > 1 && selected.includes(buildId) ? selected : [buildId];
+      await _callbacks.onDropBuildsOnComp?.(idsToAdd, destCompId);
+      return;
+    }
+
     const newFolderId = _containerFolderId(dropContainer);
 
     const build = state.builds.find((b) => b.id === buildId);

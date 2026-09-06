@@ -648,7 +648,19 @@ function renderColumnsView(container) {
   const rootFolders = getVisibleFolders();
   const rootBuilds = getVisibleBuilds();
   const rootComps = getVisibleComps();
-  columns.push({ folders: rootFolders, builds: rootBuilds, comps: rootComps, parentId: null });
+  // A column has to know which folder it IS, not just what it contains: a drop
+  // lands on a column, and every column past the first belongs to a different
+  // folder than the one the library is navigated to.
+  const rootFolderId = state.currentFolder?.type === "custom" ? state.currentFolder.id : null;
+  const rootCompId = state.currentFolder?.type === "comp" ? state.currentFolder.id : null;
+  columns.push({
+    folders: rootFolders,
+    builds: rootBuilds,
+    comps: rootComps,
+    parentId: null,
+    folderId: rootFolderId,
+    compId: rootCompId,
+  });
 
   // Subsequent columns based on selected folders/comps
   for (let i = 0; i < _columnSelectedFolders.length; i++) {
@@ -661,7 +673,7 @@ function renderColumnsView(container) {
       // Comp selected: show its builds in next column, no sub-folders or sub-comps
       const selectedCompBuildIds = new Set(selectedComp.buildIds || []);
       const compBuilds = state.builds.filter((b) => selectedCompBuildIds.has(b.id));
-      columns.push({ folders: [], builds: compBuilds, comps: [], parentId: selectedId });
+      columns.push({ folders: [], builds: compBuilds, comps: [], parentId: selectedId, folderId: null, compId: selectedId });
       break; // comps are flat — no further nesting
     }
 
@@ -684,7 +696,7 @@ function renderColumnsView(container) {
       .filter((c) => compMatchesQuery(c, query))
       .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
 
-    columns.push({ folders: childFolders, builds: childBuilds, comps: childComps, parentId: selectedId });
+    columns.push({ folders: childFolders, builds: childBuilds, comps: childComps, parentId: selectedId, folderId: selectedId, compId: null });
   }
 
   const columnsHtml = columns
@@ -730,7 +742,13 @@ function renderColumnsView(container) {
         items.push(`<div class="lib-col__empty">Empty</div>`);
       }
 
-      return `<div class="lib-col" data-col="${colIndex}">${items.join("")}</div>`;
+      // data-col-folder-id / data-col-comp-id rather than data-folder-id: the
+      // latter would make the column itself draggable and would be picked up by
+      // .closest() as if the column were a folder row.
+      const colAttr = col.compId
+        ? `data-col-comp-id="${escapeHtml(col.compId)}"`
+        : `data-col-folder-id="${escapeHtml(col.folderId || "")}"`;
+      return `<div class="lib-col" data-col="${colIndex}" ${colAttr}>${items.join("")}</div>`;
     })
     .join("");
 
