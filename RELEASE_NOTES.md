@@ -1,3 +1,9 @@
+## Version v0.20.2 — September 6, 2026
+
+### Bug Fixes
+
+- **Team items vanished after someone changed a folder's permissions, and restoring them didn't stick.** Changing any sharing setting on a team folder tells everyone's app to re-download the team's history from the beginning. On a team with more than 200 items that download takes several passes — and the app was being told to start over on every pass, which it read as "that's the end of the list". Having seen only the first 200 items, it then treated everything else as deleted and moved it to the trash. Restoring didn't help: the next sync a few seconds later did exactly the same thing. The app now finishes the download before it decides anything is missing, and will never trash items on a download that didn't run to completion. Nothing was lost on the server — once everyone is on this version, anything trashed this way comes back on the next sync.
+
 ## Version v0.20.1 — September 6, 2026
 
 ### Bug Fixes
