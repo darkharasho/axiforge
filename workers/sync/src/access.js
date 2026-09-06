@@ -7,6 +7,10 @@
 // team with no grants behaves exactly as it always did, and pays nothing for the
 // feature.
 //
+// A grant names a person, or names EVERYONE — a folder's blanket level, which is
+// the only form that stays true as people join. A person's own grant beats the
+// blanket at the same folder; between folders the nearer one wins either way.
+//
 // A grant lives on a folder and covers that folder AND its contents. Covering
 // the folder itself is what makes `none` mean "you cannot see this folder",
 // rather than "you can see an Officers folder you may not open" — which is the
@@ -18,6 +22,11 @@ const ACCESS_VALUES = Object.keys(LEVELS);
 // What you get where nobody has said otherwise. `member` → write is today's
 // behaviour: write anything, delete only what you created (see canDelete).
 const DEFAULT_FOR_ROLE = { owner: "delete", member: "write" };
+
+// A grant against this pseudo-user is the folder's blanket level: everyone in
+// the team gets at least this, without anybody having to be named. It is the
+// only way a level can stay true as people join and leave. @see migration 0004.
+const EVERYONE = "*";
 
 const MAX_WALK = 64; // cycle guard; folder depth is capped at 3 client-side
 
@@ -38,14 +47,28 @@ function isAccess(value) {
  * runs exactly the queries it ran before.
  */
 class TeamAccess {
-  constructor({ teamId, role, grants, parents }) {
+  constructor({ teamId, role, grants, everyone, parents }) {
     this.teamId = teamId;
     this.role = role;
-    this.grants = grants;          // Map folderId → access
-    this.parents = parents;        // Map folderId → parentId (null at the root)
+    this.grants = grants;                    // Map folderId → access, this user
+    this.everyone = everyone || new Map();   // Map folderId → access, the blanket
+    this.parents = parents;                  // Map folderId → parentId (null at the root)
     this.isOwner = role === "owner";
     this.default = DEFAULT_FOR_ROLE[role] || "read";
-    this.unrestricted = this.isOwner || grants.size === 0;
+    this.unrestricted = this.isOwner || (grants.size === 0 && this.everyone.size === 0);
+  }
+
+  /**
+   * The level set AT one folder, if any: this user's own grant, else the
+   * folder's blanket.
+   *
+   * Personal beats blanket at the same folder, because that is what naming
+   * somebody means — a blanket that could not be excepted would be a worse tool
+   * than no blanket at all. Across folders neither wins by kind: the nearer one
+   * does, which is the same rule everything else here obeys.
+   */
+  atFolderOnly(folderId) {
+    return this.grants.get(folderId) || this.everyone.get(folderId) || null;
   }
 
   /**
@@ -63,11 +86,11 @@ class TeamAccess {
     for (let hops = 0; cursor && hops < MAX_WALK; hops += 1) {
       if (seen.has(cursor)) break; // cyclic parent chain — fall through to the default
       seen.add(cursor);
-      const grant = this.grants.get(cursor);
+      const grant = this.atFolderOnly(cursor);
       if (grant) return grant;
       cursor = this.parents.get(cursor) ?? null;
     }
-    return this.grants.get(this.teamId) || this.default;
+    return this.atFolderOnly(this.teamId) || this.default;
   }
 
   /**
@@ -117,14 +140,18 @@ class TeamAccess {
  */
 async function loadTeamAccess(env, teamId, userId, role) {
   const grants = new Map();
+  const everyone = new Map();
   if (role !== "owner") {
+    // Both in one query: a member is governed by their own grants and by the
+    // blanket ones together, and splitting them into two round trips would only
+    // make the pair possible to read at different moments.
     const { results } = await env.SYNC_DB.prepare(
-      "SELECT folder_id, access FROM folder_grants WHERE team_id = ? AND user_id = ?"
-    ).bind(teamId, userId).all();
-    for (const r of results) grants.set(r.folder_id, r.access);
+      "SELECT folder_id, user_id, access FROM folder_grants WHERE team_id = ? AND user_id IN (?, ?)"
+    ).bind(teamId, userId, EVERYONE).all();
+    for (const r of results) (r.user_id === EVERYONE ? everyone : grants).set(r.folder_id, r.access);
   }
   const parents = new Map();
-  if (grants.size > 0) {
+  if (grants.size > 0 || everyone.size > 0) {
     // Tombstoned folders included on purpose: the trash and the changes feed
     // both have to place items that no longer live anywhere.
     const { results } = await env.SYNC_DB.prepare(
@@ -132,7 +159,7 @@ async function loadTeamAccess(env, teamId, userId, role) {
     ).bind(teamId).all();
     for (const r of results) parents.set(r.id, r.parent_id);
   }
-  return new TeamAccess({ teamId, role, grants, parents });
+  return new TeamAccess({ teamId, role, grants, everyone, parents });
 }
 
-module.exports = { TeamAccess, loadTeamAccess, LEVELS, ACCESS_VALUES, DEFAULT_FOR_ROLE, rank, isAccess };
+module.exports = { TeamAccess, loadTeamAccess, LEVELS, ACCESS_VALUES, DEFAULT_FOR_ROLE, EVERYONE, rank, isAccess };

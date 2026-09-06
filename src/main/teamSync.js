@@ -12,6 +12,9 @@
 const { SyncApi } = require("./syncApi");
 const migration = require("./teamSyncMigration");
 const access = require("./folderAccess");
+// Hoisted out of the module object: `setGrant`'s own `access` parameter shadows
+// it, so reaching through the module there silently yields undefined.
+const { EVERYONE } = access;
 
 const POLL_INTERVAL_MS = 30_000;
 const FOCUS_COOLDOWN_MS = 10_000;
@@ -1132,9 +1135,16 @@ class TeamSync {
       if (err.code === "SYNC_UNAUTHORIZED") await this._handleUnauthorized();
       return null;
     }
+    // The server hands back this user's grants and the team's blanket ones in
+    // one list, told apart by the '*' pseudo-user. Merged, they would be
+    // indistinguishable — and a personal grant has to be able to except a
+    // blanket one at the same folder.
     const grants = {};
-    for (const g of payload?.grants || []) grants[g.folderId] = g.access;
-    await this.syncStore.setGrants(teamId, grants);
+    const everyone = {};
+    for (const g of payload?.grants || []) {
+      (g.userId === EVERYONE ? everyone : grants)[g.folderId] = g.access;
+    }
+    await this.syncStore.setGrants(teamId, grants, everyone);
     return grants;
   }
 
@@ -1146,8 +1156,10 @@ class TeamSync {
       : await this.api.setGrant(teamId, folderId, userId, access);
     // Changing your OWN grant is possible (an owner demoted to member elsewhere
     // is not, but a mirror that lags is still worse than one refresh).
+    // A blanket change moves this user's own floor too, so it needs the same
+    // refresh a change to their own grant does.
     const session = await this.getSession();
-    if (session && session.userId === userId) await this._refreshGrants(teamId);
+    if (userId === EVERYONE || (session && session.userId === userId)) await this._refreshGrants(teamId);
     return out;
   }
 
@@ -1157,7 +1169,8 @@ class TeamSync {
     const root = this.teamRootFor(folderId, folders);
     if (!root) return "delete"; // personal folder — nothing to restrict
     const grants = await this.syncStore.getGrants(root.teamId);
-    return access.accessAt({ folders, folderId, teamId: root.teamId, grants, role: root.role });
+    const everyone = await this.syncStore.getEveryoneGrants(root.teamId);
+    return access.accessAt({ folders, folderId, teamId: root.teamId, grants, everyone, role: root.role });
   }
 
   /** Folder id → access, for every folder in every team the user belongs to. */
@@ -1166,7 +1179,8 @@ class TeamSync {
     const out = {};
     for (const root of folders.filter((f) => f.teamId)) {
       const grants = await this.syncStore.getGrants(root.teamId);
-      Object.assign(out, access.buildAccessMap({ folders, root, teamId: root.teamId, grants, role: root.role }));
+      const everyone = await this.syncStore.getEveryoneGrants(root.teamId);
+      Object.assign(out, access.buildAccessMap({ folders, root, teamId: root.teamId, grants, everyone, role: root.role }));
     }
     return out;
   }

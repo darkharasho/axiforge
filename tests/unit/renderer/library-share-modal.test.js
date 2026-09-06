@@ -1,10 +1,11 @@
 /**
  * @jest-environment jsdom
  *
- * The share modal is the one surface that turns a personal folder into a shared
- * one and hands back the invite code. What matters here is that each of its
- * three states renders the right affordance, and that the picker's two paths
- * (existing team / brand-new team) both end in shareFolderToTeam.
+ * The share modal turns a personal FOLDER into a shared one and hands back the
+ * invite code. What matters here is that each of its three states renders the
+ * right affordance, that the picker's two paths (existing team / brand-new
+ * team) both end in shareFolderToTeam, and that everything about the TEAM is a
+ * hand-off to the team dialog rather than a second copy of it.
  */
 "use strict";
 
@@ -18,6 +19,12 @@ jest.mock("../../../src/renderer/modules/library/folder-store.js", () => ({
 }));
 jest.mock("../../../src/renderer/modules/confirm-modal.js", () => ({
   showConfirmModal: jest.fn(async () => true),
+}));
+jest.mock("../../../src/renderer/modules/library/access.js", () => ({
+  accessTo: jest.fn(() => "write"),
+}));
+jest.mock("../../../src/renderer/modules/team-modal.js", () => ({
+  openTeamModal: jest.fn(async () => {}),
 }));
 jest.mock("../../../src/renderer/modules/teams.js", () => {
   const { state } = require("../../../src/renderer/modules/state.js");
@@ -39,6 +46,7 @@ jest.mock("../../../src/renderer/modules/teams.js", () => {
 const { state } = require("../../../src/renderer/modules/state.js");
 const folderStore = require("../../../src/renderer/modules/library/folder-store.js");
 const teams = require("../../../src/renderer/modules/teams.js");
+const teamModal = require("../../../src/renderer/modules/team-modal.js");
 const { initShareModal, openShareModal, closeShareModal } =
   require("../../../src/renderer/modules/library/share-modal.js");
 
@@ -139,15 +147,44 @@ test("a new team with no name is rejected before anything is created", async () 
   expect(document.querySelector("#shm-status").textContent).toContain("name");
 });
 
-test("a shared folder shows the invite code and its members", async () => {
+test("a shared folder shows the invite code and what YOU may do here", async () => {
   await openShareModal("t");
   expect(title()).toBe('Sharing "EWW"');
   expect(document.querySelector("#shm-invite-code").textContent).toBe("ABCDE12345");
+  expect(document.querySelector("#shm-my-access").textContent).toContain("Can edit");
+});
+
+// The member list, remove-member and the access editor used to be rendered here
+// AND in Settings, in different markup. One of each now, and this dialog links
+// to it rather than fetching people at all.
+test("the team's people are not re-listed here — it links to the team dialog", async () => {
+  await openShareModal("t");
   await flush();
-  expect([...document.querySelectorAll(".shm__member-name")].map((e) => e.textContent))
-    .toEqual(["me", "them"]);
-  // Owners can't be removed, and the owner row is the current user.
-  expect(document.querySelectorAll('[data-act="remove-member"]')).toHaveLength(1);
+  expect(window.desktopApi.listTeamMembers).not.toHaveBeenCalled();
+  expect(document.querySelectorAll('[data-act="remove-member"]')).toHaveLength(0);
+  expect(act("manage-team")).toBeTruthy();
+});
+
+test("an owner is deep-linked to the grid, on the row of the folder they opened", async () => {
+  const onRefresh = jest.fn();
+  await openShareModal("sub", { onRefresh });
+  act("manage-team").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  await flush();
+
+  expect(teamModal.openTeamModal).toHaveBeenCalledWith("t", expect.objectContaining({
+    tab: "access", focusFolderId: "sub", onRefresh,
+  }));
+  // The share dialog steps aside rather than stacking two overlays.
+  expect(document.querySelector(".shm-overlay").className).toContain("shm-overlay--hidden");
+});
+
+test("a member gets the people tab — there is no grid for them to be sent to", async () => {
+  state.folders = [{ ...TEAM_ROOT, role: "member" }, TEAM_SUB];
+  state.teams = [{ team: { id: "t", name: "EWW", inviteCode: "ABCDE12345" }, role: "member" }];
+  await openShareModal("sub");
+  act("manage-team").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  await flush();
+  expect(teamModal.openTeamModal).toHaveBeenCalledWith("t", expect.objectContaining({ tab: "people" }));
 });
 
 test("Copy flashes confirmation and puts the code on the clipboard", async () => {
@@ -174,17 +211,11 @@ test("a clipboard failure still tells the user the code", async () => {
   expect(document.querySelector("#shm-status").textContent).toContain("ABCDE12345");
 });
 
-test("rotating swaps the code in place", async () => {
+// Rotating locks everyone out of the old code — a decision about the TEAM, not
+// about this folder — so it lives in the team dialog and not here.
+test("rotating is not offered from a folder", async () => {
   await openShareModal("t");
-  teams.loadTeamState.mockImplementation(async () => {
-    state.teams = [{ team: { id: "t", name: "EWW", inviteCode: "ROTATED456" }, role: "owner" }];
-  });
-
-  act("rotate").dispatchEvent(new MouseEvent("click", { bubbles: true }));
-  await flush();
-
-  expect(window.desktopApi.rotateInvite).toHaveBeenCalledWith("t");
-  expect(document.querySelector("#shm-invite-code").textContent).toBe("ROTATED456");
+  expect(act("rotate")).toBeFalsy();
 });
 
 test("a member sees no invite code and no destructive actions", async () => {
@@ -194,8 +225,6 @@ test("a member sees no invite code and no destructive actions", async () => {
   expect(document.querySelector("#shm-invite-code")).toBeFalsy();
   expect(act("stop-sharing")).toBeFalsy();
   expect(act("pull")).toBeTruthy();
-  await flush();
-  expect(document.querySelectorAll('[data-act="remove-member"]')).toHaveLength(0);
 });
 
 // TeamSync.stopSharing rejects a team ROOT ("Not a shared sub-folder of a team"),

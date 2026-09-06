@@ -2,7 +2,7 @@
 const { uuid, nowIso, inviteCode, json, errorResponse } = require("./db");
 const { readJson } = require("./auth");
 const { checkRateLimit } = require("./ratelimit");
-const { ACCESS_VALUES, isAccess, DEFAULT_FOR_ROLE } = require("./access");
+const { ACCESS_VALUES, isAccess, DEFAULT_FOR_ROLE, EVERYONE } = require("./access");
 
 const MAX_TEAM_NAME = 80;
 const JOIN_LIMIT_PER_MIN = 10;
@@ -234,11 +234,18 @@ async function setMemberRole(request, env, _deps, auth, params) {
  * Same mechanism as `purged_seq`; @see getChanges.
  */
 function invalidateGrants(env, teamId, userId) {
+  const stampAll = userId === EVERYONE;
   return [
     env.SYNC_DB.prepare("UPDATE teams SET seq = seq + 1 WHERE id = ?").bind(teamId),
-    env.SYNC_DB.prepare(
-      "UPDATE memberships SET grants_seq = (SELECT seq FROM teams WHERE id = ?) WHERE team_id = ? AND user_id = ?"
-    ).bind(teamId, teamId, userId),
+    // A blanket grant moved everyone's floor, so everyone has to be told —
+    // stamping only the named user would strand the whole team but one.
+    stampAll
+      ? env.SYNC_DB.prepare(
+        "UPDATE memberships SET grants_seq = (SELECT seq FROM teams WHERE id = ?) WHERE team_id = ?"
+      ).bind(teamId, teamId)
+      : env.SYNC_DB.prepare(
+        "UPDATE memberships SET grants_seq = (SELECT seq FROM teams WHERE id = ?) WHERE team_id = ? AND user_id = ?"
+      ).bind(teamId, teamId, userId),
   ];
 }
 
@@ -252,7 +259,7 @@ async function listGrants(_request, env, _deps, auth, params) {
   const sql = `SELECT g.folder_id, g.user_id, g.access, g.granted_by, g.granted_at,
                       (SELECT login FROM identities i WHERE i.user_id = g.user_id ORDER BY i.provider = 'github' DESC LIMIT 1) AS login
                  FROM folder_grants g
-                WHERE g.team_id = ?${isOwner ? "" : " AND g.user_id = ?"}
+                WHERE g.team_id = ?${isOwner ? "" : ` AND g.user_id IN (?, '${EVERYONE}')`}
                 ORDER BY g.granted_at`;
   const stmt = isOwner
     ? env.SYNC_DB.prepare(sql).bind(params.teamId)
@@ -284,11 +291,16 @@ async function setGrant(request, env, deps, auth, params) {
   if (raw === "inherit") return clearGrant(request, env, deps, auth, params);
   if (!isAccess(raw)) return errorResponse("invalid", `access must be one of ${ACCESS_VALUES.join(", ")} or "inherit".`);
 
-  const target = await requireMembership(env, params.teamId, params.userId);
-  if (!target) return errorResponse("not_found", "That user is not a member.");
-  // An owner can hand out and take back any grant in the team, so a grant that
-  // appeared to restrict one would be a lie. Say so rather than storing it.
-  if (target.role === "owner") return errorResponse("invalid", "Owners always have full access. Make them a member first.");
+  // '*' is the folder's blanket level rather than a person, so there is nobody
+  // to check for membership — and no owner to protect, since an owner's access
+  // is decided by their role before any grant is consulted.
+  if (params.userId !== EVERYONE) {
+    const target = await requireMembership(env, params.teamId, params.userId);
+    if (!target) return errorResponse("not_found", "That user is not a member.");
+    // An owner can hand out and take back any grant in the team, so a grant that
+    // appeared to restrict one would be a lie. Say so rather than storing it.
+    if (target.role === "owner") return errorResponse("invalid", "Owners always have full access. Make them a member first.");
+  }
 
   // The team's own id is the root: a grant there is the team-wide default for
   // this person. Anything else has to be a folder that really exists here.

@@ -626,9 +626,9 @@
 .sm-team__head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .sm-team__name { font-weight: 700; color: var(--text); }
 .sm-team__role { color: var(--muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: .04em; }
-.sm-team__invite { font-family: var(--mono, monospace); letter-spacing: .08em; padding: 2px 6px; border-radius: 4px; background: rgba(255,255,255,.06); }
-.sm-team__members { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; }
-.sm-team__member { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-top: 1px solid rgba(255,255,255,.06); }
+/* The row is a list entry: name, your role, and the way in. The invite code and
+   member list it used to carry are the team dialog's — see team-modal.css. */
+.sm-team__head [data-act="manage"] { margin-left: auto; }
 .settings-modal__btn--small { padding: 3px 8px; font-size: 0.72rem; }
 .settings-modal__error--ok { color: var(--text); }
 .sm-migrate { padding: 10px 12px; margin-bottom: 12px; background: rgba(240,178,50,.12); border: 1px solid rgba(240,178,50,.28); border-radius: var(--radius-sm); font-size: 0.8rem; }

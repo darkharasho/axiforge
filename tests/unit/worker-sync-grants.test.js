@@ -345,3 +345,85 @@ describe("trash", () => {
     expect(res.status).toBe(403);
   });
 });
+
+// ─── The blanket ───────────────────────────────────────────────────────────────
+//
+// A grant against '*' is a fact about the FOLDER: everyone in the team gets at
+// least this here, including whoever joins tomorrow. Per-person grants could
+// never say that — they only ever described the people who happened to be in the
+// team the day somebody clicked.
+describe("a grant for everyone", () => {
+  test("covers a member nobody has named", async () => {
+    const t = await setup();
+    expect((await t.grant(t.owner, "raids", "*", "read")).status).toBe(200);
+    const res = await t.put(t.member, "b-new", { type: "build", parentId: "raids", body: { title: "Nope" } });
+    expect(res.status).toBe(403);
+    // ...and so is the second member, without a second grant.
+    expect((await t.put(t.second, "b-new2", { type: "build", parentId: "raids", body: { title: "Nope" } })).status).toBe(403);
+  });
+
+  test("does not need to name a person, so it survives the team changing", async () => {
+    const t = await setup();
+    await t.grant(t.owner, "raids", "*", "none");
+    // A member who joins after the fact is covered by it: the grant is on the
+    // folder, and there was never a row about them to forget to write.
+    const late = { user: { id: "u-late", login: "late", displayName: "late", avatarUrl: null } };
+    await t.env.SYNC_DB.prepare("INSERT INTO users (id, display_name, avatar_url, created_at) VALUES ('u-late','late',NULL,?)").bind(NOW).run();
+    await teams.joinTeam(t.req("POST", { inviteCode: t.team.inviteCode }), t.env, t.deps, late, {});
+    expect(await idsIn(await t.changes(late))).not.toContain("b-raid");
+  });
+
+  test("a person's own grant excepts them from it, on the same folder", async () => {
+    const t = await setup();
+    await t.grant(t.owner, "raids", "*", "none");
+    await t.grant(t.owner, "raids", "u-mem", "write");
+    expect((await t.put(t.member, "b-new", { type: "build", parentId: "raids", body: { title: "Yes" } })).status).toBe(201);
+    // The exception is theirs alone — everyone else is still covered.
+    expect((await t.put(t.second, "b-new2", { type: "build", parentId: "raids", body: { title: "No" } })).status).toBe(403);
+  });
+
+  test("between folders the nearer one wins, blanket or personal", async () => {
+    const t = await setup();
+    await t.grant(t.owner, t.team.id, "u-mem", "delete"); // team-wide, personal
+    await t.grant(t.owner, "raids", "*", "read");         // nearer, blanket
+    expect((await t.put(t.member, "b-new", { type: "build", parentId: "raids", body: { title: "No" } })).status).toBe(403);
+    // ...and outside that folder the personal one still applies.
+    expect((await t.put(t.member, "b-new2", { type: "build", parentId: null, body: { title: "Yes" } })).status).toBe(201);
+  });
+
+  test("a member is shown the blanket, because it binds them", async () => {
+    const t = await setup();
+    await t.grant(t.owner, "raids", "*", "read");
+    await t.grant(t.owner, "raids", "u-two", "none");
+    const { grants } = await bodyOf(await t.listGrants(t.member));
+    // Their own restrictions and the blanket — never another person's.
+    expect(grants.map((g) => g.userId)).toEqual(["*"]);
+  });
+
+  // Losing read access is invisible to the changes feed: the items did not
+  // change, they simply stop being handed out. A blanket moves everyone's floor,
+  // so stamping only the named user would strand the whole team but one.
+  test("it tells EVERY member to resync, not one of them", async () => {
+    const t = await setup();
+    await t.grant(t.owner, "raids", "*", "none");
+    const { results } = await t.env.SYNC_DB
+      .prepare("SELECT user_id, grants_seq FROM memberships WHERE team_id = ?").bind(t.team.id).all();
+    for (const row of results.filter((r) => r.user_id !== "u-owner")) {
+      expect(row.grants_seq).toBeGreaterThan(0);
+    }
+  });
+
+  test('"inherit" clears it, and the folder falls back to the one above', async () => {
+    const t = await setup();
+    await t.grant(t.owner, "raids", "*", "none");
+    expect((await t.grant(t.owner, "raids", "*", "inherit")).status).toBe(204);
+    expect((await bodyOf(await t.listGrants(t.owner))).grants).toEqual([]);
+    expect((await t.put(t.member, "b-new", { type: "build", parentId: "raids", body: { title: "Yes" } })).status).toBe(201);
+  });
+
+  test("'*' is not a person: it needs no membership, and creates no user", async () => {
+    const t = await setup();
+    expect((await t.grant(t.owner, "raids", "*", "read")).status).toBe(200);
+    expect(await t.env.SYNC_DB.prepare("SELECT COUNT(*) AS c FROM users").first("c")).toBe(3);
+  });
+});

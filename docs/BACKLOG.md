@@ -402,3 +402,113 @@ Status key: `[ ]` open · `[x]` done · `[~]` in progress · `[?]` needs repro s
   `tests/unit/renderer/form-modal.test.js` pins the shared behaviour. `showPrompt`
   keeps its contract but its OK button is now accent rather than danger red —
   renaming a folder was never destructive.
+
+- [x] **Team management was split across two dialogs and could not answer "who
+  can do what, where".** Done 2026-09-06. The reported symptom was that role
+  assignment and inviting felt janky "between the right click menu and the
+  settings menu"; reading both surfaces showed why.
+  - **The invite code, the member list and remove-member were implemented
+    twice** — `settings-modal.js` `_renderTeamsList` / `_onTeamsListClick` and
+    `share-modal.js` `_renderInviteSection` / `_loadMembers` — in different
+    markup (`.sm-team__member` vs `.shm__member`) with different wording. Which
+    one you got depended on how you arrived.
+  - **Folder access was reachable one folder at a time**, by right-clicking that
+    folder. Answering "why is this person read-only in Roaming" meant opening
+    every folder above it in turn, and an owner could never see the whole
+    picture at all.
+  - *Fix:* one **Manage team** dialog, `src/renderer/modules/team-modal.js`,
+    with People / Folder access / Team tabs. Both entry points lead to it:
+    Settings → Teams is now the *list* of teams plus a Manage button, and
+    right-click → Share… is genuinely folder-scoped — the invite code, what YOU
+    may do here, Pull now, Stop sharing — with "Manage access ›" deep-linking
+    into the grid on that folder's row.
+  - The **folder × member grid** is the new surface. Rows are the team's folders
+    nested by depth (the root keyed by the *team* id, since the root folder is
+    not a synced item); cells are one level each, with inherited and defaulted
+    ones dimmed and italic so the grants actually *set* somewhere are what the
+    eye lands on. Setting a level re-reads the grants rather than patching the
+    one cell — a grant changes what every folder below it inherits, and those
+    cells are on screen too.
+  - `folder-access.js` gained the tree it was missing. `levelFor` could only say
+    "inherited from *somewhere*" because it had no chain to walk;
+    `effectiveLevel` takes the chain and names the folder. `summarizeAccess`
+    puts one person's whole-team access in a sentence ("Can edit, except Roaming
+    (read only)") so the People tab answers the common question without making
+    anyone read the grid.
+  - **No new IPC and no server change** — this is entirely a re-arrangement of
+    `teams:members`, `teams:grants` and `teams:set-grant`, which already return
+    every grant in the team.
+  - **Deliberately not built** (both need server work first): *assigning* roles
+    — there is no set-role API, so owner/member is still fixed at creation or
+    join — and per-invite links with their own role, expiry and revoke, which
+    would replace the single rotating code. The dialog is shaped to take both.
+  - Covered by `tests/unit/renderer/team-modal.test.js` (24) and a rewritten
+    `folder-access.test.js` (22); the share-modal and settings-modal suites now
+    pin the hand-off instead of the duplication. 194 suites / 2807 tests green.
+
+- [x] **A folder's access should be set for everyone, not person by person** —
+  2026-09-06. Follow-up to the entry above, from two observations: the per-person
+  grid "can get cluttered with a lot of people", and there was no way to "blanket
+  set" read/write for the whole team.
+  - *Root cause:* a grant could only ever name a person. That is not a fact about
+    the folder — it is a pile of facts about whoever happened to be in the team
+    the day somebody clicked. A twenty-person squad had to say "read only" twenty
+    times, and the twenty-first person to join silently got the role default
+    instead. The grid was the honest rendering of a model that was wrong.
+  - *Fix:* a grant may now name **everyone** — `user_id = '*'` in `folder_grants`
+    (migration `0004_everyone_grants.sql`). One rule still resolves everything
+    (`workers/sync/src/access.js`, mirrored in `src/main/folderAccess.js`): at one
+    folder a person's own grant beats the blanket, and between folders the nearer
+    one wins, blanket or not.
+  - The **Folder access** tab is now one card per folder: the blanket level on the
+    folder's own line, and beneath it only the people who differ. A folder nobody
+    is excepted on is a single line, so the list is the length of the folder tree
+    and does not grow with the team. Naming somebody is two steps — pick the
+    person, then the level — because a grant stored at the blanket's own level
+    would be an exception that excepts nothing.
+  - The migration drops the `user_id` foreign key rather than inserting a phantom
+    `users` row for `'*'`; a phantom person would have to be excluded from every
+    query that counts or lists people, forever. `setGrant` already refuses a
+    user_id that is not a member, so the key was never load-bearing.
+  - A blanket change stamps `grants_seq` on **every** member, not one: it moves
+    everyone's floor, and losing read access is invisible to the changes feed.
+  - Found while testing: `TeamSync.setGrant`'s own `access` parameter shadowed the
+    `folderAccess` module, so `access.EVERYONE` there was `undefined`. Hoisted.
+  - **Needs a Worker deploy** (schema + resolution). 194 suites / 2836 tests green.
+
+- [x] **The Folder access tab was still tough to manage** — 2026-09-06. Follow-up
+  to the entry above. The card-per-folder list fixed the *width* problem (it no
+  longer grew with the team) but not the *reading* problem: its length tracked
+  the folder tree, so every folder was on screen whether or not it had anything
+  to say, and answering "who can touch this folder?" still meant resolving
+  inheritance in your head. Mocked three directions and workshopped them before
+  writing any of it; the picked one was "pick a folder, see everyone on it".
+  - *Fix:* the tab is a two-panel browser. Left is a filterable folder tree —
+    a gold dot means the folder sets access of its own, a red one means somebody
+    is shut out there — so the tree carries where the rules *are* without
+    listing them. Right is one folder's whole picture: the blanket control, the
+    people set on that folder, and a folded "Everyone else" line.
+  - **Every row names where its level came from.** A person can be read-only here
+    via this folder's blanket, a blanket several folders up, their own grant
+    several folders up, or the team default, and those four are indistinguishable
+    if you only print the level. `_sourceNote` says which.
+  - A folder that **sets nothing** says so before you touch a control — dashed
+    border, and the value reads `Inherited · Can edit` rather than `Can edit`.
+    There is nothing to clear on such a folder, and the pane should not pretend
+    otherwise.
+  - "Everyone else" is **folded to a face stack and one sentence** by default.
+    That list is the one thing in this design that grows with the team, and the
+    blanket's whole point is covering people without naming them — so unfolding
+    it is a choice, one click away.
+  - The tree opens flat below 25 folders and at depth 1 above that, always
+    auto-expands to the selection, and remembers nothing past close. The filter
+    re-renders **only** `#tm-fa-tree`, because re-rendering the tab would rebuild
+    the `<input>` being typed into and take the caret with it.
+  - Share-dialog deep links now *select* the folder rather than highlighting a
+    card in a list.
+  - Found while writing the tests: the resolution rule is not what the mock said.
+    Own-grant beats blanket only *at the same folder*; between folders the nearer
+    grant wins regardless of which kind it is. The tests encode the real rule.
+  - `.tm` widened 760→820px and the level controls to 190px, both after driving
+    the running app over CDP showed the blanket card collapsing and
+    `Team default · Can delete` clipping.

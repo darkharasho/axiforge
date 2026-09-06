@@ -59,6 +59,11 @@ class SyncStore {
       // Refreshed whenever the server asks for a resync, which is exactly when
       // a grant changed. @see TeamSync._refreshGrants
       grants: t.grants && typeof t.grants === "object" ? t.grants : {},
+      // The blanket grants — the ones set against everyone rather than against a
+      // person. Kept apart from the user's own because at a single folder the
+      // personal one wins, so merging them here would throw away the only thing
+      // that decides which applies. @see src/main/folderAccess.js
+      everyoneGrants: t.everyoneGrants && typeof t.everyoneGrants === "object" ? t.everyoneGrants : {},
     };
   }
 
@@ -79,8 +84,14 @@ class SyncStore {
 
   setCursor(teamId, seq) { return this.#mutateTeam(teamId, (t) => { t.cursor = seq; }); }
   async getGrants(teamId) { return (await this.getTeam(teamId)).grants; }
-  setGrants(teamId, grants) {
-    return this.#mutateTeam(teamId, (t) => { t.grants = grants && typeof grants === "object" ? grants : {}; });
+  async getEveryoneGrants(teamId) { return (await this.getTeam(teamId)).everyoneGrants; }
+  // Both in one write: they are read together on every access check, and a state
+  // file caught between the two halves of a grant change would answer wrongly.
+  setGrants(teamId, grants, everyone = {}) {
+    return this.#mutateTeam(teamId, (t) => {
+      t.grants = grants && typeof grants === "object" ? grants : {};
+      t.everyoneGrants = everyone && typeof everyone === "object" ? everyone : {};
+    });
   }
   setFailures(teamId, n) { return this.#mutateTeam(teamId, (t) => { t.failures = n; }); }
 

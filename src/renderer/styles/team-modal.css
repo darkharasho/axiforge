@@ -1,0 +1,724 @@
+/* Manage Team — people, folder access, and the team itself.
+   Wider than the Share dialog on purpose: folder access is the reason this dialog
+   exists, and every folder needs its name and its level on one readable line. */
+
+.tm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal-confirm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--overlay);
+  backdrop-filter: blur(2px);
+  transition: opacity 0.2s ease-out, visibility 0.2s;
+}
+
+.tm-overlay--hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.tm-overlay--hidden .tm {
+  transform: scale(0.96);
+  opacity: 0;
+}
+
+.tm {
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  width: 820px;
+  max-width: 92vw;
+  max-height: 84vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-lg);
+  transition: transform 0.2s ease-out, opacity 0.2s ease-out;
+}
+
+.tm__header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 18px 12px;
+}
+
+.tm__heading { flex: 1; min-width: 0; }
+
+.tm__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tm__meta {
+  margin: 3px 0 0;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.tm__role {
+  font-size: 11px;
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.12);
+  border: 1px solid rgba(var(--accent-rgb), 0.35);
+  border-radius: 999px;
+  padding: 3px 10px;
+  white-space: nowrap;
+}
+
+.tm__close {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  border-radius: var(--radius-xs);
+}
+
+.tm__close:hover { color: var(--text); background: var(--hover-subtle); }
+
+.tm__tabs {
+  display: flex;
+  gap: 2px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.tm__tab {
+  padding: 8px 12px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-dim);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+}
+
+.tm__tab:hover { color: var(--text); }
+
+.tm__tab--active {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+
+.tm__body {
+  padding: 16px 18px;
+  overflow: auto;
+}
+
+.tm__hint {
+  margin: 0 0 12px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+
+.tm__hint--foot { margin: 10px 0 0; }
+
+.tm__link {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.tm__section + .tm__section {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.tm__section-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+}
+
+.tm__row { display: flex; align-items: center; gap: 10px; }
+.tm__value { flex: 1; font-size: 13px; color: var(--text); }
+
+/* ─── Invite ───────────────────────────────────────────────────────────────── */
+
+.tm__invite { display: flex; align-items: center; gap: 8px; }
+
+.tm__invite-code {
+  flex: 1;
+  padding: 9px 12px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-align: center;
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xs);
+  user-select: all;
+}
+
+/* ─── People ───────────────────────────────────────────────────────────────────
+   Each row answers "who" and "what can they do" on one line, so the grid is for
+   changing access, not for finding out about it. */
+
+.tm__people { display: flex; flex-direction: column; gap: 2px; }
+
+.tm__person {
+  display: grid;
+  /* The last two columns are fixed, not auto: with `auto` each row sizes its own
+     grid, so a row without a Remove button pulls its level control out of line
+     with the rest of the list. */
+  grid-template-columns: 28px minmax(0, 1fr) 172px 78px;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: var(--radius-xs);
+  font-size: 13px;
+  color: var(--text);
+}
+
+.tm__person:hover { background: var(--hover-subtle); }
+
+/* The monogram is the cell's content and the image sits on top of it, so a
+   broken or still-loading avatar reads as an initial rather than a hole. */
+.tm__avatar {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.14);
+  border: 1px solid rgba(var(--accent-rgb), 0.3);
+  overflow: hidden;
+  flex: 0 0 auto;
+}
+
+.tm__avatar-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.tm__person-who {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.tm__person-line {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.tm__person-name,
+.tm__person-access {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tm__person-name { flex: 0 1 auto; }
+.tm__person-access { font-size: 12px; color: var(--text-dim); }
+
+/* A level that is stated rather than offered — an owner's, or anyone's when the
+   reader is not an owner. Sits in the control's column so the list stays a grid. */
+.tm__person-fixed {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.tm__person-role {
+  flex: 0 0 auto;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-dim);
+  padding: 2px 6px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+
+/* ─── Folder access ────────────────────────────────────────────────────────────
+   A tree of the team's folders on the left, and everything about the picked one
+   on the right. The old shape — every folder as its own card in one column —
+   grew with the folder tree whether or not anything was set on it, and still
+   left the reader resolving inheritance in their head. Here the tree is only
+   how you PICK, and the pane says the answer outright.
+
+   The two panes are one bordered box rather than two, so the divider between
+   them reads as a split rather than as a gap between unrelated things. */
+
+.tm-fa {
+  display: grid;
+  grid-template-columns: 232px minmax(0, 1fr);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  overflow: hidden;
+}
+
+.tm-fa__side {
+  border-right: 1px solid var(--line);
+  background: var(--bg-2);
+  padding: 7px 6px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.tm-fa__filter {
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 5px;
+  padding: 5px 8px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--text);
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-xs);
+  outline: none;
+}
+
+.tm-fa__filter:focus-visible { border-color: var(--accent); }
+
+.tm-fa__tree {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  overflow: auto;
+  /* The tree scrolls before the dialog does: a long folder list must not push
+     the pane's controls off the bottom of a surface that is already capped. */
+  max-height: 46vh;
+}
+
+.tm-fa__node {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 7px;
+  padding-left: calc(7px + var(--depth, 0) * 15px);
+  border-radius: var(--radius-xs);
+  font-size: 12.5px;
+  color: var(--text-light);
+  cursor: pointer;
+  outline: none;
+}
+
+.tm-fa__node:hover { background: var(--hover-subtle); color: var(--text); }
+.tm-fa__node:focus-visible { box-shadow: inset 0 0 0 1px var(--accent); }
+.tm-fa__node--root { color: var(--text); font-weight: 600; }
+
+.tm-fa__node--on,
+.tm-fa__node--on:hover {
+  background: rgba(var(--accent-rgb), 0.13);
+  color: var(--text);
+}
+
+.tm-fa__twisty {
+  width: 12px;
+  flex: 0 0 auto;
+  text-align: center;
+  font-size: 9px;
+  line-height: 1;
+  color: var(--text-dim);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.tm-fa__twisty:hover { color: var(--text); }
+
+.tm-fa__node-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Gold: this folder sets something of its own. Red: somebody is shut out at or
+   below it — the one state worth spotting without clicking through. */
+.tm-fa__dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex: 0 0 auto;
+}
+
+.tm-fa__dot--blocks { background: var(--danger); }
+
+.tm-fa__empty,
+.tm-fa__none {
+  margin: 6px 4px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+/* ─── The picked folder ──────────────────────────────────────────────────── */
+
+.tm-fa__pane {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.tm-fa__crumb {
+  font-size: 11.5px;
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tm-fa__crumb b {
+  display: block;
+  margin-top: 2px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* The blanket is the folder's primary setting, so it is the only thing on the
+   pane with a fill. Dashed and unfilled when nothing is set here — the reader
+   should know there is no rule to clear before touching the control. */
+.tm-fa__blanket {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 11px;
+  border: 1px solid rgba(var(--accent-rgb), 0.28);
+  background: rgba(var(--accent-rgb), 0.06);
+  border-radius: var(--radius-sm);
+}
+
+.tm-fa__blanket--inherited {
+  border-style: dashed;
+  border-color: var(--line);
+  background: transparent;
+}
+
+.tm-fa__blanket-text { flex: 1; min-width: 0; }
+
+/* The person rows put their control in a fixed grid column; this one is in a
+   flex row, so it needs the same width stated or width:100% swallows the line. */
+.tm-fa__blanket .tm-fa__select { flex: 0 0 190px; width: 190px; }
+.tm-fa__blanket-title { font-size: 12.5px; font-weight: 600; color: var(--text); }
+
+.tm-fa__blanket-sub {
+  margin-top: 2px;
+  font-size: 11.5px;
+  color: var(--text-dim);
+}
+
+.tm-fa__blanket-sub b { color: var(--text-light); font-weight: 500; }
+
+.tm-fa__label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+}
+
+.tm-fa__label::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+.tm-fa__set,
+.tm-fa__others {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-top: -3px;
+}
+
+/* Every person row is the same four columns whichever section it is in, so the
+   level controls line down the pane instead of stepping in and out. */
+.tm-fa__person {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) 190px 24px;
+  align-items: center;
+  gap: 9px;
+  padding: 4px 6px;
+  border-radius: var(--radius-xs);
+}
+
+.tm-fa__person:hover { background: var(--hover-subtle); }
+
+.tm-fa__person-text { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+
+.tm-fa__person-name {
+  font-size: 12.5px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tm-fa__person-note {
+  font-size: 11px;
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tm-fa__person-note b { color: var(--text-light); font-weight: 500; }
+
+.tm-fa__fixed { font-size: 11.5px; color: var(--text-dim); }
+
+.tm-fa__avatar {
+  position: relative;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.14);
+  border: 1px solid rgba(var(--accent-rgb), 0.3);
+  overflow: hidden;
+  flex: 0 0 auto;
+}
+
+.tm-fa__avatar--ghost {
+  color: var(--text-dim);
+  background: none;
+  border-style: dashed;
+  border-color: var(--line);
+}
+
+.tm-fa__avatar-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.tm-fa__add {
+  width: 100%;
+  margin-top: 3px;
+  padding: 6px 9px;
+  text-align: left;
+  font: inherit;
+  font-size: 11.5px;
+  color: var(--text-dim);
+  background: none;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+}
+
+.tm-fa__add:hover { color: var(--text); border-color: var(--input-border); }
+
+/* The folded roll call: faces plus the one sentence a blanket grant exists to
+   make true. Unfolding it is a click, not the default. */
+.tm-fa__fold {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.tm-fa__fold b { color: var(--text-light); font-weight: 500; }
+
+.tm-fa__stack { display: flex; flex: 0 0 auto; }
+
+.tm-fa__stack .tm-fa__avatar {
+  width: 21px;
+  height: 21px;
+  font-size: 9.5px;
+  margin-right: -6px;
+  box-shadow: 0 0 0 2px var(--panel);
+}
+
+.tm-fa__toggle {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-size: inherit;
+  color: var(--accent);
+  cursor: pointer;
+  border-bottom: 1px solid rgba(var(--accent-rgb), 0.4);
+}
+
+.tm-fa__foldnote {
+  margin: 2px 0 0;
+  font-size: 11.5px;
+  color: var(--text-dim);
+}
+
+.tm-fa__warn {
+  display: flex;
+  gap: 7px;
+  margin: 0;
+  padding: 7px 10px;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--danger-text, var(--danger));
+  background: color-mix(in srgb, var(--danger) 9%, transparent);
+  border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent);
+  border-radius: var(--radius-xs);
+}
+
+/* The same control the rest of the app uses — a native select renders as an OS
+   widget, which reads as a foreign object dropped into the dialog. Matches
+   .settings-modal__select so the two Teams surfaces are the one control. */
+.tm-fa__select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 5px 28px 5px 8px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--text);
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-sm);
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%23888'%3E%3Cpath fill-rule='evenodd' d='M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.168l3.71-3.938a.75.75 0 1 1 1.08 1.04l-4.25 4.5a.75.75 0 0 1-1.08 0l-4.25-4.5a.75.75 0 0 1 .02-1.06z' clip-rule='evenodd'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 7px center;
+  background-size: 14px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.tm-fa__select:hover:not(:disabled) { border-color: var(--line-strong, var(--line)); }
+
+.tm-fa__select:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+/* A native dropdown list ignores the control's colours; state them or the open
+   menu falls back to the OS palette. */
+.tm-fa__select option {
+  background: var(--bg-2);
+  color: var(--text);
+}
+
+.tm-fa__select:disabled { opacity: 0.55; cursor: default; }
+
+/* An inherited level is shown in the control it would be changed with, so the
+   control itself has to say it is not a rule yet. */
+.tm-fa__others .tm-fa__select {
+  color: var(--text-dim);
+  border-style: dashed;
+}
+
+.tm-fa__icon,
+.tm-fa__icon-space {
+  width: 24px;
+  height: 24px;
+}
+
+.tm-fa__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-xs);
+  color: var(--text-dim);
+  font-size: 15px;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+}
+
+.tm-fa__icon:hover { color: var(--text); border-color: var(--line); background: var(--hover-subtle); }
+.tm-fa__icon--drop:hover { color: var(--danger); border-color: transparent; }
+
+/* A member's own levels, read-only. */
+.tm__mine {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 10px 6px calc(10px + var(--depth, 0) * 14px);
+  font-size: 13px;
+  color: var(--text);
+  border-top: 1px solid var(--line);
+}
+
+.tm__mine-level { color: var(--text-dim); font-size: 12px; }
+
+/* ─── Buttons / status ─────────────────────────────────────────────────────── */
+
+.tm__btn {
+  padding: 7px 14px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+}
+
+.tm__btn:hover:not(:disabled) { background: var(--hover-subtle); }
+.tm__btn:disabled { opacity: 0.55; cursor: default; }
+.tm__btn--small { padding: 5px 10px; font-size: 11.5px; }
+
+.tm__btn--danger {
+  color: var(--danger);
+  border-color: var(--danger);
+  background: transparent;
+}
+
+.tm__btn--danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--danger) 14%, transparent);
+}
+
+.tm__status {
+  padding: 10px 18px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-dim);
+  border-top: 1px solid var(--line);
+}
+
+.tm__status--error { color: var(--danger); }

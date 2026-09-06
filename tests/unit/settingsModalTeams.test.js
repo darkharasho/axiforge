@@ -5,9 +5,13 @@ jest.mock("../../src/renderer/modules/custom-select.js", () => ({ renderCustomSe
 jest.mock("../../src/renderer/modules/utils.js", () => ({ escapeHtml: (s) => String(s), delay: () => Promise.resolve(), relativeTime: () => "just now" }));
 jest.mock("../../src/renderer/modules/confirm-modal.js", () => ({ showConfirmModal: jest.fn(async () => true) }));
 jest.mock("../../src/renderer/modules/choice-modal.js", () => ({ showChoiceModal: jest.fn() }));
-// Electron's renderer has no window.prompt(); everything that asks for a string
-// goes through the modal helper, so that is what the rename path must call.
-jest.mock("../../src/renderer/modules/prompt-modal.js", () => ({ showPrompt: jest.fn() }));
+// Everything about a TEAM — its people, their folder access, its name, deleting
+// or leaving it — is the team dialog now. Settings owns the list and the way in.
+jest.mock("../../src/renderer/modules/teams.js", () => ({ loadTeamState: jest.fn(async () => {}) }));
+jest.mock("../../src/renderer/modules/team-modal.js", () => ({
+  initTeamModal: jest.fn(),
+  openTeamModal: jest.fn(async () => {}),
+}));
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -91,7 +95,7 @@ describe("settings-modal — Teams pane", () => {
     expect(document.querySelectorAll(".sm-team")).toHaveLength(1);
   });
 
-  test("team list: owner sees rotate/rename/delete and member rows with Remove; member sees Leave only", async () => {
+  test("team list: one row per team, naming your role and offering the way in", async () => {
     api.getTeamSession.mockResolvedValue({ login: "me", userId: "u1" });
     api.listTeams.mockResolvedValue([
       { team: { id: "t1", name: "EWW", inviteCode: "ABCDEFGHJK" }, role: "owner" },
@@ -101,22 +105,41 @@ describe("settings-modal — Teams pane", () => {
     await flush(); await flush();
     const rows = [...document.querySelectorAll(".sm-team")];
     expect(rows).toHaveLength(2);
-    expect(rows[0].querySelector("[data-act='rotate']")).not.toBeNull();
-    expect(rows[0].querySelector("[data-act='delete']")).not.toBeNull();
-    expect(rows[0].textContent).toContain("ABCDEFGHJK");
-    expect(rows[1].querySelector("[data-act='rotate']")).toBeNull();
-    expect(rows[1].querySelector("[data-act='leave']")).not.toBeNull();
-    rows[0].querySelector("[data-act='members']").click();
+    expect(rows.map((r) => r.querySelector(".sm-team__name").textContent)).toEqual(["EWW", "Guild"]);
+    expect(rows[0].textContent).toContain("owner");
+    expect(rows[1].textContent).toContain("member");
+    expect(rows.every((r) => r.querySelector("[data-act='manage']"))).toBe(true);
+  });
+
+  // These seven controls were a second implementation of what the Share dialog
+  // rendered its own way. The row is a list entry now; none of them live here.
+  test("the row carries no invite code, rotate, rename, delete or member list", async () => {
+    api.getTeamSession.mockResolvedValue({ login: "me", userId: "u1" });
+    api.listTeams.mockResolvedValue([{ team: { id: "t1", name: "EWW", inviteCode: "ABCDEFGHJK" }, role: "owner" }]);
+    mod.openSettingsModal({ initialPane: "teams" });
     await flush(); await flush();
-    expect(api.listTeamMembers).toHaveBeenCalledWith("t1");
-    const memberRows = [...rows[0].querySelectorAll(".sm-team__member")];
-    expect(memberRows.map((m) => m.textContent)).toEqual(expect.arrayContaining([expect.stringContaining("vette")]));
-    memberRows.find((m) => m.textContent.includes("vette")).querySelector("[data-act='remove']").click();
+    const row = document.querySelector(".sm-team");
+    for (const act of ["rotate", "rename", "delete", "members", "leave", "copy-invite"]) {
+      expect(row.querySelector(`[data-act='${act}']`)).toBeNull();
+    }
+    expect(row.textContent).not.toContain("ABCDEFGHJK");
+    expect(api.listTeamMembers).not.toHaveBeenCalled();
+  });
+
+  test("Manage team opens the team dialog for that team, with a refresh hook", async () => {
+    const { openTeamModal } = require("../../src/renderer/modules/team-modal.js");
+    api.getTeamSession.mockResolvedValue({ login: "me", userId: "u1" });
+    api.listTeams.mockResolvedValue([
+      { team: { id: "t1", name: "EWW" }, role: "owner" },
+      { team: { id: "t2", name: "Guild" }, role: "member" },
+    ]);
+    mod.openSettingsModal({ initialPane: "teams" });
     await flush(); await flush();
-    expect(api.removeTeamMember).toHaveBeenCalledWith("t1", "u2");
-    rows[0].querySelector("[data-act='rotate']").click();
+
+    document.querySelectorAll(".sm-team [data-act='manage']")[1].click();
     await flush(); await flush();
-    expect(api.rotateInvite).toHaveBeenCalledWith("t1");
+
+    expect(openTeamModal).toHaveBeenCalledWith("t2", expect.objectContaining({ onRefresh: expect.any(Function) }));
   });
 
   test("legacy org library: the migrate prompt appears, runs the migration and hides itself", async () => {
@@ -163,51 +186,6 @@ describe("settings-modal — Teams pane", () => {
     await flush(); await flush(); await flush();
     expect(showChoiceModal).toHaveBeenCalled();
     expect(api.migrateOrgLibrary).toHaveBeenCalledWith({ teamId: "t9" });
-  });
-
-  test("rename uses the modal prompt, never window.prompt (Electron throws on it)", async () => {
-    const { showPrompt } = require("../../src/renderer/modules/prompt-modal.js");
-    showPrompt.mockResolvedValue("EWW Reloaded");
-    // Exactly what Electron does — if the handler still called it, the catch
-    // would paint "Error: prompt() is and will not be supported."
-    window.prompt = () => { throw new Error("prompt() is and will not be supported."); };
-    api.getTeamSession.mockResolvedValue({ login: "me", userId: "u1" });
-    api.listTeams.mockResolvedValue([{ team: { id: "t1", name: "EWW", inviteCode: "ABCDEFGHJK" }, role: "owner" }]);
-    mod.openSettingsModal({ initialPane: "teams" });
-    await flush(); await flush();
-
-    document.querySelector(".sm-team [data-act='rename']").click();
-    await flush(); await flush();
-
-    expect(showPrompt).toHaveBeenCalledWith("New team name", "EWW");
-    expect(api.renameTeam).toHaveBeenCalledWith("t1", "EWW Reloaded");
-    expect(document.getElementById("sm-teams-status").textContent).not.toMatch(/^Error/);
-  });
-
-  test("cancelling the rename prompt changes nothing", async () => {
-    const { showPrompt } = require("../../src/renderer/modules/prompt-modal.js");
-    showPrompt.mockResolvedValue(null);
-    api.getTeamSession.mockResolvedValue({ login: "me", userId: "u1" });
-    api.listTeams.mockResolvedValue([{ team: { id: "t1", name: "EWW", inviteCode: "ABCDEFGHJK" }, role: "owner" }]);
-    mod.openSettingsModal({ initialPane: "teams" });
-    await flush(); await flush();
-    document.querySelector(".sm-team [data-act='rename']").click();
-    await flush(); await flush();
-    expect(api.renameTeam).not.toHaveBeenCalled();
-  });
-
-  test("a non-Error rejection still reaches the status line", async () => {
-    api.getTeamSession.mockResolvedValue({ login: "me", userId: "u1" });
-    api.listTeams.mockResolvedValue([{ team: { id: "t1", name: "Guild" }, role: "member" }]);
-    // `err.message` on a bare string is undefined, so this used to render the
-    // useless "Error: undefined" — and an undefined rejection threw inside the
-    // catch outright, showing nothing at all.
-    api.leaveTeam.mockRejectedValue("SYNC_OFFLINE");
-    mod.openSettingsModal({ initialPane: "teams" });
-    await flush(); await flush();
-    document.querySelector(".sm-team [data-act='leave']").click();
-    await flush(); await flush();
-    expect(document.getElementById("sm-teams-status").textContent).toContain("SYNC_OFFLINE");
   });
 
   test("legacy org library: a FAILED status probe leaves the migration prompt up", async () => {

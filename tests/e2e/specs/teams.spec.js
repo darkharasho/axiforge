@@ -141,11 +141,23 @@ test.describe("Teams", () => {
     await expect(window.locator(".shm")).toBeVisible();
     await expect(window.locator("#shm-title")).toHaveText(/Sharing "Sidebar Team"/);
     await expect(window.locator("#shm-invite-code")).not.toBeEmpty();
-    // Members load asynchronously from the mock server.
-    await expect(window.locator(".shm__member-name", { hasText: "e2e" })).toBeVisible();
+    // People and access are the team dialog's, not this one's — the folder
+    // dialog says what YOU may do here and links to the rest.
+    await expect(window.locator("#shm-my-access")).not.toBeEmpty();
+
+    await window.locator('[data-act="manage-team"]').click();
+    await expect(window.locator(".shm")).toBeHidden();
+    await expect(window.locator(".tm")).toBeVisible();
+    // An owner lands on the access browser with the folder they came from
+    // already picked — the deep link lands on the answer, not on a list with
+    // the answer somewhere in it. Members and grants load asynchronously.
+    await expect(window.locator(".tm-fa__node--on")).toBeVisible();
+    await expect(window.locator(".tm-fa__blanket-title")).toHaveText("Everyone in the team");
+    await window.locator('[data-tab="people"]').click();
+    await expect(window.locator(".tm__person-name", { hasText: "e2e" })).toBeVisible();
 
     await window.keyboard.press("Escape");
-    await expect(window.locator(".shm")).toBeHidden();
+    await expect(window.locator(".tm")).toBeHidden();
     await closeApp(app);
   });
 

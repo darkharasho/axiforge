@@ -6,7 +6,8 @@ import { renderCustomSelect } from "./custom-select.js";
 import { escapeHtml, delay } from "./utils.js";
 import { showConfirmModal } from "./confirm-modal.js";
 import { showChoiceModal } from "./choice-modal.js";
-import { showPrompt } from "./prompt-modal.js";
+import { loadTeamState } from "./teams.js";
+import { openTeamModal, initTeamModal } from "./team-modal.js";
 
 let _overlay = null;
 let _el = {};
@@ -206,6 +207,7 @@ export function initSettingsModal() {
   _el.teamJoin.addEventListener("click", _joinTeam);
   _el.teamsSignout.addEventListener("click", _signOutTeams);
   _el.teamsList.addEventListener("click", _onTeamsListClick);
+  initTeamModal();
 
   _overlay.querySelector("#sm-nav").addEventListener("click", (e) => {
     const item = e.target.closest(".settings-modal__nav-item");
@@ -798,6 +800,14 @@ async function _loadTeamsState() {
   await _renderLegacyMigration();
 }
 
+/**
+ * The list of teams you are in, and nothing else.
+ *
+ * This row used to carry seven controls — the invite code, Copy, Rotate,
+ * Members, Rename, Delete — a second implementation of the same things the
+ * Share dialog rendered its own way. All of it is Manage team now, so this is a
+ * list: which teams, what you are in them, and a way in.
+ */
 async function _renderTeamsList() {
   const teams = await window.desktopApi.listTeams().catch((err) => { _setTeamsStatus(`Error: ${err?.message || String(err)}`, true); return []; });
   _el.teamsList.innerHTML = teams.length ? teams.map(({ team, role }) => `
@@ -805,73 +815,25 @@ async function _renderTeamsList() {
       <div class="sm-team__head">
         <span class="sm-team__name">${escapeHtml(team.name)}</span>
         <span class="sm-team__role">${role}</span>
-        ${role === "owner" ? `<code class="sm-team__invite" title="Invite code">${escapeHtml(team.inviteCode || "")}</code>
-          <button class="settings-modal__btn settings-modal__btn--small" data-act="copy-invite" type="button">Copy</button>
-          <button class="settings-modal__btn settings-modal__btn--small" data-act="rotate" type="button" title="Invalidate the old code">Rotate</button>` : ""}
-        <button class="settings-modal__btn settings-modal__btn--small" data-act="members" type="button">Members</button>
-        ${role === "owner" ? `<button class="settings-modal__btn settings-modal__btn--small" data-act="rename" type="button">Rename</button>
-          <button class="settings-modal__btn settings-modal__btn--small settings-modal__btn--danger" data-act="delete" type="button">Delete team</button>`
-        : `<button class="settings-modal__btn settings-modal__btn--small settings-modal__btn--danger" data-act="leave" type="button">Leave</button>`}
+        <button class="settings-modal__btn settings-modal__btn--small" data-act="manage" type="button">Manage team</button>
       </div>
-      <div class="sm-team__members" hidden></div>
     </div>`).join("") : `<p class="settings-modal__hint">You're not in any team yet. Create one and share the invite code, or paste a code to join.</p>`;
 }
 
 async function _onTeamsListClick(e) {
-  const btn = e.target.closest("[data-act]");
+  const btn = e.target.closest('[data-act="manage"]');
   if (!btn) return;
-  const row = btn.closest(".sm-team");
-  const teamId = row?.dataset.teamId;
-  const memberRow = btn.closest(".sm-team__member");
-  const act = btn.dataset.act;
-  try {
-    if (act === "copy-invite") {
-      await window.desktopApi.writeClipboardText(row.querySelector(".sm-team__invite").textContent);
-      _setTeamsStatus("Invite code copied.");
-    } else if (act === "rotate") {
-      if (!(await showConfirmModal({ title: "Rotate invite code?", body: "The old code stops working immediately. Anyone already in the team stays.", confirmLabel: "Rotate", cancelLabel: "Cancel" }))) return;
-      const { inviteCode } = await window.desktopApi.rotateInvite(teamId);
-      row.querySelector(".sm-team__invite").textContent = inviteCode;
-      _setTeamsStatus("New invite code generated.");
-    } else if (act === "members") {
-      const box = row.querySelector(".sm-team__members");
-      if (!box.hidden) { box.hidden = true; return; }
-      const members = await window.desktopApi.listTeamMembers(teamId);
-      const isOwner = row.dataset.role === "owner";
-      box.innerHTML = members.map((m) => `
-        <div class="sm-team__member" data-user-id="${escapeHtml(m.userId)}">
-          <span>${escapeHtml(m.login)}</span><span class="sm-team__role">${m.role}</span>
-          ${isOwner && m.role !== "owner" ? `<button class="settings-modal__btn settings-modal__btn--small settings-modal__btn--danger" data-act="remove" type="button">Remove</button>` : ""}
-        </div>`).join("");
-      box.hidden = false;
-    } else if (act === "remove") {
-      const userId = memberRow.dataset.userId;
-      const login = memberRow.querySelector("span").textContent;
-      if (!(await showConfirmModal({ title: `Remove ${login}?`, body: "They keep their local copies but stop receiving updates.", confirmLabel: "Remove", cancelLabel: "Cancel" }))) return;
-      await window.desktopApi.removeTeamMember(teamId, userId);
-      memberRow.remove();
-    } else if (act === "rename") {
-      // Electron's renderer has no window.prompt() — it throws, and the catch
-      // below would paint the throw as the failure. Use the modal helper.
-      const name = await showPrompt("New team name", row.querySelector(".sm-team__name").textContent);
-      if (!name?.trim()) return;
-      await window.desktopApi.renameTeam(teamId, name.trim());
+  const teamId = btn.closest(".sm-team")?.dataset.teamId;
+  if (!teamId) return;
+  // The teams the dialog reads come from state, and Settings can be opened
+  // without the library having refreshed since a team was created or joined.
+  await loadTeamState().catch(() => {});
+  await openTeamModal(teamId, {
+    onRefresh: async () => {
       await _renderTeamsList();
       await _callbacks.refreshLibraryState?.();
-    } else if (act === "delete") {
-      if (!(await showConfirmModal({ title: "Delete this team?", body: "Every member loses the shared folder. Everyone's local copies are kept as personal folders.", confirmLabel: "Delete team", cancelLabel: "Cancel" }))) return;
-      await window.desktopApi.deleteTeam(teamId);
-      await _renderTeamsList();
-      await _callbacks.refreshLibraryState?.();
-    } else if (act === "leave") {
-      if (!(await showConfirmModal({ title: "Leave this team?", body: "Your local copy of the folder is kept as a personal folder.", confirmLabel: "Leave", cancelLabel: "Cancel" }))) return;
-      await window.desktopApi.leaveTeam(teamId);
-      await _renderTeamsList();
-      await _callbacks.refreshLibraryState?.();
-    }
-  } catch (err) {
-    _setTeamsStatus(`Error: ${err?.message || String(err)}`, true);
-  }
+    },
+  });
 }
 
 async function _enableTeams() {

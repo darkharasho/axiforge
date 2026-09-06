@@ -162,3 +162,80 @@ describe("setting one", () => {
     await h.cleanup();
   });
 });
+
+// ─── The blanket ───────────────────────────────────────────────────────────────
+//
+// A grant against '*' binds this user as surely as one with their name on it, so
+// the mirror has to carry it. It is kept in its own map rather than merged in:
+// at one folder a personal grant excepts the blanket, and a merged map has no
+// way left to tell which of the two it is holding.
+describe("grants for everyone", () => {
+  test("the refresh keeps the blanket apart from this user's own", async () => {
+    const h = await makeHarness();
+    await withTeam(h);
+    h.api.listGrants.mockResolvedValue({
+      grants: [
+        { folderId: "t1", userId: "*", access: "read" },
+        { folderId: "t1", userId: "me", access: "write" },
+      ],
+      defaults: { member: "write" },
+    });
+    h.api.changes
+      .mockResolvedValueOnce({ resync: true, items: [], nextSeq: 0, hasMore: false })
+      .mockResolvedValueOnce({ items: [], nextSeq: 0, hasMore: false });
+    await h.sync.pullTeam("t1");
+    expect(await h.syncStore.getGrants("t1")).toEqual({ t1: "write" });
+    expect(await h.syncStore.getEveryoneGrants("t1")).toEqual({ t1: "read" });
+    await h.cleanup();
+  });
+
+  test("a blanket refuses a write, though this user is named nowhere", async () => {
+    const h = await makeHarness();
+    const { raids } = await withTeam(h);
+    await h.syncStore.setGrants("t1", {}, { [raids]: "read" });
+    await expect(h.sync.assertCanWrite(raids)).rejects.toThrow(/do not have permission/);
+    await h.cleanup();
+  });
+
+  test("being named on the folder excepts you from its blanket", async () => {
+    const h = await makeHarness();
+    const { raids } = await withTeam(h);
+    await h.syncStore.setGrants("t1", { [raids]: "write" }, { [raids]: "none" });
+    await expect(h.sync.assertCanWrite(raids)).resolves.toBeUndefined();
+    await h.cleanup();
+  });
+
+  test("between folders the nearer wins, whichever kind it is", async () => {
+    const h = await makeHarness();
+    const { raids, wing } = await withTeam(h);
+    await h.syncStore.setGrants("t1", { [raids]: "write" }, { [wing]: "read" });
+    await expect(h.sync.assertCanWrite(wing)).rejects.toThrow(/do not have permission/);
+    await expect(h.sync.assertCanWrite(raids)).resolves.toBeUndefined();
+    await h.cleanup();
+  });
+
+  test("a blanket reaches the folders below it, in the map the UI greys out from", async () => {
+    const h = await makeHarness();
+    const { raids, wing } = await withTeam(h);
+    await h.syncStore.setGrants("t1", {}, { [raids]: "read" });
+    const map = await h.sync.accessMap();
+    expect(map[raids]).toBe("read");
+    expect(map[wing]).toBe("read");
+    expect(map.root).toBe("write"); // untouched above it
+    await h.cleanup();
+  });
+
+  // Setting one moves this user's own floor too, even though the request names
+  // nobody — so it needs the same immediate re-read a personal change gets.
+  test("setting one re-reads the mirror, though it names no user", async () => {
+    const h = await makeHarness();
+    await withTeam(h, { role: "owner" });
+    h.api.setGrant.mockResolvedValue({});
+    h.api.listGrants.mockResolvedValue({
+      grants: [{ folderId: "t1", userId: "*", access: "read" }], defaults: { member: "write" },
+    });
+    await h.sync.setGrant("t1", "t1", "*", "read");
+    expect(await h.syncStore.getEveryoneGrants("t1")).toEqual({ t1: "read" });
+    await h.cleanup();
+  });
+});

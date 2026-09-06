@@ -13,6 +13,9 @@
 
 const LEVELS = { none: 0, read: 1, write: 2, delete: 3 };
 const DEFAULT_FOR_ROLE = { owner: "delete", member: "write" };
+// The pseudo-user a blanket grant is stored against. Must match
+// workers/sync/src/access.js — the server keys the row, we only read it back.
+const EVERYONE = "*";
 
 function rank(access) {
   return LEVELS[access] ?? 0;
@@ -26,20 +29,25 @@ function rank(access) {
  * @param {string|null} args.folderId
  * @param {string} args.teamId
  * @param {Record<string,string>} args.grants this user's grants, folderId → access
+ * @param {Record<string,string>} args.everyone the blanket grants, folderId → access
  * @param {string} args.role team role
  */
-function accessAt({ folders, folderId, teamId, grants = {}, role }) {
+function accessAt({ folders, folderId, teamId, grants = {}, everyone = {}, role }) {
   if (role === "owner") return "delete";
-  // A grant on the team's own id is the team-wide default for this person. It
-  // is keyed by the TEAM id, not the root folder's local id, because the root
-  // folder is not an item on the server — its children sync with a null parent.
-  const fallback = grants[teamId] || DEFAULT_FOR_ROLE[role] || "read";
+  // At one folder a personal grant beats the blanket one; between folders the
+  // nearer wins either way. Same rule, same order, as workers/sync/src/access.js.
+  const setAt = (key) => grants[key] || everyone[key] || null;
+  // A grant on the team's own id is the team-wide default. It is keyed by the
+  // TEAM id, not the root folder's local id, because the root folder is not an
+  // item on the server — its children sync with a null parent.
+  const fallback = setAt(teamId) || DEFAULT_FOR_ROLE[role] || "read";
   const byId = new Map((folders || []).map((f) => [f.id, f]));
   const seen = new Set();
   let cursor = folderId || null;
   while (cursor && !seen.has(cursor)) {
     seen.add(cursor);
-    if (grants[cursor]) return grants[cursor];
+    const here = setAt(cursor);
+    if (here) return here;
     const folder = byId.get(cursor);
     if (!folder || folder.teamId) break; // reached the team root (or a dangling id)
     cursor = folder.parentId;
@@ -55,7 +63,7 @@ function accessAt({ folders, folderId, teamId, grants = {}, role }) {
  * entry. So the renderer needs no walking logic of its own and cannot drift from
  * this one.
  */
-function buildAccessMap({ folders, root, teamId, grants = {}, role }) {
+function buildAccessMap({ folders, root, teamId, grants = {}, everyone = {}, role }) {
   const inTeam = (f) => {
     let cursor = f;
     const seen = new Set();
@@ -69,9 +77,9 @@ function buildAccessMap({ folders, root, teamId, grants = {}, role }) {
   const map = {};
   for (const folder of folders || []) {
     if (!inTeam(folder)) continue;
-    map[folder.id] = accessAt({ folders, folderId: folder.id, teamId, grants, role });
+    map[folder.id] = accessAt({ folders, folderId: folder.id, teamId, grants, everyone, role });
   }
   return map;
 }
 
-module.exports = { accessAt, buildAccessMap, rank, LEVELS, DEFAULT_FOR_ROLE };
+module.exports = { accessAt, buildAccessMap, rank, LEVELS, DEFAULT_FOR_ROLE, EVERYONE };
