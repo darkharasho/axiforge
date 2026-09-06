@@ -219,14 +219,17 @@ Status key: `[ ]` open · `[x]` done · `[~]` in progress · `[?]` needs repro s
     Back" will be refused by the server. Honest, but the wording is wrong for
     what actually happened.
 
-- [ ] **Deploy per-folder team permissions.** `0003_folder_grants.sql` against
-  remote D1 (via the Cloudflare MCP — the wrangler token lacks D1 permissions,
-  and remember to insert the `d1_migrations` ledger row by hand), then
-  `wrangler deploy`. The Worker is shared with the Playground SPA, so run
-  `npm run build:web` first or you roll build.axi.link back.
+- [x] **Deploy per-folder team permissions.** Live on 2026-09-05.
+  `0003_folder_grants.sql` applied to remote D1 through the Cloudflare MCP (the
+  wrangler token still lacks D1 permissions — `migrations apply --remote` fails
+  with code 7403), with the `d1_migrations` ledger row inserted by hand so a
+  future `migrations apply` does not re-run it. `npm run build:web` then
+  `wrangler deploy` — version `c36840ad`. Verified: `memberships` carries
+  `grants_seq`, `folder_grants` exists, and `GET /api/sync/teams/:id/grants`
+  answers 401 where an unknown sibling route answers 404.
 
-- [x] **Shared team trash.** Built, tested, **not yet deployed** — the D1
-  migration and `wrangler deploy` still need your go-ahead.
+- [x] **Shared team trash.** Deployed — `0002_team_trash.sql` is applied to
+  remote D1.
   - `0002_team_trash.sql` adds `deleted_at` / `deleted_by` / `delete_batch`.
   - A delete keeps its body instead of `body = NULL`, so the content survives
     for the 30 days `purgeTombstones` already kept the tombstone. `itemWire`
