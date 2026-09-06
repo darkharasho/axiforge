@@ -1010,8 +1010,13 @@ const readyWork = app.whenReady().then(async () => {
       }).catch((err) => console.warn("[comp-history] addEntry failed:", err.message));
     }
     // Guard BEFORE the local write — see builds:save.
+    // Resolve the destination the way upsertComp will actually store it: an
+    // ABSENT folderId is a partial save that leaves the comp where it is, not a
+    // move to the library root. Reading it as a move made the guard below
+    // enqueue a team-wide delete for a rename. @see CompStore#upsertComp.
+    const newFolderId = comp.folderId === undefined ? oldFolderId : (comp.folderId ?? null);
     const { oldRoot, newRoot } = await assertCanMoveOutOfTeam({ teamSync, findTeamRoot }, {
-      itemId: comp.id, oldFolderId, newFolderId: comp.folderId ?? null, label: "comp",
+      itemId: comp.id, oldFolderId, newFolderId, label: "comp",
     });
     const saved = await compStore.upsertComp(comp);
     if (!existing) {

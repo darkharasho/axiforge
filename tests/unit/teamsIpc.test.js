@@ -497,6 +497,22 @@ describe("team-aware mutations enqueue the right outbox ops", () => {
     expect(outboxFor(TEAM_ID)).toEqual([expect.objectContaining({ itemId: "c2", type: "comp", op: "delete" })]);
   });
 
+  // The bug behind "team comps delete themselves": a partial comps:save (the
+  // rename prompt sends {id, name}) dropped folderId, upsertComp stored null,
+  // and comps:save read null as "left the team" -- enqueueing a DELETE that
+  // tombstones the comp for the WHOLE team. Nobody asked for a delete.
+  test("a partial comp save never enqueues a team delete", async () => {
+    await loadMain(teamTree());
+    await invoke("comps:save", comp({ id: "c2", name: "New comp", folderId: "sub" }));
+    await invoke("comps:save", { id: "c2", name: "Renamed" });
+    expect(outboxFor(TEAM_ID)).toEqual([
+      expect.objectContaining({ itemId: "c2", type: "comp", op: "put" }),
+    ]);
+    expect((await invoke("comps:list")).find((c) => c.id === "c2")).toMatchObject({
+      name: "Renamed", folderId: "sub",
+    });
+  });
+
   test("saving and deleting a sub-folder enqueues folder put then folder delete", async () => {
     await loadMain(teamTree());
     await invoke("folders:save", folder({ id: "sub", name: "Sub renamed", parentId: TEAM_ID }));

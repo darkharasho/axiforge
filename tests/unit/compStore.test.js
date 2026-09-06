@@ -74,6 +74,26 @@ describe("CompStore — upsertComp", () => {
     expect(comp.updatedAt).toBeTruthy();
   });
 
+  // A partial save -- {id, name} from the rename prompt, a tag edit, anything
+  // that doesn't round-trip the whole record -- used to clobber folderId to
+  // null. On a TEAM comp that reads as "moved out of the team folder", and
+  // comps:save turns it into a team-wide delete. @see upsertBuild, which has
+  // carried the folder over for exactly this reason.
+  test("a partial save keeps the comp in its folder", async () => {
+    const created = await store.upsertComp(makeComp({ folderId: "team-sub" }));
+    const renamed = await store.upsertComp({ id: created.id, name: "Renamed" });
+    expect(renamed.folderId).toBe("team-sub");
+  });
+
+  // ...but an EXPLICIT null is a real move to the library root (that is how the
+  // library's "Move to Folder → Library root" is expressed), so absence and
+  // null cannot be collapsed into the same thing.
+  test("an explicit null folderId still moves the comp to the library root", async () => {
+    const created = await store.upsertComp(makeComp({ folderId: "team-sub" }));
+    const moved = await store.upsertComp({ ...created, folderId: null });
+    expect(moved.folderId).toBeNull();
+  });
+
   test("updates existing comp by id", async () => {
     const created = await store.upsertComp(makeComp());
     const updated = await store.upsertComp({ ...created, name: "Updated" });

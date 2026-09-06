@@ -141,6 +141,14 @@ class CompStore {
         }
       }
       const tags = Array.isArray(input.tags) ? input.tags : [];
+      // `undefined` means the caller never mentioned the folder -- a PARTIAL
+      // save, like the rename prompt's {id, name}. An explicit `null` means
+      // "move to the library root". Collapsing the two is what made team comps
+      // delete themselves: the partial save moved the comp to the root, and
+      // comps:save read that as a move out of the team and synced a DELETE for
+      // everybody. @see BuildStore#upsertBuild, which carries the folder over
+      // for the same reason.
+      const movesFolder = input.folderId !== undefined;
       const folderId = typeof input.folderId === "string" ? input.folderId : null;
       const sortOrder = typeof input.sortOrder === "number" ? input.sortOrder : 0;
       const buildIds = Array.isArray(input.buildIds) ? input.buildIds : [];
@@ -202,7 +210,8 @@ class CompStore {
       const existing = comps.find((c) => c.id === id);
       if (existing) {
         Object.assign(existing, {
-          name, notes, images, tags, folderId, sortOrder, buildIds, partyLines, gameMode, buildColors, categories,
+          name, notes, images, tags, sortOrder, buildIds, partyLines, gameMode, buildColors, categories,
+          ...(movesFolder ? { folderId } : {}),
           ...publishedPatch,
           updatedAt: now,
         });

@@ -569,3 +569,16 @@ Status key: `[ ]` open · `[x]` done · `[~]` in progress · `[?]` needs repro s
   appear during catalog fetches") was reported flaky by the nightly run** — it
   failed once and passed on retry. The six hard failures in that same run were
   stale specs and are fixed (cdb648c); this one is still open.
+
+- [ ] **`folderStore.upsertFolder` has the same absent-vs-null `parentId`
+  hazard that made team comps delete themselves.** Line ~153 does
+  `typeof input.parentId === "string" ? input.parentId : null`, so a partial
+  folder save would re-parent a team subfolder to the library root, and
+  `folders:save` reads that as a move out of the team — enqueueing
+  `enqueueFolderTree(..., "delete")`, which the server CASCADES to every
+  descendant. Worse than the comp case if anything ever triggers it. Not fixed
+  with the comp bug because no caller was found sending a partial folder record,
+  and several DO pass `parentId: null` deliberately to mean "library root" (the
+  team-root upsert in `teamSync._pullTeamInner`), so the two meanings have to be
+  separated carefully rather than by the same one-line guard. `buildStore` and
+  `compStore` now both carry the folder over; `folderStore` is the odd one out.
