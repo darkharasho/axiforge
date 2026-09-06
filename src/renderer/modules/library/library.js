@@ -22,6 +22,7 @@ import { loadTeamState, teamRootFor } from "../teams.js";
 import { promptRenameTeam } from "../team-modal.js";
 import { initToolbar, renderToolbar, renderFilters } from "./toolbar.js";
 import { initSidebar, renderSidebar, insertInlineInput } from "./sidebar.js";
+import { initSidebarResize, applySidebarWidth, clampSidebarWidth } from "./sidebar-resize.js";
 import { initContent, renderContent } from "./content.js";
 import { initContextMenu, wireContextMenuEvents, closeMenu } from "./context-menu.js";
 import {
@@ -84,6 +85,7 @@ export async function initLibrary(appCallbacks) {
 
   initToolbar(shared);
   initSidebar(shared);
+  initSidebarResize({ onCommit: savePrefs });
   initContent(shared);
   initContextMenu(shared);
   initDragDrop(shared);
@@ -100,6 +102,7 @@ export async function initLibrary(appCallbacks) {
  */
 export function renderLibrary() {
   refreshTrashBadge();
+  applySidebarWidth();
   renderSidebar();
   renderToolbar();
   renderFilters();
@@ -1667,6 +1670,7 @@ async function loadPrefs() {
     const sortField = await window.desktopApi.getSetting("library.sortField");
     const sortDirection = await window.desktopApi.getSetting("library.sortDirection");
     const sidebarOpen = await window.desktopApi.getSetting("library.sidebarOpen");
+    const sidebarWidth = await window.desktopApi.getSetting("library.sidebarWidth");
     const sidebarExpandedFolders = await window.desktopApi.getSetting("library.sidebarExpandedFolders");
     const activeFilters = await window.desktopApi.getSetting("library.activeFilters");
 
@@ -1674,6 +1678,7 @@ async function loadPrefs() {
     if (sortField != null) state.libraryPrefs.sortField = sortField;
     if (sortDirection != null) state.libraryPrefs.sortDirection = sortDirection;
     if (sidebarOpen != null) state.libraryPrefs.sidebarOpen = sidebarOpen;
+    if (sidebarWidth != null) state.libraryPrefs.sidebarWidth = clampSidebarWidth(sidebarWidth);
     if (Array.isArray(sidebarExpandedFolders)) state.libraryPrefs.sidebarExpandedFolders = sidebarExpandedFolders;
     if (activeFilters != null && typeof activeFilters === "object") state.libraryPrefs.activeFilters = activeFilters;
   } catch {
@@ -1688,6 +1693,7 @@ async function savePrefs() {
     await window.desktopApi.setSetting("library.sortField", p.sortField);
     await window.desktopApi.setSetting("library.sortDirection", p.sortDirection);
     await window.desktopApi.setSetting("library.sidebarOpen", p.sidebarOpen);
+    await window.desktopApi.setSetting("library.sidebarWidth", p.sidebarWidth);
     await window.desktopApi.setSetting("library.sidebarExpandedFolders", p.sidebarExpandedFolders);
     await window.desktopApi.setSetting("library.activeFilters", p.activeFilters);
   } catch {

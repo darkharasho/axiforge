@@ -7,6 +7,7 @@
 }
 
 .lib-page {
+  --lib-sidebar-w: 200px;
   display: flex;
   height: calc(100vh - var(--titlebar-h));
   min-height: 0;
@@ -15,7 +16,7 @@
 
 .lib-sidebar {
   flex-shrink: 0;
-  width: 200px;
+  width: var(--lib-sidebar-w);
   background: var(--panel-2);
   border-right: 1px solid var(--line-soft);
   display: flex;
@@ -31,7 +32,52 @@
 }
 
 .lib-sidebar--open {
-  width: 200px;
+  width: var(--lib-sidebar-w);
+}
+
+/* ── Sidebar resize handle ───────────────────────────────────────── */
+
+/* Sits between the sidebar and the main pane and straddles the sidebar's
+   border, so it reads as a grab area for that border rather than a gutter of
+   its own -- the negative margins keep it out of the layout's width budget. */
+.lib-resizer {
+  flex: 0 0 5px;
+  margin: 0 -2px;
+  position: relative;
+  z-index: 2;
+  cursor: col-resize;
+  background: transparent;
+  transition: background 0.12s ease;
+}
+
+.lib-resizer:hover,
+.lib-resizer:focus-visible,
+.lib-page.is-resizing .lib-resizer {
+  background: var(--accent, #7aa2f7);
+  outline: none;
+}
+
+/* Nothing to resize when the sidebar is a 40px icon rail. */
+.lib-page:has(.lib-sidebar--collapsed) .lib-resizer {
+  display: none;
+}
+
+/* A 5px drag target is a mouse affordance; on touch it is only a way to lose
+   a tap, and the sidebar is a drawer there anyway. */
+@media (pointer: coarse) {
+  .lib-resizer { display: none; }
+}
+
+/* During the drag the width follows the pointer directly: the sidebar's own
+   width transition would make the handle lag, and a text selection would paint
+   itself across the folder tree. */
+.lib-page.is-resizing {
+  user-select: none;
+  cursor: col-resize;
+}
+
+.lib-page.is-resizing .lib-sidebar {
+  transition: none;
 }
 
 .lib-main {

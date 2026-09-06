@@ -36,6 +36,7 @@ export const state = {
     sortField: "sortOrder",
     sortDirection: "asc",
     sidebarOpen: true,
+    sidebarWidth: 200,
     sidebarExpandedFolders: [],
     activeFilters: {},
   },
