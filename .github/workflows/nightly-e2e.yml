@@ -1,0 +1,58 @@
+# The full Electron e2e suite. It is deliberately NOT on push: every spec file
+# launches a real Electron app with its own profile and catalog build, so the
+# suite is minutes and memory-bound rather than CPU-bound (see docs/TESTING.md).
+# Running it nightly means a break surfaces within a day instead of mid-release,
+# which is how nine specs managed to sit red across three releases.
+name: Nightly E2E
+
+on:
+  schedule:
+    # 08:00 UTC — after the evening's pushes, before the day starts.
+    - cron: '0 8 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # The suite drives Electron, not a Playwright browser — but this is still
+      # the least fiddly way to get Chromium's shared libraries onto the runner.
+      - name: Install Chromium and system dependencies
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E suite
+        # The specs already launch with AXIFORGE_HIDE_WINDOW, but Electron still
+        # wants an X display on Linux to start at all. The runner has 4 cores and
+        # ~16GB, and the cap here is memory per Electron app, so 2 workers.
+        run: xvfb-run -a npm run test:e2e
+        env:
+          E2E_WORKERS: 2
+          # Ubuntu's AppArmor policy blocks Chromium's unprivileged user
+          # namespaces on the runner image, which the sandbox needs.
+          ELECTRON_DISABLE_SANDBOX: 1
+
+      # No HTML reporter is configured, so a failure's evidence is the
+      # trace/screenshot output under test-results (trace: on-first-retry).
+      - name: Upload Playwright traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces-e2e
+          path: '**/test-results/'
+          retention-days: 14

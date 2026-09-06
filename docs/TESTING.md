@@ -61,7 +61,22 @@ E2E_WORKERS=6 npm run test:e2e
 
 ## CI
 
-`.github/workflows/ci.yml` runs `npm test` only. None of the Playwright suites
-run there yet, which is how nine e2e specs stayed red for three releases — see
-the housekeeping item in `docs/BACKLOG.md`. The SPA and playground suites are
-seconds each and are the obvious first ones to add.
+`.github/workflows/ci.yml` runs, on every push to main and every PR:
+
+- `npm test` (jest), plus the main-process syntax check;
+- the **SPA** and **playground** Playwright suites, in a second job. Both are
+  browser-only and seconds each. That job bakes `src/web/public/catalogs` first
+  — it is git-ignored and generated, and the playground cannot render a
+  profession without it.
+
+The **Electron e2e suite runs nightly**, not per push
+(`.github/workflows/nightly-e2e.yml`, 08:00 UTC, plus `workflow_dispatch`). It
+is minutes rather than seconds and its cap is memory, so a per-push job would
+queue behind itself; nightly still means a break surfaces within a day instead
+of mid-release. On the runner it needs `xvfb-run` (Electron wants an X display
+even with `AXIFORGE_HIDE_WINDOW`) and `ELECTRON_DISABLE_SANDBOX`, because the
+runner image's AppArmor policy blocks the user namespaces Chromium's sandbox
+needs.
+
+Keep ci.yml and release.yml in sync: release.yml gates a tag on the same jest
+and syntax checks, and anything added to one belongs in the other.

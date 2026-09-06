@@ -352,10 +352,18 @@ Status key: `[ ]` open · `[x]` done · `[~]` in progress · `[?]` needs repro s
   jest (~12s) is the loop, `test:e2e:smoke` (~2min) is for a UI change worth
   eyes on, and the full suite is release-only.
 
-- [ ] **CI runs none of the three Playwright suites** — `.github/workflows/ci.yml`
-  is `npm test` only. That is why nine e2e specs sat red for three releases. The
-  SPA and playground suites are seconds each and are the obvious first ones to
-  add; the e2e suite wants a nightly rather than a per-push job.
+- [x] **CI runs none of the three Playwright suites.** Done 2026-09-05. `ci.yml`
+  gained a second job running the SPA (~25s) and playground (~18s) suites on
+  every push and PR, in parallel with jest. It bakes `src/web/public/catalogs`
+  first: that directory is git-ignored and generated, and on a bare checkout the
+  playground specs fail without it (verified by moving it aside locally). The
+  e2e suite is nightly instead — `.github/workflows/nightly-e2e.yml`, 08:00 UTC
+  plus `workflow_dispatch` — since it is minutes and memory-bound; it runs under
+  `xvfb-run` with `ELECTRON_DISABLE_SANDBOX`, and 2 workers. Neither config sets
+  an HTML reporter, so failures upload `test-results/` (traces, from
+  `trace: on-first-retry`) rather than a report that is never written.
+  `docs/TESTING.md` describes the new tiering. The nightly job's runner
+  specifics are unverified until it first fires.
 
 - [ ] **Two different confirm modals.** `confirm-modal.js` renders `#cm-confirm`
   while `showConfirmModal()` builds a fresh `.confirm-modal-overlay`. Callers

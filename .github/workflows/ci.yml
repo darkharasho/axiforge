@@ -42,3 +42,49 @@ jobs:
 
       - name: Run tests
         run: npm test
+
+  # The browser suites, which `npm test` does not cover: the SPA viewer and the
+  # web playground. Both are seconds and neither needs Electron, so they belong
+  # on every push. The Electron e2e suite does NOT — it is minutes and memory
+  # bound; it runs nightly instead (nightly-e2e.yml).
+  web:
+    name: Playwright (SPA + playground)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      # src/web/public/catalogs is git-ignored and generated, and the playground
+      # cannot render a profession without it — the specs fail on a bare
+      # checkout otherwise. Offline: it bakes from the repo's own snapshots.
+      - name: Bake web catalogs
+        run: npm run bake:catalogs
+
+      - name: SPA suite
+        run: npm run test:spa
+
+      - name: Playground suite
+        run: npm run test:playground
+
+      # Neither config sets an HTML reporter, so what a failure leaves behind is
+      # the trace/screenshot output under test-results (trace: on-first-retry).
+      - name: Upload Playwright traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces-web
+          path: '**/test-results/'
+          retention-days: 7
