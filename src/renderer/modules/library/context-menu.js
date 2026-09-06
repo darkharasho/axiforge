@@ -9,6 +9,7 @@ import { showConfirmModal } from "../confirm-modal.js";
 import { isSelected, getSelection, isCompSelected, getCompSelection } from "./selection.js";
 import { stopSharingFolder, pullTeamFor } from "./folder-store.js";
 import { isTeamOwner, teamRootFor } from "../teams.js";
+import { writeDeniedReason, currentFolderId } from "./access.js";
 import { openShareModal } from "./share-modal.js";
 import {
   playIcon,
@@ -149,6 +150,28 @@ function _canMoveFrom(folderId) {
   return !teamRootFor(folderId) || isTeamOwner(folderId);
 }
 
+/**
+ * The strictest refusal across a selection, or null when none of them refuse.
+ * A multi-select spanning a read-only folder and a writable one cannot offer an
+ * action that would half-apply.
+ */
+function _writeDeniedForAny(folderIds) {
+  for (const id of folderIds) {
+    const tip = writeDeniedReason(id);
+    if (tip) return tip;
+  }
+  return null;
+}
+
+/**
+ * A submenu when the action is available, and a greyed row that says why when
+ * it is not — _submenuItem has no disabled state, and a submenu of dead entries
+ * would be worse than one that never opens.
+ */
+function _submenuOrDenied(icon, label, items, tip) {
+  return tip ? _item(icon, label, null, null, false, tip) : _submenuItem(icon, label, items);
+}
+
 /** Toast without importing library.js (which imports this module). */
 function _toast(message, type = "success") {
   if (_callbacks.onToast) _callbacks.onToast(message, type);
@@ -159,19 +182,23 @@ function _toast(message, type = "success") {
 
 function showBuildMenu(x, y, buildId, build) {
   const isPinned = build?.pinned;
+  // Pin, and archiving further down, are local stamps that never leave this
+  // machine (@see BUILD_LOCAL_FIELDS in src/main/teamSync.js) — they stay live
+  // in a read-only folder because nothing about them is the team's business.
+  const writeTip = writeDeniedReason(build?.folderId);
   const canMove = _canMoveFrom(build?.folderId);
   const shareTip = shareDisabledTooltip(build, false);
   const items = [
     _item(playIcon, "Load", null, () => _callbacks.onLoadBuild?.(buildId)),
-    _item(pencilIcon, "Rename", "F2", () => _callbacks.onRename?.(buildId)),
-    _item(documentDuplicateIcon, "Duplicate", "Ctrl+D", () => _callbacks.onDuplicate?.(buildId)),
+    _item(pencilIcon, "Rename", "F2", () => _callbacks.onRename?.(buildId), false, writeTip),
+    _item(documentDuplicateIcon, "Duplicate", "Ctrl+D", () => _callbacks.onDuplicate?.(buildId), false, writeTip),
     _sep(),
     _item(starIcon, isPinned ? "Unpin" : "Pin", null, () => _callbacks.onTogglePin?.(buildId, !isPinned)),
-    ...(canMove ? [_submenuItem(folderArrowDownIcon, "Move to Folder", _buildMoveToFolderItems(buildId))] : []),
-    _item(tagIcon, "Edit Tags", null, () => _callbacks.onEditTags?.(buildId)),
+    ...(canMove ? [_submenuOrDenied(folderArrowDownIcon, "Move to Folder", _buildMoveToFolderItems(buildId), writeTip)] : []),
+    _item(tagIcon, "Edit Tags", null, () => _callbacks.onEditTags?.(buildId), false, writeTip),
     _sep(),
     _item(clipboardDocumentIcon, "Copy", "Ctrl+C", () => _callbacks.onCopyJson?.(buildId)),
-    _item(scissorsIcon, "Cut", "Ctrl+X", () => _callbacks.onCutJson?.(buildId)),
+    _item(scissorsIcon, "Cut", "Ctrl+X", () => _callbacks.onCutJson?.(buildId), false, writeTip),
     _item(linkIcon, "Copy Chat Link", null, () => _callbacks.onCopyChatLink?.(buildId)),
     _item(axiforgeIcon, "Copy AxiCode", null, () => _callbacks.onCopyShareCode?.(buildId)),
     _submenuItem(arrowUpTrayIcon, "Share to Discord", [
@@ -183,7 +210,7 @@ function showBuildMenu(x, y, buildId, build) {
     _sep(),
     _item(informationCircleIcon, "Build Info", null, () => _callbacks.onBuildInfo?.(buildId)),
     _item(clockIcon, "View History", null, () => _callbacks.onViewHistory?.(buildId)),
-    ..._buildUnlinkOrDeleteItems(buildId, build),
+    ..._buildUnlinkOrDeleteItems(buildId, build, writeTip),
   ];
   _showMenu(x, y, items);
 }
@@ -192,40 +219,42 @@ function showMultiSelectMenu(x, y, ids) {
   const count = ids.length;
   const selected = ids.map((id) => state.builds.find((b) => b.id === id)).filter(Boolean);
   const canMove = selected.every((b) => _canMoveFrom(b.folderId));
+  const writeTip = _writeDeniedForAny(selected.map((b) => b.folderId));
   const items = [
     _header(`${count} builds selected`),
     _sep(),
-    ...(canMove ? [_submenuItem(folderArrowDownIcon, "Move to Folder", _buildMoveToFolderItems(ids))] : []),
-    _item(tagIcon, "Add Tags", null, () => _callbacks.onEditTags?.(ids)),
+    ...(canMove ? [_submenuOrDenied(folderArrowDownIcon, "Move to Folder", _buildMoveToFolderItems(ids), writeTip)] : []),
+    _item(tagIcon, "Add Tags", null, () => _callbacks.onEditTags?.(ids), false, writeTip),
     _item(starIcon, "Pin All", null, () => _callbacks.onPinAll?.(ids, true)),
     _sep(),
     _item(clipboardDocumentIcon, "Copy", "Ctrl+C", () => _callbacks.onCopyJson?.(ids)),
-    _item(scissorsIcon, "Cut", "Ctrl+X", () => _callbacks.onCutJson?.(ids)),
+    _item(scissorsIcon, "Cut", "Ctrl+X", () => _callbacks.onCutJson?.(ids), false, writeTip),
     _item(arrowUpTrayIcon, "Export (.axicode)", null, () => _callbacks.onExportAxicode?.("selection")),
     _sep(),
-    ..._multiSelectUnlinkOrDeleteItems(ids),
+    ..._multiSelectUnlinkOrDeleteItems(ids, writeTip),
   ];
   _showMenu(x, y, items);
 }
 
 function showCompMenu(x, y, compId, comp) {
   const canMove = _canMoveFrom(comp?.folderId);
+  const writeTip = writeDeniedReason(comp?.folderId);
   const items = [
     _item(playIcon, "Open", null, () => _callbacks.onOpenComp?.(compId)),
-    _item(pencilIcon, "Rename", "F2", () => _callbacks.onRenameComp?.(compId)),
-    _item(documentDuplicateIcon, "Duplicate", "Ctrl+D", () => _callbacks.onDuplicateComp?.(compId)),
+    _item(pencilIcon, "Rename", "F2", () => _callbacks.onRenameComp?.(compId), false, writeTip),
+    _item(documentDuplicateIcon, "Duplicate", "Ctrl+D", () => _callbacks.onDuplicateComp?.(compId), false, writeTip),
     _sep(),
-    ...(canMove ? [_submenuItem(folderArrowDownIcon, "Move to Folder", _buildMoveToFolderItemsForComps([compId]))] : []),
+    ...(canMove ? [_submenuOrDenied(folderArrowDownIcon, "Move to Folder", _buildMoveToFolderItemsForComps([compId]), writeTip)] : []),
     _sep(),
     _item(clipboardDocumentIcon, "Copy JSON", "Ctrl+C", () => _callbacks.onCopyCompJson?.(compId)),
-    _item(scissorsIcon, "Cut", "Ctrl+X", () => _callbacks.onCutCompJson?.(compId)),
+    _item(scissorsIcon, "Cut", "Ctrl+X", () => _callbacks.onCutCompJson?.(compId), false, writeTip),
     _item(arrowUpTrayIcon, "Export (.axicode)", null, () => _callbacks.onExportAxicode?.("selection")),
-    _item(clipboardIcon, "Paste", "Ctrl+V", () => _callbacks.onPasteJson?.(compId)),
+    _item(clipboardIcon, "Paste", "Ctrl+V", () => _callbacks.onPasteJson?.(compId), false, writeTip),
     _sep(),
     _item(clockIcon, "View History", null, () => _callbacks.onViewCompHistory?.(compId)),
     _sep(),
     _item(archiveArrowDownIcon, "Archive", null, () => _callbacks.onArchive?.({ comps: [compId] })),
-    _item(trashIcon, "Delete", "Del", () => _callbacks.onDeleteComps?.([compId]), true),
+    _item(trashIcon, "Delete", "Del", () => _callbacks.onDeleteComps?.([compId]), true, writeTip),
   ];
   _showMenu(x, y, items);
 }
@@ -234,17 +263,18 @@ function showMultiCompSelectMenu(x, y, ids) {
   const count = ids.length;
   const selected = ids.map((id) => state.comps?.find((c) => c.id === id)).filter(Boolean);
   const canMove = selected.every((c) => _canMoveFrom(c.folderId));
+  const writeTip = _writeDeniedForAny(selected.map((c) => c.folderId));
   const items = [
     _header(`${count} comps selected`),
     _sep(),
-    ...(canMove ? [_submenuItem(folderArrowDownIcon, "Move to Folder", _buildMoveToFolderItemsForComps(ids))] : []),
+    ...(canMove ? [_submenuOrDenied(folderArrowDownIcon, "Move to Folder", _buildMoveToFolderItemsForComps(ids), writeTip)] : []),
     _sep(),
     _item(clipboardDocumentIcon, "Copy JSON", "Ctrl+C", () => _callbacks.onCopyCompJson?.(ids)),
-    _item(scissorsIcon, "Cut", "Ctrl+X", () => _callbacks.onCutCompJson?.(ids)),
+    _item(scissorsIcon, "Cut", "Ctrl+X", () => _callbacks.onCutCompJson?.(ids), false, writeTip),
     _item(arrowUpTrayIcon, "Export (.axicode)", null, () => _callbacks.onExportAxicode?.("selection")),
     _sep(),
     _item(archiveArrowDownIcon, `Archive ${count} Comps`, null, () => _callbacks.onArchive?.({ comps: ids })),
-    _item(trashIcon, `Delete ${count} Comps`, null, () => _callbacks.onDeleteComps?.(ids), true),
+    _item(trashIcon, `Delete ${count} Comps`, null, () => _callbacks.onDeleteComps?.(ids), true, writeTip),
   ];
   _showMenu(x, y, items);
 }
@@ -253,23 +283,27 @@ function showFolderMenu(x, y, folderId, folder) {
   const teamRoot = teamRootFor(folderId);
   const isTeamRoot = teamRoot?.id === folderId;
 
+  // Keyed by the folder's OWN id, matching folders:delete and folders:save in
+  // main: a grant on a folder governs the folder itself, not only its contents.
+  const writeTip = writeDeniedReason(folderId);
+
   const items = [
     _item(folderOpenIcon, "Open Folder", null, () => _callbacks.onOpenFolder?.(folderId)),
-    _item(pencilIcon, "Rename", "F2", () => _callbacks.onRenameFolder?.(folderId)),
+    _item(pencilIcon, "Rename", "F2", () => _callbacks.onRenameFolder?.(folderId), false, writeTip),
     _sep(),
-    _item(folderPlusIcon, "New Sub-folder", null, () => _callbacks.onNewSubfolder?.(folderId)),
-    _item(documentPlusIcon, "New Build in Folder", null, () => _callbacks.onNewBuildInFolder?.(folderId)),
-    _submenuItem(arrowDownTrayIcon, "Import in Folder", [
+    _item(folderPlusIcon, "New Sub-folder", null, () => _callbacks.onNewSubfolder?.(folderId), false, writeTip),
+    _item(documentPlusIcon, "New Build in Folder", null, () => _callbacks.onNewBuildInFolder?.(folderId), false, writeTip),
+    _submenuOrDenied(arrowDownTrayIcon, "Import in Folder", [
       _item(linkIcon, "Build Link", null, () => _callbacks.onImportChatLink?.(folderId)),
       _item(arrowDownTrayIcon, "GW2Skills", null, () => _callbacks.onImportGw2Skills?.(folderId)),
       _item(linkIcon, "AxiForge Link", null, () => _callbacks.onImportAxiLink?.(folderId)),
       _item(axiforgeIcon, "AxiCode", null, () => _callbacks.onImportShareCode?.(folderId)),
       _sep(),
       _item(arrowDownTrayIcon, ".axicode File", null, () => _callbacks.onImportAxicodeFile?.(folderId)),
-    ]),
+    ], writeTip),
     _item(arrowUpTrayIcon, "Export (.axicode)", null, () => _callbacks.onExportAxicodeFolder?.(folderId)),
     _sep(),
-    _item(clipboardIcon, "Paste", "Ctrl+V", () => _callbacks.onPasteJson?.(folderId)),
+    _item(clipboardIcon, "Paste", "Ctrl+V", () => _callbacks.onPasteJson?.(folderId), false, writeTip),
     _sep(),
     ..._folderTeamItems(folderId, folder, teamRoot, isTeamRoot),
     _item(clockIcon, "View History", null, () => _callbacks.onViewFolderHistory?.(folderId, folder?.name)),
@@ -282,11 +316,13 @@ function showFolderMenu(x, y, folderId, folder) {
       false,
       isTeamRoot ? "Leave the team in Settings \u2192 Teams instead" : null,
     ),
-    // A team root is only removable by leaving/deleting the team itself.
+    // A team root is only removable by leaving/deleting the team itself. That
+    // reason comes first: it is the more specific of the two, and a root you
+    // may write in would otherwise read as deletable.
     _item(
       trashIcon, "Delete Folder", null,
       isTeamRoot ? null : () => _callbacks.onDeleteFolder?.(folderId), true,
-      isTeamRoot ? "Leave or delete the team in Settings → Teams" : null,
+      isTeamRoot ? "Leave or delete the team in Settings → Teams" : writeTip,
     ),
   ];
   _showMenu(x, y, items);
@@ -350,22 +386,23 @@ function _folderTeamItems(folderId, folder, teamRoot, isTeamRoot) {
 
 function showEmptyMenu(x, y) {
   const insideComp = state.currentFolder?.type === "comp";
+  const writeTip = writeDeniedReason(currentFolderId());
   const items = [
-    _item(plusIcon, "New Build", "Ctrl+N", () => _callbacks.onNewBuild?.()),
+    _item(plusIcon, "New Build", "Ctrl+N", () => _callbacks.onNewBuild?.(), false, writeTip),
     ...(insideComp ? [] : [
-      _item(compPlusIcon, "New Comp", null, () => _callbacks.onNewComp?.()),
-      _item(folderPlusIcon, "New Folder", null, () => _callbacks.onNewFolder?.()),
+      _item(compPlusIcon, "New Comp", null, () => _callbacks.onNewComp?.(), false, writeTip),
+      _item(folderPlusIcon, "New Folder", null, () => _callbacks.onNewFolder?.(), false, writeTip),
     ]),
     _sep(),
-    _item(clipboardIcon, "Paste", "Ctrl+V", () => _callbacks.onPasteJson?.()),
-    _submenuItem(arrowDownTrayIcon, "Import", [
+    _item(clipboardIcon, "Paste", "Ctrl+V", () => _callbacks.onPasteJson?.(), false, writeTip),
+    _submenuOrDenied(arrowDownTrayIcon, "Import", [
       _item(linkIcon, "Build Link", null, () => _callbacks.onImportChatLink?.()),
       _item(arrowDownTrayIcon, "GW2Skills", null, () => _callbacks.onImportGw2Skills?.()),
       _item(linkIcon, "AxiForge Link", null, () => _callbacks.onImportAxiLink?.()),
       _item(axiforgeIcon, "AxiCode", null, () => _callbacks.onImportShareCode?.()),
       _sep(),
       _item(arrowDownTrayIcon, ".axicode File", null, () => _callbacks.onImportAxicodeFile?.()),
-    ]),
+    ], writeTip),
     _item(arrowUpTrayIcon, "Export (.axicode)", null, () => _callbacks.onExportAxicode?.("visible")),
     _sep(),
     _item(null, "Select All", "Ctrl+A", () => _callbacks.onSelectAll?.()),
@@ -375,14 +412,14 @@ function showEmptyMenu(x, y) {
 
 // ─── Build unlink / delete items ──────────────────────────────────────────────
 
-function _buildUnlinkOrDeleteItems(buildId, build) {
+function _buildUnlinkOrDeleteItems(buildId, build, writeTip = null) {
   const compIds = Array.isArray(build?.compIds) ? build.compIds : [];
   const inCompView = state.currentFolder?.type === "comp";
 
   if (inCompView) {
     return [
       _item(squaresIcon, "Unlink from Comp", null, () =>
-        _callbacks.onRemoveBuildFromComp?.(buildId, state.currentFolder.id)),
+        _callbacks.onRemoveBuildFromComp?.(buildId, state.currentFolder.id), false, writeTip),
     ];
   }
 
@@ -393,23 +430,23 @@ function _buildUnlinkOrDeleteItems(buildId, build) {
       const c = comps[0];
       items.push(
         _item(squaresIcon, `Unlink from ${escapeHtml(c.name)}`, null, () =>
-          _callbacks.onRemoveBuildFromComp?.(buildId, c.id)),
+          _callbacks.onRemoveBuildFromComp?.(buildId, c.id), false, writeTip),
       );
     } else if (comps.length > 1) {
       items.push(
-        _submenuItem(squaresIcon, `Unlink from Comp (${comps.length})`, comps.map((c) =>
+        _submenuOrDenied(squaresIcon, `Unlink from Comp (${comps.length})`, comps.map((c) =>
           _item(null, escapeHtml(c.name), null, () =>
             _callbacks.onRemoveBuildFromComp?.(buildId, c.id)),
-        )),
+        ), writeTip),
       );
     }
   }
   items.push(_item(archiveArrowDownIcon, "Archive", null, () => _callbacks.onArchive?.({ builds: [buildId] })));
-  items.push(_item(trashIcon, "Delete", "Del", () => _callbacks.onDelete?.([buildId]), true));
+  items.push(_item(trashIcon, "Delete", "Del", () => _callbacks.onDelete?.([buildId]), true, writeTip));
   return items;
 }
 
-function _multiSelectUnlinkOrDeleteItems(ids) {
+function _multiSelectUnlinkOrDeleteItems(ids, writeTip = null) {
   const count = ids.length;
   const inCompView = state.currentFolder?.type === "comp";
 
@@ -417,7 +454,7 @@ function _multiSelectUnlinkOrDeleteItems(ids) {
     return [
       _item(squaresIcon, `Unlink ${count} Builds`, null, () => {
         for (const id of ids) _callbacks.onRemoveBuildFromComp?.(id, state.currentFolder.id);
-      }),
+      }, false, writeTip),
     ];
   }
 
@@ -436,11 +473,11 @@ function _multiSelectUnlinkOrDeleteItems(ids) {
             _callbacks.onRemoveBuildFromComp?.(id, compId);
           }
         }
-      }),
+      }, false, writeTip),
     );
   }
   items.push(_item(archiveArrowDownIcon, `Archive ${count} Builds`, null, () => _callbacks.onArchive?.({ builds: ids })));
-  items.push(_item(trashIcon, `Delete ${count} Builds`, null, () => _callbacks.onDelete?.(ids), true));
+  items.push(_item(trashIcon, `Delete ${count} Builds`, null, () => _callbacks.onDelete?.(ids), true, writeTip));
   return items;
 }
 

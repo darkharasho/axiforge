@@ -1526,7 +1526,6 @@
   background: rgba(200, 60, 60, 0.15);
 }
 
-.lib-ctx-item--disabled,
 .lib-ctx-item--header {
   color: var(--text-dim);
   cursor: default;
@@ -1534,6 +1533,21 @@
   font-size: 0.88rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+}
+
+/* Disabled, but still hoverable. These carry a `title` saying why the action is
+   refused, and pointer-events:none would make that tooltip unreachable — the
+   grey would be the whole message. The click handler already no-ops, so nothing
+   needs the events blocked. Placed after --danger so a refused Delete reads as
+   unavailable rather than as armed. */
+.lib-ctx-item--disabled {
+  color: var(--text-dim);
+  cursor: default;
+  opacity: 0.55;
+}
+
+.lib-ctx-item--disabled:hover {
+  background: transparent;
 }
 
 .lib-ctx-item__icon {
@@ -1548,6 +1562,11 @@
 
 .lib-ctx-item--danger .lib-ctx-item__icon {
   color: var(--danger);
+}
+
+/* After the danger rule, so a refused Delete does not keep a live red icon. */
+.lib-ctx-item--disabled .lib-ctx-item__icon {
+  color: var(--text-dim);
 }
 
 .lib-ctx-item__icon svg {

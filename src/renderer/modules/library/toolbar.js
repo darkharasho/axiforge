@@ -4,6 +4,7 @@ import { state } from "../state.js";
 import { escapeHtml, formatRelativeTime } from "../utils.js";
 import { getProfessionSvg } from "../profession-icons.js";
 import { libraryBuilds } from "./folder-store.js";
+import { writeDeniedReason, currentFolderId } from "./access.js";
 import {
   magnifyingGlassIcon,
   plusIcon,
@@ -46,6 +47,11 @@ export function renderToolbar() {
   const prefs = state.libraryPrefs;
   const searchVal = escapeHtml(state.buildSearch || "");
   const insideComp = state.currentFolder?.type === "comp";
+  // New and Import both land in the folder you are standing in, so in a
+  // read-only shared folder they are refusals waiting to happen. Export is not
+  // gated: reading out what you can already see takes nothing from the team.
+  const writeTip = writeDeniedReason(currentFolderId());
+  const writeAttrs = writeTip ? ` disabled title="${escapeHtml(writeTip)}"` : "";
 
   // The trash and the archive bypass the view modes entirely (see
   // renderContent), so every control here is inert in them: search filters
@@ -93,7 +99,7 @@ export function renderToolbar() {
         ${renderViewToggle(prefs.viewMode)}
       </div>
       <div class="lib-import-dropdown" id="lib-import-dropdown">
-        <button type="button" id="lib-import-btn" class="btn lib-toolbar__new-btn lib-import-dropdown__trigger">
+        <button type="button" id="lib-import-btn" class="btn lib-toolbar__new-btn lib-import-dropdown__trigger"${writeAttrs}>
           ${arrowDownTrayIcon} Import
         </button>
         <div class="lib-import-dropdown__menu" id="lib-import-menu">
@@ -126,7 +132,7 @@ export function renderToolbar() {
         </div>
       </div>
       <div class="lib-import-dropdown" id="lib-new-dropdown">
-        <button type="button" id="lib-new-btn" class="btn btn-primary lib-toolbar__new-btn lib-import-dropdown__trigger">
+        <button type="button" id="lib-new-btn" class="btn btn-primary lib-toolbar__new-btn lib-import-dropdown__trigger"${writeAttrs}>
           ${plusIcon} New
         </button>
         <div class="lib-import-dropdown__menu" id="lib-new-menu">

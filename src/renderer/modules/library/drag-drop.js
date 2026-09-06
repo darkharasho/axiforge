@@ -18,6 +18,7 @@ import { isGameModeCompatible } from "./library.js";
 import { getSelection } from "./selection.js";
 import { isTeamOwner } from "../teams.js";
 import { showToast } from "./toast.js";
+import { canWrite } from "./access.js";
 
 /** True if folderId is within a shared folder tree. */
 function _isInSharedFolder(folderId) {
@@ -427,7 +428,7 @@ function _onPointerMove(e) {
       if (folderId !== _draggedFolderId) {
         _hoverTarget = folderEl;
         folderEl.classList.add("lib-drop-target");
-        if (_isFolderSelfOrDescendant(folderId, _draggedFolderId)) {
+        if (_isFolderSelfOrDescendant(folderId, _draggedFolderId) || !canWrite(folderId)) {
           folderEl.classList.add("is-invalid");
         }
       }
@@ -437,6 +438,9 @@ function _onPointerMove(e) {
     if (!childrenUl) {
       _hoverTarget = folderEl;
       folderEl.classList.add("lib-drop-target");
+      // The drop is still refused by main; this is only so the user sees it
+      // coming rather than watching the item snap back after a toast.
+      if (!canWrite(folderId)) folderEl.classList.add("is-invalid");
 
       // Auto-expand collapsed table folders after 500ms hover
       if (folderEl.closest(".lib-tv") && folderId) {
@@ -466,6 +470,9 @@ function _onPointerMove(e) {
   if (navTarget) {
     _hoverTarget = navTarget;
     navTarget.classList.add("lib-drop-target");
+    // navigateFolder is absent on "All Builds" / root, which are personal and
+    // always writable — canWrite(undefined) answers that.
+    if (!canWrite(navTarget.dataset.navigateFolder)) navTarget.classList.add("is-invalid");
     return;
   }
 

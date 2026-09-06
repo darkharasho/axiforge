@@ -65,6 +65,8 @@ export const state = {
   buildSyncStatus: {},    // buildId  → same
   compSyncStatus: {},     // compId   → same
   conflicts: {},          // "<type>:<id>" → { teamId, itemId, type, title, current }
+  folderAccess: {},       // folderId → "none"|"read"|"write"|"delete" (team folders only;
+                          // see modules/library/access.js — absent means personal, i.e. yours)
   skillSearch: "",
   catalogCache: new Map(),
   activeCatalog: null,

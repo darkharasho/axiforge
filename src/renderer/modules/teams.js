@@ -3,6 +3,7 @@
 // folder carries { shared: true, teamId, role }.
 
 import { state } from "./state.js";
+import { loadAccessMap } from "./library/access.js";
 
 /** Nearest ancestor (or self) that is a team root folder. */
 export function teamRootFor(folderId, folders = state.folders) {
@@ -36,12 +37,17 @@ export async function loadTeamState() {
   if (!state.teamSession) {
     state.teams = [];
     state.outbox = {};
+    state.folderAccess = {};
     return;
   }
   state.teams = await window.desktopApi.listTeams().catch(() => []);
   state.outbox = await window.desktopApi.listOutbox().catch(() => ({}));
   // listTeams reconciles membership, so roots may have been created or detached.
   state.folders = await window.desktopApi.listFolders();
+  // After the folders, not before: the map is keyed by folder id and main
+  // resolves it over the same tree, so a stale read here would grey out the
+  // wrong folders for one render.
+  await loadAccessMap();
 }
 
 /**

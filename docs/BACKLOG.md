@@ -210,10 +210,32 @@ Status key: `[ ]` open · `[x]` done · `[~]` in progress · `[?]` needs repro s
     `tests/unit/teamSync.grants.test.js` (15),
     `tests/unit/renderer/folder-access.test.js` (14), plus the extended
     `teamGuards` tests.
-  - **Still open:** the library does not yet *grey out* what a read-only member
-    cannot do — they get a clear refusal instead of a disabled control.
-    `teams:access` already returns folder id → level for exactly this, and is
-    tested; nothing calls it yet.
+  - **Now done (2026-09-06):** the library greys out what a read-only member
+    cannot do, instead of letting them find out by being refused.
+    `src/renderer/modules/library/access.js` is the one place the UI asks — it
+    is a lookup over the `teams:access` map, not a second copy of the rule, so
+    it cannot drift from `src/main/folderAccess.js`. `loadTeamState()` fetches
+    the map after the folders (it is keyed by folder id). Applied to the
+    context menu (build, comp, multi-select, folder and empty-area), to the
+    toolbar's New and Import, and to the drag hover highlight, which now marks
+    a read-only drop target `is-invalid` rather than letting the item snap back
+    after a toast.
+    - `delete` vs `write` is deliberately *not* modelled: the extra thing a
+      delete grant buys you is removing a **teammate's** work, and the renderer
+      cannot tell whose is whose. That is the server's creator rule, which still
+      answers it — so a write-level member keeps a live Delete for their own
+      builds.
+    - Gated on what main actually enforces, nothing more: `pinned`, `sortOrder`
+      and the archive stamps are `BUILD_LOCAL_FIELDS` — they never leave the
+      machine, so Pin and Archive stay live in a read-only folder. Export and
+      View History stay live too; they only read.
+    - Found on the way: `.lib-ctx-item--disabled` shared a rule with
+      `--header`, so every disabled menu item inherited `pointer-events: none`
+      — which suppresses the `title`. The greyed share-gate items could not say
+      *why*. The two rules are split now, and the icon no longer stays danger-red
+      on a refused Delete.
+    - Covered by `tests/unit/renderer/library-read-only-access.test.js` (18) and
+      `tests/unit/renderer/library-toolbar-read-only.test.js` (3).
   - **Also worth knowing:** an item you lose read access to lands in your local
     trash (via the resync prune), attributed as a teammate's delete. Its "Put
     Back" will be refused by the server. Honest, but the wording is wrong for
