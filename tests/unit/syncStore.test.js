@@ -42,7 +42,7 @@ describe("SyncStore — team scope (cursor / versions / outbox)", () => {
   afterEach(async () => cleanupDir(dir));
 
   test("getTeam defaults", async () => {
-    expect(await store.getTeam("t1")).toEqual({ cursor: 0, versions: {}, outbox: {}, failures: 0 });
+    expect(await store.getTeam("t1")).toEqual({ cursor: 0, versions: {}, outbox: {}, failures: 0, grants: {} });
   });
 
   test("cursor / versions / failures round-trip", async () => {

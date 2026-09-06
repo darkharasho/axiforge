@@ -2,12 +2,20 @@
 const { assertCanMoveOutOfTeam, assertFolderTreeFits, decideCompBuildPublish } = require("../../src/main/teamGuards");
 
 // findTeamRoot stub: folder ids are "<team>/<name>"; "p/..." means personal.
-function makeDeps({ canDelete = async () => true } = {}) {
+function makeDeps({ canDelete = async () => true, canWrite = () => true } = {}) {
   const calls = [];
+  const writeChecks = [];
   const teamSync = {
-    canDelete: async (teamId, itemId) => {
+    canDeleteIn: async (teamId, itemId) => {
       calls.push([teamId, itemId]);
       return canDelete(teamId, itemId);
+    },
+    // Per-folder access, checked on both sides of a move before anything is
+    // written. Defaults to permissive so the ownership tests below still ask
+    // only about ownership.
+    assertCanWrite: async (folderId) => {
+      writeChecks.push(folderId);
+      if (!canWrite(folderId)) throw new Error("You do not have permission to change things in that folder.");
     },
   };
   const findTeamRoot = async (folderId) => {
@@ -16,7 +24,7 @@ function makeDeps({ canDelete = async () => true } = {}) {
     if (team === "p") return null;
     return { id: `root-${team}`, teamId: team };
   };
-  return { deps: { teamSync, findTeamRoot }, calls };
+  return { deps: { teamSync, findTeamRoot }, calls, writeChecks };
 }
 
 test("personal → personal is a no-op and never consults canDelete", async () => {
@@ -61,6 +69,28 @@ test("the label is interpolated into the refusal message", async () => {
   await expect(assertCanMoveOutOfTeam(deps, {
     itemId: "f1", oldFolderId: "t1/a", newFolderId: "p/x", label: "folder",
   })).rejects.toThrow("Only the team owner or the folder's creator can move it out of the team.");
+});
+
+test("a folder you may only read refuses the write before anything moves", async () => {
+  const { deps } = makeDeps({ canWrite: (id) => id !== "t1/locked" });
+  await expect(assertCanMoveOutOfTeam(deps, {
+    itemId: "b1", oldFolderId: "t1/a", newFolderId: "t1/locked", label: "build",
+  })).rejects.toThrow("You do not have permission to change things in that folder.");
+});
+
+test("and so does taking something OUT of one", async () => {
+  const { deps } = makeDeps({ canWrite: (id) => id !== "t1/locked" });
+  await expect(assertCanMoveOutOfTeam(deps, {
+    itemId: "b1", oldFolderId: "t1/locked", newFolderId: "t1/b", label: "build",
+  })).rejects.toThrow("You do not have permission to change things in that folder.");
+});
+
+test("a plain save asks the write question once, about the folder it is in", async () => {
+  const { deps, writeChecks } = makeDeps();
+  await assertCanMoveOutOfTeam(deps, {
+    itemId: "b1", oldFolderId: "t1/a", newFolderId: "t1/a", label: "build",
+  });
+  expect(writeChecks).toEqual(["t1/a"]);
 });
 
 // ── decideCompBuildPublish ────────────────────────────────────────────────

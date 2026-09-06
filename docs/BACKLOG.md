@@ -166,8 +166,64 @@ Status key: `[ ]` open · `[x]` done · `[~]` in progress · `[?]` needs repro s
     copies. Same module applies; it needs the renderer to fingerprint in batch
     over IPC, and its conflict modal is per-item rather than one question.
 
-- [ ] **Per-folder team permissions.** Better admin controls — read / write /
-  delete per folder within a teamspace, rather than one role for the whole team.
+- [x] **Per-folder team permissions.** Done 2026-09-05. Built and tested,
+  **not yet deployed** — migration `0003_folder_grants.sql` and a
+  `wrangler deploy` still need your go-ahead.
+  - A teamspace had exactly two settings for a person — `owner` (do anything) or
+    `member` (write anything, delete only your own) — which is one decision for
+    the whole library. A squad wanting an officers-only folder or a read-only
+    reference section had no lever but making somebody an owner of everything.
+  - **A grant covers a folder and everything inside it, and the nearest one
+    walking up from an item wins.** Levels are `none` / `read` / `write` /
+    `delete`. A grant on the team's *own id* is that person's team-wide default,
+    which is how "read-only across the whole team" is written down — the root
+    folder is not a synced item, so there is nowhere else to hang it.
+  - `none` is enforced by **filtering the changes feed**, not just by refusing
+    writes: hiding a folder is the thing people actually ask for. Losing read
+    access produces no item event at all, so a grant edit stamps the team's seq
+    onto that member (`memberships.grants_seq`) and their next incremental pull
+    is told to resync — the same mechanism `purged_seq` already used. The
+    re-pull's existing `_pruneUnseen` then stages the now-invisible items in the
+    local trash.
+  - **A team with no grants runs exactly the queries it ran before.** Owners and
+    ungranted members take an `unrestricted` fast path that skips the per-item
+    checks and never loads the folder tree.
+  - Owners are deliberately not grantable: an owner can take any grant back in
+    the same breath, so a level set against one would be a lie. The API says so
+    rather than storing it.
+  - Two rules kept from before, now layered: the creator clause (a member may
+    clean up after themselves) survives, but requires `write` — a folder you
+    have been made read-only on should not still let you destroy your own
+    contributions to it. And a folder delete is all-or-nothing on the cascade;
+    half-deleting somebody's subtree is worse than refusing.
+  - An item you cannot see answers **404, not 403**. A 403 would confirm it
+    exists, which is the one thing hiding it was for.
+  - Client mirrors the rule (`src/main/folderAccess.js`) so an edit is refused
+    *before* it is written locally and queued — otherwise the user is told
+    "saved" and then "forbidden" some seconds later. The mirror is refreshed on
+    resync, which is exactly and only when a grant changed.
+  - UI is the **Access** section of the Share dialog: open Share… on a team
+    folder and each member gets a level, scoped to that folder (or the whole
+    team at the root).
+  - Covered by `tests/unit/worker-sync-grants.test.js` (35),
+    `tests/unit/folderAccess.test.js` (15),
+    `tests/unit/teamSync.grants.test.js` (15),
+    `tests/unit/renderer/folder-access.test.js` (14), plus the extended
+    `teamGuards` tests.
+  - **Still open:** the library does not yet *grey out* what a read-only member
+    cannot do — they get a clear refusal instead of a disabled control.
+    `teams:access` already returns folder id → level for exactly this, and is
+    tested; nothing calls it yet.
+  - **Also worth knowing:** an item you lose read access to lands in your local
+    trash (via the resync prune), attributed as a teammate's delete. Its "Put
+    Back" will be refused by the server. Honest, but the wording is wrong for
+    what actually happened.
+
+- [ ] **Deploy per-folder team permissions.** `0003_folder_grants.sql` against
+  remote D1 (via the Cloudflare MCP — the wrangler token lacks D1 permissions,
+  and remember to insert the `d1_migrations` ledger row by hand), then
+  `wrangler deploy`. The Worker is shared with the Playground SPA, so run
+  `npm run build:web` first or you roll build.axi.link back.
 
 - [x] **Shared team trash.** Built, tested, **not yet deployed** — the D1
   migration and `wrangler deploy` still need your go-ahead.

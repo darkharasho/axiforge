@@ -16,6 +16,7 @@ import { showConfirmModal } from "../confirm-modal.js";
 import { loadTeamState, teamRootFor } from "../teams.js";
 import { shareFolderToTeam, stopSharingFolder, pullTeamFor } from "./folder-store.js";
 import { xMarkIcon } from "./heroicons.js";
+import { renderAccessSection } from "./folder-access.js";
 
 let _overlay = null;
 let _escHandler = null;
@@ -26,6 +27,9 @@ let _copyTimer = null;
 // Remembered so a retry reuses it instead of creating a duplicate every click.
 let _pendingNewTeamId = null;
 let _onTeamSyncEnabled = null;
+// The folder id a grant is keyed by for the dialog as currently drawn — the team
+// id at the root, the folder id anywhere else. @see _renderAccess
+let _accessFolderKey = null;
 
 /**
  * @param {{ onTeamSyncEnabled?: Function }} [callbacks]
@@ -56,6 +60,7 @@ export function initShareModal(callbacks = {}) {
     if (e.target === _overlay) closeShareModal();
   });
   _overlay.querySelector("#shm-body").addEventListener("click", _onBodyClick);
+  _overlay.querySelector("#shm-body").addEventListener("change", _onBodyChange);
 }
 
 /**
@@ -198,6 +203,10 @@ function _renderShared(teamRoot) {
       <div class="shm__section-label">Members</div>
       <div class="shm__members" id="shm-members"><p class="shm__hint">Loading…</p></div>
     </div>
+    <div class="shm__section">
+      <div class="shm__section-label">Access</div>
+      <div class="shm__access" id="shm-access"><p class="shm__hint">Loading…</p></div>
+    </div>
     <div class="shm__footer">
       <button class="shm__btn" data-act="pull" type="button">Pull now</button>
       ${canStopSharing ? `<button class="shm__btn shm__btn--danger" data-act="stop-sharing" type="button">Stop sharing</button>` : ""}
@@ -253,9 +262,64 @@ async function _loadMembers(teamRoot) {
         : ""}
     </div>
   `).join("");
+
+  await _renderAccess(teamRoot, members);
+}
+
+/**
+ * The per-folder access editor, drawn under the member list.
+ *
+ * The folder it edits is the one this dialog was opened on — the team root means
+ * the whole team, a sub-folder means that branch. That is the same folder the
+ * server keys a grant by, so no translation is needed except at the root, where
+ * the grant is keyed by the TEAM id (the root folder is not a synced item).
+ */
+async function _renderAccess(teamRoot, members) {
+  const box = _overlay.querySelector("#shm-access");
+  if (!box) return;
+  const isTeamRoot = _folderId === teamRoot.id;
+  const folderKey = isTeamRoot ? teamRoot.teamId : _folderId;
+  let payload;
+  try {
+    payload = await window.desktopApi.listTeamGrants(teamRoot.teamId);
+  } catch (err) {
+    box.innerHTML = `<p class="shm__hint">Could not load access: ${escapeHtml(err?.message || String(err))}</p>`;
+    return;
+  }
+  if (!box.isConnected) return;
+  _accessFolderKey = folderKey;
+  box.innerHTML = renderAccessSection({
+    members,
+    grants: payload?.grants || [],
+    folderId: folderKey,
+    isOwner: teamRoot.role === "owner",
+    teamDefault: payload?.defaults?.member || "write",
+    isTeamRoot,
+  });
 }
 
 // ─── Actions ───────────────────────────────────────────────────────────────────
+
+async function _onBodyChange(e) {
+  const select = e.target.closest('select[data-act="set-access"]');
+  if (!select) return;
+  const teamRoot = teamRootFor(_folderId);
+  const userId = select.closest(".shm__access-row")?.dataset.userId;
+  if (!teamRoot || !userId || !_accessFolderKey) return;
+  select.disabled = true;
+  try {
+    await window.desktopApi.setTeamGrant(teamRoot.teamId, _accessFolderKey, userId, select.value);
+    _setStatus("Access updated.");
+  } catch (err) {
+    _setStatus(err?.message || String(err), true);
+    // Put the control back where the server still has it, rather than leaving it
+    // showing a level that was refused.
+    const members = await window.desktopApi.listTeamMembers(teamRoot.teamId).catch(() => []);
+    await _renderAccess(teamRoot, members);
+  } finally {
+    select.disabled = false;
+  }
+}
 
 function _onBodyClick(e) {
   const radio = e.target.closest('input[name="shm-team"]');

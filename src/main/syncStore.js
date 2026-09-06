@@ -53,6 +53,12 @@ class SyncStore {
       versions: t.versions && typeof t.versions === "object" ? t.versions : {},
       outbox: t.outbox && typeof t.outbox === "object" ? t.outbox : {},
       failures: Number.isInteger(t.failures) ? t.failures : 0,
+      // This user's own per-folder grants in this team, as { folderId: access }.
+      // Cached so the UI can refuse an edit the server would refuse anyway —
+      // saving locally and then surfacing a 403 is a worse way to find out.
+      // Refreshed whenever the server asks for a resync, which is exactly when
+      // a grant changed. @see TeamSync._refreshGrants
+      grants: t.grants && typeof t.grants === "object" ? t.grants : {},
     };
   }
 
@@ -72,6 +78,10 @@ class SyncStore {
   }
 
   setCursor(teamId, seq) { return this.#mutateTeam(teamId, (t) => { t.cursor = seq; }); }
+  async getGrants(teamId) { return (await this.getTeam(teamId)).grants; }
+  setGrants(teamId, grants) {
+    return this.#mutateTeam(teamId, (t) => { t.grants = grants && typeof grants === "object" ? grants : {}; });
+  }
   setFailures(teamId, n) { return this.#mutateTeam(teamId, (t) => { t.failures = n; }); }
 
   async getVersion(teamId, itemId) {

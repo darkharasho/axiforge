@@ -205,6 +205,54 @@
   border-radius: 999px;
 }
 
+/* ─── Per-folder access ────────────────────────────────────────────────────────
+   One row per member, mirroring .shm__member so the two lists read as the same
+   list seen twice — who is here, then what each of them may do. */
+
+.shm__access {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.shm__access-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  border-radius: var(--radius-xs);
+  font-size: 13px;
+  color: var(--text);
+}
+
+.shm__access-row:hover {
+  background: var(--hover-subtle);
+}
+
+.shm__access-select {
+  flex: 0 0 auto;
+  min-width: 150px;
+  padding: 4px 8px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--text-light);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+}
+
+.shm__access-select:disabled {
+  opacity: 0.5;
+}
+
+/* An owner's row is stated, not offered: a level set against an owner would not
+   hold, because they can take it back in the same breath. */
+.shm__access-fixed {
+  font-size: 11.5px;
+  color: var(--text-dim);
+}
+
 /* ─── Buttons / footer / status ────────────────────────────────────────────── */
 
 .shm__actions,

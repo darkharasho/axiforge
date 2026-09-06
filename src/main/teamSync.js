@@ -11,6 +11,7 @@
 
 const { SyncApi } = require("./syncApi");
 const migration = require("./teamSyncMigration");
+const access = require("./folderAccess");
 
 const POLL_INTERVAL_MS = 30_000;
 const FOCUS_COOLDOWN_MS = 10_000;
@@ -220,6 +221,11 @@ class TeamSync {
     for (const { team, role } of list) {
       seen.add(team.id);
       await this._ensureRootFolder(team, role);
+      // Seeds the grant mirror for a team joined on another machine, or on a
+      // fresh install, where no resync has been asked for yet.
+      if (role !== "owner" && Object.keys(await this.syncStore.getGrants(team.id)).length === 0) {
+        await this._refreshGrants(team.id);
+      }
     }
     const folders = await this.folderStore.listFolders();
     for (const f of folders) {
@@ -491,6 +497,9 @@ class TeamSync {
       if (page.resync && resyncSeen === null) {
         resyncSeen = new Set();
         cursor = 0;
+        // A resync is the only signal that this user's access changed, so it is
+        // also the only moment the grant mirror can go stale. @see _refreshGrants
+        await this._refreshGrants(teamId);
         continue;
       }
       // I1: if applying an item throws we must NOT persist a cursor past it —
@@ -1088,6 +1097,75 @@ class TeamSync {
   migrateOrgLibrary(opts, onProgress) { return migration.migrateOrgLibrary(this, opts, onProgress); }
   cleanupLegacyFolders() { return migration.cleanupLegacyFolders(this); }
 
+  // ─── Per-folder access ──────────────────────────────────────────────────────
+  // Mirrors of the server rules, for UX. The server is the authority; these stop
+  // an edit BEFORE it is written locally and queued, so the user is not told
+  // "saved" and then told "forbidden" a few seconds later.
+
+  /**
+   * Re-read this user's grants for one team.
+   *
+   * Called when the server asks for a resync, which is exactly when a grant
+   * changed — a grant edit stamps the team's seq onto the affected member, and
+   * nothing else does. So this costs one request per grant change rather than
+   * one per poll.
+   */
+  async _refreshGrants(teamId) {
+    let payload;
+    try {
+      payload = await this.api.listGrants(teamId);
+    } catch (err) {
+      // Not fatal: a stale mirror only means the UI offers something the server
+      // will refuse, which is where we were before this existed.
+      if (err.code === "SYNC_UNAUTHORIZED") await this._handleUnauthorized();
+      return null;
+    }
+    const grants = {};
+    for (const g of payload?.grants || []) grants[g.folderId] = g.access;
+    await this.syncStore.setGrants(teamId, grants);
+    return grants;
+  }
+
+  listGrants(teamId) { return this.api.listGrants(teamId); }
+
+  async setGrant(teamId, folderId, userId, access) {
+    const out = access === "inherit"
+      ? await this.api.clearGrant(teamId, folderId, userId)
+      : await this.api.setGrant(teamId, folderId, userId, access);
+    // Changing your OWN grant is possible (an owner demoted to member elsewhere
+    // is not, but a mirror that lags is still worse than one refresh).
+    const session = await this.getSession();
+    if (session && session.userId === userId) await this._refreshGrants(teamId);
+    return out;
+  }
+
+  /** What the current user may do with the contents of `folderId`. */
+  async accessAt(folderId) {
+    const folders = await this.folderStore.listFolders();
+    const root = this.teamRootFor(folderId, folders);
+    if (!root) return "delete"; // personal folder — nothing to restrict
+    const grants = await this.syncStore.getGrants(root.teamId);
+    return access.accessAt({ folders, folderId, teamId: root.teamId, grants, role: root.role });
+  }
+
+  /** Folder id → access, for every folder in every team the user belongs to. */
+  async accessMap() {
+    const folders = await this.folderStore.listFolders();
+    const out = {};
+    for (const root of folders.filter((f) => f.teamId)) {
+      const grants = await this.syncStore.getGrants(root.teamId);
+      Object.assign(out, access.buildAccessMap({ folders, root, teamId: root.teamId, grants, role: root.role }));
+    }
+    return out;
+  }
+
+  /** Refuse a write into a folder this user may only read (or cannot see). */
+  async assertCanWrite(folderId) {
+    if (access.rank(await this.accessAt(folderId)) < access.LEVELS.write) {
+      throw new Error("You do not have permission to change things in that folder.");
+    }
+  }
+
   // Client-side mirror of the server rule, for UX (the server is the authority).
   async canDelete(teamId, itemId) {
     const folders = await this.folderStore.listFolders();
@@ -1098,6 +1176,22 @@ class TeamSync {
     if (!known) return true; // never synced — nothing to protect
     const session = await this.getSession();
     return !!session && known.createdBy === session.userId;
+  }
+
+  /**
+   * Whether this user may delete one item, taking grants into account.
+   *
+   * `canDelete` above answers the creator question and predates grants; this
+   * layers the folder rule on top, because an outright `delete` grant lets you
+   * remove a teammate's work and a `read` one takes away removing your own.
+   *
+   * @param {string|null} folderId where the item lives
+   */
+  async canDeleteIn(teamId, itemId, folderId) {
+    const level = access.rank(await this.accessAt(folderId));
+    if (level >= access.LEVELS.delete) return true;
+    if (level < access.LEVELS.write) return false;
+    return this.canDelete(teamId, itemId);
   }
 }
 

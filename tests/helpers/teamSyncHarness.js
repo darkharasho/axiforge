@@ -19,10 +19,13 @@ function apiError(code, extra = {}) {
 
 function fakeApi() {
   const api = {};
-  for (const m of ["loginGithub", "logout", "createTeam", "joinTeam", "listTeams", "listMembers", "removeMember", "rotateInvite", "renameTeam", "deleteTeam", "changes", "putItem", "deleteItem", "bulk"]) {
+  for (const m of ["loginGithub", "logout", "createTeam", "joinTeam", "listTeams", "listMembers", "removeMember", "rotateInvite", "renameTeam", "deleteTeam", "changes", "putItem", "deleteItem", "bulk", "listGrants", "setGrant", "clearGrant"]) {
     api[m] = jest.fn(async () => { throw new Error(`unexpected api.${m}`); });
   }
   api.changes.mockImplementation(async () => ({ items: [], nextSeq: 0, hasMore: false }));
+  // Grants are refreshed opportunistically (on a resync, and when a team is first
+  // seen), so a test that never mentions them should not have to stub them.
+  api.listGrants.mockImplementation(async () => ({ grants: [], defaults: { owner: "delete", member: "write" } }));
   return api;
 }
 

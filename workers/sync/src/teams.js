@@ -2,6 +2,7 @@
 const { uuid, nowIso, inviteCode, json, errorResponse } = require("./db");
 const { readJson } = require("./auth");
 const { checkRateLimit } = require("./ratelimit");
+const { ACCESS_VALUES, isAccess, DEFAULT_FOR_ROLE } = require("./access");
 
 const MAX_TEAM_NAME = 80;
 const JOIN_LIMIT_PER_MIN = 10;
@@ -58,11 +59,13 @@ function cleanName(raw) {
 
 async function requireMembership(env, teamId, userId) {
   const row = await env.SYNC_DB.prepare(
-    `SELECT t.*, m.role FROM teams t JOIN memberships m ON m.team_id = t.id WHERE t.id = ? AND m.user_id = ?`
+    `SELECT t.*, m.role, m.grants_seq FROM teams t JOIN memberships m ON m.team_id = t.id WHERE t.id = ? AND m.user_id = ?`
   ).bind(teamId, userId).first();
   if (!row) return null;
-  const { role, ...team } = row;
-  return { team, role };
+  const { role, grants_seq: grantsSeq, ...team } = row;
+  // `grants_seq` sits alongside the role rather than inside `team`: it is this
+  // member's stamp, not the team's. @see getChanges.
+  return { team, role, grants_seq: Number.isInteger(grantsSeq) ? grantsSeq : 0 };
 }
 
 // POST /teams { name, id? }
@@ -215,4 +218,111 @@ async function setMemberRole(request, env, _deps, auth, params) {
   return json({ userId: params.userId, role });
 }
 
-module.exports = { createTeam, joinTeam, listTeams, renameTeam, deleteTeam, listMembers, removeMember, setMemberRole, rotateInvite, requireMembership, MAX_TEAM_NAME };
+// ── Per-folder grants ────────────────────────────────────────────────────────
+//
+// See workers/sync/src/access.js for how a grant is resolved. These three
+// endpoints are the whole write surface: an owner sets one, clears one, or reads
+// the list. Everything else derives from that.
+
+/**
+ * Stamp the team's current seq onto a member so their next incremental pull is
+ * told to resync.
+ *
+ * Losing read access is invisible to the changes feed — the items did not
+ * change, they simply stop being handed out — so without this the client would
+ * keep every copy it already had until something unrelated happened to touch it.
+ * Same mechanism as `purged_seq`; @see getChanges.
+ */
+function invalidateGrants(env, teamId, userId) {
+  return [
+    env.SYNC_DB.prepare("UPDATE teams SET seq = seq + 1 WHERE id = ?").bind(teamId),
+    env.SYNC_DB.prepare(
+      "UPDATE memberships SET grants_seq = (SELECT seq FROM teams WHERE id = ?) WHERE team_id = ? AND user_id = ?"
+    ).bind(teamId, teamId, userId),
+  ];
+}
+
+// GET /teams/:teamId/grants — owners see the whole team's, a member sees only
+// their own. A member is shown their own restrictions on purpose: the client
+// greys out what the server would refuse, and cannot do that blind.
+async function listGrants(_request, env, _deps, auth, params) {
+  const me = await requireMembership(env, params.teamId, auth.user.id);
+  if (!me) return errorResponse("forbidden", "You are not a member of this team.");
+  const isOwner = me.role === "owner";
+  const sql = `SELECT g.folder_id, g.user_id, g.access, g.granted_by, g.granted_at,
+                      (SELECT login FROM identities i WHERE i.user_id = g.user_id ORDER BY i.provider = 'github' DESC LIMIT 1) AS login
+                 FROM folder_grants g
+                WHERE g.team_id = ?${isOwner ? "" : " AND g.user_id = ?"}
+                ORDER BY g.granted_at`;
+  const stmt = isOwner
+    ? env.SYNC_DB.prepare(sql).bind(params.teamId)
+    : env.SYNC_DB.prepare(sql).bind(params.teamId, auth.user.id);
+  const { results } = await stmt.all();
+  return json({
+    // The level everyone falls back to, so the client can label "inherited"
+    // without hard-coding a rule that lives on the server.
+    defaults: DEFAULT_FOR_ROLE,
+    grants: results.map((r) => ({
+      folderId: r.folder_id,
+      userId: r.user_id,
+      login: r.login,
+      access: r.access,
+      grantedBy: r.granted_by,
+      grantedAt: r.granted_at,
+    })),
+  });
+}
+
+// PUT /teams/:teamId/grants/:folderId/:userId { access }
+// `access: "inherit"` removes the grant, which is not the same as "none" —
+// inherit falls back to the nearest ancestor, none is an explicit block.
+async function setGrant(request, env, deps, auth, params) {
+  const { error } = await ownerOnly(env, params.teamId, auth);
+  if (error) return error;
+  const body = await readJson(request);
+  const raw = body && typeof body.access === "string" ? body.access.trim().toLowerCase() : "";
+  if (raw === "inherit") return clearGrant(request, env, deps, auth, params);
+  if (!isAccess(raw)) return errorResponse("invalid", `access must be one of ${ACCESS_VALUES.join(", ")} or "inherit".`);
+
+  const target = await requireMembership(env, params.teamId, params.userId);
+  if (!target) return errorResponse("not_found", "That user is not a member.");
+  // An owner can hand out and take back any grant in the team, so a grant that
+  // appeared to restrict one would be a lie. Say so rather than storing it.
+  if (target.role === "owner") return errorResponse("invalid", "Owners always have full access. Make them a member first.");
+
+  // The team's own id is the root: a grant there is the team-wide default for
+  // this person. Anything else has to be a folder that really exists here.
+  if (params.folderId !== params.teamId) {
+    const folder = await env.SYNC_DB.prepare(
+      "SELECT type FROM items WHERE team_id = ? AND id = ? AND deleted = 0"
+    ).bind(params.teamId, params.folderId).first();
+    if (!folder || folder.type !== "folder") return errorResponse("not_found", "No such folder in this team.");
+  }
+
+  await env.SYNC_DB.batch([
+    env.SYNC_DB.prepare(
+      `INSERT INTO folder_grants (team_id, folder_id, user_id, access, granted_by, granted_at)
+       VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT (team_id, folder_id, user_id)
+       DO UPDATE SET access = excluded.access, granted_by = excluded.granted_by, granted_at = excluded.granted_at`
+    ).bind(params.teamId, params.folderId, params.userId, raw, auth.user.id, nowIso(deps)),
+    ...invalidateGrants(env, params.teamId, params.userId),
+  ]);
+  return json({ folderId: params.folderId, userId: params.userId, access: raw });
+}
+
+// DELETE /teams/:teamId/grants/:folderId/:userId — back to inherited.
+async function clearGrant(_request, env, _deps, auth, params) {
+  const { error } = await ownerOnly(env, params.teamId, auth);
+  if (error) return error;
+  await env.SYNC_DB.batch([
+    env.SYNC_DB.prepare("DELETE FROM folder_grants WHERE team_id = ? AND folder_id = ? AND user_id = ?")
+      .bind(params.teamId, params.folderId, params.userId),
+    // Bumped even when nothing was deleted: a no-op resync costs one extra
+    // page, and getting this wrong the other way silently strands a client.
+    ...invalidateGrants(env, params.teamId, params.userId),
+  ]);
+  return new Response(null, { status: 204 });
+}
+
+module.exports = { createTeam, joinTeam, listTeams, renameTeam, deleteTeam, listMembers, removeMember, setMemberRole, rotateInvite, requireMembership, listGrants, setGrant, clearGrant, MAX_TEAM_NAME };

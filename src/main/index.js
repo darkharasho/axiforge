@@ -661,7 +661,7 @@ const readyWork = app.whenReady().then(async () => {
     const build = builds.find((b) => b.id === id);
     const folderId = build?.folderId;
     const teamRoot = folderId ? await findTeamRoot(folderId) : null;
-    if (teamRoot && !(await teamSync.canDelete(teamRoot.teamId, id))) {
+    if (teamRoot && !(await teamSync.canDeleteIn(teamRoot.teamId, id, folderId))) {
       throw new Error("Only the team owner or the build's creator can delete it from the team.");
     }
     // Staged in the trash, not destroyed. The comp unlink and history deletion
@@ -881,6 +881,10 @@ const readyWork = app.whenReady().then(async () => {
     if (existing && newParentId !== oldParentId) {
       assertFolderTreeFits({ folders: await folderStore.listFolders(), folderId: folder.id, newParentId });
     }
+    // A folder carries its own grant, so editing one is governed by the folder
+    // itself and not only by where it sits. New folders have no grant of their
+    // own yet; the parent check inside assertCanMoveOutOfTeam covers those.
+    if (existing) await teamSync.assertCanWrite(folder.id);
     const { oldRoot, newRoot } = await assertCanMoveOutOfTeam({ teamSync, findTeamRoot }, {
       itemId: folder.id, oldFolderId: oldParentId, newFolderId: newParentId, label: "folder",
     });
@@ -902,7 +906,10 @@ const readyWork = app.whenReady().then(async () => {
     const target = allFolders.find((f) => f.id === id);
     if (target?.teamId) throw new Error("Leave or delete the team from Settings → Teams instead.");
     const teamRoot = target?.parentId ? _findTeamRoot(target.parentId, allFolders) : null;
-    if (teamRoot && !(await teamSync.canDelete(teamRoot.teamId, id))) {
+    // Keyed by the folder's OWN id: a grant on a folder governs the folder as
+    // well as its contents, which is what makes "none" hide it rather than just
+    // what is inside it. @see src/main/folderAccess.js
+    if (teamRoot && !(await teamSync.canDeleteIn(teamRoot.teamId, id, id))) {
       throw new Error("Only the team owner or the folder's creator can delete it from the team.");
     }
     // Trashes the subtree plus the builds and comps inside it, under one batch,
@@ -935,12 +942,15 @@ const readyWork = app.whenReady().then(async () => {
     )];
 
     const destRoot = await findTeamRoot(folderId);
+    // Both ends, before anything moves — see assertCanMoveOutOfTeam.
+    if (folderId) await teamSync.assertCanWrite(folderId);
     for (const srcId of sourceFolderIds) {
       if (srcId === folderId) continue;
+      await teamSync.assertCanWrite(srcId);
       const srcRoot = await findTeamRoot(srcId);
       if (srcRoot && srcRoot.id !== destRoot?.id) {
         for (const id of ids) {
-          if (!(await teamSync.canDelete(srcRoot.teamId, id))) {
+          if (!(await teamSync.canDeleteIn(srcRoot.teamId, id, srcId))) {
             throw new Error("Only the team owner or the build's creator can move it out of the team.");
           }
         }
@@ -1025,7 +1035,7 @@ const readyWork = app.whenReady().then(async () => {
     const comp = comps.find((c) => c.id === id);
     const folderId = comp?.folderId;
     const teamRoot = folderId ? await findTeamRoot(folderId) : null;
-    if (teamRoot && !(await teamSync.canDelete(teamRoot.teamId, id))) {
+    if (teamRoot && !(await teamSync.canDeleteIn(teamRoot.teamId, id, folderId))) {
       throw new Error("Only the team owner or the comp's creator can delete it from the team.");
     }
     await trash.trashComps([id]);
@@ -1040,7 +1050,7 @@ const readyWork = app.whenReady().then(async () => {
       const comp = comps.find((c) => c.id === id);
       const teamRoot = comp?.folderId ? _findTeamRoot(comp.folderId, folders) : null;
       if (!teamRoot) continue;
-      if (!(await teamSync.canDelete(teamRoot.teamId, id))) {
+      if (!(await teamSync.canDeleteIn(teamRoot.teamId, id, comp.folderId))) {
         throw new Error(`Only the team owner or the comp's creator can delete "${comp.name}" from the team.`);
       }
       teamOps.push([teamRoot.teamId, id]);
@@ -2314,6 +2324,12 @@ const readyWork = app.whenReady().then(async () => {
   handle("teams:delete", (_e, teamId) => teamSync.deleteTeam(teamId));
   handle("teams:rename", (_e, teamId, name) => teamSync.renameTeam(teamId, name));
   handle("teams:members", (_e, teamId) => teamSync.listMembers(teamId));
+  // Per-folder access. `teams:access` is the resolved answer for the CURRENT
+  // user, folder id → level, so the renderer never has to walk the tree itself
+  // and cannot drift from src/main/folderAccess.js.
+  handle("teams:grants", (_e, teamId) => teamSync.listGrants(teamId));
+  handle("teams:set-grant", (_e, teamId, folderId, userId, access) => teamSync.setGrant(teamId, folderId, userId, access));
+  handle("teams:access", () => teamSync.accessMap());
   handle("teams:remove-member", (_e, teamId, userId) => teamSync.removeMember(teamId, userId));
   handle("teams:rotate-invite", (_e, teamId) => teamSync.rotateInvite(teamId));
   // A destroyed/reloading WebContents makes send() throw; that throw would

@@ -3,6 +3,7 @@ const { nowIso, json, errorResponse } = require("./db");
 const { readJson } = require("./auth");
 const { requireMembership } = require("./teams");
 const { checkRateLimit } = require("./ratelimit");
+const { loadTeamAccess, LEVELS, rank } = require("./access");
 
 const MAX_BODY_BYTES = 1_500_000;
 const MAX_PAGE = 200;
@@ -62,7 +63,8 @@ async function currentItem(env, teamId, itemId) {
 async function memberOr403(env, teamId, auth) {
   const m = await requireMembership(env, teamId, auth.user.id);
   if (!m) return { error: errorResponse("forbidden", "You are not a member of this team.") };
-  return { membership: m };
+  const access = await loadTeamAccess(env, teamId, auth.user.id, m.role);
+  return { membership: m, access };
 }
 
 async function writeLimited(env, deps, auth, cost = 1) {
@@ -72,7 +74,7 @@ async function writeLimited(env, deps, auth, cost = 1) {
 }
 
 // Core write. Returns a plain result (not a Response) so bulk can reuse it.
-async function writeItem(env, deps, auth, teamId, { itemId, type, parentId, body, baseVersion }) {
+async function writeItem(env, deps, auth, teamId, { itemId, type, parentId, body, baseVersion }, access = null) {
   if (!itemId || typeof itemId !== "string" || itemId.length > 64) return { status: 400, message: "Invalid item id." };
   if (!TYPES.has(type)) return { status: 400, message: `Invalid type "${type}".` };
   if (body === null || typeof body !== "object" || Array.isArray(body)) return { status: 400, message: "body must be an object." };
@@ -111,8 +113,24 @@ async function writeItem(env, deps, auth, teamId, { itemId, type, parentId, body
 
   const db = env.SYNC_DB;
   const now = nowIso(deps);
-  const existing = await db.prepare("SELECT version, deleted, type FROM items WHERE team_id = ? AND id = ?").bind(teamId, itemId).first();
+  const existing = await db.prepare("SELECT version, deleted, type, parent_id FROM items WHERE team_id = ? AND id = ?").bind(teamId, itemId).first();
   const base = baseVersion ?? null;
+
+  // Per-folder access. Three questions, because a folder can be governed by a
+  // grant of its own AND by where it sits:
+  //   * may I put things HERE (the destination)?
+  //   * if this is a move, may I take things out of WHERE IT WAS?
+  //   * may I touch this item at all (a folder with its own grant)?
+  // For a build or a comp the first and third are the same question.
+  if (access && !access.unrestricted) {
+    const denied = (where) =>
+      ({ status: 403, message: `You do not have permission to change ${where} in this team.` });
+    if (rank(access.at(parentId)) < LEVELS.write) return denied("that folder");
+    if (existing && existing.parent_id !== parentId && rank(access.at(existing.parent_id)) < LEVELS.write) {
+      return denied("the folder it is in");
+    }
+    if (!access.canWrite({ id: itemId, type, parent_id: parentId })) return denied("this item");
+  }
 
   const bump = db.prepare("UPDATE teams SET seq = seq + 1 WHERE id = ?").bind(teamId);
   const seqSub = "(SELECT seq FROM teams WHERE id = ?)";
@@ -168,7 +186,7 @@ async function writeItem(env, deps, auth, teamId, { itemId, type, parentId, body
 
 // GET /teams/:teamId/changes?since=&limit=
 async function getChanges(request, env, deps, auth, params) {
-  const { error, membership } = await memberOr403(env, params.teamId, auth);
+  const { error, membership, access } = await memberOr403(env, params.teamId, auth);
   if (error) return error;
   const rl = await checkRateLimit(env.SYNC_RL, `changes:${auth.user.id}`, CHANGE_READS_PER_MIN, 60, deps);
   if (!rl.ok) return errorResponse("rate_limited", "Too many sync requests. Try again shortly.", 429, { "Retry-After": String(rl.retryAfterSeconds) });
@@ -181,7 +199,12 @@ async function getChanges(request, env, deps, auth, params) {
   // cursor sits inside the purged range, incremental sync would silently miss
   // those deletes. Tell it to do a full resync instead. `since = 0` (a client
   // starting fresh) never needs this — it will see current state either way.
-  if (since > 0 && since < membership.team.purged_seq) {
+  // Two reasons to demand a full re-pull. A purge removed tombstones this client
+  // never saw, so incremental sync would silently miss those deletes. Or the
+  // owner changed what this member may see: losing read access produces no item
+  // event at all — the items did not change, they simply stop being handed out —
+  // so only a re-pull from 0, and the prune that follows it, can reconcile.
+  if (since > 0 && (since < membership.team.purged_seq || since < (membership.grants_seq || 0))) {
     return json({ resync: true, items: [], nextSeq: since, hasMore: false });
   }
   const { results } = await env.SYNC_DB.prepare(
@@ -189,11 +212,17 @@ async function getChanges(request, env, deps, auth, params) {
   ).bind(params.teamId, since, limit + 1).all();
   const hasMore = results.length > limit;
   const page = hasMore ? results.slice(0, limit) : results;
-  const logins = await loginsFor(env, page.flatMap((r) => [r.created_by, r.updated_by]));
+  // `nextSeq` is taken from the RAW page, before filtering: the cursor tracks how
+  // far through the change log we have read, not how much of it we handed over.
+  // A page that filters down to nothing still advances, so a member walled out of
+  // a busy folder does not stall.
+  const nextSeq = page.length ? page[page.length - 1].seq : since;
+  const visible = access.unrestricted ? page : page.filter((r) => access.canRead(r));
+  const logins = await loginsFor(env, visible.flatMap((r) => [r.created_by, r.updated_by]));
   return json({
     resync: false,
-    items: page.map((r) => itemWire(r, logins)),
-    nextSeq: page.length ? page[page.length - 1].seq : since,
+    items: visible.map((r) => itemWire(r, logins)),
+    nextSeq,
     hasMore,
   });
 }
@@ -208,7 +237,7 @@ function contentLengthTooLarge(request, maxBytes) {
 
 // PUT /teams/:teamId/items/:itemId
 async function putItem(request, env, deps, auth, params) {
-  const { error } = await memberOr403(env, params.teamId, auth);
+  const { error, access } = await memberOr403(env, params.teamId, auth);
   if (error) return error;
   if (contentLengthTooLarge(request, MAX_BODY_BYTES * 1.1)) {
     return errorResponse("too_large", `Request body is too large (limit ${MAX_BODY_BYTES / 1_000_000} MB).`);
@@ -217,7 +246,7 @@ async function putItem(request, env, deps, auth, params) {
   if (limited) return limited;
   const body = await readJson(request);
   if (!body) return errorResponse("invalid", "Invalid JSON.");
-  const result = await writeItem(env, deps, auth, params.teamId, { ...body, itemId: params.itemId });
+  const result = await writeItem(env, deps, auth, params.teamId, { ...body, itemId: params.itemId }, access);
   return writeResultResponse(result);
 }
 
@@ -258,7 +287,7 @@ async function collectTree(env, teamId, rootId) {
 
 // DELETE /teams/:teamId/items/:itemId?baseVersion=N
 async function deleteItem(request, env, deps, auth, params) {
-  const { error, membership } = await memberOr403(env, params.teamId, auth);
+  const { error, membership, access } = await memberOr403(env, params.teamId, auth);
   if (error) return error;
   const limited = await writeLimited(env, deps, auth);
   if (limited) return limited;
@@ -268,14 +297,29 @@ async function deleteItem(request, env, deps, auth, params) {
   const db = env.SYNC_DB;
   const row = await db.prepare("SELECT * FROM items WHERE team_id = ? AND id = ?").bind(params.teamId, params.itemId).first();
   if (!row || row.deleted === 1) return errorResponse("not_found", "Item not found.");
+  // An item you cannot see must answer the same as one that is not there —
+  // otherwise the 403/404 split tells you exactly what lives in the folder you
+  // were walled out of.
+  if (!access.unrestricted && !access.canRead(row)) return errorResponse("not_found", "Item not found.");
   if (row.version !== baseVersion) {
     return json({ error: { code: "conflict", message: "Item was changed since you last saw it." }, current: await currentItem(env, params.teamId, params.itemId) }, 409);
   }
   const isOwner = membership.role === "owner";
   const descendants = row.type === "folder" ? await collectTree(env, params.teamId, row.id) : [];
   if (!isOwner) {
-    const notMine = [row, ...descendants].some((r) => r.created_by !== auth.user.id);
-    if (notMine) return errorResponse("forbidden", "Only the team owner or the item's creator can delete it.");
+    // Every row the cascade would take has to be one this user may delete —
+    // either granted outright, or created by them. A folder delete is all or
+    // nothing on purpose: half-deleting somebody's subtree is worse than
+    // refusing, and it is the refusal that explains itself.
+    const blocked = [row, ...descendants].find((r) => !access.canDelete(r, auth.user.id));
+    if (blocked) {
+      return errorResponse(
+        "forbidden",
+        blocked === row
+          ? "You do not have permission to delete this."
+          : "This folder contains items you do not have permission to delete."
+      );
+    }
   }
 
   const now = nowIso(deps);
@@ -330,7 +374,7 @@ const MAX_BULK_BODY_BYTES = 16_000_000;
 
 // POST /teams/:teamId/items:bulk { items: [...] }
 async function bulkItems(request, env, deps, auth, params) {
-  const { error } = await memberOr403(env, params.teamId, auth);
+  const { error, access } = await memberOr403(env, params.teamId, auth);
   if (error) return error;
   if (contentLengthTooLarge(request, MAX_BULK_BODY_BYTES)) {
     return errorResponse("too_large", `Request body is too large (limit ${MAX_BULK_BODY_BYTES / 1_000_000} MB).`);
@@ -345,7 +389,7 @@ async function bulkItems(request, env, deps, auth, params) {
   if (limited) return limited;
   const results = [];
   for (const entry of list) {
-    const r = await writeItem(env, deps, auth, params.teamId, entry || {});
+    const r = await writeItem(env, deps, auth, params.teamId, entry || {}, access);
     results.push({ itemId: entry && entry.itemId, status: r.status, version: r.version, seq: r.seq, current: r.current, message: r.message });
   }
   return json({ results });
@@ -372,7 +416,7 @@ const MAX_TRASH = 500;
  * GET /teams/:teamId/trash
  */
 async function listTrash(request, env, deps, auth, params) {
-  const { membership, error } = await memberOr403(env, params.teamId, auth);
+  const { membership, access, error } = await memberOr403(env, params.teamId, auth);
   if (error) return error;
 
   const { results } = await env.SYNC_DB.prepare(
@@ -388,9 +432,12 @@ async function listTrash(request, env, deps, auth, params) {
   ).bind(auth.user.id, params.teamId, MAX_TRASH).all();
 
   const isOwner = membership.role === "owner";
-  const logins = await loginsFor(env, results.map((r) => r.deleted_by).filter(Boolean));
+  // A deleted item is still governed by where it was. Somebody walled out of a
+  // folder should not learn its contents from the trash listing.
+  const rows = access.unrestricted ? results : results.filter((r) => access.canRead(r));
+  const logins = await loginsFor(env, rows.map((r) => r.deleted_by).filter(Boolean));
   return json({
-    items: results.map((row) => {
+    items: rows.map((row) => {
       const body = row.body ? JSON.parse(row.body) : null;
       return {
         id: row.id,
@@ -406,7 +453,8 @@ async function listTrash(request, env, deps, auth, params) {
         // created each descendant of a folder delete — and a Put Back button
         // that answers 403 is worse than one that explains itself. Same rule as
         // restoreItem below; keep the two in step.
-        canRestore: isOwner || row.deleted_by === auth.user.id || row.not_mine === 0,
+        canRestore: isOwner
+          || (access.canWrite(row) && (row.deleted_by === auth.user.id || row.not_mine === 0)),
       };
     }),
   });
@@ -424,7 +472,7 @@ async function listTrash(request, env, deps, auth, params) {
  * POST /teams/:teamId/trash/:itemId/restore
  */
 async function restoreItem(request, env, deps, auth, params) {
-  const { membership, error } = await memberOr403(env, params.teamId, auth);
+  const { membership, access, error } = await memberOr403(env, params.teamId, auth);
   if (error) return error;
   const limited = await writeLimited(env, deps, auth);
   if (limited) return limited;
@@ -434,6 +482,7 @@ async function restoreItem(request, env, deps, auth, params) {
     "SELECT * FROM items WHERE team_id = ? AND id = ? AND deleted = 1"
   ).bind(params.teamId, params.itemId).first();
   if (!row) return errorResponse("not_found", "Nothing deleted with that id.");
+  if (!access.unrestricted && !access.canRead(row)) return errorResponse("not_found", "Nothing deleted with that id.");
   if (!row.body) {
     // Tombstoned before this feature existed, so the content is genuinely gone.
     return errorResponse("not_found", "That item was deleted before the team trash existed, so there is nothing left to restore.");
@@ -448,8 +497,15 @@ async function restoreItem(request, env, deps, auth, params) {
   // action should never need the owner.
   const isOwner = membership.role === "owner";
   const deletedIt = row.deleted_by === auth.user.id;
-  if (!isOwner && !deletedIt && members.some((r) => r.created_by !== auth.user.id)) {
-    return errorResponse("forbidden", "Only the team owner, the item's creator, or whoever deleted it can restore it.");
+  if (!isOwner) {
+    // Putting something back is a write, so it needs write access where it will
+    // land — having deleted it yourself does not survive losing access since.
+    if (!access.canWrite(row)) {
+      return errorResponse("forbidden", "You do not have permission to put things back in that folder.");
+    }
+    if (!deletedIt && members.some((r) => r.created_by !== auth.user.id)) {
+      return errorResponse("forbidden", "Only the team owner, the item's creator, or whoever deleted it can restore it.");
+    }
   }
 
   const now = nowIso(deps);

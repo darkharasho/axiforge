@@ -21,8 +21,15 @@
 async function assertCanMoveOutOfTeam({ teamSync, findTeamRoot }, { itemId, oldFolderId, newFolderId, label }) {
   const oldRoot = oldFolderId ? await findTeamRoot(oldFolderId) : null;
   const newRoot = newFolderId ? await findTeamRoot(newFolderId) : null;
+  // Per-folder access, checked on BOTH sides for the same reason the move rule
+  // is: putting something into a folder you may only read is as much a refusal
+  // as taking something out of one. This runs on every save, not just a move —
+  // when nothing moved the two are the same folder and it asks the one question
+  // that matters, "may I write here at all".
+  if (newFolderId) await teamSync.assertCanWrite(newFolderId);
+  if (oldFolderId && oldFolderId !== newFolderId) await teamSync.assertCanWrite(oldFolderId);
   if (oldFolderId && oldFolderId !== newFolderId && oldRoot && oldRoot.id !== newRoot?.id) {
-    if (!(await teamSync.canDelete(oldRoot.teamId, itemId))) {
+    if (!(await teamSync.canDeleteIn(oldRoot.teamId, itemId, oldFolderId))) {
       throw new Error(`Only the team owner or the ${label}'s creator can move it out of the team.`);
     }
   }

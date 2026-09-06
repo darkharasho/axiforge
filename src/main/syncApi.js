@@ -78,6 +78,16 @@ class SyncApi {
   renameTeam(teamId, name) { return this.#request("PATCH", `/teams/${encodeURIComponent(teamId)}`, { body: { name } }); }
   deleteTeam(teamId) { return this.#request("DELETE", `/teams/${encodeURIComponent(teamId)}`); }
 
+  // Per-folder access. A member is served only their own rows; an owner gets the
+  // whole team's, which is what the access editor lists.
+  listGrants(teamId) { return this.#request("GET", `/teams/${encodeURIComponent(teamId)}/grants`); }
+  setGrant(teamId, folderId, userId, access) {
+    return this.#request("PUT", `/teams/${encodeURIComponent(teamId)}/grants/${encodeURIComponent(folderId)}/${encodeURIComponent(userId)}`, { body: { access } });
+  }
+  clearGrant(teamId, folderId, userId) {
+    return this.#request("DELETE", `/teams/${encodeURIComponent(teamId)}/grants/${encodeURIComponent(folderId)}/${encodeURIComponent(userId)}`);
+  }
+
   changes(teamId, since, limit = 200) { return this.#request("GET", `/teams/${encodeURIComponent(teamId)}/changes`, { query: { since, limit } }); }
   putItem(teamId, itemId, payload) { return this.#request("PUT", `/teams/${encodeURIComponent(teamId)}/items/${encodeURIComponent(itemId)}`, { body: payload }); }
   deleteItem(teamId, itemId, baseVersion) { return this.#request("DELETE", `/teams/${encodeURIComponent(teamId)}/items/${encodeURIComponent(itemId)}`, { query: { baseVersion } }); }
