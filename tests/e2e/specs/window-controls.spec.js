@@ -15,82 +15,85 @@ test.describe("Window Controls", () => {
     await closeApp(app);
   });
 
+  // The window is launched unmapped (AXIFORGE_HIDE_WINDOW, so a spec never steals
+  // focus) and CI runs under a bare Xvfb with no window manager at all. minimize()
+  // and maximize() are both requests TO a window manager, so isMinimized() and
+  // isMaximized() stay false in either place no matter how correct the wiring is
+  // -- which is exactly how these two specs sat red for months. What the app owns
+  // is the wiring: button -> IPC -> the BrowserWindow call. So that is what they
+  // assert now, by recording the calls main actually makes.
+  async function recordWindowCalls() {
+    await app.evaluate(({ BrowserWindow }) => {
+      const win = BrowserWindow.getAllWindows()[0];
+      globalThis.__winCalls = [];
+      if (globalThis.__winCallsHooked) return;
+      globalThis.__winCallsHooked = true;
+      for (const name of ["minimize", "maximize", "unmaximize", "restore"]) {
+        const orig = win[name].bind(win);
+        win[name] = (...args) => {
+          globalThis.__winCalls.push(name);
+          // Recorded but not performed: on a developer machine there IS a window
+          // manager, so a real minimize iconifies the window and every later
+          // click in this spec waits forever on an element that is not there.
+          if (name === "minimize") return undefined;
+          return orig(...args);
+        };
+      }
+    });
+  }
+
+  const windowCalls = () => app.evaluate(() => globalThis.__winCalls);
+
   // 1. Minimize, Maximize/Restore, Close buttons work
-  test("minimize, maximize/restore buttons work", async () => {
+  test("minimize and maximize buttons reach the window", async () => {
     // Verify buttons are visible
     await expect(window.locator("#winMin")).toBeVisible();
     await expect(window.locator("#winMax")).toBeVisible();
     await expect(window.locator("#winClose")).toBeVisible();
 
-    // Test minimize
+    await recordWindowCalls();
+
     await window.click("#winMin");
-    await window.waitForTimeout(500);
+    await expect.poll(windowCalls).toEqual(["minimize"]);
 
-    const isMinimized = await app.evaluate(({ BrowserWindow }) =>
-      BrowserWindow.getAllWindows()[0].isMinimized()
-    );
-    expect(isMinimized).toBe(true);
-
-    // Restore from minimize
-    await app.evaluate(({ BrowserWindow }) =>
-      BrowserWindow.getAllWindows()[0].restore()
-    );
-    await window.waitForTimeout(500);
-
-    const isMinimizedAfterRestore = await app.evaluate(({ BrowserWindow }) =>
-      BrowserWindow.getAllWindows()[0].isMinimized()
-    );
-    expect(isMinimizedAfterRestore).toBe(false);
-
-    // Test maximize
+    // #winMax is a toggle over isMaximized(), which is false here, so it asks to
+    // maximize.
     await window.click("#winMax");
-    await window.waitForTimeout(500);
+    await expect.poll(windowCalls).toEqual(["minimize", "maximize"]);
 
-    const isMaximized = await app.evaluate(({ BrowserWindow }) =>
-      BrowserWindow.getAllWindows()[0].isMaximized()
-    );
-    expect(isMaximized).toBe(true);
-
-    // Click maximize again to restore
-    await window.click("#winMax");
-    await window.waitForTimeout(500);
-
-    const isMaximizedAfterRestore = await app.evaluate(({ BrowserWindow }) =>
-      BrowserWindow.getAllWindows()[0].isMaximized()
-    );
-    expect(isMaximizedAfterRestore).toBe(false);
+    // On a machine that HAS a window manager that maximize really took, and the
+    // rest of the file expects an ordinary window.
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].unmaximize());
+    await window.waitForTimeout(300);
   });
 
   // 2. Double-clicking title bar maximizes/restores
   test("double-clicking title bar maximizes/restores", async () => {
-    // Ensure window is not maximized
-    const wasMaximized = await app.evaluate(({ BrowserWindow }) =>
-      BrowserWindow.getAllWindows()[0].isMaximized()
-    );
-    if (wasMaximized) {
-      await app.evaluate(({ BrowserWindow }) =>
-        BrowserWindow.getAllWindows()[0].unmaximize()
-      );
-      await window.waitForTimeout(300);
+    // Both halves of the toggle branch on isMaximized(), which answers for the
+    // window manager -- true on a developer machine, permanently false under
+    // Xvfb. Pin it rather than inherit it, so the spec asserts the same thing in
+    // both places.
+    const pinMaximized = (value) =>
+      app.evaluate(({ BrowserWindow }, v) => {
+        const win = BrowserWindow.getAllWindows()[0];
+        globalThis.__realIsMaximized ||= win.isMaximized.bind(win);
+        win.isMaximized = () => v;
+      }, value);
+
+    await recordWindowCalls();
+    try {
+      await pinMaximized(false);
+      await window.locator("#titlebar").dblclick();
+      await expect.poll(windowCalls).toEqual(["maximize"]);
+
+      await pinMaximized(true);
+      await window.locator("#titlebar").dblclick();
+      await expect.poll(windowCalls).toEqual(["maximize", "unmaximize"]);
+    } finally {
+      await app.evaluate(({ BrowserWindow }) => {
+        BrowserWindow.getAllWindows()[0].isMaximized = globalThis.__realIsMaximized;
+      });
     }
-
-    // Double-click the titlebar
-    await window.locator("#titlebar").dblclick();
-    await window.waitForTimeout(500);
-
-    const isMaximized = await app.evaluate(({ BrowserWindow }) =>
-      BrowserWindow.getAllWindows()[0].isMaximized()
-    );
-    expect(isMaximized).toBe(true);
-
-    // Double-click again to restore
-    await window.locator("#titlebar").dblclick();
-    await window.waitForTimeout(500);
-
-    const isRestored = await app.evaluate(({ BrowserWindow }) =>
-      !BrowserWindow.getAllWindows()[0].isMaximized()
-    );
-    expect(isRestored).toBe(true);
   });
 
   // 3. Window resizing works (min 1120x740)

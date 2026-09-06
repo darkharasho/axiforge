@@ -60,7 +60,12 @@ test.describe("A teammate's delete lands in the trash, not the void", () => {
       inviteCode: INVITE,
       ownerLogin: "mate",
       items: [
-        { id: "mate-build", type: "build", body: { title: "Doomed by mate", profession: "Guardian" } },
+        // Ours, removed by somebody else -- the case where Put Back is yours to
+        // press. A member may only restore what they made, and since a7a5a14 the
+        // trash row honours that instead of offering a button the server refuses.
+        { id: "mate-build", type: "build", createdByLogin: "e2e", body: { title: "Doomed by mate", profession: "Guardian" } },
+        // Mate's own, removed by mate: the same row, with Put Back closed.
+        { id: "mates-own", type: "build", body: { title: "Mate's own", profession: "Necromancer" } },
         { id: "kept-build", type: "build", body: { title: "Untouched", profession: "Warrior" } },
       ],
     }]);
@@ -83,6 +88,7 @@ test.describe("A teammate's delete lands in the trash, not the void", () => {
     // The owner really deletes it, through the server's own authorization.
     const res = await asUser("mate", "DELETE", `/teams/${TEAM_ID}/items/mate-build`, { query: "baseVersion=1" });
     expect(res.status).toBe(200);
+    expect((await asUser("mate", "DELETE", `/teams/${TEAM_ID}/items/mates-own`, { query: "baseVersion=1" })).status).toBe(200);
 
     await pull(window);
     await expect.poll(() => titles(window), { timeout: 15_000 }).not.toContain("Doomed by mate");
@@ -112,6 +118,14 @@ test.describe("A teammate's delete lands in the trash, not the void", () => {
     expect(entry.authorLogin).toBe("mate");
     // The snapshot is what makes "Bring it back" possible from the history panel.
     expect(entry.snapshot.title).toBe("Doomed by mate");
+  });
+
+  test("what a teammate made is theirs to put back, not yours", async () => {
+    // The server answers who may restore what, and the row shows the answer up
+    // front rather than a button that would come back 403.
+    const putBack = window.locator('[data-trash-row][data-trash-id="mates-own"] [data-trash-restore]');
+    await expect(putBack).toBeDisabled();
+    await expect(putBack).toHaveAttribute("title", /Only the team owner/);
   });
 
   test("Put Back brings it back and re-shares it with the team", async () => {
@@ -193,16 +207,22 @@ test.describe("The shared team trash", () => {
     expect(rows[0].canRestore).toBe(true);
   });
 
-  test("it renders in the Trash view as the team's, not yours", async () => {
+  test("it renders as one row -- your copy, carrying the team's attribution", async () => {
     await window.locator("[data-navigate-trash]").click();
     await window.waitForTimeout(600);
 
-    const row = window.locator('[data-team-trash-row][data-trash-id="team-folder"]');
+    // The tombstone staged our copy locally AND the server tombstoned it for the
+    // whole team, so this drew twice with two Put Backs that did the same thing.
+    // The local row wins (it has the countdown and the permanent delete of your
+    // own copy) and takes the server's attribution and permission with it; the
+    // team-only list is for what no machine here still holds.
+    await expect(window.locator('[data-trash-id="team-folder"]')).toHaveCount(1);
+    await expect(window.locator('[data-team-trash-row][data-trash-id="team-folder"]')).toHaveCount(0);
+
+    const row = window.locator('[data-trash-row][data-trash-id="team-folder"]');
     await expect(row.locator(".lib-trash__name")).toHaveText("Raid Night");
     await expect(row.locator(".lib-trash__meta")).toContainText("deleted by mate");
     await expect(row.locator(".lib-trash__meta")).toContainText("2 items went with it");
-    // Nobody gets to spend the team's retention window from here.
-    await expect(row.locator("[data-trash-purge]")).toHaveCount(0);
   });
 
   test("Put Back restores the whole batch, for everyone", async () => {
@@ -212,7 +232,7 @@ test.describe("The shared team trash", () => {
     await window.locator("[data-navigate-trash]").click();
     await window.waitForTimeout(600);
 
-    await window.locator('[data-team-trash-row][data-trash-id="team-folder"] [data-team-trash-restore]').click();
+    await window.locator('[data-trash-row][data-trash-id="team-folder"] [data-trash-restore]').click();
     await window.waitForTimeout(1500);
 
     await expect.poll(() => titles(window), { timeout: 15_000 }).toContain("Inside One");

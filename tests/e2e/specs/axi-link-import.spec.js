@@ -207,7 +207,8 @@ test.describe("AxiForge link import — a comp brings its builds", () => {
     expect(state.builds.map((b) => b.title)).toEqual(
       expect.arrayContaining(["Comp Member A", "Comp Member B"])
     );
-    expect(importToast).toContain('"Published Squad" imported with 2 builds');
+    // Curly quotes: the toast is user-facing copy, and summarizeImport types it.
+    expect(importToast).toContain("“Published Squad” imported with 2 builds");
   });
 
   test("it lands in its own folder named after the comp", async () => {
