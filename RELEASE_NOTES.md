@@ -1,3 +1,50 @@
+## Version v0.18.0 — September 6, 2026
+
+### One place to manage a team
+
+- **Team management was in two places that had drifted apart.** The invite code, the member list and remove-member each existed twice, in different markup and different wording — which one you got depended on whether you arrived from Settings or from a folder's right-click menu. There is now a single **Manage team** dialog with *People*, *Folder access* and *Team* tabs, and both entry points lead to it.
+- **Share… is folder-scoped again**: the invite code, what you may do in this folder, *Pull now*, *Stop sharing*, and a *Manage access* link that opens the dialog already pointed at that folder.
+
+### Access you can read off a folder
+
+- **Give a folder read, write or delete access per person.** A teamspace used to have exactly two settings for someone — owner or member — which is one decision for your whole library. A squad wanting an officers-only folder had no lever but making somebody an owner of everything. A grant now covers a folder and everything inside it, and the nearest one walking up from an item wins.
+- **`none` really hides it.** A folder you have no access to is filtered out of what the server sends you, not merely refused when you write to it — hiding a folder is what people actually ask for.
+- **Set access for *everyone* in one go.** Per-person grants are a pile of facts about whoever happened to be in the team that day: a twenty-person squad had to say "read only" twenty times, and the twenty-first person to join silently got the role default instead. A folder can now name everyone at once, and one rule resolves the result — at a single folder your own grant beats the blanket, and between folders the nearer grant wins, blanket or not.
+- **The Folder access tab is a browser, not a list.** Pick a folder on the left — a gold dot means it sets access of its own, a red one means somebody is shut out there — and the right pane shows that folder's whole picture. **Every row names where its level came from**, because read-only via this folder's blanket, via a blanket four folders up, via that person's own grant four folders up, and via the team default all look identical if you only print the level. A folder that sets nothing says so before you touch a control.
+- **"Everyone else" is folded** to a row of faces and one sentence. It is the one list here that grows with the team, and setting access for everyone exists precisely so you don't have to name them.
+
+### The library tells a read-only member what they can't do
+
+- **Permissions used to be silent until you tripped over them.** A read-only member saw a full context menu, clicked *Rename*, and found out from an error toast — after the change had already been made locally and queued to send. Rename, Delete, New and Import are now greyed where you don't have the access for them, and a read-only folder shows as an invalid drop target while you drag rather than letting the item snap back afterwards.
+- **Pin, Archive, Export and View History stay live in a read-only folder**, because none of them leave your machine or change anything a teammate sees.
+
+### Sync says what a teammate changed
+
+- **"This build was updated remotely" was the one thing you could already tell.** The toast now names the person and the change — *"vette changed this build — notes updated."* — using the same summary the version history writes, so the two can't disagree.
+- Long toasts used to run off both edges of the window; they wrap now.
+
+### Stop importing builds you already have
+
+- **A published comp carries every build it references**, so importing three comps from the same squad left three copies of the same Firebrand and nothing ever asked. Duplicates are now spotted by share code — this app's own definition of what a build *is* — and you're asked once, naming both titles: use the ones you have, or import copies anyway.
+- **Two deliberate limits:** trashed and archived builds are never reused, or the comp fills with builds you can't see; and importing into a team folder only reuses builds already in that team, so a teammate can't end up with a comp pointing at a build they don't have.
+
+### Tag a comp from the comp
+
+- **Comps have always had tags** — the store kept them, the list filtered on them, the published site showed them — but there was nowhere to tag *one* comp, so adding a comp's first tag meant leaving it, finding it in the list and using the bulk bar. The detail's tag row is always drawn now, each pill has a remove, and a dashed *+ Add tags* opens the picker. *Edit Tags* joins the single-comp right-click menu.
+
+### A way back to where the build came from
+
+- **Opening a build dropped you in the editor with no route back** to the folder or comp you came from. The editor now carries a back button that names its destination. The label is a snapshot taken on the way in, so a teammate renaming or deleting that folder mid-edit can't make the button lie; a folder that no longer resolves falls back to *Library*.
+
+### Bug Fixes
+
+- **One deleted thing, two rows.** Deleting from a shared folder staged it locally *and* tombstoned it on the server, and the Trash drew both — the same item twice, with two *Put Back* buttons doing the same thing. It's one row now, keeping the countdown and the attribution together.
+- **Deleting a whole shared folder recorded nothing.** The history entry naming who deleted what was written by looking the item up in the library, which no longer held it once the folder cascade had staged it — so the delete most worth a name against it left no trace.
+- **Six dialogs had six copies of the same scaffolding**, already drifted: *Import Build Link* was the only dialog you couldn't dismiss by clicking outside it, and the AxiCode build picker was the only one that ignored Enter. They share one implementation now, so Enter submits exactly when the confirm button would.
+- **Greyed-out menu items couldn't say why they were greyed** — a shared CSS rule suppressed their tooltips. A refused *Delete* also stops advertising itself with a live red icon.
+- **A tag added from a comp's detail vanished on the next render.** The detail drew from a stale copy of the comp, latent for every edit path that didn't happen to mutate that object in place.
+- **Renaming a folder no longer asks for confirmation in danger red.** It was never destructive.
+
 ## Version v0.17.0 — September 5, 2026
 
 ### A shared Trash for your team
