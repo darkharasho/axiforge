@@ -44,7 +44,7 @@ describe("TeamSync — 403/404 restores server state locally (C2)", () => {
 
     expect(await h.syncStore.listOutbox("t")).toEqual([]);
     expect(removeVersionSpy).toHaveBeenCalledWith("t", "sub"); // stale version dropped so the re-pull can re-apply
-    expect(h.api.changes).toHaveBeenCalledWith("t", 0, 200);   // FULL re-pull, not incremental from cursor 42
+    expect(h.api.changes).toHaveBeenCalledWith("t", 0, 200, { resyncing: false });   // FULL re-pull, not incremental from cursor 42
     expect((await h.folderStore.listFolders()).map((f) => f.id).sort()).toEqual(["sub", "t"]);
     expect((await h.buildStore.listBuilds()).map((b) => b.id)).toEqual(["b1"]);
   });
@@ -63,7 +63,7 @@ describe("TeamSync — 403/404 restores server state locally (C2)", () => {
     await h.advance(FLUSH_DEBOUNCE_MS);
 
     expect(await h.syncStore.listOutbox("t")).toEqual([]);
-    expect(h.api.changes).toHaveBeenCalledWith("t", 0, 200);
+    expect(h.api.changes).toHaveBeenCalledWith("t", 0, 200, { resyncing: false });
     expect(await h.buildStore.listBuilds()).toEqual([]);
     expect(await h.syncStore.getVersion("t", "b1")).toBeNull();
   });
@@ -104,7 +104,7 @@ describe("TeamSync — a failed apply never skips the item (I1)", () => {
 
     h.api.changes.mockResolvedValueOnce({ items: page.slice(1), nextSeq: 3, hasMore: false });
     await h.sync.pullTeam("t");
-    expect(h.api.changes).toHaveBeenLastCalledWith("t", 1, 200);
+    expect(h.api.changes).toHaveBeenLastCalledWith("t", 1, 200, { resyncing: false });
     expect((await h.folderStore.listFolders()).map((f) => f.id).sort()).toEqual(["f2", "t"]);
     expect((await h.buildStore.listBuilds()).map((b) => b.id).sort()).toEqual(["b1", "b3"]);
     expect((await h.syncStore.getTeam("t")).cursor).toBe(3);

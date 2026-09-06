@@ -24,7 +24,7 @@ async function setup() {
 const jreq = (method, body, url = "https://x/") => new Request(url, { method, headers: { "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
 const put = (env, deps, who, teamId, itemId, body) => items.putItem(jreq("PUT", body), env, deps, who, { teamId, itemId });
 const del = (env, deps, who, teamId, itemId, baseVersion) => items.deleteItem(jreq("DELETE", undefined, `https://x/?baseVersion=${baseVersion}`), env, deps, who, { teamId, itemId });
-const changes = (env, deps, who, teamId, since = 0, limit = 200) => items.getChanges(jreq("GET", undefined, `https://x/?since=${since}&limit=${limit}`), env, deps, who, { teamId });
+const changes = (env, deps, who, teamId, since = 0, limit = 200, resyncing = false) => items.getChanges(jreq("GET", undefined, `https://x/?since=${since}&limit=${limit}${resyncing ? "&resyncing=1" : ""}`), env, deps, who, { teamId });
 
 describe("items", () => {
   test("create → 201 v1 seq1; update with correct baseVersion → 200 v2 seq2; stale baseVersion → 409 with current", async () => {
@@ -301,6 +301,24 @@ describe("items", () => {
 
     const pastPurge = await (await changes(env, deps, owner, teamId, 5)).json();
     expect(pastPurge.resync).toBe(false); // since === purged_seq, not < it
+  });
+
+  // A client already walking from 0 must not be told to resync again. The gap
+  // covers the whole log, so EVERY page boundary of that walk sits inside it --
+  // re-signalling would restart the walk forever and it would never reach the
+  // end. This is what made "set the folder to read only" delete a team's comps:
+  // the client ended its walk early and pruned everything it hadn't reached.
+  test("changes: resyncing=1 suppresses the resync signal so a from-0 walk can page to the end", async () => {
+    const { env, deps, owner, teamId } = await setup();
+    await put(env, deps, owner, teamId, "b1", { type: "build", body: {}, baseVersion: null });
+    await put(env, deps, owner, teamId, "b2", { type: "build", body: {}, baseVersion: null });
+    await env.SYNC_DB.prepare("UPDATE teams SET purged_seq = 99 WHERE id = ?").bind(teamId).run();
+
+    expect((await (await changes(env, deps, owner, teamId, 1)).json()).resync).toBe(true);
+
+    const page2 = await (await changes(env, deps, owner, teamId, 1, 200, true)).json();
+    expect(page2.resync).toBe(false);
+    expect(page2.items.map((i) => i.id)).toEqual(["b2"]);
   });
 
   test("loginsFor chunks its IN list so a page with >100 distinct authors still resolves every login", async () => {

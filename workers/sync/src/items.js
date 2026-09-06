@@ -204,7 +204,13 @@ async function getChanges(request, env, deps, auth, params) {
   // owner changed what this member may see: losing read access produces no item
   // event at all — the items did not change, they simply stop being handed out —
   // so only a re-pull from 0, and the prune that follows it, can reconcile.
-  if (since > 0 && (since < membership.team.purged_seq || since < (membership.grants_seq || 0))) {
+  // `resyncing=1` means the client is already walking the log from 0 in response
+  // to an earlier resync. Re-signalling would be worse than useless: `grants_seq`
+  // holds the team's LATEST seq, so every page boundary of that walk is below it
+  // and the client would restart forever, never reaching the end — and a walk
+  // that never ends is a walk whose prune never gets a complete picture.
+  const resyncing = url.searchParams.get("resyncing") === "1";
+  if (!resyncing && since > 0 && (since < membership.team.purged_seq || since < (membership.grants_seq || 0))) {
     return json({ resync: true, items: [], nextSeq: since, hasMore: false });
   }
   const { results } = await env.SYNC_DB.prepare(

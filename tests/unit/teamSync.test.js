@@ -44,7 +44,7 @@ describe("TeamSync — teams ↔ root folders", () => {
     await h.sync.joinTeam("abcdefghjk");
     expect(h.api.joinTeam).toHaveBeenCalledWith("abcdefghjk");
     expect((await h.folderStore.listFolders())[0]).toMatchObject({ id: "team-2", teamId: "team-2", role: "member", shared: true });
-    expect(h.api.changes).toHaveBeenCalledWith("team-2", 0, 200);
+    expect(h.api.changes).toHaveBeenCalledWith("team-2", 0, 200, { resyncing: false });
   });
 
   test("listTeams reconciles: creates missing roots, updates name/role, detaches teams no longer listed", async () => {

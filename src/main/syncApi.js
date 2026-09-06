@@ -88,7 +88,15 @@ class SyncApi {
     return this.#request("DELETE", `/teams/${encodeURIComponent(teamId)}/grants/${encodeURIComponent(folderId)}/${encodeURIComponent(userId)}`);
   }
 
-  changes(teamId, since, limit = 200) { return this.#request("GET", `/teams/${encodeURIComponent(teamId)}/changes`, { query: { since, limit } }); }
+  // `resyncing` says this request is part of a from-0 re-pull that has already
+  // been told to resync, so the server must not tell it again — every page
+  // boundary of that walk sits below `grants_seq` and would otherwise re-signal
+  // forever. @see TeamSync#_pullTeamInner
+  changes(teamId, since, limit = 200, { resyncing = false } = {}) {
+    const query = { since, limit };
+    if (resyncing) query.resyncing = 1;
+    return this.#request("GET", `/teams/${encodeURIComponent(teamId)}/changes`, { query });
+  }
   putItem(teamId, itemId, payload) { return this.#request("PUT", `/teams/${encodeURIComponent(teamId)}/items/${encodeURIComponent(itemId)}`, { body: payload }); }
   deleteItem(teamId, itemId, baseVersion) { return this.#request("DELETE", `/teams/${encodeURIComponent(teamId)}/items/${encodeURIComponent(itemId)}`, { query: { baseVersion } }); }
   bulk(teamId, items) { return this.#request("POST", `/teams/${encodeURIComponent(teamId)}/items:bulk`, { body: { items } }); }

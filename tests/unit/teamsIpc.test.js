@@ -597,7 +597,7 @@ describe("polling lifecycle", () => {
     const { TeamSync } = await loadMain(teamTree());
     // Startup runs pullAll(), which asks the server for this team's changes.
     await waitFor(() => mockApi.changes.mock.calls.length > 0, { label: "startup pullAll reached api.changes" });
-    expect(mockApi.changes).toHaveBeenCalledWith(TEAM_ID, 3, expect.any(Number));
+    expect(mockApi.changes).toHaveBeenCalledWith(TEAM_ID, 3, expect.any(Number), expect.any(Object));
 
     const stopSpy = jest.spyOn(TeamSync.prototype, "stopPolling");
     fireAppEvent("will-quit");

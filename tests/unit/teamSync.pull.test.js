@@ -75,7 +75,7 @@ describe("TeamSync — pull", () => {
     expect((await h.syncStore.getTeam("t")).cursor).toBe(1); // first page was persisted
     h.api.changes.mockResolvedValueOnce({ items: [item({ id: "b2", seq: 2 })], nextSeq: 2, hasMore: false });
     await h.sync.pullTeam("t");
-    expect(h.api.changes).toHaveBeenLastCalledWith("t", 1, 200);
+    expect(h.api.changes).toHaveBeenLastCalledWith("t", 1, 200, { resyncing: false });
     expect((await h.buildStore.listBuilds()).map((b) => b.id).sort()).toEqual(["b1", "b2"]);
   });
 
@@ -277,7 +277,7 @@ describe("TeamSync — pull", () => {
     h.api.changes.mockImplementation(async (teamId) => { if (teamId === "a") throw apiError("SYNC_OFFLINE"); return { items: [], nextSeq: 0, hasMore: false }; });
     for (let i = 0; i < FAILURES_BEFORE_TOAST; i++) await h.sync.pullAll();
     expect(h.api.putItem).toHaveBeenCalledTimes(1); // outbox flushed before pulling
-    expect(h.api.changes).toHaveBeenCalledWith("b", 0, 200);
+    expect(h.api.changes).toHaveBeenCalledWith("b", 0, 200, { resyncing: false });
     const errs = h.events.filter((e) => e.status === "error" && e.error === "pull");
     expect(errs).toHaveLength(1);
     expect((await h.syncStore.getTeam("a")).failures).toBe(FAILURES_BEFORE_TOAST);
@@ -335,13 +335,41 @@ describe("TeamSync — pull", () => {
       .mockResolvedValueOnce({ items: [], nextSeq: 50, hasMore: false, resync: true })
       .mockResolvedValueOnce({ items: [item({ id: "b1", version: 1, seq: 1 })], nextSeq: 1, hasMore: false, resync: false });
     await h.sync.pullTeam("t");
-    expect(h.api.changes).toHaveBeenNthCalledWith(1, "t", 50, 200);
-    expect(h.api.changes).toHaveBeenNthCalledWith(2, "t", 0, 200);
+    expect(h.api.changes).toHaveBeenNthCalledWith(1, "t", 50, 200, { resyncing: false });
+    expect(h.api.changes).toHaveBeenNthCalledWith(2, "t", 0, 200, { resyncing: true });
     const builds = (await h.buildStore.listBuilds()).map((b) => b.id).sort();
     expect(builds).toEqual(["b1"]);
     expect(await h.syncStore.getVersion("t", "b2")).toBeNull();
     expect((await h.syncStore.getTeam("t")).cursor).toBe(1);
     expect(h.events).toContainEqual(expect.objectContaining({ status: "synced", type: "build", id: "b2", folderId: "t", removed: true }));
+  });
+
+  // "I set the folder to read only and the comps deleted themselves." Changing
+  // a grant stamps grants_seq with the team's CURRENT seq, and the server sends
+  // `resync` to anyone whose cursor is below it. The re-pull from 0 then walks
+  // the log a page at a time -- and every page boundary before the last one is
+  // ALSO below grants_seq, so the server keeps saying resync. A second resync
+  // mid-walk used to fall through as an ordinary empty page with hasMore:false,
+  // ending the walk early and handing _pruneUnseen a partial `seen` set: every
+  // item past page one got trashed. Restoring one didn't help, because the next
+  // poll re-walked, re-truncated and re-pruned it.
+  test("a resync arriving mid-re-pull never prunes on a truncated walk", async () => {
+    h = await makeHarness();
+    await seedTeam(h);
+    for (const id of ["b1", "b2"]) {
+      await h.buildStore.upsertBuild({ id, title: id, folderId: "t" });
+      await h.syncStore.setVersion("t", id, { version: 1, createdBy: "x" });
+    }
+    await h.syncStore.setCursor("t", 50);
+    h.api.changes
+      .mockResolvedValueOnce({ items: [], nextSeq: 50, hasMore: false, resync: true })
+      .mockResolvedValueOnce({ items: [item({ id: "b1", version: 1, seq: 1 })], nextSeq: 1, hasMore: true, resync: false })
+      // page two: still below grants_seq, so the server says resync again
+      .mockResolvedValueOnce({ items: [], nextSeq: 1, hasMore: false, resync: true })
+      .mockResolvedValueOnce({ items: [item({ id: "b1", version: 1, seq: 1 })], nextSeq: 1, hasMore: true, resync: false })
+      .mockResolvedValueOnce({ items: [item({ id: "b2", version: 1, seq: 2 })], nextSeq: 2, hasMore: false, resync: false });
+    await h.sync.pullTeam("t");
+    expect((await h.buildStore.listBuilds()).map((b) => b.id).sort()).toEqual(["b1", "b2"]);
   });
 
   test("resync keeps items with a pending outbox entry even if the server no longer has them (R1)", async () => {

@@ -23,6 +23,9 @@ const FLUSH_MAX_DELAY_MS = 5_000;
 const BACKOFF_BASE_MS = 5_000;
 const BACKOFF_MAX_MS = 5 * 60_000;
 const PAGE_SIZE = 200;
+// How many times one pull will restart its from-0 walk before giving up on the
+// prune. Only an out-of-date server re-signals more than once. @see _pullTeamInner
+const MAX_RESYNC_RESTARTS = 3;
 const FAILURES_BEFORE_TOAST = 3;
 
 // Archiving is a personal "get this out of my way", not a statement about the
@@ -489,20 +492,37 @@ class TeamSync {
     // once the full re-pull from 0 completes, anything NOT seen can be
     // pruned locally (it was purged from the server's change log).
     let resyncSeen = null;
+    let resyncs = 0;
     for (;;) {
       let page;
       try {
-        page = await this.api.changes(teamId, cursor, PAGE_SIZE);
+        page = await this.api.changes(teamId, cursor, PAGE_SIZE, { resyncing: resyncSeen !== null });
       } catch (err) {
         if (err.code === "SYNC_UNAUTHORIZED") { await this._handleUnauthorized(); }
         throw err;
       }
-      if (page.resync && resyncSeen === null) {
-        resyncSeen = new Set();
-        cursor = 0;
+      // A resync can arrive MID-WALK: the server signals it for any cursor below
+      // `grants_seq`, and `grants_seq` is stamped with the team's latest seq, so
+      // every page boundary of a from-0 re-pull is below it too. This used to
+      // fall through to the item loop as an ordinary empty page with
+      // `hasMore: false`, which ended the walk early and left `resyncSeen`
+      // holding only the ids seen so far — and `_pruneUnseen` then trashed
+      // everything past page one. Restart the walk instead; a walk that never
+      // finishes must never prune. `resyncing` above tells an up-to-date server
+      // not to re-signal at all, which is what makes this converge.
+      if (page.resync) {
+        if (resyncs >= MAX_RESYNC_RESTARTS) {
+          // An older server that keeps re-signalling. Leave the data alone and
+          // let the next pull try again — stuck is recoverable, pruned is not.
+          console.warn(`[team-sync] ${teamId}: server kept asking for a resync; skipping the prune`);
+          return;
+        }
+        resyncs += 1;
         // A resync is the only signal that this user's access changed, so it is
         // also the only moment the grant mirror can go stale. @see _refreshGrants
         await this._refreshGrants(teamId);
+        resyncSeen = new Set();
+        cursor = 0;
         continue;
       }
       // I1: if applying an item throws we must NOT persist a cursor past it —
