@@ -308,6 +308,24 @@ describe("items", () => {
   // re-signalling would restart the walk forever and it would never reach the
   // end. This is what made "set the folder to read only" delete a team's comps:
   // the client ended its walk early and pruned everything it hadn't reached.
+  // Clients older than v0.20.2 never send `resyncing`, so the flag cannot rescue
+  // them. The server has to remember that it already told this member to
+  // resync, or their from-0 walk gets re-signalled at every page boundary,
+  // ends early, and prunes everything past the first page.
+  test("changes: a member is only told to resync once, so an old client's walk can finish", async () => {
+    const { env, deps, owner, teamId } = await setup();
+    await put(env, deps, owner, teamId, "b1", { type: "build", body: {}, baseVersion: null });
+    await put(env, deps, owner, teamId, "b2", { type: "build", body: {}, baseVersion: null });
+    await env.SYNC_DB.prepare("UPDATE teams SET purged_seq = 99 WHERE id = ?").bind(teamId).run();
+
+    expect((await (await changes(env, deps, owner, teamId, 1)).json()).resync).toBe(true);
+
+    // No `resyncing` flag -- exactly what an old client sends for page two.
+    const page2 = await (await changes(env, deps, owner, teamId, 1)).json();
+    expect(page2.resync).toBe(false);
+    expect(page2.items.map((i) => i.id)).toEqual(["b2"]);
+  });
+
   test("changes: resyncing=1 suppresses the resync signal so a from-0 walk can page to the end", async () => {
     const { env, deps, owner, teamId } = await setup();
     await put(env, deps, owner, teamId, "b1", { type: "build", body: {}, baseVersion: null });

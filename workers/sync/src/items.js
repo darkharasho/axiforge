@@ -184,6 +184,23 @@ async function writeItem(env, deps, auth, teamId, { itemId, type, parentId, body
   return { status: created ? 201 : 200, version: row.version, seq: row.seq };
 }
 
+// Records that this member has just been told to resync, and reports whether
+// they were already told inside the window. KV failures fail OPEN (treat as
+// "not told") so a KV outage degrades to the old behaviour rather than
+// suppressing a resync that is genuinely needed. @see getChanges
+const RESYNC_SUPPRESS_TTL_S = 300;
+async function alreadyToldToResync(kv, key) {
+  if (!kv) return false;
+  try {
+    if (await kv.get(key)) return true;
+    await kv.put(key, "1", { expirationTtl: RESYNC_SUPPRESS_TTL_S });
+  } catch (err) {
+    console.warn("[sync] resync suppression unavailable:", err.message);
+    return false;
+  }
+  return false;
+}
+
 // GET /teams/:teamId/changes?since=&limit=
 async function getChanges(request, env, deps, auth, params) {
   const { error, membership, access } = await memberOr403(env, params.teamId, auth);
@@ -209,9 +226,20 @@ async function getChanges(request, env, deps, auth, params) {
   // holds the team's LATEST seq, so every page boundary of that walk is below it
   // and the client would restart forever, never reaching the end — and a walk
   // that never ends is a walk whose prune never gets a complete picture.
+  // Clients before v0.20.2 do not send `resyncing`, so the flag alone cannot
+  // save them: they walk from 0, get re-signalled at every page boundary, end
+  // the walk early and prune everything they never reached. Remember that we
+  // have told this member to resync and stay quiet for a short window, which is
+  // far longer than a walk takes. If they never finish it, the marker expires
+  // and the next poll is told again — a missed signal costs staleness for a few
+  // minutes, and staleness is recoverable in a way that a wrong prune is not.
   const resyncing = url.searchParams.get("resyncing") === "1";
   if (!resyncing && since > 0 && (since < membership.team.purged_seq || since < (membership.grants_seq || 0))) {
-    return json({ resync: true, items: [], nextSeq: since, hasMore: false });
+    const key = `resync:${params.teamId}:${auth.user.id}`;
+    if (!(await alreadyToldToResync(env.SYNC_RL, key))) {
+      return json({ resync: true, items: [], nextSeq: since, hasMore: false });
+    }
+    // Already told, recently. Serve the page so their walk can reach the end.
   }
   const { results } = await env.SYNC_DB.prepare(
     "SELECT * FROM items WHERE team_id = ? AND seq > ? ORDER BY seq LIMIT ?"
