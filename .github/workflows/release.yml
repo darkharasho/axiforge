@@ -229,6 +229,7 @@ jobs:
             echo "All platform artifacts present for $tag."
           fi
 
+
       - name: Post to Discord
         if: ${{ vars.DISCORD_WEBHOOK_URL != '' }}
         env:
@@ -236,35 +237,28 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           tag="${GITHUB_REF#refs/tags/}"
-          release_url="https://github.com/darkharasho/axiforge/releases/tag/${tag}"
-          notes=$(gh release view "$tag" --json body --jq '.body' 2>/dev/null || echo "")
 
           export TAG="$tag"
-          export RELEASE_URL="$release_url"
-          export NOTES="$notes"
+          export RELEASE_URL="https://github.com/darkharasho/axiforge/releases/tag/${tag}"
+          NOTES=$(gh release view "$tag" --json body --jq '.body' 2>/dev/null || echo "")
+          export NOTES
 
-          payload=$(python3 -c "
-          import json, os
+          # Split the notes across as many embeds/messages as they need. A single
+          # embed description caps at 4096 characters and a whole message at 6000
+          # across its embeds, so v0.18.0's 6.4k of notes used to be cut off at a
+          # hard 3800 — the Discord post ended mid-sentence and announced none of
+          # the bug fixes, which are always the last section. Splitting on the
+          # "### " headings keeps every section whole and intact.
+          python3 .github/scripts/discord-release-post.py > "$RUNNER_TEMP/payloads.ndjson"
 
-          tag = os.environ['TAG']
-          release_url = os.environ['RELEASE_URL']
-          notes = os.environ.get('NOTES', '')
-
-          if len(notes) > 3800:
-              notes = notes[:3800] + '\n\n*... see full notes on GitHub*'
-
-          embed = {
-              'title': f'AxiForge {tag}',
-              'url': release_url,
-              'description': notes or 'A new version of AxiForge is available!',
-              'color': 0x5865F2,
-              'thumbnail': {'url': 'https://raw.githubusercontent.com/darkharasho/axiforge/main/build/icon.png'},
-              'footer': {'text': 'AxiForge Release'},
-          }
-
-          print(json.dumps({
-              'embeds': [embed],
-          }))
-          ")
-
-          curl -s -H "Content-Type: application/json" -d "$payload" "$DISCORD_WEBHOOK_URL"
+          # One line of the file = one webhook message. Sequential, with a pause,
+          # so the parts arrive in order and don't trip the webhook rate limit.
+          while IFS= read -r payload; do
+            [ -n "$payload" ] || continue
+            code=$(printf '%s' "$payload" | curl -s -o /dev/stderr -w '%{http_code}' \
+              -H "Content-Type: application/json" --data-binary @- "$DISCORD_WEBHOOK_URL")
+            if [ "$code" != "200" ] && [ "$code" != "204" ]; then
+              echo "::warning::Discord webhook returned HTTP $code for one part of the $tag post."
+            fi
+            sleep 1
+          done < "$RUNNER_TEMP/payloads.ndjson"

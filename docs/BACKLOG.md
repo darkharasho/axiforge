@@ -512,3 +512,23 @@ Status key: `[ ]` open · `[x]` done · `[~]` in progress · `[?]` needs repro s
   - `.tm` widened 760→820px and the level controls to 190px, both after driving
     the running app over CDP showed the blanket card collapsing and
     `Team default · Can delete` clipping.
+
+- [x] **The Discord release post announced the features and none of the fixes**
+  — 2026-09-06. v0.18.0's notes ran to 6.4k characters; the workflow put the
+  whole blob in one embed description and cut it at a hard 3800, so the post
+  ended mid-sentence partway through the import section. Everything after that
+  — comp tagging, the editor back button, and all six bug fixes — was never
+  announced. The truncation was silent, and it always eats the *end* of the
+  notes, which is exactly where Bug Fixes lives, so this got worse the more
+  there was to say.
+  - *Fix:* `.github/scripts/discord-release-post.py` splits the notes on their
+    `###` headings, packs sections into embeds under Discord's 4096-per-
+    description limit, and packs embeds into messages under the 6000-per-message
+    one. The workflow posts each message in turn and warns on a non-2xx.
+  - A section too large for one embed is broken on paragraph then line
+    boundaries, so a split never lands mid-sentence.
+  - Title, link and thumbnail ride the first embed only and the footer the last,
+    so a multi-part post reads as one announcement rather than several.
+  - Verified lossless against the v0.18.0 notes (every character survives the
+    round trip) and unchanged for v0.14.0/v0.16.0/v0.17.0, which still go out as
+    a single message.
