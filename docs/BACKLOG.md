@@ -264,7 +264,16 @@ Status key: `[ ]` open · `[x]` done · `[~]` in progress · `[?]` needs repro s
   is shared with the Playground SPA, so `wrangler deploy` also republishes
   `dist/web` — run `npm run build:web` first or you roll build.axi.link back.
 
-- [ ] **A back button when viewing a build.**
+- [x] **A back button when viewing a build.** Done 2026-09-05. The editor
+  subnav grows a back button that names where the build was opened from — the
+  folder ("Raids"), the comp ("Zerg Frontline"), or plain "Library"/"Comps" —
+  and returns there. The origin is captured in `navigateToPage()` rather than at
+  each call site, so every route into the editor (a library card, a comp slot,
+  an import, the left nav) gets it without opting in; the label is a snapshot,
+  because the folder or comp it names can be renamed or deleted by a teammate's
+  sync while you edit. Rules live in `modules/editor-return.js` so they can be
+  tested without booting Electron (`tests/unit/renderer/editor-return.test.js`).
+  Hidden on the web playground — the editor is the whole app there.
 
 - [ ] **Say what changed in the incoming-sync popup.** Right now it announces
   that a change arrived without saying what it was. `summarizeBuildChange()`

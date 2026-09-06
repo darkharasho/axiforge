@@ -248,6 +248,46 @@ body:has(.app-layout) {
   display: flex;
 }
 
+.subnav__back {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  margin-right: 2px;
+  padding: 8px 12px 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-dim);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  max-width: 220px;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.subnav__back:hover {
+  background: var(--hover-subtle);
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.subnav__back-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+/* The destination name can be a long folder or comp title — clip it rather than
+   letting it push the build/equipment/notes tabs off the bar. */
+.subnav__back span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .subnav__item {
   padding: 8px 16px;
   border: none;

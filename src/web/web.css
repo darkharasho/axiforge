@@ -7,6 +7,7 @@
 .is-web #saveBuildBtn,            /* explicit save — no library to save into on web */
 .is-web [data-desktop-only],
 .is-web .titlebar,                  /* desktop window-chrome header; brand moves to the web top bar */
+.is-web #editorBackBtn,           /* nowhere to go back to — the editor is the whole app */
 .is-web .subnav__item[data-subtab="comps"],   /* no comps in the single-build playground */
 .is-web .subnav__item[data-subtab="notes"],    /* notes don't travel in a shared build */
 .is-web #publishSiteBtn,                        /* publishing is desktop-only */

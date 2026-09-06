@@ -19,6 +19,10 @@ export const state = {
   builds: [],
   professions: [],
   activePage: "library",
+  // Where the editor was opened from, so the editor can offer a way back.
+  // Set by navigateToPage() whenever we land on the editor from another page;
+  // { page: "library"|"comps" } or null when the editor is where we started.
+  editorReturn: null,
   buildSearch: "",
   // Library state
   folders: [],

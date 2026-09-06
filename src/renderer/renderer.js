@@ -3,6 +3,7 @@
 // Application-level orchestration (init, wireEvents, setProfession, etc.) lives here.
 
 import { state, createEmptyEditor } from "./modules/state.js";
+import { nextEditorReturn } from "./modules/editor-return.js";
 import { delay, wireTagInput, escapeHtml, relativeTime } from "./modules/utils.js";
 import { injectSkeleton } from "./modules/skeleton.js";
 
@@ -265,6 +266,8 @@ const el = {
   workspaceBtn:      q("#workspaceBtn"),
   workspaceMenu:     q("#workspaceMenu"),
   subnav:            q("#subnav"),
+  editorBackBtn:     q("#editorBackBtn"),
+  editorBackLabel:   q("#editorBackLabel"),
   appLayout:         q(".app-layout"),
   buildList:         q("#buildList"),
   buildSearch:       q("#buildSearch"),
@@ -1170,8 +1173,22 @@ function restoreUserThemeIfNeeded() {
   _stashedTheme = null;
 }
 
+function _syncEditorBackButton() {
+  if (!el.editorBackBtn) return;
+  const ret = state.editorReturn;
+  el.editorBackBtn.classList.toggle("hidden", !ret);
+  if (!ret) return;
+  el.editorBackLabel.textContent = ret.label;
+  el.editorBackBtn.title = `Back to ${ret.label}`;
+}
+
 function navigateToPage(page) {
   if (!page) return;
+  // Remember where the editor was opened from BEFORE activePage moves, so the
+  // editor can offer a way back. Done here rather than at each call site so
+  // every route in — a library card, a comp slot, an import, the left nav —
+  // gets it without having to opt in.
+  state.editorReturn = nextEditorReturn(state, page);
   // Clear library undo stack when navigating away from the library
   if (state.activePage === "library" && page !== "library") clearLibraryUndo();
   state.activePage = page;
@@ -1183,6 +1200,7 @@ function navigateToPage(page) {
   if (target) target.classList.remove("hidden");
   // Show/hide subnav for editor page
   el.subnav.classList.toggle("subnav--visible", page === "editor");
+  _syncEditorBackButton();
   // Sync the game mode toggle buttons whenever we land on the editor so the
   // highlight matches state.editor.gameMode (e.g. after loading a build from
   // the library, which calls loadBuildIntoEditor then navigateToPage without
@@ -1743,6 +1761,14 @@ function wireEvents() {
   // Left nav page switching
   document.querySelectorAll(".leftnav__item").forEach((btn) => {
     btn.addEventListener("click", () => navigateToPage(btn.dataset.page));
+  });
+
+  // Back out of the editor to wherever the build was opened from. Deliberately
+  // as permissive as the left nav — it does not gate on unsaved changes, so
+  // leaving this way is never more destructive than clicking "Library".
+  el.editorBackBtn?.addEventListener("click", () => {
+    const ret = state.editorReturn;
+    if (ret) navigateToPage(ret.page);
   });
 
   // Subnav tab switching
