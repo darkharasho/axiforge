@@ -159,7 +159,8 @@ class HistoryStore {
         ? "Deleted"
         : (before ? renderSummary(diff(before, after), sOpts) || "Created" : "Created");
       return this.#write(log, recordId, {
-        v: 1, ts, author, source, kind: kind || "key", summary, doc: after,
+        // A copy, not a reference — see #entry.
+        v: 1, ts, author, source, kind: kind || "key", summary, doc: structuredClone(after),
       });
     }
 
@@ -183,9 +184,23 @@ class HistoryStore {
       last.source === source &&
       Date.parse(ts) - Date.parse(last.ts) <= COALESCE_WINDOW_MS;
 
-    if (coalesce) {
-      const prev = await this.getVersion(recordId, last.v - 1);
-      const merged = diff(prev || {}, after);
+    // Coalescing needs the version BEFORE `last` as its base; if that cannot be
+    // reconstructed there is nothing to merge into and the edit becomes a
+    // version of its own rather than a patch against a guess.
+    const prev = coalesce ? await this.getVersion(recordId, last.v - 1) : null;
+    if (coalesce && prev) {
+      const merged = diff(prev, after);
+      if (merged.length === 0) {
+        // The edit undid itself inside the window — fix a typo, undo it; toggle
+        // a trait on and off. `after` is byte-equal to `prev`, so `last` has
+        // nothing left to say. REMOVE it rather than rewrite it: an entry with
+        // no ops renders as a blank row and, since it has nothing substantive
+        // in it, gets relabelled as bookkeeping. Skipping the write and leaving
+        // `last` in place would be worse still — its ops would describe a
+        // transition the live document no longer matches.
+        await log.removeLast();
+        return null;
+      }
       return this.#write(log, recordId, this.#entry({
         v: last.v, ts, author, source, kind, ops: merged,
         // Keep whatever shape the entry already had: replacing a keyframe with
@@ -211,7 +226,9 @@ class HistoryStore {
       || (classify(ops).substantive.length === 0 ? "meta" : (keyframe ? "key" : undefined));
     if (resolved) entry.kind = resolved;
     entry.summary = kind === "delete" ? "Deleted" : renderSummary(ops, sOpts);
-    if (keyframe) entry.doc = after;
+    // A copy, never a reference: a caller that mutates `after` after the save
+    // must not retroactively rewrite the version it was handed back.
+    if (keyframe) entry.doc = structuredClone(after);
     else entry.ops = ops;
     return entry;
   }
@@ -302,15 +319,18 @@ class HistoryStore {
     for (const name of names) {
       if (!name.endsWith(".jsonl")) continue;
       const recordId = name.slice(0, -".jsonl".length);
-      const { versions } = await this.listVersions(recordId, { limit: Number.MAX_SAFE_INTEGER });
+      // Capped like the sibling handlers: every keyframe carries a whole
+      // document and this crosses IPC. v1 capped at 50 per record; uncapped
+      // here would be strictly worse than what it replaces.
+      const { versions } = await this.listVersions(recordId, { limit: 200 });
       if (versions.length) out[recordId] = versions;
     }
     return out;
   }
 
-  /** TRANSITIONAL (Task 6 removes it): the whole newest-first list for a record. */
+  /** TRANSITIONAL (Task 6 removes it): the newest-first list for a record. */
   async getHistory(recordId) {
-    const { versions } = await this.listVersions(recordId, { limit: Number.MAX_SAFE_INTEGER });
+    const { versions } = await this.listVersions(recordId, { limit: 200 });
     return versions;
   }
 

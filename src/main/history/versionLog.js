@@ -165,15 +165,44 @@ class VersionLog {
     return readFrom + lastNlBeforeEnd + 1;
   }
 
+  /** The start offset of the final line — cached by the last write, or found. */
+  async _lastLineOffset() {
+    const offset = this._lastOffset;
+    if (offset === null || offset === undefined) return this._findLastLineOffset();
+    return offset;
+  }
+
   async replaceLast(entry) {
-    let offset = this._lastOffset;
-    if (offset === null || offset === undefined) {
-      offset = await this._findLastLineOffset();
-    }
+    // Serialize BEFORE truncating. This is the only destructive write in the
+    // file, and doing it the other way round means an entry that cannot be
+    // stringified (a circular reference, a throwing toJSON) destroys the
+    // previous version with nothing written in its place. `append` is safe
+    // for free because it destroys nothing.
+    const line = `${JSON.stringify(entry)}\n`;
+    const offset = await this._lastLineOffset();
     await fs.truncate(this.filePath, offset);
-    await fs.appendFile(this.filePath, `${JSON.stringify(entry)}\n`);
+    await fs.appendFile(this.filePath, line);
     this._lastOffset = offset;
     return entry;
+  }
+
+  /**
+   * Drop the final entry, leaving nothing in its place.
+   *
+   * The version store needs this when coalescing an edit that returns the
+   * document to exactly the state before the version being coalesced into:
+   * there is no patch left to write, and rewriting the entry with an empty one
+   * would leave a blank row in the history panel. Removing it is the only
+   * option that keeps the stored chain matching the live document — see
+   * historyStore.js.
+   */
+  async removeLast() {
+    const offset = await this._lastLineOffset();
+    await fs.truncate(this.filePath, offset);
+    // The new final line starts somewhere earlier and we do not know where;
+    // drop the cache so the next write finds it rather than trusting a stale
+    // offset that now points at the end of the file.
+    this._lastOffset = null;
   }
 
   async readAll() {

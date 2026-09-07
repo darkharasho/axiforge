@@ -237,3 +237,78 @@ describe("VersionLog — lines larger than TAIL_BYTES (fix round 1)", () => {
     expect(tail.map((e) => e.v)).toEqual([3, 2, 1]);
   });
 });
+
+// ─── fix round 2 ────────────────────────────────────────────────────────────
+
+describe("VersionLog — replaceLast serializes before it destroys", () => {
+  test("an unserializable entry leaves the previous version intact", async () => {
+    const log = logAt();
+    await log.append({ v: 1 });
+    await log.append({ v: 2, summary: "real" });
+
+    const cyclic = { v: 2 };
+    cyclic.self = cyclic;
+    await expect(log.replaceLast(cyclic)).rejects.toThrow();
+
+    // The destructive write is the one place an ordering mistake costs a
+    // version outright, so the previous one has to survive the failure.
+    const { entries } = await new VersionLog(log.filePath).readAll();
+    expect(entries).toEqual([{ v: 1 }, { v: 2, summary: "real" }]);
+  });
+
+  test("a throwing toJSON is caught by the same ordering", async () => {
+    const log = logAt();
+    await log.append({ v: 1, summary: "real" });
+    const hostile = { v: 1, toJSON() { throw new Error("nope"); } };
+    await expect(log.replaceLast(hostile)).rejects.toThrow("nope");
+    expect((await new VersionLog(log.filePath).readAll()).entries).toEqual([{ v: 1, summary: "real" }]);
+  });
+
+  test("the log is still writable after a failed replaceLast", async () => {
+    const log = logAt();
+    await log.append({ v: 1 });
+    const cyclic = {}; cyclic.self = cyclic;
+    await expect(log.replaceLast(cyclic)).rejects.toThrow();
+    await log.append({ v: 2 });
+    expect((await log.readAll()).entries).toEqual([{ v: 1 }, { v: 2 }]);
+  });
+});
+
+describe("VersionLog — removeLast", () => {
+  test("drops the final entry, leaving nothing in its place", async () => {
+    const log = logAt();
+    await log.append({ v: 1 });
+    await log.append({ v: 2 });
+    await log.removeLast();
+    expect((await new VersionLog(log.filePath).readAll()).entries).toEqual([{ v: 1 }]);
+  });
+
+  test("the remaining entry is still the one replaceLast rewrites", async () => {
+    // removeLast invalidates the cached offset; a stale one would point at the
+    // end of the file and turn the next replaceLast into an append.
+    const log = logAt();
+    await log.append({ v: 1, summary: "first" });
+    await log.append({ v: 2 });
+    await log.removeLast();
+    await log.replaceLast({ v: 1, summary: "rewritten" });
+    expect((await new VersionLog(log.filePath).readAll()).entries).toEqual([{ v: 1, summary: "rewritten" }]);
+  });
+
+  test("works on a cold instance with no cached offset", async () => {
+    const file = path.join(dir, "r1.jsonl");
+    const warm = new VersionLog(file);
+    await warm.append({ v: 1 });
+    await warm.append({ v: 2 });
+    await new VersionLog(file).removeLast();
+    expect((await new VersionLog(file).readAll()).entries).toEqual([{ v: 1 }]);
+  });
+
+  test("emptying the log leaves a readable empty file, not a torn one", async () => {
+    const log = logAt();
+    await log.append({ v: 1 });
+    await log.removeLast();
+    expect((await new VersionLog(log.filePath).readAll()).entries).toEqual([]);
+    await log.append({ v: 1, summary: "again" });
+    expect((await log.readAll()).entries).toEqual([{ v: 1, summary: "again" }]);
+  });
+});

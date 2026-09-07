@@ -213,12 +213,29 @@ describe("concurrency", () => {
 // the caller's save time (a team-sync pull replays a teammate's edit) and so
 // coalescing is testable without faking timers.
 describe("the clock is injected, never read", () => {
-  test("appendVersion does not call Date.now()", async () => {
-    const spy = jest.spyOn(Date, "now");
-    await store.appendVersion({ recordId: "b1", before: null, after: build(), ts: at(0) });
-    await store.appendVersion({ recordId: "b1", after: build({ title: "Renamed" }), ts: at(10 * 60_000) });
-    expect(spy).not.toHaveBeenCalled();
-    spy.mockRestore();
+  test("appendVersion reads the clock in no form at all", async () => {
+    // Spying on Date.now alone is not enough: `new Date()` does not route
+    // through it, so a store defaulting its own timestamp that way would pass
+    // a Date.now-only assertion trivially.
+    const RealDate = global.Date;
+    const reads = [];
+    class GuardedDate extends RealDate {
+      constructor(...args) {
+        if (args.length === 0) reads.push("new Date()");
+        super(...args);
+      }
+      static now() { reads.push("Date.now()"); return RealDate.now(); }
+    }
+    const t0 = at(0);
+    const t1 = at(10 * 60_000);
+    global.Date = GuardedDate;
+    try {
+      await store.appendVersion({ recordId: "b1", before: null, after: build(), ts: t0 });
+      await store.appendVersion({ recordId: "b1", after: build({ title: "Renamed" }), ts: t1 });
+    } finally {
+      global.Date = RealDate;
+    }
+    expect(reads).toEqual([]);
   });
 
   test("the injected ts is what lands on the version", async () => {
@@ -251,5 +268,65 @@ describe("robustness", () => {
     const v = await store.appendVersion({ recordId: "b1", after: build(), kind: "delete", ts: at(10 * 60_000) });
     expect(v).toMatchObject({ v: 2, kind: "delete", summary: "Deleted" });
     expect(v.doc).toEqual(build());
+  });
+});
+
+// ─── fix round 1 ────────────────────────────────────────────────────────────
+
+describe("coalescing an edit that undoes itself", () => {
+  test("a rename and a rename back inside the window leaves no version behind", async () => {
+    await store.appendVersion({ recordId: "b1", before: null, after: build(), author: "me", source: "local", ts: at(0) });
+    await store.appendVersion({ recordId: "b1", after: build({ title: "Typo" }), author: "me", source: "local", ts: at(10 * 60_000) });
+
+    // Fixing the typo puts the document back exactly where version 1 left it,
+    // so version 2 has nothing left to say. Rewriting it with an empty patch
+    // would leave a blank row in the panel, mislabelled as bookkeeping.
+    const v = await store.appendVersion({ recordId: "b1", after: build(), author: "me", source: "local", ts: at(11 * 60_000) });
+
+    expect(v).toBeNull();
+    const { versions } = await store.listVersions("b1");
+    expect(versions.map((x) => x.v)).toEqual([1]);
+    expect(await store.getVersion("b1", 1)).toEqual(build());
+  });
+
+  test("no blank, mislabelled version is ever written", async () => {
+    await store.appendVersion({ recordId: "b1", before: null, after: build(), author: "me", source: "local", ts: at(0) });
+    await store.appendVersion({ recordId: "b1", after: build({ notes: "oops" }), author: "me", source: "local", ts: at(10 * 60_000) });
+    await store.appendVersion({ recordId: "b1", after: build(), author: "me", source: "local", ts: at(11 * 60_000) });
+
+    const { versions } = await store.listVersions("b1");
+    expect(versions.every((x) => x.summary !== "")).toBe(true);
+    expect(versions.some((x) => x.kind === "meta")).toBe(false);
+  });
+
+  test("the log keeps working after the removal", async () => {
+    await store.appendVersion({ recordId: "b1", before: null, after: build(), author: "me", source: "local", ts: at(0) });
+    await store.appendVersion({ recordId: "b1", after: build({ title: "Typo" }), author: "me", source: "local", ts: at(10 * 60_000) });
+    await store.appendVersion({ recordId: "b1", after: build(), author: "me", source: "local", ts: at(11 * 60_000) });
+
+    // The next real edit takes v2 again, and reconstructs from the keyframe
+    // that is still v1 — a stale offset would have appended past a dead line.
+    const v = await store.appendVersion({ recordId: "b1", after: build({ title: "Renamed" }), author: "me", source: "local", ts: at(60 * 60_000) });
+    expect(v.v).toBe(2);
+    expect(await store.getVersion("b1", 2)).toEqual(build({ title: "Renamed" }));
+    expect(await store.getVersion("b1", 1)).toEqual(build());
+  });
+
+  test("an undo OUTSIDE the window is a version of its own, not a removal", async () => {
+    await store.appendVersion({ recordId: "b1", before: null, after: build(), author: "me", source: "local", ts: at(0) });
+    await store.appendVersion({ recordId: "b1", after: build({ title: "Typo" }), author: "me", source: "local", ts: at(10 * 60_000) });
+    const v = await store.appendVersion({ recordId: "b1", after: build(), author: "me", source: "local", ts: at(60 * 60_000) });
+    expect(v.v).toBe(3);
+    expect((await store.listVersions("b1")).versions.map((x) => x.v)).toEqual([3, 2, 1]);
+  });
+});
+
+describe("the returned version does not alias the caller's document", () => {
+  test("mutating `after` afterwards does not rewrite the returned version", async () => {
+    const after = build();
+    const v = await store.appendVersion({ recordId: "b1", before: null, after, ts: at(0) });
+    after.title = "mutated by the caller";
+    expect(v.doc.title).toBe("Power Berserker");
+    expect(await store.getVersion("b1", 1)).toEqual(build());
   });
 });
