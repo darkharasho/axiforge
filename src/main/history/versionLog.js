@@ -229,6 +229,41 @@ class VersionLog {
     this._lastOffset = null;
   }
 
+  /**
+   * Replace the whole file with `entries`, atomically.
+   *
+   * The one write in this class that is not O(1), and the only one that is not
+   * an append or a truncation of the tail. Retention needs it: a JSONL log of
+   * patches cannot be pruned by dropping its head, because the survivors
+   * reconstruct through the keyframe that would go with it. The caller
+   * materializes a document for the oldest entry it is keeping and hands the
+   * whole surviving list here.
+   *
+   * Temp file plus rename, not truncate-and-rewrite: a crash halfway through
+   * the latter leaves a log with no origin and no tail, which is strictly
+   * worse than the unpruned file we started with. `rename` within a directory
+   * is atomic, so the log is either entirely the old one or entirely the new.
+   */
+  async rewrite(entries) {
+    const list = Array.isArray(entries) ? entries : [];
+    // Serialize before touching the filesystem, for the same reason
+    // `replaceLast` does: an entry that cannot be stringified must not be
+    // discovered after the original is gone.
+    const text = list.map((e) => `${JSON.stringify(e)}\n`).join("");
+    const tmp = `${this.filePath}.tmp-${process.pid}`;
+    await fs.mkdir(path.dirname(this.filePath), { recursive: true });
+    try {
+      await fs.writeFile(tmp, text);
+      await fs.rename(tmp, this.filePath);
+    } catch (err) {
+      await fs.rm(tmp, { force: true }).catch(() => {});
+      throw err;
+    }
+    // Every byte offset in the file just moved.
+    this._lastOffset = null;
+    return list.length;
+  }
+
   async readAll() {
     let text;
     try {

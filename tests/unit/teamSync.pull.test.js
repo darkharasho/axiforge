@@ -210,14 +210,39 @@ describe("TeamSync — pull", () => {
     expect(entry.summary).toContain("party 1 slot 2: (none) → Firebrand");
   });
 
-  // The version store removes a coalesced edit that returns the document to
-  // where it already was, so `appendVersion` returns null and there is no
-  // summary to announce. That is the intended outcome — nothing changed, so
-  // there is nothing to tell anyone — but it reaches the sync path through
-  // `summary = version ? version.summary : null`, and every other coalescing
-  // test drives `source: "local"`. Unpinned, a change to the coalesce gate or
-  // to that mapping flips sync-toast behaviour with nothing red.
-  test("a teammate's edit that undoes itself is removed, and announces nothing", async () => {
+  // `summary = version ? version.summary : null` in teamSync.js: appendVersion
+  // returns null when a pull changed nothing worth a version, and the toast has
+  // to cope. Coalescing used to be the way to reach it; for builds it no longer
+  // is, so this pins the branch on the case that still gets there.
+  test("a pull that changes nothing writes no version and announces nothing", async () => {
+    h = await makeHarness();
+    await seedTeam(h);
+    await h.buildStore.upsertBuild({ id: "b1", title: "Old", notes: "keep", folderId: "t" });
+
+    const at = (title, version, seq) => item({
+      id: "b1", version, seq, updatedBy: who("iruixos"),
+      body: { id: "b1", title, notes: "keep" },
+    });
+    // A record's first version is always a keyframe, however little changed, so
+    // the null branch is only reachable once there is a chain to diff against.
+    h.api.changes.mockResolvedValueOnce({ items: [at("New", 2, 2)], nextSeq: 2, hasMore: false });
+    await h.sync.pullTeam("t");
+    h.api.changes.mockResolvedValueOnce({ items: [at("New", 3, 3)], nextSeq: 3, hasMore: false });
+    await h.sync.pullTeam("t");
+
+    expect(((await h.historyStore.listVersions("b1", { limit: 200 })).versions).map((e) => e.v)).toEqual([1]);
+    const synced = h.events.filter((e) => e.status === "synced" && e.id === "b1");
+    expect(synced).toHaveLength(2);
+    expect(synced[1].summary).toBeUndefined();
+    expect(synced[1].author).toBeUndefined();
+  });
+
+  // Builds do not coalesce (buildHistoryStore.js): a save is a decision, and
+  // that holds for a teammate's saves arriving over sync exactly as it does for
+  // the user's own. A typo pulled and then fixed is two things the teammate
+  // did, and both are worth a row — the alternative is a shared build whose
+  // history quietly disagrees with what the teammate remembers doing.
+  test("a teammate's edit that undoes itself keeps every version, and announces each", async () => {
     h = await makeHarness();
     await seedTeam(h);
     await h.buildStore.upsertBuild({ id: "b1", title: "Old", notes: "keep", folderId: "t" });
@@ -235,18 +260,20 @@ describe("TeamSync — pull", () => {
 
     expect(((await h.historyStore.listVersions("b1", { limit: 200 })).versions).map((e) => e.v)).toEqual([2, 1]);
 
-    // The teammate undoes the typo: the document is back where version 1 left
-    // it, so version 2 has nothing left to say and is removed outright.
+    // The teammate undoes the typo. The document is back where version 1 left
+    // it, but that is not the same as nothing having happened: the typo was
+    // real, it was pulled, and the fix is a third thing the teammate did.
     h.api.changes.mockResolvedValueOnce({ items: [edit("New", 4, 4)], nextSeq: 4, hasMore: false });
     await h.sync.pullTeam("t");
 
-    expect(((await h.historyStore.listVersions("b1", { limit: 200 })).versions).map((e) => e.v)).toEqual([1]);
-    expect(await h.historyStore.getVersion("b1", 1)).toMatchObject({ title: "New" });
+    expect(((await h.historyStore.listVersions("b1", { limit: 200 })).versions).map((e) => e.v)).toEqual([3, 2, 1]);
+    expect(await h.historyStore.getVersion("b1", 2)).toMatchObject({ title: "Typo" });
+    expect(await h.historyStore.getVersion("b1", 3)).toMatchObject({ title: "New" });
 
     const synced = h.events.filter((e) => e.status === "synced" && e.id === "b1");
     expect(synced).toHaveLength(3);
-    expect(synced[2].summary).toBeUndefined();
-    expect(synced[2].author).toBeUndefined();
+    expect(synced[2].summary).toBe('title: "Typo" → "New"');
+    expect(synced[2].author).toBe("iruixos");
     // ...and the edit still applied locally; only the announcement is absent.
     expect((await h.buildStore.listBuilds()).find((b) => b.id === "b1").title).toBe("New");
   });

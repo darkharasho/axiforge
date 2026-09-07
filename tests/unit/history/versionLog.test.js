@@ -415,3 +415,62 @@ describe("VersionLog — destructive writes repair a torn tail first", () => {
     expect(dropped).toBe(0);
   });
 });
+
+describe("VersionLog — rewrite", () => {
+  test("replaces the whole file", async () => {
+    const log = logAt();
+    for (let v = 1; v <= 5; v += 1) await log.append({ v });
+
+    expect(await log.rewrite([{ v: 3, doc: { title: "t3" } }, { v: 4 }, { v: 5 }])).toBe(3);
+    const { entries } = await log.readAll();
+    expect(entries).toEqual([{ v: 3, doc: { title: "t3" } }, { v: 4 }, { v: 5 }]);
+  });
+
+  test("appending after a rewrite lands at the end, not at a stale offset", async () => {
+    const log = logAt();
+    for (let v = 1; v <= 5; v += 1) await log.append({ v, filler: "x".repeat(200) });
+
+    // Every byte offset in the file just moved, and the cached one now points
+    // past the end of a much shorter file.
+    await log.rewrite([{ v: 5 }]);
+    await log.append({ v: 6 });
+    expect((await log.readAll()).entries).toEqual([{ v: 5 }, { v: 6 }]);
+    expect(await log.lastEntry()).toEqual({ v: 6 });
+  });
+
+  test("replaceLast after a rewrite replaces the real last line", async () => {
+    const log = logAt();
+    for (let v = 1; v <= 5; v += 1) await log.append({ v, filler: "x".repeat(200) });
+    await log.rewrite([{ v: 4 }, { v: 5 }]);
+
+    await log.replaceLast({ v: 5, summary: "coalesced" });
+    expect((await log.readAll()).entries).toEqual([{ v: 4 }, { v: 5, summary: "coalesced" }]);
+  });
+
+  test("an unserializable entry leaves the original file untouched", async () => {
+    const log = logAt();
+    await log.append({ v: 1, summary: "Created" });
+    const circular = { v: 2 };
+    circular.self = circular;
+
+    await expect(log.rewrite([circular])).rejects.toThrow();
+    // The whole point of serializing before touching the filesystem: the log we
+    // failed to replace is still the log we had.
+    expect((await log.readAll()).entries).toEqual([{ v: 1, summary: "Created" }]);
+    expect(await fs.readdir(dir)).toEqual(["r1.jsonl"]);
+  });
+
+  test("rewriting to nothing empties the file rather than deleting it", async () => {
+    const log = logAt();
+    await log.append({ v: 1 });
+    expect(await log.rewrite([])).toBe(0);
+    expect((await log.readAll()).entries).toEqual([]);
+    expect(await log.lastEntry()).toBeNull();
+  });
+
+  test("rewrite creates the parent directory, like append does", async () => {
+    const log = new VersionLog(path.join(dir, "nested", "deep", "r1.jsonl"));
+    await log.rewrite([{ v: 7 }]);
+    expect((await log.readAll()).entries).toEqual([{ v: 7 }]);
+  });
+});

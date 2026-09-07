@@ -266,7 +266,11 @@ describe("a folder move names the folder", () => {
     expect(versions[0].summary).toContain("Raids/Support");
   });
 
-  test("a later move is named too — not just the record's first version", async () => {
+  // A move on its own is bookkeeping the library did on the user's behalf, so it
+  // is not a build version — but nothing about it is lost. The diff base is the
+  // last VERSIONED document, so the move travels with the next real edit and is
+  // still named there; it just does not get a row of its own.
+  test("a move alone writes no version, and the next edit still names where it went", async () => {
     await loadMain({
       folders: FOLDERS,
       builds: [build({ id: "b1", title: "Heal Tempest", folderId: null })],
@@ -274,11 +278,18 @@ describe("a folder move names the folder", () => {
 
     await invoke("builds:save", { id: "b1", title: "Renamed", folderId: null });
     await waitFor(async () => (await invoke("builds:get-history", "b1")).versions.length >= 1);
-    await invoke("builds:save", { id: "b1", title: "Renamed", folderId: "support" });
-    await waitFor(async () => (await invoke("builds:get-history", "b1")).versions.some((v) => /moved to/.test(v.summary)));
 
-    const moved = (await invoke("builds:get-history", "b1")).versions.find((v) => /moved to/.test(v.summary));
-    expect(moved.summary).toContain("moved to Raids/Support");
+    await invoke("builds:save", { id: "b1", title: "Renamed", folderId: "support" });
+    await invoke("builds:save", { id: "b1", title: "Renamed again", folderId: "support" });
+    await waitFor(async () => (await invoke("builds:get-history", "b1")).versions.length >= 2);
+
+    // Two, not three: the move in between never became one. appendVersion is
+    // fire-and-forget, so let anything still in flight land before counting.
+    for (let i = 0; i < 20; i += 1) await new Promise((r) => setImmediate(r));
+    const { versions } = await invoke("builds:get-history", "b1");
+    expect(versions).toHaveLength(2);
+    expect(versions[0].summary).toContain("moved to Raids/Support");
+    expect(versions[0].summary).toContain("Renamed again");
   });
 
   test("comps:save names the folder too", async () => {
@@ -367,7 +378,8 @@ describe("history:compare labels ops with the same names", () => {
     });
     await invoke("builds:save", { id: "b1", title: "Heal Tempest", folderId: null });
     await waitFor(async () => (await invoke("builds:get-history", "b1")).versions.length >= 1);
-    await invoke("builds:save", { id: "b1", title: "Heal Tempest", folderId: "support" });
+    // The move rides along with an edit: on its own it writes no build version.
+    await invoke("builds:save", { id: "b1", title: "Renamed", folderId: "support" });
     await waitFor(async () => (await invoke("builds:get-history", "b1")).versions.length >= 2);
 
     const { ops } = await invoke("history:compare", "build", "b1", 1, 2);

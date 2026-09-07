@@ -4,7 +4,9 @@ const path = require("node:path");
 const fs = require("node:fs/promises");
 const os = require("node:os");
 const { BuildHistoryStore } = require("../../../src/main/buildHistoryStore");
-const { KEYFRAME_INTERVAL } = require("../../../src/main/history/constants");
+const { HistoryStore } = require("../../../src/main/historyStore");
+const diffBuild = require("../../../src/main/history/diffBuild");
+const { KEYFRAME_INTERVAL, MAX_VERSIONS } = require("../../../src/main/history/constants");
 
 let dir, store;
 const T0 = Date.parse("2026-09-01T10:00:00.000Z");
@@ -28,6 +30,26 @@ afterEach(() => fs.rm(dir, { recursive: true, force: true }));
 
 // Every append gets an explicit clock so coalescing is deterministic.
 function at(ms) { return new Date(T0 + ms).toISOString(); }
+
+// Coalescing and versioned bookkeeping both live in HistoryStore, and the two
+// record types want them differently: a comp autosaves its notes on a debounce
+// and needs both, a build is saved by an explicit click and opts out of both
+// (see buildHistoryStore.js). The cases below are about those two mechanisms
+// rather than about builds, so they run on a store that has them switched on.
+// Build documents just keep the fixtures readable; its own subdirectory keeps
+// it off `store`'s files.
+function sharedStore() {
+  return new HistoryStore(dir, { subdir: "shared", differ: diffBuild });
+}
+
+// Installs it as `store` for the enclosing describe. A nested beforeEach runs
+// after the outer one, so the fresh temp dir is already there.
+function usingSharedStore() {
+  beforeEach(async () => {
+    store = sharedStore();
+    await store.init();
+  });
+}
 
 describe("appendVersion — basics", () => {
   test("the first version is a keyframe carrying the whole doc", async () => {
@@ -63,6 +85,9 @@ describe("appendVersion — basics", () => {
   });
 
   test("an incidental-only change is logged as kind meta", async () => {
+    store = sharedStore();
+    await store.init();
+
     await store.appendVersion({ recordId: "b1", before: null, after: build(), ts: at(0) });
     const v = await store.appendVersion({ recordId: "b1", after: build({ folderId: "f2" }), ts: at(10 * 60_000) });
     expect(v).toMatchObject({ kind: "meta" });
@@ -87,6 +112,8 @@ describe("appendVersion — the store owns its diff base", () => {
 });
 
 describe("appendVersion — coalescing", () => {
+  usingSharedStore();
+
   test("edits inside the window by the same author merge into one version", async () => {
     await store.appendVersion({ recordId: "b1", before: null, after: build(), author: "me", source: "local", ts: at(0) });
     await store.appendVersion({ recordId: "b1", after: build({ title: "A" }), author: "me", source: "local", ts: at(10 * 60_000) });
@@ -137,7 +164,9 @@ describe("keyframes and reconstruction", () => {
         author: "me", source: "local", ts: at((i + 1) * 60 * 60_000),   // an hour apart: never coalesces
       });
     }
-    const { versions } = await store.listVersions("b1", { limit: 100 });
+    // The page has to cover every version written, or the origin keyframe falls
+    // off the end of it and the assertion below passes for the wrong reason.
+    const { versions } = await store.listVersions("b1", { limit: KEYFRAME_INTERVAL * 2 });
     const keyframes = versions.filter((x) => x.kind === "key").map((x) => x.v).sort((a, b) => a - b);
     expect(keyframes).toEqual([1, KEYFRAME_INTERVAL + 1]);
   });
@@ -274,6 +303,8 @@ describe("robustness", () => {
 // ─── fix round 1 ────────────────────────────────────────────────────────────
 
 describe("coalescing an edit that undoes itself", () => {
+  usingSharedStore();
+
   test("a rename and a rename back inside the window leaves no version behind", async () => {
     await store.appendVersion({ recordId: "b1", before: null, after: build(), author: "me", source: "local", ts: at(0) });
     await store.appendVersion({ recordId: "b1", after: build({ title: "Typo" }), author: "me", source: "local", ts: at(10 * 60_000) });
@@ -342,6 +373,9 @@ describe("the returned version does not alias the caller's document", () => {
   });
 
   test("coalescing into a keyframe does not alias the caller's document either", async () => {
+    store = sharedStore();
+    await store.init();
+
     // v21 is a keyframe, so coalescing into it rewrites a whole doc.
     await store.appendVersion({ recordId: "b1", before: null, after: build({ title: "t0" }), author: "me", source: "local", ts: at(0) });
     for (let i = 1; i <= KEYFRAME_INTERVAL; i += 1) {
@@ -475,6 +509,8 @@ describe("A2 — a record that has lost its base heals itself", () => {
 });
 
 describe("A3 — the coalescing window is two-sided", () => {
+  usingSharedStore();
+
   test("a backwards clock step does not merge into, and overwrite, an old version", async () => {
     await store.appendVersion({ recordId: "b1", before: null, after: build({ title: "A" }), author: "me", source: "local", ts: at(0) });
     const v2 = await store.appendVersion({ recordId: "b1", after: build({ title: "B" }), author: "me", source: "local", ts: at(60 * 60_000) });
@@ -523,6 +559,9 @@ describe("A4 — a save does not re-read the whole log", () => {
   });
 
   test("a coalescing burst reconstructs at most once, not twice per save", async () => {
+    store = sharedStore();
+    await store.init();
+
     await twoVersions();
     const spy = jest.spyOn(store, "getVersion");
     for (let i = 1; i <= 4; i += 1) {
@@ -551,6 +590,9 @@ describe("A4 — the memo cannot go stale", () => {
   });
 
   test("a removed (self-undone) version is seen: the next save diffs against what survived", async () => {
+    store = sharedStore();
+    await store.init();
+
     await store.appendVersion({ recordId: "b1", before: null, after: build({ title: "A" }), author: "me", source: "local", ts: at(0) });
     await store.appendVersion({ recordId: "b1", after: build({ title: "B" }), author: "me", source: "local", ts: at(60 * 60_000) });
     // Undo inside the window: v2 is REMOVED, and the tail is v1 ("A") again.
@@ -657,5 +699,235 @@ describe("summaries are re-rendered when the log is read", () => {
     await named.init();
     const tails = await named.listTails(["b1"], 10);
     expect(tails[0].summary).toContain("Koda's Warmth Enrichment");
+  });
+});
+
+// ─── a build is saved by hand, so a save is a version ───────────────────────
+
+// The bug this settles: set an enrichment, then change it again a minute later.
+// Both saves fell inside the coalescing window, so the second rewrote the first
+// in place as `diff(before-the-pair, after)` — one op reading `(none) → Koda's
+// Warmth`, with the Birthday enrichment in between nowhere on disk. Merging is
+// right for a document that autosaves and wrong for one saved by a click.
+describe("builds do not coalesce", () => {
+  // Consumables live under `equipment`, and the app stores an unset one as "" —
+  // which is what made the real log read `enrichment: (none) → 79926`.
+  const withEnrichment = (id) => {
+    const b = build();
+    b.equipment = { ...b.equipment, enrichment: id };
+    return b;
+  };
+
+  test("two saves seconds apart are two versions", async () => {
+    await store.appendVersion({ recordId: "b1", before: null, after: build({ title: "A" }), ts: at(0) });
+    await store.appendVersion({ recordId: "b1", after: build({ title: "B" }), ts: at(10_000) });
+    await store.appendVersion({ recordId: "b1", after: build({ title: "C" }), ts: at(20_000) });
+
+    const { versions } = await store.listVersions("b1");
+    expect(versions.map((v) => v.v)).toEqual([3, 2, 1]);
+  });
+
+  test("the value in the middle survives, and every version still reconstructs", async () => {
+    await store.appendVersion({ recordId: "b1", before: null, after: withEnrichment(""), ts: at(0) });
+    await store.appendVersion({ recordId: "b1", after: withEnrichment("79926"), ts: at(30_000) });
+    await store.appendVersion({ recordId: "b1", after: withEnrichment("79929"), ts: at(113_000) });
+
+    const { versions } = await store.listVersions("b1");
+    expect(versions[1].ops).toEqual([
+      { t: "consumable", path: "enrichment", before: "", after: "79926" },
+    ]);
+    expect(versions[0].ops).toEqual([
+      { t: "consumable", path: "enrichment", before: "79926", after: "79929" },
+    ]);
+    expect(await store.getVersion("b1", 2)).toEqual(withEnrichment("79926"));
+    expect(await store.getVersion("b1", 3)).toEqual(withEnrichment("79929"));
+  });
+
+  test("an edit that undoes itself is still two versions, not a removal", async () => {
+    await store.appendVersion({ recordId: "b1", before: null, after: build({ title: "A" }), ts: at(0) });
+    await store.appendVersion({ recordId: "b1", after: build({ title: "B" }), ts: at(10_000) });
+    await store.appendVersion({ recordId: "b1", after: build({ title: "A" }), ts: at(20_000) });
+
+    const { versions } = await store.listVersions("b1");
+    expect(versions.map((v) => v.v)).toEqual([3, 2, 1]);
+    expect(versions[0].summary).toBe('title: "B" → "A"');
+  });
+
+  test("comps still coalesce — this is a per-store setting, not a removal", async () => {
+    const comps = sharedStore();
+    await comps.init();
+    await comps.appendVersion({ recordId: "b1", before: null, after: build({ title: "A" }), author: "me", source: "local", ts: at(0) });
+    await comps.appendVersion({ recordId: "b1", after: build({ title: "B" }), author: "me", source: "local", ts: at(10_000) });
+    await comps.appendVersion({ recordId: "b1", after: build({ title: "C" }), author: "me", source: "local", ts: at(20_000) });
+
+    expect((await comps.listVersions("b1")).versions.map((v) => v.v)).toEqual([2, 1]);
+  });
+});
+
+// Moving a build between folders, adding it to a comp, dragging it in the
+// library: all `builds:save`, none of them an edit the user made to the build.
+describe("bookkeeping alone is not a build version", () => {
+  test("a folder move on its own writes nothing", async () => {
+    await store.appendVersion({ recordId: "b1", before: null, after: build(), ts: at(0) });
+    const v = await store.appendVersion({ recordId: "b1", after: build({ folderId: "f2" }), ts: at(60_000) });
+
+    expect(v).toBeNull();
+    expect((await store.listVersions("b1")).versions.map((x) => x.v)).toEqual([1]);
+  });
+
+  test("nothing is lost: the move rides along with the next real edit", async () => {
+    await store.appendVersion({ recordId: "b1", before: null, after: build(), ts: at(0) });
+    await store.appendVersion({ recordId: "b1", after: build({ folderId: "f2" }), ts: at(60_000) });
+    const v = await store.appendVersion({ recordId: "b1", after: build({ folderId: "f2", title: "Renamed" }), ts: at(120_000) });
+
+    // The diff base is the last VERSIONED document, not the last save, so the
+    // move is still in the ops — and the reconstruction is still exact.
+    expect(v.ops).toEqual(expect.arrayContaining([
+      { t: "meta", path: "folderId", before: "f1", after: "f2" },
+    ]));
+    expect(v.summary).toContain("moved to");
+    expect(await store.getVersion("b1", 2)).toEqual(build({ folderId: "f2", title: "Renamed" }));
+  });
+
+  test("a deletion is still recorded, bookkeeping or not", async () => {
+    await store.appendVersion({ recordId: "b1", before: null, after: build(), ts: at(0) });
+    const v = await store.appendVersion({
+      recordId: "b1", after: build({ deletedAt: "2026-09-02T00:00:00.000Z" }),
+      kind: "delete", ts: at(60_000),
+    });
+
+    // "Bring it back" reconstructs from this doc; it must never be skipped as
+    // an incidental-only change.
+    expect(v).toMatchObject({ v: 2, kind: "delete", summary: "Deleted" });
+    expect(v.doc.deletedAt).toBe("2026-09-02T00:00:00.000Z");
+  });
+
+  test("comps still version a folder move", async () => {
+    const comps = sharedStore();
+    await comps.init();
+    await comps.appendVersion({ recordId: "b1", before: null, after: build(), ts: at(0) });
+    const v = await comps.appendVersion({ recordId: "b1", after: build({ folderId: "f2" }), ts: at(10 * 60_000) });
+
+    expect(v).toMatchObject({ v: 2, kind: "meta" });
+  });
+});
+
+// ─── retention: an undo net, not an archive ────────────────────────────────
+
+// A count rather than an age, deliberately. Age deletes the wrong thing: a
+// record untouched for a month and then edited by mistake would have every one
+// of its versions fall outside the window at exactly the moment one was needed.
+describe("pruning trims a log to the newest MAX_VERSIONS", () => {
+  // v1 plus `n - 1` renames, none of which coalesce (builds never do).
+  async function versions(n, recordId = "b1") {
+    await store.appendVersion({ recordId, before: null, after: build({ title: "t1" }), ts: at(0) });
+    for (let i = 2; i <= n; i += 1) {
+      await store.appendVersion({ recordId, after: build({ title: `t${i}` }), ts: at(i * 1000) });
+    }
+  }
+
+  test("a log at or under the cap is left completely alone", async () => {
+    await versions(MAX_VERSIONS);
+    const before = await fs.readFile(path.join(dir, "history", "builds", "b1.jsonl"), "utf8");
+
+    expect(await store.pruneRecord("b1")).toBeNull();
+    expect(await fs.readFile(path.join(dir, "history", "builds", "b1.jsonl"), "utf8")).toBe(before);
+  });
+
+  test("over the cap, the oldest versions go and the newest MAX_VERSIONS stay", async () => {
+    await versions(MAX_VERSIONS + 30);
+
+    expect(await store.pruneRecord("b1")).toMatchObject({ dropped: 30, kept: MAX_VERSIONS, oldestVersion: 31 });
+    const { versions: kept } = await store.listVersions("b1", { limit: MAX_VERSIONS * 2 });
+    expect(kept).toHaveLength(MAX_VERSIONS);
+    expect(kept[0].v).toBe(MAX_VERSIONS + 30);
+    expect(kept[kept.length - 1].v).toBe(31);
+  });
+
+  test("the oldest survivor becomes a keyframe holding the right document", async () => {
+    await versions(MAX_VERSIONS + 30);
+    const head = (await store.listVersions("b1", { limit: MAX_VERSIONS * 2 })).versions[MAX_VERSIONS - 1];
+    await store.pruneRecord("b1");
+
+    const origin = (await store.listVersions("b1", { limit: MAX_VERSIONS * 2 })).versions[MAX_VERSIONS - 1];
+    // Still the version it always was — same number, same timestamp, still
+    // describing the change the user made then. What changed is that it now
+    // carries the document instead of the ops that produced it.
+    expect(origin).toMatchObject({ v: head.v, ts: head.ts, summary: head.summary });
+    expect(origin.ops).toBeUndefined();
+    expect(origin.doc).toEqual(build({ title: "t31" }));
+  });
+
+  test("every surviving version still reconstructs exactly", async () => {
+    await versions(MAX_VERSIONS + 30);
+    await store.pruneRecord("b1");
+
+    for (const v of [31, 32, 100, MAX_VERSIONS + 29, MAX_VERSIONS + 30]) {
+      expect(await store.getVersion("b1", v)).toEqual(build({ title: `t${v}` }));
+    }
+  });
+
+  test("a version below the new origin is gone, not a document built from nothing", async () => {
+    await versions(MAX_VERSIONS + 30);
+    await store.pruneRecord("b1");
+
+    // Version numbers are untouched by the prune, which keeps them dense and
+    // keeps getVersion's gap check meaningful. 30 simply no longer exists.
+    expect(await store.getVersion("b1", 30)).toBeNull();
+  });
+
+  test("the next save after a prune continues the chain", async () => {
+    await versions(MAX_VERSIONS + 30);
+    await store.pruneRecord("b1");
+
+    const v = await store.appendVersion({ recordId: "b1", after: build({ title: "after the prune" }), ts: at(10 ** 6) });
+    expect(v.v).toBe(MAX_VERSIONS + 31);
+    expect(await store.getVersion("b1", v.v)).toEqual(build({ title: "after the prune" }));
+  });
+
+  test("the delete keyframe survives, so a deleted record can still come back", async () => {
+    await versions(MAX_VERSIONS + 30);
+    await store.appendVersion({
+      recordId: "b1", after: build({ title: "gone", deletedAt: "2026-09-02T00:00:00.000Z" }),
+      kind: "delete", ts: at(10 ** 6),
+    });
+    await store.pruneRecord("b1");
+
+    const newest = (await store.listVersions("b1")).versions[0];
+    expect(newest).toMatchObject({ kind: "delete", summary: "Deleted" });
+    expect(newest.doc.deletedAt).toBe("2026-09-02T00:00:00.000Z");
+  });
+
+  test("a log whose new origin cannot be rebuilt is left exactly as it was", async () => {
+    await versions(MAX_VERSIONS + 30);
+    // A gap anywhere at or below the cutoff makes the origin unreconstructable.
+    await corruptVersion("b1", 20);
+    const before = await fs.readFile(path.join(dir, "history", "builds", "b1.jsonl"), "utf8");
+
+    expect(await store.pruneRecord("b1")).toBeNull();
+    expect(await fs.readFile(path.join(dir, "history", "builds", "b1.jsonl"), "utf8")).toBe(before);
+  });
+
+  test("pruneAll sweeps every log in the directory, including orphaned ones", async () => {
+    await versions(MAX_VERSIONS + 5, "b1");
+    await versions(MAX_VERSIONS + 7, "b2");
+    await versions(3, "b3");
+
+    // b2's record is gone from the library; its log is exactly the kind that
+    // would otherwise grow forever unnoticed, so the sweep reads the directory
+    // rather than taking a list of ids.
+    expect(await store.pruneAll()).toEqual({ records: 2, dropped: 12 });
+    expect((await store.listVersions("b3")).versions).toHaveLength(3);
+  });
+
+  test("pruneAll on a store with no directory yet is a no-op, not a throw", async () => {
+    const empty = new BuildHistoryStore(await fs.mkdtemp(path.join(os.tmpdir(), "axiforge-empty-")));
+    expect(await empty.pruneAll()).toEqual({ records: 0, dropped: 0 });
+  });
+
+  test("the prune leaves no temp file behind", async () => {
+    await versions(MAX_VERSIONS + 30);
+    await store.pruneRecord("b1");
+    expect(await fs.readdir(path.join(dir, "history", "builds"))).toEqual(["b1.jsonl"]);
   });
 });

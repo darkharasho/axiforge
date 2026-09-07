@@ -5,7 +5,9 @@ const fs = require("node:fs/promises");
 const crypto = require("node:crypto");
 const { VersionLog } = require("./history/versionLog");
 const { renderSummary } = require("./history/renderSummary");
-const { KEYFRAME_INTERVAL, COALESCE_WINDOW_MS, DOC_CACHE_RECORDS } = require("./history/constants");
+const {
+  KEYFRAME_INTERVAL, COALESCE_WINDOW_MS, DOC_CACHE_RECORDS, MAX_VERSIONS,
+} = require("./history/constants");
 
 /**
  * Per-record version history, on disk as one append-only JSONL log per record:
@@ -100,14 +102,29 @@ class HistoryStore {
    * places that append a version (save, revert, team-sync pull, tombstone,
    * trash, migration) cannot each forget to.
    *
+   * `coalesce` and `versionIncidental` are the two places builds and comps
+   * genuinely want different behaviour, and both follow from how each is
+   * saved. A build is saved by an explicit click, so a version per save is a
+   * version per decision and merging two of them destroys a state the user
+   * chose; its bookkeeping (a folder move, comp membership, a drag-reorder) is
+   * written by the library on the user's behalf and is not an edit to the
+   * build. A comp autosaves its notes on a debounce, so it needs the window,
+   * and a comp moving between folders is worth a line in the folder feed.
+   *
+   * Both default to the comp behaviour, which is the older one: a subclass has
+   * to ask to opt out.
+   *
    * @param {{subdir: string,
    *          differ: {diff: Function, applyOps: Function, classify: Function},
-   *          summaryOpts?: object|Function}} opts
+   *          summaryOpts?: object|Function,
+   *          coalesce?: boolean, versionIncidental?: boolean}} opts
    */
-  constructor(baseDir, { subdir, differ, summaryOpts = {} }) {
+  constructor(baseDir, { subdir, differ, summaryOpts = {}, coalesce = true, versionIncidental = true }) {
     this.dir = path.join(baseDir, "history", subdir);
     this.differ = differ;
     this.summaryOpts = summaryOpts;
+    this.coalesceByDefault = coalesce !== false;
+    this.versionIncidental = versionIncidental !== false;
   }
 
   // appendVersion is fire-and-forget from several places (local save, shared
@@ -212,13 +229,14 @@ class HistoryStore {
     kind,
     ts = new Date().toISOString(),
     summaryOpts,
-    // Opt out of the coalescing window. Live saves always want it on; the v1
+    // Opt out of the coalescing window. Comps want it on; builds turn it off
+    // store-wide (see the constructor). The v1
     // migration (history/migrateV1.js) wants it off, because every v1 entry is
     // already a version the user committed to and can see. Merging two of them
     // because they happen to sit five minutes apart would delete history the
     // migration exists to preserve — in the measured baseline that is 39 of
     // 131 entries.
-    coalesce: allowCoalesce = true,
+    coalesce: allowCoalesce = this.coalesceByDefault,
   }) {
     const { diff, classify } = this.differ;
     const log = this.#logFor(recordId);
@@ -255,6 +273,12 @@ class HistoryStore {
       if (ops.length === 0) return null;
       const { substantive, incidental } = classify(ops);
       if (substantive.length === 0 && incidental.length === 0) return null;
+      // Bookkeeping on its own is not an edit here (builds). Nothing is lost by
+      // skipping it: the diff base is the last VERSIONED document, so the move
+      // still appears as an op on the next real edit and its summary still
+      // says where the record went — it just does not get a row of its own.
+      // A deletion is exempt by construction; `isDelete` never reaches here.
+      if (!this.versionIncidental && substantive.length === 0) return null;
     }
 
     // Resolved here rather than at the top: a save that writes no version (the
@@ -474,6 +498,92 @@ class HistoryStore {
       .flat()
       .sort((a, b) => (a.ts < b.ts ? 1 : a.ts > b.ts ? -1 : 0))
       .slice(0, limit);
+  }
+
+  /* ---------------------------------------------------------------- prune */
+
+  /**
+   * Trim every log in this store's directory back to MAX_VERSIONS.
+   *
+   * Reads the directory rather than taking a list of record ids: a log whose
+   * record was purged is exactly the kind that would otherwise grow forever
+   * unnoticed. Sequential on purpose — this runs at startup beside the trash
+   * sweep, and a parallel fan-out over every record in a library would be a
+   * burst of whole-file reads and rewrites competing with the launch.
+   *
+   * Never throws. A log that cannot be pruned is left exactly as it was.
+   *
+   * @returns {Promise<{records: number, dropped: number}>}
+   */
+  async pruneAll() {
+    let names;
+    try {
+      names = (await fs.readdir(this.dir)).filter((f) => f.endsWith(".jsonl"));
+    } catch (err) {
+      if (!err || err.code !== "ENOENT") logDegrade("pruneAll", this.dir, err);
+      return { records: 0, dropped: 0 };
+    }
+    let records = 0;
+    let dropped = 0;
+    for (const name of names) {
+      const result = await this.pruneRecord(name.slice(0, -".jsonl".length));
+      if (result && result.dropped > 0) {
+        records += 1;
+        dropped += result.dropped;
+      }
+    }
+    return { records, dropped };
+  }
+
+  /**
+   * Trim one record's log to the newest MAX_VERSIONS.
+   *
+   * Queued behind writes: this rewrites the whole file, and an append landing
+   * halfway through would be written at an offset the rename then throws away.
+   */
+  async pruneRecord(recordId) {
+    return this.#enqueue(() => this.#pruneRecord(recordId)).catch((err) => {
+      logDegrade("pruneRecord", recordId, err);
+      return null;
+    });
+  }
+
+  async #pruneRecord(recordId) {
+    const log = this.#logFor(recordId);
+    const { entries } = await log.readAll();
+    const live = entries.filter(Boolean);
+    const keepFrom = live.length - MAX_VERSIONS;
+    if (keepFrom <= 0) return null;
+
+    // The oldest surviving entry becomes the log's new origin, so it needs the
+    // whole document rather than the patch it was written as — a JSONL log of
+    // patches cannot be pruned by dropping its head, because the survivors
+    // reconstruct through the keyframe that would go with it. If the document
+    // cannot be rebuilt — a torn line, a gap in the chain — there is no honest
+    // origin to write and the file is left alone. A log that is too big is a
+    // far smaller problem than one whose history cannot be read.
+    const head = live[keepFrom];
+    const doc = await this.getVersion(recordId, head.v);
+    if (doc === null) {
+      logDegrade("pruneRecord", `${recordId}@${head.v}`, new Error("could not materialize the new origin"));
+      return null;
+    }
+
+    // Keeps its own v, ts, author and summary: it is still the version it
+    // always was, and still describes the change the user made then. What
+    // changes is that it now carries the document instead of the ops that
+    // produced it — `doc` presence is what marks a keyframe, so the rest of
+    // the store needs no special case for a pruned head. Version numbers are
+    // untouched, which keeps them dense and keeps `getVersion`'s gap check
+    // meaningful; a version below the new origin now simply does not exist.
+    const origin = { ...head, doc };
+    delete origin.ops;
+    const kept = [origin, ...live.slice(keepFrom + 1)];
+
+    await log.rewrite(kept);
+    // Every offset and every memoized document for this record is now suspect.
+    this.#docs.delete(sanitizeId(recordId));
+    return { dropped: keepFrom, kept: kept.length, oldestVersion: origin.v };
   }
 
   /* ----------------------------------------------------------------- delete */

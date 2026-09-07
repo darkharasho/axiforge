@@ -13,6 +13,7 @@ const path = require("node:path");
 const fs = require("node:fs/promises");
 const os = require("node:os");
 const { BuildHistoryStore } = require("../../../src/main/buildHistoryStore");
+const { HistoryStore } = require("../../../src/main/historyStore");
 const { compareVersions } = require("../../../src/main/history/compareVersions");
 const { renderSummary } = require("../../../src/main/history/renderSummary");
 const diffBuild = require("../../../src/main/history/diffBuild");
@@ -44,6 +45,16 @@ afterEach(() => fs.rm(dir, { recursive: true, force: true }));
 const compare = (fromV, toV, summaryOpts) => compareVersions({
   store, differ: diffBuild, recordId: "b1", fromV, toV, summaryOpts,
 });
+
+// A folder move on its own writes no BUILD version — the library does it on the
+// user's behalf and it is not an edit to the build (see buildHistoryStore.js).
+// Comps do version it, because a comp moving between folders is worth a line in
+// the folder feed, so the two cases below run on a store configured their way.
+// Its own subdirectory keeps it off `store`'s files.
+function movesAreVersions() {
+  store = new HistoryStore(dir, { subdir: "shared", differ: diffBuild });
+  return store.init();
+}
 
 describe("compareVersions", () => {
   test("a value that changes and changes back reports as unchanged across the span", async () => {
@@ -102,6 +113,8 @@ describe("compareVersions", () => {
   });
 
   test("a folder move reads the same way in the compare table as in the entry list", async () => {
+    await movesAreVersions();
+
     // The drift this fix exists to kill: the entry list rendered "moved to
     // another folder" (renderSummary) while the compare table rendered its own
     // "folder: f1 → f2". Both now come from renderOpDetail.
@@ -115,6 +128,8 @@ describe("compareVersions", () => {
   });
 
   test("the folder name resolver reaches the label, so both sides can name the folder", async () => {
+    await movesAreVersions();
+
     await store.appendVersion({ recordId: "b1", before: null, after: build(), ts: at(0) });
     await store.appendVersion({ recordId: "b1", after: build({ folderId: "f2" }), ts: at(30) });
 

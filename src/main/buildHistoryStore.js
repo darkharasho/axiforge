@@ -23,7 +23,19 @@ const diffBuild = require("./history/diffBuild");
  */
 class BuildHistoryStore extends HistoryStore {
   constructor(baseDir, summaryOpts = {}) {
-    super(baseDir, { subdir: "builds", differ: diffBuild, summaryOpts });
+    super(baseDir, {
+      subdir: "builds",
+      differ: diffBuild,
+      summaryOpts,
+      // A build is saved by an explicit click — there is no autosave in the
+      // editor — so every save is already a decision, and merging two of them
+      // inside a five-minute window destroys the state between: change an
+      // enrichment and change it again, and the log kept only the second.
+      coalesce: false,
+      // Moving a build between folders, adding it to a comp, dragging it in
+      // the library: written on the user's behalf, not edits to the build.
+      versionIncidental: false,
+    });
   }
 }
 

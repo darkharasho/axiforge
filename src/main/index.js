@@ -581,6 +581,17 @@ const readyWork = app.whenReady().then(async () => {
   // Sweep anything past the retention window. Never blocks startup: a failed
   // sweep means items linger in the trash, which is harmless.
   trash.purgeExpired().catch((err) => console.warn("[trash] sweep failed:", err.message));
+  // Same posture for version history: it is an undo net, not an archive, so
+  // everything past the newest MAX_VERSIONS goes. Sequential inside, never
+  // awaited here — a library with hundreds of records must not add its prune
+  // to launch time.
+  Promise.all([
+    buildHistoryStore.pruneAll(),
+    compHistoryStore.pruneAll(),
+  ]).then(([builds, comps]) => {
+    const dropped = builds.dropped + comps.dropped;
+    if (dropped) console.warn(`[history] pruned ${dropped} old version(s) across ${builds.records + comps.records} record(s)`);
+  }).catch((err) => console.warn("[history] prune failed:", err.message));
   // Once-a-day snapshot of the user's library (kept 7 days) under data/backups/.
   // Cheap insurance on top of the per-write .bak generation in jsonFile.js.
   snapshotDaily(dataDir, ["builds.json", "comps.json", "folders.json", "settings.json"]).catch(() => {});

@@ -3,11 +3,42 @@
 // How often a verbatim document is written instead of a patch. Reconstruction
 // never walks more than this many lines; raising it shrinks files and
 // lengthens the walk.
-const KEYFRAME_INTERVAL = 20;
+//
+// This used to be 20, back when logs grew without bound and a keyframe was the
+// only thing stopping the walk from getting long. The cap below changed that:
+// pruning rewrites a log with a freshly materialized keyframe at its head, so
+// the walk is bounded by MAX_VERSIONS rather than by this number, and periodic
+// keyframes are nearly redundant. What they still buy is blast radius — a line
+// that fails to parse costs every version back to the previous keyframe — so
+// this stays finite rather than going away.
+const KEYFRAME_INTERVAL = 100;
 
 // Successive edits by the same author and source inside this window merge into
 // one version instead of appending a new one.
+//
+// Only comps use this. A build is saved by an explicit click, so every version
+// already corresponds to a decision the user made, and merging two of them
+// destroys the middle state: setting an enrichment and then changing it again
+// inside the window left one op reading `(none) -> the second one`, with the
+// first nowhere on disk. Comps DO autosave — the notes textarea writes on a
+// debounce — so without this, typing a paragraph would log a version per
+// pause. See `coalesce` in historyStore.js's constructor.
 const COALESCE_WINDOW_MS = 5 * 60 * 1000;
+
+// How many versions a record keeps. Older ones are pruned.
+//
+// History here is an undo net — "I changed something I did not mean to" — not
+// an archive, so the recent past is the useful part and the rest is weight.
+//
+// A count, deliberately, rather than an age. Age deletes the wrong thing: a
+// record left untouched for a month and then edited by mistake would have
+// every one of its versions fall outside the window at exactly the moment one
+// was needed. A count guarantees the last MAX_VERSIONS are always there,
+// however long ago they happened. It also keeps the clock out of the store
+// entirely, which is why nothing here needs a fake timer to test, and it keeps
+// the tail — the delete keyframe "Bring it back" reconstructs from — safe by
+// construction.
+const MAX_VERSIONS = 150;
 
 // How much of a log's tail is read to locate the final newline on a cold start.
 const TAIL_BYTES = 65536;
@@ -67,6 +98,7 @@ const NON_VERSIONED_PATHS = [
 module.exports = {
   KEYFRAME_INTERVAL,
   COALESCE_WINDOW_MS,
+  MAX_VERSIONS,
   TAIL_BYTES,
   DOC_CACHE_RECORDS,
   PRE_V2_ALTERNATES,
