@@ -127,3 +127,55 @@ describe("renderSummary", () => {
     });
   });
 });
+
+// ─── comp ops (history/diffComp.js) ─────────────────────────────────────────
+
+describe("renderSummary — comps", () => {
+  test("names the party and the slot, one-based, resolving build ids to titles", () => {
+    const ops = [{ t: "slot", line: 1, index: 2, before: "b1", after: "b2" }];
+    const buildNameOf = (id) => ({ b1: "Heal Druid", b2: "Alacrity Mechanist" }[id]);
+    expect(renderSummary(ops, { buildNameOf })).toBe("party 2 slot 3: Heal Druid → Alacrity Mechanist");
+  });
+
+  test("an unresolvable id still renders — the raw id beats saying nothing", () => {
+    expect(renderSummary([{ t: "slot", line: 0, index: 0, before: null, after: "b9" }]))
+      .toBe("party 1 slot 1: (none) → b9");
+  });
+
+  test("a category slot reads as the category it reserves, not as a build", () => {
+    expect(renderSummary([{ t: "slot", line: 0, index: 4, before: null, after: "tag:heal" }]))
+      .toBe("party 1 slot 5: (none) → any heal");
+  });
+
+  test("many slot moves group into a count rather than five clauses", () => {
+    const ops = [0, 1, 2, 3, 4].map((index) => ({ t: "slot", line: 0, index, before: null, after: `b${index}` }));
+    expect(renderSummary(ops)).toBe("5 party slots");
+  });
+
+  test("a comp rename quotes the name", () => {
+    expect(renderSummary([{ t: "field", path: "name", before: "Zerg", after: "Havoc" }]))
+      .toBe('name: "Zerg" → "Havoc"');
+  });
+});
+
+describe("renderSummary — comp party lines", () => {
+  test("a party added reads as such, not as serialised JSON", () => {
+    expect(renderSummary([{ t: "raw", path: "partyLines.1", before: undefined, after: { id: "l2", slots: [] } }]))
+      .toBe("party 2 added");
+  });
+
+  test("a party removed reads as such", () => {
+    expect(renderSummary([{ t: "raw", path: "partyLines.1", before: { id: "l2", slots: [] }, after: undefined }]))
+      .toBe("party 2 removed");
+  });
+
+  test("a line attribute names the party it belongs to", () => {
+    expect(renderSummary([{ t: "raw", path: "partyLines.0.capacity", before: 5, after: 10 }]))
+      .toBe("party 1 capacity: 5 → 10");
+  });
+
+  test("the whole container changing shape says so plainly", () => {
+    expect(renderSummary([{ t: "raw", path: "partyLines", before: [], after: null }]))
+      .toBe("party lines changed");
+  });
+});

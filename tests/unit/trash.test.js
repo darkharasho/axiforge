@@ -30,8 +30,8 @@ describe("trash — builds", () => {
 
   test("trashing a build hides it from the library but keeps its history", async () => {
     const build = await h.buildStore.upsertBuild({ title: "Scourge" });
-    await h.historyStore.addEntry({
-      buildId: build.id, authorLogin: "local", source: "local", summary: "Created", snapshot: build,
+    await h.historyStore.appendVersion({
+      recordId: build.id, before: null, after: build, author: "local", source: "local",
     });
 
     await h.trash.trashBuilds([build.id]);
@@ -62,8 +62,8 @@ describe("trash — builds", () => {
     await h.compStore.upsertComp({
       name: "Zerg", buildIds: [build.id], partyLines: [{ id: "l1", capacity: 5, slots: [build.id] }],
     });
-    await h.historyStore.addEntry({
-      buildId: build.id, authorLogin: "local", source: "local", summary: "Created", snapshot: build,
+    await h.historyStore.appendVersion({
+      recordId: build.id, before: null, after: build, author: "local", source: "local",
     });
     await h.trash.trashBuilds([build.id]);
 

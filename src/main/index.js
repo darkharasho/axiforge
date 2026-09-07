@@ -19,8 +19,8 @@ const { CompStore } = require("./compStore");
 const { createTrash } = require("./trash");
 const { createArchive } = require("./archive");
 const { SyncStore } = require("./syncStore");
-const { BuildHistoryStore, summarizeBuildChange } = require("./buildHistoryStore");
-const { CompHistoryStore, summarizeCompChange } = require("./compHistoryStore");
+const { BuildHistoryStore } = require("./buildHistoryStore");
+const { CompHistoryStore } = require("./compHistoryStore");
 const { TeamSync } = require("./teamSync");
 const { beginGitHubDeviceAuth, completeGitHubDeviceAuth } = require("./githubAuth");
 const {
@@ -616,17 +616,6 @@ const readyWork = app.whenReady().then(async () => {
   handle("builds:save", async (_e, build) => {
     const existing = build.id ? (await store.listBuilds()).find((b) => b.id === build.id) : null;
     const oldFolderId = existing?.folderId ?? null;
-    // Capture history before overwriting (non-blocking — never fails the save)
-    if (existing) {
-      const auth = await getAuthRecord().catch(() => null);
-      buildHistoryStore.addEntry({
-        buildId: existing.id,
-        authorLogin: auth?.viewer?.login || "local",
-        source: "local",
-        summary: summarizeBuildChange(existing, build),
-        snapshot: existing,
-      }).catch((err) => console.warn("[history] addEntry failed:", err.message));
-    }
     // Guard BEFORE the local write: a refusal after the upsert would leave the
     // build locally moved with nothing tombstoned in the source team.
     // upsertBuild PRESERVES the existing folder when the payload's folderId is
@@ -635,16 +624,20 @@ const readyWork = app.whenReady().then(async () => {
       itemId: build.id, oldFolderId, newFolderId: build.folderId ?? oldFolderId, label: "build",
     });
     const saved = await store.upsertBuild(build);
-    // Record creation for new builds so folder history panel shows the initial save.
-    if (!existing) {
+    // History records the SAVED record, not the payload: a partial save merges
+    // into the stored build, so the payload is not what the build now is.
+    // Non-blocking — history is never worth failing a save over. The store
+    // diffs its own stored tail, so `existing` only seeds a record that has no
+    // history yet.
+    {
       const auth = await getAuthRecord().catch(() => null);
-      buildHistoryStore.addEntry({
-        buildId: saved.id,
-        authorLogin: auth?.viewer?.login || "local",
+      buildHistoryStore.appendVersion({
+        recordId: saved.id,
+        before: existing,
+        after: saved,
+        author: auth?.viewer?.login || "local",
         source: "local",
-        summary: "Created",
-        snapshot: saved,
-      }).catch((err) => console.warn("[history] addEntry failed:", err.message));
+      }).catch((err) => console.warn("[history] appendVersion failed:", err.message));
     }
     if (saved.folderId) {
       await folderStore.touchFolders([saved.folderId]);
@@ -718,7 +711,7 @@ const readyWork = app.whenReady().then(async () => {
 
   // Build history
   handle("builds:get-history", async (_e, buildId) => {
-    return buildHistoryStore.getHistory(buildId);
+    return (await buildHistoryStore.listVersions(buildId, { limit: 200 })).versions;
   });
 
   handle("folders:get-history", async (_e, folderId) => {
@@ -787,16 +780,15 @@ const readyWork = app.whenReady().then(async () => {
     }
 
     // Sort newest first
-    entries.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    entries.sort((a, b) => new Date(b.ts) - new Date(a.ts));
     return entries;
   });
 
-  handle("comps:get-history", async (_e, compId) => compHistoryStore.getHistory(compId));
+  handle("comps:get-history", async (_e, compId) => (await compHistoryStore.listVersions(compId, { limit: 200 })).versions);
 
-  handle("comps:revert", async (_e, compId, historyEntryId) => {
-    const entries = await compHistoryStore.getHistory(compId);
-    const entry = entries.find((e) => e.id === historyEntryId);
-    if (!entry) throw new Error("History entry not found");
+  handle("comps:revert", async (_e, compId, versionNumber) => {
+    const doc = await compHistoryStore.getVersion(compId, versionNumber);
+    if (!doc) throw new Error("History entry not found");
 
     // Same as builds:revert — a comp sitting in the trash has to come out of it,
     // or upsertComp carries the deletedAt stamp over and the revert writes a
@@ -808,26 +800,24 @@ const readyWork = app.whenReady().then(async () => {
 
     const current = (await compStore.listComps()).find((c) => c.id === compId);
     const auth = await getAuthRecord().catch(() => null);
+    const saved = await compStore.upsertComp(doc);
     if (current) {
-      compHistoryStore.addEntry({
-        compId,
-        authorLogin: auth?.viewer?.login || "local",
+      compHistoryStore.appendVersion({
+        recordId: compId,
+        before: current,
+        after: saved,
+        author: auth?.viewer?.login || "local",
         source: "revert",
-        summary: `reverted to ${new Date(entry.timestamp).toLocaleString()}`,
-        snapshot: current,
-      }).catch((err) => console.warn("[comp-history] revert addEntry failed:", err.message));
+      }).catch((err) => console.warn("[comp-history] revert appendVersion failed:", err.message));
     }
-
-    const saved = await compStore.upsertComp(entry.snapshot);
     const teamRoot = await findTeamRoot(saved.folderId);
     if (teamRoot) await safeEnqueue(() => teamSync.enqueue(teamRoot.teamId, saved.id, "comp", "put"), { type: "comp", id: saved.id });
     return saved;
   });
 
-  handle("builds:revert", async (_e, buildId, historyEntryId) => {
-    const entries = await buildHistoryStore.getHistory(buildId);
-    const entry = entries.find((e) => e.id === historyEntryId);
-    if (!entry) throw new Error("History entry not found");
+  handle("builds:revert", async (_e, buildId, versionNumber) => {
+    const doc = await buildHistoryStore.getVersion(buildId, versionNumber);
+    if (!doc) throw new Error("History entry not found");
 
     // Restoring a version of a build that is currently in the trash has to take
     // it OUT of the trash — otherwise upsertBuild carries the deletedAt stamp
@@ -844,17 +834,16 @@ const readyWork = app.whenReady().then(async () => {
     const currentBuilds = await store.listBuilds();
     const currentBuild = currentBuilds.find((b) => b.id === buildId);
     const auth = await getAuthRecord().catch(() => null);
+    const saved = await store.upsertBuild(doc);
     if (currentBuild) {
-      buildHistoryStore.addEntry({
-        buildId,
-        authorLogin: auth?.viewer?.login || "local",
+      buildHistoryStore.appendVersion({
+        recordId: buildId,
+        before: currentBuild,
+        after: saved,
+        author: auth?.viewer?.login || "local",
         source: "revert",
-        summary: `reverted to ${new Date(entry.timestamp).toLocaleString()}`,
-        snapshot: currentBuild,
-      }).catch((err) => console.warn("[history] revert addEntry failed:", err.message));
+      }).catch((err) => console.warn("[history] revert appendVersion failed:", err.message));
     }
-
-    const saved = await store.upsertBuild(entry.snapshot);
     if (saved.folderId) {
       await folderStore.touchFolders([saved.folderId]);
     }
@@ -996,19 +985,6 @@ const readyWork = app.whenReady().then(async () => {
   handle("comps:save", async (_e, comp) => {
     const existing = comp.id ? (await compStore.listComps()).find((c) => c.id === comp.id) : null;
     const oldFolderId = existing?.folderId ?? null;
-    // Capture history before overwriting (non-blocking — never fails the save),
-    // exactly as builds:save does.
-    if (existing) {
-      const auth = await getAuthRecord().catch(() => null);
-      const titleOf = await compBuildTitleResolver();
-      compHistoryStore.addEntry({
-        compId: existing.id,
-        authorLogin: auth?.viewer?.login || "local",
-        source: "local",
-        summary: summarizeCompChange(existing, comp, titleOf),
-        snapshot: existing,
-      }).catch((err) => console.warn("[comp-history] addEntry failed:", err.message));
-    }
     // Guard BEFORE the local write — see builds:save.
     // Resolve the destination the way upsertComp will actually store it: an
     // ABSENT folderId is a partial save that leaves the comp where it is, not a
@@ -1019,15 +995,18 @@ const readyWork = app.whenReady().then(async () => {
       itemId: comp.id, oldFolderId, newFolderId, label: "comp",
     });
     const saved = await compStore.upsertComp(comp);
-    if (!existing) {
+    // Non-blocking — never fails the save, exactly as builds:save does.
+    {
       const auth = await getAuthRecord().catch(() => null);
-      compHistoryStore.addEntry({
-        compId: saved.id,
-        authorLogin: auth?.viewer?.login || "local",
+      const titleOf = await compBuildTitleResolver();
+      compHistoryStore.appendVersion({
+        recordId: saved.id,
+        before: existing,
+        after: saved,
+        author: auth?.viewer?.login || "local",
         source: "local",
-        summary: "Created",
-        snapshot: saved,
-      }).catch((err) => console.warn("[comp-history] addEntry failed:", err.message));
+        summaryOpts: { buildNameOf: titleOf },
+      }).catch((err) => console.warn("[comp-history] appendVersion failed:", err.message));
     }
     if (newRoot) await safeEnqueue(() => teamSync.enqueue(newRoot.teamId, saved.id, "comp", "put"), { type: "comp", id: saved.id });
     if (oldRoot && oldRoot.id !== newRoot?.id) {

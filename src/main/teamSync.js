@@ -631,10 +631,10 @@ class TeamSync {
         const existing = (await this.buildStore.listBuilds()).find((b) => b.id === id)
           || (await this.buildStore.listTrashedBuilds()).find((b) => b.id === id);
         if (existing) {
-          await this.historyStore.addEntry({
-            buildId: id, authorLogin: author, source: "team-sync",
-            summary: "Deleted", snapshot: existing,
-          }).catch((err) => console.warn("[history] tombstone addEntry failed:", err.message));
+          await this.historyStore.appendVersion({
+            recordId: id, before: null, after: existing,
+            author, source: "team-sync", kind: "delete",
+          }).catch((err) => console.warn("[history] tombstone appendVersion failed:", err.message));
         }
       }
       await this.trash.trashBuilds([id]);
@@ -643,10 +643,10 @@ class TeamSync {
         const existing = (await this.compStore.listComps()).find((c) => c.id === id)
           || (await this.compStore.listTrashedComps()).find((c) => c.id === id);
         if (existing) {
-          await this.compHistoryStore.addEntry({
-            compId: id, authorLogin: author, source: "team-sync",
-            summary: "Deleted", snapshot: existing,
-          }).catch((err) => console.warn("[comp-history] tombstone addEntry failed:", err.message));
+          await this.compHistoryStore.appendVersion({
+            recordId: id, before: null, after: existing,
+            author, source: "team-sync", kind: "delete",
+          }).catch((err) => console.warn("[comp-history] tombstone appendVersion failed:", err.message));
         }
       }
       await this.trash.trashComps([id]);
@@ -825,35 +825,47 @@ class TeamSync {
     if (item.type === "folder") {
       saved = await this.folderStore.upsertFolder({ id: item.id, name: body.name, sortOrder: body.sortOrder, parentId: folderId });
     } else if (item.type === "build") {
-      let existing = null;
-      if (!isOwnWrite) {
-        const { summarizeBuildChange } = require("./buildHistoryStore");
-        existing = (await this.buildStore.listBuilds()).find((b) => b.id === item.id) || null;
-        summary = existing ? summarizeBuildChange(existing, { ...body, folderId }) : "Created";
-      }
-      if (this.historyStore && !isOwnWrite) {
-        this.historyStore.addEntry({
-          buildId: item.id, authorLogin: author, source: "team-sync",
-          summary,
-          snapshot: existing || { ...body, id: item.id, folderId },
-        }).catch((err) => console.warn("[history] team-sync addEntry failed:", err.message));
-      }
+      // The pre-change record has to be read BEFORE the upsert overwrites it,
+      // and the post-change record has to be read AFTER: the upsert merges the
+      // body into what is already stored, so the body on its own is not what
+      // the build now is. Diffing the body would report every field the remote
+      // omitted as cleared.
+      const existing = !isOwnWrite && this.historyStore
+        ? ((await this.buildStore.listBuilds()).find((b) => b.id === item.id) || null)
+        : null;
       saved = await this.buildStore.upsertBuild({ ...body, id: item.id, folderId });
+      if (this.historyStore && !isOwnWrite) {
+        // The summary is the version's own — the store diffs its stored tail
+        // against the saved record, so it stays right even when an earlier
+        // save wrote no version at all. `existing` only seeds a record that
+        // has no history yet.
+        const version = await this.historyStore.appendVersion({
+          recordId: item.id, before: existing, after: saved, author, source: "team-sync",
+        }).catch((err) => {
+          console.warn("[history] team-sync appendVersion failed:", err.message);
+          return null;
+        });
+        summary = version ? version.summary : null;
+      }
     } else if (item.type === "comp") {
       // Same attribution rule as builds: a teammate's restructuring of a comp is
       // exactly the change someone will want to look up later.
+      // Same before/after ordering as builds above, and for the same reason.
+      const existing = !isOwnWrite && this.compHistoryStore
+        ? ((await this.compStore.listComps()).find((c) => c.id === item.id) || null)
+        : null;
+      saved = await this.compStore.upsertComp({ ...body, id: item.id, folderId });
       if (this.compHistoryStore && !isOwnWrite) {
-        const { summarizeCompChange } = require("./compHistoryStore.js");
-        const existing = (await this.compStore.listComps()).find((c) => c.id === item.id);
         const builds = await this.buildStore.listBuilds();
         const titleOf = (id) => builds.find((b) => b.id === id)?.title;
-        await this.compHistoryStore.addEntry({
-          compId: item.id, authorLogin: author, source: "team-sync",
-          summary: existing ? summarizeCompChange(existing, { ...body, folderId }, titleOf) : "Created",
-          snapshot: existing || { ...body, id: item.id, folderId },
-        }).catch((err) => console.warn("[comp-history] team-sync addEntry failed:", err.message));
+        await this.compHistoryStore.appendVersion({
+          recordId: item.id, before: existing, after: saved, author, source: "team-sync",
+          // Named and placed, not counted: "party 1 slot 2: Heal Druid →
+          // Firebrand" is the difference between a log and a useful one, and
+          // the titles are not in the comp itself.
+          summaryOpts: { buildNameOf: titleOf },
+        }).catch((err) => console.warn("[comp-history] team-sync appendVersion failed:", err.message));
       }
-      saved = await this.compStore.upsertComp({ ...body, id: item.id, folderId });
     }
     await this.syncStore.setVersion(teamId, item.id, { version: item.version, createdBy });
     this._emit("sync-status", {

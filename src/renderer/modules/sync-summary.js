@@ -6,14 +6,14 @@
 /**
  * Say what a teammate just changed, in one line.
  *
- * `summarizeBuildChange()` lists EVERY changed field, joined with "; ", because
+ * `main/history/renderSummary.js` lists EVERY changed field, joined with "; ", because
  * the history panel has a whole row to spend on it. A toast does not: a build
  * that arrives with new gear, new notes and a new title reads as a paragraph
  * and gets clipped mid-word. Keep the first few clauses and count the rest, so
  * the line stays readable and still admits there was more.
  *
  * @param {string|null|undefined} author the login of whoever made the change
- * @param {string|null|undefined} summary a summarizeBuildChange() result
+ * @param {string|null|undefined} summary a renderSummary() result
  * @param {{max?: number}} [opts] how many clauses to name before counting
  * @returns {string} a complete sentence, always — an event with no summary
  *   still has to announce that something arrived.

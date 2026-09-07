@@ -1,8 +1,9 @@
 "use strict";
 
-// Turns a diffBuild.js op list into the one-line summary shown in the history
-// entry list. `derived` ops never surface here — they round-trip but are not
-// user-facing edits. Everything else gets a phrase in the register the
+// Turns a diffBuild.js / diffComp.js op list into the one-line summary shown
+// in the history entry list. `derived` ops never surface here — they
+// round-trip but are not user-facing edits. Everything else gets a phrase in
+// the register the
 // existing UI already uses (see `renderMiniBuildCard` / `EQUIP_*_SLOTS` in
 // src/renderer/modules/constants.js), except `head`, which the panel calls
 // "helm" — matched here verbatim per the brief's own test.
@@ -12,7 +13,7 @@
 //     (`sync-summary.js`) splits on that separator to truncate long lists, so
 //     the separator is load-bearing and must not change.
 //   - 5+ ops: ops are grouped into counted categories (gear slots, sigils,
-//     skills, traits) plus one bare noun per everything else, joined with
+//     skills, traits, party slots) plus one bare noun per everything else, joined with
 //     ", " into a SINGLE clause — no semicolons, so it always renders whole.
 
 const SLOT_LABELS = {
@@ -62,6 +63,12 @@ const FIELD_META = {
   selectedUnderwaterLegends: { noun: "underwater legends", detail: () => "underwater legends changed" },
   selectedPets: { noun: "pets", detail: () => "pets changed" },
   morphSkillIds: { noun: "morph skills", detail: () => "morph skills changed" },
+  // Comp fields (history/diffComp.js). A comp's free-text name is worth
+  // quoting for the same reason a build's title is.
+  name: { noun: "name", detail: (b, a) => `name: "${fmtValue(b)}" → "${fmtValue(a)}"` },
+  buildIds: { noun: "members", detail: () => "members changed" },
+  categories: { noun: "categories", detail: () => "categories changed" },
+  buildColors: { noun: "slot colours", detail: () => "slot colours changed" },
 };
 
 /* ------------------------------------------------------------------ helpers */
@@ -96,6 +103,27 @@ function gearSlotLabel(slotRaw) {
 function gearPartLabel(part) {
   if (/^sigil\d+$/.test(String(part))) return "sigil";
   return GEAR_PART_LABEL[part] || "";
+}
+
+// A comp slot holds a build id, a "tag:<categoryId>" category, null, or (in
+// older records) a whole embedded build. `buildNameOf` turns an id into the
+// title a teammate would recognise; without it the raw id is still truthful.
+function partySlotValue(value, opts) {
+  if (value === null || value === undefined || value === "") return "(none)";
+  if (typeof value === "object") return fmtValue(value);
+  const raw = String(value);
+  if (raw.startsWith("tag:")) {
+    const categoryNameOf = opts && typeof opts.categoryNameOf === "function" ? opts.categoryNameOf : null;
+    const named = categoryNameOf ? categoryNameOf(raw.slice(4)) : undefined;
+    return named ? `any ${named}` : `any ${raw.slice(4)}`;
+  }
+  const buildNameOf = opts && typeof opts.buildNameOf === "function" ? opts.buildNameOf : null;
+  return (buildNameOf && buildNameOf(raw)) || raw;
+}
+
+function slotDetail(op, opts) {
+  return `party ${Number(op.line) + 1} slot ${Number(op.index) + 1}: `
+    + `${partySlotValue(op.before, opts)} → ${partySlotValue(op.after, opts)}`;
 }
 
 function skillSlotLabel(slotRaw) {
@@ -150,7 +178,25 @@ function metaDetail(op, opts) {
   return `${humanize(op.path)}: ${fmtValue(op.before)} → ${fmtValue(op.after)}`;
 }
 
+// A comp's party lines are diffed positionally, so a whole line appearing or
+// disappearing arrives as a raw op. Echoing the serialised line would fill the
+// summary with JSON; what a teammate needs is that a party was added.
+const PARTY_LINE = /^partyLines\.(\d+)$/;
+const PARTY_LINE_KEY = /^partyLines\.(\d+)\.(.+)$/;
+
 function rawDetail(op) {
+  if (op.path === "partyLines") return "party lines changed";
+  const line = PARTY_LINE.exec(String(op.path));
+  if (line) {
+    const n = Number(line[1]) + 1;
+    if (op.before === undefined || op.before === null) return `party ${n} added`;
+    if (op.after === undefined || op.after === null) return `party ${n} removed`;
+    return `party ${n} replaced`;
+  }
+  const key = PARTY_LINE_KEY.exec(String(op.path));
+  if (key) {
+    return `party ${Number(key[1]) + 1} ${humanize(key[2])}: ${fmtValue(op.before)} → ${fmtValue(op.after)}`;
+  }
   return `${humanize(op.path)}: ${fmtValue(op.before)} → ${fmtValue(op.after)}`;
 }
 
@@ -160,6 +206,8 @@ function renderOpDetail(op, opts) {
       return gearDetail(op);
     case "skill":
       return skillDetail(op);
+    case "slot":
+      return slotDetail(op, opts);
     case "trait":
       return traitDetail(op);
     case "spec":
@@ -194,7 +242,7 @@ function groupBareNoun(op) {
     case "spec":
       return "specialization";
     case "raw":
-      return humanize(op.path);
+      return op.path === "partyLines" || PARTY_LINE.test(String(op.path)) ? "parties" : humanize(op.path);
     default:
       return humanize(op.t || "change");
   }
@@ -209,6 +257,7 @@ function groupSummary(ops) {
   let sigilCount = 0;
   let skillCount = 0;
   let traitCount = 0;
+  let slotCount = 0;
   const others = [];
 
   for (const op of ops) {
@@ -219,6 +268,8 @@ function groupSummary(ops) {
       skillCount += 1;
     } else if (op.t === "trait") {
       traitCount += 1;
+    } else if (op.t === "slot") {
+      slotCount += 1;
     } else {
       others.push(groupBareNoun(op));
     }
@@ -229,6 +280,7 @@ function groupSummary(ops) {
   if (sigilCount) parts.push(pluralize(sigilCount, "sigil"));
   if (skillCount) parts.push(pluralize(skillCount, "skill"));
   if (traitCount) parts.push(pluralize(traitCount, "trait"));
+  if (slotCount) parts.push(pluralize(slotCount, "party slot"));
   parts.push(...others);
   return parts.join(", ");
 }

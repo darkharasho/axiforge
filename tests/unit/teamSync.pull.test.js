@@ -31,7 +31,7 @@ describe("TeamSync — pull", () => {
     expect(await h.syncStore.getVersion("t", "b1")).toEqual({ version: 1, createdBy: "u-vette" });
     expect((await h.syncStore.getTeam("t")).cursor).toBe(3);
     const hist = await h.historyStore.getHistory("b1");
-    expect(hist[0]).toMatchObject({ source: "team-sync", authorLogin: "vette", summary: "Created" });
+    expect(hist[0]).toMatchObject({ source: "team-sync", author: "vette", summary: "Created" });
     expect(h.events).toContainEqual(expect.objectContaining({ status: "synced", type: "build", id: "b1", folderId: "t", item: expect.objectContaining({ title: "Remote" }) }));
     expect(h.events).toContainEqual(expect.objectContaining({ status: "synced", folderId: "t" }));
   });
@@ -160,10 +160,11 @@ describe("TeamSync — pull", () => {
 
     expect((await h.trash.listTrash()).map((r) => `${r.type}:${r.id}`)).toEqual(["folder:f1"]);
     const buildEntry = (await h.historyStore.getHistory("b1")).find((e) => e.summary === "Deleted");
-    expect(buildEntry).toMatchObject({ authorLogin: "iruixos", source: "team-sync" });
-    expect(buildEntry.snapshot).toMatchObject({ id: "b1", title: "B" });
+    expect(buildEntry).toMatchObject({ author: "iruixos", source: "team-sync", kind: "delete" });
+    // A deletion is always a keyframe: "put it back" needs a whole document.
+    expect(buildEntry.doc).toMatchObject({ id: "b1", title: "B" });
     const compEntry = (await h.compHistoryStore.getHistory("c1")).find((e) => e.summary === "Deleted");
-    expect(compEntry).toMatchObject({ authorLogin: "iruixos", source: "team-sync" });
+    expect(compEntry).toMatchObject({ author: "iruixos", source: "team-sync", kind: "delete" });
   });
 
   test("a teammate's delete is undoable — putting it back restores the build and its comp slot", async () => {
@@ -202,10 +203,11 @@ describe("TeamSync — pull", () => {
     await h.sync.pullTeam("t");
 
     const [entry] = await h.compHistoryStore.getHistory("c1");
-    expect(entry.authorLogin).toBe("iruixos");
+    expect(entry.author).toBe("iruixos");
     expect(entry.source).toBe("team-sync");
-    // Named, not counted — that is the difference between a log and a useful one.
-    expect(entry.summary).toContain("added Firebrand");
+    // Named and placed, not counted — that is the difference between a log and
+    // a useful one.
+    expect(entry.summary).toContain("party 1 slot 2: (none) → Firebrand");
   });
 
   test("a teammate's comp delete is staged and recorded like a build's", async () => {
@@ -221,8 +223,8 @@ describe("TeamSync — pull", () => {
     expect(await h.compStore.listComps()).toEqual([]);
     expect((await h.trash.listTrash()).map((r) => r.id)).toEqual(["c1"]);
     const entry = (await h.compHistoryStore.getHistory("c1")).find((e) => e.summary === "Deleted");
-    expect(entry.authorLogin).toBe("iruixos");
-    expect(entry.snapshot.name).toBe("Squad");
+    expect(entry.author).toBe("iruixos");
+    expect(entry.doc.name).toBe("Squad");
   });
 
   test("purging a comp finally drops its history", async () => {
@@ -231,7 +233,7 @@ describe("TeamSync — pull", () => {
     h = await makeHarness();
     await seedTeam(h);
     await h.compStore.upsertComp({ id: "c1", name: "Squad", folderId: "t", partyLines: [] });
-    await h.compHistoryStore.addEntry({ compId: "c1", summary: "Created", snapshot: { id: "c1" } });
+    await h.compHistoryStore.appendVersion({ recordId: "c1", before: null, after: { id: "c1" } });
     await h.trash.trashComps(["c1"]);
     expect(await h.compHistoryStore.getHistory("c1")).toHaveLength(1);
 
@@ -250,10 +252,10 @@ describe("TeamSync — pull", () => {
     await h.sync.pullTeam("t");
 
     const entry = (await h.historyStore.getHistory("b1")).find((e) => e.summary === "Deleted");
-    expect(entry.authorLogin).toBe("iruixos");
+    expect(entry.author).toBe("iruixos");
     expect(entry.source).toBe("team-sync");
-    // The snapshot is what makes it restorable from the history panel.
-    expect(entry.snapshot.title).toBe("B");
+    // The keyframe doc is what makes it restorable from the history panel.
+    expect(entry.doc.title).toBe("B");
   });
 
   test("remote update of a build records a history entry with the remote author", async () => {
@@ -263,7 +265,7 @@ describe("TeamSync — pull", () => {
     h.api.changes.mockResolvedValueOnce({ items: [item({ id: "b1", version: 2, seq: 2, body: { id: "b1", title: "New" }, updatedBy: who("iruixos") })], nextSeq: 2, hasMore: false });
     await h.sync.pullTeam("t");
     const hist = await h.historyStore.getHistory("b1");
-    expect(hist[0]).toMatchObject({ source: "team-sync", authorLogin: "iruixos" });
+    expect(hist[0]).toMatchObject({ source: "team-sync", author: "iruixos" });
     expect(hist[0].summary).not.toBe("Created");
   });
 

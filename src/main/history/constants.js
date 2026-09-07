@@ -16,8 +16,10 @@ const TAIL_BYTES = 65536;
 // log a version and defeat the zero-ops rule. Keyframes still carry them.
 const IGNORED_FIELDS = ["updatedAt", "version"];
 
-// A change here is a real edit worth a summary line.
-const SUBSTANTIVE_OPS = ["skill", "trait", "spec", "gear", "stat", "consumable", "field", "raw"];
+// A change here is a real edit worth a summary line. `slot` is the comp-side
+// op (a party slot swapped) — see history/diffComp.js; the build differ never
+// emits one.
+const SUBSTANTIVE_OPS = ["skill", "trait", "spec", "gear", "stat", "consumable", "field", "raw", "slot"];
 
 // A change here is bookkeeping: it is logged (a folder move matters in a shared
 // folder feed) but it is not a build edit and gets its own phrasing. The trash
