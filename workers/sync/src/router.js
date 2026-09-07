@@ -29,6 +29,7 @@ const ROUTES = [
   ["PUT",    /^\/teams\/(?<teamId>[^/]+)\/items\/(?<itemId>[^/:]+)$/, items.putItem,      true],
   ["DELETE", /^\/teams\/(?<teamId>[^/]+)\/items\/(?<itemId>[^/:]+)$/, items.deleteItem,   true],
   ["POST",   /^\/teams\/(?<teamId>[^/]+)\/items:bulk$/,          items.bulkItems,        true],
+  ["POST",   /^\/teams\/(?<teamId>[^/]+)\/items:verify$/,        items.verifyItems,      true],
   ["GET",    /^\/teams\/(?<teamId>[^/]+)\/trash$/,               items.listTrash,        true],
   ["POST",   /^\/teams\/(?<teamId>[^/]+)\/trash\/(?<itemId>[^/]+)\/restore$/, items.restoreItem, true],
 ];

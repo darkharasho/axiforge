@@ -384,6 +384,192 @@ describe("TeamSync — pull", () => {
     expect((await h.buildStore.listBuilds()).map((b) => b.id)).toEqual(["b1"]);
   });
 
+  // "I moved my comp into the team folder and it vanished, and nobody else ever
+  // saw it." The server refused the upload (403: a folder this member may only
+  // read), _flushEntry dropped the outbox entry and the recorded version with
+  // it, and the next resync found a comp in a team folder that the server had
+  // never heard of -- and trashed it. A prune applies DELETIONS; an item with no
+  // recorded version was never on the server, so its absence there cannot be
+  // one. It is an upload that has not happened, and it stays on disk.
+  test("resync keeps an item the server has NEVER had -- a refused upload is not a deletion", async () => {
+    h = await makeHarness();
+    await seedTeam(h);
+    await h.folderStore.upsertFolder({ id: "sub", name: "Sub", parentId: "t" });
+    await h.syncStore.setVersion("t", "sub", { version: 1, createdBy: "x" });
+    // Never uploaded: no version, and the outbox entry was already dropped by
+    // the 403 that refused it.
+    await h.buildStore.upsertBuild({ id: "b-new", title: "Mine", folderId: "sub" });
+    await h.compStore.upsertComp({ id: "c-new", name: "Mine", folderId: "sub" });
+    await h.syncStore.setCursor("t", 50);
+    h.api.changes
+      .mockResolvedValueOnce({ items: [], nextSeq: 50, hasMore: false, resync: true })
+      .mockResolvedValueOnce({ items: [item({ id: "sub", type: "folder", body: { name: "Sub", sortOrder: 0 }, version: 1, seq: 1 })], nextSeq: 1, hasMore: false, resync: false });
+    await h.sync.pullTeam("t");
+    expect((await h.buildStore.listBuilds()).map((b) => b.id)).toEqual(["b-new"]);
+    expect((await h.compStore.listComps()).map((c) => c.id)).toEqual(["c-new"]);
+    expect(await h.trash.listTrash()).toEqual([]);
+  });
+
+  // ...and once the folder becomes writable, the upload that was refused has to
+  // happen by itself. Nothing else would ever re-try it: the outbox entry is
+  // long gone, and the item only looks out of date to code that knows the server
+  // has never had it. A grant change is what asks for the resync, so the resync
+  // is where the retry belongs.
+  test("resync re-queues a never-uploaded item once its folder is writable again", async () => {
+    h = await makeHarness();
+    await seedTeam(h);
+    await h.folderStore.upsertFolder({ id: "sub", name: "Sub", parentId: "t" });
+    await h.syncStore.setVersion("t", "sub", { version: 1, createdBy: "x" });
+    await h.buildStore.upsertBuild({ id: "b-new", title: "Mine", folderId: "sub" });
+    await h.syncStore.setCursor("t", 50);
+    h.api.changes
+      .mockResolvedValueOnce({ items: [], nextSeq: 50, hasMore: false, resync: true })
+      .mockResolvedValueOnce({ items: [item({ id: "sub", type: "folder", body: { name: "Sub", sortOrder: 0 }, version: 1, seq: 1 })], nextSeq: 1, hasMore: false, resync: false });
+    await h.sync.pullTeam("t");
+    expect(await h.syncStore.listOutbox("t")).toEqual([
+      expect.objectContaining({ itemId: "b-new", type: "build", op: "put" }),
+    ]);
+  });
+
+  test("resync leaves a never-uploaded item alone while its folder is still read-only", async () => {
+    h = await makeHarness();
+    await seedTeam(h);
+    await h.folderStore.upsertFolder({ id: "sub", name: "Sub", parentId: "t" });
+    await h.syncStore.setVersion("t", "sub", { version: 1, createdBy: "x" });
+    await h.buildStore.upsertBuild({ id: "b-new", title: "Mine", folderId: "sub" });
+    await h.syncStore.setCursor("t", 50);
+    h.api.listGrants.mockResolvedValue({ grants: [], defaults: { member: "write" }, });
+    h.api.changes
+      .mockResolvedValueOnce({ items: [], nextSeq: 50, hasMore: false, resync: true })
+      .mockResolvedValueOnce({ items: [item({ id: "sub", type: "folder", body: { name: "Sub", sortOrder: 0 }, version: 1, seq: 1 })], nextSeq: 1, hasMore: false, resync: false });
+    // The refresh the resync performs lands a read-only blanket on the folder.
+    h.api.listGrants.mockResolvedValue({ grants: [{ folderId: "sub", userId: "*", access: "read" }], defaults: { member: "write" } });
+    await h.sync.pullTeam("t");
+    expect(await h.syncStore.listOutbox("t")).toEqual([]);
+    expect((await h.buildStore.listBuilds()).map((b) => b.id)).toEqual(["b-new"]);
+  });
+
+  // A prune reads ABSENCE as a deletion, so it is only ever as trustworthy as
+  // the walk it is reading. A 200 that is empty or truncated — a server bug, a
+  // half-restored database, a bad deploy — is indistinguishable from "the team
+  // deleted everything", and the prune would then stage the user's whole shared
+  // library into the trash. A team never legitimately loses ALL of its synced
+  // items at once through tombstone purging (a recent mass delete arrives as
+  // real tombstones instead), so an answer that says so is not believed.
+  test("a resync that reports the team is empty prunes nothing", async () => {
+    h = await makeHarness();
+    await seedTeam(h);
+    for (const id of ["b1", "b2", "b3"]) {
+      await h.buildStore.upsertBuild({ id, title: id, folderId: "t" });
+      await h.syncStore.setVersion("t", id, { version: 1, createdBy: "x" });
+    }
+    await h.syncStore.setCursor("t", 50);
+    h.api.changes
+      .mockResolvedValueOnce({ items: [], nextSeq: 50, hasMore: false, resync: true })
+      .mockResolvedValueOnce({ items: [], nextSeq: 0, hasMore: false, resync: false });
+    await h.sync.pullTeam("t");
+    expect((await h.buildStore.listBuilds()).map((b) => b.id).sort()).toEqual(["b1", "b2", "b3"]);
+    expect(await h.trash.listTrash()).toEqual([]);
+    expect(h.events).toContainEqual(expect.objectContaining({ status: "error", error: "prune-refused", folderId: "t" }));
+  });
+
+  test("a resync that accounts for most of the team still prunes the odd missing item", async () => {
+    h = await makeHarness();
+    await seedTeam(h);
+    for (const id of ["b1", "b2", "b3"]) {
+      await h.buildStore.upsertBuild({ id, title: id, folderId: "t" });
+      await h.syncStore.setVersion("t", id, { version: 1, createdBy: "x" });
+    }
+    await h.syncStore.setCursor("t", 50);
+    h.api.changes
+      .mockResolvedValueOnce({ items: [], nextSeq: 50, hasMore: false, resync: true })
+      .mockResolvedValueOnce({ items: [
+        item({ id: "b1", version: 1, seq: 1 }),
+        item({ id: "b2", version: 1, seq: 2 }),
+      ], nextSeq: 2, hasMore: false, resync: false });
+    await h.sync.pullTeam("t");
+    expect((await h.buildStore.listBuilds()).map((b) => b.id).sort()).toEqual(["b1", "b2"]);
+  });
+
+  // "I don't even want it trashed -- if the sync doesn't come back with a
+  // success we should leave the data where it is." A walk that does not mention
+  // an item is a reason to ASK about it, never a reason to act on it: the same
+  // silence is produced by a truncated page, an access filter, a half-restored
+  // database and a bad deploy. So the last word is the server's, per item.
+  const seedThree = async () => {
+    await seedTeam(h);
+    for (const id of ["b1", "b2", "b3"]) {
+      await h.buildStore.upsertBuild({ id, title: id, folderId: "t" });
+      await h.syncStore.setVersion("t", id, { version: 1, createdBy: "x" });
+    }
+    await h.syncStore.setCursor("t", 50);
+    h.api.changes
+      .mockResolvedValueOnce({ items: [], nextSeq: 50, hasMore: false, resync: true })
+      .mockResolvedValueOnce({ items: [item({ id: "b1", version: 1, seq: 1 })], nextSeq: 1, hasMore: false, resync: false });
+  };
+  const idsLeft = async () => (await h.buildStore.listBuilds()).map((b) => b.id).sort();
+
+  test("an item the walk missed is kept when the server says it is still there", async () => {
+    h = await makeHarness();
+    await seedThree();
+    h.api.verifyItems.mockResolvedValue({ statuses: { b2: "live", b3: "live" } });
+    await h.sync.pullTeam("t");
+    expect(h.api.verifyItems).toHaveBeenCalledWith("t", expect.arrayContaining(["b2", "b3"]));
+    expect(await idsLeft()).toEqual(["b1", "b2", "b3"]);
+    expect(await h.trash.listTrash()).toEqual([]);
+  });
+
+  test("the server confirming a delete, a revoked folder or a purged tombstone removes the copy", async () => {
+    h = await makeHarness();
+    await seedThree();
+    await h.buildStore.upsertBuild({ id: "b4", title: "b4", folderId: "t" });
+    await h.syncStore.setVersion("t", "b4", { version: 1, createdBy: "x" });
+    h.api.verifyItems.mockResolvedValue({ statuses: { b2: "deleted", b3: "hidden", b4: "missing" } });
+    await h.sync.pullTeam("t");
+    expect(await idsLeft()).toEqual(["b1"]);
+  });
+
+  test("nothing is removed when the confirmation never arrives", async () => {
+    h = await makeHarness();
+    await seedThree();
+    h.api.verifyItems.mockRejectedValue(apiError("SYNC_OFFLINE"));
+    await h.sync.pullTeam("t");
+    expect(await idsLeft()).toEqual(["b1", "b2", "b3"]);
+    expect(await h.trash.listTrash()).toEqual([]);
+    expect(h.events).toContainEqual(expect.objectContaining({ status: "error", error: "prune-unverified", folderId: "t" }));
+  });
+
+  // A client can ship before the Worker it talks to is deployed. An unknown
+  // route must read as "no answer", which is the safe end of the choice.
+  test("a server too old to answer the question removes nothing", async () => {
+    h = await makeHarness();
+    await seedThree();
+    h.api.verifyItems.mockRejectedValue(apiError("SYNC_NOT_FOUND"));
+    await h.sync.pullTeam("t");
+    expect(await idsLeft()).toEqual(["b1", "b2", "b3"]);
+  });
+
+  test("an id the answer simply omits is left alone", async () => {
+    h = await makeHarness();
+    await seedThree();
+    h.api.verifyItems.mockResolvedValue({ statuses: { b2: "missing" } });
+    await h.sync.pullTeam("t");
+    expect(await idsLeft()).toEqual(["b1", "b3"]);
+  });
+
+  test("a walk that accounts for everything asks nothing", async () => {
+    h = await makeHarness();
+    await seedTeam(h);
+    await h.buildStore.upsertBuild({ id: "b1", title: "b1", folderId: "t" });
+    await h.syncStore.setVersion("t", "b1", { version: 1, createdBy: "x" });
+    await h.syncStore.setCursor("t", 50);
+    h.api.changes
+      .mockResolvedValueOnce({ items: [], nextSeq: 50, hasMore: false, resync: true })
+      .mockResolvedValueOnce({ items: [item({ id: "b1", version: 1, seq: 1 })], nextSeq: 1, hasMore: false, resync: false });
+    await h.sync.pullTeam("t");
+    expect(h.api.verifyItems).not.toHaveBeenCalled();
+  });
+
   test("SYNC_FORBIDDEN during changes detaches the team via listTeams and does not count as a failure (R2)", async () => {
     h = await makeHarness();
     await seedTeam(h);

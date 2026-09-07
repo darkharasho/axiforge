@@ -427,3 +427,50 @@ describe("a grant for everyone", () => {
     expect(await t.env.SYNC_DB.prepare("SELECT COUNT(*) AS c FROM users").first("c")).toBe(3);
   });
 });
+
+// A client that walked the whole change log and did not see an item it holds
+// must not conclude the item was deleted -- absence in a paginated,
+// access-filtered stream is also what a truncated page or a half-restored
+// database looks like, and acting on it destroys the user's only copy. So it
+// asks, and only a verdict authorises removal.
+describe("verifying what became of an item", () => {
+  const verify = (t, auth, ids) =>
+    items.verifyItems(t.req("POST", { ids }), t.env, t.deps, auth, { teamId: t.team.id });
+
+  test("live, deleted and missing are each answered from the item's own row", async () => {
+    const t = await setup();
+    await t.del(t.owner, "b-root", 1);
+    const res = await verify(t, t.owner, ["b-raid", "b-root", "never-existed"]);
+    expect(res.status).toBe(200);
+    expect((await bodyOf(res)).statuses).toEqual({
+      "b-raid": "live",
+      "b-root": "deleted",
+      "never-existed": "missing",
+    });
+  });
+
+  test("an item you may no longer read comes back hidden, not missing", async () => {
+    const t = await setup();
+    await t.grant(t.owner, "raids", "u-mem", "none");
+    expect((await bodyOf(await verify(t, t.member, ["b-raid", "b-root"]))).statuses).toEqual({
+      "b-raid": "hidden",
+      "b-root": "live",
+    });
+    // ...and the owner, who set it, still sees it as live.
+    expect((await bodyOf(await verify(t, t.owner, ["b-raid"]))).statuses).toEqual({ "b-raid": "live" });
+  });
+
+  test("only ids that were asked about are answered, so a client can tell silence apart", async () => {
+    const t = await setup();
+    const statuses = (await bodyOf(await verify(t, t.owner, ["b-raid"]))).statuses;
+    expect(Object.keys(statuses)).toEqual(["b-raid"]);
+  });
+
+  test("a non-member gets nothing, and a bad list is rejected", async () => {
+    const t = await setup();
+    const outsider = { user: { id: "u-nobody", login: "nobody", displayName: "nobody", avatarUrl: null } };
+    expect((await verify(t, outsider, ["b-raid"])).status).toBe(403);
+    expect((await verify(t, t.owner, "b-raid")).status).toBe(400);
+    expect((await verify(t, t.owner, new Array(items.MAX_VERIFY + 1).fill("x").map((_, i) => `x${i}`))).status).toBe(400);
+  });
+});

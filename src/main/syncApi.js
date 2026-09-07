@@ -101,6 +101,13 @@ class SyncApi {
   deleteItem(teamId, itemId, baseVersion) { return this.#request("DELETE", `/teams/${encodeURIComponent(teamId)}/items/${encodeURIComponent(itemId)}`, { query: { baseVersion } }); }
   bulk(teamId, items) { return this.#request("POST", `/teams/${encodeURIComponent(teamId)}/items:bulk`, { body: { items } }); }
 
+  // "Is this really gone?" for ids a full walk of the change log did not
+  // account for. Answers per id: live | deleted | hidden | missing. Nothing is
+  // ever removed locally without one of these — an error here (or an older
+  // server that has no such route) means the pull leaves the library alone.
+  // @see TeamSync#_pruneUnseen
+  verifyItems(teamId, ids) { return this.#request("POST", `/teams/${encodeURIComponent(teamId)}/items:verify`, { body: { ids } }); }
+
   // The shared team trash. Unlike every other read here this one is not part of
   // the sync loop — it is only fetched when somebody opens the trash — so it has
   // no cursor and no incremental form.

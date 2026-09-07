@@ -30,6 +30,30 @@ describe("refreshing the mirror", () => {
     await h.cleanup();
   });
 
+  // Joining is the other moment the mirror can only be wrong: the grants that
+  // govern you were set before you arrived, and nothing after the join says so —
+  // a grant CHANGE stamps a resync, an existing grant does not. Without this the
+  // client believes a member's role default ("write") everywhere, offers a move
+  // into a folder they may only read, and learns better from a 403 that arrives
+  // after the item is already sitting in a team folder locally.
+  test("joining a team reads the grants that were already set", async () => {
+    const h = await makeHarness();
+    h.api.joinTeam.mockResolvedValue({ team: { id: "t1", name: "EWW", seq: 0 }, role: "member" });
+    h.api.listGrants.mockResolvedValue({ grants: [{ folderId: "shiny", userId: "*", access: "read" }], defaults: { member: "write" } });
+    await h.sync.joinTeam("abcdefghjk");
+    expect(h.api.listGrants).toHaveBeenCalledWith("t1");
+    expect(await h.syncStore.getEveryoneGrants("t1")).toEqual({ shiny: "read" });
+    await h.cleanup();
+  });
+
+  test("a join whose grant fetch fails still joins", async () => {
+    const h = await makeHarness();
+    h.api.joinTeam.mockResolvedValue({ team: { id: "t1", name: "EWW", seq: 0 }, role: "member" });
+    h.api.listGrants.mockRejectedValue(new Error("offline"));
+    await expect(h.sync.joinTeam("abcdefghjk")).resolves.toMatchObject({ role: "member" });
+    await h.cleanup();
+  });
+
   test("an ordinary pull does not spend a request on them", async () => {
     const h = await makeHarness();
     await withTeam(h);

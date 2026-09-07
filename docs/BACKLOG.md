@@ -99,6 +99,69 @@ Status key: `[ ]` open · `[x]` done · `[~]` in progress · `[?]` needs repro s
   entries that no longer resolve — `library/content.js`. Covered by
   `tests/unit/renderer/columns-view-stale-stack.test.js`.
 
+- [x] **A comp moved into a nested team folder vanished from the library and
+  never appeared for the team.** Reported 2026-09-06: create a comp locally, add
+  builds, drag it into a folder two levels deep in a shared team folder, confirm
+  the "these builds will move too" prompt — and the comp and its builds
+  disappear locally while nobody else ever sees them.
+  *Cause (two halves, both needed):*
+  - **The client believed it could write where it could not.** The team's rules
+    were a *blanket* grant (`everyone: read`) on the parent folder, so the
+    nested folder inherited read-only. The grant mirror is only re-read when the
+    server asks for a resync — which a grant *change* triggers, but grants that
+    already existed when you joined do not. A member who joined afterwards was
+    told the member default ("write") everywhere, so the move was accepted, the
+    comp and its builds were written into the team folder locally, and the
+    server refused the upload with 403.
+  - **The refusal then ate the data.** `_flushEntry` drops a FORBIDDEN entry
+    *and* its recorded version, so the items sat in a team folder with no server
+    copy and no outbox entry. `_pruneUnseen` — which exists to apply deletions
+    the change log can no longer name — could not tell that from "the team
+    deleted this", and trashed them on the next resync. The gap was documented
+    in that function and left unfixed; this is the report it produced.
+  *Fix:* `src/main/teamSync.js`. A prune may only touch items with a recorded
+  version — an item the server never had cannot have been deleted there, so a
+  refused upload stays on disk (spec §5). And `joinTeam` now fills the grant
+  mirror, so the move is refused up front with the real reason instead of
+  succeeding locally and failing silently a second later; `listTeams`' seeding
+  guard counts blanket grants too, so an all-blanket team stops re-fetching on
+  every reconcile. Covered by `tests/unit/teamSync.pull.test.js` ("a refused
+  upload is not a deletion") and `tests/unit/teamSync.grants.test.js`
+  ("joining a team reads the grants that were already set"). A resync also
+  re-queues a never-uploaded item once its folder is writable again — the outbox
+  entry the 403 dropped is gone, so nothing else would ever retry it, and the
+  items already stranded by this bug stay stranded otherwise.
+  *Follow-up from the same report — "we shouldn't be destructive with local data
+  unless the server actually said 200":* audited every path in `teamSync.js` that
+  removes local data. There are two, both staging into the 30-day trash rather
+  than destroying: an incoming tombstone (which only exists inside a successful
+  `changes` response — any non-200 throws before anything is applied) and the
+  resync prune. The prune is the only one that acts on INFERENCE — absence read
+  as deletion — so it now refuses an answer that accounts for none of a team we
+  hold synced items for. An empty or truncated 200 (server bug, half-restored
+  database, bad deploy) is indistinguishable from "the team deleted everything",
+  and tombstone purging cannot produce that: a real mass delete arrives as real
+  tombstones. The refusal surfaces as a toast saying nothing was removed, and the
+  next pull tries again — stuck is recoverable, pruned is not.
+  *Second follow-up — "I don't even want it trashed":* inference removed
+  entirely. The prune no longer decides anything from the walk; the walk only
+  decides which ids are worth asking about. A new `POST /teams/:id/items:verify`
+  answers per id from that id's own row — `live` (keep it), `deleted` (the
+  tombstone is right here), `hidden` (it exists, your grants no longer let you
+  read it) or `missing` (no row at all: a tombstone the retention window purged).
+  Only those last three authorise removal. An id the server gives no verdict for
+  — an outage, a 5xx, a rate limit, a partial answer, a Worker too old to have
+  the route — leaves the local copy exactly where it is, with a toast saying so.
+  Ordering matters at release: deploy the Worker before shipping the client, or
+  every client prunes nothing until it is (which is the safe failure, but it is
+  still staleness). Covered by `tests/unit/worker-sync-grants.test.js`
+  ("verifying what became of an item") and `tests/unit/teamSync.pull.test.js`
+  ("nothing is removed when the confirmation never arrives").
+  *Verified against production:* the team in the report had `everyone: read` on
+  the parent and no grant on the nested folder, and a full-stack test (real main
+  process + real Worker over a D1 shim) reproduced the vanish exactly, then went
+  green on the fix.
+
 ## Features
 
 - [x] **Comp history.** Builds have carried a full "who changed what" since the

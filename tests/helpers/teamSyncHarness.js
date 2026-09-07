@@ -19,13 +19,19 @@ function apiError(code, extra = {}) {
 
 function fakeApi() {
   const api = {};
-  for (const m of ["loginGithub", "logout", "createTeam", "joinTeam", "listTeams", "listMembers", "removeMember", "rotateInvite", "renameTeam", "deleteTeam", "changes", "putItem", "deleteItem", "bulk", "listGrants", "setGrant", "clearGrant"]) {
+  for (const m of ["loginGithub", "logout", "createTeam", "joinTeam", "listTeams", "listMembers", "removeMember", "rotateInvite", "renameTeam", "deleteTeam", "changes", "putItem", "deleteItem", "bulk", "listGrants", "setGrant", "clearGrant", "verifyItems"]) {
     api[m] = jest.fn(async () => { throw new Error(`unexpected api.${m}`); });
   }
   api.changes.mockImplementation(async () => ({ items: [], nextSeq: 0, hasMore: false }));
   // Grants are refreshed opportunistically (on a resync, and when a team is first
   // seen), so a test that never mentions them should not have to stub them.
   api.listGrants.mockImplementation(async () => ({ grants: [], defaults: { owner: "delete", member: "write" } }));
+  // A healthy server whose answer agrees with the walk that reached it: an id
+  // the walk did not account for really is not there. Tests about an UNhealthy
+  // one (a truncated answer, an outage, an older server) override this.
+  api.verifyItems.mockImplementation(async (_teamId, ids) => ({
+    statuses: Object.fromEntries(ids.map((id) => [id, "missing"])),
+  }));
   return api;
 }
 

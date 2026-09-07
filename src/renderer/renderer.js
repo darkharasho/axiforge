@@ -874,7 +874,11 @@ async function init() {
     }
 
     if (status === "error") {
-      showToast("Sync failed — check your connection or library access.", "error");
+      // A folder-level error that carries its own reason has one worth reading:
+      // "prune-refused" says the server's answer looked wrong and nothing was
+      // removed, which the generic line would turn into "sync failed" — the
+      // opposite of the reassurance it is.
+      showToast(data.message || "Sync failed — check your connection or library access.", "error");
     }
   });
 

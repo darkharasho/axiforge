@@ -27,6 +27,15 @@ const PAGE_SIZE = 200;
 // prune. Only an out-of-date server re-signals more than once. @see _pullTeamInner
 const MAX_RESYNC_RESTARTS = 3;
 const FAILURES_BEFORE_TOAST = 3;
+// How many ids one "is this really gone?" request may carry. Must not exceed
+// the server's MAX_VERIFY (workers/sync/src/items.js).
+const VERIFY_CHUNK = 200;
+// The verdicts that authorise removing a local copy. Each one is the server
+// making a positive statement about that id: it was deleted, this user may no
+// longer read it, or the row is not there at all (a tombstone the retention
+// window has since purged). Every other answer — including `live`, and
+// including no answer — leaves the item exactly where it is.
+const GONE_VERDICTS = new Set(["deleted", "hidden", "missing"]);
 
 // Archiving is a personal "get this out of my way", not a statement about the
 // team's library, so the stamps stay on this machine like `pinned` does.
@@ -205,6 +214,12 @@ class TeamSync {
   async joinTeam(inviteCode) {
     const out = await this.api.joinTeam(inviteCode);
     await this._ensureRootFolder(out.team, out.role);
+    // The grants that govern you were set before you arrived, and only a grant
+    // CHANGE stamps the resync that re-reads them — so joining is the one moment
+    // the mirror has to be filled in by hand. Without it a member is told they
+    // may write everywhere, and finds out otherwise from a 403 landing after the
+    // item is already in a team folder. @see _refreshGrants
+    await this._refreshGrants(out.team.id);
     await this.pullTeam(out.team.id);
     return out;
   }
@@ -228,9 +243,15 @@ class TeamSync {
       seen.add(team.id);
       await this._ensureRootFolder(team, role);
       // Seeds the grant mirror for a team joined on another machine, or on a
-      // fresh install, where no resync has been asked for yet.
-      if (role !== "owner" && Object.keys(await this.syncStore.getGrants(team.id)).length === 0) {
-        await this._refreshGrants(team.id);
+      // fresh install, where no resync has been asked for yet. A BLANKET grant
+      // counts as a filled-in mirror too: keyed on the personal map alone, a
+      // team whose rules are all blanket ones looked empty forever and paid for
+      // a refresh on every reconcile.
+      if (role !== "owner") {
+        const mirror = await this.syncStore.getTeam(team.id);
+        if (Object.keys(mirror.grants).length === 0 && Object.keys(mirror.everyoneGrants).length === 0) {
+          await this._refreshGrants(team.id);
+        }
       }
     }
     const folders = await this.folderStore.listFolders();
@@ -636,14 +657,24 @@ class TeamSync {
     this._emit("sync-status", { status: "synced", type, id, folderId: root.id, removed: true });
   }
 
-  // R1: after a full resync re-pull from 0, drop anything under the team
-  // root that the server no longer has and that isn't awaiting an outbox
+  // R1: after a full resync re-pull from 0, reconcile anything under the team
+  // root that the walk did not account for and that isn't awaiting an outbox
   // flush (a pending local write is left alone — the flush will 409/resolve
   // it against the server's current state).
   //
-  // Known gap: an item whose outbox entry was DROPPED by a 413/403 (spec §5
-  // says it should stay on disk as local-only data) has no pending entry left,
-  // so a later resync prune deletes it locally. Documented, not fixed here.
+  // Nothing here removes a local copy on its own authority. The walk only
+  // decides which items are WORTH ASKING about; `_verifyGone` then asks the
+  // server what became of each one, and only a verdict — deleted, hidden,
+  // missing — permits removal. No verdict, no removal, for any reason at all.
+  //
+  // A prune applies DELETIONS the change log can no longer name. So it may only
+  // touch items the server is known to have HAD: an item with no recorded
+  // version was never up there, and its absence is not a deletion — it is an
+  // upload that has not happened. That is the state a write the server REFUSED
+  // leaves behind (a 403 on a read-only folder, a 413 on an oversized body):
+  // _flushEntry drops the outbox entry, so neither guard below sees it, and the
+  // next resync used to trash the user's only copy. "I moved my comp into the
+  // team folder, it vanished here and never appeared for anybody else."
   async _pruneUnseen(teamId, root, seenIds) {
     const team = await this.syncStore.getTeam(teamId);
     const folders = await this.folderStore.listFolders();
@@ -661,10 +692,102 @@ class TeamSync {
       ...comps.filter((c) => teamFolderIds.has(c.folderId)).map((c) => ({ type: "comp", id: c.id })),
       ...builds.filter((b) => teamFolderIds.has(b.folderId)).map((b) => ({ type: "build", id: b.id })),
     ];
+    // What the walk actually accounted for, out of everything we hold a server
+    // version for. A prune reads ABSENCE as a deletion, so it is only ever as
+    // good as the walk behind it — and an empty or truncated 200 (a server bug,
+    // a half-restored database, a bad deploy) looks exactly like "the team
+    // deleted all of it". Tombstone purging cannot produce that: a real mass
+    // delete arrives as real tombstones, which _applyItem has already applied by
+    // now. So an answer that accounts for NONE of a team we know has synced
+    // items is not believed — the pull stays where it is and says so, and the
+    // next one tries again. Stuck is recoverable; pruned is not.
+    //
+    // Per-item verification below is the real gate; this floor sits in front of
+    // it for the one case verification cannot see through — a database restored
+    // empty or bound to the wrong environment, where both the walk and the
+    // lookups honestly report nothing there.
+    const synced = [];
+    for (const c of candidates) if (await this.syncStore.getVersion(teamId, c.id)) synced.push(c);
+    if (synced.length && !synced.some((c) => seenIds.has(c.id))) {
+      console.warn(`[team-sync] ${teamId}: a resync accounted for none of ${synced.length} synced item(s); refusing to prune`);
+      this._emit("sync-status", { status: "error", folderId: root.id, error: "prune-refused", message: "The sync server's answer looked incomplete, so nothing was removed locally." });
+      return;
+    }
+    const doomed = [];
     for (const { type, id } of candidates) {
       if (seenIds.has(id) || team.outbox[id]) continue;
+      if (!(await this.syncStore.getVersion(teamId, id))) {
+        // Never reached the server. If the reason it was refused has since been
+        // lifted — the folder is writable now — this is the moment to try again:
+        // the outbox entry the 403 dropped is gone, so nothing else ever would.
+        // The grant mirror was just refreshed by the resync that got us here, so
+        // the answer is current. A refusal simply drops the entry again, and
+        // only the next grant change asks for another resync — so this cannot
+        // spin.
+        await this._requeueLocalOnly(teamId, type, id, folders);
+        continue;
+      }
+      doomed.push({ type, id });
+    }
+    if (!doomed.length) return;
+    // Everything above narrows down WHICH items to ask about. This asks. Not
+    // seeing an item in the walk is a reason to suspect it is gone; it is not a
+    // reason to act, because a page that was truncated, filtered or served by a
+    // half-restored database looks exactly the same from here. So the last word
+    // belongs to the server, per item, and if it does not give one — offline, a
+    // 5xx, a rate limit, a server too old to have the route — nothing moves.
+    const statuses = await this._verifyGone(teamId, root, doomed.map((d) => d.id));
+    if (!statuses) return;
+    for (const { type, id } of doomed) {
+      // `live` means keep it: the walk was wrong about this one. Anything the
+      // server did not give a verdict for is treated the same way.
+      if (!GONE_VERDICTS.has(statuses[id])) continue;
       await this._applyTombstone(teamId, root, type, id);
     }
+  }
+
+  /**
+   * Ask the server what became of items a full walk did not account for.
+   *
+   * @returns {Promise<Record<string,string>|null>} id → verdict, or null if the
+   *   server did not answer — in which case the caller must remove nothing.
+   */
+  async _verifyGone(teamId, root, ids) {
+    if (typeof this.api.verifyItems !== "function") return null;
+    const statuses = {};
+    try {
+      for (let i = 0; i < ids.length; i += VERIFY_CHUNK) {
+        const out = await this.api.verifyItems(teamId, ids.slice(i, i + VERIFY_CHUNK));
+        Object.assign(statuses, (out && out.statuses) || {});
+      }
+    } catch (err) {
+      // Stuck is recoverable; pruned is not. The next pull asks again.
+      console.warn(`[team-sync] ${teamId}: could not confirm ${ids.length} missing item(s) (${err.code || err.message}); nothing removed`);
+      this._emit("sync-status", {
+        status: "error",
+        folderId: root.id,
+        error: "prune-unverified",
+        message: "Couldn't reach the sync server to confirm a change, so nothing was removed from your library.",
+      });
+      return null;
+    }
+    return statuses;
+  }
+
+  /**
+   * Queue an upload for an item that lives in a team folder but has never been
+   * on the server — but only where this user may actually write.
+   *
+   * @param {object[]} folders the folder list `_pruneUnseen` already read
+   */
+  async _requeueLocalOnly(teamId, type, id, folders) {
+    const local = await this._loadLocal(type, id);
+    if (!local) return;
+    const folderId = type === "folder" ? local.parentId : local.folderId;
+    if (access.rank(await this.accessAt(folderId)) < access.LEVELS.write) return;
+    // A folder's own grant governs the folder itself, not just its contents.
+    if (type === "folder" && access.rank(await this.accessAt(id)) < access.LEVELS.write) return;
+    await this.enqueue(teamId, id, type, "put");
   }
 
   async _applyItem(teamId, root, item, session) {

@@ -261,6 +261,61 @@ async function getChanges(request, env, deps, auth, params) {
   });
 }
 
+// POST /teams/:teamId/items:verify
+//
+// "Is this really gone?" — asked about specific ids, answered one row at a time.
+//
+// A client that has walked the whole change log and not seen an item it holds
+// could conclude the item was deleted. It must not: absence in a paginated,
+// access-filtered stream is also what a truncated page, a filtered page or a
+// bad deploy looks like, and acting on it means destroying the user's only
+// copy. This endpoint replaces that inference with a statement. Every id gets a
+// verdict from its own row:
+//
+//   live     the item is here and you may read it — do not touch your copy
+//   deleted  somebody deleted it; the tombstone is right here
+//   hidden   it exists, but your grants no longer let you read it
+//   missing  this team has no row with that id at all
+//
+// `missing` is the tombstone-purge case (a delete older than the retention
+// window, seen by a client that was offline for all of it) and is a positive
+// answer, not a shrug: the row was looked up by primary key and was not there.
+// An id the client asks about and does NOT get back — an error, a partial
+// answer, an older server without this route — is the one case where nothing
+// may be removed. @see TeamSync#_pruneUnseen
+const MAX_VERIFY = 200;
+const VERIFY_CHUNK = 90; // D1 binds at most 100 parameters per statement
+
+async function verifyItems(request, env, deps, auth, params) {
+  const { error, access } = await memberOr403(env, params.teamId, auth);
+  if (error) return error;
+  const rl = await checkRateLimit(env.SYNC_RL, `changes:${auth.user.id}`, CHANGE_READS_PER_MIN, 60, deps);
+  if (!rl.ok) return errorResponse("rate_limited", "Too many sync requests. Try again shortly.", 429, { "Retry-After": String(rl.retryAfterSeconds) });
+  const body = await readJson(request);
+  const ids = body && Array.isArray(body.ids) ? [...new Set(body.ids.filter((id) => typeof id === "string" && id))] : null;
+  if (!ids) return errorResponse("invalid", "ids must be an array of item ids.");
+  if (ids.length > MAX_VERIFY) return errorResponse("invalid", `At most ${MAX_VERIFY} ids per request.`);
+  // Every id starts as `missing` and is upgraded by the row that turns up. Only
+  // ids the caller actually asked about appear, so a client can tell a verdict
+  // it received from one it did not.
+  const statuses = {};
+  for (const id of ids) statuses[id] = "missing";
+  for (let i = 0; i < ids.length; i += VERIFY_CHUNK) {
+    const chunk = ids.slice(i, i + VERIFY_CHUNK);
+    const placeholders = chunk.map(() => "?").join(",");
+    const { results } = await env.SYNC_DB.prepare(
+      // (team_id, id) is the primary key, so this is one index lookup per id.
+      `SELECT id, type, parent_id, created_by, deleted FROM items WHERE team_id = ? AND id IN (${placeholders})`
+    ).bind(params.teamId, ...chunk).all();
+    for (const row of results) {
+      if (row.deleted === 1) statuses[row.id] = "deleted";
+      else if (!access.unrestricted && !access.canRead(row)) statuses[row.id] = "hidden";
+      else statuses[row.id] = "live";
+    }
+  }
+  return json({ statuses });
+}
+
 // Reject an oversize request before buffering/parsing its body. `content-length`
 // is attacker-controlled (can be absent or wrong), so this is a cheap early-out,
 // not the authoritative check — the real limit is enforced on the parsed body.
@@ -557,4 +612,4 @@ async function restoreItem(request, env, deps, auth, params) {
   return json({ version: out.version, seq: out.seq, restored: members.map((m) => m.id) });
 }
 
-module.exports = { getChanges, putItem, deleteItem, bulkItems, listTrash, restoreItem, writeItem, itemWire, MAX_BODY_BYTES, MAX_PAGE, MAX_BULK, MAX_BULK_BODY_BYTES, MAX_TRASH };
+module.exports = { getChanges, verifyItems, putItem, deleteItem, bulkItems, listTrash, restoreItem, writeItem, itemWire, MAX_BODY_BYTES, MAX_PAGE, MAX_BULK, MAX_BULK_BODY_BYTES, MAX_TRASH, MAX_VERIFY };
