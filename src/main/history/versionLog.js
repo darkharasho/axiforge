@@ -165,8 +165,25 @@ class VersionLog {
     return readFrom + lastNlBeforeEnd + 1;
   }
 
-  /** The start offset of the final line — cached by the last write, or found. */
+  /**
+   * The start offset of the final line — cached by the last write, or found.
+   *
+   * Repairs a torn tail FIRST. This is Task 3's repair-before-write rule, and
+   * the destructive callers need it more than `append` does, not less: on a
+   * file whose final line is a crash fragment, the offset of "the last line"
+   * is the FRAGMENT's start. Truncating there removes only the fragment and
+   * leaves the entry the caller meant to replace or remove standing — so
+   * `replaceLast` writes its replacement after the survivor and the log ends up
+   * with two entries carrying the same `v`, and `removeLast` leaves behind the
+   * version its caller believes it deleted. A duplicate `v` is worse than
+   * anything the fragment itself could do.
+   */
   async _lastLineOffset() {
+    const sizeBefore = await statSize(this.filePath);
+    const sizeAfter = await this._repairTornTail();
+    // A repair moved the end of the file, so any cached offset describes a
+    // layout that no longer exists.
+    if (sizeAfter !== sizeBefore) this._lastOffset = null;
     const offset = this._lastOffset;
     if (offset === null || offset === undefined) return this._findLastLineOffset();
     return offset;

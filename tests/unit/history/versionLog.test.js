@@ -312,3 +312,65 @@ describe("VersionLog — removeLast", () => {
     expect((await log.readAll()).entries).toEqual([{ v: 1, summary: "again" }]);
   });
 });
+
+// ─── fix round 3 ────────────────────────────────────────────────────────────
+
+// `append` has repaired a torn tail since Task 3; the two destructive ops did
+// not. On a file whose final line is a crash fragment, the offset of "the last
+// line" is the FRAGMENT's start, so truncating there eats only the fragment and
+// leaves the entry the caller meant to act on standing.
+describe("VersionLog — destructive writes repair a torn tail first", () => {
+  const TORN = '{"v":1}\n{"v":2,"summary":"old"}\n{"v":3,"tor';
+
+  test("replaceLast does not leave two entries with the same v", async () => {
+    const file = path.join(dir, "r1.jsonl");
+    await fs.writeFile(file, TORN);
+    // The store reads lastEntry() first, which drops the fragment, so it
+    // replaces v2 — and the log must agree with it.
+    await new VersionLog(file).replaceLast({ v: 2, summary: "new" });
+
+    const { entries, dropped } = await new VersionLog(file).readAll();
+    expect(entries).toEqual([{ v: 1 }, { v: 2, summary: "new" }]);
+    expect(dropped).toBe(0);
+    const versions = entries.map((e) => e.v);
+    expect(versions).toEqual([...new Set(versions)]);
+  });
+
+  test("removeLast removes the last complete entry, not just the fragment", async () => {
+    const file = path.join(dir, "r1.jsonl");
+    await fs.writeFile(file, TORN);
+    await new VersionLog(file).removeLast();
+
+    const { entries, dropped } = await new VersionLog(file).readAll();
+    expect(entries).toEqual([{ v: 1 }]);
+    expect(dropped).toBe(0);
+  });
+
+  test("a stale cached offset is dropped when the repair moves the end of the file", async () => {
+    // The instance appended, so it holds an offset; the file is then torn
+    // underneath it. Trusting the cache would write onto the fragment.
+    const file = path.join(dir, "r1.jsonl");
+    const log = new VersionLog(file);
+    await log.append({ v: 1 });
+    await log.append({ v: 2, summary: "old" });
+    await fs.appendFile(file, '{"v":3,"tor');
+
+    await log.replaceLast({ v: 2, summary: "new" });
+
+    const { entries, dropped } = await new VersionLog(file).readAll();
+    expect(entries).toEqual([{ v: 1 }, { v: 2, summary: "new" }]);
+    expect(dropped).toBe(0);
+  });
+
+  test("the log is coherent after a torn removal followed by a fresh append", async () => {
+    const file = path.join(dir, "r1.jsonl");
+    await fs.writeFile(file, TORN);
+    const log = new VersionLog(file);
+    await log.removeLast();
+    await log.append({ v: 2, summary: "fresh" });
+
+    const { entries, dropped } = await new VersionLog(file).readAll();
+    expect(entries).toEqual([{ v: 1 }, { v: 2, summary: "fresh" }]);
+    expect(dropped).toBe(0);
+  });
+});

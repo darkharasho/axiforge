@@ -329,4 +329,38 @@ describe("the returned version does not alias the caller's document", () => {
     expect(v.doc.title).toBe("Power Berserker");
     expect(await store.getVersion("b1", 1)).toEqual(build());
   });
+
+  // The v1 branch above and the keyframe branch here are two separate
+  // assignment sites; only one of them was cloned on the first pass.
+  test("a delete keyframe does not alias the caller's document either", async () => {
+    await store.appendVersion({ recordId: "b1", before: null, after: build(), ts: at(0) });
+    const after = build({ title: "About to go" });
+    const v = await store.appendVersion({ recordId: "b1", after, kind: "delete", ts: at(10 * 60_000) });
+    after.title = "mutated by the caller";
+    expect(v.doc.title).toBe("About to go");
+    expect(await store.getVersion("b1", 2)).toEqual(build({ title: "About to go" }));
+  });
+
+  test("coalescing into a keyframe does not alias the caller's document either", async () => {
+    // v21 is a keyframe, so coalescing into it rewrites a whole doc.
+    await store.appendVersion({ recordId: "b1", before: null, after: build({ title: "t0" }), author: "me", source: "local", ts: at(0) });
+    for (let i = 1; i <= KEYFRAME_INTERVAL; i += 1) {
+      await store.appendVersion({
+        recordId: "b1", after: build({ title: `t${i}` }),
+        author: "me", source: "local", ts: at((i + 1) * 60 * 60_000),
+      });
+    }
+    const keyframe = (await store.listVersions("b1", { limit: 100 })).versions[0];
+    expect(keyframe).toMatchObject({ v: KEYFRAME_INTERVAL + 1, kind: "key" });
+
+    const after = build({ title: "coalesced" });
+    const v = await store.appendVersion({
+      recordId: "b1", after, author: "me", source: "local",
+      ts: at((KEYFRAME_INTERVAL + 1) * 60 * 60_000 + 60_000),
+    });
+    after.title = "mutated by the caller";
+    expect(v).toMatchObject({ v: KEYFRAME_INTERVAL + 1, kind: "key" });
+    expect(v.doc.title).toBe("coalesced");
+    expect(await store.getVersion("b1", KEYFRAME_INTERVAL + 1)).toEqual(build({ title: "coalesced" }));
+  });
 });
