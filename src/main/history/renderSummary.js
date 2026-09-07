@@ -16,12 +16,12 @@
 //     ", " into a SINGLE clause — no semicolons, so it always renders whole.
 
 const SLOT_LABELS = {
-  head: "helm",
+  head: "head",
   shoulders: "shoulders",
   chest: "chest",
   hands: "hands",
   legs: "legs",
-  feet: "boots",
+  feet: "feet",
   back: "back",
   amulet: "amulet",
   ring1: "ring 1",
@@ -29,8 +29,8 @@ const SLOT_LABELS = {
   accessory1: "accessory 1",
   accessory2: "accessory 2",
   breather: "breather",
-  aquatic1: "underwater weapon 1",
-  aquatic2: "underwater weapon 2",
+  aquatic1: "weapon 1",
+  aquatic2: "weapon 2",
   mainhand1: "main hand",
   offhand1: "off hand",
   mainhand2: "main hand (set 2)",

@@ -7,7 +7,7 @@ describe("renderSummary", () => {
     expect(renderSummary([
       { t: "gear", slot: "head", part: "rune",
         before: "Superior Rune of the Scholar", after: "Superior Rune of Durability" },
-    ])).toBe("helm rune: Superior Rune of the Scholar → Superior Rune of Durability");
+    ])).toBe("head rune: Superior Rune of the Scholar → Superior Rune of Durability");
   });
 
   test("names a skill swap by slot", () => {
