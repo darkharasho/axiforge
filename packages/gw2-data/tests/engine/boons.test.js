@@ -55,6 +55,38 @@ describe("analyzeBoons", () => {
     expect(result.boons.find((b) => b.name === "Fury")).toBeDefined();
   });
 
+  test("extracts boon from an equipped relic (issue #296)", () => {
+    // Relic of the Astral Ward — facts come from gw2Data/relicFacts.json
+    const relics = [{
+      id: 100388,
+      name: "Relic of the Astral Ward",
+      description: "Gain a Signet of the Astral Ward after using a signet skill. Using a signet skill while this signet is active consumes it to remove conditions from nearby allies and grant them resistance.",
+      icon: "",
+      facts: [
+        { type: "Buff", text: "Resistance", status: "Resistance", duration: 2, apply_count: 1 },
+        { type: "Number", text: "Conditions Removed", value: 2 },
+      ],
+    }];
+    const result = analyzeBoons([], [], new Map(), new Set(), relics);
+    const resistance = result.boons.find((b) => b.name === "Resistance");
+    expect(resistance).toBeDefined();
+    expect(resistance.sources.length).toBe(1);
+    expect(resistance.sources[0].type).toBe("relic");
+    expect(resistance.sources[0].name).toBe("Relic of the Astral Ward");
+    expect(resistance.sources[0].duration).toBe(2);
+    expect(resistance.sources[0].isAlly).toBe(true);
+  });
+
+  test("omitting relics leaves boons unchanged", () => {
+    const skills = [{
+      name: "Test",
+      description: "Grant Might.",
+      icon: "",
+      facts: [{ type: "Buff", status: "Might", apply_count: 1, duration: 5 }],
+    }];
+    expect(analyzeBoons(skills, [], new Map()).boons.length).toBe(1);
+  });
+
   test("extracts condition from skill", () => {
     const skills = [{
       name: "Sword of Justice",

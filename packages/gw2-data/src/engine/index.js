@@ -43,8 +43,8 @@ class StatEngine {
     return computeTooltip(attrs, skill, weaponType, mods);
   }
 
-  analyzeBoons(skills, traits, activeTraitIds) {
-    return analyzeBoons(skills, traits, this._overrides, activeTraitIds);
+  analyzeBoons(skills, traits, activeTraitIds, relics) {
+    return analyzeBoons(skills, traits, this._overrides, activeTraitIds, relics);
   }
 
   analyzeCombos(skills, traits) {

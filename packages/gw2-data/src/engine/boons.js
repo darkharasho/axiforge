@@ -50,7 +50,7 @@ function isAllyTargeted(description, statusName, allBoonNames) {
   return true;
 }
 
-function analyzeBoons(skills, traits, overrides, activeTraitIds) {
+function analyzeBoons(skills, traits, overrides, activeTraitIds, relics) {
   const boonMap = new Map(); // name → { name, sources: [] }
   const condMap = new Map();
 
@@ -155,6 +155,12 @@ function analyzeBoons(skills, traits, overrides, activeTraitIds) {
   }
   for (const trait of traits || []) {
     if (trait) processEntity(trait, "trait");
+  }
+  // Relics carry GW2-API-shaped facts too (see gw2Data/relicFacts.json), so the
+  // same fact walk applies — they just arrive from equipment rather than the
+  // skill/trait catalog.
+  for (const relic of relics || []) {
+    if (relic) processEntity(relic, "relic");
   }
 
   // Sort boons by display order

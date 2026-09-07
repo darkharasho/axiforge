@@ -97,6 +97,27 @@ export function buildEngineCatalogs(state) {
     utilityById: uc.utilityById || new Map(),
     infusionById: uc.infusionById || new Map(),
     enrichmentById: uc.enrichmentById || new Map(),
+    relicByName: uc.relicByName || new Map(),
+  };
+}
+
+/**
+ * Resolve the equipped relic into an entity the boon/fact analyzers can walk.
+ * Relics are stored on the build by name, and the upgrade catalog attaches the
+ * GW2-API-shaped `facts` array (desktop calls the flavour text `buff`, the web
+ * catalog calls it `description`).
+ */
+function _resolveRelic(state, catalogs) {
+  const name = (state.editor || {}).equipment?.relic || "";
+  if (!name) return null;
+  const def = catalogs.relicByName?.get(name);
+  if (!def?.facts?.length) return null;
+  return {
+    id: def.id,
+    name: def.name || name,
+    icon: def.icon || "",
+    description: def.description || def.buff || "",
+    facts: def.facts,
   };
 }
 
@@ -230,7 +251,8 @@ export function computeBoons(state, weaponSkills = []) {
       if (mid) activeTraitIds.add(Number(mid));
     }
   }
-  const result = analyzeBoons(resolvedSkills, resolvedTraits, overrides, activeTraitIds);
+  const relic = _resolveRelic(state, catalogs);
+  const result = analyzeBoons(resolvedSkills, resolvedTraits, overrides, activeTraitIds, relic ? [relic] : []);
 
   // Enrich boon/condition entries with icon URLs and hasAllySource for the renderer
   for (const entry of [...result.boons, ...result.conditions]) {
