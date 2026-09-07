@@ -1,3 +1,18 @@
+## Version v0.21.0 — September 7, 2026
+
+### Your builds remember what they used to be
+
+- **Changing a build was one-way.** Swap a rune, save, and the old one was gone — the only way back was remembering what it had been. Every save of a build now writes a version, listed newest-first in the build's **History** panel with who saved it and when. This is a net for "I changed something I didn't mean to", not an archive: the last 150 versions of each build are kept, and older ones fall away as new ones arrive.
+- **A version says what changed, not that something did.** Each entry is a real structural diff of the build — the trait you moved, the sigil you swapped, the skill you slotted, the stats you re-picked — named rather than listed as ids, and drawn with the same icons the editor uses. A version reads like the change instead of like a log line.
+- **Opening one compares it against the build side by side**, with the changed pieces highlighted in both columns so you can see what a restore would actually do before you do it. Restoring happens only from inside that comparison — clicking a row in the list opens the comparison rather than reverting on the spot, so an old version can never come back from a stray click.
+- **History you already had was carried over**, re-described in the new format, and comps keep their own history the same way they always did.
+
+### Bug Fixes
+
+- **Some edits couldn't be saved at all.** The editor decides whether there is anything to save by comparing a summary of its fields against the one it started with, and four fields were missing from that summary: a revenant's land legends, ranger pets, morph skills, and build images. Change only one of those and the editor still considered itself untouched — the Save button did nothing and the edit was lost on close. All four are now part of the check, and a test parses the list of versioned fields out of the differ and asserts every one of them appears in it, so the two halves can't drift apart again.
+- **The fourth weapon on a build card was sliced down the middle.** Two weapon sets is four weapons plus their names, which overflows the weapon row on a narrow card: the names ellipsized away to nothing and then the last icon was cut in half by the edge of the cell. The row wraps now, with each icon bound to its own name so a weapon can't be split across the break.
+- **A teammate's editing could push your own history off the end of a build.** Pulled changes arrive from a poll every 30 seconds, so an hour of someone iterating on a shared build wrote roughly 120 versions — enough to evict every version you had saved yourself, on the one build where you most wanted them. Consecutive pulls from the same person now fold into a single version. Your own saves are never folded into anything.
+
 ## Version v0.20.3 — September 6, 2026
 
 ### Bug Fixes
