@@ -681,3 +681,19 @@ Status key: `[ ]` open · `[x]` done · `[~]` in progress · `[?]` needs repro s
   `sqlite_master`. The account is now on Workers Paid, which lifts the free-tier
   ceiling — but the indexes and the session cache are what keep the steady-state
   read volume flat as the team grows.
+
+- [ ] **Build-history summaries still print raw trait ids.** Runes, sigils,
+  infusions and the enrichment/food/utility consumables now resolve to names
+  (`upgradeNameResolver` in `src/main/index.js`, threaded into
+  `gearDetail`/`consumableDetail`), but a trait swap still reads
+  `trait (tier 1): 1447 → 1449`. Traits are the last id-valued op family:
+  `specializations[].majorChoices` holds bare trait ids, and `diffTraitChoices`
+  emits them unchanged. Unlike upgrades, the names are not in a global catalog
+  keyed by id alone — resolving them means either prewarming every profession
+  catalog, or reading `specializations[].majorTraitsByTier` off the record's own
+  document, which `renderSummary` never sees. The store resolves summary opts
+  once per version written (`#summaryOptions`), so a per-record `traitNameOf`
+  would need the `after` doc threaded into that call. Same class of bug as the
+  one fixed in 794780c4, and it has the same permanence: the one-line summary
+  is frozen into the log when the version is written. Spec ops are fine — they
+  carry `{id, name}` — as are skills.
