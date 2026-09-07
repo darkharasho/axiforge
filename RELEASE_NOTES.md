@@ -1,3 +1,9 @@
+## Version v0.21.1 — September 7, 2026
+
+### Bug Fixes
+
+- **Relics never contributed to boon coverage.** Equip Relic of the Astral Ward on a signet build and the Resistance it grants to nearby allies simply wasn't there in the boon summary. This wasn't specific to that relic: coverage was only ever analyzed from your skills and traits, so no relic has ever been able to put a boon on the list. Relics are now analyzed alongside skills and traits, so any relic that grants a boon shows up — tagged **Relic** in the tooltip, and marked as an ally boon when its effect names allies rather than you. Comp Party Coverage reads from the same analysis and picks this up too, though comps published before this release carry a saved snapshot of their coverage and need to be republished to show it.
+
 ## Version v0.21.0 — September 7, 2026
 
 ### Your builds remember what they used to be
