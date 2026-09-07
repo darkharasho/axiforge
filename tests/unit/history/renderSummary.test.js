@@ -1,6 +1,6 @@
 "use strict";
 
-const { renderSummary } = require("../../../src/main/history/renderSummary");
+const { renderSummary, renderOpNoun } = require("../../../src/main/history/renderSummary");
 
 describe("renderSummary", () => {
   test("names a gear swap by slot and part", () => {
@@ -295,5 +295,52 @@ describe("item ids are resolved to names when a resolver is given", () => {
       [{ t: "consumable", path: "enrichment", before: "", after: "12345" }],
       { itemNameOf },
     )).toBe("enrichment: (none) → 12345");
+  });
+});
+
+// A trait choice is a bare id in the log. `diffBuild` resolves the names onto
+// the op at diff time, and the summary must prefer them — otherwise the
+// history reads "trait (tier 3): 903 → 909" and names nothing.
+describe("trait choices are named when the op carries names", () => {
+  test("uses the resolved names", () => {
+    expect(renderSummary([
+      { t: "trait", line: 0, tier: 3, before: 903, after: 909, vis: { before: { name: "Spiteful Spirit" }, after: { name: "Signets of Suffering" } } },
+    ])).toBe("trait (tier 3): Spiteful Spirit → Signets of Suffering");
+  });
+
+  test("falls back to the id for entries written before names were resolved", () => {
+    expect(renderSummary([
+      { t: "trait", line: 0, tier: 3, before: 903, after: 909 },
+    ])).toBe("trait (tier 3): 903 → 909");
+  });
+
+  test("names one side when only one resolved", () => {
+    expect(renderSummary([
+      { t: "trait", line: 0, tier: 1, before: 903, after: 909, vis: { after: { name: "Signets of Suffering" } } },
+    ])).toBe("trait (tier 1): 903 → Signets of Suffering");
+  });
+});
+
+// The compare table's label column needs the SUBJECT of an op alone. It comes
+// from here rather than from slicing `renderOpDetail`'s sentence, so there is
+// still exactly one place that decides what a slot is called.
+describe("renderOpNoun", () => {
+  test("names the subject of an op without its values", () => {
+    expect(renderOpNoun({ t: "gear", slot: "head", part: "rune" })).toBe("head rune");
+    expect(renderOpNoun({ t: "gear", slot: "mainhand1", part: "sigil0" })).toBe("main hand sigil");
+    expect(renderOpNoun({ t: "gear", slot: "chest", part: "item" })).toBe("chest");
+    expect(renderOpNoun({ t: "skill", slot: "utility2" })).toBe("utility 2");
+    expect(renderOpNoun({ t: "skill", slot: "heal", uw: true })).toBe("underwater heal");
+    expect(renderOpNoun({ t: "trait", line: 0, tier: 3 })).toBe("trait tier 3");
+    expect(renderOpNoun({ t: "spec", line: 2 })).toBe("specialization 3");
+    expect(renderOpNoun({ t: "consumable", path: "enrichment" })).toBe("enrichment");
+    expect(renderOpNoun({ t: "stat" })).toBe("stats");
+    expect(renderOpNoun({ t: "field", path: "title" })).toBe("title");
+    expect(renderOpNoun({ t: "meta", path: "folderId" })).toBe("folder");
+    expect(renderOpNoun({ t: "slot", line: 1, index: 2 })).toBe("party 2 slot 3");
+  });
+
+  test("says something for an op it has no phrase for", () => {
+    expect(renderOpNoun({ t: "raw", path: "somethingNew" })).toBe("something new");
   });
 });

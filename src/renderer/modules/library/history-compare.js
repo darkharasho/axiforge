@@ -21,6 +21,7 @@
 import { escapeHtml } from "../utils.js";
 import { state } from "../state.js";
 import { renderMiniBuildCard } from "../mini-build-card.js";
+import { resolveOpVisual, renderChip, renderOpIconStrip } from "./history-diff-view.js";
 
 let _modal = null;
 let _escHandler = null;
@@ -68,20 +69,49 @@ function _fallbackText(op) {
  * game patch) round-trip through the log but are not edits anyone made, so
  * they never reach the table.
  *
+ * An op that names a thing with artwork — a rune, a skill, a trait, a food —
+ * renders as before-chip -> after-chip with the icons the game uses, so the
+ * table reads as the equipment changing rather than as a list of sentences.
+ * The main process's sentence is still there, on the row's `title`, and an op
+ * with no two-sided value (notes, a folder move) is rendered AS that sentence.
+ *
  * @param {object[]} ops
+ * @param {object} [ctx] — { fromDoc, toDoc, catalog }. Without it every row
+ *   falls back to prose, which is what the unit tests exercise.
  * @returns {string} HTML
  */
-export function renderChangeTable(ops) {
+export function renderChangeTable(ops, ctx) {
   const list = (Array.isArray(ops) ? ops : []).filter((op) => op && op.t !== "derived");
   if (list.length === 0) {
     return `<div class="hist-compare__empty">No changes between these two versions.</div>`;
   }
-  const rows = list.map((op) => `
-    <div class="hist-compare__row" data-hist-row data-hist-op="${escapeHtml(String(op.t || ""))}">
-      <span class="hist-compare__row-text">${escapeHtml(op.label || _fallbackText(op))}</span>
-    </div>
-  `).join("");
+  const rows = list.map((op) => _renderRow(op, ctx)).join("");
   return `<div class="hist-compare__table" role="table">${rows}</div>`;
+}
+
+function _renderRow(op, ctx) {
+  const text = op.label || _fallbackText(op);
+  const attrs = `data-hist-row data-hist-op="${escapeHtml(String(op.t || ""))}"`;
+  const vis = resolveOpVisual(op, ctx);
+  if (!vis || !vis.noun) {
+    return `
+    <div class="hist-compare__row hist-compare__row--prose" ${attrs}>
+      <span class="hist-compare__row-text">${escapeHtml(text)}</span>
+    </div>
+  `;
+  }
+  const labelArt = vis.labelSvg
+    ? `<span class="hist-compare__row-glyph">${vis.labelSvg}</span>`
+    : "";
+  return `
+    <div class="hist-compare__row hist-compare__row--visual" ${attrs} title="${escapeHtml(text)}">
+      <span class="hist-compare__row-label">${labelArt}<span>${escapeHtml(vis.noun)}</span></span>
+      ${renderChip(vis.before, "before")}
+      <span class="hist-compare__row-arrow" aria-hidden="true">→</span>
+      ${renderChip(vis.after, "after")}
+      <span class="hist-compare__row-sr">${escapeHtml(text)}</span>
+    </div>
+  `;
 }
 
 /* -------------------------------------------------------------- highlights */
@@ -257,9 +287,10 @@ function _injectStyles() {
       color: var(--text-dim, #646670);
       padding: 12px 2px;
     }
-    /* One clause per row. The clause is written by the main process (see the
-       labelling note at the top of this file), arrow and all, so splitting it
-       back into before/after cells here would mean re-parsing prose. */
+    /* Two row shapes. A row whose op names something with artwork is a grid
+       of label / before / arrow / after; a row whose op has no two-sided
+       value keeps the main process's whole sentence (see the labelling note
+       at the top of this file) and spans the width. */
     .hist-compare__row {
       padding: 6px 2px;
       border-top: 1px solid var(--line, #1e1f24);
@@ -269,6 +300,102 @@ function _injectStyles() {
       color: var(--text, #e2e3e8);
     }
     .hist-compare__row:first-child { border-top: none; }
+    .hist-compare__row--visual {
+      display: grid;
+      grid-template-columns: minmax(90px, 150px) 1fr 16px 1fr;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 2px;
+    }
+    .hist-compare__row-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      color: var(--text-dim, #646670);
+      min-width: 0;
+    }
+    .hist-compare__row-label > span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .hist-compare__row-glyph {
+      display: inline-flex;
+      width: 15px;
+      height: 15px;
+      flex-shrink: 0;
+      opacity: 0.6;
+    }
+    .hist-compare__row-glyph svg { width: 100%; height: 100%; fill: currentColor; }
+    .hist-compare__row-arrow {
+      text-align: center;
+      color: var(--text-dim, #646670);
+    }
+    /* The sentence stays in the DOM for screen readers and for anyone
+       copying the diff out; sighted readers get it from the row title. */
+    .hist-compare__row-sr {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
+    }
+    .hist-chip {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+      padding: 3px 8px 3px 4px;
+      border: 1px solid var(--line, #1e1f24);
+      border-radius: 999px;
+      background: var(--bg-raised, #17181c);
+    }
+    .hist-chip__name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .hist-chip__icon {
+      width: 22px;
+      height: 22px;
+      flex-shrink: 0;
+      border-radius: 4px;
+      object-fit: cover;
+    }
+    .hist-chip__icon--svg { display: inline-flex; opacity: 0.75; }
+    .hist-chip__icon--svg svg { width: 100%; height: 100%; fill: currentColor; }
+    .hist-chip__icon--empty {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-dim, #646670);
+    }
+    .hist-chip--text { padding-left: 8px; }
+    .hist-chip--none {
+      border-style: dashed;
+      background: transparent;
+      color: var(--text-dim, #646670);
+      font-style: italic;
+    }
+    /* The new value is the point of the row, so it is the one that carries
+       colour. The old value stays neutral. */
+    .hist-chip--after {
+      border-color: var(--accent-dim, #3a4a5a);
+      background: var(--accent-bg, rgba(90, 150, 220, 0.08));
+    }
+    .hist-chip--after .hist-chip__name { color: var(--accent, #6ba4e0); }
+    @media (max-width: 640px) {
+      .hist-compare__row--visual {
+        grid-template-columns: 1fr 16px 1fr;
+        grid-template-areas: "label label label" "before arrow after";
+        row-gap: 4px;
+      }
+      .hist-compare__row-label { grid-area: label; }
+    }
     .hist-compare__footer {
       display: flex;
       flex-direction: column;
@@ -490,7 +617,7 @@ async function _renderComparison(modal, ctx, leftPick, rightPick) {
     ${isOrigin ? "" : `
     <div class="hist-compare__changes">
       <div class="hist-compare__changes-title">Changes</div>
-      ${renderChangeTable(ops)}
+      ${renderChangeTable(ops, { fromDoc: res && res.fromDoc, toDoc: res && res.toDoc, catalog: state.upgradeCatalog })}
     </div>`}
   `;
 

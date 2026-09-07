@@ -5,6 +5,7 @@
 import { escapeHtml } from "../utils.js";
 import { state } from "../state.js";
 import { showCompareModal, isCompareModalOpen, closeCompareModal } from "./history-compare.js";
+import { renderOpIconStrip } from "./history-diff-view.js";
 
 let _panel = null;
 let _escHandler = null;
@@ -166,6 +167,42 @@ function _injectStyles() {
       margin-bottom: 8px;
       word-break: break-word;
     }
+
+    /* The artwork of what changed, under the sentence that describes it. The
+       sentence stays the description; this is so a glance down the feed says
+       "a rune and two sigils moved" before anything is read. */
+    .hist-strip {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin: -4px 0 8px;
+    }
+    .hist-strip__pair {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      padding: 2px 5px;
+      border: 1px solid var(--line, #1e1f24);
+      border-radius: 999px;
+    }
+    .hist-strip__arrow { font-size: 9px; color: var(--text-dim, #646670); }
+    .hist-strip__icon {
+      width: 18px;
+      height: 18px;
+      border-radius: 3px;
+      object-fit: cover;
+      flex-shrink: 0;
+    }
+    .hist-strip__icon--svg { display: inline-flex; opacity: 0.7; }
+    .hist-strip__icon--svg svg { width: 100%; height: 100%; fill: currentColor; }
+    .hist-strip__icon--empty {
+      display: inline-block;
+      border: 1px dashed var(--line, #1e1f24);
+      border-radius: 3px;
+      box-sizing: border-box;
+    }
+    .hist-strip__more { font-size: 11px; color: var(--text-dim, #646670); }
 
     /* Dimmed until the row is hovered or keyboard-focused, so a long feed reads
        as history first and a wall of buttons second. */
@@ -343,6 +380,7 @@ function _renderFolderEntries(listEl, entries) {
         </div>
         ${entry.recordTitle ? `<div class="history-panel__entry-build">${escapeHtml(entry.recordTitle)}</div>` : ""}
         <div class="history-panel__entry-summary">${escapeHtml(_summaryText(entry))}</div>
+        ${renderOpIconStrip(entry.ops, { catalog: state.upgradeCatalog })}
       </div>
       <div class="history-panel__actions">
         <button class="history-panel__revert">${label}</button>
@@ -558,6 +596,7 @@ function _renderEntries(listEl, record, entries) {
           ${entry.author ? `<span class="history-panel__entry-time">${escapeHtml(entry.author)}</span>` : ""}
         </div>
         <div class="history-panel__entry-summary">${escapeHtml(_summaryText(entry))}</div>
+        ${renderOpIconStrip(entry.ops, { catalog: state.upgradeCatalog })}
       </div>
       <div class="history-panel__actions">
         <button class="history-panel__revert" data-hist-v="${escapeHtml(String(entry.v))}">

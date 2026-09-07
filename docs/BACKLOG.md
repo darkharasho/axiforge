@@ -682,18 +682,11 @@ Status key: `[ ]` open · `[x]` done · `[~]` in progress · `[?]` needs repro s
   ceiling — but the indexes and the session cache are what keep the steady-state
   read volume flat as the team grows.
 
-- [ ] **Build-history summaries still print raw trait ids.** Runes, sigils,
-  infusions and the enrichment/food/utility consumables now resolve to names
-  (`upgradeNameResolver` in `src/main/index.js`, threaded into
-  `gearDetail`/`consumableDetail`), but a trait swap still reads
-  `trait (tier 1): 1447 → 1449`. Traits are the last id-valued op family:
-  `specializations[].majorChoices` holds bare trait ids, and `diffTraitChoices`
-  emits them unchanged. Unlike upgrades, the names are not in a global catalog
-  keyed by id alone — resolving them means either prewarming every profession
-  catalog, or reading `specializations[].majorTraitsByTier` off the record's own
-  document, which `renderSummary` never sees. The store resolves summary opts
-  once per version written (`#summaryOptions`), so a per-record `traitNameOf`
-  would need the `after` doc threaded into that call. Same class of bug as the
-  one fixed in 794780c4, and it has the same permanence: the one-line summary
-  is frozen into the log when the version is written. Spec ops are fine — they
-  carry `{id, name}` — as are skills.
+- [x] **Build-history summaries still print raw trait ids.** ~~A trait swap
+  reads `trait (tier 1): 1447 → 1449`.~~ Fixed: `diffTraitChoices` resolves both
+  choices off the spec line's own `majorTraitsByTier` at DIFF time — the one
+  moment both documents are in hand — and hangs `{name, icon}` on the op as
+  `vis`. `renderSummary` prefers it, the compare table draws the icon, and the
+  raw ids stay on `before`/`after` so `applyOps` is untouched. Entries written
+  before this still print ids in the list, but the compare modal resolves them
+  from the documents it already loads.

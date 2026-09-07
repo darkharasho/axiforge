@@ -76,7 +76,7 @@ describe("compareVersions", () => {
 
     const { ops } = await compare(1, 3);
     expect(ops).toEqual([
-      { t: "field", path: "title", before: "Power Berserker", after: "Final", label: 'title: "Power Berserker" → "Final"' },
+      { t: "field", path: "title", before: "Power Berserker", after: "Final", label: 'title: "Power Berserker" → "Final"', noun: "title" },
     ]);
   });
 

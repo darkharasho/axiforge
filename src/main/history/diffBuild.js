@@ -120,6 +120,46 @@ function clone(value) {
   return value === undefined ? undefined : structuredClone(value);
 }
 
+// ------------------------------------------------------------------ visuals
+//
+// Trait and spec ops carry values the reader cannot name: a trait choice is a
+// bare id (`903`) and a spec op holds only `{id, name}`. Both names and icons
+// DO exist, but only on the documents being diffed — a saved spec line embeds
+// its `majorTraitsByTier` catalog and its own `icon`. So resolve them here,
+// while both documents are in hand, and hang the result on the op as `vis`.
+//
+// `vis` is a display hint, never authority: `before`/`after` keep the raw
+// values `applyOps` writes back, so reconstruction is untouched. Entries
+// written before this existed simply have no `vis`, and their summaries fall
+// back to printing ids as they always did.
+function visPair(before, after) {
+  if (!before && !after) return undefined;
+  const vis = {};
+  if (before) vis.before = before;
+  if (after) vis.after = after;
+  return vis;
+}
+
+function visOf(name, icon) {
+  const out = {};
+  if (typeof name === "string" && name) out.name = name;
+  if (typeof icon === "string" && icon) out.icon = icon;
+  return Object.keys(out).length ? out : undefined;
+}
+
+function specVis(line) {
+  return visOf(undefined, line && line.icon);
+}
+
+function traitVis(line, tier, traitId) {
+  if (traitId === undefined || traitId === null || traitId === "") return undefined;
+  const byTier = line && line.majorTraitsByTier;
+  const options = (isObject(byTier) && byTier[String(tier)]) || [];
+  if (!Array.isArray(options)) return undefined;
+  const hit = options.find((t) => t && Number(t.id) === Number(traitId));
+  return hit ? visOf(hit.name, hit.icon) : undefined;
+}
+
 function sortedUnionKeys(a, b) {
   return [...new Set([...Object.keys(a || {}), ...Object.keys(b || {})])].sort();
 }
@@ -207,10 +247,11 @@ function diffSpecLineInner(ops, line, beforeLine, afterLine) {
       line,
       before: beforeLine === undefined ? undefined : { id: b.id, name: b.name },
       after: afterLine === undefined ? undefined : { id: a.id, name: a.name },
+      vis: visPair(specVis(b), specVis(a)),
     });
   }
 
-  diffTraitChoices(ops, line, b.majorChoices, a.majorChoices);
+  diffTraitChoices(ops, line, b, a);
 
   for (const key of sortedUnionKeys(b, a)) {
     if (skip.has(key) || deepEqual(b[key], a[key])) continue;
@@ -218,7 +259,9 @@ function diffSpecLineInner(ops, line, beforeLine, afterLine) {
   }
 }
 
-function diffTraitChoices(ops, line, beforeChoices, afterChoices) {
+function diffTraitChoices(ops, line, beforeLine, afterLine) {
+  const beforeChoices = beforeLine.majorChoices;
+  const afterChoices = afterLine.majorChoices;
   if (deepEqual(beforeChoices, afterChoices)) return;
   walkOrRaw(ops, `specializations.${line}.majorChoices`, beforeChoices, afterChoices, () => {
     if (!bothAre(beforeChoices, afterChoices, isObject)) return;
@@ -228,7 +271,15 @@ function diffTraitChoices(ops, line, beforeChoices, afterChoices) {
       // A tier is always 1, 2 or 3. Anything else is malformed and must not
       // become `tier: NaN`, which `applyOps` would write back as the key "NaN".
       const op = isIndexKey(tier)
-        ? { t: "trait", line, tier: Number(tier) }
+        ? {
+            t: "trait",
+            line,
+            tier: Number(tier),
+            vis: visPair(
+              traitVis(beforeLine, tier, beforeChoices[tier]),
+              traitVis(afterLine, tier, afterChoices[tier]),
+            ),
+          }
         : { t: "raw", path };
       emit(ops, { ...op, before: beforeChoices[tier], after: afterChoices[tier] });
     }

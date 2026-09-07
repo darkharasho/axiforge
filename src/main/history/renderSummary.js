@@ -167,8 +167,17 @@ function skillDetail(op) {
   return `${label}: ${fmtValue(op.before)} → ${fmtValue(op.after)}`;
 }
 
+// A trait choice is stored as a bare id, so `before`/`after` alone read as
+// "trait (tier 3): 903 -> 909". `diffBuild` resolves the names off the spec
+// line's embedded catalog into `op.vis`; use them whenever they are there and
+// keep the id as the fallback for entries written before `vis` existed.
 function traitDetail(op) {
-  return `trait (tier ${op.tier}): ${fmtValue(op.before)} → ${fmtValue(op.after)}`;
+  return `trait (tier ${op.tier}): ${visValue(op, "before")} → ${visValue(op, "after")}`;
+}
+
+function visValue(op, side) {
+  const name = op.vis && op.vis[side] && op.vis[side].name;
+  return typeof name === "string" && name ? name : fmtValue(op[side]);
 }
 
 function specDetail(op) {
@@ -247,6 +256,39 @@ function renderOpDetail(op, opts) {
   }
 }
 
+// The SUBJECT of an op, with no values attached — "helm rune", "utility 2",
+// "trait tier 3". `renderOpDetail` writes a whole sentence; the compare
+// table's icon rows need the subject alone for their label column, and
+// deriving it by slicing the sentence at its colon would be a second
+// vocabulary in a different file. Same labels, same place.
+function renderOpNoun(op, opts) {
+  switch (op.t) {
+    case "gear": {
+      const partLabel = gearPartLabel(op.part);
+      const slotLabel = gearSlotLabel(op.slot);
+      return partLabel ? `${slotLabel} ${partLabel}` : slotLabel;
+    }
+    case "skill":
+      return `${op.uw ? "underwater " : ""}${skillSlotLabel(op.slot)}`;
+    case "slot":
+      return `party ${Number(op.line) + 1} slot ${Number(op.index) + 1}`;
+    case "trait":
+      return `trait tier ${op.tier}`;
+    case "spec":
+      return `specialization ${Number(op.line) + 1}`;
+    case "stat":
+      return "stats";
+    case "consumable":
+      return humanize(op.path);
+    case "field":
+      return (FIELD_META[op.path] && FIELD_META[op.path].noun) || humanize(op.path);
+    case "meta":
+      return op.path === "folderId" ? "folder" : humanize(op.path);
+    default:
+      return humanize(op.path || op.t || "change");
+  }
+}
+
 /* -------------------------------------------------------------- grouping */
 
 function groupBareNoun(op) {
@@ -314,4 +356,4 @@ function renderSummary(ops, opts = {}) {
   return list.map((op) => renderOpDetail(op, opts)).join("; ");
 }
 
-module.exports = { renderSummary, renderOpDetail };
+module.exports = { renderSummary, renderOpDetail, renderOpNoun };

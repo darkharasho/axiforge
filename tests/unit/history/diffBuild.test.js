@@ -131,6 +131,48 @@ describe("diffBuild — op shapes", () => {
     ]);
   });
 
+  // A trait choice is stored as a bare id, and the only place its name and
+  // icon exist is the spec line's own embedded catalog — which is in hand
+  // here and nowhere downstream. Resolving it at diff time is what stops the
+  // history reading "trait (tier 1): 670 → 671" forever after.
+  test("a trait op carries the names and icons of both choices", () => {
+    const before = baseBuild();
+    before.specializations[0].majorTraitsByTier = {
+      1: [
+        { id: 670, name: "Method of Madness", icon: "https://x/670.png" },
+        { id: 671, name: "Chaotic Persistence", icon: "https://x/671.png" },
+      ],
+    };
+    before.specializations[0].majorChoices[1] = 670;
+    const after = structuredClone(before);
+    after.specializations[0].majorChoices[1] = 671;
+    const op = diff(before, after).find((o) => o.t === "trait");
+    expect(op.vis).toEqual({
+      before: { name: "Method of Madness", icon: "https://x/670.png" },
+      after: { name: "Chaotic Persistence", icon: "https://x/671.png" },
+    });
+    // The raw ids stay authoritative — `applyOps` writes those back.
+    expect(op).toMatchObject({ before: 670, after: 671 });
+  });
+
+  test("a trait op carries no vis when the spec line cannot name the choice", () => {
+    const after = baseBuild();
+    after.specializations[0].majorChoices[2] = 999;
+    expect(diff(baseBuild(), after)[0].vis).toBeUndefined();
+  });
+
+  test("a spec op carries the specialization's icon", () => {
+    const before = baseBuild();
+    before.specializations[0].icon = "https://x/chaos.png";
+    const after = structuredClone(before);
+    after.specializations[0] = { ...after.specializations[0], id: 46, name: "Dueling", icon: "https://x/dueling.png" };
+    const op = diff(before, after).find((o) => o.t === "spec");
+    expect(op.vis).toEqual({
+      before: { icon: "https://x/chaos.png" },
+      after: { icon: "https://x/dueling.png" },
+    });
+  });
+
   test("an unknown key produces a raw op rather than being dropped", () => {
     const after = baseBuild();
     after.somethingNobodyPlanned = { a: [1, 2] };

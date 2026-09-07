@@ -51,6 +51,50 @@ describe("renderChangeTable", () => {
     expect(html).toContain("&lt;img");
   });
 
+  // The table is the diff a teammate reads, so a change to a thing with
+  // artwork has to LOOK like that thing changing.
+  test("renders a resolvable change as before and after chips with icons", () => {
+    const catalog = {
+      runeById: new Map([
+        [24836, { id: 24836, name: "Superior Rune of the Scholar", icon: "https://x/a.png" }],
+        [24838, { id: 24838, name: "Superior Rune of Durability", icon: "https://x/b.png" }],
+      ]),
+    };
+    const el = document.createElement("div");
+    el.innerHTML = renderChangeTable(
+      [{ t: "gear", slot: "head", part: "rune", noun: "head rune", label: "head rune: a → b", before: 24836, after: 24838 }],
+      { catalog },
+    );
+    const row = el.querySelector("[data-hist-row]");
+    expect(row.className).toContain("hist-compare__row--visual");
+    expect(row.querySelectorAll("img")).toHaveLength(2);
+    expect(row.textContent).toContain("head rune");
+    expect(row.textContent).toContain("Superior Rune of Durability");
+  });
+
+  // The main process owns the vocabulary; an op it worded but this module
+  // cannot picture must still render that wording, not disappear.
+  test("keeps the main process's sentence for a change with no two-sided value", () => {
+    const el = document.createElement("div");
+    el.innerHTML = renderChangeTable(
+      [{ t: "field", path: "notes", noun: "notes", label: "notes updated", before: "a", after: "b" }],
+      { catalog: {} },
+    );
+    const row = el.querySelector("[data-hist-row]");
+    expect(row.className).toContain("hist-compare__row--prose");
+    expect(row.textContent).toContain("notes updated");
+  });
+
+  test("the sentence stays on every visual row too, for screen readers", () => {
+    const el = document.createElement("div");
+    el.innerHTML = renderChangeTable(
+      [{ t: "stat", noun: "stats", label: "stats: Berserker\u0027s → Marauder", before: "Berserker\u0027s", after: "Marauder" }],
+      { catalog: {} },
+    );
+    expect(el.querySelector(".hist-compare__row-sr").textContent).toContain("stats:");
+    expect(el.querySelector("[data-hist-row]").getAttribute("title")).toContain("stats:");
+  });
+
   test("says so when a version has nothing to show", () => {
     const el = document.createElement("div");
     el.innerHTML = renderChangeTable([]);

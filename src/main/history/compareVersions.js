@@ -1,6 +1,6 @@
 "use strict";
 
-const { renderOpDetail } = require("./renderSummary");
+const { renderOpDetail, renderOpNoun } = require("./renderSummary");
 
 /**
  * A TRUE diff between any two versions of a record.
@@ -44,7 +44,11 @@ async function compareVersions({ store, differ, recordId, fromV, toV, summaryOpt
     // `derived` ops (icons, tooltips, catalog blobs rewritten by a game patch)
     // round-trip through the log but are nobody's edit.
     .filter((op) => op && op.t !== "derived")
-    .map((op) => ({ ...op, label: renderOpDetail(op, summaryOpts) }));
+    .map((op) => ({
+      ...op,
+      label: renderOpDetail(op, summaryOpts),
+      noun: renderOpNoun(op, summaryOpts),
+    }));
 
   return { ops, fromDoc, toDoc };
 }
