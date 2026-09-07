@@ -120,7 +120,7 @@ class HistoryStore {
    *
    * @param {{recordId: string, before?: object|null, after: object,
    *          author?: string, source?: string, kind?: string, ts?: string,
-   *          summaryOpts?: object}} input
+   *          summaryOpts?: object, coalesce?: boolean}} input
    */
   async appendVersion(input) {
     const opts = input || {};
@@ -140,6 +140,13 @@ class HistoryStore {
     kind,
     ts = new Date().toISOString(),
     summaryOpts,
+    // Opt out of the coalescing window. Live saves always want it on; the v1
+    // migration (history/migrateV1.js) wants it off, because every v1 entry is
+    // already a version the user committed to and can see. Merging two of them
+    // because they happen to sit five minutes apart would delete history the
+    // migration exists to preserve — in the measured baseline that is 39 of
+    // 131 entries.
+    coalesce: allowCoalesce = true,
   }) {
     const { diff, classify } = this.differ;
     const log = this.#logFor(recordId);
@@ -177,6 +184,7 @@ class HistoryStore {
     // rewrite the record's origin keyframe and erase where it came from. A
     // deletion never merges into the edit before it either.
     const coalesce =
+      allowCoalesce &&
       !isDelete &&
       last.v > 1 &&
       last.kind !== "delete" &&
