@@ -64,33 +64,43 @@ function docTs(doc) {
 }
 
 /**
- * v1 files are objects keyed by record id. A flat array is accepted too and
- * grouped by `idField` — that is the only thing `idField` is for here, and it
- * costs nothing to tolerate.
+ * v1 files are objects keyed by record id, and only ever that: the pre-v2
+ * `HistoryStore.#readAll` coerced anything that was not a plain object — an
+ * array included — to `{}`, so no other shape could reach disk.
  */
-function toRecordMap(data, idField) {
-  if (!data || typeof data !== "object") return null;
-  if (!Array.isArray(data)) return new Map(Object.entries(data));
-  const out = new Map();
-  for (const entry of data) {
-    const id = entry && entry[idField];
-    if (!id) continue;
-    if (!out.has(id)) out.set(id, []);
-    out.get(id).push(entry);
-  }
-  return out;
+function toRecordMap(data) {
+  if (!data || typeof data !== "object" || Array.isArray(data)) return null;
+  return new Map(Object.entries(data));
+}
+
+/** Has this record already been migrated? One entry is enough to say yes. */
+async function hasLog(store, recordId) {
+  const { versions } = await store.listVersions(recordId, { limit: 1 });
+  return versions.length > 0;
 }
 
 /**
  * @param {{baseDir: string, store: import("../historyStore").HistoryStore,
- *          fileName: string, idField: string,
- *          liveDocs?: Map<string, object>}} input
+ *          fileName: string, liveDocs?: Map<string, object>}} input
  * @returns {Promise<{migrated: number, failed: number, skipped: boolean,
- *                    entries: number, derivedOnly: number}>}
+ *                    retired: boolean, entries: number, versioned: number,
+ *                    derivedOnly: number, dropped: number}>}
+ *
+ * `migrated` and `failed` count RECORDS. `entries`, `versioned`,
+ * `derivedOnly` and `dropped` count v1 ENTRIES, and every entry lands in
+ * exactly one of the last three:
+ *
+ *     versioned + derivedOnly + dropped === entries
+ *
+ * (The origin keyframe is deliberately outside that sum: it is the state
+ * before the oldest entry's change, so no entry produced it.)
  */
 async function migrateV1(input) {
-  const { baseDir, store, fileName, idField, liveDocs } = input || {};
-  const result = { migrated: 0, failed: 0, skipped: true, entries: 0, derivedOnly: 0 };
+  const { baseDir, store, fileName, liveDocs } = input || {};
+  const result = {
+    migrated: 0, failed: 0, skipped: true, retired: true,
+    entries: 0, versioned: 0, derivedOnly: 0, dropped: 0,
+  };
   if (!baseDir || !store || !fileName) return result;
 
   const filePath = path.join(baseDir, fileName);
@@ -98,12 +108,12 @@ async function migrateV1(input) {
     // `null` covers absent (fresh install), already-migrated (renamed away),
     // and corrupt-beyond-recovery — jsonFile quarantines that last one for us.
     const data = await readJsonFile(filePath, null);
-    const records = toRecordMap(data, idField);
+    const records = toRecordMap(data);
     if (!records || records.size === 0) {
       // Nothing usable, but the file may still be sitting there (empty object,
       // or corrupt and already quarantined). Move it aside so the next launch
       // does not re-read and re-quarantine it forever.
-      await retire(filePath);
+      result.retired = await retire(filePath);
       return result;
     }
 
@@ -111,20 +121,55 @@ async function migrateV1(input) {
     const live = liveDocs instanceof Map ? liveDocs : new Map();
 
     for (const [recordId, value] of records) {
+      const count = Array.isArray(value) ? value.length : 0;
+      // The real idempotence guard. The source file's absence is NOT a
+      // reliable already-migrated signal — a failed rename, or a profile
+      // restored from backup, puts it back, and re-running then appends the
+      // whole chain a second time onto a log that already ends at the live
+      // document. The result reads as history running backwards: the
+      // duplicate v1-state lands ABOVE the live state, dated older.
       try {
-        const counts = await migrateRecord({ store, recordId, value, liveDoc: live.get(recordId) });
-        result.entries += counts.entries;
-        result.derivedOnly += counts.derivedOnly;
-        if (counts.wrote) result.migrated += 1;
+        if (await hasLog(store, recordId)) {
+          result.entries += count;
+          result.dropped += count;
+          continue;
+        }
+      } catch (err) {
+        // Even the guard degrades rather than throws; a record we cannot ask
+        // about is safer left alone than migrated twice.
+        console.error(`[migrateV1] could not check existing history for ${recordId}:`, err && err.message);
+        result.entries += count;
+        result.dropped += count;
+        continue;
+      }
+
+      const before = {
+        entries: result.entries, versioned: result.versioned,
+        derivedOnly: result.derivedOnly, dropped: result.dropped,
+      };
+      try {
+        const wrote = await migrateRecord({ store, recordId, value, liveDoc: live.get(recordId), tally: result });
+        if (wrote) result.migrated += 1;
       } catch (err) {
         result.failed += 1;
         console.warn(`[migrateV1] ${fileName} record ${recordId} could not be migrated:`, err && err.message);
+        // The record's log is about to be thrown away, so nothing it counted
+        // survives: roll its entries back into `dropped` and keep the sum true.
+        const seen = result.entries - before.entries;
+        result.versioned = before.versioned;
+        result.derivedOnly = before.derivedOnly;
+        result.dropped = before.dropped + seen;
         await reseed(store, recordId, live.get(recordId));
       }
     }
 
     // Only now, with every record attempted, is the old file safe to retire.
-    await retire(filePath);
+    result.retired = await retire(filePath);
+    console.log(
+      `[migrateV1] ${fileName}: ${result.migrated} records migrated, ${result.failed} failed`
+      + ` — ${result.entries} entries (${result.versioned} versioned, ${result.derivedOnly} no-change,`
+      + ` ${result.dropped} dropped)`
+    );
     return result;
   } catch (err) {
     console.error(`[migrateV1] ${fileName} migration failed:`, err && err.message);
@@ -133,20 +178,32 @@ async function migrateV1(input) {
 }
 
 /**
- * Replay one record oldest-first. Throws on an unusable record so the caller
- * can count it and re-seed; every other outcome is a normal result.
+ * Replay one record oldest-first, tallying into `tally`. Throws on an unusable
+ * record so the caller can count it and re-seed; every other outcome is a
+ * normal result. Returns whether anything was written.
  */
-async function migrateRecord({ store, recordId, value, liveDoc }) {
+async function migrateRecord({ store, recordId, value, liveDoc, tally }) {
   if (!Array.isArray(value)) throw new Error(`expected an array of entries, got ${typeof value}`);
+  tally.entries += value.length;
 
   // Newest-first on disk → oldest-first here. Entries with no snapshot are
   // pre-snapshot legacy rows: they name a change we cannot reconstruct, so
   // they are dropped rather than allowed to abort the record.
   const ordered = value.filter((e) => e && e.snapshot && typeof e.snapshot === "object").reverse();
-  const counts = { entries: ordered.length, derivedOnly: 0, wrote: false };
-  if (ordered.length === 0) return counts;
+  tally.dropped += value.length - ordered.length;
+  if (ordered.length === 0) return false;
+
+  const { diff, classify } = store.differ;
 
   // v1: the oldest state, which no entry describes. A keyframe, "Created".
+  //
+  // It takes the author and source of `first` — the entry that changed AWAY
+  // from this state, not into it. That is deliberate: v1 records a state whose
+  // own author v1 never stored, and the entry that superseded it is the only
+  // name attached to it anywhere. Its `ts` comes from the snapshot's own
+  // `updatedAt` where there is one, so the origin is dated when it was
+  // written rather than when it was replaced. Do not "fix" this to `first`'s
+  // timestamp; that would date the origin to the moment it ended.
   const first = ordered[0];
   const seeded = await store.appendVersion({
     recordId,
@@ -157,7 +214,10 @@ async function migrateRecord({ store, recordId, value, liveDoc }) {
     coalesce: false,
   });
   if (!seeded) throw new Error("could not write the origin keyframe");
-  counts.wrote = true;
+
+  // What the chain currently holds, so each entry can be classified against
+  // the same base the store will diff against.
+  let base = first.snapshot;
 
   // Each entry produced the NEXT state — the following entry's snapshot, or,
   // for the newest entry, the live document.
@@ -166,8 +226,21 @@ async function migrateRecord({ store, recordId, value, liveDoc }) {
     const after = i + 1 < ordered.length ? ordered[i + 1].snapshot : liveDoc;
     // The newest entry with no live document: the build is gone (deleted, or
     // never in this profile). Its snapshot is already stored as the version
-    // before it, so the chain simply ends here.
-    if (!after) break;
+    // before it, so the chain simply ends here and the entry produced nothing.
+    if (!after) {
+      tally.dropped += 1;
+      break;
+    }
+
+    // Classify the transition OURSELVES rather than reading it off
+    // appendVersion's return. `null` from the store means either "nothing
+    // worth recording" or "the write failed and degraded", and those must not
+    // be reported to the user as the same thing: the second is a lost version.
+    // IGNORED_FIELDS never reach ops, so diffing our own `base` and diffing
+    // the store's reconstructed tail give the same op list.
+    const { substantive, incidental } = classify(diff(base, after));
+    const noChange = substantive.length === 0 && incidental.length === 0;
+
     const written = await store.appendVersion({
       recordId,
       after,
@@ -176,12 +249,23 @@ async function migrateRecord({ store, recordId, value, liveDoc }) {
       ts: entry.timestamp,
       coalesce: false,
     });
-    // `null` means the transition was derived-only — a publish receipt, a sort
-    // order, a `updatedAt` bump. v2 deliberately does not log those, so the
-    // entry contributes no version. It is not a failure; it is the point.
-    if (!written) counts.derivedOnly += 1;
+
+    if (written) {
+      tally.versioned += 1;
+      base = after;
+    } else if (noChange) {
+      // A publish receipt, a sort order, an `updatedAt`-only save. v2
+      // deliberately does not log those; the entry contributes no version.
+      // The chain's base is unchanged, because nothing was appended.
+      tally.derivedOnly += 1;
+    } else {
+      throw new Error(
+        `version for entry ${entry.id} was not written despite`
+        + ` ${substantive.length} substantive / ${incidental.length} incidental ops`
+      );
+    }
   }
-  return counts;
+  return true;
 }
 
 /**
@@ -204,14 +288,27 @@ async function reseed(store, recordId, liveDoc) {
   }
 }
 
-/** Rename, never delete: the old file is the user's only undo. */
+/**
+ * Rename, never delete: the old file is the user's only undo.
+ *
+ * Returns whether the file is retired — true when it was renamed, and true
+ * when it was already gone, which is the same end state. A rename that FAILS
+ * returns false and logs at error level: the undo file the user was promised
+ * does not exist, and a caller that reports success regardless is lying. It
+ * still never throws, because `init()` is downstream.
+ */
 async function retire(filePath) {
   try {
     await fs.rename(filePath, `${filePath}.pre-v2`);
+    return true;
   } catch (err) {
-    if (!err || err.code !== "ENOENT") {
-      console.warn(`[migrateV1] could not retire ${filePath}:`, err && err.message);
-    }
+    if (err && err.code === "ENOENT") return true;
+    console.error(
+      `[migrateV1] could not retire ${filePath} to ${path.basename(filePath)}.pre-v2 —`
+      + ` the pre-v2 undo copy was NOT created:`,
+      err && err.message
+    );
+    return false;
   }
 }
 

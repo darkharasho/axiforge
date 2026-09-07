@@ -42,7 +42,6 @@ const KINDS = [
     label: "builds",
     historyFile: "build-history.json",
     recordsFile: "builds.json",
-    idField: "buildId",
     differ: diffBuild,
     makeStore: (dir) => new BuildHistoryStore(dir),
   },
@@ -50,7 +49,6 @@ const KINDS = [
     label: "comps",
     historyFile: "comp-history.json",
     recordsFile: "comps.json",
-    idField: "compId",
     differ: diffComp,
     makeStore: (dir) => new CompHistoryStore(dir),
   },
@@ -131,7 +129,6 @@ async function verifyKind(profileDir, tmpRoot, kind) {
     baseDir: dir,
     store,
     fileName: kind.historyFile,
-    idField: kind.idField,
     liveDocs,
   });
 
@@ -205,7 +202,24 @@ async function verifyKind(profileDir, tmpRoot, kind) {
     }
   }
 
-  if (result.failed) console.error(`WARNING ${kind.label}: ${result.failed} record(s) failed to migrate`);
+  // A partly-failed migration is a failure, not a warning: it must not pass a
+  // scripted check just because the records that survived reconstruct cleanly.
+  if (result.failed) {
+    mismatches += result.failed;
+    console.error(`FAILED ${kind.label}: ${result.failed} record(s) could not be migrated at all`);
+  }
+  if (!result.retired) {
+    mismatches += 1;
+    console.error(`FAILED ${kind.label}: the source file was not retired to .pre-v2`);
+  }
+  const accounted = result.versioned + result.derivedOnly + result.dropped;
+  if (accounted !== result.entries) {
+    mismatches += 1;
+    console.error(
+      `FAILED ${kind.label}: ${result.entries} entries but ${accounted} accounted for`
+      + ` (${result.versioned} versioned, ${result.derivedOnly} no-change, ${result.dropped} dropped)`
+    );
+  }
   return { present: true, records: recordCount, versions: checked, states, exact, ignoredDrift, notVersioned, mismatches, result };
 }
 

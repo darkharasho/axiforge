@@ -154,8 +154,143 @@ describe("migrateV1", () => {
     expect(await store.getVersion("b1", 2)).toEqual(doc("v2"));
   });
 
-  test("migration never throws, even on unreadable input", async () => {
+  // The brief's version of this fed a wholly unparseable file and asserted
+  // only `failed: 0` — which a migration that did nothing at all also
+  // satisfies. Feed it a file that is parseable but PARTLY corrupt, which is
+  // the case that actually matters (a user must still get an app that starts,
+  // with whatever history could be salvaged), and assert the salvage happened.
+  test("migration never throws, and salvages what it can from partly corrupt input", async () => {
+    await writeV1({
+      good: [
+        { id: "e1", buildId: "good", timestamp: "2026-09-03T10:00:00.000Z", authorLogin: "me", source: "local", summary: "x", snapshot: doc("v1") },
+      ],
+      bad: "this is not an array",
+    });
+    const res = await run(new Map([["good", doc("v2")], ["bad", doc("live")]]));
+    expect(res.failed).toBe(1);
+    // The good record was actually migrated, not silently skipped.
+    expect(res.versioned).toBeGreaterThan(0);
+    const { versions } = await store.listVersions("good", { limit: 10 });
+    expect(versions.map((v) => v.v)).toEqual([2, 1]);
+    expect(await store.getVersion("good", 1)).toEqual(doc("v1"));
+    expect(await store.getVersion("good", 2)).toEqual(doc("v2"));
+  });
+
+  test("migration never throws on wholly unreadable input", async () => {
     await fs.writeFile(path.join(dir, "build-history.json"), "{not json", "utf8");
     await expect(run(new Map())).resolves.toMatchObject({ failed: 0 });
+  });
+
+  // --- fix round 1 -------------------------------------------------------
+
+  // A failed rename means the source file survives, so the next launch reads
+  // it again. Without a per-record guard the whole chain is appended a second
+  // time onto a log that already ends at the live document, and the log runs
+  // backwards: the duplicated origin state lands ABOVE the live state, dated
+  // older, "reverting" the build.
+  test("a re-run over a surviving source file neither duplicates nor inverts the chain", async () => {
+    const v1 = {
+      b1: [
+        { id: "e1", buildId: "b1", timestamp: "2026-09-03T10:00:00.000Z", authorLogin: "me", source: "local", summary: "x", snapshot: doc("v2") },
+        { id: "e2", buildId: "b1", timestamp: "2026-09-01T10:00:00.000Z", authorLogin: "me", source: "local", summary: "x", snapshot: doc("v1") },
+      ],
+    };
+    const live = new Map([["b1", doc("v3")]]);
+    await writeV1(v1);
+    await run(live);
+    // The rename did not stick — restore from backup, a locked file, anything.
+    await writeV1(v1);
+    const second = await run(live);
+
+    expect(second.migrated).toBe(0);
+    const { versions } = await store.listVersions("b1", { limit: 100 });
+    expect(versions.map((v) => v.v)).toEqual([3, 2, 1]);
+    // Timestamps must still run forward, and the newest version must still be
+    // the live document rather than a resurrected origin state.
+    const ts = versions.map((v) => v.ts);
+    expect(ts).toEqual([...ts].sort().reverse());
+    expect(await store.getVersion("b1", 3)).toEqual(doc("v3"));
+  });
+
+  test("reports that the source file was retired", async () => {
+    await writeV1({ b1: [{ id: "e1", buildId: "b1", timestamp: "2026-09-03T10:00:00.000Z", authorLogin: "me", source: "local", summary: "x", snapshot: doc("v1") }] });
+    expect(await run(new Map([["b1", doc("v2")]]))).toMatchObject({ retired: true });
+  });
+
+  test("reports retired:false when the rename fails, without throwing", async () => {
+    await writeV1({ b1: [{ id: "e1", buildId: "b1", timestamp: "2026-09-03T10:00:00.000Z", authorLogin: "me", source: "local", summary: "x", snapshot: doc("v1") }] });
+    // A directory already sitting at the destination makes rename fail the way
+    // a locked or permission-denied file would.
+    await fs.mkdir(path.join(dir, "build-history.json.pre-v2"));
+    await fs.writeFile(path.join(dir, "build-history.json.pre-v2", "x"), "x", "utf8");
+    const res = await run(new Map([["b1", doc("v2")]]));
+    expect(res.retired).toBe(false);
+    // The migration itself still succeeded.
+    expect(res.migrated).toBe(1);
+    await expect(fs.access(path.join(dir, "build-history.json"))).resolves.toBeUndefined();
+  });
+
+  // Every v1 entry must land in exactly one bucket, so the totals reconcile.
+  test("every entry is accounted for: versioned + derivedOnly + dropped === entries", async () => {
+    await writeV1({
+      // 3 entries: one legacy with no snapshot (dropped), one real change
+      // (versioned), one whose change the differ sees as nothing (derivedOnly).
+      b1: [
+        { id: "e1", buildId: "b1", timestamp: "2026-09-04T10:00:00.000Z", authorLogin: "me", source: "local", summary: "x", snapshot: { ...doc("v2"), sortOrder: 1 } },
+        { id: "e2", buildId: "b1", timestamp: "2026-09-03T10:00:00.000Z", authorLogin: "me", source: "local", summary: "x", snapshot: doc("v2") },
+        { id: "e3", buildId: "b1", timestamp: "2026-09-02T10:00:00.000Z", authorLogin: "me", source: "local", summary: "legacy" },
+      ],
+      // 1 entry, no live doc: the newest entry produced nothing (dropped).
+      b2: [
+        { id: "f1", buildId: "b2", timestamp: "2026-09-03T10:00:00.000Z", authorLogin: "me", source: "local", summary: "x", snapshot: doc("gone") },
+      ],
+      // 2 entries in a record that cannot be migrated at all (both dropped).
+      b3: "this is not an array",
+    });
+    const res = await run(new Map([["b1", { ...doc("v3"), sortOrder: 1 }]]));
+    expect(res.entries).toBe(4);
+    expect(res.versioned + res.derivedOnly + res.dropped).toBe(res.entries);
+    expect(res.dropped).toBeGreaterThanOrEqual(2);
+    expect(res.derivedOnly).toBe(1);
+  });
+
+  // appendVersion returns null both for "nothing worth recording" and for "the
+  // write failed and degraded". Reading the reason off that sentinel reports a
+  // LOST version to the user as "nothing to record here", so the migration
+  // classifies the transition itself and only accepts null when it agrees.
+  test("a degraded write is counted as failed, not as a no-change entry", async () => {
+    await writeV1({
+      b1: [
+        { id: "e1", buildId: "b1", timestamp: "2026-09-03T10:00:00.000Z", authorLogin: "me", source: "local", summary: "x", snapshot: doc("v1") },
+      ],
+    });
+    const real = store.appendVersion.bind(store);
+    let calls = 0;
+    // Call 1 is the origin keyframe; call 2 is the substantive v1→v2
+    // transition, which we make degrade.
+    store.appendVersion = (args) => {
+      calls += 1;
+      return calls === 2 ? Promise.resolve(null) : real(args);
+    };
+    const res = await run(new Map([["b1", doc("v2")]]));
+
+    expect(res.derivedOnly).toBe(0);
+    expect(res.failed).toBe(1);
+    expect(res.migrated).toBe(0);
+  });
+
+  test("a record that already has a v2 log is left alone and its entries are dropped", async () => {
+    await store.appendVersion({ recordId: "b1", after: doc("already"), ts: "2026-01-01T00:00:00.000Z" });
+    await writeV1({
+      b1: [
+        { id: "e1", buildId: "b1", timestamp: "2026-09-03T10:00:00.000Z", authorLogin: "me", source: "local", summary: "x", snapshot: doc("v1") },
+      ],
+    });
+    const res = await run(new Map([["b1", doc("v2")]]));
+    expect(res.migrated).toBe(0);
+    expect(res.dropped).toBe(1);
+    const { versions } = await store.listVersions("b1", { limit: 10 });
+    expect(versions.map((v) => v.v)).toEqual([1]);
+    expect(await store.getVersion("b1", 1)).toEqual(doc("already"));
   });
 });
