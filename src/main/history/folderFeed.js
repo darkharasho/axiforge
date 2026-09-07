@@ -21,6 +21,13 @@
  * @returns {Promise<object[]>} newest-first, at most `limit` entries
  */
 async function buildFolderFeed({ folderId, folders = [], builds = [], comps = [], buildHistory, compHistory, limit = 100 }) {
+  // No folder, no feed. Seeding the walk with `undefined` would put it in the
+  // descendant set, and every record whose own folderId is unset would then
+  // match — a missing id would silently return unrelated records rather than
+  // nothing. Tasks 7-8 drive this from the renderer, where a missing id is an
+  // ordinary bug and not an impossibility.
+  if (folderId === null || folderId === undefined) return [];
+
   // This folder and every folder beneath it.
   const folderIds = new Set();
   const queue = [folderId];

@@ -39,8 +39,16 @@ function createDraftApi({ storage = window.localStorage } = {}) {
     archiveComps: async () => [],
     archiveFolder: async () => ({ builds: [], comps: [], folders: [] }),
     restoreFromArchive: async () => ({ builds: [], comps: [], folders: [] }),
-    getBuildHistory: async () => [],
+    // Same shape as the desktop history IPC (src/preload/index.js): the
+    // per-record reads are pages, the folder feed is a flat array. The web
+    // viewer keeps no history, so every one of these is the empty answer —
+    // but it has to be the empty answer of the RIGHT shape, or the panel
+    // reads `.versions` off an array and renders nothing while looking fine.
+    getBuildHistory: async () => ({ versions: [], nextCursor: null }),
+    getCompHistory: async () => ({ versions: [], nextCursor: null }),
     getFolderHistory: async () => [],
+    getHistoryVersion: async () => null,
+    getHistoryOps: async () => [],
     revertBuild: async () => null,
     listFolders: async () => [],
     saveFolder: async (folder) => folder,
