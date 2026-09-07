@@ -485,10 +485,15 @@ function _pickerOptions(versions, selected, { includeCurrent }) {
 /**
  * Open the compare modal for one version of one record.
  *
+ * `deleted` marks a record sitting in the trash. Restoring one of its versions
+ * takes it back out, so the footer has to say that — "roll back to v3" reads as
+ * a no-op on something that looks gone.
+ *
  * @param {{kind: "build"|"comp", recordId: string, version: number,
- *          title?: string, onRestored?: (saved: object) => void}} input
+ *          title?: string, deleted?: boolean,
+ *          onRestored?: (saved: object) => void}} input
  */
-export async function showCompareModal({ kind, recordId, version, title, onRestored } = {}) {
+export async function showCompareModal({ kind, recordId, version, title, deleted, onRestored } = {}) {
   closeCompareModal();
   _injectStyles();
 
@@ -549,7 +554,7 @@ export async function showCompareModal({ kind, recordId, version, title, onResto
   left.innerHTML = _pickerOptions(versions, chosen, { includeCurrent: false });
   right.innerHTML = _pickerOptions(versions, hasPrev ? chosen - 1 : CURRENT, { includeCurrent: true });
 
-  const ctx = { kind, recordId, title, versions, onRestored };
+  const ctx = { kind, recordId, title, versions, deleted: !!deleted, onRestored };
   const rerender = () => _renderComparison(modal, ctx, _pick(left), _pick(right));
   left.addEventListener("change", rerender);
   right.addEventListener("change", rerender);
@@ -631,11 +636,20 @@ async function _renderComparison(modal, ctx, leftPick, rightPick) {
 
 /* ----------------------------------------------------------------- restore */
 
-function _restoreLabel(pick, versions) {
-  if (pick === CURRENT) return "Restore";
-  const entry = versions.find((e) => e.v === pick);
+function _restoreLabel(pick, ctx) {
+  const verb = ctx.deleted ? "Bring back" : "Restore";
+  if (pick === CURRENT) return verb;
+  const entry = ctx.versions.find((e) => e.v === pick);
   const what = entry && entry.summary ? ` (the state after "${entry.summary}")` : "";
-  return `Restore v${pick}${what}`;
+  return `${verb} v${pick}${what}`;
+}
+
+function _confirmText(ctx, pick) {
+  const noun = ctx.kind === "comp" ? "comp" : "build";
+  if (ctx.deleted) {
+    return `Bring this ${noun} back out of the trash, as it was at v${escapeHtml(String(pick))}? Teammates will see it again on their next sync.`;
+  }
+  return `Roll this ${noun} back to v${escapeHtml(String(pick))}? Anything changed since then is replaced. Teammates will see it on their next sync.`;
 }
 
 function _renderFooter(modal, ctx, pick) {
@@ -647,7 +661,7 @@ function _renderFooter(modal, ctx, pick) {
     footer.innerHTML = "";
     return;
   }
-  footer.innerHTML = `<button class="hist-compare__restore">${escapeHtml(_restoreLabel(pick, ctx.versions))}</button>`;
+  footer.innerHTML = `<button class="hist-compare__restore">${escapeHtml(_restoreLabel(pick, ctx))}</button>`;
   footer.querySelector(".hist-compare__restore")
     .addEventListener("click", () => _askRestore(modal, ctx, pick));
 }
@@ -656,7 +670,7 @@ function _askRestore(modal, ctx, pick) {
   const footer = modal.querySelector(".hist-compare__footer");
   footer.innerHTML = `
     <div class="hist-compare__confirm-text">
-      Roll this ${ctx.kind === "comp" ? "comp" : "build"} back to v${escapeHtml(String(pick))}? Anything changed since then is replaced. Teammates will see it on their next sync.
+      ${_confirmText(ctx, pick)}
     </div>
     <div class="hist-compare__confirm-buttons">
       <button class="hist-compare__restore hist-compare__confirm-no">Cancel</button>

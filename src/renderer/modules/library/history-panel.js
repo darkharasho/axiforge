@@ -1,4 +1,6 @@
-// Build history slide-in panel — shows per-build change log with revert support.
+// Build history slide-in panel — shows the per-record change log. Restoring is
+// NOT done from here: every entry opens the compare modal, which owns the
+// confirmation, so no single click in this list can roll a record back.
 // NOTE: deliberately does NOT import from library.js to avoid a circular dependency.
 // Toast feedback is dispatched via CustomEvent so library.js can pick it up.
 
@@ -364,9 +366,10 @@ function _renderFolderEntries(listEl, entries) {
     // is keyed off the version existing, nothing else.
     // A record sitting in the trash is still listed here, and restoring one of
     // its versions takes it back out — so the button has to say that rather
-    // than "Restore this version", which reads as a no-op on something that
-    // looks gone.
-    const label = entry.recordDeleted ? "Bring it back" : "Restore this version";
+    // than "Restore", which reads as a no-op on something that looks gone.
+    // "Review &" because the button opens the compare modal: restoring is only
+    // reachable from there, after you have seen the diff.
+    const label = entry.recordDeleted ? "Review &amp; bring it back" : "Review &amp; restore";
     return `
     <div class="history-panel__entry${entry.recordDeleted ? " history-panel__entry--deleted" : ""}"
       data-hist-v="${escapeHtml(String(entry.v))}" data-record-id="${escapeHtml(String(entry.recordId ?? ""))}">
@@ -393,15 +396,17 @@ function _renderFolderEntries(listEl, entries) {
   // would need CSS.escape, which isn't available in every environment.
   listEl.querySelectorAll(".history-panel__entry").forEach((row, i) => {
     const entry = entries[i];
-    const btn = row.querySelector(".history-panel__revert");
-    if (btn) btn.addEventListener("click", () => _askFolderRevert(row, entry));
-    _bindCompare(row, () => showCompareModal({
+    const open = () => showCompareModal({
       kind: entry.recordKind === "comp" ? "comp" : "build",
       recordId: entry.recordId,
       version: entry.v,
       title: entry.recordTitle || "",
+      deleted: !!entry.recordDeleted,
       onRestored: closeHistoryPanel,
-    }));
+    });
+    const btn = row.querySelector(".history-panel__revert");
+    if (btn) btn.addEventListener("click", open);
+    _bindCompare(row, open);
   });
 }
 
@@ -431,68 +436,6 @@ function _bindCompare(row, open) {
   });
 }
 
-// Two-step inline confirmation. The shared confirm modal can't be used here:
-// it sits at --z-modal-confirm (1100) and .history-panel is 1101, so it would
-// open behind the panel.
-function _askFolderRevert(row, entry) {
-  const actions = row.querySelector(".history-panel__actions");
-  const recordLabel = entry.recordTitle ? `"${entry.recordTitle}"` : (entry.recordKind === "comp" ? "this comp" : "this build");
-  const question = entry.recordDeleted
-    ? `Bring ${escapeHtml(recordLabel)} back out of the trash, as it was at v${escapeHtml(String(entry.v))}? Teammates will see it again on their next sync.`
-    : `Restore ${escapeHtml(recordLabel)} to v${escapeHtml(String(entry.v))}? Anything changed since is replaced. Teammates will see it on their next sync.`;
-  actions.innerHTML = `
-    <div class="history-panel__confirm">
-      <div class="history-panel__confirm-text">
-        ${question}
-      </div>
-      <div class="history-panel__confirm-buttons">
-        <button class="history-panel__revert history-panel__confirm-no">Cancel</button>
-        <button class="history-panel__revert history-panel__confirm-yes">Restore</button>
-      </div>
-    </div>
-  `;
-  actions.querySelector(".history-panel__confirm-no")
-    .addEventListener("click", () => _resetFolderRevert(row, entry));
-  actions.querySelector(".history-panel__confirm-yes")
-    .addEventListener("click", () => _doFolderRevert(row, entry));
-}
-
-function _resetFolderRevert(row, entry) {
-  const actions = row.querySelector(".history-panel__actions");
-  actions.innerHTML = `<button class="history-panel__revert">${entry.recordDeleted ? "Bring it back" : "Restore this version"}</button>`;
-  actions.querySelector(".history-panel__revert")
-    .addEventListener("click", () => _askFolderRevert(row, entry));
-}
-
-async function _doFolderRevert(row, entry) {
-  const yes = row.querySelector(".history-panel__confirm-yes");
-  yes.disabled = true;
-  yes.textContent = "Restoring…";
-  try {
-    // The folder timeline carries both kinds. A comp entry has to go back
-    // through comps:revert or it would be handed to the build store, which has
-    // never heard of it.
-    const isComp = entry.recordKind === "comp";
-    const saved = isComp
-      ? await window.desktopApi.revertComp(entry.recordId, entry.v)
-      : await window.desktopApi.revertBuild(entry.recordId, entry.v);
-    // library:rerender draws from state, so refresh it the way the per-record
-    // panel does — otherwise the revert isn't visible until reload.
-    const collection = isComp ? state.comps : state.builds;
-    const idx = collection.findIndex((r) => r.id === saved.id);
-    if (idx >= 0) collection[idx] = saved;
-    else collection.push(saved);
-    document.dispatchEvent(new CustomEvent("library:rerender"));
-    closeHistoryPanel();
-    document.dispatchEvent(new CustomEvent("library:toast", { detail: { message: "Restored!" } }));
-  } catch (err) {
-    _resetFolderRevert(row, entry);
-    document.dispatchEvent(new CustomEvent("library:toast", {
-      detail: { message: "Restore failed — " + err.message, type: "error" },
-    }));
-  }
-}
-
 export async function showHistoryPanel(buildId) {
   const build = state.builds.find((b) => b.id === buildId);
   return _showRecordHistory({
@@ -501,8 +444,6 @@ export async function showHistoryPanel(buildId) {
     label: "Build",
     title: build?.title || "Build",
     fetch: (id) => window.desktopApi.getBuildHistory(id),
-    revert: (id, v) => window.desktopApi.revertBuild(id, v),
-    collection: () => state.builds,
   });
 }
 
@@ -519,12 +460,10 @@ export async function showCompHistoryPanel(compId) {
     label: "Comp",
     title: comp?.name || "Comp",
     fetch: (id) => window.desktopApi.getCompHistory(id),
-    revert: (id, v) => window.desktopApi.revertComp(id, v),
-    collection: () => state.comps,
   });
 }
 
-async function _showRecordHistory({ kind, id, label, title, fetch, revert, collection }) {
+async function _showRecordHistory({ kind, id, label, title, fetch }) {
   closeHistoryPanel();
   _injectStyles();
 
@@ -571,7 +510,7 @@ async function _showRecordHistory({ kind, id, label, title, fetch, revert, colle
     // a bare array. Tolerate both so a stubbed api can't silently render empty.
     const res = await fetch(id);
     const entries = Array.isArray(res) ? res : ((res && res.versions) || []);
-    _renderEntries(panel.querySelector("#history-panel-list"), { id, kind, title, revert, collection }, entries);
+    _renderEntries(panel.querySelector("#history-panel-list"), { id, kind, title }, entries);
   } catch (err) {
     panel.querySelector("#history-panel-list").innerHTML =
       `<div class="history-panel__empty">Failed to load history.</div>`;
@@ -600,45 +539,29 @@ function _renderEntries(listEl, record, entries) {
       </div>
       <div class="history-panel__actions">
         <button class="history-panel__revert" data-hist-v="${escapeHtml(String(entry.v))}">
-          Restore this version
+          Review &amp; restore
         </button>
       </div>
     </div>
   `).join("");
 
+  // The button and the row body do the same thing: open the compare modal.
+  // Restoring lives behind the modal's own confirmation and nowhere else, so a
+  // stray click in this list can never roll a build back.
   listEl.querySelectorAll(".history-panel__entry").forEach((row, i) => {
     const entry = entries[i];
-    _bindCompare(row, () => showCompareModal({
+    const open = () => showCompareModal({
       kind: record.kind,
       recordId: record.id,
       version: entry.v,
       title: record.title || "",
       onRestored: closeHistoryPanel,
-    }));
+    });
+    const btn = row.querySelector(".history-panel__revert");
+    if (btn) btn.addEventListener("click", open);
+    _bindCompare(row, open);
   });
 
-  listEl.querySelectorAll(".history-panel__revert").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      btn.disabled = true;
-      btn.textContent = "Reverting…";
-      try {
-        const saved = await record.revert(record.id, Number(btn.dataset.histV));
-        // Update state and re-render library
-        const list = record.collection();
-        const idx = list.findIndex((r) => r.id === saved.id);
-        if (idx >= 0) list[idx] = saved;
-        else list.push(saved);
-        // Trigger library re-render via a custom event the renderer listens to
-        document.dispatchEvent(new CustomEvent("library:rerender"));
-        closeHistoryPanel();
-        document.dispatchEvent(new CustomEvent("library:toast", { detail: { message: "Restored!" } }));
-      } catch (err) {
-        btn.disabled = false;
-        btn.textContent = "Restore this version";
-        document.dispatchEvent(new CustomEvent("library:toast", { detail: { message: "Restore failed — " + err.message, type: "error" } }));
-      }
-    });
-  });
 }
 
 export function closeHistoryPanel() {
