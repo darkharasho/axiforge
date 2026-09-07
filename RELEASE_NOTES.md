@@ -1,3 +1,9 @@
+## Version v0.20.3 — September 6, 2026
+
+### Bug Fixes
+
+- **Team sync could remove your only copy of something on a hunch.** When the app re-downloads a team's history and an item it holds never turns up, it used to conclude the item had been deleted and move it to the trash. But an item missing from that download is also what a cut-off page, a permissions filter, a Cloudflare outage or a half-restored database looks like from your machine — and if the guess is wrong, the copy it throws away is the only one. The app now asks the server about each item by name before touching anything, and only acts on a straight answer: deleted, no longer visible to you, or genuinely not there. Anything else — including no answer at all, because the server is down or unreachable — leaves your library exactly as it is, and tells you nothing was removed.
+
 ## Version v0.20.2 — September 6, 2026
 
 ### Bug Fixes
