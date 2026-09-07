@@ -19,6 +19,11 @@ const TAIL_BYTES = 65536;
 // which is why it is small. An editing session touches one or two records.
 const DOC_CACHE_RECORDS = 8;
 
+// How many numbered alternatives the v1 migration will try before giving up on
+// retiring its source file. `<file>.pre-v2` is the user's only undo copy, so it
+// is never overwritten: a second migration takes `.pre-v2.1`, a third `.pre-v2.2`.
+const PRE_V2_ALTERNATES = 32;
+
 // Changed by every save; excluded from ops entirely, otherwise every save would
 // log a version and defeat the zero-ops rule. Keyframes still carry them.
 const IGNORED_FIELDS = ["updatedAt", "version"];
@@ -64,6 +69,7 @@ module.exports = {
   COALESCE_WINDOW_MS,
   TAIL_BYTES,
   DOC_CACHE_RECORDS,
+  PRE_V2_ALTERNATES,
   IGNORED_FIELDS,
   SUBSTANTIVE_OPS,
   INCIDENTAL_PATHS,

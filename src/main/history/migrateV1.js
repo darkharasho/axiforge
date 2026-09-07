@@ -3,6 +3,7 @@
 const path = require("node:path");
 const fs = require("node:fs/promises");
 const { readJsonFile } = require("../jsonFile");
+const { PRE_V2_ALTERNATES } = require("./constants");
 
 /**
  * One-shot migration of v1 build/comp history into the v2 append-only logs.
@@ -289,27 +290,55 @@ async function reseed(store, recordId, liveDoc) {
 }
 
 /**
- * Rename, never delete: the old file is the user's only undo.
+ * Rename, never delete, and never OVER: the old file is the user's only undo.
+ *
+ * `.pre-v2` may already exist — downgrade to a pre-v2 build, use it, upgrade
+ * again, and there is a second v1 file to retire. Renaming onto the first one
+ * would destroy the copy the user could still go back to, so each retirement
+ * takes a name nobody has: `.pre-v2`, then `.pre-v2.1`, `.pre-v2.2`, ...
+ *
+ * The name is CLAIMED with an exclusive create rather than checked with a stat,
+ * so two processes racing at startup cannot both decide the same name is free.
  *
  * Returns whether the file is retired — true when it was renamed, and true
- * when it was already gone, which is the same end state. A rename that FAILS
- * returns false and logs at error level: the undo file the user was promised
- * does not exist, and a caller that reports success regardless is lying. It
- * still never throws, because `init()` is downstream.
+ * when it was already gone, which is the same end state. A failure returns
+ * false and logs at error level: the undo file the user was promised does not
+ * exist, and a caller that reports success regardless is lying. It still never
+ * throws, because `init()` is downstream.
  */
 async function retire(filePath) {
-  try {
-    await fs.rename(filePath, `${filePath}.pre-v2`);
-    return true;
-  } catch (err) {
-    if (err && err.code === "ENOENT") return true;
-    console.error(
-      `[migrateV1] could not retire ${filePath} to ${path.basename(filePath)}.pre-v2 —`
-      + ` the pre-v2 undo copy was NOT created:`,
-      err && err.message
-    );
-    return false;
+  const base = `${filePath}.pre-v2`;
+  let lastErr = null;
+  for (let i = 0; i <= PRE_V2_ALTERNATES; i += 1) {
+    const target = i === 0 ? base : `${base}.${i}`;
+    let claimed;
+    try {
+      // "wx" fails with EEXIST if anything is already there, atomically.
+      claimed = await fs.open(target, "wx");
+    } catch (err) {
+      if (err && (err.code === "EEXIST" || err.code === "EISDIR")) continue;
+      lastErr = err;
+      break;
+    }
+    await claimed.close();
+    try {
+      // Renames over our own empty placeholder, which is the point of claiming.
+      await fs.rename(filePath, target);
+      return true;
+    } catch (err) {
+      // Leave no 0-byte decoy behind for the user to find.
+      await fs.unlink(target).catch(() => {});
+      if (err && err.code === "ENOENT") return true;
+      lastErr = err;
+      break;
+    }
   }
+  console.error(
+    `[migrateV1] could not retire ${filePath} to ${path.basename(base)} —`
+    + ` the pre-v2 undo copy was NOT created:`,
+    lastErr ? lastErr.message : `every name up to .${PRE_V2_ALTERNATES} is taken`
+  );
+  return false;
 }
 
 module.exports = { migrateV1 };

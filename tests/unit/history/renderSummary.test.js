@@ -179,3 +179,46 @@ describe("renderSummary — comp party lines", () => {
       .toBe("party lines changed");
   });
 });
+
+// ─── final review, B5: two fallbacks nothing was pinning ─────────────────────
+
+describe("a field with no entry in the vocabulary still says something", () => {
+  // fieldDetail's fallback. Every field that HAS a FIELD_META entry is pinned
+  // above; a field added to FIELD_PATHS and not to FIELD_META fell through to
+  // this line, and the reviewer's mutation of it broke no test.
+  test("an unmapped field names itself, humanized", () => {
+    expect(renderSummary([{ t: "field", path: "gameplayNotes", before: "a", after: "b" }]))
+      .toBe("gameplay notes updated");
+  });
+
+  test("a dotted unmapped field reads as words, not as a path", () => {
+    expect(renderSummary([{ t: "field", path: "loadout.primaryWeapon", before: 1, after: 2 }]))
+      .toBe("loadout primary weapon updated");
+  });
+});
+
+describe("the grouped form names incidental changes other than a folder move", () => {
+  // groupBareNoun's meta branch. Grouping only kicks in past four ops, which is
+  // why no existing test reached the non-folderId side of it.
+  test("an archive stamp is named, and a folder move is still 'folder'", () => {
+    const summary = renderSummary([
+      { t: "meta", path: "archivedAt", before: null, after: "2026-09-01T00:00:00.000Z" },
+      { t: "meta", path: "folderId", before: "f1", after: "f2" },
+      { t: "field", path: "title", before: "a", after: "b" },
+      { t: "stat", before: "Berserker", after: "Marauder" },
+      { t: "spec", line: 0, before: { id: 1 }, after: { id: 2 } },
+    ]);
+    expect(summary).toBe("archived at, folder, title, stats, specialization");
+  });
+
+  test("a trash stamp is named too", () => {
+    const summary = renderSummary([
+      { t: "meta", path: "trashBatchId", before: null, after: "batch-1" },
+      { t: "field", path: "title", before: "a", after: "b" },
+      { t: "field", path: "notes", before: "a", after: "b" },
+      { t: "stat", before: "Berserker", after: "Marauder" },
+      { t: "spec", line: 0, before: { id: 1 }, after: { id: 2 } },
+    ]);
+    expect(summary).toContain("trash batch id");
+  });
+});

@@ -230,10 +230,14 @@ function assign(doc, segments, value) {
   node[segments[segments.length - 1]] = value;
 }
 
+// `kind` is a GUESS from whether the next path segment looks like an index;
+// the document is not. Whatever container is already there wins — on
+// `partyLines.0.0` the guess said "array" and replaced the whole party line
+// with `["x"]`. @see the same fix in diffBuild.js.
 function ensureChild(node, key, kind) {
   const current = node[key];
-  const ok = kind === "array" ? Array.isArray(current) : isObject(current);
-  if (!ok) node[key] = kind === "array" ? [] : {};
+  if (Array.isArray(current) || isObject(current)) return current;
+  node[key] = kind === "array" ? [] : {};
   return node[key];
 }
 

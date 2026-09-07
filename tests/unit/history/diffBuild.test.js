@@ -389,3 +389,90 @@ describe("diffBuild — ops are snapshots, not references", () => {
     expect(ops[0].after).toEqual({ a: [1, 3] });
   });
 });
+
+// ─── final review, Section B ────────────────────────────────────────────────
+
+// The invariant the whole branch rests on: applyOps(before, diff(before,
+// after)) === after, ignoring the fields the differ deliberately drops.
+function roundTrips(before, after) {
+  const got = applyOps(before, diff(before, after));
+  const want = structuredClone(after);
+  for (const doc of [got, want]) { delete doc.updatedAt; delete doc.version; }
+  return { got, want };
+}
+
+describe("B1 — a numeric-string key does not turn its container into an array", () => {
+  const specLine = (over = {}) => ({ id: 41, name: "Arms", majorChoices: { 1: 100, 2: 200, 3: 300 }, ...over });
+  const build = (over = {}) => ({
+    id: "b1", title: "T", profession: "Warrior",
+    specializations: [specLine()], equipment: {}, skills: {}, ...over,
+  });
+
+  // `assign` guessed each container's kind from whether the NEXT path segment
+  // looked like an index — a guess about the document, made without looking at
+  // it. On `specializations.0.0` it decided `specializations[0]` had to be an
+  // array and replaced the whole spec line with `["x"]`.
+  test("a numeric-string key ADDED to a spec line round-trips", () => {
+    const { got, want } = roundTrips(build(), build({ specializations: [specLine({ 0: "x" })] }));
+    expect(got).toEqual(want);
+  });
+
+  test("a numeric-string key CHANGED on a spec line round-trips", () => {
+    const before = build({ specializations: [specLine({ 0: "x" })] });
+    const after = build({ specializations: [specLine({ 0: "y" })] });
+    const { got, want } = roundTrips(before, after);
+    expect(got).toEqual(want);
+    // Named explicitly: the failure was total, not a wrong leaf.
+    expect(got.specializations[0].name).toBe("Arms");
+    expect(got.specializations[0].majorChoices).toEqual({ 1: 100, 2: 200, 3: 300 });
+  });
+
+  test("a numeric-string key REMOVED from a spec line round-trips", () => {
+    const { got, want } = roundTrips(build({ specializations: [specLine({ 0: "x" })] }), build());
+    expect(got).toEqual(want);
+  });
+
+  test("an object keyed numerically anywhere in the document round-trips", () => {
+    const shapes = [
+      [build({ equipment: { extras: { 0: "a" } } }), build({ equipment: { extras: { 0: "b" } } })],
+      [build({ oddball: { 0: { 1: "deep" } } }), build({ oddball: { 0: { 1: "deeper" } } })],
+      [build({ specializations: [specLine({ catalog: { 0: { n: "a" } } })] }),
+        build({ specializations: [specLine({ catalog: { 0: { n: "b" } } })] })],
+    ];
+    for (const [before, after] of shapes) {
+      const { got, want } = roundTrips(before, after);
+      expect(got).toEqual(want);
+    }
+  });
+
+  // The guess still has to apply where there is nothing to look at.
+  test("an array is still created when the path names one and nothing is there", () => {
+    const got = applyOps({}, [{ t: "raw", path: "list.0", after: "first" }]);
+    expect(Array.isArray(got.list)).toBe(true);
+    expect(got.list).toEqual(["first"]);
+  });
+});
+
+describe("B2 — removals are compacted deepest-first", () => {
+  // Removals are collected and applied at the end, because deleting in place
+  // would leave a hole. Compacting a SHALLOW array first renumbers the
+  // elements a deeper pending removal names, so `specializations.1.extras`
+  // stops existing and its removal is silently dropped.
+  test("compacting the outer array does not lose the inner array's removal", () => {
+    const doc = {
+      specializations: [
+        { id: 1, name: "One", extras: ["a", "b"] },
+        { id: 2, name: "Two", extras: ["c", "d"] },
+      ],
+    };
+    // The shallow removal is recorded FIRST, which is what makes the order
+    // matter. `after` absent is how a removal is stored (see diff's output).
+    const ops = [
+      { t: "raw", path: "specializations.0", before: doc.specializations[0] },
+      { t: "raw", path: "specializations.1.extras.0", before: "c" },
+    ];
+    expect(applyOps(doc, ops)).toEqual({
+      specializations: [{ id: 2, name: "Two", extras: ["d"] }],
+    });
+  });
+});

@@ -125,3 +125,26 @@ describe("diffComp — round trip", () => {
     expect(applyOps({}, diff(null, after))).toEqual(after);
   });
 });
+
+// ─── final review, Section B1 (same defect, same function, other differ) ─────
+
+describe("a numeric-string key does not turn its container into an array", () => {
+  const comp = (over = {}) => ({
+    id: "c1", name: "Squad",
+    partyLines: [{ id: "p1", slots: ["b1", null] }],
+    categories: [{ id: "cat", name: "Healers", buildIds: [] }],
+    ...over,
+  });
+
+  test("a numeric-string key on a party line round-trips instead of destroying the line", () => {
+    const before = comp();
+    const after = comp({ partyLines: [{ id: "p1", slots: ["b1", null], 0: "x" }] });
+    const got = applyOps(before, diff(before, after));
+    expect(got).toEqual(after);
+    expect(got.partyLines[0].slots).toEqual(["b1", null]);
+  });
+
+  test("an array is still created when the path names one and nothing is there", () => {
+    expect(applyOps({}, [{ t: "raw", path: "list.0", after: "first" }]).list).toEqual(["first"]);
+  });
+});

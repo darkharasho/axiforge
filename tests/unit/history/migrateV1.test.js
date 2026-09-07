@@ -217,17 +217,23 @@ describe("migrateV1", () => {
     expect(await run(new Map([["b1", doc("v2")]]))).toMatchObject({ retired: true });
   });
 
-  test("reports retired:false when the rename fails, without throwing", async () => {
+  // Was "reports retired:false when the rename fails": a directory at the
+  // destination is no longer a failure, because the destination is no longer
+  // fixed. It is an occupied name, and an occupied name gets stepped over —
+  // see "the pre-v2 undo copy is never overwritten" below for the case where
+  // there is genuinely nowhere left to go.
+  test("a directory sitting at the destination is stepped over, never written into", async () => {
     await writeV1({ b1: [{ id: "e1", buildId: "b1", timestamp: "2026-09-03T10:00:00.000Z", authorLogin: "me", source: "local", summary: "x", snapshot: doc("v1") }] });
-    // A directory already sitting at the destination makes rename fail the way
-    // a locked or permission-denied file would.
     await fs.mkdir(path.join(dir, "build-history.json.pre-v2"));
     await fs.writeFile(path.join(dir, "build-history.json.pre-v2", "x"), "x", "utf8");
+
     const res = await run(new Map([["b1", doc("v2")]]));
-    expect(res.retired).toBe(false);
-    // The migration itself still succeeded.
-    expect(res.migrated).toBe(1);
-    await expect(fs.access(path.join(dir, "build-history.json"))).resolves.toBeUndefined();
+    expect(res).toMatchObject({ retired: true, migrated: 1 });
+    // The directory and its contents are untouched...
+    expect(await fs.readFile(path.join(dir, "build-history.json.pre-v2", "x"), "utf8")).toBe("x");
+    // ...and the source moved to the next free name instead.
+    expect(JSON.parse(await fs.readFile(path.join(dir, "build-history.json.pre-v2.1"), "utf8"))).toHaveProperty("b1");
+    await expect(fs.access(path.join(dir, "build-history.json"))).rejects.toThrow();
   });
 
   // Every v1 entry must land in exactly one bucket, so the totals reconcile.
@@ -292,5 +298,74 @@ describe("migrateV1", () => {
     const { versions } = await store.listVersions("b1", { limit: 10 });
     expect(versions.map((v) => v.v)).toEqual([1]);
     expect(await store.getVersion("b1", 1)).toEqual(doc("already"));
+  });
+});
+
+// ─── final review, B6 ───────────────────────────────────────────────────────
+
+describe("the pre-v2 undo copy is never overwritten", () => {
+  const v1Entry = { id: "e1", buildId: "b1", timestamp: "2026-09-03T10:00:00.000Z", authorLogin: "me", source: "local", summary: "x", snapshot: doc("v1") };
+  const read = (name) => fs.readFile(path.join(dir, name), "utf8");
+
+  // Downgrade to a pre-v2 build, use it, upgrade again: the second migration
+  // used to rename the new v1 file straight over the first one's `.pre-v2`,
+  // destroying the only copy of the history the user could still go back to.
+  test("an existing .pre-v2 survives a second migration", async () => {
+    await fs.writeFile(path.join(dir, "build-history.json.pre-v2"), '{"original":true}', "utf8");
+    await writeV1({ b1: [v1Entry] });
+
+    const res = await run(new Map([["b1", doc("v2")]]));
+
+    expect(res.retired).toBe(true);
+    expect(await read("build-history.json.pre-v2")).toBe('{"original":true}');
+    // The new one is kept too, under a name of its own.
+    expect(JSON.parse(await read("build-history.json.pre-v2.1"))).toHaveProperty("b1");
+    await expect(fs.access(path.join(dir, "build-history.json"))).rejects.toThrow();
+  });
+
+  test("a third migration takes the next name again", async () => {
+    await fs.writeFile(path.join(dir, "build-history.json.pre-v2"), "one", "utf8");
+    await fs.writeFile(path.join(dir, "build-history.json.pre-v2.1"), "two", "utf8");
+    await writeV1({ b1: [v1Entry] });
+
+    expect((await run(new Map([["b1", doc("v2")]]))).retired).toBe(true);
+    expect(await read("build-history.json.pre-v2")).toBe("one");
+    expect(await read("build-history.json.pre-v2.1")).toBe("two");
+    expect(JSON.parse(await read("build-history.json.pre-v2.2"))).toHaveProperty("b1");
+  });
+
+  // Running as root defeats the permission bit, so this asserts nothing there.
+  const asUser = process.getuid && process.getuid() !== 0 ? test : test.skip;
+  asUser("a destination it cannot write reports retired:false and leaves the source alone", async () => {
+    const err = jest.spyOn(console, "error").mockImplementation(() => {});
+    await writeV1({ b1: [v1Entry] });
+    await fs.chmod(dir, 0o500);
+    try {
+      const res = await run(new Map([["b1", doc("v2")]]));
+      expect(res.retired).toBe(false);
+      await expect(fs.access(path.join(dir, "build-history.json"))).resolves.toBeUndefined();
+      expect(err).toHaveBeenCalled();
+    } finally {
+      await fs.chmod(dir, 0o700);
+      err.mockRestore();
+    }
+  });
+
+  test("with every name taken it reports retired:false and leaves the source alone", async () => {
+    const err = jest.spyOn(console, "error").mockImplementation(() => {});
+    await fs.writeFile(path.join(dir, "build-history.json.pre-v2"), "0", "utf8");
+    for (let i = 1; i <= 32; i += 1) {
+      await fs.writeFile(path.join(dir, `build-history.json.pre-v2.${i}`), String(i), "utf8");
+    }
+    await writeV1({ b1: [v1Entry] });
+
+    const res = await run(new Map([["b1", doc("v2")]]));
+    expect(res.retired).toBe(false);
+    expect(res.migrated).toBe(1);
+    // Nothing clobbered, and the source is still there for the user.
+    expect(await read("build-history.json.pre-v2")).toBe("0");
+    await expect(fs.access(path.join(dir, "build-history.json"))).resolves.toBeUndefined();
+    expect(err).toHaveBeenCalled();
+    err.mockRestore();
   });
 });

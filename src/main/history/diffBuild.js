@@ -390,9 +390,17 @@ function applyOps(doc, ops) {
   // and the arrays are compacted once at the end.
   const removals = new Map();
   for (const op of Array.isArray(ops) ? ops : []) applyOp(out, op, removals);
-  for (const [path, indices] of removals) {
+  // Deepest paths first, exactly as diffComp.js does: compacting
+  // `specializations` before `specializations.1.extras` renumbers the line the
+  // pending inner removal names, and the inner removal is then dropped in
+  // silence.
+  const paths = [...removals.keys()].sort((x, y) => y.split(".").length - x.split(".").length);
+  for (const path of paths) {
     const arr = getPath(out, path);
-    if (Array.isArray(arr)) assign(out, path.split("."), arr.filter((_, i) => !indices.has(i)));
+    if (Array.isArray(arr)) {
+      const indices = removals.get(path);
+      assign(out, path.split("."), arr.filter((_, i) => !indices.has(i)));
+    }
   }
   return out;
 }
@@ -515,10 +523,18 @@ function ensureContainer(doc, segments, kind) {
   return ensureChild(node, segments[segments.length - 1], kind);
 }
 
+// `kind` is a GUESS, made from whether the next path segment looks like an
+// index. The document itself is not a guess, so whatever container is already
+// there wins: on `specializations.0.0` the guess said "array" and replaced the
+// entire spec line with `["x"]`, losing its id, name and every trait choice.
+// A real change of container type never reaches here — the differ emits a raw
+// op for the whole container when its shape changes, and that is written by
+// `assign`'s final step, not by this. So the guess is only ever consulted to
+// CREATE something that is not there yet.
 function ensureChild(node, key, kind) {
   const current = node[key];
-  const ok = kind === "array" ? Array.isArray(current) : isObject(current);
-  if (!ok) node[key] = kind === "array" ? [] : {};
+  if (Array.isArray(current) || isObject(current)) return current;
+  node[key] = kind === "array" ? [] : {};
   return node[key];
 }
 

@@ -96,10 +96,21 @@ function renderGearAnchors(equipment) {
   return spans.join("");
 }
 
-function renderSkillAnchors() {
-  return ["heal", "utility1", "utility2", "utility3", "elite"]
-    .map((slot) => `<span class="mini-card__hist-anchor" data-hist-skill="${slot}"></span>`)
-    .join("");
+// One anchor per skill slot the build actually HAS, the way renderGearAnchors
+// works. A fixed five meant a build with no `skills` key at all still rendered
+// five anchors, so the compare modal had somewhere to hang a highlight for a
+// slot that does not exist. A slot that is present but EMPTY still gets one:
+// "no elite chosen" is a slot, and an op can change it.
+function renderSkillAnchors(skills) {
+  if (!skills || typeof skills !== "object") return "";
+  const spans = [];
+  const add = (slot) => spans.push(`<span class="mini-card__hist-anchor" data-hist-skill="${escapeHtml(slot)}"></span>`);
+  if ("heal" in skills) add("heal");
+  // diffBuild.js numbers utility slots from 1 (`utility1` -> `utility[0]`).
+  const utility = Array.isArray(skills.utility) ? skills.utility : [];
+  utility.forEach((_, i) => add(`utility${i + 1}`));
+  if ("elite" in skills) add("elite");
+  return spans.join("");
 }
 
 // Right column from page-scraped gear ({weapons,rune,stats,infusions}); each
@@ -419,7 +430,7 @@ export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
   // Hidden history-compare anchors for gear slots + skill slots (see
   // renderGearAnchors/renderSkillAnchors above). Not part of the visible
   // layout, so it carries `hidden` and stays out of any visible-markup diff.
-  const histAnchorsHtml = `<div class="mini-card__hist-anchors" hidden aria-hidden="true">${renderGearAnchors(build.equipment)}${renderSkillAnchors()}</div>`;
+  const histAnchorsHtml = `<div class="mini-card__hist-anchors" hidden aria-hidden="true">${renderGearAnchors(build.equipment)}${renderSkillAnchors(build.skills)}</div>`;
 
   return `
     <div class="mini-card ${pClass}" data-build-id="${escapeHtml(build.id)}"${slotColor && slotColor !== "normal" ? ` data-slot-color="${slotColor}"` : ""}>

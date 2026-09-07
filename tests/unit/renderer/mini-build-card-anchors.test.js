@@ -68,3 +68,29 @@ describe("mini-build-card highlight anchors", () => {
     expect(parse(html).querySelectorAll("[class]").length).toBeGreaterThan(3);
   });
 });
+
+// ─── final review, B4 ───────────────────────────────────────────────────────
+
+describe("skill anchors follow the data", () => {
+  const anchors = (build) =>
+    [...parse(renderMiniBuildCard(build, null, { showActions: false }))
+      .querySelectorAll("[data-hist-skill]")].map((el) => el.dataset.histSkill);
+
+  test("a build with no skills key renders no skill anchors", () => {
+    const build = fixture();
+    delete build.skills;
+    expect(anchors(build)).toEqual([]);
+  });
+
+  test("only the utility slots that exist get an anchor", () => {
+    const build = fixture();
+    build.skills = { heal: { id: 9093, name: "Healing Signet" }, utility: [{ id: 1, name: "A" }] };
+    expect(anchors(build)).toEqual(["heal", "utility1"]);
+  });
+
+  test("a slot that is present but empty still gets one — it is a slot, not a skill", () => {
+    const build = fixture();
+    build.skills = { heal: null, utility: [null, null], elite: null };
+    expect(anchors(build)).toEqual(["heal", "utility1", "utility2", "elite"]);
+  });
+});
