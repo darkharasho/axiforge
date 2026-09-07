@@ -26,14 +26,77 @@ function getSpecLineInfo(build, color) {
     : (getProfessionSvg(name) || "");
   const profSvg = getSvg(build.profession);
   return build.specializations
-    .filter((s) => s && s.name)
-    .map((s) => ({
+    .map((s, line) => ({ s, line }))
+    .filter(({ s }) => s && s.name)
+    .map(({ s, line }) => ({
       name: s.name,
       isElite: !!s.elite,
       svg: getSvg(s.name) || profSvg,
       // Selected major traits ({id,name,icon}) for the card's trait-icon row.
       traits: (s.selectedTraits || []).filter((t) => t && t.icon),
+      // Raw index into build.specializations — the history differ (diffBuild.js)
+      // uses this same index as the `line` on `trait`/`spec` ops, so the
+      // highlight anchors below must match it exactly, not the filtered index.
+      line,
+      majorChoices: s.majorChoices && typeof s.majorChoices === "object" ? s.majorChoices : null,
     }));
+}
+
+// History-compare highlight anchors (Task 8 consumes these). They carry the
+// same `slot`/`part` vocabulary as diffBuild.js ops so a patch op can be
+// mapped straight to a DOM node. Kept in a hidden block rather than woven into
+// the visible gear/skill rows above because those rows are aggregates (best
+// rune across slots, first non-empty weapon set, icon-gated skills) and don't
+// have a 1:1 element per slot/skill the way the op vocabulary needs.
+function renderGearAnchors(equipment) {
+  if (!equipment || typeof equipment !== "object") return "";
+  const spans = [];
+  const addSpan = (slot, part) => {
+    spans.push(`<span class="mini-card__hist-anchor" data-hist-slot="${escapeHtml(String(slot))}" data-hist-part="${escapeHtml(String(part))}"></span>`);
+  };
+  const SIMPLE_CONTAINERS = [
+    ["slots", "item"],
+    ["weapons", "weapon"],
+    ["runes", "rune"],
+  ];
+  for (const [name, part] of SIMPLE_CONTAINERS) {
+    const map = equipment[name];
+    if (map && typeof map === "object") {
+      for (const slot of Object.keys(map)) addSpan(slot, part);
+    }
+  }
+  // Sigils always carry their index in the part (sigil0/sigil1), never the slot.
+  const sigils = equipment.sigils;
+  if (sigils && typeof sigils === "object") {
+    for (const slot of Object.keys(sigils)) {
+      const val = sigils[slot];
+      if (Array.isArray(val)) {
+        val.forEach((_, i) => addSpan(slot, `sigil${i}`));
+      } else {
+        addSpan(slot, "sigil0");
+      }
+    }
+  }
+  // Infusions carry their index in the slot (ring1[2]) since a slot can hold
+  // up to three; a single (non-array) infusion slot stays bare.
+  const infusions = equipment.infusions;
+  if (infusions && typeof infusions === "object") {
+    for (const slot of Object.keys(infusions)) {
+      const val = infusions[slot];
+      if (Array.isArray(val)) {
+        val.forEach((_, i) => addSpan(`${slot}[${i}]`, "infusion"));
+      } else {
+        addSpan(slot, "infusion");
+      }
+    }
+  }
+  return spans.join("");
+}
+
+function renderSkillAnchors() {
+  return ["heal", "utility1", "utility2", "utility3", "elite"]
+    .map((slot) => `<span class="mini-card__hist-anchor" data-hist-skill="${slot}"></span>`)
+    .join("");
 }
 
 // Right column from page-scraped gear ({weapons,rune,stats,infusions}); each
@@ -197,7 +260,14 @@ export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
         .map((t) => `<span class="mini-card__trait" data-name="${escapeHtml(t.name || "")}"><img class="mini-card__trait-icon" src="${escapeHtml(t.icon)}" alt="" loading="lazy"></span>`)
         .join("");
       const traitHtml = traitIcons ? `<span class="mini-card__trait-icons">${traitIcons}</span>` : "";
-      return `<div class="mini-card__spec-line"><span class="${pipClass}">${pipContent}</span><span class="${nameClass}">${escapeHtml(s.name)}</span>${traitHtml}</div>`;
+      // History-compare anchors: one per chosen tier, matching diffBuild.js's
+      // `trait` op shape ({ line, tier }).
+      const traitTierAnchors = s.majorChoices
+        ? Object.keys(s.majorChoices)
+          .map((tier) => `<span class="mini-card__hist-anchor" data-hist-trait="${escapeHtml(String(s.line))}:${escapeHtml(String(tier))}"></span>`)
+          .join("")
+        : "";
+      return `<div class="mini-card__spec-line" data-hist-spec="${escapeHtml(String(s.line))}"><span class="${pipClass}">${pipContent}</span><span class="${nameClass}">${escapeHtml(s.name)}</span>${traitHtml}${traitTierAnchors}</div>`;
     }).join("");
 
     specColHtml = `
@@ -343,6 +413,11 @@ export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
     </div>`;
   })() : "";
 
+  // Hidden history-compare anchors for gear slots + skill slots (see
+  // renderGearAnchors/renderSkillAnchors above). Not part of the visible
+  // layout, so it carries `hidden` and stays out of any visible-markup diff.
+  const histAnchorsHtml = `<div class="mini-card__hist-anchors" hidden aria-hidden="true">${renderGearAnchors(build.equipment)}${renderSkillAnchors()}</div>`;
+
   return `
     <div class="mini-card ${pClass}" data-build-id="${escapeHtml(build.id)}"${slotColor && slotColor !== "normal" ? ` data-slot-color="${slotColor}"` : ""}>
       ${removeHtml}
@@ -365,6 +440,7 @@ export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
           ${rightColHtml}
         </div>
         ${chatBarHtml}
+        ${histAnchorsHtml}
       </div>
     </div>
   `;
