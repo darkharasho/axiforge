@@ -355,7 +355,22 @@
   align-items: center;
   gap: 3px;
   min-width: 0;
+  /* Two weapon sets is four weapons plus names, and in a narrow card that
+     overflows: the names ellipsize away to nothing and then the last ICON is
+     sliced down the middle by the cell's clip. Wrap instead — the card has no
+     fixed height, so a second line costs a few pixels and keeps every weapon
+     both whole and named. `overflow` stays as the backstop for a single weapon
+     name too long to fit on a line of its own. */
+  flex-wrap: wrap;
+  row-gap: 2px;
   overflow: hidden;
+}
+
+.forge-render .mini-card__weap {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
 }
 
 .forge-render .mini-card__weap-icon {

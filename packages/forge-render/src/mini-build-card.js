@@ -299,7 +299,10 @@ export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
       return set.weapons.map((w) => {
         const svg = getWeaponSvg(w.id);
         const icon = svg ? `<span class="mini-card__weap-icon">${svg}</span>` : "";
-        return `${icon}<span class="mini-card__weap-name">${escapeHtml(w.label)}</span>`;
+        // Icon and name are one unit: the group wraps when it does not fit, and
+        // a weapon whose icon ends one line while its name starts the next
+        // reads as two weapons.
+        return `<span class="mini-card__weap">${icon}<span class="mini-card__weap-name">${escapeHtml(w.label)}</span></span>`;
       }).join(`<span class="mini-card__weap-sep">/</span>`);
     }).join(`<span class="mini-card__weap-div">|</span>`);
 
