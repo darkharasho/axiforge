@@ -1134,6 +1134,8 @@ function _renderUnderwaterToggle() {
   return container;
 }
 
+const SOURCE_TYPE_LABELS = { skill: "Skill", trait: "Trait", relic: "Relic" };
+
 function _renderBoonCoverage(catalog, editor, weaponSkills = []) {
   const coverage = computeBoons(state, weaponSkills);
   const hasBoons = coverage.boons.length > 0;
@@ -1181,7 +1183,7 @@ function _renderBoonCoverage(catalog, editor, weaponSkills = []) {
 
           const tag = document.createElement("span");
           tag.className = `boon-coverage__tooltip-tag boon-coverage__tooltip-tag--${src.type}`;
-          tag.textContent = src.type === "skill" ? "Skill" : "Trait";
+          tag.textContent = SOURCE_TYPE_LABELS[src.type] || "Trait";
           sourceRow.append(tag);
 
           const srcName = document.createElement("span");
