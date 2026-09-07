@@ -3,9 +3,10 @@
  *
  * Per-entry revert in the shared-folder history panel.
  *
- * A history snapshot holds the build as it was BEFORE the logged change, so
- * every entry is restorable — including the newest, which is the "undo the last
- * change" case. Only legacy entries written before snapshots existed are inert.
+ * v2 stores no per-entry snapshot: a version is reconstructed by replaying the
+ * append-only log up to it, so EVERY listed version is restorable — including
+ * the newest, which is the "undo the last change" case. Restorability is keyed
+ * off the version existing, nothing else.
  *
  * Confirmation is inline (a second click in the row) rather than the shared
  * confirm modal: the history panel is z-index 1101 and .confirm-modal-overlay
@@ -21,21 +22,25 @@ const {
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
 // Two builds, interleaved. Newest-first, as folders:get-history returns them.
+// The v2 folder feed annotates each version with recordId / recordKind /
+// recordTitle / recordDeleted (the pre-v2 names were buildId / buildTitle).
 function entries() {
   return [
-    { id: "e1", buildId: "b1", buildTitle: "Alac Mech", timestamp: "2026-09-04T12:00:00Z", source: "team-sync", authorLogin: "vette", summary: "traits changed", snapshot: { id: "b1" } },
-    { id: "e2", buildId: "b2", buildTitle: "Quick Herald", timestamp: "2026-09-04T11:00:00Z", source: "local", authorLogin: "me", summary: "notes updated", snapshot: { id: "b2" } },
-    { id: "e3", buildId: "b1", buildTitle: "Alac Mech", timestamp: "2026-09-04T10:00:00Z", source: "local", authorLogin: "me", summary: "Created", snapshot: { id: "b1" } },
-    { id: "e4", buildId: "b2", buildTitle: "Quick Herald", timestamp: "2026-09-04T09:00:00Z", source: "local", authorLogin: "me", summary: "Created" }, // no snapshot
+    { v: 3, recordId: "b1", recordKind: "build", recordTitle: "Alac Mech", ts: "2026-09-04T12:00:00Z", source: "team-sync", author: "vette", summary: "traits changed" },
+    { v: 2, recordId: "b2", recordKind: "build", recordTitle: "Quick Herald", ts: "2026-09-04T11:00:00Z", source: "local", author: "me", summary: "notes updated" },
+    { v: 2, recordId: "b1", recordKind: "build", recordTitle: "Alac Mech", ts: "2026-09-04T10:00:00Z", source: "local", author: "me", summary: "helm rune: Scholar → Durability" },
+    { v: 1, recordId: "b2", recordKind: "build", recordTitle: "Quick Herald", ts: "2026-09-04T09:00:00Z", source: "local", author: "me", summary: "" },
   ];
 }
 
-function rowFor(entryId) {
-  return document.querySelector(`.history-panel__entry[data-entry-id="${entryId}"]`);
+// Rows are addressed by (record, version): the feed merges several records, so
+// a version number alone is not unique across it.
+function rowFor(recordId, v) {
+  return document.querySelector(`.history-panel__entry[data-record-id="${recordId}"][data-hist-v="${v}"]`);
 }
 
-function revertBtn(entryId) {
-  return rowFor(entryId).querySelector(".history-panel__revert");
+function revertBtn(recordId, v) {
+  return rowFor(recordId, v).querySelector(".history-panel__revert");
 }
 
 let revertBuild;
@@ -60,25 +65,29 @@ describe("folder history panel — per-entry revert", () => {
     expect(document.querySelectorAll(".history-panel__revert")).toHaveLength(4);
   });
 
-  test("every entry with a snapshot is restorable, newest included", () => {
-    // The newest entry restores the state from just before the latest change,
-    // which is the most common thing to want after a teammate's bad sync.
-    expect(revertBtn("e1").disabled).toBe(false);
-    expect(revertBtn("e2").disabled).toBe(false);
-    expect(revertBtn("e3").disabled).toBe(false);
+  test("every version is restorable, newest included", () => {
+    // The newest entry restores the state at the latest change, which is the
+    // most common thing to want after a teammate's bad sync. v2 has no inert
+    // "snapshotless" entry any more.
+    for (const btn of document.querySelectorAll(".history-panel__revert")) {
+      expect(btn.disabled).toBe(false);
+    }
   });
 
-  test("an entry with no snapshot is disabled", () => {
-    expect(revertBtn("e4").disabled).toBe(true);
+  test("the origin keyframe says it is the first recorded state, not that nothing changed", () => {
+    // history:get-ops returns [] for v1 by design — there is no predecessor to
+    // diff against — so its summary is empty. "No changes" would be a lie.
+    expect(rowFor("b2", 1).textContent).toMatch(/first recorded state/i);
+    expect(rowFor("b2", 1).textContent).not.toMatch(/no changes/i);
   });
 
   test("first click asks for confirmation instead of reverting", async () => {
-    revertBtn("e3").click();
+    revertBtn("b1", 2).click();
     await flush();
 
     expect(revertBuild).not.toHaveBeenCalled();
-    expect(rowFor("e3").querySelector(".history-panel__confirm")).not.toBeNull();
-    expect(rowFor("e3").textContent).toMatch(/teammates/i);
+    expect(rowFor("b1", 2).querySelector(".history-panel__confirm")).not.toBeNull();
+    expect(rowFor("b1", 2).textContent).toMatch(/teammates/i);
   });
 
   test("confirming reverts that build, re-renders the library, and closes the panel", async () => {
@@ -87,12 +96,12 @@ describe("folder history panel — per-entry revert", () => {
     document.addEventListener("library:rerender", rerender);
     document.addEventListener("library:toast", toast);
 
-    revertBtn("e3").click();
+    revertBtn("b1", 2).click();
     await flush();
-    rowFor("e3").querySelector(".history-panel__confirm-yes").click();
+    rowFor("b1", 2).querySelector(".history-panel__confirm-yes").click();
     await flush();
 
-    expect(revertBuild).toHaveBeenCalledWith("b1", "e3");
+    expect(revertBuild).toHaveBeenCalledWith("b1", 2);
     expect(rerender).toHaveBeenCalled();
     expect(toast).toHaveBeenCalled();
     expect(document.querySelector(".history-panel")).toBeNull();
@@ -102,14 +111,14 @@ describe("folder history panel — per-entry revert", () => {
   });
 
   test("cancelling restores the button and reverts nothing", async () => {
-    revertBtn("e3").click();
+    revertBtn("b1", 2).click();
     await flush();
-    rowFor("e3").querySelector(".history-panel__confirm-no").click();
+    rowFor("b1", 2).querySelector(".history-panel__confirm-no").click();
     await flush();
 
     expect(revertBuild).not.toHaveBeenCalled();
-    expect(rowFor("e3").querySelector(".history-panel__confirm")).toBeNull();
-    expect(revertBtn("e3").disabled).toBe(false);
+    expect(rowFor("b1", 2).querySelector(".history-panel__confirm")).toBeNull();
+    expect(revertBtn("b1", 2).disabled).toBe(false);
   });
 
   test("a failed revert keeps the panel open and reports the error", async () => {
@@ -117,13 +126,13 @@ describe("folder history panel — per-entry revert", () => {
     const toast = jest.fn();
     document.addEventListener("library:toast", toast);
 
-    revertBtn("e3").click();
+    revertBtn("b1", 2).click();
     await flush();
-    rowFor("e3").querySelector(".history-panel__confirm-yes").click();
+    rowFor("b1", 2).querySelector(".history-panel__confirm-yes").click();
     await flush();
 
     expect(document.querySelector(".history-panel")).not.toBeNull();
-    expect(revertBtn("e3").disabled).toBe(false);
+    expect(revertBtn("b1", 2).disabled).toBe(false);
     expect(toast.mock.calls[0][0].detail.type).toBe("error");
     expect(toast.mock.calls[0][0].detail.message).toMatch(/offline/);
 
