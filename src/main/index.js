@@ -23,6 +23,7 @@ const { BuildHistoryStore } = require("./buildHistoryStore");
 const { CompHistoryStore } = require("./compHistoryStore");
 const { buildFolderFeed } = require("./history/folderFeed");
 const { migrateV1 } = require("./history/migrateV1");
+const { compareVersions } = require("./history/compareVersions");
 const diffBuild = require("./history/diffBuild");
 const diffComp = require("./history/diffComp");
 const { TeamSync } = require("./teamSync");
@@ -805,6 +806,28 @@ const readyWork = app.whenReady().then(async () => {
     if (!before || !after) return [];
     return (kind === "comp" ? diffComp : diffBuild).diff(before, after);
   });
+
+  // A TRUE diff between any two versions, however far apart: two
+  // reconstructions and one diff() call. The compare modal used to assemble
+  // this renderer-side by concatenating `history:get-ops` over the range,
+  // which reported a value that changed and changed BACK as two changes and
+  // cost one IPC round trip per version. `history:get-ops` stays — it is still
+  // the right answer to "what did THIS entry change" in the entry list.
+  //
+  // Ops come back LABELLED, by the same renderOpDetail that writes the entry
+  // summaries, so the two surfaces can never word the same edit differently.
+  handle("history:compare", async (_e, kind, recordId, fromV, toV) => compareVersions({
+    store: historyStoreFor(kind),
+    differ: kind === "comp" ? diffComp : diffBuild,
+    recordId,
+    fromV,
+    toV,
+    // Exactly the options appendVersion used when it wrote the summary for
+    // this record type; anything more would re-introduce the drift this
+    // replaced (a build's folder move must not gain a name here that the entry
+    // list does not have).
+    summaryOpts: kind === "comp" ? { buildNameOf: await compBuildTitleResolver() } : {},
+  }));
 
   handle("comps:get-history", async (_e, compId, opts) => compHistoryStore.listVersions(compId, historyPage(opts)));
 

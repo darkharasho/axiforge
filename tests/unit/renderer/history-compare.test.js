@@ -121,24 +121,40 @@ function build(over = {}) {
   };
 }
 
-// Three versions of one build. getHistoryOps returns the ops a version
-// INTRODUCED, so v1 — the origin keyframe — has none.
+// Three versions of one build. `compareHistory` is the main process's TRUE
+// diff between any two of them, in ONE round trip, with every op already
+// labelled by the same vocabulary that words the entry-list summaries.
 function stubApi() {
   const versions = [
     { v: 3, ts: "2026-09-04T12:00:00Z", source: "local", author: "me", summary: "notes updated" },
     { v: 2, ts: "2026-09-04T11:00:00Z", source: "local", author: "me", summary: "helm rune: Scholar → Durability" },
     { v: 1, ts: "2026-09-04T10:00:00Z", source: "local", author: "me", kind: "key", summary: "" },
   ];
-  const opsByVersion = {
-    1: [],
-    2: [{ t: "gear", slot: "head", part: "rune", before: "Superior Rune of the Scholar", after: "Superior Rune of Durability" }],
-    3: [{ t: "field", path: "notes", before: "", after: "kite the adds" }],
+  const titles = { 1: "Power Berserker", 2: "Power Berserker", 3: "Power Berserker" };
+  const runeOp = {
+    t: "gear", slot: "head", part: "rune",
+    before: "Superior Rune of the Scholar", after: "Superior Rune of Durability",
+    label: "head rune: Superior Rune of the Scholar → Superior Rune of Durability",
+  };
+  const notesOp = { t: "field", path: "notes", before: "", after: "kite the adds", label: "notes updated" };
+  // Keyed by "from-to". v1→v3 is the NET change, not the union of v2's and
+  // v3's ops — that is the whole point of the main-process endpoint.
+  const byRange = {
+    "1-2": [runeOp],
+    "2-3": [notesOp],
+    "1-3": [runeOp, notesOp],
+    "1-1": [], "2-2": [], "3-3": [],
   };
   return {
     versions,
     getBuildHistory: jest.fn().mockResolvedValue({ versions, nextCursor: null }),
-    getHistoryVersion: jest.fn(async (kind, id, v) => build({ title: `Power Berserker v${v}` })),
-    getHistoryOps: jest.fn(async (kind, id, v) => opsByVersion[v] || []),
+    compareHistory: jest.fn(async (kind, id, fromV, toV) => ({
+      ops: byRange[`${fromV}-${toV}`] || [],
+      fromDoc: build({ title: titles[fromV] }),
+      toDoc: build({ title: titles[toV] }),
+    })),
+    getHistoryOps: jest.fn().mockResolvedValue([]),
+    getHistoryVersion: jest.fn().mockResolvedValue(null),
     revertBuild: jest.fn().mockResolvedValue(build({ title: "Reverted" })),
   };
 }
@@ -170,7 +186,10 @@ describe("the compare modal", () => {
     expect(right.options[0].value).toBe("current");
     expect(document.querySelectorAll(".hist-compare__col")).toHaveLength(2);
     expect(document.querySelectorAll("[data-hist-row]")).toHaveLength(1);
-    expect(document.querySelector(".hist-compare__table").textContent).toMatch(/kite the adds/);
+    // The row is the main process's label, verbatim — the renderer words
+    // nothing itself. "notes updated" is renderSummary's phrasing for a notes
+    // edit (it deliberately does not echo the prose), so that is what shows.
+    expect(document.querySelector(".hist-compare__table").textContent.trim()).toBe("notes updated");
   });
 
   test("changing a picker re-fetches and re-renders", async () => {
@@ -184,7 +203,8 @@ describe("the compare modal", () => {
     await flush();
     await flush();
 
-    // v1 -> v3 is the union of the ops v2 and v3 introduced.
+    // Asked for the NET v1 -> v3 change in one call, not one call per version.
+    expect(api.compareHistory).toHaveBeenLastCalledWith("build", "b1", 1, 3);
     expect(document.querySelectorAll("[data-hist-row]")).toHaveLength(2);
     expect(document.querySelector(".hist-compare__body").textContent).toMatch(/Durability/);
   });
@@ -233,6 +253,55 @@ describe("the compare modal", () => {
 
     expect(api.revertBuild).toHaveBeenCalledWith("b1", 2);
     expect(document.querySelector(".hist-compare-overlay")).toBeNull();
+  });
+
+  test("one compare call per render, never one per version in the range", async () => {
+    // The defect this replaced: the renderer walked the range with
+    // getHistoryOps, so a wide span cost one IPC round trip per version AND
+    // reported churn instead of net change.
+    await showCompareModal({ kind: "build", recordId: "b1", version: 3, title: "Power Berserker" });
+    await flush();
+    expect(api.compareHistory).toHaveBeenCalledTimes(1);
+    expect(api.getHistoryOps).not.toHaveBeenCalled();
+    expect(api.getHistoryVersion).not.toHaveBeenCalled();
+
+    const right = document.querySelectorAll(".hist-compare__pick")[1];
+    right.value = "1";
+    right.dispatchEvent(new Event("change"));
+    await flush();
+    await flush();
+
+    // Still one call per render — two renders, two calls, not two + a walk.
+    expect(api.compareHistory).toHaveBeenCalledTimes(2);
+    expect(api.compareHistory).toHaveBeenLastCalledWith("build", "b1", 1, 3);
+    expect(api.getHistoryOps).not.toHaveBeenCalled();
+  });
+
+  test("a folder move is worded the same in the entry list and in the compare table", async () => {
+    // The drift the shared vocabulary exists to kill. Both surfaces now read
+    // the SAME string: the entry list from the stored summary, the table from
+    // the op label — and main writes both with renderOpDetail.
+    const moveOps = [{ t: "meta", path: "folderId", before: "f1", after: "f2", label: "moved to another folder" }];
+    api.getBuildHistory.mockResolvedValue({
+      versions: [
+        { v: 2, ts: "2026-09-04T11:00:00Z", source: "local", author: "me", kind: "meta", summary: "moved to another folder" },
+        { v: 1, ts: "2026-09-04T10:00:00Z", source: "local", author: "me", kind: "key", summary: "" },
+      ],
+      nextCursor: null,
+    });
+    api.compareHistory.mockResolvedValue({ ops: moveOps, fromDoc: build(), toDoc: build() });
+
+    await showHistoryPanel("b1");
+    await flush();
+    const listText = document.querySelector(".history-panel__entry .history-panel__entry-summary").textContent.trim();
+
+    document.querySelectorAll(".history-panel__entry")[0].querySelector(".history-panel__entry-body").click();
+    await flush();
+    await flush();
+    const tableText = document.querySelector("[data-hist-row]").textContent.trim();
+
+    expect(listText).toBe("moved to another folder");
+    expect(tableText).toBe(listText);
   });
 
   test("clicking a history entry opens the compare modal for that version", async () => {

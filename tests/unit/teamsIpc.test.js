@@ -300,6 +300,21 @@ describe("the teams IPC surface", () => {
     expect(missing).toEqual([]);
   });
 
+  // The compare modal's whole diff comes down this one channel. A typo in
+  // either half is otherwise caught by nothing: the main-process logic is unit
+  // tested (history/compareVersions.test.js) and the renderer is tested against
+  // a stub, so only this pins that the two names actually meet.
+  test("history:compare is registered in main and is what the preload's compareHistory invokes", async () => {
+    await loadMain();
+    expect(mockCtx.handlers.has("history:compare")).toBe(true);
+
+    const calls = [];
+    mockCtx.bridgeInvoke = async (channel, ...args) => { calls.push([channel, ...args]); return null; };
+    require("../../src/preload/index.js");
+    await mockCtx.exposed.compareHistory("build", "b1", 1, 3);
+    expect(calls).toEqual([["history:compare", "build", "b1", 1, 3]]);
+  });
+
   test("the dead GitHub-org sync surface is not registered at all", async () => {
     await loadMain();
     const dead = [...mockCtx.handlers.keys()].filter((c) => c.startsWith("shared-library:"));

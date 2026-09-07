@@ -29,42 +29,21 @@ const _styleId = "history-compare-styles";
 
 /* --------------------------------------------------------------- labelling */
 
-// Mirrors src/main/history/renderSummary.js. It cannot be imported: that file
-// is CommonJS in src/main and this is renderer ESM.
-const SLOT_LABELS = {
-  head: "helm",
-  shoulders: "shoulders",
-  chest: "chest",
-  hands: "hands",
-  legs: "legs",
-  feet: "feet",
-  back: "back",
-  amulet: "amulet",
-  ring1: "ring 1",
-  ring2: "ring 2",
-  accessory1: "accessory 1",
-  accessory2: "accessory 2",
-  breather: "breather",
-  aquatic1: "weapon 1",
-  aquatic2: "weapon 2",
-  mainhand1: "main hand",
-  offhand1: "off hand",
-  mainhand2: "main hand (set 2)",
-  offhand2: "off hand (set 2)",
-};
-
-const GEAR_PART_LABEL = { item: "", weapon: "", rune: "rune", infusion: "infusion" };
-
-function humanize(path) {
-  return String(path)
-    .replace(/\./g, " ")
-    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
-    .toLowerCase();
-}
-
-function fmtValue(v) {
+// There is deliberately NO label vocabulary here. Every op arrives from
+// `history:compare` already carrying a `label`, written by the same
+// `renderOpDetail` that words the one-line entry summaries — one vocabulary,
+// defined once in src/main/history/renderSummary.js, crossing the boundary as
+// data. A renderer-side copy could not import it (that file is CommonJS) and
+// so drifted: a folder move read "moved to another folder" in the entry list
+// and "folder: f1 → f2" in the compare table.
+//
+// `_fallbackText` is NOT a second vocabulary. It is the last resort for an op
+// that reached the table unlabelled — only possible when `renderChangeTable`
+// is called directly, as the unit tests do — and it names nothing, it just
+// prints what the op carries.
+function _fallbackValue(v) {
   if (v === null || v === undefined || v === "") return "(none)";
-  if (Array.isArray(v)) return v.length ? v.map(fmtValue).join(", ") : "(none)";
+  if (Array.isArray(v)) return v.length ? v.map(_fallbackValue).join(", ") : "(none)";
   if (typeof v === "object") {
     if (typeof v.name === "string") return v.name;
     try {
@@ -76,50 +55,9 @@ function fmtValue(v) {
   return String(v);
 }
 
-function gearSlotLabel(slotRaw) {
-  // Infusions carry their index in the slot: ring1[2].
-  const m = /^(.*)\[(\d+)\]$/.exec(String(slotRaw));
-  const base = m ? m[1] : String(slotRaw);
-  const label = SLOT_LABELS[base] || humanize(base);
-  return m ? `${label} ${Number(m[2]) + 1}` : label;
-}
-
-function skillSlotLabel(slotRaw) {
-  const slot = String(slotRaw);
-  const utility = /^utility(\d+)$/.exec(slot);
-  if (utility) return `utility ${utility[1]}`;
-  return SLOT_LABELS[slot] || humanize(slot);
-}
-
-/** The left-hand "what changed" label for one op. */
-function opLabel(op) {
-  switch (op.t) {
-    case "gear": {
-      const part = /^sigil(\d+)$/.test(String(op.part))
-        ? `sigil ${Number(String(op.part).slice(5)) + 1}`
-        : (GEAR_PART_LABEL[op.part] ?? humanize(op.part));
-      const slot = gearSlotLabel(op.slot);
-      return part ? `${slot} ${part}` : slot;
-    }
-    case "skill":
-      return `${op.uw ? "underwater " : ""}${skillSlotLabel(op.slot)}`;
-    case "trait":
-      return `specialization ${Number(op.line) + 1} — trait tier ${op.tier}`;
-    case "spec":
-      return `specialization ${Number(op.line) + 1}`;
-    case "stat":
-      return "stats";
-    case "slot":
-      return `party ${Number(op.line) + 1} slot ${Number(op.index) + 1}`;
-    case "meta":
-      return op.path === "folderId" ? "folder" : humanize(op.path);
-    case "consumable":
-    case "field":
-    case "raw":
-      return humanize(op.path);
-    default:
-      return humanize(op.t || "change");
-  }
+function _fallbackText(op) {
+  const what = op.path || [op.slot, op.part].filter(Boolean).join(" ") || op.t || "change";
+  return `${what}: ${_fallbackValue(op.before)} → ${_fallbackValue(op.after)}`;
 }
 
 /* ------------------------------------------------------------ change table */
@@ -140,10 +78,7 @@ export function renderChangeTable(ops) {
   }
   const rows = list.map((op) => `
     <div class="hist-compare__row" data-hist-row data-hist-op="${escapeHtml(String(op.t || ""))}">
-      <div class="hist-compare__row-label">${escapeHtml(opLabel(op))}</div>
-      <div class="hist-compare__row-before">${escapeHtml(fmtValue(op.before))}</div>
-      <div class="hist-compare__row-arrow" aria-hidden="true">→</div>
-      <div class="hist-compare__row-after">${escapeHtml(fmtValue(op.after))}</div>
+      <span class="hist-compare__row-text">${escapeHtml(op.label || _fallbackText(op))}</span>
     </div>
   `).join("");
   return `<div class="hist-compare__table" role="table">${rows}</div>`;
@@ -322,22 +257,18 @@ function _injectStyles() {
       color: var(--text-dim, #646670);
       padding: 12px 2px;
     }
+    /* One clause per row. The clause is written by the main process (see the
+       labelling note at the top of this file), arrow and all, so splitting it
+       back into before/after cells here would mean re-parsing prose. */
     .hist-compare__row {
-      display: grid;
-      grid-template-columns: minmax(120px, 1fr) 2fr 16px 2fr;
-      gap: 8px;
-      align-items: baseline;
       padding: 6px 2px;
       border-top: 1px solid var(--line, #1e1f24);
       font-size: 12px;
       line-height: 1.45;
       word-break: break-word;
+      color: var(--text, #e2e3e8);
     }
     .hist-compare__row:first-child { border-top: none; }
-    .hist-compare__row-label { color: var(--text-dim, #646670); }
-    .hist-compare__row-before { color: var(--text-light, #aeafb8); text-decoration: line-through; opacity: 0.75; }
-    .hist-compare__row-arrow { color: var(--text-dim, #646670); text-align: center; }
-    .hist-compare__row-after { color: var(--text, #e2e3e8); }
     .hist-compare__footer {
       display: flex;
       flex-direction: column;
@@ -394,43 +325,10 @@ function _injectStyles() {
 // sentinel the <select> can carry as a string value.
 const CURRENT = "current";
 
-function _currentDoc(kind, recordId) {
-  const list = kind === "comp" ? (state.comps || []) : (state.builds || []);
-  return list.find((r) => r && r.id === recordId) || null;
-}
-
 function _versionLabel(pick, versions) {
   if (pick === CURRENT) return "Current";
   const entry = versions.find((e) => e.v === pick);
   return entry ? `v${entry.v}` : `v${pick}`;
-}
-
-/**
- * The ops between two picks. `getHistoryOps(kind, id, v)` returns the ops that
- * version v INTRODUCED, so the change between two versions is the union of the
- * ops of every version after the older one, up to and including the newer.
- * v1 returns [] — it is the origin keyframe and has no predecessor to diff
- * against, which is not the same thing as "nothing changed".
- */
-async function _opsBetween(kind, recordId, older, newer, versions) {
-  const latest = versions.length ? Math.max(...versions.map((e) => e.v)) : 0;
-  const lo = older === CURRENT ? latest : Number(older);
-  const hi = newer === CURRENT ? latest : Number(newer);
-  const from = Math.min(lo, hi);
-  const to = Math.max(lo, hi);
-  const wanted = versions
-    .map((e) => e.v)
-    .filter((v) => v > from && v <= to)
-    .sort((a, b) => a - b);
-  const batches = await Promise.all(
-    wanted.map((v) => window.desktopApi.getHistoryOps(kind, recordId, v).catch(() => [])),
-  );
-  return batches.flat();
-}
-
-async function _docFor(kind, recordId, pick) {
-  if (pick === CURRENT) return _currentDoc(kind, recordId);
-  return window.desktopApi.getHistoryVersion(kind, recordId, Number(pick));
 }
 
 function _renderCard(doc) {
@@ -540,24 +438,38 @@ async function _renderComparison(modal, ctx, leftPick, rightPick) {
   const body = modal.querySelector(".hist-compare__body");
   body.innerHTML = `<div class="hist-compare__empty">Loading…</div>`;
 
-  let leftDoc = null;
-  let rightDoc = null;
-  let ops = [];
+  // "Current" resolves to the newest RECORDED version rather than the live
+  // record in `state`. The two can only differ by a change the log judged
+  // non-substantive (a derived-only edit, or a save that changed nothing), so
+  // the diff is identical either way — and reading both the cards and the
+  // table from one source means they cannot disagree.
+  const latest = versions.length ? Math.max(...versions.map((e) => e.v)) : 0;
+  const leftV = leftPick === CURRENT ? latest : Number(leftPick);
+  const rightV = rightPick === CURRENT ? latest : Number(rightPick);
+  // Diff oldest -> newest so every clause reads forwards in time, whichever
+  // side of the modal the user put the older version on.
+  const leftIsOlder = leftV <= rightV;
+
+  let res;
   try {
-    [leftDoc, rightDoc, ops] = await Promise.all([
-      _docFor(kind, recordId, leftPick),
-      _docFor(kind, recordId, rightPick),
-      _opsBetween(kind, recordId, rightPick, leftPick, versions),
-    ]);
+    // ONE call, however far apart the versions are. This used to be one
+    // `getHistoryOps` per version in the range, concatenated — which reported
+    // a value that changed and changed back as two changes.
+    res = await window.desktopApi.compareHistory(
+      kind, recordId, Math.min(leftV, rightV), Math.max(leftV, rightV),
+    );
   } catch (err) {
     body.innerHTML = `<div class="hist-compare__empty">Could not load these versions — ${escapeHtml(err.message || "unknown error")}</div>`;
     return;
   }
   if (!document.body.contains(modal)) return;
 
-  // Version 1 is the origin keyframe: `history:get-ops` correctly returns []
-  // for it because there is nothing before it to diff against. That is the
-  // build's initial state, not "no changes were made".
+  const ops = (res && res.ops) || [];
+  const leftDoc = (leftIsOlder ? res && res.fromDoc : res && res.toDoc) || null;
+  const rightDoc = (leftIsOlder ? res && res.toDoc : res && res.fromDoc) || null;
+
+  // Version 1 is the origin keyframe: there is nothing before it to diff
+  // against. That is the record's initial state, not "no changes were made".
   const isOrigin = leftPick === 1 && ops.length === 0;
   const originNote = isOrigin
     ? `<div class="hist-compare__note">v1 is where this ${kind === "comp" ? "comp" : "build"}'s history begins — the state it was first recorded in. There is no earlier version to compare it against.</div>`
@@ -584,8 +496,8 @@ async function _renderComparison(modal, ctx, leftPick, rightPick) {
 
   // Each side highlights its own pieces. Invisible on today's card — the
   // anchors are hidden spans — see the note at the top of this file.
-  highlightOps(body.querySelector(".hist-compare__col--left"), invert(ops));
-  highlightOps(body.querySelector(".hist-compare__col--right"), ops);
+  highlightOps(body.querySelector(".hist-compare__col--left"), leftIsOlder ? invert(ops) : ops);
+  highlightOps(body.querySelector(".hist-compare__col--right"), leftIsOlder ? ops : invert(ops));
 
   _renderFooter(modal, ctx, leftPick);
 }

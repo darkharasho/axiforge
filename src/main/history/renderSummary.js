@@ -294,4 +294,4 @@ function renderSummary(ops, opts = {}) {
   return list.map((op) => renderOpDetail(op, opts)).join("; ");
 }
 
-module.exports = { renderSummary };
+module.exports = { renderSummary, renderOpDetail };

@@ -58,6 +58,10 @@ contextBridge.exposeInMainWorld("desktopApi", {
   getFolderHistory: (folderId, opts) => ipcRenderer.invoke("folders:get-history", folderId, opts || {}),
   getHistoryVersion: (kind, recordId, v) => ipcRenderer.invoke("history:get-version", kind, recordId, v),
   getHistoryOps: (kind, recordId, v) => ipcRenderer.invoke("history:get-ops", kind, recordId, v),
+  // A true diff between two versions, however far apart, in one round trip;
+  // resolves to {ops, fromDoc, toDoc} with every op pre-labelled by the main
+  // process's own summary vocabulary.
+  compareHistory: (kind, recordId, fromV, toV) => ipcRenderer.invoke("history:compare", kind, recordId, fromV, toV),
   revertBuild: (buildId, v) => ipcRenderer.invoke("builds:revert", buildId, v),
   getCompHistory: (compId, opts) => ipcRenderer.invoke("comps:get-history", compId, opts || {}),
   revertComp: (compId, v) => ipcRenderer.invoke("comps:revert", compId, v),

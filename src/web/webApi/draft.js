@@ -49,6 +49,7 @@ function createDraftApi({ storage = window.localStorage } = {}) {
     getFolderHistory: async () => [],
     getHistoryVersion: async () => null,
     getHistoryOps: async () => [],
+    compareHistory: async () => ({ ops: [], fromDoc: null, toDoc: null }),
     revertBuild: async () => null,
     listFolders: async () => [],
     saveFolder: async (folder) => folder,
