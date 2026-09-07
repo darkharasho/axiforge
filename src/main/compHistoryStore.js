@@ -22,18 +22,8 @@ const diffComp = require("./history/diffComp");
  */
 class CompHistoryStore extends HistoryStore {
   constructor(baseDir, summaryOpts = {}) {
-    super(baseDir, { subdir: "comps", idField: "compId", differ: diffComp, summaryOpts });
+    super(baseDir, { subdir: "comps", differ: diffComp, summaryOpts });
   }
 }
 
-/** Every build id a comp references, from membership AND from its party slots. */
-function _memberIds(comp) {
-  const fromList = (comp?.buildIds || []).filter(Boolean);
-  const fromSlots = (comp?.partyLines || [])
-    .flatMap((line) => line?.slots || [])
-    // "tag:<categoryId>" slots name a category, not a build.
-    .filter((slot) => typeof slot === "string" && slot && !slot.startsWith("tag:"));
-  return new Set([...fromList, ...fromSlots]);
-}
-
-module.exports = { CompHistoryStore, _memberIds };
+module.exports = { CompHistoryStore };

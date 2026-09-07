@@ -30,7 +30,7 @@ describe("TeamSync — pull", () => {
     expect((await h.compStore.listComps())[0]).toMatchObject({ name: "Comp", folderId: "t" });
     expect(await h.syncStore.getVersion("t", "b1")).toEqual({ version: 1, createdBy: "u-vette" });
     expect((await h.syncStore.getTeam("t")).cursor).toBe(3);
-    const hist = await h.historyStore.getHistory("b1");
+    const hist = (await h.historyStore.listVersions("b1", { limit: 200 })).versions;
     expect(hist[0]).toMatchObject({ source: "team-sync", author: "vette", summary: "Created" });
     expect(h.events).toContainEqual(expect.objectContaining({ status: "synced", type: "build", id: "b1", folderId: "t", item: expect.objectContaining({ title: "Remote" }) }));
     expect(h.events).toContainEqual(expect.objectContaining({ status: "synced", folderId: "t" }));
@@ -137,7 +137,7 @@ describe("TeamSync — pull", () => {
     expect((await h.compStore.listComps())[0].buildIds).toEqual(["b1"]);
 
     // And its history survives, carrying the deletion itself.
-    const history = await h.historyStore.getHistory("b1");
+    const history = (await h.historyStore.listVersions("b1", { limit: 200 })).versions;
     expect(history.some((e) => e.summary === "Deleted")).toBe(true);
   });
 
@@ -159,11 +159,11 @@ describe("TeamSync — pull", () => {
     await h.sync.pullTeam("t");
 
     expect((await h.trash.listTrash()).map((r) => `${r.type}:${r.id}`)).toEqual(["folder:f1"]);
-    const buildEntry = (await h.historyStore.getHistory("b1")).find((e) => e.summary === "Deleted");
+    const buildEntry = ((await h.historyStore.listVersions("b1", { limit: 200 })).versions).find((e) => e.summary === "Deleted");
     expect(buildEntry).toMatchObject({ author: "iruixos", source: "team-sync", kind: "delete" });
     // A deletion is always a keyframe: "put it back" needs a whole document.
     expect(buildEntry.doc).toMatchObject({ id: "b1", title: "B" });
-    const compEntry = (await h.compHistoryStore.getHistory("c1")).find((e) => e.summary === "Deleted");
+    const compEntry = ((await h.compHistoryStore.listVersions("c1", { limit: 200 })).versions).find((e) => e.summary === "Deleted");
     expect(compEntry).toMatchObject({ author: "iruixos", source: "team-sync", kind: "delete" });
   });
 
@@ -202,7 +202,7 @@ describe("TeamSync — pull", () => {
     })], nextSeq: 3, hasMore: false });
     await h.sync.pullTeam("t");
 
-    const [entry] = await h.compHistoryStore.getHistory("c1");
+    const [entry] = (await h.compHistoryStore.listVersions("c1", { limit: 200 })).versions;
     expect(entry.author).toBe("iruixos");
     expect(entry.source).toBe("team-sync");
     // Named and placed, not counted — that is the difference between a log and
@@ -233,14 +233,14 @@ describe("TeamSync — pull", () => {
     h.api.changes.mockResolvedValueOnce({ items: [edit("Typo", 3, 3)], nextSeq: 3, hasMore: false });
     await h.sync.pullTeam("t");
 
-    expect((await h.historyStore.getHistory("b1")).map((e) => e.v)).toEqual([2, 1]);
+    expect(((await h.historyStore.listVersions("b1", { limit: 200 })).versions).map((e) => e.v)).toEqual([2, 1]);
 
     // The teammate undoes the typo: the document is back where version 1 left
     // it, so version 2 has nothing left to say and is removed outright.
     h.api.changes.mockResolvedValueOnce({ items: [edit("New", 4, 4)], nextSeq: 4, hasMore: false });
     await h.sync.pullTeam("t");
 
-    expect((await h.historyStore.getHistory("b1")).map((e) => e.v)).toEqual([1]);
+    expect(((await h.historyStore.listVersions("b1", { limit: 200 })).versions).map((e) => e.v)).toEqual([1]);
     expect(await h.historyStore.getVersion("b1", 1)).toMatchObject({ title: "New" });
 
     const synced = h.events.filter((e) => e.status === "synced" && e.id === "b1");
@@ -263,7 +263,7 @@ describe("TeamSync — pull", () => {
 
     expect(await h.compStore.listComps()).toEqual([]);
     expect((await h.trash.listTrash()).map((r) => r.id)).toEqual(["c1"]);
-    const entry = (await h.compHistoryStore.getHistory("c1")).find((e) => e.summary === "Deleted");
+    const entry = ((await h.compHistoryStore.listVersions("c1", { limit: 200 })).versions).find((e) => e.summary === "Deleted");
     expect(entry.author).toBe("iruixos");
     expect(entry.doc.name).toBe("Squad");
   });
@@ -276,10 +276,10 @@ describe("TeamSync — pull", () => {
     await h.compStore.upsertComp({ id: "c1", name: "Squad", folderId: "t", partyLines: [] });
     await h.compHistoryStore.appendVersion({ recordId: "c1", before: null, after: { id: "c1" } });
     await h.trash.trashComps(["c1"]);
-    expect(await h.compHistoryStore.getHistory("c1")).toHaveLength(1);
+    expect((await h.compHistoryStore.listVersions("c1", { limit: 200 })).versions).toHaveLength(1);
 
     await h.trash.purge({ comps: ["c1"] });
-    expect(await h.compHistoryStore.getHistory("c1")).toEqual([]);
+    expect((await h.compHistoryStore.listVersions("c1", { limit: 200 })).versions).toEqual([]);
   });
 
   test("the deletion is attributed to whoever performed it", async () => {
@@ -292,7 +292,7 @@ describe("TeamSync — pull", () => {
     ], nextSeq: 7, hasMore: false });
     await h.sync.pullTeam("t");
 
-    const entry = (await h.historyStore.getHistory("b1")).find((e) => e.summary === "Deleted");
+    const entry = ((await h.historyStore.listVersions("b1", { limit: 200 })).versions).find((e) => e.summary === "Deleted");
     expect(entry.author).toBe("iruixos");
     expect(entry.source).toBe("team-sync");
     // The keyframe doc is what makes it restorable from the history panel.
@@ -305,7 +305,7 @@ describe("TeamSync — pull", () => {
     await h.buildStore.upsertBuild({ id: "b1", title: "Old", folderId: "t" });
     h.api.changes.mockResolvedValueOnce({ items: [item({ id: "b1", version: 2, seq: 2, body: { id: "b1", title: "New" }, updatedBy: who("iruixos") })], nextSeq: 2, hasMore: false });
     await h.sync.pullTeam("t");
-    const hist = await h.historyStore.getHistory("b1");
+    const hist = (await h.historyStore.listVersions("b1", { limit: 200 })).versions;
     expect(hist[0]).toMatchObject({ source: "team-sync", author: "iruixos" });
     expect(hist[0].summary).not.toBe("Created");
   });
@@ -670,7 +670,7 @@ describe("TeamSync — pull", () => {
     // from another device under the same account.
     h.api.changes.mockResolvedValueOnce({ items: [item({ id: "b1", version: 5, seq: 5, body: { id: "b1", title: "New" }, updatedBy: { userId: "me", login: "me" } })], nextSeq: 5, hasMore: false });
     await h.sync.pullTeam("t");
-    expect(await h.historyStore.getHistory("b1")).toEqual([]);
+    expect((await h.historyStore.listVersions("b1", { limit: 200 })).versions).toEqual([]);
     expect((await h.buildStore.listBuilds()).find((b) => b.id === "b1").title).toBe("New"); // still applied
     expect(await h.syncStore.getVersion("t", "b1")).toEqual({ version: 5, createdBy: "u-vette" });
   });

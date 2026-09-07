@@ -23,7 +23,7 @@ async function writeV1(data) {
 }
 
 function run(liveDocs = new Map()) {
-  return migrateV1({ baseDir: dir, store, fileName: "build-history.json", idField: "buildId", liveDocs });
+  return migrateV1({ baseDir: dir, store, fileName: "build-history.json", liveDocs });
 }
 
 describe("migrateV1", () => {

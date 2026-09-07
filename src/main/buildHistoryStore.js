@@ -7,9 +7,8 @@ const diffBuild = require("./history/diffBuild");
  * Version history for builds.
  *
  * The storage half lives in HistoryStore, shared with comps. What stays here is
- * what is actually about builds: the directory its logs live in, the `buildId`
- * key its callers name records by, and the differ that decides what counts as
- * an edit.
+ * what is actually about builds: the directory its logs live in and the differ
+ * that decides what counts as an edit.
  *
  * `summarizeBuildChange` used to live here, comparing JSON.stringify of whole
  * sub-objects. `majorTraitsByTier` and `minorTraits` embed the entire GW2
@@ -24,7 +23,7 @@ const diffBuild = require("./history/diffBuild");
  */
 class BuildHistoryStore extends HistoryStore {
   constructor(baseDir, summaryOpts = {}) {
-    super(baseDir, { subdir: "builds", idField: "buildId", differ: diffBuild, summaryOpts });
+    super(baseDir, { subdir: "builds", differ: diffBuild, summaryOpts });
   }
 }
 

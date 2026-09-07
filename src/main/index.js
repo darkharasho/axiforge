@@ -21,6 +21,10 @@ const { createArchive } = require("./archive");
 const { SyncStore } = require("./syncStore");
 const { BuildHistoryStore } = require("./buildHistoryStore");
 const { CompHistoryStore } = require("./compHistoryStore");
+const { buildFolderFeed } = require("./history/folderFeed");
+const { migrateV1 } = require("./history/migrateV1");
+const diffBuild = require("./history/diffBuild");
+const diffComp = require("./history/diffComp");
 const { TeamSync } = require("./teamSync");
 const { beginGitHubDeviceAuth, completeGitHubDeviceAuth } = require("./githubAuth");
 const {
@@ -108,6 +112,49 @@ const compStore = new CompStore(dataDir);
 const syncStore = new SyncStore(dataDir);
 const buildHistoryStore = new BuildHistoryStore(dataDir);
 const compHistoryStore = new CompHistoryStore(dataDir);
+
+// v2 histories are uncapped, so every history read is a page. 200 is what the
+// pre-v2 handlers returned and stays the default; the cap keeps a renderer
+// typo from pulling a whole log (each keyframe carries a full document) across
+// IPC.
+function historyPage(opts) {
+  const { limit, cursor } = opts || {};
+  const n = Number(limit);
+  return {
+    limit: Number.isFinite(n) && n > 0 ? Math.min(n, 500) : 200,
+    cursor: cursor === undefined ? null : cursor,
+  };
+}
+
+// Migrates both v1 history files if they are still there. Idempotent: the
+// migration renames its source to `<file>.pre-v2` when it is done, and skips
+// records that already have a v2 log.
+async function migrateHistoryV1() {
+  const jobs = [
+    { label: "builds", store: buildHistoryStore, fileName: "build-history.json", docs: () => store.listBuilds() },
+    { label: "comps", store: compHistoryStore, fileName: "comp-history.json", docs: () => compStore.listComps() },
+  ];
+  for (const job of jobs) {
+    try {
+      const live = new Map((await job.docs()).map((d) => [d.id, d]));
+      const r = await migrateV1({ baseDir: dataDir, store: job.store, fileName: job.fileName, liveDocs: live });
+      if (r && (r.migrated || r.failed)) {
+        // `skipped`/`retired` are flags, not counts: nothing to migrate, and
+        // whether the v1 file was renamed to `.pre-v2` (the user's undo).
+        console.warn(
+          `[history] v1 ${job.label} migration: ${r.migrated} record(s) migrated, ${r.failed} failed; `
+          + `${r.entries} v1 entries → ${r.versioned} versions `
+          + `(${r.derivedOnly} derived-only, ${r.dropped} dropped)`
+          + `${r.retired ? "" : "; source file NOT retired — it will be re-read next launch"}`,
+        );
+      }
+    } catch (err) {
+      // migrateV1 does not reject; this is the belt on top of the braces,
+      // because history must never block app launch.
+      console.warn(`[history] v1 ${job.label} migration failed:`, err && err.message);
+    }
+  }
+}
 // Deleting anything in the library stages it here for 30 days rather than
 // destroying it. See trash.js for why the comp-unlink and history deletion that
 // used to run on delete are deferred until purge.
@@ -352,7 +399,7 @@ function asHttpResult(promise, { badInput = false } = {}) {
     return result;
   }, (err) => {
     const msg = err?.message || String(err);
-    if (/^(Build|Comp|Folder|History entry) not found/i.test(msg)) throw httpError(404, msg);
+    if (/^(Build|Comp|Folder|Version|History entry) not found/i.test(msg)) throw httpError(404, msg);
     const ioCodes = ["ENOENT", "EACCES", "EPERM", "ENOSPC", "EMFILE"];
     if (badInput && !ioCodes.includes(err?.code)) throw httpError(400, msg);
     throw err;
@@ -434,6 +481,11 @@ const readyWork = app.whenReady().then(async () => {
   await syncStore.init();
   await buildHistoryStore.init();
   await compHistoryStore.init();
+  // One-shot v1 → v2 history migration. It runs after the record stores are up
+  // because it seeds a record's origin from the LIVE document, and it never
+  // rejects: a failure here leaves the pre-v2 file in place and the user with
+  // an empty history, not a launch that hangs.
+  await migrateHistoryV1();
   // Sweep anything past the retention window. Never blocks startup: a failed
   // sweep means items linger in the trash, which is harmless.
   trash.purgeExpired().catch((err) => console.warn("[trash] sweep failed:", err.message));
@@ -709,86 +761,56 @@ const readyWork = app.whenReady().then(async () => {
   handle("trash:purge", async (_e, selection) => trash.purge(selection || {}));
   handle("trash:empty", async () => trash.empty());
 
-  // Build history
-  handle("builds:get-history", async (_e, buildId) => {
-    return (await buildHistoryStore.listVersions(buildId, { limit: 200 })).versions;
+  // Build history. A page, not the whole log: v2 histories are uncapped, so
+  // the renderer asks for a window and pages with `nextCursor`.
+  handle("builds:get-history", async (_e, buildId, opts) => (
+    buildHistoryStore.listVersions(buildId, historyPage(opts))
+  ));
+
+  handle("folders:get-history", async (_e, folderId, opts) => {
+    const { limit } = historyPage(opts);
+    // Trashed records are passed in alongside the live ones on purpose — see
+    // history/folderFeed.js, which explains why and does the assembly.
+    return buildFolderFeed({
+      folderId,
+      limit,
+      folders: await folderStore.listFolders(),
+      builds: [...(await store.listBuilds()), ...(await store.listTrashedBuilds())],
+      comps: [...(await compStore.listComps()), ...(await compStore.listTrashedComps())],
+      buildHistory: buildHistoryStore,
+      compHistory: compHistoryStore,
+    });
   });
 
-  handle("folders:get-history", async (_e, folderId) => {
-    const allFolders = await folderStore.listFolders();
-    // Trashed builds included on purpose. A deletion is the single most useful
-    // thing this panel can show — especially in a shared folder, where someone
-    // else performed it — and listBuilds() filters trashed records out, so the
-    // build simply vanished from its own folder's history the moment it was
-    // deleted, taking every earlier entry with it.
-    const allBuilds = [...(await store.listBuilds()), ...(await store.listTrashedBuilds())];
-    const allComps = [...(await compStore.listComps()), ...(await compStore.listTrashedComps())];
-    const allHistory = await buildHistoryStore.getAllHistory();
-    const allCompHistory = await compHistoryStore.getAllHistory();
+  // One version's whole document, and the ops that produced it. `kind` picks
+  // the store so the renderer has a single pair of calls for both record types.
+  const historyStoreFor = (kind) => (kind === "comp" ? compHistoryStore : buildHistoryStore);
 
-    // Collect this folder and all its descendants
-    const folderIds = new Set();
-    const queue = [folderId];
-    while (queue.length > 0) {
-      const id = queue.shift();
-      folderIds.add(id);
-      for (const f of allFolders) {
-        if (f.parentId === id) queue.push(f.id);
-      }
-    }
+  handle("history:get-version", async (_e, kind, recordId, v) => (
+    historyStoreFor(kind).getVersion(recordId, v)
+  ));
 
-    // Build a title lookup for builds in those folders
-    const titleMap = {};
-    const deletedIds = new Set();
-    for (const b of allBuilds) {
-      if (!folderIds.has(b.folderId)) continue;
-      titleMap[b.id] = b.title || b.id;
-      if (b.deletedAt) deletedIds.add(b.id);
-    }
-
-    // Gather and annotate all history entries for those builds
-    const entries = [];
-    for (const [buildId, buildEntries] of Object.entries(allHistory)) {
-      if (!titleMap[buildId]) continue;
-      for (const entry of buildEntries) {
-        // `buildDeleted` lets the panel say the build is currently in the trash,
-        // so "Restore this version" reads as the undelete it is.
-        entries.push({ ...entry, recordKind: "build", buildTitle: titleMap[buildId], buildDeleted: deletedIds.has(buildId) });
-      }
-    }
-
-    // Comps in those folders, alongside the builds. A comp is the thing a squad
-    // actually argues over, so its history belongs in the same timeline rather
-    // than a second panel nobody opens.
-    const compNames = {};
-    const deletedCompIds = new Set();
-    for (const c of allComps) {
-      if (!folderIds.has(c.folderId)) continue;
-      compNames[c.id] = c.name || c.id;
-      if (c.deletedAt) deletedCompIds.add(c.id);
-    }
-    for (const [compId, compEntries] of Object.entries(allCompHistory)) {
-      if (!compNames[compId]) continue;
-      for (const entry of compEntries) {
-        entries.push({
-          ...entry,
-          recordKind: "comp",
-          buildTitle: compNames[compId],
-          buildDeleted: deletedCompIds.has(compId),
-        });
-      }
-    }
-
-    // Sort newest first
-    entries.sort((a, b) => new Date(b.ts) - new Date(a.ts));
-    return entries;
+  handle("history:get-ops", async (_e, kind, recordId, v) => {
+    const { versions } = await historyStoreFor(kind).listVersions(recordId, { limit: 1, cursor: v });
+    const entry = versions[0];
+    if (!entry || entry.v !== Number(v)) return [];
+    // A keyframe carries no ops of its own; derive them by diffing the version
+    // before it, so "what changed here" answers the same way for every entry.
+    if (Array.isArray(entry.ops)) return entry.ops;
+    const hs = historyStoreFor(kind);
+    const [before, after] = await Promise.all([
+      hs.getVersion(recordId, Number(v) - 1),
+      hs.getVersion(recordId, Number(v)),
+    ]);
+    if (!before || !after) return [];
+    return (kind === "comp" ? diffComp : diffBuild).diff(before, after);
   });
 
-  handle("comps:get-history", async (_e, compId) => (await compHistoryStore.listVersions(compId, { limit: 200 })).versions);
+  handle("comps:get-history", async (_e, compId, opts) => compHistoryStore.listVersions(compId, historyPage(opts)));
 
   handle("comps:revert", async (_e, compId, versionNumber) => {
     const doc = await compHistoryStore.getVersion(compId, versionNumber);
-    if (!doc) throw new Error("History entry not found");
+    if (!doc) throw new Error("Version not found");
 
     // Same as builds:revert — a comp sitting in the trash has to come out of it,
     // or upsertComp carries the deletedAt stamp over and the revert writes a
@@ -817,7 +839,7 @@ const readyWork = app.whenReady().then(async () => {
 
   handle("builds:revert", async (_e, buildId, versionNumber) => {
     const doc = await buildHistoryStore.getVersion(buildId, versionNumber);
-    if (!doc) throw new Error("History entry not found");
+    if (!doc) throw new Error("Version not found");
 
     // Restoring a version of a build that is currently in the trash has to take
     // it OUT of the trash — otherwise upsertBuild carries the deletedAt stamp

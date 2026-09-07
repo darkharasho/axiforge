@@ -17,10 +17,10 @@ const { KEYFRAME_INTERVAL, COALESCE_WINDOW_MS } = require("./history/constants")
  * rather than the size of the change. v2 stores a KEYFRAME every
  * KEYFRAME_INTERVAL versions and a structural PATCH in between, uncapped.
  *
- * Only three things differ per record type — the subdirectory, the id field,
- * and the differ — so those are the constructor's whole job. What counts as a
- * change lives in the differ (`history/diffBuild.js`, `history/diffComp.js`);
- * how a change is phrased lives in `history/renderSummary.js`.
+ * Only two things differ per record type — the subdirectory and the differ — so
+ * those are the constructor's whole job. What counts as a change lives in the
+ * differ (`history/diffBuild.js`, `history/diffComp.js`); how a change is
+ * phrased lives in `history/renderSummary.js`.
  *
  * Two invariants hold this together:
  *
@@ -63,13 +63,12 @@ class HistoryStore {
 
   /**
    * @param {string} baseDir
-   * @param {{subdir: string, idField: string,
+   * @param {{subdir: string,
    *          differ: {diff: Function, applyOps: Function, classify: Function},
    *          summaryOpts?: object}} opts
    */
-  constructor(baseDir, { subdir, idField, differ, summaryOpts = {} }) {
+  constructor(baseDir, { subdir, differ, summaryOpts = {} }) {
     this.dir = path.join(baseDir, "history", subdir);
-    this.idField = idField;
     this.differ = differ;
     this.summaryOpts = summaryOpts;
   }
@@ -308,38 +307,6 @@ class HistoryStore {
       .flat()
       .sort((a, b) => (a.ts < b.ts ? 1 : a.ts > b.ts ? -1 : 0))
       .slice(0, limit);
-  }
-
-  /**
-   * TRANSITIONAL (Task 6 removes it): every record's full version list, keyed
-   * by record id. The folder history feed still reads history this way; it
-   * becomes `listTails` once the feed is extracted.
-   */
-  async getAllHistory() {
-    let names;
-    try {
-      names = await fs.readdir(this.dir);
-    } catch (err) {
-      if (!err || err.code !== "ENOENT") logDegrade("getAllHistory", this.dir, err);
-      return {};
-    }
-    const out = {};
-    for (const name of names) {
-      if (!name.endsWith(".jsonl")) continue;
-      const recordId = name.slice(0, -".jsonl".length);
-      // Capped like the sibling handlers: every keyframe carries a whole
-      // document and this crosses IPC. v1 capped at 50 per record; uncapped
-      // here would be strictly worse than what it replaces.
-      const { versions } = await this.listVersions(recordId, { limit: 200 });
-      if (versions.length) out[recordId] = versions;
-    }
-    return out;
-  }
-
-  /** TRANSITIONAL (Task 6 removes it): the newest-first list for a record. */
-  async getHistory(recordId) {
-    const { versions } = await this.listVersions(recordId, { limit: 200 });
-    return versions;
   }
 
   /* ----------------------------------------------------------------- delete */

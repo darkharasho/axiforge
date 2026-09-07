@@ -3,7 +3,7 @@
 const path = require("node:path");
 const fs = require("node:fs/promises");
 const os = require("node:os");
-const { CompHistoryStore, _memberIds } = require("../../src/main/compHistoryStore");
+const { CompHistoryStore } = require("../../src/main/compHistoryStore");
 
 // Comps had no history at all. A build carried a full record of who changed
 // what; the comp those builds sit in — the thing a squad argues over, and the
@@ -155,22 +155,5 @@ describe("CompHistoryStore — what a comp change reads as", () => {
     const v = await store.appendVersion({ recordId: "c1", after, author: "someone-else" });
     expect(v.ops).toEqual([{ t: "slot", line: 0, index: 1, before: "b2", after: "b3" }]);
     expect(JSON.stringify(v.ops).length).toBeLessThan(200);
-  });
-});
-
-describe("_memberIds", () => {
-  test("counts a build referenced only by a slot as a member", () => {
-    expect([..._memberIds({ buildIds: ["b1"], partyLines: [{ slots: ["b1", "b2"] }] })])
-      .toEqual(["b1", "b2"]);
-  });
-
-  test("ignores tag slots, which name a category rather than a build", () => {
-    expect([..._memberIds({ buildIds: [], partyLines: [{ slots: ["b1", "tag:cat-1", null] }] })])
-      .toEqual(["b1"]);
-  });
-
-  test("an empty comp has no members", () => {
-    expect([..._memberIds({})]).toEqual([]);
-    expect([..._memberIds(null)]).toEqual([]);
   });
 });

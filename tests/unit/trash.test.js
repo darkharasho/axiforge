@@ -38,7 +38,7 @@ describe("trash — builds", () => {
 
     expect(await h.buildStore.listBuilds()).toEqual([]);
     // The whole reason trash beats undo: version history survives the delete.
-    expect(await h.historyStore.getHistory(build.id)).toHaveLength(1);
+    expect((await h.historyStore.listVersions(build.id, { limit: 200 })).versions).toHaveLength(1);
   });
 
   test("trashing a build leaves its comp membership alone so restore is clean", async () => {
@@ -73,7 +73,12 @@ describe("trash — builds", () => {
     const [comp] = await h.compStore.listComps();
     expect(comp.buildIds).toEqual([]);
     expect(comp.partyLines[0].slots).toEqual([]);
-    expect(await h.historyStore.getHistory(build.id)).toEqual([]);
+    expect((await h.historyStore.listVersions(build.id, { limit: 200 })).versions).toEqual([]);
+    // Not just empty to read — gone from disk. v2 keeps one file per record, so
+    // a purge that only emptied the list would leave every version of a build
+    // the user destroyed sitting in the data directory.
+    await expect(fs.stat(path.join(h.dir, "history", "builds", `${build.id}.jsonl`)))
+      .rejects.toMatchObject({ code: "ENOENT" });
   });
 });
 
