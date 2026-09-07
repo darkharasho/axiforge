@@ -12,6 +12,13 @@ const COALESCE_WINDOW_MS = 5 * 60 * 1000;
 // How much of a log's tail is read to locate the final newline on a cold start.
 const TAIL_BYTES = 65536;
 
+// How many records keep a memoized reconstruction of their own tail, so a save
+// does not re-read the whole log to find its diff base. Two documents are held
+// per record (the tail and the one before it, which is what coalescing needs),
+// so this bounds the memo at 2 x this many documents — comps run ~2 MB each,
+// which is why it is small. An editing session touches one or two records.
+const DOC_CACHE_RECORDS = 8;
+
 // Changed by every save; excluded from ops entirely, otherwise every save would
 // log a version and defeat the zero-ops rule. Keyframes still carry them.
 const IGNORED_FIELDS = ["updatedAt", "version"];
@@ -56,6 +63,7 @@ module.exports = {
   KEYFRAME_INTERVAL,
   COALESCE_WINDOW_MS,
   TAIL_BYTES,
+  DOC_CACHE_RECORDS,
   IGNORED_FIELDS,
   SUBSTANTIVE_OPS,
   INCIDENTAL_PATHS,

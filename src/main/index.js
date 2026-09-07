@@ -111,8 +111,66 @@ const store = new BuildStore(dataDir);
 const folderStore = new FolderStore(dataDir);
 const compStore = new CompStore(dataDir);
 const syncStore = new SyncStore(dataDir);
-const buildHistoryStore = new BuildHistoryStore(dataDir);
-const compHistoryStore = new CompHistoryStore(dataDir);
+// History summaries name things: "moved to Raids/Support", "party 1 slot 1:
+// (none) -> Heal Tempest", "any Healers". `renderSummary` is synchronous and
+// knows only ids, so those names have to be resolved and handed to it. They are
+// supplied to the STORE as a factory rather than to each call site because a
+// version is appended from six places — save, revert, team-sync pull, tombstone,
+// trash and the v1 migration — and any one of them forgetting is a summary that
+// reads "moved to another folder" forever after, in a log that cannot be
+// re-rendered. The factory runs only when a version is actually written.
+async function folderNameResolver() {
+  // Trashed and archived folders included on purpose: a version that recorded a
+  // move into a folder the user later deleted still has to be able to say where
+  // it went.
+  const all = await folderStore.listFolders();
+  const gone = await folderStore.listTrashedFolders();
+  const byId = new Map([...all, ...gone].map((f) => [f.id, f]));
+  // The full path, so "Support" under "Raids" is not confused with a "Support"
+  // somewhere else in the tree.
+  return (id) => {
+    const parts = [];
+    let node = byId.get(id);
+    // `seen` bounds the walk: a parentId cycle in a hand-edited folders.json
+    // must not hang a save.
+    const seen = new Set();
+    while (node && !seen.has(node.id)) {
+      seen.add(node.id);
+      parts.unshift(node.name);
+      node = node.parentId ? byId.get(node.parentId) : null;
+    }
+    return parts.length ? parts.join("/") : undefined;
+  };
+}
+
+async function compBuildTitleResolver() {
+  const byId = new Map((await store.listBuilds()).map((b) => [b.id, b.title]));
+  return (id) => byId.get(id);
+}
+
+// Categories are comp-scoped ({ id, name, buildIds } on the comp), so a slot
+// holding "tag:<id>" can only be named by looking across the comps.
+async function compCategoryNameResolver() {
+  const byId = new Map();
+  for (const c of await compStore.listComps()) {
+    for (const cat of c.categories || []) if (cat && cat.id) byId.set(cat.id, cat.name);
+  }
+  return (id) => byId.get(id);
+}
+
+async function buildSummaryOpts() {
+  return { folderNameOf: await folderNameResolver() };
+}
+
+async function compSummaryOpts() {
+  const [folderNameOf, buildNameOf, categoryNameOf] = await Promise.all([
+    folderNameResolver(), compBuildTitleResolver(), compCategoryNameResolver(),
+  ]);
+  return { folderNameOf, buildNameOf, categoryNameOf };
+}
+
+const buildHistoryStore = new BuildHistoryStore(dataDir, buildSummaryOpts);
+const compHistoryStore = new CompHistoryStore(dataDir, compSummaryOpts);
 
 // v2 histories are uncapped, so every history read is a page. 200 is what the
 // pre-v2 handlers returned and stays the default; the cap keeps a renderer
@@ -823,10 +881,9 @@ const readyWork = app.whenReady().then(async () => {
     fromV,
     toV,
     // Exactly the options appendVersion used when it wrote the summary for
-    // this record type; anything more would re-introduce the drift this
-    // replaced (a build's folder move must not gain a name here that the entry
-    // list does not have).
-    summaryOpts: kind === "comp" ? { buildNameOf: await compBuildTitleResolver() } : {},
+    // this record type — the same factory, so the compare table and the entry
+    // list cannot word the same edit differently.
+    summaryOpts: await (kind === "comp" ? compSummaryOpts() : buildSummaryOpts()),
   }));
 
   handle("comps:get-history", async (_e, compId, opts) => compHistoryStore.listVersions(compId, historyPage(opts)));
@@ -1021,12 +1078,6 @@ const readyWork = app.whenReady().then(async () => {
   handle("comps:list", () => compStore.listComps());
   // Comp summaries name the builds that moved ("removed Heal Druid") rather than
   // counting them, which needs a title lookup the comp itself does not carry.
-  async function compBuildTitleResolver() {
-    const builds = await store.listBuilds();
-    const byId = new Map(builds.map((b) => [b.id, b.title]));
-    return (id) => byId.get(id);
-  }
-
   handle("comps:save", async (_e, comp) => {
     const existing = comp.id ? (await compStore.listComps()).find((c) => c.id === comp.id) : null;
     const oldFolderId = existing?.folderId ?? null;
@@ -1043,14 +1094,12 @@ const readyWork = app.whenReady().then(async () => {
     // Non-blocking — never fails the save, exactly as builds:save does.
     {
       const auth = await getAuthRecord().catch(() => null);
-      const titleOf = await compBuildTitleResolver();
       compHistoryStore.appendVersion({
         recordId: saved.id,
         before: existing,
         after: saved,
         author: auth?.viewer?.login || "local",
         source: "local",
-        summaryOpts: { buildNameOf: titleOf },
       }).catch((err) => console.warn("[comp-history] appendVersion failed:", err.message));
     }
     if (newRoot) await safeEnqueue(() => teamSync.enqueue(newRoot.teamId, saved.id, "comp", "put"), { type: "comp", id: saved.id });

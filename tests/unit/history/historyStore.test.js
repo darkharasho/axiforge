@@ -364,3 +364,218 @@ describe("the returned version does not alias the caller's document", () => {
     expect(await store.getVersion("b1", KEYFRAME_INTERVAL + 1)).toEqual(build({ title: "coalesced" }));
   });
 });
+
+// ─── fix round 2 (final review) ─────────────────────────────────────────────
+
+// Corrupt the line carrying version `v` in place, leaving every other line
+// byte-identical. A truncated JSON fragment is what a partial write leaves
+// behind mid-file.
+async function corruptVersion(recordId, v) {
+  const file = path.join(dir, "history", "builds", `${recordId}.jsonl`);
+  const lines = (await fs.readFile(file, "utf8")).split("\n");
+  const i = lines.findIndex((l) => l && JSON.parse(l).v === v);
+  lines[i] = lines[i].slice(0, Math.floor(lines[i].length / 2));
+  await fs.writeFile(file, lines.join("\n"));
+}
+
+describe("A1 — reconstruction never blends two eras", () => {
+  async function chain() {
+    // v1 keyframe, then one field per version so a blend is visible.
+    await store.appendVersion({ recordId: "b1", before: null, after: build({ title: "A" }), author: "me", source: "local", ts: at(0) });
+    await store.appendVersion({ recordId: "b1", after: build({ title: "A", notes: "n1" }), author: "me", source: "local", ts: at(60 * 60_000) });
+    await store.appendVersion({ recordId: "b1", after: build({ title: "A", notes: "n2" }), author: "me", source: "local", ts: at(2 * 60 * 60_000) });
+    await store.appendVersion({ recordId: "b1", after: build({ title: "D", notes: "n2" }), author: "me", source: "local", ts: at(3 * 60 * 60_000) });
+    expect((await store.listVersions("b1")).versions.map((x) => x.v)).toEqual([4, 3, 2, 1]);
+  }
+
+  test("a version past a gap in the chain returns null instead of a blend", async () => {
+    const err = jest.spyOn(console, "error").mockImplementation(() => {});
+    await chain();
+    await corruptVersion("b1", 3);
+
+    expect(await store.getVersion("b1", 4)).toBeNull();
+    expect(err).toHaveBeenCalledWith(
+      expect.stringContaining("getVersion"),
+      expect.anything(),
+    );
+    expect(err.mock.calls.some((c) => String(c[0]).includes("b1@4"))).toBe(true);
+    err.mockRestore();
+  });
+
+  test("versions BEFORE the gap still reconstruct — the whole log is not thrown away", async () => {
+    jest.spyOn(console, "error").mockImplementation(() => {});
+    await chain();
+    await corruptVersion("b1", 3);
+
+    expect(await store.getVersion("b1", 1)).toEqual(build({ title: "A" }));
+    expect(await store.getVersion("b1", 2)).toEqual(build({ title: "A", notes: "n1" }));
+    console.error.mockRestore();
+  });
+
+  test("an intact log still reconstructs every version", async () => {
+    await chain();
+    expect(await store.getVersion("b1", 3)).toEqual(build({ title: "A", notes: "n2" }));
+    expect(await store.getVersion("b1", 4)).toEqual(build({ title: "D", notes: "n2" }));
+  });
+});
+
+describe("A2 — a record that has lost its base heals itself", () => {
+  async function chainOfFive() {
+    await store.appendVersion({ recordId: "b1", before: null, after: build({ title: "T1" }), author: "me", source: "local", ts: at(0) });
+    for (let i = 2; i <= 5; i += 1) {
+      await store.appendVersion({ recordId: "b1", after: build({ title: `T${i}` }), author: "me", source: "local", ts: at(i * 60 * 60_000) });
+    }
+    expect((await store.listVersions("b1")).versions.map((x) => x.v)).toEqual([5, 4, 3, 2, 1]);
+  }
+
+  test("the k < 0 guard: no keyframe at or before the target reconstructs to null, not a throw", async () => {
+    const err = jest.spyOn(console, "error").mockImplementation(() => {});
+    await chainOfFive();
+    await corruptVersion("b1", 1);
+    await expect(store.getVersion("b1", 5)).resolves.toBeNull();
+    expect(err.mock.calls.some((c) => String(c[1]).includes("no keyframe"))).toBe(true);
+    err.mockRestore();
+  });
+
+  // A fresh store, the way the app meets a log damaged between runs: nothing is
+  // memoized, so the damage is discovered by reading.
+  async function reopen() {
+    const next = new BuildHistoryStore(dir);
+    await next.init();
+    return next;
+  }
+
+  test("the next write after a lost keyframe is a keyframe and reconstructs", async () => {
+    jest.spyOn(console, "error").mockImplementation(() => {});
+    await chainOfFive();
+    await corruptVersion("b1", 1);
+    store = await reopen();
+
+    const v6 = await store.appendVersion({ recordId: "b1", after: build({ title: "T9" }), author: "me", source: "local", ts: at(9 * 60 * 60_000) });
+    expect(v6).toMatchObject({ v: 6 });
+    expect(v6.doc).toEqual(build({ title: "T9" }));
+    expect(await store.getVersion("b1", 6)).toEqual(build({ title: "T9" }));
+    console.error.mockRestore();
+  });
+
+  test("the healing version does not claim the record was just created", async () => {
+    jest.spyOn(console, "error").mockImplementation(() => {});
+    await chainOfFive();
+    await corruptVersion("b1", 1);
+    store = await reopen();
+
+    const v6 = await store.appendVersion({ recordId: "b1", after: build({ title: "T9" }), author: "me", source: "local", ts: at(9 * 60 * 60_000) });
+    // The store cannot know what changed — its base is gone. Anything it names
+    // is a guess, and every field but `title` is unchanged since v5.
+    expect(v6.summary).toBeTruthy();
+    expect(v6.summary).not.toContain("(none)");
+    expect(v6.summary).not.toMatch(/profession|equipment|skills|specializations/);
+    console.error.mockRestore();
+  });
+});
+
+describe("A3 — the coalescing window is two-sided", () => {
+  test("a backwards clock step does not merge into, and overwrite, an old version", async () => {
+    await store.appendVersion({ recordId: "b1", before: null, after: build({ title: "A" }), author: "me", source: "local", ts: at(0) });
+    const v2 = await store.appendVersion({ recordId: "b1", after: build({ title: "B" }), author: "me", source: "local", ts: at(60 * 60_000) });
+    expect(v2.summary).toBe('title: "A" → "B"');
+
+    // NTP correction / DST / VM resume: the next save's clock reads three hours
+    // EARLIER than the version before it. dt is -3h, which is <= the window.
+    const v3 = await store.appendVersion({
+      recordId: "b1", after: build({ title: "C" }), author: "me", source: "local",
+      ts: at(60 * 60_000 - 3 * 60 * 60_000),
+    });
+
+    expect(v3.v).toBe(3);
+    expect((await store.listVersions("b1")).versions.map((x) => x.v)).toEqual([3, 2, 1]);
+    // The version the backwards step landed on must survive intact.
+    const stored = (await store.listVersions("b1")).versions.find((x) => x.v === 2);
+    expect(stored.summary).toBe('title: "A" → "B"');
+    expect(await store.getVersion("b1", 2)).toEqual(build({ title: "B" }));
+    expect(await store.getVersion("b1", 3)).toEqual(build({ title: "C" }));
+  });
+
+  test("a forwards step inside the window still coalesces", async () => {
+    await store.appendVersion({ recordId: "b1", before: null, after: build({ title: "A" }), author: "me", source: "local", ts: at(0) });
+    await store.appendVersion({ recordId: "b1", after: build({ title: "B" }), author: "me", source: "local", ts: at(60 * 60_000) });
+    const merged = await store.appendVersion({ recordId: "b1", after: build({ title: "C" }), author: "me", source: "local", ts: at(60 * 60_000 + 60_000) });
+    expect(merged.v).toBe(2);
+  });
+});
+
+describe("A4 — a save does not re-read the whole log", () => {
+  // `getVersion` is the reconstruct path: it does a full `readAll`, which the
+  // reviewer measured at 186 ms per save on a 1.48 MB comp at v60.
+  async function twoVersions() {
+    await store.appendVersion({ recordId: "b1", before: null, after: build({ title: "A" }), author: "me", source: "local", ts: at(0) });
+    await store.appendVersion({ recordId: "b1", after: build({ title: "B" }), author: "me", source: "local", ts: at(60 * 60_000) });
+  }
+
+  test("consecutive saves never re-enter reconstruction", async () => {
+    await twoVersions();
+    const spy = jest.spyOn(store, "getVersion");
+    await store.appendVersion({ recordId: "b1", after: build({ title: "C" }), author: "me", source: "local", ts: at(2 * 60 * 60_000) });
+    await store.appendVersion({ recordId: "b1", after: build({ title: "D" }), author: "me", source: "local", ts: at(3 * 60 * 60_000) });
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
+    expect(await store.getVersion("b1", 4)).toEqual(build({ title: "D" }));
+  });
+
+  test("a coalescing burst reconstructs at most once, not twice per save", async () => {
+    await twoVersions();
+    const spy = jest.spyOn(store, "getVersion");
+    for (let i = 1; i <= 4; i += 1) {
+      await store.appendVersion({
+        recordId: "b1", after: build({ title: `C${i}` }), author: "me", source: "local",
+        ts: at(60 * 60_000 + i * 60_000),
+      });
+    }
+    expect(spy.mock.calls.length).toBeLessThanOrEqual(1);
+    spy.mockRestore();
+    expect((await store.listVersions("b1")).versions.map((x) => x.v)).toEqual([2, 1]);
+    expect(await store.getVersion("b1", 2)).toEqual(build({ title: "C4" }));
+  });
+});
+
+describe("A4 — the memo cannot go stale", () => {
+  test("deleteHistory is seen: the next save starts a new keyframe chain", async () => {
+    await store.appendVersion({ recordId: "b1", before: null, after: build({ title: "A" }), author: "me", source: "local", ts: at(0) });
+    await store.appendVersion({ recordId: "b1", after: build({ title: "B" }), author: "me", source: "local", ts: at(60 * 60_000) });
+    await store.deleteHistory("b1");
+
+    const v = await store.appendVersion({ recordId: "b1", after: build({ title: "C" }), author: "me", source: "local", ts: at(2 * 60 * 60_000) });
+    expect(v).toMatchObject({ v: 1, kind: "key" });
+    expect(v.doc).toEqual(build({ title: "C" }));
+    expect(await store.getVersion("b1", 1)).toEqual(build({ title: "C" }));
+  });
+
+  test("a removed (self-undone) version is seen: the next save diffs against what survived", async () => {
+    await store.appendVersion({ recordId: "b1", before: null, after: build({ title: "A" }), author: "me", source: "local", ts: at(0) });
+    await store.appendVersion({ recordId: "b1", after: build({ title: "B" }), author: "me", source: "local", ts: at(60 * 60_000) });
+    // Undo inside the window: v2 is REMOVED, and the tail is v1 ("A") again.
+    await store.appendVersion({ recordId: "b1", after: build({ title: "A" }), author: "me", source: "local", ts: at(60 * 60_000 + 60_000) });
+
+    const v = await store.appendVersion({ recordId: "b1", after: build({ title: "C" }), author: "me", source: "local", ts: at(5 * 60 * 60_000) });
+    expect(v.v).toBe(2);
+    expect(v.summary).toBe('title: "A" → "C"');
+    expect(v.ops).toEqual([{ t: "field", path: "title", before: "A", after: "C" }]);
+  });
+
+  test("a write that did not come through this store is seen", async () => {
+    await store.appendVersion({ recordId: "b1", before: null, after: build({ title: "A" }), author: "me", source: "local", ts: at(0) });
+    await store.appendVersion({ recordId: "b1", after: build({ title: "B" }), author: "me", source: "local", ts: at(60 * 60_000) });
+
+    // Someone else rewrote the tail entry: same version, different content.
+    const file = path.join(dir, "history", "builds", "b1.jsonl");
+    const lines = (await fs.readFile(file, "utf8")).trim().split("\n");
+    const tail = JSON.parse(lines[lines.length - 1]);
+    tail.ops = [{ t: "field", path: "title", before: "A", after: "Z" }];
+    tail.summary = 'title: "A" → "Z"';
+    lines[lines.length - 1] = JSON.stringify(tail);
+    await fs.writeFile(file, `${lines.join("\n")}\n`);
+
+    const v = await store.appendVersion({ recordId: "b1", after: build({ title: "Q" }), author: "me", source: "local", ts: at(5 * 60 * 60_000) });
+    expect(v.ops).toEqual([{ t: "field", path: "title", before: "Z", after: "Q" }]);
+  });
+});
