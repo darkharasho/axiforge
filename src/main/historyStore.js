@@ -67,12 +67,16 @@ function sanitizeId(recordId) {
 // so a memo tagged with a stale fingerprint is never mistaken for a live one.
 // This is defence in depth behind the explicit invalidation below — the same
 // posture as `versionLog.js`'s `_lastOffset` guard — and it is what catches a
-// tail rewritten out of band.
+// tail rewritten out of band. `ops` is hashed rather than embedded whole: it
+// can be large, and this runs on every save, but an out-of-band rewrite of
+// `ops` alone (every other field untouched) must still be caught, or a stale
+// memo could hand back a document the record never actually held.
 function tailFingerprint(entry) {
   if (!entry) return "";
+  const opsHash = crypto.createHash("sha1").update(JSON.stringify(entry.ops === undefined ? null : entry.ops)).digest("hex");
   return [
     entry.v, entry.ts, entry.author, entry.source, entry.kind || "",
-    entry.summary || "", entry.doc === undefined ? "p" : "k",
+    entry.summary || "", entry.doc === undefined ? "p" : "k", opsHash,
   ].join("\u0000");
 }
 

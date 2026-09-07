@@ -578,4 +578,28 @@ describe("A4 — the memo cannot go stale", () => {
     const v = await store.appendVersion({ recordId: "b1", after: build({ title: "Q" }), author: "me", source: "local", ts: at(5 * 60 * 60_000) });
     expect(v.ops).toEqual([{ t: "field", path: "title", before: "Z", after: "Q" }]);
   });
+
+  test("a tail rewrite that changes ONLY ops — v, ts, author, source, kind, and summary all left untouched — is still seen", async () => {
+    await store.appendVersion({ recordId: "b1", before: null, after: build({ title: "A" }), author: "me", source: "local", ts: at(0) });
+    // This append also warms the memo for v2 (base doc "B") via #write's `memo` seeding.
+    await store.appendVersion({ recordId: "b1", after: build({ title: "B" }), author: "me", source: "local", ts: at(60 * 60_000) });
+
+    // Rewrite the tail's `ops` out of band, but preserve every field the old
+    // fingerprint checked — v, ts, author, source, kind, summary — so the
+    // pre-fix fingerprint sees no change at all and keeps serving the memo
+    // that was warmed against the ORIGINAL ops.
+    const file = path.join(dir, "history", "builds", "b1.jsonl");
+    const lines = (await fs.readFile(file, "utf8")).trim().split("\n");
+    const tail = JSON.parse(lines[lines.length - 1]);
+    expect(tail.summary).toBe('title: "A" → "B"'); // unchanged below — proves isolation
+    tail.ops = [{ t: "field", path: "title", before: "A", after: "Z" }];
+    lines[lines.length - 1] = JSON.stringify(tail);
+    await fs.writeFile(file, `${lines.join("\n")}\n`);
+
+    // The next save diffs against the reconstructed tail document. If the
+    // stale memo (base doc "B") is served, the diff is computed against a
+    // document this record never actually held on disk.
+    const v = await store.appendVersion({ recordId: "b1", after: build({ title: "Q" }), author: "me", source: "local", ts: at(5 * 60 * 60_000) });
+    expect(v.ops).toEqual([{ t: "field", path: "title", before: "Z", after: "Q" }]);
+  });
 });
