@@ -46,5 +46,11 @@ test("folders/comps/history are empty in single-build scope", async () => {
   const api = createDraftApi({ storage: memStorage() });
   expect(await api.listFolders()).toEqual([]);
   expect(await api.listComps()).toEqual([]);
-  expect(await api.getBuildHistory("web-draft")).toEqual([]);
+  // A page, not a bare array — the shim has to match the desktop history
+  // contract or the panel reads `.versions` off an array.
+  expect(await api.getBuildHistory("web-draft")).toEqual({ versions: [], nextCursor: null });
+  expect(await api.getCompHistory("web-comp")).toEqual({ versions: [], nextCursor: null });
+  expect(await api.getFolderHistory("f1")).toEqual([]);
+  expect(await api.getHistoryVersion("build", "web-draft", 1)).toBeNull();
+  expect(await api.getHistoryOps("build", "web-draft", 1)).toEqual([]);
 });

@@ -30,8 +30,8 @@ describe("TeamSync — pull", () => {
     expect((await h.compStore.listComps())[0]).toMatchObject({ name: "Comp", folderId: "t" });
     expect(await h.syncStore.getVersion("t", "b1")).toEqual({ version: 1, createdBy: "u-vette" });
     expect((await h.syncStore.getTeam("t")).cursor).toBe(3);
-    const hist = await h.historyStore.getHistory("b1");
-    expect(hist[0]).toMatchObject({ source: "team-sync", authorLogin: "vette", summary: "Created" });
+    const hist = (await h.historyStore.listVersions("b1", { limit: 200 })).versions;
+    expect(hist[0]).toMatchObject({ source: "team-sync", author: "vette", summary: "Created" });
     expect(h.events).toContainEqual(expect.objectContaining({ status: "synced", type: "build", id: "b1", folderId: "t", item: expect.objectContaining({ title: "Remote" }) }));
     expect(h.events).toContainEqual(expect.objectContaining({ status: "synced", folderId: "t" }));
   });
@@ -137,7 +137,7 @@ describe("TeamSync — pull", () => {
     expect((await h.compStore.listComps())[0].buildIds).toEqual(["b1"]);
 
     // And its history survives, carrying the deletion itself.
-    const history = await h.historyStore.getHistory("b1");
+    const history = (await h.historyStore.listVersions("b1", { limit: 200 })).versions;
     expect(history.some((e) => e.summary === "Deleted")).toBe(true);
   });
 
@@ -159,11 +159,12 @@ describe("TeamSync — pull", () => {
     await h.sync.pullTeam("t");
 
     expect((await h.trash.listTrash()).map((r) => `${r.type}:${r.id}`)).toEqual(["folder:f1"]);
-    const buildEntry = (await h.historyStore.getHistory("b1")).find((e) => e.summary === "Deleted");
-    expect(buildEntry).toMatchObject({ authorLogin: "iruixos", source: "team-sync" });
-    expect(buildEntry.snapshot).toMatchObject({ id: "b1", title: "B" });
-    const compEntry = (await h.compHistoryStore.getHistory("c1")).find((e) => e.summary === "Deleted");
-    expect(compEntry).toMatchObject({ authorLogin: "iruixos", source: "team-sync" });
+    const buildEntry = ((await h.historyStore.listVersions("b1", { limit: 200 })).versions).find((e) => e.summary === "Deleted");
+    expect(buildEntry).toMatchObject({ author: "iruixos", source: "team-sync", kind: "delete" });
+    // A deletion is always a keyframe: "put it back" needs a whole document.
+    expect(buildEntry.doc).toMatchObject({ id: "b1", title: "B" });
+    const compEntry = ((await h.compHistoryStore.listVersions("c1", { limit: 200 })).versions).find((e) => e.summary === "Deleted");
+    expect(compEntry).toMatchObject({ author: "iruixos", source: "team-sync", kind: "delete" });
   });
 
   test("a teammate's delete is undoable — putting it back restores the build and its comp slot", async () => {
@@ -201,11 +202,146 @@ describe("TeamSync — pull", () => {
     })], nextSeq: 3, hasMore: false });
     await h.sync.pullTeam("t");
 
-    const [entry] = await h.compHistoryStore.getHistory("c1");
-    expect(entry.authorLogin).toBe("iruixos");
+    const [entry] = (await h.compHistoryStore.listVersions("c1", { limit: 200 })).versions;
+    expect(entry.author).toBe("iruixos");
     expect(entry.source).toBe("team-sync");
-    // Named, not counted — that is the difference between a log and a useful one.
-    expect(entry.summary).toContain("added Firebrand");
+    // Named and placed, not counted — that is the difference between a log and
+    // a useful one.
+    expect(entry.summary).toContain("party 1 slot 2: (none) → Firebrand");
+  });
+
+  // `summary = version ? version.summary : null` in teamSync.js: appendVersion
+  // returns null when a pull changed nothing worth a version, and the toast has
+  // to cope. Coalescing used to be the way to reach it; for builds it no longer
+  // is, so this pins the branch on the case that still gets there.
+  test("a pull that changes nothing writes no version and announces nothing", async () => {
+    h = await makeHarness();
+    await seedTeam(h);
+    await h.buildStore.upsertBuild({ id: "b1", title: "Old", notes: "keep", folderId: "t" });
+
+    const at = (title, version, seq) => item({
+      id: "b1", version, seq, updatedBy: who("iruixos"),
+      body: { id: "b1", title, notes: "keep" },
+    });
+    // A record's first version is always a keyframe, however little changed, so
+    // the null branch is only reachable once there is a chain to diff against.
+    h.api.changes.mockResolvedValueOnce({ items: [at("New", 2, 2)], nextSeq: 2, hasMore: false });
+    await h.sync.pullTeam("t");
+    h.api.changes.mockResolvedValueOnce({ items: [at("New", 3, 3)], nextSeq: 3, hasMore: false });
+    await h.sync.pullTeam("t");
+
+    expect(((await h.historyStore.listVersions("b1", { limit: 200 })).versions).map((e) => e.v)).toEqual([1]);
+    const synced = h.events.filter((e) => e.status === "synced" && e.id === "b1");
+    expect(synced).toHaveLength(2);
+    expect(synced[1].summary).toBeUndefined();
+    expect(synced[1].author).toBeUndefined();
+  });
+
+  // Builds default to not coalescing (buildHistoryStore.js) because a save in
+  // the editor is a click. A pull is not: it is whatever the 30s poll happened
+  // to observe, so teamSync.js overrides the default. Without it, an hour of a
+  // teammate iterating writes ~120 versions and evicts the user's own history
+  // for that build past MAX_VERSIONS.
+  test("a teammate's edits inside the window collapse into one version", async () => {
+    h = await makeHarness();
+    await seedTeam(h);
+    await h.buildStore.upsertBuild({ id: "b1", title: "Old", notes: "keep", folderId: "t" });
+
+    // Three pulls from the same teammate, milliseconds apart — well inside
+    // COALESCE_WINDOW_MS, and all on the team-sync source.
+    const edit = (title, notes, version, seq) => item({
+      id: "b1", version, seq, updatedBy: who("iruixos"),
+      body: { id: "b1", title, notes },
+    });
+    // The first pull writes the record's origin keyframe, which never
+    // coalesces — v1 is where the build came from. Merging starts at the pull
+    // after that.
+    h.api.changes.mockResolvedValueOnce({ items: [edit("New", "keep", 2, 2)], nextSeq: 2, hasMore: false });
+    await h.sync.pullTeam("t");
+    h.api.changes.mockResolvedValueOnce({ items: [edit("New", "reworked", 3, 3)], nextSeq: 3, hasMore: false });
+    await h.sync.pullTeam("t");
+    h.api.changes.mockResolvedValueOnce({ items: [edit("Newer", "reworked", 4, 4)], nextSeq: 4, hasMore: false });
+    await h.sync.pullTeam("t");
+
+    // One row for the last two pulls, not two — and it describes the whole of
+    // what the teammate did across them, not just the last thing, so nothing
+    // pulled is missing from the log.
+    const versions = (await h.historyStore.listVersions("b1", { limit: 200 })).versions;
+    expect(versions.map((e) => e.v)).toEqual([2, 1]);
+    expect(await h.historyStore.getVersion("b1", 2)).toMatchObject({ title: "Newer", notes: "reworked" });
+    expect(versions[0].summary).toContain("title");
+    expect(versions[0].summary).toContain("notes");
+
+    // Each pull still announces itself: coalescing is about what the log keeps,
+    // not about hiding that a teammate's change landed.
+    const synced = h.events.filter((e) => e.status === "synced" && e.id === "b1");
+    expect(synced).toHaveLength(3);
+    expect(synced[2].author).toBe("iruixos");
+  });
+
+  // The other half of coalescing: an edit that returns the document to exactly
+  // where it was leaves nothing to record. The typo never existed on this
+  // machine as a state anyone saw, and a row saying so would be a row whose
+  // ops describe a transition the live document no longer matches.
+  test("a teammate's edit that undoes itself inside the window leaves no trace", async () => {
+    h = await makeHarness();
+    await seedTeam(h);
+    await h.buildStore.upsertBuild({ id: "b1", title: "Old", notes: "keep", folderId: "t" });
+
+    const edit = (title, version, seq) => item({
+      id: "b1", version, seq, updatedBy: who("iruixos"),
+      body: { id: "b1", title, notes: "keep" },
+    });
+    // Again, past the origin keyframe first.
+    h.api.changes.mockResolvedValueOnce({ items: [edit("New", 2, 2)], nextSeq: 2, hasMore: false });
+    await h.sync.pullTeam("t");
+    h.api.changes.mockResolvedValueOnce({ items: [edit("Typo", 3, 3)], nextSeq: 3, hasMore: false });
+    await h.sync.pullTeam("t");
+    expect(((await h.historyStore.listVersions("b1", { limit: 200 })).versions).map((e) => e.v)).toEqual([2, 1]);
+
+    h.api.changes.mockResolvedValueOnce({ items: [edit("New", 4, 4)], nextSeq: 4, hasMore: false });
+    await h.sync.pullTeam("t");
+
+    expect(((await h.historyStore.listVersions("b1", { limit: 200 })).versions).map((e) => e.v)).toEqual([1]);
+
+    // Nothing to announce, because nothing changed in the end...
+    const synced = h.events.filter((e) => e.status === "synced" && e.id === "b1");
+    expect(synced).toHaveLength(3);
+    expect(synced[2].summary).toBeUndefined();
+    // ...and the edit still applied locally; only the log entry is absent.
+    expect((await h.buildStore.listBuilds()).find((b) => b.id === "b1").title).toBe("New");
+  });
+
+  // Coalescing keys on author AND source, so the pull path can never merge into
+  // a version the user wrote themselves — the failure the store default exists
+  // to prevent. A local save immediately followed by a teammate's pull is two
+  // rows, always.
+  test("a pulled edit never merges into the user's own save", async () => {
+    h = await makeHarness();
+    await seedTeam(h);
+    await h.buildStore.upsertBuild({ id: "b1", title: "Old", notes: "keep", folderId: "t" });
+    await h.historyStore.appendVersion({
+      recordId: "b1", before: null, after: { id: "b1", title: "Old", notes: "keep" },
+    });
+    await h.historyStore.appendVersion({
+      recordId: "b1", before: { id: "b1", title: "Old", notes: "keep" },
+      after: { id: "b1", title: "Mine", notes: "keep" },
+    });
+
+    h.api.changes.mockResolvedValueOnce({
+      items: [item({
+        id: "b1", version: 2, seq: 2, updatedBy: who("iruixos"),
+        body: { id: "b1", title: "Theirs", notes: "keep" },
+      })],
+      nextSeq: 2,
+      hasMore: false,
+    });
+    await h.sync.pullTeam("t");
+
+    const versions = (await h.historyStore.listVersions("b1", { limit: 200 })).versions;
+    expect(versions.map((e) => e.v)).toEqual([3, 2, 1]);
+    expect(await h.historyStore.getVersion("b1", 2)).toMatchObject({ title: "Mine" });
+    expect(versions[0].source).toBe("team-sync");
   });
 
   test("a teammate's comp delete is staged and recorded like a build's", async () => {
@@ -220,9 +356,9 @@ describe("TeamSync — pull", () => {
 
     expect(await h.compStore.listComps()).toEqual([]);
     expect((await h.trash.listTrash()).map((r) => r.id)).toEqual(["c1"]);
-    const entry = (await h.compHistoryStore.getHistory("c1")).find((e) => e.summary === "Deleted");
-    expect(entry.authorLogin).toBe("iruixos");
-    expect(entry.snapshot.name).toBe("Squad");
+    const entry = ((await h.compHistoryStore.listVersions("c1", { limit: 200 })).versions).find((e) => e.summary === "Deleted");
+    expect(entry.author).toBe("iruixos");
+    expect(entry.doc.name).toBe("Squad");
   });
 
   test("purging a comp finally drops its history", async () => {
@@ -231,12 +367,12 @@ describe("TeamSync — pull", () => {
     h = await makeHarness();
     await seedTeam(h);
     await h.compStore.upsertComp({ id: "c1", name: "Squad", folderId: "t", partyLines: [] });
-    await h.compHistoryStore.addEntry({ compId: "c1", summary: "Created", snapshot: { id: "c1" } });
+    await h.compHistoryStore.appendVersion({ recordId: "c1", before: null, after: { id: "c1" } });
     await h.trash.trashComps(["c1"]);
-    expect(await h.compHistoryStore.getHistory("c1")).toHaveLength(1);
+    expect((await h.compHistoryStore.listVersions("c1", { limit: 200 })).versions).toHaveLength(1);
 
     await h.trash.purge({ comps: ["c1"] });
-    expect(await h.compHistoryStore.getHistory("c1")).toEqual([]);
+    expect((await h.compHistoryStore.listVersions("c1", { limit: 200 })).versions).toEqual([]);
   });
 
   test("the deletion is attributed to whoever performed it", async () => {
@@ -249,11 +385,11 @@ describe("TeamSync — pull", () => {
     ], nextSeq: 7, hasMore: false });
     await h.sync.pullTeam("t");
 
-    const entry = (await h.historyStore.getHistory("b1")).find((e) => e.summary === "Deleted");
-    expect(entry.authorLogin).toBe("iruixos");
+    const entry = ((await h.historyStore.listVersions("b1", { limit: 200 })).versions).find((e) => e.summary === "Deleted");
+    expect(entry.author).toBe("iruixos");
     expect(entry.source).toBe("team-sync");
-    // The snapshot is what makes it restorable from the history panel.
-    expect(entry.snapshot.title).toBe("B");
+    // The keyframe doc is what makes it restorable from the history panel.
+    expect(entry.doc.title).toBe("B");
   });
 
   test("remote update of a build records a history entry with the remote author", async () => {
@@ -262,8 +398,8 @@ describe("TeamSync — pull", () => {
     await h.buildStore.upsertBuild({ id: "b1", title: "Old", folderId: "t" });
     h.api.changes.mockResolvedValueOnce({ items: [item({ id: "b1", version: 2, seq: 2, body: { id: "b1", title: "New" }, updatedBy: who("iruixos") })], nextSeq: 2, hasMore: false });
     await h.sync.pullTeam("t");
-    const hist = await h.historyStore.getHistory("b1");
-    expect(hist[0]).toMatchObject({ source: "team-sync", authorLogin: "iruixos" });
+    const hist = (await h.historyStore.listVersions("b1", { limit: 200 })).versions;
+    expect(hist[0]).toMatchObject({ source: "team-sync", author: "iruixos" });
     expect(hist[0].summary).not.toBe("Created");
   });
 
@@ -627,7 +763,7 @@ describe("TeamSync — pull", () => {
     // from another device under the same account.
     h.api.changes.mockResolvedValueOnce({ items: [item({ id: "b1", version: 5, seq: 5, body: { id: "b1", title: "New" }, updatedBy: { userId: "me", login: "me" } })], nextSeq: 5, hasMore: false });
     await h.sync.pullTeam("t");
-    expect(await h.historyStore.getHistory("b1")).toEqual([]);
+    expect((await h.historyStore.listVersions("b1", { limit: 200 })).versions).toEqual([]);
     expect((await h.buildStore.listBuilds()).find((b) => b.id === "b1").title).toBe("New"); // still applied
     expect(await h.syncStore.getVersion("t", "b1")).toEqual({ version: 5, createdBy: "u-vette" });
   });

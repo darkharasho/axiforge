@@ -78,7 +78,7 @@ describe("TeamSync — 403/404 restores server state locally (C2)", () => {
     await h.sync.pullTeam("t");
     expect(upsertSpy).not.toHaveBeenCalled();
     expect((await h.buildStore.listBuilds())[0].title).toBe("Local");
-    expect(await h.historyStore.getHistory("b1")).toEqual([]);
+    expect((await h.historyStore.listVersions("b1", { limit: 200 })).versions).toEqual([]);
   });
 });
 

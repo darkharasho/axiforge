@@ -30,15 +30,15 @@ describe("trash — builds", () => {
 
   test("trashing a build hides it from the library but keeps its history", async () => {
     const build = await h.buildStore.upsertBuild({ title: "Scourge" });
-    await h.historyStore.addEntry({
-      buildId: build.id, authorLogin: "local", source: "local", summary: "Created", snapshot: build,
+    await h.historyStore.appendVersion({
+      recordId: build.id, before: null, after: build, author: "local", source: "local",
     });
 
     await h.trash.trashBuilds([build.id]);
 
     expect(await h.buildStore.listBuilds()).toEqual([]);
     // The whole reason trash beats undo: version history survives the delete.
-    expect(await h.historyStore.getHistory(build.id)).toHaveLength(1);
+    expect((await h.historyStore.listVersions(build.id, { limit: 200 })).versions).toHaveLength(1);
   });
 
   test("trashing a build leaves its comp membership alone so restore is clean", async () => {
@@ -62,8 +62,8 @@ describe("trash — builds", () => {
     await h.compStore.upsertComp({
       name: "Zerg", buildIds: [build.id], partyLines: [{ id: "l1", capacity: 5, slots: [build.id] }],
     });
-    await h.historyStore.addEntry({
-      buildId: build.id, authorLogin: "local", source: "local", summary: "Created", snapshot: build,
+    await h.historyStore.appendVersion({
+      recordId: build.id, before: null, after: build, author: "local", source: "local",
     });
     await h.trash.trashBuilds([build.id]);
 
@@ -73,7 +73,12 @@ describe("trash — builds", () => {
     const [comp] = await h.compStore.listComps();
     expect(comp.buildIds).toEqual([]);
     expect(comp.partyLines[0].slots).toEqual([]);
-    expect(await h.historyStore.getHistory(build.id)).toEqual([]);
+    expect((await h.historyStore.listVersions(build.id, { limit: 200 })).versions).toEqual([]);
+    // Not just empty to read — gone from disk. v2 keeps one file per record, so
+    // a purge that only emptied the list would leave every version of a build
+    // the user destroyed sitting in the data directory.
+    await expect(fs.stat(path.join(h.dir, "history", "builds", `${build.id}.jsonl`)))
+      .rejects.toMatchObject({ code: "ENOENT" });
   });
 });
 

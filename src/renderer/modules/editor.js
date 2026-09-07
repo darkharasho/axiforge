@@ -441,9 +441,27 @@ export function computeEditorSignature() {
         : [0, 0, 0],
       eliteId: Number(editor.underwaterSkills?.eliteId) || 0,
     },
+    // Every field history/diffBuild.js treats as a versioned change has to be
+    // in this signature. A field the differ records but the signature omits can
+    // never reach it: the editor stays clean, so no save fires, so the edit is
+    // silently lost. `selectedUnderwaterLegends` was here without its land
+    // counterpart, which is how the omission went unnoticed.
+    selectedLegends: Array.isArray(editor.selectedLegends)
+      ? editor.selectedLegends.slice(0, 2).map(String)
+      : ["", ""],
     selectedUnderwaterLegends: Array.isArray(editor.selectedUnderwaterLegends)
       ? editor.selectedUnderwaterLegends.slice(0, 2).map(String)
       : ["", ""],
+    selectedPets: {
+      terrestrial1: Number(editor.selectedPets?.terrestrial1) || 0,
+      terrestrial2: Number(editor.selectedPets?.terrestrial2) || 0,
+      aquatic1: Number(editor.selectedPets?.aquatic1) || 0,
+      aquatic2: Number(editor.selectedPets?.aquatic2) || 0,
+    },
+    morphSkillIds: Array.isArray(editor.morphSkillIds)
+      ? editor.morphSkillIds.map(Number)
+      : [0, 0, 0],
+    images: editor.images && typeof editor.images === "object" ? { ...editor.images } : {},
     gameMode: String(editor.gameMode || "pve"),
   };
   return JSON.stringify(payload);

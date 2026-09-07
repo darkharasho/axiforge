@@ -681,3 +681,12 @@ Status key: `[ ]` open · `[x]` done · `[~]` in progress · `[?]` needs repro s
   `sqlite_master`. The account is now on Workers Paid, which lifts the free-tier
   ceiling — but the indexes and the session cache are what keep the steady-state
   read volume flat as the team grows.
+
+- [x] **Build-history summaries still print raw trait ids.** ~~A trait swap
+  reads `trait (tier 1): 1447 → 1449`.~~ Fixed: `diffTraitChoices` resolves both
+  choices off the spec line's own `majorTraitsByTier` at DIFF time — the one
+  moment both documents are in hand — and hangs `{name, icon}` on the op as
+  `vis`. `renderSummary` prefers it, the compare table draws the icon, and the
+  raw ids stay on `before`/`after` so `applyOps` is untouched. Entries written
+  before this still print ids in the list, but the compare modal resolves them
+  from the documents it already loads.

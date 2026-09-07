@@ -51,11 +51,20 @@ contextBridge.exposeInMainWorld("desktopApi", {
   archiveComps: (ids) => ipcRenderer.invoke("archive:comps", ids),
   archiveFolder: (id) => ipcRenderer.invoke("archive:folder", id),
   restoreFromArchive: (selection) => ipcRenderer.invoke("archive:restore", selection),
-  getBuildHistory: (buildId) => ipcRenderer.invoke("builds:get-history", buildId),
-  getFolderHistory: (folderId) => ipcRenderer.invoke("folders:get-history", folderId),
-  revertBuild: (buildId, historyEntryId) => ipcRenderer.invoke("builds:revert", buildId, historyEntryId),
-  getCompHistory: (compId) => ipcRenderer.invoke("comps:get-history", compId),
-  revertComp: (compId, historyEntryId) => ipcRenderer.invoke("comps:revert", compId, historyEntryId),
+  // Version history. Histories are uncapped now, so the per-record reads take
+  // {limit, cursor} and hand back {versions, nextCursor}; the folder feed is a
+  // merged newest-first array. `kind` is "build" | "comp".
+  getBuildHistory: (buildId, opts) => ipcRenderer.invoke("builds:get-history", buildId, opts || {}),
+  getFolderHistory: (folderId, opts) => ipcRenderer.invoke("folders:get-history", folderId, opts || {}),
+  getHistoryVersion: (kind, recordId, v) => ipcRenderer.invoke("history:get-version", kind, recordId, v),
+  getHistoryOps: (kind, recordId, v) => ipcRenderer.invoke("history:get-ops", kind, recordId, v),
+  // A true diff between two versions, however far apart, in one round trip;
+  // resolves to {ops, fromDoc, toDoc} with every op pre-labelled by the main
+  // process's own summary vocabulary.
+  compareHistory: (kind, recordId, fromV, toV) => ipcRenderer.invoke("history:compare", kind, recordId, fromV, toV),
+  revertBuild: (buildId, v) => ipcRenderer.invoke("builds:revert", buildId, v),
+  getCompHistory: (compId, opts) => ipcRenderer.invoke("comps:get-history", compId, opts || {}),
+  revertComp: (compId, v) => ipcRenderer.invoke("comps:revert", compId, v),
   publishSite: () => ipcRenderer.invoke("builds:publish-site"),
   publishBuild: (buildId, opts) => ipcRenderer.invoke("builds:publish-build", buildId, opts || {}),
 

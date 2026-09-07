@@ -22,6 +22,16 @@ const comp = makeTestComp({
   buildIds: [healer.id],
   partyLines: [{ id: "pl-1", capacity: 5, slots: [healer.id] }],
 });
+// A separate comp for the slot-swap tests near the end of the file, rather
+// than piling more state onto `comp` — by then it has already been renamed,
+// moved, and reverted several times over, and none of that should matter to
+// whether a slot swap words itself as "party N slot M:".
+const slotComp = makeTestComp({
+  name: "Slot Swap Comp",
+  gameMode: "wvw",
+  buildIds: [healer.id, dps.id],
+  partyLines: [{ id: "pl-slot", capacity: 5, slots: [healer.id, null, null, null, null] }],
+});
 
 async function goToLibrary(window) {
   await window.click('.leftnav__item[data-page="library"]');
@@ -29,8 +39,12 @@ async function goToLibrary(window) {
   await window.waitForTimeout(300);
 }
 
-const entries = (window) =>
-  window.evaluate((id) => desktopApi.getCompHistory(id), comp.id);
+// getCompHistory returns {versions, nextCursor} (a page, not the whole log —
+// v2 histories are uncapped). Every consumer below just wants the page.
+async function entries(window) {
+  const { versions } = await window.evaluate((id) => desktopApi.getCompHistory(id), comp.id);
+  return versions;
+}
 
 test.describe("Comp history", () => {
   let app, window;
@@ -62,10 +76,18 @@ test.describe("Comp history", () => {
 
     const [latest] = await entries(window);
     expect(latest.summary).toContain("added Power Reaper");
-    expect(latest.compId).toBe(comp.id);
-    // The snapshot is the comp as it was BEFORE the change — that is what makes
-    // the entry restorable.
-    expect(latest.snapshot.buildIds).toEqual([healer.id]);
+    expect(latest.recordId).toBe(comp.id);
+    // This is the FIRST time this comp has ever gone through the IPC
+    // boundary, so it becomes the origin keyframe (v1) regardless of what
+    // changed — see historyStore.js's `!last` branch. v2 stores no per-entry
+    // snapshot; a version is a whole document, reconstructed on demand. What
+    // makes v1 restorable is that it IS the document, not a snapshot beside it.
+    expect(latest.v).toBe(1);
+    const doc = await window.evaluate(
+      ({ id, v }) => desktopApi.getHistoryVersion("comp", id, v),
+      { id: comp.id, v: latest.v }
+    );
+    expect(doc.buildIds).toEqual([healer.id, dps.id]);
   });
 
   test("a rename lands as its own entry, newest first", async () => {
@@ -117,13 +139,20 @@ test.describe("Comp history", () => {
     await window.waitForTimeout(500);
 
     const all = await entries(window);
-    // The newest entry's snapshot is the comp as it stood BEFORE that edit.
+    // The newest entry's OWN version is the comp AFTER that edit. v2 keeps no
+    // per-entry snapshot of the state before it — that state is the PREVIOUS
+    // version, reconstructed on demand — so undoing this edit means restoring
+    // v-1, not v.
     const undoLast = all[0];
-    expect(undoLast.snapshot.name).not.toBe("About To Be Undone");
+    const before = await window.evaluate(
+      ({ id, v }) => desktopApi.getHistoryVersion("comp", id, v),
+      { id: comp.id, v: undoLast.v - 1 }
+    );
+    expect(before.name).not.toBe("About To Be Undone");
 
     await window.evaluate(
-      ({ id, entryId }) => desktopApi.revertComp(id, entryId),
-      { id: comp.id, entryId: undoLast.id }
+      ({ id, v }) => desktopApi.revertComp(id, v),
+      { id: comp.id, v: undoLast.v - 1 }
     );
     await window.waitForTimeout(600);
 
@@ -131,8 +160,8 @@ test.describe("Comp history", () => {
       async (id) => (await desktopApi.listComps()).find((c) => c.id === id),
       comp.id
     );
-    expect(restored.name).toBe(undoLast.snapshot.name);
-    expect(restored.notes || "").toBe(undoLast.snapshot.notes || "");
+    expect(restored.name).toBe(before.name);
+    expect(restored.notes || "").toBe(before.notes || "");
 
     // The revert is itself an entry, so it can be undone in turn.
     const after = await entries(window);
@@ -155,5 +184,61 @@ test.describe("Comp history", () => {
     const kinds = new Set(timeline.map((e) => e.recordKind));
     expect(kinds.has("comp")).toBe(true);
     expect(kinds.has("build")).toBe(true);
+  });
+
+  test("a slot swap records a party N slot M summary", async () => {
+    // v1: the origin keyframe, first time this comp goes through the IPC
+    // boundary.
+    await window.evaluate(async (c) => { await desktopApi.saveComp(c); }, slotComp);
+    await window.waitForTimeout(500);
+
+    // v2: swap party 1 slot 1 from the healer to the dps build. diffComp.js
+    // diffs `partyLines[i].slots` positionally and emits one `slot` op per
+    // changed index — the comp-side mirror of a build's `gear` op.
+    await window.evaluate(async (id) => {
+      const c = (await desktopApi.listComps()).find((x) => x.id === id);
+      const partyLines = c.partyLines.map((line, i) => (
+        i === 0 ? { ...line, slots: [c.buildIds[1], ...line.slots.slice(1)] } : line
+      ));
+      await desktopApi.saveComp({ ...c, partyLines });
+    }, slotComp.id);
+    await window.waitForTimeout(500);
+
+    const { versions } = await window.evaluate((id) => desktopApi.getCompHistory(id), slotComp.id);
+    expect(versions[0].summary).toContain("party 1 slot 1:");
+    expect(versions[0].summary).toContain("Heal Druid");
+    expect(versions[0].summary).toContain("Power Reaper");
+  });
+
+  test("the compare modal opens on a comp entry with a slot-level change table", async () => {
+    // The edits above went straight through desktopApi; reload so the
+    // renderer's state (and the library it draws) matches disk.
+    await window.reload();
+    await window.waitForFunction(
+      () => document.querySelectorAll("#professionSelect .cselect__option").length > 0,
+      null,
+      { timeout: 30_000 }
+    );
+    await goToLibrary(window);
+
+    await window.locator(`[data-comp-id="${slotComp.id}"]`).first().click({ button: "right" });
+    await window
+      .locator(".lib-ctx-menu .lib-ctx-item__label")
+      .filter({ hasText: /^View History$/ })
+      .first()
+      .click();
+
+    const panel = window.locator(".history-panel");
+    await expect(panel).toBeVisible({ timeout: 5_000 });
+    await panel.locator(".history-panel__entry").first().locator(".history-panel__entry-body").click();
+
+    const modal = window.locator(".hist-compare");
+    await expect(modal).toBeVisible({ timeout: 5_000 });
+    await expect(modal.locator(".hist-compare__col")).toHaveCount(2);
+
+    const rows = modal.locator("[data-hist-row]");
+    await expect(rows).toHaveCount(1);
+    const text = await rows.first().textContent();
+    expect(text).toContain("party 1 slot 1:");
   });
 });

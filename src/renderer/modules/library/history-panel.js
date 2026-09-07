@@ -1,9 +1,13 @@
-// Build history slide-in panel — shows per-build change log with revert support.
+// Build history slide-in panel — shows the per-record change log. Restoring is
+// NOT done from here: every entry opens the compare modal, which owns the
+// confirmation, so no single click in this list can roll a record back.
 // NOTE: deliberately does NOT import from library.js to avoid a circular dependency.
 // Toast feedback is dispatched via CustomEvent so library.js can pick it up.
 
 import { escapeHtml } from "../utils.js";
 import { state } from "../state.js";
+import { showCompareModal, isCompareModalOpen, closeCompareModal } from "./history-compare.js";
+import { renderOpIconStrip } from "./history-diff-view.js";
 
 let _panel = null;
 let _escHandler = null;
@@ -96,6 +100,9 @@ function _injectStyles() {
       transition: background 0.12s ease;
     }
     .history-panel__entry:hover { background: var(--hover-subtle, rgba(255,255,255,0.05)); }
+    /* The row body opens the side-by-side compare; the actions block below it
+       does not (its own handlers own those clicks). */
+    .history-panel__entry-body { cursor: pointer; }
     .history-panel__entry::before {
       content: "";
       position: absolute;
@@ -162,6 +169,42 @@ function _injectStyles() {
       margin-bottom: 8px;
       word-break: break-word;
     }
+
+    /* The artwork of what changed, under the sentence that describes it. The
+       sentence stays the description; this is so a glance down the feed says
+       "a rune and two sigils moved" before anything is read. */
+    .hist-strip {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin: -4px 0 8px;
+    }
+    .hist-strip__pair {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      padding: 2px 5px;
+      border: 1px solid var(--line, #1e1f24);
+      border-radius: 999px;
+    }
+    .hist-strip__arrow { font-size: 9px; color: var(--text-dim, #646670); }
+    .hist-strip__icon {
+      width: 18px;
+      height: 18px;
+      border-radius: 3px;
+      object-fit: cover;
+      flex-shrink: 0;
+    }
+    .hist-strip__icon--svg { display: inline-flex; opacity: 0.7; }
+    .hist-strip__icon--svg svg { width: 100%; height: 100%; fill: currentColor; }
+    .hist-strip__icon--empty {
+      display: inline-block;
+      border: 1px dashed var(--line, #1e1f24);
+      border-radius: 3px;
+      box-sizing: border-box;
+    }
+    .hist-strip__more { font-size: 11px; color: var(--text-dim, #646670); }
 
     /* Dimmed until the row is hovered or keyboard-focused, so a long feed reads
        as history first and a wall of buttons second. */
@@ -290,11 +333,20 @@ export async function showFolderHistoryPanel(folderId, folderName) {
   document.body.appendChild(overlay);
   _panel = overlay;
 
-  _escHandler = (e) => { if (e.key === "Escape") closeHistoryPanel(); };
+  // Escape belongs to the compare modal while it is open — closing the panel
+  // out from under it would take the modal with it.
+  _escHandler = (e) => {
+    if (e.key !== "Escape") return;
+    if (isCompareModalOpen()) return;
+    closeHistoryPanel();
+  };
   document.addEventListener("keydown", _escHandler);
 
   try {
-    const entries = await window.desktopApi.getFolderHistory(folderId);
+    // getFolderHistory returns a bare array (deliberately — it is a merged
+    // feed, not a paged log), but tolerate the wrapped shape too.
+    const res = await window.desktopApi.getFolderHistory(folderId);
+    const entries = Array.isArray(res) ? res : ((res && res.versions) || []);
     _renderFolderEntries(panel.querySelector("#history-panel-list"), entries);
   } catch (err) {
     panel.querySelector("#history-panel-list").innerHTML =
@@ -309,105 +361,79 @@ function _renderFolderEntries(listEl, entries) {
   }
 
   listEl.innerHTML = entries.map((entry) => {
-    // A snapshot holds the build as it was BEFORE the logged change, so every
-    // entry is restorable — including the newest one, which is the "undo the
-    // last change" case. Only entries written before snapshots were stored
-    // (legacy history files) have nothing to restore.
-    const reason = entry.snapshot ? "" : "This entry has no saved snapshot to restore";
-    // A build sitting in the trash is still listed here, and restoring one of
+    // v2 stores no per-entry snapshot: a version is reconstructed by replaying
+    // the log up to it, so EVERY listed version is restorable. Restorability
+    // is keyed off the version existing, nothing else.
+    // A record sitting in the trash is still listed here, and restoring one of
     // its versions takes it back out — so the button has to say that rather
-    // than "Restore this version", which reads as a no-op on something that
-    // looks gone.
-    const label = entry.buildDeleted ? "Bring it back" : "Restore this version";
+    // than "Restore", which reads as a no-op on something that looks gone.
+    // "Review &" because the button opens the compare modal: restoring is only
+    // reachable from there, after you have seen the diff.
+    const label = entry.recordDeleted ? "Review &amp; bring it back" : "Review &amp; restore";
     return `
-    <div class="history-panel__entry${entry.buildDeleted ? " history-panel__entry--deleted" : ""}" data-entry-id="${escapeHtml(entry.id)}">
+    <div class="history-panel__entry${entry.recordDeleted ? " history-panel__entry--deleted" : ""}"
+      data-hist-v="${escapeHtml(String(entry.v))}" data-record-id="${escapeHtml(String(entry.recordId ?? ""))}">
       <span class="history-panel__dot ${_dotClass(entry.source)}"></span>
-      <div class="history-panel__entry-meta">
-        <span class="history-panel__entry-time">${escapeHtml(_formatTime(entry.timestamp))}</span>
-        <span class="history-panel__badge ${_badgeClass(entry.source)}">${_badgeLabel(entry.source)}</span>
-        ${entry.authorLogin ? `<span class="history-panel__entry-time">${escapeHtml(entry.authorLogin)}</span>` : ""}
-        ${entry.buildDeleted ? `<span class="history-panel__badge history-panel__badge--deleted">in trash</span>` : ""}
+      <div class="history-panel__entry-body" role="button" tabindex="0" title="Compare this version">
+        <div class="history-panel__entry-meta">
+          <span class="history-panel__entry-time">${escapeHtml(_formatTime(entry.ts))}</span>
+          <span class="history-panel__badge ${_badgeClass(entry.source)}">${_badgeLabel(entry.source)}</span>
+          ${entry.author ? `<span class="history-panel__entry-time">${escapeHtml(entry.author)}</span>` : ""}
+          ${entry.recordDeleted ? `<span class="history-panel__badge history-panel__badge--deleted">in trash</span>` : ""}
+        </div>
+        ${entry.recordTitle ? `<div class="history-panel__entry-build">${escapeHtml(entry.recordTitle)}</div>` : ""}
+        <div class="history-panel__entry-summary">${escapeHtml(_summaryText(entry))}</div>
+        ${renderOpIconStrip(entry.ops, { catalog: state.upgradeCatalog })}
       </div>
-      ${entry.buildTitle ? `<div class="history-panel__entry-build">${escapeHtml(entry.buildTitle)}</div>` : ""}
-      <div class="history-panel__entry-summary">${escapeHtml(entry.summary)}</div>
       <div class="history-panel__actions">
-        <button class="history-panel__revert" ${reason ? `disabled title="${escapeHtml(reason)}"` : ""}>
-          ${label}
-        </button>
+        <button class="history-panel__revert">${label}</button>
       </div>
     </div>
   `;
   }).join("");
 
-  // Bind by DOM order rather than by id selector — entry ids are opaque and
+  // Bind by DOM order rather than by id selector — record ids are opaque and
   // would need CSS.escape, which isn't available in every environment.
   listEl.querySelectorAll(".history-panel__entry").forEach((row, i) => {
+    const entry = entries[i];
+    const open = () => showCompareModal({
+      kind: entry.recordKind === "comp" ? "comp" : "build",
+      recordId: entry.recordId,
+      version: entry.v,
+      title: entry.recordTitle || "",
+      deleted: !!entry.recordDeleted,
+      onRestored: closeHistoryPanel,
+    });
     const btn = row.querySelector(".history-panel__revert");
-    if (!btn || btn.disabled) return;
-    btn.addEventListener("click", () => _askFolderRevert(row, entries[i]));
+    if (btn) btn.addEventListener("click", open);
+    _bindCompare(row, open);
   });
 }
 
-// Two-step inline confirmation. The shared confirm modal can't be used here:
-// it sits at --z-modal-confirm (1100) and .history-panel is 1101, so it would
-// open behind the panel.
-function _askFolderRevert(row, entry) {
-  const actions = row.querySelector(".history-panel__actions");
-  const buildLabel = entry.buildTitle ? `"${entry.buildTitle}"` : "this build";
-  const question = entry.buildDeleted
-    ? `Bring ${escapeHtml(buildLabel)} back out of the trash, as it was at this point? Teammates will see it again on their next sync.`
-    : `Restore ${escapeHtml(buildLabel)} to how it was before this change? Teammates will see it on their next sync.`;
-  actions.innerHTML = `
-    <div class="history-panel__confirm">
-      <div class="history-panel__confirm-text">
-        ${question}
-      </div>
-      <div class="history-panel__confirm-buttons">
-        <button class="history-panel__revert history-panel__confirm-no">Cancel</button>
-        <button class="history-panel__revert history-panel__confirm-yes">Restore</button>
-      </div>
-    </div>
-  `;
-  actions.querySelector(".history-panel__confirm-no")
-    .addEventListener("click", () => _resetFolderRevert(row, entry));
-  actions.querySelector(".history-panel__confirm-yes")
-    .addEventListener("click", () => _doFolderRevert(row, entry));
+// The origin keyframe has no predecessor, so it carries no ops and its summary
+// is empty. Saying "no changes" there would be a lie about the build's first
+// recorded state.
+function _summaryText(entry) {
+  if (entry.summary) return entry.summary;
+  if (entry.v === 1) return "Created — the first recorded state";
+  return "No described changes";
 }
 
-function _resetFolderRevert(row, entry) {
-  const actions = row.querySelector(".history-panel__actions");
-  actions.innerHTML = `<button class="history-panel__revert">${entry.buildDeleted ? "Bring it back" : "Restore this version"}</button>`;
-  actions.querySelector(".history-panel__revert")
-    .addEventListener("click", () => _askFolderRevert(row, entry));
-}
-
-async function _doFolderRevert(row, entry) {
-  const yes = row.querySelector(".history-panel__confirm-yes");
-  yes.disabled = true;
-  yes.textContent = "Restoring…";
-  try {
-    // The folder timeline carries both kinds. A comp entry has to go back
-    // through comps:revert or it would be handed to the build store, which has
-    // never heard of it.
-    const isComp = entry.recordKind === "comp";
-    const saved = isComp
-      ? await window.desktopApi.revertComp(entry.compId, entry.id)
-      : await window.desktopApi.revertBuild(entry.buildId, entry.id);
-    // library:rerender draws from state, so refresh it the way the per-record
-    // panel does — otherwise the revert isn't visible until reload.
-    const collection = isComp ? state.comps : state.builds;
-    const idx = collection.findIndex((r) => r.id === saved.id);
-    if (idx >= 0) collection[idx] = saved;
-    else collection.push(saved);
-    document.dispatchEvent(new CustomEvent("library:rerender"));
-    closeHistoryPanel();
-    document.dispatchEvent(new CustomEvent("library:toast", { detail: { message: "Restored!" } }));
-  } catch (err) {
-    _resetFolderRevert(row, entry);
-    document.dispatchEvent(new CustomEvent("library:toast", {
-      detail: { message: "Restore failed — " + err.message, type: "error" },
-    }));
-  }
+// The row body opens the compare modal; the actions block keeps its own
+// clicks. Enter/Space match the button role the body advertises.
+function _bindCompare(row, open) {
+  const body = row.querySelector(".history-panel__entry-body");
+  if (!body) return;
+  body.addEventListener("click", (e) => {
+    if (e.target.closest(".history-panel__actions")) return;
+    open();
+  });
+  body.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      open();
+    }
+  });
 }
 
 export async function showHistoryPanel(buildId) {
@@ -418,8 +444,6 @@ export async function showHistoryPanel(buildId) {
     label: "Build",
     title: build?.title || "Build",
     fetch: (id) => window.desktopApi.getBuildHistory(id),
-    revert: (id, entryId) => window.desktopApi.revertBuild(id, entryId),
-    collection: () => state.builds,
   });
 }
 
@@ -436,12 +460,10 @@ export async function showCompHistoryPanel(compId) {
     label: "Comp",
     title: comp?.name || "Comp",
     fetch: (id) => window.desktopApi.getCompHistory(id),
-    revert: (id, entryId) => window.desktopApi.revertComp(id, entryId),
-    collection: () => state.comps,
   });
 }
 
-async function _showRecordHistory({ kind, id, label, title, fetch, revert, collection }) {
+async function _showRecordHistory({ kind, id, label, title, fetch }) {
   closeHistoryPanel();
   _injectStyles();
 
@@ -473,13 +495,22 @@ async function _showRecordHistory({ kind, id, label, title, fetch, revert, colle
   document.body.appendChild(overlay);
   _panel = overlay;
 
-  _escHandler = (e) => { if (e.key === "Escape") closeHistoryPanel(); };
+  // Escape belongs to the compare modal while it is open — closing the panel
+  // out from under it would take the modal with it.
+  _escHandler = (e) => {
+    if (e.key !== "Escape") return;
+    if (isCompareModalOpen()) return;
+    closeHistoryPanel();
+  };
   document.addEventListener("keydown", _escHandler);
 
   // Fetch and render history
   try {
-    const entries = await fetch(id);
-    _renderEntries(panel.querySelector("#history-panel-list"), { id, kind, revert, collection }, entries);
+    // The per-record reads hand back {versions, nextCursor}; the folder feed is
+    // a bare array. Tolerate both so a stubbed api can't silently render empty.
+    const res = await fetch(id);
+    const entries = Array.isArray(res) ? res : ((res && res.versions) || []);
+    _renderEntries(panel.querySelector("#history-panel-list"), { id, kind, title }, entries);
   } catch (err) {
     panel.querySelector("#history-panel-list").innerHTML =
       `<div class="history-panel__empty">Failed to load history.</div>`;
@@ -492,49 +523,51 @@ function _renderEntries(listEl, record, entries) {
     return;
   }
 
+  // v2 has no per-entry snapshot — a version is reconstructed by replaying the
+  // log — so every listed version is restorable. No "nothing to restore" case.
   listEl.innerHTML = entries.map((entry) => `
-    <div class="history-panel__entry" data-entry-id="${escapeHtml(entry.id)}">
+    <div class="history-panel__entry" data-hist-v="${escapeHtml(String(entry.v))}" data-record-id="${escapeHtml(String(record.id))}">
       <span class="history-panel__dot ${_dotClass(entry.source)}"></span>
-      <div class="history-panel__entry-meta">
-        <span class="history-panel__entry-time">${escapeHtml(_formatTime(entry.timestamp))}</span>
-        <span class="history-panel__badge ${_badgeClass(entry.source)}">${_badgeLabel(entry.source)}</span>
-        ${entry.authorLogin ? `<span class="history-panel__entry-time">${escapeHtml(entry.authorLogin)}</span>` : ""}
+      <div class="history-panel__entry-body" role="button" tabindex="0" title="Compare this version">
+        <div class="history-panel__entry-meta">
+          <span class="history-panel__entry-time">${escapeHtml(_formatTime(entry.ts))}</span>
+          <span class="history-panel__badge ${_badgeClass(entry.source)}">${_badgeLabel(entry.source)}</span>
+          ${entry.author ? `<span class="history-panel__entry-time">${escapeHtml(entry.author)}</span>` : ""}
+        </div>
+        <div class="history-panel__entry-summary">${escapeHtml(_summaryText(entry))}</div>
+        ${renderOpIconStrip(entry.ops, { catalog: state.upgradeCatalog })}
       </div>
-      <div class="history-panel__entry-summary">${escapeHtml(entry.summary)}</div>
       <div class="history-panel__actions">
-        <button class="history-panel__revert" data-entry-id="${escapeHtml(entry.id)}"
-          ${entry.snapshot ? "" : "disabled title=\"This entry has no saved snapshot to restore\""}>
-          Restore this version
+        <button class="history-panel__revert" data-hist-v="${escapeHtml(String(entry.v))}">
+          Review &amp; restore
         </button>
       </div>
     </div>
   `).join("");
 
-  listEl.querySelectorAll(".history-panel__revert:not([disabled])").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      btn.disabled = true;
-      btn.textContent = "Reverting…";
-      try {
-        const saved = await record.revert(record.id, btn.dataset.entryId);
-        // Update state and re-render library
-        const list = record.collection();
-        const idx = list.findIndex((r) => r.id === saved.id);
-        if (idx >= 0) list[idx] = saved;
-        else list.push(saved);
-        // Trigger library re-render via a custom event the renderer listens to
-        document.dispatchEvent(new CustomEvent("library:rerender"));
-        closeHistoryPanel();
-        document.dispatchEvent(new CustomEvent("library:toast", { detail: { message: "Restored!" } }));
-      } catch (err) {
-        btn.disabled = false;
-        btn.textContent = "Restore this version";
-        document.dispatchEvent(new CustomEvent("library:toast", { detail: { message: "Restore failed — " + err.message, type: "error" } }));
-      }
+  // The button and the row body do the same thing: open the compare modal.
+  // Restoring lives behind the modal's own confirmation and nowhere else, so a
+  // stray click in this list can never roll a build back.
+  listEl.querySelectorAll(".history-panel__entry").forEach((row, i) => {
+    const entry = entries[i];
+    const open = () => showCompareModal({
+      kind: record.kind,
+      recordId: record.id,
+      version: entry.v,
+      title: record.title || "",
+      onRestored: closeHistoryPanel,
     });
+    const btn = row.querySelector(".history-panel__revert");
+    if (btn) btn.addEventListener("click", open);
+    _bindCompare(row, open);
   });
+
 }
 
 export function closeHistoryPanel() {
+  // The compare modal is parented to <body>, not to the panel, so it would
+  // otherwise be left floating over an empty library.
+  closeCompareModal();
   if (_panel) {
     _panel.remove();
     _panel = null;

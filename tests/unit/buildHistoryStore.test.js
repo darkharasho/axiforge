@@ -3,335 +3,193 @@
 const path = require("node:path");
 const fs = require("node:fs/promises");
 const os = require("node:os");
-const { BuildHistoryStore, summarizeBuildChange } = require("../../src/main/buildHistoryStore");
+const { BuildHistoryStore } = require("../../src/main/buildHistoryStore");
 
-async function makeTempDir() {
-  return fs.mkdtemp(path.join(os.tmpdir(), "axiforge-history-"));
+// The storage half is exercised in tests/unit/history/historyStore.test.js.
+// What is left here is what is specific to BUILDS: where its logs land, which
+// differ it is wired to, and the v1 behaviours that still have meaning under
+// the new API — author and source are recorded, deletion removes the history,
+// records are isolated, concurrent writes do not drop entries, and the log
+// survives a restart.
+//
+// The v1 cap tests are gone on purpose. There is no cap any more: a per-record
+// append-only log of patches costs a few hundred bytes an edit, so throwing a
+// build's fifty-first version away was a cost nobody was paying.
+
+let dir;
+let store;
+
+function build(over = {}) {
+  return {
+    id: "b1",
+    title: "Power Berserker",
+    profession: "Warrior",
+    equipment: { statPackage: "Berserker", runes: {}, slots: {}, weapons: {}, sigils: {}, infusions: {} },
+    skills: { heal: { id: 9093, name: "Healing Signet" }, utility: [], elite: null },
+    specializations: [],
+    tags: [],
+    notes: "",
+    ...over,
+  };
 }
 
-async function cleanupDir(dir) {
-  await fs.rm(dir, { recursive: true, force: true });
-}
-
-// ─── BuildHistoryStore ──────────────────────────────────────────────────────
+beforeEach(async () => {
+  dir = await fs.mkdtemp(path.join(os.tmpdir(), "axiforge-bhs-"));
+  store = new BuildHistoryStore(dir);
+  await store.init();
+});
+afterEach(() => fs.rm(dir, { recursive: true, force: true }));
 
 describe("BuildHistoryStore — init", () => {
-  let dir, store;
-  beforeEach(async () => {
-    dir = await makeTempDir();
-    store = new BuildHistoryStore(dir);
-  });
-  afterEach(() => cleanupDir(dir));
-
-  test("creates build-history.json if it does not exist", async () => {
-    await store.init();
-    const raw = await fs.readFile(path.join(dir, "build-history.json"), "utf-8");
-    expect(JSON.parse(raw)).toEqual({});
+  test("creates the builds history directory", async () => {
+    const stat = await fs.stat(path.join(dir, "history", "builds"));
+    expect(stat.isDirectory()).toBe(true);
   });
 
-  test("does not overwrite existing file", async () => {
-    const existing = { b1: [{ id: "e1" }] };
-    await fs.writeFile(path.join(dir, "build-history.json"), JSON.stringify(existing), "utf-8");
+  test("is idempotent", async () => {
     await store.init();
-    const raw = await fs.readFile(path.join(dir, "build-history.json"), "utf-8");
-    expect(JSON.parse(raw)).toEqual(existing);
+    await expect(store.init()).resolves.toBeUndefined();
+  });
+
+  test("never throws, even when the directory cannot be created", async () => {
+    const err = jest.spyOn(console, "error").mockImplementation(() => {});
+    const file = path.join(dir, "not-a-dir");
+    await fs.writeFile(file, "x");
+    // History must never block app launch: it logs and degrades.
+    await expect(new BuildHistoryStore(file).init()).resolves.toBeUndefined();
+    expect(err).toHaveBeenCalled();
+    err.mockRestore();
+  });
+
+  test("one log file per record, named for the build", async () => {
+    await store.appendVersion({ recordId: "b1", before: null, after: build() });
+    await store.appendVersion({ recordId: "b2", before: null, after: build({ id: "b2" }) });
+    const names = await fs.readdir(path.join(dir, "history", "builds"));
+    expect(names.sort()).toEqual(["b1.jsonl", "b2.jsonl"]);
   });
 });
 
-describe("BuildHistoryStore — addEntry", () => {
-  let dir, store;
-  beforeEach(async () => {
-    dir = await makeTempDir();
-    store = new BuildHistoryStore(dir);
-    await store.init();
-  });
-  afterEach(() => cleanupDir(dir));
-
-  test("returns entry with expected shape", async () => {
-    const entry = await store.addEntry({
-      buildId: "b1",
-      authorLogin: "someuser",
-      source: "shared-sync",
-      summary: "notes updated",
-      snapshot: { title: "My Build" },
+describe("BuildHistoryStore — appendVersion", () => {
+  test("records the author and the source", async () => {
+    const v = await store.appendVersion({
+      recordId: "b1", before: null, after: build(), author: "vette", source: "team-sync",
     });
-
-    expect(entry).toMatchObject({
-      buildId: "b1",
-      authorLogin: "someuser",
-      source: "shared-sync",
-      summary: "notes updated",
-      snapshot: { title: "My Build" },
-    });
-    expect(typeof entry.id).toBe("string");
-    expect(entry.id.length).toBeGreaterThan(0);
-    expect(typeof entry.timestamp).toBe("string");
-    expect(() => new Date(entry.timestamp)).not.toThrow();
+    expect(v).toMatchObject({ author: "vette", source: "team-sync", recordId: "b1" });
   });
 
-  test("defaults authorLogin to 'local' when omitted", async () => {
-    const entry = await store.addEntry({ buildId: "b1", summary: "changed" });
-    expect(entry.authorLogin).toBe("local");
+  test("defaults the author and source to local", async () => {
+    const v = await store.appendVersion({ recordId: "b1", before: null, after: build() });
+    expect(v).toMatchObject({ author: "local", source: "local" });
   });
 
-  test("defaults source to 'local' when omitted", async () => {
-    const entry = await store.addEntry({ buildId: "b1" });
-    expect(entry.source).toBe("local");
+  test("records are isolated from one another", async () => {
+    await store.appendVersion({ recordId: "b1", before: null, after: build({ title: "one" }) });
+    await store.appendVersion({ recordId: "b2", before: null, after: build({ id: "b2", title: "two" }) });
+    expect((await store.listVersions("b1")).versions).toHaveLength(1);
+    expect(await store.getVersion("b1", 1)).toMatchObject({ title: "one" });
+    expect(await store.getVersion("b2", 1)).toMatchObject({ title: "two" });
   });
 
-  test("defaults summary to 'build updated' when omitted", async () => {
-    const entry = await store.addEntry({ buildId: "b1" });
-    expect(entry.summary).toBe("build updated");
-  });
-
-  test("stores entry so getHistory returns it", async () => {
-    await store.addEntry({ buildId: "b1", summary: "first" });
-    const history = await store.getHistory("b1");
-    expect(history).toHaveLength(1);
-    expect(history[0].summary).toBe("first");
-  });
-
-  test("prepends entries — newest first", async () => {
-    await store.addEntry({ buildId: "b1", summary: "first" });
-    await store.addEntry({ buildId: "b1", summary: "second" });
-    const history = await store.getHistory("b1");
-    expect(history[0].summary).toBe("second");
-    expect(history[1].summary).toBe("first");
-  });
-
-  test("multiple buildIds are stored independently", async () => {
-    await store.addEntry({ buildId: "b1", summary: "build one" });
-    await store.addEntry({ buildId: "b2", summary: "build two" });
-    expect(await store.getHistory("b1")).toHaveLength(1);
-    expect(await store.getHistory("b2")).toHaveLength(1);
-    expect((await store.getHistory("b1"))[0].summary).toBe("build one");
-  });
-
-  test("caps at 50 entries — oldest entries are dropped", async () => {
-    for (let i = 0; i < 55; i++) {
-      await store.addEntry({ buildId: "b1", summary: `entry-${i}` });
-    }
-    const history = await store.getHistory("b1");
-    expect(history).toHaveLength(50);
-    // Newest entries are kept (last ones added)
-    expect(history[0].summary).toBe("entry-54");
-    expect(history[49].summary).toBe("entry-5");
-  });
-
-  test("cap does not affect a different build's history", async () => {
-    for (let i = 0; i < 52; i++) {
-      await store.addEntry({ buildId: "b1", summary: `entry-${i}` });
-    }
-    await store.addEntry({ buildId: "b2", summary: "b2-entry" });
-    expect(await store.getHistory("b2")).toHaveLength(1);
-    expect((await store.getHistory("b2"))[0].summary).toBe("b2-entry");
-  });
-
-  test("persists to disk across separate store instances", async () => {
-    await store.addEntry({ buildId: "b1", summary: "persisted entry" });
-
+  test("the log survives a restart", async () => {
+    await store.appendVersion({ recordId: "b1", before: null, after: build() });
     const store2 = new BuildHistoryStore(dir);
-    const history = await store2.getHistory("b1");
-    expect(history).toHaveLength(1);
-    expect(history[0].summary).toBe("persisted entry");
+    await store2.init();
+    expect((await store2.listVersions("b1")).versions).toHaveLength(1);
+    expect(await store2.getVersion("b1", 1)).toEqual(build());
+  });
+
+  test("an unknown record has no history rather than an error", async () => {
+    expect(await store.listVersions("nonexistent")).toEqual({ versions: [], nextCursor: null });
   });
 });
 
-describe("BuildHistoryStore — getHistory", () => {
-  let dir, store;
-  beforeEach(async () => {
-    dir = await makeTempDir();
-    store = new BuildHistoryStore(dir);
-    await store.init();
-  });
-  afterEach(() => cleanupDir(dir));
+// The whole reason the structural differ exists. `majorTraitsByTier` and
+// `minorTraits` embed the entire GW2 catalog of trait options, so v1's
+// `JSON.stringify(before.specializations) !== JSON.stringify(after.specializations)`
+// made a build the player had not touched read as "specializations changed"
+// every time a game patch reworded one option's description.
+describe("BuildHistoryStore — a game patch is not an edit", () => {
+  function withSpecs(over = {}) {
+    return build({
+      specializations: [{
+        id: 18,
+        name: "Defense",
+        majorChoices: { 1: 1293, 2: 1329, 3: 1341 },
+        majorTraitsByTier: { 1: [{ id: 1293, name: "Adrenal Health", description: "Gain health." }] },
+        minorTraits: [{ id: 1339, name: "Thick Skin", description: "Toughness." }],
+      }],
+      ...over,
+    });
+  }
 
-  test("returns empty array for unknown buildId", async () => {
-    const history = await store.getHistory("nonexistent");
-    expect(history).toEqual([]);
+  test("a reworded trait description writes no version", async () => {
+    await store.appendVersion({ recordId: "b1", before: null, after: withSpecs() });
+    const patched = withSpecs();
+    patched.specializations[0].majorTraitsByTier[1][0].description = "Gain health on hit.";
+    patched.specializations[0].minorTraits[0].description = "Gain toughness.";
+    expect(await store.appendVersion({ recordId: "b1", after: patched })).toBeNull();
+    expect((await store.listVersions("b1")).versions).toHaveLength(1);
   });
 
-  test("returns all entries for known buildId", async () => {
-    await store.addEntry({ buildId: "b1", summary: "a" });
-    await store.addEntry({ buildId: "b1", summary: "b" });
-    const history = await store.getHistory("b1");
-    expect(history).toHaveLength(2);
+  test("actually choosing a different trait does write one", async () => {
+    await store.appendVersion({ recordId: "b1", before: null, after: withSpecs() });
+    const edited = withSpecs();
+    edited.specializations[0].majorChoices[2] = 1297;
+    const v = await store.appendVersion({ recordId: "b1", after: edited });
+    expect(v.ops).toEqual([{ t: "trait", line: 0, tier: 2, before: 1329, after: 1297 }]);
+  });
+
+  test("publishing a build is not an edit either", async () => {
+    await store.appendVersion({ recordId: "b1", before: null, after: build() });
+    const published = build({ publishedSlug: "abc", publishedAt: "2026-09-01T00:00:00.000Z", buildUrl: "https://x" });
+    expect(await store.appendVersion({ recordId: "b1", after: published })).toBeNull();
   });
 });
 
 describe("BuildHistoryStore — deleteHistory", () => {
-  let dir, store;
-  beforeEach(async () => {
-    dir = await makeTempDir();
-    store = new BuildHistoryStore(dir);
-    await store.init();
-  });
-  afterEach(() => cleanupDir(dir));
-
-  test("removes all entries for a buildId", async () => {
-    await store.addEntry({ buildId: "b1", summary: "entry" });
+  test("removes the record's history", async () => {
+    await store.appendVersion({ recordId: "b1", before: null, after: build() });
     await store.deleteHistory("b1");
-    expect(await store.getHistory("b1")).toEqual([]);
+    expect((await store.listVersions("b1")).versions).toEqual([]);
   });
 
-  test("does not affect other buildIds", async () => {
-    await store.addEntry({ buildId: "b1", summary: "b1-entry" });
-    await store.addEntry({ buildId: "b2", summary: "b2-entry" });
+  test("leaves other records alone", async () => {
+    await store.appendVersion({ recordId: "b1", before: null, after: build() });
+    await store.appendVersion({ recordId: "b2", before: null, after: build({ id: "b2" }) });
     await store.deleteHistory("b1");
-    const history = await store.getHistory("b2");
-    expect(history).toHaveLength(1);
-    expect(history[0].summary).toBe("b2-entry");
+    expect((await store.listVersions("b2")).versions).toHaveLength(1);
   });
 
-  test("is a no-op for unknown buildId (no error thrown)", async () => {
-    await expect(store.deleteHistory("ghost")).resolves.toBeUndefined();
-  });
-
-  test("persists deletion to disk", async () => {
-    await store.addEntry({ buildId: "b1", summary: "entry" });
+  test("the deletion is durable across a restart", async () => {
+    await store.appendVersion({ recordId: "b1", before: null, after: build() });
     await store.deleteHistory("b1");
-
     const store2 = new BuildHistoryStore(dir);
-    expect(await store2.getHistory("b1")).toEqual([]);
+    await store2.init();
+    expect((await store2.listVersions("b1")).versions).toEqual([]);
+  });
+
+  test("deleting an unknown record is a no-op", async () => {
+    await expect(store.deleteHistory("nonexistent")).resolves.toBeUndefined();
   });
 });
 
-// ─── summarizeBuildChange ───────────────────────────────────────────────────
-
-describe("summarizeBuildChange", () => {
-  const base = {
-    title: "My Build",
-    profession: "Guardian",
-    gameMode: "pve",
-    specializations: [{ id: 1 }],
-    skills: [{ id: 10 }],
-    underwaterSkills: [],
-    equipment: [{ slot: "Head" }],
-    notes: "some notes",
-    tags: ["meta"],
-  };
-
-  test("returns 'build created' when before is null", () => {
-    expect(summarizeBuildChange(null, base)).toBe("build created");
+describe("BuildHistoryStore — concurrency", () => {
+  test("concurrent appends to one record do not drop versions", async () => {
+    await store.appendVersion({ recordId: "b1", before: null, after: build({ title: "t0" }) });
+    await Promise.all(
+      Array.from({ length: 12 }, (_, i) => store.appendVersion({
+        recordId: "b1", after: build({ title: `t${i + 1}` }), author: `author${i}`,
+      })),
+    );
+    const { versions } = await store.listVersions("b1", { limit: 50 });
+    expect(versions.map((x) => x.v)).toEqual([13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]);
   });
 
-  test("returns 'build created' when before is undefined", () => {
-    expect(summarizeBuildChange(undefined, base)).toBe("build created");
-  });
-
-  test("detects title change", () => {
-    const after = { ...base, title: "New Title" };
-    expect(summarizeBuildChange(base, after)).toBe('title: "My Build" → "New Title"');
-  });
-
-  test("detects profession change", () => {
-    const after = { ...base, profession: "Warrior" };
-    expect(summarizeBuildChange(base, after)).toBe("profession: Guardian → Warrior");
-  });
-
-  test("detects gameMode change", () => {
-    const after = { ...base, gameMode: "wvw" };
-    expect(summarizeBuildChange(base, after)).toBe("game mode: pve → wvw");
-  });
-
-  test("treats missing gameMode as 'pve' for comparison", () => {
-    const before = { ...base, gameMode: undefined };
-    const after = { ...base, gameMode: "pve" };
-    expect(summarizeBuildChange(before, after)).toBe("build updated");
-  });
-
-  test("detects specializations change", () => {
-    const after = { ...base, specializations: [{ id: 2 }] };
-    expect(summarizeBuildChange(base, after)).toBe("specializations changed");
-  });
-
-  test("detects skills change", () => {
-    const after = { ...base, skills: [{ id: 99 }] };
-    expect(summarizeBuildChange(base, after)).toBe("skills changed");
-  });
-
-  test("detects underwaterSkills change", () => {
-    const after = { ...base, underwaterSkills: [{ id: 5 }] };
-    expect(summarizeBuildChange(base, after)).toBe("underwater skills changed");
-  });
-
-  test("detects equipment change", () => {
-    const after = { ...base, equipment: [{ slot: "Chest" }] };
-    expect(summarizeBuildChange(base, after)).toBe("equipment changed");
-  });
-
-  test("detects notes change", () => {
-    const after = { ...base, notes: "different notes" };
-    expect(summarizeBuildChange(base, after)).toBe("notes updated");
-  });
-
-  test("detects tags change", () => {
-    const after = { ...base, tags: ["meta", "burst"] };
-    expect(summarizeBuildChange(base, after)).toBe("tags changed");
-  });
-
-  test("returns 'build updated' when nothing changed", () => {
-    const after = { ...base };
-    expect(summarizeBuildChange(base, after)).toBe("build updated");
-  });
-
-  test("reports all changes when multiple fields differ", () => {
-    const after = { ...base, title: "Different", profession: "Warrior" };
-    expect(summarizeBuildChange(base, after)).toBe('title: "My Build" → "Different"; profession: Guardian → Warrior');
-  });
-
-  test("reports both profession and game mode when both change", () => {
-    const after = { ...base, profession: "Warrior", gameMode: "wvw" };
-    expect(summarizeBuildChange(base, after)).toBe("profession: Guardian → Warrior; game mode: pve → wvw");
-  });
-
-  test("specific skill slot changes — heal and elite", () => {
-    const before = {
-      ...base,
-      skills: { heal: { id: 1 }, utility: [null, null, null], elite: { id: 10 } },
-    };
-    const after = {
-      ...base,
-      skills: { heal: { id: 2 }, utility: [null, null, null], elite: { id: 11 } },
-    };
-    expect(summarizeBuildChange(before, after)).toBe("heal, elite skills changed");
-  });
-
-  test("specific skill slot changes — single utility slot", () => {
-    const before = {
-      ...base,
-      skills: { heal: { id: 1 }, utility: [{ id: 5 }, { id: 6 }, { id: 7 }], elite: { id: 10 } },
-    };
-    const after = {
-      ...base,
-      skills: { heal: { id: 1 }, utility: [{ id: 5 }, { id: 99 }, { id: 7 }], elite: { id: 10 } },
-    };
-    expect(summarizeBuildChange(before, after)).toBe("utility 2 skill changed");
-  });
-
-  test("underwater skill changes use 'underwater' prefix", () => {
-    const before = { ...base, underwaterSkills: { heal: { id: 1 }, utility: [null, null, null], elite: { id: 10 } } };
-    const after  = { ...base, underwaterSkills: { heal: { id: 2 }, utility: [null, null, null], elite: { id: 10 } } };
-    expect(summarizeBuildChange(before, after)).toBe("underwater heal skill changed");
-  });
-
-  test("equipment stat package change is reported specifically", () => {
-    const before = { ...base, equipment: { statPackage: "Berserker", slots: {}, weapons: {}, runes: {}, sigils: {}, infusions: {} } };
-    const after  = { ...base, equipment: { statPackage: "Viper", slots: {}, weapons: {}, runes: {}, sigils: {}, infusions: {} } };
-    expect(summarizeBuildChange(before, after)).toBe("stat package: Berserker → Viper changed");
-  });
-
-  test("equipment rune and sigil changes are reported specifically", () => {
-    const before = { ...base, equipment: { slots: {}, weapons: {}, runes: { head: "Rune of X" }, sigils: {}, infusions: {} } };
-    const after  = { ...base, equipment: { slots: {}, weapons: {}, runes: { head: "Rune of Y" }, sigils: {}, infusions: {} } };
-    expect(summarizeBuildChange(before, after)).toBe("runes changed");
-  });
-
-  test("multiple equipment categories listed when multiple change", () => {
-    const before = { ...base, equipment: { slots: { head: "a" }, weapons: { mainhand: "x" }, runes: {}, sigils: {}, infusions: {} } };
-    const after  = { ...base, equipment: { slots: { head: "b" }, weapons: { mainhand: "y" }, runes: {}, sigils: {}, infusions: {} } };
-    const result = summarizeBuildChange(before, after);
-    expect(result).toContain("armor/trinkets");
-    expect(result).toContain("weapons");
+  test("concurrent appends across records do not interleave", async () => {
+    await Promise.all(["b1", "b2", "b3"].map((id) =>
+      store.appendVersion({ recordId: id, before: null, after: build({ id }) })));
+    for (const id of ["b1", "b2", "b3"]) {
+      expect(await store.getVersion(id, 1)).toMatchObject({ id });
+    }
   });
 });
