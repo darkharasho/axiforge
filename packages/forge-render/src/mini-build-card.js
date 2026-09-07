@@ -73,6 +73,9 @@ function renderGearAnchors(equipment) {
       if (Array.isArray(val)) {
         val.forEach((_, i) => addSpan(slot, `sigil${i}`));
       } else {
+        // Defensive: diffBuild.js always emits indexed sigil ops today, so this
+        // branch is unreachable from that path. Kept for non-array sigil shapes
+        // that can arrive from gw2skills/.axicode imports.
         addSpan(slot, "sigil0");
       }
     }

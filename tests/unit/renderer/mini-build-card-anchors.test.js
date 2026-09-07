@@ -45,6 +45,23 @@ describe("mini-build-card highlight anchors", () => {
     expect(el.querySelector('[data-hist-spec="0"]')).not.toBeNull();
   });
 
+  test("spec/trait anchors use the raw specializations index, not the filtered one", () => {
+    // An unnamed spec line ahead of a named one must not shift the named
+    // line's anchor down to 0 — diffBuild.js's `line` on trait/spec ops is
+    // the raw array index, so a filtered index here would silently point
+    // Task 8's compare modal at the wrong spec line.
+    const build = fixture();
+    build.specializations = [
+      { id: 0, name: "", elite: false, majorChoices: {}, majorTraitsByTier: {}, minorTraits: [] },
+      { id: 45, name: "Chaos", elite: false, majorChoices: { 1: 675, 2: 668, 3: 1687 }, majorTraitsByTier: {}, minorTraits: [] },
+    ];
+    const el = parse(renderMiniBuildCard(build, null, { showActions: false }));
+    expect(el.querySelector('[data-hist-spec="1"]')).not.toBeNull();
+    expect(el.querySelector('[data-hist-trait="1:2"]')).not.toBeNull();
+    expect(el.querySelector('[data-hist-spec="0"]')).toBeNull();
+    expect(el.querySelector('[data-hist-trait="0:2"]')).toBeNull();
+  });
+
   test("existing markup is unchanged apart from the new attributes", () => {
     const html = renderMiniBuildCard(fixture(), null, { showActions: false });
     expect(html).toContain("mini-card");
