@@ -603,3 +603,59 @@ describe("A4 — the memo cannot go stale", () => {
     expect(v.ops).toEqual([{ t: "field", path: "title", before: "Z", after: "Q" }]);
   });
 });
+
+// A summary is one line of prose about ops that are already on disk. Freezing
+// it at write time meant a resolver that was missing that day — no upgrade
+// catalog yet, a folder tree that had not loaded — left "enrichment: (none) →
+// 79926" in the log forever, unreachable by any later fix.
+describe("summaries are re-rendered when the log is read", () => {
+  test("an entry written with no resolver reads back named", async () => {
+    // Written blind: this is the store the old code shipped with.
+    await store.appendVersion({ recordId: "b1", before: null, after: build(), ts: at(0) });
+    await store.appendVersion({
+      recordId: "b1",
+      after: build({ equipment: { ...build().equipment, enrichment: "79926" } }),
+      ts: at(10 * 60_000),
+    });
+    expect((await store.listVersions("b1")).versions[0].summary).toContain("79926");
+
+    // Same log, a store that now knows how to name an item id.
+    const named = new BuildHistoryStore(dir, {
+      itemNameOf: (v) => (String(v) === "79926" ? "Koda's Warmth Enrichment" : undefined),
+    });
+    await named.init();
+    const summary = (await named.listVersions("b1")).versions[0].summary;
+    expect(summary).toBe("enrichment: (none) → Koda's Warmth Enrichment");
+    expect(summary).not.toContain("79926");
+  });
+
+  test("entries with no ops keep the summary they were written with", async () => {
+    await store.appendVersion({ recordId: "b1", before: null, after: build(), ts: at(0) });
+    await store.appendVersion({
+      recordId: "b1", after: build(), kind: "delete", ts: at(10 * 60_000),
+    });
+    const written = (await store.listVersions("b1")).versions;
+    // A deletion and an origin keyframe carry a document, not ops; their
+    // summaries are not descriptions of ops, so a resolver that would rewrite
+    // every op in sight must leave them exactly as written.
+    const loud = new BuildHistoryStore(dir, { itemNameOf: () => "REWRITTEN" });
+    await loud.init();
+    const reread = (await loud.listVersions("b1")).versions;
+    expect(reread.map((e) => e.summary)).toEqual(written.map((e) => e.summary));
+    expect(reread[0].summary).toBe("Deleted");
+    expect(reread.every((e) => e.ops === undefined)).toBe(true);
+  });
+
+  test("the folder feed is relabelled too", async () => {
+    await store.appendVersion({ recordId: "b1", before: null, after: build(), ts: at(0) });
+    await store.appendVersion({
+      recordId: "b1",
+      after: build({ equipment: { ...build().equipment, enrichment: "79926" } }),
+      ts: at(10 * 60_000),
+    });
+    const named = new BuildHistoryStore(dir, { itemNameOf: () => "Koda's Warmth Enrichment" });
+    await named.init();
+    const tails = await named.listTails(["b1"], 10);
+    expect(tails[0].summary).toContain("Koda's Warmth Enrichment");
+  });
+});

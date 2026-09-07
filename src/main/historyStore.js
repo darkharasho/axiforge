@@ -430,9 +430,33 @@ class HistoryStore {
       start = newestFirst.findIndex((e) => e.v === Number(cursor));
       if (start === -1) return { versions: [], nextCursor: null };
     }
-    const versions = newestFirst.slice(start, start + limit);
+    const versions = await this.#relabel(recordId, newestFirst.slice(start, start + limit));
     const next = newestFirst[start + limit];
     return { versions, nextCursor: next ? next.v : null };
+  }
+
+  /**
+   * A summary is written once, when its version is written, so a resolver that
+   * was missing that day leaves a raw item id frozen in the log forever. The
+   * ops are the durable record; the sentence about them is not. Re-rendering
+   * here means a fix to the vocabulary reaches the history that already exists
+   * — the same reason `compareVersions` labels its ops at read time instead of
+   * storing the labels, and the same `renderSummary` call the write path makes,
+   * so the two can never disagree.
+   *
+   * Entries with no `ops` keep what they were written with. That is not a
+   * limitation to route around: a keyframe has a document rather than ops, and
+   * the two summaries that are not descriptions of ops at all — "Deleted" and
+   * the recovered-entry text — are only ever written onto keyframes.
+   */
+  async #relabel(recordId, entries) {
+    if (!entries.some((e) => Array.isArray(e.ops))) return entries;
+    // Resolved once for the page, not once per entry: the resolvers behind it
+    // read the folder tree and the upgrade catalog.
+    const sOpts = await this.#summaryOptions(recordId, null);
+    return entries.map((e) => (
+      Array.isArray(e.ops) ? { ...e, summary: renderSummary(e.ops, sOpts) } : e
+    ));
   }
 
   /**
@@ -444,7 +468,7 @@ class HistoryStore {
     const ids = Array.isArray(recordIds) ? recordIds : [];
     const lists = await Promise.all(ids.map(async (recordId) => {
       const tail = await this.#logFor(recordId).readTail(limit);
-      return tail.filter(Boolean).map((e) => ({ ...e, recordId }));
+      return this.#relabel(recordId, tail.filter(Boolean).map((e) => ({ ...e, recordId })));
     }));
     return lists
       .flat()
