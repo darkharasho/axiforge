@@ -20,8 +20,35 @@ const IGNORED_FIELDS = ["updatedAt", "version"];
 const SUBSTANTIVE_OPS = ["skill", "trait", "spec", "gear", "stat", "consumable", "field", "raw"];
 
 // A change here is bookkeeping: it is logged (a folder move matters in a shared
-// folder feed) but it is not a build edit and gets its own phrasing.
-const INCIDENTAL_PATHS = ["folderId", "compIds", "archivedAt", "deletedAt"];
+// folder feed) but it is not a build edit and gets its own phrasing. The trash
+// and archive batch keys travel with the stamps they belong to.
+const INCIDENTAL_PATHS = [
+  "folderId",
+  "compIds",
+  "archivedAt",
+  "deletedAt",
+  "trashBatchId",
+  "trashRoot",
+  "archiveBatchId",
+  "archiveRoot",
+];
+
+// Bookkeeping that rides along with a build without being part of it: sort
+// position, pin state, publish receipts, timestamps. These round-trip as
+// `derived` ops, so a change here on its own never writes a version — publishing
+// a build or reordering the library is not an edit to the build.
+const NON_VERSIONED_PATHS = [
+  "sortOrder",
+  "pinned",
+  "publishedSlug",
+  "publishedFileId",
+  "publishedKey",
+  "publishedAt",
+  "publishedOwner",
+  "buildUrl",
+  "createdAt",
+  "activeLegendSlot",
+];
 
 module.exports = {
   KEYFRAME_INTERVAL,
@@ -30,4 +57,5 @@ module.exports = {
   IGNORED_FIELDS,
   SUBSTANTIVE_OPS,
   INCIDENTAL_PATHS,
+  NON_VERSIONED_PATHS,
 };

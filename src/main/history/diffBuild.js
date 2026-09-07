@@ -21,11 +21,31 @@
 // then unknown keys sorted alphabetically — so a patch for a given pair of
 // documents is byte-stable.
 
-const { IGNORED_FIELDS, SUBSTANTIVE_OPS, INCIDENTAL_PATHS } = require("./constants");
+const {
+  IGNORED_FIELDS,
+  SUBSTANTIVE_OPS,
+  INCIDENTAL_PATHS,
+  NON_VERSIONED_PATHS,
+} = require("./constants");
 
-const FIELD_PATHS = ["title", "profession", "gameMode", "tags", "notes"];
+// Build content the user chose. `selectedLegends` and friends are as much a part
+// of the build as the skill bar, so they are substantive even though the brief's
+// original vocabulary predates them; Task 2 labels the new paths.
+const FIELD_PATHS = [
+  "title",
+  "profession",
+  "gameMode",
+  "tags",
+  "notes",
+  "images",
+  "selectedLegends",
+  "selectedUnderwaterLegends",
+  "selectedPets",
+  "morphSkillIds",
+];
 const CONSUMABLE_PATHS = ["relic", "food", "utility", "enrichment"];
 const SKILL_ROOTS = ["skills", "underwaterSkills"];
+const SKILL_SLOT_KEYS = new Set(["heal", "utility", "elite"]);
 
 // container name in `equipment` -> the gear op `part` it produces.
 // `sigils` and `infusions` may hold arrays; those get one op per index.
@@ -43,9 +63,19 @@ const EQUIPMENT_KEYS = new Set([
   ...GEAR_CONTAINERS.map(([name]) => name),
 ]);
 
+// `part` -> the `equipment` container it writes into. Sigils are absent because
+// they always carry an index in the part (`sigil0`, `sigil1`).
+const GEAR_PART_CONTAINERS = {
+  item: "slots",
+  rune: "runes",
+  weapon: "weapons",
+  infusion: "infusions",
+};
+
 const KNOWN_TOP_LEVEL = new Set([
   ...FIELD_PATHS,
   ...INCIDENTAL_PATHS,
+  ...NON_VERSIONED_PATHS,
   "specializations",
   "equipment",
   ...SKILL_ROOTS,
@@ -79,6 +109,13 @@ function sameEntity(a, b) {
   return a.name !== undefined && a.name === b.name;
 }
 
+// Ops carry copies, never references into the documents they came from: a
+// consumer that holds a patch and then edits the build must not retroactively
+// rewrite recorded history.
+function emit(ops, op) {
+  ops.push({ ...op, before: clone(op.before), after: clone(op.after) });
+}
+
 function clone(value) {
   return value === undefined ? undefined : structuredClone(value);
 }
@@ -100,7 +137,7 @@ function diff(before, after) {
 
   for (const path of FIELD_PATHS) {
     if (!deepEqual(b[path], a[path])) {
-      ops.push({ t: "field", path, before: b[path], after: a[path] });
+      emit(ops, { t: "field", path, before: b[path], after: a[path] });
     }
   }
 
@@ -110,7 +147,13 @@ function diff(before, after) {
 
   for (const path of INCIDENTAL_PATHS) {
     if (!deepEqual(b[path], a[path])) {
-      ops.push({ t: "meta", path, before: b[path], after: a[path] });
+      emit(ops, { t: "meta", path, before: b[path], after: a[path] });
+    }
+  }
+
+  for (const path of NON_VERSIONED_PATHS) {
+    if (!deepEqual(b[path], a[path])) {
+      emit(ops, { t: "derived", path, before: b[path], after: a[path] });
     }
   }
 
@@ -122,7 +165,7 @@ function diff(before, after) {
   );
   for (const path of unknown) {
     if (!deepEqual(b[path], a[path])) {
-      ops.push({ t: "raw", path, before: b[path], after: a[path] });
+      emit(ops, { t: "raw", path, before: b[path], after: a[path] });
     }
   }
 
@@ -159,7 +202,7 @@ function diffSpecLineInner(ops, line, beforeLine, afterLine) {
   const skip = new Set(["id", "majorChoices"]);
   if (!sameEntity(beforeLine, afterLine)) {
     skip.add("name");
-    ops.push({
+    emit(ops, {
       t: "spec",
       line,
       before: beforeLine === undefined ? undefined : { id: b.id, name: b.name },
@@ -171,7 +214,7 @@ function diffSpecLineInner(ops, line, beforeLine, afterLine) {
 
   for (const key of sortedUnionKeys(b, a)) {
     if (skip.has(key) || deepEqual(b[key], a[key])) continue;
-    ops.push({ t: "derived", path: `specializations.${line}.${key}`, before: b[key], after: a[key] });
+    emit(ops, { t: "derived", path: `specializations.${line}.${key}`, before: b[key], after: a[key] });
   }
 }
 
@@ -181,7 +224,13 @@ function diffTraitChoices(ops, line, beforeChoices, afterChoices) {
     if (!bothAre(beforeChoices, afterChoices, isObject)) return;
     for (const tier of sortedUnionKeys(beforeChoices, afterChoices)) {
       if (deepEqual(beforeChoices[tier], afterChoices[tier])) continue;
-      ops.push({ t: "trait", line, tier: Number(tier), before: beforeChoices[tier], after: afterChoices[tier] });
+      const path = `specializations.${line}.majorChoices.${tier}`;
+      // A tier is always 1, 2 or 3. Anything else is malformed and must not
+      // become `tier: NaN`, which `applyOps` would write back as the key "NaN".
+      const op = isIndexKey(tier)
+        ? { t: "trait", line, tier: Number(tier) }
+        : { t: "raw", path };
+      emit(ops, { ...op, before: beforeChoices[tier], after: afterChoices[tier] });
     }
   });
 }
@@ -213,15 +262,23 @@ function diffSkillsInner(ops, root, beforeSkills, afterSkills, uw) {
   }
 
   diffSkillSlot(ops, root, "elite", "elite", b.elite, a.elite, uw);
+
+  // Every other container walk sweeps for keys it does not name; this one has to
+  // as well. `walkOrRaw` only fires when a walk emits nothing at all, so without
+  // this an unnamed key changing alongside a named slot would be dropped.
+  for (const key of sortedUnionKeys(b, a)) {
+    if (SKILL_SLOT_KEYS.has(key) || deepEqual(b[key], a[key])) continue;
+    emit(ops, { t: "raw", path: `${root}.${key}`, before: b[key], after: a[key] });
+  }
 }
 
 function diffSkillSlot(ops, root, slot, subPath, before, after, uw) {
   if (deepEqual(before, after)) return;
   if (sameEntity(before, after)) {
-    ops.push({ t: "derived", path: `${root}.${subPath}`, before, after });
+    emit(ops, { t: "derived", path: `${root}.${subPath}`, before, after });
     return;
   }
-  ops.push({ t: "skill", slot, uw, before, after });
+  emit(ops, { t: "skill", slot, uw, before, after });
 }
 
 function diffEquipment(ops, beforeEq, afterEq) {
@@ -237,11 +294,11 @@ function diffEquipmentInner(ops, beforeEq, afterEq) {
   const a = afterEq;
 
   if (!deepEqual(b.statPackage, a.statPackage)) {
-    ops.push({ t: "stat", before: b.statPackage, after: a.statPackage });
+    emit(ops, { t: "stat", before: b.statPackage, after: a.statPackage });
   }
   for (const path of CONSUMABLE_PATHS) {
     if (!deepEqual(b[path], a[path])) {
-      ops.push({ t: "consumable", path, before: b[path], after: a[path] });
+      emit(ops, { t: "consumable", path, before: b[path], after: a[path] });
     }
   }
   for (const [name, part] of GEAR_CONTAINERS) {
@@ -249,7 +306,7 @@ function diffEquipmentInner(ops, beforeEq, afterEq) {
   }
   for (const key of sortedUnionKeys(b, a)) {
     if (EQUIPMENT_KEYS.has(key) || deepEqual(b[key], a[key])) continue;
-    ops.push({ t: "raw", path: `equipment.${key}`, before: b[key], after: a[key] });
+    emit(ops, { t: "raw", path: `equipment.${key}`, before: b[key], after: a[key] });
   }
 }
 
@@ -268,19 +325,23 @@ function diffGearContainerInner(ops, name, part, beforeMap, afterMap) {
     const bv = b[slot];
     const av = a[slot];
     if (deepEqual(bv, av)) continue;
-    if (!Array.isArray(bv) && !Array.isArray(av)) {
-      ops.push({ t: "gear", slot, part, before: bv, after: av });
+    // Sigils are always arrays, so they always take the indexed walk below: a
+    // sigil op without an index has no container to write into, and emitting the
+    // family name as the part would corrupt the slot on apply.
+    const indexed = name === "sigils" || Array.isArray(bv) || Array.isArray(av);
+    if (!indexed) {
+      emit(ops, { t: "gear", slot, part, before: bv, after: av });
       continue;
     }
-    // Sigils are always arrays; infusions are arrays only on the slots that
-    // hold more than one (back, rings, two-handers).
+    // Infusions are arrays only on the slots that hold more than one (back,
+    // rings, two-handers); a malformed shape falls out as a raw op.
     walkOrRaw(ops, `equipment.${name}.${slot}`, bv, av, () => {
       if (!bothAre(bv, av, Array.isArray)) return;
       const bl = bv;
       const al = av;
       for (let i = 0; i < Math.max(bl.length, al.length); i += 1) {
         if (deepEqual(bl[i], al[i])) continue;
-        ops.push({
+        emit(ops, {
           t: "gear",
           // Sigils carry the index in the part (`sigil0`/`sigil1`); infusion
           // slots can hold three, so they carry it in the slot instead.
@@ -302,7 +363,7 @@ function diffGearContainerInner(ops, name, part, beforeMap, afterMap) {
 function walkOrRaw(ops, path, before, after, walk) {
   const start = ops.length;
   walk();
-  if (ops.length === start) ops.push({ t: "raw", path, before, after });
+  if (ops.length === start) emit(ops, { t: "raw", path, before, after });
 }
 
 // A named container is walked only when both sides really are that container.
@@ -351,9 +412,11 @@ function applyOp(doc, op, removals) {
     case "consumable":
       set(doc, ["equipment", String(op.path)], op.after, removals);
       break;
-    case "gear":
-      set(doc, gearSegments(op), op.after, removals);
+    case "gear": {
+      const segments = gearSegments(op);
+      if (segments) set(doc, segments, op.after, removals);
       break;
+    }
     case "skill":
       set(doc, skillSegments(op), op.after, removals);
       break;
@@ -391,12 +454,15 @@ function applySpec(doc, op, removals) {
   }
 }
 
+// Returns null for a part it cannot place. Writing such an op somewhere
+// plausible would corrupt a real slot, which is worse than dropping it.
 function gearSegments(op) {
   const part = String(op.part);
   const slot = String(op.slot);
-  if (part.startsWith("sigil")) return ["equipment", "sigils", slot, part.slice("sigil".length)];
-  const container =
-    part === "item" ? "slots" : part === "rune" ? "runes" : part === "weapon" ? "weapons" : "infusions";
+  const sigil = /^sigil(\d+)$/.exec(part);
+  if (sigil) return ["equipment", "sigils", slot, sigil[1]];
+  const container = GEAR_PART_CONTAINERS[part];
+  if (!container) return null;
   const indexed = /^(.*)\[(\d+)\]$/.exec(slot);
   if (indexed) return ["equipment", container, indexed[1], indexed[2]];
   return ["equipment", container, slot];

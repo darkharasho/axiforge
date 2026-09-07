@@ -246,3 +246,146 @@ describe("diffBuild — real equipment shapes", () => {
     expect(before).toEqual(gearedBuild());
   });
 });
+
+describe("diffBuild — exhaustive walks", () => {
+  test("an unnamed skills key changing alongside a named slot is not dropped", () => {
+    const before = {
+      skills: { heal: { id: 1, name: "A" }, utility: [], elite: null, toolbelt: ["x"] },
+    };
+    const after = {
+      skills: { heal: { id: 2, name: "B" }, utility: [], elite: null, toolbelt: ["y"] },
+    };
+    const ops = diff(before, after);
+    expect(ops).toEqual([
+      { t: "skill", slot: "heal", uw: false, before: { id: 1, name: "A" }, after: { id: 2, name: "B" } },
+      { t: "raw", path: "skills.toolbelt", before: ["x"], after: ["y"] },
+    ]);
+    expect(applyOps(before, ops)).toEqual(after);
+    expect(applyOps(after, invert(ops))).toEqual(before);
+  });
+
+  // A sigil op has to carry an index in its part; the container name alone has
+  // nowhere to write on apply. Both sides non-array is the case that reached it.
+  test.each([
+    ["both sides bare strings", "74326", "82876"],
+    ["one side bare, one an array", "74326", ["74326", "82876"]],
+  ])("a malformed sigil slot (%s) travels as a raw op", (_name, bv, av) => {
+    const before = { equipment: { sigils: { mainhand1: bv } } };
+    const after = { equipment: { sigils: { mainhand1: av } } };
+    const ops = diff(before, after);
+    expect(ops).toEqual([{ t: "raw", path: "equipment.sigils.mainhand1", before: bv, after: av }]);
+    expect(applyOps(before, ops)).toEqual(after);
+    expect(applyOps(after, invert(ops))).toEqual(before);
+  });
+
+  test("a gear op whose part names no container is ignored rather than misplaced", () => {
+    const doc = { equipment: { slots: { head: "Zojja's Visage" } } };
+    const bogus = [
+      { t: "gear", slot: "mainhand1", part: "sigil", before: null, after: "74326" },
+      { t: "gear", slot: "head", part: "nonsense", before: null, after: "x" },
+    ];
+    expect(applyOps(doc, bogus)).toEqual(doc);
+  });
+
+  test("a non-numeric trait tier does not become NaN", () => {
+    const before = { specializations: [{ id: 45, majorChoices: { 1: 675, weird: 1 } }] };
+    const after = { specializations: [{ id: 45, majorChoices: { 1: 675, weird: 2 } }] };
+    const ops = diff(before, after);
+    expect(ops).toEqual([
+      { t: "raw", path: "specializations.0.majorChoices.weird", before: 1, after: 2 },
+    ]);
+    expect(applyOps(before, ops)).toEqual(after);
+    expect(applyOps(after, invert(ops))).toEqual(before);
+  });
+});
+
+describe("diffBuild — bookkeeping does not read as an edit", () => {
+  test("publish receipts and library position never justify a version", () => {
+    const before = { title: "T", sortOrder: 1, publishedAt: null, pinned: false, buildUrl: "" };
+    const after = { title: "T", sortOrder: 7, publishedAt: "2026-09-06T00:00:00.000Z", pinned: true, buildUrl: "u" };
+    const ops = diff(before, after);
+    expect(ops.every((op) => op.t === "derived")).toBe(true);
+    expect(classify(ops).substantive).toHaveLength(0);
+    expect(applyOps(before, ops)).toEqual(after);
+    expect(applyOps(after, invert(ops))).toEqual(before);
+  });
+
+  test("only sortOrder and publishedAt changing is not substantive", () => {
+    const before = { title: "T", sortOrder: 1, publishedAt: null };
+    const after = { title: "T", sortOrder: 2, publishedAt: "2026-09-06T00:00:00.000Z" };
+    expect(classify(diff(before, after)).substantive).toHaveLength(0);
+  });
+
+  test("trash and archive stamps are incidental, alongside folderId", () => {
+    const before = { deletedAt: null, trashBatchId: "", trashRoot: false, archiveRoot: false };
+    const after = { deletedAt: "2026-09-06T00:00:00.000Z", trashBatchId: "batch-1", trashRoot: true, archiveRoot: false };
+    const ops = diff(before, after);
+    expect(ops.every((op) => op.t === "meta")).toBe(true);
+    const { substantive, incidental, derived } = classify(ops);
+    expect(substantive).toHaveLength(0);
+    expect(derived).toHaveLength(0);
+    expect(incidental).toHaveLength(3);
+    expect(applyOps(before, ops)).toEqual(after);
+  });
+
+  test("legends, pets and images are build content, not bookkeeping", () => {
+    const before = { selectedLegends: ["Shiro"], selectedPets: { land1: 1 }, morphSkillIds: [], images: [] };
+    const after = {
+      selectedLegends: ["Shiro", "Mallyx"],
+      selectedPets: { land1: 2 },
+      morphSkillIds: [7],
+      images: [{ id: "i1", data: "base64" }],
+    };
+    const ops = diff(before, after);
+    expect(ops.map((op) => [op.t, op.path])).toEqual([
+      ["field", "images"],
+      ["field", "selectedLegends"],
+      ["field", "selectedPets"],
+      ["field", "morphSkillIds"],
+    ]);
+    expect(classify(ops).substantive).toHaveLength(4);
+    expect(applyOps(before, ops)).toEqual(after);
+    expect(applyOps(after, invert(ops))).toEqual(before);
+  });
+
+  test("an image payload is carried whole, not digested", () => {
+    const after = { images: [{ id: "i1", data: "AAAABBBB" }] };
+    const [op] = diff({ images: [] }, after);
+    expect(op).toEqual({ t: "field", path: "images", before: [], after: [{ id: "i1", data: "AAAABBBB" }] });
+  });
+
+  test("all three classes split apart in one patch", () => {
+    const before = { title: "T", folderId: "f1", sortOrder: 1 };
+    const after = { title: "U", folderId: "f2", sortOrder: 2 };
+    const { substantive, incidental, derived } = classify(diff(before, after));
+    expect(substantive.map((op) => op.path)).toEqual(["title"]);
+    expect(incidental.map((op) => op.path)).toEqual(["folderId"]);
+    expect(derived.map((op) => op.path)).toEqual(["sortOrder"]);
+  });
+});
+
+describe("diffBuild — ops are snapshots, not references", () => {
+  test("mutating the after document does not rewrite an op already recorded", () => {
+    const before = { skills: { heal: { id: 1, name: "A" }, utility: [], elite: null } };
+    const after = { skills: { heal: { id: 2, name: "B" }, utility: [], elite: null } };
+    const ops = diff(before, after);
+    after.skills.heal.name = "mutated";
+    expect(ops[0].after).toEqual({ id: 2, name: "B" });
+  });
+
+  test("mutating the before document does not rewrite an op already recorded", () => {
+    const before = { skills: { heal: { id: 1, name: "A" }, utility: [], elite: null } };
+    const after = { skills: { heal: { id: 2, name: "B" }, utility: [], elite: null } };
+    const ops = diff(before, after);
+    before.skills.heal.name = "mutated";
+    expect(ops[0].before).toEqual({ id: 1, name: "A" });
+  });
+
+  test("a nested value in a raw op is a copy", () => {
+    const before = { somethingNobodyPlanned: { a: [1, 2] } };
+    const after = { somethingNobodyPlanned: { a: [1, 3] } };
+    const ops = diff(before, after);
+    after.somethingNobodyPlanned.a.push(4);
+    expect(ops[0].after).toEqual({ a: [1, 3] });
+  });
+});
