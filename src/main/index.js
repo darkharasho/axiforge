@@ -158,8 +158,41 @@ async function compCategoryNameResolver() {
   return (id) => byId.get(id);
 }
 
+// Runes, sigils, infusions and the enrichment/food/utility consumables are all
+// stored as GW2 item ids, so a summary with no resolver behind it reads
+// "enrichment: (none) -> 79926" and stays that way forever: the one-line
+// summary is frozen into the log when the version is written.
+// `getUpgradeCatalog` caches after its first fetch, and a catalog that cannot
+// be loaded must never fail the save that asked for it — an absent resolver
+// degrades to the raw id, which is what we had before.
+async function upgradeNameResolver() {
+  let catalog;
+  try {
+    catalog = await getUpgradeCatalog("en");
+  } catch {
+    return undefined;
+  }
+  const maps = ["runeById", "sigilById", "infusionById", "enrichmentById", "foodById", "utilityById"]
+    .map((key) => catalog && catalog[key])
+    .filter((m) => m && typeof m.get === "function");
+  if (!maps.length) return undefined;
+  // Ids are stored as strings ("79926"); the catalog maps are keyed by number.
+  return (value) => {
+    const id = Number(value);
+    if (!Number.isFinite(id)) return undefined;
+    for (const m of maps) {
+      const hit = m.get(id);
+      if (hit && hit.name) return hit.name;
+    }
+    return undefined;
+  };
+}
+
 async function buildSummaryOpts() {
-  return { folderNameOf: await folderNameResolver() };
+  const [folderNameOf, itemNameOf] = await Promise.all([
+    folderNameResolver(), upgradeNameResolver(),
+  ]);
+  return { folderNameOf, itemNameOf };
 }
 
 async function compSummaryOpts() {

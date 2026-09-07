@@ -81,7 +81,12 @@ jest.mock("../../../src/main/syncApi", () => {
 jest.mock("../../../src/main/gw2Data", () => ({
   getProfessionList: jest.fn(async () => []),
   getProfessionCatalog: jest.fn(async () => ({})),
-  getUpgradeCatalog: jest.fn(async () => ({})),
+  // Runes/sigils/infusions/enrichment/food/utility are stored as item ids, so
+  // this catalog is what turns them into names. See the "item ids" describe.
+  getUpgradeCatalog: jest.fn(async () => ({
+    enrichmentById: new Map([[79926, { id: 79926, name: "Vision Enrichment" }]]),
+    runeById: new Map([[24703, { id: 24703, name: "Superior Rune of the Scholar" }]]),
+  })),
   getWikiSummary: jest.fn(async () => null),
   getWikiRelatedData: jest.fn(async () => null),
   initDiskCache: jest.fn(async () => {}),
@@ -383,5 +388,55 @@ describe("history:compare labels ops with the same names", () => {
 
     const { ops } = await invoke("history:compare", "comp", "c1", 1, 2);
     expect(ops.map((o) => o.label).join(" | ")).toContain("Heal Tempest");
+  });
+});
+
+// ─── item ids ───────────────────────────────────────────────────────────────
+//
+// Reported as "changing enrichment showed an ID, not the name". Nothing was
+// supplying an `itemNameOf`, so every rune, sigil, infusion, enrichment, food
+// and utility change recorded its raw GW2 id — and a one-line summary is
+// frozen into the log when the version is written, so it stayed an id forever.
+// Only a test through the real main process can tell a wired resolver from an
+// absent one; renderSummary's own unit tests pass their resolver in by hand.
+
+describe("item ids are named, not printed raw", () => {
+  const withEnrichment = (enrichment) => ({
+    id: "b1", title: "Bladesworn", folderId: null, equipment: { enrichment },
+  });
+
+  test("builds:save names an enrichment instead of showing its id", async () => {
+    await loadMain({ builds: [build(withEnrichment(""))] });
+
+    // The origin keyframe first: a record's v1 is never a diff, and v2 is the
+    // one that has to phrase the change.
+    await invoke("builds:save", withEnrichment(""));
+    await waitFor(async () => (await invoke("builds:get-history", "b1")).versions.length >= 1);
+    await invoke("builds:save", withEnrichment("79926"));
+    await waitFor(async () =>
+      (await invoke("builds:get-history", "b1")).versions.some((v) => /enrichment/.test(v.summary)));
+
+    const entry = (await invoke("builds:get-history", "b1")).versions
+      .find((v) => /enrichment/.test(v.summary));
+    expect(entry.summary).toBe("enrichment: (none) → Vision Enrichment");
+    expect(entry.summary).not.toContain("79926");
+  });
+
+  test("builds:save names a rune too — the same resolver covers gear upgrades", async () => {
+    await loadMain({ builds: [build({ id: "b1", title: "Bladesworn", folderId: null })] });
+
+    await invoke("builds:save", { id: "b1", title: "Bladesworn", folderId: null });
+    await waitFor(async () => (await invoke("builds:get-history", "b1")).versions.length >= 1);
+    await invoke("builds:save", {
+      id: "b1", title: "Bladesworn", folderId: null,
+      equipment: { runes: { head: "24703" } },
+    });
+    await waitFor(async () =>
+      (await invoke("builds:get-history", "b1")).versions.some((v) => /head rune/.test(v.summary)));
+
+    const entry = (await invoke("builds:get-history", "b1")).versions
+      .find((v) => /head rune/.test(v.summary));
+    expect(entry.summary).toContain("Superior Rune of the Scholar");
+    expect(entry.summary).not.toContain("24703");
   });
 });

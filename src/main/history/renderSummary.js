@@ -94,6 +94,25 @@ function fmtValue(v) {
   return String(v);
 }
 
+// Slot and weapon values are already words ("Berserker's", "dagger"). Rune,
+// sigil and infusion values are GW2 item ids, and so are the enrichment, food
+// and utility consumables — without a resolver those render as "79926".
+const ID_VALUED_PARTS = new Set(["rune", "infusion"]);
+
+function isIdValuedPart(part) {
+  return ID_VALUED_PARTS.has(String(part)) || /^sigil\d+$/.test(String(part));
+}
+
+// `itemNameOf` is supplied by the caller (see `buildSummaryOpts` in
+// src/main/index.js). A value it cannot name falls back to `fmtValue`, which
+// is also the right answer for the values that are already names: `relic` is
+// stored as "Relic of Bava Nisos", not as an id.
+function itemName(value, opts) {
+  if (value === null || value === undefined || value === "") return fmtValue(value);
+  const itemNameOf = opts && typeof opts.itemNameOf === "function" ? opts.itemNameOf : null;
+  return (itemNameOf && itemNameOf(value)) || fmtValue(value);
+}
+
 function gearSlotLabel(slotRaw) {
   const m = /^(.*)\[(\d+)\]$/.exec(String(slotRaw));
   const base = m ? m[1] : slotRaw;
@@ -135,11 +154,12 @@ function skillSlotLabel(slotRaw) {
 
 /* ---------------------------------------------------------- per-op detail */
 
-function gearDetail(op) {
+function gearDetail(op, opts) {
   const slotLabel = gearSlotLabel(op.slot);
   const partLabel = gearPartLabel(op.part);
   const label = partLabel ? `${slotLabel} ${partLabel}` : slotLabel;
-  return `${label}: ${fmtValue(op.before)} → ${fmtValue(op.after)}`;
+  const value = isIdValuedPart(op.part) ? (v) => itemName(v, opts) : fmtValue;
+  return `${label}: ${value(op.before)} → ${value(op.after)}`;
 }
 
 function skillDetail(op) {
@@ -159,8 +179,8 @@ function statDetail(op) {
   return `stats: ${fmtValue(op.before)} → ${fmtValue(op.after)}`;
 }
 
-function consumableDetail(op) {
-  return `${humanize(op.path)}: ${fmtValue(op.before)} → ${fmtValue(op.after)}`;
+function consumableDetail(op, opts) {
+  return `${humanize(op.path)}: ${itemName(op.before, opts)} → ${itemName(op.after, opts)}`;
 }
 
 function fieldDetail(op) {
@@ -203,7 +223,7 @@ function rawDetail(op) {
 function renderOpDetail(op, opts) {
   switch (op.t) {
     case "gear":
-      return gearDetail(op);
+      return gearDetail(op, opts);
     case "skill":
       return skillDetail(op);
     case "slot":
@@ -215,7 +235,7 @@ function renderOpDetail(op, opts) {
     case "stat":
       return statDetail(op);
     case "consumable":
-      return consumableDetail(op);
+      return consumableDetail(op, opts);
     case "field":
       return fieldDetail(op);
     case "meta":

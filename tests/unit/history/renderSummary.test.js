@@ -222,3 +222,78 @@ describe("the grouped form names incidental changes other than a folder move", (
     expect(summary).toContain("trash batch id");
   });
 });
+
+// ---------------------------------------------------------------------------
+// Item ids
+//
+// Runes, sigils, infusions and the enrichment/food/utility consumables are all
+// stored as GW2 item ids. Without a resolver the summary reads
+// "enrichment: (none) → 79926" — and because the one-line summary is frozen
+// into the log when the version is written, it reads that way forever.
+// ---------------------------------------------------------------------------
+
+describe("item ids are resolved to names when a resolver is given", () => {
+  const itemNameOf = (id) => ({
+    79926: "Vision Enrichment",
+    91734: "Peppercorn-Crusted Sous-Vide Steak",
+    24703: "Superior Rune of the Scholar",
+    24618: "Superior Sigil of Force",
+    43254: "Mighty +9 Agony Infusion",
+  })[Number(id)];
+
+  test("names an enrichment change on both sides", () => {
+    expect(renderSummary(
+      [{ t: "consumable", path: "enrichment", before: "43254", after: "79926" }],
+      { itemNameOf },
+    )).toBe("enrichment: Mighty +9 Agony Infusion → Vision Enrichment");
+  });
+
+  test("names a consumable set from nothing", () => {
+    expect(renderSummary(
+      [{ t: "consumable", path: "food", before: "", after: "91734" }],
+      { itemNameOf },
+    )).toBe("food: (none) → Peppercorn-Crusted Sous-Vide Steak");
+  });
+
+  test("names runes, sigils and infusions", () => {
+    expect(renderSummary(
+      [{ t: "gear", slot: "head", part: "rune", before: "", after: "24703" }],
+      { itemNameOf },
+    )).toBe("head rune: (none) → Superior Rune of the Scholar");
+    expect(renderSummary(
+      [{ t: "gear", slot: "mainhand1", part: "sigil0", before: "", after: "24618" }],
+      { itemNameOf },
+    )).toBe("main hand sigil: (none) → Superior Sigil of Force");
+    expect(renderSummary(
+      [{ t: "gear", slot: "chest", part: "infusion", before: "", after: "43254" }],
+      { itemNameOf },
+    )).toBe("chest infusion: (none) → Mighty +9 Agony Infusion");
+  });
+
+  // `relic` holds a name, and a gear slot holds a stat prefix or a weapon type.
+  // Running those through the resolver must not mangle them.
+  test("leaves values that are already words alone", () => {
+    expect(renderSummary(
+      [{ t: "consumable", path: "relic", before: "", after: "Relic of Bava Nisos" }],
+      { itemNameOf },
+    )).toBe("relic: (none) → Relic of Bava Nisos");
+    expect(renderSummary(
+      [{ t: "gear", slot: "head", part: "item", before: "Berserker's", after: "Marauder" }],
+      { itemNameOf },
+    )).toBe("head: Berserker's → Marauder");
+    expect(renderSummary(
+      [{ t: "gear", slot: "mainhand1", part: "weapon", before: "sword", after: "dagger" }],
+      { itemNameOf },
+    )).toBe("main hand: sword → dagger");
+  });
+
+  test("falls back to the raw id when there is no resolver, or it cannot name the id", () => {
+    expect(renderSummary(
+      [{ t: "consumable", path: "enrichment", before: "", after: "79926" }],
+    )).toBe("enrichment: (none) → 79926");
+    expect(renderSummary(
+      [{ t: "consumable", path: "enrichment", before: "", after: "12345" }],
+      { itemNameOf },
+    )).toBe("enrichment: (none) → 12345");
+  });
+});
