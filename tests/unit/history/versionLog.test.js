@@ -4,6 +4,7 @@ const path = require("node:path");
 const fs = require("node:fs/promises");
 const os = require("node:os");
 const { VersionLog } = require("../../../src/main/history/versionLog");
+const { TAIL_BYTES } = require("../../../src/main/history/constants");
 
 let dir;
 beforeEach(async () => { dir = await fs.mkdtemp(path.join(os.tmpdir(), "axiforge-vlog-")); });
@@ -133,5 +134,106 @@ describe("VersionLog — unlink", () => {
 
   test("unlinking a missing file is not an error", async () => {
     await expect(logAt("nope.jsonl").unlink()).resolves.toBeUndefined();
+  });
+});
+
+describe("VersionLog — non-ENOENT read failures degrade and log (fix round 1)", () => {
+  test("readAll logs and degrades on a non-ENOENT read error instead of throwing", async () => {
+    const file = path.join(dir, "r1.jsonl");
+    const log = new VersionLog(file);
+    await log.append({ v: 1 });
+
+    const err = Object.assign(new Error("permission denied"), { code: "EACCES" });
+    const readSpy = jest.spyOn(fs, "readFile").mockRejectedValueOnce(err);
+    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+
+    const { entries, dropped } = await log.readAll();
+    expect(entries).toEqual([]);
+    expect(dropped).toBe(0);
+    expect(errorSpy).toHaveBeenCalled();
+
+    readSpy.mockRestore();
+    errorSpy.mockRestore();
+  });
+
+  test("readTail and lastEntry degrade to empty instead of throwing on a non-ENOENT stat error", async () => {
+    const file = path.join(dir, "r1.jsonl");
+    const log = new VersionLog(file);
+    await log.append({ v: 1 });
+
+    const err = Object.assign(new Error("I/O error"), { code: "EIO" });
+    const statSpy = jest.spyOn(fs, "stat").mockRejectedValue(err);
+    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+
+    await expect(log.readTail(5)).resolves.toEqual([]);
+    await expect(log.lastEntry()).resolves.toBeNull();
+    expect(errorSpy).toHaveBeenCalled();
+
+    statSpy.mockRestore();
+    errorSpy.mockRestore();
+  });
+
+  test("ENOENT stays silent — no log call for a missing file", async () => {
+    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+    const log = logAt("nope.jsonl");
+
+    await log.readAll();
+    await log.readTail(5);
+    await log.lastEntry();
+
+    expect(errorSpy).not.toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
+});
+
+describe("VersionLog — lines larger than TAIL_BYTES (fix round 1)", () => {
+  // The controller's images decision keeps full before/after values in every
+  // patch, so a single JSONL line can legitimately exceed TAIL_BYTES in
+  // production. These force the ">TAIL_BYTES, no newline in the tail window"
+  // fallback branch in _repairTornTail, _findLastLineOffset, and readTail —
+  // built programmatically, not as a committed fixture.
+  function bigPayload() {
+    return "x".repeat(TAIL_BYTES + 1000);
+  }
+
+  test("repairs a torn tail even when the unterminated line exceeds TAIL_BYTES", async () => {
+    const file = path.join(dir, "r1.jsonl");
+    const log = new VersionLog(file);
+    await log.append({ v: 1 });
+    // Simulate a crash mid-write of an oversized entry: no closing brace, no
+    // trailing newline, and long enough that the tail window contains no
+    // newline at all.
+    await fs.appendFile(file, `{"v":2,"blob":"${bigPayload()}`);
+
+    const recovered = new VersionLog(file);
+    await recovered.append({ v: 3 });
+
+    const { entries, dropped } = await new VersionLog(file).readAll();
+    expect(entries.map((e) => e.v)).toEqual([1, 3]);
+    expect(dropped).toBe(0);
+  });
+
+  test("replaceLast on a cold start locates the offset when the last line exceeds TAIL_BYTES", async () => {
+    const file = path.join(dir, "r1.jsonl");
+    const warm = new VersionLog(file);
+    await warm.append({ v: 1 });
+    await warm.append({ v: 2, blob: bigPayload() });
+
+    const cold = new VersionLog(file);           // fresh instance, no cached offset
+    await cold.replaceLast({ v: 2, blob: "small" });
+
+    const { entries } = await new VersionLog(file).readAll();
+    expect(entries).toEqual([{ v: 1 }, { v: 2, blob: "small" }]);
+  });
+
+  test("readTail falls back to a full read when an oversized line dominates the tail window", async () => {
+    const file = path.join(dir, "r1.jsonl");
+    const log = new VersionLog(file);
+    await log.append({ v: 1 });
+    await log.append({ v: 2, blob: bigPayload() });
+    await log.append({ v: 3 });
+
+    const tail = await new VersionLog(file).readTail(5);
+    expect(tail.map((e) => e.v)).toEqual([3, 2, 1]);
   });
 });

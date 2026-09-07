@@ -11,14 +11,26 @@
 //   - a torn final line (partial write from a crash mid-append) is repaired —
 //     truncated back to the last complete line — before the next append, so
 //     damage never compounds onto a second entry;
-//   - readAll/readTail never throw on a parse failure; unparseable lines are
-//     dropped and counted;
+//   - readAll/readTail never throw on a parse failure, or on any other read
+//     failure (permissions, I/O errors, ...) — they log the failure and
+//     degrade to an empty result, mirroring src/main/jsonFile.js's
+//     read-degrade-and-log pattern. A missing file is not a failure and is
+//     never logged;
 //   - replaceLast uses a cached byte offset + ftruncate so it costs O(1), not
 //     a rewrite of the whole file.
+//
+// Concurrency: this class assumes at most one in-flight call per instance at
+// a time (no overlapping unawaited append()/replaceLast() calls on the same
+// file). Task 4's write queue is what serializes callers; nothing in here
+// guards against interleaved stat→append sequences.
 
 const fs = require("node:fs/promises");
 const path = require("node:path");
 const { TAIL_BYTES } = require("./constants");
+
+function logDegrade(action, filePath, err) {
+  console.error(`[versionLog] ${action} failed for ${path.basename(filePath)}:`, err && err.message);
+}
 
 async function statSize(filePath) {
   try {
@@ -27,6 +39,22 @@ async function statSize(filePath) {
   } catch (err) {
     if (err && err.code === "ENOENT") return null;
     throw err;
+  }
+}
+
+/**
+ * Read the final `TAIL_BYTES` of a file (or the whole file if smaller).
+ * Returns the raw buffer and the absolute offset the read started at.
+ */
+async function readTailWindow(filePath, size) {
+  const readFrom = Math.max(0, size - TAIL_BYTES);
+  const handle = await fs.open(filePath, "r");
+  try {
+    const buf = Buffer.alloc(size - readFrom);
+    await handle.read(buf, 0, buf.length, readFrom);
+    return { buf, readFrom };
+  } finally {
+    await handle.close();
   }
 }
 
@@ -65,16 +93,7 @@ class VersionLog {
     const size = await statSize(this.filePath);
     if (size === null || size === 0) return size;
 
-    const readFrom = Math.max(0, size - TAIL_BYTES);
-    const handle = await fs.open(this.filePath, "r");
-    let tail;
-    try {
-      const buf = Buffer.alloc(size - readFrom);
-      await handle.read(buf, 0, buf.length, readFrom);
-      tail = buf;
-    } finally {
-      await handle.close();
-    }
+    const { buf: tail, readFrom } = await readTailWindow(this.filePath, size);
 
     if (tail.length === 0 || tail[tail.length - 1] === 0x0a /* \n */) {
       return size;
@@ -123,16 +142,7 @@ class VersionLog {
     const size = await statSize(this.filePath);
     if (size === null || size === 0) return 0;
 
-    const readFrom = Math.max(0, size - TAIL_BYTES);
-    const handle = await fs.open(this.filePath, "r");
-    let tail;
-    try {
-      const buf = Buffer.alloc(size - readFrom);
-      await handle.read(buf, 0, buf.length, readFrom);
-      tail = buf;
-    } finally {
-      await handle.close();
-    }
+    const { buf: tail, readFrom } = await readTailWindow(this.filePath, size);
 
     // Strip a single terminating newline before searching, so we find the
     // start of the *last* line, not an empty string after it.
@@ -172,46 +182,52 @@ class VersionLog {
       text = await fs.readFile(this.filePath, "utf8");
     } catch (err) {
       if (err && err.code === "ENOENT") return { entries: [], dropped: 0 };
+      logDegrade("readAll", this.filePath, err);
       return { entries: [], dropped: 0 };
     }
     return parseLines(text);
   }
 
   async readTail(limit) {
-    const size = await statSize(this.filePath);
+    let size;
+    try {
+      size = await statSize(this.filePath);
+    } catch (err) {
+      logDegrade("readTail", this.filePath, err);
+      return [];
+    }
     if (size === null || size === 0) return [];
 
-    const readFrom = Math.max(0, size - TAIL_BYTES);
-    const truncated = readFrom > 0;
+    try {
+      const readFrom = Math.max(0, size - TAIL_BYTES);
+      const truncated = readFrom > 0;
 
-    let text;
-    if (!truncated) {
-      text = await fs.readFile(this.filePath, "utf8");
-    } else {
-      const handle = await fs.open(this.filePath, "r");
-      try {
-        const buf = Buffer.alloc(size - readFrom);
-        await handle.read(buf, 0, buf.length, readFrom);
+      let text;
+      if (!truncated) {
+        text = await fs.readFile(this.filePath, "utf8");
+      } else {
+        const { buf } = await readTailWindow(this.filePath, size);
         text = buf.toString("utf8");
-      } finally {
-        await handle.close();
+        // The read did not start at byte 0, so its first line is almost
+        // certainly a partial fragment of a preceding line — discard it.
+        const firstNl = text.indexOf("\n");
+        text = firstNl === -1 ? "" : text.slice(firstNl + 1);
       }
-      // The read did not start at byte 0, so its first line is almost
-      // certainly a partial fragment of a preceding line — discard it.
-      const firstNl = text.indexOf("\n");
-      text = firstNl === -1 ? "" : text.slice(firstNl + 1);
-    }
 
-    const { entries } = parseLines(text);
-    entries.reverse();
-    if (truncated && entries.length < limit) {
-      // Not enough survived the truncated window (e.g. very large entries) —
-      // fall back to a full read to guarantee up to `limit` results.
-      const full = await this.readAll();
-      full.entries.reverse();
-      return full.entries.slice(0, limit);
+      const { entries } = parseLines(text);
+      entries.reverse();
+      if (truncated && entries.length < limit) {
+        // Not enough survived the truncated window (e.g. very large entries) —
+        // fall back to a full read to guarantee up to `limit` results.
+        const full = await this.readAll();
+        full.entries.reverse();
+        return full.entries.slice(0, limit);
+      }
+      return entries.slice(0, limit);
+    } catch (err) {
+      logDegrade("readTail", this.filePath, err);
+      return [];
     }
-    return entries.slice(0, limit);
   }
 
   async lastEntry() {
