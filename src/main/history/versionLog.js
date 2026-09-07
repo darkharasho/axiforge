@@ -89,8 +89,8 @@ class VersionLog {
    * Returns the (possibly repaired) file size, or null if the file does not
    * exist.
    */
-  async _repairTornTail() {
-    const size = await statSize(this.filePath);
+  async _repairTornTail(knownSize) {
+    const size = knownSize === undefined ? await statSize(this.filePath) : knownSize;
     if (size === null || size === 0) return size;
 
     const { buf: tail, readFrom } = await readTailWindow(this.filePath, size);
@@ -138,8 +138,8 @@ class VersionLog {
    * Find the byte offset of the start of the last line in the file, without
    * a cached value. Used on cold start (a fresh VersionLog instance).
    */
-  async _findLastLineOffset() {
-    const size = await statSize(this.filePath);
+  async _findLastLineOffset(knownSize) {
+    const size = knownSize === undefined ? await statSize(this.filePath) : knownSize;
     if (size === null || size === 0) return 0;
 
     const { buf: tail, readFrom } = await readTailWindow(this.filePath, size);
@@ -180,12 +180,19 @@ class VersionLog {
    */
   async _lastLineOffset() {
     const sizeBefore = await statSize(this.filePath);
-    const sizeAfter = await this._repairTornTail();
-    // A repair moved the end of the file, so any cached offset describes a
-    // layout that no longer exists.
+    const sizeAfter = await this._repairTornTail(sizeBefore);
+    // DEFENCE IN DEPTH, not a live guard. `_lastOffset` holds the start of the
+    // last line THIS instance wrote, and within the single-writer contract this
+    // class documents, corruption can only append bytes after that point — so
+    // truncating at the stale offset would discard the fragment anyway and the
+    // line below changes nothing. It earns its keep only once a second writer
+    // is in play: if another process appended a COMPLETE line and then died
+    // mid-append, the cached offset points behind that line and truncating
+    // there would destroy it. Cheap, and a future caller could make it
+    // load-bearing. @see the "a second writer" test in versionLog.test.js.
     if (sizeAfter !== sizeBefore) this._lastOffset = null;
     const offset = this._lastOffset;
-    if (offset === null || offset === undefined) return this._findLastLineOffset();
+    if (offset === null || offset === undefined) return this._findLastLineOffset(sizeAfter);
     return offset;
   }
 

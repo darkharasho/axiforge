@@ -346,9 +346,13 @@ describe("VersionLog — destructive writes repair a torn tail first", () => {
     expect(dropped).toBe(0);
   });
 
-  test("a stale cached offset is dropped when the repair moves the end of the file", async () => {
-    // The instance appended, so it holds an offset; the file is then torn
-    // underneath it. Trusting the cache would write onto the fragment.
+  // Deliberately NOT titled "a stale cached offset is dropped". The cache here
+  // holds the start of the last line this instance wrote, which still precedes
+  // the fragment, so truncating at it would discard the fragment either way —
+  // the offset is stale-looking but correct. What this pins is that the repair
+  // runs on the WARM route too, not only on a cold instance that has to go
+  // through _findLastLineOffset.
+  test("a warm instance whose file is torn underneath it still replaces coherently", async () => {
     const file = path.join(dir, "r1.jsonl");
     const log = new VersionLog(file);
     await log.append({ v: 1 });
@@ -360,6 +364,43 @@ describe("VersionLog — destructive writes repair a torn tail first", () => {
     const { entries, dropped } = await new VersionLog(file).readAll();
     expect(entries).toEqual([{ v: 1 }, { v: 2, summary: "new" }]);
     expect(dropped).toBe(0);
+  });
+
+  // The one shape in which the cached offset is genuinely WRONG rather than
+  // merely stale-looking, and so the only place the invalidation in
+  // _lastLineOffset does any work: a SECOND writer appended a complete line
+  // after ours and then died mid-append. Our cache now points behind a line we
+  // did not write, and truncating there would destroy it.
+  //
+  // This is outside the single-in-flight-writer contract this class documents,
+  // so no current caller can reach it — the version store holds one VersionLog
+  // per record in one process. It is pinned because the invalidation is kept as
+  // defence in depth, and an untested defence is a claim rather than a guard.
+  describe("a second writer appended before dying mid-append", () => {
+    async function tornBySecondWriter() {
+      const file = path.join(dir, "r1.jsonl");
+      const log = new VersionLog(file);
+      await log.append({ v: 1 });                                  // caches offset 0
+      await fs.appendFile(file, '{"v":2,"summary":"old"}\n');       // not ours
+      await fs.appendFile(file, '{"v":3,"tor');                    // ...and it crashed
+      return { file, log };
+    }
+
+    test("replaceLast does not truncate away the line it never wrote", async () => {
+      const { file, log } = await tornBySecondWriter();
+      await log.replaceLast({ v: 2, summary: "new" });
+      const { entries, dropped } = await new VersionLog(file).readAll();
+      expect(entries).toEqual([{ v: 1 }, { v: 2, summary: "new" }]);
+      expect(dropped).toBe(0);
+    });
+
+    test("removeLast drops one entry, not everything after its cached offset", async () => {
+      const { file, log } = await tornBySecondWriter();
+      await log.removeLast();
+      const { entries, dropped } = await new VersionLog(file).readAll();
+      expect(entries).toEqual([{ v: 1 }]);
+      expect(dropped).toBe(0);
+    });
   });
 
   test("the log is coherent after a torn removal followed by a fresh append", async () => {
