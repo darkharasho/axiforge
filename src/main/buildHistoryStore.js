@@ -31,6 +31,10 @@ class BuildHistoryStore extends HistoryStore {
       // editor — so every save is already a decision, and merging two of them
       // inside a five-minute window destroys the state between: change an
       // enrichment and change it again, and the log kept only the second.
+      //
+      // That reasoning is about the editor, so this is the DEFAULT and not the
+      // rule: teamSync.js passes `coalesce: true` on the pull path, where a
+      // version is a poll sample rather than a click.
       coalesce: false,
       // Moving a build between folders, adding it to a comp, dragging it in
       // the library: written on the user's behalf, not edits to the build.

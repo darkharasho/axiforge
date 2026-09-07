@@ -237,45 +237,111 @@ describe("TeamSync — pull", () => {
     expect(synced[1].author).toBeUndefined();
   });
 
-  // Builds do not coalesce (buildHistoryStore.js): a save is a decision, and
-  // that holds for a teammate's saves arriving over sync exactly as it does for
-  // the user's own. A typo pulled and then fixed is two things the teammate
-  // did, and both are worth a row — the alternative is a shared build whose
-  // history quietly disagrees with what the teammate remembers doing.
-  test("a teammate's edit that undoes itself keeps every version, and announces each", async () => {
+  // Builds default to not coalescing (buildHistoryStore.js) because a save in
+  // the editor is a click. A pull is not: it is whatever the 30s poll happened
+  // to observe, so teamSync.js overrides the default. Without it, an hour of a
+  // teammate iterating writes ~120 versions and evicts the user's own history
+  // for that build past MAX_VERSIONS.
+  test("a teammate's edits inside the window collapse into one version", async () => {
     h = await makeHarness();
     await seedTeam(h);
     await h.buildStore.upsertBuild({ id: "b1", title: "Old", notes: "keep", folderId: "t" });
 
     // Three pulls from the same teammate, milliseconds apart — well inside
     // COALESCE_WINDOW_MS, and all on the team-sync source.
+    const edit = (title, notes, version, seq) => item({
+      id: "b1", version, seq, updatedBy: who("iruixos"),
+      body: { id: "b1", title, notes },
+    });
+    // The first pull writes the record's origin keyframe, which never
+    // coalesces — v1 is where the build came from. Merging starts at the pull
+    // after that.
+    h.api.changes.mockResolvedValueOnce({ items: [edit("New", "keep", 2, 2)], nextSeq: 2, hasMore: false });
+    await h.sync.pullTeam("t");
+    h.api.changes.mockResolvedValueOnce({ items: [edit("New", "reworked", 3, 3)], nextSeq: 3, hasMore: false });
+    await h.sync.pullTeam("t");
+    h.api.changes.mockResolvedValueOnce({ items: [edit("Newer", "reworked", 4, 4)], nextSeq: 4, hasMore: false });
+    await h.sync.pullTeam("t");
+
+    // One row for the last two pulls, not two — and it describes the whole of
+    // what the teammate did across them, not just the last thing, so nothing
+    // pulled is missing from the log.
+    const versions = (await h.historyStore.listVersions("b1", { limit: 200 })).versions;
+    expect(versions.map((e) => e.v)).toEqual([2, 1]);
+    expect(await h.historyStore.getVersion("b1", 2)).toMatchObject({ title: "Newer", notes: "reworked" });
+    expect(versions[0].summary).toContain("title");
+    expect(versions[0].summary).toContain("notes");
+
+    // Each pull still announces itself: coalescing is about what the log keeps,
+    // not about hiding that a teammate's change landed.
+    const synced = h.events.filter((e) => e.status === "synced" && e.id === "b1");
+    expect(synced).toHaveLength(3);
+    expect(synced[2].author).toBe("iruixos");
+  });
+
+  // The other half of coalescing: an edit that returns the document to exactly
+  // where it was leaves nothing to record. The typo never existed on this
+  // machine as a state anyone saw, and a row saying so would be a row whose
+  // ops describe a transition the live document no longer matches.
+  test("a teammate's edit that undoes itself inside the window leaves no trace", async () => {
+    h = await makeHarness();
+    await seedTeam(h);
+    await h.buildStore.upsertBuild({ id: "b1", title: "Old", notes: "keep", folderId: "t" });
+
     const edit = (title, version, seq) => item({
       id: "b1", version, seq, updatedBy: who("iruixos"),
       body: { id: "b1", title, notes: "keep" },
     });
+    // Again, past the origin keyframe first.
     h.api.changes.mockResolvedValueOnce({ items: [edit("New", 2, 2)], nextSeq: 2, hasMore: false });
     await h.sync.pullTeam("t");
     h.api.changes.mockResolvedValueOnce({ items: [edit("Typo", 3, 3)], nextSeq: 3, hasMore: false });
     await h.sync.pullTeam("t");
-
     expect(((await h.historyStore.listVersions("b1", { limit: 200 })).versions).map((e) => e.v)).toEqual([2, 1]);
 
-    // The teammate undoes the typo. The document is back where version 1 left
-    // it, but that is not the same as nothing having happened: the typo was
-    // real, it was pulled, and the fix is a third thing the teammate did.
     h.api.changes.mockResolvedValueOnce({ items: [edit("New", 4, 4)], nextSeq: 4, hasMore: false });
     await h.sync.pullTeam("t");
 
-    expect(((await h.historyStore.listVersions("b1", { limit: 200 })).versions).map((e) => e.v)).toEqual([3, 2, 1]);
-    expect(await h.historyStore.getVersion("b1", 2)).toMatchObject({ title: "Typo" });
-    expect(await h.historyStore.getVersion("b1", 3)).toMatchObject({ title: "New" });
+    expect(((await h.historyStore.listVersions("b1", { limit: 200 })).versions).map((e) => e.v)).toEqual([1]);
 
+    // Nothing to announce, because nothing changed in the end...
     const synced = h.events.filter((e) => e.status === "synced" && e.id === "b1");
     expect(synced).toHaveLength(3);
-    expect(synced[2].summary).toBe('title: "Typo" → "New"');
-    expect(synced[2].author).toBe("iruixos");
-    // ...and the edit still applied locally; only the announcement is absent.
+    expect(synced[2].summary).toBeUndefined();
+    // ...and the edit still applied locally; only the log entry is absent.
     expect((await h.buildStore.listBuilds()).find((b) => b.id === "b1").title).toBe("New");
+  });
+
+  // Coalescing keys on author AND source, so the pull path can never merge into
+  // a version the user wrote themselves — the failure the store default exists
+  // to prevent. A local save immediately followed by a teammate's pull is two
+  // rows, always.
+  test("a pulled edit never merges into the user's own save", async () => {
+    h = await makeHarness();
+    await seedTeam(h);
+    await h.buildStore.upsertBuild({ id: "b1", title: "Old", notes: "keep", folderId: "t" });
+    await h.historyStore.appendVersion({
+      recordId: "b1", before: null, after: { id: "b1", title: "Old", notes: "keep" },
+    });
+    await h.historyStore.appendVersion({
+      recordId: "b1", before: { id: "b1", title: "Old", notes: "keep" },
+      after: { id: "b1", title: "Mine", notes: "keep" },
+    });
+
+    h.api.changes.mockResolvedValueOnce({
+      items: [item({
+        id: "b1", version: 2, seq: 2, updatedBy: who("iruixos"),
+        body: { id: "b1", title: "Theirs", notes: "keep" },
+      })],
+      nextSeq: 2,
+      hasMore: false,
+    });
+    await h.sync.pullTeam("t");
+
+    const versions = (await h.historyStore.listVersions("b1", { limit: 200 })).versions;
+    expect(versions.map((e) => e.v)).toEqual([3, 2, 1]);
+    expect(await h.historyStore.getVersion("b1", 2)).toMatchObject({ title: "Mine" });
+    expect(versions[0].source).toBe("team-sync");
   });
 
   test("a teammate's comp delete is staged and recorded like a build's", async () => {

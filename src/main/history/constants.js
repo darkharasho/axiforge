@@ -16,13 +16,16 @@ const KEYFRAME_INTERVAL = 100;
 // Successive edits by the same author and source inside this window merge into
 // one version instead of appending a new one.
 //
-// Only comps use this. A build is saved by an explicit click, so every version
-// already corresponds to a decision the user made, and merging two of them
-// destroys the middle state: setting an enrichment and then changing it again
-// inside the window left one op reading `(none) -> the second one`, with the
-// first nowhere on disk. Comps DO autosave — the notes textarea writes on a
-// debounce — so without this, typing a paragraph would log a version per
-// pause. See `coalesce` in historyStore.js's constructor.
+// Comps always use this; builds use it only on the team-sync pull path. A
+// build saved in the editor is an explicit click, so every version already
+// corresponds to a decision the user made, and merging two of them destroys
+// the middle state: setting an enrichment and then changing it again inside
+// the window left one op reading `(none) -> the second one`, with the first
+// nowhere on disk. Comps DO autosave — the notes textarea writes on a debounce
+// — so without this, typing a paragraph would log a version per pause. A
+// pulled build is neither: it is a 30s poll sample of a teammate's session, so
+// it coalesces (see teamSync.js). See `coalesce` in historyStore.js's
+// constructor.
 const COALESCE_WINDOW_MS = 5 * 60 * 1000;
 
 // How many versions a record keeps. Older ones are pruned.

@@ -841,6 +841,17 @@ class TeamSync {
         // has no history yet.
         const version = await this.historyStore.appendVersion({
           recordId: item.id, before: existing, after: saved, author, source: "team-sync",
+          // Overriding the store's default, which is off for builds because a
+          // local save is an explicit click. A pull is not: it is whatever the
+          // 30s poll happened to observe, so consecutive versions here are
+          // samples of a teammate's session rather than their save points, and
+          // merging two loses no decision. Left off, an hour of a teammate
+          // iterating writes ~120 versions and evicts the user's OWN history
+          // for that build past MAX_VERSIONS — the undo net gone to someone
+          // else's churn. Coalescing keys on author AND source, so a team-sync
+          // version can only ever merge with another from the same teammate;
+          // it can never swallow a local save.
+          coalesce: true,
         }).catch((err) => {
           console.warn("[history] team-sync appendVersion failed:", err.message);
           return null;
