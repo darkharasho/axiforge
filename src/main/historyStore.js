@@ -6,7 +6,7 @@ const crypto = require("node:crypto");
 const { VersionLog } = require("./history/versionLog");
 const { renderSummary } = require("./history/renderSummary");
 const {
-  KEYFRAME_INTERVAL, COALESCE_WINDOW_MS, DOC_CACHE_RECORDS, MAX_VERSIONS,
+  KEYFRAME_INTERVAL, COALESCE_WINDOW_MS, DOC_CACHE_RECORDS, MAX_VERSIONS, PRUNE_CHECK_INTERVAL,
 } = require("./history/constants");
 
 /**
@@ -91,6 +91,10 @@ class HistoryStore {
   // on every write whose result we cannot state exactly, and re-seeded from
   // the document we just wrote otherwise.
   #docs = new Map();
+  // name -> appends since this record was last considered for pruning. Purely
+  // in-session: a fresh process starts every record at zero and the startup
+  // sweep is what covers whatever grew before it.
+  #sincePrune = new Map();
 
   /**
    * @param {string} baseDir
@@ -334,11 +338,39 @@ class HistoryStore {
     }
 
     const v = last.v + 1;
-    return this.#write(log, recordId, this.#entry({
+    const written = await this.#write(log, recordId, this.#entry({
       v, ts, author, source, kind, ops, lostBase,
       keyframe: isDelete || lostBase || v % KEYFRAME_INTERVAL === 1,
       after, sOpts,
     }), { memo: [[v, after], [last.v, base]] });
+    // Only the appending path counts. Coalescing replaces an entry in place, so
+    // it leaves the log exactly as long as it was.
+    await this.#maybePrune(recordId);
+    return written;
+  }
+
+  /**
+   * Prune this record if enough has been appended to it since the last check.
+   *
+   * Called from inside the write queue, so it runs `#pruneRecord` directly:
+   * going through the public `pruneRecord` would enqueue behind the append that
+   * is still running and deadlock.
+   *
+   * A save is never worth failing over a prune, so this swallows.
+   */
+  async #maybePrune(recordId) {
+    const name = sanitizeId(recordId);
+    const since = (this.#sincePrune.get(name) || 0) + 1;
+    if (since < PRUNE_CHECK_INTERVAL) {
+      this.#sincePrune.set(name, since);
+      return;
+    }
+    this.#sincePrune.set(name, 0);
+    try {
+      await this.#pruneRecord(recordId);
+    } catch (err) {
+      logDegrade("prune after append", recordId, err);
+    }
   }
 
   async #summaryOptions(recordId, perCall) {
@@ -542,6 +574,7 @@ class HistoryStore {
    * halfway through would be written at an offset the rename then throws away.
    */
   async pruneRecord(recordId) {
+    this.#sincePrune.set(sanitizeId(recordId), 0);
     return this.#enqueue(() => this.#pruneRecord(recordId)).catch((err) => {
       logDegrade("pruneRecord", recordId, err);
       return null;
@@ -598,6 +631,7 @@ class HistoryStore {
         logDegrade("deleteHistory", recordId, err);
       }
       this.#logs.delete(name);
+      this.#sincePrune.delete(name);
       // Not a staleness guard — the fingerprint above already handles that,
       // and a deleted log has no tail to match against. This frees the two
       // documents the memo holds for a record that no longer exists.

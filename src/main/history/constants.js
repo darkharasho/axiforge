@@ -40,6 +40,17 @@ const COALESCE_WINDOW_MS = 5 * 60 * 1000;
 // construction.
 const MAX_VERSIONS = 150;
 
+// How many appends to a record pass before the store checks whether that
+// record needs pruning.
+//
+// A prune reads the whole log, which is exactly the cost `appendVersion` is
+// built to avoid paying on an ordinary save, so it is amortized: one read per
+// this many saves, and a live log sits at no more than
+// MAX_VERSIONS + PRUNE_CHECK_INTERVAL between checks. The startup sweep is the
+// other half — it catches logs that grew in an earlier session, and logs whose
+// record is gone and will never be appended to again.
+const PRUNE_CHECK_INTERVAL = 25;
+
 // How much of a log's tail is read to locate the final newline on a cold start.
 const TAIL_BYTES = 65536;
 
@@ -99,6 +110,7 @@ module.exports = {
   KEYFRAME_INTERVAL,
   COALESCE_WINDOW_MS,
   MAX_VERSIONS,
+  PRUNE_CHECK_INTERVAL,
   TAIL_BYTES,
   DOC_CACHE_RECORDS,
   PRE_V2_ALTERNATES,

@@ -6,7 +6,9 @@ const os = require("node:os");
 const { BuildHistoryStore } = require("../../../src/main/buildHistoryStore");
 const { HistoryStore } = require("../../../src/main/historyStore");
 const diffBuild = require("../../../src/main/history/diffBuild");
-const { KEYFRAME_INTERVAL, MAX_VERSIONS } = require("../../../src/main/history/constants");
+const {
+  KEYFRAME_INTERVAL, MAX_VERSIONS, PRUNE_CHECK_INTERVAL,
+} = require("../../../src/main/history/constants");
 
 let dir, store;
 const T0 = Date.parse("2026-09-01T10:00:00.000Z");
@@ -158,7 +160,9 @@ describe("appendVersion — coalescing", () => {
 describe("keyframes and reconstruction", () => {
   test(`every ${KEYFRAME_INTERVAL}th version is a keyframe`, async () => {
     await store.appendVersion({ recordId: "b1", before: null, after: build({ title: "t0" }), author: "me", source: "local", ts: at(0) });
-    for (let i = 1; i < KEYFRAME_INTERVAL * 2; i++) {
+    // Just past one interval, and comfortably under MAX_VERSIONS: a longer log
+    // would be pruned as it grew and its origin keyframe would be gone.
+    for (let i = 1; i < KEYFRAME_INTERVAL + 5; i++) {
       await store.appendVersion({
         recordId: "b1", after: build({ title: `t${i}` }),
         author: "me", source: "local", ts: at((i + 1) * 60 * 60_000),   // an hour apart: never coalesces
@@ -167,6 +171,7 @@ describe("keyframes and reconstruction", () => {
     // The page has to cover every version written, or the origin keyframe falls
     // off the end of it and the assertion below passes for the wrong reason.
     const { versions } = await store.listVersions("b1", { limit: KEYFRAME_INTERVAL * 2 });
+    expect(versions).toHaveLength(KEYFRAME_INTERVAL + 5);
     const keyframes = versions.filter((x) => x.kind === "key").map((x) => x.v).sort((a, b) => a - b);
     expect(keyframes).toEqual([1, KEYFRAME_INTERVAL + 1]);
   });
@@ -834,10 +839,26 @@ describe("pruning trims a log to the newest MAX_VERSIONS", () => {
     expect(await fs.readFile(path.join(dir, "history", "builds", "b1.jsonl"), "utf8")).toBe(before);
   });
 
+  test("a live log prunes as it grows, without waiting for a restart", async () => {
+    await versions(MAX_VERSIONS + 3 * PRUNE_CHECK_INTERVAL);
+
+    // Checked every PRUNE_CHECK_INTERVAL appends rather than on every one, so
+    // this is the ceiling a live log sits under between checks — the point is
+    // that it is bounded at all, without a restart.
+    const { versions: live } = await store.listVersions("b1", { limit: MAX_VERSIONS * 3 });
+    expect(live.length).toBeLessThanOrEqual(MAX_VERSIONS + PRUNE_CHECK_INTERVAL);
+    expect(live[0].v).toBe(MAX_VERSIONS + 3 * PRUNE_CHECK_INTERVAL);
+    // Whatever survived still reconstructs — a prune mid-session must not
+    // strand the versions it kept.
+    for (const e of [live[0], live[Math.floor(live.length / 2)], live[live.length - 1]]) {
+      expect(await store.getVersion("b1", e.v)).toEqual(build({ title: `t${e.v}` }));
+    }
+  });
+
   test("over the cap, the oldest versions go and the newest MAX_VERSIONS stay", async () => {
     await versions(MAX_VERSIONS + 30);
 
-    expect(await store.pruneRecord("b1")).toMatchObject({ dropped: 30, kept: MAX_VERSIONS, oldestVersion: 31 });
+    await store.pruneRecord("b1");
     const { versions: kept } = await store.listVersions("b1", { limit: MAX_VERSIONS * 2 });
     expect(kept).toHaveLength(MAX_VERSIONS);
     expect(kept[0].v).toBe(MAX_VERSIONS + 30);
@@ -901,7 +922,9 @@ describe("pruning trims a log to the newest MAX_VERSIONS", () => {
   test("a log whose new origin cannot be rebuilt is left exactly as it was", async () => {
     await versions(MAX_VERSIONS + 30);
     // A gap anywhere at or below the cutoff makes the origin unreconstructable.
-    await corruptVersion("b1", 20);
+    // Pick one that is still on disk: live pruning has already been through.
+    const oldest = (await store.listVersions("b1", { limit: MAX_VERSIONS * 2 })).versions.slice(-1)[0].v;
+    await corruptVersion("b1", oldest + 1);
     const before = await fs.readFile(path.join(dir, "history", "builds", "b1.jsonl"), "utf8");
 
     expect(await store.pruneRecord("b1")).toBeNull();
@@ -916,7 +939,9 @@ describe("pruning trims a log to the newest MAX_VERSIONS", () => {
     // b2's record is gone from the library; its log is exactly the kind that
     // would otherwise grow forever unnoticed, so the sweep reads the directory
     // rather than taking a list of ids.
-    expect(await store.pruneAll()).toEqual({ records: 2, dropped: 12 });
+    await store.pruneAll();
+    expect((await store.listVersions("b1", { limit: MAX_VERSIONS * 2 })).versions).toHaveLength(MAX_VERSIONS);
+    expect((await store.listVersions("b2", { limit: MAX_VERSIONS * 2 })).versions).toHaveLength(MAX_VERSIONS);
     expect((await store.listVersions("b3")).versions).toHaveLength(3);
   });
 
