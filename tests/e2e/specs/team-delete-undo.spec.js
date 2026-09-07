@@ -112,12 +112,19 @@ test.describe("A teammate's delete lands in the trash, not the void", () => {
   });
 
   test("its history survives, and records who deleted it", async () => {
-    const history = await window.evaluate(() => desktopApi.getBuildHistory("mate-build"));
+    const { versions: history } = await window.evaluate(() => desktopApi.getBuildHistory("mate-build"));
     const entry = history.find((e) => e.summary === "Deleted");
     expect(entry).toBeTruthy();
-    expect(entry.authorLogin).toBe("mate");
-    // The snapshot is what makes "Bring it back" possible from the history panel.
-    expect(entry.snapshot.title).toBe("Doomed by mate");
+    expect(entry.author).toBe("mate");
+    // v2 keeps no per-entry snapshot, but a deletion is always recorded as a
+    // full keyframe (never a patch — see the `isDelete` branch in
+    // historyStore.js), so the version itself is what makes "Bring it back"
+    // possible from the history panel.
+    const doc = await window.evaluate(
+      (v) => desktopApi.getHistoryVersion("build", "mate-build", v),
+      entry.v
+    );
+    expect(doc.title).toBe("Doomed by mate");
   });
 
   test("what a teammate made is theirs to put back, not yours", async () => {
@@ -288,11 +295,15 @@ test.describe("The folder history panel shows the deletion", () => {
     // getFolderHistory used to build its title lookup from listBuilds(), which
     // filters trashed records — so a build vanished from its own folder's
     // history the moment it was deleted, taking every earlier entry with it.
+    // getFolderHistory returns a bare array — the merged feed, not a paged
+    // log — deliberately unlike the per-record reads. Its entries carry
+    // recordId/recordKind/recordTitle/recordDeleted; the pre-v2 names were
+    // buildTitle/buildDeleted (see folderFeed.js).
     const entries = await window.evaluate((id) => desktopApi.getFolderHistory(id), TEAM_ID);
-    const deletion = entries.find((e) => e.buildTitle === "Gone but logged" && e.summary === "Deleted");
+    const deletion = entries.find((e) => e.recordTitle === "Gone but logged" && e.summary === "Deleted");
     expect(deletion).toBeTruthy();
-    expect(deletion.authorLogin).toBe("mate");
-    expect(deletion.buildDeleted).toBe(true);
+    expect(deletion.author).toBe("mate");
+    expect(deletion.recordDeleted).toBe(true);
   });
 
   test("restoring that version from history undeletes the build", async () => {
@@ -301,11 +312,11 @@ test.describe("The folder history panel shows the deletion", () => {
     // means a plain revert would write a build nothing draws. The revert path
     // has to take it out of the trash first.
     const entries = await window.evaluate((id) => desktopApi.getFolderHistory(id), TEAM_ID);
-    const deletion = entries.find((e) => e.buildTitle === "Gone but logged" && e.summary === "Deleted");
+    const deletion = entries.find((e) => e.recordTitle === "Gone but logged" && e.summary === "Deleted");
 
     await window.evaluate(
-      ({ entryId }) => desktopApi.revertBuild("hist-build", entryId),
-      { entryId: deletion.id }
+      ({ v }) => desktopApi.revertBuild("hist-build", v),
+      { v: deletion.v }
     );
     await window.waitForTimeout(600);
 
