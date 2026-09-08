@@ -1,5 +1,6 @@
 import { state } from "../state.js";
 import { teamRootFor } from "../teams.js";
+import { matchesSmartFolder, ruleContext } from "./smart-folders.js";
 
 /** Load all folders from main process into state.folders. */
 export async function loadFolders() {
@@ -167,13 +168,12 @@ export function getVisibleBuilds() {
     } else if (folder.id === "__all-comps") {
       // "All Comps" smart folder: no builds shown
       return [];
-    } else if (folder.type === "smart-profession") {
-      // Smart folders aggregate ALL matching builds, including those in comps
-      builds = builds.filter((b) => b.profession === folder.id);
-    } else if (folder.type === "smart-gamemode") {
-      builds = builds.filter(
-        (b) => (b.gameMode || "pve") === folder.id,
-      );
+    } else if (folder.type === "smart-rule") {
+      // Every smart folder is a rule now -- including By Profession and By Game
+      // Mode, whose rows carry a generated rule instead of a magic type string.
+      // Smart folders aggregate ALL matching builds, wherever they are filed.
+      const ctx = ruleContext();
+      builds = builds.filter((b) => matchesSmartFolder(folder.smartFolder, b, ctx));
     } else {
       if (folder.type === "custom") {
         // Searching reaches through sub-folders, so the scope is the whole

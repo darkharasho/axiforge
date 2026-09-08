@@ -255,7 +255,7 @@ function isCombinedView() {
   if (hasSearchQuery()) return true;
   const f = state.currentFolder;
   if (!f) return false;
-  return f.type === "smart-profession" || f.type === "smart-gamemode" || f.type === "all";
+  return f.type === "smart-rule" || f.type === "all";
 }
 
 
