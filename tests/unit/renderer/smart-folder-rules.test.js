@@ -171,3 +171,120 @@ describe("pinned", () => {
     expect(matchesSmartFolder(sf([cond("pinned", "isFalse")]), build({ pinned: undefined }), CTX)).toBe(true);
   });
 });
+
+describe("location", () => {
+  const FOLDERS = [
+    { id: "f-root", name: "wvw", parentId: null },
+    { id: "f-child", name: "zerg", parentId: "f-root" },
+    { id: "f-other", name: "raids", parentId: null },
+  ];
+  const ctx = { folders: FOLDERS, now: CTX.now };
+
+  test("isUnfiled matches a build with no folder", () => {
+    expect(matchesSmartFolder(sf([cond("location", "isUnfiled")]), build({ folderId: null }), ctx)).toBe(true);
+  });
+
+  test("isUnfiled does not match a filed build", () => {
+    expect(matchesSmartFolder(sf([cond("location", "isUnfiled")]), build({ folderId: "f-root" }), ctx)).toBe(false);
+  });
+
+  test("inFolder matches the folder itself", () => {
+    expect(matchesSmartFolder(sf([cond("location", "inFolder", "f-root")]), build({ folderId: "f-root" }), ctx)).toBe(true);
+  });
+
+  test("inFolder includes subfolders", () => {
+    expect(matchesSmartFolder(sf([cond("location", "inFolder", "f-root")]), build({ folderId: "f-child" }), ctx)).toBe(true);
+  });
+
+  test("inFolder excludes a sibling tree", () => {
+    expect(matchesSmartFolder(sf([cond("location", "inFolder", "f-root")]), build({ folderId: "f-other" }), ctx)).toBe(false);
+  });
+
+  test("notInFolder is the exact negation, so an unfiled build satisfies it", () => {
+    expect(matchesSmartFolder(sf([cond("location", "notInFolder", "f-root")]), build({ folderId: null }), ctx)).toBe(true);
+  });
+
+  test("a rule pointing at a deleted folder matches nothing instead of throwing", () => {
+    expect(matchesSmartFolder(sf([cond("location", "inFolder", "f-gone")]), build({ folderId: "f-root" }), ctx)).toBe(false);
+  });
+});
+
+describe("ownership / team", () => {
+  const FOLDERS = [
+    { id: "t-mine", name: "My Team", parentId: null, teamId: "team-a", shared: true, role: "owner" },
+    { id: "t-theirs", name: "Their Team", parentId: null, teamId: "team-b", shared: true, role: "member" },
+    { id: "t-theirs-sub", name: "wvw", parentId: "t-theirs" },
+    { id: "f-plain", name: "personal", parentId: null },
+  ];
+  const ctx = { folders: FOLDERS, now: CTX.now };
+
+  test("sharedWithMe matches a build under a team the user does not own", () => {
+    const rule = sf([cond("ownership", "is", "sharedWithMe")]);
+    expect(matchesSmartFolder(rule, build({ folderId: "t-theirs" }), ctx)).toBe(true);
+  });
+
+  test("sharedWithMe reaches through subfolders of a team root", () => {
+    const rule = sf([cond("ownership", "is", "sharedWithMe")]);
+    expect(matchesSmartFolder(rule, build({ folderId: "t-theirs-sub" }), ctx)).toBe(true);
+  });
+
+  test("a team the user owns is theirs, not shared with them", () => {
+    const rule = sf([cond("ownership", "is", "sharedWithMe")]);
+    expect(matchesSmartFolder(rule, build({ folderId: "t-mine" }), ctx)).toBe(false);
+  });
+
+  test("mine covers both unfiled builds and owned teams", () => {
+    const rule = sf([cond("ownership", "is", "mine")]);
+    expect(matchesSmartFolder(rule, build({ folderId: null }), ctx)).toBe(true);
+    expect(matchesSmartFolder(rule, build({ folderId: "f-plain" }), ctx)).toBe(true);
+    expect(matchesSmartFolder(rule, build({ folderId: "t-mine" }), ctx)).toBe(true);
+    expect(matchesSmartFolder(rule, build({ folderId: "t-theirs" }), ctx)).toBe(false);
+  });
+
+  test("team isAnyOf matches by team id", () => {
+    const rule = sf([cond("team", "isAnyOf", ["team-b"])]);
+    expect(matchesSmartFolder(rule, build({ folderId: "t-theirs-sub" }), ctx)).toBe(true);
+    expect(matchesSmartFolder(rule, build({ folderId: "t-mine" }), ctx)).toBe(false);
+  });
+
+  test("an unknown ownership value matches nothing", () => {
+    const rule = sf([cond("ownership", "is", "somebody-else")]);
+    expect(matchesSmartFolder(rule, build({ folderId: null }), ctx)).toBe(false);
+  });
+});
+
+describe("dates", () => {
+  const now = Date.parse("2026-09-08T00:00:00Z");
+  const ctx = { folders: [], now };
+
+  test("withinDays matches a recent timestamp", () => {
+    const b = build({ updatedAt: "2026-09-01T00:00:00Z" });
+    expect(matchesSmartFolder(sf([cond("updatedAt", "withinDays", 14)]), b, ctx)).toBe(true);
+  });
+
+  test("withinDays excludes an older timestamp", () => {
+    const b = build({ updatedAt: "2026-01-01T00:00:00Z" });
+    expect(matchesSmartFolder(sf([cond("updatedAt", "withinDays", 14)]), b, ctx)).toBe(false);
+  });
+
+  test("olderThanDays is the complement for records that have a timestamp", () => {
+    const b = build({ createdAt: "2026-01-01T00:00:00Z" });
+    expect(matchesSmartFolder(sf([cond("createdAt", "olderThanDays", 14)]), b, ctx)).toBe(true);
+  });
+
+  test("a record with no timestamp matches neither operator", () => {
+    const b = build({ updatedAt: undefined });
+    expect(matchesSmartFolder(sf([cond("updatedAt", "withinDays", 14)]), b, ctx)).toBe(false);
+    expect(matchesSmartFolder(sf([cond("updatedAt", "olderThanDays", 14)]), b, ctx)).toBe(false);
+  });
+
+  test("an unparseable timestamp matches neither operator", () => {
+    const b = build({ updatedAt: "not a date" });
+    expect(matchesSmartFolder(sf([cond("updatedAt", "withinDays", 14)]), b, ctx)).toBe(false);
+    expect(matchesSmartFolder(sf([cond("updatedAt", "olderThanDays", 14)]), b, ctx)).toBe(false);
+  });
+
+  test("a non-numeric day count matches nothing", () => {
+    expect(matchesSmartFolder(sf([cond("updatedAt", "withinDays", "soon")]), build(), ctx)).toBe(false);
+  });
+});
