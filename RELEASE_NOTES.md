@@ -1,3 +1,9 @@
+## Version v0.21.2 — September 8, 2026
+
+### Bug Fixes
+
+- **Ambush skills never contributed to boon coverage.** A Mirage running rifle gets Vigor from Effervescence every time it ambushes, but the boon summary showed nothing — and on staff, the Might and Fury from Chaos Vortex were missing the same way. Ambushes replace your first weapon skill only while the spec's mechanic is up, so they were never in the weapon slots coverage reads from; the game's own data then files some of them as weapon skills and others as profession skills, which meant even the half that could get through came in for weapons you weren't carrying. Ambushes are now resolved on their own terms — matched by what they are rather than by where they sit — and counted only for the elite spec you have equipped and the weapons actually on your build. Untamed ambushes are included on the same footing, and show regardless of whether Unleash is toggled on.
+
 ## Version v0.21.1 — September 7, 2026
 
 ### Bug Fixes
