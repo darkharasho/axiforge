@@ -50,6 +50,16 @@ afterEach(() => closeSmartFolderModal());
 
 const $ = (sel) => document.querySelector(sel);
 
+/**
+ * Flush the real save promise chain -- click -> _handleSave -> saveSmartFolder
+ * -> persistFolders -> window.desktopApi.setSetting -- rather than assuming a
+ * fixed number of microtask ticks, which is an implementation detail of how
+ * deeply that chain happens to be nested today.
+ */
+async function flushAsync() {
+  for (let i = 0; i < 10; i++) await Promise.resolve();
+}
+
 describe("field definitions", () => {
   test("every field the evaluator supports is offered", () => {
     expect(FIELD_DEFS.map((f) => f.field).sort()).toEqual(
@@ -184,8 +194,7 @@ describe("saving", () => {
     $("#sfm-name").value = "Mine";
     $("#sfm-name").dispatchEvent(new Event("input", { bubbles: true }));
     $("#sfm-save").click();
-    await Promise.resolve();
-    await Promise.resolve();
+    await flushAsync();
 
     expect(onSaved).toHaveBeenCalled();
     expect(settings["library.smartFolders"][0].name).toBe("Mine");
@@ -205,10 +214,27 @@ describe("saving", () => {
     $("#sfm-name").value = "Mine";
     $("#sfm-name").dispatchEvent(new Event("input", { bubbles: true }));
     $("#sfm-save").click();
-    await Promise.resolve();
-    await Promise.resolve();
+    await flushAsync();
 
     expect(settings["library.smartFolders"][0].rule.children).toEqual([]);
+  });
+
+  test("a settings write failure keeps the modal open and reports the error", async () => {
+    global.window.desktopApi.setSetting = jest.fn(async () => {
+      throw new Error("disk full");
+    });
+    openSmartFolderModal(null);
+    $("#sfm-name").value = "Mine";
+    $("#sfm-name").dispatchEvent(new Event("input", { bubbles: true }));
+    $("#sfm-save").click();
+    await flushAsync();
+
+    expect(onSaved).not.toHaveBeenCalled();
+    expect($("#sfm-status").textContent).toMatch(/disk full/i);
+    // The modal stayed open -- closeSmartFolderModal() would have re-added
+    // this class, so its absence is proof the failure did not close it.
+    expect($(".sfm-overlay").classList.contains("sfm-overlay--hidden")).toBe(false);
+    expect($("#sfm-name").value).toBe("Mine");
   });
 
   test("cancel persists nothing", async () => {

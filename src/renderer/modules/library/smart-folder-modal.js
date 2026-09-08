@@ -435,36 +435,24 @@ function _onInput(e) {
   }
 }
 
-/** sf_<random> -- mirrors newId() in smart-folders.js, which does not export
- * it. Needed here so the record handed to onSaved (fired synchronously, see
- * below) carries the same id the store will end up persisting it under. */
-function newDraftId() {
-  return `sf_${Math.random().toString(36).slice(2, 10)}`;
-}
-
-function _handleSave() {
+async function _handleSave() {
   const name = _draft.name.trim();
   if (!name) {
     _setStatus("Give the smart folder a name.", true);
     return;
   }
   const children = _draft.rule.children.filter(isComplete);
-  const record = {
-    ..._draft,
-    id: _draft.id || newDraftId(),
-    name,
-    builtin: false,
-    rule: { ..._draft.rule, children },
-  };
-  // saveSmartFolder's write to the settings store cannot practically fail --
-  // persistFolders() swallows its own errors so a flaky disk never leaves the
-  // library without its folders -- so we report success and close right away
-  // rather than blocking the UI on that write settling.
-  saveSmartFolder(record).catch((err) => {
+  // saveSmartFolder mints the id for a brand-new folder and hands back the
+  // record it actually persisted -- that is the id onSaved must carry, so we
+  // pass the draft through as-is (with or without an id) and use the return
+  // value rather than predicting the id ourselves.
+  try {
+    const saved = await saveSmartFolder({ ..._draft, name, rule: { ..._draft.rule, children } });
+    _callbacks.onSaved?.(saved);
+    closeSmartFolderModal();
+  } catch (err) {
     _setStatus(err?.message || "Could not save this smart folder.", true);
-  });
-  _callbacks.onSaved?.(record);
-  closeSmartFolderModal();
+  }
 }
 
 async function _handleDelete() {

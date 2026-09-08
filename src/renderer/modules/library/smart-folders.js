@@ -260,20 +260,16 @@ export async function loadSmartFolders() {
   }
 }
 
+// Unlike loadSmartFolders()'s reads, a write failure here is NOT swallowed --
+// the caller (the rule editor) needs it to keep its modal open and tell the
+// user the save did not stick, rather than reporting success on a folder that
+// only exists in this session's memory.
 async function persistFolders() {
-  try {
-    await window.desktopApi.setSetting(SETTING_FOLDERS, _userFolders);
-  } catch {
-    // Caller surfaces the failure; the in-memory list stays usable this session.
-  }
+  await window.desktopApi.setSetting(SETTING_FOLDERS, _userFolders);
 }
 
 async function persistOverrides() {
-  try {
-    await window.desktopApi.setSetting(SETTING_OVERRIDES, { hidden: [..._hidden] });
-  } catch {
-    // Same.
-  }
+  await window.desktopApi.setSetting(SETTING_OVERRIDES, { hidden: [..._hidden] });
 }
 
 /** Built-ins the user has not hidden, then their own, in creation order. */
