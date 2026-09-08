@@ -23,6 +23,7 @@ import { promptRenameTeam } from "../team-modal.js";
 import { initToolbar, renderToolbar, renderFilters } from "./toolbar.js";
 import { initSidebar, renderSidebar, insertInlineInput } from "./sidebar.js";
 import { loadSmartFolders, getSmartFolder } from "./smart-folders.js";
+import { openSmartFolderModal } from "./smart-folder-modal.js";
 import { initSidebarResize, applySidebarWidth, clampSidebarWidth } from "./sidebar-resize.js";
 import { initContent, renderContent } from "./content.js";
 import { initContextMenu, wireContextMenuEvents, closeMenu } from "./context-menu.js";
@@ -323,7 +324,7 @@ async function handleNewFolder() {
 }
 
 function handleNewSmartFolder() {
-  // Wired to the editor in the next task.
+  openSmartFolderModal(null);
 }
 
 async function handleNewFolderInContent() {

@@ -56,6 +56,7 @@ import { describeIncomingChange } from "./modules/sync-summary.js";
 import { pickWebhooks } from "./modules/webhook-picker.js";
 import { initImportConflictModal } from "./modules/import-conflict-modal.js";
 import { initShareModal } from "./modules/library/share-modal.js";
+import { initSmartFolderModal } from "./modules/library/smart-folder-modal.js";
 import { initSettingsModal, initSettingsCallbacks, openSettingsModal } from "./modules/settings-modal.js";
 import { initLibrary, renderLibrary, handleLibraryKeydown, showToast } from "./modules/library/library.js";
 import { clearUndo as clearLibraryUndo } from "./modules/library/undo.js";
@@ -320,6 +321,10 @@ initConfirmModal();
 initChoiceModal();
 initImportConflictModal();
 initShareModal({ onTeamSyncEnabled: _hideSyncBanner });
+initSmartFolderModal({
+  onSaved: () => renderLibrary(),
+  onDeleted: () => renderLibrary(),
+});
 initSettingsModal();
 initWhatsNewModal();
 initDetailPanel(
