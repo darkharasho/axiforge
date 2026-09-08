@@ -132,6 +132,21 @@ export function computeStats(state, assumedBoons = null, sigilStacks = null, act
   return computeAttributes(ctx, catalogs);
 }
 
+// Matches the "Ambush." / "Unleashed Ambush." prefix the GW2 API puts on every
+// elite-spec ambush description. `Ambush Assault` and `Illusionary Ambush` carry
+// the word in their *name* only, so match the description, not the name.
+const AMBUSH_DESCRIPTION_RE = /^\s*(unleashed\s+)?ambush\.\s*/i;
+
+/**
+ * True for an elite-spec ambush skill: a spec-gated Weapon_1 replacement that is
+ * only on the bar while the spec mechanic (Mirage Cloak, Unleash) is active.
+ */
+function _isAmbushSkill(skill) {
+  return skill?.slot === "Weapon_1"
+    && !!Number(skill?.specialization)
+    && AMBUSH_DESCRIPTION_RE.test(skill?.description || "");
+}
+
 /**
  * Shared helper: resolve all skills and traits from state for boon/combo analysis.
  * Handles standard and serialized build formats, flip skills, profession mechanics, bundle skills.
@@ -170,7 +185,10 @@ function _resolveSkillsAndTraits(state, ctx, catalogs, weaponSkills = [], { filt
   }
   if (skills.elite?.id) skillIds.push(skills.elite.id);
 
-  const seenSkillIds = new Set();
+  // Seeded with the weapon slots already in resolvedSkills so no later pass can
+  // add the same skill twice (Untamed's unleashed ambush sits in Weapon_1 while
+  // Unleash is toggled on, and would otherwise be counted as two sources).
+  const seenSkillIds = new Set(resolvedSkills.map((s) => Number(s.id)).filter(Boolean));
   for (const id of skillIds.filter(Boolean)) {
     const numId = Number(id);
     if (seenSkillIds.has(numId)) continue;
@@ -199,20 +217,22 @@ function _resolveSkillsAndTraits(state, ctx, catalogs, weaponSkills = [], { filt
   // Collect profession mechanic skills (F1-F5) from catalog
   const ac = state.activeCatalog || {};
   const allCatalogSkills = ac.skills || [];
-  // Build set of equipped weapon types for optional filtering
+  // Equipped weapon types, lowercased: the build stores them lowercase ("rifle")
+  // while the catalog spells them out ("Rifle").
   const equippedWeapons = new Set();
-  if (filterWeapons) {
-    const weapons = (state.editor || {}).equipment?.weapons || {};
-    for (const val of Object.values(weapons)) {
-      if (val) equippedWeapons.add(String(val));
-    }
+  for (const val of Object.values((state.editor || {}).equipment?.weapons || {})) {
+    if (val) equippedWeapons.add(String(val).toLowerCase());
   }
+  const hasEquipped = (skill) => equippedWeapons.has(String(skill.weaponType || "").toLowerCase());
   for (const skill of allCatalogSkills) {
     if (!skill || skill.type !== "Profession") continue;
+    // Ambushes are resolved by the dedicated pass below, which weapon-gates them
+    // even when the caller didn't ask for weapon filtering.
+    if (_isAmbushSkill(skill)) continue;
     // Skip if requires an unselected elite spec
     if (skill.specialization && !activeSpecIds.has(Number(skill.specialization))) continue;
     // Skip if weapon-filtered and this skill's weapon isn't equipped
-    if (filterWeapons && skill.weaponType && !equippedWeapons.has(skill.weaponType)) continue;
+    if (filterWeapons && skill.weaponType && !hasEquipped(skill)) continue;
     if (!seenSkillIds.has(skill.id)) {
       seenSkillIds.add(skill.id);
       resolvedSkills.push(skill);
@@ -227,6 +247,23 @@ function _resolveSkillsAndTraits(state, ctx, catalogs, weaponSkills = [], { filt
         }
       }
     }
+  }
+
+  // Elite-spec ambush skills (Mirage's Mirage Cloak, Untamed's Unleashed Power).
+  // They replace Weapon_1 only while the spec mechanic is up, so they are never in
+  // the equipped weapon slots, and the API types them inconsistently — Mirage's
+  // rifle/staff/greatsword/dagger/trident ambushes are "Weapon" while its
+  // axe/scepter/sword/spear ones are "Profession" — so neither the weapon-skill
+  // resolver nor the profession-mechanic pass above can find them all. The
+  // "Ambush." description marker is what the game itself uses to label them.
+  // Always weapon-gated: an ambush for a weapon you don't carry is unreachable.
+  for (const skill of allCatalogSkills) {
+    if (!skill || !_isAmbushSkill(skill)) continue;
+    if (!activeSpecIds.has(Number(skill.specialization))) continue;
+    if (!hasEquipped(skill)) continue;
+    if (seenSkillIds.has(skill.id)) continue;
+    seenSkillIds.add(skill.id);
+    resolvedSkills.push(skill);
   }
 
   return { resolvedSkills, resolvedTraits };
