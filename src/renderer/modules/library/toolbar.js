@@ -359,20 +359,9 @@ function renderBreadcrumb() {
     return parts.join("");
   }
 
-  if (folder.type === "smart-profession") {
+  if (folder.type === "smart-rule") {
     parts.push(`<span class="lib-breadcrumb__sep">${chevronRightIcon}</span>`);
-    parts.push(`<span class="lib-breadcrumb__item lib-breadcrumb__item--current">By Profession</span>`);
-    parts.push(`<span class="lib-breadcrumb__sep">${chevronRightIcon}</span>`);
-    parts.push(`<span class="lib-breadcrumb__item lib-breadcrumb__item--current">${escapeHtml(folder.id)}</span>`);
-    return parts.join("");
-  }
-
-  if (folder.type === "smart-gamemode") {
-    parts.push(`<span class="lib-breadcrumb__sep">${chevronRightIcon}</span>`);
-    parts.push(`<span class="lib-breadcrumb__item lib-breadcrumb__item--current">By Game Mode</span>`);
-    parts.push(`<span class="lib-breadcrumb__sep">${chevronRightIcon}</span>`);
-    const modeLabel = gameModeLabel(folder.id);
-    parts.push(`<span class="lib-breadcrumb__item lib-breadcrumb__item--current">${escapeHtml(modeLabel)}</span>`);
+    parts.push(`<span class="lib-breadcrumb__item lib-breadcrumb__item--current">${escapeHtml(folder.smartFolder?.name || "")}</span>`);
     return parts.join("");
   }
 
@@ -395,13 +384,6 @@ function renderBreadcrumb() {
   }
 
   return parts.join("");
-}
-
-function gameModeLabel(id) {
-  if (id === "pve") return "PvE";
-  if (id === "pvp") return "PvP";
-  if (id === "wvw") return "WvW";
-  return id;
 }
 
 function renderViewToggle(active) {

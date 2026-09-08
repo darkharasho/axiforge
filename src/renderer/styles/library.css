@@ -615,6 +615,22 @@
   padding: 0;
 }
 
+.lib-sidebar__divider {
+  height: 1px;
+  background: var(--line-soft);
+  margin: 6px 10px;
+}
+
+.lib-sidebar__subsection-label {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--text-dim);
+  padding: 2px 10px 3px;
+  opacity: 0.75;
+  font-weight: 700;
+}
+
 .lib-sidebar__new-folder-btn {
   background: none;
   border: none;

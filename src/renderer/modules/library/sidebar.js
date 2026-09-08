@@ -5,6 +5,7 @@ import { escapeHtml } from "../utils.js";
 import { countBuildsInFolder, libraryBuilds, libraryComps, libraryFolders } from "./folder-store.js";
 import { badgeHtml } from "../sync-status.js";
 import { teamLabel } from "../teams.js";
+import { listSmartFolders, matchesSmartFolder, ruleContext } from "./smart-folders.js";
 import {
   folderIcon,
   folderOpenIcon,
@@ -17,6 +18,11 @@ import {
   shareIcon,
   trashIcon,
   archiveIcon,
+  clockIcon,
+  bars3Icon,
+  tagIcon,
+  funnelIcon,
+  plusIcon,
 } from "./heroicons.js";
 
 let _callbacks = {};
@@ -77,6 +83,74 @@ export function renderSidebar() {
 
 // ─── Internal renderers ────────────────────────────────────────────────────────
 
+/**
+ * How many builds a smart folder would show.
+ *
+ * This lives here rather than in smart-folders.js because it needs
+ * libraryBuilds(), and smart-folders.js must not import folder-store.js.
+ */
+export function countSmartFolder(sf) {
+  const ctx = ruleContext();
+  return libraryBuilds().filter((b) => matchesSmartFolder(sf, b, ctx)).length;
+}
+
+/** The row a By Profession / By Game Mode entry navigates to. */
+function generatedRuleFolder(idPrefix, name, field, value) {
+  const id = `${idPrefix}${value}`;
+  return {
+    id,
+    name,
+    // Not a persisted record: there is nothing to edit, rename or delete, which
+    // is what the context menu in Task 7 checks before it opens.
+    generated: true,
+    rule: {
+      type: "group",
+      match: "all",
+      children: [{ type: "condition", field, op: "isAnyOf", value: [value] }],
+    },
+  };
+}
+
+/** Generated rows are not persisted, so they are rebuilt from their id. */
+function resolveSidebarSmartFolder(id) {
+  if (id.startsWith("__sf-prof:")) {
+    const prof = id.slice("__sf-prof:".length);
+    return generatedRuleFolder("__sf-prof:", prof, "profession", prof);
+  }
+  if (id.startsWith("__sf-mode:")) {
+    const mode = id.slice("__sf-mode:".length);
+    return generatedRuleFolder("__sf-mode:", gameModeLabel(mode), "gameMode", mode);
+  }
+  return listSmartFolders().find((f) => f.id === id) || null;
+}
+
+function smartRowHtml(sf, { sub = false } = {}) {
+  const isActive = state.currentFolder?.type === "smart-rule" && state.currentFolder.id === sf.id;
+  return `
+    <button type="button"
+      class="lib-nav-item ${sub ? "lib-nav-item--sub" : ""} ${isActive ? "lib-nav-item--active" : ""}"
+      data-navigate-smart-folder="${escapeHtml(sf.id)}"
+    >
+      <span class="lib-nav-item__icon">${smartFolderIcon(sf.icon)}</span>
+      <span class="lib-nav-item__label">${escapeHtml(sf.name)}</span>
+      <span class="lib-nav-item__count">${countSmartFolder(sf)}</span>
+    </button>
+  `;
+}
+
+/** Icon name -> svg, falling back to the generic folder icon. */
+function smartFolderIcon(name) {
+  const icons = {
+    folderOpen: folderOpenIcon,
+    clock: clockIcon,
+    share: shareIcon,
+    bars: bars3Icon,
+    tag: tagIcon,
+    funnel: funnelIcon,
+  };
+  return icons[name] || funnelIcon;
+}
+
 function renderSmartFolders(profExpanded, modeExpanded) {
   const current = state.currentFolder;
   const allActive = !current || current.type === "all";
@@ -86,62 +160,46 @@ function renderSmartFolders(profExpanded, modeExpanded) {
   const totalBuilds = builds.length;
   const totalComps = libraryComps().length;
 
-  // Build profession items
+  const all = listSmartFolders();
+  const builtins = all.filter((f) => f.builtin);
+  const mine = all.filter((f) => !f.builtin);
+
   const professions = [...new Set(builds.map((b) => b.profession).filter(Boolean))].sort();
   const profItems = professions
-    .map((prof) => {
-      const count = builds.filter((b) => b.profession === prof).length;
-      const isActive = current?.type === "smart-profession" && current.id === prof;
-      return `
-        <button type="button"
-          class="lib-nav-item lib-nav-item--sub ${isActive ? "lib-nav-item--active" : ""}"
-          data-navigate-profession="${escapeHtml(prof)}"
-        >
-          <span class="lib-nav-item__icon">${folderIcon}</span>
-          <span class="lib-nav-item__label">${escapeHtml(prof)}</span>
-          <span class="lib-nav-item__count">${count}</span>
-        </button>
-      `;
-    })
+    .map((prof) =>
+      smartRowHtml(generatedRuleFolder("__sf-prof:", prof, "profession", prof), { sub: true }),
+    )
     .join("");
 
-  // Build game mode items
   const gameModes = [...new Set(builds.map((b) => b.gameMode || "pve").filter(Boolean))].sort();
   const modeItems = gameModes
     .map((mode) => {
-      const count = builds.filter((b) => (b.gameMode || "pve") === mode).length;
-      const isActive = current?.type === "smart-gamemode" && current.id === mode;
-      const label = gameModeLabel(mode);
-      return `
-        <button type="button"
-          class="lib-nav-item lib-nav-item--sub ${isActive ? "lib-nav-item--active" : ""}"
-          data-navigate-gamemode="${escapeHtml(mode)}"
-        >
-          <span class="lib-nav-item__icon">${folderIcon}</span>
-          <span class="lib-nav-item__label">${escapeHtml(label)}</span>
-          <span class="lib-nav-item__count">${count}</span>
-        </button>
-      `;
+      const sf = generatedRuleFolder("__sf-mode:", gameModeLabel(mode), "gameMode", mode);
+      return smartRowHtml(sf, { sub: true });
     })
     .join("");
 
   return `
     <div class="lib-sidebar__section">
-      <div class="lib-sidebar__section-label">Smart Folders</div>
+      <div class="lib-sidebar__section-header">
+        <span class="lib-sidebar__section-label">Smart Folders</span>
+        <button type="button" class="lib-sidebar__new-folder-btn" id="lib-new-smart-folder-btn"
+          title="New smart folder" aria-label="New smart folder">${plusIcon}</button>
+      </div>
+
+      ${builtins.map((f) => smartRowHtml(f)).join("")}
+
       <button type="button"
         class="lib-nav-item ${allActive ? "lib-nav-item--active" : ""}"
         data-navigate-all="1"
       >
         <span class="lib-nav-item__icon">${folderOpenIcon}</span>
-        <span class="lib-nav-item__label">All Builds</span>
+        <span class="lib-nav-item__label">All Builds (by folder)</span>
         <span class="lib-nav-item__count">${totalBuilds}</span>
       </button>
 
       ${professions.length > 0 ? `
-        <button type="button"
-          class="lib-nav-item lib-nav-item--group"
-          data-toggle-group="__smart-profession"
-        >
+        <button type="button" class="lib-nav-item lib-nav-item--group" data-toggle-group="__smart-profession">
           <span class="lib-nav-item__chevron">${profExpanded ? chevronDownIcon : chevronRightIcon}</span>
           <span class="lib-nav-item__icon">${folderIcon}</span>
           <span class="lib-nav-item__label">By Profession</span>
@@ -150,10 +208,7 @@ function renderSmartFolders(profExpanded, modeExpanded) {
       ` : ""}
 
       ${gameModes.length > 0 ? `
-        <button type="button"
-          class="lib-nav-item lib-nav-item--group"
-          data-toggle-group="__smart-gamemode"
-        >
+        <button type="button" class="lib-nav-item lib-nav-item--group" data-toggle-group="__smart-gamemode">
           <span class="lib-nav-item__chevron">${modeExpanded ? chevronDownIcon : chevronRightIcon}</span>
           <span class="lib-nav-item__icon">${folderIcon}</span>
           <span class="lib-nav-item__label">By Game Mode</span>
@@ -162,14 +217,17 @@ function renderSmartFolders(profExpanded, modeExpanded) {
       ` : ""}
 
       ${totalComps > 0 ? `
-        <button type="button"
-          class="lib-nav-item ${allCompsActive ? "lib-nav-item--active" : ""}"
-          data-navigate-all-comps="1"
-        >
+        <button type="button" class="lib-nav-item ${allCompsActive ? "lib-nav-item--active" : ""}" data-navigate-all-comps="1">
           <span class="lib-nav-item__icon">${compIcon}</span>
           <span class="lib-nav-item__label">All Comps</span>
           <span class="lib-nav-item__count">${totalComps}</span>
         </button>
+      ` : ""}
+
+      ${mine.length > 0 ? `
+        <div class="lib-sidebar__divider"></div>
+        <div class="lib-sidebar__subsection-label">My Smart Folders</div>
+        ${mine.map((f) => smartRowHtml(f)).join("")}
       ` : ""}
     </div>
   `;
@@ -335,18 +393,17 @@ function bindSidebarEvents(container) {
     });
   });
 
-  // Navigate to profession smart folder
-  container.querySelectorAll("[data-navigate-profession]").forEach((el) => {
+  // Navigate to any smart folder -- built-in, generated, or user-defined.
+  container.querySelectorAll("[data-navigate-smart-folder]").forEach((el) => {
     el.addEventListener("click", () => {
-      _callbacks.onNavigate?.({ type: "smart-profession", id: el.dataset.navigateProfession });
+      const id = el.dataset.navigateSmartFolder;
+      const sf = resolveSidebarSmartFolder(id);
+      if (sf) _callbacks.onNavigate?.({ type: "smart-rule", id, smartFolder: sf });
     });
   });
 
-  // Navigate to game mode smart folder
-  container.querySelectorAll("[data-navigate-gamemode]").forEach((el) => {
-    el.addEventListener("click", () => {
-      _callbacks.onNavigate?.({ type: "smart-gamemode", id: el.dataset.navigateGamemode });
-    });
+  container.querySelector("#lib-new-smart-folder-btn")?.addEventListener("click", () => {
+    _callbacks.onNewSmartFolder?.();
   });
 
   // Navigate to custom folder

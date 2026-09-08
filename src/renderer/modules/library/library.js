@@ -22,6 +22,7 @@ import { loadTeamState, teamRootFor } from "../teams.js";
 import { promptRenameTeam } from "../team-modal.js";
 import { initToolbar, renderToolbar, renderFilters } from "./toolbar.js";
 import { initSidebar, renderSidebar, insertInlineInput } from "./sidebar.js";
+import { loadSmartFolders, getSmartFolder } from "./smart-folders.js";
 import { initSidebarResize, applySidebarWidth, clampSidebarWidth } from "./sidebar-resize.js";
 import { initContent, renderContent } from "./content.js";
 import { initContextMenu, wireContextMenuEvents, closeMenu } from "./context-menu.js";
@@ -74,6 +75,7 @@ export async function initLibrary(appCallbacks) {
   try {
     await loadFolders();
     await loadPrefs();
+    await loadSmartFolders();
     await loadTeamState();
     await refreshTrash();
     await refreshArchive();
@@ -318,6 +320,10 @@ async function handleNewFolder() {
   if (!name) { renderLibrary(); return; }
   await saveFolder({ name, parentId: null });
   renderLibrary();
+}
+
+function handleNewSmartFolder() {
+  // Wired to the editor in the next task.
 }
 
 async function handleNewFolderInContent() {
@@ -1724,6 +1730,7 @@ function _buildSharedCallbacks() {
     onNewFolder: handleNewFolderInContent,
     onNewFolderSidebar: handleNewFolder,
     onNewComp: handleNewComp,
+    onNewSmartFolder: handleNewSmartFolder,
 
     onFilterChange(change) {
       if (!change) {
@@ -1772,6 +1779,12 @@ function _buildSharedCallbacks() {
     },
 
     async onNavigate(folder) {
+      // A smart folder can vanish between renders -- deleted in the editor, or
+      // a hidden built-in restored from a stale saved navigation.
+      if (folder?.type === "smart-rule" && !folder.smartFolder) {
+        const resolved = getSmartFolder(folder.id);
+        folder = resolved ? { ...folder, smartFolder: resolved } : { type: "all" };
+      }
       state.currentFolder = folder || null;
       // The trash lives in the main process, not in state.builds — it has to be
       // fetched on the way in, and again after anything changes it.
