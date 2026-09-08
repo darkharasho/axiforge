@@ -206,3 +206,109 @@ export function matchesSmartFolder(smartFolder, build, ctx) {
 export function ruleContext() {
   return { folders: state.folders || [], now: Date.now() };
 }
+
+// ─── Built-ins ─────────────────────────────────────────────────────────────────
+
+const group = (children, match = "all") => ({ type: "group", match, children });
+const when = (field, op, value) => ({ type: "condition", field, op, value });
+
+/**
+ * Built-ins are code, not persisted rows. That way improving one of these
+ * rules in a later release reaches everybody -- the only thing we persist
+ * about them is which ones the user has hidden.
+ */
+export const BUILTIN_SMART_FOLDERS = Object.freeze([
+  { id: "__sf-main", name: "Main Repository", icon: "folderOpen", builtin: true, rule: group([]) },
+  { id: "__sf-recent", name: "Recently Modified", icon: "clock", builtin: true, rule: group([when("updatedAt", "withinDays", 14)]) },
+  { id: "__sf-shared", name: "Shared with me", icon: "share", builtin: true, rule: group([when("ownership", "is", "sharedWithMe")]) },
+  { id: "__sf-unfiled", name: "Unfiled", icon: "bars", builtin: true, rule: group([when("location", "isUnfiled")]) },
+  { id: "__sf-untagged", name: "Untagged", icon: "tag", builtin: true, rule: group([when("tags", "isEmpty")]) },
+]);
+
+// ─── Persistence ───────────────────────────────────────────────────────────────
+
+const SETTING_FOLDERS = "library.smartFolders";
+const SETTING_OVERRIDES = "library.smartFolderOverrides";
+
+// The sidebar renders synchronously, so the persisted state is cached here and
+// listSmartFolders() reads the cache rather than awaiting the settings store.
+let _userFolders = [];
+let _hidden = new Set();
+
+/** A record is usable only if we can address it and evaluate it. */
+function isWellFormed(sf) {
+  return Boolean(
+    sf && typeof sf === "object" && typeof sf.id === "string" && sf.id && sf.rule && typeof sf.rule === "object",
+  );
+}
+
+/** Read persisted smart folders into the cache. Safe to call more than once. */
+export async function loadSmartFolders() {
+  _userFolders = [];
+  _hidden = new Set();
+  try {
+    const raw = await window.desktopApi.getSetting(SETTING_FOLDERS);
+    if (Array.isArray(raw)) _userFolders = raw.filter(isWellFormed);
+  } catch {
+    // A library that opens with only the built-ins beats one that does not open.
+  }
+  try {
+    const raw = await window.desktopApi.getSetting(SETTING_OVERRIDES);
+    if (raw && Array.isArray(raw.hidden)) _hidden = new Set(raw.hidden.filter((id) => typeof id === "string"));
+  } catch {
+    // Same.
+  }
+}
+
+async function persistFolders() {
+  try {
+    await window.desktopApi.setSetting(SETTING_FOLDERS, _userFolders);
+  } catch {
+    // Caller surfaces the failure; the in-memory list stays usable this session.
+  }
+}
+
+async function persistOverrides() {
+  try {
+    await window.desktopApi.setSetting(SETTING_OVERRIDES, { hidden: [..._hidden] });
+  } catch {
+    // Same.
+  }
+}
+
+/** Built-ins the user has not hidden, then their own, in creation order. */
+export function listSmartFolders() {
+  return [...BUILTIN_SMART_FOLDERS.filter((f) => !_hidden.has(f.id)), ..._userFolders];
+}
+
+/** Resolve by id, including built-ins the user has hidden. */
+export function getSmartFolder(id) {
+  return (
+    BUILTIN_SMART_FOLDERS.find((f) => f.id === id) || _userFolders.find((f) => f.id === id) || null
+  );
+}
+
+function newId() {
+  return `sf_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+/** Create when `sf.id` is absent, update in place otherwise. */
+export async function saveSmartFolder(sf) {
+  const record = { ...sf, id: sf.id || newId(), builtin: false };
+  const at = _userFolders.findIndex((f) => f.id === record.id);
+  if (at >= 0) _userFolders[at] = record;
+  else _userFolders.push(record);
+  await persistFolders();
+  return record;
+}
+
+export async function deleteSmartFolder(id) {
+  _userFolders = _userFolders.filter((f) => f.id !== id);
+  await persistFolders();
+}
+
+export async function setBuiltinHidden(id, hidden) {
+  if (hidden) _hidden.add(id);
+  else _hidden.delete(id);
+  await persistOverrides();
+}
