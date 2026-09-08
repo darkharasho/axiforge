@@ -30,7 +30,7 @@ const os = require("node:os");
 const fs = require("node:fs");
 const fsp = require("node:fs/promises");
 const path = require("node:path");
-const { waitFor } = require("../helpers/waitFor");
+const { waitFor, settle } = require("../helpers/waitFor");
 
 // Per-load context; the electron mock closes over this (reassigned by loadMain).
 let mockCtx = null;
@@ -208,10 +208,14 @@ async function loadMain({ auth = { sync: SESSION }, folders = [], builds = [], c
     process.argv = prevArgv;
   }
   // whenReady's async chain registers handlers; teams:outbox is the last one.
-  for (let i = 0; i < 5000 && !mockCtx.handlers.has("teams:outbox"); i += 1) {
-    await new Promise((r) => setImmediate(r));
-  }
-  if (!mockCtx.handlers.has("teams:outbox")) throw new Error("main process never finished startup");
+  // Bounded by wall clock, not tick count — this is the exact bet waitFor exists
+  // to remove. The chain awaits the file-backed stores and the local API's
+  // socket bind, and those resolve off the threadpool, so "5000 setImmediate
+  // turns" is really "~50ms on this laptop": it held here and gave up early on a
+  // loaded CI runner, failing the whole suite.
+  await waitFor(() => mockCtx.handlers.has("teams:outbox"), {
+    label: "main process finished startup",
+  });
 
   const { TeamSync } = require("../../src/main/teamSync");
   loaded = { userData, dataDir, TeamSync };
@@ -246,7 +250,7 @@ afterEach(async () => {
     // Let this boot's startup chain (pullAll / legacy cleanup / snapshot) settle
     // before the temp dir goes away, so no fs work is left in flight when the
     // jest worker is handed to the next test file.
-    for (let i = 0; i < 20; i += 1) await new Promise((r) => setImmediate(r));
+    await settle();
     await fsp.rm(loaded.userData, { recursive: true, force: true }).catch(() => {});
     loaded = null;
   }
