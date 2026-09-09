@@ -1,3 +1,13 @@
+## Version v0.22.0 — September 8, 2026
+
+### Smart folders in the library
+
+- **The sidebar only ever showed folders you made by hand.** Finding "every Firebrand I've tagged for raids" meant either building that folder yourself and keeping it current, or filtering the toolbar again every time. Smart folders are folders defined by a rule instead of by contents: you describe what belongs, and the folder fills itself in and stays filled in as builds change. Five ship built in — **Main Repository**, **Recently Modified**, **Shared**, **Unfiled**, and **Untagged** — so the common views are there before you write a single rule.
+- **You can write your own.** The rule editor takes any number of conditions joined by all-of or any-of, over profession, elite spec, tags, game mode, team, ownership, where the build lives, when it was last edited, and now its **weapons**, **stat prefixes**, and **armor weight**. Conditions that take several values show them as a grid of toggles with the real profession, spec, and weapon icons on each row, so picking six specs is six clicks and a long list is something you can scan rather than read. A live count under the editor tells you how many builds match before you save.
+- **Save what you're already looking at.** Set up the toolbar filters that got you to the right builds and turn them into a smart folder in one action, instead of rebuilding the same conditions by hand in the editor.
+- **They behave like folders everywhere else.** Right-click for the same context menu you get on a normal folder — rename, edit the rule, duplicate, delete — and the ones you don't want are hideable rather than permanent.
+- **Ownership now means the team space a build lives in**, not your role on the team, which is what "shared with me" has to mean for it to be useful.
+
 ## Version v0.21.2 — September 8, 2026
 
 ### Bug Fixes
