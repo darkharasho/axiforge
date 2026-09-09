@@ -12,10 +12,13 @@ import { state } from "../state.js";
 import { libraryBuilds, libraryFolders } from "./folder-store.js";
 import {
   matchesSmartFolder, ruleContext, saveSmartFolder, deleteSmartFolder,
-  OWNERSHIP_VALUES, gameModeLabel,
+  OWNERSHIP_VALUES, gameModeLabel, ARMOR_WEIGHTS,
 } from "./smart-folders.js";
 import { getProfessionSvg } from "../profession-icons.js";
-import { tagIcon, userGroupIcon, globeAltIcon } from "./heroicons.js";
+import { getWeaponSvg } from "../weapon-icons.js";
+import { getSlotSvg } from "../slot-icons.js";
+import { GW2_WEAPONS } from "../constants.js";
+import { tagIcon, userGroupIcon, globeAltIcon, starIcon } from "./heroicons.js";
 
 /**
  * The editor's vocabulary. It must stay in step with FIELDS in
@@ -41,6 +44,22 @@ export const FIELD_DEFS = [
     { op: "hasNoneOf", label: "has none of", valueKind: "multi", negative: true },
     { op: "isEmpty", label: "is empty", valueKind: "none" },
     { op: "isNotEmpty", label: "is not empty", valueKind: "none" },
+  ]},
+  { field: "weapons", label: "Weapon", ops: [
+    { op: "hasAnyOf", label: "is any of", valueKind: "multi" },
+    { op: "hasAllOf", label: "includes all of", valueKind: "multi" },
+    { op: "hasNoneOf", label: "is none of", valueKind: "multi", negative: true },
+  ]},
+  { field: "stats", label: "Stats", ops: [
+    { op: "hasAnyOf", label: "is any of", valueKind: "multi" },
+    { op: "hasAllOf", label: "includes all of", valueKind: "multi" },
+    { op: "hasNoneOf", label: "is none of", valueKind: "multi", negative: true },
+    { op: "isEmpty", label: "is unset", valueKind: "none" },
+    { op: "isNotEmpty", label: "is set", valueKind: "none" },
+  ]},
+  { field: "armorWeight", label: "Armor Weight", ops: [
+    { op: "isAnyOf", label: "is any of", valueKind: "multi" },
+    { op: "isNoneOf", label: "is none of", valueKind: "multi", negative: true },
   ]},
   { field: "title", label: "Title", ops: [
     { op: "contains", label: "contains", valueKind: "text" },
@@ -119,6 +138,28 @@ function optionsFor(field) {
   if (field === "gameMode") {
     return [...new Set(builds.map((b) => b.gameMode || "pve"))].sort().map((v) => ({ value: v, label: gameModeLabel(v) }));
   }
+  if (field === "weapons") {
+    // Catalog order, not alphabetical: GW2_WEAPONS runs main-hand, off-hand,
+    // two-handed, aquatic, which is the order the equipment panel uses.
+    const inUse = new Set(builds.flatMap((b) => Object.values(b.equipment?.weapons || {})).filter(Boolean));
+    return GW2_WEAPONS.filter((w) => inUse.has(w.id)).map((w) => ({ value: w.id, label: w.label }));
+  }
+  if (field === "stats") {
+    const out = new Set();
+    for (const b of builds) {
+      const pkg = b.equipment?.statPackage;
+      if (typeof pkg === "string" && pkg !== "" && !/^\d+$/.test(pkg)) out.add(pkg);
+      for (const v of Object.values(b.equipment?.slots || {})) {
+        if (typeof v === "string" && v !== "" && !/^\d+$/.test(v)) out.add(v);
+      }
+    }
+    return [...out].sort().map((v) => ({ value: v, label: v }));
+  }
+  if (field === "armorWeight") {
+    // The fixed three, not what the library happens to hold: a user filtering
+    // for Heavy before they own a heavy build still means Heavy.
+    return ARMOR_WEIGHTS.map((w) => ({ value: w.value, label: w.label }));
+  }
   if (field === "tags") {
     return [...new Set(builds.flatMap((b) => b.tags || []).filter(Boolean))].sort().map((v) => ({ value: v, label: v }));
   }
@@ -136,8 +177,12 @@ function optionsFor(field) {
  * visual vocabulary get a category glyph rather than nothing, so every row in
  * a list lines up on the same left edge.
  */
-function optionIcon(field, label) {
+function optionIcon(field, value, label) {
   if (field === "profession" || field === "eliteSpec") return getProfessionSvg(label) || "";
+  if (field === "weapons") return getWeaponSvg(value) || "";
+  // The chest piece reads as "armor" at 16px in a way a helm or boot does not.
+  if (field === "armorWeight") return getSlotSvg("chest", value) || "";
+  if (field === "stats") return starIcon;
   if (field === "gameMode") return globeAltIcon;
   if (field === "tags") return tagIcon;
   if (field === "team") return userGroupIcon;
@@ -352,7 +397,7 @@ function _renderValueControl(cond, op) {
     }
     const optionsHtml = options.map((o) => {
       const on = selected.includes(o.value);
-      const icon = optionIcon(cond.field, o.label);
+      const icon = optionIcon(cond.field, o.value, o.label);
       return `<button type="button" role="option" aria-selected="${on}"
         class="sfm-opt${on ? " sfm-opt--on" : ""}" data-opt-value="${escapeHtml(o.value)}">
         <span class="sfm-opt__icon">${icon}</span>

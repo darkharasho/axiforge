@@ -12,6 +12,7 @@
 
 import { state } from "../state.js";
 import { teamRootFor } from "../teams.js";
+import { PROFESSION_WEIGHT } from "../constants.js";
 
 /** Values that arrive from persisted JSON, so nothing here may assume a shape. */
 const asArray = (v) => (Array.isArray(v) ? v : null);
@@ -25,6 +26,47 @@ function eliteSpecOf(build) {
     if (s && s.elite && s.name) return s.name;
   }
   return "";
+}
+
+/**
+ * Every weapon type the build equips, across both weapon sets and the aquatic
+ * slots, as a deduplicated list of catalog ids ("greatsword").
+ *
+ * A list rather than a scalar because a build carries up to six, and the
+ * question a user asks is "which of my builds run a staff" -- a `has any of`
+ * over the whole loadout, not a per-slot match.
+ */
+function weaponsOf(build) {
+  const slots = build.equipment?.weapons;
+  if (!slots || typeof slots !== "object") return [];
+  return [...new Set(Object.values(slots).filter((w) => typeof w === "string" && w !== ""))];
+}
+
+/**
+ * Armor class, derived from the profession rather than stored -- GW2 fixes it
+ * per profession, so a build has no say in it and nothing writes it down.
+ */
+function armorWeightOf(build) {
+  return PROFESSION_WEIGHT[build.profession] || "";
+}
+
+/**
+ * Every stat prefix the build uses: the per-slot labels plus the whole-build
+ * package. Numeric statPackage values are ignored -- older records stored a
+ * GW2 API stat id there, which is not a name a user would ever pick from a
+ * list.
+ */
+function statsOf(build) {
+  const out = new Set();
+  const pkg = build.equipment?.statPackage;
+  if (typeof pkg === "string" && pkg !== "" && !/^\d+$/.test(pkg)) out.add(pkg);
+  const slots = build.equipment?.slots;
+  if (slots && typeof slots === "object") {
+    for (const v of Object.values(slots)) {
+      if (typeof v === "string" && v !== "" && !/^\d+$/.test(v)) out.add(v);
+    }
+  }
+  return [...out];
 }
 
 /**
@@ -105,6 +147,13 @@ const OWNERSHIP_SET = new Set(OWNERSHIP_VALUES.map((o) => o.value));
  * the sidebar, the table view and the rule editor all label the same stored
  * values, and three private copies had already started to drift.
  */
+/** The three GW2 armor classes, in the order the wiki lists them. */
+export const ARMOR_WEIGHTS = Object.freeze([
+  { value: "light", label: "Light" },
+  { value: "medium", label: "Medium" },
+  { value: "heavy", label: "Heavy" },
+]);
+
 export function gameModeLabel(mode) {
   if (mode === "pve") return "PvE";
   if (mode === "pvp") return "PvP";
@@ -182,6 +231,9 @@ const FIELDS = {
   eliteSpec: { get: (b) => eliteSpecOf(b), ops: SCALAR_OPS },
   gameMode: { get: (b) => b.gameMode || "pve", ops: SCALAR_OPS },
   tags: { get: (b) => (Array.isArray(b.tags) ? b.tags : []), ops: TAG_OPS },
+  weapons: { get: (b) => weaponsOf(b), ops: TAG_OPS },
+  stats: { get: (b) => statsOf(b), ops: TAG_OPS },
+  armorWeight: { get: (b) => armorWeightOf(b), ops: SCALAR_OPS },
   title: { get: (b) => b.title || "", ops: TEXT_OPS },
   notes: { get: (b) => b.notes || "", ops: TEXT_OPS },
   pinned: { get: (b) => b.pinned === true, ops: BOOL_OPS },
@@ -202,6 +254,14 @@ const FIELDS = {
   updatedAt: { get: (b) => timestampMs(b.updatedAt), ops: DATE_OPS },
   createdAt: { get: (b) => timestampMs(b.createdAt), ops: DATE_OPS },
 };
+
+/**
+ * Every field name the evaluator understands. The editor's FIELD_DEFS is
+ * checked against this, so a field added here without an editor entry -- or
+ * offered there and unknown here, which silently matches nothing -- fails a
+ * test rather than shipping.
+ */
+export const SUPPORTED_FIELDS = Object.freeze(Object.keys(FIELDS));
 
 function evaluateCondition(node, build, ctx) {
   const field = FIELDS[node.field];

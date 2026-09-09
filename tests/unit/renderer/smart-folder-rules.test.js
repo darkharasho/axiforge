@@ -300,3 +300,68 @@ describe("dates", () => {
     expect(matchesSmartFolder(sf([cond("updatedAt", "withinDays", "soon")]), build(), ctx)).toBe(false);
   });
 });
+
+/**
+ * Loadout fields. All three read out of `equipment`, which older records and
+ * hand-edited JSON may be missing entirely -- so every case below has a
+ * counterpart asserting the absent shape is falsy rather than a throw.
+ */
+describe("weapons", () => {
+  const staffScepter = build({
+    equipment: { weapons: { mainhand1: "staff", mainhand2: "scepter", offhand2: "focus", offhand1: "" } },
+  });
+
+  test("has any of matches a weapon in either set", () => {
+    expect(matchesSmartFolder(sf([cond("weapons", "hasAnyOf", ["focus"])]), staffScepter, CTX)).toBe(true);
+    expect(matchesSmartFolder(sf([cond("weapons", "hasAnyOf", ["greatsword"])]), staffScepter, CTX)).toBe(false);
+  });
+
+  test("has all of needs every named weapon on the build", () => {
+    expect(matchesSmartFolder(sf([cond("weapons", "hasAllOf", ["staff", "focus"])]), staffScepter, CTX)).toBe(true);
+    expect(matchesSmartFolder(sf([cond("weapons", "hasAllOf", ["staff", "rifle"])]), staffScepter, CTX)).toBe(false);
+  });
+
+  test("empty slots are not a weapon", () => {
+    expect(matchesSmartFolder(sf([cond("weapons", "hasAnyOf", [""])]), staffScepter, CTX)).toBe(false);
+  });
+
+  test("a build with no equipment matches nothing rather than throwing", () => {
+    expect(matchesSmartFolder(sf([cond("weapons", "hasAnyOf", ["staff"])]), build(), CTX)).toBe(false);
+    expect(matchesSmartFolder(sf([cond("weapons", "hasNoneOf", ["staff"])]), build(), CTX)).toBe(true);
+  });
+});
+
+describe("stats", () => {
+  const mixed = build({
+    equipment: { statPackage: "Berserker's", slots: { head: "Berserker's", chest: "Assassin's", legs: "" } },
+  });
+
+  test("collects the package and every per-slot prefix", () => {
+    expect(matchesSmartFolder(sf([cond("stats", "hasAllOf", ["Berserker's", "Assassin's"])]), mixed, CTX)).toBe(true);
+  });
+
+  test("a numeric statPackage is ignored -- it is an API id, not a prefix", () => {
+    const legacy = build({ equipment: { statPackage: "161", slots: {} } });
+    expect(matchesSmartFolder(sf([cond("stats", "isNotEmpty", undefined)]), legacy, CTX)).toBe(false);
+  });
+
+  test("is set / is unset split builds that have gear from those that do not", () => {
+    expect(matchesSmartFolder(sf([cond("stats", "isNotEmpty", undefined)]), mixed, CTX)).toBe(true);
+    expect(matchesSmartFolder(sf([cond("stats", "isEmpty", undefined)]), build(), CTX)).toBe(true);
+  });
+});
+
+describe("armorWeight", () => {
+  test("derives from the profession", () => {
+    const heavy = sf([cond("armorWeight", "isAnyOf", ["heavy"])]);
+    expect(matchesSmartFolder(heavy, build({ profession: "Guardian" }), CTX)).toBe(true);
+    expect(matchesSmartFolder(heavy, build({ profession: "Necromancer" }), CTX)).toBe(false);
+    expect(matchesSmartFolder(sf([cond("armorWeight", "isAnyOf", ["light"])]), build({ profession: "Necromancer" }), CTX)).toBe(true);
+  });
+
+  test("an unknown profession has no weight and so matches neither side", () => {
+    const odd = build({ profession: "Bartender" });
+    expect(matchesSmartFolder(sf([cond("armorWeight", "isAnyOf", ["heavy"])]), odd, CTX)).toBe(false);
+    expect(matchesSmartFolder(sf([cond("armorWeight", "isNoneOf", ["heavy"])]), odd, CTX)).toBe(true);
+  });
+});

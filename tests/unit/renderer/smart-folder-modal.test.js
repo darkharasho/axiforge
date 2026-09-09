@@ -20,6 +20,7 @@ const {
 } = require("../../../src/renderer/modules/library/smart-folder-modal");
 const {
   loadSmartFolders, getSmartFolder, listSmartFolders, matchesSmartFolder, ruleContext,
+  SUPPORTED_FIELDS,
 } = require("../../../src/renderer/modules/library/smart-folders");
 
 function makeBuild(o = {}) {
@@ -64,9 +65,9 @@ async function flushAsync() {
 
 describe("field definitions", () => {
   test("every field the evaluator supports is offered", () => {
-    expect(FIELD_DEFS.map((f) => f.field).sort()).toEqual(
-      ["createdAt", "eliteSpec", "gameMode", "location", "notes", "ownership", "pinned", "profession", "tags", "team", "title", "updatedAt"].sort(),
-    );
+    // Against the evaluator itself, not a hand-copied list: a field offered
+    // here that the evaluator does not know silently matches nothing.
+    expect(FIELD_DEFS.map((f) => f.field).sort()).toEqual([...SUPPORTED_FIELDS].sort());
   });
 
   test("value-less operators are marked so no input renders", () => {
@@ -475,5 +476,52 @@ describe("multi-value option lists", () => {
     const list = $('[data-cond-index="0"] [data-cond-value]');
     expect(list.querySelector(".sfm-opts__empty")).toBeTruthy();
     expect(list.querySelector("[data-opt-value]")).toBeNull();
+  });
+});
+
+/**
+ * Loadout fields harvest their options differently: weapons and stats from
+ * what the library actually holds (so the list stays short and every entry
+ * can match something), armor weight from the fixed three.
+ */
+describe("loadout field options", () => {
+  function optionsFor(field, op) {
+    openSmartFolderModal({
+      id: "sf_x", name: "X",
+      rule: { type: "group", match: "all", children: [{ type: "condition", field, op, value: [] }] },
+    });
+    return [...document.querySelectorAll('[data-cond-index="0"] [data-opt-value]')].map((o) => ({
+      value: o.dataset.optValue,
+      label: o.querySelector(".sfm-opt__label").textContent,
+    }));
+  }
+
+  test("weapons list only what the library equips, in catalog order", () => {
+    state.builds = [
+      makeBuild({ id: "b1", equipment: { weapons: { mainhand1: "staff", offhand1: "" } } }),
+      makeBuild({ id: "b2", equipment: { weapons: { mainhand1: "axe", offhand1: "focus" } } }),
+    ];
+    expect(optionsFor("weapons", "hasAnyOf")).toEqual([
+      { value: "axe", label: "Axe" },
+      { value: "focus", label: "Focus" },
+      { value: "staff", label: "Staff" },
+    ]);
+  });
+
+  test("stats list the prefixes in use, skipping legacy numeric ids", () => {
+    state.builds = [
+      makeBuild({ id: "b1", equipment: { statPackage: "Berserker's", slots: { head: "Assassin's" } } }),
+      makeBuild({ id: "b2", equipment: { statPackage: "161", slots: {} } }),
+    ];
+    expect(optionsFor("stats", "hasAnyOf").map((o) => o.value)).toEqual(["Assassin's", "Berserker's"]);
+  });
+
+  test("armor weight offers the fixed three even when the library holds none", () => {
+    state.builds = [];
+    expect(optionsFor("armorWeight", "isAnyOf")).toEqual([
+      { value: "light", label: "Light" },
+      { value: "medium", label: "Medium" },
+      { value: "heavy", label: "Heavy" },
+    ]);
   });
 });
