@@ -21,8 +21,8 @@ import { showPrompt } from "../prompt-modal.js";
 import { loadTeamState, teamRootFor } from "../teams.js";
 import { promptRenameTeam } from "../team-modal.js";
 import { initToolbar, renderToolbar, renderFilters } from "./toolbar.js";
-import { initSidebar, renderSidebar, insertInlineInput } from "./sidebar.js";
-import { loadSmartFolders, getSmartFolder } from "./smart-folders.js";
+import { initSidebar, renderSidebar, insertInlineInput, resolveSidebarSmartFolder } from "./sidebar.js";
+import { loadSmartFolders, getSmartFolder, saveSmartFolder, deleteSmartFolder, setBuiltinHidden } from "./smart-folders.js";
 import { openSmartFolderModal } from "./smart-folder-modal.js";
 import { initSidebarResize, applySidebarWidth, clampSidebarWidth } from "./sidebar-resize.js";
 import { initContent, renderContent } from "./content.js";
@@ -325,6 +325,68 @@ async function handleNewFolder() {
 
 function handleNewSmartFolder() {
   openSmartFolderModal(null);
+}
+
+function handleEditSmartFolder(sf) {
+  openSmartFolderModal(sf);
+}
+
+// Duplicating a built-in is how you start your own: same rule, editable copy.
+function handleDuplicateSmartFolder(sf) {
+  openSmartFolderModal({
+    name: `${sf.name} copy`,
+    icon: sf.icon,
+    rule: JSON.parse(JSON.stringify(sf.rule)),
+  });
+}
+
+async function handleRenameSmartFolder(sf) {
+  const navItem = document.querySelector(`[data-navigate-smart-folder="${sf.id}"]`);
+  const newName = await insertInlineInput(navItem, sf.name || "");
+  if (!newName || newName === sf.name) { renderLibrary(); return; }
+  try {
+    await saveSmartFolder({ ...sf, name: newName });
+  } catch (err) {
+    showToast(err?.message || "Could not rename this smart folder.", "error");
+  }
+  renderLibrary();
+}
+
+async function handleDeleteSmartFolder(sf) {
+  const ok = await showConfirmModal({
+    title: "Delete smart folder",
+    body: `Delete <strong>${escapeHtml(sf.name)}</strong>? The builds it shows are not affected.`,
+    confirmLabel: "Delete",
+    cancelLabel: "Cancel",
+  });
+  if (!ok) return;
+  try {
+    await deleteSmartFolder(sf.id);
+  } catch (err) {
+    showToast(err?.message || "Could not delete this smart folder.", "error");
+    return;
+  }
+  if (state.currentFolder?.type === "smart-rule" && state.currentFolder.id === sf.id) {
+    state.currentFolder = { type: "all" };
+  }
+  renderLibrary();
+}
+
+// setBuiltinHidden persists to the same settings store as saveSmartFolder /
+// deleteSmartFolder, which now propagates write failures instead of
+// swallowing them (see Task 6) -- this is the first caller, so it needs the
+// same guard the modal's own save/delete handlers use.
+export async function handleHideSmartFolder(id) {
+  try {
+    await setBuiltinHidden(id, true);
+  } catch (err) {
+    showToast(err?.message || "Could not hide this smart folder.", "error");
+    return;
+  }
+  if (state.currentFolder?.type === "smart-rule" && state.currentFolder.id === id) {
+    state.currentFolder = { type: "all" };
+  }
+  renderLibrary();
 }
 
 async function handleNewFolderInContent() {
@@ -1843,6 +1905,14 @@ function _buildSharedCallbacks() {
     onNewBuildInFolder: handleNewBuildInFolder,
     onDeleteFolder: handleDeleteFolder,
     onNewFolderAndMove: handleNewFolderAndMove,
+
+    // Smart folder actions
+    onResolveSmartFolder: resolveSidebarSmartFolder,
+    onEditSmartFolder: handleEditSmartFolder,
+    onRenameSmartFolder: handleRenameSmartFolder,
+    onDuplicateSmartFolder: handleDuplicateSmartFolder,
+    onDeleteSmartFolder: handleDeleteSmartFolder,
+    onHideSmartFolder: handleHideSmartFolder,
 
     // Selection
     onSelectAll: selectAll,

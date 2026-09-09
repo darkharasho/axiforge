@@ -112,7 +112,7 @@ function generatedRuleFolder(idPrefix, name, field, value) {
 }
 
 /** Generated rows are not persisted, so they are rebuilt from their id. */
-function resolveSidebarSmartFolder(id) {
+export function resolveSidebarSmartFolder(id) {
   if (id.startsWith("__sf-prof:")) {
     const prof = id.slice("__sf-prof:".length);
     return generatedRuleFolder("__sf-prof:", prof, "profession", prof);

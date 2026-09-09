@@ -98,6 +98,9 @@ export const clockIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2
 // Funnel icon — generic fallback for smart folders with no configured icon
 export const funnelIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M2.628 1.601C5.028 1.206 7.49 1 10 1s4.973.206 7.372.601a.75.75 0 0 1 .628.74v2.288a2.25 2.25 0 0 1-.659 1.59l-4.682 4.683a2.25 2.25 0 0 0-.659 1.59v3.037c0 .684-.31 1.33-.844 1.757l-1.937 1.55A.75.75 0 0 1 8 18.25v-5.757a2.25 2.25 0 0 0-.659-1.591L2.659 6.22A2.25 2.25 0 0 1 2 4.629V2.34a.75.75 0 0 1 .628-.74Z" clip-rule="evenodd"/></svg>`;
 
+// Eye-slash icon — "Hide from sidebar" for built-in smart folders
+export const eyeSlashIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3.28 2.22a.75.75 0 0 0-1.06 1.06l14.5 14.5a.75.75 0 1 0 1.06-1.06l-1.745-1.745a10.029 10.029 0 0 0 3.3-4.38 1.651 1.651 0 0 0 0-1.185A10.004 10.004 0 0 0 9.999 3a9.956 9.956 0 0 0-4.744 1.194L3.28 2.22ZM7.752 6.69l1.092 1.092a2.5 2.5 0 0 1 3.374 3.373l1.091 1.092a4 4 0 0 0-5.557-5.557Z" clip-rule="evenodd"/><path d="M10.748 13.93 6.849 10.03a4 4 0 0 0 4.9 4.9ZM2.678 4.53a10.029 10.029 0 0 0-2.014 3.375c-.09.29-.09.601 0 .89a10.004 10.004 0 0 0 9.336 6.955c.83 0 1.632-.107 2.397-.31l-1.75-1.75a4 4 0 0 1-4.678-4.678L2.678 4.53Z"/></svg>`;
+
 // Lucide-style numbered square badge for party-line labels. Lucide has no 0–9 glyphs,
 // so this draws one in Lucide's idiom: a thin rounded square (stroke) with a centered
 // digit. Used in the comp editor and the published SPA so party numbers look consistent.
