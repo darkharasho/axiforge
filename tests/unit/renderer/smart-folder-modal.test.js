@@ -196,12 +196,16 @@ describe("editing conditions", () => {
       id: "sf_x", name: "X",
       rule: { type: "group", match: "all", children: [{ type: "condition", field: "team", op: "isAnyOf", value: ["t1"] }] },
     });
-    const valueSel = $('[data-cond-index="0"] [data-cond-value]');
-    expect(valueSel).toBeTruthy();
-    const options = [...valueSel.options].map((o) => ({ value: o.value, label: o.textContent }));
+    const list = $('[data-cond-index="0"] [data-cond-value]');
+    expect(list).toBeTruthy();
+    const options = [...list.querySelectorAll("[data-opt-value]")].map((o) => ({
+      value: o.dataset.optValue,
+      label: o.querySelector(".sfm-opt__label").textContent,
+      on: o.getAttribute("aria-selected"),
+    }));
     expect(options).toEqual([
-      { value: "t1", label: "Guild One" },
-      { value: "t2", label: "Guild Two" },
+      { value: "t1", label: "Guild One", on: "true" },
+      { value: "t2", label: "Guild Two", on: "false" },
     ]);
   });
 });
@@ -404,5 +408,72 @@ describe("round trip through the store", () => {
     const ctx = ruleContext();
     const matched = state.builds.filter((b) => matchesSmartFolder(stored, b, ctx));
     expect(matched).toHaveLength(2);
+  });
+});
+
+/**
+ * The multi-valued controls are toggle buttons rather than a native
+ * `<select multiple>`: an `<option>` cannot carry a profession icon, and a
+ * ctrl-click listbox loses the whole selection on one stray click.
+ */
+describe("multi-value option lists", () => {
+  function openTags(value = []) {
+    openSmartFolderModal({
+      id: "sf_x", name: "X",
+      rule: { type: "group", match: "all", children: [{ type: "condition", field: "tags", op: "hasAnyOf", value }] },
+    });
+    return $('[data-cond-index="0"] [data-cond-value]');
+  }
+
+  test("clicking an option turns it on, and clicking it again turns it off", () => {
+    const list = openTags();
+    const wvw = list.querySelector('[data-opt-value="wvw"]');
+
+    wvw.click();
+    expect(wvw.getAttribute("aria-selected")).toBe("true");
+    expect(wvw.classList.contains("sfm-opt--on")).toBe(true);
+
+    wvw.click();
+    expect(wvw.getAttribute("aria-selected")).toBe("false");
+    expect(wvw.classList.contains("sfm-opt--on")).toBe(false);
+  });
+
+  test("toggling edits the list in place -- a long spec list must not scroll back to the top", () => {
+    const list = openTags();
+    const wvw = list.querySelector('[data-opt-value="wvw"]');
+    wvw.click();
+    expect($('[data-cond-index="0"] [data-cond-value]')).toBe(list);
+  });
+
+  test("a toggled option reaches the saved rule", async () => {
+    openTags();
+    $('[data-cond-index="0"] [data-opt-value="wvw"]').click();
+    $("#sfm-name").value = "WvW";
+    $("#sfm-name").dispatchEvent(new Event("input", { bubbles: true }));
+    $("#sfm-save").click();
+    await flushAsync();
+
+    expect(onSaved).toHaveBeenCalled();
+    expect(getSmartFolder(onSaved.mock.calls[0][0].id).rule.children[0].value).toEqual(["wvw"]);
+  });
+
+  test("profession options carry the class icon", () => {
+    openSmartFolderModal({
+      id: "sf_x", name: "X",
+      rule: { type: "group", match: "all", children: [{ type: "condition", field: "profession", op: "isAnyOf", value: [] }] },
+    });
+    const opt = $('[data-cond-index="0"] [data-opt-value="Guardian"]');
+    expect(opt.querySelector(".sfm-opt__icon")).toBeTruthy();
+  });
+
+  test("a field with nothing to choose from says so instead of rendering an empty box", () => {
+    state.teams = [];
+    openSmartFolderModal({
+      id: "sf_x", name: "X",
+      rule: { type: "group", match: "all", children: [{ type: "condition", field: "team", op: "isAnyOf", value: [] }] },
+    });
+    const list = $('[data-cond-index="0"] [data-cond-value]');
+    expect(list.querySelector(".sfm-opts__empty")).toBeTruthy();
+    expect(list.querySelector("[data-opt-value]")).toBeNull();
   });
 });

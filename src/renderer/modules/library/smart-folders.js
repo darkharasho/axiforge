@@ -100,6 +100,18 @@ export const OWNERSHIP_VALUES = Object.freeze([
 
 const OWNERSHIP_SET = new Set(OWNERSHIP_VALUES.map((o) => o.value));
 
+/**
+ * Display name for a game mode id. Lives beside the rule vocabulary because
+ * the sidebar, the table view and the rule editor all label the same stored
+ * values, and three private copies had already started to drift.
+ */
+export function gameModeLabel(mode) {
+  if (mode === "pve") return "PvE";
+  if (mode === "pvp") return "PvP";
+  if (mode === "wvw") return "WvW";
+  return mode || "PvE";
+}
+
 const OWNERSHIP_OPS = {
   is: (ownership, value) => {
     const want = asString(value);

@@ -5,6 +5,7 @@ import { escapeHtml, formatRelativeTime } from "../utils.js";
 import { roleBadgeHtml } from '../roleEstimator.js';
 import { getVisibleBuilds, getVisibleFolders, getVisibleComps, libraryBuilds, libraryComps, libraryFolders, searchQuery, hasSearchQuery, buildMatchesQuery, compMatchesQuery } from "./folder-store.js";
 import { getProfessionSvg } from "../profession-icons.js";
+import { gameModeLabel } from "./smart-folders.js";
 import { badgeHtml } from "../sync-status.js";
 import { buildUsageChipHtml, compSourceBadgeHtml, foreignFolderChipHtml } from "../build-source-chips.js";
 import { folderPathText } from "../build-sources.js";
@@ -180,13 +181,6 @@ function getEliteSpecName(build) {
 function profClass(profession) {
   if (!profession) return "";
   return `lib-prof--${profession.toLowerCase()}`;
-}
-
-function gameModeLabel(mode) {
-  if (mode === "pve") return "PvE";
-  if (mode === "pvp") return "PvP";
-  if (mode === "wvw") return "WvW";
-  return mode || "PvE";
 }
 
 function formatDate(value) {

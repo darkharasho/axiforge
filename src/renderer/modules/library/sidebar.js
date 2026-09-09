@@ -5,7 +5,7 @@ import { escapeHtml } from "../utils.js";
 import { countBuildsInFolder, libraryBuilds, libraryComps, libraryFolders } from "./folder-store.js";
 import { badgeHtml } from "../sync-status.js";
 import { teamLabel } from "../teams.js";
-import { listSmartFolders, matchesSmartFolder, ruleContext } from "./smart-folders.js";
+import { listSmartFolders, matchesSmartFolder, ruleContext, gameModeLabel } from "./smart-folders.js";
 import {
   folderIcon,
   folderOpenIcon,
@@ -404,13 +404,6 @@ function renderFolderItem(folder, expanded, depth) {
 
 function _renderSyncIndicator(folderId) {
   return badgeHtml("lib-nav-item__sync-indicator", state.folderSyncStatus?.[folderId]);
-}
-
-function gameModeLabel(id) {
-  if (id === "pve") return "PvE";
-  if (id === "pvp") return "PvP";
-  if (id === "wvw") return "WvW";
-  return id;
 }
 
 // ─── Event binding ─────────────────────────────────────────────────────────────

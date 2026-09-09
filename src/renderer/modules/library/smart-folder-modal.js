@@ -12,8 +12,10 @@ import { state } from "../state.js";
 import { libraryBuilds, libraryFolders } from "./folder-store.js";
 import {
   matchesSmartFolder, ruleContext, saveSmartFolder, deleteSmartFolder,
-  OWNERSHIP_VALUES,
+  OWNERSHIP_VALUES, gameModeLabel,
 } from "./smart-folders.js";
+import { getProfessionSvg } from "../profession-icons.js";
+import { tagIcon, userGroupIcon, globeAltIcon } from "./heroicons.js";
 
 /**
  * The editor's vocabulary. It must stay in step with FIELDS in
@@ -115,7 +117,7 @@ function optionsFor(field) {
     return [...specs].sort().map((v) => ({ value: v, label: v }));
   }
   if (field === "gameMode") {
-    return [...new Set(builds.map((b) => b.gameMode || "pve"))].sort().map((v) => ({ value: v, label: v }));
+    return [...new Set(builds.map((b) => b.gameMode || "pve"))].sort().map((v) => ({ value: v, label: gameModeLabel(v) }));
   }
   if (field === "tags") {
     return [...new Set(builds.flatMap((b) => b.tags || []).filter(Boolean))].sort().map((v) => ({ value: v, label: v }));
@@ -125,6 +127,21 @@ function optionsFor(field) {
     return (state.teams || []).map((t) => ({ value: t.team.id, label: t.team.name }));
   }
   return [];
+}
+
+/**
+ * The glyph beside an option. Professions and elite specs share one lookup --
+ * gw2-class-icons keys both off the line's name -- so "Firebrand" resolves the
+ * same way whether it arrived as a profession or as a spec. Fields with no
+ * visual vocabulary get a category glyph rather than nothing, so every row in
+ * a list lines up on the same left edge.
+ */
+function optionIcon(field, label) {
+  if (field === "profession" || field === "eliteSpec") return getProfessionSvg(label) || "";
+  if (field === "gameMode") return globeAltIcon;
+  if (field === "tags") return tagIcon;
+  if (field === "team") return userGroupIcon;
+  return "";
 }
 
 /** Folders the "is in folder" / "is not in folder" ops can point at. */
@@ -302,12 +319,14 @@ function _renderCondition(cond, index) {
   const def = fieldDef(cond.field) || FIELD_DEFS[0];
   const op = opDef(cond.field, cond.op) || def.ops[0];
   const negative = Boolean(op?.negative);
+  // A multi-valued list gets its own full-width row; the card has to say so.
+  const multi = op?.valueKind === "multi" || op?.valueKind === "team";
 
   const fieldOptions = FIELD_DEFS.map((f) => `<option value="${f.field}" ${f.field === cond.field ? "selected" : ""}>${escapeHtml(f.label)}</option>`).join("");
   const opOptions = def.ops.map((o) => `<option value="${o.op}" ${o.op === cond.op ? "selected" : ""}>${escapeHtml(o.label)}</option>`).join("");
 
   return `
-    <div class="sfm-cond${negative ? " sfm-cond--negative" : ""}" data-cond-index="${index}">
+    <div class="sfm-cond${multi ? " sfm-cond--multi" : ""}${negative ? " sfm-cond--negative" : ""}" data-cond-index="${index}">
       <select class="sfm-cond__field" data-cond-field>${fieldOptions}</select>
       <select class="sfm-cond__op" data-cond-op>${opOptions}</select>
       ${_renderValueControl(cond, op)}
@@ -320,10 +339,27 @@ function _renderValueControl(cond, op) {
   if (!op || op.valueKind === "none") return "";
 
   if (op.valueKind === "multi" || op.valueKind === "team") {
+    // Not a <select multiple>: an <option> cannot carry a profession icon, and
+    // ctrl-clicking a native listbox loses the whole selection on a stray
+    // click. These are toggle buttons, so every row is one click and the icon
+    // makes a long spec list scannable.
     const options = optionsFor(cond.field);
     const selected = Array.isArray(cond.value) ? cond.value : [];
-    const optionsHtml = options.map((o) => `<option value="${escapeHtml(o.value)}" ${selected.includes(o.value) ? "selected" : ""}>${escapeHtml(o.label)}</option>`).join("");
-    return `<select class="sfm-cond__value" data-cond-value multiple>${optionsHtml}</select>`;
+    if (options.length === 0) {
+      return `<div class="sfm-opts sfm-opts--empty" data-cond-value data-cond-multi role="listbox" aria-multiselectable="true">
+        <span class="sfm-opts__empty">Nothing in your library to choose from yet.</span>
+      </div>`;
+    }
+    const optionsHtml = options.map((o) => {
+      const on = selected.includes(o.value);
+      const icon = optionIcon(cond.field, o.label);
+      return `<button type="button" role="option" aria-selected="${on}"
+        class="sfm-opt${on ? " sfm-opt--on" : ""}" data-opt-value="${escapeHtml(o.value)}">
+        <span class="sfm-opt__icon">${icon}</span>
+        <span class="sfm-opt__label">${escapeHtml(o.label)}</span>
+      </button>`;
+    }).join("");
+    return `<div class="sfm-opts" data-cond-value data-cond-multi role="listbox" aria-multiselectable="true">${optionsHtml}</div>`;
   }
 
   if (op.valueKind === "ownership") {
@@ -373,6 +409,8 @@ function _onClick(e) {
     _render();
     return;
   }
+  const opt = e.target.closest("[data-opt-value]");
+  if (opt) { _toggleOption(opt); return; }
   if (e.target.closest("#sfm-save")) { _handleSave(); return; }
   if (e.target.closest("#sfm-cancel")) { closeSmartFolderModal(); return; }
   if (e.target.closest("#sfm-delete")) { _handleDelete(); return; }
@@ -435,11 +473,30 @@ function _onChange(e) {
   }
 }
 
+/**
+ * Toggle one option of a multi-valued condition, in place.
+ *
+ * Deliberately not a re-render: the option list scrolls, and rebuilding the
+ * body would jump it back to the top on every pick -- the exact motion that
+ * makes selecting six specs in a row unpleasant. Nothing else on the card
+ * depends on which options are on, so only the live count needs refreshing.
+ */
+function _toggleOption(btn) {
+  const i = _rowIndex(btn);
+  const cond = _draft?.rule.children[i];
+  if (!cond) return;
+  const value = btn.dataset.optValue;
+  const current = Array.isArray(cond.value) ? cond.value : [];
+  const on = !current.includes(value);
+  cond.value = on ? [...current, value] : current.filter((v) => v !== value);
+  btn.classList.toggle("sfm-opt--on", on);
+  btn.setAttribute("aria-selected", String(on));
+  _refreshCount();
+}
+
 /** Read a value control into its condition, coercing number inputs. */
 function _readValueControl(el, cond) {
-  if (el.multiple) {
-    cond.value = [...el.selectedOptions].map((o) => o.value);
-  } else if (el.type === "number") {
+  if (el.type === "number") {
     // HTMLInputElement.value is always a string; the date operators require a
     // real number, so an uncoerced "30" would match nothing.
     cond.value = el.value === "" ? NaN : Number(el.value);
