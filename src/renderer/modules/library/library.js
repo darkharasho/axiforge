@@ -21,7 +21,7 @@ import { showPrompt } from "../prompt-modal.js";
 import { loadTeamState, teamRootFor } from "../teams.js";
 import { promptRenameTeam } from "../team-modal.js";
 import { initToolbar, renderToolbar, renderFilters } from "./toolbar.js";
-import { initSidebar, renderSidebar, insertInlineInput, resolveSidebarSmartFolder } from "./sidebar.js";
+import { initSidebar, renderSidebar, insertInlineInput, resolveSidebarSmartFolder, pruneGeneratedGroupsOnce } from "./sidebar.js";
 import { loadSmartFolders, getSmartFolder, saveSmartFolder, deleteSmartFolder, setBuiltinHidden } from "./smart-folders.js";
 import { openSmartFolderModal } from "./smart-folder-modal.js";
 import { initSidebarResize, applySidebarWidth, clampSidebarWidth } from "./sidebar-resize.js";
@@ -1784,6 +1784,8 @@ async function loadPrefs() {
     if (sidebarWidth != null) state.libraryPrefs.sidebarWidth = clampSidebarWidth(sidebarWidth);
     if (Array.isArray(sidebarExpandedFolders)) state.libraryPrefs.sidebarExpandedFolders = sidebarExpandedFolders;
     if (activeFilters != null && typeof activeFilters === "object") state.libraryPrefs.activeFilters = activeFilters;
+
+    await pruneGeneratedGroupsOnce();
   } catch {
     // First run or settings not available — use defaults
   }

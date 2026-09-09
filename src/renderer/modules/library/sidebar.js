@@ -28,6 +28,39 @@ import {
 let _callbacks = {};
 
 /**
+ * The two sidebar groups the app generates rather than the user creating them.
+ * Both draw collapsed by default -- `sidebarExpandedFolders` starts empty and
+ * nothing seeds these ids into it. @see pruneGeneratedGroupsOnce
+ */
+export const GENERATED_GROUP_IDS = Object.freeze(["__smart-profession", "__smart-gamemode"]);
+
+/** Settings key recording that the one-time prune below has already run. */
+const PRUNED_KEY = "library.generatedGroupsPruned";
+
+/**
+ * Close By Profession and By Game Mode once, for anyone who has them open.
+ *
+ * The smart folder list grew to the point where two expanded generated groups
+ * push everything else off screen, so their saved expansion is pruned a single
+ * time. Gated on a settings flag rather than repeated on every load: after this
+ * runs, expanding a group has to stick again, or the chevron stops working.
+ */
+export async function pruneGeneratedGroupsOnce() {
+  const api = window.desktopApi;
+  if (!api?.getSetting || !api?.setSetting) return;
+  if ((await api.getSetting(PRUNED_KEY)) === true) return;
+
+  const kept = (state.libraryPrefs.sidebarExpandedFolders || []).filter(
+    (id) => !GENERATED_GROUP_IDS.includes(id),
+  );
+  state.libraryPrefs.sidebarExpandedFolders = kept;
+  // Persisted here rather than left for the next savePrefs: the flag is going
+  // down now, so a prune that never reached disk would never happen again.
+  await api.setSetting("library.sidebarExpandedFolders", kept);
+  await api.setSetting(PRUNED_KEY, true);
+}
+
+/**
  * Store callbacks for sidebar actions.
  * @param {{ onNavigate, onPrefsChange, onNewFolder }} callbacks
  */
@@ -59,8 +92,9 @@ export function renderSidebar() {
   }
 
   const expanded = new Set(sidebarExpandedFolders || []);
-  const profExpanded = expanded.has("__smart-profession");
-  const modeExpanded = expanded.has("__smart-gamemode");
+  const [PROF_GROUP, MODE_GROUP] = GENERATED_GROUP_IDS;
+  const profExpanded = expanded.has(PROF_GROUP);
+  const modeExpanded = expanded.has(MODE_GROUP);
 
   container.classList.remove("lib-sidebar--collapsed");
   container.classList.add("lib-sidebar--open");

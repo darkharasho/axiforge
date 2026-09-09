@@ -218,7 +218,13 @@ The Smart Folders section becomes, in order:
 
 1. Flat built-ins: `Main Repository`, `All Builds (by folder)`, `Recently
    Modified`, `Shared`, `Unfiled`, `Untagged`
-2. The `By Profession` and `By Game Mode` collapsible groups
+2. The `By Profession` and `By Game Mode` collapsible groups, both collapsed by
+   default. `sidebarExpandedFolders` starts empty and nothing seeds their ids,
+   so a fresh install already draws them closed; a one-time prune
+   (`pruneGeneratedGroupsOnce`, gated on `library.generatedGroupsPruned`)
+   closes them for anyone whose saved preference remembers them open, because
+   the list is now long enough that two expanded groups push the rest off
+   screen. It runs exactly once — after that a user's expansion sticks again.
 3. `All Comps`
 4. A divider, a "My Smart Folders" label, and the user's own smart folders
 
