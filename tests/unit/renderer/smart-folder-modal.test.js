@@ -176,15 +176,15 @@ describe("editing conditions", () => {
     expect($('[data-cond-index="0"]').classList.contains("sfm-cond--negative")).toBe(true);
   });
 
-  test("ownership field offers exactly the two ownership values", () => {
+  test("ownership field offers exactly the three ownership values", () => {
     openSmartFolderModal({
       id: "sf_x", name: "X",
-      rule: { type: "group", match: "all", children: [{ type: "condition", field: "ownership", op: "is", value: "mine" }] },
+      rule: { type: "group", match: "all", children: [{ type: "condition", field: "ownership", op: "is", value: "personal" }] },
     });
     const valueSel = $('[data-cond-index="0"] [data-cond-value]');
     expect(valueSel).toBeTruthy();
     const values = [...valueSel.options].map((o) => o.value);
-    expect(values.sort()).toEqual(["mine", "sharedWithMe"]);
+    expect(values.sort()).toEqual(["personal", "sharedByMe", "sharedWithMe"]);
   });
 
   test("team field offers the user's teams", () => {

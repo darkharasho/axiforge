@@ -82,11 +82,36 @@ const LOCATION_OPS = {
     !LOCATION_OPS.inFolder(folderId, value, build, ctx),
 };
 
+/**
+ * What "shared" can mean for a build. Every value is keyed on the team root
+ * the build sits under, because authorship is not reachable from the renderer
+ * -- `createdBy` lives in main's sync state, and only for synced records. So
+ * these describe WHERE a build lives, never who wrote it: a teammate's build
+ * in a team you own is `sharedByMe`, not `sharedWithMe`.
+ *
+ * The editor renders its Ownership select straight off this list, so adding a
+ * value here is the only edit a new one needs.
+ */
+export const OWNERSHIP_VALUES = Object.freeze([
+  { value: "personal", label: "Personal" },
+  { value: "sharedByMe", label: "Shared by me" },
+  { value: "sharedWithMe", label: "Shared with me" },
+]);
+
+const OWNERSHIP_SET = new Set(OWNERSHIP_VALUES.map((o) => o.value));
+
 const OWNERSHIP_OPS = {
   is: (ownership, value) => {
     const want = asString(value);
-    if (want !== "mine" && want !== "sharedWithMe") return false;
+    if (!OWNERSHIP_SET.has(want)) return false;
     return ownership === want;
+  },
+  // Not the negation of an unknown value: an unrecognised value is false under
+  // both ops, so a malformed rule matches nothing rather than everything.
+  isNot: (ownership, value) => {
+    const want = asString(value);
+    if (!OWNERSHIP_SET.has(want)) return false;
+    return ownership !== want;
   },
 };
 
@@ -149,11 +174,12 @@ const FIELDS = {
   notes: { get: (b) => b.notes || "", ops: TEXT_OPS },
   pinned: { get: (b) => b.pinned === true, ops: BOOL_OPS },
   location: { get: (b) => b.folderId || null, ops: LOCATION_OPS },
-  // "Shared with me" means: it sits under a team root somebody else owns.
+  // Which side of a team space a build sits on. @see OWNERSHIP_VALUES
   ownership: {
     get: (b, ctx) => {
       const root = teamRootFor(b.folderId, ctx.folders || []);
-      return root && root.role !== "owner" ? "sharedWithMe" : "mine";
+      if (!root) return "personal";
+      return root.role === "owner" ? "sharedByMe" : "sharedWithMe";
     },
     ops: OWNERSHIP_OPS,
   },
@@ -220,7 +246,10 @@ const when = (field, op, value) => ({ type: "condition", field, op, value });
 export const BUILTIN_SMART_FOLDERS = Object.freeze([
   { id: "__sf-main", name: "Main Repository", icon: "folderOpen", builtin: true, rule: group([]) },
   { id: "__sf-recent", name: "Recently Modified", icon: "clock", builtin: true, rule: group([when("updatedAt", "withinDays", 14)]) },
-  { id: "__sf-shared", name: "Shared with me", icon: "share", builtin: true, rule: group([when("ownership", "is", "sharedWithMe")]) },
+  // Both sides of every team space. "Shared with me" alone would hide the
+  // builds teammates file into a team you own, which is most of what an owner
+  // wants to see here.
+  { id: "__sf-shared", name: "Shared", icon: "share", builtin: true, rule: group([when("ownership", "isNot", "personal")]) },
   { id: "__sf-unfiled", name: "Unfiled", icon: "bars", builtin: true, rule: group([when("location", "isUnfiled")]) },
   { id: "__sf-untagged", name: "Untagged", icon: "tag", builtin: true, rule: group([when("tags", "isEmpty")]) },
 ]);

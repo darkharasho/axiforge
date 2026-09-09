@@ -18,7 +18,8 @@ Two concrete requests came out of the Discord thread:
   the folder path for builds that are filed. `All Builds` does not do this: it
   filters to `!b.folderId` and renders folder rows alongside, so filed builds
   are only reachable by descending the tree.
-- **Shared with me** — every build reachable through the team library.
+- **Shared** — every build reachable through the team library, on either side
+  of it: teams the user owns and teams they were invited to.
 
 Beyond those, users want to slice their library by their own criteria — tag,
 elite spec, game mode, and combinations of them.
@@ -87,7 +88,7 @@ expressed.
 | `title` | `contains`, `notContains` | string |
 | `notes` | `contains`, `notContains` | string |
 | `location` | `isUnfiled`, `inFolder`, `notInFolder` | none / folderId |
-| `ownership` | `is` | `"mine"` \| `"sharedWithMe"` |
+| `ownership` | `is`, `isNot` | `"personal"` \| `"sharedByMe"` \| `"sharedWithMe"` |
 | `team` | `isAnyOf` | teamId[] |
 | `updatedAt` | `withinDays`, `olderThanDays` | number |
 | `createdAt` | `withinDays`, `olderThanDays` | number |
@@ -102,9 +103,15 @@ Semantics worth pinning down, because each is ambiguous on its face:
   `getVisibleBuilds()` today.
 - `inFolder` **includes subfolders**, resolved through `folderSubtreeIds()`.
   `notInFolder` is its exact negation, so an unfiled build satisfies it.
-- `ownership: sharedWithMe` means the build sits under a team root whose
-  `role !== "owner"` (`teamRootFor()` in `teams.js`). `mine` is the negation:
-  no team root, or a team root the user owns.
+- `ownership` is keyed on the team root a build sits under (`teamRootFor()` in
+  `teams.js`), never on authorship: `personal` = no team root, `sharedByMe` =
+  a team root with `role === "owner"`, `sharedWithMe` = a team root with any
+  other role. A teammate's build inside a team the user owns is therefore
+  `sharedByMe`. Separating the user's own builds from their teammates' inside
+  one team would need `createdBy`, which lives in main's sync state and is not
+  exposed to the renderer; it is out of scope here.
+- Both `is` and `isNot` evaluate `false` for a value outside that vocabulary,
+  so a malformed ownership rule matches nothing rather than everything.
 - `contains` / `notContains` are case-insensitive substring matches.
 - `withinDays: N` means the timestamp is within the last N days of `ctx.now`.
   `olderThanDays` is its negation for records that have a timestamp; a record
@@ -153,7 +160,7 @@ opens normally.
 |---|---|
 | Main Repository | no conditions — matches everything |
 | Recently Modified | `updatedAt withinDays 14` |
-| Shared with me | `ownership is sharedWithMe` |
+| Shared | `ownership isNot personal` |
 | Unfiled | `location isUnfiled` |
 | Untagged | `tags isEmpty` |
 
@@ -210,7 +217,7 @@ place.
 The Smart Folders section becomes, in order:
 
 1. Flat built-ins: `Main Repository`, `All Builds (by folder)`, `Recently
-   Modified`, `Shared with me`, `Unfiled`, `Untagged`
+   Modified`, `Shared`, `Unfiled`, `Untagged`
 2. The `By Profession` and `By Game Mode` collapsible groups
 3. `All Comps`
 4. A divider, a "My Smart Folders" label, and the user's own smart folders
@@ -291,7 +298,8 @@ unit tests over plain objects:
 
 - one case per field/operator pair, including the ambiguous semantics called out
   above (elite-only spec matching, `gameMode` defaulting to `"pve"`, `inFolder`
-  including subfolders, `sharedWithMe` via a non-owner team root)
+  including subfolders, all three `ownership` values including a teammate's
+  build in an owned team resolving to `sharedByMe`)
 - `match: "all"` vs `"any"`
 - empty conditions match everything (the `Main Repository` case)
 - unknown field and unknown operator both evaluate `false`

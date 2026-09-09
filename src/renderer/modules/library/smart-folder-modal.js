@@ -12,6 +12,7 @@ import { state } from "../state.js";
 import { libraryBuilds, libraryFolders } from "./folder-store.js";
 import {
   matchesSmartFolder, ruleContext, saveSmartFolder, deleteSmartFolder,
+  OWNERSHIP_VALUES,
 } from "./smart-folders.js";
 
 /**
@@ -54,6 +55,7 @@ export const FIELD_DEFS = [
   ]},
   { field: "ownership", label: "Ownership", ops: [
     { op: "is", label: "is", valueKind: "ownership" },
+    { op: "isNot", label: "is not", valueKind: "ownership", negative: true },
   ]},
   { field: "team", label: "Team", ops: [
     { op: "isAnyOf", label: "is any of", valueKind: "team" },
@@ -73,11 +75,8 @@ export const FIELD_DEFS = [
   ]},
 ];
 
-/** The two ownership values OWNERSHIP_OPS.is accepts -- anything else is false. */
-const OWNERSHIP_OPTIONS = [
-  { value: "mine", label: "Mine" },
-  { value: "sharedWithMe", label: "Shared with me" },
-];
+/** The ownership values the evaluator accepts -- anything else is false. */
+const OWNERSHIP_OPTIONS = OWNERSHIP_VALUES;
 
 function fieldDef(field) {
   return FIELD_DEFS.find((f) => f.field === field) || null;
@@ -95,7 +94,7 @@ function defaultValueFor(valueKind) {
     case "text": return "";
     case "number": return 14;
     case "folder": return null;
-    case "ownership": return "mine";
+    case "ownership": return "personal";
     default: return undefined;   // "none"
   }
 }
@@ -156,7 +155,7 @@ function isComplete(cond) {
     case "text": return typeof cond.value === "string" && cond.value.trim() !== "";
     case "number": return typeof cond.value === "number" && Number.isFinite(cond.value);
     case "folder": return typeof cond.value === "string" && cond.value !== "";
-    case "ownership": return cond.value === "mine" || cond.value === "sharedWithMe";
+    case "ownership": return OWNERSHIP_OPTIONS.some((o) => o.value === cond.value);
     default: return false;
   }
 }

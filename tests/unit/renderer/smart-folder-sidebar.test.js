@@ -86,7 +86,7 @@ describe("built-in rows", () => {
       "Main Repository",
       "All Builds (by folder)",
       "Recently Modified",
-      "Shared with me",
+      "Shared",
       "Unfiled",
       "Untagged",
     ]);

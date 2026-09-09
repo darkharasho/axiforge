@@ -228,17 +228,27 @@ describe("ownership / team", () => {
     expect(matchesSmartFolder(rule, build({ folderId: "t-theirs-sub" }), ctx)).toBe(true);
   });
 
-  test("a team the user owns is theirs, not shared with them", () => {
-    const rule = sf([cond("ownership", "is", "sharedWithMe")]);
-    expect(matchesSmartFolder(rule, build({ folderId: "t-mine" }), ctx)).toBe(false);
+  test("a team the user owns is sharedByMe, not sharedWithMe", () => {
+    expect(matchesSmartFolder(sf([cond("ownership", "is", "sharedWithMe")]), build({ folderId: "t-mine" }), ctx)).toBe(false);
+    expect(matchesSmartFolder(sf([cond("ownership", "is", "sharedByMe")]), build({ folderId: "t-mine" }), ctx)).toBe(true);
   });
 
-  test("mine covers both unfiled builds and owned teams", () => {
-    const rule = sf([cond("ownership", "is", "mine")]);
+  test("personal covers unfiled builds and non-team folders only", () => {
+    const rule = sf([cond("ownership", "is", "personal")]);
     expect(matchesSmartFolder(rule, build({ folderId: null }), ctx)).toBe(true);
     expect(matchesSmartFolder(rule, build({ folderId: "f-plain" }), ctx)).toBe(true);
-    expect(matchesSmartFolder(rule, build({ folderId: "t-mine" }), ctx)).toBe(true);
+    expect(matchesSmartFolder(rule, build({ folderId: "t-mine" }), ctx)).toBe(false);
     expect(matchesSmartFolder(rule, build({ folderId: "t-theirs" }), ctx)).toBe(false);
+  });
+
+  // The "Shared" built-in. An owner has to see what teammates file into a team
+  // they own, which is exactly the case `is sharedWithMe` used to drop.
+  test("isNot personal is both sides of every team space", () => {
+    const rule = sf([cond("ownership", "isNot", "personal")]);
+    expect(matchesSmartFolder(rule, build({ folderId: "t-mine" }), ctx)).toBe(true);
+    expect(matchesSmartFolder(rule, build({ folderId: "t-theirs-sub" }), ctx)).toBe(true);
+    expect(matchesSmartFolder(rule, build({ folderId: "f-plain" }), ctx)).toBe(false);
+    expect(matchesSmartFolder(rule, build({ folderId: null }), ctx)).toBe(false);
   });
 
   test("team isAnyOf matches by team id", () => {
@@ -247,9 +257,11 @@ describe("ownership / team", () => {
     expect(matchesSmartFolder(rule, build({ folderId: "t-mine" }), ctx)).toBe(false);
   });
 
-  test("an unknown ownership value matches nothing", () => {
-    const rule = sf([cond("ownership", "is", "somebody-else")]);
-    expect(matchesSmartFolder(rule, build({ folderId: null }), ctx)).toBe(false);
+  test("an unknown ownership value matches nothing under either operator", () => {
+    expect(matchesSmartFolder(sf([cond("ownership", "is", "somebody-else")]), build({ folderId: null }), ctx)).toBe(false);
+    // isNot is deliberately not the negation of an unknown value: it would
+    // otherwise match the entire library.
+    expect(matchesSmartFolder(sf([cond("ownership", "isNot", "somebody-else")]), build({ folderId: null }), ctx)).toBe(false);
   });
 });
 
