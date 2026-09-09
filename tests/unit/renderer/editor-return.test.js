@@ -35,7 +35,7 @@ describe("describeEditorOrigin", () => {
   });
 
   test("smart folders are not named — they are still the library", () => {
-    const state = baseState({ currentFolder: { type: "smart-profession", id: "guardian" } });
+    const state = baseState({ currentFolder: { type: "smart-rule", id: "__sf-prof:Guardian" } });
     expect(describeEditorOrigin(state, "library")).toBe("Library");
   });
 

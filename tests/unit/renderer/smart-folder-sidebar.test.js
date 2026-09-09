@@ -76,6 +76,22 @@ describe("built-in rows", () => {
     expect(labels).not.toContain("All Builds");
   });
 
+  // The spec fixes this order, and gives the reason: two rows with the same
+  // count and different contents read as a bug unless they sit together.
+  test("All Builds (by folder) sits immediately after Main Repository", () => {
+    state.builds = [makeBuild()];
+    renderSidebar();
+    const labels = [...document.querySelectorAll(".lib-sidebar__section .lib-nav-item__label")].map((e) => e.textContent);
+    expect(labels.slice(0, 6)).toEqual([
+      "Main Repository",
+      "All Builds (by folder)",
+      "Recently Modified",
+      "Shared with me",
+      "Unfiled",
+      "Untagged",
+    ]);
+  });
+
   test("a hidden built-in is not rendered", async () => {
     settings["library.smartFolderOverrides"] = { hidden: ["__sf-untagged"] };
     await loadSmartFolders();
@@ -150,6 +166,29 @@ describe("navigation", () => {
     expect(arg.smartFolder.rule.children).toEqual([
       { type: "condition", field: "profession", op: "isAnyOf", value: ["Guardian"] },
     ]);
+  });
+
+  // The profession tints in library.css key off this attribute; without it
+  // every profession row renders in the default text colour.
+  test("generated profession rows carry the profession for its sidebar tint", () => {
+    state.builds = [makeBuild({ profession: "Guardian" })];
+    state.libraryPrefs.sidebarExpandedFolders = ["__smart-profession"];
+    renderSidebar();
+    const row = document.querySelector('[data-navigate-smart-folder="__sf-prof:Guardian"]');
+    expect(row.dataset.profession).toBe("Guardian");
+  });
+
+  test("generated rows keep the folder icon rather than the generic funnel", () => {
+    state.builds = [makeBuild({ profession: "Guardian", gameMode: "wvw" })];
+    state.libraryPrefs.sidebarExpandedFolders = ["__smart-profession", "__smart-gamemode"];
+    renderSidebar();
+    // The By Profession / By Game Mode group headers still use the plain folder
+    // icon, which is what their rows used before the rule-engine conversion.
+    const groupIcon = document.querySelector('[data-toggle-group="__smart-profession"] .lib-nav-item__icon').innerHTML;
+    for (const id of ["__sf-prof:Guardian", "__sf-mode:wvw"]) {
+      const icon = document.querySelector(`[data-navigate-smart-folder="${id}"] .lib-nav-item__icon`).innerHTML;
+      expect(icon).toBe(groupIcon);
+    }
   });
 
   test("the active row is marked", () => {

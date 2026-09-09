@@ -136,3 +136,50 @@ describe("corrupt settings degrade instead of breaking the library", () => {
     expect(listSmartFolders().map((f) => f.id)).toEqual(BUILTIN_SMART_FOLDERS.map((f) => f.id));
   });
 });
+
+/**
+ * Degrading to built-ins on a read failure is the sanctioned behaviour; the
+ * trap is what the *next* write does from there. `_userFolders` is empty
+ * because we could not read it, not because the user has none, so persisting
+ * it would delete every smart folder they own.
+ */
+describe("a failed read never turns into a destructive write", () => {
+  async function loadWithBrokenRead() {
+    settings["library.smartFolders"] = [
+      { id: "sf_a", name: "A", rule: { type: "group", match: "all", children: [] } },
+      { id: "sf_b", name: "B", rule: { type: "group", match: "all", children: [] } },
+    ];
+    global.window.desktopApi.getSetting = jest.fn(async () => {
+      throw new Error("no settings store");
+    });
+    await loadSmartFolders();
+  }
+
+  test("saving after a read failure refuses instead of overwriting the store", async () => {
+    await loadWithBrokenRead();
+    await expect(
+      saveSmartFolder({ name: "Mine", rule: { type: "group", match: "all", children: [] } }),
+    ).rejects.toThrow(/could not read/i);
+    expect(settings["library.smartFolders"]).toHaveLength(2);
+  });
+
+  test("deleting after a read failure refuses too", async () => {
+    await loadWithBrokenRead();
+    await expect(deleteSmartFolder("sf_a")).rejects.toThrow(/could not read/i);
+    expect(settings["library.smartFolders"]).toHaveLength(2);
+  });
+
+  test("hiding a built-in after a read failure refuses", async () => {
+    await loadWithBrokenRead();
+    await expect(setBuiltinHidden("__sf-untagged", true)).rejects.toThrow(/could not read/i);
+    expect(settings["library.smartFolderOverrides"]).toBeUndefined();
+  });
+
+  test("a later successful load clears the refusal", async () => {
+    await loadWithBrokenRead();
+    global.window.desktopApi.getSetting = jest.fn(async (k) => (k in settings ? settings[k] : null));
+    await loadSmartFolders();
+    const saved = await saveSmartFolder({ name: "Mine", rule: { type: "group", match: "all", children: [] } });
+    expect(settings["library.smartFolders"].map((f) => f.id)).toEqual(["sf_a", "sf_b", saved.id]);
+  });
+});

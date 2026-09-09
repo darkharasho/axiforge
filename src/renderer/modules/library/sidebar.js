@@ -100,6 +100,12 @@ function generatedRuleFolder(idPrefix, name, field, value) {
   return {
     id,
     name,
+    // These rows are folder-shaped groupings of the library, not saved filters,
+    // and they carried the plain folder icon before the rule-engine conversion.
+    icon: "folder",
+    // Profession rows are tinted by library.css off a data-profession
+    // attribute; carrying the name here is what lets smartRowHtml emit it.
+    profession: field === "profession" ? value : null,
     // Not a persisted record: there is nothing to edit, rename or delete, which
     // is what the context menu in Task 7 checks before it opens.
     generated: true,
@@ -130,6 +136,7 @@ function smartRowHtml(sf, { sub = false } = {}) {
     <button type="button"
       class="lib-nav-item ${sub ? "lib-nav-item--sub" : ""} ${isActive ? "lib-nav-item--active" : ""}"
       data-navigate-smart-folder="${escapeHtml(sf.id)}"
+      ${sf.profession ? `data-profession="${escapeHtml(sf.profession)}"` : ""}
     >
       <span class="lib-nav-item__icon">${smartFolderIcon(sf.icon)}</span>
       <span class="lib-nav-item__label">${escapeHtml(sf.name)}</span>
@@ -141,6 +148,7 @@ function smartRowHtml(sf, { sub = false } = {}) {
 /** Icon name -> svg, falling back to the generic folder icon. */
 function smartFolderIcon(name) {
   const icons = {
+    folder: folderIcon,
     folderOpen: folderOpenIcon,
     clock: clockIcon,
     share: shareIcon,
@@ -171,6 +179,23 @@ function renderSmartFolders(profExpanded, modeExpanded) {
     )
     .join("");
 
+  // The spec pins this order: "All Builds (by folder)" sits directly under
+  // "Main Repository" because two rows with the same count and different
+  // contents read as a bug unless the pair is adjacent enough to compare.
+  const allBuildsRow = `
+      <button type="button"
+        class="lib-nav-item ${allActive ? "lib-nav-item--active" : ""}"
+        data-navigate-all="1"
+      >
+        <span class="lib-nav-item__icon">${folderOpenIcon}</span>
+        <span class="lib-nav-item__label">All Builds (by folder)</span>
+        <span class="lib-nav-item__count">${totalBuilds}</span>
+      </button>
+  `;
+  const builtinRows = builtins.map((f) => smartRowHtml(f));
+  const mainAt = builtins.findIndex((f) => f.id === "__sf-main");
+  builtinRows.splice(mainAt >= 0 ? mainAt + 1 : 0, 0, allBuildsRow);
+
   const gameModes = [...new Set(builds.map((b) => b.gameMode || "pve").filter(Boolean))].sort();
   const modeItems = gameModes
     .map((mode) => {
@@ -187,16 +212,7 @@ function renderSmartFolders(profExpanded, modeExpanded) {
           title="New smart folder" aria-label="New smart folder">${plusIcon}</button>
       </div>
 
-      ${builtins.map((f) => smartRowHtml(f)).join("")}
-
-      <button type="button"
-        class="lib-nav-item ${allActive ? "lib-nav-item--active" : ""}"
-        data-navigate-all="1"
-      >
-        <span class="lib-nav-item__icon">${folderOpenIcon}</span>
-        <span class="lib-nav-item__label">All Builds (by folder)</span>
-        <span class="lib-nav-item__count">${totalBuilds}</span>
-      </button>
+      ${builtinRows.join("")}
 
       ${professions.length > 0 ? `
         <button type="button" class="lib-nav-item lib-nav-item--group" data-toggle-group="__smart-profession">

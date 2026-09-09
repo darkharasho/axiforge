@@ -18,7 +18,9 @@ const {
   closeSmartFolderModal,
   FIELD_DEFS,
 } = require("../../../src/renderer/modules/library/smart-folder-modal");
-const { loadSmartFolders, getSmartFolder } = require("../../../src/renderer/modules/library/smart-folders");
+const {
+  loadSmartFolders, getSmartFolder, listSmartFolders, matchesSmartFolder, ruleContext,
+} = require("../../../src/renderer/modules/library/smart-folders");
 
 function makeBuild(o = {}) {
   return {
@@ -278,5 +280,129 @@ describe("delete", () => {
     closeSmartFolderModal();
     openSmartFolderModal(getSmartFolder("__sf-main"));
     expect($("#sfm-delete")).toBeNull();
+  });
+});
+
+// A `change` event on a *value* control is the path no test drove before, and
+// it is the one real users take: type a number, then blur or click Save.
+describe("condition value controls", () => {
+  function openWithUpdatedWithin() {
+    openSmartFolderModal({
+      id: "sf_x", name: "Recent",
+      rule: { type: "group", match: "all", children: [{ type: "condition", field: "updatedAt", op: "withinDays", value: 14 }] },
+    });
+    return $('[data-cond-index="0"] [data-cond-value]');
+  }
+
+  test("a number value survives a change event as a number, and stays on screen", () => {
+    const input = openWithUpdatedWithin();
+    input.value = "30";
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+
+    const after = $('[data-cond-index="0"] [data-cond-value]');
+    expect(after.value).toBe("30");
+  });
+
+  test("a number typed then saved persists as a number the evaluator accepts", async () => {
+    openWithUpdatedWithin();
+    $("#sfm-name").value = "Recent";
+    $("#sfm-name").dispatchEvent(new Event("input", { bubbles: true }));
+    const input = $('[data-cond-index="0"] [data-cond-value]');
+    input.value = "30";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    $("#sfm-save").click();
+    await flushAsync();
+
+    const persisted = settings["library.smartFolders"][0];
+    expect(persisted.rule.children).toEqual([
+      { type: "condition", field: "updatedAt", op: "withinDays", value: 30 },
+    ]);
+  });
+
+  // The first Save click after typing used to be swallowed: the change handler
+  // re-rendered the body, so the button the user pressed was gone by mouseup.
+  test("the Save button clicked right after typing still saves", async () => {
+    openWithUpdatedWithin();
+    $("#sfm-name").value = "Recent";
+    $("#sfm-name").dispatchEvent(new Event("input", { bubbles: true }));
+    const saveBtn = $("#sfm-save");
+    const input = $('[data-cond-index="0"] [data-cond-value]');
+    input.value = "30";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    // Blur fires `change` before the click lands.
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    saveBtn.click();
+    await flushAsync();
+
+    expect(onSaved).toHaveBeenCalled();
+  });
+
+  test("a text value typed then blurred keeps the Save button alive too", async () => {
+    openSmartFolderModal({
+      id: "sf_t", name: "Titles",
+      rule: { type: "group", match: "all", children: [{ type: "condition", field: "title", op: "contains", value: "" }] },
+    });
+    $("#sfm-name").value = "Titles";
+    $("#sfm-name").dispatchEvent(new Event("input", { bubbles: true }));
+    const saveBtn = $("#sfm-save");
+    const input = $('[data-cond-index="0"] [data-cond-value]');
+    input.value = "zerg";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    saveBtn.click();
+    await flushAsync();
+
+    expect(settings["library.smartFolders"][0].rule.children[0].value).toBe("zerg");
+  });
+
+  test("the live count still updates when a value changes", () => {
+    openSmartFolderModal({
+      id: "sf_t", name: "Titles",
+      rule: { type: "group", match: "all", children: [{ type: "condition", field: "title", op: "contains", value: "" }] },
+    });
+    const input = $('[data-cond-index="0"] [data-cond-value]');
+    input.value = "nothing matches this";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    expect($("#sfm-count").textContent).toBe("0");
+  });
+
+  test("a shape-mismatched value is not saved as a broken rule", async () => {
+    openSmartFolderModal({
+      id: "sf_x", name: "Recent",
+      rule: { type: "group", match: "all", children: [{ type: "condition", field: "updatedAt", op: "withinDays", value: "30" }] },
+    });
+    $("#sfm-name").value = "Recent";
+    $("#sfm-name").dispatchEvent(new Event("input", { bubbles: true }));
+    $("#sfm-save").click();
+    await flushAsync();
+
+    expect(settings["library.smartFolders"][0].rule.children).toEqual([]);
+  });
+});
+
+// The round trip the branch never covered: save through the modal, read the
+// record back out of the store, and evaluate it against the library.
+describe("round trip through the store", () => {
+  test("a rule saved in the modal matches builds when evaluated", async () => {
+    openSmartFolderModal({
+      name: "", icon: "funnel",
+      rule: { type: "group", match: "all", children: [{ type: "condition", field: "updatedAt", op: "withinDays", value: 14 }] },
+    });
+    $("#sfm-name").value = "Recent";
+    $("#sfm-name").dispatchEvent(new Event("input", { bubbles: true }));
+    const input = $('[data-cond-index="0"] [data-cond-value]');
+    input.value = "3650";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    $("#sfm-save").click();
+    await flushAsync();
+
+    const stored = listSmartFolders().find((f) => f.name === "Recent");
+    expect(stored).toBeTruthy();
+    const ctx = ruleContext();
+    const matched = state.builds.filter((b) => matchesSmartFolder(stored, b, ctx));
+    expect(matched).toHaveLength(2);
   });
 });

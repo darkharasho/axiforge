@@ -140,15 +140,25 @@ function matchCount(rule) {
   return libraryBuilds().filter((b) => matchesSmartFolder(sf, b, ctx)).length;
 }
 
-/** A row is complete when its operator needs no value, or has a usable one. */
+/**
+ * A row is complete when its operator needs no value, or carries one of the
+ * shape that operator actually evaluates. Checking `valueKind` rather than the
+ * runtime typeof is what stops a shape mismatch -- the number field holding the
+ * string "30", say -- from being saved as a rule that matches nothing.
+ */
 function isComplete(cond) {
   const def = opDef(cond.field, cond.op);
   if (!def) return false;
-  if (def.valueKind === "none") return true;
-  if (Array.isArray(cond.value)) return cond.value.length > 0;
-  if (typeof cond.value === "string") return cond.value.trim() !== "";
-  if (typeof cond.value === "number") return Number.isFinite(cond.value);
-  return cond.value != null;
+  switch (def.valueKind) {
+    case "none": return true;
+    case "multi":
+    case "team": return Array.isArray(cond.value) && cond.value.length > 0;
+    case "text": return typeof cond.value === "string" && cond.value.trim() !== "";
+    case "number": return typeof cond.value === "number" && Number.isFinite(cond.value);
+    case "folder": return typeof cond.value === "string" && cond.value !== "";
+    case "ownership": return cond.value === "mine" || cond.value === "sharedWithMe";
+    default: return false;
+  }
 }
 
 function blankCondition() {
@@ -176,12 +186,14 @@ let _callbacks = {};
 let _draft = null;
 let _escHandler = null;
 
-export function initSmartFolderModal(callbacks = {}) {
+export function initSmartFolderModal(callbacks) {
   if (typeof document === "undefined") return;
   // Set the callbacks before the early return -- a second init() call (the
   // test suite issues one per test) must still pick up fresh callbacks even
-  // though the overlay itself is built only once.
-  _callbacks = callbacks || {};
+  // though the overlay itself is built only once. Only when the caller
+  // actually supplied some, though: openSmartFolderModal()'s bare init() call
+  // must not wipe the ones the app installed at startup.
+  if (callbacks) _callbacks = callbacks;
   if (_overlay) {
     // Tests reset document.body between cases; reattach if we got orphaned.
     if (!document.body.contains(_overlay)) document.body.appendChild(_overlay);
@@ -409,13 +421,41 @@ function _onChange(e) {
     const i = _rowIndex(e.target);
     const cond = _draft.rule.children[i];
     if (!cond) return;
-    if (e.target.multiple) {
-      cond.value = [...e.target.selectedOptions].map((o) => o.value);
-    } else {
-      cond.value = e.target.value;
+    _readValueControl(e.target, cond);
+    if (e.target.tagName === "SELECT") {
+      // Selects do not fire `change` on blur, so a full re-render here cannot
+      // pull the ground out from under a click that is already in flight.
+      _render();
+      return;
     }
-    _render();
+    // Text and number inputs DO fire `change` on blur -- which happens on the
+    // mousedown of the Save click. Re-rendering would replace #sfm-save
+    // between mousedown and mouseup, so the click event never reaches it and
+    // the first Save press is silently swallowed. Refresh only the live count.
+    _refreshCount();
   }
+}
+
+/** Read a value control into its condition, coercing number inputs. */
+function _readValueControl(el, cond) {
+  if (el.multiple) {
+    cond.value = [...el.selectedOptions].map((o) => o.value);
+  } else if (el.type === "number") {
+    // HTMLInputElement.value is always a string; the date operators require a
+    // real number, so an uncoerced "30" would match nothing.
+    cond.value = el.value === "" ? NaN : Number(el.value);
+  } else {
+    cond.value = el.value;
+  }
+}
+
+/** Update the footer counts in place, without rebuilding the body. */
+function _refreshCount() {
+  if (!_overlay || !_draft) return;
+  const count = _overlay.querySelector("#sfm-count");
+  const total = _overlay.querySelector("#sfm-total");
+  if (count) count.textContent = String(matchCount(_draft.rule));
+  if (total) total.textContent = String(libraryBuilds().length);
 }
 
 function _onInput(e) {
@@ -427,11 +467,10 @@ function _onInput(e) {
     const i = _rowIndex(e.target);
     const cond = _draft.rule.children[i];
     if (!cond) return;
-    if (e.target.type === "number") {
-      cond.value = e.target.value === "" ? NaN : Number(e.target.value);
-    } else {
-      cond.value = e.target.value;
-    }
+    _readValueControl(e.target, cond);
+    // The live count is the thing that makes the builder learnable, so it
+    // tracks every keystroke rather than waiting for blur.
+    _refreshCount();
   }
 }
 

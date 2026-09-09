@@ -235,6 +235,13 @@ const SETTING_OVERRIDES = "library.smartFolderOverrides";
 let _userFolders = [];
 let _hidden = new Set();
 
+// A failed *read* leaves the caches empty because we could not see the user's
+// records, not because they have none -- so the next write must not persist
+// that emptiness over them. These flags latch on a read failure and clear on
+// the next successful load.
+let _foldersLoadFailed = false;
+let _overridesLoadFailed = false;
+
 /** A record is usable only if we can address it and evaluate it. */
 function isWellFormed(sf) {
   return Boolean(
@@ -246,17 +253,21 @@ function isWellFormed(sf) {
 export async function loadSmartFolders() {
   _userFolders = [];
   _hidden = new Set();
+  _foldersLoadFailed = false;
+  _overridesLoadFailed = false;
   try {
     const raw = await window.desktopApi.getSetting(SETTING_FOLDERS);
     if (Array.isArray(raw)) _userFolders = raw.filter(isWellFormed);
   } catch {
     // A library that opens with only the built-ins beats one that does not open.
+    _foldersLoadFailed = true;
   }
   try {
     const raw = await window.desktopApi.getSetting(SETTING_OVERRIDES);
     if (raw && Array.isArray(raw.hidden)) _hidden = new Set(raw.hidden.filter((id) => typeof id === "string"));
   } catch {
     // Same.
+    _overridesLoadFailed = true;
   }
 }
 
@@ -264,12 +275,23 @@ export async function loadSmartFolders() {
 // the caller (the rule editor) needs it to keep its modal open and tell the
 // user the save did not stick, rather than reporting success on a folder that
 // only exists in this session's memory.
-async function persistFolders() {
-  await window.desktopApi.setSetting(SETTING_FOLDERS, _userFolders);
+//
+// The caches are also only replaced once the write lands, so a refused or
+// failed write leaves memory and disk agreeing with each other.
+async function persistFolders(next) {
+  if (_foldersLoadFailed) {
+    throw new Error("Could not read your saved smart folders — not overwriting them.");
+  }
+  await window.desktopApi.setSetting(SETTING_FOLDERS, next);
+  _userFolders = next;
 }
 
-async function persistOverrides() {
-  await window.desktopApi.setSetting(SETTING_OVERRIDES, { hidden: [..._hidden] });
+async function persistOverrides(next) {
+  if (_overridesLoadFailed) {
+    throw new Error("Could not read your smart folder settings — not overwriting them.");
+  }
+  await window.desktopApi.setSetting(SETTING_OVERRIDES, { hidden: [...next] });
+  _hidden = next;
 }
 
 /** Built-ins the user has not hidden, then their own, in creation order. */
@@ -291,20 +313,21 @@ function newId() {
 /** Create when `sf.id` is absent, update in place otherwise. */
 export async function saveSmartFolder(sf) {
   const record = { ...sf, id: sf.id || newId(), builtin: false };
-  const at = _userFolders.findIndex((f) => f.id === record.id);
-  if (at >= 0) _userFolders[at] = record;
-  else _userFolders.push(record);
-  await persistFolders();
+  const next = [..._userFolders];
+  const at = next.findIndex((f) => f.id === record.id);
+  if (at >= 0) next[at] = record;
+  else next.push(record);
+  await persistFolders(next);
   return record;
 }
 
 export async function deleteSmartFolder(id) {
-  _userFolders = _userFolders.filter((f) => f.id !== id);
-  await persistFolders();
+  await persistFolders(_userFolders.filter((f) => f.id !== id));
 }
 
 export async function setBuiltinHidden(id, hidden) {
-  if (hidden) _hidden.add(id);
-  else _hidden.delete(id);
-  await persistOverrides();
+  const next = new Set(_hidden);
+  if (hidden) next.add(id);
+  else next.delete(id);
+  await persistOverrides(next);
 }

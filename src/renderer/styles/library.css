@@ -1732,26 +1732,26 @@
 
 /* ── Sidebar profession tints ────────────────────────────────────── */
 
-.lib-nav-item[data-navigate-profession="Guardian"]     { color: #6ea8ff; }
-.lib-nav-item[data-navigate-profession="Warrior"]      { color: #ff9944; }
-.lib-nav-item[data-navigate-profession="Necromancer"]  { color: #4dca7a; }
-.lib-nav-item[data-navigate-profession="Engineer"]     { color: #cc8844; }
-.lib-nav-item[data-navigate-profession="Ranger"]       { color: #77cc55; }
-.lib-nav-item[data-navigate-profession="Thief"]        { color: #cc6677; }
-.lib-nav-item[data-navigate-profession="Mesmer"]       { color: #b07acc; }
-.lib-nav-item[data-navigate-profession="Elementalist"] { color: #dd5555; }
-.lib-nav-item[data-navigate-profession="Revenant"]     { color: #aa6655; }
+.lib-nav-item[data-profession="Guardian"]     { color: #6ea8ff; }
+.lib-nav-item[data-profession="Warrior"]      { color: #ff9944; }
+.lib-nav-item[data-profession="Necromancer"]  { color: #4dca7a; }
+.lib-nav-item[data-profession="Engineer"]     { color: #cc8844; }
+.lib-nav-item[data-profession="Ranger"]       { color: #77cc55; }
+.lib-nav-item[data-profession="Thief"]        { color: #cc6677; }
+.lib-nav-item[data-profession="Mesmer"]       { color: #b07acc; }
+.lib-nav-item[data-profession="Elementalist"] { color: #dd5555; }
+.lib-nav-item[data-profession="Revenant"]     { color: #aa6655; }
 
-.lib-nav-item[data-navigate-profession] .lib-nav-item__icon {
+.lib-nav-item[data-profession] .lib-nav-item__icon {
   color: inherit;
   opacity: 0.5;
 }
 
-.lib-nav-item[data-navigate-profession]:hover .lib-nav-item__icon {
+.lib-nav-item[data-profession]:hover .lib-nav-item__icon {
   opacity: 0.8;
 }
 
-.lib-nav-item[data-navigate-profession].lib-nav-item--active .lib-nav-item__icon {
+.lib-nav-item[data-profession].lib-nav-item--active .lib-nav-item__icon {
   opacity: 1;
 }
 
