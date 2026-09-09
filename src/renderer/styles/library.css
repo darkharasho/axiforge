@@ -530,6 +530,33 @@
   color: var(--danger-text);
 }
 
+.lib-fd__save-smart {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  background: none;
+  border: 1px solid rgba(170, 80, 80, 0.3);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 0.85rem;
+  color: var(--danger);
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.1s, color 0.1s, border-color 0.1s;
+  white-space: nowrap;
+}
+
+.lib-fd__save-smart svg {
+  width: 12px;
+  height: 12px;
+}
+
+.lib-fd__save-smart:hover {
+  background: rgba(170, 80, 80, 0.15);
+  border-color: rgba(170, 80, 80, 0.5);
+  color: var(--danger-text);
+}
+
 /* ── Content area ────────────────────────────────────────────────── */
 
 .lib-content {

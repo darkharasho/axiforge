@@ -29,6 +29,7 @@ import {
   compPlusIcon,
   documentPlusIcon,
   folderPlusIcon,
+  funnelIcon,
 } from "./heroicons.js";
 
 let _callbacks = {};
@@ -280,8 +281,11 @@ export function renderFilters() {
   const clearBtn = hasActiveFilter
     ? `<button type="button" class="lib-fd__clear" data-filter-clear="1">${xMarkIcon} Clear</button>`
     : "";
+  const saveBtn = hasActiveFilter
+    ? `<button type="button" class="lib-fd__save-smart" data-filter-save-smart="1">${funnelIcon} Save as smart folder</button>`
+    : "";
 
-  container.innerHTML = `<div class="lib-filters__bar">${dropdowns.join("")}${clearBtn}</div>`;
+  container.innerHTML = `<div class="lib-filters__bar">${dropdowns.join("")}${clearBtn}${saveBtn}</div>`;
 
   bindFilterEvents(container);
 }
@@ -308,6 +312,28 @@ function _hasAnyFilter(filters) {
     (filters.eliteSpecs?.length > 0) ||
     (filters.gameModes?.length > 0) ||
     (filters.tags?.length > 0);
+}
+
+/**
+ * The toolbar filters as a smart folder rule.
+ *
+ * The rule vocabulary was designed as a superset of these four filters, so the
+ * mapping is direct -- which is the point: people filter first and then wish it
+ * had stuck.
+ */
+export function filtersToRule(activeFilters) {
+  const f = activeFilters || {};
+  const children = [];
+  const push = (field, op, value) => {
+    if (Array.isArray(value) && value.length > 0) {
+      children.push({ type: "condition", field, op, value: [...value] });
+    }
+  };
+  push("profession", "isAnyOf", f.professions);
+  push("eliteSpec", "isAnyOf", f.eliteSpecs);
+  push("gameMode", "isAnyOf", f.gameModes);
+  push("tags", "hasAnyOf", f.tags);
+  return { type: "group", match: "all", children };
 }
 
 // ─── Internal helpers ──────────────────────────────────────────────────────────
@@ -579,5 +605,10 @@ function bindFilterEvents(container) {
     btn.addEventListener("click", () => {
       _callbacks.onFilterChange?.({ clear: true });
     });
+  });
+
+  // Save current filters as a smart folder
+  container.querySelector("[data-filter-save-smart]")?.addEventListener("click", () => {
+    _callbacks.onSaveFiltersAsSmartFolder?.(filtersToRule(state.libraryPrefs.activeFilters));
   });
 }

@@ -327,6 +327,11 @@ function handleNewSmartFolder() {
   openSmartFolderModal(null);
 }
 
+// The discovery path: filter first, then keep it.
+function handleSaveFiltersAsSmartFolder(rule) {
+  openSmartFolderModal({ name: "", icon: "funnel", rule });
+}
+
 function handleEditSmartFolder(sf) {
   openSmartFolderModal(sf);
 }
@@ -1794,6 +1799,7 @@ function _buildSharedCallbacks() {
     onNewFolderSidebar: handleNewFolder,
     onNewComp: handleNewComp,
     onNewSmartFolder: handleNewSmartFolder,
+    onSaveFiltersAsSmartFolder: handleSaveFiltersAsSmartFolder,
 
     onFilterChange(change) {
       if (!change) {
