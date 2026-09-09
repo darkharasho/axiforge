@@ -535,11 +535,11 @@
   align-items: center;
   gap: 3px;
   background: none;
-  border: 1px solid rgba(170, 80, 80, 0.3);
+  border: 1px solid var(--line-soft);
   border-radius: 6px;
   padding: 4px 8px;
   font-size: 0.85rem;
-  color: var(--danger);
+  color: var(--muted);
   cursor: pointer;
   font-family: inherit;
   transition: background 0.1s, color 0.1s, border-color 0.1s;
@@ -552,9 +552,9 @@
 }
 
 .lib-fd__save-smart:hover {
-  background: rgba(170, 80, 80, 0.15);
-  border-color: rgba(170, 80, 80, 0.5);
-  color: var(--danger-text);
+  background: var(--hover-subtle);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 /* ── Content area ────────────────────────────────────────────────── */

@@ -94,6 +94,22 @@ describe("opening", () => {
     expect($("#sfm-match").value).toBe("any");
     expect(document.querySelectorAll("[data-cond-index]")).toHaveLength(1);
   });
+
+  // This is the path the toolbar's "Save as smart folder" button uses:
+  // filtersToRule() builds a rule but no id, so the record opens as a new,
+  // unsaved folder pre-filled with that rule rather than as an edit.
+  test("a record without an id opens as a new folder, pre-filled with its rule", () => {
+    openSmartFolderModal({
+      name: "", icon: "funnel",
+      rule: { type: "group", match: "all", children: [{ type: "condition", field: "gameMode", op: "isAnyOf", value: ["wvw"] }] },
+    });
+    expect($("#sfm-title").textContent).toBe("New Smart Folder");
+    expect($("#sfm-name").value).toBe("");
+    expect(document.querySelectorAll("[data-cond-index]")).toHaveLength(1);
+    expect($('[data-cond-index="0"] [data-cond-field]').value).toBe("gameMode");
+    expect($('[data-cond-index="0"] [data-cond-op]').value).toBe("isAnyOf");
+    expect($("#sfm-delete")).toBeNull();
+  });
 });
 
 describe("live match count", () => {
