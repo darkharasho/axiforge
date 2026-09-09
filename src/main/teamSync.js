@@ -880,7 +880,10 @@ class TeamSync {
     }
     await this.syncStore.setVersion(teamId, item.id, { version: item.version, createdBy });
     this._emit("sync-status", {
-      status: "synced", type: item.type, id: item.id, folderId: root.id, item: saved,
+      // createdBy rides along so the renderer's author map stays right for an
+      // item that arrives while the library is open — without it a teammate's
+      // build reads as one of ours until the next full refresh.
+      status: "synced", type: item.type, id: item.id, folderId: root.id, item: saved, createdBy,
       ...(summary ? { summary, author } : {}),
     });
   }
@@ -1354,6 +1357,31 @@ class TeamSync {
       const grants = await this.syncStore.getGrants(root.teamId);
       const everyone = await this.syncStore.getEveryoneGrants(root.teamId);
       Object.assign(out, access.buildAccessMap({ folders, root, teamId: root.teamId, grants, everyone, role: root.role }));
+    }
+    return out;
+  }
+
+  /**
+   * itemId → the user id that created it, over every team with a local root.
+   *
+   * The renderer has no way to derive this: `createdBy` is only ever known to
+   * main, stamped when we push an item (it is ours) or pull one (the server
+   * says whose it is). Resolved in one pass here for the same reason
+   * `accessMap` is — a render pass cannot await per item.
+   *
+   * Absent and null are different answers and callers must keep them apart: no
+   * entry means the item has never synced, so it was made on this machine,
+   * while a null entry means the server returned it without a creator and
+   * authorship is genuinely unknown.
+   */
+  async authorMap() {
+    const folders = await this.folderStore.listFolders();
+    const out = {};
+    for (const root of folders.filter((f) => f.teamId)) {
+      const { versions } = await this.syncStore.getTeam(root.teamId);
+      for (const [itemId, rec] of Object.entries(versions || {})) {
+        if (rec && typeof rec === "object") out[itemId] = rec.createdBy ?? null;
+      }
     }
     return out;
   }

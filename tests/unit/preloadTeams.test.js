@@ -40,3 +40,11 @@ test("resolved values are untouched and arguments are forwarded", async () => {
   await expect(exposed.shareFolderToTeam("f1", "t1")).resolves.toEqual([{ team: { id: "t" }, role: "owner" }]);
   expect(ipcRenderer.invoke).toHaveBeenCalledWith("teams:share-folder", "f1", "t1");
 });
+
+// The author map backs the smart-folder ownership filters; without this binding
+// the renderer silently falls back to team role and mislabels every build (#300).
+test("the sync author map is bound to teams:authors", async () => {
+  ipcRenderer.invoke.mockResolvedValue({ b1: "u-me" });
+  await expect(exposed.syncAuthorMap()).resolves.toEqual({ b1: "u-me" });
+  expect(ipcRenderer.invoke).toHaveBeenCalledWith("teams:authors");
+});

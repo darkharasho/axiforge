@@ -38,6 +38,7 @@ export async function loadTeamState() {
     state.teams = [];
     state.outbox = {};
     state.folderAccess = {};
+    state.syncAuthors = {};
     return;
   }
   state.teams = await window.desktopApi.listTeams().catch(() => []);
@@ -48,6 +49,26 @@ export async function loadTeamState() {
   // resolves it over the same tree, so a stale read here would grey out the
   // wrong folders for one render.
   await loadAccessMap();
+  await loadSyncAuthors();
+}
+
+/**
+ * Who wrote each shared item, as main resolved it out of the sync state.
+ *
+ * Authorship only exists in main (`createdBy` is stamped on push and on pull),
+ * and the smart-folder ownership filters have to answer it inside a synchronous
+ * render pass — so it is fetched as one map rather than asked per build.
+ *
+ * A failed fetch leaves the map empty on purpose. Empty reads as "no entry" for
+ * every build, which the evaluator treats as work made on this machine: the old
+ * answer for your own library, and never a claim that somebody else wrote it.
+ */
+export async function loadSyncAuthors() {
+  try {
+    state.syncAuthors = (await window.desktopApi?.syncAuthorMap?.()) || {};
+  } catch {
+    state.syncAuthors = {};
+  }
 }
 
 /**

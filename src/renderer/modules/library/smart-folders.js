@@ -125,11 +125,17 @@ const LOCATION_OPS = {
 };
 
 /**
- * What "shared" can mean for a build. Every value is keyed on the team root
- * the build sits under, because authorship is not reachable from the renderer
- * -- `createdBy` lives in main's sync state, and only for synced records. So
- * these describe WHERE a build lives, never who wrote it: a teammate's build
- * in a team you own is `sharedByMe`, not `sharedWithMe`.
+ * What "shared" can mean for a build.
+ *
+ * `personal` is about WHERE a build lives -- outside every team space. The two
+ * shared values are about WHO WROTE IT, which is the only reading of those
+ * labels that matches what they say. They used to be keyed on the team root's
+ * role instead, and that made an owner's "Shared by me" mean "everything in a
+ * team I own", teammates' builds and all, while "Shared with me" could never
+ * match anything at all (#300).
+ *
+ * Authorship is not derivable in the renderer -- `createdBy` lives in main's
+ * sync state -- so it arrives in `ctx.syncAuthors`. @see ownershipOf
  *
  * The editor renders its Ownership select straight off this list, so adding a
  * value here is the only edit a new one needs.
@@ -159,6 +165,48 @@ export function gameModeLabel(mode) {
   if (mode === "pvp") return "PvP";
   if (mode === "wvw") return "WvW";
   return mode || "PvE";
+}
+
+/**
+ * Did the asking user write this item? "unknown" is a real third answer, not a
+ * shrug: it is what you get from a record the server returned with no creator,
+ * or when there is no session to compare against, and the caller has to decide
+ * rather than be told a confident wrong thing.
+ *
+ * A build with NO entry in the map has never been pushed, which can only be
+ * true of one made on this machine -- so that reads as ours.
+ *
+ * @returns {"mine"|"theirs"|"unknown"}
+ */
+function authorshipOf(build, ctx) {
+  // No identity to compare against -- sync is off, or the session never
+  // loaded. "Never pushed, so it is ours" below is only sound when there is
+  // someone for it to be ours to.
+  const me = ctx.sessionUserId || null;
+  if (!me) return "unknown";
+  const authors = ctx.syncAuthors || {};
+  if (!Object.prototype.hasOwnProperty.call(authors, build.id)) return "mine";
+  const author = authors[build.id];
+  if (!author) return "unknown";
+  return author === me ? "mine" : "theirs";
+}
+
+/**
+ * `personal` | `sharedByMe` | `sharedWithMe` for one build.
+ *
+ * Outside every team space is personal, whoever wrote it. Inside one it is the
+ * author that decides -- and only when authorship cannot be resolved at all do
+ * we fall back to the team's role, which is the pre-#300 answer and the best
+ * guess left: in a team you own, an item with no known author is most likely
+ * one of yours.
+ */
+function ownershipOf(build, ctx) {
+  const root = teamRootFor(build.folderId, ctx.folders || []);
+  if (!root) return "personal";
+  const author = authorshipOf(build, ctx);
+  if (author === "mine") return "sharedByMe";
+  if (author === "theirs") return "sharedWithMe";
+  return root.role === "owner" ? "sharedByMe" : "sharedWithMe";
 }
 
 const OWNERSHIP_OPS = {
@@ -238,15 +286,8 @@ const FIELDS = {
   notes: { get: (b) => b.notes || "", ops: TEXT_OPS },
   pinned: { get: (b) => b.pinned === true, ops: BOOL_OPS },
   location: { get: (b) => b.folderId || null, ops: LOCATION_OPS },
-  // Which side of a team space a build sits on. @see OWNERSHIP_VALUES
-  ownership: {
-    get: (b, ctx) => {
-      const root = teamRootFor(b.folderId, ctx.folders || []);
-      if (!root) return "personal";
-      return root.role === "owner" ? "sharedByMe" : "sharedWithMe";
-    },
-    ops: OWNERSHIP_OPS,
-  },
+  // @see ownershipOf
+  ownership: { get: (b, ctx) => ownershipOf(b, ctx), ops: OWNERSHIP_OPS },
   team: {
     get: (b, ctx) => teamRootFor(b.folderId, ctx.folders || [])?.teamId || "",
     ops: SCALAR_OPS,
@@ -290,7 +331,10 @@ export function evaluateNode(node, build, ctx) {
   return false;
 }
 
-/** Does this build belong in this smart folder? @param ctx {{folders, now}} */
+/**
+ * Does this build belong in this smart folder?
+ * @param ctx {{folders, now, sessionUserId?, syncAuthors?}} @see ruleContext
+ */
 export function matchesSmartFolder(smartFolder, build, ctx) {
   if (!smartFolder || !smartFolder.rule || !build) return false;
   return evaluateNode(smartFolder.rule, build, ctx);
@@ -302,7 +346,14 @@ export function matchesSmartFolder(smartFolder, build, ctx) {
  * call inside the operators.
  */
 export function ruleContext() {
-  return { folders: state.folders || [], now: Date.now() };
+  return {
+    folders: state.folders || [],
+    now: Date.now(),
+    // Authorship, for the ownership field. Both are absent when sync is off,
+    // which reads as "everything here is mine" rather than as somebody else's.
+    sessionUserId: state.teamSession?.userId || null,
+    syncAuthors: state.syncAuthors || {},
+  };
 }
 
 // ─── Built-ins ─────────────────────────────────────────────────────────────────
@@ -318,9 +369,10 @@ const when = (field, op, value) => ({ type: "condition", field, op, value });
 export const BUILTIN_SMART_FOLDERS = Object.freeze([
   { id: "__sf-main", name: "Main Repository", icon: "folderOpen", builtin: true, rule: group([]) },
   { id: "__sf-recent", name: "Recently Modified", icon: "clock", builtin: true, rule: group([when("updatedAt", "withinDays", 14)]) },
-  // Both sides of every team space. "Shared with me" alone would hide the
-  // builds teammates file into a team you own, which is most of what an owner
-  // wants to see here.
+  // Both sides of every team space, whoever wrote them. "Shared with me" alone
+  // would hide your own contributions to a team, and "Shared by me" alone would
+  // hide everything teammates file into a team you own -- which is most of what
+  // an owner wants to see here.
   { id: "__sf-shared", name: "Shared", icon: "share", builtin: true, rule: group([when("ownership", "isNot", "personal")]) },
   { id: "__sf-unfiled", name: "Unfiled", icon: "bars", builtin: true, rule: group([when("location", "isUnfiled")]) },
   { id: "__sf-untagged", name: "Untagged", icon: "tag", builtin: true, rule: group([when("tags", "isEmpty")]) },
