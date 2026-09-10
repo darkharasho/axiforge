@@ -1,3 +1,9 @@
+## Version v0.22.1 — September 9, 2026
+
+### Bug Fixes
+
+- **"Shared by me" and "Shared with me" didn't mean what they say.** A smart folder rule on Ownership never looked at who wrote a build — it read your role on the team the build sits in. Own the team and every build in it came back as *shared by me*, teammates' work included, while *shared with me* had no case left that could ever match and silently found nothing. Ownership now asks who actually authored the build: the app already knew, but only in the background process that syncs it, so that answer is now surfaced to the library the same way team permissions already are, and stays current as teammates' builds arrive rather than waiting for a refresh. A build you made but haven't synced yet still reads as yours, and where authorship genuinely can't be determined — an item an older server returned with no creator — the folder falls back to the team role rather than guessing it belongs to someone else. The built-in **Shared** folder is unaffected: it still means "anywhere inside a team space".
+
 ## Version v0.22.0 — September 8, 2026
 
 ### Smart folders in the library
