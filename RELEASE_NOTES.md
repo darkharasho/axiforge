@@ -1,3 +1,11 @@
+## Version v0.22.2 — September 9, 2026
+
+### Condition coverage
+
+- **Party Coverage only ever answered half the question.** The comp view could tell you at a glance which boons your squad had and which were missing, but conditions had no equivalent — working out whether anyone was actually bringing Blind, or Chill, or enough Vulnerability meant opening every build in turn and reading its skills. Comps now get a condition section alongside the boons: every condition in the game, damaging ones first, aggregated per party line across each filled slot, with the skills and traits responsible listed when you expand one. Conditions nobody in the party can apply are shown as gaps rather than left off, so a hole in your pressure is something you see instead of something you have to notice.
+- **Self-inflicted conditions no longer count as coverage.** A necro that poisons itself to fuel a corruption skill was, as far as the old analysis could tell, a source of poison — the game's own data attaches no target to a condition, so anything applied anywhere looked the same. Each source is now read for who it actually lands on and marked **FOE**, **SELF**, or **SELF+FOE**; the self-only ones are set apart and excluded from what the party is credited with, so Corrupt Boon doesn't quietly fill in a gap that's still there.
+- **The build editor lists conditions the way it lists boons.** The coverage strip under your skills now shows the conditions a build applies next to the boons it grants, with the same hover tooltip naming each source skill or trait and its stacks and duration. Self-inflicted conditions appear dimmed rather than counted.
+
 ## Version v0.22.1 — September 9, 2026
 
 ### Bug Fixes
