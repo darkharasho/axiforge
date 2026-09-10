@@ -11,6 +11,7 @@ import {
 import { escapeHtml } from "./utils.js";
 import { computeSlotStats, computeUpgradeModifiers, computeStatBreakdown } from "./stats.js";
 import { computeStats, computeBoons, computeFuryCritModifier, computePassiveCritModifier, computeBerserkCritModifier, computeFuryStatBonuses, computeMightPerStack, FURY_CRIT_CHANCE, FURY_CRIT_CHANCE_WVW, STACKING_SIGIL_DEFS, SIGNET_PASSIVE_BUFFS, SIGNET_ACTIVE_EFFECTS } from "./engine-bridge.js";
+import { renderCoverageStrip } from "./boon-coverage.js";
 import { bindHoverPreview, selectDetail } from "./detail-panel.js";
 import { getProfessionSvg } from "./profession-icons.js";
 import { getSlotSvg } from "./slot-icons.js";
@@ -1063,91 +1064,12 @@ export function renderEquipmentPanel() {
 
       wskillSection.append(skillRow);
 
-      // Boon/condition coverage
-      const coverage = computeBoons(state, weaponSkills);
-      const hasBoons = coverage.boons.length > 0;
-      const hasConditions = coverage.conditions.length > 0;
-      if (hasBoons || hasConditions) {
-        const coverageContainer = document.createElement("div");
-        coverageContainer.className = "equip-boon-coverage";
-
-        function makeCoverageRow(items, className) {
-          if (items.length === 0) return null;
-          const row = document.createElement("div");
-          row.className = className;
-          for (const item of items) {
-            const icon = document.createElement("div");
-            icon.className = "equip-boon-coverage__icon";
-            const img = document.createElement("img");
-            img.src = item.icon;
-            img.alt = item.name;
-            img.width = 20;
-            img.height = 20;
-            icon.append(img);
-            if (item.hasAllySource) {
-              const badge = document.createElement("div");
-              badge.className = "equip-boon-coverage__ally-badge";
-              badge.textContent = "\u21E7";
-              icon.append(badge);
-            }
-
-            icon.addEventListener("mouseenter", () => {
-              const tooltip = document.createElement("div");
-              tooltip.className = "boon-coverage__tooltip";
-
-              const title = document.createElement("div");
-              title.className = "boon-coverage__tooltip-title";
-              title.textContent = item.name;
-              tooltip.append(title);
-
-              for (const src of item.sources) {
-                const sourceRow = document.createElement("div");
-                sourceRow.className = "boon-coverage__tooltip-row";
-
-                const tag = document.createElement("span");
-                tag.className = `boon-coverage__tooltip-tag boon-coverage__tooltip-tag--${src.type}`;
-                tag.textContent = src.type === "skill" ? "Skill" : "Trait";
-                sourceRow.append(tag);
-
-                const srcName = document.createElement("span");
-                srcName.className = "boon-coverage__tooltip-name";
-                srcName.textContent = src.name;
-                sourceRow.append(srcName);
-
-                const detail = document.createElement("span");
-                detail.className = "boon-coverage__tooltip-detail";
-                if (src.duration > 0) {
-                  const parts = [];
-                  if (src.stacks > 0) parts.push(`${src.stacks}\u00d7`);
-                  parts.push(`${src.duration}s`);
-                  detail.textContent = parts.join(" ");
-                } else {
-                  detail.textContent = "passive";
-                }
-                sourceRow.append(detail);
-
-                tooltip.append(sourceRow);
-              }
-
-              icon.append(tooltip);
-            });
-
-            icon.addEventListener("mouseleave", () => {
-              const tooltip = icon.querySelector(".boon-coverage__tooltip");
-              if (tooltip) tooltip.remove();
-            });
-
-            row.append(icon);
-          }
-          return row;
-        }
-
-        const boonRow = makeCoverageRow(coverage.boons, "equip-boon-coverage__boons");
-        const condRow = makeCoverageRow(coverage.conditions, "equip-boon-coverage__conditions");
-        if (boonRow) coverageContainer.append(boonRow);
-        if (condRow) coverageContainer.append(condRow);
-        wskillSection.append(coverageContainer);
-      }
+      // Boon/condition coverage (shared with the skills panel — see boon-coverage.js)
+      const coverageEl = renderCoverageStrip(computeBoons(state, weaponSkills), {
+        prefix: "equip-boon-coverage",
+        iconSize: 20,
+      });
+      if (coverageEl) wskillSection.append(coverageEl);
 
       leftCol.append(wskillSection);
     }

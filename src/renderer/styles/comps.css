@@ -2350,6 +2350,24 @@
   color: #8f8;
 }
 
+.party-cov__pill--condi {
+  background: #5a3a3a;
+  color: #f99;
+}
+
+/* Sources exist, but every one of them is self-inflicted (e.g. Corrupt Boon's
+   "Poison yourself") \u2014 not coverage, but distinct from a plain gap and still
+   clickable so the user can see why. */
+.party-cov__pill--self-condi {
+  background: var(--line);
+  color: var(--text-dim);
+  border-style: dashed;
+}
+
+.party-cov__pill--self-condi .party-cov__pill-icon {
+  opacity: 0.4;
+}
+
 .party-cov__pill--uncovered {
   background: var(--line);
   color: var(--text-dim);
@@ -2575,6 +2593,32 @@
 .party-cov__src-target--self {
   background: #4a4a2a;
   color: #dd8;
+}
+
+.party-cov__src-target--foe {
+  background: #5a2a2a;
+  color: #f99;
+}
+
+.party-cov__src-target--selfcondi {
+  background: #4a3a2a;
+  color: #fb8;
+}
+
+.party-cov__src-target--mixed {
+  background: #4a3a4a;
+  color: #d9f;
+}
+
+.party-cov__src-row--self-condi {
+  opacity: 0.65;
+}
+
+.party-cov__expand-note {
+  font-size: 10px;
+  color: var(--text-dim);
+  font-style: italic;
+  padding: 2px 0 4px;
 }
 
 /* ── Comps Tab (editor subtab) ────────────────────────────────────────────── */

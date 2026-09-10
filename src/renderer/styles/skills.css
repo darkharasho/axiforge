@@ -798,3 +798,51 @@
   color: rgba(180, 200, 230, 0.5);
   margin-left: auto;
 }
+
+/* Self-inflicted only (e.g. a necro poisoning itself) — dimmed because it isn't
+   pressure on a foe, but still listed so the reason is discoverable on hover. */
+.boon-coverage__icon--self-condi img,
+.equip-boon-coverage__icon--self-condi img {
+  filter: grayscale(0.6);
+  opacity: 0.5;
+}
+
+.boon-coverage__icon--self-condi {
+  border-style: dashed;
+}
+
+.boon-coverage__tooltip-row--self-condi {
+  opacity: 0.65;
+}
+
+.boon-coverage__tooltip-target {
+  margin-left: 4px;
+  padding: 0 4px;
+  border-radius: 2px;
+  font-size: 9px;
+  line-height: 14px;
+  letter-spacing: 0.03em;
+  flex-shrink: 0;
+}
+
+.boon-coverage__tooltip-target--foe {
+  background: #5a2a2a;
+  color: #f99;
+}
+
+.boon-coverage__tooltip-target--selfcondi {
+  background: #4a3a2a;
+  color: #fb8;
+}
+
+.boon-coverage__tooltip-target--mixed {
+  background: #4a3a4a;
+  color: #d9f;
+}
+
+.boon-coverage__tooltip-note {
+  font-size: 10px;
+  color: var(--text-dim);
+  font-style: italic;
+  padding-top: 3px;
+}

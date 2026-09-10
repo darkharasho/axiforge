@@ -426,6 +426,14 @@ export const BOON_DISPLAY_ORDER = [
   "Regeneration", "Resistance", "Resolution", "Stability", "Swiftness", "Vigor",
 ];
 
+// Damaging conditions first, then soft CC / debuffs. Must stay in sync with
+// CONDITION_DISPLAY_ORDER in packages/gw2-data/src/engine/constants.js.
+export const CONDITION_DISPLAY_ORDER = [
+  "Bleeding", "Burning", "Confusion", "Poisoned", "Torment",
+  "Blinded", "Chilled", "Crippled", "Fear", "Immobile", "Slow",
+  "Taunt", "Vulnerability", "Weakness",
+];
+
 // Combo field type display colors — bg and text pairs matching the mockup
 export const COMBO_FIELD_COLORS = {
   Fire:      { bg: "#5a3a2a", text: "#f96", border: "#7a5a3a", emoji: "\ud83d\udd25" },

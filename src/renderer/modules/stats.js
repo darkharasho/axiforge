@@ -17,6 +17,7 @@ import {
   computeFuryStatBonuses as bridgeFuryStatBonuses,
   computeMightPerStack as bridgeMightPerStack,
   computeBuildConcentration as bridgeBuildConcentration,
+  computeBuildExpertise as bridgeBuildExpertise,
 } from "./engine-bridge.js";
 
 /**
@@ -34,6 +35,13 @@ export function computeSlotStats(comboLabel, slotKey) {
  */
 export function computeBuildConcentration(build, upgradeCatalog) {
   return bridgeBuildConcentration(build, upgradeCatalog);
+}
+
+/**
+ * Thin wrapper: computeBuildExpertise(build, upgradeCatalog)
+ */
+export function computeBuildExpertise(build, upgradeCatalog) {
+  return bridgeBuildExpertise(build, upgradeCatalog);
 }
 
 /**

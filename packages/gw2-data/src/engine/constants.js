@@ -264,6 +264,33 @@ const CONDITION_NAME_NORMALIZE = {
   Immobilize: "Immobile", Immobilized: "Immobile", Poison: "Poisoned",
 };
 
+// Damaging conditions first, then soft CC / debuffs. Names are the *normalized*
+// forms emitted by analyzeBoons (see CONDITION_NAME_NORMALIZE).
+const CONDITION_DISPLAY_ORDER = [
+  "Bleeding", "Burning", "Confusion", "Poisoned", "Torment",
+  "Blinded", "Chilled", "Crippled", "Fear", "Immobile", "Slow",
+  "Taunt", "Vulnerability", "Weakness",
+];
+
+// Skill/trait descriptions name conditions by verb ("Poison yourself"), not by the
+// status name on the fact ("Poisoned"), so target classification needs both forms.
+const CONDITION_VERB_FORMS = {
+  Bleeding: ["bleed", "bleeding"],
+  Blinded: ["blind", "blinded", "blindness"],
+  Burning: ["burn", "burning", "set fire", "on fire"],
+  Chilled: ["chill", "chilled"],
+  Confusion: ["confuse", "confusion", "confused"],
+  Crippled: ["cripple", "crippled"],
+  Fear: ["fear", "feared"],
+  Immobile: ["immobilize", "immobilized", "immobile"],
+  Poisoned: ["poison", "poisoned"],
+  Slow: ["slow", "slowed"],
+  Taunt: ["taunt", "taunted"],
+  Torment: ["torment", "tormented"],
+  Vulnerability: ["vulnerability", "vulnerable"],
+  Weakness: ["weaken", "weakened", "weakness"],
+};
+
 const BOON_DISPLAY_ORDER = [
   "Aegis", "Alacrity", "Fury", "Might", "Protection", "Quickness",
   "Regeneration", "Resistance", "Resolution", "Stability", "Swiftness", "Vigor",
@@ -305,6 +332,8 @@ module.exports = {
   PROFESSION_BASE_HP,
   WEAPON_STRENGTH_MIDPOINT,
   BUFF_FACT_TYPES,
+  CONDITION_DISPLAY_ORDER,
+  CONDITION_VERB_FORMS,
   MIGHT_POWER_PER_STACK,
   MIGHT_CONDI_PER_STACK,
   FURY_CRIT_CHANCE,

@@ -311,6 +311,63 @@ function buildBoonExpandHTML(boonName, providers, builds, iconSrc) {
     </div>`;
 }
 
+const CONDI_TARGET_LABELS = {
+  foe:   { cls: "party-cov__src-target--foe",       label: "FOE" },
+  self:  { cls: "party-cov__src-target--selfcondi", label: "SELF" },
+  mixed: { cls: "party-cov__src-target--mixed",     label: "SELF+FOE" },
+};
+
+// Mirrors _buildConditionExpandHTML in comp-boon-coverage.js. The pill markup is
+// pre-rendered at publish time, but the SPA binds its own expand handlers.
+function buildConditionExpandHTML(condName, providers, iconSrc) {
+  const applied = providers.reduce(
+    (n, p) => n + (p.sources || []).filter(s => s.target !== "self").length, 0);
+  const iconHtml = iconSrc
+    ? `<img src="${escapeHtml(iconSrc)}" width="18" height="18" alt="${escapeHtml(condName)}" class="party-cov__expand-icon" />`
+    : "";
+
+  const sourceRows = providers.flatMap(p =>
+    (p.sources || []).map(s => {
+      const profIconHtml = p.profIcon || "";
+      const skillIconHtml = s.skillIcon
+        ? `<img src="${escapeHtml(s.skillIcon)}" width="20" height="20" alt="${escapeHtml(s.name)}"
+                class="party-cov__src-skill-icon"
+                data-skill-name="${escapeHtml(s.name)}"
+                data-skill-desc="${escapeHtml(s.skillDescription || "")}"
+                data-skill-icon="${escapeHtml(s.skillIcon)}"
+                data-skill-facts="${escapeHtml(JSON.stringify(s.skillFacts || []))}" />`
+        : "";
+      const dur = `${s.effectiveDuration}s`;
+      const stacksHtml = s.stacks > 1
+        ? `<span class="party-cov__src-stacks">&times;${s.stacks}</span>` : "";
+      const t = CONDI_TARGET_LABELS[s.target] || CONDI_TARGET_LABELS.foe;
+      const rowCls = s.target === "self" ? " party-cov__src-row--self-condi" : "";
+      return `<div class="party-cov__src-row${rowCls}">
+        <span class="party-cov__src-icon">${profIconHtml}</span>
+        ${skillIconHtml}
+        <span class="party-cov__src-name">${escapeHtml(s.name)}</span>
+        ${stacksHtml}
+        <span class="party-cov__src-dur">${escapeHtml(dur)}</span>
+        <span class="party-cov__src-target ${t.cls}">${t.label}</span>
+      </div>`;
+    })
+  ).join("");
+
+  const note = applied === 0
+    ? `<div class="party-cov__expand-note">Self-inflicted only \u2014 not applied to enemies.</div>`
+    : "";
+
+  return `
+    <div class="party-cov__expand-header" style="border-left-color: #f88;">
+      ${iconHtml}
+      <span class="party-cov__expand-title" style="color: #faa;">${escapeHtml(condName)} \u2014 ${applied} source${applied !== 1 ? "s" : ""}</span>
+    </div>
+    <div class="party-cov__expand-body" style="border-left-color: #f88;">
+      ${note}
+      ${sourceRows}
+    </div>`;
+}
+
 function buildFieldExpandHTML(fieldType, sources) {
   const colors = COMBO_FIELD_COLORS[fieldType] || { text: "#aaa" };
   const sourceRows = sources.map(s => {
@@ -490,6 +547,11 @@ function bindPartyCoverageEvents(container, builds) {
         try { providers = JSON.parse(pillEl.dataset.providers || "[]"); } catch { /* */ }
         const iconSrc = pillEl.querySelector(".party-cov__pill-icon")?.src || "";
         html = buildBoonExpandHTML(pillEl.dataset.boonName, providers, builds, iconSrc);
+      } else if (category === "condition") {
+        let providers = [];
+        try { providers = JSON.parse(pillEl.dataset.providers || "[]"); } catch { /* */ }
+        const iconSrc = pillEl.querySelector(".party-cov__pill-icon")?.src || "";
+        html = buildConditionExpandHTML(pillEl.dataset.conditionName, providers, iconSrc);
       } else if (category === "field") {
         let sources = [];
         try { sources = JSON.parse(pillEl.dataset.sources || "[]"); } catch { /* */ }
@@ -507,7 +569,9 @@ function bindPartyCoverageEvents(container, builds) {
       // Apply current self-toggle state to newly rendered SELF source rows + update count
       const lineEl = pillEl.closest(".party-cov__line");
       const toggleEl = lineEl?.querySelector('[data-action="toggle-self-boons"]');
-      if (toggleEl && !toggleEl.checked) {
+      // Scoped to boons: the SELF/ALLY toggle is a boon concept, and its row-hiding
+      // recount would clobber the condition panel's foe-only source count.
+      if (category === "boon" && toggleEl && !toggleEl.checked) {
         expandEl.querySelectorAll(".party-cov__src-target--self").forEach(badge => {
           const row = badge.closest(".party-cov__src-row");
           if (row) row.style.display = "none";
