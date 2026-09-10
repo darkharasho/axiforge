@@ -7,8 +7,10 @@ jest.mock("../../../src/renderer/modules/state", () => ({
   state: { builds: [], folders: [], comps: [], currentFolder: null },
 }));
 
+const { state } = require("../../../src/renderer/modules/state");
 const {
   matchesSmartFolder,
+  ruleContext,
 } = require("../../../src/renderer/modules/library/smart-folders");
 
 const CTX = { folders: [], now: Date.parse("2026-09-08T00:00:00Z") };
@@ -216,52 +218,94 @@ describe("ownership / team", () => {
     { id: "t-theirs-sub", name: "wvw", parentId: "t-theirs" },
     { id: "f-plain", name: "personal", parentId: null },
   ];
-  const ctx = { folders: FOLDERS, now: CTX.now };
+  // Ownership is authorship, not team role: `syncAuthors` is itemId -> the user
+  // id that created it, as main resolved it out of the sync state, and
+  // `sessionUserId` is who is asking.
+  const ctx = {
+    folders: FOLDERS,
+    now: CTX.now,
+    sessionUserId: "u-me",
+    syncAuthors: { "b-mine": "u-me", "b-theirs": "u-them", "b-nobody": null },
+  };
+  const mine = (folderId) => build({ id: "b-mine", folderId });
+  const theirs = (folderId) => build({ id: "b-theirs", folderId });
 
-  test("sharedWithMe matches a build under a team the user does not own", () => {
-    const rule = sf([cond("ownership", "is", "sharedWithMe")]);
-    expect(matchesSmartFolder(rule, build({ folderId: "t-theirs" }), ctx)).toBe(true);
+  // The bug (#300): an owner saw every teammate's build as "Shared by me",
+  // because the answer came from the ROOT's role and never looked at who wrote
+  // the build.
+  test("a teammate's build in a team I own is sharedWithMe, not sharedByMe", () => {
+    expect(matchesSmartFolder(sf([cond("ownership", "is", "sharedByMe")]), theirs("t-mine"), ctx)).toBe(false);
+    expect(matchesSmartFolder(sf([cond("ownership", "is", "sharedWithMe")]), theirs("t-mine"), ctx)).toBe(true);
   });
 
-  test("sharedWithMe reaches through subfolders of a team root", () => {
-    const rule = sf([cond("ownership", "is", "sharedWithMe")]);
-    expect(matchesSmartFolder(rule, build({ folderId: "t-theirs-sub" }), ctx)).toBe(true);
+  // The other half of it: a member could never match "Shared by me" at all, so
+  // their own contributions were filed as somebody else's.
+  test("my own build in a team I joined is sharedByMe", () => {
+    expect(matchesSmartFolder(sf([cond("ownership", "is", "sharedByMe")]), mine("t-theirs"), ctx)).toBe(true);
+    expect(matchesSmartFolder(sf([cond("ownership", "is", "sharedWithMe")]), mine("t-theirs"), ctx)).toBe(false);
   });
 
-  test("a team the user owns is sharedByMe, not sharedWithMe", () => {
-    expect(matchesSmartFolder(sf([cond("ownership", "is", "sharedWithMe")]), build({ folderId: "t-mine" }), ctx)).toBe(false);
-    expect(matchesSmartFolder(sf([cond("ownership", "is", "sharedByMe")]), build({ folderId: "t-mine" }), ctx)).toBe(true);
+  test("my own build in a team I own is sharedByMe", () => {
+    expect(matchesSmartFolder(sf([cond("ownership", "is", "sharedByMe")]), mine("t-mine"), ctx)).toBe(true);
+  });
+
+  test("a teammate's build reaches through subfolders of a team root", () => {
+    expect(matchesSmartFolder(sf([cond("ownership", "is", "sharedWithMe")]), theirs("t-theirs-sub"), ctx)).toBe(true);
+  });
+
+  // Nothing in the map means nothing has ever been pushed for it, which can
+  // only be true of a build made on this machine.
+  test("a build the sync state has never seen counts as mine", () => {
+    const fresh = build({ id: "b-unsynced", folderId: "t-theirs" });
+    expect(matchesSmartFolder(sf([cond("ownership", "is", "sharedByMe")]), fresh, ctx)).toBe(true);
+  });
+
+  // Present but null: the server sent the item without a creator, so authorship
+  // is unknown rather than absent, and the team role is the only answer left.
+  test("an unknown author falls back to the team role", () => {
+    const nobody = build({ id: "b-nobody" });
+    expect(matchesSmartFolder(sf([cond("ownership", "is", "sharedByMe")]), { ...nobody, folderId: "t-mine" }, ctx)).toBe(true);
+    expect(matchesSmartFolder(sf([cond("ownership", "is", "sharedWithMe")]), { ...nobody, folderId: "t-theirs" }, ctx)).toBe(true);
+  });
+
+  // A ctx with no session (sync off, or the map failed to load) must not turn
+  // the whole library into somebody else's work.
+  test("with no session at all every team build falls back to the team role", () => {
+    const noSession = { folders: FOLDERS, now: CTX.now };
+    expect(matchesSmartFolder(sf([cond("ownership", "is", "sharedByMe")]), theirs("t-mine"), noSession)).toBe(true);
+    expect(matchesSmartFolder(sf([cond("ownership", "is", "sharedWithMe")]), mine("t-theirs"), noSession)).toBe(true);
   });
 
   test("personal covers unfiled builds and non-team folders only", () => {
     const rule = sf([cond("ownership", "is", "personal")]);
-    expect(matchesSmartFolder(rule, build({ folderId: null }), ctx)).toBe(true);
-    expect(matchesSmartFolder(rule, build({ folderId: "f-plain" }), ctx)).toBe(true);
-    expect(matchesSmartFolder(rule, build({ folderId: "t-mine" }), ctx)).toBe(false);
-    expect(matchesSmartFolder(rule, build({ folderId: "t-theirs" }), ctx)).toBe(false);
+    expect(matchesSmartFolder(rule, mine(null), ctx)).toBe(true);
+    expect(matchesSmartFolder(rule, mine("f-plain"), ctx)).toBe(true);
+    expect(matchesSmartFolder(rule, mine("t-mine"), ctx)).toBe(false);
+    expect(matchesSmartFolder(rule, theirs("t-theirs"), ctx)).toBe(false);
   });
 
-  // The "Shared" built-in. An owner has to see what teammates file into a team
-  // they own, which is exactly the case `is sharedWithMe` used to drop.
+  // The "Shared" built-in. Both sides of every team space, whoever wrote them —
+  // an owner has to see what teammates file into a team they own.
   test("isNot personal is both sides of every team space", () => {
     const rule = sf([cond("ownership", "isNot", "personal")]);
-    expect(matchesSmartFolder(rule, build({ folderId: "t-mine" }), ctx)).toBe(true);
-    expect(matchesSmartFolder(rule, build({ folderId: "t-theirs-sub" }), ctx)).toBe(true);
-    expect(matchesSmartFolder(rule, build({ folderId: "f-plain" }), ctx)).toBe(false);
-    expect(matchesSmartFolder(rule, build({ folderId: null }), ctx)).toBe(false);
+    expect(matchesSmartFolder(rule, mine("t-mine"), ctx)).toBe(true);
+    expect(matchesSmartFolder(rule, theirs("t-mine"), ctx)).toBe(true);
+    expect(matchesSmartFolder(rule, theirs("t-theirs-sub"), ctx)).toBe(true);
+    expect(matchesSmartFolder(rule, mine("f-plain"), ctx)).toBe(false);
+    expect(matchesSmartFolder(rule, mine(null), ctx)).toBe(false);
   });
 
   test("team isAnyOf matches by team id", () => {
     const rule = sf([cond("team", "isAnyOf", ["team-b"])]);
-    expect(matchesSmartFolder(rule, build({ folderId: "t-theirs-sub" }), ctx)).toBe(true);
-    expect(matchesSmartFolder(rule, build({ folderId: "t-mine" }), ctx)).toBe(false);
+    expect(matchesSmartFolder(rule, mine("t-theirs-sub"), ctx)).toBe(true);
+    expect(matchesSmartFolder(rule, mine("t-mine"), ctx)).toBe(false);
   });
 
   test("an unknown ownership value matches nothing under either operator", () => {
-    expect(matchesSmartFolder(sf([cond("ownership", "is", "somebody-else")]), build({ folderId: null }), ctx)).toBe(false);
+    expect(matchesSmartFolder(sf([cond("ownership", "is", "somebody-else")]), mine(null), ctx)).toBe(false);
     // isNot is deliberately not the negation of an unknown value: it would
     // otherwise match the entire library.
-    expect(matchesSmartFolder(sf([cond("ownership", "isNot", "somebody-else")]), build({ folderId: null }), ctx)).toBe(false);
+    expect(matchesSmartFolder(sf([cond("ownership", "isNot", "somebody-else")]), mine(null), ctx)).toBe(false);
   });
 });
 
@@ -363,5 +407,31 @@ describe("armorWeight", () => {
     const odd = build({ profession: "Bartender" });
     expect(matchesSmartFolder(sf([cond("armorWeight", "isAnyOf", ["heavy"])]), odd, CTX)).toBe(false);
     expect(matchesSmartFolder(sf([cond("armorWeight", "isNoneOf", ["heavy"])]), odd, CTX)).toBe(true);
+  });
+});
+
+// ruleContext() is what every live call site passes, so a field the evaluator
+// reads but the context never carries is a filter that silently answers wrongly
+// in the app while every unit test above still passes.
+describe("ruleContext", () => {
+  afterEach(() => {
+    state.folders = [];
+    state.teamSession = null;
+    state.syncAuthors = {};
+  });
+
+  test("carries the identity and the author map the ownership field needs", () => {
+    state.folders = [{ id: "f1" }];
+    state.teamSession = { userId: "u-me", login: "me" };
+    state.syncAuthors = { b1: "u-them" };
+    expect(ruleContext()).toMatchObject({
+      folders: [{ id: "f1" }],
+      sessionUserId: "u-me",
+      syncAuthors: { b1: "u-them" },
+    });
+  });
+
+  test("degrades to no identity when team sync is off", () => {
+    expect(ruleContext()).toMatchObject({ sessionUserId: null, syncAuthors: {} });
   });
 });

@@ -2452,6 +2452,10 @@ const readyWork = app.whenReady().then(async () => {
   handle("teams:grants", (_e, teamId) => teamSync.listGrants(teamId));
   handle("teams:set-grant", (_e, teamId, folderId, userId, access) => teamSync.setGrant(teamId, folderId, userId, access));
   handle("teams:access", () => teamSync.accessMap());
+  // Item id -> author user id, for the smart-folder ownership filters. Only the
+  // creator's id, never the session token: this is the same identity the
+  // renderer already holds for every team member.
+  handle("teams:authors", () => teamSync.authorMap());
   handle("teams:remove-member", (_e, teamId, userId) => teamSync.removeMember(teamId, userId));
   handle("teams:rotate-invite", (_e, teamId) => teamSync.rotateInvite(teamId));
   // A destroyed/reloading WebContents makes send() throw; that throw would

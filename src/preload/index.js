@@ -185,6 +185,7 @@ contextBridge.exposeInMainWorld("desktopApi", {
   listTeamGrants: (teamId) => invoke("teams:grants", teamId),
   setTeamGrant: (teamId, folderId, userId, access) => invoke("teams:set-grant", teamId, folderId, userId, access),
   teamAccessMap: () => invoke("teams:access"),
+  syncAuthorMap: () => invoke("teams:authors"),
   rotateInvite: (teamId) => invoke("teams:rotate-invite", teamId),
   shareFolderToTeam: (folderId, teamId) => invoke("teams:share-folder", folderId, teamId),
   stopSharingFolder: (folderId) => invoke("teams:stop-sharing", folderId),

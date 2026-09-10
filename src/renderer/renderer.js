@@ -764,6 +764,10 @@ async function init() {
         // "synced" is the default for shared-folder items — just clear any active status
         delete state[statusMap][id];
         delete state.conflicts[`${type}:${id}`];
+        // Keep authorship current for the ownership smart-folder filters. Only
+        // team items raise this event, so an entry here is always meaningful —
+        // null included, which means the server named no creator.
+        state.syncAuthors[id] = data.createdBy ?? null;
         // Splice the updated item into state so library reflects the latest data
         // (e.g. gamemode change from another user won't silently stale-filter on next render)
         if (data.item) {
