@@ -4,14 +4,14 @@
 import { computePartyCoverage } from "../boon-coverage.js";
 import { resolveAllWeaponSkills } from "../equipment-weapon-skills.js";
 import {
-  BOON_DISPLAY_ORDER, BOON_CONDITION_ICONS,
+  BOON_DISPLAY_ORDER, CONDITION_DISPLAY_ORDER, BOON_CONDITION_ICONS,
   COMBO_FIELD_COLORS, COMBO_FIELD_DISPLAY_ORDER,
   COMBO_FINISHER_COLORS, COMBO_FINISHER_DISPLAY_ORDER,
 } from "../constants.js";
 import { getProfessionSvg } from "../profession-icons.js";
 import { formatFactHtml } from "../detail-panel.js";
 import { escapeHtml } from "../utils.js";
-import { computeBuildConcentration } from "../stats.js";
+import { computeBuildConcentration, computeBuildExpertise } from "../stats.js";
 
 
 /**
@@ -42,6 +42,7 @@ export async function computeCompPartyCoverage(comp, builds, catalogCache, getCa
     const line = lines[i];
     const label = `P${i + 1}`;
     const lineBoonMap = new Map();
+    const lineCondMap = new Map();
     const lineFieldMap = new Map();
     const lineFinisherMap = new Map(); // keyed by finisher type (Blast, Whirl, Leap, Projectile)
     const lineBuilds = []; // { profession, eliteSpec } per build in this line
@@ -60,6 +61,8 @@ export async function computeCompPartyCoverage(comp, builds, catalogCache, getCa
       const coverage = computePartyCoverage(catalog, build, weaponSkills);
       const buildName = build.title || build.id;
       const concentrationBonus = computeBuildConcentration(build, upgradeCatalog) / 1500;
+      // Condition duration scales off Expertise, not Concentration.
+      const expertiseBonus = computeBuildExpertise(build, upgradeCatalog) / 1500;
 
       // Resolve elite spec
       let eliteSpec = null;
@@ -94,6 +97,32 @@ export async function computeCompPartyCoverage(comp, builds, catalogCache, getCa
             context: s.context || "",
             isAlly: s.isAlly,
           }));
+        entry.providers.push({ buildId, buildName, profession: build.profession, eliteSpec, profIcon, sources });
+      }
+
+      // Aggregate conditions. Self-inflicted conditions (e.g. Corrupt Boon, whose
+      // only condition fact is the *self* poison) are recorded so the user can see
+      // why a condition is not covered, but they never count toward coverage.
+      for (const cond of coverage.conditions || []) {
+        if (!lineCondMap.has(cond.name)) {
+          lineCondMap.set(cond.name, { count: 0, providers: [] });
+        }
+        const entry = lineCondMap.get(cond.name);
+        const sources = (cond.sources || [])
+          .filter(s => s.duration > 0)
+          .map(s => ({
+            type: s.type,
+            name: s.name,
+            skillIcon: s.skillIcon || "",
+            skillDescription: s.skillDescription || "",
+            skillFacts: s.skillFacts || [],
+            stacks: s.stacks,
+            effectiveDuration: +((s.duration * (1 + expertiseBonus)).toFixed(1)),
+            context: s.context || "",
+            target: s.target || "foe",
+          }));
+        if (!sources.length) continue;
+        if (sources.some(s => s.target !== "self")) entry.count++;
         entry.providers.push({ buildId, buildName, profession: build.profession, eliteSpec, profIcon, sources });
       }
 
@@ -146,6 +175,7 @@ export async function computeCompPartyCoverage(comp, builds, catalogCache, getCa
       hasFilledSlots,
       builds: lineBuilds,
       boons: lineBoonMap,
+      conditions: lineCondMap,
       comboFields: lineFieldMap,
       comboFinishers: lineFinisherMap,
     });
@@ -167,6 +197,7 @@ export function buildPartyCoverageHTML(data) {
 
 function _renderPartyLine(line) {
   const boonPills = _renderBoonPills(line.boons, line.label);
+  const condPills = _renderConditionPills(line.conditions || new Map(), line.label);
   const fieldPills = _renderFieldPills(line.comboFields, line.label);
   const finisherPills = _renderFinisherPills(line.comboFinishers, line.label);
 
@@ -213,6 +244,11 @@ function _renderPartyLine(line) {
           <div class="party-cov__pills">${boonPills}</div>
           <div class="party-cov__expand" data-expand-for="boons"></div>
         </div>
+        <div class="party-cov__section" data-section="conditions">
+          <div class="party-cov__section-label">CONDITIONS</div>
+          <div class="party-cov__pills">${condPills}</div>
+          <div class="party-cov__expand" data-expand-for="conditions"></div>
+        </div>
         <div class="party-cov__section" data-section="fields">
           <div class="party-cov__section-label">COMBO FIELDS</div>
           <div class="party-cov__pills">${fieldPills}</div>
@@ -255,6 +291,41 @@ function _renderBoonPills(boonMap, lineLabel) {
         <img src="${escapeHtml(icon)}" width="20" height="20" alt="${escapeHtml(boonName)}"
              class="party-cov__pill-icon" />
         <span class="party-cov__pill-name">${escapeHtml(boonName)}</span>
+        ${count > 1 ? `<span class="party-cov__pill-badge">&times;${count}</span>` : ""}
+      </div>`;
+  }).join("");
+}
+
+function _renderConditionPills(condMap, lineLabel) {
+  return CONDITION_DISPLAY_ORDER.map((condName) => {
+    const entry = condMap.get(condName);
+    const count = entry?.count || 0;
+    const covered = count > 0;
+    // A condition with sources that are *all* self-inflicted isn't coverage, but
+    // it's worth showing distinctly rather than as a plain gap — the user can
+    // expand it to see that the necro is poisoning itself, not the enemy.
+    const selfOnly = !covered && (entry?.providers?.length || 0) > 0;
+    const icon = BOON_CONDITION_ICONS[condName] || "";
+
+    const providersJson = entry?.providers?.length
+      ? escapeHtml(JSON.stringify(entry.providers))
+      : "[]";
+
+    const stateClass = covered
+      ? ""
+      : (selfOnly ? "party-cov__pill--self-condi" : "party-cov__pill--uncovered");
+
+    return `
+      <div class="party-cov__pill party-cov__pill--condi ${stateClass}"
+           data-category="condition"
+           data-condition-name="${escapeHtml(condName)}"
+           data-count="${count}"
+           data-providers="${providersJson}"
+           data-line-label="${escapeHtml(lineLabel)}"
+           ${covered || selfOnly ? 'data-clickable="true"' : ""}>
+        <img src="${escapeHtml(icon)}" width="20" height="20" alt="${escapeHtml(condName)}"
+             class="party-cov__pill-icon" />
+        <span class="party-cov__pill-name">${escapeHtml(condName)}</span>
         ${count > 1 ? `<span class="party-cov__pill-badge">&times;${count}</span>` : ""}
       </div>`;
   }).join("");
@@ -349,6 +420,61 @@ function _buildBoonExpandHTML(boonName, providers) {
       <span class="party-cov__expand-title" style="color: #afa;">${escapeHtml(boonName)} — ${totalSources} source${totalSources !== 1 ? "s" : ""}</span>
     </div>
     <div class="party-cov__expand-body" style="border-left-color: #8f8;">
+      ${sourceRows}
+    </div>`;
+}
+
+const _CONDI_TARGET_LABELS = {
+  foe:   { cls: "party-cov__src-target--foe",       label: "FOE" },
+  self:  { cls: "party-cov__src-target--selfcondi", label: "SELF" },
+  mixed: { cls: "party-cov__src-target--mixed",     label: "SELF+FOE" },
+};
+
+function _buildConditionExpandHTML(condName, providers) {
+  const icon = BOON_CONDITION_ICONS[condName] || "";
+  // Only foe-facing sources count as coverage; self-inflicted ones are listed
+  // below but excluded from the headline count.
+  const applied = providers.reduce(
+    (n, p) => n + (p.sources || []).filter(s => s.target !== "self").length, 0);
+
+  const sourceRows = providers.flatMap(p =>
+    (p.sources || []).map(s => {
+      const profIconHtml = p.profIcon || "";
+      const skillIconHtml = s.skillIcon
+        ? `<img src="${escapeHtml(s.skillIcon)}" width="20" height="20" alt="${escapeHtml(s.name)}"
+                class="party-cov__src-skill-icon"
+                data-skill-name="${escapeHtml(s.name)}"
+                data-skill-desc="${escapeHtml(s.skillDescription || "")}"
+                data-skill-icon="${escapeHtml(s.skillIcon)}"
+                data-skill-facts="${escapeHtml(JSON.stringify(s.skillFacts || []))}" />`
+        : "";
+      const dur = `${s.effectiveDuration}s`;
+      const stacksHtml = s.stacks > 1
+        ? `<span class="party-cov__src-stacks">&times;${s.stacks}</span>` : "";
+      const t = _CONDI_TARGET_LABELS[s.target] || _CONDI_TARGET_LABELS.foe;
+      const rowCls = s.target === "self" ? " party-cov__src-row--self-condi" : "";
+      return `<div class="party-cov__src-row${rowCls}">
+        <span class="party-cov__src-icon">${profIconHtml}</span>
+        ${skillIconHtml}
+        <span class="party-cov__src-name">${escapeHtml(s.name)}</span>
+        ${stacksHtml}
+        <span class="party-cov__src-dur">${escapeHtml(dur)}</span>
+        <span class="party-cov__src-target ${t.cls}">${t.label}</span>
+      </div>`;
+    })
+  ).join("");
+
+  const note = applied === 0
+    ? `<div class="party-cov__expand-note">Self-inflicted only \u2014 not applied to enemies.</div>`
+    : "";
+
+  return `
+    <div class="party-cov__expand-header" style="border-left-color: #f88;">
+      <img src="${escapeHtml(icon)}" width="18" height="18" alt="${escapeHtml(condName)}" class="party-cov__expand-icon" />
+      <span class="party-cov__expand-title" style="color: #faa;">${escapeHtml(condName)} \u2014 ${applied} source${applied !== 1 ? "s" : ""}</span>
+    </div>
+    <div class="party-cov__expand-body" style="border-left-color: #f88;">
+      ${note}
       ${sourceRows}
     </div>`;
 }
@@ -572,7 +698,8 @@ export function bindPartyCoverageEvents(container) {
     pillEl.addEventListener("click", (e) => {
       e.stopPropagation();
 
-      // Don't expand uncovered or self-only boon pills
+      // Don't expand pills with nothing behind them. Self-only *condition* pills
+      // stay expandable — seeing the self-inflicted source is the whole point.
       if (pillEl.classList.contains("party-cov__pill--uncovered") ||
           pillEl.classList.contains("party-cov__pill--self-only")) return;
 
@@ -594,6 +721,10 @@ export function bindPartyCoverageEvents(container) {
         let providers = [];
         try { providers = JSON.parse(pillEl.dataset.providers || "[]"); } catch { /* */ }
         html = _buildBoonExpandHTML(pillEl.dataset.boonName, providers);
+      } else if (category === "condition") {
+        let providers = [];
+        try { providers = JSON.parse(pillEl.dataset.providers || "[]"); } catch { /* */ }
+        html = _buildConditionExpandHTML(pillEl.dataset.conditionName, providers);
       } else if (category === "field") {
         let sources = [];
         try { sources = JSON.parse(pillEl.dataset.sources || "[]"); } catch { /* */ }
@@ -611,7 +742,9 @@ export function bindPartyCoverageEvents(container) {
       // Apply current self-toggle state to newly rendered SELF source rows + update count
       const lineEl = pillEl.closest(".party-cov__line");
       const toggleEl = lineEl?.querySelector('[data-action="toggle-self-boons"]');
-      if (toggleEl && !toggleEl.checked) {
+      // Scoped to boons: the SELF/ALLY toggle is a boon concept, and its row-hiding
+      // recount would clobber the condition panel's foe-only source count.
+      if (category === "boon" && toggleEl && !toggleEl.checked) {
         expandEl.querySelectorAll('.party-cov__src-target--self').forEach(badge => {
           const row = badge.closest('.party-cov__src-row');
           if (row) row.style.display = "none";

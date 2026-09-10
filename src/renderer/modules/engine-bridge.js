@@ -412,13 +412,11 @@ export function computeMightPerStack(state) {
 }
 
 /**
- * Compute total Concentration for a build object (used by comp-boon-coverage).
- * The build object has a different shape than state.editor — it comes from
- * the comp/party system. We construct a minimal ctx from it.
+ * Build a minimal ctx from a comp/party build object, whose shape differs from
+ * state.editor. Shared by the Concentration/Expertise duration helpers.
  */
-export function computeBuildConcentration(build, upgradeCatalog) {
-  if (!build?.equipment) return 0;
-  const fakeState = {
+function _fakeStateForBuild(build, upgradeCatalog) {
+  return {
     editor: {
       profession: build.profession || "",
       specializations: build.specializations || [],
@@ -431,6 +429,25 @@ export function computeBuildConcentration(build, upgradeCatalog) {
     activeCatalog: { traitById: new Map(), skillById: new Map(), specializationById: new Map() },
     upgradeCatalog: upgradeCatalog || { runeById: new Map(), foodById: new Map(), utilityById: new Map(), infusionById: new Map(), enrichmentById: new Map() },
   };
-  const result = computeStats(fakeState);
+}
+
+/**
+ * Compute total Concentration for a build object (used by comp-boon-coverage
+ * to scale boon durations).
+ */
+export function computeBuildConcentration(build, upgradeCatalog) {
+  if (!build?.equipment) return 0;
+  const result = computeStats(_fakeStateForBuild(build, upgradeCatalog));
   return result.total.Concentration || 0;
+}
+
+/**
+ * Compute total Expertise for a build object. Condition duration scales off
+ * Expertise, not Concentration — reusing the boon helper would report wrong
+ * durations on the condition coverage panel.
+ */
+export function computeBuildExpertise(build, upgradeCatalog) {
+  if (!build?.equipment) return 0;
+  const result = computeStats(_fakeStateForBuild(build, upgradeCatalog));
+  return result.total.Expertise || 0;
 }

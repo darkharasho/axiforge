@@ -409,3 +409,114 @@ describe("computeCompPartyCoverage — sources and effectiveDuration on line pro
     expect(lines[0].boons.get("Might")).toBeDefined();
   });
 });
+
+// ── Condition coverage (issue #302) ──────────────────────────────────────────
+
+const {
+  buildPartyCoverageHTML: _buildHtmlForCondi,
+} = require("../../../src/renderer/modules/comps/comp-boon-coverage");
+const {
+  classifyConditionTarget,
+} = require("../../../packages/gw2-data/src/engine/boons");
+
+// Applies Bleeding to a foe — normal, countable coverage.
+function makeBleedSkill() {
+  return {
+    id: 300, name: "Ripper",
+    description: "Bleed your foe.",
+    facts: [{ type: "Buff", status: "Bleeding", duration: 10, apply_count: 3 }],
+    type: "Utility",
+  };
+}
+
+// Corrupt Boon: the ONLY condition fact is the *self* poison. Real GW2 data.
+function makeSelfPoisonSkill() {
+  return {
+    id: 301, name: "Corrupt Boon",
+    description: "Corruption. Poison yourself. Transform boons on your foe into negative conditions.",
+    facts: [{ type: "Buff", status: "Poisoned", duration: 6, apply_count: 1 }],
+    type: "Utility",
+  };
+}
+
+describe("classifyConditionTarget", () => {
+  test("defaults to foe for a plain foe-targeted description", () => {
+    expect(classifyConditionTarget("Bleed your foe.", "Bleeding")).toBe("foe");
+  });
+
+  test("detects self-inflicted conditions (Corrupt Boon)", () => {
+    expect(classifyConditionTarget(
+      "Corruption. Poison yourself. Transform boons on your foe into negative conditions.",
+      "Poisoned"
+    )).toBe("self");
+  });
+
+  test("detects mixed self+foe application (Blood Is Power)", () => {
+    expect(classifyConditionTarget(
+      "Corruption. Bleed yourself to grant might to allies around you and bleed your target.",
+      "Bleeding"
+    )).toBe("mixed");
+  });
+
+  test("falls back to foe when there is no description", () => {
+    expect(classifyConditionTarget("", "Torment")).toBe("foe");
+  });
+});
+
+describe("computeCompPartyCoverage — conditions", () => {
+  test("aggregates foe-targeted conditions per line", async () => {
+    const catalog = makeCatalog(new Map([[300, makeBleedSkill()]]));
+    const cache = new Map();
+    const build = makeBuild("b1", "Necromancer", {
+      skills: { healId: 0, utilityIds: [300, 0, 0], eliteId: 0 },
+    });
+    const comp = makeComp([makeLine("l1", ["b1"])]);
+    const { lines } = await computeCompPartyCoverage(
+      comp, [build], cache, makeGetCatalog(cache, catalog)
+    );
+
+    expect(lines[0].conditions.get("Bleeding").count).toBe(1);
+  });
+
+  test("does not credit coverage for a self-inflicted condition", async () => {
+    const catalog = makeCatalog(new Map([[301, makeSelfPoisonSkill()]]));
+    const cache = new Map();
+    const build = makeBuild("b1", "Necromancer", {
+      skills: { healId: 0, utilityIds: [301, 0, 0], eliteId: 0 },
+    });
+    const comp = makeComp([makeLine("l1", ["b1"])]);
+    const { lines } = await computeCompPartyCoverage(
+      comp, [build], cache, makeGetCatalog(cache, catalog)
+    );
+
+    const entry = lines[0].conditions.get("Poisoned");
+    // The source is still recorded (so the user can see *why*), but it must not
+    // count as poison the party applies to enemies.
+    expect(entry.count).toBe(0);
+    expect(entry.providers[0].sources[0].target).toBe("self");
+  });
+
+  test("renders all conditions, greying uncovered ones as gaps", async () => {
+    const catalog = makeCatalog(new Map([[300, makeBleedSkill()]]));
+    const cache = new Map();
+    const build = makeBuild("b1", "Necromancer", {
+      skills: { healId: 0, utilityIds: [300, 0, 0], eliteId: 0 },
+    });
+    const comp = makeComp([makeLine("l1", ["b1"])]);
+    const { lines } = await computeCompPartyCoverage(
+      comp, [build], cache, makeGetCatalog(cache, catalog)
+    );
+    const html = _buildHtmlForCondi({ lines });
+
+    expect(html).toContain('data-section="conditions"');
+    expect(html).toContain('data-condition-name="Bleeding"');
+    // Damaging conditions come first
+    expect(html.indexOf('data-condition-name="Bleeding"'))
+      .toBeLessThan(html.indexOf('data-condition-name="Vulnerability"'));
+    // Torment has no source here → rendered but marked uncovered
+    const tormentIdx = html.indexOf('data-condition-name="Torment"');
+    expect(tormentIdx).toBeGreaterThan(-1);
+    const tormentPill = html.slice(html.lastIndexOf("<div", tormentIdx), tormentIdx);
+    expect(tormentPill).toContain("party-cov__pill--uncovered");
+  });
+});

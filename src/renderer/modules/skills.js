@@ -16,6 +16,7 @@ import { escapeHtml, parseWeaponSlotNum } from "./utils.js";
 import { bindHoverPreview, selectDetail, buildSkillCard, showHoverPreview } from "./detail-panel.js";
 import { renderCustomSelect } from "./custom-select.js";
 import { computeStats, computeBoons } from "./engine-bridge.js";
+import { renderCoverageStrip } from "./boon-coverage.js";
 
 let _readOnly = false;
 export function setReadOnly(val) { _readOnly = val; }
@@ -1134,97 +1135,9 @@ function _renderUnderwaterToggle() {
   return container;
 }
 
-const SOURCE_TYPE_LABELS = { skill: "Skill", trait: "Trait", relic: "Relic" };
-
 function _renderBoonCoverage(catalog, editor, weaponSkills = []) {
   const coverage = computeBoons(state, weaponSkills);
-  const hasBoons = coverage.boons.length > 0;
-  const hasConditions = coverage.conditions.length > 0;
-  if (!hasBoons && !hasConditions) return null;
-
-  const container = document.createElement("div");
-  container.className = "boon-coverage";
-
-  function makeIconRow(items, className) {
-    if (items.length === 0) return null;
-    const row = document.createElement("div");
-    row.className = className;
-    for (const item of items) {
-      const icon = document.createElement("div");
-      icon.className = "boon-coverage__icon";
-
-      const img = document.createElement("img");
-      img.src = item.icon;
-      img.alt = item.name;
-      img.width = 24;
-      img.height = 24;
-      icon.append(img);
-
-      if (item.hasAllySource) {
-        const badge = document.createElement("div");
-        badge.className = "boon-coverage__ally-badge";
-        badge.textContent = "⇧";
-        icon.append(badge);
-      }
-
-      // Tooltip on hover
-      icon.addEventListener("mouseenter", () => {
-        const tooltip = document.createElement("div");
-        tooltip.className = "boon-coverage__tooltip";
-
-        const title = document.createElement("div");
-        title.className = "boon-coverage__tooltip-title";
-        title.textContent = item.name;
-        tooltip.append(title);
-
-        for (const src of item.sources) {
-          const sourceRow = document.createElement("div");
-          sourceRow.className = "boon-coverage__tooltip-row";
-
-          const tag = document.createElement("span");
-          tag.className = `boon-coverage__tooltip-tag boon-coverage__tooltip-tag--${src.type}`;
-          tag.textContent = SOURCE_TYPE_LABELS[src.type] || "Trait";
-          sourceRow.append(tag);
-
-          const srcName = document.createElement("span");
-          srcName.className = "boon-coverage__tooltip-name";
-          srcName.textContent = src.name;
-          sourceRow.append(srcName);
-
-          const detail = document.createElement("span");
-          detail.className = "boon-coverage__tooltip-detail";
-          if (src.duration > 0) {
-            const parts = [];
-            if (src.stacks > 0) parts.push(`${src.stacks}×`);
-            parts.push(`${src.duration}s`);
-            detail.textContent = parts.join(" ");
-          } else {
-            detail.textContent = "passive";
-          }
-          sourceRow.append(detail);
-
-          tooltip.append(sourceRow);
-        }
-
-        icon.append(tooltip);
-      });
-
-      icon.addEventListener("mouseleave", () => {
-        const tooltip = icon.querySelector(".boon-coverage__tooltip");
-        if (tooltip) tooltip.remove();
-      });
-
-      row.append(icon);
-    }
-    return row;
-  }
-
-  const boonRow = makeIconRow(coverage.boons, "boon-coverage__boons");
-  const condRow = makeIconRow(coverage.conditions, "boon-coverage__conditions");
-  if (boonRow) container.append(boonRow);
-  if (condRow) container.append(condRow);
-
-  return container;
+  return renderCoverageStrip(coverage, { prefix: "boon-coverage", iconSize: 24 });
 }
 
 function _renderEmptySkillBar() {

@@ -2,7 +2,8 @@
 
 const {
   BOON_NAMES, CONDITION_NAMES, CONDITION_NAME_NORMALIZE,
-  BOON_DISPLAY_ORDER, BUFF_FACT_TYPES,
+  BOON_DISPLAY_ORDER, CONDITION_DISPLAY_ORDER, CONDITION_VERB_FORMS,
+  BUFF_FACT_TYPES,
 } = require("./constants");
 
 function normalizeName(status) {
@@ -48,6 +49,44 @@ function isAllyTargeted(description, statusName, allBoonNames) {
   }
 
   return true;
+}
+
+const SELF_MARKERS = /\byourself\b|\bself-inflict/;
+const FOE_MARKERS = /\bfoes?\b|\benem(?:y|ies)\b|\btargets?\b/;
+
+/**
+ * Classify who a condition fact lands on: "foe" (the default and overwhelmingly
+ * common case), "self" (e.g. Corrupt Boon's "Poison yourself" — whose only
+ * condition fact is the *self* poison), or "mixed" (e.g. Blood Is Power's
+ * "Bleed yourself ... and bleed your target").
+ *
+ * The GW2 API attaches no target to Buff facts, so this reads the description.
+ * Descriptions name conditions by verb ("Poison yourself"), hence CONDITION_VERB_FORMS.
+ * Unknown / unparseable descriptions fall back to "foe" so we never hide real coverage.
+ */
+function classifyConditionTarget(description, statusName) {
+  if (!description) return "foe";
+  const forms = CONDITION_VERB_FORMS[statusName] || [statusName];
+  const desc = description.toLowerCase();
+
+  // Split on sentence *and* clause boundaries — "Bleed yourself to grant might to
+  // allies around you and bleed your target." is one sentence naming both targets.
+  const clauses = desc.split(/[.;]|\band\b/);
+
+  let sawSelf = false;
+  let sawFoe = false;
+  for (const raw of clauses) {
+    const clause = raw.trim();
+    if (!clause) continue;
+    const namesCondition = forms.some((f) => clause.includes(f));
+    if (!namesCondition) continue;
+    if (SELF_MARKERS.test(clause)) sawSelf = true;
+    if (FOE_MARKERS.test(clause)) sawFoe = true;
+  }
+
+  if (sawSelf && sawFoe) return "mixed";
+  if (sawSelf) return "self";
+  return "foe";
 }
 
 function analyzeBoons(skills, traits, overrides, activeTraitIds, relics) {
@@ -130,6 +169,8 @@ function analyzeBoons(skills, traits, overrides, activeTraitIds, relics) {
         isAlly,
         context: currentContext,
       };
+      // isAlly is a boon concept; conditions care about foe-vs-self instead.
+      if (isCondition) source.target = classifyConditionTarget(description, name);
 
       const map = isBoon ? boonMap : condMap;
       if (!map.has(name)) {
@@ -171,10 +212,15 @@ function analyzeBoons(skills, traits, overrides, activeTraitIds, relics) {
     return ai - bi;
   });
 
-  // Sort conditions alphabetically
-  const conditions = [...condMap.values()].sort((a, b) => a.name.localeCompare(b.name));
+  // Sort conditions by display order (damaging first), unknowns last
+  const condOrder = new Map(CONDITION_DISPLAY_ORDER.map((name, i) => [name, i]));
+  const conditions = [...condMap.values()].sort((a, b) => {
+    const ai = condOrder.has(a.name) ? condOrder.get(a.name) : 999;
+    const bi = condOrder.has(b.name) ? condOrder.get(b.name) : 999;
+    return ai - bi || a.name.localeCompare(b.name);
+  });
 
   return { boons, conditions };
 }
 
-module.exports = { analyzeBoons, isAllyTargeted, normalizeName };
+module.exports = { analyzeBoons, isAllyTargeted, classifyConditionTarget, normalizeName };
