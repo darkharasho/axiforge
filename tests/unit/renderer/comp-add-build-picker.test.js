@@ -146,3 +146,58 @@ describe("Add Builds to Comp — scope", () => {
     expect(rows(o).map((r) => r.dataset.buildId)).toEqual(["b2"]);
   });
 });
+
+// #304: a smart folder is how people group their builds, so its name is what
+// they type -- and a search that matched nothing blamed the comp for it.
+describe("Add Builds to Comp — search by smart folder", () => {
+  const { loadSmartFolders } = require("../../../src/renderer/modules/library/smart-folders.js");
+
+  const withSmartFolders = async (folders) => {
+    window.desktopApi = {
+      getSetting: async (key) => (key === "library.smartFolders" ? folders : null),
+    };
+    await loadSmartFolders();
+  };
+
+  const search = (o, term) => {
+    const input = o.querySelector(".comp-picker-modal__search");
+    input.value = term;
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    return document.querySelector(".comp-picker-overlay");
+  };
+
+  afterEach(async () => {
+    await withSmartFolders([]);
+  });
+
+  test("typing a custom smart folder's name lists the builds it matches", async () => {
+    await withSmartFolders([{
+      id: "sf_lib", name: "My Library",
+      rule: { type: "group", match: "all", children: [{ type: "condition", field: "tags", op: "isEmpty" }] },
+    }]);
+    state.builds = [
+      makeBuild({ id: "b1", title: "Firebrand", tags: [] }),
+      makeBuild({ id: "b2", title: "Scrapper", tags: ["zerg"] }),
+    ];
+    const o = search(open({ id: "c1", name: "Comp", buildIds: [], folderId: null }), "my library");
+    expect(rows(o).map((r) => r.dataset.buildId)).toEqual(["b1"]);
+  });
+
+  test("the match-everything Main Repository does not swallow a search for 'main'", async () => {
+    await withSmartFolders([]);
+    state.builds = [
+      makeBuild({ id: "b1", title: "Main DPS" }),
+      makeBuild({ id: "b2", title: "Scrapper" }),
+    ];
+    const o = search(open({ id: "c1", name: "Comp", buildIds: [], folderId: null }), "main");
+    expect(rows(o).map((r) => r.dataset.buildId)).toEqual(["b1"]);
+  });
+
+  test("a search with no matches says so instead of blaming the comp", () => {
+    state.builds = [makeBuild({ id: "b1", title: "Firebrand" })];
+    const o = search(open({ id: "c1", name: "Comp", buildIds: [], folderId: null }), "nothing like this");
+    const empty = o.querySelector(".comp-picker-empty").textContent;
+    expect(empty).toContain("nothing like this");
+    expect(empty).not.toContain("already in this comp");
+  });
+});

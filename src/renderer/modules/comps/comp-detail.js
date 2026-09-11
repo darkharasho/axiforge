@@ -25,6 +25,7 @@ import { openCompTagPopover, closeCompTagPopover, renderCompTagsRow } from "./co
 import { renderCompTabs, mountCompNotes } from "./comp-notes.js";
 import { publishWithOwnerCheck, publishedByOtherBody } from "../publish-guard.js";
 import { teamRootFor } from "../teams.js";
+import { listSmartFolders, matchesSmartFolder, ruleContext } from "../library/smart-folders.js";
 import { compsContainingBuild } from "./comp-membership.js";
 import { compSources, folderPathText } from "../build-sources.js";
 import { foreignFolderChipHtml } from "../build-source-chips.js";
@@ -913,6 +914,21 @@ export function openAddBuildModal(comp) {
     return true;
   });
 
+  // Smart folders are how people group their builds, so a folder's name is
+  // what they type. Evaluated once here rather than per keystroke. A built-in
+  // with no conditions (Main Repository) matches every build, so its name
+  // would turn a search for "main" into "everything" -- it is left out.
+  const smartFolders = listSmartFolders().filter(
+    (sf) => !(sf.builtin && !(sf.rule?.children || []).length)
+  );
+  const ctx = ruleContext();
+  const smartFolderNames = new Map(
+    available.map((b) => [
+      b.id,
+      smartFolders.filter((sf) => matchesSmartFolder(sf, b, ctx)).map((sf) => sf.name || ""),
+    ])
+  );
+
   const selected = new Set();
   let searchTerm = "";
 
@@ -932,6 +948,7 @@ export function openAddBuildModal(comp) {
         info.rune,
         info.team?.name || "",
         ...(b.tags || []),
+        ...(smartFolderNames.get(b.id) || []),
       ]
         .join(" ")
         .toLowerCase()
@@ -985,7 +1002,12 @@ export function openAddBuildModal(comp) {
     }).join("");
 
     if (rows) return rows;
-    return `<p class="comp-picker-empty">${escapeHtml(_emptyPickerReason(comp, compTeamRoot))}</p>`;
+    // The comp's rules only explain an empty list when there was nothing to
+    // search; otherwise it is the search that came up empty.
+    const reason = searchTerm && available.length
+      ? `No builds match “${searchTerm}”.`
+      : _emptyPickerReason(comp, compTeamRoot);
+    return `<p class="comp-picker-empty">${escapeHtml(reason)}</p>`;
   }
 
   function render() {
