@@ -1,3 +1,10 @@
+## Version v0.22.3 — September 10, 2026
+
+### Bug Fixes
+
+- **Adding builds to a comp couldn't find them by smart folder.** Smart folders are how most people group their builds, so a folder's name is the natural thing to type into the Add Builds search — but the search only looked at a build's name, profession, spec, folder, gear, team, and tags, and never at which smart folders it belongs to. Typing "My Library" found nothing. The search now matches smart folder names too, custom and built-in alike. **Main Repository** is left out on purpose: it contains every build, so a search for "main" would otherwise return your whole library.
+- **An empty search blamed the comp.** When a search matched nothing, the picker said "everything is already in this comp" — even with dozens of builds available right above it. It now says no builds match what you typed, and keeps the old explanation for when the comp's game mode or team really has left nothing to add.
+
 ## Version v0.22.2 — September 9, 2026
 
 ### Condition coverage
