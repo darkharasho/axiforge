@@ -1,3 +1,10 @@
+## Version v0.22.4 — September 15, 2026
+
+### Bug Fixes
+
+- **WvW and PvP builds were shown their PvE boons.** Party Coverage read a skill or trait's PvE numbers no matter which game mode the build was set to, so anything the game splits between modes was reported wrong. A Paragon running Feverish Pulse in WvW grants quickness — but coverage credited it with the PvE alacrity instead, leaving quickness greyed out as an uncovered gap even with a source sitting right there in the party. Boons, their durations, and combo fields now all follow the build's game mode, so a WvW comp is analysed with WvW values and a PvP comp with PvP ones. Damage modifiers already did this; they now share the same code path rather than their own copy of it.
+- **A wiki page with nothing to parse could read as "does nothing in WvW".** When the data pipeline couldn't find any of the game's mode-split markers on a page, it recorded an empty WvW and PvP fact list — indistinguishable, downstream, from a page that genuinely says the skill has no effect in those modes. Those empty lists are no longer recorded, so an unparseable page falls back to the game's own data instead of erasing the skill outside PvE.
+
 ## Version v0.22.3 — September 10, 2026
 
 ### Bug Fixes
