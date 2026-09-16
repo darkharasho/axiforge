@@ -6,6 +6,7 @@ const { computeTooltip } = require("./tooltips");
 const { buildInteractionGraph } = require("./graph");
 const { analyzeBoons, isAllyTargeted, normalizeName } = require("./boons");
 const { analyzeCombos } = require("./combos");
+const { factsForMode } = require("./facts");
 const { loadOverrides, getOverride } = require("./overrides");
 const {
   STAT_COMBOS, STAT_COMBOS_BY_LABEL, getStatCombo, getEffectiveStats,
@@ -43,12 +44,12 @@ class StatEngine {
     return computeTooltip(attrs, skill, weaponType, mods);
   }
 
-  analyzeBoons(skills, traits, activeTraitIds, relics) {
-    return analyzeBoons(skills, traits, this._overrides, activeTraitIds, relics);
+  analyzeBoons(skills, traits, activeTraitIds, relics, gameMode) {
+    return analyzeBoons(skills, traits, this._overrides, activeTraitIds, relics, gameMode);
   }
 
-  analyzeCombos(skills, traits) {
-    return analyzeCombos(skills, traits);
+  analyzeCombos(skills, traits, gameMode) {
+    return analyzeCombos(skills, traits, gameMode);
   }
 }
 
@@ -67,6 +68,7 @@ module.exports = {
   isAllyTargeted,
   normalizeName,
   analyzeCombos,
+  factsForMode,
   loadOverrides,
   getOverride,
   // Constants

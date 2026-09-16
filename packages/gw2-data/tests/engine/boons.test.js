@@ -217,3 +217,46 @@ describe("analyzeBoons", () => {
     expect(condNames).toEqual([...condNames].sort());
   });
 });
+
+describe("analyzeBoons — game-mode fact splits", () => {
+  // Feverish Pulse's shape: PvE alacrity, WvW/PvP quickness.
+  const splitTrait = {
+    id: 2369,
+    name: "Feverish Pulse",
+    description: "Using a chant reduces the recharge of your other chants and grants boons to affected allies.",
+    facts: [{ type: "Buff", status: "Alacrity", apply_count: 1, duration: 6 }],
+    wvwFacts: [{ type: "Buff", status: "Quickness", apply_count: 1, duration: 1 }],
+    pvpFacts: [{ type: "Buff", status: "Quickness", apply_count: 1, duration: 2 }],
+  };
+
+  function boonNames(gameMode) {
+    return analyzeBoons([], [splitTrait], new Map(), new Set([2369]), [], gameMode)
+      .boons.map((b) => b.name);
+  }
+
+  test("uses wvwFacts in WvW", () => {
+    expect(boonNames("wvw")).toEqual(["Quickness"]);
+  });
+
+  test("uses pvpFacts in PvP", () => {
+    expect(boonNames("pvp")).toEqual(["Quickness"]);
+  });
+
+  test("uses the PvE facts otherwise", () => {
+    expect(boonNames("pve")).toEqual(["Alacrity"]);
+    expect(boonNames(undefined)).toEqual(["Alacrity"]);
+  });
+
+  test("an empty per-mode array means the entity grants nothing in that mode", () => {
+    const pveOnly = { name: "PvE Only", description: "", facts: [{ type: "Buff", status: "Might", apply_count: 5, duration: 10 }], wvwFacts: [] };
+    expect(analyzeBoons([pveOnly], [], new Map(), new Set(), [], "wvw").boons).toEqual([]);
+    expect(analyzeBoons([pveOnly], [], new Map(), new Set(), [], "pve").boons).toHaveLength(1);
+  });
+
+  test("entities with no split are unaffected by game mode", () => {
+    const plain = { name: "Plain", description: "", facts: [{ type: "Buff", status: "Fury", apply_count: 1, duration: 3 }] };
+    for (const mode of ["pve", "wvw", "pvp"]) {
+      expect(analyzeBoons([plain], [], new Map(), new Set(), [], mode).boons.map((b) => b.name)).toEqual(["Fury"]);
+    }
+  });
+});

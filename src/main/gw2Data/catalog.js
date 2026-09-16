@@ -222,11 +222,18 @@ function applyWikiFacts(entity, wikiFactsById, overridesMap, rechargeOverrides) 
   }
   entity.hasSplit = wikiFacts.hasSplit;
 
-  if (wikiFacts.wvw) {
+  // An empty per-mode array means "every fact on the page belongs to other
+  // modes" — a real split, and consumers read it as such. But a page the parser
+  // found no facts on at all yields three empty arrays, which would then read as
+  // "this entity does nothing in WvW" while PvE keeps the API facts. Only record
+  // the per-mode arrays when the wiki pipeline actually produced facts.
+  const wikiHasFacts = [wikiFacts.pve, wikiFacts.wvw, wikiFacts.pvp].some((f) => f?.length > 0);
+
+  if (wikiHasFacts && wikiFacts.wvw) {
     _transferIcons(entity.wvwFacts || entity.facts, wikiFacts.wvw);
     entity.wvwFacts = wikiFacts.wvw;
   }
-  if (wikiFacts.pvp) {
+  if (wikiHasFacts && wikiFacts.pvp) {
     _transferIcons(entity.pvpFacts || entity.facts, wikiFacts.pvp);
     entity.pvpFacts = wikiFacts.pvp;
   }
@@ -1210,6 +1217,7 @@ module.exports = {
   getWikiClient,
   clearCatalogCache,
   _transferIcons,
+  _applyWikiFacts: applyWikiFacts,
   _applyRechargeOverride,
   _resolveSkillSpecialization,
   _validateProfessions: validateProfessions,
