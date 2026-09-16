@@ -289,7 +289,7 @@ export function computeBoons(state, weaponSkills = []) {
     }
   }
   const relic = _resolveRelic(state, catalogs);
-  const result = analyzeBoons(resolvedSkills, resolvedTraits, overrides, activeTraitIds, relic ? [relic] : []);
+  const result = analyzeBoons(resolvedSkills, resolvedTraits, overrides, activeTraitIds, relic ? [relic] : [], ctx.gameMode);
 
   // Enrich boon/condition entries with icon URLs and hasAllySource for the renderer
   for (const entry of [...result.boons, ...result.conditions]) {
@@ -308,7 +308,7 @@ export function computeCombos(state, weaponSkills = [], { filterWeapons = false 
   const ctx = buildEngineCtx(state);
   const catalogs = buildEngineCatalogs(state);
   const { resolvedSkills, resolvedTraits } = _resolveSkillsAndTraits(state, ctx, catalogs, weaponSkills, { filterWeapons });
-  return analyzeCombos(resolvedSkills, resolvedTraits);
+  return analyzeCombos(resolvedSkills, resolvedTraits, ctx.gameMode);
 }
 
 /**

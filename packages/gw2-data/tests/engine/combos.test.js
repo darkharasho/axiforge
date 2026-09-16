@@ -74,3 +74,20 @@ describe("analyzeCombos", () => {
     expect(result.finishers[0].percent).toBe(50);
   });
 });
+
+describe("analyzeCombos — game-mode fact splits", () => {
+  const splitSkill = {
+    name: "Split Field", icon: "", description: "",
+    facts: [{ type: "ComboField", field_type: "Fire" }],
+    wvwFacts: [{ type: "ComboField", field_type: "Water" }],
+  };
+
+  test("uses wvwFacts in WvW", () => {
+    expect(analyzeCombos([splitSkill], [], "wvw").fields.map((f) => f.fieldType)).toEqual(["Water"]);
+  });
+
+  test("uses the PvE facts otherwise", () => {
+    expect(analyzeCombos([splitSkill], [], "pve").fields.map((f) => f.fieldType)).toEqual(["Fire"]);
+    expect(analyzeCombos([splitSkill], []).fields.map((f) => f.fieldType)).toEqual(["Fire"]);
+  });
+});

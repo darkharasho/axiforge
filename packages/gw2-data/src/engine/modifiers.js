@@ -1,6 +1,7 @@
 "use strict";
 
 const { CONVERSION_TARGET_MAP } = require("./constants");
+const { factsForMode } = require("./facts");
 
 // ---------------------------------------------------------------------------
 // Modifiers module — collects active trait IDs and classifies facts into
@@ -167,9 +168,7 @@ function collectModifiers(ctx, catalogs, overrides) {
 
     // Use per-mode facts when the wiki pipeline has separated them;
     // fall back to trait.facts (which may contain mixed-mode duplicates).
-    const modeFacts = gameMode === "wvw" && trait.wvwFacts ? trait.wvwFacts
-      : gameMode === "pvp" && trait.pvpFacts ? trait.pvpFacts
-      : trait.facts;
+    const modeFacts = factsForMode(trait, gameMode);
 
     const fury = isFuryTrait(trait, traitId, overrides);
     // A trait may *apply* Fury (Buff/Fury fact) yet grant its own stat bonuses

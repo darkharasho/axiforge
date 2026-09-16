@@ -1,12 +1,14 @@
 "use strict";
 
+const { factsForMode } = require("./facts");
+
 /**
  * Extract combo field facts from an entity.
  * Pulls Duration and Radius from adjacent facts for metadata.
  */
-function extractComboFields(entity, sourceType) {
+function extractComboFields(entity, sourceType, gameMode) {
   const results = [];
-  const facts = entity.facts || [];
+  const facts = factsForMode(entity, gameMode);
   let duration = 0;
   let radius = 0;
 
@@ -36,9 +38,9 @@ function extractComboFields(entity, sourceType) {
  * Extract combo finisher facts from an entity.
  * Groups by finisher type, counts hits.
  */
-function extractComboFinishers(entity, sourceType) {
+function extractComboFinishers(entity, sourceType, gameMode) {
   const results = [];
-  const facts = entity.facts || [];
+  const facts = factsForMode(entity, gameMode);
 
   const byType = new Map();
   for (const fact of facts) {
@@ -69,22 +71,23 @@ function extractComboFinishers(entity, sourceType) {
  *
  * @param {Object[]} skills - Resolved skill objects with facts
  * @param {Object[]} traits - Resolved trait objects with facts
+ * @param {string} [gameMode] - "pve" | "wvw" | "pvp"; selects mode-split facts
  * @returns {{ fields: Object[], finishers: Object[] }}
  */
-function analyzeCombos(skills, traits) {
+function analyzeCombos(skills, traits, gameMode) {
   const allFields = [];
   const allFinishers = [];
 
   for (const skill of skills) {
     if (!skill) continue;
-    allFields.push(...extractComboFields(skill, "skill"));
-    allFinishers.push(...extractComboFinishers(skill, "skill"));
+    allFields.push(...extractComboFields(skill, "skill", gameMode));
+    allFinishers.push(...extractComboFinishers(skill, "skill", gameMode));
   }
 
   for (const trait of traits) {
     if (!trait) continue;
-    allFields.push(...extractComboFields(trait, "trait"));
-    allFinishers.push(...extractComboFinishers(trait, "trait"));
+    allFields.push(...extractComboFields(trait, "trait", gameMode));
+    allFinishers.push(...extractComboFinishers(trait, "trait", gameMode));
   }
 
   // Deduplicate fields by (fieldType, sourceName)

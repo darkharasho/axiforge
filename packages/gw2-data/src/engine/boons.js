@@ -5,6 +5,7 @@ const {
   BOON_DISPLAY_ORDER, CONDITION_DISPLAY_ORDER, CONDITION_VERB_FORMS,
   BUFF_FACT_TYPES,
 } = require("./constants");
+const { factsForMode } = require("./facts");
 
 function normalizeName(status) {
   return CONDITION_NAME_NORMALIZE[status] || status;
@@ -89,7 +90,7 @@ function classifyConditionTarget(description, statusName) {
   return "foe";
 }
 
-function analyzeBoons(skills, traits, overrides, activeTraitIds, relics) {
+function analyzeBoons(skills, traits, overrides, activeTraitIds, relics, gameMode) {
   const boonMap = new Map(); // name → { name, sources: [] }
   const condMap = new Map();
 
@@ -99,7 +100,10 @@ function analyzeBoons(skills, traits, overrides, activeTraitIds, relics) {
     activeTraitIds.has(2220);
 
   function processEntity(entity, type) {
-    const baseFacts = entity.facts || [];
+    // Mode-split entities keep their WvW/PvP values in separate arrays (e.g.
+    // Feverish Pulse grants alacrity in PvE but quickness in WvW), so coverage
+    // has to read the list for the build's game mode, not the PvE default.
+    const baseFacts = factsForMode(entity, gameMode);
     const description = entity.description || "";
 
     // Merge traited_facts when the required trait is active (mirrors detail-panel logic).
