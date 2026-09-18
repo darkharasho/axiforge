@@ -1,3 +1,9 @@
+## Version v0.22.5 — September 17, 2026
+
+### Bug Fixes
+
+- **Shared builds kept flipping from their “Synced” check back to a spinner.** Every time the app checked the team for changes, it put a spinner on each build the server mentioned — before working out whether that build actually needed anything doing. The most common case by far is the server handing back the edit you just made yourself, which there is nothing to apply for, so the spinner had no finish to pair with and sat there for a full minute until a safety timeout cleared it. Since that check runs shortly after every save, a build you'd just synced went straight back to spinning, over and over; and when the server asked the app to re-read the whole team, it happened to every build at once. A build now only shows a spinner when there is real work being applied to it, and a build whose update fails to save locally shows a sync error instead of spinning until the timeout.
+
 ## Version v0.22.4 — September 15, 2026
 
 ### Bug Fixes
