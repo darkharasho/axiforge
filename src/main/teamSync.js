@@ -562,11 +562,16 @@ class TeamSync {
       let failed = null;
       for (const item of page.items) {
         if (resyncSeen) resyncSeen.add(item.id);
-        this._emit("sync-status", { status: "syncing", type: item.type, id: item.id, folderId: root.id });
         try {
           await this._applyItem(teamId, root, item, session);
         } catch (err) {
           console.error(`[team-sync] apply ${item.type} ${item.id} failed:`, err.message);
+          // Pairs the "syncing" `_applyItem` raised on its way in. Without a
+          // terminal status the item keeps a spinner until the renderer's 60s
+          // escape hatch — the failure has to be the thing on screen. No
+          // `message`: the folder-level pull error already toasts, and this
+          // one is a local apply fault, not something to read per item.
+          if (item.type !== "folder") this._emit("sync-status", { status: "error", type: item.type, id: item.id, folderId: root.id, error: "apply" });
           failed = item;
           break;
         }
@@ -800,6 +805,15 @@ class TeamSync {
     if (known && known.version === item.version && (await this._loadLocal(item.type, item.id))) return;
     const team = await this.syncStore.getTeam(teamId);
     if (team.outbox[item.id]) return;                                     // local change pending — flush decides
+    // Only NOW, past the two skips above, is there work to show a spinner for.
+    // Raised here rather than in the pull's item loop so that every "syncing"
+    // has a terminal status behind it (the "synced" at the end of this method,
+    // the tombstone's, or the pull loop's "error"). Emitted from the loop, the
+    // skips left a dangling spinner the renderer could only clear on its 60s
+    // timeout — and the commonest skip is the echo of our OWN write, which the
+    // next poll after every local save delivers, so a freshly-synced build
+    // flipped from its check back to a spinner for a minute, repeatedly.
+    if (item.type !== "folder") this._emit("sync-status", { status: "syncing", type: item.type, id: item.id, folderId: root.id });
     const createdBy = item.createdBy ? item.createdBy.userId : null;
     const author = (item.updatedBy && item.updatedBy.login) || "teammate";
     const folderId = item.parentId || root.id;

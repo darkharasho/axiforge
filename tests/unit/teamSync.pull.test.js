@@ -767,4 +767,42 @@ describe("TeamSync — pull", () => {
     expect((await h.buildStore.listBuilds()).find((b) => b.id === "b1").title).toBe("New"); // still applied
     expect(await h.syncStore.getVersion("t", "b1")).toEqual({ version: 5, createdBy: "u-vette" });
   });
+
+  // A "syncing" badge with no terminal event behind it is a spinner the renderer
+  // only clears on its 60s escape hatch. The pull used to raise one per item in
+  // the page BEFORE deciding whether it had anything to apply, so an echo of our
+  // own write — which every poll after a local save delivers — flipped a build
+  // from its "Synced" check back to a spinner for a minute.
+  test("an echo we skip raises no per-item syncing", async () => {
+    h = await makeHarness();
+    await seedTeam(h);
+    const mine = await h.buildStore.upsertBuild({ id: "b1", title: "Mine", folderId: "t" });
+    await h.syncStore.setVersion("t", "b1", { version: 2, createdBy: "me" });
+    h.api.changes.mockResolvedValueOnce({ items: [
+      item({ id: "b1", version: 2, seq: 2, updatedBy: { userId: "me", login: "me" }, body: mine }),
+    ], nextSeq: 2, hasMore: false });
+    await h.sync.pullTeam("t");
+    expect(h.events).not.toContainEqual(expect.objectContaining({ status: "syncing", type: "build", id: "b1" }));
+  });
+
+  test("an item held back by a pending local write raises no per-item syncing", async () => {
+    h = await makeHarness();
+    await seedTeam(h);
+    await h.buildStore.upsertBuild({ id: "b1", title: "Mine", folderId: "t" });
+    await h.sync.enqueue("t", "b1", "build", "put");
+    h.events.length = 0; // the enqueue's own "syncing" is the outbox badge, not the pull's
+    h.api.changes.mockResolvedValueOnce({ items: [item({ id: "b1", version: 3, seq: 3 })], nextSeq: 3, hasMore: false });
+    await h.sync.pullTeam("t");
+    expect(h.events).not.toContainEqual(expect.objectContaining({ status: "syncing", type: "build", id: "b1" }));
+  });
+
+  test("an item whose apply fails ends on a terminal status, not a spinner", async () => {
+    h = await makeHarness();
+    await seedTeam(h);
+    h.api.changes.mockResolvedValueOnce({ items: [item({ id: "b1", seq: 2 })], nextSeq: 2, hasMore: false });
+    jest.spyOn(h.buildStore, "upsertBuild").mockRejectedValueOnce(new Error("disk full"));
+    await expect(h.sync.pullTeam("t")).rejects.toThrow(/PULL_APPLY_FAILED/);
+    const forB1 = h.events.filter((e) => e.type === "build" && e.id === "b1");
+    expect(forB1.at(-1)).toMatchObject({ status: "error" });
+  });
 });
