@@ -776,6 +776,16 @@
   padding-top: 5px;
 }
 
+/* Skill a trait procs/casts, stacked above the trait card as its own box (like in game). */
+.forge-render .hover-preview__proc-skill {
+  margin: -10px -10px 10px;
+  padding: 10px;
+  border-radius: 10px 10px 0 0;
+  background: rgba(0, 0, 0, 0.28);
+  border-bottom: 1px solid var(--fr-line, #1e1f24);
+  box-shadow: 0 1px 0 rgba(var(--fr-accent-rgb, 200, 152, 72), 0.12);
+}
+
 .forge-render .hover-preview__trait-skill-divider + .trait-skill-list {
   padding: 0 6px 4px;
 }

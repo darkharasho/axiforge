@@ -476,8 +476,19 @@ export function showHoverPreview(kind, entity, x, y) {
   // Compute damage stats from the current build for Damage fact calculations.
   // Formula: Damage = WeaponStrength × EffectivePower × Coefficient × Hits / 2597
   // EffectivePower = Power × (1 + CritChance × (0.5 + Ferocity/1500))
+  // A trait that procs/casts exactly one skill (Medic's Feedback → Feedback) shows that
+  // skill's full card above the trait card, like the in-game tooltip. Traits granting
+  // several skills are mechanic replacements (Primal Rage, Evocation), not procs — those
+  // keep the compact list below, since a dozen stacked cards won't fit on screen.
+  const traitSkills = kind === "trait" && Array.isArray(entity.traitSkillIds)
+    ? entity.traitSkillIds.map((id) => state.activeCatalog?.skillById?.get(id)).filter(Boolean)
+    : [];
+  const procSkill = traitSkills.length === 1 && entity.traitSkillIds.length === 1
+    ? { ...traitSkills[0], icon: entity.traitSkillIcons?.[traitSkills[0].id] || traitSkills[0].icon }
+    : null;
+
   let dmgStats = null;
-  if (kind === "skill") {
+  if (kind === "skill" || procSkill) {
     const computed = computeStats(state).total;
     const power = computed.Power || 1000;
     const precision = computed.Precision || 1000;
@@ -554,25 +565,19 @@ export function showHoverPreview(kind, entity, x, y) {
     }
   }
 
-  // For traits with associated skills (traitSkillIds), show a compact list (icon + name)
-  // matching the detail-panel layout instead of full skill cards.
-  if (kind === "trait" && Array.isArray(entity.traitSkillIds) && entity.traitSkillIds.length) {
-    const catalog = state.activeCatalog;
+  if (procSkill) {
+    chainCards.unshift(`<div class="hover-preview__proc-skill">${buildSkillCard(procSkill, "skill", false, dmgStats)}</div>`);
+  } else if (traitSkills.length) {
     const iconOverrides = entity.traitSkillIcons || {};
-    const items = [];
-    for (const skillId of entity.traitSkillIds) {
-      const skill = catalog?.skillById?.get(skillId);
-      if (!skill) continue;
-      const icon = iconOverrides[skillId] || skill.icon || "";
+    const items = traitSkills.map((skill) => {
+      const icon = iconOverrides[skill.id] || skill.icon || "";
       const name = escapeHtml(skill.name || "Unknown");
-      items.push(`<li class="trait-skill-entry"><img src="${escapeHtml(icon)}" alt="" onerror="this.style.visibility='hidden'" /><span>${name}</span></li>`);
-    }
-    if (items.length) {
-      chainCards.push(
-        `<div class="hover-preview__trait-skill-divider">Trait Skills</div>`
-        + `<ul class="trait-skill-list">${items.join("")}</ul>`
-      );
-    }
+      return `<li class="trait-skill-entry"><img src="${escapeHtml(icon)}" alt="" onerror="this.style.visibility='hidden'" /><span>${name}</span></li>`;
+    });
+    chainCards.push(
+      `<div class="hover-preview__trait-skill-divider">Trait Skills</div>`
+      + `<ul class="trait-skill-list">${items.join("")}</ul>`
+    );
   }
 
   if (_el.hoverPreview) {
