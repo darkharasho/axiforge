@@ -272,9 +272,10 @@ describe("showHoverPreview — flip-chain suppression for mismatched elite spec"
 
 // ── showHoverPreview — trait-associated skill cards ─────────────────────────
 //
-// When hovering over a trait that has traitSkillIds (skills triggered by the
-// trait), the hover preview should show the associated skill card(s) below the
-// trait card, separated by a "Trait skill" divider.
+// A trait that procs/casts exactly one skill (Medic's Feedback → Feedback) shows
+// that skill's full card stacked above the trait card, like the in-game tooltip.
+// Traits that grant several skills (mechanic replacements like Primal Rage) keep
+// a compact icon+name list below the trait card instead.
 
 describe("showHoverPreview — trait-associated skill cards", () => {
   const LESSER_SIGNET = {
@@ -301,10 +302,22 @@ describe("showHoverPreview — trait-associated skill cards", () => {
     traitSkillIcons: {},
   };
 
+  const SECOND_SKILL = {
+    ...LESSER_SIGNET, id: 79345, name: "Greater Signet of the Locust",
+    description: "Strikes more foes",
+  };
+
+  const TRAIT_WITH_TWO_SKILLS = {
+    ...TRAIT_WITH_SKILLS, id: 917, name: "Double Trait",
+    traitSkillIds: [79344, 79345],
+    traitSkillIcons: {},
+  };
+
   const MOCK_CATALOG = {
     specializationById: new Map(),
     skillById: new Map([
       [79344, LESSER_SIGNET],
+      [79345, SECOND_SKILL],
     ]),
     weaponSkillById: new Map(),
   };
@@ -370,10 +383,28 @@ describe("showHoverPreview — trait-associated skill cards", () => {
     global.document     = savedDocument;
   });
 
-  test("shows associated skill card when trait has traitSkillIds", () => {
+  test("shows the proc'd skill's full card above the trait card for a single trait skill", () => {
     detailPanel.showHoverPreview("trait", TRAIT_WITH_SKILLS, 100, 100);
-    expect(mockHover.innerHTML).toContain("Lesser Signet of the Locust");
-    expect(mockHover.innerHTML).toContain("hover-preview__trait-skill-divider");
+    const html = mockHover.innerHTML;
+    expect(html).toContain("hover-preview__proc-skill");
+    expect(html).toContain("Strikes nearby foes");
+    expect(html.indexOf("Lesser Signet of the Locust")).toBeLessThan(html.indexOf("Malicious Swarm"));
+    expect(html).not.toContain("hover-preview__trait-skill-divider");
+  });
+
+  test("uses the trait's icon override on the proc'd skill card", () => {
+    const trait = { ...TRAIT_WITH_SKILLS, traitSkillIcons: { 79344: "https://example.test/proc.png" } };
+    detailPanel.showHoverPreview("trait", trait, 100, 100);
+    expect(mockHover.innerHTML).toMatch(/class="hover-preview__icon" src="https:\/\/example\.test\/proc\.png"/);
+  });
+
+  test("keeps the compact list below the trait card when a trait has several skills", () => {
+    detailPanel.showHoverPreview("trait", TRAIT_WITH_TWO_SKILLS, 100, 100);
+    const html = mockHover.innerHTML;
+    expect(html).not.toContain("hover-preview__proc-skill");
+    expect(html).toContain("hover-preview__trait-skill-divider");
+    expect(html.indexOf("Double Trait")).toBeLessThan(html.indexOf("Lesser Signet of the Locust"));
+    expect(html).toContain("Greater Signet of the Locust");
   });
 
   test("does not show trait-skill divider when trait has no traitSkillIds", () => {
@@ -392,6 +423,7 @@ describe("showHoverPreview — trait-associated skill cards", () => {
     const traitMissing = { ...TRAIT_WITH_SKILLS, traitSkillIds: [99999] };
     detailPanel.showHoverPreview("trait", traitMissing, 100, 100);
     expect(mockHover.innerHTML).not.toContain("hover-preview__trait-skill-divider");
+    expect(mockHover.innerHTML).not.toContain("hover-preview__proc-skill");
   });
 });
 
