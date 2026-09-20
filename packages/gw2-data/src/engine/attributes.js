@@ -440,12 +440,31 @@ function computeAttributes(ctx, catalogs) {
   const furyAssumed = Boolean(ctx.assumedBoons?.fury) || signetActiveBoons.fury;
   const berserkActive = Boolean(ctx.berserkActive);
 
+  // Assumed boons, plus any granted by an activated signet active.
+  const activeBoons = { ...(ctx.assumedBoons || {}) };
+  if (signetActiveBoons.might) activeBoons.might = (activeBoons.might || 0) + signetActiveBoons.might;
+  if (signetActiveBoons.fury) activeBoons.fury = true;
+
+  /**
+   * Whether a modifier's gate is satisfied: passive (null), fury, berserk, or a
+   * named boon (optionally needing a minimum stack count, e.g. Power Overwhelming
+   * at 10+ might).
+   */
+  function conditionMet(mod) {
+    if (mod.condition == null) return true;
+    if (mod.condition === "fury") return furyAssumed;
+    if (mod.condition === "berserk") return berserkActive;
+    if (mod.condition === "boon") {
+      const val = activeBoons[mod.conditionBoon];
+      if (typeof val === "number") return val >= Math.max(1, mod.conditionMinStacks || 1);
+      return Boolean(val);
+    }
+    return false;
+  }
+
   for (const mod of modifiers) {
     if (mod.type !== "flatBonus") continue;
-    // Apply if: passive (condition === null), fury (when assumed or from signet active), or berserk (when toggled)
-    if (mod.condition === null
-        || (mod.condition === "fury" && furyAssumed)
-        || (mod.condition === "berserk" && berserkActive)) {
+    if (conditionMet(mod)) {
       if (mod.target in traitStats) {
         traitStats[mod.target] += mod.value;
         // Extract trait ID from source (e.g. "trait:1338" → 1338)
@@ -456,6 +475,8 @@ function computeAttributes(ctx, catalogs) {
           name: trait?.name || mod.source,
           target: mod.target,
           value: mod.value,
+          condition: mod.condition ?? null,
+          conditionBoon: mod.conditionBoon || null,
         });
       }
     }
@@ -538,32 +559,22 @@ function computeAttributes(ctx, catalogs) {
 
   const health = profBaseHp + total.Vitality * 10;
 
-  // Crit bonus from traits and boons
+  // Crit bonus from traits and boons — each trait modifier applies only when its
+  // gate is met (passive, fury, berserk, or a named boon such as resolution).
   let critBonus = 0;
-  // Passive crit chance modifiers (always active, condition === null)
   for (const mod of modifiers) {
-    if (mod.type === "critChance" && mod.condition === null) {
+    if (mod.type === "critChance" && conditionMet(mod)) {
       critBonus += mod.value;
     }
   }
-  // Fury crit bonus
+  // Fury's own crit bonus
   if (furyAssumed) {
     critBonus += gameMode === "wvw" ? FURY_CRIT_CHANCE_WVW : FURY_CRIT_CHANCE;
-    for (const mod of modifiers) {
-      if (mod.type === "critChance" && mod.condition === "fury") {
-        critBonus += mod.value;
-      }
-    }
   }
-  // Berserk crit bonus (only when berserk mode is active)
+  // Berserk's own crit bonus (only when berserk mode is active)
   // WvW: base berserk crit is 0; crit comes from berserk-conditional traits (e.g. Smash Brawler WvW: +5%).
   if (berserkActive) {
     critBonus += gameMode === "wvw" ? BERSERK_CRIT_CHANCE_WVW : BERSERK_CRIT_CHANCE;
-    for (const mod of modifiers) {
-      if (mod.type === "critChance" && mod.condition === "berserk") {
-        critBonus += mod.value;
-      }
-    }
   }
 
   const critChance = Math.min(100, (total.Precision - 895) / 21 + critBonus);

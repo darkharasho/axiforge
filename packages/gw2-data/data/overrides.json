@@ -75,5 +75,55 @@
   "trait:2130": {
     "stackingBuffStats": true,
     "description": "Attacker's Insight (Spellbreaker minor): its AttributeAdjust facts report the 5-stack max total (250 P/P/F in PvE, 150 in WvW) of an earned in-combat stacking buff, not a passive bonus — exclude from the baseline so a fresh Spellbreaker starts at 1000 power"
+  },
+  "trait:2148": {
+    "boonConditional": {
+      "boon": "quickness"
+    },
+    "description": "Imbued Haste: +250 Condition Damage/Healing Power/Vitality only while affected by quickness"
+  },
+  "trait:519": {
+    "boonConditional": {
+      "boon": "regeneration"
+    },
+    "description": "Energy Amplifier: +250 Power/Healing Power only while you have regeneration"
+  },
+  "trait:1865": {
+    "boonConditional": {
+      "boon": "regeneration"
+    },
+    "description": "Chaotic Persistence: concentration/expertise only while affected by regeneration"
+  },
+  "trait:1683": {
+    "boonConditional": {
+      "boon": "resolution"
+    },
+    "description": "Righteous Instincts: crit chance bonus only while you have resolution"
+  },
+  "trait:1927": {
+    "boonConditional": {
+      "boon": "alacrity"
+    },
+    "description": "Flow of Time: crit chance bonus only while you have alacrity"
+  },
+  "trait:334": {
+    "boonConditional": {
+      "boon": "might",
+      "minStacks": 10
+    },
+    "attunementConditional": {
+      "attunements": [
+        "Fire"
+      ],
+      "multiplier": 2
+    },
+    "description": "Power Overwhelming: +150 Power at 10+ might stacks, doubled while attuned to fire"
+  },
+  "trait:1849": {
+    "boonConditional": {
+      "boon": "might",
+      "minStacks": 10
+    },
+    "description": "Applied Force: bonus power only at or above the 10-stack might threshold"
   }
 }

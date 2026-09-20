@@ -175,9 +175,16 @@ function collectModifiers(ctx, catalogs, overrides) {
     // unconditionally. Furious Demise, for example, grants fury on shroud entry
     // but its +180 Precision is a flat passive — not "while you have fury". The
     // unconditionalStats override opts such fury-granting traits out of fury-gating.
+    // boonConditional traits (Imbued Haste, Chaotic Persistence, ...) only grant their
+    // attributes while the player actually has that boon, so they are gated the same way
+    // fury traits are — on the assumed-boon selection rather than applied unconditionally.
+    const boonCond = override?.boonConditional || null;
     const condition = override?.berserkConditional ? "berserk"
+      : boonCond ? "boon"
       : override?.unconditionalStats ? null
       : fury ? "fury" : null;
+    const conditionBoon = boonCond?.boon || null;
+    const conditionMinStacks = boonCond?.minStacks || 0;
 
     // 4. AttributeAdjust facts — flatBonus
     //    Skip for traits with mightOverride (the bonus is folded into per-stack values)
@@ -195,17 +202,26 @@ function collectModifiers(ctx, catalogs, overrides) {
       // weaponConditional: multiply flat bonuses when an active weapon matches
       const wc = override?.weaponConditional;
       const weaponMatch = wc && wc.weapons?.some((w) => activeWeaponTypes.has(w));
+      // attunementConditional: Power Overwhelming doubles its Power while attuned to fire
+      const ac = override?.attunementConditional;
+      const attunementMatch = ac && ac.attunements?.some(
+        (a) => String(a).toLowerCase() === String(ctx?.activeAttunement || "").toLowerCase()
+      );
 
       for (const [target, values] of byTarget) {
         const statKey = CONVERSION_TARGET_MAP[target] || target;
         const idx = gameMode === "wvw" ? Math.min(1, values.length - 1) : 0;
         const base = values[idx];
+        let value = weaponMatch ? base * wc.multiplier : base;
+        if (attunementMatch) value *= ac.multiplier;
         modifiers.push({
           source,
           type: "flatBonus",
           target: statKey,
-          value: weaponMatch ? base * wc.multiplier : base,
+          value,
           condition,
+          conditionBoon,
+          conditionMinStacks,
         });
       }
     }
@@ -237,6 +253,7 @@ function collectModifiers(ctx, catalogs, overrides) {
 
     // 6. "Critical Chance Increase" Percent facts — critChance
     //    Fury traits: condition = "fury" (applied only when fury is assumed)
+    //    Boon-conditional traits: condition = "boon" (applied only when that boon is assumed)
     //    Berserk traits: condition = "berserk" (applied only when berserk is active)
     //    Non-fury/non-berserk traits: condition = null (passive, always active)
     //    Skip traits with ignoreCritChance (skill-specific crit like Opening Strike, stealth, bursts)
@@ -244,13 +261,15 @@ function collectModifiers(ctx, catalogs, overrides) {
       const critFacts = modeFacts.filter(
         (f) => f.type === "Percent" && f.text === "Critical Chance Increase" && f.percent
       );
-      if (critFacts.length > 0 && (fury || condition === null || condition === "berserk")) {
+      if (critFacts.length > 0) {
         const idx = gameMode === "wvw" ? Math.min(1, critFacts.length - 1) : 0;
         modifiers.push({
           source,
           type: "critChance",
           value: critFacts[idx].percent,
           condition,
+          conditionBoon,
+          conditionMinStacks,
         });
       }
     }

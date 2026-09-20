@@ -79,6 +79,7 @@ export function buildEngineCtx(state, assumedBoons = null, sigilStacks = null, a
     sigilStacks,
     activeSignets,
     berserkActive,
+    activeAttunement: editor.activeAttunement || "",
   };
 }
 
@@ -393,6 +394,39 @@ export function computeFuryStatBonuses(state) {
     }
   }
   return bonuses;
+}
+
+/**
+ * Trait attribute bonuses that only apply while a specific boon is up, grouped by
+ * boon key (the same keys the assumed-boon picker uses). Drives the picker's
+ * "matters for this build" marker and its tooltip lines.
+ *
+ * @returns {Object<string, Array<{traitId:number,name:string,target?:string,value?:number,critChance?:number,minStacks:number}>>}
+ */
+export function computeBoonConditionalTraitBonuses(state) {
+  const ctx = buildEngineCtx(state);
+  const catalogs = buildEngineCatalogs(state);
+  const mods = engineCollectModifiers(ctx, catalogs, getOverrides());
+  const byBoon = {};
+  for (const mod of mods) {
+    if (mod.condition !== "boon" || !mod.conditionBoon) continue;
+    if (mod.type !== "flatBonus" && mod.type !== "critChance") continue;
+    const traitId = Number(String(mod.source || "").replace("trait:", "")) || 0;
+    const trait = traitId ? catalogs?.traitById?.get(traitId) : null;
+    const entry = {
+      traitId,
+      name: trait?.name || mod.source,
+      minStacks: mod.conditionMinStacks || 0,
+    };
+    if (mod.type === "flatBonus") {
+      entry.target = mod.target;
+      entry.value = mod.value;
+    } else {
+      entry.critChance = mod.value;
+    }
+    (byBoon[mod.conditionBoon] ||= []).push(entry);
+  }
+  return byBoon;
 }
 
 /**

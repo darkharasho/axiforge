@@ -980,6 +980,18 @@
   position: relative;
 }
 
+/* Boon a trait in this build needs to grant its attributes — marked so it stands
+   out among the toggles that only change tooltips. */
+.equip-boons__item--trait .equip-boons__label::after {
+  content: "\2022";
+  color: #6fb3d9;
+  margin-left: 3px;
+}
+
+.equip-boons__item--trait .equip-boons__icon {
+  border-color: rgba(111, 179, 217, 0.5);
+}
+
 .equip-boons__icon {
   width: 36px;
   height: 36px;

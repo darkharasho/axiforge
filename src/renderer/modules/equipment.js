@@ -10,7 +10,7 @@ import {
 } from "./constants.js";
 import { escapeHtml } from "./utils.js";
 import { computeSlotStats, computeUpgradeModifiers, computeStatBreakdown } from "./stats.js";
-import { computeStats, computeBoons, computeFuryCritModifier, computePassiveCritModifier, computeBerserkCritModifier, computeFuryStatBonuses, computeMightPerStack, FURY_CRIT_CHANCE, FURY_CRIT_CHANCE_WVW, STACKING_SIGIL_DEFS, SIGNET_PASSIVE_BUFFS, SIGNET_ACTIVE_EFFECTS } from "./engine-bridge.js";
+import { computeStats, computeBoons, computeFuryCritModifier, computePassiveCritModifier, computeBerserkCritModifier, computeFuryStatBonuses, computeMightPerStack, computeBoonConditionalTraitBonuses, FURY_CRIT_CHANCE, FURY_CRIT_CHANCE_WVW, STACKING_SIGIL_DEFS, SIGNET_PASSIVE_BUFFS, SIGNET_ACTIVE_EFFECTS } from "./engine-bridge.js";
 import { renderCoverageStrip } from "./boon-coverage.js";
 import { bindHoverPreview, selectDetail } from "./detail-panel.js";
 import { getProfessionSvg } from "./profession-icons.js";
@@ -1145,6 +1145,32 @@ export function renderEquipmentPanel() {
     { key: "aegis", label: "Aegis", icon: BOON_CONDITION_ICONS.Aegis, stackable: false },
   ];
 
+  // Traits in this build whose attributes only apply while a boon is up, keyed by
+  // boon. Used to surface those boons in the collapsed bar and explain them in the
+  // tooltip, so the numbers behind a toggle are visible before toggling it.
+  const boonConditionalTraits = computeBoonConditionalTraitBonuses(state);
+
+  const STAT_LABELS = {
+    Power: "Power", Precision: "Precision", Toughness: "Toughness", Vitality: "Vitality",
+    Ferocity: "Ferocity", ConditionDamage: "Condition Damage", Expertise: "Expertise",
+    Concentration: "Concentration", HealingPower: "Healing Power",
+  };
+
+  function buildTraitBonusLines(boonKey) {
+    const entries = boonConditionalTraits[boonKey] || [];
+    const byTrait = new Map();
+    for (const e of entries) {
+      if (!byTrait.has(e.traitId)) byTrait.set(e.traitId, { name: e.name, minStacks: e.minStacks, parts: [] });
+      byTrait.get(e.traitId).parts.push(
+        e.critChance != null ? `+${e.critChance}% Critical Chance` : `+${e.value} ${STAT_LABELS[e.target] || e.target}`
+      );
+    }
+    return [...byTrait.values()].map(({ name, minStacks, parts }) => {
+      const need = minStacks > 1 ? ` at ${minStacks}+ stacks` : "";
+      return `<div class="equip-boons__tip-effect">${escapeHtml(name)}${need}: ${parts.join(", ")}</div>`;
+    });
+  }
+
   function getDelta(event) {
     if (event.ctrlKey || event.metaKey) return 25;
     if (event.shiftKey) return 5;
@@ -1217,8 +1243,10 @@ export function renderEquipmentPanel() {
   }
 
   for (const def of BOON_DEFS) {
+    const hasTraitBonus = (boonConditionalTraits[def.key] || []).length > 0;
+
     const item = document.createElement("div");
-    item.className = "equip-boons__item";
+    item.className = "equip-boons__item" + (hasTraitBonus ? " equip-boons__item--trait" : "");
 
     const iconWrap = document.createElement("div");
     const isActive = def.stackable ? _assumedBoons[def.key] > 0 : _assumedBoons[def.key];
@@ -1243,7 +1271,11 @@ export function renderEquipmentPanel() {
     // Tooltip
     const tooltip = document.createElement("div");
     tooltip.className = "equip-boons__tooltip";
-    tooltip.innerHTML = buildBoonTooltipHTML(def);
+    const traitLines = buildTraitBonusLines(def.key);
+    tooltip.innerHTML = buildBoonTooltipHTML(def)
+      + (traitLines.length
+        ? `<div class="equip-boons__tip-note">Your traits while active:</div>${traitLines.join("")}`
+        : "");
     item.append(tooltip);
 
     // Reposition tooltip if it overflows the viewport
@@ -1315,8 +1347,9 @@ export function renderEquipmentPanel() {
     label.textContent = def.label;
     item.append(label);
 
-    // Core boons go in main bar, others in expandable section
-    if (def.core) {
+    // Core boons go in main bar; so do boons this build's traits depend on, since
+    // they change the stat panel and would otherwise stay hidden behind the expander.
+    if (def.core || hasTraitBonus) {
       boonsBar.append(item);
     } else {
       boonsExpand.append(item);
