@@ -39,7 +39,7 @@ let mockApi = null;
 
 const mockApiMethods = [
   "loginGithub", "logout", "createTeam", "joinTeam", "listTeams", "listMembers",
-  "removeMember", "rotateInvite", "renameTeam", "deleteTeam", "changes",
+  "removeMember", "rotateInvite", "renameTeam", "setTeamPublishOwner", "deleteTeam", "changes",
   "putItem", "deleteItem", "bulk",
 ];
 
@@ -280,7 +280,8 @@ const teamTree = ({ role = "owner" } = {}) => ({
 const TEAM_CHANNELS = [
   "teams:get-session", "teams:enable", "teams:disable", "teams:list", "teams:create",
   "teams:join", "teams:leave", "teams:delete", "teams:rename", "teams:members",
-  "teams:remove-member", "teams:rotate-invite", "teams:share-folder", "teams:stop-sharing",
+  "teams:remove-member", "teams:rotate-invite", "teams:set-publish-owner",
+  "teams:share-folder", "teams:stop-sharing",
   "teams:pull", "teams:pull-all", "teams:resolve-conflict", "teams:outbox",
   "teams:legacy-status", "teams:migrate-org-library",
 ];
@@ -630,3 +631,70 @@ describe("polling lifecycle", () => {
   });
 });
 
+
+// ─── Publishing follows the team, not the machine ───────────────────────────
+//
+// The bug: a member hit Publish on the team's comp and it went to their own
+// GitHub account, silently, because the only publish target there was belonged
+// to the machine. These assert the owner the publish actually reaches GitHub
+// with — githubApi is the mocked boundary, so this is the real handler running.
+
+describe("publishing inside a team", () => {
+  const AUTH = {
+    sync: SESSION,
+    token: "gh-token",
+    onboarding: { targetOwner: "me", targetOwnerType: "user", branch: "main" },
+  };
+  // Same tree, with the team pointed at its org (as listTeams mirrors it).
+  const publishingTeam = () => {
+    const tree = teamTree();
+    tree.folders[0] = folder({
+      id: TEAM_ID, name: "Squad", shared: true, teamId: TEAM_ID, role: "owner",
+      publishOwner: "gw2eww", publishOwnerType: "org",
+    });
+    tree.builds.push(build({ id: "b2", title: "My build", folderId: "solo" }));
+    return { ...tree, auth: AUTH };
+  };
+  const github = () => require("../../src/main/githubApi");
+
+  test("a build in a team publishes to the team's owner, as an org", async () => {
+    await loadMain(publishingTeam());
+    await invoke("builds:publish-build", "b1", {});
+    expect(github().ensureAxiForgeRepo).toHaveBeenCalledWith("gh-token", "gw2eww", "org");
+  });
+
+  test("a build outside the team still publishes to the personal target", async () => {
+    await loadMain(publishingTeam());
+    await invoke("builds:publish-build", "b2", {});
+    expect(github().ensureAxiForgeRepo).toHaveBeenCalledWith("gh-token", "me", "user");
+  });
+
+  // onboarding is this machine's own publishing setup. A team publish that
+  // stamped itself onto it would repoint the personal target at the team's org
+  // and report the team's site build as the user's own.
+  test("a team publish does not rewrite the personal target", async () => {
+    await loadMain(publishingTeam());
+    await invoke("builds:publish-build", "b1", {});
+    const auth = JSON.parse(fs.readFileSync(path.join(mockCtx.dataDir, "auth.json"), "utf8"));
+    expect(auth.onboarding).toMatchObject({ targetOwner: "me", targetOwnerType: "user" });
+  });
+
+  // Every team that predates this. Their publishing must not move.
+  test("a team with no target falls back to the personal one", async () => {
+    await loadMain({ ...teamTree(), auth: AUTH });
+    await invoke("builds:publish-build", "b1", {});
+    expect(github().ensureAxiForgeRepo).toHaveBeenCalledWith("gh-token", "me", "user");
+  });
+
+  test("teams:set-publish-owner reaches the server and mirrors onto the root folder", async () => {
+    await loadMain({ ...teamTree(), auth: AUTH });
+    mockApi.setTeamPublishOwner.mockResolvedValue({
+      team: { id: TEAM_ID, name: "Squad", publishOwner: "gw2eww", publishOwnerType: "org" },
+      role: "owner",
+    });
+    await invoke("teams:set-publish-owner", TEAM_ID, "gw2eww", "org");
+    expect(mockApi.setTeamPublishOwner).toHaveBeenCalledWith(TEAM_ID, "gw2eww", "org");
+    const folders = await invoke("folders:list");
+    expect(folders.find((f) => f.id === TEAM_ID)).toMatchObject({ publishOwner: "gw2eww", publishOwnerType: "org" });
+  });
+});

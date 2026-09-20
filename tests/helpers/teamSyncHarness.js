@@ -19,7 +19,7 @@ function apiError(code, extra = {}) {
 
 function fakeApi() {
   const api = {};
-  for (const m of ["loginGithub", "logout", "createTeam", "joinTeam", "listTeams", "listMembers", "removeMember", "rotateInvite", "renameTeam", "deleteTeam", "changes", "putItem", "deleteItem", "bulk", "listGrants", "setGrant", "clearGrant", "verifyItems"]) {
+  for (const m of ["loginGithub", "logout", "createTeam", "joinTeam", "listTeams", "listMembers", "removeMember", "rotateInvite", "renameTeam", "setTeamPublishOwner", "deleteTeam", "changes", "putItem", "deleteItem", "bulk", "listGrants", "setGrant", "clearGrant", "verifyItems"]) {
     api[m] = jest.fn(async () => { throw new Error(`unexpected api.${m}`); });
   }
   api.changes.mockImplementation(async () => ({ items: [], nextSeq: 0, hasMore: false }));

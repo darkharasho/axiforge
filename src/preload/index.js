@@ -182,6 +182,9 @@ contextBridge.exposeInMainWorld("desktopApi", {
   leaveTeam: (teamId) => invoke("teams:leave", teamId),
   deleteTeam: (teamId) => invoke("teams:delete", teamId),
   renameTeam: (teamId, name) => invoke("teams:rename", teamId, name),
+  // owner: a GitHub login, or null to clear (back to the personal target).
+  setTeamPublishOwner: (teamId, owner, ownerType) =>
+    invoke("teams:set-publish-owner", teamId, owner, ownerType),
   listTeamMembers: (teamId) => invoke("teams:members", teamId),
   removeTeamMember: (teamId, userId) => invoke("teams:remove-member", teamId, userId),
   listTeamGrants: (teamId) => invoke("teams:grants", teamId),

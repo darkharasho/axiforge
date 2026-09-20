@@ -133,6 +133,90 @@ describe("teams", () => {
   });
 
 
+  // ── The team's publish target ──────────────────────────────────────────────
+  //
+  // Publishing used to have one target per MACHINE, so a member publishing the
+  // team's comp put it on their own GitHub account. This is the team's answer,
+  // set by an owner and handed to every member.
+
+  test("an owner sets the publish target; every member sees it", async () => {
+    const { env, deps, owner, member } = await setup();
+    const { team } = await (await teams.createTeam(req("POST", { name: "EWW" }), env, deps, owner, {})).json();
+    await teams.joinTeam(req("POST", { inviteCode: team.inviteCode }), env, deps, member, {});
+    const p = { teamId: team.id };
+
+    // Absent until set — which is what every team that predates this looks like.
+    const before = await (await teams.listTeams(req("GET"), env, deps, member, {})).json();
+    expect(before[0].team.publishOwner).toBeUndefined();
+
+    const res = await teams.renameTeam(req("PATCH", { publishOwner: "gw2eww", publishOwnerType: "org" }), env, deps, owner, p);
+    expect(res.status).toBe(200);
+    expect((await res.json()).team).toMatchObject({ publishOwner: "gw2eww", publishOwnerType: "org" });
+
+    const after = await (await teams.listTeams(req("GET"), env, deps, member, {})).json();
+    expect(after[0].team).toMatchObject({ publishOwner: "gw2eww", publishOwnerType: "org" });
+  });
+
+  test("only an owner can set it", async () => {
+    const { env, deps, db, owner, member } = await setup();
+    const { team } = await (await teams.createTeam(req("POST", { name: "EWW" }), env, deps, owner, {})).json();
+    await teams.joinTeam(req("POST", { inviteCode: team.inviteCode }), env, deps, member, {});
+    const res = await teams.renameTeam(req("PATCH", { publishOwner: "evil-org", publishOwnerType: "org" }), env, deps, member, { teamId: team.id });
+    expect(res.status).toBe(403);
+    expect(await db.prepare("SELECT publish_owner FROM teams WHERE id = ?").bind(team.id).first("publish_owner")).toBeNull();
+  });
+
+  test("null clears it, back to each member's own account", async () => {
+    const { env, deps, db, owner } = await setup();
+    const { team } = await (await teams.createTeam(req("POST", { name: "EWW" }), env, deps, owner, {})).json();
+    const p = { teamId: team.id };
+    await teams.renameTeam(req("PATCH", { publishOwner: "gw2eww", publishOwnerType: "org" }), env, deps, owner, p);
+    const res = await teams.renameTeam(req("PATCH", { publishOwner: null }), env, deps, owner, p);
+    expect(res.status).toBe(200);
+    expect((await res.json()).team.publishOwner).toBeUndefined();
+    expect(await db.prepare("SELECT publish_owner_type FROM teams WHERE id = ?").bind(team.id).first("publish_owner_type")).toBeNull();
+  });
+
+  // It is pasted straight into a GitHub API path, so it is checked here rather
+  // than trusted from the client.
+  test("a target that is not a GitHub login is refused", async () => {
+    const { env, deps, owner } = await setup();
+    const { team } = await (await teams.createTeam(req("POST", { name: "EWW" }), env, deps, owner, {})).json();
+    const p = { teamId: team.id };
+    for (const bad of ["../evil", "org/repo", "has space", "x".repeat(40), "-"]) {
+      const res = await teams.renameTeam(req("PATCH", { publishOwner: bad }), env, deps, owner, p);
+      expect([bad, res.status]).toEqual([bad, 400]);
+    }
+    // A leading hyphen is not a login, but one inside is.
+    expect((await teams.renameTeam(req("PATCH", { publishOwner: "gw2-eww" }), env, deps, owner, p)).status).toBe(200);
+  });
+
+  // Getting this wrong creates the axibuilds repo on the wrong account, so an
+  // unrecognised type lands on the end that fails loudly instead.
+  test("an unrecognised owner type is stored as user", async () => {
+    const { env, deps, owner } = await setup();
+    const { team } = await (await teams.createTeam(req("POST", { name: "EWW" }), env, deps, owner, {})).json();
+    const res = await teams.renameTeam(req("PATCH", { publishOwner: "gw2eww", publishOwnerType: "team" }), env, deps, owner, { teamId: team.id });
+    expect((await res.json()).team.publishOwnerType).toBe("user");
+  });
+
+  test("PATCH is a patch: a rename leaves the target alone, and vice versa", async () => {
+    const { env, deps, owner } = await setup();
+    const { team } = await (await teams.createTeam(req("POST", { name: "EWW" }), env, deps, owner, {})).json();
+    const p = { teamId: team.id };
+    await teams.renameTeam(req("PATCH", { publishOwner: "gw2eww", publishOwnerType: "org" }), env, deps, owner, p);
+    const renamed = await (await teams.renameTeam(req("PATCH", { name: "EWW2" }), env, deps, owner, p)).json();
+    expect(renamed.team).toMatchObject({ name: "EWW2", publishOwner: "gw2eww", publishOwnerType: "org" });
+    const retargeted = await (await teams.renameTeam(req("PATCH", { publishOwner: "vette", publishOwnerType: "user" }), env, deps, owner, p)).json();
+    expect(retargeted.team).toMatchObject({ name: "EWW2", publishOwner: "vette", publishOwnerType: "user" });
+  });
+
+  test("an empty patch is a 400, not a silent no-op", async () => {
+    const { env, deps, owner } = await setup();
+    const { team } = await (await teams.createTeam(req("POST", { name: "EWW" }), env, deps, owner, {})).json();
+    expect((await teams.renameTeam(req("PATCH", {}), env, deps, owner, { teamId: team.id })).status).toBe(400);
+  });
+
   test("a create that loses the id race (row appears after the pre-check) is a 409, not a 500", async () => {
     const { env, deps, db, owner, member } = await setup();
     const id = "0f1e2d3c-4b5a-6978-8796-a5b4c3d2e1f0";

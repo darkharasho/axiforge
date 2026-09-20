@@ -158,6 +158,17 @@ class FolderStore {
       const lastSyncedAt = typeof input.lastSyncedAt === "string" ? input.lastSyncedAt : undefined;
       const teamId = typeof input.teamId === "string" ? input.teamId : (input.teamId === null ? null : undefined);
       const role = input.role === "owner" || input.role === "member" ? input.role : (input.role === null ? null : undefined);
+      // Where this team publishes to, mirrored from the server onto its root
+      // folder so publishing can answer "which GitHub owner?" from disk. The
+      // publish handlers already resolve the team root for the item's folder;
+      // reaching the network for it there would make publishing fail offline for
+      // a reason that has nothing to do with the publish. @see teamSync.listTeams
+      const publishOwner = typeof input.publishOwner === "string" && input.publishOwner
+        ? input.publishOwner
+        : (input.publishOwner === null || input.publishOwner === "" ? null : undefined);
+      const publishOwnerType = input.publishOwnerType === "org" || input.publishOwnerType === "user"
+        ? input.publishOwnerType
+        : (input.publishOwnerType === null ? null : undefined);
 
       // Shared folders must be top-level
       if (shared && parentId) {
@@ -189,6 +200,8 @@ class FolderStore {
         if (input.lastSyncedAt !== undefined) existing.lastSyncedAt = input.lastSyncedAt;
         if (teamId !== undefined) { if (teamId === null) delete existing.teamId; else existing.teamId = teamId; }
         if (role !== undefined) { if (role === null) delete existing.role; else existing.role = role; }
+        if (publishOwner !== undefined) { if (publishOwner === null) delete existing.publishOwner; else existing.publishOwner = publishOwner; }
+        if (publishOwnerType !== undefined) { if (publishOwnerType === null) delete existing.publishOwnerType; else existing.publishOwnerType = publishOwnerType; }
         // Ensure updatedAt is strictly greater than the previous value
         const prevUpdatedAt = existing.updatedAt;
         existing.updatedAt =
@@ -213,6 +226,8 @@ class FolderStore {
       if (lastSyncedAt) folder.lastSyncedAt = lastSyncedAt;
       if (teamId) folder.teamId = teamId;
       if (role) folder.role = role;
+      if (publishOwner) folder.publishOwner = publishOwner;
+      if (publishOwnerType) folder.publishOwnerType = publishOwnerType;
       folders.push(folder);
       await this.#writeJson(this.foldersPath, folders);
       return { ...folder };

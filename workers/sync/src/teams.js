@@ -48,8 +48,19 @@ async function withInviteCode(attempt) {
 function teamWire(row, { includeInvite }) {
   const t = { id: row.id, name: row.name, seq: row.seq, createdAt: row.created_at };
   if (includeInvite) t.inviteCode = row.invite_code;
+  // Only when configured. Absent is the answer every team had before this
+  // existed, and the client reads absent as "fall back to the personal target",
+  // so an unset team keeps behaving exactly as it did.
+  if (row.publish_owner) {
+    t.publishOwner = row.publish_owner;
+    t.publishOwnerType = row.publish_owner_type === "org" ? "org" : "user";
+  }
   return t;
 }
+
+// A GitHub login: 1–39 of letters, digits and hyphens. Checked here rather than
+// trusted from the client because it is pasted straight into an API path.
+const GITHUB_LOGIN_RE = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/;
 
 function cleanName(raw) {
   const name = typeof raw === "string" ? raw.trim() : "";
@@ -135,14 +146,44 @@ async function ownerOnly(env, teamId, auth) {
   return { membership: m };
 }
 
-// PATCH /teams/:teamId { name }
+// PATCH /teams/:teamId { name?, publishOwner?, publishOwnerType? }
+//
+// Owner-only, and a patch: a key that is absent is left alone. `name` on its own
+// is the rename this endpoint has always been. `publishOwner: null` clears the
+// team target, which is not the same as leaving it out — it puts the team back
+// on each member's personal target.
 async function renameTeam(request, env, _deps, auth, params) {
   const { error } = await ownerOnly(env, params.teamId, auth);
   if (error) return error;
-  const body = await readJson(request);
-  const name = cleanName(body && body.name);
-  if (!name) return errorResponse("invalid", `Team name must be 1–${MAX_TEAM_NAME} characters.`);
-  await env.SYNC_DB.prepare("UPDATE teams SET name = ? WHERE id = ?").bind(name, params.teamId).run();
+  const body = (await readJson(request)) || {};
+  const sets = [];
+  const binds = [];
+
+  if (body.name !== undefined) {
+    const name = cleanName(body.name);
+    if (!name) return errorResponse("invalid", `Team name must be 1–${MAX_TEAM_NAME} characters.`);
+    sets.push("name = ?");
+    binds.push(name);
+  }
+
+  if (body.publishOwner !== undefined) {
+    if (body.publishOwner === null || body.publishOwner === "") {
+      sets.push("publish_owner = NULL", "publish_owner_type = NULL");
+    } else {
+      const owner = typeof body.publishOwner === "string" ? body.publishOwner.trim() : "";
+      if (!GITHUB_LOGIN_RE.test(owner)) return errorResponse("invalid", "publishOwner must be a GitHub user or organization name.");
+      // Anything we don't recognise is stored as "user": that is the safe end of
+      // getting it wrong, because creating a personal repo fails loudly for an
+      // org the user can't reach, whereas the reverse quietly makes the repo in
+      // the wrong place.
+      sets.push("publish_owner = ?", "publish_owner_type = ?");
+      binds.push(owner, body.publishOwnerType === "org" ? "org" : "user");
+    }
+  }
+
+  if (!sets.length) return errorResponse("invalid", "Nothing to update.");
+  binds.push(params.teamId);
+  await env.SYNC_DB.prepare(`UPDATE teams SET ${sets.join(", ")} WHERE id = ?`).bind(...binds).run();
   const row = await env.SYNC_DB.prepare("SELECT * FROM teams WHERE id = ?").bind(params.teamId).first();
   return json({ team: teamWire(row, { includeInvite: true }), role: "owner" });
 }

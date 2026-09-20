@@ -143,6 +143,11 @@ class TeamSync {
   // local folder whose id equals `team.id`. Without it, an id match alone is NOT
   // permission to absorb a folder — see the comment below.
   async _ensureRootFolder(team, role, { adoptById = false } = {}) {
+    // The team's publish target, normalised to what the folder stores. `null`
+    // rather than `undefined` on purpose: an owner clearing the target has to
+    // reach every member's root folder, and `undefined` means "leave as is".
+    const publishOwner = team.publishOwner || null;
+    const publishOwnerType = publishOwner ? (team.publishOwnerType === "org" ? "org" : "user") : null;
     const folders = await this.folderStore.listFolders();
     let existing = this.rootFolderForTeam(team.id, folders);
     const sameId = folders.find((f) => f.id === team.id) || null;
@@ -164,17 +169,20 @@ class TeamSync {
       if (existing.orgName) await this.folderStore.clearLegacyFields(existing.id);
       if (existing.parentId) {
         // A migrated/old folder that is nested cannot be a team root — re-root it.
-        await this.folderStore.upsertFolder({ id: existing.id, name: team.name, parentId: null, shared: true, teamId: team.id, role });
+        await this.folderStore.upsertFolder({ id: existing.id, name: team.name, parentId: null, shared: true, teamId: team.id, role, publishOwner, publishOwnerType });
         return existing.id;
       }
       // Skip the upsert (and its updatedAt bump) when nothing actually changed —
       // pullAll/listTeams run on every poll tick and would otherwise touch every
       // root folder every 30s.
-      const unchanged = existing.name === team.name && existing.role === role && existing.teamId === team.id;
+      const unchanged = existing.name === team.name && existing.role === role && existing.teamId === team.id
+        && (existing.publishOwner || null) === publishOwner
+        && (publishOwner === null || (existing.publishOwnerType || "user") === publishOwnerType);
       if (!unchanged) {
         await this.folderStore.upsertFolder({
           id: existing.id, name: team.name, parentId: null,
           sortOrder: existing.sortOrder, shared: true, teamId: team.id, role,
+          publishOwner, publishOwnerType,
         });
       }
       return existing.id;
@@ -183,6 +191,7 @@ class TeamSync {
     const created = await this.folderStore.upsertFolder({
       id: idTaken ? undefined : team.id, name: team.name, parentId: null,
       sortOrder: 0, shared: true, teamId: team.id, role,
+      publishOwner, publishOwnerType,
     });
     return created.id;
   }
@@ -194,7 +203,10 @@ class TeamSync {
     const folders = await this.folderStore.listFolders();
     const root = this.rootFolderForTeam(teamId, folders);
     if (root) {
-      await this.folderStore.upsertFolder({ id: root.id, name: root.name, parentId: null, shared: false, teamId: null, role: null });
+      // The publish target goes with the team: what is left is a personal folder,
+      // and a personal folder that still pointed at the team's org would publish
+      // there with nothing on screen to say why.
+      await this.folderStore.upsertFolder({ id: root.id, name: root.name, parentId: null, shared: false, teamId: null, role: null, publishOwner: null, publishOwnerType: null });
       await this.folderStore.clearLegacyFields(root.id); // R6: upsert ignores `orgName: undefined`
       // No actor identity is available here: a detach is inferred from the team
       // disappearing from listTeams (or from the user leaving/deleting it), not
@@ -278,6 +290,30 @@ class TeamSync {
     const folders = await this.folderStore.listFolders();
     const root = this.rootFolderForTeam(teamId, folders);
     if (root) await this.folderStore.upsertFolder({ id: root.id, name: out.team.name, parentId: null, shared: true, teamId, role: root.role });
+    return out;
+  }
+
+  /**
+   * Point this team's publishing at a GitHub owner (owner-only, enforced by the
+   * server). Mirrored onto the root folder immediately so the next publish uses
+   * it without waiting for a poll; teammates pick it up on their next listTeams.
+   *
+   * @param {string} teamId
+   * @param {string|null} owner - GitHub login, or null to clear (back to personal)
+   * @param {"user"|"org"} [ownerType]
+   */
+  async setPublishOwner(teamId, owner, ownerType = "user") {
+    const out = await this.api.setTeamPublishOwner(teamId, owner || null, ownerType === "org" ? "org" : "user");
+    const folders = await this.folderStore.listFolders();
+    const root = this.rootFolderForTeam(teamId, folders);
+    if (root) {
+      await this.folderStore.upsertFolder({
+        id: root.id, name: root.name, parentId: null, sortOrder: root.sortOrder,
+        shared: true, teamId, role: root.role,
+        publishOwner: out.team.publishOwner || null,
+        publishOwnerType: out.team.publishOwner ? (out.team.publishOwnerType === "org" ? "org" : "user") : null,
+      });
+    }
     return out;
   }
 

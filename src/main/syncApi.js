@@ -75,7 +75,16 @@ class SyncApi {
   listMembers(teamId) { return this.#request("GET", `/teams/${encodeURIComponent(teamId)}/members`); }
   removeMember(teamId, userId) { return this.#request("DELETE", `/teams/${encodeURIComponent(teamId)}/members/${encodeURIComponent(userId)}`); }
   rotateInvite(teamId) { return this.#request("POST", `/teams/${encodeURIComponent(teamId)}/invite/rotate`); }
-  renameTeam(teamId, name) { return this.#request("PATCH", `/teams/${encodeURIComponent(teamId)}`, { body: { name } }); }
+  // PATCH /teams/:id is a patch — only the keys present are written. Both of
+  // these go through it, so a rename never disturbs the publish target and vice
+  // versa.
+  updateTeam(teamId, patch) { return this.#request("PATCH", `/teams/${encodeURIComponent(teamId)}`, { body: patch }); }
+  renameTeam(teamId, name) { return this.updateTeam(teamId, { name }); }
+  // `publishOwner: null` clears it, putting the team back on each member's own
+  // personal target.
+  setTeamPublishOwner(teamId, publishOwner, publishOwnerType) {
+    return this.updateTeam(teamId, { publishOwner, publishOwnerType });
+  }
   deleteTeam(teamId) { return this.#request("DELETE", `/teams/${encodeURIComponent(teamId)}`); }
 
   // Per-folder access. A member is served only their own rows; an owner gets the

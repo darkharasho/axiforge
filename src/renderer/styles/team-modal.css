@@ -606,7 +606,8 @@
 /* The same control the rest of the app uses — a native select renders as an OS
    widget, which reads as a foreign object dropped into the dialog. Matches
    .settings-modal__select so the two Teams surfaces are the one control. */
-.tm-fa__select {
+.tm-fa__select,
+.tm__select {
   width: 100%;
   box-sizing: border-box;
   padding: 5px 28px 5px 8px;
@@ -627,21 +628,25 @@
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 
-.tm-fa__select:hover:not(:disabled) { border-color: var(--line-strong, var(--line)); }
+.tm-fa__select:hover:not(:disabled),
+.tm__select:hover:not(:disabled) { border-color: var(--line-strong, var(--line)); }
 
-.tm-fa__select:focus-visible {
+.tm-fa__select:focus-visible,
+.tm__select:focus-visible {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 /* A native dropdown list ignores the control's colours; state them or the open
    menu falls back to the OS palette. */
-.tm-fa__select option {
+.tm-fa__select option,
+.tm__select option {
   background: var(--bg-2);
   color: var(--text);
 }
 
-.tm-fa__select:disabled { opacity: 0.55; cursor: default; }
+.tm-fa__select:disabled,
+.tm__select:disabled { opacity: 0.55; cursor: default; }
 
 /* An inherited level is shown in the control it would be changed with, so the
    control itself has to say it is not a rule yet. */
@@ -722,3 +727,7 @@
 }
 
 .tm__status--error { color: var(--danger); }
+
+/* The team's publish target: one control on its own row, so it reads as the
+   answer to "where does this go" rather than as a cell in a table. */
+.tm__select { max-width: 320px; }
