@@ -135,6 +135,14 @@ jest.mock("../../src/main/localApiDiscovery", () => ({
 
 jest.mock("../../src/main/autoUpdate", () => ({ initAutoUpdate: jest.fn(() => {}) }));
 jest.mock("../../src/main/axicodeFile", () => ({ registerAxicodeFileHandlers: jest.fn(() => {}) }));
+// The publish handlers assemble the SPA bundle out of dist/site — a build
+// artifact, not behaviour these tests assert (they check WHICH OWNER a publish
+// goes to). Left real, the suite passes only on a machine that happens to have
+// run `npm run build:site` and fails everywhere else, CI included.
+jest.mock("../../src/main/siteBundle", () => ({
+  ...jest.requireActual("../../src/main/siteBundle"),
+  buildSpaBundle: () => ({ "site/index.html": "<!doctype html>\n" }),
+}));
 
 // ─── Harness ────────────────────────────────────────────────────────────────
 
