@@ -64,6 +64,14 @@ beforeEach(() => {
     leaveTeam: jest.fn(async () => {}),
     pullTeam: jest.fn(async () => {}),
     writeClipboardText: jest.fn(async () => {}),
+    listTargets: jest.fn(async () => [
+      { login: "me", type: "user" },
+      { login: "gw2eww", type: "org" },
+    ]),
+    setTeamPublishOwner: jest.fn(async (teamId, owner, type) => ({
+      team: { id: teamId, name: "EWW", ...(owner ? { publishOwner: owner, publishOwnerType: type } : {}) },
+      role: "owner",
+    })),
   };
   window.desktopApi = api;
   state.folders = [ROOT, RAIDS, WVW, DEEP];
@@ -637,4 +645,88 @@ test("Escape closes the dialog, and re-opening does not stack listeners", async 
   await openTeamModal("t1");
   document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
   expect(document.querySelector(".tm-overlay").className).toContain("tm-overlay--hidden");
+});
+
+// ─── Where the team publishes ───────────────────────────────────────────────
+//
+// Publishing used to have one target per machine, so a member publishing the
+// team's comp put it on their own GitHub account. It is the team's setting now,
+// which means it is set here and every member inherits it.
+
+describe("the team's publish target", () => {
+  const openTeamTab = async () => {
+    await openTeamModal("t1", { tab: "team" });
+    await flush();
+  };
+  const picker = () => document.querySelector('select[data-act="set-publish-owner"]');
+
+  test("an owner picks from the accounts they can publish to", async () => {
+    await openTeamTab();
+    expect(api.listTargets).toHaveBeenCalled();
+    expect([...picker().options].map((o) => o.value)).toEqual(["", "me", "gw2eww"]);
+    // Unset means each member keeps publishing to their own account.
+    expect(picker().value).toBe("");
+  });
+
+  test("picking an org sends it with its owner type and reports it", async () => {
+    await openTeamTab();
+    const select = picker();
+    select.value = "gw2eww";
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+    await flush();
+    expect(api.setTeamPublishOwner).toHaveBeenCalledWith("t1", "gw2eww", "org");
+    expect(status()).toMatch(/publishes to gw2eww/);
+    // The server's answer is what the control now shows.
+    expect(picker().value).toBe("gw2eww");
+  });
+
+  test("choosing the blank option clears it", async () => {
+    state.teams = [{ team: { id: "t1", name: "EWW", inviteCode: "A", publishOwner: "gw2eww", publishOwnerType: "org" }, role: "owner" }];
+    await openTeamTab();
+    expect(picker().value).toBe("gw2eww");
+    const select = picker();
+    select.value = "";
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+    await flush();
+    expect(api.setTeamPublishOwner).toHaveBeenCalledWith("t1", null, "user");
+    expect(picker().value).toBe("");
+  });
+
+  // A refused write must not leave a control showing a setting the team does
+  // not have — the next person to read it would believe it.
+  test("a refused change says so and puts the control back", async () => {
+    state.teams = [{ team: { id: "t1", name: "EWW", inviteCode: "A", publishOwner: "gw2eww", publishOwnerType: "org" }, role: "owner" }];
+    api.setTeamPublishOwner.mockRejectedValue(new Error("Only a team owner can do that."));
+    await openTeamTab();
+    const select = picker();
+    select.value = "me";
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+    await flush();
+    expect(status()).toBe("Only a team owner can do that.");
+    expect(picker().value).toBe("gw2eww");
+  });
+
+  test("the team's target is shown even when this user cannot reach it", async () => {
+    state.teams = [{ team: { id: "t1", name: "EWW", inviteCode: "A", publishOwner: "some-other-org", publishOwnerType: "org" }, role: "owner" }];
+    await openTeamTab();
+    expect(picker().value).toBe("some-other-org");
+    expect(document.querySelector("#tm-body").textContent).toMatch(/can't reach the account/);
+  });
+
+  test("a member is told where it goes, without a control", async () => {
+    state.folders = [{ ...ROOT, role: "member" }, RAIDS, WVW, DEEP];
+    state.teams = [{ team: { id: "t1", name: "EWW", publishOwner: "gw2eww", publishOwnerType: "org" }, role: "member" }];
+    await openTeamTab();
+    expect(picker()).toBeNull();
+    expect(document.querySelector("#tm-body").textContent).toMatch(/publish to gw2eww/);
+    // No reason to ask GitHub for accounts they cannot choose between.
+    expect(api.listTargets).not.toHaveBeenCalled();
+  });
+
+  test("a member on a team with no target is told it goes to their own account", async () => {
+    state.folders = [{ ...ROOT, role: "member" }, RAIDS, WVW, DEEP];
+    state.teams = [{ team: { id: "t1", name: "EWW" }, role: "member" }];
+    await openTeamTab();
+    expect(document.querySelector("#tm-body").textContent).toMatch(/your own GitHub account/);
+  });
 });

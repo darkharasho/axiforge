@@ -1526,11 +1526,14 @@ const readyWork = app.whenReady().then(async () => {
     const build = builds.find((b) => b.id === buildId);
     if (!build) throw new Error("Build not found.");
 
-    const { owner, ownerType } = resolvePublishTarget(auth, session.viewer.login);
+    // Before the owner check, not after: a build inside a team publishes to the
+    // team's owner, so which owner "published by someone else" is measured
+    // against depends on it.
+    const teamRoot = await findTeamRoot(build.folderId);
+    const { owner, ownerType, scope } = resolvePublishTarget(auth, session.viewer.login, teamRoot);
     if (build.publishedOwner && build.publishedOwner !== owner && !opts.force) {
       throw new Error(`PUBLISHED_BY_OTHER:${build.publishedOwner}`);
     }
-    const teamRoot = await findTeamRoot(build.folderId);
 
     // Auto-populate build name if empty or default
     if (!build.title?.trim() || build.title === "Untitled Build") {
@@ -1700,21 +1703,28 @@ const readyWork = app.whenReady().then(async () => {
       : await store.getSetting("appearance.theme");
     const pagesUrl = `https://${owner}.github.io/${TARGET_REPO}/?n=${encodeURIComponent(newSlug)}&b=${fileId}.${encKey}${themeParam ? `&t=${themeParam}` : ""}`;
 
-    await patchAuthRecord({
-      onboarding: {
-        repoReady: true,
-        forkReady: true,
-        repoName: TARGET_REPO,
-        pagesReady: false,
-        pagesBuildStatus: "queued",
-        pagesBuildUpdatedAt: new Date().toISOString(),
-        pagesBuildError: null,
-        pagesUrl: `https://${owner}.github.io/${TARGET_REPO}/`,
-        branch,
-        targetOwner: owner,
-        targetOwnerType: ownerType,
-      },
-    });
+    // Only for a publish that went to the PERSONAL target. onboarding is this
+    // machine's own publishing setup — its repo, its Pages build, its chosen
+    // owner — so stamping a team publish onto it would repoint the personal
+    // target at the team's org and then report the team's site build as the
+    // user's own.
+    if (scope === "personal") {
+      await patchAuthRecord({
+        onboarding: {
+          repoReady: true,
+          forkReady: true,
+          repoName: TARGET_REPO,
+          pagesReady: false,
+          pagesBuildStatus: "queued",
+          pagesBuildUpdatedAt: new Date().toISOString(),
+          pagesBuildError: null,
+          pagesUrl: `https://${owner}.github.io/${TARGET_REPO}/`,
+          branch,
+          targetOwner: owner,
+          targetOwnerType: ownerType,
+        },
+      });
+    }
 
     return {
       pagesUrl,
@@ -1747,11 +1757,11 @@ const readyWork = app.whenReady().then(async () => {
       throw new Error("Comp name is required for publishing.");
     }
 
-    const { owner, ownerType } = resolvePublishTarget(auth, session.viewer.login);
+    const compTeamRoot = await findTeamRoot(comp.folderId);
+    const { owner, ownerType, scope } = resolvePublishTarget(auth, session.viewer.login, compTeamRoot);
     if (comp.publishedOwner && comp.publishedOwner !== owner && !opts.force) {
       throw new Error(`PUBLISHED_BY_OTHER:${comp.publishedOwner}`);
     }
-    const compTeamRoot = await findTeamRoot(comp.folderId);
 
     const allBuilds = await store.listBuilds();
     // Use union of buildIds + all party line slot IDs so a build that ended up
@@ -1897,25 +1907,30 @@ const readyWork = app.whenReady().then(async () => {
       snapshotUpdatedAt: comp.updatedAt,
     })) || comp;
 
-    // Push comp publish metadata to shared repo so teammates get the URL.
-    // Skip personal auth record update for shared comps — the org's repo is the
-    // canonical publish target, not the user's personal publishing setup.
+    // Push comp publish metadata to the team so teammates get the URL.
     if (compTeamRoot) await safeEnqueue(() => teamSync.enqueue(compTeamRoot.teamId, savedComp.id, "comp", "put"), { type: "comp", id: savedComp.id });
-    await patchAuthRecord({
-      onboarding: {
-        repoReady: true,
-        forkReady: true,
-        repoName: TARGET_REPO,
-        pagesReady: false,
-        pagesBuildStatus: "queued",
-        pagesBuildUpdatedAt: new Date().toISOString(),
-        pagesBuildError: null,
-        pagesUrl: `https://${owner}.github.io/${TARGET_REPO}/`,
-        branch,
-        targetOwner: owner,
-        targetOwnerType: ownerType,
-      },
-    });
+    // Only for a publish that went to the PERSONAL target. onboarding is this
+    // machine's own publishing setup — its repo, its Pages build, its chosen
+    // owner — so stamping a team publish onto it would repoint the personal
+    // target at the team's org and then report the team's site build as the
+    // user's own.
+    if (scope === "personal") {
+      await patchAuthRecord({
+        onboarding: {
+          repoReady: true,
+          forkReady: true,
+          repoName: TARGET_REPO,
+          pagesReady: false,
+          pagesBuildStatus: "queued",
+          pagesBuildUpdatedAt: new Date().toISOString(),
+          pagesBuildError: null,
+          pagesUrl: `https://${owner}.github.io/${TARGET_REPO}/`,
+          branch,
+          targetOwner: owner,
+          targetOwnerType: ownerType,
+        },
+      });
+    }
 
     return { pagesUrl: compPagesUrl, slug: compSlug, fileId: compFileId, changed: true, skippedForeignBuilds };
   }
@@ -2485,6 +2500,13 @@ const readyWork = app.whenReady().then(async () => {
   handle("teams:leave", (_e, teamId) => teamSync.leaveTeam(teamId));
   handle("teams:delete", (_e, teamId) => teamSync.deleteTeam(teamId));
   handle("teams:rename", (_e, teamId, name) => teamSync.renameTeam(teamId, name));
+  // Where this team publishes. Owner-only (the server refuses anyone else), and
+  // it reaches every member: a team's builds belong in the team's GitHub org, not
+  // in whichever account the member who happened to hit Publish had configured.
+  // `owner: null` clears it, putting the team back on each member's personal
+  // target. @see src/main/publishTarget.js
+  handle("teams:set-publish-owner", (_e, teamId, owner, ownerType) =>
+    teamSync.setPublishOwner(teamId, owner, ownerType));
   handle("teams:members", (_e, teamId) => teamSync.listMembers(teamId));
   // Per-folder access. `teams:access` is the resolved answer for the CURRENT
   // user, folder id → level, so the renderer never has to walk the tree itself

@@ -66,6 +66,10 @@ const EXPAND_ALL_UPTO = 25;
 // Everything one render needs, fetched together so a tab switch is instant and
 // every tab is drawn from the same snapshot rather than three racing ones.
 let _data = { members: [], grants: [], teamDefault: "write" };
+// GitHub accounts and orgs this user can publish to, for the Team tab's publish
+// target picker. Fetched once per open and only for an owner — a member cannot
+// set it, and the call costs a round trip to GitHub.
+let _targets = null;
 
 export function initTeamModal() {
   if (typeof document === "undefined" || _overlay) return;
@@ -134,6 +138,7 @@ export async function openTeamModal(teamId, opts = {}) {
   _filter = "";
   _showOthers = false;
   _data = { members: [], grants: [], teamDefault: "write" };
+  _targets = null;
   _adding = false;
   _pending = null;
 
@@ -257,6 +262,26 @@ async function _load() {
     if (_teamId !== teamId) return;
     _setStatus(err?.message || String(err), true);
   }
+  await _loadTargets(teamId);
+}
+
+/**
+ * The owners this user could point the team at. Separate from _load's batch: it
+ * talks to GitHub rather than to the sync server, so a GitHub hiccup must not
+ * cost the dialog its people and its access rules.
+ */
+async function _loadTargets(teamId) {
+  if (!_isOwner()) return;
+  let targets = [];
+  try {
+    targets = (await window.desktopApi.listTargets()) || [];
+  } catch {
+    // Signed out of GitHub, or the API is unreachable. The section says so
+    // rather than offering a picker that cannot be honoured.
+  }
+  if (_teamId !== teamId) return;
+  _targets = targets;
+  if (_tab === "team") _render();
 }
 
 // ─── Rendering ─────────────────────────────────────────────────────────────────
@@ -435,6 +460,7 @@ function _renderTeamTab(record) {
         ${isOwner ? `<button class="tm__btn tm__btn--small" data-act="rename" type="button">Rename</button>` : ""}
       </div>
     </div>
+    ${_renderPublishTarget(record, isOwner)}
     <div class="tm__section">
       <div class="tm__section-label">Sync</div>
       <p class="tm__hint">Changes sync on their own. Pull if you want to be sure you have the latest right now.</p>
@@ -451,9 +477,73 @@ function _renderTeamTab(record) {
   `;
 }
 
+/**
+ * Where this team publishes.
+ *
+ * Publishing had one target, kept in Settings against this machine — so a member
+ * who hit Publish on the team's comp put it on their own GitHub account, and it
+ * looked like it worked. The target is a fact about the TEAM, so it is set here,
+ * once, and every member inherits it, including whoever joins next week.
+ */
+function _renderPublishTarget(record, isOwner) {
+  const current = record?.team?.publishOwner || "";
+  const currentType = record?.team?.publishOwnerType === "org" ? "org" : "user";
+
+  if (!isOwner) {
+    return `
+      <div class="tm__section">
+        <div class="tm__section-label">Publishing</div>
+        ${current
+          ? `<p class="tm__hint">Builds and comps in this team publish to <strong>${escapeHtml(current)}</strong>.</p>`
+          : `<p class="tm__hint">This team has no publish target, so anything you publish here goes to your own GitHub account. Only an owner can change that.</p>`}
+      </div>
+    `;
+  }
+
+  if (_targets === null) {
+    return `
+      <div class="tm__section">
+        <div class="tm__section-label">Publishing</div>
+        <p class="tm__hint">Loading GitHub accounts…</p>
+      </div>
+    `;
+  }
+
+  // The team may already point at an owner this user cannot see (they left the
+  // org, or another owner set it). Showing it anyway is the honest answer —
+  // dropping it would silently offer to change a setting the picker isn't
+  // showing.
+  const options = [..._targets];
+  if (current && !options.some((t) => t.login === current)) {
+    options.push({ login: current, type: currentType, unreachable: true });
+  }
+
+  return `
+    <div class="tm__section">
+      <div class="tm__section-label">Publishing</div>
+      <p class="tm__hint">Builds and comps in this team publish to this GitHub account or organization — for every member, not just you.</p>
+      <div class="tm__row">
+        <select class="tm__select" data-act="set-publish-owner">
+          <option value=""${current ? "" : " selected"}>Each member's own account</option>
+          ${options.map((t) => `
+            <option value="${escapeHtml(t.login)}" data-type="${t.type === "org" ? "org" : "user"}"${t.login === current ? " selected" : ""}>
+              ${escapeHtml(t.login)}${t.type === "org" ? " (organization)" : ""}${t.unreachable ? " — no access" : ""}
+            </option>`).join("")}
+        </select>
+      </div>
+      ${options.some((t) => t.unreachable)
+        ? `<p class="tm__hint">You can't reach the account this team publishes to, so publishing from here will fail until that changes.</p>`
+        : ""}
+    </div>
+  `;
+}
+
 // ─── Actions ───────────────────────────────────────────────────────────────────
 
 async function _onBodyChange(e) {
+  const publish = e.target.closest('select[data-act="set-publish-owner"]');
+  if (publish) return _handleSetPublishOwner(publish);
+
   const picker = e.target.closest('select[data-act="pick-person"]');
   if (picker) {
     const folderKey = picker.closest("[data-folder-key]")?.dataset.folderKey;
@@ -486,6 +576,38 @@ async function _onBodyChange(e) {
     // Put the list back where the server still has it, rather than leaving a
     // control showing a level that was refused.
     _render();
+  }
+}
+
+/** Point the team at an owner (or back at "each member's own"). */
+async function _handleSetPublishOwner(select) {
+  const login = select.value || null;
+  const type = select.selectedOptions?.[0]?.dataset?.type === "org" ? "org" : "user";
+  select.disabled = true;
+  try {
+    const out = await window.desktopApi.setTeamPublishOwner(_teamId, login, type);
+    // Patch the record in place rather than reloading every team: the server's
+    // answer is the authority on what was stored, and _render reads from here.
+    //
+    // The two publish fields are assigned rather than spread: a cleared target
+    // comes back with them ABSENT, and a spread of an absent key leaves the old
+    // value standing — the control would keep showing an owner the team no
+    // longer has.
+    const record = _record();
+    if (record && out?.team) {
+      record.team = {
+        ...record.team,
+        ...out.team,
+        publishOwner: out.team.publishOwner || null,
+        publishOwnerType: out.team.publishOwner ? out.team.publishOwnerType : null,
+      };
+    }
+    _render();
+    _setStatus(login ? `This team now publishes to ${login}.` : "This team now publishes to each member's own account.");
+    if (_onRefresh) await _onRefresh();
+  } catch (err) {
+    _setStatus(err?.message || String(err), true);
+    _render(); // put the control back on what the server still has
   }
 }
 

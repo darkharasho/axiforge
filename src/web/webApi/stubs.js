@@ -51,6 +51,7 @@ function createStubsApi() {
     // teams (team sync)
     getTeamSession: async () => null,
     listTeams: async () => [],
+    setTeamPublishOwner: noop,
     listOutbox: async () => ({}),
     pullAllTeams: noop,
     resolveConflict: noop,
