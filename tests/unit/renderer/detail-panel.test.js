@@ -398,6 +398,21 @@ describe("showHoverPreview — trait-associated skill cards", () => {
     expect(mockHover.innerHTML).toMatch(/class="hover-preview__icon" src="https:\/\/example\.test\/proc\.png"/);
   });
 
+  test("does not reduce the proc'd skill's recharge (the trait ICD) with alacrity", () => {
+    const proc = { ...LESSER_SIGNET, id: 79346, name: "Proc Skill", facts: [{ type: "Recharge", value: 20 }] };
+    const trait = { ...TRAIT_WITH_SKILLS, traitSkillIds: [79346], traitSkillIcons: {} };
+    state.activeCatalog = { ...MOCK_CATALOG, skillById: new Map([[79346, proc]]) };
+    const boons = require("../../../src/renderer/modules/equipment").getAssumedBoons();
+    boons.alacrity = true;
+    try {
+      detailPanel.showHoverPreview("trait", trait, 100, 100);
+    } finally {
+      boons.alacrity = false;
+    }
+    expect(mockHover.innerHTML).toContain("20s");
+    expect(mockHover.innerHTML).not.toContain("fact-alacrity");
+  });
+
   test("keeps the compact list below the trait card when a trait has several skills", () => {
     detailPanel.showHoverPreview("trait", TRAIT_WITH_TWO_SKILLS, 100, 100);
     const html = mockHover.innerHTML;
