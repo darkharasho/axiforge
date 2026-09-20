@@ -402,12 +402,14 @@ function _renderStatBreakdown(entries, total, statName) {
   return `<ul class="hover-preview__breakdown">${lines.join("")}</ul>`;
 }
 
-export function buildSkillCard(skill, kind, isChained = false, dmgStats = null) {
+export function buildSkillCard(skill, kind, isChained = false, dmgStats = null, { traitProc = false } = {}) {
   const icon = String(skill.icon || skill.iconFallback || "");
   const description = normalizeText(skill.description || "");
   const maxFacts = kind.startsWith("equip-") ? 12 : 16;
   const rawFacts = resolveEntityFacts(skill).slice(0, maxFacts);
-  const isSkillCard = kind !== "trait";
+  // A trait-proc'd skill's recharge is the trait's internal cooldown, which alacrity and
+  // burst recharge don't touch — same as the trait card itself.
+  const isSkillCard = kind !== "trait" && !traitProc;
   const cardAlacrity = isSkillCard && getAssumedBoons().alacrity;
   const burstRch = isSkillCard && skill.slot === "Profession_1" ? (computeUpgradeModifiers().get("Burst Recharge") || 0) : 0;
 
@@ -566,7 +568,7 @@ export function showHoverPreview(kind, entity, x, y) {
   }
 
   if (procSkill) {
-    chainCards.unshift(`<div class="hover-preview__proc-skill">${buildSkillCard(procSkill, "skill", false, dmgStats)}</div>`);
+    chainCards.unshift(`<div class="hover-preview__proc-skill">${buildSkillCard(procSkill, "skill", false, dmgStats, { traitProc: true })}</div>`);
   } else if (traitSkills.length) {
     const iconOverrides = entity.traitSkillIcons || {};
     const items = traitSkills.map((skill) => {
