@@ -56,6 +56,7 @@ const { writeDiscoveryFile, removeDiscoveryFileSync } = require("./localApiDisco
 const { parseCliFlags } = require("./cliFlags");
 const { shareRejectionReason } = require("./shareGate");
 const { shortUrl, publishedOwnerFor } = require("./shortUrl");
+const { resolvePublishTarget } = require("./publishTarget");
 const { assertCanMoveOutOfTeam, assertFolderTreeFits, decideCompBuildPublish } = require("./teamGuards");
 
 const PROFESSION_THEME_IDS = {
@@ -432,6 +433,7 @@ async function getOnboardingStatus() {
     siteReady: Boolean(reachable),
     pagesUrl,
     targetOwner: onboarding.targetOwner || null,
+    targetOwnerType: onboarding.targetOwnerType === "org" ? "org" : "user",
     repoName: onboarding.repoName || TARGET_REPO,
     branch: onboarding.branch || "main",
   };
@@ -1517,7 +1519,6 @@ const readyWork = app.whenReady().then(async () => {
 
     const auth = await getAuthRecord();
     const branch = auth?.onboarding?.branch || "main";
-    const personalOwner = auth?.onboarding?.targetOwner || session.viewer.login;
 
     // Load the build
     progress("loading");
@@ -1525,8 +1526,7 @@ const readyWork = app.whenReady().then(async () => {
     const build = builds.find((b) => b.id === buildId);
     if (!build) throw new Error("Build not found.");
 
-    const owner = personalOwner;
-    const ownerType = "user";
+    const { owner, ownerType } = resolvePublishTarget(auth, session.viewer.login);
     if (build.publishedOwner && build.publishedOwner !== owner && !opts.force) {
       throw new Error(`PUBLISHED_BY_OTHER:${build.publishedOwner}`);
     }
@@ -1712,6 +1712,7 @@ const readyWork = app.whenReady().then(async () => {
         pagesUrl: `https://${owner}.github.io/${TARGET_REPO}/`,
         branch,
         targetOwner: owner,
+        targetOwnerType: ownerType,
       },
     });
 
@@ -1733,7 +1734,6 @@ const readyWork = app.whenReady().then(async () => {
 
     const auth = await getAuthRecord();
     const branch = auth?.onboarding?.branch || "main";
-    const personalOwner = auth?.onboarding?.targetOwner || session.viewer.login;
 
     // ── 1. Load comp + its builds ──────────────────────────────────────
     const compTheme = await store.getSetting("appearance.theme");
@@ -1747,8 +1747,7 @@ const readyWork = app.whenReady().then(async () => {
       throw new Error("Comp name is required for publishing.");
     }
 
-    const owner = personalOwner;
-    const ownerType = "user";
+    const { owner, ownerType } = resolvePublishTarget(auth, session.viewer.login);
     if (comp.publishedOwner && comp.publishedOwner !== owner && !opts.force) {
       throw new Error(`PUBLISHED_BY_OTHER:${comp.publishedOwner}`);
     }
@@ -1914,6 +1913,7 @@ const readyWork = app.whenReady().then(async () => {
         pagesUrl: `https://${owner}.github.io/${TARGET_REPO}/`,
         branch,
         targetOwner: owner,
+        targetOwnerType: ownerType,
       },
     });
 
@@ -2351,6 +2351,7 @@ const readyWork = app.whenReady().then(async () => {
           pagesUrl: `https://${owner}.github.io/${TARGET_REPO}/`,
           branch: defaultBranch,
           targetOwner: owner,
+          targetOwnerType: ownerType === "org" ? "org" : "user",
         },
       });
     } catch (err) {
@@ -2374,6 +2375,45 @@ const readyWork = app.whenReady().then(async () => {
 
     return getOnboardingStatus();
   }
+
+  // Selecting an owner in Settings must persist immediately. It used to only be
+  // stored as a side effect of running setup, so picking the team org and
+  // closing the dialog left targetOwner unset and every publish silently went to
+  // the personal account.
+  handle("onboarding:set-target-owner", async (_e, targetOwner, ownerType = "user") => {
+    const session = await getSession();
+    if (!session) throw new Error("Authenticate with GitHub before choosing a publish target.");
+    const owner = targetOwner || session.viewer.login;
+    const type = ownerType === "org" ? "org" : "user";
+
+    // Readiness is per-owner, so it can't carry over from the previous target.
+    // A repo that already exists means this owner is set up — checking costs one
+    // call and keeps switching between configured owners seamless.
+    let repoReady = false;
+    try {
+      await getRepo(session.token, owner, TARGET_REPO);
+      repoReady = true;
+    } catch {
+      // 404 (or anything else) — treat as not set up and let the user run setup.
+    }
+
+    await patchAuthRecord({
+      onboarding: {
+        targetOwner: owner,
+        targetOwnerType: type,
+        repoReady,
+        forkReady: repoReady,
+        repoName: TARGET_REPO,
+        // getOnboardingStatus probes this URL, so pagesReady self-heals for an
+        // owner whose site is already live.
+        pagesUrl: `https://${owner}.github.io/${TARGET_REPO}/`,
+        pagesReady: false,
+        pagesBuildStatus: null,
+        pagesBuildError: null,
+      },
+    });
+    return getOnboardingStatus();
+  });
 
   handle("onboarding:setup-repo-pages", async (_e, targetOwner, ownerType = "user") =>
     setupRepoPages(targetOwner, ownerType)

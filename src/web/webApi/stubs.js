@@ -24,6 +24,7 @@ function createStubsApi() {
     // onboarding / pages
     getOnboardingStatus: async () => ({ configured: false }),
     listTargets: async () => [],
+    setPublishTarget: noop,
     setupRepoPages: noop,
     setupForkPages: noop,
     pollPagesStatus: async () => ({ ready: false }),

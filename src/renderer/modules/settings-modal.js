@@ -418,8 +418,18 @@ function _renderPublishing() {
         iconText: t.type === "org" ? "O" : "U",
       })),
       placeholder: "Select owner",
-      onChange: (login) => {
-        state.selectedTarget = state.targets.find((t) => t.login === String(login)) || null;
+      onChange: async (login) => {
+        const target = state.targets.find((t) => t.login === String(login)) || null;
+        state.selectedTarget = target;
+        _renderSetupRow();
+        if (!target) return;
+        // Persist right away — selecting an owner and closing the dialog without
+        // running setup used to leave publishing pointed at the personal account.
+        try {
+          state.onboarding = await window.desktopApi.setPublishTarget(target.login, target.type);
+        } catch (err) {
+          console.warn("[publish-target]", err?.message || err);
+        }
         _renderSetupRow();
       },
     });

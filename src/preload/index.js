@@ -31,6 +31,8 @@ contextBridge.exposeInMainWorld("desktopApi", {
   logout: () => ipcRenderer.invoke("auth:logout"),
   getOnboardingStatus: () => ipcRenderer.invoke("onboarding:status"),
   listTargets: () => ipcRenderer.invoke("onboarding:list-targets"),
+  setPublishTarget: (targetOwner, ownerType) =>
+    ipcRenderer.invoke("onboarding:set-target-owner", targetOwner, ownerType),
   setupRepoPages: (targetOwner, ownerType) =>
     ipcRenderer.invoke("onboarding:setup-repo-pages", targetOwner, ownerType),
   setupForkPages: (targetOwner, ownerType) =>
