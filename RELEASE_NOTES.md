@@ -1,3 +1,9 @@
+## Version v0.24.0 — September 19, 2026
+
+### New Features
+
+- **A team can now publish to its own GitHub organisation.** Until now every publish went to whatever owner you picked in Settings → Publishing, so a comp sitting in a shared team folder landed on the account of whoever happened to press Publish rather than the team's. A team owner can now set the team's GitHub organisation once in Manage Team → Team → Publishing, and from then on anything published out of that team's folders goes there, for everyone on the team. Your own setting still applies to everything outside a team, and a team with no organisation set behaves exactly as before.
+
 ## Version v0.23.0 — September 19, 2026
 
 ### New Features
