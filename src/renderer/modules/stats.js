@@ -16,6 +16,7 @@ import {
   computeFuryCritModifier as bridgeFuryCritModifier,
   computeFuryStatBonuses as bridgeFuryStatBonuses,
   computeMightPerStack as bridgeMightPerStack,
+  computeBoonConditionalTraitBonuses as bridgeBoonConditionalTraitBonuses,
   computeBuildConcentration as bridgeBuildConcentration,
   computeBuildExpertise as bridgeBuildExpertise,
 } from "./engine-bridge.js";
@@ -76,6 +77,13 @@ export function computeFuryCritModifier(gameMode) {
 export function computeFuryStatBonuses(gameMode) {
   if (gameMode) state.editor.gameMode = gameMode;
   return bridgeFuryStatBonuses(state);
+}
+
+/**
+ * Thin wrapper: computeBoonConditionalTraitBonuses(state?) → { boonKey: [bonus, ...] }.
+ */
+export function computeBoonConditionalTraitBonuses(fromState) {
+  return bridgeBoonConditionalTraitBonuses(fromState || state);
 }
 
 /**
@@ -374,7 +382,12 @@ export function computeStatBreakdown(statKey, assumedBoons = null, sigilStacks =
   if (engineResult.traitDetails) {
     for (const detail of engineResult.traitDetails) {
       if (detail.target === statKey && detail.value) {
-        entries.push({ source: detail.name, value: detail.value, category: "trait" });
+        // Boon-gated bonuses (Imbued Haste, Chaotic Persistence, ...) only reach the
+        // breakdown when that boon is assumed, so label where the bonus comes from.
+        const boonLabel = detail.conditionBoon
+          ? ` (while ${detail.conditionBoon.charAt(0).toUpperCase()}${detail.conditionBoon.slice(1)})`
+          : "";
+        entries.push({ source: `${detail.name}${boonLabel}`, value: detail.value, category: "trait" });
       }
     }
   } else if (engineResult.traits[statKey]) {
