@@ -64,17 +64,23 @@ export function resolveAccentId(id) {
 
 let _transitionTimer = null;
 
-/** Sets the accent on <html>, crossfading for 500ms. Returns the resolved id. */
-export function applyAccent(id) {
+/**
+ * Sets the accent on <html>. Returns the resolved id.
+ * Crossfades for 500ms unless { transition: false } - startup passes that,
+ * so the first paint doesn't visibly flash against an unthemed page.
+ */
+export function applyAccent(id, { transition = true } = {}) {
   const resolved = resolveAccentId(id);
   const root = document.documentElement;
 
-  root.classList.add("theme-transitioning");
-  if (_transitionTimer) clearTimeout(_transitionTimer);
-  _transitionTimer = setTimeout(() => {
-    root.classList.remove("theme-transitioning");
-    _transitionTimer = null;
-  }, 500);
+  if (transition) {
+    root.classList.add("theme-transitioning");
+    if (_transitionTimer) clearTimeout(_transitionTimer);
+    _transitionTimer = setTimeout(() => {
+      root.classList.remove("theme-transitioning");
+      _transitionTimer = null;
+    }, 500);
+  }
 
   root.setAttribute("data-axi-accent", resolved);
   return resolved;

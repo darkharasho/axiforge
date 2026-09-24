@@ -658,11 +658,12 @@ async function init() {
   try { _lastGameMode = (await window.desktopApi.getSetting("lastGameMode")) || "pve"; } catch { /* first run */ }
   syncGameModeToggleUI(_lastGameMode);
 
-  // Apply the saved accent
+  // Apply the saved accent. No crossfade here - transitioning against an
+  // unthemed first paint would be visible as a flash.
   try {
-    _accentTinting.setUserAccent(await window.desktopApi.getSetting("appearance.theme"));
+    _accentTinting.setUserAccent(await window.desktopApi.getSetting("appearance.theme"), { transition: false });
   } catch {
-    _accentTinting.setUserAccent(undefined); // first run
+    _accentTinting.setUserAccent(undefined, { transition: false }); // first run
   }
 
   _themedBuildsEnabled = !!(await window.desktopApi.getSetting("appearance.themedBuildPages"));

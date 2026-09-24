@@ -63,7 +63,11 @@ describe("profession tinting", () => {
 
   it("changing the accent behind a tint changes what is restored, not what shows", () => {
     const t = makeTinting({ themedBuildsEnabled: true });
-    t.setUserAccent("violet-purple");
+    // Mesmer's own accent is violet-purple (see PROFESSION_ACCENTS), so the
+    // user's own pick here is deliberately a different colour - otherwise
+    // the idempotency guard below would treat the tint as a no-op, since
+    // the "tint" would already be identical to what's showing.
+    t.setUserAccent("rose-pink");
     t.openBuild("Mesmer");
     t.setUserAccent("teal-ocean");
     expect(t.shown).toBe("violet-purple"); // the Mesmer tint, still showing
@@ -85,5 +89,60 @@ describe("profession tinting", () => {
     t.openBuild(undefined);
     expect(t.shown).toBe("rose-pink");
     expect(t.tinting).toBe(false);
+  });
+});
+
+// Fix round 1: applyProfessionAccentIfEnabled used to re-apply an
+// already-showing tint on every call (setProfession / navigateToPage can
+// call it repeatedly for the same profession), re-arming applyAccent's
+// crossfade timer each time. Tracked in the module against what applyAccent
+// last set, not read from the DOM.
+describe("applyProfessionAccentIfEnabled idempotency", () => {
+  it("does not re-apply an already-showing profession tint, but does apply on a profession change", () => {
+    const applyAccent = jest.fn((id) => id);
+    let profession = "Guardian";
+    const tinting = createAccentTinting({
+      applyAccent,
+      getProfession: () => profession,
+      isEnabled: () => true,
+    });
+
+    tinting.applyProfessionAccentIfEnabled();
+    tinting.applyProfessionAccentIfEnabled();
+    tinting.applyProfessionAccentIfEnabled();
+    expect(applyAccent).toHaveBeenCalledTimes(1);
+
+    profession = "Warrior";
+    tinting.applyProfessionAccentIfEnabled();
+    expect(applyAccent).toHaveBeenCalledTimes(2);
+  });
+});
+
+// Fix round 1: startup passes { transition: false } so the saved accent
+// doesn't crossfade against an unthemed first paint. Every other call site
+// keeps the default (transition: true).
+describe("setUserAccent transition option", () => {
+  it("forwards transition: false to applyAccent", () => {
+    const applyAccent = jest.fn((id) => id);
+    const tinting = createAccentTinting({
+      applyAccent,
+      getProfession: () => undefined,
+      isEnabled: () => false,
+    });
+
+    tinting.setUserAccent("rose-pink", { transition: false });
+    expect(applyAccent).toHaveBeenCalledWith("rose-pink", { transition: false });
+  });
+
+  it("forwards the default transition when omitted", () => {
+    const applyAccent = jest.fn((id) => id);
+    const tinting = createAccentTinting({
+      applyAccent,
+      getProfession: () => undefined,
+      isEnabled: () => false,
+    });
+
+    tinting.setUserAccent("rose-pink");
+    expect(applyAccent).toHaveBeenCalledWith("rose-pink", { transition: true });
   });
 });
