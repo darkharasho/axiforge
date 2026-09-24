@@ -479,67 +479,6 @@
   gap: 8px;
 }
 
-.settings-modal__theme-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 8px 8px;
-  background: var(--bg);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
-  font-family: inherit;
-}
-
-.settings-modal__theme-card:hover {
-  background: var(--panel);
-  border-color: var(--muted);
-}
-
-.settings-modal__theme-card--active {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.2);
-  background: rgba(var(--accent-rgb), 0.06);
-}
-
-.settings-modal__theme-swatches {
-  display: flex;
-  gap: 4px;
-}
-
-.settings-modal__theme-swatch {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.settings-modal__theme-label {
-  font-size: 0.66rem;
-  font-weight: 600;
-  color: var(--text-light);
-  text-align: center;
-  line-height: 1.2;
-}
-
-.settings-modal__theme-tag {
-  font-size: 0.56rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-dim);
-}
-
-.settings-modal__theme-card--active .settings-modal__theme-label {
-  color: var(--text);
-}
-
-.settings-modal__theme-card--active .settings-modal__theme-tag {
-  color: var(--accent);
-}
-
 /* ── Select ──────────────────────────────────────────────────────────── */
 
 .settings-modal__select {
