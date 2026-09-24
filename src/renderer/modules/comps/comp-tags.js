@@ -46,7 +46,7 @@ export function openCompTagPopover(anchor, { ids, onAddTags, onRemoveTags } = {}
   const onEvery = (tag) => selected.length > 0 && selected.every((c) => (c.tags || []).includes(tag));
 
   const popover = document.createElement("div");
-  popover.className = "comp-tag-popover";
+  popover.className = "axi-picker__pop axi-picker__pop--fixed comp-tag-popover";
   popover.innerHTML = `
     <div class="comp-tag-popover__header">Manage Tags</div>
     <div class="comp-tag-popover__list">
@@ -60,12 +60,14 @@ export function openCompTagPopover(anchor, { ids, onAddTags, onRemoveTags } = {}
       `).join("")}
     </div>
     <div class="comp-tag-popover__add">
-      <input type="text" placeholder="New tag…" class="comp-tag-popover__input" />
+      <input type="text" placeholder="New tag…" class="axi-input comp-tag-popover__input" />
       <button type="button" class="comp-tag-popover__add-btn">Add</button>
     </div>
   `;
 
-  popover.style.position = "fixed";
+  // Position comes from .axi-picker__pop--fixed on the element itself now;
+  // only the stacking order and the measure-then-place visibility dance stay
+  // script-driven.
   popover.style.zIndex = "9999";
   popover.style.visibility = "hidden";
   document.body.appendChild(popover);

@@ -78,8 +78,10 @@ export function isProfession(name) {
 
 /**
  * A `style` attribute body setting --axi-series, or "" for an unknown
- * profession so that the element inherits the accent instead of being
- * deliberately painted grey.
+ * profession so the element falls through to whatever neutral its own CSS
+ * rule names in --axi-series's fallback (most consumers use a dim/faint
+ * text colour; one nav-icon rule falls to the accent instead) rather than
+ * this helper guessing a colour on its behalf.
  * @param {unknown} name
  * @returns {string}
  */

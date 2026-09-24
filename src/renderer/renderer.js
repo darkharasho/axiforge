@@ -1298,9 +1298,9 @@ function renderCompsPanel() {
   const cards = comps.map((c) => {
     const name = escapeHtml(c.name || "Untitled Comp");
     const gmBadge = c.gameMode === "pve"
-      ? `<span class="comp-badge comp-badge--sm comp-badge--pve">PvE</span>`
+      ? `<span class="axi-chip comp-badge comp-badge--sm comp-badge--pve">PvE</span>`
       : c.gameMode === "wvw"
-        ? `<span class="comp-badge comp-badge--sm comp-badge--wvw">WvW</span>`
+        ? `<span class="axi-chip axi-chip--meta comp-badge comp-badge--sm comp-badge--wvw">WvW</span>`
         : "";
     const profIcons = _compTabProfIcons(c);
     const summary = _compTabPartySummary(c);

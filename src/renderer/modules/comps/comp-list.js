@@ -144,7 +144,7 @@ function renderToolbarTier1(searchVal, prefs) {
     <div class="comp-list-toolbar">
       <div class="comp-list-toolbar__left">
         <button type="button" id="comp-new-btn" class="axi-btn axi-btn--primary comp-list-toolbar__new-btn">+ New Comp</button>
-        <div class="comp-list-toolbar__search axi-search">
+        <div class="axi-search">
           <span class="axi-search__icon">${magnifyingGlassIcon}</span>
           <input type="search" id="comp-search-input" class="comp-list-toolbar__search-input axi-input"
             placeholder="Search comps\u2026" value="${searchVal}" autocomplete="off" />
@@ -187,7 +187,7 @@ function renderToolbarTier2(prefs, allTags) {
       <div class="comp-list-filters__left">
         <div class="comp-list-filters__group">
           <label class="comp-list-filters__label">MODE</label>
-          <select id="comp-filter-mode" class="axi-select comp-list-filters__select">
+          <select id="comp-filter-mode" class="axi-select">
             <option value="" ${gm === "" ? "selected" : ""}>All</option>
             <option value="pve" ${gm === "pve" ? "selected" : ""}>PvE</option>
             <option value="wvw" ${gm === "wvw" ? "selected" : ""}>WvW</option>
@@ -195,7 +195,7 @@ function renderToolbarTier2(prefs, allTags) {
         </div>
         <div class="comp-list-filters__group">
           <label class="comp-list-filters__label">STATUS</label>
-          <select id="comp-filter-status" class="axi-select comp-list-filters__select">
+          <select id="comp-filter-status" class="axi-select">
             <option value="" ${ps === "" ? "selected" : ""}>All</option>
             <option value="published" ${ps === "published" ? "selected" : ""}>Published</option>
             <option value="draft" ${ps === "draft" ? "selected" : ""}>Draft</option>
@@ -204,12 +204,12 @@ function renderToolbarTier2(prefs, allTags) {
         <div class="comp-list-filters__group">
           <label class="comp-list-filters__label">SORT</label>
           <div class="comp-list-filters__sort-row">
-            <select id="comp-sort-select" class="axi-select comp-list-filters__select">
+            <select id="comp-sort-select" class="axi-select">
               <option value="updatedAt" ${prefs.sortField === "updatedAt" ? "selected" : ""}>Last Updated</option>
               <option value="createdAt" ${prefs.sortField === "createdAt" ? "selected" : ""}>Date Created</option>
               <option value="name" ${prefs.sortField === "name" ? "selected" : ""}>Name</option>
             </select>
-            <button type="button" id="comp-sort-dir-btn" class="comp-list-filters__sort-dir" title="Toggle sort direction">
+            <button type="button" id="comp-sort-dir-btn" class="axi-btn comp-list-filters__sort-dir" title="Toggle sort direction">
               ${prefs.sortDirection === "asc" ? "\u2191" : "\u2193"}
             </button>
           </div>
@@ -240,10 +240,10 @@ function renderBulkBar() {
         <span class="comp-list-bulk-bar__count">${count} selected</span>
       </div>
       <div class="comp-list-bulk-bar__right">
-        <button type="button" class="comp-list-bulk-bar__btn" data-bulk-action="tag">Tag</button>
-        <button type="button" class="comp-list-bulk-bar__btn" data-bulk-action="export">Export</button>
-        <button type="button" class="comp-list-bulk-bar__btn comp-list-bulk-bar__btn--danger" data-bulk-action="delete">Delete</button>
-        <button type="button" class="comp-list-bulk-bar__btn comp-list-bulk-bar__btn--cancel" data-bulk-action="cancel">Cancel</button>
+        <button type="button" class="axi-btn axi-btn--ghost comp-list-bulk-bar__btn" data-bulk-action="tag">Tag</button>
+        <button type="button" class="axi-btn axi-btn--ghost comp-list-bulk-bar__btn" data-bulk-action="export">Export</button>
+        <button type="button" class="axi-btn axi-btn--ghost comp-list-bulk-bar__btn comp-list-bulk-bar__btn--danger" data-bulk-action="delete">Delete</button>
+        <button type="button" class="axi-btn axi-btn--ghost comp-list-bulk-bar__btn comp-list-bulk-bar__btn--cancel" data-bulk-action="cancel">Cancel</button>
       </div>
     </div>
   `;
@@ -258,19 +258,19 @@ function renderExpandedRow(comp) {
 
   // Game mode badge
   const gmBadge = comp.gameMode === "pve"
-    ? `<span class="comp-badge comp-badge--pve">PvE</span>`
+    ? `<span class="axi-chip comp-badge comp-badge--pve">PvE</span>`
     : comp.gameMode === "wvw"
-      ? `<span class="comp-badge comp-badge--wvw">WvW</span>`
+      ? `<span class="axi-chip axi-chip--meta comp-badge comp-badge--wvw">WvW</span>`
       : "";
 
   // Publish status badge
   const pubBadge = comp.publishedFileId
-    ? `<span class="comp-badge comp-badge--published">Published</span>`
-    : `<span class="comp-badge comp-badge--draft">Draft</span>`;
+    ? `<span class="axi-chip axi-chip--ok comp-badge comp-badge--published">Published</span>`
+    : `<span class="axi-chip comp-badge comp-badge--draft">Draft</span>`;
 
   // Shared badge
   const sharedBadge = _isCompShared(comp)
-    ? `<span class="comp-badge comp-badge--shared">Shared</span>`
+    ? `<span class="axi-chip axi-chip--accent comp-badge comp-badge--shared">Shared</span>`
     : "";
 
   // Relative timestamp
@@ -287,7 +287,7 @@ function renderExpandedRow(comp) {
 
   // Tags
   const tags = (comp.tags || [])
-    .map((t) => `<span class="comp-list-row__tag">${escapeHtml(t)}</span>`)
+    .map((t) => `<span class="axi-chip comp-list-row__tag">${escapeHtml(t)}</span>`)
     .join("");
 
   return `
@@ -321,17 +321,17 @@ function renderCompactRow(comp) {
   const selectedClass = _selectedIds.has(comp.id) ? " comp-list-row--selected" : "";
 
   const gmBadge = comp.gameMode === "pve"
-    ? `<span class="comp-badge comp-badge--pve comp-badge--sm">PvE</span>`
+    ? `<span class="axi-chip comp-badge comp-badge--pve comp-badge--sm">PvE</span>`
     : comp.gameMode === "wvw"
-      ? `<span class="comp-badge comp-badge--wvw comp-badge--sm">WvW</span>`
+      ? `<span class="axi-chip axi-chip--meta comp-badge comp-badge--wvw comp-badge--sm">WvW</span>`
       : "";
 
   const pubBadge = comp.publishedFileId
-    ? `<span class="comp-badge comp-badge--published comp-badge--sm">Published</span>`
-    : `<span class="comp-badge comp-badge--draft comp-badge--sm">Draft</span>`;
+    ? `<span class="axi-chip axi-chip--ok comp-badge comp-badge--published comp-badge--sm">Published</span>`
+    : `<span class="axi-chip comp-badge comp-badge--draft comp-badge--sm">Draft</span>`;
 
   const sharedBadge = _isCompShared(comp)
-    ? `<span class="comp-badge comp-badge--shared comp-badge--sm">Shared</span>`
+    ? `<span class="axi-chip axi-chip--accent comp-badge comp-badge--shared comp-badge--sm">Shared</span>`
     : "";
 
   const partySummary = getPartySummary(comp);
@@ -514,7 +514,7 @@ function renderEmptyState() {
       <div class="comp-list-empty">
         <div class="comp-list-empty__title">No comps match your filters</div>
         <div class="comp-list-empty__sub">Try adjusting your filters or search</div>
-        <button type="button" id="comp-clear-filters-btn" class="comp-list-empty__btn">Clear Filters</button>
+        <button type="button" id="comp-clear-filters-btn" class="axi-btn comp-list-empty__btn">Clear Filters</button>
       </div>
     `;
   }

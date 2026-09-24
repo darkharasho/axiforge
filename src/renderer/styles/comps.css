@@ -15,10 +15,9 @@
 /* ══ Comp List Toolbar — Tier 1 ═══════════════════════════════════════════ */
 /* Mirrors .lib-toolbar (library.css, Task 3): the package classes
    (.axi-search/.axi-search__icon/.axi-input, .axi-pill + aria-pressed) carry
-   the box, and only app-specific geometry — fixed icon-button sizes, the
-   search width, container layout — lives here, the same split
-   .lib-toolbar__search-input/.lib-toolbar__view-toggle/.lib-view-btn draw in
-   library.css. */
+   the whole box — .axi-pill sizes itself around an icon exactly like
+   .lib-view-btn does, with no fixed width/height of its own — so only
+   container layout and the search width live here. */
 
 .comp-list-toolbar {
   display: flex;
@@ -57,26 +56,10 @@
   max-width: 260px;
 }
 
-/* .axi-pill carries the box for both the filters toggle and the view
-   toggle; these only fix the icon-button geometry. */
-.comp-list-toolbar__filters-btn {
-  width: 30px;
-  height: 30px;
-  padding: 0;
-  justify-content: center;
-}
-
 .comp-list-toolbar__view-toggle {
   display: flex;
   align-items: center;
   gap: 4px;
-}
-
-.comp-list-toolbar__view-btn {
-  width: 30px;
-  height: 28px;
-  padding: 0;
-  justify-content: center;
 }
 
 /* ══ Comp List Toolbar — Tier 2 (Filters) ════════════════════════════════ */
@@ -128,24 +111,9 @@
   gap: 4px;
 }
 
+/* .axi-btn carries the box; this only sizes the ↑/↓ glyph. */
 .comp-list-filters__sort-dir {
-  all: unset;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border: var(--axi-border-control) solid var(--axi-ink-line);
-  color: var(--axi-text);
   font-size: 14px;
-  cursor: pointer;
-  background: var(--axi-ground);
-  transition: transform 0.1s, box-shadow 0.1s;
-}
-
-.comp-list-filters__sort-dir:hover {
-  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
-  transform: translate(-2px, -2px);
 }
 
 .comp-list-filters__tags {
@@ -199,22 +167,18 @@
   gap: 6px;
 }
 
+/* .axi-btn/.axi-btn--ghost carry the box; the accent-filled bar these sit on
+   is app context the package can't know about, so the resting/hover text
+   colour is overridden to stay legible on it, and the label keeps its
+   smaller, non-uppercase size to fit a compact bar. */
 .comp-list-bulk-bar__btn {
-  all: unset;
-  display: inline-flex;
-  align-items: center;
   padding: 4px 12px;
-  border: var(--axi-border-control) solid var(--axi-ink-line);
-  background: transparent;
-  color: var(--axi-accent-ink);
   font: var(--axi-t-small);
-  cursor: pointer;
-  transition: transform 0.1s, box-shadow 0.1s;
+  color: var(--axi-accent-ink);
 }
 
 .comp-list-bulk-bar__btn:hover {
-  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
-  transform: translate(-2px, -2px);
+  color: var(--axi-accent-ink);
 }
 
 .comp-list-bulk-bar__btn--danger {
@@ -222,16 +186,17 @@
   color: var(--axi-danger);
 }
 
-.comp-list-bulk-bar__btn--cancel {
-  border-color: transparent;
-  background: transparent;
-  color: var(--axi-accent-ink);
+.comp-list-bulk-bar__btn--danger:hover {
+  color: var(--axi-danger);
 }
 
-.comp-list-bulk-bar__btn--cancel:hover {
-  box-shadow: none;
-  transform: none;
-  color: var(--axi-ink-line);
+/* Cancel is still a control — it keeps the base .axi-btn hover lift (rule 4
+   case i: no resting block, hover gains one) and only drops its resting
+   border, so it reads as the quiet option next to Tag/Export/Delete rather
+   than as inert text. */
+.comp-list-bulk-bar__btn--cancel {
+  border-color: transparent;
+  color: var(--axi-accent-ink);
 }
 
 /* ══ Comp List Body ══════════════════════════════════════════════════════ */
@@ -259,7 +224,11 @@
 
 /* Selection is a fill, not a frame — an edge stripe would read as the row's
    own border (rule 5), and a fill stays legible when many rows are selected
-   at once, where a stripe would just be many coloured frames stacked. */
+   at once, where a stripe would just be many coloured frames stacked. The
+   row's own text children switch to the row's ink so they read against the
+   fill; .comp-badge--shared is the one status chip whose fill is the same
+   accent as the row, so on a selected row it switches to an outline in the
+   row's ink instead of disappearing into it. */
 .comp-list-row--selected,
 .comp-list-row--selected:hover {
   background: var(--axi-accent);
@@ -271,6 +240,12 @@
 .comp-list-row--selected .comp-list-row__summary,
 .comp-list-row--selected .comp-list-row__boon-pct {
   color: inherit;
+}
+
+.comp-list-row--selected .comp-badge--shared {
+  background: transparent;
+  border-color: var(--axi-accent-ink);
+  color: var(--axi-accent-ink);
 }
 
 /* Checkbox */
@@ -315,13 +290,11 @@
 /* Metadata separator on bottom line. Rule 7: the family bullet, at its
    metadata size. */
 .comp-list-row__sep {
-  display: inline-block;
   width: 5px;
   height: 5px;
   margin: 0 4px;
   transform: rotate(45deg);
   background: var(--axi-text-faint);
-  vertical-align: middle;
   flex-shrink: 0;
 }
 
@@ -344,14 +317,10 @@
   flex-shrink: 0;
 }
 
+/* .axi-chip carries the box; this is a neutral fact about the comp, not a
+   status, so it stays the unmodified chip. */
 .comp-list-row__tag {
-  display: inline-block;
   padding: 1px 8px;
-  font: var(--axi-t-micro);
-  letter-spacing: var(--axi-ls-micro);
-  color: var(--axi-accent);
-  background: transparent;
-  border: var(--axi-border-hairline) solid var(--axi-rule);
   white-space: nowrap;
 }
 
@@ -388,43 +357,23 @@
 
 /* ══ Badges (Game Mode + Publish Status) ════════════════════════════════ */
 /* Five badges, all built the same wrong way before this pass: an ink at 12%
-   over the ground inside the same ink at 30%. Rule 5 sorts them into two
-   groups: game mode annotates what a comp is for, so it outlines; published
-   and shared are states the comp is in, so they fill. Draft stays outlined
-   because draft is the absence of publication, and filling it would make
-   "not yet done" the loudest thing in the row. */
+   over the ground inside the same ink at 30%, and a hand-rolled shape where
+   .axi-chip already exists for exactly this — filled asserts, outlined
+   annotates (rule 5) — so these ride it rather than becoming a second chip.
+   Game mode annotates what a comp is for, so PvE/WvW take the unmodified
+   chip or --meta; published and shared are states the comp is in, so they
+   take --ok/--accent. Draft stays the unmodified (outlined) chip because
+   draft is the absence of publication, and filling it would make "not yet
+   done" the loudest thing in the row. */
 
 .comp-badge {
-  display: inline-flex;
-  align-items: center;
   padding: 1px 8px;
-  font: var(--axi-t-micro);
-  letter-spacing: var(--axi-ls-micro);
-  text-transform: uppercase;
   white-space: nowrap;
   flex-shrink: 0;
 }
 
 .comp-badge--sm {
   padding: 0 6px;
-}
-
-/* Annotations: what the comp is for. Outlined. */
-.comp-badge--pve,
-.comp-badge--wvw {
-  border: var(--axi-border-hairline) solid var(--axi-rule);
-  background: transparent;
-  color: var(--axi-text-dim);
-}
-.comp-badge--wvw { border-color: var(--axi-meta); color: var(--axi-meta); }
-
-/* Statuses: what state the comp is in. Filled. */
-.comp-badge--published { background: var(--axi-ok); color: var(--axi-accent-ink); }
-.comp-badge--shared { background: var(--axi-accent); color: var(--axi-accent-ink); }
-.comp-badge--draft {
-  border: var(--axi-border-hairline) solid var(--axi-rule);
-  background: transparent;
-  color: var(--axi-text-faint);
 }
 
 /* ══ Profession Icons Strip ═════════════════════════════════════════════ */
@@ -507,40 +456,25 @@
   max-width: 340px;
 }
 
+/* .axi-btn carries the box; this only sets the compact size and the top gap
+   under the empty-state copy. */
 .comp-list-empty__btn {
-  all: unset;
   margin-top: 8px;
   padding: 4px 14px;
-  font: var(--axi-t-label);
-  letter-spacing: var(--axi-ls-label);
-  text-transform: uppercase;
-  color: var(--axi-text-dim);
-  border: var(--axi-border-control) solid var(--axi-ink-line);
-  background: var(--axi-ground);
-  cursor: pointer;
-  transition: transform 0.1s, box-shadow 0.1s, color 0.1s;
-}
-
-.comp-list-empty__btn:hover {
-  color: var(--axi-text);
-  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
-  transform: translate(-2px, -2px);
 }
 
 /* ══ Tag Popover ════════════════════════════════════════════════════ */
-/* A raised surface: panel border plus the 6px offset block, no radius.
-   Positioned fixed from script when any ancestor clips — comp-tags.js
-   already sets position: fixed and left/top from a measured anchor, same
-   contract as .axi-picker__pop. */
+/* .axi-picker__pop / .axi-picker__pop--fixed carry the raised-surface box
+   (panel border, the 6px offset block, position: fixed) — comp-tags.js
+   appends this to <body> and sets left/top from a measured anchor, exactly
+   the contract --fixed is for. Only the popover's own measure differs from
+   a picker's trigger-width floor, so min-width/max-height/padding stay
+   local. */
 
 .comp-tag-popover {
-  background: var(--axi-surface-raised);
-  border: var(--axi-border-panel) solid var(--axi-ink-line);
-  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
   padding: 8px;
   min-width: 180px;
   max-height: 280px;
-  overflow-y: auto;
 }
 
 .comp-tag-popover__header {
@@ -587,18 +521,12 @@
   border-top: var(--axi-border-hairline) solid var(--axi-rule);
 }
 
+/* .axi-input carries the box; this is the compact height a popover row
+   needs instead of .axi-input's full form padding — the same override
+   .lib-inline-input makes on the same class in library.css. */
 .comp-tag-popover__input {
   flex: 1;
-  background: var(--axi-ground);
-  border: var(--axi-border-control) solid var(--axi-ink-line);
   padding: 3px 6px;
-  color: var(--axi-text);
-  font: var(--axi-t-small);
-  outline: none;
-}
-
-.comp-tag-popover__input:focus {
-  border-color: var(--axi-accent);
 }
 
 .comp-tag-popover__add-btn {
