@@ -372,10 +372,10 @@
    .axi-chip already exists for exactly this — filled asserts, outlined
    annotates (rule 5) — so these ride it rather than becoming a second chip.
    Game mode annotates what a comp is for, so PvE/WvW take the unmodified
-   chip or --meta; published and shared are states the comp is in, so they
-   take --ok/--accent. Draft stays the unmodified (outlined) chip because
-   draft is the absence of publication, and filling it would make "not yet
-   done" the loudest thing in the row. */
+   chip or --axi-meta; published and shared are states the comp is in, so
+   they take --axi-ok/--axi-accent. Draft stays the unmodified (outlined)
+   chip because draft is the absence of publication, and filling it would
+   make "not yet done" the loudest thing in the row. */
 
 .comp-badge {
   padding: 1px 8px;
