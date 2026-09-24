@@ -427,6 +427,21 @@ function _injectStyles() {
       box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
       font-weight: 600;
     }
+    /* This button carries both classes, and .hist-compare__restore's :hover is
+       case 1 (no resting block: translate plus a gained box-shadow). Confirm-
+       yes already rests on a block, so it needs case 3 instead -- deepen, no
+       translate -- or the two move together and the lower-right edge never
+       shifts, which is the "grows rather than lifts" failure rule 4 names.
+       Both classes are in the selector deliberately: on its own,
+       .hist-compare__confirm-yes:hover:not(:disabled) ties restore's hover at
+       (0,3,0) and wins only by sitting later in the file, so reordering these
+       rules would silently bring the bug back. Naming both makes it (0,4,0)
+       and the win independent of source order. */
+    .hist-compare__restore.hist-compare__confirm-yes:hover:not(:disabled) {
+      background: var(--axi-accent);
+      color: var(--axi-accent-ink);
+      box-shadow: var(--axi-offset-control-hover) var(--axi-offset-control-hover) 0 var(--axi-ink-line);
+    }
 
     /* The one thing an anchor is for. Harmless on the hidden anchor spans the
        mini card emits today; visible the moment a card renders a real element

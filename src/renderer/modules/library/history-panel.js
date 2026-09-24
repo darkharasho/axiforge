@@ -122,8 +122,8 @@ function _injectStyles() {
       position: absolute;
       left: 14px;
       top: 13px;
-      width: 11px;
-      height: 11px;
+      width: 12px;
+      height: 12px;
       flex: none;
       transform: rotate(45deg);
       background: var(--axi-ground);
