@@ -488,6 +488,19 @@ function bindPicker(root, { onSelect, group } = {}) {
     }
   };
 
+  // A --fixed popover is measured once at open and doesn't move with
+  // anything after that -- a native <select>'s popup is positioned by the
+  // OS, which is the whole reason the package stopped asking the OS to draw
+  // it, and once this owns the positioning it owns keeping it attached.
+  // Resize is rare and repositioning is cheap, so that one just recomputes.
+  // Scroll is common (the sidebar and the content pane both scroll behind
+  // this toolbar) and firing layout on every scroll tick would be wasteful,
+  // so a scroll closes the popover instead of chasing it. Both listeners are
+  // attached only while open and removed on close, matching the delegated
+  // click watcher below rather than accumulating one pair per render.
+  let onResize = null;
+  let onScroll = null;
+
   const setOpen = (open) => {
     if (open) closeOthers();
     btn.setAttribute("aria-expanded", String(open));
@@ -498,6 +511,19 @@ function bindPicker(root, { onSelect, group } = {}) {
       // first arrow press should step away from where you already are.
       const current = opts().find((o) => o.getAttribute("aria-selected") === "true");
       (current ?? opts()[0])?.focus();
+      if (isFixed) {
+        onResize = () => position();
+        onScroll = () => setOpen(false);
+        window.addEventListener("resize", onResize);
+        // capture: a scroll inside .lib-main (or the sidebar) doesn't bubble
+        // to window, so this has to hear it on the way down.
+        window.addEventListener("scroll", onScroll, { passive: true, capture: true });
+      }
+    } else if (isFixed) {
+      if (onResize) window.removeEventListener("resize", onResize);
+      if (onScroll) window.removeEventListener("scroll", onScroll, { capture: true });
+      onResize = null;
+      onScroll = null;
     }
   };
 
