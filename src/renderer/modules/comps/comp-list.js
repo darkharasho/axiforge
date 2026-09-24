@@ -8,6 +8,7 @@ import { getProfessionSvg } from "../profession-icons.js";
 import { getEliteSpecName, profClass } from "../build-helpers.js";
 import { computeCompPartyCoverage } from "./comp-boon-coverage.js";
 import { BOON_DISPLAY_ORDER } from "../constants.js";
+import { meterValue } from "./boon-indicator.js";
 import { openCompTagPopover, collectAllCompTags } from "./comp-tags.js";
 import { showToast } from "../library/toast.js";
 import { showChoiceModal } from "../choice-modal.js";
@@ -414,20 +415,16 @@ function getPartySummary(comp) {
 function renderBoonIndicator(compId) {
   const cached = _boonCache.get(compId);
   if (!cached) {
-    return `<span class="comp-list-row__boon" data-boon-id="${compId}"><span class="comp-list-row__boon-dot comp-list-row__boon-dot--none"></span><span class="comp-list-row__boon-pct">--</span></span>`;
+    return `<span class="comp-list-row__boon" data-boon-id="${compId}">
+      <span class="axi-meter" style="--axi-meter-v: 0%; --axi-meter-h: 10px"><span class="axi-meter__fill"></span></span>
+      <span class="comp-list-row__boon-pct">--</span>
+    </span>`;
   }
   const pct = cached.percentage;
-  let colorClass;
-  if (pct >= 80) colorClass = "comp-list-row__boon-dot--green";
-  else if (pct >= 50) colorClass = "comp-list-row__boon-dot--yellow";
-  else colorClass = "comp-list-row__boon-dot--red";
-
-  let textColor;
-  if (pct >= 80) textColor = "#4caf50";
-  else if (pct >= 50) textColor = "#ffc107";
-  else textColor = "#f44336";
-
-  return `<span class="comp-list-row__boon" data-boon-id="${compId}"><span class="comp-list-row__boon-dot ${colorClass}"></span><span class="comp-list-row__boon-pct" style="color:${textColor}">${pct}%</span></span>`;
+  return `<span class="comp-list-row__boon" data-boon-id="${compId}">
+    <span class="axi-meter" style="--axi-meter-h: 10px"><span class="axi-meter__fill" style="--axi-meter-v: ${meterValue(pct)}"></span></span>
+    <span class="comp-list-row__boon-pct">${meterValue(pct)}</span>
+  </span>`;
 }
 
 // ─── Boon Coverage Async Cache ───────────────────────────────────────────────
@@ -479,11 +476,7 @@ async function computeBoonCoverageAsync(comp) {
   if (el) {
     const cached2 = _boonCache.get(comp.id);
     const pct = cached2.percentage;
-    let dotClass, textColor;
-    if (pct >= 80) { dotClass = "comp-list-row__boon-dot--green"; textColor = "#4caf50"; }
-    else if (pct >= 50) { dotClass = "comp-list-row__boon-dot--yellow"; textColor = "#ffc107"; }
-    else { dotClass = "comp-list-row__boon-dot--red"; textColor = "#f44336"; }
-    el.innerHTML = `<span class="comp-list-row__boon-dot ${dotClass}"></span><span class="comp-list-row__boon-pct" style="color:${textColor}">${pct}%</span>`;
+    el.innerHTML = `<span class="axi-meter" style="--axi-meter-h: 10px"><span class="axi-meter__fill" style="--axi-meter-v: ${meterValue(pct)}"></span></span><span class="comp-list-row__boon-pct">${meterValue(pct)}</span>`;
   }
 }
 

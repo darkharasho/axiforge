@@ -545,29 +545,22 @@
 }
 
 /* ══ Boon Coverage Indicator ════════════════════════════════════════════ */
-
+/* Rule 9: coverage is a proportion, so it is a length. It used to be one of
+   three inks — green, yellow, red — which is a quantity drawn as intensity,
+   and at a glance down a list of comps the three were only distinguishable
+   from each other, never from "how much". */
 .comp-list-row__boon {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 7px;
   flex-shrink: 0;
 }
-
-.comp-list-row__boon-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.comp-list-row__boon-dot--green  { background: #4caf50; }
-.comp-list-row__boon-dot--yellow { background: #ffc107; }
-.comp-list-row__boon-dot--red    { background: #f44336; }
-.comp-list-row__boon-dot--none   { background: var(--line); }
-
+.comp-list-row__boon .axi-meter { width: 54px; }
 .comp-list-row__boon-pct {
-  font-size: 0.75rem;
-  font-weight: 600;
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
+  color: var(--axi-text-dim);
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
