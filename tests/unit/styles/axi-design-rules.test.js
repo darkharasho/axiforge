@@ -50,7 +50,6 @@ const APP_CSS = [
 // empty the conversion is done. bridge.css is deliberately absent from
 // APP_CSS: its whole job is to hold legacy names, and it is deleted in batch 5.
 const PENDING = [
-  "src/renderer/styles/cards.css",
   "src/renderer/styles/specializations.css",
   "src/renderer/styles/skills.css",
   "src/renderer/styles/detail-panel.css",
@@ -68,7 +67,6 @@ const PENDING = [
   "src/renderer/styles/settings-modal.css",
   "src/renderer/styles/professions-legacy.css",
   "src/renderer/styles/comps.css",
-  "src/renderer/styles/build-sources.css",
   "src/renderer/styles/forge-render-bridge.css",
   "src/web/web.css",
   "src/web/web-mobile.css",

@@ -14,18 +14,14 @@
   gap: 4px;
   flex: 0 0 auto;
   padding: 2px 7px;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text-dim);
-  font-size: 9.5px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  line-height: 1.5;
+  border: var(--axi-border-hairline) solid var(--axi-rule);
+  background: transparent;
+  color: var(--axi-text-faint);
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
   white-space: nowrap;
   cursor: pointer;
   user-select: none;
-  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
 }
 
 .src-chip svg {
@@ -36,27 +32,32 @@
 
 .src-chip:hover,
 .src-chip:focus-visible {
-  color: var(--text);
-  border-color: rgba(var(--accent-rgb), 0.5);
+  color: var(--axi-text);
+  border-color: var(--axi-rule);
   outline: none;
 }
 
 /* The two loud variants: a build sourced outside its comp's folder, and a build
- * pulled into a comp that lives somewhere else. Same signal, both directions. */
+ * pulled into a comp that lives somewhere else. Same signal, both directions.
+ * They outline rather than fill, because where a build came from annotates it
+ * and does not judge it (rule 5). */
 .src-chip--foreign,
 .src-chip--external {
-  background: rgba(var(--accent-rgb), 0.14);
-  border-color: rgba(var(--accent-rgb), 0.38);
-  color: var(--accent);
+  border-color: var(--axi-accent);
+  color: var(--axi-accent);
 }
 
+/* .src-chip:hover has the same specificity as .src-chip--foreign/--external,
+   so without naming both classes together the generic hover (which resets
+   border/color to the neutral ramp) would win on source order and erase the
+   accent on hover — the exact cascade trap the task brief calls out. */
 .src-chip--foreign:hover,
 .src-chip--external:hover,
 .src-chip--foreign:focus-visible,
 .src-chip--external:focus-visible {
-  background: rgba(var(--accent-rgb), 0.22);
-  border-color: rgba(var(--accent-rgb), 0.6);
-  color: var(--accent);
+  border-color: var(--axi-accent);
+  color: var(--axi-accent);
+  outline: none;
 }
 
 /* Compact chips are icon + number, so they need a tighter gap than the worded
@@ -75,8 +76,9 @@
 }
 
 /* Grid and icon cards float the chip in the card corner, where the pin star is
- * on the other side. */
-.lib-grid-card__header .src-chip,
+ * on the other side. .lib-grid-card__header no longer exists (batch 2/Task 5
+ * folded it into .af-tile__head); retargeted here. */
+.af-tile__head .src-chip,
 .lib-icon-item__label .src-chip {
   margin-left: auto;
 }
@@ -91,54 +93,59 @@
 }
 
 .src-external-count {
-  color: var(--accent);
+  color: var(--axi-accent);
   font-weight: 600;
 }
 
 /* A comp slot is a 42px icon box with no room for a chip, so the fact becomes a
- * corner dot. Small, but the only marker that fits at that size. .comp-slot has
- * no position of its own, so the marker needs one to anchor to. */
+ * corner mark. .comp-slot has no position of its own, so the marker needs one
+ * to anchor to. */
 .comp-slot--foreign {
   position: relative;
 }
 
+/* Rule 7's motif at its smallest: rotated, outlined in the ink line so it
+ * reads as a shape against whatever is behind it. */
 .comp-slot--foreign::after {
   content: "";
   position: absolute;
   top: 2px;
   right: 2px;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 0 1.5px var(--panel);
+  width: 7px;
+  height: 7px;
+  transform: rotate(45deg);
+  background: var(--axi-accent);
+  border: var(--axi-border-hairline) solid var(--axi-ink-line);
   pointer-events: none;
 }
 
-/* The way into the matrix, in the build pool header beside "+ Add". */
+/* The way into the matrix, in the build pool header beside "+ Add". An
+ * actionable trigger, not an annotation, so it takes the ordinary control
+ * treatment (rule 3/4 case i) rather than the chips' outline-only look. */
 .comp-pool-sources {
   display: inline-flex;
   align-items: center;
   gap: 5px;
   padding: 4px 9px;
-  border-radius: var(--radius-sm);
-  border: 1px solid rgba(var(--accent-rgb), 0.35);
-  background: rgba(var(--accent-rgb), 0.1);
-  color: var(--accent);
+  border: var(--axi-border-control) solid var(--axi-ink-line);
+  background: var(--axi-ground);
+  color: var(--axi-accent);
   font-size: 11px;
   font-weight: 600;
   cursor: pointer;
+  transition: transform .1s, box-shadow .1s;
 }
 
 .comp-pool-sources:hover {
-  background: rgba(var(--accent-rgb), 0.18);
-  border-color: rgba(var(--accent-rgb), 0.55);
+  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  transform: translate(-2px, -2px);
 }
 
+/* A real count, so it fills like .axi-badge-count. */
 .comp-pool-sources__count {
   padding: 0 5px;
-  border-radius: 999px;
-  background: rgba(var(--accent-rgb), 0.25);
+  background: var(--axi-accent);
+  color: var(--axi-accent-ink);
   font-size: 10px;
 }
 
@@ -148,7 +155,7 @@
   position: fixed;
   inset: 0;
   z-index: var(--z-modal-confirm);
-  background: var(--overlay);
+  background: var(--axi-scrim);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -168,10 +175,9 @@
   max-height: 80vh;
   display: flex;
   flex-direction: column;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-lg);
+  background: var(--axi-surface);
+  border: var(--axi-border-panel) solid var(--axi-ink-line);
+  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
   overflow: hidden;
 }
 
@@ -181,21 +187,21 @@
   justify-content: space-between;
   gap: 12px;
   padding: 14px 16px;
-  border-bottom: 1px solid var(--line);
-  background: var(--panel-2);
+  border-bottom: var(--axi-border-hairline) solid var(--axi-rule);
+  background: var(--axi-surface);
 }
 
 .bsm-title {
   margin: 0;
   font-size: 14px;
   font-weight: 600;
-  color: var(--text);
+  color: var(--axi-text);
 }
 
 .bsm-subtitle {
   margin-top: 2px;
   font-size: 11px;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
 }
 
 .bsm-tools {
@@ -209,17 +215,16 @@
   align-items: center;
   gap: 6px;
   padding: 5px 9px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--bg);
-  color: var(--text-light);
+  border: var(--axi-border-control) solid var(--axi-ink-line);
+  background: var(--axi-ground);
+  color: var(--axi-text-dim);
   font-size: 11px;
   cursor: pointer;
   user-select: none;
 }
 
 .bsm-toggle input {
-  accent-color: var(--accent);
+  accent-color: var(--axi-accent);
   cursor: pointer;
 }
 
@@ -229,15 +234,14 @@
   width: 24px;
   height: 24px;
   border: none;
-  border-radius: var(--radius-xs);
   background: transparent;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
   cursor: pointer;
 }
 
 .bsm-close:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--text);
+  background: var(--axi-surface-raised);
+  color: var(--axi-text);
 }
 
 .bsm-body {
@@ -246,7 +250,7 @@
 
 .bsm-empty,
 .bsm-none {
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
   font-size: 12px;
 }
 
@@ -256,6 +260,9 @@
   text-align: center;
 }
 
+/* Rule 8: rows are rules, never outlines/blocks. The panel around the table
+ * is the raised element; the header rule is the control weight so the head
+ * reads as a lid, and the row rules are the hairline. */
 .bsm-table {
   width: 100%;
   border-collapse: collapse;
@@ -267,9 +274,9 @@
   z-index: 1;
   padding: 9px 16px;
   text-align: left;
-  background: var(--panel-2);
-  border-bottom: 1px solid var(--line);
-  color: var(--text-dim);
+  background: var(--axi-surface);
+  border-bottom: var(--axi-border-control) solid var(--axi-rule);
+  color: var(--axi-text-faint);
   font-size: 9.5px;
   font-weight: 600;
   letter-spacing: 0.12em;
@@ -278,9 +285,9 @@
 
 .bsm-table td {
   padding: 10px 16px;
-  border-bottom: 1px solid var(--line-soft);
+  border-bottom: var(--axi-border-hairline) solid var(--axi-rule);
   font-size: 12px;
-  color: var(--text);
+  color: var(--axi-text);
   vertical-align: middle;
 }
 
@@ -289,13 +296,23 @@
 }
 
 .bsm-row:hover td {
-  background: rgba(255, 255, 255, 0.025);
+  background: var(--axi-surface-raised);
 }
 
 /* The one visual job of the matrix: make the outside-sourced rows findable
- * without reading a single cell. */
+ * without reading a single cell. A cap across the head of the cell, the same
+ * 3px-inset accent bar the library uses for a pinned tile (.af-tile--pinned),
+ * rather than the inset box-shadow stripe this used to be — a stripe down the
+ * cell's edge would read as the cell's own border. */
 .bsm-row--external td:first-child {
-  box-shadow: inset 3px 0 0 var(--accent);
+  position: relative;
+}
+.bsm-row--external td:first-child::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: var(--axi-accent);
 }
 
 .bsm-build {
@@ -310,8 +327,7 @@
   width: 26px;
   height: 26px;
   flex: 0 0 auto;
-  border-radius: var(--radius-sm);
-  background: var(--bg-2);
+  background: var(--axi-ground);
 }
 
 .bsm-icon svg {
@@ -321,29 +337,29 @@
 
 .bsm-path {
   font-size: 11.5px;
-  color: var(--accent);
+  color: var(--axi-accent);
 }
 
 .bsm-path--home {
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
 }
 
 .bsm-other {
   font-size: 11.5px;
-  color: var(--text-light);
+  color: var(--axi-text-dim);
 }
 
 /* ── Expanded row detail ───────────────────────────────────────────────────── */
 
 .bsm-detail-row td {
   padding: 0 16px 14px;
-  background: var(--bg-2);
+  background: var(--axi-ground);
 }
 
 .bsm-detail-row .bsm-detail {
   margin-left: 9px;
   padding: 10px 0 2px 14px;
-  border-left: 2px solid rgba(var(--accent-rgb), 0.35);
+  border-left: var(--axi-border-hairline) solid var(--axi-accent);
 }
 
 .bsm-detail {
@@ -352,7 +368,7 @@
 
 .bsm-detail-label {
   margin-bottom: 6px;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
   font-size: 9.5px;
   font-weight: 600;
   letter-spacing: 0.12em;
@@ -366,7 +382,7 @@
 
 .bsm-detail-home {
   font-size: 12px;
-  color: var(--accent);
+  color: var(--axi-accent);
 }
 
 .bsm-detail-comp {
@@ -374,20 +390,20 @@
   justify-content: space-between;
   gap: 16px;
   padding: 5px 0;
-  border-top: 1px solid var(--line-soft);
+  border-top: var(--axi-border-hairline) solid var(--axi-rule);
   font-size: 11.5px;
 }
 
 .bsm-detail-comp__name {
-  color: var(--text);
+  color: var(--axi-text);
 }
 
 .bsm-detail-comp__folder {
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
   text-align: right;
 }
 
 .bsm-detail-comp--self .bsm-detail-comp__name,
 .bsm-detail-comp--self .bsm-detail-comp__folder {
-  color: var(--accent);
+  color: var(--axi-accent);
 }

@@ -8,11 +8,14 @@
 }
 
 .pill {
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  padding: 5px 10px;
-  font-size: 0.8rem;
-  color: var(--text);
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border: var(--axi-border-hairline) solid var(--axi-rule);
+  color: var(--axi-text-dim);
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
+  text-transform: uppercase;
 }
 
 .mt-8 {
@@ -26,31 +29,29 @@
 }
 
 .status-card {
-  border: 1px solid var(--line-soft);
-  border-radius: 10px;
-  background: var(--surface);
-  padding: 10px;
+  padding: 12px;
+  background: var(--axi-surface);
+  border: var(--axi-border-panel) solid var(--axi-ink-line);
   overflow: hidden;
   overflow-wrap: break-word;
 }
 
-.status-card h3 {
-  margin: 0;
-  font-size: 0.9rem;
-}
+.status-card h3 { margin: 0; font: var(--axi-t-h3); letter-spacing: var(--axi-ls-h3); }
+.status-card p { margin: 5px 0 0; font: var(--axi-t-small); color: var(--axi-text-dim); }
 
-.status-card p {
-  margin: 5px 0 0;
-  font-size: 0.78rem;
-}
-
-.status-card--done {
-  border-color: rgba(var(--accent-rgb), 0.48);
-  background: rgba(var(--accent-rgb), 0.12);
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
+/* Done is a status, so it caps: a bar across the head, not a tinted box.
+   --axi-ok and not --axi-accent: "done" is a status the language has an ink
+   for, and the accent is the theme. */
+.status-card--done { position: relative; padding-top: 18px; }
+.status-card--done::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  background: var(--axi-ok);
+  border-bottom: var(--axi-border-panel) solid var(--axi-ink-line);
 }
 
 .section-head {
@@ -63,12 +64,13 @@
 .section-head p {
   margin: 0;
   font-size: 0.76rem;
+  color: var(--axi-text-dim);
 }
 
 
 .empty-line {
   margin: 0;
-  color: var(--muted);
+  color: var(--axi-text-faint);
   font-size: 0.85rem;
 }
 
@@ -87,16 +89,14 @@
   display: flex;
 }
 .title-input-group input {
-  border-radius: var(--radius) 0 0 var(--radius);
   border-right: none;
   flex: 1;
   min-width: 0;
 }
 .title-input-group__btn {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 0 var(--radius) var(--radius) 0;
-  color: var(--muted);
+  background: var(--axi-surface);
+  border: var(--axi-border-control) solid var(--axi-ink-line);
+  color: var(--axi-text-faint);
   padding: 0 10px;
   cursor: pointer;
   display: flex;
@@ -107,18 +107,20 @@
   transition: background 0.2s, color 0.2s, border-color 0.2s;
 }
 .title-input-group__btn:hover {
-  background: var(--line);
-  color: var(--text);
+  background: var(--axi-surface-raised);
+  color: var(--axi-text);
 }
+/* Success/error outline in the status ink with a transparent ground —
+   rule 2 forbids the tint this used to carry as a partial-opacity fill. */
 .title-input-group__btn--success {
-  border-color: var(--accent);
-  color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 10%, var(--panel));
+  border-color: var(--axi-ok);
+  color: var(--axi-ok);
+  background: transparent;
 }
 .title-input-group__btn--error {
-  border-color: var(--danger);
-  color: var(--danger);
-  background: color-mix(in srgb, var(--danger) 10%, var(--panel));
+  border-color: var(--axi-danger);
+  color: var(--axi-danger);
+  background: transparent;
 }
 
 /* ── Editor share dropdown ─────────────────────────────────────────────── */
@@ -140,18 +142,20 @@
   transform: rotate(180deg);
 }
 
+/* A picker-style popover: raised above the trigger's own ground, panel
+   weight border+block, the same treatment .axi-picker__pop and
+   .workspace-menu (buttons.css) already carry. */
 .editor-share-dropdown__menu {
   display: none;
   position: absolute;
   top: calc(100% + 4px);
   right: 0;
   min-width: 170px;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  padding: 4px 0;
+  background: var(--axi-surface-raised);
+  border: var(--axi-border-panel) solid var(--axi-ink-line);
+  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
+  padding: 4px;
   z-index: var(--z-menu);
-  box-shadow: var(--shadow-sm);
   animation: editor-share-menu-in 0.12s ease;
 }
 
@@ -164,44 +168,45 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* Same row treatment as .af-menu-item (app.css): the menu's own ground is
+   --axi-surface-raised, so hover steps down to --axi-ground to be visible. */
 .editor-share-dropdown__item {
   display: flex;
   align-items: center;
   gap: 8px;
   width: 100%;
-  padding: 6px 14px;
+  padding: 7px 10px;
   background: none;
   border: none;
-  color: var(--text-light);
-  font-size: 0.85rem;
-  font-family: inherit;
+  color: var(--axi-text-dim);
+  font: var(--axi-t-small);
   text-align: left;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 0.1s, color 0.1s;
 }
 
 .editor-share-dropdown__item:hover {
-  background: var(--hover-subtle);
+  background: var(--axi-ground);
+  color: var(--axi-text);
 }
 
 .editor-share-dropdown__item svg {
   width: 13px;
   height: 13px;
   flex-shrink: 0;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
 }
 
 .editor-share-dropdown__item--copied {
-  color: var(--accent);
+  color: var(--axi-ok);
 }
 
 .editor-share-dropdown__item--copied svg {
-  color: var(--accent);
+  color: var(--axi-ok);
 }
 
 .editor-share-dropdown__item--error {
-  color: var(--danger-text);
+  color: var(--axi-danger);
 }
 
 .editor-share-dropdown__item:disabled {
@@ -210,8 +215,8 @@
 }
 
 .editor-share-dropdown__divider {
-  height: 1px;
-  background: var(--line-soft);
+  height: var(--axi-border-hairline);
+  background: var(--axi-rule);
   margin: 2px 0;
 }
 
@@ -226,7 +231,7 @@
   font-size: 0.75rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--axi-text-faint);
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -238,31 +243,28 @@
 .build-code-group__input {
   flex: 1;
   min-width: 0;
-  background: var(--base);
-  border: 1px solid var(--line);
+  background: var(--axi-ground);
+  border: var(--axi-border-control) solid var(--axi-ink-line);
   border-right: none;
-  border-radius: var(--radius) 0 0 var(--radius);
-  color: var(--text);
-  font-family: 'IBM Plex Mono', monospace;
+  color: var(--axi-text);
+  font-family: var(--axi-mono);
   font-size: 0.8rem;
   padding: 5px 10px;
   cursor: text;
 }
 .build-code-group__input:focus {
   outline: none;
-  border-color: var(--accent);
+  border-color: var(--axi-accent);
 }
 .build-code-group__input::placeholder {
-  color: var(--muted);
-  font-family: 'DM Sans', sans-serif;
+  color: var(--axi-text-faint);
   font-style: italic;
   font-size: 0.75rem;
 }
 .build-code-group__btn {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 0 var(--radius) var(--radius) 0;
-  color: var(--muted);
+  background: var(--axi-surface);
+  border: var(--axi-border-control) solid var(--axi-ink-line);
+  color: var(--axi-text-faint);
   padding: 0 10px;
   cursor: pointer;
   display: flex;
@@ -273,17 +275,18 @@
   transition: background 0.2s, color 0.2s, border-color 0.2s;
 }
 .build-code-group__btn:hover:not(:disabled) {
-  background: var(--line);
-  color: var(--text);
+  background: var(--axi-surface-raised);
+  color: var(--axi-text);
 }
 .build-code-group__btn:disabled {
   opacity: 0.4;
   cursor: default;
 }
+/* Same status treatment as the title's success/error above. */
 .build-code-group__btn--copied {
-  border-color: var(--accent);
-  color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 10%, var(--panel));
+  border-color: var(--axi-ok);
+  color: var(--axi-ok);
+  background: transparent;
 }
 
 label {
@@ -292,7 +295,7 @@ label {
   font-size: 0.75rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--axi-text-faint);
 }
 
 .toolbar-actions {
@@ -312,52 +315,35 @@ label {
   gap: 8px;
   position: relative;
   font-size: 0.72rem;
-  color: var(--muted);
+  color: var(--axi-text-faint);
 }
 
 /* Dismiss × */
 .publish-status__dismiss {
   background: none;
   border: none;
-  color: var(--muted);
+  color: var(--axi-text-faint);
   cursor: pointer;
   font-size: 0.82rem;
   line-height: 1;
   padding: 0 2px;
   flex-shrink: 0;
 }
-.publish-status__dismiss:hover { color: var(--text); }
+.publish-status__dismiss:hover { color: var(--axi-text); }
 
 /* Ticker window — 3 visible rows */
 .publish-ticker {
   --ticker-row-h: 20px;
   height: calc(var(--ticker-row-h) * 3);
   overflow: hidden;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--surface);
+  border: var(--axi-border-control) solid var(--axi-ink-line);
+  background: var(--axi-surface);
   padding: 0 10px;
   min-width: 180px;
   position: relative;
-  /* top/bottom fade edges like a mechanical counter window */
-  mask-image: linear-gradient(
-    to bottom,
-    transparent 0%,
-    rgba(0,0,0,0.4) 15%,
-    black 33%,
-    black 67%,
-    rgba(0,0,0,0.4) 85%,
-    transparent 100%
-  );
-  -webkit-mask-image: linear-gradient(
-    to bottom,
-    transparent 0%,
-    rgba(0,0,0,0.4) 15%,
-    black 33%,
-    black 67%,
-    rgba(0,0,0,0.4) 85%,
-    transparent 100%
-  );
+  /* The top/bottom fade-edge mask this used to carry was a gradient, which
+     rule 1 forbids outright in app CSS (no shape exemption applies to an
+     alpha mask). Dropped: the window now hard-clips instead of fading. */
 }
 
 /* The scrolling strip */
@@ -383,23 +369,23 @@ label {
 }
 
 .publish-ticker__row--pending {
-  color: var(--muted);
+  color: var(--axi-text-faint);
   opacity: 0.4;
 }
 
 .publish-ticker__row--active {
-  color: var(--accent);
+  color: var(--axi-accent);
   opacity: 1;
   font-weight: 600;
 }
 
 .publish-ticker__row--done {
-  color: var(--accent);
+  color: var(--axi-accent);
   opacity: 0.7;
 }
 
 .publish-ticker__row--error {
-  color: var(--danger);
+  color: var(--axi-danger);
   opacity: 1;
 }
 
@@ -410,18 +396,24 @@ label {
   font-size: 0.65rem;
 }
 
+/* A rotating hairline ring, capped in the accent — rule 11's compositor-only
+   contract (transform) and no radius, so it reads as an outlined square in
+   motion rather than a circle. */
 .publish-ticker__spinner {
   display: inline-block;
   width: 10px;
   height: 10px;
-  border: 1.5px solid rgba(var(--accent-rgb), 0.3);
-  border-top-color: var(--accent);
-  border-radius: 50%;
+  border: var(--axi-border-hairline) solid var(--axi-rule);
+  border-top-color: var(--axi-accent);
   animation: spin 0.8s linear infinite;
 }
 
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 .publish-ticker__error {
-  color: var(--danger);
+  color: var(--axi-danger);
   font-size: 0.68rem;
   font-weight: 400;
 }
@@ -445,7 +437,7 @@ label {
 }
 
 .publish-result__label {
-  color: var(--accent);
+  color: var(--axi-accent);
   font-weight: 600;
   font-size: 0.72rem;
   flex-shrink: 0;
@@ -454,17 +446,16 @@ label {
 .publish-result__url {
   min-width: 80px;
   max-width: 200px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-xs);
-  background: var(--bg);
-  color: var(--accent);
+  border: var(--axi-border-control) solid var(--axi-ink-line);
+  background: var(--axi-ground);
+  color: var(--axi-accent);
   padding: 2px 6px;
   font-size: 0.68rem;
-  font-family: monospace;
+  font-family: var(--axi-mono);
   cursor: text;
   outline: none;
 }
-.publish-result__url:focus { border-color: var(--accent); }
+.publish-result__url:focus { border-color: var(--axi-accent); }
 
 .publish-result__copy,
 .publish-result__preview {
@@ -476,7 +467,12 @@ label {
 
 .publish-result__live-status {
   font-size: 0.68rem;
-  color: var(--muted);
+  color: var(--axi-text-faint);
   flex-shrink: 0;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .publish-ticker__strip { transition: none; }
+  .publish-ticker__spinner { animation: none; }
+  .editor-share-dropdown__menu { animation: none; }
+}
