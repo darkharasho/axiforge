@@ -148,7 +148,7 @@ function renderToolbarTier1(searchVal, prefs) {
   return `
     <div class="comp-list-toolbar">
       <div class="comp-list-toolbar__left">
-        <button type="button" id="comp-new-btn" class="btn btn-primary comp-list-toolbar__new-btn">+ New Comp</button>
+        <button type="button" id="comp-new-btn" class="axi-btn axi-btn--primary comp-list-toolbar__new-btn">+ New Comp</button>
         <div class="comp-list-toolbar__search">
           <input type="search" id="comp-search-input" class="comp-list-toolbar__search-input"
             placeholder="Search comps\u2026" value="${searchVal}" autocomplete="off" />
@@ -536,7 +536,7 @@ function renderEmptyState() {
     <div class="comp-list-empty">
       <div class="comp-list-empty__title">No compositions yet</div>
       <div class="comp-list-empty__sub">Create your first comp to organize builds into party groups</div>
-      <button type="button" id="comp-empty-new-btn" class="btn btn-primary comp-list-toolbar__new-btn">+ New Comp</button>
+      <button type="button" id="comp-empty-new-btn" class="axi-btn axi-btn--primary comp-list-toolbar__new-btn">+ New Comp</button>
     </div>
   `;
 }

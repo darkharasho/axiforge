@@ -145,3 +145,66 @@ a { color: var(--axi-accent); }
   flex: none;
   border: var(--axi-border-hairline) solid var(--axi-ink-line);
 }
+
+/* --- buttons off the package's palette --- */
+
+/* Danger is a status, so it is a solid fill, not a tinted outline (rule 5). */
+.af-btn--danger {
+  background: var(--axi-danger);
+  color: var(--axi-accent-ink);
+}
+
+/* The dev-only local/mobile preview buttons on a publish result. This is
+   commentary about the build - where you can go to look at it - not a verdict
+   on it, so it is outlined in the cool meta ink rather than filled (rules 5
+   and 6). --axi-meta is the one ink guaranteed never to mean a status. */
+.af-btn--dev {
+  border-color: var(--axi-meta);
+  color: var(--axi-meta);
+}
+
+/* --- workspace menu rows (formerly .ws-menu-item* / .ws-menu-sep) --- */
+
+.af-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 10px;
+  border: 0;
+  background: transparent;
+  color: var(--axi-text-dim);
+  cursor: pointer;
+  text-align: left;
+  font: var(--axi-t-small);
+}
+/* The menu's own ground is --axi-surface-raised, so hover has to step DOWN to
+   the ground to be visible (the package's .axi-menu__pop pattern). */
+.af-menu-item:hover { background: var(--axi-ground); color: var(--axi-text); }
+
+/* Icon box + label: the markup still emits these (render-pages.js) even
+   though the brief's replacement block omitted them. */
+.af-menu-item__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--axi-text-dim);
+}
+.af-menu-item__label {
+  flex: 1;
+  min-width: 0;
+}
+
+.af-menu-item--danger { color: var(--axi-danger); }
+.af-menu-item--danger .af-menu-item__icon { color: var(--axi-danger); }
+.af-menu-item--danger:hover { background: var(--axi-danger); color: var(--axi-accent-ink); }
+
+.af-menu-item--primary { color: var(--axi-accent); }
+.af-menu-item--primary .af-menu-item__icon { color: var(--axi-accent); }
+.af-menu-item--primary:hover { background: var(--axi-accent); color: var(--axi-accent-ink); }
+
+.af-menu-item:disabled { color: var(--axi-text-faint); cursor: default; }
+.af-menu-sep { height: var(--axi-border-hairline); background: var(--axi-rule); margin: 4px 8px; }

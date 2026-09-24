@@ -104,7 +104,7 @@ export function renderToolbar() {
         ${renderViewToggle(prefs.viewMode)}
       </div>
       <div class="lib-import-dropdown" id="lib-import-dropdown">
-        <button type="button" id="lib-import-btn" class="btn lib-toolbar__new-btn lib-import-dropdown__trigger"${writeAttrs}>
+        <button type="button" id="lib-import-btn" class="axi-btn lib-toolbar__new-btn lib-import-dropdown__trigger"${writeAttrs}>
           ${arrowDownTrayIcon} Import
         </button>
         <div class="lib-import-dropdown__menu" id="lib-import-menu">
@@ -127,7 +127,7 @@ export function renderToolbar() {
         </div>
       </div>
       <div class="lib-import-dropdown" id="lib-export-dropdown">
-        <button type="button" id="lib-export-btn" class="btn lib-toolbar__new-btn lib-import-dropdown__trigger">
+        <button type="button" id="lib-export-btn" class="axi-btn lib-toolbar__new-btn lib-import-dropdown__trigger">
           ${arrowUpTrayIcon} Export
         </button>
         <div class="lib-import-dropdown__menu" id="lib-export-menu">
@@ -137,7 +137,7 @@ export function renderToolbar() {
         </div>
       </div>
       <div class="lib-import-dropdown" id="lib-new-dropdown">
-        <button type="button" id="lib-new-btn" class="btn btn-primary lib-toolbar__new-btn lib-import-dropdown__trigger"${writeAttrs}>
+        <button type="button" id="lib-new-btn" class="axi-btn axi-btn--primary lib-toolbar__new-btn lib-import-dropdown__trigger"${writeAttrs}>
           ${plusIcon} New
         </button>
         <div class="lib-import-dropdown__menu" id="lib-new-menu">

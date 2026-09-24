@@ -462,7 +462,7 @@ export function renderCompDetail() {
         <span class="comp-detail__spacer"></span>
         <span class="comp-detail__save-status" id="compSaveStatus"></span>
         <div class="comp-share-dropdown">
-          <button type="button" class="btn btn-secondary comp-share-dropdown__trigger" data-action="share-toggle">
+          <button type="button" class="axi-btn axi-btn--ghost comp-share-dropdown__trigger" data-action="share-toggle">
             Share ${chevronDownIcon}
           </button>
           <div class="comp-share-dropdown__menu">
@@ -481,7 +481,7 @@ export function renderCompDetail() {
             </button>
           </div>
         </div>
-        <button type="button" class="btn btn-primary" data-action="publish">Publish</button>
+        <button type="button" class="axi-btn axi-btn--primary" data-action="publish">Publish</button>
         <div class="publish-status" id="compPublishStatus"></div>
         <span class="comp-detail__discord-status" id="compDiscordStatus"></span>
         <span class="comp-detail__slot-counter">${totalCap} / 50 slots</span>

@@ -2,8 +2,8 @@
 /* Workspace menu */
 .titlebar__workspace-btn {
   background: transparent;
-  border: none;
-  color: var(--text-dim);
+  border: 0;
+  color: var(--axi-text-dim);
   cursor: pointer;
   padding: 0 10px;
   height: 40px;
@@ -15,14 +15,12 @@
 
 .titlebar__workspace-btn:hover,
 .titlebar__workspace-btn--active {
-  color: var(--accent);
+  color: var(--axi-accent);
 }
 
 .titlebar__user {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  white-space: nowrap;
+  font: var(--axi-t-small);
+  letter-spacing: var(--axi-ls-label);
 }
 
 .workspace-menu {
@@ -30,24 +28,23 @@
   top: 40px;
   right: 8px;
   z-index: var(--z-menu);
-  background: var(--panel-gradient);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
+  background: var(--axi-surface-raised);
+  border: var(--axi-border-panel) solid var(--axi-ink-line);
+  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
   padding: 4px;
   width: 240px;
   display: flex;
   flex-direction: column;
   gap: 0;
-  box-shadow: var(--shadow-md);
 }
 
 .workspace-menu__user {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-light);
+  font: var(--axi-t-label);
+  letter-spacing: var(--axi-ls-label);
+  color: var(--axi-text);
   padding: 8px 10px;
 }
 
@@ -55,84 +52,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-dim);
+  color: var(--axi-text-dim);
   flex-shrink: 0;
 }
 
-/* ─── Menu items ─── */
-.ws-menu-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 7px 10px;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--text-light);
-  font-size: 12px;
-  cursor: pointer;
-  text-align: left;
-  transition: background 0.1s;
-}
-
-.ws-menu-item:hover {
-  background: var(--hover-subtle);
-}
-
-.ws-menu-item__icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  flex-shrink: 0;
-  color: var(--text-dim);
-}
-
-.ws-menu-item__label {
-  flex: 1;
-  min-width: 0;
-}
-
-.ws-menu-item--danger {
-  color: var(--danger-text);
-}
-
-.ws-menu-item--danger .ws-menu-item__icon {
-  color: var(--danger-text);
-}
-
-.ws-menu-item--danger:hover {
-  background: rgba(200, 30, 30, 0.15);
-}
-
-.ws-menu-item--primary {
-  color: var(--accent);
-}
-
-.ws-menu-item--primary .ws-menu-item__icon {
-  color: var(--accent);
-}
-
-.ws-menu-item--primary:hover {
-  background: var(--hover-accent);
-}
-
-.ws-menu-sep {
-  height: 1px;
-  background: var(--line);
-  margin: 4px 8px;
-}
-
-/* Legacy .btn-danger (used elsewhere) */
-.btn-danger {
-  color: var(--danger-text);
-  background: rgba(197, 72, 95, 0.15);
-  border-color: rgba(197, 72, 95, 0.4);
-}
-
-.btn-danger:hover {
-  background: rgba(197, 72, 95, 0.25);
-  border-color: var(--danger);
-}
+/* .af-menu-item / .af-menu-sep (the former .ws-menu-item* / .ws-menu-sep)
+   live in app.css alongside the other af-btn* rules. */
