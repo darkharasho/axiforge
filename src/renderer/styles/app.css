@@ -1,0 +1,108 @@
+/* AxiForge app layer over @axiapps/axi-design (imported first in renderer.js).
+   Window plumbing, the z-index scale the app's own JS reads, and the shapes
+   shared across screens. No colour literals: every colour is a token. */
+
+/* --- layout constants the app's JS and partials both read --- */
+:root {
+  /* The fixed titlebar's height. Everything below it is positioned against
+     this; it was written by hand in five places once, as 42px in two of them
+     and 40px in the other three, which let the page scroll 2px and slide the
+     left nav under the titlebar. One name, one value. */
+  --af-titlebar-h: 42px;
+
+  --z-sticky: 10;
+  --z-titlebar: 50;
+  --z-dropdown: 90;
+  --z-autocomplete: 100;
+  --z-tooltip: 120;
+  --z-menu: 200;
+  --z-modal: 1000;
+  --z-modal-confirm: 1100;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--axi-ground);
+  color: var(--axi-text);
+  font: var(--axi-t-body);
+}
+
+/* Clear the fixed titlebar with PADDING, not a margin on the first child: an
+   adjoining top margin collapses out through a parent with no top padding or
+   border, so it would land on <body>, make <html> taller than the viewport
+   and let the whole document scroll under the titlebar. */
+body { padding-top: var(--af-titlebar-h); }
+
+a { color: var(--axi-accent); }
+
+.app-drag { -webkit-app-region: drag; }
+.no-drag, .no-drag * { -webkit-app-region: no-drag; }
+.hidden { display: none !important; }
+
+/* --- scrollbars --- */
+
+* { scrollbar-width: thin; scrollbar-color: var(--axi-rule) transparent; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--axi-ground); }
+::-webkit-scrollbar-thumb {
+  background: var(--axi-surface-raised);
+  border: var(--axi-border-hairline) solid var(--axi-ink-line);
+}
+::-webkit-scrollbar-thumb:hover { background: var(--axi-rule); }
+
+/* --- the background wordmark ---
+   Replaces the animated radial-gradient wash base.css used to draw: a
+   gradient across the ground at partial opacity broke rules 1 and 2 at once.
+   AxiAM's .am-mark pattern instead — one static, solid surface-ink shape
+   punched through a mask, which costs nothing to composite and says the same
+   thing. */
+.af-mark {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--axi-surface);
+  -webkit-mask: url("./svg/axiforge-glyph.svg") no-repeat center 55% / 130%;
+  mask: url("./svg/axiforge-glyph.svg") no-repeat center 55% / 130%;
+}
+
+/* --- status --- */
+
+.af-dot {
+  width: 9px;
+  height: 9px;
+  display: inline-block;
+  border: var(--axi-border-hairline) solid var(--axi-ink-line);
+}
+.af-dot--ok { background: var(--axi-ok); }
+.af-dot--warn { background: var(--axi-warn); }
+.af-dot--danger { background: var(--axi-danger); }
+.af-dot--idle { background: var(--axi-surface-raised); }
+
+/* --- work indicator ---
+   Compositor-only (rule 11). These report on a save, a publish or a sync, all
+   of which can block the main thread; anything animated by layout or paint
+   would freeze exactly when it most needs to look alive. */
+@keyframes af-work { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
+.af-work { animation: af-work 1.1s ease-in-out infinite; }
+
+/* --- accent crossfade, toggled by applyAccent() for 500ms --- */
+
+.theme-transitioning *,
+.theme-transitioning *::before,
+.theme-transitioning *::after {
+  transition: background-color .4s ease, border-color .4s ease,
+    color .2s ease, box-shadow .4s ease, outline-color .4s ease !important;
+}
+
+/* --- reduced motion: kill every loop; state stays legible in the chips --- */
+
+@media (prefers-reduced-motion: reduce) {
+  .af-work { animation: none; }
+  .theme-transitioning *,
+  .theme-transitioning *::before,
+  .theme-transitioning *::after { transition: none !important; }
+}

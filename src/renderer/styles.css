@@ -1,6 +1,7 @@
-/* AxiForge — styles entry point */
-@import "./styles/base.css";
-@import "./styles/themes.css";
+/* AxiForge — styles entry point.
+   @axiapps/axi-design is imported ahead of this file from renderer.js. */
+@import "./styles/app.css";
+@import "./styles/bridge.css";
 @import "./styles/layout.css";
 @import "./styles/buttons.css";
 @import "./styles/forms.css";

@@ -9,9 +9,6 @@ const ROOT = path.join(__dirname, "..", "..", "..");
 // is the one file in the system allowed to hold a colour literal.
 const APP_CSS = [
   "src/renderer/styles/app.css",
-  // Deleted by Task 3, which removes these two lines with them.
-  "src/renderer/styles/base.css",
-  "src/renderer/styles/themes.css",
   "src/renderer/styles/layout.css",
   "src/renderer/styles/buttons.css",
   "src/renderer/styles/forms.css",
@@ -47,11 +44,6 @@ const APP_CSS = [
 // empty the conversion is done. bridge.css is deliberately absent from
 // APP_CSS: its whole job is to hold legacy names, and it is deleted in batch 5.
 const PENDING = [
-  // app.css does not exist until Task 3, which removes this line; base.css
-  // and themes.css are deleted by the same task, which removes theirs.
-  "src/renderer/styles/app.css",
-  "src/renderer/styles/base.css",
-  "src/renderer/styles/themes.css",
   "src/renderer/styles/cards.css",
   "src/renderer/styles/specializations.css",
   "src/renderer/styles/skills.css",
