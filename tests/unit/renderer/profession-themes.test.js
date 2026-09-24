@@ -1,21 +1,18 @@
 "use strict";
 
-const { PROFESSION_THEMES, PROFESSION_WEIGHT } = require("../../../src/renderer/modules/constants.js");
+// The profession map's contract now lives in accents.test.js, which owns both
+// the map and the legacy ids it has to stay consistent with. This file keeps
+// only the one thing it uniquely covered: that constants.js - where the app's
+// callers look - exposes the same map, so the re-export cannot silently rot.
+const constants = require("../../../src/renderer/modules/constants.js");
+const accents = require("../../../src/renderer/modules/accents.js");
 
-describe("PROFESSION_THEMES", () => {
-  it("maps every profession in PROFESSION_WEIGHT to a prof-* theme ID", () => {
-    for (const profession of Object.keys(PROFESSION_WEIGHT)) {
-      expect(PROFESSION_THEMES).toHaveProperty(profession);
-      expect(PROFESSION_THEMES[profession]).toMatch(/^prof-/);
-    }
+describe("constants re-exports the profession accent map", () => {
+  it("exposes PROFESSION_ACCENTS", () => {
+    expect(constants.PROFESSION_ACCENTS).toBe(accents.PROFESSION_ACCENTS);
   });
 
-  it("has exactly 9 entries", () => {
-    expect(Object.keys(PROFESSION_THEMES)).toHaveLength(9);
-  });
-
-  it("has unique theme IDs", () => {
-    const ids = Object.values(PROFESSION_THEMES);
-    expect(new Set(ids).size).toBe(ids.length);
+  it("no longer exposes the removed PROFESSION_THEMES", () => {
+    expect(constants.PROFESSION_THEMES).toBeUndefined();
   });
 });

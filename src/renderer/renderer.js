@@ -69,7 +69,7 @@ import { compsContainingBuild } from "./modules/comps/comp-membership.js";
 import { getProfessionSvg } from "./modules/profession-icons.js";
 import { getEliteSpecName, profClass } from "./modules/build-helpers.js";
 import { renderMiniBuildCard } from "./modules/mini-build-card.js";
-import { PROFESSION_THEMES } from "./modules/constants.js";
+import { PROFESSION_ACCENTS } from "./modules/constants.js";
 
 // Scope class for @axiapps/forge-render styles (mini cards, role badges, hover previews).
 document.body.classList.add("forge-render");
@@ -1180,7 +1180,7 @@ function applyThemeWithTransition(themeId) {
 function applyProfessionThemeIfEnabled() {
   if (!_themedBuildsEnabled) return;
   const profession = state.editor?.profession;
-  const profTheme = profession ? PROFESSION_THEMES[profession] : null;
+  const profTheme = profession ? PROFESSION_ACCENTS[profession] : null;
   if (!profTheme) return;
   const current = document.documentElement.getAttribute("data-theme") || "";
   if (current === profTheme) return;
