@@ -61,7 +61,7 @@ export function openCompTagPopover(anchor, { ids, onAddTags, onRemoveTags } = {}
     </div>
     <div class="comp-tag-popover__add">
       <input type="text" placeholder="New tag…" class="axi-input comp-tag-popover__input" />
-      <button type="button" class="comp-tag-popover__add-btn">Add</button>
+      <button type="button" class="axi-btn axi-btn--primary comp-tag-popover__add-btn">Add</button>
     </div>
   `;
 

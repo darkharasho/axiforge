@@ -529,21 +529,14 @@
   padding: 3px 6px;
 }
 
+/* .axi-btn/.axi-btn--primary carry the box, including the rule-4 case-iii
+   hover (rests on a block, deepens it, no translate); this is the compact
+   size and micro type a popover row needs instead of .axi-btn's full form
+   padding/label size. */
 .comp-tag-popover__add-btn {
-  all: unset;
   padding: 3px 8px;
   font: var(--axi-t-micro);
   letter-spacing: var(--axi-ls-micro);
-  text-transform: uppercase;
-  color: var(--axi-accent-ink);
-  background: var(--axi-accent);
-  cursor: pointer;
-  transition: transform 0.1s, box-shadow 0.1s;
-}
-
-.comp-tag-popover__add-btn:hover {
-  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
-  transform: translate(-2px, -2px);
 }
 
 /* ═══════════════════════════════════════════════════════════════════
