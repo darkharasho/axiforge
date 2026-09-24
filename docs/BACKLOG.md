@@ -813,3 +813,18 @@ chrome; none of this can be checked from a test):
     outlines, and both mean "this is the current page" — which under rule 5
     (filled = status, outlined = annotation) say different things. Every later
     batch copies whichever answer stands.
+12. *Decision:* the publish ticker's window used a `mask-image` gradient to fade
+    its top and bottom edges. Rule 1 forbids gradients unconditionally, and the
+    gate's scanner reads an alpha mask the same as a painted one, so it is gone
+    and the window hard-clips (`cards.css:344-346` carries the note). A hard clip
+    is arguably more in-language than a fade was — confirm at the running app
+    that the clipped rows read as intentional and not as a cut-off bug.
+13. *Decision:* `.publish-ticker__spinner` was a circle by `border-radius: 50%`,
+    which rule 3 forbids along with every other rounding. The first conversion
+    made it a rotating square; task review pointed out `app.css:80-96` already
+    ships a work indicator (`.af-dot` + `.af-work`, a compositor-only opacity
+    pulse, already reduced-motion gated), so the bespoke shape is gone and both
+    ticker sites now emit `af-dot af-dot--idle af-work`. Check that a pulsing
+    9px square reads as "working" in the publish ticker as clearly as a spinner
+    did — it is the same primitive the rest of the app uses, but this is the
+    first place it stands in for a spinner rather than a status light.

@@ -111,13 +111,17 @@
   color: var(--axi-text);
 }
 /* Success/error outline in the status ink with a transparent ground —
-   rule 2 forbids the tint this used to carry as a partial-opacity fill. */
-.title-input-group__btn--success {
+   rule 2 forbids the tint this used to carry as a partial-opacity fill. Both
+   name :hover for the same reason the share dropdown's statuses do: the
+   generic hover is (0,2,0) and would otherwise win. */
+.title-input-group__btn--success,
+.title-input-group__btn--success:hover {
   border-color: var(--axi-ok);
   color: var(--axi-ok);
   background: transparent;
 }
-.title-input-group__btn--error {
+.title-input-group__btn--error,
+.title-input-group__btn--error:hover {
   border-color: var(--axi-danger);
   color: var(--axi-danger);
   background: transparent;
@@ -197,7 +201,13 @@
   color: var(--axi-text-faint);
 }
 
-.editor-share-dropdown__item--copied {
+/* .editor-share-dropdown__item:hover sets the neutral ink at (0,2,0), which
+   outranks a single-class modifier whatever the source order — so each status
+   names :hover too, tying the specificity and winning on order. Without this
+   the "Copied" ink reverts to plain text while the cursor still rests on the
+   item the user just clicked. */
+.editor-share-dropdown__item--copied,
+.editor-share-dropdown__item--copied:hover {
   color: var(--axi-ok);
 }
 
@@ -205,7 +215,8 @@
   color: var(--axi-ok);
 }
 
-.editor-share-dropdown__item--error {
+.editor-share-dropdown__item--error,
+.editor-share-dropdown__item--error:hover {
   color: var(--axi-danger);
 }
 
@@ -282,8 +293,11 @@
   opacity: 0.4;
   cursor: default;
 }
-/* Same status treatment as the title's success/error above. */
-.build-code-group__btn--copied {
+/* Same status treatment as the title's success/error above. The hover here
+   carries :not(:disabled), so it is (0,3,0) — the status pair has to match it
+   rather than just add :hover. */
+.build-code-group__btn--copied,
+.build-code-group__btn--copied:hover:not(:disabled) {
   border-color: var(--axi-ok);
   color: var(--axi-ok);
   background: transparent;
@@ -361,7 +375,7 @@ label {
   white-space: nowrap;
   font-size: 0.72rem;
   line-height: var(--ticker-row-h, 20px);
-  transition: color 0.3s, opacity 0.3s;
+  transition: color 0.3s;
 }
 
 .publish-ticker__row--blank {
@@ -370,23 +384,21 @@ label {
 
 .publish-ticker__row--pending {
   color: var(--axi-text-faint);
-  opacity: 0.4;
 }
 
 .publish-ticker__row--active {
   color: var(--axi-accent);
-  opacity: 1;
   font-weight: 600;
 }
 
+/* Done rows keep the accent but drop --active's weight; that is the whole
+   difference, and it does not need an opacity ramp to say it. */
 .publish-ticker__row--done {
   color: var(--axi-accent);
-  opacity: 0.7;
 }
 
 .publish-ticker__row--error {
   color: var(--axi-danger);
-  opacity: 1;
 }
 
 .publish-ticker__icon {
@@ -396,22 +408,8 @@ label {
   font-size: 0.65rem;
 }
 
-/* A rotating hairline ring, capped in the accent — rule 11's compositor-only
-   contract (transform) and no radius, so it reads as an outlined square in
-   motion rather than a circle. */
-.publish-ticker__spinner {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border: var(--axi-border-hairline) solid var(--axi-rule);
-  border-top-color: var(--axi-accent);
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
+/* The work indicator is app.css's .af-dot + .af-work, not a shape of its own:
+   same compositor-only pulse, already gated for reduced motion there. */
 .publish-ticker__error {
   color: var(--axi-danger);
   font-size: 0.68rem;
@@ -473,6 +471,5 @@ label {
 
 @media (prefers-reduced-motion: reduce) {
   .publish-ticker__strip { transition: none; }
-  .publish-ticker__spinner { animation: none; }
   .editor-share-dropdown__menu { animation: none; }
 }

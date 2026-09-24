@@ -830,7 +830,7 @@ export function advancePublishStep(stepKey) {
       row.querySelector(".publish-ticker__icon").textContent = "\u2713";
     } else if (i === idx) {
       row.classList.add("publish-ticker__row--active");
-      row.querySelector(".publish-ticker__icon").innerHTML = `<span class="publish-ticker__spinner"></span>`;
+      row.querySelector(".publish-ticker__icon").innerHTML = `<span class="af-dot af-dot--idle af-work"></span>`;
     } else {
       row.classList.add("publish-ticker__row--pending");
       row.querySelector(".publish-ticker__icon").textContent = "\u2022";
