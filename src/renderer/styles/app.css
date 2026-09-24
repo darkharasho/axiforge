@@ -38,6 +38,12 @@ body { padding-top: var(--af-titlebar-h); }
 
 a { color: var(--axi-accent); }
 
+/* A frameless window has nothing behind it for a block to fall onto, so the
+   window's offset block is drawn inward. */
+.axi-window {
+  box-shadow: inset calc(-1 * var(--axi-offset-panel)) calc(-1 * var(--axi-offset-panel)) 0 0 var(--axi-ink-line);
+}
+
 .app-drag { -webkit-app-region: drag; }
 .no-drag, .no-drag * { -webkit-app-region: no-drag; }
 .hidden { display: none !important; }

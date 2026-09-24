@@ -70,7 +70,6 @@ const PENDING = [
   "src/site/site-mobile.css",
   "packages/forge-render/src/forge-render.css",
   // Batch 1 converts these; each task below removes its own line.
-  "src/renderer/styles/layout.css",
   "src/renderer/styles/buttons.css",
   "src/renderer/styles/forms.css",
   "src/renderer/styles/custom-select.css",

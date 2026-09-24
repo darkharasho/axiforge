@@ -1,156 +1,125 @@
-/* AxiForge — layout styles */
-.titlebar {
+/* AxiForge — layout styles (axi design language)
+   The app chrome: titlebar, workspace menu launcher, left nav, subnav and the
+   page frame. Every colour is an --axi-* token; every border is one of the
+   two form steps (panel 4px/6px, control 3px/3px); every box-shadow is
+   exactly <offset> <offset> 0 var(--axi-ink-line). */
+
+/* ── Titlebar ──────────────────────────────────────────────────────────────
+   The header carries the package's .axi-titlebar class (index.html), which
+   supplies the drag region and the button-hover treatment. This id selector
+   overrides the parts that are specific to a fixed, frameless chrome bar:
+   position, height, and the surface/border pairing the rest of the app's
+   panels use rather than the package's flush ink-line strip. */
+#titlebar {
   position: fixed;
   inset: 0 0 auto 0;
-  height: var(--titlebar-h);
-  z-index: 50;
+  height: var(--af-titlebar-h);
+  z-index: var(--z-titlebar);
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 10px;
-  border-bottom: 1px solid var(--line-soft);
-  background: var(--surface);
-  backdrop-filter: blur(8px);
+  border-bottom: var(--axi-border-panel) solid var(--axi-ink-line);
+  background: var(--axi-surface);
+  color: var(--axi-text);
+  font: var(--axi-t-body);
+  text-transform: none;
+  letter-spacing: normal;
 }
 
 .titlebar__brand {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-family: "Cinzel", serif;
-  font-size: 0.84rem;
-  letter-spacing: 0.06em;
+  font: var(--axi-t-label);
+  letter-spacing: var(--axi-ls-label);
 }
 
 .titlebar__brand-accent {
-  color: var(--accent);
+  color: var(--axi-accent);
 }
 
-.titlebar__beta-badge {
-  font-family: system-ui, sans-serif;
-  font-size: 0.6rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: color-mix(in srgb, var(--gold) 75%, transparent);
-  border: 1px solid currentColor;
-  border-radius: 3px;
-  padding: 1px 4px;
-  line-height: 1.4;
-  align-self: center;
+/* The beta badge and update pill carry .axi-chip in the markup; this slims
+   the package's default chip padding to fit a 42px-tall strip. */
+#titlebar .axi-chip {
+  padding: 1px 7px;
+  gap: 5px;
 }
 
-.titlebar__dev-badge {
-  font-family: system-ui, sans-serif;
-  font-size: 0.6rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  border: 1px solid currentColor;
-  border-radius: 3px;
-  padding: 1px 4px;
-  line-height: 1.4;
-  align-self: center;
+/* Update status (titlebar) — version label + dev-build badge.
+   `.titlebar__dev-badge` is toggled by renderer.js onto the version span; it
+   never gains the .axi-chip class (that toggle predates this conversion and
+   changing it would be a JS refactor), so its chip look is hand-rolled here
+   from the same tokens the package's chip uses. */
+.titlebar__version {
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
+  color: var(--axi-text-dim);
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+.titlebar__version:hover {
+  color: var(--axi-text);
 }
 
 .titlebar__version.titlebar__dev-badge {
-  color: color-mix(in srgb, var(--gold) 85%, transparent);
+  display: inline-flex;
+  align-items: center;
+  text-transform: uppercase;
+  border: var(--axi-border-control) solid var(--axi-ink-line);
+  background: var(--axi-surface-raised);
+  padding: 1px 7px;
+  line-height: 1.4;
+  align-self: center;
   transition: none;
 }
 
-/* ── Update status (titlebar) ─────────────────────────────────────────────── */
-.titlebar__version {
-  font-family: system-ui, sans-serif;
-  font-size: 0.6rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  color: color-mix(in srgb, var(--text-dim) 60%, transparent);
-  transition: opacity 0.3s ease, transform 0.3s ease, color 0.2s ease;
-  cursor: pointer;
-}
-.titlebar__version:hover {
-  color: var(--text-dim);
+/* Status pill: checking / downloading / error / unsupported. Base classes
+   (.axi-chip.axi-chip--accent) live in the markup; these modifiers, toggled
+   by renderer.js, override the chip's fill in place. */
+.titlebar__pill.titlebar__pill--muted {
+  background: var(--axi-surface-raised);
+  color: var(--axi-text-dim);
 }
 
-/* Status pill: used for checking / downloading / error / unsupported states */
-.titlebar__pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-family: system-ui, sans-serif;
-  font-size: 0.6rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  padding: 2px 8px;
-  border-radius: 4px;
-  line-height: 1.4;
-  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
-  color: var(--accent);
-  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+.titlebar__pill.titlebar__pill--error {
+  background: var(--axi-danger);
+  color: var(--axi-ink-line);
 }
 
-.titlebar__pill--muted {
-  border-color: color-mix(in srgb, var(--text-dim) 50%, transparent);
-  background: color-mix(in srgb, var(--text-dim) 12%, transparent);
-  color: var(--text-light);
-}
-
-.titlebar__pill--error {
-  border-color: color-mix(in srgb, var(--danger) 55%, transparent);
-  background: color-mix(in srgb, var(--danger) 12%, transparent);
-  color: var(--danger-text);
-}
-
-.titlebar__pill-spinner {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  border: 1.5px solid currentColor;
-  border-top-color: transparent;
-  animation: titlebar-pill-spin 0.8s linear infinite;
-}
-
+/* The spinner is an .af-dot with .af-work (opacity blink, compositor-only —
+   see app.css). Static/error states have nothing to animate. */
 .titlebar__pill--static .titlebar__pill-spinner,
 .titlebar__pill--error .titlebar__pill-spinner {
   display: none;
-}
-
-@keyframes titlebar-pill-spin {
-  to { transform: rotate(360deg); }
 }
 
 .titlebar__restart-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-family: system-ui, sans-serif;
-  font-size: 0.6rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
   text-transform: uppercase;
-  color: var(--gold);
-  border: 1px solid var(--gold);
-  border-radius: 4px;
+  color: var(--axi-ink-line);
+  border: var(--axi-border-control) solid var(--axi-ink-line);
+  background: var(--axi-warn);
   padding: 2px 10px;
   line-height: 1.4;
-  background: color-mix(in srgb, var(--gold) 18%, transparent);
   cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
-  -webkit-font-smoothing: antialiased;
+  transition: transform 0.1s, box-shadow 0.1s;
 }
 
 .titlebar__restart-btn:hover {
-  background: color-mix(in srgb, var(--gold) 30%, transparent);
-  transform: translateY(-1px);
+  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  transform: translate(-2px, -2px);
 }
 
 .titlebar__restart-icon {
   width: 8px;
   height: 8px;
-  border-radius: 50%;
+  flex-shrink: 0;
   background: currentColor;
-  box-shadow: 0 0 6px currentColor;
 }
 
 .titlebar__logo {
@@ -173,9 +142,8 @@
 .titlebar__controls #winClose {
   width: 46px;
   border: none;
-  border-radius: 0;
   background: transparent;
-  color: rgba(255, 255, 255, 0.75);
+  color: var(--axi-text-dim);
   cursor: pointer;
   display: grid;
   place-items: center;
@@ -184,41 +152,24 @@
 
 .titlebar__controls #winMin:hover,
 .titlebar__controls #winMax:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
+  background: var(--axi-surface-raised);
+  color: var(--axi-text);
 }
 
 .titlebar__controls #winMin:active,
 .titlebar__controls #winMax:active {
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.6);
+  background: var(--axi-surface);
+  color: var(--axi-text-dim);
 }
 
-.titlebar__controls #winClose:hover {
-  background: #e81123;
-  color: #fff;
-}
-
+.titlebar__controls #winClose:hover,
 .titlebar__controls #winClose:active {
-  background: #bf0f1d;
-  color: rgba(255, 255, 255, 0.8);
+  background: var(--axi-danger);
+  color: var(--axi-ink-line);
 }
 
-.layout {
-  display: grid;
-  grid-template-columns: 360px 1fr;
-  gap: 14px;
-  min-height: 100vh;
-  padding: 56px 14px 14px;
-}
+/* ── App layout ────────────────────────────────────────────────────────── */
 
-.sidebar {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-/* New app layout */
 body:has(.app-layout) {
   height: 100vh;
   overflow: hidden;
@@ -227,8 +178,10 @@ body:has(.app-layout) {
 .app-layout {
   display: grid;
   grid-template-columns: 54px 1fr;
-  height: calc(100vh - var(--titlebar-h));
+  height: calc(100vh - var(--af-titlebar-h));
 }
+
+/* ── Subnav (Build Editor secondary bar) ──────────────────────────────── */
 
 .subnav {
   display: none;
@@ -237,11 +190,11 @@ body:has(.app-layout) {
   gap: 8px;
   padding: 8px 14px;
   min-height: 76px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--line);
+  background: var(--axi-surface);
+  border-bottom: var(--axi-border-panel) solid var(--axi-ink-line);
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: var(--z-sticky);
 }
 
 .subnav--visible {
@@ -255,23 +208,22 @@ body:has(.app-layout) {
   flex-shrink: 0;
   margin-right: 2px;
   padding: 8px 12px 8px 10px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
+  border: var(--axi-border-control) solid var(--axi-ink-line);
   background: transparent;
   cursor: pointer;
-  color: var(--text-dim);
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.03em;
+  color: var(--axi-text-dim);
+  font: var(--axi-t-label);
+  letter-spacing: var(--axi-ls-label);
   white-space: nowrap;
   max-width: 220px;
-  transition: background 0.2s, color 0.2s, border-color 0.2s;
+  transition: color 0.15s, border-color 0.15s, box-shadow 0.1s, transform 0.1s;
 }
 
 .subnav__back:hover {
-  background: var(--hover-subtle);
-  border-color: var(--accent);
-  color: var(--text);
+  border-color: var(--axi-accent);
+  color: var(--axi-text);
+  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  transform: translate(-2px, -2px);
 }
 
 .subnav__back-icon {
@@ -290,19 +242,17 @@ body:has(.app-layout) {
 
 .subnav__item {
   padding: 8px 16px;
-  border: none;
-  border-radius: 8px;
+  border: var(--axi-border-control) solid transparent;
   background: transparent;
   cursor: pointer;
-  color: var(--text-dim);
-  font-size: 14px;
-  font-weight: 600;
-  letter-spacing: 0.03em;
+  color: var(--axi-text-dim);
+  font: var(--axi-t-label);
+  letter-spacing: var(--axi-ls-label);
   text-align: left;
   display: flex;
   align-items: center;
   gap: 7px;
-  transition: background 0.2s, color 0.2s, transform 0.15s;
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
   white-space: nowrap;
 }
 
@@ -313,14 +263,21 @@ body:has(.app-layout) {
   opacity: 0.8;
 }
 
+/* Matches the package's .axi-tabs a:hover: colour and border answer, nothing
+   lifts or fills — this is a tab row, not a button rail. */
 .subnav__item:hover {
-  background: var(--hover-subtle);
-  color: var(--text);
+  color: var(--axi-text);
+  border-color: var(--axi-rule);
 }
 
+/* The current tab is filled and blocked — the same treatment .axi-tabs gives
+   the page's current link and a pressed .axi-pill gives its filter: this one
+   is on. */
 .subnav__item--active {
-  background: var(--hover-accent);
-  color: var(--accent);
+  background: var(--axi-accent);
+  color: var(--axi-accent-ink);
+  border-color: var(--axi-ink-line);
+  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
 }
 
 .subnav__actions {
@@ -331,61 +288,55 @@ body:has(.app-layout) {
 }
 
 .subnav__save-status {
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.03em;
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
   white-space: nowrap;
   padding: 3px 10px;
-  border-radius: 20px;
-  border: 1px solid;
+  border: var(--axi-border-control) solid var(--axi-ink-line);
 }
 
 .subnav__save-status:empty {
   display: none;
 }
 
+/* Draft = attention (unsaved changes); saved = success. Both are status, so
+   both are filled. */
 .subnav__save-status--draft {
-  color: var(--accent);
-  background: var(--hover-accent);
-  border-color: var(--focus-ring);
+  color: var(--axi-ink-line);
+  background: var(--axi-warn);
+}
+
+.subnav__save-status--saved {
+  color: var(--axi-ink-line);
+  background: var(--axi-ok);
 }
 
 .subnav__link-btn {
   background: none;
   border: none;
-  color: var(--muted);
+  color: var(--axi-text-dim);
   cursor: pointer;
   padding: 2px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
-  transition: color 0.15s, background 0.15s;
+  transition: color 0.15s;
 }
 
 .subnav__link-btn:hover {
-  color: var(--accent);
-  background: rgba(var(--accent-rgb), 0.1);
+  color: var(--axi-accent);
 }
 
 .subnav__link-btn--copied {
-  color: var(--accent) !important;
-}
-
-.subnav__save-status--saved {
-  color: var(--accent);
-  background: rgba(var(--accent-rgb), 0.1);
-  border-color: rgba(var(--accent-rgb), 0.3);
+  color: var(--axi-accent) !important;
 }
 
 .subnav__sync-status {
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.03em;
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
   white-space: nowrap;
   padding: 3px 8px;
-  border-radius: 20px;
-  border: 1px solid transparent;
+  border: var(--axi-border-control) solid transparent;
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -403,20 +354,21 @@ body:has(.app-layout) {
 }
 
 .subnav__sync-status--syncing {
-  color: var(--text-dim);
-  border-color: var(--border);
+  color: var(--axi-text-dim);
+  background: var(--axi-surface-raised);
+  border-color: var(--axi-ink-line);
 }
 
 .subnav__sync-status--synced {
-  color: #4caf50;
-  border-color: rgba(76, 175, 80, 0.35);
-  background: rgba(76, 175, 80, 0.08);
+  color: var(--axi-ink-line);
+  background: var(--axi-ok);
+  border-color: var(--axi-ink-line);
 }
 
 .subnav__sync-status--error {
-  color: #e57373;
-  border-color: rgba(229, 115, 115, 0.35);
-  background: rgba(229, 115, 115, 0.08);
+  color: var(--axi-ink-line);
+  background: var(--axi-danger);
+  border-color: var(--axi-ink-line);
 }
 
 .subnav__save-btn {
@@ -428,8 +380,8 @@ body:has(.app-layout) {
 .subnav__save-dot {
   width: 6px;
   height: 6px;
-  border-radius: 50%;
-  background: var(--accent);
+  border: var(--axi-border-hairline) solid var(--axi-ink-line);
+  background: var(--axi-accent);
   flex-shrink: 0;
 }
 
@@ -440,9 +392,8 @@ body:has(.app-layout) {
 .subnav__overflow-btn {
   padding: 4px 8px;
   border: none;
-  border-radius: var(--radius-sm);
   background: transparent;
-  color: var(--text-dim);
+  color: var(--axi-text-dim);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -450,8 +401,8 @@ body:has(.app-layout) {
 }
 
 .subnav__overflow-btn:hover {
-  background: var(--hover-accent);
-  color: var(--text);
+  background: var(--axi-surface-raised);
+  color: var(--axi-text);
 }
 
 .subnav__overflow-menu {
@@ -460,12 +411,11 @@ body:has(.app-layout) {
   right: 0;
   margin-top: 4px;
   min-width: 160px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 8px;
+  background: var(--axi-surface);
+  border: var(--axi-border-panel) solid var(--axi-ink-line);
   padding: 4px 0;
-  z-index: var(--z-sticky);
-  box-shadow: var(--shadow-sm);
+  z-index: var(--z-dropdown);
+  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
 }
 
 .subnav__overflow-item {
@@ -476,16 +426,15 @@ body:has(.app-layout) {
   padding: 7px 12px;
   border: none;
   background: transparent;
-  color: var(--text);
-  font-size: 12px;
-  font-weight: 500;
+  color: var(--axi-text);
+  font: var(--axi-t-small);
   cursor: pointer;
   text-align: left;
   transition: background 0.1s;
 }
 
 .subnav__overflow-item:hover {
-  background: var(--hover-accent);
+  background: var(--axi-surface-raised);
 }
 
 .subnav__overflow-icon {
@@ -495,14 +444,16 @@ body:has(.app-layout) {
   opacity: 0.7;
 }
 
+/* ── Left nav ──────────────────────────────────────────────────────────── */
+
 .leftnav {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
   padding: 12px 0;
-  background: var(--surface);
-  border-right: 1px solid var(--line);
+  background: var(--axi-surface);
+  border-right: var(--axi-border-panel) solid var(--axi-ink-line);
 }
 
 .leftnav__item {
@@ -514,36 +465,28 @@ body:has(.app-layout) {
   width: 40px;
   height: 40px;
   padding: 0;
-  border: none;
-  border-radius: 8px;
+  border: var(--axi-border-control) solid transparent;
   background: transparent;
   cursor: pointer;
-  color: var(--text-dim);
+  color: var(--axi-text-dim);
   position: relative;
-  transition: background 0.2s, color 0.2s, transform 0.2s;
+  transition: color 0.2s, border-color 0.2s, box-shadow 0.1s, transform 0.1s;
 }
 
+/* Hover lifts: translate against a gained offset block, never a tinted
+   background or a glow. */
 .leftnav__item:hover {
-  background: var(--hover-accent);
-  color: var(--text);
-  transform: translateY(-1px);
+  color: var(--axi-text);
+  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  transform: translate(-2px, -2px);
 }
 
+/* The active rail item carries an accent edge (AxiAM's .am-rail-btn--active)
+   rather than a filled background — the accent lives on the border and the
+   icon/text colour, not as a tint behind them. */
 .leftnav__item--active {
-  background: var(--hover-accent-strong);
-  color: var(--accent);
-}
-
-.leftnav__item--active::before {
-  content: '';
-  position: absolute;
-  left: -6px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 3px;
-  height: 20px;
-  background: var(--accent);
-  border-radius: 0 2px 2px 0;
+  color: var(--axi-accent);
+  border-color: var(--axi-accent);
 }
 
 .leftnav__icon {
@@ -556,9 +499,11 @@ body:has(.app-layout) {
   display: none;
 }
 
+/* ── Page frame ────────────────────────────────────────────────────────── */
+
 .page-content {
   overflow-y: auto;
-  height: calc(100vh - var(--titlebar-h));
+  height: calc(100vh - var(--af-titlebar-h));
 }
 
 .page {
@@ -575,65 +520,65 @@ body:has(.app-layout) {
 /* ── Game mode toggle ─────────────────────────────────────────────────────── */
 .game-mode-toggle {
   display: flex;
-  border-radius: 4px;
   overflow: hidden;
 }
 
 .game-mode-toggle__btn {
   padding: 4px 10px;
   border: none;
-  background: var(--panel);
-  color: var(--text-dim);
-  font-size: 11px;
-  font-weight: 500;
+  background: var(--axi-surface-raised);
+  color: var(--axi-text-dim);
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
 }
 
 .game-mode-toggle__btn:hover {
-  background: var(--line);
+  background: var(--axi-rule);
 }
 
+/* The selected mode is a status the toggle asserts, so it fills — the same
+   idea as a pressed .axi-pill. */
 .game-mode-toggle__btn--active {
-  background: var(--gold);
-  color: var(--bg);
-  font-weight: 600;
+  background: var(--axi-accent);
+  color: var(--axi-accent-ink);
 }
 
 .game-mode-toggle__btn--active:hover {
-  background: var(--gold);
+  background: var(--axi-accent);
 }
 
-/* WvW balance split badge */
+/* WvW balance split / aquatic-only badge — an annotation, not a status, so it
+   stays outlined rather than filled. */
 .split-badge {
   display: inline-block;
-  font-size: 9px;
-  font-weight: 600;
+  font: var(--axi-t-micro);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: var(--axi-ls-micro);
   padding: 1px 5px;
-  border-radius: 3px;
-  background: rgba(var(--accent-rgb), 0.15);
-  color: var(--accent);
+  border: var(--axi-border-control) solid var(--axi-ink-line);
+  background: var(--axi-surface-raised);
+  color: var(--axi-text-dim);
   margin-left: 6px;
   vertical-align: middle;
 }
 .aquatic-badge {
-  background: rgba(var(--accent-2-rgb), 0.15);
-  color: var(--accent-2);
+  color: var(--axi-meta);
 }
 
 /* ── Sync banner ─────────────────────────────────────────────────────────── */
-/* Session-level sync notice (e.g. signed out) above the app layout. */
+/* Session-level sync notice (e.g. signed out) above the app layout. This is a
+   status, so it fills with the warn ink rather than sitting behind a tint. */
 
 .sync-banner {
   display: flex;
   gap: 12px;
   align-items: center;
   padding: 6px 14px;
-  background: #3a2a0a;
-  color: #f5d78e;
-  font-size: 0.8rem;
+  background: var(--axi-warn);
+  color: var(--axi-ink-line);
+  font: var(--axi-t-small);
 }
 
 .sync-banner[hidden] {
