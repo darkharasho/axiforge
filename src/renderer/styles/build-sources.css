@@ -72,7 +72,6 @@
 .src-chip--compact svg:first-child {
   width: 10px;
   height: 10px;
-  opacity: 0.9;
 }
 
 /* Grid and icon cards float the chip in the card corner, where the pin star is

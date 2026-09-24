@@ -132,17 +132,26 @@ function libTableRow(titleW, d1, d2, d3) {
     </li>`;
 }
 
+// Mirrors .af-tile's real shape (library.css), which folded the old
+// .lib-grid-card into itself in batch 2/Task 5 — this skeleton drew a boxless,
+// layoutless card from then until Task 24 because nothing checked that an
+// emitted class still had a selector behind it. The title placeholder's
+// inline border-radius:3px is also dropped here: rule 3 forbids all rounding,
+// and an inline style is invisible to every CSS scanner in the gate, so nothing
+// would have caught it either.
 function libGridCard(titleW, d1, d2, d3) {
   const c = (d) => d ? ` skel-d${d}` : "";
   return `
-  <div class="lib-grid-card">
-    <div class="lib-grid-card__header"><div class="skel${c(d1)} skel-lib-card-icon"></div></div>
-    <div class="skel${c(d1)}" style="height:18px;width:${titleW}%;border-radius:3px"></div>
-    <div class="lib-grid-card__pills">
+  <div class="af-tile">
+    <div class="af-tile__head">
+      <div class="af-tile__glyph"><div class="skel${c(d1)} skel-lib-card-icon"></div></div>
+      <div class="af-tile__title"><div class="skel${c(d1)}" style="height:18px;width:${titleW}%"></div></div>
+    </div>
+    <div class="af-tile__pills">
       <div class="skel${c(d2)}" style="height:21px;width:50px;border-radius:999px"></div>
       <div class="skel${c(d2)}" style="height:21px;width:40px;border-radius:999px"></div>
     </div>
-    <div class="lib-grid-card__date"><div class="skel${c(d3)}" style="height:18px;width:48px;border-radius:3px"></div></div>
+    <div class="af-tile__meta"><div class="skel${c(d3)}" style="height:18px;width:48px"></div></div>
   </div>`;
 }
 

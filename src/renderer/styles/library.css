@@ -1345,7 +1345,6 @@
 .lib-ctx-item--disabled {
   color: var(--axi-text-faint);
   cursor: default;
-  opacity: 0.55;
 }
 
 .lib-ctx-item--disabled:hover {
@@ -1526,9 +1525,8 @@
   font-weight: 600;
   color: inherit;
   cursor: pointer;
-  opacity: 0.85;
 }
-.lib-toast__action:hover { opacity: 1; text-decoration: underline; }
+.lib-toast__action:hover { text-decoration: underline; }
 .lib-toast__action:focus-visible { outline: var(--axi-border-control) solid currentColor; outline-offset: 2px; }
 .lib-toast--loading {
   display: flex;
@@ -1593,7 +1591,6 @@
   vertical-align: middle;
   margin-left: 6px;
   color: var(--axi-accent);
-  opacity: 0.75;
   flex-shrink: 0;
 }
 

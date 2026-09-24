@@ -24,3 +24,5 @@
 /* Finding 6: a genuine violation still fires even with !important attached. */
 .v18 { box-shadow: 0 2px 8px #000 !important; }
 .v19 { color: #ff0000 !important; }
+/* Finding 7: a resting partial opacity, no animation, outside @keyframes. */
+.v20 { opacity: 0.42; }

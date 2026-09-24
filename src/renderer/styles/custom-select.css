@@ -43,7 +43,8 @@
 }
 
 .cselect__trigger:disabled {
-  opacity: 0.5;
+  color: var(--axi-text-faint);
+  border-color: var(--axi-rule);
   cursor: not-allowed;
   pointer-events: none;
 }
@@ -118,7 +119,7 @@
 }
 
 .cselect__option:disabled {
-  opacity: 0.45;
+  color: var(--axi-text-faint);
   cursor: not-allowed;
 }
 

@@ -221,7 +221,7 @@
 }
 
 .editor-share-dropdown__item:disabled {
-  opacity: 0.5;
+  color: var(--axi-text-faint);
   cursor: not-allowed;
 }
 
@@ -290,7 +290,7 @@
   color: var(--axi-text);
 }
 .build-code-group__btn:disabled {
-  opacity: 0.4;
+  border-color: var(--axi-rule);
   cursor: default;
 }
 /* Same status treatment as the title's success/error above. The hover here

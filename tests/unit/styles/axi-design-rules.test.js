@@ -266,6 +266,116 @@ function findLegacyVars(css) {
   );
 }
 
+// Genuine exemptions to the static-opacity scanner below: an element that is
+// itself a representation of a thing being dragged, not a colour resting at
+// partial strength over the ground (RULES.md rule 2). Every entry is a
+// selector exactly as it appears as its own rule block (or as one member of a
+// comma-separated selector list), so a compound or grouped selector needs one
+// entry per piece that carries the opacity.
+const OPACITY_ALLOWLIST = [
+  // comps.css — SortableJS fallback ghosts for the four drag surfaces in the
+  // comp editor. Each keeps its resting opacity because a ghost is a
+  // representation of a thing being moved, not a colour at partial strength;
+  // comps.css:1230 carries the same reasoning in its own comment.
+  [".comp-cat-drag-ghost", "SortableJS fallback ghost for a dragged category chip — a representation of the thing being moved, not a colour at rest."],
+  [".comp-drag-icon-ghost", "SortableJS fallback ghost for a dragged build icon — same reasoning as .comp-cat-drag-ghost."],
+  [".comp-slot-ghost", "The drop-placeholder ghost shown in an empty slot while dragging — a representation of the thing being moved, not a colour at rest."],
+  [".comp-line-ghost", "The reorder ghost shown in a party line's position while dragging — same reasoning as .comp-slot-ghost."],
+  // library.css — the equivalent SortableJS drag lifecycle for the library's
+  // grid/tree/list views. ghostClass and fallbackClass are literal clone
+  // elements (SortableJS's own placeholder and fallback-drag avatar); the
+  // *.lib-dragging classes are the source element while its clone exists
+  // elsewhere, and chosenClass/dragClass are the same source element mid-
+  // gesture. All four report "this item is currently being moved" rather than
+  // asserting a resting colour, so all get the same exemption as the ghosts
+  // above (RULES.md rule 2 is about colour at rest, not about a transient
+  // drag affordance) — see library/drag-drop.js for the ghostClass /
+  // chosenClass / dragClass / fallbackClass wiring.
+  [".lib-list-row.lib-dragging", "The library list row's own SortableJS lib-dragging state — represents the row currently being moved, not a resting colour."],
+  [".lib-tv__item.lib-dragging > .lib-tv__row", "The library tree row's own SortableJS lib-dragging state — same reasoning as .lib-list-row.lib-dragging."],
+  [".lib-tv__item.lib-dragging", "The library tree item's own SortableJS lib-dragging state — same reasoning as .lib-list-row.lib-dragging."],
+  [".af-tile.lib-dragging", "The library grid tile's own SortableJS lib-dragging state — same reasoning as .lib-list-row.lib-dragging."],
+  [".lib-icon-item.lib-dragging", "The library icon-view item's own SortableJS lib-dragging state — same reasoning as .lib-list-row.lib-dragging."],
+  [".lib-dragging", "The generic SortableJS lib-dragging state, shared by any drag surface not covered by a more specific selector above."],
+  [".lib-drag-ghost", "SortableJS's own drop-placeholder ghost (ghostClass) — a representation of the thing being moved, not a colour at rest."],
+  [".lib-drag-chosen", "SortableJS's chosenClass, applied to the source item the instant it is picked up — reports the drag gesture, not a resting colour."],
+  [".lib-drag-active", "SortableJS's dragClass, applied to the item actively being dragged (and, under the fallback renderer, to the body-level clone alongside lib-drag-fallback — see drag-drop.js:141) — a drag-state report, not a resting colour."],
+  [".lib-drag-fallback", "SortableJS's fallbackClass — the clone element it drags in browsers without native HTML5 drag support; a literal ghost avatar."],
+  [".sortable-drag", "SortableJS's own default class for the element following the cursor during a native HTML5 drag — a literal ghost avatar."],
+];
+
+/** True when `header` — a rule's selector text, exactly as written between
+    the previous `}`/`{`/`;` and its own `{` — is, or contains as one
+    comma-separated member, an allowlisted selector. Internal whitespace
+    (including the newlines a wrapped multi-selector list carries) is
+    collapsed first so formatting differences never defeat the match. */
+function isOpacityAllowlisted(header) {
+  const pieces = header.split(",").map((p) => p.trim().replace(/\s+/g, " "));
+  return OPACITY_ALLOWLIST.some(([selector]) => pieces.includes(selector));
+}
+
+/** Every rule block in a sheet — comments stripped — as `{ header, body,
+    inKeyframes }`, where `body` is the block's own text with any nested
+    blocks removed (each nested block becomes its own entry). This exists
+    because `declarations()` deliberately discards which rule a declaration
+    came from, and the opacity scanner below needs that context: whether a
+    block sits inside `@keyframes` (motion, permitted outright by RULES.md
+    line 308) and whether the block declares `animation` are both
+    block-level questions a flat declaration list cannot answer. */
+function ruleBlocks(css, inKeyframes = false) {
+  const blocks = [];
+  let i = 0;
+  while (i < css.length) {
+    const open = css.indexOf("{", i);
+    if (open === -1) break;
+    const header = css.slice(i, open).trim();
+    let depth = 1;
+    let j = open + 1;
+    while (j < css.length && depth > 0) {
+      if (css[j] === "{") depth++;
+      else if (css[j] === "}") depth--;
+      j++;
+    }
+    const body = css.slice(open + 1, j - 1);
+    const thisInKeyframes = inKeyframes || /^@keyframes\b/i.test(header);
+    if (body.includes("{")) {
+      blocks.push(...ruleBlocks(body, thisInKeyframes));
+    } else {
+      blocks.push({ header, body, inKeyframes: thisInKeyframes });
+    }
+    i = j;
+  }
+  return blocks;
+}
+
+/** Rule 2 applied to opacity specifically: a colour is either present at full
+    strength or absent, never resting in between. `opacity: 0` and
+    `opacity: 1` are the two legitimate endpoints (absence and full strength),
+    so a show/hide pair built from exactly those two values passes without
+    needing a special case. A block inside `@keyframes`, or a block that
+    declares `animation` itself, is motion rather than a resting value
+    (RULES.md line 308 permits animating opacity outright) — `transition` is
+    deliberately NOT exempting: it describes how a property moves between
+    values, not whether the value it rests on is legitimate, and exempting it
+    would launder any rule-2 violation by adding one line. */
+function findStaticOpacity(css) {
+  const withoutComments = css.replace(/\/\*[\s\S]*?\*\//g, "");
+  const violations = [];
+  for (const { header, body, inKeyframes } of ruleBlocks(withoutComments)) {
+    if (inKeyframes) continue;
+    if (isOpacityAllowlisted(header)) continue;
+    const declaresAnimation = /(?:^|[;{\s])animation\s*:/.test(body);
+    if (declaresAnimation) continue;
+    for (const m of body.matchAll(/opacity\s*:\s*([^;]+)/gi)) {
+      const raw = m[1].trim().replace(/\s*!\s*important\s*$/i, "");
+      const value = parseFloat(raw);
+      if (Number.isNaN(value)) continue;
+      if (value > 0 && value < 1) violations.push(`${header} { opacity: ${raw} }`);
+    }
+  }
+  return violations;
+}
+
 /** Every CSS block a JS module injects into the document.
 
     Two shapes exist in this codebase and both are covered: a literal
@@ -339,6 +449,92 @@ function jsFilesUnder(root, dir = root) {
     .sort();
 }
 
+/** Every class name a JS module writes into markup: `class="..."` inside a
+    template literal, `classList.add/remove/toggle/contains(...)`, and
+    `className = "..."`/`className += "..."`. `${...}` interpolations are
+    blanked first (same loop `injectedCssBlocks` uses above), so a ternary
+    that embeds its own quoted strings — e.g.
+    `class="… ${covered ? "" : "party-cov__pill--uncovered"}"` — cannot
+    truncate the attribute early, and a name assembled at runtime
+    (`lib-toast--${type}`) is left as a harmless, incomplete fragment rather
+    than read as a real class. Any token still ending in `-` after blanking
+    is exactly that kind of fragment and is dropped: no real class name in
+    this codebase ends in a bare hyphen. */
+function emittedClasses(js) {
+  let blanked = js;
+  let prev;
+  do {
+    prev = blanked;
+    blanked = blanked.replace(/\$\{[^{}]*\}/g, " ");
+  } while (blanked !== prev);
+
+  const names = new Set();
+  const isRealName = (s) => /^[A-Za-z_-][\w-]*$/.test(s) && !s.endsWith("-");
+
+  for (const m of blanked.matchAll(/\bclass(?:Name)?\s*=\s*["'`]([^"'`]*)["'`]/g)) {
+    for (const piece of m[1].split(/\s+/)) if (isRealName(piece)) names.add(piece);
+  }
+  for (const m of blanked.matchAll(/\bclassList\.(?:add|remove|toggle|contains)\(\s*([^)]*)\)/g)) {
+    for (const argm of m[1].matchAll(/["'`]([\w-]+)["'`]/g)) if (isRealName(argm[1])) names.add(argm[1]);
+  }
+  return names;
+}
+
+// Only classes shaped like the app's own components are worth checking here:
+// scoping to these four prefixes is what keeps the allowlist below short
+// enough to read. A wider scan (every class any renderer module writes)
+// pulls in the package's own `.axi-*` vocabulary, third-party library hooks,
+// and structural utility classes with no naming convention at all — none of
+// which this scanner exists to police. Rule 3's inline `border-radius`
+// blind spot below is the one the scanner cannot see at all: it reads
+// `class="..."`, not `style="..."`.
+const EMITTED_CLASS_PREFIX = /^(?:af-|lib-|comp-|party-cov__)/;
+
+// Classes deliberately not backed by a CSS selector. Each is either a JS-only
+// hook laid down alongside a class the package (or a sibling app class)
+// already styles, a state-tracking class whose "off" value needs no rule of
+// its own, or a plain text child that inherits its type/colour from an
+// ancestor. Discovered by running the scanner unfiltered and reading every
+// result (2026-09-24, commit 94c58e17): the four real defects it found
+// (Task 5's deleted .lib-grid-card family) are fixed below instead of
+// allowlisted.
+const EMITTED_CLASS_ALLOWLIST = [
+  ["af-accent-card__label", "Plain text child of .af-accent-card; inherits that ancestor's color/font (app.css), no rule of its own needed."],
+  ["af-libpicker", "JS-only companion class on the package's own .axi-picker; carries no styling of its own."],
+  ["comp-badge--draft", "JS-only modifier alongside .axi-chip/.comp-badge, which carry the fill; the state itself needs no separate rule."],
+  ["comp-badge--published", "Same as comp-badge--draft — the .axi-chip--ok pairing carries the colour."],
+  ["comp-badge--pve", "Same as comp-badge--draft — a JS/data hook, not a paint instruction."],
+  ["comp-badge--wvw", "Same as comp-badge--draft — the .axi-chip--meta pairing carries the colour."],
+  ["comp-boon-cov__title", "Plain text child of .comp-boon-cov__header; inherits its ancestor's typography."],
+  ["comp-cat-chip__name", "Plain text child of .comp-cat-chip; inherits its ancestor's typography."],
+  ["comp-list-toolbar__filters-btn", "JS-only hook alongside .axi-pill, which carries the control's paint."],
+  ["comp-list-toolbar__view-btn", "Same as comp-list-toolbar__filters-btn."],
+  ["comp-picker-modal__btn--cancel", "JS-only modifier alongside .axi-btn/--ghost, which carries the paint."],
+  ["comp-picker-row__badge--comps", "JS-only modifier alongside .axi-chip, which carries the paint."],
+  ["comp-picker-row__badge--shared", "JS-only modifier alongside .axi-chip/--meta, which carries the paint."],
+  ["comp-picker-row__prof", "Plain text child of .comp-picker-row; inherits its ancestor's typography."],
+  ["comp-tag-chip", "JS-only hook alongside .axi-pill, which carries the control's paint."],
+  ["lib-banner--info", "JS-only modifier alongside .lib-banner, which carries the paint; only one banner kind exists today."],
+  ["lib-col__item--folder", "JS/query hook alongside .lib-col__item, which carries the paint; used to re-select folder rows."],
+  ["lib-ctx-item--submenu", "JS-only hook alongside .lib-ctx-item; the submenu behaviour is script, not paint."],
+  ["lib-fd", "JS-only companion class on the package's own .axi-picker (filter dropdown); carries no styling of its own."],
+  ["lib-fd__icon--prof", "JS-only modifier alongside .lib-fd__icon; distinguishes profession vs spec icons for script, not paint."],
+  ["lib-fd__trigger--active", "JS state class toggled on .lib-fd__trigger when a filter is set; no dedicated rule, the trigger's own states carry it."],
+  ["lib-icon-item--build", "JS/query hook alongside .lib-icon-item, which carries the paint."],
+  ["lib-icon-item--folder", "JS/query hook alongside .lib-icon-item, which carries the paint."],
+  ["lib-list-row--build", "JS/query hook alongside .lib-list-row, which carries the paint."],
+  ["lib-sidebar--open", "The sidebar's default (non-collapsed) state; every rule is keyed off .lib-sidebar--collapsed instead, so --open needs none of its own."],
+  ["lib-table__folder-icon", "Dead code: the isTable branch of insertInlineInput() (library/sidebar.js) only runs against a <table> element, and no current view renders one."],
+  ["lib-table__row", "Same dead-code path as lib-table__folder-icon."],
+  ["lib-table__row--folder", "Same dead-code path as lib-table__folder-icon."],
+  ["lib-table__td", "Same dead-code path as lib-table__folder-icon."],
+  ["lib-table__td--icon", "Same dead-code path as lib-table__folder-icon."],
+  ["lib-table__td--name", "Same dead-code path as lib-table__folder-icon."],
+  ["lib-table__td--pin", "Same dead-code path as lib-table__folder-icon."],
+  ["lib-toast__msg", "Plain text child of .lib-toast; inherits its ancestor's typography/colour."],
+  ["lib-tv__row--build", "JS/query hook alongside .lib-tv__row, which carries the paint."],
+];
+
 const SCANNERS = [
   ["colour literal", findColourLiterals],
   ["custom property colour literal", findCustomPropertyColours],
@@ -349,6 +545,7 @@ const SCANNERS = [
   ["border width literal", findBorderLiterals],
   ["non-token font-family", findFontFamilies],
   ["legacy palette variable", findLegacyVars],
+  ["static partial opacity", findStaticOpacity],
 ];
 
 // --- the gate ------------------------------------------------------------
@@ -445,6 +642,92 @@ describe("axi design language rules", () => {
       const css = injectedCssBlocks(js).join("\n");
       expect(css).not.toContain("size");
       for (const [, scan] of SCANNERS) expect(scan(css)).toEqual([]);
+    });
+  });
+
+  describe("classes emitted from JavaScript have a selector", () => {
+    // The app's own stylesheets, comments stripped so a class name mentioned
+    // in prose (e.g. the deletion note at build-sources.css:79-80, which
+    // names .lib-grid-card__header only to say it no longer exists) cannot
+    // read as the selector that backs it. Every APP_CSS file is included,
+    // not just CONVERTED: a class can legitimately be styled from a PENDING
+    // file, and this scanner is about whether a selector exists anywhere,
+    // not about rule-2/3-style compliance.
+    const appCssBundle = APP_CSS.map((f) =>
+      fs.readFileSync(path.join(ROOT, f), "utf8").replace(/\/\*[\s\S]*?\*\//g, ""),
+    ).join("\n");
+    const packageCssBundle = fs
+      .readFileSync(path.join(ROOT, "node_modules/@axiapps/axi-design/dist/axi.css"), "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, "");
+    const cssBundle = `${appCssBundle}\n${packageCssBundle}`;
+
+    function hasSelector(className) {
+      const esc = className.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&");
+      return new RegExp(`\\.${esc}\\b`).test(cssBundle);
+    }
+
+    it("finds a selector for every emitted class in the app's own components", () => {
+      const emitted = new Set();
+      for (const file of jsFilesUnder("src/renderer")) {
+        for (const cls of emittedClasses(fs.readFileSync(path.join(ROOT, file), "utf8"))) {
+          if (EMITTED_CLASS_PREFIX.test(cls)) emitted.add(cls);
+        }
+      }
+      const allowlisted = new Set(EMITTED_CLASS_ALLOWLIST.map(([cls]) => cls));
+      const orphans = [...emitted]
+        .filter((cls) => !allowlisted.has(cls) && !hasSelector(cls))
+        .sort();
+      expect(orphans).toEqual([]);
+    });
+
+    it("names every allowlisted class as one a real emitter still writes", () => {
+      // An allowlist entry for a class nothing emits anymore is dead
+      // weight — worse, it is a class that could quietly rot as its own
+      // undetected orphan since nothing checks it once it is excused here.
+      const emitted = new Set();
+      for (const file of jsFilesUnder("src/renderer")) {
+        for (const cls of emittedClasses(fs.readFileSync(path.join(ROOT, file), "utf8"))) {
+          emitted.add(cls);
+        }
+      }
+      const stale = EMITTED_CLASS_ALLOWLIST.map(([cls]) => cls).filter((cls) => !emitted.has(cls));
+      expect(stale).toEqual([]);
+    });
+
+    it("extracts a class from a class=\"...\" attribute, including one whose interpolation embeds its own quotes", () => {
+      const js = 'return `<div class="foo ${covered ? "" : "bar--baz"}">`;';
+      const classes = emittedClasses(js);
+      expect(classes.has("foo")).toBe(true);
+      // The interpolated piece is unresolvable statically and is dropped
+      // rather than misread as "bar--baz" unconditionally or as garbage.
+      expect(classes.has("bar--baz")).toBe(false);
+    });
+
+    it("extracts classList.add/toggle arguments and drops a classList query", () => {
+      const js = [
+        'el.classList.add("comp-foo", "comp-bar");',
+        'el.classList.toggle("comp-baz", isOn);',
+        'if (el.classList.contains("comp-qux")) {}',
+      ].join("\n");
+      const classes = emittedClasses(js);
+      for (const cls of ["comp-foo", "comp-bar", "comp-baz", "comp-qux"]) {
+        expect(classes.has(cls)).toBe(true);
+      }
+    });
+
+    it("drops an incomplete fragment left by an unresolved interpolation", () => {
+      // `lib-toast--${type}` blanks to the fragment "lib-toast--", which is
+      // not a real class name (nothing in this codebase ends in a bare `-`)
+      // and would otherwise report as a false orphan.
+      const js = 'el.className = `lib-toast lib-toast--${type}`;';
+      const classes = emittedClasses(js);
+      expect(classes.has("lib-toast")).toBe(true);
+      expect([...classes].some((c) => c.endsWith("-"))).toBe(false);
+    });
+
+    it("finds a selector for a real, styled class and not for an invented one", () => {
+      expect(hasSelector("comp-list-row")).toBe(true);
+      expect(hasSelector("comp-does-not-exist-anywhere")).toBe(false);
     });
   });
 
@@ -557,6 +840,42 @@ describe("axi design language rules", () => {
         .w { box-shadow: inset calc(-1 * var(--axi-offset-panel)) calc(-1 * var(--axi-offset-panel)) 0 0 var(--axi-ink-line); }
       `;
       for (const [, scan] of SCANNERS) expect(scan(clean)).toEqual([]);
+    });
+
+    it("detects a resting partial opacity", () => {
+      expect(findStaticOpacity(".a { opacity: 0.3; }")).not.toEqual([]);
+    });
+
+    it("does not flag a partial opacity whose own block declares animation", () => {
+      // The transition-paired case (RULES.md's own worked example,
+      // .comp-list-row__checkbox) still fires: a transition says how a value
+      // moves, not whether the value it rests on is legitimate.
+      expect(
+        findStaticOpacity(".a { opacity: 0.3; transition: opacity 0.15s; }"),
+      ).not.toEqual([]);
+      expect(
+        findStaticOpacity(".a { opacity: 0.3; animation: fade-in 0.2s ease; }"),
+      ).toEqual([]);
+    });
+
+    it("does not flag a partial opacity inside @keyframes", () => {
+      expect(
+        findStaticOpacity("@keyframes fade-in { from { opacity: 0; } 50% { opacity: 0.3; } to { opacity: 1; } }"),
+      ).toEqual([]);
+    });
+
+    it("does not flag opacity: 0 or opacity: 1 on their own", () => {
+      expect(findStaticOpacity(".a { opacity: 0; }")).toEqual([]);
+      expect(findStaticOpacity(".a { opacity: 1; }")).toEqual([]);
+      // A show/hide pair built only from the two legitimate endpoints.
+      expect(
+        findStaticOpacity(".a { opacity: 0; } .a:hover { opacity: 1; }"),
+      ).toEqual([]);
+    });
+
+    it("exempts only an allowlisted selector, not a lookalike", () => {
+      expect(findStaticOpacity(".comp-cat-drag-ghost { opacity: 0.9; }")).toEqual([]);
+      expect(findStaticOpacity(".comp-cat-drag-ghost-2 { opacity: 0.9; }")).not.toEqual([]);
     });
   });
 });

@@ -259,18 +259,29 @@
   color: var(--axi-accent-ink);
 }
 
-/* Checkbox */
+/* Checkbox. Judgement call (Task 24, RULES.md rule 2): the resting 0.3 read
+   as a third, smudged state, and 0.15s of opacity transition does not rescue
+   a resting partial value (a transition says how a property moves, not
+   whether the value it rests on is legitimate). The intent is that the
+   checkbox is genuinely HIDDEN until the row is hovered, selected, or
+   focused — not present-but-quiet — so visibility is the honest expression:
+   it keeps the layout box (unlike display: none) and is still transitionable.
+   :focus-within is added to the reveal list alongside :hover/--selected so a
+   keyboard user tabbing to the checkbox does not focus an invisible control —
+   the old opacity: 0.3 never had that gap, since a smudged checkbox was still
+   visible enough to focus. */
 .comp-list-row__checkbox {
   accent-color: var(--axi-accent);
   cursor: pointer;
-  opacity: 0.3;
-  transition: opacity 0.15s;
+  visibility: hidden;
+  transition: visibility 0.15s;
   flex-shrink: 0;
 }
 
 .comp-list-row:hover .comp-list-row__checkbox,
+.comp-list-row:focus-within .comp-list-row__checkbox,
 .comp-list-row--selected .comp-list-row__checkbox {
-  opacity: 1;
+  visibility: visible;
 }
 
 /* Name */
@@ -638,7 +649,7 @@
 }
 
 .comp-share-dropdown__item:disabled {
-  opacity: 0.5;
+  color: var(--axi-text-faint);
   cursor: not-allowed;
 }
 
@@ -992,7 +1003,7 @@
 }
 
 .comp-line--add.comp-line--disabled {
-  opacity: 0.35;
+  border-color: var(--axi-rule);
   cursor: default;
   pointer-events: none;
 }
@@ -1043,7 +1054,6 @@
 .comp-slot--missing {
   background: var(--axi-ground);
   border: var(--axi-border-hairline) dashed var(--axi-rule);
-  opacity: 0.5;
   cursor: default;
 }
 
@@ -1552,7 +1562,6 @@
 }
 
 .comp-picker-row__dot {
-  opacity: 0.45;
   flex-shrink: 0;
 }
 
@@ -1587,7 +1596,9 @@
 }
 
 .comp-picker-modal__btn--add:disabled {
-  opacity: 0.4;
+  background: var(--axi-ground);
+  color: var(--axi-text-faint);
+  box-shadow: none;
   cursor: default;
 }
 
@@ -1932,8 +1943,15 @@
   display: block;
 }
 
+/* Judgement call (Task 24, RULES.md rule 2): this was "greyed if uncovered"
+   via opacity, which is a colour at partial strength over the ground — a
+   boon icon is a coloured image asset, not a text colour, so the pill's own
+   answer for --uncovered (quiet ground + --axi-text-dim) has no literal
+   equivalent on a bare <img>. Desaturating to a full-strength neutral is the
+   closest honest translation of that answer: the icon rests at full opacity,
+   carrying no hue rather than a faded one. */
 .party-cov__header-boon--uncovered {
-  opacity: 0.2;
+  filter: grayscale(1);
 }
 
 /* Collapsible body */
@@ -2092,8 +2110,19 @@
   box-shadow: none;
 }
 
+/* Judgement call (Task 24, RULES.md rules 2 and 9): the two --self-* icon
+   opacities (0.4 here, 0.28 below) encoded a three-step gradation (covered /
+   self-conditional / self-only) as three brightnesses of the same icon —
+   exactly what rule 9 forbids (a quantity read as intensity), and rule 2's
+   own case besides. These three are categories, not an ordered quantity a
+   user needs to compare, and the category is already carried by the pill's
+   own colour and border-style (dashed for self-condi, filled-quiet for
+   self-only, per the rules above); the icon itself only needs to read as
+   "not a live status colour," so it is desaturated to a full-strength
+   neutral rather than faded — same reasoning as .party-cov__header-boon
+   --uncovered just above. */
 .party-cov__pill--self-condi .party-cov__pill-icon {
-  opacity: 0.4;
+  filter: grayscale(1);
 }
 
 /* Uncovered is a status too — the absence of one — and it is never
@@ -2127,7 +2156,7 @@
 }
 
 .party-cov__pill--self-only .party-cov__pill-icon {
-  opacity: 0.28;
+  filter: grayscale(1);
 }
 
 .party-cov__pill--self-only .party-cov__pill-badge {
@@ -2366,7 +2395,7 @@
 }
 
 .party-cov__src-row--self-condi {
-  opacity: 0.65;
+  background: var(--axi-ground);
 }
 
 /* No scale step: same case as .party-cov__toggle-text. */

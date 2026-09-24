@@ -122,11 +122,15 @@
   background: currentColor;
 }
 
+/* Task 24 (RULES.md rule 2): this carried a 0.9 resting opacity. The glyph's
+   own colours are baked into the SVG asset (src/renderer/styles/svg/
+   axiforge-glyph.svg, outside the gate's reach), so the CSS-level dim was
+   just a partial-opacity fade layered on top of an already-set colour; it
+   rests at full strength now. */
 .titlebar__logo {
   width: 18px;
   height: 18px;
   flex-shrink: 0;
-  opacity: 0.9;
 }
 
 .titlebar__controls {
@@ -226,11 +230,14 @@ body:has(.app-layout) {
   transform: translate(-2px, -2px);
 }
 
+/* Task 24 (RULES.md rule 2): this carried a 0.85 resting opacity on top of a
+   stroke that already reads var(--axi-text-dim) from .subnav__back's own
+   colour (currentColor) — a fade of an already-dimmed ink. The parent's
+   colour is the ramp's answer here, so the extra fade is just removed. */
 .subnav__back-icon {
   width: 16px;
   height: 16px;
   flex-shrink: 0;
-  opacity: 0.85;
 }
 
 /* The destination name can be a long folder or comp title — clip it rather than
@@ -256,11 +263,13 @@ body:has(.app-layout) {
   white-space: nowrap;
 }
 
+/* Task 24 (RULES.md rule 2): same case as .subnav__back-icon above — a 0.8
+   resting opacity fading a stroke that already reads var(--axi-text-dim)
+   from .subnav__item's own colour. */
 .subnav__icon {
   width: 17px;
   height: 17px;
   flex-shrink: 0;
-  opacity: 0.8;
 }
 
 /* Matches the package's .axi-tabs a:hover: colour and border answer, nothing
@@ -437,11 +446,13 @@ body:has(.app-layout) {
   background: var(--axi-surface-raised);
 }
 
+/* Task 24 (RULES.md rule 2): same case as .subnav__back-icon above — a 0.7
+   resting opacity fading a stroke that already carries the menu row's own
+   colour. */
 .subnav__overflow-icon {
   width: 14px;
   height: 14px;
   flex-shrink: 0;
-  opacity: 0.7;
 }
 
 /* ── Left nav ──────────────────────────────────────────────────────────── */
