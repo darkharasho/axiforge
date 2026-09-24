@@ -5,6 +5,7 @@ import {
   professionColour,
   professionSeriesStyle,
   professionStripStyle,
+  slotSeriesStyle,
 } from "../../../src/shared/professions.js";
 
 const ROOT = path.resolve(__dirname, "../../..");
@@ -59,6 +60,19 @@ describe("the style-attribute helpers", () => {
   });
 });
 
+describe("slotSeriesStyle", () => {
+  it("lets a role marker win over the profession", () => {
+    expect(slotSeriesStyle("red", "Ranger")).toBe("--axi-series: #d63a3a");
+    expect(slotSeriesStyle("blue", "Ranger")).toBe("--axi-series: #3a8fd6");
+  });
+
+  it("falls through to the profession for an unknown role", () => {
+    for (const role of ["normal", null, undefined, "", "green"]) {
+      expect(slotSeriesStyle(role, "Ranger")).toBe(professionSeriesStyle("Ranger"));
+    }
+  });
+});
+
 describe("the palette has one home", () => {
   it("appears in no renderer file but professions.js", () => {
     // Global Constraint 6. Six copies is how the palette drifted; this is the
@@ -79,13 +93,6 @@ describe("the palette has one home", () => {
         // src/site and packages/forge-render convert in batch 5.
         if (rel.startsWith(path.join("src", "site"))) continue;
         if (rel.startsWith("packages")) continue;
-        // These two still carry the palette as CSS classes. Task 6 moved
-        // library.css's copy into professions-legacy.css (Ruling 11 — three
-        // screens still emit profClass() and have not been converted), and
-        // Task 11 deletes both that file and comps.css's own copy; when both
-        // are done, delete these two lines and the test covers the whole app.
-        if (rel === path.join("src", "renderer", "styles", "professions-legacy.css")) continue;
-        if (rel === path.join("src", "renderer", "styles", "comps.css")) continue;
         const text = fs.readFileSync(full, "utf8").toLowerCase();
         for (const c of colours) if (text.includes(c)) offenders.push(`${rel}: ${c}`);
       }

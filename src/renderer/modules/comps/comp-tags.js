@@ -137,7 +137,7 @@ export function renderCompTagsRow(comp) {
   const tags = comp?.tags || [];
   const pills = tags
     .map((t) => `
-      <span class="comp-detail__tag">
+      <span class="comp-detail__tag axi-chip">
         ${escapeHtml(t)}
         <button type="button" class="comp-detail__tag-remove" data-action="remove-tag"
                 data-tag="${escapeHtml(t)}" title="Remove tag">&times;</button>
@@ -147,7 +147,7 @@ export function renderCompTagsRow(comp) {
   return `
     <div class="comp-detail__tags-row">
       ${pills}
-      <button type="button" class="comp-detail__tag-add" data-action="edit-tags">${addLabel}</button>
+      <button type="button" class="comp-detail__tag-add axi-btn axi-btn--dashed" data-action="edit-tags">${addLabel}</button>
     </div>
   `;
 }

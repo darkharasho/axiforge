@@ -65,8 +65,7 @@ describe("condition expand panel", () => {
     const el = await renderLine();
     el.querySelector('[data-condition-name="Poisoned"]').click();
     const toggle = el.querySelector('[data-action="toggle-self-boons"]');
-    toggle.checked = false;
-    toggle.dispatchEvent(new Event("change"));
+    toggle.click();
 
     const expand = el.querySelector('[data-expand-for="conditions"]');
     expand.querySelectorAll(".party-cov__src-row").forEach((r) => {

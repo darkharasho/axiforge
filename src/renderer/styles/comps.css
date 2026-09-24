@@ -569,25 +569,20 @@
   gap: 10px;
   padding: 8px 12px;
   min-height: 80px;
-  border-bottom: 1px solid var(--panel-2);
+  border-bottom: var(--axi-border-panel) solid var(--axi-ink-line);
   flex-shrink: 0;
 }
 
-.comp-detail__topbar .btn svg {
-  width: 14px;
-  height: 14px;
-  vertical-align: -2px;
-}
-
-/* ── Share dropdown ───────────────────────────────────────────────────────── */
+/* ── Share dropdown ──────────────────────────────────────────────── */
+/* Ruling B: a share dropdown is a .axi-picker. The trigger already carries
+   .axi-btn/--ghost; the menu it opens carries .axi-picker__pop and each item
+   carries .axi-picker__opt, so the popover reads as the same family as the
+   import/export pickers in library.css. Only position/size/animation stay
+   local — the trigger sits at the topbar's right edge, not growing to its
+   own width, so the popover needs its own offset instead of the package's
+   calc(100% + 9px) default. */
 .comp-share-dropdown {
   position: relative;
-}
-
-.comp-share-dropdown__trigger {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
 }
 
 .comp-share-dropdown__trigger svg {
@@ -606,12 +601,7 @@
   top: calc(100% + 4px);
   left: 0;
   min-width: 170px;
-  background: var(--panel-2);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  padding: 4px 0;
   z-index: var(--z-menu);
-  box-shadow: var(--shadow-sm);
   animation: share-menu-in 0.12s ease;
 }
 
@@ -625,43 +615,26 @@
 }
 
 .comp-share-dropdown__item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 6px 14px;
-  background: none;
-  border: none;
-  color: var(--text-light);
-  font-size: 0.85rem;
-  font-family: inherit;
-  text-align: left;
-  cursor: pointer;
   white-space: nowrap;
-  transition: background 0.1s, color 0.1s;
-}
-
-.comp-share-dropdown__item:hover {
-  background: var(--hover-subtle);
 }
 
 .comp-share-dropdown__item svg {
   width: 13px;
   height: 13px;
   flex-shrink: 0;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
 }
 
 .comp-share-dropdown__item--copied {
-  color: var(--accent);
+  color: var(--axi-accent);
 }
 
 .comp-share-dropdown__item--copied svg {
-  color: var(--accent);
+  color: var(--axi-accent);
 }
 
 .comp-share-dropdown__item--error {
-  color: var(--danger-text);
+  color: var(--axi-danger);
 }
 
 .comp-share-dropdown__item:disabled {
@@ -670,8 +643,8 @@
 }
 
 .comp-share-dropdown__divider {
-  height: 1px;
-  background: rgba(255, 255, 255, 0.08);
+  height: var(--axi-border-hairline);
+  background: var(--axi-rule);
   margin: 2px 0;
 }
 
@@ -679,46 +652,46 @@
   all: unset;
   cursor: pointer;
   font-size: 0.85rem;
-  color: var(--muted);
+  color: var(--axi-text-faint);
   white-space: nowrap;
   transition: color 0.15s;
 }
 
 .comp-detail__back-btn:hover {
-  color: var(--text-light);
+  color: var(--axi-text-dim);
 }
 
 .comp-detail__divider {
-  color: var(--line);
+  color: var(--axi-ink-line);
   user-select: none;
 }
 
 .comp-detail__name {
   font-size: 0.95rem;
-  color: var(--text);
+  color: var(--axi-text);
   font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   min-width: 0;
   cursor: pointer;
-  border-bottom: 1px dashed transparent;
+  border-bottom: var(--axi-border-hairline) dashed transparent;
   transition: border-color 0.15s;
 }
 
 .comp-detail__name:hover {
-  border-color: var(--accent);
+  border-color: var(--axi-accent);
 }
 
+/* .axi-input carries the box; this is the compact inline-rename size and the
+   accent border that marks "editing" instead of the input's resting
+   ink-line — legitimate per-instance overrides, the same shape
+   library.css:512-520 makes on the same class. */
 .comp-detail__name-input {
   font-size: 0.95rem;
-  color: var(--text);
   font-weight: 500;
-  background: var(--bg-2);
-  border: 1px solid var(--accent);
-  border-radius: var(--radius-xs);
   padding: 1px 6px;
-  font-family: inherit;
+  border-color: var(--axi-accent);
   outline: none;
   min-width: 120px;
   max-width: 300px;
@@ -730,27 +703,27 @@
 
 .comp-detail__save-status {
   font-size: 0.75rem;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
   white-space: nowrap;
   transition: color 0.2s;
 }
 
 .comp-detail__save-status--saving {
-  color: var(--gold);
+  color: var(--axi-accent);
 }
 
 .comp-detail__discord-status {
   font-size: 0.75rem;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
   white-space: nowrap;
 }
 .comp-detail__discord-status--error {
-  color: var(--danger-text);
+  color: var(--axi-danger);
 }
 
 .comp-detail__slot-counter {
   font-size: 0.85rem;
-  color: var(--muted);
+  color: var(--axi-text-faint);
   white-space: nowrap;
 }
 
@@ -762,21 +735,17 @@
   align-items: center;
   gap: 6px;
   padding: 6px 12px;
-  border-bottom: 1px solid var(--panel-2);
+  border-bottom: var(--axi-border-panel) solid var(--axi-ink-line);
   flex-shrink: 0;
 }
 
+/* .axi-chip carries the box; a tag is a neutral fact about the comp, not a
+   status, so it rides the unmodified chip — the same call
+   .comp-list-row__tag makes in the list. The padding is asymmetric to leave
+   room for the remove button riding inside it. */
 .comp-detail__tag {
-  display: inline-flex;
-  align-items: center;
   gap: 4px;
   padding: 2px 6px 2px 10px;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  color: var(--gold);
-  background: rgba(200, 169, 110, 0.1);
-  border: 1px solid rgba(200, 169, 110, 0.25);
-  white-space: nowrap;
 }
 
 /* Hidden until the pill is hovered: a row of tags is something you read far
@@ -786,8 +755,7 @@
   cursor: pointer;
   line-height: 1;
   padding: 0 3px;
-  border-radius: 8px;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
   opacity: 0;
   transition: opacity 0.12s ease;
 }
@@ -798,30 +766,20 @@
 }
 
 .comp-detail__tag-remove:hover {
-  color: var(--danger, #e06c6c);
-  background: rgba(224, 108, 108, 0.15);
+  color: var(--axi-danger);
 }
 
+/* .axi-btn/--dashed carries the box; this is the compact micro-label size a
+   pill-shaped row control needs instead of the button's full form padding. */
 .comp-detail__tag-add {
-  all: unset;
-  cursor: pointer;
   padding: 2px 10px;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  color: var(--text-dim);
-  border: 1px dashed rgba(200, 169, 110, 0.35);
-  white-space: nowrap;
-}
-
-.comp-detail__tag-add:hover {
-  color: var(--gold);
-  border-color: rgba(200, 169, 110, 0.45);
-  background: rgba(200, 169, 110, 0.08);
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
 }
 
 .comp-tag-popover__empty {
   font-size: 0.78rem;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
   padding: 4px;
 }
 
@@ -832,43 +790,49 @@
   align-items: center;
   gap: 4px;
   padding: 0 12px 8px;
-  border-bottom: 1px solid var(--panel-2);
+  border-bottom: var(--axi-border-panel) solid var(--axi-ink-line);
   flex-shrink: 0;
 }
 
+/* Matches the package's .axi-tabs a — a filled/blocked current tab, the rest
+   quiet — but the elements are buttons (data-action dispatch, not
+   navigation), so .axi-tabs itself, whose selector is `.axi-tabs a`, cannot
+   reach them. Same precedent as .subnav__item in layout.css: the same
+   tokens, applied to a <button>. */
 .comp-detail__tab {
   position: relative;
   padding: 6px 14px;
-  border: none;
-  border-radius: 8px;
+  border: var(--axi-border-control) solid transparent;
   background: transparent;
   cursor: pointer;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.03em;
   white-space: nowrap;
-  transition: background 0.2s, color 0.2s;
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
 }
 
 .comp-detail__tab:hover {
-  background: var(--hover-subtle);
-  color: var(--text);
+  color: var(--axi-text);
+  border-color: var(--axi-rule);
 }
 
 .comp-detail__tab--active {
-  background: var(--hover-accent);
-  color: var(--accent);
+  background: var(--axi-accent);
+  color: var(--axi-accent-ink);
+  border-color: var(--axi-ink-line);
+  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
 }
 
-/* Marks the Notes tab when the comp actually has notes to read. */
+/* Rule 7: the family bullet, marking a tab that has something behind it. */
 .comp-detail__tab-dot {
   display: inline-block;
-  width: 5px;
-  height: 5px;
-  margin-left: 6px;
-  border-radius: 50%;
-  background: var(--accent);
+  width: 6px;
+  height: 6px;
+  margin-left: 7px;
+  transform: rotate(45deg);
+  background: var(--axi-accent);
   vertical-align: middle;
 }
 
@@ -902,7 +866,7 @@
 
 .comp-detail__resize-handle {
   flex: 0 0 4px;
-  background: var(--panel-2);
+  background: var(--axi-surface);
   cursor: col-resize;
   transition: background 0.15s;
   position: relative;
@@ -917,7 +881,7 @@
 
 .comp-detail__resize-handle:hover,
 .comp-detail__resize-handle--dragging {
-  background: var(--accent);
+  background: var(--axi-accent);
 }
 
 .comp-detail__pool-panel {
@@ -928,13 +892,15 @@
 }
 
 /* ── Party Line Row ──────────────────────────────────────────────── */
+/* Rule 8: the eye runs down the P#/slots column, so a line is a rule, not an
+   outline — the hairline weight, same as .comp-list-row. */
 
 .comp-line {
   display: flex;
   align-items: flex-start;
   gap: 8px;
   padding: 8px 12px;
-  border-bottom: 1px solid var(--line-soft);
+  border-bottom: var(--axi-border-hairline) solid var(--axi-rule);
 }
 
 .comp-line__label {
@@ -942,7 +908,7 @@
   width: 22px;
   font-size: 0.8rem;
   font-weight: 600;
-  color: var(--muted);
+  color: var(--axi-text-faint);
   padding-top: 10px;
   text-align: right;
 }
@@ -951,15 +917,14 @@
   width: 20px;
   height: 20px;
   display: block;
-  color: var(--muted);
+  color: var(--axi-text-faint);
 }
 
-.comp-line--multirow .comp-line__num { color: var(--text); }
+.comp-line--multirow .comp-line__num { color: var(--axi-text); }
 
 .comp-line--multirow .comp-line__label {
-  background: var(--panel-2);
-  color: var(--text);
-  border-radius: var(--radius-xs);
+  background: var(--axi-surface);
+  color: var(--axi-text);
   padding: 6px 4px;
   text-align: center;
   align-self: stretch;
@@ -992,40 +957,40 @@
   all: unset;
   cursor: pointer;
   font-size: 1rem;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
   width: 22px;
   height: 22px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-xs);
   transition: color 0.15s, background 0.15s;
 }
 
 .comp-line__btn:hover {
-  color: var(--text-light);
-  background: var(--panel-2);
+  color: var(--axi-text-dim);
+  background: var(--axi-surface);
 }
 
+/* A destructive hover: full-strength danger fill, same as
+   .axi-titlebar__btns' close button. */
 .comp-line__btn--remove:hover {
-  color: var(--danger-text);
-  background: rgba(238, 85, 85, 0.12);
+  color: var(--axi-ink-line);
+  background: var(--axi-danger);
 }
 
 /* ── Add Line ────────────────────────────────────────────────────── */
 
 .comp-line--add {
   cursor: pointer;
-  border: 1px dashed var(--line);
+  border: var(--axi-border-control) dashed var(--axi-ink-line);
   margin: 8px 12px;
   padding: 10px;
-  border-radius: var(--radius-sm);
   justify-content: center;
   transition: border-color 0.15s, color 0.15s;
 }
 
 .comp-line--add:hover {
-  border-color: var(--accent);
+  border-color: var(--axi-accent);
 }
 
 .comp-line--add.comp-line--disabled {
@@ -1036,11 +1001,11 @@
 
 .comp-line__add-text {
   font-size: 0.85rem;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
 }
 
 .comp-line--add:hover .comp-line__add-text {
-  color: var(--muted);
+  color: var(--axi-text-faint);
 }
 
 /* ── Slot Box ────────────────────────────────────────────────────── */
@@ -1048,7 +1013,6 @@
 .comp-slot {
   width: 42px;
   height: 42px;
-  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1057,49 +1021,55 @@
 }
 
 .comp-slot--filled {
-  background: var(--bg-2);
-  border: 2px solid var(--line);
+  background: var(--axi-ground);
+  border: var(--axi-border-control) solid var(--axi-ink-line);
   cursor: pointer;
-  transition: background 0.15s, box-shadow 0.15s;
+  transition: transform .1s, box-shadow .1s;
 }
 
+/* A filled slot is a control with no resting block — rule 4's first hover
+   case: it gains the 3px block from nothing and moves against it. The old
+   hover was a white ring at partial opacity, which rule 4 forbids outright
+   (a glow) as much as rule 2 does (partial-opacity colour). */
 .comp-slot--filled:hover {
-  background: var(--panel-2);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1);
+  transform: translate(-2px, -2px);
+  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
 }
 
 .comp-slot--missing {
-  background: var(--bg-2);
-  border: 1px dashed var(--line);
+  background: var(--axi-ground);
+  border: var(--axi-border-hairline) dashed var(--axi-rule);
   opacity: 0.5;
   cursor: default;
 }
 
 .comp-slot__missing-icon {
   font-size: 0.85rem;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
   user-select: none;
   font-weight: 600;
 }
 
 .comp-slot--empty {
   background: transparent;
-  border: 1px dashed var(--line);
+  border: var(--axi-border-hairline) dashed var(--axi-rule);
   cursor: pointer;
   transition: border-color 0.15s;
 }
 
 .comp-slot--empty:hover {
-  border-color: var(--accent);
+  border-color: var(--axi-accent);
 }
 
+/* Square: the round mask is the one round thing left in this batch, and the
+   profession glyph inside it is the only circular shape on the screen once
+   the slot box's own corner goes square. */
 .comp-slot__icon {
   width: 30px;
   height: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
   overflow: hidden;
 }
 
@@ -1110,29 +1080,21 @@
 
 .comp-slot__plus {
   font-size: 1rem;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
   user-select: none;
 }
 
 .comp-slot--empty:hover .comp-slot__plus {
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
 }
 
-/* ── Profession-colored slot borders ─────────────────────────────── */
-
-.comp-slot--filled.lib-prof--guardian     { border-color: #6ea8ff; }
-.comp-slot--filled.lib-prof--warrior      { border-color: #ff9944; }
-.comp-slot--filled.lib-prof--necromancer  { border-color: #4dca7a; }
-.comp-slot--filled.lib-prof--engineer     { border-color: #cc8844; }
-.comp-slot--filled.lib-prof--ranger       { border-color: #77cc55; }
-.comp-slot--filled.lib-prof--thief        { border-color: #cc6677; }
-.comp-slot--filled.lib-prof--mesmer       { border-color: #b07acc; }
-.comp-slot--filled.lib-prof--elementalist { border-color: #dd5555; }
-.comp-slot--filled.lib-prof--revenant     { border-color: #aa6655; }
-
-/* Slot color overrides (Condi / Heal) — extra class for specificity over .lib-prof--* */
-.comp-slot.comp-slot--filled[data-slot-color="red"]  { border-color: #d63a3a; }
-.comp-slot.comp-slot--filled[data-slot-color="blue"] { border-color: #3a8fd6; }
+/* The profession's colour on the slot's outline — the one place in the app
+   an outline carries domain colour, because here the outline IS the
+   identification: a 42px box has no room for a strip or a label. The
+   template sets --axi-series to the slot's role marker (Condi/Heal) when it
+   has one, else to the build's profession — slotSeriesStyle in
+   professions.js resolves the two. */
+.comp-slot--filled { border-color: var(--axi-series, var(--axi-ink-line)); }
 
 /* ═══════════════════════════════════════════════════════════════════
    Build Pool Panel
@@ -1157,50 +1119,28 @@
 
 .comp-pool-title {
   font-size: 12px;
-  color: var(--muted);
+  color: var(--axi-text-faint);
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
 
 .comp-pool-count {
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
 }
 
+/* .axi-input carries the box; this is the compact search width a pool header
+   needs instead of the input's full form width. */
 .comp-pool-search {
-  background: var(--panel-2);
-  border: 1px solid var(--panel-2);
-  border-radius: 3px;
+  width: 100px;
   padding: 3px 8px;
   font-size: 11px;
-  color: var(--muted);
-  font-family: inherit;
-  width: 100px;
-  outline: none;
 }
 
-.comp-pool-search:focus {
-  border-color: var(--accent);
-}
-
-.comp-pool-search::placeholder {
-  color: var(--text-dim);
-}
-
+/* .axi-btn/--ghost carries the box; this is the compact label size a pool
+   header control needs instead of the button's full form padding. */
 .comp-pool-add {
-  background: var(--panel-2);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-xs);
   padding: 3px 8px;
   font-size: 12px;
-  color: var(--muted);
-  font-family: inherit;
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-}
-
-.comp-pool-add:hover {
-  background: var(--line);
-  color: var(--text);
 }
 
 .comp-pool-list {
@@ -1210,7 +1150,7 @@
 }
 
 .comp-pool-empty {
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
   font-size: 13px;
   padding: 20px 0;
   text-align: center;
@@ -1224,14 +1164,14 @@
   flex-wrap: wrap;
   padding: 6px 0 8px;
   margin-bottom: 4px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: var(--axi-border-hairline) solid var(--axi-rule);
 }
 
 .comp-cat-row__label {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
 }
 
 .comp-cat-list {
@@ -1241,24 +1181,26 @@
   flex-wrap: wrap;
 }
 
+/* A draggable fact about the comp (a category exists, with N builds in it) —
+   not a status, so it takes the control weight rather than a hand-drawn
+   lozenge. The 999px pill radius is gone with every other corner. */
 .comp-cat-chip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 3px 8px;
-  background: var(--panel-2);
-  border: 1px solid var(--line);
-  border-radius: 999px;
+  background: var(--axi-surface);
+  border: var(--axi-border-control) solid var(--axi-ink-line);
   font-size: 12px;
-  color: var(--text);
+  color: var(--axi-text);
   cursor: grab;
   user-select: none;
   transition: background 0.15s, border-color 0.15s;
 }
 
 .comp-cat-chip:hover {
-  background: var(--line);
-  border-color: var(--muted);
+  background: var(--axi-ink-line);
+  border-color: var(--axi-text-faint);
 }
 
 .comp-cat-chip:active {
@@ -1281,33 +1223,21 @@
   justify-content: center;
   font-size: 10px;
   font-weight: 600;
-  color: var(--muted);
-  background: var(--bg-2);
-  border-radius: 999px;
+  color: var(--axi-text-faint);
+  background: var(--axi-ground);
 }
 
-/* SortableJS fallback ghost while dragging a chip */
+/* SortableJS fallback ghost while dragging a chip — a ghost, so it keeps its
+   opacity, but the shape it's a ghost of no longer has a radius or a blur. */
 .comp-cat-drag-ghost {
   opacity: 0.9;
-  box-shadow: var(--shadow-md);
 }
 
+/* .axi-btn/--dashed carries the box; this is the compact label size and
+   dashed-pill-radius-free shape a row control needs. */
 .comp-cat-add {
-  background: transparent;
-  border: 1px dashed var(--line);
-  border-radius: 999px;
   padding: 3px 8px;
   font-size: 12px;
-  color: var(--muted);
-  font-family: inherit;
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
-}
-
-.comp-cat-add:hover {
-  background: var(--panel-2);
-  color: var(--text);
-  border-color: var(--muted);
 }
 
 /* ── Category hover preview ────────────────────────────────────────────────── */
@@ -1316,10 +1246,9 @@
   z-index: var(--z-modal);
   min-width: 180px;
   max-width: 260px;
-  background: var(--bg-2);
-  border: 1px solid var(--line);
-  border-radius: 7px;
-  box-shadow: var(--shadow-md);
+  background: var(--axi-surface-raised);
+  border: var(--axi-border-panel) solid var(--axi-ink-line);
+  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
   padding: 8px;
   pointer-events: none;
   animation: comp-hover-in 0.14s ease;
@@ -1328,28 +1257,23 @@
 .comp-cat-hover__title {
   font-size: 12px;
   font-weight: 600;
-  color: var(--text);
+  color: var(--axi-text);
   margin-bottom: 6px;
 }
 
+/* The strip rule (5): a cap, not a full-height frame, would be the more
+   "correct" shape for a card, but this is a single-line row inside a
+   popover rather than a card — the left edge is what a dense list of rows
+   has room for. It carries the same domain colour as the slot box's
+   outline, set the same way. */
 .comp-cat-hover__row {
   display: flex;
   align-items: center;
   gap: 6px;
   padding: 2px 0;
-  border-left: 3px solid var(--line);
+  border-left: var(--axi-border-control) solid var(--axi-series, var(--axi-ink-line));
   padding-left: 6px;
 }
-
-.comp-cat-hover__row.lib-prof--guardian     { border-left-color: #6ea8ff; }
-.comp-cat-hover__row.lib-prof--warrior      { border-left-color: #ff9944; }
-.comp-cat-hover__row.lib-prof--necromancer  { border-left-color: #4dca7a; }
-.comp-cat-hover__row.lib-prof--engineer     { border-left-color: #cc8844; }
-.comp-cat-hover__row.lib-prof--ranger       { border-left-color: #77cc55; }
-.comp-cat-hover__row.lib-prof--thief        { border-left-color: #cc6677; }
-.comp-cat-hover__row.lib-prof--mesmer       { border-left-color: #b07acc; }
-.comp-cat-hover__row.lib-prof--elementalist { border-left-color: #dd5555; }
-.comp-cat-hover__row.lib-prof--revenant     { border-left-color: #aa6655; }
 
 .comp-cat-hover__icon {
   width: 18px;
@@ -1364,12 +1288,11 @@
 .comp-cat-hover__icon svg {
   width: 18px;
   height: 18px;
-  border-radius: 3px;
 }
 
 .comp-cat-hover__name {
   font-size: 12px;
-  color: var(--text);
+  color: var(--axi-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1377,27 +1300,23 @@
 
 .comp-cat-hover__empty {
   font-size: 12px;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
 }
 
 /* Category modal extras (reuses .comp-picker-modal) */
 .comp-cat-modal__spacer { flex: 1; }
 
 .comp-cat-name-input--error {
-  border-color: #d63a3a !important;
+  border-color: var(--axi-danger) !important;
 }
 
 .comp-picker-modal__btn--delete {
-  color: #e06464;
-}
-
-.comp-picker-modal__btn--delete:hover {
-  background: rgba(214, 58, 58, 0.12);
+  color: var(--axi-danger);
 }
 
 /* ── Tag slot in a party line ──────────────────────────────────────────────── */
 .comp-slot--tag {
-  background: var(--panel-2);
+  background: var(--axi-surface);
   border-style: dashed;
 }
 
@@ -1411,20 +1330,20 @@
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--axi-text-faint);
 }
 
 /* ── Icon picker (category editor) ─────────────────────────────────────────── */
 .comp-cat-icon-picker {
   padding: 10px 14px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: var(--axi-border-hairline) solid var(--axi-rule);
 }
 
 .comp-cat-icon-label {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
   margin-bottom: 6px;
 }
 
@@ -1436,23 +1355,17 @@
   overflow-y: auto;
 }
 
+/* .axi-pill carries the box, including the pressed fill (rule 4's three-case
+   hover) via aria-pressed — the same idiom .lib-view-btn rides in
+   library.css. This is the compact square an icon-only grid cell needs
+   instead of the pill's full label padding. */
 .comp-cat-icon-opt {
   width: 34px;
   height: 34px;
+  padding: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 4px;
-  background: var(--panel-2);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-xs);
-  cursor: pointer;
-  color: var(--muted);
-  transition: border-color 0.12s, background 0.12s;
-}
-
-.comp-cat-icon-opt:hover {
-  border-color: var(--muted);
 }
 
 .comp-cat-icon-opt img {
@@ -1465,23 +1378,12 @@
   font-size: 16px;
 }
 
-.comp-cat-icon-opt--active {
-  border-color: var(--accent, #6ea8ff);
-  background: color-mix(in srgb, var(--accent, #6ea8ff) 18%, transparent);
-}
-
 .comp-cat-icon-custom {
   margin-top: 8px;
   width: 100%;
-  background: var(--bg-2);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-xs);
   padding: 5px 8px;
   font-size: 12px;
-  color: var(--text);
-  font-family: inherit;
 }
-
 
 /* ═══════════════════════════════════════════════════════════════════
    Add Build Picker Modal
@@ -1490,23 +1392,25 @@
 .comp-picker-overlay {
   position: fixed;
   inset: 0;
-  background: var(--overlay);
+  background: var(--axi-scrim);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: var(--z-modal);
 }
 
+/* No modal primitive exists yet (batch 4 consolidates the app's ten sheets);
+   this matches .axi-panel's own weight — a centred sheet is a raised
+   surface like any other — rather than inventing a third form step. */
 .comp-picker-modal {
-  background: var(--bg-2);
-  border: 1px solid var(--line);
-  border-radius: 8px;
+  background: var(--axi-surface-raised);
+  border: var(--axi-border-panel) solid var(--axi-ink-line);
+  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
   width: 480px;
   max-width: 90vw;
   max-height: 70vh;
   display: flex;
   flex-direction: column;
-  box-shadow: var(--shadow-lg);
 }
 
 .comp-picker-modal__header {
@@ -1514,34 +1418,21 @@
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  border-bottom: 1px solid var(--panel-2);
+  border-bottom: var(--axi-border-panel) solid var(--axi-ink-line);
   flex-shrink: 0;
 }
 
 .comp-picker-modal__title {
   font-size: 13px;
-  color: var(--text-light);
+  color: var(--axi-text-dim);
   font-weight: 500;
 }
 
+/* .axi-input carries the box; this is the compact header search width. */
 .comp-picker-modal__search {
-  background: var(--panel-2);
-  border: 1px solid var(--panel-2);
-  border-radius: var(--radius-xs);
+  width: 160px;
   padding: 4px 8px;
   font-size: 12px;
-  color: var(--muted);
-  font-family: inherit;
-  width: 160px;
-  outline: none;
-}
-
-.comp-picker-modal__search:focus {
-  border-color: var(--accent);
-}
-
-.comp-picker-modal__search::placeholder {
-  color: var(--text-dim);
 }
 
 .comp-picker-modal__list {
@@ -1551,12 +1442,15 @@
 }
 
 .comp-picker-empty {
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
   font-size: 12px;
   padding: 20px 16px;
   text-align: center;
 }
 
+/* A short list of things you act on (rule 8's counterpart) would normally be
+   a stack of control-weight cards, but a build picker runs to dozens of rows
+   — past the "short" bound — so it stays a flat, ruled list instead. */
 .comp-picker-row {
   display: flex;
   align-items: center;
@@ -1567,12 +1461,12 @@
 }
 
 .comp-picker-row:hover {
-  background: var(--panel-2);
+  background: var(--axi-surface);
 }
 
 .comp-picker-row__checkbox {
   flex-shrink: 0;
-  accent-color: var(--gold);
+  accent-color: var(--axi-accent);
 }
 
 .comp-picker-row__icon {
@@ -1607,22 +1501,20 @@
 
 .comp-picker-row__name {
   font-size: 13px;
-  color: var(--text-light);
+  color: var(--axi-text-dim);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   min-width: 0;
 }
 
+/* Shared and already-in-a-comp are the two facts that change whether you
+   should pick a build at all, so they don't get to look like the rest of
+   the meta — .axi-chip carries the box (--meta for "shared", a fact about
+   provenance; the unmodified chip for "already in N comps", a plain
+   count). This is the row's compact size instead of the chip's default. */
 .comp-picker-row__badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  font-size: 10px;
-  color: var(--text-dim);
-  background: var(--bg-tertiary, rgba(255, 255, 255, 0.08));
-  padding: 1px 6px;
-  border-radius: 8px;
+  padding: 1px 8px;
   flex-shrink: 0;
   white-space: nowrap;
   max-width: 140px;
@@ -1636,24 +1528,12 @@
   flex-shrink: 0;
 }
 
-/* Shared and already-in-a-comp are the two facts that change whether you should
-   pick a build at all, so they don't get to look like the rest of the meta. */
-.comp-picker-row__badge--shared {
-  color: var(--accent, #7aa2f7);
-  background: color-mix(in srgb, var(--accent, #7aa2f7) 14%, transparent);
-}
-
-.comp-picker-row__badge--comps {
-  color: var(--gold, #d9b25f);
-  background: color-mix(in srgb, var(--gold, #d9b25f) 14%, transparent);
-}
-
 .comp-picker-row__meta {
   display: flex;
   align-items: center;
   gap: 5px;
   font-size: 10.5px;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
   min-width: 0;
   overflow: hidden;
   white-space: nowrap;
@@ -1661,7 +1541,7 @@
 }
 
 .comp-picker-row__where {
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
   overflow: hidden;
   text-overflow: ellipsis;
   flex-shrink: 1;
@@ -1676,12 +1556,12 @@
 .comp-picker-modal__scope {
   padding: 6px 16px 8px;
   font-size: 11px;
-  color: var(--text-dim);
-  border-bottom: 1px solid var(--line-soft);
+  color: var(--axi-text-faint);
+  border-bottom: var(--axi-border-hairline) solid var(--axi-rule);
 }
 
 .comp-picker-modal__scope b {
-  color: var(--text-light);
+  color: var(--axi-text-dim);
   font-weight: 600;
 }
 
@@ -1691,39 +1571,15 @@
   justify-content: flex-end;
   gap: 8px;
   padding: 10px 16px;
-  border-top: 1px solid var(--panel-2);
+  border-top: var(--axi-border-panel) solid var(--axi-ink-line);
   flex-shrink: 0;
 }
 
+/* .axi-btn/--ghost/--primary carry the box; this is the compact label size
+   the modal footer needs instead of the button's full form padding. */
 .comp-picker-modal__btn {
-  all: unset;
-  cursor: pointer;
   padding: 5px 14px;
-  border-radius: var(--radius-xs);
   font-size: 12px;
-  font-family: inherit;
-  transition: background 0.15s, color 0.15s;
-}
-
-.comp-picker-modal__btn--cancel {
-  color: var(--text-dim);
-  background: var(--panel-2);
-  border: 1px solid var(--line);
-}
-
-.comp-picker-modal__btn--cancel:hover {
-  color: var(--text-light);
-  background: var(--line);
-}
-
-.comp-picker-modal__btn--add {
-  color: var(--text);
-  background: rgba(200, 169, 110, 0.25);
-  border: 1px solid rgba(200, 169, 110, 0.5);
-}
-
-.comp-picker-modal__btn--add:hover:not(:disabled) {
-  background: rgba(200, 169, 110, 0.35);
 }
 
 .comp-picker-modal__btn--add:disabled {
@@ -1735,14 +1591,20 @@
    Drag & Drop States
    ═══════════════════════════════════════════════════════════════════ */
 
-/* Pool card drag ghost — styled to look like a filled slot box */
+/* Pool card drag ghost — styled to look like a filled slot box, so its
+   border weight and the slot's must move together. It keeps its opacity —
+   a ghost is a ghost — but no longer draws a radius. The forced values
+   below mirror .comp-slot--filled's own; the profession colour comes
+   through the same --axi-series knob, set by comp-drag-drop.js onStart
+   (the clone still carries a lib-prof--* class from packages/forge-render,
+   batch 5's unconverted mini-card, which draws nothing once
+   professions-legacy.css is gone). */
 .comp-drag-icon-ghost {
   width: 42px !important;
   height: 42px !important;
-  border-radius: var(--radius-sm) !important;
   opacity: 0.9;
-  background: var(--bg-2) !important;
-  border: 2px solid var(--line) !important;
+  background: var(--axi-ground) !important;
+  border: var(--axi-border-control) solid var(--axi-series, var(--axi-ink-line)) !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -1750,17 +1612,6 @@
   gap: 0 !important;
   overflow: hidden;
 }
-
-/* Profession-colored borders matching slot colors */
-.comp-drag-icon-ghost.lib-prof--guardian     { border-color: #6ea8ff !important; }
-.comp-drag-icon-ghost.lib-prof--warrior      { border-color: #ff9944 !important; }
-.comp-drag-icon-ghost.lib-prof--necromancer  { border-color: #4dca7a !important; }
-.comp-drag-icon-ghost.lib-prof--engineer     { border-color: #cc8844 !important; }
-.comp-drag-icon-ghost.lib-prof--ranger       { border-color: #77cc55 !important; }
-.comp-drag-icon-ghost.lib-prof--thief        { border-color: #cc6677 !important; }
-.comp-drag-icon-ghost.lib-prof--mesmer       { border-color: #b07acc !important; }
-.comp-drag-icon-ghost.lib-prof--elementalist { border-color: #dd5555 !important; }
-.comp-drag-icon-ghost.lib-prof--revenant     { border-color: #aa6655 !important; }
 
 .comp-drag-icon-ghost .mini-card__info,
 .comp-drag-icon-ghost .mini-card__btn-remove {
@@ -1770,8 +1621,7 @@
 .comp-drag-icon-ghost .mini-card__icon {
   width: 30px !important;
   height: 30px !important;
-  background: rgba(255, 255, 255, 0.05) !important;
-  border-radius: 50% !important;
+  background: var(--axi-surface) !important;
   flex-shrink: 0 !important;
 }
 
@@ -1786,9 +1636,8 @@
   height: 42px !important;
   min-width: 0 !important;
   max-width: 42px !important;
-  background: rgba(255, 255, 255, 0.04) !important;
-  border: 1px dashed var(--accent) !important;
-  border-radius: var(--radius-sm) !important;
+  background: var(--axi-surface) !important;
+  border: var(--axi-border-hairline) dashed var(--axi-accent) !important;
   overflow: hidden !important;
   opacity: 0.7;
   flex-shrink: 0 !important;
@@ -1806,7 +1655,7 @@
 /* Party line ghost during reorder */
 .comp-line-ghost {
   opacity: 0.5;
-  background: var(--panel-2);
+  background: var(--axi-surface);
 }
 
 /* Make P# label grabbable when lines are reorderable */
@@ -1815,16 +1664,21 @@
 }
 
 /* ── Slot hover card ─────────────────────────────────────────────── */
+/* A tooltip-family popover, portaled to <body> already (showSlotHoverCard
+   appends it there directly), so rule 4's transformed-ancestor hazard does
+   not apply here. It is richer than .axi-tooltip's one-line shape — an
+   icon, a name, equipment, tags — so it takes the panel weight rather than
+   the tooltip's single ink-line exception, which RULES.md reserves for
+   .axi-tooltip alone. */
 
 .comp-slot-hover-card {
   position: fixed;
   z-index: var(--z-modal);
   width: 230px;
-  background: var(--bg-2);
-  border: 1px solid var(--line);
-  border-left: 3px solid var(--line);
-  border-radius: 7px;
-  box-shadow: var(--shadow-md);
+  background: var(--axi-surface-raised);
+  border: var(--axi-border-panel) solid var(--axi-ink-line);
+  border-left: var(--axi-border-panel) solid var(--axi-series, var(--axi-ink-line));
+  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
   pointer-events: none;
   animation: comp-hover-in 0.14s ease;
 }
@@ -1833,17 +1687,6 @@
   from { opacity: 0; transform: translateY(4px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-
-/* Profession accent */
-.comp-slot-hover-card.lib-prof--guardian     { border-left-color: #6ea8ff; }
-.comp-slot-hover-card.lib-prof--warrior      { border-left-color: #ff9944; }
-.comp-slot-hover-card.lib-prof--necromancer  { border-left-color: #4dca7a; }
-.comp-slot-hover-card.lib-prof--engineer     { border-left-color: #cc8844; }
-.comp-slot-hover-card.lib-prof--ranger       { border-left-color: #77cc55; }
-.comp-slot-hover-card.lib-prof--thief        { border-left-color: #cc6677; }
-.comp-slot-hover-card.lib-prof--mesmer       { border-left-color: #b07acc; }
-.comp-slot-hover-card.lib-prof--elementalist { border-left-color: #dd5555; }
-.comp-slot-hover-card.lib-prof--revenant     { border-left-color: #aa6655; }
 
 .comp-hover__header {
   display: flex;
@@ -1855,8 +1698,7 @@
 .comp-hover__icon {
   width: 30px;
   height: 30px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--axi-surface);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1879,7 +1721,7 @@
 .comp-hover__name {
   font-size: 12px;
   font-weight: 600;
-  color: var(--text);
+  color: var(--axi-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1887,14 +1729,13 @@
 
 .comp-hover__prof {
   font-size: 10px;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
 }
 
 .comp-hover__mode {
   font-size: 10px;
-  color: var(--text-dim);
-  background: var(--bg);
-  border-radius: 8px;
+  color: var(--axi-text-faint);
+  background: var(--axi-ground);
   padding: 2px 6px;
   flex-shrink: 0;
   align-self: flex-start;
@@ -1907,24 +1748,24 @@
   flex-wrap: wrap;
   gap: 4px;
   padding: 0 11px 8px;
-  border-top: 1px solid var(--line-soft);
+  border-top: var(--axi-border-hairline) solid var(--axi-rule);
   padding-top: 6px;
 }
 
 .comp-hover__stat {
   font-size: 11px;
-  color: var(--gold);
+  color: var(--axi-accent);
   font-weight: 500;
 }
 
 .comp-hover__equip {
   font-size: 10px;
-  color: var(--muted);
+  color: var(--axi-text-faint);
 }
 
 .comp-hover__sep {
   font-size: 10px;
-  color: var(--line);
+  color: var(--axi-ink-line);
 }
 
 .comp-hover__tags {
@@ -1940,11 +1781,10 @@
 
 .comp-hover__tag {
   font-size: 10px;
-  border-radius: 8px;
   padding: 1px 6px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: var(--muted);
+  background: var(--axi-surface);
+  border: var(--axi-border-hairline) solid var(--axi-rule);
+  color: var(--axi-text-faint);
 }
 
 /* ── Slot drag trash zone ────────────────────────────────────────── */
@@ -1955,8 +1795,7 @@
   justify-content: center;
   margin: 4px 12px 8px;
   padding: 8px;
-  border: 1px dashed var(--line);
-  border-radius: var(--radius-sm);
+  border: var(--axi-border-control) dashed var(--axi-ink-line);
   transition: border-color 0.15s, background 0.15s;
   min-height: 36px;
 }
@@ -1966,25 +1805,25 @@
 }
 
 .comp-line-trash--over {
-  border-color: #cc4444;
-  background: rgba(204, 68, 68, 0.08);
+  border-color: var(--axi-danger);
+  background: var(--axi-danger);
 }
 
 .comp-line-trash__text {
   font-size: 0.75rem;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
   user-select: none;
   pointer-events: none;
 }
 
 .comp-line-trash--over .comp-line-trash__text {
-  color: #cc4444;
+  color: var(--axi-ink-line);
 }
 
 /* ── Comp Boon Coverage Section ─────────────────────────────────────── */
 
 .comp-boon-cov {
-  border-top: 1px solid var(--panel-2);
+  border-top: var(--axi-border-panel) solid var(--axi-ink-line);
   margin-top: 4px;
 }
 
@@ -1995,13 +1834,13 @@
   padding: 7px 12px 6px;
   cursor: pointer;
   user-select: none;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
   font-size: 11px;
   letter-spacing: .05em;
 }
 
 .comp-boon-cov__header:hover {
-  color: var(--muted);
+  color: var(--axi-text-faint);
 }
 
 .comp-boon-cov__chevron {
@@ -2020,8 +1859,7 @@
 /* ── Party Coverage (replaces squad-level boon coverage) ──────────────── */
 
 .party-cov__line {
-  background: var(--panel-2);
-  border-radius: 8px;
+  background: var(--axi-surface);
   margin-bottom: 8px;
 }
 
@@ -2036,19 +1874,18 @@
 }
 
 .party-cov__line-header:hover {
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 8px;
+  background: var(--axi-surface-raised);
 }
 
 .party-cov__line-chevron {
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
   font-size: 10px;
   flex-shrink: 0;
   width: 10px;
 }
 
 .party-cov__line-label {
-  color: #e0a040;
+  color: var(--axi-accent);
   font-weight: bold;
   font-size: 13px;
   flex-shrink: 0;
@@ -2083,7 +1920,6 @@
 
 .party-cov__header-boon {
   display: block;
-  border-radius: 2px;
 }
 
 .party-cov__header-boon--uncovered {
@@ -2113,8 +1949,10 @@
   margin-bottom: 8px;
 }
 
-/* Self-boon toggle */
+/* Self-boon toggle — .axi-switch carries the box (rule 5: the track fills
+   to assert the setting's status; the knob stays ink in both states). */
 .party-cov__toggle {
+  all: unset;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -2122,49 +1960,14 @@
   user-select: none;
 }
 
-.party-cov__toggle-input {
-  display: none;
-}
-
-.party-cov__toggle-switch {
-  width: 32px;
-  height: 18px;
-  background: #3a3a4e;
-  border-radius: 9px;
-  position: relative;
-  transition: background 0.2s;
-}
-
-.party-cov__toggle-switch::after {
-  content: "";
-  width: 14px;
-  height: 14px;
-  background: #888;
-  border-radius: 50%;
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  transition: transform 0.2s, background 0.2s;
-}
-
-.party-cov__toggle-input:checked + .party-cov__toggle-switch {
-  background: #3a6ea5;
-}
-
-.party-cov__toggle-input:checked + .party-cov__toggle-switch::after {
-  transform: translateX(14px);
-  background: white;
-}
-
 .party-cov__toggle-text {
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
   font-size: 11px;
 }
 
 /* Sections */
 .party-cov__section {
-  background: var(--panel);
-  border-radius: var(--radius-sm);
+  background: var(--axi-surface);
   padding: 10px 12px;
   margin-bottom: 8px;
 }
@@ -2174,7 +1977,7 @@
 }
 
 .party-cov__section-label {
-  color: var(--muted);
+  color: var(--axi-text-faint);
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -2193,29 +1996,35 @@
   align-items: center;
   gap: 4px;
   padding: 3px 8px;
-  border-radius: var(--radius-xs);
   font-size: 11px;
   cursor: pointer;
-  border: 1px solid transparent;
-  transition: opacity 0.15s, border-color 0.15s;
+  border: var(--axi-border-control) solid transparent;
+  background: var(--axi-surface-raised);
+  color: var(--axi-text-dim);
+  transition: transform .1s, box-shadow .1s;
 }
 
-.party-cov__pill--boon {
-  background: #3a5a3a;
-  color: #8f8;
-}
-
-.party-cov__pill--condi {
-  background: #5a3a3a;
-  color: #f99;
+/* Filled asserts a value (rule 5): a boon/condition pill reports the party's
+   actual coverage, so it takes the status ink at full strength. Field and
+   finisher pills are domain data (nine combo fields, four finisher types),
+   so their colour comes through --axi-series, the same knob a profession or
+   a card strip reads — set per-instance from constants.js, not a literal
+   here. */
+.party-cov__pill--boon { background: var(--axi-ok); color: var(--axi-ink-line); }
+.party-cov__pill--condi { background: var(--axi-danger); color: var(--axi-ink-line); }
+.party-cov__pill--field,
+.party-cov__pill--finisher {
+  background: var(--axi-series, var(--axi-accent));
+  color: var(--axi-ink-line);
 }
 
 /* Sources exist, but every one of them is self-inflicted (e.g. Corrupt Boon's
-   "Poison yourself") \u2014 not coverage, but distinct from a plain gap and still
-   clickable so the user can see why. */
+   "Poison yourself") — not coverage, but distinct from a plain gap and still
+   clickable so the user can see why. Outlined rather than filled: these three
+   are commentary about the coverage, not a status assertion. */
 .party-cov__pill--self-condi {
-  background: var(--line);
-  color: var(--text-dim);
+  background: var(--axi-surface-raised);
+  color: var(--axi-text-faint);
   border-style: dashed;
 }
 
@@ -2224,14 +2033,14 @@
 }
 
 .party-cov__pill--uncovered {
-  background: var(--line);
-  color: var(--text-dim);
+  background: var(--axi-surface-raised);
+  color: var(--axi-text-faint);
   cursor: default;
 }
 
 .party-cov__pill--self-only {
-  background: var(--line);
-  color: var(--text-dim);
+  background: var(--axi-surface-raised);
+  color: var(--axi-text-faint);
   cursor: default;
 }
 
@@ -2240,21 +2049,20 @@
 }
 
 .party-cov__pill--self-only .party-cov__pill-badge {
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
 }
 
+/* Every clickable pill carries data-clickable="true"; uncovered/self-only
+   never do, so they never lift. Rule 4 case i: no resting block, so hover
+   gains one from nothing. */
+.party-cov__pill[data-clickable="true"]:hover,
 .party-cov__pill--active {
-  border-color: currentColor;
-  box-shadow: 0 0 6px 1px currentColor;
-}
-
-.party-cov__pill:not(.party-cov__pill--uncovered):not(.party-cov__pill--self-only):hover {
-  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  transform: translate(-2px, -2px);
 }
 
 .party-cov__pill-icon {
   display: block;
-  border-radius: 3px;
 }
 
 .party-cov__pill-emoji {
@@ -2267,7 +2075,7 @@
 }
 
 .party-cov__pill-badge {
-  color: #dda;
+  color: inherit;
   font-size: 10px;
 }
 
@@ -2285,8 +2093,11 @@
   padding-top: 8px;
 }
 
+/* --axi-series carries the header/body's left edge and the title's ink — set
+   per-instance by comp-boon-coverage.js: a fixed status token for boons and
+   conditions, the combo field/finisher's own domain colour otherwise. */
 .party-cov__expand-header {
-  border-left: 3px solid;
+  border-left: var(--axi-border-control) solid var(--axi-series, var(--axi-rule));
   padding: 4px 10px;
   margin-bottom: 4px;
 }
@@ -2294,16 +2105,16 @@
 .party-cov__expand-title {
   font-size: 12px;
   font-weight: bold;
+  color: var(--axi-series, var(--axi-text));
 }
 
 .party-cov__expand-icon {
-  border-radius: 3px;
   vertical-align: middle;
   margin-right: 4px;
 }
 
 .party-cov__expand-body {
-  border-left: 3px solid;
+  border-left: var(--axi-border-control) solid var(--axi-series, var(--axi-rule));
   padding-left: 10px;
   display: flex;
   flex-direction: column;
@@ -2316,8 +2127,7 @@
   align-items: center;
   gap: 8px;
   padding: 4px 8px;
-  background: var(--panel);
-  border-radius: var(--radius-xs);
+  background: var(--axi-surface);
 }
 
 .party-cov__src-icon {
@@ -2335,29 +2145,25 @@
 }
 
 .party-cov__src-skill-icon {
-  border-radius: 3px;
   flex-shrink: 0;
   cursor: help;
-  transition: outline 0.1s;
+  transition: outline-color 0.1s;
 }
 
 .party-cov__src-skill-icon:hover {
-  outline: 1.5px solid rgba(255, 255, 255, 0.3);
+  outline: var(--axi-border-hairline) solid var(--axi-rule);
 }
 
-/* Skill hover tooltip — matches build view hover-preview style */
+/* Skill hover tooltip — a richer popover than .axi-tooltip's one-line shape,
+   so it takes the panel weight rather than the tooltip's ink-fill exception
+   (RULES.md reserves that reasoning for .axi-tooltip alone). */
 .party-cov__skill-tooltip {
   position: fixed;
   z-index: var(--z-modal-confirm);
   width: min(320px, calc(100vw - 16px));
-  border: 1px solid #43679f;
-  border-radius: 11px;
-  background:
-    linear-gradient(180deg, rgba(11, 21, 41, 0.97), rgba(8, 15, 30, 0.96)),
-    rgba(8, 15, 30, 0.96);
-  box-shadow:
-    0 12px 28px rgba(2, 7, 18, 0.72),
-    0 0 0 1px rgba(74, 113, 170, 0.18) inset;
+  background: var(--axi-surface-raised);
+  border: var(--axi-border-panel) solid var(--axi-ink-line);
+  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
   padding: 10px;
   pointer-events: none;
 }
@@ -2369,25 +2175,24 @@
 }
 
 .party-cov__skill-tooltip-icon {
-  border-radius: 8px;
-  border: 1px solid #4f79b5;
+  border: var(--axi-border-hairline) solid var(--axi-rule);
 }
 
 .party-cov__skill-tooltip-name {
   font-size: 0.95rem;
   font-weight: 600;
-  color: var(--text);
+  color: var(--axi-text);
 }
 
 .party-cov__skill-tooltip-desc {
   margin: 8px 0 0;
   font-size: 0.78rem;
   line-height: 1.45;
-  color: #b0c4de;
+  color: var(--axi-text-dim);
 }
 
 .party-cov__src-name {
-  color: var(--text);
+  color: var(--axi-text);
   font-size: 12px;
   flex: 1;
   min-width: 0;
@@ -2398,72 +2203,55 @@
 
 .party-cov__src-spec {
   font-size: 11px;
-  color: var(--muted);
+  color: var(--axi-text-faint);
   white-space: nowrap;
 }
 
 .party-cov__src-kit {
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
   font-size: 10px;
 }
 
 .party-cov__src-stacks {
-  color: var(--muted);
+  color: var(--axi-text-faint);
   font-size: 11px;
 }
 
 .party-cov__src-dur {
-  color: var(--muted);
+  color: var(--axi-text-faint);
   font-size: 11px;
 }
 
 .party-cov__src-radius {
-  color: var(--muted);
+  color: var(--axi-text-faint);
   font-size: 11px;
 }
 
 .party-cov__src-blasts {
-  color: var(--muted);
+  color: var(--axi-text-faint);
   font-size: 11px;
 }
 
 .party-cov__src-pct {
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
   font-size: 10px;
 }
 
+/* Five targeting facts, filled asserts a value (rule 5) — the same five
+   inks the rest of the language already means something by, so a sixth
+   arbitrary hue never has to be invented. */
 .party-cov__src-target {
   font-size: 9px;
   font-weight: 700;
   padding: 1px 6px;
-  border-radius: 3px;
   white-space: nowrap;
 }
 
-.party-cov__src-target--ally {
-  background: #2a4a6a;
-  color: #8cf;
-}
-
-.party-cov__src-target--self {
-  background: #4a4a2a;
-  color: #dd8;
-}
-
-.party-cov__src-target--foe {
-  background: #5a2a2a;
-  color: #f99;
-}
-
-.party-cov__src-target--selfcondi {
-  background: #4a3a2a;
-  color: #fb8;
-}
-
-.party-cov__src-target--mixed {
-  background: #4a3a4a;
-  color: #d9f;
-}
+.party-cov__src-target--ally      { background: var(--axi-ok);     color: var(--axi-ink-line); }
+.party-cov__src-target--self      { background: var(--axi-meta);   color: var(--axi-ink-line); }
+.party-cov__src-target--foe       { background: var(--axi-danger); color: var(--axi-ink-line); }
+.party-cov__src-target--selfcondi { background: var(--axi-warn);   color: var(--axi-ink-line); }
+.party-cov__src-target--mixed     { background: var(--axi-accent); color: var(--axi-accent-ink); }
 
 .party-cov__src-row--self-condi {
   opacity: 0.65;
@@ -2471,7 +2259,7 @@
 
 .party-cov__expand-note {
   font-size: 10px;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
   font-style: italic;
   padding: 2px 0 4px;
 }
@@ -2485,7 +2273,7 @@
 .comps-tab__header {
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-light);
+  color: var(--axi-text-dim);
   margin-bottom: 12px;
   display: flex;
   align-items: center;
@@ -2495,10 +2283,9 @@
 .comps-tab__badge {
   font-size: 11px;
   font-weight: 600;
-  background: var(--hover-subtle);
-  color: var(--text-dim);
+  background: var(--axi-surface-raised);
+  color: var(--axi-text-faint);
   padding: 1px 7px;
-  border-radius: 8px;
 }
 
 .comps-tab__list {
@@ -2510,9 +2297,8 @@
 /* ── Comp card ────────────────────────────────────────────────────────────── */
 
 .comps-tab__card {
-  background: var(--panel-2);
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--line-soft);
+  background: var(--axi-surface);
+  border: var(--axi-border-control) solid var(--axi-ink-line);
   overflow: hidden;
 }
 
@@ -2523,17 +2309,17 @@
   padding: 10px 14px;
   cursor: pointer;
   transition: background 0.12s;
-  border-bottom: 1px solid var(--line-soft);
+  border-bottom: var(--axi-border-hairline) solid var(--axi-rule);
 }
 
 .comps-tab__card-header:hover {
-  background: var(--panel);
+  background: var(--axi-surface);
 }
 
 .comps-tab__card-name {
   font-size: 13px;
   font-weight: 600;
-  color: var(--gold);
+  color: var(--axi-accent);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2546,7 +2332,7 @@
 
 .comps-tab__card-open {
   font-size: 13px;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
   opacity: 0;
   transition: opacity 0.15s;
 }
@@ -2560,7 +2346,7 @@
   align-items: center;
   gap: 0;
   padding: 6px 14px;
-  border-bottom: 1px solid var(--line-soft);
+  border-bottom: var(--axi-border-hairline) solid var(--axi-rule);
 }
 
 /* ── Toggle button ────────────────────────────────────────────────────────── */
@@ -2572,7 +2358,7 @@
   gap: 6px;
   padding: 6px 14px;
   font-size: 12px;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
   cursor: pointer;
   transition: color 0.12s;
   width: 100%;
@@ -2580,7 +2366,7 @@
 }
 
 .comps-tab__toggle:hover {
-  color: var(--text-light);
+  color: var(--axi-text-dim);
 }
 
 .comps-tab__toggle-chevron {
@@ -2615,7 +2401,7 @@
 
 .comps-tab__card-empty {
   font-size: 12px;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
   padding: 12px 14px;
 }
 
@@ -2627,7 +2413,7 @@
   align-items: center;
   gap: 8px;
   padding: 40px 20px;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
 }
 
 .comps-tab__empty-text {
@@ -2638,16 +2424,16 @@
 .comp-webhook-picker-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--axi-scrim);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: var(--z-modal);
 }
 .comp-webhook-picker {
-  background: var(--bg-elevated, #1e1e24);
-  border: 1px solid var(--border, rgba(255,255,255,0.12));
-  border-radius: 10px;
+  background: var(--axi-surface-raised);
+  border: var(--axi-border-panel) solid var(--axi-ink-line);
+  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
   padding: 16px;
   min-width: 280px;
   max-width: 360px;
@@ -2656,5 +2442,6 @@
 .comp-webhook-picker__list { display: flex; flex-direction: column; gap: 6px; max-height: 240px; overflow-y: auto; }
 .comp-webhook-picker__item { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 .comp-webhook-picker__actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
-.comp-webhook-picker__btn { padding: 6px 14px; border-radius: 6px; cursor: pointer; }
-.comp-webhook-picker__btn--primary { background: var(--accent, #c89848); color: #1a1a1a; font-weight: 600; }
+/* .axi-btn/--ghost/--primary carry the box; this is the compact label size
+   a modal footer needs instead of the button's full form padding. */
+.comp-webhook-picker__btn { padding: 6px 14px; font-size: 12px; }

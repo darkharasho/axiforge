@@ -18,7 +18,7 @@
 
 import { state } from "./state.js";
 import { escapeHtml } from "./utils.js";
-import { getSpecIcon, profClass } from "./build-helpers.js";
+import { getSpecIcon } from "./build-helpers.js";
 import { buildUsage, compSources, folderPathText } from "./build-sources.js";
 
 const HIDDEN = "bsm-overlay--hidden";
@@ -169,7 +169,7 @@ function _rowHtml(row) {
     <tr class="bsm-row ${row.isExternal ? "bsm-row--external" : ""}"
         data-src-build="${escapeHtml(row.build.id)}" aria-expanded="false">
       <td><span class="bsm-build">
-        <span class="bsm-icon ${profClass(row.build.profession)}">${getSpecIcon(row.build)}</span>
+        <span class="bsm-icon">${getSpecIcon(row.build)}</span>
         ${escapeHtml(row.build.title || "Untitled")}
       </span></td>
       <td>${home}</td>

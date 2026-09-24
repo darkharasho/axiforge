@@ -34,11 +34,11 @@ import {
   getEliteSpecName,
   getSpecIcon,
   getSpecIconColored,
-  profClass,
   getDisplayName,
   resolveStatPackage,
   getRuneName,
 } from "../build-helpers.js";
+import { professionSeriesStyle, slotSeriesStyle, SLOT_ROLES } from "../../../shared/professions.js";
 
 let _callbacks = {};
 let _notesDebounceTimer = null;
@@ -176,8 +176,8 @@ function closeHoverCard() {
 
 function showSlotHoverCard(slotEl, build) {
   const card = document.createElement("div");
-  const pClass = profClass(build.profession);
-  card.className = `comp-slot-hover-card ${pClass}`;
+  card.className = "comp-slot-hover-card";
+  card.setAttribute("style", professionSeriesStyle(build.profession));
 
   const icon = getSpecIcon(build);
   const name = escapeHtml(getDisplayName(build));
@@ -465,18 +465,18 @@ export function renderCompDetail() {
           <button type="button" class="axi-btn axi-btn--ghost comp-share-dropdown__trigger" data-action="share-toggle">
             Share ${chevronDownIcon}
           </button>
-          <div class="comp-share-dropdown__menu">
-            <button type="button" class="comp-share-dropdown__item" data-action="copy-share-code">
+          <div class="comp-share-dropdown__menu axi-picker__pop">
+            <button type="button" class="comp-share-dropdown__item axi-picker__opt" data-action="copy-share-code">
               ${axiforgeIcon} AxiCode
             </button>
-            <button type="button" class="comp-share-dropdown__item" data-action="share-discord"${compShareTip ? ` disabled title="${compShareTip}"` : ""}>
+            <button type="button" class="comp-share-dropdown__item axi-picker__opt" data-action="share-discord"${compShareTip ? ` disabled title="${compShareTip}"` : ""}>
               ${arrowUpTrayIcon} Discord Embed
             </button>
-            <button type="button" class="comp-share-dropdown__item" data-action="copy-plaintext"${compShareTip ? ` disabled title="${compShareTip}"` : ""}>
+            <button type="button" class="comp-share-dropdown__item axi-picker__opt" data-action="copy-plaintext"${compShareTip ? ` disabled title="${compShareTip}"` : ""}>
               ${clipboardDocumentIcon} Discord Plaintext
             </button>
             <div class="comp-share-dropdown__divider"></div>
-            <button type="button" class="comp-share-dropdown__item" data-action="copy-published-link"${comp.publishedFileId ? "" : ' disabled title="Publish first"'}>
+            <button type="button" class="comp-share-dropdown__item axi-picker__opt" data-action="copy-published-link"${comp.publishedFileId ? "" : ' disabled title="Publish first"'}>
               ${globeAltIcon} Published Link
             </button>
           </div>
@@ -680,9 +680,8 @@ function renderPartyLine(comp, pl, idx, totalCap) {
     if (build) {
       const slotColor = (comp.buildColors || {})[buildId] || "normal";
       const icon = getSpecIconColored(build, slotColor);
-      const pClass = profClass(build.profession);
+      const seriesStyle = slotSeriesStyle(slotColor, build.profession);
       const title = escapeHtml(build.title || "Untitled");
-      const colorAttr = slotColor !== "normal" ? ` data-slot-color="${slotColor}"` : "";
       // A slot is a 42px icon box -- no room for the pool's folder chip. It gets
       // a corner marker instead, and says where the build lives in its tooltip,
       // so the fact survives at the one size where the chip cannot.
@@ -691,7 +690,7 @@ function renderPartyLine(comp, pl, idx, totalCap) {
         ? `${title} — from ${escapeHtml(folderPathText(build.folderId) || "Library root")}`
         : title;
       slotBoxes.push(
-        `<div class="comp-slot comp-slot--filled ${pClass} ${foreign ? "comp-slot--foreign" : ""}" title="${slotTitle}"${colorAttr}
+        `<div class="comp-slot comp-slot--filled ${foreign ? "comp-slot--foreign" : ""}" title="${slotTitle}" style="${escapeHtml(seriesStyle)}"
               data-action="click-filled-slot" data-line-id="${escapeHtml(pl.id)}" data-slot-idx="${i}" data-build-id="${escapeHtml(buildId)}">
           <span class="comp-slot__icon">${icon}</span>
         </div>`
@@ -781,10 +780,10 @@ function renderBuildPool(comp) {
       <div class="comp-pool-header">
         <span class="comp-pool-title">BUILDS <span class="comp-pool-count">(${compBuilds.length})</span></span>
         <div class="comp-pool-header__right">
-          <input type="text" class="comp-pool-search" placeholder="Search..."
+          <input type="text" class="comp-pool-search axi-input" placeholder="Search..."
                  value="${escapeHtml(state.compPoolSearch || "")}" data-action="pool-search" />
           ${_sourcesButtonHtml(comp)}
-          <button type="button" class="comp-pool-add" data-action="pool-add">+ Add</button>
+          <button type="button" class="comp-pool-add axi-btn axi-btn--ghost" data-action="pool-add">+ Add</button>
         </div>
       </div>
       ${renderCategoryRow(comp)}
@@ -841,7 +840,7 @@ function renderCategoryRow(comp) {
     <div class="comp-cat-row">
       <span class="comp-cat-row__label">Tags</span>
       <div class="comp-cat-list">${chips}</div>
-      <button type="button" class="comp-cat-add" data-action="cat-add" title="New tag">+ Tag</button>
+      <button type="button" class="comp-cat-add axi-btn axi-btn--dashed" data-action="cat-add" title="New tag">+ Tag</button>
     </div>
   `;
 }
@@ -962,7 +961,7 @@ export function openAddBuildModal(comp) {
       const badges = [];
       if (info.team) {
         badges.push(
-          `<span class="comp-picker-row__badge comp-picker-row__badge--shared"` +
+          `<span class="comp-picker-row__badge comp-picker-row__badge--shared axi-chip axi-chip--meta"` +
           ` title="Shared with ${escapeHtml(info.team.name)} (${escapeHtml(info.team.role || "member")})">` +
           `${shareIcon}${escapeHtml(info.team.name)}</span>`
         );
@@ -970,7 +969,7 @@ export function openAddBuildModal(comp) {
       if (info.comps.length > 0) {
         const names = info.comps.map((c) => c.name || "Untitled").join(", ");
         badges.push(
-          `<span class="comp-picker-row__badge comp-picker-row__badge--comps"` +
+          `<span class="comp-picker-row__badge comp-picker-row__badge--comps axi-chip"` +
           ` title="Already in: ${escapeHtml(names)}">` +
           `${info.comps.length} comp${info.comps.length === 1 ? "" : "s"}</span>`
         );
@@ -987,7 +986,7 @@ export function openAddBuildModal(comp) {
       ].filter(Boolean).join('<span class="comp-picker-row__dot">·</span>');
 
       return `
-        <label class="comp-picker-row ${profClass(b.profession)}" data-build-id="${escapeHtml(b.id)}">
+        <label class="comp-picker-row" data-build-id="${escapeHtml(b.id)}">
           <input type="checkbox" class="comp-picker-row__checkbox" value="${escapeHtml(b.id)}" ${checked} />
           <span class="comp-picker-row__icon">${getSpecIcon(b)}</span>
           <span class="comp-picker-row__main">
@@ -1015,7 +1014,7 @@ export function openAddBuildModal(comp) {
       <div class="comp-picker-modal">
         <div class="comp-picker-modal__header">
           <span class="comp-picker-modal__title">Add Builds to Comp</span>
-          <input type="text" class="comp-picker-modal__search" placeholder="Search name, folder, gear, team..."
+          <input type="text" class="comp-picker-modal__search axi-input" placeholder="Search name, folder, gear, team..."
                  value="${escapeHtml(searchTerm)}" />
         </div>
         <div class="comp-picker-modal__scope">${_pickerScopeNote(comp, compTeamRoot, available.length)}</div>
@@ -1023,9 +1022,9 @@ export function openAddBuildModal(comp) {
           ${renderModalList()}
         </div>
         <div class="comp-picker-modal__footer">
-          <button type="button" class="comp-picker-modal__btn comp-picker-modal__btn--cancel"
+          <button type="button" class="comp-picker-modal__btn comp-picker-modal__btn--cancel axi-btn axi-btn--ghost"
                   data-action="picker-cancel">Cancel</button>
-          <button type="button" class="comp-picker-modal__btn comp-picker-modal__btn--add"
+          <button type="button" class="comp-picker-modal__btn comp-picker-modal__btn--add axi-btn axi-btn--primary"
                   data-action="picker-add" ${selected.size === 0 ? "disabled" : ""}>
             Add Selected (${selected.size})
           </button>
@@ -1126,12 +1125,11 @@ function openCategoryModal(comp, categoryId) {
     }
     return compBuilds.map((b) => {
       const icon = getSpecIcon(b);
-      const pClass = profClass(b.profession);
       const checked = selected.has(b.id) ? "checked" : "";
       const displayName = escapeHtml(getDisplayName(b));
       const gear = escapeHtml(resolveStatPackage(b));
       return `
-        <label class="comp-picker-row ${pClass}" data-build-id="${escapeHtml(b.id)}">
+        <label class="comp-picker-row" data-build-id="${escapeHtml(b.id)}">
           <input type="checkbox" class="comp-picker-row__checkbox" value="${escapeHtml(b.id)}" ${checked} />
           <span class="comp-picker-row__icon">${icon}</span>
           <span class="comp-picker-row__name">${displayName}</span>
@@ -1143,20 +1141,20 @@ function openCategoryModal(comp, categoryId) {
 
   function renderIconGrid() {
     const isCustom = icon && !COMP_TAG_ICONS.some((opt) => opt.url === icon);
-    const noneSel = !icon ? " comp-cat-icon-opt--active" : "";
+    const noneSel = !icon ? "true" : "false";
     const options = COMP_TAG_ICONS.map((opt) => {
-      const active = opt.url === icon ? " comp-cat-icon-opt--active" : "";
-      return `<button type="button" class="comp-cat-icon-opt${active}" data-icon-url="${escapeHtml(opt.url)}" title="${escapeHtml(opt.name)}">
+      const active = opt.url === icon ? "true" : "false";
+      return `<button type="button" class="comp-cat-icon-opt axi-pill" aria-pressed="${active}" data-icon-url="${escapeHtml(opt.url)}" title="${escapeHtml(opt.name)}">
         <img src="${escapeHtml(opt.url)}" alt="${escapeHtml(opt.name)}" draggable="false" />
       </button>`;
     }).join("");
     return `
       <div class="comp-cat-icon-label">Icon</div>
       <div class="comp-cat-icon-grid">
-        <button type="button" class="comp-cat-icon-opt comp-cat-icon-opt--none${noneSel}" data-icon-url="" title="No icon">∅</button>
+        <button type="button" class="comp-cat-icon-opt comp-cat-icon-opt--none axi-pill" aria-pressed="${noneSel}" data-icon-url="" title="No icon">∅</button>
         ${options}
       </div>
-      <input type="text" class="comp-cat-icon-custom" placeholder="…or paste a custom image URL"
+      <input type="text" class="comp-cat-icon-custom axi-input" placeholder="…or paste a custom image URL"
              value="${isCustom ? escapeHtml(icon) : ""}" />
     `;
   }
@@ -1166,7 +1164,7 @@ function openCategoryModal(comp, categoryId) {
       <div class="comp-picker-modal">
         <div class="comp-picker-modal__header">
           <span class="comp-picker-modal__title">${isEdit ? "Edit Tag" : "New Tag"}</span>
-          <input type="text" class="comp-picker-modal__search comp-cat-name-input"
+          <input type="text" class="comp-picker-modal__search comp-cat-name-input axi-input"
                  placeholder="Tag name (e.g. DPS, Heals)" value="${escapeHtml(name)}" maxlength="60" />
         </div>
         <div class="comp-cat-icon-picker">
@@ -1176,10 +1174,10 @@ function openCategoryModal(comp, categoryId) {
           ${renderRows()}
         </div>
         <div class="comp-picker-modal__footer">
-          ${isEdit ? `<button type="button" class="comp-picker-modal__btn comp-picker-modal__btn--delete" data-action="cat-delete">Delete</button>` : ""}
+          ${isEdit ? `<button type="button" class="comp-picker-modal__btn comp-picker-modal__btn--delete axi-btn axi-btn--ghost" data-action="cat-delete">Delete</button>` : ""}
           <span class="comp-cat-modal__spacer"></span>
-          <button type="button" class="comp-picker-modal__btn comp-picker-modal__btn--cancel" data-action="cat-cancel">Cancel</button>
-          <button type="button" class="comp-picker-modal__btn comp-picker-modal__btn--add" data-action="cat-save">Save</button>
+          <button type="button" class="comp-picker-modal__btn comp-picker-modal__btn--cancel axi-btn axi-btn--ghost" data-action="cat-cancel">Cancel</button>
+          <button type="button" class="comp-picker-modal__btn comp-picker-modal__btn--add axi-btn axi-btn--primary" data-action="cat-save">Save</button>
         </div>
       </div>
     `;
@@ -1201,7 +1199,7 @@ function openCategoryModal(comp, categoryId) {
       icon = e.target.value.trim();
       // Update grid highlight without stealing focus from the URL field
       overlay.querySelectorAll(".comp-cat-icon-opt").forEach((b) => {
-        b.classList.toggle("comp-cat-icon-opt--active", (b.dataset.iconUrl || "") === icon);
+        b.setAttribute("aria-pressed", (b.dataset.iconUrl || "") === icon ? "true" : "false");
       });
     });
 
@@ -1280,8 +1278,7 @@ function showCategoryHoverCard(chipEl, comp, category) {
   card.className = "comp-cat-hover-card";
   const rows = builds.length
     ? builds.map((b) => {
-        const pClass = profClass(b.profession);
-        return `<div class="comp-cat-hover__row ${pClass}">
+        return `<div class="comp-cat-hover__row" style="${escapeHtml(professionSeriesStyle(b.profession))}">
           <span class="comp-cat-hover__icon">${getSpecIcon(b)}</span>
           <span class="comp-cat-hover__name">${escapeHtml(getDisplayName(b))}</span>
         </div>`;
@@ -1337,7 +1334,7 @@ function bindDetailEvents(container, comp) {
       // Replace the span with an input
       const input = document.createElement("input");
       input.type = "text";
-      input.className = "comp-detail__name-input";
+      input.className = "comp-detail__name-input axi-input";
       input.value = comp.name || "";
       nameEl.replaceWith(input);
       input.focus();
@@ -1791,10 +1788,12 @@ function bindPoolEvents(container, comp) {
       document.querySelectorAll(".mini-card__color-menu").forEach((m) => m.remove());
       const buildId = picker.dataset.buildId;
       const current = picker.dataset.current || "normal";
+      // The same two role markers the slot box's own outline reads from
+      // professions.js — one home for the palette, per Global Constraint 6.
       const choices = [
-        { value: "normal", label: "Default", dot: "transparent", border: "1px solid #666" },
-        { value: "red", label: "Condi", dot: "#d63a3a", border: "none" },
-        { value: "blue", label: "Heal", dot: "#3a8fd6", border: "none" },
+        { value: "normal", label: "Default", dot: "transparent", border: "1px solid var(--axi-rule)" },
+        { value: "red", label: "Condi", dot: SLOT_ROLES.red, border: "none" },
+        { value: "blue", label: "Heal", dot: SLOT_ROLES.blue, border: "none" },
       ];
       const menu = document.createElement("div");
       menu.className = "mini-card__color-menu";

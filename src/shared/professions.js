@@ -95,3 +95,27 @@ export function professionStripStyle(name) {
   const k = key(name);
   return k ? `--axi-card-strip: ${COLOURS[k]}` : "";
 }
+
+/**
+ * Role markers a comp slot can be flagged with, overriding the profession.
+ * Condi and Heal markers are domain data by the same argument as the
+ * professions above: a comp author is asserting a role for that slot, not
+ * styling it, so the colour lives here rather than as a literal in comps.css.
+ */
+export const SLOT_ROLES = Object.freeze({ red: "#d63a3a", blue: "#3a8fd6" });
+
+/**
+ * A `style` body for a comp slot: the role marker if the slot carries one,
+ * else the profession it holds. A slot is a 42px box with no room for a
+ * strip or a label, so its outline is the one place an outline carries
+ * domain colour — the outline IS the identification.
+ * @param {unknown} role - "red" | "blue" | anything else (including "normal")
+ * @param {unknown} profession
+ * @returns {string}
+ */
+export function slotSeriesStyle(role, profession) {
+  if (Object.prototype.hasOwnProperty.call(SLOT_ROLES, role)) {
+    return `--axi-series: ${SLOT_ROLES[role]}`;
+  }
+  return professionSeriesStyle(profession);
+}

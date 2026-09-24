@@ -20,8 +20,8 @@ export function pickWebhooks(webhooks) {
             </label>`).join("")}
         </div>
         <div class="comp-webhook-picker__actions">
-          <button class="comp-webhook-picker__btn" data-act="cancel" type="button">Cancel</button>
-          <button class="comp-webhook-picker__btn comp-webhook-picker__btn--primary" data-act="post" type="button">Post</button>
+          <button class="comp-webhook-picker__btn axi-btn axi-btn--ghost" data-act="cancel" type="button">Cancel</button>
+          <button class="comp-webhook-picker__btn axi-btn axi-btn--primary" data-act="post" type="button">Post</button>
         </div>
       </div>`;
     document.body.appendChild(overlay);
