@@ -90,20 +90,45 @@ const CONVERTED = APP_CSS.filter((f) => !PENDING.includes(f));
 
 // Properties that can legally carry a colour. A selector or at-rule prelude
 // never starts with one of these, which is why a pseudo-class's colon is
-// harmless (RULES.md, "Colour literal scan, precisely").
+// harmless (RULES.md, "Colour literal scan, precisely"). The shorthands
+// (border, border-top, ..., outline) are included: `border: 1px solid #000`
+// is exactly the shape a converted rule takes, and a literal colour hiding
+// in the shorthand is just as much a violation as one in `border-color`.
 const COLOUR_PROP =
-  /^(?:-webkit-)?(?:color|background|background-image|background-color|border-color|border-(?:top|right|bottom|left)-color|outline-color|box-shadow|text-shadow|filter|fill|stroke|caret-color|column-rule-color|text-decoration-color|accent-color|scrollbar-color)\s*:/;
+  /^(?:-webkit-)?(?:color|background|background-image|background-color|border|border-top|border-right|border-bottom|border-left|border-color|border-(?:top|right|bottom|left)-color|outline|outline-color|box-shadow|text-shadow|filter|fill|stroke|caret-color|column-rule-color|text-decoration-color|accent-color|scrollbar-color)\s*:/;
 
 // Hex and the colour functions have no other meaning in CSS. color-mix is
 // included because `color-mix(in srgb, X 12%, transparent)` is rule 2's
 // violation written a third way.
 const COLOUR_LITERAL = /#[0-9a-fA-F]{3,8}\b|\b(?:rgba?|hsla?|oklch|oklab|lab|lch|color-mix)\s*\(/;
 
-/** Every `prop: value` declaration in a sheet, comments stripped. */
+/** The value with every var(...) expression removed, so what is left is
+    whatever the author wrote outside a token. Handles nesting via a loop
+    (e.g. `calc(var(--axi-radius-sm) + 40px)` still exposes the `+ 40px`). */
+function withoutVars(value) {
+  let out = value;
+  let prev;
+  do {
+    prev = out;
+    out = out.replace(/var\([^()]*\)/g, " ");
+  } while (out !== prev);
+  return out;
+}
+
+/** Every `prop: value` declaration in a sheet, comments stripped. A `;` or
+    brace baked into a quoted string or a url(...) (e.g. a data-URI SVG) must
+    not truncate the declaration early and hide whatever comes after it
+    (RULES.md: a hex inside url(...) must still be caught) — so separators
+    inside those spans are protected before the split and restored after. */
 function declarations(css) {
-  return css
-    .replace(/\/\*[\s\S]*?\*\//g, "")
+  const withoutComments = css.replace(/\/\*[\s\S]*?\*\//g, "");
+  const protectedCss = withoutComments.replace(
+    /"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|url\([^)]*\)/g,
+    (span) => span.replace(/[;{}]/g, (ch) => `\u0000${ch.charCodeAt(0)}\u0000`),
+  );
+  return protectedCss
     .split(/[;{}]/)
+    .map((d) => d.replace(/\u0000(\d+)\u0000/g, (_, code) => String.fromCharCode(Number(code))))
     .map((d) => d.trim())
     .filter((d) => d.includes(":"));
 }
@@ -112,10 +137,25 @@ function findColourLiterals(css) {
   return declarations(css).filter((d) => COLOUR_PROP.test(d) && COLOUR_LITERAL.test(d));
 }
 
+/** A custom property (`--foo: ...`) can hide any other violation behind
+    indirection (`--my-color: #ff0000; color: var(--my-color);` is invisible
+    to every property-name-based scanner). Only colour is checked here: a
+    length is a legitimate custom-property value (e.g.
+    `--af-titlebar-h: 42px`), so this must not fire on those. */
+function findCustomPropertyColours(css) {
+  return declarations(css).filter((d) => {
+    if (!/^--[a-zA-Z0-9-]+\s*:/.test(d)) return false;
+    const value = d.slice(d.indexOf(":") + 1).trim();
+    return COLOUR_LITERAL.test(value);
+  });
+}
+
 function findRadiusLiterals(css) {
-  return declarations(css).filter(
-    (d) => /^border(?:-[a-z]+)*-radius\s*:/.test(d) && !/var\(--axi-radius/.test(d),
-  );
+  return declarations(css).filter((d) => {
+    if (!/^border(?:-[a-z]+)*-radius\s*:/.test(d)) return false;
+    const value = d.slice(d.indexOf(":") + 1).trim();
+    return /\d/.test(withoutVars(value));
+  });
 }
 
 /** A legal block is `<offset> <offset> 0 var(--axi-ink-line)` and nothing else. */
@@ -150,15 +190,17 @@ function findBorderLiterals(css) {
     if (!/^(?:border|outline)(?:-(?:top|right|bottom|left))?(?:-width)?\s*:/.test(d)) return false;
     const value = d.slice(d.indexOf(":") + 1).trim();
     if (value === "none" || value === "0") return false;
-    if (/\bvar\(--axi-border-(?:panel|control|hairline)\)/.test(value)) return false;
-    return /\d*\.?\d+(px|rem|em)|\b(?:thin|medium|thick)\b/.test(value);
+    const stripped = withoutVars(value);
+    return /\d*\.?\d+(px|rem|em)|\b(?:thin|medium|thick)\b/.test(stripped);
   });
 }
 
 function findFontFamilies(css) {
-  return declarations(css).filter(
-    (d) => /^font-family\s*:/.test(d) && !/var\(--axi-(?:sans|mono)\)/.test(d),
-  );
+  return declarations(css).filter((d) => {
+    if (!/^font-family\s*:/.test(d)) return false;
+    const value = d.slice(d.indexOf(":") + 1).trim();
+    return /[^\s,]/.test(withoutVars(value));
+  });
 }
 
 /** The legacy palette. Its presence means the file still leans on bridge.css. */
@@ -170,6 +212,7 @@ function findLegacyVars(css) {
 
 const SCANNERS = [
   ["colour literal", findColourLiterals],
+  ["custom property colour literal", findCustomPropertyColours],
   ["border-radius literal", findRadiusLiterals],
   ["illegal box-shadow", findBadShadows],
   ["blur", findBlurs],
@@ -196,11 +239,13 @@ describe("axi design language rules", () => {
   }
 
   it("lists every app stylesheet, so a new file cannot dodge the gate", () => {
-    const onDisk = [
-      ...fs.readdirSync(path.join(ROOT, "src/renderer/styles"))
+    const dirs = ["src/renderer/styles", "src/web", "src/site", "packages/forge-render/src"];
+    const onDisk = dirs.flatMap((dir) =>
+      fs
+        .readdirSync(path.join(ROOT, dir))
         .filter((f) => f.endsWith(".css") && f !== "bridge.css")
-        .map((f) => `src/renderer/styles/${f}`),
-    ];
+        .map((f) => `${dir}/${f}`),
+    );
     expect(APP_CSS).toEqual(expect.arrayContaining(onDisk));
   });
 
@@ -224,11 +269,14 @@ describe("axi design language rules", () => {
         .a:not(.gold) { color: var(--axi-text); }
         .b::after { content: "tan linen gold"; background: var(--axi-surface); }
         .c { font: var(--axi-t-label); letter-spacing: var(--axi-ls-label); }
+        .c2 { font-family: var(--axi-sans); }
         .d { border: var(--axi-border-control) solid var(--axi-ink-line);
              box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line); }
         .d:hover { transform: translate(-2px, -2px);
                    box-shadow: var(--axi-offset-control-hover) var(--axi-offset-control-hover) 0 var(--axi-ink-line); }
         .e { border-radius: var(--axi-radius-sm); border: none; }
+        .f { border-width: 0; }
+        :root { --af-titlebar-h: 42px; }
         /* The frameless window's inward block (Task 8). calc() and inset are
            legal here: no length literal, and the ink line is present. */
         .w { box-shadow: inset calc(-1 * var(--axi-offset-panel)) calc(-1 * var(--axi-offset-panel)) 0 0 var(--axi-ink-line); }
