@@ -37,7 +37,7 @@ function buildGridDOM() {
       <div class="lib-sidebar__section"></div>
     </div>
     <div id="lib-content">
-      <div class="lib-grid lib-grid--folders">
+      <div class="lib-grid" data-grid="folders">
         <div class="af-tile af-tile--row af-tile--folder" data-folder-id="shared-1">Shared Folder</div>
       </div>
     </div>

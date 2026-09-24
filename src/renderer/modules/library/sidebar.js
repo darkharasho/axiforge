@@ -528,7 +528,10 @@ export function insertInlineInput(afterEl, defaultValue = "", options = {}) {
         <div class="af-tile__folder-icon">${displayIcon}</div>
         <input type="text" class="lib-inline-input axi-input af-tile__inline-input" placeholder="${fallbackName}" value="" />
       `;
-      const grid = container.querySelector(".lib-grid--folders") || container.querySelector(".lib-grid");
+      // Falls back to the first grid when no folder section is drawn -- with no
+      // folders there is no folder grid to append to, and the first section is
+      // the nearest thing to where a new folder will appear once it exists.
+      const grid = container.querySelector('[data-grid="folders"]') || container.querySelector(".lib-grid");
       if (grid) grid.appendChild(row);
     } else if (isIconView) {
       // Icon view: create an icon-shaped inline input

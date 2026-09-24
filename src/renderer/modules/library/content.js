@@ -564,7 +564,11 @@ function renderGridView(container) {
     .join("");
 
   const sections = [];
-  if (folderCards) sections.push(`<div class="lib-grid" style="--axi-grid-min: 170px">${folderCards}</div>`);
+  // data-grid marks the folder section for insertInlineInput(), which has to
+  // append a new-folder card to the folder grid specifically. It is a JS hook,
+  // not a style variant: the old .lib-grid--folders class carried both jobs,
+  // and the sizing half is now the --axi-grid-min knob below.
+  if (folderCards) sections.push(`<div class="lib-grid" data-grid="folders" style="--axi-grid-min: 170px">${folderCards}</div>`);
   if (compCards) sections.push(`<div class="lib-grid" style="--axi-grid-min: 170px">${compCards}</div>`);
   if (buildCards) sections.push(`<div class="lib-grid" style="--axi-grid-min: 200px">${buildCards}</div>`);
   container.innerHTML = sections.join("");
