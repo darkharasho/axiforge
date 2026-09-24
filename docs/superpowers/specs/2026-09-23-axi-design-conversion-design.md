@@ -108,8 +108,16 @@ The three Google font `<link>`s are deleted from all entries (§7).
   `af-`-prefixed shapes shared across screens.
 - `styles/bridge.css` — **temporary**, see §4.3.
 
-Every converted partial keeps its filename and screen ownership, is rewritten
-under the **`af-`** prefix, and composes only tokens. Partials are rewritten in
+Every converted partial keeps its filename and screen ownership, keeps its
+existing class names, and composes only tokens. The **`af-`** prefix is for
+genuinely new app-specific shapes (`.af-mark`, `.af-menu-item`,
+`.af-accent-card`, `--af-titlebar-h`); pre-existing names such as
+`.titlebar__*`, `.subnav__*`, `.leftnav__*`, `.cselect__*`, `.panel` and
+`.tag-pill` are preserved. This conversion is a reskin, not a refactor:
+renaming a class is a markup change, and this codebase assigns most of its
+classes from JavaScript via `className =` and `classList.add/toggle` rather
+than a `class=` attribute, so a rename that looks complete to a grep for
+`class=` silently breaks the elements built in JS. Partials are rewritten in
 place rather than added alongside: the old rules are deleted as each screen
 converts, so the sheet never carries two styles for one element.
 
