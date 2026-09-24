@@ -523,10 +523,10 @@ export function insertInlineInput(afterEl, defaultValue = "", options = {}) {
     } else if (isGrid) {
       // Grid view: create a card-shaped inline input
       row = document.createElement("div");
-      row.className = "lib-grid-card lib-grid-card--folder lib-grid-card--editing";
+      row.className = "af-tile af-tile--row af-tile--folder af-tile--editing";
       row.innerHTML = `
-        <div class="lib-grid-card__folder-icon">${displayIcon}</div>
-        <input type="text" class="lib-inline-input axi-input lib-grid-card__inline-input" placeholder="${fallbackName}" value="" />
+        <div class="af-tile__folder-icon">${displayIcon}</div>
+        <input type="text" class="lib-inline-input axi-input af-tile__inline-input" placeholder="${fallbackName}" value="" />
       `;
       const grid = container.querySelector(".lib-grid--folders") || container.querySelector(".lib-grid");
       if (grid) grid.appendChild(row);

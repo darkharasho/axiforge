@@ -524,14 +524,14 @@
 }
 
 /* Inline input in grid view — matches card shape */
-.lib-grid-card--editing {
+.af-tile--editing {
   border-color: var(--axi-accent);
 }
-.lib-grid-card__inline-input {
+.af-tile__inline-input {
   width: 100%;
   text-align: center;
 }
-.lib-grid-card--folder .lib-grid-card__inline-input {
+.af-tile--folder .af-tile__inline-input {
   text-align: left;
 }
 
@@ -683,14 +683,15 @@
 }
 
 /* Grid / icon views: folder path sits on its own line */
-.lib-grid-card > .lib-folder-path,
+.af-tile > .lib-folder-path,
 .lib-icon-item > .lib-folder-path {
   display: block;
   margin-left: 0;
-  font-size: 0.72rem;
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
 }
 
-.lib-grid-card > .lib-folder-path::before,
+.af-tile > .lib-folder-path::before,
 .lib-icon-item > .lib-folder-path::before {
   content: none;
 }
@@ -985,157 +986,140 @@
 }
 
 /* ── Grid view ───────────────────────────────────────────────────── */
-
+/* --axi-grid-min is a per-instance knob, so it is set on the grid element in
+   markup, not here. Folders and comps ask for a narrower track than builds. */
 .lib-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(var(--axi-grid-min, 200px), 1fr));
+  gap: 14px;
 }
 
-.lib-grid + .lib-grid {
-  margin-top: 12px;
-}
+.lib-grid + .lib-grid { margin-top: 18px; }
 
-.lib-grid--folders {
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-}
-
-.lib-grid--comps {
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-}
-
-.lib-grid-card {
-  background: var(--panel-2);
-  border: 1px solid var(--line-soft);
-  border-radius: 8px;
-  padding: 10px;
-  cursor: pointer;
+/* A grid tile is a card at PANEL weight: it sits on the page's content area,
+   not inside a second panel, so it is the raised thing here and carries the
+   6px block. Anything raised INSIDE a panel takes the control weight instead
+   — the build pool in comps.css is the app's other case. */
+.af-tile {
+  position: relative;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  transition: background 0.1s, border-color 0.1s;
+  gap: 10px;
+  padding: 22px 14px 12px;
+  background: var(--axi-surface);
+  border: var(--axi-border-panel) solid var(--axi-ink-line);
+  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
+  cursor: pointer;
   user-select: none;
   min-width: 0;
+  transition: transform .1s, box-shadow .1s;
 }
 
-.lib-grid-card:hover {
-  background: var(--hover-subtle);
-  border-color: var(--line);
+/* Rule 4, the panel case: resting on 6px, so it grows to 10px and translates
+   by 3. Never opacity, never a glow. */
+.af-tile:hover {
+  transform: translate(-3px, -3px);
+  box-shadow: var(--axi-offset-panel-hover) var(--axi-offset-panel-hover) 0 var(--axi-ink-line);
 }
 
-.lib-grid-card--folder {
-  color: var(--muted);
-  flex-direction: row;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-}
-
-.lib-grid-card--pinned {
-  border-left-color: rgba(212, 192, 68, 0.5);
-  border-left-width: 2px;
-}
-
-.lib-grid-card.lib-selected {
-  background: var(--panel);
-  border-color: var(--accent);
-}
-
-.lib-grid-card.lib-drop-target {
-  border: 1px dashed rgba(var(--accent-rgb), 0.5);
-  background: rgba(var(--accent-rgb), 0.06);
-}
-
-.lib-grid-card.lib-dragging {
-  opacity: 0.4;
-}
-
-.lib-grid-card__header {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.lib-grid-card__header .lib-pin-btn {
+/* Rule 5: the profession CAPS the tile. A full-height left edge reads as the
+   box's own border, and a row of five tiles becomes five coloured frames with
+   the colour saying nothing. The strip's colour arrives per-instance as
+   --axi-card-strip; the tile's outline stays --axi-ink-line in every state. */
+.af-tile--strip::before {
+  content: "";
   position: absolute;
   top: 0;
+  left: 0;
   right: 0;
+  height: 9px;
+  background: var(--axi-card-strip, var(--axi-accent));
+  border-bottom: var(--axi-border-panel) solid var(--axi-ink-line);
 }
 
-.lib-grid-card__spec-icon {
-  display: flex;
+.af-tile__head { display: flex; gap: 11px; align-items: flex-start; }
+
+/* The one place the profession's colour FILLS, because a glyph tile is the
+   thing being identified rather than a judgement about it. */
+.af-tile__glyph {
+  flex: none;
   width: 40px;
   height: 40px;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  place-items: center;
+  background: var(--axi-surface-raised);
+  border: var(--axi-border-control) solid var(--axi-ink-line);
+  color: var(--axi-series, var(--axi-text));
 }
 
-.lib-grid-card__spec-icon svg {
-  width: 40px;
-  height: 40px;
-  fill: currentColor;
-}
+.af-tile__glyph svg { width: 26px; height: 26px; fill: currentColor; }
 
-.lib-grid-card__folder-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  color: var(--text-dim);
-}
-
-.lib-grid-card__folder-icon svg {
-  width: 32px;
-  height: 32px;
-}
-
-.lib-grid-card--comp {
-  color: var(--muted);
-  flex-direction: row;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-}
-
-.lib-grid-card__comp-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  color: var(--text-dim);
-}
-
-.lib-grid-card__comp-icon svg {
-  width: 32px;
-  height: 32px;
-}
-
-.lib-grid-card__comp-body {
-  min-width: 0;
-}
-
-.lib-grid-card__title {
-  font-size: 0.88rem;
-  font-weight: 500;
-  color: var(--text-light);
+.af-tile__title {
+  font: var(--axi-t-h3);
+  letter-spacing: var(--axi-ls-h3);
+  color: var(--axi-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.lib-grid-card__pills {
+.af-tile__pills { display: flex; flex-wrap: wrap; gap: 5px; }
+
+/* margin-top:auto so that in an equalised grid row every tile's rule lands on
+   the same line and reads as continuous across the grid. The cost is empty
+   space on tiles with less content, and that is the trade the language makes. */
+.af-tile__meta {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
+  gap: 12px;
+  align-items: center;
+  margin-top: auto;
+  padding-top: 11px;
+  border-top: var(--axi-border-control) solid var(--axi-rule);
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
+  text-transform: uppercase;
+  color: var(--axi-text-faint);
 }
 
-.lib-grid-card__date {
-  font-size: 0.85rem;
-  color: var(--text-dim);
-  margin-top: auto;
+/* Selected and drop-target are states of the tile, so they cap and outline
+   rather than tint. Pinned caps in the accent the same way a list row does. */
+.af-tile--pinned::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 3px;
+  background: var(--axi-accent);
 }
+.af-tile.lib-selected { outline: var(--axi-border-control) solid var(--axi-accent); outline-offset: -3px; }
+.af-tile.lib-drop-target { outline: var(--axi-border-control) dashed var(--axi-accent); outline-offset: -3px; }
+.af-tile.lib-dragging { opacity: 0.4; }
+
+/* Folder and comp tiles are the same box laid on its side: an icon and a
+   name, no strip, because neither owns a domain colour. */
+.af-tile--row {
+  flex-direction: row;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 13px;
+  color: var(--axi-text-dim);
+}
+
+.af-tile__folder-icon,
+.af-tile__comp-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.af-tile__folder-icon svg,
+.af-tile__comp-icon svg {
+  width: 32px;
+  height: 32px;
+}
+
+.af-tile__comp-body { min-width: 0; }
 
 /* ── Icon view ───────────────────────────────────────────────────── */
 
@@ -1149,30 +1133,16 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 5px;
-  padding: 8px 4px;
-  border-radius: 6px;
+  gap: 6px;
+  padding: 9px 5px;
   cursor: pointer;
   transition: background 0.1s;
   user-select: none;
 }
 
-.lib-icon-item:hover {
-  background: var(--hover-subtle);
-}
-
-.lib-icon-item--folder {
-  color: var(--text-dim);
-}
-
-.lib-icon-item.lib-selected {
-  background: var(--panel);
-}
-
-.lib-icon-item.lib-drop-target {
-  background: rgba(var(--accent-rgb), 0.08);
-  outline: 1px dashed rgba(var(--accent-rgb), 0.4);
-}
+.lib-icon-item:hover { background: var(--axi-surface-raised); }
+.lib-icon-item.lib-selected { outline: var(--axi-border-control) solid var(--axi-accent); outline-offset: -3px; }
+.lib-icon-item.lib-drop-target { outline: var(--axi-border-control) dashed var(--axi-accent); outline-offset: -3px; }
 
 .lib-icon-item.lib-dragging {
   opacity: 0.4;
@@ -1185,6 +1155,7 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  color: var(--axi-series, var(--axi-text-faint));
 }
 
 .lib-icon-item__icon svg {
@@ -1199,8 +1170,9 @@
 }
 
 .lib-icon-item__label {
-  font-size: 0.85rem;
-  color: var(--muted);
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
+  color: var(--axi-text-dim);
   text-align: center;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1608,19 +1580,26 @@
   }
 }
 
-.lib-grid-card {
+.af-tile {
   animation: lib-card-enter 0.25s ease-out both;
 }
 
-.lib-grid-card:nth-child(1) { animation-delay: 0ms; }
-.lib-grid-card:nth-child(2) { animation-delay: 40ms; }
-.lib-grid-card:nth-child(3) { animation-delay: 80ms; }
-.lib-grid-card:nth-child(4) { animation-delay: 120ms; }
-.lib-grid-card:nth-child(5) { animation-delay: 160ms; }
-.lib-grid-card:nth-child(6) { animation-delay: 200ms; }
-.lib-grid-card:nth-child(7) { animation-delay: 240ms; }
-.lib-grid-card:nth-child(8) { animation-delay: 280ms; }
-.lib-grid-card:nth-child(n+9) { animation-delay: 320ms; }
+.af-tile:nth-child(1) { animation-delay: 0ms; }
+.af-tile:nth-child(2) { animation-delay: 40ms; }
+.af-tile:nth-child(3) { animation-delay: 80ms; }
+.af-tile:nth-child(4) { animation-delay: 120ms; }
+.af-tile:nth-child(5) { animation-delay: 160ms; }
+.af-tile:nth-child(6) { animation-delay: 200ms; }
+.af-tile:nth-child(7) { animation-delay: 240ms; }
+.af-tile:nth-child(8) { animation-delay: 280ms; }
+.af-tile:nth-child(n+9) { animation-delay: 320ms; }
+
+/* A stagger on entry is decoration, and decoration is the first thing to go
+   when someone has asked the system for less motion. The tiles still arrive;
+   they just arrive at once. */
+@media (prefers-reduced-motion: reduce) {
+  .af-tile { animation: none; }
+}
 
 /* ── Shared folder badge ─────────────────────────────────────────────────── */
 
@@ -1640,7 +1619,7 @@
 }
 
 /* Grid/icon view: overlay badge on folder icon */
-.lib-grid-card__folder-icon,
+.af-tile__folder-icon,
 .lib-icon-item__icon--folder {
   position: relative;
 }

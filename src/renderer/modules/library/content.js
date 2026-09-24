@@ -1,7 +1,7 @@
 // Library content module — renders builds and folders in the active view mode.
 
 import { state } from "../state.js";
-import { professionSeriesStyle } from "../../../shared/professions.js";
+import { professionSeriesStyle, professionStripStyle } from "../../../shared/professions.js";
 import { escapeHtml, formatRelativeTime } from "../utils.js";
 import { roleBadgeHtml } from '../roleEstimator.js';
 import { getVisibleBuilds, getVisibleFolders, getVisibleComps, libraryBuilds, libraryComps, libraryFolders, searchQuery, hasSearchQuery, buildMatchesQuery, compMatchesQuery } from "./folder-store.js";
@@ -522,9 +522,9 @@ function renderGridView(container) {
   const folderCards = folders
     .map(
       (f) => `
-        <div class="lib-grid-card lib-grid-card--folder" data-folder-id="${escapeHtml(f.id)}">
-          <div class="lib-grid-card__folder-icon">${folderIcon}${f.teamId ? `<span class="lib-shared-badge lib-shared-badge--grid" title="${escapeHtml(teamLabel(f))}">${shareIcon}</span>` : ""}</div>
-          <div class="lib-grid-card__title">${escapeHtml(f.name)}${contentSyncIndicatorHtml(f.id)}</div>
+        <div class="af-tile af-tile--row af-tile--folder" data-folder-id="${escapeHtml(f.id)}">
+          <div class="af-tile__folder-icon">${folderIcon}${f.teamId ? `<span class="lib-shared-badge lib-shared-badge--grid" title="${escapeHtml(teamLabel(f))}">${shareIcon}</span>` : ""}</div>
+          <div class="af-tile__title">${escapeHtml(f.name)}${contentSyncIndicatorHtml(f.id)}</div>
         </div>
       `
     )
@@ -533,17 +533,17 @@ function renderGridView(container) {
   const buildCards = builds
     .map(
       (b) => `
-        <div class="lib-grid-card lib-grid-card--build ${b.pinned ? "lib-grid-card--pinned" : ""} ${profClass(b.profession)}" data-build-id="${escapeHtml(b.id)}">
-          <div class="lib-grid-card__header">
-            <div class="lib-grid-card__spec-icon ${profClass(b.profession)}">${getSpecIcon(b)}</div>
+        <div class="af-tile af-tile--strip ${b.pinned ? "af-tile--pinned" : ""}" style="${professionStripStyle(b.profession)}" data-build-id="${escapeHtml(b.id)}">
+          <div class="af-tile__head">
+            <div class="af-tile__glyph" style="${professionSeriesStyle(b.profession)}">${getSpecIcon(b)}</div>
+            <div class="af-tile__title">${escapeHtml(b.title || "Untitled")}${itemSyncIndicatorHtml("build", b)}</div>
             ${buildUsageChipHtml(b, { compact: true })}${pinStarHtml(b)}
           </div>
-          <div class="lib-grid-card__title">${escapeHtml(b.title || "Untitled")}${itemSyncIndicatorHtml("build", b)}</div>
           ${folderPathHtml(b)}
-          <div class="lib-grid-card__pills">
+          <div class="af-tile__pills">
             ${profPillHtml(b)}${eliteSpecPillHtml(b)}${gameModePillHtml(b)}${roleBadgeHtml(b, state.upgradeCatalog)}
           </div>
-          <div class="lib-grid-card__date">${formatDate(b.updatedAt)}</div>
+          <div class="af-tile__meta">${formatDate(b.updatedAt)}</div>
         </div>
       `
     )
@@ -552,10 +552,10 @@ function renderGridView(container) {
   const compCards = comps
     .map(
       (c) => `
-        <div class="lib-grid-card lib-grid-card--comp" data-comp-id="${escapeHtml(c.id)}">
-          <div class="lib-grid-card__comp-icon">${compIcon}</div>
-          <div class="lib-grid-card__comp-body">
-            <div class="lib-grid-card__title">${escapeHtml(c.name || "Untitled Comp")}${itemSyncIndicatorHtml("comp", c)}</div>
+        <div class="af-tile af-tile--row" data-comp-id="${escapeHtml(c.id)}">
+          <div class="af-tile__comp-icon">${compIcon}</div>
+          <div class="af-tile__comp-body">
+            <div class="af-tile__title">${escapeHtml(c.name || "Untitled Comp")}${itemSyncIndicatorHtml("comp", c)}</div>
             ${compBadgeHtml(c)}
           </div>
         </div>
@@ -564,9 +564,9 @@ function renderGridView(container) {
     .join("");
 
   const sections = [];
-  if (folderCards) sections.push(`<div class="lib-grid lib-grid--folders">${folderCards}</div>`);
-  if (compCards) sections.push(`<div class="lib-grid lib-grid--comps">${compCards}</div>`);
-  if (buildCards) sections.push(`<div class="lib-grid">${buildCards}</div>`);
+  if (folderCards) sections.push(`<div class="lib-grid" style="--axi-grid-min: 170px">${folderCards}</div>`);
+  if (compCards) sections.push(`<div class="lib-grid" style="--axi-grid-min: 170px">${compCards}</div>`);
+  if (buildCards) sections.push(`<div class="lib-grid" style="--axi-grid-min: 200px">${buildCards}</div>`);
   container.innerHTML = sections.join("");
 
   bindContentEvents(container);
@@ -598,8 +598,8 @@ function renderIconView(container) {
   const buildItems = builds
     .map(
       (b) => `
-        <div class="lib-icon-item lib-icon-item--build ${b.pinned ? "lib-icon-item--pinned" : ""} ${profClass(b.profession)}" data-build-id="${escapeHtml(b.id)}">
-          <div class="lib-icon-item__icon ${profClass(b.profession)}">${getSpecIcon(b)}</div>
+        <div class="lib-icon-item lib-icon-item--build ${b.pinned ? "lib-icon-item--pinned" : ""}" data-build-id="${escapeHtml(b.id)}">
+          <div class="lib-icon-item__icon" style="${professionSeriesStyle(b.profession)}">${getSpecIcon(b)}</div>
           <div class="lib-icon-item__label">${escapeHtml(b.title || "Untitled")}${itemSyncIndicatorHtml("build", b)}${buildUsageChipHtml(b, { compact: true })}</div>
           ${folderPathHtml(b)}
         </div>

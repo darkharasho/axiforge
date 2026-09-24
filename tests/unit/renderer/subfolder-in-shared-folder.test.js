@@ -38,7 +38,7 @@ function buildGridDOM() {
     </div>
     <div id="lib-content">
       <div class="lib-grid lib-grid--folders">
-        <div class="lib-grid-card lib-grid-card--folder" data-folder-id="shared-1">Shared Folder</div>
+        <div class="af-tile af-tile--row af-tile--folder" data-folder-id="shared-1">Shared Folder</div>
       </div>
     </div>
   `;
@@ -129,8 +129,8 @@ describe("insertInlineInput — grid view placement (issue #261)", () => {
 
     insertInlineInput(folderEl, "", { container: content, className: "lib-content-inline-folder" });
 
-    const editingCard = content.querySelector(".lib-grid-card--editing");
-    const inputInCard = content.querySelector(".lib-grid-card--editing .lib-inline-input");
+    const editingCard = content.querySelector(".af-tile--editing");
+    const inputInCard = content.querySelector(".af-tile--editing .lib-inline-input");
     expect(editingCard).toBeTruthy();
     expect(inputInCard).toBeTruthy();
 
@@ -145,7 +145,7 @@ describe("insertInlineInput — grid view placement (issue #261)", () => {
     // is undefined?.querySelector → false. Falls to else, inserts nav-item after folderEl.
     insertInlineInput(folderEl, "", { className: "lib-content-inline-folder" });
 
-    const editingCard = content.querySelector(".lib-grid-card--editing");
+    const editingCard = content.querySelector(".af-tile--editing");
     expect(editingCard).toBeNull(); // bug: grid card NOT created
 
     cancelInline();

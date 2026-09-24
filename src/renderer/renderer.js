@@ -145,7 +145,7 @@ function _updateItemSyncIndicators(type, id, status) {
     // Only apply to actual library content cards (which have a named title element).
     // Elements like comp-detail slot divs also carry data-build-id but are not
     // library cards — skip them to avoid injecting badges into comp party lines.
-    const nameEl = cardEl.querySelector(".lib-list-row__title, .lib-tv__name, .lib-grid-card__title, .lib-icon-item__label, .lib-col__name");
+    const nameEl = cardEl.querySelector(".lib-list-row__title, .lib-tv__name, .af-tile__title, .lib-icon-item__label, .lib-col__name");
     if (!nameEl) return;
     applyBadge(nameEl, status, {
       className: "lib-content-sync-indicator",
@@ -178,7 +178,7 @@ function _updateFolderSyncIndicators(folderId, status) {
   content.querySelectorAll(`[data-folder-id="${CSS.escape(folderId)}"]`).forEach((cardEl) => {
     // Find the best anchor: a name/title/label span, or fall back to the card itself
     const nameEl =
-      cardEl.querySelector(".lib-list-row__title, .lib-tv__name, .lib-grid-card__title, .lib-icon-item__label, .lib-col__name") ||
+      cardEl.querySelector(".lib-list-row__title, .lib-tv__name, .af-tile__title, .lib-icon-item__label, .lib-col__name") ||
       cardEl;
     applyBadge(nameEl, status, { className: "lib-content-sync-indicator" });
   });
