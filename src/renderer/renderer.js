@@ -2,6 +2,10 @@
 // Imports all feature modules and wires them together via init callbacks.
 // Application-level orchestration (init, wireEvents, setProfession, etc.) lives here.
 
+import "@axiapps/axi-design/axi.css";
+import "@axiapps/axi-design/accents.css";
+import "./styles.css";
+
 import { state, createEmptyEditor } from "./modules/state.js";
 import { nextEditorReturn } from "./modules/editor-return.js";
 import { delay, wireTagInput, escapeHtml, relativeTime } from "./modules/utils.js";

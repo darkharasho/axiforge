@@ -1,3 +1,5 @@
+import "@axiapps/axi-design/axi.css";
+import "@axiapps/axi-design/accents.css";
 import "./styles.css";
 import { resolveDataBase } from "./rawBase.js";
 import { renderBuildPage } from "./render-build.js";
