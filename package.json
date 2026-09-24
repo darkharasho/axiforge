@@ -137,6 +137,14 @@
         "babel-jest",
         {}
       ],
+      "^.+/src/shared/.+\\.js$": [
+        "babel-jest",
+        {}
+      ],
+      "^.+/tests/unit/shared/.+\\.js$": [
+        "babel-jest",
+        {}
+      ],
       "^.+/node_modules/marked/.+\\.js$": [
         "babel-jest",
         {}

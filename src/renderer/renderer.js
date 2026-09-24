@@ -10,6 +10,7 @@ import { state, createEmptyEditor } from "./modules/state.js";
 import { nextEditorReturn } from "./modules/editor-return.js";
 import { delay, wireTagInput, escapeHtml, relativeTime } from "./modules/utils.js";
 import { injectSkeleton } from "./modules/skeleton.js";
+import { professionColour } from "../shared/professions.js";
 
 import { initCustomSelect, closeCustomSelect } from "./modules/custom-select.js";
 import {
@@ -1248,12 +1249,6 @@ function navigateToPage(page) {
 
 // ── Comps panel (editor tab) ─────────────────────────────────────────────────
 
-const PROF_COLORS = {
-  guardian: "#6ea8ff", warrior: "#ff9944", necromancer: "#4dca7a",
-  engineer: "#cc8844", ranger: "#77cc55", thief: "#cc6677",
-  mesmer: "#b07acc", elementalist: "#dd5555", revenant: "#aa6655",
-};
-
 function _compTabProfIcons(comp) {
   const specs = [];
   const seen = new Set();
@@ -1273,7 +1268,7 @@ function _compTabProfIcons(comp) {
   if (specs.length === 0) return "";
   return specs.map(({ specName, profession }) => {
     const svg = getProfessionSvg(specName) || getProfessionSvg(profession) || "";
-    const color = PROF_COLORS[(profession || "").toLowerCase()] || "#888";
+    const color = professionColour(profession);
     return `<span class="comp-list-row__prof-icon ${profClass(profession)}" style="background:${color}" title="${escapeHtml(specName)}">${svg}</span>`;
   }).join("");
 }

@@ -12,6 +12,7 @@ import { openCompTagPopover, collectAllCompTags } from "./comp-tags.js";
 import { showToast } from "../library/toast.js";
 import { showChoiceModal } from "../choice-modal.js";
 import { askAboutDuplicates } from "../library/import-dedupe.js";
+import { professionColour } from "../../../shared/professions.js";
 
 // ─── Shared folder helpers ───────────────────────────────────────────────────
 
@@ -36,13 +37,6 @@ const _selectedIds = new Set();
 
 /** Boon coverage cache: compId → { percentage: number, hash: string } */
 const _boonCache = new Map();
-
-// Profession hex colors (matching existing lib-prof-- CSS classes)
-const PROF_COLORS = {
-  guardian: "#6ea8ff", warrior: "#ff9944", necromancer: "#4dca7a",
-  engineer: "#cc8844", ranger: "#77cc55", thief: "#cc6677",
-  mesmer: "#b07acc", elementalist: "#dd5555", revenant: "#aa6655",
-};
 
 // ─── Init / Public API ───────────────────────────────────────────────────────
 
@@ -387,7 +381,7 @@ function renderProfessionIcons(comp) {
 
   const icons = specs.map(({ specName, profession }) => {
     const svg = getProfessionSvg(specName) || getProfessionSvg(profession) || "";
-    const color = PROF_COLORS[(profession || "").toLowerCase()] || "#888";
+    const color = professionColour(profession);
     return `<span class="comp-list-row__prof-icon ${profClass(profession)}" style="background:${color}" title="${escapeHtml(specName)}">${svg}</span>`;
   }).join("");
 
