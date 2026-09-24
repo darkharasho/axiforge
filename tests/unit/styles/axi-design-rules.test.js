@@ -212,8 +212,13 @@ function findColourLiterals(css) {
 function findCustomPropertyColours(css) {
   return declarations(css).filter((d) => {
     if (!/^--[a-zA-Z0-9-]+\s*:/.test(d)) return false;
+    // Only the VALUE is scanned, so the property's own name never reaches the
+    // named-colour match: `--axi-gold-thing: 0` is a length, `--brand: white`
+    // is a colour literal one indirection deep. hasNamedColour still strips
+    // the `--name` of any token referenced *inside* the value, and still
+    // blanks quoted strings and url() spans.
     const value = d.slice(d.indexOf(":") + 1).trim();
-    return COLOUR_LITERAL.test(value);
+    return COLOUR_LITERAL.test(value) || hasNamedColour(value);
   });
 }
 
@@ -530,6 +535,29 @@ describe("axi design language rules", () => {
         ".j { color: var(--axi-text); background: var(--axi-surface-raised); }",
       ];
       for (const css of clean) expect(findColourLiterals(css)).toEqual([]);
+    });
+
+    it("detects a bare named colour hidden behind a custom property", () => {
+      expect(findCustomPropertyColours(":root { --x: white; }")).not.toEqual([]);
+      expect(findCustomPropertyColours(":root { --x: RED; }")).not.toEqual([]);
+      // In a shorthand value, alongside legal parts.
+      expect(
+        findCustomPropertyColours(":root { --edge: var(--axi-border-control) solid tomato; }"),
+      ).not.toEqual([]);
+    });
+
+    it("does not flag a custom property whose value is not a colour", () => {
+      const clean = [
+        ":root { --axi-gold-thing: 0; }",       // colour word in the NAME only
+        ":root { --af-titlebar-h: 42px; }",
+        ":root { --x: none; }",
+        ":root { --x: transparent; }",
+        ":root { --x: currentColor; }",
+        ":root { --x: var(--axi-accent); }",
+        ':root { --x: "Times"; }',
+        ':root { --x: url("./textures/tan.png"); }',
+      ];
+      for (const css of clean) expect(findCustomPropertyColours(css)).toEqual([]);
     });
 
     it("does not flag a pseudo-class colon or a font stack in a string", () => {
