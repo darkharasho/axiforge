@@ -69,9 +69,6 @@ const PENDING = [
   "src/site/styles.css",
   "src/site/site-mobile.css",
   "packages/forge-render/src/forge-render.css",
-  // Batch 1 converts these; each task below removes its own line.
-  "src/renderer/styles/forms.css",
-  "src/renderer/styles/custom-select.css",
 ];
 
 const CONVERTED = APP_CSS.filter((f) => !PENDING.includes(f));
