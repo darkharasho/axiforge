@@ -68,7 +68,7 @@ import { clearUndo as clearLibraryUndo } from "./modules/library/undo.js";
 import { initComps, loadComps, renderComps } from "./modules/comps/comps.js";
 import { compsContainingBuild } from "./modules/comps/comp-membership.js";
 import { getProfessionSvg } from "./modules/profession-icons.js";
-import { getEliteSpecName, profClass } from "./modules/build-helpers.js";
+import { getEliteSpecName } from "./modules/build-helpers.js";
 import { renderMiniBuildCard } from "./modules/mini-build-card.js";
 import { applyAccent } from "./modules/accents.js";
 import { createAccentTinting } from "./modules/accent-tinting.js";
@@ -1268,7 +1268,7 @@ function _compTabProfIcons(comp) {
   if (specs.length === 0) return "";
   return specs.map(({ specName, profession }) => {
     const svg = getProfessionSvg(specName) || getProfessionSvg(profession) || "";
-    return `<span class="comp-list-row__prof-icon ${profClass(profession)}" style="${professionSeriesStyle(profession)}" title="${escapeHtml(specName)}">${svg}</span>`;
+    return `<span class="comp-list-row__prof-icon" style="${professionSeriesStyle(profession)}" title="${escapeHtml(specName)}">${svg}</span>`;
   }).join("");
 }
 
@@ -1334,7 +1334,7 @@ function renderCompsPanel() {
   }).join("");
 
   panel.innerHTML = `<div class="comps-tab">
-    <div class="comps-tab__header">Linked Comps <span class="comps-tab__badge">${comps.length}</span></div>
+    <div class="comps-tab__header">Linked Comps <span class="comps-tab__badge axi-badge-count">${comps.length}</span></div>
     <div class="comps-tab__list">${cards}</div>
   </div>`;
 

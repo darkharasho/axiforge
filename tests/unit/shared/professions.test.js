@@ -6,6 +6,8 @@ import {
   professionSeriesStyle,
   professionStripStyle,
   slotSeriesStyle,
+  SLOT_ROLES,
+  TARGET_ROLES,
 } from "../../../src/shared/professions.js";
 
 const ROOT = path.resolve(__dirname, "../../..");
@@ -76,8 +78,14 @@ describe("slotSeriesStyle", () => {
 describe("the palette has one home", () => {
   it("appears in no renderer file but professions.js", () => {
     // Global Constraint 6. Six copies is how the palette drifted; this is the
-    // test that keeps it from happening again.
-    const colours = PROFESSIONS.map((p) => professionColour(p));
+    // test that keeps it from happening again. SLOT_ROLES and TARGET_ROLES
+    // are checked alongside the nine professions — a copy of either
+    // reappearing anywhere under src/ is exactly the same drift.
+    const colours = [
+      ...PROFESSIONS.map((p) => professionColour(p)),
+      ...Object.values(SLOT_ROLES),
+      ...Object.values(TARGET_ROLES),
+    ];
     const offenders = [];
     const walk = (dir) => {
       for (const e of fs.readdirSync(dir, { withFileTypes: true })) {

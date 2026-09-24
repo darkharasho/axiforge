@@ -5,7 +5,7 @@ import { state } from "../state.js";
 import { escapeHtml } from "../utils.js";
 import { compIcon, magnifyingGlassIcon } from "../library/heroicons.js";
 import { getProfessionSvg } from "../profession-icons.js";
-import { getEliteSpecName, profClass } from "../build-helpers.js";
+import { getEliteSpecName } from "../build-helpers.js";
 import { computeCompPartyCoverage } from "./comp-boon-coverage.js";
 import { BOON_DISPLAY_ORDER } from "../constants.js";
 import { meterValue } from "./boon-indicator.js";
@@ -383,7 +383,7 @@ function renderProfessionIcons(comp) {
 
   const icons = specs.map(({ specName, profession }) => {
     const svg = getProfessionSvg(specName) || getProfessionSvg(profession) || "";
-    return `<span class="comp-list-row__prof-icon ${profClass(profession)}" style="${professionSeriesStyle(profession)}" title="${escapeHtml(specName)}">${svg}</span>`;
+    return `<span class="comp-list-row__prof-icon" style="${professionSeriesStyle(profession)}" title="${escapeHtml(specName)}">${svg}</span>`;
   }).join("");
 
   return icons + overflow;

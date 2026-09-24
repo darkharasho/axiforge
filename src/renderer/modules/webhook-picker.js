@@ -10,7 +10,7 @@ export function pickWebhooks(webhooks) {
     const overlay = document.createElement("div");
     overlay.className = "comp-webhook-picker-overlay";
     overlay.innerHTML = `
-      <div class="comp-webhook-picker" role="dialog" aria-label="Choose webhooks">
+      <div class="comp-webhook-picker axi-panel" role="dialog" aria-label="Choose webhooks">
         <div class="comp-webhook-picker__title">Share to which Discord webhook(s)?</div>
         <div class="comp-webhook-picker__list">
           ${webhooks.map((w) => `

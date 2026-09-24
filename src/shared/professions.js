@@ -119,3 +119,29 @@ export function slotSeriesStyle(role, profession) {
   }
   return professionSeriesStyle(profession);
 }
+
+/**
+ * Five ways a boon/condition source can be targeted (ally, self, foe, a
+ * condition's self-inflicted case, or a mix of self+foe). Domain data by
+ * the same rule-10 argument as SLOT_ROLES — and deliberately not the
+ * status inks: "foe" is the *good* outcome for a condition (damage landing
+ * on the enemy), so it must not borrow --axi-danger's meaning, and "self"
+ * is informational, not commentary, so it must not borrow the reserved
+ * --axi-meta ink either (rule 6).
+ */
+export const TARGET_ROLES = Object.freeze({
+  ally: "#5b8fd6",
+  self: "#c9a63c",
+  foe: "#d6785b",
+  selfcondi: "#d6a35b",
+  mixed: "#a35bd6",
+});
+
+/** A `style` body for a targeting badge: "" for an unknown role, so it falls
+ * through to whatever neutral the consumer's own CSS names in --axi-series's
+ * fallback. */
+export function targetSeriesStyle(role) {
+  return Object.prototype.hasOwnProperty.call(TARGET_ROLES, role)
+    ? `--axi-series: ${TARGET_ROLES[role]}`
+    : "";
+}

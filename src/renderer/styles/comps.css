@@ -651,7 +651,7 @@
 .comp-detail__back-btn {
   all: unset;
   cursor: pointer;
-  font-size: 0.85rem;
+  font: var(--axi-t-small);
   color: var(--axi-text-faint);
   white-space: nowrap;
   transition: color 0.15s;
@@ -667,9 +667,8 @@
 }
 
 .comp-detail__name {
-  font-size: 0.95rem;
+  font: var(--axi-t-body);
   color: var(--axi-text);
-  font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -688,8 +687,7 @@
    ink-line — legitimate per-instance overrides, the same shape
    library.css:512-520 makes on the same class. */
 .comp-detail__name-input {
-  font-size: 0.95rem;
-  font-weight: 500;
+  font: var(--axi-t-body);
   padding: 1px 6px;
   border-color: var(--axi-accent);
   outline: none;
@@ -702,7 +700,7 @@
 }
 
 .comp-detail__save-status {
-  font-size: 0.75rem;
+  font: var(--axi-t-small);
   color: var(--axi-text-faint);
   white-space: nowrap;
   transition: color 0.2s;
@@ -713,7 +711,7 @@
 }
 
 .comp-detail__discord-status {
-  font-size: 0.75rem;
+  font: var(--axi-t-small);
   color: var(--axi-text-faint);
   white-space: nowrap;
 }
@@ -722,7 +720,7 @@
 }
 
 .comp-detail__slot-counter {
-  font-size: 0.85rem;
+  font: var(--axi-t-small);
   color: var(--axi-text-faint);
   white-space: nowrap;
 }
@@ -778,7 +776,7 @@
 }
 
 .comp-tag-popover__empty {
-  font-size: 0.78rem;
+  font: var(--axi-t-small);
   color: var(--axi-text-faint);
   padding: 4px;
 }
@@ -806,9 +804,8 @@
   background: transparent;
   cursor: pointer;
   color: var(--axi-text-faint);
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.03em;
+  font: var(--axi-t-label);
+  letter-spacing: var(--axi-ls-label);
   white-space: nowrap;
   transition: color 0.2s, border-color 0.2s, background 0.2s;
 }
@@ -906,8 +903,8 @@
 .comp-line__label {
   flex-shrink: 0;
   width: 22px;
-  font-size: 0.8rem;
-  font-weight: 600;
+  font: var(--axi-t-label);
+  letter-spacing: var(--axi-ls-label);
   color: var(--axi-text-faint);
   padding-top: 10px;
   text-align: right;
@@ -953,6 +950,7 @@
   margin-left: auto;
 }
 
+/* No scale step: an icon glyph's size (duplicate/remove symbols), not prose — no scale step applies. */
 .comp-line__btn {
   all: unset;
   cursor: pointer;
@@ -1000,7 +998,7 @@
 }
 
 .comp-line__add-text {
-  font-size: 0.85rem;
+  font: var(--axi-t-small);
   color: var(--axi-text-faint);
 }
 
@@ -1020,9 +1018,15 @@
   flex-shrink: 0;
 }
 
+/* The profession's colour on the slot's outline — the tightest case in the
+   file for an outline carrying domain colour, because here the outline IS
+   the identification: a 42px box has no room for a strip or a label. The
+   template sets --axi-series to the slot's role marker (Condi/Heal) when it
+   has one, else to the build's profession — slotSeriesStyle in
+   professions.js resolves the two. */
 .comp-slot--filled {
   background: var(--axi-ground);
-  border: var(--axi-border-control) solid var(--axi-ink-line);
+  border: var(--axi-border-control) solid var(--axi-series, var(--axi-ink-line));
   cursor: pointer;
   transition: transform .1s, box-shadow .1s;
 }
@@ -1043,6 +1047,7 @@
   cursor: default;
 }
 
+/* No scale step: a single "?" glyph, not prose — no scale step applies. */
 .comp-slot__missing-icon {
   font-size: 0.85rem;
   color: var(--axi-text-faint);
@@ -1078,6 +1083,7 @@
   height: 26px;
 }
 
+/* No scale step: a single "+" glyph, not prose — no scale step applies. */
 .comp-slot__plus {
   font-size: 1rem;
   color: var(--axi-text-faint);
@@ -1087,14 +1093,6 @@
 .comp-slot--empty:hover .comp-slot__plus {
   color: var(--axi-text-faint);
 }
-
-/* The profession's colour on the slot's outline — the one place in the app
-   an outline carries domain colour, because here the outline IS the
-   identification: a 42px box has no room for a strip or a label. The
-   template sets --axi-series to the slot's role marker (Condi/Heal) when it
-   has one, else to the build's profession — slotSeriesStyle in
-   professions.js resolves the two. */
-.comp-slot--filled { border-color: var(--axi-series, var(--axi-ink-line)); }
 
 /* ═══════════════════════════════════════════════════════════════════
    Build Pool Panel
@@ -1118,10 +1116,10 @@
 }
 
 .comp-pool-title {
-  font-size: 12px;
+  font: var(--axi-t-eyebrow);
+  letter-spacing: var(--axi-ls-eyebrow);
   color: var(--axi-text-faint);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
 }
 
 .comp-pool-count {
@@ -1129,18 +1127,20 @@
 }
 
 /* .axi-input carries the box; this is the compact search width a pool header
-   needs instead of the input's full form width. */
+   needs instead of the input's full form width. 11px has no scale step below
+   --axi-t-small (13.5px) — a header search this tight has to read smaller
+   than the smallest body type the language ships. */
 .comp-pool-search {
   width: 100px;
   padding: 3px 8px;
   font-size: 11px;
 }
 
-/* .axi-btn/--ghost carries the box; this is the compact label size a pool
-   header control needs instead of the button's full form padding. */
+/* .axi-btn/--ghost carries the box, including its own type; this is only
+   the compact padding a pool header control needs instead of the button's
+   full form padding. */
 .comp-pool-add {
   padding: 3px 8px;
-  font-size: 12px;
 }
 
 .comp-pool-list {
@@ -1151,7 +1151,7 @@
 
 .comp-pool-empty {
   color: var(--axi-text-faint);
-  font-size: 13px;
+  font: var(--axi-t-small);
   padding: 20px 0;
   text-align: center;
 }
@@ -1168,9 +1168,9 @@
 }
 
 .comp-cat-row__label {
-  font-size: 11px;
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
   color: var(--axi-text-faint);
 }
 
@@ -1191,7 +1191,7 @@
   padding: 3px 8px;
   background: var(--axi-surface);
   border: var(--axi-border-control) solid var(--axi-ink-line);
-  font-size: 12px;
+  font: var(--axi-t-small);
   color: var(--axi-text);
   cursor: grab;
   user-select: none;
@@ -1214,17 +1214,14 @@
   flex-shrink: 0;
 }
 
+/* .axi-badge-count carries the box; this is the compact centred square a
+   chip's inline count needs instead of the badge's own padding. */
 .comp-cat-chip__count {
   min-width: 16px;
   height: 16px;
-  padding: 0 4px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--axi-text-faint);
-  background: var(--axi-ground);
 }
 
 /* SortableJS fallback ghost while dragging a chip — a ghost, so it keeps its
@@ -1233,30 +1230,30 @@
   opacity: 0.9;
 }
 
-/* .axi-btn/--dashed carries the box; this is the compact label size and
-   dashed-pill-radius-free shape a row control needs. */
+/* .axi-btn/--dashed carries the box, including its own type; this is only
+   the compact padding a row control needs. */
 .comp-cat-add {
   padding: 3px 8px;
-  font-size: 12px;
 }
 
 /* ── Category hover preview ────────────────────────────────────────────────── */
+/* .axi-picker__pop/--fixed carry the raised-surface box (panel border, the
+   6px offset block, position: fixed) — this is body-portaled and positioned
+   from script, exactly the contract --fixed is for. min-width/max-width
+   override the package's min-width: 100%, which against a fixed containing
+   block otherwise means the viewport. */
 .comp-cat-hover-card {
-  position: fixed;
   z-index: var(--z-modal);
   min-width: 180px;
   max-width: 260px;
-  background: var(--axi-surface-raised);
-  border: var(--axi-border-panel) solid var(--axi-ink-line);
-  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
   padding: 8px;
   pointer-events: none;
   animation: comp-hover-in 0.14s ease;
 }
 
 .comp-cat-hover__title {
-  font-size: 12px;
-  font-weight: 600;
+  font: var(--axi-t-label);
+  letter-spacing: var(--axi-ls-label);
   color: var(--axi-text);
   margin-bottom: 6px;
 }
@@ -1291,7 +1288,7 @@
 }
 
 .comp-cat-hover__name {
-  font-size: 12px;
+  font: var(--axi-t-small);
   color: var(--axi-text);
   white-space: nowrap;
   overflow: hidden;
@@ -1299,7 +1296,7 @@
 }
 
 .comp-cat-hover__empty {
-  font-size: 12px;
+  font: var(--axi-t-small);
   color: var(--axi-text-faint);
 }
 
@@ -1327,8 +1324,8 @@
 }
 
 .comp-slot__tag-text {
-  font-size: 11px;
-  font-weight: 700;
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
   text-transform: uppercase;
   color: var(--axi-text-faint);
 }
@@ -1340,9 +1337,9 @@
 }
 
 .comp-cat-icon-label {
-  font-size: 11px;
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
   color: var(--axi-text-faint);
   margin-bottom: 6px;
 }
@@ -1374,10 +1371,13 @@
   object-fit: contain;
 }
 
+/* No scale step: a single "∅" glyph, not prose — no scale step applies. */
 .comp-cat-icon-opt--none {
   font-size: 16px;
 }
 
+/* 12px has no scale step below --axi-t-small (13.5px); this custom-URL
+   field sits in a tight icon-picker row that has no room for body type. */
 .comp-cat-icon-custom {
   margin-top: 8px;
   width: 100%;
@@ -1400,12 +1400,13 @@
 }
 
 /* No modal primitive exists yet (batch 4 consolidates the app's ten sheets);
-   this matches .axi-panel's own weight — a centred sheet is a raised
-   surface like any other — rather than inventing a third form step. */
+   .axi-panel documents itself as exactly this escape hatch — "a consumer
+   can raise an arbitrary block into the language without waiting for us to
+   ship a component for it" — so a centred sheet adopts it rather than
+   transcribing its box. --axi-panel-pad zeroes the panel's own 26px padding,
+   since the header/list/footer here own their own. */
 .comp-picker-modal {
-  background: var(--axi-surface-raised);
-  border: var(--axi-border-panel) solid var(--axi-ink-line);
-  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
+  --axi-panel-pad: 0;
   width: 480px;
   max-width: 90vw;
   max-height: 70vh;
@@ -1423,12 +1424,13 @@
 }
 
 .comp-picker-modal__title {
-  font-size: 13px;
+  font: var(--axi-t-small);
   color: var(--axi-text-dim);
-  font-weight: 500;
 }
 
-/* .axi-input carries the box; this is the compact header search width. */
+/* .axi-input carries the box; this is the compact header search width. 12px
+   has no scale step below --axi-t-small (13.5px) — same tight-header case as
+   .comp-pool-search. */
 .comp-picker-modal__search {
   width: 160px;
   padding: 4px 8px;
@@ -1443,7 +1445,7 @@
 
 .comp-picker-empty {
   color: var(--axi-text-faint);
-  font-size: 12px;
+  font: var(--axi-t-small);
   padding: 20px 16px;
   text-align: center;
 }
@@ -1500,7 +1502,7 @@
 }
 
 .comp-picker-row__name {
-  font-size: 13px;
+  font: var(--axi-t-small);
   color: var(--axi-text-dim);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1528,6 +1530,7 @@
   flex-shrink: 0;
 }
 
+/* No scale step: same case as .party-cov__toggle-text. */
 .comp-picker-row__meta {
   display: flex;
   align-items: center;
@@ -1553,6 +1556,7 @@
   flex-shrink: 0;
 }
 
+/* No scale step: same case as .party-cov__toggle-text. */
 .comp-picker-modal__scope {
   padding: 6px 16px 8px;
   font-size: 11px;
@@ -1575,11 +1579,11 @@
   flex-shrink: 0;
 }
 
-/* .axi-btn/--ghost/--primary carry the box; this is the compact label size
-   the modal footer needs instead of the button's full form padding. */
+/* .axi-btn/--ghost/--primary carry the box, including their own type; this
+   is only the compact padding a modal footer needs instead of the button's
+   full form padding. */
 .comp-picker-modal__btn {
   padding: 5px 14px;
-  font-size: 12px;
 }
 
 .comp-picker-modal__btn--add:disabled {
@@ -1597,8 +1601,10 @@
    below mirror .comp-slot--filled's own; the profession colour comes
    through the same --axi-series knob, set by comp-drag-drop.js onStart
    (the clone still carries a lib-prof--* class from packages/forge-render,
-   batch 5's unconverted mini-card, which draws nothing once
-   professions-legacy.css is gone). */
+   batch 5's unconverted mini-card, but that class draws nothing here: its
+   colour rule is scoped to .forge-render .mini-card.lib-prof--*, and
+   SortableJS's fallback clone is appended to <body>, outside any
+   .forge-render ancestor). */
 .comp-drag-icon-ghost {
   width: 42px !important;
   height: 42px !important;
@@ -1671,14 +1677,15 @@
    the tooltip's single ink-line exception, which RULES.md reserves for
    .axi-tooltip alone. */
 
+/* .axi-picker__pop/--fixed carry the raised-surface box; min-width overrides
+   the package's min-width: 100%, which against a fixed containing block
+   otherwise means the viewport. border-left stays local — domain
+   identification (which profession/role this is), not a status cap. */
 .comp-slot-hover-card {
-  position: fixed;
   z-index: var(--z-modal);
+  min-width: 230px;
   width: 230px;
-  background: var(--axi-surface-raised);
-  border: var(--axi-border-panel) solid var(--axi-ink-line);
   border-left: var(--axi-border-panel) solid var(--axi-series, var(--axi-ink-line));
-  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
   pointer-events: none;
   animation: comp-hover-in 0.14s ease;
 }
@@ -1719,23 +1726,23 @@
 }
 
 .comp-hover__name {
-  font-size: 12px;
-  font-weight: 600;
+  font: var(--axi-t-label);
+  letter-spacing: var(--axi-ls-label);
   color: var(--axi-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+/* No scale step: meta text this small has no scale step between --axi-t-micro's 800-weight caps and --axi-t-small's 13.5px body. */
 .comp-hover__prof {
   font-size: 10px;
   color: var(--axi-text-faint);
 }
 
+/* .axi-chip carries the box; this is the compact padding a hover card
+   needs instead of the chip's default. */
 .comp-hover__mode {
-  font-size: 10px;
-  color: var(--axi-text-faint);
-  background: var(--axi-ground);
   padding: 2px 6px;
   flex-shrink: 0;
   align-self: flex-start;
@@ -1752,17 +1759,20 @@
   padding-top: 6px;
 }
 
+/* No scale step: a normal-weight stat name at 11px falls between --axi-t-micro's 800 weight and --axi-t-small's 13.5px, with no step for either. */
 .comp-hover__stat {
   font-size: 11px;
   color: var(--axi-accent);
   font-weight: 500;
 }
 
+/* No scale step: same case as .comp-hover__prof. */
 .comp-hover__equip {
   font-size: 10px;
   color: var(--axi-text-faint);
 }
 
+/* No scale step: a one-character separator glyph, not prose — no scale step applies. */
 .comp-hover__sep {
   font-size: 10px;
   color: var(--axi-ink-line);
@@ -1779,12 +1789,10 @@
   padding: 0 11px 9px;
 }
 
+/* .axi-chip carries the box; this is the compact padding a hover card tag
+   needs instead of the chip's default. */
 .comp-hover__tag {
-  font-size: 10px;
   padding: 1px 6px;
-  background: var(--axi-surface);
-  border: var(--axi-border-hairline) solid var(--axi-rule);
-  color: var(--axi-text-faint);
 }
 
 /* ── Slot drag trash zone ────────────────────────────────────────── */
@@ -1810,7 +1818,7 @@
 }
 
 .comp-line-trash__text {
-  font-size: 0.75rem;
+  font: var(--axi-t-small);
   color: var(--axi-text-faint);
   user-select: none;
   pointer-events: none;
@@ -1835,14 +1843,15 @@
   cursor: pointer;
   user-select: none;
   color: var(--axi-text-faint);
-  font-size: 11px;
-  letter-spacing: .05em;
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
 }
 
 .comp-boon-cov__header:hover {
   color: var(--axi-text-faint);
 }
 
+/* No scale step: a disclosure glyph (▸/▾), not prose — no scale step applies. */
 .comp-boon-cov__chevron {
   font-size: 10px;
   line-height: 1;
@@ -1877,6 +1886,7 @@
   background: var(--axi-surface-raised);
 }
 
+/* No scale step: same case as .comp-boon-cov__chevron. */
 .party-cov__line-chevron {
   color: var(--axi-text-faint);
   font-size: 10px;
@@ -1886,8 +1896,8 @@
 
 .party-cov__line-label {
   color: var(--axi-accent);
-  font-weight: bold;
-  font-size: 13px;
+  font: var(--axi-t-label);
+  letter-spacing: var(--axi-ls-label);
   flex-shrink: 0;
 }
 
@@ -1950,7 +1960,14 @@
 }
 
 /* Self-boon toggle — .axi-switch carries the box (rule 5: the track fills
-   to assert the setting's status; the knob stays ink in both states). */
+   to assert the setting's status; the knob stays ink in both states).
+   role="switch"/aria-checked live on the button itself, not the decorative
+   .axi-switch span, so the state reaches the focusable element — a span is
+   never in the tab order, and a screen reader never sees an attribute on a
+   node it can't land on. That means the package's own
+   `.axi-switch[aria-checked="true"]` selector can't reach this instance;
+   the fill/knob-travel rules below key off the button's state instead,
+   reusing the same --axi-switch-w/-knob formula the package rule uses. */
 .party-cov__toggle {
   all: unset;
   display: flex;
@@ -1960,6 +1977,23 @@
   user-select: none;
 }
 
+/* all: unset also drops the global :focus-visible outline (same specificity,
+   later in source order), so it is restored here with the same tokens. */
+.party-cov__toggle:focus-visible {
+  outline: var(--axi-border-control) solid var(--axi-accent);
+  outline-offset: 2px;
+}
+
+.party-cov__toggle[aria-checked="true"] .axi-switch {
+  background: var(--axi-switch-fill, var(--axi-accent));
+}
+.party-cov__toggle[aria-checked="true"] .axi-switch__knob {
+  transform: translateX(calc(
+    var(--axi-switch-w, 46px) - 2 * var(--axi-border-control)
+    - var(--axi-switch-knob, 16px) - 4px));
+}
+
+/* No scale step: a normal-weight fact at this size (not a caps label), and 11px sits below --axi-t-small (13.5px) with no lighter-weight step between it and --axi-t-micro (11px/800). */
 .party-cov__toggle-text {
   color: var(--axi-text-faint);
   font-size: 11px;
@@ -1978,9 +2012,9 @@
 
 .party-cov__section-label {
   color: var(--axi-text-faint);
-  font-size: 10px;
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
   margin-bottom: 8px;
 }
 
@@ -1991,40 +2025,38 @@
   flex-wrap: wrap;
 }
 
+/* .axi-pill carries the box: a full ink-line edge at rest (rule 3 — the
+   old local rule set a transparent border, so the hover block appeared with
+   no outline under it), the pressed fill driven by --axi-pill-fill, its own
+   type (uppercase label, matching every other pill in the app), and rule 4
+   case iii's pressed-hover cascade (axi.css:262-267) — a control already on
+   a block does not translate at rest and only deepens its block on hover,
+   which the old hand-rolled `.party-cov__pill--active` rule got backwards by
+   applying the same hover values at rest. Padding is the row's compact size
+   instead of the pill's full form padding. */
 .party-cov__pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
   padding: 3px 8px;
-  font-size: 11px;
-  cursor: pointer;
-  border: var(--axi-border-control) solid transparent;
-  background: var(--axi-surface-raised);
-  color: var(--axi-text-dim);
-  transition: transform .1s, box-shadow .1s;
 }
 
 /* Filled asserts a value (rule 5): a boon/condition pill reports the party's
-   actual coverage, so it takes the status ink at full strength. Field and
-   finisher pills are domain data (nine combo fields, four finisher types),
-   so their colour comes through --axi-series, the same knob a profession or
-   a card strip reads — set per-instance from constants.js, not a literal
-   here. */
-.party-cov__pill--boon { background: var(--axi-ok); color: var(--axi-ink-line); }
-.party-cov__pill--condi { background: var(--axi-danger); color: var(--axi-ink-line); }
+   actual coverage, so it takes the status ink at full strength, through
+   --axi-pill-fill (aria-pressed="true" is what actually paints it). Field
+   and finisher pills are domain data (nine combo fields, four finisher
+   types), so their fill comes through --axi-series, the same knob a
+   profession or a card strip reads — set per-instance from constants.js. */
+.party-cov__pill--boon { --axi-pill-fill: var(--axi-ok); }
+.party-cov__pill--condi { --axi-pill-fill: var(--axi-danger); }
 .party-cov__pill--field,
 .party-cov__pill--finisher {
-  background: var(--axi-series, var(--axi-accent));
-  color: var(--axi-ink-line);
+  --axi-pill-fill: var(--axi-series, var(--axi-accent));
 }
 
 /* Sources exist, but every one of them is self-inflicted (e.g. Corrupt Boon's
    "Poison yourself") — not coverage, but distinct from a plain gap and still
-   clickable so the user can see why. Outlined rather than filled: these three
-   are commentary about the coverage, not a status assertion. */
+   clickable so the user can see why. aria-pressed stays false: these three
+   are commentary about the coverage, not a status assertion, so they keep
+   the pill's own unpressed ground rather than a fill. */
 .party-cov__pill--self-condi {
-  background: var(--axi-surface-raised);
-  color: var(--axi-text-faint);
   border-style: dashed;
 }
 
@@ -2032,15 +2064,8 @@
   opacity: 0.4;
 }
 
-.party-cov__pill--uncovered {
-  background: var(--axi-surface-raised);
-  color: var(--axi-text-faint);
-  cursor: default;
-}
-
+.party-cov__pill--uncovered,
 .party-cov__pill--self-only {
-  background: var(--axi-surface-raised);
-  color: var(--axi-text-faint);
   cursor: default;
 }
 
@@ -2052,11 +2077,20 @@
   color: var(--axi-text-faint);
 }
 
-/* Every clickable pill carries data-clickable="true"; uncovered/self-only
-   never do, so they never lift. Rule 4 case i: no resting block, so hover
-   gains one from nothing. */
-.party-cov__pill[data-clickable="true"]:hover,
-.party-cov__pill--active {
+/* Uncovered/self-only are never clickable (no data-clickable), so the
+   package's own :hover lift — which .axi-pill applies unconditionally —
+   is switched back off for them; they are informational, not a control. */
+.party-cov__pill:not([data-clickable="true"]):hover {
+  box-shadow: none;
+  transform: none;
+}
+
+/* A clickable pill with nothing resting under it (self-condi, unpressed)
+   keeps the case-i lift while its source panel is open, the same shape a
+   hover shows — a pressed pill's own fill and block already carry that
+   "this one" weight while expanded, and .axi-pill's own pressed-hover rule
+   covers the rest, so it needs nothing extra here. */
+.party-cov__pill[aria-pressed="false"][aria-expanded="true"] {
   box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
   transform: translate(-2px, -2px);
 }
@@ -2065,6 +2099,7 @@
   display: block;
 }
 
+/* No scale step: a decorative glyph, not prose — no scale step applies. */
 .party-cov__pill-emoji {
   font-size: 12px;
   line-height: 1;
@@ -2074,6 +2109,8 @@
   white-space: nowrap;
 }
 
+/* No scale step: a tight numeric badge; no scale step lands this small at
+   normal weight. */
 .party-cov__pill-badge {
   color: inherit;
   font-size: 10px;
@@ -2093,18 +2130,35 @@
   padding-top: 8px;
 }
 
-/* --axi-series carries the header/body's left edge and the title's ink — set
-   per-instance by comp-boon-coverage.js: a fixed status token for boons and
-   conditions, the combo field/finisher's own domain colour otherwise. */
+/* --axi-series carries the header/body's left edge and the title's ink for
+   the combo field/finisher panels — domain identification (rule 10), same
+   knob the slot box and category hover row read. */
 .party-cov__expand-header {
   border-left: var(--axi-border-control) solid var(--axi-series, var(--axi-rule));
   padding: 4px 10px;
   margin-bottom: 4px;
 }
 
+/* Boon/condition panels report a status (coverage), not domain identity, so
+   rule 5 puts --axi-series on a cap across the head instead of a frame down
+   the side — the same shape build-sources.css:307-316 uses for a pinned
+   row. */
+.party-cov__expand-header--cap {
+  position: relative;
+  border-left: none;
+  padding-top: 9px;
+}
+.party-cov__expand-header--cap::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: var(--axi-series, var(--axi-rule));
+}
+
 .party-cov__expand-title {
-  font-size: 12px;
-  font-weight: bold;
+  font: var(--axi-t-label);
+  letter-spacing: var(--axi-ls-label);
   color: var(--axi-series, var(--axi-text));
 }
 
@@ -2119,6 +2173,15 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+/* The cap already identified the boon/condition at the head of the panel;
+   the body underneath is plain, since a frame down its side would be the
+   same "colour stops saying anything about any one row" failure rule 5
+   rejects for a card's full-height stripe. */
+.party-cov__expand-body--cap {
+  border-left: none;
+  padding-left: 0;
 }
 
 /* Source rows */
@@ -2156,14 +2219,14 @@
 
 /* Skill hover tooltip — a richer popover than .axi-tooltip's one-line shape,
    so it takes the panel weight rather than the tooltip's ink-fill exception
-   (RULES.md reserves that reasoning for .axi-tooltip alone). */
+   (RULES.md reserves that reasoning for .axi-tooltip alone). .axi-picker__pop/
+   --fixed carry the box; min-width/width override the package's
+   min-width: 100%, which against a fixed containing block otherwise means
+   the viewport. */
 .party-cov__skill-tooltip {
-  position: fixed;
   z-index: var(--z-modal-confirm);
+  min-width: min(320px, calc(100vw - 16px));
   width: min(320px, calc(100vw - 16px));
-  background: var(--axi-surface-raised);
-  border: var(--axi-border-panel) solid var(--axi-ink-line);
-  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
   padding: 10px;
   pointer-events: none;
 }
@@ -2179,21 +2242,20 @@
 }
 
 .party-cov__skill-tooltip-name {
-  font-size: 0.95rem;
-  font-weight: 600;
+  font: var(--axi-t-body);
   color: var(--axi-text);
 }
 
 .party-cov__skill-tooltip-desc {
   margin: 8px 0 0;
-  font-size: 0.78rem;
+  font: var(--axi-t-small);
   line-height: 1.45;
   color: var(--axi-text-dim);
 }
 
 .party-cov__src-name {
   color: var(--axi-text);
-  font-size: 12px;
+  font: var(--axi-t-small);
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -2201,62 +2263,74 @@
   white-space: nowrap;
 }
 
+/* No scale step: same case as .party-cov__toggle-text. */
 .party-cov__src-spec {
   font-size: 11px;
   color: var(--axi-text-faint);
   white-space: nowrap;
 }
 
+/* No scale step: same case as .party-cov__toggle-text. */
 .party-cov__src-kit {
   color: var(--axi-text-faint);
   font-size: 10px;
 }
 
+/* No scale step: same case as .party-cov__toggle-text. */
 .party-cov__src-stacks {
   color: var(--axi-text-faint);
   font-size: 11px;
 }
 
+/* No scale step: same case as .party-cov__toggle-text. */
 .party-cov__src-dur {
   color: var(--axi-text-faint);
   font-size: 11px;
 }
 
+/* No scale step: same case as .party-cov__toggle-text. */
 .party-cov__src-radius {
   color: var(--axi-text-faint);
   font-size: 11px;
 }
 
+/* No scale step: same case as .party-cov__toggle-text. */
 .party-cov__src-blasts {
   color: var(--axi-text-faint);
   font-size: 11px;
 }
 
+/* No scale step: same case as .party-cov__toggle-text. */
 .party-cov__src-pct {
   color: var(--axi-text-faint);
   font-size: 10px;
 }
 
-/* Five targeting facts, filled asserts a value (rule 5) — the same five
-   inks the rest of the language already means something by, so a sixth
-   arbitrary hue never has to be invented. */
+/* Five targeting *categories* (ally/self/foe/a condition's self-inflicted
+   case/mixed) — domain data (rule 10), not status: "foe" is the good
+   outcome for a condition, so it must not borrow --axi-danger, and "self"
+   is informational rather than commentary, so it must not borrow the
+   reserved --axi-meta ink either (rule 6). Each span's own --axi-series is
+   set per-instance by comp-boon-coverage.js, reading TARGET_ROLES in
+   professions.js — the modifier classes below are JS/test hooks only, with
+   no visual rule of their own. */
+/* .axi-chip carries the box (border, base padding, font); background/colour
+   here are the per-instance domain colour rule 10 grants data that owns its
+   own palette — the same override .axi-card--strip makes for
+   --axi-card-strip, applied directly since .axi-chip has no matching
+   --axi-chip-fill knob. */
 .party-cov__src-target {
-  font-size: 9px;
-  font-weight: 700;
   padding: 1px 6px;
   white-space: nowrap;
+  background: var(--axi-series, var(--axi-surface-raised));
+  color: var(--axi-ink-line);
 }
-
-.party-cov__src-target--ally      { background: var(--axi-ok);     color: var(--axi-ink-line); }
-.party-cov__src-target--self      { background: var(--axi-meta);   color: var(--axi-ink-line); }
-.party-cov__src-target--foe       { background: var(--axi-danger); color: var(--axi-ink-line); }
-.party-cov__src-target--selfcondi { background: var(--axi-warn);   color: var(--axi-ink-line); }
-.party-cov__src-target--mixed     { background: var(--axi-accent); color: var(--axi-accent-ink); }
 
 .party-cov__src-row--self-condi {
   opacity: 0.65;
 }
 
+/* No scale step: same case as .party-cov__toggle-text. */
 .party-cov__expand-note {
   font-size: 10px;
   color: var(--axi-text-faint);
@@ -2271,8 +2345,8 @@
 }
 
 .comps-tab__header {
-  font-size: 13px;
-  font-weight: 600;
+  font: var(--axi-t-label);
+  letter-spacing: var(--axi-ls-label);
   color: var(--axi-text-dim);
   margin-bottom: 12px;
   display: flex;
@@ -2280,13 +2354,9 @@
   gap: 8px;
 }
 
-.comps-tab__badge {
-  font-size: 11px;
-  font-weight: 600;
-  background: var(--axi-surface-raised);
-  color: var(--axi-text-faint);
-  padding: 1px 7px;
-}
+/* .axi-badge-count carries the whole box; nothing here is per-instance,
+   so no local rule is needed — the class in renderer.js's markup is
+   enough. */
 
 .comps-tab__list {
   display: flex;
@@ -2317,8 +2387,8 @@
 }
 
 .comps-tab__card-name {
-  font-size: 13px;
-  font-weight: 600;
+  font: var(--axi-t-label);
+  letter-spacing: var(--axi-ls-label);
   color: var(--axi-accent);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2331,7 +2401,7 @@
 }
 
 .comps-tab__card-open {
-  font-size: 13px;
+  font: var(--axi-t-small);
   color: var(--axi-text-faint);
   opacity: 0;
   transition: opacity 0.15s;
@@ -2357,7 +2427,7 @@
   align-items: center;
   gap: 6px;
   padding: 6px 14px;
-  font-size: 12px;
+  font: var(--axi-t-small);
   color: var(--axi-text-faint);
   cursor: pointer;
   transition: color 0.12s;
@@ -2400,7 +2470,7 @@
 }
 
 .comps-tab__card-empty {
-  font-size: 12px;
+  font: var(--axi-t-small);
   color: var(--axi-text-faint);
   padding: 12px 14px;
 }
@@ -2417,7 +2487,7 @@
 }
 
 .comps-tab__empty-text {
-  font-size: 13px;
+  font: var(--axi-t-small);
 }
 
 /* ─── Comp webhook picker overlay ─────────────────────────────────────────── */
@@ -2430,11 +2500,10 @@
   justify-content: center;
   z-index: var(--z-modal);
 }
+/* .axi-panel carries the box; --axi-panel-pad overrides the panel's own 26px
+   default to this sheet's tighter 16px. */
 .comp-webhook-picker {
-  background: var(--axi-surface-raised);
-  border: var(--axi-border-panel) solid var(--axi-ink-line);
-  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
-  padding: 16px;
+  --axi-panel-pad: 16px;
   min-width: 280px;
   max-width: 360px;
 }
@@ -2442,6 +2511,22 @@
 .comp-webhook-picker__list { display: flex; flex-direction: column; gap: 6px; max-height: 240px; overflow-y: auto; }
 .comp-webhook-picker__item { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 .comp-webhook-picker__actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
-/* .axi-btn/--ghost/--primary carry the box; this is the compact label size
-   a modal footer needs instead of the button's full form padding. */
-.comp-webhook-picker__btn { padding: 6px 14px; font-size: 12px; }
+/* .axi-btn/--ghost/--primary carry the box, including their own type; this
+   is only the compact padding a modal footer needs. */
+.comp-webhook-picker__btn { padding: 6px 14px; }
+
+/* ── Reduced motion ──────────────────────────────────────────────────────── */
+/* The package's own block (axi.css) only covers its enumerated .axi-*
+   selectors, so it never reaches these app-local shapes. Entrance keyframes
+   (share-menu-in, comp-hover-in) are already covered by the package's global
+   `*, *::before, *::after { animation-duration: .01ms !important }` rule, so
+   only the hover/state transforms that would otherwise still jump on
+   interaction need cancelling here — the same set the package cancels for
+   its own .axi-btn/.axi-pill/etc. */
+@media (prefers-reduced-motion: reduce) {
+  .comp-slot--filled:hover,
+  .party-cov__pill[data-clickable="true"]:hover,
+  .party-cov__pill[aria-pressed="false"][aria-expanded="true"] {
+    transform: none !important;
+  }
+}

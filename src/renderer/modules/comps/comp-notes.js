@@ -35,11 +35,12 @@ const COMP_NOTES_HINT =
 export function renderCompTabs(activeTab, { hasNotes = false } = {}) {
   const active = TABS.some((t) => t.id === activeTab) ? activeTab : "comp";
   const buttons = TABS.map((tab) => {
-    const cls = "comp-detail__tab" + (tab.id === active ? " comp-detail__tab--active" : "");
+    const isActive = tab.id === active;
+    const cls = "comp-detail__tab" + (isActive ? " comp-detail__tab--active" : "");
     const dot = tab.id === "notes" && hasNotes ? '<span class="comp-detail__tab-dot"></span>' : "";
-    return `<button type="button" class="${cls}" data-comp-tab="${tab.id}">${tab.label}${dot}</button>`;
+    return `<button type="button" class="${cls}" role="tab" aria-selected="${isActive}" data-comp-tab="${tab.id}">${tab.label}${dot}</button>`;
   }).join("");
-  return `<div class="comp-detail__tabs">${buttons}</div>`;
+  return `<div class="comp-detail__tabs" role="tablist">${buttons}</div>`;
 }
 
 /**

@@ -176,7 +176,7 @@ function closeHoverCard() {
 
 function showSlotHoverCard(slotEl, build) {
   const card = document.createElement("div");
-  card.className = "comp-slot-hover-card";
+  card.className = "comp-slot-hover-card axi-picker__pop axi-picker__pop--fixed";
   card.setAttribute("style", professionSeriesStyle(build.profession));
 
   const icon = getSpecIcon(build);
@@ -194,7 +194,7 @@ function showSlotHoverCard(slotEl, build) {
   if (runeName)    equipParts.push(`<span class="comp-hover__equip">${escapeHtml(runeName)}</span>`);
   if (relicName)   equipParts.push(`<span class="comp-hover__equip">${escapeHtml(relicName)}</span>`);
 
-  const tagPills = tags.map((t) => `<span class="comp-hover__tag">${escapeHtml(t)}</span>`).join("");
+  const tagPills = tags.map((t) => `<span class="comp-hover__tag axi-chip axi-chip--meta">${escapeHtml(t)}</span>`).join("");
   const roleBadge = roleBadgeHtml(build, state.upgradeCatalog);
 
   card.innerHTML = `
@@ -204,7 +204,7 @@ function showSlotHoverCard(slotEl, build) {
         <span class="comp-hover__name">${name}</span>
         ${profLine ? `<span class="comp-hover__prof">${escapeHtml(profLine)}</span>` : ""}
       </div>
-      <span class="comp-hover__mode">${escapeHtml(gameMode)}</span>
+      <span class="comp-hover__mode axi-chip">${escapeHtml(gameMode)}</span>
     </div>
     ${equipParts.length ? `<div class="comp-hover__equip-row">${equipParts.join('<span class="comp-hover__sep">·</span>')}</div>` : ""}
     ${tagPills ? `<div class="comp-hover__tags">${tagPills}</div>` : ""}
@@ -831,7 +831,7 @@ function renderCategoryRow(comp) {
            title="Drag onto a line to add its icon · click to edit">
         ${iconHtml}
         <span class="comp-cat-chip__name">${name}</span>
-        <span class="comp-cat-chip__count">${count}</span>
+        <span class="comp-cat-chip__count axi-badge-count">${count}</span>
       </div>
     `;
   }).join("");
@@ -1011,7 +1011,7 @@ export function openAddBuildModal(comp) {
 
   function render() {
     overlay.innerHTML = `
-      <div class="comp-picker-modal">
+      <div class="comp-picker-modal axi-panel">
         <div class="comp-picker-modal__header">
           <span class="comp-picker-modal__title">Add Builds to Comp</span>
           <input type="text" class="comp-picker-modal__search axi-input" placeholder="Search name, folder, gear, team..."
@@ -1161,7 +1161,7 @@ function openCategoryModal(comp, categoryId) {
 
   function render() {
     overlay.innerHTML = `
-      <div class="comp-picker-modal">
+      <div class="comp-picker-modal axi-panel">
         <div class="comp-picker-modal__header">
           <span class="comp-picker-modal__title">${isEdit ? "Edit Tag" : "New Tag"}</span>
           <input type="text" class="comp-picker-modal__search comp-cat-name-input axi-input"
@@ -1275,7 +1275,7 @@ function showCategoryHoverCard(chipEl, comp, category) {
     .filter(Boolean);
 
   const card = document.createElement("div");
-  card.className = "comp-cat-hover-card";
+  card.className = "comp-cat-hover-card axi-picker__pop axi-picker__pop--fixed";
   const rows = builds.length
     ? builds.map((b) => {
         return `<div class="comp-cat-hover__row" style="${escapeHtml(professionSeriesStyle(b.profession))}">

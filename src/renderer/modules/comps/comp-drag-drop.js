@@ -6,7 +6,7 @@
 
 import Sortable from "sortablejs";
 import { state } from "../state.js";
-import { professionSeriesStyle } from "../../../shared/professions.js";
+import { professionColour } from "../../../shared/professions.js";
 
 let _sortableInstances = [];
 
@@ -54,21 +54,20 @@ export function wireCompDragDrop(callbacks) {
           const grabX = oe ? oe.clientX - rect.left : rect.width / 2;
           const grabY = oe ? oe.clientY - rect.top : rect.height / 2;
           // The ghost is a clone of .mini-card, which still carries its own
-          // lib-prof--* class from forge-render (batch 5, unconverted) rather
-          // than an --axi-series style — that class no longer draws a colour
-          // once professions-legacy.css is gone. Resolve the build's own
-          // series here instead, the same way the slot box does.
+          // lib-prof--* class from forge-render (batch 5, unconverted). That
+          // class draws nothing here regardless: forge-render.css scopes its
+          // colour rules to .forge-render .mini-card.lib-prof--*, and
+          // SortableJS's fallback clone is appended to <body>, outside any
+          // .forge-render ancestor. Resolve the build's own colour here
+          // instead, the same way the slot box does.
           const buildId = evt.item?.dataset?.buildId;
           const build = buildId ? state.builds.find((b) => b.id === buildId) : null;
-          const seriesDecl = build ? professionSeriesStyle(build.profession) : "";
+          const seriesColour = build ? professionColour(build.profession) : null;
           requestAnimationFrame(() => {
             const ghost = document.querySelector(".comp-drag-icon-ghost");
             if (ghost) {
               ghost.style.transform = `translate(${grabX - 21}px, ${grabY - 21}px)`;
-              if (seriesDecl) {
-                const value = seriesDecl.slice(seriesDecl.indexOf(":") + 1).trim();
-                ghost.style.setProperty("--axi-series", value);
-              }
+              if (seriesColour) ghost.style.setProperty("--axi-series", seriesColour);
             }
           });
         },
