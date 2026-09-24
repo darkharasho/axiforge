@@ -763,3 +763,53 @@ batches 2–5. Ordered by how likely it is to matter.
   rendered page, longer URL — benign, but pinned by no test, and there is now no
   way to store a falsy value (`src/main/index.js:1213, 1700, 1836, 1893` and
   `render-pages.js:608` are the readers).
+
+### Batch 1 outstanding — carried out of the plan workspace
+
+The workspace (`.superpowers/sdd/…`) is git-ignored and deleted when the batch
+closes, so the items it was holding live here now.
+
+- [ ] **Batch 2 must empty `PENDING_JS` in the same task that drops
+  `library.css` from `PENDING`.** The gate's JS sweep seeds
+  `modules/library/history-panel.js` and `modules/library/history-compare.js`
+  as acknowledged-but-unenforced. Both carry live `linear-gradient` and hex
+  literals. Convert the stylesheet without clearing the seed and the gate goes
+  green over them permanently — the exact failure the sweep was added to catch.
+  Today the obligation is carried only by a code comment.
+- [ ] **The JS injection sweep is renderer-only.** `src/web`, `src/site` and
+  `packages/` JS are unswept. Grepped clean today — no live gap — but it is the
+  same blind-spot shape that hid the two library modules, and batch 5 owns
+  those trees.
+- [ ] **`src/renderer/styles.css` passes the gate trivially** (it is an
+  `@import` manifest with no declarations). Its green is prospective coverage,
+  not evidence of conversion.
+- [ ] **The `<style>` template-literal extractor has no real-code coverage,**
+  and a style element held on `this.styleEl` rather than a `const`/`let`/`var`
+  binding would be missed. No such shape exists today.
+
+**Manual gate, still owed at the running Electron app** (batch 1 changed the
+chrome; none of this can be checked from a test):
+
+1. Titlebar / left nav / subnav before-after.
+2. *Decision:* the save-status warn/ok split — does "draft" now read as a
+   warning rather than a neutral state?
+3. *Decision:* `.af-btn--danger` has no resting offset block, so it lifts from
+   flat on hover while `.axi-btn--primary` drops from an already-offset rest.
+   Parity or deliberate difference?
+4. *Decision:* `.axi-window` ships dead — nothing in `src/` carries the class.
+   Wire it to `<body>` or delete the rule (`app.css:43-45`).
+5. The accent-collision case in the picker.
+6. Profession auto-theming end to end.
+7. Click through: workspace menu, save, subnav overflow, one destructive
+   confirm — a missed class rename shows as an unstyled button, a missed `id`
+   as a dead one.
+8. The update pill's opacity blink.
+9. The glyph at all three sizes.
+10. *Decision:* do the accent labels wrap? `settings-modal.css:476-480` sizes
+    the track `minmax(96px, 1fr)`, chosen for the old stacked card; the new
+    `.af-accent-card` is a horizontal row, leaving ~50px of text box for
+    "Violet Purple", "Electric Blue", "Emerald Mint", "Slate Silver".
+11. *Decision:* `.subnav__item--active` fills while `.leftnav__item--active`
+    outlines, and both mean "this is the current page" — which under rule 5
+    (filled = status, outlined = annotation) say different things. Every later
+    batch copies whichever answer stands.
