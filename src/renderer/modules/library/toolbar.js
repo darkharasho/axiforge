@@ -46,6 +46,10 @@ export function initToolbar(callbacks) {
 export function renderToolbar() {
   const container = document.getElementById("lib-toolbar");
   if (!container) return;
+  // The nodes any open picker's scroll/resize listeners close over are about
+  // to be discarded below; nothing calls setOpen(false) for a destroyed
+  // node, so this has to close them first.
+  _closeAllPickers();
 
   const prefs = state.libraryPrefs;
   const searchVal = escapeHtml(state.buildSearch || "");
@@ -185,6 +189,9 @@ function isListlessView() {
 export function renderFilters() {
   const container = document.getElementById("lib-filters");
   if (!container) return;
+  // Same reason as renderToolbar(): close before the nodes underneath any
+  // open picker's listeners are discarded.
+  _closeAllPickers();
 
   // Same reason as the toolbar controls: a Class/Mode/Tags filter cannot narrow
   // a list that is not being drawn from libraryBuilds() in the first place.
@@ -464,6 +471,28 @@ function renderViewToggle(active) {
  * @param {HTMLElement[]} [opts.group] sibling .axi-picker roots that close
  *   when this one opens — the filter bar's "only one open at a time".
  */
+// Every currently-OPEN picker, keyed by its .axi-picker root, value is its
+// own close() (== setOpen(false)). This is the single source of truth for
+// "is a picker open and does it still have listeners attached" -- closeOthers
+// and the outside-click watcher below close a picker by calling the entry's
+// close() rather than poking pop.hidden/aria-expanded directly, so setOpen is
+// the *only* exit a picker closes through and its scroll/resize cleanup can
+// never be bypassed. A closed picker has no entry here.
+const _openPickers = new Map();
+
+/**
+ * Close every open picker. renderToolbar()/renderFilters() call this before
+ * replacing their container's innerHTML: the nodes a picker's scroll/resize
+ * listeners close over are about to be discarded, and nothing calls
+ * setOpen(false) for a destroyed node, so the render site has to close first
+ * rather than rely on the picker to clean up after itself. There is nothing
+ * in either container worth preserving open across a re-render, so this
+ * closes all of them rather than walking the container for just its own.
+ */
+function _closeAllPickers() {
+  for (const close of [..._openPickers.values()]) close();
+}
+
 function bindPicker(root, { onSelect, group } = {}) {
   const btn = root.querySelector(".axi-picker__btn, .axi-btn[aria-haspopup]");
   const pop = root.querySelector(".axi-picker__pop");
@@ -482,9 +511,7 @@ function bindPicker(root, { onSelect, group } = {}) {
   const closeOthers = () => {
     for (const other of group || []) {
       if (other === root) continue;
-      other.querySelector(".axi-picker__btn, .axi-btn[aria-haspopup]")?.setAttribute("aria-expanded", "false");
-      const otherPop = other.querySelector(".axi-picker__pop");
-      if (otherPop) otherPop.hidden = true;
+      _openPickers.get(other)?.();
     }
   };
 
@@ -496,8 +523,9 @@ function bindPicker(root, { onSelect, group } = {}) {
   // Scroll is common (the sidebar and the content pane both scroll behind
   // this toolbar) and firing layout on every scroll tick would be wasteful,
   // so a scroll closes the popover instead of chasing it. Both listeners are
-  // attached only while open and removed on close, matching the delegated
-  // click watcher below rather than accumulating one pair per render.
+  // attached only while open and removed on close -- via setOpen(false), the
+  // only path that ever closes a picker, so this can't be bypassed the way
+  // three direct hidden/aria-expanded writes were.
   let onResize = null;
   let onScroll = null;
 
@@ -519,11 +547,15 @@ function bindPicker(root, { onSelect, group } = {}) {
         // to window, so this has to hear it on the way down.
         window.addEventListener("scroll", onScroll, { passive: true, capture: true });
       }
-    } else if (isFixed) {
-      if (onResize) window.removeEventListener("resize", onResize);
-      if (onScroll) window.removeEventListener("scroll", onScroll, { capture: true });
-      onResize = null;
-      onScroll = null;
+      _openPickers.set(root, () => setOpen(false));
+    } else {
+      if (isFixed) {
+        if (onResize) window.removeEventListener("resize", onResize);
+        if (onScroll) window.removeEventListener("scroll", onScroll, { capture: true });
+        onResize = null;
+        onScroll = null;
+      }
+      _openPickers.delete(root);
     }
   };
 
@@ -572,18 +604,19 @@ function bindPicker(root, { onSelect, group } = {}) {
 // added per call here would accumulate one per render for the life of the
 // window. One delegated document listener, bound the first time any picker
 // is wired and left in place, closes whatever picker is open by walking the
-// live DOM instead -- cheap, since at most one or two are ever open at once.
+// live _openPickers registry instead -- cheap, since at most one or two are
+// ever open at once -- and closes each through its own close() rather than
+// touching pop.hidden/aria-expanded directly, so this can't orphan a
+// picker's scroll/resize listeners either.
 let _pickerOutsideClickBound = false;
 function _ensurePickerOutsideClickWatcher() {
   if (_pickerOutsideClickBound) return;
   _pickerOutsideClickBound = true;
   document.addEventListener("click", (e) => {
-    document.querySelectorAll(".axi-picker__pop:not([hidden])").forEach((pop) => {
-      const root = pop.closest(".axi-picker");
-      if (root && root.contains(e.target)) return;
-      root?.querySelector(".axi-picker__btn, .axi-btn[aria-haspopup]")?.setAttribute("aria-expanded", "false");
-      pop.hidden = true;
-    });
+    for (const [root, close] of [..._openPickers]) {
+      if (root.contains(e.target)) continue;
+      close();
+    }
   });
 }
 
