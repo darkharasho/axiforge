@@ -15,8 +15,7 @@ import {
   clearPublishProgress,
 } from "../render-pages.js";
 import { roleBadgeHtml } from "../roleEstimator.js";
-import { COMP_TAG_ICONS, BOON_DISPLAY_ORDER } from "../constants.js";
-import { tickRun } from "./boon-indicator.js";
+import { COMP_TAG_ICONS } from "../constants.js";
 import { axiforgeIcon, checkIcon, chevronDownIcon, arrowUpTrayIcon, clipboardDocumentIcon, globeAltIcon, partyNumberIcon, shareIcon } from "../library/heroicons.js";
 import { renderMiniBuildCard, renderMissingMiniBuildCard } from "../mini-build-card.js";
 import { pickWebhooks } from "../webhook-picker.js";
@@ -607,18 +606,6 @@ export function renderCompDetail() {
       if (!bodyEl) return;
       bodyEl.innerHTML = buildPartyCoverageHTML(data);
       bindPartyCoverageEvents(bodyEl);
-
-      // Patch each party-line row's placeholder tick run with the real
-      // per-line coverage. A run of yes/no against BOON_DISPLAY_ORDER is a
-      // sequence of facts, not a quantity — rule 9's ticks, not a meter.
-      for (const line of data.lines) {
-        const ticksEl = container.querySelector(
-          `.comp-line[data-line-id="${line.lineId}"] .af-boonticks`
-        );
-        if (!ticksEl) continue;
-        const lineBoonMap = line.boons;
-        ticksEl.innerHTML = tickRun(BOON_DISPLAY_ORDER.map((b) => lineBoonMap.has(b)));
-      }
     })();
   }
 }
@@ -735,7 +722,6 @@ function renderPartyLine(comp, pl, idx, totalCap) {
   return `
     <div class="comp-line${multiRow ? " comp-line--multirow" : ""}" data-line-id="${escapeHtml(pl.id)}">
       <span class="comp-line__label">${partyNumberIcon(idx + 1)}</span>
-      <span class="af-boonticks" style="--axi-tick-w: 4px; --axi-ticks-gap: 2px">${tickRun(BOON_DISPLAY_ORDER.map(() => false))}</span>
       <div class="comp-line__slots" data-capacity="${capacity}">${slotBoxes.join("")}</div>
       <div class="comp-line__controls">
         <button type="button" class="comp-line__btn" data-action="duplicate-line"

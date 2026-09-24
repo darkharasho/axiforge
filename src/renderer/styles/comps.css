@@ -1085,20 +1085,6 @@
   text-align: right;
 }
 
-.af-boonticks {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  padding-top: 10px;
-}
-
-.af-ticks__more {
-  margin-left: 5px;
-  font: var(--axi-t-micro);
-  letter-spacing: var(--axi-ls-micro);
-  color: var(--axi-text-faint);
-}
-
 .comp-line__num {
   width: 20px;
   height: 20px;

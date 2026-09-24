@@ -134,7 +134,12 @@ export function renderContent() {
       break;
   }
 
-  container.insertAdjacentHTML("afterbegin", statStripHtml());
+  // The strip describes a library; an empty library has nothing to describe,
+  // and stacking three zero tiles above the "nothing here yet" state would be
+  // the first thing a new user sees.
+  if (getVisibleFolders().length || getVisibleBuilds().length || getVisibleComps().length) {
+    container.insertAdjacentHTML("afterbegin", statStripHtml());
+  }
 
   renderLegacyOrphanBanner(container);
 
