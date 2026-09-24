@@ -81,6 +81,50 @@ see today:
   treatment with its own wordmark.
 - The 8 full themes lose their backgrounds (§5).
 
+### 3.1 The constraints are half the language
+
+Section 3 is a list of prohibitions, and batch 1 satisfied all of them while
+producing an app with no voice. That is a predictable failure, and naming it
+here is what prevents the next four batches from repeating it.
+
+The package ships more than sixty classes. Batch 1 used nine — `.axi-window`,
+`.axi-titlebar`, `.axi-btn`, `.axi-panel`, `.axi-chip`, `.axi-switch`,
+`.axi-menu`, `.axi-input`, `.axi-select` — every one of them structural. The
+expressive half went untouched: `.axi-card` and `.axi-card--strip`,
+`.axi-stat`, `.axi-diamond`, `.axi-meter` and `.axi-meter-list`, `.axi-bars`,
+`.axi-ticks`, `.axi-pill`, `.axi-badge-count`, `.axi-notice`, `.axi-sigil`,
+`.axi-mast`, `.axi-tabs`, `.axi-toolbar`, `.axi-plot`.
+
+So each remaining batch carries a positive obligation alongside the
+prohibitions: **name the expressive primitives its screens should be using,
+and use them.** A batch that emerges having consumed only the structural
+classes has converted the plumbing and skipped the language. Three rules in
+particular are obligations rather than bans, and none of them was discharged
+in batch 1:
+
+- **Rule 7 — the diamond is the family motif.** A 45°-rotated outlined square:
+  bullet, status dot, list marker, and scaled up behind a glyph, the brand
+  sigil. It currently appears nowhere in AxiForge. It is the cheapest
+  character in the system and the clearest family resemblance to AxiAM.
+- **Rule 9 — a quantity is drawn as length.** Attribute weightings, completion
+  ratios and slot counts are quantities the app already computes and currently
+  prints as bare numerals. A proportion is `.axi-meter`; a run of yes/no is
+  `.axi-ticks`, marks of one size differing only in ink, because a fact has no
+  magnitude to draw.
+- **Rule 10 — domain data owns its own palette.** A GW2 profession is domain
+  data, so its colour arrives per-instance through `--axi-series` /
+  `--axi-card-strip` at full strength. This is the sanctioned route by which
+  real colour enters the app, and it is the opposite of what
+  `library.css:859-868` does today: nine professions at `rgba(…, 0.15)` over
+  near-black, which is precisely the case rule 2 names — a muted ink over
+  near-black is a brown, and nine of them are nine browns.
+
+The per-instance knobs (`--axi-series`, `--axi-card-strip`, `--axi-pill-fill`,
+`--axi-meter-v`, `--axi-grid-min`, …) are set with a `style=""` attribute on
+one element, never in `:root`. They are a different surface from the tokens,
+and using them is not a rule-3 violation — it is how the language is meant to
+carry data.
+
 ## 4. Architecture
 
 ### 4.1 Import order
@@ -297,6 +341,30 @@ the two largest files, plus `cards.css`, `build-sources.css`,
 counterpart decide each list: the library's build rows end in a verb, so they
 are a stack of control-weight cards; the stat tables inside a build are drawn
 in rules.
+
+This batch owns the app's cards, so it owns §3.1's obligation most directly.
+The approved anatomy, settled against a live render:
+
+- **A build row is a card at control weight** (3px border, 3px block, gained
+  on hover with `translate(-2px, -2px)`). Control and not panel because these
+  sit inside a panel already carrying a 6px block, and 6px nested in 6px reads
+  as two planes arguing rather than as the contents of a box.
+- **A grid tile is a card at panel weight**, with the profession strip
+  *capping* the head — `.axi-card--strip`'s 9px top bar — never framing the
+  left edge. A full-height stripe reads as the box's border, and five cards in
+  a row become five coloured frames (rule 5).
+- **The profession colour is real and full-strength**, delivered per-instance
+  as `--axi-series`, and it lands on the strip and on the filled glyph tile.
+  It never lands on the card's own outline, which stays `--axi-ink-line` in
+  every state.
+- **The row's meta line uses the diamond** as its separator, and the tile's
+  meta rule sits on `margin-top: auto` so that every tile in a grid row lands
+  its rule on the same line.
+- **The library header becomes `.axi-stat` tiles**, and attribute weighting
+  inside a build becomes `.axi-meter-list`.
+
+The nine `.lib-pill--prof` rules at `library.css:859-868` are deleted, not
+retokenised: their whole construction is a partial-opacity tint.
 
 **Batch 3 — editor.** `specializations.css`, `skills.css`, `equipment.css`,
 `notes.css`, `detail-panel.css`. The densest screens, and where the
