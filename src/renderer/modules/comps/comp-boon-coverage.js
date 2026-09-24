@@ -354,6 +354,7 @@ function _renderFieldPills(fieldMap, lineLabel) {
              data-sources="${sourcesJson}"
              data-line-label="${escapeHtml(lineLabel)}"
              data-clickable="true"
+             aria-expanded="false"
              style="--axi-series: ${colors.text};">
           <span class="party-cov__pill-emoji">${colors.emoji || ""}</span>
           <span class="party-cov__pill-name">${escapeHtml(fieldType)}</span>
@@ -379,6 +380,7 @@ function _renderFinisherPills(finisherMap, lineLabel) {
              data-sources="${sourcesJson}"
              data-line-label="${escapeHtml(lineLabel)}"
              data-clickable="true"
+             aria-expanded="false"
              style="--axi-series: ${colors.text};">
           <span class="party-cov__pill-emoji">${colors.emoji || ""}</span>
           <span class="party-cov__pill-name">${escapeHtml(finisherType)}</span>
@@ -563,11 +565,7 @@ let _skillTooltip = null;
 function _closeExpand() {
   if (!_activeExpand) return;
   _activeExpand.expandEl.classList.remove("party-cov__expand--open");
-  // Field/finisher pills carry no aria-expanded (they are not a toggle — see
-  // the render functions), so only touch it on the categories that do.
-  if (_activeExpand.pillEl.hasAttribute("aria-expanded")) {
-    _activeExpand.pillEl.setAttribute("aria-expanded", "false");
-  }
+  _activeExpand.pillEl.setAttribute("aria-expanded", "false");
   _activeExpand = null;
 }
 
@@ -656,15 +654,16 @@ export function bindPartyCoverageEvents(container) {
         const totalCount = Number(pill.dataset.count) || 0;
         if (!totalCount) return; // naturally uncovered, leave as-is
         if (!showSelf && !hasAlly) {
-          // Not a status assertion while every source is hidden, and not a
-          // control either — the click handler already no-ops for
-          // self-only pills, so it carries no expand state to announce.
+          // Not a status assertion while every source is hidden. The click
+          // handler already no-ops for self-only pills, so the button is
+          // genuinely disabled — a real runtime state, not a paint switch —
+          // and aria-disabled says so.
           if (_activeExpand?.pillEl === pill) _closeExpand();
           pill.classList.add("party-cov__pill--self-only");
-          pill.removeAttribute("aria-expanded");
+          pill.setAttribute("aria-disabled", "true");
         } else {
           pill.classList.remove("party-cov__pill--self-only");
-          pill.setAttribute("aria-expanded", "false");
+          pill.removeAttribute("aria-disabled");
         }
         // Recount providers based on toggle — count only providers with ally sources when self is off
         let visibleCount = totalCount;
@@ -754,9 +753,7 @@ export function bindPartyCoverageEvents(container) {
       }
 
       expandEl.innerHTML = html;
-      if (pillEl.hasAttribute("aria-expanded")) {
-        pillEl.setAttribute("aria-expanded", "true");
-      }
+      pillEl.setAttribute("aria-expanded", "true");
       _activeExpand = { expandEl, pillEl };
 
       // Apply current self-toggle state to newly rendered SELF source rows + update count

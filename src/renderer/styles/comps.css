@@ -2110,19 +2110,20 @@
   cursor: default;
 }
 
-/* Self-only (every source hidden by the self-boon toggle) is the same
-   commentary-not-status case as self-condi, but reached at runtime by
-   toggling this class rather than at render time — see the toggle handler.
-   It stays clickable (case-i hover lift from .axi-pill still applies; only
-   box-shadow is pinned back to none outside of :hover so the lift can
-   still show). */
-.party-cov__pill--boon.party-cov__pill--self-only {
+/* Self-only (every source hidden by the self-boon toggle) is reached at
+   runtime rather than at render time — see the toggle handler, which sets
+   this class and aria-disabled="true" together. It keeps its element type
+   (a real <button>, still a tab stop) but not its behaviour: the click
+   handler no-ops for it, so it takes the same quiet, inert paint as
+   .party-cov__pill--uncovered — no hover lift, because there is nothing
+   left for a lift to promise. */
+.party-cov__pill--boon.party-cov__pill--self-only,
+.party-cov__pill--boon.party-cov__pill--self-only:hover {
   background: var(--axi-ground);
   color: var(--axi-text-dim);
-  cursor: default;
-}
-.party-cov__pill--boon.party-cov__pill--self-only:not(:hover) {
   box-shadow: none;
+  transform: none;
+  cursor: default;
 }
 
 .party-cov__pill--self-only .party-cov__pill-icon {
