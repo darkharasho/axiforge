@@ -226,7 +226,8 @@
    own border (rule 5), and a fill stays legible when many rows are selected
    at once, where a stripe would just be many coloured frames stacked. The
    row's own text children switch to the row's ink so they read against the
-   fill; .comp-badge--shared is the one status chip whose fill is the same
+   fill, and the checkbox's accent-color follows; .comp-badge--shared is the
+   one status chip whose fill is the same
    accent as the row, so on a selected row it switches to an outline in the
    row's ink instead of disappearing into it. */
 .comp-list-row--selected,
@@ -238,8 +239,18 @@
 .comp-list-row--selected .comp-list-row__name,
 .comp-list-row--selected .comp-list-row__time,
 .comp-list-row--selected .comp-list-row__summary,
-.comp-list-row--selected .comp-list-row__boon-pct {
+.comp-list-row--selected .comp-list-row__boon-pct,
+.comp-list-row--selected .comp-list-row__prof-overflow {
   color: inherit;
+}
+
+/* The checkbox is the one child whose colour is the browser's to draw: its
+   accent-color fills the box when checked, and on a selected row that fill is
+   the same accent as the row, so the box disappears into it. On the fill it
+   takes the row's ink instead — the same swap .comp-badge--shared makes below,
+   for the same accent-on-accent reason. */
+.comp-list-row--selected .comp-list-row__checkbox {
+  accent-color: var(--axi-accent-ink);
 }
 
 .comp-list-row--selected .comp-badge--shared {
