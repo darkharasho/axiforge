@@ -26,7 +26,7 @@ describe("meterValue", () => {
 describe("tickRun", () => {
   it("emits one mark per event, inked for the true ones", () => {
     const html = tickRun([true, false, true]);
-    expect(html.match(/axi-ticks__tick\b/g)).toHaveLength(3);
+    expect(html.match(/axi-ticks__tick(?!--)/g)).toHaveLength(3);
     expect(html.match(/axi-ticks__tick--on/g)).toHaveLength(2);
   });
 
@@ -41,7 +41,7 @@ describe("tickRun", () => {
     // Marks are a fixed width and never flex, so forty of them push the
     // column open rather than compressing.
     const html = tickRun(new Array(40).fill(true));
-    expect(html.match(/axi-ticks__tick\b/g).length).toBeLessThanOrEqual(20);
+    expect(html.match(/axi-ticks__tick(?!--)/g).length).toBeLessThanOrEqual(20);
     expect(html).toContain("+20");
   });
 });

@@ -32,13 +32,8 @@ const TICK_CAP = 20;
 export function tickRun(flags) {
   const all = Array.isArray(flags) ? flags : [];
   const shown = all.slice(0, TICK_CAP);
-  // A single merged token ("axi-ticks__tick" or "axi-ticks__tick--on"), not
-  // two space-separated classes: "axi-ticks__tick--on" already contains
-  // "axi-ticks__tick" as a literal prefix, so pairing it with the bare base
-  // class would encode the same mark twice in the text a caller (or a test)
-  // greps for it by class name.
   const marks = shown
-    .map((on) => `<span class="axi-ticks__tick${on ? "--on" : ""}"></span>`)
+    .map((on) => `<span class="axi-ticks__tick${on ? " axi-ticks__tick--on" : ""}"></span>`)
     .join("");
   const rest = all.length - shown.length;
   return `<span class="axi-ticks">${marks}</span>${rest > 0 ? `<span class="af-ticks__more">+${rest}</span>` : ""}`;
