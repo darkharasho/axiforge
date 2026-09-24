@@ -3,7 +3,7 @@
 
 import { state } from "../state.js";
 import { escapeHtml } from "../utils.js";
-import { compIcon } from "../library/heroicons.js";
+import { compIcon, magnifyingGlassIcon } from "../library/heroicons.js";
 import { getProfessionSvg } from "../profession-icons.js";
 import { getEliteSpecName, profClass } from "../build-helpers.js";
 import { computeCompPartyCoverage } from "./comp-boon-coverage.js";
@@ -144,23 +144,24 @@ function renderToolbarTier1(searchVal, prefs) {
     <div class="comp-list-toolbar">
       <div class="comp-list-toolbar__left">
         <button type="button" id="comp-new-btn" class="axi-btn axi-btn--primary comp-list-toolbar__new-btn">+ New Comp</button>
-        <div class="comp-list-toolbar__search">
-          <input type="search" id="comp-search-input" class="comp-list-toolbar__search-input"
+        <div class="comp-list-toolbar__search axi-search">
+          <span class="axi-search__icon">${magnifyingGlassIcon}</span>
+          <input type="search" id="comp-search-input" class="comp-list-toolbar__search-input axi-input"
             placeholder="Search comps\u2026" value="${searchVal}" autocomplete="off" />
         </div>
       </div>
       <div class="comp-list-toolbar__right">
-        <button type="button" id="comp-filters-toggle" class="comp-list-toolbar__filters-btn ${filtersActive ? "comp-list-toolbar__filters-btn--active" : ""}"
-          title="Toggle filters">
+        <button type="button" id="comp-filters-toggle" class="axi-pill comp-list-toolbar__filters-btn"
+          aria-pressed="${filtersActive}" title="Toggle filters">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path fill-rule="evenodd" d="M2.628 1.601C5.028 1.206 7.49 1 10 1s4.973.206 7.372.601a.75.75 0 0 1 .628.74v2.288a2.25 2.25 0 0 1-.659 1.59l-4.682 4.683a2.25 2.25 0 0 0-.659 1.59v3.037c0 .684-.31 1.33-.844 1.757l-1.937 1.55A.75.75 0 0 1 8 18.25v-5.757a2.25 2.25 0 0 0-.659-1.591L2.659 6.22A2.25 2.25 0 0 1 2 4.629V2.34a.75.75 0 0 1 .628-.74Z" clip-rule="evenodd"/></svg>
         </button>
         <div class="comp-list-toolbar__view-toggle">
-          <button type="button" class="comp-list-toolbar__view-btn ${prefs.viewMode === "expanded" ? "comp-list-toolbar__view-btn--active" : ""}"
-            data-view-mode="expanded" title="Expanded view">
+          <button type="button" class="axi-pill comp-list-toolbar__view-btn"
+            aria-pressed="${prefs.viewMode === "expanded"}" data-view-mode="expanded" title="Expanded view">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path fill-rule="evenodd" d="M2 3.75A.75.75 0 0 1 2.75 3h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 3.75Zm0 4.167a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1-.75-.75Zm0 4.166a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1-.75-.75Zm0 4.167a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1-.75-.75Z" clip-rule="evenodd"/></svg>
           </button>
-          <button type="button" class="comp-list-toolbar__view-btn ${prefs.viewMode === "compact" ? "comp-list-toolbar__view-btn--active" : ""}"
-            data-view-mode="compact" title="Compact view">
+          <button type="button" class="axi-pill comp-list-toolbar__view-btn"
+            aria-pressed="${prefs.viewMode === "compact"}" data-view-mode="compact" title="Compact view">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path fill-rule="evenodd" d="M2 4.75A.75.75 0 0 1 2.75 4h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 4.75Zm0 10.5a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1-.75-.75ZM2 10a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 10Z" clip-rule="evenodd"/></svg>
           </button>
         </div>
@@ -178,7 +179,7 @@ function renderToolbarTier2(prefs, allTags) {
 
   const tagChips = allTags.map((tag) => {
     const active = activeTags.includes(tag);
-    return `<button type="button" class="comp-tag-chip ${active ? "comp-tag-chip--active" : ""}" data-tag-filter="${escapeHtml(tag)}">${escapeHtml(tag)}</button>`;
+    return `<button type="button" class="axi-pill comp-tag-chip" aria-pressed="${active}" data-tag-filter="${escapeHtml(tag)}">${escapeHtml(tag)}</button>`;
   }).join("");
 
   return `
@@ -186,7 +187,7 @@ function renderToolbarTier2(prefs, allTags) {
       <div class="comp-list-filters__left">
         <div class="comp-list-filters__group">
           <label class="comp-list-filters__label">MODE</label>
-          <select id="comp-filter-mode" class="comp-list-filters__select">
+          <select id="comp-filter-mode" class="axi-select comp-list-filters__select">
             <option value="" ${gm === "" ? "selected" : ""}>All</option>
             <option value="pve" ${gm === "pve" ? "selected" : ""}>PvE</option>
             <option value="wvw" ${gm === "wvw" ? "selected" : ""}>WvW</option>
@@ -194,7 +195,7 @@ function renderToolbarTier2(prefs, allTags) {
         </div>
         <div class="comp-list-filters__group">
           <label class="comp-list-filters__label">STATUS</label>
-          <select id="comp-filter-status" class="comp-list-filters__select">
+          <select id="comp-filter-status" class="axi-select comp-list-filters__select">
             <option value="" ${ps === "" ? "selected" : ""}>All</option>
             <option value="published" ${ps === "published" ? "selected" : ""}>Published</option>
             <option value="draft" ${ps === "draft" ? "selected" : ""}>Draft</option>
@@ -203,7 +204,7 @@ function renderToolbarTier2(prefs, allTags) {
         <div class="comp-list-filters__group">
           <label class="comp-list-filters__label">SORT</label>
           <div class="comp-list-filters__sort-row">
-            <select id="comp-sort-select" class="comp-list-filters__select">
+            <select id="comp-sort-select" class="axi-select comp-list-filters__select">
               <option value="updatedAt" ${prefs.sortField === "updatedAt" ? "selected" : ""}>Last Updated</option>
               <option value="createdAt" ${prefs.sortField === "createdAt" ? "selected" : ""}>Date Created</option>
               <option value="name" ${prefs.sortField === "name" ? "selected" : ""}>Name</option>

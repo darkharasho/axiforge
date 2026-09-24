@@ -13,13 +13,12 @@
 }
 
 /* ══ Comp List Toolbar — Tier 1 ═══════════════════════════════════════════ */
-/* Mirrors .lib-toolbar (library.css, Task 3): panel-weight rule under the
-   bar, the search box wearing .axi-input's declarations, the view toggle a
-   run of pressed/unpressed controls matching .axi-pill. The markup here
-   predates .axi-search/.axi-input/.axi-pill and this task's JS scope does
-   not extend past the profession-icon template and the row/badge markup, so
-   the existing classes carry the same declarations by hand rather than
-   picking up the shared class names. */
+/* Mirrors .lib-toolbar (library.css, Task 3): the package classes
+   (.axi-search/.axi-search__icon/.axi-input, .axi-pill + aria-pressed) carry
+   the box, and only app-specific geometry — fixed icon-button sizes, the
+   search width, container layout — lives here, the same split
+   .lib-toolbar__search-input/.lib-toolbar__view-toggle/.lib-view-btn draw in
+   library.css. */
 
 .comp-list-toolbar {
   display: flex;
@@ -52,65 +51,21 @@
   white-space: nowrap;
 }
 
-/* Search — matches .axi-input declaration for declaration. */
+/* .axi-search / .axi-input carry the box; this only sets the width. */
 .comp-list-toolbar__search-input {
-  background: var(--axi-ground);
-  border: var(--axi-border-control) solid var(--axi-ink-line);
-  padding: 4px 8px;
-  color: var(--axi-text);
-  font: var(--axi-t-label);
-  letter-spacing: var(--axi-ls-label);
-  font-size: 0.85rem;
-  font-family: inherit;
   width: 200px;
   max-width: 260px;
-  outline: none;
 }
 
-.comp-list-toolbar__search-input:focus {
-  border-color: var(--axi-accent);
-}
-
-.comp-list-toolbar__search-input::placeholder {
-  color: var(--axi-text-faint);
-}
-
-/* Filters toggle button — a control with a pressed (active) state, same
-   fill-on-press contract as .axi-pill. */
+/* .axi-pill carries the box for both the filters toggle and the view
+   toggle; these only fix the icon-button geometry. */
 .comp-list-toolbar__filters-btn {
-  all: unset;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   width: 30px;
   height: 30px;
-  border: var(--axi-border-control) solid var(--axi-ink-line);
-  background: var(--axi-ground);
-  color: var(--axi-text-dim);
-  cursor: pointer;
-  transition: transform 0.1s, box-shadow 0.1s, color 0.1s;
+  padding: 0;
+  justify-content: center;
 }
 
-.comp-list-toolbar__filters-btn:hover {
-  color: var(--axi-text);
-  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
-  transform: translate(-2px, -2px);
-}
-
-.comp-list-toolbar__filters-btn--active {
-  background: var(--axi-accent);
-  color: var(--axi-accent-ink);
-  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
-}
-
-.comp-list-toolbar__filters-btn--active:hover {
-  box-shadow: var(--axi-offset-control-hover) var(--axi-offset-control-hover) 0 var(--axi-ink-line);
-  transform: translate(-2px, -2px);
-}
-
-/* View toggle button group — a run of .axi-pill's, pressed = current view.
-   (aria-pressed is out of this task's JS scope; the --active class already
-   on this markup carries the same pressed contract.) */
 .comp-list-toolbar__view-toggle {
   display: flex;
   align-items: center;
@@ -118,34 +73,10 @@
 }
 
 .comp-list-toolbar__view-btn {
-  all: unset;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   width: 30px;
   height: 28px;
-  border: var(--axi-border-control) solid var(--axi-ink-line);
-  background: var(--axi-ground);
-  color: var(--axi-text-dim);
-  cursor: pointer;
-  transition: transform 0.1s, box-shadow 0.1s, color 0.1s;
-}
-
-.comp-list-toolbar__view-btn:hover {
-  color: var(--axi-text);
-  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
-  transform: translate(-2px, -2px);
-}
-
-.comp-list-toolbar__view-btn--active {
-  background: var(--axi-accent);
-  color: var(--axi-accent-ink);
-  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
-}
-
-.comp-list-toolbar__view-btn--active:hover {
-  box-shadow: var(--axi-offset-control-hover) var(--axi-offset-control-hover) 0 var(--axi-ink-line);
-  transform: translate(-2px, -2px);
+  padding: 0;
+  justify-content: center;
 }
 
 /* ══ Comp List Toolbar — Tier 2 (Filters) ════════════════════════════════ */
@@ -187,30 +118,9 @@
   user-select: none;
 }
 
-/* A native <select>. Same closed-box treatment as .axi-select's border/
-   background/type; the caret stays the browser's own arrow rather than the
-   package's two-linear-gradient triangle — that gradient is drawn only for
-   .axi-select itself (RULES.md rule 1), and this file does not carry the
-   class name to hang it on. */
-.comp-list-filters__select {
-  background-color: var(--axi-ground);
-  border: var(--axi-border-control) solid var(--axi-ink-line);
-  padding: 4px 8px;
-  color: var(--axi-text-dim);
-  font: var(--axi-t-label);
-  letter-spacing: var(--axi-ls-label);
-  font-size: 0.8rem;
-  cursor: pointer;
-  outline: none;
-  transition: transform 0.1s, box-shadow 0.1s, color 0.1s;
-}
-
-.comp-list-filters__select:hover,
-.comp-list-filters__select:focus {
-  color: var(--axi-text);
-  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
-  transform: translate(-2px, -2px);
-}
+/* .axi-select carries the closed box and the caret (its two-linear-gradient
+   triangle lives in the package's own stylesheet, which the gate never
+   scans); no app-specific geometry is needed here. */
 
 .comp-list-filters__sort-row {
   display: flex;
@@ -245,45 +155,10 @@
 }
 
 /* ══ Tag Filter Chips ════════════════════════════════════════════════════ */
-/* A tag pill is the case --axi-pill-fill exists for — a pressed pill fills
-   with the colour of the thing it filters to — but a tag owns no colour, so
-   the knob is left unset and the pressed chip fills with the accent. */
-
-.comp-tag-chip {
-  all: unset;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 9px;
-  border: var(--axi-border-control) solid var(--axi-ink-line);
-  background: var(--axi-ground);
-  color: var(--axi-text-dim);
-  font: var(--axi-t-label);
-  letter-spacing: var(--axi-ls-label);
-  text-transform: uppercase;
-  cursor: pointer;
-  user-select: none;
-  transition: transform 0.1s, box-shadow 0.1s, color 0.1s;
-}
-
-.comp-tag-chip:hover {
-  color: var(--axi-text);
-  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
-  transform: translate(-2px, -2px);
-}
-
-.comp-tag-chip--active {
-  background: var(--axi-pill-fill, var(--axi-accent));
-  color: var(--axi-accent-ink);
-  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
-}
-
-.comp-tag-chip--active:hover {
-  background: var(--axi-pill-fill, var(--axi-accent));
-  color: var(--axi-accent-ink);
-  box-shadow: var(--axi-offset-control-hover) var(--axi-offset-control-hover) 0 var(--axi-ink-line);
-  transform: translate(-2px, -2px);
-}
+/* .axi-pill carries the box. A tag pill is the case --axi-pill-fill exists
+   for — a pressed pill fills with the colour of the thing it filters to —
+   but a tag owns no colour, so the knob is left unset here and the pressed
+   chip falls back to the accent. No app-specific geometry is needed. */
 
 /* ══ Bulk Selection Bar ══════════════════════════════════════════════════ */
 /* A status: a bar that appears when a selection exists. It fills, at panel
