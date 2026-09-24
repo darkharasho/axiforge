@@ -581,3 +581,31 @@ describe("axi design language rules", () => {
     });
   });
 });
+
+describe("the installed axi-design ships the primitives this app uses", () => {
+  // Batch 2 is written against 1.10.0. In 1.8.0 `.axi-ticks` and `.axi-picker`
+  // do not exist, and markup that reaches for them renders as unstyled divs
+  // with nothing failing. This pins the floor where a human will see it.
+  // require.resolve("@axiapps/axi-design/dist/axi.css") throws
+  // ERR_PACKAGE_PATH_NOT_EXPORTED: the package's exports map only publishes
+  // "./axi.css", not "./dist/axi.css". Reach the file on disk instead.
+  const pkgCss = fs.readFileSync(
+    path.join(ROOT, "node_modules/@axiapps/axi-design/dist/axi.css"),
+    "utf8",
+  );
+
+  it.each([
+    ".axi-ticks",
+    ".axi-ticks__tick--on",
+    ".axi-picker__btn",
+    ".axi-picker__pop",
+    ".axi-picker__opt",
+    ".axi-card--strip",
+    ".axi-meter-list",
+    ".axi-diamond",
+    ".axi-stat",
+    ".axi-table",
+  ])("defines %s", (selector) => {
+    expect(pkgCss).toContain(`${selector}`);
+  });
+});

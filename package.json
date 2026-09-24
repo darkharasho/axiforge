@@ -165,7 +165,7 @@
   },
   "license": "MIT",
   "dependencies": {
-    "@axiapps/axi-design": "^1.8.0",
+    "@axiapps/axi-design": "^1.10.0",
     "@axiapps/code": "*",
     "@axiapps/gw2-data": "*",
     "acorn": "^8.17.0",
