@@ -69,14 +69,23 @@ import { compsContainingBuild } from "./modules/comps/comp-membership.js";
 import { getProfessionSvg } from "./modules/profession-icons.js";
 import { getEliteSpecName, profClass } from "./modules/build-helpers.js";
 import { renderMiniBuildCard } from "./modules/mini-build-card.js";
-import { PROFESSION_ACCENTS } from "./modules/constants.js";
+import { applyAccent } from "./modules/accents.js";
+import { createAccentTinting } from "./modules/accent-tinting.js";
 
 // Scope class for @axiapps/forge-render styles (mini cards, role badges, hover previews).
 document.body.classList.add("forge-render");
 
 let _lastGameMode = "pve";
-let _stashedTheme = null;
 let _themedBuildsEnabled = false;
+// Profession tinting: opening a build tints the app to its profession's
+// accent; leaving restores the accent the user chose. Extracted to its own
+// module so the stash/restore state machine can be unit-tested without
+// renderer.js's Electron-dependent import-time side effects.
+const _accentTinting = createAccentTinting({
+  applyAccent,
+  getProfession: () => state.editor?.profession,
+  isEnabled: () => _themedBuildsEnabled,
+});
 // One "couldn't queue a change" toast per session — every failed enqueue after
 // the first would say the same thing.
 let _outboxToastShown = false;
@@ -430,15 +439,16 @@ initSettingsCallbacks({
     _themedBuildsEnabled = enabled;
     if (state.activePage === "editor") {
       if (enabled) {
-        applyProfessionThemeIfEnabled();
+        _accentTinting.applyProfessionAccentIfEnabled();
       } else {
-        restoreUserThemeIfNeeded();
+        _accentTinting.restoreUserAccentIfNeeded();
       }
     }
   },
-  onThemeChange: (themeId) => {
-    const current = document.documentElement.getAttribute("data-theme") || "";
-    if (current.startsWith("prof-")) _stashedTheme = themeId;
+  onThemeChange: (accentId) => {
+    // Behind a profession tint, a new pick changes what gets restored rather
+    // than what is on screen.
+    _accentTinting.setUserAccent(accentId);
   },
 });
 
@@ -648,11 +658,12 @@ async function init() {
   try { _lastGameMode = (await window.desktopApi.getSetting("lastGameMode")) || "pve"; } catch { /* first run */ }
   syncGameModeToggleUI(_lastGameMode);
 
-  // Apply saved color theme
+  // Apply the saved accent
   try {
-    const savedTheme = await window.desktopApi.getSetting("appearance.theme");
-    if (savedTheme) document.documentElement.setAttribute("data-theme", savedTheme);
-  } catch { /* first run */ }
+    _accentTinting.setUserAccent(await window.desktopApi.getSetting("appearance.theme"));
+  } catch {
+    _accentTinting.setUserAccent(undefined); // first run
+  }
 
   _themedBuildsEnabled = !!(await window.desktopApi.getSetting("appearance.themedBuildPages"));
 
@@ -1071,7 +1082,7 @@ async function setProfession(professionId, options = {}) {
 
   enforceEditorConsistency({ preferredEliteSlot: options.preferredEliteSlot });
   renderEditor();
-  if (state.activePage === "editor") applyProfessionThemeIfEnabled();
+  if (state.activePage === "editor") _accentTinting.applyProfessionAccentIfEnabled();
 }
 
 export async function getCatalog(professionId, gameMode = "pve") {
@@ -1167,34 +1178,6 @@ function updateWindowTitle() {
 
 // ── Page navigation ─────────────────────────────────────────────────────────
 
-function applyThemeWithTransition(themeId) {
-  document.documentElement.classList.add("theme-transitioning");
-  if (themeId) {
-    document.documentElement.setAttribute("data-theme", themeId);
-  } else {
-    document.documentElement.removeAttribute("data-theme");
-  }
-  setTimeout(() => document.documentElement.classList.remove("theme-transitioning"), 500);
-}
-
-function applyProfessionThemeIfEnabled() {
-  if (!_themedBuildsEnabled) return;
-  const profession = state.editor?.profession;
-  const profTheme = profession ? PROFESSION_ACCENTS[profession] : null;
-  if (!profTheme) return;
-  const current = document.documentElement.getAttribute("data-theme") || "";
-  if (current === profTheme) return;
-  if (!current.startsWith("prof-")) _stashedTheme = current;
-  applyThemeWithTransition(profTheme);
-}
-
-function restoreUserThemeIfNeeded() {
-  const current = document.documentElement.getAttribute("data-theme") || "";
-  if (!current.startsWith("prof-")) return;
-  applyThemeWithTransition(_stashedTheme || "");
-  _stashedTheme = null;
-}
-
 function _syncEditorBackButton() {
   if (!el.editorBackBtn) return;
   const ret = state.editorReturn;
@@ -1256,9 +1239,9 @@ function navigateToPage(page) {
     });
   }
   if (page === "editor") {
-    applyProfessionThemeIfEnabled();
+    _accentTinting.applyProfessionAccentIfEnabled();
   } else {
-    restoreUserThemeIfNeeded();
+    _accentTinting.restoreUserAccentIfNeeded();
   }
 }
 
@@ -1595,7 +1578,7 @@ function wireEvents() {
         if (!buildId) throw new Error("No build loaded");
         const build = state.builds.find((b) => b.id === buildId);
         if (!build?.publishedFileId) throw new Error("Build not published");
-        const theme = document.documentElement.getAttribute("data-theme");
+        const theme = document.documentElement.getAttribute("data-axi-accent");
         const url = resolvePublishedUrl(build, state.onboarding, state.folders, theme);
         if (!url) throw new Error("Could not resolve published URL");
         await window.desktopApi.writeClipboardText(url);
