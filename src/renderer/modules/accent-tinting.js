@@ -45,8 +45,14 @@ export function createAccentTinting({ applyAccent, getProfession, isEnabled }) {
     const profession = getProfession();
     const accent = profession ? PROFESSION_ACCENTS[profession] : null;
     if (!accent) return;
-    if (accent === _shown) return;
+    // Stash before the idempotency check, not after: if the user's own
+    // accent already equals the profession's, _shown === accent is true
+    // immediately, and an early-out ahead of the stash would skip it
+    // entirely - leaving isTinting false while a tint is, in fact, showing.
+    // The stash is already idempotent under the === null check, so ordering
+    // it first cannot double-stash.
     if (_stashedAccent === null) _stashedAccent = _userAccent;
+    if (accent === _shown) return;
     applyAccent(accent);
     _shown = accent;
   }

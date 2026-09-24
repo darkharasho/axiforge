@@ -118,6 +118,53 @@ describe("applyProfessionAccentIfEnabled idempotency", () => {
   });
 });
 
+// Fix round 2: the round-1 idempotency guard short-circuited ahead of the
+// stash, so when the user's own accent already equals the profession's, no
+// tint got recorded at all - a later accent change while that build was
+// open applied immediately instead of stashing, and leaving never restored
+// it. The stash now happens before the idempotency check.
+describe("applyProfessionAccentIfEnabled stashes even when the tint is a no-op", () => {
+  it("records the tint (and restores through it) when the user's accent equals the profession's, even after a mid-tint change", () => {
+    const applyAccent = jest.fn((id) => id);
+    let profession;
+    const tinting = createAccentTinting({
+      applyAccent,
+      getProfession: () => profession,
+      isEnabled: () => true,
+    });
+
+    tinting.setUserAccent("electric-blue");
+    expect(tinting.isTinting).toBe(false);
+
+    profession = "Guardian"; // PROFESSION_ACCENTS.Guardian === "electric-blue"
+    tinting.applyProfessionAccentIfEnabled();
+    expect(tinting.isTinting).toBe(true);
+
+    // Changing the accent while this no-op tint is "showing" must stash,
+    // not apply immediately - the screen should still be electric-blue.
+    tinting.setUserAccent("teal-ocean");
+    expect(applyAccent).not.toHaveBeenCalledWith("teal-ocean");
+    expect(tinting.isTinting).toBe(true);
+
+    tinting.restoreUserAccentIfNeeded();
+    expect(applyAccent).toHaveBeenCalledWith("teal-ocean");
+    expect(tinting.isTinting).toBe(false);
+  });
+
+  it("isTinting is true immediately after applying a profession accent that matches the current user accent", () => {
+    const applyAccent = jest.fn((id) => id);
+    const tinting = createAccentTinting({
+      applyAccent,
+      getProfession: () => "Guardian",
+      isEnabled: () => true,
+    });
+
+    tinting.setUserAccent("electric-blue");
+    tinting.applyProfessionAccentIfEnabled();
+    expect(tinting.isTinting).toBe(true);
+  });
+});
+
 // Fix round 1: startup passes { transition: false } so the saved accent
 // doesn't crossfade against an unthemed first paint. Every other call site
 // keeps the default (transition: true).
