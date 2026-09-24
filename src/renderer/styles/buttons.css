@@ -25,7 +25,9 @@
 
 .workspace-menu {
   position: fixed;
-  top: 40px;
+  /* Drops from the bottom edge of the titlebar. The hand-written 40px this
+     replaces is the exact bug --af-titlebar-h exists to end (app.css). */
+  top: var(--af-titlebar-h);
   right: 8px;
   z-index: var(--z-menu);
   background: var(--axi-surface-raised);
