@@ -6,43 +6,48 @@
   padding: 0;
 }
 
+/* Grid rather than flex so the resizer can own a real track (its own 5px
+   column) instead of borrowing space from its neighbours with negative
+   margins. --lib-sidebar-w is unchanged from before this pass: it is set on
+   .lib-page by sidebar-resize.js, which this task does not touch, so the
+   variable name stays put rather than becoming --af-lib-sidebar-w. The
+   collapsed width and the drag both animate through grid-template-columns
+   now, which is why it -- not .lib-sidebar's own width -- carries the
+   transition. */
 .lib-page {
-  --lib-sidebar-w: 200px;
-  display: flex;
-  height: calc(100vh - var(--titlebar-h));
+  display: grid;
+  grid-template-columns: var(--lib-sidebar-w, 200px) 5px 1fr;
+  height: calc(100vh - var(--af-titlebar-h));
   min-height: 0;
-  overflow: hidden;
+  transition: grid-template-columns 0.15s ease;
+  background: var(--axi-ground);
 }
 
 .lib-sidebar {
-  flex-shrink: 0;
-  width: var(--lib-sidebar-w);
-  background: var(--panel-2);
-  border-right: 1px solid var(--line-soft);
+  min-width: 0;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
   overflow-x: hidden;
-  transition: width 0.15s ease;
+  padding: 12px 10px;
+  background: var(--axi-surface);
+  border-right: var(--axi-border-panel) solid var(--axi-ink-line);
 }
 
 .lib-sidebar--collapsed {
-  width: 40px;
+  padding: 12px 0;
   overflow: hidden;
 }
 
-.lib-sidebar--open {
-  width: var(--lib-sidebar-w);
+/* Collapsed drops the sidebar to a 40px icon rail and the resizer's track
+   with it -- there is nothing to grab when the rail has no width to give. */
+.lib-page:has(.lib-sidebar--collapsed) {
+  grid-template-columns: 40px 0 1fr;
 }
 
 /* ── Sidebar resize handle ───────────────────────────────────────── */
 
-/* Sits between the sidebar and the main pane and straddles the sidebar's
-   border, so it reads as a grab area for that border rather than a gutter of
-   its own -- the negative margins keep it out of the layout's width budget. */
 .lib-resizer {
-  flex: 0 0 5px;
-  margin: 0 -2px;
   position: relative;
   z-index: 2;
   cursor: col-resize;
@@ -53,7 +58,7 @@
 .lib-resizer:hover,
 .lib-resizer:focus-visible,
 .lib-page.is-resizing .lib-resizer {
-  background: var(--accent, #7aa2f7);
+  background: var(--axi-accent);
   outline: none;
 }
 
@@ -63,28 +68,26 @@
 }
 
 /* A 5px drag target is a mouse affordance; on touch it is only a way to lose
-   a tap, and the sidebar is a drawer there anyway. */
+   a tap, and the sidebar is a drawer there anyway. Its column collapses with
+   it, or touch would carry a dead 5px gap the pointer can't reach. */
 @media (pointer: coarse) {
   .lib-resizer { display: none; }
+  .lib-page { grid-template-columns: var(--lib-sidebar-w, 200px) 0 1fr; }
 }
 
-/* During the drag the width follows the pointer directly: the sidebar's own
-   width transition would make the handle lag, and a text selection would paint
-   itself across the folder tree. */
+/* During the drag the width follows the pointer directly: the page's own
+   grid-template-columns transition would make the handle lag, and a text
+   selection would paint itself across the folder tree. */
 .lib-page.is-resizing {
   user-select: none;
   cursor: col-resize;
-}
-
-.lib-page.is-resizing .lib-sidebar {
   transition: none;
 }
 
 .lib-main {
-  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  min-width: 0;
   overflow: hidden;
 }
 
@@ -94,9 +97,9 @@
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--line-soft);
+  gap: 9px;
+  padding: 12px 14px;
+  border-bottom: var(--axi-border-panel) solid var(--axi-ink-line);
   flex-shrink: 0;
   flex-wrap: wrap;
   /* The trash and archive drop the controls (they act on a list those views do
@@ -122,90 +125,24 @@
   flex-shrink: 0;
 }
 
-/* Search */
-.lib-toolbar__search {
-  display: flex;
-  align-items: center;
-  position: relative;
-}
-
-.lib-toolbar__search-icon {
-  position: absolute;
-  left: 7px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--text-dim);
-  display: flex;
-  pointer-events: none;
-}
-
-.lib-toolbar__search-icon svg {
-  width: 13px;
-  height: 13px;
-}
-
+/* Search — .axi-search only reserves the room and positions the icon; the
+   glyph itself stays the consumer's SVG. */
 .lib-toolbar__search-input {
-  background: var(--bg-2);
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 4px 8px 4px 26px;
-  color: var(--text-light);
-  font-size: 0.85rem;
-  font-family: inherit;
   width: 160px;
-  outline: none;
 }
 
-.lib-toolbar__search-input:focus {
-  border-color: var(--accent);
+/* Sort, and the import/export/new pickers below, share .axi-picker's box —
+   the closed state is the same chip .axi-select wears, so a hand-rolled
+   dropdown and a native-backed one read as one family. */
+.lib-toolbar__sort {
+  width: 150px;
 }
 
-.lib-toolbar__search-input::placeholder {
-  color: var(--text-dim);
-}
-
-/* Sort */
-.lib-toolbar__sort-select {
-  background: var(--bg-2);
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 4px 8px;
-  color: var(--text-light);
-  font-size: 0.85rem;
-  font-family: inherit;
-  cursor: pointer;
-  outline: none;
-}
-
-.lib-toolbar__sort-select:focus {
-  border-color: var(--accent);
-}
-
-/* View toggle */
+/* View toggle — a run of .axi-pill, pressed = current. */
 .lib-toolbar__view-toggle {
   display: flex;
   align-items: center;
-  gap: 0;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  overflow: hidden;
-}
-
-.lib-view-btn {
-  background: var(--bg-2);
-  border: none;
-  border-left: 1px solid var(--line);
-  padding: 4px 8px;
-  color: var(--muted);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.1s, color 0.1s;
-}
-
-.lib-view-btn:first-child {
-  border-left: none;
+  gap: 4px;
 }
 
 .lib-view-btn svg {
@@ -213,111 +150,49 @@
   height: 16px;
 }
 
-.lib-view-btn:hover {
-  background: var(--hover-subtle);
-  color: var(--text-light);
+/* Import / Export / New pickers */
+.lib-toolbar__picker-pop {
+  /* Never narrower than the trigger row it grew from, per .axi-picker__pop —
+     but these triggers are icon+label buttons, not a fixed-width chip, so the
+     floor is set from script alongside left/top (bindPicker in toolbar.js). */
+  min-width: 160px;
 }
-
-.lib-view-btn--active {
-  background: var(--panel);
-  color: var(--accent);
-}
-
-/* New build button */
-.lib-toolbar__new-btn {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 0.85rem;
-  padding: 4px 10px;
-  white-space: nowrap;
-}
-
-.lib-toolbar__new-btn svg {
-  width: 13px;
-  height: 13px;
-}
-
-/* Import dropdown */
-.lib-import-dropdown {
-  position: relative;
-}
-.lib-import-dropdown__menu {
-  display: none;
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
-  min-width: 140px;
-  background: var(--line-soft);
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 4px 0;
-  z-index: var(--z-menu);
-  box-shadow: var(--shadow-sm);
-}
-.lib-import-dropdown--open .lib-import-dropdown__menu {
-  display: block;
-}
-.lib-import-dropdown__item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 6px 14px;
-  background: none;
-  border: none;
-  color: var(--text-light);
-  font-size: 0.85rem;
-  text-align: left;
-  cursor: pointer;
-  white-space: nowrap;
-}
-.lib-import-dropdown__item:hover {
-  background: var(--hover-subtle);
-}
-.lib-import-dropdown__item svg {
-  width: 13px;
-  height: 13px;
+.lib-toolbar__picker-pop svg {
+  width: 14px;
+  height: 14px;
   flex-shrink: 0;
-  color: var(--text-dim);
-}
-.lib-import-dropdown__sep {
-  height: 1px;
-  background: var(--line);
-  margin: 4px 0;
 }
 
-/* Breadcrumb */
+/* Breadcrumb — the cheapest appearance in the language: no box, no fill,
+   just type and a diamond between crumbs. */
 .lib-breadcrumb__item {
   background: none;
   border: none;
-  color: var(--muted);
-  font-size: 0.85rem;
-  font-family: inherit;
-  cursor: pointer;
   padding: 2px 4px;
-  border-radius: 4px;
   display: flex;
   align-items: center;
   gap: 4px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  cursor: pointer;
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
+  text-transform: uppercase;
+  color: var(--axi-text-faint);
 }
 
 .lib-breadcrumb__item:hover {
-  color: var(--text-light);
-  background: var(--hover-subtle);
+  color: var(--axi-text);
 }
 
 .lib-breadcrumb__item--current {
-  color: var(--text-light);
-  font-weight: 600;
+  color: var(--axi-text);
   cursor: default;
 }
 
 .lib-breadcrumb__item--current:hover {
-  background: none;
+  color: var(--axi-text);
 }
 
 .lib-breadcrumb__item svg {
@@ -326,15 +201,14 @@
   flex-shrink: 0;
 }
 
+/* A miniature .axi-diamond: full size (9px, .axi-border-control-weight) reads
+   as a bullet, which is heavier than a crumb separator needs. --axi-tick-w is
+   the language's other "smaller than a diamond" mark, so the separator
+   borrows its scale rather than inventing a bespoke size. */
 .lib-breadcrumb__sep {
-  color: var(--line-soft);
-  display: flex;
-  align-items: center;
-}
-
-.lib-breadcrumb__sep svg {
-  width: 12px;
-  height: 12px;
+  width: var(--axi-tick-w, 5px);
+  height: var(--axi-tick-w, 5px);
+  flex-shrink: 0;
 }
 
 /* ── Filters ─────────────────────────────────────────────────────── */
@@ -342,7 +216,7 @@
 .lib-filters {
   flex-shrink: 0;
   padding: 6px 12px;
-  border-bottom: 1px solid var(--line-soft);
+  border-bottom: var(--axi-border-panel) solid var(--axi-ink-line);
 }
 
 .lib-filters:empty {
@@ -351,31 +225,15 @@
 
 .lib-filters__bar {
   display: flex;
-  gap: 6px;
+  gap: 9px;
   align-items: center;
+  flex-wrap: wrap;
 }
 
-/* Filter dropdown container */
-.lib-fd {
-  position: relative;
-}
-
-.lib-fd__trigger {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  background: var(--bg-2);
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 4px 8px 4px 10px;
-  font-size: 0.85rem;
-  color: var(--muted);
-  cursor: pointer;
-  font-family: inherit;
-  transition: background 0.1s, color 0.1s, border-color 0.1s;
-  white-space: nowrap;
-}
-
+/* Filter dropdown — .axi-picker, the same box and popover as Sort. It sits in
+   .lib-filters, a sibling of .lib-toolbar inside .lib-main's overflow:
+   hidden, so its popover needs the same --fixed + script-positioned contract
+   (bindPicker in toolbar.js). */
 .lib-fd__trigger svg {
   width: 14px;
   height: 14px;
@@ -383,90 +241,13 @@
   transition: transform 0.15s;
 }
 
-.lib-fd--open .lib-fd__trigger svg {
+.lib-fd__trigger[aria-expanded="true"] svg {
   transform: rotate(180deg);
 }
 
-.lib-fd__trigger:hover {
-  background: var(--hover-subtle);
-  color: var(--text-light);
-  border-color: var(--accent);
-}
-
-.lib-fd__trigger--active {
-  background: var(--panel);
-  color: var(--accent);
-  border-color: var(--accent);
-}
-
-/* Dropdown menu */
-.lib-fd__menu {
-  display: none;
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  min-width: 180px;
-  max-height: 320px;
-  overflow-y: auto;
-  background: var(--bg-2);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  box-shadow: var(--shadow-md);
-  z-index: var(--z-menu);
-  padding: 4px;
-}
-
-.lib-fd--open .lib-fd__menu {
-  display: block;
-}
-
-/* Dropdown item */
-.lib-fd__item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  width: 100%;
-  padding: 5px 8px;
-  border: none;
-  border-radius: 4px;
-  background: none;
-  color: var(--muted);
-  font-size: 0.85rem;
-  font-family: inherit;
-  cursor: pointer;
-  text-align: left;
-  transition: background 0.1s, color 0.1s;
-}
-
-.lib-fd__item:hover {
-  background: var(--hover-subtle);
-  color: var(--text-light);
-}
-
-.lib-fd__item--active {
-  color: var(--text-light);
-}
-
-.lib-fd__item--indent {
+/* An elite spec nested under its profession. */
+.axi-picker__opt.lib-fd__item--indent {
   padding-left: 28px;
-}
-
-/* Checkmark (hidden until active) */
-.lib-fd__check {
-  width: 14px;
-  height: 14px;
-  flex-shrink: 0;
-  opacity: 0;
-}
-
-.lib-fd__check svg {
-  width: 14px;
-  height: 14px;
-}
-
-.lib-fd__item--active .lib-fd__check {
-  opacity: 1;
-  color: var(--accent);
 }
 
 /* Icon (profession/spec SVG) */
@@ -502,61 +283,6 @@
   white-space: nowrap;
 }
 
-/* Clear all button */
-.lib-fd__clear {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  background: none;
-  border: 1px solid rgba(170, 80, 80, 0.3);
-  border-radius: 6px;
-  padding: 4px 8px;
-  font-size: 0.85rem;
-  color: var(--danger);
-  cursor: pointer;
-  font-family: inherit;
-  transition: background 0.1s, color 0.1s, border-color 0.1s;
-  white-space: nowrap;
-}
-
-.lib-fd__clear svg {
-  width: 12px;
-  height: 12px;
-}
-
-.lib-fd__clear:hover {
-  background: rgba(170, 80, 80, 0.15);
-  border-color: rgba(170, 80, 80, 0.5);
-  color: var(--danger-text);
-}
-
-.lib-fd__save-smart {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  background: none;
-  border: 1px solid var(--line-soft);
-  border-radius: 6px;
-  padding: 4px 8px;
-  font-size: 0.85rem;
-  color: var(--muted);
-  cursor: pointer;
-  font-family: inherit;
-  transition: background 0.1s, color 0.1s, border-color 0.1s;
-  white-space: nowrap;
-}
-
-.lib-fd__save-smart svg {
-  width: 12px;
-  height: 12px;
-}
-
-.lib-fd__save-smart:hover {
-  background: var(--hover-subtle);
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
 /* ── Content area ────────────────────────────────────────────────── */
 
 .lib-content {
@@ -579,20 +305,18 @@
 .lib-sidebar__expand-btn {
   background: none;
   border: none;
-  color: var(--text-dim);
+  color: var(--axi-text-dim);
   cursor: pointer;
   padding: 4px;
-  border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: color 0.1s, background 0.1s;
+  transition: color 0.1s;
 }
 
 .lib-sidebar__collapse-btn:hover,
 .lib-sidebar__expand-btn:hover {
-  color: var(--text-light);
-  background: var(--hover-subtle);
+  color: var(--axi-text);
 }
 
 .lib-sidebar__collapse-btn svg,
@@ -618,7 +342,7 @@
 }
 
 .lib-sidebar__section + .lib-sidebar__section {
-  border-top: 1px solid var(--line-soft);
+  border-top: var(--axi-border-hairline) solid var(--axi-rule);
   padding-top: 2px;
 }
 
@@ -630,11 +354,10 @@
 }
 
 .lib-sidebar__section-label {
-  font-size: 0.65rem;
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--text-dim);
-  font-weight: 700;
+  color: var(--axi-text-faint);
   padding: 10px 10px 4px;
 }
 
@@ -643,35 +366,31 @@
 }
 
 .lib-sidebar__divider {
-  height: 1px;
-  background: var(--line-soft);
+  height: var(--axi-border-hairline);
+  background: var(--axi-rule);
   margin: 6px 10px;
 }
 
 .lib-sidebar__subsection-label {
-  font-size: 0.6rem;
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
   text-transform: uppercase;
-  letter-spacing: 0.09em;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
   padding: 2px 10px 3px;
-  opacity: 0.75;
-  font-weight: 700;
 }
 
 .lib-sidebar__new-folder-btn {
   background: none;
   border: none;
-  color: var(--text-dim);
+  color: var(--axi-text-dim);
   cursor: pointer;
   padding: 2px;
-  border-radius: 3px;
   display: flex;
   align-items: center;
 }
 
 .lib-sidebar__new-folder-btn:hover {
-  color: var(--text-light);
-  background: var(--hover-subtle);
+  color: var(--axi-text);
 }
 
 .lib-sidebar__new-folder-btn svg {
@@ -681,12 +400,15 @@
 
 .lib-sidebar__empty {
   padding: 4px 10px;
-  font-size: 0.88rem;
-  color: var(--text-dim);
+  font: var(--axi-t-small);
+  color: var(--axi-text-faint);
   font-style: italic;
 }
 
-/* Nav items */
+/* Nav items — the same hover lift and accent-edge active state as
+   .leftnav__item (layout.css, batch 1): a border that inks the accent
+   instead of a filled background, and a hover that deepens the offset block
+   rather than tinting one in. */
 .lib-nav-item {
   display: flex;
   align-items: center;
@@ -694,60 +416,56 @@
   padding: 5px 10px;
   width: 100%;
   background: none;
-  border: none;
-  color: var(--text-light);
-  font-size: 0.82rem;
-  font-weight: 500;
-  font-family: inherit;
+  border: var(--axi-border-control) solid transparent;
+  color: var(--axi-text);
+  font: var(--axi-t-small);
   cursor: pointer;
   text-align: left;
-  border-radius: 0;
-  transition: background 0.1s, color 0.1s;
+  transition: color 0.15s, border-color 0.15s, box-shadow 0.1s, transform 0.1s;
 }
 
 .lib-nav-item:hover {
-  background: var(--hover-subtle);
-  color: var(--text);
+  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  transform: translate(-2px, -2px);
 }
 
 .lib-nav-item--active {
-  background: var(--panel);
-  color: var(--accent);
-  font-weight: 600;
-}
-
-.lib-nav-item--active:hover {
-  background: var(--hover-accent);
+  color: var(--axi-accent);
+  border-color: var(--axi-accent);
 }
 
 .lib-nav-item--sub {
   padding-left: 22px;
-  font-size: 0.78rem;
-  font-weight: 400;
-  color: var(--muted);
+  font: var(--axi-t-small);
+  color: var(--axi-text-dim);
 }
 
 .lib-nav-item--group {
-  font-size: 0.75rem;
-  color: var(--text-dim);
-  font-weight: 500;
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
+  text-transform: uppercase;
+  color: var(--axi-text-faint);
 }
 
-.lib-nav-item__icon {
-  display: flex;
-  flex-shrink: 0;
-  color: var(--text-dim);
-  opacity: 0.65;
-}
+/* The profession's own colour, at full strength, delivered per-instance from
+   src/shared/professions.js (sidebar.js sets --axi-series in a style
+   attribute on the row). Rule 10: the palette belongs to the game, not to
+   the theme, so it arrives as data and not as a token. A row with no
+   profession falls to the faint neutral the old --unknown grey used. */
+.lib-nav-item__icon { color: var(--axi-series, var(--axi-text-faint)); }
 
 .lib-nav-item__icon svg {
   width: 14px;
   height: 14px;
 }
 
+/* Active keeps a profession's own tint rather than switching it to the
+   accent -- matching what the deleted opacity-tier rules did (a profession
+   icon never lost its hue by being the current selection). A non-profession
+   row has no --axi-series to keep, so it falls to the accent exactly as
+   before. */
 .lib-nav-item--active .lib-nav-item__icon {
-  color: var(--accent);
-  opacity: 1;
+  color: var(--axi-series, var(--axi-accent));
 }
 
 .lib-nav-item__label {
@@ -758,20 +476,19 @@
 }
 
 .lib-nav-item__count {
-  font-size: 0.68rem;
-  color: var(--text-dim);
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
+  color: var(--axi-text-faint);
   flex-shrink: 0;
   margin-left: auto;
-  font-weight: 500;
   min-width: 20px;
   text-align: right;
-  opacity: 0.7;
 }
 
 .lib-nav-item__chevron {
   display: flex;
   flex-shrink: 0;
-  color: var(--text-dim);
+  color: var(--axi-text-dim);
   width: 14px;
 }
 
@@ -792,20 +509,14 @@
   /* wrapper for folder item + children */
 }
 
+/* Inline rename/create inputs carry .axi-input (added in the consuming JS)
+   for the box; these are the local overrides that keep them the compact
+   height a sidebar row or a grid/icon card needs instead of .axi-input's
+   full form padding. */
 .lib-inline-input {
   flex: 1;
   min-width: 0;
-  background: var(--panel);
-  border: 1px solid var(--accent);
-  border-radius: 3px;
-  color: var(--text-light);
-  font-size: 0.85rem;
   padding: 2px 6px;
-  outline: none;
-}
-
-.lib-inline-input:focus {
-  border-color: var(--accent);
 }
 
 .lib-nav-item--editing {
@@ -814,7 +525,7 @@
 
 /* Inline input in grid view — matches card shape */
 .lib-grid-card--editing {
-  border-color: var(--accent);
+  border-color: var(--axi-accent);
 }
 .lib-grid-card__inline-input {
   width: 100%;
@@ -831,12 +542,12 @@
 .lib-icon-item__inline-input {
   width: 70px;
   text-align: center;
-  font-size: 0.75rem;
+  font: var(--axi-t-micro);
 }
 
 .lib-content-inline-folder {
   padding: 5px 12px;
-  border-bottom: 1px solid var(--line-soft);
+  border-bottom: var(--axi-border-panel) solid var(--axi-ink-line);
 }
 
 /* ── Shared pills ────────────────────────────────────────────────── */
@@ -1730,30 +1441,9 @@
 .lib-prof--revenant     { color: #aa6655; }
 .lib-prof--unknown      { color: #888; }
 
-/* ── Sidebar profession tints ────────────────────────────────────── */
-
-.lib-nav-item[data-profession="Guardian"]     { color: #6ea8ff; }
-.lib-nav-item[data-profession="Warrior"]      { color: #ff9944; }
-.lib-nav-item[data-profession="Necromancer"]  { color: #4dca7a; }
-.lib-nav-item[data-profession="Engineer"]     { color: #cc8844; }
-.lib-nav-item[data-profession="Ranger"]       { color: #77cc55; }
-.lib-nav-item[data-profession="Thief"]        { color: #cc6677; }
-.lib-nav-item[data-profession="Mesmer"]       { color: #b07acc; }
-.lib-nav-item[data-profession="Elementalist"] { color: #dd5555; }
-.lib-nav-item[data-profession="Revenant"]     { color: #aa6655; }
-
-.lib-nav-item[data-profession] .lib-nav-item__icon {
-  color: inherit;
-  opacity: 0.5;
-}
-
-.lib-nav-item[data-profession]:hover .lib-nav-item__icon {
-  opacity: 0.8;
-}
-
-.lib-nav-item[data-profession].lib-nav-item--active .lib-nav-item__icon {
-  opacity: 1;
-}
+/* Sidebar profession tints now live with the rest of .lib-nav-item, above:
+   .lib-nav-item__icon reads --axi-series, which sidebar.js sets per-instance
+   from src/shared/professions.js. */
 
 /* ── Empty state ─────────────────────────────────────────────────── */
 

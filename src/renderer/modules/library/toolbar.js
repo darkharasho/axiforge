@@ -17,11 +17,9 @@ import {
   squaresIcon,
   squaresMiniIcon,
   viewColumnsIcon,
-  chevronRightIcon,
   chevronDownIcon,
   homeIcon,
   xMarkIcon,
-  checkIcon,
   arrowDownTrayIcon,
   arrowUpTrayIcon,
   linkIcon,
@@ -80,74 +78,66 @@ export function renderToolbar() {
       ${renderBreadcrumb()}
     </div>
     <div class="lib-toolbar__controls">
-      <div class="lib-toolbar__search">
-        <span class="lib-toolbar__search-icon">${magnifyingGlassIcon}</span>
+      <div class="lib-toolbar__search axi-search">
+        <span class="axi-search__icon">${magnifyingGlassIcon}</span>
         <input
           type="search"
           id="lib-search-input"
-          class="lib-toolbar__search-input"
+          class="lib-toolbar__search-input axi-input"
           placeholder="Search builds…"
           value="${searchVal}"
           autocomplete="off"
         />
       </div>
-      <div class="lib-toolbar__sort">
-        <select id="lib-sort-select" class="lib-toolbar__sort-select">
-          <option value="sortOrder" ${prefs.sortField === "sortOrder" ? "selected" : ""}>Custom</option>
-          <option value="updatedAt" ${prefs.sortField === "updatedAt" ? "selected" : ""}>Last Modified</option>
-          <option value="createdAt" ${prefs.sortField === "createdAt" ? "selected" : ""}>Created</option>
-          <option value="title" ${prefs.sortField === "title" ? "selected" : ""}>A–Z</option>
-          <option value="profession" ${prefs.sortField === "profession" ? "selected" : ""}>Profession</option>
-        </select>
-      </div>
+      ${renderSortPicker(prefs.sortField)}
       <div class="lib-toolbar__view-toggle" role="group" aria-label="View mode">
         ${renderViewToggle(prefs.viewMode)}
       </div>
-      <div class="lib-import-dropdown" id="lib-import-dropdown">
-        <button type="button" id="lib-import-btn" class="axi-btn lib-toolbar__new-btn lib-import-dropdown__trigger"${writeAttrs}>
+      <div class="axi-picker af-libpicker" id="lib-import-dropdown">
+        <button type="button" id="lib-import-btn" class="axi-btn" aria-haspopup="menu" aria-expanded="false" aria-controls="lib-import-menu"${writeAttrs}>
           ${arrowDownTrayIcon} Import
         </button>
-        <div class="lib-import-dropdown__menu" id="lib-import-menu">
-          <button type="button" class="lib-import-dropdown__item" data-import-type="chatlink">
+        <div class="axi-picker__pop axi-picker__pop--fixed lib-toolbar__picker-pop" id="lib-import-menu" role="menu" hidden>
+          <button type="button" class="axi-picker__opt" role="menuitem" data-import-type="chatlink">
             ${linkIcon} Build Link
           </button>
-          <button type="button" class="lib-import-dropdown__item" data-import-type="gw2skills">
+          <button type="button" class="axi-picker__opt" role="menuitem" data-import-type="gw2skills">
             ${arrowDownTrayIcon} GW2Skills
           </button>
-          <button type="button" class="lib-import-dropdown__item" data-import-type="axilink">
+          <button type="button" class="axi-picker__opt" role="menuitem" data-import-type="axilink">
             ${linkIcon} AxiForge Link
           </button>
-          <button type="button" class="lib-import-dropdown__item" data-import-type="sharecode">
+          <button type="button" class="axi-picker__opt" role="menuitem" data-import-type="sharecode">
             ${axiforgeIcon} AxiCode
           </button>
-          <div class="lib-import-dropdown__sep"></div>
-          <button type="button" class="lib-import-dropdown__item" data-import-type="axicode-file">
+          <div class="af-menu-sep"></div>
+          <button type="button" class="axi-picker__opt" role="menuitem" data-import-type="axicode-file">
             ${arrowDownTrayIcon} .axicode File
           </button>
         </div>
       </div>
-      <div class="lib-import-dropdown" id="lib-export-dropdown">
-        <button type="button" id="lib-export-btn" class="axi-btn lib-toolbar__new-btn lib-import-dropdown__trigger">
+      <div class="axi-picker af-libpicker" id="lib-export-dropdown">
+        <button type="button" id="lib-export-btn" class="axi-btn" aria-haspopup="menu" aria-expanded="false" aria-controls="lib-export-menu">
           ${arrowUpTrayIcon} Export
         </button>
-        <div class="lib-import-dropdown__menu" id="lib-export-menu">
-          <button type="button" class="lib-import-dropdown__item" data-export-type="all">
+        <div class="axi-picker__pop axi-picker__pop--fixed lib-toolbar__picker-pop" id="lib-export-menu" role="menu" hidden>
+          <button type="button" class="axi-picker__opt" role="menuitem" data-export-type="all">
             ${arrowUpTrayIcon} Export All (.axicode)
           </button>
         </div>
       </div>
-      <div class="lib-import-dropdown" id="lib-new-dropdown">
-        <button type="button" id="lib-new-btn" class="axi-btn axi-btn--primary lib-toolbar__new-btn lib-import-dropdown__trigger"${writeAttrs}>
+      <div class="axi-picker af-libpicker" id="lib-new-dropdown">
+        <button type="button" id="lib-new-btn" class="axi-btn axi-btn--primary" aria-haspopup="menu" aria-expanded="false" aria-controls="lib-new-menu"${writeAttrs}>
           ${plusIcon} New
         </button>
-        <div class="lib-import-dropdown__menu" id="lib-new-menu">
-          <button type="button" class="lib-import-dropdown__item" data-new-type="build">
+        <div class="axi-picker__pop axi-picker__pop--fixed lib-toolbar__picker-pop" id="lib-new-menu" role="menu" hidden>
+          <button type="button" class="axi-picker__opt" role="menuitem" data-new-type="build">
             ${documentPlusIcon} New Build
           </button>
-          ${insideComp ? "" : `<button type="button" class="lib-import-dropdown__item" data-new-type="folder">
+          ${insideComp ? "" : `<button type="button" class="axi-picker__opt" role="menuitem" data-new-type="folder">
             ${folderPlusIcon} New Folder
           </button>
-          <button type="button" class="lib-import-dropdown__item" data-new-type="comp">
+          <button type="button" class="axi-picker__opt" role="menuitem" data-new-type="comp">
             ${compPlusIcon} New Comp
           </button>`}
         </div>
@@ -156,6 +146,28 @@ export function renderToolbar() {
   `;
 
   bindToolbarEvents(container);
+}
+
+/** field → the label the closed sort picker shows. */
+const SORT_FIELDS = [
+  { value: "sortOrder", label: "Custom" },
+  { value: "updatedAt", label: "Last Modified" },
+  { value: "createdAt", label: "Created" },
+  { value: "title", label: "A–Z" },
+  { value: "profession", label: "Profession" },
+];
+
+function renderSortPicker(activeField) {
+  const active = SORT_FIELDS.find((f) => f.value === activeField) || SORT_FIELDS[0];
+  const opts = SORT_FIELDS.map(
+    (f) => `<button type="button" class="axi-picker__opt" role="option" data-sort-field="${f.value}" aria-selected="${f.value === active.value}">${f.label}</button>`
+  ).join("");
+  return `
+    <div class="axi-picker af-libpicker lib-toolbar__sort" id="lib-sort-picker">
+      <button type="button" class="axi-picker__btn" id="lib-sort-trigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="lib-sort-pop">${active.label}</button>
+      <div class="axi-picker__pop axi-picker__pop--fixed" id="lib-sort-pop" role="listbox" hidden>${opts}</div>
+    </div>
+  `;
 }
 
 /**
@@ -217,8 +229,7 @@ export function renderFilters() {
     for (const prof of professions) {
       const profActive = selectedProfs.includes(prof);
       const svg = getProfessionSvg(prof) || "";
-      items += `<button type="button" class="lib-fd__item ${profActive ? "lib-fd__item--active" : ""}" data-filter-type="professions" data-filter-value="${escapeHtml(prof)}">
-        <span class="lib-fd__check">${checkIcon}</span>
+      items += `<button type="button" class="axi-picker__opt" role="option" aria-selected="${profActive}" data-filter-type="professions" data-filter-value="${escapeHtml(prof)}">
         <span class="lib-fd__icon lib-fd__icon--prof">${svg}</span>
         <span class="lib-fd__label">${escapeHtml(prof)}</span>
       </button>`;
@@ -228,8 +239,7 @@ export function renderFilters() {
       for (const spec of specs) {
         const specActive = selectedSpecs.includes(spec);
         const specSvg = getProfessionSvg(spec) || "";
-        items += `<button type="button" class="lib-fd__item lib-fd__item--indent ${specActive ? "lib-fd__item--active" : ""}" data-filter-type="eliteSpecs" data-filter-value="${escapeHtml(spec)}">
-          <span class="lib-fd__check">${checkIcon}</span>
+        items += `<button type="button" class="axi-picker__opt lib-fd__item--indent" role="option" aria-selected="${specActive}" data-filter-type="eliteSpecs" data-filter-value="${escapeHtml(spec)}">
           <span class="lib-fd__icon lib-fd__icon--spec">${specSvg}</span>
           <span class="lib-fd__label">${escapeHtml(spec)}</span>
         </button>`;
@@ -249,8 +259,7 @@ export function renderFilters() {
     for (const mode of gameModes) {
       const active = selectedModes.includes(mode);
       const modeLabel = mode === "pve" ? "PvE" : mode === "pvp" ? "PvP" : mode === "wvw" ? "WvW" : escapeHtml(mode);
-      items += `<button type="button" class="lib-fd__item ${active ? "lib-fd__item--active" : ""}" data-filter-type="gameModes" data-filter-value="${escapeHtml(mode)}">
-        <span class="lib-fd__check">${checkIcon}</span>
+      items += `<button type="button" class="axi-picker__opt" role="option" aria-selected="${active}" data-filter-type="gameModes" data-filter-value="${escapeHtml(mode)}">
         <span class="lib-fd__label">${escapeHtml(modeLabel)}</span>
       </button>`;
     }
@@ -267,8 +276,7 @@ export function renderFilters() {
     let items = "";
     for (const tag of tags) {
       const active = selectedTags.includes(tag);
-      items += `<button type="button" class="lib-fd__item ${active ? "lib-fd__item--active" : ""}" data-filter-type="tags" data-filter-value="${escapeHtml(tag)}">
-        <span class="lib-fd__check">${checkIcon}</span>
+      items += `<button type="button" class="axi-picker__opt" role="option" aria-selected="${active}" data-filter-type="tags" data-filter-value="${escapeHtml(tag)}">
         <span class="lib-fd__label">${escapeHtml(tag)}</span>
       </button>`;
     }
@@ -279,10 +287,10 @@ export function renderFilters() {
   // Clear all button
   const hasActiveFilter = _hasAnyFilter(activeFilters);
   const clearBtn = hasActiveFilter
-    ? `<button type="button" class="lib-fd__clear" data-filter-clear="1">${xMarkIcon} Clear</button>`
+    ? `<button type="button" class="axi-btn axi-btn--ghost" data-filter-clear="1">${xMarkIcon} Clear</button>`
     : "";
   const saveBtn = hasActiveFilter
-    ? `<button type="button" class="lib-fd__save-smart" data-filter-save-smart="1">${funnelIcon} Save as smart folder</button>`
+    ? `<button type="button" class="axi-btn axi-btn--ghost" data-filter-save-smart="1">${funnelIcon} Save as smart folder</button>`
     : "";
 
   container.innerHTML = `<div class="lib-filters__bar">${dropdowns.join("")}${clearBtn}${saveBtn}</div>`;
@@ -291,11 +299,12 @@ export function renderFilters() {
 }
 
 function _renderDropdown(id, label, items, hasActive) {
-  return `<div class="lib-fd" data-dropdown="${id}">
-    <button type="button" class="lib-fd__trigger ${hasActive ? "lib-fd__trigger--active" : ""}">
+  const popId = `lib-fd-pop-${id}`;
+  return `<div class="axi-picker af-libpicker lib-fd" data-dropdown="${id}">
+    <button type="button" class="axi-picker__btn lib-fd__trigger${hasActive ? " lib-fd__trigger--active" : ""}" aria-haspopup="listbox" aria-expanded="false" aria-controls="${popId}">
       <span>${label}</span>${chevronDownIcon}
     </button>
-    <div class="lib-fd__menu">${items}</div>
+    <div class="axi-picker__pop axi-picker__pop--fixed" id="${popId}" role="listbox" aria-multiselectable="true" hidden>${items}</div>
   </div>`;
 }
 
@@ -356,7 +365,7 @@ function renderBreadcrumb() {
   // rendered as a plain, un-highlighted crumb — the exact same header the root
   // shows — while the pane underneath was showing the archive.
   if (folder.type === "trash" || folder.type === "archive") {
-    parts.push(`<span class="lib-breadcrumb__sep">${chevronRightIcon}</span>`);
+    parts.push(`<span class="lib-breadcrumb__sep axi-diamond" aria-hidden="true"></span>`);
     parts.push(
       `<span class="lib-breadcrumb__item lib-breadcrumb__item--current">${folder.type === "trash" ? "Trash" : "Archive"}</span>`
     );
@@ -364,7 +373,7 @@ function renderBreadcrumb() {
   }
 
   if (folder.id === "__all-comps") {
-    parts.push(`<span class="lib-breadcrumb__sep">${chevronRightIcon}</span>`);
+    parts.push(`<span class="lib-breadcrumb__sep axi-diamond" aria-hidden="true"></span>`);
     parts.push(`<span class="lib-breadcrumb__item lib-breadcrumb__item--current">All Comps</span>`);
     return parts.join("");
   }
@@ -376,17 +385,17 @@ function renderBreadcrumb() {
     if (comp?.folderId) {
       const chain = buildFolderChain(comp.folderId);
       for (const f of chain) {
-        parts.push(`<span class="lib-breadcrumb__sep">${chevronRightIcon}</span>`);
+        parts.push(`<span class="lib-breadcrumb__sep axi-diamond" aria-hidden="true"></span>`);
         parts.push(`<button type="button" class="lib-breadcrumb__item" data-navigate-folder="${escapeHtml(f.id)}">${escapeHtml(f.name)}</button>`);
       }
     }
-    parts.push(`<span class="lib-breadcrumb__sep">${chevronRightIcon}</span>`);
+    parts.push(`<span class="lib-breadcrumb__sep axi-diamond" aria-hidden="true"></span>`);
     parts.push(`<span class="lib-breadcrumb__item lib-breadcrumb__item--current">${escapeHtml(compName)}</span>`);
     return parts.join("");
   }
 
   if (folder.type === "smart-rule") {
-    parts.push(`<span class="lib-breadcrumb__sep">${chevronRightIcon}</span>`);
+    parts.push(`<span class="lib-breadcrumb__sep axi-diamond" aria-hidden="true"></span>`);
     parts.push(`<span class="lib-breadcrumb__item lib-breadcrumb__item--current">${escapeHtml(folder.smartFolder?.name || "")}</span>`);
     return parts.join("");
   }
@@ -397,7 +406,7 @@ function renderBreadcrumb() {
     for (let i = 0; i < chain.length; i++) {
       const f = chain[i];
       const isLast = i === chain.length - 1;
-      parts.push(`<span class="lib-breadcrumb__sep">${chevronRightIcon}</span>`);
+      parts.push(`<span class="lib-breadcrumb__sep axi-diamond" aria-hidden="true"></span>`);
       if (isLast) {
         parts.push(`<span class="lib-breadcrumb__item lib-breadcrumb__item--current">${escapeHtml(f.name)}</span>`);
       } else {
@@ -424,7 +433,7 @@ function renderViewToggle(active) {
     .map(
       (m) =>
         `<button type="button"
-          class="lib-view-btn ${active === m.id ? "lib-view-btn--active" : ""}"
+          class="axi-pill lib-view-btn"
           data-view="${m.id}"
           title="${m.label}"
           aria-label="${m.label}"
@@ -432,6 +441,124 @@ function renderViewToggle(active) {
         >${m.icon}</button>`
     )
     .join("");
+}
+
+/**
+ * Wire a single .axi-picker: the package ships no script, so `hidden`,
+ * `aria-expanded` and `aria-selected` are the whole state and this is the
+ * consumer's half of the contract. Roving focus over the options, arrows and
+ * Home/End to move it, Escape back to the trigger, click-outside-to-close —
+ * the same shape as the package's own gallery.js reference wiring.
+ *
+ * The popover is always --fixed here: both .lib-toolbar and .lib-filters sit
+ * inside .lib-main's `overflow: hidden`, so position is measured from the
+ * trigger with getBoundingClientRect() and written to the popover's
+ * left/top, the tooltip's contract.
+ *
+ * @param {HTMLElement} root the .axi-picker
+ * @param {object} [opts]
+ * @param {(opt: HTMLElement) => (boolean|void)} [opts.onSelect] called when
+ *   an option is activated; returning `false` keeps the picker open (the
+ *   filter pickers, which toggle a multi-select value rather than choosing
+ *   one and closing).
+ * @param {HTMLElement[]} [opts.group] sibling .axi-picker roots that close
+ *   when this one opens — the filter bar's "only one open at a time".
+ */
+function bindPicker(root, { onSelect, group } = {}) {
+  const btn = root.querySelector(".axi-picker__btn, .axi-btn[aria-haspopup]");
+  const pop = root.querySelector(".axi-picker__pop");
+  if (!btn || !pop) return;
+  const isFixed = pop.classList.contains("axi-picker__pop--fixed");
+  const opts = () => [...pop.querySelectorAll(".axi-picker__opt")];
+
+  const position = () => {
+    if (!isFixed) return;
+    const rect = btn.getBoundingClientRect();
+    pop.style.left = `${Math.min(rect.left, window.innerWidth - pop.offsetWidth - 8)}px`;
+    pop.style.top = `${rect.bottom + 6}px`;
+    pop.style.minWidth = `${rect.width}px`;
+  };
+
+  const closeOthers = () => {
+    for (const other of group || []) {
+      if (other === root) continue;
+      other.querySelector(".axi-picker__btn, .axi-btn[aria-haspopup]")?.setAttribute("aria-expanded", "false");
+      const otherPop = other.querySelector(".axi-picker__pop");
+      if (otherPop) otherPop.hidden = true;
+    }
+  };
+
+  const setOpen = (open) => {
+    if (open) closeOthers();
+    btn.setAttribute("aria-expanded", String(open));
+    pop.hidden = !open;
+    if (open) {
+      position();
+      // Opening lands on the current choice, not the top of the list: the
+      // first arrow press should step away from where you already are.
+      const current = opts().find((o) => o.getAttribute("aria-selected") === "true");
+      (current ?? opts()[0])?.focus();
+    }
+  };
+
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    setOpen(btn.getAttribute("aria-expanded") !== "true");
+  });
+
+  for (const opt of opts()) {
+    opt.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const keepOpen = onSelect?.(opt) === false;
+      if (!keepOpen) {
+        setOpen(false);
+        btn.focus();
+      }
+    });
+  }
+
+  pop.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      setOpen(false);
+      btn.focus();
+      return;
+    }
+    const list = opts();
+    const i = list.indexOf(document.activeElement);
+    if (i < 0) return;
+    const to =
+      e.key === "ArrowDown" ? Math.min(i + 1, list.length - 1)
+      : e.key === "ArrowUp" ? Math.max(i - 1, 0)
+      : e.key === "Home" ? 0
+      : e.key === "End" ? list.length - 1
+      : null;
+    if (to === null) return;
+    e.preventDefault();
+    list[to].focus();
+  });
+
+  _ensurePickerOutsideClickWatcher();
+}
+
+// renderToolbar()/renderFilters() rebuild this markup and call bindPicker
+// again on every navigation, sort change and view change, so a listener
+// added per call here would accumulate one per render for the life of the
+// window. One delegated document listener, bound the first time any picker
+// is wired and left in place, closes whatever picker is open by walking the
+// live DOM instead -- cheap, since at most one or two are ever open at once.
+let _pickerOutsideClickBound = false;
+function _ensurePickerOutsideClickWatcher() {
+  if (_pickerOutsideClickBound) return;
+  _pickerOutsideClickBound = true;
+  document.addEventListener("click", (e) => {
+    document.querySelectorAll(".axi-picker__pop:not([hidden])").forEach((pop) => {
+      const root = pop.closest(".axi-picker");
+      if (root && root.contains(e.target)) return;
+      root?.querySelector(".axi-picker__btn, .axi-btn[aria-haspopup]")?.setAttribute("aria-expanded", "false");
+      pop.hidden = true;
+    });
+  });
 }
 
 function bindToolbarEvents(container) {
@@ -444,11 +571,17 @@ function bindToolbarEvents(container) {
     });
   }
 
-  // Sort select
-  const sortSelect = container.querySelector("#lib-sort-select");
-  if (sortSelect) {
-    sortSelect.addEventListener("change", (e) => {
-      _callbacks.onSortChange?.({ field: e.target.value });
+  // Sort picker
+  const sortPicker = container.querySelector("#lib-sort-picker");
+  if (sortPicker) {
+    bindPicker(sortPicker, {
+      onSelect: (opt) => {
+        for (const o of opt.parentElement.querySelectorAll(".axi-picker__opt")) {
+          o.setAttribute("aria-selected", String(o === opt));
+        }
+        sortPicker.querySelector("#lib-sort-trigger").textContent = opt.textContent.trim();
+        _callbacks.onSortChange?.({ field: opt.dataset.sortField });
+      },
     });
   }
 
@@ -459,80 +592,41 @@ function bindToolbarEvents(container) {
     });
   });
 
-  // Import dropdown
-  const importDropdown = container.querySelector("#lib-import-dropdown");
-  const importMenu = container.querySelector("#lib-import-menu");
-  container.querySelector("#lib-import-btn")?.addEventListener("click", (e) => {
-    e.stopPropagation();
-    const isOpen = importDropdown.classList.toggle("lib-import-dropdown--open");
-    if (isOpen) {
-      const closeHandler = (evt) => {
-        if (!importDropdown.contains(evt.target)) {
-          importDropdown.classList.remove("lib-import-dropdown--open");
-          document.removeEventListener("click", closeHandler);
-        }
-      };
-      setTimeout(() => document.addEventListener("click", closeHandler), 0);
-    }
-  });
-  importMenu?.querySelectorAll("[data-import-type]").forEach((item) => {
-    item.addEventListener("click", () => {
-      importDropdown.classList.remove("lib-import-dropdown--open");
-      if (item.dataset.importType === "chatlink") _callbacks.onImportChatLink?.();
-      else if (item.dataset.importType === "gw2skills") _callbacks.onImportGw2Skills?.();
-      else if (item.dataset.importType === "axilink") _callbacks.onImportAxiLink?.();
-      else if (item.dataset.importType === "sharecode") _callbacks.onImportShareCode?.();
-      else if (item.dataset.importType === "axicode-file") _callbacks.onImportAxicodeFile?.();
+  // Import / Export / New pickers — action menus rather than a choice, so
+  // selecting an option never marks it aria-selected, only runs the action
+  // and closes.
+  const importPicker = container.querySelector("#lib-import-dropdown");
+  if (importPicker) {
+    bindPicker(importPicker, {
+      onSelect: (item) => {
+        if (item.dataset.importType === "chatlink") _callbacks.onImportChatLink?.();
+        else if (item.dataset.importType === "gw2skills") _callbacks.onImportGw2Skills?.();
+        else if (item.dataset.importType === "axilink") _callbacks.onImportAxiLink?.();
+        else if (item.dataset.importType === "sharecode") _callbacks.onImportShareCode?.();
+        else if (item.dataset.importType === "axicode-file") _callbacks.onImportAxicodeFile?.();
+      },
     });
-  });
+  }
 
-  // Export dropdown
-  const exportDropdown = container.querySelector("#lib-export-dropdown");
-  const exportMenu = container.querySelector("#lib-export-menu");
-  container.querySelector("#lib-export-btn")?.addEventListener("click", (e) => {
-    e.stopPropagation();
-    const isOpen = exportDropdown.classList.toggle("lib-import-dropdown--open");
-    if (isOpen) {
-      const closeHandler = (evt) => {
-        if (!exportDropdown.contains(evt.target)) {
-          exportDropdown.classList.remove("lib-import-dropdown--open");
-          document.removeEventListener("click", closeHandler);
-        }
-      };
-      setTimeout(() => document.addEventListener("click", closeHandler), 0);
-    }
-  });
-  exportMenu?.querySelectorAll("[data-export-type]").forEach((item) => {
-    item.addEventListener("click", () => {
-      exportDropdown.classList.remove("lib-import-dropdown--open");
-      _callbacks.onExportAxicode?.("visible");
+  const exportPicker = container.querySelector("#lib-export-dropdown");
+  if (exportPicker) {
+    bindPicker(exportPicker, {
+      onSelect: () => {
+        _callbacks.onExportAxicode?.("visible");
+      },
     });
-  });
+  }
 
-  // New button dropdown
-  const newDropdown = container.querySelector("#lib-new-dropdown");
-  const newMenu = container.querySelector("#lib-new-menu");
-  container.querySelector("#lib-new-btn")?.addEventListener("click", (e) => {
-    e.stopPropagation();
-    const isOpen = newDropdown.classList.toggle("lib-import-dropdown--open");
-    if (isOpen) {
-      const closeHandler = (evt) => {
-        if (!newDropdown.contains(evt.target)) {
-          newDropdown.classList.remove("lib-import-dropdown--open");
-          document.removeEventListener("click", closeHandler);
-        }
-      };
-      setTimeout(() => document.addEventListener("click", closeHandler), 0);
-    }
-  });
-  newMenu?.querySelectorAll("[data-new-type]").forEach((item) => {
-    item.addEventListener("click", () => {
-      newDropdown.classList.remove("lib-import-dropdown--open");
-      if (item.dataset.newType === "build") _callbacks.onNewBuild?.();
-      else if (item.dataset.newType === "folder") _callbacks.onNewFolder?.();
-      else if (item.dataset.newType === "comp") _callbacks.onNewComp?.();
+  const newPicker = container.querySelector("#lib-new-dropdown");
+  if (newPicker) {
+    bindPicker(newPicker, {
+      onSelect: (item) => {
+        if (item.dataset.newType === "build") _callbacks.onNewBuild?.();
+        else if (item.dataset.newType === "folder") _callbacks.onNewFolder?.();
+        else if (item.dataset.newType === "comp") _callbacks.onNewComp?.();
+      },
     });
-  });
+  }
 
   // Breadcrumb navigation
   container.querySelectorAll("[data-navigate-root]").forEach((el) => {
@@ -548,57 +642,35 @@ function bindToolbarEvents(container) {
 }
 
 function bindFilterEvents(container) {
-  // Dropdown trigger toggle
-  container.querySelectorAll(".lib-fd__trigger").forEach((trigger) => {
-    trigger.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const dropdown = trigger.closest(".lib-fd");
-      const wasOpen = dropdown.classList.contains("lib-fd--open");
+  const pickers = [...container.querySelectorAll(".lib-fd")];
 
-      // Close all dropdowns
-      container.querySelectorAll(".lib-fd--open").forEach((d) => d.classList.remove("lib-fd--open"));
+  for (const dropdown of pickers) {
+    bindPicker(dropdown, {
+      group: pickers,
+      // Multi-select: toggle the value, keep the dropdown open.
+      onSelect: (btn) => {
+        const type = btn.dataset.filterType;
+        const value = btn.dataset.filterValue;
+        const current = state.libraryPrefs.activeFilters[type] || [];
+        const updated = current.includes(value)
+          ? current.filter((v) => v !== value)
+          : [...current, value];
 
-      if (!wasOpen) {
-        dropdown.classList.add("lib-fd--open");
-        // Close on outside click
-        const closeHandler = (evt) => {
-          if (!dropdown.contains(evt.target)) {
-            dropdown.classList.remove("lib-fd--open");
-            document.removeEventListener("click", closeHandler);
-          }
-        };
-        // Delay to avoid this click closing it immediately
-        setTimeout(() => document.addEventListener("click", closeHandler), 0);
-      }
+        btn.setAttribute("aria-selected", String(!current.includes(value)));
+
+        // Update trigger label
+        const trigger = dropdown.querySelector(".lib-fd__trigger span");
+        const allSelected = dropdown.querySelectorAll('.axi-picker__opt[aria-selected="true"]');
+        const baseLabel = dropdown.dataset.dropdown === "class-filter" ? "Class"
+          : dropdown.dataset.dropdown === "mode-filter" ? "Mode" : "Tags";
+        trigger.textContent = allSelected.length > 0 ? `${baseLabel} (${allSelected.length})` : baseLabel;
+        dropdown.querySelector(".lib-fd__trigger")?.classList.toggle("lib-fd__trigger--active", allSelected.length > 0);
+
+        _callbacks.onFilterChange?.({ type, value: updated.length > 0 ? updated : null });
+        return false;
+      },
     });
-  });
-
-  // Multi-select items (toggle value in array, keep dropdown open)
-  container.querySelectorAll("[data-filter-type]").forEach((btn) => {
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const type = btn.dataset.filterType;
-      const value = btn.dataset.filterValue;
-      const current = state.libraryPrefs.activeFilters[type] || [];
-      const updated = current.includes(value)
-        ? current.filter((v) => v !== value)
-        : [...current, value];
-
-      // Toggle visual state in place
-      btn.classList.toggle("lib-fd__item--active");
-
-      // Update trigger label
-      const dropdown = btn.closest(".lib-fd");
-      const trigger = dropdown?.querySelector(".lib-fd__trigger span");
-      const allItems = dropdown?.querySelectorAll(".lib-fd__item--active") || [];
-      const baseLabel = dropdown?.dataset.dropdown === "class-filter" ? "Class"
-        : dropdown?.dataset.dropdown === "mode-filter" ? "Mode" : "Tags";
-      trigger.textContent = allItems.length > 0 ? `${baseLabel} (${allItems.length})` : baseLabel;
-      dropdown?.querySelector(".lib-fd__trigger")?.classList.toggle("lib-fd__trigger--active", allItems.length > 0);
-
-      _callbacks.onFilterChange?.({ type, value: updated.length > 0 ? updated : null });
-    });
-  });
+  }
 
   // Clear all filters
   container.querySelectorAll("[data-filter-clear]").forEach((btn) => {
