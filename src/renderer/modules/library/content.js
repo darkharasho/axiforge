@@ -1,6 +1,7 @@
 // Library content module — renders builds and folders in the active view mode.
 
 import { state } from "../state.js";
+import { professionSeriesStyle } from "../../../shared/professions.js";
 import { escapeHtml, formatRelativeTime } from "../utils.js";
 import { roleBadgeHtml } from '../roleEstimator.js';
 import { getVisibleBuilds, getVisibleFolders, getVisibleComps, libraryBuilds, libraryComps, libraryFolders, searchQuery, hasSearchQuery, buildMatchesQuery, compMatchesQuery } from "./folder-store.js";
@@ -201,23 +202,26 @@ function pinStarHtml(build) {
 function profPillHtml(build) {
   const prof = build.profession;
   if (!prof) return "";
-  return `<span class="lib-pill lib-pill--prof ${profClass(prof)}">${escapeHtml(prof)}</span>`;
+  // Rule 7: the diamond carries the profession's colour, the label stays in
+  // the neutral ramp. A chip filled with the profession hue would be status
+  // (rule 5), and which profession a build is is not a status.
+  return `<span class="axi-chip af-chip--prof"><span class="axi-diamond axi-diamond--series" style="${professionSeriesStyle(prof)}"></span>${escapeHtml(prof)}</span>`;
 }
 
 function eliteSpecPillHtml(build) {
   const spec = getEliteSpecName(build);
   if (!spec) return "";
-  return `<span class="lib-pill lib-pill--spec">${escapeHtml(spec)}</span>`;
+  return `<span class="axi-chip">${escapeHtml(spec)}</span>`;
 }
 
 function gameModePillHtml(build) {
   const mode = gameModeLabel(build.gameMode || "pve");
-  return `<span class="lib-pill lib-pill--mode">${escapeHtml(mode)}</span>`;
+  return `<span class="axi-chip axi-chip--meta">${escapeHtml(mode)}</span>`;
 }
 
 function tagPillsHtml(build) {
   return (build.tags || [])
-    .map((t) => `<span class="lib-pill lib-pill--tag">${escapeHtml(t)}</span>`)
+    .map((t) => `<span class="axi-chip">${escapeHtml(t)}</span>`)
     .join("");
 }
 
@@ -306,7 +310,7 @@ function renderListView(container) {
     .map(
       (b) => `
         <div class="lib-list-row lib-list-row--build ${b.pinned ? "lib-list-row--pinned" : ""}" data-build-id="${escapeHtml(b.id)}">
-          <span class="lib-list-row__spec-icon ${profClass(b.profession)}">${getSpecIcon(b)}</span>
+          <span class="lib-list-row__spec-icon" style="${professionSeriesStyle(b.profession)}">${getSpecIcon(b)}</span>
           <span class="lib-list-row__title">${escapeHtml(b.title || "Untitled")}${folderPathHtml(b)}${itemSyncIndicatorHtml("build", b)}</span>
           <span class="lib-list-row__pills">
             ${profPillHtml(b)}${eliteSpecPillHtml(b)}${gameModePillHtml(b)}${tagPillsHtml(b)}${roleBadgeHtml(b, state.upgradeCatalog)}${buildUsageChipHtml(b)}

@@ -550,41 +550,10 @@
   border-bottom: var(--axi-border-panel) solid var(--axi-ink-line);
 }
 
-/* ── Shared pills ────────────────────────────────────────────────── */
-
-.lib-pill {
-  display: inline-flex;
-  align-items: center;
-  border-radius: 6px;
-  padding: 2px 8px;
-  font-size: 0.73rem;
-  font-weight: 600;
-  white-space: nowrap;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  line-height: 1.5;
-  border: none;
-}
-
-/* ── Profession pills — the only colored ones ── */
-.lib-pill--prof.lib-prof--guardian     { background: rgba(110, 168, 255, 0.15); color: #7db4ff; }
-.lib-pill--prof.lib-prof--warrior      { background: rgba(255, 153, 68, 0.15);  color: #ffa858; }
-.lib-pill--prof.lib-prof--necromancer  { background: rgba(77, 202, 122, 0.15);  color: #5ed088; }
-.lib-pill--prof.lib-prof--engineer     { background: rgba(204, 136, 68, 0.15);  color: #d4a060; }
-.lib-pill--prof.lib-prof--ranger       { background: rgba(119, 204, 85, 0.15);  color: #88d468; }
-.lib-pill--prof.lib-prof--thief        { background: rgba(204, 102, 119, 0.15); color: #d87888; }
-.lib-pill--prof.lib-prof--mesmer       { background: rgba(176, 122, 204, 0.15); color: #c08ee0; }
-.lib-pill--prof.lib-prof--elementalist { background: rgba(221, 85, 85, 0.15);   color: #e87070; }
-.lib-pill--prof.lib-prof--revenant     { background: rgba(170, 102, 85, 0.15);  color: #c48068; }
-.lib-pill--prof.lib-prof--unknown      { background: rgba(136, 136, 136, 0.10); color: #999; }
-
-/* ── Neutral pills — spec, mode, tags share one calm style ── */
-.lib-pill--spec,
-.lib-pill--mode,
-.lib-pill--tag {
-  background: rgba(200, 200, 220, 0.07);
-  color: var(--muted);
-}
+/* A chip whose bullet is the profession's colour. The colour is on the
+   diamond, never on the chip's outline: an outlined chip is an annotation
+   (rule 5), and a build's profession annotates it rather than judging it. */
+.af-chip--prof { gap: 7px; }
 
 /* ── Pin button ──────────────────────────────────────────────────── */
 
@@ -616,38 +585,35 @@
 }
 
 /* ── List view ───────────────────────────────────────────────────── */
-
-.lib-list {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
+/* Rule 8: the eye runs down the date column, so this is the panel's
+   interior and is drawn in rules. No outline per row, no block per row —
+   forty outlined rows inside an outlined panel is the grid-of-boxes the
+   hairline weight exists to prevent. */
+.lib-list { display: flex; flex-direction: column; }
 
 .lib-list-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
-  border-radius: 6px;
+  gap: 9px;
+  padding: 9px 10px;
+  border-bottom: var(--axi-border-hairline) solid var(--axi-rule);
+  font: var(--axi-t-small);
+  color: var(--axi-text-dim);
   cursor: pointer;
-  font-size: 0.85rem;
-  color: var(--text-light);
-  transition: background 0.1s;
   min-width: 0;
   user-select: none;
 }
 
-.lib-list-row:hover {
-  background: var(--hover-subtle);
-}
+/* The neutral ramp, not an ink: hovering a row is not a status, and forty
+   rows that each flash a colour on the way past the one you want is exactly
+   the tinted-everything failure rule 2 is about. */
+.lib-list-row:hover { background: var(--axi-surface-raised); color: var(--axi-text); }
 
-.lib-list-row--folder {
-  color: var(--muted);
-}
+.lib-list-row--folder { color: var(--axi-text-faint); }
 
-.lib-list-row--pinned {
-  border-left: 2px solid rgba(212, 192, 68, 0.4);
-}
+/* Pinned is a fact about the row, so it caps rather than frames: a short bar
+   at the row's head, in the accent, at the control weight. */
+.lib-list-row--pinned { box-shadow: inset 3px 0 0 var(--axi-accent); }
 
 .lib-list-row__icon--folder {
   color: var(--muted);
@@ -670,6 +636,7 @@
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
+  color: var(--axi-series, var(--axi-text-faint));
 }
 
 .lib-list-row__spec-icon svg {
@@ -693,8 +660,8 @@
 }
 
 .lib-list-row__date {
-  font-size: 0.85rem;
-  color: var(--text-dim);
+  font: var(--axi-t-small);
+  color: var(--axi-text-faint);
   white-space: nowrap;
   flex-shrink: 0;
   margin-left: auto;
@@ -703,7 +670,7 @@
 /* Folder path breadcrumb shown in combined/smart folder views */
 .lib-folder-path {
   font-size: 0.75rem;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
   margin-left: 6px;
   white-space: nowrap;
   overflow: hidden;
@@ -734,13 +701,13 @@
 }
 
 .lib-list-row--comp.lib-drop-target {
-  outline: 2px dashed rgba(110, 168, 255, 0.4);
-  background: rgba(110, 168, 255, 0.06);
+  outline: var(--axi-border-control) dashed var(--axi-accent);
+  outline-offset: -3px;
 }
 
 .lib-list-row--comp.lib-drop-target.is-invalid {
-  outline: 2px dashed rgba(255, 90, 90, 0.5);
-  background: rgba(255, 90, 90, 0.06);
+  outline: var(--axi-border-control) dashed var(--axi-danger);
+  outline-offset: -3px;
   cursor: not-allowed;
 }
 
@@ -761,7 +728,6 @@
   margin-left: auto;
   padding: 1px 8px;
   background: var(--line-soft);
-  border-radius: 8px;
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -793,16 +759,10 @@
 }
 
 /* Selection highlight */
-.lib-list-row.lib-selected {
-  background: var(--panel);
-  border-left: 2px solid var(--accent);
-}
+.lib-list-row.lib-selected { background: var(--axi-surface-raised); box-shadow: inset 3px 0 0 var(--axi-accent); }
 
 /* Drop target */
-.lib-list-row.lib-drop-target {
-  background: rgba(var(--accent-rgb), 0.1);
-  border: 1px dashed rgba(var(--accent-rgb), 0.4);
-}
+.lib-list-row.lib-drop-target { outline: var(--axi-border-control) dashed var(--axi-accent); outline-offset: -3px; }
 
 /* Dragging */
 .lib-list-row.lib-dragging {
@@ -829,32 +789,32 @@
 .lib-tv__header {
   position: sticky;
   top: 0;
-  background: var(--bg-2);
+  background: var(--axi-ground);
   z-index: 2;
   padding: 6px 4px;
-  border-bottom: 1px solid var(--line-soft);
-  color: var(--text-dim);
-  font-weight: 600;
+  border-bottom: var(--axi-border-control) solid var(--axi-rule);
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  color: var(--axi-text-faint);
   user-select: none;
 }
 
 .lib-tv__row {
   padding: 5px 4px;
-  border-bottom: 1px solid var(--panel-2);
+  border-bottom: var(--axi-border-hairline) solid var(--axi-rule);
   cursor: pointer;
   transition: background 0.1s;
   user-select: none;
-  color: var(--text-light);
+  color: var(--axi-text-dim);
 }
 
-.lib-tv__row:hover { background: var(--hover-subtle); }
-.lib-tv__row--folder { color: var(--muted); }
-.lib-tv__row--pinned { border-left: 2px solid rgba(212, 192, 68, 0.4); }
-.lib-tv__item.lib-selected > .lib-tv__row { background: var(--panel); }
+.lib-tv__row:hover { background: var(--axi-surface-raised); color: var(--axi-text); }
+.lib-tv__row--folder { color: var(--axi-text-faint); }
+.lib-tv__row--pinned { box-shadow: inset 3px 0 0 var(--axi-accent); }
+.lib-tv__item.lib-selected > .lib-tv__row { background: var(--axi-surface-raised); box-shadow: inset 3px 0 0 var(--axi-accent); }
 .lib-tv__item.lib-drop-target > .lib-tv__row,
-.lib-tv__item.lib-drop-target { background: rgba(var(--accent-rgb), 0.1); }
+.lib-tv__item.lib-drop-target { outline: var(--axi-border-control) dashed var(--axi-accent); outline-offset: -3px; }
 .lib-tv__item.lib-dragging > .lib-tv__row,
 .lib-tv__item.lib-dragging { opacity: 0.4; }
 
@@ -991,8 +951,12 @@
   white-space: nowrap;
 }
 .lib-tv__sort-btn svg { width: 12px; height: 12px; fill: currentColor; flex-shrink: 0; }
-.lib-tv__sort-btn--active { color: var(--accent); }
-.lib-tv__sort-btn:hover { color: var(--text-light); }
+.lib-tv__sort-btn--active { color: var(--axi-accent); }
+.lib-tv__sort-btn:hover {
+  color: var(--axi-text);
+  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  transform: translate(-2px, -2px);
+}
 
 /* ── Grid view ───────────────────────────────────────────────────── */
 
