@@ -611,9 +611,10 @@
 
 .lib-list-row--folder { color: var(--axi-text-faint); }
 
-/* Pinned is a fact about the row, so it caps rather than frames: a short bar
-   at the row's head, in the accent, at the control weight. */
-.lib-list-row--pinned { box-shadow: inset 3px 0 0 var(--axi-accent); }
+/* Pinned has no row-level treatment: a full-height edge stripe reads as the
+   row's border (rule 5), and status belongs on a filled shape inside the
+   row, never on the row's own edge (rule 8). The pin star inside the row is
+   that filled shape already. */
 
 .lib-list-row__icon--folder {
   color: var(--muted);
@@ -758,8 +759,19 @@
   color: var(--text-dim);
 }
 
-/* Selection highlight */
-.lib-list-row.lib-selected { background: var(--axi-surface-raised); box-shadow: inset 3px 0 0 var(--axi-accent); }
+/* Selection highlight — a fill, not a frame. Selection is an assertion
+   about the row (rule 5), and a fill stays legible when many rows are
+   selected at once, where an edge stripe would just be five coloured
+   frames stacked. */
+.lib-list-row.lib-selected { background: var(--axi-accent); color: var(--axi-accent-ink); }
+/* The date and folder-path breadcrumb set their own faint colour so they
+   recede against the ground; against the accent fill that faint grey has to
+   give way and pick up the row's ink instead, or it reads as disabled.
+   Chips and the spec icon carry their own background/hue on purpose (a
+   chip's fill and a profession's colour are not the row's to override) so
+   they are left alone. */
+.lib-list-row.lib-selected .lib-list-row__date,
+.lib-list-row.lib-selected .lib-folder-path { color: inherit; }
 
 /* Drop target */
 .lib-list-row.lib-drop-target { outline: var(--axi-border-control) dashed var(--axi-accent); outline-offset: -3px; }
@@ -811,8 +823,22 @@
 
 .lib-tv__row:hover { background: var(--axi-surface-raised); color: var(--axi-text); }
 .lib-tv__row--folder { color: var(--axi-text-faint); }
-.lib-tv__row--pinned { box-shadow: inset 3px 0 0 var(--axi-accent); }
-.lib-tv__item.lib-selected > .lib-tv__row { background: var(--axi-surface-raised); box-shadow: inset 3px 0 0 var(--axi-accent); }
+/* Pinned has no row-level treatment here either — see the list view comment
+   above the (now deleted) .lib-list-row--pinned rule; the same rule 5/rule 8
+   reasoning applies to the tree row. */
+/* Selection is a fill, not a frame, for the same reason as the list view:
+   rule 5 treats an edge stripe as the row's own border, and a fill is the
+   only version that stays legible with more than one row selected. The data
+   columns set their own faint/muted colour to recede against the ground, so
+   they have to pick up the row's ink explicitly or they read as disabled
+   against the fill. */
+.lib-tv__item.lib-selected > .lib-tv__row { background: var(--axi-accent); color: var(--axi-accent-ink); }
+.lib-tv__item.lib-selected > .lib-tv__row .lib-tv__profession,
+.lib-tv__item.lib-selected > .lib-tv__row .lib-tv__spec,
+.lib-tv__item.lib-selected > .lib-tv__row .lib-tv__mode,
+.lib-tv__item.lib-selected > .lib-tv__row .lib-tv__tags,
+.lib-tv__item.lib-selected > .lib-tv__row .lib-tv__created,
+.lib-tv__item.lib-selected > .lib-tv__row .lib-tv__modified { color: inherit; }
 .lib-tv__item.lib-drop-target > .lib-tv__row,
 .lib-tv__item.lib-drop-target { outline: var(--axi-border-control) dashed var(--axi-accent); outline-offset: -3px; }
 .lib-tv__item.lib-dragging > .lib-tv__row,
