@@ -204,6 +204,9 @@ const ROOT = path.join(__dirname, "..", "..", "..");
 // is the one file in the system allowed to hold a colour literal.
 const APP_CSS = [
   "src/renderer/styles/app.css",
+  // Deleted by Task 3, which removes these two lines with them.
+  "src/renderer/styles/base.css",
+  "src/renderer/styles/themes.css",
   "src/renderer/styles/layout.css",
   "src/renderer/styles/buttons.css",
   "src/renderer/styles/forms.css",
@@ -239,8 +242,11 @@ const APP_CSS = [
 // empty the conversion is done. bridge.css is deliberately absent from
 // APP_CSS: its whole job is to hold legacy names, and it is deleted in batch 5.
 const PENDING = [
-  // app.css does not exist until Task 3, which removes this line.
+  // app.css does not exist until Task 3, which removes this line; base.css
+  // and themes.css are deleted by the same task, which removes theirs.
   "src/renderer/styles/app.css",
+  "src/renderer/styles/base.css",
+  "src/renderer/styles/themes.css",
   "src/renderer/styles/cards.css",
   "src/renderer/styles/specializations.css",
   "src/renderer/styles/skills.css",
@@ -371,13 +377,18 @@ const SCANNERS = [
 // --- the gate ------------------------------------------------------------
 
 describe("axi design language rules", () => {
-  describe.each(CONVERTED)("%s", (file) => {
-    const css = fs.readFileSync(path.join(ROOT, file), "utf8");
+  // Guarded: jest throws "`.each` called with an empty Array" rather than
+  // registering zero blocks, and CONVERTED is empty until the first file
+  // leaves PENDING.
+  if (CONVERTED.length) {
+    describe.each(CONVERTED)("%s", (file) => {
+      const css = fs.readFileSync(path.join(ROOT, file), "utf8");
 
-    it.each(SCANNERS)("has no %s", (_label, scan) => {
-      expect(scan(css)).toEqual([]);
+      it.each(SCANNERS)("has no %s", (_label, scan) => {
+        expect(scan(css)).toEqual([]);
+      });
     });
-  });
+  }
 
   it("lists every app stylesheet, so a new file cannot dodge the gate", () => {
     const onDisk = [
@@ -692,6 +703,11 @@ grep -ho 'var(--[a-z0-9-]*' src/renderer/styles/*.css src/web/*.css src/site/*.c
 ```bash
 git rm src/renderer/styles/base.css src/renderer/styles/themes.css
 ```
+
+Then delete their two lines from **both** `APP_CSS` and `PENDING` in
+`tests/unit/styles/axi-design-rules.test.js` — the "lists every app stylesheet"
+check reads the directory, so a listed file that no longer exists and an
+existing file that is not listed both fail it.
 
 - [ ] **Step 5: Add the background mark to the markup**
 
@@ -1815,7 +1831,7 @@ reporting during the main-thread work it reports on."
 ### Task 9: Convert the buttons
 
 **Files:**
-- Delete: the `.btn`, `.btn-primary`, `.btn-secondary`, `.btn-danger`, `.btn-dev` rules at `src/renderer/styles/cards.css:18-75`
+- Delete: the `.btn`, `.btn-primary`, `.btn-secondary`, `.btn-danger`, `.btn-dev` rules at `src/renderer/styles/cards.css:18-84`
 - Rewrite: `src/renderer/styles/buttons.css` (138 lines — workspace menu items and the legacy `.btn-danger`)
 - Modify: 49 markup sites across `src/renderer/**/*.html` and `**/*.js`
 - Modify: `tests/unit/styles/axi-design-rules.test.js` (drop `buttons.css` from `PENDING`)
@@ -1888,12 +1904,17 @@ For each offender, translate the class list — and nothing else on the element:
 - `class="btn btn-primary"` → `class="axi-btn axi-btn--primary"`
 - `class="btn btn-secondary"` → `class="axi-btn axi-btn--ghost"`
 - `class="btn btn-danger"` → `class="axi-btn af-btn--danger"`
+- `class="btn btn-dev ..."` → `class="axi-btn af-btn--dev ..."` (four sites, all
+  in `src/renderer/modules/render-pages.js:886,892,937,943` — the local/mobile
+  preview buttons on a publish result)
 
 Keep every other class, `id`, `type` and attribute untouched — several of these buttons are found by `id` or by a co-occurring class.
 
 - [ ] **Step 4: Delete the old rules**
 
-Remove `src/renderer/styles/cards.css:18-75` (the `.btn*` block) and the legacy `.btn-danger` at `buttons.css:129-139`.
+Remove `src/renderer/styles/cards.css:18-84` (the `.btn*` block, which runs
+through `.btn-dev:hover` — not to line 75) and the legacy `.btn-danger` at
+`buttons.css:129-139`.
 
 - [ ] **Step 5: Add the danger variant and the menu items**
 
@@ -1904,6 +1925,15 @@ To `app.css`:
 .af-btn--danger {
   background: var(--axi-danger);
   color: var(--axi-accent-ink);
+}
+
+/* The dev-only local/mobile preview buttons on a publish result. This is
+   commentary about the build - where you can go to look at it - not a verdict
+   on it, so it is outlined in the cool meta ink rather than filled (rules 5
+   and 6). --axi-meta is the one ink guaranteed never to mean a status. */
+.af-btn--dev {
+  border-color: var(--axi-meta);
+  color: var(--axi-meta);
 }
 
 /* --- workspace menu rows --- */
