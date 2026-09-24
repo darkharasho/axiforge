@@ -719,3 +719,47 @@ Status key: `[ ]` open · `[x]` done · `[~]` in progress · `[?]` needs repro s
   already-offset rest state like the primary button does — a visual-parity
   question for whoever next touches the button set
   (`.af-btn--danger` in `src/renderer/styles/app.css`).
+
+### Parked gate holes (from the batch 1 final review)
+
+These are scanner gaps in `tests/unit/styles/axi-design-rules.test.js`. Nothing
+violates them today; each one is a way a violation could enter unnoticed in
+batches 2–5. Ordered by how likely it is to matter.
+
+- [ ] **The `font:` shorthand is unscanned.** `findFontFamilies` matches only
+  `^font-family\s*:`, so `font: 700 12px Cinzel, serif` passes clean — and the
+  converted files use the shorthand everywhere. Rule 8 / spec §7 require
+  `font: var(--axi-t-*)`. This is the scanner most likely to be needed and
+  least able to fire; worth closing at the top of batch 2.
+- [ ] **Colour functions outside the enumerated set pass.** `hwb(…)` and
+  `color(display-p3 …)` are not matched. `oklch`/`oklab`/`lab`/`lch` are
+  covered, and `light-dark()` is caught only incidentally, via the hex inside
+  it.
+- [ ] **Vendor-prefixed radius passes.** `-webkit-border-radius: 8px` and
+  `-moz-border-radius` slip `findRadiusLiterals`, whose regex is anchored
+  `^border(?:-[a-z]+)*-radius`. `COLOUR_PROP` already handles the prefix case;
+  copy that treatment.
+
+### Parked observations (from the batch 1 final review)
+
+- [ ] **In the web build, `styles.css` now loads *after* `web.css`.** The
+  renderer sheet arrives via the dynamic `await import("../renderer/renderer.js")`
+  in `src/web/main-web.js:24`, which Rollup code-splits, so its `<link>` is
+  appended at runtime — last. Before this branch the relationship was inverted.
+  Effect today is nil (all 22 unscoped `web.css` rules are `.web-topbar*`, a
+  namespace the renderer sheet never touches; everything else is `.is-web`-scoped
+  or `!important`), and `tests/unit/styles/import-order.test.js` cannot see it —
+  it asserts the order of `import` statements in source text, not where a
+  dynamically-imported module's CSS lands. Note it on the batch 5 brief.
+- [ ] **`.subnav__back:hover` is the only hover that recolours its outline**
+  (`src/renderer/styles/layout.css:222-227` adds `border-color: var(--axi-accent)`).
+  All 14 other hover rules in the batch keep `--axi-ink-line` on the edge and
+  answer in the block, the background step or the text colour, which is what
+  rule 8's counterpart states. One-line fix, zero risk.
+- [ ] **The Appearance picker now always persists a string, so every share URL
+  carries `&t=`.** `settings-modal.js:383` writes the accent id unconditionally;
+  the old `_applyTheme` wrote `themeId || null`, so a default-theme user stored
+  `null` and published a URL with no `t=`. They now publish `&t=axi-gold`. Same
+  rendered page, longer URL — benign, but pinned by no test, and there is now no
+  way to store a falsy value (`src/main/index.js:1213, 1700, 1836, 1893` and
+  `render-pages.js:608` are the readers).
