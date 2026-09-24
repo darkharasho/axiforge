@@ -604,6 +604,11 @@ export function renderEditorMeta() {
  * @param {string|null} theme - current theme param value (or null)
  * @returns {string|null}
  */
+/** Single source of the `?t=` value: the accent id currently applied to the page. */
+export function currentShareAccent() {
+  return document.documentElement.getAttribute("data-axi-accent");
+}
+
 export function resolvePublishedUrl(build, onboarding, folders, theme) {
   if (!build?.publishedSlug || !build?.publishedFileId || !build?.publishedKey) return null;
 
@@ -626,8 +631,7 @@ export function resolvePublishedUrl(build, onboarding, folders, theme) {
 function _getPublishedUrl() {
   if (!state.editor.id) return null;
   const build = state.builds.find((b) => b.id === state.editor.id);
-  const theme = document.documentElement.getAttribute("data-theme");
-  return resolvePublishedUrl(build, state.onboarding, state.folders, theme);
+  return resolvePublishedUrl(build, state.onboarding, state.folders, currentShareAccent());
 }
 
 // ---------------------------------------------------------------------------

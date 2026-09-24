@@ -95,6 +95,12 @@ function setupDocumentMock() {
     },
     querySelector() { return null; },
     querySelectorAll() { return []; },
+    documentElement: {
+      _attrs: {},
+      getAttribute(name) { return Object.prototype.hasOwnProperty.call(this._attrs, name) ? this._attrs[name] : null; },
+      setAttribute(name, value) { this._attrs[name] = String(value); },
+      removeAttribute(name) { delete this._attrs[name]; },
+    },
   };
 
   global.location = { port: "", hostname: "app" };
@@ -359,5 +365,42 @@ describe("resolvePublishedUrl", () => {
 
   test("returns null when owner and repo are not available", () => {
     expect(resolvePublishedUrl(personalBuild, {}, [], null)).toBeNull();
+  });
+});
+
+describe("currentShareAccent", () => {
+  afterEach(() => {
+    document.documentElement.removeAttribute("data-axi-accent");
+  });
+
+  test("reads the accent id from the document element", () => {
+    document.documentElement.setAttribute("data-axi-accent", "teal-ocean");
+    expect(renderPages.currentShareAccent()).toBe("teal-ocean");
+
+    const onboarding = { targetOwner: "personaluser", repoName: "axibuilds" };
+    const build = {
+      id: "b1",
+      folderId: null,
+      publishedSlug: "my-build",
+      publishedFileId: "abc123",
+      publishedKey: "key456",
+    };
+    const url = renderPages.resolvePublishedUrl(build, onboarding, [], renderPages.currentShareAccent());
+    expect(url.endsWith("&t=teal-ocean")).toBe(true);
+  });
+
+  test("returns null and omits the t param when no accent is set", () => {
+    expect(renderPages.currentShareAccent()).toBeNull();
+
+    const onboarding = { targetOwner: "personaluser", repoName: "axibuilds" };
+    const build = {
+      id: "b1",
+      folderId: null,
+      publishedSlug: "my-build",
+      publishedFileId: "abc123",
+      publishedKey: "key456",
+    };
+    const url = renderPages.resolvePublishedUrl(build, onboarding, [], renderPages.currentShareAccent());
+    expect(url).not.toContain("&t=");
   });
 });

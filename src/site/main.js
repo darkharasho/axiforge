@@ -8,16 +8,10 @@ import { setReadOnly as setSkillsReadOnly } from "@renderer/modules/skills.js";
 import { setReadOnly as setEquipmentReadOnly } from "@renderer/modules/equipment.js";
 import { setReadOnly as setSpecsReadOnly } from "@renderer/modules/specializations.js";
 import { setReadOnly as setDetailReadOnly } from "@renderer/modules/detail-panel.js";
+import { accentFromParams } from "./accent.js";
 
 // Scope class for @axiapps/forge-render styles (mini cards, role badges, hover previews).
 document.body.classList.add("forge-render");
-
-const VALID_THEMES = new Set([
-  "molten-core", "frostforge", "verdant-crucible", "cinderfall",
-  "copper", "cobalt", "mithril", "rose-gold",
-  "prof-guardian", "prof-warrior", "prof-necromancer", "prof-engineer",
-  "prof-ranger", "prof-thief", "prof-mesmer", "prof-elementalist", "prof-revenant",
-]);
 
 const app = document.getElementById("app");
 
@@ -25,11 +19,9 @@ const app = document.getElementById("app");
 function init() {
   const params = new URLSearchParams(location.search);
 
-  // Apply color theme from URL
-  const theme = params.get("t");
-  if (theme && VALID_THEMES.has(theme)) {
-    document.documentElement.setAttribute("data-theme", theme);
-  }
+  // Apply color accent from URL
+  const accent = accentFromParams(params);
+  if (accent) document.documentElement.setAttribute("data-axi-accent", accent);
 
   // New format: ?b=fileId.key&n=slug
   let buildParam = params.get("b");

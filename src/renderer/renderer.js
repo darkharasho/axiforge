@@ -44,7 +44,7 @@ import {
   setPublishStatus, showError, runPagesBuildPoll, getSelectedTarget,
   showPublishProgress, advancePublishStep, completeAllPublishSteps,
   failPublishStep, showPublishResult, getPublishTargetId, syncPublishStatus,
-  resolvePublishedUrl, clearPublishProgress,
+  resolvePublishedUrl, clearPublishProgress, currentShareAccent,
 } from "./modules/render-pages.js";
 import { publishWithOwnerCheck, publishedByOtherBody } from "./modules/publish-guard.js";
 import { resolveEntityFacts } from "./modules/detail-panel.js";
@@ -1579,8 +1579,7 @@ function wireEvents() {
         if (!buildId) throw new Error("No build loaded");
         const build = state.builds.find((b) => b.id === buildId);
         if (!build?.publishedFileId) throw new Error("Build not published");
-        const theme = document.documentElement.getAttribute("data-axi-accent");
-        const url = resolvePublishedUrl(build, state.onboarding, state.folders, theme);
+        const url = resolvePublishedUrl(build, state.onboarding, state.folders, currentShareAccent());
         if (!url) throw new Error("Could not resolve published URL");
         await window.desktopApi.writeClipboardText(url);
         flashItem(pubLinkItem, pubLinkDefault);
