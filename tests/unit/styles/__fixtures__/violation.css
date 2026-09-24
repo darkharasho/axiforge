@@ -18,3 +18,9 @@
 .v14 { --my-color: #ff0000; color: var(--my-color); }
 /* Finding 4: a hex hiding behind a `;` inside a data-URI string. */
 .v15 { background: url("data:image/svg+xml;utf8,<svg><rect fill='#ff0000'/></svg>"); }
+/* Finding 5: an !important reset that must NOT read as an illegal value. */
+.v16 { box-shadow: none !important; }
+.v17 { border: none !important; }
+/* Finding 6: a genuine violation still fires even with !important attached. */
+.v18 { box-shadow: 0 2px 8px #000 !important; }
+.v19 { color: #ff0000 !important; }

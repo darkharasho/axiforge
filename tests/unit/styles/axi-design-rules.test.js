@@ -117,6 +117,7 @@ function declarations(css) {
     .split(/[;{}]/)
     .map((d) => d.replace(/\u0000(\d+)\u0000/g, (_, code) => String.fromCharCode(Number(code))))
     .map((d) => d.trim())
+    .map((d) => d.replace(/\s*!\s*important\s*$/i, ""))
     .filter((d) => d.includes(":"));
 }
 
@@ -249,6 +250,22 @@ describe("axi design language rules", () => {
 
     it.each(SCANNERS)("detects a planted %s", (_label, scan) => {
       expect(scan(bad).length).toBeGreaterThan(0);
+    });
+
+    it("strips a trailing !important before any scanner sees the value", () => {
+      // box-shadow: none !important is a reset, not an illegal shadow.
+      expect(findBadShadows('.v16 { box-shadow: none !important; }')).toEqual([]);
+      // box-shadow: <literal> !important is still a real violation.
+      expect(
+        findBadShadows('.v18 { box-shadow: 0 2px 8px #000 !important; }'),
+      ).not.toEqual([]);
+      // border: none !important is a reset, not an illegal border width.
+      expect(findBorderLiterals('.v17 { border: none !important; }')).toEqual([]);
+      // a genuine violation with !important still fires for another scanner
+      // (colour literal).
+      expect(
+        findColourLiterals('.v19 { color: #ff0000 !important; }'),
+      ).not.toEqual([]);
     });
 
     it("does not flag a pseudo-class colon or a font stack in a string", () => {
