@@ -10,7 +10,7 @@ import { state, createEmptyEditor } from "./modules/state.js";
 import { nextEditorReturn } from "./modules/editor-return.js";
 import { delay, wireTagInput, escapeHtml, relativeTime } from "./modules/utils.js";
 import { injectSkeleton } from "./modules/skeleton.js";
-import { professionColour } from "../shared/professions.js";
+import { professionSeriesStyle } from "../shared/professions.js";
 
 import { initCustomSelect, closeCustomSelect } from "./modules/custom-select.js";
 import {
@@ -1268,8 +1268,7 @@ function _compTabProfIcons(comp) {
   if (specs.length === 0) return "";
   return specs.map(({ specName, profession }) => {
     const svg = getProfessionSvg(specName) || getProfessionSvg(profession) || "";
-    const color = professionColour(profession);
-    return `<span class="comp-list-row__prof-icon ${profClass(profession)}" style="background:${color}" title="${escapeHtml(specName)}">${svg}</span>`;
+    return `<span class="comp-list-row__prof-icon ${profClass(profession)}" style="${professionSeriesStyle(profession)}" title="${escapeHtml(specName)}">${svg}</span>`;
   }).join("");
 }
 
@@ -1323,7 +1322,7 @@ function renderCompsPanel() {
       </div>
       <div class="comps-tab__card-meta">
         <div class="comp-list-row__prof-icons">${profIcons}</div>
-        ${profIcons ? `<span class="comp-list-row__pipe">|</span>` : ""}
+        ${profIcons ? `<span class="comp-list-row__sep"></span>` : ""}
         <span class="comp-list-row__summary">${summary}</span>
       </div>
       <button type="button" class="comps-tab__toggle" data-comp-toggle="${escapeHtml(c.id)}">

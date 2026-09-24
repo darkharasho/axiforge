@@ -13,6 +13,13 @@
 }
 
 /* ══ Comp List Toolbar — Tier 1 ═══════════════════════════════════════════ */
+/* Mirrors .lib-toolbar (library.css, Task 3): panel-weight rule under the
+   bar, the search box wearing .axi-input's declarations, the view toggle a
+   run of pressed/unpressed controls matching .axi-pill. The markup here
+   predates .axi-search/.axi-input/.axi-pill and this task's JS scope does
+   not extend past the profession-icon template and the row/badge markup, so
+   the existing classes carry the same declarations by hand rather than
+   picking up the shared class names. */
 
 .comp-list-toolbar {
   display: flex;
@@ -20,7 +27,7 @@
   justify-content: space-between;
   gap: 8px;
   padding: 8px 12px;
-  border-bottom: 1px solid var(--panel-2);
+  border-bottom: var(--axi-border-panel) solid var(--axi-ink-line);
   flex-shrink: 0;
 }
 
@@ -45,13 +52,14 @@
   white-space: nowrap;
 }
 
-/* Search */
+/* Search — matches .axi-input declaration for declaration. */
 .comp-list-toolbar__search-input {
-  background: var(--bg-2);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
+  background: var(--axi-ground);
+  border: var(--axi-border-control) solid var(--axi-ink-line);
   padding: 4px 8px;
-  color: var(--text-light);
+  color: var(--axi-text);
+  font: var(--axi-t-label);
+  letter-spacing: var(--axi-ls-label);
   font-size: 0.85rem;
   font-family: inherit;
   width: 200px;
@@ -60,14 +68,15 @@
 }
 
 .comp-list-toolbar__search-input:focus {
-  border-color: var(--accent);
+  border-color: var(--axi-accent);
 }
 
 .comp-list-toolbar__search-input::placeholder {
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
 }
 
-/* Filters toggle button */
+/* Filters toggle button — a control with a pressed (active) state, same
+   fill-on-press contract as .axi-pill. */
 .comp-list-toolbar__filters-btn {
   all: unset;
   display: flex;
@@ -75,33 +84,37 @@
   justify-content: center;
   width: 30px;
   height: 30px;
-  border-radius: var(--radius-sm);
-  background: var(--panel-2);
-  color: var(--text-dim);
+  border: var(--axi-border-control) solid var(--axi-ink-line);
+  background: var(--axi-ground);
+  color: var(--axi-text-dim);
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition: transform 0.1s, box-shadow 0.1s, color 0.1s;
 }
 
 .comp-list-toolbar__filters-btn:hover {
-  background: var(--line);
-  color: var(--text-light);
+  color: var(--axi-text);
+  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  transform: translate(-2px, -2px);
 }
 
 .comp-list-toolbar__filters-btn--active {
-  background: rgba(200, 169, 110, 0.13);
-  color: var(--gold);
+  background: var(--axi-accent);
+  color: var(--axi-accent-ink);
+  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
 }
 
 .comp-list-toolbar__filters-btn--active:hover {
-  background: rgba(200, 169, 110, 0.2);
+  box-shadow: var(--axi-offset-control-hover) var(--axi-offset-control-hover) 0 var(--axi-ink-line);
+  transform: translate(-2px, -2px);
 }
 
-/* View toggle button group */
+/* View toggle button group — a run of .axi-pill's, pressed = current view.
+   (aria-pressed is out of this task's JS scope; the --active class already
+   on this markup carries the same pressed contract.) */
 .comp-list-toolbar__view-toggle {
   display: flex;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
+  align-items: center;
+  gap: 4px;
 }
 
 .comp-list-toolbar__view-btn {
@@ -111,23 +124,28 @@
   justify-content: center;
   width: 30px;
   height: 28px;
-  color: var(--text-dim);
+  border: var(--axi-border-control) solid var(--axi-ink-line);
+  background: var(--axi-ground);
+  color: var(--axi-text-dim);
   cursor: pointer;
-  transition: background 0.1s, color 0.1s;
+  transition: transform 0.1s, box-shadow 0.1s, color 0.1s;
 }
 
 .comp-list-toolbar__view-btn:hover {
-  background: var(--panel-2);
-  color: var(--text-light);
+  color: var(--axi-text);
+  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  transform: translate(-2px, -2px);
 }
 
 .comp-list-toolbar__view-btn--active {
-  background: rgba(200, 169, 110, 0.13);
-  color: var(--gold);
+  background: var(--axi-accent);
+  color: var(--axi-accent-ink);
+  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
 }
 
-.comp-list-toolbar__view-btn + .comp-list-toolbar__view-btn {
-  border-left: 1px solid var(--line);
+.comp-list-toolbar__view-btn--active:hover {
+  box-shadow: var(--axi-offset-control-hover) var(--axi-offset-control-hover) 0 var(--axi-ink-line);
+  transform: translate(-2px, -2px);
 }
 
 /* ══ Comp List Toolbar — Tier 2 (Filters) ════════════════════════════════ */
@@ -138,7 +156,7 @@
   justify-content: space-between;
   gap: 16px;
   padding: 8px 12px;
-  border-bottom: 1px solid var(--panel-2);
+  border-bottom: var(--axi-border-panel) solid var(--axi-ink-line);
   flex-shrink: 0;
 }
 
@@ -162,27 +180,36 @@
 }
 
 .comp-list-filters__label {
-  font-size: 10px;
-  color: var(--text-dim);
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
+  color: var(--axi-text-faint);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
   user-select: none;
 }
 
+/* A native <select>. Same closed-box treatment as .axi-select's border/
+   background/type; the caret stays the browser's own arrow rather than the
+   package's two-linear-gradient triangle — that gradient is drawn only for
+   .axi-select itself (RULES.md rule 1), and this file does not carry the
+   class name to hang it on. */
 .comp-list-filters__select {
-  background: var(--bg-2);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
+  background-color: var(--axi-ground);
+  border: var(--axi-border-control) solid var(--axi-ink-line);
   padding: 4px 8px;
-  color: var(--text-light);
+  color: var(--axi-text-dim);
+  font: var(--axi-t-label);
+  letter-spacing: var(--axi-ls-label);
   font-size: 0.8rem;
-  font-family: inherit;
   cursor: pointer;
   outline: none;
+  transition: transform 0.1s, box-shadow 0.1s, color 0.1s;
 }
 
+.comp-list-filters__select:hover,
 .comp-list-filters__select:focus {
-  border-color: var(--accent);
+  color: var(--axi-text);
+  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  transform: translate(-2px, -2px);
 }
 
 .comp-list-filters__sort-row {
@@ -198,16 +225,17 @@
   justify-content: center;
   width: 28px;
   height: 28px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  color: var(--text-light);
+  border: var(--axi-border-control) solid var(--axi-ink-line);
+  color: var(--axi-text);
   font-size: 14px;
   cursor: pointer;
-  background: var(--bg-2);
+  background: var(--axi-ground);
+  transition: transform 0.1s, box-shadow 0.1s;
 }
 
 .comp-list-filters__sort-dir:hover {
-  border-color: var(--accent);
+  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  transform: translate(-2px, -2px);
 }
 
 .comp-list-filters__tags {
@@ -217,46 +245,59 @@
 }
 
 /* ══ Tag Filter Chips ════════════════════════════════════════════════════ */
+/* A tag pill is the case --axi-pill-fill exists for — a pressed pill fills
+   with the colour of the thing it filters to — but a tag owns no colour, so
+   the knob is left unset and the pressed chip fills with the accent. */
 
 .comp-tag-chip {
   all: unset;
   display: inline-flex;
   align-items: center;
-  padding: 2px 10px;
-  border-radius: 12px;
-  font-size: 0.7rem;
-  color: var(--text-dim);
-  background: var(--panel-2);
-  border: 1px solid var(--panel-2);
+  gap: 6px;
+  padding: 10px 9px;
+  border: var(--axi-border-control) solid var(--axi-ink-line);
+  background: var(--axi-ground);
+  color: var(--axi-text-dim);
+  font: var(--axi-t-label);
+  letter-spacing: var(--axi-ls-label);
+  text-transform: uppercase;
   cursor: pointer;
   user-select: none;
-  transition: background 0.1s, color 0.1s, border-color 0.1s;
+  transition: transform 0.1s, box-shadow 0.1s, color 0.1s;
 }
 
 .comp-tag-chip:hover {
-  background: var(--panel-2);
-  color: var(--text-light);
+  color: var(--axi-text);
+  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  transform: translate(-2px, -2px);
 }
 
 .comp-tag-chip--active {
-  background: rgba(200, 169, 110, 0.15);
-  border-color: rgba(200, 169, 110, 0.4);
-  color: var(--gold);
+  background: var(--axi-pill-fill, var(--axi-accent));
+  color: var(--axi-accent-ink);
+  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
 }
 
 .comp-tag-chip--active:hover {
-  background: rgba(200, 169, 110, 0.25);
+  background: var(--axi-pill-fill, var(--axi-accent));
+  color: var(--axi-accent-ink);
+  box-shadow: var(--axi-offset-control-hover) var(--axi-offset-control-hover) 0 var(--axi-ink-line);
+  transform: translate(-2px, -2px);
 }
 
 /* ══ Bulk Selection Bar ══════════════════════════════════════════════════ */
+/* A status: a bar that appears when a selection exists. It fills, at panel
+   weight, and caps the list it governs — the panel-weight rule under it is
+   the cap's edge, per rule 5. */
 
 .comp-list-bulk-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 8px 12px;
-  background: rgba(200, 169, 110, 0.07);
-  border-bottom: 1px solid rgba(200, 169, 110, 0.27);
+  background: var(--axi-accent);
+  color: var(--axi-accent-ink);
+  border-bottom: var(--axi-border-panel) solid var(--axi-ink-line);
   flex-shrink: 0;
 }
 
@@ -267,14 +308,14 @@
 }
 
 .comp-list-bulk-bar__master {
-  accent-color: var(--gold);
+  accent-color: var(--axi-accent-ink);
   cursor: pointer;
 }
 
 .comp-list-bulk-bar__count {
-  font-size: 0.85rem;
-  color: var(--gold);
-  font-weight: 600;
+  font: var(--axi-t-small);
+  color: inherit;
+  font-weight: 700;
 }
 
 .comp-list-bulk-bar__right {
@@ -288,36 +329,34 @@
   display: inline-flex;
   align-items: center;
   padding: 4px 12px;
-  border-radius: var(--radius-sm);
-  font-size: 0.8rem;
-  color: var(--text-light);
-  background: var(--panel-2);
-  border: 1px solid var(--line);
+  border: var(--axi-border-control) solid var(--axi-ink-line);
+  background: transparent;
+  color: var(--axi-accent-ink);
+  font: var(--axi-t-small);
   cursor: pointer;
-  transition: background 0.1s;
+  transition: transform 0.1s, box-shadow 0.1s;
 }
 
 .comp-list-bulk-bar__btn:hover {
-  background: var(--line);
+  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  transform: translate(-2px, -2px);
 }
 
 .comp-list-bulk-bar__btn--danger {
-  color: #f44336;
-  border-color: rgba(244, 67, 54, 0.3);
-}
-
-.comp-list-bulk-bar__btn--danger:hover {
-  background: rgba(244, 67, 54, 0.12);
+  border-color: var(--axi-danger);
+  color: var(--axi-danger);
 }
 
 .comp-list-bulk-bar__btn--cancel {
-  color: var(--text-dim);
   border-color: transparent;
   background: transparent;
+  color: var(--axi-accent-ink);
 }
 
 .comp-list-bulk-bar__btn--cancel:hover {
-  color: var(--text-light);
+  box-shadow: none;
+  transform: none;
+  color: var(--axi-ink-line);
 }
 
 /* ══ Comp List Body ══════════════════════════════════════════════════════ */
@@ -329,31 +368,39 @@
 }
 
 /* ══ Comp Row — Shared ═══════════════════════════════════════════════════ */
+/* Rule 8: the eye runs down the timestamp column, so rows are drawn in
+   rules — the same treatment as .lib-list-row (Task 4): a hairline row rule
+   and the neutral ramp on hover, no outline and no block per row. */
 
 .comp-list-row {
   cursor: pointer;
-  border-bottom: 1px solid var(--line-soft);
-  border-left: 2px solid transparent;
-  transition: background 0.1s, border-color 0.15s;
+  border-bottom: var(--axi-border-hairline) solid var(--axi-rule);
+  transition: background 0.1s, color 0.1s;
 }
 
 .comp-list-row:hover {
-  background: var(--panel-2);
-  border-left-color: rgba(200, 169, 110, 0.27);
+  background: var(--axi-surface-raised);
 }
 
-.comp-list-row--selected {
-  background: rgba(200, 169, 110, 0.04);
-  border-left-color: rgba(200, 169, 110, 0.27);
-}
-
+/* Selection is a fill, not a frame — an edge stripe would read as the row's
+   own border (rule 5), and a fill stays legible when many rows are selected
+   at once, where a stripe would just be many coloured frames stacked. */
+.comp-list-row--selected,
 .comp-list-row--selected:hover {
-  background: rgba(200, 169, 110, 0.07);
+  background: var(--axi-accent);
+  color: var(--axi-accent-ink);
+}
+
+.comp-list-row--selected .comp-list-row__name,
+.comp-list-row--selected .comp-list-row__time,
+.comp-list-row--selected .comp-list-row__summary,
+.comp-list-row--selected .comp-list-row__boon-pct {
+  color: inherit;
 }
 
 /* Checkbox */
 .comp-list-row__checkbox {
-  accent-color: var(--gold);
+  accent-color: var(--axi-accent);
   cursor: pointer;
   opacity: 0.3;
   transition: opacity 0.15s;
@@ -371,7 +418,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--gold);
+  color: var(--axi-text);
   font-size: 13px;
   font-weight: 600;
 }
@@ -383,23 +430,30 @@
 
 /* Timestamp */
 .comp-list-row__time {
-  font-size: 0.75rem;
-  color: var(--text-dim);
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
+  color: var(--axi-text-faint);
   white-space: nowrap;
   flex-shrink: 0;
 }
 
-/* Pipe separator on bottom line */
-.comp-list-row__pipe {
-  color: var(--line);
-  font-size: 0.75rem;
+/* Metadata separator on bottom line. Rule 7: the family bullet, at its
+   metadata size. */
+.comp-list-row__sep {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
   margin: 0 4px;
+  transform: rotate(45deg);
+  background: var(--axi-text-faint);
+  vertical-align: middle;
+  flex-shrink: 0;
 }
 
 /* Party/slot summary */
 .comp-list-row__summary {
-  font-size: 0.75rem;
-  color: var(--text-dim);
+  font: var(--axi-t-small);
+  color: var(--axi-text-dim);
   white-space: nowrap;
 }
 
@@ -418,11 +472,11 @@
 .comp-list-row__tag {
   display: inline-block;
   padding: 1px 8px;
-  border-radius: 10px;
-  font-size: 9px;
-  color: var(--gold);
-  background: rgba(200, 169, 110, 0.1);
-  border: 1px solid var(--line);
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
+  color: var(--axi-accent);
+  background: transparent;
+  border: var(--axi-border-hairline) solid var(--axi-rule);
   white-space: nowrap;
 }
 
@@ -458,52 +512,44 @@
 }
 
 /* ══ Badges (Game Mode + Publish Status) ════════════════════════════════ */
+/* Five badges, all built the same wrong way before this pass: an ink at 12%
+   over the ground inside the same ink at 30%. Rule 5 sorts them into two
+   groups: game mode annotates what a comp is for, so it outlines; published
+   and shared are states the comp is in, so they fill. Draft stays outlined
+   because draft is the absence of publication, and filling it would make
+   "not yet done" the loudest thing in the row. */
 
 .comp-badge {
   display: inline-flex;
   align-items: center;
   padding: 1px 8px;
-  border-radius: 10px;
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.3px;
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
+  text-transform: uppercase;
   white-space: nowrap;
   flex-shrink: 0;
 }
 
 .comp-badge--sm {
-  font-size: 9px;
-  padding: 0px 6px;
+  padding: 0 6px;
 }
 
-.comp-badge--pve {
-  color: #4fc3f7;
-  background: rgba(79, 195, 247, 0.12);
-  border: 1px solid rgba(79, 195, 247, 0.3);
-}
-
+/* Annotations: what the comp is for. Outlined. */
+.comp-badge--pve,
 .comp-badge--wvw {
-  color: #ef5350;
-  background: rgba(239, 83, 80, 0.12);
-  border: 1px solid rgba(239, 83, 80, 0.3);
+  border: var(--axi-border-hairline) solid var(--axi-rule);
+  background: transparent;
+  color: var(--axi-text-dim);
 }
+.comp-badge--wvw { border-color: var(--axi-meta); color: var(--axi-meta); }
 
-.comp-badge--published {
-  color: #4caf50;
-  background: rgba(76, 175, 80, 0.12);
-  border: 1px solid rgba(76, 175, 80, 0.3);
-}
-
+/* Statuses: what state the comp is in. Filled. */
+.comp-badge--published { background: var(--axi-ok); color: var(--axi-accent-ink); }
+.comp-badge--shared { background: var(--axi-accent); color: var(--axi-accent-ink); }
 .comp-badge--draft {
-  color: var(--text-dim);
-  background: rgba(136, 136, 136, 0.08);
-  border: 1px solid rgba(136, 136, 136, 0.2);
-}
-
-.comp-badge--shared {
-  color: #ffa726;
-  background: rgba(255, 167, 38, 0.1);
-  border: 1px solid rgba(255, 167, 38, 0.28);
+  border: var(--axi-border-hairline) solid var(--axi-rule);
+  background: transparent;
+  color: var(--axi-text-faint);
 }
 
 /* ══ Profession Icons Strip ═════════════════════════════════════════════ */
@@ -521,27 +567,26 @@
   justify-content: center;
   width: 22px;
   height: 22px;
-  border-radius: var(--radius-xs);
-  overflow: hidden;
+  color: var(--axi-series, var(--axi-text-dim));
 }
 
 .comp-list-row__prof-icon svg {
   width: 16px;
   height: 16px;
-  fill: var(--text);
+  fill: currentColor;
 }
 
 .comp-list-row__prof-overflow {
-  font-size: 10px;
-  color: var(--text-dim);
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
+  color: var(--axi-text-faint);
   margin-left: 2px;
 }
 
 .comp-list-row__prof-empty {
   width: 22px;
   height: 22px;
-  border: 1px dashed var(--line);
-  border-radius: var(--radius-xs);
+  border: var(--axi-border-hairline) dashed var(--axi-rule);
 }
 
 /* ══ Boon Coverage Indicator ════════════════════════════════════════════ */
@@ -569,7 +614,7 @@
 .comp-list-empty {
   padding: 60px 20px;
   text-align: center;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -577,14 +622,13 @@
 }
 
 .comp-list-empty__title {
-  font-size: 1rem;
-  color: var(--text-dim);
-  font-weight: 600;
+  font: var(--axi-t-body);
+  color: var(--axi-text-dim);
 }
 
 .comp-list-empty__sub {
-  font-size: 0.85rem;
-  color: var(--text-dim);
+  font: var(--axi-t-small);
+  color: var(--axi-text-faint);
   max-width: 340px;
 }
 
@@ -592,36 +636,45 @@
   all: unset;
   margin-top: 8px;
   padding: 4px 14px;
-  border-radius: var(--radius-sm);
-  font-size: 0.85rem;
-  color: var(--gold);
-  border: 1px solid rgba(200, 169, 110, 0.4);
+  font: var(--axi-t-label);
+  letter-spacing: var(--axi-ls-label);
+  text-transform: uppercase;
+  color: var(--axi-text-dim);
+  border: var(--axi-border-control) solid var(--axi-ink-line);
+  background: var(--axi-ground);
   cursor: pointer;
-  transition: background 0.1s;
+  transition: transform 0.1s, box-shadow 0.1s, color 0.1s;
 }
 
 .comp-list-empty__btn:hover {
-  background: rgba(200, 169, 110, 0.12);
+  color: var(--axi-text);
+  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  transform: translate(-2px, -2px);
 }
 
 /* ══ Tag Popover ════════════════════════════════════════════════════ */
+/* A raised surface: panel border plus the 6px offset block, no radius.
+   Positioned fixed from script when any ancestor clips — comp-tags.js
+   already sets position: fixed and left/top from a measured anchor, same
+   contract as .axi-picker__pop. */
 
 .comp-tag-popover {
-  background: var(--panel-2);
-  border: 1px solid var(--line);
-  border-radius: 8px;
+  background: var(--axi-surface-raised);
+  border: var(--axi-border-panel) solid var(--axi-ink-line);
+  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
   padding: 8px;
   min-width: 180px;
   max-height: 280px;
   overflow-y: auto;
-  box-shadow: var(--shadow-md);
 }
 
 .comp-tag-popover__header {
-  font-size: 0.75rem;
-  color: var(--text-dim);
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
+  text-transform: uppercase;
+  color: var(--axi-text-faint);
   padding: 2px 4px 6px;
-  border-bottom: 1px solid var(--panel-2);
+  border-bottom: var(--axi-border-hairline) solid var(--axi-rule);
   margin-bottom: 6px;
 }
 
@@ -636,18 +689,19 @@
   align-items: center;
   gap: 6px;
   padding: 3px 4px;
-  border-radius: var(--radius-xs);
-  font-size: 0.8rem;
-  color: var(--text-light);
+  background: transparent;
+  font: var(--axi-t-small);
+  color: var(--axi-text-dim);
   cursor: pointer;
 }
 
 .comp-tag-popover__item:hover {
-  background: var(--panel-2);
+  background: var(--axi-ground);
+  color: var(--axi-text);
 }
 
 .comp-tag-popover__item input {
-  accent-color: var(--gold);
+  accent-color: var(--axi-accent);
 }
 
 .comp-tag-popover__add {
@@ -655,37 +709,38 @@
   gap: 4px;
   margin-top: 6px;
   padding-top: 6px;
-  border-top: 1px solid var(--panel-2);
+  border-top: var(--axi-border-hairline) solid var(--axi-rule);
 }
 
 .comp-tag-popover__input {
   flex: 1;
-  background: var(--bg-2);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-xs);
+  background: var(--axi-ground);
+  border: var(--axi-border-control) solid var(--axi-ink-line);
   padding: 3px 6px;
-  color: var(--text-light);
-  font-size: 0.8rem;
-  font-family: inherit;
+  color: var(--axi-text);
+  font: var(--axi-t-small);
   outline: none;
 }
 
 .comp-tag-popover__input:focus {
-  border-color: var(--accent);
+  border-color: var(--axi-accent);
 }
 
 .comp-tag-popover__add-btn {
   all: unset;
   padding: 3px 8px;
-  border-radius: var(--radius-xs);
-  font-size: 0.75rem;
-  color: var(--gold);
-  background: rgba(200, 169, 110, 0.12);
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
+  text-transform: uppercase;
+  color: var(--axi-accent-ink);
+  background: var(--axi-accent);
   cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.1s;
 }
 
 .comp-tag-popover__add-btn:hover {
-  background: rgba(200, 169, 110, 0.2);
+  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  transform: translate(-2px, -2px);
 }
 
 /* ═══════════════════════════════════════════════════════════════════

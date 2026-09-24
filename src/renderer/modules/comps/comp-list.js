@@ -13,7 +13,7 @@ import { openCompTagPopover, collectAllCompTags } from "./comp-tags.js";
 import { showToast } from "../library/toast.js";
 import { showChoiceModal } from "../choice-modal.js";
 import { askAboutDuplicates } from "../library/import-dedupe.js";
-import { professionColour } from "../../../shared/professions.js";
+import { professionSeriesStyle } from "../../../shared/professions.js";
 
 // ─── Shared folder helpers ───────────────────────────────────────────────────
 
@@ -302,9 +302,9 @@ function renderExpandedRow(comp) {
       </div>
       <div class="comp-list-row__bottom">
         <div class="comp-list-row__prof-icons">${profIcons}</div>
-        <span class="comp-list-row__pipe">|</span>
+        <span class="comp-list-row__sep"></span>
         <span class="comp-list-row__summary">${partySummary}</span>
-        <span class="comp-list-row__pipe">|</span>
+        <span class="comp-list-row__sep"></span>
         ${boonHtml}
         <span class="comp-list-row__tags-right">${tags}</span>
       </div>
@@ -382,8 +382,7 @@ function renderProfessionIcons(comp) {
 
   const icons = specs.map(({ specName, profession }) => {
     const svg = getProfessionSvg(specName) || getProfessionSvg(profession) || "";
-    const color = professionColour(profession);
-    return `<span class="comp-list-row__prof-icon ${profClass(profession)}" style="background:${color}" title="${escapeHtml(specName)}">${svg}</span>`;
+    return `<span class="comp-list-row__prof-icon ${profClass(profession)}" style="${professionSeriesStyle(profession)}" title="${escapeHtml(specName)}">${svg}</span>`;
   }).join("");
 
   return icons + overflow;
