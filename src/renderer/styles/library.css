@@ -562,21 +562,20 @@
   border: none;
   cursor: pointer;
   padding: 2px;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
   display: inline-flex;
   align-items: center;
   vertical-align: middle;
   flex-shrink: 0;
-  border-radius: 3px;
   transition: color 0.1s;
 }
 
 .lib-pin-btn:hover {
-  color: var(--muted);
+  color: var(--axi-text-dim);
 }
 
 .lib-pin-btn--active {
-  color: var(--gold);
+  color: var(--axi-accent);
 }
 
 .lib-pin-btn svg {
@@ -617,7 +616,7 @@
    that filled shape already. */
 
 .lib-list-row__icon--folder {
-  color: var(--muted);
+  color: var(--axi-text-faint);
   display: inline-flex;
   align-items: center;
   flex-shrink: 0;
@@ -715,7 +714,7 @@
 
 .lib-list-row__comp-icon {
   font-size: 16px;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
 }
 
 .lib-list-row__comp-icon svg {
@@ -726,25 +725,25 @@
 
 .lib-list-row__badge {
   font-size: 0.75rem;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
   margin-left: auto;
   padding: 1px 8px;
-  background: var(--line-soft);
+  background: var(--axi-ink-line);
   white-space: nowrap;
   flex-shrink: 0;
 }
 
 .lib-tv__row--comp {
-  color: var(--muted);
+  color: var(--axi-text-faint);
   cursor: pointer;
 }
 
 .lib-icon-item--comp {
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
 }
 
 .lib-icon-item__icon--comp {
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
 }
 
 .lib-col__item--build {
@@ -753,11 +752,11 @@
 }
 
 .lib-col__item--comp {
-  color: var(--muted);
+  color: var(--axi-text-faint);
 }
 
 .lib-col__icon--comp {
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
 }
 
 /* Selection highlight — a fill, not a frame. Selection is an assertion
@@ -862,20 +861,20 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
 }
 .lib-tv__action svg { width: 14px; height: 14px; }
 .lib-tv__row--folder .lib-tv__action { cursor: pointer; }
-.lib-tv__row--folder .lib-tv__action:hover { color: var(--muted); }
+.lib-tv__row--folder .lib-tv__action:hover { color: var(--axi-text-faint); }
 
 /* Icon column */
-.lib-tv__icon { display: flex; align-items: center; justify-content: center; }
+.lib-tv__icon { display: flex; align-items: center; justify-content: center; color: var(--axi-series, var(--axi-text-faint)); }
 .lib-tv__icon svg { width: 18px; height: 18px; fill: currentColor; }
 
 .lib-table__folder-icon {
   display: inline-flex;
   align-items: center;
-  color: var(--muted);
+  color: var(--axi-text-faint);
 }
 .lib-table__folder-icon svg {
   width: 16px;
@@ -918,7 +917,7 @@
 /* Data columns */
 .lib-tv__profession,
 .lib-tv__spec {
-  color: var(--muted);
+  color: var(--axi-text-faint);
   padding: 0 8px;
   white-space: nowrap;
   overflow: hidden;
@@ -927,7 +926,7 @@
 }
 
 .lib-tv__mode {
-  color: var(--muted);
+  color: var(--axi-text-faint);
   padding: 0 8px;
   white-space: nowrap;
   overflow: hidden;
@@ -948,7 +947,7 @@
 }
 
 .lib-tv__tags {
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
   padding: 0 8px;
   white-space: nowrap;
   overflow: hidden;
@@ -958,7 +957,7 @@
 
 .lib-tv__created,
 .lib-tv__modified {
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
   padding: 0 8px;
   white-space: nowrap;
   min-width: 80px;
@@ -1193,7 +1192,7 @@
   min-width: 220px;
   max-width: 280px;
   flex-shrink: 0;
-  border-right: 1px solid var(--line-soft);
+  border-right: var(--axi-border-hairline) solid var(--axi-rule);
   overflow-y: auto;
   padding: 4px 0;
 }
@@ -1211,23 +1210,31 @@
   cursor: pointer;
   transition: background 0.1s;
   user-select: none;
-  font-size: 0.88rem;
-  color: var(--muted);
+  font: var(--axi-t-small);
+  color: var(--axi-series, var(--axi-text-faint));
 }
 
 .lib-col__item:hover {
-  background: var(--hover-subtle);
-  color: var(--text-light);
+  background: var(--axi-surface-raised);
+  color: var(--axi-text-dim);
 }
 
 .lib-col__item--selected {
-  background: var(--panel);
-  color: var(--text-light);
+  background: var(--axi-surface);
+  color: var(--axi-text-dim);
 }
 
 .lib-col__item.lib-selected {
-  background: var(--panel);
-  color: var(--text-light);
+  background: var(--axi-accent);
+  color: var(--axi-accent-ink);
+}
+
+/* The chevron recedes against the ground normally, so under the accent fill
+   it has to pick up the row's ink or it reads as disabled. The icon keeps
+   its own profession colour on purpose, same as the list and table rows'
+   spec icon — a profession's hue is not the row's to override. */
+.lib-col__item.lib-selected .lib-col__chevron {
+  color: inherit;
 }
 
 .lib-col__icon {
@@ -1237,6 +1244,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  color: var(--axi-series, var(--axi-text-faint));
 }
 
 .lib-col__icon svg {
@@ -1246,7 +1254,7 @@
 }
 
 .lib-col__icon--folder {
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
 }
 
 .lib-col__name {
@@ -1261,7 +1269,7 @@
   width: 14px;
   height: 14px;
   flex-shrink: 0;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
 }
 
 .lib-col__chevron svg {
@@ -1271,7 +1279,7 @@
 
 .lib-col__empty {
   padding: 16px;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
   font-size: 0.85rem;
   text-align: center;
   font-style: italic;
@@ -1280,10 +1288,9 @@
 /* ── Context menu ────────────────────────────────────────────────── */
 
 .lib-ctx-menu {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 7px;
-  box-shadow: var(--shadow-md);
+  background: var(--axi-surface-raised);
+  border: var(--axi-border-panel) solid var(--axi-ink-line);
+  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
   min-width: 180px;
   padding: 4px 0;
   user-select: none;
@@ -1302,30 +1309,32 @@
   gap: 8px;
   padding: 6px 10px;
   cursor: pointer;
-  font-size: 0.85rem;
-  color: var(--text-light);
+  font: var(--axi-t-small);
+  color: var(--axi-text-dim);
   transition: background 0.1s;
 }
 
 .lib-ctx-item:hover {
-  background: var(--hover-subtle);
+  background: var(--axi-ground);
+  color: var(--axi-text);
 }
 
 .lib-ctx-item--danger {
-  color: var(--danger-text);
+  color: var(--axi-danger);
 }
 
 .lib-ctx-item--danger:hover {
-  background: rgba(200, 60, 60, 0.15);
+  background: var(--axi-danger);
+  color: var(--axi-accent-ink);
 }
 
 .lib-ctx-item--header {
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
   cursor: default;
   pointer-events: none;
-  font-size: 0.88rem;
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
 }
 
 /* Disabled, but still hoverable. These carry a `title` saying why the action is
@@ -1334,7 +1343,7 @@
    needs the events blocked. Placed after --danger so a refused Delete reads as
    unavailable rather than as armed. */
 .lib-ctx-item--disabled {
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
   cursor: default;
   opacity: 0.55;
 }
@@ -1350,16 +1359,16 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
 }
 
 .lib-ctx-item--danger .lib-ctx-item__icon {
-  color: var(--danger);
+  color: var(--axi-danger);
 }
 
 /* After the danger rule, so a refused Delete does not keep a live red icon. */
 .lib-ctx-item--disabled .lib-ctx-item__icon {
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
 }
 
 .lib-ctx-item__icon svg {
@@ -1372,36 +1381,23 @@
 }
 
 .lib-ctx-item__shortcut {
-  font-size: 0.85rem;
-  color: var(--text-dim);
+  font: var(--axi-t-small);
+  color: var(--axi-text-faint);
   flex-shrink: 0;
   white-space: nowrap;
 }
 
 .lib-ctx-item__arrow {
   display: flex;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
   flex-shrink: 0;
 }
 
 .lib-ctx-sep {
-  height: 1px;
-  background: var(--line-soft);
+  height: var(--axi-border-hairline);
+  background: var(--axi-rule);
   margin: 3px 0;
 }
-
-/* ── Profession colors ───────────────────────────────────────────── */
-
-.lib-prof--guardian     { color: #6ea8ff; }
-.lib-prof--warrior      { color: #ff9944; }
-.lib-prof--necromancer  { color: #4dca7a; }
-.lib-prof--engineer     { color: #cc8844; }
-.lib-prof--ranger       { color: #77cc55; }
-.lib-prof--thief        { color: #cc6677; }
-.lib-prof--mesmer       { color: #b07acc; }
-.lib-prof--elementalist { color: #dd5555; }
-.lib-prof--revenant     { color: #aa6655; }
-.lib-prof--unknown      { color: #888; }
 
 /* Sidebar profession tints now live with the rest of .lib-nav-item, above:
    .lib-nav-item__icon reads --axi-series, which sidebar.js sets per-instance
@@ -1415,8 +1411,8 @@
   justify-content: center;
   height: 100%;
   min-height: 120px;
-  color: var(--text-dim);
-  font-size: 0.88rem;
+  font: var(--axi-t-small);
+  color: var(--axi-text-faint);
 }
 
 .lib-empty-state p {
@@ -1432,7 +1428,7 @@
 /* SortableJS drag classes */
 .lib-drag-ghost {
   opacity: 0.3;
-  background: rgba(var(--accent-rgb), 0.1) !important;
+  background: var(--axi-surface-raised) !important;
 }
 
 .lib-drag-chosen {
@@ -1445,51 +1441,38 @@
 
 .lib-drag-fallback {
   opacity: 0.9;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
   cursor: grab !important;
 }
 
 .sortable-drag {
   opacity: 0.9;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
 }
 
 .lib-drop-target {
-  outline: 2px dashed rgba(var(--accent-rgb), 0.6);
-  outline-offset: -2px;
-  background: rgba(var(--accent-rgb), 0.1) !important;
+  outline: var(--axi-border-control) dashed var(--axi-accent);
+  outline-offset: -3px;
 }
 
 .lib-breadcrumb__item.lib-drop-target {
-  outline: none;
-  box-shadow: inset 0 0 0 2px rgba(var(--accent-rgb), 0.6);
-  border-radius: 4px;
-  background: rgba(var(--accent-rgb), 0.15) !important;
+  outline: var(--axi-border-control) dashed var(--axi-accent);
   overflow: visible;
 }
 
 .lib-root-drop-zone {
   padding: 10px 16px;
   text-align: center;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
   font-size: 0.85rem;
-  border: 2px dashed var(--line);
-  border-radius: 6px;
+  border: var(--axi-border-control) dashed var(--axi-rule);
   margin: 6px 8px;
   transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
 
 .lib-root-drop-zone--active {
-  background: rgba(var(--accent-rgb), 0.1);
-  border-color: rgba(var(--accent-rgb), 0.5);
-  color: var(--muted);
-}
-
-/* ── Selection ───────────────────────────────────────────────────── */
-
-.lib-selected {
-  background: var(--panel) !important;
-  border-left: 2px solid var(--accent);
+  border-color: var(--axi-accent);
+  color: var(--axi-text);
 }
 
 /* ── Library toast ───────────────────────────────────────────────── */
@@ -1499,13 +1482,12 @@
   bottom: 20px;
   left: 50%;
   transform: translateX(-50%) translateY(8px);
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
+  background: var(--axi-surface);
+  border: var(--axi-border-panel) solid var(--axi-ink-line);
+  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
   padding: 7px 14px;
-  font-size: 0.8rem;
-  color: var(--text);
-  box-shadow: var(--shadow-sm);
+  font: var(--axi-t-small);
+  color: var(--axi-text);
   opacity: 0;
   transition: opacity 0.15s ease, transform 0.15s ease;
   pointer-events: none;
@@ -1521,8 +1503,8 @@
   opacity: 1;
   transform: translateX(-50%) translateY(0);
 }
-.lib-toast--success { border-color: var(--accent); color: var(--accent); }
-.lib-toast--error   { border-color: var(--danger);  color: var(--danger);  }
+.lib-toast--success { border-color: var(--axi-accent); color: var(--axi-accent); }
+.lib-toast--error   { border-color: var(--axi-danger); color: var(--axi-danger); }
 
 /* A toast carrying an Undo button has to take pointer events back off the base
    rule above, or the button can't be clicked (and hover can't pause the timer). */
@@ -1537,7 +1519,7 @@
   border: none;
   /* currentColor, not --line: the toast recolours itself per type, and a fixed
      dark divider disappears against the accent-tinted text. */
-  border-left: 1px solid color-mix(in srgb, currentColor 35%, transparent);
+  border-left: var(--axi-border-hairline) solid currentColor;
   padding: 2px 2px 2px 10px;
   margin: 0;
   font: inherit;
@@ -1547,25 +1529,27 @@
   opacity: 0.85;
 }
 .lib-toast__action:hover { opacity: 1; text-decoration: underline; }
-.lib-toast__action:focus-visible { outline: 1px solid currentColor; outline-offset: 2px; }
+.lib-toast__action:focus-visible { outline: var(--axi-border-control) solid currentColor; outline-offset: 2px; }
 .lib-toast--loading {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
 }
 .lib-toast--loading::before {
   content: "";
   width: 12px;
   height: 12px;
-  border: 2px solid currentColor;
+  border: var(--axi-border-control) solid currentColor;
   border-top-color: transparent;
-  border-radius: 50%;
   animation: lib-toast-spin 0.7s linear infinite;
   flex-shrink: 0;
 }
 @keyframes lib-toast-spin {
   to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lib-toast--loading::before { animation: none; }
 }
 
 /* ── Card entrance animation ────────────────────────────────────────── */
@@ -1608,7 +1592,7 @@
   align-items: center;
   vertical-align: middle;
   margin-left: 6px;
-  color: var(--accent);
+  color: var(--axi-accent);
   opacity: 0.75;
   flex-shrink: 0;
 }
@@ -1630,8 +1614,7 @@
   bottom: -2px;
   right: -4px;
   margin: 0;
-  background: var(--bg-2);
-  border-radius: 50%;
+  background: var(--axi-ground);
   padding: 1px;
   opacity: 1;
 }
@@ -1654,11 +1637,11 @@
 }
 
 .lib-nav-item__sync-indicator--syncing {
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
 }
 
 .lib-nav-item__sync-indicator--synced {
-  color: #4caf50;
+  color: var(--axi-ok);
 }
 
 /* ── Content area folder sync indicators ─────────────────────────────────── */
@@ -1675,30 +1658,30 @@
 }
 
 .lib-content-sync-indicator--syncing {
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
 }
 
 .lib-content-sync-indicator--synced {
-  color: #4caf50;
+  color: var(--axi-ok);
 }
 
 .lib-content-sync-indicator--error {
-  color: #e57373;
+  color: var(--axi-danger);
 }
 
 /* Queued locally / diverged from the team copy — shared by both badge sites. */
 .lib-content-sync-indicator--pending,
 .lib-nav-item__sync-indicator--pending {
-  color: var(--muted);
+  color: var(--axi-text-faint);
 }
 
 .lib-content-sync-indicator--conflict,
 .lib-nav-item__sync-indicator--conflict {
-  color: #f0b232;
+  color: var(--axi-warn);
 }
 
 .lib-nav-item__sync-indicator--error {
-  color: #e57373;
+  color: var(--axi-danger);
 }
 
 /* Spinner animation for syncing state */
@@ -1711,13 +1694,18 @@
   transform-origin: center;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .sync-spin { animation: none; }
+}
+
 /* ── Library banners (e.g. an orphaned legacy GitHub-org folder) ─────────── */
 .lib-banner {
   padding: 8px 12px;
-  border-radius: var(--radius-sm, 6px);
-  background: rgba(240, 178, 50, .12);
-  color: #f5d78e;
-  font-size: .8rem;
+  background: var(--axi-surface);
+  border: var(--axi-border-panel) solid var(--axi-ink-line);
+  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
+  font: var(--axi-t-small);
+  color: var(--axi-text-dim);
   margin-bottom: 8px;
   display: flex;
   align-items: center;
@@ -1726,16 +1714,19 @@
 }
 
 .lib-banner__btn {
-  background: rgba(255, 255, 255, .08);
-  border: 1px solid rgba(255, 255, 255, .16);
+  background: var(--axi-surface-raised);
+  border: var(--axi-border-control) solid var(--axi-ink-line);
   color: inherit;
-  border-radius: 4px;
   padding: 3px 8px;
   font-size: .72rem;
   cursor: pointer;
+  transition: box-shadow 0.1s, transform 0.1s;
 }
 
-.lib-banner__btn:hover { background: rgba(255, 255, 255, .14); }
+.lib-banner__btn:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+}
 
 /* ── Trash view ──────────────────────────────────────────────────────────── */
 
@@ -1750,13 +1741,13 @@
   gap: 16px;
   padding-bottom: 12px;
   margin-bottom: 8px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: var(--axi-border-hairline) solid var(--axi-rule);
 }
 
 .lib-trash__hint {
   margin: 0;
-  color: var(--muted);
-  font-size: 12px;
+  color: var(--axi-text-faint);
+  font: var(--axi-t-small);
 }
 
 .lib-trash__list {
@@ -1769,21 +1760,21 @@
   align-items: center;
   gap: 12px;
   padding: 10px 8px;
-  border-bottom: 1px solid var(--line-soft);
+  border-bottom: var(--axi-border-hairline) solid var(--axi-rule);
 }
-.lib-trash__row:hover { background: var(--panel-2); }
+.lib-trash__row:hover { background: var(--axi-surface); }
 
 .lib-trash__icon {
   display: flex;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
 }
 .lib-trash__icon svg { width: 18px; height: 18px; }
 
 .lib-trash__text { flex: 1; min-width: 0; }
 
 .lib-trash__name {
-  color: var(--text-light);
-  font-size: 13px;
+  color: var(--axi-text-dim);
+  font: var(--axi-t-small);
   /* A trashed item is not live content, so it does not get the full --text. */
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1791,13 +1782,14 @@
 }
 
 .lib-trash__meta {
-  color: var(--text-dim);
-  font-size: 11px;
+  color: var(--axi-text-faint);
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
   margin-top: 2px;
 }
 
 /* Running out of time to restore — the meta line is the thing to notice. */
-.lib-trash__row--expiring .lib-trash__meta { color: var(--danger-text); }
+.lib-trash__row--expiring .lib-trash__meta { color: var(--axi-danger); }
 
 .lib-trash__actions {
   display: flex;
@@ -1813,26 +1805,24 @@
 
 .lib-trash__btn {
   background: none;
-  border: 1px solid var(--line);
-  border-radius: 4px;
+  border: var(--axi-border-control) solid var(--axi-ink-line);
   padding: 4px 10px;
-  font: inherit;
-  font-size: 12px;
-  color: var(--text-light);
+  font: var(--axi-t-small);
+  color: var(--axi-text-dim);
   cursor: pointer;
 }
 /* The team's own deletions, below your personal rows. Separated by a rule and
    a little air so the two lists never read as one. */
 .lib-trash__team {
   margin-top: 18px;
-  border-top: 1px solid var(--line);
+  border-top: var(--axi-border-hairline) solid var(--axi-rule);
   padding-top: 10px;
 }
-.lib-trash__btn--primary:hover { border-color: var(--accent); color: var(--accent); }
+.lib-trash__btn--primary:hover { border-color: var(--axi-accent); color: var(--axi-accent); }
 
-.lib-trash__btn:hover { border-color: var(--muted); color: var(--text); }
-.lib-trash__btn--danger:hover { border-color: var(--danger); color: var(--danger-text); }
-.lib-trash__btn:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
+.lib-trash__btn:hover { border-color: var(--axi-text-faint); color: var(--axi-text); }
+.lib-trash__btn--danger:hover { border-color: var(--axi-danger); color: var(--axi-danger); }
+.lib-trash__btn:focus-visible { outline: var(--axi-border-control) solid var(--axi-accent); outline-offset: 1px; }
 
 .lib-trash--empty {
   display: flex;
@@ -1843,10 +1833,10 @@
   padding: 64px 20px;
   text-align: center;
 }
-.lib-trash__empty-icon { color: var(--text-dim); }
+.lib-trash__empty-icon { color: var(--axi-text-faint); }
 .lib-trash__empty-icon svg { width: 32px; height: 32px; }
-.lib-trash__empty-title { margin: 4px 0 0; color: var(--text-light); font-size: 14px; }
-.lib-trash__empty-hint { margin: 0; color: var(--text-dim); font-size: 12px; max-width: 40ch; }
+.lib-trash__empty-title { margin: 4px 0 0; color: var(--axi-text-dim); font: var(--axi-t-label); letter-spacing: var(--axi-ls-label); }
+.lib-trash__empty-hint { margin: 0; color: var(--axi-text-faint); font: var(--axi-t-small); max-width: 40ch; }
 
 /* ── Archive view ────────────────────────────────────────────────────────── */
 /* Structurally the trash view, tuned in the two places the difference shows:
@@ -1858,13 +1848,13 @@
 .lib-archive__header {
   padding-bottom: 12px;
   margin-bottom: 8px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: var(--axi-border-hairline) solid var(--axi-rule);
 }
 
 .lib-archive__hint {
   margin: 0;
-  color: var(--muted);
-  font-size: 12px;
+  color: var(--axi-text-faint);
+  font: var(--axi-t-small);
 }
 
 .lib-archive__list {
@@ -1877,29 +1867,30 @@
   align-items: center;
   gap: 12px;
   padding: 10px 8px;
-  border-bottom: 1px solid var(--line-soft);
+  border-bottom: var(--axi-border-hairline) solid var(--axi-rule);
 }
-.lib-archive__row:hover { background: var(--panel-2); }
+.lib-archive__row:hover { background: var(--axi-surface); }
 
 .lib-archive__icon {
   display: flex;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
 }
 .lib-archive__icon svg { width: 18px; height: 18px; }
 
 .lib-archive__text { flex: 1; min-width: 0; }
 
 .lib-archive__name {
-  color: var(--text);
-  font-size: 13px;
+  color: var(--axi-text);
+  font: var(--axi-t-small);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .lib-archive__meta {
-  color: var(--text-dim);
-  font-size: 11px;
+  color: var(--axi-text-faint);
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
   margin-top: 2px;
 }
 
@@ -1914,17 +1905,15 @@
 
 .lib-archive__btn {
   background: none;
-  border: 1px solid var(--line);
-  border-radius: 4px;
+  border: var(--axi-border-control) solid var(--axi-ink-line);
   padding: 4px 10px;
-  font: inherit;
-  font-size: 12px;
-  color: var(--text-light);
+  font: var(--axi-t-small);
+  color: var(--axi-text-dim);
   cursor: pointer;
 }
-.lib-archive__btn:hover { border-color: var(--muted); color: var(--text); }
-.lib-archive__btn--primary:hover { border-color: var(--accent); color: var(--accent); }
-.lib-archive__btn:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
+.lib-archive__btn:hover { border-color: var(--axi-text-faint); color: var(--axi-text); }
+.lib-archive__btn--primary:hover { border-color: var(--axi-accent); color: var(--axi-accent); }
+.lib-archive__btn:focus-visible { outline: var(--axi-border-control) solid var(--axi-accent); outline-offset: 1px; }
 
 .lib-archive--empty {
   display: flex;
@@ -1935,10 +1924,10 @@
   padding: 64px 20px;
   text-align: center;
 }
-.lib-archive__empty-icon { color: var(--text-dim); }
+.lib-archive__empty-icon { color: var(--axi-text-faint); }
 .lib-archive__empty-icon svg { width: 32px; height: 32px; }
-.lib-archive__empty-title { margin: 4px 0 0; color: var(--text-light); font-size: 14px; }
-.lib-archive__empty-hint { margin: 0; color: var(--text-dim); font-size: 12px; max-width: 46ch; }
+.lib-archive__empty-title { margin: 4px 0 0; color: var(--axi-text-dim); font: var(--axi-t-label); letter-spacing: var(--axi-ls-label); }
+.lib-archive__empty-hint { margin: 0; color: var(--axi-text-faint); font: var(--axi-t-small); max-width: 46ch; }
 
 /* Archive and Trash both live at the bottom of the sidebar. The `margin-top:
    auto` has to be on whichever comes first, so it is claimed here and the trash
@@ -1947,7 +1936,7 @@
 .lib-sidebar__section--archive {
   margin-top: auto;
   padding-top: 8px;
-  border-top: 1px solid var(--line-soft);
+  border-top: var(--axi-border-hairline) solid var(--axi-rule);
 }
 .lib-sidebar__section--archive + .lib-sidebar__section--trash {
   margin-top: 0;
@@ -1959,7 +1948,7 @@
 .lib-sidebar__section--trash {
   margin-top: auto;
   padding-top: 8px;
-  border-top: 1px solid var(--line-soft);
+  border-top: var(--axi-border-hairline) solid var(--axi-rule);
 }
 
 /* ══ Import Dedupe ══════════════════════════════════════════════════════════
@@ -1971,10 +1960,10 @@
   padding-left: 18px;
   max-height: 180px;
   overflow-y: auto;
-  font-size: 0.82rem;
-  color: var(--text-dim);
+  font: var(--axi-t-small);
+  color: var(--axi-text-faint);
 }
 
 .import-dedupe__list li { margin-bottom: 4px; }
 
-.import-dedupe__list strong { color: var(--text); font-weight: 600; }
+.import-dedupe__list strong { color: var(--axi-text); font-weight: 600; }

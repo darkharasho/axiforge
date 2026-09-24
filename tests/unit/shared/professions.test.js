@@ -79,10 +79,12 @@ describe("the palette has one home", () => {
         // src/site and packages/forge-render convert in batch 5.
         if (rel.startsWith(path.join("src", "site"))) continue;
         if (rel.startsWith("packages")) continue;
-        // These two still carry the palette as CSS classes. Task 5 deletes
-        // library.css's copy and Task 11 deletes comps.css's; when both are
-        // done, delete these two lines and the test covers the whole app.
-        if (rel === path.join("src", "renderer", "styles", "library.css")) continue;
+        // These two still carry the palette as CSS classes. Task 6 moved
+        // library.css's copy into professions-legacy.css (Ruling 11 — three
+        // screens still emit profClass() and have not been converted), and
+        // Task 11 deletes both that file and comps.css's own copy; when both
+        // are done, delete these two lines and the test covers the whole app.
+        if (rel === path.join("src", "renderer", "styles", "professions-legacy.css")) continue;
         if (rel === path.join("src", "renderer", "styles", "comps.css")) continue;
         const text = fs.readFileSync(full, "utf8").toLowerCase();
         for (const c of colours) if (text.includes(c)) offenders.push(`${rel}: ${c}`);

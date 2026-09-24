@@ -1,0 +1,30 @@
+/* TEMPORARY — deleted by Task 11 of batch 2.
+   The last ten profession colour rules in renderer CSS. They are a deliberate,
+   recorded exception to the "CSS never names a profession" constraint, kept
+   alive only because three screens still emit profClass() and have not been
+   converted yet:
+
+     .bsm-icon          build-sources-modal.js:172   — Task 8 drops it
+     comp-list rows     comp-list.js, renderer.js    — Task 10 drops it
+     comp-detail rows   comp-detail.js (five sites)  — Task 11 drops it
+
+   Task 11 is the last of those, and deletes this file and the @import beside
+   it. The palette these duplicate is src/shared/professions.js; converted
+   markup reads it as style="--axi-series: …" instead.
+
+   This file is in PENDING in tests/unit/styles/axi-design-rules.test.js. It
+   is the only place in renderer CSS where a profession hex may appear.
+
+   src/site/styles.css holds a separate copy for the published SPA. That one
+   belongs to a later batch — do not fold it in here. */
+
+.lib-prof--guardian     { color: #6ea8ff; }
+.lib-prof--warrior      { color: #ff9944; }
+.lib-prof--necromancer  { color: #4dca7a; }
+.lib-prof--engineer     { color: #cc8844; }
+.lib-prof--ranger       { color: #77cc55; }
+.lib-prof--thief        { color: #cc6677; }
+.lib-prof--mesmer       { color: #b07acc; }
+.lib-prof--elementalist { color: #dd5555; }
+.lib-prof--revenant     { color: #aa6655; }
+.lib-prof--unknown      { color: #888; }

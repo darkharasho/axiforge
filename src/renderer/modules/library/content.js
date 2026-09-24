@@ -179,11 +179,6 @@ function getEliteSpecName(build) {
   return null;
 }
 
-function profClass(profession) {
-  if (!profession) return "";
-  return `lib-prof--${profession.toLowerCase()}`;
-}
-
 function formatDate(value) {
   return formatRelativeTime(value) || "—";
 }
@@ -420,7 +415,7 @@ function renderTableView(container) {
       <li class="lib-tv__item" data-build-id="${escapeHtml(b.id)}">
         <div class="lib-tv__row lib-tv__row--build ${b.pinned ? "lib-tv__row--pinned" : ""}">
           <span class="lib-tv__action">${pinStarHtml(b)}</span>
-          <span class="lib-tv__icon ${profClass(b.profession)}">${getSpecIcon(b)}</span>
+          <span class="lib-tv__icon" style="${professionSeriesStyle(b.profession)}">${getSpecIcon(b)}</span>
           <span class="lib-tv__name"><span class="lib-tv__title">${escapeHtml(b.title || "Untitled")}</span>${folderPathHtml(b)}${itemSyncIndicatorHtml("build", b)}${buildUsageChipHtml(b, { compact: true })}</span>
           <span class="lib-tv__profession">${escapeHtml(b.profession || "")}</span>
           <span class="lib-tv__spec">${escapeHtml(eliteSpec || "")}</span>
@@ -727,9 +722,10 @@ function renderColumnsView(container) {
           ? foreignFolderChipHtml(b, colComp)
           : buildUsageChipHtml(b, { compact: true });
         items.push(`
-          <div class="lib-col__item lib-col__item--build ${profClass(b.profession)}"
+          <div class="lib-col__item lib-col__item--build"
+               style="${professionSeriesStyle(b.profession)}"
                data-build-id="${escapeHtml(b.id)}" data-col-index="${colIndex}">
-            <span class="lib-col__icon ${profClass(b.profession)}">${getSpecIcon(b)}</span>
+            <span class="lib-col__icon" style="${professionSeriesStyle(b.profession)}">${getSpecIcon(b)}</span>
             <span class="lib-col__name">${escapeHtml(b.title || "Untitled")}${folderPathHtml(b)}${itemSyncIndicatorHtml("build", b)}</span>
             ${roleBadgeHtml(b, state.upgradeCatalog)}${sourceChip}
           </div>

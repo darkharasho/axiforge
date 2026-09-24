@@ -23,6 +23,7 @@
 @import "./styles/team-modal.css";
 @import "./styles/settings-modal.css";
 @import "./styles/library.css";
+@import "./styles/professions-legacy.css";
 @import "./styles/comps.css";
 @import "./styles/build-sources.css";
 @import "../../packages/forge-render/src/forge-render.css";
