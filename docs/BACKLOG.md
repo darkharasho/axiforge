@@ -700,14 +700,19 @@ Status key: `[ ]` open · `[x]` done · `[~]` in progress · `[?]` needs repro s
 - [ ] **Users lost the per-theme backgrounds of the 8 full themes** (Molten
   Core, Frostforge, …). The design language has one ground; those themes are
   accents now. Raised deliberately in the conversion spec, not a regression.
-- [ ] **`tests/unit/renderer/asset-urls.test.js` should reject a bare
+- [ ] **`tests/unit/styles/asset-urls.test.js` should reject a bare
   leading-slash asset path** (`startsWith("/")`), which it currently permits.
   A parked Minor from an earlier task in this batch — worth closing before it
   becomes load-bearing behaviour someone codes against.
-- [ ] **The app carries three copies of its glyph SVG** — `src/renderer/svg/`,
-  and the web and site copies — which can drift independently. Generate the
-  web/site copies from the one renderer source at build time, or add a test
-  that diffs all three for equality.
+- [ ] **The app carries three byte-identical copies of its glyph SVG** —
+  `src/renderer/styles/svg/axiforge-glyph.svg` (the renderer's, referenced by
+  `src/renderer/index.html` and `src/renderer/styles/app.css`),
+  `src/web/public/svg/axiforge-glyph.svg` (the web playground's, referenced by
+  `src/web/chrome.js`) and `public/svg/axiforge-glyph.svg` (the site's —
+  `src/site/vite.config.js:12` sets `publicDir` to the repo-root `public/`).
+  They can drift independently. Generate the web and site copies from the
+  renderer source at build time, or add a test that diffs all three for
+  equality.
 - [ ] **`.af-btn--danger` doesn't carry the resting offset block that
   `.axi-btn--primary` gets from the package.** It's a solid status fill, so on
   `:hover`/`:active` it lifts from flat instead of dropping from an
