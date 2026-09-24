@@ -690,3 +690,27 @@ Status key: `[ ]` open · `[x]` done · `[~]` in progress · `[?]` needs repro s
   raw ids stay on `before`/`after` so `applyOps` is untouched. Entries written
   before this still print ids in the list, but the compare modal resolves them
   from the documents it already loads.
+
+## axi-design conversion — follow-ups
+
+- [ ] **Convert AxiVale and AxiBridge to axi-design.** They embed
+  `packages/forge-render`, whose conversion in batch 5 changes the *form* of
+  their embedded cards (square corners, ink outlines, hard blocks) while
+  leaving their palette intact via `var(--axi-…, #literal)` fallbacks.
+- [ ] **Users lost the per-theme backgrounds of the 8 full themes** (Molten
+  Core, Frostforge, …). The design language has one ground; those themes are
+  accents now. Raised deliberately in the conversion spec, not a regression.
+- [ ] **`tests/unit/renderer/asset-urls.test.js` should reject a bare
+  leading-slash asset path** (`startsWith("/")`), which it currently permits.
+  A parked Minor from an earlier task in this batch — worth closing before it
+  becomes load-bearing behaviour someone codes against.
+- [ ] **The app carries three copies of its glyph SVG** — `src/renderer/svg/`,
+  and the web and site copies — which can drift independently. Generate the
+  web/site copies from the one renderer source at build time, or add a test
+  that diffs all three for equality.
+- [ ] **`.af-btn--danger` doesn't carry the resting offset block that
+  `.axi-btn--primary` gets from the package.** It's a solid status fill, so on
+  `:hover`/`:active` it lifts from flat instead of dropping from an
+  already-offset rest state like the primary button does — a visual-parity
+  question for whoever next touches the button set
+  (`.af-btn--danger` in `src/renderer/styles/app.css`).
