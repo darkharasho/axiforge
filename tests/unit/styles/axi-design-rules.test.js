@@ -79,19 +79,7 @@ const PENDING = [
 
 const CONVERTED = APP_CSS.filter((f) => !PENDING.includes(f));
 
-// Renderer modules that build a stylesheet as a string and inject it. The
-// rules apply to CSS, not to the file extension it arrives in: these two
-// sheets are as live as any partial, and until this list existed nothing in
-// the repo scanned them. They belong to the library screen (batch 2), so they
-// are acknowledged here the way PENDING acknowledges a stylesheet — every
-// OTHER renderer JS file is enforced from now on, so a new injected sheet
-// cannot appear unscanned. Batch 2 must empty this list (converting the CSS in
-// place or moving it into library.css) at the same time it drops library.css
-// from PENDING.
-const PENDING_JS = [
-  "src/renderer/modules/library/history-panel.js",
-  "src/renderer/modules/library/history-compare.js",
-];
+const PENDING_JS = [];
 
 // --- the scanners ---------------------------------------------------------
 
@@ -417,21 +405,16 @@ describe("axi design language rules", () => {
     const rendererJs = jsFilesUnder("src/renderer");
     const enforced = rendererJs.filter((f) => !PENDING_JS.includes(f));
 
-    it("finds the two known injected stylesheets", () => {
-      // Proven, not assumed: the extraction has to actually reach these blocks
-      // or the whole scan below is a no-op that reports success.
-      for (const file of PENDING_JS) {
-        const blocks = injectedCssBlocks(fs.readFileSync(path.join(ROOT, file), "utf8"));
-        expect(blocks.length).toBeGreaterThan(0);
-        expect(blocks.join("\n")).toMatch(/linear-gradient\(180deg/);
-        expect(findGradients(blocks.join("\n")).length).toBeGreaterThan(0);
-        expect(findColourLiterals(blocks.join("\n")).length).toBeGreaterThan(0);
-      }
-    });
-
-    it("names every pending JS file as one that exists and injects CSS", () => {
-      for (const file of PENDING_JS) {
-        expect(rendererJs).toContain(file);
+    it("still finds blocks in the app's real injected stylesheets", () => {
+      // The synthetic cases above could pass against an extractor that only
+      // handles the shapes they were written for, and the scan loop skips any
+      // file it finds no blocks in -- so a broken extractor reports success
+      // over an unscanned repo. These are the real files, named directly
+      // rather than through PENDING_JS, which is empty from this task on.
+      for (const file of ["src/renderer/modules/library/history-panel.js",
+                          "src/renderer/modules/library/history-compare.js"]) {
+        expect(injectedCssBlocks(fs.readFileSync(path.join(ROOT, file), "utf8")).length)
+          .toBeGreaterThan(0);
       }
     });
 
