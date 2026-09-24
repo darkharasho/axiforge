@@ -276,7 +276,10 @@ batch.
 `base.css` + `themes.css` deleted; `app.css` and `bridge.css` created;
 `accents.js` + the picker + the publish-boundary ids; then `layout.css`
 (titlebar, left nav, subnav, pages), `buttons.css`, `forms.css`,
-`custom-select.css`. This batch sets every pattern the rest of the app copies —
+`custom-select.css`, and the `.btn` / `.btn-primary` / `.btn-secondary` /
+`.btn-danger` rules — which live in `cards.css:18-70`, not `buttons.css`, but
+are chrome primitives 49 markup sites depend on, so they convert here rather
+than in batch 2. This batch sets every pattern the rest of the app copies —
 window, panel, button, input, select, nav item, eyebrow — and is the one to
 review closely.
 
@@ -317,6 +320,11 @@ Per batch, in order:
    - `box-shadow` not matching `<offset> <offset> 0 var(--axi-ink-line)`;
      `drop-shadow`; `text-shadow`
    - `gradient` — exception: none in this app.
+   - `color-mix` — the app's current idiom for a muted ink is
+     `color-mix(in srgb, var(--accent) 12%, transparent)`, which is rule 2's
+     violation written a third way. Zero occurrences, no exception.
+   - `backdrop-filter` — the titlebar currently blurs what is behind it.
+     Zero occurrences, no exception.
    - `opacity` on a colour-bearing rule, reviewed by hand rather than grepped,
      since opacity on a whole element (a dragging card) stays legal.
 2. **`npm test`** (jest, configured under the `jest` key in `package.json`) —
