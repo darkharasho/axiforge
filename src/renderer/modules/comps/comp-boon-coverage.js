@@ -280,21 +280,22 @@ function _renderBoonPills(boonMap, lineLabel) {
       ? escapeHtml(JSON.stringify(entry.providers))
       : "[]";
 
+    const tag = covered ? "button" : "div";
+    const typeAttr = covered ? ' type="button"' : "";
+    const interactiveAttrs = covered ? ' data-clickable="true" aria-expanded="false"' : "";
     return `
-      <div class="party-cov__pill axi-pill party-cov__pill--boon ${covered ? "" : "party-cov__pill--uncovered"}"
-           aria-pressed="${covered}"
+      <${tag}${typeAttr} class="party-cov__pill axi-pill party-cov__pill--boon ${covered ? "" : "party-cov__pill--uncovered"}"
            data-category="boon"
            data-boon-name="${escapeHtml(boonName)}"
            data-has-ally="${hasAllySource}"
            data-count="${count}"
            data-providers="${providersJson}"
-           data-line-label="${escapeHtml(lineLabel)}"
-           ${covered ? 'data-clickable="true" aria-expanded="false"' : ""}>
+           data-line-label="${escapeHtml(lineLabel)}"${interactiveAttrs}>
         <img src="${escapeHtml(icon)}" width="20" height="20" alt="${escapeHtml(boonName)}"
              class="party-cov__pill-icon" />
         <span class="party-cov__pill-name">${escapeHtml(boonName)}</span>
         ${count > 1 ? `<span class="party-cov__pill-badge">&times;${count}</span>` : ""}
-      </div>`;
+      </${tag}>`;
   }).join("");
 }
 
@@ -317,20 +318,22 @@ function _renderConditionPills(condMap, lineLabel) {
       ? ""
       : (selfOnly ? "party-cov__pill--self-condi" : "party-cov__pill--uncovered");
 
+    const clickable = covered || selfOnly;
+    const tag = clickable ? "button" : "div";
+    const typeAttr = clickable ? ' type="button"' : "";
+    const interactiveAttrs = clickable ? ' data-clickable="true" aria-expanded="false"' : "";
     return `
-      <div class="party-cov__pill axi-pill party-cov__pill--condi ${stateClass}"
-           aria-pressed="${covered}"
+      <${tag}${typeAttr} class="party-cov__pill axi-pill party-cov__pill--condi ${stateClass}"
            data-category="condition"
            data-condition-name="${escapeHtml(condName)}"
            data-count="${count}"
            data-providers="${providersJson}"
-           data-line-label="${escapeHtml(lineLabel)}"
-           ${covered || selfOnly ? 'data-clickable="true" aria-expanded="false"' : ""}>
+           data-line-label="${escapeHtml(lineLabel)}"${interactiveAttrs}>
         <img src="${escapeHtml(icon)}" width="20" height="20" alt="${escapeHtml(condName)}"
              class="party-cov__pill-icon" />
         <span class="party-cov__pill-name">${escapeHtml(condName)}</span>
         ${count > 1 ? `<span class="party-cov__pill-badge">&times;${count}</span>` : ""}
-      </div>`;
+      </${tag}>`;
   }).join("");
 }
 
@@ -344,20 +347,18 @@ function _renderFieldPills(fieldMap, lineLabel) {
       const sourcesJson = escapeHtml(JSON.stringify(entry.sources));
 
       return `
-        <div class="party-cov__pill axi-pill party-cov__pill--field"
-             aria-pressed="true"
+        <button type="button" class="party-cov__pill axi-pill party-cov__pill--field"
              data-category="field"
              data-field-type="${escapeHtml(fieldType)}"
              data-count="${count}"
              data-sources="${sourcesJson}"
              data-line-label="${escapeHtml(lineLabel)}"
              data-clickable="true"
-             aria-expanded="false"
              style="--axi-series: ${colors.text};">
           <span class="party-cov__pill-emoji">${colors.emoji || ""}</span>
           <span class="party-cov__pill-name">${escapeHtml(fieldType)}</span>
           ${count > 1 ? `<span class="party-cov__pill-badge">&times;${count}</span>` : ""}
-        </div>`;
+        </button>`;
     }).join("");
 }
 
@@ -371,20 +372,18 @@ function _renderFinisherPills(finisherMap, lineLabel) {
       const sourcesJson = escapeHtml(JSON.stringify(entry.sources));
 
       return `
-        <div class="party-cov__pill axi-pill party-cov__pill--finisher"
-             aria-pressed="true"
+        <button type="button" class="party-cov__pill axi-pill party-cov__pill--finisher"
              data-category="finisher"
              data-finisher-type="${escapeHtml(finisherType)}"
              data-count="${count}"
              data-sources="${sourcesJson}"
              data-line-label="${escapeHtml(lineLabel)}"
              data-clickable="true"
-             aria-expanded="false"
              style="--axi-series: ${colors.text};">
           <span class="party-cov__pill-emoji">${colors.emoji || ""}</span>
           <span class="party-cov__pill-name">${escapeHtml(finisherType)}</span>
           ${count > 1 ? `<span class="party-cov__pill-badge">&times;${count}</span>` : ""}
-        </div>`;
+        </button>`;
     }).join("");
 }
 
@@ -564,7 +563,11 @@ let _skillTooltip = null;
 function _closeExpand() {
   if (!_activeExpand) return;
   _activeExpand.expandEl.classList.remove("party-cov__expand--open");
-  _activeExpand.pillEl.setAttribute("aria-expanded", "false");
+  // Field/finisher pills carry no aria-expanded (they are not a toggle — see
+  // the render functions), so only touch it on the categories that do.
+  if (_activeExpand.pillEl.hasAttribute("aria-expanded")) {
+    _activeExpand.pillEl.setAttribute("aria-expanded", "false");
+  }
   _activeExpand = null;
 }
 
@@ -653,14 +656,15 @@ export function bindPartyCoverageEvents(container) {
         const totalCount = Number(pill.dataset.count) || 0;
         if (!totalCount) return; // naturally uncovered, leave as-is
         if (!showSelf && !hasAlly) {
+          // Not a status assertion while every source is hidden, and not a
+          // control either — the click handler already no-ops for
+          // self-only pills, so it carries no expand state to announce.
+          if (_activeExpand?.pillEl === pill) _closeExpand();
           pill.classList.add("party-cov__pill--self-only");
-          // Not a status assertion while every source is hidden — drop the
-          // pressed fill so .axi-pill reads it as unpressed, same as
-          // self-condi/uncovered.
-          pill.setAttribute("aria-pressed", "false");
+          pill.removeAttribute("aria-expanded");
         } else {
           pill.classList.remove("party-cov__pill--self-only");
-          pill.setAttribute("aria-pressed", "true");
+          pill.setAttribute("aria-expanded", "false");
         }
         // Recount providers based on toggle — count only providers with ally sources when self is off
         let visibleCount = totalCount;
@@ -704,7 +708,7 @@ export function bindPartyCoverageEvents(container) {
       });
     });
     // Apply initial state (toggle is unchecked = hide self-only)
-    toggle.dispatchEvent(new Event("change"));
+    toggle.dispatchEvent(new Event("click"));
   });
 
   // Click to expand pills
@@ -750,7 +754,9 @@ export function bindPartyCoverageEvents(container) {
       }
 
       expandEl.innerHTML = html;
-      pillEl.setAttribute("aria-expanded", "true");
+      if (pillEl.hasAttribute("aria-expanded")) {
+        pillEl.setAttribute("aria-expanded", "true");
+      }
       _activeExpand = { expandEl, pillEl };
 
       // Apply current self-toggle state to newly rendered SELF source rows + update count

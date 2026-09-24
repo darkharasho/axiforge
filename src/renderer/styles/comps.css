@@ -2025,25 +2025,20 @@
   flex-wrap: wrap;
 }
 
-/* .axi-pill carries the box: a full ink-line edge at rest (rule 3 — the
-   old local rule set a transparent border, so the hover block appeared with
-   no outline under it), the pressed fill driven by --axi-pill-fill, its own
-   type (uppercase label, matching every other pill in the app), and rule 4
-   case iii's pressed-hover cascade (axi.css:262-267) — a control already on
-   a block does not translate at rest and only deepens its block on hover,
-   which the old hand-rolled `.party-cov__pill--active` rule got backwards by
-   applying the same hover values at rest. Padding is the row's compact size
-   instead of the pill's full form padding. */
+/* .axi-pill carries the box: a full ink-line edge at rest (rule 3 — the old
+   local rule set a transparent border, so the hover block appeared with no
+   outline under it) and its own type (uppercase label, matching every other
+   pill in the app). Clickable pills are real <button>s now (fix round 2),
+   so focus/Enter/Space come from the element itself; the fill below is
+   driven by a modifier class, not a faked aria-pressed — covered/field/
+   finisher is status (rule 5), not a toggle position the user controls, and
+   an ARIA attribute is a statement about semantics that styling may
+   observe, not a paint switch. Padding is the row's compact size instead of
+   the pill's full form padding. */
 .party-cov__pill {
   padding: 3px 8px;
 }
 
-/* Filled asserts a value (rule 5): a boon/condition pill reports the party's
-   actual coverage, so it takes the status ink at full strength, through
-   --axi-pill-fill (aria-pressed="true" is what actually paints it). Field
-   and finisher pills are domain data (nine combo fields, four finisher
-   types), so their fill comes through --axi-series, the same knob a
-   profession or a card strip reads — set per-instance from constants.js. */
 .party-cov__pill--boon { --axi-pill-fill: var(--axi-ok); }
 .party-cov__pill--condi { --axi-pill-fill: var(--axi-danger); }
 .party-cov__pill--field,
@@ -2051,22 +2046,83 @@
   --axi-pill-fill: var(--axi-series, var(--axi-accent));
 }
 
+/* Filled asserts a value (rule 5): a boon/condition pill reports the
+   party's actual coverage, and a field/finisher pill is domain data
+   (--axi-series, the same knob a profession or a card strip reads), so all
+   four take their fill unconditionally through --axi-pill-fill. The hover
+   variant is named explicitly at equal specificity to the package's own
+   .axi-pill:hover (axi.css) — a bare :hover would otherwise win outright
+   (two selector parts beat our one), reset the colour, and paint the
+   package's un-filled hover box instead of deepening ours (rule 4 case
+   iii: a control already on a block does not translate at rest and only
+   deepens on hover, keeping the translate). */
+.party-cov__pill--boon,
+.party-cov__pill--condi,
+.party-cov__pill--field,
+.party-cov__pill--finisher {
+  background: var(--axi-pill-fill);
+  color: var(--axi-accent-ink);
+  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+}
+.party-cov__pill--boon:hover,
+.party-cov__pill--condi:hover,
+.party-cov__pill--field:hover,
+.party-cov__pill--finisher:hover {
+  background: var(--axi-pill-fill);
+  color: var(--axi-accent-ink);
+  box-shadow: var(--axi-offset-control-hover) var(--axi-offset-control-hover) 0 var(--axi-ink-line);
+  transform: translate(-2px, -2px);
+}
+
 /* Sources exist, but every one of them is self-inflicted (e.g. Corrupt Boon's
    "Poison yourself") — not coverage, but distinct from a plain gap and still
-   clickable so the user can see why. aria-pressed stays false: these three
-   are commentary about the coverage, not a status assertion, so they keep
-   the pill's own unpressed ground rather than a fill. */
-.party-cov__pill--self-condi {
+   clickable so the user can see why. Outlined rather than filled: these are
+   commentary about the coverage, not a status assertion, so they override
+   the filled rule above back to the pill's own quiet ground. Named as a
+   compound with the category class so the override is never weaker than
+   the filled rule it is cancelling (the same trap build-sources.css:50-61
+   documents — a bare modifier would tie with .axi-pill:hover on
+   specificity and could lose on source order alone). */
+.party-cov__pill--condi.party-cov__pill--self-condi {
+  background: var(--axi-ground);
+  color: var(--axi-text-dim);
   border-style: dashed;
+}
+.party-cov__pill--condi.party-cov__pill--self-condi:not(:hover) {
+  box-shadow: none;
 }
 
 .party-cov__pill--self-condi .party-cov__pill-icon {
   opacity: 0.4;
 }
 
-.party-cov__pill--uncovered,
-.party-cov__pill--self-only {
+/* Uncovered is a status too — the absence of one — and it is never
+   clickable, so both rest and hover reset to the quiet ground and the
+   package's unconditional hover lift is switched off outright. */
+.party-cov__pill--boon.party-cov__pill--uncovered,
+.party-cov__pill--boon.party-cov__pill--uncovered:hover,
+.party-cov__pill--condi.party-cov__pill--uncovered,
+.party-cov__pill--condi.party-cov__pill--uncovered:hover {
+  background: var(--axi-ground);
+  color: var(--axi-text-dim);
+  box-shadow: none;
+  transform: none;
   cursor: default;
+}
+
+/* Self-only (every source hidden by the self-boon toggle) is the same
+   commentary-not-status case as self-condi, but reached at runtime by
+   toggling this class rather than at render time — see the toggle handler.
+   It stays clickable (case-i hover lift from .axi-pill still applies; only
+   box-shadow is pinned back to none outside of :hover so the lift can
+   still show). */
+.party-cov__pill--boon.party-cov__pill--self-only {
+  background: var(--axi-ground);
+  color: var(--axi-text-dim);
+  cursor: default;
+}
+.party-cov__pill--boon.party-cov__pill--self-only:not(:hover) {
+  box-shadow: none;
 }
 
 .party-cov__pill--self-only .party-cov__pill-icon {
@@ -2075,24 +2131,6 @@
 
 .party-cov__pill--self-only .party-cov__pill-badge {
   color: var(--axi-text-faint);
-}
-
-/* Uncovered/self-only are never clickable (no data-clickable), so the
-   package's own :hover lift — which .axi-pill applies unconditionally —
-   is switched back off for them; they are informational, not a control. */
-.party-cov__pill:not([data-clickable="true"]):hover {
-  box-shadow: none;
-  transform: none;
-}
-
-/* A clickable pill with nothing resting under it (self-condi, unpressed)
-   keeps the case-i lift while its source panel is open, the same shape a
-   hover shows — a pressed pill's own fill and block already carry that
-   "this one" weight while expanded, and .axi-pill's own pressed-hover rule
-   covers the rest, so it needs nothing extra here. */
-.party-cov__pill[aria-pressed="false"][aria-expanded="true"] {
-  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
-  transform: translate(-2px, -2px);
 }
 
 .party-cov__pill-icon {
@@ -2525,8 +2563,7 @@
    its own .axi-btn/.axi-pill/etc. */
 @media (prefers-reduced-motion: reduce) {
   .comp-slot--filled:hover,
-  .party-cov__pill[data-clickable="true"]:hover,
-  .party-cov__pill[aria-pressed="false"][aria-expanded="true"] {
+  .party-cov__pill:hover {
     transform: none !important;
   }
 }
