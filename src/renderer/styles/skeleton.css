@@ -15,13 +15,14 @@
 
 /* A loading placeholder pulses rather than sweeping: a sweep needs a
    gradient travelling across a surface, and the one compositor-only property
-   that can carry it here is opacity on a flat block. */
-@keyframes af-skel {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.55; }
-}
+   that can carry it here is opacity on a flat block. Shares app.css's
+   @keyframes af-pulse (the work-indicator idiom) rather than defining its
+   own — same shape, a shallower dip: a whole grid of these dipping to the
+   work dot's .25 in unison reads worse than .55, so this sets its own
+   --af-pulse-dim instead of forking the keyframes. */
 .skel {
-  animation: af-skel 1.4s ease-in-out infinite;
+  --af-pulse-dim: .55;
+  animation: af-pulse 1.4s ease-in-out infinite;
   animation-delay: 150ms;
   animation-fill-mode: both;
 }
@@ -465,14 +466,15 @@
   flex-shrink: 0;
 }
 
-/* Grid card glyph placeholder — sized to .af-tile__glyph's 34px content box
-   (its 40px outer edge minus a --axi-border-control step on each side), so
-   the border added below reproduces the real element's 40px footprint
-   instead of drawing a plain 40px block over it. */
+/* Grid card glyph placeholder — this div sits INSIDE a real .af-tile__glyph
+   (skeleton.js), which already draws the 40px box and its own
+   --axi-border-control ink ring (library.css). With the app's global
+   box-sizing: border-box, that leaves a 34px content box for this element to
+   fill exactly — so it takes no border of its own; one would double the
+   ring the real glyph already draws around it. */
 .skel-lib-card-icon {
   width: 34px;
   height: 34px;
-  border: var(--axi-border-control) solid var(--axi-ink-line);
   flex-shrink: 0;
 }
 

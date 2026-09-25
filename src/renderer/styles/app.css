@@ -91,9 +91,13 @@ a { color: var(--axi-accent); }
 /* --- work indicator ---
    Compositor-only (rule 11). These report on a save, a publish or a sync, all
    of which can block the main thread; anything animated by layout or paint
-   would freeze exactly when it most needs to look alive. */
-@keyframes af-work { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
-.af-work { animation: af-work 1.1s ease-in-out infinite; }
+   would freeze exactly when it most needs to look alive. Shared with
+   skeleton.css's .skel loading placeholders — same idiom, two depths: a
+   single work dot needs the deeper .25 dip to read as one thing pulsing,
+   while a whole grid of skeleton blocks dipping that far in unison is worse
+   than the shallower .55 skeleton.css asks for via --af-pulse-dim. */
+@keyframes af-pulse { 0%, 100% { opacity: 1; } 50% { opacity: var(--af-pulse-dim, .25); } }
+.af-work { animation: af-pulse 1.1s ease-in-out infinite; }
 
 /* --- accent crossfade, toggled by applyAccent() for 500ms --- */
 
