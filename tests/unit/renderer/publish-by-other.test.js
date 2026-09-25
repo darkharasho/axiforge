@@ -39,3 +39,26 @@ test("publishedByOtherBody escapes the login itself", () => {
 test("publishedByOtherBody renders an ordinary login unchanged", () => {
   expect(publishedByOtherBody("vette")).toContain("<strong>vette</strong>");
 });
+
+// Electron wraps a handler rejection: ipcRenderer.invoke rejects with
+// "Error invoking remote method '<channel>': Error: <original message>". The
+// sentinel therefore never arrives at the START of the message in the real app,
+// only in hand-rolled mocks — which is how this shipped broken.
+test("recognises the sentinel inside Electron's wrapped IPC message", async () => {
+  const wrapped = "Error invoking remote method 'builds:publish-build': Error: PUBLISHED_BY_OTHER:skavok";
+  const invoke = jest.fn(async (opts) => { if (!opts.force) throw new Error(wrapped); return { pagesUrl: "new" }; });
+  const confirm = jest.fn(async () => true);
+  expect(await publishWithOwnerCheck(invoke, confirm)).toEqual({ pagesUrl: "new" });
+  expect(confirm).toHaveBeenCalledWith("skavok");
+  expect(invoke).toHaveBeenLastCalledWith({ force: true });
+});
+
+test("a login is read up to the first non-login character", async () => {
+  const invoke = jest.fn(async (opts) => {
+    if (!opts.force) throw new Error("Error invoking remote method 'comps:publish-comp': Error: PUBLISHED_BY_OTHER:gw2-eww\n    at foo (bar.js:1)");
+    return { pagesUrl: "new" };
+  });
+  const confirm = jest.fn(async () => true);
+  await publishWithOwnerCheck(invoke, confirm);
+  expect(confirm).toHaveBeenCalledWith("gw2-eww");
+});
