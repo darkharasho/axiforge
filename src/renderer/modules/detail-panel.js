@@ -395,7 +395,9 @@ function _buildTimingBadges(entity, alacrity, burstRecharge) {
 function _renderStatBreakdown(entries, total, statName) {
   const lines = entries.map((e) => {
     const countSuffix = e.count > 1 ? ` <span class="breakdown-count">\u00d7${e.count}</span>` : "";
-    const pill = e.category ? `<span class="breakdown-pill breakdown-pill--${e.category}">${e.category}</span>` : "";
+    // One outlined chip per category, with no per-category modifier: the chip's
+    // text is the category, so a hue keyed to the same word said it twice.
+    const pill = e.category ? `<span class="breakdown-pill">${e.category}</span>` : "";
     return `<li><span class="breakdown-value">+${e.value}</span> ${pill}${escapeHtml(e.source)}${countSuffix}</li>`;
   });
   lines.push(`<li class="breakdown-total"><span class="breakdown-value">${total}</span> Total ${escapeHtml(statName)}</li>`);

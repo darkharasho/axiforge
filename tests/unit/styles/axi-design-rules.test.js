@@ -50,7 +50,6 @@ const APP_CSS = [
 const PENDING = [
   "src/renderer/styles/specializations.css",
   "src/renderer/styles/skills.css",
-  "src/renderer/styles/detail-panel.css",
   "src/renderer/styles/equipment.css",
   "src/renderer/styles/wiki-modal.css",
   "src/renderer/styles/detail-modal.css",
