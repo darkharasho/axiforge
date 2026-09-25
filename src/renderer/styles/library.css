@@ -23,6 +23,17 @@
   background: var(--axi-ground);
 }
 
+/* Every child of .lib-page names its own column. The tracks are positional --
+   rail, handle, content -- and two rules below take the handle out of flow
+   with display: none (collapsed, and coarse pointers). Under auto-placement
+   that promotes .lib-main into track 2, which BOTH of those rules size at 0,
+   so collapsing the sidebar rendered the library as a 40px rail and nothing
+   else. Explicit placement makes a missing child cost nothing but its own
+   track. */
+.lib-sidebar { grid-column: 1; }
+.lib-resizer { grid-column: 2; }
+.lib-main { grid-column: 3; }
+
 .lib-sidebar {
   min-width: 0;
   display: flex;
