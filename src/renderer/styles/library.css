@@ -126,9 +126,34 @@
 }
 
 /* Search — .axi-search only reserves the room and positions the icon; the
-   glyph itself stays the consumer's SVG. */
-.lib-toolbar__search-input {
-  width: 160px;
+   glyph itself stays the consumer's SVG.
+
+   The package sizes .axi-input for a form field, where a tall target sitting
+   alone in a column is right. This is chrome: a strip of controls above the
+   thing you came to read, where every pixel of height is taken from the list.
+   So the whole control row is compacted to one height here -- the input, the
+   pickers, the view pills and the three buttons together, because a toolbar
+   whose controls disagree about height reads as broken rather than as dense.
+   Only the padding moves; every border, block and hover stays the package's.
+   The input also gets the width the others do not need: it holds a query. */
+.lib-toolbar__search .lib-toolbar__search-input {
+  width: 260px;
+  padding-block: 6px;
+  /* Keeps .axi-search's reserved gutter for the magnifier, minus the padding
+     the compacting takes off everything else. */
+  padding-inline: 34px 10px;
+}
+
+.lib-toolbar__controls .axi-btn {
+  padding: 7px 14px;
+}
+
+.lib-toolbar__controls .axi-pill {
+  padding: 7px 8px;
+}
+
+.lib-toolbar__controls .axi-picker__btn {
+  padding: 7px 28px 7px 9px;
 }
 
 /* Sort, and the import/export/new pickers below, share .axi-picker's box —
