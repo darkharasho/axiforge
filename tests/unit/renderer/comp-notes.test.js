@@ -27,7 +27,7 @@ describe("renderCompTabs", () => {
   test("marks the active tab", () => {
     const host = document.createElement("div");
     host.innerHTML = renderCompTabs("notes");
-    const active = host.querySelectorAll(".comp-detail__tab--active");
+    const active = host.querySelectorAll(".subnav__item--active");
     expect(active.length).toBe(1);
     expect(active[0].dataset.compTab).toBe("notes");
   });
@@ -35,7 +35,7 @@ describe("renderCompTabs", () => {
   test("defaults to the comp tab for an unknown value", () => {
     const host = document.createElement("div");
     host.innerHTML = renderCompTabs(undefined);
-    expect(host.querySelector(".comp-detail__tab--active").dataset.compTab).toBe("comp");
+    expect(host.querySelector(".subnav__item--active").dataset.compTab).toBe("comp");
   });
 
   test("shows a dot on the Notes tab when the comp has notes", () => {

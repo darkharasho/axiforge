@@ -42,7 +42,10 @@ test.describe("Comp detail — a party line with a hole in it", () => {
     await openFirstComp(window);
 
     await expect(window.locator(".comp-detail")).toBeVisible();
-    await expect(window.locator(".comp-detail__topbar")).toContainText("Holey Comp");
+    // The name lives in the toolbar panel's field now, not as bar text.
+    await expect(
+      window.locator(".comp-detail__toolbar input[data-action='edit-name']"),
+    ).toHaveValue("Holey Comp");
   });
 
   test("the build that IS there still renders, and the holes render as empty slots", async () => {

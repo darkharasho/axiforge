@@ -198,8 +198,11 @@ export function wireCompDragDrop(callbacks) {
   }
 
   // ── Party line reorder sortable ──────────────────────────────────
+  // The lines' own parent, not the panel: the party board is a panel with a
+  // head above the lines now, and Sortable treats every child of its container
+  // as a candidate — pointed at the panel it would offer to reorder the head.
   const linesContainerEl = document.querySelector(
-    ".comp-detail__party-panel"
+    ".comp-detail__party-scroll"
   );
   if (linesContainerEl) {
     _sortableInstances.push(

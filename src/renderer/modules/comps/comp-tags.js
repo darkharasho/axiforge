@@ -132,6 +132,11 @@ export function openCompTagPopover(anchor, { ids, onAddTags, onRemoveTags } = {}
  * The pill row on the comp detail. Always rendered, even with no tags: it used
  * to vanish when a comp had none, which meant the only place to add the first
  * one was the list view's bulk bar — you had to leave the comp to tag the comp.
+ *
+ * It rides .tag-container because it is now a field in the detail's toolbar
+ * panel, beside the name, exactly as the build editor's Tags field is. The
+ * published SPA still draws this row as a band under its topbar, so the
+ * .comp-detail__tags-row rule keeps that shape and the pairing overrides it.
  */
 export function renderCompTagsRow(comp) {
   const tags = comp?.tags || [];
@@ -145,7 +150,7 @@ export function renderCompTagsRow(comp) {
     .join("");
   const addLabel = tags.length === 0 ? "+ Add tags" : "+ Tag";
   return `
-    <div class="comp-detail__tags-row">
+    <div class="comp-detail__tags-row tag-container">
       ${pills}
       <button type="button" class="comp-detail__tag-add axi-btn axi-btn--dashed" data-action="edit-tags">${addLabel}</button>
     </div>

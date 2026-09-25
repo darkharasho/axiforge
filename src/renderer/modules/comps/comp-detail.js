@@ -16,7 +16,7 @@ import {
 } from "../render-pages.js";
 import { roleBadgeHtml } from "../roleEstimator.js";
 import { COMP_TAG_ICONS } from "../constants.js";
-import { axiforgeIcon, checkIcon, chevronDownIcon, arrowUpTrayIcon, clipboardDocumentIcon, globeAltIcon, partyNumberIcon, shareIcon } from "../library/heroicons.js";
+import { axiforgeIcon, checkIcon, chevronDownIcon, arrowLeftIcon, arrowUpTrayIcon, clipboardDocumentIcon, globeAltIcon, partyNumberIcon, shareIcon } from "../library/heroicons.js";
 import { renderMiniBuildCard, renderMissingMiniBuildCard } from "../mini-build-card.js";
 import { pickWebhooks } from "../webhook-picker.js";
 import { compShareDisabledTooltip } from "../share-gate.js";
@@ -455,12 +455,13 @@ export function renderCompDetail() {
 
   container.innerHTML = `
     <div class="comp-detail">
-      <div class="comp-detail__topbar">
-        <button type="button" class="comp-detail__back-btn" data-action="back">&larr; Back to Comps</button>
-        <span class="comp-detail__divider">|</span>
-        <span class="comp-detail__name" data-action="edit-name">${escapeHtml(comp.name || "Untitled Comp")}</span>
-        <span class="comp-detail__spacer"></span>
-        <span class="comp-detail__save-status" id="compSaveStatus"></span>
+      <nav class="subnav subnav--visible comp-detail__bar">
+        <button type="button" class="subnav__back" data-action="back">
+          <span class="subnav__icon">${arrowLeftIcon}</span><span>Comps</span>
+        </button>
+        ${renderCompTabs(activeTab, { hasNotes: Boolean(comp.notes?.trim()) })}
+        <div class="subnav__actions">
+        <span class="subnav__save-status comp-detail__save-status" id="compSaveStatus"></span>
         <div class="comp-share-dropdown">
           <button type="button" class="axi-btn axi-btn--ghost comp-share-dropdown__trigger" data-action="share-toggle">
             Share ${chevronDownIcon}
@@ -481,24 +482,29 @@ export function renderCompDetail() {
             </button>
           </div>
         </div>
-        <button type="button" class="axi-btn axi-btn--primary" data-action="publish">Publish</button>
+        <button type="button" class="axi-btn axi-btn--ghost" data-action="publish">Publish</button>
         <div class="publish-status" id="compPublishStatus"></div>
         <span class="comp-detail__discord-status" id="compDiscordStatus"></span>
-        <span class="comp-detail__slot-counter">${totalCap} / 50 slots</span>
-      </div>
-      ${renderCompTagsRow(comp)}
-      ${renderCompTabs(activeTab, { hasNotes: Boolean(comp.notes?.trim()) })}
+        </div>
+      </nav>
+      ${renderCompToolbar(comp)}
       ${activeTab === "notes" ? `
       <div class="comp-detail__notes-tab" id="compNotesMount"></div>
       ` : `
-      <div class="comp-detail__body">
-        <div class="comp-detail__party-panel">
-          ${renderPartyLines(comp, totalCap)}
-        </div>
+      <div class="comp-detail__body comp-detail__body--panels">
+        <section class="axi-panel comp-detail__party-panel">
+          <div class="comp-detail__panel-head">
+            <span class="comp-detail__panel-title">Party Lines</span>
+            <span class="comp-detail__slot-counter"><b>${totalCap}/50</b> slots filled</span>
+          </div>
+          <div class="comp-detail__party-scroll">
+            ${renderPartyLines(comp, totalCap)}
+          </div>
+        </section>
         <div class="comp-detail__resize-handle" title="Drag to resize"></div>
-        <div class="comp-detail__pool-panel">
+        <section class="axi-panel comp-detail__pool-panel">
           ${renderBuildPool(comp)}
-        </div>
+        </section>
       </div>
       `}
     </div>
@@ -608,6 +614,34 @@ export function renderCompDetail() {
       bindPartyCoverageEvents(bodyEl);
     })();
   }
+}
+
+/**
+ * The comp's name and tags, in a toolbar panel below the bar.
+ *
+ * They used to ride in the topbar and a band under it. The build editor puts a
+ * build's name in a `.panel--toolbar` and leaves its subnav to navigation and
+ * actions, so a comp's name goes in the same place for the same reason: the bar
+ * is a row of one-height controls, and a title is neither.
+ *
+ * The name is a plain input rather than the old click-to-edit span — once it
+ * sits in a labelled field next to the tags there is nothing for the swap to
+ * buy, and an input is what the Build Title field is.
+ */
+function renderCompToolbar(comp) {
+  return `
+    <section class="panel panel--toolbar comp-detail__toolbar">
+      <div class="toolbar-grid comp-detail__toolbar-grid">
+        <label>Comp Name
+          <input type="text" data-action="edit-name" placeholder="Untitled Comp"
+                 value="${escapeHtml(comp.name || "")}" />
+        </label>
+        <label>Tags
+          ${renderCompTagsRow(comp)}
+        </label>
+      </div>
+    </section>
+  `;
 }
 
 function renderPartyLines(comp, totalCap) {
@@ -1327,44 +1361,32 @@ function bindDetailEvents(container, comp) {
     });
   });
 
-  // ── Inline name editing ────────────────────────────────────────────────────
-  const nameEl = container.querySelector("[data-action='edit-name']");
-  if (nameEl) {
-    nameEl.addEventListener("click", () => {
-      // Replace the span with an input
-      const input = document.createElement("input");
-      input.type = "text";
-      input.className = "comp-detail__name-input axi-input";
-      input.value = comp.name || "";
-      nameEl.replaceWith(input);
-      input.focus();
-      input.select();
+  // ── Name field ─────────────────────────────────────────────────────────────
+  // A live input in the toolbar panel, so renaming is typing rather than a
+  // click-to-swap. Commit on blur and on Enter; Escape puts the stored name
+  // back rather than re-rendering the whole view, which would cost the user
+  // their scroll position for a cancelled edit.
+  const nameInput = container.querySelector("input[data-action='edit-name']");
+  if (nameInput) {
+    const commitRename = async () => {
+      const newName = nameInput.value.trim() || "Untitled Comp";
+      if (newName === comp.name) return;
+      comp.name = newName;
+      nameInput.value = newName;
+      await saveAndSync(comp);
+      _callbacks.onRerender?.();
+    };
 
-      let cancelled = false;
-
-      const commitRename = async () => {
-        if (cancelled) return;
-        const newName = input.value.trim() || "Untitled Comp";
-        comp.name = newName;
-        await saveAndSync(comp);
-        _callbacks.onRerender?.();
-      };
-
-      const cancelRename = () => {
-        cancelled = true;
-        _callbacks.onRerender?.();
-      };
-
-      input.addEventListener("blur", () => commitRename());
-      input.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          input.blur();
-        } else if (e.key === "Escape") {
-          e.preventDefault();
-          cancelRename();
-        }
-      });
+    nameInput.addEventListener("blur", () => commitRename());
+    nameInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        nameInput.blur();
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        nameInput.value = comp.name || "";
+        nameInput.blur();
+      }
     });
   }
 
