@@ -150,7 +150,9 @@
  *   #equipmentPanel          — root container
  *   .equip-layout            — CSS grid with 3 columns (left | art | right)
  *   .equip-col--left         — Armor/Weapons/Trinkets/Consumables sections
- *   .equip-col--art          — decorative art column (hidden on phone)
+ *   .equip-col--art          — empty 1fr gutter between the two columns
+ *                              (hidden on phone; it once held a profession
+ *                              watermark, removed in the axi-design pass)
  *   .equip-col--right        — Attributes stats section
  *   .equip-section.panel     — each named section (wraps .equip-stats)
  *   .equip-slot              — individual gear slot row (44px min tap target)
@@ -201,7 +203,8 @@
     min-width: 0;
   }
 
-  /* Hide the decorative art column — it's pure artwork, not interactive */
+  /* Collapse the gutter column. On a phone the grid is one column wide, so a
+     1fr spacer between the two stacked columns is dead vertical space. */
   .is-web .equip-col--art {
     display: none !important;
   }

@@ -13,7 +13,6 @@ import { computeSlotStats, computeUpgradeModifiers, computeStatBreakdown } from 
 import { computeStats, computeBoons, computeFuryCritModifier, computePassiveCritModifier, computeBerserkCritModifier, computeFuryStatBonuses, computeMightPerStack, computeBoonConditionalTraitBonuses, FURY_CRIT_CHANCE, FURY_CRIT_CHANCE_WVW, STACKING_SIGIL_DEFS, SIGNET_PASSIVE_BUFFS, SIGNET_ACTIVE_EFFECTS } from "./engine-bridge.js";
 import { renderCoverageStrip } from "./boon-coverage.js";
 import { bindHoverPreview, selectDetail } from "./detail-panel.js";
-import { getProfessionSvg } from "./profession-icons.js";
 import { getSlotSvg } from "./slot-icons.js";
 import { getWeaponSvg } from "./weapon-icons.js";
 import { resolveEquippedWeaponSkills, getAvailableAttunements, resolveWarriorBurst } from "./equipment-weapon-skills.js";
@@ -786,7 +785,7 @@ export function renderEquipmentPanel() {
     if (fillEntries.length && !_readOnly) {
       const fillBtn = document.createElement("button");
       fillBtn.type = "button";
-      fillBtn.className = "equip-fill-btn" + (fillEntries.length > 1 ? " equip-fill-btn--dropdown" : "");
+      fillBtn.className = "axi-btn equip-fill-btn" + (fillEntries.length > 1 ? " equip-fill-btn--dropdown" : "");
       fillBtn.textContent = fillEntries.length > 1 ? "Fill \u25BE" : "Fill";
       if (!_readOnly) {
         fillBtn.addEventListener("click", (e) => {
@@ -828,7 +827,7 @@ export function renderEquipmentPanel() {
     if (onClear && !_readOnly) {
       const clearBtn = document.createElement("button");
       clearBtn.type = "button";
-      clearBtn.className = "equip-fill-btn equip-clear-btn";
+      clearBtn.className = "axi-btn equip-fill-btn equip-clear-btn";
       clearBtn.textContent = "Clear";
       if (!_readOnly) {
         clearBtn.addEventListener("click", (e) => {
@@ -852,7 +851,7 @@ export function renderEquipmentPanel() {
   // Clear All button
   const clearAllBtn = document.createElement("button");
   clearAllBtn.type = "button";
-  clearAllBtn.className = "equip-fill-btn equip-clear-btn equip-clear-all-btn";
+  clearAllBtn.className = "axi-btn equip-fill-btn equip-clear-btn equip-clear-all-btn";
   clearAllBtn.textContent = "Clear All Equipment";
   if (_readOnly) {
     clearAllBtn.style.display = "none";
@@ -1945,26 +1944,14 @@ export function renderEquipmentPanel() {
   rightCol.append(underwaterSection);
   rightCol.append(consumeSection);
 
-  // Center: profession / elite spec class icon
+  // Center: the gutter between the two slot columns. It used to hold the
+  // profession/elite-spec sigil washed over the ground at 12% opacity. A
+  // watermark has no honest form in the axi language — rule 2 has a colour at
+  // full strength or not at all, and a full-strength profession glyph behind
+  // the slot columns competes with the equipment instead of backing it — so
+  // the element is gone rather than reworked.
   const artCol = document.createElement("div");
   artCol.className = "equip-col equip-col--art";
-  if (state.editor.profession) {
-    // Determine active elite spec name, fall back to core profession
-    const catalog = state.activeCatalog;
-    const activeEliteSpec = (state.editor.specializations || [])
-      .map((e) => Number(e?.specializationId) || 0)
-      .filter((id) => id > 0)
-      .map((id) => catalog?.specializationById?.get(id))
-      .find((s) => s?.elite);
-    const iconName = activeEliteSpec ? activeEliteSpec.name : state.editor.profession;
-    const svg = getProfessionSvg(iconName);
-    if (svg) {
-      const bgIcon = document.createElement("div");
-      bgIcon.className = "equip-art-bg-icon";
-      bgIcon.innerHTML = svg;
-      artCol.append(bgIcon);
-    }
-  }
 
   // Layout
   const layout = document.createElement("div");

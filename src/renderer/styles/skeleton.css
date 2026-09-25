@@ -217,20 +217,21 @@
   padding: 12px;
 }
 
-/* matches .equip-section__head (some headers include equip-fill-btn ~16px tall) */
+/* matches .equip-section__head (some headers include equip-fill-btn, 21px tall) */
 .skel-equip__section-head {
   display: flex;
   align-items: center;
-  min-height: 16px;
+  min-height: 21px;
   padding-bottom: 4px;
   border-bottom: var(--axi-border-hairline) solid var(--axi-rule);
   margin-bottom: 2px;
 }
 
-/* matches .equip-fill-btn ("Fill All" at 10px font, padding 2px 8px) */
+/* matches .equip-fill-btn: "Fill" in micro (11px/1) with 2px 8px padding,
+   inside .axi-btn's 3px control border -- 11 + 4 + 6 = 21px tall. */
 .skel-equip__fill-btn {
-  width: 36px;
-  height: 18px;
+  width: 44px;
+  height: 21px;
   border: var(--axi-border-hairline) solid var(--axi-rule);
   margin-left: auto;
 }
