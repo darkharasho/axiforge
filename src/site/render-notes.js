@@ -7,12 +7,18 @@ import { decodeHtmlEntities } from "@renderer/modules/utils.js";
 import { GW2_WEAPONS_BY_ID } from "@renderer/modules/constants.js";
 
 export function renderNotes(build) {
+  // The pane is wrapped in a .notes-sheet so published notes read as the panel
+  // they are. Returning the bare .notes-preview put them straight on the body's
+  // --axi-ground — the page itself — while every other SPA surface is a panel.
+  const sheet = document.createElement("div");
+  sheet.className = "notes-sheet";
   const container = document.createElement("div");
   container.className = "notes-preview";
+  sheet.append(container);
 
   if (!build.notes) {
-    container.innerHTML = '<p style="color:var(--axi-text-faint);font-style:italic">No notes.</p>';
-    return container;
+    container.innerHTML = '<p class="notes-empty">No notes.</p>';
+    return sheet;
   }
 
   // Configure marked to escape HTML (XSS prevention for published content)
@@ -130,7 +136,7 @@ export function renderNotes(build) {
     });
   });
 
-  return container;
+  return sheet;
 }
 
 // ── Class emoji ───────────────────────────────────────────────────────

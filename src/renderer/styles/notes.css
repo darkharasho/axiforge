@@ -2,18 +2,29 @@
    Shared: this sheet is imported by src/site/styles.css as well, so every rule
    here also draws the published SPA's and build.axi.link's notes. */
 
-/* The editor is one raised surface holding a toolbar band and a writing field,
-   so it takes the panel step (rule 3) and its children are its interior rather
-   than a stack of boxes of their own. overflow: hidden stays for the embeds
-   and the textarea's own scroll, not for a corner — the corner is square. */
-.notes-editor {
-  display: flex;
-  flex-direction: column;
-  min-height: calc(100vh - 340px);
+/* Notes are one raised surface, and this class is the only place that says so:
+   the panel step (rule 3) with its ink outline and hard block, on --axi-surface
+   because notes are a panel and --axi-ground is the page itself. Both surfaces
+   wear it — the desktop editor below, and the published SPA's read-only pane,
+   which render-notes.js wraps in a bare .notes-sheet. Before the split the
+   chrome lived on .notes-editor alone, so published notes rendered straight
+   onto the page ground with no panel around them at all. overflow: hidden is
+   for the embeds and the textarea's own scroll, not for a corner — the corner
+   is square. */
+.notes-sheet {
   background: var(--axi-surface);
   border: var(--axi-border-panel) solid var(--axi-ink-line);
   box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
   overflow: hidden;
+}
+
+/* The editor is a .notes-sheet that also has to stack a toolbar band above a
+   writing field and hold a usable height while the field is empty. Nothing
+   about its fill or its edge is restated here; it inherits both. */
+.notes-editor {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 340px);
 }
 
 /* ── Toolbar ──────────────────────────────────────────────────────────── */
@@ -135,15 +146,18 @@
 
 /* ── Textarea ─────────────────────────────────────────────────────────── */
 
-/* The writing field is the panel's interior, so it carries no edge of its own;
-   it sits on --axi-ground the way prose's code blocks do, which is what marks
-   it as the surface being typed into rather than another raised thing.
-   Markdown source is monospace, so it is the one place --axi-mono applies. */
+/* The writing field is the panel's interior, so it carries no edge of its own
+   and no fill of its own either: it inherits the sheet's --axi-surface. It used
+   to be painted --axi-ground, which is the page — a hole punched in the panel,
+   and a ground that moved out from under the text the moment the preview
+   toggle swapped the pane for .notes-preview on the surface. The rule closing
+   the toolbar above is what draws the top of the field. Markdown source is
+   monospace, so it is the one place --axi-mono applies. */
 .notes-textarea {
   flex: 1;
   width: 100%;
   padding: 16px 20px;
-  background: var(--axi-ground);
+  background: transparent;
   border: none;
   color: var(--axi-text);
   font-family: var(--axi-mono);
@@ -178,6 +192,15 @@
 
 .notes-preview > :first-child { margin-top: 0; }
 .notes-preview > :last-child { margin-bottom: 0; }
+
+/* "No notes." — the absence of content, not content about it, so it is the
+   faint step of the neutral ramp at the small size. render-notes.js used to
+   write this as an inline color plus font-style: italic, which put a type
+   decision in a template where the gate cannot see it. */
+.notes-empty {
+  font: var(--axi-t-small);
+  color: var(--axi-text-faint);
+}
 
 .notes-preview h1 { margin: 0 0 14px; font: var(--axi-t-h1); letter-spacing: var(--axi-ls-h1); color: var(--axi-text); }
 .notes-preview h2 { margin: 22px 0 10px; font: var(--axi-t-h2); letter-spacing: var(--axi-ls-h2); color: var(--axi-text); }

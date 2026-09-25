@@ -345,7 +345,7 @@ function renderNotesEditor({ placeholder, hint } = {}) {
   _previewMode = false;
 
   const container = document.createElement("div");
-  container.className = "notes-editor";
+  container.className = "notes-sheet notes-editor";
 
   const textarea = document.createElement("textarea");
   textarea.className = "notes-textarea";
