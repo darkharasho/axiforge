@@ -5,7 +5,7 @@
 
 import { buildSkillCard } from "@renderer/modules/detail-panel.js";
 
-const PLACEHOLDER_HTML = `<p style="color:var(--muted); font-size:0.82rem;">Hover over a skill or trait to see details.</p>`;
+const PLACEHOLDER_HTML = `<p style="color:var(--axi-text-faint); font:var(--axi-t-small);">Hover over a skill or trait to see details.</p>`;
 
 let _card = null;
 

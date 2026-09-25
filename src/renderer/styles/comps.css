@@ -614,22 +614,6 @@
 }
 
 /* ── Top Bar ─────────────────────────────────────────────────────── */
-/* The desktop comp detail draws its bar as a .subnav now (see
-   .comp-detail__bar below). This band, and .comp-detail__name /
-   .comp-detail__spacer with it, belong to the published SPA's read-only comp
-   view in src/site/render-comp.js, which has no tabs and no actions to put in
-   a subnav — a title and a game-mode chip is the whole bar. */
-
-.comp-detail__topbar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  min-height: 80px;
-  border-bottom: var(--axi-border-panel) solid var(--axi-ink-line);
-  flex-shrink: 0;
-}
-
 /* The build editor's subnav, one screen over, is a row of controls that all
    share a height — a back button, icon tabs, then actions. The comp detail's
    bar was four different archetypes each sized by its own padding, which is
@@ -720,26 +704,6 @@
   margin: 2px 0;
 }
 
-.comp-detail__name {
-  font: var(--axi-t-body);
-  color: var(--axi-text);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
-  cursor: pointer;
-  border-bottom: var(--axi-border-hairline) dashed transparent;
-  transition: border-color 0.15s;
-}
-
-.comp-detail__name:hover {
-  border-color: var(--axi-accent);
-}
-
-.comp-detail__spacer {
-  flex: 1;
-}
-
 /* .subnav__save-status carries the box. It stays unfilled: the editor's
    --draft and --saved variants fill because they report a state you might need
    to act on, and "Saved 4m ago" is a fact, not a state. Only mid-save is worth
@@ -765,8 +729,9 @@
 
 /* This counts party slots, so it lives in the party board's head rather than
    in the bar: the build editor has no stat tile up there, and a number reads
-   as a fact about the thing it sits on. The SPA still uses the class for the
-   game-mode chip in its own topbar, which has no <b> to accent. */
+   as a fact about the thing it sits on. The SPA counts the same thing in an
+   .axi-stat at the head of its page — it opens on a comp somebody linked you
+   to, where the size is the first fact you want, not the last. */
 .comp-detail__slot-counter {
   font: var(--axi-t-small);
   color: var(--axi-text-faint);
@@ -780,24 +745,16 @@
 
 /* ── Tags Row ────────────────────────────────────────────────────── */
 
-/* The SPA's read-only shape: a band under the topbar. */
+/* A field in the detail's toolbar panel. .tag-container carries the box; only
+   the tighter fit a row of pills wants inside a toolbar stays here. The SPA
+   draws its tags as .axi-chips in .comp-head__tags instead — read-only, so
+   none of this class's room for a remove button applies there. */
 .comp-detail__tags-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-bottom: var(--axi-border-panel) solid var(--axi-ink-line);
-  flex-shrink: 0;
-}
-
-/* The desktop's shape: a field in the detail's toolbar panel. .tag-container
-   carries the box; comps.css loads after forms.css, so the band above would
-   otherwise win on source order at equal specificity. */
-.comp-detail__tags-row.tag-container {
   gap: 5px;
   padding: 5px 8px;
-  border-bottom: var(--axi-border-control) solid var(--axi-ink-line);
 }
 
 /* .axi-chip carries the box; a tag is a neutral fact about the comp, not a
@@ -892,9 +849,10 @@
    weight. The two boards were bare regions divided by a rule, which made the
    detail read as one undifferentiated surface; on the desktop they are
    .axi-panel boxes, so the split you can drag is a gap between two objects.
-   The published SPA's comp view draws the same two regions bare and scrolls
-   the page as a whole, so everything here hangs off --panels, which only the
-   desktop body carries. The panel's own padding comes off
+   The published SPA draws the same two panels, but as a grid that scrolls with
+   the page rather than a flex row of inner scrollers, so everything here hangs
+   off --panels and the SPA carries --boards instead (src/site/styles.css). The
+   panel's own padding comes off
    (--axi-panel-pad: 0) because each board has a head that runs to its edges
    and a scroller under it. */
 .comp-detail__body--panels {

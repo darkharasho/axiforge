@@ -88,11 +88,9 @@
 
 @media (max-width: 1024px) {
   /* --- Global / Layout --- */
-  #app {
-    width: 100%;
-    margin: 12px 0 32px;
-    padding: 0 12px;
-    box-sizing: border-box;
+  #app#app {
+    --axi-page-pad: 12px;
+    margin-block: 12px 32px;
   }
 
   .build-header {
@@ -549,17 +547,35 @@
 
   /* --- Comp Page --- */
 
-  /* Stack the topbar vertically */
-  .comp-detail__topbar {
+  /* The head stacks: at this width the name, the mode chip and the slot tile
+     cannot share a row without the name losing its measure. The tile gives up
+     its margin-left: auto so it lands under the name rather than off to the
+     right of nothing.
+
+     These three carry #app for the same reason the phone block below carries
+     #app.mobile: this file is @imported at the TOP of src/site/styles.css, so
+     the SPA's own rules come after it and would win a tie on source order. */
+  #app .comp-head {
+    --axi-panel-pad: 14px;
     flex-direction: column;
-    align-items: flex-start;
-    gap: 6px;
-    min-height: auto;
-    padding: 12px;
+    gap: 10px;
   }
 
-  .comp-detail__spacer {
-    display: none;
+  #app .comp-head__stat {
+    margin-left: 0;
+    align-self: stretch;
+    text-align: left;
+  }
+
+  /* One column instead of the two-board grid */
+  #app .comp-detail__body--boards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* The masthead wraps at this width; without this the links land hard right
+     of a full-width row, reading as a second, orphaned bar. */
+  .axi-mast .site-mast__links {
+    margin-left: 0;
   }
 
   /* Stack body vertically instead of 40/60 split */
@@ -681,7 +697,7 @@
 
   /* Relax padding so the 12px on each side doesn't eat too much room */
   #app.mobile#app {
-    padding: 0 8px;
+    --axi-page-pad: 8px;
   }
 
   /* === Build view: header === */
@@ -828,7 +844,7 @@
     -webkit-overflow-scrolling: touch;
   }
 
-  #app.mobile .comp-detail__tags-row {
+  #app.mobile .comp-head__tags {
     flex-wrap: wrap;
   }
 

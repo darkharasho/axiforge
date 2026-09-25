@@ -11,7 +11,7 @@ export function renderNotes(build) {
   container.className = "notes-preview";
 
   if (!build.notes) {
-    container.innerHTML = '<p style="color:var(--muted);font-style:italic">No notes.</p>';
+    container.innerHTML = '<p style="color:var(--axi-text-faint);font-style:italic">No notes.</p>';
     return container;
   }
 

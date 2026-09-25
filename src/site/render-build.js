@@ -222,8 +222,8 @@ export function renderBuildPage(container, build) {
   populateStateFromBuild(build);
 
   // ── Build header ─────────────────────────────────────────────────────────
-  const header = document.createElement("div");
-  header.className = "build-header";
+  const header = document.createElement("section");
+  header.className = "axi-panel build-header";
 
   if (build.professionIcon) {
     const iconWrapper = document.createElement("div");
