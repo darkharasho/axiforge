@@ -107,18 +107,12 @@ export function drawSpecConnector(body) {
   const corePath = document.createElementNS(svgNS, "path");
   corePath.setAttribute("d", pathData);
   corePath.setAttribute("fill", "none");
-  corePath.setAttribute("stroke", "rgba(180, 235, 255, 0.5)");
-  corePath.setAttribute("stroke-width", "1.5");
-  corePath.setAttribute("stroke-linecap", "round");
   svg.append(corePath);
 
   const flowPath = document.createElementNS(svgNS, "path");
   flowPath.setAttribute("class", "connector-flow");
   flowPath.setAttribute("d", pathData);
   flowPath.setAttribute("fill", "none");
-  flowPath.setAttribute("stroke", "rgba(220, 250, 255, 1)");
-  flowPath.setAttribute("stroke-width", "2.5");
-  flowPath.setAttribute("stroke-linecap", "round");
   flowPath.setAttribute("stroke-dasharray", "10 22");
   svg.append(flowPath);
 
@@ -126,9 +120,6 @@ export function drawSpecConnector(body) {
   flowPath2.setAttribute("class", "connector-flow2");
   flowPath2.setAttribute("d", pathData);
   flowPath2.setAttribute("fill", "none");
-  flowPath2.setAttribute("stroke", "rgba(160, 230, 255, 0.7)");
-  flowPath2.setAttribute("stroke-width", "2.5");
-  flowPath2.setAttribute("stroke-linecap", "round");
   flowPath2.setAttribute("stroke-dasharray", "10 22");
   svg.append(flowPath2);
 
@@ -167,10 +158,10 @@ export function renderSpecializations() {
       <div class="spec-empty-state">
         <div class="spec-empty-state__icon">
           <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-            <path d="M24 4L44 24L24 44L4 24Z" stroke="rgba(79,216,151,0.4)" stroke-width="1.5" fill="rgba(79,216,151,0.06)"/>
-            <path d="M24 12L36 24L24 36L12 24Z" stroke="rgba(79,216,151,0.25)" stroke-width="1" fill="none"/>
-            <line x1="24" y1="18" x2="24" y2="30" stroke="rgba(79,216,151,0.5)" stroke-width="1.5" stroke-linecap="round"/>
-            <line x1="18" y1="24" x2="30" y2="24" stroke="rgba(79,216,151,0.5)" stroke-width="1.5" stroke-linecap="round"/>
+            <path d="M24 4L44 24L24 44L4 24Z"/>
+            <path d="M24 12L36 24L24 36L12 24Z"/>
+            <line x1="24" y1="18" x2="24" y2="30"/>
+            <line x1="18" y1="24" x2="30" y2="24"/>
           </svg>
         </div>
         <p class="spec-empty-state__text">Select a profession to begin building</p>
@@ -201,9 +192,9 @@ export function renderSpecializations() {
       diamond.className = "spec-empty-diamond";
       diamond.innerHTML = `
         <svg width="52" height="52" viewBox="0 0 52 52" fill="none">
-          <path d="M26 4L48 26L26 48L4 26Z" stroke="rgba(166,187,222,0.3)" stroke-width="1.5" fill="rgba(166,187,222,0.04)"/>
-          <line x1="26" y1="18" x2="26" y2="34" stroke="rgba(166,187,222,0.4)" stroke-width="1.5" stroke-linecap="round"/>
-          <line x1="18" y1="26" x2="34" y2="26" stroke="rgba(166,187,222,0.4)" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M26 4L48 26L26 48L4 26Z"/>
+          <line x1="26" y1="18" x2="26" y2="34"/>
+          <line x1="18" y1="26" x2="34" y2="26"/>
         </svg>`;
 
       const label = document.createElement("span");
@@ -269,10 +260,14 @@ export function renderSpecializations() {
     const panel = document.createElement("div");
     panel.className = spec.elite ? "spec-card__panel spec-card__panel--elite" : "spec-card__panel";
     const wikiBackground = `https://wiki.guildwars2.com/wiki/Special:FilePath/${encodeURIComponent(`${spec.name || ""} specialization.png`)}`;
-    panel.style.backgroundImage = `linear-gradient(0deg, rgba(7, 14, 27, 0.1), rgba(7, 14, 27, 0.1)), url("${wikiBackground.replaceAll('"', '\\"')}")`;
-    panel.style.backgroundPosition = "center, center";
-    panel.style.backgroundSize = "100% 100%, cover";
-    panel.style.backgroundRepeat = "no-repeat, no-repeat";
+    // The art is one layer. The 10% near-black wash that used to ride over it
+    // as a second linear-gradient layer is gone: a gradient across a surface is
+    // rule 1's violation wherever it is written, inline style included, and the
+    // panel's own --axi-surface fill is what the art now sits on.
+    panel.style.backgroundImage = `url("${wikiBackground.replaceAll('"', '\\"')}")`;
+    panel.style.backgroundPosition = "center";
+    panel.style.backgroundSize = "cover";
+    panel.style.backgroundRepeat = "no-repeat";
 
     const selectHost = document.createElement("div");
     if (!_readOnly) {
