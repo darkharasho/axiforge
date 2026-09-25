@@ -69,7 +69,10 @@
   .is-web .web-topbar__brand {
     font-size: 15px;
   }
-  .is-web .web-topbar__beta {
+  /* The brand's sub-line ("Playground") is .axi-brand__name's <small> child
+     since the masthead became the package's .axi-mast -- it used to be a
+     .web-topbar__beta span. On a phone the lockup has no room for it. */
+  .is-web .web-topbar__brand .axi-brand__name small {
     display: none;
   }
 }

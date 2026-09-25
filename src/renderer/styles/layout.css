@@ -39,8 +39,9 @@
   color: var(--axi-accent);
 }
 
-/* The beta badge and update pill carry .axi-chip in the markup; this slims
-   the package's default chip padding to fit a 42px-tall strip. */
+/* The update pill carries .axi-chip in the markup; this slims the package's
+   default chip padding to fit a 42px-tall strip. (It shared the rule with a
+   beta badge until 1.0 retired it.) */
 #titlebar .axi-chip {
   padding: 1px 7px;
   gap: 5px;
