@@ -13,6 +13,21 @@
  * src/site and packages/forge-render (both converting in batch 5). They had
  * already drifted — library.css's pills were the same hues at 15% opacity
  * over near-black, which rule 2 calls nine browns.
+ *
+ * What this file is NOT: the app's single home for domain colour. To be exact,
+ * because the plan for this batch said colour would have "exactly one way into
+ * the app" after the consolidation and that is not what shipped:
+ *   - This file itself holds three tables, not one — PROFESSIONS' nine hues
+ *     plus SLOT_ROLES (2) and TARGET_ROLES (5) below. It also hosts SLOT_ROLES
+ *     despite being named professions.js.
+ *   - src/renderer/modules/constants.js:430-455 holds nine more in
+ *     COMBO_FIELD_COLORS / COMBO_FINISHER_COLORS, which reach --axi-series the
+ *     same way these do.
+ * What IS true after the consolidation: a profession's colour has exactly one
+ * definition, and no app stylesheet names a profession. Consolidating the rest
+ * is a cross-file palette decision (rule 10's answer past two series is the
+ * accent against the neutral ramp, and ally-vs-self is a two-value
+ * distinction); it is parked in docs/BACKLOG.md for batch 3.
  */
 
 /** Canonical names, title-cased, in the game's own order. */

@@ -492,7 +492,11 @@
    nothing. :has(.skel) scopes this to a grid that is actually showing
    skeleton children, so the real .lib-grid (identical class, no .skel
    descendants once real content replaces it) stays interactive. This is a
-   neutraliser, not a conversion — skeleton.css stays in PENDING. */
+   neutraliser rather than a conversion — it cancels an affordance the grid
+   card brought with it, and changes nothing about how the placeholder is
+   drawn. (An earlier version of this comment added "skeleton.css stays in
+   PENDING"; commit 026bbf76 converted this file and took it out of the gate's
+   PENDING array, so that half was false.) */
 .lib-grid:has(.skel) {
   pointer-events: none;
 }

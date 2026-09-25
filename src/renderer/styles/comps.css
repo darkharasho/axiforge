@@ -1082,9 +1082,10 @@
   border-color: var(--axi-accent);
 }
 
-/* Square: the round mask is the one round thing left in this batch, and the
-   profession glyph inside it is the only circular shape on the screen once
-   the slot box's own corner goes square. */
+/* Square, like everything else: the border-radius: 50% that used to round this
+   icon's clip is gone (rule 3 -- nothing in this language rounds). All that is
+   left is the 30px box and overflow: hidden, which crops the glyph to a square
+   the same way the slot box around it is square. */
 .comp-slot__icon {
   width: 30px;
   height: 30px;
@@ -1106,9 +1107,12 @@
   user-select: none;
 }
 
-.comp-slot--empty:hover .comp-slot__plus {
-  color: var(--axi-text-faint);
-}
+/* No hover rule for .comp-slot__plus: it had one that set --axi-text-faint,
+   the colour the resting rule above already gives it. Legacy --muted and
+   --text-dim both collapse to --axi-text-faint in bridge.css, so what was two
+   distinct colours became one and the rule turned into a no-op that still
+   advertised an affordance. The slot's own hover (border-color, above) is the
+   real one. */
 
 /* ═══════════════════════════════════════════════════════════════════
    Build Pool Panel
@@ -1885,9 +1889,9 @@
   letter-spacing: var(--axi-ls-micro);
 }
 
-.comp-boon-cov__header:hover {
-  color: var(--axi-text-faint);
-}
+/* No :hover rule here either: it set --axi-text-faint, which the resting rule
+   above already sets — the same bridge.css collapse described at
+   .comp-slot__plus. The chevron flip is what says the header is interactive. */
 
 /* No scale step: a disclosure glyph (▸/▾), not prose — no scale step applies. */
 .comp-boon-cov__chevron {
@@ -2491,13 +2495,14 @@
   gap: 8px;
   padding: 10px 14px;
   cursor: pointer;
-  transition: background 0.12s;
   border-bottom: var(--axi-border-hairline) solid var(--axi-rule);
 }
 
-.comps-tab__card-header:hover {
-  background: var(--axi-surface);
-}
+/* No background hover, and so no `transition: background` above: the header is
+   transparent over .comps-tab__card, which is already --axi-surface, so the
+   :hover that set --axi-surface painted the colour the card was showing anyway
+   — the same bridge.css collapse described at .comp-slot__plus. The real hover
+   affordance is the "open" label fading in, just below. */
 
 .comps-tab__card-name {
   font: var(--axi-t-label);

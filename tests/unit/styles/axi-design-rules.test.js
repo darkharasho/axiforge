@@ -1228,9 +1228,18 @@ describe("axi design language rules", () => {
 });
 
 describe("the installed axi-design ships the primitives this app uses", () => {
-  // Batch 2 is written against 1.10.0. In 1.8.0 `.axi-ticks` and `.axi-picker`
-  // do not exist, and markup that reaches for them renders as unstyled divs
-  // with nothing failing. This pins the floor where a human will see it.
+  // Batch 2 is written against 1.10.0. In 1.8.0 `.axi-picker` does not exist,
+  // and markup that reaches for it renders as unstyled divs with nothing
+  // failing. This pins the floor where a human will see it.
+  //
+  // The list is only the primitives the app ACTUALLY adopts, verified by the
+  // staleness test below. It used to name five it does not — .axi-ticks,
+  // .axi-ticks__tick--on, .axi-card--strip, .axi-meter-list and .axi-table —
+  // and a gate that asserts a false thing is worse than one that asserts less.
+  // (.axi-card--strip and .axi-table appear in app CSS only inside comments;
+  // .axi-ticks was reverted in b97cf592, so the 1.10.0 floor now rests on
+  // .axi-picker alone, and adopting .axi-table is parked in docs/BACKLOG.md.)
+  //
   // require.resolve("@axiapps/axi-design/dist/axi.css") throws
   // ERR_PACKAGE_PATH_NOT_EXPORTED: the package's exports map only publishes
   // "./axi.css", not "./dist/axi.css". Reach the file on disk instead.
@@ -1239,18 +1248,54 @@ describe("the installed axi-design ships the primitives this app uses", () => {
     "utf8",
   );
 
-  it.each([
-    ".axi-ticks",
-    ".axi-ticks__tick--on",
+  const ADOPTED_PRIMITIVES = [
     ".axi-picker__btn",
     ".axi-picker__pop",
     ".axi-picker__opt",
-    ".axi-card--strip",
-    ".axi-meter-list",
+    ".axi-chip",
+    ".axi-pill",
+    ".axi-switch",
+    ".axi-meter",
     ".axi-diamond",
     ".axi-stat",
-    ".axi-table",
-  ])("defines %s", (selector) => {
-    expect(pkgCss).toContain(`${selector}`);
+  ];
+
+  // Anchored, not a substring test. `toContain(".axi-ticks")` used to pass on
+  // the ".axi-ticks__tick" in the sheet, so the old list could not have failed
+  // for .axi-ticks even if the primitive had been dropped. Every name here has
+  // the same hazard -- .axi-meter is inside .axi-meter-list, .axi-diamond
+  // inside .axi-diamond--accent, .axi-switch inside .axi-switch__knob,
+  // .axi-stat inside .axi-stat__n, .axi-chip/.axi-pill inside their own
+  // modifiers -- so the class boundary is required explicitly.
+  const definesClass = (css, cls) =>
+    new RegExp(`\\.${cls.slice(1).replace(/[-]/g, "\\-")}(?![\\w-])`).test(css);
+
+  it.each(ADOPTED_PRIMITIVES)("defines %s", (selector) => {
+    expect(definesClass(pkgCss, selector)).toBe(true);
+  });
+
+  it("requires a class boundary rather than a substring", () => {
+    // The exact hole the old list had: a sheet that ships only the longer
+    // relative must not certify the shorter class.
+    expect(definesClass(".axi-ticks__tick { color: red }", ".axi-ticks")).toBe(false);
+    expect(definesClass(".axi-ticks { color: red }", ".axi-ticks")).toBe(true);
+    expect(definesClass(".axi-ticks__tick--on { color: red }", ".axi-ticks__tick")).toBe(false);
+  });
+
+  it("names only primitives the app really adopts", () => {
+    // The other half of "do not assert a false thing": an entry for a
+    // primitive the app has stopped using is the same overclaim, in the
+    // opposite direction, and is how the five removed above got in.
+    const appSources = [
+      ...jsFilesUnder("src/renderer"),
+      ...cssFilesUnder("src/renderer"),
+    ].map((f) => fs.readFileSync(path.join(ROOT, f), "utf8")
+      // Comments only mention a primitive; they do not adopt it. This is what
+      // catches .axi-card--strip and .axi-table, whose only appearances in app
+      // CSS are inside comments.
+      .replace(/\/\*[\s\S]*?\*\//g, ""))
+      .join("\n");
+    const unused = ADOPTED_PRIMITIVES.filter((sel) => !appSources.includes(sel.slice(1)));
+    expect(unused).toEqual([]);
   });
 });
