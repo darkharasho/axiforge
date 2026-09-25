@@ -439,7 +439,14 @@ function keyframesAnimatesDimming(css, name) {
     k++;
   }
   const body = css.slice(m.index + m[0].length, k - 1);
-  return /\bopacity\s*:/.test(body) || /\bfilter\s*:\s*[^;]*\b(?:opacity|brightness)\(/i.test(body);
+  // Fix round 2, G3: `\b` matches between the `-` and the `f` of
+  // `backdrop-filter`, so a keyframes block that only animates
+  // `backdrop-filter: brightness(...)` would wrongly read as animating
+  // `filter`'s dimming functions and exempt an unrelated resting opacity
+  // elsewhere. `(?<![\w-])` requires the property name not be preceded by a
+  // word character or a hyphen, so `backdrop-filter:` is rejected while a
+  // leading-whitespace `filter:` still matches.
+  return /(?<![\w-])opacity\s*:/.test(body) || /(?<![\w-])filter\s*:\s*[^;]*\b(?:opacity|brightness)\(/i.test(body);
 }
 
 /** True when a block's own `animation` shorthand names a `@keyframes` block
@@ -480,13 +487,24 @@ function findStaticOpacity(css) {
     if (inKeyframes) continue;
     if (isOpacityAllowlisted(header)) continue;
     if (exemptByAnimation(withoutComments, body)) continue;
-    for (const m of body.matchAll(/opacity\s*:\s*([^;]+)/gi)) {
+    // Fix round 2, G3: same anchoring hole as the filter scan below —
+    // unanchored, this would match inside `fill-opacity:`/`stroke-opacity:`
+    // and report it under the wrong property name if either ever appears in
+    // a scanned sheet. Neither is scanned deliberately: if one needs to be,
+    // it gets added as its own matched property in a later task.
+    for (const m of body.matchAll(/(?<![\w-])opacity\s*:\s*([^;]+)/gi)) {
       const raw = m[1].trim().replace(/\s*!\s*important\s*$/i, "");
       const value = parseAlphaValue(raw);
       if (Number.isNaN(value)) continue;
       if (value > 0 && value < 1) violations.push(`${header} { opacity: ${raw} }`);
     }
-    for (const m of body.matchAll(/filter\s*:\s*([^;]+)/gi)) {
+    // Fix round 2, G3: unanchored, this also matched inside
+    // `backdrop-filter:` — harmless today only because `findBlurs` already
+    // flags every `backdrop-filter` declaration regardless of function, so
+    // this scanner has no coverage to lose by excluding it, and a future
+    // `backdrop-filter: brightness(.4)` would otherwise report as
+    // `{ filter: brightness(.4) }`, naming the wrong property.
+    for (const m of body.matchAll(/(?<![\w-])filter\s*:\s*([^;]+)/gi)) {
       const raw = m[1].trim().replace(/\s*!\s*important\s*$/i, "");
       for (const hit of findDimmingFilters(raw)) violations.push(`${header} { filter: ${hit} }`);
     }
@@ -1084,6 +1102,36 @@ describe("axi design language rules", () => {
       // sanctioned answer this commit installs for a bitmap <img>.
       expect(findStaticOpacity(".a { filter: grayscale(1); }")).toEqual([]);
       expect(findStaticOpacity(".a { filter: grayscale(0.5); }")).toEqual([]);
+    });
+
+    it("does not read backdrop-filter as filter, or fill-opacity/stroke-opacity as opacity (fix round 2, G3)", () => {
+      // `\b`/no anchor at all both let a hyphen-prefixed property slip
+      // through and get reported under the wrong name. `findBlurs` already
+      // flags every backdrop-filter declaration on its own, so excluding it
+      // here loses no coverage — it just stops the double-report under a
+      // misnamed property.
+      expect(findStaticOpacity(".a { backdrop-filter: brightness(.5); }")).toEqual([]);
+      expect(findStaticOpacity(".a { fill-opacity: 0.5; }")).toEqual([]);
+      // A real, correctly-anchored violation of each property still fires.
+      expect(findStaticOpacity(".a { filter: brightness(.5); }")).not.toEqual([]);
+      expect(findStaticOpacity(".a { opacity: 0.5; }")).not.toEqual([]);
+    });
+
+    it("does not let a hyphen-prefixed property exempt an unrelated resting opacity via the animation route (fix round 2, G3)", () => {
+      // keyframesAnimatesDimming's own opacity/filter checks have the same
+      // anchoring hole: a keyframes block that only touches
+      // fill-opacity/backdrop-filter must not be read as "animates opacity"
+      // and wrongly exempt a real violation elsewhere in the same block.
+      expect(
+        findStaticOpacity(
+          "@keyframes k { to { fill-opacity: 0.5; } } .a { opacity: 0.3; animation: k 1s; }",
+        ),
+      ).not.toEqual([]);
+      expect(
+        findStaticOpacity(
+          "@keyframes k { to { backdrop-filter: brightness(.4); } } .a { opacity: 0.3; animation: k 1s; }",
+        ),
+      ).not.toEqual([]);
     });
 
     it("keeps a { or } inside a string or url() from being read as a structural brace (fix round 1, F7)", () => {

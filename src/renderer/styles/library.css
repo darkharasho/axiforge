@@ -1429,20 +1429,25 @@
    lib-drag-ghost and lib-drag-chosen are therefore real rows at a resting
    partial opacity — the thing rule 2 forbids — and are fixed below instead
    of exempted. lib-drag-active and lib-drag-fallback are genuine floating
-   clones and keep their opacity. */
+   clones, so their opacity is a fade on a representation of the thing being
+   moved, not on a row resting on the ground — rule 2 permits that, and they
+   keep it.
+
+   lib-drag-chosen itself has no rule below: chosenClass lands on the same
+   row a moment later, so the "picked up" state is already expressed by
+   lib-drag-ghost above, and a resting 0.8 on a real row had nothing left to
+   say — deleted rather than exempted, same disposition as lib-dragging and
+   sortable-drag above. */
 .lib-drag-ghost {
   background: var(--axi-ground);
   outline: var(--axi-border-control) dashed var(--axi-rule);
   outline-offset: -3px;
 }
 
-/* ghostClass lands on the same row a moment later, so the "picked up" state
-   is already expressed by lib-drag-ghost above; a resting 0.8 on a real row
-   had nothing left to say. */
-
+/* Floating clone (see the block comment above), not a row resting on the
+   ground — its 0.5 opacity is the fade rule 2 permits for a representation
+   of the thing being moved. */
 .lib-drag-active {
-  /* Genuine floating clone (see the block comment above) — full-strength
-     opacity, no fade. */
   opacity: 0.5;
 }
 
