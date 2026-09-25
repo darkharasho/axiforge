@@ -646,6 +646,7 @@ function renderColumnsView(container) {
     parentId: null,
     folderId: rootFolderId,
     compId: rootCompId,
+    title: state.currentFolder?.name || "Library",
   });
 
   // Subsequent columns based on selected folders/comps
@@ -659,7 +660,7 @@ function renderColumnsView(container) {
       // Comp selected: show its builds in next column, no sub-folders or sub-comps
       const selectedCompBuildIds = new Set(selectedComp.buildIds || []);
       const compBuilds = state.builds.filter((b) => selectedCompBuildIds.has(b.id));
-      columns.push({ folders: [], builds: compBuilds, comps: [], parentId: selectedId, folderId: null, compId: selectedId });
+      columns.push({ folders: [], builds: compBuilds, comps: [], parentId: selectedId, folderId: null, compId: selectedId, title: selectedComp.name || "Untitled Comp" });
       break; // comps are flat — no further nesting
     }
 
@@ -682,7 +683,8 @@ function renderColumnsView(container) {
       .filter((c) => compMatchesQuery(c, query))
       .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
 
-    columns.push({ folders: childFolders, builds: childBuilds, comps: childComps, parentId: selectedId, folderId: selectedId, compId: null });
+    const selectedFolder = libraryFolders().find((f) => f.id === selectedId);
+    columns.push({ folders: childFolders, builds: childBuilds, comps: childComps, parentId: selectedId, folderId: selectedId, compId: null, title: selectedFolder?.name || "Folder" });
   }
 
   const columnsHtml = columns
@@ -741,7 +743,12 @@ function renderColumnsView(container) {
       const colAttr = col.compId
         ? `data-col-comp-id="${escapeHtml(col.compId)}"`
         : `data-col-folder-id="${escapeHtml(col.folderId || "")}"`;
-      return `<div class="lib-col" data-col="${colIndex}" ${colAttr}>${items.join("")}</div>`;
+      const count = col.folders.length + (col.comps || []).length + col.builds.length;
+      const head = `<div class="lib-col__head">
+        <span class="axi-eyebrow lib-col__head-title">${escapeHtml(col.title || "")}</span>
+        <span class="axi-badge-count">${count}</span>
+      </div>`;
+      return `<div class="lib-col" data-col="${colIndex}" ${colAttr}>${head}<div class="lib-col__body">${items.join("")}</div></div>`;
     })
     .join("");
 

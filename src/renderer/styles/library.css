@@ -1205,23 +1205,39 @@
 .lib-icon-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-  gap: 6px;
+  gap: 12px;
 }
 
+/* An icon tile is the grid card at control weight. .af-tile is the same idea
+   at panel weight -- surface, ink outline, an offset block it translates
+   against on hover -- and the icon view was the one view that never got a
+   form at all: loose glyphs sitting directly on the ground, with a tinted
+   background for hover. A tile is a box, and rule 4 says a box lifts by
+   growing its offset, not by tinting. */
 .lib-icon-item {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 6px;
   padding: 9px 5px;
+  background: var(--axi-surface);
+  border: var(--axi-border-control) solid var(--axi-ink-line);
+  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
   cursor: pointer;
-  transition: background 0.1s;
+  transition: transform 0.1s, box-shadow 0.1s, border-color 0.15s;
   user-select: none;
 }
 
-.lib-icon-item:hover { background: var(--axi-surface-raised); }
-.lib-icon-item.lib-selected { outline: var(--axi-border-control) solid var(--axi-accent); outline-offset: -3px; }
-.lib-icon-item.lib-drop-target { outline: var(--axi-border-control) dashed var(--axi-accent); outline-offset: -3px; }
+.lib-icon-item:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: var(--axi-offset-control-hover) var(--axi-offset-control-hover) 0 var(--axi-ink-line);
+}
+
+/* Selection moves onto the tile's own border now that it has one -- the same
+   accent edge the rail's active item and the filter triggers take. An inset
+   outline would draw a second frame just inside the first. */
+.lib-icon-item.lib-selected { border-color: var(--axi-accent); }
+.lib-icon-item.lib-drop-target { border-style: dashed; border-color: var(--axi-accent); }
 
 .lib-icon-item__icon {
   display: flex;
@@ -1230,6 +1246,9 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  padding: 4px;
+  background: var(--axi-surface-raised);
+  border: var(--axi-border-control) solid var(--axi-ink-line);
   color: var(--axi-series, var(--axi-text-faint));
 }
 
@@ -1268,7 +1287,36 @@
   min-width: 220px;
   max-width: 280px;
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
   border-right: var(--axi-border-hairline) solid var(--axi-rule);
+}
+
+/* The head is a lid on the column, so it takes the control weight the panel
+   heads elsewhere take -- the hairline is for rules inside running content,
+   and this line separates the label from the list rather than one row from
+   the next. */
+.lib-col__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: var(--axi-border-control) solid var(--axi-ink-line);
+  flex-shrink: 0;
+}
+
+.lib-col__head-title {
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lib-col__body {
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: 4px 0;
 }
@@ -1287,7 +1335,8 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 5px 10px;
+  padding: 7px 10px;
+  border-bottom: var(--axi-border-hairline) solid var(--axi-rule);
   cursor: pointer;
   transition: background 0.1s;
   user-select: none;
