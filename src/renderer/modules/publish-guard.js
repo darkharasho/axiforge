@@ -1,6 +1,11 @@
 import { escapeHtml } from "./utils.js";
 
-const PREFIX = "PUBLISHED_BY_OTHER:";
+// Matched anywhere in the message, not just at the start: Electron rejects an
+// ipcRenderer.invoke with "Error invoking remote method '<channel>': Error:
+// <original message>", so the main process's sentinel always arrives wrapped.
+// A GitHub login is [A-Za-z0-9-], which also stops the capture before any
+// trailing stack frames.
+const SENTINEL = /PUBLISHED_BY_OTHER:([A-Za-z0-9-]+)/;
 
 /**
  * Team items publish under whoever clicks Publish. If someone else published
@@ -11,9 +16,9 @@ export async function publishWithOwnerCheck(invoke, confirm) {
   try {
     return await invoke({});
   } catch (err) {
-    const msg = String(err?.message || "");
-    if (!msg.startsWith(PREFIX)) throw err;
-    const login = msg.slice(PREFIX.length);
+    const match = SENTINEL.exec(String(err?.message || ""));
+    if (!match) throw err;
+    const login = match[1];
     if (!(await confirm(login))) return null;
     return invoke({ force: true });
   }
