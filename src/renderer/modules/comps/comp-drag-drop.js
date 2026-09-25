@@ -5,8 +5,6 @@
 // - Slot swaps/moves within and across lines
 
 import Sortable from "sortablejs";
-import { state } from "../state.js";
-import { professionColour } from "../../../shared/professions.js";
 
 let _sortableInstances = [];
 
@@ -53,22 +51,17 @@ export function wireCompDragDrop(callbacks) {
           const oe = evt.originalEvent;
           const grabX = oe ? oe.clientX - rect.left : rect.width / 2;
           const grabY = oe ? oe.clientY - rect.top : rect.height / 2;
-          // The ghost is a clone of .mini-card, which still carries its own
-          // lib-prof--* class from forge-render (batch 5, unconverted). That
-          // class draws nothing here regardless: forge-render.css scopes its
-          // colour rules to .forge-render .mini-card.lib-prof--*, and
-          // SortableJS's fallback clone is appended to <body>, outside any
-          // .forge-render ancestor. Resolve the build's own colour here
-          // instead, the same way the slot box does.
-          const buildId = evt.item?.dataset?.buildId;
-          const build = buildId ? state.builds.find((b) => b.id === buildId) : null;
-          const seriesColour = build ? professionColour(build.profession) : null;
+          // The ghost is a clone of .mini-card, and since batch 5 the card
+          // carries its own --axi-series inline (packages/forge-render's
+          // renderMiniBuildCard), so the clone arrives already holding the
+          // build's colour — nothing to resolve here. It used to need
+          // resolving because the hue came from a lib-prof--* class whose rule
+          // is scoped to .forge-render, and SortableJS's fallback clone is
+          // appended to <body>, outside any .forge-render ancestor. An inline
+          // custom property has no such scope.
           requestAnimationFrame(() => {
             const ghost = document.querySelector(".comp-drag-icon-ghost");
-            if (ghost) {
-              ghost.style.transform = `translate(${grabX - 21}px, ${grabY - 21}px)`;
-              if (seriesColour) ghost.style.setProperty("--axi-series", seriesColour);
-            }
+            if (ghost) ghost.style.transform = `translate(${grabX - 21}px, ${grabY - 21}px)`;
           });
         },
         onEnd() {

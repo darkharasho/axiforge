@@ -8,12 +8,12 @@ import { getWeaponSvg } from "./weapon-icons.js";
 import {
   getSpecIcon,
   getSpecIconColored,
-  profClass,
   getDisplayName,
   resolveStatPackage,
   getRuneName,
 } from "./build-helpers.js";
 import { roleBadgeHtml } from "./role-estimator.js";
+import { SLOT_ROLES, slotSeriesStyle } from "./professions.js";
 
 /**
  * Return array of { name, isElite, svg } for each specialization on the build.
@@ -245,7 +245,12 @@ export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
   const { showActions = true, showMode = true, linkUrl = null, chatLink = null, linkBadge = null, slotColor = null, showColorPicker = false, sourceBadge = "" } = options;
 
   const icon = slotColor && slotColor !== "normal" ? getSpecIconColored(build, slotColor) : getSpecIcon(build);
-  const pClass = profClass(build.profession);
+  // Rule 10: the card's identifying hue is domain data, so it arrives
+  // per-instance on --axi-series instead of through a lib-prof--* class the
+  // stylesheet would have to name. A slot's role marker outranks the
+  // profession; an unrecognised name yields "" and the card's own rule falls
+  // to the neutral it names as --axi-series's fallback.
+  const series = slotSeriesStyle(slotColor, build.profession);
   const name = escapeHtml(getDisplayName(build));
   const gameMode = build.gameMode || "pve";
 
@@ -419,12 +424,13 @@ export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
   // Color picker dropdown (Condi / Heal)
   const colorPickerHtml = showColorPicker ? (() => {
     const c = slotColor || "normal";
-    const dotColor = c === "red" ? "#d63a3a" : c === "blue" ? "#3a8fd6" : "transparent";
-    const dotStyle = c === "normal"
-      ? 'style="border:1px solid #666;background:transparent"'
-      : `style="background:${dotColor}"`;
+    // The dot IS the swatch, so the marker's own colour lands on it through
+    // --axi-series. "Default" has no marker to show: it gets the empty
+    // modifier, which the stylesheet draws as an outlined box.
+    const dotStyle = SLOT_ROLES[c] ? ` style="--axi-series: ${SLOT_ROLES[c]}"` : "";
+    const dotClass = SLOT_ROLES[c] ? "mini-card__color-dot" : "mini-card__color-dot mini-card__color-dot--none";
     return `<div class="mini-card__color-picker" data-action="color-picker" data-build-id="${escapeHtml(build.id)}" data-current="${c}" title="Icon color">
-      <span class="mini-card__color-dot" ${dotStyle}></span>
+      <span class="${dotClass}"${dotStyle}></span>
       <span class="mini-card__color-label">${c === "red" ? "Condi" : c === "blue" ? "Heal" : "Default"}</span>
       <span class="mini-card__color-caret">&#9662;</span>
     </div>`;
@@ -436,7 +442,7 @@ export function renderMiniBuildCard(build, upgradeCatalog, options = {}) {
   const histAnchorsHtml = `<div class="mini-card__hist-anchors" hidden aria-hidden="true">${renderGearAnchors(build.equipment)}${renderSkillAnchors(build.skills)}</div>`;
 
   return `
-    <div class="mini-card ${pClass}" data-build-id="${escapeHtml(build.id)}"${slotColor && slotColor !== "normal" ? ` data-slot-color="${slotColor}"` : ""}>
+    <div class="mini-card" data-build-id="${escapeHtml(build.id)}"${series ? ` style="${series}"` : ""}>
       ${removeHtml}
       <div class="mini-card__icon">${icon}</div>
       <div class="mini-card__info">

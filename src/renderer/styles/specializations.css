@@ -262,8 +262,14 @@
   filter: grayscale(60%) brightness(0.7);
 }
 
-.trait-column--major .trait-btn:not(.trait-btn--active):not(.trait-btn--always):hover img {
-  filter: grayscale(20%) brightness(0.9);
+/* Guarded by (hover: hover) for the same reason as skills.css's icon hover:
+   on touch, :hover latches after a tap and left an unselected trait sitting
+   brightened. web-mobile.css used to cancel it by restating the resting
+   filter above, in a second file, as a copy. */
+@media (hover: hover) {
+  .trait-column--major .trait-btn:not(.trait-btn--active):not(.trait-btn--always):hover img {
+    filter: grayscale(20%) brightness(0.9);
+  }
 }
 
 .trait-column--major .trait-btn:hover {

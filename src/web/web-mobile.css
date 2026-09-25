@@ -20,12 +20,11 @@
     flex: 1 1 0;
     justify-content: center;
     min-height: 48px;
-    border-radius: 0;
     font-size: 13px;
-    border-bottom: 2px solid transparent;
+    border-bottom: var(--axi-border-hairline) solid transparent;
   }
   .is-web .subnav__item--active {
-    border-bottom-color: var(--accent, #c8a85a);
+    border-bottom-color: var(--axi-accent);
   }
   /* Actions (game-mode toggle + overflow) drop below the tabs, full-width and
    * centered, so nothing is clipped off the right edge on narrow phones. */
@@ -238,7 +237,7 @@
    * first-child sticky-bottom element un-pins once you scroll past its
    * container, which read as the bar "disappearing" at the bottom of the list. */
   .is-web .equip-col--right > .equip-section:first-child {
-    background: var(--panel, #14161c);
+    background: var(--axi-surface);
   }
 
   /* Header reads as a tappable toggle with a chevron affordance. */
@@ -255,7 +254,9 @@
     content: "\25B4"; /* ▴ up-triangle: points up when collapsed (tap to open) */
     margin-left: auto;
     font-size: 12px;
-    opacity: 0.7;
+    /* Rule 2: the chevron sat at 70%, which is a muted ink written as
+       opacity. It takes a step down the ramp instead. */
+    color: var(--axi-text-dim);
     transition: transform 0.15s ease;
   }
   body.is-web.attrs-expanded .equip-col--right > .equip-section:first-child > .equip-section__head::after {
@@ -378,30 +379,30 @@
  * we re-assert the resting appearance so nothing stays "stuck on". Scoped to
  * .is-web; desktop (hover: hover) is unaffected. */
 @media (hover: none) {
-  .is-web .skill-slot:hover .skill-icon-large,
-  .is-web .skill-icon-large:hover {
-    border-color: rgba(210, 180, 80, 0.5); /* base .skill-icon-large border */
-    box-shadow: none;
-  }
-  .is-web .trait-column--major .trait-btn:not(.trait-btn--active):not(.trait-btn--always):hover img {
-    filter: grayscale(60%) brightness(0.7); /* base (non-hover) filter */
-  }
+  /* The two restores that used to sit here — .skill-icon-large's border and
+     .trait-btn img's filter — moved to the files that own the hover they
+     cancel (skills.css, specializations.css). They worked by copying the
+     resting values out of those sheets, which meant this file held two
+     literals it could not tokenise without guessing what the editor batch
+     will make those resting values, and which would have drifted silently the
+     moment either changed. A rule that cancels another belongs beside it. */
   .is-web .subnav__item:hover {
     background: transparent;
-    color: var(--text-dim);
+    color: var(--axi-text-dim);
   }
   .is-web .subnav__item--active:hover {
-    color: var(--text);
+    color: var(--axi-text);
   }
   .is-web .underwater-toggle__btn:hover:not(.underwater-toggle__btn--active) {
     background: transparent;
-    color: var(--text-dim);
+    color: var(--axi-text-dim);
   }
+  /* The top bar's buttons are the package's .axi-btn now, and it hovers by
+     lifting the block rather than by changing the fill — so on touch the lift
+     is what must not latch. */
   .is-web .web-topbar__btn:hover {
-    background: transparent;
-  }
-  .is-web .web-topbar__btn--primary:hover {
-    background: var(--accent, #c8a85a);
+    transform: none;
+    box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
   }
 }
 
@@ -412,7 +413,8 @@
  * On phone both modals render as near-fullscreen bottom sheets:
  *   - Pinned to the bottom with full viewport width
  *   - Max-height 85vh so some of the underlying page is visible above it
- *   - Rounded top corners for the sheet aesthetic
+ *   - Square, like every other box: the 14px rounded top corners this used
+ *     to draw are gone (rule 3 — nothing in this language rounds)
  *   - overflow-y:auto so long content is scrollable within the sheet
  * Scoped under .is-web so the desktop Electron renderer is never affected.
  */
@@ -425,7 +427,6 @@
     max-width: 100% !important;
     height: 85vh !important;        /* explicit height so flex children fill the sheet */
     max-height: 85vh !important;
-    border-radius: 14px 14px 0 0 !important;
     overflow: hidden !important;    /* root clips at max-height; body scrolls below */
   }
 

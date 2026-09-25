@@ -1084,3 +1084,46 @@ into the numbered manual gate above (14–16).
   rather than a green suite. Either way the durable guard is a gate scanning
   for a button whose class list reaches no `font` declaration — write it with
   the existing 27 fixed, or it lands red.
+
+- [ ] **`bridge.css` outlived its schedule.** The conversion spec (§8) deletes
+  it in batch 5. Batch 5 has landed and it is still here, because the schedule
+  assumed batches 3 and 4 would run first: what is left in the gate's `PENDING`
+  is the editor (`specializations`, `skills`, `equipment`, `notes`,
+  `detail-panel`) and the ten modal sheets, and every one of them still reads a
+  legacy name the bridge defines. The deletion belongs to whichever batch
+  empties `PENDING`. Its companion `forge-render-bridge.css` IS gone: batch 5
+  converted `forge-render.css`, so the `--fr-*` names are defined inside the
+  package now, each re-pointed at an axi token with its pre-conversion value as
+  the fallback.
+
+- [ ] **Batch 5's two release-gated steps are unrun.** The spec ends batch 5
+  with the Playwright `spa`/`playground`/`e2e` suites and a marketing
+  screenshot regeneration. Both are release-only work here (jest is the dev
+  loop), so they are queued for the next release pass rather than run
+  mid-session. One spec selector was updated blind along the way and wants that
+  pass to confirm it: `tests/spa/specs/smoke.spec.js` and
+  `tests/e2e/specs/comp-slot-holes.spec.js`, both of which assert on comp
+  detail markup this batch and the previous one rewrote.
+
+- [x] **`renderCompCard` threw on a party line with a hole in it.** `slots` is
+  meant to be dense, but a record from an import, a sync payload or a
+  hand-edited `comps.json` can carry a `null`, and the pool's
+  `renderMissingMiniBuildCard(null)` read `null.length` and took the whole card
+  down. The party lines beside it already tolerated the same shape, and the
+  desktop has an e2e spec for exactly this
+  (`tests/e2e/specs/comp-slot-holes.spec.js`) — only the package's chat-embed
+  card did not. *Fix:* `.filter(Boolean)` before the pool map,
+  `packages/forge-render/src/comp-card.js`. Found by rendering the card for
+  batch 5's review, not by a test; the package has no coverage for a holed
+  line, which is worth adding.
+
+- [ ] **Three profession/role colour tables, not one.** Batch 2 consolidated
+  the nine profession hues and batch 5 moved them into
+  `packages/forge-render/src/professions.js` (the package publishes standalone
+  and cannot import out of the repo, so `src/shared/professions.js` re-exports
+  from it). That file now also owns `SLOT_ROLES` and `BUILD_ROLES`;
+  `src/shared/professions.js` still owns `TARGET_ROLES`, and
+  `src/renderer/modules/constants.js:430-455` still owns
+  `COMBO_FIELD_COLORS` / `COMBO_FINISHER_COLORS`. All five reach CSS the same
+  way, through `--axi-series`, so this is about where the tables live rather
+  than how they are applied.

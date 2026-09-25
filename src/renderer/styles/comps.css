@@ -1713,12 +1713,10 @@
    this really is a floating clone, not a colour resting on a live element.
    The forced values
    below mirror .comp-slot--filled's own; the profession colour comes
-   through the same --axi-series knob, set by comp-drag-drop.js onStart
-   (the clone still carries a lib-prof--* class from packages/forge-render,
-   batch 5's unconverted mini-card, but that class draws nothing here: its
-   colour rule is scoped to .forge-render .mini-card.lib-prof--*, and
-   SortableJS's fallback clone is appended to <body>, outside any
-   .forge-render ancestor). */
+   through the same --axi-series knob, which the cloned .mini-card already
+   carries inline (packages/forge-render's renderMiniBuildCard sets it per
+   instance since batch 5, so nothing has to re-resolve it for a clone that
+   lands outside any .forge-render ancestor). */
 .comp-drag-icon-ghost {
   width: 42px !important;
   height: 42px !important;

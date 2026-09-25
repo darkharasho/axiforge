@@ -35,66 +35,47 @@
   padding-inline: 32px;
   box-sizing: border-box;
 }
-.is-web .web-topbar {
-  padding-inline: max(32px, calc((100vw - 1600px) / 2 + 32px));
+/* .axi-mast__in carries the package's own measure; the editor's is 1600px
+   (above), so the bar's inner is widened to match or the bar's controls sit
+   in from the content they act on. */
+.is-web .axi-mast__in {
+  max-width: 1600px;
+  padding-inline: 32px;
 }
 
-.web-topbar {
-  position: sticky;
-  top: 0;
-  z-index: 50;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 14px;
-  background: var(--panel, #14161c);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
-.web-topbar__btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-  font: inherit;
-}
-.web-topbar__btn svg { flex: 0 0 auto; }
-.web-topbar__btn--primary {
-  background: var(--accent, #c8a85a);
-  color: #1a1a1a;
-  border-color: transparent;
-}
-.web-topbar__brand {
-  margin-right: auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-family: "Cinzel", serif;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  font-size: 18px;
-}
+/* ── The top bar ──────────────────────────────────────────────────────────
+   The bar itself is the package's .axi-mast (chrome.js builds it), so what is
+   left here is only what this app adds on top: the measure the editor and the
+   bar share, the brand's glyph, and the two dropdowns the language has no
+   component for. The bar used to carry its own sticky/padding/background and
+   a 1px white-at-8% rule under it — .axi-mast draws all of that. */
+
 .web-topbar__logo { height: 24px; width: auto; display: block; }
-.web-topbar__name { white-space: nowrap; }          /* keep "AxiForge" as one word */
-.web-topbar__brand-accent { color: var(--accent, #c8a85a); }
-.web-topbar__beta {
-  font-family: "DM Sans", system-ui, sans-serif;
-  font-weight: 600;
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--accent, #c8a85a);
-  opacity: 0.8;
-}
-.web-topbar__cta { opacity: 0.85; text-decoration: none; white-space: nowrap; }
-.web-topbar__cta:hover { opacity: 1; text-decoration: underline; }
+.web-topbar__brand-accent { color: var(--axi-accent); }
 
-/* Import dropdown in the web top bar (the library toolbar's import menu is hidden
-   on web, so this is the single-build playground's entry point for importing). */
+/* Everything after the brand is pushed to the right edge. */
+.axi-mast .web-topbar__menu { margin-left: auto; }
+.axi-mast .web-topbar__menu ~ * { margin-left: 0; }
+
+.web-topbar__btn svg { flex: 0 0 auto; }
+
+/* Rule 8: this is a link in running chrome, not a control, so it reads as a
+   link and takes the quiet step on the ramp. It used to sit at 0.85 opacity
+   and brighten to 1, which rule 2 does not have. */
+.web-topbar__cta {
+  color: var(--axi-text-dim);
+  text-decoration: none;
+  white-space: nowrap;
+  font: var(--axi-t-small);
+}
+.web-topbar__cta:hover { color: var(--axi-text); text-decoration: underline; }
+
+/* ── The two dropdowns ────────────────────────────────────────────────────
+   Import in the top bar (the library toolbar's import menu is hidden on web,
+   so this is the playground's only way in) and the split Copy button's extra
+   codes. Both are popovers raised off the bar, so they are drawn as panels:
+   a surface fill, a panel outline in ink, a hard offset block, square. The
+   12px/32px blurred drop shadow they used to carry is gone (rule 7). */
 .web-topbar__menu { position: relative; display: inline-flex; }
 .web-topbar__menu-list {
   position: absolute;
@@ -105,10 +86,9 @@
   flex-direction: column;
   padding: 6px;
   gap: 2px;
-  background: var(--panel, #14161c);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 10px;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  background: var(--axi-surface);
+  border: var(--axi-border-panel) solid var(--axi-ink-line);
+  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
   z-index: 60;
 }
 .web-topbar__menu--open .web-topbar__menu-list { display: flex; }
@@ -117,30 +97,28 @@
   align-items: center;
   gap: 8px;
   padding: 8px 10px;
-  border-radius: 7px;
   border: 0;
-  background: transparent;
-  color: inherit;
+  background: none;
+  color: var(--axi-text);
   cursor: pointer;
-  font: inherit;
+  font: var(--axi-t-body);
   text-align: left;
   white-space: nowrap;
 }
-.web-topbar__menu-item:hover { background: rgba(255, 255, 255, 0.08); }
-.web-topbar__menu-item svg { flex: 0 0 auto; opacity: 0.85; }
+.web-topbar__menu-item:hover { background: var(--axi-surface-raised); }
+/* Rule 2: the glyph was at 85%, a muted ink written as opacity. */
+.web-topbar__menu-item svg { flex: 0 0 auto; color: var(--axi-text-dim); }
 
-/* Split "Copy" button: primary "Copy share link" + attached caret dropdown for
-   the axi/chat code options. */
+/* Split "Copy" button: primary "Copy share link" plus an attached caret. The
+   two halves used to be joined by squaring the inner corners off a radius;
+   nothing here has a radius any more, so the join is the shared ink line
+   between them and the caret simply loses its own left edge's weight. */
 .web-topbar__split { position: relative; display: inline-flex; }
-.web-topbar__split-main {
-  border-top-right-radius: 0;
-  border-bottom-right-radius: 0;
-}
 .web-topbar__split-toggle {
   padding-inline: 7px;
-  border-top-left-radius: 0;
-  border-bottom-left-radius: 0;
-  border-left: 1px solid rgba(0, 0, 0, 0.22);
+  /* Pull the caret onto the main half's outline so the pair shares one ink
+     line instead of drawing two edges back to back. */
+  margin-left: calc(var(--axi-border-control) * -1);
 }
 /* Menu hangs from the right edge so it can't overflow past the top bar. */
 .web-topbar__split .web-topbar__menu-list { left: auto; right: 0; }

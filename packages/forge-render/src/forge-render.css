@@ -1,34 +1,118 @@
 /* @axiapps/forge-render — generated once by scripts/extract-forge-render-css.mjs,
    hand-maintained afterwards. All selectors are scoped under .forge-render and
-   all theme variables are namespaced --fr-* with baked-in AxiForge dark
-   defaults, so embedding apps (AxiVale) can't collide with these styles. */
+   all theme variables are namespaced --fr-* so embedding apps (AxiVale) can't
+   collide with these styles.
+
+   Converted to the axi design language in batch 5 of the conversion
+   (docs/superpowers/specs/2026-09-23-axi-design-conversion-design.md §6). Two
+   halves, and they behave differently on purpose:
+
+   PALETTE is conditional. Every --fr-* name stays exactly as it was — an app
+   that overrides one keeps overriding it — and each is re-pointed at an axi
+   token with the value it held before this conversion as the fallback. An app
+   that loads @axiapps/axi-design's axi.css (AxiForge's renderer via app.css,
+   the published SPA via src/site/main.js) gets the converted palette; AxiVale
+   and AxiBridge, which do not, render the same colours they always have.
+
+   FORM is not conditional. Radius, shadow and outline weight come straight
+   off --axi-* with no fallback, so where the language is absent they resolve
+   to nothing and the element is drawn flat and square. That is deliberate:
+   a card with the new outline weight and the old rounded corners is worse
+   than either end state, so AxiVale's embedded cards DO change shape while
+   keeping their palette. AxiVale's own conversion is the follow-up that
+   resolves it (docs/BACKLOG.md).
+
+   Rule 2 is why no --fr-* value is a colour resting at partial opacity any
+   more: the tints this file used to carry (rgba(255,255,255,.05) for a raised
+   box, an accent at 12% for a hover) are steps on the ramp now. The literals
+   kept as fallbacks are the pre-conversion values and are the one sanctioned
+   colour literal in app CSS (spec §9). */
+.forge-render {
+  /* The ground/surface ramp. --fr-panel-2 was the darker of the two, so it
+     reads as the ground and --fr-panel as a surface raised off it. */
+  --fr-panel-2: var(--axi-ground, #101114);
+  --fr-panel: var(--axi-surface, #141518);
+  --fr-surface: var(--axi-surface, #141518);
+  --fr-panel-gradient: var(--axi-surface, #141518);
+
+  /* One step further up, for a chip or a menu sitting on a surface. All five
+     of these names were a white or accent wash at 5-12% before rule 2; they
+     are the same step on the ramp now, which is why they collapse onto one
+     token while keeping five overridable names. */
+  --fr-hover-subtle: var(--axi-surface-raised, rgba(255, 255, 255, 0.05));
+  --fr-hover: var(--axi-surface-raised, rgba(255, 255, 255, 0.05));
+  --fr-hover-accent: var(--axi-surface-raised, rgba(200, 152, 72, 0.12));
+  --fr-bg-raised: var(--axi-surface-raised, #2a2a2a);
+  --fr-bg-surface: var(--axi-surface-raised, #2a2a2a);
+  --fr-bg-tertiary: var(--axi-surface-raised, rgba(255, 255, 255, 0.06));
+  --fr-bg-hover: var(--axi-surface-raised, rgba(255, 255, 255, 0.12));
+
+  /* Ink. --fr-line is the outline a raised element is drawn with;
+     --fr-line-soft is an internal rule INSIDE one, which is a different job
+     and a different token even though the legacy bridge collapsed both. */
+  --fr-line: var(--axi-ink-line, #1e1f24);
+  --fr-border: var(--axi-ink-line, #444444);
+  --fr-line-soft: var(--axi-rule, #181920);
+
+  /* The text ramp. Three steps, and the legacy names map onto them in order:
+     --fr-text-light was a build's name, --fr-text-dim and --fr-muted were
+     both the quietest step. */
+  --fr-text: var(--axi-text, #e2e3e8);
+  --fr-text-light: var(--axi-text-dim, #aeafb8);
+  --fr-text-secondary: var(--axi-text-dim, #aeafb8);
+  --fr-text-dim: var(--axi-text-faint, #646670);
+  --fr-muted: var(--axi-text-faint, #828490);
+
+  /* Accent and status. --fr-gold was a second warm ink a shade off the
+     accent, which rule 5 does not have room for: there is one accent. */
+  --fr-accent: var(--axi-accent, #c89848);
+  --fr-gold: var(--axi-accent, #e8b050);
+  --fr-danger-text: var(--axi-danger, #f87171);
+
+  /* The one cool ink, reserved for meta (rule 6). A relic is the card's
+     only meta fact, and it used to carry a lilac literal of its own. */
+  --fr-meta: var(--axi-meta, #aa88cc);
+
+  /* Type. The sans is the host page's and this file never names it; the mono
+     is named because a chat code has to be monospaced to be readable and an
+     app without axi.css would otherwise lose that. */
+  --fr-mono: var(--axi-mono, ui-monospace, monospace);
+}
+
 /* ── Mini Build Card ─────────────────────────────────────────────────────────
    Reusable compact card showing build summary: specs, weapons, gear, relic.
    ──────────────────────────────────────────────────────────────────────────── */
 
+/* Rule 10: the identifying hue arrives per-instance on --axi-series, set by
+   renderMiniBuildCard from the one profession table (./professions.js). The
+   card used to key it off a lib-prof--* class, which meant this stylesheet
+   named all nine professions in colour literals. It names none now. A card
+   whose profession is unrecognised falls to the outline ink, and a card
+   dragged out of its .forge-render ancestor keeps its colour, because an
+   inline custom property has no scope to leave. */
 .forge-render .mini-card {
   display: flex;
   gap: 12px;
   padding: 10px 16px;
-  background: var(--fr-panel-2, #101114);
-  border-radius: var(--fr-radius-sm, 6px);
+  background: var(--fr-panel-2);
   cursor: grab;
-  border-left: 3px solid currentColor;
+  border-left: var(--axi-border-control) solid var(--axi-series, var(--fr-line));
   position: relative;
   transition: background 0.12s;
 }
 
 .forge-render .mini-card:hover {
-  background: var(--fr-panel, #141518);
+  background: var(--fr-panel);
 }
 
 /* ── Icon ──────────────────────────────────────────────────────────────────── */
 
+/* Square, like every other box in the language: the border-radius: 50% that
+   used to make this a disc is gone (rule 3). */
 .forge-render .mini-card__icon {
   width: 40px;
   height: 40px;
-  background: var(--fr-hover-subtle, rgba(255, 255, 255, 0.05));
-  border-radius: 50%;
+  background: var(--fr-hover-subtle);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -60,7 +144,7 @@
 .forge-render .mini-card__name {
   all: unset;
   font-size: 13px;
-  color: var(--fr-text-light, #aeafb8);
+  color: var(--fr-text-light);
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -78,7 +162,7 @@
 
 .forge-render button.mini-card__name:hover,
 .forge-render a.mini-card__name:hover {
-  color: var(--fr-text, #e2e3e8);
+  color: var(--fr-text);
 }
 
 .forge-render .mini-card__name-arrow {
@@ -95,11 +179,10 @@
 
 .forge-render .mini-card__tag {
   font-size: 9px;
-  border-radius: var(--fr-radius-xs, 4px);
   padding: 1px 6px;
-  background: var(--fr-hover-subtle, rgba(255, 255, 255, 0.05));
+  background: var(--fr-hover-subtle);
   border: none;
-  color: var(--fr-text-dim, #646670);
+  color: var(--fr-text-dim);
   white-space: nowrap;
   flex-shrink: 0;
   font-weight: 600;
@@ -109,10 +192,9 @@
 
 .forge-render .mini-card__mode {
   font-size: 9px;
-  color: var(--fr-text-dim, #646670);
-  background: var(--fr-hover-subtle, rgba(255, 255, 255, 0.05));
+  color: var(--fr-text-dim);
+  background: var(--fr-hover-subtle);
   border: none;
-  border-radius: var(--fr-radius-xs, 4px);
   padding: 1px 6px;
   flex-shrink: 0;
   white-space: nowrap;
@@ -140,22 +222,31 @@
   gap: 4px;
   cursor: pointer;
   font-size: 9px;
-  color: var(--fr-text-dim, #646670);
-  background: var(--fr-hover-subtle, rgba(255, 255, 255, 0.05));
-  border-radius: var(--fr-radius-xs, 4px);
+  color: var(--fr-text-dim);
+  background: var(--fr-hover-subtle);
   padding: 1px 6px;
   white-space: nowrap;
   user-select: none;
   position: relative;
 }
-.forge-render .mini-card__color-picker:hover { background: var(--fr-hover, rgba(255, 255, 255, 0.05)); }
+.forge-render .mini-card__color-picker:hover { background: var(--fr-hover); }
 
+/* The dot IS the swatch: renderMiniBuildCard puts the marker's own colour on
+   --axi-series (./professions.js SLOT_ROLES), so this rule carries no colour
+   of its own. "Default" has no marker to show and takes the --none modifier,
+   which is an outlined empty box rather than a filled one. Square, like the
+   rest (rule 3 -- the 50% that made it a dot is gone). */
 .forge-render .mini-card__color-dot {
   display: inline-block;
   width: 8px;
   height: 8px;
-  border-radius: 50%;
+  background: var(--axi-series, var(--fr-text-dim));
   flex-shrink: 0;
+}
+
+.forge-render .mini-card__color-dot--none {
+  background: none;
+  border: var(--axi-border-hairline) solid var(--fr-line);
 }
 
 .forge-render .mini-card__color-label {
@@ -164,9 +255,11 @@
   letter-spacing: 0.02em;
 }
 
+/* Rule 2: the caret was at half opacity, which is a muted ink written a
+   different way. It is the quietest step on the ramp instead. */
 .forge-render .mini-card__color-caret {
   font-size: 7px;
-  opacity: 0.5;
+  color: var(--fr-text-dim);
 }
 
 .forge-render .mini-card__color-menu {
@@ -174,13 +267,14 @@
   top: 100%;
   left: 0;
   margin-top: 2px;
-  background: var(--fr-bg-raised, #2a2a2a);
-  border: 1px solid var(--fr-border, #444);
-  border-radius: var(--fr-radius-sm, 6px);
+  background: var(--fr-bg-raised);
+  border: var(--axi-border-panel) solid var(--fr-line);
   padding: 2px 0;
   z-index: 200;
   min-width: 90px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  /* A popover is raised off the card, and the language raises things with a
+     hard offset block rather than a blur (rule 7). */
+  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
 }
 
 .forge-render .mini-card__color-option {
@@ -190,19 +284,18 @@
   padding: 4px 10px;
   cursor: pointer;
   font-size: 11px;
-  color: var(--fr-text, #e2e3e8);
+  color: var(--fr-text);
   white-space: nowrap;
 }
-.forge-render .mini-card__color-option:hover { background: var(--fr-hover-subtle, rgba(255, 255, 255, 0.05)); }
+.forge-render .mini-card__color-option:hover { background: var(--fr-hover-subtle); }
 .forge-render .mini-card__color-option--active { font-weight: 700; }
 
 /* ── Copy build code button ────────────────────────────────────────────────── */
 
 .forge-render .mini-card__btn-copy-code {
-  background: var(--fr-hover-subtle, rgba(255, 255, 255, 0.05));
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  color: var(--fr-text-dim, #646670);
+  background: var(--fr-hover-subtle);
+  border: var(--axi-border-hairline) solid var(--fr-line);
+  color: var(--fr-text-dim);
   padding: 1px 7px;
   font-size: 9px;
   cursor: pointer;
@@ -213,13 +306,13 @@
   transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 .forge-render .mini-card__btn-copy-code:hover {
-  background: var(--fr-hover-accent, rgba(200, 152, 72, 0.12));
-  color: var(--fr-text, #e2e3e8);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: var(--fr-hover-accent);
+  color: var(--fr-text);
+  border-color: var(--fr-line);
 }
 .forge-render .mini-card__btn-copy-code--copied {
-  border-color: var(--fr-accent, rgb(200, 152, 72));
-  color: var(--fr-accent, rgb(200, 152, 72));
+  border-color: var(--fr-accent);
+  color: var(--fr-accent);
 }
 
 /* ── Two-Column Layout (specs left, gear right) ────────────────────────────── */
@@ -285,7 +378,7 @@
 
 .forge-render .mini-card__detail-label {
   font-size: 9px;
-  color: var(--fr-text-dim, #646670);
+  color: var(--fr-text-dim);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   min-width: 58px;
@@ -301,17 +394,19 @@
   min-width: 0;
 }
 
+/* Rule 2: the pip's fill was a blue-grey at 15% over near-black, which is a
+   muted ink. It is a step on the ramp instead, and the elite variant is told
+   apart by its ink and its outline rather than by a second tint. */
 .forge-render .mini-card__spec-pip {
   width: 18px;
   height: 18px;
-  border-radius: var(--fr-radius-xs, 4px);
-  background: rgba(136, 153, 187, 0.15);
+  background: var(--fr-hover-subtle);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 8px;
   font-weight: 600;
-  color: var(--fr-muted, #828490);
+  color: var(--fr-muted);
   flex-shrink: 0;
 }
 
@@ -321,9 +416,9 @@
 }
 
 .forge-render .mini-card__spec-pip--elite {
-  background: rgba(200, 169, 110, 0.15);
-  color: var(--fr-gold, #e8b050);
-  border: 1px solid rgba(200, 169, 110, 0.25);
+  background: var(--fr-hover-subtle);
+  color: var(--fr-gold);
+  border: var(--axi-border-hairline) solid var(--fr-accent);
 }
 
 .forge-render .mini-card__spec-pip--elite svg {
@@ -333,7 +428,7 @@
 
 .forge-render .mini-card__spec-name {
   font-size: 11px;
-  color: var(--fr-muted, #828490);
+  color: var(--fr-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -343,7 +438,7 @@
 }
 
 .forge-render .mini-card__spec-name--elite {
-  color: var(--fr-gold, #e8b050);
+  color: var(--fr-gold);
   font-weight: 500;
 }
 
@@ -378,7 +473,7 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  color: #fff;
+  color: var(--fr-text);
 }
 
 .forge-render .mini-card__weap-icon svg {
@@ -386,39 +481,45 @@
   height: 16px;
 }
 
+/* The class icons ship with their own baked fills, so overriding them is the
+   only way the icon takes the page's ink. !important because the fill is on
+   the element, not in a sheet this one can outrank. */
 .forge-render .mini-card__weap-icon svg,
 .forge-render .mini-card__weap-icon svg path,
 .forge-render .mini-card__weap-icon svg g {
-  fill: #fff !important;
-  color: #fff !important;
+  fill: var(--fr-text) !important;
+  color: var(--fr-text) !important;
 }
 
 .forge-render .mini-card__weap-name {
   font-size: 11px;
-  color: var(--fr-accent, rgb(200, 152, 72));
+  color: var(--fr-accent);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .forge-render .mini-card__weap-sep {
-  color: var(--fr-line-soft, #181920);
+  color: var(--fr-line-soft);
   margin: 0 2px;
   font-size: 11px;
 }
 
 .forge-render .mini-card__weap-div {
-  color: var(--fr-line-soft, #181920);
+  color: var(--fr-line-soft);
   margin: 0 4px;
   font-size: 11px;
 }
 
 /* ── Gear icons & text ─────────────────────────────────────────────────────── */
 
+/* Three kinds of gear fact, each of which used to be its own tinted hue.
+   Rule 10 caps a set at two series and rule 2 forbids the tint, so all three
+   share one ramp step and are told apart by their ink: a stat package is the
+   accent, a rune is a neutral, and a relic is the card's one meta fact. */
 .forge-render .mini-card__gear-icon {
   width: 16px;
   height: 16px;
-  border-radius: 3px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -427,37 +528,36 @@
 }
 
 .forge-render .mini-card__gear-icon--stat {
-  background: rgba(200, 169, 110, 0.15);
-  color: var(--fr-gold, #e8b050);
+  background: var(--fr-hover-subtle);
+  color: var(--fr-gold);
 }
 
 .forge-render .mini-card__gear-icon--rune {
-  background: rgba(166, 187, 222, 0.12);
-  color: var(--fr-muted, #828490);
+  background: var(--fr-hover-subtle);
+  color: var(--fr-muted);
 }
 
 .forge-render .mini-card__gear-icon--relic {
-  background: rgba(170, 136, 204, 0.12);
-  color: #aa88cc;
+  background: var(--fr-hover-subtle);
+  color: var(--fr-meta);
 }
 
 .forge-render .mini-card__gear-img {
   width: 18px;
   height: 18px;
-  border-radius: 3px;
   flex-shrink: 0;
   object-fit: contain;
 }
 
 .forge-render .mini-card__stat {
   font-size: 11px;
-  color: var(--fr-gold, #e8b050);
+  color: var(--fr-gold);
   white-space: nowrap;
 }
 
 .forge-render .mini-card__equip {
   font-size: 11px;
-  color: var(--fr-muted, #828490);
+  color: var(--fr-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -465,7 +565,7 @@
 
 .forge-render .mini-card__relic {
   font-size: 11px;
-  color: #aa88cc;
+  color: var(--fr-meta);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -473,7 +573,7 @@
 
 .forge-render .mini-card__sep {
   font-size: 11px;
-  color: var(--fr-line-soft, #181920);
+  color: var(--fr-line-soft);
   margin: 0 3px;
 }
 
@@ -487,13 +587,12 @@
   right: 6px;
   font-size: 18px;
   line-height: 1;
-  color: var(--fr-text-dim, #646670);
+  color: var(--fr-text-dim);
   width: 24px;
   height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--fr-radius-xs, 4px);
   z-index: 1;
   opacity: 0;
   transition: color 0.15s, background 0.15s, opacity 0.15s;
@@ -503,9 +602,11 @@
   opacity: 1;
 }
 
+/* Rule 2: the hover fill was the danger ink at 12%. A destructive control
+   hovers to the danger ink on a ramp step, not to a wash of it. */
 .forge-render .mini-card__btn-remove:hover {
-  color: var(--fr-danger-text, #f87171);
-  background: rgba(197, 72, 95, 0.12);
+  color: var(--fr-danger-text);
+  background: var(--fr-hover-subtle);
 }
 
 /* ── Link badge (comp reference indicator) ────────────────────────────────── */
@@ -515,10 +616,9 @@
   align-items: center;
   gap: 3px;
   font-size: 10px;
-  color: var(--fr-text-dim, #646670);
-  background: var(--fr-bg-tertiary, rgba(255, 255, 255, 0.06));
+  color: var(--fr-text-dim);
+  background: var(--fr-bg-tertiary);
   padding: 1px 6px;
-  border-radius: 8px;
   flex-shrink: 0;
   white-space: nowrap;
   vertical-align: middle;
@@ -532,34 +632,44 @@
 }
 
 .forge-render a.mini-card__link-badge:hover {
-  color: var(--fr-text, #c7c9d1);
-  background: var(--fr-bg-hover, rgba(255, 255, 255, 0.12));
+  color: var(--fr-text);
+  background: var(--fr-bg-hover);
 }
 
+/* Rule 2: the glyph was at 70%, which is a muted ink written as opacity. It
+   takes the quietest step on the ramp instead. */
 .forge-render .mini-card__link-badge svg {
-  opacity: 0.7;
+  color: var(--fr-text-dim);
 }
 
 /* ── Missing variant ───────────────────────────────────────────────────────── */
 
-/* Slot color overrides for left accent */
-.forge-render .mini-card[data-slot-color="red"] { border-left-color: #d63a3a; }
-.forge-render .mini-card[data-slot-color="blue"] { border-left-color: #3a8fd6; }
+/* A slot's Condi/Heal marker used to be two attribute selectors carrying two
+   literals. It comes through --axi-series now, set by renderMiniBuildCard
+   from ./professions.js SLOT_ROLES, so the marker outranks the profession
+   without this sheet naming either. */
 
+/* A placeholder for a build that is not there. It used to say so with
+   opacity: 0.5, which rule 2 does not allow -- a colour at half strength over
+   the ground is a different colour, not a quieter one. It says it the way the
+   desktop's .comp-slot--missing does instead (comps.css): the accent edge goes
+   dashed, because dashed is this language's word for absent, and the ink steps
+   to the quietest rung. */
 .forge-render .mini-card--missing {
-  opacity: 0.5;
-  border-left-color: var(--fr-line, #1e1f24);
+  --axi-series: var(--fr-line-soft);
+  border-left-style: dashed;
+  color: var(--fr-text-dim);
   cursor: default;
 }
 
 .forge-render .mini-card__icon--missing {
-  color: var(--fr-text-dim, #646670);
+  color: var(--fr-text-dim);
   font-size: 14px;
   font-weight: 600;
 }
 
 .forge-render .mini-card__name--missing {
-  color: var(--fr-text-dim, #646670);
+  color: var(--fr-text-dim);
   font-style: italic;
 }
 
@@ -567,11 +677,19 @@
 /* src/renderer/styles/role-badge.css */
 /* Role badge pill — used in library cards and comp detail. */
 
+/* Six roles, which used to be six hues each washed to 15% over near-black --
+   rule 2's "five muted inks over near-black are five browns" exactly, and
+   rule 10's cap on series exceeded twice over. The estimated role is domain
+   data (role-estimator.js decides it, not the theme), so the colour survives
+   at full strength as ink on one shared ramp step, arriving per-instance on
+   --axi-series from ./professions.js BUILD_ROLES. An unrecognised role yields
+   no style and falls to the neutral named below. */
 .forge-render .role-badge {
   display: inline-flex;
   align-items: center;
-  border-radius: 6px;
   padding: 2px 8px;
+  background: var(--fr-hover-subtle);
+  color: var(--axi-series, var(--fr-muted));
   font-size: 0.68rem;
   font-weight: 600;
   white-space: nowrap;
@@ -582,42 +700,11 @@
   text-transform: uppercase;
 }
 
-.forge-render .role-badge--power-dps {
-  background: rgba(220, 80, 80, 0.15);
-  color: #e87070;
-}
-
-.forge-render .role-badge--condi-dps {
-  background: rgba(185, 80, 220, 0.15);
-  color: #cc80e8;
-}
-
-.forge-render .role-badge--boon-support {
-  background: rgba(72, 160, 255, 0.15);
-  color: #72aaff;
-}
-
-.forge-render .role-badge--heal-support {
-  background: rgba(77, 202, 122, 0.15);
-  color: #4dca7a;
-}
-
-.forge-render .role-badge--hybrid {
-  background: rgba(200, 169, 110, 0.15);
-  color: #c8a96e;
-}
-
-.forge-render .role-badge--unknown {
-  background: rgba(130, 130, 130, 0.08);
-  color: #888;
-}
-
 /* Compact variant used inside comp party line slots */
 .forge-render .comp-slot .role-badge {
   font-size: 0.58rem;
   padding: 0 5px;
   line-height: 1.4;
-  border-radius: 4px;
 }
 
 
@@ -815,56 +902,62 @@
 /* ── Comp card (chat embeds) ─────────────────────────────────────────── */
 .forge-render .comp-card { display: flex; flex-direction: column; gap: 10px; }
 .forge-render .comp-card__head { display: flex; align-items: baseline; gap: 8px; }
-.forge-render .comp-card__name { font-size: 14px; font-weight: 600; color: var(--fr-text-light, #aeafb8); }
-.forge-render .comp-card__tag { font-size: 10px; padding: 1px 7px; border-radius: 999px;
-  border: 1px solid var(--fr-line, #1e1f24); color: var(--fr-muted, #828490); }
+.forge-render .comp-card__name { font-size: 14px; font-weight: 600; color: var(--fr-text-light); }
+.forge-render .comp-card__tag { font-size: 10px; padding: 1px 7px;
+  border: var(--axi-border-hairline) solid var(--fr-line); color: var(--fr-muted); }
 .forge-render .comp-card__lines { display: flex; flex-direction: column; gap: 6px; }
 .forge-render .comp-line { display: flex; align-items: center; gap: 8px; }
-.forge-render .comp-line__label { font-size: 10px; color: var(--fr-muted, #828490); width: 20px; flex-shrink: 0; }
-.forge-render .comp-line__num { width: 18px; height: 18px; display: block; color: var(--fr-muted, #828490); }
+.forge-render .comp-line__label { font-size: 10px; color: var(--fr-muted); width: 20px; flex-shrink: 0; }
+.forge-render .comp-line__num { width: 18px; height: 18px; display: block; color: var(--fr-muted); }
 .forge-render .comp-line__slots { display: flex; gap: 4px; flex-wrap: wrap; }
-.forge-render .comp-line__count { margin-left: auto; font-size: 10px; color: var(--fr-muted, #828490); }
-.forge-render .comp-slot { width: 30px; height: 30px; border-radius: var(--fr-radius-xs, 4px);
+.forge-render .comp-line__count { margin-left: auto; font-size: 10px; color: var(--fr-muted); }
+/* Rule 10 again: a slot is a 30px box with no room for a strip or a label,
+   so its outline IS the identification -- the same call comps.css makes for
+   the desktop's .comp-slot--filled. renderSlot (comp-card.js, and the SPA's
+   render-comp.js) sets --axi-series from ./professions.js. */
+.forge-render .comp-slot { width: 30px; height: 30px;
   display: flex; align-items: center; justify-content: center;
-  background: var(--fr-panel-2, #101114); border: 1px solid var(--fr-line, #1e1f24); }
-.forge-render .comp-slot--empty { border-style: dashed; opacity: 0.45; }
+  background: var(--fr-panel-2);
+  border: var(--axi-border-control) solid var(--axi-series, var(--fr-line)); }
+/* An empty slot is an absence, so the dashed outline says it and the ink
+   steps down the ramp -- no wash (rule 2). */
+.forge-render .comp-slot--empty { border-style: dashed; border-color: var(--fr-line-soft); }
 .forge-render .comp-slot--tag { border-style: dashed; }
 .forge-render .comp-slot__icon svg { width: 20px; height: 20px; }
 .forge-render .comp-slot__tag-img { width: 22px; height: 22px; object-fit: contain; }
-.forge-render .comp-slot__tag-text { font-size: 9px; font-weight: 700; text-transform: uppercase; color: var(--fr-muted, #8a8f98); }
+.forge-render .comp-slot__tag-text { font-size: 9px; font-weight: 700; text-transform: uppercase; color: var(--fr-muted); }
 .forge-render .comp-card__pool { display: flex; flex-direction: column; gap: 8px; }
 
-/* --- Build card: class-colored left accent --- */
-.forge-render .mini-card.lib-prof--elementalist { border-left-color: #f68a87; }
-.forge-render .mini-card.lib-prof--engineer     { border-left-color: #d09c59; }
-.forge-render .mini-card.lib-prof--guardian     { border-left-color: #72c1d9; }
-.forge-render .mini-card.lib-prof--mesmer       { border-left-color: #b679d5; }
-.forge-render .mini-card.lib-prof--necromancer  { border-left-color: #52a76f; }
-.forge-render .mini-card.lib-prof--ranger       { border-left-color: #8cdc82; }
-.forge-render .mini-card.lib-prof--revenant     { border-left-color: #d16e5a; }
-.forge-render .mini-card.lib-prof--thief        { border-left-color: #c08f95; }
-.forge-render .mini-card.lib-prof--warrior      { border-left-color: #ffd166; }
+/* The nine .mini-card.lib-prof--* rules that used to sit here are gone: they
+   were nine colour literals, and they had drifted from the nine in the app's
+   own copy of the table (elementalist was #f68a87 here against #dd5555
+   there). ./professions.js is the one table now, and .mini-card reads the
+   result off --axi-series at the top of this file. */
 
 /* --- Build card: selected-trait icons in spec lines --- */
 .forge-render .mini-card__trait-icons { display: inline-flex; gap: 3px; margin-left: 6px; vertical-align: middle; }
 .forge-render .mini-card__trait { position: relative; display: inline-flex; }
-.forge-render .mini-card__trait-icon { width: 18px; height: 18px; border-radius: 3px; border: 1px solid var(--fr-line, #2a2d36); object-fit: cover; }
+.forge-render .mini-card__trait-icon { width: 18px; height: 18px; border: var(--axi-border-hairline) solid var(--fr-line); object-fit: cover; }
 /* Hover tooltip with the trait name */
 .forge-render .mini-card__trait:hover::after {
   content: attr(data-name); position: absolute; bottom: calc(100% + 4px); left: 50%; transform: translateX(-50%);
-  background: #000; color: #fff; border: 1px solid var(--fr-accent, #e0a526); border-radius: 3px;
+  background: var(--fr-bg-raised); color: var(--fr-text);
+  border: var(--axi-border-panel) solid var(--fr-line);
+  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
   padding: 2px 7px; font-size: 10px; white-space: nowrap; z-index: 50; pointer-events: none;
 }
 
 /* --- Build card: top skills row (weapon set + utilities, big + named) --- */
 .forge-render .mini-card__skills { display: flex; align-items: flex-start; gap: 4px; margin: 8px 0 2px; flex-wrap: wrap; }
 .forge-render .mini-card__skill { display: flex; flex-direction: column; align-items: center; width: 48px; }
-.forge-render .mini-card__skill-icon { width: 34px; height: 34px; border-radius: 5px; border: 1px solid var(--fr-line, #2a2d36); object-fit: cover; }
-.forge-render .mini-card__skill-name { font-size: 8px; line-height: 1.05; text-align: center; color: var(--fr-muted, #9a948a); margin-top: 3px; }
-.forge-render .mini-card__skill-div { width: 1px; align-self: stretch; background: var(--fr-line, #2a2d36); margin: 0 4px; }
+.forge-render .mini-card__skill-icon { width: 34px; height: 34px; border: var(--axi-border-hairline) solid var(--fr-line); object-fit: cover; }
+.forge-render .mini-card__skill-name { font-size: 8px; line-height: 1.05; text-align: center; color: var(--fr-muted); margin-top: 3px; }
+.forge-render .mini-card__skill-div { width: 1px; align-self: stretch; background: var(--fr-line-soft); margin: 0 4px; }
 
 /* --- Build card: chat-code bar with copy --- */
-.forge-render .mini-card__chatbar { display: flex; align-items: center; gap: 8px; margin-top: 10px; background: var(--fr-panel, #15161b); border: 1px solid var(--fr-line, #2a2d36); border-radius: 4px; padding: 5px 8px; }
-.forge-render .mini-card__chatcode { flex: 1; min-width: 0; font-size: 10px; font-family: ui-monospace, monospace; color: var(--fr-muted, #8fb0c9); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.forge-render .mini-card__chatcopy { flex: 0 0 auto; font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fr-accent, #e0a526); background: none; border: 1px solid var(--fr-accent, #e0a526); border-radius: 3px; padding: 3px 9px; cursor: pointer; }
-.forge-render .mini-card__chatcopy:hover { background: rgba(224, 165, 38, 0.12); }
+.forge-render .mini-card__chatbar { display: flex; align-items: center; gap: 8px; margin-top: 10px; background: var(--fr-panel); border: var(--axi-border-hairline) solid var(--fr-line); padding: 5px 8px; }
+.forge-render .mini-card__chatcode { flex: 1; min-width: 0; font-size: 10px; font-family: var(--fr-mono); color: var(--fr-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.forge-render .mini-card__chatcopy { flex: 0 0 auto; font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fr-accent); background: none; border: var(--axi-border-control) solid var(--fr-accent); padding: 3px 9px; cursor: pointer; }
+/* Rule 2: the hover was the accent at 12%. A control that hovers to the
+   accent fills with it and takes the ink that reads on it. */
+.forge-render .mini-card__chatcopy:hover { background: var(--fr-accent); color: var(--axi-accent-ink, var(--fr-panel-2)); }

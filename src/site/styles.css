@@ -12,28 +12,21 @@
 @import "../renderer/styles/detail-panel.css";
 @import "../renderer/styles/comps.css";
 @import "../../packages/forge-render/src/forge-render.css";
-@import "../renderer/styles/forge-render-bridge.css";
 @import "./site-mobile.css";
 
-/* ── Profession colour, waiting on forge-render ───────────────────────────
-   The nine hues a profession owns, as `color` on whatever carries the
-   lib-prof--* class: a comp slot's icon here, a mini card's icon in the pool.
-   They are colour literals, which is why this file is still in the gate's
-   PENDING list — and they stay literals until packages/forge-render converts
-   and its emitters set --axi-series from src/shared/professions.js the way the
-   desktop's do. Nine hexes in one place beats nine in the markup, so they wait
-   here rather than move. RULES.md rule 10 and src/shared/professions.js are
-   the two documents that govern them. */
+/* ── Profession colour ────────────────────────────────────────────────────
+   The nine hues a profession owns used to sit here as nine `color` literals
+   keyed off a lib-prof--* class, which is what kept this file in the gate's
+   PENDING list. They are gone: packages/forge-render/src/professions.js now
+   owns the one table, and render-comp.js sets --axi-series per instance on
+   the element that carries the hue — a comp slot, a tag-popover row. The
+   slot's own outline is drawn from that knob in forge-render.css, the same
+   way the desktop draws it (comps.css .comp-slot--filled). RULES.md rule 10
+   is why the colour arrives per-instance rather than as a token or a class. */
 
-.lib-prof--guardian     { color: #6ea8ff; }
-.lib-prof--warrior      { color: #ff9944; }
-.lib-prof--necromancer  { color: #4dca7a; }
-.lib-prof--engineer     { color: #cc8844; }
-.lib-prof--ranger       { color: #77cc55; }
-.lib-prof--thief        { color: #cc6677; }
-.lib-prof--mesmer       { color: #b07acc; }
-.lib-prof--elementalist { color: #dd5555; }
-.lib-prof--revenant     { color: #aa6655; }
+.comp-tag-pop__row .comp-tag-pop__icon {
+  color: var(--axi-series, var(--axi-text-faint));
+}
 
 /* ── The masthead ─────────────────────────────────────────────────────────
    .axi-mast / .axi-mast__in carry the bar, .axi-brand / .axi-brand__name the

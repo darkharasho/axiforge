@@ -37,7 +37,6 @@ const APP_CSS = [
   "src/renderer/styles/library.css",
   "src/renderer/styles/comps.css",
   "src/renderer/styles/build-sources.css",
-  "src/renderer/styles/forge-render-bridge.css",
   "src/web/web.css",
   "src/web/web-mobile.css",
   "src/site/styles.css",
@@ -63,12 +62,6 @@ const PENDING = [
   "src/renderer/styles/smart-folder-modal.css",
   "src/renderer/styles/team-modal.css",
   "src/renderer/styles/settings-modal.css",
-  "src/renderer/styles/forge-render-bridge.css",
-  "src/web/web.css",
-  "src/web/web-mobile.css",
-  "src/site/styles.css",
-  "src/site/site-mobile.css",
-  "packages/forge-render/src/forge-render.css",
 ];
 
 const CONVERTED = APP_CSS.filter((f) => !PENDING.includes(f));
@@ -705,6 +698,27 @@ const EMITTED_CLASS_ALLOWLIST = [
   ["lib-tv__row--build", "JS/query hook alongside .lib-tv__row, which carries the paint."],
 ];
 
+/** The conversion's one sanctioned colour literal in app CSS (spec §6 and §9).
+    packages/forge-render publishes standalone to AxiVale and AxiBridge, which
+    do not load axi.css. So forge-render.css re-points each of its --fr-*
+    names at an axi token and keeps the value that name held before the
+    conversion as the var()'s fallback — `--fr-panel: var(--axi-surface,
+    #141518)` — and an embedding app without the language keeps its palette.
+
+    Only the fallback POSITION is excused, and only in that file: the whole
+    `var(--axi-…, …)` span is blanked before scanning, so a bare literal
+    anywhere else in the sheet still reports, and no other file gets the
+    exemption. Form is not excused at all — radius, shadow and outline weight
+    in that file come off --axi-* with no fallback on purpose, so where the
+    language is absent the element draws flat rather than half-converted. */
+const AXI_FALLBACK_EXEMPT = new Set(["packages/forge-render/src/forge-render.css"]);
+
+/** `css` with the exempt file's `var(--axi-…, fallback)` spans blanked. */
+function scannable(file, css) {
+  if (!AXI_FALLBACK_EXEMPT.has(file)) return css;
+  return css.replace(/var\(\s*--axi-[\w-]+\s*,[^()]*(?:\([^()]*\)[^()]*)*\)/g, " ");
+}
+
 const SCANNERS = [
   ["colour literal", findColourLiterals],
   ["custom property colour literal", findCustomPropertyColours],
@@ -726,7 +740,7 @@ describe("axi design language rules", () => {
   // leaves PENDING.
   if (CONVERTED.length) {
     describe.each(CONVERTED)("%s", (file) => {
-      const css = fs.readFileSync(path.join(ROOT, file), "utf8");
+      const css = scannable(file, fs.readFileSync(path.join(ROOT, file), "utf8"));
 
       it.each(SCANNERS)("has no %s", (_label, scan) => {
         expect(scan(css)).toEqual([]);
@@ -741,6 +755,44 @@ describe("axi design language rules", () => {
     const dirs = ["src/renderer", "src/web", "src/site", "packages/forge-render/src"];
     const onDisk = dirs.flatMap((dir) => cssFilesUnder(dir));
     expect(APP_CSS).toEqual(expect.arrayContaining(onDisk));
+  });
+
+  describe("the forge-render fallback exemption", () => {
+    const FILE = "packages/forge-render/src/forge-render.css";
+
+    it("excuses a literal in an axi token's fallback position", () => {
+      const css = scannable(FILE, ".x { background: var(--axi-surface, #141518); }");
+      expect(findColourLiterals(css)).toEqual([]);
+      expect(findCustomPropertyColours(scannable(FILE, "--fr-panel: var(--axi-surface, #141518);")))
+        .toEqual([]);
+    });
+
+    it("excuses a fallback carrying a colour function, parens and all", () => {
+      const css = scannable(FILE, "--fr-hover: var(--axi-surface-raised, rgba(255,255,255,.05));");
+      expect(findCustomPropertyColours(css)).toEqual([]);
+    });
+
+    it("still reports a bare literal elsewhere in the same file", () => {
+      const css = scannable(FILE, ".x { color: #ff0000; background: var(--axi-surface, #141518); }");
+      expect(findColourLiterals(css)).toEqual(["color: #ff0000"]);
+    });
+
+    it("excuses nothing in any other file", () => {
+      const css = scannable("src/site/styles.css", ".x { background: var(--axi-surface, #141518); }");
+      expect(findColourLiterals(css)).not.toEqual([]);
+    });
+
+    it("does not excuse form: the file's shadows and outlines carry no fallback", () => {
+      // If a fallback ever appeared on a form token, the blanking above would
+      // hide it from findBadShadows/findBorderLiterals — so the guarantee is
+      // that none exists. These are the three form tokens the file uses.
+      const real = fs.readFileSync(path.join(ROOT, FILE), "utf8");
+      for (const token of ["--axi-offset-panel", "--axi-offset-control", "--axi-border-control",
+                           "--axi-border-panel", "--axi-border-hairline", "--axi-radius",
+                           "--axi-radius-sm"]) {
+        expect(real).not.toMatch(new RegExp(`var\\(\\s*${token}\\s*,`));
+      }
+    });
   });
 
   it("scans the @import manifest", () => {

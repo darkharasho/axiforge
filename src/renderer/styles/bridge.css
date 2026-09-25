@@ -1,4 +1,4 @@
-/* TEMPORARY — deleted in batch 5.
+/* TEMPORARY — deleted when PENDING empties.
    Re-points the legacy palette at axi tokens so screens not yet converted keep
    rendering: flat, on the right ground, wrong in detail, but usable and
    reviewable. Every name here is a screen still to do, which makes this file
@@ -6,6 +6,15 @@
    axi-design-rules.test.js is empty, delete this file and the @import above
    it; the build failing without it would mean a converted sheet still leans
    on a legacy name.
+
+   The spec schedules this deletion in batch 5 (§8). Batch 5 has now landed and
+   the file is still here, because the schedule assumed batches 3 and 4 would
+   run first: what is left in PENDING is the editor (specializations, skills,
+   equipment, notes, detail-panel) and the ten modal sheets, and every one of
+   them still reads a name defined below. The deletion moves to whichever batch
+   empties PENDING. Its companion, forge-render-bridge.css, IS gone — batch 5
+   converted forge-render.css, so the --fr-* names point at axi tokens from
+   inside the package now (see its header).
 
    --accent-rgb is deliberately NOT defined. It exists only to be interpolated
    into rgba(var(--accent-rgb), .12), which is the partial-opacity colour rule

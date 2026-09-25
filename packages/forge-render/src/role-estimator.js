@@ -4,6 +4,7 @@
 // which is wrong for library/chat cards anyway).
 import * as _engine from "@axiapps/gw2-data/engine";
 const engine = _engine.default || _engine;
+import { roleSeriesStyle } from "./professions.js";
 const { computeSlotStats } = engine;
 
 // 700 (not the spec's 1500): tuned down so Celestial gear (~810 max) and partial builds
@@ -18,15 +19,6 @@ const ROLE_SCORERS = [
   { role: 'Boon Support', fn: s => s.Concentration * 1.5 + s.HealingPower * 0.3 },
   { role: 'Heal Support', fn: s => s.HealingPower * 1.5 + s.Concentration * 0.3 },
 ];
-
-const ROLE_CSS_CLASS = {
-  'Power DPS':    'power-dps',
-  'Condi DPS':    'condi-dps',
-  'Boon Support': 'boon-support',
-  'Heal Support': 'heal-support',
-  'Hybrid':       'hybrid',
-  'Unknown':      'unknown',
-};
 
 const RUNE_STAT_RE = /\+(\d+)\s+(Condition Damage|Healing Power|Healing|Power|Precision|Toughness|Vitality|Ferocity|Concentration|Expertise|to All Stats)/;
 const RUNE_BOON_RE = /\+(\d+)%\s+Boon Duration/i;
@@ -153,6 +145,10 @@ export function estimateRole(build, catalog = null) {
 export function roleBadgeHtml(build, catalog = null) {
   const role = estimateRole(build, catalog);
   if (!role) return '';
-  const cls = ROLE_CSS_CLASS[role] ?? 'unknown';
-  return `<span class="role-badge role-badge--${cls}">${role}</span>`;
+  // Rule 10: the role's colour is domain data and arrives per-instance on
+  // --axi-series. It used to arrive as one of six role-badge--* modifiers,
+  // which meant this package's stylesheet named all six hues and washed each
+  // to 15%. An unrecognised role yields '' and the badge takes the neutral.
+  const series = roleSeriesStyle(role);
+  return `<span class="role-badge"${series ? ` style="${series}"` : ''}>${role}</span>`;
 }

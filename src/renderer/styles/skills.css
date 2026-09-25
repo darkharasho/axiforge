@@ -479,10 +479,20 @@
     box-shadow 0.16s ease;
 }
 
-.skill-slot:hover .skill-icon-large,
-.skill-icon-large:hover {
-  border-color: rgba(255, 220, 100, 0.85);
-  box-shadow: 0 0 8px rgba(255, 200, 50, 0.4);
+/* Guarded by (hover: hover) so it never fires on a touch device. :hover
+   latches after a tap there and does not clear until you tap elsewhere, which
+   left tapped skill icons wearing a gold glow. web-mobile.css used to cancel
+   that by re-asserting .skill-icon-large's resting border and shadow from a
+   copy of the literals above — two values in a second file that would drift
+   the moment these changed, and two colour literals that file could not
+   tokenise without guessing what this one would become. Cancelling a hover is
+   this rule's own business, so it states the condition itself. */
+@media (hover: hover) {
+  .skill-slot:hover .skill-icon-large,
+  .skill-icon-large:hover {
+    border-color: rgba(255, 220, 100, 0.85);
+    box-shadow: 0 0 8px rgba(255, 200, 50, 0.4);
+  }
 }
 
 .skill-icon-large img {

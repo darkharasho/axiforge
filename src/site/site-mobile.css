@@ -12,7 +12,7 @@
   display: none;
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--axi-scrim);
   z-index: 999;
 }
 
@@ -26,10 +26,12 @@
   left: 0;
   right: 0;
   max-height: 60vh;
-  background: var(--panel, #101930);
-  border-top-left-radius: 16px;
-  border-top-right-radius: 16px;
-  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.5);
+  background: var(--axi-surface);
+  /* Square, and lifted by an outline rather than by a blur: the sheet is
+     pinned to the bottom edge, so the one edge it shows the page is the top
+     one, and that edge is where its outline goes (rules 3 and 7 -- the 16px
+     corners and the 24px drop shadow are both gone). */
+  border-top: var(--axi-border-panel) solid var(--axi-ink-line);
   z-index: 1000;
   transform: translateY(100%);
   transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
@@ -53,8 +55,7 @@
 .bottom-sheet__handle-bar {
   width: 36px;
   height: 4px;
-  border-radius: 2px;
-  background: rgba(136, 144, 166, 0.3);
+  background: var(--axi-rule);
 }
 
 .bottom-sheet__close {
@@ -64,9 +65,8 @@
   width: 28px;
   height: 28px;
   border: none;
-  border-radius: 50%;
-  background: rgba(136, 144, 166, 0.15);
-  color: rgba(136, 144, 166, 0.7);
+  background: var(--axi-surface-raised);
+  color: var(--axi-text-dim);
   font-size: 16px;
   cursor: pointer;
   display: grid;
@@ -75,8 +75,8 @@
 }
 
 .bottom-sheet__close:hover {
-  background: rgba(136, 144, 166, 0.25);
-  color: var(--text);
+  background: var(--axi-surface-raised);
+  color: var(--axi-text);
 }
 
 .bottom-sheet__content {
@@ -202,52 +202,52 @@
     width: 100%;
   }
 
+  /* The weapon-swap toggle. It used to be a gold pill that turned cyan when
+     the second set was live -- two hues for one two-state control, both washed
+     to 70-96% over a near-black of their own (rules 2 and 10). It is the
+     language's own answer to a toggle now: resting, the accent as ink on an
+     outlined box; live, the accent as the fill with the ink that reads on it,
+     and the block that says a control is pressed. */
   .mobile-swap-pill {
     display: flex;
     align-items: center;
     gap: 6px;
-    background: rgba(14, 11, 4, 0.7);
-    border: 1px solid rgba(210, 175, 70, 0.5);
-    border-radius: 16px;
+    background: var(--axi-surface);
+    border: var(--axi-border-control) solid var(--axi-ink-line);
     padding: 4px 12px 4px 6px;
     cursor: pointer;
-    color: rgba(220, 185, 75, 0.85);
+    color: var(--axi-accent);
     font-size: 11px;
     font-weight: 600;
   }
 
   .mobile-swap-pill:hover {
-    border-color: rgba(255, 215, 100, 1);
-    color: #ffe06a;
+    background: var(--axi-surface-raised);
   }
 
   .mobile-swap-pill--active {
-    border-color: rgba(100, 200, 255, 0.85);
-    color: rgba(120, 210, 255, 0.95);
-    background: rgba(10, 20, 40, 0.7);
-  }
-
-  .mobile-swap-pill--active .mobile-swap-pill__icon {
-    border-color: rgba(100, 200, 255, 0.85);
-    color: rgba(120, 210, 255, 0.95);
-    box-shadow: 0 0 6px rgba(80, 180, 240, 0.35);
+    background: var(--axi-accent);
+    color: var(--axi-accent-ink);
+    box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
   }
 
   .mobile-swap-pill__icon {
     width: 24px;
     height: 24px;
-    border-radius: 50%;
-    border: 2px solid rgba(210, 175, 70, 0.85);
-    background: rgba(14, 11, 4, 0.96);
+    border: var(--axi-border-hairline) solid currentColor;
     display: grid;
     place-items: center;
     font-size: 10px;
   }
 
+  /* Health is a number this build has, not something going wrong with it, so
+     it does not get the danger ink (rule 5 reserves the status inks for
+     status). It used to be a red-tinted pill with a glowing red dot; it is a
+     plain outlined chip with the count in the text ink and its label a step
+     quieter, which is how every other count in this app reads. */
   .mobile-hp-badge {
-    background: rgba(160, 20, 20, 0.2);
-    border: 1px solid rgba(200, 60, 60, 0.4);
-    border-radius: 16px;
+    background: var(--axi-surface);
+    border: var(--axi-border-control) solid var(--axi-ink-line);
     padding: 4px 12px;
     display: flex;
     align-items: center;
@@ -257,23 +257,22 @@
   .mobile-hp-badge__dot {
     width: 8px;
     height: 8px;
-    border-radius: 50%;
-    background: rgba(200, 60, 60, 0.8);
-    box-shadow: 0 0 4px rgba(200, 30, 30, 0.6);
+    background: var(--axi-text-faint);
   }
 
   .mobile-hp-badge__value {
     font-size: 12px;
     font-weight: 700;
-    color: rgba(255, 200, 200, 0.95);
+    color: var(--axi-text);
     letter-spacing: 0.3px;
+    font-variant-numeric: tabular-nums;
   }
 
   .mobile-hp-badge__label {
-    font-size: 8px;
-    color: rgba(255, 180, 180, 0.6);
+    font: var(--axi-t-micro);
+    letter-spacing: var(--axi-ls-micro);
+    color: var(--axi-text-faint);
     text-transform: uppercase;
-    font-weight: 600;
   }
 
   /* --- Equipment Sub-tabs --- */
@@ -310,12 +309,16 @@
   }
 
   /* Sub-tab bar — injected by mobile.js */
+  /* The same treatment the comp page's tabs take (src/site/styles.css): the
+     current tab is filled with the accent and blocked, the rest are quiet ink
+     on the surface. It used to be a rounded segmented control whose current
+     segment was the accent at 35% and whose hover was the accent at 12% --
+     three strengths of one ink, which rule 2 does not have. */
   .equip-mobile-tabs {
     display: flex;
     gap: 2px;
-    background: rgba(9, 10, 16, 0.72);
-    border: 1px solid var(--line-soft, rgba(100, 120, 160, 0.25));
-    border-radius: 20px;
+    background: var(--axi-surface);
+    border: var(--axi-border-control) solid var(--axi-ink-line);
     padding: 3px;
     width: fit-content;
     margin-bottom: 12px;
@@ -327,9 +330,8 @@
     gap: 5px;
     padding: 5px 14px;
     border: none;
-    border-radius: 16px;
-    background: transparent;
-    color: var(--text-dim, #6a6e80);
+    background: none;
+    color: var(--axi-text-dim);
     font-size: 12px;
     font-weight: 600;
     cursor: pointer;
@@ -338,13 +340,13 @@
   }
 
   .equip-mobile-tab:hover:not(.equip-mobile-tab--active) {
-    background: rgba(240, 144, 64, 0.12);
-    color: rgba(228, 230, 238, 0.9);
+    background: var(--axi-surface-raised);
+    color: var(--axi-text);
   }
 
   .equip-mobile-tab--active {
-    background: rgba(240, 144, 64, 0.35);
-    color: #fff;
+    background: var(--axi-accent);
+    color: var(--axi-accent-ink);
     cursor: default;
   }
 
@@ -388,14 +390,12 @@
     border: 0;
     min-height: 0;
     transition: max-height 0.25s ease, opacity 0.2s ease;
-    border-top-left-radius: 0;
-    border-top-right-radius: 0;
   }
 
   .spec-card.expanded .spec-card__panel {
     opacity: 1;
     padding: calc(8px * var(--spec-scale)) calc(12px * var(--spec-scale)) calc(10px * var(--spec-scale));
-    border: 1px solid rgba(100, 170, 240, 0.35);
+    border: var(--axi-border-control) solid var(--axi-ink-line);
     border-top: 0;
   }
 
@@ -438,18 +438,19 @@
     gap: 10px;
     padding: 10px 12px;
     cursor: pointer;
-    border: 1px solid rgba(100, 170, 240, 0.35);
-    border-radius: 4px;
-    background: var(--bg);
+    border: var(--axi-border-control) solid var(--axi-ink-line);
+    background: var(--axi-ground);
   }
 
   .spec-card__mobile-header:active {
-    background: rgba(20, 22, 30, 0.9);
+    background: var(--axi-surface-raised);
   }
 
+  /* An elite spec is the one row worth singling out, so it takes the accent on
+     its outline. The 20px inset glow it also carried is gone (rule 7 -- this
+     language raises things with a hard block, and never with a glow). */
   .spec-card--elite .spec-card__mobile-header {
-    border-color: rgba(210, 165, 50, 0.7);
-    box-shadow: 0 0 20px rgba(190, 145, 30, 0.2) inset;
+    border-color: var(--axi-accent);
   }
 
   .spec-card__mobile-emblem {
@@ -465,9 +466,9 @@
   }
 
   .spec-card__mobile-name {
-    font-family: "Cinzel", serif;
+    font-family: var(--axi-sans);
     font-size: 14px;
-    color: var(--text);
+    color: var(--axi-text);
     font-weight: 600;
     flex: 1;
     min-width: 0;
@@ -482,16 +483,15 @@
   .spec-card__mobile-traits img {
     width: 20px;
     height: 20px;
-    border-radius: 2px;
-    border: 1px solid rgba(100, 170, 240, 0.4);
+    border: var(--axi-border-hairline) solid var(--axi-ink-line);
   }
 
   .spec-card--elite .spec-card__mobile-traits img {
-    border-color: rgba(210, 165, 50, 0.5);
+    border-color: var(--axi-accent);
   }
 
   .spec-card__mobile-chevron {
-    color: rgba(136, 144, 166, 0.5);
+    color: var(--axi-text-faint);
     font-size: 16px;
     flex-shrink: 0;
     transition: transform 0.2s ease;
@@ -499,12 +499,13 @@
 
   .spec-card.expanded .spec-card__mobile-chevron {
     transform: rotate(180deg);
-    color: rgba(100, 170, 240, 0.8);
+    color: var(--axi-text);
   }
 
+  /* Expanded, the header and its panel are one box, so the edge between them
+     goes. (The two radius resets that used to sit here went with the radius
+     itself.) */
   .spec-card.expanded .spec-card__mobile-header {
-    border-bottom-left-radius: 0;
-    border-bottom-right-radius: 0;
     border-bottom: none;
   }
 
@@ -517,12 +518,14 @@
     padding: 12px;
   }
 
+  /* Rule 8: a divider inside running content is the hairline against the
+     rule token, not an outline weight. */
   .spec-card__mobile-tier {
     display: flex;
     align-items: center;
     gap: 8px;
     padding: 8px 0;
-    border-bottom: 1px solid rgba(100, 170, 240, 0.1);
+    border-bottom: var(--axi-border-hairline) solid var(--axi-rule);
   }
 
   .spec-card__mobile-tier:last-child {
@@ -531,7 +534,7 @@
 
   .spec-card__mobile-tier-label {
     font-size: 10px;
-    color: rgba(136, 144, 166, 0.4);
+    color: var(--axi-text-faint);
     width: 36px;
     flex-shrink: 0;
   }
@@ -646,7 +649,7 @@
   .mini-card__weap-div {
     width: 100%;
     height: 1px;
-    background: rgba(100, 170, 240, 0.15);
+    background: var(--axi-rule);
     margin: 4px 0;
     font-size: 0;
     color: transparent;

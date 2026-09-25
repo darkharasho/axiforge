@@ -20,10 +20,15 @@ const build = {
 };
 
 describe("@axiapps/forge-render mini build card", () => {
-  test("renders name, profession class, mode, and weapon labels", () => {
+  test("renders name, profession colour, mode, and weapon labels", () => {
     const html = renderMiniBuildCard(build, null, { showActions: false });
     expect(html).toContain("Quickness Firebrand");
-    expect(html).toContain("lib-prof--guardian");
+    // Guardian's hue, from the one profession table
+    // (packages/forge-render/src/professions.js). It used to arrive as a
+    // lib-prof--guardian class the stylesheet had to name; it arrives on
+    // --axi-series now, which is what let forge-render.css stop naming all
+    // nine (RULES.md rule 10).
+    expect(html).toContain('style="--axi-series: #6ea8ff"');
     expect(html).toContain("wvw");
     expect(html).toContain("Axe");
     expect(html).toContain("Staff");
@@ -37,18 +42,19 @@ describe("@axiapps/forge-render mini build card", () => {
     expect(html).toContain("&lt;img");
   });
 
-  test("sanitizes the profession class slug against attribute injection", () => {
+  test("a profession name carrying an injection payload reaches no attribute", () => {
     const html = renderMiniBuildCard(
       { ...build, profession: 'Warrior" onmouseover="x' },
       null,
       { showActions: false }
     );
-    // The quote and space are stripped, so the payload can never escape the
-    // class attribute: no `" onmouseover="x"` ends up in the markup.
-    expect(html).not.toContain('"x"');
-    expect(html).not.toContain('onmouseover=');
-    expect(html).not.toContain('" onmouseover');
-    expect(html).toContain('class="mini-card lib-prof--warrioronmouseoverx"');
+    // Stronger than the slug-sanitising this replaced: the hue is a lookup in
+    // a frozen table of nine keys, so an unrecognised name yields "" and no
+    // style attribute is written at all. Nothing derived from the name reaches
+    // the markup, so there is nothing for a payload to escape from.
+    expect(html).not.toContain('onmouseover');
+    expect(html).not.toContain('--axi-series');
+    expect(html).toContain('<div class="mini-card" data-build-id=');
   });
 
   test("renders the missing-build placeholder", () => {
