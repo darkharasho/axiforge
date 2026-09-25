@@ -360,8 +360,10 @@ The approved anatomy, settled against a live render:
 - **The row's meta line uses the diamond** as its separator, and the tile's
   meta rule sits on `margin-top: auto` so that every tile in a grid row lands
   its rule on the same line.
-- **The library header becomes `.axi-stat` tiles**, and attribute weighting
-  inside a build becomes `.axi-meter-list`.
+- **Attribute weighting inside a build becomes `.axi-meter-list`.** (A
+  `.axi-stat` count strip in the library header was built and then removed at
+  the user's request: the three counts were not worth the vertical space they
+  took from the list itself.)
 
 The nine `.lib-pill--prof` rules at `library.css:859-868` are deleted, not
 retokenised: their whole construction is a partial-opacity tint.

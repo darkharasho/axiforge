@@ -1257,7 +1257,6 @@ describe("the installed axi-design ships the primitives this app uses", () => {
     ".axi-switch",
     ".axi-meter",
     ".axi-diamond",
-    ".axi-stat",
   ];
 
   // Anchored, not a substring test. `toContain(".axi-ticks")` used to pass on
@@ -1265,7 +1264,7 @@ describe("the installed axi-design ships the primitives this app uses", () => {
   // for .axi-ticks even if the primitive had been dropped. Every name here has
   // the same hazard -- .axi-meter is inside .axi-meter-list, .axi-diamond
   // inside .axi-diamond--accent, .axi-switch inside .axi-switch__knob,
-  // .axi-stat inside .axi-stat__n, .axi-chip/.axi-pill inside their own
+  // .axi-chip/.axi-pill inside their own
   // modifiers -- so the class boundary is required explicitly.
   const definesClass = (css, cls) =>
     new RegExp(`\\.${cls.slice(1).replace(/[-]/g, "\\-")}(?![\\w-])`).test(css);

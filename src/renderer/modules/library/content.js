@@ -134,13 +134,6 @@ export function renderContent() {
       break;
   }
 
-  // The strip describes a library; an empty library has nothing to describe,
-  // and stacking three zero tiles above the "nothing here yet" state would be
-  // the first thing a new user sees.
-  if (getVisibleFolders().length || getVisibleBuilds().length || getVisibleComps().length) {
-    container.insertAdjacentHTML("afterbegin", statStripHtml());
-  }
-
   renderLegacyOrphanBanner(container);
 
   // Re-init SortableJS on the new DOM
@@ -169,22 +162,6 @@ function renderLegacyOrphanBanner(container) {
 }
 
 // ─── Shared helpers ────────────────────────────────────────────────────────────
-
-/**
- * Spec §8: the library header's folder/build/comp counts as .axi-stat tiles.
- * Left in the default ink — none of these three counts is a status, and a
- * tile coloured for emphasis is decoration impersonating one.
- */
-function statStripHtml() {
-  const folders = getVisibleFolders().length;
-  const builds = getVisibleBuilds().length;
-  const comps = getVisibleComps().length;
-  return `<div class="af-statstrip">
-    <div class="axi-stat"><span class="axi-stat__n">${folders}</span><span class="axi-stat__k">Folders</span></div>
-    <div class="axi-stat"><span class="axi-stat__n">${builds}</span><span class="axi-stat__k">Builds</span></div>
-    <div class="axi-stat"><span class="axi-stat__n">${comps}</span><span class="axi-stat__k">Comps</span></div>
-  </div>`;
-}
 
 function getSpecIcon(build) {
   const eliteSpec = getEliteSpecName(build);

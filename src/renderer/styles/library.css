@@ -1997,17 +1997,6 @@
 
 .import-dedupe__list strong { color: var(--axi-text); font-weight: 600; }
 
-/* ══ Stat Strip ═════════════════════════════════════════════════════════════
-   The library header's folder/build/comp counts, as .axi-stat tiles. A stat
-   tile is flat on the ground inside its panel: an outline, no block. It is
-   content, not something raised off the surface it sits on. */
-.af-statstrip {
-  display: flex;
-  gap: 10px;
-  padding: 12px 14px 0;
-}
-.af-statstrip .axi-stat { flex: 1 1 0; min-width: 0; }
-
 /* ── Reduced motion ──────────────────────────────────────────────────────── */
 /* The package's block (axi.css:149-166) enumerates only its own .axi-*
    selectors, so it never reaches these app-local lifts, and its global
