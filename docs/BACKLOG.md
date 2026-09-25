@@ -842,3 +842,39 @@ chrome; none of this can be checked from a test):
     9px square reads as "working" in the publish ticker as clearly as a spinner
     did — it is the same primitive the rest of the app uses, but this is the
     first place it stands in for a spinner rather than a status light.
+
+### Parked from the batch 2 conversion
+
+- **`renderBuildList()` is dead code.** `src/renderer/modules/render-pages.js:175`
+  returns immediately on `if (document.getElementById("lib-content")) return;`,
+  and `#lib-content` is unconditionally present at `src/renderer/index.html:416`.
+  Lines 179-323 have therefore never run since the library module landed. The
+  `.build-card*` classes they emit have no CSS anywhere in the repo — confirmed
+  with `grep -rn '\.build-card' src/ packages/ --include=*.css`, zero hits — so
+  the dead branch also renders unstyled. `renderer.js:288` queries `#buildList`,
+  which is not in `index.html` either, so `_el.buildList` is null. Deleting it is
+  a refactor and was out of batch 2's scope (Global Constraint 10). ~145 lines.
+- **`custom-select.css` should adopt `.axi-picker`.** Batch 1 converted it
+  against axi-design 1.8.0, where the native `<select>` popup is OS chrome the
+  language cannot reach — no ink outline, no offset block, its own selection
+  colour. 1.10.0 added `.axi-picker` for exactly this case, and Electron is the
+  case. Batch 2 adopted it in the library and comps dropdowns only (Ruling B);
+  batch 4 owns the modals where the rest of the selects live.
+- **The comp slot's hover card may not be portaled.** Rule 4 requires tooltips
+  at `<body>`; `comps.css:1962-2000` styles one positioned relative to its slot.
+  Moving it is a behaviour change, so batch 2 converted its colours only.
+- **Decisions taken in batch 2 that want a human eye at the running app:**
+  `.status-card--done` caps in `--axi-ok` rather than the accent (done is a
+  status the language has an ink for); `.comp-badge--draft` outlines while
+  `--published` and `--shared` fill (draft is the absence of publication, and
+  filling it would make "not yet done" the loudest thing in the row);
+  `.src-chip--foreign` outlines in the accent rather than filling, and its file
+  header claims the variant exists to "catch the eye in a list of twenty rows"
+  — check that it still does.
+- **`skeleton.js`'s icon buttons grew from roughly 30×28 to roughly 40×42**
+  across the library toolbar conversion (Ruling 38). Confirmed again here: the
+  growth is unchanged by this task and still reads correctly against the
+  converted `.af-tile` grid it sits above.
+- **`__prof-overflow`'s count sits at full row ink when its row is selected.**
+  Carried from an earlier task with no counter-evidence found in this one;
+  unresolved, left for a running-app check alongside the other decisions above.

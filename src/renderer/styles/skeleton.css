@@ -1,24 +1,38 @@
-/* AxiForge — skeleton loading placeholders */
-
-@keyframes skel-pulse {
-  0%   { opacity: 0; }
-  50%  { opacity: 1; }
-  100% { opacity: 0; }
-}
+/* AxiForge — skeleton loading placeholders
+ *
+ * Batch 2 converted this file's colours so it could come under the rules
+ * gate; its DIMENSIONS were deliberately left alone. Every "matches .foo"
+ * comment below is a measurement against a screen that specializations.css,
+ * skills.css, equipment.css and detail-panel.css still own, and those
+ * convert in batch 3. Re-fit the measurements there, in the same task that
+ * changes the shape each one mirrors.
+ */
 
 .skel {
-  background: var(--line-soft);
-  border-radius: 4px;
-  animation: skel-pulse 1.8s ease-in-out infinite;
+  background: var(--axi-surface-raised);
+  border: var(--axi-border-hairline) solid var(--axi-rule);
+}
+
+/* A loading placeholder pulses rather than sweeping: a sweep needs a
+   gradient travelling across a surface, and the one compositor-only property
+   that can carry it here is opacity on a flat block. */
+@keyframes af-skel {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+.skel {
+  animation: af-skel 1.4s ease-in-out infinite;
   animation-delay: 150ms;
-  opacity: 0;
   animation-fill-mode: both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skel { animation: none; opacity: 1; }
 }
 
 /* Hexagonal shape — matches specializations.css minor trait clip-path */
 .skel-hex {
   clip-path: polygon(25% 5%, 75% 5%, 96% 50%, 75% 95%, 25% 95%, 4% 50%);
-  border-radius: 0;
 }
 
 /* Staggered delays (50ms increments, added to base 150ms) */
@@ -56,7 +70,6 @@
 .skel-skills__mechslot {
   width: 36px;
   aspect-ratio: 1;
-  border-radius: 4px;
 }
 
 /* matches .skills-bar__weapon-row */
@@ -70,7 +83,6 @@
 .skel-skills__swap {
   width: 34px;
   aspect-ratio: 1;
-  border-radius: 50%;
   flex-shrink: 0;
 }
 
@@ -84,14 +96,12 @@
 .skel-skills__slot {
   width: 72px;
   aspect-ratio: 1;
-  border-radius: 4px;
 }
 
 /* matches .health-orb */
 .skel-skills__orb {
   width: 110px;
   aspect-ratio: 1;
-  border-radius: 50%;
   flex-shrink: 0;
 }
 
@@ -114,10 +124,9 @@
 
 /* matches .spec-card__panel */
 .skel-spec-card__panel {
-  border: 1px solid rgba(var(--accent-rgb), 0.35);
-  border-radius: 4px;
+  border: var(--axi-border-hairline) solid var(--axi-rule);
   padding: calc(8px * var(--spec-scale)) calc(12px * var(--spec-scale)) calc(10px * var(--spec-scale));
-  background-color: var(--bg-2);
+  background-color: var(--axi-surface);
   min-height: calc(148px * var(--spec-scale));
 }
 
@@ -155,10 +164,8 @@
 .skel-spec-card__major-trait {
   width: calc(32px * var(--spec-scale));
   aspect-ratio: 1;
-  border-radius: 2px;
   margin-block: calc(9px * var(--spec-scale));
 }
-
 
 /* matches .trait-minor-anchor .trait-btn--always img (26px hex) */
 .skel-spec-card__minor {
@@ -194,8 +201,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border-left: 1px solid rgba(var(--accent-rgb), 0.15);
-  border-right: 1px solid rgba(var(--accent-rgb), 0.15);
+  border-left: var(--axi-border-hairline) solid var(--axi-rule);
+  border-right: var(--axi-border-hairline) solid var(--axi-rule);
   padding: 0;
 }
 
@@ -204,9 +211,8 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--panel-gradient);
+  border: var(--axi-border-hairline) solid var(--axi-rule);
+  background: var(--axi-surface);
   padding: 12px;
 }
 
@@ -216,7 +222,7 @@
   align-items: center;
   min-height: 16px;
   padding-bottom: 4px;
-  border-bottom: 1px solid rgba(var(--accent-rgb), 0.2);
+  border-bottom: var(--axi-border-hairline) solid var(--axi-rule);
   margin-bottom: 2px;
 }
 
@@ -224,8 +230,7 @@
 .skel-equip__fill-btn {
   width: 36px;
   height: 18px;
-  border-radius: 4px;
-  border: 1px solid rgba(var(--accent-rgb), 0.35);
+  border: var(--axi-border-hairline) solid var(--axi-rule);
   margin-left: auto;
 }
 
@@ -235,9 +240,8 @@
   gap: 8px;
   align-items: center;
   padding: 4px 6px;
-  border-radius: 6px;
-  border: 1px solid rgba(var(--accent-rgb), 0.15);
-  background: var(--input-bg);
+  border: var(--axi-border-hairline) solid var(--axi-rule);
+  background: var(--axi-surface-raised);
 }
 
 /* matches .equip-slot--weapon */
@@ -251,7 +255,7 @@
   align-items: center;
   gap: 8px;
   padding: 4px 8px;
-  border-right: 1px solid rgba(var(--accent-rgb), 0.1);
+  border-right: var(--axi-border-hairline) solid var(--axi-rule);
   min-width: 130px;
 }
 
@@ -287,8 +291,7 @@
 .skel-equip__slot-icon {
   width: 40px;
   height: 40px;
-  border-radius: 4px;
-  border: 1px solid rgba(var(--accent-rgb), 0.2);
+  border: var(--axi-border-hairline) solid var(--axi-rule);
   flex-shrink: 0;
 }
 
@@ -310,7 +313,6 @@
 .skel-equip__art {
   width: 60%;
   height: 180px;
-  border-radius: 8px;
 }
 
 /* matches .equip-stats */
@@ -333,8 +335,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 3px 6px;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--axi-surface-raised);
 }
 .skel-equip__stat-cell:only-child {
   flex: 0 0 calc(50% - 4px);
@@ -349,9 +350,8 @@
 
 .skel-equip__text-input {
   height: 26px; /* 12px font × ~1.2 line-height + 10px padding + 2px border */
-  border: 1px solid var(--input-border);
-  border-radius: 6px;
-  background: var(--input-bg);
+  border: var(--axi-border-hairline) solid var(--axi-rule);
+  background: var(--axi-surface-raised);
 }
 
 /* matches .equip-trinket-grid */
@@ -369,9 +369,8 @@
 /* ── Detail panel skeleton ───────────────────────────────────────────────── */
 /* matches .detail-card */
 .skel-detail {
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--surface);
+  border: var(--axi-border-hairline) solid var(--axi-rule);
+  background: var(--axi-surface);
   padding: 10px;
 }
 
@@ -387,7 +386,6 @@
 .skel-detail__icon {
   width: 56px;
   height: 56px;
-  border-radius: 10px;
   flex-shrink: 0;
 }
 
@@ -415,14 +413,12 @@
 .skel-detail__fact-icon {
   width: 18px;
   height: 18px;
-  border-radius: 2px;
   flex-shrink: 0;
 }
 
 /* ── Toolbar profession dropdown skeleton ────────────────────────────────── */
 .skel-dropdown {
   height: 40px;
-  border-radius: 10px;
   width: 100%;
 }
 
@@ -459,7 +455,6 @@
 .skel-lib-sidebar-icon {
   width: 14px;
   height: 14px;
-  border-radius: 3px;
   flex-shrink: 0;
 }
 
@@ -467,15 +462,17 @@
 .skel-lib-row-icon {
   width: 18px;
   height: 18px;
-  border-radius: 4px;
   flex-shrink: 0;
 }
 
-/* Grid card spec icon placeholder (matches .lib-grid-card__spec-icon) */
+/* Grid card glyph placeholder — sized to .af-tile__glyph's 34px content box
+   (its 40px outer edge minus a --axi-border-control step on each side), so
+   the border added below reproduces the real element's 40px footprint
+   instead of drawing a plain 40px block over it. */
 .skel-lib-card-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 6px;
+  width: 34px;
+  height: 34px;
+  border: var(--axi-border-control) solid var(--axi-ink-line);
   flex-shrink: 0;
 }
 
@@ -483,7 +480,6 @@
 .skel-lib-icon-img {
   width: 34px;
   height: 34px;
-  border-radius: 6px;
   flex-shrink: 0;
 }
 

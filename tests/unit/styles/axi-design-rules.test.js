@@ -55,7 +55,6 @@ const PENDING = [
   "src/renderer/styles/equipment.css",
   "src/renderer/styles/wiki-modal.css",
   "src/renderer/styles/detail-modal.css",
-  "src/renderer/styles/skeleton.css",
   "src/renderer/styles/notes.css",
   "src/renderer/styles/confirm-modal.css",
   "src/renderer/styles/whats-new-modal.css",
