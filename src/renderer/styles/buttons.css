@@ -1,4 +1,18 @@
 /* AxiForge — button styles */
+/* The package sizes no icon inside .axi-btn, and every heroicon in this app
+   ships with a viewBox and no width/height -- so an icon button drew its
+   glyph at zero and the label sat alone. The pre-conversion
+   `.lib-toolbar__new-btn svg { width: 13px; height: 13px }` did this job;
+   599c3dc2 removed it with the class it was scoped to and nothing took over,
+   which is why the New button's plus and the Import arrow both vanished.
+   14px is the size the converted picker menus already use for the same
+   icons, so a menu item and the button that opens it agree. */
+.axi-btn svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
 /* Workspace menu */
 /* A button does not inherit font, and nothing here reset it, so this control
    was drawing in the browser's default face -- the one thing in the titlebar
