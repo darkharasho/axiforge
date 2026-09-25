@@ -401,10 +401,14 @@
   font-style: italic;
 }
 
-/* Nav items — the same hover lift and accent-edge active state as
-   .leftnav__item (layout.css, batch 1): a border that inks the accent
-   instead of a filled background, and a hover that deepens the offset block
-   rather than tinting one in. */
+/* Nav items — an accent-edge active state, as .leftnav__item has (layout.css,
+   batch 1). The hover is NOT that rail's lift: rule 8 says a row is drawn in
+   rules, and these are rows, stacked five pixels apart inside a panel. A lift
+   there translates a row over its neighbour and drops an ink block across the
+   one below it, which is why the rail can have one and a list cannot. Hover is
+   the package's own row idiom instead (.axi-picker__opt, axi.css:568) — a step
+   down the neutral ramp to --axi-ground against the sidebar's --axi-surface,
+   flat and at full strength. */
 .lib-nav-item {
   display: flex;
   align-items: center;
@@ -417,12 +421,12 @@
   font: var(--axi-t-small);
   cursor: pointer;
   text-align: left;
-  transition: color 0.15s, border-color 0.15s, box-shadow 0.1s, transform 0.1s;
+  transition: color 0.15s, border-color 0.15s, background-color 0.15s;
 }
 
 .lib-nav-item:hover {
-  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
-  transform: translate(-2px, -2px);
+  background: var(--axi-ground);
+  color: var(--axi-text);
 }
 
 .lib-nav-item--active {
@@ -2005,7 +2009,6 @@
    and same reason as comps.css's block. A reader who asked for less motion
    should get none of it, including from the app layer. */
 @media (prefers-reduced-motion: reduce) {
-  .lib-nav-item:hover,
   .lib-tv__sort-btn:hover,
   .af-tile:hover,
   .lib-banner__btn:hover {

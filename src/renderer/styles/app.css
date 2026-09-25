@@ -239,3 +239,17 @@ a { color: var(--axi-accent); }
 
 .af-menu-item:disabled { color: var(--axi-text-faint); cursor: default; }
 .af-menu-sep { height: var(--axi-border-hairline); background: var(--axi-rule); margin: 4px 8px; }
+
+/* ── The search glyph ────────────────────────────────────────────────────── */
+/* .axi-search__icon positions the magnifier and colours it, but the glyph
+   itself is the consumer's -- the package expects a text character, and both
+   of our toolbars (library.css, comps.css) hand it a heroicon <svg> with a
+   viewBox and no width/height. An inline SVG sized that way falls to the
+   replaced-element default of 300x150, so the glyph painted at fifteen times
+   its intended size and the 38px gutter .axi-search reserves for it read as
+   empty space. Sized once here because both toolbars pass the same icon. */
+.axi-search__icon svg {
+  display: block;
+  width: 15px;
+  height: 15px;
+}
