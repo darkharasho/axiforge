@@ -1164,13 +1164,49 @@ describe("axi design language rules", () => {
       return !blocks.some(({ header, body }) => {
         const pieces = header.split(",").map((p) => p.trim().replace(/\s+/g, " "));
         if (!pieces.includes(selector)) return false;
-        return [...body.matchAll(/opacity\s*:\s*([^;]+)/gi)].some((m) => {
-          const v = parseFloat(m[1].trim().replace(/\s*!\s*important\s*$/i, ""));
+        // Fix round 3, G4: anchored the same way round 2 anchored the other
+        // four occurrences (unanchored, a `fill-opacity: 0.5`-only block
+        // would satisfy "still carries a resting partial opacity" and keep
+        // a stale allowlist entry alive — the exact F3 defect class this
+        // test exists to close). parseAlphaValue (not a bare parseFloat)
+        // so a percentage opacity like `50%` is read as 0.5, not as the
+        // literal 50 a bare parseFloat would leave it as — which would
+        // otherwise report a genuine resting partial opacity as stale.
+        return [...body.matchAll(/(?<![\w-])opacity\s*:\s*([^;]+)/gi)].some((m) => {
+          const v = parseAlphaValue(m[1].trim().replace(/\s*!\s*important\s*$/i, ""));
           return !Number.isNaN(v) && v > 0 && v < 1;
         });
       });
     }).map(([selector]) => selector);
     expect(stale).toEqual([]);
+  });
+
+  // Fix round 3, G4: both defects were confirmed latent, not live — neither
+  // changes a current result — but the staleness check above exists
+  // specifically to catch dead allowlist weight (F3), so its own leniency
+  // direction is the one that matters. These pin the two failure modes
+  // directly against the same matching this test's `stale` filter uses.
+  it("does not let a fill-opacity-only block satisfy the OPACITY_ALLOWLIST staleness check", () => {
+    // Unanchored, `fill-opacity: 0.5` would have satisfied "still carries a
+    // resting partial opacity" and kept a stale allowlist entry alive.
+    const body = "fill-opacity: 0.5;";
+    const hasRestingOpacity = [...body.matchAll(/(?<![\w-])opacity\s*:\s*([^;]+)/gi)].some((m) => {
+      const v = parseAlphaValue(m[1].trim().replace(/\s*!\s*important\s*$/i, ""));
+      return !Number.isNaN(v) && v > 0 && v < 1;
+    });
+    expect(hasRestingOpacity).toBe(false);
+  });
+
+  it("recognises a percentage opacity as a genuine resting partial value, not stale", () => {
+    // A bare parseFloat("50%") is 50, which fails v > 0 && v < 1 — reporting
+    // a genuine resting partial opacity as stale (fail-loud, but still
+    // wrong). parseAlphaValue reads it as 0.5.
+    const body = "opacity: 50%;";
+    const hasRestingOpacity = [...body.matchAll(/(?<![\w-])opacity\s*:\s*([^;]+)/gi)].some((m) => {
+      const v = parseAlphaValue(m[1].trim().replace(/\s*!\s*important\s*$/i, ""));
+      return !Number.isNaN(v) && v > 0 && v < 1;
+    });
+    expect(hasRestingOpacity).toBe(true);
   });
 });
 
