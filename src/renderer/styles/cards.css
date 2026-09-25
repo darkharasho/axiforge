@@ -272,10 +272,16 @@
   font-style: italic;
   font-size: 0.75rem;
 }
+/* Fix round 1, F8: --axi-rule (#3a4250) is lighter than --axi-ink-line
+   (#0c0e12), so :disabled's border swap below reads as a hue change against
+   --axi-surface, not a quieting, and the resting colour was already
+   --axi-text-faint — leaving nothing to distinguish "disabled" from
+   "resting" but that hue. Three real ramp steps now: resting --axi-text-dim,
+   hover --axi-text (already there), disabled --axi-text-faint. */
 .build-code-group__btn {
   background: var(--axi-surface);
   border: var(--axi-border-control) solid var(--axi-ink-line);
-  color: var(--axi-text-faint);
+  color: var(--axi-text-dim);
   padding: 0 10px;
   cursor: pointer;
   display: flex;
@@ -290,6 +296,7 @@
   color: var(--axi-text);
 }
 .build-code-group__btn:disabled {
+  color: var(--axi-text-faint);
   border-color: var(--axi-rule);
   cursor: default;
 }

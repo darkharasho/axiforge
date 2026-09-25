@@ -135,10 +135,11 @@ function libTableRow(titleW, d1, d2, d3) {
 // Mirrors .af-tile's real shape (library.css), which folded the old
 // .lib-grid-card into itself in batch 2/Task 5 — this skeleton drew a boxless,
 // layoutless card from then until Task 24 because nothing checked that an
-// emitted class still had a selector behind it. The title placeholder's
-// inline border-radius:3px is also dropped here: rule 3 forbids all rounding,
-// and an inline style is invisible to every CSS scanner in the gate, so nothing
-// would have caught it either.
+// emitted class still had a selector behind it. Every inline border-radius in
+// this block is dropped: rule 3 forbids all rounding, and an inline style is
+// invisible to every CSS scanner in the gate, so nothing would have caught
+// it otherwise. The rest of skeleton.js's inline radii are out of scope here
+// — that cleanup belongs to the task that converts skeleton.css.
 function libGridCard(titleW, d1, d2, d3) {
   const c = (d) => d ? ` skel-d${d}` : "";
   return `
@@ -148,8 +149,8 @@ function libGridCard(titleW, d1, d2, d3) {
       <div class="af-tile__title"><div class="skel${c(d1)}" style="height:18px;width:${titleW}%"></div></div>
     </div>
     <div class="af-tile__pills">
-      <div class="skel${c(d2)}" style="height:21px;width:50px;border-radius:999px"></div>
-      <div class="skel${c(d2)}" style="height:21px;width:40px;border-radius:999px"></div>
+      <div class="skel${c(d2)}" style="height:21px;width:50px"></div>
+      <div class="skel${c(d2)}" style="height:21px;width:40px"></div>
     </div>
     <div class="af-tile__meta"><div class="skel${c(d3)}" style="height:18px;width:48px"></div></div>
   </div>`;

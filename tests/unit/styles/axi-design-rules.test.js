@@ -272,36 +272,28 @@ function findLegacyVars(css) {
 // selector exactly as it appears as its own rule block (or as one member of a
 // comma-separated selector list), so a compound or grouped selector needs one
 // entry per piece that carries the opacity.
+// Fix round 1, F4: verified against the vendored SortableJS source
+// (node_modules/sortablejs/modular/sortable.esm.js) which class lands on a
+// clone versus the live element still in the list. ghostClass and
+// chosenClass land on the live element (sortable.esm.js:1416, :1302); with
+// forceFallback: true (this app's setting), fallbackClass and dragClass both
+// land on ghostEl, the floating clone (:1536-1537). A "ghost" class landing
+// on a live element is not a representation of a thing being moved — it IS
+// the thing, resting at a partial colour — so only the genuine clones stay
+// allowlisted here; the comp-slot-ghost/comp-line-ghost/lib-drag-ghost/
+// lib-drag-chosen cases were fixed instead (see comps.css and library.css).
 const OPACITY_ALLOWLIST = [
-  // comps.css — SortableJS fallback ghosts for the four drag surfaces in the
-  // comp editor. Each keeps its resting opacity because a ghost is a
-  // representation of a thing being moved, not a colour at partial strength;
-  // comps.css:1230 carries the same reasoning in its own comment.
-  [".comp-cat-drag-ghost", "SortableJS fallback ghost for a dragged category chip — a representation of the thing being moved, not a colour at rest."],
-  [".comp-drag-icon-ghost", "SortableJS fallback ghost for a dragged build icon — same reasoning as .comp-cat-drag-ghost."],
-  [".comp-slot-ghost", "The drop-placeholder ghost shown in an empty slot while dragging — a representation of the thing being moved, not a colour at rest."],
-  [".comp-line-ghost", "The reorder ghost shown in a party line's position while dragging — same reasoning as .comp-slot-ghost."],
-  // library.css — the equivalent SortableJS drag lifecycle for the library's
-  // grid/tree/list views. ghostClass and fallbackClass are literal clone
-  // elements (SortableJS's own placeholder and fallback-drag avatar); the
-  // *.lib-dragging classes are the source element while its clone exists
-  // elsewhere, and chosenClass/dragClass are the same source element mid-
-  // gesture. All four report "this item is currently being moved" rather than
-  // asserting a resting colour, so all get the same exemption as the ghosts
-  // above (RULES.md rule 2 is about colour at rest, not about a transient
-  // drag affordance) — see library/drag-drop.js for the ghostClass /
-  // chosenClass / dragClass / fallbackClass wiring.
-  [".lib-list-row.lib-dragging", "The library list row's own SortableJS lib-dragging state — represents the row currently being moved, not a resting colour."],
-  [".lib-tv__item.lib-dragging > .lib-tv__row", "The library tree row's own SortableJS lib-dragging state — same reasoning as .lib-list-row.lib-dragging."],
-  [".lib-tv__item.lib-dragging", "The library tree item's own SortableJS lib-dragging state — same reasoning as .lib-list-row.lib-dragging."],
-  [".af-tile.lib-dragging", "The library grid tile's own SortableJS lib-dragging state — same reasoning as .lib-list-row.lib-dragging."],
-  [".lib-icon-item.lib-dragging", "The library icon-view item's own SortableJS lib-dragging state — same reasoning as .lib-list-row.lib-dragging."],
-  [".lib-dragging", "The generic SortableJS lib-dragging state, shared by any drag surface not covered by a more specific selector above."],
-  [".lib-drag-ghost", "SortableJS's own drop-placeholder ghost (ghostClass) — a representation of the thing being moved, not a colour at rest."],
-  [".lib-drag-chosen", "SortableJS's chosenClass, applied to the source item the instant it is picked up — reports the drag gesture, not a resting colour."],
-  [".lib-drag-active", "SortableJS's dragClass, applied to the item actively being dragged (and, under the fallback renderer, to the body-level clone alongside lib-drag-fallback — see drag-drop.js:141) — a drag-state report, not a resting colour."],
-  [".lib-drag-fallback", "SortableJS's fallbackClass — the clone element it drags in browsers without native HTML5 drag support; a literal ghost avatar."],
-  [".sortable-drag", "SortableJS's own default class for the element following the cursor during a native HTML5 drag — a literal ghost avatar."],
+  // comps.css — comp-drag-drop.js:46,96 set both of these as SortableJS's
+  // fallbackClass, which lands on the floating body-level clone, not the
+  // source card still in its list.
+  [".comp-cat-drag-ghost", "SortableJS fallbackClass (comp-drag-drop.js:96) — lands on the floating clone, not the source chip; a representation of the thing being moved, not a colour at rest."],
+  [".comp-drag-icon-ghost", "SortableJS fallbackClass (comp-drag-drop.js:46) — lands on the floating clone, not the source card; same reasoning as .comp-cat-drag-ghost."],
+  // library.css — library/drag-drop.js:401-407 sets forceFallback: true, so
+  // dragClass and fallbackClass both land on the floating clone SortableJS
+  // appends to <body> (sortable.esm.js:1536-1537), not on the row still in
+  // the list.
+  [".lib-drag-active", "SortableJS dragClass under forceFallback: true (library/drag-drop.js:403,406) — lands on the floating clone (sortable.esm.js:1536-1537), not the source row; a representation of the thing being moved, not a colour at rest."],
+  [".lib-drag-fallback", "SortableJS fallbackClass under forceFallback: true (library/drag-drop.js:407) — the floating clone itself; same reasoning as .lib-drag-active."],
 ];
 
 /** True when `header` — a rule's selector text, exactly as written between
@@ -322,28 +314,82 @@ function isOpacityAllowlisted(header) {
     block sits inside `@keyframes` (motion, permitted outright by RULES.md
     line 308) and whether the block declares `animation` are both
     block-level questions a flat declaration list cannot answer. */
+/** If `css[i]` opens a quoted string or a `url(...)` span, returns the index
+    just past its end; otherwise -1. Shared by both scans in `ruleBlocks`
+    below so a `{` or `}` inside `content: "{"` or a data-URI `url(...)`
+    is never read as a structural brace (fix round 1, F7 —
+    `findStaticOpacity('.a { content: "}"; opacity: 0.5; }')` used to
+    return `[]`, swallowing the declaration whole). */
+function skipSpan(css, i) {
+  const ch = css[i];
+  if (ch === '"' || ch === "'") {
+    let j = i + 1;
+    while (j < css.length) {
+      if (css[j] === "\\") { j += 2; continue; }
+      if (css[j] === ch) return j + 1;
+      j++;
+    }
+    return css.length;
+  }
+  if (/^url\(/i.test(css.slice(i, i + 4))) {
+    let j = i + 4;
+    while (j < css.length && css[j] !== ")") {
+      const inner = skipSpan(css, j);
+      if (inner !== -1) { j = inner; continue; }
+      j++;
+    }
+    return j + 1;
+  }
+  return -1;
+}
+
+/** True when `str` contains a `{` outside any string/`url(...)` span — the
+    string-aware replacement for a naive `str.includes("{")`, which
+    misreads `content: "{"` as introducing a nested block and, worse, then
+    recurses into a body with no *real* opening brace at all, silently
+    discarding it (fix round 1, F7: this was the second half of the same
+    bug `skipSpan` alone did not cover). */
+function hasStructuralBrace(str) {
+  let i = 0;
+  while (i < str.length) {
+    const skip = skipSpan(str, i);
+    if (skip !== -1) { i = skip; continue; }
+    if (str[i] === "{") return true;
+    i++;
+  }
+  return false;
+}
+
 function ruleBlocks(css, inKeyframes = false) {
   const blocks = [];
   let i = 0;
   while (i < css.length) {
-    const open = css.indexOf("{", i);
-    if (open === -1) break;
-    const header = css.slice(i, open).trim();
-    let depth = 1;
-    let j = open + 1;
-    while (j < css.length && depth > 0) {
-      if (css[j] === "{") depth++;
-      else if (css[j] === "}") depth--;
+    let j = i;
+    while (j < css.length) {
+      const skip = skipSpan(css, j);
+      if (skip !== -1) { j = skip; continue; }
+      if (css[j] === "{") break;
       j++;
     }
-    const body = css.slice(open + 1, j - 1);
+    if (j >= css.length) break;
+    const header = css.slice(i, j).trim();
+    let depth = 1;
+    let k = j + 1;
+    while (k < css.length && depth > 0) {
+      const skip = skipSpan(css, k);
+      if (skip !== -1) { k = skip; continue; }
+      if (css[k] === "{") depth++;
+      else if (css[k] === "}") depth--;
+      k++;
+    }
+    const body = css.slice(j + 1, k - 1);
     const thisInKeyframes = inKeyframes || /^@keyframes\b/i.test(header);
-    if (body.includes("{")) {
+    if (hasStructuralBrace(body)) {
       blocks.push(...ruleBlocks(body, thisInKeyframes));
     } else {
       blocks.push({ header, body, inKeyframes: thisInKeyframes });
     }
-    i = j;
+    i = k;
   }
   return blocks;
 }
@@ -358,19 +404,91 @@ function ruleBlocks(css, inKeyframes = false) {
     deliberately NOT exempting: it describes how a property moves between
     values, not whether the value it rests on is legitimate, and exempting it
     would launder any rule-2 violation by adding one line. */
+/** Parses a CSS `<alpha-value>` (an `opacity`/`filter-function` argument):
+    a bare number (`0.3`) or a percentage (`50%`, fix round 1 F5 — `opacity:
+    50%` is valid CSS and `parseFloat("50%") === 50`, which used to read as
+    "well above 1" and never fire). Returns NaN for anything else. */
+function parseAlphaValue(raw) {
+  const trimmed = raw.trim();
+  const num = parseFloat(trimmed);
+  if (Number.isNaN(num)) return NaN;
+  return trimmed.endsWith("%") ? num / 100 : num;
+}
+
+/** True when `name` (a `@keyframes` name referenced from an `animation`
+    shorthand) names a `@keyframes` block, anywhere in `css`, whose own body
+    declares `opacity` or a dimming `filter` function (`opacity()` /
+    `brightness()`). Fix round 1, F7 tightens the original brief's "exempt
+    any block that declares animation" — too wide, since
+    `.spin { animation: spin 1s linear infinite; opacity: 0.6 }` would pass
+    even though `spin`'s keyframes touch only `transform`, the same
+    laundering the round-1 `transition` exemption was removed over. Motion
+    is only a legitimate excuse for a property the referenced keyframes
+    actually animates. */
+function keyframesAnimatesDimming(css, name) {
+  const re = new RegExp(`@keyframes\\s+${name.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&")}\\s*\\{`, "i");
+  const m = re.exec(css);
+  if (!m) return false;
+  let depth = 1;
+  let k = m.index + m[0].length;
+  while (k < css.length && depth > 0) {
+    const skip = skipSpan(css, k);
+    if (skip !== -1) { k = skip; continue; }
+    if (css[k] === "{") depth++;
+    else if (css[k] === "}") depth--;
+    k++;
+  }
+  const body = css.slice(m.index + m[0].length, k - 1);
+  return /\bopacity\s*:/.test(body) || /\bfilter\s*:\s*[^;]*\b(?:opacity|brightness)\(/i.test(body);
+}
+
+/** True when a block's own `animation` shorthand names a `@keyframes` block
+    that itself animates opacity (directly, or through a dimming `filter`
+    function) — see `keyframesAnimatesDimming` above. */
+function exemptByAnimation(css, body) {
+  const m = /(?:^|[;{\s])animation\s*:\s*([^;]+)/.exec(body);
+  if (!m) return false;
+  const value = m[1];
+  for (const nameMatch of value.matchAll(/[A-Za-z_-][\w-]*/g)) {
+    if (keyframesAnimatesDimming(css, nameMatch[0])) return true;
+  }
+  return false;
+}
+
+/** `filter` functions that fade a colour toward the ground the same way
+    `opacity` does — fix round 1, F5. `opacity()` and `brightness()` below
+    full strength are the identical rendering `opacity` produces (or, for
+    brightness, the same laundering one step removed) and would otherwise
+    let this exact commit's own `filter: grayscale(1)` precedent get copied
+    as `filter: brightness(0.4)` with the gate staying silent.
+    `grayscale()` is deliberately left alone: it rests at full strength and
+    asserts no hue, which is the letter of rule 2, and no ramp token can
+    reach inside a bitmap `<img>` the way it can a text colour. */
+function findDimmingFilters(value) {
+  const hits = [];
+  for (const m of value.matchAll(/\b(opacity|brightness)\(\s*([^)]+)\)/gi)) {
+    const alpha = parseAlphaValue(m[2]);
+    if (!Number.isNaN(alpha) && alpha < 1) hits.push(`${m[1].toLowerCase()}(${m[2].trim()})`);
+  }
+  return hits;
+}
+
 function findStaticOpacity(css) {
   const withoutComments = css.replace(/\/\*[\s\S]*?\*\//g, "");
   const violations = [];
   for (const { header, body, inKeyframes } of ruleBlocks(withoutComments)) {
     if (inKeyframes) continue;
     if (isOpacityAllowlisted(header)) continue;
-    const declaresAnimation = /(?:^|[;{\s])animation\s*:/.test(body);
-    if (declaresAnimation) continue;
+    if (exemptByAnimation(withoutComments, body)) continue;
     for (const m of body.matchAll(/opacity\s*:\s*([^;]+)/gi)) {
       const raw = m[1].trim().replace(/\s*!\s*important\s*$/i, "");
-      const value = parseFloat(raw);
+      const value = parseAlphaValue(raw);
       if (Number.isNaN(value)) continue;
       if (value > 0 && value < 1) violations.push(`${header} { opacity: ${raw} }`);
+    }
+    for (const m of body.matchAll(/filter\s*:\s*([^;]+)/gi)) {
+      const raw = m[1].trim().replace(/\s*!\s*important\s*$/i, "");
+      for (const hit of findDimmingFilters(raw)) violations.push(`${header} { filter: ${hit} }`);
     }
   }
   return violations;
@@ -450,8 +568,11 @@ function jsFilesUnder(root, dir = root) {
 }
 
 /** Every class name a JS module writes into markup: `class="..."` inside a
-    template literal, `classList.add/remove/toggle/contains(...)`, and
-    `className = "..."`/`className += "..."`. `${...}` interpolations are
+    template literal, `classList.add/remove/toggle(...)`, and
+    `className = "..."`/`className += "..."`. `classList.contains(...)` is
+    deliberately not matched (fix round 1, F14): it is a query, and reading
+    it as markup only inflates the allowlist with classes nothing actually
+    writes. `${...}` interpolations are
     blanked first (same loop `injectedCssBlocks` uses above), so a ternary
     that embeds its own quoted strings — e.g.
     `class="… ${covered ? "" : "party-cov__pill--uncovered"}"` — cannot
@@ -474,20 +595,27 @@ function emittedClasses(js) {
   for (const m of blanked.matchAll(/\bclass(?:Name)?\s*=\s*["'`]([^"'`]*)["'`]/g)) {
     for (const piece of m[1].split(/\s+/)) if (isRealName(piece)) names.add(piece);
   }
-  for (const m of blanked.matchAll(/\bclassList\.(?:add|remove|toggle|contains)\(\s*([^)]*)\)/g)) {
+  for (const m of blanked.matchAll(/\bclassList\.(?:add|remove|toggle)\(\s*([^)]*)\)/g)) {
     for (const argm of m[1].matchAll(/["'`]([\w-]+)["'`]/g)) if (isRealName(argm[1])) names.add(argm[1]);
   }
   return names;
 }
 
-// Only classes shaped like the app's own components are worth checking here:
-// scoping to these four prefixes is what keeps the allowlist below short
-// enough to read. A wider scan (every class any renderer module writes)
-// pulls in the package's own `.axi-*` vocabulary, third-party library hooks,
-// and structural utility classes with no naming convention at all — none of
-// which this scanner exists to police. Rule 3's inline `border-radius`
-// blind spot below is the one the scanner cannot see at all: it reads
-// `class="..."`, not `style="..."`.
+// A deliberately narrow scope, corrected in fix round 1 (F12) after a review
+// found the prior comment overclaiming: these four prefixes cover 433 of the
+// roughly 1232 class names emitted from src/renderer, not "the app's own
+// components" as a whole. Several app-owned, already-CONVERTED families are
+// knowingly excluded — layout.css's `titlebar__*` and `subnav__*`,
+// custom-select.css's `cselect*`, build-sources.css's `src-chip*`, and
+// cards.css's `editor-share-dropdown__*` and `build-code-group__*` — plus
+// everything the package's own `.axi-*` vocabulary, third-party library
+// hooks, and unprefixed structural utility classes bring in. The four
+// prefixes here are what keeps EMITTED_CLASS_ALLOWLIST below short enough to
+// read; widening it is future work, not a one-line change — a plain prefix
+// widen would surface `skel-d`, the fragment `` `skel-d${d}` `` leaves after
+// blanking (skeleton.js), and the "nothing ends in a bare hyphen" heuristic
+// `emittedClasses` relies on does not catch a fragment that doesn't end in a
+// hyphen. That needs a companion heuristic, which is not this round's work.
 const EMITTED_CLASS_PREFIX = /^(?:af-|lib-|comp-|party-cov__)/;
 
 // Classes deliberately not backed by a CSS selector. Each is either a JS-only
@@ -512,6 +640,7 @@ const EMITTED_CLASS_ALLOWLIST = [
   ["comp-picker-modal__btn--cancel", "JS-only modifier alongside .axi-btn/--ghost, which carries the paint."],
   ["comp-picker-row__badge--comps", "JS-only modifier alongside .axi-chip, which carries the paint."],
   ["comp-picker-row__badge--shared", "JS-only modifier alongside .axi-chip/--meta, which carries the paint."],
+  ["comp-cat-name-input", "Base class carrying only its --error modifier's styling (comps.css); the input itself is paired with .comp-picker-modal__search/.axi-input for paint and this is a querySelector hook. (Fix round 1, F6.)"],
   ["comp-picker-row__prof", "Plain text child of .comp-picker-row; inherits its ancestor's typography."],
   ["comp-tag-chip", "JS-only hook alongside .axi-pill, which carries the control's paint."],
   ["lib-banner--info", "JS-only modifier alongside .lib-banner, which carries the paint; only one banner kind exists today."],
@@ -523,15 +652,21 @@ const EMITTED_CLASS_ALLOWLIST = [
   ["lib-icon-item--build", "JS/query hook alongside .lib-icon-item, which carries the paint."],
   ["lib-icon-item--folder", "JS/query hook alongside .lib-icon-item, which carries the paint."],
   ["lib-list-row--build", "JS/query hook alongside .lib-list-row, which carries the paint."],
+  ["lib-list-row__icon", "Base class carrying only its --folder modifier's styling (library.css); no independent rule of its own. (Fix round 1, F6.)"],
   ["lib-sidebar--open", "The sidebar's default (non-collapsed) state; every rule is keyed off .lib-sidebar--collapsed instead, so --open needs none of its own."],
-  ["lib-table__folder-icon", "Dead code: the isTable branch of insertInlineInput() (library/sidebar.js) only runs against a <table> element, and no current view renders one."],
-  ["lib-table__row", "Same dead-code path as lib-table__folder-icon."],
-  ["lib-table__row--folder", "Same dead-code path as lib-table__folder-icon."],
-  ["lib-table__td", "Same dead-code path as lib-table__folder-icon."],
-  ["lib-table__td--icon", "Same dead-code path as lib-table__folder-icon."],
-  ["lib-table__td--name", "Same dead-code path as lib-table__folder-icon."],
-  ["lib-table__td--pin", "Same dead-code path as lib-table__folder-icon."],
+  // lib-table__folder-icon is NOT here (fix round 1, F11): it IS styled
+  // (library.css:867-874) and emitted live from the real lib-tv tree view
+  // (library/content.js:419) — it would never have reported as an orphan,
+  // and the entry's "dead code" reason was wrong (it isn't the same
+  // isTable branch as the six entries below).
+  ["lib-table__row", "Dead code: the isTable branch of insertInlineInput() (library/sidebar.js) only runs against a <table> element, and no current view renders one."],
+  ["lib-table__row--folder", "Same dead-code path as lib-table__row."],
+  ["lib-table__td", "Same dead-code path as lib-table__row."],
+  ["lib-table__td--icon", "Same dead-code path as lib-table__row."],
+  ["lib-table__td--name", "Same dead-code path as lib-table__row."],
+  ["lib-table__td--pin", "Same dead-code path as lib-table__row."],
   ["lib-toast__msg", "Plain text child of .lib-toast; inherits its ancestor's typography/colour."],
+  ["lib-toolbar__search", "Base class paired with the package's .axi-search for paint; the only independent rule is on the sibling -input class. (Fix round 1, F6.)"],
   ["lib-tv__row--build", "JS/query hook alongside .lib-tv__row, which carries the paint."],
 ];
 
@@ -663,7 +798,14 @@ describe("axi design language rules", () => {
 
     function hasSelector(className) {
       const esc = className.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&");
-      return new RegExp(`\\.${esc}\\b`).test(cssBundle);
+      // Fix round 1, F6: `\b` treats `-` as a non-word character, so it is a
+      // boundary — `.lib-drag\b` matches inside `.lib-drag-ghost`, meaning a
+      // hyphen-suffixed relative of a real selector could certify a class
+      // that has no rule of its own (hasSelector("lib-drag") used to return
+      // true). `(?![\w-])` requires the match not be followed by another
+      // word character OR hyphen, so only an exact class boundary passes.
+      // `__` stays safe either way, since `_` is a word character.
+      return new RegExp(`\\.${esc}(?![\\w-])`).test(cssBundle);
     }
 
     it("finds a selector for every emitted class in the app's own components", () => {
@@ -703,16 +845,20 @@ describe("axi design language rules", () => {
       expect(classes.has("bar--baz")).toBe(false);
     });
 
-    it("extracts classList.add/toggle arguments and drops a classList query", () => {
+    it("extracts classList.add/remove/toggle arguments and drops a classList query (fix round 1, F14)", () => {
       const js = [
         'el.classList.add("comp-foo", "comp-bar");',
-        'el.classList.toggle("comp-baz", isOn);',
-        'if (el.classList.contains("comp-qux")) {}',
+        'el.classList.remove("comp-baz");',
+        'el.classList.toggle("comp-qux", isOn);',
+        'if (el.classList.contains("comp-quux")) {}',
       ].join("\n");
       const classes = emittedClasses(js);
       for (const cls of ["comp-foo", "comp-bar", "comp-baz", "comp-qux"]) {
         expect(classes.has(cls)).toBe(true);
       }
+      // A query proves nothing about markup — collecting it would inflate
+      // the allowlist with classes nothing actually writes.
+      expect(classes.has("comp-quux")).toBe(false);
     });
 
     it("drops an incomplete fragment left by an unresolved interpolation", () => {
@@ -728,6 +874,18 @@ describe("axi design language rules", () => {
     it("finds a selector for a real, styled class and not for an invented one", () => {
       expect(hasSelector("comp-list-row")).toBe(true);
       expect(hasSelector("comp-does-not-exist-anywhere")).toBe(false);
+    });
+
+    it("does not certify a class from a hyphen-suffixed relative's selector (fix round 1, F6)", () => {
+      // `.lib-drag-ghost` (a real selector, library.css) must not certify
+      // the unrelated class "lib-drag": `\b` treats `-` as a boundary, so
+      // `\.lib-drag\b` used to match inside `.lib-drag-ghost` and return
+      // true for a class with no rule of its own.
+      expect(cssBundle).toMatch(/\.lib-drag-ghost\b/);
+      expect(hasSelector("lib-drag")).toBe(false);
+      // `__` stays safe either way, since `_` is a word character — this is
+      // why the `.lib-grid-card` family was caught in the original commit.
+      expect(hasSelector("comp-list-row")).toBe(true);
     });
   });
 
@@ -846,16 +1004,45 @@ describe("axi design language rules", () => {
       expect(findStaticOpacity(".a { opacity: 0.3; }")).not.toEqual([]);
     });
 
-    it("does not flag a partial opacity whose own block declares animation", () => {
-      // The transition-paired case (RULES.md's own worked example,
-      // .comp-list-row__checkbox) still fires: a transition says how a value
-      // moves, not whether the value it rests on is legitimate.
+    it("does not flag a partial opacity whose own block declares a transition", () => {
+      // A transition says how a value moves, not whether the value it rests
+      // on is legitimate — the round-1 brief's own worked example
+      // (.comp-list-row__checkbox) made this point; the checkbox itself was
+      // fixed a different way in fix round 1 (F1), but the scanner rule
+      // still has to hold for any other transition-paired resting value.
       expect(
         findStaticOpacity(".a { opacity: 0.3; transition: opacity 0.15s; }"),
       ).not.toEqual([]);
+    });
+
+    it("exempts an animation only when the keyframes it names actually animates opacity", () => {
+      // Fix round 1, F7: the original brief's exemption ("declares
+      // animation") was too wide — a block referencing a keyframes that
+      // never touches opacity would still have passed. .fade's keyframes
+      // move opacity, so it is motion; .spin's keyframes move only
+      // transform, so its own resting 0.6 is still a violation.
       expect(
-        findStaticOpacity(".a { opacity: 0.3; animation: fade-in 0.2s ease; }"),
+        findStaticOpacity(
+          "@keyframes fade { from { opacity: 0; } to { opacity: 1; } } .a { opacity: 0.3; animation: fade 0.2s ease; }",
+        ),
       ).toEqual([]);
+      expect(
+        findStaticOpacity(
+          "@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } } .spin { animation: spin 1s linear infinite; opacity: 0.6; }",
+        ),
+      ).not.toEqual([]);
+    });
+
+    it("does not change any current CONVERTED-file result now that the animation exemption is tightened", () => {
+      // No block in the tree pairs `animation:` with its own `opacity:`
+      // declaration (verified separately with
+      // `awk 'BEGIN{RS="}"} /animation:/ && /opacity:/' <file>` over every
+      // CONVERTED file, printing nothing) — this just pins that the tighter
+      // exemption still reports zero violations across the real files.
+      for (const file of CONVERTED) {
+        const css = fs.readFileSync(path.join(ROOT, file), "utf8");
+        expect(findStaticOpacity(css)).toEqual([]);
+      }
     });
 
     it("does not flag a partial opacity inside @keyframes", () => {
@@ -877,6 +1064,65 @@ describe("axi design language rules", () => {
       expect(findStaticOpacity(".comp-cat-drag-ghost { opacity: 0.9; }")).toEqual([]);
       expect(findStaticOpacity(".comp-cat-drag-ghost-2 { opacity: 0.9; }")).not.toEqual([]);
     });
+
+    it("detects a percentage opacity (fix round 1, F5)", () => {
+      // parseFloat("50%") === 50, which used to read as "above 1" and never
+      // fire at all.
+      expect(findStaticOpacity(".a { opacity: 50%; }")).not.toEqual([]);
+      expect(findStaticOpacity(".a { opacity: 100%; }")).toEqual([]);
+      expect(findStaticOpacity(".a { opacity: 0%; }")).toEqual([]);
+    });
+
+    it("detects a dimming filter() function but leaves grayscale() alone (fix round 1, F5)", () => {
+      expect(findStaticOpacity(".a { filter: opacity(0.3); }")).not.toEqual([]);
+      expect(findStaticOpacity(".a { filter: brightness(0.4); }")).not.toEqual([]);
+      expect(findStaticOpacity(".a { filter: opacity(50%); }")).not.toEqual([]);
+      // Full strength or brighter is not a fade.
+      expect(findStaticOpacity(".a { filter: opacity(1); }")).toEqual([]);
+      expect(findStaticOpacity(".a { filter: brightness(1.2); }")).toEqual([]);
+      // grayscale() rests at full strength and asserts no hue — the
+      // sanctioned answer this commit installs for a bitmap <img>.
+      expect(findStaticOpacity(".a { filter: grayscale(1); }")).toEqual([]);
+      expect(findStaticOpacity(".a { filter: grayscale(0.5); }")).toEqual([]);
+    });
+
+    it("keeps a { or } inside a string or url() from being read as a structural brace (fix round 1, F7)", () => {
+      expect(
+        findStaticOpacity('.a { content: "}"; opacity: 0.5; }'),
+      ).not.toEqual([]);
+      expect(
+        findStaticOpacity('.a { content: "{"; opacity: 0.5; }'),
+      ).not.toEqual([]);
+      expect(
+        findStaticOpacity(".a { background: url(\"data:image/svg+xml,<svg>{}</svg>\"); opacity: 0.5; }"),
+      ).not.toEqual([]);
+      // The violation's own header and value still come through intact.
+      expect(findStaticOpacity('.a { content: "}"; opacity: 0.5; }')).toEqual([
+        '.a { opacity: 0.5 }',
+      ]);
+    });
+  });
+
+  // Fix round 1, F3: OPACITY_ALLOWLIST had no equivalent of the staleness
+  // check EMITTED_CLASS_ALLOWLIST already has, which is exactly how six dead
+  // `lib-dragging`/`.sortable-drag` entries went unnoticed — nothing in the
+  // codebase applied those classes at all, so their exemption was pure dead
+  // weight that could have pre-authorised a future violation.
+  it("names every OPACITY_ALLOWLIST selector as one that still carries a resting partial opacity", () => {
+    const bundle = CONVERTED.map((f) => fs.readFileSync(path.join(ROOT, f), "utf8")).join("\n");
+    const withoutComments = bundle.replace(/\/\*[\s\S]*?\*\//g, "");
+    const blocks = ruleBlocks(withoutComments);
+    const stale = OPACITY_ALLOWLIST.filter(([selector]) => {
+      return !blocks.some(({ header, body }) => {
+        const pieces = header.split(",").map((p) => p.trim().replace(/\s+/g, " "));
+        if (!pieces.includes(selector)) return false;
+        return [...body.matchAll(/opacity\s*:\s*([^;]+)/gi)].some((m) => {
+          const v = parseFloat(m[1].trim().replace(/\s*!\s*important\s*$/i, ""));
+          return !Number.isNaN(v) && v > 0 && v < 1;
+        });
+      });
+    }).map(([selector]) => selector);
+    expect(stale).toEqual([]);
   });
 });
 

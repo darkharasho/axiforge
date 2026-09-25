@@ -776,11 +776,6 @@
 /* Drop target */
 .lib-list-row.lib-drop-target { outline: var(--axi-border-control) dashed var(--axi-accent); outline-offset: -3px; }
 
-/* Dragging */
-.lib-list-row.lib-dragging {
-  opacity: 0.4;
-}
-
 /* ── Table / Tree view ───────────────────────────────────────────── */
 
 /* Grid columns shared by header and every row */
@@ -841,8 +836,6 @@
 .lib-tv__item.lib-selected > .lib-tv__row .lib-tv__modified { color: inherit; }
 .lib-tv__item.lib-drop-target > .lib-tv__row,
 .lib-tv__item.lib-drop-target { outline: var(--axi-border-control) dashed var(--axi-accent); outline-offset: -3px; }
-.lib-tv__item.lib-dragging > .lib-tv__row,
-.lib-tv__item.lib-dragging { opacity: 0.4; }
 
 /* Tree nesting — just CSS list indentation */
 .lib-tv__tree,
@@ -1092,7 +1085,6 @@
 }
 .af-tile.lib-selected { outline: var(--axi-border-control) solid var(--axi-accent); outline-offset: -3px; }
 .af-tile.lib-drop-target { outline: var(--axi-border-control) dashed var(--axi-accent); outline-offset: -3px; }
-.af-tile.lib-dragging { opacity: 0.4; }
 
 /* Folder and comp tiles are the same box laid on its side: an icon and a
    name, no strip, because neither owns a domain colour. */
@@ -1142,10 +1134,6 @@
 .lib-icon-item:hover { background: var(--axi-surface-raised); }
 .lib-icon-item.lib-selected { outline: var(--axi-border-control) solid var(--axi-accent); outline-offset: -3px; }
 .lib-icon-item.lib-drop-target { outline: var(--axi-border-control) dashed var(--axi-accent); outline-offset: -3px; }
-
-.lib-icon-item.lib-dragging {
-  opacity: 0.4;
-}
 
 .lib-icon-item__icon {
   display: flex;
@@ -1419,34 +1407,50 @@
 }
 
 /* ── Drag and drop state ─────────────────────────────────────────── */
-
-.lib-dragging {
-  opacity: 0.4;
-}
-
-/* SortableJS drag classes */
+/* Fix round 1, F3/F4: library/drag-drop.js:398,401-407 wires
+   ghostClass: "lib-drag-ghost", chosenClass: "lib-drag-chosen",
+   dragClass: "lib-drag-active", forceFallback: true,
+   fallbackClass: "lib-drag-fallback". `grep -rn lib-dragging src/` finds no
+   emitter at all (nothing in this codebase applies it) and `sortable-drag`
+   is SortableJS's *default* dragClass name, which this app overrides to
+   lib-drag-active — so both were dead rules, deleted rather than fixed.
+   The vendored SortableJS source (node_modules/sortablejs/modular/
+   sortable.esm.js) settles which of the four real classes land on the live
+   row still in the list versus the floating clone:
+     - :1416 toggleClass(dragEl, options.ghostClass, true) — ghostClass is
+       the live row, acting as the placeholder gap; :1535 explicitly
+       removes it from the clone.
+     - :1302 toggleClass(dragEl, options.chosenClass, true) — chosenClass
+       is the live row too.
+     - :1536-1537 put fallbackClass AND dragClass on ghostEl, the floating
+       clone; :1592 applies dragClass to dragEl only when !fallback, and
+       this app sets forceFallback: true, so dragClass here is the clone
+       as well.
+   lib-drag-ghost and lib-drag-chosen are therefore real rows at a resting
+   partial opacity — the thing rule 2 forbids — and are fixed below instead
+   of exempted. lib-drag-active and lib-drag-fallback are genuine floating
+   clones and keep their opacity. */
 .lib-drag-ghost {
-  opacity: 0.3;
-  background: var(--axi-surface-raised) !important;
+  background: var(--axi-ground);
+  outline: var(--axi-border-control) dashed var(--axi-rule);
+  outline-offset: -3px;
 }
 
-.lib-drag-chosen {
-  opacity: 0.8;
-}
+/* ghostClass lands on the same row a moment later, so the "picked up" state
+   is already expressed by lib-drag-ghost above; a resting 0.8 on a real row
+   had nothing left to say. */
 
 .lib-drag-active {
+  /* Genuine floating clone (see the block comment above) — full-strength
+     opacity, no fade. */
   opacity: 0.5;
 }
 
 .lib-drag-fallback {
+  /* Genuine floating clone (see the block comment above). */
   opacity: 0.9;
   box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
   cursor: grab !important;
-}
-
-.sortable-drag {
-  opacity: 0.9;
-  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
 }
 
 .lib-drop-target {

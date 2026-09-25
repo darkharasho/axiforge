@@ -259,29 +259,21 @@
   color: var(--axi-accent-ink);
 }
 
-/* Checkbox. Judgement call (Task 24, RULES.md rule 2): the resting 0.3 read
-   as a third, smudged state, and 0.15s of opacity transition does not rescue
-   a resting partial value (a transition says how a property moves, not
-   whether the value it rests on is legitimate). The intent is that the
-   checkbox is genuinely HIDDEN until the row is hovered, selected, or
-   focused — not present-but-quiet — so visibility is the honest expression:
-   it keeps the layout box (unlike display: none) and is still transitionable.
-   :focus-within is added to the reveal list alongside :hover/--selected so a
-   keyboard user tabbing to the checkbox does not focus an invisible control —
-   the old opacity: 0.3 never had that gap, since a smudged checkbox was still
-   visible enough to focus. */
+/* Checkbox. Fix round 1, F1: the round-1 fix (visibility: hidden, revealed
+   on hover/selected/:focus-within) was a keyboard/screen-reader regression —
+   .comp-list-row is a plain <div> with no tabindex, and the checkbox is the
+   only focusable node in its subtree (comps/comp-list.js:296, :343),
+   so :focus-within on the row could never fire and the checkbox was simply
+   unreachable without a mouse. Rule 2 gives two resting options — full
+   strength or absent — and "absent" is not available for a control that has
+   to stay operable, so it rests visible at full strength; the reveal rules
+   and transition are gone with it. The row reads busier with the checkbox
+   always present than it did at a resting 0.3, which is the honest trade
+   for keeping it usable. */
 .comp-list-row__checkbox {
   accent-color: var(--axi-accent);
   cursor: pointer;
-  visibility: hidden;
-  transition: visibility 0.15s;
   flex-shrink: 0;
-}
-
-.comp-list-row:hover .comp-list-row__checkbox,
-.comp-list-row:focus-within .comp-list-row__checkbox,
-.comp-list-row--selected .comp-list-row__checkbox {
-  visibility: visible;
 }
 
 /* Name */
@@ -1008,12 +1000,22 @@
   pointer-events: none;
 }
 
+/* Fix round 1, F8: --axi-rule (#3a4250) is lighter than --axi-ink-line
+   (#0c0e12), so the border-colour swap above reads as a hue change against
+   --axi-surface, not a quieting on its own — the label has to carry the
+   actual dim/disabled distinction. Three real ramp steps now: resting
+   --axi-text-dim, hover --axi-text (brighter, the usual hover direction),
+   disabled --axi-text-faint (dimmer than resting, unlike the border). */
 .comp-line__add-text {
   font: var(--axi-t-small);
-  color: var(--axi-text-faint);
+  color: var(--axi-text-dim);
 }
 
 .comp-line--add:hover .comp-line__add-text {
+  color: var(--axi-text);
+}
+
+.comp-line--add.comp-line--disabled .comp-line__add-text {
   color: var(--axi-text-faint);
 }
 
@@ -1234,8 +1236,12 @@
   justify-content: center;
 }
 
-/* SortableJS fallback ghost while dragging a chip — a ghost, so it keeps its
-   opacity, but the shape it's a ghost of no longer has a radius or a blur. */
+/* Fix round 1, F4: comp-drag-drop.js sets fallbackClass: "comp-cat-drag-ghost"
+   (comp-drag-drop.js:96). SortableJS's vendored source puts fallbackClass on
+   ghostEl, the floating clone appended to <body> — not on the source chip
+   still sitting in the list — so this is a genuine clone, not a colour
+   resting on a live element, and keeps its opacity per rule 2's own carve-out
+   for a representation of the thing being moved. */
 .comp-cat-drag-ghost {
   opacity: 0.9;
 }
@@ -1608,7 +1614,11 @@
 
 /* Pool card drag ghost — styled to look like a filled slot box, so its
    border weight and the slot's must move together. It keeps its opacity —
-   a ghost is a ghost — but no longer draws a radius. The forced values
+   a ghost is a ghost — but no longer draws a radius. Fix round 1, F4:
+   comp-drag-drop.js:46 sets fallbackClass: "comp-drag-icon-ghost", and
+   SortableJS's vendored source puts fallbackClass on ghostEl, the clone — so
+   this really is a floating clone, not a colour resting on a live element.
+   The forced values
    below mirror .comp-slot--filled's own; the profession colour comes
    through the same --axi-series knob, set by comp-drag-drop.js onStart
    (the clone still carries a lib-prof--* class from packages/forge-render,
@@ -1647,7 +1657,13 @@
   height: 26px !important;
 }
 
-/* Slot ghost (drop placeholder) — constrain to slot size regardless of dragged element */
+/* Slot ghost (drop placeholder) — constrain to slot size regardless of
+   dragged element. Fix round 1, F4: comp-drag-drop.js:125 sets
+   ghostClass: "comp-slot-ghost", and SortableJS's vendored source puts
+   ghostClass on dragEl, the slot still sitting in the line — a live
+   element, not a clone. Its background and border were already
+   full-strength tokens; only the 0.7 opacity was a rule-2 violation, so it
+   is dropped rather than exempted. */
 .comp-slot-ghost {
   width: 42px !important;
   height: 42px !important;
@@ -1656,7 +1672,6 @@
   background: var(--axi-surface) !important;
   border: var(--axi-border-hairline) dashed var(--axi-accent) !important;
   overflow: hidden !important;
-  opacity: 0.7;
   flex-shrink: 0 !important;
 }
 
@@ -1669,9 +1684,12 @@
   display: none !important;
 }
 
-/* Party line ghost during reorder */
+/* Party line ghost during reorder. Fix round 1, F4: comp-drag-drop.js:209
+   sets ghostClass: "comp-line-ghost", which — same as .comp-slot-ghost
+   above — lands on the live line still in the list, not a clone. The
+   background was already a full-strength token; only the 0.5 opacity was
+   the violation. */
 .comp-line-ghost {
-  opacity: 0.5;
   background: var(--axi-surface);
 }
 
@@ -2110,17 +2128,23 @@
   box-shadow: none;
 }
 
-/* Judgement call (Task 24, RULES.md rules 2 and 9): the two --self-* icon
-   opacities (0.4 here, 0.28 below) encoded a three-step gradation (covered /
-   self-conditional / self-only) as three brightnesses of the same icon —
-   exactly what rule 9 forbids (a quantity read as intensity), and rule 2's
-   own case besides. These three are categories, not an ordered quantity a
-   user needs to compare, and the category is already carried by the pill's
-   own colour and border-style (dashed for self-condi, filled-quiet for
-   self-only, per the rules above); the icon itself only needs to read as
-   "not a live status colour," so it is desaturated to a full-strength
-   neutral rather than faded — same reasoning as .party-cov__header-boon
-   --uncovered just above. */
+/* Judgement call (Task 24, RULES.md rules 2 and 9; comment corrected in fix
+   round 1, F10): the two --self-* icon opacities (0.4 here, 0.28 below)
+   encoded a three-step gradation (covered / self-conditional / self-only) as
+   three brightnesses of the same icon — exactly what rule 9 forbids (a
+   quantity read as intensity), and rule 2's own case besides. These three
+   are categories, not an ordered quantity a user needs to compare, so the
+   icon itself only needs to read as "not a live status colour," desaturated
+   to a full-strength neutral rather than faded — same reasoning as
+   .party-cov__header-boon--uncovered just above. The two --self-* states
+   never actually need to be told apart from each other: --self-condi is
+   only emitted on condition pills (comp-boon-coverage.js:319) and
+   --self-only only on boon pills (comp-boon-coverage.js:662, inside a
+   .party-cov__pill--boon loop) — they never co-occur in one row. What the
+   self-only pill does need to stay distinguishable from, within its own
+   (boon) row, is --uncovered, and it is: same background/colour as
+   --uncovered, but paired with this grey icon plus --axi-text-faint on
+   the badge below, instead of --uncovered's plain default-ink icon. */
 .party-cov__pill--self-condi .party-cov__pill-icon {
   filter: grayscale(1);
 }

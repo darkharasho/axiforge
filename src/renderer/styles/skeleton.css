@@ -486,3 +486,15 @@
   border-radius: 6px;
   flex-shrink: 0;
 }
+
+/* Fix round 1, F9 — nothing else in this file: the grid card
+   (skeleton.js:143-157) now emits a bare .af-tile, which carries
+   cursor: pointer and a hover lift (library.css) with nothing to neutralise
+   either, so a loading placeholder promised a click that resolved to
+   nothing. :has(.skel) scopes this to a grid that is actually showing
+   skeleton children, so the real .lib-grid (identical class, no .skel
+   descendants once real content replaces it) stays interactive. This is a
+   neutraliser, not a conversion — skeleton.css stays in PENDING. */
+.lib-grid:has(.skel) {
+  pointer-events: none;
+}

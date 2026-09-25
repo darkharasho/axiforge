@@ -719,6 +719,20 @@ Status key: `[ ]` open · `[x]` done · `[~]` in progress · `[?]` needs repro s
   already-offset rest state like the primary button does — a visual-parity
   question for whoever next touches the button set
   (`.af-btn--danger` in `src/renderer/styles/app.css`).
+- [ ] **Task 24's orphaned-emitted-class scanner cannot see a class name
+  assembled from an interpolated variable, and two spots in
+  `comp-boon-coverage.js` fall in that gap.** `party-cov__src-target--foe`
+  `--selfcondi`/`--mixed` are built through `${t.cls}`/`${targetClass}`
+  (`comp-boon-coverage.js:413`, `:421`, `:437-439`, `:471`) and none of them
+  has a CSS selector — `comps.css` styles only the base
+  `.party-cov__src-target` class. Separately, `comp-boon-coverage.js:694` and
+  `:765` query `.party-cov__src-target--self`, which nothing ever emits (the
+  emitted name is `--selfcondi`), so both of those loops are permanent no-ops.
+  Pre-existing, not introduced by this batch. The scanner cannot catch either
+  case because `emittedClasses()` blanks `${...}` interpolations before
+  looking for class names, by design (the same blanking is what keeps a
+  ternary's own embedded quotes from truncating a `class="..."` attribute
+  early) — a class name assembled at runtime is invisible to it either way.
 
 ### Parked gate holes (from the batch 1 final review)
 
