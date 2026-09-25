@@ -621,21 +621,28 @@
 }
 
 
+/* ── Hover preview (skill / trait / attribute card) ──────────────────────
+   Converted to the axi design language ahead of the rest of this file: the
+   card is the app's most-looked-at surface and was still wearing the legacy
+   bridge's rounded corners, blurred drop shadow, panel gradient and inset
+   accent glow -- four things the language does not have. It is a popover
+   raised off whatever it floats over, so it is drawn as a panel: surface-
+   raised fill, a panel outline in ink, a hard offset block, square. Both
+   consumers load axi.css (the renderer via app.css, the published SPA via
+   src/site/main.js), so these tokens resolve in either. */
 .forge-render .hover-preview {
   position: fixed;
   top: 0;
   left: 0;
-  z-index: var(--fr-z-tooltip, 120);
+  /* Above every panel and popover the app raises; not a design token -- a
+     stacking order the host page owns. */
+  z-index: 120;
   width: min(360px, calc(100vw - 16px));
-  border: 1px solid var(--fr-line, #1e1f24);
-  border-radius: 11px;
-  background:
-    var(--fr-panel-gradient, linear-gradient(180deg, rgba(20, 21, 24, 0.95), rgba(16, 17, 20, 0.95))),
-    var(--fr-surface, rgba(10, 11, 14, 0.92));
-  box-shadow:
-    0 12px 28px rgba(0, 0, 0, 0.72),
-    0 0 0 1px rgba(var(--fr-accent-rgb, 200, 152, 72), 0.12) inset;
-  padding: 10px;
+  padding: 12px;
+  background: var(--axi-surface-raised);
+  border: var(--axi-border-panel) solid var(--axi-ink-line);
+  border-radius: var(--axi-radius);
+  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
   pointer-events: none;
 }
 
@@ -665,44 +672,46 @@
   display: flex;
   align-items: center;
   gap: 3px;
-  font-size: 0.82rem;
-  color: var(--fr-text-secondary, #b0b0b0);
+  font: var(--axi-t-small);
+  color: var(--axi-text-dim);
   white-space: nowrap;
 }
 
+/* The icon was at .85 opacity, which rule 2 does not allow: a colour present
+   is at full strength, and the ramp is where quieter comes from. An image has
+   no ramp, so it simply stands at full. */
 .forge-render .hover-preview__timing img {
   width: 16px;
   height: 16px;
-  opacity: 0.85;
 }
 
 .forge-render .hover-preview__icon {
   width: 56px;
   height: 56px;
-  border-radius: 10px;
-  border: 1px solid var(--fr-line, #1e1f24);
+  border: var(--axi-border-control) solid var(--axi-ink-line);
+  border-radius: var(--axi-radius-sm);
   object-fit: cover;
 }
 
 .forge-render .hover-preview__title {
   margin: 0;
-  font-size: 0.99rem;
-  color: var(--fr-text, #e2e3e8);
+  font: var(--axi-t-h3);
+  letter-spacing: var(--axi-ls-h3);
+  color: var(--axi-text);
 }
 
 .forge-render .hover-preview__meta {
   margin: 4px 0 0;
-  font-size: 0.71rem;
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--fr-muted, #828490);
+  color: var(--axi-text-faint);
 }
 
 .forge-render .hover-preview__desc {
   margin: 9px 0 0;
-  font-size: 0.78rem;
-  color: var(--fr-text, #e2e3e8);
-  line-height: 1.34;
+  font: var(--axi-t-small);
+  color: var(--axi-text);
 }
 
 .forge-render .hover-preview__bonuses {
@@ -711,16 +720,17 @@
   list-style: none;
   display: grid;
   gap: 2px;
-  font-size: 0.78rem;
-  line-height: 1.34;
+  font: var(--axi-t-small);
 }
 
+/* Rule 5: a bonus that is live is a status, so it takes the status ink at full
+   strength; one that is not is quieter, so it takes a neutral off the ramp. */
 .forge-render .hover-preview__bonus--active {
-  color: #6fdc6f;
+  color: var(--axi-ok);
 }
 
 .forge-render .hover-preview__bonus--inactive {
-  color: var(--fr-text-dim, #646670);
+  color: var(--axi-text-faint);
 }
 
 /* Stat breakdown list (attribute hover) */
@@ -728,13 +738,13 @@
   margin: 8px 0 0;
   padding: 0;
   list-style: none;
-  color: var(--fr-text, #e2e3e8);
+  color: var(--axi-text);
   display: grid;
   gap: 2px;
 }
 
 .forge-render .hover-preview__breakdown li {
-  font-size: 0.74rem;
+  font: var(--axi-t-small);
   display: flex;
   align-items: center;
   gap: 5px;
@@ -743,47 +753,53 @@
 .forge-render .hover-preview__facts {
   margin: 8px 0 0;
   padding-left: 16px;
-  color: var(--fr-text, #e2e3e8);
+  color: var(--axi-text);
   display: grid;
   gap: 3px;
 }
 
 .forge-render .hover-preview__facts li {
-  font-size: 0.74rem;
+  font: var(--axi-t-small);
   display: flex;
   align-items: center;
   gap: 5px;
 }
 
+/* Rule 8: the divider between chained skills is a rule inside running content,
+   so it is the hairline weight against --axi-rule -- not an outline. */
 .forge-render .hover-preview__chain-divider {
   text-align: center;
-  color: var(--fr-text-dim, #646670);
-  font-size: 0.65rem;
+  color: var(--axi-text-faint);
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
+  text-transform: uppercase;
   margin: 5px 0 1px;
-  letter-spacing: 3px;
-  border-top: 1px solid var(--fr-line-soft, #181920);
+  border-top: var(--axi-border-hairline) solid var(--axi-rule);
   padding-top: 5px;
 }
 
+/* Was a muted green on a green line at 30% -- rule 2's "five muted inks over
+   near-black are five browns" exactly. It is a section label, not a status, so
+   it is a neutral and the same rule as its neighbour above. */
 .forge-render .hover-preview__trait-skill-divider {
   text-align: center;
-  color: #6a8a5a;
-  font-size: 0.55rem;
-  margin: 8px 0 4px;
-  letter-spacing: 1px;
+  color: var(--axi-text-faint);
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
   text-transform: uppercase;
-  border-top: 1px solid rgba(100, 140, 90, 0.3);
+  margin: 8px 0 4px;
+  border-top: var(--axi-border-hairline) solid var(--axi-rule);
   padding-top: 5px;
 }
 
-/* Skill a trait procs/casts, stacked above the trait card as its own box (like in game). */
+/* Skill a trait procs/casts, stacked above the trait card as its own box (like
+   in game). A step down the ramp to the ground, divided by a rule -- the black
+   wash and the accent glow it used to carry are both gone. */
 .forge-render .hover-preview__proc-skill {
-  margin: -10px -10px 10px;
-  padding: 10px;
-  border-radius: 10px 10px 0 0;
-  background: rgba(0, 0, 0, 0.28);
-  border-bottom: 1px solid var(--fr-line, #1e1f24);
-  box-shadow: 0 1px 0 rgba(var(--fr-accent-rgb, 200, 152, 72), 0.12);
+  margin: -12px -12px 12px;
+  padding: 12px;
+  background: var(--axi-ground);
+  border-bottom: var(--axi-border-hairline) solid var(--axi-rule);
 }
 
 .forge-render .hover-preview__trait-skill-divider + .trait-skill-list {
@@ -793,6 +809,7 @@
 .forge-render .hover-preview__head--chained {
   margin-top: 2px;
 }
+
 
 
 /* ── Comp card (chat embeds) ─────────────────────────────────────────── */

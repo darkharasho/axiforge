@@ -867,7 +867,15 @@ chrome; none of this can be checked from a test):
     observe paint. With the OS "reduce motion" setting on, confirm each of those
     seven controls no longer moves on hover — and that its resting appearance is
     unchanged, since only `transform` is cancelled.
-17. *Check (batch 2 final review, I6 — Ruling 79):* the typography constraint
+17. *Check (pulled forward from batch 5):* the skill/trait hover card
+    (`.hover-preview`, `packages/forge-render/src/forge-render.css`) was
+    converted out of order, because it is the app's most-looked-at surface and
+    was still wearing the bridge's rounded corners, blurred drop shadow, panel
+    gradient and inset accent glow. The rest of that file is still legacy, and
+    the card's fact rows are styled from `detail-panel.css`, which batch 4
+    owns — so confirm the converted frame and the unconverted rows inside it
+    do not read as two different cards until those land.
+18. *Check (batch 2 final review, I6 — Ruling 79):* the typography constraint
     moved rendered type, and it is the one constraint in the whole conversion
     with no mechanical backstop, so this is the round's widest visual change
     and the only one nothing can see but a person. Two caps headers went from
@@ -876,7 +884,7 @@ chrome; none of this can be checked from a test):
     13.5px. Confirm the caps headers still read as headers rather than as body
     text, that the looser-to-tighter tracking change did not close them up, and
     that the 12→13.5px rows did not reflow or clip anything they sit beside.
-18. *Check (batch 2 final review, I10):* `comp-detail.js:1797`'s colour-swatch
+19. *Check (batch 2 final review, I10):* `comp-detail.js:1797`'s colour-swatch
     border doubled from a literal `1px` to `--axi-border-hairline` (2px) in the
     mini-card colour menu. Correct against rule 3 — a literal 1px would be a
     fourth edge weight beside the three the language defines — but it is a
