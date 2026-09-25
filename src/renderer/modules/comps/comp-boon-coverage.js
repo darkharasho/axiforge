@@ -619,6 +619,78 @@ function _hideSkillTooltip() {
 
 export function closePartyCoverageExpand() { _closeExpand(); }
 
+/**
+ * Write the self-boon visibility state onto a toggle and its line.
+ *
+ * This *sets* `showSelf` rather than reading-and-flipping, so it is safe to call
+ * both from the click handler (which computes the flip) and at bind time to
+ * prime the rendered default. An earlier form of this code computed the flip
+ * inline and primed by dispatching a synthetic click, which inverted the
+ * default: every panel opened with self boons shown.
+ */
+function _applySelfBoonState(toggle, showSelf) {
+  const lineEl = toggle.closest(".party-cov__line");
+  if (!lineEl) return;
+  toggle.setAttribute("aria-checked", String(showSelf));
+  // Update body pills — grey out self-only boons, update badge counts
+  lineEl.querySelectorAll('.party-cov__pill--boon').forEach(pill => {
+    const hasAlly = pill.dataset.hasAlly === "true";
+    const totalCount = Number(pill.dataset.count) || 0;
+    if (!totalCount) return; // naturally uncovered, leave as-is
+    if (!showSelf && !hasAlly) {
+      // Not a status assertion while every source is hidden. The click
+      // handler already no-ops for self-only pills, so the button is
+      // genuinely disabled — a real runtime state, not a paint switch —
+      // and aria-disabled says so.
+      if (_activeExpand?.pillEl === pill) _closeExpand();
+      pill.classList.add("party-cov__pill--self-only");
+      pill.setAttribute("aria-disabled", "true");
+    } else {
+      pill.classList.remove("party-cov__pill--self-only");
+      pill.removeAttribute("aria-disabled");
+    }
+    // Recount providers based on toggle — count only providers with ally sources when self is off
+    let visibleCount = totalCount;
+    if (!showSelf) {
+      try {
+        const providers = JSON.parse(pill.dataset.providers || "[]");
+        visibleCount = providers.filter(p => p.sources?.some(s => s.isAlly)).length;
+      } catch { /* */ }
+    }
+    const badge = pill.querySelector(".party-cov__pill-badge");
+    if (badge) {
+      badge.textContent = visibleCount > 1 ? `×${visibleCount}` : "";
+    }
+  });
+  // Update header boon icons to match
+  lineEl.querySelectorAll('.party-cov__header-boon').forEach(img => {
+    const covered = img.dataset.covered === "true";
+    const hasAlly = img.dataset.hasAlly === "true";
+    if (!covered) {
+      img.classList.add("party-cov__header-boon--uncovered");
+    } else if (!showSelf && !hasAlly) {
+      img.classList.add("party-cov__header-boon--uncovered");
+    } else {
+      img.classList.remove("party-cov__header-boon--uncovered");
+    }
+  });
+  // Hide/show SELF source rows in any open expansion, update source count header
+  lineEl.querySelectorAll('.party-cov__src-target--self').forEach(badge => {
+    const row = badge.closest('.party-cov__src-row');
+    if (row) row.style.display = showSelf ? "" : "none";
+  });
+  // Update "N sources" count in expand headers
+  lineEl.querySelectorAll('.party-cov__expand--open').forEach(expandEl => {
+    const rows = expandEl.querySelectorAll('.party-cov__src-row');
+    let visible = 0;
+    rows.forEach(r => { if (r.style.display !== "none") visible++; });
+    const titleEl = expandEl.querySelector('.party-cov__expand-title');
+    if (titleEl) {
+      titleEl.textContent = titleEl.textContent.replace(/— \d+ source(s?)/, `— ${visible} source${visible !== 1 ? "s" : ""}`);
+    }
+  });
+}
+
 export function bindPartyCoverageEvents(container) {
   // Skill icon hover tooltip (delegated — works for dynamically created expand content)
   container.addEventListener("mouseenter", (e) => {
@@ -644,70 +716,14 @@ export function bindPartyCoverageEvents(container) {
   // Self-boon toggle — updates pills, header icons, badges, and expanded source rows
   container.querySelectorAll('[data-action="toggle-self-boons"]').forEach(toggle => {
     toggle.addEventListener("click", () => {
-      const lineEl = toggle.closest(".party-cov__line");
-      if (!lineEl) return;
-      const showSelf = toggle.getAttribute("aria-checked") !== "true";
-      toggle.setAttribute("aria-checked", String(showSelf));
-      // Update body pills — grey out self-only boons, update badge counts
-      lineEl.querySelectorAll('.party-cov__pill--boon').forEach(pill => {
-        const hasAlly = pill.dataset.hasAlly === "true";
-        const totalCount = Number(pill.dataset.count) || 0;
-        if (!totalCount) return; // naturally uncovered, leave as-is
-        if (!showSelf && !hasAlly) {
-          // Not a status assertion while every source is hidden. The click
-          // handler already no-ops for self-only pills, so the button is
-          // genuinely disabled — a real runtime state, not a paint switch —
-          // and aria-disabled says so.
-          if (_activeExpand?.pillEl === pill) _closeExpand();
-          pill.classList.add("party-cov__pill--self-only");
-          pill.setAttribute("aria-disabled", "true");
-        } else {
-          pill.classList.remove("party-cov__pill--self-only");
-          pill.removeAttribute("aria-disabled");
-        }
-        // Recount providers based on toggle — count only providers with ally sources when self is off
-        let visibleCount = totalCount;
-        if (!showSelf) {
-          try {
-            const providers = JSON.parse(pill.dataset.providers || "[]");
-            visibleCount = providers.filter(p => p.sources?.some(s => s.isAlly)).length;
-          } catch { /* */ }
-        }
-        const badge = pill.querySelector(".party-cov__pill-badge");
-        if (badge) {
-          badge.textContent = visibleCount > 1 ? `×${visibleCount}` : "";
-        }
-      });
-      // Update header boon icons to match
-      lineEl.querySelectorAll('.party-cov__header-boon').forEach(img => {
-        const covered = img.dataset.covered === "true";
-        const hasAlly = img.dataset.hasAlly === "true";
-        if (!covered) {
-          img.classList.add("party-cov__header-boon--uncovered");
-        } else if (!showSelf && !hasAlly) {
-          img.classList.add("party-cov__header-boon--uncovered");
-        } else {
-          img.classList.remove("party-cov__header-boon--uncovered");
-        }
-      });
-      // Hide/show SELF source rows in any open expansion, update source count header
-      lineEl.querySelectorAll('.party-cov__src-target--self').forEach(badge => {
-        const row = badge.closest('.party-cov__src-row');
-        if (row) row.style.display = showSelf ? "" : "none";
-      });
-      // Update "N sources" count in expand headers
-      lineEl.querySelectorAll('.party-cov__expand--open').forEach(expandEl => {
-        const rows = expandEl.querySelectorAll('.party-cov__src-row');
-        let visible = 0;
-        rows.forEach(r => { if (r.style.display !== "none") visible++; });
-        const titleEl = expandEl.querySelector('.party-cov__expand-title');
-        if (titleEl) {
-          titleEl.textContent = titleEl.textContent.replace(/— \d+ source(s?)/, `— ${visible} source${visible !== 1 ? "s" : ""}`);
-        }
-      });
+      _applySelfBoonState(toggle, toggle.getAttribute("aria-checked") !== "true");
     });
-    // Apply initial state (toggle is unchecked = hide self-only)
-    toggle.dispatchEvent(new Event("click"));
+    // Prime the rendered default. Markup renders aria-checked="false", and
+    // _applySelfBoonState *writes* the state it is handed rather than flipping
+    // the attribute, so priming is idempotent and cannot invert the default.
+    // (A synthetic click here would go through the flip and open the panel ON,
+    // counting self-only sources as coverage.)
+    _applySelfBoonState(toggle, false);
   });
 
   // Click to expand pills
