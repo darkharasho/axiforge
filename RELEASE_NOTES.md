@@ -1,3 +1,9 @@
+## Version v1.0.3 — September 25, 2026
+
+### Bug Fixes
+
+- **Publishing something a teammate had already published showed an error instead of asking.** Items in a team folder publish under whoever presses Publish, so when the last publish came from someone else the app is meant to explain that a new link will be made and the old one will stop updating, then let you decide. That question never reached the screen — the publish stopped with a raw `PUBLISHED_BY_OTHER` error. The question is back, and answering it publishes under your account as it always should have.
+
 ## Version v1.0.2 — September 25, 2026
 
 ### Bug Fixes
