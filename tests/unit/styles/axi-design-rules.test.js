@@ -1282,6 +1282,16 @@ describe("the installed axi-design ships the primitives this app uses", () => {
     expect(definesClass(".axi-ticks__tick--on { color: red }", ".axi-ticks__tick")).toBe(false);
   });
 
+  it("requires a class boundary when checking app adoption too", () => {
+    // The adoption direction had the same hole until this commit: a longer
+    // relative in app code must not certify the shorter primitive as adopted.
+    const usesClass = (src, cls) =>
+      new RegExp(`(?<![\\w-])${cls.slice(1).replace(/[-]/g, "\\-")}(?![\\w-])`).test(src);
+    expect(usesClass('className = "axi-meter-list"', ".axi-meter")).toBe(false);
+    expect(usesClass('className = "axi-meter"', ".axi-meter")).toBe(true);
+    expect(usesClass('class="axi-chip axi-chip--meta"', ".axi-chip")).toBe(true);
+  });
+
   it("names only primitives the app really adopts", () => {
     // The other half of "do not assert a false thing": an entry for a
     // primitive the app has stopped using is the same overclaim, in the
@@ -1295,7 +1305,14 @@ describe("the installed axi-design ships the primitives this app uses", () => {
       // CSS are inside comments.
       .replace(/\/\*[\s\S]*?\*\//g, ""))
       .join("\n");
-    const unused = ADOPTED_PRIMITIVES.filter((sel) => !appSources.includes(sel.slice(1)));
+    // Anchored for the same reason definesClass is, and by the same hazard read
+    // backwards: a substring test would let .axi-meter-list in app code certify
+    // .axi-meter as adopted, so a dropped primitive would keep passing. The dot
+    // cannot be required here the way definesClass requires it -- JS sets these
+    // as bare className strings -- so the boundary is the whole device.
+    const usesClass = (src, cls) =>
+      new RegExp(`(?<![\\w-])${cls.slice(1).replace(/[-]/g, "\\-")}(?![\\w-])`).test(src);
+    const unused = ADOPTED_PRIMITIVES.filter((sel) => !usesClass(appSources, sel));
     expect(unused).toEqual([]);
   });
 });
