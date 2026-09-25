@@ -1,3 +1,12 @@
+## Version v1.0.1 — September 25, 2026
+
+### Bug Fixes
+
+- **The build title bar went lopsided once the tags wrapped.** A build with enough tags to fill a second line stretched the title field and the profession picker to match it, leaving two tall empty boxes beside the tags. Each field now keeps its own height, and tags gets the width the other two were not using.
+- **The health figure is red again.** The new look had drawn it in the same ink as everything around it. It is filled red, the colour the game gives it, so the number is findable before it is read.
+- **Trait icons and the specialization emblem lost the box drawn around them.** The artwork is already a finished shape; a square control border around it framed nothing. A chosen trait is marked by an accent rule beneath it instead.
+- **The class and elite-spec stamp is back in the middle of the equipment view.** It is drawn at full strength in the icon's own colours, and on a published page that carries a theme it takes that theme's accent.
+
 ## Version v1.0.0 — September 24, 2026
 
 AxiForge leaves beta. The version number in the title bar is the badge that used to say so.
