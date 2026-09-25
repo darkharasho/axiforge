@@ -878,3 +878,13 @@ chrome; none of this can be checked from a test):
 - **`__prof-overflow`'s count sits at full row ink when its row is selected.**
   Carried from an earlier task with no counter-evidence found in this one;
   unresolved, left for a running-app check alongside the other decisions above.
+
+- **The shared `@keyframes af-pulse` actually pulses at both depths.**
+  `src/renderer/styles/app.css` defines one pulse whose dim stop reads
+  `var(--af-pulse-dim, .25)`; `.af-work` takes the fallback and `.skel`
+  (`skeleton.css`) overrides it to `.55`. A custom property inside a keyframe
+  step is resolved per-element by Chromium, but no test can observe paint, so
+  confirm at the running app that the work dot still dips deep and the loading
+  placeholders dip shallow. If the `var()` failed to resolve, both would dip to
+  `.25` — a working pulse at the wrong depth, not an obvious breakage, which is
+  why it needs an eye rather than a scanner.
