@@ -214,6 +214,18 @@
   overflow-x: hidden;
 }
 
+/* The expanded view draws each comp as a card rather than as a row (see
+   .comp-list-row--expanded below), so the body stops being a run of rules and
+   becomes a stack with air between the cards. The asymmetric padding is the
+   offset block: it falls outside the card's own box, down and to the right,
+   and an overflow-y: auto parent with symmetric padding clips it. */
+.comp-list-body--cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 20px 20px 12px;
+}
+
 /* ══ Comp Row — Shared ═══════════════════════════════════════════════════ */
 /* Rule 8: the eye runs down the timestamp column, so rows are drawn in
    rules — the same treatment as .lib-list-row (Task 4): a hairline row rule
@@ -344,11 +356,44 @@
 
 /* ══ Comp Row — Expanded ═════════════════════════════════════════════════ */
 
+/* A comp is a thing you open, not a line you scan a column of — the expanded
+   view carries a name, four badges, five profession marks, a party summary,
+   boon coverage and tags per entry, which is a card's worth of content and
+   stops reading as a row well before the list is long. So this one view leaves
+   the rule treatment its .comp-list-row base sets up and becomes a panel: the
+   panel outline, the panel block, and the panel's hover (rule 4 case ii — the
+   translate with the block grown to --axi-offset-panel-hover). The compact
+   view keeps the rules, which is what makes the two modes worth having.
+
+   The card is kept to the two lines the row already had rather than taking
+   .axi-card's own padding: the point of the card here is the outline and the
+   block, not the air. */
 .comp-list-row--expanded {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 10px 12px;
+  gap: 5px;
+  padding: 9px 11px;
+  background: var(--axi-surface);
+  border: var(--axi-border-panel) solid var(--axi-ink-line);
+  border-radius: var(--axi-radius);
+  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
+  transition: transform 0.1s, box-shadow 0.1s, background 0.1s, color 0.1s;
+}
+
+/* The shared rule tints the row on hover; a card lifts instead, and doing both
+   would be two answers to one question. */
+.comp-list-row--expanded:hover {
+  background: var(--axi-surface);
+  transform: translate(-3px, -3px);
+  box-shadow: var(--axi-offset-panel-hover) var(--axi-offset-panel-hover) 0 var(--axi-ink-line);
+}
+
+/* Selection stays the accent fill it is for a row (rule 5, and the children
+   that switch to --axi-accent-ink are already listed above) — the card only
+   changes what frames it, not what says "this one is chosen". */
+.comp-list-row--expanded.comp-list-row--selected,
+.comp-list-row--expanded.comp-list-row--selected:hover {
+  background: var(--axi-accent);
 }
 
 .comp-list-row__top {
@@ -2642,6 +2687,7 @@
    interaction need cancelling here — the same set the package cancels for
    its own .axi-btn/.axi-pill/etc. */
 @media (prefers-reduced-motion: reduce) {
+  .comp-list-row--expanded:hover,
   .comp-slot--filled:hover,
   .party-cov__pill:hover {
     transform: none !important;

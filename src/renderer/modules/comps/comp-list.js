@@ -71,7 +71,7 @@ export function renderCompList() {
   container.innerHTML = `
     ${anySelected ? renderBulkBar() : renderToolbarTier1(searchVal, prefs)}
     ${!anySelected && prefs.filtersExpanded ? renderToolbarTier2(prefs, allTags) : ""}
-    <div class="comp-list-body">
+    <div class="comp-list-body${prefs.viewMode === "compact" ? "" : " comp-list-body--cards"}">
       ${comps.length > 0
         ? comps.map((c) => prefs.viewMode === "compact" ? renderCompactRow(c) : renderExpandedRow(c)).join("")
         : renderEmptyState()}
