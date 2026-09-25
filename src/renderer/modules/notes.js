@@ -788,7 +788,7 @@ function embedYouTubeVideos(container) {
 
     const playBtn = document.createElement("div");
     playBtn.className = "notes-embed__play";
-    playBtn.innerHTML = '<svg viewBox="0 0 68 48"><path d="M66.52 7.74c-.78-2.93-2.49-5.41-5.42-6.19C55.79.13 34 0 34 0S12.21.13 6.9 1.55c-2.93.78-4.64 3.26-5.42 6.19C.06 13.05 0 24 0 24s.06 10.95 1.48 16.26c.78 2.93 2.49 5.41 5.42 6.19C12.21 47.87 34 48 34 48s21.79-.13 27.1-1.55c2.93-.78 4.64-3.26 5.42-6.19C67.94 34.95 68 24 68 24s-.06-10.95-1.48-16.26z" fill="red"/><path d="M45 24L27 14v20" fill="#fff"/></svg>';
+    playBtn.innerHTML = '<svg viewBox="0 0 68 48"><path d="M45 24L27 14v20"/></svg>';
 
     videoWrap.append(thumb, playBtn);
 
@@ -891,11 +891,11 @@ function embedTwitchVideos(container) {
     // Twitch-branded placeholder (replaced if thumbnail fetched)
     const placeholder = document.createElement("div");
     placeholder.className = "notes-embed__twitch-placeholder";
-    placeholder.innerHTML = '<svg viewBox="0 0 256 268" width="48" height="50"><path d="M17.458 0L0 46.556v185.262h63.208v34.934h36.834l34.715-34.934h53.354L256 163.955V0H17.458zm23.259 23.263h192.02v128.029l-45.41 45.415h-63.208L89.57 231.222v-34.515H40.717V23.263zm64.551 84.544h23.263V58.56h-23.263v49.247zm63.208 0h23.263V58.56h-23.263v49.247z" fill="#9146FF"/></svg>';
+    placeholder.innerHTML = '<svg viewBox="0 0 256 268" width="48" height="50"><path d="M17.458 0L0 46.556v185.262h63.208v34.934h36.834l34.715-34.934h53.354L256 163.955V0H17.458zm23.259 23.263h192.02v128.029l-45.41 45.415h-63.208L89.57 231.222v-34.515H40.717V23.263zm64.551 84.544h23.263V58.56h-23.263v49.247zm63.208 0h23.263V58.56h-23.263v49.247z"/></svg>';
 
     const playBtn = document.createElement("div");
     playBtn.className = "notes-embed__play";
-    playBtn.innerHTML = '<svg viewBox="0 0 68 48"><rect width="68" height="48" rx="8" fill="#9146FF"/><path d="M45 24L27 14v20" fill="#fff"/></svg>';
+    playBtn.innerHTML = '<svg viewBox="0 0 68 48"><path d="M45 24L27 14v20"/></svg>';
 
     videoWrap.append(placeholder, playBtn);
 
