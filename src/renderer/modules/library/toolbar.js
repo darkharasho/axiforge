@@ -502,9 +502,25 @@ function bindPicker(root, { onSelect, group } = {}) {
   const position = () => {
     if (!isFixed) return;
     const rect = btn.getBoundingClientRect();
-    pop.style.left = `${Math.min(rect.left, window.innerWidth - pop.offsetWidth - 8)}px`;
-    pop.style.top = `${rect.bottom + 6}px`;
+    // minWidth FIRST, and the order is the whole point. .axi-picker__pop
+    // carries `min-width: 100%`, and a percentage on a position: fixed box
+    // resolves against its containing block -- the viewport. So until this
+    // line runs the popover is as wide as the window, and the clamp below
+    // reads offsetWidth ~= innerWidth and lands on
+    // `innerWidth - innerWidth - 8`, i.e. -8: hard against the left edge,
+    // nowhere near the trigger. Measuring after setting the width is what
+    // makes the clamp mean what it says.
+    //
+    // This was only ever wrong on a picker's FIRST open. The inline minWidth
+    // survives until the toolbar re-renders, so every open after it measured
+    // correctly -- which is exactly why it read as an intermittent bug.
     pop.style.minWidth = `${rect.width}px`;
+    // Clamped at both ends. The right-hand clamp keeps a wide popover on
+    // screen; the left-hand one means no future measuring mistake can put it
+    // off the edge again, it can only be mispositioned within view.
+    const maxLeft = window.innerWidth - pop.offsetWidth - 8;
+    pop.style.left = `${Math.max(8, Math.min(rect.left, maxLeft))}px`;
+    pop.style.top = `${rect.bottom + 6}px`;
   };
 
   const closeOthers = () => {
