@@ -306,11 +306,15 @@
 
 /* ── Content area ────────────────────────────────────────────────── */
 
+/* The rule-drawn views inside draw themselves as one card (.lib-list and
+   .lib-tv, below), and a card's offset block falls OUTSIDE its own box, down
+   and to the right. Symmetric padding on an overflow-y: auto parent clips
+   that block, so the right and bottom carry the extra. */
 .lib-content {
   flex: 1;
   overflow-y: auto;
   min-height: 0;
-  padding: 8px 12px;
+  padding: 12px 20px 20px 12px;
 }
 
 /* ── Sidebar styles ──────────────────────────────────────────────── */
@@ -430,10 +434,14 @@
    batch 1). The hover is NOT that rail's lift: rule 8 says a row is drawn in
    rules, and these are rows, stacked five pixels apart inside a panel. A lift
    there translates a row over its neighbour and drops an ink block across the
-   one below it, which is why the rail can have one and a list cannot. Hover is
-   the package's own row idiom instead (.axi-picker__opt, axi.css:568) — a step
-   down the neutral ramp to --axi-ground against the sidebar's --axi-surface,
-   flat and at full strength. */
+   one below it, which is why the rail can have one and a list cannot.
+   The step is UP the neutral ramp, to the same --axi-surface-raised
+   .lib-list-row uses. Down was the obvious reading of the package's row idiom
+   (.axi-picker__opt, axi.css:568) and it was wrong here: down from the
+   sidebar's --axi-surface lands on --axi-ground, which is exactly what
+   .lib-page paints in the pane five pixels to the right, so hovering a folder
+   tinted it the colour of the thing it is not. One direction for every row in
+   the library, and it is the one that does not collide with a neighbour. */
 .lib-nav-item {
   display: flex;
   align-items: center;
@@ -450,7 +458,7 @@
 }
 
 .lib-nav-item:hover {
-  background: var(--axi-ground);
+  background: var(--axi-surface-raised);
   color: var(--axi-text);
 }
 
@@ -613,7 +621,24 @@
    interior and is drawn in rules. No outline per row, no block per row —
    forty outlined rows inside an outlined panel is the grid-of-boxes the
    hairline weight exists to prevent. */
-.lib-list { display: flex; flex-direction: column; }
+/* One card holds the whole list, rather than one card per row: at sixty-seven
+   builds a card per row is sixty-seven outlines and sixty-seven blocks, which
+   is the grid-of-boxes rule 8 names. The card is what lifts the list off the
+   pane --axi-ground now that the pane is dark again; the rows inside it stay
+   rules. --axi-surface, not --axi-surface-raised, so that rows keep the hover
+   they already had (raised) and the ramp still runs upward from the card. */
+.lib-list {
+  display: flex;
+  flex-direction: column;
+  background: var(--axi-surface);
+  border: var(--axi-border-panel) solid var(--axi-ink-line);
+  border-radius: var(--axi-radius);
+  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
+}
+
+/* The card's own border is the list's last rule; drawing both stacks a 2px
+   hairline directly inside a 4px ink edge. */
+.lib-list > .lib-list-row:last-child { border-bottom: none; }
 
 .lib-list-row {
   display: flex;
@@ -813,15 +838,21 @@
   font-size: 0.85rem;
 }
 
-/* Remove top padding from content area when table view is active */
-.lib-content:has(.lib-tv) {
-  padding-top: 0;
+/* The tree view is the same card as the list (above): one outline and one
+   block around a run of rules, not a box per row. Its header is sticky, so it
+   carries the card's own fill rather than the pane's -- on --axi-ground it
+   would read as a strip of the background sliding through the card. */
+.lib-tv {
+  background: var(--axi-surface);
+  border: var(--axi-border-panel) solid var(--axi-ink-line);
+  border-radius: var(--axi-radius);
+  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
 }
 
 .lib-tv__header {
   position: sticky;
   top: 0;
-  background: var(--axi-ground);
+  background: var(--axi-surface);
   z-index: 2;
   padding: 6px 4px;
   border-bottom: var(--axi-border-control) solid var(--axi-rule);
