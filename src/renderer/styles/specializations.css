@@ -181,22 +181,25 @@
 }
 
 /* The emblem is the card's primary control — pressing it swaps the whole
-   specialization — so it is a control-weight box on the card's fill, and its
-   hover is rule 4's *first* case: it rests blockless, so the hover draws
-   --axi-offset-control (3px) for the first time rather than the 6px a control
-   already standing on a block deepens to. A 6px block behind a 2px lift moves
-   the lower-right edge down, and the control reads as growing instead of
-   rising — the trap comps.css documents for the coverage pills. The two
-   stacked cyan drop-shadows it used to wear, and the brighter pair on hover,
-   are exactly the glow rule 4 rules out. */
+   specialization — but it does not get a box. The art it carries is a hexagon
+   the game already draws complete, on its own plate, and a square control
+   border around it framed a frame: two edges saying the same thing, the outer
+   one in a shape the inner one contradicts. The art is the button. What the
+   hover keeps is the lift, which is the half of rule 4 that still applies
+   when there is no box to deepen — a block cast by nothing would be a shadow
+   under a hexagon, drawn as a square.
+
+   The two stacked cyan drop-shadows it used to wear, and the brighter pair on
+   hover, remain out: that was the glow rule 4 rules out, and removing the
+   plate does not bring it back. */
 .spec-emblem {
   box-sizing: border-box;
   width: calc(96px * var(--spec-scale));
   height: calc(96px * var(--spec-scale));
   appearance: none;
   -webkit-appearance: none;
-  border: var(--axi-border-control) solid var(--axi-ink-line);
-  background: var(--axi-surface);
+  border: 0;
+  background: none;
   clip-path: none;
   display: grid;
   place-items: center;
@@ -205,11 +208,10 @@
   line-height: 0;
   cursor: pointer;
   outline: none;
-  transition: transform 0.16s ease, box-shadow 0.16s ease;
+  transition: transform 0.16s ease;
 }
 
 .spec-emblem:hover {
-  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
   transform: translate(-2px, -2px);
 }
 
@@ -264,45 +266,44 @@
   height: calc(40px * var(--spec-scale));
 }
 
-/* A trait button is the one thing in the grid the user acts on, so it is a
-   control-weight box. It rests without a block: nine of them each carrying
-   its own 3px block inside a card that already carries 6px is two planes
-   arguing, which is the failure rule 8 names for a screen this dense. The
-   block is what the hover draws, together with the translate — that, and not
-   a tint or a brightened icon, is what says "press me". Blockless at rest
-   means the hover is rule 4's first case, so it draws 3px, not the 6px a
-   control already on a block deepens to (see .spec-emblem:hover above). */
+/* A trait button carries no box. Rule 8 already said nine control-weight
+   plates inside a card that is itself raised is two planes arguing; the
+   stronger objection is the shape. Every icon in this grid is round art the
+   game ships finished, and the cell it sat in was taller than it was wide, so
+   each circle read as floating in a rectangle that belonged to nothing. The
+   art is the control. Its hit area stays the full cell — the button box is
+   still here, it is just not drawn.
+
+   The hover keeps the lift alone. There is no edge left to cast a block from,
+   and a block under a circle would be a square of ink with nothing above it. */
 .trait-btn {
   box-sizing: border-box;
-  border: var(--axi-border-control) solid var(--axi-ink-line);
-  background: var(--axi-surface);
+  border: 0;
+  background: none;
   height: calc(46px * var(--spec-scale));
   display: grid;
   place-items: center;
   cursor: pointer;
   padding: 0;
-  transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease, filter 0.16s ease;
+  transition: transform 0.16s ease, filter 0.16s ease;
 }
 
 .trait-btn:hover {
-  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
   transform: translate(-2px, -2px);
 }
 
-/* An unavailable trait is an absence, not a dimmed presence: it drops to the
-   faint end of the ramp and to the hairline rule weight, which reads as "not
-   a box you press" without laundering a colour the way the old opacity: .45
-   did (rule 2). Its icon is greyed rather than faded — see the img rule
-   below. */
+/* An unavailable trait is an absence, not a dimmed presence. With the box
+   gone there is no edge left to drop to the hairline weight, so the whole
+   statement is the grey icon and the dead cursor: nothing lifts, nothing
+   colours. That is still rule 2 kept — the icon is greyscaled at full
+   strength, not faded the way the old opacity: .45 faded it. */
 .trait-btn:disabled {
   cursor: default;
-  border: var(--axi-border-hairline) solid var(--axi-rule);
   color: var(--axi-text-faint);
 }
 
 .trait-btn:disabled:hover {
   transform: none;
-  box-shadow: none;
 }
 
 .trait-btn img {
@@ -329,25 +330,24 @@
   }
 }
 
-/* A taken trait is the one thing on this card the user chose, so rule 5 fills
-   it: the accent at full strength with the ink that rides on it. The gold
-   drop-shadow the active icon used to wear was the tint saying the same thing
-   a second time, illegibly.
+/* A taken trait is the one thing on this card the user chose, and with the
+   plate gone the accent has to reach the art without enclosing it again. A
+   ring around the circle was the obvious move and the gate was right to
+   refuse it: it needs a radius and a spread shadow, and this language has
+   neither. So the mark is a rule under the icon, drawn at control weight in
+   the accent — the same line the tier connectors are already drawn as, ending
+   on the trait that terminates them. Rule 5 still reads: the chosen trait
+   wears the accent and nothing else in the tier does. The other half of the
+   signal is already running, since every major the user did not take is
+   greyscaled, so a taken one is the one in colour.
 
-   A minor comes with the tier — it is in effect, but nobody picked it, and
-   rule 5 keeps a fill for what was asserted rather than what was granted. So
-   it takes the accent as an outline and leaves the fill alone. That is also
-   what keeps the card readable: filling both would put eighteen accent plates
+   A minor comes with the tier. It is in effect, but nobody picked it, and
+   rule 5 keeps the accent for what was asserted rather than what was granted,
+   so it takes no rule at all. Marking both would put eighteen accent strokes
    on a full build and the nine the user actually chose would stop standing
-   out at all. */
+   out. A minor is legible anyway: it is hex-clipped and never greyscaled. */
 .trait-btn--active {
-  background: var(--axi-accent);
-  color: var(--axi-accent-ink);
-}
-
-.trait-btn--always {
-  border-color: var(--axi-accent);
-  color: var(--axi-accent);
+  border-bottom: var(--axi-border-control) solid var(--axi-accent);
 }
 
 .trait-minor-anchor .trait-btn--always {

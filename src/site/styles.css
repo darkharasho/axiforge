@@ -443,3 +443,16 @@ a.comp-slot { text-decoration: none; color: inherit; cursor: pointer; }
   top: 80px;
   align-self: flex-start;
 }
+
+/* ── The profession stamp on a themed page ───────────────────────── */
+
+/* In the app the stamp keeps the colours the icon set ships with, because the
+   app is one ground and the mark is artwork about the build. A published page
+   can carry a theme (?t=, applied as data-axi-accent on <html>), and the
+   language themes exactly one variable -- so the closest colour a theme has to
+   offer IS its accent, and the stamp takes it rather than sitting in a hue the
+   rest of the page never uses. Baked-in fills, so !important, the same
+   override .cselect__group-header makes on the same icon set. */
+[data-axi-accent] .equip-art-bg-icon svg * {
+  fill: var(--axi-accent) !important;
+}

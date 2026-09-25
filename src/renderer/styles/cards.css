@@ -79,9 +79,17 @@
   gap: 10px;
 }
 
+/* Top-aligned on purpose. Tags is the only field here that can grow: it wraps
+   its pills onto a second line, and under the grid's default stretch that new
+   height was handed to every column, so the title input and the profession
+   select grew tall and empty beside it. Each field keeps its own height and
+   the row grows under the tags alone. Tags gets the widest column outright:
+   a title and a profession are each one short value, and tags is the only
+   field whose content keeps arriving. */
 .toolbar-grid {
   display: grid;
-  grid-template-columns: 1.4fr 1fr 1fr;
+  grid-template-columns: 0.95fr 0.5fr 2fr;
+  align-items: start;
   gap: 10px;
 }
 

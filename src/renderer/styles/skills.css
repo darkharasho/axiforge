@@ -402,21 +402,32 @@
 
 /* ══ Health ══════════════════════════════════════════════════════════════ */
 
-/* Not an orb any more. It was a blood-red disc — two radial gradients, a red
-   halo, an inset vignette and a glow behind the number — which is three
-   things this language forbids outright and one it forbids by implication:
-   the red said "danger" about a figure that is never bad news (rules 5 and 6
-   both land here, and rule 9 rules out reading a quantity as intensity).
-   Total health is a reading, so it is a tile: the same control-weight square
-   as the slots beside it, on a block, painted in nothing but the ramp. The
-   class names and the 110px square are kept because skeleton.css sizes its
-   placeholder against them and site-mobile.js reads the HP out of it. */
+/* Not an orb any more, but still red — and filled, not outlined. It was a
+   blood-red disc — two radial gradients, a halo, an inset vignette and a glow
+   behind the number — and all of that had to go: gradients, glow and
+   laundered colour are three things this language forbids outright. What went
+   with it was the red itself, and that was a step too far. Red is not an
+   alarm here, it is what health is called in this game; a player finds the
+   number by its colour before they read it.
+
+   So the tile is --axi-danger at full strength with --axi-ink-line riding on
+   it, which is exactly the pair .axi-chip--danger uses in the package. An
+   outline in the same red would have been the more cautious reading of rule 5
+   — health is a readout, and readouts are usually commentary — but it puts
+   the colour on the edge and leaves the middle of a 110px square empty, so
+   the one tile on this screen that is about a single number stops looking
+   like it is about anything. Filled, it reads as the health plate it is.
+
+   The block stays in --axi-ink-line: it is the shadow the tile casts, not
+   part of the tile. The class names and the 110px square are kept because
+   skeleton.css sizes its placeholder against them and site-mobile.js reads
+   the HP out of it. */
 .health-orb {
   position: relative;
   width: 110px;
   height: 110px;
   border: var(--axi-border-control) solid var(--axi-ink-line);
-  background: var(--axi-surface);
+  background: var(--axi-danger);
   box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
   display: flex;
   flex-direction: column;
@@ -436,13 +447,17 @@
 .health-orb__hp {
   font: var(--axi-t-h3);
   letter-spacing: var(--axi-ls-h3);
-  color: var(--axi-text);
+  color: var(--axi-ink-line);
 }
 
+/* The label rides the fill in the same ink as the figure. The ramp's dim step
+   is a step down from --axi-text on the neutral ground and means nothing on
+   top of red; separating the two lines is the type scale's job here, not the
+   colour's. */
 .health-orb__label {
   font: var(--axi-t-micro);
   letter-spacing: var(--axi-ls-micro);
-  color: var(--axi-text-dim);
+  color: var(--axi-ink-line);
   text-transform: uppercase;
   margin-top: 4px;
 }

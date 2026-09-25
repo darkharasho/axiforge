@@ -16,16 +16,31 @@
   padding: 0 16px 0 0;
 }
 
-/* The middle column used to hold a profession sigil washed over the ground at
-   12% and nothing else. A watermark has no honest form in this language: rule
-   2 says a colour present is a colour at full strength, and a full-strength
-   profession glyph behind the slot columns is not a watermark, it is a second
-   picture competing with the equipment. So the sigil is gone, equipment.js no
-   longer builds it, and the column is the 1fr gutter between the two slot
-   columns -- the grid gives it its width, so it needs nothing but its padding
-   reset. The centring it used to do had only the sigil to centre. */
+/* The middle column is the 1fr gutter between the two slot columns, and it
+   holds the profession stamp. The stamp used to be the sigil washed over the
+   ground at 12% opacity, which rule 2 forbids outright -- a colour is present
+   at full strength or it is not present. So it is drawn at full strength in
+   the colours the icon set ships with: the profession mark is artwork about
+   the build, not chrome, and a player finds it by its own colour. */
 .equip-col--art {
   padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.equip-art-bg-icon {
+  width: 55%;
+  height: 55%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.equip-art-bg-icon svg {
+  width: 100%;
+  height: 100%;
 }
 
 .equip-col--right {
