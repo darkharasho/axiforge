@@ -328,6 +328,18 @@
   padding: 12px 20px 20px 12px;
 }
 
+/* The tree view's column header is sticky (.lib-tv__header, below), and a
+   sticky header only reads as locked if nothing in the scroller sits above
+   where it locks. Top padding on the scroller is exactly that: the header
+   comes to rest below it, and rows scroll up through the strip it leaves --
+   a band of moving text above a header that is supposed to be the top edge.
+   The strip has no fill of its own either, because the card's own background
+   has already scrolled past. So the view that has the sticky header takes its
+   breathing room from the toolbar above instead of from this padding. */
+.lib-content:has(.lib-tv) {
+  padding-top: 0;
+}
+
 /* ── Sidebar styles ──────────────────────────────────────────────── */
 
 .lib-sidebar__header {
