@@ -1205,7 +1205,16 @@
 .lib-icon-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-  gap: 12px;
+  gap: 4px;
+  /* One card holds the whole grid. Giving every tile its own card made a
+     folder, a comp and a build read as three identical boxes -- the form
+     drowned out the distinction the glyph was carrying. The card is the
+     container; what is inside it is contents, not more cards. Panel weight,
+     because the grid sits on the content area (library.css:1074). */
+  padding: 14px;
+  background: var(--axi-surface);
+  border: var(--axi-border-panel) solid var(--axi-ink-line);
+  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
 }
 
 /* An icon tile is the grid card at control weight. .af-tile is the same idea
@@ -1214,28 +1223,26 @@
    form at all: loose glyphs sitting directly on the ground, with a tinted
    background for hover. A tile is a box, and rule 4 says a box lifts by
    growing its offset, not by tinting. */
+/* A tile inside the card is contents, so it carries no form of its own and
+   hovers the way a row does (library.css:682) -- the neutral ramp, not a
+   lift. What tells a folder from a comp from a build is the glyph, which is
+   what it was before and the reason this view is worth having. */
 .lib-icon-item {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 6px;
   padding: 9px 5px;
-  background: var(--axi-surface);
-  border: var(--axi-border-control) solid var(--axi-ink-line);
-  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  border: var(--axi-border-control) solid transparent;
   cursor: pointer;
-  transition: transform 0.1s, box-shadow 0.1s, border-color 0.15s;
+  transition: background 0.1s, border-color 0.15s;
   user-select: none;
 }
 
-.lib-icon-item:hover {
-  transform: translate(-2px, -2px);
-  box-shadow: var(--axi-offset-control-hover) var(--axi-offset-control-hover) 0 var(--axi-ink-line);
-}
+.lib-icon-item:hover { background: var(--axi-surface-raised); }
 
-/* Selection moves onto the tile's own border now that it has one -- the same
-   accent edge the rail's active item and the filter triggers take. An inset
-   outline would draw a second frame just inside the first. */
+/* The transparent resting border above is what this colours in, so selecting
+   a tile does not nudge the ones beside it. */
 .lib-icon-item.lib-selected { border-color: var(--axi-accent); }
 .lib-icon-item.lib-drop-target { border-style: dashed; border-color: var(--axi-accent); }
 
@@ -1246,10 +1253,13 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  color: var(--axi-series, var(--axi-text-faint));
+}
+
+.lib-icon-item--build .lib-icon-item__icon {
   padding: 4px;
   background: var(--axi-surface-raised);
   border: var(--axi-border-control) solid var(--axi-ink-line);
-  color: var(--axi-series, var(--axi-text-faint));
 }
 
 .lib-icon-item__icon svg {
@@ -1279,10 +1289,23 @@
 
 .lib-columns {
   display: flex;
+  align-items: stretch;
+  gap: 12px;
   height: 100%;
+  /* The columns are cards now, so the strip needs room for the block each one
+     casts down and to the right -- without the trailing padding the last
+     column's offset is what the scroll container clips. */
+  padding: 2px var(--axi-offset-panel) var(--axi-offset-panel) 2px;
   overflow-x: auto;
 }
 
+/* A column is a card at panel weight, by the same reading .af-tile takes
+   (library.css:1074): it sits on the page's content area rather than inside
+   another panel, so it is the raised thing here and carries the 6px block.
+   It does not lift on hover the way a tile does -- a tile is a thing you
+   press and a column is the container the things you press are in, and a
+   strip of columns that each jumped as the pointer crossed them would be
+   four panels flinching on the way to one row. */
 .lib-col {
   min-width: 220px;
   max-width: 280px;
@@ -1290,7 +1313,9 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
-  border-right: var(--axi-border-hairline) solid var(--axi-rule);
+  background: var(--axi-surface);
+  border: var(--axi-border-panel) solid var(--axi-ink-line);
+  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
 }
 
 /* The head is a lid on the column, so it takes the control weight the panel
