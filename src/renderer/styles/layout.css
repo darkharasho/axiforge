@@ -54,7 +54,7 @@
 .titlebar__version {
   font: var(--axi-t-micro);
   letter-spacing: var(--axi-ls-micro);
-  color: var(--axi-text-dim);
+  color: var(--axi-text-faint);
   cursor: pointer;
   transition: color 0.2s ease;
 }
@@ -498,6 +498,10 @@ body:has(.app-layout) {
 .leftnav__item--active {
   color: var(--axi-accent);
   border-color: var(--axi-accent);
+}
+
+.leftnav__spacer {
+  flex: 1;
 }
 
 .leftnav__icon {

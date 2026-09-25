@@ -1765,8 +1765,14 @@ function wireEvents() {
     }
   });
 
-  // Left nav page switching
+  // Left nav page switching. The rail also carries the Settings cog at its
+  // foot, which is a rail button but not a page -- it opens the modal instead,
+  // so the page handler only binds items that name one.
   document.querySelectorAll(".leftnav__item").forEach((btn) => {
+    if (btn.dataset.action === "settings") {
+      btn.addEventListener("click", () => openSettingsModal());
+      return;
+    }
     btn.addEventListener("click", () => navigateToPage(btn.dataset.page));
   });
 
