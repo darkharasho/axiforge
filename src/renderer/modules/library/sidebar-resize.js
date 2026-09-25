@@ -6,20 +6,17 @@
 // classes also drive width. One variable on the stable parent survives both.
 
 import { state } from "../state.js";
+import { DEFAULT_SIDEBAR_W, clampSidebarWidth } from "./sidebar-width.js";
 
-export const MIN_SIDEBAR_W = 150;
-export const MAX_SIDEBAR_W = 480;
-export const DEFAULT_SIDEBAR_W = 200;
-
-/** Clamp to the usable range, falling back to the default for junk input. */
-export function clampSidebarWidth(px) {
-  // Number(null) is 0, which would silently clamp a missing setting down to the
-  // minimum instead of leaving it at the default.
-  if (px == null || px === "") return DEFAULT_SIDEBAR_W;
-  const n = Number(px);
-  if (!Number.isFinite(n)) return DEFAULT_SIDEBAR_W;
-  return Math.min(MAX_SIDEBAR_W, Math.max(MIN_SIDEBAR_W, Math.round(n)));
-}
+// The bounds and the clamp own themselves in sidebar-width.js -- state.js needs
+// the default too and cannot import this file back. Re-exported here so every
+// caller keeps the import path it already had.
+export {
+  MIN_SIDEBAR_W,
+  MAX_SIDEBAR_W,
+  DEFAULT_SIDEBAR_W,
+  clampSidebarWidth,
+} from "./sidebar-width.js";
 
 /** Push the current preference onto the page. Safe to call before the DOM exists. */
 export function applySidebarWidth() {

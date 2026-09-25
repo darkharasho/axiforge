@@ -17,7 +17,7 @@ const {
   DEFAULT_SIDEBAR_W,
 } = require("../../../src/renderer/modules/library/sidebar-resize.js");
 
-function mount({ collapsed = false, width = 200 } = {}) {
+function mount({ collapsed = false, width = DEFAULT_SIDEBAR_W } = {}) {
   document.body.innerHTML = `
     <div class="lib-page">
       <div id="lib-sidebar" class="lib-sidebar ${collapsed ? "lib-sidebar--collapsed" : ""}"></div>
@@ -43,7 +43,7 @@ function drag(handle, fromX, toX) {
 }
 
 beforeEach(() => {
-  state.libraryPrefs = { sidebarWidth: 200 };
+  state.libraryPrefs = { sidebarWidth: DEFAULT_SIDEBAR_W };
 });
 
 describe("clampSidebarWidth", () => {
@@ -76,7 +76,7 @@ describe("applySidebarWidth", () => {
 
 describe("initSidebarResize", () => {
   test("a drag widens the sidebar and persists once, on release", () => {
-    const { page, handle } = mount();
+    const { page, handle } = mount({ width: 200 });
     const onCommit = jest.fn();
     initSidebarResize({ onCommit });
 
@@ -111,7 +111,7 @@ describe("initSidebarResize", () => {
   });
 
   test("moves after release do not keep resizing the sidebar", () => {
-    const { page, handle } = mount();
+    const { page, handle } = mount({ width: 200 });
     initSidebarResize({});
     drag(handle, 200, 300);
     document.dispatchEvent(new MouseEvent("pointermove", { clientX: 450, bubbles: true }));
@@ -123,7 +123,7 @@ describe("initSidebarResize", () => {
     initSidebarResize({});
     drag(handle, 200, 400);
     expect(page.classList.contains("is-resizing")).toBe(false);
-    expect(state.libraryPrefs.sidebarWidth).toBe(200);
+    expect(state.libraryPrefs.sidebarWidth).toBe(DEFAULT_SIDEBAR_W);
   });
 
   test("double-click resets to the default width", () => {
@@ -140,13 +140,13 @@ describe("initSidebarResize", () => {
     const { handle } = mount();
     initSidebarResize({});
     handle.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
-    expect(state.libraryPrefs.sidebarWidth).toBe(208);
+    expect(state.libraryPrefs.sidebarWidth).toBe(DEFAULT_SIDEBAR_W + 8);
     handle.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", shiftKey: true, bubbles: true }));
-    expect(state.libraryPrefs.sidebarWidth).toBe(176);
+    expect(state.libraryPrefs.sidebarWidth).toBe(DEFAULT_SIDEBAR_W + 8 - 32);
   });
 
   test("binding twice does not double-apply a drag", () => {
-    const { page, handle } = mount();
+    const { page, handle } = mount({ width: 200 });
     const onCommit = jest.fn();
     initSidebarResize({ onCommit });
     initSidebarResize({ onCommit });

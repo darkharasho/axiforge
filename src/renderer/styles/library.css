@@ -10,13 +10,16 @@
    column) instead of borrowing space from its neighbours with negative
    margins. --lib-sidebar-w is unchanged from before this pass: it is set on
    .lib-page by sidebar-resize.js, which this task does not touch, so the
-   variable name stays put rather than becoming --af-lib-sidebar-w. The
-   collapsed width and the drag both animate through grid-template-columns
+   variable name stays put rather than becoming --af-lib-sidebar-w. The 240px
+   fallback mirrors DEFAULT_SIDEBAR_W in modules/library/sidebar-width.js --
+   it paints only for the instant before applySidebarWidth() runs, and a
+   stylesheet cannot import the constant, so the two move together by hand.
+   The collapsed width and the drag both animate through grid-template-columns
    now, which is why it -- not .lib-sidebar's own width -- carries the
    transition. */
 .lib-page {
   display: grid;
-  grid-template-columns: var(--lib-sidebar-w, 200px) 5px 1fr;
+  grid-template-columns: var(--lib-sidebar-w, 240px) 5px 1fr;
   height: calc(100vh - var(--af-titlebar-h));
   min-height: 0;
   transition: grid-template-columns 0.15s ease;
@@ -83,7 +86,7 @@
    it, or touch would carry a dead 5px gap the pointer can't reach. */
 @media (pointer: coarse) {
   .lib-resizer { display: none; }
-  .lib-page { grid-template-columns: var(--lib-sidebar-w, 200px) 0 1fr; }
+  .lib-page { grid-template-columns: var(--lib-sidebar-w, 240px) 0 1fr; }
 }
 
 /* During the drag the width follows the pointer directly: the page's own

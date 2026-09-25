@@ -216,13 +216,32 @@
 
 /* The expanded view draws each comp as a card rather than as a row (see
    .comp-list-row--expanded below), so the body stops being a run of rules and
-   becomes a stack with air between the cards. The asymmetric padding is the
-   offset block: it falls outside the card's own box, down and to the right,
-   and an overflow-y: auto parent with symmetric padding clips it. */
+   becomes a grid of cards. The asymmetric padding is the offset block: it
+   falls outside the card's own box, down and to the right, and an
+   overflow-y: auto parent with symmetric padding clips it.
+
+   The card's content -- name, badges, profession marks, party summary, boon
+   coverage, tags -- runs to about 520px, and .comp-list-row__spacer pushed
+   the timestamp to whatever edge the window had, so a single column spent
+   the whole right half of a wide window on air. auto-fill rather than a flat
+   two columns, matching the library grid (library.css): the same declaration
+   gives one column on a narrow window and three on an ultrawide instead of
+   forcing two into a width that cannot hold them.
+
+   The column gap is wider than the row gap on purpose. Each card's block
+   falls to its right, and at the row gap's 12px the left column's block
+   would land under the right column's outline; the gap has to clear
+   --axi-offset-panel-hover, which is what the block grows to on hover.
+
+   The compact view keeps its single run of rules -- the eye runs down the
+   timestamp column there, and a second column would break that read. */
 .comp-list-body--cards {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(520px, 1fr));
+  column-gap: 20px;
+  row-gap: 12px;
+  /* Without this a short list stretches its rows to fill the scroll box. */
+  align-content: start;
   padding: 12px 20px 20px 12px;
 }
 
