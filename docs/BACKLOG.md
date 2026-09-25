@@ -1063,3 +1063,24 @@ into the numbered manual gate above (14–16).
   Worth one look at the running app to decide whether either separator is
   wanted at all; if it is, `--axi-rule` is the weight-and-colour pair for a line
   drawn inside content.
+- [ ] **A `<button>` does not inherit `font`, and nothing in this app resets
+  it.** Neither the package's `axi.css` nor `app.css` carries a
+  `button { font: inherit }`, so every button whose classes never name a font
+  draws its label in the *browser's default face* — outside the type scale
+  entirely, and invisible to every gate we have, since the markup and the CSS
+  are each individually fine. Found via the titlebar workspace button, whose
+  `.titlebar__user` span had `font: var(--axi-t-small)` patching the symptom
+  while the button around it stayed on the UA face; fixed there by naming the
+  font on the button (`buttons.css`). A sweep of the renderer found 27 more
+  buttons in the same state. Most are icon-only — a close `×`, a pin, a
+  collapse chevron — where nothing renders in the wrong face and the bug is
+  latent. Four render real text and are live defects today:
+  `history-panel__revert` (`history-panel.js:429`, `:581`) and
+  `hist-compare__restore` / `__confirm-no` / `__confirm-yes`
+  (`history-compare.js:693`, `:705-706`). Two candidate fixes: name the font on
+  those rules, or add one global `button { font: inherit }` to `app.css` and
+  let the exceptions override. The global reset is the real upstream fix but
+  restyles every latent case at once, so it wants a person at the running app
+  rather than a green suite. Either way the durable guard is a gate scanning
+  for a button whose class list reaches no `font` declaration — write it with
+  the existing 27 fixed, or it lands red.

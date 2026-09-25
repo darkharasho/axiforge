@@ -1,12 +1,22 @@
 /* AxiForge — button styles */
 /* Workspace menu */
+/* A button does not inherit font, and nothing here reset it, so this control
+   was drawing in the browser's default face -- the one thing in the titlebar
+   not coming from a token. Naming the font on the button is the fix; the
+   span inside it was only ever patching the symptom. Micro is the tier its
+   neighbour the version label already sits in, and faint is the strip's
+   resting colour (axi.css:905) -- dim made the username the loudest thing in
+   a header whose own brand is quieter. Height follows the strip rather than
+   the hand-written 40px, which overhung a 38px bar. */
 .titlebar__workspace-btn {
   background: transparent;
   border: 0;
-  color: var(--axi-text-dim);
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
+  color: var(--axi-text-faint);
   cursor: pointer;
   padding: 0 10px;
-  height: 40px;
+  height: 100%;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -18,9 +28,14 @@
   color: var(--axi-accent);
 }
 
+/* Type comes from the button above. What is left here is the truncation: a
+   GitHub login has no length a header should trust, and without this one
+   pushes the window buttons off the right edge. */
 .titlebar__user {
-  font: var(--axi-t-small);
-  letter-spacing: var(--axi-ls-label);
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .workspace-menu {
