@@ -57,8 +57,8 @@ function _injectStyles() {
       flex-shrink: 0;
     }
     .history-panel__title {
-      font-size: 13px;
-      font-weight: 600;
+      font: var(--axi-t-label);
+      letter-spacing: var(--axi-ls-label);
       color: var(--axi-text);
       white-space: nowrap;
       overflow: hidden;
@@ -86,7 +86,7 @@ function _injectStyles() {
       padding: 32px 16px;
       text-align: center;
       color: var(--axi-text-faint);
-      font-size: 13px;
+      font: var(--axi-t-small);
       line-height: 1.6;
     }
 
@@ -140,6 +140,10 @@ function _injectStyles() {
       gap: 6px;
       margin-bottom: 3px;
     }
+    /* No scale step: normal-weight meta at 11px. --axi-t-micro is that size
+       but 800-weight caps type, and --axi-t-small is 13.5px, so nothing fits.
+       Same case as comps.css's .party-cov__toggle-text; every "same case as
+       __entry-time" below is this one. */
     .history-panel__entry-time {
       font-size: 11px;
       color: var(--axi-text-faint);
@@ -161,8 +165,8 @@ function _injectStyles() {
        but keep it fully legible — this is the row you came here to act on. */
     .history-panel__entry--deleted .history-panel__entry-build { color: var(--axi-danger); }
     .history-panel__entry-build {
-      font-size: 11px;
-      font-weight: 600;
+      font: var(--axi-t-micro);
+      letter-spacing: var(--axi-ls-micro);
       color: var(--axi-meta);
       margin-bottom: 2px;
       white-space: nowrap;
@@ -170,7 +174,7 @@ function _injectStyles() {
       text-overflow: ellipsis;
     }
     .history-panel__entry-summary {
-      font-size: 12px;
+      font: var(--axi-t-small);
       line-height: 1.45;
       color: var(--axi-text-dim);
       margin-bottom: 8px;
@@ -194,6 +198,7 @@ function _injectStyles() {
       padding: 2px 5px;
       border: var(--axi-border-hairline) solid var(--axi-rule);
     }
+    /* No scale step: a single arrow glyph, not prose. */
     .hist-strip__arrow { font-size: 9px; color: var(--axi-text-faint); }
     .hist-strip__icon {
       width: 18px;
@@ -208,6 +213,7 @@ function _injectStyles() {
       border: var(--axi-border-hairline) dashed var(--axi-rule);
       box-sizing: border-box;
     }
+    /* No scale step: same case as __entry-time. */
     .hist-strip__more { font-size: 11px; color: var(--axi-text-faint); }
 
     /* Dimmed until the row is hovered or keyboard-focused, so a long feed reads
@@ -216,7 +222,8 @@ function _injectStyles() {
     .history-panel__entry:hover .history-panel__actions,
     .history-panel__entry:focus-within .history-panel__actions { color: var(--axi-text); }
     .history-panel__revert {
-      font-size: 11px;
+      font: var(--axi-t-micro);
+      letter-spacing: var(--axi-ls-micro);
       padding: 4px 10px;
       border: var(--axi-border-hairline) solid var(--axi-rule);
       background: transparent;
@@ -245,6 +252,7 @@ function _injectStyles() {
       border: var(--axi-border-hairline) solid var(--axi-accent);
       background: var(--axi-surface-raised);
     }
+    /* No scale step: same case as __entry-time -- a normal-weight sentence. */
     .history-panel__confirm-text {
       font-size: 11px;
       color: var(--axi-text-dim);
@@ -259,12 +267,37 @@ function _injectStyles() {
       background: var(--axi-accent);
       color: var(--axi-accent-ink);
       box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+      /* No scale step: weight emphasis over the type __revert already sets on
+         this same button; a font: shorthand would reset that. */
       font-weight: 600;
     }
-    .history-panel__confirm-yes:hover:not(:disabled) {
+    /* Same pair, same shape as history-compare.js's: __revert's :hover is rule
+       4 case 1 (translate plus a gained 3px block) while __confirm-yes rests on
+       a block already, so it is case 3 -- keep the translate, deepen 3px -> 6px.
+       On its own, .history-panel__confirm-yes:hover:not(:disabled) ties
+       __revert's hover at (0,3,0) and would win only by sitting later in the
+       file, so a reorder could silently swap them; naming both classes makes it
+       (0,4,0) and the win independent of source order. This confirm flow is not
+       emitted from this file today (it lives in history-compare.js), so the tie
+       is latent rather than live -- the rules stay per Global Constraint 10, and
+       this is the selector shape a revival should start from, matching the
+       markup history-compare.js actually emits (both classes on one button). */
+    .history-panel__revert.history-panel__confirm-yes:hover:not(:disabled) {
       background: var(--axi-accent);
       color: var(--axi-accent-ink);
       box-shadow: var(--axi-offset-control-hover) var(--axi-offset-control-hover) 0 var(--axi-ink-line);
+    }
+
+    /* ── Reduced motion ──────────────────────────────────────────────── */
+    /* The package's block (axi.css:149-166) enumerates only its own .axi-*
+       selectors, so it never reaches an app-local lift, and its global
+       "* { transition-duration: .01ms }" rule makes a lift INSTANT
+       rather than absent -- which is exactly why the package cancels transform
+       separately. Same shape and reason as comps.css's block. */
+    @media (prefers-reduced-motion: reduce) {
+      .history-panel__revert:hover:not(:disabled) {
+        transform: none !important;
+      }
     }
   `;
   document.head.appendChild(style);
@@ -279,7 +312,10 @@ function _isSync(source) {
 function _badgeClass(source) {
   if (_isSync(source)) return "history-panel__badge--sync";
   if (source === "revert") return "history-panel__badge--revert";
-  return "history-panel__badge--local";
+  // "local" is the unmodified badge -- its rule was removed when it became the
+  // default, so emitting the name put a class with no selector in the markup.
+  // Same disposition as _dotClass() below.
+  return "";
 }
 
 function _dotClass(source) {

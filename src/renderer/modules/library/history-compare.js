@@ -212,18 +212,18 @@ function _injectStyles() {
       flex-shrink: 0;
     }
     .hist-compare__heading {
-      font-size: 13px;
-      font-weight: 600;
+      font: var(--axi-t-label);
+      letter-spacing: var(--axi-ls-label);
       color: var(--axi-text);
       margin: 0 6px 0 0;
     }
-    .hist-compare__word { font-size: 12px; color: var(--axi-text-faint); }
+    .hist-compare__word { font: var(--axi-t-small); color: var(--axi-text-faint); }
     .hist-compare__pick {
       appearance: none;
       background-color: var(--axi-ground);
       color: var(--axi-text-dim);
       border: var(--axi-border-control) solid var(--axi-ink-line);
-      font-size: 12px;
+      font: var(--axi-t-small);
       padding: 3px 6px;
     }
     .hist-compare__close {
@@ -244,18 +244,19 @@ function _injectStyles() {
       gap: 14px;
     }
     @media (max-width: 720px) { .hist-compare__cols { grid-template-columns: 1fr; } }
+    /* A caps meta label: 0.04em IS --axi-ls-micro spelled out, and its paired
+       size/weight is --axi-t-micro. */
     .hist-compare__col-title {
-      font-size: 11px;
-      font-weight: 700;
+      font: var(--axi-t-micro);
+      letter-spacing: var(--axi-ls-micro);
       text-transform: uppercase;
-      letter-spacing: 0.04em;
       color: var(--axi-text-faint);
       margin-bottom: 6px;
     }
     .hist-compare__missing {
       padding: 24px 12px;
       text-align: center;
-      font-size: 12px;
+      font: var(--axi-t-small);
       color: var(--axi-text-faint);
       border: var(--axi-border-hairline) dashed var(--axi-rule);
     }
@@ -264,21 +265,20 @@ function _injectStyles() {
       padding: 10px 12px;
       border: var(--axi-border-hairline) solid var(--axi-accent);
       background: var(--axi-surface-raised);
-      font-size: 12px;
-      line-height: 1.5;
+      font: var(--axi-t-small);
       color: var(--axi-text-dim);
     }
     .hist-compare__changes { margin-top: 14px; }
+    /* Same caps-meta case as __col-title. */
     .hist-compare__changes-title {
-      font-size: 11px;
-      font-weight: 700;
+      font: var(--axi-t-micro);
+      letter-spacing: var(--axi-ls-micro);
       text-transform: uppercase;
-      letter-spacing: 0.04em;
       color: var(--axi-text-faint);
       margin-bottom: 6px;
     }
     .hist-compare__empty {
-      font-size: 12px;
+      font: var(--axi-t-small);
       color: var(--axi-text-faint);
       padding: 12px 2px;
     }
@@ -289,7 +289,7 @@ function _injectStyles() {
     .hist-compare__row {
       padding: 6px 2px;
       border-top: var(--axi-border-hairline) solid var(--axi-rule);
-      font-size: 12px;
+      font: var(--axi-t-small);
       line-height: 1.45;
       word-break: break-word;
       color: var(--axi-text);
@@ -306,8 +306,10 @@ function _injectStyles() {
       display: flex;
       align-items: center;
       gap: 6px;
-      font-size: 11px;
-      letter-spacing: 0.03em;
+      /* Another caps meta label; 0.03em was a hand-tuned near-miss of
+         --axi-ls-micro (.04em), which is the step for caps at this size. */
+      font: var(--axi-t-micro);
+      letter-spacing: var(--axi-ls-micro);
       text-transform: uppercase;
       color: var(--axi-text-faint);
       min-width: 0;
@@ -399,7 +401,7 @@ function _injectStyles() {
     }
     .hist-compare__restore {
       align-self: flex-end;
-      font-size: 12px;
+      font: var(--axi-t-small);
       padding: 5px 12px;
       border: var(--axi-border-hairline) solid var(--axi-rule);
       background: transparent;
@@ -416,8 +418,7 @@ function _injectStyles() {
     }
     .hist-compare__restore:disabled { color: var(--axi-text-faint); cursor: not-allowed; }
     .hist-compare__confirm-text {
-      font-size: 12px;
-      line-height: 1.5;
+      font: var(--axi-t-small);
       color: var(--axi-text-dim);
     }
     .hist-compare__confirm-buttons { display: flex; gap: 6px; justify-content: flex-end; }
@@ -425,14 +426,21 @@ function _injectStyles() {
       background: var(--axi-accent);
       color: var(--axi-accent-ink);
       box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+      /* No scale step: weight emphasis over the type __restore already sets on
+         this same button; a font: shorthand would reset that. */
       font-weight: 600;
     }
     /* This button carries both classes, and .hist-compare__restore's :hover is
-       case 1 (no resting block: translate plus a gained box-shadow). Confirm-
-       yes already rests on a block, so it needs case 3 instead -- deepen, no
-       translate -- or the two move together and the lower-right edge never
-       shifts, which is the "grows rather than lifts" failure rule 4 names.
-       Both classes are in the selector deliberately: on its own,
+       rule 4 case 1 (no resting block: translate plus a gained box-shadow).
+       Confirm-yes already rests on a block, so it is case 3 instead: KEEP the
+       translate(-2px, -2px) and deepen the block 3px -> 6px. (Case 3 is not
+       "no translate" -- RULES.md says those "deepen 3px to 6px while keeping
+       the control's translate(-2px, -2px)". It is translating *without*
+       deepening that moves element and block together and leaves the
+       lower-right edge where it was, which is the "grows rather than lifts"
+       failure rule 4 names.) So this rule overrides only box-shadow and
+       inherits the translate from restore's hover, which is what the code
+       below does. Both classes are in the selector deliberately: on its own,
        .hist-compare__confirm-yes:hover:not(:disabled) ties restore's hover at
        (0,3,0) and wins only by sitting later in the file, so reordering these
        rules would silently bring the bug back. Naming both makes it (0,4,0)
@@ -450,6 +458,18 @@ function _injectStyles() {
     .hist-changed {
       outline: var(--axi-border-control) solid var(--axi-accent);
       outline-offset: -3px;
+    }
+
+    /* ── Reduced motion ──────────────────────────────────────────────── */
+    /* The package's block (axi.css:149-166) enumerates only its own .axi-*
+       selectors, so it never reaches an app-local lift, and its global
+       "* { transition-duration: .01ms }" rule makes a lift INSTANT
+       rather than absent -- which is exactly why the package cancels transform
+       separately. Same shape and reason as comps.css's block. */
+    @media (prefers-reduced-motion: reduce) {
+      .hist-compare__restore:hover:not(:disabled) {
+        transform: none !important;
+      }
     }
   `;
   document.head.appendChild(style);

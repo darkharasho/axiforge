@@ -63,7 +63,7 @@
 
 .section-head p {
   margin: 0;
-  font-size: 0.76rem;
+  font: var(--axi-t-small);
   color: var(--axi-text-dim);
 }
 
@@ -71,7 +71,7 @@
 .empty-line {
   margin: 0;
   color: var(--axi-text-faint);
-  font-size: 0.85rem;
+  font: var(--axi-t-small);
 }
 
 .panel--toolbar {
@@ -102,7 +102,8 @@
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 0.75rem;
+  font: var(--axi-t-label);
+  letter-spacing: var(--axi-ls-label);
   white-space: nowrap;
   transition: background 0.2s, color 0.2s, border-color 0.2s;
 }
@@ -238,9 +239,11 @@
   gap: 10px;
   margin-top: 2px;
 }
+/* A caps meta label: 0.04em IS --axi-ls-micro spelled out, and its paired
+   size/weight is --axi-t-micro. */
 .build-code-row__label {
-  font-size: 0.75rem;
-  letter-spacing: 0.04em;
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
   text-transform: uppercase;
   color: var(--axi-text-faint);
   white-space: nowrap;
@@ -258,8 +261,11 @@
   border: var(--axi-border-control) solid var(--axi-ink-line);
   border-right: none;
   color: var(--axi-text);
+  /* Shorthand first, then the mono family back over it -- the same order
+     .axi-input uses to keep one declaration for size/weight/leading while
+     overriding a single field. */
+  font: var(--axi-t-small);
   font-family: var(--axi-mono);
-  font-size: 0.8rem;
   padding: 5px 10px;
   cursor: text;
 }
@@ -267,6 +273,9 @@
   outline: none;
   border-color: var(--axi-accent);
 }
+/* No scale step: a placeholder set one notch under its own input's mono size,
+   and a font: shorthand here would reset the inherited mono family that makes
+   the field read as a code field. */
 .build-code-group__input::placeholder {
   color: var(--axi-text-faint);
   font-style: italic;
@@ -287,7 +296,8 @@
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 0.75rem;
+  font: var(--axi-t-label);
+  letter-spacing: var(--axi-ls-label);
   white-space: nowrap;
   transition: background 0.2s, color 0.2s, border-color 0.2s;
 }
@@ -310,11 +320,12 @@
   background: transparent;
 }
 
+/* Same caps-meta case as .build-code-row__label. */
 label {
   display: grid;
   gap: 6px;
-  font-size: 0.75rem;
-  letter-spacing: 0.04em;
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
   text-transform: uppercase;
   color: var(--axi-text-faint);
 }
@@ -330,6 +341,11 @@ label {
 
 .publish-status:empty { display: none; }
 
+/* No scale step: 0.72rem (~11.5px) at normal weight. --axi-t-micro is that
+   size but 800-weight caps type, and --axi-t-small is 13.5px, so there is no
+   step for normal-weight meta this small. Same case as comps.css's
+   .party-cov__toggle-text; every "same case as .publish-status" below is this
+   one. */
 .publish-status {
   display: flex;
   align-items: center;
@@ -345,6 +361,7 @@ label {
   border: none;
   color: var(--axi-text-faint);
   cursor: pointer;
+  /* No scale step: a single "×" glyph, not prose -- no scale step applies. */
   font-size: 0.82rem;
   line-height: 1;
   padding: 0 2px;
@@ -380,6 +397,8 @@ label {
   align-items: center;
   gap: 6px;
   white-space: nowrap;
+  /* No scale step: same case as .publish-status -- and the leading is the
+     ticker's row height, which a font: shorthand would overwrite. */
   font-size: 0.72rem;
   line-height: var(--ticker-row-h, 20px);
   transition: color 0.3s;
@@ -395,6 +414,8 @@ label {
 
 .publish-ticker__row--active {
   color: var(--axi-accent);
+  /* No scale step: weight emphasis on one row of a strip that already carries
+     its type from .publish-ticker__row; a shorthand would reset that. */
   font-weight: 600;
 }
 
@@ -412,6 +433,8 @@ label {
   width: 12px;
   text-align: center;
   flex-shrink: 0;
+  /* No scale step: a status glyph in a 12px cell, not prose, and below
+     --axi-t-micro with nothing under it. */
   font-size: 0.65rem;
 }
 
@@ -419,6 +442,8 @@ label {
    same compositor-only pulse, already gated for reduced motion there. */
 .publish-ticker__error {
   color: var(--axi-danger);
+  /* No scale step: normal-weight meta at ~11px, same case as
+     .publish-status, one notch smaller to sit under the row it annotates. */
   font-size: 0.68rem;
   font-weight: 400;
 }
@@ -443,6 +468,7 @@ label {
 
 .publish-result__label {
   color: var(--axi-accent);
+  /* No scale step: same case as .publish-status. */
   font-weight: 600;
   font-size: 0.72rem;
   flex-shrink: 0;
@@ -455,6 +481,8 @@ label {
   background: var(--axi-ground);
   color: var(--axi-accent);
   padding: 2px 6px;
+  /* No scale step: same case as .publish-status, and a font: shorthand would
+     reset the mono family this URL field needs. */
   font-size: 0.68rem;
   font-family: var(--axi-mono);
   cursor: text;
@@ -466,11 +494,14 @@ label {
 .publish-result__preview {
   flex-shrink: 0;
   white-space: nowrap;
+  /* No scale step: same case as .publish-status -- these sit on the same
+     inline row and have to match it. */
   font-size: 0.68rem;
   padding: 2px 6px;
 }
 
 .publish-result__live-status {
+  /* No scale step: same case as .publish-status. */
   font-size: 0.68rem;
   color: var(--axi-text-faint);
   flex-shrink: 0;

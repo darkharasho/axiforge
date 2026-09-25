@@ -63,6 +63,9 @@
 /* Compact chips are icon + number, so they need a tighter gap than the worded
  * variant and a slightly larger glyph -- at 9px the 2x2 comp grid turns into a
  * smudge, which was the whole problem with the bare digit it replaced. */
+/* No scale step: 10px sits below --axi-t-micro (11px/800), which .src-chip
+   already carries, and there is no lighter/smaller step under it. Kept at 10px
+   deliberately -- see the note above about the compact variant's density. */
 .src-chip--compact {
   gap: 3px;
   padding: 2px 6px;
@@ -91,6 +94,10 @@
   cursor: pointer;
 }
 
+/* No scale step: inline weight emphasis on a number inside text that already
+   carries its own step from the chip around it. A font: shorthand here would
+   reset that inherited size, which is the opposite of what a bare weight on a
+   <span> is for. */
 .src-external-count {
   color: var(--axi-accent);
   font-weight: 600;
@@ -129,8 +136,8 @@
   border: var(--axi-border-control) solid var(--axi-ink-line);
   background: var(--axi-ground);
   color: var(--axi-accent);
-  font-size: 11px;
-  font-weight: 600;
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
   cursor: pointer;
   transition: transform .1s, box-shadow .1s;
 }
@@ -141,6 +148,8 @@
 }
 
 /* A real count, so it fills like .axi-badge-count. */
+/* No scale step: same case as .src-chip--compact -- 10px is below
+   --axi-t-micro with nothing under it. */
 .comp-pool-sources__count {
   padding: 0 5px;
   background: var(--axi-accent);
@@ -192,11 +201,15 @@
 
 .bsm-title {
   margin: 0;
-  font-size: 14px;
-  font-weight: 600;
+  font: var(--axi-t-label);
+  letter-spacing: var(--axi-ls-label);
   color: var(--axi-text);
 }
 
+/* No scale step: a normal-weight line of meta at 11px, which is
+   --axi-t-micro's size but not its 800 caps weight, and below --axi-t-small
+   (13.5px) with nothing between. Same case as comps.css's
+   .party-cov__toggle-text. */
 .bsm-subtitle {
   margin-top: 2px;
   font-size: 11px;
@@ -217,6 +230,8 @@
   border: var(--axi-border-control) solid var(--axi-ink-line);
   background: var(--axi-ground);
   color: var(--axi-text-dim);
+  /* No scale step: same case as .bsm-subtitle -- a normal-weight control
+     label at 11px. */
   font-size: 11px;
   cursor: pointer;
   user-select: none;
@@ -250,7 +265,7 @@
 .bsm-empty,
 .bsm-none {
   color: var(--axi-text-faint);
-  font-size: 12px;
+  font: var(--axi-t-small);
 }
 
 .bsm-empty {
@@ -276,16 +291,19 @@
   background: var(--axi-surface);
   border-bottom: var(--axi-border-control) solid var(--axi-rule);
   color: var(--axi-text-faint);
-  font-size: 9.5px;
-  font-weight: 600;
-  letter-spacing: 0.12em;
+  /* A caps header rule, which is what --axi-t-micro/--axi-ls-micro are for --
+     and it is what the package's own .axi-table th uses (axi.css:1020-1021),
+     so this also stops the hand-rolled table drifting from the primitive
+     BACKLOG has it adopting. */
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
   text-transform: uppercase;
 }
 
 .bsm-table td {
   padding: 10px 16px;
   border-bottom: var(--axi-border-hairline) solid var(--axi-rule);
-  font-size: 12px;
+  font: var(--axi-t-small);
   color: var(--axi-text);
   vertical-align: middle;
 }
@@ -334,6 +352,10 @@
   height: 16px;
 }
 
+/* No scale step: 11.5px normal weight. --axi-t-eyebrow is the only 11.5px
+   step and it is 900-weight caps at .1em; the nearest normal-weight steps are
+   --axi-t-micro (11px, 800) and --axi-t-small (13.5px). Same case as
+   comps.css's .party-cov__toggle-text. */
 .bsm-path {
   font-size: 11.5px;
   color: var(--axi-accent);
@@ -343,6 +365,7 @@
   color: var(--axi-text-faint);
 }
 
+/* No scale step: same case as .bsm-path. */
 .bsm-other {
   font-size: 11.5px;
   color: var(--axi-text-dim);
@@ -365,12 +388,12 @@
   padding: 14px 16px;
 }
 
+/* Same caps-header case as .bsm-table th above. */
 .bsm-detail-label {
   margin-bottom: 6px;
   color: var(--axi-text-faint);
-  font-size: 9.5px;
-  font-weight: 600;
-  letter-spacing: 0.12em;
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
   text-transform: uppercase;
 }
 
@@ -380,7 +403,7 @@
 }
 
 .bsm-detail-home {
-  font-size: 12px;
+  font: var(--axi-t-small);
   color: var(--axi-accent);
 }
 
@@ -390,6 +413,7 @@
   gap: 16px;
   padding: 5px 0;
   border-top: var(--axi-border-hairline) solid var(--axi-rule);
+  /* No scale step: same case as .bsm-path. */
   font-size: 11.5px;
 }
 
@@ -405,4 +429,17 @@
 .bsm-detail-comp--self .bsm-detail-comp__name,
 .bsm-detail-comp--self .bsm-detail-comp__folder {
   color: var(--axi-accent);
+}
+
+/* ── Reduced motion ──────────────────────────────────────────────────────── */
+/* The package's block (axi.css:149-166) enumerates only its own .axi-*
+   selectors, so it never reaches these app-local lifts, and its global
+   `*{ transition-duration: .01ms }` makes a lift INSTANT rather than absent —
+   which is exactly why the package cancels `transform` separately. Same shape
+   and same reason as comps.css's block. A reader who asked for less motion
+   should get none of it, including from the app layer. */
+@media (prefers-reduced-motion: reduce) {
+  .comp-pool-sources:hover {
+    transform: none !important;
+  }
 }

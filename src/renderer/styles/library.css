@@ -2002,3 +2002,19 @@
   padding: 12px 14px 0;
 }
 .af-statstrip .axi-stat { flex: 1 1 0; min-width: 0; }
+
+/* ── Reduced motion ──────────────────────────────────────────────────────── */
+/* The package's block (axi.css:149-166) enumerates only its own .axi-*
+   selectors, so it never reaches these app-local lifts, and its global
+   `*{ transition-duration: .01ms }` makes a lift INSTANT rather than absent —
+   which is exactly why the package cancels `transform` separately. Same shape
+   and same reason as comps.css's block. A reader who asked for less motion
+   should get none of it, including from the app layer. */
+@media (prefers-reduced-motion: reduce) {
+  .lib-nav-item:hover,
+  .lib-tv__sort-btn:hover,
+  .af-tile:hover,
+  .lib-banner__btn:hover {
+    transform: none !important;
+  }
+}
