@@ -17,7 +17,6 @@ import {
   squaresIcon,
   squaresMiniIcon,
   viewColumnsIcon,
-  chevronDownIcon,
   homeIcon,
   xMarkIcon,
   arrowDownTrayIcon,
@@ -309,7 +308,7 @@ function _renderDropdown(id, label, items, hasActive) {
   const popId = `lib-fd-pop-${id}`;
   return `<div class="axi-picker af-libpicker lib-fd" data-dropdown="${id}">
     <button type="button" class="axi-picker__btn lib-fd__trigger${hasActive ? " lib-fd__trigger--active" : ""}" aria-haspopup="listbox" aria-expanded="false" aria-controls="${popId}">
-      <span>${label}</span>${chevronDownIcon}
+      <span>${label}</span>
     </button>
     <div class="axi-picker__pop axi-picker__pop--fixed" id="${popId}" role="listbox" aria-multiselectable="true" hidden>${items}</div>
   </div>`;

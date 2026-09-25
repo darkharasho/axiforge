@@ -266,15 +266,19 @@
    .lib-filters, a sibling of .lib-toolbar inside .lib-main's overflow:
    hidden, so its popover needs the same --fixed + script-positioned contract
    (bindPicker in toolbar.js). */
-.lib-fd__trigger svg {
-  width: 14px;
-  height: 14px;
-  flex-shrink: 0;
-  transition: transform 0.15s;
-}
+/* The trigger draws no chevron of its own: .axi-picker__btn already paints
+   the accent caret in its background, and a second glyph beside it reads as
+   two arrows on one control. The 28px right padding on .lib-toolbar__controls
+   .axi-picker__btn (above) is the room that caret sits in. */
 
-.lib-fd__trigger[aria-expanded="true"] svg {
-  transform: rotate(180deg);
+/* The base class is a hook, not a box -- .axi-picker__btn draws the whole
+   closed trigger. What the class owns is the on state: a filter holding
+   selections says so on the trigger itself, in the accent, rather than only in
+   the "(2)" appended to its label. */
+.lib-fd__trigger.lib-fd__trigger--active,
+.lib-fd__trigger.lib-fd__trigger--active:hover {
+  border-color: var(--axi-accent);
+  color: var(--axi-accent);
 }
 
 /* An elite spec nested under its profession. */
