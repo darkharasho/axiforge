@@ -842,6 +842,31 @@ chrome; none of this can be checked from a test):
     9px square reads as "working" in the publish ticker as clearly as a spinner
     did — it is the same primitive the rest of the app uses, but this is the
     first place it stands in for a spinner rather than a status light.
+14. *Decision (batch 2 final review, I4/M11):* the small metadata diamond is
+    now one shared class, `.af-sep-diamond` (`app.css`), and it is **filled**
+    from the neutral ramp rather than outlined. It had to be: `.axi-diamond`
+    shrunk to 5px is, under the global `border-box` reset, entirely border — an
+    invisible `--axi-ink-line` speck on `--axi-surface` with the fill never
+    painting, which is what the breadcrumb was drawing. Confirm it reads as a
+    separator at both sites: between library breadcrumb crumbs, and on the
+    comp-list row's bottom line between the profession icons, the party summary
+    and the boon meter.
+15. *Decision (batch 2 final review, I9):* the bulk bar's **Delete** button was
+    `--axi-danger` text on the bar's `--axi-accent` fill, about 1.9:1 — the one
+    label a user must read. It is now inverted: a danger fill with near-black
+    text, which is the file's existing destructive idiom
+    (`.comp-line__btn--remove:hover`, `.comp-line-trash--over`) and rule 5's
+    "filled asserts a value". Confirm it still reads as destructive rather than
+    as the *primary* action on the bar, since it is now the only one of the four
+    buttons carrying a fill.
+16. *Check (batch 2 final review, I5):* four `prefers-reduced-motion` blocks
+    were added — `library.css` (`.lib-nav-item`, `.lib-tv__sort-btn`,
+    `.af-tile`, `.lib-banner__btn`), `build-sources.css`
+    (`.comp-pool-sources`), `history-compare.js` (`.hist-compare__restore`) and
+    `history-panel.js` (`.history-panel__revert`). Nothing in the test suite can
+    observe paint. With the OS "reduce motion" setting on, confirm each of those
+    seven controls no longer moves on hover — and that its resting appearance is
+    unchanged, since only `transform` is cancelled.
 
 ### Parked from the batch 2 conversion
 
@@ -888,3 +913,129 @@ chrome; none of this can be checked from a test):
   placeholders dip shallow. If the `var()` failed to resolve, both would dip to
   `.25` — a working pulse at the wrong depth, not an obvious breakage, which is
   why it needs an eye rather than a scanner.
+
+### Deferred from the batch 2 final review
+
+The whole-plan review of batch 2 returned 1 Critical, 11 Important and 14 Minor.
+Everything actionable in a single fix round was fixed there; these are the items
+that were deliberately deferred, each with enough reasoning that a future reader
+does not have to re-derive it. Manual-look items from the same review are folded
+into the numbered manual gate above (14–16).
+
+- [ ] **I7 — adopt `.axi-table` on `.bsm-table`.** `build-sources.css`'s table
+  block re-spells the package's `.axi-table` (`axi.css:1008-1034`) declaration
+  for declaration: `width: 100%`, `border-collapse: collapse`, a `th` ruled at
+  `--axi-border-control` and a `td` at `--axi-border-hairline`, both in
+  `--axi-rule`. `build-sources-modal.js` emits `<table class="bsm-table">` with
+  no `.axi-table`, and `grep -rn 'axi-table' src/renderer --include=*.js`
+  returns nothing: the primitive is adopted **nowhere** in the app. This is the
+  batch's headline defect class — a shape reinvented when the package already
+  ships it. Deferred to whichever of batches 3 and 4 owns the remaining tables,
+  so the adoption happens once across all of them rather than as a one-off here,
+  and **it should be the first thing that batch does.** (The fix round did
+  convert this table's `th`/`td` typography to the same tokens `.axi-table` uses,
+  so the hand-rolled copy at least stops drifting further in the meantime.)
+- [ ] **M5 — spec §3.1's `.axi-ticks` obligation is discharged as "attempted and
+  correctly reverted", not silently dropped.** The tick run was added and then
+  removed again in `b97cf592`, on the ground that `headerBoons` was already a run
+  of equal-size marks and the new one could not follow the self-boon toggle.
+  That is the right call and it is recorded here as the disposition rather than
+  left implicit in a passing test. Consequence: the axi-design **1.10.0 version
+  floor** (Ruling A) now rests on `.axi-picker` alone, and the gate's
+  package-floor list was narrowed to the nine primitives the app really adopts
+  (`tests/unit/styles/axi-design-rules.test.js`).
+- [ ] **M7 — the domain palette has two homes.** `src/shared/professions.js`
+  holds the nine profession hues plus `SLOT_ROLES` (2 hexes) and `TARGET_ROLES`
+  (5 bespoke hexes: ally / self / foe / selfcondi / mixed), and
+  `src/renderer/modules/constants.js:430-455` holds nine more in
+  `COMBO_FIELD_COLORS` / `COMBO_FINISHER_COLORS` — all of them reaching CSS
+  through `--axi-series`. Rule 10's answer past two series is the accent against
+  the neutral ramp, and ally-vs-self is a two-value distinction, so
+  `TARGET_ROLES` in particular is five inks where two would do. Consolidating is
+  a cross-file palette decision, deferred to batch 3. Also note that
+  `professions.js` hosts `SLOT_ROLES` despite its name.
+- [ ] **M8 — the copied switch knob-travel `calc()`.** `comps.css`'s
+  `.party-cov__toggle[aria-checked="true"] .axi-switch__knob` re-derives the
+  package's formula verbatim: `calc(var(--axi-switch-w, 46px) - 2 *
+  var(--axi-border-control) - var(--axi-switch-knob, 16px) - 4px)`. It has to,
+  because `role="switch"`/`aria-checked` correctly live on the focusable
+  `<button>` rather than the decorative span, so the package's
+  `.axi-switch[aria-checked="true"] .axi-switch__knob` descendant selector
+  cannot match. The package's own comment says the formula exists so the slug
+  stays right at any border weight — which means the copy will silently drift
+  the first time upstream retunes it. Wants `:has()` or an upstream
+  `.axi-switch` variant that reads its state from an ancestor. Upstream
+  decision, not AxiForge's alone.
+- [ ] **M10 / M12 — decide "one chip family, one work indicator" once.** Four
+  hand-rolled hairline-outlined chips sit beside the adopted control-weight
+  `.axi-chip`: `.src-chip` (`build-sources.css`), `.pill` (`cards.css`),
+  `.history-panel__badge` and `.hist-strip__pair` (`history-panel.js`). A reader
+  sees two chip families in one app. Separately, `library.css`'s
+  `.lib-toast--loading::before` keeps a bespoke rotating-square loading mark
+  built from a `border-top-color: transparent` trick, beside the shared
+  `.af-dot af-work` that `a4c26858` adopted elsewhere precisely because
+  "app.css already ships a work indicator". Deferred to batch 3, which owns the
+  next tranche of chip- and indicator-bearing screens: deciding once is cheaper
+  than three more rounds of the same finding.
+- [ ] **I10 — `src/renderer/modules/library/library.js`'s inline literals.**
+  Around `:1974` it writes `border: 1px solid var(--input-border)` plus
+  `border-radius: 4px` into a `style=""` attribute, and around `:2014-2150` it
+  writes `#556`/`#c55`/`#5a5`/`#889` status inks the same way. That is a literal
+  border weight, a radius, a legacy bridge token and four colour literals. Not a
+  batch-2 conversion target — but `PENDING_JS` is now empty and the gate's JS
+  path only extracts injected `<style>` blocks, so a `style=""` attribute is
+  invisible to it and the gate reads as though the renderer's JS is clean. Parked
+  **explicitly** rather than by omission; belongs to whichever batch owns this
+  file.
+- [ ] **I11 — the drag-ghost fade wants a rule upstream.** Four clone opacities
+  (`.lib-drag-active` 0.5, `.lib-drag-fallback` 0.9, `.comp-cat-drag-ghost` 0.9,
+  `.comp-drag-icon-ghost` 0.9) now stand as an explicitly **app-level deviation
+  from rule 2, owned locally** — the reasoning is written out once in
+  `library.css`'s drag block and echoed in the gate's `OPACITY_ALLOWLIST`.
+  Earlier rounds attributed them to a rule-2 exception that
+  `../axi-design/docs/RULES.md` does not contain, and RULES.md's preamble is
+  explicit that a thing which cannot be justified by a rule "either needs a new
+  rule written for it, or does not belong in the system". The durable answer is
+  therefore either a rule written upstream for "a representation of a thing
+  being moved", or clones distinguished without opacity. Upstream decision, not
+  AxiForge's to make alone — and until it is made, a fifth clone fade needs that
+  decision rather than a citation of the local one.
+- [ ] **M14 — typeahead on the sort picker.** The native `<select>` `.axi-picker`
+  replaced let you type a letter to jump to an option; neither `.axi-picker` nor
+  the filter dropdowns do. The fix round restored ArrowDown/ArrowUp on the closed
+  trigger (Enter/Space already worked), which is the part of the listbox pattern
+  the control was clearly missing. Typeahead is parked as a language-level
+  question — it belongs in the package's `.axi-picker`, not in one app's
+  control — rather than as this one control's regression.
+- [ ] **Gate holes, for the batch-3 gate task.** The batch-2 list already in this
+  file grows by these, all of them things the fix round had to find by reading:
+  nothing checks that a hover's `translate` is paired with a *grown* shadow
+  depth (I3 was the second instance of that mismatch); nothing reads inline
+  `style=""` attributes or SVG presentation attributes, so `opacity="0.3"` and
+  `rx="1"` on an inline `<svg>` are free (I10, M9); no scanner covers bare
+  `font-size`/`font-weight` in a file that has been converted — I6 is the widest
+  surface in the whole conversion with no mechanical backstop, and the
+  already-parked hole above is about `font-family`, a different check; and
+  `prefers-reduced-motion` coverage of app-local lifts is entirely unchecked
+  (I5), which is why six of them survived a whole batch.
+- [ ] **Reduced-motion gaps in batch-1 files.** `app.css`'s `.af-accent-card`
+  hover and three lifts in `layout.css` are the same class as I5 but sit outside
+  batch 2's range. Fold into batch 3 with the rest of the batch-1 carry-over.
+- [ ] **Two latent traps, recorded rather than lost.** (a)
+  `.axi-picker__pop--fixed` popovers stay inside `.axi-picker` rather than being
+  portaled to `<body>` as the package's `--fixed` contract describes. Harmless
+  today because no ancestor of a picker carries a `transform` — and a
+  re-anchoring bug the day one does, since a transformed ancestor becomes the
+  containing block for a `position: fixed` descendant (RULES.md rule 4's
+  structural note). (b) `comp-tags.js` sets `popover.style.zIndex = "9999"`,
+  which is outside the app's `--z-*` scale and above `.axi-picker__pop`'s
+  layer 41 — a component shouting over the stack instead of joining it. Both
+  pre-existing; the batch-2 diff only removed a `position: fixed` beside the
+  second one.
+- [ ] **`.comp-detail__divider` and `.comp-hover__sep` draw an invisible
+  separator** — `--axi-ink-line` on an `--axi-surface` ground. The legacy
+  `--line` they were converted from was equally invisible, so the reskin is
+  faithful and this is a bug the conversion *inherited* rather than introduced.
+  Worth one look at the running app to decide whether either separator is
+  wanted at all; if it is, `--axi-rule` is the weight-and-colour pair for a line
+  drawn inside content.
