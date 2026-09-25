@@ -104,13 +104,22 @@
 
 /* ── Toolbar ─────────────────────────────────────────────────────── */
 
+/* The toolbar is a panel, not a band. It was transparent over --axi-ground
+   while .axi-btn fills with --axi-ground too, so bar and buttons were one
+   value and the only thing between them was an --axi-ink-line edge DARKER
+   than both -- an outline that reads as a void instead of a border, which is
+   why the whole strip looked like one black field. It gets a surface, an ink
+   outline and the block every raised thing in this language carries. */
 .lib-toolbar {
   display: flex;
   flex-direction: row;
   align-items: center;
   gap: 9px;
+  margin: 10px 14px 16px 12px;
   padding: 12px 14px;
-  border-bottom: var(--axi-border-panel) solid var(--axi-ink-line);
+  background: var(--axi-surface);
+  border: var(--axi-border-panel) solid var(--axi-ink-line);
+  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
   flex-shrink: 0;
   flex-wrap: wrap;
   /* The trash and archive drop the controls (they act on a list those views do
@@ -118,6 +127,33 @@
      Pin the height so the whole content pane doesn't jump every time you step
      into the Archive and back out. */
   min-height: 46px;
+}
+
+/* Now that the bar is a surface, the controls on it need an edge lighter than
+   what they sit on, or they disappear into it the way they did before.
+   --axi-rule is the language's line for exactly this: a division drawn inside
+   an outlined panel rather than around one.
+
+   Scoped to .lib-toolbar deliberately. .lib-filters is a sibling container,
+   so the CLASS/MODE/TAGS triggers keep the treatment they have today.
+
+   Two traps live in this selector. background-COLOR, never the shorthand:
+   .axi-picker__btn paints its caret as a background-image and the shorthand
+   erases it. And the view toggle's pressed pill has to be excluded, or the
+   accent fill marking the current view loses to this rule. */
+.lib-toolbar .axi-btn:not(.axi-btn--primary),
+.lib-toolbar .axi-picker__btn,
+.lib-toolbar .lib-view-btn:not([aria-pressed="true"]) {
+  background-color: var(--axi-surface-raised);
+  border-color: var(--axi-rule);
+}
+
+/* The search well goes the other way: an input is a recess, so it takes the
+   ground it used to share with everything else, which now reads as depth
+   against the surface around it. */
+.lib-toolbar .axi-input {
+  background-color: var(--axi-ground);
+  border-color: var(--axi-rule);
 }
 
 .lib-toolbar__breadcrumb {
