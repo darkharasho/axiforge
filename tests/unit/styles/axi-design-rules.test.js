@@ -45,8 +45,10 @@ const APP_CSS = [
 ];
 
 // Not yet converted. Shrinks by one entry per conversion task; when this is
-// empty the conversion is done. bridge.css is deliberately absent from
-// APP_CSS: its whole job is to hold legacy names, and it is deleted in batch 5.
+// empty the conversion is done. What remains is the modal sheets, which batch 4
+// owns. bridge.css is deliberately absent from APP_CSS: its whole job is to hold
+// legacy names, so it is deleted by whichever batch empties this list -- batch 4,
+// since nothing can still be leaning on it once every sheet here is converted.
 const PENDING = [
   "src/renderer/styles/wiki-modal.css",
   "src/renderer/styles/detail-modal.css",
