@@ -75,6 +75,33 @@ a { color: var(--axi-accent); }
   mask: url("./svg/axiforge-glyph.svg") no-repeat center 55% / 130%;
 }
 
+/* --- the small metadata diamond ---
+   Rule 7 makes the 45°-rotated square the family motif, and this is that mark
+   at metadata size. One class, two sites: the library breadcrumb between
+   crumbs, and the comp-list row's bottom line between bits of metadata. Each
+   site keeps only its own spacing.
+
+   It is FILLED, not outlined, and that is geometry rather than taste. An
+   outlined diamond cannot exist at this size: box-sizing is border-box (see
+   the reset above), so --axi-border-control (3px) on each side of a 5px box
+   leaves no content box at all — the mark comes out a solid --axi-ink-line
+   speck on --axi-surface, near-invisible, and the fill never paints.
+   Shrinking an outlined shape without shrinking its outline makes it denser,
+   not lighter, and the outline weights are not a consumer's to shrink
+   (RULES.md rule 3: the form tokens may only be declared in tokens.css). So
+   the small mark is a fill from the neutral ramp and nothing else. Where a
+   FULL diamond is wanted, the package's .axi-diamond at its real 9px is
+   still the answer. */
+
+.af-sep-diamond {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  flex: none;
+  transform: rotate(45deg);
+  background: var(--axi-text-faint);
+}
+
 /* --- status --- */
 
 .af-dot {

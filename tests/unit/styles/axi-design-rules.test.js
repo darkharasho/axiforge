@@ -281,18 +281,36 @@ function findLegacyVars(css) {
 // the thing, resting at a partial colour — so only the genuine clones stay
 // allowlisted here; the comp-slot-ghost/comp-line-ghost/lib-drag-ghost/
 // lib-drag-chosen cases were fixed instead (see comps.css and library.css).
+//
+// What this list IS, stated exactly. Rule 2 says colour is at full strength
+// and grants no exception to a drag clone; RULES.md's preamble says a thing
+// that cannot be justified by a rule "either needs a new rule written for it,
+// or does not belong in the system." Earlier rounds of this conversion wrote
+// these four entries as though the rule permitted them. It does not, and a
+// gate that pre-authorises an exception the normative document does not
+// contain is how the next four get in.
+//
+// So: these four are an AxiForge-level DEVIATION from rule 2, owned by this
+// app and by the paragraph in library.css's drag block, not by the language.
+// The trade is local: all four are body-portaled clones that exist only while
+// a pointer is held, nothing about them is a resting appearance, and a fading
+// drag ghost is a strong enough platform convention that re-deciding drag
+// feel at the tail of a reskin is the worse error. The durable answer is a
+// rule written upstream for "a representation of a thing being moved", or
+// clones distinguished without opacity (docs/BACKLOG.md). A fifth entry needs
+// that decision made, not this comment quoted at it.
 const OPACITY_ALLOWLIST = [
   // comps.css — comp-drag-drop.js:46,96 set both of these as SortableJS's
   // fallbackClass, which lands on the floating body-level clone, not the
   // source card still in its list.
-  [".comp-cat-drag-ghost", "SortableJS fallbackClass (comp-drag-drop.js:96) — lands on the floating clone, not the source chip; a representation of the thing being moved, not a colour at rest."],
-  [".comp-drag-icon-ghost", "SortableJS fallbackClass (comp-drag-drop.js:46) — lands on the floating clone, not the source card; same reasoning as .comp-cat-drag-ghost."],
+  [".comp-cat-drag-ghost", "SortableJS fallbackClass (comp-drag-drop.js:96) — lands on the floating clone, not the source chip. App-level deviation from rule 2, owned locally (see the block comment above); RULES.md does not exempt a clone."],
+  [".comp-drag-icon-ghost", "SortableJS fallbackClass (comp-drag-drop.js:46) — lands on the floating clone, not the source card; same app-level deviation as .comp-cat-drag-ghost."],
   // library.css — library/drag-drop.js:401-407 sets forceFallback: true, so
   // dragClass and fallbackClass both land on the floating clone SortableJS
   // appends to <body> (sortable.esm.js:1536-1537), not on the row still in
   // the list.
-  [".lib-drag-active", "SortableJS dragClass under forceFallback: true (library/drag-drop.js:403,406) — lands on the floating clone (sortable.esm.js:1536-1537), not the source row; a representation of the thing being moved, not a colour at rest."],
-  [".lib-drag-fallback", "SortableJS fallbackClass under forceFallback: true (library/drag-drop.js:407) — the floating clone itself; same reasoning as .lib-drag-active."],
+  [".lib-drag-active", "SortableJS dragClass under forceFallback: true (library/drag-drop.js:403,406) — lands on the floating clone (sortable.esm.js:1536-1537), not the source row. App-level deviation from rule 2, owned locally (see the block comment above); RULES.md does not exempt a clone."],
+  [".lib-drag-fallback", "SortableJS fallbackClass under forceFallback: true (library/drag-drop.js:407) — the floating clone itself; same app-level deviation as .lib-drag-active."],
 ];
 
 /** True when `header` — a rule's selector text, exactly as written between

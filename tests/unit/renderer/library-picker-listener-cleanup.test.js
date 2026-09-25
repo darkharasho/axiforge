@@ -126,3 +126,77 @@ test("re-rendering with a picker left open: net zero window listeners", () => {
   renderToolbar();
   expectBalanced();
 });
+
+// The scroll listener is on window with { capture: true } so that a scroll
+// inside .lib-main -- which does not bubble -- still closes the popover. A
+// capture listener on window also receives a scroll from any *descendant*,
+// including .axi-picker__pop's own overflow-y scroll, so it has to check the
+// target before closing.
+describe("scrolling the popover's own list does not close it", () => {
+  test("a scroll inside the popover is ignored, one outside it closes", () => {
+    const sortBtn = document.getElementById("lib-sort-trigger");
+    click(sortBtn);
+    const pop = document.getElementById("lib-sort-pop");
+    expect(pop.hidden).toBe(false);
+
+    // Wheeling down the option list: the scroll originates inside the popover.
+    pop.dispatchEvent(new Event("scroll"));
+    expect(pop.hidden).toBe(false);
+    expect(sortBtn.getAttribute("aria-expanded")).toBe("true");
+
+    // A scroll from an option inside the popover is equally the popover's own.
+    pop.querySelector(".axi-picker__opt").dispatchEvent(new Event("scroll"));
+    expect(pop.hidden).toBe(false);
+
+    // A scroll from anywhere else still closes it, and tears the listeners down.
+    document.body.dispatchEvent(new Event("scroll"));
+    expect(pop.hidden).toBe(true);
+    expect(sortBtn.getAttribute("aria-expanded")).toBe("false");
+    expectBalanced();
+  });
+});
+
+// The native <select> the picker replaced opened on ArrowDown/ArrowUp, and the
+// listbox pattern expects it. Enter/Space already work via the <button>.
+describe("ArrowDown/ArrowUp on the closed trigger", () => {
+  const key = (el, k) => el.dispatchEvent(new KeyboardEvent("keydown", { key: k, bubbles: true }));
+
+  test("ArrowDown opens the popover and lands focus on the current choice", () => {
+    const sortBtn = document.getElementById("lib-sort-trigger");
+    const pop = document.getElementById("lib-sort-pop");
+    expect(pop.hidden).toBe(true);
+    key(sortBtn, "ArrowDown");
+    expect(pop.hidden).toBe(false);
+    expect(sortBtn.getAttribute("aria-expanded")).toBe("true");
+    expect(pop.contains(document.activeElement)).toBe(true);
+    click(sortBtn);
+    expectBalanced();
+  });
+
+  test("ArrowUp opens it too", () => {
+    const sortBtn = document.getElementById("lib-sort-trigger");
+    key(sortBtn, "ArrowUp");
+    expect(document.getElementById("lib-sort-pop").hidden).toBe(false);
+    click(sortBtn);
+    expectBalanced();
+  });
+
+  test("ArrowDown on an already-open trigger does not re-open (no duplicate listeners)", () => {
+    const sortBtn = document.getElementById("lib-sort-trigger");
+    key(sortBtn, "ArrowDown");
+    expect(counts.scrollAdd).toBe(1);
+    key(sortBtn, "ArrowDown");
+    expect(counts.scrollAdd).toBe(1);
+    click(sortBtn);
+    expectBalanced();
+  });
+
+  test("the filter dropdowns get it from the same binding", () => {
+    renderFilters();
+    const classTrigger = document.querySelector("#lib-filters .lib-fd__trigger");
+    key(classTrigger, "ArrowDown");
+    expect(classTrigger.getAttribute("aria-expanded")).toBe("true");
+    click(classTrigger);
+    expectBalanced();
+  });
+});

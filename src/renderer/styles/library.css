@@ -201,15 +201,11 @@
   flex-shrink: 0;
 }
 
-/* A miniature .axi-diamond: full size (9px, .axi-border-control-weight) reads
-   as a bullet, which is heavier than a crumb separator needs. --axi-tick-w is
-   the language's other "smaller than a diamond" mark, so the separator
-   borrows its scale rather than inventing a bespoke size. */
-.lib-breadcrumb__sep {
-  width: var(--axi-tick-w, 5px);
-  height: var(--axi-tick-w, 5px);
-  flex-shrink: 0;
-}
+/* The crumb separator is .af-sep-diamond (app.css) — the shared small metadata
+   diamond, which app.css explains. It used to be .axi-diamond shrunk to 5px,
+   which at border-box left the 9px mark entirely border: an invisible
+   --axi-ink-line speck with the fill never painting. It needs no rule here;
+   .lib-toolbar__breadcrumb's own 2px gap is its spacing. */
 
 /* ── Filters ─────────────────────────────────────────────────────── */
 
@@ -1190,6 +1186,11 @@
   max-width: none;
 }
 
+/* The label stays in the neutral ramp: the profession's colour rides on the
+   diamond/icon, never on a whole row of text (content.js:198-203 states the
+   principle, and list, table, grid and icon views all follow it). Reading
+   --axi-series here made the columns view the one place a build's *name* was
+   profession-coloured; .lib-col__icon below already carries the hue. */
 .lib-col__item {
   display: flex;
   align-items: center;
@@ -1199,7 +1200,7 @@
   transition: background 0.1s;
   user-select: none;
   font: var(--axi-t-small);
-  color: var(--axi-series, var(--axi-text-faint));
+  color: var(--axi-text-faint);
 }
 
 .lib-col__item:hover {
@@ -1429,9 +1430,25 @@
    lib-drag-ghost and lib-drag-chosen are therefore real rows at a resting
    partial opacity — the thing rule 2 forbids — and are fixed below instead
    of exempted. lib-drag-active and lib-drag-fallback are genuine floating
-   clones, so their opacity is a fade on a representation of the thing being
-   moved, not on a row resting on the ground — rule 2 permits that, and they
-   keep it.
+   clones, and they keep their fade.
+
+   ── An app-level deviation from rule 2, owned here ──
+   To be exact about what that last sentence is: RULES.md rule 2 says colour
+   is at full strength, and it grants no exception of any kind to a drag
+   clone. Earlier rounds of this conversion said it did; they were wrong, and
+   so was the
+   matching wording in the gate's OPACITY_ALLOWLIST. These four fades
+   (.lib-drag-active, .lib-drag-fallback, and comps.css's
+   .comp-cat-drag-ghost and .comp-drag-icon-ghost) are a deliberate AxiForge
+   deviation, and the reasoning is AxiForge's, not the language's: they are
+   body-portaled floating clones that exist only while a pointer is held
+   down, nothing about them is a resting appearance, and a fading drag ghost
+   is a strong enough platform convention that re-deciding drag feel at the
+   tail of a reskin is the worse error. That is a local trade, not a rule.
+   The durable answer is either a rule written upstream in
+   ../axi-design/docs/RULES.md for "a representation of a thing being moved",
+   or clones distinguished without opacity — recorded in docs/BACKLOG.md.
+   Do not cite this paragraph as permission for a fifth one.
 
    lib-drag-chosen itself has no rule below: chosenClass lands on the same
    row a moment later, so the "picked up" state is already expressed by
@@ -1445,14 +1462,15 @@
 }
 
 /* Floating clone (see the block comment above), not a row resting on the
-   ground — its 0.5 opacity is the fade rule 2 permits for a representation
-   of the thing being moved. */
+   ground. Its 0.5 is an app-level deviation from rule 2, owned by the
+   "app-level deviation" paragraph above — RULES.md does not permit it. */
 .lib-drag-active {
   opacity: 0.5;
 }
 
 .lib-drag-fallback {
-  /* Genuine floating clone (see the block comment above). */
+  /* Genuine floating clone (see the block comment above); the 0.9 is the same
+     app-level deviation from rule 2, not something the language allows. */
   opacity: 0.9;
   box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
   cursor: grab !important;

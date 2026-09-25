@@ -372,7 +372,7 @@ function renderBreadcrumb() {
   // rendered as a plain, un-highlighted crumb — the exact same header the root
   // shows — while the pane underneath was showing the archive.
   if (folder.type === "trash" || folder.type === "archive") {
-    parts.push(`<span class="lib-breadcrumb__sep axi-diamond" aria-hidden="true"></span>`);
+    parts.push(`<span class="af-sep-diamond" aria-hidden="true"></span>`);
     parts.push(
       `<span class="lib-breadcrumb__item lib-breadcrumb__item--current">${folder.type === "trash" ? "Trash" : "Archive"}</span>`
     );
@@ -380,7 +380,7 @@ function renderBreadcrumb() {
   }
 
   if (folder.id === "__all-comps") {
-    parts.push(`<span class="lib-breadcrumb__sep axi-diamond" aria-hidden="true"></span>`);
+    parts.push(`<span class="af-sep-diamond" aria-hidden="true"></span>`);
     parts.push(`<span class="lib-breadcrumb__item lib-breadcrumb__item--current">All Comps</span>`);
     return parts.join("");
   }
@@ -392,17 +392,17 @@ function renderBreadcrumb() {
     if (comp?.folderId) {
       const chain = buildFolderChain(comp.folderId);
       for (const f of chain) {
-        parts.push(`<span class="lib-breadcrumb__sep axi-diamond" aria-hidden="true"></span>`);
+        parts.push(`<span class="af-sep-diamond" aria-hidden="true"></span>`);
         parts.push(`<button type="button" class="lib-breadcrumb__item" data-navigate-folder="${escapeHtml(f.id)}">${escapeHtml(f.name)}</button>`);
       }
     }
-    parts.push(`<span class="lib-breadcrumb__sep axi-diamond" aria-hidden="true"></span>`);
+    parts.push(`<span class="af-sep-diamond" aria-hidden="true"></span>`);
     parts.push(`<span class="lib-breadcrumb__item lib-breadcrumb__item--current">${escapeHtml(compName)}</span>`);
     return parts.join("");
   }
 
   if (folder.type === "smart-rule") {
-    parts.push(`<span class="lib-breadcrumb__sep axi-diamond" aria-hidden="true"></span>`);
+    parts.push(`<span class="af-sep-diamond" aria-hidden="true"></span>`);
     parts.push(`<span class="lib-breadcrumb__item lib-breadcrumb__item--current">${escapeHtml(folder.smartFolder?.name || "")}</span>`);
     return parts.join("");
   }
@@ -413,7 +413,7 @@ function renderBreadcrumb() {
     for (let i = 0; i < chain.length; i++) {
       const f = chain[i];
       const isLast = i === chain.length - 1;
-      parts.push(`<span class="lib-breadcrumb__sep axi-diamond" aria-hidden="true"></span>`);
+      parts.push(`<span class="af-sep-diamond" aria-hidden="true"></span>`);
       if (isLast) {
         parts.push(`<span class="lib-breadcrumb__item lib-breadcrumb__item--current">${escapeHtml(f.name)}</span>`);
       } else {
@@ -541,7 +541,11 @@ function bindPicker(root, { onSelect, group } = {}) {
       (current ?? opts()[0])?.focus();
       if (isFixed) {
         onResize = () => position();
-        onScroll = () => setOpen(false);
+        // The popover itself scrolls -- .axi-picker__pop is max-height 340px,
+        // overflow-y auto, and the Class filter is far longer than that. A
+        // window capture listener hears a scroll from *any* descendant, so
+        // without this guard wheeling down the list dismisses it.
+        onScroll = (e) => { if (!pop.contains(e.target)) setOpen(false); };
         window.addEventListener("resize", onResize);
         // capture: a scroll inside .lib-main (or the sidebar) doesn't bubble
         // to window, so this has to hear it on the way down.
@@ -562,6 +566,18 @@ function bindPicker(root, { onSelect, group } = {}) {
   btn.addEventListener("click", (e) => {
     e.stopPropagation();
     setOpen(btn.getAttribute("aria-expanded") !== "true");
+  });
+
+  // ArrowDown/ArrowUp on the closed trigger opens it. The listbox pattern
+  // expects this, and the native <select> these replaced had it; Enter/Space
+  // already work because the trigger is a <button>. setOpen() lands focus on
+  // the current choice, so the arrow that opened the list is also the one that
+  // put the cursor somewhere sensible.
+  btn.addEventListener("keydown", (e) => {
+    if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+    if (btn.getAttribute("aria-expanded") === "true") return;
+    e.preventDefault();
+    setOpen(true);
   });
 
   for (const opt of opts()) {

@@ -1288,8 +1288,14 @@ function renderCompsPanel() {
   // a shared build was in no comps while the comp listed it.
   const comps = state.editor.id ? compsContainingBuild(state.editor.id) : [];
   if (comps.length === 0) {
+    // No opacity="0.3" and no rx="1" on this icon: rule 2 (colour is at full
+    // strength; quiet comes from the ramp) and rule 3 (nothing rounds). It
+    // needs neither — fill="currentColor" inherits .comps-tab__empty's
+    // --axi-text-faint, which is already the ramp's quiet step. SVG
+    // presentation attributes are invisible to every scanner in the gate, so
+    // this one is spelled out rather than left to be re-found.
     panel.innerHTML = `<div class="comps-tab__empty">
-      <span class="comps-tab__empty-icon"><svg width="32" height="32" viewBox="0 0 16 16" fill="currentColor" opacity="0.3"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg></span>
+      <span class="comps-tab__empty-icon"><svg width="32" height="32" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6"/><rect x="9" y="1" width="6" height="6"/><rect x="1" y="9" width="6" height="6"/><rect x="9" y="9" width="6" height="6"/></svg></span>
       <span class="comps-tab__empty-text">This build is not linked to any comps.</span>
     </div>`;
     return;
@@ -1322,7 +1328,7 @@ function renderCompsPanel() {
       </div>
       <div class="comps-tab__card-meta">
         <div class="comp-list-row__prof-icons">${profIcons}</div>
-        ${profIcons ? `<span class="comp-list-row__sep"></span>` : ""}
+        ${profIcons ? `<span class="comp-list-row__sep af-sep-diamond"></span>` : ""}
         <span class="comp-list-row__summary">${summary}</span>
       </div>
       <button type="button" class="comps-tab__toggle" data-comp-toggle="${escapeHtml(c.id)}">

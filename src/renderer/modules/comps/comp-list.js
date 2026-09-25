@@ -138,7 +138,12 @@ function getVisibleComps() {
 function renderToolbarTier1(searchVal, prefs) {
   const hasActiveFilter = prefs.activeFilters?.gameMode || prefs.activeFilters?.publishStatus
     || (prefs.activeFilters?.tags || []).length > 0;
-  const filtersActive = prefs.filtersExpanded || hasActiveFilter;
+  // Boolean(): hasActiveFilter is an `||` chain over gameMode/publishStatus,
+  // which are strings, so this used to render aria-pressed="pve". That is
+  // invalid ARIA, and [aria-pressed="true"] stops matching -- the button's only
+  // paint comes from .axi-pill, so the pressed fill vanished in exactly the
+  // state it matters most: a filter applied with the panel collapsed.
+  const filtersActive = Boolean(prefs.filtersExpanded || hasActiveFilter);
 
   return `
     <div class="comp-list-toolbar">
@@ -303,9 +308,9 @@ function renderExpandedRow(comp) {
       </div>
       <div class="comp-list-row__bottom">
         <div class="comp-list-row__prof-icons">${profIcons}</div>
-        <span class="comp-list-row__sep"></span>
+        <span class="comp-list-row__sep af-sep-diamond"></span>
         <span class="comp-list-row__summary">${partySummary}</span>
-        <span class="comp-list-row__sep"></span>
+        <span class="comp-list-row__sep af-sep-diamond"></span>
         ${boonHtml}
         <span class="comp-list-row__tags-right">${tags}</span>
       </div>

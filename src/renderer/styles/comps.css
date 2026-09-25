@@ -181,13 +181,20 @@
   color: var(--axi-accent-ink);
 }
 
-.comp-list-bulk-bar__btn--danger {
-  border-color: var(--axi-danger);
-  color: var(--axi-danger);
-}
-
+/* Inverted rather than coloured text: the bar is filled with --axi-accent, so
+   --axi-danger *on* it is about 1.9:1 — the one label a user must read was the
+   least legible thing on the bar. This takes the file's existing destructive
+   idiom (.comp-line__btn--remove:hover, .comp-line-trash--over: a full-strength
+   danger fill with near-black on it) and applies it at rest, which is also what
+   rule 5 wants — a fill asserts a value about the thing, and "this button
+   destroys" is exactly that. The border stays the package's --axi-ink-line, so
+   rule 3 still holds and Delete is the only one of the four with a fill, which
+   is the clearest signal available. No resting block is added, so the ghost
+   button's rule-4 case-i hover (gain 3px, translate -2px) is unchanged. */
+.comp-list-bulk-bar__btn--danger,
 .comp-list-bulk-bar__btn--danger:hover {
-  color: var(--axi-danger);
+  background: var(--axi-danger);
+  color: var(--axi-accent-ink);
 }
 
 /* Cancel is still a control — it keeps the base .axi-btn hover lift (rule 4
@@ -301,15 +308,12 @@
   flex-shrink: 0;
 }
 
-/* Metadata separator on bottom line. Rule 7: the family bullet, at its
-   metadata size. */
+/* Metadata separator on the bottom line. The mark itself is .af-sep-diamond
+   (app.css) — the one small metadata diamond, shared with the library
+   breadcrumb; this used to hand-roll a second spelling of it. All that is
+   left here is the spacing, because .comp-list-row__bottom has gap: 0. */
 .comp-list-row__sep {
-  width: 5px;
-  height: 5px;
   margin: 0 4px;
-  transform: rotate(45deg);
-  background: var(--axi-text-faint);
-  flex-shrink: 0;
 }
 
 /* Party/slot summary */
@@ -1240,8 +1244,11 @@
    (comp-drag-drop.js:96). SortableJS's vendored source puts fallbackClass on
    ghostEl, the floating clone appended to <body> — not on the source chip
    still sitting in the list — so this is a genuine clone, not a colour
-   resting on a live element, and keeps its opacity per rule 2's own carve-out
-   for a representation of the thing being moved. */
+   resting on a live element, and it keeps its opacity. That fade is an
+   app-level deviation from rule 2, owned locally: rule 2 grants no exception
+   to a drag clone (an earlier round of this conversion claimed it did). The
+   reasoning and the upstream question are written out once in
+   library.css's drag block, under "An app-level deviation from rule 2". */
 .comp-cat-drag-ghost {
   opacity: 0.9;
 }
@@ -1613,8 +1620,10 @@
    ═══════════════════════════════════════════════════════════════════ */
 
 /* Pool card drag ghost — styled to look like a filled slot box, so its
-   border weight and the slot's must move together. It keeps its opacity —
-   a ghost is a ghost — but no longer draws a radius. Fix round 1, F4:
+   border weight and the slot's must move together. It keeps its opacity as an
+   app-level deviation from rule 2 (which grants clones no exception — see
+   library.css's drag block, "An app-level deviation from rule 2"), but no
+   longer draws a radius. Fix round 1, F4:
    comp-drag-drop.js:46 sets fallbackClass: "comp-drag-icon-ghost", and
    SortableJS's vendored source puts fallbackClass on ghostEl, the clone — so
    this really is a floating clone, not a colour resting on a live element.
@@ -2126,6 +2135,18 @@
 }
 .party-cov__pill--condi.party-cov__pill--self-condi:not(:hover) {
   box-shadow: none;
+}
+/* ...and because it rests flat, its hover is rule 4's *first* case, not the
+   third: a control with no resting block gains --axi-offset-control (3px) for
+   the first time, alongside the translate(-2px, -2px) it inherits from
+   .party-cov__pill--condi:hover. Without this rule that hover's
+   --axi-offset-control-hover (6px) applied -- the third case's deepening,
+   which only makes sense for a control that was already on a 3px block, and
+   which here lifts 2px while drawing 6px of block, so the lower-right edge
+   moves *down* and the pill reads as growing. Compound so it outranks
+   .party-cov__pill--condi:hover (0,3,0 against 0,2,0). */
+.party-cov__pill--condi.party-cov__pill--self-condi:hover {
+  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
 }
 
 /* Judgement call (Task 24, RULES.md rules 2 and 9; comment corrected in fix

@@ -746,7 +746,6 @@ function renderColumnsView(container) {
           : buildUsageChipHtml(b, { compact: true });
         items.push(`
           <div class="lib-col__item lib-col__item--build"
-               style="${professionSeriesStyle(b.profession)}"
                data-build-id="${escapeHtml(b.id)}" data-col-index="${colIndex}">
             <span class="lib-col__icon" style="${professionSeriesStyle(b.profession)}">${getSpecIcon(b)}</span>
             <span class="lib-col__name">${escapeHtml(b.title || "Untitled")}${folderPathHtml(b)}${itemSyncIndicatorHtml("build", b)}</span>

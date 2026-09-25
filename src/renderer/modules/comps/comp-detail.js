@@ -1791,7 +1791,10 @@ function bindPoolEvents(container, comp) {
       // The same two role markers the slot box's own outline reads from
       // professions.js — one home for the palette, per Global Constraint 6.
       const choices = [
-        { value: "normal", label: "Default", dot: "transparent", border: "1px solid var(--axi-rule)" },
+        // The swatch is a dot inside a menu, not a raised thing, so its edge is
+        // the rule weight (--axi-border-hairline) rather than a form step — and
+        // a literal 1px would be a fourth weight besides.
+        { value: "normal", label: "Default", dot: "transparent", border: "var(--axi-border-hairline) solid var(--axi-rule)" },
         { value: "red", label: "Condi", dot: SLOT_ROLES.red, border: "none" },
         { value: "blue", label: "Heal", dot: SLOT_ROLES.blue, border: "none" },
       ];
