@@ -37,7 +37,7 @@ function resetSyncServer() {
 /** Settings → Teams: sign in and create a team, the way a user would. */
 async function enableSyncAndCreateTeam(window, name) {
   await window.click("#workspaceBtn");
-  await window.click('.ws-menu-item:has-text("Settings")');
+  await window.click('.af-menu-item:has-text("Settings")');
   await window.click(".settings-modal__nav-item[data-pane='teams']");
   await window.click("#sm-teams-enable");
   await expect(window.locator("#sm-teams-on")).toBeVisible();
@@ -66,7 +66,7 @@ test.describe("Teams", () => {
     // reads from. Calling the IPC methods directly leaves that renderer-side
     // state stale until some other trigger happens to refresh it.
     await window.click("#workspaceBtn");
-    await window.click('.ws-menu-item:has-text("Settings")');
+    await window.click('.af-menu-item:has-text("Settings")');
     await window.click(".settings-modal__nav-item[data-pane='teams']");
     await window.click("#sm-teams-enable");
     await expect(window.locator("#sm-teams-on")).toBeVisible();

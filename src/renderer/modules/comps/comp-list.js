@@ -3,15 +3,17 @@
 
 import { state } from "../state.js";
 import { escapeHtml } from "../utils.js";
-import { compIcon } from "../library/heroicons.js";
+import { compIcon, magnifyingGlassIcon } from "../library/heroicons.js";
 import { getProfessionSvg } from "../profession-icons.js";
-import { getEliteSpecName, profClass } from "../build-helpers.js";
+import { getEliteSpecName } from "../build-helpers.js";
 import { computeCompPartyCoverage } from "./comp-boon-coverage.js";
 import { BOON_DISPLAY_ORDER } from "../constants.js";
+import { meterValue } from "./boon-indicator.js";
 import { openCompTagPopover, collectAllCompTags } from "./comp-tags.js";
 import { showToast } from "../library/toast.js";
 import { showChoiceModal } from "../choice-modal.js";
 import { askAboutDuplicates } from "../library/import-dedupe.js";
+import { professionSeriesStyle } from "../../../shared/professions.js";
 
 // ─── Shared folder helpers ───────────────────────────────────────────────────
 
@@ -36,13 +38,6 @@ const _selectedIds = new Set();
 
 /** Boon coverage cache: compId → { percentage: number, hash: string } */
 const _boonCache = new Map();
-
-// Profession hex colors (matching existing lib-prof-- CSS classes)
-const PROF_COLORS = {
-  guardian: "#6ea8ff", warrior: "#ff9944", necromancer: "#4dca7a",
-  engineer: "#cc8844", ranger: "#77cc55", thief: "#cc6677",
-  mesmer: "#b07acc", elementalist: "#dd5555", revenant: "#aa6655",
-};
 
 // ─── Init / Public API ───────────────────────────────────────────────────────
 
@@ -76,7 +71,7 @@ export function renderCompList() {
   container.innerHTML = `
     ${anySelected ? renderBulkBar() : renderToolbarTier1(searchVal, prefs)}
     ${!anySelected && prefs.filtersExpanded ? renderToolbarTier2(prefs, allTags) : ""}
-    <div class="comp-list-body">
+    <div class="comp-list-body${prefs.viewMode === "compact" ? "" : " comp-list-body--cards"}">
       ${comps.length > 0
         ? comps.map((c) => prefs.viewMode === "compact" ? renderCompactRow(c) : renderExpandedRow(c)).join("")
         : renderEmptyState()}
@@ -143,29 +138,35 @@ function getVisibleComps() {
 function renderToolbarTier1(searchVal, prefs) {
   const hasActiveFilter = prefs.activeFilters?.gameMode || prefs.activeFilters?.publishStatus
     || (prefs.activeFilters?.tags || []).length > 0;
-  const filtersActive = prefs.filtersExpanded || hasActiveFilter;
+  // Boolean(): hasActiveFilter is an `||` chain over gameMode/publishStatus,
+  // which are strings, so this used to render aria-pressed="pve". That is
+  // invalid ARIA, and [aria-pressed="true"] stops matching -- the button's only
+  // paint comes from .axi-pill, so the pressed fill vanished in exactly the
+  // state it matters most: a filter applied with the panel collapsed.
+  const filtersActive = Boolean(prefs.filtersExpanded || hasActiveFilter);
 
   return `
     <div class="comp-list-toolbar">
       <div class="comp-list-toolbar__left">
-        <button type="button" id="comp-new-btn" class="btn btn-primary comp-list-toolbar__new-btn">+ New Comp</button>
-        <div class="comp-list-toolbar__search">
-          <input type="search" id="comp-search-input" class="comp-list-toolbar__search-input"
+        <button type="button" id="comp-new-btn" class="axi-btn axi-btn--primary comp-list-toolbar__new-btn">+ New Comp</button>
+        <div class="axi-search">
+          <span class="axi-search__icon">${magnifyingGlassIcon}</span>
+          <input type="search" id="comp-search-input" class="comp-list-toolbar__search-input axi-input"
             placeholder="Search comps\u2026" value="${searchVal}" autocomplete="off" />
         </div>
       </div>
       <div class="comp-list-toolbar__right">
-        <button type="button" id="comp-filters-toggle" class="comp-list-toolbar__filters-btn ${filtersActive ? "comp-list-toolbar__filters-btn--active" : ""}"
-          title="Toggle filters">
+        <button type="button" id="comp-filters-toggle" class="axi-pill comp-list-toolbar__filters-btn"
+          aria-pressed="${filtersActive}" title="Toggle filters">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path fill-rule="evenodd" d="M2.628 1.601C5.028 1.206 7.49 1 10 1s4.973.206 7.372.601a.75.75 0 0 1 .628.74v2.288a2.25 2.25 0 0 1-.659 1.59l-4.682 4.683a2.25 2.25 0 0 0-.659 1.59v3.037c0 .684-.31 1.33-.844 1.757l-1.937 1.55A.75.75 0 0 1 8 18.25v-5.757a2.25 2.25 0 0 0-.659-1.591L2.659 6.22A2.25 2.25 0 0 1 2 4.629V2.34a.75.75 0 0 1 .628-.74Z" clip-rule="evenodd"/></svg>
         </button>
         <div class="comp-list-toolbar__view-toggle">
-          <button type="button" class="comp-list-toolbar__view-btn ${prefs.viewMode === "expanded" ? "comp-list-toolbar__view-btn--active" : ""}"
-            data-view-mode="expanded" title="Expanded view">
+          <button type="button" class="axi-pill comp-list-toolbar__view-btn"
+            aria-pressed="${prefs.viewMode === "expanded"}" data-view-mode="expanded" title="Expanded view">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path fill-rule="evenodd" d="M2 3.75A.75.75 0 0 1 2.75 3h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 3.75Zm0 4.167a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1-.75-.75Zm0 4.166a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1-.75-.75Zm0 4.167a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1-.75-.75Z" clip-rule="evenodd"/></svg>
           </button>
-          <button type="button" class="comp-list-toolbar__view-btn ${prefs.viewMode === "compact" ? "comp-list-toolbar__view-btn--active" : ""}"
-            data-view-mode="compact" title="Compact view">
+          <button type="button" class="axi-pill comp-list-toolbar__view-btn"
+            aria-pressed="${prefs.viewMode === "compact"}" data-view-mode="compact" title="Compact view">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path fill-rule="evenodd" d="M2 4.75A.75.75 0 0 1 2.75 4h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 4.75Zm0 10.5a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1-.75-.75ZM2 10a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 10Z" clip-rule="evenodd"/></svg>
           </button>
         </div>
@@ -183,7 +184,7 @@ function renderToolbarTier2(prefs, allTags) {
 
   const tagChips = allTags.map((tag) => {
     const active = activeTags.includes(tag);
-    return `<button type="button" class="comp-tag-chip ${active ? "comp-tag-chip--active" : ""}" data-tag-filter="${escapeHtml(tag)}">${escapeHtml(tag)}</button>`;
+    return `<button type="button" class="axi-pill comp-tag-chip" aria-pressed="${active}" data-tag-filter="${escapeHtml(tag)}">${escapeHtml(tag)}</button>`;
   }).join("");
 
   return `
@@ -191,7 +192,7 @@ function renderToolbarTier2(prefs, allTags) {
       <div class="comp-list-filters__left">
         <div class="comp-list-filters__group">
           <label class="comp-list-filters__label">MODE</label>
-          <select id="comp-filter-mode" class="comp-list-filters__select">
+          <select id="comp-filter-mode" class="axi-select">
             <option value="" ${gm === "" ? "selected" : ""}>All</option>
             <option value="pve" ${gm === "pve" ? "selected" : ""}>PvE</option>
             <option value="wvw" ${gm === "wvw" ? "selected" : ""}>WvW</option>
@@ -199,7 +200,7 @@ function renderToolbarTier2(prefs, allTags) {
         </div>
         <div class="comp-list-filters__group">
           <label class="comp-list-filters__label">STATUS</label>
-          <select id="comp-filter-status" class="comp-list-filters__select">
+          <select id="comp-filter-status" class="axi-select">
             <option value="" ${ps === "" ? "selected" : ""}>All</option>
             <option value="published" ${ps === "published" ? "selected" : ""}>Published</option>
             <option value="draft" ${ps === "draft" ? "selected" : ""}>Draft</option>
@@ -208,12 +209,12 @@ function renderToolbarTier2(prefs, allTags) {
         <div class="comp-list-filters__group">
           <label class="comp-list-filters__label">SORT</label>
           <div class="comp-list-filters__sort-row">
-            <select id="comp-sort-select" class="comp-list-filters__select">
+            <select id="comp-sort-select" class="axi-select">
               <option value="updatedAt" ${prefs.sortField === "updatedAt" ? "selected" : ""}>Last Updated</option>
               <option value="createdAt" ${prefs.sortField === "createdAt" ? "selected" : ""}>Date Created</option>
               <option value="name" ${prefs.sortField === "name" ? "selected" : ""}>Name</option>
             </select>
-            <button type="button" id="comp-sort-dir-btn" class="comp-list-filters__sort-dir" title="Toggle sort direction">
+            <button type="button" id="comp-sort-dir-btn" class="axi-btn comp-list-filters__sort-dir" title="Toggle sort direction">
               ${prefs.sortDirection === "asc" ? "\u2191" : "\u2193"}
             </button>
           </div>
@@ -244,10 +245,10 @@ function renderBulkBar() {
         <span class="comp-list-bulk-bar__count">${count} selected</span>
       </div>
       <div class="comp-list-bulk-bar__right">
-        <button type="button" class="comp-list-bulk-bar__btn" data-bulk-action="tag">Tag</button>
-        <button type="button" class="comp-list-bulk-bar__btn" data-bulk-action="export">Export</button>
-        <button type="button" class="comp-list-bulk-bar__btn comp-list-bulk-bar__btn--danger" data-bulk-action="delete">Delete</button>
-        <button type="button" class="comp-list-bulk-bar__btn comp-list-bulk-bar__btn--cancel" data-bulk-action="cancel">Cancel</button>
+        <button type="button" class="axi-btn axi-btn--ghost comp-list-bulk-bar__btn" data-bulk-action="tag">Tag</button>
+        <button type="button" class="axi-btn axi-btn--ghost comp-list-bulk-bar__btn" data-bulk-action="export">Export</button>
+        <button type="button" class="axi-btn axi-btn--ghost comp-list-bulk-bar__btn comp-list-bulk-bar__btn--danger" data-bulk-action="delete">Delete</button>
+        <button type="button" class="axi-btn axi-btn--ghost comp-list-bulk-bar__btn comp-list-bulk-bar__btn--cancel" data-bulk-action="cancel">Cancel</button>
       </div>
     </div>
   `;
@@ -262,19 +263,19 @@ function renderExpandedRow(comp) {
 
   // Game mode badge
   const gmBadge = comp.gameMode === "pve"
-    ? `<span class="comp-badge comp-badge--pve">PvE</span>`
+    ? `<span class="axi-chip comp-badge comp-badge--pve">PvE</span>`
     : comp.gameMode === "wvw"
-      ? `<span class="comp-badge comp-badge--wvw">WvW</span>`
+      ? `<span class="axi-chip axi-chip--meta comp-badge comp-badge--wvw">WvW</span>`
       : "";
 
   // Publish status badge
   const pubBadge = comp.publishedFileId
-    ? `<span class="comp-badge comp-badge--published">Published</span>`
-    : `<span class="comp-badge comp-badge--draft">Draft</span>`;
+    ? `<span class="axi-chip axi-chip--ok comp-badge comp-badge--published">Published</span>`
+    : `<span class="axi-chip comp-badge comp-badge--draft">Draft</span>`;
 
   // Shared badge
   const sharedBadge = _isCompShared(comp)
-    ? `<span class="comp-badge comp-badge--shared">Shared</span>`
+    ? `<span class="axi-chip axi-chip--accent comp-badge comp-badge--shared">Shared</span>`
     : "";
 
   // Relative timestamp
@@ -291,7 +292,7 @@ function renderExpandedRow(comp) {
 
   // Tags
   const tags = (comp.tags || [])
-    .map((t) => `<span class="comp-list-row__tag">${escapeHtml(t)}</span>`)
+    .map((t) => `<span class="axi-chip comp-list-row__tag">${escapeHtml(t)}</span>`)
     .join("");
 
   return `
@@ -307,9 +308,9 @@ function renderExpandedRow(comp) {
       </div>
       <div class="comp-list-row__bottom">
         <div class="comp-list-row__prof-icons">${profIcons}</div>
-        <span class="comp-list-row__pipe">|</span>
+        <span class="comp-list-row__sep af-sep-diamond"></span>
         <span class="comp-list-row__summary">${partySummary}</span>
-        <span class="comp-list-row__pipe">|</span>
+        <span class="comp-list-row__sep af-sep-diamond"></span>
         ${boonHtml}
         <span class="comp-list-row__tags-right">${tags}</span>
       </div>
@@ -325,17 +326,17 @@ function renderCompactRow(comp) {
   const selectedClass = _selectedIds.has(comp.id) ? " comp-list-row--selected" : "";
 
   const gmBadge = comp.gameMode === "pve"
-    ? `<span class="comp-badge comp-badge--pve comp-badge--sm">PvE</span>`
+    ? `<span class="axi-chip comp-badge comp-badge--pve comp-badge--sm">PvE</span>`
     : comp.gameMode === "wvw"
-      ? `<span class="comp-badge comp-badge--wvw comp-badge--sm">WvW</span>`
+      ? `<span class="axi-chip axi-chip--meta comp-badge comp-badge--wvw comp-badge--sm">WvW</span>`
       : "";
 
   const pubBadge = comp.publishedFileId
-    ? `<span class="comp-badge comp-badge--published comp-badge--sm">Published</span>`
-    : `<span class="comp-badge comp-badge--draft comp-badge--sm">Draft</span>`;
+    ? `<span class="axi-chip axi-chip--ok comp-badge comp-badge--published comp-badge--sm">Published</span>`
+    : `<span class="axi-chip comp-badge comp-badge--draft comp-badge--sm">Draft</span>`;
 
   const sharedBadge = _isCompShared(comp)
-    ? `<span class="comp-badge comp-badge--shared comp-badge--sm">Shared</span>`
+    ? `<span class="axi-chip axi-chip--accent comp-badge comp-badge--shared comp-badge--sm">Shared</span>`
     : "";
 
   const partySummary = getPartySummary(comp);
@@ -387,8 +388,7 @@ function renderProfessionIcons(comp) {
 
   const icons = specs.map(({ specName, profession }) => {
     const svg = getProfessionSvg(specName) || getProfessionSvg(profession) || "";
-    const color = PROF_COLORS[(profession || "").toLowerCase()] || "#888";
-    return `<span class="comp-list-row__prof-icon ${profClass(profession)}" style="background:${color}" title="${escapeHtml(specName)}">${svg}</span>`;
+    return `<span class="comp-list-row__prof-icon" style="${professionSeriesStyle(profession)}" title="${escapeHtml(specName)}">${svg}</span>`;
   }).join("");
 
   return icons + overflow;
@@ -420,20 +420,16 @@ function getPartySummary(comp) {
 function renderBoonIndicator(compId) {
   const cached = _boonCache.get(compId);
   if (!cached) {
-    return `<span class="comp-list-row__boon" data-boon-id="${compId}"><span class="comp-list-row__boon-dot comp-list-row__boon-dot--none"></span><span class="comp-list-row__boon-pct">--</span></span>`;
+    return `<span class="comp-list-row__boon" data-boon-id="${compId}">
+      <span class="axi-meter" style="--axi-meter-v: 0%; --axi-meter-h: 10px"><span class="axi-meter__fill"></span></span>
+      <span class="comp-list-row__boon-pct">--</span>
+    </span>`;
   }
   const pct = cached.percentage;
-  let colorClass;
-  if (pct >= 80) colorClass = "comp-list-row__boon-dot--green";
-  else if (pct >= 50) colorClass = "comp-list-row__boon-dot--yellow";
-  else colorClass = "comp-list-row__boon-dot--red";
-
-  let textColor;
-  if (pct >= 80) textColor = "#4caf50";
-  else if (pct >= 50) textColor = "#ffc107";
-  else textColor = "#f44336";
-
-  return `<span class="comp-list-row__boon" data-boon-id="${compId}"><span class="comp-list-row__boon-dot ${colorClass}"></span><span class="comp-list-row__boon-pct" style="color:${textColor}">${pct}%</span></span>`;
+  return `<span class="comp-list-row__boon" data-boon-id="${compId}">
+    <span class="axi-meter" style="--axi-meter-h: 10px"><span class="axi-meter__fill" style="--axi-meter-v: ${meterValue(pct)}"></span></span>
+    <span class="comp-list-row__boon-pct">${meterValue(pct)}</span>
+  </span>`;
 }
 
 // ─── Boon Coverage Async Cache ───────────────────────────────────────────────
@@ -485,11 +481,7 @@ async function computeBoonCoverageAsync(comp) {
   if (el) {
     const cached2 = _boonCache.get(comp.id);
     const pct = cached2.percentage;
-    let dotClass, textColor;
-    if (pct >= 80) { dotClass = "comp-list-row__boon-dot--green"; textColor = "#4caf50"; }
-    else if (pct >= 50) { dotClass = "comp-list-row__boon-dot--yellow"; textColor = "#ffc107"; }
-    else { dotClass = "comp-list-row__boon-dot--red"; textColor = "#f44336"; }
-    el.innerHTML = `<span class="comp-list-row__boon-dot ${dotClass}"></span><span class="comp-list-row__boon-pct" style="color:${textColor}">${pct}%</span>`;
+    el.innerHTML = `<span class="axi-meter" style="--axi-meter-h: 10px"><span class="axi-meter__fill" style="--axi-meter-v: ${meterValue(pct)}"></span></span><span class="comp-list-row__boon-pct">${meterValue(pct)}</span>`;
   }
 }
 
@@ -527,7 +519,7 @@ function renderEmptyState() {
       <div class="comp-list-empty">
         <div class="comp-list-empty__title">No comps match your filters</div>
         <div class="comp-list-empty__sub">Try adjusting your filters or search</div>
-        <button type="button" id="comp-clear-filters-btn" class="comp-list-empty__btn">Clear Filters</button>
+        <button type="button" id="comp-clear-filters-btn" class="axi-btn comp-list-empty__btn">Clear Filters</button>
       </div>
     `;
   }
@@ -536,7 +528,7 @@ function renderEmptyState() {
     <div class="comp-list-empty">
       <div class="comp-list-empty__title">No compositions yet</div>
       <div class="comp-list-empty__sub">Create your first comp to organize builds into party groups</div>
-      <button type="button" id="comp-empty-new-btn" class="btn btn-primary comp-list-toolbar__new-btn">+ New Comp</button>
+      <button type="button" id="comp-empty-new-btn" class="axi-btn axi-btn--primary comp-list-toolbar__new-btn">+ New Comp</button>
     </div>
   `;
 }

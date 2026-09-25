@@ -466,7 +466,7 @@ function startInlineRename(itemEl, currentValue) {
   // the columns view (.lib-col__name) for as long as it has existed.
   const titleEl =
     itemEl.querySelector(".lib-list-row__title") ||
-    itemEl.querySelector(".lib-grid-card__title") ||
+    itemEl.querySelector(".af-tile__title") ||
     itemEl.querySelector(".lib-icon-item__label") ||
     itemEl.querySelector(".lib-tv__name") ||
     itemEl.querySelector(".lib-col__name");

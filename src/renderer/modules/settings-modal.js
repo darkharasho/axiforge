@@ -8,6 +8,7 @@ import { showConfirmModal } from "./confirm-modal.js";
 import { showChoiceModal } from "./choice-modal.js";
 import { loadTeamState } from "./teams.js";
 import { openTeamModal, initTeamModal } from "./team-modal.js";
+import { ACCENTS, resolveAccentId } from "./accents.js";
 
 let _overlay = null;
 let _el = {};
@@ -24,18 +25,6 @@ const WEBHOOK_KINDS = {
   comp:  { setting: "discord.compWebhooks",  empty: "No webhooks yet. Add one to share comps to Discord." },
   build: { setting: "discord.buildWebhooks", empty: "No webhooks yet. Add one to share builds to Discord." },
 };
-
-const THEMES = [
-  { id: "",                label: "Golden Amber",     type: "full",   warm: true,  swatches: ["#c89848", "#64aaf0"] },
-  { id: "molten-core",     label: "Molten Core",      type: "full",   warm: true,  swatches: ["#dc6930", "#e8a538"] },
-  { id: "cinderfall",      label: "Cinderfall",       type: "full",   warm: true,  swatches: ["#c85050", "#d89060"] },
-  { id: "frostforge",      label: "Frostforge",       type: "full",   warm: false, swatches: ["#64afe6", "#9bd2f0"] },
-  { id: "verdant-crucible", label: "Verdant Crucible", type: "full",   warm: false, swatches: ["#4bbe78", "#3ca5b4"] },
-  { id: "copper",          label: "Copper Alloy",     type: "accent", warm: true,  swatches: ["#d28c60", "#64aaf0"] },
-  { id: "rose-gold",       label: "Rose Gold",        type: "accent", warm: true,  swatches: ["#c8738c", "#64aaf0"] },
-  { id: "cobalt",          label: "Cobalt Steel",     type: "accent", warm: false, swatches: ["#5888c8", "#82b4f0"] },
-  { id: "mithril",         label: "Mithril",          type: "accent", warm: false, swatches: ["#aab4c8", "#8cbee6"] },
-];
 
 const SETUP_STEPS = [
   { key: "repo", label: "Creating repository" },
@@ -353,48 +342,48 @@ export async function openSettingsModal({ initialPane } = {}) {
 
 // ─── Theme grid ─────────────────────────────────────────────────────────────
 
-async function _renderThemeGrid() {
-  const grid = _el.themeGrid;
+/**
+ * Renders the Appearance accent grid into `grid`, marking `storedId` active.
+ * `storedId` may be a legacy theme id, so it is resolved before comparing.
+ *
+ * The swatch is the one place a colour literal legitimately reaches the DOM:
+ * it comes from accents.json - the design language's sanctioned home for an
+ * accent hex - and is set per-instance with a style attribute rather than
+ * written into a stylesheet.
+ */
+export function renderAccentGrid(grid, storedId) {
+  const active = resolveAccentId(storedId);
   grid.innerHTML = "";
-  const domTheme = document.documentElement.getAttribute("data-theme") || "";
-  const current = domTheme.startsWith("prof-")
-    ? (await window.desktopApi.getSetting("appearance.theme")) || ""
-    : domTheme;
 
-  for (const theme of THEMES) {
+  for (const accent of ACCENTS) {
     const card = document.createElement("button");
     card.type = "button";
-    card.className = `settings-modal__theme-card${theme.id === current ? " settings-modal__theme-card--active" : ""}`;
-    card.dataset.theme = theme.id;
-
-    const swatchRow = theme.swatches
-      .map((c) => `<span class="settings-modal__theme-swatch" style="background:${c}"></span>`)
-      .join("");
-
+    card.className = `af-accent-card${accent.id === active ? " af-accent-card--active" : ""}`;
+    card.dataset.accent = accent.id;
     card.innerHTML = `
-      <div class="settings-modal__theme-swatches">${swatchRow}</div>
-      <span class="settings-modal__theme-label">${escapeHtml(theme.label)}</span>
-      <span class="settings-modal__theme-tag">${theme.type === "full" ? "Full" : "Accent"}</span>
+      <span class="af-accent-card__swatch" style="background:${accent.hex}"></span>
+      <span class="af-accent-card__label">${escapeHtml(accent.label)}</span>
     `;
-
-    card.addEventListener("click", () => _applyTheme(theme.id));
-    grid.append(card);
+    grid.appendChild(card);
   }
 }
 
-async function _applyTheme(themeId) {
-  const current = document.documentElement.getAttribute("data-theme") || "";
-  const profThemeActive = current.startsWith("prof-");
-  if (!profThemeActive) {
-    if (themeId) {
-      document.documentElement.setAttribute("data-theme", themeId);
-    } else {
-      document.documentElement.removeAttribute("data-theme");
-    }
-  }
-  await window.desktopApi.setSetting("appearance.theme", themeId || null);
-  if (_callbacks.onThemeChange) _callbacks.onThemeChange(themeId || "");
-  _renderThemeGrid();
+async function _renderThemeGrid() {
+  const storedId = (await window.desktopApi.getSetting("appearance.theme")) || "";
+  _paintAccentGrid(storedId);
+}
+
+function _paintAccentGrid(storedId) {
+  renderAccentGrid(_el.themeGrid, storedId);
+  _el.themeGrid.querySelectorAll(".af-accent-card").forEach((card) => {
+    card.addEventListener("click", () => _applyAccent(card.dataset.accent));
+  });
+}
+
+async function _applyAccent(accentId) {
+  await window.desktopApi.setSetting("appearance.theme", accentId);
+  _callbacks.onThemeChange?.(accentId);
+  _paintAccentGrid(accentId);
 }
 
 // ─── Publishing section ─────────────────────────────────────────────────────
@@ -591,7 +580,7 @@ function _createTicker(steps) {
         r.querySelector(".publish-ticker__icon").textContent = "\u2713";
       } else if (i === idx) {
         r.classList.add("publish-ticker__row--active");
-        r.querySelector(".publish-ticker__icon").innerHTML = `<span class="publish-ticker__spinner"></span>`;
+        r.querySelector(".publish-ticker__icon").innerHTML = `<span class="af-dot af-dot--idle af-work"></span>`;
       } else {
         r.classList.add("publish-ticker__row--pending");
         r.querySelector(".publish-ticker__icon").textContent = "\u2022";

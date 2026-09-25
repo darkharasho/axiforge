@@ -24,14 +24,6 @@ export function getSpecIconColored(build, color) {
   return getProfessionSvgColored(name, color) || "";
 }
 
-export function profClass(profession) {
-  const slug = String(profession || "")
-    .toLowerCase()
-    .replace(/[^a-z-]/g, "");
-  if (!slug) return "";
-  return `lib-prof--${slug}`;
-}
-
 export function getDisplayName(build) {
   const elite = getEliteSpecName(build);
   return build.title || elite || build.profession || "Untitled";

@@ -1153,7 +1153,7 @@ function _renderEmptySkillBar() {
   swapBtn.type = "button";
   swapBtn.className = "weapon-swap-btn";
   swapBtn.disabled = true;
-  swapBtn.innerHTML = `<svg viewBox="0 0 16 13"><path d="M4 1v4H1l5 5 5-5H8V1z" fill="currentColor" opacity=".5"/></svg>`;
+  swapBtn.innerHTML = `<svg viewBox="0 0 16 13"><path d="M4 1v4H1l5 5 5-5H8V1z" fill="currentColor"/></svg>`;
   const weaponGroup = document.createElement("div");
   weaponGroup.className = "skill-group skill-group--weapons";
   for (let i = 0; i < 5; i++) {
@@ -1179,7 +1179,6 @@ function _renderEmptySkillBar() {
   const orbEl = document.createElement("div");
   orbEl.className = "health-orb";
   orbEl.innerHTML = `
-    <div class="health-orb__fill"></div>
     <div class="health-orb__text">
       <span class="health-orb__hp">—</span>
       <span class="health-orb__label">HP</span>
@@ -1445,16 +1444,16 @@ export function renderSkills() {
         iconBtn.disabled = true;
         iconBtn.innerHTML = fakeCommand === "attack"
           ? `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-               <circle cx="16" cy="16" r="11" stroke="rgba(160,230,140,0.9)" stroke-width="1.5" fill="none"/>
-               <circle cx="16" cy="16" r="3" fill="rgba(160,230,140,0.9)"/>
-               <line x1="16" y1="2" x2="16" y2="9" stroke="rgba(160,230,140,0.9)" stroke-width="1.5"/>
-               <line x1="16" y1="23" x2="16" y2="30" stroke="rgba(160,230,140,0.9)" stroke-width="1.5"/>
-               <line x1="2" y1="16" x2="9" y2="16" stroke="rgba(160,230,140,0.9)" stroke-width="1.5"/>
-               <line x1="23" y1="16" x2="30" y2="16" stroke="rgba(160,230,140,0.9)" stroke-width="1.5"/>
+               <circle cx="16" cy="16" r="11" stroke="currentColor" stroke-width="1.5" fill="none"/>
+               <circle cx="16" cy="16" r="3" fill="currentColor"/>
+               <line x1="16" y1="2" x2="16" y2="9" stroke="currentColor" stroke-width="1.5"/>
+               <line x1="16" y1="23" x2="16" y2="30" stroke="currentColor" stroke-width="1.5"/>
+               <line x1="2" y1="16" x2="9" y2="16" stroke="currentColor" stroke-width="1.5"/>
+               <line x1="23" y1="16" x2="30" y2="16" stroke="currentColor" stroke-width="1.5"/>
              </svg>`
           : `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-               <path d="M26 7 L26 18 C26 22 22 25 18 25 L9 25" stroke="rgba(240,220,100,0.9)" stroke-width="2" fill="none" stroke-linecap="round"/>
-               <polyline points="13,19 9,25 15,29" stroke="rgba(240,220,100,0.9)" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+               <path d="M26 7 L26 18 C26 22 22 25 18 25 L9 25" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>
+               <polyline points="13,19 9,25 15,29" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
              </svg>`;
         mechIconSignature = `fake:${fakeCommand}`;
       } else {
@@ -1779,7 +1778,6 @@ export function renderSkills() {
   const orbEl = document.createElement("div");
   orbEl.className = "health-orb";
   orbEl.innerHTML = `
-    <div class="health-orb__fill"></div>
     <div class="health-orb__text">
       <span class="health-orb__hp">${totalHp > 0 ? totalHp.toLocaleString() : "—"}</span>
       <span class="health-orb__label">HP</span>

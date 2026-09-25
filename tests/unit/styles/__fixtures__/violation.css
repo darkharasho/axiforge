@@ -1,0 +1,28 @@
+/* Every rule broken at once. Fixture for the scanner self-test. */
+.v1 { color: #ffc53d; background: rgba(200, 152, 72, 0.12); }
+.v2 { border-radius: 14px; }
+.v3 { box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6); }
+.v4 { backdrop-filter: blur(8px); text-shadow: 0 1px 2px #000; }
+.v5 { background: linear-gradient(180deg, #141518, #101114); }
+.v6 { border: 1px solid var(--axi-ink-line); }
+.v7 { font-family: "Cinzel", serif; }
+.v8 { background: var(--panel-gradient); color: var(--text-dim); }
+.v9 { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+/* Finding 1: colour literal hiding in a border shorthand. */
+.v10 { border: var(--axi-border-control) solid #0c0e12; }
+/* Finding 2: a legal token present alongside an author-written literal. */
+.v11 { border: var(--axi-border-panel) 3px solid red; }
+.v12 { border-radius: calc(var(--axi-radius-sm) + 40px); }
+.v13 { font-family: "Comic Sans", var(--axi-sans); }
+/* Finding 3: colour indirection through a custom property. */
+.v14 { --my-color: #ff0000; color: var(--my-color); }
+/* Finding 4: a hex hiding behind a `;` inside a data-URI string. */
+.v15 { background: url("data:image/svg+xml;utf8,<svg><rect fill='#ff0000'/></svg>"); }
+/* Finding 5: an !important reset that must NOT read as an illegal value. */
+.v16 { box-shadow: none !important; }
+.v17 { border: none !important; }
+/* Finding 6: a genuine violation still fires even with !important attached. */
+.v18 { box-shadow: 0 2px 8px #000 !important; }
+.v19 { color: #ff0000 !important; }
+/* Finding 7: a resting partial opacity, no animation, outside @keyframes. */
+.v20 { opacity: 0.42; }

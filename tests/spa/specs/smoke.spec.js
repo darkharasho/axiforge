@@ -24,7 +24,7 @@ test.describe("SPA smoke tests", () => {
     const payload = generateCompPayload(comp, [buildA, buildB]);
     await loadCompPage(page, payload);
 
-    await expect(page.locator(".comp-detail__topbar")).toContainText("Smoke Test Comp");
+    await expect(page.locator(".comp-head__title")).toContainText("Smoke Test Comp");
     await expect(page.locator(".comp-line")).toBeVisible();
     await expect(page.locator(".comp-slot")).toHaveCount(5);
 

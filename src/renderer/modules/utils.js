@@ -199,11 +199,21 @@ export function wireTagInput(container, getTags, setTags, onChange) {
   });
 }
 
+// Explicit lookup, not string interpolation: an interpolated class name is
+// invisible to a grep for the literal classes it can produce, which is what
+// let this factory drift out of sync with the stylesheet undetected.
+const BUTTON_VARIANT_CLASS = {
+  secondary: "axi-btn--ghost",
+  danger: "af-btn--danger",
+  primary: "axi-btn--primary",
+};
+
 export function makeButton(label, variant, onClick) {
   const btn = document.createElement("button");
   btn.type = "button";
   btn.textContent = label;
-  btn.className = `btn btn-${variant}`;
+  const variantClass = BUTTON_VARIANT_CLASS[variant];
+  btn.className = variantClass ? `axi-btn ${variantClass}` : "axi-btn";
   btn.addEventListener("click", onClick);
   return btn;
 }

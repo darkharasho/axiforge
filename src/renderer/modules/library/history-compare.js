@@ -186,17 +186,16 @@ function _injectStyles() {
       position: fixed;
       inset: 0;
       z-index: 1200;
-      background: rgba(0,0,0,0.55);
+      background: var(--axi-scrim);
       display: flex;
       align-items: center;
       justify-content: center;
       padding: 24px;
     }
     .hist-compare {
-      background: var(--panel, #141518);
-      border: 1px solid var(--line, #1e1f24);
-      border-radius: var(--radius-md, 10px);
-      box-shadow: var(--shadow-lg, 0 12px 48px rgba(0,0,0,0.5));
+      background: var(--axi-surface);
+      border: var(--axi-border-panel) solid var(--axi-ink-line);
+      box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
       width: min(980px, 100%);
       max-height: 100%;
       display: flex;
@@ -209,23 +208,22 @@ function _injectStyles() {
       gap: 8px;
       flex-wrap: wrap;
       padding: 12px 14px;
-      border-bottom: 1px solid var(--line, #1e1f24);
-      background: var(--panel-gradient, none);
+      border-bottom: var(--axi-border-hairline) solid var(--axi-rule);
       flex-shrink: 0;
     }
     .hist-compare__heading {
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--text, #e2e3e8);
+      font: var(--axi-t-label);
+      letter-spacing: var(--axi-ls-label);
+      color: var(--axi-text);
       margin: 0 6px 0 0;
     }
-    .hist-compare__word { font-size: 12px; color: var(--text-dim, #646670); }
+    .hist-compare__word { font: var(--axi-t-small); color: var(--axi-text-faint); }
     .hist-compare__pick {
-      background: var(--input-bg, #0f1013);
-      color: var(--text, #e2e3e8);
-      border: 1px solid var(--line, #1e1f24);
-      border-radius: var(--radius-xs, 4px);
-      font-size: 12px;
+      appearance: none;
+      background-color: var(--axi-ground);
+      color: var(--axi-text-dim);
+      border: var(--axi-border-control) solid var(--axi-ink-line);
+      font: var(--axi-t-small);
       padding: 3px 6px;
     }
     .hist-compare__close {
@@ -233,13 +231,12 @@ function _injectStyles() {
       background: none;
       border: none;
       cursor: pointer;
-      color: var(--text-dim, #646670);
+      color: var(--axi-text-faint);
       padding: 4px;
-      border-radius: var(--radius-xs, 4px);
       display: flex;
       align-items: center;
     }
-    .hist-compare__close:hover { color: var(--text, #e2e3e8); background: var(--hover-subtle, rgba(255,255,255,0.05)); }
+    .hist-compare__close:hover { color: var(--axi-text); background: var(--axi-surface-raised); }
     .hist-compare__body { overflow-y: auto; padding: 14px; flex: 1; }
     .hist-compare__cols {
       display: grid;
@@ -247,44 +244,42 @@ function _injectStyles() {
       gap: 14px;
     }
     @media (max-width: 720px) { .hist-compare__cols { grid-template-columns: 1fr; } }
+    /* A caps meta label: 0.04em IS --axi-ls-micro spelled out, and its paired
+       size/weight is --axi-t-micro. */
     .hist-compare__col-title {
-      font-size: 11px;
-      font-weight: 700;
+      font: var(--axi-t-micro);
+      letter-spacing: var(--axi-ls-micro);
       text-transform: uppercase;
-      letter-spacing: 0.04em;
-      color: var(--text-dim, #646670);
+      color: var(--axi-text-faint);
       margin-bottom: 6px;
     }
     .hist-compare__missing {
       padding: 24px 12px;
       text-align: center;
-      font-size: 12px;
-      color: var(--text-dim, #646670);
-      border: 1px dashed var(--line, #1e1f24);
-      border-radius: var(--radius-sm, 6px);
+      font: var(--axi-t-small);
+      color: var(--axi-text-faint);
+      border: var(--axi-border-hairline) dashed var(--axi-rule);
     }
     .hist-compare__note {
       margin-top: 14px;
       padding: 10px 12px;
-      border-radius: var(--radius-sm, 6px);
-      border: 1px solid rgba(var(--accent-rgb, 200,152,72), 0.28);
-      background: rgba(var(--accent-rgb, 200,152,72), 0.07);
-      font-size: 12px;
-      line-height: 1.5;
-      color: var(--text-light, #aeafb8);
+      border: var(--axi-border-hairline) solid var(--axi-accent);
+      background: var(--axi-surface-raised);
+      font: var(--axi-t-small);
+      color: var(--axi-text-dim);
     }
     .hist-compare__changes { margin-top: 14px; }
+    /* Same caps-meta case as __col-title. */
     .hist-compare__changes-title {
-      font-size: 11px;
-      font-weight: 700;
+      font: var(--axi-t-micro);
+      letter-spacing: var(--axi-ls-micro);
       text-transform: uppercase;
-      letter-spacing: 0.04em;
-      color: var(--text-dim, #646670);
+      color: var(--axi-text-faint);
       margin-bottom: 6px;
     }
     .hist-compare__empty {
-      font-size: 12px;
-      color: var(--text-dim, #646670);
+      font: var(--axi-t-small);
+      color: var(--axi-text-faint);
       padding: 12px 2px;
     }
     /* Two row shapes. A row whose op names something with artwork is a grid
@@ -293,11 +288,11 @@ function _injectStyles() {
        at the top of this file) and spans the width. */
     .hist-compare__row {
       padding: 6px 2px;
-      border-top: 1px solid var(--line, #1e1f24);
-      font-size: 12px;
+      border-top: var(--axi-border-hairline) solid var(--axi-rule);
+      font: var(--axi-t-small);
       line-height: 1.45;
       word-break: break-word;
-      color: var(--text, #e2e3e8);
+      color: var(--axi-text);
     }
     .hist-compare__row:first-child { border-top: none; }
     .hist-compare__row--visual {
@@ -311,10 +306,12 @@ function _injectStyles() {
       display: flex;
       align-items: center;
       gap: 6px;
-      font-size: 11px;
-      letter-spacing: 0.03em;
+      /* Another caps meta label; 0.03em was a hand-tuned near-miss of
+         --axi-ls-micro (.04em), which is the step for caps at this size. */
+      font: var(--axi-t-micro);
+      letter-spacing: var(--axi-ls-micro);
       text-transform: uppercase;
-      color: var(--text-dim, #646670);
+      color: var(--axi-text-faint);
       min-width: 0;
     }
     .hist-compare__row-label > span {
@@ -327,12 +324,12 @@ function _injectStyles() {
       width: 15px;
       height: 15px;
       flex-shrink: 0;
-      opacity: 0.6;
+      color: var(--axi-text-faint);
     }
     .hist-compare__row-glyph svg { width: 100%; height: 100%; fill: currentColor; }
     .hist-compare__row-arrow {
       text-align: center;
-      color: var(--text-dim, #646670);
+      color: var(--axi-text-faint);
     }
     /* The sentence stays in the DOM for screen readers and for anyone
        copying the diff out; sighted readers get it from the row title. */
@@ -350,9 +347,8 @@ function _injectStyles() {
       gap: 6px;
       min-width: 0;
       padding: 3px 8px 3px 4px;
-      border: 1px solid var(--line, #1e1f24);
-      border-radius: 999px;
-      background: var(--bg-raised, #17181c);
+      border: var(--axi-border-hairline) solid var(--axi-rule);
+      background: var(--axi-ground);
     }
     .hist-chip__name {
       overflow: hidden;
@@ -363,31 +359,30 @@ function _injectStyles() {
       width: 22px;
       height: 22px;
       flex-shrink: 0;
-      border-radius: 4px;
       object-fit: cover;
     }
-    .hist-chip__icon--svg { display: inline-flex; opacity: 0.75; }
+    .hist-chip__icon--svg { display: inline-flex; color: var(--axi-text-dim); }
     .hist-chip__icon--svg svg { width: 100%; height: 100%; fill: currentColor; }
     .hist-chip__icon--empty {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      color: var(--text-dim, #646670);
+      color: var(--axi-text-faint);
     }
     .hist-chip--text { padding-left: 8px; }
     .hist-chip--none {
       border-style: dashed;
       background: transparent;
-      color: var(--text-dim, #646670);
+      color: var(--axi-text-faint);
       font-style: italic;
     }
     /* The new value is the point of the row, so it is the one that carries
-       colour. The old value stays neutral. */
+       colour. The old value stays neutral, and colour lands on the chip's
+       outline (annotation), not a tinted fill (rule 2/5). */
     .hist-chip--after {
-      border-color: var(--accent-dim, #3a4a5a);
-      background: var(--accent-bg, rgba(90, 150, 220, 0.08));
+      border-color: var(--axi-accent);
     }
-    .hist-chip--after .hist-chip__name { color: var(--accent, #6ba4e0); }
+    .hist-chip--after .hist-chip__name { color: var(--axi-accent); }
     @media (max-width: 640px) {
       .hist-compare__row--visual {
         grid-template-columns: 1fr 16px 1fr;
@@ -401,46 +396,80 @@ function _injectStyles() {
       flex-direction: column;
       gap: 8px;
       padding: 12px 14px;
-      border-top: 1px solid var(--line, #1e1f24);
+      border-top: var(--axi-border-hairline) solid var(--axi-rule);
       flex-shrink: 0;
     }
     .hist-compare__restore {
       align-self: flex-end;
-      font-size: 12px;
+      font: var(--axi-t-small);
       padding: 5px 12px;
-      border-radius: var(--radius-xs, 4px);
-      border: 1px solid var(--line, #1e1f24);
+      border: var(--axi-border-hairline) solid var(--axi-rule);
       background: transparent;
-      color: var(--text-light, #aeafb8);
+      color: var(--axi-text-dim);
       cursor: pointer;
+      transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease, transform 0.1s, box-shadow 0.1s;
     }
     .hist-compare__restore:hover:not(:disabled) {
-      background: var(--hover-accent, rgba(200,152,72,0.12));
-      border-color: rgba(var(--accent-rgb, 200,152,72), 0.45);
-      color: var(--accent, #c89848);
+      transform: translate(-2px, -2px);
+      box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+      background: var(--axi-surface-raised);
+      border-color: var(--axi-accent);
+      color: var(--axi-accent);
     }
-    .hist-compare__restore:disabled { opacity: 0.35; cursor: not-allowed; }
+    .hist-compare__restore:disabled { color: var(--axi-text-faint); cursor: not-allowed; }
     .hist-compare__confirm-text {
-      font-size: 12px;
-      line-height: 1.5;
-      color: var(--text-light, #aeafb8);
+      font: var(--axi-t-small);
+      color: var(--axi-text-dim);
     }
     .hist-compare__confirm-buttons { display: flex; gap: 6px; justify-content: flex-end; }
     .hist-compare__confirm-yes {
-      border-color: var(--btn-primary-to, #a87828);
-      background: linear-gradient(180deg, var(--btn-primary-from, #c89848), var(--btn-primary-to, #a87828));
-      color: #17120a;
+      background: var(--axi-accent);
+      color: var(--axi-accent-ink);
+      box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+      /* No scale step: weight emphasis over the type __restore already sets on
+         this same button; a font: shorthand would reset that. */
       font-weight: 600;
+    }
+    /* This button carries both classes, and .hist-compare__restore's :hover is
+       rule 4 case 1 (no resting block: translate plus a gained box-shadow).
+       Confirm-yes already rests on a block, so it is case 3 instead: KEEP the
+       translate(-2px, -2px) and deepen the block 3px -> 6px. (Case 3 is not
+       "no translate" -- RULES.md says those "deepen 3px to 6px while keeping
+       the control's translate(-2px, -2px)". It is translating *without*
+       deepening that moves element and block together and leaves the
+       lower-right edge where it was, which is the "grows rather than lifts"
+       failure rule 4 names.) So this rule overrides only box-shadow and
+       inherits the translate from restore's hover, which is what the code
+       below does. Both classes are in the selector deliberately: on its own,
+       .hist-compare__confirm-yes:hover:not(:disabled) ties restore's hover at
+       (0,3,0) and wins only by sitting later in the file, so reordering these
+       rules would silently bring the bug back. Naming both makes it (0,4,0)
+       and the win independent of source order. */
+    .hist-compare__restore.hist-compare__confirm-yes:hover:not(:disabled) {
+      background: var(--axi-accent);
+      color: var(--axi-accent-ink);
+      box-shadow: var(--axi-offset-control-hover) var(--axi-offset-control-hover) 0 var(--axi-ink-line);
     }
 
     /* The one thing an anchor is for. Harmless on the hidden anchor spans the
        mini card emits today; visible the moment a card renders a real element
-       carrying data-hist-*. */
+       carrying data-hist-*. Matches the drop-target idiom: a dashed or solid
+       accent outline, no fill, because at most one element is ever one. */
     .hist-changed {
-      outline: 1px solid rgba(var(--accent-rgb, 200,152,72), 0.85);
-      outline-offset: 1px;
-      background: rgba(var(--accent-rgb, 200,152,72), 0.12);
-      border-radius: var(--radius-xs, 4px);
+      outline: var(--axi-border-control) solid var(--axi-accent);
+      outline-offset: -3px;
+    }
+
+    /* ── Reduced motion ──────────────────────────────────────────────── */
+    /* The package's block (axi.css:149-166) enumerates only its own .axi-*
+       selectors, so it never reaches an app-local lift, and its global
+       "* { transition-duration: .01ms }" rule makes a lift INSTANT
+       rather than absent -- which is exactly why the package cancels transform
+       separately. Same shape and reason as comps.css's block. */
+    @media (prefers-reduced-motion: reduce) {
+      .hist-compare__restore:hover:not(:disabled) {
+        transform: none !important;
+      }
     }
   `;
   document.head.appendChild(style);

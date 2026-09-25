@@ -178,17 +178,9 @@ export const PROFESSION_WEIGHT = {
   Guardian: "heavy", Warrior: "heavy", Revenant: "heavy",
 };
 
-export const PROFESSION_THEMES = {
-  Guardian: "prof-guardian",
-  Warrior: "prof-warrior",
-  Necromancer: "prof-necromancer",
-  Engineer: "prof-engineer",
-  Ranger: "prof-ranger",
-  Thief: "prof-thief",
-  Mesmer: "prof-mesmer",
-  Elementalist: "prof-elementalist",
-  Revenant: "prof-revenant",
-};
+// Profession -> accent id. Defined in accents.js next to the legacy map that
+// has to agree with it; re-exported here because this is where callers look.
+export { PROFESSION_ACCENTS } from "./accents.js";
 
 // Total defense from a full set of level 80 Ascended/Legendary armor (6 pieces).
 // Armor (derived stat) = Toughness + total defense.

@@ -1,0 +1,255 @@
+/* AxiForge app layer over @axiapps/axi-design (imported first in renderer.js).
+   Window plumbing, the z-index scale the app's own JS reads, and the shapes
+   shared across screens. No colour literals: every colour is a token. */
+
+/* --- layout constants the app's JS and partials both read --- */
+:root {
+  /* The fixed titlebar's height. Everything below it is positioned against
+     this; it was written by hand in five places once, as 42px in two of them
+     and 40px in the other three, which let the page scroll 2px and slide the
+     left nav under the titlebar. One name, one value. */
+  --af-titlebar-h: 42px;
+
+  --z-sticky: 10;
+  --z-titlebar: 50;
+  --z-dropdown: 90;
+  --z-autocomplete: 100;
+  --z-tooltip: 120;
+  --z-menu: 200;
+  --z-modal: 1000;
+  --z-modal-confirm: 1100;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--axi-ground);
+  color: var(--axi-text);
+  font: var(--axi-t-body);
+}
+
+/* Clear the fixed titlebar with PADDING, not a margin on the first child: an
+   adjoining top margin collapses out through a parent with no top padding or
+   border, so it would land on <body>, make <html> taller than the viewport
+   and let the whole document scroll under the titlebar. */
+body { padding-top: var(--af-titlebar-h); }
+
+a { color: var(--axi-accent); }
+
+/* A frameless window has nothing behind it for a block to fall onto, so the
+   window's offset block is drawn inward. */
+.axi-window {
+  box-shadow: inset calc(-1 * var(--axi-offset-panel)) calc(-1 * var(--axi-offset-panel)) 0 0 var(--axi-ink-line);
+}
+
+.app-drag { -webkit-app-region: drag; }
+.no-drag, .no-drag * { -webkit-app-region: no-drag; }
+.hidden { display: none !important; }
+
+/* --- scrollbars --- */
+
+* { scrollbar-width: thin; scrollbar-color: var(--axi-rule) transparent; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--axi-ground); }
+::-webkit-scrollbar-thumb {
+  background: var(--axi-surface-raised);
+  border: var(--axi-border-hairline) solid var(--axi-ink-line);
+}
+::-webkit-scrollbar-thumb:hover { background: var(--axi-rule); }
+
+/* --- the background wordmark ---
+   Replaces the animated radial-gradient wash base.css used to draw: a
+   gradient across the ground at partial opacity broke rules 1 and 2 at once.
+   AxiAM's .am-mark pattern instead — one static, solid surface-ink shape
+   punched through a mask, which costs nothing to composite and says the same
+   thing. */
+.af-mark {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--axi-surface);
+  -webkit-mask: url("./svg/axiforge-glyph.svg") no-repeat center 55% / 130%;
+  mask: url("./svg/axiforge-glyph.svg") no-repeat center 55% / 130%;
+}
+
+/* --- the small metadata diamond ---
+   Rule 7 makes the 45°-rotated square the family motif, and this is that mark
+   at metadata size. One class, two sites: the library breadcrumb between
+   crumbs, and the comp-list row's bottom line between bits of metadata. Each
+   site keeps only its own spacing.
+
+   It is FILLED, not outlined, and that is geometry rather than taste. An
+   outlined diamond cannot exist at this size: box-sizing is border-box (see
+   the reset above), so --axi-border-control (3px) on each side of a 5px box
+   leaves no content box at all — the mark comes out a solid --axi-ink-line
+   speck on --axi-surface, near-invisible, and the fill never paints.
+   Shrinking an outlined shape without shrinking its outline makes it denser,
+   not lighter, and the outline weights are not a consumer's to shrink
+   (RULES.md rule 3: the form tokens may only be declared in tokens.css). So
+   the small mark is a fill from the neutral ramp and nothing else. Where a
+   FULL diamond is wanted, the package's .axi-diamond at its real 9px is
+   still the answer. */
+
+.af-sep-diamond {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  flex: none;
+  transform: rotate(45deg);
+  background: var(--axi-text-faint);
+}
+
+/* --- status --- */
+
+.af-dot {
+  width: 9px;
+  height: 9px;
+  display: inline-block;
+  border: var(--axi-border-hairline) solid var(--axi-ink-line);
+}
+.af-dot--ok { background: var(--axi-ok); }
+.af-dot--warn { background: var(--axi-warn); }
+.af-dot--danger { background: var(--axi-danger); }
+.af-dot--idle { background: var(--axi-surface-raised); }
+
+/* --- work indicator ---
+   Compositor-only (rule 11). These report on a save, a publish or a sync, all
+   of which can block the main thread; anything animated by layout or paint
+   would freeze exactly when it most needs to look alive. Shared with
+   skeleton.css's .skel loading placeholders — same idiom, two depths: a
+   single work dot needs the deeper .25 dip to read as one thing pulsing,
+   while a whole grid of skeleton blocks dipping that far in unison is worse
+   than the shallower .55 skeleton.css asks for via --af-pulse-dim. */
+@keyframes af-pulse { 0%, 100% { opacity: 1; } 50% { opacity: var(--af-pulse-dim, .25); } }
+.af-work { animation: af-pulse 1.1s ease-in-out infinite; }
+
+/* --- accent crossfade, toggled by applyAccent() for 500ms --- */
+
+.theme-transitioning *,
+.theme-transitioning *::before,
+.theme-transitioning *::after {
+  transition: background-color .4s ease, border-color .4s ease,
+    color .2s ease, box-shadow .4s ease, outline-color .4s ease !important;
+}
+
+/* --- reduced motion: kill every loop; state stays legible in the chips --- */
+
+@media (prefers-reduced-motion: reduce) {
+  .af-work { animation: none; }
+  .theme-transitioning *,
+  .theme-transitioning *::before,
+  .theme-transitioning *::after { transition: none !important; }
+}
+
+/* --- accent picker (Settings > Appearance) --- */
+
+.af-accent-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  cursor: pointer;
+  text-align: left;
+  background: var(--axi-surface);
+  color: var(--axi-text);
+  border: var(--axi-border-control) solid var(--axi-ink-line);
+  font: var(--axi-t-label);
+  letter-spacing: var(--axi-ls-label);
+  transition: transform .1s ease, box-shadow .1s ease;
+}
+.af-accent-card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+}
+/* Selection is an accent outline, not a glow and not a tinted fill (rule 2). */
+.af-accent-card--active {
+  outline: var(--axi-border-control) solid var(--axi-accent);
+  outline-offset: 2px;
+}
+/* The swatch's background comes from accents.json via a style attribute. */
+.af-accent-card__swatch {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  border: var(--axi-border-hairline) solid var(--axi-ink-line);
+}
+
+/* --- buttons off the package's palette --- */
+
+/* Danger is a status, so it is a solid fill, not a tinted outline (rule 5). */
+.af-btn--danger {
+  background: var(--axi-danger);
+  color: var(--axi-accent-ink);
+}
+
+/* The dev-only local/mobile preview buttons on a publish result. This is
+   commentary about the build - where you can go to look at it - not a verdict
+   on it, so it is outlined in the cool meta ink rather than filled (rules 5
+   and 6). --axi-meta is the one ink guaranteed never to mean a status. */
+.af-btn--dev {
+  border-color: var(--axi-meta);
+  color: var(--axi-meta);
+}
+
+/* --- workspace menu rows (formerly .ws-menu-item* / .ws-menu-sep) --- */
+
+.af-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 10px;
+  border: 0;
+  background: transparent;
+  color: var(--axi-text-dim);
+  cursor: pointer;
+  text-align: left;
+  font: var(--axi-t-small);
+}
+/* The menu's own ground is --axi-surface-raised, so hover has to step DOWN to
+   the ground to be visible (the package's .axi-menu__pop pattern). */
+.af-menu-item:hover { background: var(--axi-ground); color: var(--axi-text); }
+
+/* Icon box + label: the markup still emits these (render-pages.js) even
+   though the brief's replacement block omitted them. */
+.af-menu-item__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--axi-text-dim);
+}
+.af-menu-item__label {
+  flex: 1;
+  min-width: 0;
+}
+
+.af-menu-item--danger { color: var(--axi-danger); }
+.af-menu-item--danger .af-menu-item__icon { color: var(--axi-danger); }
+.af-menu-item--danger:hover { background: var(--axi-danger); color: var(--axi-accent-ink); }
+
+.af-menu-item--primary { color: var(--axi-accent); }
+.af-menu-item--primary .af-menu-item__icon { color: var(--axi-accent); }
+.af-menu-item--primary:hover { background: var(--axi-accent); color: var(--axi-accent-ink); }
+
+.af-menu-item:disabled { color: var(--axi-text-faint); cursor: default; }
+.af-menu-sep { height: var(--axi-border-hairline); background: var(--axi-rule); margin: 4px 8px; }
+
+/* ── The search glyph ────────────────────────────────────────────────────── */
+/* .axi-search__icon positions the magnifier and colours it, but the glyph
+   itself is the consumer's -- the package expects a text character, and both
+   of our toolbars (library.css, comps.css) hand it a heroicon <svg> with a
+   viewBox and no width/height. An inline SVG sized that way falls to the
+   replaced-element default of 300x150, so the glyph painted at fifteen times
+   its intended size and the 38px gutter .axi-search reserves for it read as
+   empty space. Sized once here because both toolbars pass the same icon. */
+.axi-search__icon svg {
+  display: block;
+  width: 15px;
+  height: 15px;
+}

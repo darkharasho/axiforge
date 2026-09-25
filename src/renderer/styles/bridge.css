@@ -1,0 +1,61 @@
+/* TEMPORARY — deleted when PENDING empties.
+   Re-points the legacy palette at axi tokens so screens not yet converted keep
+   rendering: flat, on the right ground, wrong in detail, but usable and
+   reviewable. Every name here is a screen still to do, which makes this file
+   the conversion's checklist. When PENDING in tests/unit/styles/
+   axi-design-rules.test.js is empty, delete this file and the @import above
+   it; the build failing without it would mean a converted sheet still leans
+   on a legacy name.
+
+   The spec schedules this deletion in batch 5 (§8). Batch 5 has now landed and
+   the file is still here, because the schedule assumed batches 3 and 4 would
+   run first: what is left in PENDING is the editor (specializations, skills,
+   equipment, notes, detail-panel) and the ten modal sheets, and every one of
+   them still reads a name defined below. The deletion moves to whichever batch
+   empties PENDING. Its companion, forge-render-bridge.css, IS gone — batch 5
+   converted forge-render.css, so the --fr-* names point at axi tokens from
+   inside the package now (see its header).
+
+   --accent-rgb is deliberately NOT defined. It exists only to be interpolated
+   into rgba(var(--accent-rgb), .12), which is the partial-opacity colour rule
+   2 forbids, so those rules are meant to fail visibly (transparent) rather
+   than survive in a muted form. Each batch converts its own. */
+:root {
+  --bg: var(--axi-ground);
+  --bg-2: var(--axi-ground);
+  --panel: var(--axi-surface);
+  --panel-2: var(--axi-surface);
+  --panel-gradient: var(--axi-surface);
+  --surface: var(--axi-surface);
+  --surface-hover: var(--axi-surface-raised);
+  --line: var(--axi-ink-line);
+  --line-soft: var(--axi-ink-line);
+  --text: var(--axi-text);
+  --text-light: var(--axi-text-dim);
+  --text-dim: var(--axi-text-faint);
+  --muted: var(--axi-text-faint);
+  --accent: var(--axi-accent);
+  --accent-2: var(--axi-meta);
+  --gold: var(--axi-accent);
+  --link: var(--axi-accent);
+  --danger: var(--axi-danger);
+  --danger-text: var(--axi-danger);
+  --input-bg: var(--axi-ground);
+  --input-border: var(--axi-ink-line);
+  --hover-subtle: var(--axi-surface-raised);
+  --hover-accent: var(--axi-surface-raised);
+  --hover-accent-strong: var(--axi-rule);
+  --focus-ring: var(--axi-accent);
+  --overlay: var(--axi-scrim);
+  --btn-primary-from: var(--axi-accent);
+  --btn-primary-to: var(--axi-accent);
+  --btn-primary-from-hover: var(--axi-accent);
+  --btn-primary-to-hover: var(--axi-accent);
+  --radius: var(--axi-radius);
+  --radius-sm: var(--axi-radius-sm);
+  --radius-xs: var(--axi-radius-sm);
+  --shadow-sm: none;
+  --shadow-md: none;
+  --shadow-lg: none;
+  --titlebar-h: var(--af-titlebar-h);
+}

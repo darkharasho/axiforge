@@ -3,7 +3,8 @@
 // buildsById: plain object of build records keyed by id.
 // catalog: upgradeCatalog with runeById/relicByName Maps, or null.
 import { escapeHtml } from "./escape.js";
-import { profClass, getDisplayName, getSpecIcon, getSpecIconColored } from "./build-helpers.js";
+import { getDisplayName, getSpecIcon, getSpecIconColored } from "./build-helpers.js";
+import { slotSeriesStyle } from "./professions.js";
 import { renderMiniBuildCard, renderMissingMiniBuildCard } from "./mini-build-card.js";
 
 // A slot id may be a build id (UUID) or a category reference encoded as "tag:<id>".
@@ -20,9 +21,13 @@ function partyNumberIcon(n) {
 function renderSlot(build, color) {
   if (!build) return `<div class="comp-slot comp-slot--empty"></div>`;
   const icon = color && color !== "normal" ? getSpecIconColored(build, color) : getSpecIcon(build);
-  const colorAttr = color && color !== "normal" ? ` data-slot-color="${color}"` : "";
+  // Rule 10: the hue is domain data, so it arrives per-instance on --axi-series
+  // rather than through a class the stylesheet would have to name. A role
+  // marker on the slot outranks the profession; an unknown name yields "" and
+  // the slot falls to the neutral its own rule names as the fallback.
+  const series = slotSeriesStyle(color, build.profession);
   return `
-    <div class="comp-slot comp-slot--filled ${profClass(build.profession)}"${colorAttr}
+    <div class="comp-slot comp-slot--filled"${series ? ` style="${series}"` : ""}
          title="${escapeHtml(getDisplayName(build))}">
       <span class="comp-slot__icon">${icon || escapeHtml((build.profession || "?")[0])}</span>
     </div>`;
@@ -72,7 +77,14 @@ function renderPartyLines(comp, buildsById) {
 
 export function renderCompCard(comp, buildsById = {}, catalog = null) {
   const colors = comp.buildColors || {};
+  // Boolean first: `slots` is meant to be a dense list of what is filled, but a
+  // record can arrive from an import, a sync payload or a hand-edited
+  // comps.json with a hole in it, and renderMissingMiniBuildCard(null) reads
+  // `null.length` and throws the whole card away. The desktop has an e2e spec
+  // for exactly this shape (tests/e2e/specs/comp-slot-holes.spec.js); the
+  // party lines below already tolerated it, only the pool did not.
   const referenced = [...new Set((comp.partyLines || []).flatMap((l) => l.slots || []))]
+    .filter(Boolean)
     .filter((id) => !isTagSlot(id));
   const pool = referenced
     .map((id) =>

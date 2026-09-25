@@ -2,10 +2,15 @@
 // Imports all feature modules and wires them together via init callbacks.
 // Application-level orchestration (init, wireEvents, setProfession, etc.) lives here.
 
+import "@axiapps/axi-design/axi.css";
+import "@axiapps/axi-design/accents.css";
+import "./styles.css";
+
 import { state, createEmptyEditor } from "./modules/state.js";
 import { nextEditorReturn } from "./modules/editor-return.js";
 import { delay, wireTagInput, escapeHtml, relativeTime } from "./modules/utils.js";
 import { injectSkeleton } from "./modules/skeleton.js";
+import { professionSeriesStyle } from "../shared/professions.js";
 
 import { initCustomSelect, closeCustomSelect } from "./modules/custom-select.js";
 import {
@@ -40,7 +45,7 @@ import {
   setPublishStatus, showError, runPagesBuildPoll, getSelectedTarget,
   showPublishProgress, advancePublishStep, completeAllPublishSteps,
   failPublishStep, showPublishResult, getPublishTargetId, syncPublishStatus,
-  resolvePublishedUrl, clearPublishProgress,
+  resolvePublishedUrl, clearPublishProgress, currentShareAccent,
 } from "./modules/render-pages.js";
 import { publishWithOwnerCheck, publishedByOtherBody } from "./modules/publish-guard.js";
 import { resolveEntityFacts } from "./modules/detail-panel.js";
@@ -63,16 +68,25 @@ import { clearUndo as clearLibraryUndo } from "./modules/library/undo.js";
 import { initComps, loadComps, renderComps } from "./modules/comps/comps.js";
 import { compsContainingBuild } from "./modules/comps/comp-membership.js";
 import { getProfessionSvg } from "./modules/profession-icons.js";
-import { getEliteSpecName, profClass } from "./modules/build-helpers.js";
+import { getEliteSpecName } from "./modules/build-helpers.js";
 import { renderMiniBuildCard } from "./modules/mini-build-card.js";
-import { PROFESSION_THEMES } from "./modules/constants.js";
+import { applyAccent } from "./modules/accents.js";
+import { createAccentTinting } from "./modules/accent-tinting.js";
 
 // Scope class for @axiapps/forge-render styles (mini cards, role badges, hover previews).
 document.body.classList.add("forge-render");
 
 let _lastGameMode = "pve";
-let _stashedTheme = null;
 let _themedBuildsEnabled = false;
+// Profession tinting: opening a build tints the app to its profession's
+// accent; leaving restores the accent the user chose. Extracted to its own
+// module so the stash/restore state machine can be unit-tested without
+// renderer.js's Electron-dependent import-time side effects.
+const _accentTinting = createAccentTinting({
+  applyAccent,
+  getProfession: () => state.editor?.profession,
+  isEnabled: () => _themedBuildsEnabled,
+});
 // One "couldn't queue a change" toast per session — every failed enqueue after
 // the first would say the same thing.
 let _outboxToastShown = false;
@@ -131,7 +145,7 @@ function _updateItemSyncIndicators(type, id, status) {
     // Only apply to actual library content cards (which have a named title element).
     // Elements like comp-detail slot divs also carry data-build-id but are not
     // library cards — skip them to avoid injecting badges into comp party lines.
-    const nameEl = cardEl.querySelector(".lib-list-row__title, .lib-tv__name, .lib-grid-card__title, .lib-icon-item__label, .lib-col__name");
+    const nameEl = cardEl.querySelector(".lib-list-row__title, .lib-tv__name, .af-tile__title, .lib-icon-item__label, .lib-col__name");
     if (!nameEl) return;
     applyBadge(nameEl, status, {
       className: "lib-content-sync-indicator",
@@ -164,7 +178,7 @@ function _updateFolderSyncIndicators(folderId, status) {
   content.querySelectorAll(`[data-folder-id="${CSS.escape(folderId)}"]`).forEach((cardEl) => {
     // Find the best anchor: a name/title/label span, or fall back to the card itself
     const nameEl =
-      cardEl.querySelector(".lib-list-row__title, .lib-tv__name, .lib-grid-card__title, .lib-icon-item__label, .lib-col__name") ||
+      cardEl.querySelector(".lib-list-row__title, .lib-tv__name, .af-tile__title, .lib-icon-item__label, .lib-col__name") ||
       cardEl;
     applyBadge(nameEl, status, { className: "lib-content-sync-indicator" });
   });
@@ -426,15 +440,16 @@ initSettingsCallbacks({
     _themedBuildsEnabled = enabled;
     if (state.activePage === "editor") {
       if (enabled) {
-        applyProfessionThemeIfEnabled();
+        _accentTinting.applyProfessionAccentIfEnabled();
       } else {
-        restoreUserThemeIfNeeded();
+        _accentTinting.restoreUserAccentIfNeeded();
       }
     }
   },
-  onThemeChange: (themeId) => {
-    const current = document.documentElement.getAttribute("data-theme") || "";
-    if (current.startsWith("prof-")) _stashedTheme = themeId;
+  onThemeChange: (accentId) => {
+    // Behind a profession tint, a new pick changes what gets restored rather
+    // than what is on screen.
+    _accentTinting.setUserAccent(accentId);
   },
 });
 
@@ -644,11 +659,13 @@ async function init() {
   try { _lastGameMode = (await window.desktopApi.getSetting("lastGameMode")) || "pve"; } catch { /* first run */ }
   syncGameModeToggleUI(_lastGameMode);
 
-  // Apply saved color theme
+  // Apply the saved accent. No crossfade here - transitioning against an
+  // unthemed first paint would be visible as a flash.
   try {
-    const savedTheme = await window.desktopApi.getSetting("appearance.theme");
-    if (savedTheme) document.documentElement.setAttribute("data-theme", savedTheme);
-  } catch { /* first run */ }
+    _accentTinting.setUserAccent(await window.desktopApi.getSetting("appearance.theme"), { transition: false });
+  } catch {
+    _accentTinting.setUserAccent(undefined, { transition: false }); // first run
+  }
 
   _themedBuildsEnabled = !!(await window.desktopApi.getSetting("appearance.themedBuildPages"));
 
@@ -1067,7 +1084,7 @@ async function setProfession(professionId, options = {}) {
 
   enforceEditorConsistency({ preferredEliteSlot: options.preferredEliteSlot });
   renderEditor();
-  if (state.activePage === "editor") applyProfessionThemeIfEnabled();
+  if (state.activePage === "editor") _accentTinting.applyProfessionAccentIfEnabled();
 }
 
 export async function getCatalog(professionId, gameMode = "pve") {
@@ -1163,34 +1180,6 @@ function updateWindowTitle() {
 
 // ── Page navigation ─────────────────────────────────────────────────────────
 
-function applyThemeWithTransition(themeId) {
-  document.documentElement.classList.add("theme-transitioning");
-  if (themeId) {
-    document.documentElement.setAttribute("data-theme", themeId);
-  } else {
-    document.documentElement.removeAttribute("data-theme");
-  }
-  setTimeout(() => document.documentElement.classList.remove("theme-transitioning"), 500);
-}
-
-function applyProfessionThemeIfEnabled() {
-  if (!_themedBuildsEnabled) return;
-  const profession = state.editor?.profession;
-  const profTheme = profession ? PROFESSION_THEMES[profession] : null;
-  if (!profTheme) return;
-  const current = document.documentElement.getAttribute("data-theme") || "";
-  if (current === profTheme) return;
-  if (!current.startsWith("prof-")) _stashedTheme = current;
-  applyThemeWithTransition(profTheme);
-}
-
-function restoreUserThemeIfNeeded() {
-  const current = document.documentElement.getAttribute("data-theme") || "";
-  if (!current.startsWith("prof-")) return;
-  applyThemeWithTransition(_stashedTheme || "");
-  _stashedTheme = null;
-}
-
 function _syncEditorBackButton() {
   if (!el.editorBackBtn) return;
   const ret = state.editorReturn;
@@ -1252,19 +1241,13 @@ function navigateToPage(page) {
     });
   }
   if (page === "editor") {
-    applyProfessionThemeIfEnabled();
+    _accentTinting.applyProfessionAccentIfEnabled();
   } else {
-    restoreUserThemeIfNeeded();
+    _accentTinting.restoreUserAccentIfNeeded();
   }
 }
 
 // ── Comps panel (editor tab) ─────────────────────────────────────────────────
-
-const PROF_COLORS = {
-  guardian: "#6ea8ff", warrior: "#ff9944", necromancer: "#4dca7a",
-  engineer: "#cc8844", ranger: "#77cc55", thief: "#cc6677",
-  mesmer: "#b07acc", elementalist: "#dd5555", revenant: "#aa6655",
-};
 
 function _compTabProfIcons(comp) {
   const specs = [];
@@ -1285,8 +1268,7 @@ function _compTabProfIcons(comp) {
   if (specs.length === 0) return "";
   return specs.map(({ specName, profession }) => {
     const svg = getProfessionSvg(specName) || getProfessionSvg(profession) || "";
-    const color = PROF_COLORS[(profession || "").toLowerCase()] || "#888";
-    return `<span class="comp-list-row__prof-icon ${profClass(profession)}" style="background:${color}" title="${escapeHtml(specName)}">${svg}</span>`;
+    return `<span class="comp-list-row__prof-icon" style="${professionSeriesStyle(profession)}" title="${escapeHtml(specName)}">${svg}</span>`;
   }).join("");
 }
 
@@ -1306,8 +1288,14 @@ function renderCompsPanel() {
   // a shared build was in no comps while the comp listed it.
   const comps = state.editor.id ? compsContainingBuild(state.editor.id) : [];
   if (comps.length === 0) {
+    // No opacity="0.3" and no rx="1" on this icon: rule 2 (colour is at full
+    // strength; quiet comes from the ramp) and rule 3 (nothing rounds). It
+    // needs neither — fill="currentColor" inherits .comps-tab__empty's
+    // --axi-text-faint, which is already the ramp's quiet step. SVG
+    // presentation attributes are invisible to every scanner in the gate, so
+    // this one is spelled out rather than left to be re-found.
     panel.innerHTML = `<div class="comps-tab__empty">
-      <span class="comps-tab__empty-icon"><svg width="32" height="32" viewBox="0 0 16 16" fill="currentColor" opacity="0.3"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg></span>
+      <span class="comps-tab__empty-icon"><svg width="32" height="32" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6"/><rect x="9" y="1" width="6" height="6"/><rect x="1" y="9" width="6" height="6"/><rect x="9" y="9" width="6" height="6"/></svg></span>
       <span class="comps-tab__empty-text">This build is not linked to any comps.</span>
     </div>`;
     return;
@@ -1316,9 +1304,9 @@ function renderCompsPanel() {
   const cards = comps.map((c) => {
     const name = escapeHtml(c.name || "Untitled Comp");
     const gmBadge = c.gameMode === "pve"
-      ? `<span class="comp-badge comp-badge--sm comp-badge--pve">PvE</span>`
+      ? `<span class="axi-chip comp-badge comp-badge--sm comp-badge--pve">PvE</span>`
       : c.gameMode === "wvw"
-        ? `<span class="comp-badge comp-badge--sm comp-badge--wvw">WvW</span>`
+        ? `<span class="axi-chip axi-chip--meta comp-badge comp-badge--sm comp-badge--wvw">WvW</span>`
         : "";
     const profIcons = _compTabProfIcons(c);
     const summary = _compTabPartySummary(c);
@@ -1340,7 +1328,7 @@ function renderCompsPanel() {
       </div>
       <div class="comps-tab__card-meta">
         <div class="comp-list-row__prof-icons">${profIcons}</div>
-        ${profIcons ? `<span class="comp-list-row__pipe">|</span>` : ""}
+        ${profIcons ? `<span class="comp-list-row__sep af-sep-diamond"></span>` : ""}
         <span class="comp-list-row__summary">${summary}</span>
       </div>
       <button type="button" class="comps-tab__toggle" data-comp-toggle="${escapeHtml(c.id)}">
@@ -1352,7 +1340,7 @@ function renderCompsPanel() {
   }).join("");
 
   panel.innerHTML = `<div class="comps-tab">
-    <div class="comps-tab__header">Linked Comps <span class="comps-tab__badge">${comps.length}</span></div>
+    <div class="comps-tab__header">Linked Comps <span class="comps-tab__badge axi-badge-count">${comps.length}</span></div>
     <div class="comps-tab__list">${cards}</div>
   </div>`;
 
@@ -1591,8 +1579,7 @@ function wireEvents() {
         if (!buildId) throw new Error("No build loaded");
         const build = state.builds.find((b) => b.id === buildId);
         if (!build?.publishedFileId) throw new Error("Build not published");
-        const theme = document.documentElement.getAttribute("data-theme");
-        const url = resolvePublishedUrl(build, state.onboarding, state.folders, theme);
+        const url = resolvePublishedUrl(build, state.onboarding, state.folders, currentShareAccent());
         if (!url) throw new Error("Could not resolve published URL");
         await window.desktopApi.writeClipboardText(url);
         flashItem(pubLinkItem, pubLinkDefault);
@@ -1778,8 +1765,14 @@ function wireEvents() {
     }
   });
 
-  // Left nav page switching
+  // Left nav page switching. The rail also carries the Settings cog at its
+  // foot, which is a rail button but not a page -- it opens the modal instead,
+  // so the page handler only binds items that name one.
   document.querySelectorAll(".leftnav__item").forEach((btn) => {
+    if (btn.dataset.action === "settings") {
+      btn.addEventListener("click", () => openSettingsModal());
+      return;
+    }
     btn.addEventListener("click", () => navigateToPage(btn.dataset.page));
   });
 

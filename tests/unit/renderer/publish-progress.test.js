@@ -361,3 +361,6 @@ describe("resolvePublishedUrl", () => {
     expect(resolvePublishedUrl(personalBuild, {}, [], null)).toBeNull();
   });
 });
+
+// currentShareAccent() is pinned in tests/unit/renderer/share-accent.test.js
+// under a real jsdom document, not this file's hand-rolled document mock.

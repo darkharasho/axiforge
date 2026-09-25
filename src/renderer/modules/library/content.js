@@ -1,6 +1,7 @@
 // Library content module — renders builds and folders in the active view mode.
 
 import { state } from "../state.js";
+import { professionSeriesStyle, professionStripStyle } from "../../../shared/professions.js";
 import { escapeHtml, formatRelativeTime } from "../utils.js";
 import { roleBadgeHtml } from '../roleEstimator.js';
 import { getVisibleBuilds, getVisibleFolders, getVisibleComps, libraryBuilds, libraryComps, libraryFolders, searchQuery, hasSearchQuery, buildMatchesQuery, compMatchesQuery } from "./folder-store.js";
@@ -178,11 +179,6 @@ function getEliteSpecName(build) {
   return null;
 }
 
-function profClass(profession) {
-  if (!profession) return "";
-  return `lib-prof--${profession.toLowerCase()}`;
-}
-
 function formatDate(value) {
   return formatRelativeTime(value) || "—";
 }
@@ -201,23 +197,26 @@ function pinStarHtml(build) {
 function profPillHtml(build) {
   const prof = build.profession;
   if (!prof) return "";
-  return `<span class="lib-pill lib-pill--prof ${profClass(prof)}">${escapeHtml(prof)}</span>`;
+  // Rule 7: the diamond carries the profession's colour, the label stays in
+  // the neutral ramp. A chip filled with the profession hue would be status
+  // (rule 5), and which profession a build is is not a status.
+  return `<span class="axi-chip af-chip--prof"><span class="axi-diamond axi-diamond--series" style="${professionSeriesStyle(prof)}"></span>${escapeHtml(prof)}</span>`;
 }
 
 function eliteSpecPillHtml(build) {
   const spec = getEliteSpecName(build);
   if (!spec) return "";
-  return `<span class="lib-pill lib-pill--spec">${escapeHtml(spec)}</span>`;
+  return `<span class="axi-chip">${escapeHtml(spec)}</span>`;
 }
 
 function gameModePillHtml(build) {
   const mode = gameModeLabel(build.gameMode || "pve");
-  return `<span class="lib-pill lib-pill--mode">${escapeHtml(mode)}</span>`;
+  return `<span class="axi-chip axi-chip--meta">${escapeHtml(mode)}</span>`;
 }
 
 function tagPillsHtml(build) {
   return (build.tags || [])
-    .map((t) => `<span class="lib-pill lib-pill--tag">${escapeHtml(t)}</span>`)
+    .map((t) => `<span class="axi-chip">${escapeHtml(t)}</span>`)
     .join("");
 }
 
@@ -306,7 +305,7 @@ function renderListView(container) {
     .map(
       (b) => `
         <div class="lib-list-row lib-list-row--build ${b.pinned ? "lib-list-row--pinned" : ""}" data-build-id="${escapeHtml(b.id)}">
-          <span class="lib-list-row__spec-icon ${profClass(b.profession)}">${getSpecIcon(b)}</span>
+          <span class="lib-list-row__spec-icon" style="${professionSeriesStyle(b.profession)}">${getSpecIcon(b)}</span>
           <span class="lib-list-row__title">${escapeHtml(b.title || "Untitled")}${folderPathHtml(b)}${itemSyncIndicatorHtml("build", b)}</span>
           <span class="lib-list-row__pills">
             ${profPillHtml(b)}${eliteSpecPillHtml(b)}${gameModePillHtml(b)}${tagPillsHtml(b)}${roleBadgeHtml(b, state.upgradeCatalog)}${buildUsageChipHtml(b)}
@@ -416,7 +415,7 @@ function renderTableView(container) {
       <li class="lib-tv__item" data-build-id="${escapeHtml(b.id)}">
         <div class="lib-tv__row lib-tv__row--build ${b.pinned ? "lib-tv__row--pinned" : ""}">
           <span class="lib-tv__action">${pinStarHtml(b)}</span>
-          <span class="lib-tv__icon ${profClass(b.profession)}">${getSpecIcon(b)}</span>
+          <span class="lib-tv__icon" style="${professionSeriesStyle(b.profession)}">${getSpecIcon(b)}</span>
           <span class="lib-tv__name"><span class="lib-tv__title">${escapeHtml(b.title || "Untitled")}</span>${folderPathHtml(b)}${itemSyncIndicatorHtml("build", b)}${buildUsageChipHtml(b, { compact: true })}</span>
           <span class="lib-tv__profession">${escapeHtml(b.profession || "")}</span>
           <span class="lib-tv__spec">${escapeHtml(eliteSpec || "")}</span>
@@ -518,9 +517,9 @@ function renderGridView(container) {
   const folderCards = folders
     .map(
       (f) => `
-        <div class="lib-grid-card lib-grid-card--folder" data-folder-id="${escapeHtml(f.id)}">
-          <div class="lib-grid-card__folder-icon">${folderIcon}${f.teamId ? `<span class="lib-shared-badge lib-shared-badge--grid" title="${escapeHtml(teamLabel(f))}">${shareIcon}</span>` : ""}</div>
-          <div class="lib-grid-card__title">${escapeHtml(f.name)}${contentSyncIndicatorHtml(f.id)}</div>
+        <div class="af-tile af-tile--row af-tile--folder" data-folder-id="${escapeHtml(f.id)}">
+          <div class="af-tile__folder-icon">${folderIcon}${f.teamId ? `<span class="lib-shared-badge lib-shared-badge--grid" title="${escapeHtml(teamLabel(f))}">${shareIcon}</span>` : ""}</div>
+          <div class="af-tile__title">${escapeHtml(f.name)}${contentSyncIndicatorHtml(f.id)}</div>
         </div>
       `
     )
@@ -529,17 +528,17 @@ function renderGridView(container) {
   const buildCards = builds
     .map(
       (b) => `
-        <div class="lib-grid-card lib-grid-card--build ${b.pinned ? "lib-grid-card--pinned" : ""} ${profClass(b.profession)}" data-build-id="${escapeHtml(b.id)}">
-          <div class="lib-grid-card__header">
-            <div class="lib-grid-card__spec-icon ${profClass(b.profession)}">${getSpecIcon(b)}</div>
+        <div class="af-tile af-tile--strip ${b.pinned ? "af-tile--pinned" : ""}" style="${professionStripStyle(b.profession)}" data-build-id="${escapeHtml(b.id)}">
+          <div class="af-tile__head">
+            <div class="af-tile__glyph" style="${professionSeriesStyle(b.profession)}">${getSpecIcon(b)}</div>
+            <div class="af-tile__title">${escapeHtml(b.title || "Untitled")}${itemSyncIndicatorHtml("build", b)}</div>
             ${buildUsageChipHtml(b, { compact: true })}${pinStarHtml(b)}
           </div>
-          <div class="lib-grid-card__title">${escapeHtml(b.title || "Untitled")}${itemSyncIndicatorHtml("build", b)}</div>
           ${folderPathHtml(b)}
-          <div class="lib-grid-card__pills">
+          <div class="af-tile__pills">
             ${profPillHtml(b)}${eliteSpecPillHtml(b)}${gameModePillHtml(b)}${roleBadgeHtml(b, state.upgradeCatalog)}
           </div>
-          <div class="lib-grid-card__date">${formatDate(b.updatedAt)}</div>
+          <div class="af-tile__meta">${formatDate(b.updatedAt)}</div>
         </div>
       `
     )
@@ -548,10 +547,10 @@ function renderGridView(container) {
   const compCards = comps
     .map(
       (c) => `
-        <div class="lib-grid-card lib-grid-card--comp" data-comp-id="${escapeHtml(c.id)}">
-          <div class="lib-grid-card__comp-icon">${compIcon}</div>
-          <div class="lib-grid-card__comp-body">
-            <div class="lib-grid-card__title">${escapeHtml(c.name || "Untitled Comp")}${itemSyncIndicatorHtml("comp", c)}</div>
+        <div class="af-tile af-tile--row" data-comp-id="${escapeHtml(c.id)}">
+          <div class="af-tile__comp-icon">${compIcon}</div>
+          <div class="af-tile__comp-body">
+            <div class="af-tile__title">${escapeHtml(c.name || "Untitled Comp")}${itemSyncIndicatorHtml("comp", c)}</div>
             ${compBadgeHtml(c)}
           </div>
         </div>
@@ -560,9 +559,13 @@ function renderGridView(container) {
     .join("");
 
   const sections = [];
-  if (folderCards) sections.push(`<div class="lib-grid lib-grid--folders">${folderCards}</div>`);
-  if (compCards) sections.push(`<div class="lib-grid lib-grid--comps">${compCards}</div>`);
-  if (buildCards) sections.push(`<div class="lib-grid">${buildCards}</div>`);
+  // data-grid marks the folder section for insertInlineInput(), which has to
+  // append a new-folder card to the folder grid specifically. It is a JS hook,
+  // not a style variant: the old .lib-grid--folders class carried both jobs,
+  // and the sizing half is now the --axi-grid-min knob below.
+  if (folderCards) sections.push(`<div class="lib-grid" data-grid="folders" style="--axi-grid-min: 170px">${folderCards}</div>`);
+  if (compCards) sections.push(`<div class="lib-grid" style="--axi-grid-min: 170px">${compCards}</div>`);
+  if (buildCards) sections.push(`<div class="lib-grid" style="--axi-grid-min: 200px">${buildCards}</div>`);
   container.innerHTML = sections.join("");
 
   bindContentEvents(container);
@@ -594,8 +597,8 @@ function renderIconView(container) {
   const buildItems = builds
     .map(
       (b) => `
-        <div class="lib-icon-item lib-icon-item--build ${b.pinned ? "lib-icon-item--pinned" : ""} ${profClass(b.profession)}" data-build-id="${escapeHtml(b.id)}">
-          <div class="lib-icon-item__icon ${profClass(b.profession)}">${getSpecIcon(b)}</div>
+        <div class="lib-icon-item lib-icon-item--build ${b.pinned ? "lib-icon-item--pinned" : ""}" data-build-id="${escapeHtml(b.id)}">
+          <div class="lib-icon-item__icon" style="${professionSeriesStyle(b.profession)}">${getSpecIcon(b)}</div>
           <div class="lib-icon-item__label">${escapeHtml(b.title || "Untitled")}${itemSyncIndicatorHtml("build", b)}${buildUsageChipHtml(b, { compact: true })}</div>
           ${folderPathHtml(b)}
         </div>
@@ -643,6 +646,7 @@ function renderColumnsView(container) {
     parentId: null,
     folderId: rootFolderId,
     compId: rootCompId,
+    title: state.currentFolder?.name || "Library",
   });
 
   // Subsequent columns based on selected folders/comps
@@ -656,7 +660,7 @@ function renderColumnsView(container) {
       // Comp selected: show its builds in next column, no sub-folders or sub-comps
       const selectedCompBuildIds = new Set(selectedComp.buildIds || []);
       const compBuilds = state.builds.filter((b) => selectedCompBuildIds.has(b.id));
-      columns.push({ folders: [], builds: compBuilds, comps: [], parentId: selectedId, folderId: null, compId: selectedId });
+      columns.push({ folders: [], builds: compBuilds, comps: [], parentId: selectedId, folderId: null, compId: selectedId, title: selectedComp.name || "Untitled Comp" });
       break; // comps are flat — no further nesting
     }
 
@@ -679,7 +683,8 @@ function renderColumnsView(container) {
       .filter((c) => compMatchesQuery(c, query))
       .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
 
-    columns.push({ folders: childFolders, builds: childBuilds, comps: childComps, parentId: selectedId, folderId: selectedId, compId: null });
+    const selectedFolder = libraryFolders().find((f) => f.id === selectedId);
+    columns.push({ folders: childFolders, builds: childBuilds, comps: childComps, parentId: selectedId, folderId: selectedId, compId: null, title: selectedFolder?.name || "Folder" });
   }
 
   const columnsHtml = columns
@@ -719,9 +724,9 @@ function renderColumnsView(container) {
           ? foreignFolderChipHtml(b, colComp)
           : buildUsageChipHtml(b, { compact: true });
         items.push(`
-          <div class="lib-col__item lib-col__item--build ${profClass(b.profession)}"
+          <div class="lib-col__item lib-col__item--build"
                data-build-id="${escapeHtml(b.id)}" data-col-index="${colIndex}">
-            <span class="lib-col__icon ${profClass(b.profession)}">${getSpecIcon(b)}</span>
+            <span class="lib-col__icon" style="${professionSeriesStyle(b.profession)}">${getSpecIcon(b)}</span>
             <span class="lib-col__name">${escapeHtml(b.title || "Untitled")}${folderPathHtml(b)}${itemSyncIndicatorHtml("build", b)}</span>
             ${roleBadgeHtml(b, state.upgradeCatalog)}${sourceChip}
           </div>
@@ -738,7 +743,12 @@ function renderColumnsView(container) {
       const colAttr = col.compId
         ? `data-col-comp-id="${escapeHtml(col.compId)}"`
         : `data-col-folder-id="${escapeHtml(col.folderId || "")}"`;
-      return `<div class="lib-col" data-col="${colIndex}" ${colAttr}>${items.join("")}</div>`;
+      const count = col.folders.length + (col.comps || []).length + col.builds.length;
+      const head = `<div class="lib-col__head">
+        <span class="axi-eyebrow lib-col__head-title">${escapeHtml(col.title || "")}</span>
+        <span class="axi-badge-count">${count}</span>
+      </div>`;
+      return `<div class="lib-col" data-col="${colIndex}" ${colAttr}>${head}<div class="lib-col__body">${items.join("")}</div></div>`;
     })
     .join("");
 

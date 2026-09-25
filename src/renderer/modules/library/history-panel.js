@@ -32,12 +32,12 @@ function _injectStyles() {
       bottom: 0;
       width: 380px;
       max-width: 100vw;
-      background: var(--panel, #141518);
-      border-left: 1px solid var(--line, #1e1f24);
+      background: var(--axi-surface);
+      border-left: var(--axi-border-panel) solid var(--axi-ink-line);
       display: flex;
       flex-direction: column;
       z-index: 1101;
-      box-shadow: var(--shadow-lg, -4px 0 24px rgba(0,0,0,0.4));
+      box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
       animation: history-panel-in 0.16s ease-out;
     }
     @keyframes history-panel-in {
@@ -53,14 +53,13 @@ function _injectStyles() {
       justify-content: space-between;
       gap: 8px;
       padding: 14px 16px;
-      background: var(--panel-gradient, none);
-      border-bottom: 1px solid var(--line, #1e1f24);
+      border-bottom: var(--axi-border-hairline) solid var(--axi-rule);
       flex-shrink: 0;
     }
     .history-panel__title {
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--text, #e2e3e8);
+      font: var(--axi-t-label);
+      letter-spacing: var(--axi-ls-label);
+      color: var(--axi-text);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -71,14 +70,13 @@ function _injectStyles() {
       background: none;
       border: none;
       cursor: pointer;
-      color: var(--text-dim, #646670);
+      color: var(--axi-text-faint);
       padding: 4px;
-      border-radius: var(--radius-xs, 4px);
       display: flex;
       align-items: center;
       flex-shrink: 0;
     }
-    .history-panel__close:hover { color: var(--text, #e2e3e8); background: var(--hover-subtle, rgba(255,255,255,0.05)); }
+    .history-panel__close:hover { color: var(--axi-text); background: var(--axi-surface-raised); }
     .history-panel__list {
       overflow-y: auto;
       flex: 1;
@@ -87,8 +85,8 @@ function _injectStyles() {
     .history-panel__empty {
       padding: 32px 16px;
       text-align: center;
-      color: var(--text-dim, #646670);
-      font-size: 13px;
+      color: var(--axi-text-faint);
+      font: var(--axi-t-small);
       line-height: 1.6;
     }
 
@@ -99,34 +97,42 @@ function _injectStyles() {
       padding: 11px 14px 12px 36px;
       transition: background 0.12s ease;
     }
-    .history-panel__entry:hover { background: var(--hover-subtle, rgba(255,255,255,0.05)); }
+    .history-panel__entry:hover { background: var(--axi-surface-raised); }
     /* The row body opens the side-by-side compare; the actions block below it
        does not (its own handlers own those clicks). */
     .history-panel__entry-body { cursor: pointer; }
+    /* The rail the events hang off. A rule, not an edge: it is inside the
+       panel's running content. */
     .history-panel__entry::before {
       content: "";
       position: absolute;
       left: 19px;
       top: 0;
       bottom: 0;
-      width: 1px;
-      background: var(--line, #1e1f24);
+      width: var(--axi-border-hairline);
+      background: var(--axi-rule);
     }
     .history-panel__entry:first-child::before { top: 17px; }
     .history-panel__entry:last-child::before { bottom: auto; height: 17px; }
+    /* Rule 7. A local edit is the ordinary case and is outlined; a sync, a
+       revert and a deletion each get an ink, and nothing else on the timeline
+       does -- three inks is already the most a column of events can carry
+       before the colour stops sorting anything. */
     .history-panel__dot {
       position: absolute;
-      left: 15px;
-      top: 14px;
-      width: 9px;
-      height: 9px;
-      border-radius: 50%;
-      background: var(--panel, #141518);
-      border: 2px solid var(--text-dim, #646670);
+      left: 14px;
+      top: 13px;
+      width: 12px;
+      height: 12px;
+      flex: none;
+      transform: rotate(45deg);
+      background: var(--axi-ground);
+      border: var(--axi-border-control) solid var(--axi-ink-line);
       box-sizing: border-box;
     }
-    .history-panel__dot--sync { border-color: var(--accent-2, #64aaf0); }
-    .history-panel__dot--revert { border-color: var(--accent, #c89848); }
+    .history-panel__dot--sync { background: var(--axi-meta); }
+    .history-panel__dot--revert { background: var(--axi-accent); }
+    .history-panel__dot--deleted { background: var(--axi-danger); }
 
     .history-panel__entry-meta {
       display: flex;
@@ -134,38 +140,43 @@ function _injectStyles() {
       gap: 6px;
       margin-bottom: 3px;
     }
+    /* No scale step: normal-weight meta at 11px. --axi-t-micro is that size
+       but 800-weight caps type, and --axi-t-small is 13.5px, so nothing fits.
+       Same case as comps.css's .party-cov__toggle-text; every "same case as
+       __entry-time" below is this one. */
     .history-panel__entry-time {
       font-size: 11px;
-      color: var(--text-dim, #646670);
+      color: var(--axi-text-faint);
     }
     .history-panel__badge {
-      font-size: 9px;
-      padding: 1px 5px;
-      border-radius: 3px;
-      font-weight: 700;
+      display: inline-block;
+      padding: 1px 7px;
+      border: var(--axi-border-hairline) solid var(--axi-rule);
+      background: transparent;
+      color: var(--axi-text-faint);
+      font: var(--axi-t-micro);
+      letter-spacing: var(--axi-ls-micro);
       text-transform: uppercase;
-      letter-spacing: 0.04em;
     }
-    .history-panel__badge--local { background: var(--hover-subtle, rgba(255,255,255,0.05)); color: var(--text-dim, #646670); }
-    .history-panel__badge--sync { background: rgba(var(--accent-2-rgb, 100,170,240), 0.14); color: var(--accent-2, #64aaf0); }
-    .history-panel__badge--revert { background: rgba(var(--accent-rgb, 200,152,72), 0.14); color: var(--accent, #c89848); }
-    .history-panel__badge--deleted { background: rgba(var(--danger-rgb, 214,92,92), 0.14); color: var(--danger, #d65c5c); }
+    .history-panel__badge--sync { border-color: var(--axi-meta); color: var(--axi-meta); }
+    .history-panel__badge--revert { border-color: var(--axi-accent); color: var(--axi-accent); }
+    .history-panel__badge--deleted { border-color: var(--axi-danger); color: var(--axi-danger); }
     /* The build is in the trash: dim the entry so the list reads at a glance,
        but keep it fully legible — this is the row you came here to act on. */
-    .history-panel__entry--deleted .history-panel__entry-build { color: var(--danger, #d65c5c); }
+    .history-panel__entry--deleted .history-panel__entry-build { color: var(--axi-danger); }
     .history-panel__entry-build {
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--accent-2, #64aaf0);
+      font: var(--axi-t-micro);
+      letter-spacing: var(--axi-ls-micro);
+      color: var(--axi-meta);
       margin-bottom: 2px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
     .history-panel__entry-summary {
-      font-size: 12px;
+      font: var(--axi-t-small);
       line-height: 1.45;
-      color: var(--text-light, #aeafb8);
+      color: var(--axi-text-dim);
       margin-bottom: 8px;
       word-break: break-word;
     }
@@ -185,65 +196,66 @@ function _injectStyles() {
       align-items: center;
       gap: 3px;
       padding: 2px 5px;
-      border: 1px solid var(--line, #1e1f24);
-      border-radius: 999px;
+      border: var(--axi-border-hairline) solid var(--axi-rule);
     }
-    .hist-strip__arrow { font-size: 9px; color: var(--text-dim, #646670); }
+    /* No scale step: a single arrow glyph, not prose. */
+    .hist-strip__arrow { font-size: 9px; color: var(--axi-text-faint); }
     .hist-strip__icon {
       width: 18px;
       height: 18px;
-      border-radius: 3px;
       object-fit: cover;
       flex-shrink: 0;
     }
-    .hist-strip__icon--svg { display: inline-flex; opacity: 0.7; }
+    .hist-strip__icon--svg { display: inline-flex; color: var(--axi-text-faint); }
     .hist-strip__icon--svg svg { width: 100%; height: 100%; fill: currentColor; }
     .hist-strip__icon--empty {
       display: inline-block;
-      border: 1px dashed var(--line, #1e1f24);
-      border-radius: 3px;
+      border: var(--axi-border-hairline) dashed var(--axi-rule);
       box-sizing: border-box;
     }
-    .hist-strip__more { font-size: 11px; color: var(--text-dim, #646670); }
+    /* No scale step: same case as __entry-time. */
+    .hist-strip__more { font-size: 11px; color: var(--axi-text-faint); }
 
     /* Dimmed until the row is hovered or keyboard-focused, so a long feed reads
        as history first and a wall of buttons second. */
-    .history-panel__actions { opacity: 0.5; transition: opacity 0.12s ease; }
+    .history-panel__actions { color: var(--axi-text-faint); transition: color 0.12s ease; }
     .history-panel__entry:hover .history-panel__actions,
-    .history-panel__entry:focus-within .history-panel__actions { opacity: 1; }
+    .history-panel__entry:focus-within .history-panel__actions { color: var(--axi-text); }
     .history-panel__revert {
-      font-size: 11px;
+      font: var(--axi-t-micro);
+      letter-spacing: var(--axi-ls-micro);
       padding: 4px 10px;
-      border-radius: var(--radius-xs, 4px);
-      border: 1px solid var(--line, #1e1f24);
+      border: var(--axi-border-hairline) solid var(--axi-rule);
       background: transparent;
-      color: var(--text-light, #aeafb8);
+      color: var(--axi-text-dim);
       cursor: pointer;
-      transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+      transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease, transform 0.1s, box-shadow 0.1s;
     }
     .history-panel__revert:hover:not(:disabled) {
-      background: var(--hover-accent, rgba(200,152,72,0.12));
-      border-color: rgba(var(--accent-rgb, 200,152,72), 0.45);
-      color: var(--accent, #c89848);
+      transform: translate(-2px, -2px);
+      box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+      background: var(--axi-surface-raised);
+      border-color: var(--axi-accent);
+      color: var(--axi-accent);
     }
     .history-panel__revert:focus-visible {
-      outline: 2px solid var(--focus-ring, rgba(200,152,72,0.26));
+      outline: var(--axi-border-control) solid var(--axi-accent);
       outline-offset: 1px;
     }
-    .history-panel__revert:disabled { opacity: 0.35; cursor: not-allowed; }
+    .history-panel__revert:disabled { color: var(--axi-text-faint); cursor: not-allowed; }
 
     .history-panel__confirm {
       display: flex;
       flex-direction: column;
       gap: 8px;
       padding: 8px 9px;
-      border-radius: var(--radius-sm, 6px);
-      border: 1px solid rgba(var(--accent-rgb, 200,152,72), 0.28);
-      background: rgba(var(--accent-rgb, 200,152,72), 0.07);
+      border: var(--axi-border-hairline) solid var(--axi-accent);
+      background: var(--axi-surface-raised);
     }
+    /* No scale step: same case as __entry-time -- a normal-weight sentence. */
     .history-panel__confirm-text {
       font-size: 11px;
-      color: var(--text-light, #aeafb8);
+      color: var(--axi-text-dim);
       line-height: 1.45;
     }
     .history-panel__confirm-buttons {
@@ -252,15 +264,40 @@ function _injectStyles() {
       justify-content: flex-end;
     }
     .history-panel__confirm-yes {
-      border-color: var(--btn-primary-to, #a87828);
-      background: linear-gradient(180deg, var(--btn-primary-from, #c89848), var(--btn-primary-to, #a87828));
-      color: #17120a;
+      background: var(--axi-accent);
+      color: var(--axi-accent-ink);
+      box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+      /* No scale step: weight emphasis over the type __revert already sets on
+         this same button; a font: shorthand would reset that. */
       font-weight: 600;
     }
-    .history-panel__confirm-yes:hover:not(:disabled) {
-      background: linear-gradient(180deg, var(--btn-primary-from-hover, #d0a858), var(--btn-primary-to-hover, #b89038));
-      border-color: var(--btn-primary-to-hover, #b89038);
-      color: #17120a;
+    /* Same pair, same shape as history-compare.js's: __revert's :hover is rule
+       4 case 1 (translate plus a gained 3px block) while __confirm-yes rests on
+       a block already, so it is case 3 -- keep the translate, deepen 3px -> 6px.
+       On its own, .history-panel__confirm-yes:hover:not(:disabled) ties
+       __revert's hover at (0,3,0) and would win only by sitting later in the
+       file, so a reorder could silently swap them; naming both classes makes it
+       (0,4,0) and the win independent of source order. This confirm flow is not
+       emitted from this file today (it lives in history-compare.js), so the tie
+       is latent rather than live -- the rules stay per Global Constraint 10, and
+       this is the selector shape a revival should start from, matching the
+       markup history-compare.js actually emits (both classes on one button). */
+    .history-panel__revert.history-panel__confirm-yes:hover:not(:disabled) {
+      background: var(--axi-accent);
+      color: var(--axi-accent-ink);
+      box-shadow: var(--axi-offset-control-hover) var(--axi-offset-control-hover) 0 var(--axi-ink-line);
+    }
+
+    /* ── Reduced motion ──────────────────────────────────────────────── */
+    /* The package's block (axi.css:149-166) enumerates only its own .axi-*
+       selectors, so it never reaches an app-local lift, and its global
+       "* { transition-duration: .01ms }" rule makes a lift INSTANT
+       rather than absent -- which is exactly why the package cancels transform
+       separately. Same shape and reason as comps.css's block. */
+    @media (prefers-reduced-motion: reduce) {
+      .history-panel__revert:hover:not(:disabled) {
+        transform: none !important;
+      }
     }
   `;
   document.head.appendChild(style);
@@ -275,7 +312,10 @@ function _isSync(source) {
 function _badgeClass(source) {
   if (_isSync(source)) return "history-panel__badge--sync";
   if (source === "revert") return "history-panel__badge--revert";
-  return "history-panel__badge--local";
+  // "local" is the unmodified badge -- its rule was removed when it became the
+  // default, so emitting the name put a class with no selector in the markup.
+  // Same disposition as _dotClass() below.
+  return "";
 }
 
 function _dotClass(source) {

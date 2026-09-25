@@ -1,50 +1,68 @@
-/* AxiForge — Notes tab styles */
+/* AxiForge — Notes tab styles.
+   Shared: this sheet is imported by src/site/styles.css as well, so every rule
+   here also draws the published SPA's and build.axi.link's notes. */
 
+/* The editor is one raised surface holding a toolbar band and a writing field,
+   so it takes the panel step (rule 3) and its children are its interior rather
+   than a stack of boxes of their own. overflow: hidden stays for the embeds
+   and the textarea's own scroll, not for a corner — the corner is square. */
 .notes-editor {
   display: flex;
   flex-direction: column;
   min-height: calc(100vh - 340px);
-  background: var(--bg-2);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
+  background: var(--axi-surface);
+  border: var(--axi-border-panel) solid var(--axi-ink-line);
+  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
   overflow: hidden;
 }
 
 /* ── Toolbar ──────────────────────────────────────────────────────────── */
 
+/* A band across the head of the panel: a raised fill off the panel, closed by
+   the panel-weight ink rule that separates it from the writing field. */
 .notes-toolbar {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 6px;
   padding: 8px 12px;
-  background: var(--panel-2);
-  border-bottom: 1px solid var(--line-soft);
+  background: var(--axi-surface-raised);
+  border-bottom: var(--axi-border-panel) solid var(--axi-ink-line);
   flex-wrap: wrap;
 }
 
+/* Each button is a thing you press, so it is a control-weight box (rule 3):
+   a flat fill, an ink outline, no resting block. The gap above is 6px rather
+   than the old 2px so the blocks a hover draws have somewhere to fall. */
 .notes-toolbar__btn {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 32px;
   height: 32px;
-  border: none;
-  background: transparent;
-  color: var(--muted);
-  border-radius: 6px;
+  border: var(--axi-border-control) solid var(--axi-ink-line);
+  background: var(--axi-surface);
+  color: var(--axi-text-dim);
   cursor: pointer;
-  font-size: 0.85rem;
-  font-weight: 600;
-  transition: background 0.12s, color 0.12s;
+  font: var(--axi-t-label);
+  letter-spacing: var(--axi-ls-label);
+  transition: transform 0.12s, box-shadow 0.12s, color 0.12s;
 }
 
+/* Rule 4: a control has no resting block, so its hover both moves it and
+   draws the block for the first time. The movement is what says clickable —
+   no tint changes hands. */
 .notes-toolbar__btn:hover {
-  background: rgba(var(--accent-rgb), 0.1);
-  color: var(--accent);
+  color: var(--axi-text);
+  transform: translate(-2px, -2px);
+  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
 }
 
+/* Unavailable is drawn by dropping the glyph to the darkest neutral on the
+   ramp, not by fading the whole control: rule 2 leaves no partial opacity to
+   spend, and the box staying put is what says "this button exists but not
+   now" rather than "this button is half here". */
 .notes-toolbar__btn:disabled {
-  opacity: 0.35;
+  color: var(--axi-rule);
   cursor: default;
   pointer-events: none;
 }
@@ -59,44 +77,50 @@
   stroke-linejoin: round;
 }
 
+/* A separator is a rule inside the panel, not an outline: --axi-rule at the
+   hairline weight (rule 8). The width reads the same token so the divider and
+   a prose rule stay one thickness. */
 .notes-toolbar__sep {
-  width: 1px;
+  width: var(--axi-border-hairline);
   height: 20px;
-  background: var(--line-soft);
-  margin: 0 6px;
+  background: var(--axi-rule);
+  margin: 0 4px;
 }
 
 .notes-toolbar__right {
   margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 6px;
 }
 
 .notes-toolbar__preview {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 12px;
-  border: 1px solid var(--line);
-  background: transparent;
-  color: var(--muted);
-  border-radius: 6px;
+  padding: 5px 12px;
+  border: var(--axi-border-control) solid var(--axi-ink-line);
+  background: var(--axi-surface);
+  color: var(--axi-text-dim);
   cursor: pointer;
-  font-size: 0.75rem;
-  font-weight: 500;
-  transition: border-color 0.12s, color 0.12s, background 0.12s;
+  font: var(--axi-t-label);
+  letter-spacing: var(--axi-ls-label);
+  transition: transform 0.12s, box-shadow 0.12s, color 0.12s;
 }
 
 .notes-toolbar__preview:hover {
-  border-color: var(--accent);
-  color: var(--accent);
+  color: var(--axi-text);
+  transform: translate(-2px, -2px);
+  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
 }
 
+/* Preview is either on or off, and rule 5 says a chosen thing is filled: the
+   accent at full strength with the ink text that rides on it, never the .1
+   accent wash this used to carry. The hover above only moves it, so the fill
+   survives the lift. */
 .notes-toolbar__preview--active {
-  background: rgba(var(--accent-rgb), 0.1);
-  border-color: var(--accent);
-  color: var(--accent);
+  background: var(--axi-accent);
+  color: var(--axi-accent-ink);
 }
 
 .notes-toolbar__preview svg {
@@ -111,15 +135,19 @@
 
 /* ── Textarea ─────────────────────────────────────────────────────────── */
 
+/* The writing field is the panel's interior, so it carries no edge of its own;
+   it sits on --axi-ground the way prose's code blocks do, which is what marks
+   it as the surface being typed into rather than another raised thing.
+   Markdown source is monospace, so it is the one place --axi-mono applies. */
 .notes-textarea {
   flex: 1;
   width: 100%;
   padding: 16px 20px;
-  background: transparent;
+  background: var(--axi-ground);
   border: none;
-  color: var(--text);
-  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
-  font-size: 0.85rem;
+  color: var(--axi-text);
+  font-family: var(--axi-mono);
+  font-size: 13.5px;
   line-height: 1.6;
   resize: vertical;
   outline: none;
@@ -127,95 +155,123 @@
 }
 
 .notes-textarea::placeholder {
-  color: rgba(166, 187, 222, 0.4);
+  color: var(--axi-text-faint);
 }
 
 /* ── Preview ──────────────────────────────────────────────────────────── */
 
+/* Rendered markdown the user wrote, so it is drawn to the same prose settings
+   the package publishes in .axi-prose: the --axi-t-* scale with its paired
+   tracking, body ink dim and the headings full strength. It is written out
+   against .notes-preview rather than by putting .axi-prose on the element
+   because two of the package's prose decisions are wrong here — it outlines
+   and blocks its table and <pre> as objects dropped into an article, where
+   rule 8 wants this table drawn as the panel's interior, and its h2 buys a
+   38px margin and a top rule that a notes pane has no room for. */
 .notes-preview {
   flex: 1;
   padding: 20px 24px;
-  line-height: 1.7;
-  font-size: 0.9rem;
   overflow-y: auto;
+  font: var(--axi-t-body);
+  color: var(--axi-text-dim);
 }
 
-.notes-preview h1 { font-size: 1.4rem; margin: 0 0 12px; color: var(--text); }
-.notes-preview h2 { font-size: 1.15rem; margin: 16px 0 8px; color: var(--text); }
-.notes-preview h3 { font-size: 1rem; margin: 12px 0 6px; color: var(--text); }
-.notes-preview p { margin: 0 0 12px; color: var(--text); }
-.notes-preview strong { color: var(--text); }
+.notes-preview > :first-child { margin-top: 0; }
+.notes-preview > :last-child { margin-bottom: 0; }
+
+.notes-preview h1 { margin: 0 0 14px; font: var(--axi-t-h1); letter-spacing: var(--axi-ls-h1); color: var(--axi-text); }
+.notes-preview h2 { margin: 22px 0 10px; font: var(--axi-t-h2); letter-spacing: var(--axi-ls-h2); color: var(--axi-text); }
+.notes-preview h3 { margin: 16px 0 8px; font: var(--axi-t-h3); letter-spacing: var(--axi-ls-h3); color: var(--axi-text); }
+.notes-preview p { margin: 0 0 14px; font: var(--axi-t-body); }
+.notes-preview strong { color: var(--axi-text); font-weight: 800; }
 .notes-preview em { font-style: italic; }
-.notes-preview ul, .notes-preview ol { padding-left: 20px; margin: 0 0 12px; }
-.notes-preview li { margin: 4px 0; color: var(--text); }
+.notes-preview ul, .notes-preview ol { padding-left: 22px; margin: 0 0 14px; }
+.notes-preview li { margin: 0 0 6px; font: var(--axi-t-body); }
+
+/* A rule between passages, at the prose hairline weight in --axi-rule — the
+   same line the table rows use, since both are interior to the panel. */
 .notes-preview hr {
+  height: 0;
   border: none;
-  border-top: 1px solid var(--line);
-  margin: 16px 0;
+  border-top: var(--axi-border-hairline) solid var(--axi-rule);
+  margin: 18px 0;
 }
-.notes-preview a { color: var(--link); text-decoration: none; }
+
+.notes-preview a { color: var(--axi-accent); font-weight: 600; text-decoration: none; text-underline-offset: 2px; }
 .notes-preview a:hover { text-decoration: underline; }
 
+/* Rule 8: a table is the panel's interior. It gets no outline and no block of
+   its own — the editor panel around it is the raised element — and the rows
+   are separated by hairline rules so the eye can still run down a column. */
 .notes-preview table {
   width: 100%;
   border-collapse: collapse;
-  margin: 12px 0;
+  margin: 14px 0;
 }
 
-.notes-preview th,
 .notes-preview td {
   padding: 8px 12px;
-  border: 1px solid var(--line);
+  border-top: var(--axi-border-hairline) solid var(--axi-rule);
   text-align: left;
-  font-size: 0.85rem;
+  font: var(--axi-t-small);
 }
 
 .notes-preview th {
-  background: var(--panel-2);
-  color: var(--muted);
-  font-weight: 600;
+  padding: 8px 12px;
+  text-align: left;
+  background: var(--axi-surface-raised);
+  color: var(--axi-text);
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
+  text-transform: uppercase;
+  border-bottom: var(--axi-border-hairline) solid var(--axi-rule);
 }
 
 /* ── Embedded images ─────────────────────────────────────────────────── */
 
+/* A pasted image is content, not a raised thing: it takes the width and gets
+   out of the way. Square, like everything else. */
 .notes-preview img:not(.notes-mention__icon) {
   max-width: 100%;
-  border-radius: 8px;
   margin: 8px 0;
   display: block;
 }
 
 /* ── YouTube embed ───────────────────────────────────────────────────── */
 
+/* A card lifted out of the running text: panel step, ink outline, hard block
+   (rule 3). The extra bottom margin is the room the block falls into. The
+   letterbox behind the video is --axi-ink-line, the same near-black the
+   outline is drawn in, so the frame and the bars it encloses agree. */
 .notes-embed {
-  margin: 12px 0;
+  margin: 14px 0 20px;
   max-width: 480px;
-  border-radius: 8px;
   overflow: hidden;
-  border: 1px solid var(--line);
-  background: #000;
+  border: var(--axi-border-panel) solid var(--axi-ink-line);
+  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
+  background: var(--axi-ink-line);
 }
 
 .notes-embed__meta {
   padding: 10px 12px;
-  background: var(--panel-2);
-  border-bottom: 1px solid var(--line);
+  background: var(--axi-surface-raised);
+  border-bottom: var(--axi-border-panel) solid var(--axi-ink-line);
 }
 
 .notes-embed__author {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--muted);
-  margin-bottom: 4px;
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
+  text-transform: uppercase;
+  color: var(--axi-text-faint);
+  margin-bottom: 5px;
 }
 
 .notes-embed__title {
   display: block;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--accent);
+  font: var(--axi-t-label);
+  letter-spacing: var(--axi-ls-label);
+  color: var(--axi-accent);
   text-decoration: none;
-  line-height: 1.3;
 }
 
 .notes-embed__title:hover {
@@ -246,6 +302,11 @@
   object-fit: cover;
 }
 
+/* The play affordance is a control sitting on the thumbnail, so it is drawn as
+   one: a solid accent plate with an ink outline. It used to be a brand glyph
+   resting at .8 opacity, which rule 2 forbids and which needed the thumbnail
+   dimmed behind it to stay legible — an opaque plate needs no scrim over the
+   image at all, so --axi-scrim is not spent here either. */
 .notes-embed__play {
   position: absolute;
   top: 50%;
@@ -253,112 +314,143 @@
   transform: translate(-50%, -50%);
   width: 68px;
   height: 48px;
-  opacity: 0.8;
-  transition: opacity 0.15s;
+  background: var(--axi-accent);
+  border: var(--axi-border-control) solid var(--axi-ink-line);
+  color: var(--axi-accent-ink);
+  transition: transform 0.15s, box-shadow 0.15s;
   pointer-events: none;
 }
 
+/* Rule 4's lift, driven from the video box because the plate itself takes no
+   pointer events. The translate has to keep the centring transform, or the
+   plate would jump to the corner on hover. */
 .notes-embed__video:hover .notes-embed__play {
-  opacity: 1;
+  transform: translate(-50%, -50%) translate(-2px, -2px);
+  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
 }
 
+/* Both play glyphs used to ship a brand-coloured body behind the triangle,
+   hard-coded as fill attributes in the markup. The plate is the body now, so
+   notes.js and render-notes.js emit the triangle alone and it takes the ink
+   that rides on an accent fill. Painting it from here rather than from the
+   attribute is what lets the accent change without touching four emitters. */
 .notes-embed__play svg {
   width: 100%;
   height: 100%;
+  fill: currentColor;
 }
 
 /* ── Twitch embed ────────────────────────────────────────────────────── */
 
+/* A Twitch embed is the same card as a YouTube one. The brand purple it used
+   to carry on the title, and the second near-black it used as a ground, are
+   both gone: this language has one accent and one ink line, and a per-service
+   hue would be a colour that means "which site" rather than anything about
+   the build (rule 10's reasoning, applied outside a chart). */
 .notes-embed--twitch {
-  background: #18181b;
+  background: var(--axi-ink-line);
 }
 
-.notes-embed--twitch .notes-embed__title {
-  color: #bf94ff;
-}
-
-.notes-embed--twitch .notes-embed__title:hover {
-  color: #d4b2ff;
-}
-
+/* The plate standing in for a stream that has no thumbnail yet: a flat raised
+   fill with the panel-weight ink edge. It gets no block, unlike the embed
+   around it — it is positioned flush to the inside of that panel's clipped
+   box, so a hard offset would have nowhere to fall and would only be cut off.
+   The gradient it used to carry is a rule-1 violation twice over (two stops
+   and a soft transition across a surface). */
 .notes-embed__twitch-placeholder {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, #18181b 0%, #2c2c35 100%);
+  background: var(--axi-surface-raised);
+  border: var(--axi-border-panel) solid var(--axi-ink-line);
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: center;
+  color: var(--axi-rule);
 }
 
+/* Quiet is the neutral ramp, not 15% of a brand purple (rule 2): the mark is
+   drawn at full strength in the darkest rule ink, so it reads as a watermark
+   without any colour resting half-way over the ground. */
 .notes-embed__twitch-placeholder svg {
   width: 96px;
   height: 100px;
-  opacity: 0.15;
 }
+
+.notes-embed__twitch-placeholder svg path { fill: currentColor; }
 
 /* ── @ Mention chips ──────────────────────────────────────────────────── */
 
+/* A mention is commentary about a thing — "this note refers to that build" —
+   not a status asserted about it, so rule 5 draws it outlined: a hairline in
+   --axi-rule with accent text, at the prose weight because it sits in a line
+   of running text. The three stacked accent washes it used to carry (fill,
+   border, hover fill) were rule 2 three times over. */
 .notes-mention {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   padding: 1px 8px;
-  background: rgba(var(--accent-rgb), 0.12);
-  border: 1px solid rgba(var(--accent-rgb), 0.25);
-  border-radius: 4px;
-  color: var(--accent);
-  font-size: 0.82rem;
-  font-weight: 500;
+  background: none;
+  border: var(--axi-border-hairline) solid var(--axi-rule);
+  color: var(--axi-accent);
+  font: var(--axi-t-small);
   cursor: pointer;
   vertical-align: baseline;
 }
 
+/* The hover fills from the neutral ramp rather than the accent: filling with
+   the accent would turn an annotation into a status for as long as the cursor
+   sat on it, which is the one thing rule 5 asks a reader never to have to
+   second-guess. */
 .notes-mention:hover {
-  background: rgba(var(--accent-rgb), 0.2);
-  border-color: rgba(var(--accent-rgb), 0.4);
+  background: var(--axi-surface-raised);
+  color: var(--axi-text);
 }
 
 .notes-mention__icon {
   width: 16px;
   height: 16px;
-  border-radius: 2px;
   flex-shrink: 0;
 }
 
 .notes-mention__label {
-  font-size: 0.65rem;
-  line-height: 1;
-  color: var(--muted);
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
+  color: var(--axi-text-faint);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
 }
 
 /* ── Autocomplete popup ───────────────────────────────────────────────── */
 
+/* A popover raised off the page, so it takes the panel step and the hard
+   block. The 32px-blurred drop shadow it used to float on is deleted rather
+   than tightened: depth in this language is an offset, and nothing blurs. */
 .notes-autocomplete {
   position: absolute;
   width: 300px;
   max-height: 320px;
   overflow-y: auto;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  background: var(--axi-surface);
+  border: var(--axi-border-panel) solid var(--axi-ink-line);
+  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
   z-index: 100;
 }
 
 .notes-autocomplete__header {
   padding: 8px 12px;
-  font-size: 0.7rem;
-  color: var(--muted);
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
+  color: var(--axi-text-faint);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  border-bottom: 1px solid var(--line-soft);
+  border-bottom: var(--axi-border-hairline) solid var(--axi-rule);
 }
 
+/* The rows are the popover's interior (rule 8), not a stack of boxes inside
+   it: hairline rules between them, no outline and no block per row. */
 .notes-autocomplete__item {
   display: flex;
   align-items: center;
@@ -368,21 +460,45 @@
   transition: background 0.1s;
 }
 
-.notes-autocomplete__item:hover,
+.notes-autocomplete__item + .notes-autocomplete__item {
+  border-top: var(--axi-border-hairline) solid var(--axi-rule);
+}
+
+/* Moving the cursor down a list is not a series of status changes, so the
+   hover is the neutral ramp (rule 8). */
+.notes-autocomplete__item:hover {
+  background: var(--axi-surface-raised);
+}
+
+/* The keyboard selection is a chosen row, which rule 5 fills: the accent at
+   full strength, with everything in the row flipping to the ink that rides on
+   it — including the category chip, which drops its own fill so a chip does
+   not sit as a second plate inside the one that is already asserting the
+   choice. This rule follows :hover so a selected row keeps its fill while the
+   pointer passes over it. */
 .notes-autocomplete__item--selected {
-  background: rgba(var(--accent-rgb), 0.08);
+  background: var(--axi-accent);
+}
+
+.notes-autocomplete__item--selected .notes-autocomplete__item-name,
+.notes-autocomplete__item--selected .notes-autocomplete__item-category,
+.notes-autocomplete__item--selected .notes-autocomplete__item-icon--svg {
+  color: var(--axi-accent-ink);
+}
+
+.notes-autocomplete__item--selected .notes-autocomplete__item-category {
+  background: none;
 }
 
 .notes-autocomplete__item-icon {
   width: 24px;
   height: 24px;
-  border-radius: 4px;
   flex-shrink: 0;
 }
 
 .notes-autocomplete__item-name {
-  font-size: 0.85rem;
-  color: var(--text);
+  font: var(--axi-t-small);
+  color: var(--axi-text);
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -390,34 +506,44 @@
 }
 
 .notes-autocomplete__item-category {
-  font-size: 0.65rem;
-  color: var(--muted);
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
+  color: var(--axi-text-faint);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  padding: 2px 6px;
-  background: rgba(166, 187, 222, 0.08);
-  border-radius: 3px;
+  padding: 3px 6px;
+  background: var(--axi-surface-raised);
   flex-shrink: 0;
 }
 
 /* ── Feature hint ─────────────────────────────────────────────────────── */
 
+/* A note about the feature rather than a state of it, so it is outlined at the
+   prose hairline weight and not filled (rule 5). The one word that matters —
+   the trigger character — carries the accent. */
 .notes-feature-hint {
   padding: 10px 14px;
-  margin-top: 8px;
-  background: rgba(var(--accent-rgb), 0.06);
-  border: 1px solid rgba(var(--accent-rgb), 0.15);
-  border-radius: 8px;
-  font-size: 0.78rem;
-  color: var(--muted);
+  margin-top: 10px;
+  background: none;
+  border: var(--axi-border-hairline) solid var(--axi-rule);
+  font: var(--axi-t-small);
+  color: var(--axi-text-faint);
 }
 
 .notes-feature-hint strong {
-  color: var(--accent);
+  color: var(--axi-accent);
 }
 
 /* ── Mirror div (for caret positioning) ───────────────────────────────── */
 
+/* An invisible twin of the textarea, measured to place the autocomplete at the
+   caret. It must not carry type or box metrics of its own: notes.js
+   (getCaretCoords) copies fontFamily, fontSize, fontWeight, lineHeight,
+   letterSpacing, wordSpacing, textIndent, padding, border, boxSizing and width
+   off the live textarea's computed style as inline styles, so the twin follows
+   whatever .notes-textarea above ends up with and the caret maths cannot
+   drift. Only what the JS does NOT set belongs here — and white-space:
+   pre-wrap has to stay, because that is a textarea's own default and the JS
+   does not copy it. */
 .notes-mirror {
   position: absolute;
   top: 0;
@@ -457,7 +583,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: var(--text);
+  color: var(--axi-text);
 }
 
 .notes-autocomplete__item-icon--svg svg {

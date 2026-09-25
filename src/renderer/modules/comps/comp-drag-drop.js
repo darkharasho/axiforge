@@ -51,11 +51,17 @@ export function wireCompDragDrop(callbacks) {
           const oe = evt.originalEvent;
           const grabX = oe ? oe.clientX - rect.left : rect.width / 2;
           const grabY = oe ? oe.clientY - rect.top : rect.height / 2;
+          // The ghost is a clone of .mini-card, and since batch 5 the card
+          // carries its own --axi-series inline (packages/forge-render's
+          // renderMiniBuildCard), so the clone arrives already holding the
+          // build's colour — nothing to resolve here. It used to need
+          // resolving because the hue came from a lib-prof--* class whose rule
+          // is scoped to .forge-render, and SortableJS's fallback clone is
+          // appended to <body>, outside any .forge-render ancestor. An inline
+          // custom property has no such scope.
           requestAnimationFrame(() => {
             const ghost = document.querySelector(".comp-drag-icon-ghost");
-            if (ghost) {
-              ghost.style.transform = `translate(${grabX - 21}px, ${grabY - 21}px)`;
-            }
+            if (ghost) ghost.style.transform = `translate(${grabX - 21}px, ${grabY - 21}px)`;
           });
         },
         onEnd() {
@@ -185,8 +191,11 @@ export function wireCompDragDrop(callbacks) {
   }
 
   // ── Party line reorder sortable ──────────────────────────────────
+  // The lines' own parent, not the panel: the party board is a panel with a
+  // head above the lines now, and Sortable treats every child of its container
+  // as a candidate — pointed at the panel it would offer to reorder the head.
   const linesContainerEl = document.querySelector(
-    ".comp-detail__party-panel"
+    ".comp-detail__party-scroll"
   );
   if (linesContainerEl) {
     _sortableInstances.push(

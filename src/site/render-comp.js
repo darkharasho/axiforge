@@ -6,14 +6,13 @@ import { formatFactHtml } from "../renderer/modules/detail-panel.js";
 import { initMobileDetection } from "./mobile.js";
 import { partyNumberIcon } from "../renderer/modules/library/heroicons.js";
 import { renderNotes } from "./render-notes.js";
+import { SLOT_ROLES, professionSeriesStyle, slotSeriesStyle } from "../shared/professions.js";
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
-const LINE_COLORS = { red: "#d63a3a", blue: "#3a8fd6" };
-
 function recolorSvg(svg, color) {
-  if (!color || color === "normal" || !LINE_COLORS[color]) return svg;
-  return svg.replace(/fill:#(?!000000)[0-9a-fA-F]{6}/gi, `fill:${LINE_COLORS[color]}`);
+  if (!color || color === "normal" || !SLOT_ROLES[color]) return svg;
+  return svg.replace(/fill:#(?!000000)[0-9a-fA-F]{6}/gi, `fill:${SLOT_ROLES[color]}`);
 }
 
 function getProfIcon(build, color) {
@@ -27,11 +26,6 @@ function getEliteSpecName(build) {
     if (s.elite && s.name) return s.name;
   }
   return null;
-}
-
-function profClass(profession) {
-  if (!profession) return "";
-  return `lib-prof--${profession.toLowerCase()}`;
 }
 
 function getDisplayName(build) {
@@ -66,7 +60,7 @@ function renderTagSlot(category, builds) {
 }
 
 // ── Tag-slot hover popover (parity with the desktop app) ───────────────────
-let _tagHoverData = new Map();   // categoryId → { name, builds: [{ name, icon, pClass }] }
+let _tagHoverData = new Map();   // categoryId → { name, builds: [{ name, icon, series }] }
 let _tagHoverEl = null;
 
 function buildTagHoverData(comp) {
@@ -75,7 +69,7 @@ function buildTagHoverData(comp) {
     const builds = (cat.buildIds || [])
       .map((id) => comp.builds?.[id])
       .filter(Boolean)
-      .map((b) => ({ name: getDisplayName(b), icon: getProfIcon(b, "normal"), pClass: profClass(b.profession) }));
+      .map((b) => ({ name: getDisplayName(b), icon: getProfIcon(b, "normal"), series: professionSeriesStyle(b.profession) }));
     _tagHoverData.set(cat.id, { name: cat.name || "Tag", builds });
   }
 }
@@ -89,7 +83,7 @@ function showTagHover(slotEl) {
   if (!data) return;
   hideTagHover();
   const rows = data.builds.length
-    ? data.builds.map((b) => `<div class="comp-tag-pop__row ${b.pClass}">
+    ? data.builds.map((b) => `<div class="comp-tag-pop__row"${b.series ? ` style="${b.series}"` : ""}>
         <span class="comp-tag-pop__icon">${b.icon}</span>
         <span class="comp-tag-pop__name">${escapeHtml(b.name)}</span>
       </div>`).join("")
@@ -111,18 +105,21 @@ function renderSlot(build, color) {
   if (!build) {
     return `<div class="comp-slot comp-slot--empty"></div>`;
   }
-  const pClass = profClass(build.profession);
   const title = escapeHtml(getDisplayName(build));
-  const colorAttr = color && color !== "normal" ? ` data-slot-color="${color}"` : "";
+  // Rule 10: the identifying hue is domain data and arrives per-instance on
+  // --axi-series, the same knob the desktop's slot reads. A role marker
+  // (Condi/Heal) outranks the profession.
+  const series = slotSeriesStyle(color, build.profession);
+  const styleAttr = series ? ` style="${series}"` : "";
   if (build.spaUrl) {
     return `
       <a href="${escapeHtml(build.spaUrl)}" target="_blank" rel="noopener"
-         class="comp-slot comp-slot--filled ${pClass}"${colorAttr} title="${title}">
+         class="comp-slot comp-slot--filled"${styleAttr} title="${title}">
         <span class="comp-slot__icon">${getProfIcon(build, color)}</span>
       </a>`;
   }
   return `
-    <div class="comp-slot comp-slot--filled ${pClass}"${colorAttr} title="${title}">
+    <div class="comp-slot comp-slot--filled"${styleAttr} title="${title}">
       <span class="comp-slot__icon">${getProfIcon(build, color)}</span>
     </div>`;
 }
@@ -170,8 +167,9 @@ function renderBuildPool(comp) {
   const cards = Object.entries(builds).map(([id, build]) => renderPoolCard(build, buildColors[id])).join("");
   return `
     <div class="comp-pool">
-      <div class="comp-pool-header">
-        <span class="comp-pool-title">BUILDS <span class="comp-pool-count">(${Object.keys(builds).length})</span></span>
+      <div class="comp-detail__panel-head">
+        <p class="comp-detail__panel-title">Builds</p>
+        <span class="comp-pool-count">${Object.keys(builds).length}</span>
       </div>
       <div class="comp-pool-list">
         ${cards || '<p class="comp-pool-empty">No builds</p>'}
@@ -181,11 +179,16 @@ function renderBuildPool(comp) {
 
 // ── Tags + Notes ─────────────────────────────────────────────────────────
 
+// A tag is a neutral fact about the comp, so it rides the unmodified .axi-chip
+// — the same call the desktop's .comp-detail__tag makes. The SPA's tags are
+// read-only, so none of that class's room for a remove button applies here.
 function renderTagsRow(comp) {
   const tags = comp.tags || [];
   if (!tags.length) return "";
-  const pills = tags.map((t) => `<span class="comp-detail__tag">${escapeHtml(t)}</span>`).join("");
-  return `<div class="comp-detail__tags-row">${pills}</div>`;
+  const pills = tags
+    .map((t) => `<span class="axi-chip comp-head__tag">${escapeHtml(t)}</span>`)
+    .join("");
+  return `<div class="comp-head__tags">${pills}</div>`;
 }
 
 // ── Party Coverage ───────────────────────────────────────────────────────
@@ -605,33 +608,58 @@ function bindCompTabs(app) {
   });
 }
 
+/** Filled slots over total capacity, across every party line. The desktop
+    counts this in the party board's head; here it is the head of the page,
+    because the SPA opens on a comp somebody linked you to and "how big is
+    this" is the first thing you want to know about it. */
+function countSlots(comp) {
+  return (comp.partyLines || []).reduce(
+    (acc, line) => ({
+      filled: acc.filled + (line.slots || []).filter(Boolean).length,
+      capacity: acc.capacity + (line.capacity || 5),
+    }),
+    { filled: 0, capacity: 0 },
+  );
+}
+
 export function renderCompPage(app, comp) {
   const name = escapeHtml(comp.name || "Untitled Comp");
   const gameMode = comp.gameMode || "";
   const hasNotes = Boolean(comp.notes?.trim());
+  const slots = countSlots(comp);
 
   app.innerHTML = `
     <div class="comp-detail">
-      <div class="comp-detail__topbar">
-        <span class="comp-detail__name">${name}</span>
-        <span class="comp-detail__spacer"></span>
-        ${gameMode ? `<span class="comp-detail__slot-counter">${escapeHtml(gameMode.toUpperCase())}</span>` : ""}
-      </div>
-      ${renderTagsRow(comp)}
+      <section class="axi-panel comp-head">
+        <div class="comp-head__id">
+          <h1 class="comp-head__title">${name}</h1>
+          ${renderTagsRow(comp)}
+        </div>
+        ${gameMode ? `<span class="axi-chip axi-chip--meta comp-head__mode">${escapeHtml(gameMode.toUpperCase())}</span>` : ""}
+        <div class="axi-stat axi-stat--accent comp-head__stat">
+          <span class="axi-stat__n">${slots.filled}</span>
+          <span class="axi-stat__k">of ${slots.capacity} slots</span>
+        </div>
+      </section>
       ${hasNotes ? `
       <div class="site-tabs">
         <button type="button" class="site-tab site-tab--active" data-comp-tab="comp">COMP</button>
         <button type="button" class="site-tab" data-comp-tab="notes">NOTES</button>
       </div>` : ""}
       <div class="site-tab-content site-tab-content--active" data-comp-panel="comp">
-        <div class="comp-detail__body">
-          <div class="comp-detail__party-panel">
-            ${renderPartyLines(comp)}
-            ${renderPartyCoverage(comp)}
-          </div>
-          <div class="comp-detail__pool-panel">
+        <div class="comp-detail__body comp-detail__body--boards">
+          <section class="axi-panel comp-detail__party-panel">
+            <div class="comp-detail__panel-head">
+              <p class="comp-detail__panel-title">Party Lines</p>
+            </div>
+            <div class="comp-board__body">
+              ${renderPartyLines(comp)}
+              ${renderPartyCoverage(comp)}
+            </div>
+          </section>
+          <section class="axi-panel comp-detail__pool-panel">
             ${renderBuildPool(comp)}
-          </div>
+          </section>
         </div>
       </div>
       ${hasNotes ? '<div class="site-tab-content comp-detail__notes-tab" data-comp-panel="notes"></div>' : ""}

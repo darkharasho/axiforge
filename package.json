@@ -1,6 +1,6 @@
 {
   "name": "axiforge-desktop",
-  "version": "0.24.0",
+  "version": "1.0.0",
   "workspaces": [
     "packages/*"
   ],
@@ -137,6 +137,14 @@
         "babel-jest",
         {}
       ],
+      "^.+/src/shared/.+\\.js$": [
+        "babel-jest",
+        {}
+      ],
+      "^.+/tests/unit/shared/.+\\.js$": [
+        "babel-jest",
+        {}
+      ],
       "^.+/node_modules/marked/.+\\.js$": [
         "babel-jest",
         {}
@@ -165,6 +173,7 @@
   },
   "license": "MIT",
   "dependencies": {
+    "@axiapps/axi-design": "^1.10.0",
     "@axiapps/code": "*",
     "@axiapps/gw2-data": "*",
     "acorn": "^8.17.0",

@@ -1,6 +1,8 @@
 // Application state — single source of truth for the renderer.
 // All modules read/mutate this shared object by reference.
 
+import { DEFAULT_SIDEBAR_W } from "./library/sidebar-width.js";
+
 export const state = {
   user: null,
   onboarding: null,
@@ -36,7 +38,7 @@ export const state = {
     sortField: "sortOrder",
     sortDirection: "asc",
     sidebarOpen: true,
-    sidebarWidth: 200,
+    sidebarWidth: DEFAULT_SIDEBAR_W,
     sidebarExpandedFolders: [],
     activeFilters: {},
   },

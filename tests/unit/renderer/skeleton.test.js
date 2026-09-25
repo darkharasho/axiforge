@@ -122,10 +122,16 @@ describe("library skeleton templates", () => {
     expect(skeletonTemplates["library-table"]).toContain("skel-lib-row-icon");
   });
 
-  test("library-grid contains 6 cards with centered icon using lib-grid classes", () => {
-    const cards = (skeletonTemplates["library-grid"].match(/class="lib-grid-card"/g) || []).length;
+  test("library-grid contains 6 cards with centered icon using af-tile classes", () => {
+    // Task 24: the grid card was rebuilt on .af-tile after Task 5 folded the
+    // old .lib-grid-card into it (batch 2), which had left this skeleton
+    // drawing boxless, layoutless cards with no selector behind them. Task 12
+    // added af-tile--strip so the card's 22px cap area is occupied rather
+    // than blank, which is why the class match below is no longer an exact
+    // "af-tile" string.
+    const cards = (skeletonTemplates["library-grid"].match(/class="af-tile af-tile--strip"/g) || []).length;
     expect(cards).toBe(6);
-    expect(skeletonTemplates["library-grid"]).toContain("lib-grid-card__header");
+    expect(skeletonTemplates["library-grid"]).toContain("af-tile__glyph");
     expect(skeletonTemplates["library-grid"]).toContain("skel-lib-card-icon");
   });
 

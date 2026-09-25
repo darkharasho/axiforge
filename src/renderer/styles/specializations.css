@@ -1,4 +1,10 @@
-/* AxiForge — specializations styles */
+/* AxiForge — specialization cards.
+
+   Three cards, each one panel: an emblem at the left, nine trait buttons in a
+   grid, and a line drawn through the traits that are chosen. The whole screen
+   is rule 8's split read twice over — the card is the raised thing, the line
+   through it is a rule, and only what the user presses is a box. */
+
 .specs-with-detail {
   display: flex;
   gap: 10px;
@@ -22,10 +28,16 @@
   justify-items: center;
 }
 
+/* The wrapper reserves the room the panel's block falls into. Without it the
+   block lands outside .spec-card's own min(1060px, 100%) box — 6px past the
+   right edge of a full-width editor, which is enough to put a horizontal
+   scrollbar on the page, and 6px below the last card, where it would be
+   clipped by the pane instead. Padding rather than margin so the three cards
+   stay the same width as each other at every scale. */
 .spec-card {
   --spec-scale: 1.1;
   position: relative;
-  padding: 0;
+  padding: 0 var(--axi-offset-panel) var(--axi-offset-panel) 0;
   background: transparent;
   min-height: 0;
   width: min(1060px, 100%);
@@ -53,6 +65,10 @@
   height: 100%;
 }
 
+/* The trigger is a hit area laid over the emblem, not a control of its own —
+   the emblem underneath is what the eye reads. `opacity: 0` is the one end of
+   the scale rule 2 has no quarrel with: the element asserts no colour at all
+   rather than a laundered one. */
 .spec-select-overlay .cselect__trigger {
   width: 100%;
   height: 100%;
@@ -75,12 +91,18 @@
 }
 
 
+/* The card is the raised element on this screen: panel weight, panel block,
+   square. Everything below is drawn as its interior. The wiki art the module
+   sets inline sits on this fill; the 0.04→0.08 black wash that used to lie
+   over it in an ::after went with rule 1, and the darkening layer that rode
+   in the inline `background-image` went with it for the same reason. */
 .spec-card__panel {
   position: relative;
-  border: 1px solid rgba(var(--accent-rgb), 0.35);
-  border-radius: 4px;
+  box-sizing: border-box;
+  border: var(--axi-border-panel) solid var(--axi-ink-line);
+  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
   padding: calc(8px * var(--spec-scale)) calc(12px * var(--spec-scale)) calc(10px * var(--spec-scale));
-  background-color: var(--bg-2);
+  background-color: var(--axi-surface);
   background-position: center;
   background-size: 100% 100%;
   background-repeat: no-repeat;
@@ -88,25 +110,13 @@
   overflow: hidden;
 }
 
-.spec-card__panel::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.08));
-  pointer-events: none;
-}
-
+/* An elite spec is the one card worth singling out, so it takes the accent on
+   its outline — the same call site-mobile.css already made for the collapsed
+   elite header, kept identical here so the phone and the desktop single the
+   same card out the same way. The inset 20px glow it used to carry is gone:
+   this language raises a thing with a block and never with a glow. */
 .spec-card__panel--elite {
-  border-color: rgba(210, 165, 50, 0.7);
-  box-shadow: 0 0 20px rgba(190, 145, 30, 0.2) inset;
-}
-
-.spec-emblem--elite {
-  filter: drop-shadow(0 0 5px rgba(220, 175, 60, 0.9)) drop-shadow(0 0 14px rgba(200, 150, 40, 0.5));
-}
-
-.spec-emblem--elite:hover {
-  filter: drop-shadow(0 0 7px rgba(240, 200, 80, 1)) drop-shadow(0 0 20px rgba(210, 165, 50, 0.7));
+  border-color: var(--axi-accent);
 }
 
 .spec-card__panel > * {
@@ -134,6 +144,11 @@
   padding: calc(2px * var(--spec-scale)) calc(6px * var(--spec-scale)) calc(4px * var(--spec-scale));
 }
 
+/* The connector is a rule, not a raised thing (rule 8): it is the line the
+   card's interior is ruled with, so it is drawn at the hairline weight in
+   --axi-rule like any other internal rule, and the module hands it no colour
+   of its own. Its caps are butt rather than round for the reason the corners
+   are square — nothing in this language rounds. */
 .spec-connector {
   position: absolute;
   inset: 0;
@@ -141,26 +156,47 @@
   z-index: -1;
 }
 
+.spec-connector path {
+  fill: none;
+  stroke: var(--axi-rule);
+  stroke-width: var(--axi-border-hairline);
+  stroke-linecap: butt;
+}
+
 @keyframes connectorFlow {
   to { stroke-dashoffset: -32; }
 }
 
-.spec-connector .connector-flow {
+/* The two dashed paths trace the route the chosen traits make, so they are the
+   accent at full strength over the resting rule — a chosen thing, not a
+   brighter version of the line underneath. */
+.spec-connector .connector-flow,
+.spec-connector .connector-flow2 {
+  stroke: var(--axi-accent);
   animation: connectorFlow 2.4s linear infinite;
 }
 
 .spec-connector .connector-flow2 {
-  animation: connectorFlow 2.4s linear infinite;
   animation-delay: -1.2s;
 }
 
+/* The emblem is the card's primary control — pressing it swaps the whole
+   specialization — so it is a control-weight box on the card's fill, and its
+   hover is rule 4's *first* case: it rests blockless, so the hover draws
+   --axi-offset-control (3px) for the first time rather than the 6px a control
+   already standing on a block deepens to. A 6px block behind a 2px lift moves
+   the lower-right edge down, and the control reads as growing instead of
+   rising — the trap comps.css documents for the coverage pills. The two
+   stacked cyan drop-shadows it used to wear, and the brighter pair on hover,
+   are exactly the glow rule 4 rules out. */
 .spec-emblem {
+  box-sizing: border-box;
   width: calc(96px * var(--spec-scale));
   height: calc(96px * var(--spec-scale));
   appearance: none;
   -webkit-appearance: none;
-  border: 0;
-  background: transparent;
+  border: var(--axi-border-control) solid var(--axi-ink-line);
+  background: var(--axi-surface);
   clip-path: none;
   display: grid;
   place-items: center;
@@ -168,15 +204,13 @@
   margin: 0;
   line-height: 0;
   cursor: pointer;
-  box-shadow: none;
   outline: none;
-  filter: drop-shadow(0 0 5px rgba(100, 220, 255, 0.85)) drop-shadow(0 0 14px rgba(80, 200, 255, 0.45));
-  transition: filter 0.16s ease;
+  transition: transform 0.16s ease, box-shadow 0.16s ease;
 }
 
-.spec-emblem:hover:not(.spec-emblem--elite) {
-  box-shadow: none;
-  filter: drop-shadow(0 0 7px rgba(160, 240, 255, 1)) drop-shadow(0 0 20px rgba(100, 220, 255, 0.7));
+.spec-emblem:hover {
+  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  transform: translate(-2px, -2px);
 }
 
 .spec-emblem img {
@@ -184,13 +218,11 @@
   height: calc(86px * var(--spec-scale));
   display: block;
   object-fit: contain;
-  border-radius: 0;
   border: 0;
 }
 
 .trait-column {
   border: 0;
-  border-radius: 0;
   background: transparent;
   padding: 0;
   display: grid;
@@ -202,7 +234,14 @@
   justify-self: center;
 }
 
+/* A minor trait is not chosen, it comes with the tier — so its cell is part of
+   the ruling rather than a box: a hairline in --axi-rule running across the
+   column, continuous with the connector that passes through the same point.
+   It is drawn here as well as in the SVG so the tiers still read as wired
+   together on the collapsed phone card and in a read-only render, where the
+   connector is not drawn at all. */
 .trait-minor-anchor {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -210,104 +249,110 @@
   width: auto;
 }
 
+.trait-minor-anchor::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: var(--axi-border-hairline);
+  background: var(--axi-rule);
+}
+
 .trait-minor-anchor .trait-btn img {
   width: calc(40px * var(--spec-scale));
   height: calc(40px * var(--spec-scale));
 }
 
+/* A trait button is the one thing in the grid the user acts on, so it is a
+   control-weight box. It rests without a block: nine of them each carrying
+   its own 3px block inside a card that already carries 6px is two planes
+   arguing, which is the failure rule 8 names for a screen this dense. The
+   block is what the hover draws, together with the translate — that, and not
+   a tint or a brightened icon, is what says "press me". Blockless at rest
+   means the hover is rule 4's first case, so it draws 3px, not the 6px a
+   control already on a block deepens to (see .spec-emblem:hover above). */
 .trait-btn {
-  border: none;
-  border-radius: 2px;
-  background: transparent;
+  box-sizing: border-box;
+  border: var(--axi-border-control) solid var(--axi-ink-line);
+  background: var(--axi-surface);
   height: calc(46px * var(--spec-scale));
   display: grid;
   place-items: center;
   cursor: pointer;
   padding: 0;
-  transition: opacity 0.16s ease, filter 0.16s ease;
+  transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease, filter 0.16s ease;
 }
 
 .trait-btn:hover {
-  border-color: transparent;
-  background: transparent;
-  box-shadow: none;
-  transform: none;
+  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  transform: translate(-2px, -2px);
 }
 
+/* An unavailable trait is an absence, not a dimmed presence: it drops to the
+   faint end of the ramp and to the hairline rule weight, which reads as "not
+   a box you press" without laundering a colour the way the old opacity: .45
+   did (rule 2). Its icon is greyed rather than faded — see the img rule
+   below. */
 .trait-btn:disabled {
   cursor: default;
-  opacity: 0.45;
+  border: var(--axi-border-hairline) solid var(--axi-rule);
+  color: var(--axi-text-faint);
 }
 
 .trait-btn:disabled:hover {
   transform: none;
-  border-color: transparent;
-  background: transparent;
   box-shadow: none;
 }
 
 .trait-btn img {
   width: calc(30px * var(--spec-scale));
   height: calc(30px * var(--spec-scale));
-  border-radius: 2px;
 }
 
-.trait-column--major .trait-btn {
-  background: transparent;
-  border-color: transparent;
-  opacity: 1;
-}
-
+/* A trait the user has not taken is an absence too, and the ramp cannot reach
+   inside a bitmap: grayscale is the one filter the gate leaves alone for
+   exactly this case, because it rests at full strength and asserts no hue.
+   The old grayscale(60%) brightness(0.7) paired it with the laundering rule 2
+   forbids. */
 .trait-column--major .trait-btn:not(.trait-btn--active):not(.trait-btn--always) img {
-  filter: grayscale(60%) brightness(0.7);
+  filter: grayscale(1);
 }
 
-.trait-column--major .trait-btn:not(.trait-btn--active):not(.trait-btn--always):hover img {
-  filter: grayscale(20%) brightness(0.9);
+/* Guarded by (hover: hover) for the same reason as skills.css's icon hover:
+   on touch, :hover latches after a tap and left an unselected trait sitting
+   brightened. web-mobile.css used to cancel it by restating the resting
+   filter above, in a second file, as a copy. */
+@media (hover: hover) {
+  .trait-column--major .trait-btn:not(.trait-btn--active):not(.trait-btn--always):hover img {
+    filter: none;
+  }
 }
 
-.trait-column--major .trait-btn:hover {
-  border-color: transparent;
-  background: transparent;
-  box-shadow: none;
-  opacity: 1;
-}
+/* A taken trait is the one thing on this card the user chose, so rule 5 fills
+   it: the accent at full strength with the ink that rides on it. The gold
+   drop-shadow the active icon used to wear was the tint saying the same thing
+   a second time, illegibly.
 
+   A minor comes with the tier — it is in effect, but nobody picked it, and
+   rule 5 keeps a fill for what was asserted rather than what was granted. So
+   it takes the accent as an outline and leaves the fill alone. That is also
+   what keeps the card readable: filling both would put eighteen accent plates
+   on a full build and the nine the user actually chose would stop standing
+   out at all. */
 .trait-btn--active {
-  border-color: transparent;
-  background: transparent;
-  opacity: 1;
-  box-shadow: none;
-}
-
-.trait-btn--active img {
-  filter: drop-shadow(0 0 6px rgba(255, 196, 56, 0.95)) drop-shadow(0 0 3px rgba(255, 230, 140, 0.8));
-}
-
-.trait-btn--active:hover {
-  border-color: transparent;
-  box-shadow: none;
+  background: var(--axi-accent);
+  color: var(--axi-accent-ink);
 }
 
 .trait-btn--always {
-  border-color: transparent;
-  background: transparent;
-  box-shadow: none;
-}
-
-.trait-btn--always:hover {
-  border-color: transparent;
-  background: transparent;
-  box-shadow: none;
-  transform: none;
+  border-color: var(--axi-accent);
+  color: var(--axi-accent);
 }
 
 .trait-minor-anchor .trait-btn--always {
   height: calc(50px * var(--spec-scale));
   width: calc(40px * var(--spec-scale));
-  border: 0;
-  background: transparent;
-  border-radius: 0;
   padding: 0;
 }
 
@@ -320,14 +365,14 @@
   height: calc(32px * var(--spec-scale));
 }
 
+/* The minor icon keeps its hexagon — that shape is the game's own marker for a
+   minor trait, and it is clipped, not outlined. The two-layer cyan ring it
+   carried was a blurred block in a colour that is not the ink line, which is
+   both halves of rule 3 at once. */
 .trait-minor-anchor .trait-btn--always img {
   width: calc(26px * var(--spec-scale));
   height: calc(26px * var(--spec-scale));
-  border-radius: 0;
   clip-path: polygon(25% 5%, 75% 5%, 96% 50%, 75% 95%, 25% 95%, 4% 50%);
-  box-shadow:
-    0 0 0 1px rgba(153, 230, 255, 0.48),
-    0 0 9px rgba(107, 224, 255, 0.24);
 }
 
 /* ─── Empty states ──────────────────────────────────────────────────────── */
@@ -343,9 +388,18 @@
   padding: 40px 20px;
 }
 
+/* The pulse is motion and stays. The resting opacity: .7 underneath it does
+   not: the keyframes already own the element's opacity, so the static value
+   only laundered the ink a second time. */
 .spec-empty-state__icon {
-  opacity: 0.7;
+  color: var(--axi-text-faint);
   animation: emptyDiamondPulse 3s ease-in-out infinite;
+}
+
+.spec-empty-state__icon svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: var(--axi-border-hairline);
 }
 
 @keyframes emptyDiamondPulse {
@@ -354,11 +408,9 @@
 }
 
 .spec-empty-state__text {
-  font-family: var(--font-display, 'Outfit', sans-serif);
-  font-size: 0.85rem;
-  font-weight: 500;
-  color: rgba(166, 187, 222, 0.5);
-  letter-spacing: 0.08em;
+  font: var(--axi-t-eyebrow);
+  letter-spacing: var(--axi-ls-eyebrow);
+  color: var(--axi-text-faint);
   text-transform: uppercase;
   margin: 0;
 }
@@ -368,20 +420,29 @@
   --spec-scale: 1.1;
 }
 
+/* An empty slot is not a raised thing — there is nothing in it to raise — so
+   it takes no block and is drawn as an outline about an absence (rule 5): a
+   dashed rule in --axi-rule. It keeps the panel's 4px weight rather than the
+   hairline so an empty card and a filled one occupy the same box to the pixel
+   and the column does not shift as slots fill. */
 .spec-card__panel--empty {
   position: relative;
-  border: 1px dashed rgba(166, 187, 222, 0.18);
-  border-radius: 4px;
+  box-sizing: border-box;
+  border: var(--axi-border-panel) dashed var(--axi-rule);
   padding: calc(8px * var(--spec-scale)) calc(12px * var(--spec-scale)) calc(10px * var(--spec-scale));
-  background: rgba(7, 15, 29, 0.4);
+  background: var(--axi-ground);
   min-height: calc(148px * var(--spec-scale));
   overflow: hidden;
   transition: border-color 0.25s ease, background 0.25s ease;
 }
 
+/* Hovering the slot is the one place the accent belongs before anything is
+   chosen: it marks the slot about to be filled. The fill steps up the neutral
+   ramp instead of tinting with the accent at 3%, which is rule 2's violation
+   written as a hover. */
 .spec-card__panel--empty:hover {
-  border-color: rgba(var(--accent-rgb), 0.35);
-  background: rgba(var(--accent-rgb), 0.03);
+  border-color: var(--axi-accent);
+  background: var(--axi-surface-raised);
 }
 
 .spec-card__empty-body {
@@ -393,26 +454,35 @@
   gap: 10px;
 }
 
+/* The diamond is the family motif (rule 7), drawn as an outline in the same
+   rule ink the empty card's edge uses. It brightens to the accent on hover
+   with the slot it sits in, and grows — the two opacity steps it used to fade
+   between are gone. */
 .spec-empty-diamond {
-  opacity: 0.6;
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  color: var(--axi-rule);
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.spec-empty-diamond svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: var(--axi-border-hairline);
 }
 
 .spec-card__panel--empty:hover .spec-empty-diamond {
-  opacity: 0.9;
+  color: var(--axi-accent);
   transform: scale(1.08);
 }
 
 .spec-empty-label {
-  font-size: 0.72rem;
-  font-weight: 500;
-  color: rgba(166, 187, 222, 0.4);
-  letter-spacing: 0.04em;
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
+  color: var(--axi-text-faint);
   transition: color 0.2s ease;
 }
 
 .spec-card__panel--empty:hover .spec-empty-label {
-  color: rgba(166, 187, 222, 0.65);
+  color: var(--axi-text);
 }
 
 /* Position the spec-select overlay for empty cards over the full panel */

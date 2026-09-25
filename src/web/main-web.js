@@ -1,4 +1,6 @@
 import { Buffer as NodeBuffer } from "buffer";
+import "@axiapps/axi-design/axi.css";
+import "@axiapps/axi-design/accents.css";
 import "./web.css";
 import "./web-mobile.css";
 import { createWebApi } from "./webApi/index.js";

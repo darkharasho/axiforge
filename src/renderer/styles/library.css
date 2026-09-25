@@ -6,43 +6,62 @@
   padding: 0;
 }
 
+/* Grid rather than flex so the resizer can own a real track (its own 5px
+   column) instead of borrowing space from its neighbours with negative
+   margins. --lib-sidebar-w is unchanged from before this pass: it is set on
+   .lib-page by sidebar-resize.js, which this task does not touch, so the
+   variable name stays put rather than becoming --af-lib-sidebar-w. The 240px
+   fallback mirrors DEFAULT_SIDEBAR_W in modules/library/sidebar-width.js --
+   it paints only for the instant before applySidebarWidth() runs, and a
+   stylesheet cannot import the constant, so the two move together by hand.
+   The collapsed width and the drag both animate through grid-template-columns
+   now, which is why it -- not .lib-sidebar's own width -- carries the
+   transition. */
 .lib-page {
-  --lib-sidebar-w: 200px;
-  display: flex;
-  height: calc(100vh - var(--titlebar-h));
+  display: grid;
+  grid-template-columns: var(--lib-sidebar-w, 240px) 5px 1fr;
+  height: calc(100vh - var(--af-titlebar-h));
   min-height: 0;
-  overflow: hidden;
+  transition: grid-template-columns 0.15s ease;
+  background: var(--axi-ground);
 }
 
+/* Every child of .lib-page names its own column. The tracks are positional --
+   rail, handle, content -- and two rules below take the handle out of flow
+   with display: none (collapsed, and coarse pointers). Under auto-placement
+   that promotes .lib-main into track 2, which BOTH of those rules size at 0,
+   so collapsing the sidebar rendered the library as a 40px rail and nothing
+   else. Explicit placement makes a missing child cost nothing but its own
+   track. */
+.lib-sidebar { grid-column: 1; }
+.lib-resizer { grid-column: 2; }
+.lib-main { grid-column: 3; }
+
 .lib-sidebar {
-  flex-shrink: 0;
-  width: var(--lib-sidebar-w);
-  background: var(--panel-2);
-  border-right: 1px solid var(--line-soft);
+  min-width: 0;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
   overflow-x: hidden;
-  transition: width 0.15s ease;
+  padding: 12px 10px;
+  background: var(--axi-surface);
+  border-right: var(--axi-border-panel) solid var(--axi-ink-line);
 }
 
 .lib-sidebar--collapsed {
-  width: 40px;
+  padding: 12px 0;
   overflow: hidden;
 }
 
-.lib-sidebar--open {
-  width: var(--lib-sidebar-w);
+/* Collapsed drops the sidebar to a 40px icon rail and the resizer's track
+   with it -- there is nothing to grab when the rail has no width to give. */
+.lib-page:has(.lib-sidebar--collapsed) {
+  grid-template-columns: 40px 0 1fr;
 }
 
 /* ── Sidebar resize handle ───────────────────────────────────────── */
 
-/* Sits between the sidebar and the main pane and straddles the sidebar's
-   border, so it reads as a grab area for that border rather than a gutter of
-   its own -- the negative margins keep it out of the layout's width budget. */
 .lib-resizer {
-  flex: 0 0 5px;
-  margin: 0 -2px;
   position: relative;
   z-index: 2;
   cursor: col-resize;
@@ -53,7 +72,7 @@
 .lib-resizer:hover,
 .lib-resizer:focus-visible,
 .lib-page.is-resizing .lib-resizer {
-  background: var(--accent, #7aa2f7);
+  background: var(--axi-accent);
   outline: none;
 }
 
@@ -63,40 +82,47 @@
 }
 
 /* A 5px drag target is a mouse affordance; on touch it is only a way to lose
-   a tap, and the sidebar is a drawer there anyway. */
+   a tap, and the sidebar is a drawer there anyway. Its column collapses with
+   it, or touch would carry a dead 5px gap the pointer can't reach. */
 @media (pointer: coarse) {
   .lib-resizer { display: none; }
+  .lib-page { grid-template-columns: var(--lib-sidebar-w, 240px) 0 1fr; }
 }
 
-/* During the drag the width follows the pointer directly: the sidebar's own
-   width transition would make the handle lag, and a text selection would paint
-   itself across the folder tree. */
+/* During the drag the width follows the pointer directly: the page's own
+   grid-template-columns transition would make the handle lag, and a text
+   selection would paint itself across the folder tree. */
 .lib-page.is-resizing {
   user-select: none;
   cursor: col-resize;
-}
-
-.lib-page.is-resizing .lib-sidebar {
   transition: none;
 }
 
 .lib-main {
-  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  min-width: 0;
   overflow: hidden;
 }
 
 /* ── Toolbar ─────────────────────────────────────────────────────── */
 
+/* The toolbar is a panel, not a band. It was transparent over --axi-ground
+   while .axi-btn fills with --axi-ground too, so bar and buttons were one
+   value and the only thing between them was an --axi-ink-line edge DARKER
+   than both -- an outline that reads as a void instead of a border, which is
+   why the whole strip looked like one black field. It gets a surface, an ink
+   outline and the block every raised thing in this language carries. */
 .lib-toolbar {
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--line-soft);
+  gap: 9px;
+  margin: 10px 14px 16px 12px;
+  padding: 12px 14px;
+  background: var(--axi-surface);
+  border: var(--axi-border-panel) solid var(--axi-ink-line);
+  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
   flex-shrink: 0;
   flex-wrap: wrap;
   /* The trash and archive drop the controls (they act on a list those views do
@@ -104,6 +130,33 @@
      Pin the height so the whole content pane doesn't jump every time you step
      into the Archive and back out. */
   min-height: 46px;
+}
+
+/* Now that the bar is a surface, the controls on it need an edge lighter than
+   what they sit on, or they disappear into it the way they did before.
+   --axi-rule is the language's line for exactly this: a division drawn inside
+   an outlined panel rather than around one.
+
+   Scoped to .lib-toolbar deliberately. .lib-filters is a sibling container,
+   so the CLASS/MODE/TAGS triggers keep the treatment they have today.
+
+   Two traps live in this selector. background-COLOR, never the shorthand:
+   .axi-picker__btn paints its caret as a background-image and the shorthand
+   erases it. And the view toggle's pressed pill has to be excluded, or the
+   accent fill marking the current view loses to this rule. */
+.lib-toolbar .axi-btn:not(.axi-btn--primary),
+.lib-toolbar .axi-picker__btn,
+.lib-toolbar .lib-view-btn:not([aria-pressed="true"]) {
+  background-color: var(--axi-surface-raised);
+  border-color: var(--axi-rule);
+}
+
+/* The search well goes the other way: an input is a recess, so it takes the
+   ground it used to share with everything else, which now reads as depth
+   against the surface around it. */
+.lib-toolbar .axi-input {
+  background-color: var(--axi-ground);
+  border-color: var(--axi-rule);
 }
 
 .lib-toolbar__breadcrumb {
@@ -122,90 +175,49 @@
   flex-shrink: 0;
 }
 
-/* Search */
-.lib-toolbar__search {
-  display: flex;
-  align-items: center;
-  position: relative;
+/* Search — .axi-search only reserves the room and positions the icon; the
+   glyph itself stays the consumer's SVG.
+
+   The package sizes .axi-input for a form field, where a tall target sitting
+   alone in a column is right. This is chrome: a strip of controls above the
+   thing you came to read, where every pixel of height is taken from the list.
+   So the whole control row is compacted to one height here -- the input, the
+   pickers, the view pills and the three buttons together, because a toolbar
+   whose controls disagree about height reads as broken rather than as dense.
+   Only the padding moves; every border, block and hover stays the package's.
+   The input also gets the width the others do not need: it holds a query. */
+.lib-toolbar__search .lib-toolbar__search-input {
+  width: 260px;
+  padding-block: 6px;
+  /* Keeps .axi-search's reserved gutter for the magnifier, minus the padding
+     the compacting takes off everything else. */
+  padding-inline: 34px 10px;
 }
 
-.lib-toolbar__search-icon {
-  position: absolute;
-  left: 7px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--text-dim);
-  display: flex;
-  pointer-events: none;
+.lib-toolbar__controls .axi-btn {
+  padding: 7px 14px;
 }
 
-.lib-toolbar__search-icon svg {
-  width: 13px;
-  height: 13px;
+.lib-toolbar__controls .axi-pill {
+  padding: 7px 8px;
 }
 
-.lib-toolbar__search-input {
-  background: var(--bg-2);
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 4px 8px 4px 26px;
-  color: var(--text-light);
-  font-size: 0.85rem;
-  font-family: inherit;
-  width: 160px;
-  outline: none;
+.lib-toolbar__controls .axi-picker__btn {
+  padding: 7px 28px 7px 9px;
 }
 
-.lib-toolbar__search-input:focus {
-  border-color: var(--accent);
+/* Sort, and the import/export/new pickers below, share .axi-picker's box —
+   the closed state is the same chip .axi-select wears, so a hand-rolled
+   dropdown and a native-backed one read as one family. */
+.lib-toolbar__sort {
+  width: 150px;
 }
 
-.lib-toolbar__search-input::placeholder {
-  color: var(--text-dim);
-}
-
-/* Sort */
-.lib-toolbar__sort-select {
-  background: var(--bg-2);
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 4px 8px;
-  color: var(--text-light);
-  font-size: 0.85rem;
-  font-family: inherit;
-  cursor: pointer;
-  outline: none;
-}
-
-.lib-toolbar__sort-select:focus {
-  border-color: var(--accent);
-}
-
-/* View toggle */
+/* View toggle — a run of .axi-pill, pressed = current. */
 .lib-toolbar__view-toggle {
   display: flex;
   align-items: center;
-  gap: 0;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  overflow: hidden;
-}
-
-.lib-view-btn {
-  background: var(--bg-2);
-  border: none;
-  border-left: 1px solid var(--line);
-  padding: 4px 8px;
-  color: var(--muted);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.1s, color 0.1s;
-}
-
-.lib-view-btn:first-child {
-  border-left: none;
+  gap: 4px;
 }
 
 .lib-view-btn svg {
@@ -213,111 +225,49 @@
   height: 16px;
 }
 
-.lib-view-btn:hover {
-  background: var(--hover-subtle);
-  color: var(--text-light);
+/* Import / Export / New pickers */
+.lib-toolbar__picker-pop {
+  /* Never narrower than the trigger row it grew from, per .axi-picker__pop —
+     but these triggers are icon+label buttons, not a fixed-width chip, so the
+     floor is set from script alongside left/top (bindPicker in toolbar.js). */
+  min-width: 160px;
 }
-
-.lib-view-btn--active {
-  background: var(--panel);
-  color: var(--accent);
-}
-
-/* New build button */
-.lib-toolbar__new-btn {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 0.85rem;
-  padding: 4px 10px;
-  white-space: nowrap;
-}
-
-.lib-toolbar__new-btn svg {
-  width: 13px;
-  height: 13px;
-}
-
-/* Import dropdown */
-.lib-import-dropdown {
-  position: relative;
-}
-.lib-import-dropdown__menu {
-  display: none;
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
-  min-width: 140px;
-  background: var(--line-soft);
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 4px 0;
-  z-index: var(--z-menu);
-  box-shadow: var(--shadow-sm);
-}
-.lib-import-dropdown--open .lib-import-dropdown__menu {
-  display: block;
-}
-.lib-import-dropdown__item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 6px 14px;
-  background: none;
-  border: none;
-  color: var(--text-light);
-  font-size: 0.85rem;
-  text-align: left;
-  cursor: pointer;
-  white-space: nowrap;
-}
-.lib-import-dropdown__item:hover {
-  background: var(--hover-subtle);
-}
-.lib-import-dropdown__item svg {
-  width: 13px;
-  height: 13px;
+.lib-toolbar__picker-pop svg {
+  width: 14px;
+  height: 14px;
   flex-shrink: 0;
-  color: var(--text-dim);
-}
-.lib-import-dropdown__sep {
-  height: 1px;
-  background: var(--line);
-  margin: 4px 0;
 }
 
-/* Breadcrumb */
+/* Breadcrumb — the cheapest appearance in the language: no box, no fill,
+   just type and a diamond between crumbs. */
 .lib-breadcrumb__item {
   background: none;
   border: none;
-  color: var(--muted);
-  font-size: 0.85rem;
-  font-family: inherit;
-  cursor: pointer;
   padding: 2px 4px;
-  border-radius: 4px;
   display: flex;
   align-items: center;
   gap: 4px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  cursor: pointer;
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
+  text-transform: uppercase;
+  color: var(--axi-text-faint);
 }
 
 .lib-breadcrumb__item:hover {
-  color: var(--text-light);
-  background: var(--hover-subtle);
+  color: var(--axi-text);
 }
 
 .lib-breadcrumb__item--current {
-  color: var(--text-light);
-  font-weight: 600;
+  color: var(--axi-text);
   cursor: default;
 }
 
 .lib-breadcrumb__item--current:hover {
-  background: none;
+  color: var(--axi-text);
 }
 
 .lib-breadcrumb__item svg {
@@ -326,23 +276,18 @@
   flex-shrink: 0;
 }
 
-.lib-breadcrumb__sep {
-  color: var(--line-soft);
-  display: flex;
-  align-items: center;
-}
-
-.lib-breadcrumb__sep svg {
-  width: 12px;
-  height: 12px;
-}
+/* The crumb separator is .af-sep-diamond (app.css) — the shared small metadata
+   diamond, which app.css explains. It used to be .axi-diamond shrunk to 5px,
+   which at border-box left the 9px mark entirely border: an invisible
+   --axi-ink-line speck with the fill never painting. It needs no rule here;
+   .lib-toolbar__breadcrumb's own 2px gap is its spacing. */
 
 /* ── Filters ─────────────────────────────────────────────────────── */
 
 .lib-filters {
   flex-shrink: 0;
   padding: 6px 12px;
-  border-bottom: 1px solid var(--line-soft);
+  border-bottom: var(--axi-border-panel) solid var(--axi-ink-line);
 }
 
 .lib-filters:empty {
@@ -351,122 +296,33 @@
 
 .lib-filters__bar {
   display: flex;
-  gap: 6px;
+  gap: 9px;
   align-items: center;
+  flex-wrap: wrap;
 }
 
-/* Filter dropdown container */
-.lib-fd {
-  position: relative;
+/* Filter dropdown — .axi-picker, the same box and popover as Sort. It sits in
+   .lib-filters, a sibling of .lib-toolbar inside .lib-main's overflow:
+   hidden, so its popover needs the same --fixed + script-positioned contract
+   (bindPicker in toolbar.js). */
+/* The trigger draws no chevron of its own: .axi-picker__btn already paints
+   the accent caret in its background, and a second glyph beside it reads as
+   two arrows on one control. The 28px right padding on .lib-toolbar__controls
+   .axi-picker__btn (above) is the room that caret sits in. */
+
+/* The base class is a hook, not a box -- .axi-picker__btn draws the whole
+   closed trigger. What the class owns is the on state: a filter holding
+   selections says so on the trigger itself, in the accent, rather than only in
+   the "(2)" appended to its label. */
+.lib-fd__trigger.lib-fd__trigger--active,
+.lib-fd__trigger.lib-fd__trigger--active:hover {
+  border-color: var(--axi-accent);
+  color: var(--axi-accent);
 }
 
-.lib-fd__trigger {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  background: var(--bg-2);
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 4px 8px 4px 10px;
-  font-size: 0.85rem;
-  color: var(--muted);
-  cursor: pointer;
-  font-family: inherit;
-  transition: background 0.1s, color 0.1s, border-color 0.1s;
-  white-space: nowrap;
-}
-
-.lib-fd__trigger svg {
-  width: 14px;
-  height: 14px;
-  flex-shrink: 0;
-  transition: transform 0.15s;
-}
-
-.lib-fd--open .lib-fd__trigger svg {
-  transform: rotate(180deg);
-}
-
-.lib-fd__trigger:hover {
-  background: var(--hover-subtle);
-  color: var(--text-light);
-  border-color: var(--accent);
-}
-
-.lib-fd__trigger--active {
-  background: var(--panel);
-  color: var(--accent);
-  border-color: var(--accent);
-}
-
-/* Dropdown menu */
-.lib-fd__menu {
-  display: none;
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  min-width: 180px;
-  max-height: 320px;
-  overflow-y: auto;
-  background: var(--bg-2);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  box-shadow: var(--shadow-md);
-  z-index: var(--z-menu);
-  padding: 4px;
-}
-
-.lib-fd--open .lib-fd__menu {
-  display: block;
-}
-
-/* Dropdown item */
-.lib-fd__item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  width: 100%;
-  padding: 5px 8px;
-  border: none;
-  border-radius: 4px;
-  background: none;
-  color: var(--muted);
-  font-size: 0.85rem;
-  font-family: inherit;
-  cursor: pointer;
-  text-align: left;
-  transition: background 0.1s, color 0.1s;
-}
-
-.lib-fd__item:hover {
-  background: var(--hover-subtle);
-  color: var(--text-light);
-}
-
-.lib-fd__item--active {
-  color: var(--text-light);
-}
-
-.lib-fd__item--indent {
+/* An elite spec nested under its profession. */
+.axi-picker__opt.lib-fd__item--indent {
   padding-left: 28px;
-}
-
-/* Checkmark (hidden until active) */
-.lib-fd__check {
-  width: 14px;
-  height: 14px;
-  flex-shrink: 0;
-  opacity: 0;
-}
-
-.lib-fd__check svg {
-  width: 14px;
-  height: 14px;
-}
-
-.lib-fd__item--active .lib-fd__check {
-  opacity: 1;
-  color: var(--accent);
 }
 
 /* Icon (profession/spec SVG) */
@@ -502,68 +358,29 @@
   white-space: nowrap;
 }
 
-/* Clear all button */
-.lib-fd__clear {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  background: none;
-  border: 1px solid rgba(170, 80, 80, 0.3);
-  border-radius: 6px;
-  padding: 4px 8px;
-  font-size: 0.85rem;
-  color: var(--danger);
-  cursor: pointer;
-  font-family: inherit;
-  transition: background 0.1s, color 0.1s, border-color 0.1s;
-  white-space: nowrap;
-}
-
-.lib-fd__clear svg {
-  width: 12px;
-  height: 12px;
-}
-
-.lib-fd__clear:hover {
-  background: rgba(170, 80, 80, 0.15);
-  border-color: rgba(170, 80, 80, 0.5);
-  color: var(--danger-text);
-}
-
-.lib-fd__save-smart {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  background: none;
-  border: 1px solid var(--line-soft);
-  border-radius: 6px;
-  padding: 4px 8px;
-  font-size: 0.85rem;
-  color: var(--muted);
-  cursor: pointer;
-  font-family: inherit;
-  transition: background 0.1s, color 0.1s, border-color 0.1s;
-  white-space: nowrap;
-}
-
-.lib-fd__save-smart svg {
-  width: 12px;
-  height: 12px;
-}
-
-.lib-fd__save-smart:hover {
-  background: var(--hover-subtle);
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
 /* ── Content area ────────────────────────────────────────────────── */
 
+/* The rule-drawn views inside draw themselves as one card (.lib-list and
+   .lib-tv, below), and a card's offset block falls OUTSIDE its own box, down
+   and to the right. Symmetric padding on an overflow-y: auto parent clips
+   that block, so the right and bottom carry the extra. */
 .lib-content {
   flex: 1;
   overflow-y: auto;
   min-height: 0;
-  padding: 8px 12px;
+  padding: 12px 20px 20px 12px;
+}
+
+/* The tree view's column header is sticky (.lib-tv__header, below), and a
+   sticky header only reads as locked if nothing in the scroller sits above
+   where it locks. Top padding on the scroller is exactly that: the header
+   comes to rest below it, and rows scroll up through the strip it leaves --
+   a band of moving text above a header that is supposed to be the top edge.
+   The strip has no fill of its own either, because the card's own background
+   has already scrolled past. So the view that has the sticky header takes its
+   breathing room from the toolbar above instead of from this padding. */
+.lib-content:has(.lib-tv) {
+  padding-top: 0;
 }
 
 /* ── Sidebar styles ──────────────────────────────────────────────── */
@@ -579,20 +396,18 @@
 .lib-sidebar__expand-btn {
   background: none;
   border: none;
-  color: var(--text-dim);
+  color: var(--axi-text-dim);
   cursor: pointer;
   padding: 4px;
-  border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: color 0.1s, background 0.1s;
+  transition: color 0.1s;
 }
 
 .lib-sidebar__collapse-btn:hover,
 .lib-sidebar__expand-btn:hover {
-  color: var(--text-light);
-  background: var(--hover-subtle);
+  color: var(--axi-text);
 }
 
 .lib-sidebar__collapse-btn svg,
@@ -618,7 +433,7 @@
 }
 
 .lib-sidebar__section + .lib-sidebar__section {
-  border-top: 1px solid var(--line-soft);
+  border-top: var(--axi-border-hairline) solid var(--axi-rule);
   padding-top: 2px;
 }
 
@@ -630,11 +445,10 @@
 }
 
 .lib-sidebar__section-label {
-  font-size: 0.65rem;
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--text-dim);
-  font-weight: 700;
+  color: var(--axi-text-faint);
   padding: 10px 10px 4px;
 }
 
@@ -643,35 +457,31 @@
 }
 
 .lib-sidebar__divider {
-  height: 1px;
-  background: var(--line-soft);
+  height: var(--axi-border-hairline);
+  background: var(--axi-rule);
   margin: 6px 10px;
 }
 
 .lib-sidebar__subsection-label {
-  font-size: 0.6rem;
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
   text-transform: uppercase;
-  letter-spacing: 0.09em;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
   padding: 2px 10px 3px;
-  opacity: 0.75;
-  font-weight: 700;
 }
 
 .lib-sidebar__new-folder-btn {
   background: none;
   border: none;
-  color: var(--text-dim);
+  color: var(--axi-text-dim);
   cursor: pointer;
   padding: 2px;
-  border-radius: 3px;
   display: flex;
   align-items: center;
 }
 
 .lib-sidebar__new-folder-btn:hover {
-  color: var(--text-light);
-  background: var(--hover-subtle);
+  color: var(--axi-text);
 }
 
 .lib-sidebar__new-folder-btn svg {
@@ -681,12 +491,23 @@
 
 .lib-sidebar__empty {
   padding: 4px 10px;
-  font-size: 0.88rem;
-  color: var(--text-dim);
+  font: var(--axi-t-small);
+  color: var(--axi-text-faint);
   font-style: italic;
 }
 
-/* Nav items */
+/* Nav items — an accent-edge active state, as .leftnav__item has (layout.css,
+   batch 1). The hover is NOT that rail's lift: rule 8 says a row is drawn in
+   rules, and these are rows, stacked five pixels apart inside a panel. A lift
+   there translates a row over its neighbour and drops an ink block across the
+   one below it, which is why the rail can have one and a list cannot.
+   The step is UP the neutral ramp, to the same --axi-surface-raised
+   .lib-list-row uses. Down was the obvious reading of the package's row idiom
+   (.axi-picker__opt, axi.css:568) and it was wrong here: down from the
+   sidebar's --axi-surface lands on --axi-ground, which is exactly what
+   .lib-page paints in the pane five pixels to the right, so hovering a folder
+   tinted it the colour of the thing it is not. One direction for every row in
+   the library, and it is the one that does not collide with a neighbour. */
 .lib-nav-item {
   display: flex;
   align-items: center;
@@ -694,60 +515,56 @@
   padding: 5px 10px;
   width: 100%;
   background: none;
-  border: none;
-  color: var(--text-light);
-  font-size: 0.82rem;
-  font-weight: 500;
-  font-family: inherit;
+  border: var(--axi-border-control) solid transparent;
+  color: var(--axi-text);
+  font: var(--axi-t-small);
   cursor: pointer;
   text-align: left;
-  border-radius: 0;
-  transition: background 0.1s, color 0.1s;
+  transition: color 0.15s, border-color 0.15s, background-color 0.15s;
 }
 
 .lib-nav-item:hover {
-  background: var(--hover-subtle);
-  color: var(--text);
+  background: var(--axi-surface-raised);
+  color: var(--axi-text);
 }
 
 .lib-nav-item--active {
-  background: var(--panel);
-  color: var(--accent);
-  font-weight: 600;
-}
-
-.lib-nav-item--active:hover {
-  background: var(--hover-accent);
+  color: var(--axi-accent);
+  border-color: var(--axi-accent);
 }
 
 .lib-nav-item--sub {
   padding-left: 22px;
-  font-size: 0.78rem;
-  font-weight: 400;
-  color: var(--muted);
+  font: var(--axi-t-small);
+  color: var(--axi-text-dim);
 }
 
 .lib-nav-item--group {
-  font-size: 0.75rem;
-  color: var(--text-dim);
-  font-weight: 500;
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
+  text-transform: uppercase;
+  color: var(--axi-text-faint);
 }
 
-.lib-nav-item__icon {
-  display: flex;
-  flex-shrink: 0;
-  color: var(--text-dim);
-  opacity: 0.65;
-}
+/* The profession's own colour, at full strength, delivered per-instance from
+   src/shared/professions.js (sidebar.js sets --axi-series in a style
+   attribute on the row). Rule 10: the palette belongs to the game, not to
+   the theme, so it arrives as data and not as a token. A row with no
+   profession falls to the faint neutral the old --unknown grey used. */
+.lib-nav-item__icon { color: var(--axi-series, var(--axi-text-faint)); }
 
 .lib-nav-item__icon svg {
   width: 14px;
   height: 14px;
 }
 
+/* Active keeps a profession's own tint rather than switching it to the
+   accent -- matching what the deleted opacity-tier rules did (a profession
+   icon never lost its hue by being the current selection). A non-profession
+   row has no --axi-series to keep, so it falls to the accent exactly as
+   before. */
 .lib-nav-item--active .lib-nav-item__icon {
-  color: var(--accent);
-  opacity: 1;
+  color: var(--axi-series, var(--axi-accent));
 }
 
 .lib-nav-item__label {
@@ -758,20 +575,19 @@
 }
 
 .lib-nav-item__count {
-  font-size: 0.68rem;
-  color: var(--text-dim);
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
+  color: var(--axi-text-faint);
   flex-shrink: 0;
   margin-left: auto;
-  font-weight: 500;
   min-width: 20px;
   text-align: right;
-  opacity: 0.7;
 }
 
 .lib-nav-item__chevron {
   display: flex;
   flex-shrink: 0;
-  color: var(--text-dim);
+  color: var(--axi-text-dim);
   width: 14px;
 }
 
@@ -792,20 +608,14 @@
   /* wrapper for folder item + children */
 }
 
+/* Inline rename/create inputs carry .axi-input (added in the consuming JS)
+   for the box; these are the local overrides that keep them the compact
+   height a sidebar row or a grid/icon card needs instead of .axi-input's
+   full form padding. */
 .lib-inline-input {
   flex: 1;
   min-width: 0;
-  background: var(--panel);
-  border: 1px solid var(--accent);
-  border-radius: 3px;
-  color: var(--text-light);
-  font-size: 0.85rem;
   padding: 2px 6px;
-  outline: none;
-}
-
-.lib-inline-input:focus {
-  border-color: var(--accent);
 }
 
 .lib-nav-item--editing {
@@ -813,14 +623,14 @@
 }
 
 /* Inline input in grid view — matches card shape */
-.lib-grid-card--editing {
-  border-color: var(--accent);
+.af-tile--editing {
+  border-color: var(--axi-accent);
 }
-.lib-grid-card__inline-input {
+.af-tile__inline-input {
   width: 100%;
   text-align: center;
 }
-.lib-grid-card--folder .lib-grid-card__inline-input {
+.af-tile--folder .af-tile__inline-input {
   text-align: left;
 }
 
@@ -831,49 +641,18 @@
 .lib-icon-item__inline-input {
   width: 70px;
   text-align: center;
-  font-size: 0.75rem;
+  font: var(--axi-t-micro);
 }
 
 .lib-content-inline-folder {
   padding: 5px 12px;
-  border-bottom: 1px solid var(--line-soft);
+  border-bottom: var(--axi-border-panel) solid var(--axi-ink-line);
 }
 
-/* ── Shared pills ────────────────────────────────────────────────── */
-
-.lib-pill {
-  display: inline-flex;
-  align-items: center;
-  border-radius: 6px;
-  padding: 2px 8px;
-  font-size: 0.73rem;
-  font-weight: 600;
-  white-space: nowrap;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  line-height: 1.5;
-  border: none;
-}
-
-/* ── Profession pills — the only colored ones ── */
-.lib-pill--prof.lib-prof--guardian     { background: rgba(110, 168, 255, 0.15); color: #7db4ff; }
-.lib-pill--prof.lib-prof--warrior      { background: rgba(255, 153, 68, 0.15);  color: #ffa858; }
-.lib-pill--prof.lib-prof--necromancer  { background: rgba(77, 202, 122, 0.15);  color: #5ed088; }
-.lib-pill--prof.lib-prof--engineer     { background: rgba(204, 136, 68, 0.15);  color: #d4a060; }
-.lib-pill--prof.lib-prof--ranger       { background: rgba(119, 204, 85, 0.15);  color: #88d468; }
-.lib-pill--prof.lib-prof--thief        { background: rgba(204, 102, 119, 0.15); color: #d87888; }
-.lib-pill--prof.lib-prof--mesmer       { background: rgba(176, 122, 204, 0.15); color: #c08ee0; }
-.lib-pill--prof.lib-prof--elementalist { background: rgba(221, 85, 85, 0.15);   color: #e87070; }
-.lib-pill--prof.lib-prof--revenant     { background: rgba(170, 102, 85, 0.15);  color: #c48068; }
-.lib-pill--prof.lib-prof--unknown      { background: rgba(136, 136, 136, 0.10); color: #999; }
-
-/* ── Neutral pills — spec, mode, tags share one calm style ── */
-.lib-pill--spec,
-.lib-pill--mode,
-.lib-pill--tag {
-  background: rgba(200, 200, 220, 0.07);
-  color: var(--muted);
-}
+/* A chip whose bullet is the profession's colour. The colour is on the
+   diamond, never on the chip's outline: an outlined chip is an annotation
+   (rule 5), and a build's profession annotates it rather than judging it. */
+.af-chip--prof { gap: 7px; }
 
 /* ── Pin button ──────────────────────────────────────────────────── */
 
@@ -882,21 +661,20 @@
   border: none;
   cursor: pointer;
   padding: 2px;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
   display: inline-flex;
   align-items: center;
   vertical-align: middle;
   flex-shrink: 0;
-  border-radius: 3px;
   transition: color 0.1s;
 }
 
 .lib-pin-btn:hover {
-  color: var(--muted);
+  color: var(--axi-text-dim);
 }
 
 .lib-pin-btn--active {
-  color: var(--gold);
+  color: var(--axi-accent);
 }
 
 .lib-pin-btn svg {
@@ -905,41 +683,56 @@
 }
 
 /* ── List view ───────────────────────────────────────────────────── */
-
+/* Rule 8: the eye runs down the date column, so this is the panel's
+   interior and is drawn in rules. No outline per row, no block per row —
+   forty outlined rows inside an outlined panel is the grid-of-boxes the
+   hairline weight exists to prevent. */
+/* One card holds the whole list, rather than one card per row: at sixty-seven
+   builds a card per row is sixty-seven outlines and sixty-seven blocks, which
+   is the grid-of-boxes rule 8 names. The card is what lifts the list off the
+   pane --axi-ground now that the pane is dark again; the rows inside it stay
+   rules. --axi-surface, not --axi-surface-raised, so that rows keep the hover
+   they already had (raised) and the ramp still runs upward from the card. */
 .lib-list {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  background: var(--axi-surface);
+  border: var(--axi-border-panel) solid var(--axi-ink-line);
+  border-radius: var(--axi-radius);
+  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
 }
+
+/* The card's own border is the list's last rule; drawing both stacks a 2px
+   hairline directly inside a 4px ink edge. */
+.lib-list > .lib-list-row:last-child { border-bottom: none; }
 
 .lib-list-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
-  border-radius: 6px;
+  gap: 9px;
+  padding: 9px 10px;
+  border-bottom: var(--axi-border-hairline) solid var(--axi-rule);
+  font: var(--axi-t-small);
+  color: var(--axi-text-dim);
   cursor: pointer;
-  font-size: 0.85rem;
-  color: var(--text-light);
-  transition: background 0.1s;
   min-width: 0;
   user-select: none;
 }
 
-.lib-list-row:hover {
-  background: var(--hover-subtle);
-}
+/* The neutral ramp, not an ink: hovering a row is not a status, and forty
+   rows that each flash a colour on the way past the one you want is exactly
+   the tinted-everything failure rule 2 is about. */
+.lib-list-row:hover { background: var(--axi-surface-raised); color: var(--axi-text); }
 
-.lib-list-row--folder {
-  color: var(--muted);
-}
+.lib-list-row--folder { color: var(--axi-text-faint); }
 
-.lib-list-row--pinned {
-  border-left: 2px solid rgba(212, 192, 68, 0.4);
-}
+/* Pinned has no row-level treatment: a full-height edge stripe reads as the
+   row's border (rule 5), and status belongs on a filled shape inside the
+   row, never on the row's own edge (rule 8). The pin star inside the row is
+   that filled shape already. */
 
 .lib-list-row__icon--folder {
-  color: var(--muted);
+  color: var(--axi-text-faint);
   display: inline-flex;
   align-items: center;
   flex-shrink: 0;
@@ -959,6 +752,7 @@
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
+  color: var(--axi-series, var(--axi-text-faint));
 }
 
 .lib-list-row__spec-icon svg {
@@ -982,8 +776,8 @@
 }
 
 .lib-list-row__date {
-  font-size: 0.85rem;
-  color: var(--text-dim);
+  font: var(--axi-t-small);
+  color: var(--axi-text-faint);
   white-space: nowrap;
   flex-shrink: 0;
   margin-left: auto;
@@ -992,7 +786,7 @@
 /* Folder path breadcrumb shown in combined/smart folder views */
 .lib-folder-path {
   font-size: 0.75rem;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
   margin-left: 6px;
   white-space: nowrap;
   overflow: hidden;
@@ -1004,14 +798,15 @@
 }
 
 /* Grid / icon views: folder path sits on its own line */
-.lib-grid-card > .lib-folder-path,
+.af-tile > .lib-folder-path,
 .lib-icon-item > .lib-folder-path {
   display: block;
   margin-left: 0;
-  font-size: 0.72rem;
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
 }
 
-.lib-grid-card > .lib-folder-path::before,
+.af-tile > .lib-folder-path::before,
 .lib-icon-item > .lib-folder-path::before {
   content: none;
 }
@@ -1023,19 +818,19 @@
 }
 
 .lib-list-row--comp.lib-drop-target {
-  outline: 2px dashed rgba(110, 168, 255, 0.4);
-  background: rgba(110, 168, 255, 0.06);
+  outline: var(--axi-border-control) dashed var(--axi-accent);
+  outline-offset: -3px;
 }
 
 .lib-list-row--comp.lib-drop-target.is-invalid {
-  outline: 2px dashed rgba(255, 90, 90, 0.5);
-  background: rgba(255, 90, 90, 0.06);
+  outline: var(--axi-border-control) dashed var(--axi-danger);
+  outline-offset: -3px;
   cursor: not-allowed;
 }
 
 .lib-list-row__comp-icon {
   font-size: 16px;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
 }
 
 .lib-list-row__comp-icon svg {
@@ -1046,26 +841,25 @@
 
 .lib-list-row__badge {
   font-size: 0.75rem;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
   margin-left: auto;
   padding: 1px 8px;
-  background: var(--line-soft);
-  border-radius: 8px;
+  background: var(--axi-ink-line);
   white-space: nowrap;
   flex-shrink: 0;
 }
 
 .lib-tv__row--comp {
-  color: var(--muted);
+  color: var(--axi-text-faint);
   cursor: pointer;
 }
 
 .lib-icon-item--comp {
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
 }
 
 .lib-icon-item__icon--comp {
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
 }
 
 .lib-col__item--build {
@@ -1074,29 +868,29 @@
 }
 
 .lib-col__item--comp {
-  color: var(--muted);
+  color: var(--axi-text-faint);
 }
 
 .lib-col__icon--comp {
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
 }
 
-/* Selection highlight */
-.lib-list-row.lib-selected {
-  background: var(--panel);
-  border-left: 2px solid var(--accent);
-}
+/* Selection highlight — a fill, not a frame. Selection is an assertion
+   about the row (rule 5), and a fill stays legible when many rows are
+   selected at once, where an edge stripe would just be five coloured
+   frames stacked. */
+.lib-list-row.lib-selected { background: var(--axi-accent); color: var(--axi-accent-ink); }
+/* The date and folder-path breadcrumb set their own faint colour so they
+   recede against the ground; against the accent fill that faint grey has to
+   give way and pick up the row's ink instead, or it reads as disabled.
+   Chips and the spec icon carry their own background/hue on purpose (a
+   chip's fill and a profession's colour are not the row's to override) so
+   they are left alone. */
+.lib-list-row.lib-selected .lib-list-row__date,
+.lib-list-row.lib-selected .lib-folder-path { color: inherit; }
 
 /* Drop target */
-.lib-list-row.lib-drop-target {
-  background: rgba(var(--accent-rgb), 0.1);
-  border: 1px dashed rgba(var(--accent-rgb), 0.4);
-}
-
-/* Dragging */
-.lib-list-row.lib-dragging {
-  opacity: 0.4;
-}
+.lib-list-row.lib-drop-target { outline: var(--axi-border-control) dashed var(--axi-accent); outline-offset: -3px; }
 
 /* ── Table / Tree view ───────────────────────────────────────────── */
 
@@ -1110,42 +904,60 @@
   font-size: 0.85rem;
 }
 
-/* Remove top padding from content area when table view is active */
-.lib-content:has(.lib-tv) {
-  padding-top: 0;
+/* The tree view is the same card as the list (above): one outline and one
+   block around a run of rules, not a box per row. Its header is sticky, so it
+   carries the card's own fill rather than the pane's -- on --axi-ground it
+   would read as a strip of the background sliding through the card. */
+.lib-tv {
+  background: var(--axi-surface);
+  border: var(--axi-border-panel) solid var(--axi-ink-line);
+  border-radius: var(--axi-radius);
+  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
 }
 
 .lib-tv__header {
   position: sticky;
   top: 0;
-  background: var(--bg-2);
+  background: var(--axi-surface);
   z-index: 2;
   padding: 6px 4px;
-  border-bottom: 1px solid var(--line-soft);
-  color: var(--text-dim);
-  font-weight: 600;
+  border-bottom: var(--axi-border-control) solid var(--axi-rule);
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  color: var(--axi-text-faint);
   user-select: none;
 }
 
 .lib-tv__row {
   padding: 5px 4px;
-  border-bottom: 1px solid var(--panel-2);
+  border-bottom: var(--axi-border-hairline) solid var(--axi-rule);
   cursor: pointer;
   transition: background 0.1s;
   user-select: none;
-  color: var(--text-light);
+  color: var(--axi-text-dim);
 }
 
-.lib-tv__row:hover { background: var(--hover-subtle); }
-.lib-tv__row--folder { color: var(--muted); }
-.lib-tv__row--pinned { border-left: 2px solid rgba(212, 192, 68, 0.4); }
-.lib-tv__item.lib-selected > .lib-tv__row { background: var(--panel); }
+.lib-tv__row:hover { background: var(--axi-surface-raised); color: var(--axi-text); }
+.lib-tv__row--folder { color: var(--axi-text-faint); }
+/* Pinned has no row-level treatment here either — see the list view comment
+   above the (now deleted) .lib-list-row--pinned rule; the same rule 5/rule 8
+   reasoning applies to the tree row. */
+/* Selection is a fill, not a frame, for the same reason as the list view:
+   rule 5 treats an edge stripe as the row's own border, and a fill is the
+   only version that stays legible with more than one row selected. The data
+   columns set their own faint/muted colour to recede against the ground, so
+   they have to pick up the row's ink explicitly or they read as disabled
+   against the fill. */
+.lib-tv__item.lib-selected > .lib-tv__row { background: var(--axi-accent); color: var(--axi-accent-ink); }
+.lib-tv__item.lib-selected > .lib-tv__row .lib-tv__profession,
+.lib-tv__item.lib-selected > .lib-tv__row .lib-tv__spec,
+.lib-tv__item.lib-selected > .lib-tv__row .lib-tv__mode,
+.lib-tv__item.lib-selected > .lib-tv__row .lib-tv__tags,
+.lib-tv__item.lib-selected > .lib-tv__row .lib-tv__created,
+.lib-tv__item.lib-selected > .lib-tv__row .lib-tv__modified { color: inherit; }
 .lib-tv__item.lib-drop-target > .lib-tv__row,
-.lib-tv__item.lib-drop-target { background: rgba(var(--accent-rgb), 0.1); }
-.lib-tv__item.lib-dragging > .lib-tv__row,
-.lib-tv__item.lib-dragging { opacity: 0.4; }
+.lib-tv__item.lib-drop-target { outline: var(--axi-border-control) dashed var(--axi-accent); outline-offset: -3px; }
 
 /* Tree nesting — just CSS list indentation */
 .lib-tv__tree,
@@ -1164,20 +976,20 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
 }
 .lib-tv__action svg { width: 14px; height: 14px; }
 .lib-tv__row--folder .lib-tv__action { cursor: pointer; }
-.lib-tv__row--folder .lib-tv__action:hover { color: var(--muted); }
+.lib-tv__row--folder .lib-tv__action:hover { color: var(--axi-text-faint); }
 
 /* Icon column */
-.lib-tv__icon { display: flex; align-items: center; justify-content: center; }
+.lib-tv__icon { display: flex; align-items: center; justify-content: center; color: var(--axi-series, var(--axi-text-faint)); }
 .lib-tv__icon svg { width: 18px; height: 18px; fill: currentColor; }
 
 .lib-table__folder-icon {
   display: inline-flex;
   align-items: center;
-  color: var(--muted);
+  color: var(--axi-text-faint);
 }
 .lib-table__folder-icon svg {
   width: 16px;
@@ -1220,7 +1032,7 @@
 /* Data columns */
 .lib-tv__profession,
 .lib-tv__spec {
-  color: var(--muted);
+  color: var(--axi-text-faint);
   padding: 0 8px;
   white-space: nowrap;
   overflow: hidden;
@@ -1229,7 +1041,7 @@
 }
 
 .lib-tv__mode {
-  color: var(--muted);
+  color: var(--axi-text-faint);
   padding: 0 8px;
   white-space: nowrap;
   overflow: hidden;
@@ -1250,7 +1062,7 @@
 }
 
 .lib-tv__tags {
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
   padding: 0 8px;
   white-space: nowrap;
   overflow: hidden;
@@ -1260,7 +1072,7 @@
 
 .lib-tv__created,
 .lib-tv__modified {
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
   padding: 0 8px;
   white-space: nowrap;
   min-width: 80px;
@@ -1280,202 +1092,198 @@
   white-space: nowrap;
 }
 .lib-tv__sort-btn svg { width: 12px; height: 12px; fill: currentColor; flex-shrink: 0; }
-.lib-tv__sort-btn--active { color: var(--accent); }
-.lib-tv__sort-btn:hover { color: var(--text-light); }
+.lib-tv__sort-btn--active { color: var(--axi-accent); }
+.lib-tv__sort-btn:hover {
+  color: var(--axi-text);
+  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  transform: translate(-2px, -2px);
+}
 
 /* ── Grid view ───────────────────────────────────────────────────── */
-
+/* --axi-grid-min is a per-instance knob, so it is set on the grid element in
+   markup, not here. Folders and comps ask for a narrower track than builds. */
 .lib-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(var(--axi-grid-min, 200px), 1fr));
+  gap: 14px;
 }
 
-.lib-grid + .lib-grid {
-  margin-top: 12px;
-}
+.lib-grid + .lib-grid { margin-top: 18px; }
 
-.lib-grid--folders {
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-}
-
-.lib-grid--comps {
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-}
-
-.lib-grid-card {
-  background: var(--panel-2);
-  border: 1px solid var(--line-soft);
-  border-radius: 8px;
-  padding: 10px;
-  cursor: pointer;
+/* A grid tile is a card at PANEL weight: it sits on the page's content area,
+   not inside a second panel, so it is the raised thing here and carries the
+   6px block. Anything raised INSIDE a panel takes the control weight instead
+   — the build pool in comps.css is the app's other case. */
+.af-tile {
+  position: relative;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  transition: background 0.1s, border-color 0.1s;
+  gap: 10px;
+  padding: 22px 14px 12px;
+  background: var(--axi-surface);
+  border: var(--axi-border-panel) solid var(--axi-ink-line);
+  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
+  cursor: pointer;
   user-select: none;
   min-width: 0;
+  transition: transform .1s, box-shadow .1s;
 }
 
-.lib-grid-card:hover {
-  background: var(--hover-subtle);
-  border-color: var(--line);
+/* Rule 4, the panel case: resting on 6px, so it grows to 10px and translates
+   by 3. Never opacity, never a glow. */
+.af-tile:hover {
+  transform: translate(-3px, -3px);
+  box-shadow: var(--axi-offset-panel-hover) var(--axi-offset-panel-hover) 0 var(--axi-ink-line);
 }
 
-.lib-grid-card--folder {
-  color: var(--muted);
-  flex-direction: row;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-}
-
-.lib-grid-card--pinned {
-  border-left-color: rgba(212, 192, 68, 0.5);
-  border-left-width: 2px;
-}
-
-.lib-grid-card.lib-selected {
-  background: var(--panel);
-  border-color: var(--accent);
-}
-
-.lib-grid-card.lib-drop-target {
-  border: 1px dashed rgba(var(--accent-rgb), 0.5);
-  background: rgba(var(--accent-rgb), 0.06);
-}
-
-.lib-grid-card.lib-dragging {
-  opacity: 0.4;
-}
-
-.lib-grid-card__header {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.lib-grid-card__header .lib-pin-btn {
+/* Rule 5: the profession CAPS the tile. A full-height left edge reads as the
+   box's own border, and a row of five tiles becomes five coloured frames with
+   the colour saying nothing. The strip's colour arrives per-instance as
+   --axi-card-strip; the tile's outline stays --axi-ink-line in every state. */
+.af-tile--strip::before {
+  content: "";
   position: absolute;
   top: 0;
+  left: 0;
   right: 0;
+  height: 9px;
+  background: var(--axi-card-strip, var(--axi-accent));
+  border-bottom: var(--axi-border-panel) solid var(--axi-ink-line);
 }
 
-.lib-grid-card__spec-icon {
-  display: flex;
+.af-tile__head { display: flex; gap: 11px; align-items: flex-start; }
+
+/* The one place the profession's colour FILLS, because a glyph tile is the
+   thing being identified rather than a judgement about it. */
+.af-tile__glyph {
+  flex: none;
   width: 40px;
   height: 40px;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  place-items: center;
+  background: var(--axi-surface-raised);
+  border: var(--axi-border-control) solid var(--axi-ink-line);
+  color: var(--axi-series, var(--axi-text));
 }
 
-.lib-grid-card__spec-icon svg {
-  width: 40px;
-  height: 40px;
-  fill: currentColor;
-}
+.af-tile__glyph svg { width: 26px; height: 26px; fill: currentColor; }
 
-.lib-grid-card__folder-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  color: var(--text-dim);
-}
-
-.lib-grid-card__folder-icon svg {
-  width: 32px;
-  height: 32px;
-}
-
-.lib-grid-card--comp {
-  color: var(--muted);
-  flex-direction: row;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-}
-
-.lib-grid-card__comp-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  color: var(--text-dim);
-}
-
-.lib-grid-card__comp-icon svg {
-  width: 32px;
-  height: 32px;
-}
-
-.lib-grid-card__comp-body {
-  min-width: 0;
-}
-
-.lib-grid-card__title {
-  font-size: 0.88rem;
-  font-weight: 500;
-  color: var(--text-light);
+.af-tile__title {
+  font: var(--axi-t-h3);
+  letter-spacing: var(--axi-ls-h3);
+  color: var(--axi-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.lib-grid-card__pills {
+.af-tile__pills { display: flex; flex-wrap: wrap; gap: 5px; }
+
+/* margin-top:auto so that in an equalised grid row every tile's rule lands on
+   the same line and reads as continuous across the grid. The cost is empty
+   space on tiles with less content, and that is the trade the language makes. */
+.af-tile__meta {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
+  gap: 12px;
+  align-items: center;
+  margin-top: auto;
+  padding-top: 11px;
+  border-top: var(--axi-border-control) solid var(--axi-rule);
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
+  text-transform: uppercase;
+  color: var(--axi-text-faint);
 }
 
-.lib-grid-card__date {
-  font-size: 0.85rem;
-  color: var(--text-dim);
-  margin-top: auto;
+/* Selected and drop-target are states of the tile, so they cap and outline
+   rather than tint. Pinned caps in the accent, and the grid is the ONLY place
+   pinning shows on the container at all: .lib-list-row--pinned and
+   .lib-tv__row--pinned were both deleted in this batch on the rule 5/rule 8
+   reasoning recorded above .lib-tv__row--folder, so this is not "the same way
+   a list row does" — there is no list-row treatment left to be the same as.
+   A tile is a card with a head to cap; a row is a line in a list. */
+.af-tile--pinned::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 3px;
+  background: var(--axi-accent);
 }
+.af-tile.lib-selected { outline: var(--axi-border-control) solid var(--axi-accent); outline-offset: -3px; }
+.af-tile.lib-drop-target { outline: var(--axi-border-control) dashed var(--axi-accent); outline-offset: -3px; }
+
+/* Folder and comp tiles are the same box laid on its side: an icon and a
+   name, no strip, because neither owns a domain colour. */
+.af-tile--row {
+  flex-direction: row;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 13px;
+  color: var(--axi-text-dim);
+}
+
+.af-tile__folder-icon,
+.af-tile__comp-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.af-tile__folder-icon svg,
+.af-tile__comp-icon svg {
+  width: 32px;
+  height: 32px;
+}
+
+.af-tile__comp-body { min-width: 0; }
 
 /* ── Icon view ───────────────────────────────────────────────────── */
 
 .lib-icon-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-  gap: 6px;
+  gap: 4px;
+  /* One card holds the whole grid. Giving every tile its own card made a
+     folder, a comp and a build read as three identical boxes -- the form
+     drowned out the distinction the glyph was carrying. The card is the
+     container; what is inside it is contents, not more cards. Panel weight,
+     because the grid sits on the content area (library.css:1074). */
+  padding: 14px;
+  background: var(--axi-surface);
+  border: var(--axi-border-panel) solid var(--axi-ink-line);
+  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
 }
 
+/* An icon tile is the grid card at control weight. .af-tile is the same idea
+   at panel weight -- surface, ink outline, an offset block it translates
+   against on hover -- and the icon view was the one view that never got a
+   form at all: loose glyphs sitting directly on the ground, with a tinted
+   background for hover. A tile is a box, and rule 4 says a box lifts by
+   growing its offset, not by tinting. */
+/* A tile inside the card is contents, so it carries no form of its own and
+   hovers the way a row does (library.css:682) -- the neutral ramp, not a
+   lift. What tells a folder from a comp from a build is the glyph, which is
+   what it was before and the reason this view is worth having. */
 .lib-icon-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 5px;
-  padding: 8px 4px;
-  border-radius: 6px;
+  gap: 6px;
+  padding: 9px 5px;
+  border: var(--axi-border-control) solid transparent;
   cursor: pointer;
-  transition: background 0.1s;
+  transition: background 0.1s, border-color 0.15s;
   user-select: none;
 }
 
-.lib-icon-item:hover {
-  background: var(--hover-subtle);
-}
+.lib-icon-item:hover { background: var(--axi-surface-raised); }
 
-.lib-icon-item--folder {
-  color: var(--text-dim);
-}
-
-.lib-icon-item.lib-selected {
-  background: var(--panel);
-}
-
-.lib-icon-item.lib-drop-target {
-  background: rgba(var(--accent-rgb), 0.08);
-  outline: 1px dashed rgba(var(--accent-rgb), 0.4);
-}
-
-.lib-icon-item.lib-dragging {
-  opacity: 0.4;
-}
+/* The transparent resting border above is what this colours in, so selecting
+   a tile does not nudge the ones beside it. */
+.lib-icon-item.lib-selected { border-color: var(--axi-accent); }
+.lib-icon-item.lib-drop-target { border-style: dashed; border-color: var(--axi-accent); }
 
 .lib-icon-item__icon {
   display: flex;
@@ -1484,6 +1292,13 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  color: var(--axi-series, var(--axi-text-faint));
+}
+
+.lib-icon-item--build .lib-icon-item__icon {
+  padding: 4px;
+  background: var(--axi-surface-raised);
+  border: var(--axi-border-control) solid var(--axi-ink-line);
 }
 
 .lib-icon-item__icon svg {
@@ -1498,8 +1313,9 @@
 }
 
 .lib-icon-item__label {
-  font-size: 0.85rem;
-  color: var(--muted);
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
+  color: var(--axi-text-dim);
   text-align: center;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1512,15 +1328,59 @@
 
 .lib-columns {
   display: flex;
+  align-items: stretch;
+  gap: 12px;
   height: 100%;
+  /* The columns are cards now, so the strip needs room for the block each one
+     casts down and to the right -- without the trailing padding the last
+     column's offset is what the scroll container clips. */
+  padding: 2px var(--axi-offset-panel) var(--axi-offset-panel) 2px;
   overflow-x: auto;
 }
 
+/* A column is a card at panel weight, by the same reading .af-tile takes
+   (library.css:1074): it sits on the page's content area rather than inside
+   another panel, so it is the raised thing here and carries the 6px block.
+   It does not lift on hover the way a tile does -- a tile is a thing you
+   press and a column is the container the things you press are in, and a
+   strip of columns that each jumped as the pointer crossed them would be
+   four panels flinching on the way to one row. */
 .lib-col {
   min-width: 220px;
   max-width: 280px;
   flex-shrink: 0;
-  border-right: 1px solid var(--line-soft);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--axi-surface);
+  border: var(--axi-border-panel) solid var(--axi-ink-line);
+  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
+}
+
+/* The head is a lid on the column, so it takes the control weight the panel
+   heads elsewhere take -- the hairline is for rules inside running content,
+   and this line separates the label from the list rather than one row from
+   the next. */
+.lib-col__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: var(--axi-border-control) solid var(--axi-ink-line);
+  flex-shrink: 0;
+}
+
+.lib-col__head-title {
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lib-col__body {
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: 4px 0;
 }
@@ -1530,31 +1390,45 @@
   max-width: none;
 }
 
+/* The label stays in the neutral ramp: the profession's colour rides on the
+   diamond/icon, never on a whole row of text (content.js:198-203 states the
+   principle, and list, table, grid and icon views all follow it). Reading
+   --axi-series here made the columns view the one place a build's *name* was
+   profession-coloured; .lib-col__icon below already carries the hue. */
 .lib-col__item {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 5px 10px;
+  padding: 7px 10px;
+  border-bottom: var(--axi-border-hairline) solid var(--axi-rule);
   cursor: pointer;
   transition: background 0.1s;
   user-select: none;
-  font-size: 0.88rem;
-  color: var(--muted);
+  font: var(--axi-t-small);
+  color: var(--axi-text-faint);
 }
 
 .lib-col__item:hover {
-  background: var(--hover-subtle);
-  color: var(--text-light);
+  background: var(--axi-surface-raised);
+  color: var(--axi-text-dim);
 }
 
 .lib-col__item--selected {
-  background: var(--panel);
-  color: var(--text-light);
+  background: var(--axi-surface);
+  color: var(--axi-text-dim);
 }
 
 .lib-col__item.lib-selected {
-  background: var(--panel);
-  color: var(--text-light);
+  background: var(--axi-accent);
+  color: var(--axi-accent-ink);
+}
+
+/* The chevron recedes against the ground normally, so under the accent fill
+   it has to pick up the row's ink or it reads as disabled. The icon keeps
+   its own profession colour on purpose, same as the list and table rows'
+   spec icon — a profession's hue is not the row's to override. */
+.lib-col__item.lib-selected .lib-col__chevron {
+  color: inherit;
 }
 
 .lib-col__icon {
@@ -1564,6 +1438,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  color: var(--axi-series, var(--axi-text-faint));
 }
 
 .lib-col__icon svg {
@@ -1573,7 +1448,7 @@
 }
 
 .lib-col__icon--folder {
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
 }
 
 .lib-col__name {
@@ -1588,7 +1463,7 @@
   width: 14px;
   height: 14px;
   flex-shrink: 0;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
 }
 
 .lib-col__chevron svg {
@@ -1598,7 +1473,7 @@
 
 .lib-col__empty {
   padding: 16px;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
   font-size: 0.85rem;
   text-align: center;
   font-style: italic;
@@ -1607,10 +1482,9 @@
 /* ── Context menu ────────────────────────────────────────────────── */
 
 .lib-ctx-menu {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 7px;
-  box-shadow: var(--shadow-md);
+  background: var(--axi-surface-raised);
+  border: var(--axi-border-panel) solid var(--axi-ink-line);
+  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
   min-width: 180px;
   padding: 4px 0;
   user-select: none;
@@ -1629,30 +1503,32 @@
   gap: 8px;
   padding: 6px 10px;
   cursor: pointer;
-  font-size: 0.85rem;
-  color: var(--text-light);
+  font: var(--axi-t-small);
+  color: var(--axi-text-dim);
   transition: background 0.1s;
 }
 
 .lib-ctx-item:hover {
-  background: var(--hover-subtle);
+  background: var(--axi-ground);
+  color: var(--axi-text);
 }
 
 .lib-ctx-item--danger {
-  color: var(--danger-text);
+  color: var(--axi-danger);
 }
 
 .lib-ctx-item--danger:hover {
-  background: rgba(200, 60, 60, 0.15);
+  background: var(--axi-danger);
+  color: var(--axi-accent-ink);
 }
 
 .lib-ctx-item--header {
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
   cursor: default;
   pointer-events: none;
-  font-size: 0.88rem;
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
 }
 
 /* Disabled, but still hoverable. These carry a `title` saying why the action is
@@ -1661,9 +1537,8 @@
    needs the events blocked. Placed after --danger so a refused Delete reads as
    unavailable rather than as armed. */
 .lib-ctx-item--disabled {
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
   cursor: default;
-  opacity: 0.55;
 }
 
 .lib-ctx-item--disabled:hover {
@@ -1677,16 +1552,16 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
 }
 
 .lib-ctx-item--danger .lib-ctx-item__icon {
-  color: var(--danger);
+  color: var(--axi-danger);
 }
 
 /* After the danger rule, so a refused Delete does not keep a live red icon. */
 .lib-ctx-item--disabled .lib-ctx-item__icon {
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
 }
 
 .lib-ctx-item__icon svg {
@@ -1699,61 +1574,27 @@
 }
 
 .lib-ctx-item__shortcut {
-  font-size: 0.85rem;
-  color: var(--text-dim);
+  font: var(--axi-t-small);
+  color: var(--axi-text-faint);
   flex-shrink: 0;
   white-space: nowrap;
 }
 
 .lib-ctx-item__arrow {
   display: flex;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
   flex-shrink: 0;
 }
 
 .lib-ctx-sep {
-  height: 1px;
-  background: var(--line-soft);
+  height: var(--axi-border-hairline);
+  background: var(--axi-rule);
   margin: 3px 0;
 }
 
-/* ── Profession colors ───────────────────────────────────────────── */
-
-.lib-prof--guardian     { color: #6ea8ff; }
-.lib-prof--warrior      { color: #ff9944; }
-.lib-prof--necromancer  { color: #4dca7a; }
-.lib-prof--engineer     { color: #cc8844; }
-.lib-prof--ranger       { color: #77cc55; }
-.lib-prof--thief        { color: #cc6677; }
-.lib-prof--mesmer       { color: #b07acc; }
-.lib-prof--elementalist { color: #dd5555; }
-.lib-prof--revenant     { color: #aa6655; }
-.lib-prof--unknown      { color: #888; }
-
-/* ── Sidebar profession tints ────────────────────────────────────── */
-
-.lib-nav-item[data-profession="Guardian"]     { color: #6ea8ff; }
-.lib-nav-item[data-profession="Warrior"]      { color: #ff9944; }
-.lib-nav-item[data-profession="Necromancer"]  { color: #4dca7a; }
-.lib-nav-item[data-profession="Engineer"]     { color: #cc8844; }
-.lib-nav-item[data-profession="Ranger"]       { color: #77cc55; }
-.lib-nav-item[data-profession="Thief"]        { color: #cc6677; }
-.lib-nav-item[data-profession="Mesmer"]       { color: #b07acc; }
-.lib-nav-item[data-profession="Elementalist"] { color: #dd5555; }
-.lib-nav-item[data-profession="Revenant"]     { color: #aa6655; }
-
-.lib-nav-item[data-profession] .lib-nav-item__icon {
-  color: inherit;
-  opacity: 0.5;
-}
-
-.lib-nav-item[data-profession]:hover .lib-nav-item__icon {
-  opacity: 0.8;
-}
-
-.lib-nav-item[data-profession].lib-nav-item--active .lib-nav-item__icon {
-  opacity: 1;
-}
+/* Sidebar profession tints now live with the rest of .lib-nav-item, above:
+   .lib-nav-item__icon reads --axi-series, which sidebar.js sets per-instance
+   from src/shared/professions.js. */
 
 /* ── Empty state ─────────────────────────────────────────────────── */
 
@@ -1763,8 +1604,8 @@
   justify-content: center;
   height: 100%;
   min-height: 120px;
-  color: var(--text-dim);
-  font-size: 0.88rem;
+  font: var(--axi-t-small);
+  color: var(--axi-text-faint);
 }
 
 .lib-empty-state p {
@@ -1772,72 +1613,97 @@
 }
 
 /* ── Drag and drop state ─────────────────────────────────────────── */
+/* Fix round 1, F3/F4: library/drag-drop.js:398,401-407 wires
+   ghostClass: "lib-drag-ghost", chosenClass: "lib-drag-chosen",
+   dragClass: "lib-drag-active", forceFallback: true,
+   fallbackClass: "lib-drag-fallback". `grep -rn lib-dragging src/` finds no
+   emitter at all (nothing in this codebase applies it) and `sortable-drag`
+   is SortableJS's *default* dragClass name, which this app overrides to
+   lib-drag-active — so both were dead rules, deleted rather than fixed.
+   The vendored SortableJS source (node_modules/sortablejs/modular/
+   sortable.esm.js) settles which of the four real classes land on the live
+   row still in the list versus the floating clone:
+     - :1416 toggleClass(dragEl, options.ghostClass, true) — ghostClass is
+       the live row, acting as the placeholder gap; :1535 explicitly
+       removes it from the clone.
+     - :1302 toggleClass(dragEl, options.chosenClass, true) — chosenClass
+       is the live row too.
+     - :1536-1537 put fallbackClass AND dragClass on ghostEl, the floating
+       clone; :1592 applies dragClass to dragEl only when !fallback, and
+       this app sets forceFallback: true, so dragClass here is the clone
+       as well.
+   lib-drag-ghost and lib-drag-chosen are therefore real rows at a resting
+   partial opacity — the thing rule 2 forbids — and are fixed below instead
+   of exempted. lib-drag-active and lib-drag-fallback are genuine floating
+   clones, and they keep their fade.
 
-.lib-dragging {
-  opacity: 0.4;
-}
+   ── An app-level deviation from rule 2, owned here ──
+   To be exact about what that last sentence is: RULES.md rule 2 says colour
+   is at full strength, and it grants no exception of any kind to a drag
+   clone. Earlier rounds of this conversion said it did; they were wrong, and
+   so was the
+   matching wording in the gate's OPACITY_ALLOWLIST. These four fades
+   (.lib-drag-active, .lib-drag-fallback, and comps.css's
+   .comp-cat-drag-ghost and .comp-drag-icon-ghost) are a deliberate AxiForge
+   deviation, and the reasoning is AxiForge's, not the language's: they are
+   body-portaled floating clones that exist only while a pointer is held
+   down, nothing about them is a resting appearance, and a fading drag ghost
+   is a strong enough platform convention that re-deciding drag feel at the
+   tail of a reskin is the worse error. That is a local trade, not a rule.
+   The durable answer is either a rule written upstream in
+   ../axi-design/docs/RULES.md for "a representation of a thing being moved",
+   or clones distinguished without opacity — recorded in docs/BACKLOG.md.
+   Do not cite this paragraph as permission for a fifth one.
 
-/* SortableJS drag classes */
+   lib-drag-chosen itself has no rule below: chosenClass lands on the same
+   row a moment later, so the "picked up" state is already expressed by
+   lib-drag-ghost above, and a resting 0.8 on a real row had nothing left to
+   say — deleted rather than exempted, same disposition as lib-dragging and
+   sortable-drag above. */
 .lib-drag-ghost {
-  opacity: 0.3;
-  background: rgba(var(--accent-rgb), 0.1) !important;
+  background: var(--axi-ground);
+  outline: var(--axi-border-control) dashed var(--axi-rule);
+  outline-offset: -3px;
 }
 
-.lib-drag-chosen {
-  opacity: 0.8;
-}
-
+/* Floating clone (see the block comment above), not a row resting on the
+   ground. Its 0.5 is an app-level deviation from rule 2, owned by the
+   "app-level deviation" paragraph above — RULES.md does not permit it. */
 .lib-drag-active {
   opacity: 0.5;
 }
 
 .lib-drag-fallback {
+  /* Genuine floating clone (see the block comment above); the 0.9 is the same
+     app-level deviation from rule 2, not something the language allows. */
   opacity: 0.9;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
   cursor: grab !important;
 }
 
-.sortable-drag {
-  opacity: 0.9;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-}
-
 .lib-drop-target {
-  outline: 2px dashed rgba(var(--accent-rgb), 0.6);
-  outline-offset: -2px;
-  background: rgba(var(--accent-rgb), 0.1) !important;
+  outline: var(--axi-border-control) dashed var(--axi-accent);
+  outline-offset: -3px;
 }
 
 .lib-breadcrumb__item.lib-drop-target {
-  outline: none;
-  box-shadow: inset 0 0 0 2px rgba(var(--accent-rgb), 0.6);
-  border-radius: 4px;
-  background: rgba(var(--accent-rgb), 0.15) !important;
+  outline: var(--axi-border-control) dashed var(--axi-accent);
   overflow: visible;
 }
 
 .lib-root-drop-zone {
   padding: 10px 16px;
   text-align: center;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
   font-size: 0.85rem;
-  border: 2px dashed var(--line);
-  border-radius: 6px;
+  border: var(--axi-border-control) dashed var(--axi-rule);
   margin: 6px 8px;
   transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
 
 .lib-root-drop-zone--active {
-  background: rgba(var(--accent-rgb), 0.1);
-  border-color: rgba(var(--accent-rgb), 0.5);
-  color: var(--muted);
-}
-
-/* ── Selection ───────────────────────────────────────────────────── */
-
-.lib-selected {
-  background: var(--panel) !important;
-  border-left: 2px solid var(--accent);
+  border-color: var(--axi-accent);
+  color: var(--axi-text);
 }
 
 /* ── Library toast ───────────────────────────────────────────────── */
@@ -1847,13 +1713,12 @@
   bottom: 20px;
   left: 50%;
   transform: translateX(-50%) translateY(8px);
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
+  background: var(--axi-surface);
+  border: var(--axi-border-panel) solid var(--axi-ink-line);
+  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
   padding: 7px 14px;
-  font-size: 0.8rem;
-  color: var(--text);
-  box-shadow: var(--shadow-sm);
+  font: var(--axi-t-small);
+  color: var(--axi-text);
   opacity: 0;
   transition: opacity 0.15s ease, transform 0.15s ease;
   pointer-events: none;
@@ -1869,8 +1734,8 @@
   opacity: 1;
   transform: translateX(-50%) translateY(0);
 }
-.lib-toast--success { border-color: var(--accent); color: var(--accent); }
-.lib-toast--error   { border-color: var(--danger);  color: var(--danger);  }
+.lib-toast--success { border-color: var(--axi-accent); color: var(--axi-accent); }
+.lib-toast--error   { border-color: var(--axi-danger); color: var(--axi-danger); }
 
 /* A toast carrying an Undo button has to take pointer events back off the base
    rule above, or the button can't be clicked (and hover can't pause the timer). */
@@ -1885,35 +1750,36 @@
   border: none;
   /* currentColor, not --line: the toast recolours itself per type, and a fixed
      dark divider disappears against the accent-tinted text. */
-  border-left: 1px solid color-mix(in srgb, currentColor 35%, transparent);
+  border-left: var(--axi-border-hairline) solid currentColor;
   padding: 2px 2px 2px 10px;
   margin: 0;
   font: inherit;
   font-weight: 600;
   color: inherit;
   cursor: pointer;
-  opacity: 0.85;
 }
-.lib-toast__action:hover { opacity: 1; text-decoration: underline; }
-.lib-toast__action:focus-visible { outline: 1px solid currentColor; outline-offset: 2px; }
+.lib-toast__action:hover { text-decoration: underline; }
+.lib-toast__action:focus-visible { outline: var(--axi-border-control) solid currentColor; outline-offset: 2px; }
 .lib-toast--loading {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
 }
 .lib-toast--loading::before {
   content: "";
   width: 12px;
   height: 12px;
-  border: 2px solid currentColor;
+  border: var(--axi-border-control) solid currentColor;
   border-top-color: transparent;
-  border-radius: 50%;
   animation: lib-toast-spin 0.7s linear infinite;
   flex-shrink: 0;
 }
 @keyframes lib-toast-spin {
   to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lib-toast--loading::before { animation: none; }
 }
 
 /* ── Card entrance animation ────────────────────────────────────────── */
@@ -1928,19 +1794,26 @@
   }
 }
 
-.lib-grid-card {
+.af-tile {
   animation: lib-card-enter 0.25s ease-out both;
 }
 
-.lib-grid-card:nth-child(1) { animation-delay: 0ms; }
-.lib-grid-card:nth-child(2) { animation-delay: 40ms; }
-.lib-grid-card:nth-child(3) { animation-delay: 80ms; }
-.lib-grid-card:nth-child(4) { animation-delay: 120ms; }
-.lib-grid-card:nth-child(5) { animation-delay: 160ms; }
-.lib-grid-card:nth-child(6) { animation-delay: 200ms; }
-.lib-grid-card:nth-child(7) { animation-delay: 240ms; }
-.lib-grid-card:nth-child(8) { animation-delay: 280ms; }
-.lib-grid-card:nth-child(n+9) { animation-delay: 320ms; }
+.af-tile:nth-child(1) { animation-delay: 0ms; }
+.af-tile:nth-child(2) { animation-delay: 40ms; }
+.af-tile:nth-child(3) { animation-delay: 80ms; }
+.af-tile:nth-child(4) { animation-delay: 120ms; }
+.af-tile:nth-child(5) { animation-delay: 160ms; }
+.af-tile:nth-child(6) { animation-delay: 200ms; }
+.af-tile:nth-child(7) { animation-delay: 240ms; }
+.af-tile:nth-child(8) { animation-delay: 280ms; }
+.af-tile:nth-child(n+9) { animation-delay: 320ms; }
+
+/* A stagger on entry is decoration, and decoration is the first thing to go
+   when someone has asked the system for less motion. The tiles still arrive;
+   they just arrive at once. */
+@media (prefers-reduced-motion: reduce) {
+  .af-tile { animation: none; }
+}
 
 /* ── Shared folder badge ─────────────────────────────────────────────────── */
 
@@ -1949,8 +1822,7 @@
   align-items: center;
   vertical-align: middle;
   margin-left: 6px;
-  color: var(--accent);
-  opacity: 0.75;
+  color: var(--axi-accent);
   flex-shrink: 0;
 }
 
@@ -1960,7 +1832,7 @@
 }
 
 /* Grid/icon view: overlay badge on folder icon */
-.lib-grid-card__folder-icon,
+.af-tile__folder-icon,
 .lib-icon-item__icon--folder {
   position: relative;
 }
@@ -1971,8 +1843,7 @@
   bottom: -2px;
   right: -4px;
   margin: 0;
-  background: var(--bg-2);
-  border-radius: 50%;
+  background: var(--axi-ground);
   padding: 1px;
   opacity: 1;
 }
@@ -1995,11 +1866,11 @@
 }
 
 .lib-nav-item__sync-indicator--syncing {
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
 }
 
 .lib-nav-item__sync-indicator--synced {
-  color: #4caf50;
+  color: var(--axi-ok);
 }
 
 /* ── Content area folder sync indicators ─────────────────────────────────── */
@@ -2016,30 +1887,30 @@
 }
 
 .lib-content-sync-indicator--syncing {
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
 }
 
 .lib-content-sync-indicator--synced {
-  color: #4caf50;
+  color: var(--axi-ok);
 }
 
 .lib-content-sync-indicator--error {
-  color: #e57373;
+  color: var(--axi-danger);
 }
 
 /* Queued locally / diverged from the team copy — shared by both badge sites. */
 .lib-content-sync-indicator--pending,
 .lib-nav-item__sync-indicator--pending {
-  color: var(--muted);
+  color: var(--axi-text-faint);
 }
 
 .lib-content-sync-indicator--conflict,
 .lib-nav-item__sync-indicator--conflict {
-  color: #f0b232;
+  color: var(--axi-warn);
 }
 
 .lib-nav-item__sync-indicator--error {
-  color: #e57373;
+  color: var(--axi-danger);
 }
 
 /* Spinner animation for syncing state */
@@ -2052,13 +1923,18 @@
   transform-origin: center;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .sync-spin { animation: none; }
+}
+
 /* ── Library banners (e.g. an orphaned legacy GitHub-org folder) ─────────── */
 .lib-banner {
   padding: 8px 12px;
-  border-radius: var(--radius-sm, 6px);
-  background: rgba(240, 178, 50, .12);
-  color: #f5d78e;
-  font-size: .8rem;
+  background: var(--axi-surface);
+  border: var(--axi-border-panel) solid var(--axi-ink-line);
+  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
+  font: var(--axi-t-small);
+  color: var(--axi-text-dim);
   margin-bottom: 8px;
   display: flex;
   align-items: center;
@@ -2067,16 +1943,19 @@
 }
 
 .lib-banner__btn {
-  background: rgba(255, 255, 255, .08);
-  border: 1px solid rgba(255, 255, 255, .16);
+  background: var(--axi-surface-raised);
+  border: var(--axi-border-control) solid var(--axi-ink-line);
   color: inherit;
-  border-radius: 4px;
   padding: 3px 8px;
   font-size: .72rem;
   cursor: pointer;
+  transition: box-shadow 0.1s, transform 0.1s;
 }
 
-.lib-banner__btn:hover { background: rgba(255, 255, 255, .14); }
+.lib-banner__btn:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+}
 
 /* ── Trash view ──────────────────────────────────────────────────────────── */
 
@@ -2091,13 +1970,13 @@
   gap: 16px;
   padding-bottom: 12px;
   margin-bottom: 8px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: var(--axi-border-hairline) solid var(--axi-rule);
 }
 
 .lib-trash__hint {
   margin: 0;
-  color: var(--muted);
-  font-size: 12px;
+  color: var(--axi-text-faint);
+  font: var(--axi-t-small);
 }
 
 .lib-trash__list {
@@ -2110,21 +1989,21 @@
   align-items: center;
   gap: 12px;
   padding: 10px 8px;
-  border-bottom: 1px solid var(--line-soft);
+  border-bottom: var(--axi-border-hairline) solid var(--axi-rule);
 }
-.lib-trash__row:hover { background: var(--panel-2); }
+.lib-trash__row:hover { background: var(--axi-surface); }
 
 .lib-trash__icon {
   display: flex;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
 }
 .lib-trash__icon svg { width: 18px; height: 18px; }
 
 .lib-trash__text { flex: 1; min-width: 0; }
 
 .lib-trash__name {
-  color: var(--text-light);
-  font-size: 13px;
+  color: var(--axi-text-dim);
+  font: var(--axi-t-small);
   /* A trashed item is not live content, so it does not get the full --text. */
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2132,13 +2011,14 @@
 }
 
 .lib-trash__meta {
-  color: var(--text-dim);
-  font-size: 11px;
+  color: var(--axi-text-faint);
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
   margin-top: 2px;
 }
 
 /* Running out of time to restore — the meta line is the thing to notice. */
-.lib-trash__row--expiring .lib-trash__meta { color: var(--danger-text); }
+.lib-trash__row--expiring .lib-trash__meta { color: var(--axi-danger); }
 
 .lib-trash__actions {
   display: flex;
@@ -2154,26 +2034,24 @@
 
 .lib-trash__btn {
   background: none;
-  border: 1px solid var(--line);
-  border-radius: 4px;
+  border: var(--axi-border-control) solid var(--axi-ink-line);
   padding: 4px 10px;
-  font: inherit;
-  font-size: 12px;
-  color: var(--text-light);
+  font: var(--axi-t-small);
+  color: var(--axi-text-dim);
   cursor: pointer;
 }
 /* The team's own deletions, below your personal rows. Separated by a rule and
    a little air so the two lists never read as one. */
 .lib-trash__team {
   margin-top: 18px;
-  border-top: 1px solid var(--line);
+  border-top: var(--axi-border-hairline) solid var(--axi-rule);
   padding-top: 10px;
 }
-.lib-trash__btn--primary:hover { border-color: var(--accent); color: var(--accent); }
+.lib-trash__btn--primary:hover { border-color: var(--axi-accent); color: var(--axi-accent); }
 
-.lib-trash__btn:hover { border-color: var(--muted); color: var(--text); }
-.lib-trash__btn--danger:hover { border-color: var(--danger); color: var(--danger-text); }
-.lib-trash__btn:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
+.lib-trash__btn:hover { border-color: var(--axi-text-faint); color: var(--axi-text); }
+.lib-trash__btn--danger:hover { border-color: var(--axi-danger); color: var(--axi-danger); }
+.lib-trash__btn:focus-visible { outline: var(--axi-border-control) solid var(--axi-accent); outline-offset: 1px; }
 
 .lib-trash--empty {
   display: flex;
@@ -2184,10 +2062,10 @@
   padding: 64px 20px;
   text-align: center;
 }
-.lib-trash__empty-icon { color: var(--text-dim); }
+.lib-trash__empty-icon { color: var(--axi-text-faint); }
 .lib-trash__empty-icon svg { width: 32px; height: 32px; }
-.lib-trash__empty-title { margin: 4px 0 0; color: var(--text-light); font-size: 14px; }
-.lib-trash__empty-hint { margin: 0; color: var(--text-dim); font-size: 12px; max-width: 40ch; }
+.lib-trash__empty-title { margin: 4px 0 0; color: var(--axi-text-dim); font: var(--axi-t-label); letter-spacing: var(--axi-ls-label); }
+.lib-trash__empty-hint { margin: 0; color: var(--axi-text-faint); font: var(--axi-t-small); max-width: 40ch; }
 
 /* ── Archive view ────────────────────────────────────────────────────────── */
 /* Structurally the trash view, tuned in the two places the difference shows:
@@ -2199,13 +2077,13 @@
 .lib-archive__header {
   padding-bottom: 12px;
   margin-bottom: 8px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: var(--axi-border-hairline) solid var(--axi-rule);
 }
 
 .lib-archive__hint {
   margin: 0;
-  color: var(--muted);
-  font-size: 12px;
+  color: var(--axi-text-faint);
+  font: var(--axi-t-small);
 }
 
 .lib-archive__list {
@@ -2218,29 +2096,30 @@
   align-items: center;
   gap: 12px;
   padding: 10px 8px;
-  border-bottom: 1px solid var(--line-soft);
+  border-bottom: var(--axi-border-hairline) solid var(--axi-rule);
 }
-.lib-archive__row:hover { background: var(--panel-2); }
+.lib-archive__row:hover { background: var(--axi-surface); }
 
 .lib-archive__icon {
   display: flex;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
 }
 .lib-archive__icon svg { width: 18px; height: 18px; }
 
 .lib-archive__text { flex: 1; min-width: 0; }
 
 .lib-archive__name {
-  color: var(--text);
-  font-size: 13px;
+  color: var(--axi-text);
+  font: var(--axi-t-small);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .lib-archive__meta {
-  color: var(--text-dim);
-  font-size: 11px;
+  color: var(--axi-text-faint);
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
   margin-top: 2px;
 }
 
@@ -2255,17 +2134,15 @@
 
 .lib-archive__btn {
   background: none;
-  border: 1px solid var(--line);
-  border-radius: 4px;
+  border: var(--axi-border-control) solid var(--axi-ink-line);
   padding: 4px 10px;
-  font: inherit;
-  font-size: 12px;
-  color: var(--text-light);
+  font: var(--axi-t-small);
+  color: var(--axi-text-dim);
   cursor: pointer;
 }
-.lib-archive__btn:hover { border-color: var(--muted); color: var(--text); }
-.lib-archive__btn--primary:hover { border-color: var(--accent); color: var(--accent); }
-.lib-archive__btn:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
+.lib-archive__btn:hover { border-color: var(--axi-text-faint); color: var(--axi-text); }
+.lib-archive__btn--primary:hover { border-color: var(--axi-accent); color: var(--axi-accent); }
+.lib-archive__btn:focus-visible { outline: var(--axi-border-control) solid var(--axi-accent); outline-offset: 1px; }
 
 .lib-archive--empty {
   display: flex;
@@ -2276,10 +2153,10 @@
   padding: 64px 20px;
   text-align: center;
 }
-.lib-archive__empty-icon { color: var(--text-dim); }
+.lib-archive__empty-icon { color: var(--axi-text-faint); }
 .lib-archive__empty-icon svg { width: 32px; height: 32px; }
-.lib-archive__empty-title { margin: 4px 0 0; color: var(--text-light); font-size: 14px; }
-.lib-archive__empty-hint { margin: 0; color: var(--text-dim); font-size: 12px; max-width: 46ch; }
+.lib-archive__empty-title { margin: 4px 0 0; color: var(--axi-text-dim); font: var(--axi-t-label); letter-spacing: var(--axi-ls-label); }
+.lib-archive__empty-hint { margin: 0; color: var(--axi-text-faint); font: var(--axi-t-small); max-width: 46ch; }
 
 /* Archive and Trash both live at the bottom of the sidebar. The `margin-top:
    auto` has to be on whichever comes first, so it is claimed here and the trash
@@ -2288,7 +2165,7 @@
 .lib-sidebar__section--archive {
   margin-top: auto;
   padding-top: 8px;
-  border-top: 1px solid var(--line-soft);
+  border-top: var(--axi-border-hairline) solid var(--axi-rule);
 }
 .lib-sidebar__section--archive + .lib-sidebar__section--trash {
   margin-top: 0;
@@ -2300,7 +2177,7 @@
 .lib-sidebar__section--trash {
   margin-top: auto;
   padding-top: 8px;
-  border-top: 1px solid var(--line-soft);
+  border-top: var(--axi-border-hairline) solid var(--axi-rule);
 }
 
 /* ══ Import Dedupe ══════════════════════════════════════════════════════════
@@ -2312,10 +2189,25 @@
   padding-left: 18px;
   max-height: 180px;
   overflow-y: auto;
-  font-size: 0.82rem;
-  color: var(--text-dim);
+  font: var(--axi-t-small);
+  color: var(--axi-text-faint);
 }
 
 .import-dedupe__list li { margin-bottom: 4px; }
 
-.import-dedupe__list strong { color: var(--text); font-weight: 600; }
+.import-dedupe__list strong { color: var(--axi-text); font-weight: 600; }
+
+/* ── Reduced motion ──────────────────────────────────────────────────────── */
+/* The package's block (axi.css:149-166) enumerates only its own .axi-*
+   selectors, so it never reaches these app-local lifts, and its global
+   `*{ transition-duration: .01ms }` makes a lift INSTANT rather than absent —
+   which is exactly why the package cancels `transform` separately. Same shape
+   and same reason as comps.css's block. A reader who asked for less motion
+   should get none of it, including from the app layer. */
+@media (prefers-reduced-motion: reduce) {
+  .lib-tv__sort-btn:hover,
+  .af-tile:hover,
+  .lib-banner__btn:hover {
+    transform: none !important;
+  }
+}

@@ -59,11 +59,7 @@ const { shortUrl, publishedOwnerFor } = require("./shortUrl");
 const { resolvePublishTarget } = require("./publishTarget");
 const { assertCanMoveOutOfTeam, assertFolderTreeFits, decideCompBuildPublish } = require("./teamGuards");
 
-const PROFESSION_THEME_IDS = {
-  Guardian: "prof-guardian", Warrior: "prof-warrior", Necromancer: "prof-necromancer",
-  Engineer: "prof-engineer", Ranger: "prof-ranger", Thief: "prof-thief",
-  Mesmer: "prof-mesmer", Elementalist: "prof-elementalist", Revenant: "prof-revenant",
-};
+const { PROFESSION_ACCENTS: PROFESSION_THEME_IDS } = require("./accents");
 
 const DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL || "";
 const APP_PROFILE = process.env.APP_PROFILE;

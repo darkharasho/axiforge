@@ -31,7 +31,7 @@ function seedGithubAuth(login = "e2e") {
 
 async function joinTeam(window) {
   await window.click("#workspaceBtn");
-  await window.click('.ws-menu-item:has-text("Settings")');
+  await window.click('.af-menu-item:has-text("Settings")');
   await window.click(".settings-modal__nav-item[data-pane='teams']");
   await window.click("#sm-teams-enable");
   await expect(window.locator("#sm-teams-on")).toBeVisible();

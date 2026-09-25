@@ -57,15 +57,15 @@ const _wsIcons = {
 function _menuItem(icon, label, onClick, className = "") {
   const btn = document.createElement("button");
   btn.type = "button";
-  btn.className = `ws-menu-item${className ? ` ${className}` : ""}`;
-  btn.innerHTML = `<span class="ws-menu-item__icon">${icon}</span><span class="ws-menu-item__label">${escapeHtml(label)}</span>`;
+  btn.className = `af-menu-item${className ? ` ${className}` : ""}`;
+  btn.innerHTML = `<span class="af-menu-item__icon">${icon}</span><span class="af-menu-item__label">${escapeHtml(label)}</span>`;
   btn.addEventListener("click", onClick);
   return btn;
 }
 
 function _menuSeparator() {
   const div = document.createElement("div");
-  div.className = "ws-menu-sep";
+  div.className = "af-menu-sep";
   return div;
 }
 
@@ -103,7 +103,7 @@ export function renderAuth() {
       state.loginFlow.beginData = null;
       await _callbacks.refreshOnboardingStatus();
       render();
-    }, "ws-menu-item--danger"));
+    }, "af-menu-item--danger"));
 
     return;
   }
@@ -116,7 +116,7 @@ export function renderAuth() {
     } catch (err) {
       showError(err);
     }
-  }, "ws-menu-item--primary"));
+  }, "af-menu-item--primary"));
 
   _el.authRow.append(_menuSeparator());
 
@@ -604,6 +604,11 @@ export function renderEditorMeta() {
  * @param {string|null} theme - current theme param value (or null)
  * @returns {string|null}
  */
+/** Single source of the `?t=` value: the accent id currently applied to the page. */
+export function currentShareAccent() {
+  return document.documentElement.getAttribute("data-axi-accent");
+}
+
 export function resolvePublishedUrl(build, onboarding, folders, theme) {
   if (!build?.publishedSlug || !build?.publishedFileId || !build?.publishedKey) return null;
 
@@ -626,8 +631,7 @@ export function resolvePublishedUrl(build, onboarding, folders, theme) {
 function _getPublishedUrl() {
   if (!state.editor.id) return null;
   const build = state.builds.find((b) => b.id === state.editor.id);
-  const theme = document.documentElement.getAttribute("data-theme");
-  return resolvePublishedUrl(build, state.onboarding, state.folders, theme);
+  return resolvePublishedUrl(build, state.onboarding, state.folders, currentShareAccent());
 }
 
 // ---------------------------------------------------------------------------
@@ -826,7 +830,7 @@ export function advancePublishStep(stepKey) {
       row.querySelector(".publish-ticker__icon").textContent = "\u2713";
     } else if (i === idx) {
       row.classList.add("publish-ticker__row--active");
-      row.querySelector(".publish-ticker__icon").innerHTML = `<span class="publish-ticker__spinner"></span>`;
+      row.querySelector(".publish-ticker__icon").innerHTML = `<span class="af-dot af-dot--idle af-work"></span>`;
     } else {
       row.classList.add("publish-ticker__row--pending");
       row.querySelector(".publish-ticker__icon").textContent = "\u2022";
@@ -883,13 +887,13 @@ export function showPublishResult(url) {
       localParams.set("remoteBase", remoteBase);
       const localUrl = `http://localhost:3000/?${localParams.toString()}`;
       const localBtn = document.createElement("button");
-      localBtn.className = "btn btn-dev publish-result__preview";
+      localBtn.className = "axi-btn af-btn--dev publish-result__preview";
       localBtn.textContent = "Preview";
       localBtn.addEventListener("click", () => {
         window.desktopApi.openPreviewWindow(localUrl);
       });
       const mobileBtn = document.createElement("button");
-      mobileBtn.className = "btn btn-dev publish-result__preview";
+      mobileBtn.className = "axi-btn af-btn--dev publish-result__preview";
       mobileBtn.textContent = "Mobile";
       mobileBtn.addEventListener("click", () => {
         window.desktopApi.openPreviewWindow(localUrl, { mobile: true });
@@ -910,7 +914,7 @@ function _showUrlResult(url, resultSlot) {
   resultSlot.innerHTML = `
     <span class="publish-result__label">Published</span>
     <input type="text" class="publish-result__url" value="${escapeHtml(url)}" readonly />
-    <button class="btn btn-secondary publish-result__copy">Copy</button>
+    <button class="axi-btn axi-btn--ghost publish-result__copy">Copy</button>
   `;
 
   const copyBtn = resultSlot.querySelector(".publish-result__copy");
@@ -934,13 +938,13 @@ function _showUrlResult(url, resultSlot) {
       localParams.set("remoteBase", remoteBase);
       const localUrl = `http://localhost:3000/?${localParams.toString()}`;
       const localBtn = document.createElement("button");
-      localBtn.className = "btn btn-dev publish-result__preview";
+      localBtn.className = "axi-btn af-btn--dev publish-result__preview";
       localBtn.textContent = "Preview";
       localBtn.addEventListener("click", () => {
         window.desktopApi.openPreviewWindow(localUrl);
       });
       const mobileBtn = document.createElement("button");
-      mobileBtn.className = "btn btn-dev publish-result__preview";
+      mobileBtn.className = "axi-btn af-btn--dev publish-result__preview";
       mobileBtn.textContent = "Mobile";
       mobileBtn.addEventListener("click", () => {
         window.desktopApi.openPreviewWindow(localUrl, { mobile: true });

@@ -274,7 +274,7 @@ test.describe("AxiForge link import — a comp brings its builds", () => {
 
   test("the comp opens with its builds in place", async () => {
     await window.click('.leftnav__item[data-page="comps"]');
-    const back = window.locator(".comp-detail__back-btn");
+    const back = window.locator(".comp-detail__bar .subnav__back");
     if (await back.count()) {
       await back.first().click();
       await window.waitForTimeout(300);

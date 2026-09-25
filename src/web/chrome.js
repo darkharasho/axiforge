@@ -46,32 +46,40 @@ function flash(btn, msg) {
 }
 
 function mountTopBar() {
-  const bar = document.createElement("div");
-  bar.className = "web-topbar no-drag";
+  // The language's own masthead, the same one the published SPA wears
+  // (src/site/index.html): .axi-mast is the sticky bar, .axi-mast__in its
+  // measure, .axi-brand the lockup. "Playground" used to be a .web-topbar__beta
+  // span carrying its own font, size, tracking and a 0.8 opacity; it is
+  // .axi-brand__name's built-in <small> child now, which is that sub-line's
+  // job in the package. The web-topbar__* classes stay as this app's own
+  // layout hooks on top of the package's paint.
+  const bar = document.createElement("nav");
+  bar.className = "axi-mast web-topbar no-drag";
   bar.innerHTML = `
-    <span class="web-topbar__brand">
-      <img class="web-topbar__logo" src="/svg/axiforge-glyph.svg" alt="" aria-hidden="true" />
-      <span class="web-topbar__name">Axi<span class="web-topbar__brand-accent">Forge</span></span>
-      <span class="web-topbar__beta">Playground</span>
-    </span>
-    <div class="web-topbar__menu" id="webImportMenu">
-      <button id="webImportBtn" type="button" class="web-topbar__btn" aria-haspopup="true" aria-expanded="false">${ICON_IMPORT}<span class="web-topbar__btn-label">Import build</span></button>
-      <div class="web-topbar__menu-list" role="menu">
-        <button type="button" class="web-topbar__menu-item" data-import="gw2skills" role="menuitem">${ICON_CHAT}<span>From gw2skills.net…</span></button>
-        <button type="button" class="web-topbar__menu-item" data-import="axicode" role="menuitem">${ICON_AXI}<span>From .axicode file…</span></button>
+    <div class="axi-mast__in">
+      <span class="axi-brand web-topbar__brand">
+        <img class="web-topbar__logo" src="/svg/axiforge-glyph.svg" alt="" aria-hidden="true" />
+        <span class="axi-brand__name">Axi<span class="web-topbar__brand-accent">Forge</span><small>Playground</small></span>
+      </span>
+      <div class="web-topbar__menu" id="webImportMenu">
+        <button id="webImportBtn" type="button" class="axi-btn axi-btn--ghost web-topbar__btn" aria-haspopup="true" aria-expanded="false">${ICON_IMPORT}<span class="web-topbar__btn-label">Import build</span></button>
+        <div class="web-topbar__menu-list" role="menu">
+          <button type="button" class="web-topbar__menu-item" data-import="gw2skills" role="menuitem">${ICON_CHAT}<span>From gw2skills.net…</span></button>
+          <button type="button" class="web-topbar__menu-item" data-import="axicode" role="menuitem">${ICON_AXI}<span>From .axicode file…</span></button>
+        </div>
       </div>
-    </div>
-    <div class="web-topbar__split" id="webCopySplit">
-      <button id="webCopyLink" type="button" class="web-topbar__btn web-topbar__btn--primary web-topbar__split-main">${ICON_LINK}<span class="web-topbar__btn-label">Copy share link</span></button>
-      <button id="webCopyMore" type="button" class="web-topbar__btn web-topbar__btn--primary web-topbar__split-toggle" aria-haspopup="true" aria-expanded="false" aria-label="More copy options">
-        <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8l5 5 5-5"/></svg>
-      </button>
-      <div class="web-topbar__menu-list" role="menu">
-        <button id="webCopyAxi" type="button" class="web-topbar__menu-item" role="menuitem">${ICON_AXI}<span>Copy axi code</span></button>
-        <button id="webCopyChat" type="button" class="web-topbar__menu-item" role="menuitem">${ICON_CHAT}<span>Copy chat code</span></button>
+      <div class="web-topbar__split" id="webCopySplit">
+        <button id="webCopyLink" type="button" class="axi-btn axi-btn--primary web-topbar__btn web-topbar__split-main">${ICON_LINK}<span class="web-topbar__btn-label">Copy share link</span></button>
+        <button id="webCopyMore" type="button" class="axi-btn axi-btn--primary web-topbar__btn web-topbar__split-toggle" aria-haspopup="true" aria-expanded="false" aria-label="More copy options">
+          <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8l5 5 5-5"/></svg>
+        </button>
+        <div class="web-topbar__menu-list" role="menu">
+          <button id="webCopyAxi" type="button" class="web-topbar__menu-item" role="menuitem">${ICON_AXI}<span>Copy axi code</span></button>
+          <button id="webCopyChat" type="button" class="web-topbar__menu-item" role="menuitem">${ICON_CHAT}<span>Copy chat code</span></button>
+        </div>
       </div>
+      <a id="webGetApp" class="web-topbar__cta" href="${MARKETING_URL}" target="_blank" rel="noopener noreferrer">Get the desktop app</a>
     </div>
-    <a id="webGetApp" class="web-topbar__cta" href="${MARKETING_URL}" target="_blank" rel="noopener noreferrer">Get the desktop app</a>
   `;
   document.body.prepend(bar);
 

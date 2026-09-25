@@ -1,6 +1,6 @@
 /* Import desktop CSS — one source of truth for component styles */
-@import "../renderer/styles/base.css";
-@import "../renderer/styles/themes.css";
+@import "../renderer/styles/app.css";
+@import "../renderer/styles/bridge.css";
 @import "../renderer/styles/layout.css";
 @import "../renderer/styles/buttons.css";
 @import "../renderer/styles/forms.css";
@@ -12,109 +12,434 @@
 @import "../renderer/styles/detail-panel.css";
 @import "../renderer/styles/comps.css";
 @import "../../packages/forge-render/src/forge-render.css";
-@import "../renderer/styles/forge-render-bridge.css";
 @import "./site-mobile.css";
 
-/* ── Mini card SPA overrides ─────────────────────────────────────────── */
+/* ── Profession colour ────────────────────────────────────────────────────
+   The nine hues a profession owns used to sit here as nine `color` literals
+   keyed off a lib-prof--* class, which is what kept this file in the gate's
+   PENDING list. They are gone: packages/forge-render/src/professions.js now
+   owns the one table, and render-comp.js sets --axi-series per instance on
+   the element that carries the hue — a comp slot, a tag-popover row. The
+   slot's own outline is drawn from that knob in forge-render.css, the same
+   way the desktop draws it (comps.css .comp-slot--filled). RULES.md rule 10
+   is why the colour arrives per-instance rather than as a token or a class. */
 
-/* Profession accent colors (from library.css — needed for comp pool cards) */
-.lib-prof--guardian     { color: #6ea8ff; }
-.lib-prof--warrior      { color: #ff9944; }
-.lib-prof--necromancer  { color: #4dca7a; }
-.lib-prof--engineer     { color: #cc8844; }
-.lib-prof--ranger       { color: #77cc55; }
-.lib-prof--thief        { color: #cc6677; }
-.lib-prof--mesmer       { color: #b07acc; }
-.lib-prof--elementalist { color: #dd5555; }
-.lib-prof--revenant     { color: #aa6655; }
-
-/* ── SPA-specific styles ─────────────────────────────────────────────── */
-
-/* Navbar */
-.site-navbar {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 10px 24px; background: var(--panel); border-bottom: 1px solid var(--line-soft);
+.comp-tag-pop__row .comp-tag-pop__icon {
+  color: var(--axi-series, var(--axi-text-faint));
 }
-.site-navbar__left { display: flex; align-items: center; gap: 10px; }
-.site-navbar__logo { width: 24px; height: 24px; flex-shrink: 0; color: #ffffff; }
-.site-navbar__title { font-family: 'Cinzel', serif; font-size: 1.1rem; font-weight: 700; letter-spacing: 0.04em; color: #ffffff; }
-.site-navbar__title-accent { color: var(--accent); }
-.site-navbar__right { display: flex; align-items: center; gap: 16px; }
-.site-navbar__link { color: var(--muted); text-decoration: none; font-size: 0.85rem; display: flex; align-items: center; gap: 6px; transition: color 0.15s; }
-.site-navbar__link:hover { color: var(--text); }
 
-/* App container */
-#app { width: min(1400px, 96vw); margin: 24px auto 48px; }
+/* ── The masthead ─────────────────────────────────────────────────────────
+   .axi-mast / .axi-mast__in carry the bar, .axi-brand / .axi-brand__name the
+   lockup. The name's built-in <small> child is the uppercase sub-line, which
+   is what " Builds" used to be — spelled into the title string, at title
+   weight, reading as part of the product's name. The two links are
+   .axi-btn/--ghost: they were bare grey text at two different sizes from the
+   brand beside them, and the language's own answer to "a link in a masthead"
+   is the ghost button. */
 
-/* Landing */
-.site-landing { text-align: center; padding: 80px 0; }
-.site-landing h1 { font-family: 'Cinzel', serif; font-size: 2rem; color: var(--accent); margin-bottom: 12px; }
-.site-landing p { color: var(--muted); font-size: 1.05rem; }
-.site-landing a { color: var(--accent-2); }
+.site-mast__logo {
+  width: 30px;
+  height: 30px;
+  flex: none;
+  color: var(--axi-text);
+}
 
-/* Loading & error */
-.site-loading { text-align: center; padding: 48px 0; color: var(--muted); font-size: 1.1rem; }
-.site-error { background: rgba(255,60,60,.12); border: 1px solid rgba(255,60,60,.4); border-radius: 10px; padding: 20px; color: #ff8888; text-align: center; margin-top: 40px; }
+/* The one accented span in the chrome: the product's name is two words
+   joined, and the accent is what separates them. */
+.site-mast__accent {
+  color: var(--axi-accent);
+}
 
-/* Build header */
-.build-header { margin-bottom: 20px; display: flex; align-items: center; gap: 14px; }
-.build-header__icon { width: 48px; height: 48px; color: var(--muted); flex-shrink: 0; }
-.build-header__icon svg { width: 100%; height: 100%; }
-.build-header__info { flex: 1; min-width: 0; }
-.build-header__info h1 { font-family: 'Cinzel', serif; font-size: 1.6rem; margin: 0; }
-.build-header__meta { color: var(--muted); font-size: 0.85rem; margin-top: 2px; }
-.build-header__tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-.build-header__tag { background: var(--panel); border: 1px solid var(--line-soft); border-radius: 999px; padding: 3px 10px; font-size: 0.75rem; color: var(--accent-2); }
+.site-mast__links {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
 
-/* Build code widget — right-aligned in header */
-.build-code-group--header { flex-shrink: 0; margin-left: auto; }
+.site-mast__link svg {
+  width: 15px;
+  height: 15px;
+  flex: none;
+}
 
-/* Tabs */
-.site-tabs { display: flex; gap: 0; border-bottom: 2px solid var(--line-soft); margin-bottom: 16px; }
-.site-tab { background: none; border: none; color: var(--muted); font-family: 'Outfit', sans-serif; font-size: 0.88rem; font-weight: 600; padding: 10px 20px; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; letter-spacing: 0.04em; transition: color 0.15s, border-color 0.15s; }
-.site-tab:hover { color: var(--text); }
-.site-tab--active { color: var(--accent); border-bottom-color: var(--accent); }
-.site-tab-content { display: none; }
-.site-tab-content--active { display: flex; flex-direction: column; gap: 12px; }
+/* ── The page ─────────────────────────────────────────────────────────────
+   #app is .axi-page/--wide now, so the measure and the gutter come from the
+   language. Only the vertical rhythm under the masthead stays local — a page
+   measure has no opinion about how far below the chrome its content starts. */
 
-/* Section headings used in SPA */
-.site-section-heading { color: var(--accent); font-family: 'Outfit', sans-serif; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; margin: 20px 0 8px; }
+#app {
+  margin-block: 26px 60px;
+}
 
-/* Notes display */
-.site-notes { color: var(--muted); padding: 12px 14px; border: 1px solid var(--line-soft); border-radius: 8px; background: var(--panel); font-size: 0.88rem; line-height: 1.5; white-space: pre-wrap; }
+/* ── Landing ─────────────────────────────────────────────────────────────── */
 
-/* Comp slots are read-only in the SPA — no drag/grab cursor */
+.site-landing {
+  text-align: center;
+  padding: 80px 0;
+}
+
+.site-landing h1 {
+  margin: 0 0 12px;
+  font: var(--axi-t-display);
+  letter-spacing: var(--axi-ls-display);
+  color: var(--axi-text);
+}
+
+.site-landing p {
+  color: var(--axi-text-dim);
+  font: var(--axi-t-body);
+}
+
+/* Rule: a link opts into the accent; it does not inherit one. */
+.site-landing a {
+  color: var(--axi-accent);
+}
+
+/* ── Loading and error ───────────────────────────────────────────────────── */
+
+.site-loading {
+  text-align: center;
+  padding: 48px 0;
+  color: var(--axi-text-faint);
+  font: var(--axi-t-body);
+}
+
+/* .axi-panel would be wrong here: a failure is not a raised object on the
+   page, it is the page. The danger ink is on the rule and the type, not a
+   tinted fill — the tint was rgba(255,60,60,.12), which rule 2 calls a brown. */
+.site-error {
+  max-width: var(--axi-page-narrow);
+  margin: 40px auto 0;
+  padding: 20px;
+  border: var(--axi-border-panel) solid var(--axi-danger);
+  border-radius: var(--axi-radius);
+  background: var(--axi-surface);
+  color: var(--axi-danger);
+  font: var(--axi-t-body);
+  text-align: center;
+}
+
+/* ── Build header ─────────────────────────────────────────────────────────
+   The build page's own head, and the sibling of the comp page's .comp-head
+   below: an .axi-panel carrying the build's identity on the left and its
+   share code on the right. */
+
+.build-header {
+  --axi-panel-pad: 18px 20px;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.build-header__icon {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  color: var(--axi-text-faint);
+}
+
+.build-header__icon svg,
+.build-header__icon img {
+  width: 100%;
+  height: 100%;
+}
+
+.build-header__info {
+  flex: 1;
+  min-width: 0;
+}
+
+.build-header__info h1 {
+  margin: 0;
+  font: var(--axi-t-h2);
+  letter-spacing: var(--axi-ls-h2);
+  color: var(--axi-text);
+}
+
+.build-header__meta {
+  margin: 3px 0 0;
+  font: var(--axi-t-small);
+  color: var(--axi-text-faint);
+}
+
+.build-header__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+/* .axi-chip carries the box. A tag is a neutral fact about the build, so it
+   rides the unmodified chip — the same call .comp-head__tag makes. */
+.build-header__tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 9px;
+  border: var(--axi-border-control) solid var(--axi-ink-line);
+  border-radius: var(--axi-radius-sm);
+  background: var(--axi-surface-raised);
+  color: var(--axi-text-dim);
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
+  text-transform: uppercase;
+}
+
+/* Build code widget — right-aligned in the header */
+.build-code-group--header {
+  flex: none;
+  margin-left: auto;
+}
+
+/* ── Tabs ─────────────────────────────────────────────────────────────────
+   The .axi-tabs treatment, with its selector written for buttons: the package
+   styles `.axi-tabs a[aria-current="page"]`, and the SPA's tabs are <button>s
+   that carry --active instead, so the tokens are ported rather than the class.
+   The current tab is filled and blocked — the same treatment a pressed pill
+   gets, because it is the same idea: this one is on. */
+
+.site-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.site-tab {
+  padding: 8px 16px;
+  font: 800 13.5px/1 var(--axi-sans);
+  color: var(--axi-text-dim);
+  background: transparent;
+  border: var(--axi-border-control) solid transparent;
+  border-radius: var(--axi-radius-sm);
+  cursor: pointer;
+}
+
+.site-tab:hover {
+  color: var(--axi-text);
+  border-color: var(--axi-rule);
+}
+
+.site-tab--active {
+  background: var(--axi-accent);
+  color: var(--axi-accent-ink);
+  border-color: var(--axi-ink-line);
+  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+}
+
+.site-tab-content {
+  display: none;
+}
+
+.site-tab-content--active {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ── Comp head ────────────────────────────────────────────────────────────
+   The comp page's head. The desktop puts the comp's name in a .subnav with a
+   back button and a row of actions beside it; the SPA has neither, so there
+   is nothing for a bar to hold — what it has is a name, a game mode, some
+   tags and a size, which is a panel. The slot count is an .axi-stat because a
+   number reads as a fact about the thing it sits on. */
+
+.comp-head {
+  --axi-panel-pad: 18px 20px;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.comp-head__id {
+  flex: 1;
+  min-width: 0;
+}
+
+.comp-head__title {
+  margin: 0;
+  font: var(--axi-t-h2);
+  letter-spacing: var(--axi-ls-h2);
+  color: var(--axi-text);
+}
+
+.comp-head__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+/* The game mode is commentary on the comp, not a measurement of it, so it
+   takes the meta chip's outline rather than a fill. */
+.comp-head__mode {
+  margin-top: 4px;
+}
+
+.comp-head__stat {
+  flex: none;
+  margin-left: auto;
+  text-align: right;
+}
+
+/* ── Comp boards ──────────────────────────────────────────────────────────
+   Two .axi-panel boards, the same pair the desktop draws. What differs is the
+   scrolling: the desktop detail is a fixed-height flex column whose boards
+   scroll inside themselves, and the SPA is a document that scrolls as a
+   whole. So this is a grid in page flow with align-items: start, and it
+   overrides the height and overflow .comp-detail / .comp-detail__body carry
+   for the desktop rather than reusing the --panels modifier, which assumes
+   them. The panels' own padding comes off because each board has a head that
+   runs to its edges. */
+
+.comp-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  height: auto;
+  overflow: visible;
+}
+
+.comp-detail__body--boards {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 14px;
+  align-items: start;
+  overflow: visible;
+}
+
+.comp-detail__body--boards .comp-detail__party-panel,
+.comp-detail__body--boards .comp-detail__pool-panel {
+  --axi-panel-pad: 0;
+  width: auto;
+  min-width: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* The board's body, under the head: the padding the panel gave up so its head
+   could run to the edges. */
+.comp-board__body {
+  padding: 10px 12px 12px;
+}
+
+/* Opposite .comp-detail__panel-title in the same head, and the same size —
+   on the desktop this count is a span inside the title and inherits it. */
+.comp-pool-count {
+  font: var(--axi-t-small);
+  color: var(--axi-text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.comp-detail__body--boards .comp-pool {
+  padding: 0;
+}
+
+.comp-detail__body--boards .comp-pool-list {
+  padding: 10px 12px 12px;
+}
+
+/* ── Comp slots, read-only ───────────────────────────────────────────────── */
+
 .comp-slot--filled { cursor: default; }
 .comp-slot--tag { border-style: dashed; }
+a.comp-slot { text-decoration: none; color: inherit; cursor: pointer; }
+.mini-card { cursor: default; }
+.comp-line__label { cursor: default; }
 
 /* Lucide-style numbered party-line badge */
-.comp-line__num { width: 20px; height: 20px; display: block; color: var(--muted); }
+.comp-line__num {
+  width: 20px;
+  height: 20px;
+  display: block;
+  color: var(--axi-text-faint);
+}
 
-/* Tag-slot hover popover (parity with the desktop app) */
+/* ── Tag-slot hover popover (parity with the desktop app) ─────────────────
+   A popover is raised at panel weight over the page, so it takes the panel's
+   border and offset block rather than a blur — rule 3: this language casts a
+   hard shadow or none. */
+
 .comp-tag-pop {
   position: fixed;
   z-index: 9999;
   min-width: 170px;
   max-width: 260px;
-  background: var(--panel, #1b1e25);
-  border: 1px solid var(--line, #2d313b);
-  border-radius: 7px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
   padding: 8px;
+  background: var(--axi-surface);
+  border: var(--axi-border-panel) solid var(--axi-ink-line);
+  border-radius: var(--axi-radius);
+  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
   pointer-events: none;
 }
-.comp-tag-pop__title { font-size: 12px; font-weight: 600; color: var(--text, #e6e8ee); margin-bottom: 6px; }
-.comp-tag-pop__row { display: flex; align-items: center; gap: 6px; padding: 2px 0 2px 6px; border-left: 3px solid var(--line, #2d313b); }
-.comp-tag-pop__icon { width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; }
-.comp-tag-pop__icon svg, .comp-tag-pop__icon img { width: 18px; height: 18px; }
-.comp-tag-pop__name { font-size: 12px; color: var(--text, #e6e8ee); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.comp-tag-pop__empty { font-size: 12px; color: var(--muted, #9aa3b2); }
-.comp-slot--tag .comp-slot__icon { display: flex; align-items: center; justify-content: center; }
-.comp-slot__tag-img { width: 26px; height: 26px; object-fit: contain; }
-.comp-slot__tag-text { font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--muted); }
-a.comp-slot { text-decoration: none; color: inherit; cursor: pointer; }
-.mini-card { cursor: default; }
-.comp-line__label { cursor: default; }
 
-/* Reference panel sticky positioning */
-.detail-panel { position: sticky; top: 20px; align-self: flex-start; }
+.comp-tag-pop__title {
+  margin-bottom: 6px;
+  font: var(--axi-t-label);
+  letter-spacing: var(--axi-ls-label);
+  color: var(--axi-text);
+}
+
+.comp-tag-pop__row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0 2px 6px;
+  border-left: var(--axi-border-control) solid var(--axi-rule);
+}
+
+.comp-tag-pop__icon {
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.comp-tag-pop__icon svg,
+.comp-tag-pop__icon img {
+  width: 18px;
+  height: 18px;
+}
+
+.comp-tag-pop__name {
+  font: var(--axi-t-small);
+  color: var(--axi-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.comp-tag-pop__empty {
+  font: var(--axi-t-small);
+  color: var(--axi-text-faint);
+}
+
+.comp-slot--tag .comp-slot__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.comp-slot__tag-img {
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+}
+
+.comp-slot__tag-text {
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
+  text-transform: uppercase;
+  color: var(--axi-text-faint);
+}
+
+/* ── Reference panel sticky positioning ──────────────────────────────────── */
+
+.detail-panel {
+  position: sticky;
+  top: 80px;
+  align-self: flex-start;
+}

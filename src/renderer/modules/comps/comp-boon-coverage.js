@@ -12,6 +12,7 @@ import { getProfessionSvg } from "../profession-icons.js";
 import { formatFactHtml } from "../detail-panel.js";
 import { escapeHtml } from "../utils.js";
 import { computeBuildConcentration, computeBuildExpertise } from "../stats.js";
+import { targetSeriesStyle } from "../../../shared/professions.js";
 
 
 /**
@@ -235,11 +236,11 @@ function _renderPartyLine(line) {
         <div class="party-cov__section" data-section="boons">
           <div class="party-cov__section-header">
             <div class="party-cov__section-label">BOONS</div>
-            <label class="party-cov__toggle">
-              <input type="checkbox" class="party-cov__toggle-input" data-action="toggle-self-boons" />
-              <span class="party-cov__toggle-switch"></span>
+            <button type="button" class="party-cov__toggle" data-action="toggle-self-boons"
+                    role="switch" aria-checked="false">
+              <span class="axi-switch"><span class="axi-switch__knob"></span></span>
               <span class="party-cov__toggle-text">Show self boons</span>
-            </label>
+            </button>
           </div>
           <div class="party-cov__pills">${boonPills}</div>
           <div class="party-cov__expand" data-expand-for="boons"></div>
@@ -279,20 +280,22 @@ function _renderBoonPills(boonMap, lineLabel) {
       ? escapeHtml(JSON.stringify(entry.providers))
       : "[]";
 
+    const tag = covered ? "button" : "div";
+    const typeAttr = covered ? ' type="button"' : "";
+    const interactiveAttrs = covered ? ' data-clickable="true" aria-expanded="false"' : "";
     return `
-      <div class="party-cov__pill party-cov__pill--boon ${covered ? "" : "party-cov__pill--uncovered"}"
+      <${tag}${typeAttr} class="party-cov__pill axi-pill party-cov__pill--boon ${covered ? "" : "party-cov__pill--uncovered"}"
            data-category="boon"
            data-boon-name="${escapeHtml(boonName)}"
            data-has-ally="${hasAllySource}"
            data-count="${count}"
            data-providers="${providersJson}"
-           data-line-label="${escapeHtml(lineLabel)}"
-           ${covered ? 'data-clickable="true"' : ""}>
+           data-line-label="${escapeHtml(lineLabel)}"${interactiveAttrs}>
         <img src="${escapeHtml(icon)}" width="20" height="20" alt="${escapeHtml(boonName)}"
              class="party-cov__pill-icon" />
         <span class="party-cov__pill-name">${escapeHtml(boonName)}</span>
         ${count > 1 ? `<span class="party-cov__pill-badge">&times;${count}</span>` : ""}
-      </div>`;
+      </${tag}>`;
   }).join("");
 }
 
@@ -315,19 +318,22 @@ function _renderConditionPills(condMap, lineLabel) {
       ? ""
       : (selfOnly ? "party-cov__pill--self-condi" : "party-cov__pill--uncovered");
 
+    const clickable = covered || selfOnly;
+    const tag = clickable ? "button" : "div";
+    const typeAttr = clickable ? ' type="button"' : "";
+    const interactiveAttrs = clickable ? ' data-clickable="true" aria-expanded="false"' : "";
     return `
-      <div class="party-cov__pill party-cov__pill--condi ${stateClass}"
+      <${tag}${typeAttr} class="party-cov__pill axi-pill party-cov__pill--condi ${stateClass}"
            data-category="condition"
            data-condition-name="${escapeHtml(condName)}"
            data-count="${count}"
            data-providers="${providersJson}"
-           data-line-label="${escapeHtml(lineLabel)}"
-           ${covered || selfOnly ? 'data-clickable="true"' : ""}>
+           data-line-label="${escapeHtml(lineLabel)}"${interactiveAttrs}>
         <img src="${escapeHtml(icon)}" width="20" height="20" alt="${escapeHtml(condName)}"
              class="party-cov__pill-icon" />
         <span class="party-cov__pill-name">${escapeHtml(condName)}</span>
         ${count > 1 ? `<span class="party-cov__pill-badge">&times;${count}</span>` : ""}
-      </div>`;
+      </${tag}>`;
   }).join("");
 }
 
@@ -337,22 +343,23 @@ function _renderFieldPills(fieldMap, lineLabel) {
     .map((fieldType) => {
       const entry = fieldMap.get(fieldType);
       const count = entry.count || 0;
-      const colors = COMBO_FIELD_COLORS[fieldType] || { bg: "#333", text: "#aaa", border: "#555" };
+      const colors = COMBO_FIELD_COLORS[fieldType] || { text: "var(--axi-text-faint)" };
       const sourcesJson = escapeHtml(JSON.stringify(entry.sources));
 
       return `
-        <div class="party-cov__pill party-cov__pill--field"
+        <button type="button" class="party-cov__pill axi-pill party-cov__pill--field"
              data-category="field"
              data-field-type="${escapeHtml(fieldType)}"
              data-count="${count}"
              data-sources="${sourcesJson}"
              data-line-label="${escapeHtml(lineLabel)}"
              data-clickable="true"
-             style="background:${colors.bg}; color:${colors.text}; border-color:${colors.border};">
+             aria-expanded="false"
+             style="--axi-series: ${colors.text};">
           <span class="party-cov__pill-emoji">${colors.emoji || ""}</span>
           <span class="party-cov__pill-name">${escapeHtml(fieldType)}</span>
-          ${count > 1 ? `<span class="party-cov__pill-badge" style="color:${colors.text};">&times;${count}</span>` : ""}
-        </div>`;
+          ${count > 1 ? `<span class="party-cov__pill-badge">&times;${count}</span>` : ""}
+        </button>`;
     }).join("");
 }
 
@@ -362,22 +369,23 @@ function _renderFinisherPills(finisherMap, lineLabel) {
     .map((finisherType) => {
       const entry = finisherMap.get(finisherType);
       const count = entry.count || 0;
-      const colors = COMBO_FINISHER_COLORS[finisherType] || { bg: "#333", text: "#aaa", border: "#555" };
+      const colors = COMBO_FINISHER_COLORS[finisherType] || { text: "var(--axi-text-faint)" };
       const sourcesJson = escapeHtml(JSON.stringify(entry.sources));
 
       return `
-        <div class="party-cov__pill party-cov__pill--finisher"
+        <button type="button" class="party-cov__pill axi-pill party-cov__pill--finisher"
              data-category="finisher"
              data-finisher-type="${escapeHtml(finisherType)}"
              data-count="${count}"
              data-sources="${sourcesJson}"
              data-line-label="${escapeHtml(lineLabel)}"
              data-clickable="true"
-             style="background:${colors.bg}; color:${colors.text}; border-color:${colors.border};">
+             aria-expanded="false"
+             style="--axi-series: ${colors.text};">
           <span class="party-cov__pill-emoji">${colors.emoji || ""}</span>
           <span class="party-cov__pill-name">${escapeHtml(finisherType)}</span>
-          ${count > 1 ? `<span class="party-cov__pill-badge" style="color:${colors.text};">&times;${count}</span>` : ""}
-        </div>`;
+          ${count > 1 ? `<span class="party-cov__pill-badge">&times;${count}</span>` : ""}
+        </button>`;
     }).join("");
 }
 
@@ -401,7 +409,8 @@ function _buildBoonExpandHTML(boonName, providers) {
       const dur = `${s.effectiveDuration}s`;
       const stacksHtml = s.stacks > 1
         ? `<span class="party-cov__src-stacks">&times;${s.stacks}</span>` : "";
-      const targetClass = s.isAlly ? "party-cov__src-target--ally" : "party-cov__src-target--self";
+      const targetRole = s.isAlly ? "ally" : "self";
+      const targetClass = `party-cov__src-target--${targetRole}`;
       const targetLabel = s.isAlly ? "ALLY" : "SELF";
       return `<div class="party-cov__src-row">
         <span class="party-cov__src-icon">${profIconHtml}</span>
@@ -409,25 +418,25 @@ function _buildBoonExpandHTML(boonName, providers) {
         <span class="party-cov__src-name">${escapeHtml(s.name)}</span>
         ${stacksHtml}
         <span class="party-cov__src-dur">${escapeHtml(dur)}</span>
-        <span class="party-cov__src-target ${targetClass}">${targetLabel}</span>
+        <span class="party-cov__src-target axi-chip ${targetClass}" style="${escapeHtml(targetSeriesStyle(targetRole))}">${targetLabel}</span>
       </div>`;
     })
   ).join("");
 
   return `
-    <div class="party-cov__expand-header" style="border-left-color: #8f8;">
+    <div class="party-cov__expand-header party-cov__expand-header--cap" style="--axi-series: var(--axi-ok);">
       <img src="${escapeHtml(icon)}" width="18" height="18" alt="${escapeHtml(boonName)}" class="party-cov__expand-icon" />
-      <span class="party-cov__expand-title" style="color: #afa;">${escapeHtml(boonName)} — ${totalSources} source${totalSources !== 1 ? "s" : ""}</span>
+      <span class="party-cov__expand-title">${escapeHtml(boonName)} — ${totalSources} source${totalSources !== 1 ? "s" : ""}</span>
     </div>
-    <div class="party-cov__expand-body" style="border-left-color: #8f8;">
+    <div class="party-cov__expand-body party-cov__expand-body--cap">
       ${sourceRows}
     </div>`;
 }
 
 const _CONDI_TARGET_LABELS = {
-  foe:   { cls: "party-cov__src-target--foe",       label: "FOE" },
-  self:  { cls: "party-cov__src-target--selfcondi", label: "SELF" },
-  mixed: { cls: "party-cov__src-target--mixed",     label: "SELF+FOE" },
+  foe:   { cls: "party-cov__src-target--foe",       label: "FOE",      role: "foe" },
+  self:  { cls: "party-cov__src-target--selfcondi", label: "SELF",     role: "selfcondi" },
+  mixed: { cls: "party-cov__src-target--mixed",     label: "SELF+FOE", role: "mixed" },
 };
 
 function _buildConditionExpandHTML(condName, providers) {
@@ -459,7 +468,7 @@ function _buildConditionExpandHTML(condName, providers) {
         <span class="party-cov__src-name">${escapeHtml(s.name)}</span>
         ${stacksHtml}
         <span class="party-cov__src-dur">${escapeHtml(dur)}</span>
-        <span class="party-cov__src-target ${t.cls}">${t.label}</span>
+        <span class="party-cov__src-target axi-chip ${t.cls}" style="${escapeHtml(targetSeriesStyle(t.role))}">${t.label}</span>
       </div>`;
     })
   ).join("");
@@ -469,18 +478,18 @@ function _buildConditionExpandHTML(condName, providers) {
     : "";
 
   return `
-    <div class="party-cov__expand-header" style="border-left-color: #f88;">
+    <div class="party-cov__expand-header party-cov__expand-header--cap" style="--axi-series: var(--axi-danger);">
       <img src="${escapeHtml(icon)}" width="18" height="18" alt="${escapeHtml(condName)}" class="party-cov__expand-icon" />
-      <span class="party-cov__expand-title" style="color: #faa;">${escapeHtml(condName)} \u2014 ${applied} source${applied !== 1 ? "s" : ""}</span>
+      <span class="party-cov__expand-title">${escapeHtml(condName)} \u2014 ${applied} source${applied !== 1 ? "s" : ""}</span>
     </div>
-    <div class="party-cov__expand-body" style="border-left-color: #f88;">
+    <div class="party-cov__expand-body party-cov__expand-body--cap">
       ${note}
       ${sourceRows}
     </div>`;
 }
 
 function _buildFieldExpandHTML(fieldType, sources) {
-  const colors = COMBO_FIELD_COLORS[fieldType] || { text: "#aaa", border: "#555" };
+  const colors = COMBO_FIELD_COLORS[fieldType] || { text: "var(--axi-text-faint)" };
 
   const sourceRows = sources.map(s => {
     const profIconHtml = s.profIcon || "";
@@ -505,16 +514,16 @@ function _buildFieldExpandHTML(fieldType, sources) {
   }).join("");
 
   return `
-    <div class="party-cov__expand-header" style="border-left-color: ${colors.text};">
-      <span class="party-cov__expand-title" style="color: ${colors.text};">${escapeHtml(fieldType)} Field — ${sources.length} source${sources.length !== 1 ? "s" : ""}</span>
+    <div class="party-cov__expand-header" style="--axi-series: ${colors.text};">
+      <span class="party-cov__expand-title">${escapeHtml(fieldType)} Field — ${sources.length} source${sources.length !== 1 ? "s" : ""}</span>
     </div>
-    <div class="party-cov__expand-body" style="border-left-color: ${colors.text};">
+    <div class="party-cov__expand-body" style="--axi-series: ${colors.text};">
       ${sourceRows}
     </div>`;
 }
 
 function _buildFinisherExpandHTML(finisherType, sources) {
-  const colors = COMBO_FINISHER_COLORS[finisherType] || { text: "#aaa" };
+  const colors = COMBO_FINISHER_COLORS[finisherType] || { text: "var(--axi-text-faint)" };
 
   const sourceRows = sources.map(s => {
     const profIconHtml = s.profIcon || "";
@@ -540,10 +549,10 @@ function _buildFinisherExpandHTML(finisherType, sources) {
   }).join("");
 
   return `
-    <div class="party-cov__expand-header" style="border-left-color: ${colors.text};">
-      <span class="party-cov__expand-title" style="color: ${colors.text};">${escapeHtml(finisherType)} — ${sources.length} source${sources.length !== 1 ? "s" : ""}</span>
+    <div class="party-cov__expand-header" style="--axi-series: ${colors.text};">
+      <span class="party-cov__expand-title">${escapeHtml(finisherType)} — ${sources.length} source${sources.length !== 1 ? "s" : ""}</span>
     </div>
-    <div class="party-cov__expand-body" style="border-left-color: ${colors.text};">
+    <div class="party-cov__expand-body" style="--axi-series: ${colors.text};">
       ${sourceRows}
     </div>`;
 }
@@ -556,7 +565,7 @@ let _skillTooltip = null;
 function _closeExpand() {
   if (!_activeExpand) return;
   _activeExpand.expandEl.classList.remove("party-cov__expand--open");
-  _activeExpand.pillEl.classList.remove("party-cov__pill--active");
+  _activeExpand.pillEl.setAttribute("aria-expanded", "false");
   _activeExpand = null;
 }
 
@@ -581,7 +590,7 @@ function _showSkillTooltip(iconEl) {
   } catch { /* */ }
 
   const tip = document.createElement("div");
-  tip.className = "party-cov__skill-tooltip";
+  tip.className = "party-cov__skill-tooltip axi-picker__pop axi-picker__pop--fixed";
   tip.innerHTML = `
     <div class="party-cov__skill-tooltip-head">
       ${icon ? `<img src="${escapeHtml(icon)}" width="40" height="40" class="party-cov__skill-tooltip-icon" />` : ""}
@@ -610,6 +619,78 @@ function _hideSkillTooltip() {
 
 export function closePartyCoverageExpand() { _closeExpand(); }
 
+/**
+ * Write the self-boon visibility state onto a toggle and its line.
+ *
+ * This *sets* `showSelf` rather than reading-and-flipping, so it is safe to call
+ * both from the click handler (which computes the flip) and at bind time to
+ * prime the rendered default. An earlier form of this code computed the flip
+ * inline and primed by dispatching a synthetic click, which inverted the
+ * default: every panel opened with self boons shown.
+ */
+function _applySelfBoonState(toggle, showSelf) {
+  const lineEl = toggle.closest(".party-cov__line");
+  if (!lineEl) return;
+  toggle.setAttribute("aria-checked", String(showSelf));
+  // Update body pills — grey out self-only boons, update badge counts
+  lineEl.querySelectorAll('.party-cov__pill--boon').forEach(pill => {
+    const hasAlly = pill.dataset.hasAlly === "true";
+    const totalCount = Number(pill.dataset.count) || 0;
+    if (!totalCount) return; // naturally uncovered, leave as-is
+    if (!showSelf && !hasAlly) {
+      // Not a status assertion while every source is hidden. The click
+      // handler already no-ops for self-only pills, so the button is
+      // genuinely disabled — a real runtime state, not a paint switch —
+      // and aria-disabled says so.
+      if (_activeExpand?.pillEl === pill) _closeExpand();
+      pill.classList.add("party-cov__pill--self-only");
+      pill.setAttribute("aria-disabled", "true");
+    } else {
+      pill.classList.remove("party-cov__pill--self-only");
+      pill.removeAttribute("aria-disabled");
+    }
+    // Recount providers based on toggle — count only providers with ally sources when self is off
+    let visibleCount = totalCount;
+    if (!showSelf) {
+      try {
+        const providers = JSON.parse(pill.dataset.providers || "[]");
+        visibleCount = providers.filter(p => p.sources?.some(s => s.isAlly)).length;
+      } catch { /* */ }
+    }
+    const badge = pill.querySelector(".party-cov__pill-badge");
+    if (badge) {
+      badge.textContent = visibleCount > 1 ? `×${visibleCount}` : "";
+    }
+  });
+  // Update header boon icons to match
+  lineEl.querySelectorAll('.party-cov__header-boon').forEach(img => {
+    const covered = img.dataset.covered === "true";
+    const hasAlly = img.dataset.hasAlly === "true";
+    if (!covered) {
+      img.classList.add("party-cov__header-boon--uncovered");
+    } else if (!showSelf && !hasAlly) {
+      img.classList.add("party-cov__header-boon--uncovered");
+    } else {
+      img.classList.remove("party-cov__header-boon--uncovered");
+    }
+  });
+  // Hide/show SELF source rows in any open expansion, update source count header
+  lineEl.querySelectorAll('.party-cov__src-target--self').forEach(badge => {
+    const row = badge.closest('.party-cov__src-row');
+    if (row) row.style.display = showSelf ? "" : "none";
+  });
+  // Update "N sources" count in expand headers
+  lineEl.querySelectorAll('.party-cov__expand--open').forEach(expandEl => {
+    const rows = expandEl.querySelectorAll('.party-cov__src-row');
+    let visible = 0;
+    rows.forEach(r => { if (r.style.display !== "none") visible++; });
+    const titleEl = expandEl.querySelector('.party-cov__expand-title');
+    if (titleEl) {
+      titleEl.textContent = titleEl.textContent.replace(/— \d+ source(s?)/, `— ${visible} source${visible !== 1 ? "s" : ""}`);
+    }
+  });
+}
+
 export function bindPartyCoverageEvents(container) {
   // Skill icon hover tooltip (delegated — works for dynamically created expand content)
   container.addEventListener("mouseenter", (e) => {
@@ -634,63 +715,15 @@ export function bindPartyCoverageEvents(container) {
 
   // Self-boon toggle — updates pills, header icons, badges, and expanded source rows
   container.querySelectorAll('[data-action="toggle-self-boons"]').forEach(toggle => {
-    toggle.addEventListener("change", () => {
-      const lineEl = toggle.closest(".party-cov__line");
-      if (!lineEl) return;
-      const showSelf = toggle.checked;
-      // Update body pills — grey out self-only boons, update badge counts
-      lineEl.querySelectorAll('.party-cov__pill--boon').forEach(pill => {
-        const hasAlly = pill.dataset.hasAlly === "true";
-        const totalCount = Number(pill.dataset.count) || 0;
-        if (!totalCount) return; // naturally uncovered, leave as-is
-        if (!showSelf && !hasAlly) {
-          pill.classList.add("party-cov__pill--self-only");
-        } else {
-          pill.classList.remove("party-cov__pill--self-only");
-        }
-        // Recount providers based on toggle — count only providers with ally sources when self is off
-        let visibleCount = totalCount;
-        if (!showSelf) {
-          try {
-            const providers = JSON.parse(pill.dataset.providers || "[]");
-            visibleCount = providers.filter(p => p.sources?.some(s => s.isAlly)).length;
-          } catch { /* */ }
-        }
-        const badge = pill.querySelector(".party-cov__pill-badge");
-        if (badge) {
-          badge.textContent = visibleCount > 1 ? `×${visibleCount}` : "";
-        }
-      });
-      // Update header boon icons to match
-      lineEl.querySelectorAll('.party-cov__header-boon').forEach(img => {
-        const covered = img.dataset.covered === "true";
-        const hasAlly = img.dataset.hasAlly === "true";
-        if (!covered) {
-          img.classList.add("party-cov__header-boon--uncovered");
-        } else if (!showSelf && !hasAlly) {
-          img.classList.add("party-cov__header-boon--uncovered");
-        } else {
-          img.classList.remove("party-cov__header-boon--uncovered");
-        }
-      });
-      // Hide/show SELF source rows in any open expansion, update source count header
-      lineEl.querySelectorAll('.party-cov__src-target--self').forEach(badge => {
-        const row = badge.closest('.party-cov__src-row');
-        if (row) row.style.display = showSelf ? "" : "none";
-      });
-      // Update "N sources" count in expand headers
-      lineEl.querySelectorAll('.party-cov__expand--open').forEach(expandEl => {
-        const rows = expandEl.querySelectorAll('.party-cov__src-row');
-        let visible = 0;
-        rows.forEach(r => { if (r.style.display !== "none") visible++; });
-        const titleEl = expandEl.querySelector('.party-cov__expand-title');
-        if (titleEl) {
-          titleEl.textContent = titleEl.textContent.replace(/— \d+ source(s?)/, `— ${visible} source${visible !== 1 ? "s" : ""}`);
-        }
-      });
+    toggle.addEventListener("click", () => {
+      _applySelfBoonState(toggle, toggle.getAttribute("aria-checked") !== "true");
     });
-    // Apply initial state (toggle is unchecked = hide self-only)
-    toggle.dispatchEvent(new Event("change"));
+    // Prime the rendered default. Markup renders aria-checked="false", and
+    // _applySelfBoonState *writes* the state it is handed rather than flipping
+    // the attribute, so priming is idempotent and cannot invert the default.
+    // (A synthetic click here would go through the flip and open the panel ON,
+    // counting self-only sources as coverage.)
+    _applySelfBoonState(toggle, false);
   });
 
   // Click to expand pills
@@ -736,7 +769,7 @@ export function bindPartyCoverageEvents(container) {
       }
 
       expandEl.innerHTML = html;
-      pillEl.classList.add("party-cov__pill--active");
+      pillEl.setAttribute("aria-expanded", "true");
       _activeExpand = { expandEl, pillEl };
 
       // Apply current self-toggle state to newly rendered SELF source rows + update count
@@ -744,7 +777,7 @@ export function bindPartyCoverageEvents(container) {
       const toggleEl = lineEl?.querySelector('[data-action="toggle-self-boons"]');
       // Scoped to boons: the SELF/ALLY toggle is a boon concept, and its row-hiding
       // recount would clobber the condition panel's foe-only source count.
-      if (category === "boon" && toggleEl && !toggleEl.checked) {
+      if (category === "boon" && toggleEl && toggleEl.getAttribute("aria-checked") !== "true") {
         expandEl.querySelectorAll('.party-cov__src-target--self').forEach(badge => {
           const row = badge.closest('.party-cov__src-row');
           if (row) row.style.display = "none";

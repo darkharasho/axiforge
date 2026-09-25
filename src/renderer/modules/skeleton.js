@@ -107,9 +107,9 @@ function libListRow(titleW, d1, d2, d3) {
   return `
   <div class="lib-list-row">
     <div class="skel${c(d1)} skel-lib-row-icon"></div>
-    <span class="lib-list-row__title"><div class="skel${c(d1)}" style="height:18px;width:${titleW}%;border-radius:3px"></div></span>
-    <span class="lib-list-row__pills"><div class="skel${c(d2)}" style="height:21px;width:54px;border-radius:999px"></div><div class="skel${c(d2)}" style="height:21px;width:46px;border-radius:999px"></div></span>
-    <span class="lib-list-row__date"><div class="skel${c(d3)}" style="height:18px;width:56px;border-radius:3px"></div></span>
+    <span class="lib-list-row__title"><div class="skel${c(d1)}" style="height:18px;width:${titleW}%"></div></span>
+    <span class="lib-list-row__pills"><div class="skel${c(d2)}" style="height:21px;width:54px"></div><div class="skel${c(d2)}" style="height:21px;width:46px"></div></span>
+    <span class="lib-list-row__date"><div class="skel${c(d3)}" style="height:18px;width:56px"></div></span>
   </div>`;
 }
 
@@ -120,36 +120,48 @@ function libTableRow(titleW, d1, d2, d3) {
       <div class="lib-tv__row">
         <span class="lib-tv__action"></span>
         <span class="lib-tv__icon"><div class="skel${c(d1)} skel-lib-row-icon"></div></span>
-        <span class="lib-tv__name"><div class="skel${c(d1)}" style="height:18px;width:${titleW}%;border-radius:3px"></div></span>
-        <span class="lib-tv__profession"><div class="skel${c(d2)}" style="height:18px;width:58px;border-radius:3px"></div></span>
-        <span class="lib-tv__spec"><div class="skel${c(d2)}" style="height:18px;width:55px;border-radius:3px"></div></span>
-        <span class="lib-tv__mode"><div class="skel${c(d3)}" style="height:18px;width:34px;border-radius:3px"></div></span>
-        <span class="lib-tv__role"><div class="skel${c(d1)}" style="height:21px;width:52px;border-radius:999px"></div></span>
+        <span class="lib-tv__name"><div class="skel${c(d1)}" style="height:18px;width:${titleW}%"></div></span>
+        <span class="lib-tv__profession"><div class="skel${c(d2)}" style="height:18px;width:58px"></div></span>
+        <span class="lib-tv__spec"><div class="skel${c(d2)}" style="height:18px;width:55px"></div></span>
+        <span class="lib-tv__mode"><div class="skel${c(d3)}" style="height:18px;width:34px"></div></span>
+        <span class="lib-tv__role"><div class="skel${c(d1)}" style="height:21px;width:52px"></div></span>
         <span class="lib-tv__tags"></span>
-        <span class="lib-tv__created"><div class="skel${c(d3)}" style="height:18px;width:52px;border-radius:3px"></div></span>
-        <span class="lib-tv__modified"><div class="skel${c(d1)}" style="height:18px;width:52px;border-radius:3px"></div></span>
+        <span class="lib-tv__created"><div class="skel${c(d3)}" style="height:18px;width:52px"></div></span>
+        <span class="lib-tv__modified"><div class="skel${c(d1)}" style="height:18px;width:52px"></div></span>
       </div>
     </li>`;
 }
 
+// Mirrors .af-tile's real shape (library.css), which folded the old
+// .lib-grid-card into itself in batch 2/Task 5 — this skeleton drew a boxless,
+// layoutless card from then until Task 24 because nothing checked that an
+// emitted class still had a selector behind it. Task 12 finished the cleanup
+// this comment used to defer: every inline border-radius in skeleton.js is
+// gone (rule 3 forbids all rounding, and an inline style is invisible to
+// every CSS scanner in the gate, so nothing else would have caught it), the
+// card carries af-tile--strip so its 22px cap area is occupied rather than
+// blank, and the icon placeholder is sized to the glyph's 34px content box
+// rather than its 40px outer edge.
 function libGridCard(titleW, d1, d2, d3) {
   const c = (d) => d ? ` skel-d${d}` : "";
   return `
-  <div class="lib-grid-card">
-    <div class="lib-grid-card__header"><div class="skel${c(d1)} skel-lib-card-icon"></div></div>
-    <div class="skel${c(d1)}" style="height:18px;width:${titleW}%;border-radius:3px"></div>
-    <div class="lib-grid-card__pills">
-      <div class="skel${c(d2)}" style="height:21px;width:50px;border-radius:999px"></div>
-      <div class="skel${c(d2)}" style="height:21px;width:40px;border-radius:999px"></div>
+  <div class="af-tile af-tile--strip">
+    <div class="af-tile__head">
+      <div class="af-tile__glyph"><div class="skel${c(d1)} skel-lib-card-icon"></div></div>
+      <div class="af-tile__title"><div class="skel${c(d1)}" style="height:18px;width:${titleW}%"></div></div>
     </div>
-    <div class="lib-grid-card__date"><div class="skel${c(d3)}" style="height:18px;width:48px;border-radius:3px"></div></div>
+    <div class="af-tile__pills">
+      <div class="skel${c(d2)}" style="height:21px;width:50px"></div>
+      <div class="skel${c(d2)}" style="height:21px;width:40px"></div>
+    </div>
+    <div class="af-tile__meta"><div class="skel${c(d3)}" style="height:18px;width:48px"></div></div>
   </div>`;
 }
 
 function libIconItem(d1, d2, w) {
   const c = (d) => d ? ` skel-d${d}` : "";
   return `
-  <div class="lib-icon-item"><div class="skel${c(d1)} skel-lib-icon-img"></div><div class="skel${c(d2)}" style="height:18px;width:${w}px;border-radius:3px"></div></div>`;
+  <div class="lib-icon-item"><div class="skel${c(d1)} skel-lib-icon-img"></div><div class="skel${c(d2)}" style="height:18px;width:${w}px"></div></div>`;
 }
 
 const skeletonTemplates = {
@@ -273,40 +285,40 @@ const skeletonTemplates = {
 
   "library-toolbar": `
 <div class="lib-toolbar__breadcrumb">
-  <div class="skel skel-d1" style="height:14px;width:90px;border-radius:4px"></div>
+  <div class="skel skel-d1" style="height:14px;width:90px"></div>
 </div>
 <div class="lib-toolbar__controls">
-  <div class="skel skel-d2" style="height:26px;width:160px;border-radius:6px"></div>
-  <div class="skel skel-d3" style="height:26px;width:90px;border-radius:6px"></div>
-  <div class="skel skel-d1" style="height:26px;width:130px;border-radius:6px"></div>
-  <div class="skel skel-d2" style="height:26px;width:75px;border-radius:6px"></div>
-  <div class="skel skel-d3" style="height:26px;width:60px;border-radius:6px"></div>
+  <div class="skel skel-d2" style="height:26px;width:160px"></div>
+  <div class="skel skel-d3" style="height:26px;width:90px"></div>
+  <div class="skel skel-d1" style="height:26px;width:130px"></div>
+  <div class="skel skel-d2" style="height:26px;width:75px"></div>
+  <div class="skel skel-d3" style="height:26px;width:60px"></div>
 </div>`,
 
   "library-filters": `
 <div class="lib-filters__bar">
-  <div class="skel skel-d1" style="height:26px;width:65px;border-radius:6px"></div>
-  <div class="skel skel-d2" style="height:26px;width:58px;border-radius:6px"></div>
-  <div class="skel skel-d3" style="height:26px;width:52px;border-radius:6px"></div>
+  <div class="skel skel-d1" style="height:26px;width:65px"></div>
+  <div class="skel skel-d2" style="height:26px;width:58px"></div>
+  <div class="skel skel-d3" style="height:26px;width:52px"></div>
 </div>`,
 
   "library-sidebar": `
 <div class="lib-sidebar__header">
-  <div class="skel" style="width:22px;height:22px;border-radius:4px"></div>
+  <div class="skel" style="width:22px;height:22px"></div>
 </div>
 <nav class="lib-sidebar__nav">
   <div class="lib-sidebar__section">
     <div class="lib-sidebar__section-label"><div class="skel skel-lib-sidebar-head" style="width:80px"></div></div>
-    <div class="lib-nav-item"><div class="skel skel-lib-sidebar-icon"></div><div class="skel skel-d1" style="height:18px;width:70px;border-radius:3px"></div></div>
-    <div class="lib-nav-item"><div class="skel skel-d2 skel-lib-sidebar-icon"></div><div class="skel skel-d2" style="height:18px;width:55px;border-radius:3px"></div></div>
-    <div class="lib-nav-item"><div class="skel skel-d3 skel-lib-sidebar-icon"></div><div class="skel skel-d3" style="height:18px;width:80px;border-radius:3px"></div></div>
+    <div class="lib-nav-item"><div class="skel skel-lib-sidebar-icon"></div><div class="skel skel-d1" style="height:18px;width:70px"></div></div>
+    <div class="lib-nav-item"><div class="skel skel-d2 skel-lib-sidebar-icon"></div><div class="skel skel-d2" style="height:18px;width:55px"></div></div>
+    <div class="lib-nav-item"><div class="skel skel-d3 skel-lib-sidebar-icon"></div><div class="skel skel-d3" style="height:18px;width:80px"></div></div>
   </div>
   <div class="lib-sidebar__section">
     <div class="lib-sidebar__section-header">
       <div class="lib-sidebar__section-label"><div class="skel skel-d2 skel-lib-sidebar-head" style="width:65px"></div></div>
     </div>
-    <div class="lib-nav-item"><div class="skel skel-d3 skel-lib-sidebar-icon"></div><div class="skel skel-d3" style="height:18px;width:65px;border-radius:3px"></div></div>
-    <div class="lib-nav-item"><div class="skel skel-d2 skel-lib-sidebar-icon"></div><div class="skel skel-d2" style="height:18px;width:75px;border-radius:3px"></div></div>
+    <div class="lib-nav-item"><div class="skel skel-d3 skel-lib-sidebar-icon"></div><div class="skel skel-d3" style="height:18px;width:65px"></div></div>
+    <div class="lib-nav-item"><div class="skel skel-d2 skel-lib-sidebar-icon"></div><div class="skel skel-d2" style="height:18px;width:75px"></div></div>
   </div>
 </nav>`,
 
@@ -325,14 +337,14 @@ const skeletonTemplates = {
   <div class="lib-tv__header">
     <span class="lib-tv__action"></span>
     <span class="lib-tv__icon"></span>
-    <span class="lib-tv__name"><div style="height:18px;width:40px;background:var(--line-soft);border-radius:3px"></div></span>
-    <span class="lib-tv__profession"><div style="height:18px;width:60px;background:var(--line-soft);border-radius:3px"></div></span>
-    <span class="lib-tv__spec"><div style="height:18px;width:48px;background:var(--line-soft);border-radius:3px"></div></span>
-    <span class="lib-tv__mode"><div style="height:18px;width:36px;background:var(--line-soft);border-radius:3px"></div></span>
-    <span class="lib-tv__role"><div style="height:18px;width:30px;background:var(--line-soft);border-radius:3px"></div></span>
-    <span class="lib-tv__tags"><div style="height:18px;width:30px;background:var(--line-soft);border-radius:3px"></div></span>
-    <span class="lib-tv__created"><div style="height:18px;width:48px;background:var(--line-soft);border-radius:3px"></div></span>
-    <span class="lib-tv__modified"><div style="height:18px;width:48px;background:var(--line-soft);border-radius:3px"></div></span>
+    <span class="lib-tv__name"><div style="height:18px;width:40px;background:var(--axi-surface-raised)"></div></span>
+    <span class="lib-tv__profession"><div style="height:18px;width:60px;background:var(--axi-surface-raised)"></div></span>
+    <span class="lib-tv__spec"><div style="height:18px;width:48px;background:var(--axi-surface-raised)"></div></span>
+    <span class="lib-tv__mode"><div style="height:18px;width:36px;background:var(--axi-surface-raised)"></div></span>
+    <span class="lib-tv__role"><div style="height:18px;width:30px;background:var(--axi-surface-raised)"></div></span>
+    <span class="lib-tv__tags"><div style="height:18px;width:30px;background:var(--axi-surface-raised)"></div></span>
+    <span class="lib-tv__created"><div style="height:18px;width:48px;background:var(--axi-surface-raised)"></div></span>
+    <span class="lib-tv__modified"><div style="height:18px;width:48px;background:var(--axi-surface-raised)"></div></span>
   </div>
   <ul class="lib-tv__tree">
     ${libTableRow(62, "", 1, 2)}

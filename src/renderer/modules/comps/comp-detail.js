@@ -16,7 +16,7 @@ import {
 } from "../render-pages.js";
 import { roleBadgeHtml } from "../roleEstimator.js";
 import { COMP_TAG_ICONS } from "../constants.js";
-import { axiforgeIcon, checkIcon, chevronDownIcon, arrowUpTrayIcon, clipboardDocumentIcon, globeAltIcon, partyNumberIcon, shareIcon } from "../library/heroicons.js";
+import { axiforgeIcon, checkIcon, chevronDownIcon, arrowLeftIcon, arrowUpTrayIcon, clipboardDocumentIcon, globeAltIcon, partyNumberIcon, shareIcon } from "../library/heroicons.js";
 import { renderMiniBuildCard, renderMissingMiniBuildCard } from "../mini-build-card.js";
 import { pickWebhooks } from "../webhook-picker.js";
 import { compShareDisabledTooltip } from "../share-gate.js";
@@ -34,11 +34,11 @@ import {
   getEliteSpecName,
   getSpecIcon,
   getSpecIconColored,
-  profClass,
   getDisplayName,
   resolveStatPackage,
   getRuneName,
 } from "../build-helpers.js";
+import { professionSeriesStyle, slotSeriesStyle, SLOT_ROLES } from "../../../shared/professions.js";
 
 let _callbacks = {};
 let _notesDebounceTimer = null;
@@ -176,8 +176,8 @@ function closeHoverCard() {
 
 function showSlotHoverCard(slotEl, build) {
   const card = document.createElement("div");
-  const pClass = profClass(build.profession);
-  card.className = `comp-slot-hover-card ${pClass}`;
+  card.className = "comp-slot-hover-card axi-picker__pop axi-picker__pop--fixed";
+  card.setAttribute("style", professionSeriesStyle(build.profession));
 
   const icon = getSpecIcon(build);
   const name = escapeHtml(getDisplayName(build));
@@ -194,7 +194,7 @@ function showSlotHoverCard(slotEl, build) {
   if (runeName)    equipParts.push(`<span class="comp-hover__equip">${escapeHtml(runeName)}</span>`);
   if (relicName)   equipParts.push(`<span class="comp-hover__equip">${escapeHtml(relicName)}</span>`);
 
-  const tagPills = tags.map((t) => `<span class="comp-hover__tag">${escapeHtml(t)}</span>`).join("");
+  const tagPills = tags.map((t) => `<span class="comp-hover__tag axi-chip axi-chip--meta">${escapeHtml(t)}</span>`).join("");
   const roleBadge = roleBadgeHtml(build, state.upgradeCatalog);
 
   card.innerHTML = `
@@ -204,7 +204,7 @@ function showSlotHoverCard(slotEl, build) {
         <span class="comp-hover__name">${name}</span>
         ${profLine ? `<span class="comp-hover__prof">${escapeHtml(profLine)}</span>` : ""}
       </div>
-      <span class="comp-hover__mode">${escapeHtml(gameMode)}</span>
+      <span class="comp-hover__mode axi-chip">${escapeHtml(gameMode)}</span>
     </div>
     ${equipParts.length ? `<div class="comp-hover__equip-row">${equipParts.join('<span class="comp-hover__sep">·</span>')}</div>` : ""}
     ${tagPills ? `<div class="comp-hover__tags">${tagPills}</div>` : ""}
@@ -455,50 +455,56 @@ export function renderCompDetail() {
 
   container.innerHTML = `
     <div class="comp-detail">
-      <div class="comp-detail__topbar">
-        <button type="button" class="comp-detail__back-btn" data-action="back">&larr; Back to Comps</button>
-        <span class="comp-detail__divider">|</span>
-        <span class="comp-detail__name" data-action="edit-name">${escapeHtml(comp.name || "Untitled Comp")}</span>
-        <span class="comp-detail__spacer"></span>
-        <span class="comp-detail__save-status" id="compSaveStatus"></span>
+      <nav class="subnav subnav--visible comp-detail__bar">
+        <button type="button" class="subnav__back" data-action="back">
+          <span class="subnav__icon">${arrowLeftIcon}</span><span>Comps</span>
+        </button>
+        ${renderCompTabs(activeTab, { hasNotes: Boolean(comp.notes?.trim()) })}
+        <div class="subnav__actions">
+        <span class="subnav__save-status comp-detail__save-status" id="compSaveStatus"></span>
         <div class="comp-share-dropdown">
-          <button type="button" class="btn btn-secondary comp-share-dropdown__trigger" data-action="share-toggle">
+          <button type="button" class="axi-btn axi-btn--ghost comp-share-dropdown__trigger" data-action="share-toggle">
             Share ${chevronDownIcon}
           </button>
-          <div class="comp-share-dropdown__menu">
-            <button type="button" class="comp-share-dropdown__item" data-action="copy-share-code">
+          <div class="comp-share-dropdown__menu axi-picker__pop">
+            <button type="button" class="comp-share-dropdown__item axi-picker__opt" data-action="copy-share-code">
               ${axiforgeIcon} AxiCode
             </button>
-            <button type="button" class="comp-share-dropdown__item" data-action="share-discord"${compShareTip ? ` disabled title="${compShareTip}"` : ""}>
+            <button type="button" class="comp-share-dropdown__item axi-picker__opt" data-action="share-discord"${compShareTip ? ` disabled title="${compShareTip}"` : ""}>
               ${arrowUpTrayIcon} Discord Embed
             </button>
-            <button type="button" class="comp-share-dropdown__item" data-action="copy-plaintext"${compShareTip ? ` disabled title="${compShareTip}"` : ""}>
+            <button type="button" class="comp-share-dropdown__item axi-picker__opt" data-action="copy-plaintext"${compShareTip ? ` disabled title="${compShareTip}"` : ""}>
               ${clipboardDocumentIcon} Discord Plaintext
             </button>
             <div class="comp-share-dropdown__divider"></div>
-            <button type="button" class="comp-share-dropdown__item" data-action="copy-published-link"${comp.publishedFileId ? "" : ' disabled title="Publish first"'}>
+            <button type="button" class="comp-share-dropdown__item axi-picker__opt" data-action="copy-published-link"${comp.publishedFileId ? "" : ' disabled title="Publish first"'}>
               ${globeAltIcon} Published Link
             </button>
           </div>
         </div>
-        <button type="button" class="btn btn-primary" data-action="publish">Publish</button>
+        <button type="button" class="axi-btn axi-btn--ghost" data-action="publish">Publish</button>
         <div class="publish-status" id="compPublishStatus"></div>
         <span class="comp-detail__discord-status" id="compDiscordStatus"></span>
-        <span class="comp-detail__slot-counter">${totalCap} / 50 slots</span>
-      </div>
-      ${renderCompTagsRow(comp)}
-      ${renderCompTabs(activeTab, { hasNotes: Boolean(comp.notes?.trim()) })}
+        </div>
+      </nav>
+      ${renderCompToolbar(comp)}
       ${activeTab === "notes" ? `
       <div class="comp-detail__notes-tab" id="compNotesMount"></div>
       ` : `
-      <div class="comp-detail__body">
-        <div class="comp-detail__party-panel">
-          ${renderPartyLines(comp, totalCap)}
-        </div>
+      <div class="comp-detail__body comp-detail__body--panels">
+        <section class="axi-panel comp-detail__party-panel">
+          <div class="comp-detail__panel-head">
+            <span class="comp-detail__panel-title">Party Lines</span>
+            <span class="comp-detail__slot-counter"><b>${totalCap}/50</b> slots filled</span>
+          </div>
+          <div class="comp-detail__party-scroll">
+            ${renderPartyLines(comp, totalCap)}
+          </div>
+        </section>
         <div class="comp-detail__resize-handle" title="Drag to resize"></div>
-        <div class="comp-detail__pool-panel">
+        <section class="axi-panel comp-detail__pool-panel">
           ${renderBuildPool(comp)}
-        </div>
+        </section>
       </div>
       `}
     </div>
@@ -610,6 +616,34 @@ export function renderCompDetail() {
   }
 }
 
+/**
+ * The comp's name and tags, in a toolbar panel below the bar.
+ *
+ * They used to ride in the topbar and a band under it. The build editor puts a
+ * build's name in a `.panel--toolbar` and leaves its subnav to navigation and
+ * actions, so a comp's name goes in the same place for the same reason: the bar
+ * is a row of one-height controls, and a title is neither.
+ *
+ * The name is a plain input rather than the old click-to-edit span — once it
+ * sits in a labelled field next to the tags there is nothing for the swap to
+ * buy, and an input is what the Build Title field is.
+ */
+function renderCompToolbar(comp) {
+  return `
+    <section class="panel panel--toolbar comp-detail__toolbar">
+      <div class="toolbar-grid comp-detail__toolbar-grid">
+        <label>Comp Name
+          <input type="text" data-action="edit-name" placeholder="Untitled Comp"
+                 value="${escapeHtml(comp.name || "")}" />
+        </label>
+        <label>Tags
+          ${renderCompTagsRow(comp)}
+        </label>
+      </div>
+    </section>
+  `;
+}
+
 function renderPartyLines(comp, totalCap) {
   const lines = comp.partyLines || [];
   const lineRows = lines
@@ -680,9 +714,8 @@ function renderPartyLine(comp, pl, idx, totalCap) {
     if (build) {
       const slotColor = (comp.buildColors || {})[buildId] || "normal";
       const icon = getSpecIconColored(build, slotColor);
-      const pClass = profClass(build.profession);
+      const seriesStyle = slotSeriesStyle(slotColor, build.profession);
       const title = escapeHtml(build.title || "Untitled");
-      const colorAttr = slotColor !== "normal" ? ` data-slot-color="${slotColor}"` : "";
       // A slot is a 42px icon box -- no room for the pool's folder chip. It gets
       // a corner marker instead, and says where the build lives in its tooltip,
       // so the fact survives at the one size where the chip cannot.
@@ -691,7 +724,7 @@ function renderPartyLine(comp, pl, idx, totalCap) {
         ? `${title} — from ${escapeHtml(folderPathText(build.folderId) || "Library root")}`
         : title;
       slotBoxes.push(
-        `<div class="comp-slot comp-slot--filled ${pClass} ${foreign ? "comp-slot--foreign" : ""}" title="${slotTitle}"${colorAttr}
+        `<div class="comp-slot comp-slot--filled ${foreign ? "comp-slot--foreign" : ""}" title="${slotTitle}" style="${escapeHtml(seriesStyle)}"
               data-action="click-filled-slot" data-line-id="${escapeHtml(pl.id)}" data-slot-idx="${i}" data-build-id="${escapeHtml(buildId)}">
           <span class="comp-slot__icon">${icon}</span>
         </div>`
@@ -781,10 +814,10 @@ function renderBuildPool(comp) {
       <div class="comp-pool-header">
         <span class="comp-pool-title">BUILDS <span class="comp-pool-count">(${compBuilds.length})</span></span>
         <div class="comp-pool-header__right">
-          <input type="text" class="comp-pool-search" placeholder="Search..."
+          <input type="text" class="comp-pool-search axi-input" placeholder="Search..."
                  value="${escapeHtml(state.compPoolSearch || "")}" data-action="pool-search" />
           ${_sourcesButtonHtml(comp)}
-          <button type="button" class="comp-pool-add" data-action="pool-add">+ Add</button>
+          <button type="button" class="comp-pool-add axi-btn axi-btn--ghost" data-action="pool-add">+ Add</button>
         </div>
       </div>
       ${renderCategoryRow(comp)}
@@ -832,7 +865,7 @@ function renderCategoryRow(comp) {
            title="Drag onto a line to add its icon · click to edit">
         ${iconHtml}
         <span class="comp-cat-chip__name">${name}</span>
-        <span class="comp-cat-chip__count">${count}</span>
+        <span class="comp-cat-chip__count axi-badge-count">${count}</span>
       </div>
     `;
   }).join("");
@@ -841,7 +874,7 @@ function renderCategoryRow(comp) {
     <div class="comp-cat-row">
       <span class="comp-cat-row__label">Tags</span>
       <div class="comp-cat-list">${chips}</div>
-      <button type="button" class="comp-cat-add" data-action="cat-add" title="New tag">+ Tag</button>
+      <button type="button" class="comp-cat-add axi-btn axi-btn--dashed" data-action="cat-add" title="New tag">+ Tag</button>
     </div>
   `;
 }
@@ -962,7 +995,7 @@ export function openAddBuildModal(comp) {
       const badges = [];
       if (info.team) {
         badges.push(
-          `<span class="comp-picker-row__badge comp-picker-row__badge--shared"` +
+          `<span class="comp-picker-row__badge comp-picker-row__badge--shared axi-chip axi-chip--meta"` +
           ` title="Shared with ${escapeHtml(info.team.name)} (${escapeHtml(info.team.role || "member")})">` +
           `${shareIcon}${escapeHtml(info.team.name)}</span>`
         );
@@ -970,7 +1003,7 @@ export function openAddBuildModal(comp) {
       if (info.comps.length > 0) {
         const names = info.comps.map((c) => c.name || "Untitled").join(", ");
         badges.push(
-          `<span class="comp-picker-row__badge comp-picker-row__badge--comps"` +
+          `<span class="comp-picker-row__badge comp-picker-row__badge--comps axi-chip"` +
           ` title="Already in: ${escapeHtml(names)}">` +
           `${info.comps.length} comp${info.comps.length === 1 ? "" : "s"}</span>`
         );
@@ -987,7 +1020,7 @@ export function openAddBuildModal(comp) {
       ].filter(Boolean).join('<span class="comp-picker-row__dot">·</span>');
 
       return `
-        <label class="comp-picker-row ${profClass(b.profession)}" data-build-id="${escapeHtml(b.id)}">
+        <label class="comp-picker-row" data-build-id="${escapeHtml(b.id)}">
           <input type="checkbox" class="comp-picker-row__checkbox" value="${escapeHtml(b.id)}" ${checked} />
           <span class="comp-picker-row__icon">${getSpecIcon(b)}</span>
           <span class="comp-picker-row__main">
@@ -1012,10 +1045,10 @@ export function openAddBuildModal(comp) {
 
   function render() {
     overlay.innerHTML = `
-      <div class="comp-picker-modal">
+      <div class="comp-picker-modal axi-panel">
         <div class="comp-picker-modal__header">
           <span class="comp-picker-modal__title">Add Builds to Comp</span>
-          <input type="text" class="comp-picker-modal__search" placeholder="Search name, folder, gear, team..."
+          <input type="text" class="comp-picker-modal__search axi-input" placeholder="Search name, folder, gear, team..."
                  value="${escapeHtml(searchTerm)}" />
         </div>
         <div class="comp-picker-modal__scope">${_pickerScopeNote(comp, compTeamRoot, available.length)}</div>
@@ -1023,9 +1056,9 @@ export function openAddBuildModal(comp) {
           ${renderModalList()}
         </div>
         <div class="comp-picker-modal__footer">
-          <button type="button" class="comp-picker-modal__btn comp-picker-modal__btn--cancel"
+          <button type="button" class="comp-picker-modal__btn comp-picker-modal__btn--cancel axi-btn axi-btn--ghost"
                   data-action="picker-cancel">Cancel</button>
-          <button type="button" class="comp-picker-modal__btn comp-picker-modal__btn--add"
+          <button type="button" class="comp-picker-modal__btn comp-picker-modal__btn--add axi-btn axi-btn--primary"
                   data-action="picker-add" ${selected.size === 0 ? "disabled" : ""}>
             Add Selected (${selected.size})
           </button>
@@ -1126,12 +1159,11 @@ function openCategoryModal(comp, categoryId) {
     }
     return compBuilds.map((b) => {
       const icon = getSpecIcon(b);
-      const pClass = profClass(b.profession);
       const checked = selected.has(b.id) ? "checked" : "";
       const displayName = escapeHtml(getDisplayName(b));
       const gear = escapeHtml(resolveStatPackage(b));
       return `
-        <label class="comp-picker-row ${pClass}" data-build-id="${escapeHtml(b.id)}">
+        <label class="comp-picker-row" data-build-id="${escapeHtml(b.id)}">
           <input type="checkbox" class="comp-picker-row__checkbox" value="${escapeHtml(b.id)}" ${checked} />
           <span class="comp-picker-row__icon">${icon}</span>
           <span class="comp-picker-row__name">${displayName}</span>
@@ -1143,30 +1175,30 @@ function openCategoryModal(comp, categoryId) {
 
   function renderIconGrid() {
     const isCustom = icon && !COMP_TAG_ICONS.some((opt) => opt.url === icon);
-    const noneSel = !icon ? " comp-cat-icon-opt--active" : "";
+    const noneSel = !icon ? "true" : "false";
     const options = COMP_TAG_ICONS.map((opt) => {
-      const active = opt.url === icon ? " comp-cat-icon-opt--active" : "";
-      return `<button type="button" class="comp-cat-icon-opt${active}" data-icon-url="${escapeHtml(opt.url)}" title="${escapeHtml(opt.name)}">
+      const active = opt.url === icon ? "true" : "false";
+      return `<button type="button" class="comp-cat-icon-opt axi-pill" aria-pressed="${active}" data-icon-url="${escapeHtml(opt.url)}" title="${escapeHtml(opt.name)}">
         <img src="${escapeHtml(opt.url)}" alt="${escapeHtml(opt.name)}" draggable="false" />
       </button>`;
     }).join("");
     return `
       <div class="comp-cat-icon-label">Icon</div>
       <div class="comp-cat-icon-grid">
-        <button type="button" class="comp-cat-icon-opt comp-cat-icon-opt--none${noneSel}" data-icon-url="" title="No icon">∅</button>
+        <button type="button" class="comp-cat-icon-opt comp-cat-icon-opt--none axi-pill" aria-pressed="${noneSel}" data-icon-url="" title="No icon">∅</button>
         ${options}
       </div>
-      <input type="text" class="comp-cat-icon-custom" placeholder="…or paste a custom image URL"
+      <input type="text" class="comp-cat-icon-custom axi-input" placeholder="…or paste a custom image URL"
              value="${isCustom ? escapeHtml(icon) : ""}" />
     `;
   }
 
   function render() {
     overlay.innerHTML = `
-      <div class="comp-picker-modal">
+      <div class="comp-picker-modal axi-panel">
         <div class="comp-picker-modal__header">
           <span class="comp-picker-modal__title">${isEdit ? "Edit Tag" : "New Tag"}</span>
-          <input type="text" class="comp-picker-modal__search comp-cat-name-input"
+          <input type="text" class="comp-picker-modal__search comp-cat-name-input axi-input"
                  placeholder="Tag name (e.g. DPS, Heals)" value="${escapeHtml(name)}" maxlength="60" />
         </div>
         <div class="comp-cat-icon-picker">
@@ -1176,10 +1208,10 @@ function openCategoryModal(comp, categoryId) {
           ${renderRows()}
         </div>
         <div class="comp-picker-modal__footer">
-          ${isEdit ? `<button type="button" class="comp-picker-modal__btn comp-picker-modal__btn--delete" data-action="cat-delete">Delete</button>` : ""}
+          ${isEdit ? `<button type="button" class="comp-picker-modal__btn comp-picker-modal__btn--delete axi-btn axi-btn--ghost" data-action="cat-delete">Delete</button>` : ""}
           <span class="comp-cat-modal__spacer"></span>
-          <button type="button" class="comp-picker-modal__btn comp-picker-modal__btn--cancel" data-action="cat-cancel">Cancel</button>
-          <button type="button" class="comp-picker-modal__btn comp-picker-modal__btn--add" data-action="cat-save">Save</button>
+          <button type="button" class="comp-picker-modal__btn comp-picker-modal__btn--cancel axi-btn axi-btn--ghost" data-action="cat-cancel">Cancel</button>
+          <button type="button" class="comp-picker-modal__btn comp-picker-modal__btn--add axi-btn axi-btn--primary" data-action="cat-save">Save</button>
         </div>
       </div>
     `;
@@ -1201,7 +1233,7 @@ function openCategoryModal(comp, categoryId) {
       icon = e.target.value.trim();
       // Update grid highlight without stealing focus from the URL field
       overlay.querySelectorAll(".comp-cat-icon-opt").forEach((b) => {
-        b.classList.toggle("comp-cat-icon-opt--active", (b.dataset.iconUrl || "") === icon);
+        b.setAttribute("aria-pressed", (b.dataset.iconUrl || "") === icon ? "true" : "false");
       });
     });
 
@@ -1277,11 +1309,10 @@ function showCategoryHoverCard(chipEl, comp, category) {
     .filter(Boolean);
 
   const card = document.createElement("div");
-  card.className = "comp-cat-hover-card";
+  card.className = "comp-cat-hover-card axi-picker__pop axi-picker__pop--fixed";
   const rows = builds.length
     ? builds.map((b) => {
-        const pClass = profClass(b.profession);
-        return `<div class="comp-cat-hover__row ${pClass}">
+        return `<div class="comp-cat-hover__row" style="${escapeHtml(professionSeriesStyle(b.profession))}">
           <span class="comp-cat-hover__icon">${getSpecIcon(b)}</span>
           <span class="comp-cat-hover__name">${escapeHtml(getDisplayName(b))}</span>
         </div>`;
@@ -1330,44 +1361,32 @@ function bindDetailEvents(container, comp) {
     });
   });
 
-  // ── Inline name editing ────────────────────────────────────────────────────
-  const nameEl = container.querySelector("[data-action='edit-name']");
-  if (nameEl) {
-    nameEl.addEventListener("click", () => {
-      // Replace the span with an input
-      const input = document.createElement("input");
-      input.type = "text";
-      input.className = "comp-detail__name-input";
-      input.value = comp.name || "";
-      nameEl.replaceWith(input);
-      input.focus();
-      input.select();
+  // ── Name field ─────────────────────────────────────────────────────────────
+  // A live input in the toolbar panel, so renaming is typing rather than a
+  // click-to-swap. Commit on blur and on Enter; Escape puts the stored name
+  // back rather than re-rendering the whole view, which would cost the user
+  // their scroll position for a cancelled edit.
+  const nameInput = container.querySelector("input[data-action='edit-name']");
+  if (nameInput) {
+    const commitRename = async () => {
+      const newName = nameInput.value.trim() || "Untitled Comp";
+      if (newName === comp.name) return;
+      comp.name = newName;
+      nameInput.value = newName;
+      await saveAndSync(comp);
+      _callbacks.onRerender?.();
+    };
 
-      let cancelled = false;
-
-      const commitRename = async () => {
-        if (cancelled) return;
-        const newName = input.value.trim() || "Untitled Comp";
-        comp.name = newName;
-        await saveAndSync(comp);
-        _callbacks.onRerender?.();
-      };
-
-      const cancelRename = () => {
-        cancelled = true;
-        _callbacks.onRerender?.();
-      };
-
-      input.addEventListener("blur", () => commitRename());
-      input.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          input.blur();
-        } else if (e.key === "Escape") {
-          e.preventDefault();
-          cancelRename();
-        }
-      });
+    nameInput.addEventListener("blur", () => commitRename());
+    nameInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        nameInput.blur();
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        nameInput.value = comp.name || "";
+        nameInput.blur();
+      }
     });
   }
 
@@ -1791,10 +1810,15 @@ function bindPoolEvents(container, comp) {
       document.querySelectorAll(".mini-card__color-menu").forEach((m) => m.remove());
       const buildId = picker.dataset.buildId;
       const current = picker.dataset.current || "normal";
+      // The same two role markers the slot box's own outline reads from
+      // professions.js — one home for the palette, per Global Constraint 6.
       const choices = [
-        { value: "normal", label: "Default", dot: "transparent", border: "1px solid #666" },
-        { value: "red", label: "Condi", dot: "#d63a3a", border: "none" },
-        { value: "blue", label: "Heal", dot: "#3a8fd6", border: "none" },
+        // The swatch is a dot inside a menu, not a raised thing, so its edge is
+        // the rule weight (--axi-border-hairline) rather than a form step — and
+        // a literal 1px would be a fourth weight besides.
+        { value: "normal", label: "Default", dot: "transparent", border: "var(--axi-border-hairline) solid var(--axi-rule)" },
+        { value: "red", label: "Condi", dot: SLOT_ROLES.red, border: "none" },
+        { value: "blue", label: "Heal", dot: SLOT_ROLES.blue, border: "none" },
       ];
       const menu = document.createElement("div");
       menu.className = "mini-card__color-menu";

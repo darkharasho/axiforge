@@ -380,7 +380,7 @@ test.describe("Compositions — Boon Coverage", () => {
     expect(profText).toContain("Reaper");
 
     // Move away to dismiss
-    await window.locator(".comp-detail__topbar").hover();
+    await window.locator(".comp-detail__bar").hover();
     await window.waitForTimeout(200);
   });
 
@@ -404,7 +404,7 @@ test.describe("Compositions — Boon Coverage", () => {
     expect(profText).not.toContain("Reaper");
 
     // Move away to dismiss
-    await window.locator(".comp-detail__topbar").hover();
+    await window.locator(".comp-detail__bar").hover();
     await window.waitForTimeout(200);
   });
 
@@ -424,7 +424,7 @@ test.describe("Compositions — Boon Coverage", () => {
     const profText = await hoverCard.locator(".comp-hover__prof").textContent();
     expect(profText).toContain("Reaper");
 
-    await window.locator(".comp-detail__topbar").hover();
+    await window.locator(".comp-detail__bar").hover();
     await window.waitForTimeout(200);
   });
 
@@ -448,7 +448,7 @@ test.describe("Compositions — Boon Coverage", () => {
     const profText = await hoverCard.locator(".comp-hover__prof").textContent();
     expect(profText).toContain("Necromancer");
 
-    await window.locator(".comp-detail__topbar").hover();
+    await window.locator(".comp-detail__bar").hover();
     await window.waitForTimeout(200);
   });
 });
@@ -531,6 +531,6 @@ test.describe("Compositions — Build Tags", () => {
     await expect(hoverCard).toBeVisible({ timeout: 3000 });
     await expect(hoverCard.locator(".comp-cat-hover__title")).toHaveText("DPS");
     await expect(hoverCard.locator(".comp-cat-hover__row")).toHaveCount(2);
-    await window.locator(".comp-detail__topbar").hover();
+    await window.locator(".comp-detail__bar").hover();
   });
 });

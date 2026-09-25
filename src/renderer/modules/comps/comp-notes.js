@@ -13,10 +13,11 @@
 // Firebrand, and ":Firebrand:" renders as the class icon.
 
 import { createNotesEditor } from "../notes.js";
+import { compIcon, pencilIcon } from "../library/heroicons.js";
 
 const TABS = [
-  { id: "comp", label: "Comp" },
-  { id: "notes", label: "Notes" },
+  { id: "comp", label: "Comp", icon: compIcon },
+  { id: "notes", label: "Notes", icon: pencilIcon },
 ];
 
 const COMP_NOTES_PLACEHOLDER =
@@ -26,7 +27,16 @@ const COMP_NOTES_HINT =
   "Type <strong>:</strong> for class icons and <strong>@</strong> to reference runes, sigils, relics, and weapons. <strong>Paste</strong> images from your clipboard. YouTube &amp; Twitch links auto-embed in preview.";
 
 /**
- * Markup for the comp detail tab strip.
+ * The comp detail's tabs, as .subnav__item buttons.
+ *
+ * These used to be a strip of their own below the topbar, with their own
+ * near-copy of the tab tokens. They are the build editor's subnav tabs now —
+ * same class, same icons-then-label shape, same filled-and-blocked current tab
+ * — because they do the same job one screen over, and a row that reuses the
+ * component inherits its uniform height instead of inventing another one.
+ *
+ * Returns the buttons bare, with no wrapper: the bar they sit in IS the
+ * .subnav, so they have to be its direct children.
  *
  * @param {string} activeTab      "comp" | "notes"
  * @param {object} [opts]         { hasNotes: boolean } — dots the Notes tab
@@ -34,12 +44,12 @@ const COMP_NOTES_HINT =
  */
 export function renderCompTabs(activeTab, { hasNotes = false } = {}) {
   const active = TABS.some((t) => t.id === activeTab) ? activeTab : "comp";
-  const buttons = TABS.map((tab) => {
-    const cls = "comp-detail__tab" + (tab.id === active ? " comp-detail__tab--active" : "");
+  return TABS.map((tab) => {
+    const isActive = tab.id === active;
+    const cls = "subnav__item" + (isActive ? " subnav__item--active" : "");
     const dot = tab.id === "notes" && hasNotes ? '<span class="comp-detail__tab-dot"></span>' : "";
-    return `<button type="button" class="${cls}" data-comp-tab="${tab.id}">${tab.label}${dot}</button>`;
+    return `<button type="button" class="${cls}" role="tab" aria-selected="${isActive}" data-comp-tab="${tab.id}"><span class="subnav__icon">${tab.icon}</span>${tab.label}${dot}</button>`;
   }).join("");
-  return `<div class="comp-detail__tabs">${buttons}</div>`;
 }
 
 /**

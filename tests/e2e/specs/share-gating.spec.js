@@ -200,7 +200,7 @@ test.describe("Share gating — comp Share dropdown", () => {
     // The comps page remembers the comp it had open, so clicking the nav item
     // lands on the detail view, not the list. Back out first or the row we want
     // simply is not on screen.
-    const back = window.locator(".comp-detail__back-btn");
+    const back = window.locator(".comp-detail__bar .subnav__back");
     if (await back.count()) {
       await back.first().click();
       await window.waitForTimeout(300);
