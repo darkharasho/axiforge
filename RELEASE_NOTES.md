@@ -1,3 +1,9 @@
+## Version v1.0.2 — September 25, 2026
+
+### Bug Fixes
+
+- **Notes were written on the page instead of on a panel.** In the app the writing field was painted the page's own dark grey inside the panel around it, so the text sat in a hole rather than on a surface, and switching to the preview moved the ground out from under it. On a published build page the notes had no panel at all — they landed directly on the page while every other section was framed. Notes are now one raised surface in both places, and the editor and the preview share it.
+
 ## Version v1.0.1 — September 25, 2026
 
 ### Bug Fixes
