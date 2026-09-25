@@ -1,16 +1,19 @@
 /* AxiForge — skills styles */
+
+/* The skill bar is the densest run of controls in the editor: two swap
+   buttons, up to five profession mechanic slots, a legend or pet stack, ten
+   skill slots and a health reading. Every one of the first four is a thing
+   the user presses, so each is drawn at the control step (rule 3) — an
+   --axi-ink-line edge on a flat --axi-surface, square, resting with no block
+   — and the lift is what says clickable (rule 4). Nothing here glows: the
+   sheet used to carry a gold halo on every hover and a second, brighter one
+   on every selection, which put twenty soft light sources in a 700px strip
+   and left the chosen slot indistinguishable from the hovered one. */
+
 .editor-grid {
   display: grid;
   gap: 10px;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.subpanel {
-  border: 1px solid var(--line-soft);
-  border-radius: 10px;
-  background: rgba(9, 10, 16, 0.72);
-  padding: 10px;
-  min-height: 260px;
 }
 
 .skills-host {
@@ -39,48 +42,55 @@
   gap: 6px;
 }
 
+/* ══ Weapon swap ═════════════════════════════════════════════════════════ */
+
+/* Square, not a disc: the round swap button was the one place in the editor
+   that admitted a 50% radius, and it read as a control borrowed from another
+   system the moment the slots beside it went square (rule 3, "the corner is
+   square"). */
 .weapon-swap-btn {
   width: 34px;
   height: 34px;
   flex-shrink: 0;
-  border-radius: 50%;
-  border: 2px solid rgba(190, 155, 50, 0.55);
-  background: radial-gradient(circle at 42% 36%, rgba(50, 42, 14, 0.92) 0%, rgba(14, 11, 4, 0.96) 70%);
-  color: rgba(200, 165, 60, 0.55);
+  border: var(--axi-border-control) solid var(--axi-ink-line);
+  background: var(--axi-surface);
+  color: var(--axi-text);
   cursor: pointer;
   padding: 0;
   display: grid;
   place-items: center;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease, color 0.15s ease;
+  transition: box-shadow 0.15s ease, transform 0.15s ease, background 0.15s ease, color 0.15s ease;
 }
 
+/* Disabled is an absence of the second weapon set, not a dimmed copy of the
+   button: the glyph drops to the faint end of the ramp rather than fading the
+   whole control toward the ground (rule 2). */
 .weapon-swap-btn:disabled {
-  opacity: 0.35;
+  color: var(--axi-text-faint);
   cursor: default;
 }
 
-.weapon-swap-btn:not(:disabled) {
-  border-color: rgba(210, 175, 70, 0.85);
-  color: rgba(220, 185, 75, 0.95);
-  box-shadow: 0 0 6px rgba(180, 140, 40, 0.35), inset 0 1px 0 rgba(255, 220, 100, 0.12);
-}
-
+/* Rule 4's first case — a control that rests flat gains its block for the
+   first time and moves with it. */
 .weapon-swap-btn:not(:disabled):hover {
-  border-color: rgba(255, 215, 100, 1);
-  color: #ffe06a;
-  box-shadow: 0 0 12px rgba(210, 170, 50, 0.6), inset 0 1px 0 rgba(255, 230, 120, 0.2);
+  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  transform: translate(-2px, -2px);
 }
 
+/* A chosen control, so it fills (rule 5). A fill is safe here in a way it is
+   not on the slots below: the swap glyph is an SVG stroked in currentColor,
+   so it inverts with the box instead of being buried under it. */
 .weapon-swap-btn--active {
-  border-color: rgba(100, 170, 240, 0.85) !important;
-  color: rgba(130, 190, 250, 0.95) !important;
-  box-shadow: 0 0 8px rgba(100, 170, 240, 0.45), inset 0 1px 0 rgba(140, 200, 250, 0.15) !important;
+  background: var(--axi-accent);
+  color: var(--axi-accent-ink);
 }
 
 .weapon-swap-btn svg {
   width: 16px;
   height: 13px;
 }
+
+/* ══ Profession mechanics (F1–F5, kits, attunements) ═════════════════════ */
 
 .profession-mechanics-bar {
   display: flex;
@@ -94,20 +104,18 @@
   margin-left: 94px;
 }
 
-
 .skill-icon--profession {
   position: relative;
   width: 36px;
   height: 36px;
-  border: 1px solid rgba(210, 180, 80, 0.5);
-  border-radius: 4px;
-  background: rgba(2, 8, 16, 0.7);
+  border: var(--axi-border-control) solid var(--axi-ink-line);
+  background: var(--axi-surface);
   padding: 0;
   cursor: pointer;
   display: grid;
   place-items: center;
   overflow: visible;
-  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+  transition: box-shadow 0.16s ease, transform 0.16s ease;
 }
 
 .skill-icon--profession img {
@@ -115,83 +123,102 @@
   height: 100%;
   object-fit: cover;
   display: block;
-  border-radius: 3px;
   overflow: hidden;
 }
 
 .skill-icon--profession:hover {
-  border-color: rgba(255, 220, 100, 0.85);
-  box-shadow: 0 0 8px rgba(255, 200, 50, 0.4);
+  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  transform: translate(-2px, -2px);
 }
 
+/* Outlined rather than filled, and this is the exception rule 5 leaves room
+   for: the slot's whole interior is a GW2 skill bitmap drawn edge to edge, so
+   an accent background would sit entirely behind the art and assert nothing.
+   The accent goes on the one surface the art does not cover — the edge. The
+   same call is made on .legend-slot-btn--active and .pet-swap-btn--active
+   below, and deliberately not on the two swap buttons, whose glyphs are
+   currentColor SVGs that a fill can invert. */
 .skill-icon--profession-active {
-  border-color: rgba(255, 210, 60, 0.9);
-  box-shadow: 0 0 8px rgba(255, 190, 30, 0.5);
+  border-color: var(--axi-accent);
 }
 
+/* An empty mechanic slot is an absence, so it is an empty square rather than
+   a faded full one (rule 2): dashed edge, the ground showing through, and the
+   faint ramp step for the F-label that is its only content. */
 .skill-icon--profession-empty {
-  opacity: 0.25;
+  background: var(--axi-ground);
   border-style: dashed;
+  color: var(--axi-text-faint);
   cursor: default;
   pointer-events: none;
 }
 
+/* Two slots that look pressable but are not: a kit slot with no kit behind it,
+   and Ranger's two client-side pet commands. Both cancel the lift outright,
+   because a lift is a promise that pressing does something. */
 .skill-icon--profession-nokit {
   cursor: default;
 }
-.skill-icon--profession-nokit:hover {
-  border-color: rgba(210, 180, 80, 0.5);
+.skill-icon--profession-nokit:hover,
+.skill-icon--fake-command:hover {
   box-shadow: none;
+  transform: none;
 }
 
-/* Ranger fake pet command buttons (Attack My Target / Return to Me) */
+/* Ranger fake pet command buttons (Attack My Target / Return to Me).
+   Their two glyphs carried a green and a gold tint plus a tinted ground,
+   which read as two statuses; they are two verbs, told apart by the shape of
+   the glyph (a crosshair, a return arrow). One dim ink for both, and the SVGs
+   in skills.js stroke themselves in currentColor so this rule owns it. */
 .skill-icon--fake-command {
   cursor: default;
-}
-.skill-icon--fake-command:hover {
-  border-color: rgba(210, 180, 80, 0.5);
-  box-shadow: none;
+  color: var(--axi-text-dim);
 }
 .skill-icon--fake-command svg {
   width: 26px;
   height: 26px;
 }
-.skill-icon--fake-attack {
-  background: rgba(20, 70, 15, 0.85);
-  border-color: rgba(100, 180, 80, 0.5);
-}
-.skill-icon--fake-return {
-  background: rgba(80, 65, 10, 0.85);
-  border-color: rgba(200, 175, 50, 0.5);
-}
 
-.skill-icon--profession-flabel {
+/* ══ Corner labels on a slot ═════════════════════════════════════════════ */
+/* The F-key, keybind and legend labels all sit in a corner of a slot, over
+   skill art that is a different colour in every build. They take the ink line
+   as a ground — the one full-strength near-black in the ramp — so they stay
+   legible over any bitmap without the translucent black plate they used to
+   carry. Their 9px size is deliberate and below the type scale's floor: this
+   is a one-character marker inside a 36px box, not a line of text. */
+.skill-icon--profession-flabel,
+.legend-slot-btn__label,
+.skill-icon-large__keylabel {
   position: absolute;
   bottom: -1px;
   left: -1px;
-  background: rgba(0, 0, 0, 0.72);
-  color: rgba(220, 200, 120, 0.9);
+  background: var(--axi-ink-line);
+  color: var(--axi-text);
   font-size: 9px;
   font-weight: 600;
   line-height: 1;
   padding: 1px 3px 2px;
-  border-radius: 0 2px 0 2px;
   pointer-events: none;
   letter-spacing: 0.02em;
   z-index: 1;
 }
 
+/* The kit toggle is its own control sitting in the corner of another one, so
+   it takes the same ink ground as the labels and the same chosen-control fill
+   as everything else that is switched on (rule 5). It is small enough that a
+   lift would read as a jitter rather than a lift, so its hover is the neutral
+   ramp step instead — rule 8's reasoning applied to a control too small to
+   carry a block. */
 .kit-toggle-indicator {
   position: absolute;
   bottom: -1px;
   right: -1px;
-  background: rgba(0, 0, 0, 0.72);
-  color: rgba(220, 200, 120, 0.9);
+  background: var(--axi-ink-line);
+  color: var(--axi-text);
   font-size: 11px;
   font-weight: 600;
   line-height: 1;
   padding: 2px 4px 3px;
-  border-radius: 2px 0 2px 0;
   pointer-events: all;
   cursor: pointer;
   user-select: none;
@@ -199,18 +226,22 @@
   transition: background 0.12s ease, color 0.12s ease;
 }
 .kit-toggle-indicator:hover {
-  background: rgba(255, 200, 50, 0.85);
-  color: #000;
+  background: var(--axi-surface-raised);
 }
 .kit-toggle-indicator--active {
-  background: rgba(210, 180, 80, 0.5);
-  color: #fff;
+  background: var(--axi-accent);
+  color: var(--axi-accent-ink);
 }
+/* The only hover in this sheet that changes ink, because it is the only one
+   whose verb is destructive: the badge reads ✕ while the kit is active and
+   pressing it drops the kit's whole weapon bar. --axi-danger is asserting
+   what the press does, which is the status meaning rule 10 reserves it for. */
 .kit-toggle-indicator--active:hover {
-  background: rgba(255, 80, 60, 0.8);
-  color: #fff;
+  background: var(--axi-danger);
+  color: var(--axi-accent-ink);
 }
 
+/* ══ Revenant legends ════════════════════════════════════════════════════ */
 
 .legend-stack {
   display: flex;
@@ -223,16 +254,15 @@
   position: relative;
   width: 36px;
   height: 36px;
-  border: 2px solid rgba(160, 120, 60, 0.6);
-  border-radius: 3px;
-  background: rgba(4, 12, 22, 0.85);
+  border: var(--axi-border-control) solid var(--axi-ink-line);
+  background: var(--axi-surface);
   padding: 0;
   cursor: pointer;
   display: grid;
   place-items: center;
   overflow: visible;
-  color: rgba(200, 180, 120, 0.75);
-  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+  color: var(--axi-text-dim);
+  transition: box-shadow 0.16s ease, transform 0.16s ease;
   flex-shrink: 0;
 }
 
@@ -241,34 +271,19 @@
   height: 100%;
   object-fit: cover;
   display: block;
-  border-radius: 2px;
 }
 
 .legend-slot-btn:hover {
-  border-color: rgba(220, 180, 80, 0.9);
-  box-shadow: 0 0 10px rgba(200, 160, 40, 0.5);
+  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  transform: translate(-2px, -2px);
 }
 
+/* Accent on the edge, not a fill — same reason as .skill-icon--profession-active. */
 .legend-slot-btn--active {
-  border-color: rgba(220, 190, 60, 0.95) !important;
-  box-shadow: 0 0 12px rgba(200, 170, 30, 0.6) !important;
+  border-color: var(--axi-accent);
 }
 
-/* F1/F2 label on legend slot button */
-.legend-slot-btn__label {
-  position: absolute;
-  bottom: -1px;
-  left: -1px;
-  background: rgba(0, 0, 0, 0.75);
-  color: rgba(220, 200, 120, 0.9);
-  font-size: 9px;
-  font-weight: 600;
-  line-height: 1;
-  padding: 1px 3px 2px;
-  border-radius: 0 2px 0 2px;
-  pointer-events: none;
-  letter-spacing: 0.02em;
-}
+/* ══ Ranger pets ═════════════════════════════════════════════════════════ */
 
 /* Ranger: spacer inside mechBar that pushes pet selector to the right */
 .pet-panel-spacer {
@@ -285,24 +300,26 @@
 .pet-slot-btn {
   width: 52px;
   height: 52px;
-  border: 2px solid rgba(80, 140, 60, 0.6);
-  border-radius: 3px;
-  background: rgba(4, 12, 22, 0.85);
+  border: var(--axi-border-control) solid var(--axi-ink-line);
+  background: var(--axi-surface);
   padding: 0;
   cursor: pointer;
   display: grid;
   place-items: center;
   overflow: hidden;
-  color: rgba(140, 200, 110, 0.75);
-  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+  color: var(--axi-text-dim);
+  transition: box-shadow 0.16s ease, transform 0.16s ease;
   flex-shrink: 0;
 }
 
+/* A filled pet slot used to drop its edge and its ground so the pet portrait
+   could float free. That made the one pet a build actually has the only
+   control on the bar with no box, which reads as the slot having been
+   removed rather than filled. It keeps the box and grows; the portrait is
+   scaled and clipped inside it like any other slot's art. */
 .pet-slot-btn--filled {
   width: 60px;
   height: 60px;
-  border-color: transparent;
-  background: transparent;
 }
 
 .pet-slot-btn img {
@@ -315,13 +332,13 @@
 }
 
 .pet-slot-btn:hover {
-  border-color: rgba(120, 200, 80, 0.9);
-  box-shadow: 0 0 10px rgba(100, 180, 60, 0.5);
+  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  transform: translate(-2px, -2px);
 }
 
 .pet-slot-btn__label {
   font-size: 10px;
-  color: rgba(160, 210, 130, 0.75);
+  color: var(--axi-text-faint);
   text-align: center;
   max-width: 60px;
   overflow: hidden;
@@ -334,33 +351,34 @@
   width: 28px;
   height: 28px;
   flex-shrink: 0;
-  border-radius: 50%;
-  border: 2px solid rgba(80, 140, 60, 0.55);
-  background: radial-gradient(circle at 42% 36%, rgba(14, 30, 10, 0.92) 0%, rgba(4, 12, 4, 0.96) 70%);
-  color: rgba(80, 140, 60, 0.55);
+  border: var(--axi-border-control) solid var(--axi-ink-line);
+  background: var(--axi-surface);
+  color: var(--axi-text);
   cursor: pointer;
   padding: 0;
   display: grid;
   place-items: center;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease, color 0.15s ease;
+  transition: box-shadow 0.15s ease, transform 0.15s ease, background 0.15s ease, color 0.15s ease;
 }
 
 .pet-swap-btn:hover {
-  border-color: rgba(120, 200, 80, 0.9);
-  color: rgba(140, 210, 90, 0.95);
-  box-shadow: 0 0 10px rgba(100, 180, 60, 0.5);
+  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  transform: translate(-2px, -2px);
 }
 
+/* Fills, like the weapon swap button and for the same reason: its glyph is a
+   currentColor SVG, so the fill inverts it rather than hiding it. */
 .pet-swap-btn--active {
-  border-color: rgba(100, 170, 240, 0.85) !important;
-  color: rgba(130, 190, 250, 0.95) !important;
-  box-shadow: 0 0 8px rgba(100, 170, 240, 0.45) !important;
+  background: var(--axi-accent);
+  color: var(--axi-accent-ink);
 }
 
 .pet-swap-btn svg {
   width: 13px;
   height: 10px;
 }
+
+/* ══ The bar itself ══════════════════════════════════════════════════════ */
 
 .skills-bar {
   display: flex;
@@ -375,7 +393,6 @@
   align-items: center;
 }
 
-
 .skills-bar__orb-col {
   display: flex;
   flex-direction: column;
@@ -383,27 +400,29 @@
   gap: 4px;
 }
 
+/* ══ Health ══════════════════════════════════════════════════════════════ */
+
+/* Not an orb any more. It was a blood-red disc — two radial gradients, a red
+   halo, an inset vignette and a glow behind the number — which is three
+   things this language forbids outright and one it forbids by implication:
+   the red said "danger" about a figure that is never bad news (rules 5 and 6
+   both land here, and rule 9 rules out reading a quantity as intensity).
+   Total health is a reading, so it is a tile: the same control-weight square
+   as the slots beside it, on a block, painted in nothing but the ramp. The
+   class names and the 110px square are kept because skeleton.css sizes its
+   placeholder against them and site-mobile.js reads the HP out of it. */
 .health-orb {
   position: relative;
   width: 110px;
   height: 110px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 50% 70%, rgba(160, 20, 20, 0.95) 0%, rgba(100, 8, 8, 0.9) 55%, rgba(40, 4, 4, 0.85) 100%);
-  border: 2px solid rgba(200, 60, 60, 0.6);
-  box-shadow: 0 0 12px rgba(200, 30, 30, 0.5), inset 0 0 16px rgba(0, 0, 0, 0.6);
+  border: var(--axi-border-control) solid var(--axi-ink-line);
+  background: var(--axi-surface);
+  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-}
-
-.health-orb__fill {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background: radial-gradient(circle at 40% 30%, rgba(255, 100, 100, 0.15) 0%, transparent 60%);
-  pointer-events: none;
 }
 
 .health-orb__text {
@@ -415,22 +434,20 @@
 }
 
 .health-orb__hp {
-  font-family: var(--font-display, 'Outfit', sans-serif);
-  font-size: 16px;
-  font-weight: 700;
-  color: #fff;
-  text-shadow: 0 0 6px rgba(255, 120, 120, 0.8);
-  letter-spacing: 0.5px;
+  font: var(--axi-t-h3);
+  letter-spacing: var(--axi-ls-h3);
+  color: var(--axi-text);
 }
 
 .health-orb__label {
-  font-size: 9px;
-  font-weight: 600;
-  color: rgba(255, 180, 180, 0.8);
-  letter-spacing: 1px;
+  font: var(--axi-t-micro);
+  letter-spacing: var(--axi-ls-micro);
+  color: var(--axi-text-dim);
   text-transform: uppercase;
-  margin-top: 2px;
+  margin-top: 4px;
 }
+
+/* ══ Skill slots ═════════════════════════════════════════════════════════ */
 
 .skill-slot {
   position: relative;
@@ -444,22 +461,17 @@
   cursor: default;
 }
 
-.skill-icon-large.skill-icon--weapon {
-  border-color: rgba(210, 180, 80, 0.5);
-}
-
-.skill-icon--weapon.skill-icon--empty {
-  opacity: 0.3;
-  background: rgba(2, 8, 16, 0.5);
+/* One rule for both empty cases — a weapon slot with no weapon and a
+   heal/utility/elite slot with nothing chosen. They used to differ only in
+   how far each was faded, which is rule 2 encoding "empty" twice and
+   illegibly. An empty slot is an empty square: the ground showing through a
+   dashed edge, with the faint ramp step for the keybind label that is its
+   only content. No grayscale answer is needed here — skills.js emits no
+   <img> at all for an empty slot, so there is no bitmap to desaturate. */
+.skill-icon-large.skill-icon--empty {
+  background: var(--axi-ground);
   border-style: dashed;
-}
-
-/* Empty heal/utility/elite skill slots */
-.skill-icon-large.skill-icon--empty:not(.skill-icon--weapon) {
-  opacity: 0.45;
-  background: rgba(2, 8, 16, 0.4);
-  border-style: dashed;
-  border-color: rgba(166, 187, 222, 0.2);
+  color: var(--axi-text-faint);
 }
 
 .skill-icon-large {
@@ -467,22 +479,24 @@
   overflow: visible;
   width: 72px;
   height: 72px;
-  border: 1px solid rgba(210, 180, 80, 0.5);
-  border-radius: 4px;
-  background: rgba(2, 8, 16, 0.7);
+  border: var(--axi-border-control) solid var(--axi-ink-line);
+  background: var(--axi-surface);
   cursor: pointer;
   padding: 0;
   display: grid;
   place-items: center;
   transition:
-    border-color 0.16s ease,
-    box-shadow 0.16s ease;
+    box-shadow 0.16s ease,
+    transform 0.16s ease;
 }
 
 /* Guarded by (hover: hover) so it never fires on a touch device. :hover
    latches after a tap there and does not clear until you tap elsewhere, which
-   left tapped skill icons wearing a gold glow. web-mobile.css used to cancel
-   that by re-asserting .skill-icon-large's resting border and shadow from a
+   left tapped skill icons wearing a gold glow — and now that the hover is
+   rule 4's lift rather than a glow, a latched hover would leave the slot
+   sitting 2px off its own block instead, which is worse: it reads as a
+   layout fault rather than a highlight. web-mobile.css used to cancel the old
+   glow by re-asserting .skill-icon-large's resting border and shadow from a
    copy of the literals above — two values in a second file that would drift
    the moment these changed, and two colour literals that file could not
    tokenise without guessing what this one would become. Cancelling a hover is
@@ -490,8 +504,8 @@
 @media (hover: hover) {
   .skill-slot:hover .skill-icon-large,
   .skill-icon-large:hover {
-    border-color: rgba(255, 220, 100, 0.85);
-    box-shadow: 0 0 8px rgba(255, 200, 50, 0.4);
+    box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+    transform: translate(-2px, -2px);
   }
 }
 
@@ -500,10 +514,13 @@
   height: 100%;
   object-fit: cover;
   display: block;
-  border-radius: 3px;
   overflow: hidden;
 }
 
+/* Motion is out of scope for the language's resting rules: the flip that
+   plays when a kit swaps the whole bar keeps its perspective, its scale and
+   its brightness ramp, because none of them is an appearance anything rests
+   at. */
 @keyframes skillFlipSwap {
   0% {
     transform: perspective(280px) rotateX(-86deg) scale(0.92);
@@ -523,50 +540,57 @@
   backface-visibility: hidden;
 }
 
-.skill-icon-large__keylabel {
-  position: absolute;
-  bottom: -1px;
-  left: -1px;
-  background: rgba(0, 0, 0, 0.72);
-  color: rgba(220, 200, 120, 0.9);
-  font-size: 9px;
-  font-weight: 600;
-  line-height: 1;
-  padding: 1px 3px 2px;
-  border-radius: 0 2px 0 2px;
-  pointer-events: none;
-  letter-spacing: 0.02em;
-  z-index: 1;
-}
-
 .skill-slot-label {
   font-size: 10px;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
   text-align: center;
   white-space: nowrap;
 }
 
+/* A locked slot is a slot whose skill comes from the chosen specialization —
+   commentary about where the skill came from rather than a judgment of it, so
+   it takes the one cool ink rule 6 reserves for exactly that, and takes it on
+   the edge so the skill art underneath is untouched. */
 .skill-slot--locked .skill-icon-large {
-  border-color: rgba(210, 165, 50, 0.5);
+  border-color: var(--axi-meta);
 }
 
-/* Drag-to-swap: utility skill slots */
+/* ══ Drag-to-swap: utility skill slots ═══════════════════════════════════ */
+
 [data-util-idx] .skill-icon-large {
   cursor: grab;
 }
 
+/* The pair used to be a half-faded source slot and a drop target inside a
+   double accent halo. Both are gone: rule 2 rules out the fade, rule 3 the
+   halo. The source slot is marked the way an empty slot is — a dashed edge —
+   in the accent, so "this one is in the air" and "this one is where it will
+   land" differ in form rather than in brightness; the target takes the accent
+   as a solid edge and the block it would gain under the pointer, which is the
+   lift rule 4 already uses for "this one is under the cursor". The block is
+   the 3px first-time one, not the 6px deepening: the slot rests flat, and a
+   6px block behind a 2px lift moves the lower-right edge down. Neither fills, for the same reason
+   .skill-icon--profession-active does not: the slot is full of skill art. */
 .skill-slot--dragging .skill-icon-large {
-  opacity: 0.5;
   cursor: grabbing;
-  border-color: rgba(var(--accent-rgb), 0.7);
-  box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.3);
+  border-color: var(--axi-accent);
+  border-style: dashed;
 }
 
 .skill-slot--drag-over .skill-icon-large {
-  border-color: rgba(var(--accent-rgb), 0.9);
-  box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.5), 0 0 14px rgba(var(--accent-rgb), 0.35);
+  border-color: var(--axi-accent);
+  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  transform: translate(-2px, -2px);
 }
 
+/* ══ Skill picker ════════════════════════════════════════════════════════ */
+
+/* The picker is a popover, and .cselect (custom-select.css) already draws it
+   as one — panel weight, panel block, square. Nothing about the popover is
+   redefined here: this overlay only stretches an invisible trigger across the
+   slot so that clicking the skill icon opens the list. The trigger's
+   opacity: 0 is the language's own permitted endpoint, not a fade — it is
+   the whole reason the element exists. */
 .skill-select-overlay {
   position: absolute;
   top: 0;
@@ -602,50 +626,17 @@
   pointer-events: none;
 }
 
-.skill-icon-btn {
-  border: 1px solid rgba(136, 144, 166, 0.45);
-  border-radius: 8px;
-  background: rgba(8, 12, 19, 0.74);
-  width: 38px;
-  height: 38px;
-  display: grid;
-  place-items: center;
-  cursor: pointer;
-  transition:
-    border-color 0.16s ease,
-    background-color 0.16s ease,
-    box-shadow 0.16s ease,
-    transform 0.16s ease;
-}
+/* ══ Land / Water segmented toggle ═══════════════════════════════════════ */
 
-.skill-icon-btn:hover {
-  border-color: rgba(var(--accent-rgb), 0.6);
-  background: rgba(11, 17, 27, 0.82);
-  box-shadow: 0 4px 12px rgba(5, 11, 20, 0.54);
-  transform: translateY(-1px);
-}
-
-.skill-icon-btn img {
-  width: 30px;
-  height: 30px;
-  border-radius: 6px;
-}
-
-.skill-card select:hover {
-  border-color: rgba(var(--accent-rgb), 0.5);
-}
-
-.skill-card select option:disabled {
-  color: var(--text-dim);
-}
-
-/* Land / Water segmented pill toggle */
+/* A segmented control: the frame is the raised thing (control weight, on its
+   block, sitting over the skills panel), and the two halves inside it are
+   flat until one is chosen. The lozenge radius goes with the rest (rule 3). */
 .underwater-toggle {
   display: flex;
   gap: 2px;
-  background: rgba(9, 10, 16, 0.72);
-  border: 1px solid var(--line-soft);
-  border-radius: 20px;
+  background: var(--axi-surface);
+  border: var(--axi-border-control) solid var(--axi-ink-line);
+  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
   padding: 3px;
   width: fit-content;
   position: absolute;
@@ -660,9 +651,8 @@
   gap: 5px;
   padding: 4px 14px;
   border: none;
-  border-radius: 16px;
   background: transparent;
-  color: var(--text-dim);
+  color: var(--axi-text-dim);
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
@@ -670,18 +660,25 @@
   line-height: 1.2;
 }
 
+/* Rule 8's hover: the unchosen half moves up one neutral step rather than
+   picking up a weak copy of the accent the chosen half wears. */
 .underwater-toggle__btn:hover:not(.underwater-toggle__btn--active) {
-  background: rgba(var(--accent-rgb), 0.12);
-  color: rgba(228, 230, 238, 0.9);
+  background: var(--axi-surface-raised);
+  color: var(--axi-text);
 }
 
+/* Chosen, so it fills at full strength (rule 5). The old .35 accent tint was
+   the exact case rule 2 exists to stop: a gold at a third strength over
+   near-black is a brown, and it sat next to a .12 tint of the same gold on
+   hover, so "hovered" and "chosen" differed by a shade nobody can name. */
 .underwater-toggle__btn--active {
-  background: rgba(var(--accent-rgb), 0.35);
-  color: #fff;
+  background: var(--axi-accent);
+  color: var(--axi-accent-ink);
   cursor: default;
 }
 
-/* Boon & Condition Coverage */
+/* ══ Boon & Condition Coverage ═══════════════════════════════════════════ */
+
 .skills-bar__util-col {
   display: flex;
   flex-direction: column;
@@ -702,59 +699,66 @@
   align-items: center;
 }
 
+/* Twenty-odd 28px icons in two rows are a reading, not twenty raised things
+   (rule 8): they are drawn as an interior, in hairline rules on the panel's
+   own ground, and their hover is the neutral ramp rather than a block. They
+   are hoverable for the tooltip, but a row of blocks this dense stops reading
+   as depth and starts reading as texture, which is the bound rule 8's
+   counterpart sets on when a stack of cards is the right answer. */
 .boon-coverage__icon {
   position: relative;
   width: 28px;
   height: 28px;
-  border-radius: 3px;
-  background: rgba(2, 8, 16, 0.5);
-  border: 1px solid rgba(180, 180, 180, 0.25);
+  background: var(--axi-ground);
+  border: var(--axi-border-hairline) solid var(--axi-rule);
   display: grid;
   place-items: center;
   cursor: pointer;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition: background 0.15s ease, border-color 0.15s ease;
 }
 
 .boon-coverage__icon:hover {
-  border-color: rgba(255, 220, 100, 0.7);
-  box-shadow: 0 0 6px rgba(255, 200, 50, 0.3);
+  background: var(--axi-surface-raised);
+  border-color: var(--axi-text-faint);
 }
 
 .boon-coverage__icon img {
   width: 24px;
   height: 24px;
-  border-radius: 2px;
   display: block;
 }
 
+/* "This boon can also come from an ally" — metadata about the reading, which
+   is the one thing --axi-meta is for and the one thing it may never be
+   borrowed from (rule 6). Square, like every other mark here. */
 .boon-coverage__ally-badge {
   position: absolute;
   top: -4px;
   right: -4px;
   width: 10px;
   height: 10px;
-  border-radius: 50%;
-  background: rgba(100, 170, 240, 0.9);
+  background: var(--axi-meta);
   display: grid;
   place-items: center;
   font-size: 6px;
-  color: #fff;
+  color: var(--axi-accent-ink);
   line-height: 1;
   pointer-events: none;
 }
 
+/* A popover, so it takes the panel step (rule 3) and a hard block in place of
+   its old 16px blur. */
 .boon-coverage__tooltip {
   position: absolute;
   bottom: calc(100% + 6px);
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(12, 18, 32, 0.96);
-  border: 1px solid rgba(var(--accent-rgb), 0.25);
-  border-radius: 6px;
+  background: var(--axi-surface-raised);
+  border: var(--axi-border-panel) solid var(--axi-ink-line);
+  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
   padding: 8px 12px;
   min-width: 200px;
   max-width: 320px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
   z-index: 100;
   pointer-events: none;
   white-space: nowrap;
@@ -763,10 +767,10 @@
 .boon-coverage__tooltip-title {
   font-size: 13px;
   font-weight: 600;
-  color: #fff;
+  color: var(--axi-text);
   margin-bottom: 5px;
   padding-bottom: 4px;
-  border-bottom: 1px solid rgba(var(--accent-rgb), 0.15);
+  border-bottom: var(--axi-border-hairline) solid var(--axi-rule);
 }
 
 .boon-coverage__tooltip-row {
@@ -777,44 +781,49 @@
   font-size: 11px;
 }
 
-.boon-coverage__tooltip-tag {
+/* One outlined chip for every source kind, and one for every target. Both
+   families used to carry a hue per value — blue/amber/violet for
+   skill/trait/relic, red/amber/violet for foe/self/mixed — but the chip's own
+   text already reads "Skill", "Trait", "Foe", "Self". That is rule 5's
+   distinction exactly: these are annotations naming where a boon comes from
+   and who it lands on, not statuses asserting whether the build is good, so
+   they are outlined and quiet. The per-value modifier classes are still
+   emitted by boon-coverage.js as data hooks; they carry no paint. */
+.boon-coverage__tooltip-tag,
+.boon-coverage__tooltip-target {
   font-size: 9px;
   font-weight: 600;
   padding: 1px 5px;
-  border-radius: 3px;
+  border: var(--axi-border-hairline) solid var(--axi-rule);
+  color: var(--axi-text-dim);
   flex-shrink: 0;
 }
 
-.boon-coverage__tooltip-tag--skill {
-  color: rgba(100, 170, 240, 0.9);
-  background: rgba(100, 170, 240, 0.15);
-}
-
-.boon-coverage__tooltip-tag--trait {
-  color: rgba(255, 180, 80, 0.9);
-  background: rgba(255, 180, 80, 0.15);
-}
-
-.boon-coverage__tooltip-tag--relic {
-  color: rgba(190, 145, 240, 0.9);
-  background: rgba(190, 145, 240, 0.15);
+.boon-coverage__tooltip-target {
+  margin-left: 4px;
+  line-height: 14px;
+  letter-spacing: 0.03em;
 }
 
 .boon-coverage__tooltip-name {
-  color: rgba(220, 220, 240, 0.9);
+  color: var(--axi-text);
 }
 
 .boon-coverage__tooltip-detail {
-  color: rgba(180, 200, 230, 0.5);
+  color: var(--axi-text-dim);
   margin-left: auto;
 }
 
-/* Self-inflicted only (e.g. a necro poisoning itself) — dimmed because it isn't
-   pressure on a foe, but still listed so the reason is discoverable on hover. */
+/* Self-inflicted only (e.g. a necro poisoning itself) — not pressure on a
+   foe, but still listed so the reason is discoverable on hover. Desaturated
+   rather than faded, the same answer comps.css settled on for
+   .party-cov__pill--self-condi: grayscale() rests at full strength and
+   asserts no hue, which is the letter of rule 2, and no ramp token can reach
+   inside a bitmap <img> the way it can a text colour. The row it sits in
+   steps down the ramp instead of taking an opacity. */
 .boon-coverage__icon--self-condi img,
 .equip-boon-coverage__icon--self-condi img {
-  filter: grayscale(0.6);
-  opacity: 0.5;
+  filter: grayscale(1);
 }
 
 .boon-coverage__icon--self-condi {
@@ -822,37 +831,12 @@
 }
 
 .boon-coverage__tooltip-row--self-condi {
-  opacity: 0.65;
-}
-
-.boon-coverage__tooltip-target {
-  margin-left: 4px;
-  padding: 0 4px;
-  border-radius: 2px;
-  font-size: 9px;
-  line-height: 14px;
-  letter-spacing: 0.03em;
-  flex-shrink: 0;
-}
-
-.boon-coverage__tooltip-target--foe {
-  background: #5a2a2a;
-  color: #f99;
-}
-
-.boon-coverage__tooltip-target--selfcondi {
-  background: #4a3a2a;
-  color: #fb8;
-}
-
-.boon-coverage__tooltip-target--mixed {
-  background: #4a3a4a;
-  color: #d9f;
+  color: var(--axi-text-faint);
 }
 
 .boon-coverage__tooltip-note {
   font-size: 10px;
-  color: var(--text-dim);
+  color: var(--axi-text-faint);
   font-style: italic;
   padding-top: 3px;
 }
