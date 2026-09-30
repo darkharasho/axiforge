@@ -4,6 +4,8 @@
 
 import "@axiapps/axi-design/axi.css";
 import "@axiapps/axi-design/accents.css";
+import "@axiapps/axi-design/themes/flat.css";
+import "@axiapps/axi-design/themes/glass.css";
 import "./styles.css";
 
 import { state, createEmptyEditor } from "./modules/state.js";
@@ -70,7 +72,7 @@ import { compsContainingBuild } from "./modules/comps/comp-membership.js";
 import { getProfessionSvg } from "./modules/profession-icons.js";
 import { getEliteSpecName } from "./modules/build-helpers.js";
 import { renderMiniBuildCard } from "./modules/mini-build-card.js";
-import { applyAccent } from "./modules/accents.js";
+import { applyAccent, applySurface } from "./modules/accents.js";
 import { createAccentTinting } from "./modules/accent-tinting.js";
 
 // Scope class for @axiapps/forge-render styles (mini cards, role badges, hover previews).
@@ -665,6 +667,13 @@ async function init() {
     _accentTinting.setUserAccent(await window.desktopApi.getSetting("appearance.theme"), { transition: false });
   } catch {
     _accentTinting.setUserAccent(undefined, { transition: false }); // first run
+  }
+
+  // Same reasoning as the accent above: no crossfade against the first paint.
+  try {
+    applySurface(await window.desktopApi.getSetting("appearance.surface"), { transition: false });
+  } catch {
+    applySurface(undefined, { transition: false }); // first run
   }
 
   _themedBuildsEnabled = !!(await window.desktopApi.getSetting("appearance.themedBuildPages"));

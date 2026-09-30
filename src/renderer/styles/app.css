@@ -25,7 +25,13 @@
 html, body {
   margin: 0;
   min-height: 100vh;
-  background: var(--axi-ground);
+  /* Longhands rather than the shorthand: body paints the page's light as well
+     as its ground colour (see axi-design's base.css), and `background:` would
+     reset background-image to none, discarding glass's atmosphere gradients.
+     --axi-ground-image defaults to none, so this is free on the default
+     surface. */
+  background-color: var(--axi-ground);
+  background-image: var(--axi-ground-image);
   color: var(--axi-text);
   font: var(--axi-t-body);
 }
