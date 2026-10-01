@@ -1,3 +1,15 @@
+## Version v1.1.0 — October 1, 2026
+
+### Pick how AxiForge looks
+Settings has a new **Surface** control with three choices. **Axi** is what AxiForge has always looked like — flat and outlined, square corners, hard offset blocks instead of blurred shadows — and it stays the default, so nothing changes unless you go looking. **Flat** keeps those shapes but rounds the corners and uses real shadows. **Glass** makes panels translucent, with depth and blur behind them.
+
+Your choice sticks between launches and repaints the whole app immediately — panels, buttons, modals, the window frame.
+
+### Fixes
+- On Flat and Glass the window's rounded corners are now actually round; the page used to paint square corners over them.
+- Modal dialogs on Glass were see-through holes you could read the app through. They now get the surface's own backing, so a dialog reads as a sheet sitting above the page.
+- The large AxiForge wordmark that sat behind the app is gone.
+
 ## Version v1.0.3 — September 25, 2026
 
 ### Bug Fixes
