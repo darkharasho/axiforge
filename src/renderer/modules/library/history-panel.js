@@ -37,7 +37,7 @@ function _injectStyles() {
       display: flex;
       flex-direction: column;
       z-index: 1101;
-      box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
+      box-shadow: var(--axi-shadow-panel);
       animation: history-panel-in 0.16s ease-out;
     }
     @keyframes history-panel-in {
@@ -233,7 +233,7 @@ function _injectStyles() {
     }
     .history-panel__revert:hover:not(:disabled) {
       transform: translate(-2px, -2px);
-      box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+      box-shadow: var(--axi-shadow-control);
       background: var(--axi-surface-raised);
       border-color: var(--axi-accent);
       color: var(--axi-accent);
@@ -266,7 +266,7 @@ function _injectStyles() {
     .history-panel__confirm-yes {
       background: var(--axi-accent);
       color: var(--axi-accent-ink);
-      box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+      box-shadow: var(--axi-shadow-control);
       /* No scale step: weight emphasis over the type __revert already sets on
          this same button; a font: shorthand would reset that. */
       font-weight: 600;
@@ -285,7 +285,7 @@ function _injectStyles() {
     .history-panel__revert.history-panel__confirm-yes:hover:not(:disabled) {
       background: var(--axi-accent);
       color: var(--axi-accent-ink);
-      box-shadow: var(--axi-offset-control-hover) var(--axi-offset-control-hover) 0 var(--axi-ink-line);
+      box-shadow: var(--axi-shadow-control-hover);
     }
 
     /* ── Reduced motion ──────────────────────────────────────────────── */

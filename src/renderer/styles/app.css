@@ -168,7 +168,7 @@ a { color: var(--axi-accent); }
 }
 .af-accent-card:hover {
   transform: translate(-2px, -2px);
-  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-control);
 }
 /* Selection is an accent outline, not a glow and not a tinted fill (rule 2). */
 .af-accent-card--active {

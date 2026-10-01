@@ -166,7 +166,7 @@
   min-width: 170px;
   background: var(--axi-surface-raised);
   border: var(--axi-border-panel) solid var(--axi-ink-line);
-  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-panel);
   padding: 4px;
   z-index: var(--z-menu);
   animation: editor-share-menu-in 0.12s ease;

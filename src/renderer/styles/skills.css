@@ -73,7 +73,7 @@
 /* Rule 4's first case — a control that rests flat gains its block for the
    first time and moves with it. */
 .weapon-swap-btn:not(:disabled):hover {
-  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-control);
   transform: translate(-2px, -2px);
 }
 
@@ -127,7 +127,7 @@
 }
 
 .skill-icon--profession:hover {
-  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-control);
   transform: translate(-2px, -2px);
 }
 
@@ -274,7 +274,7 @@
 }
 
 .legend-slot-btn:hover {
-  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-control);
   transform: translate(-2px, -2px);
 }
 
@@ -332,7 +332,7 @@
 }
 
 .pet-slot-btn:hover {
-  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-control);
   transform: translate(-2px, -2px);
 }
 
@@ -362,7 +362,7 @@
 }
 
 .pet-swap-btn:hover {
-  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-control);
   transform: translate(-2px, -2px);
 }
 
@@ -428,7 +428,7 @@
   height: 110px;
   border: var(--axi-border-control) solid var(--axi-ink-line);
   background: var(--axi-danger);
-  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-control);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -519,7 +519,7 @@
 @media (hover: hover) {
   .skill-slot:hover .skill-icon-large,
   .skill-icon-large:hover {
-    box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+    box-shadow: var(--axi-shadow-control);
     transform: translate(-2px, -2px);
   }
 }
@@ -594,7 +594,7 @@
 
 .skill-slot--drag-over .skill-icon-large {
   border-color: var(--axi-accent);
-  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-control);
   transform: translate(-2px, -2px);
 }
 
@@ -651,7 +651,7 @@
   gap: 2px;
   background: var(--axi-surface);
   border: var(--axi-border-control) solid var(--axi-ink-line);
-  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-control);
   padding: 3px;
   width: fit-content;
   position: absolute;
@@ -770,7 +770,7 @@
   transform: translateX(-50%);
   background: var(--axi-surface-raised);
   border: var(--axi-border-panel) solid var(--axi-ink-line);
-  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-panel);
   padding: 8px 12px;
   min-width: 200px;
   max-width: 320px;

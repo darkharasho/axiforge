@@ -408,7 +408,7 @@
      is what must not latch. */
   .is-web .web-topbar__btn:hover {
     transform: none;
-    box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+    box-shadow: var(--axi-shadow-control);
   }
 }
 

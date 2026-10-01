@@ -381,7 +381,7 @@
    stops reading as a row well before the list is long. So this one view leaves
    the rule treatment its .comp-list-row base sets up and becomes a panel: the
    panel outline, the panel block, and the panel's hover (rule 4 case ii — the
-   translate with the block grown to --axi-offset-panel-hover). The compact
+   translate with the block grown to --axi-shadow-panel-hover). The compact
    view keeps the rules, which is what makes the two modes worth having.
 
    The card is kept to the two lines the row already had rather than taking
@@ -395,7 +395,7 @@
   background: var(--axi-surface);
   border: var(--axi-border-panel) solid var(--axi-ink-line);
   border-radius: var(--axi-radius);
-  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-panel);
   transition: transform 0.1s, box-shadow 0.1s, background 0.1s, color 0.1s;
 }
 
@@ -404,7 +404,7 @@
 .comp-list-row--expanded:hover {
   background: var(--axi-surface);
   transform: translate(-3px, -3px);
-  box-shadow: var(--axi-offset-panel-hover) var(--axi-offset-panel-hover) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-panel-hover);
 }
 
 /* Selection stays the accent fill it is for a row (rule 5, and the children
@@ -1153,7 +1153,7 @@
    (a glow) as much as rule 2 does (partial-opacity colour). */
 .comp-slot--filled:hover {
   transform: translate(-2px, -2px);
-  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-control);
 }
 
 .comp-slot--missing {
@@ -2208,7 +2208,7 @@
 .party-cov__pill--finisher {
   background: var(--axi-pill-fill);
   color: var(--axi-accent-ink);
-  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-control);
 }
 .party-cov__pill--boon:hover,
 .party-cov__pill--condi:hover,
@@ -2216,7 +2216,7 @@
 .party-cov__pill--finisher:hover {
   background: var(--axi-pill-fill);
   color: var(--axi-accent-ink);
-  box-shadow: var(--axi-offset-control-hover) var(--axi-offset-control-hover) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-control-hover);
   transform: translate(-2px, -2px);
 }
 
@@ -2238,16 +2238,17 @@
   box-shadow: none;
 }
 /* ...and because it rests flat, its hover is rule 4's *first* case, not the
-   third: a control with no resting block gains --axi-offset-control (3px) for
-   the first time, alongside the translate(-2px, -2px) it inherits from
-   .party-cov__pill--condi:hover. Without this rule that hover's
-   --axi-offset-control-hover (6px) applied -- the third case's deepening,
-   which only makes sense for a control that was already on a 3px block, and
-   which here lifts 2px while drawing 6px of block, so the lower-right edge
+   third: a control with no resting block gains --axi-shadow-control (3px on
+   the default surface) for the first time, alongside the translate(-2px, -2px)
+   it inherits from .party-cov__pill--condi:hover. Without this rule that
+   hover's --axi-shadow-control-hover (6px) applied -- the third case's
+   deepening, which only makes sense for a control that was already on a 3px
+   block, and which here lifts 2px while drawing 6px of block, so the
+   lower-right edge
    moves *down* and the pill reads as growing. Compound so it outranks
    .party-cov__pill--condi:hover (0,3,0 against 0,2,0). */
 .party-cov__pill--condi.party-cov__pill--self-condi:hover {
-  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-control);
 }
 
 /* Judgement call (Task 24, RULES.md rules 2 and 9; comment corrected in fix

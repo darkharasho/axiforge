@@ -112,7 +112,7 @@
 }
 
 .titlebar__restart-btn:hover {
-  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-control);
   transform: translate(-2px, -2px);
 }
 
@@ -227,7 +227,7 @@ body:has(.app-layout) {
 .subnav__back:hover {
   border-color: var(--axi-accent);
   color: var(--axi-text);
-  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-control);
   transform: translate(-2px, -2px);
 }
 
@@ -301,7 +301,7 @@ span.subnav__icon {
   background: var(--axi-accent);
   color: var(--axi-accent-ink);
   border-color: var(--axi-ink-line);
-  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-control);
 }
 
 .subnav__actions {
@@ -439,7 +439,7 @@ span.subnav__icon {
   border: var(--axi-border-panel) solid var(--axi-ink-line);
   padding: 4px 0;
   z-index: var(--z-dropdown);
-  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-panel);
 }
 
 .subnav__overflow-item {
@@ -503,7 +503,7 @@ span.subnav__icon {
    background or a glow. */
 .leftnav__item:hover {
   color: var(--axi-text);
-  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-control);
   transform: translate(-2px, -2px);
 }
 

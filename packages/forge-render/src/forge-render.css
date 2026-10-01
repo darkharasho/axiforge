@@ -274,7 +274,7 @@
   min-width: 90px;
   /* A popover is raised off the card, and the language raises things with a
      hard offset block rather than a blur (rule 7). */
-  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-panel);
 }
 
 .forge-render .mini-card__color-option {
@@ -729,7 +729,7 @@
   background: var(--axi-surface-raised);
   border: var(--axi-border-panel) solid var(--axi-ink-line);
   border-radius: var(--axi-radius);
-  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-panel);
   pointer-events: none;
 }
 
@@ -943,7 +943,7 @@
   content: attr(data-name); position: absolute; bottom: calc(100% + 4px); left: 50%; transform: translateX(-50%);
   background: var(--fr-bg-raised); color: var(--fr-text);
   border: var(--axi-border-panel) solid var(--fr-line);
-  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-control);
   padding: 2px 7px; font-size: 10px; white-space: nowrap; z-index: 50; pointer-events: none;
 }
 

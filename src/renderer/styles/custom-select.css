@@ -33,7 +33,7 @@
 
 .cselect__trigger:hover {
   color: var(--axi-text);
-  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-control);
   transform: translate(-2px, -2px);
 }
 
@@ -76,7 +76,7 @@
   right: 0;
   border: var(--axi-border-control) solid var(--axi-ink-line);
   background: var(--axi-surface-raised);
-  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-control);
   padding: 6px;
   display: none;
   animation: cselect-open 0.15s ease-out;

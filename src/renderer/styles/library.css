@@ -122,7 +122,7 @@
   padding: 12px 14px;
   background: var(--axi-surface);
   border: var(--axi-border-panel) solid var(--axi-ink-line);
-  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-panel);
   flex-shrink: 0;
   flex-wrap: wrap;
   /* The trash and archive drop the controls (they act on a list those views do
@@ -699,7 +699,7 @@
   background: var(--axi-surface);
   border: var(--axi-border-panel) solid var(--axi-ink-line);
   border-radius: var(--axi-radius);
-  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-panel);
 }
 
 /* The card's own border is the list's last rule; drawing both stacks a 2px
@@ -912,7 +912,7 @@
   background: var(--axi-surface);
   border: var(--axi-border-panel) solid var(--axi-ink-line);
   border-radius: var(--axi-radius);
-  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-panel);
 }
 
 .lib-tv__header {
@@ -1095,7 +1095,7 @@
 .lib-tv__sort-btn--active { color: var(--axi-accent); }
 .lib-tv__sort-btn:hover {
   color: var(--axi-text);
-  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-control);
   transform: translate(-2px, -2px);
 }
 
@@ -1123,7 +1123,7 @@
   padding: 22px 14px 12px;
   background: var(--axi-surface);
   border: var(--axi-border-panel) solid var(--axi-ink-line);
-  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-panel);
   cursor: pointer;
   user-select: none;
   min-width: 0;
@@ -1134,7 +1134,7 @@
    by 3. Never opacity, never a glow. */
 .af-tile:hover {
   transform: translate(-3px, -3px);
-  box-shadow: var(--axi-offset-panel-hover) var(--axi-offset-panel-hover) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-panel-hover);
 }
 
 /* Rule 5: the profession CAPS the tile. A full-height left edge reads as the
@@ -1253,7 +1253,7 @@
   padding: 14px;
   background: var(--axi-surface);
   border: var(--axi-border-panel) solid var(--axi-ink-line);
-  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-panel);
 }
 
 /* An icon tile is the grid card at control weight. .af-tile is the same idea
@@ -1354,7 +1354,7 @@
   min-height: 0;
   background: var(--axi-surface);
   border: var(--axi-border-panel) solid var(--axi-ink-line);
-  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-panel);
 }
 
 /* The head is a lid on the column, so it takes the control weight the panel
@@ -1484,7 +1484,7 @@
 .lib-ctx-menu {
   background: var(--axi-surface-raised);
   border: var(--axi-border-panel) solid var(--axi-ink-line);
-  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-panel);
   min-width: 180px;
   padding: 4px 0;
   user-select: none;
@@ -1677,7 +1677,7 @@
   /* Genuine floating clone (see the block comment above); the 0.9 is the same
      app-level deviation from rule 2, not something the language allows. */
   opacity: 0.9;
-  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-panel);
   cursor: grab !important;
 }
 
@@ -1715,7 +1715,7 @@
   transform: translateX(-50%) translateY(8px);
   background: var(--axi-surface);
   border: var(--axi-border-panel) solid var(--axi-ink-line);
-  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-panel);
   padding: 7px 14px;
   font: var(--axi-t-small);
   color: var(--axi-text);
@@ -1932,7 +1932,7 @@
   padding: 8px 12px;
   background: var(--axi-surface);
   border: var(--axi-border-panel) solid var(--axi-ink-line);
-  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-panel);
   font: var(--axi-t-small);
   color: var(--axi-text-dim);
   margin-bottom: 8px;
@@ -1954,7 +1954,7 @@
 
 .lib-banner__btn:hover {
   transform: translate(-2px, -2px);
-  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-control);
 }
 
 /* ── Trash view ──────────────────────────────────────────────────────────── */

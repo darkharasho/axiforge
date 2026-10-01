@@ -195,7 +195,7 @@ function _injectStyles() {
     .hist-compare {
       background: var(--axi-surface);
       border: var(--axi-border-panel) solid var(--axi-ink-line);
-      box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
+      box-shadow: var(--axi-shadow-panel);
       width: min(980px, 100%);
       max-height: 100%;
       display: flex;
@@ -411,7 +411,7 @@ function _injectStyles() {
     }
     .hist-compare__restore:hover:not(:disabled) {
       transform: translate(-2px, -2px);
-      box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+      box-shadow: var(--axi-shadow-control);
       background: var(--axi-surface-raised);
       border-color: var(--axi-accent);
       color: var(--axi-accent);
@@ -425,7 +425,7 @@ function _injectStyles() {
     .hist-compare__confirm-yes {
       background: var(--axi-accent);
       color: var(--axi-accent-ink);
-      box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+      box-shadow: var(--axi-shadow-control);
       /* No scale step: weight emphasis over the type __restore already sets on
          this same button; a font: shorthand would reset that. */
       font-weight: 600;
@@ -448,7 +448,7 @@ function _injectStyles() {
     .hist-compare__restore.hist-compare__confirm-yes:hover:not(:disabled) {
       background: var(--axi-accent);
       color: var(--axi-accent-ink);
-      box-shadow: var(--axi-offset-control-hover) var(--axi-offset-control-hover) 0 var(--axi-ink-line);
+      box-shadow: var(--axi-shadow-control-hover);
     }
 
     /* The one thing an anchor is for. Harmless on the hidden anchor spans the

@@ -88,7 +88,7 @@
   gap: 2px;
   background: var(--axi-surface);
   border: var(--axi-border-panel) solid var(--axi-ink-line);
-  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-panel);
   z-index: 60;
 }
 .web-topbar__menu--open .web-topbar__menu-list { display: flex; }

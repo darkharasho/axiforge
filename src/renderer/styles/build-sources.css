@@ -143,7 +143,7 @@
 }
 
 .comp-pool-sources:hover {
-  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-control);
   transform: translate(-2px, -2px);
 }
 
@@ -185,7 +185,7 @@
   flex-direction: column;
   background: var(--axi-surface);
   border: var(--axi-border-panel) solid var(--axi-ink-line);
-  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-panel);
   overflow: hidden;
 }
 

@@ -100,7 +100,7 @@
   position: relative;
   box-sizing: border-box;
   border: var(--axi-border-panel) solid var(--axi-ink-line);
-  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-panel);
   padding: calc(8px * var(--spec-scale)) calc(12px * var(--spec-scale)) calc(10px * var(--spec-scale));
   background-color: var(--axi-surface);
   background-position: center;
