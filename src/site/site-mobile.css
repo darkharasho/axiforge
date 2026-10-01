@@ -228,7 +228,7 @@
   .mobile-swap-pill--active {
     background: var(--axi-accent);
     color: var(--axi-accent-ink);
-    box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+    box-shadow: var(--axi-shadow-control);
   }
 
   .mobile-swap-pill__icon {
@@ -439,7 +439,7 @@
     padding: 10px 12px;
     cursor: pointer;
     border: var(--axi-border-control) solid var(--axi-ink-line);
-    background: var(--axi-ground);
+    background: var(--axi-well-fill);
   }
 
   .spec-card__mobile-header:active {

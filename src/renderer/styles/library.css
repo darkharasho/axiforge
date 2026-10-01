@@ -23,7 +23,12 @@
   height: calc(100vh - var(--af-titlebar-h));
   min-height: 0;
   transition: grid-template-columns 0.15s ease;
-  background: var(--axi-ground);
+  /* The one element in this sheet that genuinely paints the page, so it takes
+     the ground -- and takes it in longhands for the reason app.css gives on
+     <body>: `background:` would reset background-image to none and throw away
+     a theme's atmosphere. */
+  background-color: var(--axi-ground);
+  background-image: var(--axi-ground-image);
 }
 
 /* Every child of .lib-page names its own column. The tracks are positional --
@@ -122,7 +127,7 @@
   padding: 12px 14px;
   background: var(--axi-surface);
   border: var(--axi-border-panel) solid var(--axi-ink-line);
-  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-panel);
   flex-shrink: 0;
   flex-wrap: wrap;
   /* The trash and archive drop the controls (they act on a list those views do
@@ -140,22 +145,29 @@
    Scoped to .lib-toolbar deliberately. .lib-filters is a sibling container,
    so the CLASS/MODE/TAGS triggers keep the treatment they have today.
 
-   Two traps live in this selector. background-COLOR, never the shorthand:
+   Three traps live in this selector. background-COLOR, never the shorthand:
    .axi-picker__btn paints its caret as a background-image and the shorthand
-   erases it. And the view toggle's pressed pill has to be excluded, or the
-   accent fill marking the current view loses to this rule. */
+   erases it. Which forces the second: the longhand takes a COLOUR, and a
+   surface token is allowed to hold a gradient (glass's panes do), so it has to
+   be --axi-surface-raised-paint -- that surface as one flat paint -- or the
+   declaration is dropped at parse time and the buttons lose their fill. And the
+   view toggle's pressed pill has to be excluded, or the accent fill marking the
+   current view loses to this rule. */
 .lib-toolbar .axi-btn:not(.axi-btn--primary),
 .lib-toolbar .axi-picker__btn,
 .lib-toolbar .lib-view-btn:not([aria-pressed="true"]) {
-  background-color: var(--axi-surface-raised);
+  background-color: var(--axi-surface-raised-paint);
   border-color: var(--axi-rule);
 }
 
-/* The search well goes the other way: an input is a recess, so it takes the
-   ground it used to share with everything else, which now reads as depth
-   against the surface around it. */
+/* The search well goes the other way: an input is a recess, so it takes
+   --axi-well-fill, which reads as depth against the surface around it. It was
+   --axi-ground, and on the default surface those are the same colour -- but
+   --axi-ground is the page, opaque under every theme, so on glass it painted an
+   opaque black tile inside a translucent toolbar instead of a dent in one.
+   --axi-well-fill is the level, and a theme restates it as a darkening. */
 .lib-toolbar .axi-input {
-  background-color: var(--axi-ground);
+  background-color: var(--axi-well-fill);
   border-color: var(--axi-rule);
 }
 
@@ -699,7 +711,7 @@
   background: var(--axi-surface);
   border: var(--axi-border-panel) solid var(--axi-ink-line);
   border-radius: var(--axi-radius);
-  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-panel);
 }
 
 /* The card's own border is the list's last rule; drawing both stacks a 2px
@@ -912,7 +924,7 @@
   background: var(--axi-surface);
   border: var(--axi-border-panel) solid var(--axi-ink-line);
   border-radius: var(--axi-radius);
-  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-panel);
 }
 
 .lib-tv__header {
@@ -1095,7 +1107,7 @@
 .lib-tv__sort-btn--active { color: var(--axi-accent); }
 .lib-tv__sort-btn:hover {
   color: var(--axi-text);
-  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-control);
   transform: translate(-2px, -2px);
 }
 
@@ -1123,7 +1135,7 @@
   padding: 22px 14px 12px;
   background: var(--axi-surface);
   border: var(--axi-border-panel) solid var(--axi-ink-line);
-  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-panel);
   cursor: pointer;
   user-select: none;
   min-width: 0;
@@ -1134,7 +1146,7 @@
    by 3. Never opacity, never a glow. */
 .af-tile:hover {
   transform: translate(-3px, -3px);
-  box-shadow: var(--axi-offset-panel-hover) var(--axi-offset-panel-hover) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-panel-hover);
 }
 
 /* Rule 5: the profession CAPS the tile. A full-height left edge reads as the
@@ -1253,7 +1265,7 @@
   padding: 14px;
   background: var(--axi-surface);
   border: var(--axi-border-panel) solid var(--axi-ink-line);
-  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-panel);
 }
 
 /* An icon tile is the grid card at control weight. .af-tile is the same idea
@@ -1354,7 +1366,7 @@
   min-height: 0;
   background: var(--axi-surface);
   border: var(--axi-border-panel) solid var(--axi-ink-line);
-  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-panel);
 }
 
 /* The head is a lid on the column, so it takes the control weight the panel
@@ -1484,7 +1496,7 @@
 .lib-ctx-menu {
   background: var(--axi-surface-raised);
   border: var(--axi-border-panel) solid var(--axi-ink-line);
-  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-panel);
   min-width: 180px;
   padding: 4px 0;
   user-select: none;
@@ -1509,7 +1521,7 @@
 }
 
 .lib-ctx-item:hover {
-  background: var(--axi-ground);
+  background: var(--axi-well-fill);
   color: var(--axi-text);
 }
 
@@ -1661,7 +1673,7 @@
    say — deleted rather than exempted, same disposition as lib-dragging and
    sortable-drag above. */
 .lib-drag-ghost {
-  background: var(--axi-ground);
+  background: var(--axi-well-fill);
   outline: var(--axi-border-control) dashed var(--axi-rule);
   outline-offset: -3px;
 }
@@ -1677,7 +1689,7 @@
   /* Genuine floating clone (see the block comment above); the 0.9 is the same
      app-level deviation from rule 2, not something the language allows. */
   opacity: 0.9;
-  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-panel);
   cursor: grab !important;
 }
 
@@ -1715,7 +1727,7 @@
   transform: translateX(-50%) translateY(8px);
   background: var(--axi-surface);
   border: var(--axi-border-panel) solid var(--axi-ink-line);
-  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-panel);
   padding: 7px 14px;
   font: var(--axi-t-small);
   color: var(--axi-text);
@@ -1843,7 +1855,7 @@
   bottom: -2px;
   right: -4px;
   margin: 0;
-  background: var(--axi-ground);
+  background: var(--axi-well-fill);
   padding: 1px;
   opacity: 1;
 }
@@ -1932,7 +1944,7 @@
   padding: 8px 12px;
   background: var(--axi-surface);
   border: var(--axi-border-panel) solid var(--axi-ink-line);
-  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-panel);
   font: var(--axi-t-small);
   color: var(--axi-text-dim);
   margin-bottom: 8px;
@@ -1954,7 +1966,7 @@
 
 .lib-banner__btn:hover {
   transform: translate(-2px, -2px);
-  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-control);
 }
 
 /* ── Trash view ──────────────────────────────────────────────────────────── */

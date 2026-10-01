@@ -134,7 +134,7 @@
   gap: 5px;
   padding: 4px 9px;
   border: var(--axi-border-control) solid var(--axi-ink-line);
-  background: var(--axi-ground);
+  background: var(--axi-well-fill);
   color: var(--axi-accent);
   font: var(--axi-t-micro);
   letter-spacing: var(--axi-ls-micro);
@@ -143,7 +143,7 @@
 }
 
 .comp-pool-sources:hover {
-  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-control);
   transform: translate(-2px, -2px);
 }
 
@@ -185,7 +185,7 @@
   flex-direction: column;
   background: var(--axi-surface);
   border: var(--axi-border-panel) solid var(--axi-ink-line);
-  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-panel);
   overflow: hidden;
 }
 
@@ -228,7 +228,7 @@
   gap: 6px;
   padding: 5px 9px;
   border: var(--axi-border-control) solid var(--axi-ink-line);
-  background: var(--axi-ground);
+  background: var(--axi-well-fill);
   color: var(--axi-text-dim);
   /* No scale step: same case as .bsm-subtitle -- a normal-weight control
      label at 11px. */
@@ -344,7 +344,7 @@
   width: 26px;
   height: 26px;
   flex: 0 0 auto;
-  background: var(--axi-ground);
+  background: var(--axi-well-fill);
 }
 
 .bsm-icon svg {
@@ -375,7 +375,7 @@
 
 .bsm-detail-row td {
   padding: 0 16px 14px;
-  background: var(--axi-ground);
+  background: var(--axi-well-fill);
 }
 
 .bsm-detail-row .bsm-detail {

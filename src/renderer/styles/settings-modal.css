@@ -479,6 +479,14 @@
   gap: 8px;
 }
 
+/* ── Surface picker ─────────────────────────────────────────────────────── */
+/* .axi-btn/--sm/--primary carry the box; this only lays the three out in a row. */
+
+.settings-modal__surface-row {
+  display: flex;
+  gap: 8px;
+}
+
 /* ── Select ──────────────────────────────────────────────────────────── */
 
 .settings-modal__select {

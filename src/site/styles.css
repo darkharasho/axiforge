@@ -225,7 +225,7 @@
   background: var(--axi-accent);
   color: var(--axi-accent-ink);
   border-color: var(--axi-ink-line);
-  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-control);
 }
 
 .site-tab-content {
@@ -371,7 +371,7 @@ a.comp-slot { text-decoration: none; color: inherit; cursor: pointer; }
   background: var(--axi-surface);
   border: var(--axi-border-panel) solid var(--axi-ink-line);
   border-radius: var(--axi-radius);
-  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-panel);
   pointer-events: none;
 }
 

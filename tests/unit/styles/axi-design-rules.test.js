@@ -203,15 +203,30 @@ function findRadiusLiterals(css) {
   });
 }
 
-/** A legal block is `<offset> <offset> 0 var(--axi-ink-line)` and nothing else. */
+/** A legal block is the composed token `var(--axi-shadow-*)` and nothing else.
+    `--axi-shadow-panel` and friends are the one token a theme restates to say
+    what "raised" looks like in its material; the default theme composes them
+    from `--axi-offset-*` + `--axi-ink-line`, but flat and glass zero the
+    offsets and restate the composed token as a soft drop instead. So a block
+    hand-assembled here out of `--axi-offset-*` is not merely off-contract — it
+    renders as *no relief at all* under flat and glass, which is the bug this
+    scanner now pins the fix for (axi-design 1.44.0).
+
+    The one shape still allowed to name the offsets is a block drawn *inward*
+    (`inset`): there is no composed token for one, and it correctly
+    self-disables when a theme zeroes the offsets. */
+const COMPOSED_BLOCK = /^var\(--axi-shadow-(?:panel|control)(?:-hover)?\)$/;
 function findBadShadows(css) {
   return declarations(css).filter((d) => {
     if (!/^box-shadow\s*:/.test(d)) return false;
     const value = d.slice(d.indexOf(":") + 1).trim();
     if (value === "none") return false;
+    if (COMPOSED_BLOCK.test(value)) return false;
     // A length literal in a shadow is either an invented offset or a blur.
     if (/\d*\.?\d+(px|rem|em|%)/.test(value)) return true;
-    return !value.includes("var(--axi-ink-line)");
+    // Anything else is only legal as the inward block, which must still carry
+    // the ink line.
+    return !(/^inset\b/.test(value) && value.includes("var(--axi-ink-line)"));
   });
 }
 
@@ -1071,9 +1086,9 @@ describe("axi design language rules", () => {
         .c { font: var(--axi-t-label); letter-spacing: var(--axi-ls-label); }
         .c2 { font-family: var(--axi-sans); }
         .d { border: var(--axi-border-control) solid var(--axi-ink-line);
-             box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line); }
+             box-shadow: var(--axi-shadow-control); }
         .d:hover { transform: translate(-2px, -2px);
-                   box-shadow: var(--axi-offset-control-hover) var(--axi-offset-control-hover) 0 var(--axi-ink-line); }
+                   box-shadow: var(--axi-shadow-control-hover); }
         .e { border-radius: var(--axi-radius-sm); border: none; }
         .f { border-width: 0; }
         :root { --af-titlebar-h: 42px; }
@@ -1082,6 +1097,27 @@ describe("axi design language rules", () => {
         .w { box-shadow: inset calc(-1 * var(--axi-offset-panel)) calc(-1 * var(--axi-offset-panel)) 0 0 var(--axi-ink-line); }
       `;
       for (const [, scan] of SCANNERS) expect(scan(clean)).toEqual([]);
+    });
+
+    it("flags a block hand-assembled from --axi-offset-* instead of the composed token", () => {
+      // The whole point of the composed token: flat and glass zero
+      // --axi-offset-* and restate --axi-shadow-* as their own soft drop, so
+      // this spelling renders as no relief at all under them. Only the
+      // composed token asks the theme what "raised" means.
+      expect(
+        findBadShadows(
+          ".a { box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line); }",
+        ),
+      ).not.toEqual([]);
+      expect(
+        findBadShadows(
+          ".a:hover { box-shadow: var(--axi-offset-control-hover) var(--axi-offset-control-hover) 0 var(--axi-ink-line); }",
+        ),
+      ).not.toEqual([]);
+      // ...and the composed token itself is the one legal outset spelling.
+      for (const t of ["panel", "control", "panel-hover", "control-hover"]) {
+        expect(findBadShadows(`.a { box-shadow: var(--axi-shadow-${t}); }`)).toEqual([]);
+      }
     });
 
     it("detects a resting partial opacity", () => {

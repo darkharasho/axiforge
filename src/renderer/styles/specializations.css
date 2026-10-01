@@ -100,9 +100,15 @@
   position: relative;
   box-sizing: border-box;
   border: var(--axi-border-panel) solid var(--axi-ink-line);
-  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-panel);
   padding: calc(8px * var(--spec-scale)) calc(12px * var(--spec-scale)) calc(10px * var(--spec-scale));
-  background-color: var(--axi-surface);
+  /* --axi-surface-paint and not --axi-surface, because this has to be the
+     longhand: the wiki art arrives as an inline background-image and the
+     shorthand would erase it. A surface token is allowed to hold a gradient
+     (that is how a glass theme exists), and background-color takes a colour --
+     the gradient would be dropped at parse time and the card would lose its
+     fill outright. The companion is that surface as one flat paint. */
+  background-color: var(--axi-surface-paint);
   background-position: center;
   background-size: 100% 100%;
   background-repeat: no-repeat;
@@ -430,7 +436,7 @@
   box-sizing: border-box;
   border: var(--axi-border-panel) dashed var(--axi-rule);
   padding: calc(8px * var(--spec-scale)) calc(12px * var(--spec-scale)) calc(10px * var(--spec-scale));
-  background: var(--axi-ground);
+  background: var(--axi-well-fill);
   min-height: calc(148px * var(--spec-scale));
   overflow: hidden;
   transition: border-color 0.25s ease, background 0.25s ease;

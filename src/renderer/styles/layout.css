@@ -85,7 +85,7 @@
 
 .titlebar__pill.titlebar__pill--error {
   background: var(--axi-danger);
-  color: var(--axi-ink-line);
+  color: var(--axi-ink-on-fill);
 }
 
 /* The spinner is an .af-dot with .af-work (opacity blink, compositor-only —
@@ -102,7 +102,7 @@
   font: var(--axi-t-micro);
   letter-spacing: var(--axi-ls-micro);
   text-transform: uppercase;
-  color: var(--axi-ink-line);
+  color: var(--axi-ink-on-fill);
   border: var(--axi-border-control) solid var(--axi-ink-line);
   background: var(--axi-warn);
   padding: 2px 10px;
@@ -112,7 +112,7 @@
 }
 
 .titlebar__restart-btn:hover {
-  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-control);
   transform: translate(-2px, -2px);
 }
 
@@ -170,7 +170,7 @@
 .titlebar__controls #winClose:hover,
 .titlebar__controls #winClose:active {
   background: var(--axi-danger);
-  color: var(--axi-ink-line);
+  color: var(--axi-ink-on-fill);
 }
 
 /* ── App layout ────────────────────────────────────────────────────────── */
@@ -227,7 +227,7 @@ body:has(.app-layout) {
 .subnav__back:hover {
   border-color: var(--axi-accent);
   color: var(--axi-text);
-  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-control);
   transform: translate(-2px, -2px);
 }
 
@@ -301,7 +301,7 @@ span.subnav__icon {
   background: var(--axi-accent);
   color: var(--axi-accent-ink);
   border-color: var(--axi-ink-line);
-  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-control);
 }
 
 .subnav__actions {
@@ -326,12 +326,12 @@ span.subnav__icon {
 /* Draft = attention (unsaved changes); saved = success. Both are status, so
    both are filled. */
 .subnav__save-status--draft {
-  color: var(--axi-ink-line);
+  color: var(--axi-ink-on-fill);
   background: var(--axi-warn);
 }
 
 .subnav__save-status--saved {
-  color: var(--axi-ink-line);
+  color: var(--axi-ink-on-fill);
   background: var(--axi-ok);
 }
 
@@ -384,13 +384,13 @@ span.subnav__icon {
 }
 
 .subnav__sync-status--synced {
-  color: var(--axi-ink-line);
+  color: var(--axi-ink-on-fill);
   background: var(--axi-ok);
   border-color: var(--axi-ink-line);
 }
 
 .subnav__sync-status--error {
-  color: var(--axi-ink-line);
+  color: var(--axi-ink-on-fill);
   background: var(--axi-danger);
   border-color: var(--axi-ink-line);
 }
@@ -439,7 +439,7 @@ span.subnav__icon {
   border: var(--axi-border-panel) solid var(--axi-ink-line);
   padding: 4px 0;
   z-index: var(--z-dropdown);
-  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-panel);
 }
 
 .subnav__overflow-item {
@@ -503,7 +503,7 @@ span.subnav__icon {
    background or a glow. */
 .leftnav__item:hover {
   color: var(--axi-text);
-  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-control);
   transform: translate(-2px, -2px);
 }
 
@@ -607,7 +607,7 @@ span.subnav__icon {
   align-items: center;
   padding: 6px 14px;
   background: var(--axi-warn);
-  color: var(--axi-ink-line);
+  color: var(--axi-ink-on-fill);
   font: var(--axi-t-small);
 }
 

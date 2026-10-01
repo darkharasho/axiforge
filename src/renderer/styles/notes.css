@@ -14,7 +14,7 @@
 .notes-sheet {
   background: var(--axi-surface);
   border: var(--axi-border-panel) solid var(--axi-ink-line);
-  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-panel);
   overflow: hidden;
 }
 
@@ -65,7 +65,7 @@
 .notes-toolbar__btn:hover {
   color: var(--axi-text);
   transform: translate(-2px, -2px);
-  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-control);
 }
 
 /* Unavailable is drawn by dropping the glyph to the darkest neutral on the
@@ -122,7 +122,7 @@
 .notes-toolbar__preview:hover {
   color: var(--axi-text);
   transform: translate(-2px, -2px);
-  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-control);
 }
 
 /* Preview is either on or off, and rule 5 says a chosen thing is filled: the
@@ -271,7 +271,7 @@
   max-width: 480px;
   overflow: hidden;
   border: var(--axi-border-panel) solid var(--axi-ink-line);
-  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-panel);
   background: var(--axi-ink-line);
 }
 
@@ -349,7 +349,7 @@
    plate would jump to the corner on hover. */
 .notes-embed__video:hover .notes-embed__play {
   transform: translate(-50%, -50%) translate(-2px, -2px);
-  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-control);
 }
 
 /* Both play glyphs used to ship a brand-coloured body behind the triangle,
@@ -459,7 +459,7 @@
   overflow-y: auto;
   background: var(--axi-surface);
   border: var(--axi-border-panel) solid var(--axi-ink-line);
-  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-panel);
   z-index: 100;
 }
 

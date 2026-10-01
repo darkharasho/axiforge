@@ -29,8 +29,13 @@
    colour literal in app CSS (spec §9). */
 .forge-render {
   /* The ground/surface ramp. --fr-panel-2 was the darker of the two, so it
-     reads as the ground and --fr-panel as a surface raised off it. */
-  --fr-panel-2: var(--axi-ground, #101114);
+     reads as the step below --fr-panel's surface. That step is --axi-well-fill,
+     not --axi-ground: every element this name paints (a mini-card resting in a
+     list, a 30px comp slot, the proc-skill box) is flat on its container rather
+     than a hole through to the page, and --axi-ground is opaque under every
+     theme -- on glass it turned each of them into a black tile inside a
+     translucent pane. The well is a subtraction, which a theme restates. */
+  --fr-panel-2: var(--axi-well-fill, #101114);
   --fr-panel: var(--axi-surface, #141518);
   --fr-surface: var(--axi-surface, #141518);
   --fr-panel-gradient: var(--axi-surface, #141518);
@@ -274,7 +279,7 @@
   min-width: 90px;
   /* A popover is raised off the card, and the language raises things with a
      hard offset block rather than a blur (rule 7). */
-  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-panel);
 }
 
 .forge-render .mini-card__color-option {
@@ -729,7 +734,7 @@
   background: var(--axi-surface-raised);
   border: var(--axi-border-panel) solid var(--axi-ink-line);
   border-radius: var(--axi-radius);
-  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-panel);
   pointer-events: none;
 }
 
@@ -880,12 +885,12 @@
 }
 
 /* Skill a trait procs/casts, stacked above the trait card as its own box (like
-   in game). A step down the ramp to the ground, divided by a rule -- the black
+   in game). A step down the ramp into the well, divided by a rule -- the black
    wash and the accent glow it used to carry are both gone. */
 .forge-render .hover-preview__proc-skill {
   margin: -12px -12px 12px;
   padding: 12px;
-  background: var(--axi-ground);
+  background: var(--axi-well-fill);
   border-bottom: var(--axi-border-hairline) solid var(--axi-rule);
 }
 
@@ -943,7 +948,7 @@
   content: attr(data-name); position: absolute; bottom: calc(100% + 4px); left: 50%; transform: translateX(-50%);
   background: var(--fr-bg-raised); color: var(--fr-text);
   border: var(--axi-border-panel) solid var(--fr-line);
-  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-control);
   padding: 2px 7px; font-size: 10px; white-space: nowrap; z-index: 50; pointer-events: none;
 }
 

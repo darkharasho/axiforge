@@ -21,8 +21,22 @@
    2 forbids, so those rules are meant to fail visibly (transparent) rather
    than survive in a muted form. Each batch converts its own. */
 :root {
-  --bg: var(--axi-ground);
-  --bg-2: var(--axi-ground);
+  /* --bg/--bg-2 were the page colour in the legacy palette, but nothing left
+     reading them is the page. --bg's surviving use is a trough INSIDE a modal
+     panel, so it points at --axi-well-fill, the level a thing flat on its
+     container sits at, rather than --axi-ground, which is the page and stays
+     opaque under every theme -- aimed at --axi-ground it painted a black patch
+     inside the translucent panels flat and glass give a modal. Identical to
+     --axi-ground on the default surface, so this is free there.
+
+     --bg-2 is not a trough. Every one of its thirteen uses is a modal sheet or
+     a band on one, and a sheet floating over the page is a panel: at well
+     level it was 32% black with nothing behind it, so under glass the library
+     read straight through the settings dialog. It takes the panel surface, and
+     the sheets that own an edge against the page take the panel's filter with
+     it -- a translucent fill without its blur is just a hole. */
+  --bg: var(--axi-well-fill);
+  --bg-2: var(--axi-surface);
   --panel: var(--axi-surface);
   --panel-2: var(--axi-surface);
   --panel-gradient: var(--axi-surface);
@@ -40,7 +54,9 @@
   --link: var(--axi-accent);
   --danger: var(--axi-danger);
   --danger-text: var(--axi-danger);
-  --input-bg: var(--axi-ground);
+  /* An input is a recess, which is exactly what --axi-well-fill names (same
+     reason as --bg above, and as library.css's converted .axi-input). */
+  --input-bg: var(--axi-well-fill);
   --input-border: var(--axi-ink-line);
   --hover-subtle: var(--axi-surface-raised);
   --hover-accent: var(--axi-surface-raised);
@@ -58,4 +74,24 @@
   --shadow-md: none;
   --shadow-lg: none;
   --titlebar-h: var(--af-titlebar-h);
+}
+
+/* Every modal sheet in this app fills with the panel surface and stops there.
+   On the default surface that is an opaque colour and nothing is missing, but
+   flat and glass make the panel surface translucent on the understanding that
+   a blur stands behind it -- which is why the package pairs --axi-surface with
+   --axi-surface-filter on .axi-panel and on the titlebar. Unpaired, the glass
+   settings dialog was a tinted pane with the build library legible straight
+   through it. The token is `none` on every opaque surface, so this is inert on
+   axi and does the whole job on the two themes that need it. */
+.settings-modal,
+.detail-modal,
+.confirm-modal,
+.whats-new-modal,
+.wiki-modal,
+.icm,
+.shm,
+.sfm,
+.tm {
+  backdrop-filter: var(--axi-surface-filter);
 }

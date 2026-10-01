@@ -65,6 +65,20 @@ export function resolveAccentId(id) {
 let _transitionTimer = null;
 
 /**
+ * Holds the crossfade class on <html> for 500ms so the whole page changes
+ * together. Shared by the accent and the surface: changing both at once should
+ * still be one fade, so the timer is deliberately not per-attribute.
+ */
+function _startCrossfade(root) {
+  root.classList.add("theme-transitioning");
+  if (_transitionTimer) clearTimeout(_transitionTimer);
+  _transitionTimer = setTimeout(() => {
+    root.classList.remove("theme-transitioning");
+    _transitionTimer = null;
+  }, 500);
+}
+
+/**
  * Sets the accent on <html>. Returns the resolved id.
  * Crossfades for 500ms unless { transition: false } - startup passes that,
  * so the first paint doesn't visibly flash against an unthemed page.
@@ -73,15 +87,56 @@ export function applyAccent(id, { transition = true } = {}) {
   const resolved = resolveAccentId(id);
   const root = document.documentElement;
 
-  if (transition) {
-    root.classList.add("theme-transitioning");
-    if (_transitionTimer) clearTimeout(_transitionTimer);
-    _transitionTimer = setTimeout(() => {
-      root.classList.remove("theme-transitioning");
-      _transitionTimer = null;
-    }, 500);
-  }
+  if (transition) _startCrossfade(root);
 
   root.setAttribute("data-axi-accent", resolved);
+  return resolved;
+}
+
+/**
+ * The surfaces the design language paints. "axi" is the language itself, drawn
+ * with no `data-axi-theme` at all. "flat" and "glass" are repaints of it
+ * shipped as `@axiapps/axi-design/themes/<id>.css`.
+ */
+export const SURFACES = [
+  { id: "axi", label: "Axi" },
+  { id: "flat", label: "Flat" },
+  { id: "glass", label: "Glass" },
+];
+
+/** AxiForge has always been drawn in the language itself, so that stays the default. */
+export const DEFAULT_SURFACE_ID = "axi";
+
+/**
+ * Always returns one of the three ids. Membership is tested against the array
+ * rather than an object, so inherited property names are unknown values like
+ * any other.
+ *
+ * There is deliberately no legacy map here. LEGACY_THEME_TO_ACCENT exists
+ * because published share URLs carry an accent forever; the surface has never
+ * been persisted or shared, so it has no vocabulary to translate.
+ */
+export function resolveSurfaceId(id) {
+  return SURFACES.some((s) => s.id === id) ? id : DEFAULT_SURFACE_ID;
+}
+
+/**
+ * Sets the surface on <html>. Returns the resolved id.
+ * Crossfades for 500ms unless { transition: false } - startup passes that,
+ * so the first paint doesn't visibly flash against an unthemed page.
+ *
+ * "axi" removes the attribute rather than naming itself: the language is not a
+ * theme layered over itself, and axi-design's own rule is that removing
+ * `data-axi-theme` leaves you back on it with no other change.
+ */
+export function applySurface(id, { transition = true } = {}) {
+  const resolved = resolveSurfaceId(id);
+  const root = document.documentElement;
+
+  if (transition) _startCrossfade(root);
+
+  if (resolved === "axi") root.removeAttribute("data-axi-theme");
+  else root.setAttribute("data-axi-theme", resolved);
+
   return resolved;
 }

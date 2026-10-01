@@ -8,7 +8,7 @@ import { showConfirmModal } from "./confirm-modal.js";
 import { showChoiceModal } from "./choice-modal.js";
 import { loadTeamState } from "./teams.js";
 import { openTeamModal, initTeamModal } from "./team-modal.js";
-import { ACCENTS, resolveAccentId } from "./accents.js";
+import { ACCENTS, resolveAccentId, SURFACES, resolveSurfaceId, applySurface } from "./accents.js";
 
 let _overlay = null;
 let _el = {};
@@ -81,6 +81,10 @@ export function initSettingsModal() {
         <div class="settings-modal__body">
           <section class="settings-modal__pane settings-modal__pane--active" data-pane="appearance" id="sm-appearance-section">
             <div class="settings-modal__theme-grid" id="sm-theme-grid"></div>
+            <div class="settings-modal__subsection">
+              <label class="settings-modal__sublabel">Surface</label>
+              <div class="settings-modal__surface-row" id="sm-surface-row"></div>
+            </div>
             <label class="settings-modal__toggle" id="sm-themed-builds-toggle">
               <input type="checkbox" class="settings-modal__toggle-input" id="sm-themed-builds">
               <span class="settings-modal__toggle-switch"></span>
@@ -156,6 +160,7 @@ export function initSettingsModal() {
   _el = {
     close:          document.getElementById("sm-close"),
     themeGrid:      document.getElementById("sm-theme-grid"),
+    surfaceRow:     document.getElementById("sm-surface-row"),
     targetPicker:   document.getElementById("sm-target-picker"),
     setupRow:       document.getElementById("sm-setup-row"),
     publishSection: document.getElementById("sm-publishing-section"),
@@ -326,6 +331,7 @@ export async function openSettingsModal({ initialPane } = {}) {
 
   // Populate appearance section
   _renderThemeGrid();
+  _renderSurfaceRow();
 
   // Populate publishing section
   _renderPublishing();
@@ -384,6 +390,33 @@ async function _applyAccent(accentId) {
   await window.desktopApi.setSetting("appearance.theme", accentId);
   _callbacks.onThemeChange?.(accentId);
   _paintAccentGrid(accentId);
+}
+
+async function _renderSurfaceRow() {
+  const storedId = (await window.desktopApi.getSetting("appearance.surface")) || "";
+  _paintSurfaceRow(storedId);
+}
+
+function _paintSurfaceRow(storedId) {
+  const active = resolveSurfaceId(storedId);
+  _el.surfaceRow.innerHTML = "";
+
+  for (const surface of SURFACES) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = `axi-btn axi-btn--sm${surface.id === active ? " axi-btn--primary" : ""}`;
+    btn.dataset.surface = surface.id;
+    btn.setAttribute("aria-pressed", String(surface.id === active));
+    btn.textContent = surface.label;
+    btn.addEventListener("click", () => _applySurface(surface.id));
+    _el.surfaceRow.appendChild(btn);
+  }
+}
+
+async function _applySurface(surfaceId) {
+  const resolved = applySurface(surfaceId);
+  await window.desktopApi.setSetting("appearance.surface", resolved);
+  _paintSurfaceRow(resolved);
 }
 
 // ─── Publishing section ─────────────────────────────────────────────────────

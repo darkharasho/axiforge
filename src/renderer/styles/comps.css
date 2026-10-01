@@ -381,7 +381,7 @@
    stops reading as a row well before the list is long. So this one view leaves
    the rule treatment its .comp-list-row base sets up and becomes a panel: the
    panel outline, the panel block, and the panel's hover (rule 4 case ii — the
-   translate with the block grown to --axi-offset-panel-hover). The compact
+   translate with the block grown to --axi-shadow-panel-hover). The compact
    view keeps the rules, which is what makes the two modes worth having.
 
    The card is kept to the two lines the row already had rather than taking
@@ -395,7 +395,7 @@
   background: var(--axi-surface);
   border: var(--axi-border-panel) solid var(--axi-ink-line);
   border-radius: var(--axi-radius);
-  box-shadow: var(--axi-offset-panel) var(--axi-offset-panel) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-panel);
   transition: transform 0.1s, box-shadow 0.1s, background 0.1s, color 0.1s;
 }
 
@@ -404,7 +404,7 @@
 .comp-list-row--expanded:hover {
   background: var(--axi-surface);
   transform: translate(-3px, -3px);
-  box-shadow: var(--axi-offset-panel-hover) var(--axi-offset-panel-hover) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-panel-hover);
 }
 
 /* Selection stays the accent fill it is for a row (rule 5, and the children
@@ -587,7 +587,7 @@
 }
 
 .comp-tag-popover__item:hover {
-  background: var(--axi-ground);
+  background: var(--axi-well-fill);
   color: var(--axi-text);
 }
 
@@ -1078,7 +1078,7 @@
 /* A destructive hover: full-strength danger fill, same as
    .axi-titlebar__btns' close button. */
 .comp-line__btn--remove:hover {
-  color: var(--axi-ink-line);
+  color: var(--axi-ink-on-fill);
   background: var(--axi-danger);
 }
 
@@ -1141,7 +1141,7 @@
    has one, else to the build's profession — slotSeriesStyle in
    professions.js resolves the two. */
 .comp-slot--filled {
-  background: var(--axi-ground);
+  background: var(--axi-well-fill);
   border: var(--axi-border-control) solid var(--axi-series, var(--axi-ink-line));
   cursor: pointer;
   transition: transform .1s, box-shadow .1s;
@@ -1153,11 +1153,11 @@
    (a glow) as much as rule 2 does (partial-opacity colour). */
 .comp-slot--filled:hover {
   transform: translate(-2px, -2px);
-  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-control);
 }
 
 .comp-slot--missing {
-  background: var(--axi-ground);
+  background: var(--axi-well-fill);
   border: var(--axi-border-hairline) dashed var(--axi-rule);
   cursor: default;
 }
@@ -1712,7 +1712,7 @@
 }
 
 .comp-picker-modal__btn--add:disabled {
-  background: var(--axi-ground);
+  background: var(--axi-well-fill);
   color: var(--axi-text-faint);
   box-shadow: none;
   cursor: default;
@@ -1740,7 +1740,7 @@
   width: 42px !important;
   height: 42px !important;
   opacity: 0.9;
-  background: var(--axi-ground) !important;
+  background: var(--axi-well-fill) !important;
   border: var(--axi-border-control) solid var(--axi-series, var(--axi-ink-line)) !important;
   display: flex !important;
   align-items: center !important;
@@ -1964,7 +1964,7 @@
 }
 
 .comp-line-trash--over .comp-line-trash__text {
-  color: var(--axi-ink-line);
+  color: var(--axi-ink-on-fill);
 }
 
 /* ── Comp Boon Coverage Section ─────────────────────────────────────── */
@@ -2208,7 +2208,7 @@
 .party-cov__pill--finisher {
   background: var(--axi-pill-fill);
   color: var(--axi-accent-ink);
-  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-control);
 }
 .party-cov__pill--boon:hover,
 .party-cov__pill--condi:hover,
@@ -2216,7 +2216,7 @@
 .party-cov__pill--finisher:hover {
   background: var(--axi-pill-fill);
   color: var(--axi-accent-ink);
-  box-shadow: var(--axi-offset-control-hover) var(--axi-offset-control-hover) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-control-hover);
   transform: translate(-2px, -2px);
 }
 
@@ -2224,13 +2224,13 @@
    "Poison yourself") — not coverage, but distinct from a plain gap and still
    clickable so the user can see why. Outlined rather than filled: these are
    commentary about the coverage, not a status assertion, so they override
-   the filled rule above back to the pill's own quiet ground. Named as a
+   the filled rule above back to the pill's own quiet well. Named as a
    compound with the category class so the override is never weaker than
    the filled rule it is cancelling (the same trap build-sources.css:50-61
    documents — a bare modifier would tie with .axi-pill:hover on
    specificity and could lose on source order alone). */
 .party-cov__pill--condi.party-cov__pill--self-condi {
-  background: var(--axi-ground);
+  background: var(--axi-well-fill);
   color: var(--axi-text-dim);
   border-style: dashed;
 }
@@ -2238,16 +2238,17 @@
   box-shadow: none;
 }
 /* ...and because it rests flat, its hover is rule 4's *first* case, not the
-   third: a control with no resting block gains --axi-offset-control (3px) for
-   the first time, alongside the translate(-2px, -2px) it inherits from
-   .party-cov__pill--condi:hover. Without this rule that hover's
-   --axi-offset-control-hover (6px) applied -- the third case's deepening,
-   which only makes sense for a control that was already on a 3px block, and
-   which here lifts 2px while drawing 6px of block, so the lower-right edge
+   third: a control with no resting block gains --axi-shadow-control (3px on
+   the default surface) for the first time, alongside the translate(-2px, -2px)
+   it inherits from .party-cov__pill--condi:hover. Without this rule that
+   hover's --axi-shadow-control-hover (6px) applied -- the third case's
+   deepening, which only makes sense for a control that was already on a 3px
+   block, and which here lifts 2px while drawing 6px of block, so the
+   lower-right edge
    moves *down* and the pill reads as growing. Compound so it outranks
    .party-cov__pill--condi:hover (0,3,0 against 0,2,0). */
 .party-cov__pill--condi.party-cov__pill--self-condi:hover {
-  box-shadow: var(--axi-offset-control) var(--axi-offset-control) 0 var(--axi-ink-line);
+  box-shadow: var(--axi-shadow-control);
 }
 
 /* Judgement call (Task 24, RULES.md rules 2 and 9; comment corrected in fix
@@ -2272,13 +2273,15 @@
 }
 
 /* Uncovered is a status too — the absence of one — and it is never
-   clickable, so both rest and hover reset to the quiet ground and the
-   package's unconditional hover lift is switched off outright. */
+   clickable, so both rest and hover reset to the quiet well and the
+   package's unconditional hover lift is switched off outright. The well rather
+   than --axi-ground, which is the page and opaque under every theme: a pill is
+   sunk into the row that holds it, not a window through it. */
 .party-cov__pill--boon.party-cov__pill--uncovered,
 .party-cov__pill--boon.party-cov__pill--uncovered:hover,
 .party-cov__pill--condi.party-cov__pill--uncovered,
 .party-cov__pill--condi.party-cov__pill--uncovered:hover {
-  background: var(--axi-ground);
+  background: var(--axi-well-fill);
   color: var(--axi-text-dim);
   box-shadow: none;
   transform: none;
@@ -2294,7 +2297,7 @@
    left for a lift to promise. */
 .party-cov__pill--boon.party-cov__pill--self-only,
 .party-cov__pill--boon.party-cov__pill--self-only:hover {
-  background: var(--axi-ground);
+  background: var(--axi-well-fill);
   color: var(--axi-text-dim);
   box-shadow: none;
   transform: none;
@@ -2537,11 +2540,11 @@
   padding: 1px 6px;
   white-space: nowrap;
   background: var(--axi-series, var(--axi-surface-raised));
-  color: var(--axi-ink-line);
+  color: var(--axi-ink-on-fill);
 }
 
 .party-cov__src-row--self-condi {
-  background: var(--axi-ground);
+  background: var(--axi-well-fill);
 }
 
 /* No scale step: same case as .party-cov__toggle-text. */

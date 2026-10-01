@@ -123,11 +123,12 @@
   margin-inline: auto;
 }
 
-/* matches .spec-card__panel */
+/* matches .spec-card__panel, including its --axi-surface-paint (see the note
+   there: a longhand cannot take the gradient a theme may put in a surface). */
 .skel-spec-card__panel {
   border: var(--axi-border-hairline) solid var(--axi-rule);
   padding: calc(8px * var(--spec-scale)) calc(12px * var(--spec-scale)) calc(10px * var(--spec-scale));
-  background-color: var(--axi-surface);
+  background-color: var(--axi-surface-paint);
   min-height: calc(148px * var(--spec-scale));
 }
 
