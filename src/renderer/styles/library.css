@@ -145,14 +145,18 @@
    Scoped to .lib-toolbar deliberately. .lib-filters is a sibling container,
    so the CLASS/MODE/TAGS triggers keep the treatment they have today.
 
-   Two traps live in this selector. background-COLOR, never the shorthand:
+   Three traps live in this selector. background-COLOR, never the shorthand:
    .axi-picker__btn paints its caret as a background-image and the shorthand
-   erases it. And the view toggle's pressed pill has to be excluded, or the
-   accent fill marking the current view loses to this rule. */
+   erases it. Which forces the second: the longhand takes a COLOUR, and a
+   surface token is allowed to hold a gradient (glass's panes do), so it has to
+   be --axi-surface-raised-paint -- that surface as one flat paint -- or the
+   declaration is dropped at parse time and the buttons lose their fill. And the
+   view toggle's pressed pill has to be excluded, or the accent fill marking the
+   current view loses to this rule. */
 .lib-toolbar .axi-btn:not(.axi-btn--primary),
 .lib-toolbar .axi-picker__btn,
 .lib-toolbar .lib-view-btn:not([aria-pressed="true"]) {
-  background-color: var(--axi-surface-raised);
+  background-color: var(--axi-surface-raised-paint);
   border-color: var(--axi-rule);
 }
 
