@@ -439,7 +439,7 @@
     padding: 10px 12px;
     cursor: pointer;
     border: var(--axi-border-control) solid var(--axi-ink-line);
-    background: var(--axi-ground);
+    background: var(--axi-well-fill);
   }
 
   .spec-card__mobile-header:active {

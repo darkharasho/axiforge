@@ -58,6 +58,10 @@ a { color: var(--axi-accent); }
 
 * { scrollbar-width: thin; scrollbar-color: var(--axi-rule) transparent; }
 ::-webkit-scrollbar { width: 10px; height: 10px; }
+/* The one control in this sheet that keeps --axi-ground: a track is a channel
+   cut through to the page, which is what the page colour is for. The shorthand
+   is deliberate too -- a theme's atmosphere gradient is sized to the viewport
+   and has nothing to say inside a 10px gutter. */
 ::-webkit-scrollbar-track { background: var(--axi-ground); }
 ::-webkit-scrollbar-thumb {
   background: var(--axi-surface-raised);
@@ -215,9 +219,12 @@ a { color: var(--axi-accent); }
   text-align: left;
   font: var(--axi-t-small);
 }
-/* The menu's own ground is --axi-surface-raised, so hover has to step DOWN to
-   the ground to be visible (the package's .axi-menu__pop pattern). */
-.af-menu-item:hover { background: var(--axi-ground); color: var(--axi-text); }
+/* The menu's own fill is --axi-surface-raised, so hover has to step DOWN to be
+   visible (the package's .axi-menu__pop pattern). Down to --axi-well-fill, not
+   --axi-ground: a hovered row in a popover is sunk into the popover, not a hole
+   through to the page, and --axi-ground is opaque under every theme -- it would
+   punch a black bar across a translucent menu. */
+.af-menu-item:hover { background: var(--axi-well-fill); color: var(--axi-text); }
 
 /* Icon box + label: the markup still emits these (render-pages.js) even
    though the brief's replacement block omitted them. */

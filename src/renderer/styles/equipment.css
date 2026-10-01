@@ -331,7 +331,7 @@
   width: 40px;
   height: 40px;
   flex-shrink: 0;
-  background: var(--axi-ground);
+  background: var(--axi-well-fill);
   border: var(--axi-border-hairline) solid var(--axi-rule);
   overflow: hidden;
   display: flex;
@@ -488,12 +488,13 @@
   overflow: hidden;
 }
 
-/* The package's input treatment, as forms.css already spells it: ground fill,
-   control-weight ink edge, an accent outline on focus. It is flush against the
-   popover's own border on three sides, so only the bottom edge is drawn. */
+/* The package's input treatment, as forms.css already spells it: the well fill
+   an input is sunk into, a control-weight ink edge, an accent outline on focus.
+   It is flush against the popover's own border on three sides, so only the
+   bottom edge is drawn. */
 .slot-picker__search {
   padding: 9px 10px;
-  background: var(--axi-ground);
+  background: var(--axi-well-fill);
   border: 0;
   border-bottom: var(--axi-border-control) solid var(--axi-ink-line);
   color: var(--axi-text);
@@ -512,7 +513,7 @@
 .slot-picker__tabs {
   display: flex;
   border-bottom: var(--axi-border-control) solid var(--axi-ink-line);
-  background: var(--axi-ground);
+  background: var(--axi-well-fill);
   padding: 0;
   gap: 0;
 }
@@ -706,7 +707,7 @@
 }
 
 .equip-text-label input {
-  background: var(--axi-ground);
+  background: var(--axi-well-fill);
   border: var(--axi-border-control) solid var(--axi-ink-line);
   color: var(--axi-text);
   padding: 5px 8px;
@@ -755,7 +756,7 @@
   letter-spacing: var(--axi-ls-micro);
   color: var(--axi-text-faint);
   border: var(--axi-border-hairline) dashed var(--axi-rule);
-  background: var(--axi-ground);
+  background: var(--axi-well-fill);
   padding: 0;
   transition: box-shadow 0.1s, transform 0.1s;
   overflow: hidden;
@@ -808,7 +809,7 @@
   width: 26px;
   height: 26px;
   border: var(--axi-border-control) solid var(--axi-ink-line);
-  background: var(--axi-ground);
+  background: var(--axi-well-fill);
   color: var(--axi-text-dim);
   font: var(--axi-t-label);
   letter-spacing: var(--axi-ls-label);
@@ -844,7 +845,7 @@
   width: 48px;
   height: 48px;
   border: var(--axi-border-hairline) solid var(--axi-rule);
-  background: var(--axi-ground);
+  background: var(--axi-well-fill);
   cursor: pointer;
   padding: 0;
   overflow: hidden;
@@ -1108,7 +1109,7 @@
 }
 
 .equip-boons__help-row kbd {
-  background: var(--axi-ground);
+  background: var(--axi-well-fill);
   color: var(--axi-text-dim);
   padding: 1px 5px;
   font-family: var(--axi-mono);

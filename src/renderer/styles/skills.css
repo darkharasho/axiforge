@@ -143,10 +143,13 @@
 }
 
 /* An empty mechanic slot is an absence, so it is an empty square rather than
-   a faded full one (rule 2): dashed edge, the ground showing through, and the
-   faint ramp step for the F-label that is its only content. */
+   a faded full one (rule 2): dashed edge, the well showing through, and the
+   faint ramp step for the F-label that is its only content. The well and not
+   --axi-ground: nothing here is a hole through to the page, and --axi-ground is
+   opaque under every theme, so it would tile the bar with black squares on
+   glass. --axi-well-fill is a subtraction from whatever holds it. */
 .skill-icon--profession-empty {
-  background: var(--axi-ground);
+  background: var(--axi-well-fill);
   border-style: dashed;
   color: var(--axi-text-faint);
   cursor: default;
@@ -447,7 +450,7 @@
 .health-orb__hp {
   font: var(--axi-t-h3);
   letter-spacing: var(--axi-ls-h3);
-  color: var(--axi-ink-line);
+  color: var(--axi-ink-on-fill);
 }
 
 /* The label rides the fill in the same ink as the figure. The ramp's dim step
@@ -457,7 +460,7 @@
 .health-orb__label {
   font: var(--axi-t-micro);
   letter-spacing: var(--axi-ls-micro);
-  color: var(--axi-ink-line);
+  color: var(--axi-ink-on-fill);
   text-transform: uppercase;
   margin-top: 4px;
 }
@@ -479,12 +482,12 @@
 /* One rule for both empty cases — a weapon slot with no weapon and a
    heal/utility/elite slot with nothing chosen. They used to differ only in
    how far each was faded, which is rule 2 encoding "empty" twice and
-   illegibly. An empty slot is an empty square: the ground showing through a
+   illegibly. An empty slot is an empty square: the well showing through a
    dashed edge, with the faint ramp step for the keybind label that is its
    only content. No grayscale answer is needed here — skills.js emits no
    <img> at all for an empty slot, so there is no bitmap to desaturate. */
 .skill-icon-large.skill-icon--empty {
-  background: var(--axi-ground);
+  background: var(--axi-well-fill);
   border-style: dashed;
   color: var(--axi-text-faint);
 }
@@ -715,8 +718,9 @@
 }
 
 /* Twenty-odd 28px icons in two rows are a reading, not twenty raised things
-   (rule 8): they are drawn as an interior, in hairline rules on the panel's
-   own ground, and their hover is the neutral ramp rather than a block. They
+   (rule 8): they are drawn as an interior, in hairline rules on the well the
+   panel sinks them into, and their hover is the neutral ramp rather than a
+   block. They
    are hoverable for the tooltip, but a row of blocks this dense stops reading
    as depth and starts reading as texture, which is the bound rule 8's
    counterpart sets on when a stack of cards is the right answer. */
@@ -724,7 +728,7 @@
   position: relative;
   width: 28px;
   height: 28px;
-  background: var(--axi-ground);
+  background: var(--axi-well-fill);
   border: var(--axi-border-hairline) solid var(--axi-rule);
   display: grid;
   place-items: center;

@@ -17,7 +17,7 @@
 .cselect__trigger {
   width: 100%;
   border: var(--axi-border-control) solid var(--axi-ink-line);
-  background: var(--axi-ground);
+  background: var(--axi-well-fill);
   color: var(--axi-text-dim);
   padding: 8px 10px;
   min-height: 40px;
@@ -94,9 +94,11 @@
 }
 
 /* Menu rows follow the workspace menu's pattern (app.css .af-menu-item): the
-   menu's own ground is --axi-surface-raised, so hover steps DOWN to
-   --axi-ground to read as depressed, rather than the row lifting off the
-   list like a standalone control. */
+   menu's own fill is --axi-surface-raised, so hover steps DOWN to
+   --axi-well-fill to read as depressed, rather than the row lifting off the
+   list like a standalone control. Depressed into the list, which is why it is
+   the well and not --axi-ground: the page colour is opaque under every theme
+   and would read as a hole cut clean through a translucent popover. */
 .cselect__option {
   width: 100%;
   border: none;
@@ -110,7 +112,7 @@
 }
 
 .cselect__option:hover {
-  background: var(--axi-ground);
+  background: var(--axi-well-fill);
 }
 
 .cselect__option--selected {
@@ -227,7 +229,7 @@
   padding: 7px 10px;
   margin-bottom: 4px;
   border: var(--axi-border-control) solid var(--axi-ink-line);
-  background: var(--axi-ground);
+  background: var(--axi-well-fill);
   color: var(--axi-text);
   font: var(--axi-t-small);
   outline: none;

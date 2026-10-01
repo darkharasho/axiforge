@@ -430,7 +430,7 @@
   box-sizing: border-box;
   border: var(--axi-border-panel) dashed var(--axi-rule);
   padding: calc(8px * var(--spec-scale)) calc(12px * var(--spec-scale)) calc(10px * var(--spec-scale));
-  background: var(--axi-ground);
+  background: var(--axi-well-fill);
   min-height: calc(148px * var(--spec-scale));
   overflow: hidden;
   transition: border-color 0.25s ease, background 0.25s ease;

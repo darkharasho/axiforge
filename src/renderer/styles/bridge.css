@@ -21,8 +21,15 @@
    2 forbids, so those rules are meant to fail visibly (transparent) rather
    than survive in a muted form. Each batch converts its own. */
 :root {
-  --bg: var(--axi-ground);
-  --bg-2: var(--axi-ground);
+  /* --bg/--bg-2 were the page colour in the legacy palette, but nothing left
+     reading them is the page: every surviving use is a region or a trough
+     INSIDE a modal panel. So they point at --axi-well-fill, the level a thing
+     flat on its container sits at, rather than --axi-ground, which is the page
+     and stays opaque under every theme -- aimed at --axi-ground these painted
+     black patches inside the translucent panels flat and glass give a modal.
+     Identical to --axi-ground on the default surface, so this is free there. */
+  --bg: var(--axi-well-fill);
+  --bg-2: var(--axi-well-fill);
   --panel: var(--axi-surface);
   --panel-2: var(--axi-surface);
   --panel-gradient: var(--axi-surface);
@@ -40,7 +47,9 @@
   --link: var(--axi-accent);
   --danger: var(--axi-danger);
   --danger-text: var(--axi-danger);
-  --input-bg: var(--axi-ground);
+  /* An input is a recess, which is exactly what --axi-well-fill names (same
+     reason as --bg above, and as library.css's converted .axi-input). */
+  --input-bg: var(--axi-well-fill);
   --input-border: var(--axi-ink-line);
   --hover-subtle: var(--axi-surface-raised);
   --hover-accent: var(--axi-surface-raised);

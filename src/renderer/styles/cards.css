@@ -181,8 +181,10 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* Same row treatment as .af-menu-item (app.css): the menu's own ground is
-   --axi-surface-raised, so hover steps down to --axi-ground to be visible. */
+/* Same row treatment as .af-menu-item (app.css): the menu's own fill is
+   --axi-surface-raised, so hover steps down to --axi-well-fill to be visible --
+   sunk into the popover, which is what a hovered row is, rather than the page
+   colour showing through it. */
 .editor-share-dropdown__item {
   display: flex;
   align-items: center;
@@ -199,7 +201,7 @@
 }
 
 .editor-share-dropdown__item:hover {
-  background: var(--axi-ground);
+  background: var(--axi-well-fill);
   color: var(--axi-text);
 }
 
@@ -265,7 +267,7 @@
 .build-code-group__input {
   flex: 1;
   min-width: 0;
-  background: var(--axi-ground);
+  background: var(--axi-well-fill);
   border: var(--axi-border-control) solid var(--axi-ink-line);
   border-right: none;
   color: var(--axi-text);
@@ -486,7 +488,7 @@ label {
   min-width: 80px;
   max-width: 200px;
   border: var(--axi-border-control) solid var(--axi-ink-line);
-  background: var(--axi-ground);
+  background: var(--axi-well-fill);
   color: var(--axi-accent);
   padding: 2px 6px;
   /* No scale step: same case as .publish-status, and a font: shorthand would

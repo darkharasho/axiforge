@@ -220,7 +220,7 @@ function _injectStyles() {
     .hist-compare__word { font: var(--axi-t-small); color: var(--axi-text-faint); }
     .hist-compare__pick {
       appearance: none;
-      background-color: var(--axi-ground);
+      background-color: var(--axi-well-fill);
       color: var(--axi-text-dim);
       border: var(--axi-border-control) solid var(--axi-ink-line);
       font: var(--axi-t-small);
@@ -348,7 +348,7 @@ function _injectStyles() {
       min-width: 0;
       padding: 3px 8px 3px 4px;
       border: var(--axi-border-hairline) solid var(--axi-rule);
-      background: var(--axi-ground);
+      background: var(--axi-well-fill);
     }
     .hist-chip__name {
       overflow: hidden;

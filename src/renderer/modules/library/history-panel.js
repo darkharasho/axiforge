@@ -126,7 +126,7 @@ function _injectStyles() {
       height: 12px;
       flex: none;
       transform: rotate(45deg);
-      background: var(--axi-ground);
+      background: var(--axi-well-fill);
       border: var(--axi-border-control) solid var(--axi-ink-line);
       box-sizing: border-box;
     }

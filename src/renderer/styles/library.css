@@ -23,7 +23,12 @@
   height: calc(100vh - var(--af-titlebar-h));
   min-height: 0;
   transition: grid-template-columns 0.15s ease;
-  background: var(--axi-ground);
+  /* The one element in this sheet that genuinely paints the page, so it takes
+     the ground -- and takes it in longhands for the reason app.css gives on
+     <body>: `background:` would reset background-image to none and throw away
+     a theme's atmosphere. */
+  background-color: var(--axi-ground);
+  background-image: var(--axi-ground-image);
 }
 
 /* Every child of .lib-page names its own column. The tracks are positional --
@@ -151,11 +156,14 @@
   border-color: var(--axi-rule);
 }
 
-/* The search well goes the other way: an input is a recess, so it takes the
-   ground it used to share with everything else, which now reads as depth
-   against the surface around it. */
+/* The search well goes the other way: an input is a recess, so it takes
+   --axi-well-fill, which reads as depth against the surface around it. It was
+   --axi-ground, and on the default surface those are the same colour -- but
+   --axi-ground is the page, opaque under every theme, so on glass it painted an
+   opaque black tile inside a translucent toolbar instead of a dent in one.
+   --axi-well-fill is the level, and a theme restates it as a darkening. */
 .lib-toolbar .axi-input {
-  background-color: var(--axi-ground);
+  background-color: var(--axi-well-fill);
   border-color: var(--axi-rule);
 }
 
@@ -1509,7 +1517,7 @@
 }
 
 .lib-ctx-item:hover {
-  background: var(--axi-ground);
+  background: var(--axi-well-fill);
   color: var(--axi-text);
 }
 
@@ -1661,7 +1669,7 @@
    say — deleted rather than exempted, same disposition as lib-dragging and
    sortable-drag above. */
 .lib-drag-ghost {
-  background: var(--axi-ground);
+  background: var(--axi-well-fill);
   outline: var(--axi-border-control) dashed var(--axi-rule);
   outline-offset: -3px;
 }
@@ -1843,7 +1851,7 @@
   bottom: -2px;
   right: -4px;
   margin: 0;
-  background: var(--axi-ground);
+  background: var(--axi-well-fill);
   padding: 1px;
   opacity: 1;
 }

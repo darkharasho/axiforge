@@ -45,7 +45,7 @@
 .panel textarea {
   width: 100%;
   border: var(--axi-border-control) solid var(--axi-ink-line);
-  background: var(--axi-ground);
+  background: var(--axi-well-fill);
   color: var(--axi-text);
   padding: 9px 10px;
   font: inherit;
@@ -76,7 +76,7 @@
   width: 100%;
   min-height: 38px;
   border: var(--axi-border-control) solid var(--axi-ink-line);
-  background: var(--axi-ground);
+  background: var(--axi-well-fill);
   padding: 5px 8px;
   cursor: text;
 }
@@ -114,7 +114,7 @@
 
 .tag-pill__remove:hover {
   background: var(--axi-danger);
-  color: var(--axi-ink-line);
+  color: var(--axi-ink-on-fill);
 }
 
 .tag-container__input {
