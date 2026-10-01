@@ -321,7 +321,16 @@ function createWindow(savedBounds) {
     ...(process.platform === "darwin"
       ? { titleBarStyle: "hidden", trafficLightPosition: { x: -20, y: -20 } }
       : {}),
-    backgroundColor: "#050910",
+    // A frameless window's corner is rounded in CSS, and CSS can only cut a
+    // hole: what shows through it is whatever the window itself was created
+    // over. An opaque backgroundColor paints a square there, so the radius reads
+    // as no radius at all. Transparent on Linux and Windows, the pattern axiam
+    // already ships; macOS rounds and shadows a frameless window itself, and
+    // transparency there would cost the native shadow for nothing. The
+    // renderer's half is the clip on <html> in styles/app.css.
+    ...(process.platform === "darwin"
+      ? { backgroundColor: "#050910" }
+      : { transparent: true, backgroundColor: "#00000000" }),
     icon: getIconPath(),
     webPreferences: {
       contextIsolation: true,
