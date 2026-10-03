@@ -18,6 +18,12 @@
   --z-menu: 200;
   --z-modal: 1000;
   --z-modal-confirm: 1100;
+  /* A confirmation has to sit above the dialog that raised it. At an equal
+     z-index that is decided by DOM order, and the confirm overlay is a
+     singleton appended at startup while every other dialog mounts lazily — so
+     it lost, and "Remove this person?" opened BEHIND the Manage Team backdrop.
+     The click meant for its button closed Manage Team instead. @see #317 */
+  --z-modal-alert: 1150;
   /* Above the modals: a native resize border is part of the window, not the
      page, so it stays grabbable while a dialog is open. */
   --z-resize-grip: 1200;
