@@ -432,6 +432,28 @@ describe("as an owner", () => {
     expect(document.querySelector('[data-user-id="u2"]')).toBeNull();
   });
 
+  // Their grants go with the membership (@see dropGrantsFor in
+  // workers/sync/src/teams.js), so the dialog has to re-read them: an exception
+  // left on screen for somebody who is no longer in the team reads as a rule
+  // that cannot be removed, which is issue #317 from the other side.
+  test("removing a member re-reads the grants, so no ghost exception is left behind", async () => {
+    api.listTeamGrants.mockResolvedValue({
+      grants: [{ folderId: "t1", userId: "u2", access: "read", login: "bob" }],
+      defaults: { member: "write" },
+    });
+    await openTeamModal("t1");
+    await flush();
+    // What the server answers once the membership — and with it the grant — is gone.
+    api.listTeamGrants.mockResolvedValue({ grants: [], defaults: { member: "write" } });
+
+    document.querySelector('[data-user-id="u2"] [data-act="remove-member"]')
+      .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await flush(); await flush(); await flush();
+
+    act("go-access").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(document.querySelector('.tm-fa__exception[data-user-id="u2"]')).toBeNull();
+  });
+
   test("an owner cannot be removed — there is no control to try it with", async () => {
     await openTeamModal("t1");
     await flush();

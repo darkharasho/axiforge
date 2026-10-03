@@ -704,6 +704,11 @@ async function _handleRemoveMember(btn) {
   try {
     await window.desktopApi.removeTeamMember(_teamId, row.dataset.userId);
     _data.members = _data.members.filter((m) => m.userId !== row.dataset.userId);
+    // Their grants went with the membership, so re-read rather than patch: the
+    // Folder access tab would otherwise keep listing an exception for somebody
+    // who is no longer in the team, and an exception nobody holds reads as a
+    // rule that cannot be removed. @see dropGrantsFor in workers/sync/src/teams.js
+    await _reloadGrants();
     _render();
     _setStatus(`${login} removed.`);
   } catch (err) {
