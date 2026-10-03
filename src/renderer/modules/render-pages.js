@@ -1009,6 +1009,30 @@ export function getSelectedTarget() {
 // ---------------------------------------------------------------------------
 export async function showError(err) {
   const message = err instanceof Error ? err.message : String(err);
-  setPublishStatus(`Error: ${message}`);
-  await window.desktopApi.showError("AxiForge Error", message);
+
+  // The last report of a failure must not depend on the thing that failed.
+  // This is `init()`'s only catch, and when a broken preload left desktopApi
+  // undefined every line below threw in turn — so the one error that explained
+  // the whole app stayed invisible and it looked like an endless load instead
+  // of a crash. Say it to the console first, where nothing can swallow it.
+  console.error("[axiforge]", err);
+
+  try {
+    setPublishStatus(`Error: ${message}`);
+  } catch { /* the page may not be built yet; the console line stands */ }
+
+  try {
+    await window.desktopApi.showError("AxiForge Error", message);
+  } catch {
+    // No bridge to the main process — most likely the preload itself is what
+    // broke. Put it on the page directly so a user who never opens DevTools
+    // still gets a cause instead of a skeleton that never resolves.
+    const banner = document.createElement("div");
+    banner.setAttribute("role", "alert");
+    banner.style.cssText =
+      "position:fixed;inset:auto 0 0 0;z-index:2147483647;padding:12px 16px;" +
+      "background:#5a1020;color:#fff;font:13px/1.5 system-ui,sans-serif;white-space:pre-wrap";
+    banner.textContent = `AxiForge failed to start: ${message}`;
+    document.body.appendChild(banner);
+  }
 }

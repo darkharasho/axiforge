@@ -46,7 +46,7 @@ const { getProfessionList, getProfessionCatalog, getUpgradeCatalog, getWikiSumma
 const { slugifyBuildName, generateFileId, generateEncryptionKey, getDefaultBuildName } = require("./buildEncryption");
 const { buildSpaBundle, buildEncryptedBuildFile, buildEncryptedCompFile, buildRedirectFile } = require("./siteBundle");
 const { snapshotDaily } = require("./jsonFile");
-const { WINDOW_MIN, windowChromeOptions, resizeBounds } = require("../shared/windowChrome");
+const { WINDOW_MIN, windowChromeOptions, needsManualResize, resizeBounds } = require("../shared/windowChrome");
 const { repairOrphans } = require("./orphanRepair");
 const { serializeForPublish, loadCrossProfessionCatalogs } = require("./buildPublish");
 const { serializeCompForPublish, getCompPublishBuildIds } = require("./compPublish");
@@ -338,6 +338,13 @@ function createWindow(savedBounds) {
       nodeIntegration: false,
       webviewTag: true,
       preload: path.join(__dirname, "../preload/index.js"),
+      // The preload is sandboxed and cannot require shared/windowChrome to
+      // reach this verdict itself, so hand it over as data. Computed from the
+      // same helper the window above is built with, which is what keeps the
+      // grips and the native border from ever both being absent.
+      additionalArguments: [
+        `--axi-manual-resize=${needsManualResize(process.platform) ? "1" : "0"}`,
+      ],
     },
   });
 
