@@ -18,6 +18,14 @@
   --z-menu: 200;
   --z-modal: 1000;
   --z-modal-confirm: 1100;
+  /* Above the modals: a native resize border is part of the window, not the
+     page, so it stays grabbable while a dialog is open. */
+  --z-resize-grip: 1200;
+
+  /* The resize grips' hit area. 6px matches the width a window manager gives
+     its own border; the corners are wider because they are a smaller target. */
+  --af-resize-edge: 6px;
+  --af-resize-corner: 14px;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -87,6 +95,58 @@ a { color: var(--axi-accent); }
 
 .app-drag { -webkit-app-region: drag; }
 .no-drag, .no-drag * { -webkit-app-region: no-drag; }
+
+/* --- the resize grips ---
+   The window is transparent wherever its corners are rounded (see
+   createWindow in src/main/index.js), and a transparent window has no native
+   resize border, so these eight strips are the border. The layer itself takes
+   no pointer events; only the grips in it do, so it cannot eat a click on the
+   page beneath. Built by modules/window-resize.js, and absent entirely on
+   macOS, whose window is opaque and resizes natively. */
+.af-resize-layer {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-resize-grip);
+  pointer-events: none;
+}
+/* Maximized, there are no edges to drag — matching the window manager, which
+   does not let you resize a maximized window by its border either. */
+body.is-maximized .af-resize-layer { display: none; }
+
+.af-resize {
+  position: absolute;
+  pointer-events: auto;
+  /* touch-action so a pen or touch drag resizes instead of scrolling the page
+     underneath, which is what a captured pointer would otherwise do. */
+  touch-action: none;
+}
+
+.af-resize--n, .af-resize--s {
+  left: var(--af-resize-corner);
+  right: var(--af-resize-corner);
+  height: var(--af-resize-edge);
+  cursor: ns-resize;
+}
+.af-resize--n { top: 0; }
+.af-resize--s { bottom: 0; }
+
+.af-resize--e, .af-resize--w {
+  top: var(--af-resize-corner);
+  bottom: var(--af-resize-corner);
+  width: var(--af-resize-edge);
+  cursor: ew-resize;
+}
+.af-resize--w { left: 0; }
+.af-resize--e { right: 0; }
+
+.af-resize--nw, .af-resize--ne, .af-resize--sw, .af-resize--se {
+  width: var(--af-resize-corner);
+  height: var(--af-resize-corner);
+}
+.af-resize--nw { top: 0; left: 0; cursor: nwse-resize; }
+.af-resize--se { bottom: 0; right: 0; cursor: nwse-resize; }
+.af-resize--ne { top: 0; right: 0; cursor: nesw-resize; }
+.af-resize--sw { bottom: 0; left: 0; cursor: nesw-resize; }
 .hidden { display: none !important; }
 
 /* --- scrollbars --- */

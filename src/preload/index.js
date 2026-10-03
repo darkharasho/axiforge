@@ -1,4 +1,5 @@
 const { contextBridge, ipcRenderer } = require("electron");
+const { needsManualResize } = require("../shared/windowChrome");
 
 // ipcRenderer.invoke rejects with "Error invoking remote method '<channel>':
 // Error: <message>". Handlers word their errors for the user (the migration's
@@ -21,6 +22,13 @@ contextBridge.exposeInMainWorld("desktopApi", {
   toggleMaximizeWindow: () => ipcRenderer.invoke("window:toggle-maximize"),
   isMaximizedWindow: () => ipcRenderer.invoke("window:is-maximized"),
   closeWindow: () => ipcRenderer.invoke("window:close"),
+  // A transparent window has no native resize border, so on those platforms the
+  // renderer installs its own grips. Same helper main creates the window with,
+  // so the two cannot disagree about which platforms those are.
+  needsManualResize: needsManualResize(process.platform),
+  resizeWindowStart: (edge) => ipcRenderer.invoke("window:resize-start", edge),
+  resizeWindowTo: (dx, dy) => ipcRenderer.invoke("window:resize-to", dx, dy),
+  resizeWindowEnd: () => ipcRenderer.invoke("window:resize-end"),
   openPreviewWindow: (url, opts) => ipcRenderer.invoke("window:open-preview", url, opts),
   openExternal: (url) => ipcRenderer.invoke("app:open-external", url),
   writeClipboardText: (text) => ipcRenderer.invoke("clipboard:write-text", text),
