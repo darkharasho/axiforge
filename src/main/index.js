@@ -46,6 +46,7 @@ const { getProfessionList, getProfessionCatalog, getUpgradeCatalog, getWikiSumma
 const { slugifyBuildName, generateFileId, generateEncryptionKey, getDefaultBuildName } = require("./buildEncryption");
 const { buildSpaBundle, buildEncryptedBuildFile, buildEncryptedCompFile, buildRedirectFile } = require("./siteBundle");
 const { snapshotDaily } = require("./jsonFile");
+const { WINDOW_MIN, windowChromeOptions, resizeBounds } = require("../shared/windowChrome");
 const { repairOrphans } = require("./orphanRepair");
 const { serializeForPublish, loadCrossProfessionCatalogs } = require("./buildPublish");
 const { serializeCompForPublish, getCompPublishBuildIds } = require("./compPublish");
@@ -314,13 +315,10 @@ function createWindow(savedBounds) {
     width: savedBounds?.width ?? 1600,
     height: savedBounds?.height ?? 980,
     ...(savedBounds ? { x: savedBounds.x, y: savedBounds.y } : {}),
-    minWidth: 1120,
-    minHeight: 740,
+    minWidth: WINDOW_MIN.width,
+    minHeight: WINDOW_MIN.height,
     show: false,
     frame: false,
-    ...(process.platform === "darwin"
-      ? { titleBarStyle: "hidden", trafficLightPosition: { x: -20, y: -20 } }
-      : {}),
     // A frameless window's corner is rounded in CSS, and CSS can only cut a
     // hole: what shows through it is whatever the window itself was created
     // over. An opaque backgroundColor paints a square there, so the radius reads
@@ -328,9 +326,12 @@ function createWindow(savedBounds) {
     // already ships; macOS rounds and shadows a frameless window itself, and
     // transparency there would cost the native shadow for nothing. The
     // renderer's half is the clip on <html> in styles/app.css.
-    ...(process.platform === "darwin"
-      ? { backgroundColor: "#050910" }
-      : { transparent: true, backgroundColor: "#00000000" }),
+    //
+    // The options live in shared/windowChrome.js because transparency costs the
+    // native resize border on Linux and Windows, and preload has to reach the
+    // same verdict to decide whether the renderer installs its own resize
+    // grips — see the window:resize-* handlers below.
+    ...windowChromeOptions(process.platform),
     icon: getIconPath(),
     webPreferences: {
       contextIsolation: true,
@@ -708,6 +709,40 @@ const readyWork = app.whenReady().then(async () => {
 
   handle("window:close", (event) => {
     BrowserWindow.fromWebContents(event.sender)?.close();
+    return true;
+  });
+
+  // ── Manual window resize ───────────────────────────────────────────────────
+  // A transparent window has no native resize border (see windowChromeOptions),
+  // so the renderer's grips drive it from here. The bounds the drag started from
+  // are held per window rather than recomputed per move: the renderer reports
+  // the total delta from where the pointer went down, so a coalesced or dropped
+  // move event cannot accumulate into drift.
+  const resizeDrags = new WeakMap();
+
+  handle("window:resize-start", (event, edge) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (!win || win.isMaximized() || win.isFullScreen()) return false;
+    resizeDrags.set(win, { edge, start: win.getBounds() });
+    return true;
+  });
+
+  handle("window:resize-to", (event, dx, dy) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    const drag = win && resizeDrags.get(win);
+    if (!drag) return false;
+    win.setBounds(resizeBounds(drag.start, drag.edge, dx, dy, WINDOW_MIN));
+    return true;
+  });
+
+  handle("window:resize-end", (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (win) {
+      resizeDrags.delete(win);
+      // The window only persists its bounds on close; a resize that ends with
+      // the app still running should survive a crash too.
+      store.setSetting("windowBounds", win.getBounds());
+    }
     return true;
   });
 

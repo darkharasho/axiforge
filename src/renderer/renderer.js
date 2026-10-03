@@ -12,6 +12,7 @@ import { state, createEmptyEditor } from "./modules/state.js";
 import { nextEditorReturn } from "./modules/editor-return.js";
 import { delay, wireTagInput, escapeHtml, relativeTime } from "./modules/utils.js";
 import { injectSkeleton } from "./modules/skeleton.js";
+import { initWindowResize } from "./modules/window-resize.js";
 import { professionSeriesStyle } from "../shared/professions.js";
 
 import { initCustomSelect, closeCustomSelect } from "./modules/custom-select.js";
@@ -1155,6 +1156,9 @@ async function refreshOnboardingStatus() {
 // ── Window controls ──────────────────────────────────────────────────────────
 
 function wireWindowControls() {
+  // The window is transparent where the corners are rounded in CSS, which costs
+  // the native resize border; these grips put resizing back. No-op on macOS.
+  initWindowResize(window.desktopApi);
   el.titlebar.addEventListener("dblclick", async (event) => {
     if (event.target.closest(".no-drag")) return;
     await window.desktopApi.toggleMaximizeWindow();
@@ -1174,6 +1178,8 @@ function wireWindowControls() {
 
 async function refreshWindowControls() {
   const maximized = await window.desktopApi.isMaximizedWindow();
+  // A maximized window has no edges to drag, so the grips stand down with it.
+  document.body.classList.toggle("is-maximized", maximized);
   el.winMax.title = maximized ? "Restore Down" : "Maximize";
   el.winMax.innerHTML = maximized
     ? '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1"><rect x="0.5" y="2.5" width="7" height="7"/><polyline points="2.5,2.5 2.5,0.5 9.5,0.5 9.5,7.5 7.5,7.5"/></svg>'
