@@ -474,3 +474,122 @@ describe("verifying what became of an item", () => {
     expect((await verify(t, t.owner, new Array(items.MAX_VERIFY + 1).fill("x").map((_, i) => `x${i}`))).status).toBe(400);
   });
 });
+
+// A grant is a sentence about one person's place in one team: "Bob, in Raids,
+// read". Remove Bob from the team, or make him an owner, and the sentence no
+// longer has a subject — but the row outlived both, and nothing ever deleted it.
+//
+// Two ways that reads as "you can add a person's permissions but not remove
+// them" (issue #317):
+//
+//   - Taking somebody out of the team left their grants behind, so rejoining
+//     through the invite code silently handed them back — including a `delete`
+//     they had been given once and a `none` they had been let out of.
+//   - Promoting somebody to owner left their grants behind, and the access
+//     editor refuses to show a grant against an owner (correctly — an owner can
+//     hand any grant back, so a level against one would be a lie). The row was
+//     then unreachable: nothing in the UI could remove it, and demoting them
+//     later brought it back into force.
+//
+// So the lifecycle is the fix, not the two symptoms: a grant lives exactly as
+// long as the non-owner membership it describes.
+describe("a grant and the membership it describes", () => {
+  const removeMember = (t, auth, userId) =>
+    teams.removeMember(t.req("DELETE"), t.env, t.deps, auth, { teamId: t.team.id, userId });
+  const setRole = (t, auth, userId, role) =>
+    teams.setMemberRole(t.req("PATCH", { role }), t.env, t.deps, auth, { teamId: t.team.id, userId });
+  const rejoin = (t, auth) =>
+    teams.joinTeam(t.req("POST", { inviteCode: t.team.inviteCode }), t.env, t.deps, auth, {});
+  const grantsFor = async (t, userId) => {
+    const { results } = await t.db
+      .prepare("SELECT folder_id, access FROM folder_grants WHERE team_id = ? AND user_id = ?")
+      .bind(t.team.id, userId).all();
+    return results;
+  };
+
+  test("removing a member removes their folder grants too", async () => {
+    const t = await setup();
+    await t.grant(t.owner, "raids", "u-mem", "read");
+    expect(await grantsFor(t, "u-mem")).toHaveLength(1);
+
+    expect((await removeMember(t, t.owner, "u-mem")).status).toBe(204);
+    expect(await grantsFor(t, "u-mem")).toHaveLength(0);
+  });
+
+  test("a removed member who rejoins is not still governed by their old grants", async () => {
+    const t = await setup();
+    await t.grant(t.owner, "raids", "u-mem", "none");
+    await removeMember(t, t.owner, "u-mem");
+    await rejoin(t, t.member);
+
+    // Back to the team default, which is what joining has always meant.
+    expect((await t.put(t.member, "b-again", { type: "build", parentId: "raids", body: { title: "Back" } })).status).toBe(201);
+  });
+
+  test("one member leaving leaves everyone else's grants alone", async () => {
+    const t = await setup();
+    await t.grant(t.owner, "raids", "u-mem", "read");
+    await t.grant(t.owner, "raids", "u-two", "read");
+    await t.grant(t.owner, "raids", "*", "read");
+
+    await removeMember(t, t.owner, "u-mem");
+    expect(await grantsFor(t, "u-two")).toHaveLength(1);
+    // The blanket level is a fact about the folder, not about any one person.
+    expect(await grantsFor(t, "*")).toHaveLength(1);
+  });
+
+  test("promoting a member to owner clears the grants that no longer describe them", async () => {
+    const t = await setup();
+    await t.grant(t.owner, "raids", "u-mem", "none");
+    expect((await setRole(t, t.owner, "u-mem", "owner")).status).toBe(200);
+    expect(await grantsFor(t, "u-mem")).toHaveLength(0);
+  });
+
+  test("a demoted owner is not silently held to a grant from before the promotion", async () => {
+    const t = await setup();
+    await t.grant(t.owner, "raids", "u-mem", "none");
+    await setRole(t, t.owner, "u-mem", "owner");
+    await setRole(t, t.owner, "u-mem", "member");
+    expect((await t.put(t.member, "b-demoted", { type: "build", parentId: "raids", body: { title: "Mine" } })).status).toBe(201);
+  });
+
+  test("demoting an owner does not invent grants for them", async () => {
+    const t = await setup();
+    await setRole(t, t.owner, "u-mem", "owner");
+    await setRole(t, t.owner, "u-mem", "member");
+    expect(await grantsFor(t, "u-mem")).toHaveLength(0);
+  });
+
+  test("a cleared grant tells the member's next pull to resync, as setting one does", async () => {
+    const t = await setup();
+    await t.grant(t.owner, "raids", "u-mem", "none");
+    const before = await t.db.prepare("SELECT grants_seq FROM memberships WHERE team_id = ? AND user_id = ?")
+      .bind(t.team.id, "u-mem").first("grants_seq");
+
+    await setRole(t, t.owner, "u-mem", "owner");
+    const after = await t.db.prepare("SELECT grants_seq FROM memberships WHERE team_id = ? AND user_id = ?")
+      .bind(t.team.id, "u-mem").first("grants_seq");
+    expect(after).toBeGreaterThan(before);
+  });
+
+  test("the one-off migration purges the grants earlier versions stranded", async () => {
+    const t = await setup();
+    // Written the way the old code left them: a row for somebody who is not a
+    // member any more, and one for somebody who has since become an owner.
+    await t.db.prepare(
+      "INSERT INTO folder_grants (team_id, folder_id, user_id, access, granted_by, granted_at) VALUES (?, ?, ?, ?, ?, ?)"
+    ).bind(t.team.id, "raids", "u-gone", "read", "u-owner", NOW).run();
+    await t.grant(t.owner, "raids", "u-mem", "read");
+    await t.db.prepare("UPDATE memberships SET role = 'owner' WHERE team_id = ? AND user_id = ?")
+      .bind(t.team.id, "u-mem").run();
+    await t.grant(t.owner, "raids", "*", "read");
+
+    t.db._raw.exec(require("fs").readFileSync(
+      require("path").join(__dirname, "../../workers/sync/migrations/0007_grants_follow_membership.sql"), "utf8"
+    ));
+
+    expect(await grantsFor(t, "u-gone")).toHaveLength(0);
+    expect(await grantsFor(t, "u-mem")).toHaveLength(0);
+    expect(await grantsFor(t, "*")).toHaveLength(1);
+  });
+});

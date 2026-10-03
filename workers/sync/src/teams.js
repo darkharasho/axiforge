@@ -225,8 +225,34 @@ async function removeMember(_request, env, _deps, auth, params) {
     const owners = await env.SYNC_DB.prepare("SELECT COUNT(*) AS c FROM memberships WHERE team_id = ? AND role = 'owner'").bind(params.teamId).first("c");
     if (owners <= 1) return errorResponse("forbidden", "The last owner cannot leave. Promote another member to owner first, or delete the team.");
   }
-  await env.SYNC_DB.prepare("DELETE FROM memberships WHERE team_id = ? AND user_id = ?").bind(params.teamId, params.userId).run();
+  await env.SYNC_DB.batch([
+    env.SYNC_DB.prepare("DELETE FROM memberships WHERE team_id = ? AND user_id = ?").bind(params.teamId, params.userId),
+    // In the same statement list, because a grant that outlives its membership
+    // is unreachable: the access editor lists people, and this one is no longer
+    // a person in this team. @see dropGrantsFor
+    dropGrantsFor(env, params.teamId, params.userId),
+  ]);
   return new Response(null, { status: 204 });
+}
+
+/**
+ * Delete every grant held by one person in one team.
+ *
+ * A grant says what one member may do in one folder, so it is only true for as
+ * long as that membership is. Leaving the row behind when the membership goes —
+ * removed from the team, or promoted to owner — strands it: nothing in the
+ * access editor can reach it, and rejoining or being demoted puts it silently
+ * back into force (issue #317). Returns the statement rather than running it, so
+ * the caller batches it with the membership change that orphaned it and the two
+ * cannot be observed apart.
+ *
+ * Never matches EVERYONE: the blanket level belongs to the folder, not to anyone
+ * whose membership could end.
+ */
+function dropGrantsFor(env, teamId, userId) {
+  return env.SYNC_DB
+    .prepare("DELETE FROM folder_grants WHERE team_id = ? AND user_id = ? AND user_id <> ?")
+    .bind(teamId, userId, EVERYONE);
 }
 
 // POST /teams/:teamId/invite/rotate
@@ -255,7 +281,16 @@ async function setMemberRole(request, env, _deps, auth, params) {
     const owners = await env.SYNC_DB.prepare("SELECT COUNT(*) AS c FROM memberships WHERE team_id = ? AND role = 'owner'").bind(params.teamId).first("c");
     if (owners <= 1) return errorResponse("forbidden", "The last owner cannot be demoted. Promote another member first.");
   }
-  await env.SYNC_DB.prepare("UPDATE memberships SET role = ? WHERE team_id = ? AND user_id = ?").bind(role, params.teamId, params.userId).run();
+  // An owner reaches everything by role, and setGrant refuses to store a level
+  // against one for that reason — so a promotion has to take the grants with it,
+  // or they sit there unreachable until a demotion brings them back.
+  const promoting = role === "owner";
+  await env.SYNC_DB.batch([
+    env.SYNC_DB.prepare("UPDATE memberships SET role = ? WHERE team_id = ? AND user_id = ?").bind(role, params.teamId, params.userId),
+    ...(promoting
+      ? [dropGrantsFor(env, params.teamId, params.userId), ...invalidateGrants(env, params.teamId, params.userId)]
+      : []),
+  ]);
   return json({ userId: params.userId, role });
 }
 

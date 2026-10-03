@@ -432,6 +432,28 @@ describe("as an owner", () => {
     expect(document.querySelector('[data-user-id="u2"]')).toBeNull();
   });
 
+  // Their grants go with the membership (@see dropGrantsFor in
+  // workers/sync/src/teams.js), so the dialog has to re-read them: an exception
+  // left on screen for somebody who is no longer in the team reads as a rule
+  // that cannot be removed, which is issue #317 from the other side.
+  test("removing a member re-reads the grants, so no ghost exception is left behind", async () => {
+    api.listTeamGrants.mockResolvedValue({
+      grants: [{ folderId: "t1", userId: "u2", access: "read", login: "bob" }],
+      defaults: { member: "write" },
+    });
+    await openTeamModal("t1");
+    await flush();
+    // What the server answers once the membership — and with it the grant — is gone.
+    api.listTeamGrants.mockResolvedValue({ grants: [], defaults: { member: "write" } });
+
+    document.querySelector('[data-user-id="u2"] [data-act="remove-member"]')
+      .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await flush(); await flush(); await flush();
+
+    act("go-access").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(document.querySelector('.tm-fa__exception[data-user-id="u2"]')).toBeNull();
+  });
+
   test("an owner cannot be removed — there is no control to try it with", async () => {
     await openTeamModal("t1");
     await flush();
@@ -728,5 +750,68 @@ describe("the team's publish target", () => {
     state.teams = [{ team: { id: "t1", name: "EWW" }, role: "member" }];
     await openTeamTab();
     expect(document.querySelector("#tm-body").textContent).toMatch(/your own GitHub account/);
+  });
+});
+
+// Production told on us: three `DELETE /teams/null/members/<id>` requests in one
+// evening, every one a 403, and not a single grant ever deleted (issue #317).
+// `null` is the module's `_teamId` read AFTER an await — a handler asks for a
+// confirmation, the dialog is closed while that promise is pending, and the
+// handler wakes up and writes against a team that is no longer open. The user
+// sees the row vanish from a list that is about to be thrown away, and the
+// permission is back next time they look, because the server never heard.
+//
+// The gesture behind it is the layering bug in modal-layering.test.js: the
+// confirmation opened BEHIND this overlay, so the click aimed at its button
+// landed on this backdrop and closed the dialog first.
+describe("a confirmation that outlives the dialog that asked for it", () => {
+  test("removing a member does nothing if the dialog closed while confirming", async () => {
+    let confirm;
+    showConfirmModal.mockImplementation(() => new Promise((r) => { confirm = r; }));
+    await openTeamModal("t1");
+    await flush();
+
+    document.querySelector('[data-user-id="u2"] [data-act="remove-member"]')
+      .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await flush();
+
+    // The backdrop click that the user meant for the confirmation's button.
+    document.querySelector(".tm-overlay")
+      .dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+    confirm(true);
+    await flush();
+
+    // Never "null" — and never anybody else's team either.
+    expect(api.removeTeamMember).not.toHaveBeenCalled();
+  });
+
+  test("leaving a team does nothing if the dialog closed while confirming", async () => {
+    state.folders = [{ ...ROOT, role: "member" }, RAIDS, WVW, DEEP];
+    state.teams = [{ team: { id: "t1", name: "EWW" }, role: "member" }];
+    let confirm;
+    showConfirmModal.mockImplementation(() => new Promise((r) => { confirm = r; }));
+    state.teamSession = { userId: "u2", login: "vette" };
+    await openTeamModal("t1");
+    await flush();
+
+    tab("team").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    act("leave-team").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await flush();
+    document.querySelector(".tm-overlay")
+      .dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+    confirm(true);
+    await flush();
+
+    expect(api.leaveTeam).not.toHaveBeenCalled();
+  });
+
+  test("a confirmation answered with the dialog still open goes through", async () => {
+    showConfirmModal.mockResolvedValue(true);
+    await openTeamModal("t1");
+    await flush();
+    document.querySelector('[data-user-id="u2"] [data-act="remove-member"]')
+      .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await flush();
+    expect(api.removeTeamMember).toHaveBeenCalledWith("t1", "u2");
   });
 });

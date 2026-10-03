@@ -673,16 +673,38 @@ async function _handleCopyInvite(btn) {
   }, 2000);
 }
 
+/**
+ * Ask for a confirmation, and check afterwards that we are still asking about
+ * the same team.
+ *
+ * `_teamId` is module state that `closeTeamModal()` clears, so a handler that
+ * reads it AFTER awaiting a dialog can wake up holding null — or, worse, the
+ * id of a different team opened in the meantime — and write against it.
+ * Production showed three `DELETE /teams/null/members/<id>` requests in one
+ * evening, every one a 403: the owner's removal never reached the server, so
+ * the permission was still there when they looked again (issue #317).
+ *
+ * @returns {Promise<string|null>} the team id to act on, or null to do nothing.
+ */
+async function _confirmFor(options) {
+  const teamId = _teamId;
+  const ok = await showConfirmModal(options);
+  if (!ok) return null;
+  // Closed, or swapped for another team, while the question was on screen.
+  if (_teamId !== teamId) return null;
+  return teamId;
+}
+
 async function _handleRotate() {
-  const ok = await showConfirmModal({
+  const teamId = await _confirmFor({
     title: "Rotate invite code?",
     body: "The old code stops working immediately. Anyone already in the team stays.",
     confirmLabel: "Rotate",
     cancelLabel: "Cancel",
   });
-  if (!ok) return;
+  if (!teamId) return;
   try {
-    await window.desktopApi.rotateInvite(_teamId);
+    await window.desktopApi.rotateInvite(teamId);
     await loadTeamState();
     _render();
     _setStatus("New invite code generated.");
@@ -694,16 +716,21 @@ async function _handleRotate() {
 async function _handleRemoveMember(btn) {
   const row = btn.closest(".tm__person");
   const login = row?.querySelector(".tm__person-name")?.textContent || "this member";
-  const ok = await showConfirmModal({
+  const teamId = await _confirmFor({
     title: `Remove ${login}?`,
     body: "They keep their local copies but stop receiving updates.",
     confirmLabel: "Remove",
     cancelLabel: "Cancel",
   });
-  if (!ok) return;
+  if (!teamId) return;
   try {
-    await window.desktopApi.removeTeamMember(_teamId, row.dataset.userId);
+    await window.desktopApi.removeTeamMember(teamId, row.dataset.userId);
     _data.members = _data.members.filter((m) => m.userId !== row.dataset.userId);
+    // Their grants went with the membership, so re-read rather than patch: the
+    // Folder access tab would otherwise keep listing an exception for somebody
+    // who is no longer in the team, and an exception nobody holds reads as a
+    // rule that cannot be removed. @see dropGrantsFor in workers/sync/src/teams.js
+    await _reloadGrants();
     _render();
     _setStatus(`${login} removed.`);
   } catch (err) {
@@ -763,15 +790,15 @@ async function _handlePull(btn) {
 }
 
 async function _handleDelete() {
-  const ok = await showConfirmModal({
+  const teamId = await _confirmFor({
     title: "Delete this team?",
     body: "Every member loses the shared folder. Everyone's local copies are kept as personal folders.",
     confirmLabel: "Delete team",
     cancelLabel: "Cancel",
   });
-  if (!ok) return;
+  if (!teamId) return;
   try {
-    await window.desktopApi.deleteTeam(_teamId);
+    await window.desktopApi.deleteTeam(teamId);
     closeTeamModal();
     await _refreshLibrary();
   } catch (err) {
@@ -780,15 +807,15 @@ async function _handleDelete() {
 }
 
 async function _handleLeave() {
-  const ok = await showConfirmModal({
+  const teamId = await _confirmFor({
     title: "Leave this team?",
     body: "Your local copy of the folder is kept as a personal folder.",
     confirmLabel: "Leave",
     cancelLabel: "Cancel",
   });
-  if (!ok) return;
+  if (!teamId) return;
   try {
-    await window.desktopApi.leaveTeam(_teamId);
+    await window.desktopApi.leaveTeam(teamId);
     closeTeamModal();
     await _refreshLibrary();
   } catch (err) {
