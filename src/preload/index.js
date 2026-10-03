@@ -1,5 +1,19 @@
 const { contextBridge, ipcRenderer } = require("electron");
-const { needsManualResize } = require("../shared/windowChrome");
+
+// This file runs as a SANDBOXED preload, which is not a Node module: `require`
+// resolves "electron" and a handful of builtins, and throws on anything else.
+// A relative require here kills the preload outright, so `desktopApi` never
+// exists and the app hangs on its first-paint skeleton with nothing in the log.
+// Anything main and preload must agree on therefore arrives as data.
+// @see tests/unit/preload/preload-sandbox.test.js
+
+// A transparent window has no native resize border, so on those platforms the
+// renderer draws and drives its own grips. Main decides, using the same
+// shared/windowChrome helper it creates the window with, and passes the verdict
+// in through webPreferences.additionalArguments — so the two cannot disagree
+// about which platforms those are without main being wrong about its own window.
+const MANUAL_RESIZE_FLAG = "--axi-manual-resize";
+const needsManualResize = process.argv.includes(`${MANUAL_RESIZE_FLAG}=1`);
 
 // ipcRenderer.invoke rejects with "Error invoking remote method '<channel>':
 // Error: <message>". Handlers word their errors for the user (the migration's
@@ -22,10 +36,7 @@ contextBridge.exposeInMainWorld("desktopApi", {
   toggleMaximizeWindow: () => ipcRenderer.invoke("window:toggle-maximize"),
   isMaximizedWindow: () => ipcRenderer.invoke("window:is-maximized"),
   closeWindow: () => ipcRenderer.invoke("window:close"),
-  // A transparent window has no native resize border, so on those platforms the
-  // renderer installs its own grips. Same helper main creates the window with,
-  // so the two cannot disagree about which platforms those are.
-  needsManualResize: needsManualResize(process.platform),
+  needsManualResize,
   resizeWindowStart: (edge) => ipcRenderer.invoke("window:resize-start", edge),
   resizeWindowTo: (dx, dy) => ipcRenderer.invoke("window:resize-to", dx, dy),
   resizeWindowEnd: () => ipcRenderer.invoke("window:resize-end"),
