@@ -267,25 +267,259 @@ function cacheableStamp(build) {
   return build && build.id && build.updatedAt ? build.updatedAt : null;
 }
 
+// ───────────────────────────── pre-flight id validation ─────────────────────────
+// gw2buildlink resolves every id in a template against the GW2 API and rejects the
+// WHOLE encode if any single lookup fails — so one dead id (a skill removed from the
+// API, a hand-edited .axicode, a build saved on an older patch) produced no chat code
+// at all instead of a code missing that one slot. We own the client the encoder uses,
+// so resolve each id here first and drop only the ones that will not resolve. The
+// encode then repeats those lookups against the same client's cache, so this costs
+// no extra requests.
+//
+// The profession is deliberately NOT tolerated: a build template is a profession plus
+// its slots, and there is nothing to encode without one.
+
+// The status code of a failed gw2buildlink fetch, or null if the error was not one.
+// Their message is `Failed to fetch <url>: <status> <statusText>`, and the status has
+// to be read from after the URL — an id like /specializations/503 otherwise reads as
+// a 503 and would turn a dead id into a hard failure.
+function httpStatusFromError(message) {
+  const match = /Failed to fetch\s+\S+:\s+(\d{3})\b/.exec(message);
+  return match ? Number(match[1]) : null;
+}
+
+// A failed lookup is only safe to read as "this id is gone" when the API actually
+// answered. On a dead network, an exhausted 429, or a 5xx, dropping the slot would
+// hand back a quietly truncated build and call it success — so those are rethrown and
+// surface to the user as a failure.
+function rethrowIfTransient(err) {
+  const message = String((err && err.message) || err || "");
+  const status = httpStatusFromError(message);
+  if (status !== null && (status === 408 || status === 425 || status === 429 || status >= 500)) {
+    throw err;
+  }
+  if (/fetch failed|network|ENOTFOUND|ECONNRESET|ECONNREFUSED|ETIMEDOUT|socket hang up/i.test(message)) {
+    throw err;
+  }
+}
+
+// Keep `value` only if the api resolves it into a well-formed answer. Baked mode (the
+// Worker) answers an unknown single id with HTTP 200 and a `null` body rather than a
+// 404, so a miss can arrive as a shapeless value instead of a throw — hence isValid.
+async function keepResolvable(value, label, resolve, isValid, drop) {
+  if (value == null) return undefined;
+  try {
+    const resolved = await resolve();
+    if (!isValid(resolved)) throw new Error(`Unresolvable ${label}`);
+    return value;
+  } catch (err) {
+    rethrowIfTransient(err);
+    drop(label);
+    return undefined;
+  }
+}
+
+// A trait line resolves as a unit, so try all three tiers together first and only fall
+// back to probing tier by tier when that fails — one bad trait then costs its own tier
+// rather than the whole line.
+async function sanitizeTraits(api, spec, traits, drop) {
+  const tiers = [traits?.[0], traits?.[1], traits?.[2]];
+  try {
+    await api.resolveTraitChoices(spec, tiers);
+    return tiers;
+  } catch (err) {
+    rethrowIfTransient(err);
+  }
+  const kept = [undefined, undefined, undefined];
+  for (let tier = 0; tier < 3; tier++) {
+    if (tiers[tier] == null) continue;
+    const probe = [undefined, undefined, undefined];
+    probe[tier] = tiers[tier];
+    kept[tier] = await keepResolvable(
+      tiers[tier],
+      `trait ${tiers[tier]} in ${spec.name || `specialization ${spec.id}`}`,
+      () => api.resolveTraitChoices(spec, probe),
+      (choices) => Array.isArray(choices),
+      drop
+    );
+  }
+  return kept;
+}
+
+// The ten skill slots, in the shape encodeBuildTemplate reads them back out of.
+async function sanitizeSkills(api, professionId, skills, drop) {
+  const out = {};
+  for (const environment of ["terrestrial", "aquatic"]) {
+    const set = skills?.[environment];
+    const utilities = Array.isArray(set?.utilities) ? set.utilities : [];
+    // A skill the environment forbids resolves to paletteId 0 rather than throwing,
+    // which is the encoder's own way of saying "empty slot" — not a drop.
+    const keep = (value, slot) =>
+      keepResolvable(
+        value,
+        `${environment} ${slot} skill ${value}`,
+        () => api.resolveSkillPalette(professionId, value, environment),
+        (resolved) => resolved && resolved.paletteId != null,
+        drop
+      );
+    out[environment] = {
+      heal: await keep(set?.heal, "heal"),
+      utilities: [
+        await keep(utilities[0], "utility 1"),
+        await keep(utilities[1], "utility 2"),
+        await keep(utilities[2], "utility 3"),
+      ],
+      elite: await keep(set?.elite, "elite"),
+    };
+  }
+  return out;
+}
+
+/**
+ * Resolve every id in a template input and drop the ones the GW2 API cannot account
+ * for, so a build carrying a dead id yields a link missing that slot instead of no
+ * link at all.
+ *
+ * @returns {Promise<{ input: Object, dropped: string[] }>}
+ */
+async function sanitizeTemplateInput(input, api) {
+  const dropped = [];
+  const drop = (what) => dropped.push(what);
+
+  // No profession, no template — this one is meant to propagate.
+  const { id: professionId } = await api.resolveProfession(input.profession);
+
+  const specializations = [];
+  for (let i = 0; i < 3; i++) {
+    const spec = (input.specializations || [])[i];
+    if (!spec || spec.id == null) {
+      specializations.push({ id: null });
+      continue;
+    }
+    let resolved;
+    try {
+      resolved = await api.resolveSpecialization(spec.id);
+      if (!resolved || resolved.id == null || !Array.isArray(resolved.major_traits)) {
+        throw new Error(`Unknown specialization ${spec.id}`);
+      }
+    } catch (err) {
+      rethrowIfTransient(err);
+      drop(`specialization ${spec.id}`);
+      specializations.push({ id: null });
+      continue;
+    }
+    specializations.push({
+      id: spec.id,
+      traits: await sanitizeTraits(api, resolved, spec.traits, drop),
+    });
+  }
+
+  const skills = await sanitizeSkills(api, professionId, input.skills, drop);
+
+  let rangerPets;
+  if (Array.isArray(input.rangerPets)) {
+    rangerPets = [];
+    for (const pet of input.rangerPets) {
+      rangerPets.push(
+        await keepResolvable(pet, `pet ${pet}`, () => api.resolvePet(pet), (r) => r && r.id != null, drop)
+      );
+    }
+  }
+
+  let revenantLegends;
+  if (Array.isArray(input.revenantLegends)) {
+    revenantLegends = [];
+    for (const legend of input.revenantLegends) {
+      revenantLegends.push(
+        await keepResolvable(
+          legend,
+          `legend ${legend}`,
+          () => api.resolveLegend(legend),
+          (r) => r && r.code != null,
+          drop
+        )
+      );
+    }
+  }
+
+  let revenantInactiveSkills;
+  if (Array.isArray(input.revenantInactiveSkills)) {
+    revenantInactiveSkills = [];
+    for (const palette of input.revenantInactiveSkills) {
+      revenantInactiveSkills.push(
+        await keepResolvable(
+          palette,
+          `inactive legend skill ${palette}`,
+          () => api.resolveSkillPalette(professionId, palette, "terrestrial"),
+          (r) => r && r.paletteId != null,
+          drop
+        )
+      );
+    }
+  }
+
+  const weapons = [];
+  for (const weapon of input.weapons ?? []) {
+    const kept = await keepResolvable(
+      weapon,
+      `weapon ${weapon}`,
+      () => api.resolveWeapon(weapon),
+      (r) => r && r.id != null,
+      drop
+    );
+    if (kept != null) weapons.push(kept);
+  }
+
+  return {
+    input: {
+      ...input,
+      specializations,
+      skills,
+      weapons: weapons.length > 0 ? weapons : undefined,
+      rangerPets,
+      revenantLegends,
+      revenantInactiveSkills,
+    },
+    dropped,
+  };
+}
+
 /**
  * Generate a GW2 in-game chat link string for the given axiforge build.
  * Returns instantly from cache if the build hasn't changed since last generation.
  *
  * @param {Object} build — serialized axiforge build object
- * @param {Object} [deps] — test seam: `encode` replaces the gw2buildlink encoder.
+ * @param {Object} [deps] — test seam: `encode` replaces the gw2buildlink encoder and
+ *   `api` the client the pre-flight validation resolves ids against.
  */
-async function generateChatLink(build, { encode } = {}) {
+async function generateChatLink(build, { encode, api } = {}) {
   const stamp = cacheableStamp(build);
   const cached = stamp ? _cache.get(build.id) : null;
   if (cached && cached.updatedAt === stamp) return cached.link;
 
+  // One client for both passes, so validating an id and then encoding it is a single
+  // request. A test supplying only `encode` has nothing to validate against.
+  const client = api || (encode ? null : await getApi());
+
+  let input = mapBuildToTemplateInput(build);
+  if (client) {
+    const sanitized = await sanitizeTemplateInput(input, client);
+    input = sanitized.input;
+    if (sanitized.dropped.length > 0) {
+      const n = sanitized.dropped.length;
+      console.warn(
+        `[buildChatLink] chat code omits ${n} ${n === 1 ? "entry" : "entries"} the GW2 API could not resolve: ${sanitized.dropped.join(", ")}`
+      );
+    }
+  }
+
   const encodeTemplate =
     encode ||
-    (async (input) => {
+    (async (templateInput) => {
       const { encodeBuildTemplate } = await import("gw2buildlink");
-      return encodeBuildTemplate(input, { api: await getApi() });
+      return encodeBuildTemplate(templateInput, { api: client });
     });
-  const link = await encodeTemplate(mapBuildToTemplateInput(build));
+  const link = await encodeTemplate(input);
 
   if (stamp) _cache.set(build.id, { updatedAt: stamp, link });
   return link;
@@ -435,4 +669,11 @@ async function decodeChatLinkToBuild(link, name, folderId, gameMode) {
   };
 }
 
-module.exports = { generateChatLink, prewarmChatLinks, previewChatLink, decodeChatLinkToBuild, mapBuildToTemplateInput };
+module.exports = {
+  generateChatLink,
+  prewarmChatLinks,
+  previewChatLink,
+  decodeChatLinkToBuild,
+  mapBuildToTemplateInput,
+  sanitizeTemplateInput,
+};

@@ -313,3 +313,225 @@ describe("generateChatLink caching", () => {
     expect(after).toContain("50");
   });
 });
+
+// gw2buildlink resolves every id in a template against the GW2 API and rejects the
+// WHOLE encode if a single lookup fails, so one stale id — a skill removed from the
+// API, a hand-edited .axicode, a build saved on an older patch — produced no chat
+// code at all. These cover the pre-flight pass that drops just the dead ids.
+describe("generateChatLink tolerates ids the GW2 API cannot resolve", () => {
+  const SPITE = {
+    id: 53,
+    name: "Spite",
+    major_traits: [914, 899, 919, 1920, 1921, 1922, 1923, 1924, 1925],
+  };
+  const LIVE_SKILLS = new Set([10547, 10620, 10611, 10550, 10547]);
+  const LIVE_PETS = new Set([42]);
+  const LIVE_WEAPONS = new Set(["dagger", "greatsword"]);
+
+  // Mirrors node_modules/gw2buildlink/dist/gw2ApiClient.js — same return shapes and
+  // the same error messages, since the pre-flight pass classifies failures by them.
+  function fakeApi(overrides = {}) {
+    return {
+      resolveProfession: async (name) => {
+        if (String(name).toLowerCase() !== "necromancer") {
+          throw new Error(`Unknown profession name ${name}`);
+        }
+        return { id: "Necromancer", name: "Necromancer", code: 8 };
+      },
+      getProfessionDetails: async (id) => ({ id }),
+      resolveSpecialization: async (id) => {
+        if (id !== SPITE.id) {
+          throw new Error(
+            `Failed to fetch https://api.guildwars2.com/v2/specializations/${id}?v=latest: 404 Not Found`
+          );
+        }
+        return SPITE;
+      },
+      resolveTraitChoices: async (spec, traits) => {
+        const choices = [0, 0, 0];
+        (traits ?? []).forEach((input, tier) => {
+          if (input == null) return;
+          if (input >= 0 && input <= 3) { choices[tier] = input; return; }
+          const index = spec.major_traits.indexOf(input);
+          if (index === -1) {
+            throw new Error(`Trait id ${input} is not part of specialization ${spec.name}`);
+          }
+          choices[tier] = (index % 3) + 1;
+        });
+        return choices;
+      },
+      resolveSkillPalette: async (_prof, value) => {
+        if (value == null) return { paletteId: 0 };
+        if (!LIVE_SKILLS.has(value)) throw new Error(`Unknown skill id ${value}`);
+        return { paletteId: value + 1000, skillId: value };
+      },
+      resolvePet: async (value) => {
+        if (value == null) return { id: 0 };
+        if (!LIVE_PETS.has(value)) throw new Error(`Unknown pet id ${value}`);
+        return { id: value };
+      },
+      resolveLegend: async (value) => {
+        if (value == null) return { code: 0 };
+        if (value < 1 || value > 8) throw new Error(`Unknown legend code ${value}`);
+        return { code: value };
+      },
+      resolveWeapon: async (value) => {
+        if (!LIVE_WEAPONS.has(value)) throw new Error(`Unknown weapon ${value}`);
+        return { id: 47, name: value };
+      },
+      ...overrides,
+    };
+  }
+
+  // Records the input the encoder actually receives — the assertions are about what
+  // reached the encode, since that is what gw2buildlink would have rejected.
+  function capturingEncoder() {
+    const seen = [];
+    return { seen, encode: async (input) => { seen.push(input); return "[&code]"; } };
+  }
+
+  let seq = 0;
+  const unsavedBuild = (extra = {}) => ({
+    // No `updatedAt`, so nothing here is cached between tests.
+    id: `tolerant-${++seq}`,
+    profession: "Necromancer",
+    specializations: [{ id: 53, majorChoices: { 1: 914, 2: 899, 3: 919 } }],
+    skills: { heal: { id: 10547 }, utility: [{ id: 10620 }, null, null], elite: null },
+    underwaterSkills: { heal: null, utility: [], elite: null },
+    equipment: { weapons: { mainhand1: "Dagger" } },
+    ...extra,
+  });
+
+  it("still produces a code when one utility skill no longer exists", async () => {
+    const { seen, encode } = capturingEncoder();
+    const build = unsavedBuild({
+      skills: { heal: { id: 10547 }, utility: [{ id: 999999 }, { id: 10620 }, null], elite: null },
+    });
+    const link = await generateChatLink(build, { api: fakeApi(), encode });
+    expect(link).toBe("[&code]");
+    // The dead id is gone; the live ones in the same set are untouched.
+    expect(seen[0].skills.terrestrial.utilities[0]).toBeUndefined();
+    expect(seen[0].skills.terrestrial.utilities[1]).toBe(10620);
+    expect(seen[0].skills.terrestrial.heal).toBe(10547);
+  });
+
+  it("drops only the offending tier when one trait is not in the line", async () => {
+    const { seen, encode } = capturingEncoder();
+    const build = unsavedBuild({
+      specializations: [{ id: 53, majorChoices: { 1: 914, 2: 123456, 3: 919 } }],
+    });
+    await generateChatLink(build, { api: fakeApi(), encode });
+    expect(seen[0].specializations[0].id).toBe(53);
+    expect(seen[0].specializations[0].traits).toEqual([914, undefined, 919]);
+  });
+
+  it("empties a trait line whose specialization is gone, keeping the others", async () => {
+    const { seen, encode } = capturingEncoder();
+    const build = unsavedBuild({
+      specializations: [
+        { id: 53, majorChoices: { 1: 914, 2: 899, 3: 919 } },
+        { id: 404404, majorChoices: { 1: 1, 2: 2, 3: 3 } },
+      ],
+    });
+    await generateChatLink(build, { api: fakeApi(), encode });
+    expect(seen[0].specializations[0]).toEqual({ id: 53, traits: [914, 899, 919] });
+    expect(seen[0].specializations[1]).toEqual({ id: null });
+  });
+
+  it("drops an unknown ranger pet rather than the whole code", async () => {
+    const { seen, encode } = capturingEncoder();
+    const build = unsavedBuild({
+      profession: "Necromancer", // pets are mapped for Ranger only, so pass them directly
+    });
+    const input = { ...mapBuildToTemplateInput(build), rangerPets: [42, 777777, undefined, undefined] };
+    // Exercise the sanitizer on an input that already carries pets.
+    const { sanitizeTemplateInput } = require("../../src/main/buildChatLink");
+    const result = await sanitizeTemplateInput(input, fakeApi());
+    expect(result.input.rangerPets).toEqual([42, undefined, undefined, undefined]);
+    expect(result.dropped.join(" ")).toContain("777777");
+    expect(seen).toHaveLength(0);
+    void encode;
+  });
+
+  it("drops a weapon the encoder does not know", async () => {
+    const { seen, encode } = capturingEncoder();
+    const build = unsavedBuild({
+      equipment: { weapons: { mainhand1: "Dagger", offhand1: "Greatsword" } },
+    });
+    const input = mapBuildToTemplateInput(build);
+    input.weapons = [...input.weapons, "flail"];
+    const { sanitizeTemplateInput } = require("../../src/main/buildChatLink");
+    const result = await sanitizeTemplateInput(input, fakeApi());
+    expect(result.input.weapons).toEqual(["dagger", "greatsword"]);
+    expect(result.dropped.join(" ")).toContain("flail");
+    void seen; void encode;
+  });
+
+  it("reports every dropped entry so the caller can say what was lost", async () => {
+    const { encode } = capturingEncoder();
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    const build = unsavedBuild({
+      skills: { heal: { id: 999999 }, utility: [{ id: 888888 }, null, null], elite: null },
+    });
+    await generateChatLink(build, { api: fakeApi(), encode });
+    expect(warn).toHaveBeenCalled();
+    const message = warn.mock.calls.map((c) => c.join(" ")).join(" ");
+    expect(message).toContain("999999");
+    expect(message).toContain("888888");
+    warn.mockRestore();
+  });
+
+  it("still fails outright when the profession itself cannot be resolved", async () => {
+    const { encode } = capturingEncoder();
+    const build = unsavedBuild({ profession: "Bard" });
+    await expect(generateChatLink(build, { api: fakeApi(), encode })).rejects.toThrow(/Unknown profession/);
+  });
+
+  // Dropping a slot because the network blipped would hand back a quietly truncated
+  // build and call it success. Only a real answer from the API may retire an id.
+  it("fails rather than truncating the build when a lookup hits a 429", async () => {
+    const { encode } = capturingEncoder();
+    const api = fakeApi({
+      resolveSkillPalette: async (_prof, value) => {
+        if (value == null) return { paletteId: 0 };
+        throw new Error(
+          "Failed to fetch https://api.guildwars2.com/v2/skills?ids=10547&v=latest: 429 Too Many Requests"
+        );
+      },
+    });
+    await expect(generateChatLink(unsavedBuild(), { api, encode })).rejects.toThrow(/429/);
+  });
+
+  it("fails rather than truncating the build when the network is down", async () => {
+    const { encode } = capturingEncoder();
+    const api = fakeApi({
+      resolveSpecialization: async () => { throw new TypeError("fetch failed"); },
+    });
+    await expect(generateChatLink(unsavedBuild(), { api, encode })).rejects.toThrow(/fetch failed/);
+  });
+
+  // A 503 in the URL path must not read as a 503 status — the status is the number
+  // after the URL, and confusing the two would turn a dead id into a hard failure.
+  it("treats a 404 on an id that merely looks like a status code as a dead id", async () => {
+    const { seen, encode } = capturingEncoder();
+    const api = fakeApi({
+      resolveSpecialization: async (id) => {
+        throw new Error(
+          `Failed to fetch https://api.guildwars2.com/v2/specializations/${id}?v=latest: 404 Not Found`
+        );
+      },
+    });
+    const build = unsavedBuild({ specializations: [{ id: 503, majorChoices: {} }] });
+    await generateChatLink(build, { api, encode });
+    expect(seen[0].specializations[0]).toEqual({ id: null });
+  });
+
+  // Baked mode (the Worker) answers an unknown single id with HTTP 200 and a `null`
+  // body rather than a 404, so a miss arrives as a shapeless value, not a throw.
+  it("treats a null specialization from baked data as a dead id", async () => {
+    const { seen, encode } = capturingEncoder();
+    const api = fakeApi({ resolveSpecialization: async () => null });
+    await generateChatLink(unsavedBuild(), { api, encode });
+    expect(seen[0].specializations[0]).toEqual({ id: null });
+  });
+});

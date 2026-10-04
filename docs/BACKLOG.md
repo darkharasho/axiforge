@@ -1138,9 +1138,24 @@ into the numbered manual gate above (14–16).
   a scratch script and a production console log rather than a spec. Routing it
   through the same root would make the whole feature testable offline.
 
-- [ ] **One unresolvable id kills the whole chat code.** gw2buildlink fetches
+- [x] **One unresolvable id kills the whole chat code.** gw2buildlink fetches
   every skill/trait id and rejects the entire encode if any single lookup 404s —
   a build carrying one stale id (a skill removed from the API, a hand-edited
   JSON) produces no link at all instead of a link missing that one slot. Seen
   while probing #324: an invented utility id took down a build that was
-  otherwise complete. Worth deciding whether a partial link beats no link.
+  otherwise complete. *Fix:* a partial link beats no link, so `generateChatLink`
+  now resolves every id against the same (cached) client the encode uses and
+  drops only the ones that will not resolve — `sanitizeTemplateInput` in
+  `src/main/buildChatLink.js`. A dead trait costs its own tier, a dead
+  specialization empties its line, a dead skill empties its slot, and the rest of
+  the build still encodes; what was dropped is named in a `console.warn`. A
+  missing profession is still fatal, since there is no template without one.
+  Transient failures (a dead network, an exhausted 429, a 5xx) are rethrown
+  rather than dropped — truncating a build on a network blip and calling it
+  success would be worse than failing. Covered by 11 cases in
+  `tests/unit/buildChatLink.test.js`.
+
+  Still open on top of this: the renderer has nowhere to *show* what was dropped,
+  so a user who copies a code missing a slot only learns of it from the log. The
+  drop list is returned from `sanitizeTemplateInput`, so surfacing it in the copy
+  toast is a UI change away.
