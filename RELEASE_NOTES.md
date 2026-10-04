@@ -1,3 +1,10 @@
+## Version v1.1.1 — October 3, 2026
+
+### Fixes
+
+- **The app window could not be resized.** Rounding the window's corners in v1.1.0 made the window transparent, and a transparent window has no resize border — the rounded corners cost the whole gesture. Every edge and corner can be dragged again, and they follow the curve rather than sitting in a square outside it. A maximized window leaves them alone, as it should. macOS never lost its native border and is unchanged.
+- **Permissions set for one person in a team folder could not be removed.** The row disappeared when you cleared it and was back the next time the dialog was opened, and the server never heard about it. The confirmation question was opening *behind* Manage Team, so the click meant for its Remove button landed on the backdrop instead and closed the team dialog. Confirmations now open above whatever dialog asked them. Two older faults are fixed with it: a person's permissions used to outlive their membership, so the folder could keep listing an exception for somebody no longer in the team, and that stale level — including a *No access* or a *Delete* — came back into force if they rejoined with the invite code or were demoted from owner.
+
 ## Version v1.1.0 — October 1, 2026
 
 ### Pick how AxiForge looks
