@@ -15,3 +15,6 @@ playwright-report/
 
 # wrangler local state (d1 --local, wrangler dev)
 .wrangler/
+
+# scripts/dev-sync-server.js — the fake team's SQLite
+.dev-sync/

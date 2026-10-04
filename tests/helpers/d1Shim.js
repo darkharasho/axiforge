@@ -23,8 +23,11 @@ function plain(row) {
   return Object.assign({}, row); // node:sqlite returns null-prototype objects
 }
 
-function createTestD1() {
-  const db = new DatabaseSync(":memory:");
+// `location` is a SQLite path; the default keeps every suite on a throwaway
+// in-memory database. A path is passed by scripts/dev-sync-server.js, which
+// needs the seeded team to outlive a restart of the server. @see applyMigrations
+function createTestD1(location = ":memory:") {
+  const db = new DatabaseSync(location);
   db.exec("PRAGMA foreign_keys = ON");
 
   function makeStatement(sql) {
@@ -71,6 +74,9 @@ function createTestD1() {
         throw err;
       }
     },
+    // Replays every migration from nothing. Not idempotent — 0004 rebuilds
+    // folder_grants through a temporary table — so a file-backed caller must
+    // only call this on a database it just created.
     async applyMigrations() {
       const files = fs.readdirSync(MIGRATIONS_DIR).filter((f) => f.endsWith(".sql")).sort();
       for (const f of files) db.exec(fs.readFileSync(path.join(MIGRATIONS_DIR, f), "utf8"));
