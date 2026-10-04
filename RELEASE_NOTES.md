@@ -1,3 +1,9 @@
+## Version v1.1.3 — October 3, 2026
+
+### Fixes
+
+- **One out-of-date skill or trait no longer costs you the whole chat code.** If a build held anything the game's API no longer recognises — a skill since removed from the game, a build saved on an older patch, a hand-edited `.axicode` — copying its chat code simply failed. Now the code is made without just that piece: an unknown trait leaves its own tier empty, an unknown specialization leaves its line empty, and an unknown skill, pet, legend or weapon leaves its slot empty, while everything else copies as normal. A failed connection to the API is still reported as a failure rather than quietly producing a code with gaps in it.
+
 ## Version v1.1.2 — October 3, 2026
 
 ### Fixes
