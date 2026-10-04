@@ -696,6 +696,84 @@ class TeamSync {
     }
     await this.syncStore.removeVersion(teamId, id);
     this._emit("sync-status", { status: "synced", type, id, folderId: root.id, removed: true });
+    // Another team may hold a live copy whose put was held back while this one
+    // owned the id (@see _crossTeamClaim) — the second half of a teammate's
+    // cross-team move. Its change has already gone past, so only a re-pull from
+    // 0 can place it now.
+    for (const other of await this.syncStore.listTeamIds()) {
+      if (other !== teamId && (await this.syncStore.getVersion(other, id))) {
+        // The trash keeps a later put from resurrecting what the user deleted;
+        // this copy was not deleted, it moved. Let the re-pull take it back out.
+        this._movedAway = this._movedAway || new Map();
+        this._movedAway.set(id, type);
+        this._scheduleRepull(other);
+      }
+    }
+  }
+
+  // Not awaited by the caller: the tombstone that asks for it is being applied
+  // inside another team's pull, and two pulls waiting on each other would hang.
+  _scheduleRepull(teamId) {
+    this._repulls = this._repulls || new Map();
+    if (this._repulls.has(teamId)) return;
+    const p = this._fullRepull(teamId)
+      .catch((err) => console.warn(`[team-sync] ${teamId}: cross-team re-pull failed:`, err.message))
+      .finally(() => this._repulls.delete(teamId));
+    this._repulls.set(teamId, p);
+  }
+
+  /** Settles once every re-pull `_scheduleRepull` started has finished. */
+  async _crossTeamRepulls() {
+    while (this._repulls && this._repulls.size) await Promise.all([...this._repulls.values()]);
+  }
+
+  /**
+   * One item id can be live in two teams at once — the server keys items by
+   * (team, id), and the legacy migration run from two machines pushed the same
+   * library into two teams. Locally every store is keyed by id alone, so the
+   * copy can sit under only one team root. Without this check the last team
+   * pulled won: it silently re-parented the folder under its own root, and the
+   * team the user's teammates could see lost it from this library.
+   *
+   * So a change from `teamId` that would land on a copy ANOTHER team owns —
+   * the item itself, or the folder it is going into — only goes ahead once
+   * that team confirms it no longer has the item (a cross-team move). Until
+   * then it is held back, with its version recorded so a later full re-pull
+   * can still place it. A tombstone never reaches across: deleting one team's
+   * copy says nothing about the other's.
+   *
+   * @returns {Promise<"hold"|"rehome"|null>} "hold": do not apply; "rehome":
+   *   apply even if it looks like an echo, it is moving here; null: no conflict
+   */
+  async _crossTeamClaim(teamId, item) {
+    const folders = await this.folderStore.listFolders();
+    const foreign = (folderId) => {
+      const r = this.teamRootFor(folderId, folders);
+      return r && r.teamId !== teamId ? r : null;
+    };
+    const local = await this._loadLocal(item.type, item.id);
+    let owner = local ? foreign(item.type === "folder" ? local.id : local.folderId) : null;
+    let contested = item.id;
+    if (!owner && !local && !item.deleted && item.parentId) {
+      owner = foreign(item.parentId);
+      contested = item.parentId;
+    }
+    if (!owner) return null;
+    if (item.deleted) {
+      await this.syncStore.removeVersion(teamId, item.id);
+      return "hold";
+    }
+    // No verdict, no move: a throw parks the pull's cursor before this item.
+    const out = await this.api.verifyItems(owner.teamId, [contested]);
+    const verdict = out && out.statuses ? out.statuses[contested] : undefined;
+    if (GONE_VERDICTS.has(verdict)) {
+      await this.syncStore.removeVersion(owner.teamId, contested);
+      return "rehome";
+    }
+    if (!verdict) throw new Error(`no verdict from team ${owner.teamId} for ${contested}`);
+    console.warn(`[team-sync] ${teamId}: ${item.type} ${item.id} is also live in team ${owner.teamId}, which holds it here; not moving it`);
+    await this.syncStore.setVersion(teamId, item.id, { version: item.version, createdBy: item.createdBy ? item.createdBy.userId : null });
+    return "hold";
   }
 
   // R1: after a full resync re-pull from 0, reconcile anything under the team
@@ -832,15 +910,23 @@ class TeamSync {
   }
 
   async _applyItem(teamId, root, item, session) {
+    // Ahead of the echo check on purpose: a copy another team took over still
+    // carries this team's version, and would be waved through as an echo.
+    const claim = await this._crossTeamClaim(teamId, item);
+    if (claim === "hold") return;
     const known = await this.syncStore.getVersion(teamId, item.id);
     // Our own write echoed back — but only if the item is actually still here.
     // C2: after a rejected local mutation (403/404) the item can be MISSING
     // locally while its version is still known (e.g. the descendants of a
     // folder delete the server refused); the re-pull must restore those, so a
     // version match alone is not enough to skip.
-    if (known && known.version === item.version && (await this._loadLocal(item.type, item.id))) return;
+    if (claim !== "rehome" && known && known.version === item.version && (await this._loadLocal(item.type, item.id))) return;
     const team = await this.syncStore.getTeam(teamId);
     if (team.outbox[item.id]) return;                                     // local change pending — flush decides
+    if (!item.deleted && this._movedAway && this._movedAway.get(item.id) === item.type && !(await this._loadLocal(item.type, item.id))) {
+      await this.trash.restore({ [`${item.type}s`]: [item.id] });
+      this._movedAway.delete(item.id);
+    }
     // Only NOW, past the two skips above, is there work to show a spinner for.
     // Raised here rather than in the pull's item loop so that every "syncing"
     // has a terminal status behind it (the "synced" at the end of this method,
