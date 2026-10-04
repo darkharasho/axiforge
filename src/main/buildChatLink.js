@@ -41,11 +41,19 @@ function mapBuildToTemplateInput(build) {
   const specializations = [];
   for (let i = 0; i < 3; i++) {
     const spec = specs[i];
-    if (!spec || spec.id == null) {
+    // An open trait line arrives as `id: 0` (serializeEditorToBuild coalesces a
+    // missing selection to 0) or `id: ""` from an import — not just as null. A
+    // real specialization id is always a positive integer, so anything that is
+    // not one IS an empty line. Passing 0 through made gw2buildlink fetch
+    // /v2/specializations/0, a 404 that rejected the whole encode and left the
+    // user with no chat code at all. Trait ids are NOT filtered this way: 0 is a
+    // legitimate "no major trait picked" value the encoder understands.
+    const specId = Number(spec?.id);
+    if (!spec || !Number.isFinite(specId) || specId <= 0) {
       specializations.push({ id: null });
     } else {
       specializations.push({
-        id: Number(spec.id),
+        id: specId,
         traits: [
           spec.majorChoices?.[1] != null ? Number(spec.majorChoices[1]) : undefined,
           spec.majorChoices?.[2] != null ? Number(spec.majorChoices[2]) : undefined,
@@ -250,19 +258,36 @@ async function getApi() {
 // Result cache — keyed by buildId, invalidated when updatedAt changes.
 const _cache = new Map(); // Map<buildId, { updatedAt: string, link: string }>
 
+// Only a SAVED build record can be cached: the cache's whole invalidation signal
+// is updatedAt, and serializeEditorToBuild() (what every copy button passes) emits
+// no stamp at all. Caching that stored `updatedAt: undefined`, which then matched
+// undefined on every later call — so the first link generated for a build id was
+// handed back forever, however much the build had changed since.
+function cacheableStamp(build) {
+  return build && build.id && build.updatedAt ? build.updatedAt : null;
+}
+
 /**
  * Generate a GW2 in-game chat link string for the given axiforge build.
  * Returns instantly from cache if the build hasn't changed since last generation.
+ *
+ * @param {Object} build — serialized axiforge build object
+ * @param {Object} [deps] — test seam: `encode` replaces the gw2buildlink encoder.
  */
-async function generateChatLink(build) {
-  const cached = _cache.get(build.id);
-  if (cached && cached.updatedAt === build.updatedAt) return cached.link;
+async function generateChatLink(build, { encode } = {}) {
+  const stamp = cacheableStamp(build);
+  const cached = stamp ? _cache.get(build.id) : null;
+  if (cached && cached.updatedAt === stamp) return cached.link;
 
-  const { encodeBuildTemplate } = await import("gw2buildlink");
-  const api = await getApi();
-  const link = await encodeBuildTemplate(mapBuildToTemplateInput(build), { api });
+  const encodeTemplate =
+    encode ||
+    (async (input) => {
+      const { encodeBuildTemplate } = await import("gw2buildlink");
+      return encodeBuildTemplate(input, { api: await getApi() });
+    });
+  const link = await encodeTemplate(mapBuildToTemplateInput(build));
 
-  if (build.id) _cache.set(build.id, { updatedAt: build.updatedAt, link });
+  if (stamp) _cache.set(build.id, { updatedAt: stamp, link });
   return link;
 }
 
@@ -273,8 +298,9 @@ async function generateChatLink(build) {
  */
 async function prewarmChatLinks(builds) {
   for (const build of builds) {
-    const cached = _cache.get(build.id);
-    if (cached && cached.updatedAt === build.updatedAt) continue;
+    const stamp = cacheableStamp(build);
+    const cached = stamp ? _cache.get(build.id) : null;
+    if (cached && cached.updatedAt === stamp) continue;
     try {
       await generateChatLink(build);
     } catch {
