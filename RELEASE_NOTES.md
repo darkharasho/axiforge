@@ -1,3 +1,9 @@
+## Version v1.1.4 — October 3, 2026
+
+### Improvements
+
+- **A chat code that had to leave something out now tells you what.** Since v1.1.3, a build holding a skill, trait or other piece the game's API no longer recognises still copies — just without that piece. But the copy looked exactly like a complete one, so there was no way to know the code you pasted was missing something. Now a warning names each gap, for example *"Chat code copied without 1 entry the GW2 API doesn't recognize: utility 1 skill 999999"*, so you can find and replace it. It appears wherever you copy a chat code: the button beside the build title, the Share menu, the library's right-click menu and the web Playground.
+
 ## Version v1.1.3 — October 3, 2026
 
 ### Fixes
