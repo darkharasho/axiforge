@@ -43,6 +43,7 @@ import { pushUndo, popUndo, applyUndo } from "./undo.js";
 // pulling all of library.js into a DOM. Re-exported: it is imported from here
 // all over the renderer.
 import { showToast, hideToast } from "./toast.js";
+import { chatLinkDroppedNotice } from "../chatLinkNotice.js";
 export { showToast };
 import { handleAxicodeExport, handleAxicodeImport } from "./axicode-io.js";
 import { pickWebhooks } from "../webhook-picker.js";
@@ -839,9 +840,10 @@ async function handleCopyChatLink(buildId) {
   const build = state.builds.find((b) => b.id === buildId);
   if (!build) return;
   try {
-    const link = await window.desktopApi.generateChatLink(build);
+    const { link, dropped } = await window.desktopApi.generateChatLinkReport(build);
     await window.desktopApi.writeClipboardText(link);
-    showToast("Chat link copied!");
+    const notice = chatLinkDroppedNotice(dropped);
+    showToast(notice || "Chat link copied!", notice ? "warning" : "success");
   } catch (err) {
     console.error("Failed to generate chat link:", err);
     showToast("Failed to generate chat link", "error");

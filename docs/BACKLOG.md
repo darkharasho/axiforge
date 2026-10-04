@@ -1173,7 +1173,14 @@ into the numbered manual gate above (14–16).
   success would be worse than failing. Covered by 11 cases in
   `tests/unit/buildChatLink.test.js`.
 
-  Still open on top of this: the renderer has nowhere to *show* what was dropped,
-  so a user who copies a code missing a slot only learns of it from the log. The
-  drop list is returned from `sanitizeTemplateInput`, so surfacing it in the copy
-  toast is a UI change away.
+  *Follow-up, done:* the drop list now reaches the user. `generateChatLinkReport`
+  returns `{ link, dropped }` (cached alongside the link, so a second copy of a
+  saved build still warns), exposed as `builds:generate-chat-link-report` /
+  `desktopApi.generateChatLinkReport` on desktop and web. Every copy surface — the
+  editor button, the editor share menu, the library context menu and the web top
+  bar — still copies the code and then raises a warning toast naming each missing
+  slot ("…without 1 entry the GW2 API doesn't recognize: utility 1 skill 999999").
+  `generateChatLink` keeps returning a bare string for the Discord/publish/local-API
+  callers. Covered by `tests/unit/chatLinkNotice.test.js`, three cases in
+  `tests/unit/buildChatLink.test.js`, and a Chat Link case in
+  `tests/e2e/specs/library.spec.js` that seeds a build with a dead utility id.

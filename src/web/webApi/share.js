@@ -8,6 +8,7 @@ import { encodeShareCode, decodeShareCode, isValidShareCode } from "@axiapps/cod
 // `export`, so these named imports resolve in Vite dev + build too.
 import {
   generateChatLink,
+  generateChatLinkReport,
   previewChatLink,
   decodeChatLinkToBuild,
 } from "../../main/buildChatLink.js";
@@ -111,6 +112,7 @@ export function createShareApi(deps = {}) {
     decodeShareCode: async (code) => decodeShareCode(code),
     isShareCode: async (text) => Boolean(isValidShareCode(text)),
     generateChatLink: async (build) => generateChatLink(build),
+    generateChatLinkReport: async (build) => generateChatLinkReport(build),
     previewChatLink: async (link) => previewChatLink(link),
     importChatLink: async (link, name, folderId, gameMode) => {
       // Build the desktop's importChatLink shape from the pure decoder.
