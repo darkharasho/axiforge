@@ -1127,3 +1127,20 @@ into the numbered manual gate above (14–16).
   `COMBO_FIELD_COLORS` / `COMBO_FINISHER_COLORS`. All five reach CSS the same
   way, through `--axi-series`, so this is about where the tables live rather
   than how they are applied.
+
+- [ ] **`buildChatLink.js` ignores `GW2_API_ROOT`.** Every other GW2 API caller
+  honours it (`src/main/gw2Data.js`), and the e2e harness points it at the mock
+  server — but `buildChatLink.js` hardcodes `https://api.guildwars2.com` in
+  `fetchNameIcons`, `resolveWeaponSkills` and gw2buildlink's own
+  `DefaultGw2ApiClient`. So chat-link generation is the one path that reaches
+  the live API during tests, which is why
+  [#324](https://github.com/darkharasho/axiforge/pull/324) had to be proved with
+  a scratch script and a production console log rather than a spec. Routing it
+  through the same root would make the whole feature testable offline.
+
+- [ ] **One unresolvable id kills the whole chat code.** gw2buildlink fetches
+  every skill/trait id and rejects the entire encode if any single lookup 404s —
+  a build carrying one stale id (a skill removed from the API, a hand-edited
+  JSON) produces no link at all instead of a link missing that one slot. Seen
+  while probing #324: an invented utility id took down a build that was
+  otherwise complete. Worth deciding whether a partial link beats no link.
