@@ -807,7 +807,26 @@ test.describe("Context Menu", () => {
 test.describe("Chat Link", () => {
   let app, window;
 
-  const buildA = makeTestBuild({ title: "Chat Link Build", profession: "Necromancer" });
+  // Real ids from the mock's fixtures, so the round trip exercises every lookup the
+  // encoder makes — an empty build only proves the profession survives.
+  const buildA = makeTestBuild({
+    title: "Chat Link Build",
+    profession: "Necromancer",
+    specializations: [
+      { id: 53, name: "Spite", elite: false, majorChoices: { 1: 914, 2: 829, 3: 853 } },
+      { id: 19, name: "Blood Magic", elite: false, majorChoices: { 1: 788, 2: 799, 3: 1692 } },
+      { id: 34, name: "Reaper", elite: true, majorChoices: { 1: 1974, 2: 2008, 3: 2021 } },
+    ],
+    skills: {
+      heal: { id: 10527, name: "Well of Blood" },
+      utility: [
+        { id: 10546, name: "Well of Suffering" },
+        { id: 10545, name: "Well of Corruption" },
+        { id: 10609, name: "Well of Power" },
+      ],
+      elite: { id: 10646, name: "Summon Flesh Golem" },
+    },
+  });
 
   test.beforeAll(async () => {
     cleanDataDir();
@@ -857,6 +876,12 @@ test.describe("Chat Link", () => {
     expect(savedBuild.title).toBe("Imported Chat Build");
     // The imported build should have a profession matching the original
     expect(savedBuild.profession).toBe("Necromancer");
+    expect(savedBuild.specializations.map((s) => [s.id, s.majorChoices[1], s.majorChoices[2], s.majorChoices[3]])).toEqual(
+      buildA.specializations.map((s) => [s.id, s.majorChoices[1], s.majorChoices[2], s.majorChoices[3]])
+    );
+    expect([savedBuild.skills.heal?.id, ...savedBuild.skills.utility.map((u) => u?.id), savedBuild.skills.elite?.id]).toEqual([
+      10527, 10546, 10545, 10609, 10646,
+    ]);
 
     // Verify the build was persisted by listing all builds via IPC
     const allBuilds = await window.evaluate(() => window.desktopApi.listBuilds());

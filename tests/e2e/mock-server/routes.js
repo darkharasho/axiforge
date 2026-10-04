@@ -36,6 +36,13 @@ function parseIds(url) {
   return decoded.split(",");
 }
 
+// A single-resource path like /v2/specializations/53 — gw2buildlink fetches
+// specializations, pets and (for weapon skills) professions one at a time this way.
+function singleId(pathname, endpoint) {
+  const match = pathname.match(new RegExp(`^/v2/${endpoint}/([^/]+)$`));
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
 function handleRequest(method, url) {
   const pathname = new URL(url, "http://localhost").pathname;
   const ids = parseIds(url);
@@ -43,18 +50,34 @@ function handleRequest(method, url) {
   if (pathname === "/v2/professions" && ids === null) {
     return professions.map((p) => p.id);
   }
+  if (pathname === "/v2/professions" && ids === "all") {
+    return professions;
+  }
   if (pathname === "/v2/professions" && Array.isArray(ids)) {
     return professions.filter((p) => ids.includes(p.id));
   }
+  const professionId = singleId(pathname, "professions");
+  if (professionId !== null) {
+    return professions.find((p) => p.id === professionId) || null;
+  }
 
+  if (pathname === "/v2/specializations" && ids === "all") {
+    return Object.values(allSpecs);
+  }
   if (pathname === "/v2/specializations" && Array.isArray(ids)) {
     return ids.map((id) => allSpecs[id]).filter(Boolean);
+  }
+  const specId = singleId(pathname, "specializations");
+  if (specId !== null) {
+    return allSpecs[specId] || null;
   }
 
   if (pathname === "/v2/traits" && Array.isArray(ids)) {
     return ids.map((id) => allTraits[id]).filter(Boolean);
   }
 
+  // Also answers `?search=`: the live API ignores that parameter and lists every
+  // skill id, and gw2buildlink filters the results by name itself.
   if (pathname === "/v2/skills" && ids === null) {
     return Object.keys(allSkills).map(Number);
   }
@@ -84,6 +107,10 @@ function handleRequest(method, url) {
   }
   if (pathname === "/v2/pets" && ids === null) {
     return pets.map((p) => p.id);
+  }
+  const petId = singleId(pathname, "pets");
+  if (petId !== null) {
+    return pets.find((p) => String(p.id) === petId) || null;
   }
 
   if (pathname === "/v2/items") {

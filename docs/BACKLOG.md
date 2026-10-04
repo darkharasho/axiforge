@@ -1143,10 +1143,18 @@ into the numbered manual gate above (14–16).
   requests (it offers no base-URL option) as well as our own. Baked mode still
   wins first on the web. Covered by a test that runs the real module in a Node
   child (Jest cannot load gw2buildlink's ESM) and checks every URL it requests.
-  *Still open:* the e2e mock server cannot yet answer gw2buildlink —
-  `tests/fixtures/gw2Api.js` professions lack `code` and `skills_by_palette`, and
-  `/v2/specializations/<id>`, `/v2/pets/<id>` and `?search=` are not routed — so
-  a chat-link e2e spec needs that fixture work first.
+  *Follow-up, done:* that left the e2e mock server answering gw2buildlink, which it
+  could not — `ids=all` lists 404'd, so the nightly "Chat Link" spec in
+  `library.spec.js` broke the moment #328 merged. The mock now routes `ids=all` and
+  the single-resource paths (`/professions/<id>`, `/specializations/<id>`,
+  `/pets/<id>`); `?search=` already worked, since the live API ignores it and lists
+  every skill id too. `tests/e2e/fixtures/professions.json` gained `code` and
+  `skills_by_palette`, and `capture.js` now merges those two fields in from the
+  `v=latest` schema so a recapture keeps them. The spec round-trips a full
+  Necromancer build instead of an empty one, and
+  `tests/unit/e2eMockChatLink.test.js` round-trips full Necromancer and Ranger
+  (pets) builds through the mock's routes in the Jest loop, so this cannot quietly
+  rot again between nightlies.
 
 - [x] **One unresolvable id kills the whole chat code.** gw2buildlink fetches
   every skill/trait id and rejects the entire encode if any single lookup 404s —
