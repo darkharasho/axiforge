@@ -1,3 +1,9 @@
+## Version v1.1.5 — October 4, 2026
+
+### Fixes
+
+- **A team folder could vanish from your view while your teammates still saw it.** If you belong to more than one team and the same folder had ended up in two of them, which running the move from the old GitHub sync twice could cause, AxiForge showed it under whichever team happened to sync last and dropped it from the other. Your teammates kept seeing it in their team, while for you it seemed to be missing. A folder now stays in the team it's in until that team actually lets go of it. A deletion in one team no longer removes your copy from another. And a folder a teammate moves between two teams you're both in can no longer get lost in your trash halfway through the move.
+
 ## Version v1.1.4 — October 3, 2026
 
 ### Improvements
