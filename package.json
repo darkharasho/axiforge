@@ -83,6 +83,8 @@
   "scripts": {
     "start": "electron .",
     "dev": "npm run build:site && concurrently -k \"vite\" \"vite --config src/site/vite.config.js --port 3000\" \"wait-on tcp:5174 && APP_PROFILE=dev VITE_DEV_SERVER_URL=http://localhost:5174 electronmon .\"",
+    "dev:sync-server": "node scripts/dev-sync-server.js",
+    "dev:fake-team": "npm run build:site && concurrently -k \"node scripts/dev-sync-server.js\" \"vite\" \"vite --config src/site/vite.config.js --port 3000\" \"wait-on tcp:5174 tcp:8788 && APP_PROFILE=fake-team AXIFORGE_SYNC_BASE=http://127.0.0.1:8788/api/sync VITE_DEV_SERVER_URL=http://localhost:5174 electronmon .\"",
     "dev:headless": "APP_PROFILE=dev electron . --headless",
     "dev:clean": "node scripts/dev-clean.mjs",
     "dev:fake-update": "npm run build:site && concurrently -k \"VITE_AXIFORGE_FAKE_UPDATE=1 vite\" \"vite --config src/site/vite.config.js --port 3000\" \"wait-on tcp:5174 && APP_PROFILE=dev AXIFORGE_FAKE_UPDATE=1 VITE_DEV_SERVER_URL=http://localhost:5174 electronmon .\"",
