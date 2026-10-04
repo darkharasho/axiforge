@@ -158,6 +158,20 @@ function mapBuildToTemplateInput(build) {
  * @param {Object} build — serialized axiforge build object
  * @returns {Promise<string>} — the [&...] chat link
  */
+// gw2buildlink hardcodes this root and offers no way to change it, so every GW2 API
+// request on the chat-link path — theirs and ours — is written against it and
+// rerouted in rateLimitedFetch below.
+const GW2_API_BASE = "https://api.guildwars2.com/v2";
+
+// GW2_API_ROOT points the whole app at another API (the e2e mock server, an offline
+// run); src/main/gw2Data/fetch.js honours it for catalog data and this path has to
+// agree. Read per request rather than at load, and guarded, because the web bundle
+// runs this module where `process` does not exist.
+function gw2ApiRootOverride() {
+  const root = typeof process !== "undefined" && process.env ? process.env.GW2_API_ROOT : "";
+  return root ? root.replace(/\/+$/, "") : null;
+}
+
 // Wrap global fetch with 429 retry handling for gw2buildlink's DefaultGw2ApiClient,
 // which makes direct fetch() calls without rate-limit awareness.
 const _origFetch = globalThis.fetch;
@@ -177,6 +191,8 @@ function patchFetchFor429() {
       const res = await baked(urlStr);
       if (res) return res;
     }
+    const root = gw2ApiRootOverride();
+    if (root && typeof url === "string" && url.startsWith(GW2_API_BASE)) url = root + url.slice(GW2_API_BASE.length);
     for (let attempt = 0; attempt < 4; attempt++) {
       const res = await _origFetch(url, opts);
       if (res.status !== 429) return res;
@@ -198,7 +214,7 @@ async function fetchNameIcons(kind, ids) {
     for (let i = 0; i < unique.length; i += 150) {
       const chunk = unique.slice(i, i + 150);
       const res = await globalThis.fetch(
-        `https://api.guildwars2.com/v2/${kind}?ids=${chunk.join(",")}&lang=en&v=latest`
+        `${GW2_API_BASE}/${kind}?ids=${chunk.join(",")}&lang=en&v=latest`
       );
       if (!res.ok) continue;
       const arr = await res.json();
@@ -218,7 +234,7 @@ async function resolveWeaponSkills(professionId, weaponTypes) {
   const slotNum = { Weapon_1: 1, Weapon_2: 2, Weapon_3: 3, Weapon_4: 4, Weapon_5: 5 };
   try {
     const res = await globalThis.fetch(
-      `https://api.guildwars2.com/v2/professions/${encodeURIComponent(professionId)}?v=latest`
+      `${GW2_API_BASE}/professions/${encodeURIComponent(professionId)}?v=latest`
     );
     if (!res.ok) return [];
     const prof = await res.json();

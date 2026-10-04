@@ -1128,7 +1128,7 @@ into the numbered manual gate above (14–16).
   way, through `--axi-series`, so this is about where the tables live rather
   than how they are applied.
 
-- [ ] **`buildChatLink.js` ignores `GW2_API_ROOT`.** Every other GW2 API caller
+- [x] **`buildChatLink.js` ignores `GW2_API_ROOT`.** Every other GW2 API caller
   honours it (`src/main/gw2Data.js`), and the e2e harness points it at the mock
   server — but `buildChatLink.js` hardcodes `https://api.guildwars2.com` in
   `fetchNameIcons`, `resolveWeaponSkills` and gw2buildlink's own
@@ -1137,6 +1137,16 @@ into the numbered manual gate above (14–16).
   [#324](https://github.com/darkharasho/axiforge/pull/324) had to be proved with
   a scratch script and a production console log rather than a spec. Routing it
   through the same root would make the whole feature testable offline.
+  *Fix:* every GW2 request on the chat-link path already passes through
+  `rateLimitedFetch`, so that is where `GW2_API_ROOT` is applied — it rewrites the
+  hardcoded `https://api.guildwars2.com/v2` prefix, which catches gw2buildlink's
+  requests (it offers no base-URL option) as well as our own. Baked mode still
+  wins first on the web. Covered by a test that runs the real module in a Node
+  child (Jest cannot load gw2buildlink's ESM) and checks every URL it requests.
+  *Still open:* the e2e mock server cannot yet answer gw2buildlink —
+  `tests/fixtures/gw2Api.js` professions lack `code` and `skills_by_palette`, and
+  `/v2/specializations/<id>`, `/v2/pets/<id>` and `?search=` are not routed — so
+  a chat-link e2e spec needs that fixture work first.
 
 - [x] **One unresolvable id kills the whole chat code.** gw2buildlink fetches
   every skill/trait id and rejects the entire encode if any single lookup 404s —

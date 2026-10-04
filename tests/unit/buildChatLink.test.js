@@ -535,3 +535,51 @@ describe("generateChatLink tolerates ids the GW2 API cannot resolve", () => {
     expect(seen[0].specializations[0]).toEqual({ id: null });
   });
 });
+
+// gw2buildlink hardcodes https://api.guildwars2.com/v2. With GW2_API_ROOT set (the e2e
+// mock server, an offline run) the chat-link path must follow it like the rest of the
+// app does, instead of being the one caller that still reaches the live API.
+//
+// gw2buildlink is ESM and Jest cannot run its dynamic import, so the real module runs
+// in a plain Node child over a fetch that records every URL and answers 404. The encode
+// fails at its first lookup; the URLs it tried are what is being checked.
+describe("GW2_API_ROOT on the chat-link path", () => {
+  const { execFileSync } = require("child_process");
+  const path = require("path");
+  const modulePath = path.resolve(__dirname, "../../src/main/buildChatLink.js");
+
+  const script = `
+    const urls = [];
+    globalThis.fetch = async (url) => {
+      urls.push(String(url));
+      return new Response(JSON.stringify({ text: "not found" }), { status: 404 });
+    };
+    console.error = () => {};
+    const { generateChatLink } = require(${JSON.stringify(modulePath)});
+    generateChatLink({ profession: "Guardian" })
+      .catch(() => {})
+      .then(() => process.stdout.write(JSON.stringify(urls)));
+  `;
+
+  function urlsRequestedBy(root) {
+    const env = { ...process.env };
+    if (root === undefined) delete env.GW2_API_ROOT;
+    else env.GW2_API_ROOT = root;
+    return JSON.parse(execFileSync(process.execPath, ["-e", script], { env, encoding: "utf8" }));
+  }
+
+  it("sends gw2buildlink's requests to GW2_API_ROOT", () => {
+    const urls = urlsRequestedBy("http://localhost:9877/v2/");
+    expect(urls.length).toBeGreaterThan(0);
+    for (const url of urls) {
+      expect(url.startsWith("http://localhost:9877/v2/")).toBe(true);
+      expect(url).not.toMatch(/api\.guildwars2\.com/);
+    }
+  });
+
+  it("uses the live API when GW2_API_ROOT is unset", () => {
+    const urls = urlsRequestedBy(undefined);
+    expect(urls.length).toBeGreaterThan(0);
+    for (const url of urls) expect(url.startsWith("https://api.guildwars2.com/v2/")).toBe(true);
+  });
+});
