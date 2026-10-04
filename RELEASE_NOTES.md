@@ -1,3 +1,9 @@
+## Version v1.1.2 — October 3, 2026
+
+### Fixes
+
+- **Copying a chat code failed for any build with an unfilled trait line.** Both *Copy chat code* in the Share menu and the chat-link button beside the build title just reported a failure, and the reason was the build rather than the button: an empty specialization slot was being sent to the game's API as specialization number zero, which does not exist, and that one bad lookup threw away the entire code. An open trait line is now left open, so a part-built build copies the lines it does have. A second fault went with it — once a code had been made for a build, the same code was handed back on every later copy no matter how much the build had changed since, so an edit could be copied as the version before it.
+
 ## Version v1.1.1 — October 3, 2026
 
 ### Fixes
