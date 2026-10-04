@@ -75,6 +75,7 @@ import { getEliteSpecName } from "./modules/build-helpers.js";
 import { renderMiniBuildCard } from "./modules/mini-build-card.js";
 import { applyAccent, applySurface } from "./modules/accents.js";
 import { createAccentTinting } from "./modules/accent-tinting.js";
+import { chatLinkDroppedNotice } from "./modules/chatLinkNotice.js";
 
 // Scope class for @axiapps/forge-render styles (mini cards, role badges, hover previews).
 document.body.classList.add("forge-render");
@@ -1445,8 +1446,10 @@ function wireEvents() {
     el.chatLinkBtn.classList.remove("title-input-group__btn--success", "title-input-group__btn--error");
     const build = serializeEditorToBuild();
     try {
-      const link = await window.desktopApi.generateChatLink(build);
+      const { link, dropped } = await window.desktopApi.generateChatLinkReport(build);
       await window.desktopApi.writeClipboardText(link);
+      const notice = chatLinkDroppedNotice(dropped);
+      if (notice) showToast(notice, "warning");
       el.chatLinkBtn.classList.add("title-input-group__btn--success");
       el.chatLinkBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg> Copied!`;
     } catch (err) {
@@ -1505,9 +1508,11 @@ function wireEvents() {
       if (chatLinkItem.classList.contains("editor-share-dropdown__item--copied")) return;
       const build = serializeEditorToBuild();
       try {
-        const link = await window.desktopApi.generateChatLink(build);
+        const { link, dropped } = await window.desktopApi.generateChatLinkReport(build);
         await window.desktopApi.writeClipboardText(link);
         flashItem(chatLinkItem, chatLinkItemDefault);
+        const notice = chatLinkDroppedNotice(dropped);
+        if (notice) showToast(notice, "warning");
       } catch {
         failItem(chatLinkItem, chatLinkItemDefault);
       }

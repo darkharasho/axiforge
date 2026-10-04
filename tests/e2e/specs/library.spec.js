@@ -828,9 +828,19 @@ test.describe("Chat Link", () => {
     },
   });
 
+  // The same build with one utility the API has never heard of: the code still copies,
+  // minus that slot, and the user is told which one.
+  const buildWithDeadId = makeTestBuild({
+    title: "Chat Link Dead Id",
+    profession: "Necromancer",
+    specializations: buildA.specializations,
+    skills: { ...buildA.skills, utility: [{ id: 999999, name: "Removed Skill" }, ...buildA.skills.utility.slice(1)] },
+  });
+
   test.beforeAll(async () => {
     cleanDataDir();
     seedBuildFile(buildA);
+    seedBuildFile(buildWithDeadId);
     ({ app, window } = await launchApp({ clean: false }));
     await waitForLibrary(window);
   });
@@ -888,5 +898,21 @@ test.describe("Chat Link", () => {
     const found = allBuilds.find((b) => b.id === savedBuild.id);
     expect(found).toBeTruthy();
     expect(found.title).toBe("Imported Chat Build");
+  });
+
+  test("copying a code that drops an unknown id says which one", async () => {
+    await window.evaluate(() => window.desktopApi.writeClipboardText(""));
+    const row = window.locator(`[data-build-id="${buildWithDeadId.id}"]`);
+    await row.click({ button: "right" });
+    await window.waitForTimeout(200);
+    await window.locator(".lib-ctx-item__label:text('Copy Chat Link')").click();
+    await window.waitForTimeout(1000);
+
+    const toast = await getToastText(window);
+    expect(toast).toContain("without 1 entry");
+    expect(toast).toContain("utility 1 skill 999999");
+
+    const clipText = await window.evaluate(() => window.desktopApi.readClipboardText());
+    expect(clipText).toMatch(/^\[&[A-Za-z0-9+/=]+\]$/);
   });
 });

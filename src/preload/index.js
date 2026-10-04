@@ -115,6 +115,7 @@ contextBridge.exposeInMainWorld("desktopApi", {
   reorderBuilds: (updates) =>
     ipcRenderer.invoke("builds:reorder", updates),
   generateChatLink: (build) => ipcRenderer.invoke("builds:generate-chat-link", build),
+  generateChatLinkReport: (build) => ipcRenderer.invoke("builds:generate-chat-link-report", build),
   prewarmChatLinks: (builds) => ipcRenderer.invoke("builds:prewarm-chat-links", builds),
   previewChatLink: (link) => ipcRenderer.invoke("builds:preview-chat-link", link),
   importChatLink: (link, name, folderId, gameMode) => ipcRenderer.invoke("builds:import-chat-link", link, name, folderId, gameMode),

@@ -1268,6 +1268,10 @@ const readyWork = app.whenReady().then(async () => {
     const { generateChatLink } = require("./buildChatLink.js");
     return generateChatLink(build);
   });
+  handle("builds:generate-chat-link-report", async (_e, build) => {
+    const { generateChatLinkReport } = require("./buildChatLink.js");
+    return generateChatLinkReport(build);
+  });
   handle("builds:prewarm-chat-links", async (_e, builds) => {
     const { prewarmChatLinks } = require("./buildChatLink.js");
     prewarmChatLinks(builds); // fire-and-forget

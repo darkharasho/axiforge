@@ -3,7 +3,8 @@
 // boots. Reads the live editor via the renderer's own module exports.
 import { serializeEditorToBuild, loadBuildIntoEditor } from "../renderer/modules/editor.js";
 import { state } from "../renderer/modules/state.js";
-import { handleImportGw2Skills, handleImportAxicodeFile } from "../renderer/modules/library/library.js";
+import { handleImportGw2Skills, handleImportAxicodeFile, showToast } from "../renderer/modules/library/library.js";
+import { chatLinkDroppedNotice } from "../renderer/modules/chatLinkNotice.js";
 import { createShareApi } from "./webApi/share.js";
 
 const share = createShareApi();
@@ -168,9 +169,11 @@ function mountTopBar() {
   bar.querySelector("#webCopyChat").addEventListener("click", async () => {
     try {
       const build = serializeEditorToBuild();
-      const chat = await window.desktopApi.generateChatLink(build);
-      await window.desktopApi.writeClipboardText(chat);
+      const { link, dropped } = await window.desktopApi.generateChatLinkReport(build);
+      await window.desktopApi.writeClipboardText(link);
       flash(bar.querySelector("#webCopyChat"), "Chat code copied!");
+      const notice = chatLinkDroppedNotice(dropped);
+      if (notice) showToast(notice, "warning");
     } catch {
       flash(bar.querySelector("#webCopyChat"), "Couldn't generate code");
     }

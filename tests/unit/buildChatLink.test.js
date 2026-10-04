@@ -1,6 +1,6 @@
 "use strict";
 
-const { mapBuildToTemplateInput, generateChatLink } = require("../../src/main/buildChatLink");
+const { mapBuildToTemplateInput, generateChatLink, generateChatLinkReport } = require("../../src/main/buildChatLink");
 
 describe("mapBuildToTemplateInput", () => {
   const baseBuild = {
@@ -479,6 +479,47 @@ describe("generateChatLink tolerates ids the GW2 API cannot resolve", () => {
     expect(message).toContain("999999");
     expect(message).toContain("888888");
     warn.mockRestore();
+  });
+
+  // The copy buttons need the drop list itself, not a log line, to tell the user the
+  // code they just copied is missing slots.
+  it("hands the drop list back with the code, naming each slot", async () => {
+    const { encode } = capturingEncoder();
+    jest.spyOn(console, "warn").mockImplementation(() => {});
+    const build = unsavedBuild({
+      skills: { heal: { id: 999999 }, utility: [{ id: 10620 }, null, null], elite: null },
+      underwaterSkills: { heal: null, utility: [{ id: 888888 }, null, null], elite: null },
+    });
+    const report = await generateChatLinkReport(build, { api: fakeApi(), encode });
+    expect(report).toEqual({
+      link: "[&code]",
+      dropped: ["heal skill 999999", "underwater utility 1 skill 888888"],
+    });
+    console.warn.mockRestore();
+  });
+
+  it("reports nothing dropped for a build that resolves cleanly", async () => {
+    const { encode } = capturingEncoder();
+    const report = await generateChatLinkReport(unsavedBuild(), { api: fakeApi(), encode });
+    expect(report).toEqual({ link: "[&code]", dropped: [] });
+  });
+
+  // A saved build is served from cache on the second copy; the warning must not
+  // vanish just because the code was already generated once.
+  it("keeps the drop list on a cached code", async () => {
+    const { encode } = capturingEncoder();
+    jest.spyOn(console, "warn").mockImplementation(() => {});
+    const build = unsavedBuild({
+      updatedAt: "2026-10-03T00:00:00.000Z",
+      skills: { heal: { id: 999999 }, utility: [null, null, null], elite: null },
+    });
+    const first = await generateChatLinkReport(build, { api: fakeApi(), encode });
+    const failingApi = fakeApi({ resolveProfession: async () => { throw new Error("should be cached"); } });
+    const second = await generateChatLinkReport(build, { api: failingApi, encode });
+    expect(second).toEqual(first);
+    expect(second.dropped).toEqual(["heal skill 999999"]);
+    expect(await generateChatLink(build, { api: failingApi, encode })).toBe("[&code]");
+    console.warn.mockRestore();
   });
 
   it("still fails outright when the profession itself cannot be resolved", async () => {

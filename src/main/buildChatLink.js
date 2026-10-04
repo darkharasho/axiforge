@@ -152,12 +152,6 @@ function mapBuildToTemplateInput(build) {
   };
 }
 
-/**
- * Generate a GW2 in-game chat link string for the given axiforge build.
- * Requires internet — calls the GW2 API to resolve palette IDs.
- * @param {Object} build — serialized axiforge build object
- * @returns {Promise<string>} — the [&...] chat link
- */
 // gw2buildlink hardcodes this root and offers no way to change it, so every GW2 API
 // request on the chat-link path — theirs and ours — is written against it and
 // rerouted in rateLimitedFetch below.
@@ -272,7 +266,7 @@ async function getApi() {
 }
 
 // Result cache — keyed by buildId, invalidated when updatedAt changes.
-const _cache = new Map(); // Map<buildId, { updatedAt: string, link: string }>
+const _cache = new Map(); // Map<buildId, { updatedAt: string, link: string, dropped: string[] }>
 
 // Only a SAVED build record can be cached: the cache's whole invalidation signal
 // is updatedAt, and serializeEditorToBuild() (what every copy button passes) emits
@@ -373,7 +367,7 @@ async function sanitizeSkills(api, professionId, skills, drop) {
     const keep = (value, slot) =>
       keepResolvable(
         value,
-        `${environment} ${slot} skill ${value}`,
+        `${environment === "aquatic" ? "underwater " : ""}${slot} skill ${value}`,
         () => api.resolveSkillPalette(professionId, value, environment),
         (resolved) => resolved && resolved.paletteId != null,
         drop
@@ -501,30 +495,35 @@ async function sanitizeTemplateInput(input, api) {
 }
 
 /**
- * Generate a GW2 in-game chat link string for the given axiforge build.
- * Returns instantly from cache if the build hasn't changed since last generation.
+ * Generate a GW2 in-game chat link for the given axiforge build, and say what had to be
+ * left out of it. Returns instantly from cache if the build hasn't changed since last
+ * generation.
  *
  * @param {Object} build — serialized axiforge build object
  * @param {Object} [deps] — test seam: `encode` replaces the gw2buildlink encoder and
  *   `api` the client the pre-flight validation resolves ids against.
+ * @returns {Promise<{ link: string, dropped: string[] }>} `dropped` names every entry
+ *   the GW2 API could not resolve, so the code is missing those slots.
  */
-async function generateChatLink(build, { encode, api } = {}) {
+async function generateChatLinkReport(build, { encode, api } = {}) {
   const stamp = cacheableStamp(build);
   const cached = stamp ? _cache.get(build.id) : null;
-  if (cached && cached.updatedAt === stamp) return cached.link;
+  if (cached && cached.updatedAt === stamp) return { link: cached.link, dropped: cached.dropped };
 
   // One client for both passes, so validating an id and then encoding it is a single
   // request. A test supplying only `encode` has nothing to validate against.
   const client = api || (encode ? null : await getApi());
 
   let input = mapBuildToTemplateInput(build);
+  let dropped = [];
   if (client) {
     const sanitized = await sanitizeTemplateInput(input, client);
     input = sanitized.input;
-    if (sanitized.dropped.length > 0) {
-      const n = sanitized.dropped.length;
+    dropped = sanitized.dropped;
+    if (dropped.length > 0) {
+      const n = dropped.length;
       console.warn(
-        `[buildChatLink] chat code omits ${n} ${n === 1 ? "entry" : "entries"} the GW2 API could not resolve: ${sanitized.dropped.join(", ")}`
+        `[buildChatLink] chat code omits ${n} ${n === 1 ? "entry" : "entries"} the GW2 API could not resolve: ${dropped.join(", ")}`
       );
     }
   }
@@ -537,8 +536,17 @@ async function generateChatLink(build, { encode, api } = {}) {
     });
   const link = await encodeTemplate(input);
 
-  if (stamp) _cache.set(build.id, { updatedAt: stamp, link });
-  return link;
+  if (stamp) _cache.set(build.id, { updatedAt: stamp, link, dropped });
+  return { link, dropped };
+}
+
+/**
+ * Generate a GW2 in-game chat link string for the given axiforge build. For callers
+ * that only need the code; the copy buttons use generateChatLinkReport so they can say
+ * what the code is missing.
+ */
+async function generateChatLink(build, deps) {
+  return (await generateChatLinkReport(build, deps)).link;
 }
 
 /**
@@ -686,6 +694,7 @@ async function decodeChatLinkToBuild(link, name, folderId, gameMode) {
 }
 
 module.exports = {
+  generateChatLinkReport,
   generateChatLink,
   prewarmChatLinks,
   previewChatLink,
