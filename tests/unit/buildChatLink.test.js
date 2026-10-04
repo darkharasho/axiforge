@@ -1,6 +1,6 @@
 "use strict";
 
-const { mapBuildToTemplateInput } = require("../../src/main/buildChatLink");
+const { mapBuildToTemplateInput, generateChatLink } = require("../../src/main/buildChatLink");
 
 describe("mapBuildToTemplateInput", () => {
   const baseBuild = {
@@ -202,5 +202,114 @@ describe("mapBuildToTemplateInput", () => {
     expect(input.skills.aquatic.heal).toBeUndefined();
     expect(input.revenantLegends).toBeUndefined();
     expect(input.rangerPets).toBeUndefined();
+  });
+});
+
+// An unselected trait line reaches here as `id: 0` — that is what
+// serializeEditorToBuild() emits (`Number(spec?.id || entry.specializationId || 0)`),
+// and an imported build can carry `id: ""`. Only `id == null` was treated as an
+// empty line, so 0 was passed through as a real specialization and gw2buildlink
+// asked the GW2 API for /v2/specializations/0 — a 404 that rejected the whole
+// encode. The user got "Failed" on every build with a trait line left open, on
+// both the Share menu and the title bar's Chat Link button, because both call
+// the same generator.
+describe("mapBuildToTemplateInput — an unfilled trait line is not specialization 0", () => {
+  const skeleton = {
+    profession: "Necromancer",
+    skills: { heal: null, utility: [], elite: null },
+    underwaterSkills: { heal: null, utility: [], elite: null },
+    equipment: { weapons: {} },
+  };
+
+  for (const [label, emptyId] of [["0", 0], ['""', ""], ["null", null], ["undefined", undefined]]) {
+    it(`treats a specialization id of ${label} as an empty line`, () => {
+      const input = mapBuildToTemplateInput({ ...skeleton, specializations: [{ id: emptyId, majorChoices: {} }] });
+      expect(input.specializations[0]).toEqual({ id: null });
+    });
+  }
+
+  it("keeps the filled lines when only some are open", () => {
+    const input = mapBuildToTemplateInput({
+      ...skeleton,
+      specializations: [
+        { id: 53, majorChoices: { 1: 914, 2: 899, 3: 919 } },
+        { id: 0, majorChoices: {} },
+        { id: 0, majorChoices: {} },
+      ],
+    });
+    expect(input.specializations).toEqual([
+      { id: 53, traits: [914, 899, 919] },
+      { id: null },
+      { id: null },
+    ]);
+  });
+
+  it("never emits a zero specialization id for any shape of empty line", () => {
+    const input = mapBuildToTemplateInput({
+      ...skeleton,
+      specializations: [{ id: "0" }, { id: 0 }, { id: "" }],
+    });
+    for (const spec of input.specializations) expect(spec.id).not.toBe(0);
+  });
+});
+
+// The result cache is keyed by build id and invalidated on updatedAt. The editor's
+// serializeEditorToBuild() emits neither a stamp nor a bumped one while you type —
+// `updatedAt` is simply absent — so `cached.updatedAt === build.updatedAt` compared
+// undefined to undefined and matched forever: after the first generation every
+// later copy handed back the FIRST link, whatever the build looked like by then.
+describe("generateChatLink caching", () => {
+  function countingEncoder() {
+    const calls = [];
+    return {
+      calls,
+      encode: async (input) => {
+        calls.push(input);
+        return `[&link-${calls.length}-${input.specializations.map((s) => s.id).join(":")}]`;
+      },
+    };
+  }
+
+  // The cache lives at module scope, so each test needs its own build id or it
+  // inherits the previous test's entry.
+  let seq = 0;
+  const freshId = () => `build-${++seq}`;
+
+  const build = (specId, extra = {}) => ({
+    id: extra.id || CURRENT_ID,
+    profession: "Necromancer",
+    specializations: [{ id: specId, majorChoices: {} }],
+    skills: { heal: null, utility: [], elite: null },
+    underwaterSkills: { heal: null, utility: [], elite: null },
+    equipment: { weapons: {} },
+    ...extra,
+  });
+
+  let CURRENT_ID;
+  beforeEach(() => { CURRENT_ID = freshId(); });
+
+  it("reuses the link for a saved build that has not changed", async () => {
+    const { calls, encode } = countingEncoder();
+    const saved = build(53, { updatedAt: "2026-10-04T00:00:00.000Z" });
+    const first = await generateChatLink(saved, { encode });
+    const second = await generateChatLink(saved, { encode });
+    expect(second).toBe(first);
+    expect(calls).toHaveLength(1);
+  });
+
+  it("regenerates when the saved build's updatedAt moves", async () => {
+    const { calls, encode } = countingEncoder();
+    await generateChatLink(build(53, { updatedAt: "2026-10-04T00:00:00.000Z" }), { encode });
+    await generateChatLink(build(50, { updatedAt: "2026-10-04T00:05:00.000Z" }), { encode });
+    expect(calls).toHaveLength(2);
+  });
+
+  it("does not serve a stale link to an unsaved editor build with no updatedAt", async () => {
+    const { calls, encode } = countingEncoder();
+    const before = await generateChatLink(build(53), { encode });
+    const after = await generateChatLink(build(50), { encode });
+    expect(calls).toHaveLength(2);
+    expect(after).not.toBe(before);
+    expect(after).toContain("50");
   });
 });
