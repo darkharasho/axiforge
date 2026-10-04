@@ -21,6 +21,20 @@ async function fetchByIds(endpoint, ids) {
   return results;
 }
 
+// The app reads professions in the API's default schema, so that is what the fixture
+// holds. gw2buildlink (chat links) asks for v=latest and needs two fields only that
+// schema has — the profession's numeric `code` and `skills_by_palette` — so merge
+// exactly those in; without them the mock cannot encode or decode a chat link.
+async function addChatLinkFields(profs) {
+  const latest = await fetchJson(`${API}/professions?ids=all&v=latest`);
+  const byId = new Map(latest.map((p) => [p.id, p]));
+  return profs.map((p) => ({
+    ...p,
+    code: byId.get(p.id)?.code,
+    skills_by_palette: byId.get(p.id)?.skills_by_palette,
+  }));
+}
+
 async function captureProfessionCatalog(professions, profName, outFile) {
   const prof = professions.find((p) => p.id === profName);
   if (!prof) throw new Error(`${profName} not found`);
@@ -58,7 +72,7 @@ async function captureProfessionCatalog(professions, profName, outFile) {
 async function main() {
   console.log("Fetching profession list...");
   const profIds = await fetchJson(`${API}/professions`);
-  const profs = await fetchByIds("professions", profIds);
+  const profs = await addChatLinkFields(await fetchByIds("professions", profIds));
   await fs.writeFile(path.join(OUT, "professions.json"), JSON.stringify(profs, null, 2));
   console.log(`  Saved ${profs.length} professions`);
 
