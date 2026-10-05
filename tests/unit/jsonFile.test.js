@@ -141,8 +141,8 @@ describe("BuildStore.markPublished", () => {
     expect(out.title).toBe("Edited mid-publish");
     expect(out.updatedAt).toBe(during.updatedAt);
     expect(out.publishedAt).toBe(snapshot.updatedAt);
-    const { buildPublishState } = require("../../src/shared/publishState");
-    expect(buildPublishState(out).stale).toBe(true);
+    const { publishStatus } = require("../../src/shared/publishState");
+    expect(publishStatus(out)).toBe("stale");
   });
 
   test("returns null for unknown id", async () => {

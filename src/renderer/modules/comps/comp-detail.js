@@ -451,7 +451,7 @@ export function renderCompDetail() {
 
   const totalCap = getTotalFilledSlots(comp);
   const activeTab = state.compPrefs.detailTab === "notes" ? "notes" : "comp";
-  const compShareTip = compShareDisabledTooltip(comp);
+  const compShareTip = compShareDisabledTooltip(comp, state.builds);
 
   container.innerHTML = `
     <div class="comp-detail">

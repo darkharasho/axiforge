@@ -26,4 +26,20 @@ describe("shareRejectionReason", () => {
     expect(shareRejectionReason({ publishedFileId: "x", publishedKey: "k", updatedAt: "t2", publishedAt: "t1" }, "Comp"))
       .toBe("Comp has unpublished changes — publish again before sharing.");
   });
+  test("hash receipt: a teammate-published build is shareable despite a newer local updatedAt", () => {
+    expect(shareRejectionReason({
+      publishedFileId: "x", publishedKey: "k", publishedHash: "h", contentHash: "h", updatedAt: "t9", publishedAt: "t1",
+    }, "Build")).toBeNull();
+  });
+  test("hash receipt: edited content is rejected", () => {
+    expect(shareRejectionReason({
+      publishedFileId: "x", publishedKey: "k", publishedHash: "h", contentHash: "edited",
+    }, "Build")).toBe("Build has unpublished changes — publish again before sharing.");
+  });
+  test("comps with a lookup: a changed member is rejected", () => {
+    const buildOf = (id) => (id === "b1" ? { id: "b1", contentHash: "new" } : undefined);
+    expect(shareRejectionReason({
+      publishedFileId: "x", publishedKey: "k", publishedHash: "h", contentHash: "h", publishedMemberHashes: { b1: "old" },
+    }, "Comp", buildOf)).toBe("Comp has unpublished changes — publish again before sharing.");
+  });
 });
