@@ -800,15 +800,13 @@ async function init() {
         // Splice the updated item into state so library reflects the latest data
         // (e.g. gamemode change from another user won't silently stale-filter on next render)
         if (data.item) {
-          if (type === "build") {
-            const idx = state.builds.findIndex((b) => b.id === id);
-            if (idx >= 0) state.builds[idx] = data.item;
-            else state.builds.push(data.item);
-          } else {
-            const idx = state.comps.findIndex((c) => c.id === id);
-            if (idx >= 0) state.comps[idx] = data.item;
-            else state.comps.push(data.item);
-          }
+          // New arrays, never in-place: the publish-status build lookup caches
+          // per state.builds array (publish-status.js buildLookup).
+          const splice = (list) => (list.some((x) => x.id === id)
+            ? list.map((x) => (x.id === id ? data.item : x))
+            : [...list, data.item]);
+          if (type === "build") state.builds = splice(state.builds);
+          else state.comps = splice(state.comps);
           // Re-render the visible page so the change is reflected immediately.
           // Skip while an inline input is focused — the rename/new-folder flow
           // re-renders on its own commit, and re-rendering now would tear down
@@ -1710,7 +1708,9 @@ function wireEvents() {
         completeAllPublishSteps();
       }
 
+      // The publish also re-stamped every published comp containing this build.
       state.builds = await window.desktopApi.listBuilds();
+      state.comps = await window.desktopApi.listComps();
       renderBuildList();
       renderEditorMeta();
     } catch (err) {

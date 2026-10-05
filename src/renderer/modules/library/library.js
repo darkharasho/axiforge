@@ -2,6 +2,7 @@
 // This is the main entry point for the library page.
 
 import { state } from "../state.js";
+import { withoutPublishReceipt } from "../publish-status.js";
 import { normalizeImportedSkills } from "../editor.js";
 import { escapeHtml } from "../utils.js";
 
@@ -541,7 +542,8 @@ async function handleRename(buildId) {
 async function handleDuplicate(buildId) {
   const build = state.builds.find((b) => b.id === buildId);
   if (!build) return;
-  const copy = { ...build };
+  // A copy is unpublished: the original's receipt would claim its page.
+  const copy = withoutPublishReceipt(build);
   delete copy.id;
   copy.title = `${build.title || "Untitled"} (Copy)`;
   copy.compIds = [];
@@ -1367,7 +1369,7 @@ async function handleRenameComp(compId) {
 async function handleDuplicateComp(compId) {
   const comp = state.comps?.find((c) => c.id === compId);
   if (!comp) return;
-  const copy = { ...comp };
+  const copy = withoutPublishReceipt(comp);
   delete copy.id;
   copy.name = `Copy of ${comp.name || "Untitled"}`;
   await window.desktopApi.saveComp(copy);
