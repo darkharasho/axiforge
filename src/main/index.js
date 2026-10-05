@@ -1659,6 +1659,10 @@ const readyWork = app.whenReady().then(async () => {
     const allComps = await compStore.listComps();
     const affectedComps = allComps.filter(
       (c) => c.publishedFileId && (c.buildIds || []).includes(buildId)
+        // Only comps whose page lives in the repo this publish uploads to. A comp
+        // published under another owner would get a dead copy here and a receipt
+        // for a page that never changed.
+        && (!c.publishedOwner || c.publishedOwner === owner)
     );
     // Receipts for the comps re-uploaded below, stamped once the upload is live.
     const compRestamps = [];
