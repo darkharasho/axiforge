@@ -459,6 +459,26 @@ class BuildStore {
     });
   }
 
+  /**
+   * Startup backfill of publish receipts. `plan(build)` returns
+   * `{ publishedHash }` or null. One write; updatedAt is left alone.
+   * @returns {Promise<number>} how many builds were stamped
+   */
+  async backfillReceipts(plan) {
+    return this.#enqueue(async () => {
+      const builds = await this.#readAllBuilds();
+      let count = 0;
+      for (const b of builds) {
+        const receipt = plan(b);
+        if (!receipt?.publishedHash) continue;
+        b.publishedHash = receipt.publishedHash;
+        count++;
+      }
+      if (count) await this.#writeJson(this.buildsPath, builds);
+      return count;
+    });
+  }
+
   async migrateCompIdToCompIds() {
     const raw = await this.#readJson(this.buildsPath, []);
     if (!Array.isArray(raw)) return;

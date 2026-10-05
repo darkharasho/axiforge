@@ -346,6 +346,28 @@ class CompStore {
    * Stamp publish metadata onto a comp without re-upserting a stale snapshot
    * or bumping updatedAt. See BuildStore.markPublished for the rationale.
    */
+  /**
+   * Startup backfill of publish receipts. `plan(comp)` returns
+   * `{ publishedHash, publishedMemberHashes }` or null. One write; updatedAt is
+   * left alone.
+   * @returns {Promise<number>} how many comps were stamped
+   */
+  async backfillReceipts(plan) {
+    return this.#enqueue(async () => {
+      const comps = await this.#readAllComps();
+      let count = 0;
+      for (const c of comps) {
+        const receipt = plan(c);
+        if (!receipt?.publishedHash) continue;
+        c.publishedHash = receipt.publishedHash;
+        c.publishedMemberHashes = normalizeHashMap(receipt.publishedMemberHashes) || {};
+        count++;
+      }
+      if (count) await this.#writeJson(this.compsPath, comps);
+      return count;
+    });
+  }
+
   async markPublished(id, { publishedFileId, publishedKey, publishedSlug, publishedOwner, boonCoverageHtml, publishedHash, publishedMemberHashes, snapshotUpdatedAt }) {
     return this.#enqueue(async () => {
       const comps = await this.#readAllComps();

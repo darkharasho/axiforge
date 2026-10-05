@@ -108,7 +108,19 @@ function annotateSyncEvent(data) {
   return data;
 }
 
+// A record published before receipts existed has no publishedHash. When its
+// legacy timestamps say it is current — or say nothing, as on a team pull,
+// which never carried publishedAt — its present content is the best baseline
+// there is. One edited since its publish (publishedAt set and behind) keeps
+// reading stale until it is republished.
+function needsBaselineReceipt(record) {
+  const r = record || {};
+  if (!r.publishedFileId || r.publishedHash) return false;
+  return !r.publishedAt || r.publishedAt === r.updatedAt;
+}
+
 module.exports = {
+  needsBaselineReceipt,
   buildFingerprint,
   compFingerprint,
   memberHashes,

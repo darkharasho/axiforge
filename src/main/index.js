@@ -60,6 +60,7 @@ const { withoutPublishReceipt } = require("../shared/publishState");
 const {
   annotateBuild, annotateComp, annotateSyncEvent, buildReceipt, compReceipt, compReceiptAfterRepublish,
 } = require("./publishFingerprint");
+const { backfillPublishReceipts } = require("./publishBaseline");
 const { shortUrl, publishedOwnerFor } = require("./shortUrl");
 const { resolvePublishTarget } = require("./publishTarget");
 const { assertCanMoveOutOfTeam, assertFolderTreeFits, decideCompBuildPublish, withoutReceiptHashes, memberStampTargets } = require("./teamGuards");
@@ -599,6 +600,15 @@ const readyWork = app.whenReady().then(async () => {
   // rejects: a failure here leaves the pre-v2 file in place and the user with
   // an empty history, not a launch that hangs.
   await migrateHistoryV1();
+  // Records published before publish receipts existed get a baseline one, so
+  // an edit made from here on reads "Out of date". Idempotent; a failure only
+  // leaves those records on the legacy timestamp check.
+  try {
+    const stamped = await backfillPublishReceipts({ buildStore: store, compStore });
+    if (stamped.builds || stamped.comps) console.log("[publish] baseline receipts:", stamped);
+  } catch (err) {
+    console.warn("[publish] baseline backfill failed:", err.message);
+  }
   // Sweep anything past the retention window. Never blocks startup: a failed
   // sweep means items linger in the trash, which is harmless.
   trash.purgeExpired().catch((err) => console.warn("[trash] sweep failed:", err.message));

@@ -138,6 +138,11 @@ date.
   implementation: a pull writes a local `updatedAt`, so carrying `publishedAt`
   would make every legacy team comp read out of date on teammates' machines.
   Legacy comps behave as before until their next hash-stamped publish.)
+- Startup backfill (added after release testing): a published record with no
+  `publishedHash` whose `publishedAt` is absent or equals `updatedAt` gets a
+  baseline receipt from its current content (comps: member hashes from the
+  local builds). Without it, records with no `publishedAt` read "Published"
+  forever. One edited since its publish keeps the legacy stale reading.
 - Known limit: a teammate on an older version publishes without a hash, so
   the receipt this machine holds stays at the last hash-stamped publish.
 
