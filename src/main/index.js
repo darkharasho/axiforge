@@ -62,7 +62,7 @@ const {
 } = require("./publishFingerprint");
 const { shortUrl, publishedOwnerFor } = require("./shortUrl");
 const { resolvePublishTarget } = require("./publishTarget");
-const { assertCanMoveOutOfTeam, assertFolderTreeFits, decideCompBuildPublish } = require("./teamGuards");
+const { assertCanMoveOutOfTeam, assertFolderTreeFits, decideCompBuildPublish, withoutReceiptHashes, memberStampTargets } = require("./teamGuards");
 
 const { PROFESSION_ACCENTS: PROFESSION_THEME_IDS } = require("./accents");
 
@@ -824,7 +824,9 @@ const readyWork = app.whenReady().then(async () => {
 
   // contentHash rides along for the renderer's publish status; never stored.
   handle("builds:list", async () => (await store.listBuilds()).map(annotateBuild));
-  handle("builds:save", async (_e, build) => {
+  handle("builds:save", async (_e, rawBuild) => {
+    // Main owns the publish receipt: a renderer object can be stale.
+    const build = withoutReceiptHashes(rawBuild);
     const existing = build.id ? (await store.listBuilds()).find((b) => b.id === build.id) : null;
     const oldFolderId = existing?.folderId ?? null;
     // Guard BEFORE the local write: a refusal after the upsert would leave the
@@ -1181,7 +1183,9 @@ const readyWork = app.whenReady().then(async () => {
   handle("comps:list", async () => (await compStore.listComps()).map(annotateComp));
   // Comp summaries name the builds that moved ("removed Heal Druid") rather than
   // counting them, which needs a title lookup the comp itself does not carry.
-  handle("comps:save", async (_e, comp) => {
+  handle("comps:save", async (_e, rawComp) => {
+    // Main owns the publish receipt: a renderer object can be stale.
+    const comp = withoutReceiptHashes(rawComp);
     const existing = comp.id ? (await compStore.listComps()).find((c) => c.id === comp.id) : null;
     const oldFolderId = existing?.folderId ?? null;
     // Guard BEFORE the local write — see builds:save.
@@ -1977,11 +1981,16 @@ const readyWork = app.whenReady().then(async () => {
     // ── 8. Persist metadata (builds first, then comp) ─────────────────
     // Push each newly-published build to the shared repo so teammates get the
     // published URL without needing to publish themselves.
+    // Each member goes to ITS OWN team (or nowhere, if personal) -- not the
+    // comp's: a personal build must never reach the comp's team, and a team
+    // build must reach its own.
+    const stampedBuilds = [];
     for (const { id, ...patch } of updatedBuildRecords) {
       const savedBuild = await store.markPublished(id, patch);
-      if (savedBuild && compTeamRoot) {
-        await safeEnqueue(() => teamSync.enqueue(compTeamRoot.teamId, savedBuild.id, "build", "put"), { type: "build", id: savedBuild.id });
-      }
+      if (savedBuild) stampedBuilds.push(savedBuild);
+    }
+    for (const { teamId, buildId } of await memberStampTargets(stampedBuilds, findTeamRoot)) {
+      await safeEnqueue(() => teamSync.enqueue(teamId, buildId, "build", "put"), { type: "build", id: buildId });
     }
 
     const savedTheme = await store.getSetting("appearance.theme");

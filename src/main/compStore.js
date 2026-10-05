@@ -215,9 +215,10 @@ class CompStore {
         ...(typeof input.publishedSlug === "string" ? { publishedSlug: input.publishedSlug } : {}),
         ...(typeof input.boonCoverageHtml === "string" ? { boonCoverageHtml: input.boonCoverageHtml } : {}),
         ...(typeof input.publishedOwner === "string" ? { publishedOwner: input.publishedOwner } : {}),
-        // The receipt and publishedAt arrive in a team pull's body. Absent means
-        // "not mentioned" (an editor save), so the stored values stay.
-        ...(typeof input.publishedAt === "string" && input.publishedAt ? { publishedAt: input.publishedAt } : {}),
+        // The receipt arrives in a team pull's body. Absent means "not
+        // mentioned" (an editor save), so the stored values stay. publishedAt is
+        // deliberately NOT carried: beside a local updatedAt it would make every
+        // pulled legacy comp read stale.
         ...(typeof input.publishedHash === "string" && input.publishedHash ? { publishedHash: input.publishedHash } : {}),
         ...(normalizeHashMap(input.publishedMemberHashes) ? { publishedMemberHashes: normalizeHashMap(input.publishedMemberHashes) } : {}),
       };

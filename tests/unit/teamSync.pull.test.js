@@ -825,7 +825,9 @@ describe("TeamSync — pull", () => {
     expect(publishStatus(annotateBuild(pulled))).toBe("current");
   });
 
-  test("a pulled comp keeps publishedAt and its receipt", async () => {
+  test("a pulled comp keeps its receipt but not the publisher's publishedAt, and a legacy one reads current", async () => {
+    const { annotateComp } = require("../../src/main/publishFingerprint");
+    const { publishStatus } = require("../../src/shared/publishState");
     h = await makeHarness();
     await seedTeam(h);
     h.api.changes.mockResolvedValueOnce({ items: [item({ id: "c1", type: "comp", body: {
@@ -833,8 +835,16 @@ describe("TeamSync — pull", () => {
       publishedAt: "2020-01-01T00:00:00.000Z", publishedHash: "self", publishedMemberHashes: { b1: "m1" },
     } })], nextSeq: 1, hasMore: false });
     await h.sync.pullTeam("t");
-    expect((await h.compStore.listComps())[0]).toMatchObject({
-      publishedAt: "2020-01-01T00:00:00.000Z", publishedHash: "self", publishedMemberHashes: { b1: "m1" },
-    });
+    const pulled = (await h.compStore.listComps())[0];
+    expect(pulled).toMatchObject({ publishedHash: "self", publishedMemberHashes: { b1: "m1" } });
+    expect(pulled.publishedAt).not.toBe("2020-01-01T00:00:00.000Z");
+
+    h.api.changes.mockResolvedValueOnce({ items: [item({ id: "c2", type: "comp", seq: 2, body: {
+      id: "c2", name: "Legacy", buildIds: [], partyLines: [], publishedFileId: "cf", publishedKey: "ck",
+      publishedAt: "2020-01-01T00:00:00.000Z",
+    } })], nextSeq: 2, hasMore: false });
+    await h.sync.pullTeam("t");
+    const legacy = (await h.compStore.listComps()).find((c) => c.id === "c2");
+    expect(publishStatus(annotateComp(legacy))).toBe("current");
   });
 });

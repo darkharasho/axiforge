@@ -8,6 +8,7 @@ import { getSelection, getCompSelection } from "./selection.js";
 import { showImportConflictModal } from "../import-conflict-modal.js";
 import { nextCopyTitle } from "./library.js";
 import { pushUndo } from "./undo.js";
+import { withoutPublishReceipt } from "../publish-status.js";
 
 // ─── Export ──────────────────────────────────────────────────────────────────────
 
@@ -243,7 +244,7 @@ export async function handleAxicodeImport(targetFolderId, renderLibrary, showToa
       if (old) undoActions.push({ type: "build", action: "replace", old: { ...old } });
       await window.desktopApi.saveBuild(build);
     } else if (action === "copy") {
-      const copy = { ...build, id: crypto.randomUUID(), title: nextCopyTitle(build.title, existingBuildTitles) };
+      const copy = { ...withoutPublishReceipt(build), id: crypto.randomUUID(), title: nextCopyTitle(build.title, existingBuildTitles) };
       if (targetFolderId && !build.folderId) copy.folderId = targetFolderId;
       existingBuildTitles.push(copy.title);
       await window.desktopApi.saveBuild(copy);
@@ -268,7 +269,7 @@ export async function handleAxicodeImport(targetFolderId, renderLibrary, showToa
       if (old) undoActions.push({ type: "comp", action: "replace", old: { ...old } });
       await window.desktopApi.saveComp(comp);
     } else if (action === "copy") {
-      const copy = { ...comp, id: crypto.randomUUID(), name: nextCopyTitle(comp.name, existingCompNames) };
+      const copy = { ...withoutPublishReceipt(comp), id: crypto.randomUUID(), name: nextCopyTitle(comp.name, existingCompNames) };
       if (targetFolderId && !comp.folderId) copy.folderId = targetFolderId;
       await window.desktopApi.saveComp(copy);
       undoActions.push({ type: "comp", action: "create", id: copy.id });

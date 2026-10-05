@@ -199,3 +199,22 @@ describe("getCompPublishBuildIds", () => {
     expect(ids.some((id) => String(id).startsWith("tag:"))).toBe(false);
   });
 });
+
+describe("teamGuards receipt helpers", () => {
+  const { withoutReceiptHashes, memberStampTargets } = require("../../src/main/teamGuards");
+
+  test("withoutReceiptHashes drops only the hash receipt", () => {
+    const input = { id: "b", publishedFileId: "f", publishedHash: "h", publishedMemberHashes: { a: "1" } };
+    expect(withoutReceiptHashes(input)).toEqual({ id: "b", publishedFileId: "f" });
+    expect(input.publishedHash).toBe("h");
+  });
+
+  test("stamped members are put to their own team root, personal ones nowhere", async () => {
+    const roots = { fT2: { teamId: "T2" }, fT1: { teamId: "T1" } };
+    const findTeamRoot = async (folderId) => roots[folderId] || null;
+    const targets = await memberStampTargets([
+      { id: "a", folderId: "fT2" }, { id: "b", folderId: "personal" }, { id: "c", folderId: null }, { id: "d", folderId: "fT1" },
+    ], findTeamRoot);
+    expect(targets).toEqual([{ teamId: "T2", buildId: "a" }, { teamId: "T1", buildId: "d" }]);
+  });
+});

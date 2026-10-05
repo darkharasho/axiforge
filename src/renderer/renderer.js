@@ -1711,6 +1711,11 @@ function wireEvents() {
       // The publish also re-stamped every published comp containing this build.
       state.builds = await window.desktopApi.listBuilds();
       state.comps = await window.desktopApi.listComps();
+      // An open comp page holds its own object; re-point it so it does not draw
+      // the pre-publish member hashes.
+      if (state.activeComp) {
+        state.activeComp = state.comps.find((c) => c.id === state.activeComp.id) || state.activeComp;
+      }
       renderBuildList();
       renderEditorMeta();
     } catch (err) {

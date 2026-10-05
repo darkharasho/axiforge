@@ -473,14 +473,22 @@ describe("CompStore — publish receipt", () => {
     expect(publishStatus(annotateComp(out))).toBe("current");
   });
 
-  test("upsertComp accepts the receipt and publishedAt (team pull), and keeps them when absent", async () => {
+  test("upsertComp accepts the receipt (team pull) but not publishedAt, and keeps the receipt when absent", async () => {
     const pulled = await store.upsertComp(makeComp({
       id: "c1", publishedFileId: "f", publishedKey: "k", publishedAt: "2026-01-01T00:00:00.000Z",
       publishedHash: "h", publishedMemberHashes: { b1: "m1", bad: 7 },
     }));
-    expect(pulled).toMatchObject({ publishedAt: "2026-01-01T00:00:00.000Z", publishedHash: "h", publishedMemberHashes: { b1: "m1" } });
+    expect(pulled).toMatchObject({ publishedHash: "h", publishedMemberHashes: { b1: "m1" } });
+    expect(pulled.publishedAt).not.toBe("2026-01-01T00:00:00.000Z");
     const renamed = await store.upsertComp({ id: "c1", name: "Renamed" });
-    expect(renamed).toMatchObject({ publishedAt: "2026-01-01T00:00:00.000Z", publishedHash: "h", publishedMemberHashes: { b1: "m1" } });
+    expect(renamed).toMatchObject({ publishedHash: "h", publishedMemberHashes: { b1: "m1" } });
+  });
+
+  test("a pulled legacy comp (publishedAt, no hash) does not read stale", async () => {
+    const pulled = await store.upsertComp(makeComp({
+      id: "c1", publishedFileId: "f", publishedKey: "k", publishedAt: "2020-01-01T00:00:00.000Z",
+    }));
+    expect(publishStatus(annotateComp(pulled))).toBe("current");
   });
 
   test("bookkeeping and default-filling saves leave a published comp current", async () => {

@@ -588,6 +588,19 @@ describe("team-aware mutations enqueue the right outbox ops", () => {
     expect(outboxFor(TEAM_ID)).toEqual([expect.objectContaining({ itemId: "b1", op: "put" })]);
   });
 
+  test("a renderer save carrying an old receipt cannot regress the stored one", async () => {
+    const tree = teamTree();
+    tree.builds = [build({ id: "b1", title: "Shared build", folderId: "sub", publishedFileId: "f", publishedKey: "k", publishedHash: "NEW" })];
+    tree.comps = [comp({ id: "c1", name: "Comp", folderId: "sub", publishedFileId: "cf", publishedKey: "ck", publishedHash: "CNEW", publishedMemberHashes: { b1: "NEW" } })];
+    await loadMain(tree);
+    await invoke("builds:save", { id: "b1", title: "Edited", profession: "Warrior", publishedHash: "OLD" });
+    await invoke("comps:save", { id: "c1", name: "Edited", publishedHash: "COLD", publishedMemberHashes: { b1: "OLD" } });
+    const b = (await invoke("builds:list")).find((x) => x.id === "b1");
+    const c = (await invoke("comps:list")).find((x) => x.id === "c1");
+    expect(b).toMatchObject({ title: "Edited", publishedHash: "NEW" });
+    expect(c).toMatchObject({ name: "Edited", publishedHash: "CNEW", publishedMemberHashes: { b1: "NEW" } });
+  });
+
   test("personal-folder mutations touch no outbox at all", async () => {
     await loadMain(teamTree());
     await invoke("builds:save", build({ id: "b5", title: "Private", folderId: "solo" }));

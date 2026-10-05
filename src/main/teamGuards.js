@@ -97,4 +97,31 @@ function assertFolderTreeFits({ folders, folderId, newParentId, maxDepth = 3 }) 
   if (parentDepth + 1 + maxRel > maxDepth) throw new Error("FOLDER_TOO_DEEP");
 }
 
-module.exports = { assertCanMoveOutOfTeam, assertFolderTreeFits, decideCompBuildPublish };
+/**
+ * A renderer payload never writes the publish receipt hashes: its object may be
+ * stale, and an older receipt would regress a newer one. Main writes them
+ * (markPublished, team pull); the stores keep the stored values when absent.
+ */
+function withoutReceiptHashes(record) {
+  if (!record || typeof record !== "object") return record;
+  const out = { ...record };
+  delete out.publishedHash;
+  delete out.publishedMemberHashes;
+  return out;
+}
+
+/**
+ * Where to team-put each build stamped by a comp publish: the build's OWN team
+ * root. Personal builds (null root) are skipped.
+ * @returns {Promise<{teamId: string, buildId: string}[]>}
+ */
+async function memberStampTargets(builds, findTeamRoot) {
+  const out = [];
+  for (const build of builds) {
+    const root = await findTeamRoot(build.folderId);
+    if (root) out.push({ teamId: root.teamId, buildId: build.id });
+  }
+  return out;
+}
+
+module.exports = { assertCanMoveOutOfTeam, assertFolderTreeFits, decideCompBuildPublish, withoutReceiptHashes, memberStampTargets };

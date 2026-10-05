@@ -1,4 +1,5 @@
 import { state } from "../state.js";
+import { withoutPublishReceipt } from "../publish-status.js";
 import { showConfirmModal } from "../confirm-modal.js";
 import { showPrompt } from "../prompt-modal.js";
 import { initCompList, renderCompList, clearCompSelection } from "./comp-list.js";
@@ -58,7 +59,7 @@ export function initComps(appCallbacks) {
     onDuplicateComp: async (id) => {
       const comp = state.comps.find((c) => c.id === id);
       if (!comp) return;
-      const { id: _id, createdAt, updatedAt, ...rest } = comp;
+      const { id: _id, createdAt, updatedAt, ...rest } = withoutPublishReceipt(comp);
       await window.desktopApi.saveComp({ ...rest, name: `Copy of ${comp.name}` });
       await loadComps();
       renderComps();

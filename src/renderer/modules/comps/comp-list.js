@@ -14,7 +14,7 @@ import { showToast } from "../library/toast.js";
 import { showChoiceModal } from "../choice-modal.js";
 import { askAboutDuplicates } from "../library/import-dedupe.js";
 import { professionSeriesStyle } from "../../../shared/professions.js";
-import { compPublishStatus, buildLookup, compMatchesStatusFilter, compPublishChipHtml } from "../publish-status.js";
+import { withoutPublishReceipt, compPublishStatus, buildLookup, compMatchesStatusFilter, compPublishChipHtml } from "../publish-status.js";
 
 // ─── Shared folder helpers ───────────────────────────────────────────────────
 
@@ -815,7 +815,7 @@ async function handleCopyCompShareCode(compId) {
   }
 }
 
-async function handlePasteComp() {
+export async function handlePasteComp() {
   try {
     const text = await window.desktopApi.readClipboardText();
     if (!text) return;
@@ -858,7 +858,7 @@ async function handlePasteComp() {
     const comps = Array.isArray(parsed) ? parsed : [parsed];
     for (const comp of comps) {
       if (!comp.name) continue;
-      const { id, createdAt, updatedAt, ...rest } = comp;
+      const { id, createdAt, updatedAt, ...rest } = withoutPublishReceipt(comp);
       await window.desktopApi.saveComp(rest);
     }
     state.comps = await window.desktopApi.listComps();
