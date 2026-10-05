@@ -304,7 +304,10 @@
 
 .comp-detail__body--boards {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 340px;
+  /* The lines are a fixed run of five slots plus a boon strip, so they get
+     at most 40% (never less than the strip needs); the builds take the rest,
+     one card to a row, wide enough to hold a card's skills on one line. */
+  grid-template-columns: minmax(min-content, min(40%, 560px)) minmax(340px, 1fr);
   gap: 14px;
   align-items: start;
   overflow: visible;
