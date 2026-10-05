@@ -18,6 +18,7 @@ const { sha256Hex } = require("./db");
 const POLICY_KV_KEY = "policy:manifest";
 const POLICY_KV_TTL_SECONDS = 240;
 const POLICY_MEMO_TTL_MS = 60 * 1000;
+const POLICY_FETCH_TIMEOUT_MS = 3000;
 const GITHUB_ID = /^[1-9]\d{0,19}$/;
 
 const memo = new WeakMap();
@@ -30,7 +31,7 @@ async function githubUserHash(githubId) {
 
 function parseDenylist(value) {
   if (!Array.isArray(value)) return null;
-  return value.filter((h) => typeof h === "string");
+  return value.filter((h) => typeof h === "string").map((h) => h.toLowerCase());
 }
 
 async function readKv(kv) {
@@ -55,7 +56,7 @@ async function writeKv(kv, list) {
 
 async function fetchDenylist(url, deps) {
   try {
-    const res = await (deps.policyFetchImpl || fetch)(url, { headers: { accept: "application/json" } });
+    const res = await (deps.policyFetchImpl || fetch)(url, { headers: { accept: "application/json" }, signal: AbortSignal.timeout(deps.policyTimeoutMs || POLICY_FETCH_TIMEOUT_MS) });
     if (!res.ok) {
       console.warn("[policy] manifest fetch failed: HTTP", res.status);
       return null;
@@ -95,4 +96,4 @@ async function isGithubUserBlocked(env, deps = {}, githubId) {
   return hash !== null && set.has(hash);
 }
 
-module.exports = { githubUserHash, isGithubUserBlocked, POLICY_KV_KEY, POLICY_KV_TTL_SECONDS, POLICY_MEMO_TTL_MS };
+module.exports = { githubUserHash, isGithubUserBlocked, POLICY_KV_KEY, POLICY_KV_TTL_SECONDS, POLICY_MEMO_TTL_MS, POLICY_FETCH_TIMEOUT_MS };

@@ -1,5 +1,5 @@
 "use strict";
-const { githubUserHash, isGithubUserBlocked, POLICY_KV_KEY, POLICY_KV_TTL_SECONDS, POLICY_MEMO_TTL_MS } = require("../../workers/sync/src/policy");
+const { githubUserHash, isGithubUserBlocked, POLICY_KV_KEY, POLICY_KV_TTL_SECONDS, POLICY_MEMO_TTL_MS, POLICY_FETCH_TIMEOUT_MS } = require("../../workers/sync/src/policy");
 const { createTestKV } = require("../helpers/d1Shim");
 const { sha256Hex } = require("../../workers/sync/src/db");
 
@@ -42,7 +42,8 @@ describe("isGithubUserBlocked", () => {
   });
 
   test("refuses a listed id and allows an unlisted one", async () => {
-    const { env, deps, calls } = setup({ denylist: [await sha256Hex("github_user:42")] });
+    const hash = await sha256Hex("github_user:42");
+    const { env, deps, calls } = setup({ denylist: [hash.toUpperCase()] });
     expect(await isGithubUserBlocked(env, deps, 42)).toBe(true);
     expect(await isGithubUserBlocked(env, deps, "43")).toBe(false);
     expect(calls).toEqual([URL_]);
@@ -111,6 +112,17 @@ describe("isGithubUserBlocked", () => {
     const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
     expect(await isGithubUserBlocked(env, deps, 42)).toBe(true);
     expect(calls).toHaveLength(1);
+    warn.mockRestore();
+  });
+
+  test("fetch timeout causes graceful failure with warning", async () => {
+    const { env, deps } = setup({
+      fetchImpl: (url, init) => new Promise((_, reject) => init.signal.addEventListener("abort", () => reject(init.signal.reason)))
+    });
+    deps.policyTimeoutMs = 20;
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    expect(await isGithubUserBlocked(env, deps, 42)).toBe(false);
+    expect(warn).toHaveBeenCalled();
     warn.mockRestore();
   });
 });
