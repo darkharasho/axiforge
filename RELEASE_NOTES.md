@@ -1,3 +1,15 @@
+## Version v1.2.0 — October 4, 2026
+
+### New Features
+
+- **See at a glance what's published and what has changed since.** Builds and comps now show whether they're published and whether the published page is still current. In the library, a globe mark appears beside each published item: one colour for *Published*, another for *Out of date*. The build and comp editors show the same mark with a label, including *Not published* for items you haven't shared yet. A comp also reads *Out of date* when one of its builds has changed since you published it, even if the comp itself hasn't. Status is based on the content itself, not on when an item was last saved. So a team sync, or an edit you undo, no longer makes something look out of date when it isn't. Items published before this update are checked once at startup and start out as *Published*; anything you change after that is marked *Out of date*.
+- **Filter the library by publish status.** A new filter in the library toolbar shows only published, out-of-date or unpublished items. On the comps page, the Status filter and the chip on each comp now have three states (*Published*, *Out of date* and *Draft*) instead of two.
+
+### Bug Fixes
+
+- **Publishing a build no longer re-uploads comp pages it doesn't own.** When you republished a build, AxiForge also re-uploaded every comp that contained it, including comps a teammate had published. Now it only refreshes the comp pages you published yourself.
+- **A duplicated or pasted build or comp now starts out unpublished.** Copies used to inherit the original's published state, so they showed as published even though the copy had never been shared.
+
 ## Version v1.1.6 — October 4, 2026
 
 ### Fixes
