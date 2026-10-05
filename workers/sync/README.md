@@ -8,6 +8,8 @@ Spec: `docs/superpowers/specs/2026-08-21-team-sync-design.md`.
     # desktop app against it:
     AXIFORGE_SYNC_BASE=http://localhost:8787/api/sync npm run dev
 
+`wrangler dev` also fetches the production manifest via the `POLICY_MANIFEST_URL` var; override or blank it in `.dev.vars` to change that.
+
 ## Deploy
     npx wrangler d1 migrations apply axiforge-sync --remote
     npm run deploy:web        # builds the Playground + deploys the Worker

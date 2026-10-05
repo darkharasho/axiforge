@@ -2,11 +2,11 @@
 // Axi access policy for the sync Worker.
 //
 // The Axi apps can revoke access for people who violate their terms of use
-// (see README "Access"). The list is published at config.axi.link as a manifest
+// (see README "Access policy"). The list is published at config.axi.link as a manifest
 // whose `denylist` holds only SHA-256 hashes of "kind:normalized" identifiers;
 // this module answers whether a GitHub user id is on it.
 //
-// Caching: the denylist is kept in the SYNC_RL KV namespace for 240 s and in a
+// Caching: the denylist is kept in the SYNC_RL KV namespace for 230 s and in a
 // per-isolate memo for 60 s, so an unban takes effect within 5 minutes. The
 // memo is a WeakMap keyed by the KV binding (or by `env` when there is none),
 // which keeps tests isolated without any reset hook.
@@ -16,7 +16,7 @@
 const { sha256Hex } = require("./db");
 
 const POLICY_KV_KEY = "policy:manifest";
-const POLICY_KV_TTL_SECONDS = 240;
+const POLICY_KV_TTL_SECONDS = 230;
 const POLICY_MEMO_TTL_MS = 60 * 1000;
 const POLICY_FETCH_TIMEOUT_MS = 3000;
 const GITHUB_ID = /^[1-9]\d{0,19}$/;

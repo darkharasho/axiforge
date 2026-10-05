@@ -66,6 +66,8 @@ async function cacheDelete(kv, tokenHash) {
 // when the user is on the Axi access denylist (see policy.js). Select first:
 // the cache is keyed by token hash, and its entries outlive the D1 rows by up
 // to one TTL.
+// Benign race: a concurrent request in an isolate with a stale policy memo can re-cache a
+// sess: entry after this runs; it expires with the cache TTL and the D1 row is already gone.
 async function revokeUserSessions(env, userId) {
   const { results } = await env.SYNC_DB.prepare("SELECT token_hash FROM sessions WHERE user_id = ?").bind(userId).all();
   await env.SYNC_DB.prepare("DELETE FROM sessions WHERE user_id = ?").bind(userId).run();

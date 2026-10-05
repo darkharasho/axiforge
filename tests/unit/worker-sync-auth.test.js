@@ -249,11 +249,10 @@ describe("access policy", () => {
   // on every fetch, so a test can ban/unban between requests.
   async function policySetup() {
     const base = await setup();
-    const state = { denylist: [], manifestCalls: 0 };
+    const state = { denylist: [] };
     const gh = base.deps.fetchImpl;
     base.deps.policyFetchImpl = async (url) => {
       if (String(url) !== MANIFEST) throw new Error("unexpected url " + url);
-      state.manifestCalls += 1;
       return new Response(JSON.stringify({ version: 1, flags: {}, minVersion: null, notice: null, denylist: state.denylist }), { status: 200 });
     };
     base.deps.fetchImpl = gh;
@@ -296,7 +295,7 @@ describe("access policy", () => {
     expect(await db.prepare("SELECT COUNT(*) AS c FROM users").first("c")).toBe(1);
   });
 
-  test("the warm cache path is checked too (no D1 needed to refuse)", async () => {
+  test("the warm cache path is checked too (a ban is refused from a warm sess: entry)", async () => {
     const { env, deps, ban } = await policySetup();
     const token = (await (await handleGithubLogin(loginReq("gh-good"), env, deps)).json()).sessionToken;
     await authenticate(authedReq(token), env, deps); // caches { user, expiresAt, githubId }
@@ -304,7 +303,7 @@ describe("access policy", () => {
     expect(JSON.parse(await env.SYNC_RL.get("sess:" + hash)).githubId).toBe("42");
 
     await ban();
-    deps.advance(4 * 60 * 1000 + 1); // policy cache lapsed (240 s KV, 60 s memo); session cache (300 s) still warm
+    deps.advance(4 * 60 * 1000 + 1); // policy cache lapsed (230 s KV, 60 s memo); session cache (300 s) still warm
     expect(await authenticate(authedReq(token), env, deps)).toBeNull();
   });
 
@@ -318,6 +317,17 @@ describe("access policy", () => {
     await ban();
     deps.advance(4 * 60 * 1000 + 1);
     expect(await authenticate(authedReq(token), env, deps)).toBeNull();
+  });
+
+  test("an unbanned user's warm session makes zero D1 calls with the policy on", async () => {
+    const { env, deps } = await policySetup();
+    const token = (await (await handleGithubLogin(loginReq("gh-good"), env, deps)).json()).sessionToken;
+    expect(await authenticate(authedReq(token), env, deps)).not.toBeNull(); // cold: fills the cache
+    const spy = jest.spyOn(env.SYNC_DB, "prepare");
+    deps.advance(30 * 1000);
+    expect(await authenticate(authedReq(token), env, deps)).not.toBeNull();
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
   });
 
   test("unban: after the cache period the user can log in again", async () => {
