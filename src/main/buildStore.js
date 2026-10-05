@@ -236,6 +236,7 @@ class BuildStore {
         if (!next.publishedSlug && existing.publishedSlug) next.publishedSlug = existing.publishedSlug;
         if (!next.publishedAt && existing.publishedAt) next.publishedAt = existing.publishedAt;
         if (!next.publishedOwner && existing.publishedOwner) next.publishedOwner = existing.publishedOwner;
+        if (!next.publishedHash && existing.publishedHash) next.publishedHash = existing.publishedHash;
         // The trash and archive stamps are local -- they are stripped from the
         // synced body -- so a team pull, or any caller upserting a partial
         // record, arrives without them. Carrying them over is what stops a
@@ -437,7 +438,7 @@ class BuildStore {
    * during the publish, `updatedAt !== publishedAt` and the build correctly
    * reads as stale (needs re-publish) instead of falsely fresh.
    */
-  async markPublished(id, { publishedFileId, publishedKey, publishedSlug, publishedOwner, snapshotUpdatedAt }) {
+  async markPublished(id, { publishedFileId, publishedKey, publishedSlug, publishedOwner, publishedHash, snapshotUpdatedAt }) {
     return this.#enqueue(async () => {
       const builds = await this.#readAllBuilds();
       const idx = builds.findIndex((b) => b.id === id);
@@ -449,6 +450,7 @@ class BuildStore {
         publishedKey: publishedKey || existing.publishedKey,
         publishedSlug: publishedSlug || existing.publishedSlug,
         publishedOwner: publishedOwner || existing.publishedOwner || "",
+        publishedHash: publishedHash || existing.publishedHash || "",
         publishedAt: asIso(snapshotUpdatedAt) || existing.updatedAt,
       };
       builds[idx] = next;
@@ -512,6 +514,9 @@ function normalizeBuild(input, fallbackCreatedAt) {
     publishedKey: asString(input.publishedKey, 100),
     publishedAt: asIso(input.publishedAt) || null,
     publishedOwner: asString(input.publishedOwner, 80),
+    // Fingerprint of the content last uploaded (publishFingerprint.js). Synced
+    // with the other published* fields, so every teammate compares against it.
+    publishedHash: asString(input.publishedHash, 64),
     // Library organization fields
     folderId:
       typeof input.folderId === "string" ? input.folderId : null,

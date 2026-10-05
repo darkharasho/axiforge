@@ -144,6 +144,11 @@ describe("BuildHistoryStore — a game patch is not an edit", () => {
     const published = build({ publishedSlug: "abc", publishedAt: "2026-09-01T00:00:00.000Z", buildUrl: "https://x" });
     expect(await store.appendVersion({ recordId: "b1", after: published })).toBeNull();
   });
+
+  test("a new publish receipt is not an edit either", async () => {
+    await store.appendVersion({ recordId: "b1", before: null, after: build() });
+    expect(await store.appendVersion({ recordId: "b1", after: build({ publishedHash: "abc" }) })).toBeNull();
+  });
 });
 
 describe("BuildHistoryStore — deleteHistory", () => {

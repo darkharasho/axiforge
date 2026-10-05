@@ -805,4 +805,36 @@ describe("TeamSync — pull", () => {
     const forB1 = h.events.filter((e) => e.type === "build" && e.id === "b1");
     expect(forB1.at(-1)).toMatchObject({ status: "error" });
   });
+
+  test("a teammate-published build reads current after the pull, whatever updatedAt the pull writes", async () => {
+    const { buildFingerprint, annotateBuild } = require("../../src/main/publishFingerprint");
+    const { publishStatus } = require("../../src/shared/publishState");
+    h = await makeHarness();
+    await seedTeam(h);
+    // The teammate's normalized record, shaped the way their store holds it.
+    const theirs = await h.buildStore.upsertBuild({ id: "seed", title: "Remote", profession: "Warrior", notes: "n" });
+    const { folderId, pinned, sortOrder, compIds, archivedAt, archiveBatchId, archiveRoot, ...body } = theirs;
+    h.api.changes.mockResolvedValueOnce({ items: [item({ id: "b1", body: {
+      ...body, id: "b1", publishedFileId: "f1", publishedKey: "k1",
+      // Long before the local updatedAt the pull stamps: the legacy check would say stale.
+      publishedAt: "2020-01-01T00:00:00.000Z", publishedHash: buildFingerprint(theirs),
+    } })], nextSeq: 1, hasMore: false });
+    await h.sync.pullTeam("t");
+    const pulled = (await h.buildStore.listBuilds()).find((b) => b.id === "b1");
+    expect(pulled.publishedHash).toBe(buildFingerprint(theirs));
+    expect(publishStatus(annotateBuild(pulled))).toBe("current");
+  });
+
+  test("a pulled comp keeps publishedAt and its receipt", async () => {
+    h = await makeHarness();
+    await seedTeam(h);
+    h.api.changes.mockResolvedValueOnce({ items: [item({ id: "c1", type: "comp", body: {
+      id: "c1", name: "Comp", buildIds: [], partyLines: [], publishedFileId: "cf", publishedKey: "ck",
+      publishedAt: "2020-01-01T00:00:00.000Z", publishedHash: "self", publishedMemberHashes: { b1: "m1" },
+    } })], nextSeq: 1, hasMore: false });
+    await h.sync.pullTeam("t");
+    expect((await h.compStore.listComps())[0]).toMatchObject({
+      publishedAt: "2020-01-01T00:00:00.000Z", publishedHash: "self", publishedMemberHashes: { b1: "m1" },
+    });
+  });
 });

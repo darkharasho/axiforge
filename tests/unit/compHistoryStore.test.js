@@ -157,3 +157,11 @@ describe("CompHistoryStore — what a comp change reads as", () => {
     expect(JSON.stringify(v.ops).length).toBeLessThan(200);
   });
 });
+
+describe("CompHistoryStore — publish receipt", () => {
+  test("a new publish receipt writes no version", async () => {
+    await store.appendVersion({ recordId: "c1", before: null, after: comp() });
+    const published = comp({ publishedHash: "h", publishedMemberHashes: { b1: "m" } });
+    expect(await store.appendVersion({ recordId: "c1", after: published })).toBeNull();
+  });
+});

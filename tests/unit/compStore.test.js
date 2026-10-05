@@ -454,3 +454,52 @@ describe("publishedOwner", () => {
     expect(stamped.publishedOwner).toBe("other");
   });
 });
+
+describe("CompStore — publish receipt", () => {
+  const { compFingerprint, annotateComp } = require("../../src/main/publishFingerprint");
+  const { publishStatus, withoutPublishReceipt } = require("../../src/shared/publishState");
+  let store, dir;
+  beforeEach(async () => ({ store, dir } = await makeTempStore()));
+  afterEach(() => cleanupDir(dir));
+
+  test("markPublished stores publishedHash and publishedMemberHashes", async () => {
+    const saved = await store.upsertComp(makeComp());
+    const out = await store.markPublished(saved.id, {
+      publishedFileId: "c1", publishedKey: "k", publishedHash: compFingerprint(saved),
+      publishedMemberHashes: { b1: "h1" }, snapshotUpdatedAt: saved.updatedAt,
+    });
+    expect(out.publishedHash).toBe(compFingerprint(saved));
+    expect(out.publishedMemberHashes).toEqual({ b1: "h1" });
+    expect(publishStatus(annotateComp(out))).toBe("current");
+  });
+
+  test("upsertComp accepts the receipt and publishedAt (team pull), and keeps them when absent", async () => {
+    const pulled = await store.upsertComp(makeComp({
+      id: "c1", publishedFileId: "f", publishedKey: "k", publishedAt: "2026-01-01T00:00:00.000Z",
+      publishedHash: "h", publishedMemberHashes: { b1: "m1", bad: 7 },
+    }));
+    expect(pulled).toMatchObject({ publishedAt: "2026-01-01T00:00:00.000Z", publishedHash: "h", publishedMemberHashes: { b1: "m1" } });
+    const renamed = await store.upsertComp({ id: "c1", name: "Renamed" });
+    expect(renamed).toMatchObject({ publishedAt: "2026-01-01T00:00:00.000Z", publishedHash: "h", publishedMemberHashes: { b1: "m1" } });
+  });
+
+  test("bookkeeping and default-filling saves leave a published comp current", async () => {
+    const saved = await store.upsertComp(makeComp({ buildIds: ["b1"], partyLines: [{ capacity: 5, slots: ["b1"] }] }));
+    await store.markPublished(saved.id, { publishedFileId: "f", publishedKey: "k", publishedHash: compFingerprint(saved) });
+    const moved = await store.upsertComp({ ...saved, folderId: "f9", sortOrder: 3 });
+    expect(publishStatus(annotateComp(moved))).toBe("current");
+  });
+
+  test("a receipt-stripped history document keeps the current receipt", async () => {
+    const saved = await store.upsertComp(makeComp({ id: "c1" }));
+    await store.markPublished("c1", { publishedFileId: "f", publishedKey: "k", publishedHash: "now", publishedMemberHashes: { b1: "now" } });
+    const reverted = await store.upsertComp(withoutPublishReceipt({ ...saved, publishedHash: "then", publishedMemberHashes: { b1: "then" } }));
+    expect(reverted.publishedHash).toBe("now");
+    expect(reverted.publishedMemberHashes).toEqual({ b1: "now" });
+  });
+
+  test("contentHash is never persisted", async () => {
+    const saved = await store.upsertComp(makeComp({ contentHash: "zzz" }));
+    expect(saved.contentHash).toBeUndefined();
+  });
+});

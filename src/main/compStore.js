@@ -5,6 +5,16 @@ const fs = require("node:fs/promises");
 const crypto = require("node:crypto");
 const { readJsonFile, writeJsonAtomic } = require("./jsonFile");
 
+// { buildId: fingerprint } from a synced or published comp; anything else is dropped.
+function normalizeHashMap(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const out = {};
+  for (const [k, v] of Object.entries(value)) {
+    if (typeof v === "string" && v) out[k] = v;
+  }
+  return out;
+}
+
 class CompStore {
   #writeQueue = Promise.resolve();
 
@@ -205,6 +215,11 @@ class CompStore {
         ...(typeof input.publishedSlug === "string" ? { publishedSlug: input.publishedSlug } : {}),
         ...(typeof input.boonCoverageHtml === "string" ? { boonCoverageHtml: input.boonCoverageHtml } : {}),
         ...(typeof input.publishedOwner === "string" ? { publishedOwner: input.publishedOwner } : {}),
+        // The receipt and publishedAt arrive in a team pull's body. Absent means
+        // "not mentioned" (an editor save), so the stored values stay.
+        ...(typeof input.publishedAt === "string" && input.publishedAt ? { publishedAt: input.publishedAt } : {}),
+        ...(typeof input.publishedHash === "string" && input.publishedHash ? { publishedHash: input.publishedHash } : {}),
+        ...(normalizeHashMap(input.publishedMemberHashes) ? { publishedMemberHashes: normalizeHashMap(input.publishedMemberHashes) } : {}),
       };
 
       const existing = comps.find((c) => c.id === id);
@@ -330,7 +345,7 @@ class CompStore {
    * Stamp publish metadata onto a comp without re-upserting a stale snapshot
    * or bumping updatedAt. See BuildStore.markPublished for the rationale.
    */
-  async markPublished(id, { publishedFileId, publishedKey, publishedSlug, publishedOwner, boonCoverageHtml, snapshotUpdatedAt }) {
+  async markPublished(id, { publishedFileId, publishedKey, publishedSlug, publishedOwner, boonCoverageHtml, publishedHash, publishedMemberHashes, snapshotUpdatedAt }) {
     return this.#enqueue(async () => {
       const comps = await this.#readAllComps();
       const existing = comps.find((c) => c.id === id);
@@ -340,6 +355,9 @@ class CompStore {
       if (publishedSlug) existing.publishedSlug = publishedSlug;
       if (publishedOwner) existing.publishedOwner = publishedOwner;
       if (typeof boonCoverageHtml === "string") existing.boonCoverageHtml = boonCoverageHtml;
+      if (publishedHash) existing.publishedHash = publishedHash;
+      const members = normalizeHashMap(publishedMemberHashes);
+      if (members) existing.publishedMemberHashes = members;
       existing.publishedAt = snapshotUpdatedAt || existing.updatedAt;
       await this.#writeJson(this.compsPath, comps);
       return { ...existing };

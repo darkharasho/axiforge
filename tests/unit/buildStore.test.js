@@ -1324,3 +1324,58 @@ describe("publishedOwner", () => {
     expect(stamped.publishedOwner).toBe("darkharasho");
   });
 });
+
+describe("BuildStore — publish receipt", () => {
+  const { buildFingerprint, annotateBuild } = require("../../src/main/publishFingerprint");
+  const { publishStatus, withoutPublishReceipt } = require("../../src/shared/publishState");
+  let store, dir;
+  beforeEach(async () => ({ store, dir } = await makeTempStore()));
+  afterEach(() => cleanupDir(dir));
+
+  test("markPublished stores publishedHash", async () => {
+    const saved = await store.upsertBuild(makeBuild());
+    const out = await store.markPublished(saved.id, {
+      publishedFileId: "f1", publishedKey: "k1", publishedSlug: "s", publishedHash: buildFingerprint(saved),
+      snapshotUpdatedAt: saved.updatedAt,
+    });
+    expect(out.publishedHash).toBe(buildFingerprint(saved));
+    expect(publishStatus(annotateBuild(out))).toBe("current");
+  });
+
+  test("an editor save (no receipt in the payload) keeps the receipt and reads stale after an edit", async () => {
+    const saved = await store.upsertBuild(makeBuild());
+    await store.markPublished(saved.id, { publishedFileId: "f1", publishedKey: "k1", publishedHash: buildFingerprint(saved) });
+    const edited = await store.upsertBuild({ ...makeBuild(), id: saved.id, title: "Renamed" });
+    expect(edited.publishedHash).toBe(buildFingerprint(saved));
+    expect(publishStatus(annotateBuild(edited))).toBe("stale");
+  });
+
+  test("bookkeeping writes leave a published build current", async () => {
+    const saved = await store.upsertBuild(makeBuild());
+    await store.markPublished(saved.id, { publishedFileId: "f1", publishedKey: "k1", publishedHash: buildFingerprint(saved) });
+    const moved = await store.upsertBuild({ ...saved, folderId: "f9", pinned: true, sortOrder: 4 });
+    expect(publishStatus(annotateBuild(moved))).toBe("current");
+  });
+
+  test("an incoming receipt replaces the stored one (team pull)", async () => {
+    const saved = await store.upsertBuild(makeBuild());
+    await store.markPublished(saved.id, { publishedFileId: "f1", publishedKey: "k1", publishedHash: "old" });
+    const pulled = await store.upsertBuild({ ...saved, publishedHash: "fromTeammate" });
+    expect(pulled.publishedHash).toBe("fromTeammate");
+  });
+
+  test("a receipt-stripped history document keeps the current receipt", async () => {
+    const saved = await store.upsertBuild(makeBuild());
+    await store.markPublished(saved.id, { publishedFileId: "f1", publishedKey: "k1", publishedSlug: "s", publishedHash: "current-receipt" });
+    const oldDoc = { ...saved, publishedHash: "old-receipt", publishedSlug: "old" };
+    const reverted = await store.upsertBuild(withoutPublishReceipt(oldDoc));
+    expect(reverted.publishedHash).toBe("current-receipt");
+    expect(reverted.publishedSlug).toBe("s");
+  });
+
+  test("contentHash is never persisted", async () => {
+    const saved = await store.upsertBuild({ ...makeBuild(), contentHash: "zzz" });
+    expect(saved.contentHash).toBeUndefined();
+    expect((await store.listBuilds())[0].contentHash).toBeUndefined();
+  });
+});
