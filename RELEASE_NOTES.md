@@ -1,3 +1,9 @@
+## Version v1.1.6 — October 4, 2026
+
+### Fixes
+
+- **Published comp pages no longer cram the builds into a narrow strip.** On a wide screen the party lines took most of the page and left the builds a fixed sliver, so every build card wrapped its skills onto three rows and cut off its name and chat code. The party lines now take only the room they need and the builds get the rest, one build per row, with all ten skills on a single line. Your published comps pick up the new layout the next time you publish anything.
+
 ## Version v1.1.5 — October 4, 2026
 
 ### Fixes
