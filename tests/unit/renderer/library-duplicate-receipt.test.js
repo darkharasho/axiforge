@@ -20,3 +20,11 @@ test("sync splices replace the arrays instead of mutating them", () => {
   expect(renderer).not.toMatch(/state\.builds\.push\(data\.item\)/);
   expect(renderer).not.toMatch(/state\.comps\.push\(data\.item\)/);
 });
+
+test("clipboard paste copies drop the publish receipt", () => {
+  expect(lib).toMatch(/const copy = \{ \.\.\.withoutPublishReceipt\(source\), title,/);
+});
+
+test("library comp updates replace state.comps instead of mutating it", () => {
+  expect(lib).not.toMatch(/state\.comps\[idx\] = /);
+});

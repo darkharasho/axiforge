@@ -1192,8 +1192,7 @@ async function handlePasteJson(targetId) {
             const updatedComp = { ...comp, gameMode: newGameMode, buildIds: [...(comp.buildIds || []), id] };
             await window.desktopApi.saveComp(updatedComp);
             // Update in-memory so subsequent iterations see the set gameMode
-            const idx = state.comps.findIndex((c) => c.id === compId);
-            if (idx !== -1) state.comps[idx] = updatedComp;
+            state.comps = state.comps.map((c) => (c.id === compId ? updatedComp : c));
           }
         }
         state.builds = await window.desktopApi.listBuilds();
@@ -1259,7 +1258,7 @@ async function handlePasteJson(targetId) {
       const originalTitle = String(source.title || source.name || "Imported Build");
       const title = nextCopyTitle(originalTitle, existingTitles);
       existingTitles.push(title);
-      const copy = { ...source, title, folderId: folderId || undefined, compIds: compId ? [compId] : [] };
+      const copy = { ...withoutPublishReceipt(source), title, folderId: folderId || undefined, compIds: compId ? [compId] : [] };
       delete copy.id;
       const saved = await window.desktopApi.saveBuild(copy);
       if (saved?.id) pastedIds.push(saved.id);
@@ -1270,8 +1269,7 @@ async function handlePasteJson(targetId) {
           const newGameMode = comp.gameMode || saved.gameMode || null;
           const updatedComp = { ...comp, gameMode: newGameMode, buildIds: [...(comp.buildIds || []), saved.id] };
           await window.desktopApi.saveComp(updatedComp);
-          const idx = state.comps.findIndex((c) => c.id === compId);
-          if (idx !== -1) state.comps[idx] = updatedComp;
+          state.comps = state.comps.map((c) => (c.id === compId ? updatedComp : c));
         }
       }
       savedCount++;
