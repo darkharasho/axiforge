@@ -56,6 +56,10 @@ const { createLocalApi, generateToken, httpError } = require("./localApi");
 const { writeDiscoveryFile, removeDiscoveryFileSync } = require("./localApiDiscovery");
 const { parseCliFlags } = require("./cliFlags");
 const { shareRejectionReason } = require("./shareGate");
+const { withoutPublishReceipt } = require("../shared/publishState");
+const {
+  annotateBuild, annotateComp, annotateSyncEvent, buildReceipt, compReceipt, compReceiptAfterRepublish,
+} = require("./publishFingerprint");
 const { shortUrl, publishedOwnerFor } = require("./shortUrl");
 const { resolvePublishTarget } = require("./publishTarget");
 const { assertCanMoveOutOfTeam, assertFolderTreeFits, decideCompBuildPublish } = require("./teamGuards");
@@ -523,7 +527,9 @@ let teamSyncRef = null;
 // uses for its own events).
 function teamSyncEmit(channel, data) {
   const wins = BrowserWindow.getAllWindows();
-  if (wins.length) wins[0].webContents.send(channel, data);
+  // A pulled record is spliced straight into renderer state, so it needs the
+  // contentHash the list handlers would have attached.
+  if (wins.length) wins[0].webContents.send(channel, channel === "sync-status" ? annotateSyncEvent(data) : data);
 }
 
 // Outbox enqueues are best-effort: the local write already succeeded, so a
@@ -816,7 +822,8 @@ const readyWork = app.whenReady().then(async () => {
     return true;
   });
 
-  handle("builds:list", async () => store.listBuilds());
+  // contentHash rides along for the renderer's publish status; never stored.
+  handle("builds:list", async () => (await store.listBuilds()).map(annotateBuild));
   handle("builds:save", async (_e, build) => {
     const existing = build.id ? (await store.listBuilds()).find((b) => b.id === build.id) : null;
     const oldFolderId = existing?.folderId ?? null;
@@ -851,7 +858,7 @@ const readyWork = app.whenReady().then(async () => {
     if (oldRoot && oldRoot.id !== newRoot?.id) {
       await safeEnqueue(() => teamSync.enqueue(oldRoot.teamId, saved.id, "build", "delete"), { type: "build", id: saved.id });
     }
-    return saved;
+    return annotateBuild(saved);
   });
   handle("builds:delete", async (_e, id) => {
     const builds = await store.listBuilds();
@@ -995,7 +1002,9 @@ const readyWork = app.whenReady().then(async () => {
 
     const current = (await compStore.listComps()).find((c) => c.id === compId);
     const auth = await getAuthRecord().catch(() => null);
-    const saved = await compStore.upsertComp(doc);
+    // The history document carries the receipt from ITS point in time; the
+    // published page reflects the latest publish, so the current receipt stays.
+    const saved = await compStore.upsertComp(withoutPublishReceipt(doc));
     if (current) {
       compHistoryStore.appendVersion({
         recordId: compId,
@@ -1007,7 +1016,7 @@ const readyWork = app.whenReady().then(async () => {
     }
     const teamRoot = await findTeamRoot(saved.folderId);
     if (teamRoot) await safeEnqueue(() => teamSync.enqueue(teamRoot.teamId, saved.id, "comp", "put"), { type: "comp", id: saved.id });
-    return saved;
+    return annotateComp(saved);
   });
 
   handle("builds:revert", async (_e, buildId, versionNumber) => {
@@ -1029,7 +1038,8 @@ const readyWork = app.whenReady().then(async () => {
     const currentBuilds = await store.listBuilds();
     const currentBuild = currentBuilds.find((b) => b.id === buildId);
     const auth = await getAuthRecord().catch(() => null);
-    const saved = await store.upsertBuild(doc);
+    // See comps:revert — the current receipt stays.
+    const saved = await store.upsertBuild(withoutPublishReceipt(doc));
     if (currentBuild) {
       buildHistoryStore.appendVersion({
         recordId: buildId,
@@ -1044,7 +1054,7 @@ const readyWork = app.whenReady().then(async () => {
     }
     const teamRoot = await findTeamRoot(saved.folderId);
     if (teamRoot) await safeEnqueue(() => teamSync.enqueue(teamRoot.teamId, saved.id, "build", "put"), { type: "build", id: saved.id });
-    return saved;
+    return annotateBuild(saved);
   });
 
   // Folder CRUD
@@ -1168,7 +1178,7 @@ const readyWork = app.whenReady().then(async () => {
   );
 
   // Comp CRUD
-  handle("comps:list", () => compStore.listComps());
+  handle("comps:list", async () => (await compStore.listComps()).map(annotateComp));
   // Comp summaries name the builds that moved ("removed Heal Druid") rather than
   // counting them, which needs a title lookup the comp itself does not carry.
   handle("comps:save", async (_e, comp) => {
@@ -1199,7 +1209,7 @@ const readyWork = app.whenReady().then(async () => {
     if (oldRoot && oldRoot.id !== newRoot?.id) {
       await safeEnqueue(() => teamSync.enqueue(oldRoot.teamId, saved.id, "comp", "delete"), { type: "comp", id: saved.id });
     }
-    return saved;
+    return annotateComp(saved);
   });
   handle("comps:delete", async (_e, id) => {
     const comps = await compStore.listComps();
@@ -1650,6 +1660,8 @@ const readyWork = app.whenReady().then(async () => {
     const affectedComps = allComps.filter(
       (c) => c.publishedFileId && (c.buildIds || []).includes(buildId)
     );
+    // Receipts for the comps re-uploaded below, stamped once the upload is live.
+    const compRestamps = [];
     if (affectedComps.length) {
       const allBuilds = await store.listBuilds();
       const themedBuildsOn = await store.getSetting("appearance.themedBuildPages");
@@ -1659,6 +1671,10 @@ const readyWork = app.whenReady().then(async () => {
         const compBuildIds = new Set(getCompPublishBuildIds(comp));
         const compBuilds = allBuilds.filter((b) => compBuildIds.has(b.id));
         const buildsMap = {};
+        // The member records that went into this comp's payload, and the ones
+        // that failed to enrich and were left out.
+        const included = [];
+        const skippedIds = [];
 
         for (const cb of compBuilds) {
           let enriched;
@@ -1674,6 +1690,7 @@ const readyWork = app.whenReady().then(async () => {
               const cbExtras = await loadCrossProfessionCatalogs(cb.notes, cb.profession, getProfessionCatalog);
               enriched = serializeForPublish(cb, cat, upCat, cbExtras);
             } catch {
+              skippedIds.push(cb.id);
               continue; // Skip builds that fail to enrich — don't block the publish
             }
             try {
@@ -1690,12 +1707,15 @@ const readyWork = app.whenReady().then(async () => {
             : compTheme;
           const cbSpaUrl = `https://${owner}.github.io/${TARGET_REPO}/?n=${encodeURIComponent(cbSlug)}&b=${cbFileId}.${cbEncKey}${buildTheme ? `&t=${buildTheme}` : ""}`;
           buildsMap[cb.id] = { ...enriched, spaUrl: cbSpaUrl };
+          // The published build is the snapshot serialized above, not the re-read.
+          included.push(cb.id === buildId ? build : cb);
         }
 
         const compPayload = serializeCompForPublish(comp, buildsMap);
         if (comp.boonCoverageHtml) compPayload.boonCoverageHtml = comp.boonCoverageHtml;
         const compEncFile = buildEncryptedCompFile(compPayload, comp.publishedFileId, comp.publishedKey);
         combinedBundle[compEncFile.filePath] = compEncFile.content;
+        compRestamps.push({ comp, receipt: compReceiptAfterRepublish(comp, included, skippedIds) });
       }
     }
 
@@ -1745,8 +1765,21 @@ const readyWork = app.whenReady().then(async () => {
       publishedKey: encKey,
       publishedOwner: owner,
       snapshotUpdatedAt: build.updatedAt,
+      // Fingerprint of the snapshot that was serialized, so a save made during
+      // the upload leaves the build reading out of date.
+      ...buildReceipt(build),
     })) || build;
     if (teamRoot) await safeEnqueue(() => teamSync.enqueue(teamRoot.teamId, savedBuild.id, "build", "put"), { type: "build", id: savedBuild.id });
+
+    // The comps re-uploaded above now carry this build, so their receipts move
+    // with it — except a comp whose upload left a member out (it stays out of
+    // date until it is published in full).
+    for (const { comp, receipt } of compRestamps) {
+      if (!receipt) continue;
+      const restamped = await compStore.markPublished(comp.id, { ...receipt, snapshotUpdatedAt: comp.updatedAt });
+      const compRoot = restamped ? await findTeamRoot(restamped.folderId) : null;
+      if (compRoot) await safeEnqueue(() => teamSync.enqueue(compRoot.teamId, restamped.id, "comp", "put"), { type: "comp", id: restamped.id });
+    }
 
     const themedBuilds = await store.getSetting("appearance.themedBuildPages");
     const themeParam = themedBuilds && build.profession && PROFESSION_THEME_IDS[build.profession]
@@ -1894,8 +1927,11 @@ const readyWork = app.whenReady().then(async () => {
       const encFile = buildEncryptedBuildFile(enrichedBuild, fileId, encKey);
       spaBundle[encFile.filePath] = encFile.content;
 
-      if (needsRecord) {
-        updatedBuildRecords.push({ id: build.id, publishedFileId: fileId, publishedKey: encKey, publishedSlug: slug, publishedOwner: owner, snapshotUpdatedAt: build.updatedAt });
+      // This build's own page was just re-encrypted from `build`, so its receipt
+      // moves too. Only a changed record is written (and synced to the team).
+      const receipt = buildReceipt(build);
+      if (needsRecord || build.publishedHash !== receipt.publishedHash) {
+        updatedBuildRecords.push({ id: build.id, publishedFileId: fileId, publishedKey: encKey, publishedSlug: slug, publishedOwner: owner, snapshotUpdatedAt: build.updatedAt, ...receipt });
       }
 
       // Always add redirect file (idempotent — overwrites if already exists)
@@ -1956,6 +1992,9 @@ const readyWork = app.whenReady().then(async () => {
       publishedOwner: owner,
       boonCoverageHtml: boonCoverageHtml || comp.boonCoverageHtml || "",
       snapshotUpdatedAt: comp.updatedAt,
+      // Every member is in buildsMap (enrichment failure throws above). Linked
+      // teammate copies are fingerprinted from the local, synced record.
+      ...compReceipt(comp, compBuilds),
     })) || comp;
 
     // Push comp publish metadata to the team so teammates get the URL.
@@ -2094,7 +2133,8 @@ const readyWork = app.whenReady().then(async () => {
     const comp = allComps.find((c) => c.id === compId);
     if (!comp) return { success: false, error: "Comp not found" };
     if (!comp.publishedSlug) return { success: false, error: "Comp must be published before sharing" };
-    const compReject = shareRejectionReason(comp, "Comp");
+    const buildsById = new Map((await store.listBuilds()).map((b) => [b.id, annotateBuild(b)]));
+    const compReject = shareRejectionReason(annotateComp(comp), "Comp", (id) => buildsById.get(id));
     if (compReject) return { success: false, error: compReject };
 
     // 3. Resolve owner for URL construction (matches existing publish pattern)
@@ -2148,7 +2188,7 @@ const readyWork = app.whenReady().then(async () => {
     const allBuilds = await store.listBuilds();
     const build = allBuilds.find((b) => b.id === buildId);
     if (!build) return { success: false, error: "Build not found" };
-    const buildReject = shareRejectionReason(build, "Build");
+    const buildReject = shareRejectionReason(annotateBuild(build), "Build");
     if (buildReject) return { success: false, error: buildReject };
 
     // 3. Resolve owner for URL construction
