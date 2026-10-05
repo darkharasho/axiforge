@@ -312,6 +312,7 @@ const el = {
   overflowMenuBtn:   q("#overflowMenuBtn"),
   overflowMenu:      q("#overflowMenu"),
   publishSiteBtn:    q("#publishSiteBtn"),
+  editorPublishBadge: q("#editorPublishBadge"),
   specializationsHost: q("#specializationsHost"),
   skillsHost:        q("#skillsHost"),
   detailHost:        q("#detailHost"),

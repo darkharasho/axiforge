@@ -11,6 +11,7 @@
 .is-web .subnav__item[data-subtab="comps"],   /* no comps in the single-build playground */
 .is-web .subnav__item[data-subtab="notes"],    /* notes don't travel in a shared build */
 .is-web #publishSiteBtn,                        /* publishing is desktop-only */
+.is-web #editorPublishBadge,
 .is-web #editorShareDropdown {                  /* sharing handled by the web top bar */
   display: none !important;
 }

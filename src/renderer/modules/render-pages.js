@@ -8,6 +8,7 @@ import { openSettingsModal } from "./settings-modal.js";
 import { computeUnsavedChangeSummary } from "./editor.js";
 import { getProfessionSvg } from "./profession-icons.js";
 import { shareDisabledTooltip } from "./share-gate.js";
+import { publishStatus, publishBadgeHtml } from "./publish-status.js";
 
 // ---------------------------------------------------------------------------
 // DOM refs — injected by the host (renderer.js) after DOM is ready
@@ -580,6 +581,14 @@ export function renderEditorMeta() {
       _el.editorSharePubLink.disabled = true;
       _el.editorSharePubLink.title = "Publish first";
     }
+  }
+
+  // Publish mark beside the Publish button. Unsaved edits are unpublished too.
+  if (_el.editorPublishBadge) {
+    const pubBuild = state.editor?.id ? state.builds.find((b) => b.id === state.editor.id) : null;
+    let pubStatus = pubBuild ? publishStatus(pubBuild) : null;
+    if (pubStatus === "current" && state.editorDirty) pubStatus = "stale";
+    _el.editorPublishBadge.innerHTML = pubStatus ? publishBadgeHtml(pubStatus, { editor: true }) : "";
   }
 
   // Discord share buttons — disabled until build is published and has no unsaved/unpublished changes

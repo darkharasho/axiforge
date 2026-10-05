@@ -8,6 +8,7 @@ import { getVisibleBuilds, getVisibleFolders, getVisibleComps, libraryBuilds, li
 import { getProfessionSvg } from "../profession-icons.js";
 import { gameModeLabel } from "./smart-folders.js";
 import { badgeHtml } from "../sync-status.js";
+import { itemPublishBadgeHtml } from "../publish-status.js";
 import { buildUsageChipHtml, compSourceBadgeHtml, foreignFolderChipHtml } from "../build-source-chips.js";
 import { folderPathText } from "../build-sources.js";
 import { showBuildSourcesModal, showCompSourcesModal } from "../build-sources-modal.js";
@@ -270,6 +271,12 @@ function itemSyncIndicatorHtml(type, item) {
   );
 }
 
+// Sync indicator plus publish mark, as every view draws them side by side. A
+// comp's mark reads state.builds, so a member edit shows without reloading comps.
+function itemIndicatorsHtml(type, item) {
+  return itemSyncIndicatorHtml(type, item) + itemPublishBadgeHtml(type, item, state.builds);
+}
+
 /** Return HTML for the folder path breadcrumb shown in combined views. */
 function folderPathHtml(build) {
   if (!isCombinedView()) return "";
@@ -306,7 +313,7 @@ function renderListView(container) {
       (b) => `
         <div class="lib-list-row lib-list-row--build ${b.pinned ? "lib-list-row--pinned" : ""}" data-build-id="${escapeHtml(b.id)}">
           <span class="lib-list-row__spec-icon" style="${professionSeriesStyle(b.profession)}">${getSpecIcon(b)}</span>
-          <span class="lib-list-row__title">${escapeHtml(b.title || "Untitled")}${folderPathHtml(b)}${itemSyncIndicatorHtml("build", b)}</span>
+          <span class="lib-list-row__title">${escapeHtml(b.title || "Untitled")}${folderPathHtml(b)}${itemIndicatorsHtml("build", b)}</span>
           <span class="lib-list-row__pills">
             ${profPillHtml(b)}${eliteSpecPillHtml(b)}${gameModePillHtml(b)}${tagPillsHtml(b)}${roleBadgeHtml(b, state.upgradeCatalog)}${buildUsageChipHtml(b)}
           </span>
@@ -322,7 +329,7 @@ function renderListView(container) {
       (c) => `
         <div class="lib-list-row lib-list-row--comp" data-comp-id="${escapeHtml(c.id)}">
           <span class="lib-list-row__spec-icon lib-list-row__comp-icon">${compIcon}</span>
-          <span class="lib-list-row__title">${escapeHtml(c.name || "Untitled Comp")}${itemSyncIndicatorHtml("comp", c)}</span>
+          <span class="lib-list-row__title">${escapeHtml(c.name || "Untitled Comp")}${itemIndicatorsHtml("comp", c)}</span>
           ${compBadgeHtml(c)}
         </div>
       `
@@ -416,7 +423,7 @@ function renderTableView(container) {
         <div class="lib-tv__row lib-tv__row--build ${b.pinned ? "lib-tv__row--pinned" : ""}">
           <span class="lib-tv__action">${pinStarHtml(b)}</span>
           <span class="lib-tv__icon" style="${professionSeriesStyle(b.profession)}">${getSpecIcon(b)}</span>
-          <span class="lib-tv__name"><span class="lib-tv__title">${escapeHtml(b.title || "Untitled")}</span>${folderPathHtml(b)}${itemSyncIndicatorHtml("build", b)}${buildUsageChipHtml(b, { compact: true })}</span>
+          <span class="lib-tv__name"><span class="lib-tv__title">${escapeHtml(b.title || "Untitled")}</span>${folderPathHtml(b)}${itemIndicatorsHtml("build", b)}${buildUsageChipHtml(b, { compact: true })}</span>
           <span class="lib-tv__profession">${escapeHtml(b.profession || "")}</span>
           <span class="lib-tv__spec">${escapeHtml(eliteSpec || "")}</span>
           <span class="lib-tv__mode">${escapeHtml(gameModeLabel(b.gameMode || "pve"))}</span>
@@ -447,7 +454,7 @@ function renderTableView(container) {
         <div class="lib-tv__row lib-tv__row--comp">
           <span class="lib-tv__action" data-toggle-table-folder="${escapeHtml(c.id)}">${chevron}</span>
           <span class="lib-tv__icon lib-list-row__comp-icon">${compIcon}</span>
-          <span class="lib-tv__name"><span class="lib-tv__title">${escapeHtml(c.name || "Untitled Comp")}</span>${itemSyncIndicatorHtml("comp", c)}</span>
+          <span class="lib-tv__name"><span class="lib-tv__title">${escapeHtml(c.name || "Untitled Comp")}</span>${itemIndicatorsHtml("comp", c)}</span>
           <span class="lib-tv__profession">${compBadgeHtml(c)}</span>
           <span class="lib-tv__spec"></span>
           <span class="lib-tv__mode"></span>
@@ -531,7 +538,7 @@ function renderGridView(container) {
         <div class="af-tile af-tile--strip ${b.pinned ? "af-tile--pinned" : ""}" style="${professionStripStyle(b.profession)}" data-build-id="${escapeHtml(b.id)}">
           <div class="af-tile__head">
             <div class="af-tile__glyph" style="${professionSeriesStyle(b.profession)}">${getSpecIcon(b)}</div>
-            <div class="af-tile__title">${escapeHtml(b.title || "Untitled")}${itemSyncIndicatorHtml("build", b)}</div>
+            <div class="af-tile__title">${escapeHtml(b.title || "Untitled")}${itemIndicatorsHtml("build", b)}</div>
             ${buildUsageChipHtml(b, { compact: true })}${pinStarHtml(b)}
           </div>
           ${folderPathHtml(b)}
@@ -550,7 +557,7 @@ function renderGridView(container) {
         <div class="af-tile af-tile--row" data-comp-id="${escapeHtml(c.id)}">
           <div class="af-tile__comp-icon">${compIcon}</div>
           <div class="af-tile__comp-body">
-            <div class="af-tile__title">${escapeHtml(c.name || "Untitled Comp")}${itemSyncIndicatorHtml("comp", c)}</div>
+            <div class="af-tile__title">${escapeHtml(c.name || "Untitled Comp")}${itemIndicatorsHtml("comp", c)}</div>
             ${compBadgeHtml(c)}
           </div>
         </div>
@@ -599,7 +606,7 @@ function renderIconView(container) {
       (b) => `
         <div class="lib-icon-item lib-icon-item--build ${b.pinned ? "lib-icon-item--pinned" : ""}" data-build-id="${escapeHtml(b.id)}">
           <div class="lib-icon-item__icon" style="${professionSeriesStyle(b.profession)}">${getSpecIcon(b)}</div>
-          <div class="lib-icon-item__label">${escapeHtml(b.title || "Untitled")}${itemSyncIndicatorHtml("build", b)}${buildUsageChipHtml(b, { compact: true })}</div>
+          <div class="lib-icon-item__label">${escapeHtml(b.title || "Untitled")}${itemIndicatorsHtml("build", b)}${buildUsageChipHtml(b, { compact: true })}</div>
           ${folderPathHtml(b)}
         </div>
       `
@@ -611,7 +618,7 @@ function renderIconView(container) {
       (c) => `
         <div class="lib-icon-item lib-icon-item--comp" data-comp-id="${escapeHtml(c.id)}">
           <div class="lib-icon-item__icon lib-icon-item__icon--comp">${compIcon}</div>
-          <div class="lib-icon-item__label">${escapeHtml(c.name || "Untitled Comp")}${itemSyncIndicatorHtml("comp", c)}</div>
+          <div class="lib-icon-item__label">${escapeHtml(c.name || "Untitled Comp")}${itemIndicatorsHtml("comp", c)}</div>
         </div>
       `
     )
@@ -709,7 +716,7 @@ function renderColumnsView(container) {
           <div class="lib-col__item lib-col__item--comp ${isSelected ? "lib-col__item--selected" : ""}"
                data-comp-id="${escapeHtml(c.id)}" data-col-index="${colIndex}">
             <span class="lib-col__icon lib-col__icon--comp">${compIcon}</span>
-            <span class="lib-col__name">${escapeHtml(c.name || "Untitled Comp")}${itemSyncIndicatorHtml("comp", c)}</span>
+            <span class="lib-col__name">${escapeHtml(c.name || "Untitled Comp")}${itemIndicatorsHtml("comp", c)}</span>
             <span class="lib-col__chevron">${chevronRightIcon}</span>
           </div>
         `);
@@ -727,7 +734,7 @@ function renderColumnsView(container) {
           <div class="lib-col__item lib-col__item--build"
                data-build-id="${escapeHtml(b.id)}" data-col-index="${colIndex}">
             <span class="lib-col__icon" style="${professionSeriesStyle(b.profession)}">${getSpecIcon(b)}</span>
-            <span class="lib-col__name">${escapeHtml(b.title || "Untitled")}${folderPathHtml(b)}${itemSyncIndicatorHtml("build", b)}</span>
+            <span class="lib-col__name">${escapeHtml(b.title || "Untitled")}${folderPathHtml(b)}${itemIndicatorsHtml("build", b)}</span>
             ${roleBadgeHtml(b, state.upgradeCatalog)}${sourceChip}
           </div>
         `);

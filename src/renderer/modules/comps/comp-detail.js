@@ -20,6 +20,7 @@ import { axiforgeIcon, checkIcon, chevronDownIcon, arrowLeftIcon, arrowUpTrayIco
 import { renderMiniBuildCard, renderMissingMiniBuildCard } from "../mini-build-card.js";
 import { pickWebhooks } from "../webhook-picker.js";
 import { compShareDisabledTooltip } from "../share-gate.js";
+import { compPublishStatus, buildLookup, publishBadgeHtml, PUBLISH_RECEIPT_FIELDS } from "../publish-status.js";
 import { computeCompPartyCoverage, buildPartyCoverageHTML, bindPartyCoverageEvents, closePartyCoverageExpand } from "./comp-boon-coverage.js";
 import { openCompTagPopover, closeCompTagPopover, renderCompTagsRow } from "./comp-tags.js";
 import { renderCompTabs, mountCompNotes } from "./comp-notes.js";
@@ -414,6 +415,15 @@ function startSaveStatusTicker() {
   _saveStatusInterval = setInterval(updateSaveStatusText, 5000);
 }
 
+// Publish mark beside the comp's Publish button. Reads state.builds, so a member
+// edit made elsewhere shows the next time the detail view draws.
+function renderCompPublishBadge() {
+  const el = document.getElementById("compPublishBadge");
+  if (!el || !state.activeComp) return;
+  const { status, reason } = compPublishStatus(state.activeComp, buildLookup(state.builds));
+  el.innerHTML = publishBadgeHtml(status, { reason, editor: true });
+}
+
 async function saveAndSync(comp) {
   showSaving();
   const saved = await window.desktopApi.saveComp(comp);
@@ -421,6 +431,7 @@ async function saveAndSync(comp) {
   state.comps = await window.desktopApi.listComps();
   _lastSavedAt = new Date();
   updateSaveStatusText();
+  renderCompPublishBadge();
   return saved;
 }
 
@@ -483,6 +494,7 @@ export function renderCompDetail() {
           </div>
         </div>
         <button type="button" class="axi-btn axi-btn--ghost" data-action="publish">Publish</button>
+        <span id="compPublishBadge" class="comp-publish-badge"></span>
         <div class="publish-status" id="compPublishStatus"></div>
         <span class="comp-detail__discord-status" id="compDiscordStatus"></span>
         </div>
@@ -511,6 +523,7 @@ export function renderCompDetail() {
   `;
 
   bindDetailEvents(container, comp);
+  renderCompPublishBadge();
 
   // Initialize save status badge from comp's updatedAt
   if (!_lastSavedAt && comp.updatedAt) {
@@ -1425,7 +1438,15 @@ function bindDetailEvents(container, comp) {
         state.publishProgress[comp.id] = { ...state.publishProgress[comp.id], result: "complete" };
         completeAllPublishSteps();
       }
+      // The publish stamped the comp's receipt and its members' receipts.
       state.comps = await window.desktopApi.listComps();
+      state.builds = await window.desktopApi.listBuilds();
+      const fresh = state.comps.find((c) => c.id === comp.id);
+      if (fresh && state.activeComp?.id === comp.id) {
+        const receipt = Object.fromEntries(PUBLISH_RECEIPT_FIELDS.map((k) => [k, fresh[k]]));
+        state.activeComp = { ...state.activeComp, ...receipt, contentHash: fresh.contentHash };
+      }
+      renderCompPublishBadge();
       const pubLinkEl = container.querySelector("[data-action='copy-published-link']");
       if (pubLinkEl) { pubLinkEl.disabled = false; pubLinkEl.removeAttribute("title"); }
     } catch (err) {

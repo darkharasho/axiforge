@@ -1925,6 +1925,34 @@
   color: var(--axi-danger);
 }
 
+/* ── Publish status mark (publish-status.js) ─────────────────────────────── */
+
+.publish-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  height: 14px;
+  vertical-align: middle;
+  margin-left: 4px;
+}
+
+.publish-badge--current,
+.publish-badge--never {
+  color: var(--axi-text-faint);
+}
+
+.publish-badge--stale {
+  color: var(--axi-warn);
+}
+
+/* Editor variant, beside the Publish button: icon + label. */
+.publish-badge--editor {
+  margin-left: 0;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
 /* Spinner animation for syncing state */
 @keyframes sync-spin {
   to { transform: rotate(360deg); }
