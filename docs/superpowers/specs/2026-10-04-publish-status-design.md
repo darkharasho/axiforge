@@ -68,7 +68,10 @@ New pure module `src/main/publishFingerprint.js` (main process only, node
 - **Attached, never stored:** main's `builds:list`, `builds:save`,
   `comps:list` and `comps:save` handlers attach `contentHash` (the current
   fingerprint) to each record they return. The stores drop unknown fields on
-  write, so a `contentHash` sent back by the renderer is discarded.
+  write, so a `contentHash` sent back by the renderer is discarded. The
+  `builds:save`/`comps:save` handlers also strip `publishedHash` and
+  `publishedMemberHashes` from renderer payloads: main owns the receipt, so a
+  stale renderer object can never regress it.
 - **Derived** by a pure comparison, no hashing, in `src/shared/publishState.js`
   (CJS, main) and an ESM twin `src/renderer/modules/publish-status.js`
   (renderer), locked together by a parity test (the repo's existing pattern):
@@ -131,8 +134,10 @@ date.
   when present and keep the existing value when absent.
 - Status is content-derived, so the local `updatedAt` a pull writes no longer
   matters.
-- `upsertComp` also starts carrying `publishedAt` from its input, so the
-  legacy fallback is right for pulled comps published before this ships.
+- `upsertComp` does **not** carry `publishedAt` from its input. (Revised during
+  implementation: a pull writes a local `updatedAt`, so carrying `publishedAt`
+  would make every legacy team comp read out of date on teammates' machines.
+  Legacy comps behave as before until their next hash-stamped publish.)
 - Known limit: a teammate on an older version publishes without a hash, so
   the receipt this machine holds stays at the last hash-stamped publish.
 
