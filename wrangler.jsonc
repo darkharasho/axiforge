@@ -8,6 +8,10 @@
   "compatibility_date": "2026-06-29",
   // @axiapps/code (used to validate share codes in the Worker) pulls in Buffer.
   "compatibility_flags": ["nodejs_compat"],
+  // Axi access policy (workers/sync/src/policy.js). Remove to switch the check off.
+  "vars": {
+    "POLICY_MANIFEST_URL": "https://config.axi.link/v1/manifest?app=axiforge"
+  },
   "assets": {
     "directory": "./dist/web",
     "binding": "ASSETS",

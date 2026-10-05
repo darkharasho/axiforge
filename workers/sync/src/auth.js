@@ -1,6 +1,7 @@
 "use strict";
 const { uuid, nowIso, sha256Hex, randomToken, json, errorResponse } = require("./db");
 const { checkRateLimit } = require("./ratelimit");
+const { isGithubUserBlocked } = require("./policy");
 
 const SESSION_TTL_MS = 90 * 24 * 60 * 60 * 1000; // 90 days, sliding
 const SESSION_BUMP_MS = 60 * 60 * 1000;          // bump expiry at most hourly
@@ -61,6 +62,16 @@ async function cacheDelete(kv, tokenHash) {
   }
 }
 
+// Deletes every session of a user and evicts their `sess:` cache entries. Used
+// when the user is on the Axi access denylist (see policy.js). Select first:
+// the cache is keyed by token hash, and its entries outlive the D1 rows by up
+// to one TTL.
+async function revokeUserSessions(env, userId) {
+  const { results } = await env.SYNC_DB.prepare("SELECT token_hash FROM sessions WHERE user_id = ?").bind(userId).all();
+  await env.SYNC_DB.prepare("DELETE FROM sessions WHERE user_id = ?").bind(userId).run();
+  for (const row of results || []) await cacheDelete(env.SYNC_RL, row.token_hash);
+}
+
 async function readJson(request) {
   try { return await request.json(); } catch { return null; }
 }
@@ -96,6 +107,13 @@ async function handleGithubLogin(request, env, deps = {}) {
   if (!ghRes.ok) return errorResponse("unavailable", "GitHub is unavailable. Try again shortly.");
   const gh = await ghRes.json();
   if (!gh || typeof gh.id !== "number" || !gh.login) return errorResponse("unauthorized", "GitHub returned no user.");
+  if (await isGithubUserBlocked(env, deps, gh.id)) {
+    // Neutral on purpose: never say which identifier matched. Also drop any
+    // sessions the user still holds from before the ban.
+    const known = await env.SYNC_DB.prepare("SELECT user_id FROM identities WHERE provider = 'github' AND provider_user_id = ?").bind(String(gh.id)).first();
+    if (known) await revokeUserSessions(env, known.user_id);
+    return errorResponse("forbidden", "Access unavailable for this account.");
+  }
 
   const db = env.SYNC_DB;
   const now = nowIso(deps);
@@ -151,16 +169,24 @@ async function authenticate(request, env, deps = {}) {
   const nowMs = (deps.now || Date.now)();
 
   const cached = await cacheGet(env.SYNC_RL, tokenHash);
-  if (cached) {
-    // Still valid → answer without going near D1, which is the whole point.
-    if (Date.parse(cached.expiresAt) > nowMs) return { user: cached.user, sessionHash: tokenHash };
+  // Entries written before the access policy existed have no `githubId`; treat
+  // them as a miss so the D1 path below checks the policy and re-caches them.
+  if (cached && cached.githubId !== undefined) {
+    if (Date.parse(cached.expiresAt) > nowMs) {
+      // Still valid → answer without going near D1, which is the whole point.
+      if (cached.githubId && await isGithubUserBlocked(env, deps, cached.githubId)) {
+        await revokeUserSessions(env, cached.user.id);
+        return null;
+      }
+      return { user: cached.user, sessionHash: tokenHash };
+    }
     // Lapsed → drop it and fall through, so the D1 path below also deletes the
     // dead row rather than leaving it for the nightly purge.
     await cacheDelete(env.SYNC_RL, tokenHash);
   }
 
   const row = await env.SYNC_DB.prepare(
-    `SELECT s.token_hash, s.last_used_at, s.expires_at, u.id, u.display_name, u.avatar_url, i.login
+    `SELECT s.token_hash, s.last_used_at, s.expires_at, u.id, u.display_name, u.avatar_url, i.login, i.provider, i.provider_user_id
        FROM sessions s
        JOIN users u ON u.id = s.user_id
        JOIN identities i ON i.user_id = u.id
@@ -171,6 +197,11 @@ async function authenticate(request, env, deps = {}) {
   if (!row) return null;
   if (Date.parse(row.expires_at) <= nowMs) {
     await env.SYNC_DB.prepare("DELETE FROM sessions WHERE token_hash = ?").bind(tokenHash).run();
+    return null;
+  }
+  const githubId = row.provider === "github" ? row.provider_user_id : null;
+  if (githubId && await isGithubUserBlocked(env, deps, githubId)) {
+    await revokeUserSessions(env, row.id);
     return null;
   }
   // The slide still runs on the cold read. A cache TTL far shorter than
@@ -185,7 +216,7 @@ async function authenticate(request, env, deps = {}) {
   }
   const user = publicUser(row);
   // Cache the post-bump expiry, not the row's stale one.
-  await cachePut(env.SYNC_RL, tokenHash, { user, expiresAt });
+  await cachePut(env.SYNC_RL, tokenHash, { user, expiresAt, githubId });
   return { user, sessionHash: tokenHash };
 }
 
@@ -198,4 +229,4 @@ async function handleLogout(_request, env, _deps, auth) {
   return new Response(null, { status: 204 });
 }
 
-module.exports = { handleGithubLogin, authenticate, handleLogout, publicUser, readJson, SESSION_TTL_MS, SESSION_BUMP_MS, SESSION_CACHE_TTL_MS };
+module.exports = { handleGithubLogin, authenticate, revokeUserSessions, handleLogout, publicUser, readJson, SESSION_TTL_MS, SESSION_BUMP_MS, SESSION_CACHE_TTL_MS };

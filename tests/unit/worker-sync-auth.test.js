@@ -239,3 +239,113 @@ describe("auth session cache", () => {
     expect(await db.prepare("SELECT expires_at FROM sessions").first("expires_at")).not.toBe(exp0);
   });
 });
+
+describe("access policy", () => {
+  const { sha256Hex } = require("../../workers/sync/src/db");
+  const { revokeUserSessions } = require("../../workers/sync/src/auth");
+  const MANIFEST = "https://config.axi.link/v1/manifest?app=axiforge";
+
+  // Same GitHub mock as setup(), plus the manifest URL. `state.denylist` is read
+  // on every fetch, so a test can ban/unban between requests.
+  async function policySetup() {
+    const base = await setup();
+    const state = { denylist: [], manifestCalls: 0 };
+    const gh = base.deps.fetchImpl;
+    base.deps.policyFetchImpl = async (url) => {
+      if (String(url) !== MANIFEST) throw new Error("unexpected url " + url);
+      state.manifestCalls += 1;
+      return new Response(JSON.stringify({ version: 1, flags: {}, minVersion: null, notice: null, denylist: state.denylist }), { status: 200 });
+    };
+    base.deps.fetchImpl = gh;
+    base.env.POLICY_MANIFEST_URL = MANIFEST;
+    return { ...base, state, ban: async () => { state.denylist = [await sha256Hex("github_user:" + GH_USER.id)]; } };
+  }
+
+  test("a listed GitHub user cannot log in, and no user/session row is written", async () => {
+    const { env, deps, db, ban } = await policySetup();
+    await ban();
+    const r = await handleGithubLogin(loginReq("gh-good"), env, deps);
+    expect(r.status).toBe(403);
+    expect(await r.json()).toEqual({ error: { code: "forbidden", message: "Access unavailable for this account." } });
+    expect(await db.prepare("SELECT COUNT(*) AS c FROM users").first("c")).toBe(0);
+    expect(await db.prepare("SELECT COUNT(*) AS c FROM sessions").first("c")).toBe(0);
+  });
+
+  test("an unlisted user logs in normally with the policy on", async () => {
+    const { env, deps } = await policySetup();
+    const r = await handleGithubLogin(loginReq("gh-good"), env, deps);
+    expect(r.status).toBe(200);
+  });
+
+  test("a ban revokes every session of the user, D1 rows and sess: cache entries", async () => {
+    const { env, deps, db, ban } = await policySetup();
+    const a = (await (await handleGithubLogin(loginReq("gh-good"), env, deps)).json()).sessionToken;
+    const b = (await (await handleGithubLogin(loginReq("gh-good", "5.6.7.8"), env, deps)).json()).sessionToken;
+    expect(await authenticate(authedReq(a), env, deps)).not.toBeNull();
+    expect(await authenticate(authedReq(b), env, deps)).not.toBeNull();
+    const hashB = await sha256Hex(b);
+    expect(await env.SYNC_RL.get("sess:" + hashB)).not.toBeNull();
+
+    await ban();
+    deps.advance(4 * 60 * 1000 + 1); // policy cache lapsed; both sess: entries still warm
+    expect(await authenticate(authedReq(a), env, deps)).toBeNull();
+    expect(await db.prepare("SELECT COUNT(*) AS c FROM sessions").first("c")).toBe(0);
+    expect(await env.SYNC_RL.get("sess:" + hashB)).toBeNull();
+    expect(await authenticate(authedReq(b), env, deps)).toBeNull();
+    // Only sessions go: the user and identity rows stay, so an unban restores everything.
+    expect(await db.prepare("SELECT COUNT(*) AS c FROM users").first("c")).toBe(1);
+  });
+
+  test("the warm cache path is checked too (no D1 needed to refuse)", async () => {
+    const { env, deps, ban } = await policySetup();
+    const token = (await (await handleGithubLogin(loginReq("gh-good"), env, deps)).json()).sessionToken;
+    await authenticate(authedReq(token), env, deps); // caches { user, expiresAt, githubId }
+    const hash = await sha256Hex(token);
+    expect(JSON.parse(await env.SYNC_RL.get("sess:" + hash)).githubId).toBe("42");
+
+    await ban();
+    deps.advance(4 * 60 * 1000 + 1); // policy cache lapsed (240 s KV, 60 s memo); session cache (300 s) still warm
+    expect(await authenticate(authedReq(token), env, deps)).toBeNull();
+  });
+
+  test("a session cached before githubId existed falls through to D1 and is still checked", async () => {
+    const { env, deps, ban } = await policySetup();
+    const token = (await (await handleGithubLogin(loginReq("gh-good"), env, deps)).json()).sessionToken;
+    const first = await authenticate(authedReq(token), env, deps);
+    const hash = await sha256Hex(token);
+    await env.SYNC_RL.put("sess:" + hash, JSON.stringify({ user: first.user, expiresAt: "2099-01-01T00:00:00.000Z" }), { expirationTtl: 300 });
+
+    await ban();
+    deps.advance(4 * 60 * 1000 + 1);
+    expect(await authenticate(authedReq(token), env, deps)).toBeNull();
+  });
+
+  test("unban: after the cache period the user can log in again", async () => {
+    const { env, deps, state, ban } = await policySetup();
+    await ban();
+    expect((await handleGithubLogin(loginReq("gh-good"), env, deps)).status).toBe(403);
+    state.denylist = [];
+    deps.advance(5 * 60 * 1000);
+    expect((await handleGithubLogin(loginReq("gh-good"), env, deps)).status).toBe(200);
+  });
+
+  test("manifest outage fails open for login and authenticate", async () => {
+    const { env, deps } = await policySetup();
+    deps.policyFetchImpl = async () => { throw new Error("dns"); };
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    const r = await handleGithubLogin(loginReq("gh-good"), env, deps);
+    expect(r.status).toBe(200);
+    const { sessionToken } = await r.json();
+    expect(await authenticate(authedReq(sessionToken), env, deps)).not.toBeNull();
+    warn.mockRestore();
+  });
+
+  test("revokeUserSessions removes only that user's sessions", async () => {
+    const { env, deps, db } = await policySetup();
+    const mine = (await (await handleGithubLogin(loginReq("gh-good"), env, deps)).json());
+    await db.prepare("INSERT INTO users (id, display_name, avatar_url, created_at) VALUES ('other', 'O', NULL, '2026-01-01')").run();
+    await db.prepare("INSERT INTO sessions (token_hash, user_id, client_label, created_at, last_used_at, expires_at) VALUES ('h-other', 'other', NULL, '2026-01-01', '2026-01-01', '2099-01-01')").run();
+    await revokeUserSessions(env, mine.user.id);
+    expect((await db.prepare("SELECT token_hash FROM sessions").all()).results).toEqual([{ token_hash: "h-other" }]);
+  });
+});

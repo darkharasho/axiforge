@@ -25,3 +25,8 @@ test("wrangler.jsonc binds SYNC_DB, SYNC_RL, routes /api/sync/* to the Worker, a
   expect(raw).toMatch(/"run_worker_first":\s*\[\s*"\/api\/\*",\s*"\/b\/\*"\s*\]/);
   expect(raw).toMatch(/"crons":\s*\[\s*"0 4 \* \* \*"\s*\]/);
 });
+
+test("wrangler.jsonc points the access policy at the axiforge manifest", () => {
+  const raw = fs.readFileSync(WRANGLER, "utf8");
+  expect(raw).toMatch(/"POLICY_MANIFEST_URL":\s*"https:\/\/config\.axi\.link\/v1\/manifest\?app=axiforge"/);
+});

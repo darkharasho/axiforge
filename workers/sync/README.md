@@ -32,3 +32,14 @@ can fail — it fails open (logs a warning and allows the request) rather than
 the limit is not strictly enforced under load. Follow-up: move to the
 Workers Rate Limiting binding (`ratelimits` in `wrangler.jsonc`), which is
 built for this and does not consume KV ops.
+
+## Access policy
+The Axi apps can revoke access for people who violate their terms of use.
+`src/policy.js` reads the public manifest at `POLICY_MANIFEST_URL`
+(`wrangler.jsonc`), whose `denylist` holds only SHA-256 hashes of
+`kind:normalized` identifiers. A listed GitHub user gets a neutral 403
+("Access unavailable for this account.") on login; a listed user who is already
+signed in has every session deleted (D1 rows and `sess:` cache entries) and is
+answered 401 like any signed-out client. Nothing else is deleted, so an unban
+restores access within 5 minutes. If the manifest is unreachable nobody is
+refused. Unset `POLICY_MANIFEST_URL` to switch the check off.
