@@ -1,7 +1,7 @@
 # Publish status for builds and comps
 
 Date: 2026-10-04
-Status: approved design, pending implementation plan
+Status: approved design (revised 2026-10-04: status derived from attached hashes), pending implementation plan
 
 ## Goal
 
@@ -34,141 +34,172 @@ two-state Published/Draft chip that ignores staleness.
 
 ### 1. Fingerprint
 
-New pure module `src/main/publishFingerprint.js` (main process only):
+New pure module `src/main/publishFingerprint.js` (main process only, node
+`crypto`):
 
-- `buildFingerprint(build)` — hash of a canonical projection of the
-  published-page fields: `title`, `profession`, `specializations`, `skills`,
-  `underwaterSkills`, `equipment`, `tags`, `notes`, `images`, `gameMode`,
-  `activeAttunement`.
-  Excluded: `id`, all timestamps, all `published*` fields, and local-only
-  fields (`folderId`, `pinned`, `sortOrder`, `compIds`, trash and archive
-  stamps).
-- `compFingerprint(comp, buildsById)` — hash of the comp's page fields
-  (`name`, `notes`, `images`, `tags`, `partyLines`, `gameMode`, `buildColors`,
-  `categories`) plus the ordered list of `[buildId, buildFingerprint(member)]`
-  for its publish members (`getCompPublishBuildIds`). A missing member hashes
-  as `[buildId, null]`.
+- `buildFingerprint(build)` hashes a **normalized** build (the shape
+  `normalizeBuild` produces) with these keys removed: `id`, `version`,
+  `createdAt`, `updatedAt`, `buildUrl`, every `published*` field, the local-only
+  fields (`folderId`, `compIds`, `pinned`, `sortOrder`), the trash and archive
+  stamps, and `activeLegendSlot` (a view toggle; history treats it as
+  bookkeeping too). Exclusion rather than an allowlist, so a content field added
+  later is covered by default.
+- `compFingerprint(comp)` hashes the comp's **own** page fields only:
+  `name`, `notes`, `images`, `tags`, `buildIds`, `partyLines` (capacity and
+  slots per line; line ids are not shown and are regenerated for legacy
+  records), `gameMode`, `buildColors`, `categories`. Absent fields hash as
+  their `upsertComp` defaults, so a save that only fills in defaults does not
+  change the hash.
 - Hashing: stable-key JSON (keys sorted recursively, `undefined` dropped),
-  then SHA-256 from node `crypto`, truncated to 16 hex characters.
-- Both functions take **normalized** records (the shape the stores and team
-  sync hold), so key order and absent optional fields cannot change the hash.
-  Images are data URLs, so they hash the same on every machine.
+  SHA-256, truncated to 16 hex characters. Images are data URLs, so they hash
+  the same on every machine.
 
-### 2. Stored field and derived status
+### 2. Stored receipt, attached hash, derived status
 
-- New stored field `publishedHash` on builds and comps, next to the other
-  `published*` fields. `normalizeBuild` and `upsertComp` carry it.
-  `upsertBuild` keeps an existing value when the input omits it, the same way
-  it keeps `publishedAt`. It syncs to teammates because team sync strips only
-  local-only fields.
-- `publishStatus(record, ...)` returns `"never" | "current" | "stale"`:
-  - `never`: no `publishedFileId`.
-  - `current` / `stale`: `publishedHash` present, and the current fingerprint
-    matches / does not match it.
-  - Legacy (published before this ships, no `publishedHash`): fall back to
-    `updatedAt !== publishedAt`. The next publish stamps a hash.
-- Status is computed **only in main**. The builds and comps list/get IPC
-  handlers attach a derived `publishStatus` field to each record. Comps need
-  the build store to resolve members; main holds both stores.
-- `publishStatus` is derived, never persisted: stores and the team-sync body
-  strip it on write.
-- `src/shared/publishState.js` and `src/main/shareGate.js` switch to it. The
-  renderer reads `publishStatus` only, which removes the hand-maintained ESM
-  duplicate of the predicate in `src/renderer/modules/share-gate.js` rather
-  than adding a second one (CJS/ESM parity hazard).
+- **Stored** (the publish receipt, next to the other `published*` fields):
+  - builds and comps: `publishedHash`, the fingerprint of what was uploaded;
+  - comps also: `publishedMemberHashes`, `{ buildId: buildFingerprint }` for
+    each member build as it went into the comp page.
+  `normalizeBuild` and `upsertComp` carry them; `upsertBuild`/`upsertComp`
+  keep the existing values when the input omits them, the same way
+  `upsertBuild` keeps `publishedAt`. They sync to teammates because team sync
+  strips only local-only fields. History lists them as non-versioned
+  bookkeeping, so a publish never writes a history version.
+- **Attached, never stored:** main's `builds:list`, `builds:save`,
+  `comps:list` and `comps:save` handlers attach `contentHash` (the current
+  fingerprint) to each record they return. The stores drop unknown fields on
+  write, so a `contentHash` sent back by the renderer is discarded.
+- **Derived** by a pure comparison, no hashing, in `src/shared/publishState.js`
+  (CJS, main) and an ESM twin `src/renderer/modules/publish-status.js`
+  (renderer), locked together by a parity test (the repo's existing pattern):
+  - `publishStatus(record)` → `"never" | "current" | "stale"`:
+    - `never`: no `publishedFileId`;
+    - with `publishedHash`: `contentHash === publishedHash` → `current`, else
+      `stale`. A record with no `contentHash` (not yet annotated) reads
+      `current` until the next list reload; main always annotates before it
+      gates anything;
+    - legacy (published before this ships, no `publishedHash`):
+      `updatedAt !== publishedAt` → `stale`. The next publish stamps a hash.
+  - `compPublishStatus(comp, buildOf)` → `{ status, reason }`, `reason` is
+    `"self" | "member" | null`. The comp's own `publishStatus` first; if that
+    is `current` and the comp has a `publishedHash`, each
+    `publishedMemberHashes` entry is compared to `buildOf(id).contentHash`.
+    A mismatch → `stale`/`member`. A member that is not in the library, or
+    has no `contentHash`, is skipped (cannot be judged; republishing would
+    only drop it).
+- Because a comp's member check reads `state.builds`, a comp's status is right
+  whenever the builds list is fresh. Nothing has to reload comps after a build
+  save.
 
-### 3. Writing the hash
+### 3. Writing the receipt
 
-The hash is computed from the **exact records serialized and uploaded**, not
-re-read afterwards, mirroring the existing `snapshotUpdatedAt` logic. A save
-that lands during a publish therefore leaves the item correctly out of date.
+The receipt is computed from the **exact records serialized and uploaded**,
+not re-read afterwards, mirroring the existing `snapshotUpdatedAt` logic. A
+save that lands during a publish therefore leaves the item correctly out of
+date.
 
-- **Build publish** (`src/main/index.js`, `builds:publish-build`):
-  - `buildStore.markPublished` accepts and stores `publishedHash`.
-  - The publish already re-uploads every published comp containing the build,
-    each with its current fields and current member builds. Each such comp
-    gets `compStore.markPublished` with a `compFingerprint` over the records
-    that went into its payload.
+- **Build publish** (`builds:publish-build`):
+  - `buildStore.markPublished` accepts and stores `publishedHash`, from the
+    `build` snapshot that was serialized.
+  - The publish already re-uploads every published comp containing the build.
+    Each such comp gets `compStore.markPublished` with
+    `publishedHash = compFingerprint(comp)` and `publishedMemberHashes` over
+    the member records that went into its payload.
   - If any member build failed to enrich and was skipped from that payload,
-    that comp's hash is **not** refreshed (it stays out of date — the upload
-    was incomplete).
-  - Re-stamped comps in team folders get a team `put`, as the build already
-    does.
-- **Comp publish** (`comps:publish-comp`): `compStore.markPublished` stores
-  `compFingerprint` over the comp and its member builds as uploaded. Members
-  linked to a teammate's published copy rather than re-uploaded are
-  fingerprinted from the local record (the synced copy of that version).
+    that comp's receipt is **not** refreshed (it stays out of date — the
+    upload was incomplete).
+  - Re-stamped comps in team folders get a team `put`, as the build does.
+- **Comp publish** (`comps:publish-comp`): `compStore.markPublished` stores the
+  comp's `publishedHash` and `publishedMemberHashes` over its members as
+  uploaded. Members linked to a teammate's published copy rather than
+  re-uploaded are fingerprinted from the local record (the synced copy of
+  that version). Every member it re-uploaded under our owner also gets its
+  `publishedHash` stamped (today only members that need a new record are
+  stamped); a team `put` goes out only when the build's receipt changed.
+- **History revert** (`builds:revert`, `comps:revert`): the history document
+  carries the receipt from that point in time. The revert strips the receipt
+  fields before upserting so the current receipt is kept; otherwise a revert
+  to the last-published version would read "Published" while the page shows
+  a later publish.
+- **Library duplicate** (`handleDuplicate`, `handleDuplicateComp`): the copy
+  drops every `published*` field. Today it copies `publishedFileId` and
+  `publishedKey`, so a duplicate claims the original's published page.
 
 ### 4. Team pull
 
-- `publishedHash` arrives in the synced body. `upsertBuild`/`upsertComp`
-  accept it when present and keep the existing value when absent.
+- The receipt arrives in the synced body. `upsertBuild`/`upsertComp` accept it
+  when present and keep the existing value when absent.
 - Status is content-derived, so the local `updatedAt` a pull writes no longer
   matters.
 - `upsertComp` also starts carrying `publishedAt` from its input, so the
   legacy fallback is right for pulled comps published before this ships.
+- Known limit: a teammate on an older version publishes without a hash, so
+  the receipt this machine holds stays at the last hash-stamped publish.
 
 ### 5. UI
 
-- New renderer helper `publishBadgeHtml(status, opts)`, styled after the sync
-  indicator (`src/renderer/modules/sync-status.js`):
+- The ESM module also exports `publishBadgeHtml(status, { reason, editor })`,
+  styled after the sync indicator (`src/renderer/modules/sync-status.js`):
   - `current`: small "Published" mark.
   - `stale`: amber "Out of date" mark. Tooltip "Changed since last publish";
-    for a comp whose own fields match but a member changed, "A build in this
-    comp changed since publish". This needs main to expose which part moved:
-    `publishStatus` for comps is accompanied by `publishStaleReason:
-    "self" | "member"`.
+    with reason `member`, "A build in this comp changed since publish".
   - `never`: nothing in library rows; editors show "Not published".
 - Placement:
   - All five library views in `src/renderer/modules/library/content.js`
     (list, table, grid, icon, columns), for builds and comps, beside
     `itemSyncIndicatorHtml`.
-  - Build and comp editors, beside the Publish button.
+  - Build and comp editors, beside the Publish button (hidden on the web
+    playground, where publishing is not available).
   - The comps list chip (`src/renderer/modules/comps/comp-list.js`) becomes
     Published / Out of date / Draft.
 
 ### 6. Filter
 
-- A "Publish status" multi-select in the library toolbar
+- A "Publish" multi-select in the library toolbar
   (`src/renderer/modules/library/toolbar.js`) with Published / Out of date /
-  Never published, stored in `libraryPrefs.activeFilters.publishStatus` and
-  applied in `src/renderer/modules/library/folder-store.js` to builds and
-  comps.
-- The comps-list publish filter gains "Out of date" and reads
-  `publishStatus` instead of `publishedFileId`.
+  Never published (`current` / `stale` / `never`), stored in
+  `libraryPrefs.activeFilters.publishStatus` and applied in
+  `src/renderer/modules/library/folder-store.js` to builds and comps.
+- The comps-list Status filter gains "Out of date" and reads the derived
+  status instead of `publishedFileId`: values `published` (current), `stale`,
+  `draft` (never).
 - Not included in "save filters as smart folder" (`filtersToRule`):
   smart-folder rules evaluate persisted fields and this one is derived.
 
 ### 7. Freshness
 
-- Saves and team pulls already refresh the library from main, which
-  re-annotates.
-- A comp's status depends on its members, so a build save or pull must also
-  refresh the comps the renderer holds. The exact existing refresh path is to
-  be confirmed during planning.
-- Discord-share gating (`share-gate.js`, `shareGate.js`) switches to
-  `publishStatus !== "current"`. This also fixes share being wrongly blocked on
-  teammates' machines.
+- Saves and team pulls already refresh `state.builds`/`state.comps` from main,
+  which re-annotates.
+- Comp member staleness reads `state.builds`, so it follows build saves and
+  pulls with no extra refresh.
+- After a build publish the renderer also reloads `state.comps` (main
+  re-stamped comps); after a comp publish it also reloads `state.builds` (main
+  stamped members) and refreshes the editor badge.
+- Discord-share gating switches to the derived status
+  (`shareGate.js` in main, `share-gate.js` in the renderer); comps include the
+  member check. This also fixes share being wrongly blocked on teammates'
+  machines.
 
 ## Testing
 
 Jest only (Playwright is release-only).
 
 - Fingerprint: stable across key order; ignores local-only, timestamp and
-  `published*` fields; changes on a title or skill edit; comp hash changes when
-  a member build changes; missing member handled.
-- `publishStatus`: all three states plus the legacy fallback; comp
-  `publishStaleReason`.
-- Stores: `markPublished` stores `publishedHash`; `upsertBuild`/`upsertComp`
-  keep or accept `publishedHash` and `publishedAt`; `publishStatus` is never
-  persisted.
+  `published*` fields; changes on a title or skill edit; comp defaults and
+  party-line ids do not change it.
+- `publishStatus` / `compPublishStatus`: all three states, the legacy
+  fallback, un-annotated records, member mismatch, missing member; CJS/ESM
+  parity over a fixture matrix.
+- Stores: `markPublished` stores the receipt; `upsertBuild`/`upsertComp` keep
+  or accept it and `publishedAt`; `contentHash` is never persisted.
+- History: a receipt change writes no version.
 - Team sync: a pulled, teammate-published build with a different local
-  `updatedAt` reads `current`; a pulled comp keeps `publishedAt` and
-  `publishedHash`.
-- Build publish: re-stamps affected comps; does not re-stamp a comp whose
-  member failed to enrich. (Extract the stamping decision into a testable
-  helper if `index.js` is not directly testable.)
-- Renderer: badge states, library filter, comps-list chip and filter.
+  `updatedAt` reads `current`; a pulled comp keeps `publishedAt` and its
+  receipt.
+- Publish: receipt helpers, including "no receipt when a member was skipped".
+- Revert and duplicate strip the receipt.
+- Renderer: badge states, library filter, comps-list chip and filter, share
+  tooltips.
 
 ## Out of scope
 
