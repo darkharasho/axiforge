@@ -14,6 +14,7 @@ import { showToast } from "../library/toast.js";
 import { showChoiceModal } from "../choice-modal.js";
 import { askAboutDuplicates } from "../library/import-dedupe.js";
 import { professionSeriesStyle } from "../../../shared/professions.js";
+import { compPublishStatus, buildLookup, compMatchesStatusFilter, compPublishChipHtml } from "../publish-status.js";
 
 // ─── Shared folder helpers ───────────────────────────────────────────────────
 
@@ -114,11 +115,7 @@ function getVisibleComps() {
 
   // Publish status filter
   const ps = state.compPrefs.activeFilters?.publishStatus;
-  if (ps === "published") {
-    comps = comps.filter((c) => !!c.publishedFileId);
-  } else if (ps === "draft") {
-    comps = comps.filter((c) => !c.publishedFileId);
-  }
+  if (ps) comps = comps.filter((c) => compMatchesStatusFilter(c, ps, state.builds));
 
   // Sort
   const { sortField, sortDirection } = state.compPrefs;
@@ -203,6 +200,7 @@ function renderToolbarTier2(prefs, allTags) {
           <select id="comp-filter-status" class="axi-select">
             <option value="" ${ps === "" ? "selected" : ""}>All</option>
             <option value="published" ${ps === "published" ? "selected" : ""}>Published</option>
+            <option value="stale" ${ps === "stale" ? "selected" : ""}>Out of date</option>
             <option value="draft" ${ps === "draft" ? "selected" : ""}>Draft</option>
           </select>
         </div>
@@ -268,10 +266,8 @@ function renderExpandedRow(comp) {
       ? `<span class="axi-chip axi-chip--meta comp-badge comp-badge--wvw">WvW</span>`
       : "";
 
-  // Publish status badge
-  const pubBadge = comp.publishedFileId
-    ? `<span class="axi-chip axi-chip--ok comp-badge comp-badge--published">Published</span>`
-    : `<span class="axi-chip comp-badge comp-badge--draft">Draft</span>`;
+  // Publish status badge -- member builds count, so it reads state.builds.
+  const pubBadge = compPublishChipHtml(compPublishStatus(comp, buildLookup(state.builds)).status);
 
   // Shared badge
   const sharedBadge = _isCompShared(comp)
@@ -331,9 +327,7 @@ function renderCompactRow(comp) {
       ? `<span class="axi-chip axi-chip--meta comp-badge comp-badge--wvw comp-badge--sm">WvW</span>`
       : "";
 
-  const pubBadge = comp.publishedFileId
-    ? `<span class="axi-chip axi-chip--ok comp-badge comp-badge--published comp-badge--sm">Published</span>`
-    : `<span class="axi-chip comp-badge comp-badge--draft comp-badge--sm">Draft</span>`;
+  const pubBadge = compPublishChipHtml(compPublishStatus(comp, buildLookup(state.builds)).status, { small: true });
 
   const sharedBadge = _isCompShared(comp)
     ? `<span class="axi-chip axi-chip--accent comp-badge comp-badge--shared comp-badge--sm">Shared</span>`

@@ -3,7 +3,7 @@
 import { state } from "../state.js";
 import { escapeHtml, formatRelativeTime } from "../utils.js";
 import { getProfessionSvg } from "../profession-icons.js";
-import { libraryBuilds } from "./folder-store.js";
+import { libraryBuilds, libraryComps } from "./folder-store.js";
 import { writeDeniedReason, currentFolderId } from "./access.js";
 // One folder-ancestor walker for the whole renderer. There used to be three
 // near-identical copies (here, content.js, comp-detail.js) and only some of
@@ -217,7 +217,9 @@ export function renderFilters() {
   const gameModes = [...new Set(builds.map((b) => b.gameMode || "pve").filter(Boolean))].sort();
   const tags = [...new Set(builds.flatMap((b) => b.tags || []).filter(Boolean))].sort();
 
-  if (professions.length === 0 && gameModes.length === 0 && tags.length === 0) {
+  // The publish filter applies to comps too, so a library of comps alone still
+  // gets a filter row.
+  if (builds.length === 0 && libraryComps().length === 0) {
     container.innerHTML = "";
     return;
   }
@@ -290,12 +292,29 @@ export function renderFilters() {
     dropdowns.push(_renderDropdown("tags-filter", label, items, count > 0));
   }
 
+  // Publish status dropdown -- derived from the content fingerprint, so it is not
+  // a smart-folder condition (filtersToRule leaves it out).
+  {
+    const selected = activeFilters.publishStatus || [];
+    const count = selected.length;
+    const label = count > 0 ? `Publish (${count})` : "Publish";
+    const options = [["current", "Published"], ["stale", "Out of date"], ["never", "Never published"]];
+    let items = "";
+    for (const [value, text] of options) {
+      items += `<button type="button" class="axi-picker__opt" role="option" aria-selected="${selected.includes(value)}" data-filter-type="publishStatus" data-filter-value="${value}">
+        <span class="lib-fd__label">${text}</span>
+      </button>`;
+    }
+    dropdowns.push(_renderDropdown("publish-filter", label, items, count > 0));
+  }
+
   // Clear all button
   const hasActiveFilter = _hasAnyFilter(activeFilters);
   const clearBtn = hasActiveFilter
     ? `<button type="button" class="axi-btn axi-btn--ghost" data-filter-clear="1">${xMarkIcon} Clear</button>`
     : "";
-  const saveBtn = hasActiveFilter
+  // A publish-only selection yields an empty rule, so there is nothing to save.
+  const saveBtn = filtersToRule(activeFilters).children.length > 0
     ? `<button type="button" class="axi-btn axi-btn--ghost" data-filter-save-smart="1">${funnelIcon} Save as smart folder</button>`
     : "";
 
@@ -326,7 +345,8 @@ function _hasAnyFilter(filters) {
   return (filters.professions?.length > 0) ||
     (filters.eliteSpecs?.length > 0) ||
     (filters.gameModes?.length > 0) ||
-    (filters.tags?.length > 0);
+    (filters.tags?.length > 0) ||
+    (filters.publishStatus?.length > 0);
 }
 
 /**
@@ -752,7 +772,8 @@ function bindFilterEvents(container) {
         const trigger = dropdown.querySelector(".lib-fd__trigger span");
         const allSelected = dropdown.querySelectorAll('.axi-picker__opt[aria-selected="true"]');
         const baseLabel = dropdown.dataset.dropdown === "class-filter" ? "Class"
-          : dropdown.dataset.dropdown === "mode-filter" ? "Mode" : "Tags";
+          : dropdown.dataset.dropdown === "mode-filter" ? "Mode"
+          : dropdown.dataset.dropdown === "publish-filter" ? "Publish" : "Tags";
         trigger.textContent = allSelected.length > 0 ? `${baseLabel} (${allSelected.length})` : baseLabel;
         dropdown.querySelector(".lib-fd__trigger")?.classList.toggle("lib-fd__trigger--active", allSelected.length > 0);
 

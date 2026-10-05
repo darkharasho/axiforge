@@ -1,6 +1,7 @@
 import { state } from "../state.js";
 import { teamRootFor } from "../teams.js";
 import { matchesSmartFolder, ruleContext } from "./smart-folders.js";
+import { matchesPublishFilter } from "../publish-status.js";
 
 /** Load all folders from main process into state.folders. */
 export async function loadFolders() {
@@ -213,6 +214,9 @@ export function getVisibleBuilds() {
       filters.tags.some((t) => (b.tags || []).includes(t)),
     );
   }
+  if (filters.publishStatus?.length > 0) {
+    builds = builds.filter((b) => matchesPublishFilter("build", b, state.builds, filters.publishStatus));
+  }
 
   // Apply search
   if (query) builds = builds.filter((b) => buildMatchesQuery(b, query));
@@ -317,6 +321,12 @@ export function getVisibleComps() {
 
   // Apply search
   if (query) comps = comps.filter((c) => compMatchesQuery(c, query));
+
+  // The publish filter is the one toolbar filter that means something for comps.
+  const publishFilter = state.libraryPrefs.activeFilters?.publishStatus;
+  if (publishFilter?.length > 0) {
+    comps = comps.filter((c) => matchesPublishFilter("comp", c, state.builds, publishFilter));
+  }
 
   // Sort by sortOrder (or name as fallback)
   comps.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
