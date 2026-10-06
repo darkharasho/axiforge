@@ -1,3 +1,9 @@
+## Version v1.3.1 — October 6, 2026
+
+### Fixes
+
+- If access is revoked and AxiForge can't save that to disk, it now restarts straight into the block screen, so nothing keeps running behind it. Before, the block screen covered an app that was still running.
+
 ## Version v1.3.0 — October 5, 2026
 
 ### Access check
