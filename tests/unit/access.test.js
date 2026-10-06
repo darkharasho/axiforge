@@ -57,13 +57,20 @@ function fakeElectron(userData) {
 
 let dir;
 beforeEach(() => { dir = fs.mkdtempSync(path.join(os.tmpdir(), "axiforge-access-")); });
+let configs = [];
 afterEach(async () => {
-  await new Promise((r) => setTimeout(r, 25)); // let a background manifest fetch settle
-  fs.rmSync(dir, { recursive: true, force: true });
+  // Let any in-flight cache write settle before removing the directory.
+  for (const c of configs.splice(0)) {
+    await c.refresh();
+    c.close();
+  }
+  await fs.promises.rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 });
 });
 
 function makeConfig(fetch) {
-  return createConfig({ appId: "axiforge", cacheDir: dir, fetch, refreshMs: 1e9 });
+  const c = createConfig({ appId: "axiforge", cacheDir: dir, fetch, refreshMs: 1e9, logger: { warn() {} } });
+  configs.push(c);
+  return c;
 }
 
 const noHooks = async () => [];
@@ -101,6 +108,22 @@ describe("access", () => {
     });
     await boot.gate.recheck();
     expect(seen).toHaveLength(3);
+    expect(onBlocked).toHaveBeenCalledTimes(1);
+    config.close();
+  });
+
+  test("a legacy-only build webhook is checked and blocks when its server is listed", async () => {
+    const config = makeConfig(manifestFetch([await hashIdentity("discord_server", SERVER_ID)]));
+    const onBlocked = jest.fn();
+    const seen = [];
+    const legacyBuild = "https://discord.com/api/webhooks/4/token-d";
+    const boot = await startAccess({
+      electron: fakeElectron(dir), config, onBlocked,
+      store: fakeStore({ settings: { "discord.buildWebhookUrl": legacyBuild } }),
+      lookupWebhooks: async (urls) => { seen.push(...urls); return urls.includes(legacyBuild) ? [{ kind: "discord_server", value: SERVER_ID }] : []; },
+    });
+    await boot.gate.recheck();
+    expect(seen).toEqual([legacyBuild]);
     expect(onBlocked).toHaveBeenCalledTimes(1);
     config.close();
   });

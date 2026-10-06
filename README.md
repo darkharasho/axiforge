@@ -40,7 +40,7 @@ npm start
 
 ## Access
 
-AxiForge checks a public access list when it starts and every few hours, by downloading `https://config.axi.link/v1/manifest`. Access to the Axi apps can be revoked for accounts, guilds or Discord servers that violate the terms of use. The list holds only one-way SHA-256 hashes, and the comparison happens on your device: AxiForge compares your GitHub user ID and the Discord servers your webhooks post to against it and never sends them, or anything else about you, anywhere. If the list can't be reached, AxiForge keeps working. If you believe your access was revoked by mistake, use the contact link on the block screen, or reach the author through https://github.com/darkharasho.
+AxiForge checks a public access list when it starts and every few hours, by downloading `https://config.axi.link/v1/manifest`. Access to the Axi apps can be revoked for accounts, guilds or Discord servers that violate the terms of use. The list holds only one-way SHA-256 hashes, and the comparison happens on your device: AxiForge compares your GitHub user ID and the Discord servers your webhooks post to against it and never sends them, or anything else about you, anywhere. To find a webhook's server, AxiForge sends an unauthenticated GET request to the webhook URL on discord.com; that is the only other request the check makes. If the list can't be reached, AxiForge keeps working. If you believe your access was revoked by mistake, use the contact link on the block screen, or reach the author through https://github.com/darkharasho.
 
 ## Dev
 

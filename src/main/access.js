@@ -39,13 +39,16 @@ async function startAccess(deps) {
   gate.addSource("webhooks", async () => {
     // Read the lists directly: the getCompWebhooks/getBuildWebhooks helpers
     // write migrated settings, which a check must not do.
-    const [comp, build, legacy] = await Promise.all([
+    const [comp, build, legacy, legacyBuild] = await Promise.all([
       store.getSetting("discord.compWebhooks"),
       store.getSetting("discord.buildWebhooks"),
       store.getSetting("discord.webhookUrl"),
+      store.getSetting("discord.buildWebhookUrl"),
     ]);
     const urls = [...urlsOf(comp), ...urlsOf(build)];
     if (legacy) urls.push(legacy);
+    // getBuildWebhooks migrates this single URL only while no list exists yet.
+    if (!Array.isArray(build) && legacyBuild) urls.push(legacyBuild);
     return lookupWebhooks(urls);
   });
 

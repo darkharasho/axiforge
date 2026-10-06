@@ -600,16 +600,22 @@ const readyWork = app.whenReady().then(async () => {
   await store.init();
   // Access check first: when blocked, start nothing else (no local API, team
   // sync, IPC or main window).
-  const access = await startAccess({
-    electron: { app, BrowserWindow, shell },
-    store,
-    headless: cliFlags.headless,
-  });
-  if (access.blocked) {
+  let access = null;
+  try {
+    access = await startAccess({
+      electron: { app, BrowserWindow, shell },
+      store,
+      headless: cliFlags.headless,
+    });
+  } catch {
+    // Fail open: a bug in the check must not take the app down.
+    console.warn('access check unavailable');
+  }
+  if (access && access.blocked) {
     accessBlocked = true;
     return;
   }
-  accessGate = access.gate;
+  accessGate = access ? access.gate : null;
   await store.migrateCompIdToCompIds();
   await folderStore.init();
   await compStore.init();
