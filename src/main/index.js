@@ -55,6 +55,7 @@ const { registerAxicodeFileHandlers } = require("./axicodeFile");
 const { createLocalApi, generateToken, httpError } = require("./localApi");
 const { writeDiscoveryFile, removeDiscoveryFileSync } = require("./localApiDiscovery");
 const { parseCliFlags } = require("./cliFlags");
+const { startAccess } = require("./access");
 const { shareRejectionReason } = require("./shareGate");
 const { withoutPublishReceipt } = require("../shared/publishState");
 const {
@@ -88,7 +89,14 @@ if (!gotInstanceLock) {
   app.quit();
 }
 
+// Set at boot when the Axi access check blocks this instance; the normal
+// window must never open afterwards. accessGate is the runtime re-check hook.
+let accessBlocked = false;
+let accessGate = null;
+const recheckAccess = () => { if (accessGate) void accessGate.recheck(); };
+
 app.on("second-instance", (_event, argv) => {
+  if (accessBlocked) return;
   if (parseCliFlags(argv).headless) return; // services already running — nothing to show
   // A windowed launch is being adopted by this instance. Claim it synchronously
   // so a pending headless quit (quitIfHeadless) aborts instead of killing the
@@ -562,6 +570,7 @@ let lastSavedBounds = null;
 // running headless instance. Safe to call before whenReady resolves only via
 // those electron events, which all fire after ready.
 function openMainWindow(savedBounds = lastSavedBounds) {
+  if (accessBlocked) return null;
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.show();
     mainWindow.focus();
@@ -589,6 +598,18 @@ function openMainWindow(savedBounds = lastSavedBounds) {
 const readyWork = app.whenReady().then(async () => {
   if (!gotInstanceLock) return; // a second launch — the running instance handles it
   await store.init();
+  // Access check first: when blocked, start nothing else (no local API, team
+  // sync, IPC or main window).
+  const access = await startAccess({
+    electron: { app, BrowserWindow, shell },
+    store,
+    headless: cliFlags.headless,
+  });
+  if (access.blocked) {
+    accessBlocked = true;
+    return;
+  }
+  accessGate = access.gate;
   await store.migrateCompIdToCompIds();
   await folderStore.init();
   await compStore.init();
@@ -683,6 +704,8 @@ const readyWork = app.whenReady().then(async () => {
   } else {
     console.log("[headless] started without a window — services and local API only");
   }
+  // After normal startup, never awaited: the manifest fetch must not delay launch.
+  recheckAccess();
 
   // Pre-warm all profession catalogs in the background so class switching is instant.
   // Runs sequentially with a short delay between each to avoid hammering the GW2 API.
@@ -824,6 +847,7 @@ const readyWork = app.whenReady().then(async () => {
       viewer,
       onboarding: previous.onboarding || {},
     }));
+    recheckAccess();
     return { viewer };
   });
 
@@ -2072,7 +2096,11 @@ const readyWork = app.whenReady().then(async () => {
     return serialized;
   });
   handle("settings:get", async (_e, key) => store.getSetting(key));
-  handle("settings:set", async (_e, key, value) => store.setSetting(key, value));
+  handle("settings:set", async (_e, key, value) => {
+    const result = await store.setSetting(key, value);
+    if (typeof key === "string" && key.startsWith("discord.")) recheckAccess();
+    return result;
+  });
 
   handle("app:get-whats-new", async () => {
     const fs = require("node:fs");
@@ -2776,6 +2804,7 @@ app.on("activate", () => {
   // Wait for startup init so an adopted window never opens against a
   // half-initialized process.
   readyWork.then(() => {
+    if (accessBlocked) return;
     if (BrowserWindow.getAllWindows().length === 0) openMainWindow();
   }).catch((err) => console.error("[startup] adoption failed:", err));
 });
