@@ -1,4 +1,5 @@
 import { state } from "@renderer/modules/state.js";
+import { expandStatPackage } from "@renderer/modules/stat-package.js";
 import { initSkills, renderSkills } from "@renderer/modules/skills.js";
 import { initSpecializations, renderSpecializations, drawSpecConnector } from "@renderer/modules/specializations.js";
 import { initEquipment, initEquipmentCallbacks, renderEquipmentPanel } from "@renderer/modules/equipment.js";
@@ -86,7 +87,12 @@ function populateStateFromBuild(build) {
   // ── state.editor ──
   state.editor.profession              = build.profession;
   state.editor.gameMode                = build.gameMode || "pve";
-  state.editor.equipment               = build.equipment;
+  // Builds published before the store expanded statPackage carry it with
+  // empty slots; expand here so those links show the gear the editor showed.
+  state.editor.equipment               = build.equipment && {
+    ...build.equipment,
+    slots: expandStatPackage(build.equipment.slots, build.equipment.statPackage),
+  };
   // The renderer reads specializationId but the build store uses id.
   // Normalize so both fields are present; resolve _traitChoices if needed.
   state.editor.specializations         = (build.specializations || []).map(s => {

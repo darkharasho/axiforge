@@ -557,6 +557,22 @@ describe("normalizeBuild — equipment", () => {
     expect(result.equipment.statPackage).toHaveLength(80);
   });
 
+  // A uniform import stores only statPackage; the editor shows it in every
+  // slot, so the stored record (what publish reads) must carry it too.
+  test("expands statPackage into slots when every slot is empty", async () => {
+    const result = await store.upsertBuild(makeBuild({ equipment: { statPackage: "Minstrel's", slots: {} } }));
+    expect(result.equipment.slots.head).toBe("Minstrel's");
+    expect(result.equipment.slots.amulet).toBe("Minstrel's");
+    expect(result.equipment.slots.mainhand1).toBe("Minstrel's");
+  });
+
+  test("leaves hand-set slots alone", async () => {
+    const result = await store.upsertBuild(makeBuild({
+      equipment: { statPackage: "Minstrel's", slots: { head: "Berserker's" } },
+    }));
+    expect(result.equipment.slots).toEqual({ head: "Berserker's" });
+  });
+
 });
 
 describe("normalizeBuild — timestamps", () => {

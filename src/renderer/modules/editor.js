@@ -3,6 +3,7 @@
 import { state, createEmptyEditor } from "./state.js";
 import { parseTags, simplifyTrait, simplifySkill } from "./utils.js";
 import { getMajorTraitsByTier } from "./specializations.js";
+import { expandStatPackage } from "./stat-package.js";
 import { ANTIQUARY_PROLIFIC_PLUNDERER_TRAIT_ID, UNDERWATER_BLOCKED_LEGENDS, GW2_WEAPONS_BY_ID } from "./constants.js";
 
 // Normalize sigil array to correct shape for a given slot key.
@@ -751,14 +752,7 @@ export async function loadBuildIntoEditor(build, options = {}) {
   };
 
   // Expand statPackage into empty slots (e.g. uniform axicode imports)
-  const pkg = state.editor.equipment.statPackage;
-  if (pkg) {
-    const sl = state.editor.equipment.slots;
-    const allEmpty = Object.values(sl).every(v => !v);
-    if (allEmpty) {
-      for (const key of Object.keys(sl)) sl[key] = pkg;
-    }
-  }
+  state.editor.equipment.slots = expandStatPackage(state.editor.equipment.slots, state.editor.equipment.statPackage);
 
   if (profession) {
     await _setProfession(profession, { preserveSelections: true });

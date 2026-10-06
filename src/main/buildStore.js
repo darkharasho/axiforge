@@ -2,6 +2,7 @@ const fs = require("node:fs/promises");
 const path = require("node:path");
 const crypto = require("node:crypto");
 const { readJsonFile, writeJsonAtomic } = require("./jsonFile");
+const { expandStatPackage } = require("../shared/statPackage");
 
 // Electron's OS-keyring-backed encryption, when it is actually usable.
 // Deliberately re-checked on every call (not cached): `isEncryptionAvailable()`
@@ -683,12 +684,13 @@ function normalizeEquipment(value) {
     }
     return out;
   };
+  const statPackage = asString(equipment.statPackage, 80);
   return {
-    statPackage: asString(equipment.statPackage, 80),
+    statPackage,
     relic: asString(equipment.relic, 120),
     food: asString(equipment.food, 120),
     utility: asString(equipment.utility, 120),
-    slots: normalizeStringMap(equipment.slots),
+    slots: expandStatPackage(normalizeStringMap(equipment.slots), statPackage),
     weapons: normalizeStringMap(equipment.weapons),
     runes: normalizeStringMap(equipment.runes),
     sigils: normalizeSigils(equipment.sigils),
