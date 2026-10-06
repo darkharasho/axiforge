@@ -1,3 +1,9 @@
+## Version v1.2.1 — October 5, 2026
+
+### Fixes
+
+- **Published builds no longer lose their gear stats.** A build imported from an `.axicode` or a gw2skills link with the same stats on every piece (for example all Minstrel's) showed its stats in the editor, but the published page showed the gear with no stats and got the attributes wrong. The stats are now carried through when you save and publish the build, and published pages fill them in too. Republish an affected build to correct the attribute totals on its page. It will show as *Out of date* after you update.
+
 ## Version v1.2.0 — October 4, 2026
 
 ### New Features
