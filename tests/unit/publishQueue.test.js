@@ -339,6 +339,66 @@ describe("publishNow and resume", () => {
     expect(q.snapshot().items["build:a"]).toBeUndefined();
   });
 
+  test("resume({ keepUnauthorized }) leaves an unauthorized pause alone", async () => {
+    const { q, rounds } = makeQueue({
+      runRound: async () => { throw coded("Bad credentials", { code: "GITHUB_UNAUTHORIZED", status: 401 }); },
+    });
+    q.enqueue("build", "a");
+    await adv(5000);
+    await q.resume({ keepUnauthorized: true });
+    expect(q.snapshot().paused).toBe("unauthorized");
+    expect(rounds).toHaveLength(1);
+  });
+
+  test("resume({ keepUnauthorized }) lifts a disconnected pause and an offline backoff", async () => {
+    let fail = "disconnected";
+    const { q, rounds } = makeQueue({
+      runRound: async (items) => {
+        if (fail === "disconnected") throw coded("Set up publishing to publish.", { code: "PUBLISH_DISCONNECTED" });
+        if (fail === "offline") throw offline();
+        return ok(items);
+      },
+    });
+    q.enqueue("build", "a");
+    await adv(5000);
+    fail = "offline";
+    await q.resume({ keepUnauthorized: true });
+    expect(q.snapshot().paused).toBeNull();
+    expect(q.snapshot().items["build:a"]).toMatchObject({ state: "waiting", reason: "offline" });
+    fail = null;
+    await q.resume({ keepUnauthorized: true });
+    expect(rounds).toHaveLength(3);
+    expect(q.snapshot().items["build:a"]).toBeUndefined();
+  });
+
+  test("publishNow({ unpause }) runs the item in one round with the paused ones", async () => {
+    const { q, rounds } = makeQueue({
+      runRound: async (items) => ({
+        results: items.map((i) => (i.id === "broken"
+          ? { ...i, ok: false, error: coded("Set up publishing to publish.", { code: "PUBLISH_DISCONNECTED" }) }
+          : { ...i, ok: true })),
+      }),
+    });
+    q.enqueue("build", "broken");
+    await adv(5000);
+    expect(q.snapshot().paused).toBe("disconnected");
+    q.publishNow("build", "team", { unpause: true });
+    await expect(q.awaitPublished("build", "team")).resolves.toMatchObject({ id: "team", ok: true });
+    expect(rounds[1].sort()).toEqual(["build:broken", "build:team"]);
+    expect(q.snapshot().paused).toBe("disconnected");
+  });
+
+  test("publishNow without unpause leaves a pause alone", async () => {
+    const { q, rounds } = makeQueue({
+      runRound: async () => { throw coded("Set up publishing to publish.", { code: "PUBLISH_DISCONNECTED" }); },
+    });
+    q.enqueue("build", "a");
+    await adv(5000);
+    await q.publishNow("build", "b");
+    expect(rounds).toHaveLength(1);
+    expect(q.snapshot().paused).toBe("disconnected");
+  });
+
   test("resume with nothing to do emits nothing", async () => {
     const { q, emitted } = makeQueue();
     await q.resume();

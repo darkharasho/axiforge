@@ -789,6 +789,31 @@ describe("publish on save", () => {
     expect((await invoke("publish:snapshot")).paused).toBe("disconnected");
   });
 
+  test("an explicit publish of a team item goes through while setup pauses the queue", async () => {
+    const t = tree([mine()]);
+    t.folders[0] = folder({
+      id: TEAM_ID, name: "Squad", shared: true, teamId: TEAM_ID, role: "owner",
+      publishOwner: "gw2eww", publishOwnerType: "org",
+    });
+    t.builds.push(build({ id: "b1", title: "Shared build", folderId: "sub" }));
+    await loadMain({ ...t, auth: { ...AUTH, onboarding: { targetOwner: "me", branch: "main" } } });
+    await invoke("builds:save", { id: "p1", title: "Edited", profession: "Warrior" });
+    await invoke("publish:retry", "build", "p1");
+    await waitFor(() => lastStatus()?.paused === "disconnected", { label: "queue paused" });
+    const res = await invoke("builds:publish-build", "b1", {});
+    expect(res.pagesUrl).toMatch(/^https:\/\/gw2eww\.github\.io\//);
+    expect(github().ensureAxiForgeRepo).toHaveBeenCalledWith("gh-token", "gw2eww", "org");
+    // The personal item is still not set up, so the round paused the queue again.
+    expect((await invoke("publish:snapshot")).paused).toBe("disconnected");
+  });
+
+  test("a tag edit on a published comp queues it", async () => {
+    const pc = comp({ id: "c1", name: "Squad comp", folderId: "solo", publishedFileId: "cf", publishedKey: KEY, publishedSlug: "squad", publishedOwner: "me", publishedHash: "OLD" });
+    await loadMain({ ...tree([]), comps: [pc] });
+    await invoke("comps:add-tags", ["c1"], ["wvw"]);
+    expect(lastStatus().items["comp:c1"]).toEqual({ state: "queued" });
+  });
+
   test("publish:get-link returns a published item's link without publishing", async () => {
     await loadMain(tree([mine()]));
     const url = await invoke("publish:get-link", "build", "p1");

@@ -723,7 +723,9 @@ const readyWork = app.whenReady().then(async () => {
 
   app.on("browser-window-focus", () => {
     teamSync.onFocus();
-    publishQueue.resume().catch(() => {});
+    // Focus retries a "disconnected" pause and an offline backoff, never bad
+    // credentials: those wait for sign-in (auth:complete-login).
+    publishQueue.resume({ keepUnauthorized: true }).catch(() => {});
   });
 
   // Restore last window position/size if valid
@@ -1120,6 +1122,7 @@ const readyWork = app.whenReady().then(async () => {
     }
     const teamRoot = await findTeamRoot(saved.folderId);
     if (teamRoot) await safeEnqueue(() => teamSync.enqueue(teamRoot.teamId, saved.id, "comp", "put"), { type: "comp", id: saved.id });
+    await autoPublishAfterSave("comp", saved);
     return annotateComp(saved);
   });
 
@@ -1158,6 +1161,7 @@ const readyWork = app.whenReady().then(async () => {
     }
     const teamRoot = await findTeamRoot(saved.folderId);
     if (teamRoot) await safeEnqueue(() => teamSync.enqueue(teamRoot.teamId, saved.id, "build", "put"), { type: "build", id: saved.id });
+    await autoPublishAfterSave("build", saved);
     return annotateBuild(saved);
   });
 
@@ -1357,14 +1361,23 @@ const readyWork = app.whenReady().then(async () => {
       if (teamRoot) await safeEnqueue(() => teamSync.enqueue(teamRoot.teamId, id, "comp", "put"), { type: "comp", id });
     }
   }
+  // Tags are part of a comp's published page, so a tag edit publishes like a save.
+  async function autoPublishComps(ids) {
+    const idSet = new Set(ids);
+    for (const comp of await compStore.listComps()) {
+      if (idSet.has(comp.id)) await autoPublishAfterSave("comp", comp);
+    }
+  }
   handle("comps:add-tags", async (_e, ids, tags) => {
     const res = await compStore.addTagsToComps(ids, tags);
     await enqueueCompPuts(ids);
+    await autoPublishComps(ids);
     return res;
   });
   handle("comps:remove-tags", async (_e, ids, tags) => {
     const res = await compStore.removeTagsFromComps(ids, tags);
     await enqueueCompPuts(ids);
+    await autoPublishComps(ids);
     return res;
   });
 
@@ -1774,8 +1787,10 @@ const readyWork = app.whenReady().then(async () => {
     return list.find((r) => r.id === id) || null;
   }
 
+  // An explicit publish lifts any pause: another item's broken setup must not
+  // refuse this one. A still-broken item re-pauses the queue in that round.
   function publishAndWait(kind, id, timeoutMs = PUBLISH_FULL_WAIT_MS) {
-    publishQueue.publishNow(kind, id).catch(() => {});
+    publishQueue.publishNow(kind, id, { unpause: true }).catch(() => {});
     return publishQueue.awaitPublished(kind, id, { timeoutMs });
   }
 
@@ -1805,8 +1820,8 @@ const readyWork = app.whenReady().then(async () => {
   // shares the new version instead of refusing. Returns an error message or null.
   async function settlePendingPublish(kind, id) {
     const state = publishQueue.snapshot().items[`${kind}:${id}`]?.state;
-    if (state !== "queued" && state !== "publishing") return null;
-    if (state === "queued") publishQueue.publishNow(kind, id).catch(() => {});
+    if (state !== "queued" && state !== "waiting" && state !== "publishing") return null;
+    if (state !== "publishing") publishQueue.publishNow(kind, id).catch(() => {});
     try {
       await publishQueue.awaitPublished(kind, id, { timeoutMs: SHARE_PUBLISH_WAIT_MS });
       return null;

@@ -124,21 +124,30 @@ class PublishQueue {
     this._schedule();
   }
 
-  /** Enqueue and start a round now, skipping the debounce and any network backoff. */
-  publishNow(kind, id) {
+  /**
+   * Enqueue and start a round now, skipping the debounce and any network backoff.
+   * `unpause` (an explicit publish) also lifts a pause, so the round carries this
+   * item with everything else pending; an item still broken pauses it again.
+   */
+  publishNow(kind, id, { unpause = false } = {}) {
     this._add(keyOf(kind, id));
+    if (unpause) this._paused = null;
     if (this._retry?.reason === "offline") this._clearRetry();
     this._changed();
     return this.flush();
   }
 
-  /** Sign-in, setup, focus or coming online: lift a pause and any network backoff. */
-  resume() {
+  /**
+   * Sign-in, setup, focus or coming online: lift a pause and any network backoff.
+   * `keepUnauthorized` (window focus) leaves an "unauthorized" pause in place:
+   * only signing in again can fix bad credentials.
+   */
+  resume({ keepUnauthorized = false } = {}) {
     let changed = false;
-    if (this._paused) { this._paused = null; changed = true; }
+    if (this._paused && !(keepUnauthorized && this._paused === "unauthorized")) { this._paused = null; changed = true; }
     if (this._retry?.reason === "offline") { this._clearRetry(); changed = true; }
     if (changed) this._emit();
-    return this._pending.size ? this.flush() : Promise.resolve();
+    return this._pending.size && !this._paused ? this.flush() : Promise.resolve();
   }
 
   flush() {
