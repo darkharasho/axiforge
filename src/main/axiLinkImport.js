@@ -201,8 +201,9 @@ const COMP_NOT_MINE = [
 /**
  * Unpacks a decrypted comp payload into a local comp plus its builds.
  *
- * A published comp is self-contained — serializeCompForPublish embeds every
- * referenced build under `builds`, keyed by the PUBLISHER's build id. Those ids
+ * The payload carries its builds under `builds`, keyed by the PUBLISHER's
+ * build id: a v1 comp embeds them; a v2 comp links them as `members`, which
+ * importAxiAny fetches into `builds` before calling this. Those ids
  * mean nothing in this library, so each build gets a fresh one and every
  * reference to it is rewritten to match: buildIds, party-line slots,
  * buildColors, and category membership. Miss any one of those and the comp
