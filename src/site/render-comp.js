@@ -1,6 +1,6 @@
 "use strict";
 
-import { escapeHtml } from "./main.js";
+import { escapeHtml } from "./escape.js";
 import { renderMiniBuildCard } from "../renderer/modules/mini-build-card.js";
 import { formatFactHtml } from "../renderer/modules/detail-panel.js";
 import { initMobileDetection } from "./mobile.js";

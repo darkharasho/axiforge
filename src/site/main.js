@@ -9,6 +9,10 @@ import { setReadOnly as setEquipmentReadOnly } from "@renderer/modules/equipment
 import { setReadOnly as setSpecsReadOnly } from "@renderer/modules/specializations.js";
 import { setReadOnly as setDetailReadOnly } from "@renderer/modules/detail-panel.js";
 import { accentFromParams } from "./accent.js";
+import { escapeHtml } from "./escape.js";
+import { fetchPayload, PayloadVersionError, NEWER_FORMAT_MESSAGE } from "./payload.js";
+
+export { escapeHtml };
 
 // Scope class for @axiapps/forge-render styles (mini cards, role badges, hover previews).
 document.body.classList.add("forge-render");
@@ -69,57 +73,34 @@ function showError(msg) {
 }
 
 // ── Fetch & Decrypt ──────────────────────────────────────────────────────
+function loadErrorMessage(err, noun) {
+  if (err instanceof PayloadVersionError) return NEWER_FORMAT_MESSAGE;
+  if (err?.status) return `${noun} not found (HTTP ${err.status})`;
+  return err?.message || String(err);
+}
+
 async function loadBuild(fileId, base64urlKey) {
   try {
-    const params = new URLSearchParams(location.search);
-    const base = resolveDataBase(location, params);
-    const buildUrl = `${base}builds/${encodeURIComponent(fileId)}.enc`;
-    const res = await fetch(buildUrl, { cache: "no-store" });
-    if (!res.ok) throw new Error("Build not found (HTTP " + res.status + ")");
-    const base64Data = await res.text();
-    const build = await decrypt(base64Data, base64urlKey);
+    const base = resolveDataBase(location, new URLSearchParams(location.search));
+    const build = await fetchPayload(`${base}builds/${encodeURIComponent(fileId)}.enc`, base64urlKey);
     renderBuild(build);
   } catch (err) {
-    showError(err.message || String(err));
+    showError(loadErrorMessage(err, "Build"));
   }
 }
 
 async function loadComp(fileId, base64urlKey) {
   try {
-    const params = new URLSearchParams(location.search);
-    const base = resolveDataBase(location, params);
-    const compUrl = `${base}comps/${encodeURIComponent(fileId)}.enc`;
-    const res = await fetch(compUrl, { cache: "no-store" });
-    if (!res.ok) throw new Error("Comp not found (HTTP " + res.status + ")");
-    const base64Data = await res.text();
-    const comp = await decrypt(base64Data, base64urlKey);
+    const base = resolveDataBase(location, new URLSearchParams(location.search));
+    const comp = await fetchPayload(`${base}comps/${encodeURIComponent(fileId)}.enc`, base64urlKey);
     renderComp(comp);
   } catch (err) {
-    showError(err.message || String(err));
+    showError(loadErrorMessage(err, "Comp"));
   }
 }
 
 function renderComp(comp) {
   renderCompPage(app, comp);
-}
-
-async function decrypt(base64Data, base64urlKey) {
-  const combined = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
-  const iv = combined.slice(0, 12);
-  const ciphertext = combined.slice(12);
-  const keyBytes = base64urlDecode(base64urlKey);
-  const cryptoKey = await crypto.subtle.importKey("raw", keyBytes, { name: "AES-GCM" }, false, ["decrypt"]);
-  const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, cryptoKey, ciphertext);
-  return JSON.parse(new TextDecoder().decode(plain));
-}
-
-function base64urlDecode(str) {
-  let b64 = str.replace(/-/g, "+").replace(/_/g, "/");
-  while (b64.length % 4) b64 += "=";
-  const bin = atob(b64);
-  const bytes = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-  return bytes.buffer;
 }
 
 // ── Build renderer ────────────────────────────────────────────────────────
@@ -129,10 +110,6 @@ function renderBuild(build) {
   setSpecsReadOnly(true);
   setDetailReadOnly(true);
   renderBuildPage(app, build);
-}
-
-export function escapeHtml(s) {
-  return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 }
 
 // ── Start ────────────────────────────────────────────────────────────────
