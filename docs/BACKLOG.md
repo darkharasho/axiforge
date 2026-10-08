@@ -691,7 +691,7 @@ Status key: `[ ]` open · `[x]` done · `[~]` in progress · `[?]` needs repro s
   before this still print ids in the list, but the compare modal resolves them
   from the documents it already loads.
 
-- [ ] **Published payloads are 50–1000× bigger than the data they carry.**
+- [x] **Published payloads are 50–1000× bigger than the data they carry.**
   Measured 2026-10-07 on `gw2eww/axibuilds`: 58 builds average 1.3 MB (min
   866 KB), 9 comps average 17 MB (max 27.7 MB). A local build record is at most
   27 KB and notes top out around 7 KB, so notes are not the cause. Three
@@ -706,6 +706,7 @@ Status key: `[ ]` open · `[x]` done · `[~]` in progress · `[?]` needs repro s
   structured data in the viewer instead of shipping HTML. This blocks any
   publish-on-save design. Any change needs a payload version flag so the SPA
   can still read existing links.
+  Fixed by payload v2 (`docs/superpowers/specs/2026-10-07-publish-payload-shrink-design.md`): gzip + binary envelope, comps link members, coverage computed in the viewer. Measured on a real local build: v1 1,324,188 bytes -> v2 99,979 bytes (about 13x). Comp payloads (members linked, not embedded) are about 1 KB each, against 4.6-7.9 MB raw locally.
 
 ## axi-design conversion — follow-ups
 
