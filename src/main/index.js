@@ -66,7 +66,8 @@ const { shortUrl, publishedOwnerFor } = require("./shortUrl");
 const { resolvePublishTarget } = require("./publishTarget");
 const { PublishQueue } = require("./publishQueue");
 const { autoPublishDecision, bulkPublishCandidates } = require("./autoPublish");
-const { createPublishBatch, publishedPageUrl } = require("./publishBatch");
+const { createPublishBatch, publishedPageUrl, PAGES_TIMEOUT_MS } = require("./publishBatch");
+const { createPagesLive } = require("./pagesLive");
 const { assertCanMoveOutOfTeam, assertFolderTreeFits, withoutReceiptHashes } = require("./teamGuards");
 
 const { PROFESSION_ACCENTS: PROFESSION_THEME_IDS } = require("./accents");
@@ -1799,6 +1800,10 @@ const readyWork = app.whenReady().then(async () => {
   // item) go through the queue too: same round, same receipts, same wait.
   const PUBLISH_FULL_WAIT_MS = 5 * 60 * 1000;
   const SHARE_PUBLISH_WAIT_MS = 15 * 1000;
+  // A new item's /r/ page and a new site's viewer go live with the Pages
+  // deploy, after the round: whoever hands those links out waits for them.
+  const pagesLive = createPagesLive({ pollUrlLive, timeoutMs: PAGES_TIMEOUT_MS });
+  const PAGES_NOT_LIVE = "Published, but the link isn't live yet. Try again in a minute.";
 
   async function findPublishRecord(kind, id) {
     const list = kind === "comp" ? await compStore.listComps() : await store.listBuilds();
@@ -1868,7 +1873,10 @@ const readyWork = app.whenReady().then(async () => {
       await publishAndWait(kind, id);
       record = await findPublishRecord(kind, id);
     }
-    return publishedLinkFor(kind, record);
+    const link = await publishedLinkFor(kind, record);
+    // The ?b= link opens on the site's viewer, which a brand-new site deploys after its first round.
+    if (link && !(await pagesLive.waitLive([link.split("?")[0]]))) throw new Error(PAGES_NOT_LIVE);
+    return link;
   });
   async function bulkCandidates() {
     const [builds, comps] = await Promise.all([store.listBuilds(), compStore.listComps()]);
@@ -2025,6 +2033,10 @@ const readyWork = app.whenReady().then(async () => {
       }
     }
 
+    if (!(await pagesLive.waitLive([compUrl, ...getCompPublishBuildIds(comp).map((id) => buildUrls[id])]))) {
+      return { success: false, error: PAGES_NOT_LIVE };
+    }
+
     // 6. Post to each selected webhook (or all when webhookIds is empty/omitted)
     return shareCompToWebhooks(webhooks, webhookIds, (w) =>
       shareCompToDiscord(comp, buildsMap, compUrl, buildUrls, w.url, {
@@ -2069,6 +2081,7 @@ const readyWork = app.whenReady().then(async () => {
 
     // 4. Build URL
     const buildUrl = shortUrl(publishedOwnerFor(build, owner), repo, build.publishedFileId);
+    if (!(await pagesLive.waitLive([buildUrl]))) return { success: false, error: PAGES_NOT_LIVE };
 
     // 5. Generate chat link
     let chatLink = null;
@@ -2142,6 +2155,8 @@ const readyWork = app.whenReady().then(async () => {
         buildUrl = shortUrl(publishedOwnerFor(build, owner), repo, build.publishedFileId);
       }
     }
+    // The text is handed out either way: a page still deploying opens shortly.
+    await pagesLive.waitLive([buildUrl]);
 
     return formatBuildDiscordCopy(build, buildUrl);
   });
@@ -2270,6 +2285,8 @@ const readyWork = app.whenReady().then(async () => {
     const compUrl = hasUrls && comp.publishedFileId
       ? shortUrl(publishedOwnerFor(comp, owner), repo, comp.publishedFileId)
       : null;
+    // The text is handed out either way: a page still deploying opens shortly.
+    await pagesLive.waitLive([compUrl, ...getCompPublishBuildIds(comp).map((id) => buildUrls[id])]);
     const title = compUrl ? `**[${compName}](${compUrl})**` : `**${compName}**`;
     const out = [title];
     out.push("");

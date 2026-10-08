@@ -190,12 +190,15 @@ Status key: `[ ]` open · `[x]` done · `[~]` in progress · `[?]` needs repro s
   commit (`pinnedRawBase`, `src/site/rawBase.js`); the importer could do the
   same.
 
-- [ ] **One new item makes its whole owner group wait for Pages.**
-  `createPublishBatch` (`src/main/publishBatch.js`) waits for the live check
-  whenever any item in an owner's commit is new, so up to 49 republishes in
-  the same round wait up to 180 s too. The spec says republishes don't wait.
-  Fix idea: split new items into their own commit, or only make waiters for
-  the new item block on the live check.
+- [x] **One new item held every save for minutes.** The publish round waited
+  up to 180 s for the Pages deploy whenever a commit held a new item or a new
+  viewer. Rounds run one at a time and items settle only when their round
+  ends, so a save on one site showed "publishing" for 4+ minutes behind
+  another site's deploy. *Fix:* the round only checks the commit's raw data;
+  the `?b=` link opens on the existing viewer from then on. Whoever hands out a
+  link that needs the deploy waits for exactly that page: Discord share and
+  Copy Discord text for new `/r/` pages, Copy link for a brand-new site
+  (`src/main/pagesLive.js`).
 
 - [ ] **"Keep theirs" leaves no way to copy the teammate's link.** After the
   owner prompt's Keep theirs, the build's Copy link button and library item

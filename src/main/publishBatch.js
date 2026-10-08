@@ -13,7 +13,7 @@ const { memberStampTargets } = require("./teamGuards");
 const { PROFESSION_ACCENTS: PROFESSION_THEME_IDS } = require("./accents");
 
 const REPO = "axibuilds";
-const PAGES_TIMEOUT_MS = 180000;
+const PAGES_TIMEOUT_MS = 180000; // how long a Pages deploy may take
 
 function coded(message, code) {
   const err = new Error(message);
@@ -281,15 +281,10 @@ function createPublishBatch(deps) {
     if (!(await pollUrlLive(dataUrl))) {
       notLive = coded("Published, but the link isn't live yet. Try again in a minute.", "PUBLISH_NOT_LIVE");
     }
-    // Only a new /r/ page or a new viewer waits for the Pages deploy; a
-    // republish is served from raw as soon as the commit lands.
-    const fresh = prepared.find((p) => p.isNew);
-    if (!notLive && (fresh || upload.shellChanged)) {
-      const pageUrl = fresh ? `https://${owner}.github.io/${repo}/r/${fresh.fileId}/` : `https://${owner}.github.io/${repo}/`;
-      if (!(await pollUrlLive(pageUrl, { timeoutMs: PAGES_TIMEOUT_MS }))) {
-        notLive = coded("Published, but the site isn't live yet. Try again in a minute.", "PUBLISH_NOT_LIVE");
-      }
-    }
+    // No wait for the Pages deploy here: the ?b= link opens on the existing
+    // viewer as soon as the data is readable. A new /r/ short link or a new
+    // site waits in the caller that hands it out (pagesLive.js), so one new
+    // item doesn't hold every other save for minutes.
 
     // Receipts patch publish fields only. Re-upserting the snapshot would
     // clobber a save made while the upload was in flight.

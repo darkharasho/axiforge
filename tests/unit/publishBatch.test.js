@@ -208,17 +208,17 @@ describe("live check", () => {
     expect(calls.polls).toEqual([{ url: `https://raw.githubusercontent.com/me/axibuilds/${SHA}/site/builds/f-a.enc`, opts: undefined }]);
   });
 
-  test("a first publish also waits for its /r/ page", async () => {
+  test("a first publish doesn't wait for the Pages deploy of its /r/ page", async () => {
     const { publishBatch, calls } = setup({ builds: [b({ id: "a" })] });
     await publishBatch([{ kind: "build", id: "a" }]);
-    expect(calls.polls[1]).toEqual({ url: "https://me.github.io/axibuilds/r/new1/", opts: { timeoutMs: 180000 } });
+    expect(calls.polls).toEqual([{ url: `https://raw.githubusercontent.com/me/axibuilds/${SHA}/site/builds/new1.enc`, opts: undefined }]);
   });
 
-  test("a viewer change waits for the site and triggers Pages", async () => {
+  test("a viewer change triggers Pages without waiting for the deploy", async () => {
     const { publishBatch, deps, calls } = setup({ builds: [pub({ id: "a" })], upload: { shellChanged: true } });
     await publishBatch([{ kind: "build", id: "a" }]);
     expect(deps.triggerPagesWorkflow).toHaveBeenCalledWith("tok", "me", "main", "axibuilds");
-    expect(calls.polls[1]).toEqual({ url: "https://me.github.io/axibuilds/", opts: { timeoutMs: 180000 } });
+    expect(calls.polls).toHaveLength(1);
   });
 
   test("a link that never goes live is still published: stamped, with a PUBLISH_NOT_LIVE note", async () => {
@@ -226,13 +226,10 @@ describe("live check", () => {
     const { results } = await publishBatch([{ kind: "build", id: "a" }]);
     expect(results[0]).toMatchObject({ ok: true, fileId: "f-a", notLive: { code: "PUBLISH_NOT_LIVE" } });
     expect(calls.marks.map((m) => m.id)).toEqual(["a"]);
-    // The raw check failed, so the Pages wait is skipped.
-    expect(calls.polls).toHaveLength(1);
   });
 
-  test("a first publish whose page is slow keeps the ids it committed", async () => {
-    const { publishBatch, deps, calls } = setup({ builds: [b({ id: "a" })] });
-    deps.pollUrlLive.mockImplementation(async (url, opts) => { calls.polls.push({ url, opts }); return !opts; });
+  test("a first publish whose data is slow keeps the ids it committed", async () => {
+    const { publishBatch, calls } = setup({ builds: [b({ id: "a" })], live: false });
     const { results } = await publishBatch([{ kind: "build", id: "a" }]);
     expect(results[0]).toMatchObject({ ok: true, fileId: "new1", notLive: { code: "PUBLISH_NOT_LIVE" } });
     expect(calls.marks[0].patch).toMatchObject({ publishedFileId: "new1", publishedOwner: "me" });
