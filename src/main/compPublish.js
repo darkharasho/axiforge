@@ -83,22 +83,31 @@ function serializeCompForPublish(comp, members) {
  * and left alone (unless `force`). Every other member is (re-)uploaded under
  * `owner` in the same commit as the comp, reusing its file id and key when it
  * has them so existing build links stay valid.
+ *
+ * Each member also records the slug and theme (`themeOf(build)`, "" for none)
+ * its page link carries, so the viewer links it exactly as v1 comps did: a
+ * teammate's build under the slug it was published with, our own under the
+ * slug this publish writes.
  */
-function planCompMembers({ compBuilds, owner, force = false, slugOf, newFileId, newKey }) {
+function planCompMembers({ compBuilds, owner, force = false, slugOf, themeOf = () => "", newFileId, newKey }) {
   const members = {};
   const uploads = [];
   const foreign = [];
   for (const build of compBuilds) {
     const slug = slugOf(build);
+    const theme = themeOf(build) || "";
     const { foreignOwner, needsRecord } = decideCompBuildPublish({ build, owner, force, slug });
     if (foreignOwner) {
-      members[build.id] = { fileId: build.publishedFileId, key: build.publishedKey, owner: foreignOwner };
+      members[build.id] = {
+        fileId: build.publishedFileId, key: build.publishedKey, owner: foreignOwner,
+        slug: build.publishedSlug || slug, theme,
+      };
       foreign.push({ id: build.id, title: build.title || build.profession || "Build", owner: foreignOwner });
       continue;
     }
     const fileId = build.publishedFileId || newFileId();
     const key = build.publishedKey || newKey();
-    members[build.id] = { fileId, key, owner };
+    members[build.id] = { fileId, key, owner, slug, theme };
     uploads.push({ build, fileId, key, slug, needsRecord });
   }
   return { members, uploads, foreign };

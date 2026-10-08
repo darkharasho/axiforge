@@ -14,10 +14,16 @@ export function memberDataBase(member, fallbackBase) {
   return member?.owner ? `https://raw.githubusercontent.com/${member.owner}/${REPO}/main/site/` : fallbackBase;
 }
 
-/** The member build's own page, for slot and pool-card links. */
+/**
+ * The member build's own page, for slot and pool-card links: the URL the
+ * desktop publishes for it, slug and theme included. Members written before
+ * comps recorded those fall back to the build's title and this page's theme.
+ */
 export function memberSpaUrl(member, build, loc) {
   const page = member.owner ? `https://${member.owner}.github.io/${REPO}/` : `${loc.origin}${loc.pathname}`;
-  return `${page}?n=${encodeURIComponent(slugify(build.title))}&b=${member.fileId}.${member.key}`;
+  const slug = member.slug || slugify(build.title);
+  const theme = member.theme !== undefined ? member.theme : new URLSearchParams(loc.search || "").get("t");
+  return `${page}?n=${encodeURIComponent(slug)}&b=${member.fileId}.${member.key}${theme ? `&t=${encodeURIComponent(theme)}` : ""}`;
 }
 
 /**

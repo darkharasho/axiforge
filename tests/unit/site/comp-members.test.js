@@ -27,6 +27,19 @@ describe("comp members", () => {
       .toBe("https://me.github.io/axibuilds/?n=build&b=ab12cd34.KEY");
   });
 
+  test("spaUrl uses the member's published slug and theme, as v1 member links did", () => {
+    expect(memberSpaUrl({ owner: "mate", fileId: "ab12cd34", key: "KEY", slug: "old-name", theme: "guardian" }, { title: "New Name" }, loc))
+      .toBe("https://mate.github.io/axibuilds/?n=old-name&b=ab12cd34.KEY&t=guardian");
+    // No theme recorded at publish: no &t.
+    expect(memberSpaUrl({ owner: "mate", fileId: "ab12cd34", key: "KEY", slug: "x", theme: "" }, { title: "X" }, { ...loc, search: "?c=f.k&t=dark" }))
+      .toBe("https://mate.github.io/axibuilds/?n=x&b=ab12cd34.KEY");
+  });
+
+  test("a member written without slug/theme falls back to the title and this page's theme", () => {
+    expect(memberSpaUrl({ owner: "mate", fileId: "ab12cd34", key: "KEY" }, { title: "Heal FB" }, { ...loc, search: "?c=f.k&t=dark" }))
+      .toBe("https://mate.github.io/axibuilds/?n=heal-fb&b=ab12cd34.KEY&t=dark");
+  });
+
   test("loads members in parallel; a 404, a bad key, or a v1 member are each handled", async () => {
     const kA = generateEncryptionKey();
     const kB = generateEncryptionKey();

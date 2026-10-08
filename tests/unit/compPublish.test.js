@@ -104,7 +104,7 @@ describe("planCompMembers", () => {
       { id: "b2", title: "Two", publishedFileId: "keep2222", publishedKey: "K2", publishedOwner: "me", publishedSlug: "two" },
     ] });
     expect(plan.uploads.map((u) => u.build.id)).toEqual(["b1", "b2"]);
-    expect(plan.members.b2).toEqual({ fileId: "keep2222", key: "K2", owner: "me" });
+    expect(plan.members.b2).toEqual({ fileId: "keep2222", key: "K2", owner: "me", slug: "two", theme: "" });
     expect(plan.members.b1.owner).toBe("me");
     expect(plan.uploads[0].needsRecord).toBe(true);
     expect(plan.uploads[1].needsRecord).toBe(false);
@@ -115,8 +115,21 @@ describe("planCompMembers", () => {
       { id: "b3", title: "Theirs", publishedFileId: "mate3333", publishedKey: "K3", publishedOwner: "mate" },
     ] });
     expect(plan.uploads).toHaveLength(0);
-    expect(plan.members.b3).toEqual({ fileId: "mate3333", key: "K3", owner: "mate" });
+    expect(plan.members.b3).toEqual({ fileId: "mate3333", key: "K3", owner: "mate", slug: "theirs", theme: "" });
     expect(plan.foreign).toEqual([{ id: "b3", title: "Theirs", owner: "mate" }]);
+  });
+
+  test("each member carries the slug and theme its v1 spaUrl used", () => {
+    const themeOf = (b) => (b.profession === "Guardian" ? "guardian" : "");
+    const plan = planCompMembers({ ...deps, themeOf, owner: "me", compBuilds: [
+      { id: "b1", title: "One", profession: "Guardian" },
+      { id: "b3", title: "Renamed", profession: "Necromancer", publishedFileId: "mate3333", publishedKey: "K3", publishedOwner: "mate", publishedSlug: "theirs" },
+      { id: "b4", title: "Unslugged", publishedFileId: "mate4444", publishedKey: "K4", publishedOwner: "mate" },
+    ] });
+    // Own builds: the slug this publish writes. A teammate's: the slug their link was published under.
+    expect(plan.members.b1).toMatchObject({ slug: "one", theme: "guardian" });
+    expect(plan.members.b3).toMatchObject({ slug: "theirs", theme: "" });
+    expect(plan.members.b4).toMatchObject({ slug: "unslugged" });
   });
 
   test("force takes over a teammate's build", () => {

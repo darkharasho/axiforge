@@ -1829,9 +1829,14 @@ const readyWork = app.whenReady().then(async () => {
     const spaBundle = buildSpaBundle();
 
     // ── 4. Plan members: link teammates' copies, upload our own ────────
+    // Member page links carry the theme the build's own publish would: its
+    // profession accent when themed build pages are on, else the app theme.
+    const compTheme = await store.getSetting("appearance.theme");
+    const themedBuildsOn = await store.getSetting("appearance.themedBuildPages");
     const plan = planCompMembers({
       compBuilds, owner, force: opts.force,
       slugOf: (b) => slugifyBuildName(b.title),
+      themeOf: (b) => (themedBuildsOn && b.profession && PROFESSION_THEME_IDS[b.profession]) || compTheme || "",
       newFileId: generateFileId,
       newKey: generateEncryptionKey,
     });
