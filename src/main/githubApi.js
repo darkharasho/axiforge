@@ -25,7 +25,7 @@ function ghRest() {
 const TARGET_REPO = "axibuilds";
 const USER_AGENT = "axiforge-desktop";
 const crypto = require("node:crypto");
-const { partitionBundleForPublish, SITE_VERSION_PATH } = require("./siteBundle");
+const { partitionBundleForPublish, SITE_VERSION_PATH, VIEWER_DIR, VIEWER_FORMAT_PATH } = require("./siteBundle");
 
 async function apiFetch(path, token, init = {}) {
   const res = await fetch(`${ghRest()}${path}`, {
@@ -173,6 +173,68 @@ async function ensureNoJekyll(token, owner, branch = "main", repo = TARGET_REPO)
   await putFile(token, owner, repo, ".nojekyll", "\n", branch, "Add .nojekyll");
 }
 
+const VIEWER_GUARD_PATH = ".github/workflows/axiforge-viewer-guard.yml";
+
+// Apps up to v1.3.1 replace the served viewer whenever theirs differs, and
+// rewrite deploy-pages.yml, so an older teammate's publish can put back a
+// viewer that can't read newer links. This workflow has its own file, which
+// those apps never touch. After every Pages deploy it checks whether site/
+// still holds the viewer in viewer/ (the newest, see siteBundle.js) and, if
+// not, redeploys with viewer/ laid over site/. Its deploy job shares the
+// "pages" concurrency group; the check job stays out of it, so a no-op check
+// never displaces a queued deploy.
+function viewerGuardWorkflow() {
+  return `name: AxiForge Viewer Guard
+
+on:
+  workflow_run:
+    workflows: [ "Deploy Pages" ]
+    types: [ completed ]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  check:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    outputs:
+      stale: \${{ steps.compare.outputs.stale }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: compare
+        name: Compare the served viewer with viewer/
+        run: |
+          if [ -f viewer/site-version ] && ! cmp -s viewer/site-version site/site-version; then
+            echo "stale=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "stale=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  deploy:
+    needs: check
+    if: needs.check.outputs.stale == 'true'
+    concurrency:
+      group: "pages"
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: \${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Lay the newest viewer over site/
+        run: cp -a viewer/. site/
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./site
+      - id: deployment
+        uses: actions/deploy-pages@v4
+`;
+}
+
 async function ensurePagesWorkflow(token, owner, branch = "main", repo = TARGET_REPO) {
   const workflowPath = ".github/workflows/deploy-pages.yml";
   const workflow = `name: Deploy Pages
@@ -219,6 +281,7 @@ jobs:
 
   try {
     await putFile(token, owner, repo, workflowPath, workflow, branch, "Add/Update Pages deploy workflow");
+    await putFile(token, owner, repo, VIEWER_GUARD_PATH, viewerGuardWorkflow(), branch, "Add/Update AxiForge viewer guard");
   } catch (err) {
     if (err?.status === 404) {
       const scopeHint = err?.oauthScopes ? ` Current token scopes: ${err.oauthScopes}.` : "";
@@ -397,13 +460,21 @@ async function publishSiteBundleOnce(token, owner, bundle, branch, repo) {
     const verFile = await apiFetch(`/repos/${owner}/${repo}/contents/${SITE_VERSION_PATH}?ref=${encodeURIComponent(branch)}`, token);
     if (verFile?.content) remoteVersion = Buffer.from(verFile.content, "base64").toString("utf8").trim();
   } catch { /* no marker yet → treat as shell changed */ }
-  const { shellChanged, filesToPublish } = partitionBundleForPublish(bundle || {}, remoteVersion);
+  let remoteFormat = null;
+  if (existingByPath.has(VIEWER_FORMAT_PATH)) {
+    try {
+      const fmtFile = await apiFetch(`/repos/${owner}/${repo}/contents/${VIEWER_FORMAT_PATH}?ref=${encodeURIComponent(branch)}`, token);
+      if (fmtFile?.content) remoteFormat = Number(Buffer.from(fmtFile.content, "base64").toString("utf8").trim()) || null;
+    } catch { /* unreadable → no newer viewer known */ }
+  }
+  const { shellChanged, filesToPublish } = partitionBundleForPublish(bundle || {}, remoteVersion, remoteFormat);
   const publishEntries = Object.entries(filesToPublish).filter(
     ([filePath, content]) => filePath && (typeof content === "string" || Buffer.isBuffer(content))
   );
 
   const nextPathSet = new Set(publishEntries.map(([filePath]) => filePath));
   const treeEntries = [];
+  const knownBlobShas = new Set(existingByPath.values());
 
   // buildSpaBundle() base64-encodes binary assets (images, fonts) and leaves text files
   // as utf8. Decode binaries back to their real bytes here, otherwise the base64 string
@@ -423,6 +494,14 @@ async function publishSiteBundleOnce(token, owner, bundle, branch, repo) {
     const existingSha = existingByPath.get(filePath);
     if (existingSha === blobSha) continue;
 
+    // Blobs are content-addressed: when the repo (or this publish) already
+    // holds these bytes under another path, point at them instead of
+    // uploading again. The viewer/ copy of the shell costs nothing this way.
+    if (knownBlobShas.has(blobSha)) {
+      treeEntries.push({ path: filePath, sha: blobSha });
+      continue;
+    }
+
     const blob = await apiFetch(`/repos/${owner}/${repo}/git/blobs`, token, {
       method: "POST",
       body: JSON.stringify({
@@ -430,6 +509,7 @@ async function publishSiteBundleOnce(token, owner, bundle, branch, repo) {
         encoding: "base64",
       }),
     });
+    knownBlobShas.add(blobSha);
     treeEntries.push({ path: filePath, sha: blob.sha });
   }
 
@@ -440,7 +520,8 @@ async function publishSiteBundleOnce(token, owner, bundle, branch, repo) {
       const isEncBuild = (entry.path.startsWith("site/builds/") || entry.path.startsWith("site/comps/")) && entry.path.endsWith(".enc");
       const isRedirect = entry.path.startsWith("site/r/");
       const isStaleSiteFile = entry.path.startsWith("site/") && !nextPathSet.has(entry.path) && !isEncBuild && !isRedirect;
-      if (!isLegacyRootNoJekyll && !isStaleSiteFile) continue;
+      const isStaleViewerFile = entry.path.startsWith(VIEWER_DIR) && !nextPathSet.has(entry.path);
+      if (!isLegacyRootNoJekyll && !isStaleSiteFile && !isStaleViewerFile) continue;
       treeEntries.push({ path: entry.path, sha: null });
     }
   }
@@ -595,6 +676,8 @@ async function pollUrlLive(url, opts = {}) {
 
 module.exports = {
   TARGET_REPO,
+  VIEWER_GUARD_PATH,
+  viewerGuardWorkflow,
   getViewer,
   listTargets,
   ensureAxiForgeRepo,

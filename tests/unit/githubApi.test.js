@@ -3,6 +3,8 @@
 const crypto = require("node:crypto");
 const {
   TARGET_REPO,
+  VIEWER_GUARD_PATH,
+  viewerGuardWorkflow,
   getViewer,
   listTargets,
   ensureAxiForgeRepo,
@@ -436,7 +438,8 @@ describe("publishSiteBundle — SHA deduplication", () => {
   const CONTENT = "Hello World";
   const CONTENT_SHA = computeGitBlobSha(CONTENT);
 
-  function buildMockFetch({ existingFiles = {}, repoReady = true } = {}) {
+  // `contents` maps a repo path to the text the contents API returns for it.
+  function buildMockFetch({ existingFiles = {}, repoReady = true, contents = {} } = {}) {
     const existingTree = Object.entries(existingFiles).map(([path, sha]) => ({
       path, sha, type: "blob",
     }));
@@ -444,6 +447,13 @@ describe("publishSiteBundle — SHA deduplication", () => {
     return jest.fn((url, options) => {
       const urlStr = String(url);
       const method = (options?.method || "GET").toUpperCase();
+
+      const contentsPath = urlStr.match(/\/contents\/([^?]+)/)?.[1];
+      if (contentsPath && method === "GET") {
+        return contentsPath in contents
+          ? okRes({ content: Buffer.from(contents[contentsPath]).toString("base64") })
+          : failRes(404);
+      }
 
       // Repo check
       if (urlStr.includes(`/repos/${FAKE_OWNER}/${FAKE_REPO}`) && method === "GET" && !urlStr.includes("/git/")) {
@@ -674,6 +684,93 @@ describe("publishSiteBundle — SHA deduplication", () => {
       .map((e) => e.path);
     expect(deletedPaths).not.toContain("site/r/abc12345/index.html");
   });
+
+  function postedTree() {
+    const treeCall = global.fetch.mock.calls.find(
+      ([url, opts]) => String(url).includes("/git/trees") && opts?.method === "POST"
+    );
+    return treeCall ? JSON.parse(treeCall[1].body).tree : [];
+  }
+
+  test("uploads identical bytes once and reuses the blob for other paths", async () => {
+    global.fetch = buildMockFetch({
+      existingFiles: { "site/old-logo.txt": computeGitBlobSha("logo") },
+    });
+
+    const bundle = {
+      "site/index.html": "<html>shell</html>",
+      "viewer/index.html": "<html>shell</html>",
+      "viewer/logo.txt": "logo",
+    };
+    await publishSiteBundle(FAKE_TOKEN, FAKE_OWNER, bundle);
+
+    const blobPosts = global.fetch.mock.calls.filter(
+      ([url, opts]) => String(url).includes("/git/blobs") && opts?.method === "POST"
+    );
+    expect(blobPosts).toHaveLength(1);
+    const sha = (p) => postedTree().find((e) => e.path === p)?.sha;
+    expect(sha("viewer/index.html")).toBe(computeGitBlobSha("<html>shell</html>"));
+    expect(sha("viewer/logo.txt")).toBe(computeGitBlobSha("logo"));
+  });
+
+  test("a shell change sweeps viewer/ files the new viewer no longer has", async () => {
+    global.fetch = buildMockFetch({
+      existingFiles: {
+        "viewer/assets/old-abc.js": "oldsha",
+        "viewer/index.html": computeGitBlobSha("old"),
+      },
+    });
+
+    const bundle = { "site/index.html": "new", "viewer/index.html": "new" };
+    await publishSiteBundle(FAKE_TOKEN, FAKE_OWNER, bundle);
+
+    const deleted = postedTree().filter((e) => e.sha === null).map((e) => e.path);
+    expect(deleted).toContain("viewer/assets/old-abc.js");
+    expect(deleted).not.toContain("viewer/index.html");
+  });
+
+  test("leaves the repo's viewer alone when it reads a newer format than ours", async () => {
+    global.fetch = buildMockFetch({
+      existingFiles: {
+        "site/site-version": "remotesha",
+        "viewer/viewer-format": "fmtsha",
+        "viewer/assets/newer.js": "newersha",
+      },
+      contents: { "site/site-version": "newerviewer", "viewer/viewer-format": "3" },
+    });
+
+    const bundle = {
+      "site/site-version": "ourviewer",
+      "site/index.html": "<html>ours</html>",
+      "viewer/index.html": "<html>ours</html>",
+      "viewer/viewer-format": "2",
+      "site/builds/abc.enc": Buffer.from([0, 0x41, 0x58, 2]),
+    };
+    const result = await publishSiteBundle(FAKE_TOKEN, FAKE_OWNER, bundle);
+
+    expect(result.shellChanged).toBe(false);
+    expect(result.files).toEqual(["site/builds/abc.enc"]);
+    expect(postedTree().map((e) => e.path)).toEqual(["site/builds/abc.enc"]);
+  });
+
+  test("replaces an older-format viewer", async () => {
+    global.fetch = buildMockFetch({
+      existingFiles: { "site/site-version": "remotesha", "viewer/viewer-format": "fmtsha" },
+      contents: { "site/site-version": "olderviewer", "viewer/viewer-format": "1" },
+    });
+
+    const bundle = {
+      "site/site-version": "ourviewer",
+      "site/index.html": "<html>ours</html>",
+      "viewer/viewer-format": "2",
+    };
+    const result = await publishSiteBundle(FAKE_TOKEN, FAKE_OWNER, bundle);
+
+    expect(result.shellChanged).toBe(true);
+    expect(postedTree().map((e) => e.path)).toEqual(
+      expect.arrayContaining(["site/index.html", "viewer/viewer-format", "site/site-version"])
+    );
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -740,7 +837,7 @@ describe("ensurePagesWorkflow", () => {
     global.fetch = jest.fn((url, options) => {
       const method = (options?.method || "GET").toUpperCase();
       if (method === "GET") return failRes(404);
-      if (method === "PUT") {
+      if (method === "PUT" && String(url).includes("deploy-pages.yml")) {
         capturedBody = JSON.parse(options.body);
         return okRes({ content: { sha: "newsha" } });
       }
@@ -772,6 +869,109 @@ describe("ensurePagesWorkflow", () => {
     const err = await ensurePagesWorkflow(FAKE_TOKEN, FAKE_OWNER).catch((e) => e);
     expect(err.message).toContain("workflow");
     expect(err.message).toContain("Re-authenticate");
+  });
+
+  test("also writes the viewer guard workflow", async () => {
+    const written = {};
+    global.fetch = jest.fn((url, options) => {
+      const method = (options?.method || "GET").toUpperCase();
+      if (method === "GET") return failRes(404);
+      if (method === "PUT") {
+        const path = decodeURIComponent(String(url).match(/\/contents\/([^?]+)/)[1]);
+        written[path] = Buffer.from(JSON.parse(options.body).content, "base64").toString("utf8");
+        return okRes({ content: { sha: "newsha" } });
+      }
+      return okRes({});
+    });
+
+    await ensurePagesWorkflow(FAKE_TOKEN, FAKE_OWNER);
+    expect(written[VIEWER_GUARD_PATH]).toBe(viewerGuardWorkflow());
+  });
+});
+
+describe("viewerGuardWorkflow", () => {
+  const { execFileSync } = require("node:child_process");
+  const fs = require("node:fs");
+  const os = require("node:os");
+  const path = require("node:path");
+  const yaml = viewerGuardWorkflow();
+
+  test("runs after the Deploy Pages workflow (old apps rewrite that one, never this)", () => {
+    expect(VIEWER_GUARD_PATH).not.toBe(".github/workflows/deploy-pages.yml");
+    expect(yaml).toMatch(/on:\n  workflow_run:\n    workflows: \[ "Deploy Pages" \]\n    types: \[ completed \]/);
+    expect(yaml).toContain("if: github.event.workflow_run.conclusion == 'success'");
+  });
+
+  test("only the deploy job joins the pages concurrency group", () => {
+    const [checkJob, deployJob] = yaml.split("\n  deploy:\n");
+    expect(checkJob).not.toContain("concurrency");
+    expect(deployJob).toContain('concurrency:\n      group: "pages"\n      cancel-in-progress: false');
+    expect(deployJob).toContain("if: needs.check.outputs.stale == 'true'");
+  });
+
+  test("leaves GitHub expressions for Actions, not JS, to expand", () => {
+    expect(yaml).toContain("${{ steps.compare.outputs.stale }}");
+    expect(yaml).toContain("${{ steps.deployment.outputs.page_url }}");
+  });
+
+  // Pull a step's `run: |` block out of the YAML and run it the way Actions does.
+  function runBlock(after) {
+    const start = yaml.indexOf(after);
+    const lines = yaml.slice(yaml.indexOf("run:", start)).split("\n");
+    const first = lines[0].replace(/^run:\s*/, "");
+    if (first !== "|") return first;
+    const body = [];
+    for (const line of lines.slice(1)) {
+      if (!line.startsWith("          ")) break;
+      body.push(line.slice(10));
+    }
+    return body.join("\n");
+  }
+
+  function inRepo(files, script) {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "viewer-guard-"));
+    try {
+      for (const [rel, text] of Object.entries(files)) {
+        fs.mkdirSync(path.dirname(path.join(dir, rel)), { recursive: true });
+        fs.writeFileSync(path.join(dir, rel), text);
+      }
+      const out = path.join(dir, "gh-output");
+      fs.writeFileSync(out, "");
+      execFileSync("bash", ["-e", "-c", script], { cwd: dir, env: { ...process.env, GITHUB_OUTPUT: out } });
+      return { dir, output: fs.readFileSync(out, "utf8"), read: (rel) => fs.readFileSync(path.join(dir, rel), "utf8") };
+    } catch (err) {
+      fs.rmSync(dir, { recursive: true, force: true });
+      throw err;
+    }
+  }
+
+  const compare = runBlock("id: compare");
+
+  test.each([
+    ["an older app replaced the served viewer", { "site/site-version": "old", "viewer/site-version": "new" }, "stale=true"],
+    ["the served viewer is the newest", { "site/site-version": "new", "viewer/site-version": "new" }, "stale=false"],
+    ["no newer app has published here yet", { "site/site-version": "old" }, "stale=false"],
+    ["site/ has no viewer at all", { "viewer/site-version": "new" }, "stale=true"],
+  ])("compare step: %s", (_name, files, expected) => {
+    const { dir, output } = inRepo(files, compare);
+    fs.rmSync(dir, { recursive: true, force: true });
+    expect(output.trim()).toBe(expected);
+  });
+
+  test("restore step lays viewer/ over site/, keeping published data", () => {
+    const { dir, read } = inRepo({
+      "site/index.html": "old shell",
+      "site/builds/a.enc": "data",
+      "viewer/index.html": "new shell",
+      "viewer/assets/app.js": "js",
+    }, runBlock("Lay the newest viewer"));
+    try {
+      expect(read("site/index.html")).toBe("new shell");
+      expect(read("site/assets/app.js")).toBe("js");
+      expect(read("site/builds/a.enc")).toBe("data");
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
 

@@ -120,7 +120,33 @@ describe("buildEncryptedBuildFile", () => {
 });
 
 const { computeSpaVersion, SITE_VERSION_PATH } = require("../../src/main/siteBundle");
-const { partitionBundleForPublish } = require("../../src/main/siteBundle");
+const { partitionBundleForPublish, VIEWER_FORMAT, VIEWER_FORMAT_PATH } = require("../../src/main/siteBundle");
+
+describe("buildSpaBundle — protected viewer copy", () => {
+  test("mirrors every site/ shell file into viewer/ unchanged", () => {
+    const bundle = buildSpaBundle();
+    const siteFiles = Object.keys(bundle).filter((k) => k.startsWith("site/"));
+    for (const rel of siteFiles) {
+      expect(bundle[`viewer/${rel.slice(5)}`]).toBe(bundle[rel]);
+    }
+    expect(bundle["viewer/site-version"]).toBe(bundle[SITE_VERSION_PATH]);
+  });
+
+  test("records the viewer's format, and the copy doesn't change the shell version", () => {
+    const bundle = buildSpaBundle();
+    expect(bundle[VIEWER_FORMAT_PATH]).toBe(String(VIEWER_FORMAT));
+    expect(computeSpaVersion(bundle)).toBe(bundle[SITE_VERSION_PATH]);
+  });
+
+  // A floor, not proof: any viewer-breaking format change must bump
+  // VIEWER_FORMAT, or an older viewer could replace one that reads it.
+  test("viewer format is at least the envelope and comp formats", () => {
+    const { PAYLOAD_VERSION } = require("../../src/main/buildEncryption");
+    const { COMP_FORMAT_VERSION } = require("../../src/main/compPublish");
+    expect(VIEWER_FORMAT).toBeGreaterThanOrEqual(PAYLOAD_VERSION);
+    expect(VIEWER_FORMAT).toBeGreaterThanOrEqual(COMP_FORMAT_VERSION);
+  });
+});
 
 const shell = {
   "site/index.html": "<html>a</html>",
@@ -174,5 +200,23 @@ describe("partitionBundleForPublish", () => {
     expect(filesToPublish["site/r/z"]).toBe("redirect");
     expect(filesToPublish["site/index.html"]).toBeUndefined();
     expect(filesToPublish[SITE_VERSION_PATH]).toBeUndefined();
+  });
+
+  const withViewer = {
+    ...bundle,
+    "viewer/index.html": "<html>",
+    [VIEWER_FORMAT_PATH]: "2",
+  };
+
+  test("never replaces a viewer that reads a newer format, even when versions differ", () => {
+    const { shellChanged, filesToPublish } = partitionBundleForPublish(withViewer, "other", 3);
+    expect(shellChanged).toBe(false);
+    expect(Object.keys(filesToPublish).sort()).toEqual(["site/builds/x/build.json", "site/comps/y/comp.json", "site/r/z"]);
+  });
+
+  test.each([[2], [1], [null]])("replaces a differing viewer of format %p", (remoteFormat) => {
+    const { shellChanged, filesToPublish } = partitionBundleForPublish(withViewer, "other", remoteFormat);
+    expect(shellChanged).toBe(true);
+    expect(filesToPublish).toEqual(withViewer);
   });
 });

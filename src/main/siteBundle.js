@@ -7,8 +7,20 @@ const { encryptPayload } = require("./buildEncryption");
 
 const SITE_VERSION_PATH = "site/site-version";
 
+// The newest payload format this viewer reads. Bump it whenever the viewer
+// learns a format an older viewer can't read (a PAYLOAD_VERSION or
+// COMP_FORMAT_VERSION bump, or any other change older viewers would misread).
+const VIEWER_FORMAT = 2;
+
+// A copy of the shell lives outside site/, where apps up to v1.3.1 never write
+// or delete. The repo's guard workflow serves it whenever an older app has put
+// its own shell back into site/ (see githubApi.ensurePagesWorkflow).
+const VIEWER_DIR = "viewer/";
+const VIEWER_FORMAT_PATH = `${VIEWER_DIR}viewer-format`;
+
 function isShellPath(p) {
   if (p === SITE_VERSION_PATH) return false;
+  if (!p.startsWith("site/")) return false;
   if (p.startsWith("site/builds/") || p.startsWith("site/comps/") || p.startsWith("site/r/")) return false;
   return true;
 }
@@ -46,6 +58,10 @@ function buildSpaBundle() {
   walkDir(distDir, distDir, files);
   files["site/.nojekyll"] = "\n";
   files[SITE_VERSION_PATH] = computeSpaVersion(files);
+  for (const [rel, content] of Object.entries(files)) {
+    files[VIEWER_DIR + rel.slice("site/".length)] = content;
+  }
+  files[VIEWER_FORMAT_PATH] = String(VIEWER_FORMAT);
   return files;
 }
 
@@ -96,9 +112,19 @@ function buildRedirectFile(fileId, encKey, type) {
   };
 }
 
-function partitionBundleForPublish(bundle, remoteVersion) {
+/**
+ * Decide whether this publish uploads the viewer shell or only data.
+ * @param {object} bundle
+ * @param {string|null} remoteVersion — the repo's site/site-version
+ * @param {number|null} [remoteFormat] — the repo's viewer/viewer-format
+ */
+function partitionBundleForPublish(bundle, remoteVersion, remoteFormat = null) {
   const localVersion = bundle[SITE_VERSION_PATH];
-  const shellChanged = !remoteVersion || remoteVersion !== localVersion;
+  const localFormat = Number(bundle[VIEWER_FORMAT_PATH]) || 0;
+  // Never replace a viewer that reads newer formats than ours: links
+  // published by a newer app would stop opening.
+  const remoteIsNewer = Number(remoteFormat) > localFormat;
+  const shellChanged = !remoteIsNewer && (!remoteVersion || remoteVersion !== localVersion);
   if (shellChanged) return { shellChanged: true, filesToPublish: { ...bundle } };
   const filesToPublish = {};
   for (const [p, content] of Object.entries(bundle)) {
@@ -111,4 +137,4 @@ function partitionBundleForPublish(bundle, remoteVersion) {
   return { shellChanged: false, filesToPublish };
 }
 
-module.exports = { getSiteDistDir, buildSpaBundle, buildEncryptedBuildFile, buildEncryptedCompFile, buildRedirectFile, computeSpaVersion, SITE_VERSION_PATH, partitionBundleForPublish };
+module.exports = { getSiteDistDir, buildSpaBundle, buildEncryptedBuildFile, buildEncryptedCompFile, buildRedirectFile, computeSpaVersion, SITE_VERSION_PATH, VIEWER_FORMAT, VIEWER_DIR, VIEWER_FORMAT_PATH, partitionBundleForPublish };
