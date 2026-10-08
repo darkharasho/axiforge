@@ -5,19 +5,26 @@ const { publishStatus } = require("../../../src/shared/publishState");
 describe("shareDisabledTooltip", () => {
   test("never published", () => {
     expect(shareDisabledTooltip({ publishedFileId: "", updatedAt: "t", publishedAt: null }, false))
-      .toBe("Publish this build first");
+      .toBe("Not published yet — Copy link publishes it");
   });
   test("stale", () => {
     expect(shareDisabledTooltip({ publishedFileId: "x", updatedAt: "t2", publishedAt: "t1" }, false))
-      .toBe("Publish your latest changes first");
+      .toBe("Your latest changes aren't published yet");
   });
   test("editor dirty even if published+fresh", () => {
     expect(shareDisabledTooltip({ publishedFileId: "x", updatedAt: "t1", publishedAt: "t1" }, true))
-      .toBe("Publish your latest changes first");
+      .toBe("Save your changes first");
   });
   test("shareable and clean → enabled (null)", () => {
     expect(shareDisabledTooltip({ publishedFileId: "x", updatedAt: "t1", publishedAt: "t1" }, false))
       .toBeNull();
+  });
+  test.each(["queued", "publishing"])("an upload in flight does not block (main waits for it): %s", (state) => {
+    expect(shareDisabledTooltip({ publishedFileId: "x", updatedAt: "t2", publishedAt: "t1" }, false, state)).toBeNull();
+  });
+  test("a failed upload blocks with its own reason", () => {
+    expect(shareDisabledTooltip({ publishedFileId: "x", updatedAt: "t2", publishedAt: "t1" }, false, "failed"))
+      .toBe("Publishing failed — retry it first");
   });
 });
 
@@ -26,15 +33,20 @@ const { compShareDisabledTooltip } = require("../../../src/renderer/modules/shar
 describe("compShareDisabledTooltip", () => {
   test("never published", () => {
     expect(compShareDisabledTooltip({ publishedFileId: "", updatedAt: "t", publishedAt: null }))
-      .toBe("Publish this comp first");
+      .toBe("Not published yet — Copy link publishes it");
   });
   test("stale", () => {
     expect(compShareDisabledTooltip({ publishedFileId: "x", updatedAt: "t2", publishedAt: "t1" }))
-      .toBe("Publish your latest changes first");
+      .toBe("Your latest changes aren't published yet");
   });
   test("shareable → null", () => {
     expect(compShareDisabledTooltip({ publishedFileId: "x", updatedAt: "t1", publishedAt: "t1" }))
       .toBeNull();
+  });
+  test("queued → null; failed → blocked", () => {
+    const stale = { publishedFileId: "x", updatedAt: "t2", publishedAt: "t1" };
+    expect(compShareDisabledTooltip(stale, [], "queued")).toBeNull();
+    expect(compShareDisabledTooltip(stale, [], "failed")).toBe("Publishing failed — retry it first");
   });
 });
 
@@ -58,7 +70,7 @@ describe("compShareDisabledTooltip with member builds", () => {
   const comp = { publishedFileId: "x", publishedHash: "h", contentHash: "h", publishedMemberHashes: { b1: "old" } };
   test("a changed member blocks sharing", () => {
     expect(compShareDisabledTooltip(comp, [{ id: "b1", contentHash: "new" }]))
-      .toBe("Publish your latest changes first");
+      .toBe("Your latest changes aren't published yet");
   });
   test("matching members allow it", () => {
     expect(compShareDisabledTooltip(comp, [{ id: "b1", contentHash: "old" }])).toBeNull();
