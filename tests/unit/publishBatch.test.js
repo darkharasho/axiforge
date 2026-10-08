@@ -323,3 +323,20 @@ test("publishedPageUrl", () => {
   expect(publishedPageUrl({ kind: "comp", owner: "me", slug: "r", fileId: "f", key: "k", theme: "dark" }))
     .toBe("https://me.github.io/axibuilds/?n=r&c=f.k&t=dark");
 });
+
+describe("pageThemes", () => {
+  const { pageThemes } = require("../../src/main/publishBatch");
+  const settings = (values) => async (key) => values[key];
+
+  test("builds take their profession accent when themed pages are on; comps the app theme", async () => {
+    const t = await pageThemes(settings({ "appearance.theme": "midnight", "appearance.themedBuildPages": true }));
+    expect(t.comp).toBe("midnight");
+    expect(t.build({ profession: "Necromancer" })).not.toBe("midnight");
+    expect(t.build({})).toBe("midnight");
+  });
+
+  test("themed pages off: every build uses the app theme; no theme is empty", async () => {
+    expect((await pageThemes(settings({ "appearance.theme": "midnight" }))).build({ profession: "Necromancer" })).toBe("midnight");
+    expect((await pageThemes(settings({}))).build({ profession: "Necromancer" })).toBe("");
+  });
+});

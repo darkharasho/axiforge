@@ -66,11 +66,10 @@ const { shortUrl, publishedOwnerFor } = require("./shortUrl");
 const { resolvePublishTarget } = require("./publishTarget");
 const { PublishQueue } = require("./publishQueue");
 const { autoPublishDecision, bulkPublishCandidates } = require("./autoPublish");
-const { createPublishBatch, publishedPageUrl, PAGES_TIMEOUT_MS } = require("./publishBatch");
+const { createPublishBatch, publishedPageUrl, displayTitle, pageThemes, PAGES_TIMEOUT_MS } = require("./publishBatch");
 const { createPagesLive } = require("./pagesLive");
 const { assertCanMoveOutOfTeam, assertFolderTreeFits, withoutReceiptHashes } = require("./teamGuards");
 
-const { PROFESSION_ACCENTS: PROFESSION_THEME_IDS } = require("./accents");
 
 const DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL || "";
 const APP_PROFILE = process.env.APP_PROFILE;
@@ -1741,16 +1740,17 @@ const readyWork = app.whenReady().then(async () => {
     const done = { builds: [], comps: [] };
     try {
       const [builds, comps] = await Promise.all([store.listBuilds(), compStore.listComps()]);
-      const appTheme = await store.getSetting("appearance.theme");
-      const themedBuildsOn = await store.getSetting("appearance.themedBuildPages");
+      const theme = await pageThemes((key) => store.getSetting(key));
       const plan = planFormatMigrations({
         builds, comps, owner, excludeIds,
         memberIdsOf: getCompPublishBuildIds,
-        themeOf: (b) => (themedBuildsOn && b.profession && PROFESSION_THEME_IDS[b.profession]) || appTheme || "",
+        themeOf: theme.build,
       });
       for (const build of plan.builds) {
         try {
-          const file = buildEncryptedBuildFile(await enrichBuildForPublish(build), build.publishedFileId, build.publishedKey);
+          // Titled the way publishBatch titles it, so an untitled build's page keeps its name.
+          const enriched = await enrichBuildForPublish({ ...build, title: displayTitle(build) });
+          const file = buildEncryptedBuildFile(enriched, build.publishedFileId, build.publishedKey);
           bundle[file.filePath] = file.content;
           done.builds.push(build);
         } catch (err) {
@@ -1791,6 +1791,8 @@ const readyWork = app.whenReady().then(async () => {
       try {
         const saved = await compStore.markPublished(comp.id, {
           boonCoverageHtml: "",
+          // The page now links its members' live pages, as compReceipt(comp, []) records.
+          publishedMemberHashes: {},
           publishedFormat: formatStamp("comp", comp.publishedHash),
           snapshotUpdatedAt: comp.publishedAt || comp.updatedAt,
         });
@@ -1805,11 +1807,16 @@ const readyWork = app.whenReady().then(async () => {
   // Explicit publishes (old IPC, local API, Copy link on a never-published
   // item) go through the queue too: same round, same receipts, same wait.
   const PUBLISH_FULL_WAIT_MS = 5 * 60 * 1000;
-  const SHARE_PUBLISH_WAIT_MS = 15 * 1000;
+  // A share waits out a whole round: up to 50 items plus a batch of format
+  // migrations, which takes well past 15 s right after an upgrade.
+  const SHARE_PUBLISH_WAIT_MS = 60 * 1000;
   // A new item's /r/ page and a new site's viewer go live with the Pages
   // deploy, after the round: whoever hands those links out waits for them.
   const pagesLive = createPagesLive({ pollUrlLive, timeoutMs: PAGES_TIMEOUT_MS });
   const PAGES_NOT_LIVE = "Published, but the link isn't live yet. Try again in a minute.";
+  // Copied text is handed out even if a page is still deploying: wait a little
+  // for a new page, never the full deploy timeout (offline, every click would hang).
+  const COPY_LIVE_WAIT_MS = 20 * 1000;
 
   async function findPublishRecord(kind, id) {
     const list = kind === "comp" ? await compStore.listComps() : await store.listBuilds();
@@ -1839,9 +1846,8 @@ const readyWork = app.whenReady().then(async () => {
     const auth = await getAuthRecord();
     const owner = publishedOwnerFor(record, auth?.onboarding?.targetOwner);
     if (!owner) return null;
-    const appTheme = (await store.getSetting("appearance.theme")) || "";
-    const themed = await store.getSetting("appearance.themedBuildPages");
-    const theme = kind === "comp" ? appTheme : ((themed && record.profession && PROFESSION_THEME_IDS[record.profession]) || appTheme);
+    const themes = await pageThemes((key) => store.getSetting(key));
+    const theme = kind === "comp" ? themes.comp : themes.build(record);
     return publishedPageUrl({ kind, owner, slug: record.publishedSlug || "", fileId: record.publishedFileId, key: record.publishedKey, theme, repo: TARGET_REPO });
   }
 
@@ -2146,6 +2152,9 @@ const readyWork = app.whenReady().then(async () => {
 
   handle("discord:build-copy-text", async (_e, buildId) => {
     const { formatBuildDiscordCopy } = require("./discordWebhook");
+    // The share gate lets this through while a save uploads: copy the new link.
+    const waitError = await settlePendingPublish("build", buildId);
+    if (waitError) throw new Error(waitError);
 
     const allBuilds = await store.listBuilds();
     const build = allBuilds.find((b) => b.id === buildId);
@@ -2162,13 +2171,23 @@ const readyWork = app.whenReady().then(async () => {
       }
     }
     // The text is handed out either way: a page still deploying opens shortly.
-    await pagesLive.waitLive([buildUrl]);
+    await pagesLive.waitLive([buildUrl], { timeoutMs: COPY_LIVE_WAIT_MS });
 
     return formatBuildDiscordCopy(build, buildUrl);
   });
 
   handle("comps:generate-plaintext", async (_e, compId) => {
     const { getDisplayName, getDiscordEmoji, tagEmojiMention } = require("./discordEmoji");
+
+    // The share gate lets this through while the comp or a member uploads:
+    // wait for them, so the text links what was just saved.
+    const pending = (await compStore.listComps()).find((c) => c.id === compId);
+    const waitErrors = await Promise.all([
+      settlePendingPublish("comp", compId),
+      ...(pending ? getCompPublishBuildIds(pending) : []).map((id) => settlePendingPublish("build", id)),
+    ]);
+    const waitError = waitErrors.find(Boolean);
+    if (waitError) throw new Error(waitError);
 
     const allComps = await compStore.listComps();
     const comp = allComps.find((c) => c.id === compId);
@@ -2292,7 +2311,7 @@ const readyWork = app.whenReady().then(async () => {
       ? shortUrl(publishedOwnerFor(comp, owner), repo, comp.publishedFileId)
       : null;
     // The text is handed out either way: a page still deploying opens shortly.
-    await pagesLive.waitLive([compUrl, ...getCompPublishBuildIds(comp).map((id) => buildUrls[id])]);
+    await pagesLive.waitLive([compUrl, ...getCompPublishBuildIds(comp).map((id) => buildUrls[id])], { timeoutMs: COPY_LIVE_WAIT_MS });
     const title = compUrl ? `**[${compName}](${compUrl})**` : `**${compName}**`;
     const out = [title];
     out.push("");

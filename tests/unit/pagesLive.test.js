@@ -36,3 +36,9 @@ test("no pages, or only empty urls, is live", async () => {
   await expect(pagesLive.waitLive([null, "", undefined])).resolves.toBe(true);
   expect(polls).toHaveLength(0);
 });
+
+test("a caller can shorten the wait", async () => {
+  const { pagesLive, polls } = setup(["https://a/r/1"]);
+  await pagesLive.waitLive(["https://a/r/1"], { timeoutMs: 50 });
+  expect(polls).toEqual([{ url: "https://a/r/1", opts: { timeoutMs: 50 } }]);
+});

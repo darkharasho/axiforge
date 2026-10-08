@@ -33,6 +33,20 @@ function displayTitle(build) {
   return title && title !== "Untitled Build" ? title : getDefaultBuildName(build?.specializations, build?.profession);
 }
 
+/**
+ * The theme a published page opens in: the app theme, or a build's profession
+ * accent when profession-themed build pages are on. Copy link and format
+ * migrations name the same theme, so their links match the published ones.
+ */
+async function pageThemes(getSetting) {
+  const appTheme = (await getSetting("appearance.theme")) || "";
+  const themedBuilds = await getSetting("appearance.themedBuildPages");
+  return {
+    comp: appTheme,
+    build: (build) => (themedBuilds && build?.profession && PROFESSION_THEME_IDS[build.profession]) || appTheme,
+  };
+}
+
 function prepareError(build, err) {
   const wrapped = new Error(`Couldn't prepare "${build.title || build.profession || "Build"}": ${err?.message || err}`);
   wrapped.cause = err;
@@ -51,15 +65,6 @@ function createPublishBatch(deps) {
     newFileId = generateFileId, newKey = generateEncryptionKey, repo = REPO,
   } = deps;
 
-  async function themes() {
-    const appTheme = (await getSetting("appearance.theme")) || "";
-    const themedBuilds = await getSetting("appearance.themedBuildPages");
-    return {
-      comp: appTheme,
-      build: (build) => (themedBuilds && build.profession && PROFESSION_THEME_IDS[build.profession]) || appTheme,
-    };
-  }
-
   return async function publishBatch(items) {
     const session = await getSession();
     if (!session) throw coded("Sign in with GitHub to publish.", "PUBLISH_DISCONNECTED");
@@ -69,7 +74,7 @@ function createPublishBatch(deps) {
     const [builds, comps] = await Promise.all([listBuilds(), listComps()]);
     const buildsById = new Map(builds.map((x) => [x.id, x]));
     const compsById = new Map(comps.map((x) => [x.id, x]));
-    const theme = await themes();
+    const theme = await pageThemes(getSetting);
     const results = [];
 
     const groups = new Map();
@@ -379,4 +384,4 @@ function createPublishBatch(deps) {
   }
 }
 
-module.exports = { createPublishBatch, publishedPageUrl, displayTitle, PAGES_TIMEOUT_MS };
+module.exports = { createPublishBatch, publishedPageUrl, displayTitle, pageThemes, PAGES_TIMEOUT_MS };

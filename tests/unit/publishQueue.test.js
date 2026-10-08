@@ -525,7 +525,7 @@ describe("publishNow and resume", () => {
     expect(q.snapshot().items["build:a"]).toBeUndefined();
   });
 
-  test("publishNow({ unpause }) runs the item in one round with the paused ones", async () => {
+  test("an item whose own target isn't set up is held alone; the rest keep publishing", async () => {
     const { q, rounds } = makeQueue({
       runRound: async (items) => ({
         results: items.map((i) => (i.id === "broken"
@@ -535,11 +535,37 @@ describe("publishNow and resume", () => {
     });
     q.enqueue("build", "broken");
     await adv(5000);
+    expect(q.snapshot()).toMatchObject({ paused: null, items: { "build:broken": { state: "disconnected" } } });
+    await expect(q.awaitPublished("build", "broken")).rejects.toMatchObject({ code: "PUBLISH_DISCONNECTED" });
+    q.enqueue("build", "team");
+    await adv(5000);
+    expect(rounds[1]).toEqual(["build:team"]);
+    expect(q.snapshot().items["build:team"]).toBeUndefined();
+    expect(q.hasPending()).toBe(false);
+    // Coming back (focus, setup) tries it again; so does saving it again.
+    await q.resume();
+    expect(rounds[2]).toEqual(["build:broken"]);
+    q.enqueue("build", "broken");
+    await adv(5000);
+    expect(rounds[3]).toEqual(["build:broken"]);
+  });
+
+  test("publishNow({ unpause }) runs the item in one round with the paused ones", async () => {
+    let paused = true;
+    const { q, rounds } = makeQueue({
+      runRound: async (items) => {
+        if (paused) throw coded("Set up publishing to publish.", { code: "PUBLISH_DISCONNECTED" });
+        return ok(items);
+      },
+    });
+    q.enqueue("build", "a");
+    await adv(5000);
     expect(q.snapshot().paused).toBe("disconnected");
+    paused = false;
     q.publishNow("build", "team", { unpause: true });
     await expect(q.awaitPublished("build", "team")).resolves.toMatchObject({ id: "team", ok: true });
-    expect(rounds[1].sort()).toEqual(["build:broken", "build:team"]);
-    expect(q.snapshot().paused).toBe("disconnected");
+    expect(rounds[1].sort()).toEqual(["build:a", "build:team"]);
+    expect(q.snapshot().paused).toBeNull();
   });
 
   test("publishNow without unpause leaves a pause alone", async () => {

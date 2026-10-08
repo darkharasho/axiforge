@@ -444,7 +444,7 @@ export function compPublishView(comp, snapshot, onboarding) {
   return publishButtonState({
     queueItem: queueItemFor(snapshot, "comp", comp?.id),
     receipt: status,
-    connection: connectionFrom(onboarding),
+    connection: connectionFrom(onboarding, teamRootFor(comp?.folderId)),
   });
 }
 

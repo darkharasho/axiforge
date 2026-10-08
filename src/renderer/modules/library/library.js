@@ -1590,7 +1590,7 @@ function handlePublish(buildId) {
   const { action } = publishButtonState({
     queueItem,
     receipt: publishStatus(build),
-    connection: connectionFrom(state.onboarding),
+    connection: connectionFrom(state.onboarding, teamRootFor(build?.folderId)),
   });
   const owner = queueItem?.owner || build?.publishedOwner || "";
   window.dispatchEvent(new CustomEvent("axi:publish-action", { detail: { action, kind: "build", id: buildId, owner } }));

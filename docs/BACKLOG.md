@@ -215,6 +215,18 @@ Status key: `[ ]` open · `[x]` done · `[~]` in progress · `[?]` needs repro s
   `"disconnected"` and the button reads "Set up publishing". Setup signs the
   user in first, so it still recovers; the label is just less specific.
 
+- [ ] **Every publish round asks GitHub who the user is.** `getPublishSession`
+  → `readSession` → `getViewer` makes a live `/user` call per round, and each
+  window focus resumes held items with a fresh round. Use the cached
+  `auth.viewer` and check only when a call comes back 401.
+
+- [ ] **The bulk publish prompt skips team-only publishers.**
+  `maybeShowBulkPublishPrompt` (`src/renderer/modules/publish-prompts.js`)
+  needs a personal site (`repoReady`). Someone who only publishes through a
+  team never sees it, though their team items would publish. Counting only
+  the items with a ready target would fix both this and offering personal
+  items that would just wait for setup.
+
 ## Features
 
 - [x] **Comp history.** Builds have carried a full "who changed what" since the

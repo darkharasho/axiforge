@@ -94,6 +94,7 @@ class PublishQueue {
     this._retry = null;            // { id, at, reason: "offline" | "rate-limit" }
     this._attempt = 0;             // consecutive rounds with a network failure
     this._paused = null;           // null | "unauthorized" | "disconnected"
+    this._blocked = new Set();     // keys whose own target isn't set up (a personal item, no personal site): held until resume or re-save
     this._running = null;
     this._again = false;
     this._waiters = new Map();     // key → [{ resolve, reject, timer }]
@@ -161,6 +162,7 @@ class PublishQueue {
   resume({ keepUnauthorized = false } = {}) {
     let changed = false;
     if (this._paused && !(keepUnauthorized && this._paused === "unauthorized")) { this._paused = null; changed = true; }
+    if (this._blocked.size) { this._blocked.clear(); changed = true; }
     if (this._retry?.reason === "offline") { this._clearRetry(); changed = true; }
     if (changed) this._emit();
     return this._pending.size && !this._paused ? this.flush() : Promise.resolve();
@@ -189,6 +191,7 @@ class PublishQueue {
       return Promise.resolve(null);
     }
     if (this._paused) return Promise.reject(pausedError(this._paused));
+    if (this._blocked.has(key)) return Promise.reject(pausedError("disconnected"));
     const deadline = this._now() + timeoutMs;
     // A rate limit that outlasts the wait can only end in a timeout: say why now.
     if (this._retry?.reason === "rate-limit" && this._retry.at > deadline) {
@@ -231,7 +234,7 @@ class PublishQueue {
   }
 
   hasPending() {
-    return this._pending.size > 0 && !this._paused;
+    return this._pending.size > this._blocked.size && !this._paused;
   }
 
   choiceOf(kind, id) {
@@ -263,6 +266,7 @@ class PublishQueue {
     for (const key of this._pending) {
       if (this._publishing.has(key)) items[key] = { state: "publishing" };
       else if (this._paused) items[key] = { state: this._paused };
+      else if (this._blocked.has(key)) items[key] = { state: "disconnected" };
       else if (this._retry) items[key] = { state: "waiting", reason: this._retry.reason, retryAt: this._retry.at };
       else items[key] = { state: "queued" };
     }
@@ -273,6 +277,7 @@ class PublishQueue {
 
   _add(key) {
     this._failed.delete(key);
+    this._blocked.delete(key);
     this._needsChoice.delete(key);
     this._pending.add(key);
     if (this._publishing.has(key)) this._resaved.add(key);
@@ -323,7 +328,7 @@ class PublishQueue {
    * edited doesn't chase every keystroke.
    */
   async _drain() {
-    const backlog = new Set(this._pending);
+    const backlog = new Set([...this._pending].filter((k) => !this._blocked.has(k)));
     this._arrived.clear();
     for (;;) {
       if (this._paused) return;
@@ -339,7 +344,7 @@ class PublishQueue {
         for (const source of [this._owed, this._arrived, backlog]) {
           for (const k of source) {
             if (batch.size >= this._batchSize) break;
-            if (this._pending.has(k)) batch.add(k);
+            if (this._pending.has(k) && !this._blocked.has(k)) batch.add(k);
           }
         }
       }
@@ -360,9 +365,11 @@ class PublishQueue {
     this._resaved.clear();
     this._emit();
     let results;
+    let roundFailed = false;
     try {
       results = (await this._runRound(batch.map(parseKey)))?.results || [];
     } catch (err) {
+      roundFailed = true;
       results = batch.map((k) => ({ ...parseKey(k), ok: false, error: err }));
     }
     const byKey = new Map(results.map((r) => [keyOf(r.kind, r.id), r]));
@@ -391,6 +398,13 @@ class PublishQueue {
       if (cls === "rate-limited") {
         const ms = Number(r.error?.retryAfterMs) || RATE_LIMIT_DEFAULT_MS;
         if (ms > wait) { wait = ms; waitReason = "rate-limit"; }
+        continue;
+      }
+      if (cls === "disconnected" && !roundFailed) {
+        // Only this item's target isn't set up (a personal build with no personal
+        // site): hold it alone, so team items keep publishing.
+        this._blocked.add(key);
+        this._settle(key, pausedError(cls));
         continue;
       }
       if (cls === "unauthorized" || cls === "disconnected") {

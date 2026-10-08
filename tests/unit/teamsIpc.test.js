@@ -783,13 +783,15 @@ describe("publish on save", () => {
     expect(mockCtx.sent.some((m) => m.channel === "publish:needs-owner-choice")).toBe(false);
   });
 
-  test("publishing is refused, and the queue paused, until setup is done", async () => {
+  test("publishing a personal item is refused, and that item held, until setup is done", async () => {
     await loadMain({ ...tree([mine()]), auth: { ...AUTH, onboarding: { targetOwner: "me", branch: "main" } } });
     await expect(invoke("builds:publish-build", "p1", {})).rejects.toThrow(/Set up publishing/);
-    expect((await invoke("publish:snapshot")).paused).toBe("disconnected");
+    const snap = await invoke("publish:snapshot");
+    expect(snap.items["build:p1"]).toEqual({ state: "disconnected" });
+    expect(snap.paused).toBeNull();
   });
 
-  test("an explicit publish of a team item goes through while setup pauses the queue", async () => {
+  test("a team item publishes while a personal item waits for setup", async () => {
     const t = tree([mine()]);
     t.folders[0] = folder({
       id: TEAM_ID, name: "Squad", shared: true, teamId: TEAM_ID, role: "owner",
@@ -799,12 +801,14 @@ describe("publish on save", () => {
     await loadMain({ ...t, auth: { ...AUTH, onboarding: { targetOwner: "me", branch: "main" } } });
     await invoke("builds:save", { id: "p1", title: "Edited", profession: "Warrior" });
     await invoke("publish:retry", "build", "p1");
-    await waitFor(() => lastStatus()?.paused === "disconnected", { label: "queue paused" });
+    await waitFor(() => lastStatus()?.items["build:p1"]?.state === "disconnected", { label: "personal item held" });
     const res = await invoke("builds:publish-build", "b1", {});
     expect(res.pagesUrl).toMatch(/^https:\/\/gw2eww\.github\.io\//);
     expect(github().ensureAxiForgeRepo).toHaveBeenCalledWith("gh-token", "gw2eww", "org");
-    // The personal item is still not set up, so the round paused the queue again.
-    expect((await invoke("publish:snapshot")).paused).toBe("disconnected");
+    // Only the personal item waits for setup; the queue itself never paused.
+    const snap = await invoke("publish:snapshot");
+    expect(snap.paused).toBeNull();
+    expect(snap.items["build:p1"]).toEqual({ state: "disconnected" });
   });
 
   test("a token GitHub refuses mid-round pauses for sign-in; coming online keeps that pause", async () => {

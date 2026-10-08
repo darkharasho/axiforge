@@ -8,17 +8,21 @@
 function createPagesLive({ pollUrlLive, timeoutMs }) {
   const live = new Set(); // urls seen live this session; a deployed page stays up
 
-  async function waitOne(url) {
+  async function waitOne(url, ms) {
     if (live.has(url)) return true;
-    const ok = await pollUrlLive(url, { timeoutMs });
+    const ok = await pollUrlLive(url, { timeoutMs: ms });
     if (ok) live.add(url);
     return ok;
   }
 
-  /** True once every url answers; false if any is still missing at the timeout. */
-  async function waitLive(urls) {
+  /**
+   * True once every url answers; false if any is still missing at the timeout.
+   * `opts.timeoutMs` shortens the wait for a caller that hands the link out anyway.
+   */
+  async function waitLive(urls, opts = {}) {
+    const ms = opts.timeoutMs ?? timeoutMs;
     const unique = [...new Set((urls || []).filter(Boolean))];
-    const results = await Promise.all(unique.map(waitOne));
+    const results = await Promise.all(unique.map((url) => waitOne(url, ms)));
     return results.every(Boolean);
   }
 

@@ -25,7 +25,7 @@ function isPublishable(kind, record) {
  * @returns {"skip"|"enqueue"|"ask-owner"}
  */
 function autoPublishDecision(kind, record, { targetOwner = null, choice = null } = {}) {
-  if (!record || record.deletedAt) return "skip";
+  if (!record || record.deletedAt || record.archivedAt) return "skip";
   if (!isPublishable(kind, record)) return "skip";
   if (choice === "theirs") return "skip";
   if (publishStatus(record) === "current") return "skip";
@@ -34,14 +34,14 @@ function autoPublishDecision(kind, record, { targetOwner = null, choice = null }
   return "enqueue";
 }
 
-/** Records the one-time bulk prompt offers to publish. */
+/** Records the one-time bulk prompt offers to publish. Archived ones stay put away. */
 function bulkPublishCandidates({ builds = [], comps = [] }) {
   const out = [];
   for (const b of builds) {
-    if (!b.deletedAt && !b.publishedFileId && isPublishable("build", b)) out.push({ kind: "build", id: b.id });
+    if (!b.deletedAt && !b.archivedAt && !b.publishedFileId && isPublishable("build", b)) out.push({ kind: "build", id: b.id });
   }
   for (const c of comps) {
-    if (!c.deletedAt && !c.publishedFileId && isPublishable("comp", c)) out.push({ kind: "comp", id: c.id });
+    if (!c.deletedAt && !c.archivedAt && !c.publishedFileId && isPublishable("comp", c)) out.push({ kind: "comp", id: c.id });
   }
   return out;
 }

@@ -101,6 +101,9 @@ describe("helpers", () => {
     expect(connectionFrom(null)).toEqual({ signedIn: false, connected: false });
     expect(connectionFrom({ isAuthenticated: true })).toEqual({ signedIn: true, connected: false });
     expect(connectionFrom({ isAuthenticated: true, repoReady: true })).toEqual({ signedIn: true, connected: true });
+    expect(connectionFrom({ isAuthenticated: true }, { publishOwner: "guild" })).toEqual({ signedIn: true, connected: true });
+    expect(connectionFrom({ isAuthenticated: false }, { publishOwner: "guild" })).toEqual({ signedIn: false, connected: false });
+    expect(connectionFrom({ isAuthenticated: true }, { teamId: "T" })).toEqual({ signedIn: true, connected: false });
   });
 
   test("applyPublishButton draws label, tone, icon, action and tooltip; the label is text", () => {

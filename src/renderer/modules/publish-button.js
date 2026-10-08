@@ -65,9 +65,15 @@ export function queueItemFor(snapshot, kind, id) {
   return snapshot?.items?.[`${kind}:${id}`] || null;
 }
 
-export function connectionFrom(onboarding) {
+/**
+ * `teamRoot`: the team root folder the item lives under (teams.js teamRootFor).
+ * A team with a publish target publishes its items there, so they need no
+ * personal site (publishTarget.js resolvePublishTarget).
+ */
+export function connectionFrom(onboarding, teamRoot = null) {
   const signedIn = Boolean(onboarding?.isAuthenticated);
-  return { signedIn, connected: Boolean(signedIn && onboarding?.repoReady) };
+  const ready = Boolean(onboarding?.repoReady || teamRoot?.publishOwner);
+  return { signedIn, connected: Boolean(signedIn && ready) };
 }
 
 export function applyPublishButton(btn, v) {

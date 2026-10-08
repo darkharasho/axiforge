@@ -10,6 +10,7 @@ import { getProfessionSvg } from "./profession-icons.js";
 import { shareDisabledTooltip } from "./share-gate.js";
 import { publishStatus, publishBadgeHtml } from "./publish-status.js";
 import { publishButtonState, queueItemFor, connectionFrom, applyPublishButton } from "./publish-button.js";
+import { teamRootFor } from "./teams.js";
 
 // ---------------------------------------------------------------------------
 // DOM refs — injected by the host (renderer.js) after DOM is ready
@@ -551,7 +552,7 @@ export function editorPublishView() {
   return publishButtonState({
     queueItem: queueItemFor(state.publishQueue, "build", id),
     receipt: build ? publishStatus(build) : "never",
-    connection: connectionFrom(state.onboarding),
+    connection: connectionFrom(state.onboarding, teamRootFor(build?.folderId ?? state.editor?.folderId)),
     dirty: Boolean(state.editorDirty),
   });
 }

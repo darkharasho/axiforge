@@ -46,6 +46,7 @@ describe("autoPublishDecision", () => {
   test("unpublishable or trashed records are skipped", () => {
     expect(autoPublishDecision("build", build({ profession: "" }), {})).toBe("skip");
     expect(autoPublishDecision("build", build({ deletedAt: "2026-10-07T00:00:00.000Z" }), {})).toBe("skip");
+    expect(autoPublishDecision("build", build({ archivedAt: "2026-10-07T00:00:00.000Z" }), {})).toBe("skip");
     expect(autoPublishDecision("comp", annotateComp({ id: "c", name: "Untitled Comp" }), {})).toBe("skip");
     expect(autoPublishDecision("comp", annotateComp({ id: "c", name: "  " }), {})).toBe("skip");
     expect(autoPublishDecision("build", null, {})).toBe("skip");
@@ -78,8 +79,13 @@ describe("bulkPublishCandidates", () => {
       build({ id: "pub", publishedFileId: "f" }),
       build({ id: "noprof", profession: "" }),
       build({ id: "trash", deletedAt: "2026-10-07T00:00:00.000Z" }),
+      build({ id: "archived", archivedAt: "2026-10-07T00:00:00.000Z" }),
     ];
-    const comps = [annotateComp({ id: "c1", name: "Raid" }), annotateComp({ id: "c2", name: "Untitled Comp" })];
+    const comps = [
+      annotateComp({ id: "c1", name: "Raid" }),
+      annotateComp({ id: "c2", name: "Untitled Comp" }),
+      annotateComp({ id: "c3", name: "Old raid", archivedAt: "2026-10-07T00:00:00.000Z" }),
+    ];
     expect(bulkPublishCandidates({ builds, comps })).toEqual([
       { kind: "build", id: "new" },
       { kind: "comp", id: "c1" },
