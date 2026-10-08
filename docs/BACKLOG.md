@@ -162,6 +162,17 @@ Status key: `[ ]` open · `[x]` done · `[~]` in progress · `[?]` needs repro s
   process + real Worker over a D1 shim) reproduced the vanish exactly, then went
   green on the fix.
 
+- [ ] **Publish loads note-referenced cross-profession catalogs without the
+  build's game mode.** `loadCrossProfessionCatalogs(notes, profession,
+  getProfessionCatalog)` (`src/main/buildPublish.js`) calls
+  `getProfessionCatalog(p, lang)` with no game mode, at both publish call sites
+  in `src/main/index.js` (~1680 single build, ~1859 comp members), while the
+  build's own catalog is fetched for `build.gameMode`. A WvW build whose notes
+  mention another profession's `@[skill:..]`/`@[trait:..]` gets that entry's
+  PvE facts in the published notes. Pre-existing (not from the payload-shrink
+  branch); affects notes skill/trait lookups only, not boon coverage. Fix: pass
+  the game mode through to `getProfessionCatalog`.
+
 ## Features
 
 - [x] **Comp history.** Builds have carried a full "who changed what" since the
