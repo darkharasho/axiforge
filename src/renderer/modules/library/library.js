@@ -2,7 +2,8 @@
 // This is the main entry point for the library page.
 
 import { state } from "../state.js";
-import { withoutPublishReceipt } from "../publish-status.js";
+import { withoutPublishReceipt, publishStatus } from "../publish-status.js";
+import { publishButtonState, queueItemFor, connectionFrom } from "../publish-button.js";
 import { normalizeImportedSkills } from "../editor.js";
 import { escapeHtml } from "../utils.js";
 
@@ -1580,9 +1581,19 @@ async function handleMoveComps(compIds, folderId) {
   renderLibrary();
 }
 
+// Copy link from the library (publish on save). The action comes from the same
+// state as the editor's button, so a stale build publishes before copying and
+// an unconnected account goes to setup. renderer.js runs the action.
 function handlePublish(buildId) {
-  // Load the build into the editor and navigate there — publish from editor
-  handleLoadBuild(buildId);
+  const build = state.builds.find((b) => b.id === buildId);
+  const queueItem = queueItemFor(state.publishQueue, "build", buildId);
+  const { action } = publishButtonState({
+    queueItem,
+    receipt: publishStatus(build),
+    connection: connectionFrom(state.onboarding),
+  });
+  const owner = queueItem?.owner || build?.publishedOwner || "";
+  window.dispatchEvent(new CustomEvent("axi:publish-action", { detail: { action, kind: "build", id: buildId, owner } }));
 }
 
 async function handleBuildInfo(buildId) {

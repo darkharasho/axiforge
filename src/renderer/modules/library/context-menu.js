@@ -4,6 +4,7 @@
 
 import { escapeHtml } from "../utils.js";
 import { shareDisabledTooltip } from "../share-gate.js";
+import { queueItemFor } from "../publish-button.js";
 import { state } from "../state.js";
 import { showConfirmModal } from "../confirm-modal.js";
 import { isSelected, getSelection, isCompSelected, getCompSelection } from "./selection.js";
@@ -20,7 +21,6 @@ import {
   folderArrowDownIcon,
   tagIcon,
   clipboardDocumentIcon,
-  globeAltIcon,
   informationCircleIcon,
   trashIcon,
   archiveArrowDownIcon,
@@ -195,7 +195,7 @@ function showBuildMenu(x, y, buildId, build) {
   // in a read-only folder because nothing about them is the team's business.
   const writeTip = writeDeniedReason(build?.folderId);
   const canMove = _canMoveFrom(build?.folderId);
-  const shareTip = shareDisabledTooltip(build, false);
+  const shareTip = shareDisabledTooltip(build, false, queueItemFor(state.publishQueue, "build", build?.id)?.state || null);
   const items = [
     _item(playIcon, "Load", null, () => _callbacks.onLoadBuild?.(buildId)),
     _item(pencilIcon, "Rename", "F2", () => _callbacks.onRename?.(buildId), false, writeTip),
@@ -214,7 +214,7 @@ function showBuildMenu(x, y, buildId, build) {
       _item(arrowUpTrayIcon, "Discord Embed", null, () => _callbacks.onDiscordEmbed?.(buildId), false, shareTip),
     ]),
     _item(arrowUpTrayIcon, "Export (.axicode)", null, () => _callbacks.onExportAxicode?.("selection")),
-    _item(globeAltIcon, "Publish", null, () => _callbacks.onPublish?.(buildId)),
+    _item(linkIcon, "Copy link", null, () => _callbacks.onPublish?.(buildId)),
     _sep(),
     _item(informationCircleIcon, "Build Info", null, () => _callbacks.onBuildInfo?.(buildId)),
     _item(clockIcon, "View History", null, () => _callbacks.onViewHistory?.(buildId)),

@@ -2,29 +2,18 @@
 
 import { state } from "../state.js";
 import { escapeHtml } from "../utils.js";
-import { showConfirmModal } from "../confirm-modal.js";
 import { wireCompDragDrop, destroyCompDragDrop } from "./comp-drag-drop.js";
-import {
-  showPublishProgress,
-  advancePublishStep,
-  failPublishStep,
-  showPublishResult,
-  completeAllPublishSteps,
-  setPublishStatusEl,
-  restorePublishProgress,
-  clearPublishProgress,
-} from "../render-pages.js";
 import { roleBadgeHtml } from "../roleEstimator.js";
 import { COMP_TAG_ICONS } from "../constants.js";
 import { axiforgeIcon, checkIcon, chevronDownIcon, arrowLeftIcon, arrowUpTrayIcon, clipboardDocumentIcon, globeAltIcon, partyNumberIcon, shareIcon } from "../library/heroicons.js";
 import { renderMiniBuildCard, renderMissingMiniBuildCard } from "../mini-build-card.js";
 import { pickWebhooks } from "../webhook-picker.js";
 import { compShareDisabledTooltip } from "../share-gate.js";
-import { compPublishStatus, buildLookup, publishBadgeHtml, PUBLISH_RECEIPT_FIELDS } from "../publish-status.js";
+import { compPublishStatus, buildLookup, publishBadgeHtml } from "../publish-status.js";
+import { publishButtonState, queueItemFor, connectionFrom, applyPublishButton } from "../publish-button.js";
 import { computeCompPartyCoverage, buildPartyCoverageHTML, bindPartyCoverageEvents, closePartyCoverageExpand } from "./comp-boon-coverage.js";
 import { openCompTagPopover, closeCompTagPopover, renderCompTagsRow } from "./comp-tags.js";
 import { renderCompTabs, mountCompNotes } from "./comp-notes.js";
-import { publishWithOwnerCheck, publishedByOtherBody } from "../publish-guard.js";
 import { teamRootFor } from "../teams.js";
 import { listSmartFolders, matchesSmartFolder, ruleContext } from "../library/smart-folders.js";
 import { compsContainingBuild } from "./comp-membership.js";
@@ -415,13 +404,59 @@ function startSaveStatusTicker() {
   _saveStatusInterval = setInterval(updateSaveStatusText, 5000);
 }
 
-// Publish mark beside the comp's Publish button. Reads state.builds, so a member
+// Publish mark beside the comp's Copy link button. Reads state.builds, so a member
 // edit made elsewhere shows the next time the detail view draws.
 function renderCompPublishBadge() {
   const el = document.getElementById("compPublishBadge");
   if (!el || !state.activeComp) return;
   const { status, reason } = compPublishStatus(state.activeComp, buildLookup(state.builds));
   el.innerHTML = publishBadgeHtml(status, { reason, editor: true });
+  renderCompPublishButton();
+  renderCompShareGates();
+}
+
+function compShareTipFor(comp) {
+  return compShareDisabledTooltip(comp, state.builds, queueItemFor(state.publishQueue, "comp", comp.id)?.state || null);
+}
+
+// The share menu's gates follow the publish queue and receipt: a save, a
+// queued upload or a finished publish changes them without a full redraw.
+function renderCompShareGates() {
+  const comp = state.activeComp;
+  const menu = document.querySelector("#comps-container .comp-share-dropdown__menu");
+  if (!menu || !comp) return;
+  const setGate = (btn, tip) => {
+    if (!btn) return;
+    btn.disabled = Boolean(tip);
+    if (tip) btn.title = tip; else btn.removeAttribute("title");
+  };
+  const shareTip = compShareTipFor(comp);
+  setGate(menu.querySelector("[data-action='share-discord']"), shareTip);
+  setGate(menu.querySelector("[data-action='copy-plaintext']"), shareTip);
+  setGate(menu.querySelector("[data-action='copy-published-link']"), comp.publishedFileId ? null : "Publish first");
+}
+
+// The comp board's Copy link button (publish on save).
+export function compPublishView(comp, snapshot, onboarding) {
+  const { status } = compPublishStatus(comp, buildLookup(state.builds || []));
+  return publishButtonState({
+    queueItem: queueItemFor(snapshot, "comp", comp?.id),
+    receipt: status,
+    connection: connectionFrom(onboarding),
+  });
+}
+
+function renderCompPublishButton() {
+  const btn = document.getElementById("compPublishBtn");
+  if (!btn || !state.activeComp) return;
+  applyPublishButton(btn, compPublishView(state.activeComp, state.publishQueue, state.onboarding));
+}
+
+// renderer.js dispatches this after every publish-queue snapshot. Both
+// renderers return early when the comp view isn't open. Guarded: node-env
+// tests (comp-move-slot.test.js) require this module without a window.
+if (typeof window !== "undefined") {
+  window.addEventListener("axi:publish-status", () => renderCompPublishBadge());
 }
 
 async function saveAndSync(comp) {
@@ -450,9 +485,6 @@ export function renderCompDetail() {
   if (_cleanupResize) { _cleanupResize(); _cleanupResize = null; }
   if (_saveStatusInterval) { clearInterval(_saveStatusInterval); _saveStatusInterval = null; }
   _lastSavedAt = null;
-  // Restore original publish status element when re-rendering
-  const origPublishEl = document.getElementById("publishStatus");
-  if (origPublishEl) setPublishStatusEl(origPublishEl);
 
   const container = document.getElementById("comps-container");
   if (!container) return;
@@ -462,7 +494,7 @@ export function renderCompDetail() {
 
   const totalCap = getTotalFilledSlots(comp);
   const activeTab = state.compPrefs.detailTab === "notes" ? "notes" : "comp";
-  const compShareTip = compShareDisabledTooltip(comp, state.builds);
+  const compShareTip = compShareTipFor(comp);
 
   container.innerHTML = `
     <div class="comp-detail">
@@ -493,9 +525,8 @@ export function renderCompDetail() {
             </button>
           </div>
         </div>
-        <button type="button" class="axi-btn axi-btn--ghost" data-action="publish">Publish</button>
+        <button type="button" class="axi-btn axi-btn--ghost publish-btn" id="compPublishBtn" data-action="copy">Copy link</button>
         <span id="compPublishBadge" class="comp-publish-badge"></span>
-        <div class="publish-status" id="compPublishStatus"></div>
         <span class="comp-detail__discord-status" id="compDiscordStatus"></span>
         </div>
       </nav>
@@ -1403,62 +1434,14 @@ function bindDetailEvents(container, comp) {
     });
   }
 
-  // ── Publish ────────────────────────────────────────────────────────────────
-  container.querySelector("[data-action='publish']")?.addEventListener("click", async () => {
-    // Point publish ticker at the comp-local status element
-    const compEl = container.querySelector("#compPublishStatus");
-    if (compEl) setPublishStatusEl(compEl);
-    // Share relies on a finished publish — block it while one is in flight.
-    const shareTriggerBtn = container.querySelector("[data-action='share-toggle']");
-    if (shareTriggerBtn) shareTriggerBtn.disabled = true;
-    container.querySelector(".comp-share-dropdown")?.classList.remove("comp-share-dropdown--open");
-    try {
-      state.publishProgress[comp.id] = { currentStep: "saving" };
-      showPublishProgress(comp.id);
-      const result = await publishWithOwnerCheck(
-        (opts) => window.desktopApi.publishComp(comp.id, opts),
-        (login) => showConfirmModal({ title: "Publish under your account?", body: publishedByOtherBody(login), confirmLabel: "Publish anyway", cancelLabel: "Cancel" }),
-      );
-      if (!result) { clearPublishProgress(comp.id); return; }
-
-      advancePublishStep("pages");
-      if (result?.pagesUrl) {
-        state.publishProgress[comp.id] = { ...state.publishProgress[comp.id], result: result.pagesUrl };
-        await window.desktopApi.writeClipboardText(result.pagesUrl);
-        showPublishResult(result.pagesUrl);
-      } else {
-        state.publishProgress[comp.id] = { ...state.publishProgress[comp.id], result: "complete" };
-        completeAllPublishSteps();
-      }
-      // The publish stamped the comp's receipt and its members' receipts.
-      state.comps = await window.desktopApi.listComps();
-      state.builds = await window.desktopApi.listBuilds();
-      const fresh = state.comps.find((c) => c.id === comp.id);
-      if (fresh && state.activeComp?.id === comp.id) {
-        const receipt = Object.fromEntries(PUBLISH_RECEIPT_FIELDS.map((k) => [k, fresh[k]]));
-        state.activeComp = { ...state.activeComp, ...receipt, contentHash: fresh.contentHash };
-      }
-      renderCompPublishBadge();
-      const pubLinkEl = container.querySelector("[data-action='copy-published-link']");
-      if (pubLinkEl) { pubLinkEl.disabled = false; pubLinkEl.removeAttribute("title"); }
-    } catch (err) {
-      if (state.publishProgress[comp.id]) {
-        state.publishProgress[comp.id].error = { step: "loading", message: err.message };
-      }
-      failPublishStep("loading", err.message);
-    } finally {
-      if (shareTriggerBtn) shareTriggerBtn.disabled = false;
-    }
+  // ── Copy link ──────────────────────────────────────────────────────────────
+  // renderer.js runs the action (axi:publish-action), with the app-level deps.
+  container.querySelector("#compPublishBtn")?.addEventListener("click", (e) => {
+    const action = e.currentTarget.dataset.action;
+    const owner = queueItemFor(state.publishQueue, "comp", comp.id)?.owner || comp.publishedOwner || "";
+    window.dispatchEvent(new CustomEvent("axi:publish-action", { detail: { action, kind: "comp", id: comp.id, owner } }));
   });
-
-  // ── Restore publish status if comp has active publish state ─────────────────
-  if (state.publishProgress[comp.id]) {
-    const compEl = container.querySelector("#compPublishStatus");
-    if (compEl) {
-      setPublishStatusEl(compEl);
-      restorePublishProgress(comp.id);
-    }
-  }
+  renderCompPublishButton();
 
   // ── Share dropdown ──────────────────────────────────────────────────────────
   const shareDropdown = container.querySelector(".comp-share-dropdown");
