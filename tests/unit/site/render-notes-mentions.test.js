@@ -18,7 +18,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const RENDER_NOTES_PATH = path.join(__dirname, "../../../src/site/render-notes.js");
-const RENDER_BUILD_PATH = path.join(__dirname, "../../../src/site/render-build.js");
+const RENDER_BUILD_PATH = path.join(__dirname, "../../../src/site/published-catalog.js"); // catalog builders moved here from render-build.js
 const BUILD_PUBLISH_PATH = path.join(__dirname, "../../../src/main/buildPublish.js");
 
 const renderNotesSrc = fs.readFileSync(RENDER_NOTES_PATH, "utf-8");
