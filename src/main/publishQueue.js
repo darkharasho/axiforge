@@ -89,6 +89,7 @@ class PublishQueue {
     this._resaved = new Set();     // keys enqueued again while their round was in flight
     this._priority = new Set();    // keys an explicit publishNow asked for: next batch first
     this._arrived = new Set();     // keys enqueued while a drain runs: ride the next batch
+    this._owed = new Set();        // explicit keys whose round failed transiently: first once the hold lifts
     this._timer = null;            // { id, firstAt }: the debounce
     this._retry = null;            // { id, at, reason: "offline" | "rate-limit" }
     this._attempt = 0;             // consecutive rounds with a network failure
@@ -328,13 +329,14 @@ class PublishQueue {
       if (this._paused) return;
       for (const k of this._priority) if (!this._pending.has(k)) this._priority.delete(k);
       for (const k of backlog) if (!this._pending.has(k)) backlog.delete(k);
+      for (const k of this._owed) if (!this._pending.has(k)) this._owed.delete(k);
       // A backoff holds everything but an explicit publish; a rate limit holds all.
       const held = Boolean(this._retry);
       if (held && (this._retry.reason !== "offline" || !this._priority.size)) return;
       if (!this._priority.size && !backlog.size) return;
       const batch = new Set(this._priority);
       if (!held) {
-        for (const source of [this._arrived, backlog]) {
+        for (const source of [this._owed, this._arrived, backlog]) {
           for (const k of source) {
             if (batch.size >= this._batchSize) break;
             if (this._pending.has(k)) batch.add(k);
@@ -342,16 +344,18 @@ class PublishQueue {
         }
       }
       const keys = [...batch].slice(0, this._batchSize);
+      const explicit = new Set(keys.filter((k) => this._priority.has(k) || this._owed.has(k)));
       for (const k of keys) {
         this._priority.delete(k);
+        this._owed.delete(k);
         this._arrived.delete(k);
         backlog.delete(k);
       }
-      await this._round(keys);
+      await this._round(keys, explicit);
     }
   }
 
-  async _round(batch) {
+  async _round(batch, explicit = new Set()) {
     this._publishing = new Set(batch);
     this._resaved.clear();
     this._emit();
@@ -376,6 +380,10 @@ class PublishQueue {
         continue;
       }
       const cls = classifyPublishError(r.error);
+      if (cls === "transient" || cls === "rate-limited") {
+        // An explicit item keeps its place at the front once the hold lifts.
+        if (explicit.has(key)) this._owed.add(key);
+      }
       if (cls === "transient") {
         transient = true;
         continue;

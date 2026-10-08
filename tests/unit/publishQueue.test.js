@@ -224,6 +224,19 @@ describe("drain order", () => {
     await expect(waiting).resolves.toMatchObject({ id: "urgent" });
     expect(q.snapshot().items["build:b0"]).toMatchObject({ state: "waiting", reason: "offline" });
   });
+
+  test("an explicit item whose round fails offline stays first once the backoff ends", async () => {
+    let fail = true;
+    const { q, rounds } = makeQueue({ runRound: async (items) => { if (fail) throw offline(); return ok(items); } });
+    for (let i = 0; i < 120; i += 1) q.enqueue("build", `b${i}`);
+    q.publishNow("build", "urgent");
+    await adv(0);
+    expect(rounds).toHaveLength(1);
+    expect(rounds[0][0]).toBe("build:urgent");
+    fail = false;
+    await adv(BACKOFF_MS[0]);
+    expect(rounds[1][0]).toBe("build:urgent");
+  });
 });
 
 describe("waiting through a rate limit", () => {
