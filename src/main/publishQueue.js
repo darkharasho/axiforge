@@ -328,6 +328,12 @@ class PublishQueue {
         this._settle(key, pausedError(cls));
         continue;
       }
+      if (this._resaved.has(key)) {
+        // Saved again mid-round: this failure is about the old content. Keep the
+        // newer save pending; its own debounce timer retries it.
+        this._settle(key, r.error);
+        continue;
+      }
       this._pending.delete(key);
       if (cls === "needs-choice") {
         this._needsChoice.set(key, String(r.error.message).slice("PUBLISHED_BY_OTHER:".length));

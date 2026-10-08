@@ -122,6 +122,27 @@ describe("rounds", () => {
     expect(q.snapshot().items["build:a"].state).toBe("queued");
   });
 
+  test("a save made during a round that then fails for good stays queued", async () => {
+    const gate = deferred();
+    const { q, rounds } = makeQueue({
+      runRound: async (items) => {
+        if (rounds.length === 1) {
+          await gate.promise;
+          return { results: items.map((i) => ({ ...i, ok: false, error: new Error("Build must have a profession selected.") })) };
+        }
+        return ok(items);
+      },
+    });
+    q.enqueue("build", "a");
+    await adv(5000);
+    q.enqueue("build", "a");
+    gate.resolve();
+    await adv(0);
+    expect(q.snapshot().items["build:a"]).toEqual({ state: "queued" });
+    await adv(5000);
+    expect(rounds[1]).toEqual(["build:a"]);
+  });
+
   test("an item the round did not report is treated as failed", async () => {
     const { q } = makeQueue({ runRound: async () => ({ results: [] }) });
     q.enqueue("build", "a");
