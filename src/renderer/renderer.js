@@ -46,7 +46,7 @@ import {
   initRenderPagesDom, initRenderPagesCallbacks,
   render, renderEditor, renderEditorForm, renderEditorMeta, renderBuildList,
   setPublishStatus, showError, runPagesBuildPoll, getSelectedTarget,
-  failPublishStep, syncPublishStatus,
+  syncPublishStatus,
   resolvePublishedUrl, currentShareAccent,
 } from "./modules/render-pages.js";
 import { runPublishButtonAction, queueItemFor } from "./modules/publish-button.js";
@@ -1585,10 +1585,7 @@ function wireEvents() {
           showError(new Error(result.error || "Failed to share"));
           discordEmbedItem.innerHTML = discordEmbedDefault;
         }
-      } catch (err) {
-        if (state.editor?.id && state.publishProgress[state.editor.id]) {
-          failPublishStep("saving", err.message);
-        }
+      } catch {
         failItem(discordEmbedItem, discordEmbedDefault);
       }
     });

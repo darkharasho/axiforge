@@ -2,15 +2,19 @@
 "use strict";
 
 jest.mock("../../../src/renderer/modules/settings-modal.js", () => ({ openSettingsModal: jest.fn() }));
-jest.mock("../../../src/renderer/modules/render-pages.js", () => ({ startLoginFlow: jest.fn(async () => {}) }));
+jest.mock("../../../src/renderer/modules/render-pages.js", () => ({ signInAndRefresh: jest.fn(async () => true) }));
 jest.mock("../../../src/renderer/modules/confirm-modal.js", () => ({ showConfirmModal: jest.fn(async () => true) }));
 jest.mock("../../../src/renderer/modules/library/toast.js", () => ({ showToast: jest.fn() }));
 
 const { state } = require("../../../src/renderer/modules/state.js");
 const { applyPublishSnapshot, isPublishInFlight, publishButtonDeps } = require("../../../src/renderer/modules/publish-actions.js");
 const { openSettingsModal } = require("../../../src/renderer/modules/settings-modal.js");
+const { signInAndRefresh } = require("../../../src/renderer/modules/render-pages.js");
+const { showConfirmModal } = require("../../../src/renderer/modules/confirm-modal.js");
 
 beforeEach(() => {
+  jest.clearAllMocks();
+  state.onboarding = { isAuthenticated: true, repoReady: false };
   window.desktopApi = {
     listBuilds: jest.fn(async () => [{ id: "b1", publishedFileId: "f", publishedHash: "h" }]),
     listComps: jest.fn(async () => [{ id: "c1", name: "Raid", publishedFileId: "cf", notes: "stored" }]),
@@ -42,7 +46,63 @@ test("isPublishInFlight", async () => {
   expect(isPublishInFlight("comp", "x")).toBe(false);
 });
 
-test("setup opens the Publishing settings pane", async () => {
-  await publishButtonDeps().openSetup();
-  expect(openSettingsModal).toHaveBeenCalledWith({ initialPane: "publishing" });
+describe("Set up publishing", () => {
+  test("signed in: confirming the explainer opens the Publishing settings pane", async () => {
+    await publishButtonDeps().openSetup();
+    expect(signInAndRefresh).not.toHaveBeenCalled();
+    expect(showConfirmModal).toHaveBeenCalledWith(expect.objectContaining({ title: "Publishing puts your build online" }));
+    expect(showConfirmModal.mock.calls[0][0].body).toMatch(/publishes automatically/);
+    expect(openSettingsModal).toHaveBeenCalledWith({ initialPane: "publishing" });
+  });
+
+  test("cancelling the explainer stops before the settings pane", async () => {
+    showConfirmModal.mockResolvedValueOnce(false);
+    await publishButtonDeps().openSetup();
+    expect(openSettingsModal).not.toHaveBeenCalled();
+  });
+
+  test("signed out: sign-in runs first, then the explainer and pane", async () => {
+    state.onboarding = { isAuthenticated: false };
+    signInAndRefresh.mockImplementationOnce(async () => {
+      expect(showConfirmModal).not.toHaveBeenCalled();
+      state.onboarding = { isAuthenticated: true, repoReady: false };
+      return true;
+    });
+    await publishButtonDeps().openSetup();
+    expect(signInAndRefresh).toHaveBeenCalledTimes(1);
+    expect(showConfirmModal).toHaveBeenCalled();
+    expect(openSettingsModal).toHaveBeenCalledWith({ initialPane: "publishing" });
+  });
+
+  test("signed out: a cancelled sign-in stops", async () => {
+    state.onboarding = { isAuthenticated: false };
+    signInAndRefresh.mockResolvedValueOnce(false);
+    await publishButtonDeps().openSetup();
+    expect(showConfirmModal).not.toHaveBeenCalled();
+    expect(openSettingsModal).not.toHaveBeenCalled();
+  });
+
+  test("signed out: a failed sign-in stops and surfaces the error", async () => {
+    state.onboarding = { isAuthenticated: false };
+    signInAndRefresh.mockRejectedValueOnce(new Error("denied"));
+    await expect(publishButtonDeps().openSetup()).rejects.toThrow("denied");
+    expect(showConfirmModal).not.toHaveBeenCalled();
+    expect(openSettingsModal).not.toHaveBeenCalled();
+  });
+
+  test("signing in to an account that already publishes needs no setup", async () => {
+    state.onboarding = { isAuthenticated: false };
+    signInAndRefresh.mockImplementationOnce(async () => {
+      state.onboarding = { isAuthenticated: true, repoReady: true };
+      return true;
+    });
+    await publishButtonDeps().openSetup();
+    expect(showConfirmModal).not.toHaveBeenCalled();
+    expect(openSettingsModal).not.toHaveBeenCalled();
+  });
+});
+
+test("Sign in to publish goes through the shared sign-in + refresh path", async () => {
+  await publishButtonDeps().signIn();
+  expect(signInAndRefresh).toHaveBeenCalledTimes(1);
 });

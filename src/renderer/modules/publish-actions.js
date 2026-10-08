@@ -1,21 +1,46 @@
 import { state } from "./state.js";
 import { openSettingsModal } from "./settings-modal.js";
-import { startLoginFlow } from "./render-pages.js";
+import { signInAndRefresh } from "./render-pages.js";
 import { showConfirmModal } from "./confirm-modal.js";
 import { showToast } from "./library/toast.js";
 import { askOwnerChoice } from "./publish-prompts.js";
-import { queueItemFor } from "./publish-button.js";
+import { queueItemFor, connectionFrom } from "./publish-button.js";
 import { PUBLISH_RECEIPT_FIELDS } from "./publish-status.js";
+
+const SETUP_EXPLAINER = {
+  title: "Publishing puts your build online",
+  body:
+    "<p>Publishing uploads your builds to your own GitHub Pages site so the shareable link " +
+    "(including Discord) actually works for other people.</p>" +
+    "<p>Once it's set up, saving publishes automatically in the background, using the " +
+    "one-time GitHub sign-in. Your links stay private unless you share them.</p>",
+  confirmLabel: "Set up publishing",
+  cancelLabel: "Cancel",
+};
+
+/**
+ * "Set up publishing": sign in if needed, explain what publishing does, then
+ * open the Publishing settings pane. Stops on a cancelled sign-in or explainer;
+ * a failed sign-in throws to the caller.
+ * @returns {Promise<boolean>} whether the settings pane was opened
+ */
+async function openPublishingSetup() {
+  if (!state.onboarding?.isAuthenticated) {
+    if (!(await signInAndRefresh())) return false;
+    // An account that already publishes needs no setup.
+    if (connectionFrom(state.onboarding).connected) return false;
+  }
+  if (!(await showConfirmModal(SETUP_EXPLAINER))) return false;
+  await openSettingsModal({ initialPane: "publishing" });
+  return true;
+}
 
 /** What the Copy link button needs from the app, for runPublishButtonAction. */
 export function publishButtonDeps() {
   return {
     api: window.desktopApi,
-    openSetup: () => openSettingsModal({ initialPane: "publishing" }),
-    signIn: async () => {
-      await startLoginFlow();
-      state.onboarding = await window.desktopApi.getOnboardingStatus();
-    },
+    openSetup: openPublishingSetup,
+    signIn: signInAndRefresh,
     askOwnerChoice: (kind, id, owner) => askOwnerChoice(kind, id, owner, { confirm: showConfirmModal, api: window.desktopApi }),
     notify: (message) => showToast(message),
   };

@@ -87,9 +87,7 @@ export function renderAuth() {
 
     _el.authRow.append(_menuItem(_wsIcons.refresh, "Re-authenticate", async () => {
       try {
-        await startLoginFlow();
-        await _callbacks.refreshOnboardingStatus();
-        render();
+        await signInAndRefresh();
       } catch (err) { showError(err); }
     }));
 
@@ -112,9 +110,7 @@ export function renderAuth() {
 
   _el.authRow.append(_menuItem(_wsIcons.github, "Sign in with GitHub", async () => {
     try {
-      await startLoginFlow();
-      await _callbacks.refreshOnboardingStatus();
-      render();
+      await signInAndRefresh();
     } catch (err) {
       showError(err);
     }
@@ -577,7 +573,7 @@ export function renderEditorMeta() {
     }
   }
 
-  // Publish mark beside the Publish button. Unsaved edits are unpublished too.
+  // Publish mark beside the Copy link button. Unsaved edits are unpublished too.
   if (_el.editorPublishBadge) {
     const pubBuild = state.editor?.id ? state.builds.find((b) => b.id === state.editor.id) : null;
     let pubStatus = pubBuild ? publishStatus(pubBuild) : null;
@@ -712,6 +708,18 @@ export async function startLoginFlow() {
     state.loginFlow.waitingForApproval = false;
     state.loginFlow.pending = false;
   }
+}
+
+/**
+ * Sign in with GitHub, then refresh onboarding (user, targets, the bulk
+ * prompt) and redraw. Shared by the workspace menu and the Copy link button.
+ * @returns {Promise<boolean>} whether the user is signed in afterwards
+ */
+export async function signInAndRefresh() {
+  await startLoginFlow();
+  await _callbacks.refreshOnboardingStatus();
+  render();
+  return Boolean(state.onboarding?.isAuthenticated);
 }
 
 // ---------------------------------------------------------------------------
