@@ -34,9 +34,15 @@ describe("v2 comp in the viewer", () => {
   test("an unavailable member is left out of a tag popover's data", () => {
     const app = document.getElementById("app");
     renderCompPage(app, { ...baseComp,
+      partyLines: [{ id: "l1", capacity: 5, slots: ["tag:c1", "gone"] }],
       categories: [{ id: "c1", name: "Heal", buildIds: ["a", "gone"] }],
-      builds: { a: publishedBuild("a"), gone: { id: "gone", unavailable: true } } });
+      builds: { a: publishedBuild("a", { title: "Heal FB" }), gone: { id: "gone", unavailable: true } } });
     expect(app.querySelector(".comp-slot--unavailable")).not.toBeNull();
+
+    app.querySelector(".comp-slot--tag").dispatchEvent(new Event("mouseenter"));
+    const pop = document.querySelector(".comp-tag-pop");
+    expect(pop).not.toBeNull();
+    expect([...pop.querySelectorAll(".comp-tag-pop__name")].map((n) => n.textContent)).toEqual(["Heal FB"]);
   });
 
   test("coverage computed in the viewer skips the unavailable member and tolerates a v1 member with no bonus", async () => {
