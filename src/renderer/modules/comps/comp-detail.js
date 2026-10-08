@@ -427,7 +427,9 @@ function renderCompShareGates() {
   if (!menu || !comp) return;
   const setGate = (btn, tip) => {
     if (!btn) return;
-    btn.disabled = Boolean(tip);
+    // A share in progress (data-busy) disabled its own button; a queue
+    // snapshot mid-share must not re-enable it, or a second click posts twice.
+    btn.disabled = Boolean(tip) || btn.dataset.busy === "1";
     if (tip) btn.title = tip; else btn.removeAttribute("title");
   };
   const shareTip = compShareTipFor(comp);
@@ -1438,7 +1440,7 @@ function bindDetailEvents(container, comp) {
   // renderer.js runs the action (axi:publish-action), with the app-level deps.
   container.querySelector("#compPublishBtn")?.addEventListener("click", (e) => {
     const action = e.currentTarget.dataset.action;
-    const owner = queueItemFor(state.publishQueue, "comp", comp.id)?.owner || comp.publishedOwner || "";
+    const owner = queueItemFor(state.publishQueue, "comp", comp.id)?.owner || state.activeComp?.publishedOwner || "";
     window.dispatchEvent(new CustomEvent("axi:publish-action", { detail: { action, kind: "comp", id: comp.id, owner } }));
   });
   renderCompPublishButton();
@@ -1509,6 +1511,7 @@ function bindDetailEvents(container, comp) {
       }
 
       embedBtn.disabled = true;
+      embedBtn.dataset.busy = "1";
       embedBtn.innerHTML = "Sharing...";
       try {
         const result = await window.desktopApi.shareCompToDiscord(comp.id, webhookIds);
@@ -1529,7 +1532,9 @@ function bindDetailEvents(container, comp) {
         showDiscordStatus(err.message || "Failed to share", true);
         embedBtn.innerHTML = embedBtnDefault;
       } finally {
+        delete embedBtn.dataset.busy;
         embedBtn.disabled = false;
+        renderCompShareGates();
       }
     });
 

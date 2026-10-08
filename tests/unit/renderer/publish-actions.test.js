@@ -39,6 +39,19 @@ test("the open comp takes the new receipt but keeps its unsaved fields", async (
   expect(state.activeComp).toMatchObject({ publishedFileId: "cf", notes: "typing…" });
 });
 
+// The comp board's Published Link unlocks from state.activeComp when
+// renderer.js fires axi:publish-status, which it does only after this resolves.
+test("a first publish puts the whole receipt on the open comp before resolving", async () => {
+  const receipt = {
+    publishedFileId: "cf", publishedKey: "k", publishedSlug: "s", publishedAt: "2026-10-08T00:00:00.000Z",
+    publishedOwner: "me", publishedHash: "h2", publishedMemberHashes: { b1: "m" }, publishedFormat: 2,
+  };
+  window.desktopApi.listComps = jest.fn(async () => [{ id: "c1", name: "Raid", notes: "stored", ...receipt }]);
+  state.activeComp = { id: "c1", name: "Raid", notes: "typing…" };
+  await applyPublishSnapshot({ items: {}, paused: null, published: ["comp:c1"] });
+  expect(state.activeComp).toEqual({ id: "c1", name: "Raid", notes: "typing…", ...receipt });
+});
+
 test("isPublishInFlight", async () => {
   await applyPublishSnapshot({ items: { "build:a": { state: "publishing" }, "build:b": { state: "failed" } }, paused: null, published: [] });
   expect(isPublishInFlight("build", "a")).toBe(true);

@@ -68,6 +68,56 @@ describe("comp board", () => {
     expect(menuItem("copy-plaintext").hasAttribute("title")).toBe(false);
   });
 
+  test("a share in progress keeps Discord Embed disabled through queue snapshots", async () => {
+    let finishShare;
+    window.desktopApi = {
+      listCompWebhooks: jest.fn(async () => [{ id: "w1", name: "Guild" }]),
+      shareCompToDiscord: jest.fn(() => new Promise((resolve) => { finishShare = resolve; })),
+    };
+    const embed = menuItem("share-discord");
+    embed.click();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(window.desktopApi.shareCompToDiscord).toHaveBeenCalledTimes(1);
+    expect(embed.disabled).toBe(true);
+
+    // The comp is current, so the gate alone would enable the button.
+    window.dispatchEvent(new CustomEvent("axi:publish-status"));
+    expect(embed.disabled).toBe(true);
+    embed.click();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(window.desktopApi.shareCompToDiscord).toHaveBeenCalledTimes(1);
+
+    finishShare({ success: true, results: [] });
+    await new Promise((r) => setTimeout(r, 0));
+    expect(embed.disabled).toBe(false);
+  });
+
+  test("a finished share leaves the button gated when the comp changed meanwhile", async () => {
+    let finishShare;
+    window.desktopApi = {
+      listCompWebhooks: jest.fn(async () => [{ id: "w1", name: "Guild" }]),
+      shareCompToDiscord: jest.fn(() => new Promise((resolve) => { finishShare = resolve; })),
+    };
+    const embed = menuItem("share-discord");
+    embed.click();
+    await new Promise((r) => setTimeout(r, 0));
+    state.activeComp = { ...state.activeComp, contentHash: "edited" };
+    finishShare({ success: false, error: "nope" });
+    await new Promise((r) => setTimeout(r, 0));
+    expect(embed.disabled).toBe(true);
+    expect(embed.title).toBe("Your latest changes aren't published yet");
+  });
+
+  test("the click passes the owner of the comp as it is now, not as first drawn", () => {
+    state.activeComp = { ...state.activeComp, publishedOwner: "guildie" };
+    const seen = [];
+    const onAction = (e) => seen.push(e.detail);
+    window.addEventListener("axi:publish-action", onAction);
+    btn().click();
+    window.removeEventListener("axi:publish-action", onAction);
+    expect(seen[0].owner).toBe("guildie");
+  });
+
   test("Published Link unlocks once the first publish lands", () => {
     state.activeComp = { ...state.activeComp, publishedFileId: undefined, publishedHash: undefined };
     renderCompDetail();
