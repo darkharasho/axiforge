@@ -84,7 +84,7 @@ test.describe("Share gating — library context menu", () => {
     const submenu = await openShareSubmenu(window, unpublished.id);
     const copy = submenu.locator(".lib-ctx-item", { hasText: "Copy Link" }).first();
     await expect(copy).toHaveClass(/lib-ctx-item--disabled/);
-    await expect(copy).toHaveAttribute("title", "Publish this build first");
+    await expect(copy).toHaveAttribute("title", "Not published yet — Copy link publishes it");
     await closeMenus(window);
   });
 
@@ -95,7 +95,7 @@ test.describe("Share gating — library context menu", () => {
     const submenu = await openShareSubmenu(window, stale.id);
     const embed = submenu.locator(".lib-ctx-item", { hasText: "Discord Embed" }).first();
     await expect(embed).toHaveClass(/lib-ctx-item--disabled/);
-    await expect(embed).toHaveAttribute("title", "Publish your latest changes first");
+    await expect(embed).toHaveAttribute("title", "Your latest changes aren't published yet");
     await closeMenus(window);
   });
 
@@ -137,7 +137,7 @@ test.describe("Share gating — editor Share dropdown", () => {
     for (const action of ["discord-copy", "discord-embed"]) {
       const btn = window.locator(`#editorShareDropdown [data-action='${action}']`);
       await expect(btn).toBeDisabled();
-      await expect(btn).toHaveAttribute("title", "Publish this build first");
+      await expect(btn).toHaveAttribute("title", "Not published yet — Copy link publishes it");
     }
     await expect(window.locator("#editorShareDropdown [data-action='copy-published-link']")).toBeDisabled();
   });
@@ -166,7 +166,7 @@ test.describe("Share gating — editor Share dropdown", () => {
     for (const action of ["discord-copy", "discord-embed"]) {
       const btn = window.locator(`#editorShareDropdown [data-action='${action}']`);
       await expect(btn).toBeDisabled();
-      await expect(btn).toHaveAttribute("title", "Publish your latest changes first");
+      await expect(btn).toHaveAttribute("title", "Save your changes first");
     }
   });
 });
@@ -223,7 +223,7 @@ test.describe("Share gating — comp Share dropdown", () => {
     for (const action of ["share-discord", "copy-plaintext"]) {
       const btn = window.locator(`.comp-share-dropdown__item[data-action='${action}']`);
       await expect(btn).toBeDisabled();
-      await expect(btn).toHaveAttribute("title", "Publish this comp first");
+      await expect(btn).toHaveAttribute("title", "Not published yet — Copy link publishes it");
     }
     await expect(window.locator(".comp-share-dropdown__item[data-action='copy-share-code']")).toBeEnabled();
   });

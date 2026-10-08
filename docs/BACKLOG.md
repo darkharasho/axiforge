@@ -173,6 +173,23 @@ Status key: `[ ]` open · `[x]` done · `[~]` in progress · `[?]` needs repro s
   branch); affects notes skill/trait lookups only, not boon coverage. Fix: pass
   the game mode through to `getProfessionCatalog`.
 
+- [ ] **Renderer build links ignore `publishedOwner`.** `resolvePublishedUrl`
+  (`src/renderer/modules/render-pages.js`) builds the owner from the folder's
+  `shared`/`orgName` walk and `onboarding.targetOwner`, while the main process
+  (`publishedOwnerFor`, `shortUrl.js`) and the publish queue's
+  `publish:get-link` use the receipt's `publishedOwner`. A build published by
+  a team or another account can get a link to the wrong site from the editor's
+  share dropdown. Copy link already goes through `publish:get-link`; the share
+  dropdown's "Published Link" item still uses the renderer path. Out of scope
+  for publish on save (spec 2026-10-07).
+
+- [ ] **Desktop import of a published link still reads `/main/`.**
+  `dataBases()` in `src/main/axiLinkImport.js` mirrors the old
+  `resolveDataBase`, so importing a link right after its owner saved can get
+  the version from up to ~5 minutes earlier. The viewer now pins to the newest
+  commit (`pinnedRawBase`, `src/site/rawBase.js`); the importer could do the
+  same.
+
 ## Features
 
 - [x] **Comp history.** Builds have carried a full "who changed what" since the
