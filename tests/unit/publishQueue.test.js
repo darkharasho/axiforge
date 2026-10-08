@@ -418,6 +418,19 @@ describe("awaitPublished", () => {
     await expect(waiting).resolves.toMatchObject({ pagesUrl: "https://x" });
   });
 
+  test("a committed item whose link isn't live yet leaves the queue; its waiter hears why", async () => {
+    const notLive = coded("Published, but the site isn't live yet.", { code: "PUBLISH_NOT_LIVE" });
+    const { q, rounds } = makeQueue({ runRound: async (items) => ({ results: items.map((i) => ({ ...i, ok: true, notLive })) }) });
+    q.enqueue("build", "a");
+    const waiting = q.awaitPublished("build", "a");
+    const assertion = expect(waiting).rejects.toMatchObject({ code: "PUBLISH_NOT_LIVE" });
+    await adv(5000);
+    await assertion;
+    expect(q.snapshot().items).toEqual({});
+    await adv(600000);
+    expect(rounds).toHaveLength(1);
+  });
+
   test("resolves null for an item that is not queued", async () => {
     const { q } = makeQueue();
     await expect(q.awaitPublished("build", "nope")).resolves.toBeNull();

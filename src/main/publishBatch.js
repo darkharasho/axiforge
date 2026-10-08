@@ -270,19 +270,24 @@ function createPublishBatch(deps) {
     if (upload.shellChanged) {
       await triggerPagesWorkflow(session.token, owner, branch, repo).catch(() => null);
     }
+    // The commit landed: from here the items are published. A slow live check
+    // doesn't undo that. Retrying would mint new ids for a first publish and
+    // commit orphan files, so receipts are stamped either way and only an
+    // explicit waiter (Copy link, Discord share) hears that the link isn't live yet.
+    let notLive = null;
     // Pinned to the new commit: an older copy of the file can't answer, so a
     // republish no longer passes before its own upload is readable.
     const dataUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${upload.commitSha}/${prepared[0].filePath}`;
     if (!(await pollUrlLive(dataUrl))) {
-      return failAll(coded("Uploaded, but the link did not go live in time.", "PUBLISH_NOT_LIVE"));
+      notLive = coded("Published, but the link isn't live yet. Try again in a minute.", "PUBLISH_NOT_LIVE");
     }
     // Only a new /r/ page or a new viewer waits for the Pages deploy; a
     // republish is served from raw as soon as the commit lands.
     const fresh = prepared.find((p) => p.isNew);
-    if (fresh || upload.shellChanged) {
+    if (!notLive && (fresh || upload.shellChanged)) {
       const pageUrl = fresh ? `https://${owner}.github.io/${repo}/r/${fresh.fileId}/` : `https://${owner}.github.io/${repo}/`;
       if (!(await pollUrlLive(pageUrl, { timeoutMs: PAGES_TIMEOUT_MS }))) {
-        return failAll(coded("Uploaded, but the site did not go live in time.", "PUBLISH_NOT_LIVE"));
+        notLive = coded("Published, but the site isn't live yet. Try again in a minute.", "PUBLISH_NOT_LIVE");
       }
     }
 
@@ -331,6 +336,7 @@ function createPublishBatch(deps) {
         fileId: p.fileId,
         changed: true,
         ...(p.kind === "comp" ? { skippedForeignBuilds: p.skippedForeignBuilds } : {}),
+        ...(notLive ? { notLive } : {}),
       });
     }
     // Each member goes to ITS OWN team, or nowhere if personal.

@@ -370,7 +370,9 @@ class PublishQueue {
       if (r.ok) {
         if (!this._resaved.has(key)) this._pending.delete(key);
         this._justPublished.push(key);
-        this._settle(key, null, r);
+        // Committed but not live yet: published all the same; a waiter hears why
+        // its link may not open yet.
+        this._settle(key, r.notLive || null, r);
         continue;
       }
       const cls = classifyPublishError(r.error);

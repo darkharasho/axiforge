@@ -221,11 +221,21 @@ describe("live check", () => {
     expect(calls.polls[1]).toEqual({ url: "https://me.github.io/axibuilds/", opts: { timeoutMs: 180000 } });
   });
 
-  test("a link that never goes live leaves items unstamped with PUBLISH_NOT_LIVE", async () => {
+  test("a link that never goes live is still published: stamped, with a PUBLISH_NOT_LIVE note", async () => {
     const { publishBatch, calls } = setup({ builds: [pub({ id: "a" })], live: false });
     const { results } = await publishBatch([{ kind: "build", id: "a" }]);
-    expect(results[0].error).toMatchObject({ code: "PUBLISH_NOT_LIVE" });
-    expect(calls.marks).toHaveLength(0);
+    expect(results[0]).toMatchObject({ ok: true, fileId: "f-a", notLive: { code: "PUBLISH_NOT_LIVE" } });
+    expect(calls.marks.map((m) => m.id)).toEqual(["a"]);
+    // The raw check failed, so the Pages wait is skipped.
+    expect(calls.polls).toHaveLength(1);
+  });
+
+  test("a first publish whose page is slow keeps the ids it committed", async () => {
+    const { publishBatch, deps, calls } = setup({ builds: [b({ id: "a" })] });
+    deps.pollUrlLive.mockImplementation(async (url, opts) => { calls.polls.push({ url, opts }); return !opts; });
+    const { results } = await publishBatch([{ kind: "build", id: "a" }]);
+    expect(results[0]).toMatchObject({ ok: true, fileId: "new1", notLive: { code: "PUBLISH_NOT_LIVE" } });
+    expect(calls.marks[0].patch).toMatchObject({ publishedFileId: "new1", publishedOwner: "me" });
   });
 });
 
