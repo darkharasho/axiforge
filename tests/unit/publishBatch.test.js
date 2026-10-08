@@ -254,6 +254,62 @@ describe("results and side effects", () => {
   });
 });
 
+describe("owner groups in one round", () => {
+  const comp = (over) => ({ name: "Raid", buildIds: [], partyLines: [], updatedAt: "t1", ...over });
+
+  test("a team comp with a queued personal member links the member's page", async () => {
+    const { publishBatch, calls } = setup({
+      builds: [b({ id: "m" })],
+      comps: [comp({ id: "c", folderId: "team", buildIds: ["m"] })],
+    });
+    const { results } = await publishBatch([{ kind: "comp", id: "c" }, { kind: "build", id: "m" }]);
+    expect(results.every((r) => r.ok)).toBe(true);
+    expect(calls.bundles.map((x) => x.owner)).toEqual(["me", "guild"]);
+    expect(encFiles(calls.bundles[0].bundle)).toHaveLength(1);
+    expect(encFiles(calls.bundles[1].bundle)).toHaveLength(0); // the comp only links the member
+    expect(Object.keys(calls.bundles[1].bundle).filter((f) => /^site\/comps\/.+\.enc$/.test(f))).toHaveLength(1);
+    const memberMarks = calls.marks.filter((m) => m.kind === "build");
+    expect(memberMarks).toHaveLength(1);
+    expect(memberMarks[0].patch.publishedOwner).toBe("me");
+    expect(results.find((r) => r.kind === "comp").skippedForeignBuilds).toEqual([expect.objectContaining({ id: "m", owner: "me" })]);
+  });
+
+  test("a personal comp with a queued team member links the member's page", async () => {
+    const { publishBatch, calls } = setup({
+      builds: [b({ id: "t", folderId: "team" })],
+      comps: [comp({ id: "c", buildIds: ["t"] })],
+    });
+    const { results } = await publishBatch([{ kind: "comp", id: "c" }, { kind: "build", id: "t" }]);
+    expect(results.every((r) => r.ok)).toBe(true);
+    expect(calls.bundles.map((x) => x.owner)).toEqual(["guild", "me"]);
+    expect(encFiles(calls.bundles[0].bundle)).toHaveLength(1);
+    expect(encFiles(calls.bundles[1].bundle)).toHaveLength(0); // the comp only links the member
+    expect(Object.keys(calls.bundles[1].bundle).filter((f) => /^site\/comps\/.+\.enc$/.test(f))).toHaveLength(1);
+    const memberMarks = calls.marks.filter((m) => m.kind === "build");
+    expect(memberMarks).toHaveLength(1);
+    expect(memberMarks[0].patch.publishedOwner).toBe("guild");
+    expect(results.find((r) => r.kind === "comp").skippedForeignBuilds).toEqual([expect.objectContaining({ id: "t", owner: "guild" })]);
+  });
+});
+
+describe("post-commit side effects", () => {
+  test("a failing team push does not fail committed items or other groups", async () => {
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const { publishBatch, deps, calls } = setup({ builds: [b({ id: "a" }), b({ id: "t", folderId: "team" })] });
+      deps.teamPut.mockRejectedValue(new Error("sync down"));
+      deps.stampFormatMigrations.mockRejectedValue(new Error("stamp down"));
+      const { results } = await publishBatch([{ kind: "build", id: "t" }, { kind: "build", id: "a" }]);
+      expect(results.map((r) => r.ok)).toEqual([true, true]);
+      expect(calls.bundles).toHaveLength(2);
+      expect(calls.marks).toHaveLength(2);
+      expect(warn).toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+    }
+  });
+});
+
 test("publishedPageUrl", () => {
   expect(publishedPageUrl({ kind: "build", owner: "me", slug: "a b", fileId: "f", key: "k", theme: "" }))
     .toBe("https://me.github.io/axibuilds/?n=a%20b&b=f.k");

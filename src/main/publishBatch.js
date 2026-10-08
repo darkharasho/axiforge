@@ -97,11 +97,37 @@ function createPublishBatch(deps) {
       }
     }
 
-    for (const group of groups.values()) {
+    for (const group of orderGroups([...groups.values()])) {
       results.push(...await publishGroup(group, { session, branch, buildsById, theme }));
     }
     return { results };
   };
+
+  // A group that publishes a queued build runs before any group whose queued
+  // comps contain it, so the later group links the build's page instead of
+  // minting a second copy under its own owner. Stable otherwise; a cycle falls
+  // back to the stable order.
+  function orderGroups(list) {
+    const ownerOfBuild = new Map();
+    for (const g of list) for (const e of g.entries) if (e.kind === "build") ownerOfBuild.set(e.id, g.owner);
+    const deps = new Map(list.map((g) => [g.owner, new Set()]));
+    for (const g of list) {
+      for (const e of g.entries) {
+        if (e.kind !== "comp") continue;
+        for (const id of getCompPublishBuildIds(e.record)) {
+          const from = ownerOfBuild.get(id);
+          if (from && from !== g.owner) deps.get(g.owner).add(from);
+        }
+      }
+    }
+    const remaining = [...list];
+    const ordered = [];
+    while (remaining.length) {
+      const i = remaining.findIndex((g) => [...deps.get(g.owner)].every((o) => !remaining.some((r) => r.owner === o)));
+      ordered.push(...remaining.splice(i === -1 ? 0 : i, 1));
+    }
+    return ordered;
+  }
 
   async function publishGroup({ owner, ownerType, personal, entries }, { session, branch, buildsById, theme }) {
     const results = [];
@@ -269,55 +295,84 @@ function createPublishBatch(deps) {
       try {
         const saved = await markBuildPublished(id, patch);
         if (saved) stampedMembers.push(saved);
+        buildsById.set(id, { ...buildsById.get(id), ...patch });
       } catch (err) {
         console.warn("[publish] member stamp failed", id, err?.message || err);
       }
     }
     for (const p of prepared) {
+      let saved;
       try {
-        const saved = p.kind === "build" ? await markBuildPublished(p.id, p.patch) : await markCompPublished(p.id, p.patch);
-        if (saved && p.teamRoot) await teamPut(p.teamRoot.teamId, p.id, p.kind);
-        results.push({
-          kind: p.kind,
-          id: p.id,
-          ok: true,
-          pagesUrl: publishedPageUrl({
-            kind: p.kind, owner, slug: p.slug, fileId: p.fileId, key: p.key, repo,
-            theme: p.kind === "comp" ? theme.comp : theme.build(p.record),
-          }),
-          slug: p.slug,
-          fileId: p.fileId,
-          changed: true,
-          ...(p.kind === "comp" ? { skippedForeignBuilds: p.skippedForeignBuilds } : {}),
-        });
+        saved = p.kind === "build" ? await markBuildPublished(p.id, p.patch) : await markCompPublished(p.id, p.patch);
       } catch (err) {
         results.push({ kind: p.kind, id: p.id, ok: false, error: err });
+        continue;
       }
+      // Later owner groups in this round read the receipt, so a build already
+      // published here is linked, not uploaded again.
+      if (p.kind === "build") buildsById.set(p.id, { ...buildsById.get(p.id), ...p.patch });
+      // The commit landed and the receipt is stamped: nothing below may fail the item.
+      if (saved && p.teamRoot) {
+        try {
+          await teamPut(p.teamRoot.teamId, p.id, p.kind);
+        } catch (err) {
+          console.warn("[publish] team sync failed", p.kind, p.id, err?.message || err);
+        }
+      }
+      results.push({
+        kind: p.kind,
+        id: p.id,
+        ok: true,
+        pagesUrl: publishedPageUrl({
+          kind: p.kind, owner, slug: p.slug, fileId: p.fileId, key: p.key, repo,
+          theme: p.kind === "comp" ? theme.comp : theme.build(p.record),
+        }),
+        slug: p.slug,
+        fileId: p.fileId,
+        changed: true,
+        ...(p.kind === "comp" ? { skippedForeignBuilds: p.skippedForeignBuilds } : {}),
+      });
     }
     // Each member goes to ITS OWN team, or nowhere if personal.
-    for (const { teamId, buildId } of await memberStampTargets(stampedMembers, findTeamRoot)) {
-      await teamPut(teamId, buildId, "build");
+    try {
+      for (const { teamId, buildId } of await memberStampTargets(stampedMembers, findTeamRoot)) {
+        try {
+          await teamPut(teamId, buildId, "build");
+        } catch (err) {
+          console.warn("[publish] member team sync failed", buildId, err?.message || err);
+        }
+      }
+    } catch (err) {
+      console.warn("[publish] member team lookup failed", err?.message || err);
     }
-    await stampFormatMigrations(migrated);
+    try {
+      await stampFormatMigrations(migrated);
+    } catch (err) {
+      console.warn("[publish] format migration stamp failed", err?.message || err);
+    }
 
     // Only a personal publish updates this machine's own publishing setup; a
     // team publish stamped here would repoint the personal target at the team.
     if (personal) {
-      await patchAuthRecord({
-        onboarding: {
-          repoReady: true,
-          forkReady: true,
-          repoName: repo,
-          pagesReady: false,
-          pagesBuildStatus: "queued",
-          pagesBuildUpdatedAt: new Date().toISOString(),
-          pagesBuildError: null,
-          pagesUrl: `https://${owner}.github.io/${repo}/`,
-          branch,
-          targetOwner: owner,
-          targetOwnerType: ownerType,
-        },
-      });
+      try {
+        await patchAuthRecord({
+          onboarding: {
+            repoReady: true,
+            forkReady: true,
+            repoName: repo,
+            pagesReady: false,
+            pagesBuildStatus: "queued",
+            pagesBuildUpdatedAt: new Date().toISOString(),
+            pagesBuildError: null,
+            pagesUrl: `https://${owner}.github.io/${repo}/`,
+            branch,
+            targetOwner: owner,
+            targetOwnerType: ownerType,
+          },
+        });
+      } catch (err) {
+        console.warn("[publish] onboarding update failed", err?.message || err);
+      }
     }
     return results;
   }
