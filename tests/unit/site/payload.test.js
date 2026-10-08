@@ -7,7 +7,7 @@ globalThis.DecompressionStream ??= web.DecompressionStream;
 globalThis.crypto ??= require("node:crypto").webcrypto;
 
 const { encryptPayload, encryptBuild, generateEncryptionKey } = require("../../../src/main/buildEncryption");
-const { decodePayload, fetchPayload, payloadVersion, PayloadVersionError } = require("../../../src/site/payload.js");
+const { decodePayload, fetchPayload, payloadVersion, PayloadVersionError, assertCompFormat, loadErrorMessage, NEWER_FORMAT_MESSAGE } = require("../../../src/site/payload.js");
 
 const key = generateEncryptionKey();
 const data = { title: "Firebrand", catalogSkills: [{ id: 1, name: "Mantra" }] };
@@ -37,5 +37,24 @@ describe("viewer payload decode", () => {
 
     const missing = jest.fn(async () => ({ ok: false, status: 404 }));
     await expect(fetchPayload("https://x/builds/b.enc", key, missing)).rejects.toMatchObject({ status: 404 });
+  });
+});
+
+describe("comp format version", () => {
+  test("v1 (no v) and v2 comps are readable", () => {
+    expect(() => assertCompFormat({ name: "Old" })).not.toThrow();
+    expect(() => assertCompFormat({ v: 2, members: {} })).not.toThrow();
+  });
+
+  test("a comp newer than v2 throws PayloadVersionError, which the page shows as NEWER_FORMAT_MESSAGE", () => {
+    expect(() => assertCompFormat({ v: 3 })).toThrow(PayloadVersionError);
+    let err;
+    try { assertCompFormat({ v: 3 }); } catch (e) { err = e; }
+    expect(loadErrorMessage(err, "Comp")).toBe(NEWER_FORMAT_MESSAGE);
+  });
+
+  test("loadErrorMessage keeps HTTP and plain errors", () => {
+    expect(loadErrorMessage({ status: 404 }, "Comp")).toBe("Comp not found (HTTP 404)");
+    expect(loadErrorMessage(new Error("boom"), "Build")).toBe("boom");
   });
 });

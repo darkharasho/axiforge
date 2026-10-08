@@ -403,4 +403,11 @@ describe("v2 payloads", () => {
     await expect(importAxiAny(`https://someone.github.io/axibuilds/?b=f4c38d4f.${key}`, {}, { fetchText }))
       .rejects.toThrow(/newer version of AxiForge/);
   });
+
+  test("a comp in a newer comp format says to update the app instead of importing it empty", async () => {
+    const comp = { v: 3, name: "Future Comp", partyLines: [{ id: "l", capacity: 5, slots: ["x"] }], links: {} };
+    const fetchText = serve({ [raw("someone", "comps", "e4369a53")]: bytes(comp) });
+    await expect(importAxiAny(`https://someone.github.io/axibuilds/?c=e4369a53.${key}`, {}, { fetchText }))
+      .rejects.toThrow("That comp was published by a newer version of AxiForge — update the app to import it.");
+  });
 });

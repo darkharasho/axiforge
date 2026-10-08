@@ -60,10 +60,14 @@ function resolveNotesClassIcons(notes) {
  * re-published on its own shows up in every comp that uses it without
  * re-uploading those comps.
  */
+// Comp payload format: v1 embedded every build; v2 links them as `members`.
+// Readers (import, the SPA viewer) refuse anything newer.
+const COMP_FORMAT_VERSION = 2;
+
 function serializeCompForPublish(comp, members) {
   const { id, name, notes, tags, gameMode, partyLines, buildColors, categories, images } = comp;
   return {
-    v: 2,
+    v: COMP_FORMAT_VERSION,
     id, name, notes, tags, gameMode, partyLines, buildColors,
     // Screenshots pasted into comp notes, keyed by the ~img:<key> tokens the
     // notes markdown references.
@@ -131,4 +135,4 @@ function getCompPublishBuildIds(comp) {
   return [...new Set([...fromBuildIds, ...fromSlots])];
 }
 
-module.exports = { serializeCompForPublish, getCompPublishBuildIds, resolveNotesClassIcons, planCompMembers };
+module.exports = { COMP_FORMAT_VERSION, serializeCompForPublish, getCompPublishBuildIds, resolveNotesClassIcons, planCompMembers };

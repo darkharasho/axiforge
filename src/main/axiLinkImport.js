@@ -4,6 +4,7 @@ const https = require("https");
 const http = require("http");
 const crypto = require("node:crypto");
 const { decryptPayload, PayloadVersionError } = require("./buildEncryption.js");
+const { COMP_FORMAT_VERSION } = require("./compPublish");
 
 // ── HTTP ──────────────────────────────────────────────────────────────────────
 
@@ -271,6 +272,10 @@ function toImportedComp(payload, { name, folderId, gameMode } = {}, newId = () =
   return { comp, builds };
 }
 
+function newerVersionError(noun) {
+  return new Error(`That ${noun} was published by a newer version of AxiForge — update the app to import it.`);
+}
+
 async function fetchPayload({ fileId, key, bases, dir }, fetchText, noun = "build") {
   const failures = [];
   for (const base of bases) {
@@ -288,9 +293,7 @@ async function fetchPayload({ fileId, key, bases, dir }, fetchText, noun = "buil
     try {
       return decryptPayload(res.bytes ?? res.body, key);
     } catch (err) {
-      if (err instanceof PayloadVersionError) {
-        throw new Error(`That ${noun} was published by a newer version of AxiForge — update the app to import it.`);
-      }
+      if (err instanceof PayloadVersionError) throw newerVersionError(noun);
       // Reached the file but could not open it: the key in the link is wrong or
       // truncated. Trying the next base would only repeat that, so stop here.
       throw new Error(`Couldn't decrypt that ${noun} — the link looks incomplete or was edited.`);
@@ -350,6 +353,8 @@ async function importAxiAny(link, opts = {}, deps = {}) {
 
   if (parsed.kind === "comp") {
     let payload = await fetchPayload({ ...parsed, dir: "comps" }, fetchText, "comp");
+    // A newer comp format would otherwise read as v1 and import with no builds.
+    if ((Number(payload?.v) || 1) > COMP_FORMAT_VERSION) throw newerVersionError("comp");
     if (payload && payload.v === 2) {
       payload = { ...payload, builds: await fetchCompMembers(payload.members, parsed.bases, fetchText) };
     }

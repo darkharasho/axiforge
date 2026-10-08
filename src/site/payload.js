@@ -11,6 +11,25 @@ export class PayloadVersionError extends Error {
   }
 }
 
+/** Newest comp payload format this page renders (v1 has no `v`; v2 links members). */
+export const COMP_FORMAT_VERSION = 2;
+
+/**
+ * A comp from a newer AxiForge than this page would otherwise be read as v1
+ * and render empty; refuse it the way an unknown envelope version is refused.
+ */
+export function assertCompFormat(comp) {
+  const v = Number(comp?.v) || 1;
+  if (v > COMP_FORMAT_VERSION) throw new PayloadVersionError(v);
+}
+
+/** The page's message for a failed build or comp load. */
+export function loadErrorMessage(err, noun) {
+  if (err instanceof PayloadVersionError) return NEWER_FORMAT_MESSAGE;
+  if (err?.status) return `${noun} not found (HTTP ${err.status})`;
+  return err?.message || String(err);
+}
+
 export function payloadVersion(bytes) {
   if (bytes.length >= 4 && bytes[0] === 0x00 && bytes[1] === 0x41 && bytes[2] === 0x58) return bytes[3];
   return 1;

@@ -12,7 +12,7 @@ import { accentFromParams } from "./accent.js";
 import { escapeHtml } from "./escape.js";
 import { loadCompMembers } from "./comp-members.js";
 import { computeViewerCoverageHtml } from "./comp-coverage.js";
-import { fetchPayload, PayloadVersionError, NEWER_FORMAT_MESSAGE } from "./payload.js";
+import { fetchPayload, assertCompFormat, loadErrorMessage } from "./payload.js";
 
 export { escapeHtml };
 
@@ -75,12 +75,6 @@ function showError(msg) {
 }
 
 // ── Fetch & Decrypt ──────────────────────────────────────────────────────
-function loadErrorMessage(err, noun) {
-  if (err instanceof PayloadVersionError) return NEWER_FORMAT_MESSAGE;
-  if (err?.status) return `${noun} not found (HTTP ${err.status})`;
-  return err?.message || String(err);
-}
-
 async function loadBuild(fileId, base64urlKey) {
   try {
     const base = resolveDataBase(location, new URLSearchParams(location.search));
@@ -95,6 +89,7 @@ async function loadComp(fileId, base64urlKey) {
   try {
     const base = resolveDataBase(location, new URLSearchParams(location.search));
     let comp = await fetchPayload(`${base}comps/${encodeURIComponent(fileId)}.enc`, base64urlKey);
+    assertCompFormat(comp);
     if (comp.v === 2) {
       // A v2 comp links its builds: fetch them, then compute coverage here.
       const builds = await loadCompMembers(comp, { fallbackBase: base, loc: location });
