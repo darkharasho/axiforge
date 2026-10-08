@@ -90,6 +90,8 @@ export const state = {
   openCustomSelect: null,
   // Per-build/comp publish progress: { [id]: { currentStep, result, error } }
   publishProgress: {},
+  // Publish queue snapshot from the main process (publishQueue.js).
+  publishQueue: { items: {}, paused: null, published: [] },
 };
 
 export function createEmptyEditor(profession = "", gameMode = "pve") {

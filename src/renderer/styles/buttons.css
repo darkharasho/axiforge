@@ -89,3 +89,22 @@
 
 /* .af-menu-item / .af-menu-sep (the former .ws-menu-item* / .ws-menu-sep)
    live in app.css alongside the other af-btn* rules. */
+
+/* Copy link button (publish on save) */
+.publish-btn { display: inline-flex; align-items: center; gap: 6px; }
+.publish-btn__icon { flex: none; }
+/* Square corners and the control border token, per the axi design rules
+   (same spinner as .lib-toast--loading). */
+.publish-btn__icon--spinner {
+  width: 10px; height: 10px;
+  border: var(--axi-border-control) solid currentColor; border-right-color: transparent;
+  animation: publish-btn-spin 0.8s linear infinite;
+}
+/* Quieter via a neutral from the ramp, not partial opacity (rule 2). */
+.publish-btn--busy { color: var(--axi-text-faint); }
+.publish-btn--warn { color: var(--axi-warn); }
+.publish-btn--ok .publish-btn__icon--check { color: var(--axi-accent); }
+@keyframes publish-btn-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .publish-btn__icon--spinner { animation: none; }
+}

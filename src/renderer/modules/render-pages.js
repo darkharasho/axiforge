@@ -9,6 +9,7 @@ import { computeUnsavedChangeSummary } from "./editor.js";
 import { getProfessionSvg } from "./profession-icons.js";
 import { shareDisabledTooltip } from "./share-gate.js";
 import { publishStatus, publishBadgeHtml } from "./publish-status.js";
+import { publishButtonState, queueItemFor, connectionFrom, applyPublishButton } from "./publish-button.js";
 
 // ---------------------------------------------------------------------------
 // DOM refs — injected by the host (renderer.js) after DOM is ready
@@ -499,16 +500,7 @@ export function renderEditorForm() {
   const buildName = state.editor.title;
   document.title = buildName ? `AxiForge — ${buildName}` : "AxiForge";
 
-  const status = state.onboarding;
-  const canPublish = Boolean(status?.isAuthenticated && status?.repoReady);
-  _el.publishSiteBtn.disabled = !canPublish;
-  if (!status?.isAuthenticated) {
-    _el.publishSiteBtn.title = "Sign in and set up publishing to enable this";
-  } else if (!status?.repoReady) {
-    _el.publishSiteBtn.title = "Set up publishing in the user menu to enable this";
-  } else {
-    _el.publishSiteBtn.title = "";
-  }
+  renderEditorPublishButton();
   _el.copyBuildBtn.disabled = !state.editor.profession;
   _el.duplicateBuildBtn.disabled = !state.editor.profession;
 }
@@ -528,6 +520,8 @@ function _findRootSharedFolderInState(folderId) {
 }
 
 export function renderEditorMeta() {
+  // Queue status events redraw through here, so the Copy link button does too.
+  renderEditorPublishButton();
   if (state.editorDirty) {
     _el.saveDot.classList.remove("hidden");
   } else {
@@ -593,13 +587,33 @@ export function renderEditorMeta() {
 
   // Discord share buttons — disabled until build is published and has no unsaved/unpublished changes
   const _shareBuild = state.builds.find((b) => b.id === state.editor?.id);
-  const _shareTip = shareDisabledTooltip(_shareBuild, Boolean(state.editorDirty));
+  const _shareTip = shareDisabledTooltip(_shareBuild, Boolean(state.editorDirty),
+    queueItemFor(state.publishQueue, "build", _shareBuild?.id)?.state || null);
   for (const action of ["discord-copy", "discord-embed"]) {
     const btn = document.querySelector(`#editorShareDropdown [data-action='${action}']`);
     if (!btn) continue;
     if (_shareTip) { btn.disabled = true; btn.title = _shareTip; }
     else { btn.disabled = false; btn.removeAttribute("title"); }
   }
+}
+
+// The editor's Copy link button (publish on save): queue state for the open
+// build, else its receipt.
+export function editorPublishView() {
+  const id = state.editor?.id || null;
+  const build = id ? state.builds.find((b) => b.id === id) : null;
+  return publishButtonState({
+    queueItem: queueItemFor(state.publishQueue, "build", id),
+    receipt: build ? publishStatus(build) : "never",
+    connection: connectionFrom(state.onboarding),
+  });
+}
+
+export function renderEditorPublishButton() {
+  const id = state.editor?.id || null;
+  applyPublishButton(_el.publishSiteBtn, editorPublishView());
+  _el.publishSiteBtn.disabled = !id;
+  if (!id) _el.publishSiteBtn.title = "Save the build first";
 }
 
 /**

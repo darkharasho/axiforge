@@ -73,7 +73,6 @@ function createStubsApi() {
     onUpdateError: onEvent,
     onUpdateInstallError: onEvent,
     onDownloadProgress: onEvent,
-    onPublishProgress: onEvent,
     onPublishStatus: onEvent,
     onPublishOwnerChoice: onEvent,
     onSyncStatus: onEvent,

@@ -46,11 +46,12 @@ import {
   initRenderPagesDom, initRenderPagesCallbacks,
   render, renderEditor, renderEditorForm, renderEditorMeta, renderBuildList,
   setPublishStatus, showError, runPagesBuildPoll, getSelectedTarget,
-  showPublishProgress, advancePublishStep, completeAllPublishSteps,
-  failPublishStep, showPublishResult, getPublishTargetId, syncPublishStatus,
-  resolvePublishedUrl, clearPublishProgress, currentShareAccent,
+  failPublishStep, syncPublishStatus,
+  resolvePublishedUrl, currentShareAccent,
 } from "./modules/render-pages.js";
-import { publishWithOwnerCheck, publishedByOtherBody } from "./modules/publish-guard.js";
+import { runPublishButtonAction, queueItemFor } from "./modules/publish-button.js";
+import { maybeShowBulkPublishPrompt, askOwnerChoice } from "./modules/publish-prompts.js";
+import { publishButtonDeps, applyPublishSnapshot, isPublishInFlight } from "./modules/publish-actions.js";
 import { resolveEntityFacts } from "./modules/detail-panel.js";
 import { resetWikiResolution } from "./modules/wiki-updates.js";
 import { initWikiModal, openWikiModal } from "./modules/wiki-modal.js";
@@ -738,6 +739,7 @@ async function init() {
   // the next poll tick.
   window.addEventListener("online", () => {
     window.desktopApi.pullAllTeams?.().catch(() => {});
+    window.desktopApi.resumePublishing?.().catch(() => {});
   });
 
   // ── Global sync-status / conflict handlers ───────────────────────────────
@@ -1151,6 +1153,10 @@ async function refreshOnboardingStatus() {
   if (status.isAuthenticated && status.repoReady && !status.pagesReady && !state.pagesPoll.active) {
     runPagesBuildPoll().catch((err) => showError(err));
   }
+
+  // Once publishing is connected (startup or right after setup), offer to
+  // publish the never-published library, once.
+  maybeShowBulkPublishPrompt({ api: window.desktopApi, onboarding: state.onboarding, confirm: showConfirmModal }).catch(showError);
 }
 
 // ── Window controls ──────────────────────────────────────────────────────────
@@ -1571,6 +1577,7 @@ function wireEvents() {
         }
 
         discordEmbedItem.innerHTML = "Sharing...";
+        if (isPublishInFlight("build", buildId)) showToast("Waiting for your latest save to upload…", "loading");
         const result = await window.desktopApi.shareBuildToDiscord(buildId, webhookIds);
         if (result.success) {
           flashItem(discordEmbedItem, discordEmbedDefault);
@@ -1582,7 +1589,6 @@ function wireEvents() {
         if (state.editor?.id && state.publishProgress[state.editor.id]) {
           failPublishStep("saving", err.message);
         }
-        el.publishSiteBtn.disabled = false;
         failItem(discordEmbedItem, discordEmbedDefault);
       }
     });
@@ -1627,108 +1633,35 @@ function wireEvents() {
     el.overflowMenu.classList.add("hidden");
   });
 
-  // Listen for publish progress events from main process
-  window.desktopApi.onPublishProgress((payload) => {
-    const id = typeof payload === "object" ? payload.id : null;
-    const step = typeof payload === "object" ? payload.step : payload;
-    // Store in per-ID state
-    if (id && state.publishProgress[id]) {
-      state.publishProgress[id].currentStep = step;
-    }
-    // Only advance the visible ticker if it matches the current target
-    if (!id || id === getPublishTargetId()) {
-      advancePublishStep(step);
-    }
+  // Copy link (publish on save): what a click does comes from the button's
+  // current state, drawn by renderEditorPublishButton.
+  el.publishSiteBtn.addEventListener("click", () => {
+    const id = state.editor.id;
+    if (!id) return;
+    const owner = queueItemFor(state.publishQueue, "build", id)?.owner
+      || state.builds.find((b) => b.id === id)?.publishedOwner || "";
+    runPublishButtonAction(el.publishSiteBtn.dataset.action, { kind: "build", id, owner }, publishButtonDeps())
+      .catch(showError);
   });
 
-  el.publishSiteBtn.addEventListener("click", async () => {
-    const buildId = state.editor.id;
-    if (!buildId) {
-      showError(new Error("Save the build first before publishing."));
-      return;
-    }
-    const isFirstPublishEver = !state.builds.some((b) => b.publishedFileId);
-    if (isFirstPublishEver) {
-      const proceed = await showConfirmModal({
-        title: "Publishing puts your build online",
-        body:
-          "<p>Publishing uploads this build to your own GitHub Pages site so the shareable link " +
-          "(including Discord) actually works for other people.</p>" +
-          "<p>It uses the one-time GitHub sign-in you already set up, and takes a few seconds. " +
-          "Your build link stays private unless you share it.</p>",
-        confirmLabel: "Publish now",
-        cancelLabel: "Cancel",
-      });
-      if (!proceed) return;
-    }
-    let lastStep = "saving";
-    // Share relies on a finished publish — block it while one is in flight.
-    const shareTrigger = el.editorShareDropdown?.querySelector(".editor-share-dropdown__trigger");
-    try {
-      el.publishSiteBtn.disabled = true;
-      if (shareTrigger) shareTrigger.disabled = true;
-      el.editorShareDropdown?.classList.remove("editor-share-dropdown--open");
-      state.publishProgress[buildId] = { currentStep: "saving" };
-      showPublishProgress(buildId);
-      advancePublishStep("saving");
-
-      if (state.editorDirty) {
-        const serialized = serializeEditorToBuild();
-        await window.desktopApi.saveBuild({ ...serialized, id: buildId });
-        state.builds = await window.desktopApi.listBuilds();
-        captureEditorBaseline();
-      }
-
-      // The main process sends progress events for loading, repo, site, encrypt, upload, deploy.
-      // A team build already published by a teammate throws PUBLISHED_BY_OTHER:<login>;
-      // publishWithOwnerCheck turns that into a confirm + an explicit force retry
-      // instead of surfacing the raw sentinel as an error (spec §2.8).
-      const result = await publishWithOwnerCheck(
-        (opts) => window.desktopApi.publishBuild(buildId, opts),
-        (login) => showConfirmModal({
-          title: "Publish under your account?",
-          body: publishedByOtherBody(login),
-          confirmLabel: "Publish anyway",
-          cancelLabel: "Cancel",
-        }),
-      );
-      // Declined the confirm — not a failure, so drop the ticker silently.
-      if (!result) { clearPublishProgress(buildId); return; }
-
-      // Mark all upload steps done, advance to Pages polling
-      advancePublishStep("pages");
-
-      if (result?.pagesUrl) {
-        state.publishProgress[buildId] = { ...state.publishProgress[buildId], result: result.pagesUrl };
-        await window.desktopApi.writeClipboardText(result.pagesUrl);
-        // showPublishResult marks "pages" done and polls until live
-        showPublishResult(result.pagesUrl);
-      } else {
-        state.publishProgress[buildId] = { ...state.publishProgress[buildId], result: "complete" };
-        completeAllPublishSteps();
-      }
-
-      // The publish also re-stamped every published comp containing this build.
-      state.builds = await window.desktopApi.listBuilds();
-      state.comps = await window.desktopApi.listComps();
-      // An open comp page holds its own object; re-point it so it does not draw
-      // the pre-publish member hashes.
-      if (state.activeComp) {
-        state.activeComp = state.comps.find((c) => c.id === state.activeComp.id) || state.activeComp;
-      }
-      renderBuildList();
-      renderEditorMeta();
-    } catch (err) {
-      if (state.publishProgress[buildId]) {
-        state.publishProgress[buildId].error = { step: lastStep, message: err.message };
-      }
-      failPublishStep(lastStep, err.message);
-      showError(err);
-    } finally {
-      el.publishSiteBtn.disabled = false;
-      if (shareTrigger) shareTrigger.disabled = false;
-    }
+  // The comp board and the library request Copy link actions through this
+  // event, so those modules don't import the app-level deps (settings modal,
+  // login flow). That keeps them loadable in node-env tests.
+  window.addEventListener("axi:publish-action", (e) => {
+    const { action, kind, id, owner = "" } = e.detail || {};
+    if (!action || !kind || !id) return;
+    runPublishButtonAction(action, { kind, id, owner }, publishButtonDeps()).catch(showError);
   });
+
+  window.desktopApi.onPublishStatus(async (snapshot) => {
+    if (await applyPublishSnapshot(snapshot)) renderBuildList();
+    renderEditorMeta();
+    window.dispatchEvent(new CustomEvent("axi:publish-status"));
+  });
+  window.desktopApi.onPublishOwnerChoice(({ kind, id, owner }) => {
+    askOwnerChoice(kind, id, owner, { confirm: showConfirmModal, api: window.desktopApi }).catch(showError);
+  });
+  window.desktopApi.getPublishSnapshot().then(applyPublishSnapshot).then(() => renderEditorMeta()).catch(() => {});
 
   if (el.buildSearch) {
     el.buildSearch.addEventListener("input", () => {
