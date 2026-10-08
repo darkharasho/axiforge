@@ -10,8 +10,10 @@ const ICONS = {
 const TONES = ["busy", "warn", "ok"];
 
 function view(label, action, { tone = "", icon = "", title = "" } = {}) {
-  return { label, action, tone, icon, title };
+  return { label, action, tone, icon, title, disabled: false };
 }
+
+const COPY_ACTIONS = new Set(["copy", "publish-and-copy"]);
 
 function waitingTitle(item, now) {
   const why = item.reason === "rate-limit" ? "GitHub rate limit reached" : "Offline";
@@ -20,10 +22,20 @@ function waitingTitle(item, now) {
 }
 
 /**
+ * `dirty` (the editor has unsaved edits): a copy would hand out the last save,
+ * so the copy actions are disabled until the edits are saved, like the Discord
+ * share buttons. Setup, sign-in, Retry and the owner choice stay available.
  * @param {{queueItem?: {state: string, error?: string, reason?: string, retryAt?: number, owner?: string}|null,
- *          receipt?: "never"|"current"|"stale", connection?: {signedIn: boolean, connected: boolean}, now?: number}} input
+ *          receipt?: "never"|"current"|"stale", connection?: {signedIn: boolean, connected: boolean}, now?: number,
+ *          dirty?: boolean}} input
  */
-export function publishButtonState({ queueItem = null, receipt = "never", connection = {}, now = Date.now() } = {}) {
+export function publishButtonState({ dirty = false, ...input } = {}) {
+  const v = baseButtonState(input);
+  if (dirty && COPY_ACTIONS.has(v.action)) return { ...v, disabled: true, title: "Save your changes first" };
+  return v;
+}
+
+function baseButtonState({ queueItem = null, receipt = "never", connection = {}, now = Date.now() } = {}) {
   const state = queueItem?.state || null;
   if (state === "unauthorized") {
     return view("Sign in to publish", "sign-in", { tone: "warn", title: "Your GitHub sign-in expired. Sign in again to keep publishing." });
@@ -61,6 +73,7 @@ export function connectionFrom(onboarding) {
 export function applyPublishButton(btn, v) {
   btn.dataset.action = v.action;
   btn.title = v.title || "";
+  btn.disabled = Boolean(v.disabled);
   for (const tone of TONES) btn.classList.toggle(`publish-btn--${tone}`, v.tone === tone);
   btn.classList.add("publish-btn");
   btn.innerHTML = `${ICONS[v.icon] || ""}<span class="publish-btn__label"></span>`;

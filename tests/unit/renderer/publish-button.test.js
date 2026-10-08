@@ -63,6 +63,32 @@ describe("publishButtonState — every row of the spec's table", () => {
   });
 });
 
+describe("publishButtonState — unsaved editor edits", () => {
+  test.each([
+    [{ receipt: "current" }, "Copy link"],
+    [{ receipt: "stale" }, "Copy link"],
+    [{ receipt: "never" }, "Copy link"],
+    [{ queueItem: { state: "queued" }, receipt: "stale" }, "Publishing…"],
+    [{ queueItem: { state: "waiting", reason: "offline" }, receipt: "stale" }, "Copy link"],
+  ])("%o is disabled with Save your changes first", (input, label) => {
+    const v = publishButtonState({ ...input, connection: CONNECTED, dirty: true });
+    expect(v).toMatchObject({ label, disabled: true, title: "Save your changes first" });
+  });
+
+  test.each([
+    [{ connection: { signedIn: false, connected: false } }, "setup"],
+    [{ queueItem: { state: "unauthorized" }, connection: CONNECTED }, "sign-in"],
+    [{ queueItem: { state: "failed", error: "x" }, connection: CONNECTED }, "retry"],
+    [{ queueItem: { state: "declined", owner: "m" }, connection: CONNECTED }, "choose-owner"],
+  ])("%o stays enabled: it copies nothing", (input, action) => {
+    expect(publishButtonState({ ...input, receipt: "current", dirty: true })).toMatchObject({ action, disabled: false });
+  });
+
+  test("a saved editor is enabled", () => {
+    expect(publishButtonState({ receipt: "current", connection: CONNECTED }).disabled).toBe(false);
+  });
+});
+
 describe("helpers", () => {
   test("queueItemFor", () => {
     const snap = { items: { "build:a": { state: "queued" } } };
@@ -88,6 +114,15 @@ describe("helpers", () => {
     applyPublishButton(btn, { label: "Copy link", action: "copy", tone: "", icon: "", title: "" });
     expect(btn.classList.contains("publish-btn--busy")).toBe(false);
     expect(btn.querySelector(".publish-btn__icon")).toBeNull();
+  });
+
+  test("applyPublishButton disables the button for a disabled view and enables it again", () => {
+    const btn = document.createElement("button");
+    applyPublishButton(btn, { label: "Copy link", action: "copy", tone: "", icon: "", title: "Save your changes first", disabled: true });
+    expect(btn.disabled).toBe(true);
+    expect(btn.title).toBe("Save your changes first");
+    applyPublishButton(btn, { label: "Copy link", action: "copy", tone: "", icon: "", title: "", disabled: false });
+    expect(btn.disabled).toBe(false);
   });
 });
 

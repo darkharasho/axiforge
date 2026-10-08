@@ -29,3 +29,12 @@ test("a new, unsaved build reads as never published", () => {
   state.editor = { id: null };
   expect(editorPublishView()).toMatchObject({ label: "Copy link", action: "copy", icon: "" });
 });
+
+test("unsaved edits disable Copy link: it would copy the last save", () => {
+  state.editorDirty = true;
+  try {
+    expect(editorPublishView()).toMatchObject({ label: "Copy link", disabled: true, title: "Save your changes first" });
+  } finally {
+    state.editorDirty = false;
+  }
+});

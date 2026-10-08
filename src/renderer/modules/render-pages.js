@@ -602,14 +602,17 @@ export function editorPublishView() {
     queueItem: queueItemFor(state.publishQueue, "build", id),
     receipt: build ? publishStatus(build) : "never",
     connection: connectionFrom(state.onboarding),
+    dirty: Boolean(state.editorDirty),
   });
 }
 
 export function renderEditorPublishButton() {
   const id = state.editor?.id || null;
   applyPublishButton(_el.publishSiteBtn, editorPublishView());
-  _el.publishSiteBtn.disabled = !id;
-  if (!id) _el.publishSiteBtn.title = "Save the build first";
+  if (!id) {
+    _el.publishSiteBtn.disabled = true;
+    _el.publishSiteBtn.title = "Save the build first";
+  }
 }
 
 /**
