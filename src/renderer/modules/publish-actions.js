@@ -51,6 +51,10 @@ export function isPublishInFlight(kind, id) {
   return s === "queued" || s === "publishing";
 }
 
+// Reloads overlap when snapshots arrive close together; only the newest one
+// may land, so an older list response never overwrites newer data.
+let reloadSeq = 0;
+
 /**
  * Store a queue snapshot. When items just published, reload the lists so their
  * receipts (status dots, links) are current. The open comp takes only the
@@ -60,7 +64,9 @@ export function isPublishInFlight(kind, id) {
 export async function applyPublishSnapshot(snapshot) {
   state.publishQueue = snapshot || { items: {}, paused: null, published: [] };
   if (!snapshot?.published?.length) return false;
+  const seq = ++reloadSeq;
   const [builds, comps] = await Promise.all([window.desktopApi.listBuilds(), window.desktopApi.listComps()]);
+  if (seq !== reloadSeq) return false;
   state.builds = builds;
   state.comps = comps;
   if (state.activeComp) {

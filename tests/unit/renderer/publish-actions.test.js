@@ -52,6 +52,19 @@ test("a first publish puts the whole receipt on the open comp before resolving",
   expect(state.activeComp).toEqual({ id: "c1", name: "Raid", notes: "typing…", ...receipt });
 });
 
+test("an older snapshot's list reload never lands after a newer one", async () => {
+  const replies = [];
+  window.desktopApi.listBuilds = jest.fn(() => new Promise((resolve) => replies.push(resolve)));
+  window.desktopApi.listComps = jest.fn(async () => []);
+  const older = applyPublishSnapshot({ items: {}, paused: null, published: ["build:b1"] });
+  const newer = applyPublishSnapshot({ items: {}, paused: null, published: ["build:b1"] });
+  replies[1]([{ id: "b1", publishedHash: "new" }]);
+  await expect(newer).resolves.toBe(true);
+  replies[0]([{ id: "b1", publishedHash: "old" }]);
+  await expect(older).resolves.toBe(false);
+  expect(state.builds).toEqual([{ id: "b1", publishedHash: "new" }]);
+});
+
 test("isPublishInFlight", async () => {
   await applyPublishSnapshot({ items: { "build:a": { state: "publishing" }, "build:b": { state: "failed" } }, paused: null, published: [] });
   expect(isPublishInFlight("build", "a")).toBe(true);
