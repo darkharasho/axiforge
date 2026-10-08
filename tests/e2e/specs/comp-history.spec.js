@@ -75,7 +75,7 @@ test.describe("Comp history", () => {
     await window.waitForTimeout(500);
 
     const [latest] = await entries(window);
-    expect(latest.summary).toContain("added Power Reaper");
+    expect(latest.summary).toContain("party 1 slot 2: (none) → Power Reaper");
     expect(latest.recordId).toBe(comp.id);
     // This is the FIRST time this comp has ever gone through the IPC
     // boundary, so it becomes the origin keyframe (v1) regardless of what
@@ -99,7 +99,7 @@ test.describe("Comp history", () => {
 
     const all = await entries(window);
     expect(all[0].summary).toContain('name: "Raid Squad" → "Raid Squad v2"');
-    expect(all[1].summary).toContain("added Power Reaper");
+    expect(all[1].summary).toContain("party 1 slot 2: (none) → Power Reaper");
   });
 
   test("right-click → View History opens the panel with those entries", async () => {

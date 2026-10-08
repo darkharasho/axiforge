@@ -57,6 +57,11 @@ function makeTestComp(overrides = {}) {
     partyLines: [
       { id: uuid(), capacity: 5, slots: [] },
     ],
+    // Every comp CompStore writes carries these. Without them a comp's first save
+    // reads as "images, slot colours, categories" changed in its history.
+    images: {},
+    buildColors: {},
+    categories: [],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     ...overrides,

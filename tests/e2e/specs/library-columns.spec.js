@@ -103,7 +103,7 @@ test.describe("App layout fits under the titlebar", () => {
     // (A second copy of the height, written as 40px in four places against a
     // 42px bar, made it 2px worse again.)
     const metrics = await window.evaluate(() => {
-      const bar = document.querySelector(".titlebar");
+      const bar = document.querySelector("#titlebar");
       const layout = document.querySelector(".app-layout");
       return {
         barHeight: bar.getBoundingClientRect().height,
@@ -122,7 +122,7 @@ test.describe("App layout fits under the titlebar", () => {
 
   test("the left nav's first item is fully below the titlebar", async () => {
     const clipped = await window.evaluate(() => {
-      const bar = document.querySelector(".titlebar").getBoundingClientRect();
+      const bar = document.querySelector("#titlebar").getBoundingClientRect();
       const first = document.querySelector(".leftnav__item").getBoundingClientRect();
       return first.top < bar.bottom;
     });

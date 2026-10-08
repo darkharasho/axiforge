@@ -355,6 +355,11 @@ function createWindow(savedBounds) {
       nodeIntegration: false,
       webviewTag: true,
       preload: path.join(__dirname, "../preload/index.js"),
+      // A window that is never shown gets no vsync, so Chromium paints it at
+      // 1 fps: rAF, CSS animations and scroll events then land up to a second
+      // late, and E2E dropdowns close or never finish opening. Offscreen
+      // rendering keeps its own clock (60 fps, set on ready-to-show).
+      ...(HIDE_WINDOW ? { offscreen: true } : {}),
       // The preload is sandboxed and cannot require shared/windowChrome to
       // reach this verdict itself, so hand it over as data. Computed from the
       // same helper the window above is built with, which is what keeps the
@@ -371,6 +376,7 @@ function createWindow(savedBounds) {
 
   win.once("ready-to-show", () => {
     if (!HIDE_WINDOW) win.show();
+    else win.webContents.setFrameRate(60);
   });
 
   win.webContents.on("will-attach-webview", (event, webPreferences, params) => {

@@ -186,32 +186,30 @@ test.describe("Build history + compare", () => {
     expect(versions[0].source).toBe("revert");
   });
 
-  test("editing a build twice within the coalesce window produces one entry, not two", async () => {
-    const coalesceBuild = makeTestBuild({ title: "Coalesce Test Build", profession: "Guardian" });
+  test("editing a build twice in quick succession keeps both saves as versions", async () => {
+    // Builds do not coalesce (historyStore's `coalesce: false` for builds): a
+    // build save is an explicit click, so merging two of them would erase a
+    // state the user chose. Comps keep the window — their notes autosave.
+    const quickBuild = makeTestBuild({ title: "Quick Edits Build", profession: "Guardian" });
 
     // v1: origin keyframe.
-    await window.evaluate(async (b) => { await desktopApi.saveBuild(b); }, coalesceBuild);
+    await window.evaluate(async (b) => { await desktopApi.saveBuild(b); }, quickBuild);
     await window.waitForTimeout(300);
 
-    // v2: the FIRST edit after v1 always becomes its own version — coalescing
-    // into v1 is blocked on purpose (it is the record's origin keyframe; see
-    // the `last.v > 1` guard in historyStore.js).
-    await window.evaluate(async (id) => {
-      const b = (await desktopApi.listBuilds()).find((x) => x.id === id);
-      await desktopApi.saveBuild({ ...b, notes: "first edit" });
-    }, coalesceBuild.id);
-    await window.waitForTimeout(300);
+    for (const notes of ["first edit", "second edit"]) {
+      await window.evaluate(async ({ id, notes }) => {
+        const b = (await desktopApi.listBuilds()).find((x) => x.id === id);
+        await desktopApi.saveBuild({ ...b, notes });
+      }, { id: quickBuild.id, notes });
+      await window.waitForTimeout(300);
+    }
 
-    // A second edit by the same author/source, moments later: inside the
-    // 5-minute coalesce window, so it merges into v2 instead of becoming v3.
-    await window.evaluate(async (id) => {
-      const b = (await desktopApi.listBuilds()).find((x) => x.id === id);
-      await desktopApi.saveBuild({ ...b, notes: "second edit" });
-    }, coalesceBuild.id);
-    await window.waitForTimeout(500);
-
-    const { versions } = await window.evaluate((id) => desktopApi.getBuildHistory(id), coalesceBuild.id);
-    expect(versions).toHaveLength(2);
-    expect(versions[0].v).toBe(2);
+    const { versions } = await window.evaluate((id) => desktopApi.getBuildHistory(id), quickBuild.id);
+    expect(versions.map((v) => v.v)).toEqual([3, 2, 1]);
+    const firstEdit = await window.evaluate(
+      ({ id }) => desktopApi.getHistoryVersion("build", id, 2),
+      { id: quickBuild.id }
+    );
+    expect(firstEdit.notes).toBe("first edit");
   });
 });

@@ -195,8 +195,13 @@ test.describe("Team Sync — join, conflicts, stop sharing", () => {
     await window.fill(".lib-inline-input", "Shared Sub");
     await window.keyboard.press("Enter");
 
-    const subId = await window.evaluate(async (tid) =>
-      (await desktopApi.listFolders()).find((f) => f.parentId === tid).id, teamId);
+    // Enter starts an async save; the folder isn't on disk yet when it returns.
+    let subId = null;
+    await expect.poll(async () => {
+      subId = await window.evaluate(async (tid) =>
+        (await desktopApi.listFolders()).find((f) => f.parentId === tid)?.id ?? null, teamId);
+      return subId;
+    }, { timeout: 5_000 }).not.toBeNull();
     const buildId = await window.evaluate(async (fid) =>
       (await desktopApi.saveBuild({ title: "Inside sub", profession: "Ranger", folderId: fid })).id, subId);
     await waitForSynced(window);

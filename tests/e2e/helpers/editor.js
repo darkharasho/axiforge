@@ -39,10 +39,23 @@ async function settleMenu(window) {
  * the next frame, so an auto-scroll that starts *before* the click arrives *after*
  * the menu has opened and closes it again. Scrolling up front keeps the click itself
  * scroll-free.
+ *
+ * Centre it rather than scrollIntoViewIfNeeded(): the editor's sticky subnav can
+ * cover a target that is technically in view, and Playwright then scrolls again at
+ * click time to get past the cover.
  */
 async function scrollIntoViewAndSettle(window, target) {
-  await target.scrollIntoViewIfNeeded();
-  await window.waitForTimeout(150);
+  await target.evaluate((el) => el.scrollIntoView({ block: "center", inline: "nearest" }));
+  // Then wait for scrolling to go quiet: our own scroll lands a frame later, and
+  // a re-render from the previous pick can still shift the page (scroll
+  // anchoring) after that. Either one closes a menu opened in the meantime.
+  await window.evaluate(() => new Promise((resolve) => {
+    let timer;
+    const done = () => { document.removeEventListener("scroll", arm, true); resolve(); };
+    const arm = () => { clearTimeout(timer); timer = setTimeout(done, 150); };
+    document.addEventListener("scroll", arm, true);
+    arm();
+  }));
 }
 
 /** Pick an option out of an open menu by visible text. */
@@ -154,7 +167,16 @@ async function setTitle(window, title) {
 
 async function setGameMode(window, mode) {
   await window.click(`.game-mode-toggle__btn[data-mode="${mode}"]`);
-  await window.waitForTimeout(500);
+  // The switch reloads the catalog, then marks the button active and re-renders.
+  // Returning before that lets its re-render close whatever the test opens next.
+  await window.waitForFunction(
+    (m) => document.querySelector(`.game-mode-toggle__btn[data-mode="${m}"]`)
+      ?.classList.contains("game-mode-toggle__btn--active")
+      && !document.querySelector("#specializationsHost .skel-specs"),
+    mode,
+    { timeout: 15_000 }
+  );
+  await window.waitForTimeout(100);
 }
 
 async function saveBuild(window) {
