@@ -358,3 +358,49 @@ describe("importAxiAny with a comp link", () => {
     expect(result).toMatchObject({ kind: "build", build: { title: "U Chrono" } });
   });
 });
+
+describe("v2 payloads", () => {
+  const { encryptPayload } = require("../../src/main/buildEncryption");
+  const key = generateEncryptionKey();
+  const raw = (owner, dir, id) => `https://raw.githubusercontent.com/${owner}/axibuilds/main/site/${dir}/${id}.enc`;
+  const serve = (routes) => jest.fn(async (url) => routes[url] || { status: 404, body: "" });
+  const bytes = (data, k = key) => { const b = encryptPayload(data, k); return { status: 200, body: b.toString("latin1"), bytes: b }; };
+
+  test("imports a v2 build", async () => {
+    const fetchText = serve({ [raw("someone", "builds", "f4c38d4f")]: bytes({ profession: "Mesmer", title: "U Chrono" }) });
+    const result = await importAxiAny(`https://someone.github.io/axibuilds/?b=f4c38d4f.${key}`, {}, { fetchText });
+    expect(result.build.title).toBe("U Chrono");
+  });
+
+  test("a v2 comp fetches each member from its owner's repo; an unreachable one is dropped", async () => {
+    const kA = generateEncryptionKey();
+    const kB = generateEncryptionKey();
+    const comp = {
+      v: 2, name: "Linked Comp", gameMode: "wvw",
+      partyLines: [{ id: "l", capacity: 5, slots: ["b-a", "b-b"] }],
+      members: {
+        "b-a": { fileId: "aaaa1111", key: kA, owner: "someone" },
+        "b-b": { fileId: "bbbb2222", key: kB, owner: "teammate" },
+      },
+    };
+    const fetchText = serve({
+      [raw("someone", "comps", "e4369a53")]: bytes(comp),
+      [raw("someone", "builds", "aaaa1111")]: bytes({ id: "b-a", profession: "Guardian", title: "FB" }, kA),
+    });
+    const result = await importAxiAny(`https://someone.github.io/axibuilds/?c=e4369a53.${key}`, {}, { fetchText });
+    expect(result.kind).toBe("comp");
+    expect(result.builds.map((b) => b.title)).toEqual(["FB"]);
+    expect(result.comp.partyLines[0].slots).toHaveLength(1);
+    expect(fetchText).toHaveBeenCalledWith(raw("teammate", "builds", "bbbb2222"));
+    expect(result.comp).not.toHaveProperty("members");
+    expect(result.comp).not.toHaveProperty("v");
+  });
+
+  test("a payload from a newer format says to update the app", async () => {
+    const b = encryptPayload({ profession: "Mesmer" }, key);
+    b[3] = 0x03;
+    const fetchText = serve({ [raw("someone", "builds", "f4c38d4f")]: { status: 200, body: "", bytes: b } });
+    await expect(importAxiAny(`https://someone.github.io/axibuilds/?b=f4c38d4f.${key}`, {}, { fetchText }))
+      .rejects.toThrow(/newer version of AxiForge/);
+  });
+});

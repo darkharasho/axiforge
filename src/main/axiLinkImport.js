@@ -3,14 +3,14 @@
 const https = require("https");
 const http = require("http");
 const crypto = require("node:crypto");
-const { decryptBuild } = require("./buildEncryption.js");
+const { decryptPayload, PayloadVersionError } = require("./buildEncryption.js");
 
 // ── HTTP ──────────────────────────────────────────────────────────────────────
 
 /**
  * GET a URL as text, reporting the status so a 404 on one data base can fall
  * through to the next candidate instead of being decrypted as garbage.
- * @returns {Promise<{status: number, body: string}>}
+ * @returns {Promise<{status: number, body: string, bytes: Buffer}>}
  */
 function httpsGetStatus(url, redirectCount = 0) {
   if (redirectCount > 5) return Promise.reject(new Error("Too many redirects"));
@@ -38,9 +38,12 @@ function httpsGetStatus(url, redirectCount = 0) {
           resolve(httpsGetStatus(new URL(res.headers.location, url).href, redirectCount + 1));
           return;
         }
-        let data = "";
-        res.on("data", (c) => (data += c));
-        res.on("end", () => resolve({ status: res.statusCode, body: data }));
+        const chunks = [];
+        res.on("data", (c) => chunks.push(Buffer.isBuffer(c) ? c : Buffer.from(c)));
+        res.on("end", () => {
+          const bytes = Buffer.concat(chunks);
+          resolve({ status: res.statusCode, body: bytes.toString("utf8"), bytes });
+        });
       }
     );
     req.on("error", reject);
@@ -188,7 +191,7 @@ function toImportedBuild(payload, { name, folderId, gameMode } = {}) {
  * same reason -- baked SVGs the app already has locally.
  */
 const COMP_NOT_MINE = [
-  "id", "createdAt", "updatedAt", "folderId", "sortOrder", "builds", "boonCoverageHtml",
+  "id", "createdAt", "updatedAt", "folderId", "sortOrder", "builds", "members", "v", "boonCoverageHtml",
   "notesClassIcons",
   "publishedSlug", "publishedFileId", "publishedKey", "publishedAt", "publishedOwner",
   "deletedAt", "trashBatchId", "trashRoot",
@@ -283,8 +286,11 @@ async function fetchPayload({ fileId, key, bases, dir }, fetchText, noun = "buil
       continue;
     }
     try {
-      return decryptBuild(res.body.trim(), key);
-    } catch {
+      return decryptPayload(res.bytes ?? res.body, key);
+    } catch (err) {
+      if (err instanceof PayloadVersionError) {
+        throw new Error(`That ${noun} was published by a newer version of AxiForge — update the app to import it.`);
+      }
       // Reached the file but could not open it: the key in the link is wrong or
       // truncated. Trying the next base would only repeat that, so stop here.
       throw new Error(`Couldn't decrypt that ${noun} — the link looks incomplete or was edited.`);
@@ -295,6 +301,26 @@ async function fetchPayload({ fileId, key, bases, dir }, fetchText, noun = "buil
       ? `That ${noun} isn't published anymore (the link's file is gone).`
       : `Couldn't reach that ${noun} (${failures[0] || "no response"}).`
   );
+}
+
+/**
+ * A v2 comp links its builds instead of embedding them. Fetch each member from
+ * the repo of the user who published it and return the same {id: build} map a
+ * v1 payload carries, so toImportedComp handles both. A member that can't be
+ * fetched is left out, which empties its slot the same way an unmappable v1
+ * slot does.
+ */
+async function fetchCompMembers(members, fallbackBases, fetchText) {
+  const entries = await Promise.all(Object.entries(members || {}).map(async ([buildId, m]) => {
+    if (!m?.fileId || !m?.key) return null;
+    const bases = m.owner ? [`https://raw.githubusercontent.com/${m.owner}/axibuilds/main/site/`] : fallbackBases;
+    try {
+      return [buildId, await fetchPayload({ fileId: m.fileId, key: m.key, bases, dir: "builds" }, fetchText)];
+    } catch {
+      return null;
+    }
+  }));
+  return Object.fromEntries(entries.filter(Boolean));
 }
 
 /**
@@ -323,7 +349,10 @@ async function importAxiAny(link, opts = {}, deps = {}) {
   }
 
   if (parsed.kind === "comp") {
-    const payload = await fetchPayload({ ...parsed, dir: "comps" }, fetchText, "comp");
+    let payload = await fetchPayload({ ...parsed, dir: "comps" }, fetchText, "comp");
+    if (payload && payload.v === 2) {
+      payload = { ...payload, builds: await fetchCompMembers(payload.members, parsed.bases, fetchText) };
+    }
     // The link's `n=` param is a slug, not a title — see below.
     const { comp, builds } = toImportedComp(payload, opts, deps.newId);
     return { kind: "comp", comp, builds };
