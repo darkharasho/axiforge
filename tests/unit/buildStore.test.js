@@ -1358,6 +1358,19 @@ describe("BuildStore — publish receipt", () => {
     expect(publishStatus(annotateBuild(out))).toBe("current");
   });
 
+  test("publishedFormat is stamped by markPublished, survives saves and team pulls, and is not content", async () => {
+    const saved = await store.upsertBuild(makeBuild());
+    const stamped = await store.markPublished(saved.id, {
+      publishedFileId: "f1", publishedKey: "k1", publishedHash: buildFingerprint(saved), publishedFormat: "2:x",
+    });
+    expect(stamped.publishedFormat).toBe("2:x");
+    expect(buildFingerprint(stamped)).toBe(buildFingerprint(saved));
+    const renamed = await store.upsertBuild({ ...makeBuild(), id: saved.id, title: "Renamed" });
+    expect(renamed.publishedFormat).toBe("2:x");
+    const pulled = await store.upsertBuild({ ...renamed, publishedFormat: "2:y" });
+    expect(pulled.publishedFormat).toBe("2:y");
+  });
+
   test("an editor save (no receipt in the payload) keeps the receipt and reads stale after an edit", async () => {
     const saved = await store.upsertBuild(makeBuild());
     await store.markPublished(saved.id, { publishedFileId: "f1", publishedKey: "k1", publishedHash: buildFingerprint(saved) });

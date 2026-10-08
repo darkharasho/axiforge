@@ -106,6 +106,7 @@ const NON_VERSIONED_PATHS = [
   "publishedOwner",
   "publishedHash",
   "publishedMemberHashes",
+  "publishedFormat",
   "buildUrl",
   "createdAt",
   "activeLegendSlot",

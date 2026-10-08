@@ -484,6 +484,14 @@ describe("CompStore — publish receipt", () => {
     expect(renamed).toMatchObject({ publishedHash: "h", publishedMemberHashes: { b1: "m1" } });
   });
 
+  test("publishedFormat is stamped by markPublished and kept or taken from a team pull", async () => {
+    const saved = await store.upsertComp(makeComp({ id: "c1" }));
+    const stamped = await store.markPublished("c1", { publishedFileId: "f", publishedKey: "k", publishedHash: compFingerprint(saved), publishedFormat: "2.2:x" });
+    expect(stamped.publishedFormat).toBe("2.2:x");
+    expect((await store.upsertComp({ id: "c1", name: "Renamed" })).publishedFormat).toBe("2.2:x");
+    expect((await store.upsertComp({ id: "c1", publishedFormat: "2.2:y" })).publishedFormat).toBe("2.2:y");
+  });
+
   test("a pulled legacy comp (publishedAt, no hash) does not read stale", async () => {
     const pulled = await store.upsertComp(makeComp({
       id: "c1", publishedFileId: "f", publishedKey: "k", publishedAt: "2020-01-01T00:00:00.000Z",

@@ -98,7 +98,7 @@ function assertFolderTreeFits({ folders, folderId, newParentId, maxDepth = 3 }) 
 }
 
 /**
- * A renderer payload never writes the publish receipt hashes: its object may be
+ * A renderer payload never writes the publish receipt hashes or format stamp: its object may be
  * stale, and an older receipt would regress a newer one. Main writes them
  * (markPublished, team pull); the stores keep the stored values when absent.
  */
@@ -107,6 +107,7 @@ function withoutReceiptHashes(record) {
   const out = { ...record };
   delete out.publishedHash;
   delete out.publishedMemberHashes;
+  delete out.publishedFormat;
   return out;
 }
 

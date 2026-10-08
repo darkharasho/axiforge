@@ -6,7 +6,7 @@
 
 export const PUBLISH_RECEIPT_FIELDS = [
   "publishedSlug", "publishedFileId", "publishedKey", "publishedAt", "publishedOwner",
-  "publishedHash", "publishedMemberHashes",
+  "publishedHash", "publishedMemberHashes", "publishedFormat",
 ];
 
 export function publishStatus(record) {

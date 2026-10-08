@@ -165,7 +165,7 @@ async function resolveShortLink(url, fetchText) {
  */
 const NOT_MINE = [
   "id", "createdAt", "updatedAt", "folderId", "compIds", "pinned", "sortOrder",
-  "publishedSlug", "publishedFileId", "publishedKey", "publishedAt", "publishedOwner",
+  "publishedSlug", "publishedFileId", "publishedKey", "publishedAt", "publishedOwner", "publishedHash", "publishedFormat",
   "deletedAt", "trashBatchId", "trashRoot",
 ];
 
@@ -194,7 +194,7 @@ function toImportedBuild(payload, { name, folderId, gameMode } = {}) {
 const COMP_NOT_MINE = [
   "id", "createdAt", "updatedAt", "folderId", "sortOrder", "builds", "members", "v", "boonCoverageHtml",
   "notesClassIcons",
-  "publishedSlug", "publishedFileId", "publishedKey", "publishedAt", "publishedOwner",
+  "publishedSlug", "publishedFileId", "publishedKey", "publishedAt", "publishedOwner", "publishedHash", "publishedFormat",
   "deletedAt", "trashBatchId", "trashRoot",
 ];
 

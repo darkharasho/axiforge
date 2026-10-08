@@ -220,6 +220,7 @@ class CompStore {
         // deliberately NOT carried: beside a local updatedAt it would make every
         // pulled legacy comp read stale.
         ...(typeof input.publishedHash === "string" && input.publishedHash ? { publishedHash: input.publishedHash } : {}),
+        ...(typeof input.publishedFormat === "string" && input.publishedFormat ? { publishedFormat: input.publishedFormat } : {}),
         ...(normalizeHashMap(input.publishedMemberHashes) ? { publishedMemberHashes: normalizeHashMap(input.publishedMemberHashes) } : {}),
       };
 
@@ -368,7 +369,7 @@ class CompStore {
     });
   }
 
-  async markPublished(id, { publishedFileId, publishedKey, publishedSlug, publishedOwner, boonCoverageHtml, publishedHash, publishedMemberHashes, snapshotUpdatedAt }) {
+  async markPublished(id, { publishedFileId, publishedKey, publishedSlug, publishedOwner, boonCoverageHtml, publishedHash, publishedMemberHashes, publishedFormat, snapshotUpdatedAt }) {
     return this.#enqueue(async () => {
       const comps = await this.#readAllComps();
       const existing = comps.find((c) => c.id === id);
@@ -379,6 +380,7 @@ class CompStore {
       if (publishedOwner) existing.publishedOwner = publishedOwner;
       if (typeof boonCoverageHtml === "string") existing.boonCoverageHtml = boonCoverageHtml;
       if (publishedHash) existing.publishedHash = publishedHash;
+      if (publishedFormat) existing.publishedFormat = publishedFormat;
       const members = normalizeHashMap(publishedMemberHashes);
       if (members) existing.publishedMemberHashes = members;
       existing.publishedAt = snapshotUpdatedAt || existing.updatedAt;

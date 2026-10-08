@@ -4,7 +4,7 @@
 // document or a duplicated record must not carry these over.
 const PUBLISH_RECEIPT_FIELDS = [
   "publishedSlug", "publishedFileId", "publishedKey", "publishedAt", "publishedOwner",
-  "publishedHash", "publishedMemberHashes",
+  "publishedHash", "publishedMemberHashes", "publishedFormat",
 ];
 
 /**

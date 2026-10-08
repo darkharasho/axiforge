@@ -11,6 +11,7 @@ const crypto = require("node:crypto");
 const BUILD_NON_CONTENT = new Set([
   "id", "version", "createdAt", "updatedAt", "buildUrl",
   "publishedSlug", "publishedFileId", "publishedKey", "publishedAt", "publishedOwner", "publishedHash",
+  "publishedFormat",
   "folderId", "compIds", "pinned", "sortOrder",
   "deletedAt", "trashBatchId", "trashRoot", "archivedAt", "archiveBatchId", "archiveRoot",
   "activeLegendSlot", "contentHash",

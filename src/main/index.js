@@ -50,6 +50,7 @@ const { WINDOW_MIN, windowChromeOptions, needsManualResize, resizeBounds } = req
 const { repairOrphans } = require("./orphanRepair");
 const { serializeForPublish, loadCrossProfessionCatalogs } = require("./buildPublish");
 const { serializeCompForPublish, getCompPublishBuildIds, planCompMembers } = require("./compPublish");
+const { formatStamp, planFormatMigrations } = require("./formatMigration");
 const { initAutoUpdate } = require("./autoUpdate");
 const { registerAxicodeFileHandlers } = require("./axicodeFile");
 const { createLocalApi, generateToken, httpError } = require("./localApi");
@@ -1612,6 +1613,95 @@ const readyWork = app.whenReady().then(async () => {
     return result;
   });
 
+  // A build as its published page carries it: catalog data the page needs and
+  // the GW2 chat link, so the SPA makes no API calls.
+  async function enrichBuildForPublish(build) {
+    const [catalog, upgradeCatalog] = await Promise.all([
+      getProfessionCatalog(build.profession, "en", build.gameMode || "pve"),
+      getUpgradeCatalog("en"),
+    ]);
+    const extraCatalogs = await loadCrossProfessionCatalogs(build.notes, build.profession, getProfessionCatalog);
+    const enriched = serializeForPublish(build, catalog, upgradeCatalog, extraCatalogs);
+    try {
+      const { generateChatLink } = require("./buildChatLink.js");
+      enriched.chatLink = await generateChatLink(build);
+    } catch {
+      // Chat link unavailable — SPA will hide the build code widget
+    }
+    return enriched;
+  }
+
+  /**
+   * Add a batch of this owner's old-format pages to a publish's bundle, re-encoded
+   * in the current format under their existing ids and keys (formatMigration.js).
+   * Never fails the publish: a page that can't be redone stays as it is, and
+   * still opens. Returns what to stamp once the upload lands.
+   */
+  async function addFormatMigrations(bundle, owner, excludeIds) {
+    const done = { builds: [], comps: [] };
+    try {
+      const [builds, comps] = await Promise.all([store.listBuilds(), compStore.listComps()]);
+      const appTheme = await store.getSetting("appearance.theme");
+      const themedBuildsOn = await store.getSetting("appearance.themedBuildPages");
+      const plan = planFormatMigrations({
+        builds, comps, owner, excludeIds,
+        memberIdsOf: getCompPublishBuildIds,
+        themeOf: (b) => (themedBuildsOn && b.profession && PROFESSION_THEME_IDS[b.profession]) || appTheme || "",
+      });
+      for (const build of plan.builds) {
+        try {
+          const file = buildEncryptedBuildFile(await enrichBuildForPublish(build), build.publishedFileId, build.publishedKey);
+          bundle[file.filePath] = file.content;
+          done.builds.push(build);
+        } catch (err) {
+          console.warn("[publish] format migration skipped build", build.id, err?.message || err);
+        }
+      }
+      for (const { comp, members } of plan.comps) {
+        const file = buildEncryptedCompFile(serializeCompForPublish(comp, members), comp.publishedFileId, comp.publishedKey);
+        bundle[file.filePath] = file.content;
+        done.comps.push(comp);
+      }
+      if (done.builds.length || done.comps.length) {
+        console.log("[publish] format migration:", { builds: done.builds.length, comps: done.comps.length });
+      }
+    } catch (err) {
+      console.warn("[publish] format migration skipped:", err?.message || err);
+    }
+    return done;
+  }
+
+  // Stamp the pages addFormatMigrations redid, and share the stamp with each
+  // record's team so teammates don't redo them. Only the format moves: the
+  // content receipt was already current.
+  async function stampFormatMigrations({ builds, comps }) {
+    for (const build of builds) {
+      try {
+        const saved = await store.markPublished(build.id, {
+          publishedFormat: formatStamp("build", build.publishedHash),
+          snapshotUpdatedAt: build.publishedAt || build.updatedAt,
+        });
+        const root = saved && await findTeamRoot(saved.folderId);
+        if (root) await safeEnqueue(() => teamSync.enqueue(root.teamId, saved.id, "build", "put"), { type: "build", id: saved.id });
+      } catch (err) {
+        console.warn("[publish] format stamp failed for build", build.id, err?.message || err);
+      }
+    }
+    for (const comp of comps) {
+      try {
+        const saved = await compStore.markPublished(comp.id, {
+          boonCoverageHtml: "",
+          publishedFormat: formatStamp("comp", comp.publishedHash),
+          snapshotUpdatedAt: comp.publishedAt || comp.updatedAt,
+        });
+        const root = saved && await findTeamRoot(saved.folderId);
+        if (root) await safeEnqueue(() => teamSync.enqueue(root.teamId, saved.id, "comp", "put"), { type: "comp", id: saved.id });
+      } catch (err) {
+        console.warn("[publish] format stamp failed for comp", comp.id, err?.message || err);
+      }
+    }
+  }
+
   handle("builds:publish-build", (event, buildId, opts) => enqueuePublish(() => publishBuildImpl(event, buildId, opts || {})));
   async function publishBuildImpl(event, buildId, opts = {}) {
     const sender = event.sender;
@@ -1673,30 +1763,19 @@ const readyWork = app.whenReady().then(async () => {
     progress("encrypt");
     let enrichedBuild;
     try {
-      const [catalog, upgradeCatalog] = await Promise.all([
-        getProfessionCatalog(build.profession, "en", build.gameMode || "pve"),
-        getUpgradeCatalog("en"),
-      ]);
-      const extraCatalogs = await loadCrossProfessionCatalogs(build.notes, build.profession, getProfessionCatalog);
-      enrichedBuild = serializeForPublish(build, catalog, upgradeCatalog, extraCatalogs);
+      enrichedBuild = await enrichBuildForPublish(build);
     } catch (err) {
       throw new Error(
         `Failed to enrich build data: ${err?.message || err}. ` +
         "Check your internet connection and try again."
       );
     }
-    // Pre-compute GW2 chat link so the SPA can display it without API calls
-    try {
-      const { generateChatLink } = require("./buildChatLink.js");
-      enrichedBuild.chatLink = await generateChatLink(build);
-    } catch {
-      // Chat link unavailable — SPA will hide the build code widget
-    }
     const encFile = buildEncryptedBuildFile(enrichedBuild, fileId, encKey);
 
     // Merge SPA bundle + encrypted build + redirect into a single commit
     const redirectFile = buildRedirectFile(fileId, encKey, "b");
     const combinedBundle = { ...spaBundle, [encFile.filePath]: encFile.content, [redirectFile.filePath]: redirectFile.content };
+    const migrated = await addFormatMigrations(combinedBundle, owner, [buildId]);
 
     progress("upload");
     let publishResult;
@@ -1747,8 +1826,10 @@ const readyWork = app.whenReady().then(async () => {
       // Fingerprint of the snapshot that was serialized, so a save made during
       // the upload leaves the build reading out of date.
       ...buildReceipt(build),
+      publishedFormat: formatStamp("build", buildReceipt(build).publishedHash),
     })) || build;
     if (teamRoot) await safeEnqueue(() => teamSync.enqueue(teamRoot.teamId, savedBuild.id, "build", "put"), { type: "build", id: savedBuild.id });
+    await stampFormatMigrations(migrated);
 
     const themedBuilds = await store.getSetting("appearance.themedBuildPages");
     const themeParam = themedBuilds && build.profession && PROFESSION_THEME_IDS[build.profession]
@@ -1850,24 +1931,12 @@ const readyWork = app.whenReady().then(async () => {
       }
       let enrichedBuild;
       try {
-        const [catalog, upgradeCatalog] = await Promise.all([
-          getProfessionCatalog(build.profession, "en", build.gameMode || "pve"),
-          getUpgradeCatalog("en"),
-        ]);
-        const extraCatalogs = await loadCrossProfessionCatalogs(build.notes, build.profession, getProfessionCatalog);
-        enrichedBuild = serializeForPublish(build, catalog, upgradeCatalog, extraCatalogs);
+        enrichedBuild = await enrichBuildForPublish(build);
       } catch (err) {
         throw new Error(
           `Failed to enrich build "${build.title || build.profession}": ${err?.message || err}. ` +
           "Check your internet connection and try again."
         );
-      }
-      // Pre-compute GW2 chat link so the SPA can display it without API calls
-      try {
-        const { generateChatLink } = require("./buildChatLink.js");
-        enrichedBuild.chatLink = await generateChatLink(build);
-      } catch {
-        // Chat link unavailable — SPA will hide the build code widget
       }
 
       const encFile = buildEncryptedBuildFile(enrichedBuild, fileId, key);
@@ -1878,8 +1947,9 @@ const readyWork = app.whenReady().then(async () => {
       // This build's own page was just re-encrypted from `build`, so its receipt
       // moves too. Only a changed record is written (and synced to the team).
       const receipt = buildReceipt(build);
-      if (needsRecord || build.publishedHash !== receipt.publishedHash) {
-        updatedBuildRecords.push({ id: build.id, publishedFileId: fileId, publishedKey: key, publishedSlug: slug, publishedOwner: owner, snapshotUpdatedAt: build.updatedAt, ...receipt });
+      const publishedFormat = formatStamp("build", receipt.publishedHash);
+      if (needsRecord || build.publishedHash !== receipt.publishedHash || build.publishedFormat !== publishedFormat) {
+        updatedBuildRecords.push({ id: build.id, publishedFileId: fileId, publishedKey: key, publishedSlug: slug, publishedOwner: owner, snapshotUpdatedAt: build.updatedAt, ...receipt, publishedFormat });
       }
     }
 
@@ -1894,6 +1964,7 @@ const readyWork = app.whenReady().then(async () => {
     spaBundle[compEncFile.filePath] = compEncFile.content;
     const compRedir = buildRedirectFile(compFileId, compEncKey, "c");
     spaBundle[compRedir.filePath] = compRedir.content;
+    const migrated = await addFormatMigrations(spaBundle, owner, [compId, ...plan.uploads.map((u) => u.build.id)]);
 
     // ── 6. Upload everything in one commit ────────────────────────────
     progress("upload");
@@ -1942,10 +2013,12 @@ const readyWork = app.whenReady().then(async () => {
       // v2 links members, so the comp page can't go stale through them: no
       // member hashes. A member's own staleness shows on the member.
       ...compReceipt(comp, []),
+      publishedFormat: formatStamp("comp", compReceipt(comp, []).publishedHash),
     })) || comp;
 
     // Push comp publish metadata to the team so teammates get the URL.
     if (compTeamRoot) await safeEnqueue(() => teamSync.enqueue(compTeamRoot.teamId, savedComp.id, "comp", "put"), { type: "comp", id: savedComp.id });
+    await stampFormatMigrations(migrated);
     // Only for a publish that went to the PERSONAL target. onboarding is this
     // machine's own publishing setup — its repo, its Pages build, its chosen
     // owner — so stamping a team publish onto it would repoint the personal

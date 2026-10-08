@@ -212,7 +212,7 @@ describe("teamGuards receipt helpers", () => {
   const { withoutReceiptHashes, memberStampTargets } = require("../../src/main/teamGuards");
 
   test("withoutReceiptHashes drops only the hash receipt", () => {
-    const input = { id: "b", publishedFileId: "f", publishedHash: "h", publishedMemberHashes: { a: "1" } };
+    const input = { id: "b", publishedFileId: "f", publishedHash: "h", publishedMemberHashes: { a: "1" }, publishedFormat: "2:h" };
     expect(withoutReceiptHashes(input)).toEqual({ id: "b", publishedFileId: "f" });
     expect(input.publishedHash).toBe("h");
   });

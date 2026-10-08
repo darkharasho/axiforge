@@ -79,12 +79,13 @@ describe("withoutPublishReceipt", () => {
     const rec = {
       id: "b1", title: "T", publishedSlug: "s", publishedFileId: "f", publishedKey: "k",
       publishedAt: "t", publishedOwner: "o", publishedHash: "h", publishedMemberHashes: { b: "m" },
+      publishedFormat: "2:h",
     };
     expect(withoutPublishReceipt(rec)).toEqual({ id: "b1", title: "T" });
     expect(rec.publishedHash).toBe("h");
     expect(PUBLISH_RECEIPT_FIELDS).toEqual([
       "publishedSlug", "publishedFileId", "publishedKey", "publishedAt", "publishedOwner",
-      "publishedHash", "publishedMemberHashes",
+      "publishedHash", "publishedMemberHashes", "publishedFormat",
     ]);
   });
 });
