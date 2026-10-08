@@ -464,59 +464,6 @@ label {
   margin-top: 8px;
 }
 
-/* ── Publish result — compact inline row ──────────────────────────── */
-
-.publish-result:empty { display: none; }
-
-.publish-result {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 1;
-  min-width: 0;
-}
-
-.publish-result__label {
-  color: var(--axi-accent);
-  /* No scale step: same case as .publish-status. */
-  font-weight: 600;
-  font-size: 0.72rem;
-  flex-shrink: 0;
-}
-
-.publish-result__url {
-  min-width: 80px;
-  max-width: 200px;
-  border: var(--axi-border-control) solid var(--axi-ink-line);
-  background: var(--axi-well-fill);
-  color: var(--axi-accent);
-  padding: 2px 6px;
-  /* No scale step: same case as .publish-status, and a font: shorthand would
-     reset the mono family this URL field needs. */
-  font-size: 0.68rem;
-  font-family: var(--axi-mono);
-  cursor: text;
-  outline: none;
-}
-.publish-result__url:focus { border-color: var(--axi-accent); }
-
-.publish-result__copy,
-.publish-result__preview {
-  flex-shrink: 0;
-  white-space: nowrap;
-  /* No scale step: same case as .publish-status -- these sit on the same
-     inline row and have to match it. */
-  font-size: 0.68rem;
-  padding: 2px 6px;
-}
-
-.publish-result__live-status {
-  /* No scale step: same case as .publish-status. */
-  font-size: 0.68rem;
-  color: var(--axi-text-faint);
-  flex-shrink: 0;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .publish-ticker__strip { transition: none; }
   .editor-share-dropdown__menu { animation: none; }

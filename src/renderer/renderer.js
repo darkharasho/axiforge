@@ -1256,8 +1256,8 @@ function navigateToPage(page) {
   }
   // Redraw spec connectors when editor page becomes visible (they need layout dimensions)
   if (page === "editor") {
-    // Restore publish ticker for the current editor build (if any active publish)
-    syncPublishStatus(state.editor.id);
+    // Clear the previous build's status message
+    syncPublishStatus();
     requestAnimationFrame(() => {
       document.querySelectorAll(".spec-card__body").forEach((body) => drawSpecConnector(body));
     });
