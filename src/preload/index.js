@@ -104,7 +104,7 @@ contextBridge.exposeInMainWorld("desktopApi", {
   deleteComps: (ids) => ipcRenderer.invoke("comps:delete-batch", ids),
   addTagsToComps: (ids, tags) => ipcRenderer.invoke("comps:add-tags", ids, tags),
   removeTagsFromComps: (ids, tags) => ipcRenderer.invoke("comps:remove-tags", ids, tags),
-  publishComp: (compId, html, opts) => ipcRenderer.invoke("comps:publish-comp", compId, html, opts || {}),
+  publishComp: (compId, opts) => ipcRenderer.invoke("comps:publish-comp", compId, opts || {}),
   getCompPublishedUrl: (compId) => ipcRenderer.invoke("comps:get-published-url", compId),
 
   // Build library operations

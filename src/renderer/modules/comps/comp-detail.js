@@ -1415,16 +1415,8 @@ function bindDetailEvents(container, comp) {
     try {
       state.publishProgress[comp.id] = { currentStep: "saving" };
       showPublishProgress(comp.id);
-      // Pre-compute boon coverage HTML to include in the published payload
-      let boonCoverageHtml = "";
-      try {
-        const covData = await computeCompPartyCoverage(
-          comp, state.builds, state.catalogCache, _callbacks.getCatalog, state.upgradeCatalog
-        );
-        boonCoverageHtml = buildPartyCoverageHTML(covData);
-      } catch { /* skip if computation fails */ }
       const result = await publishWithOwnerCheck(
-        (opts) => window.desktopApi.publishComp(comp.id, boonCoverageHtml, opts),
+        (opts) => window.desktopApi.publishComp(comp.id, opts),
         (login) => showConfirmModal({ title: "Publish under your account?", body: publishedByOtherBody(login), confirmLabel: "Publish anyway", cancelLabel: "Cancel" }),
       );
       if (!result) { clearPublishProgress(comp.id); return; }

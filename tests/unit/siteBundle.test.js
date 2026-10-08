@@ -102,16 +102,20 @@ describe("getSiteDistDir — packaged path", () => {
 });
 
 describe("buildEncryptedBuildFile", () => {
-  test("returns filePath and content", () => {
-    const result = buildEncryptedBuildFile({ title: "Test" }, "abc12345", "someBase64urlKey_that_is_43_chars_longAAAAA");
+  const { decryptPayload, generateEncryptionKey } = require("../../src/main/buildEncryption");
+  const key = generateEncryptionKey();
+
+  test("writes a v2 Buffer at the build path", () => {
+    const result = buildEncryptedBuildFile({ title: "Test" }, "abc12345", key);
     expect(result.filePath).toBe("site/builds/abc12345.enc");
-    expect(typeof result.content).toBe("string");
-    expect(result.content.length).toBeGreaterThan(0);
+    expect(Buffer.isBuffer(result.content)).toBe(true);
+    expect([...result.content.subarray(0, 4)]).toEqual([0x00, 0x41, 0x58, 0x02]);
+    expect(decryptPayload(result.content, key)).toEqual({ title: "Test" });
   });
 
   test("content does not contain plaintext", () => {
-    const result = buildEncryptedBuildFile({ title: "My Secret Build" }, "abc12345", "someBase64urlKey_that_is_43_chars_longAAAAA");
-    expect(result.content).not.toContain("My Secret Build");
+    const result = buildEncryptedBuildFile({ title: "My Secret Build" }, "abc12345", key);
+    expect(result.content.includes(Buffer.from("My Secret Build"))).toBe(false);
   });
 });
 

@@ -81,16 +81,6 @@ function compReceipt(comp, memberBuilds) {
   return { publishedHash: compFingerprint(comp), publishedMemberHashes: memberHashes(memberBuilds) };
 }
 
-/**
- * Receipt for a comp a build publish re-uploaded, or null when that upload left
- * a member out (it failed to enrich): the page is incomplete, so the comp must
- * keep reading out of date.
- */
-function compReceiptAfterRepublish(comp, includedBuilds, skippedIds) {
-  if (skippedIds && skippedIds.length) return null;
-  return compReceipt(comp, includedBuilds);
-}
-
 function annotateBuild(build) {
   return build ? { ...build, contentHash: buildFingerprint(build) } : build;
 }
@@ -126,7 +116,6 @@ module.exports = {
   memberHashes,
   buildReceipt,
   compReceipt,
-  compReceiptAfterRepublish,
   annotateBuild,
   annotateComp,
   annotateSyncEvent,

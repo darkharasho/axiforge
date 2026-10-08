@@ -2,7 +2,7 @@
 
 const {
   buildFingerprint, compFingerprint, memberHashes, buildReceipt, compReceipt,
-  compReceiptAfterRepublish, annotateBuild, annotateComp, annotateSyncEvent,
+  annotateBuild, annotateComp, annotateSyncEvent,
 } = require("../../src/main/publishFingerprint");
 
 function build(over = {}) {
@@ -105,11 +105,6 @@ describe("receipts", () => {
       publishedMemberHashes: { b1: buildFingerprint(build()), b2: buildFingerprint(b2) },
     });
     expect(memberHashes([build()])).toEqual({ b1: buildFingerprint(build()) });
-  });
-
-  test("a re-upload that left a member out yields no receipt", () => {
-    expect(compReceiptAfterRepublish(comp(), [build()], ["b2"])).toBeNull();
-    expect(compReceiptAfterRepublish(comp(), [build()], [])).toEqual(compReceipt(comp(), [build()]));
   });
 });
 

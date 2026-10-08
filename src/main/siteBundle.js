@@ -3,7 +3,7 @@
 const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
-const { encryptBuild } = require("./buildEncryption");
+const { encryptPayload } = require("./buildEncryption");
 
 const SITE_VERSION_PATH = "site/site-version";
 
@@ -67,7 +67,7 @@ function walkDir(dir, root, files) {
 }
 
 function buildEncryptedBuildFile(buildData, fileId, base64urlKey) {
-  const content = encryptBuild(buildData, base64urlKey);
+  const content = encryptPayload(buildData, base64urlKey);
   return {
     filePath: `site/builds/${fileId}.enc`,
     content,
@@ -75,7 +75,7 @@ function buildEncryptedBuildFile(buildData, fileId, base64urlKey) {
 }
 
 function buildEncryptedCompFile(compData, fileId, base64urlKey) {
-  const content = encryptBuild(compData, base64urlKey);
+  const content = encryptPayload(compData, base64urlKey);
   return {
     filePath: `site/comps/${fileId}.enc`,
     content,

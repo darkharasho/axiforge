@@ -303,8 +303,8 @@ describe("local API — comps endpoints", () => {
       listComps: () => compStore.listComps(),
       saveComp: (c) => compStore.upsertComp(c),
       deleteComp: (id) => compStore.deleteComp(id),
-      publishComp: async (id, boonCoverageHtml) => {
-        publishedComps.push({ id, boonCoverageHtml });
+      publishComp: async (id) => {
+        publishedComps.push({ id });
         return { pagesUrl: `https://example.test/?c=${id}`, slug: "comp", fileId: "c1", changed: true };
       },
       shareCompToDiscord: async (id, webhookIds) => {
@@ -359,21 +359,19 @@ describe("local API — comps endpoints", () => {
     expect(await compStore.listComps()).toHaveLength(0);
   });
 
-  test("POST /comps/:id/publish forwards optional boonCoverageHtml", async () => {
+  test("POST /comps/:id/publish publishes by id; any body is ignored", async () => {
     const created = await compStore.upsertComp({ name: "Pub Comp" });
-    const res = await req(port, token, "POST", `/comps/${created.id}/publish`, {
-      boonCoverageHtml: "<table></table>",
-    });
+    const res = await req(port, token, "POST", `/comps/${created.id}/publish`, { boonCoverageHtml: "<table></table>" });
     expect(res.status).toBe(200);
     expect((await res.json()).pagesUrl).toContain(created.id);
-    expect(publishedComps).toEqual([{ id: created.id, boonCoverageHtml: "<table></table>" }]);
+    expect(publishedComps).toEqual([{ id: created.id }]);
   });
 
   test("POST /comps/:id/publish works without a body", async () => {
     const created = await compStore.upsertComp({ name: "Pub Comp 2" });
     const res = await req(port, token, "POST", `/comps/${created.id}/publish`);
     expect(res.status).toBe(200);
-    expect(publishedComps[0].boonCoverageHtml).toBeUndefined();
+    expect(publishedComps).toEqual([{ id: created.id }]);
   });
 
   test("GET /comps/:id/plaintext returns { text }", async () => {

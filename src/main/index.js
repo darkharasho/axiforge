@@ -49,7 +49,7 @@ const { snapshotDaily } = require("./jsonFile");
 const { WINDOW_MIN, windowChromeOptions, needsManualResize, resizeBounds } = require("../shared/windowChrome");
 const { repairOrphans } = require("./orphanRepair");
 const { serializeForPublish, loadCrossProfessionCatalogs } = require("./buildPublish");
-const { serializeCompForPublish, getCompPublishBuildIds } = require("./compPublish");
+const { serializeCompForPublish, getCompPublishBuildIds, planCompMembers } = require("./compPublish");
 const { initAutoUpdate } = require("./autoUpdate");
 const { registerAxicodeFileHandlers } = require("./axicodeFile");
 const { createLocalApi, generateToken, httpError } = require("./localApi");
@@ -59,12 +59,12 @@ const { startAccess } = require("./access");
 const { shareRejectionReason } = require("./shareGate");
 const { withoutPublishReceipt } = require("../shared/publishState");
 const {
-  annotateBuild, annotateComp, annotateSyncEvent, buildReceipt, compReceipt, compReceiptAfterRepublish,
+  annotateBuild, annotateComp, annotateSyncEvent, buildReceipt, compReceipt,
 } = require("./publishFingerprint");
 const { backfillPublishReceipts } = require("./publishBaseline");
 const { shortUrl, publishedOwnerFor } = require("./shortUrl");
 const { resolvePublishTarget } = require("./publishTarget");
-const { assertCanMoveOutOfTeam, assertFolderTreeFits, decideCompBuildPublish, withoutReceiptHashes, memberStampTargets } = require("./teamGuards");
+const { assertCanMoveOutOfTeam, assertFolderTreeFits, withoutReceiptHashes, memberStampTargets } = require("./teamGuards");
 
 const { PROFESSION_ACCENTS: PROFESSION_THEME_IDS } = require("./accents");
 
@@ -1674,7 +1674,7 @@ const readyWork = app.whenReady().then(async () => {
     let enrichedBuild;
     try {
       const [catalog, upgradeCatalog] = await Promise.all([
-        getProfessionCatalog(build.profession, "en"),
+        getProfessionCatalog(build.profession, "en", build.gameMode || "pve"),
         getUpgradeCatalog("en"),
       ]);
       const extraCatalogs = await loadCrossProfessionCatalogs(build.notes, build.profession, getProfessionCatalog);
@@ -1697,75 +1697,6 @@ const readyWork = app.whenReady().then(async () => {
     // Merge SPA bundle + encrypted build + redirect into a single commit
     const redirectFile = buildRedirectFile(fileId, encKey, "b");
     const combinedBundle = { ...spaBundle, [encFile.filePath]: encFile.content, [redirectFile.filePath]: redirectFile.content };
-
-    // Re-encrypt any published comps that contain this build so their
-    // embedded build data stays in sync (notes, traits, equipment, etc.)
-    const allComps = await compStore.listComps();
-    const affectedComps = allComps.filter(
-      (c) => c.publishedFileId && (c.buildIds || []).includes(buildId)
-        // Only comps whose page lives in the repo this publish uploads to. A comp
-        // published under another owner would get a dead copy here and a receipt
-        // for a page that never changed.
-        && (!c.publishedOwner || c.publishedOwner === owner)
-    );
-    // Receipts for the comps re-uploaded below, stamped once the upload is live.
-    const compRestamps = [];
-    if (affectedComps.length) {
-      const allBuilds = await store.listBuilds();
-      const themedBuildsOn = await store.getSetting("appearance.themedBuildPages");
-      const compTheme = await store.getSetting("appearance.theme");
-
-      for (const comp of affectedComps) {
-        const compBuildIds = new Set(getCompPublishBuildIds(comp));
-        const compBuilds = allBuilds.filter((b) => compBuildIds.has(b.id));
-        const buildsMap = {};
-        // The member records that went into this comp's payload, and the ones
-        // that failed to enrich and were left out.
-        const included = [];
-        const skippedIds = [];
-
-        for (const cb of compBuilds) {
-          let enriched;
-          if (cb.id === buildId) {
-            // Reuse the enriched build we already computed above
-            enriched = { ...enrichedBuild };
-          } else {
-            try {
-              const [cat, upCat] = await Promise.all([
-                getProfessionCatalog(cb.profession, "en"),
-                getUpgradeCatalog("en"),
-              ]);
-              const cbExtras = await loadCrossProfessionCatalogs(cb.notes, cb.profession, getProfessionCatalog);
-              enriched = serializeForPublish(cb, cat, upCat, cbExtras);
-            } catch {
-              skippedIds.push(cb.id);
-              continue; // Skip builds that fail to enrich — don't block the publish
-            }
-            try {
-              const { generateChatLink } = require("./buildChatLink.js");
-              enriched.chatLink = await generateChatLink(cb);
-            } catch { /* */ }
-          }
-
-          const cbFileId = cb.publishedFileId || generateFileId();
-          const cbEncKey = cb.publishedKey || generateEncryptionKey();
-          const cbSlug = slugifyBuildName(cb.title);
-          const buildTheme = themedBuildsOn && cb.profession && PROFESSION_THEME_IDS[cb.profession]
-            ? PROFESSION_THEME_IDS[cb.profession]
-            : compTheme;
-          const cbSpaUrl = `https://${owner}.github.io/${TARGET_REPO}/?n=${encodeURIComponent(cbSlug)}&b=${cbFileId}.${cbEncKey}${buildTheme ? `&t=${buildTheme}` : ""}`;
-          buildsMap[cb.id] = { ...enriched, spaUrl: cbSpaUrl };
-          // The published build is the snapshot serialized above, not the re-read.
-          included.push(cb.id === buildId ? build : cb);
-        }
-
-        const compPayload = serializeCompForPublish(comp, buildsMap);
-        if (comp.boonCoverageHtml) compPayload.boonCoverageHtml = comp.boonCoverageHtml;
-        const compEncFile = buildEncryptedCompFile(compPayload, comp.publishedFileId, comp.publishedKey);
-        combinedBundle[compEncFile.filePath] = compEncFile.content;
-        compRestamps.push({ comp, receipt: compReceiptAfterRepublish(comp, included, skippedIds) });
-      }
-    }
 
     progress("upload");
     let publishResult;
@@ -1819,16 +1750,6 @@ const readyWork = app.whenReady().then(async () => {
     })) || build;
     if (teamRoot) await safeEnqueue(() => teamSync.enqueue(teamRoot.teamId, savedBuild.id, "build", "put"), { type: "build", id: savedBuild.id });
 
-    // The comps re-uploaded above now carry this build, so their receipts move
-    // with it — except a comp whose upload left a member out (it stays out of
-    // date until it is published in full).
-    for (const { comp, receipt } of compRestamps) {
-      if (!receipt) continue;
-      const restamped = await compStore.markPublished(comp.id, { ...receipt, snapshotUpdatedAt: comp.updatedAt });
-      const compRoot = restamped ? await findTeamRoot(restamped.folderId) : null;
-      if (compRoot) await safeEnqueue(() => teamSync.enqueue(compRoot.teamId, restamped.id, "comp", "put"), { type: "comp", id: restamped.id });
-    }
-
     const themedBuilds = await store.getSetting("appearance.themedBuildPages");
     const themeParam = themedBuilds && build.profession && PROFESSION_THEME_IDS[build.profession]
       ? PROFESSION_THEME_IDS[build.profession]
@@ -1866,8 +1787,8 @@ const readyWork = app.whenReady().then(async () => {
     };
   }
 
-  handle("comps:publish-comp", (event, compId, boonCoverageHtml, opts) => enqueuePublish(() => publishCompImpl(event, compId, boonCoverageHtml, opts || {})));
-  async function publishCompImpl(event, compId, boonCoverageHtml, opts = {}) {
+  handle("comps:publish-comp", (event, compId, opts) => enqueuePublish(() => publishCompImpl(event, compId, opts || {})));
+  async function publishCompImpl(event, compId, opts = {}) {
     const sender = event.sender;
     const progress = (step) => sender.send("publish-progress", { id: compId, step });
 
@@ -1878,8 +1799,6 @@ const readyWork = app.whenReady().then(async () => {
     const branch = auth?.onboarding?.branch || "main";
 
     // ── 1. Load comp + its builds ──────────────────────────────────────
-    const compTheme = await store.getSetting("appearance.theme");
-    const themedBuildsOn = await store.getSetting("appearance.themedBuildPages");
     progress("loading");
     const allComps = await compStore.listComps();
     const comp = allComps.find((c) => c.id === compId);
@@ -1909,27 +1828,25 @@ const readyWork = app.whenReady().then(async () => {
     progress("site");
     const spaBundle = buildSpaBundle();
 
-    // ── 4. Publish unpublished builds, enrich all builds ──────────────
-    const buildsMap = {};
+    // ── 4. Plan members: link teammates' copies, upload our own ────────
+    const plan = planCompMembers({
+      compBuilds, owner, force: opts.force,
+      slugOf: (b) => slugifyBuildName(b.title),
+      newFileId: generateFileId,
+      newKey: generateEncryptionKey,
+    });
+    const skippedForeignBuilds = plan.foreign;
     const updatedBuildRecords = [];
-    // Builds already published by a teammate: linked, never re-uploaded (see
-    // decideCompBuildPublish). Surfaced so the UI can explain the split.
-    const skippedForeignBuilds = [];
-    const unpublishedBuilds = compBuilds.filter((b) => !b.publishedFileId);
+    const newUploads = plan.uploads.filter((u) => !u.build.publishedFileId);
 
-    for (let i = 0; i < compBuilds.length; i++) {
-      const build = compBuilds[i];
-
+    for (const { build, fileId, key, slug, needsRecord } of plan.uploads) {
       if (!build.publishedFileId) {
-        const unpubIdx = unpublishedBuilds.indexOf(build);
-        progress(`builds:${unpubIdx + 1}:${unpublishedBuilds.length}:${build.title || build.profession || "Build"}`);
+        progress(`builds:${newUploads.findIndex((u) => u.build === build) + 1}:${newUploads.length}:${build.title || build.profession || "Build"}`);
       }
-
-      // Enrich build — required for the SPA to display skills and traits
       let enrichedBuild;
       try {
         const [catalog, upgradeCatalog] = await Promise.all([
-          getProfessionCatalog(build.profession, "en"),
+          getProfessionCatalog(build.profession, "en", build.gameMode || "pve"),
           getUpgradeCatalog("en"),
         ]);
         const extraCatalogs = await loadCrossProfessionCatalogs(build.notes, build.profession, getProfessionCatalog);
@@ -1948,45 +1865,17 @@ const readyWork = app.whenReady().then(async () => {
         // Chat link unavailable — SPA will hide the build code widget
       }
 
-      const slug = slugifyBuildName(build.title);
-      const buildTheme = themedBuildsOn && build.profession && PROFESSION_THEME_IDS[build.profession]
-        ? PROFESSION_THEME_IDS[build.profession]
-        : compTheme;
-      const { foreignOwner, needsRecord } = decideCompBuildPublish({ build, owner, force: opts.force, slug });
-
-      if (foreignOwner) {
-        // Keep the existing URL stable: link to the other user's published copy
-        // rather than re-uploading the bytes under our owner (which would leave
-        // publishedOwner pointing at a copy we no longer maintain).
-        const fSlug = build.publishedSlug || slug;
-        buildsMap[build.id] = {
-          ...enrichedBuild,
-          spaUrl: `https://${foreignOwner}.github.io/${TARGET_REPO}/?n=${encodeURIComponent(fSlug)}&b=${build.publishedFileId}.${build.publishedKey}${buildTheme ? `&t=${buildTheme}` : ""}`,
-        };
-        skippedForeignBuilds.push({ id: build.id, title: build.title || build.profession || "Build", owner: foreignOwner });
-        continue;
-      }
-
-      const fileId = build.publishedFileId || generateFileId();
-      const encKey = build.publishedKey || generateEncryptionKey();
-      const spaUrl = `https://${owner}.github.io/${TARGET_REPO}/?n=${encodeURIComponent(slug)}&b=${fileId}.${encKey}${buildTheme ? `&t=${buildTheme}` : ""}`;
-
-      // Always re-encrypt with latest enriched data (traits may have been fixed)
-      const encFile = buildEncryptedBuildFile(enrichedBuild, fileId, encKey);
+      const encFile = buildEncryptedBuildFile(enrichedBuild, fileId, key);
       spaBundle[encFile.filePath] = encFile.content;
+      const redir = buildRedirectFile(fileId, key, "b");
+      spaBundle[redir.filePath] = redir.content;
 
       // This build's own page was just re-encrypted from `build`, so its receipt
       // moves too. Only a changed record is written (and synced to the team).
       const receipt = buildReceipt(build);
       if (needsRecord || build.publishedHash !== receipt.publishedHash) {
-        updatedBuildRecords.push({ id: build.id, publishedFileId: fileId, publishedKey: encKey, publishedSlug: slug, publishedOwner: owner, snapshotUpdatedAt: build.updatedAt, ...receipt });
+        updatedBuildRecords.push({ id: build.id, publishedFileId: fileId, publishedKey: key, publishedSlug: slug, publishedOwner: owner, snapshotUpdatedAt: build.updatedAt, ...receipt });
       }
-
-      // Always add redirect file (idempotent — overwrites if already exists)
-      const redir = buildRedirectFile(fileId, encKey, "b");
-      spaBundle[redir.filePath] = redir.content;
-
-      buildsMap[build.id] = { ...enrichedBuild, spaUrl };
     }
 
     // ── 5. Serialize + encrypt comp ────────────────────────────────────
@@ -1995,8 +1884,7 @@ const readyWork = app.whenReady().then(async () => {
     const compEncKey = comp.publishedKey || generateEncryptionKey();
     const compSlug = slugifyBuildName(comp.name);
 
-    const compPayload = serializeCompForPublish(comp, buildsMap);
-    if (boonCoverageHtml) compPayload.boonCoverageHtml = boonCoverageHtml;
+    const compPayload = serializeCompForPublish(comp, plan.members);
     const compEncFile = buildEncryptedCompFile(compPayload, compFileId, compEncKey);
     spaBundle[compEncFile.filePath] = compEncFile.content;
     const compRedir = buildRedirectFile(compFileId, compEncKey, "c");
@@ -2043,11 +1931,12 @@ const readyWork = app.whenReady().then(async () => {
       publishedKey: compEncKey,
       publishedSlug: compSlug,
       publishedOwner: owner,
-      boonCoverageHtml: boonCoverageHtml || comp.boonCoverageHtml || "",
+      // Clear the pre-v2 coverage snapshot; v2 pages compute coverage live.
+      boonCoverageHtml: "",
       snapshotUpdatedAt: comp.updatedAt,
-      // Every member is in buildsMap (enrichment failure throws above). Linked
-      // teammate copies are fingerprinted from the local, synced record.
-      ...compReceipt(comp, compBuilds),
+      // v2 links members, so the comp page can't go stale through them: no
+      // member hashes. A member's own staleness shows on the member.
+      ...compReceipt(comp, []),
     })) || comp;
 
     // Push comp publish metadata to the team so teammates get the URL.
@@ -2735,8 +2624,7 @@ const readyWork = app.whenReady().then(async () => {
       listComps: () => invokeLocal("comps:list"),
       saveComp: (comp) => asHttpResult(invokeLocal("comps:save", comp)),
       deleteComp: (id) => asHttpResult(invokeLocal("comps:delete", id)),
-      publishComp: (id, boonCoverageHtml) =>
-        asHttpResult(invokeLocal("comps:publish-comp", id, boonCoverageHtml)),
+      publishComp: (id) => asHttpResult(invokeLocal("comps:publish-comp", id)),
       shareCompToDiscord: (id, webhookIds) =>
         asHttpResult(invokeLocal("discord:share-comp", id, webhookIds), { badInput: true }),
       compPlaintext: (id) => asHttpResult(invokeLocal("comps:generate-plaintext", id)),

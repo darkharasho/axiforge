@@ -209,12 +209,12 @@ function buildRoutes({ version, ops }) {
     },
     {
       method: "POST", pattern: "/comps/:id/publish",
-      handler: async ({ params, body }) => {
+      handler: async ({ params }) => {
         const comps = await ops.listComps();
         if (!comps.some((c) => c.id === params.id)) {
           throw httpError(404, `Comp not found: ${params.id}`);
         }
-        return ops.publishComp(params.id, body?.boonCoverageHtml);
+        return ops.publishComp(params.id);
       },
     },
     {
