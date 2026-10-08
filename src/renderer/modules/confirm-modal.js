@@ -5,6 +5,7 @@ let _overlay = null;
 let _el = {};
 let _escHandler = null;
 let _resolve = null;
+let _idleWaiters = [];
 
 export function initConfirmModal() {
   if (typeof document === "undefined") return;
@@ -35,9 +36,9 @@ export function initConfirmModal() {
     confirm: document.getElementById("cm-confirm"),
   };
 
-  _el.close.addEventListener("click", () => _dismiss(false));
-  _el.cancel.addEventListener("click", () => _dismiss(false));
-  _el.confirm.addEventListener("click", () => _dismiss(true));
+  _el.close.addEventListener("click", () => _dismiss("close"));
+  _el.cancel.addEventListener("click", () => _dismiss("cancel"));
+  _el.confirm.addEventListener("click", () => _dismiss("confirm"));
 }
 
 /**
@@ -47,13 +48,20 @@ export function initConfirmModal() {
  * @param {string} options.body    - HTML string for the body content
  * @param {string} [options.confirmLabel="Confirm"] - Confirm button text
  * @param {string} [options.cancelLabel="Cancel"]   - Cancel button text
- * @returns {Promise<boolean>} true if confirmed, false if cancelled
+ * @param {boolean} [options.detailed=false] - resolve with how the modal ended
+ *   instead of a boolean: "confirm", "cancel" (the cancel button), "close"
+ *   (Esc or the X) or "displaced" (another confirm replaced it)
+ * @returns {Promise<boolean|string>} true if confirmed, false otherwise (or the outcome when detailed)
  */
-export function showConfirmModal({ title, body, confirmLabel = "Confirm", cancelLabel = "Cancel" }) {
-  if (!_overlay) return Promise.resolve(false);
+export function showConfirmModal({ title, body, confirmLabel = "Confirm", cancelLabel = "Cancel", detailed = false }) {
+  if (!_overlay) return Promise.resolve(detailed ? "close" : false);
 
-  // If already open, dismiss the previous one as cancelled
-  if (_resolve) _resolve(false);
+  // If already open, the previous one ends as displaced (false for boolean callers)
+  if (_resolve) {
+    const previous = _resolve;
+    _resolve = null;
+    previous("displaced");
+  }
 
   _el.title.textContent = title;
   _el.body.innerHTML = body;
@@ -61,10 +69,31 @@ export function showConfirmModal({ title, body, confirmLabel = "Confirm", cancel
   _el.cancel.textContent = cancelLabel;
 
   _overlay.classList.remove("confirm-modal-overlay--hidden");
-  _escHandler = (e) => { if (e.key === "Escape") _dismiss(false); };
+  if (_escHandler) document.removeEventListener("keydown", _escHandler);
+  _escHandler = (e) => { if (e.key === "Escape") _dismiss("close"); };
   document.addEventListener("keydown", _escHandler);
 
-  return new Promise((resolve) => { _resolve = resolve; });
+  return new Promise((resolve) => {
+    _resolve = (outcome) => resolve(detailed ? outcome : outcome === "confirm");
+  });
+}
+
+export function isConfirmModalOpen() {
+  return Boolean(_resolve);
+}
+
+/**
+ * Resolves once no confirm is open. Checked again a tick after each close, so
+ * a caller that opens a follow-up confirm from its own answer goes first.
+ */
+export function whenConfirmModalIdle() {
+  return new Promise((resolve) => {
+    const check = () => {
+      if (_resolve) _idleWaiters.push(() => setTimeout(check, 0));
+      else resolve();
+    };
+    check();
+  });
 }
 
 function _dismiss(result) {
@@ -79,4 +108,7 @@ function _dismiss(result) {
     _resolve = null;
     resolve(result);
   }
+  const waiters = _idleWaiters;
+  _idleWaiters = [];
+  for (const wake of waiters) wake();
 }

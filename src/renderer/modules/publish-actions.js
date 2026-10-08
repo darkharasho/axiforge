@@ -1,7 +1,7 @@
 import { state } from "./state.js";
 import { openSettingsModal } from "./settings-modal.js";
 import { signInAndRefresh } from "./render-pages.js";
-import { showConfirmModal } from "./confirm-modal.js";
+import { showConfirmModal, whenConfirmModalIdle } from "./confirm-modal.js";
 import { showToast } from "./library/toast.js";
 import { askOwnerChoice } from "./publish-prompts.js";
 import { queueItemFor, connectionFrom } from "./publish-button.js";
@@ -41,7 +41,7 @@ export function publishButtonDeps() {
     api: window.desktopApi,
     openSetup: openPublishingSetup,
     signIn: signInAndRefresh,
-    askOwnerChoice: (kind, id, owner) => askOwnerChoice(kind, id, owner, { confirm: showConfirmModal, api: window.desktopApi }),
+    askOwnerChoice: (kind, id, owner) => askOwnerChoice(kind, id, owner, { confirm: showConfirmModal, api: window.desktopApi, whenIdle: whenConfirmModalIdle }),
     notify: (message) => showToast(message),
   };
 }

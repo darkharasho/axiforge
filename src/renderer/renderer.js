@@ -57,7 +57,7 @@ import { resetWikiResolution } from "./modules/wiki-updates.js";
 import { initWikiModal, openWikiModal } from "./modules/wiki-modal.js";
 import { initWhatsNewModal, maybeAutoOpenWhatsNew } from "./modules/whats-new-modal.js";
 import { initDetailModal, openDetailModal } from "./modules/detail-modal.js";
-import { initConfirmModal, showConfirmModal } from "./modules/confirm-modal.js";
+import { initConfirmModal, showConfirmModal, whenConfirmModalIdle } from "./modules/confirm-modal.js";
 import { initChoiceModal, showChoiceModal } from "./modules/choice-modal.js";
 import { loadTeamState, seedSyncStatusFromOutbox, teamRootFor } from "./modules/teams.js";
 import { applyBadge } from "./modules/sync-status.js";
@@ -1156,7 +1156,7 @@ async function refreshOnboardingStatus() {
 
   // Once publishing is connected (startup or right after setup), offer to
   // publish the never-published library, once.
-  maybeShowBulkPublishPrompt({ api: window.desktopApi, onboarding: state.onboarding, confirm: showConfirmModal }).catch(showError);
+  maybeShowBulkPublishPrompt({ api: window.desktopApi, onboarding: state.onboarding, confirm: showConfirmModal, whenIdle: whenConfirmModalIdle }).catch(showError);
 }
 
 // ── Window controls ──────────────────────────────────────────────────────────
@@ -1656,7 +1656,7 @@ function wireEvents() {
     window.dispatchEvent(new CustomEvent("axi:publish-status"));
   });
   window.desktopApi.onPublishOwnerChoice(({ kind, id, owner }) => {
-    askOwnerChoice(kind, id, owner, { confirm: showConfirmModal, api: window.desktopApi }).catch(showError);
+    askOwnerChoice(kind, id, owner, { confirm: showConfirmModal, api: window.desktopApi, whenIdle: whenConfirmModalIdle }).catch(showError);
   });
   window.desktopApi.getPublishSnapshot().then(applyPublishSnapshot).then(() => renderEditorMeta()).catch(() => {});
 
