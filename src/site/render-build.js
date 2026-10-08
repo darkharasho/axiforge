@@ -1,5 +1,6 @@
 import { state } from "@renderer/modules/state.js";
 import { expandStatPackage } from "@renderer/modules/stat-package.js";
+import { resolveMajorChoices } from "@renderer/modules/trait-choices.js";
 import { initSkills, renderSkills } from "@renderer/modules/skills.js";
 import { initSpecializations, renderSpecializations, drawSpecConnector } from "@renderer/modules/specializations.js";
 import { initEquipment, initEquipmentCallbacks, renderEquipmentPanel } from "@renderer/modules/equipment.js";
@@ -52,20 +53,9 @@ function populateStateFromBuild(build) {
   // Normalize so both fields are present; resolve _traitChoices if needed.
   state.editor.specializations         = (build.specializations || []).map(s => {
     const entry = { ...s, specializationId: s.specializationId || s.id || 0 };
-    // Resolve traitChoices (axicode position indices) → majorChoices (trait IDs) if needed
-    // Check both _traitChoices (normalized imports) and traitChoices (raw axicode saves).
-    const tc = Array.isArray(s._traitChoices) ? s._traitChoices
-      : Array.isArray(s.traitChoices) ? s.traitChoices : null;
-    const mc = entry.majorChoices || { 1: 0, 2: 0, 3: 0 };
-    if (tc && !Object.values(mc).some(v => v)) {
-      const mbt = s.majorTraitsByTier || {};
-      entry.majorChoices = {};
-      for (const tier of [1, 2, 3]) {
-        const posIdx = (Number(tc[tier - 1]) || 1) - 1;
-        const traitsInTier = (mbt[tier] || []);
-        entry.majorChoices[tier] = Number(traitsInTier[posIdx]?.id) || Number(traitsInTier[0]?.id) || 0;
-      }
-    }
+    // Publish resolves traitChoices already; a spec still carrying them raw is
+    // resolved by the same rule.
+    entry.majorChoices = resolveMajorChoices(s, s.majorTraitsByTier);
     return entry;
   });
   // The build store saves skills as { heal: {obj}, utility: [{obj}], elite: {obj} }

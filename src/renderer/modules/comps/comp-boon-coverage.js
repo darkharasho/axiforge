@@ -13,6 +13,30 @@ import { formatFactHtml } from "../detail-panel.js";
 import { escapeHtml } from "../utils.js";
 import { computeBuildConcentration, computeBuildExpertise } from "../stats.js";
 import { targetSeriesStyle } from "../../../shared/professions.js";
+import { getMajorTraitsByTier } from "../specializations.js";
+import { resolveMajorChoices } from "../trait-choices.js";
+
+/**
+ * The build with each specialization's majorChoices resolved from axicode
+ * traitChoices, as publish resolves them. Store builds from an axicode import
+ * keep majorChoices blank until then; without this the desktop coverage would
+ * drop those traits while the published link counts them. Published builds
+ * are already resolved and pass through unchanged.
+ */
+function withResolvedTraits(build, catalog) {
+  const specs = build.specializations;
+  if (!Array.isArray(specs) || !specs.some((s) => s?.traitChoices || s?._traitChoices)) return build;
+  return {
+    ...build,
+    specializations: specs.map((s) => {
+      if (!s) return s;
+      const specId = Number(s.specializationId || s.id) || 0;
+      const specData = catalog.specializationById?.get(specId);
+      const tiers = specData && catalog.traitById ? getMajorTraitsByTier(specData, catalog) : null;
+      return { ...s, majorChoices: resolveMajorChoices(s, tiers) };
+    }),
+  };
+}
 
 
 /**
@@ -53,12 +77,13 @@ export async function computeCompPartyCoverage(comp, builds, catalogCache, getCa
     let hasFilledSlots = false;
 
     for (const buildId of line.slots || []) {
-      const build = buildMap.get(buildId);
-      if (!build || !build.profession) continue;
+      const storedBuild = buildMap.get(buildId);
+      if (!storedBuild || !storedBuild.profession) continue;
 
-      const cacheKey = `${build.profession}_${build.gameMode || "pve"}`;
-      const catalog = catalogFor ? catalogFor(build) : catalogCache.get(cacheKey);
+      const cacheKey = `${storedBuild.profession}_${storedBuild.gameMode || "pve"}`;
+      const catalog = catalogFor ? catalogFor(storedBuild) : catalogCache.get(cacheKey);
       if (!catalog) continue;
+      const build = withResolvedTraits(storedBuild, catalog);
 
       hasFilledSlots = true;
       const weaponSkills = resolveAllWeaponSkills(catalog, build);

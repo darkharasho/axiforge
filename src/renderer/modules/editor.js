@@ -4,6 +4,7 @@ import { state, createEmptyEditor } from "./state.js";
 import { parseTags, simplifyTrait, simplifySkill } from "./utils.js";
 import { getMajorTraitsByTier } from "./specializations.js";
 import { expandStatPackage } from "./stat-package.js";
+import { resolveMajorChoices } from "./trait-choices.js";
 import { ANTIQUARY_PROLIFIC_PLUNDERER_TRAIT_ID, UNDERWATER_BLOCKED_LEGENDS, GW2_WEAPONS_BY_ID } from "./constants.js";
 
 // Normalize sigil array to correct shape for a given slot key.
@@ -124,21 +125,10 @@ export function enforceEditorConsistency(options = {}) {
     }
     used.add(spec.id);
     const majors = getMajorTraitsByTier(spec, catalog);
-    // If traitChoices (from axicode import) exist and majorChoices are all 0,
-    // resolve the 1-based position indices to actual trait IDs.
-    // Check both _traitChoices (normalized imports) and traitChoices (raw axicode saves).
-    const tc = Array.isArray(current._traitChoices) ? current._traitChoices
-      : Array.isArray(current.traitChoices) ? current.traitChoices : null;
-    const resolveForTier = (tier) => {
-      const existing = current.majorChoices?.[tier];
-      if (existing) return chooseTraitId(existing, majors[tier]);
-      if (tc) {
-        const posIdx = (Number(tc[tier - 1]) || 1) - 1;
-        const resolved = Number(majors[tier]?.[posIdx]?.id) || 0;
-        if (resolved) return resolved;
-      }
-      return chooseTraitId(0, majors[tier]);
-    };
+    // Axicode imports carry traitChoices (tier positions) with blank
+    // majorChoices; resolve them the way publish and comp coverage do.
+    const chosen = resolveMajorChoices(current, majors);
+    const resolveForTier = (tier) => chooseTraitId(chosen[tier], majors[tier]);
     nextSpecs.push({
       specializationId: spec.id,
       majorChoices: {

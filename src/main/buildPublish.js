@@ -3,6 +3,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { computePublishStats, computeDurationStats } = require("./statsCompute");
+const { resolveMajorChoices } = require("../shared/traitChoices");
 
 // ---------------------------------------------------------------------------
 // Equipment icon constants
@@ -617,21 +618,8 @@ function serializeForPublish(build, catalog, upgradeCatalog, extraCatalogs = [])
       ])
     );
 
-    // Resolve traitChoices (from axicode import) → majorChoices if needed.
-    // traitChoices are 1-based position indices; majorChoices are actual trait IDs.
-    // Check both _traitChoices (normalized imports) and traitChoices (raw axicode saves).
-    const tc = Array.isArray(spec._traitChoices) ? spec._traitChoices
-      : Array.isArray(spec.traitChoices) ? spec.traitChoices : null;
-    let majorChoices = spec.majorChoices || { 1: 0, 2: 0, 3: 0 };
-    const hasChoices = Object.values(majorChoices).some(v => v);
-    if (tc && !hasChoices) {
-      majorChoices = {};
-      for (const tier of [1, 2, 3]) {
-        const posIdx = (Number(tc[tier - 1]) || 1) - 1;
-        const traitsInTier = majorTraitsByTier[tier] || [];
-        majorChoices[tier] = Number(traitsInTier[posIdx]?.id) || Number(traitsInTier[0]?.id) || 0;
-      }
-    }
+    // Axicode imports carry traitChoices (tier positions) with blank majorChoices.
+    const majorChoices = resolveMajorChoices(spec, majorTraitsByTier);
 
     // Enrich spec metadata (name, elite, icon, background) from catalog
     const catSpec = catalogSpecs.find(cs => cs.id === spec.id);

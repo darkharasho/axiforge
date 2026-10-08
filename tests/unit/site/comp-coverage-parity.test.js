@@ -68,3 +68,57 @@ describe.each(["pve", "wvw"])("desktop vs viewer coverage (%s)", (gameMode) => {
     expect(desktop.lines[0].boons.get("Might").count).toBe(2);
   });
 });
+
+// Axicode imports store specializations as traitChoices (1-based position per
+// tier) with majorChoices all zero. Publish resolves them to trait ids, so the
+// viewer counts the chosen traits; the desktop must count the same ones.
+describe("desktop vs viewer coverage for traitChoices-only specializations", () => {
+  const MAJOR_TRAITS = [
+    { id: 401, name: "T1a", tier: 1, facts: [] },
+    { id: 402, name: "T1b", tier: 1, facts: [] },
+    { id: 501, name: "T2a", tier: 2, facts: [] },
+    { id: 502, name: "Swift Trait", tier: 2, description: "Grant swiftness.",
+      facts: [{ type: "Buff", status: "Swiftness", duration: 5, apply_count: 1 }] },
+    { id: 601, name: "T3a", tier: 3, facts: [] },
+    { id: 602, name: "T3b", tier: 3, facts: [] },
+  ];
+  const SPEC = { id: 16, name: "Honor", elite: false, minorTraits: [], majorTraits: MAJOR_TRAITS.map((t) => t.id) };
+
+  function traitChoicesBuild(id) {
+    return {
+      ...storeBuild(id, "wvw"),
+      // Exactly what buildStore.normalizeSpecializations keeps for an axicode import.
+      specializations: [{
+        id: 16, name: "Honor", elite: false, icon: "", background: "", minorTraits: [],
+        majorChoices: { 1: 0, 2: 0, 3: 0 }, majorTraitsByTier: { 1: [], 2: [], 3: [] },
+        traitChoices: [1, 2, 1],
+      }],
+    };
+  }
+
+  test("both sides count the trait the traitChoices select", async () => {
+    const builds = [traitChoicesBuild("b1")];
+    const comp = { id: "c", partyLines: [{ id: "l1", capacity: 5, slots: ["b1"] }] };
+
+    const cache = new Map();
+    const desktop = await computeCompPartyCoverage(comp, builds, cache, async (p, m) => {
+      cache.set(`${p}_${m}`, {
+        ...desktopCatalog(),
+        traits: MAJOR_TRAITS, traitById: new Map(MAJOR_TRAITS.map((t) => [t.id, t])),
+        specializations: [SPEC], specializationById: new Map([[SPEC.id, SPEC]]),
+      });
+    }, EMPTY_UPGRADES);
+
+    const arrays = { ...CATALOG_ARRAYS, traits: MAJOR_TRAITS, specializations: [SPEC] };
+    const published = builds.map((b) => serializeForPublish(b, arrays, EMPTY_UPGRADES));
+    const viewer = await computeCompPartyCoverage(comp, published, new Map(), async () => null, null, {
+      catalogFor: catalogFromPublishedBuild,
+      upgradeCatalogFor: upgradeCatalogFromPublishedBuild,
+      durationBonusFor: (b) => b.boonDurationBonus,
+    });
+
+    expect(viewer.lines[0].boons.has("Swiftness")).toBe(true);
+    expect(desktop.lines[0].boons.has("Swiftness")).toBe(true);
+    expect(flatten(viewer)).toEqual(flatten(desktop));
+  });
+});
