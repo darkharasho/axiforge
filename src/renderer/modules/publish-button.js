@@ -3,7 +3,7 @@
 // the same view with applyPublishButton.
 
 const ICONS = {
-  spinner: '<span class="publish-btn__icon publish-btn__icon--spinner" aria-hidden="true"></span>',
+  spinner: '<span class="publish-btn__icon publish-btn__icon--spinner axi-spinner" aria-hidden="true"></span>',
   check: '<svg class="publish-btn__icon publish-btn__icon--check" viewBox="0 0 20 20" width="12" height="12" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M16.7 5.3a1 1 0 0 1 0 1.4l-8 8a1 1 0 0 1-1.4 0l-4-4a1 1 0 1 1 1.4-1.4L8 12.6l7.3-7.3a1 1 0 0 1 1.4 0Z" clip-rule="evenodd"/></svg>',
   clock: '<svg class="publish-btn__icon publish-btn__icon--clock" viewBox="0 0 20 20" width="12" height="12" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-13a.75.75 0 0 0-1.5 0v5c0 .2.08.39.22.53l3 3a.75.75 0 1 0 1.06-1.06l-2.78-2.78V5Z" clip-rule="evenodd"/></svg>',
 };

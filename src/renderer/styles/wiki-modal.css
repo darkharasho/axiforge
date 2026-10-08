@@ -133,24 +133,13 @@
   display: none;
 }
 
-.wiki-modal-spinner {
-  width: 36px;
-  height: 36px;
-  border: 3px solid rgba(255, 255, 255, 0.08);
-  border-top-color: var(--accent);
-  border-radius: 50%;
-  animation: wiki-spin 0.7s linear infinite;
-}
+.wiki-modal-spinner { --axi-spinner-size: 24px; }
 
 .wiki-modal-loading-text {
   font-size: 0.8rem;
   color: var(--muted);
   letter-spacing: 0.05em;
   animation: wiki-fade-pulse 1.4s ease-in-out infinite;
-}
-
-@keyframes wiki-spin {
-  to { transform: rotate(360deg); }
 }
 
 @keyframes wiki-fade-pulse {

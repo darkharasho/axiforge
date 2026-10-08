@@ -44,12 +44,12 @@ export function initDetailModal() {
         </section>
         <section class="dm-section dm-section--loading" id="dm-related-skills-section">
           <h3 class="dm-section__heading">Related Skills</h3>
-          <div class="dm-spinner" id="dm-skills-spinner"></div>
+          <div class="dm-spinner axi-spinner" id="dm-skills-spinner" aria-hidden="true"></div>
           <ul class="dm-related-grid dm-related-grid--hidden" id="dm-related-skills"></ul>
         </section>
         <section class="dm-section dm-section--loading" id="dm-related-traits-section">
           <h3 class="dm-section__heading">Related Traits</h3>
-          <div class="dm-spinner" id="dm-traits-spinner"></div>
+          <div class="dm-spinner axi-spinner" id="dm-traits-spinner" aria-hidden="true"></div>
           <div class="dm-related-grid--hidden" id="dm-related-traits"></div>
         </section>
       </div>

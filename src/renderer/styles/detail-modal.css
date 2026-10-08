@@ -149,12 +149,7 @@
 /* ── Loading state ───────────────────────────────────────────────────────── */
 
 .dm-spinner {
-  width: 24px;
-  height: 24px;
-  border: 2px solid rgba(255, 255, 255, 0.08);
-  border-top-color: var(--accent);
-  border-radius: 50%;
-  animation: wiki-spin 0.7s linear infinite;
+  --axi-spinner-size: 20px;
   display: none;  /* hidden by default; shown only when parent has dm-section--loading */
 }
 

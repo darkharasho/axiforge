@@ -448,8 +448,9 @@ label {
   font-size: 0.65rem;
 }
 
-/* The work indicator is app.css's .af-dot + .af-work, not a shape of its own:
-   same compositor-only pulse, already gated for reduced motion there. */
+/* The work indicator is the package's .axi-spinner, which handles reduced
+   motion itself. */
+.publish-ticker__spinner { --axi-spinner-size: 10px; }
 .publish-ticker__error {
   color: var(--axi-danger);
   /* No scale step: normal-weight meta at ~11px, same case as

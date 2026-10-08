@@ -20,7 +20,7 @@ export function initWikiModal() {
       </div>
       <div class="wiki-modal-body">
         <div class="wiki-modal-loading wiki-modal-loading--hidden" id="wiki-modal-loading">
-          <div class="wiki-modal-spinner"></div>
+          <div class="wiki-modal-spinner axi-spinner" aria-hidden="true"></div>
           <span class="wiki-modal-loading-text">Loading&hellip;</span>
         </div>
         <webview class="wiki-modal-webview" id="wiki-modal-webview" partition="wiki"></webview>

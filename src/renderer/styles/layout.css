@@ -88,8 +88,9 @@
   color: var(--axi-ink-on-fill);
 }
 
-/* The spinner is an .af-dot with .af-work (opacity blink, compositor-only —
-   see app.css). Static/error states have nothing to animate. */
+/* The spinner is the package's .axi-spinner, drawn in its own well so it
+   reads on the accent fill. Static/error states have nothing to animate. */
+.titlebar__pill-spinner { --axi-spinner-size: 10px; }
 .titlebar__pill--static .titlebar__pill-spinner,
 .titlebar__pill--error .titlebar__pill-spinner {
   display: none;

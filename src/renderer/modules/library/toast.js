@@ -56,6 +56,13 @@ export function showToast(message, type = "success", action = null) {
   // Rebuild from scratch each time: a stale Undo button left over from the
   // previous toast would undo something the user is no longer being told about.
   _toastEl.querySelector(".lib-toast__action")?.remove();
+  _toastEl.querySelector(".lib-toast__spinner")?.remove();
+  if (type === "loading") {
+    const spinner = document.createElement("span");
+    spinner.className = "lib-toast__spinner axi-spinner";
+    spinner.setAttribute("aria-hidden", "true");
+    _toastEl.insertBefore(spinner, _msgEl);
+  }
   if (action?.label) {
     const btn = document.createElement("button");
     btn.type = "button";

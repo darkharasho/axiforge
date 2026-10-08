@@ -613,7 +613,7 @@ function _createTicker(steps) {
         r.querySelector(".publish-ticker__icon").textContent = "\u2713";
       } else if (i === idx) {
         r.classList.add("publish-ticker__row--active");
-        r.querySelector(".publish-ticker__icon").innerHTML = `<span class="af-dot af-dot--idle af-work"></span>`;
+        r.querySelector(".publish-ticker__icon").innerHTML = `<span class="publish-ticker__spinner axi-spinner" aria-hidden="true"></span>`;
       } else {
         r.classList.add("publish-ticker__row--pending");
         r.querySelector(".publish-ticker__icon").textContent = "\u2022";

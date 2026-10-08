@@ -15,11 +15,9 @@
 
 /* A loading placeholder pulses rather than sweeping: a sweep needs a
    gradient travelling across a surface, and the one compositor-only property
-   that can carry it here is opacity on a flat block. Shares app.css's
-   @keyframes af-pulse (the work-indicator idiom) rather than defining its
-   own — same shape, a shallower dip: a whole grid of these dipping to the
-   work dot's .25 in unison reads worse than .55, so this sets its own
-   --af-pulse-dim instead of forking the keyframes. */
+   that can carry it here is opacity on a flat block. Uses app.css's
+   @keyframes af-pulse with a shallow --af-pulse-dim: a whole grid of blocks
+   dipping to .25 in unison reads worse than .55. */
 .skel {
   --af-pulse-dim: .55;
   animation: af-pulse 1.4s ease-in-out infinite;

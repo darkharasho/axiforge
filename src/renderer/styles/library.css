@@ -1778,21 +1778,7 @@
   gap: 8px;
   color: var(--axi-text-faint);
 }
-.lib-toast--loading::before {
-  content: "";
-  width: 12px;
-  height: 12px;
-  border: var(--axi-border-control) solid currentColor;
-  border-top-color: transparent;
-  animation: lib-toast-spin 0.7s linear infinite;
-  flex-shrink: 0;
-}
-@keyframes lib-toast-spin {
-  to { transform: rotate(360deg); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .lib-toast--loading::before { animation: none; }
-}
+.lib-toast__spinner { --axi-spinner-size: 12px; }
 
 /* ── Card entrance animation ────────────────────────────────────────── */
 @keyframes lib-card-enter {
@@ -1953,19 +1939,8 @@
   white-space: nowrap;
 }
 
-/* Spinner animation for syncing state */
-@keyframes sync-spin {
-  to { transform: rotate(360deg); }
-}
-
-.sync-spin {
-  animation: sync-spin 0.8s linear infinite;
-  transform-origin: center;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .sync-spin { animation: none; }
-}
+/* Syncing state: the package's .axi-spinner at the badge icons' 12px. */
+.sync-spin { --axi-spinner-size: 12px; }
 
 /* ── Library banners (e.g. an orphaned legacy GitHub-org folder) ─────────── */
 .lib-banner {
