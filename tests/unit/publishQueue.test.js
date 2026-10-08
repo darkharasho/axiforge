@@ -237,6 +237,22 @@ describe("drain order", () => {
     await adv(BACKOFF_MS[0]);
     expect(rounds[1][0]).toBe("build:urgent");
   });
+
+  test("a rate limit in the same round as a network failure keeps its reason", async () => {
+    const { q } = makeQueue({
+      runRound: async (items) => ({
+        results: items.map((i) => ({
+          ...i,
+          ok: false,
+          error: i.id === "a" ? offline() : coded("limited", { code: "GITHUB_RATE_LIMITED", retryAfterMs: 1 }),
+        })),
+      }),
+    });
+    q.enqueue("build", "a");
+    q.enqueue("build", "b");
+    await adv(5000);
+    expect(q.snapshot().items["build:b"]).toMatchObject({ state: "waiting", reason: "rate-limit" });
+  });
 });
 
 describe("waiting through a rate limit", () => {

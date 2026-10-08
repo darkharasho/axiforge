@@ -207,6 +207,11 @@ Status key: `[ ]` open · `[x]` done · `[~]` in progress · `[?]` needs repro s
   `publish-queue.json` grows over time. Prune them on load against the
   current build and comp ids.
 
+- [ ] **"Sign in to publish" lasts only one round.** `readSession`
+  (`src/main/index.js`) clears the token on a 401, so the next round pauses as
+  `"disconnected"` and the button reads "Set up publishing". Setup signs the
+  user in first, so it still recovers; the label is just less specific.
+
 ## Features
 
 - [x] **Comp history.** Builds have carried a full "who changed what" since the

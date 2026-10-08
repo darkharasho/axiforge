@@ -415,7 +415,9 @@ class PublishQueue {
     if (transient) {
       const ms = BACKOFF_MS[Math.min(this._attempt, BACKOFF_MS.length - 1)];
       this._attempt += 1;
-      if (ms > wait) { wait = ms; waitReason = "offline"; }
+      // A rate limit keeps its reason even under a longer backoff, so an explicit
+      // publish doesn't slip past the hold and hit the limit again.
+      if (ms > wait) { wait = ms; if (!waitReason) waitReason = "offline"; }
     } else {
       this._attempt = 0;
     }
