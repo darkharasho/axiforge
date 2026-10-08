@@ -30,11 +30,14 @@ export function memberSpaUrl(member, build, loc) {
  * Fetch every member of a v2 comp in parallel. Returns the {id: build} map v1
  * comps embed, so the rest of the page renders both formats the same way. A
  * member that can't be fetched or decrypted becomes {id, unavailable: true}.
+ * `baseForOwner(owner)` resolves an owner's data base (pinned to its newest
+ * commit in the viewer); without it, `memberDataBase`.
  */
-export async function loadCompMembers(comp, { fallbackBase, loc, fetchImpl }) {
+export async function loadCompMembers(comp, { fallbackBase, loc, fetchImpl, baseForOwner = null }) {
   const entries = await Promise.all(Object.entries(comp.members || {}).map(async ([buildId, m]) => {
     try {
-      const url = `${memberDataBase(m, fallbackBase)}builds/${encodeURIComponent(m.fileId)}.enc`;
+      const base = m?.owner && baseForOwner ? await baseForOwner(m.owner) : memberDataBase(m, fallbackBase);
+      const url = `${base}builds/${encodeURIComponent(m.fileId)}.enc`;
       const build = await fetchPayload(url, m.key, fetchImpl);
       return [buildId, { ...build, id: buildId, spaUrl: memberSpaUrl(m, build, loc) }];
     } catch {

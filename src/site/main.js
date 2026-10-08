@@ -1,7 +1,7 @@
 import "@axiapps/axi-design/axi.css";
 import "@axiapps/axi-design/accents.css";
 import "./styles.css";
-import { resolveDataBase } from "./rawBase.js";
+import { resolvePinnedBase, pinnedRawBase } from "./rawBase.js";
 import { renderBuildPage } from "./render-build.js";
 import { renderCompPage } from "./render-comp.js";
 import { setReadOnly as setSkillsReadOnly } from "@renderer/modules/skills.js";
@@ -77,7 +77,7 @@ function showError(msg) {
 // ── Fetch & Decrypt ──────────────────────────────────────────────────────
 async function loadBuild(fileId, base64urlKey) {
   try {
-    const base = resolveDataBase(location, new URLSearchParams(location.search));
+    const base = await resolvePinnedBase(location, new URLSearchParams(location.search));
     const build = await fetchPayload(`${base}builds/${encodeURIComponent(fileId)}.enc`, base64urlKey);
     renderBuild(build);
   } catch (err) {
@@ -87,12 +87,16 @@ async function loadBuild(fileId, base64urlKey) {
 
 async function loadComp(fileId, base64urlKey) {
   try {
-    const base = resolveDataBase(location, new URLSearchParams(location.search));
+    const base = await resolvePinnedBase(location, new URLSearchParams(location.search));
     let comp = await fetchPayload(`${base}comps/${encodeURIComponent(fileId)}.enc`, base64urlKey);
     assertCompFormat(comp);
     if (comp.v === 2) {
       // A v2 comp links its builds: fetch them, then compute coverage here.
-      const builds = await loadCompMembers(comp, { fallbackBase: base, loc: location });
+      const builds = await loadCompMembers(comp, {
+        fallbackBase: base,
+        loc: location,
+        baseForOwner: (owner) => pinnedRawBase(owner, "axibuilds"),
+      });
       let boonCoverageHtml = "";
       try {
         boonCoverageHtml = await computeViewerCoverageHtml(comp, builds);

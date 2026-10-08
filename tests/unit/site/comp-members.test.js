@@ -56,4 +56,14 @@ describe("comp members", () => {
     expect(out.b).toEqual({ id: "b", unavailable: true });
     expect(fetchImpl).toHaveBeenCalledWith("https://raw.githubusercontent.com/mate/axibuilds/main/site/builds/bbbb2222.enc", { cache: "no-store" });
   });
+
+  test("a member's data is read from the base its owner resolves to", async () => {
+    const kA = generateEncryptionKey();
+    const comp = { members: { a: { fileId: "aaaa1111", key: kA, owner: "mate" } } };
+    const fetchImpl = jest.fn(async () => okBytes({ title: "A", profession: "Guardian" }, kA));
+    const baseForOwner = jest.fn(async (owner) => `https://raw.githubusercontent.com/${owner}/axibuilds/SHA/site/`);
+    await loadCompMembers(comp, { fallbackBase: "BASE/", loc, fetchImpl, baseForOwner });
+    expect(baseForOwner).toHaveBeenCalledWith("mate");
+    expect(fetchImpl.mock.calls[0][0]).toBe("https://raw.githubusercontent.com/mate/axibuilds/SHA/site/builds/aaaa1111.enc");
+  });
 });
