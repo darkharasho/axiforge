@@ -111,28 +111,35 @@ header, and either:
 - decrypts and pipes the result through `DecompressionStream("gzip")`, or
 - falls back to the v1 path: base64 text, decrypt, then `JSON.parse`.
 
-**Comp v2 render.** `renderCompPage` branches on `comp.v === 2`:
+**Comp v2 render.** `loadComp` in `main.js` branches on `comp.v === 2`:
 
-1. Render the comp shell immediately: header, notes, party lines with
-   placeholder slots, and the pool.
-2. Fetch every member in parallel. The base URL comes from the member's `owner`
-   (`raw.githubusercontent.com/<owner>/axibuilds/main/site/builds/<fileId>.enc`),
-   built by a new `dataBaseForOwner(owner)` helper next to `resolveDataBase`.
-   Each slot fills in as its build arrives. A member that fails (404, decrypt
-   error or network error) renders as a **"Build unavailable"** slot. A member
-   whose `owner` is empty uses `resolveDataBase(location, params)`.
-3. Once every member has settled, compute boon coverage in the viewer:
-   - Extract a pure `catalogFromPublishedBuild(build)` from
-     `populateStateFromBuild` (`render-build.js`), returning the same
-     `activeCatalog` shape without touching `state`.
-   - Run `computeCompPartyCoverage` with a catalog cache built from those
-     catalogs and a `getCatalog` that resolves immediately. Builds with a
-     `boonDurationBonus` use it in place of the upgrade-catalog computation;
-     add an optional override parameter so the desktop path is unchanged.
-   - Render with `buildPartyCoverageHTML` and bind with the existing
-     `bindPartyCoverageEvents`.
+1. Fetch every member in parallel (`src/site/comp-members.js`). The base URL
+   comes from the member's `owner`
+   (`raw.githubusercontent.com/<owner>/axibuilds/main/site/builds/<fileId>.enc`).
+   A member whose `owner` is empty uses `resolveDataBase(location, params)`.
+   A member that fails (404, decrypt error or network error) becomes
+   `{id, unavailable: true}` and renders as a **"Build unavailable"** slot. The
+   pool and tag popovers leave it out.
+2. Once every member has settled, compute boon coverage in the viewer
+   (`src/site/comp-coverage.js`):
+   - Extract pure `catalogFromPublishedBuild(build)` and
+     `upgradeCatalogFromPublishedBuild(build)` from `populateStateFromBuild`
+     into `src/site/published-catalog.js`. They return the same shapes without
+     touching `state`. Coverage needs a separate upgrade catalog per member,
+     because relics, runes and sigils grant boons.
+   - Run `computeCompPartyCoverage` with a new optional `overrides` argument:
+     `{catalogFor, upgradeCatalogFor, durationBonusFor}`. The desktop path is
+     unchanged.
+3. Hand `{...comp, builds, boonCoverageHtml}` to the existing `renderCompPage`,
+   which renders and binds it exactly like a v1 comp. The page renders once
+   every member has settled, not slot by slot. Member payloads are ~90 KB, so
+   progressive slots aren't worth the extra render path.
 4. Each member's `spaUrl` is derived in the viewer from `owner`, `fileId` and
    `key`, matching the URL desktop builds today.
+
+`escapeHtml` moves from `main.js` to `src/site/escape.js`. `render-comp.js`
+imported it from `main.js`, whose top-level `init()` made `render-comp.js`
+impossible to load in a test.
 
 **v1 comps** render exactly as they do now, from embedded `builds` and
 `boonCoverageHtml`.
@@ -156,24 +163,32 @@ header, and either:
   `computeCompPartyCoverage`, and the IPC, preload and local-API signature
   drops the argument.
 - Builds the v2 comp payload and puts these in the **same commit**: the comp
-  file, plus the v2 file of every member owned by the publisher that is
-  never-published, stale (`src/shared/publishState.js`), or still v1 (receipt
-  lacks `payloadVersion: 2`). Re-uploading v1 members guarantees every member
-  the publisher owns carries `boonDurationBonus`. Members owned by other users
-  are referenced, not uploaded. If one of those is still v1, the viewer computes
-  its coverage with a bonus of 0, so its durations show without the
-  concentration or expertise boost until its owner re-publishes it.
+  file, plus the v2 file of **every** member the publisher owns. This matches
+  today, where comp publish re-encrypts all of its own members. It guarantees
+  every owned member carries `boonDurationBonus` without tracking each file's
+  format in a new receipt field. Members owned by other users are referenced,
+  not uploaded. If one of those is still v1, the viewer computes its coverage
+  with a bonus of 0, so its durations show without the concentration or
+  expertise boost until its owner re-publishes it.
+- The member decision is a pure `planCompMembers` in `compPublish.js`, built on
+  the existing `decideCompBuildPublish`.
 - A member owned by nobody yet is published under the comp publisher, which is
   the same as today's auto-publish of unpublished members.
-- Stamps receipts for the comp and for each member build it uploaded.
+- Stamps receipts for the comp and for each member build it uploaded, and
+  clears the comp's local `boonCoverageHtml`.
+- Publish fetches each build's catalog for **its own game mode**. Today both
+  publish paths fetch the default (PvE) catalog, so a WvW build's page showed
+  PvE facts. The viewer's coverage would then disagree with the desktop's.
 
-**Publish status:**
+**Publish status:** no code change.
 
-- For a v2 comp (receipt carries `payloadVersion: 2`), staleness is the comp's
-  own fingerprint only. `publishedMemberHashes` is no longer written for v2.
-- v1 receipts keep today's member-hash logic until re-published.
-- `publishState.js` and `publish-status.js` stay in CJS/ESM parity, enforced by
-  the existing parity test.
+- A v2 comp is stamped with `compReceipt(comp, [])`, i.e. an empty
+  `publishedMemberHashes`. `compPublishStatus` then reports only the comp's own
+  staleness, which is right because the page reads members live.
+- A v1 comp keeps its member hashes, so it still reads stale when a member
+  changes, until it is re-published as v2.
+- `compReceiptAfterRepublish` becomes dead with the fan-out gone and is
+  removed.
 
 **Bundle upload** (`githubApi.js:~414`):
 
@@ -210,23 +225,29 @@ header, and either:
 
 - **Envelope:** v2 round-trip; v1 still decodes through `decryptPayload`; header
   detection; unknown version throws a typed error.
-- **Viewer decode:** `main.js` `decrypt` handles v1 text and v2 bytes (jsdom
-  with a `DecompressionStream` polyfill if needed).
+- **Viewer decode:** `src/site/payload.js` decodes v1 text and v2 bytes written
+  by the desktop (Node's web streams and WebCrypto).
+- **Duration parity:** `computeDurationStats` (main) equals the renderer's
+  `computeBuildConcentration`/`computeBuildExpertise` across gear and rune
+  fixtures.
 - **Coverage parity:** for fixture comps, coverage data computed the desktop way
   (store builds, full catalogs, upgrade catalog) equals coverage computed the
   viewer way (`catalogFromPublishedBuild` on serialized builds,
   `boonDurationBonus`). Compare the data, not the HTML.
 - **Comp serialize:** v2 has `members` with `owner`, and has no `builds` or
   `boonCoverageHtml`.
-- **Comp publish:** uploads stale and never-published members owned by the
-  publisher, skips current ones, never uploads another owner's member, and
-  writes everything in one commit.
-- **Build publish:** never writes a `site/comps/` path.
-- **Publish state:** v2 comp staleness ignores member changes; v1 is unchanged;
-  CJS/ESM parity holds.
+- **Comp publish:** `planCompMembers` uploads every member the publisher owns,
+  reusing existing file IDs and keys. It links a teammate's member from their
+  repo and never uploads it, unless `force` is set.
+- **Build publish:** no build→comp fan-out, no coverage-HTML argument, and
+  catalogs fetched per game mode. `index.js` can't load under Jest, so these
+  are pinned by a source-level test.
+- **Publish state:** covered by the existing `compPublishStatus` tests, since a
+  v2 comp's receipt simply has an empty member-hash map.
 - **Bundle upload:** `Buffer` entries are uploaded byte-for-byte.
 - **Import:** v1 comp, v2 comp, and a v2 comp with an unreachable member.
-- **Size guard:** a fixture build serializes to under 150 KB as v2.
+- **Size guard:** v2 of a catalog-heavy fixture is under a fifth of its v1 size.
+  A one-off measurement on a real local build confirms the ~90 KB target.
 
 ## Out of scope
 
