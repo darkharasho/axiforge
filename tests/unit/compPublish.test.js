@@ -17,19 +17,10 @@ function makeComp(overrides = {}) {
   };
 }
 
-function makeBuildEntry(id, spaUrl) {
-  return { id, title: `Build ${id}`, profession: "Guardian", spaUrl };
-}
-
 describe("serializeCompForPublish", () => {
   test("includes comp fields", () => {
     const comp = makeComp();
-    const buildsMap = {
-      "build-1": makeBuildEntry("build-1", "https://x.github.io/axibuilds/?b=abc.key"),
-      "build-2": makeBuildEntry("build-2", "https://x.github.io/axibuilds/?b=def.key"),
-      "build-3": makeBuildEntry("build-3", "https://x.github.io/axibuilds/?b=ghi.key"),
-    };
-    const result = serializeCompForPublish(comp, buildsMap);
+    const result = serializeCompForPublish(comp, {});
     expect(result.id).toBe("comp-1");
     expect(result.name).toBe("Test Comp");
     expect(result.notes).toBe("Some notes");
@@ -84,52 +75,56 @@ describe("serializeCompForPublish", () => {
     expect(result.categories).toEqual([]);
   });
 
-  test("includes all builds in buildsMap regardless of party line assignment", () => {
-    const comp = makeComp();
-    const buildsMap = {
-      "build-1": makeBuildEntry("build-1", "https://x.github.io/axibuilds/?b=abc.key"),
-      "build-2": makeBuildEntry("build-2", "https://x.github.io/axibuilds/?b=def.key"),
-      "build-3": makeBuildEntry("build-3", "https://x.github.io/axibuilds/?b=ghi.key"),
-    };
-    const result = serializeCompForPublish(comp, buildsMap);
-    expect(Object.keys(result.builds)).toHaveLength(3);
-    expect(result.builds["build-3"].spaUrl).toBe("https://x.github.io/axibuilds/?b=ghi.key");
-  });
-
-  test("each build entry includes spaUrl", () => {
-    const comp = makeComp();
-    const buildsMap = {
-      "build-1": makeBuildEntry("build-1", "https://x.github.io/axibuilds/?b=abc.key"),
-      "build-2": makeBuildEntry("build-2", "https://x.github.io/axibuilds/?b=def.key"),
-      "build-3": makeBuildEntry("build-3", null),
-    };
-    const result = serializeCompForPublish(comp, buildsMap);
-    expect(result.builds["build-1"].spaUrl).toBe("https://x.github.io/axibuilds/?b=abc.key");
-    expect(result.builds["build-3"].spaUrl).toBeNull();
-  });
-
   test("does not include publishedFileId/Key/Slug on the output", () => {
     const comp = makeComp({ publishedFileId: "abc", publishedKey: "key", publishedSlug: "slug" });
-    const buildsMap = { "build-1": makeBuildEntry("build-1", "https://x.io/?b=x.y") };
-    const result = serializeCompForPublish(comp, buildsMap);
+    const result = serializeCompForPublish(comp, {});
     expect(result.publishedKey).toBeUndefined();
   });
+});
 
-  test("slot referencing a build absent from buildsMap produces undefined entry — documents bug", () => {
-    // When a slot's buildId is not in buildsMap, comp.builds[buildId] is undefined.
-    // The SPA then renders an empty slot with no link. This test documents the root
-    // cause that getCompPublishBuildIds (and the publish handler) must defend against.
-    const comp = makeComp({
-      buildIds: ["build-1"],          // build-2 missing from buildIds
-      partyLines: [{ id: "line-1", capacity: 5, slots: ["build-1", "build-2"] }],
-    });
-    const buildsMap = {
-      "build-1": makeBuildEntry("build-1", "https://x.io/?b=a.k"),
-      // build-2 NOT in buildsMap because it was not in comp.buildIds
-    };
-    const result = serializeCompForPublish(comp, buildsMap);
-    expect(result.builds["build-1"]).toBeDefined();
-    expect(result.builds["build-2"]).toBeUndefined(); // empty slot — the bug
+describe("serializeCompForPublish v2", () => {
+  test("links members instead of embedding builds and drops coverage HTML", () => {
+    const members = { "build-1": { fileId: "aaaa1111", key: "K1", owner: "me" } };
+    const result = serializeCompForPublish(makeComp({ boonCoverageHtml: "<div>8 MB</div>" }), members);
+    expect(result.v).toBe(2);
+    expect(result.members).toEqual(members);
+    expect(result).not.toHaveProperty("builds");
+    expect(result).not.toHaveProperty("boonCoverageHtml");
+  });
+});
+
+describe("planCompMembers", () => {
+  const { planCompMembers } = require("../../src/main/compPublish");
+  let n = 0;
+  const deps = { slugOf: (b) => b.title.toLowerCase(), newFileId: () => `new${++n}`, newKey: () => "NEWKEY" };
+
+  test("own builds are uploaded and linked under the publisher", () => {
+    const plan = planCompMembers({ ...deps, owner: "me", compBuilds: [
+      { id: "b1", title: "One" },
+      { id: "b2", title: "Two", publishedFileId: "keep2222", publishedKey: "K2", publishedOwner: "me", publishedSlug: "two" },
+    ] });
+    expect(plan.uploads.map((u) => u.build.id)).toEqual(["b1", "b2"]);
+    expect(plan.members.b2).toEqual({ fileId: "keep2222", key: "K2", owner: "me" });
+    expect(plan.members.b1.owner).toBe("me");
+    expect(plan.uploads[0].needsRecord).toBe(true);
+    expect(plan.uploads[1].needsRecord).toBe(false);
+  });
+
+  test("a teammate's published build is linked from their repo, never uploaded", () => {
+    const plan = planCompMembers({ ...deps, owner: "me", compBuilds: [
+      { id: "b3", title: "Theirs", publishedFileId: "mate3333", publishedKey: "K3", publishedOwner: "mate" },
+    ] });
+    expect(plan.uploads).toHaveLength(0);
+    expect(plan.members.b3).toEqual({ fileId: "mate3333", key: "K3", owner: "mate" });
+    expect(plan.foreign).toEqual([{ id: "b3", title: "Theirs", owner: "mate" }]);
+  });
+
+  test("force takes over a teammate's build", () => {
+    const plan = planCompMembers({ ...deps, owner: "me", force: true, compBuilds: [
+      { id: "b3", title: "Theirs", publishedFileId: "mate3333", publishedKey: "K3", publishedOwner: "mate" },
+    ] });
+    expect(plan.uploads).toHaveLength(1);
+    expect(plan.members.b3.owner).toBe("me");
   });
 });
 

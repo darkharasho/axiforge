@@ -97,16 +97,18 @@ function generateBuildPayload(build, catalog) {
  * every assertion about the chrome around them still passed. Going through
  * serializeCompForPublish means a fixture can only ever be the shape the app
  * actually produces.
+ *
+ * Pinned to the v1 shape on purpose; see payload v2 in docs/superpowers/specs/2026-10-07-publish-payload-shrink-design.md.
  */
 function generateCompPayload(comp, builds) {
   const buildsMap = Object.fromEntries(
     builds.map((b) => [b.id, serializeForPublish(b, loadCatalog(b.profession || "Necromancer"), null)])
   );
-  const enrichedComp = serializeCompForPublish(comp, buildsMap);
-  // The publisher attaches the rendered party-coverage snapshot AFTER
-  // serializing, because it is produced by the renderer rather than the store —
-  // see src/main/index.js. Mirror that, or a comp fixture silently loses its
-  // coverage panel.
+  // The legacy (v1) comp shape: builds embedded, coverage pre-rendered. The SPA
+  // still renders it for links published before payload v2; these fixtures pin
+  // that path. Fields other than builds/coverage come from the real serializer.
+  const { v: _v, members: _members, ...fields } = serializeCompForPublish(comp, {});
+  const enrichedComp = { ...fields, builds: buildsMap };
   if (comp.boonCoverageHtml) enrichedComp.boonCoverageHtml = comp.boonCoverageHtml;
   const fileId = generateFileId();
   const encKey = generateEncryptionKey();
