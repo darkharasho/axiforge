@@ -27,8 +27,9 @@ export function resolveMajorChoices(spec, catalogTiers) {
   const resolved = {};
   for (const tier of [1, 2, 3]) {
     const list = Array.isArray(tiers[tier]) ? tiers[tier] : [];
-    const posIdx = (Number(tc[tier - 1]) || 1) - 1;
-    resolved[tier] = traitId(list[posIdx]) || traitId(list[0]) || 0;
+    // Positions are 1-based; 0 is axicode's "no trait chosen".
+    const pos = Number(tc[tier - 1]) || 0;
+    resolved[tier] = pos > 0 ? traitId(list[pos - 1]) : 0;
   }
   return resolved;
 }

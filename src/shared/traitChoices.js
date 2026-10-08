@@ -26,7 +26,8 @@ function hasTierLists(tiers) {
  *
  * Tier lists come from the spec's own majorTraitsByTier when stored, else from
  * `catalogTiers` ({1: [...], 2: [...], 3: [...]}, trait objects or ids, in
- * catalog order). A missing or out-of-range position takes the tier's first trait.
+ * catalog order). Position 0 (axicode's "no trait"), a missing position or one
+ * past the end of the tier leaves that tier blank.
  *
  * @returns {{1: number, 2: number, 3: number}}
  */
@@ -41,8 +42,9 @@ function resolveMajorChoices(spec, catalogTiers) {
   const resolved = {};
   for (const tier of [1, 2, 3]) {
     const list = Array.isArray(tiers[tier]) ? tiers[tier] : [];
-    const posIdx = (Number(tc[tier - 1]) || 1) - 1;
-    resolved[tier] = traitId(list[posIdx]) || traitId(list[0]) || 0;
+    // Positions are 1-based; 0 is axicode's "no trait chosen".
+    const pos = Number(tc[tier - 1]) || 0;
+    resolved[tier] = pos > 0 ? traitId(list[pos - 1]) : 0;
   }
   return resolved;
 }

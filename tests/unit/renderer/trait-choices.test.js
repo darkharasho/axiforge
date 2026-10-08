@@ -33,9 +33,14 @@ describe("resolveMajorChoices", () => {
     expect(cjs.resolveMajorChoices(spec, TIERS)).toEqual({ 1: 402, 2: 501, 3: 602 });
   });
 
-  test("an out-of-range or zero position picks the tier's first trait", () => {
-    const spec = { traitChoices: [0, 9, null] };
-    expect(cjs.resolveMajorChoices(spec, TIERS)).toEqual({ 1: 401, 2: 501, 3: 601 });
+  test("position 0 is axicode's 'no trait': the tier stays blank", () => {
+    const spec = { traitChoices: [0, 2, 0] };
+    expect(cjs.resolveMajorChoices(spec, TIERS)).toEqual({ 1: 0, 2: 502, 3: 0 });
+  });
+
+  test("a missing or out-of-range position leaves the tier blank, never guesses", () => {
+    const spec = { traitChoices: [9, null, undefined] };
+    expect(cjs.resolveMajorChoices(spec, TIERS)).toEqual({ 1: 0, 2: 0, 3: 0 });
   });
 
   test("any chosen major trait wins: majorChoices are returned untouched", () => {
@@ -60,6 +65,7 @@ describe("trait-choices ESM mirror matches src/shared/traitChoices", () => {
     [{ _traitChoices: [3, 3, 1], majorChoices: { 1: 0, 2: 0, 3: 0 } }, TIERS],
     [{ traitChoices: [2, 2, 2], majorTraitsByTier: { 1: [{ id: 11 }, { id: 12 }], 2: [], 3: [] } }, TIERS],
     [{ traitChoices: [0, 9, null] }, TIERS],
+    [{ traitChoices: [0, 2, 0] }, TIERS],
     [{ majorChoices: { 1: 402, 2: 0, 3: 0 }, traitChoices: [3, 3, 3] }, TIERS],
     [{}, TIERS],
     [null, undefined],
