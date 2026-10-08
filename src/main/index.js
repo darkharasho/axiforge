@@ -326,6 +326,16 @@ function getIconPath() {
 // CDP, which does not require the window to be visible.
 const HIDE_WINDOW = process.env.AXIFORGE_HIDE_WINDOW === "1";
 
+// E2E workers run side by side and would share the OS clipboard, so one spec's
+// copy lands in another spec's paste. AXIFORGE_PRIVATE_CLIPBOARD=1 gives each
+// process its own in-memory text clipboard. Patching the module object covers
+// the IPC handlers and specs that call clipboard through electronApp.evaluate.
+if (process.env.AXIFORGE_PRIVATE_CLIPBOARD === "1" && !app.isPackaged) {
+  let privateClipboardText = "";
+  clipboard.writeText = (text) => { privateClipboardText = String(text ?? ""); };
+  clipboard.readText = () => privateClipboardText;
+}
+
 function createWindow(savedBounds) {
   const win = new BrowserWindow({
     width: savedBounds?.width ?? 1600,

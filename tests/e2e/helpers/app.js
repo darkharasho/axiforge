@@ -67,6 +67,8 @@ async function launchApp({ clean = true, env: envOverride = {} } = {}) {
       // Never map the window: without this every spec's launch steals desktop focus.
       // Playwright drives the renderer over CDP, which does not need a visible window.
       AXIFORGE_HIDE_WINDOW: "1",
+      // Parallel workers would otherwise share the OS clipboard.
+      AXIFORGE_PRIVATE_CLIPBOARD: "1",
       ...envOverride,
     },
   });
