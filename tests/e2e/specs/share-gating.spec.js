@@ -82,7 +82,7 @@ test.describe("Share gating — library context menu", () => {
 
   test("an unpublished build cannot be shared, and says why", async () => {
     const submenu = await openShareSubmenu(window, unpublished.id);
-    const copy = submenu.locator(".lib-ctx-item", { hasText: "Copy Link" }).first();
+    const copy = submenu.locator(".lib-ctx-item", { hasText: "Copy Discord text" }).first();
     await expect(copy).toHaveClass(/lib-ctx-item--disabled/);
     await expect(copy).toHaveAttribute("title", "Not published yet — Copy link publishes it");
     await closeMenus(window);
@@ -101,7 +101,7 @@ test.describe("Share gating — library context menu", () => {
 
   test("a build published exactly as it stands is shareable", async () => {
     const submenu = await openShareSubmenu(window, clean.id);
-    for (const label of ["Copy Link", "Discord Embed"]) {
+    for (const label of ["Copy Discord text", "Discord Embed"]) {
       const item = submenu.locator(".lib-ctx-item", { hasText: label }).first();
       await expect(item).not.toHaveClass(/lib-ctx-item--disabled/);
       await expect(item).not.toHaveAttribute("title", /Publish/);

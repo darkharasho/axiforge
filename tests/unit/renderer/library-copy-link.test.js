@@ -65,6 +65,12 @@ test("the build menu offers Copy link, not Publish, and it calls onPublish", () 
   expect(onPublish).toHaveBeenCalledWith("b1");
 });
 
+test("the Discord submenu's copy item says what it copies, so it can't be mistaken for Copy link", () => {
+  const menu = openBuildMenu("b1");
+  expect(discordItem(menu, "Copy Discord text")).toBeDefined();
+  expect(itemFor(document.body, "Copy Link")).toBeUndefined();
+});
+
 test("Discord share stays enabled while the build's first upload is in flight", () => {
   expect(discordItem(openBuildMenu("b1"), "Discord Embed").title).toBe("Not published yet — Copy link publishes it");
   closeMenu();

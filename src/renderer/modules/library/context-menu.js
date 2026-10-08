@@ -210,7 +210,7 @@ function showBuildMenu(x, y, buildId, build) {
     _item(linkIcon, "Copy Chat Link", null, () => _callbacks.onCopyChatLink?.(buildId)),
     _item(axiforgeIcon, "Copy AxiCode", null, () => _callbacks.onCopyShareCode?.(buildId)),
     _submenuItem(arrowUpTrayIcon, "Share to Discord", [
-      _item(clipboardDocumentIcon, "Copy Link", null, () => _callbacks.onDiscordCopy?.(buildId), false, shareTip),
+      _item(clipboardDocumentIcon, "Copy Discord text", null, () => _callbacks.onDiscordCopy?.(buildId), false, shareTip),
       _item(arrowUpTrayIcon, "Discord Embed", null, () => _callbacks.onDiscordEmbed?.(buildId), false, shareTip),
     ]),
     _item(arrowUpTrayIcon, "Export (.axicode)", null, () => _callbacks.onExportAxicode?.("selection")),
