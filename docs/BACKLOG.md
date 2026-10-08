@@ -190,6 +190,23 @@ Status key: `[ ]` open · `[x]` done · `[~]` in progress · `[?]` needs repro s
   commit (`pinnedRawBase`, `src/site/rawBase.js`); the importer could do the
   same.
 
+- [ ] **One new item makes its whole owner group wait for Pages.**
+  `createPublishBatch` (`src/main/publishBatch.js`) waits for the live check
+  whenever any item in an owner's commit is new, so up to 49 republishes in
+  the same round wait up to 180 s too. The spec says republishes don't wait.
+  Fix idea: split new items into their own commit, or only make waiters for
+  the new item block on the live check.
+
+- [ ] **"Keep theirs" leaves no way to copy the teammate's link.** After the
+  owner prompt's Keep theirs, the build's Copy link button and library item
+  only offer "Publish my copy". Copy link should also give the teammate's
+  published link.
+
+- [ ] **Publish-queue owner choices are never pruned.** `_choices` in
+  `src/main/publishQueue.js` keeps entries for deleted builds and comps, so
+  `publish-queue.json` grows over time. Prune them on load against the
+  current build and comp ids.
+
 ## Features
 
 - [x] **Comp history.** Builds have carried a full "who changed what" since the
