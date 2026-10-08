@@ -1,3 +1,25 @@
+## Version v1.4.0 — October 8, 2026
+
+### New Features
+
+- **Saving publishes.** Saving a build or comp now publishes it in the background a few seconds later, so your shared links always show what you last saved. You no longer need to press Publish. Changes saved close together go out in a single upload. If you're offline or signed out, saves wait and publish once you're connected again.
+- **Copy link replaces Publish.** The editor, the comp board and the library menu now have a **Copy link** button. It shows whether the link is up to date or still publishing, and copies the link once the latest save is live. It reads **Retry** if a publish failed, and **Set up publishing** if you haven't connected publishing yet.
+- **One-time prompts.** After you update, AxiForge offers once to publish the builds and comps you've never shared. For a build someone else published, it asks on the first save whether to publish your own copy or keep linking to theirs, and remembers your answer.
+- **Links show the newest version right away.** Published pages now load the latest save directly instead of a copy that could be about 5 minutes old.
+- **Smaller, faster published pages.** Published data is now compressed, and comps link to their builds instead of carrying a copy of each one. Your existing pages are re-encoded in the background after you update. Links you've already shared keep working.
+
+### Bug Fixes
+
+- **A deliberately blank trait line stays blank.** Builds imported with an empty trait line used to gain that line's first trait in the editor, on the published page and in comp coverage.
+- **Comps no longer show an empty list at startup.** Opening Comps while the app was still loading could show "No compositions yet" until something else refreshed the page.
+- **Copy Discord text includes the current link.** Copying right after a save now waits for the publish, so the text never links an old version or leaves the link out.
+- The library's Discord menu item **Copy Link** is now called **Copy Discord text**, so it isn't confused with the new Copy link.
+- Archived builds and comps are no longer published automatically.
+
+### Other Changes
+
+- Loading indicators now use the same animated bar throughout the app.
+
 ## Version v1.3.1 — October 6, 2026
 
 ### Fixes
