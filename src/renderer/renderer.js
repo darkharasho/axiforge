@@ -950,10 +950,10 @@ async function init() {
   render();
   syncGameModeToggleUI(state.editor.gameMode || "pve");
 
-  // Render library if it's the default/active page on startup
-  if (state.activePage === "library") {
-    renderLibrary();
-  }
+  // render() doesn't draw the library or comps page, and the user may already
+  // have opened Comps while the loads above were in flight — it would then sit
+  // on an empty list until something else repainted it.
+  _renderActivePage();
 }
 
 // ── Build operations ─────────────────────────────────────────────────────────
