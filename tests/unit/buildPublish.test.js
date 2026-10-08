@@ -773,3 +773,10 @@ describe("loadCrossProfessionCatalogs", () => {
     expect(result.map((c) => c.profession)).not.toContain("Guardian");
   });
 });
+
+describe("boonDurationBonus", () => {
+  test("serializeForPublish bakes concentration and expertise for the viewer's coverage", () => {
+    const out = serializeForPublish(makeMockBuild(), makeMockCatalog(), makeMockUpgradeCatalog());
+    expect(out.boonDurationBonus).toEqual({ concentration: expect.any(Number), expertise: expect.any(Number) });
+  });
+});

@@ -256,4 +256,21 @@ function estimateRole(build) {
   return first.role;
 }
 
-module.exports = { computePublishStats, estimateRole };
+/**
+ * Concentration and Expertise exactly as the desktop's comp coverage computes
+ * them (engine-bridge _fakeStateForBuild): equipment only, PvE, no skills, and
+ * no trait catalog, so traits contribute nothing. Baked into published builds
+ * so the viewer, which has no upgrade catalog, scales durations the same way.
+ */
+function computeDurationStats(build, upgradeCatalog) {
+  if (!build?.equipment) return { concentration: 0, expertise: 0 };
+  const { stats } = computePublishStats(build.equipment, upgradeCatalog, build.profession, "pve", {
+    specializations: build.specializations || [],
+    activeWeaponSet: 1,
+    underwaterMode: false,
+    skills: {},
+  });
+  return { concentration: stats.Concentration || 0, expertise: stats.Expertise || 0 };
+}
+
+module.exports = { computePublishStats, computeDurationStats, estimateRole };

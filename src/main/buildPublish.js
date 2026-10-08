@@ -2,7 +2,7 @@
 
 const fs = require("node:fs");
 const path = require("node:path");
-const { computePublishStats } = require("./statsCompute");
+const { computePublishStats, computeDurationStats } = require("./statsCompute");
 
 // ---------------------------------------------------------------------------
 // Equipment icon constants
@@ -762,6 +762,9 @@ function serializeForPublish(build, catalog, upgradeCatalog, extraCatalogs = [])
     equipmentIcons,
     computedStats,
     statModifiers,
+    // Concentration/Expertise for party-coverage durations on the published comp
+    // page, which has no upgrade catalog to derive them from.
+    boonDurationBonus: computeDurationStats(build, upgradeCatalog),
     professionWeapons,
     // Full profession skill + trait catalogs for the SPA renderer.
     // Includes bundle skills, flip-skill chains, toolbelt skills, etc.
