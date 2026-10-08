@@ -10,6 +10,8 @@ import { setReadOnly as setSpecsReadOnly } from "@renderer/modules/specializatio
 import { setReadOnly as setDetailReadOnly } from "@renderer/modules/detail-panel.js";
 import { accentFromParams } from "./accent.js";
 import { escapeHtml } from "./escape.js";
+import { loadCompMembers } from "./comp-members.js";
+import { computeViewerCoverageHtml } from "./comp-coverage.js";
 import { fetchPayload, PayloadVersionError, NEWER_FORMAT_MESSAGE } from "./payload.js";
 
 export { escapeHtml };
@@ -92,7 +94,18 @@ async function loadBuild(fileId, base64urlKey) {
 async function loadComp(fileId, base64urlKey) {
   try {
     const base = resolveDataBase(location, new URLSearchParams(location.search));
-    const comp = await fetchPayload(`${base}comps/${encodeURIComponent(fileId)}.enc`, base64urlKey);
+    let comp = await fetchPayload(`${base}comps/${encodeURIComponent(fileId)}.enc`, base64urlKey);
+    if (comp.v === 2) {
+      // A v2 comp links its builds: fetch them, then compute coverage here.
+      const builds = await loadCompMembers(comp, { fallbackBase: base, loc: location });
+      let boonCoverageHtml = "";
+      try {
+        boonCoverageHtml = await computeViewerCoverageHtml(comp, builds);
+      } catch (err) {
+        console.warn("Party coverage unavailable:", err);
+      }
+      comp = { ...comp, builds, boonCoverageHtml };
+    }
     renderComp(comp);
   } catch (err) {
     showError(loadErrorMessage(err, "Comp"));

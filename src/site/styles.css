@@ -348,6 +348,7 @@
 
 .comp-slot--filled { cursor: default; }
 .comp-slot--tag { border-style: dashed; }
+.comp-slot--unavailable { opacity: 0.45; border-style: dashed; }
 a.comp-slot { text-decoration: none; color: inherit; cursor: pointer; }
 .mini-card { cursor: default; }
 .comp-line__label { cursor: default; }

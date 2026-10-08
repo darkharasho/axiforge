@@ -68,7 +68,7 @@ function buildTagHoverData(comp) {
   for (const cat of (comp.categories || [])) {
     const builds = (cat.buildIds || [])
       .map((id) => comp.builds?.[id])
-      .filter(Boolean)
+      .filter((b) => b && !b.unavailable)
       .map((b) => ({ name: getDisplayName(b), icon: getProfIcon(b, "normal"), series: professionSeriesStyle(b.profession) }));
     _tagHoverData.set(cat.id, { name: cat.name || "Tag", builds });
   }
@@ -102,6 +102,9 @@ function showTagHover(slotEl) {
 }
 
 function renderSlot(build, color) {
+  if (build?.unavailable) {
+    return `<div class="comp-slot comp-slot--unavailable" title="Build unavailable"><span class="comp-slot__icon">?</span></div>`;
+  }
   if (!build) {
     return `<div class="comp-slot comp-slot--empty"></div>`;
   }
@@ -162,7 +165,7 @@ function renderPoolCard(build, slotColor) {
 }
 
 function renderBuildPool(comp) {
-  const builds = comp.builds || {};
+  const builds = Object.fromEntries(Object.entries(comp.builds || {}).filter(([, b]) => b && !b.unavailable));
   const buildColors = comp.buildColors || {};
   const cards = Object.entries(builds).map(([id, build]) => renderPoolCard(build, buildColors[id])).join("");
   return `
