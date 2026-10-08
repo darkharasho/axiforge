@@ -151,6 +151,118 @@ describe("rounds", () => {
   });
 });
 
+describe("drain order", () => {
+  test("publishNow during a long drain rides in the very next round", async () => {
+    const gates = [];
+    const { q, rounds } = makeQueue({
+      runRound: async (items) => { const g = deferred(); gates.push(g); await g.promise; return ok(items); },
+    });
+    for (let i = 0; i < 120; i += 1) q.enqueue("build", `b${i}`);
+    await adv(5000);
+    expect(rounds).toHaveLength(1);
+    q.publishNow("build", "urgent");
+    gates[0].resolve();
+    await adv(0);
+    expect(rounds).toHaveLength(2);
+    expect(rounds[1][0]).toBe("build:urgent");
+    expect(rounds[1]).toHaveLength(50);
+    gates[1].resolve();
+    await adv(0);
+    gates[2].resolve();
+    await adv(0);
+    expect(rounds.map((r) => r.length)).toEqual([50, 50, 21]);
+    expect(q.snapshot().items).toEqual({});
+  });
+
+  test("a save made mid-drain fills a partial batch instead of waiting for the backlog", async () => {
+    const gate = deferred();
+    const { q, rounds } = makeQueue({
+      runRound: async (items) => { if (rounds.length === 1) await gate.promise; return ok(items); },
+    });
+    for (let i = 0; i < 60; i += 1) q.enqueue("build", `b${i}`);
+    await adv(5000);
+    q.enqueue("comp", "new");
+    gate.resolve();
+    await adv(0);
+    expect(rounds.map((r) => r.length)).toEqual([50, 11]);
+    expect(rounds[1][0]).toBe("comp:new");
+  });
+
+  test("a save made mid-drain on its own waits for its debounce", async () => {
+    const gate = deferred();
+    const { q, rounds } = makeQueue({
+      runRound: async (items) => { if (rounds.length === 1) await gate.promise; return ok(items); },
+    });
+    q.enqueue("build", "a");
+    await adv(5000);
+    q.enqueue("build", "b");
+    gate.resolve();
+    await adv(0);
+    expect(rounds).toHaveLength(1);
+    await adv(5000);
+    expect(rounds).toEqual([["build:a"], ["build:b"]]);
+  });
+
+  test("an explicit item still runs while a network backoff holds the backlog", async () => {
+    const gate = deferred();
+    const { q, rounds } = makeQueue({
+      runRound: async (items) => {
+        if (rounds.length === 1) await gate.promise;
+        if (items.some((i) => i.id === "urgent")) return ok(items);
+        throw offline();
+      },
+    });
+    for (let i = 0; i < 60; i += 1) q.enqueue("build", `b${i}`);
+    await adv(5000);
+    q.publishNow("build", "urgent");
+    gate.resolve();
+    const waiting = q.awaitPublished("build", "urgent");
+    await adv(0);
+    // Round 1 failed offline: only the explicit item goes before the backoff ends.
+    expect(rounds.map((r) => r.length)).toEqual([50, 1]);
+    expect(rounds[1]).toEqual(["build:urgent"]);
+    await expect(waiting).resolves.toMatchObject({ id: "urgent" });
+    expect(q.snapshot().items["build:b0"]).toMatchObject({ state: "waiting", reason: "offline" });
+  });
+});
+
+describe("waiting through a rate limit", () => {
+  const limited = (retryAfterMs) => makeQueue({
+    runRound: async (items) => {
+      if (limited.lift) return ok(items);
+      throw coded("rate limited", { code: "GITHUB_RATE_LIMITED", retryAfterMs });
+    },
+  });
+  afterEach(() => { limited.lift = false; });
+
+  test("a wait the rate limit outlasts is told so right away, not after a timeout", async () => {
+    const { q } = limited(60000);
+    q.enqueue("build", "a");
+    const waiting = q.awaitPublished("build", "a", { timeoutMs: 15000 });
+    const assertion = expect(waiting).rejects.toMatchObject({ code: "GITHUB_RATE_LIMITED", message: expect.stringMatching(/rate limit/i) });
+    await adv(5000);
+    await assertion;
+    expect(q.snapshot().items["build:a"]).toMatchObject({ state: "waiting", reason: "rate-limit" });
+  });
+
+  test("a new wait during a rate limit that outlasts it rejects at once", async () => {
+    const { q } = limited(60000);
+    q.enqueue("build", "a");
+    await adv(5000);
+    await expect(q.awaitPublished("build", "a", { timeoutMs: 15000 })).rejects.toMatchObject({ code: "GITHUB_RATE_LIMITED" });
+  });
+
+  test("a wait longer than the rate limit keeps waiting and gets the result", async () => {
+    const { q } = limited(60000);
+    q.enqueue("build", "a");
+    const waiting = q.awaitPublished("build", "a", { timeoutMs: 300000 });
+    await adv(5000);
+    limited.lift = true;
+    await adv(60000);
+    await expect(waiting).resolves.toMatchObject({ id: "a", ok: true });
+  });
+});
+
 describe("failures", () => {
   test("network errors back off 30 s, 1 min, 2 min, then every 5 min", async () => {
     const { q, rounds } = makeQueue({ runRound: async () => { throw offline(); } });

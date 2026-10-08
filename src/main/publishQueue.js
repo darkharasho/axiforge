@@ -49,6 +49,14 @@ function pausedError(reason) {
   return err;
 }
 
+function rateLimitedError(at) {
+  const time = new Date(at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const err = new Error(`GitHub rate limit reached. Publishing again at ${time}.`);
+  err.code = "GITHUB_RATE_LIMITED";
+  err.retryAt = at;
+  return err;
+}
+
 class PublishQueue {
   constructor({
     runRound,
@@ -79,6 +87,8 @@ class PublishQueue {
     this._needsChoice = new Map(); // key → foreign owner login; asked once per launch
     this._publishing = new Set();  // keys in the round in flight
     this._resaved = new Set();     // keys enqueued again while their round was in flight
+    this._priority = new Set();    // keys an explicit publishNow asked for: next batch first
+    this._arrived = new Set();     // keys enqueued while a drain runs: ride the next batch
     this._timer = null;            // { id, firstAt }: the debounce
     this._retry = null;            // { id, at, reason: "offline" | "rate-limit" }
     this._attempt = 0;             // consecutive rounds with a network failure
@@ -126,11 +136,16 @@ class PublishQueue {
 
   /**
    * Enqueue and start a round now, skipping the debounce and any network backoff.
+   * The item goes first in the next batch, even mid-drain. A GitHub rate limit
+   * still holds it (another call would only hit the limit again); a waiter hears
+   * that through awaitPublished.
    * `unpause` (an explicit publish) also lifts a pause, so the round carries this
    * item with everything else pending; an item still broken pauses it again.
    */
   publishNow(kind, id, { unpause = false } = {}) {
-    this._add(keyOf(kind, id));
+    const key = keyOf(kind, id);
+    this._add(key);
+    this._priority.add(key);
     if (unpause) this._paused = null;
     if (this._retry?.reason === "offline") this._clearRetry();
     this._changed();
@@ -173,11 +188,20 @@ class PublishQueue {
       return Promise.resolve(null);
     }
     if (this._paused) return Promise.reject(pausedError(this._paused));
+    const deadline = this._now() + timeoutMs;
+    // A rate limit that outlasts the wait can only end in a timeout: say why now.
+    if (this._retry?.reason === "rate-limit" && this._retry.at > deadline) {
+      return Promise.reject(rateLimitedError(this._retry.at));
+    }
     return new Promise((resolve, reject) => {
-      const waiter = { resolve, reject, timer: null };
+      const waiter = { resolve, reject, timer: null, deadline };
       waiter.timer = this._setTimeout(() => {
         const list = (this._waiters.get(key) || []).filter((w) => w !== waiter);
         if (list.length) this._waiters.set(key, list); else this._waiters.delete(key);
+        if (this._retry?.reason === "rate-limit") {
+          reject(rateLimitedError(this._retry.at));
+          return;
+        }
         const err = new Error("Publishing is taking longer than expected. Try again in a moment.");
         err.code = "PUBLISH_TIMEOUT";
         reject(err);
@@ -251,6 +275,7 @@ class PublishQueue {
     this._needsChoice.delete(key);
     this._pending.add(key);
     if (this._publishing.has(key)) this._resaved.add(key);
+    if (this._running) this._arrived.add(key);
   }
 
   _schedule() {
@@ -288,15 +313,41 @@ class PublishQueue {
     this._retry = null;
   }
 
+  /**
+   * Rounds until the backlog (everything pending when the drain started) and
+   * every explicit publishNow have had a round. Each batch is built fresh:
+   * explicit items first, then saves made since the drain started, then the
+   * backlog, up to batchSize. A save made mid-drain rides along in a batch that
+   * has room; on its own it waits for its debounce timer, so a single item being
+   * edited doesn't chase every keystroke.
+   */
   async _drain() {
-    // Items due now. A save made mid-round has its own debounce timer, so it
-    // waits for a quiet period instead of chasing every keystroke.
-    const due = new Set(this._pending);
-    while (!this._paused && !this._retry) {
-      const batch = [...due].filter((k) => this._pending.has(k)).slice(0, this._batchSize);
-      if (!batch.length) return;
-      for (const k of batch) due.delete(k);
-      await this._round(batch);
+    const backlog = new Set(this._pending);
+    this._arrived.clear();
+    for (;;) {
+      if (this._paused) return;
+      for (const k of this._priority) if (!this._pending.has(k)) this._priority.delete(k);
+      for (const k of backlog) if (!this._pending.has(k)) backlog.delete(k);
+      // A backoff holds everything but an explicit publish; a rate limit holds all.
+      const held = Boolean(this._retry);
+      if (held && (this._retry.reason !== "offline" || !this._priority.size)) return;
+      if (!this._priority.size && !backlog.size) return;
+      const batch = new Set(this._priority);
+      if (!held) {
+        for (const source of [this._arrived, backlog]) {
+          for (const k of source) {
+            if (batch.size >= this._batchSize) break;
+            if (this._pending.has(k)) batch.add(k);
+          }
+        }
+      }
+      const keys = [...batch].slice(0, this._batchSize);
+      for (const k of keys) {
+        this._priority.delete(k);
+        this._arrived.delete(k);
+        backlog.delete(k);
+      }
+      await this._round(keys);
     }
   }
 
@@ -359,8 +410,29 @@ class PublishQueue {
       this._attempt = 0;
     }
     this._publishing = new Set();
-    if (wait && !this._paused) this._setRetry(wait, waitReason);
+    if (wait && !this._paused) {
+      this._setRetry(wait, waitReason);
+      if (waitReason === "rate-limit") this._rejectOutlastedWaiters();
+    }
     this._changed();
+  }
+
+  // A waiter whose deadline falls before the rate limit lifts hears why now,
+  // instead of a generic timeout later. The item stays pending.
+  _rejectOutlastedWaiters() {
+    const at = this._retry.at;
+    for (const [key, list] of this._waiters) {
+      const keep = [];
+      for (const w of list) {
+        if (w.deadline < at) {
+          this._clearTimeout(w.timer);
+          w.reject(rateLimitedError(at));
+        } else {
+          keep.push(w);
+        }
+      }
+      if (keep.length) this._waiters.set(key, keep); else this._waiters.delete(key);
+    }
   }
 
   _settle(key, err, result = null) {
