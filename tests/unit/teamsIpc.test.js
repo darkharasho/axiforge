@@ -664,7 +664,7 @@ describe("publishing inside a team", () => {
   const AUTH = {
     sync: SESSION,
     token: "gh-token",
-    onboarding: { targetOwner: "me", targetOwnerType: "user", branch: "main" },
+    onboarding: { targetOwner: "me", targetOwnerType: "user", branch: "main", repoReady: true },
   };
   // Same tree, with the team pointed at its org (as listTeams mirrors it).
   const publishingTeam = () => {
@@ -717,5 +717,107 @@ describe("publishing inside a team", () => {
     expect(mockApi.setTeamPublishOwner).toHaveBeenCalledWith(TEAM_ID, "gw2eww", "org");
     const folders = await invoke("folders:list");
     expect(folders.find((f) => f.id === TEAM_ID)).toMatchObject({ publishOwner: "gw2eww", publishOwnerType: "org" });
+  });
+});
+
+// ─── Publish on save ────────────────────────────────────────────────────────
+
+describe("publish on save", () => {
+  const AUTH = {
+    sync: SESSION,
+    token: "gh-token",
+    viewer: { login: "me" },
+    onboarding: { targetOwner: "me", targetOwnerType: "user", branch: "main", repoReady: true },
+  };
+  const github = () => require("../../src/main/githubApi");
+  const statuses = () => mockCtx.sent.filter((m) => m.channel === "publish:status").map((m) => m.data);
+  const lastStatus = () => statuses().at(-1);
+  const queueFile = () => path.join(mockCtx.userData, "publish-queue.json");
+  // A real AES-256 key: a publish re-encrypts with the record's own key.
+  const KEY = Buffer.alloc(32, 7).toString("base64url");
+  const mine = (over) => build({ id: "p1", title: "Mine", folderId: "solo", publishedFileId: "pf", publishedKey: KEY, publishedSlug: "mine", publishedOwner: "me", publishedHash: "OLD", ...over });
+  const tree = (builds) => ({ ...teamTree(), builds, auth: AUTH });
+
+  test("saving a changed build queues it and persists the queue", async () => {
+    await loadMain(tree([mine()]));
+    await invoke("builds:save", { id: "p1", title: "Mine, edited", profession: "Warrior" });
+    expect(lastStatus().items["build:p1"]).toEqual({ state: "queued" });
+    await waitFor(() => fs.existsSync(queueFile()), { label: "queue persisted" });
+    expect(JSON.parse(fs.readFileSync(queueFile(), "utf8")).pending).toEqual(["build:p1"]);
+  });
+
+  test("a save that leaves the published content alone is not queued", async () => {
+    await loadMain(tree([mine()]));
+    await invoke("builds:publish-build", "p1", {});
+    const [stored] = (await invoke("builds:list")).filter((x) => x.id === "p1");
+    mockCtx.sent.length = 0;
+    await invoke("builds:save", stored);
+    expect(statuses().some((s) => s.items["build:p1"])).toBe(false);
+  });
+
+  test("builds:publish-build keeps its response shape (local API)", async () => {
+    await loadMain(tree([mine()]));
+    const res = await invoke("builds:publish-build", "p1", {});
+    expect(res).toMatchObject({ slug: "mine", fileId: "pf", changed: true });
+    expect(res.pagesUrl).toMatch(new RegExp(`^https://me\\.github\\.io/axibuilds/\\?n=mine&b=pf\\.${KEY}`));
+    expect(github().publishSiteBundle).toHaveBeenCalledTimes(1);
+  });
+
+  test("a build owned by someone else asks once, then publishes after \"mine\"", async () => {
+    await loadMain(tree([mine({ publishedOwner: "mate" })]));
+    await invoke("builds:save", { id: "p1", title: "Edit 1", profession: "Warrior" });
+    await invoke("builds:save", { id: "p1", title: "Edit 2", profession: "Warrior" });
+    const asks = mockCtx.sent.filter((m) => m.channel === "publish:needs-owner-choice");
+    expect(asks.map((m) => m.data)).toEqual([{ kind: "build", id: "p1", owner: "mate" }]);
+    expect(lastStatus().items["build:p1"]).toEqual({ state: "declined", owner: "mate" });
+    await invoke("publish:set-choice", "build", "p1", "mine");
+    await waitFor(() => github().publishSiteBundle.mock.calls.length === 1, { label: "published after choice" });
+    expect(github().publishSiteBundle.mock.calls[0][1]).toBe("me");
+  });
+
+  test("\"theirs\" stops further saves from publishing", async () => {
+    await loadMain(tree([mine({ publishedOwner: "mate" })]));
+    await invoke("publish:set-choice", "build", "p1", "theirs");
+    await invoke("builds:save", { id: "p1", title: "Edit", profession: "Warrior" });
+    expect(lastStatus().items["build:p1"]).toEqual({ state: "declined" });
+    expect(mockCtx.sent.some((m) => m.channel === "publish:needs-owner-choice")).toBe(false);
+  });
+
+  test("publishing is refused, and the queue paused, until setup is done", async () => {
+    await loadMain({ ...tree([mine()]), auth: { ...AUTH, onboarding: { targetOwner: "me", branch: "main" } } });
+    await expect(invoke("builds:publish-build", "p1", {})).rejects.toThrow(/Set up publishing/);
+    expect((await invoke("publish:snapshot")).paused).toBe("disconnected");
+  });
+
+  test("publish:get-link returns a published item's link without publishing", async () => {
+    await loadMain(tree([mine()]));
+    const url = await invoke("publish:get-link", "build", "p1");
+    expect(url).toBe(`https://me.github.io/axibuilds/?n=mine&b=pf.${KEY}`);
+    expect(github().publishSiteBundle).not.toHaveBeenCalled();
+  });
+
+  test("publish:bulk-candidates counts never-published items; bulk-enqueue queues them", async () => {
+    await loadMain(tree([mine(), build({ id: "n1", title: "New", folderId: "solo" }), build({ id: "n2", title: "", profession: "" })]));
+    // tree() replaces teamTree's builds: p1 is published, n2 has no profession.
+    expect(await invoke("publish:bulk-candidates")).toBe(1);
+    expect(await invoke("publish:bulk-enqueue")).toBe(1);
+    expect(Object.keys(lastStatus().items)).toEqual(["build:n1"]);
+  });
+
+  test("quitting with saves pending runs one round, then quits", async () => {
+    await loadMain(tree([mine()]));
+    await invoke("builds:save", { id: "p1", title: "Edited", profession: "Warrior" });
+    const event = { preventDefault: jest.fn() };
+    fireAppEvent("before-quit", event);
+    expect(event.preventDefault).toHaveBeenCalled();
+    await waitFor(() => mockCtx.quit === true, { label: "quit after flush" });
+    expect(github().publishSiteBundle).toHaveBeenCalledTimes(1);
+  });
+
+  test("a Discord share of a queued build waits for its upload", async () => {
+    await loadMain(tree([mine()]));
+    await invoke("builds:save", { id: "p1", title: "Edited", profession: "Warrior" });
+    await invoke("discord:share-build", "p1", []);
+    expect(github().publishSiteBundle).toHaveBeenCalledTimes(1);
   });
 });

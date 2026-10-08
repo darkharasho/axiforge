@@ -106,6 +106,13 @@ contextBridge.exposeInMainWorld("desktopApi", {
   removeTagsFromComps: (ids, tags) => ipcRenderer.invoke("comps:remove-tags", ids, tags),
   publishComp: (compId, opts) => ipcRenderer.invoke("comps:publish-comp", compId, opts || {}),
   getCompPublishedUrl: (compId) => ipcRenderer.invoke("comps:get-published-url", compId),
+  getPublishSnapshot: () => invoke("publish:snapshot"),
+  retryPublish: (kind, id) => invoke("publish:retry", kind, id),
+  setPublishChoice: (kind, id, choice) => invoke("publish:set-choice", kind, id, choice),
+  getPublishLink: (kind, id) => invoke("publish:get-link", kind, id),
+  getBulkPublishCount: () => invoke("publish:bulk-candidates"),
+  bulkPublish: () => invoke("publish:bulk-enqueue"),
+  resumePublishing: () => invoke("publish:resume"),
 
   // Build library operations
   moveBuilds: (ids, folderId) =>
@@ -191,6 +198,14 @@ contextBridge.exposeInMainWorld("desktopApi", {
   onPublishProgress: (cb) => {
     ipcRenderer.removeAllListeners("publish-progress");
     ipcRenderer.on("publish-progress", (_e, step) => cb(step));
+  },
+  onPublishStatus: (cb) => {
+    ipcRenderer.removeAllListeners("publish:status");
+    ipcRenderer.on("publish:status", (_e, snapshot) => cb(snapshot));
+  },
+  onPublishOwnerChoice: (cb) => {
+    ipcRenderer.removeAllListeners("publish:needs-owner-choice");
+    ipcRenderer.on("publish:needs-owner-choice", (_e, ask) => cb(ask));
   },
   // Teams (team sync)
   getTeamSession: () => invoke("teams:get-session"),

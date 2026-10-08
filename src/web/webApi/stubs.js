@@ -33,6 +33,13 @@ function createStubsApi() {
     publishBuild: noop,
     publishComp: noop,
     getCompPublishedUrl: async () => null,
+    getPublishSnapshot: async () => ({ items: {}, paused: null, published: [] }),
+    retryPublish: noop,
+    setPublishChoice: noop,
+    getPublishLink: async () => null,
+    getBulkPublishCount: async () => 0,
+    bulkPublish: async () => 0,
+    resumePublishing: noop,
     // discord
     shareCompToDiscord: noop,
     shareBuildToDiscord: noop,
@@ -67,6 +74,8 @@ function createStubsApi() {
     onUpdateInstallError: onEvent,
     onDownloadProgress: onEvent,
     onPublishProgress: onEvent,
+    onPublishStatus: onEvent,
+    onPublishOwnerChoice: onEvent,
     onSyncStatus: onEvent,
     onSyncConflict: onEvent,
     // wiki deep-dive (facts are baked into catalogs; live lookups are off)

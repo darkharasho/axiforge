@@ -43,13 +43,12 @@ const {
   pollUrlLive,
 } = require("./githubApi");
 const { getProfessionList, getProfessionCatalog, getUpgradeCatalog, getWikiSummary, getWikiRelatedData, initDiskCache, clearDiskCache, initWikiClient, clearCatalogCache } = require("./gw2Data");
-const { slugifyBuildName, generateFileId, generateEncryptionKey, getDefaultBuildName } = require("./buildEncryption");
-const { buildSpaBundle, buildEncryptedBuildFile, buildEncryptedCompFile, buildRedirectFile } = require("./siteBundle");
-const { snapshotDaily } = require("./jsonFile");
+const { buildSpaBundle, buildEncryptedBuildFile, buildEncryptedCompFile } = require("./siteBundle");
+const { snapshotDaily, readJsonFile, writeJsonAtomic } = require("./jsonFile");
 const { WINDOW_MIN, windowChromeOptions, needsManualResize, resizeBounds } = require("../shared/windowChrome");
 const { repairOrphans } = require("./orphanRepair");
 const { serializeForPublish, loadCrossProfessionCatalogs } = require("./buildPublish");
-const { serializeCompForPublish, getCompPublishBuildIds, planCompMembers } = require("./compPublish");
+const { serializeCompForPublish, getCompPublishBuildIds } = require("./compPublish");
 const { formatStamp, planFormatMigrations } = require("./formatMigration");
 const { initAutoUpdate } = require("./autoUpdate");
 const { registerAxicodeFileHandlers } = require("./axicodeFile");
@@ -60,12 +59,15 @@ const { startAccess } = require("./access");
 const { shareRejectionReason } = require("./shareGate");
 const { withoutPublishReceipt } = require("../shared/publishState");
 const {
-  annotateBuild, annotateComp, annotateSyncEvent, buildReceipt, compReceipt,
+  annotateBuild, annotateComp, annotateSyncEvent,
 } = require("./publishFingerprint");
 const { backfillPublishReceipts } = require("./publishBaseline");
 const { shortUrl, publishedOwnerFor } = require("./shortUrl");
 const { resolvePublishTarget } = require("./publishTarget");
-const { assertCanMoveOutOfTeam, assertFolderTreeFits, withoutReceiptHashes, memberStampTargets } = require("./teamGuards");
+const { PublishQueue } = require("./publishQueue");
+const { autoPublishDecision, bulkPublishCandidates } = require("./autoPublish");
+const { createPublishBatch, publishedPageUrl } = require("./publishBatch");
+const { assertCanMoveOutOfTeam, assertFolderTreeFits, withoutReceiptHashes } = require("./teamGuards");
 
 const { PROFESSION_ACCENTS: PROFESSION_THEME_IDS } = require("./accents");
 
@@ -532,6 +534,9 @@ let mainWindow = null;
 // Set once TeamSync is constructed during startup, so app-level lifecycle hooks
 // (will-quit) can reach the instance that lives inside the ready handler.
 let teamSyncRef = null;
+// Set once the publish queue is constructed in the ready handler, for the
+// app-level quit hooks.
+let publishQueueRef = null;
 
 // Sync events go to the focused-most window (the same target TeamSync itself
 // uses for its own events).
@@ -691,7 +696,35 @@ const readyWork = app.whenReady().then(async () => {
   teamSync.cleanupLegacyFolders().catch((err) => console.warn("[legacy-cleanup]", err.message));
   // Flush anything left in the outbox from a previous run, then pull.
   teamSync.pullAll().catch((err) => console.error("[startup-pull] error:", err.message));
-  app.on("browser-window-focus", () => { teamSync.onFocus(); });
+  // Publish on save (publishQueue.js / publishBatch.js). Rounds go through
+  // enqueuePublish, so a round, a Retry and a local API publish never race.
+  const publishBatch = createPublishBatch({
+    getSession, getAuthRecord, patchAuthRecord, findTeamRoot, resolvePublishTarget,
+    listBuilds: () => store.listBuilds(),
+    listComps: () => compStore.listComps(),
+    markBuildPublished: (id, patch) => store.markPublished(id, patch),
+    markCompPublished: (id, patch) => compStore.markPublished(id, patch),
+    getSetting: (key) => store.getSetting(key),
+    enrichBuildForPublish, buildSpaBundle, addFormatMigrations, stampFormatMigrations,
+    ensurePublishInfra, invalidatePublishInfra, publishSiteBundle, triggerPagesWorkflow, pollUrlLive,
+    teamPut: (teamId, id, kind) => safeEnqueue(() => teamSync.enqueue(teamId, id, kind, "put"), { type: kind, id }),
+    choiceOf: (kind, id) => publishQueue.choiceOf(kind, id),
+    repo: TARGET_REPO,
+  });
+  const publishQueueFile = path.join(app.getPath("userData"), "publish-queue.json");
+  const publishQueue = new PublishQueue({
+    runRound: (items) => enqueuePublish(() => publishBatch(items)),
+    load: () => readJsonFile(publishQueueFile, null),
+    persist: (data) => writeJsonAtomic(publishQueueFile, data, { backup: false }),
+    emit: (snapshot) => broadcast("publish:status", snapshot),
+  });
+  publishQueueRef = publishQueue;
+  publishQueue.load().catch((err) => console.warn("[publish-queue] load failed:", err.message));
+
+  app.on("browser-window-focus", () => {
+    teamSync.onFocus();
+    publishQueue.resume().catch(() => {});
+  });
 
   // Restore last window position/size if valid
   const b = await store.getSetting("windowBounds");
@@ -855,6 +888,7 @@ const readyWork = app.whenReady().then(async () => {
       onboarding: previous.onboarding || {},
     }));
     recheckAccess();
+    publishQueueRef?.resume().catch(() => {});
     return { viewer };
   });
 
@@ -864,6 +898,32 @@ const readyWork = app.whenReady().then(async () => {
   });
 
   // contentHash rides along for the renderer's publish status; never stored.
+  // Where a record publishes, from the stored auth only: a save must never wait
+  // on a network round trip. null when signed out (the round decides later).
+  async function publishTargetOwner(record) {
+    const auth = await getAuthRecord();
+    if (!auth?.token || !auth?.viewer?.login) return null;
+    return resolvePublishTarget(auth, auth.viewer.login, await findTeamRoot(record.folderId)).owner;
+  }
+
+  // Never fails the save: publishing is best-effort on top of a local write.
+  async function autoPublishAfterSave(kind, saved) {
+    try {
+      const annotated = kind === "comp" ? annotateComp(saved) : annotateBuild(saved);
+      const decision = autoPublishDecision(kind, annotated, {
+        targetOwner: await publishTargetOwner(saved),
+        choice: publishQueue.choiceOf(kind, saved.id),
+      });
+      if (decision === "enqueue") {
+        publishQueue.enqueue(kind, saved.id);
+      } else if (decision === "ask-owner" && publishQueue.markNeedsChoice(kind, saved.id, saved.publishedOwner)) {
+        broadcast("publish:needs-owner-choice", { kind, id: saved.id, owner: saved.publishedOwner });
+      }
+    } catch (err) {
+      console.warn("[publish-queue] auto-publish skipped:", kind, saved?.id, err?.message || err);
+    }
+  }
+
   handle("builds:list", async () => (await store.listBuilds()).map(annotateBuild));
   handle("builds:save", async (_e, rawBuild) => {
     // Main owns the publish receipt: a renderer object can be stale.
@@ -901,6 +961,7 @@ const readyWork = app.whenReady().then(async () => {
     if (oldRoot && oldRoot.id !== newRoot?.id) {
       await safeEnqueue(() => teamSync.enqueue(oldRoot.teamId, saved.id, "build", "delete"), { type: "build", id: saved.id });
     }
+    await autoPublishAfterSave("build", saved);
     return annotateBuild(saved);
   });
   handle("builds:delete", async (_e, id) => {
@@ -1254,6 +1315,7 @@ const readyWork = app.whenReady().then(async () => {
     if (oldRoot && oldRoot.id !== newRoot?.id) {
       await safeEnqueue(() => teamSync.enqueue(oldRoot.teamId, saved.id, "comp", "delete"), { type: "comp", id: saved.id });
     }
+    await autoPublishAfterSave("comp", saved);
     return annotateComp(saved);
   });
   handle("comps:delete", async (_e, id) => {
@@ -1702,348 +1764,93 @@ const readyWork = app.whenReady().then(async () => {
     }
   }
 
-  handle("builds:publish-build", (event, buildId, opts) => enqueuePublish(() => publishBuildImpl(event, buildId, opts || {})));
-  async function publishBuildImpl(event, buildId, opts = {}) {
-    const sender = event.sender;
-    const progress = (step) => sender.send("publish-progress", { id: buildId, step });
+  // Explicit publishes (old IPC, local API, Copy link on a never-published
+  // item) go through the queue too: same round, same receipts, same wait.
+  const PUBLISH_FULL_WAIT_MS = 5 * 60 * 1000;
+  const SHARE_PUBLISH_WAIT_MS = 15 * 1000;
 
-    const session = await getSession();
-    if (!session) {
-      throw new Error("You must log in with GitHub before publishing.");
-    }
-
-    const auth = await getAuthRecord();
-    const branch = auth?.onboarding?.branch || "main";
-
-    // Load the build
-    progress("loading");
-    const builds = await store.listBuilds();
-    const build = builds.find((b) => b.id === buildId);
-    if (!build) throw new Error("Build not found.");
-
-    // Before the owner check, not after: a build inside a team publishes to the
-    // team's owner, so which owner "published by someone else" is measured
-    // against depends on it.
-    const teamRoot = await findTeamRoot(build.folderId);
-    const { owner, ownerType, scope } = resolvePublishTarget(auth, session.viewer.login, teamRoot);
-    if (build.publishedOwner && build.publishedOwner !== owner && !opts.force) {
-      throw new Error(`PUBLISHED_BY_OTHER:${build.publishedOwner}`);
-    }
-
-    // Auto-populate build name if empty or default
-    if (!build.title?.trim() || build.title === "Untitled Build") {
-      const defaultName = getDefaultBuildName(build.specializations, build.profession);
-      build.title = defaultName;
-      const renamed = await store.upsertBuild(build);
-      // Keep the snapshot's updatedAt in step with what was just written, so the
-      // publishedAt stamped at the end matches and the build reads as fresh.
-      build.updatedAt = renamed.updatedAt;
-    }
-
-    // Validate
-    if (!build.title) throw new Error("Build name is required for publishing.");
-    if (!build.profession) throw new Error("Build must have a profession selected.");
-
-    // Generate or reuse publish metadata
-    const fileId = build.publishedFileId || generateFileId();
-    const encKey = build.publishedKey || generateEncryptionKey();
-    const newSlug = slugifyBuildName(build.title);
-
-    // Ensure repo and site infrastructure exist (cached after the first success)
-    progress("repo");
-    await ensurePublishInfra(session.token, owner, ownerType, branch);
-
-    // Build combined bundle: SPA files + encrypted build in one commit.
-    // publishSiteBundle compares SHA hashes and skips unchanged files,
-    // so SPA files are effectively a no-op after the first publish.
-    progress("site");
-    const spaBundle = buildSpaBundle();
-
-    // Enrich build data for the SPA
-    progress("encrypt");
-    let enrichedBuild;
-    try {
-      enrichedBuild = await enrichBuildForPublish(build);
-    } catch (err) {
-      throw new Error(
-        `Failed to enrich build data: ${err?.message || err}. ` +
-        "Check your internet connection and try again."
-      );
-    }
-    const encFile = buildEncryptedBuildFile(enrichedBuild, fileId, encKey);
-
-    // Merge SPA bundle + encrypted build + redirect into a single commit
-    const redirectFile = buildRedirectFile(fileId, encKey, "b");
-    const combinedBundle = { ...spaBundle, [encFile.filePath]: encFile.content, [redirectFile.filePath]: redirectFile.content };
-    const migrated = await addFormatMigrations(combinedBundle, owner, [buildId]);
-
-    progress("upload");
-    let publishResult;
-    try {
-      publishResult = await publishSiteBundle(session.token, owner, combinedBundle, branch, TARGET_REPO);
-    } catch (err) {
-      if (err?.status === 404) invalidatePublishInfra(owner, branch);
-      throw err;
-    }
-    if (publishResult.shellChanged) {
-      progress("deploy");
-      await triggerPagesWorkflow(session.token, owner, branch, TARGET_REPO).catch(() => null);
-    }
-
-    // Confirm the encrypted build is actually reachable before we mark the
-    // build as published. The SPA reads it from raw.githubusercontent.com, which
-    // reflects the commit within seconds. Only after it's live do we stamp
-    // publishedAt — so "published" always means "the shared link works".
-    progress("pages");
-    const rawBuildUrl = `https://raw.githubusercontent.com/${owner}/${TARGET_REPO}/${branch}/site/builds/${fileId}.enc`;
-    const live = await pollUrlLive(rawBuildUrl);
-    if (!live) {
-      throw new Error("Published, but the link did not go live in time. Try again in a minute.");
-    }
-
-    // On a shell-changed publish (first ever, or the SPA app itself updated) the
-    // site shell is served by the Pages workflow, not raw — wait for it too so the
-    // shared page itself (not just the build data) is live before we mark published.
-    if (publishResult.shellChanged) {
-      const shellLive = await pollUrlLive(`https://${owner}.github.io/${TARGET_REPO}/`, { timeoutMs: 180000 });
-      if (!shellLive) {
-        throw new Error("Published, but the site did not go live in time. Try again in a minute.");
-      }
-    }
-
-    // Record publish metadata and push to shared repo so teammates receive the
-    // published URL without needing to publish themselves. markPublished patches
-    // only the publish fields — it must NOT re-upsert the `build` snapshot, which
-    // would clobber any save the user made while the upload was in flight. If
-    // such a save happened, publishedAt (= snapshot updatedAt) != updatedAt and
-    // the build correctly shows as needing a re-publish.
-    const savedBuild = (await store.markPublished(buildId, {
-      publishedSlug: newSlug,
-      publishedFileId: fileId,
-      publishedKey: encKey,
-      publishedOwner: owner,
-      snapshotUpdatedAt: build.updatedAt,
-      // Fingerprint of the snapshot that was serialized, so a save made during
-      // the upload leaves the build reading out of date.
-      ...buildReceipt(build),
-      publishedFormat: formatStamp("build", buildReceipt(build).publishedHash),
-    })) || build;
-    if (teamRoot) await safeEnqueue(() => teamSync.enqueue(teamRoot.teamId, savedBuild.id, "build", "put"), { type: "build", id: savedBuild.id });
-    await stampFormatMigrations(migrated);
-
-    const themedBuilds = await store.getSetting("appearance.themedBuildPages");
-    const themeParam = themedBuilds && build.profession && PROFESSION_THEME_IDS[build.profession]
-      ? PROFESSION_THEME_IDS[build.profession]
-      : await store.getSetting("appearance.theme");
-    const pagesUrl = `https://${owner}.github.io/${TARGET_REPO}/?n=${encodeURIComponent(newSlug)}&b=${fileId}.${encKey}${themeParam ? `&t=${themeParam}` : ""}`;
-
-    // Only for a publish that went to the PERSONAL target. onboarding is this
-    // machine's own publishing setup — its repo, its Pages build, its chosen
-    // owner — so stamping a team publish onto it would repoint the personal
-    // target at the team's org and then report the team's site build as the
-    // user's own.
-    if (scope === "personal") {
-      await patchAuthRecord({
-        onboarding: {
-          repoReady: true,
-          forkReady: true,
-          repoName: TARGET_REPO,
-          pagesReady: false,
-          pagesBuildStatus: "queued",
-          pagesBuildUpdatedAt: new Date().toISOString(),
-          pagesBuildError: null,
-          pagesUrl: `https://${owner}.github.io/${TARGET_REPO}/`,
-          branch,
-          targetOwner: owner,
-          targetOwnerType: ownerType,
-        },
-      });
-    }
-
-    return {
-      pagesUrl,
-      slug: newSlug,
-      fileId,
-      changed: true,
-    };
+  async function findPublishRecord(kind, id) {
+    const list = kind === "comp" ? await compStore.listComps() : await store.listBuilds();
+    return list.find((r) => r.id === id) || null;
   }
 
-  handle("comps:publish-comp", (event, compId, opts) => enqueuePublish(() => publishCompImpl(event, compId, opts || {})));
-  async function publishCompImpl(event, compId, opts = {}) {
-    const sender = event.sender;
-    const progress = (step) => sender.send("publish-progress", { id: compId, step });
-
-    const session = await getSession();
-    if (!session) throw new Error("You must log in with GitHub before publishing.");
-
-    const auth = await getAuthRecord();
-    const branch = auth?.onboarding?.branch || "main";
-
-    // ── 1. Load comp + its builds ──────────────────────────────────────
-    progress("loading");
-    const allComps = await compStore.listComps();
-    const comp = allComps.find((c) => c.id === compId);
-    if (!comp) throw new Error("Comp not found.");
-
-    if (!comp.name?.trim() || comp.name === "Untitled Comp") {
-      throw new Error("Comp name is required for publishing.");
-    }
-
-    const compTeamRoot = await findTeamRoot(comp.folderId);
-    const { owner, ownerType, scope } = resolvePublishTarget(auth, session.viewer.login, compTeamRoot);
-    if (comp.publishedOwner && comp.publishedOwner !== owner && !opts.force) {
-      throw new Error(`PUBLISHED_BY_OTHER:${comp.publishedOwner}`);
-    }
-
-    const allBuilds = await store.listBuilds();
-    // Use union of buildIds + all party line slot IDs so a build that ended up
-    // in a slot without being in buildIds (data divergence) is still published.
-    const buildIdSet = new Set(getCompPublishBuildIds(comp));
-    const compBuilds = allBuilds.filter((b) => buildIdSet.has(b.id));
-
-    // ── 2. Ensure repo infrastructure (cached after first success) ─────
-    progress("repo");
-    await ensurePublishInfra(session.token, owner, ownerType, branch);
-
-    // ── 3. Build SPA bundle ────────────────────────────────────────────
-    progress("site");
-    const spaBundle = buildSpaBundle();
-
-    // ── 4. Plan members: link teammates' copies, upload our own ────────
-    // Member page links carry the theme the build's own publish would: its
-    // profession accent when themed build pages are on, else the app theme.
-    const compTheme = await store.getSetting("appearance.theme");
-    const themedBuildsOn = await store.getSetting("appearance.themedBuildPages");
-    const plan = planCompMembers({
-      compBuilds, owner, force: opts.force,
-      slugOf: (b) => slugifyBuildName(b.title),
-      themeOf: (b) => (themedBuildsOn && b.profession && PROFESSION_THEME_IDS[b.profession]) || compTheme || "",
-      newFileId: generateFileId,
-      newKey: generateEncryptionKey,
-    });
-    const skippedForeignBuilds = plan.foreign;
-    const updatedBuildRecords = [];
-    const newUploads = plan.uploads.filter((u) => !u.build.publishedFileId);
-
-    for (const { build, fileId, key, slug, needsRecord } of plan.uploads) {
-      if (!build.publishedFileId) {
-        progress(`builds:${newUploads.findIndex((u) => u.build === build) + 1}:${newUploads.length}:${build.title || build.profession || "Build"}`);
-      }
-      let enrichedBuild;
-      try {
-        enrichedBuild = await enrichBuildForPublish(build);
-      } catch (err) {
-        throw new Error(
-          `Failed to enrich build "${build.title || build.profession}": ${err?.message || err}. ` +
-          "Check your internet connection and try again."
-        );
-      }
-
-      const encFile = buildEncryptedBuildFile(enrichedBuild, fileId, key);
-      spaBundle[encFile.filePath] = encFile.content;
-      const redir = buildRedirectFile(fileId, key, "b");
-      spaBundle[redir.filePath] = redir.content;
-
-      // This build's own page was just re-encrypted from `build`, so its receipt
-      // moves too. Only a changed record is written (and synced to the team).
-      const receipt = buildReceipt(build);
-      const publishedFormat = formatStamp("build", receipt.publishedHash);
-      if (needsRecord || build.publishedHash !== receipt.publishedHash || build.publishedFormat !== publishedFormat) {
-        updatedBuildRecords.push({ id: build.id, publishedFileId: fileId, publishedKey: key, publishedSlug: slug, publishedOwner: owner, snapshotUpdatedAt: build.updatedAt, ...receipt, publishedFormat });
-      }
-    }
-
-    // ── 5. Serialize + encrypt comp ────────────────────────────────────
-    progress("encrypt");
-    const compFileId = comp.publishedFileId || generateFileId();
-    const compEncKey = comp.publishedKey || generateEncryptionKey();
-    const compSlug = slugifyBuildName(comp.name);
-
-    const compPayload = serializeCompForPublish(comp, plan.members);
-    const compEncFile = buildEncryptedCompFile(compPayload, compFileId, compEncKey);
-    spaBundle[compEncFile.filePath] = compEncFile.content;
-    const compRedir = buildRedirectFile(compFileId, compEncKey, "c");
-    spaBundle[compRedir.filePath] = compRedir.content;
-    const migrated = await addFormatMigrations(spaBundle, owner, [compId, ...plan.uploads.map((u) => u.build.id)]);
-
-    // ── 6. Upload everything in one commit ────────────────────────────
-    progress("upload");
-    let compPublishResult;
-    try {
-      compPublishResult = await publishSiteBundle(session.token, owner, spaBundle, branch, TARGET_REPO);
-    } catch (err) {
-      if (err?.status === 404) invalidatePublishInfra(owner, branch);
-      throw err;
-    }
-
-    // ── 7. Trigger Pages rebuild ───────────────────────────────────────
-    if (compPublishResult.shellChanged) {
-      progress("deploy");
-      await triggerPagesWorkflow(session.token, owner, branch, TARGET_REPO).catch(() => null);
-    }
-
-    // ── 8. Persist metadata (builds first, then comp) ─────────────────
-    // Push each newly-published build to the shared repo so teammates get the
-    // published URL without needing to publish themselves.
-    // Each member goes to ITS OWN team (or nowhere, if personal) -- not the
-    // comp's: a personal build must never reach the comp's team, and a team
-    // build must reach its own.
-    const stampedBuilds = [];
-    for (const { id, ...patch } of updatedBuildRecords) {
-      const savedBuild = await store.markPublished(id, patch);
-      if (savedBuild) stampedBuilds.push(savedBuild);
-    }
-    for (const { teamId, buildId } of await memberStampTargets(stampedBuilds, findTeamRoot)) {
-      await safeEnqueue(() => teamSync.enqueue(teamId, buildId, "build", "put"), { type: "build", id: buildId });
-    }
-
-    const savedTheme = await store.getSetting("appearance.theme");
-    const compPagesUrl = `https://${owner}.github.io/${TARGET_REPO}/?n=${encodeURIComponent(compSlug)}&c=${compFileId}.${compEncKey}${savedTheme ? `&t=${savedTheme}` : ""}`;
-
-    // Patch publish fields only — never re-upsert the pre-publish snapshot
-    // (see builds:publish-build for why).
-    const savedComp = (await compStore.markPublished(compId, {
-      publishedFileId: compFileId,
-      publishedKey: compEncKey,
-      publishedSlug: compSlug,
-      publishedOwner: owner,
-      // Clear the pre-v2 coverage snapshot; v2 pages compute coverage live.
-      boonCoverageHtml: "",
-      snapshotUpdatedAt: comp.updatedAt,
-      // v2 links members, so the comp page can't go stale through them: no
-      // member hashes. A member's own staleness shows on the member.
-      ...compReceipt(comp, []),
-      publishedFormat: formatStamp("comp", compReceipt(comp, []).publishedHash),
-    })) || comp;
-
-    // Push comp publish metadata to the team so teammates get the URL.
-    if (compTeamRoot) await safeEnqueue(() => teamSync.enqueue(compTeamRoot.teamId, savedComp.id, "comp", "put"), { type: "comp", id: savedComp.id });
-    await stampFormatMigrations(migrated);
-    // Only for a publish that went to the PERSONAL target. onboarding is this
-    // machine's own publishing setup — its repo, its Pages build, its chosen
-    // owner — so stamping a team publish onto it would repoint the personal
-    // target at the team's org and then report the team's site build as the
-    // user's own.
-    if (scope === "personal") {
-      await patchAuthRecord({
-        onboarding: {
-          repoReady: true,
-          forkReady: true,
-          repoName: TARGET_REPO,
-          pagesReady: false,
-          pagesBuildStatus: "queued",
-          pagesBuildUpdatedAt: new Date().toISOString(),
-          pagesBuildError: null,
-          pagesUrl: `https://${owner}.github.io/${TARGET_REPO}/`,
-          branch,
-          targetOwner: owner,
-          targetOwnerType: ownerType,
-        },
-      });
-    }
-
-    return { pagesUrl: compPagesUrl, slug: compSlug, fileId: compFileId, changed: true, skippedForeignBuilds };
+  function publishAndWait(kind, id, timeoutMs = PUBLISH_FULL_WAIT_MS) {
+    publishQueue.publishNow(kind, id).catch(() => {});
+    return publishQueue.awaitPublished(kind, id, { timeoutMs });
   }
+
+  async function publishViaQueue(kind, id, opts = {}) {
+    if (!(await findPublishRecord(kind, id))) throw new Error(`${kind === "comp" ? "Comp" : "Build"} not found.`);
+    if (opts.force) publishQueue.setChoice(kind, id, "mine");
+    const result = await publishAndWait(kind, id);
+    if (!result?.pagesUrl) throw new Error(`${kind === "comp" ? "Comp" : "Build"} not found.`);
+    const { pagesUrl, slug, fileId, changed, skippedForeignBuilds } = result;
+    return kind === "comp" ? { pagesUrl, slug, fileId, changed, skippedForeignBuilds } : { pagesUrl, slug, fileId, changed };
+  }
+
+  // The link a published record answers on. Owner from its receipt, theme the
+  // way publishBatch writes it.
+  async function publishedLinkFor(kind, record) {
+    if (!record?.publishedFileId || !record?.publishedKey) return null;
+    const auth = await getAuthRecord();
+    const owner = publishedOwnerFor(record, auth?.onboarding?.targetOwner);
+    if (!owner) return null;
+    const appTheme = (await store.getSetting("appearance.theme")) || "";
+    const themed = await store.getSetting("appearance.themedBuildPages");
+    const theme = kind === "comp" ? appTheme : ((themed && record.profession && PROFESSION_THEME_IDS[record.profession]) || appTheme);
+    return publishedPageUrl({ kind, owner, slug: record.publishedSlug || "", fileId: record.publishedFileId, key: record.publishedKey, theme, repo: TARGET_REPO });
+  }
+
+  // A save still on its way up is waited for, so sharing right after saving
+  // shares the new version instead of refusing. Returns an error message or null.
+  async function settlePendingPublish(kind, id) {
+    const state = publishQueue.snapshot().items[`${kind}:${id}`]?.state;
+    if (state !== "queued" && state !== "publishing") return null;
+    if (state === "queued") publishQueue.publishNow(kind, id).catch(() => {});
+    try {
+      await publishQueue.awaitPublished(kind, id, { timeoutMs: SHARE_PUBLISH_WAIT_MS });
+      return null;
+    } catch (err) {
+      return err?.message || String(err);
+    }
+  }
+
+  handle("builds:publish-build", (event, buildId, opts) => publishViaQueue("build", buildId, opts || {}));
+  handle("comps:publish-comp", (event, compId, opts) => publishViaQueue("comp", compId, opts || {}));
+
+  handle("publish:snapshot", async () => publishQueue.snapshot());
+  handle("publish:retry", async (_e, kind, id) => {
+    publishQueue.publishNow(kind, id).catch(() => {});
+    return true;
+  });
+  handle("publish:set-choice", async (_e, kind, id, choice) => {
+    publishQueue.setChoice(kind, id, choice);
+    if (choice === "mine") publishQueue.publishNow(kind, id).catch(() => {});
+    return true;
+  });
+  handle("publish:get-link", async (_e, kind, id) => {
+    let record = await findPublishRecord(kind, id);
+    if (!record) throw new Error(`${kind === "comp" ? "Comp" : "Build"} not found.`);
+    if (!record.publishedFileId) {
+      await publishAndWait(kind, id);
+      record = await findPublishRecord(kind, id);
+    }
+    return publishedLinkFor(kind, record);
+  });
+  async function bulkCandidates() {
+    const [builds, comps] = await Promise.all([store.listBuilds(), compStore.listComps()]);
+    return bulkPublishCandidates({ builds, comps });
+  }
+  handle("publish:bulk-candidates", async () => (await bulkCandidates()).length);
+  handle("publish:bulk-enqueue", async () => {
+    const items = await bulkCandidates();
+    publishQueue.enqueueMany(items);
+    return items.length;
+  });
+  handle("publish:resume", async () => {
+    publishQueue.resume().catch(() => {});
+    return true;
+  });
 
   handle("gw2:list-professions", async () => getProfessionList("en"));
   handle("gw2:get-profession-catalog", async (_e, professionId, gameMode) =>
@@ -2143,6 +1950,8 @@ const readyWork = app.whenReady().then(async () => {
   });
 
   handle("discord:share-comp", async (_e, compId, webhookIds) => {
+    const compWaitError = await settlePendingPublish("comp", compId);
+    if (compWaitError) return { success: false, error: compWaitError };
     const { shareCompToDiscord } = require("./discordWebhook");
     const { getCompWebhooks, shareCompToWebhooks } = require("./compWebhooks");
 
@@ -2198,6 +2007,8 @@ const readyWork = app.whenReady().then(async () => {
   });
 
   handle("discord:share-build", async (_e, buildId, webhookIds) => {
+    const buildWaitError = await settlePendingPublish("build", buildId);
+    if (buildWaitError) return { success: false, error: buildWaitError };
     const { shareBuildToDiscord } = require("./discordWebhook");
     const { getBuildWebhooks, shareBuildToWebhooks } = require("./buildWebhooks");
     const { generateChatLink } = require("./buildChatLink.js");
@@ -2545,12 +2356,18 @@ const readyWork = app.whenReady().then(async () => {
     return getOnboardingStatus();
   });
 
+  // Finishing setup resumes anything saved while publishing wasn't connected.
+  async function afterPublishSetup(result) {
+    publishQueue.resume().catch(() => {});
+    return result;
+  }
+
   handle("onboarding:setup-repo-pages", async (_e, targetOwner, ownerType = "user") =>
-    setupRepoPages(targetOwner, ownerType)
+    afterPublishSetup(await setupRepoPages(targetOwner, ownerType))
   );
 
   handle("onboarding:setup-fork-pages", async (_e, targetOwner, ownerType = "user") =>
-    setupRepoPages(targetOwner, ownerType)
+    afterPublishSetup(await setupRepoPages(targetOwner, ownerType))
   );
 
   handle("onboarding:poll-pages-status", async () => {
@@ -2751,6 +2568,16 @@ const readyWork = app.whenReady().then(async () => {
   }
 });
 
+// Saves still waiting to publish get one round (10 s at most) before the app
+// exits. Anything unfinished stays in publish-queue.json for the next launch.
+let publishFlushedForQuit = false;
+app.on("before-quit", (event) => {
+  if (publishFlushedForQuit || !publishQueueRef?.hasPending()) return;
+  event.preventDefault();
+  publishFlushedForQuit = true;
+  publishQueueRef.flushForQuit().finally(() => app.quit());
+});
+
 app.on("will-quit", () => {
   // A second launch that lost the single-instance lock must never clean up
   // state owned by the running instance.
@@ -2763,6 +2590,7 @@ app.on("will-quit", () => {
   if (localApi) localApi.stop().catch(() => {});
   // Stop the team-sync poll timer so a pending tick can't fire mid-teardown.
   if (teamSyncRef) teamSyncRef.stopPolling();
+  if (publishQueueRef) publishQueueRef.stop();
 });
 
 app.on("window-all-closed", () => {
