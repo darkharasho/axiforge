@@ -41,6 +41,11 @@ describe("viewer payload decode", () => {
 });
 
 describe("comp format version", () => {
+  test("the viewer reads up to the format the desktop writes", () => {
+    const site = require("../../../src/site/payload.js");
+    expect(site.COMP_FORMAT_VERSION).toBe(require("../../../src/main/compPublish").COMP_FORMAT_VERSION);
+  });
+
   test("v1 (no v) and v2 comps are readable", () => {
     expect(() => assertCompFormat({ name: "Old" })).not.toThrow();
     expect(() => assertCompFormat({ v: 2, members: {} })).not.toThrow();
