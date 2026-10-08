@@ -691,6 +691,22 @@ Status key: `[ ]` open · `[x]` done · `[~]` in progress · `[?]` needs repro s
   before this still print ids in the list, but the compare modal resolves them
   from the documents it already loads.
 
+- [ ] **Published payloads are 50–1000× bigger than the data they carry.**
+  Measured 2026-10-07 on `gw2eww/axibuilds`: 58 builds average 1.3 MB (min
+  866 KB), 9 comps average 17 MB (max 27.7 MB). A local build record is at most
+  27 KB and notes top out around 7 KB, so notes are not the cause. Three
+  multipliers: `serializeForPublish` re-inflates catalog data (full facts for
+  every weapon skill, all major traits, profession mechanics); comps carry
+  `boonCoverageHtml`, a pre-rendered snapshot that alone is 7.9 MB for one
+  local comp (`comps.json` is 35.8 MB for 12 comps), plus every member build
+  embedded; and `encryptBuild` encrypts raw JSON, then base64 adds another 33%.
+  Ciphertext doesn't compress, so the CDN can't help. Compressing before
+  encrypting should shrink these by ~5–10×: locally, gzip takes `builds.json`
+  from 1.6 MB to 0.31 MB. Also worth computing boon coverage from
+  structured data in the viewer instead of shipping HTML. This blocks any
+  publish-on-save design. Any change needs a payload version flag so the SPA
+  can still read existing links.
+
 ## axi-design conversion — follow-ups
 
 - [ ] **Convert AxiVale and AxiBridge to axi-design.** They embed
