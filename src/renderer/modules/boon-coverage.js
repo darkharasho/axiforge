@@ -20,13 +20,15 @@ export function computeBoonCoverage(catalog, editor, weaponSkills = []) {
  * Compute full party coverage for a single build: boons, conditions, combo fields, finishers.
  * Delegates core boon/condition computation to the engine.
  */
-export function computePartyCoverage(catalog, editor, weaponSkills = []) {
+export function computePartyCoverage(catalog, editor, weaponSkills = [], upgradeCatalog = null) {
   // Build a temporary state object for the bridge functions.
-  // The bridge needs state.editor and state.activeCatalog/upgradeCatalog.
+  // The bridge needs state.editor and state.activeCatalog/upgradeCatalog. The
+  // published viewer passes each build's own upgrade catalog; the desktop uses
+  // the global one.
   const bridgeState = {
     editor,
     activeCatalog: catalog,
-    upgradeCatalog: state.upgradeCatalog || {},
+    upgradeCatalog: upgradeCatalog || state.upgradeCatalog || {},
   };
 
   const { boons, conditions } = computeBoons(bridgeState, weaponSkills);

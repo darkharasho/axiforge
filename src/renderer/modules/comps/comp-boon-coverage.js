@@ -18,7 +18,8 @@ import { targetSeriesStyle } from "../../../shared/professions.js";
 /**
  * Compute party coverage for all filled slots in a comp, per line.
  */
-export async function computeCompPartyCoverage(comp, builds, catalogCache, getCatalog, upgradeCatalog = null) {
+export async function computeCompPartyCoverage(comp, builds, catalogCache, getCatalog, upgradeCatalog = null, overrides = {}) {
+  const { catalogFor, upgradeCatalogFor, durationBonusFor } = overrides;
   const lines = comp.partyLines || [];
   const buildMap = new Map(builds.map((b) => [b.id, b]));
 
@@ -30,12 +31,14 @@ export async function computeCompPartyCoverage(comp, builds, catalogCache, getCa
       if (b?.profession) profKeys.add(`${b.profession}|${b.gameMode || "pve"}`);
     }
   }
-  await Promise.all(
-    [...profKeys].map((key) => {
-      const [profession, gameMode] = key.split("|");
-      return getCatalog(profession, gameMode);
-    })
-  );
+  if (!catalogFor) {
+    await Promise.all(
+      [...profKeys].map((key) => {
+        const [profession, gameMode] = key.split("|");
+        return getCatalog(profession, gameMode);
+      })
+    );
+  }
 
   const lineResults = [];
 
@@ -54,16 +57,19 @@ export async function computeCompPartyCoverage(comp, builds, catalogCache, getCa
       if (!build || !build.profession) continue;
 
       const cacheKey = `${build.profession}_${build.gameMode || "pve"}`;
-      const catalog = catalogCache.get(cacheKey);
+      const catalog = catalogFor ? catalogFor(build) : catalogCache.get(cacheKey);
       if (!catalog) continue;
 
       hasFilledSlots = true;
       const weaponSkills = resolveAllWeaponSkills(catalog, build);
-      const coverage = computePartyCoverage(catalog, build, weaponSkills);
+      const coverage = computePartyCoverage(catalog, build, weaponSkills, upgradeCatalogFor ? upgradeCatalogFor(build) : null);
       const buildName = build.title || build.id;
-      const concentrationBonus = computeBuildConcentration(build, upgradeCatalog) / 1500;
+      // A published build carries these precomputed (the viewer has no upgrade
+      // catalog); the desktop derives them from equipment.
+      const bonus = durationBonusFor ? durationBonusFor(build) : null;
+      const concentrationBonus = (bonus ? bonus.concentration : computeBuildConcentration(build, upgradeCatalog)) / 1500;
       // Condition duration scales off Expertise, not Concentration.
-      const expertiseBonus = computeBuildExpertise(build, upgradeCatalog) / 1500;
+      const expertiseBonus = (bonus ? bonus.expertise : computeBuildExpertise(build, upgradeCatalog)) / 1500;
 
       // Resolve elite spec
       let eliteSpec = null;

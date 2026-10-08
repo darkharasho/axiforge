@@ -520,3 +520,33 @@ describe("computeCompPartyCoverage — conditions", () => {
     expect(tormentPill).toContain("party-cov__pill--uncovered");
   });
 });
+
+describe("computeCompPartyCoverage overrides (published-viewer path)", () => {
+  test("catalogFor gives each build its own catalog, even within one profession", async () => {
+    const b1 = makeBuild("b1", "Guardian"); b1.skills.healId = 100;
+    const b2 = makeBuild("b2", "Guardian"); b2.skills.healId = 100;
+    const withMight = makeCatalog(new Map([[100, makeMightSkill()]]));
+    const without = makeCatalog(new Map());
+    const comp = makeComp([makeLine("l1", ["b1", "b2"])]);
+    const getCatalog = jest.fn();
+
+    const { lines } = await computeCompPartyCoverage(comp, [b1, b2], new Map(), getCatalog, null, {
+      catalogFor: (b) => (b.id === "b1" ? withMight : without),
+    });
+
+    expect(getCatalog).not.toHaveBeenCalled();
+    expect(lines[0].boons.get("Might").count).toBe(1);
+    expect(lines[0].boons.get("Might").providers[0].buildId).toBe("b1");
+  });
+
+  test("durationBonusFor replaces the equipment-derived concentration", async () => {
+    const b1 = makeBuild("b1", "Guardian"); b1.skills.healId = 100;
+    const comp = makeComp([makeLine("l1", ["b1"])]);
+    const { lines } = await computeCompPartyCoverage(comp, [b1], new Map(), async () => null, null, {
+      catalogFor: () => makeCatalog(new Map([[100, makeMightSkill()]])),
+      durationBonusFor: () => ({ concentration: 150, expertise: 0 }),
+    });
+    // 10s base * (1 + 150/1500)
+    expect(lines[0].boons.get("Might").providers[0].sources[0].effectiveDuration).toBe(11);
+  });
+});
