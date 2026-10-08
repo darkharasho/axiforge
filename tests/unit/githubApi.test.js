@@ -56,7 +56,7 @@ function failRes(status, message = "Error", headers = {}) {
 
 // Build a fake git blob SHA for known content (mirrors computeGitBlobSha in githubApi)
 function computeGitBlobSha(content) {
-  const buf = Buffer.from(content, "utf8");
+  const buf = Buffer.isBuffer(content) ? content : Buffer.from(content, "utf8");
   return crypto.createHash("sha1").update(`blob ${buf.length}\0`).update(buf).digest("hex");
 }
 
@@ -560,6 +560,37 @@ describe("publishSiteBundle — SHA deduplication", () => {
     // base64 — not the base64 of the base64 string (the old double-encoding bug).
     expect(blobBody.content).toBe(pngBase64);
     expect(Buffer.from(blobBody.content, "base64").equals(pngBytes)).toBe(true);
+  });
+
+  test("commits Buffer entries byte-for-byte (v2 .enc files)", async () => {
+    const bytes = Buffer.from([0x00, 0x41, 0x58, 0x02, 9, 8, 7, 6, 5]);
+    let blobBody = null;
+    global.fetch = jest.fn((url, options) => {
+      const urlStr = String(url);
+      const method = (options?.method || "GET").toUpperCase();
+      if (urlStr.includes(`/repos/${FAKE_OWNER}/${FAKE_REPO}`) && method === "GET" && !urlStr.includes("/git/")) return okRes({ name: FAKE_REPO });
+      if (urlStr.includes("/git/ref/heads/") && method === "GET") return okRes({ object: { sha: HEAD_SHA } });
+      if (urlStr.includes(`/git/commits/${HEAD_SHA}`) && method === "GET") return okRes({ tree: { sha: TREE_SHA } });
+      if (urlStr.includes(`/git/trees/${TREE_SHA}`) && method === "GET") return okRes({ tree: [] });
+      if (urlStr.includes("/git/blobs") && method === "POST") { blobBody = JSON.parse(options.body); return okRes({ sha: "blobsha" }); }
+      if (urlStr.includes("/git/trees") && method === "POST") return okRes({ sha: "newtreesha" });
+      if (urlStr.includes("/git/commits") && method === "POST") return okRes({ sha: "newcommitsha" });
+      if (urlStr.includes("/git/refs/heads/") && method === "PATCH") return okRes({ object: { sha: "newcommitsha" } });
+      return okRes({});
+    });
+
+    const result = await publishSiteBundle(FAKE_TOKEN, FAKE_OWNER, { "site/builds/abcd1234.enc": bytes });
+
+    expect(result.files).toContain("site/builds/abcd1234.enc");
+    expect(blobBody.encoding).toBe("base64");
+    expect(Buffer.from(blobBody.content, "base64").equals(bytes)).toBe(true);
+  });
+
+  test("skips an unchanged Buffer entry by git blob SHA", async () => {
+    const bytes = Buffer.from([0x00, 0x41, 0x58, 0x02, 1, 2, 3]);
+    global.fetch = buildMockFetch({ existingFiles: { "site/builds/abcd1234.enc": computeGitBlobSha(bytes) } });
+    const result = await publishSiteBundle(FAKE_TOKEN, FAKE_OWNER, { "site/builds/abcd1234.enc": bytes });
+    expect(result.changed).toBe(false);
   });
 
   test("files property lists all published file paths", async () => {

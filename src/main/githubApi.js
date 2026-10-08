@@ -341,7 +341,7 @@ const PUBLISH_COMMIT_ATTEMPTS = 4;
 async function publishSiteBundle(token, owner, bundle, branch = "main", repo = TARGET_REPO) {
   await ensureAxiForgeRepo(token, owner);
   const entries = Object.entries(bundle || {}).filter(
-    ([filePath, content]) => filePath && typeof content === "string"
+    ([filePath, content]) => filePath && (typeof content === "string" || Buffer.isBuffer(content))
   );
   if (!entries.length) {
     throw new Error("Nothing to publish.");
@@ -399,7 +399,7 @@ async function publishSiteBundleOnce(token, owner, bundle, branch, repo) {
   } catch { /* no marker yet → treat as shell changed */ }
   const { shellChanged, filesToPublish } = partitionBundleForPublish(bundle || {}, remoteVersion);
   const publishEntries = Object.entries(filesToPublish).filter(
-    ([filePath, content]) => filePath && typeof content === "string"
+    ([filePath, content]) => filePath && (typeof content === "string" || Buffer.isBuffer(content))
   );
 
   const nextPathSet = new Set(publishEntries.map(([filePath]) => filePath));
@@ -412,9 +412,13 @@ async function publishSiteBundleOnce(token, owner, bundle, branch, repo) {
   const isBinaryPath = (p) => BINARY_EXTS.includes(p.slice(p.lastIndexOf(".")).toLowerCase());
 
   for (const [filePath, content] of publishEntries) {
-    const contentBuffer = isBinaryPath(filePath)
-      ? Buffer.from(content, "base64")
-      : Buffer.from(content, "utf8");
+    // A Buffer is already the file's bytes (v2 .enc payloads). Strings follow
+    // the old rule: binary assets arrive base64-encoded, text as utf8.
+    const contentBuffer = Buffer.isBuffer(content)
+      ? content
+      : isBinaryPath(filePath)
+        ? Buffer.from(content, "base64")
+        : Buffer.from(content, "utf8");
     const blobSha = computeGitBlobSha(contentBuffer);
     const existingSha = existingByPath.get(filePath);
     if (existingSha === blobSha) continue;
