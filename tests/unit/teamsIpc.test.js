@@ -807,6 +807,18 @@ describe("publish on save", () => {
     expect((await invoke("publish:snapshot")).paused).toBe("disconnected");
   });
 
+  test("a token GitHub refuses mid-round pauses for sign-in; coming online keeps that pause", async () => {
+    await loadMain(tree([mine()]));
+    github().getViewer.mockRejectedValue(Object.assign(new Error("Bad credentials"), { status: 401 }));
+    await expect(invoke("builds:publish-build", "p1", {})).rejects.toMatchObject({ code: "GITHUB_UNAUTHORIZED" });
+    expect((await invoke("publish:snapshot")).paused).toBe("unauthorized");
+    await invoke("publish:resume", { keepUnauthorized: true });
+    expect((await invoke("publish:snapshot")).paused).toBe("unauthorized");
+    // A full resume (sign-in) lifts it; the token is gone, so the round now asks for setup.
+    await invoke("publish:resume");
+    await waitFor(() => lastStatus()?.paused === "disconnected", { label: "re-paused without a token" });
+  });
+
   test("a tag edit on a published comp queues it", async () => {
     const pc = comp({ id: "c1", name: "Squad comp", folderId: "solo", publishedFileId: "cf", publishedKey: KEY, publishedSlug: "squad", publishedOwner: "me", publishedHash: "OLD" });
     await loadMain({ ...tree([]), comps: [pc] });

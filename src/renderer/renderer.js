@@ -739,7 +739,8 @@ async function init() {
   // the next poll tick.
   window.addEventListener("online", () => {
     window.desktopApi.pullAllTeams?.().catch(() => {});
-    window.desktopApi.resumePublishing?.().catch(() => {});
+    // Coming online fixes a network problem, never bad credentials.
+    window.desktopApi.resumePublishing?.({ keepUnauthorized: true }).catch(() => {});
   });
 
   // ── Global sync-status / conflict handlers ───────────────────────────────

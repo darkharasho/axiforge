@@ -17,6 +17,7 @@ test.each([
   ["getBulkPublishCount", [], "publish:bulk-candidates"],
   ["bulkPublish", [], "publish:bulk-enqueue"],
   ["resumePublishing", [], "publish:resume"],
+  ["resumePublishing", [{ keepUnauthorized: true }], "publish:resume"],
 ])("%s invokes %s", async (method, args, channel) => {
   await exposed[method](...args);
   expect(ipcRenderer.invoke).toHaveBeenLastCalledWith(channel, ...args);

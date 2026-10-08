@@ -112,7 +112,7 @@ contextBridge.exposeInMainWorld("desktopApi", {
   getPublishLink: (kind, id) => invoke("publish:get-link", kind, id),
   getBulkPublishCount: () => invoke("publish:bulk-candidates"),
   bulkPublish: () => invoke("publish:bulk-enqueue"),
-  resumePublishing: () => invoke("publish:resume"),
+  resumePublishing: (...args) => invoke("publish:resume", ...args),
 
   // Build library operations
   moveBuilds: (ids, folderId) =>

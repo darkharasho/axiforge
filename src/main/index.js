@@ -399,24 +399,42 @@ function createWindow(savedBounds) {
   return win;
 }
 
-async function getSession() {
+// { session, unauthorized }: unauthorized is true when GitHub just refused the
+// stored token (it is cleared), so a caller can tell that from never signed in.
+async function readSession() {
   const auth = await store.getAuth();
-  if (!auth.token) return null;
+  if (!auth.token) return { session: null, unauthorized: false };
   try {
     const viewer = await getViewer(auth.token);
-    return { token: auth.token, viewer };
+    return { session: { token: auth.token, viewer }, unauthorized: false };
   } catch (err) {
     if (err?.status === 401) {
       await store.clearAuth();
-      return null;
+      return { session: null, unauthorized: true };
     }
     // Network error or transient GitHub failure — keep the token,
     // fall back to the cached viewer so the session stays alive.
     if (auth.viewer) {
-      return { token: auth.token, viewer: auth.viewer };
+      return { session: { token: auth.token, viewer: auth.viewer }, unauthorized: false };
     }
-    return null;
+    return { session: null, unauthorized: false };
   }
+}
+
+async function getSession() {
+  return (await readSession()).session;
+}
+
+// A publish round's session: a refused token is GITHUB_UNAUTHORIZED, so the
+// queue pauses for sign-in instead of reading it as "not set up".
+async function getPublishSession() {
+  const { session, unauthorized } = await readSession();
+  if (unauthorized) {
+    const err = new Error("Sign in to GitHub again to publish.");
+    err.code = "GITHUB_UNAUTHORIZED";
+    throw err;
+  }
+  return session;
 }
 
 async function getAuthRecord() {
@@ -699,7 +717,7 @@ const readyWork = app.whenReady().then(async () => {
   // Publish on save (publishQueue.js / publishBatch.js). Rounds go through
   // enqueuePublish, so a round, a Retry and a local API publish never race.
   const publishBatch = createPublishBatch({
-    getSession, getAuthRecord, patchAuthRecord, findTeamRoot, resolvePublishTarget,
+    getSession: getPublishSession, getAuthRecord, patchAuthRecord, findTeamRoot, resolvePublishTarget,
     listBuilds: () => store.listBuilds(),
     listComps: () => compStore.listComps(),
     markBuildPublished: (id, patch) => store.markPublished(id, patch),
@@ -1862,8 +1880,9 @@ const readyWork = app.whenReady().then(async () => {
     publishQueue.enqueueMany(items);
     return items.length;
   });
-  handle("publish:resume", async () => {
-    publishQueue.resume().catch(() => {});
+  // Coming online passes keepUnauthorized: only signing in fixes bad credentials.
+  handle("publish:resume", async (_e, opts) => {
+    publishQueue.resume({ keepUnauthorized: Boolean(opts?.keepUnauthorized) }).catch(() => {});
     return true;
   });
 
