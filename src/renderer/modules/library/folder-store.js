@@ -2,6 +2,7 @@ import { state } from "../state.js";
 import { teamRootFor } from "../teams.js";
 import { matchesSmartFolder, ruleContext } from "./smart-folders.js";
 import { matchesPublishFilter } from "../publish-status.js";
+import { compareBuilds } from "./table-columns.js";
 
 /** Load all folders from main process into state.folders. */
 export async function loadFolders() {
@@ -223,21 +224,7 @@ export function getVisibleBuilds() {
 
   // Sort — pinned items always first
   const { sortField, sortDirection } = state.libraryPrefs;
-  const dir = sortDirection === "asc" ? 1 : -1;
-
-  builds.sort((a, b) => {
-    // Pinned first
-    if (a.pinned && !b.pinned) return -1;
-    if (!a.pinned && b.pinned) return 1;
-
-    let av = a[sortField] ?? "";
-    let bv = b[sortField] ?? "";
-    if (typeof av === "string") av = av.toLowerCase();
-    if (typeof bv === "string") bv = bv.toLowerCase();
-    if (av < bv) return -1 * dir;
-    if (av > bv) return 1 * dir;
-    return 0;
-  });
+  builds.sort((a, b) => compareBuilds(a, b, sortField, sortDirection));
 
   return builds;
 }

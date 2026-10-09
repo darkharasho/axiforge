@@ -910,7 +910,9 @@
 .lib-tv__header,
 .lib-tv__row {
   display: grid;
-  grid-template-columns: 22px 22px 1fr 100px 100px 60px 116px 80px 80px 80px;
+  /* Set inline by renderTableView from the visible columns (table-columns.js).
+     The fallback is the default set, which the skeleton draws. */
+  grid-template-columns: var(--lib-tv-cols, 22px 22px 1fr 116px 100px 72px 116px 80px 88px 92px);
   align-items: center;
   gap: 0;
   font-size: 0.85rem;
@@ -967,7 +969,10 @@
 .lib-tv__item.lib-selected > .lib-tv__row .lib-tv__mode,
 .lib-tv__item.lib-selected > .lib-tv__row .lib-tv__tags,
 .lib-tv__item.lib-selected > .lib-tv__row .lib-tv__created,
-.lib-tv__item.lib-selected > .lib-tv__row .lib-tv__modified { color: inherit; }
+.lib-tv__item.lib-selected > .lib-tv__row .lib-tv__modified,
+.lib-tv__item.lib-selected > .lib-tv__row .lib-tv__path,
+.lib-tv__item.lib-selected > .lib-tv__row .lib-tv__owner,
+.lib-tv__item.lib-selected > .lib-tv__row .lib-tv__published { color: inherit; }
 .lib-tv__item.lib-drop-target > .lib-tv__row,
 .lib-tv__item.lib-drop-target { outline: var(--axi-border-control) dashed var(--axi-accent); outline-offset: -3px; }
 
@@ -1090,12 +1095,46 @@
   min-width: 80px;
 }
 
+/* Optional columns (off by default; see table-columns.js) */
+.lib-tv__path,
+.lib-tv__owner,
+.lib-tv__published {
+  color: var(--axi-text-faint);
+  padding: 0 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.lib-tv__row .lib-tv__published-stale { color: var(--axi-warn); }
+
+/* "Choose columns" button in the header's action cell */
+.lib-tv__columns-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: var(--axi-radius);
+  color: var(--axi-text-faint);
+  cursor: pointer;
+}
+.lib-tv__columns-btn:hover { color: var(--axi-text); background: var(--axi-surface-raised); }
+.lib-tv__columns-btn svg { width: 14px; height: 14px; }
+
 /* Sort buttons */
 .lib-tv__sort-btn {
   background: none;
   border: none;
   color: inherit;
   font: inherit;
+  /* Buttons reset these, so a sortable header read in mixed case beside the
+     uppercase plain ones. */
+  text-transform: inherit;
+  letter-spacing: inherit;
   cursor: pointer;
   padding: 0;
   display: inline-flex;
@@ -1580,6 +1619,21 @@
   width: 14px;
   height: 14px;
 }
+
+/* Table columns menu (showTableColumnsMenu): tick rows with a drag grip. */
+.lib-ctx-item__grip {
+  display: flex;
+  color: var(--axi-text-faint);
+  cursor: grab;
+}
+.lib-ctx-item__grip svg { width: 12px; height: 12px; }
+.lib-ctx-item--column:not(.lib-ctx-item--checked) .lib-ctx-item__label { color: var(--axi-text-faint); }
+/* The drop line is a border the row always carries, transparent until a drag
+   is over it, so marking a row never shifts the rows around it. */
+.lib-ctx-item--column { border-block: var(--axi-border-control) solid transparent; }
+.lib-ctx-item--dragging { background: var(--axi-well-fill); color: var(--axi-text-faint); }
+.lib-ctx-item--drop-before { border-top-color: var(--axi-accent); }
+.lib-ctx-item--drop-after { border-bottom-color: var(--axi-accent); }
 
 .lib-ctx-item__label {
   flex: 1;

@@ -8,11 +8,12 @@ import { getVisibleBuilds, getVisibleFolders, getVisibleComps, libraryBuilds, li
 import { getProfessionSvg } from "../profession-icons.js";
 import { gameModeLabel } from "./smart-folders.js";
 import { badgeHtml } from "../sync-status.js";
-import { itemPublishBadgeHtml } from "../publish-status.js";
+import { itemPublishBadgeHtml, itemPublishStatus, describePublishStatus } from "../publish-status.js";
 import { buildUsageChipHtml, compSourceBadgeHtml, foreignFolderChipHtml } from "../build-source-chips.js";
 import { folderPathText } from "../build-sources.js";
 import { showBuildSourcesModal, showCompSourcesModal } from "../build-sources-modal.js";
-import { teamRootFor, teamLabel } from "../teams.js";
+import { teamRootFor, teamLabel, ensureTeamMemberNames } from "../teams.js";
+import { visibleColumns, gridTemplate, compareBuilds, eliteSpecName, ownerLabel } from "./table-columns.js";
 import { clearSelection, handleBuildClick, handleCompClick, updateSelectionVisuals } from "./selection.js";
 import { wireDragDropEvents } from "./drag-drop.js";
 import { renderTrashView } from "./trash-view.js";
@@ -26,6 +27,7 @@ import {
   chevronRightIcon,
   compIcon,
   shareIcon,
+  adjustmentsIcon,
 } from "./heroicons.js";
 
 let _callbacks = {};
@@ -165,19 +167,11 @@ function renderLegacyOrphanBanner(container) {
 // ─── Shared helpers ────────────────────────────────────────────────────────────
 
 function getSpecIcon(build) {
-  const eliteSpec = getEliteSpecName(build);
+  const eliteSpec = eliteSpecName(build);
   const name = eliteSpec || build.profession;
   if (!name) return "";
   const svg = getProfessionSvg(name);
   return svg || "";
-}
-
-function getEliteSpecName(build) {
-  if (!build.specializations) return null;
-  for (const s of build.specializations) {
-    if (s.elite && s.name) return s.name;
-  }
-  return null;
 }
 
 function formatDate(value) {
@@ -205,7 +199,7 @@ function profPillHtml(build) {
 }
 
 function eliteSpecPillHtml(build) {
-  const spec = getEliteSpecName(build);
+  const spec = eliteSpecName(build);
   if (!spec) return "";
   return `<span class="axi-chip">${escapeHtml(spec)}</span>`;
 }
@@ -349,6 +343,11 @@ function renderTableView(container) {
   const comps = getVisibleComps();
 
   const { sortField, sortDirection } = state.libraryPrefs;
+  const columns = visibleColumns(state.libraryPrefs.tableColumns);
+
+  // Owner names come from the team member lists, which only load when the
+  // column is actually showing. The table redraws once they arrive.
+  if (columns.some((c) => c.id === "owner")) ensureTeamMemberNames(() => renderContent());
 
   function sortHeaderDiv(field, label) {
     const isActive = sortField === field;
@@ -358,14 +357,23 @@ function renderTableView(container) {
     return `<button type="button" class="lib-tv__sort-btn ${isActive ? "lib-tv__sort-btn--active" : ""}" data-sort-field="${field}">${escapeHtml(label)} ${icon}</button>`;
   }
 
+  function headerCellHtml(col) {
+    if (col.id === "action") {
+      return `<span class="lib-tv__action"><button type="button" class="lib-tv__columns-btn" data-table-columns-menu title="Choose columns" aria-label="Choose columns">${adjustmentsIcon}</button></span>`;
+    }
+    const inner = col.sortField ? sortHeaderDiv(col.sortField, col.label) : escapeHtml(col.label);
+    return `<span class="${cellClass(col.id)}">${inner}</span>`;
+  }
+
   if (folders.length === 0 && builds.length === 0 && comps.length === 0) {
     container.innerHTML = emptyStateHtml();
     return;
   }
 
+  const rowCells = (kind, item) => columns.map((col) => tableCellHtml(col.id, kind, item)).join("");
+
   function renderTreeFolder(folder) {
     const isExpanded = _tableExpandedFolders.has(folder.id);
-    const chevron = isExpanded ? chevronDownIcon : chevronRightIcon;
 
     let childrenHtml = "";
     if (isExpanded) {
@@ -374,16 +382,7 @@ function renderTableView(container) {
         .sort((a, b) => a.sortOrder - b.sortOrder);
       const folderBuilds = libraryBuilds()
         .filter((b) => b.folderId === folder.id)
-        .sort((a, b) => {
-          if (a.pinned && !b.pinned) return -1;
-          if (!a.pinned && b.pinned) return 1;
-          const av = (a[sortField] ?? "").toString().toLowerCase();
-          const bv = (b[sortField] ?? "").toString().toLowerCase();
-          const dir = sortDirection === "asc" ? 1 : -1;
-          if (av < bv) return -1 * dir;
-          if (av > bv) return 1 * dir;
-          return 0;
-        });
+        .sort((a, b) => compareBuilds(a, b, sortField, sortDirection));
 
       const folderComps = libraryComps()
         .filter((c) => c.folderId === folder.id)
@@ -398,71 +397,31 @@ function renderTableView(container) {
 
     return `
       <li class="lib-tv__item" data-folder-id="${escapeHtml(folder.id)}">
-        <div class="lib-tv__row lib-tv__row--folder">
-          <span class="lib-tv__action" data-toggle-table-folder="${escapeHtml(folder.id)}">${chevron}</span>
-          <span class="lib-tv__icon"><span class="lib-table__folder-icon">${folderIcon}</span></span>
-          <span class="lib-tv__name"><span class="lib-tv__title">${escapeHtml(folder.name)}</span>${folder.teamId ? `<span class="lib-shared-badge" title="${escapeHtml(teamLabel(folder))}">${shareIcon}</span>` : ""}${contentSyncIndicatorHtml(folder.id)}</span>
-          <span class="lib-tv__profession"></span>
-          <span class="lib-tv__spec"></span>
-          <span class="lib-tv__mode"></span>
-          <span class="lib-tv__role"></span>
-          <span class="lib-tv__tags"></span>
-          <span class="lib-tv__created" title="${escapeHtml(folder.createdAt || "")}">${formatDate(folder.createdAt)}</span>
-          <span class="lib-tv__modified" title="${escapeHtml(folder.updatedAt || "")}">${formatDate(folder.updatedAt)}</span>
-        </div>
+        <div class="lib-tv__row lib-tv__row--folder">${rowCells("folder", folder)}</div>
         ${childrenHtml}
       </li>
     `;
   }
 
   function renderTreeBuild(b) {
-    const eliteSpec = getEliteSpecName(b);
-    const tags = (b.tags || []).map((t) => escapeHtml(t)).join(", ");
     return `
       <li class="lib-tv__item" data-build-id="${escapeHtml(b.id)}">
-        <div class="lib-tv__row lib-tv__row--build ${b.pinned ? "lib-tv__row--pinned" : ""}">
-          <span class="lib-tv__action">${pinStarHtml(b)}</span>
-          <span class="lib-tv__icon" style="${professionSeriesStyle(b.profession)}">${getSpecIcon(b)}</span>
-          <span class="lib-tv__name"><span class="lib-tv__title">${escapeHtml(b.title || "Untitled")}</span>${folderPathHtml(b)}${itemIndicatorsHtml("build", b)}${buildUsageChipHtml(b, { compact: true })}</span>
-          <span class="lib-tv__profession">${escapeHtml(b.profession || "")}</span>
-          <span class="lib-tv__spec">${escapeHtml(eliteSpec || "")}</span>
-          <span class="lib-tv__mode">${escapeHtml(gameModeLabel(b.gameMode || "pve"))}</span>
-          <span class="lib-tv__role">${roleBadgeHtml(b, state.upgradeCatalog)}</span>
-          <span class="lib-tv__tags" title="${escapeHtml((b.tags || []).join(", "))}">${tags}</span>
-          <span class="lib-tv__created" title="${escapeHtml(b.createdAt || "")}">${formatDate(b.createdAt)}</span>
-          <span class="lib-tv__modified" title="${escapeHtml(b.updatedAt || "")}">${formatDate(b.updatedAt)}</span>
-        </div>
+        <div class="lib-tv__row lib-tv__row--build ${b.pinned ? "lib-tv__row--pinned" : ""}">${rowCells("build", b)}</div>
       </li>
     `;
   }
 
   function renderTreeComp(c) {
-    const compBuildIdSet = new Set(c.buildIds || []);
-    const compBuilds = state.builds.filter((b) => compBuildIdSet.has(b.id));
-    const tags = (c.tags || []).map((t) => escapeHtml(t)).join(", ");
-    const isExpanded = _tableExpandedFolders.has(c.id);
-    const chevron = isExpanded ? chevronDownIcon : chevronRightIcon;
-
     let childrenHtml = "";
-    if (isExpanded) {
-      const items = compBuilds.map((b) => renderTreeBuild(b)).join("");
+    if (_tableExpandedFolders.has(c.id)) {
+      const compBuildIdSet = new Set(c.buildIds || []);
+      const items = state.builds.filter((b) => compBuildIdSet.has(b.id)).map((b) => renderTreeBuild(b)).join("");
       childrenHtml = `<ul class="lib-tv__children">${items}</ul>`;
     }
 
     return `
       <li class="lib-tv__item" data-comp-id="${escapeHtml(c.id)}">
-        <div class="lib-tv__row lib-tv__row--comp">
-          <span class="lib-tv__action" data-toggle-table-folder="${escapeHtml(c.id)}">${chevron}</span>
-          <span class="lib-tv__icon lib-list-row__comp-icon">${compIcon}</span>
-          <span class="lib-tv__name"><span class="lib-tv__title">${escapeHtml(c.name || "Untitled Comp")}</span>${itemIndicatorsHtml("comp", c)}</span>
-          <span class="lib-tv__profession">${compBadgeHtml(c)}</span>
-          <span class="lib-tv__spec"></span>
-          <span class="lib-tv__mode"></span>
-          <span class="lib-tv__role"></span>
-          <span class="lib-tv__tags" title="${escapeHtml((c.tags || []).join(", "))}">${tags}</span>
-          <span class="lib-tv__created" title="${escapeHtml(c.createdAt || "")}">${formatDate(c.createdAt)}</span>
-          <span class="lib-tv__modified" title="${escapeHtml(c.updatedAt || "")}">${formatDate(c.updatedAt)}</span>
-        </div>
+        <div class="lib-tv__row lib-tv__row--comp">${rowCells("comp", c)}</div>
         ${childrenHtml}
       </li>
     `;
@@ -473,19 +432,8 @@ function renderTableView(container) {
   const compItems = comps.map((c) => renderTreeComp(c)).join("");
 
   container.innerHTML = `
-    <div class="lib-tv">
-      <div class="lib-tv__header">
-        <span class="lib-tv__action"></span>
-        <span class="lib-tv__icon"></span>
-        <span class="lib-tv__name">${sortHeaderDiv("title", "Name")}</span>
-        <span class="lib-tv__profession">${sortHeaderDiv("profession", "Profession")}</span>
-        <span class="lib-tv__spec">Elite Spec</span>
-        <span class="lib-tv__mode">Mode</span>
-        <span class="lib-tv__role">Role</span>
-        <span class="lib-tv__tags">Tags</span>
-        <span class="lib-tv__created">${sortHeaderDiv("createdAt", "Created")}</span>
-        <span class="lib-tv__modified">${sortHeaderDiv("updatedAt", "Modified")}</span>
-      </div>
+    <div class="lib-tv" style="--lib-tv-cols: ${gridTemplate(columns)}">
+      <div class="lib-tv__header">${columns.map(headerCellHtml).join("")}</div>
       <ul class="lib-tv__tree">
         ${folderItems}${compItems}${buildItems}
       </ul>
@@ -506,7 +454,83 @@ function renderTableView(container) {
     });
   });
 
+  container.querySelector("[data-table-columns-menu]")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const r = e.currentTarget.getBoundingClientRect();
+    _callbacks.onTableColumnsMenu?.(r.left, r.bottom + 4);
+  });
+
   bindContentEvents(container);
+}
+
+/** A table cell's class: every column is `lib-tv__<column id>`. */
+function cellClass(id) {
+  return `lib-tv__${id}`;
+}
+
+/** Text cell with a full-value tooltip, for columns that ellipsise. */
+function textCell(id, text) {
+  const t = escapeHtml(text || "");
+  return `<span class="${cellClass(id)}" title="${t}">${t}</span>`;
+}
+
+function dateCell(id, value) {
+  return `<span class="${cellClass(id)}" title="${escapeHtml(value || "")}">${formatDate(value)}</span>`;
+}
+
+/**
+ * One table cell. Folders, comps and builds share the columns but not every
+ * column means something for every kind -- those cells are drawn empty so the
+ * grid stays aligned.
+ */
+function tableCellHtml(id, kind, item) {
+  switch (id) {
+    case "action": {
+      if (kind === "build") return `<span class="lib-tv__action">${pinStarHtml(item)}</span>`;
+      const chevron = _tableExpandedFolders.has(item.id) ? chevronDownIcon : chevronRightIcon;
+      return `<span class="lib-tv__action" data-toggle-table-folder="${escapeHtml(item.id)}">${chevron}</span>`;
+    }
+    case "icon":
+      if (kind === "folder") return `<span class="lib-tv__icon"><span class="lib-table__folder-icon">${folderIcon}</span></span>`;
+      if (kind === "comp") return `<span class="lib-tv__icon lib-list-row__comp-icon">${compIcon}</span>`;
+      return `<span class="lib-tv__icon" style="${professionSeriesStyle(item.profession)}">${getSpecIcon(item)}</span>`;
+    case "name":
+      if (kind === "folder") {
+        return `<span class="lib-tv__name"><span class="lib-tv__title">${escapeHtml(item.name)}</span>${item.teamId ? `<span class="lib-shared-badge" title="${escapeHtml(teamLabel(item))}">${shareIcon}</span>` : ""}${contentSyncIndicatorHtml(item.id)}</span>`;
+      }
+      if (kind === "comp") {
+        return `<span class="lib-tv__name"><span class="lib-tv__title">${escapeHtml(item.name || "Untitled Comp")}</span>${itemIndicatorsHtml("comp", item)}</span>`;
+      }
+      return `<span class="lib-tv__name"><span class="lib-tv__title">${escapeHtml(item.title || "Untitled")}</span>${folderPathHtml(item)}${itemIndicatorsHtml("build", item)}${buildUsageChipHtml(item, { compact: true })}</span>`;
+    case "profession":
+      if (kind === "comp") return `<span class="lib-tv__profession">${compBadgeHtml(item)}</span>`;
+      return `<span class="lib-tv__profession">${kind === "build" ? escapeHtml(item.profession || "") : ""}</span>`;
+    case "spec":
+      return `<span class="lib-tv__spec">${kind === "build" ? escapeHtml(eliteSpecName(item) || "") : ""}</span>`;
+    case "mode":
+      return `<span class="lib-tv__mode">${kind === "build" ? escapeHtml(gameModeLabel(item.gameMode || "pve")) : ""}</span>`;
+    case "role":
+      return `<span class="lib-tv__role">${kind === "build" ? roleBadgeHtml(item, state.upgradeCatalog) : ""}</span>`;
+    case "tags":
+      return textCell("tags", kind === "folder" ? "" : (item.tags || []).join(", "));
+    case "created":
+      return dateCell("created", item.createdAt);
+    case "modified":
+      return dateCell("modified", item.updatedAt);
+    case "path":
+      // A folder's path is where it sits, not itself.
+      return textCell("path", folderPathText(kind === "folder" ? item.parentId : item.folderId));
+    case "owner":
+      return textCell("owner", ownerLabel(item));
+    case "published": {
+      if (kind === "folder") return `<span class="lib-tv__published"></span>`;
+      const { status, reason } = itemPublishStatus(kind, item, state.builds);
+      const d = status === "never" ? null : describePublishStatus(status, reason);
+      return `<span class="lib-tv__published${d ? ` lib-tv__published-${status}` : ""}" title="${escapeHtml(d?.title || "")}">${escapeHtml(d?.label || "")}</span>`;
+    }
+    default:
+      return `<span class="${cellClass(id)}"></span>`;
+  }
 }
 
 // ─── Grid View ─────────────────────────────────────────────────────────────────

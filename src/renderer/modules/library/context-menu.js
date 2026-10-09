@@ -13,6 +13,7 @@ import { isTeamOwner, teamRootFor } from "../teams.js";
 import { compsContainingBuild } from "../comps/comp-membership.js";
 import { writeDeniedReason, currentFolderId } from "./access.js";
 import { openShareModal } from "./share-modal.js";
+import { normalizeColumnPrefs, toggleColumn, moveColumn, columnLabel, TABLE_COLUMNS } from "./table-columns.js";
 import {
   playIcon,
   pencilIcon,
@@ -42,6 +43,8 @@ import {
   clockIcon,
   funnelIcon,
   eyeSlashIcon,
+  checkIcon,
+  bars3Icon,
 } from "./heroicons.js";
 
 let _callbacks = {};
@@ -111,6 +114,11 @@ function _bindOnce(el) {
 
 function _onContextMenu(e) {
   e.preventDefault();
+
+  if (e.target.closest(".lib-tv__header")) {
+    showTableColumnsMenu(e.clientX, e.clientY);
+    return;
+  }
 
   const buildEl = e.target.closest("[data-build-id]");
   const folderEl = e.target.closest("[data-folder-id]");
@@ -453,6 +461,119 @@ function showEmptyMenu(x, y) {
     _item(null, "Select All", "Ctrl+A", () => _callbacks.onSelectAll?.()),
   ];
   _showMenu(x, y, items);
+}
+
+// ─── Table columns menu ───────────────────────────────────────────────────────
+
+/**
+ * Show, hide and reorder the table view's columns. Opened from a right-click on
+ * the table header or its "Choose columns" button.
+ *
+ * Unlike every other menu here it stays open while you use it: ticking a
+ * column or dragging one redraws the table behind the menu and the menu
+ * redraws in place, so you can set up several columns in one go.
+ */
+export function showTableColumnsMenu(x, y) {
+  _showMenu(x, y, []);
+  const menu = _activeMenu;
+  _fillColumnsMenu(menu);
+  _repositionMenu(menu, x, y);
+}
+
+function _applyColumns(menu, next) {
+  _callbacks.onTableColumnsChange?.(next);
+  _fillColumnsMenu(menu);
+}
+
+function _fillColumnsMenu(menu) {
+  const prefs = normalizeColumnPrefs(state.libraryPrefs.tableColumns);
+  menu.replaceChildren();
+  menu.appendChild(_header("Columns"));
+
+  // Locked columns: shown ticked so the list reads as the whole table, but
+  // they cannot be unticked or moved.
+  for (const col of TABLE_COLUMNS.filter((c) => c.locked && c.label)) {
+    const el = _columnRow(col.label, true);
+    el.classList.add("lib-ctx-item--disabled");
+    el.title = "Always shown";
+    menu.appendChild(el);
+  }
+
+  prefs.forEach((p, index) => {
+    const el = _columnRow(columnLabel(p.id), p.visible, true);
+    el.dataset.columnId = p.id;
+    el.addEventListener("click", (e) => {
+      e.stopPropagation();
+      _applyColumns(menu, toggleColumn(prefs, p.id));
+    });
+    _wireColumnDrag(menu, el, prefs, index);
+    menu.appendChild(el);
+  });
+
+  menu.appendChild(_sep());
+  const reset = document.createElement("div");
+  reset.className = "lib-ctx-item";
+  reset.innerHTML = `<span class="lib-ctx-item__icon"></span><span class="lib-ctx-item__label">Reset to default</span>`;
+  reset.addEventListener("click", (e) => {
+    e.stopPropagation();
+    _applyColumns(menu, normalizeColumnPrefs(null));
+  });
+  menu.appendChild(reset);
+}
+
+function _columnRow(label, checked, draggable = false) {
+  const el = document.createElement("div");
+  el.className = "lib-ctx-item lib-ctx-item--column" + (checked ? " lib-ctx-item--checked" : "");
+  el.setAttribute("role", "menuitemcheckbox");
+  el.setAttribute("aria-checked", checked ? "true" : "false");
+  el.innerHTML =
+    `<span class="lib-ctx-item__icon">${checked ? checkIcon : ""}</span>` +
+    `<span class="lib-ctx-item__label">${escapeHtml(label)}</span>` +
+    (draggable ? `<span class="lib-ctx-item__grip" title="Drag to reorder">${bars3Icon}</span>` : "");
+  if (draggable) el.draggable = true;
+  return el;
+}
+
+/**
+ * Drag a column row onto another to move it there. Dropping on the top half
+ * of a row puts it before that row, the bottom half after it.
+ */
+function _wireColumnDrag(menu, el, prefs, index) {
+  const before = (e) => {
+    const r = el.getBoundingClientRect();
+    return e.clientY < r.top + r.height / 2;
+  };
+  const clearMarks = () => menu.querySelectorAll(".lib-ctx-item--drop-before, .lib-ctx-item--drop-after")
+    .forEach((n) => n.classList.remove("lib-ctx-item--drop-before", "lib-ctx-item--drop-after"));
+
+  el.addEventListener("dragstart", (e) => {
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/x-axiforge-column", el.dataset.columnId);
+    el.classList.add("lib-ctx-item--dragging");
+  });
+  el.addEventListener("dragend", () => {
+    el.classList.remove("lib-ctx-item--dragging");
+    clearMarks();
+  });
+  el.addEventListener("dragover", (e) => {
+    if (!e.dataTransfer.types.includes("text/x-axiforge-column")) return;
+    e.preventDefault();
+    clearMarks();
+    el.classList.add(before(e) ? "lib-ctx-item--drop-before" : "lib-ctx-item--drop-after");
+  });
+  el.addEventListener("dragleave", clearMarks);
+  el.addEventListener("drop", (e) => {
+    const id = e.dataTransfer.getData("text/x-axiforge-column");
+    if (!id) return;
+    e.preventDefault();
+    clearMarks();
+    const from = prefs.findIndex((p) => p.id === id);
+    let to = before(e) ? index : index + 1;
+    // Removing the dragged row first shifts every later index down by one.
+    if (from !== -1 && from < to) to -= 1;
+    if (from === to) return;
+    _applyColumns(menu, moveColumn(prefs, id, to));
+  });
 }
 
 // ─── Build unlink / delete items ──────────────────────────────────────────────

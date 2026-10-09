@@ -33,6 +33,8 @@ export function teamLabel(folder) {
 
 /** Refresh session, teams, outbox and folders from main. Safe when sync is off. */
 export async function loadTeamState() {
+  // Membership may have changed; the Owner column refetches names on its next draw.
+  _memberNameLoads.clear();
   state.teamSession = await window.desktopApi.getTeamSession().catch(() => null);
   if (!state.teamSession) {
     state.teams = [];
@@ -68,6 +70,37 @@ export async function loadSyncAuthors() {
     state.syncAuthors = (await window.desktopApi?.syncAuthorMap?.()) || {};
   } catch {
     state.syncAuthors = {};
+  }
+}
+
+// teamId → the in-flight or finished member fetch, so each team is asked once.
+const _memberNameLoads = new Map();
+
+/**
+ * Fill state.teamMemberNames from every team's member list, for the library
+ * table's Owner column. Only that column needs names, so it asks when it draws
+ * rather than every team load paying for it. `onLoaded` runs once per team
+ * whose names arrive, so the caller can redraw.
+ *
+ * A failed fetch is forgotten, so the next draw tries again; until then that
+ * team's owners stay blank rather than wrong.
+ */
+export function ensureTeamMemberNames(onLoaded) {
+  if (!state.teamSession) return;
+  for (const entry of state.teams || []) {
+    const teamId = entry?.team?.id;
+    if (!teamId || _memberNameLoads.has(teamId)) continue;
+    const load = Promise.resolve(window.desktopApi?.listTeamMembers?.(teamId))
+      .then((members) => {
+        const names = { ...state.teamMemberNames };
+        for (const m of members || []) {
+          if (m?.userId) names[m.userId] = m.displayName || m.login || "";
+        }
+        state.teamMemberNames = names;
+        onLoaded?.();
+      })
+      .catch(() => { _memberNameLoads.delete(teamId); });
+    _memberNameLoads.set(teamId, load);
   }
 }
 

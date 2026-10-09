@@ -17,7 +17,8 @@ test("no view draws the sync indicator without the publish mark", () => {
 });
 
 test("all ten build/comp rows across the five views draw both indicators", () => {
-  const combined = src.match(/\$\{itemIndicatorsHtml\("(build|comp)", [bc]\)\}/g) || [];
+  // The table view draws its cells from one function over `item`.
+  const combined = src.match(/\$\{itemIndicatorsHtml\("(build|comp)", (?:[bc]|item)\)\}/g) || [];
   expect(combined).toHaveLength(10);
 });
 

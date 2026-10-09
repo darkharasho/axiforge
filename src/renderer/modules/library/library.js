@@ -28,7 +28,8 @@ import { loadSmartFolders, getSmartFolder, saveSmartFolder, deleteSmartFolder, s
 import { openSmartFolderModal } from "./smart-folder-modal.js";
 import { initSidebarResize, applySidebarWidth, clampSidebarWidth } from "./sidebar-resize.js";
 import { initContent, renderContent } from "./content.js";
-import { initContextMenu, wireContextMenuEvents, closeMenu } from "./context-menu.js";
+import { initContextMenu, wireContextMenuEvents, closeMenu, showTableColumnsMenu } from "./context-menu.js";
+import { normalizeColumnPrefs } from "./table-columns.js";
 import {
   getSelection,
   getCompSelection,
@@ -1789,6 +1790,7 @@ async function loadPrefs() {
     const sidebarWidth = await window.desktopApi.getSetting("library.sidebarWidth");
     const sidebarExpandedFolders = await window.desktopApi.getSetting("library.sidebarExpandedFolders");
     const activeFilters = await window.desktopApi.getSetting("library.activeFilters");
+    const tableColumns = await window.desktopApi.getSetting("library.tableColumns");
 
     if (viewMode != null) state.libraryPrefs.viewMode = viewMode;
     if (sortField != null) state.libraryPrefs.sortField = sortField;
@@ -1797,6 +1799,7 @@ async function loadPrefs() {
     if (sidebarWidth != null) state.libraryPrefs.sidebarWidth = clampSidebarWidth(sidebarWidth);
     if (Array.isArray(sidebarExpandedFolders)) state.libraryPrefs.sidebarExpandedFolders = sidebarExpandedFolders;
     if (activeFilters != null && typeof activeFilters === "object") state.libraryPrefs.activeFilters = activeFilters;
+    if (Array.isArray(tableColumns)) state.libraryPrefs.tableColumns = normalizeColumnPrefs(tableColumns);
 
     await pruneGeneratedGroupsOnce();
   } catch {
@@ -1814,6 +1817,7 @@ async function savePrefs() {
     await window.desktopApi.setSetting("library.sidebarWidth", p.sidebarWidth);
     await window.desktopApi.setSetting("library.sidebarExpandedFolders", p.sidebarExpandedFolders);
     await window.desktopApi.setSetting("library.activeFilters", p.activeFilters);
+    await window.desktopApi.setSetting("library.tableColumns", p.tableColumns);
   } catch {
     // Settings write failure is non-fatal
   }
@@ -1878,6 +1882,14 @@ function _buildSharedCallbacks() {
       savePrefs();
       renderLibrary();
     },
+
+    onTableColumnsChange(columns) {
+      state.libraryPrefs.tableColumns = columns;
+      savePrefs();
+      renderContent();
+    },
+
+    onTableColumnsMenu: (x, y) => showTableColumnsMenu(x, y),
 
     onViewChange(mode) {
       state.libraryPrefs.viewMode = mode;

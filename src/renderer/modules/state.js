@@ -41,6 +41,7 @@ export const state = {
     sidebarWidth: DEFAULT_SIDEBAR_W,
     sidebarExpandedFolders: [],
     activeFilters: {},
+    tableColumns: null,     // [{ id, visible }] — see library/table-columns.js
   },
   // Comp state
   comps: [],
@@ -73,6 +74,7 @@ export const state = {
                           // see modules/library/access.js — absent means personal, i.e. yours)
   syncAuthors: {},        // itemId → creator's userId (null when the server sent no creator;
                           // ABSENT means never synced, i.e. made here — see modules/teams.js)
+  teamMemberNames: {},    // userId → display name, for the library table's Owner column
   skillSearch: "",
   catalogCache: new Map(),
   activeCatalog: null,

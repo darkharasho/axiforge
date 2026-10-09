@@ -490,6 +490,21 @@ Status key: `[ ]` open · `[x]` done · `[~]` in progress · `[?]` needs repro s
     delete most worth a name against it, a whole shared folder, recorded
     nothing. It falls back to the trashed list now. Same for comps.
 
+- [x] **Configurable table columns** (Discord, ge0rge, 2026-10-08: "More Columns
+  — Path, Owner, etc."). The table view's columns are now a registry
+  (`src/renderer/modules/library/table-columns.js`) instead of markup repeated
+  in the header and three row kinds. Right-click the header, or use its
+  adjustments button, to show/hide columns, drag to reorder, or reset. Name is
+  locked on. New optional columns: Path, Owner (team items only; blank outside
+  a team, "You" for your own, member names fetched lazily via
+  `ensureTeamMemberNames`), Published. Saved as `library.tableColumns`. Elite
+  Spec and Mode became sortable through `compareBuilds`, which also replaced
+  the expanded-folder copy of the sort (that copy compared `sortOrder` as
+  strings). Covered by `library-table-columns.test.js` and
+  `library-table-columns-view.test.js`.
+  *Not done:* drag-reordering by dragging header cells directly (reorder is in
+  the menu only); a Team column (Path already starts with the team root).
+
 ## Housekeeping
 
 - [x] **The e2e suite took ~35 minutes and blocked the dev loop.** It ran pinned
