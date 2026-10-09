@@ -1450,6 +1450,7 @@ const readyWork = app.whenReady().then(async () => {
     const saved = await store.upsertBuild(build);
     const teamRoot = await findTeamRoot(saved.folderId);
     if (teamRoot) await safeEnqueue(() => teamSync.enqueue(teamRoot.teamId, saved.id, "build", "put"), { type: "build", id: saved.id });
+    await autoPublishAfterSave("build", saved);
     return saved;
   });
   handle("builds:import-gw2skills", async (_e, url, name, folderId, gameMode) => {
@@ -1458,6 +1459,7 @@ const readyWork = app.whenReady().then(async () => {
     const saved = await store.upsertBuild(build);
     const teamRoot = await findTeamRoot(saved.folderId);
     if (teamRoot) await safeEnqueue(() => teamSync.enqueue(teamRoot.teamId, saved.id, "build", "put"), { type: "build", id: saved.id });
+    await autoPublishAfterSave("build", saved);
     return saved;
   });
   // Importing into a team folder can only reuse builds that ALREADY live in
@@ -1531,6 +1533,10 @@ const readyWork = app.whenReady().then(async () => {
         }
         await safeEnqueue(() => teamSync.enqueue(teamRoot.teamId, savedComp.id, "comp", "put"), { type: "comp", id: savedComp.id });
       }
+      // An import is a save like any other, so what it wrote publishes. Reused
+      // builds are yours already; the comp's publish uploads any that never were.
+      for (const b of savedBuilds) await autoPublishAfterSave("build", b);
+      await autoPublishAfterSave("comp", savedComp);
       return { kind: "comp", comp: savedComp, builds: savedBuilds, reused: savedReused, folder };
     }
 
@@ -1543,6 +1549,7 @@ const readyWork = app.whenReady().then(async () => {
     const saved = await store.upsertBuild(imported.build);
     const teamRoot = await findTeamRoot(saved.folderId);
     if (teamRoot) await safeEnqueue(() => teamSync.enqueue(teamRoot.teamId, saved.id, "build", "put"), { type: "build", id: saved.id });
+    await autoPublishAfterSave("build", saved);
     return saved;
   }
 
@@ -1678,6 +1685,7 @@ const readyWork = app.whenReady().then(async () => {
     const newBuildIds = [];
     const buildRefToId = new Map();
     const reusedIds = new Set();
+    const savedBuilds = [];
     for (const build of decoded.builds) {
       const match = reuse.get(build);
       const saved = match
@@ -1691,6 +1699,7 @@ const readyWork = app.whenReady().then(async () => {
             compIds: [comp.id],
           });
       if (match) reusedIds.add(saved.id);
+      else savedBuilds.push(saved);
       // A build matched twice is one roster entry, not two — same collapse
       // applyBuildReuse makes on the published-link path.
       if (!newBuildIds.includes(saved.id)) newBuildIds.push(saved.id);
@@ -1709,6 +1718,10 @@ const readyWork = app.whenReady().then(async () => {
       partyLines,
       categories,
     });
+
+    // Same as any other save: what the import wrote publishes (see writeAxiImport).
+    for (const b of savedBuilds) await autoPublishAfterSave("build", b);
+    await autoPublishAfterSave("comp", updated);
 
     // Return comp ID + warning count for UI feedback
     const result = {

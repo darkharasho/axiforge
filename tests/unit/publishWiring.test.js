@@ -24,3 +24,37 @@ describe("publish wiring", () => {
     for (const call of publishCalls) expect(call).toMatch(/gameMode/);
   });
 });
+
+// Publish-on-save hangs off autoPublishAfterSave, so a write path that skips it
+// leaves the record unpublished. Imports did: every import handler wrote with
+// store.upsertBuild / compStore.upsertComp directly, and an imported build sat
+// at "never published" until it was edited.
+describe("every handler that writes a build or comp publishes it", () => {
+  // Name → body, for handlers and the import helper they share.
+  function blocks() {
+    const out = new Map();
+    const re = /\n  (?:handle\("([^"]+)"|async function (writeAxiImport)\()/g;
+    const starts = [...src.matchAll(re)].map((m) => ({ name: m[1] || m[2], at: m.index }));
+    starts.forEach((s, i) => out.set(s.name, src.slice(s.at, starts[i + 1]?.at ?? src.length)));
+    return out;
+  }
+
+  test.each([
+    "builds:import-chat-link",
+    "builds:import-gw2skills",
+    "writeAxiImport",
+    "comps:import-share-code",
+  ])("%s", (name) => {
+    const body = blocks().get(name);
+    expect(body).toBeTruthy();
+    expect(body).toMatch(/autoPublishAfterSave\(/);
+  });
+
+  test("no other handler writes a record without publishing it", () => {
+    const writes = /store\.upsertBuild\(|compStore\.upsertComp\(/;
+    const skipped = [...blocks()]
+      .filter(([, body]) => writes.test(body) && !/autoPublishAfterSave\(/.test(body))
+      .map(([name]) => name);
+    expect(skipped).toEqual([]);
+  });
+});
