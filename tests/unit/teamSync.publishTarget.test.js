@@ -50,6 +50,24 @@ describe("TeamSync — team publish target", () => {
     expect(folder.publishOwnerType).toBeUndefined();
   });
 
+  // Team items wait for a target and for access to it; a new one has to wake
+  // them and invite the members, whether it was set here or by another owner.
+  test("a new or changed target is announced; an unchanged or cleared one isn't", async () => {
+    h = await makeHarness();
+    const hook = jest.fn();
+    h.sync._onPublishTargetChange = hook;
+    h.api.listTeams.mockResolvedValue([team()]);
+    await h.sync.listTeams();
+    h.api.listTeams.mockResolvedValue([team({ publishOwner: "gw2eww", publishOwnerType: "org" })]);
+    await h.sync.listTeams();
+    await h.sync.listTeams();
+    expect(hook).toHaveBeenCalledTimes(1);
+    h.api.setTeamPublishOwner.mockResolvedValue({ team: { id: "team-1", name: "EWW", publishOwner: "vette", publishOwnerType: "user" }, role: "owner" });
+    await h.sync.setPublishOwner("team-1", "vette", "user");
+    expect(hook).toHaveBeenCalledTimes(2);
+    expect(hook).toHaveBeenLastCalledWith("team-1");
+  });
+
   test("changing it to another owner rewrites both fields", async () => {
     h = await makeHarness();
     h.api.listTeams.mockResolvedValue([team({ publishOwner: "gw2eww", publishOwnerType: "org" })]);

@@ -101,9 +101,37 @@ describe("helpers", () => {
     expect(connectionFrom(null)).toEqual({ signedIn: false, connected: false });
     expect(connectionFrom({ isAuthenticated: true })).toEqual({ signedIn: true, connected: false });
     expect(connectionFrom({ isAuthenticated: true, repoReady: true })).toEqual({ signedIn: true, connected: true });
-    expect(connectionFrom({ isAuthenticated: true }, { publishOwner: "guild" })).toEqual({ signedIn: true, connected: true });
-    expect(connectionFrom({ isAuthenticated: false }, { publishOwner: "guild" })).toEqual({ signedIn: false, connected: false });
-    expect(connectionFrom({ isAuthenticated: true }, { teamId: "T" })).toEqual({ signedIn: true, connected: false });
+    expect(connectionFrom({ isAuthenticated: true }, { publishOwner: "guild" })).toEqual({ signedIn: true, connected: true, team: true });
+    expect(connectionFrom({ isAuthenticated: false }, { publishOwner: "guild" })).toEqual({ signedIn: false, connected: false, team: true });
+    expect(connectionFrom({ isAuthenticated: true }, { teamId: "T" })).toEqual({ signedIn: true, connected: false, team: true });
+    // A personal site never makes a team item ready: it would publish there.
+    expect(connectionFrom({ isAuthenticated: true, repoReady: true }, { teamId: "T" })).toEqual({ signedIn: true, connected: false, team: true });
+  });
+
+  describe("team items", () => {
+    const TEAM = { signedIn: true, connected: true, team: true };
+
+    test("a team with no target says so rather than offering personal setup", () => {
+      const v = publishButtonState({ receipt: "never", connection: { signedIn: true, connected: false, team: true } });
+      expect(v).toMatchObject({ label: "Not published", tone: "warn", disabled: true });
+      expect(v.title).toMatch(/team owner can set it/);
+      expect(v.action).not.toBe("setup");
+      // An older link still copies.
+      expect(publishButtonState({ receipt: "current", connection: { signedIn: true, connected: false, team: true } }).disabled).toBe(false);
+    });
+
+    test("held for repo access: says why; retries a first publish, copies an older link", () => {
+      const queueItem = { state: "disconnected", error: "Waiting for access to owner/axibuilds." };
+      expect(publishButtonState({ queueItem, receipt: "never", connection: TEAM }))
+        .toMatchObject({ label: "Waiting to publish", action: "retry", title: "Waiting for access to owner/axibuilds." });
+      expect(publishButtonState({ queueItem, receipt: "stale", connection: TEAM }))
+        .toMatchObject({ label: "Copy link", action: "copy", title: expect.stringMatching(/^Waiting for access.*last published version/) });
+    });
+
+    test("signed out still asks to sign in", () => {
+      expect(publishButtonState({ receipt: "never", connection: { signedIn: false, connected: false, team: true } }))
+        .toMatchObject({ action: "setup" });
+    });
   });
 
   test("applyPublishButton draws label, tone, icon, action and tooltip; the label is text", () => {

@@ -94,7 +94,7 @@ class PublishQueue {
     this._retry = null;            // { id, at, reason: "offline" | "rate-limit" }
     this._attempt = 0;             // consecutive rounds with a network failure
     this._paused = null;           // null | "unauthorized" | "disconnected"
-    this._blocked = new Set();     // keys whose own target isn't set up (a personal item, no personal site): held until resume or re-save
+    this._blocked = new Map();     // key → why: its own target isn't ready (no personal site; a team repo it can't push to yet). Held until resume or re-save
     this._running = null;
     this._again = false;
     this._waiters = new Map();     // key → [{ resolve, reject, timer }]
@@ -191,7 +191,11 @@ class PublishQueue {
       return Promise.resolve(null);
     }
     if (this._paused) return Promise.reject(pausedError(this._paused));
-    if (this._blocked.has(key)) return Promise.reject(pausedError("disconnected"));
+    if (this._blocked.has(key)) {
+      const err = pausedError("disconnected");
+      if (this._blocked.get(key)) err.message = this._blocked.get(key);
+      return Promise.reject(err);
+    }
     const deadline = this._now() + timeoutMs;
     // A rate limit that outlasts the wait can only end in a timeout: say why now.
     if (this._retry?.reason === "rate-limit" && this._retry.at > deadline) {
@@ -266,7 +270,7 @@ class PublishQueue {
     for (const key of this._pending) {
       if (this._publishing.has(key)) items[key] = { state: "publishing" };
       else if (this._paused) items[key] = { state: this._paused };
-      else if (this._blocked.has(key)) items[key] = { state: "disconnected" };
+      else if (this._blocked.has(key)) items[key] = { state: "disconnected", ...(this._blocked.get(key) ? { error: this._blocked.get(key) } : {}) };
       else if (this._retry) items[key] = { state: "waiting", reason: this._retry.reason, retryAt: this._retry.at };
       else items[key] = { state: "queued" };
     }
@@ -403,8 +407,10 @@ class PublishQueue {
       if (cls === "disconnected" && !roundFailed) {
         // Only this item's target isn't set up (a personal build with no personal
         // site): hold it alone, so team items keep publishing.
-        this._blocked.add(key);
-        this._settle(key, pausedError(cls));
+        this._blocked.set(key, r.error?.message || "");
+        // The item's own reason (a team with no target, no access to its repo
+        // yet), not the generic "set up publishing".
+        this._settle(key, r.error?.message ? r.error : pausedError(cls));
         continue;
       }
       if (cls === "unauthorized" || cls === "disconnected") {

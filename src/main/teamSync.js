@@ -50,7 +50,7 @@ function omit(obj, keys) {
 }
 
 class TeamSync {
-  constructor({ buildStore, compStore, folderStore, syncStore, historyStore, compHistoryStore, trash, api, emit, now, setTimeoutImpl, clearTimeoutImpl } = {}) {
+  constructor({ buildStore, compStore, folderStore, syncStore, historyStore, compHistoryStore, trash, api, emit, onPublishTargetChange, now, setTimeoutImpl, clearTimeoutImpl } = {}) {
     this.buildStore = buildStore;
     this.compStore = compStore;
     this.folderStore = folderStore;
@@ -61,6 +61,9 @@ class TeamSync {
     this.trash = trash || null;
     this.api = api || new SyncApi({ getToken: async () => (await this.getSession())?.sessionToken || null });
     this._emit = typeof emit === "function" ? emit : () => {};
+    // A team's items wait to publish until the team has a target, so setting
+    // one (here, or by another owner and seen on a pull) has to wake them.
+    this._onPublishTargetChange = typeof onPublishTargetChange === "function" ? onPublishTargetChange : () => {};
     this._now = now || Date.now;
     this._setTimeout = setTimeoutImpl || setTimeout;
     this._clearTimeout = clearTimeoutImpl || clearTimeout;
@@ -184,6 +187,7 @@ class TeamSync {
           sortOrder: existing.sortOrder, shared: true, teamId: team.id, role,
           publishOwner, publishOwnerType,
         });
+        if (publishOwner && (existing.publishOwner || null) !== publishOwner) this._onPublishTargetChange(team.id);
       }
       return existing.id;
     }
@@ -314,6 +318,7 @@ class TeamSync {
         publishOwnerType: out.team.publishOwner ? (out.team.publishOwnerType === "org" ? "org" : "user") : null,
       });
     }
+    if (out.team.publishOwner) this._onPublishTargetChange(teamId);
     return out;
   }
 

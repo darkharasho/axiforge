@@ -1,4 +1,5 @@
 import { fetchPayload } from "./payload.js";
+import { movedOwner } from "./moved.js";
 
 const REPO = "axibuilds";
 
@@ -34,11 +35,23 @@ export function memberSpaUrl(member, build, loc) {
  * commit in the viewer); without it, `memberDataBase`.
  */
 export async function loadCompMembers(comp, { fallbackBase, loc, fetchImpl, baseForOwner = null }) {
-  const entries = await Promise.all(Object.entries(comp.members || {}).map(async ([buildId, m]) => {
+  const baseOf = async (m) => (m?.owner && baseForOwner ? baseForOwner(m.owner) : memberDataBase(m, fallbackBase));
+  const load = async (m) => {
+    const base = await baseOf(m);
     try {
-      const base = m?.owner && baseForOwner ? await baseForOwner(m.owner) : memberDataBase(m, fallbackBase);
-      const url = `${base}builds/${encodeURIComponent(m.fileId)}.enc`;
-      const build = await fetchPayload(url, m.key, fetchImpl);
+      return { m, build: await fetchPayload(`${base}builds/${encodeURIComponent(m.fileId)}.enc`, m.key, fetchImpl) };
+    } catch (err) {
+      // Moved to another account since this comp was published (moved.js):
+      // same file id and key, new host.
+      const owner = err?.status === 404 ? await movedOwner(base, m.fileId, fetchImpl) : null;
+      if (!owner || owner === m.owner) throw err;
+      const moved = { ...m, owner };
+      return { m: moved, build: await fetchPayload(`${await baseOf(moved)}builds/${encodeURIComponent(m.fileId)}.enc`, m.key, fetchImpl) };
+    }
+  };
+  const entries = await Promise.all(Object.entries(comp.members || {}).map(async ([buildId, member]) => {
+    try {
+      const { m, build } = await load(member);
       return [buildId, { ...build, id: buildId, spaUrl: memberSpaUrl(m, build, loc) }];
     } catch {
       return [buildId, { id: buildId, unavailable: true }];

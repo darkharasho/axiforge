@@ -401,10 +401,13 @@ async function getRepo(token, owner, repo = TARGET_REPO) {
 // or a publish racing the Pages workflow). Each retry rebases on the new HEAD.
 const PUBLISH_COMMIT_ATTEMPTS = 4;
 
+// A bundle value of null deletes that file (an item's payload, once it moved).
+const isRemoval = (content) => content === null;
+
 async function publishSiteBundle(token, owner, bundle, branch = "main", repo = TARGET_REPO) {
   await ensureAxiForgeRepo(token, owner);
   const entries = Object.entries(bundle || {}).filter(
-    ([filePath, content]) => filePath && (typeof content === "string" || Buffer.isBuffer(content))
+    ([filePath, content]) => filePath && (typeof content === "string" || Buffer.isBuffer(content) || isRemoval(content))
   );
   if (!entries.length) {
     throw new Error("Nothing to publish.");
@@ -468,13 +471,17 @@ async function publishSiteBundleOnce(token, owner, bundle, branch, repo) {
     } catch { /* unreadable → no newer viewer known */ }
   }
   const { shellChanged, filesToPublish } = partitionBundleForPublish(bundle || {}, remoteVersion, remoteFormat);
-  const publishEntries = Object.entries(filesToPublish).filter(
+  const allEntries = Object.entries(filesToPublish);
+  const publishEntries = allEntries.filter(
     ([filePath, content]) => filePath && (typeof content === "string" || Buffer.isBuffer(content))
   );
 
   const nextPathSet = new Set(publishEntries.map(([filePath]) => filePath));
   const treeEntries = [];
   const knownBlobShas = new Set(existingByPath.values());
+  for (const [filePath, content] of allEntries) {
+    if (isRemoval(content) && existingByPath.has(filePath)) treeEntries.push({ path: filePath, sha: null });
+  }
 
   // buildSpaBundle() base64-encodes binary assets (images, fonts) and leaves text files
   // as utf8. Decode binaries back to their real bytes here, otherwise the base64 string
@@ -518,7 +525,7 @@ async function publishSiteBundleOnce(token, owner, bundle, branch, repo) {
       if (!entry?.path || entry?.type !== "blob") continue;
       const isLegacyRootNoJekyll = entry.path === ".nojekyll";
       const isEncBuild = (entry.path.startsWith("site/builds/") || entry.path.startsWith("site/comps/")) && entry.path.endsWith(".enc");
-      const isRedirect = entry.path.startsWith("site/r/");
+      const isRedirect = entry.path.startsWith("site/r/") || entry.path.startsWith("site/moved/");
       const isStaleSiteFile = entry.path.startsWith("site/") && !nextPathSet.has(entry.path) && !isEncBuild && !isRedirect;
       const isStaleViewerFile = entry.path.startsWith(VIEWER_DIR) && !nextPathSet.has(entry.path);
       if (!isLegacyRootNoJekyll && !isStaleSiteFile && !isStaleViewerFile) continue;
@@ -657,6 +664,63 @@ async function deleteFile(token, owner, filePath, branch = "main", message = "Re
   });
 }
 
+/** Every path under site/ in owner/repo's branch, or null when there's no repo. */
+async function listSitePaths(token, owner, branch = "main", repo = TARGET_REPO) {
+  let tree;
+  try {
+    tree = await apiFetch(`/repos/${owner}/${repo}/git/trees/${encodeURIComponent(branch)}?recursive=1`, token);
+  } catch (err) {
+    if (err.status === 404 || err.status === 409) return null; // no repo, or an empty one
+    throw err;
+  }
+  return new Set((tree?.tree || []).filter((e) => e?.type === "blob" && e.path?.startsWith("site/")).map((e) => e.path));
+}
+
+// ─── Collaborators ────────────────────────────────────────────────────────────
+//
+// A team that publishes to a person's account needs its members to be able to
+// push there. The owner's app invites them (teamRepoAccess.js); a member's app
+// accepts the invite. "direct" lists only people added to the repo itself, the
+// only ones this code may remove; "all" also counts org members who can push
+// through the org, who need no invite.
+
+async function listRepoCollaborators(token, owner, { affiliation = "direct", repo = TARGET_REPO } = {}) {
+  const out = await apiFetch(`/repos/${owner}/${repo}/collaborators?affiliation=${affiliation}&per_page=100`, token);
+  return (out || []).filter((c) => c?.login && (affiliation === "direct" || c.permissions?.push)).map((c) => c.login);
+}
+
+async function listRepoInvitations(token, owner, repo = TARGET_REPO) {
+  const out = await apiFetch(`/repos/${owner}/${repo}/invitations?per_page=100`, token);
+  return (out || []).filter((i) => i?.invitee?.login).map((i) => ({ id: i.id, login: i.invitee.login }));
+}
+
+async function addRepoCollaborator(token, owner, login, repo = TARGET_REPO) {
+  await apiFetch(`/repos/${owner}/${repo}/collaborators/${encodeURIComponent(login)}`, token, {
+    method: "PUT",
+    body: JSON.stringify({ permission: "push" }),
+  });
+}
+
+async function removeRepoCollaborator(token, owner, login, repo = TARGET_REPO) {
+  await apiFetch(`/repos/${owner}/${repo}/collaborators/${encodeURIComponent(login)}`, token, { method: "DELETE" });
+}
+
+async function deleteRepoInvitation(token, owner, invitationId, repo = TARGET_REPO) {
+  await apiFetch(`/repos/${owner}/${repo}/invitations/${invitationId}`, token, { method: "DELETE" });
+}
+
+/** This user's pending invitation to owner/repo, or null. */
+async function findMyRepoInvitation(token, owner, repo = TARGET_REPO) {
+  const out = await apiFetch("/user/repository_invitations?per_page=100", token);
+  const want = `${owner}/${repo}`.toLowerCase();
+  const hit = (out || []).find((i) => String(i?.repository?.full_name || "").toLowerCase() === want);
+  return hit ? { id: hit.id } : null;
+}
+
+async function acceptRepoInvitation(token, invitationId) {
+  await apiFetch(`/user/repository_invitations/${invitationId}`, token, { method: "PATCH" });
+}
+
 async function pollUrlLive(url, opts = {}) {
   const fetchImpl = opts.fetchImpl || globalThis.fetch;
   const delayImpl = opts.delayImpl || ((ms) => new Promise((r) => setTimeout(r, ms)));
@@ -690,4 +754,12 @@ module.exports = {
   publishSiteBundle,
   deleteFile,
   pollUrlLive,
+  listSitePaths,
+  listRepoCollaborators,
+  listRepoInvitations,
+  addRepoCollaborator,
+  removeRepoCollaborator,
+  deleteRepoInvitation,
+  findMyRepoInvitation,
+  acceptRepoInvitation,
 };

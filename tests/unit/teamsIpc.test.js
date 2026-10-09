@@ -109,7 +109,15 @@ jest.mock("../../src/main/githubApi", () => ({
   ensureAxiForgeRepo: jest.fn(async () => {}),
   ensurePages: jest.fn(async () => {}),
   getPagesBuildStatus: jest.fn(async () => ({})),
-  getRepo: jest.fn(async () => ({})),
+  getRepo: jest.fn(async () => ({ permissions: { admin: true, push: true } })),
+  listSitePaths: jest.fn(async () => null),
+  listRepoCollaborators: jest.fn(async () => []),
+  listRepoInvitations: jest.fn(async () => []),
+  addRepoCollaborator: jest.fn(async () => {}),
+  removeRepoCollaborator: jest.fn(async () => {}),
+  deleteRepoInvitation: jest.fn(async () => {}),
+  findMyRepoInvitation: jest.fn(async () => null),
+  acceptRepoInvitation: jest.fn(async () => {}),
   ensurePagesWorkflow: jest.fn(async () => {}),
   triggerPagesWorkflow: jest.fn(async () => {}),
   publishSiteBundle: jest.fn(async () => ({})),
@@ -700,11 +708,12 @@ describe("publishing inside a team", () => {
     expect(auth.onboarding).toMatchObject({ targetOwner: "me", targetOwnerType: "user" });
   });
 
-  // Every team that predates this. Their publishing must not move.
-  test("a team with no target falls back to the personal one", async () => {
+  // Falling back put a shared build wherever its last editor published it, so
+  // a link stopped following the build's edits. Now it waits for a target.
+  test("a team with no target is held, never published to the personal one", async () => {
     await loadMain({ ...teamTree(), auth: AUTH });
-    await invoke("builds:publish-build", "b1", {});
-    expect(github().ensureAxiForgeRepo).toHaveBeenCalledWith("gh-token", "me", "user");
+    await expect(invoke("builds:publish-build", "b1", {})).rejects.toThrow(/hasn't chosen where it publishes/);
+    expect(github().ensureAxiForgeRepo).not.toHaveBeenCalledWith("gh-token", "me", "user");
   });
 
   test("teams:set-publish-owner reaches the server and mirrors onto the root folder", async () => {
@@ -717,6 +726,53 @@ describe("publishing inside a team", () => {
     expect(mockApi.setTeamPublishOwner).toHaveBeenCalledWith(TEAM_ID, "gw2eww", "org");
     const folders = await invoke("folders:list");
     expect(folders.find((f) => f.id === TEAM_ID)).toMatchObject({ publishOwner: "gw2eww", publishOwnerType: "org" });
+  });
+});
+
+// ─── Moving shared builds to the team's account ─────────────────────────────
+//
+// A shared build used to publish to whichever member last edited it, so a link
+// kept showing that member's copy. On startup each member moves their own
+// copies to the team's target, and leaves a pointer where the old copy was.
+
+describe("moving published team items", () => {
+  const AUTH = {
+    sync: SESSION,
+    token: "gh-token",
+    viewer: { login: "me" },
+    onboarding: { targetOwner: "me", targetOwnerType: "user", branch: "main", repoReady: true },
+  };
+  const KEY = Buffer.alloc(32, 7).toString("base64url");
+  const github = () => require("../../src/main/githubApi");
+  const withTarget = (tree) => {
+    tree.folders[0] = folder({ id: TEAM_ID, name: "Squad", shared: true, teamId: TEAM_ID, role: "owner", publishOwner: "gw2eww", publishOwnerType: "org" });
+    return tree;
+  };
+
+  test("my copy of a team build republishes to the team target on startup, same file and key", async () => {
+    const tree = withTarget(teamTree());
+    tree.builds = [build({ id: "b1", title: "Shared build", folderId: "sub", publishedFileId: "pf", publishedKey: KEY, publishedSlug: "shared-build", publishedOwner: "me", publishedHash: "OLD" })];
+    await loadMain({ ...tree, auth: AUTH });
+    // Timers are fake here; the queue's debounce has to be walked forward.
+    await waitFor(() => { jest.advanceTimersByTime(5000); return github().publishSiteBundle.mock.calls.some((c) => c[1] === "gw2eww"); }, { label: "moved to the team target" });
+    const [, , bundle] = github().publishSiteBundle.mock.calls.find((c) => c[1] === "gw2eww");
+    expect(Object.keys(bundle)).toContain("site/builds/pf.enc");
+  });
+
+  test("the old host's copy becomes a pointer to the new one", async () => {
+    const tree = withTarget(teamTree());
+    tree.builds = [
+      build({ id: "b1", title: "Shared build", folderId: "sub", publishedFileId: "pf", publishedKey: KEY, publishedOwner: "gw2eww", publishedHash: "OLD" }),
+      build({ id: "mine", title: "Solo", folderId: "solo" }),
+    ];
+    await loadMain({ ...tree, auth: AUTH });
+    github().listSitePaths.mockResolvedValue(new Set(["site/builds/pf.enc", "site/index.html"]));
+    // Any publish round that lands looks for copies to turn into pointers.
+    await invoke("builds:publish-build", "mine", {});
+    await waitFor(() => github().publishSiteBundle.mock.calls.some((c) => c[1] === "me" && "site/moved/pf.json" in c[2]), { label: "stub written" });
+    const [, , bundle] = github().publishSiteBundle.mock.calls.find((c) => c[1] === "me" && "site/moved/pf.json" in c[2]);
+    expect(bundle["site/builds/pf.enc"]).toBeNull();
+    expect(JSON.parse(bundle["site/moved/pf.json"])).toEqual({ owner: "gw2eww" });
   });
 });
 
@@ -787,7 +843,7 @@ describe("publish on save", () => {
     await loadMain({ ...tree([mine()]), auth: { ...AUTH, onboarding: { targetOwner: "me", branch: "main" } } });
     await expect(invoke("builds:publish-build", "p1", {})).rejects.toThrow(/Set up publishing/);
     const snap = await invoke("publish:snapshot");
-    expect(snap.items["build:p1"]).toEqual({ state: "disconnected" });
+    expect(snap.items["build:p1"]).toEqual({ state: "disconnected", error: "Set up publishing to publish." });
     expect(snap.paused).toBeNull();
   });
 
@@ -808,7 +864,7 @@ describe("publish on save", () => {
     // Only the personal item waits for setup; the queue itself never paused.
     const snap = await invoke("publish:snapshot");
     expect(snap.paused).toBeNull();
-    expect(snap.items["build:p1"]).toEqual({ state: "disconnected" });
+    expect(snap.items["build:p1"]).toEqual({ state: "disconnected", error: "Set up publishing to publish." });
   });
 
   test("a token GitHub refuses mid-round pauses for sign-in; coming online keeps that pause", async () => {

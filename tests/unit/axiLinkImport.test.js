@@ -129,6 +129,17 @@ describe("importAxiLink", () => {
     expect(fetchText).toHaveBeenCalledTimes(2);
   });
 
+  // Moved to its team's account after the link was shared: the old host left a
+  // pointer, and the same file id and key open it there.
+  test("follows a moved pointer to the build's new host", async () => {
+    const fetchText = serve({
+      "https://raw.githubusercontent.com/someone/axibuilds/main/site/moved/f4c38d4f.json": { status: 200, body: '{"owner":"guild"}' },
+      "https://raw.githubusercontent.com/guild/axibuilds/main/site/builds/f4c38d4f.enc": { status: 200, body: encryptBuild(published, key) },
+    });
+    const build = await importAxiLink(LINK.replace("KEY", key), {}, { fetchText });
+    expect(build.title).toBe("U Chrono");
+  });
+
   test("says the build is gone when no base has it", async () => {
     await expect(importAxiLink(LINK.replace("KEY", key), {}, { fetchText: serve({}) }))
       .rejects.toThrow(/isn't published anymore/i);

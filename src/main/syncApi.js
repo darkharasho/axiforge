@@ -80,8 +80,7 @@ class SyncApi {
   // versa.
   updateTeam(teamId, patch) { return this.#request("PATCH", `/teams/${encodeURIComponent(teamId)}`, { body: patch }); }
   renameTeam(teamId, name) { return this.updateTeam(teamId, { name }); }
-  // `publishOwner: null` clears it, putting the team back on each member's own
-  // personal target.
+  // It can be changed, not cleared: the server refuses null.
   setTeamPublishOwner(teamId, publishOwner, publishOwnerType) {
     return this.updateTeam(teamId, { publishOwner, publishOwnerType });
   }

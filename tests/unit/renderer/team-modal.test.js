@@ -685,9 +685,19 @@ describe("the team's publish target", () => {
   test("an owner picks from the accounts they can publish to", async () => {
     await openTeamTab();
     expect(api.listTargets).toHaveBeenCalled();
+    // Unset (a team the server couldn't give one): a prompt, not an option.
     expect([...picker().options].map((o) => o.value)).toEqual(["", "me", "gw2eww"]);
-    // Unset means each member keeps publishing to their own account.
+    expect(picker().options[0].disabled).toBe(true);
     expect(picker().value).toBe("");
+  });
+
+  // "Each member's own account" put a shared build wherever its last editor
+  // published it, so a link stopped following the build's edits.
+  test("a team with a target offers no way back to each member's own account", async () => {
+    state.teams = [{ team: { id: "t1", name: "EWW", inviteCode: "A", publishOwner: "gw2eww", publishOwnerType: "org" }, role: "owner" }];
+    await openTeamTab();
+    expect([...picker().options].map((o) => o.value)).toEqual(["me", "gw2eww"]);
+    expect(document.querySelector("#tm-body").textContent).not.toMatch(/own account/);
   });
 
   test("picking an org sends it with its owner type and reports it", async () => {
@@ -700,18 +710,6 @@ describe("the team's publish target", () => {
     expect(status()).toMatch(/publishes to gw2eww/);
     // The server's answer is what the control now shows.
     expect(picker().value).toBe("gw2eww");
-  });
-
-  test("choosing the blank option clears it", async () => {
-    state.teams = [{ team: { id: "t1", name: "EWW", inviteCode: "A", publishOwner: "gw2eww", publishOwnerType: "org" }, role: "owner" }];
-    await openTeamTab();
-    expect(picker().value).toBe("gw2eww");
-    const select = picker();
-    select.value = "";
-    select.dispatchEvent(new Event("change", { bubbles: true }));
-    await flush();
-    expect(api.setTeamPublishOwner).toHaveBeenCalledWith("t1", null, "user");
-    expect(picker().value).toBe("");
   });
 
   // A refused write must not leave a control showing a setting the team does
@@ -745,11 +743,11 @@ describe("the team's publish target", () => {
     expect(api.listTargets).not.toHaveBeenCalled();
   });
 
-  test("a member on a team with no target is told it goes to their own account", async () => {
+  test("a member on a team with no target is told nothing publishes yet", async () => {
     state.folders = [{ ...ROOT, role: "member" }, RAIDS, WVW, DEEP];
     state.teams = [{ team: { id: "t1", name: "EWW" }, role: "member" }];
     await openTeamTab();
-    expect(document.querySelector("#tm-body").textContent).toMatch(/your own GitHub account/);
+    expect(document.querySelector("#tm-body").textContent).toMatch(/nothing in it publishes until an owner picks/);
   });
 });
 

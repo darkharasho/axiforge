@@ -10,6 +10,19 @@ Status key: `[ ]` open · `[x]` done · `[~]` in progress · `[?]` needs repro s
 
 ## Bugs
 
+- [ ] **Team publish home: deploy and follow-ups** (design:
+  `docs/superpowers/specs/2026-10-08-team-publish-home-design.md`).
+  - Deploy the sync Worker with migration 0008 (`--remote`). Until then the
+    owner's app claims unset teams itself, so nothing breaks, but the server
+    still accepts a cleared target from an older app.
+  - A personal comp that links a never-published team build uploads that build
+    under the personal owner (`planCompMembers`); the team build then moves on
+    its next publish. Better: link it unpublished-skip, or publish it to the team.
+  - Org targets: members are added as repo collaborators only when the owner is
+    an admin of the org's repo. Inviting them to the org itself
+    (`PUT /orgs/{org}/memberships/{user}`) is not done.
+  - Moved pointers don't chain through an org host (see design "Limits").
+
 - [x] **Phantom build row floats over every library view.** Switching between All
   Builds and the Archive left a build row pinned at its old screen coordinates,
   on top of whatever you navigated to, until restart.

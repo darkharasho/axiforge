@@ -21,15 +21,17 @@ function isPublishable(kind, record) {
  *
  * @param {"build"|"comp"} kind
  * @param {object|null} record
- * @param {{targetOwner?: string|null, choice?: "mine"|"theirs"|null}} ctx
+ * @param {{targetOwner?: string|null, choice?: "mine"|"theirs"|null, team?: boolean}} ctx
  * @returns {"skip"|"enqueue"|"ask-owner"}
  */
-function autoPublishDecision(kind, record, { targetOwner = null, choice = null } = {}) {
+function autoPublishDecision(kind, record, { targetOwner = null, choice = null, team = false } = {}) {
   if (!record || record.deletedAt || record.archivedAt) return "skip";
   if (!isPublishable(kind, record)) return "skip";
-  if (choice === "theirs") return "skip";
+  // A team item belongs at the team's target, wherever it was published before,
+  // so an earlier "leave it with them" doesn't hold it back.
+  if (choice === "theirs" && !team) return "skip";
   if (publishStatus(record) === "current") return "skip";
-  const foreign = Boolean(record.publishedOwner && targetOwner && record.publishedOwner !== targetOwner);
+  const foreign = !team && Boolean(record.publishedOwner && targetOwner && record.publishedOwner !== targetOwner);
   if (foreign && choice !== "mine") return "ask-owner";
   return "enqueue";
 }

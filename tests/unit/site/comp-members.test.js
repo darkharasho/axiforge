@@ -66,4 +66,18 @@ describe("comp members", () => {
     expect(baseForOwner).toHaveBeenCalledWith("mate");
     expect(fetchImpl.mock.calls[0][0]).toBe("https://raw.githubusercontent.com/mate/axibuilds/SHA/site/builds/aaaa1111.enc");
   });
+
+  // The member moved to its team's account after this comp was published: its
+  // old host left a pointer, and the same file id and key work at the new one.
+  test("a member that moved is read from its new host, and links there", async () => {
+    const k = generateEncryptionKey();
+    const comp = { members: { a: { fileId: "aaaa1111", key: k, owner: "mate", slug: "fb" } } };
+    const fetchImpl = jest.fn(async (url) => {
+      if (url === "https://raw.githubusercontent.com/mate/axibuilds/main/site/moved/aaaa1111.json") return { ok: true, json: async () => ({ owner: "guild" }) };
+      if (url === "https://raw.githubusercontent.com/guild/axibuilds/main/site/builds/aaaa1111.enc") return okBytes({ title: "FB", profession: "Guardian" }, k);
+      return { ok: false, status: 404 };
+    });
+    const out = await loadCompMembers(comp, { fallbackBase: "BASE/", loc, fetchImpl });
+    expect(out.a).toMatchObject({ title: "FB", spaUrl: `https://guild.github.io/axibuilds/?n=fb&b=aaaa1111.${k}` });
+  });
 });

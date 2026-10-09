@@ -48,9 +48,8 @@ async function withInviteCode(attempt) {
 function teamWire(row, { includeInvite }) {
   const t = { id: row.id, name: row.name, seq: row.seq, createdAt: row.created_at };
   if (includeInvite) t.inviteCode = row.invite_code;
-  // Only when configured. Absent is the answer every team had before this
-  // existed, and the client reads absent as "fall back to the personal target",
-  // so an unset team keeps behaving exactly as it did.
+  // Every team has one (createTeam, migration 0008). Absent only for a team
+  // whose owners have no GitHub identity; the client holds its publishes.
   if (row.publish_owner) {
     t.publishOwner = row.publish_owner;
     t.publishOwnerType = row.publish_owner_type === "org" ? "org" : "user";
@@ -66,6 +65,11 @@ function cleanName(raw) {
   const name = typeof raw === "string" ? raw.trim() : "";
   if (!name || name.length > MAX_TEAM_NAME) return null;
   return name;
+}
+
+function publishOwnerFor(auth) {
+  const login = auth?.user?.login;
+  return typeof login === "string" && GITHUB_LOGIN_RE.test(login) ? login : null;
 }
 
 async function requireMembership(env, teamId, userId) {
@@ -103,7 +107,10 @@ async function createTeam(request, env, deps, auth) {
   return withInviteCode(async (code) => {
     try {
       await env.SYNC_DB.batch([
-        env.SYNC_DB.prepare("INSERT INTO teams (id, name, invite_code, seq, created_by, created_at) VALUES (?, ?, ?, 0, ?, ?)").bind(id, name, code, auth.user.id, now),
+        // A team publishes to its creator until an owner points it at an org,
+        // so a shared build has one home whoever edits it. @see migration 0008.
+        env.SYNC_DB.prepare("INSERT INTO teams (id, name, invite_code, seq, created_by, created_at, publish_owner, publish_owner_type) VALUES (?, ?, ?, 0, ?, ?, ?, ?)")
+          .bind(id, name, code, auth.user.id, now, publishOwnerFor(auth), publishOwnerFor(auth) ? "user" : null),
         env.SYNC_DB.prepare("INSERT INTO memberships (team_id, user_id, role, joined_at) VALUES (?, ?, 'owner', ?)").bind(id, auth.user.id, now),
       ]);
     } catch (err) {
@@ -149,9 +156,9 @@ async function ownerOnly(env, teamId, auth) {
 // PATCH /teams/:teamId { name?, publishOwner?, publishOwnerType? }
 //
 // Owner-only, and a patch: a key that is absent is left alone. `name` on its own
-// is the rename this endpoint has always been. `publishOwner: null` clears the
-// team target, which is not the same as leaving it out — it puts the team back
-// on each member's personal target.
+// is the rename this endpoint has always been. The target can be changed but
+// not cleared: with none, each member published shared builds to their own
+// account and a link stopped following the build's edits.
 async function renameTeam(request, env, _deps, auth, params) {
   const { error } = await ownerOnly(env, params.teamId, auth);
   if (error) return error;
@@ -168,7 +175,7 @@ async function renameTeam(request, env, _deps, auth, params) {
 
   if (body.publishOwner !== undefined) {
     if (body.publishOwner === null || body.publishOwner === "") {
-      sets.push("publish_owner = NULL", "publish_owner_type = NULL");
+      return errorResponse("invalid", "A team always publishes somewhere. Choose another account or organization instead.");
     } else {
       const owner = typeof body.publishOwner === "string" ? body.publishOwner.trim() : "";
       if (!GITHUB_LOGIN_RE.test(owner)) return errorResponse("invalid", "publishOwner must be a GitHub user or organization name.");

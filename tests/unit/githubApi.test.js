@@ -640,6 +640,30 @@ describe("publishSiteBundle — SHA deduplication", () => {
     expect(deletedPaths).not.toContain("site/builds/abc.enc");
   });
 
+  // An item that moved to another account: its payload goes, a pointer stays.
+  test("a null entry deletes that file; moved pointers survive a shell sweep", async () => {
+    global.fetch = buildMockFetch({
+      existingFiles: {
+        "site/index.html": computeGitBlobSha("old"),
+        "site/builds/gone.enc": "encsha1",
+        "site/moved/older.json": "movedsha",
+      },
+    });
+    await publishSiteBundle(FAKE_TOKEN, FAKE_OWNER, {
+      "site/index.html": "new",
+      "site/builds/gone.enc": null,
+      "site/builds/never-here.enc": null,
+      "site/moved/gone.json": '{"owner":"guild"}',
+    });
+    const treeCall = global.fetch.mock.calls.find(([url, opts]) => String(url).includes("/git/trees") && opts?.method === "POST");
+    const tree = JSON.parse(treeCall[1].body).tree;
+    const deleted = tree.filter((e) => e.sha === null).map((e) => e.path);
+    expect(deleted).toContain("site/builds/gone.enc");
+    expect(deleted).not.toContain("site/builds/never-here.enc");
+    expect(deleted).not.toContain("site/moved/older.json");
+    expect(tree.map((e) => e.path)).toContain("site/moved/gone.json");
+  });
+
   test("preserves site/comps/*.enc files during stale-file sweep", async () => {
     global.fetch = buildMockFetch({
       existingFiles: {
@@ -1192,5 +1216,21 @@ describe("ensureAxiForgeRepo — fast path", () => {
     await ensureAxiForgeRepo(FAKE_TOKEN, FAKE_OWNER);
     expect(global.fetch).toHaveBeenCalledTimes(1);
     expect(Date.now() - started).toBeLessThan(500);
+  });
+});
+
+describe("listRepoCollaborators", () => {
+  afterEach(() => { delete global.fetch; });
+
+  test("direct lists everyone added to the repo; all keeps only those who can push", async () => {
+    const people = [
+      { login: "writer", permissions: { push: true } },
+      { login: "reader", permissions: { push: false } },
+    ];
+    global.fetch = jest.fn(() => okRes(people));
+    expect(await require("../../src/main/githubApi").listRepoCollaborators("t", "guild")).toEqual(["writer", "reader"]);
+    expect(global.fetch.mock.calls[0][0]).toMatch(/affiliation=direct/);
+    expect(await require("../../src/main/githubApi").listRepoCollaborators("t", "guild", { affiliation: "all" })).toEqual(["writer"]);
+    expect(global.fetch.mock.calls[1][0]).toMatch(/affiliation=all/);
   });
 });

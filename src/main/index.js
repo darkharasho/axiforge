@@ -64,6 +64,9 @@ const {
 const { backfillPublishReceipts } = require("./publishBaseline");
 const { shortUrl, publishedOwnerFor } = require("./shortUrl");
 const { resolvePublishTarget } = require("./publishTarget");
+const { createTeamRepoAccess } = require("./teamRepoAccess");
+const { itemsToMove, planMovedStubs } = require("./teamPublishMoves");
+const githubApi = require("./githubApi");
 const { PublishQueue } = require("./publishQueue");
 const { autoPublishDecision, bulkPublishCandidates } = require("./autoPublish");
 const { createPublishBatch, publishedPageUrl, displayTitle, pageThemes, PAGES_TIMEOUT_MS } = require("./publishBatch");
@@ -719,8 +722,86 @@ const readyWork = app.whenReady().then(async () => {
     // A teammate's delete stages in the trash, exactly like your own.
     trash,
     emit: teamSyncEmit,
+    // Team items wait for a target and for push access to it (publishTarget.js,
+    // teamRepoAccess.js); a new target invites the members and frees them.
+    onPublishTargetChange: () => {
+      teamRepoAccess.syncCollaborators({ force: true })
+        .finally(() => { publishQueueRef?.resume().catch(() => {}); queueTeamMoves(); });
+    },
   });
   teamSyncRef = teamSync;
+  const teamRepoAccessFile = path.join(app.getPath("userData"), "team-repo-collaborators.json");
+  const teamRepoAccess = createTeamRepoAccess({
+    getGithub: async () => {
+      const session = await getSession().catch(() => null);
+      return session?.token && session?.viewer?.login ? { token: session.token, login: session.viewer.login } : null;
+    },
+    listTeams: async () => ((await teamSync.getSession()) ? teamSync.listTeams() : []),
+    listMembers: (teamId) => teamSync.listMembers(teamId),
+    setPublishOwner: (teamId, owner, ownerType) => teamSync.setPublishOwner(teamId, owner, ownerType),
+    gh: githubApi,
+    loadAdded: () => readJsonFile(teamRepoAccessFile, null),
+    saveAdded: (data) => writeJsonAtomic(teamRepoAccessFile, data, { backup: false }),
+  });
+  teamRepoAccess.syncCollaborators({ force: true });
+
+  async function publishedRecords() {
+    const [builds, comps] = await Promise.all([store.listBuilds(), compStore.listComps()]);
+    return [
+      ...builds.map((record) => ({ kind: "build", record })),
+      ...comps.map((record) => ({ kind: "comp", record })),
+    ];
+  }
+
+  // Team items still published on a member's own account move to the team's
+  // target. @see src/main/teamPublishMoves.js
+  async function queueTeamMoves() {
+    try {
+      const auth = await getAuthRecord();
+      const viewerLogin = auth?.viewer?.login;
+      if (!auth?.token || !viewerLogin || !publishQueueRef) return;
+      const folders = await folderStore.listFolders();
+      const memberLogins = new Map();
+      for (const root of folders.filter((f) => f.teamId && !f.parentId && f.role === "owner")) {
+        const members = await teamSync.listMembers(root.teamId).catch(() => null);
+        if (members) memberLogins.set(root.teamId, new Set(members.map((m) => String(m.login || "").toLowerCase())));
+      }
+      const moves = itemsToMove({
+        records: await publishedRecords(),
+        rootFor: (record) => teamSync.teamRootFor(record.folderId, folders),
+        viewerLogin,
+        memberLogins,
+      });
+      for (const { kind, id } of moves) publishQueueRef.enqueue(kind, id);
+    } catch (err) {
+      console.warn("[team-moves] skipped:", err?.message || err);
+    }
+  }
+
+  // This user's copies of items now published elsewhere become pointers to the
+  // new host, so links handed out before a move open the current version.
+  let movedStubsAt = 0;
+  async function writeMovedStubs({ force = false } = {}) {
+    if (!force && Date.now() - movedStubsAt < 10 * 60 * 1000) return;
+    movedStubsAt = Date.now();
+    try {
+      const session = await getSession();
+      const login = session?.viewer?.login;
+      if (!session?.token || !login) return;
+      const sitePaths = await githubApi.listSitePaths(session.token, login);
+      if (!sitePaths) return;
+      const stubs = planMovedStubs({ records: await publishedRecords(), viewerLogin: login, sitePaths });
+      if (!Object.keys(stubs).length) return;
+      await enqueuePublish(async () => {
+        // The current viewer rides along when the repo's is older: it is the
+        // one that knows to follow a pointer.
+        const upload = await publishSiteBundle(session.token, login, { ...buildSpaBundle(), ...stubs });
+        if (upload.shellChanged) await triggerPagesWorkflow(session.token, login).catch(() => null);
+      });
+    } catch (err) {
+      console.warn("[moved-stubs] skipped:", err?.message || err);
+    }
+  }
   // Polling is meaningless without a team session (pullAll is a no-op then), and
   // teams:enable starts it as soon as the user opts in.
   if (await teamSync.getSession()) teamSync.startPolling();
@@ -729,7 +810,9 @@ const readyWork = app.whenReady().then(async () => {
   // dead `orgName`/`lastSyncedAt` fields (and the stale auth blob) go away.
   teamSync.cleanupLegacyFolders().catch((err) => console.warn("[legacy-cleanup]", err.message));
   // Flush anything left in the outbox from a previous run, then pull.
-  teamSync.pullAll().catch((err) => console.error("[startup-pull] error:", err.message));
+  teamSync.pullAll().catch((err) => console.error("[startup-pull] error:", err.message))
+    // After the pull, so the team roots carry their current targets.
+    .finally(() => { queueTeamMoves(); writeMovedStubs({ force: true }); });
   // Publish on save (publishQueue.js / publishBatch.js). Rounds go through
   // enqueuePublish, so a round, a Retry and a local API publish never race.
   const publishBatch = createPublishBatch({
@@ -743,20 +826,31 @@ const readyWork = app.whenReady().then(async () => {
     ensurePublishInfra, invalidatePublishInfra, publishSiteBundle, triggerPagesWorkflow, pollUrlLive,
     teamPut: (teamId, id, kind) => safeEnqueue(() => teamSync.enqueue(teamId, id, kind, "put"), { type: kind, id }),
     choiceOf: (kind, id) => publishQueue.choiceOf(kind, id),
+    ensureTeamAccess: (session, owner, ownerType) =>
+      teamRepoAccess.ensurePushAccess({ token: session.token, login: session.viewer.login }, owner, ownerType),
     repo: TARGET_REPO,
   });
   const publishQueueFile = path.join(app.getPath("userData"), "publish-queue.json");
   const publishQueue = new PublishQueue({
-    runRound: (items) => enqueuePublish(() => publishBatch(items)),
+    runRound: (items) => enqueuePublish(() => publishBatch(items)).then((out) => {
+      // A round may have moved this user's copies elsewhere: point the old
+      // links at the new host. Not awaited: it queues behind this round.
+      if (out?.results?.some((r) => r.ok)) writeMovedStubs({ force: true });
+      return out;
+    }),
     load: () => readJsonFile(publishQueueFile, null),
     persist: (data) => writeJsonAtomic(publishQueueFile, data, { backup: false }),
     emit: (snapshot) => broadcast("publish:status", snapshot),
   });
   publishQueueRef = publishQueue;
-  publishQueue.load().catch((err) => console.warn("[publish-queue] load failed:", err.message));
+  publishQueue.load().catch((err) => console.warn("[publish-queue] load failed:", err.message))
+    .finally(() => queueTeamMoves());
 
   app.on("browser-window-focus", () => {
     teamSync.onFocus();
+    // Throttled: invites members who joined since, before their publish retries.
+    teamRepoAccess.syncCollaborators();
+    writeMovedStubs();
     // Focus retries a "disconnected" pause and an offline backoff, never bad
     // credentials: those wait for sign-in (auth:complete-login).
     publishQueue.resume({ keepUnauthorized: true }).catch(() => {});
@@ -936,18 +1030,20 @@ const readyWork = app.whenReady().then(async () => {
   // contentHash rides along for the renderer's publish status; never stored.
   // Where a record publishes, from the stored auth only: a save must never wait
   // on a network round trip. null when signed out (the round decides later).
-  async function publishTargetOwner(record) {
+  async function publishTargetOf(record) {
     const auth = await getAuthRecord();
     if (!auth?.token || !auth?.viewer?.login) return null;
-    return resolvePublishTarget(auth, auth.viewer.login, await findTeamRoot(record.folderId)).owner;
+    return resolvePublishTarget(auth, auth.viewer.login, await findTeamRoot(record.folderId));
   }
 
   // Never fails the save: publishing is best-effort on top of a local write.
   async function autoPublishAfterSave(kind, saved) {
     try {
       const annotated = kind === "comp" ? annotateComp(saved) : annotateBuild(saved);
+      const target = await publishTargetOf(saved);
       const decision = autoPublishDecision(kind, annotated, {
-        targetOwner: await publishTargetOwner(saved),
+        targetOwner: target?.owner || null,
+        team: target?.scope === "team",
         choice: publishQueue.choiceOf(kind, saved.id),
       });
       if (decision === "enqueue") {
@@ -2534,8 +2630,8 @@ const readyWork = app.whenReady().then(async () => {
   // Where this team publishes. Owner-only (the server refuses anyone else), and
   // it reaches every member: a team's builds belong in the team's GitHub org, not
   // in whichever account the member who happened to hit Publish had configured.
-  // `owner: null` clears it, putting the team back on each member's personal
-  // target. @see src/main/publishTarget.js
+  // Until one is set the team's items don't publish at all; they never fall back
+  // to a member's own account. @see src/main/publishTarget.js
   handle("teams:set-publish-owner", (_e, teamId, owner, ownerType) =>
     teamSync.setPublishOwner(teamId, owner, ownerType));
   handle("teams:members", (_e, teamId) => teamSync.listMembers(teamId));

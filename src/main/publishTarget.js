@@ -17,9 +17,13 @@
  *     target is a fact about the MACHINE, so it could never be right for work
  *     that belongs to the team, and a publish to the wrong owner succeeds
  *     silently.
- *   * The personal target from Settings, for everything else (and for a team
- *     that has not configured one — which is every team that existed before
- *     this, so nothing changes for them).
+ *   * The personal target from Settings, for everything else.
+ *
+ * A team item never falls back to the personal target. It used to, when the
+ * team had none, and then each member who edited a shared build published it
+ * under their own account: person X's link went on showing X's copy after
+ * person Y changed it. With no team target the owner is null, and publishing
+ * waits until a team owner picks one.
  *
  * The stored type is only trusted for a third-party owner. When the target is
  * the signed-in user (explicitly or by falling back), the type is always "user"
@@ -29,10 +33,12 @@
  * @param {string} viewerLogin - login of the signed-in user, used as fallback
  * @param {object|null} [teamRoot] - the team root folder the item lives under,
  *   as returned by teamSync.teamRootFor; null for personal items
- * @returns {{owner: string, ownerType: "user"|"org", scope: "team"|"personal"}}
+ * @returns {{owner: string|null, ownerType: "user"|"org"|null, scope: "team"|"personal"}}
+ *   owner is null only for a team item whose team has no target yet
  */
 function resolvePublishTarget(auth, viewerLogin, teamRoot = null) {
-  if (teamRoot?.publishOwner) {
+  if (teamRoot) {
+    if (!teamRoot.publishOwner) return { owner: null, ownerType: null, scope: "team" };
     return {
       ...normalize(teamRoot.publishOwner, teamRoot.publishOwnerType, viewerLogin),
       scope: "team",

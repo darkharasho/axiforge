@@ -76,6 +76,29 @@ describe("grouping", () => {
     expect(results.find((r) => r.id === "t").ok).toBe(true);
     expect(calls.bundles.map((x) => x.owner)).toEqual(["guild"]);
   });
+
+  // Never the editor's own account: then each member who edited a shared build
+  // published their own copy, and an old link never showed the new edit.
+  test("a team item with no team target is held, not published to the personal account", async () => {
+    const { deps, calls } = setup({ builds: [b({ id: "a" }), b({ id: "t", folderId: "team" })] });
+    deps.findTeamRoot = async (folderId) => (folderId === "team" ? { id: "team", teamId: "T1", shared: true } : null);
+    const { results } = await createPublishBatch(deps)([{ kind: "build", id: "a" }, { kind: "build", id: "t" }]);
+    expect(results.find((r) => r.id === "t").error).toMatchObject({ code: "PUBLISH_DISCONNECTED" });
+    expect(results.find((r) => r.id === "a").ok).toBe(true);
+    expect(calls.bundles.map((x) => x.owner)).toEqual(["me"]);
+  });
+
+  test("team items wait for push access to the team's repo, checked once per round", async () => {
+    const { deps, calls } = setup({ builds: [b({ id: "a" }), b({ id: "t1", folderId: "team" }), b({ id: "t2", folderId: "team" })] });
+    deps.ensureTeamAccess = jest.fn(async () => {
+      throw Object.assign(new Error("Waiting for access to guild/axibuilds."), { code: "PUBLISH_DISCONNECTED" });
+    });
+    const { results } = await createPublishBatch(deps)(["a", "t1", "t2"].map((id) => ({ kind: "build", id })));
+    expect(deps.ensureTeamAccess).toHaveBeenCalledTimes(1);
+    expect(deps.ensureTeamAccess).toHaveBeenCalledWith(expect.anything(), "guild", "org");
+    expect(results.filter((r) => r.error?.code === "PUBLISH_DISCONNECTED").map((r) => r.id)).toEqual(["t1", "t2"]);
+    expect(calls.bundles.map((x) => x.owner)).toEqual(["me"]);
+  });
 });
 
 describe("ownership", () => {
@@ -92,6 +115,28 @@ describe("ownership", () => {
     const { results } = await publishBatch([{ kind: "build", id: "x" }]);
     expect(results[0].ok).toBe(true);
     expect(calls.marks[0].patch.publishedOwner).toBe("me");
+  });
+
+  // The migration: published to a member's own account before the team had one
+  // target. Same file id and key, so only the host in the link changes.
+  test("a team item published elsewhere moves to the team target, keeping its ids", async () => {
+    const x = pub({ id: "x", folderId: "team", publishedOwner: "mate" });
+    const { publishBatch, calls } = setup({ builds: [x] });
+    const { results } = await publishBatch([{ kind: "build", id: "x" }]);
+    expect(results[0].ok).toBe(true);
+    expect(calls.bundles.map((bb) => bb.owner)).toEqual(["guild"]);
+    expect(calls.marks[0].patch).toMatchObject({ publishedOwner: "guild", publishedFileId: x.publishedFileId, publishedKey: x.publishedKey });
+  });
+
+  test("a team comp brings its team members along; anyone else's copy stays linked", async () => {
+    const mine = pub({ id: "m", folderId: "team", publishedOwner: "mate" });
+    const outside = pub({ id: "o", folderId: null, publishedOwner: "stranger" });
+    const comps = [{ id: "c1", name: "Raid", folderId: "team", buildIds: ["m", "o"], partyLines: [], updatedAt: "t1" }];
+    const { publishBatch, calls } = setup({ builds: [mine, outside], comps });
+    await publishBatch([{ kind: "comp", id: "c1" }]);
+    expect(encFiles(calls.bundles[0].bundle)).toEqual([`site/builds/${mine.publishedFileId}.enc`]);
+    expect(calls.marks.find((m) => m.id === "m").patch.publishedOwner).toBe("guild");
+    expect(calls.marks.find((m) => m.id === "o")).toBeUndefined();
   });
 });
 

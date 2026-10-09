@@ -277,7 +277,24 @@ function newerVersionError(noun) {
   return new Error(`That ${noun} was published by a newer version of AxiForge — update the app to import it.`);
 }
 
-async function fetchPayload({ fileId, key, bases, dir }, fetchText, noun = "build") {
+const GITHUB_LOGIN = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/;
+
+// An item that moved to another account leaves a pointer where its payload was
+// (teamPublishMoves.js). Same file id and key at the new host.
+async function movedBase(bases, fileId, fetchText) {
+  for (const base of bases) {
+    try {
+      const res = await fetchText(`${base}moved/${encodeURIComponent(fileId)}.json`);
+      if (res.status !== 200) continue;
+      const text = typeof res.body === "string" ? res.body : Buffer.from(res.bytes || res.body || "").toString("utf8");
+      const owner = JSON.parse(text)?.owner;
+      if (typeof owner === "string" && GITHUB_LOGIN.test(owner)) return `https://raw.githubusercontent.com/${owner}/axibuilds/main/site/`;
+    } catch { /* no pointer here */ }
+  }
+  return null;
+}
+
+async function fetchPayload({ fileId, key, bases, dir, followed = false }, fetchText, noun = "build") {
   const failures = [];
   for (const base of bases) {
     let res;
@@ -299,6 +316,10 @@ async function fetchPayload({ fileId, key, bases, dir }, fetchText, noun = "buil
       // truncated. Trying the next base would only repeat that, so stop here.
       throw new Error(`Couldn't decrypt that ${noun} — the link looks incomplete or was edited.`);
     }
+  }
+  if (failures.includes("HTTP 404") && !followed) {
+    const moved = await movedBase(bases, fileId, fetchText);
+    if (moved && !bases.includes(moved)) return fetchPayload({ fileId, key, bases: [moved], dir, followed: true }, fetchText, noun);
   }
   throw new Error(
     failures.includes("HTTP 404")

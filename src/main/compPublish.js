@@ -100,7 +100,8 @@ function planCompMembers({ compBuilds, owner, force = false, slugOf, themeOf = (
   for (const build of compBuilds) {
     const slug = slugOf(build);
     const theme = themeOf(build) || "";
-    const { foreignOwner, needsRecord } = decideCompBuildPublish({ build, owner, force, slug });
+    const forced = typeof force === "function" ? Boolean(force(build)) : force;
+    const { foreignOwner, needsRecord } = decideCompBuildPublish({ build, owner, force: forced, slug });
     if (foreignOwner) {
       members[build.id] = {
         fileId: build.publishedFileId, key: build.publishedKey, owner: foreignOwner,

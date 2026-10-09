@@ -61,7 +61,7 @@ function createPublishBatch(deps) {
     listBuilds, listComps, markBuildPublished, markCompPublished, getSetting,
     enrichBuildForPublish, buildSpaBundle, addFormatMigrations, stampFormatMigrations,
     ensurePublishInfra, invalidatePublishInfra, publishSiteBundle, triggerPagesWorkflow, pollUrlLive,
-    teamPut, choiceOf,
+    teamPut, choiceOf, ensureTeamAccess = async () => {},
     newFileId = generateFileId, newKey = generateEncryptionKey, repo = REPO,
   } = deps;
 
@@ -78,6 +78,13 @@ function createPublishBatch(deps) {
     const results = [];
 
     const groups = new Map();
+    // One access check per team target per round, however many items it has.
+    const access = new Map();
+    const teamAccess = (target) => {
+      const key = target.owner.toLowerCase();
+      if (!access.has(key)) access.set(key, ensureTeamAccess(session, target.owner, target.ownerType));
+      return access.get(key);
+    };
     for (const { kind, id } of items) {
       const record = kind === "comp" ? compsById.get(id) : buildsById.get(id);
       if (!record || record.deletedAt) {
@@ -90,7 +97,17 @@ function createPublishBatch(deps) {
         if (target.scope === "personal" && !personalReady) {
           throw coded("Set up publishing to publish.", "PUBLISH_DISCONNECTED");
         }
-        if (record.publishedOwner && record.publishedOwner !== target.owner && choiceOf(kind, id) !== "mine") {
+        // Held like an unset personal target: it publishes once an owner picks
+        // where the team publishes (resolvePublishTarget says why never yours).
+        if (!target.owner) {
+          throw coded("This team hasn't chosen where it publishes. A team owner can set it in the team's settings.", "PUBLISH_DISCONNECTED");
+        }
+        if (target.scope === "team") await teamAccess(target);
+        // A team item published somewhere else (a member's own account, from
+        // before the team had one target) is the team's: it moves without
+        // asking, and its old host's copy is replaced by a pointer here
+        // (movedStubs.js).
+        if (target.scope !== "team" && record.publishedOwner && record.publishedOwner !== target.owner && choiceOf(kind, id) !== "mine") {
           throw new Error(`PUBLISHED_BY_OTHER:${record.publishedOwner}`);
         }
         const group = groups.get(target.owner) || { owner: target.owner, ownerType: target.ownerType, personal: false, entries: [] };
@@ -186,7 +203,7 @@ function createPublishBatch(deps) {
       return { ...upload, patch: buildPatch(build, upload) };
     };
 
-    const prepareComp = async (comp) => {
+    const prepareComp = async (comp, teamRoot) => {
       const name = String(comp.name || "").trim();
       if (!name || name === "Untitled Comp") throw new Error("Comp name is required for publishing.");
       const memberIds = getCompPublishBuildIds(comp);
@@ -196,8 +213,17 @@ function createPublishBatch(deps) {
         const up = uploaded.get(build.id);
         return up ? { ...build, publishedFileId: up.fileId, publishedKey: up.key, publishedSlug: up.slug, publishedOwner: owner } : build;
       });
+      // A team comp's members from the same team move with it, like the team
+      // items themselves; anyone else's copy is linked where it is.
+      const teamMembers = new Set();
+      if (teamRoot) {
+        for (const build of compBuilds) {
+          if ((await findTeamRoot(build.folderId))?.teamId === teamRoot.teamId) teamMembers.add(build.id);
+        }
+      }
+      const forceAll = choiceOf("comp", comp.id) === "mine";
       const plan = planCompMembers({
-        compBuilds, owner, force: choiceOf("comp", comp.id) === "mine",
+        compBuilds, owner, force: (build) => forceAll || teamMembers.has(build.id),
         slugOf: (build) => uploaded.get(build.id)?.slug || slugifyBuildName(displayTitle(build)),
         themeOf: theme.build,
         newFileId, newKey,
@@ -241,7 +267,7 @@ function createPublishBatch(deps) {
     const ordered = [...entries.filter((e) => e.kind === "build"), ...entries.filter((e) => e.kind === "comp")];
     for (const entry of ordered) {
       try {
-        const prep = entry.kind === "build" ? await prepareBuild(entry.record) : await prepareComp(entry.record);
+        const prep = entry.kind === "build" ? await prepareBuild(entry.record) : await prepareComp(entry.record, entry.teamRoot);
         prepared.push({ ...entry, ...prep });
       } catch (err) {
         results.push({ kind: entry.kind, id: entry.id, ok: false, error: err });

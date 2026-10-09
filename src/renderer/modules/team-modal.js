@@ -495,7 +495,7 @@ function _renderPublishTarget(record, isOwner) {
         <div class="tm__section-label">Publishing</div>
         ${current
           ? `<p class="tm__hint">Builds and comps in this team publish to <strong>${escapeHtml(current)}</strong>.</p>`
-          : `<p class="tm__hint">This team has no publish target, so anything you publish here goes to your own GitHub account. Only an owner can change that.</p>`}
+          : `<p class="tm__hint">This team hasn't chosen where it publishes yet, so nothing in it publishes until an owner picks an account. It never goes to your own.</p>`}
       </div>
     `;
   }
@@ -521,10 +521,10 @@ function _renderPublishTarget(record, isOwner) {
   return `
     <div class="tm__section">
       <div class="tm__section-label">Publishing</div>
-      <p class="tm__hint">Builds and comps in this team publish to this GitHub account or organization — for every member, not just you.</p>
+      <p class="tm__hint">Builds and comps in this team publish to this GitHub account or organization — for every member, not just you — so a link keeps showing the latest edit whoever made it. Members are added to its repo as collaborators.</p>
       <div class="tm__row">
         <select class="tm__select" data-act="set-publish-owner">
-          <option value=""${current ? "" : " selected"}>Each member's own account</option>
+          ${current ? "" : `<option value="" selected disabled>Choose where this team publishes…</option>`}
           ${options.map((t) => `
             <option value="${escapeHtml(t.login)}" data-type="${t.type === "org" ? "org" : "user"}"${t.login === current ? " selected" : ""}>
               ${escapeHtml(t.login)}${t.type === "org" ? " (organization)" : ""}${t.unreachable ? " — no access" : ""}
@@ -579,9 +579,10 @@ async function _onBodyChange(e) {
   }
 }
 
-/** Point the team at an owner (or back at "each member's own"). */
+/** Point the team at an owner. There is no "none": the server refuses it. */
 async function _handleSetPublishOwner(select) {
   const login = select.value || null;
+  if (!login) return;
   const type = select.selectedOptions?.[0]?.dataset?.type === "org" ? "org" : "user";
   select.disabled = true;
   try {
@@ -603,7 +604,7 @@ async function _handleSetPublishOwner(select) {
       };
     }
     _render();
-    _setStatus(login ? `This team now publishes to ${login}.` : "This team now publishes to each member's own account.");
+    _setStatus(`This team now publishes to ${login}.`);
     if (_onRefresh) await _onRefresh();
   } catch (err) {
     _setStatus(err?.message || String(err), true);

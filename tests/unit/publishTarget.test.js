@@ -55,12 +55,12 @@ describe("resolvePublishTarget", () => {
       });
     });
 
-    // Every team that existed before this feature. Nothing about their
-    // publishing may change.
-    test("a team with no target falls back to the personal one", () => {
+    // A shared build published to whoever last edited it: X's link kept X's
+    // copy after Y changed it. A team item waits for a team target instead.
+    test("a team with no target has no owner, never the personal one", () => {
       const teamRoot = { teamId: "t1" };
       expect(resolvePublishTarget(PERSONAL, VIEWER, teamRoot)).toEqual({
-        owner: "my-account", ownerType: "user", scope: "personal",
+        owner: null, ownerType: null, scope: "team",
       });
     });
 
@@ -80,11 +80,11 @@ describe("resolvePublishTarget", () => {
       });
     });
 
-    // scope drives whether the publish writes back to the machine's own
-    // onboarding record, so an empty string must not read as "team".
-    test("an empty team target is not a team target", () => {
+    test("an empty team target is no target", () => {
       const teamRoot = { teamId: "t1", publishOwner: "", publishOwnerType: "org" };
-      expect(resolvePublishTarget(PERSONAL, VIEWER, teamRoot).scope).toBe("personal");
+      expect(resolvePublishTarget(PERSONAL, VIEWER, teamRoot)).toEqual({
+        owner: null, ownerType: null, scope: "team",
+      });
     });
   });
 });

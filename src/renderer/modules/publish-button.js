@@ -40,6 +40,17 @@ function baseButtonState({ queueItem = null, receipt = "never", connection = {},
   if (state === "unauthorized") {
     return view("Sign in to publish", "sign-in", { tone: "warn", title: "Your GitHub sign-in expired. Sign in again to keep publishing." });
   }
+  // A team item publishes only to its team's account: personal setup can't
+  // help, so say what it's waiting for instead.
+  if (connection.team && connection.signedIn && !connection.connected) {
+    return { ...view("Not published", "copy", { tone: "warn", title: "This team hasn't chosen where it publishes. A team owner can set it in the team's settings." }), disabled: receipt === "never" };
+  }
+  if (connection.team && connection.connected && state === "disconnected") {
+    return view(receipt === "never" ? "Waiting to publish" : "Copy link", receipt === "never" ? "retry" : "copy", {
+      tone: "warn", icon: "clock",
+      title: `${queueItem.error || "Waiting for access to the team's publishing repo."}${receipt === "never" ? "" : " The link shows the last published version."}`,
+    });
+  }
   if (!connection.connected || state === "disconnected") {
     return view("Set up publishing", "setup", { title: connection.signedIn ? "Choose where your builds publish" : "Sign in with GitHub to publish" });
   }
@@ -67,13 +78,13 @@ export function queueItemFor(snapshot, kind, id) {
 
 /**
  * `teamRoot`: the team root folder the item lives under (teams.js teamRootFor).
- * A team with a publish target publishes its items there, so they need no
- * personal site (publishTarget.js resolvePublishTarget).
+ * A team item publishes only to its team's target, never the personal site
+ * (publishTarget.js resolvePublishTarget), so only that target makes it ready.
  */
 export function connectionFrom(onboarding, teamRoot = null) {
   const signedIn = Boolean(onboarding?.isAuthenticated);
-  const ready = Boolean(onboarding?.repoReady || teamRoot?.publishOwner);
-  return { signedIn, connected: Boolean(signedIn && ready) };
+  if (teamRoot) return { signedIn, connected: Boolean(signedIn && teamRoot.publishOwner), team: true };
+  return { signedIn, connected: Boolean(signedIn && onboarding?.repoReady) };
 }
 
 export function applyPublishButton(btn, v) {

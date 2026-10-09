@@ -33,6 +33,14 @@ describe("autoPublishDecision", () => {
     expect(autoPublishDecision("build", annotateBuild(rec), { targetOwner: "me", choice: "theirs" })).toBe("skip");
   });
 
+  // Published to a member's own account before the team had one target: it is
+  // the team's, so it moves there without asking, even after an earlier "theirs".
+  test("a team item published elsewhere moves without asking", () => {
+    const rec = published({ publishedOwner: "mate", publishedHash: "old" });
+    expect(autoPublishDecision("build", annotateBuild(rec), { targetOwner: "guild", team: true })).toBe("enqueue");
+    expect(autoPublishDecision("build", annotateBuild(rec), { targetOwner: "guild", team: true, choice: "theirs" })).toBe("enqueue");
+  });
+
   test("a team build whose target is the team owner is not foreign", () => {
     const rec = published({ publishedOwner: "guild", publishedHash: "old" });
     expect(autoPublishDecision("build", annotateBuild(rec), { targetOwner: "guild" })).toBe("enqueue");

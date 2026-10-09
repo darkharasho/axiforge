@@ -13,6 +13,7 @@ import { escapeHtml } from "./escape.js";
 import { loadCompMembers } from "./comp-members.js";
 import { computeViewerCoverageHtml } from "./comp-coverage.js";
 import { fetchPayload, assertCompFormat, loadErrorMessage } from "./payload.js";
+import { movedOwner, movedPageUrl, isOwnSite } from "./moved.js";
 
 export { escapeHtml };
 
@@ -75,20 +76,40 @@ function showError(msg) {
 }
 
 // ── Fetch & Decrypt ──────────────────────────────────────────────────────
+
+// A payload that's gone may have moved to another account: go there instead.
+// Resolves only when it didn't (the caller shows its error).
+async function followIfMoved(err, base, fileId) {
+  if (err?.status !== 404) return;
+  const owner = await movedOwner(base, fileId);
+  if (!owner || isOwnSite(owner, location)) return;
+  location.replace(movedPageUrl(owner, location));
+  await new Promise(() => {}); // navigating away
+}
+
 async function loadBuild(fileId, base64urlKey) {
+  let base = "";
   try {
-    const base = await resolvePinnedBase(location, new URLSearchParams(location.search));
+    base = await resolvePinnedBase(location, new URLSearchParams(location.search));
     const build = await fetchPayload(`${base}builds/${encodeURIComponent(fileId)}.enc`, base64urlKey);
     renderBuild(build);
   } catch (err) {
+    await followIfMoved(err, base, fileId);
     showError(loadErrorMessage(err, "Build"));
   }
 }
 
 async function loadComp(fileId, base64urlKey) {
+  let base = "";
   try {
-    const base = await resolvePinnedBase(location, new URLSearchParams(location.search));
-    let comp = await fetchPayload(`${base}comps/${encodeURIComponent(fileId)}.enc`, base64urlKey);
+    base = await resolvePinnedBase(location, new URLSearchParams(location.search));
+    let comp;
+    try {
+      comp = await fetchPayload(`${base}comps/${encodeURIComponent(fileId)}.enc`, base64urlKey);
+    } catch (err) {
+      await followIfMoved(err, base, fileId);
+      throw err;
+    }
     assertCompFormat(comp);
     if (comp.v === 2) {
       // A v2 comp links its builds: fetch them, then compute coverage here.

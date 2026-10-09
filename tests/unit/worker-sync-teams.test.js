@@ -49,7 +49,7 @@ describe("teams", () => {
     expect(body.role).toBe("owner");
     expect(body.team.inviteCode).toMatch(/^[0-9ABCDEFGHJKMNPQRSTVWXYZ]{10}$/);
     const list = await (await teams.listTeams(req("GET"), env, deps, owner, {})).json();
-    expect(list).toEqual([{ team: { id: body.team.id, name: "EWW", inviteCode: body.team.inviteCode, seq: 0, createdAt: expect.any(String) }, role: "owner" }]);
+    expect(list).toEqual([{ team: { id: body.team.id, name: "EWW", inviteCode: body.team.inviteCode, seq: 0, createdAt: expect.any(String), publishOwner: "owner", publishOwnerType: "user" }, role: "owner" }]);
   });
 
   test("create rejects empty/too-long names", async () => {
@@ -145,9 +145,9 @@ describe("teams", () => {
     await teams.joinTeam(req("POST", { inviteCode: team.inviteCode }), env, deps, member, {});
     const p = { teamId: team.id };
 
-    // Absent until set — which is what every team that predates this looks like.
+    // A new team publishes to its creator, so a shared build has one home.
     const before = await (await teams.listTeams(req("GET"), env, deps, member, {})).json();
-    expect(before[0].team.publishOwner).toBeUndefined();
+    expect(before[0].team).toMatchObject({ publishOwner: "owner", publishOwnerType: "user" });
 
     const res = await teams.renameTeam(req("PATCH", { publishOwner: "gw2eww", publishOwnerType: "org" }), env, deps, owner, p);
     expect(res.status).toBe(200);
@@ -163,18 +163,41 @@ describe("teams", () => {
     await teams.joinTeam(req("POST", { inviteCode: team.inviteCode }), env, deps, member, {});
     const res = await teams.renameTeam(req("PATCH", { publishOwner: "evil-org", publishOwnerType: "org" }), env, deps, member, { teamId: team.id });
     expect(res.status).toBe(403);
-    expect(await db.prepare("SELECT publish_owner FROM teams WHERE id = ?").bind(team.id).first("publish_owner")).toBeNull();
+    expect(await db.prepare("SELECT publish_owner FROM teams WHERE id = ?").bind(team.id).first("publish_owner")).toBe("owner");
   });
 
-  test("null clears it, back to each member's own account", async () => {
+  // With no target each member published shared builds to their own account,
+  // and a link stopped following the build's edits.
+  test("it can't be cleared", async () => {
     const { env, deps, db, owner } = await setup();
     const { team } = await (await teams.createTeam(req("POST", { name: "EWW" }), env, deps, owner, {})).json();
     const p = { teamId: team.id };
     await teams.renameTeam(req("PATCH", { publishOwner: "gw2eww", publishOwnerType: "org" }), env, deps, owner, p);
-    const res = await teams.renameTeam(req("PATCH", { publishOwner: null }), env, deps, owner, p);
-    expect(res.status).toBe(200);
-    expect((await res.json()).team.publishOwner).toBeUndefined();
-    expect(await db.prepare("SELECT publish_owner_type FROM teams WHERE id = ?").bind(team.id).first("publish_owner_type")).toBeNull();
+    for (const cleared of [null, ""]) {
+      expect((await teams.renameTeam(req("PATCH", { publishOwner: cleared }), env, deps, owner, p)).status).toBe(400);
+    }
+    expect(await db.prepare("SELECT publish_owner FROM teams WHERE id = ?").bind(team.id).first("publish_owner")).toBe("gw2eww");
+  });
+
+  test("migration 0008 gives older teams their creator, or the longest-standing owner", async () => {
+    const fs = require("node:fs");
+    const path = require("node:path");
+    const { env, db } = await setup();
+    const at = "2026-01-01T00:00:00.000Z";
+    const later = "2026-02-01T00:00:00.000Z";
+    const team = (id, createdBy) => db.prepare("INSERT INTO teams (id, name, invite_code, seq, created_by, created_at) VALUES (?, ?, ?, 0, ?, ?)").bind(id, id, `CODE${id}`, createdBy, at).run();
+    const join = (teamId, userId, role, when = at) => db.prepare("INSERT INTO memberships (team_id, user_id, role, joined_at) VALUES (?, ?, ?, ?)").bind(teamId, userId, role, when).run();
+    await team("a", "u-owner"); await join("a", "u-owner", "owner"); await join("a", "u-mem", "member");
+    // The creator stepped down: the earliest remaining owner gets it.
+    await team("b", "u-owner"); await join("b", "u-owner", "member"); await join("b", "u-other", "owner", later); await join("b", "u-mem", "owner");
+    // Already set: left alone.
+    await team("c", "u-owner"); await join("c", "u-owner", "owner");
+    await db.prepare("UPDATE teams SET publish_owner = 'gw2eww', publish_owner_type = 'org' WHERE id = 'c'").run();
+    db._raw.exec(fs.readFileSync(path.join(__dirname, "../../workers/sync/migrations/0008_team_publish_owner_required.sql"), "utf8"));
+    const row = (id) => env.SYNC_DB.prepare("SELECT publish_owner, publish_owner_type FROM teams WHERE id = ?").bind(id).first();
+    expect(await row("a")).toEqual({ publish_owner: "owner", publish_owner_type: "user" });
+    expect(await row("b")).toEqual({ publish_owner: "member", publish_owner_type: "user" });
+    expect(await row("c")).toEqual({ publish_owner: "gw2eww", publish_owner_type: "org" });
   });
 
   // It is pasted straight into a GitHub API path, so it is checked here rather

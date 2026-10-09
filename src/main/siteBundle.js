@@ -18,11 +18,15 @@ const VIEWER_FORMAT = 2;
 const VIEWER_DIR = "viewer/";
 const VIEWER_FORMAT_PATH = `${VIEWER_DIR}viewer-format`;
 
+// Per-item files: payloads, short-link redirects, and the pointers an old host
+// leaves when an item moves to another account (movedStubs.js).
+const DATA_PREFIXES = ["site/builds/", "site/comps/", "site/r/", "site/moved/"];
+const isDataPath = (p) => DATA_PREFIXES.some((prefix) => p.startsWith(prefix));
+
 function isShellPath(p) {
   if (p === SITE_VERSION_PATH) return false;
   if (!p.startsWith("site/")) return false;
-  if (p.startsWith("site/builds/") || p.startsWith("site/comps/") || p.startsWith("site/r/")) return false;
-  return true;
+  return !isDataPath(p);
 }
 
 function computeSpaVersion(bundle) {
@@ -130,11 +134,18 @@ function partitionBundleForPublish(bundle, remoteVersion, remoteFormat = null) {
   for (const [p, content] of Object.entries(bundle)) {
     // Shell unchanged: only re-publish per-build/comp/redirect data.
     // Shell files AND the version marker are dropped.
-    if (p.startsWith("site/builds/") || p.startsWith("site/comps/") || p.startsWith("site/r/")) {
-      filesToPublish[p] = content;
-    }
+    if (isDataPath(p)) filesToPublish[p] = content;
   }
   return { shellChanged: false, filesToPublish };
 }
 
-module.exports = { getSiteDistDir, buildSpaBundle, buildEncryptedBuildFile, buildEncryptedCompFile, buildRedirectFile, computeSpaVersion, SITE_VERSION_PATH, VIEWER_FORMAT, VIEWER_DIR, VIEWER_FORMAT_PATH, partitionBundleForPublish };
+/**
+ * Where an item that moved to another account now lives. The viewer reads it
+ * when the item's payload is gone from this repo. Keyed by file id: the move
+ * keeps the item's file id and key, so only the host changes.
+ */
+function movedPointerPath(fileId) {
+  return `site/moved/${fileId}.json`;
+}
+
+module.exports = { movedPointerPath, isDataPath, getSiteDistDir, buildSpaBundle, buildEncryptedBuildFile, buildEncryptedCompFile, buildRedirectFile, computeSpaVersion, SITE_VERSION_PATH, VIEWER_FORMAT, VIEWER_DIR, VIEWER_FORMAT_PATH, partitionBundleForPublish };
