@@ -1,3 +1,18 @@
+## Version v1.5.0 — October 8, 2026
+
+### New Features
+
+- **Choose your library columns.** In the library's table view, right-click the header or use the new adjustments button to pick which columns show and drag them into the order you want. New optional columns: **Path**, **Owner** (for team items) and **Published**. Elite Spec and Mode can now be sorted. Your choice is remembered.
+- **Every team publishes to one place.** A shared build used to publish to whichever member saved it last, so its link kept showing that member's copy. Now each team publishes to its owner's account (or the team's org), and every link to a team build shows the same, current version.
+  - The team owner's AxiForge adds members as collaborators automatically, and a member's AxiForge accepts the invite the first time it publishes. Nobody has to do anything by hand.
+  - Team builds and comps a member published under their own account move to the team's home in the background. Links shared before the move keep working and open the current version.
+  - If a member can't publish to the team's home yet, their saves wait instead of publishing somewhere else, and the Copy link button says why.
+
+### Bug Fixes
+
+- **Imports publish like any other save.** Builds and comps imported from a chat link, gw2skills, a published link or a comp share code now publish right away, instead of waiting until you edit them.
+- Expanded folders in the library table now sort the same way as the top level.
+
 ## Version v1.4.0 — October 8, 2026
 
 ### New Features
