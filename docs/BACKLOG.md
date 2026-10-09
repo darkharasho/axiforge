@@ -10,11 +10,10 @@ Status key: `[ ]` open · `[x]` done · `[~]` in progress · `[?]` needs repro s
 
 ## Bugs
 
-- [ ] **Team publish home: deploy and follow-ups** (design:
-  `docs/superpowers/specs/2026-10-08-team-publish-home-design.md`).
-  - Deploy the sync Worker with migration 0008 (`--remote`). Until then the
-    owner's app claims unset teams itself, so nothing breaks, but the server
-    still accepts a cleared target from an older app.
+- [ ] **Team publish home: follow-ups** (design:
+  `docs/superpowers/specs/2026-10-08-team-publish-home-design.md`). Worker and
+  migration 0008 deployed 2026-10-08 (version ed0ff606); all 6 prod teams
+  have a target. The client side ships with the next release.
   - A personal comp that links a never-published team build uploads that build
     under the personal owner (`planCompMembers`); the team build then moves on
     its next publish. Better: link it unpublished-skip, or publish it to the team.
