@@ -130,6 +130,32 @@
   z-index: 1;
 }
 
+/* The API's spec background is the game's raw 1024x256 texture: the art fills
+   its bottom-left 648x208 and the rest is black padding. An auto-sized image
+   keeps its aspect ratio when min-width/min-height push it up, so these grow
+   the texture until that art region covers the panel, anchored bottom-left.
+   The inset:0 wrapper clips it, so the oversized image never widens a panel
+   that scrolls (the web's mobile layout scrolls it sideways). */
+.spec-card__panel > .spec-card__art {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.spec-card__art img {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: auto;
+  height: auto;
+  max-width: none;
+  min-width: calc(100% * 1024 / 648);
+  min-height: calc(100% * 256 / 208);
+  user-select: none;
+}
+
 
 .spec-card__body {
   position: relative;

@@ -21,7 +21,7 @@ import {
   renderDetailPanel, selectDetail, triggerDetailPanelAnimation,
 } from "./modules/detail-panel.js";
 import {
-  initSpecializations, initSpecializationsCallbacks, renderSpecializations, drawSpecConnector,
+  initSpecializations, initSpecializationsCallbacks, renderSpecializations, drawSpecConnector, specBackgroundUrl,
 } from "./modules/specializations.js";
 import {
   initSkills, initSkillsCallbacks, renderSkills, syncRevenantSkillsFromLegend,
@@ -1117,9 +1117,8 @@ export async function getCatalog(professionId, gameMode = "pve") {
 
   // Pre-load all spec background images so they're cached before the user switches specs
   for (const spec of catalog.specializations || []) {
-    const wikiUrl = `https://wiki.guildwars2.com/wiki/Special:FilePath/${encodeURIComponent(`${spec.name || ""} specialization.png`)}`;
     const img = new Image();
-    img.src = wikiUrl;
+    img.src = specBackgroundUrl(spec);
   }
 
   return catalog;

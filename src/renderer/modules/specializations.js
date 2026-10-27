@@ -76,6 +76,16 @@ export function makeTraitButton(trait, active, onClick, options = {}) {
   return btn;
 }
 
+// The API's background lives on render.guildwars2.com, which the skill and
+// trait icons already load from. The wiki file is only a fallback for specs
+// saved without one: hotlinking the wiki broke every spec panel while it was
+// down for maintenance (it serves an HTML page the browser refuses as an image).
+// The two are different crops — see .spec-card__art for framing the API one.
+export function specBackgroundUrl(spec) {
+  if (spec?.background) return spec.background;
+  return `https://wiki.guildwars2.com/wiki/Special:FilePath/${encodeURIComponent(`${spec?.name || ""} specialization.png`)}`;
+}
+
 export function drawSpecConnector(body) {
   if (!body) return;
   const bodyRect = body.getBoundingClientRect();
@@ -259,15 +269,28 @@ export function renderSpecializations() {
     card.className = "spec-card";
     const panel = document.createElement("div");
     panel.className = spec.elite ? "spec-card__panel spec-card__panel--elite" : "spec-card__panel";
-    const wikiBackground = `https://wiki.guildwars2.com/wiki/Special:FilePath/${encodeURIComponent(`${spec.name || ""} specialization.png`)}`;
     // The art is one layer. The 10% near-black wash that used to ride over it
     // as a second linear-gradient layer is gone: a gradient across a surface is
     // rule 1's violation wherever it is written, inline style included, and the
     // panel's own --axi-surface fill is what the art now sits on.
-    panel.style.backgroundImage = `url("${wikiBackground.replaceAll('"', '\\"')}")`;
-    panel.style.backgroundPosition = "center";
-    panel.style.backgroundSize = "cover";
-    panel.style.backgroundRepeat = "no-repeat";
+    if (spec.background) {
+      // The API art is the raw game texture with padding around it, which a
+      // background can't crop to; .spec-card__art frames it (see the CSS).
+      const art = document.createElement("div");
+      art.className = "spec-card__art";
+      const img = document.createElement("img");
+      img.src = spec.background;
+      img.alt = "";
+      img.draggable = false;
+      art.append(img);
+      panel.append(art);
+    } else {
+      // Specs saved before the API background was stored carry only a name.
+      panel.style.backgroundImage = `url("${specBackgroundUrl(spec).replaceAll('"', '\\"')}")`;
+      panel.style.backgroundPosition = "center";
+      panel.style.backgroundSize = "cover";
+      panel.style.backgroundRepeat = "no-repeat";
+    }
 
     const selectHost = document.createElement("div");
     if (!_readOnly) {
