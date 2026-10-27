@@ -1,3 +1,9 @@
+## Version v1.5.1 — October 26, 2026
+
+### Bug Fixes
+
+- **Trait lines show their background art again.** Spec panels in the editor and on published pages loaded their art from the Guild Wars 2 wiki, so they went blank whenever the wiki was down. They now load it from the official GW2 API, the same place skill and trait icons come from.
+
 ## Version v1.5.0 — October 8, 2026
 
 ### New Features
