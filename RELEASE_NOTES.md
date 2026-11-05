@@ -1,3 +1,12 @@
+## Version v1.6.0 — November 5, 2026
+
+### New Features
+
+- **Shared comps keep their Discord post up to date.** When you share a comp to a Discord channel or forum, AxiForge now remembers that post. Rename the comp or one of its builds, add or remove builds, or move builds between lines, and the existing post updates on its own after the change publishes, without a new post.
+  - Forum posts keep their original thread title (Discord doesn't let webhooks rename threads), but the comp's title inside the post updates.
+  - Comps shared before this version aren't tracked yet. Share them once more and they'll stay in sync from then on.
+  - If you delete the post in Discord or remove the webhook in Settings, AxiForge stops updating it.
+
 ## Version v1.5.1 — October 26, 2026
 
 ### Bug Fixes
