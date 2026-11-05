@@ -264,7 +264,7 @@ describe("shareCompToDiscord", () => {
     mockHttpsResponse(204);
     await shareCompToDiscord(comp, builds, compUrl, buildUrls, webhookUrl, { threadMode: "none" });
     const reqOpts = https.request.mock.calls[0][0];
-    expect(reqOpts.path).toBe("/api/webhooks/123/abc");
+    expect(reqOpts.path).toBe("/api/webhooks/123/abc?wait=true");
     const req = https.request.mock.results[0].value;
     const payload = JSON.parse(req.write.mock.calls[0][0]);
     expect(payload.thread_name).toBeUndefined();
@@ -274,7 +274,7 @@ describe("shareCompToDiscord", () => {
     mockHttpsResponse(204);
     await shareCompToDiscord(comp, builds, compUrl, buildUrls, webhookUrl, { threadMode: "auto" });
     const reqOpts = https.request.mock.calls[0][0];
-    expect(reqOpts.path).toBe("/api/webhooks/123/abc");
+    expect(reqOpts.path).toBe("/api/webhooks/123/abc?wait=true");
     const req = https.request.mock.results[0].value;
     const payload = JSON.parse(req.write.mock.calls[0][0]);
     expect(payload.thread_name).toBe("Test Comp");
@@ -284,7 +284,7 @@ describe("shareCompToDiscord", () => {
     mockHttpsResponse(204);
     await shareCompToDiscord(comp, builds, compUrl, buildUrls, webhookUrl, { threadMode: "custom", threadId: "9876543210" });
     const reqOpts = https.request.mock.calls[0][0];
-    expect(reqOpts.path).toBe("/api/webhooks/123/abc?thread_id=9876543210");
+    expect(reqOpts.path).toBe("/api/webhooks/123/abc?wait=true&thread_id=9876543210");
     const req = https.request.mock.results[0].value;
     const payload = JSON.parse(req.write.mock.calls[0][0]);
     expect(payload.thread_name).toBeUndefined();
@@ -705,5 +705,74 @@ describe("shareBuildToDiscord — error body", () => {
       expect(result.error).toContain("400");
       expect(result.error).toContain("Invalid Form Body");
     });
+  });
+});
+
+describe("comp post tracking (wait=true + edit)", () => {
+  const { editCompDiscordPost, compEmbedsSig, buildCompEmbeds } = require("../../src/main/discordWebhook");
+  const webhookUrl = "https://discord.com/api/webhooks/123/abc";
+  const comp = { name: "Test Comp", gameMode: "pve", partyLines: [{ id: "p1", slots: ["b1"] }] };
+  const builds = { b1: makeBuild("b1", "Guardian", "Firebrand", "Heal FB") };
+  const compUrl = "https://x.github.io/axibuilds/?c=abc";
+
+  function respond(statusCode, body = "") {
+    const res = {
+      statusCode,
+      on: jest.fn((event, cb) => {
+        if (event === "data" && body) cb(body);
+        if (event === "end") cb();
+        return res;
+      }),
+    };
+    https.request.mockImplementation((_opts, callback) => {
+      callback(res);
+      return { on: jest.fn().mockReturnThis(), write: jest.fn(), end: jest.fn() };
+    });
+  }
+
+  beforeEach(() => jest.resetAllMocks());
+
+  test("share returns the message id and embed sig; plain channel has no thread", async () => {
+    respond(200, JSON.stringify({ id: "m1", channel_id: "c1" }));
+    const r = await shareCompToDiscord(comp, builds, compUrl, {}, webhookUrl);
+    expect(r.success).toBe(true);
+    expect(r.post).toEqual({ messageId: "m1", threadId: null });
+    expect(r.sig).toBe(compEmbedsSig(buildCompEmbeds(comp, builds, compUrl, {})));
+  });
+
+  test("auto (forum) mode records the created thread from channel_id", async () => {
+    respond(200, JSON.stringify({ id: "m1", channel_id: "t9" }));
+    const r = await shareCompToDiscord(comp, builds, compUrl, {}, webhookUrl, { threadMode: "auto" });
+    expect(r.post).toEqual({ messageId: "m1", threadId: "t9" });
+  });
+
+  test("custom mode records the configured thread", async () => {
+    respond(200, JSON.stringify({ id: "m1", channel_id: "t5" }));
+    const r = await shareCompToDiscord(comp, builds, compUrl, {}, webhookUrl, { threadMode: "custom", threadId: "t5" });
+    expect(r.post).toEqual({ messageId: "m1", threadId: "t5" });
+  });
+
+  test("edit PATCHes the message, passing thread_id for thread posts", async () => {
+    respond(200, "{}");
+    const r = await editCompDiscordPost(comp, builds, compUrl, {}, webhookUrl, { messageId: "m1", threadId: "t9" });
+    const opts = https.request.mock.calls[0][0];
+    expect(opts.method).toBe("PATCH");
+    expect(opts.path).toBe("/api/webhooks/123/abc/messages/m1?thread_id=t9");
+    const payload = JSON.parse(https.request.mock.results[0].value.write.mock.calls[0][0]);
+    expect(payload.embeds[0].title).toBe("Test Comp");
+    expect(r).toEqual({ success: true, sig: compEmbedsSig(payload.embeds) });
+  });
+
+  test("edit of a channel message omits thread_id", async () => {
+    respond(200, "{}");
+    await editCompDiscordPost(comp, builds, compUrl, {}, webhookUrl, { messageId: "m1", threadId: null });
+    expect(https.request.mock.calls[0][0].path).toBe("/api/webhooks/123/abc/messages/m1");
+  });
+
+  test("edit of a deleted message reports gone", async () => {
+    respond(404, "");
+    const r = await editCompDiscordPost(comp, builds, compUrl, {}, webhookUrl, { messageId: "m1" });
+    expect(r.success).toBe(false);
+    expect(r.gone).toBe(true);
   });
 });

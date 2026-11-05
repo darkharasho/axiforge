@@ -835,7 +835,11 @@ const readyWork = app.whenReady().then(async () => {
     runRound: (items) => enqueuePublish(() => publishBatch(items)).then((out) => {
       // A round may have moved this user's copies elsewhere: point the old
       // links at the new host. Not awaited: it queues behind this round.
-      if (out?.results?.some((r) => r.ok)) writeMovedStubs({ force: true });
+      if (out?.results?.some((r) => r.ok)) {
+        writeMovedStubs({ force: true });
+        // Not awaited: Discord edits never hold up the next round.
+        syncDiscordPostsAfterRound(out.results);
+      }
       return out;
     }),
     load: () => readJsonFile(publishQueueFile, null),
@@ -2148,34 +2152,72 @@ const readyWork = app.whenReady().then(async () => {
     const session = await getSession();
     const owner = auth?.onboarding?.targetOwner || session?.viewer?.login;
     if (!owner) return { success: false, error: "GitHub publishing not configured" };
-    const repo = auth?.onboarding?.repoName || TARGET_REPO;
-
-    // 4. Build comp URL — use GitHub Pages short redirect
-    const compUrl = shortUrl(publishedOwnerFor(comp, owner), repo, comp.publishedFileId);
-
-    // 5. Load builds and construct maps — use short URLs
-    const allBuilds = await store.listBuilds();
-    const buildsMap = {};
-    const buildUrls = {};
-    for (const build of allBuilds) {
-      buildsMap[build.id] = build;
-      if (build.publishedFileId) {
-        buildUrls[build.id] = shortUrl(publishedOwnerFor(build, owner), repo, build.publishedFileId);
-      }
-    }
+    const { compUrl, builds: buildsMap, buildUrls } = await compDiscordContext(comp, owner, auth);
 
     if (!(await pagesLive.waitLive([compUrl, ...getCompPublishBuildIds(comp).map((id) => buildUrls[id])]))) {
       return { success: false, error: PAGES_NOT_LIVE };
     }
 
-    // 6. Post to each selected webhook (or all when webhookIds is empty/omitted)
-    return shareCompToWebhooks(webhooks, webhookIds, (w) =>
-      shareCompToDiscord(comp, buildsMap, compUrl, buildUrls, w.url, {
+    // 6. Post to each selected webhook (or all when webhookIds is empty/omitted).
+    // Each post is remembered so later edits to the comp update it in place.
+    const { recordCompPost } = require("./compDiscordSync");
+    return shareCompToWebhooks(webhooks, webhookIds, async (w) => {
+      const r = await shareCompToDiscord(comp, buildsMap, compUrl, buildUrls, w.url, {
         threadMode: w.threadMode || "none",
         threadId: w.threadMode === "custom" ? w.threadId : null,
-      })
-    );
+      });
+      if (r.success && r.post) {
+        await recordCompPost(store, comp.id, w.id, r.post, r.sig)
+          .catch((err) => console.warn("[discord-sync] record failed:", err?.message || err));
+      }
+      return r;
+    });
   });
+
+  // What a comp's Discord embed links to: the comp and its builds by short URL.
+  async function compDiscordContext(comp, owner, auth) {
+    const repo = auth?.onboarding?.repoName || TARGET_REPO;
+    const compUrl = shortUrl(publishedOwnerFor(comp, owner), repo, comp.publishedFileId);
+    const builds = {};
+    const buildUrls = {};
+    for (const build of await store.listBuilds()) {
+      builds[build.id] = build;
+      if (build.publishedFileId) {
+        buildUrls[build.id] = shortUrl(publishedOwnerFor(build, owner), repo, build.publishedFileId);
+      }
+    }
+    return { comp, compUrl, builds, buildUrls };
+  }
+
+  // After a publish round, edit the Discord posts of every comp it changed —
+  // the comp itself (rename, lines, builds added) or one of its builds (rename).
+  // Best-effort and off the publish path: a Discord failure never fails a round.
+  async function syncDiscordPostsAfterRound(results) {
+    try {
+      const { postedCompIds, compsAffectedByRound, syncCompDiscordPosts } = require("./compDiscordSync");
+      const posted = await postedCompIds(store);
+      if (!posted.length) return;
+      const comps = await compStore.listComps();
+      const affected = compsAffectedByRound(results, comps, posted, getCompPublishBuildIds);
+      if (!affected.length) return;
+      const auth = await getAuthRecord();
+      const owner = auth?.onboarding?.targetOwner || auth?.viewer?.login;
+      if (!owner) return;
+      const { getCompWebhooks } = require("./compWebhooks");
+      const { editCompDiscordPost } = require("./discordWebhook");
+      const byId = new Map(comps.map((c) => [c.id, c]));
+      await syncCompDiscordPosts(store, affected, {
+        webhooks: await getCompWebhooks(store),
+        loadContext: async (id) => {
+          const comp = byId.get(id);
+          return comp?.publishedFileId ? compDiscordContext(comp, owner, auth) : null;
+        },
+        editPost: editCompDiscordPost,
+      });
+    } catch (err) {
+      console.warn("[discord-sync] skipped:", err?.message || err);
+    }
+  }
 
   handle("discord:list-comp-webhooks", async () => {
     const { getCompWebhooks } = require("./compWebhooks");

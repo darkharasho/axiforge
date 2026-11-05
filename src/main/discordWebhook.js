@@ -1,6 +1,7 @@
 "use strict";
 
 const https = require("node:https");
+const crypto = require("node:crypto");
 const { getDiscordEmoji, getDisplayName, getSpecLineEmoji } = require("./discordEmoji");
 
 const TITLE_LIMIT = 256;
@@ -218,7 +219,7 @@ function buildCompEmbeds(comp, builds, compUrl, buildUrls) {
   return embeds;
 }
 
-function postWebhook(webhookUrl, payload) {
+function postWebhook(webhookUrl, payload, method = "POST") {
   return new Promise((resolve, reject) => {
     const url = new URL(webhookUrl);
     const data = JSON.stringify(payload);
@@ -226,7 +227,7 @@ function postWebhook(webhookUrl, payload) {
       {
         hostname: url.hostname,
         path: url.pathname + url.search,
-        method: "POST",
+        method,
         headers: {
           "Content-Type": "application/json",
           "Content-Length": Buffer.byteLength(data),
@@ -244,34 +245,98 @@ function postWebhook(webhookUrl, payload) {
   });
 }
 
+// Appends query params to a webhook URL, keeping any it already has.
+function withQuery(webhookUrl, params) {
+  const url = new URL(webhookUrl);
+  for (const [k, v] of Object.entries(params)) {
+    if (v !== undefined && v !== null && v !== "") url.searchParams.set(k, String(v));
+  }
+  return url.toString();
+}
+
+/**
+ * Fingerprint of the embeds a comp posts as. A posted comp is edited only when
+ * this changes, so unrelated saves (folder moves, pins) never touch Discord.
+ */
+function compEmbedsSig(embeds) {
+  return crypto.createHash("sha1").update(JSON.stringify(embeds)).digest("hex");
+}
+
+function webhookError(res) {
+  if (res.status === 401 || res.status === 404) {
+    return { success: false, gone: true, error: "Webhook URL is invalid or has been deleted" };
+  }
+  if (res.status === 429) {
+    return { success: false, error: "Rate limited by Discord. Try again in a few seconds." };
+  }
+  const detail = res.body ? `: ${res.body}` : "";
+  return { success: false, error: `Discord returned status ${res.status}${detail}` };
+}
+
+function parseMessage(body) {
+  try {
+    const msg = JSON.parse(body);
+    return msg && msg.id ? msg : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Posts a comp. `wait=true` makes Discord return the message, so the post can
+ * be edited later when the comp changes: the result carries `post`
+ * ({ messageId, threadId }) and `sig` (compEmbedsSig of what was sent).
+ * `threadId` is the thread/forum post the message lives in, or null for a
+ * plain channel message (editing a channel message must not pass thread_id).
+ */
 async function shareCompToDiscord(comp, builds, compUrl, buildUrls, webhookUrl, options = {}) {
   const { threadMode = "none", threadId } = options;
   const embeds = buildCompEmbeds(comp, builds, compUrl, buildUrls);
   const payload = { username: "AxiForge", avatar_url: LOGO_URL, embeds };
 
-  let targetUrl = webhookUrl;
-  if (threadMode === "custom" && threadId) {
-    // Reply to an existing thread or forum post
-    const sep = webhookUrl.includes("?") ? "&" : "?";
-    targetUrl = `${webhookUrl}${sep}thread_id=${threadId}`;
-  } else if (threadMode === "auto") {
+  const custom = threadMode === "custom" && threadId;
+  if (!custom && threadMode === "auto") {
     // Create a new forum post using the comp name
     payload.thread_name = comp.name || "Untitled Comp";
   }
+  // Reply to an existing thread or forum post
+  const targetUrl = withQuery(webhookUrl, { wait: "true", thread_id: custom ? threadId : null });
 
   try {
     const res = await postWebhook(targetUrl, payload);
     if (res.status === 204 || res.status === 200) {
-      return { success: true };
+      const out = { success: true };
+      const msg = parseMessage(res.body);
+      if (msg) {
+        const inThread = custom || threadMode === "auto";
+        out.post = {
+          messageId: String(msg.id),
+          threadId: inThread ? String(custom ? threadId : msg.channel_id || "") || null : null,
+        };
+        out.sig = compEmbedsSig(embeds);
+      }
+      return out;
     }
-    if (res.status === 401 || res.status === 404) {
-      return { success: false, error: "Webhook URL is invalid or has been deleted" };
-    }
-    if (res.status === 429) {
-      return { success: false, error: "Rate limited by Discord. Try again in a few seconds." };
-    }
-    const detail = res.body ? `: ${res.body}` : "";
-    return { success: false, error: `Discord returned status ${res.status}${detail}` };
+    const err = webhookError(res);
+    delete err.gone;
+    return err;
+  } catch (err) {
+    return { success: false, error: `Network error: ${err.message}` };
+  }
+}
+
+/**
+ * Edits a comp post made by shareCompToDiscord to the comp's current state.
+ * `gone: true` means the message (or webhook) no longer exists.
+ */
+async function editCompDiscordPost(comp, builds, compUrl, buildUrls, webhookUrl, post) {
+  const embeds = buildCompEmbeds(comp, builds, compUrl, buildUrls);
+  const base = `${webhookUrl.split("?")[0].replace(/\/+$/, "")}/messages/${encodeURIComponent(post.messageId)}`;
+  const targetUrl = withQuery(base, { thread_id: post.threadId || null });
+  try {
+    const res = await postWebhook(targetUrl, { embeds }, "PATCH");
+    if (res.status === 200 || res.status === 204) return { success: true, sig: compEmbedsSig(embeds) };
+    return webhookError(res);
   } catch (err) {
     return { success: false, error: `Network error: ${err.message}` };
   }
@@ -571,4 +636,4 @@ function formatBuildDiscordCopy(build, buildUrl) {
   return `${emoji} ${name}`;
 }
 
-module.exports = { buildCompEmbed, buildCompEmbeds, shareCompToDiscord, buildBuildEmbed, shareBuildToDiscord, formatBuildDiscordCopy };
+module.exports = { buildCompEmbed, buildCompEmbeds, compEmbedsSig, shareCompToDiscord, editCompDiscordPost, buildBuildEmbed, shareBuildToDiscord, formatBuildDiscordCopy };
