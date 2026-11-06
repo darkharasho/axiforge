@@ -44,7 +44,13 @@
     "win": {
       "target": [
         "nsis"
-      ]
+      ],
+      "azureSignOptions": {
+        "publisherName": "Michael Stephens",
+        "endpoint": "https://eus.codesigning.azure.net/",
+        "codeSigningAccountName": "darkharasho-signing",
+        "certificateProfileName": "public-trust"
+      }
     },
     "nsis": {
       "oneClick": true,

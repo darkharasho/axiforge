@@ -36,6 +36,9 @@ jobs:
       - name: Run tests
         run: npm test
 
+  # Linux needs no code-signing. Windows is signed with Azure Artifact Signing
+  # (build.win.azureSignOptions in package.json); electron-builder reads the
+  # AZURE_* credentials from the environment. macOS signing is below.
   build:
     needs: [test]
     strategy:
@@ -115,9 +118,27 @@ jobs:
           fi
           echo "CSC_KEYCHAIN=$kc" >> "$GITHUB_ENV"
 
+      # Without these electron-builder can't authenticate to Artifact Signing.
+      # Fail before the slow build instead of after it.
+      - name: Check the Windows signing secrets are set
+        if: matrix.platform == 'win'
+        shell: bash
+        env:
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+        run: |
+          for v in AZURE_TENANT_ID AZURE_CLIENT_ID AZURE_CLIENT_SECRET; do
+            [ -n "${!v}" ] || { echo "::error::Secret $v is not set (run ~/.claude/templates/windows-signing/set-azure-signing-secrets.sh axiforge)."; exit 1; }
+          done
+
       - name: Build and publish Electron distributables
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Windows signing (Azure Artifact Signing); ignored off Windows.
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
           # CSC_KEYCHAIN comes from the step above on macOS; deliberately no CSC_LINK, so
           # electron-builder resolves the identity from that keychain instead of making
           # its own. Notarization credentials are unaffected and ignored off macOS.
@@ -129,6 +150,22 @@ jobs:
           PUBLISH_MODE: ${{ (github.event_name == 'push' || inputs.publish) && 'always' || 'never' }}
         run: npx electron-builder ${{ matrix.args }} --publish $PUBLISH_MODE
         shell: bash
+
+      # Fails the Windows build if the installer isn't validly signed. On a tag push the
+      # installer is already uploaded to the draft release by then; publish still runs
+      # for the other platforms (fail-fast: false + !cancelled()), so check this job
+      # before letting the release go out.
+      - name: Verify the Windows installer is signed
+        if: matrix.platform == 'win'
+        shell: pwsh
+        run: |
+          $files = Get-ChildItem dist_out -Filter 'AxiForge-*.exe'
+          if (-not $files) { Write-Error "No installer found in dist_out/"; exit 1 }
+          foreach ($f in $files) {
+            $sig = Get-AuthenticodeSignature $f.FullName
+            Write-Host "$($f.Name): $($sig.Status) — $($sig.SignerCertificate.Subject)"
+            if ($sig.Status -ne 'Valid') { Write-Error "$($f.Name) is not validly signed"; exit 1 }
+          }
 
       - name: Upload dry-run artifacts
         if: github.event_name == 'workflow_dispatch' && inputs.publish != true
