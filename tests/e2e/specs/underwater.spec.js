@@ -260,9 +260,6 @@ test.describe("Underwater Mode — Ranger pets", () => {
     await closeApp(app);
   });
 
-  // Aquatic pet IDs from constants.js — drakes, shark, armor fish, jellyfish, siege turtle
-  const AQUATIC_PET_IDS = new Set([7, 12, 18, 19, 45, 21, 40, 41, 42, 43, 66]);
-
   test("Ranger: only aquatic/amphibious pets available underwater", async () => {
     // Aquatic-only pet names (should NOT appear on land)
     const AQUATIC_ONLY_NAMES = ["Shark", "Armor Fish", "Blue Jellyfish", "Red Jellyfish", "Rainbow Jellyfish"];

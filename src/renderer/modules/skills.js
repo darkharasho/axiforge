@@ -10,7 +10,7 @@ import {
   MECHANIST_DEPTH_CHARGES_ID,
   MECHANIST_SPEC_ID,
   UNDERWATER_BLOCKED_LEGENDS,
-  AQUATIC_PET_IDS,
+  isPetAllowedInSlot,
 } from "./constants.js";
 import { escapeHtml, parseWeaponSlotNum } from "./utils.js";
 import { bindHoverPreview, selectDetail, buildSkillCard, showHoverPreview } from "./detail-panel.js";
@@ -1849,12 +1849,8 @@ export function openLegendPicker(anchorEl, slotIdx, catalog) {
 export function openPetPicker(anchorEl, petKey, catalog) {
   const currentPetId = Number(state.editor.selectedPets?.[petKey]) || 0;
   const isAquatic = petKey.startsWith("aquatic");
-  // Filter pets: aquatic slots show aquatic/amphibious pets; terrestrial slots show non-aquatic.
-  // The GW2 API has no type field on pets, so we use a hardcoded set of aquatic pet IDs.
-  const filteredPets = (catalog.pets || []).filter((p) => {
-    const isAquaticPet = AQUATIC_PET_IDS.has(p.id);
-    return isAquatic ? isAquaticPet : !isAquaticPet;
-  });
+  // Land slots show terrestrial + amphibious pets; underwater slots show aquatic + amphibious.
+  const filteredPets = (catalog.pets || []).filter((p) => isPetAllowedInSlot(p.id, isAquatic));
   const items = [
     { value: "", label: "— None —" },
     ...filteredPets.map((p) => ({ value: String(p.id), label: p.name, icon: p.icon })),
