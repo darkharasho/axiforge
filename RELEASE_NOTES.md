@@ -1,3 +1,9 @@
+## Version v1.6.2 — November 8, 2026
+
+### Bug Fixes
+
+- **Ranger pet picker shows the right pets on land and underwater.** The Juvenile Siege Turtle was hidden from land pet slots, and pets that can fight both on land and underwater only appeared in one of the two. Drakes now show up on land, and Bears, Devourers, the River Otter, Jaguar, Snow Leopard, Jungle Stalker, Tiger and White Tiger now show up underwater. Shark, Armor Fish and the Jellyfish stay underwater-only.
+
 ## Version v1.6.1 — November 8, 2026
 
 ### Bug Fixes
