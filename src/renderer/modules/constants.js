@@ -157,16 +157,31 @@ export const MECHANIST_SPEC_ID = 70;
 // Legend1 = Glint (Herald elite spec, spec ID 52), Legend5 = Kalla (Renegade elite spec, spec ID 63)
 export const UNDERWATER_BLOCKED_LEGENDS = new Set(["Legend1", "Legend5"]);
 
-// Ranger pets usable underwater (GW2 API has no type field — this is hardcoded).
-// Aquatic-only: Shark, Armor Fish, Jellyfish variants
-// Amphibious (land + water): all Drakes, Siege Turtle
-export const AQUATIC_PET_IDS = new Set([
-  7, 12, 18, 19, 45,          // Drakes: Salamander, Marsh, Ice, River, Reef
+// Ranger pet environments. The GW2 API has no environment field, so these are
+// hardcoded from the wiki's pet taxonomy table:
+// https://wiki.guildwars2.com/wiki/Pet#Taxonomy
+// Any pet not listed in either set is terrestrial (land only).
+// Aquatic-only pets (underwater only):
+export const AQUATIC_ONLY_PET_IDS = new Set([
   21,                           // Shark
   40,                           // Armor Fish
   41, 42, 43,                   // Jellyfish: Blue, Red, Rainbow
-  66,                           // Siege Turtle
 ]);
+// Amphibious pets (land and underwater):
+export const AMPHIBIOUS_PET_IDS = new Set([
+  7, 12, 18, 19, 45,            // Drakes: Salamander, Marsh, Ice, River, Reef
+  6, 26, 27,                    // Devourers: Carrion, Whiptail, Lashtail
+  1, 9, 11, 47, 63,             // Felines: Jungle Stalker, Snow Leopard, Jaguar, Tiger, White Tiger
+  5, 20, 23, 24, 25,            // Ursines: Brown Bear, Murellow, Black Bear, Polar Bear, Arctodus
+  73,                           // River Otter
+]);
+
+// Whether a pet may go in a land slot (isAquaticSlot=false) or an underwater slot.
+export function isPetAllowedInSlot(petId, isAquaticSlot) {
+  const id = Number(petId);
+  if (AMPHIBIOUS_PET_IDS.has(id)) return true;
+  return AQUATIC_ONLY_PET_IDS.has(id) === Boolean(isAquaticSlot);
+}
 
 // Slot sets for stat computation mode switching
 export const LAND_ONLY_SLOTS = new Set(["head", "mainhand1", "offhand1", "mainhand2", "offhand2"]);
