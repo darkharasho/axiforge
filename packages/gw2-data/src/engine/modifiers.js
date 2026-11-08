@@ -58,8 +58,20 @@ function collectActiveTraitIds(ctx, catalogs) {
 function isFuryTrait(trait, traitId, overrides) {
   const override = overrides?.get(`trait:${traitId}`);
   if (override?.implicitFury) return true;
-  return trait.facts?.some((f) => f.type === "Buff" && f.status === "Fury") || false;
+  const hasFuryFact = trait.facts?.some((f) => f.type === "Buff" && f.status === "Fury") || false;
+  if (!hasFuryFact) return false;
+  // A Buff(Fury) fact only says the trait *applies* fury somewhere (Roaring
+  // Reveille's Charge, Furious Demise's shroud entry, ...). Its stat bonuses are
+  // fury-gated only when the description says so ("Fury grants ferocity",
+  // "while under the effects of fury"). Without a description, keep the old
+  // fact-only behaviour.
+  if (!trait.description) return true;
+  return _FURY_GATED_RE.test(trait.description);
 }
+
+// Wording the API uses for "this bonus applies while you have fury" — verified
+// against every trait carrying a Buff(Fury) fact across all nine professions.
+const _FURY_GATED_RE = /\bfury (?:gives|grants|increases)\b|\b(?:under|with) the effects? of fury\b|\bwhile (?:you have|affected by) fury\b/i;
 
 // Attribute name a fact's text must mention (per target) to count as a stat bonus.
 const _ATTR_TEXT_BY_TARGET = {
