@@ -1,3 +1,13 @@
+## Version v1.6.1 — November 8, 2026
+
+### Bug Fixes
+
+- **Trait stat bonuses no longer disappear when Fury is off.** Traits that grant Fury as a side effect, such as Warrior's Roaring Reveille (Tactics) and Necromancer's Furious Demise, were treated as if their stats only applied while you had Fury. Their bonuses now always appear in the attributes panel. Roaring Reveille gives +120 Concentration in PvE and +60 in WvW and PvP. Traits whose stats really do depend on Fury, such as Raging Storm, still follow the Fury toggle.
+
+### Other Changes
+
+- **Signed Windows installer.** The Windows installer is now code-signed, so Windows shows a verified publisher instead of an "unknown publisher" warning.
+
 ## Version v1.6.0 — November 5, 2026
 
 ### New Features
