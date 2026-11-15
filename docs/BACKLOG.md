@@ -800,6 +800,13 @@ Status key: `[ ]` open · `[x]` done · `[~]` in progress · `[?]` needs repro s
   can still read existing links.
   Fixed by payload v2 (`docs/superpowers/specs/2026-10-07-publish-payload-shrink-design.md`): gzip + binary envelope, comps link members, coverage computed in the viewer. Measured on a real local build: v1 1,324,188 bytes -> v2 99,979 bytes (about 13x). Comp payloads (members linked, not embedded) are about 1 KB each, against 4.6-7.9 MB raw locally.
 
+- [ ] **Share-code relic field is nearly full.** The relic index is a 7-bit
+  field (max 127). After the Visions of Eternity Set 4 relics (#337) the table
+  holds 118, so about 9 more relics fit. Before it overflows, widen the field
+  with a codec version bump (see the stat-table v2 6-bit change for the pattern).
+  Until then `BitWriter.write` throws on overflow, so copying a share code fails
+  visibly instead of silently writing a wrong relic.
+
 ## axi-design conversion — follow-ups
 
 - [ ] **Convert AxiVale and AxiBridge to axi-design.** They embed

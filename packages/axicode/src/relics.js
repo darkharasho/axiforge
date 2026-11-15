@@ -130,4 +130,11 @@ module.exports = [
   "Relic of the Doyen",
   "Relic of the Cruel Overseer",
   "Relic of Watch",
+  // Relics—Visions of Eternity Set 4 (#337)
+  "Relic of the Lantern",
+  "Relic of the Last Tyrant",
+  "Relic of the Eternal Alchemy",
+  "Relic of the Tyrian Hero",
+  "Relic of the Curator",
+  "Relic of the Visionary",
 ];

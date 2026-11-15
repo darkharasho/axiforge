@@ -28,7 +28,7 @@ concurrency:
 
 jobs:
   audit:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04  # Playwright 1.58 cannot install deps on ubuntu-latest (26.04)
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -60,7 +60,8 @@ jobs:
         continue-on-error: true
         run: node scripts/sync-legends.mjs
 
-      - name: Sync upgrade IDs (wiki SMW)
+      - name: Sync upgrade IDs (wiki SMW, GW2 API fallback for relics)
+        id: upgradeids
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.sync }}
         continue-on-error: true
         run: node scripts/sync-upgrade-ids.mjs
@@ -98,8 +99,15 @@ jobs:
           # 'failure' when the relic-facts crawl collapsed (the wiki blocks CI
           # IPs) and the in-script guard refused to overwrite relicFacts.json.
           RELICFACTS_OUTCOME: ${{ steps.relicfacts.outcome }}
+          UPGRADEIDS_OUTCOME: ${{ steps.upgradeids.outcome }}
         run: |
           node scripts/audit-report-md.mjs > audit-summary.md
+          if [ "$UPGRADEIDS_OUTCOME" = "failure" ]; then
+            {
+              echo
+              echo "> ⚠️ **Some upgrade-ID lists were not refreshed this run** (see the \`Sync upgrade IDs\` step log for which). The wiki blocks GitHub Actions IPs; relics fall back to GW2 API discovery, but runes/sigils/food/utility need \`node scripts/sync-upgrade-ids.mjs\` run locally and committed."
+            } >> audit-summary.md
+          fi
           if [ "$RELICFACTS_OUTCOME" = "failure" ]; then
             {
               echo
