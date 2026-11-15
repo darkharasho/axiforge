@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-08-05T17:49:57.708Z",
+  "updatedAt": "2026-11-15T18:56:32.230Z",
   "relics": {
     "99965": {
       "name": "Relic of the Flock",
@@ -2399,11 +2399,6 @@
           "status": "Quickness",
           "duration": 0,
           "apply_count": 1
-        },
-        {
-          "type": "Recharge",
-          "text": "Recharge",
-          "value": 1
         }
       ]
     },
@@ -2753,6 +2748,154 @@
           "status": "Weakness",
           "duration": 2,
           "apply_count": 1
+        }
+      ]
+    },
+    "109936": {
+      "name": "Relic of the Lantern",
+      "facts": [
+        {
+          "type": "Buff",
+          "text": "Revealed",
+          "status": "Revealed",
+          "duration": 6,
+          "apply_count": 1
+        },
+        {
+          "type": "Number",
+          "text": "Number of Targets",
+          "value": 5
+        },
+        {
+          "type": "Range",
+          "text": "Range",
+          "value": 600
+        },
+        {
+          "type": "Recharge",
+          "text": "Recharge",
+          "value": 20
+        }
+      ]
+    },
+    "109942": {
+      "name": "Relic of the Last Tyrant",
+      "facts": [
+        {
+          "type": "Damage",
+          "text": "Damage",
+          "dmg_multiplier": 3,
+          "hit_count": 1
+        },
+        {
+          "type": "Damage",
+          "text": "Damage",
+          "dmg_multiplier": 1.5,
+          "hit_count": 1
+        },
+        {
+          "type": "Buff",
+          "text": "Burning",
+          "status": "Burning",
+          "duration": 8,
+          "apply_count": 1
+        },
+        {
+          "type": "Buff",
+          "text": "Burning",
+          "status": "Burning",
+          "duration": 8,
+          "apply_count": 1
+        },
+        {
+          "type": "Number",
+          "text": "Number of Targets",
+          "value": 5
+        },
+        {
+          "type": "Range",
+          "text": "Range",
+          "value": 240
+        },
+        {
+          "type": "Recharge",
+          "text": "Recharge",
+          "value": 12
+        }
+      ]
+    },
+    "109980": {
+      "name": "Relic of the Eternal Alchemy",
+      "facts": [
+        {
+          "type": "AttributeAdjust",
+          "text": "Healing",
+          "target": "Healing",
+          "value": 37,
+          "coefficient": 0.022,
+          "hit_count": 1
+        }
+      ]
+    },
+    "109998": {
+      "name": "Relic of the Tyrian Hero",
+      "facts": [
+        {
+          "type": "Buff",
+          "text": "Superspeed",
+          "status": "Superspeed",
+          "duration": 3,
+          "apply_count": 1
+        },
+        {
+          "type": "Buff",
+          "text": "Superspeed",
+          "status": "Superspeed",
+          "duration": 10,
+          "apply_count": 1
+        },
+        {
+          "type": "Buff",
+          "text": "Might",
+          "status": "Might",
+          "duration": 10,
+          "apply_count": 1
+        },
+        {
+          "type": "Buff",
+          "text": "Swiftness",
+          "status": "Swiftness",
+          "duration": 10,
+          "apply_count": 1
+        },
+        {
+          "type": "Number",
+          "text": "Number of Targets",
+          "value": 5
+        },
+        {
+          "type": "Radius",
+          "text": "Radius",
+          "distance": 600
+        }
+      ]
+    },
+    "110009": {
+      "name": "Relic of the Curator",
+      "facts": []
+    },
+    "110152": {
+      "name": "Relic of the Visionary",
+      "facts": [
+        {
+          "type": "Time",
+          "text": "Duration",
+          "duration": 8
+        },
+        {
+          "type": "Time",
+          "text": "Duration",
+          "duration": 8
         }
       ]
     }

@@ -413,6 +413,12 @@ const RELIC_ITEM_IDS = [
   109522, // Relic of the Doyen
   109664, // Relic of the Cruel Overseer
   109709, // Relic of Watch
+  109936, // Relic of the Lantern
+  109942, // Relic of the Last Tyrant
+  109980, // Relic of the Eternal Alchemy
+  109998, // Relic of the Tyrian Hero
+  110009, // Relic of the Curator
+  110152, // Relic of the Visionary
 ];
 
 module.exports = { RUNE_ITEM_IDS, SIGIL_ITEM_IDS, INFUSION_ITEM_IDS, WVW_INFUSION_IDS, ENRICHMENT_ITEM_IDS, FOOD_ITEM_IDS, UTILITY_ITEM_IDS, RELIC_ITEM_IDS };

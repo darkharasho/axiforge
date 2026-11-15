@@ -23,6 +23,9 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import { createRequire } from "node:module";
+
+const { discoverNewItemsByType } = createRequire(import.meta.url)("./lib/apiItemDiscovery.cjs");
 
 const WIKI_API = "https://wiki.guildwars2.com/api.php";
 const GW2_API = "https://api.guildwars2.com/v2";
@@ -52,6 +55,9 @@ const CATEGORIES = {
     const: "RELIC_ITEM_IDS",
     query: "[[Category:Relics]]",
     exclude: new Set(["Legendary Relic"]),
+    // The wiki 403s GitHub Actions IPs (issue #337). When it does, append any
+    // newly-published relics found via the GW2 API instead of going stale.
+    apiFallbackType: "Relic",
   },
   runes: {
     const: "RUNE_ITEM_IDS",
@@ -134,8 +140,46 @@ function blockRegex(constName) {
   return new RegExp(`const ${constName} = \\[[\\s\\S]*?\\n\\];`);
 }
 
+function existingBlockIds(constName, src) {
+  const re = blockRegex(constName);
+  if (!re.test(src)) throw new Error(`${constName} block not found in upgradeIds.js`);
+  return [...src.match(re)[0].matchAll(/^\s*(\d+),/gm)].map((m) => Number(m[1]));
+}
+
+// GW2-API fallback for replace-mode categories whose wiki fetch failed: append
+// newly-published items of `cfg.apiFallbackType` (never removes anything).
+async function syncCategoryFromApi(name, cfg, srcRef) {
+  const res = await fetch(`${GW2_API}/items`, { headers: { "User-Agent": "axiforge-sync" } });
+  if (!res.ok) throw new Error(`GW2 API ${res.status} for item id list`);
+  const allIds = await res.json();
+  const existingIds = existingBlockIds(cfg.const, srcRef.src);
+  const found = await discoverNewItemsByType({
+    allIds,
+    existingIds,
+    type: cfg.apiFallbackType,
+    fetchItems: fetchApiItems,
+  });
+  if (!found.length) {
+    console.log(`✓ ${name}: GW2 API fallback found no new items (${existingIds.length} entries)`);
+    return false;
+  }
+  const re = blockRegex(cfg.const);
+  const insert = found.map((c) => `  ${c.id}, // ${c.name}`).join("\n");
+  const updatedBlock = srcRef.src.match(re)[0].replace(/\n\];\s*$/, `\n${insert}\n];`);
+  srcRef.src = srcRef.src.replace(re, () => updatedBlock);
+  console.log(`✓ ${name}: GW2 API fallback added ${found.length}: ${found.map((c) => `${c.id} ${c.name}`).join(", ")}`);
+  return true;
+}
+
 async function syncCategory(name, cfg, srcRef) {
-  const items = await fetchCategory(cfg);
+  let items;
+  try {
+    items = await fetchCategory(cfg);
+  } catch (err) {
+    if (!cfg.apiFallbackType) throw err;
+    console.warn(`⚠ ${name}: wiki fetch failed (${err.message}); falling back to GW2 API discovery`);
+    return syncCategoryFromApi(name, cfg, srcRef);
+  }
   if (!items.length) throw new Error(`no ${name} returned from wiki`);
 
   const re = blockRegex(cfg.const);
@@ -225,16 +269,28 @@ async function main() {
 
   const srcRef = { src: await readFile(TARGET, "utf8") };
   let anyChanged = false;
+  const failed = [];
+  // One failing category must not abort the rest — previously a wiki 403 on
+  // relics (the first category) skipped runes/sigils/food/utility entirely.
   for (const t of targets) {
     const cfg = CATEGORIES[t];
-    const changed = cfg.additive
-      ? await syncCategoryAdditive(t, cfg, srcRef)
-      : await syncCategory(t, cfg, srcRef);
-    anyChanged = anyChanged || changed;
+    try {
+      const changed = cfg.additive
+        ? await syncCategoryAdditive(t, cfg, srcRef)
+        : await syncCategory(t, cfg, srcRef);
+      anyChanged = anyChanged || changed;
+    } catch (err) {
+      console.error(`✗ ${t}: ${err.message}`);
+      failed.push(t);
+    }
   }
   if (anyChanged) {
     await writeFile(TARGET, srcRef.src);
     console.log(`wrote ${path.relative(process.cwd(), TARGET)}`);
+  }
+  if (failed.length) {
+    console.error(`✗ failed categories: ${failed.join(", ")}`);
+    process.exitCode = 1;
   }
 }
 
