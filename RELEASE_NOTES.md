@@ -1,3 +1,9 @@
+## Version v1.6.3 — November 15, 2026
+
+### Bug Fixes
+
+- **Visions of Eternity Set 4 relics are now available.** The Relic of the Lantern, Relic of the Last Tyrant, Relic of the Eternal Alchemy, Relic of the Tyrian Hero, Relic of the Curator and Relic of the Visionary now appear in the relic picker and are kept when you share a build. The Relic of the Curator has no stat lines yet because the GW2 wiki doesn't list any. Future relics should also show up sooner.
+
 ## Version v1.6.2 — November 8, 2026
 
 ### Bug Fixes
