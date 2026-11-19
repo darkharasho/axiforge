@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-15T18:56:32.230Z",
+  "updatedAt": "2026-11-19T20:17:14.920Z",
   "relics": {
     "99965": {
       "name": "Relic of the Flock",
@@ -2514,96 +2514,15 @@
     },
     "107030": {
       "name": "Relic of Fog",
-      "facts": [
-        {
-          "type": "Time",
-          "text": "Duration",
-          "duration": 5
-        }
-      ]
+      "facts": []
     },
     "107061": {
       "name": "Relic of the Coral Heart",
-      "facts": [
-        {
-          "type": "Damage",
-          "text": "Damage",
-          "dmg_multiplier": 0.4,
-          "hit_count": 1
-        },
-        {
-          "type": "Damage",
-          "text": "Damage",
-          "dmg_multiplier": 0.5,
-          "hit_count": 1
-        },
-        {
-          "type": "Time",
-          "text": "Duration",
-          "duration": 6
-        },
-        {
-          "type": "Recharge",
-          "text": "Recharge",
-          "value": 20
-        }
-      ]
+      "facts": []
     },
     "107124": {
       "name": "Relic of the Forest Dweller",
-      "facts": [
-        {
-          "type": "Number",
-          "text": "Defiance Break",
-          "value": 300
-        },
-        {
-          "type": "Number",
-          "text": "Defiance Break",
-          "value": 150
-        },
-        {
-          "type": "Damage",
-          "text": "Damage",
-          "dmg_multiplier": 1,
-          "hit_count": 1
-        },
-        {
-          "type": "Damage",
-          "text": "Damage",
-          "dmg_multiplier": 0.01,
-          "hit_count": 1
-        },
-        {
-          "type": "Buff",
-          "text": "Float",
-          "status": "Float",
-          "duration": 3,
-          "apply_count": 1
-        },
-        {
-          "type": "Buff",
-          "text": "Float",
-          "status": "Float",
-          "duration": 0,
-          "apply_count": 1
-        },
-        {
-          "type": "Number",
-          "text": "Number of Targets",
-          "value": 3
-        },
-        {
-          "type": "Range",
-          "text": "Range",
-          "value": 600
-        },
-        {
-          "type": "Recharge",
-          "text": "Recharge",
-          "value": 30
-        }
-      ]
+      "facts": []
     },
     "107192": {
       "name": "Relic of the Alliance",
@@ -2617,90 +2536,15 @@
     },
     "109264": {
       "name": "Relic of Galdra",
-      "facts": [
-        {
-          "type": "Damage",
-          "text": "Damage",
-          "dmg_multiplier": 0.2,
-          "hit_count": 1
-        },
-        {
-          "type": "Damage",
-          "text": "Damage",
-          "dmg_multiplier": 0.1,
-          "hit_count": 1
-        },
-        {
-          "type": "Buff",
-          "text": "Burning",
-          "status": "Burning",
-          "duration": 10,
-          "apply_count": 1
-        },
-        {
-          "type": "Buff",
-          "text": "Burning",
-          "status": "Burning",
-          "duration": 6,
-          "apply_count": 1
-        },
-        {
-          "type": "Number",
-          "text": "Number of Targets",
-          "value": 5
-        },
-        {
-          "type": "Recharge",
-          "text": "Recharge",
-          "value": 30
-        }
-      ]
+      "facts": []
     },
     "109267": {
       "name": "Relic of the Sacred Grounds",
-      "facts": [
-        {
-          "type": "Buff",
-          "text": "Protection",
-          "status": "Protection",
-          "duration": 4,
-          "apply_count": 1
-        },
-        {
-          "type": "Buff",
-          "text": "Protection",
-          "status": "Protection",
-          "duration": 3,
-          "apply_count": 1
-        }
-      ]
+      "facts": []
     },
     "109351": {
       "name": "Relic of the Director",
-      "facts": [
-        {
-          "type": "Percent",
-          "text": "Damage Increase",
-          "percent": 10
-        },
-        {
-          "type": "Buff",
-          "text": "Vulnerability",
-          "status": "Vulnerability",
-          "duration": 8,
-          "apply_count": 1
-        },
-        {
-          "type": "Time",
-          "text": "Duration",
-          "duration": 6
-        },
-        {
-          "type": "Recharge",
-          "text": "Recharge",
-          "value": 15
-        }
-      ]
+      "facts": []
     },
     "109522": {
       "name": "Relic of the Doyen",
