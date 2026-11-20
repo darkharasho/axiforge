@@ -48,13 +48,47 @@ export function resolveEquippedWeaponSkills(catalog, editor) {
   }, activeAttunement, activeAttunement2, isWeaver, false));
 }
 
+// Elementalists and Engineers have no weapon swap in combat, so a second set
+// stored on their build is never on the bar alongside the first.
+const NO_WEAPON_SWAP_PROFESSIONS = new Set(["elementalist", "engineer"]);
+
 /**
- * Resolve weapon skills across ALL attunements for composition analysis.
- * For non-Elementalist builds this behaves identically to resolveEquippedWeaponSkills.
- * For Elementalist it returns the union of weapon skills from every available attunement
- * (and for Weaver, every attunement pair), deduplicated by skill id.
+ * The weapon sets a build can fight with: the active one first, plus the other
+ * set when it has a weapon in it and the profession can swap to it.
+ */
+function weaponSetsInPlay(editor) {
+  const active = Number(editor.activeWeaponSet) === 2 ? 2 : 1;
+  if (NO_WEAPON_SWAP_PROFESSIONS.has(String(editor.profession || "").toLowerCase())) return [active];
+  const other = active === 1 ? 2 : 1;
+  const weapons = editor.equipment?.weapons || {};
+  const otherFilled = editor.underwaterMode
+    ? !!weapons[`aquatic${other}`]
+    : !!(weapons[`mainhand${other}`] || weapons[`offhand${other}`]);
+  return otherFilled ? [active, other] : [active];
+}
+
+/**
+ * Resolve every weapon skill a build can reach, for composition analysis:
+ * both weapon sets (where the profession can swap), and for Elementalist every
+ * attunement (for Weaver, every attunement pair). Deduplicated by skill id.
  */
 export function resolveAllWeaponSkills(catalog, editor) {
+  if (!catalog) return [];
+  const seen = new Set();
+  const all = [];
+  for (const set of weaponSetsInPlay(editor)) {
+    for (const s of resolveSetWeaponSkills(catalog, { ...editor, activeWeaponSet: set })) {
+      if (s && !seen.has(s.id)) { seen.add(s.id); all.push(s); }
+    }
+  }
+  return all;
+}
+
+/**
+ * One weapon set's skills across all attunements. Without attunements this is
+ * the same as resolveEquippedWeaponSkills.
+ */
+function resolveSetWeaponSkills(catalog, editor) {
   const attunements = getAvailableAttunements(catalog, editor);
   if (attunements.length === 0) return resolveEquippedWeaponSkills(catalog, editor);
 
