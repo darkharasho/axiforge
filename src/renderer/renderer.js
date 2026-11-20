@@ -37,6 +37,7 @@ import {
 import {
   initEditorCallbacks, enforceEditorConsistency, markEditorChanged, captureEditorBaseline,
   loadBuildIntoEditor, serializeEditorToBuild, parseBuildImportPayload, confirmDiscardDirty,
+  promptLeaveDirtyEditor,
   createDefaultSpecializationSelections, createDefaultSkillSelections,
   computeEditorSignature,
   computeUnsavedChangeSummary,
@@ -964,7 +965,7 @@ async function reloadBuilds() {
 }
 
 async function startNewBuild(profession, { skipDirtyCheck = false } = {}) {
-  if (!skipDirtyCheck && !confirmDiscardDirty("Start a new build")) return;
+  if (!skipDirtyCheck && !(await confirmDiscardDirty("Start a new build"))) return;
   profession = profession || "";
   state.editor = createEmptyEditor(profession, _lastGameMode);
   if (profession) {
@@ -1038,7 +1039,7 @@ async function copyShareCodeToClipboard() {
 
 async function importBuildJsonFromClipboard() {
   try {
-    if (!confirmDiscardDirty("Import another build")) return;
+    if (!(await confirmDiscardDirty("Import another build"))) return;
     const text = await window.desktopApi.readClipboardText();
     if (!text || !String(text).trim()) {
       throw new Error("Clipboard is empty.");
@@ -1210,6 +1211,45 @@ function _syncEditorBackButton() {
   el.editorBackBtn.title = `Back to ${ret.label}`;
 }
 
+/**
+ * User-initiated navigation (left nav, the editor's back button). Leaving the
+ * editor with unsaved edits asks first: Save (stays put if the save fails),
+ * Discard (reverts the editor to the last save) or Keep editing.
+ * Programmatic routes into the editor go straight to navigateToPage — the flows
+ * that replace the editor's build already ask via confirmDiscardDirty.
+ */
+async function requestNavigate(page) {
+  if (page && (await confirmLeaveEditor(page))) navigateToPage(page);
+}
+
+// Resolves true when navigating to `page` may go ahead.
+async function confirmLeaveEditor(page) {
+  if (state.activePage !== "editor" || page === "editor") return true;
+  const choice = await promptLeaveDirtyEditor();
+  if (choice === "stay") return false;
+  if (choice === "save") {
+    await saveCurrentBuild();
+    return !state.editorDirty;
+  }
+  if (choice === "discard") await revertEditorToSaved();
+  return true;
+}
+
+// Throw away unsaved edits: reload the stored copy, or reset a never-saved build.
+async function revertEditorToSaved() {
+  const id = state.editor?.id;
+  if (id) {
+    await reloadBuilds();
+    const saved = state.builds.find((b) => b.id === id);
+    if (saved) {
+      await loadBuildIntoEditor(saved, { captureBaseline: true });
+      render();
+      return;
+    }
+  }
+  await startNewBuild("", { skipDirtyCheck: true });
+}
+
 function navigateToPage(page) {
   if (!page) return;
   // Remember where the editor was opened from BEFORE activePage moves, so the
@@ -1366,10 +1406,11 @@ function renderCompsPanel() {
   </div>`;
 
   panel.querySelectorAll(".comps-tab__card-header").forEach((header) => {
-    header.addEventListener("click", () => {
+    header.addEventListener("click", async () => {
       const compId = header.closest("[data-comp-id]").dataset.compId;
       const comp = (state.comps || []).find((c) => c.id === compId);
       if (!comp) return;
+      if (!(await confirmLeaveEditor("comps"))) return;
       state.activeComp = comp;
       state.compPage = "detail";
       navigateToPage("comps");
@@ -1729,15 +1770,14 @@ function wireEvents() {
       btn.addEventListener("click", () => openSettingsModal());
       return;
     }
-    btn.addEventListener("click", () => navigateToPage(btn.dataset.page));
+    btn.addEventListener("click", () => requestNavigate(btn.dataset.page));
   });
 
-  // Back out of the editor to wherever the build was opened from. Deliberately
-  // as permissive as the left nav — it does not gate on unsaved changes, so
-  // leaving this way is never more destructive than clicking "Library".
+  // Back out of the editor to wherever the build was opened from. Gated on
+  // unsaved changes exactly like the left nav.
   el.editorBackBtn?.addEventListener("click", () => {
     const ret = state.editorReturn;
-    if (ret) navigateToPage(ret.page);
+    if (ret) requestNavigate(ret.page);
   });
 
   // Subnav tab switching

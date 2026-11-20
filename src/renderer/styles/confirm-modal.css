@@ -127,13 +127,15 @@
   border-color: var(--line-soft);
 }
 
-.confirm-modal__btn--confirm {
+.confirm-modal__btn--confirm,
+.confirm-modal__btn--alt {
   background: rgba(197, 72, 95, 0.15);
   color: var(--danger-text);
   border-color: rgba(197, 72, 95, 0.4);
 }
 
-.confirm-modal__btn--confirm:hover {
+.confirm-modal__btn--confirm:hover,
+.confirm-modal__btn--alt:hover {
   background: rgba(197, 72, 95, 0.3);
   color: var(--danger-text);
   border-color: var(--danger);

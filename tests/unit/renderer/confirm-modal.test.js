@@ -75,3 +75,38 @@ describe("whenConfirmModalIdle", () => {
     expect(idle).toBe(true);
   });
 });
+
+describe("optional third button", () => {
+  test("hidden unless altLabel is given", async () => {
+    const p = showConfirmModal({ title: "t", body: "" });
+    expect(document.getElementById("cm-alt").hidden).toBe(true);
+    click("cm-cancel");
+    await p;
+  });
+
+  test("shows altLabel and resolves alt (false for boolean callers)", async () => {
+    let p = showConfirmModal({ title: "t", body: "", altLabel: "Discard", detailed: true });
+    const alt = document.getElementById("cm-alt");
+    expect(alt.hidden).toBe(false);
+    expect(alt.textContent).toBe("Discard");
+    click("cm-alt");
+    await expect(p).resolves.toBe("alt");
+    p = showConfirmModal({ title: "t", body: "", altLabel: "Discard" });
+    click("cm-alt");
+    await expect(p).resolves.toBe(false);
+  });
+
+  test("confirmTone primary restyles confirm, and the next modal resets it", async () => {
+    const btn = document.getElementById("cm-confirm");
+    let p = showConfirmModal({ title: "t", body: "", confirmTone: "primary" });
+    expect(btn.classList.contains("confirm-modal__btn--primary")).toBe(true);
+    expect(btn.classList.contains("confirm-modal__btn--confirm")).toBe(false);
+    click("cm-cancel");
+    await p;
+    p = showConfirmModal({ title: "t", body: "" });
+    expect(btn.classList.contains("confirm-modal__btn--confirm")).toBe(true);
+    expect(btn.classList.contains("confirm-modal__btn--primary")).toBe(false);
+    click("cm-cancel");
+    await p;
+  });
+});
