@@ -8,6 +8,7 @@ const TITLE_LIMIT = 256;
 const DESC_LIMIT = 4096;
 const TOTAL_CHAR_LIMIT = 6000;
 const FIELD_LIMIT = 25;
+const FIELD_VALUE_LIMIT = 1024;
 const COLOR_PVE = 0xFFD700;
 const COLOR_WVW = 0xDC143C;
 const LOGO_URL = "https://raw.githubusercontent.com/darkharasho/axiforge/main/public/favicon.png";
@@ -47,6 +48,28 @@ function formatPartyGrid(emojis, partyIdx) {
     rows.push(i === 0 ? `${label} ${chunk}` : `\u2B1B ${chunk}`);
   }
   return rows.join("\n");
+}
+
+/**
+ * Pack entries into field values of at most FIELD_VALUE_LIMIT chars, joined by
+ * newlines. An entry is kept whole (a party's grid rows stay together) unless
+ * it alone is too long, in which case it is split on its own lines.
+ * Always returns at least one chunk.
+ */
+function chunkFieldLines(entries, max = FIELD_VALUE_LIMIT) {
+  const lines = entries.flatMap((e) => (e.length > max ? e.split("\n") : [e]));
+  const chunks = [];
+  let chunk = "";
+  for (const line of lines) {
+    if (chunk && chunk.length + 1 + line.length > max) {
+      chunks.push(chunk);
+      chunk = line;
+    } else {
+      chunk = chunk ? `${chunk}\n${line}` : line;
+    }
+  }
+  if (chunk) chunks.push(chunk);
+  return chunks.length ? chunks : ["\u200b"];
 }
 
 function buildCompEmbed(comp, builds, compUrl, buildUrls) {
@@ -111,32 +134,21 @@ function buildCompEmbed(comp, builds, compUrl, buildUrls) {
     legendLines.push(`${emoji} ${nameStr}`);
   }
 
-  // Grid in left inline field, legend split across right-column fields
-  const grid = gridRows.join("\n") || "\u200b";
-
-  // Split legend into chunks that fit Discord's 1024-char field limit
-  const legendChunks = [];
-  let chunk = "";
-  for (const line of legendLines) {
-    if (chunk && (chunk + "\n" + line).length > 1024) {
-      legendChunks.push(chunk);
-      chunk = line;
-    } else {
-      chunk = chunk ? chunk + "\n" + line : line;
-    }
-  }
-  if (chunk) legendChunks.push(chunk);
-  if (!legendChunks.length) legendChunks.push("\u200b");
+  // Grid in the left column, legend in the right. Both are split into chunks
+  // that fit Discord's 1024-char field limit: a class emoji is ~33 chars, so a
+  // squad of more than ~5 full parties overflows a single grid field.
+  const gridChunks = chunkFieldLines(gridRows);
+  const legendChunks = chunkFieldLines(legendLines);
 
   const fields = [
-    { name: "Comp", value: grid, inline: true },
+    { name: "Comp", value: gridChunks[0], inline: true },
     { name: "Builds", value: legendChunks[0], inline: true },
   ];
-  // Overflow: row break + blank left + builds right (keeps right-column alignment)
-  for (let i = 1; i < legendChunks.length; i++) {
+  // Overflow: row break + grid continuation left + builds right (keeps the columns aligned)
+  for (let i = 1; i < Math.max(gridChunks.length, legendChunks.length); i++) {
     fields.push({ name: "\u200b", value: "\u200b", inline: false });
-    fields.push({ name: "\u200b", value: "\u200b", inline: true });
-    fields.push({ name: "\u200b", value: legendChunks[i], inline: true });
+    fields.push({ name: "\u200b", value: gridChunks[i] || "\u200b", inline: true });
+    fields.push({ name: "\u200b", value: legendChunks[i] || "\u200b", inline: true });
   }
 
   return {
