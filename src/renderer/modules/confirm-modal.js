@@ -22,6 +22,7 @@ export function initConfirmModal() {
       <div class="confirm-modal__body" id="cm-body"></div>
       <div class="confirm-modal__actions">
         <button class="confirm-modal__btn" id="cm-cancel"></button>
+        <button class="confirm-modal__btn confirm-modal__btn--alt" id="cm-alt"></button>
         <button class="confirm-modal__btn confirm-modal__btn--confirm" id="cm-confirm"></button>
       </div>
     </div>
@@ -33,11 +34,13 @@ export function initConfirmModal() {
     body:    document.getElementById("cm-body"),
     close:   document.getElementById("cm-close"),
     cancel:  document.getElementById("cm-cancel"),
+    alt:     document.getElementById("cm-alt"),
     confirm: document.getElementById("cm-confirm"),
   };
 
   _el.close.addEventListener("click", () => _dismiss("close"));
   _el.cancel.addEventListener("click", () => _dismiss("cancel"));
+  _el.alt.addEventListener("click", () => _dismiss("alt"));
   _el.confirm.addEventListener("click", () => _dismiss("confirm"));
 }
 
@@ -48,12 +51,18 @@ export function initConfirmModal() {
  * @param {string} options.body    - HTML string for the body content
  * @param {string} [options.confirmLabel="Confirm"] - Confirm button text
  * @param {string} [options.cancelLabel="Cancel"]   - Cancel button text
+ * @param {string} [options.altLabel] - optional third button, between cancel
+ *   and confirm; picking it resolves "alt" (only meaningful with `detailed`).
+ *   Styled as the destructive choice.
+ * @param {"danger"|"primary"} [options.confirmTone="danger"] - "primary" styles
+ *   the confirm button as the safe, recommended action instead of a danger one
  * @param {boolean} [options.detailed=false] - resolve with how the modal ended
  *   instead of a boolean: "confirm", "cancel" (the cancel button), "close"
- *   (Esc or the X) or "displaced" (another confirm replaced it)
+ *   (Esc or the X), "alt" (the third button) or "displaced" (another confirm
+ *   replaced it)
  * @returns {Promise<boolean|string>} true if confirmed, false otherwise (or the outcome when detailed)
  */
-export function showConfirmModal({ title, body, confirmLabel = "Confirm", cancelLabel = "Cancel", detailed = false }) {
+export function showConfirmModal({ title, body, confirmLabel = "Confirm", cancelLabel = "Cancel", altLabel = "", confirmTone = "danger", detailed = false }) {
   if (!_overlay) return Promise.resolve(detailed ? "close" : false);
 
   // If already open, the previous one ends as displaced (false for boolean callers)
@@ -67,6 +76,10 @@ export function showConfirmModal({ title, body, confirmLabel = "Confirm", cancel
   _el.body.innerHTML = body;
   _el.confirm.textContent = confirmLabel;
   _el.cancel.textContent = cancelLabel;
+  _el.alt.textContent = altLabel;
+  _el.alt.hidden = !altLabel;
+  _el.confirm.classList.toggle("confirm-modal__btn--primary", confirmTone === "primary");
+  _el.confirm.classList.toggle("confirm-modal__btn--confirm", confirmTone !== "primary");
 
   _overlay.classList.remove("confirm-modal-overlay--hidden");
   if (_escHandler) document.removeEventListener("keydown", _escHandler);

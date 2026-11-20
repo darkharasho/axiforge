@@ -240,7 +240,7 @@ export function renderBuildList() {
     actions.className = "build-card__actions";
 
     const loadBtn = makeButton("Load", "secondary", async () => {
-      if (!_callbacks.confirmDiscardDirty("Load a different build")) return;
+      if (!(await _callbacks.confirmDiscardDirty("Load a different build"))) return;
       await _callbacks.loadBuildIntoEditor(build);
       _callbacks.navigateToPage("editor");
       render();

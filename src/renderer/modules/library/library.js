@@ -328,8 +328,8 @@ function pushUndoable(action, doneMessage) {
 
 // ─── Action handlers ───────────────────────────────────────────────────────────
 
-function handleNewBuild() {
-  if (!_app.confirmDiscardDirty?.("Start a new build")) return;
+async function handleNewBuild() {
+  if (!(await _app.confirmDiscardDirty?.("Start a new build"))) return;
   _app.startNewBuild?.();
   // Preserve current location so the build is saved into the right place
   if (state.editor) {
@@ -442,7 +442,7 @@ async function handleNewFolderInContent() {
 }
 
 async function handleLoadBuild(buildId) {
-  if (!_app.confirmDiscardDirty?.("Load another build")) return;
+  if (!(await _app.confirmDiscardDirty?.("Load another build"))) return;
   // Always fetch from the store so we get the post-sync version, not a
   // potentially stale in-memory copy (e.g. notes written by another user
   // whose push landed after the last in-memory state update).
@@ -942,7 +942,7 @@ export async function handleImportGw2Skills(targetFolderId) {
     const gameMode = state.editor?.gameMode || "pve";
     const saved = await window.desktopApi.importGw2Skills(result.url, result.name, folderId, gameMode);
     if (window.__AXIFORGE_WEB__) {
-      if (_app.confirmDiscardDirty && !_app.confirmDiscardDirty("Load imported build")) return;
+      if (_app.confirmDiscardDirty && !(await _app.confirmDiscardDirty("Load imported build"))) return;
       _app.loadBuildIntoEditor?.(saved);
       _app.navigateToPage?.("editor");
       showToast(`"${saved.title || saved.name || "Build"}" loaded`);
@@ -1081,7 +1081,7 @@ export async function handleImportAxicodeFile(targetFolderId) {
     }
     const chosen = builds.length === 1 ? builds[0] : await showAxicodeBuildPickerModal(builds);
     if (!chosen) return;
-    if (_app.confirmDiscardDirty && !_app.confirmDiscardDirty("Load imported build")) return;
+    if (_app.confirmDiscardDirty && !(await _app.confirmDiscardDirty("Load imported build"))) return;
     _app.loadBuildIntoEditor?.(chosen);
     _app.navigateToPage?.("editor");
     showToast(`"${chosen.title || chosen.name || "Build"}" loaded`);
@@ -1723,8 +1723,8 @@ async function handleNewSubfolder(parentId) {
   renderLibrary();
 }
 
-function handleNewBuildInFolder(folderId) {
-  if (!_app.confirmDiscardDirty?.("Start a new build")) return;
+async function handleNewBuildInFolder(folderId) {
+  if (!(await _app.confirmDiscardDirty?.("Start a new build"))) return;
   _app.startNewBuild?.();
   // Set the folder on the editor so the build is saved into this folder
   if (state.editor) {

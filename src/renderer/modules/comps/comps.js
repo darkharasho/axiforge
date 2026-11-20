@@ -109,9 +109,9 @@ export function initComps(appCallbacks) {
       await loadComps();
       renderComps();
     },
-    onOpenBuild: (build) => {
+    onOpenBuild: async (build) => {
       if (!build) return;
-      if (_app.confirmDiscardDirty && !_app.confirmDiscardDirty("Load another build")) return;
+      if (_app.confirmDiscardDirty && !(await _app.confirmDiscardDirty("Load another build"))) return;
       _app.loadBuildIntoEditor?.(build);
       _app.navigateToPage?.("editor");
     },

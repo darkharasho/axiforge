@@ -1,7 +1,8 @@
 // Editor state management: consistency enforcement, serialization, build loading/saving.
 
 import { state, createEmptyEditor } from "./state.js";
-import { parseTags, simplifyTrait, simplifySkill } from "./utils.js";
+import { parseTags, simplifyTrait, simplifySkill, escapeHtml } from "./utils.js";
+import { showConfirmModal } from "./confirm-modal.js";
 import { getMajorTraitsByTier } from "./specializations.js";
 import { expandStatPackage } from "./stat-package.js";
 import { resolveMajorChoices } from "./trait-choices.js";
@@ -345,9 +346,45 @@ export function chooseSkillId(currentId, options, usedSet = null) {
 // Dirty-state tracking
 // ---------------------------------------------------------------------------
 
-export function confirmDiscardDirty(actionLabel) {
+function _dirtyBuildLabelHtml() {
+  const title = String(state.editor?.title || "").trim();
+  return title ? `<strong>${escapeHtml(title)}</strong>` : "This build";
+}
+
+/**
+ * Ask before an action that replaces the editor's contents (loading another
+ * build, starting a new one). Resolves true when there is nothing unsaved or
+ * the user chose to discard. Always async, so callers must await it.
+ */
+export async function confirmDiscardDirty(actionLabel) {
   if (!state.editorDirty) return true;
-  return window.confirm(`Unsaved changes will be lost. ${actionLabel}?`);
+  return showConfirmModal({
+    title: "Unsaved changes",
+    body: `${_dirtyBuildLabelHtml()} has unsaved changes that will be lost. ${escapeHtml(actionLabel)} anyway?`,
+    confirmLabel: "Discard changes",
+    cancelLabel: "Keep editing",
+  });
+}
+
+/**
+ * Ask what to do with unsaved edits before leaving the editor.
+ * Resolves "leave" when there is nothing unsaved, otherwise "save", "discard"
+ * or "stay" (Keep editing, Esc, the X, or another confirm displacing this one).
+ */
+export async function promptLeaveDirtyEditor() {
+  if (!state.editorDirty) return "leave";
+  const outcome = await showConfirmModal({
+    title: "Unsaved changes",
+    body: `${_dirtyBuildLabelHtml()} has unsaved changes. Save them before leaving?`,
+    confirmLabel: "Save",
+    confirmTone: "primary",
+    altLabel: "Discard",
+    cancelLabel: "Keep editing",
+    detailed: true,
+  });
+  if (outcome === "confirm") return "save";
+  if (outcome === "alt") return "discard";
+  return "stay";
 }
 
 export function markEditorChanged(options = {}) {
