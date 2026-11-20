@@ -162,12 +162,44 @@ describe("buildCompEmbed", () => {
     const embed = buildCompEmbed(bigComp, manyBuilds, compUrl, bigUrls);
     // Should have more than 2 fields
     expect(embed.fields.length).toBeGreaterThan(2);
-    // All builds field values within 1024 chars
-    for (const field of embed.fields.slice(1)) {
+    // Every field value — grid included — within Discord's 1024-char limit
+    for (const field of embed.fields) {
       expect(field.value.length).toBeLessThanOrEqual(1024);
     }
-    // Grid field preserved
-    expect(embed.fields[0].value.match(/<:\w+:\d+>/g)).toHaveLength(50);
+    // Every grid emoji survives, across however many grid fields it took
+    const gridEmojis = embed.fields
+      .filter((f) => !/\]\(https?:/.test(f.value))
+      .flatMap((f) => f.value.match(/<:\w+:\d+>/g) || []);
+    expect(gridEmojis).toHaveLength(50);
+  });
+
+  test("splits the party grid when a full squad exceeds 1024 chars", () => {
+    // Real emojis are ~33 chars, so 7+ full parties overflow one field (Discord 400: {"embeds": ["0"]}).
+    const specs = [["Mesmer", "Troubadour"], ["Guardian", "Firebrand"], ["Ranger", "Druid"], ["Necromancer", "Reaper"], ["Warrior", "Spellbreaker"]];
+    const squadBuilds = {};
+    const partyLines = [];
+    for (let p = 0; p < 10; p++) {
+      const slots = [];
+      specs.forEach(([prof, spec], i) => {
+        const id = `p${p}s${i}`;
+        squadBuilds[id] = makeBuild(id, prof, spec, `${spec} ${p}`);
+        slots.push(id);
+      });
+      partyLines.push({ id: `l${p}`, capacity: 5, slots });
+    }
+    const squad = { name: "Squad", gameMode: "wvw", partyLines };
+    const embeds = buildCompEmbeds(squad, squadBuilds, compUrl, {});
+    const fields = embeds.flatMap((e) => e.fields);
+    for (const field of fields) {
+      expect(field.value.length).toBeLessThanOrEqual(1024);
+    }
+    // All 10 party rows, in order, each kept whole
+    const gridRows = fields
+      .flatMap((f) => f.value.split("\n"))
+      .filter((row) => /^(\d\uFE0F\u20E3|\uD83D\uDD1F) /.test(row));
+    expect(gridRows).toHaveLength(10);
+    expect(gridRows[9].startsWith("\uD83D\uDD1F")).toBe(true);
+    for (const row of gridRows) expect(row.match(/<:\w+:\d+>/g)).toHaveLength(5);
   });
 });
 
