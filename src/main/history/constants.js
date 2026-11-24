@@ -110,6 +110,8 @@ const NON_VERSIONED_PATHS = [
   "buildUrl",
   "createdAt",
   "activeLegendSlot",
+  // Where a comp was posted on Discord (compDiscordSync.js).
+  "discordPosts",
 ];
 
 module.exports = {

@@ -2160,6 +2160,8 @@ const readyWork = app.whenReady().then(async () => {
 
     // 6. Post to each selected webhook (or all when webhookIds is empty/omitted).
     // Each post is remembered so later edits to the comp update it in place.
+    // The post is also shared on the comp, so teammates with the same webhook
+    // keep it current too.
     const { recordCompPost } = require("./compDiscordSync");
     return shareCompToWebhooks(webhooks, webhookIds, async (w) => {
       const r = await shareCompToDiscord(comp, buildsMap, compUrl, buildUrls, w.url, {
@@ -2167,8 +2169,12 @@ const readyWork = app.whenReady().then(async () => {
         threadId: w.threadMode === "custom" ? w.threadId : null,
       });
       if (r.success && r.post) {
-        await recordCompPost(store, comp.id, w.id, r.post, r.sig)
-          .catch((err) => console.warn("[discord-sync] record failed:", err?.message || err));
+        try {
+          const shared = await recordCompPost(store, comp.id, w, r.post, r.sig);
+          if (shared) await updateSharedCompPosts(comp.id, [shared], []);
+        } catch (err) {
+          console.warn("[discord-sync] record failed:", err?.message || err);
+        }
       }
       return r;
     });
@@ -2189,15 +2195,30 @@ const readyWork = app.whenReady().then(async () => {
     return { comp, compUrl, builds, buildUrls };
   }
 
+  // Applies a change to a comp's shared Discord post list (prev → next) and
+  // pushes the comp to its team. Only where this user may write: a read-only
+  // member's push would be refused, and their own posts are still remembered
+  // locally (compDiscordSync.js).
+  async function updateSharedCompPosts(compId, next, prev) {
+    const { applySharedPostDelta } = require("./compDiscordPosts");
+    const saved = await compStore.updateDiscordPosts(compId, (current) => applySharedPostDelta(current, next, prev));
+    if (!saved) return;
+    const root = await findTeamRoot(saved.folderId);
+    if (!root) return;
+    const folderAccess = require("./folderAccess");
+    if (folderAccess.rank(await teamSync.accessAt(saved.folderId)) < folderAccess.LEVELS.write) return;
+    await safeEnqueue(() => teamSync.enqueue(root.teamId, saved.id, "comp", "put"), { type: "comp", id: saved.id });
+  }
+
   // After a publish round, edit the Discord posts of every comp it changed —
   // the comp itself (rename, lines, builds added) or one of its builds (rename).
   // Best-effort and off the publish path: a Discord failure never fails a round.
   async function syncDiscordPostsAfterRound(results) {
     try {
       const { postedCompIds, compsAffectedByRound, syncCompDiscordPosts } = require("./compDiscordSync");
-      const posted = await postedCompIds(store);
-      if (!posted.length) return;
       const comps = await compStore.listComps();
+      const posted = await postedCompIds(store, comps);
+      if (!posted.length) return;
       const affected = compsAffectedByRound(results, comps, posted, getCompPublishBuildIds);
       if (!affected.length) return;
       const auth = await getAuthRecord();
@@ -2213,6 +2234,7 @@ const readyWork = app.whenReady().then(async () => {
           return comp?.publishedFileId ? compDiscordContext(comp, owner, auth) : null;
         },
         editPost: editCompDiscordPost,
+        updateShared: updateSharedCompPosts,
       });
     } catch (err) {
       console.warn("[discord-sync] skipped:", err?.message || err);
