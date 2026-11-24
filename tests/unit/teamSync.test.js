@@ -228,8 +228,10 @@ describe("TeamSync — mapping helpers and bodies", () => {
   test("bodies strip local-only fields and keep publish metadata", () => {
     const build = { id: "b", title: "B", folderId: "f", pinned: true, sortOrder: 3, compIds: ["c"], publishedFileId: "x", publishedOwner: "me", equipment: {} };
     expect(TeamSync.buildBody(build)).toEqual({ id: "b", title: "B", publishedFileId: "x", publishedOwner: "me", equipment: {} });
-    const comp = { id: "c", name: "C", folderId: "f", sortOrder: 1, boonCoverageHtml: "<div/>", partyLines: [] };
-    expect(TeamSync.compBody(comp)).toEqual({ id: "c", name: "C", partyLines: [] });
+    // discordPosts travels: teammates with the same webhook edit those posts.
+    const discordPosts = [{ hookId: "1", messageId: "m", threadId: null }];
+    const comp = { id: "c", name: "C", folderId: "f", sortOrder: 1, boonCoverageHtml: "<div/>", partyLines: [], discordPosts };
+    expect(TeamSync.compBody(comp)).toEqual({ id: "c", name: "C", partyLines: [], discordPosts });
     expect(TeamSync.folderBody({ id: "f", name: "F", sortOrder: 2, parentId: "t", updatedAt: "x" })).toEqual({ name: "F", sortOrder: 2 });
   });
 });

@@ -519,3 +519,31 @@ describe("CompStore — publish receipt", () => {
     expect(saved.contentHash).toBeUndefined();
   });
 });
+
+describe("CompStore — shared Discord posts", () => {
+  let store, dir;
+  beforeEach(async () => ({ store, dir } = await makeTempStore()));
+  afterEach(async () => cleanupDir(dir));
+
+  const post = { hookId: "1", messageId: "m1", threadId: null };
+
+  test("a team pull's list is stored; a save without one keeps it; an empty list clears it", async () => {
+    const c = await store.upsertComp(makeComp({ discordPosts: [post, { messageId: "no-hook" }] }));
+    expect(c.discordPosts).toEqual([post]);
+    const renamed = await store.upsertComp({ ...makeComp({ name: "Renamed" }), id: c.id });
+    expect(renamed.discordPosts).toEqual([post]);
+    const cleared = await store.upsertComp({ ...makeComp(), id: c.id, discordPosts: [] });
+    expect(cleared.discordPosts).toEqual([]);
+  });
+
+  test("updateDiscordPosts rewrites the list without bumping updatedAt", async () => {
+    const c = await store.upsertComp(makeComp());
+    const out = await store.updateDiscordPosts(c.id, (list) => [...list, post]);
+    expect(out.discordPosts).toEqual([post]);
+    expect(out.updatedAt).toBe(c.updatedAt);
+    expect((await store.listComps())[0].discordPosts).toEqual([post]);
+    const both = await store.updateDiscordPosts(c.id, (list) => [{ ...post, messageId: "m2" }, ...list]);
+    expect(both.discordPosts.map((p) => p.messageId)).toEqual(["m2", "m1"]);
+    expect(await store.updateDiscordPosts("missing", () => [post])).toBeNull();
+  });
+});

@@ -807,4 +807,21 @@ describe("comp post tracking (wait=true + edit)", () => {
     expect(r.success).toBe(false);
     expect(r.gone).toBe(true);
   });
+
+  test("Unknown Message (10008) marks the message itself gone", async () => {
+    respond(404, JSON.stringify({ message: "Unknown Message", code: 10008 }));
+    const r = await editCompDiscordPost(comp, builds, compUrl, {}, webhookUrl, { messageId: "m1" });
+    expect(r).toMatchObject({ success: false, gone: true, messageGone: true });
+  });
+
+  test("an unknown webhook or bad token is gone but not the message", async () => {
+    respond(404, JSON.stringify({ message: "Unknown Webhook", code: 10015 }));
+    const r = await editCompDiscordPost(comp, builds, compUrl, {}, webhookUrl, { messageId: "m1" });
+    expect(r.gone).toBe(true);
+    expect(r.messageGone).toBeUndefined();
+    respond(401, JSON.stringify({ message: "Invalid Webhook Token", code: 50027 }));
+    const r2 = await editCompDiscordPost(comp, builds, compUrl, {}, webhookUrl, { messageId: "m1" });
+    expect(r2.gone).toBe(true);
+    expect(r2.messageGone).toBeUndefined();
+  });
 });

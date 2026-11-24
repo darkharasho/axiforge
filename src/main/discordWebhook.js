@@ -285,6 +285,17 @@ function webhookError(res) {
   return { success: false, error: `Discord returned status ${res.status}${detail}` };
 }
 
+const UNKNOWN_MESSAGE = 10008;
+
+function discordErrorCode(body) {
+  try {
+    const parsed = JSON.parse(body);
+    return parsed && typeof parsed.code === "number" ? parsed.code : null;
+  } catch {
+    return null;
+  }
+}
+
 function parseMessage(body) {
   try {
     const msg = JSON.parse(body);
@@ -348,7 +359,12 @@ async function editCompDiscordPost(comp, builds, compUrl, buildUrls, webhookUrl,
   try {
     const res = await postWebhook(targetUrl, { embeds }, "PATCH");
     if (res.status === 200 || res.status === 204) return { success: true, sig: compEmbedsSig(embeds) };
-    return webhookError(res);
+    const err = webhookError(res);
+    // Unknown Message: the post itself was deleted, for everyone. Any other
+    // 401/404 is this webhook URL (deleted, or a stale token) and says nothing
+    // about whether a teammate's copy of the webhook can still reach the post.
+    if (err.gone && discordErrorCode(res.body) === UNKNOWN_MESSAGE) err.messageGone = true;
+    return err;
   } catch (err) {
     return { success: false, error: `Network error: ${err.message}` };
   }

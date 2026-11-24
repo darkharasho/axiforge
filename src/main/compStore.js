@@ -4,6 +4,7 @@ const path = require("node:path");
 const fs = require("node:fs/promises");
 const crypto = require("node:crypto");
 const { readJsonFile, writeJsonAtomic } = require("./jsonFile");
+const { normalizeSharedPosts } = require("./compDiscordPosts");
 
 // { buildId: fingerprint } from a synced or published comp; anything else is dropped.
 function normalizeHashMap(value) {
@@ -222,6 +223,10 @@ class CompStore {
         ...(typeof input.publishedHash === "string" && input.publishedHash ? { publishedHash: input.publishedHash } : {}),
         ...(typeof input.publishedFormat === "string" && input.publishedFormat ? { publishedFormat: input.publishedFormat } : {}),
         ...(normalizeHashMap(input.publishedMemberHashes) ? { publishedMemberHashes: normalizeHashMap(input.publishedMemberHashes) } : {}),
+        // Where the comp was posted on Discord, shared through team sync
+        // (compDiscordSync.js). Arrives in a team pull; absent (an editor save,
+        // an older teammate's push) keeps the stored list. Empty is a real value.
+        ...(Array.isArray(input.discordPosts) ? { discordPosts: normalizeSharedPosts(input.discordPosts) } : {}),
       };
 
       const existing = comps.find((c) => c.id === id);
@@ -366,6 +371,23 @@ class CompStore {
       }
       if (count) await this.#writeJson(this.compsPath, comps);
       return count;
+    });
+  }
+
+  /**
+   * Rewrite a comp's shared Discord post list with `fn(currentList)`, inside the
+   * write queue so concurrent shares and syncs never drop each other's posts.
+   * Bookkeeping, not an edit, so updatedAt is left alone (like markPublished).
+   * Returns the comp, or null when it doesn't exist.
+   */
+  async updateDiscordPosts(id, fn) {
+    return this.#enqueue(async () => {
+      const comps = await this.#readAllComps();
+      const existing = comps.find((c) => c.id === id);
+      if (!existing) return null;
+      existing.discordPosts = normalizeSharedPosts(fn(normalizeSharedPosts(existing.discordPosts)));
+      await this.#writeJson(this.compsPath, comps);
+      return { ...existing };
     });
   }
 
