@@ -1,3 +1,14 @@
+## Version v1.6.4 — November 23, 2026
+
+### New Features
+
+- **Unsaved-changes prompt when leaving a build.** If you leave the editor with unsaved edits (from the left nav, the editor's back button or a linked comp), AxiForge now asks whether to Save, Discard or Keep editing. Loading another build, starting a new one or importing over unsaved edits uses the same prompt instead of the plain system dialog.
+
+### Bug Fixes
+
+- **Large comps post to Discord again.** Comps with many full parties failed to share or sync to Discord with `Discord returned status 400: {"embeds": ["0"]}` because the party grid was too long for one Discord field. The grid is now split across several fields.
+- **Party Coverage counts both weapon sets.** Combo fields, finishers and boons from a build's second weapon set (and underwater sets) now count toward a comp's Party Coverage. Elementalist and Engineer stay single-set since they can't weapon swap.
+
 ## Version v1.6.3 — November 15, 2026
 
 ### Bug Fixes
