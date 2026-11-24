@@ -1,3 +1,9 @@
+## Version v1.6.5 — November 23, 2026
+
+### New Features
+
+- **Comp Discord posts update for the whole team.** When a comp in a team folder is shared to Discord, the post is now remembered on the comp itself and synced to your team. Any teammate who has the same webhook set up in their settings keeps that post up to date when they edit the comp or one of its builds, no matter who shared it first. Webhook tokens are never synced. If a post's message is deleted in Discord, it's removed from the list for everyone.
+
 ## Version v1.6.4 — November 23, 2026
 
 ### New Features
