@@ -163,7 +163,7 @@ jobs:
           if (-not $files) { Write-Error "No installer found in dist_out/"; exit 1 }
           foreach ($f in $files) {
             $sig = Get-AuthenticodeSignature $f.FullName
-            Write-Host "$($f.Name): $($sig.Status) — $($sig.SignerCertificate.Subject)"
+            Write-Host "$($f.Name): $($sig.Status)"
             if ($sig.Status -ne 'Valid') { Write-Error "$($f.Name) is not validly signed"; exit 1 }
           }
 
