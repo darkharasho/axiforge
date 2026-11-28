@@ -8,7 +8,7 @@ import { BOON_CONDITION_ICONS } from "./constants.js";
 
 // Normalize CJS interop: Vite dev uses namespace, Rollup prod wraps in { default }
 const engine = _engine.default || _engine;
-const { computeAttributes, analyzeBoons, analyzeCombos, loadOverrides, computeSlotStats: engineSlotStats, collectModifiers: engineCollectModifiers } = engine;
+const { computeAttributes, analyzeBoons, analyzeCombos, loadOverrides, computeSlotStats: engineSlotStats, collectModifiers: engineCollectModifiers, collectActiveTraitIds } = engine;
 
 // Re-export engine constants for renderer modules that need them
 export const {
@@ -19,6 +19,7 @@ export const {
   BERSERK_CRIT_CHANCE,
   BERSERK_CRIT_CHANCE_WVW,
   STACKING_SIGIL_DEFS,
+  STACKING_TRAIT_BUFF_DEFS,
   SIGNET_PASSIVE_BUFFS,
   SIGNET_ACTIVE_EFFECTS,
   BOON_NAMES,
@@ -42,7 +43,7 @@ function getOverrides() {
 /**
  * Transform renderer state.editor into the engine's build context shape.
  */
-export function buildEngineCtx(state, assumedBoons = null, sigilStacks = null, activeSignets = null) {
+export function buildEngineCtx(state, assumedBoons = null, sigilStacks = null, activeSignets = null, traitBuffStacks = null) {
   const editor = state.editor || {};
   const equipment = editor.equipment || {};
   const isUnderwater = Boolean(editor.underwaterMode);
@@ -78,6 +79,7 @@ export function buildEngineCtx(state, assumedBoons = null, sigilStacks = null, a
     assumedBoons,
     sigilStacks,
     activeSignets,
+    traitBuffStacks,
     berserkActive,
     activeAttunement: editor.activeAttunement || "",
   };
@@ -125,12 +127,20 @@ function _resolveRelic(state, catalogs) {
 /**
  * Compute all stats via the engine. Returns the full engine result:
  * { base, equipment, food, runes, infusions, enrichment, utility, signets,
- *   traits, conversions, boons, sigils, total, derived }
+ *   traits, conversions, boons, sigils, traitBuffs, total, derived }
  */
-export function computeStats(state, assumedBoons = null, sigilStacks = null, activeSignets = null) {
-  const ctx = buildEngineCtx(state, assumedBoons, sigilStacks, activeSignets);
+export function computeStats(state, assumedBoons = null, sigilStacks = null, activeSignets = null, traitBuffStacks = null) {
+  const ctx = buildEngineCtx(state, assumedBoons, sigilStacks, activeSignets, traitBuffStacks);
   const catalogs = buildEngineCatalogs(state);
   return computeAttributes(ctx, catalogs);
+}
+
+/**
+ * Stacking trait buffs (e.g. Attacker's Insight) whose trait the current build has.
+ */
+export function getActiveTraitBuffDefs(state) {
+  const ids = collectActiveTraitIds(buildEngineCtx(state), buildEngineCatalogs(state));
+  return engine.STACKING_TRAIT_BUFF_DEFS.filter((def) => ids.has(def.traitId));
 }
 
 // Matches the "Ambush." / "Unleashed Ambush." prefix the GW2 API puts on every

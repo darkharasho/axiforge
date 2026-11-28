@@ -10,7 +10,7 @@ import {
 } from "./constants.js";
 import { escapeHtml } from "./utils.js";
 import { computeSlotStats, computeUpgradeModifiers, computeStatBreakdown } from "./stats.js";
-import { computeStats, computeBoons, computeFuryCritModifier, computePassiveCritModifier, computeBerserkCritModifier, computeFuryStatBonuses, computeMightPerStack, computeBoonConditionalTraitBonuses, FURY_CRIT_CHANCE, FURY_CRIT_CHANCE_WVW, STACKING_SIGIL_DEFS, SIGNET_PASSIVE_BUFFS, SIGNET_ACTIVE_EFFECTS } from "./engine-bridge.js";
+import { computeStats, computeBoons, computeFuryCritModifier, computePassiveCritModifier, computeBerserkCritModifier, computeFuryStatBonuses, computeMightPerStack, computeBoonConditionalTraitBonuses, FURY_CRIT_CHANCE, FURY_CRIT_CHANCE_WVW, STACKING_SIGIL_DEFS, SIGNET_PASSIVE_BUFFS, SIGNET_ACTIVE_EFFECTS, getActiveTraitBuffDefs } from "./engine-bridge.js";
 import { renderCoverageStrip } from "./boon-coverage.js";
 import { bindHoverPreview, selectDetail } from "./detail-panel.js";
 import { getProfessionSvg } from "./profession-icons.js";
@@ -45,6 +45,12 @@ export function resetAssumedBoons() {
 let _sigilStacks = {};
 export function getSigilStacks() { return _sigilStacks; }
 export function resetSigilStacks() { _sigilStacks = {}; }
+
+// Assumed stacks of earned trait buffs (e.g. Attacker's Insight) — session-only.
+// { [def.key]: stacks }
+let _traitBuffStacks = {};
+export function getTraitBuffStacks() { return _traitBuffStacks; }
+export function resetTraitBuffStacks() { _traitBuffStacks = {}; }
 
 // Signet state toggles — session-only, not persisted to builds.
 // { [skillId: number]: "passive"|"active"|"cooldown" }
@@ -336,6 +342,7 @@ export function renderEquipmentPanel() {
   if (currentBuildId !== _lastBoonResetBuildId) {
     resetAssumedBoons();
     resetSigilStacks();
+    resetTraitBuffStacks();
     _lastBoonResetBuildId = currentBuildId;
   }
 
@@ -1080,6 +1087,7 @@ export function renderEquipmentPanel() {
   rightCol.className = "equip-col equip-col--right";
 
   let equippedStackingSigils = [];
+  let activeTraitBuffDefs = [];
 
   // Assumed Boons
   const boonsSection = document.createElement("div");
@@ -1455,6 +1463,84 @@ export function renderEquipmentPanel() {
     boonsSection.append(sigilBar);
   }
 
+  // Stacking trait buffs (e.g. Attacker's Insight) — only for builds with the trait
+  activeTraitBuffDefs = getActiveTraitBuffDefs(state);
+  for (const key of Object.keys(_traitBuffStacks)) {
+    if (!activeTraitBuffDefs.some((d) => d.key === key)) delete _traitBuffStacks[key];
+  }
+
+  if (activeTraitBuffDefs.length > 0) {
+    const traitLabel = document.createElement("div");
+    traitLabel.className = "equip-boons__sigil-label";
+    traitLabel.textContent = "Trait Stacks";
+    boonsSection.append(traitLabel);
+
+    const traitBar = document.createElement("div");
+    traitBar.className = "equip-boons__bar equip-boons__bar--sigils";
+    const isWvw = state.editor.gameMode === "wvw";
+
+    for (const def of activeTraitBuffDefs) {
+      const stacks = _traitBuffStacks[def.key] || 0;
+      const perStack = isWvw ? def.perStack.wvw : def.perStack.pve;
+      const icon = state.activeCatalog?.traitById?.get(def.traitId)?.icon || "";
+      const statLabel = def.stats.join(", ");
+
+      const item = document.createElement("div");
+      item.className = "equip-boons__item";
+
+      const iconWrap = document.createElement("div");
+      iconWrap.className = "equip-boons__icon equip-boons__icon--sigil" + (stacks > 0 ? " equip-boons__icon--on" : "");
+      if (icon) {
+        const img = document.createElement("img");
+        img.src = icon;
+        img.alt = def.label;
+        img.width = 28;
+        img.height = 28;
+        iconWrap.append(img);
+      }
+
+      const badge = document.createElement("div");
+      badge.className = "equip-boons__badge";
+      badge.textContent = stacks || "";
+      if (!stacks) badge.style.display = "none";
+      iconWrap.append(badge);
+
+      const tooltip = document.createElement("div");
+      tooltip.className = "equip-boons__tooltip";
+      if (stacks > 0) {
+        tooltip.innerHTML =
+          `<div class="equip-boons__tip-title">${def.label} ×${stacks}</div>` +
+          `<div class="equip-boons__tip-effect">+${stacks * perStack} ${statLabel}</div>` +
+          `<div class="equip-boons__tip-note">+${perStack} ${statLabel} per stack (max ${def.maxStacks})</div>`;
+      } else {
+        tooltip.innerHTML =
+          `<div class="equip-boons__tip-title">${def.label}</div>` +
+          `<div class="equip-boons__tip-note">Click to add stacks. +${perStack} ${statLabel} per stack (max ${def.maxStacks}).</div>`;
+      }
+      item.append(tooltip);
+
+      iconWrap.addEventListener("click", (e) => {
+        _traitBuffStacks[def.key] = Math.min(def.maxStacks, Math.max(0, (_traitBuffStacks[def.key] || 0) + getDelta(e)));
+        _render();
+      });
+      iconWrap.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
+        _traitBuffStacks[def.key] = Math.min(def.maxStacks, Math.max(0, (_traitBuffStacks[def.key] || 0) - getDelta(e)));
+        _render();
+      });
+      item.append(iconWrap);
+
+      const label = document.createElement("div");
+      label.className = "equip-boons__label" + (stacks > 0 ? " equip-boons__label--on" : "");
+      label.textContent = def.label;
+      item.append(label);
+
+      traitBar.append(item);
+    }
+
+    boonsSection.append(traitBar);
+  }
+
   // Signet toggles — 3 states per signet:
   //   "passive"  → passive bonus active (no outline, default)
   //   "active"   → skill used: active effect applies (glowing outline)
@@ -1582,7 +1668,7 @@ export function renderEquipmentPanel() {
 
   // Attributes
   const statsSection = makeSection("Attributes");
-  const statsResult = computeStats(state, _assumedBoons, _sigilStacks, _activeSignets);
+  const statsResult = computeStats(state, _assumedBoons, _sigilStacks, _activeSignets, _traitBuffStacks);
   const computed = statsResult.total;
   const traitBonuses = statsResult.conversions;
   const professionName = state.editor.profession;
@@ -1626,13 +1712,16 @@ export function renderEquipmentPanel() {
       if ((_sigilStacks[d.key] || 0) <= 0) return false;
       return d.allStats ? d.allStats.includes(row.key) : d.stat === row.key;
     });
+    const traitBuffBoosted = activeTraitBuffDefs.some((d) =>
+      (_traitBuffStacks[d.key] || 0) > 0 && d.stats.includes(row.key));
     const isBoosted = (_assumedBoons.might > 0 && (row.key === "Power" || row.key === "ConditionDamage"))
       || (traitBonuses[row.key] > 0)
-      || sigilBoosted;
+      || sigilBoosted
+      || traitBuffBoosted;
     leftEl.innerHTML = `<span class="equip-stat-label">${row.stat}</span><span class="equip-stat-value${isBoosted ? " equip-stat-value--boosted" : ""}">${(row.value || 0).toLocaleString()}</span>`;
 
     bindHoverPreview(leftEl, "equip-stat", () => {
-      const breakdown = computeStatBreakdown(row.key, _assumedBoons, _sigilStacks, _activeSignets);
+      const breakdown = computeStatBreakdown(row.key, _assumedBoons, _sigilStacks, _activeSignets, _traitBuffStacks);
       if (!breakdown.length) return null;
       // Consolidate duplicate sources (e.g. 18x identical infusions → one line)
       const grouped = new Map();

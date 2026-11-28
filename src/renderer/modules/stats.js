@@ -4,6 +4,7 @@ import { state } from "./state.js";
 import {
   STAT_COMBOS_BY_LABEL, SLOT_WEIGHTS, TWO_HAND_WEIGHTS,
   STACKING_SIGIL_DEFS,
+  STACKING_TRAIT_BUFF_DEFS,
   MIGHT_POWER_PER_STACK, MIGHT_CONDI_PER_STACK,
   AQUATIC_SLOTS, LAND_ONLY_SLOTS,
   SIGNET_PASSIVE_BUFFS,
@@ -134,7 +135,7 @@ function getExcludedSlots() {
  * Returns an array of { source: string, value: number } entries.
  * This is a UI-only function for hover tooltips.
  */
-export function computeStatBreakdown(statKey, assumedBoons = null, sigilStacks = null, activeSignets = null) {
+export function computeStatBreakdown(statKey, assumedBoons = null, sigilStacks = null, activeSignets = null, traitBuffStacks = null) {
   const entries = [];
   const BASE_STATS = new Set(["Power", "Precision", "Toughness", "Vitality"]);
   if (BASE_STATS.has(statKey)) entries.push({ source: "Base", value: 1000, category: "base" });
@@ -279,7 +280,7 @@ export function computeStatBreakdown(statKey, assumedBoons = null, sigilStacks =
       // preConvBase (base + equipment + food + runes + infusions + enrichment + signets).
       // Using the full total inflates results because it includes the utility's own flat
       // bonuses, trait conversions, and boon contributions.
-      const _er = computeStats(state, assumedBoons, sigilStacks, activeSignets);
+      const _er = computeStats(state, assumedBoons, sigilStacks, activeSignets, traitBuffStacks);
       const _STAT_KEYS = ["Power", "Precision", "Toughness", "Vitality", "Ferocity", "ConditionDamage", "Expertise", "Concentration", "HealingPower"];
       const preUtilBase = {};
       for (const _k of _STAT_KEYS) {
@@ -349,7 +350,7 @@ export function computeStatBreakdown(statKey, assumedBoons = null, sigilStacks =
   }
 
   // Assumed boon contributions (including boons from activated signet actives)
-  const engineResult = computeStats(state, assumedBoons, sigilStacks, activeSignets);
+  const engineResult = computeStats(state, assumedBoons, sigilStacks, activeSignets, traitBuffStacks);
   const sigActBoons = engineResult.signetActiveBoons || { might: 0, fury: false };
   {
     const mightStacks = (assumedBoons?.might || 0) + sigActBoons.might;
@@ -408,6 +409,18 @@ export function computeStatBreakdown(statKey, assumedBoons = null, sigilStacks =
       if (matches) {
         entries.push({ source: `Sigil (${def.label} ×${stacks})`, value: stacks * def.perStack, category: "sigil" });
       }
+    }
+  }
+
+  // Assumed stacks of earned trait buffs (e.g. Attacker's Insight). The engine
+  // only counts them while the build has the trait, so gate on its result.
+  if (traitBuffStacks && (engineResult.traitBuffs?.[statKey] || 0) > 0) {
+    const isWvw = state.editor?.gameMode === "wvw";
+    for (const def of STACKING_TRAIT_BUFF_DEFS) {
+      const stacks = Math.min(def.maxStacks, traitBuffStacks[def.key] || 0);
+      if (stacks <= 0 || !def.stats.includes(statKey)) continue;
+      const perStack = isWvw ? def.perStack.wvw : def.perStack.pve;
+      entries.push({ source: `Trait (${def.label} ×${stacks})`, value: stacks * perStack, category: "trait" });
     }
   }
 
