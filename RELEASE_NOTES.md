@@ -1,3 +1,14 @@
+## Version v1.7.0 — November 28, 2026
+
+### New Features
+
+- **Trait stacks on Assumed Boons.** Some traits give stats that build up in combat. You can now set their stacks yourself under Trait Stacks to see the stats at any stack count.
+  - **Attacker's Insight** (Spellbreaker): 0–5 stacks, +50 Power, Precision and Ferocity per stack (+30 in WvW).
+  - **Death's Carapace** (Deadly Strength): 0–30 stacks, +10 Power and Condition Damage per stack.
+
+  Before, both bonuses were always added at their maximum.
+- **All / Clear boon presets.** The Assumed Boons header has two new buttons. **All** turns on every boon at full uptime (25 Might, 25 Stability), and **Clear** turns them all off.
+
 ## Version v1.6.5 — November 23, 2026
 
 ### New Features
