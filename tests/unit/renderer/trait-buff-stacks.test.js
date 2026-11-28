@@ -53,3 +53,48 @@ test("breakdown omits it when the build lacks the trait", () => {
   const entries = computeStatBreakdown("Power", null, null, null, { attackersInsight: 5 });
   expect(entries.find((e) => e.source.includes("Attacker's Insight"))).toBeUndefined();
 });
+
+// Deadly Strength (Necromancer Death Magic major, trait 855) — +10 Power and
+// +10 Condition Damage per Death's Carapace stack, max 30 (#345).
+describe("Deadly Strength", () => {
+  const DEATH_MAGIC = 2;
+
+  function setNecro({ withTrait = true } = {}) {
+    state.editor = {
+      profession: "Necromancer",
+      gameMode: "pve",
+      equipment: { slots: {}, weapons: {} },
+      specializations: [{ specializationId: DEATH_MAGIC, majorChoices: withTrait ? { 2: 855 } : {} }],
+      skills: { healId: 0, utilityIds: [0, 0, 0], eliteId: 0 },
+    };
+    state.activeCatalog = {
+      traitById: new Map([[855, {
+        id: 855, name: "Deadly Strength", specialization: DEATH_MAGIC, slot: "Major",
+        facts: [
+          { type: "AttributeAdjust", value: 10, target: "Power" },
+          { type: "AttributeAdjust", value: 10, target: "ConditionDamage" },
+        ],
+      }]]),
+      skillById: new Map(),
+      specializationById: new Map([[DEATH_MAGIC, { minorTraits: [] }]]),
+    };
+    state.upgradeCatalog = null;
+  }
+
+  test("its per-stack facts are not counted as a passive baseline bonus", () => {
+    setNecro();
+    const total = computeStats(state).total;
+    expect(total.Power).toBe(1000);
+    expect(total.ConditionDamage).toBe(0);
+  });
+
+  test("is offered as a trait stack and adds +10 per Carapace stack, capped at 30", () => {
+    setNecro();
+    expect(getActiveTraitBuffDefs(state).map((d) => d.key)).toEqual(["deadlyStrength"]);
+    const buffed = computeStats(state, null, null, null, { deadlyStrength: 99 }).total;
+    expect(buffed.Power).toBe(1300);
+    expect(buffed.ConditionDamage).toBe(300);
+    setNecro({ withTrait: false });
+    expect(getActiveTraitBuffDefs(state)).toEqual([]);
+  });
+});

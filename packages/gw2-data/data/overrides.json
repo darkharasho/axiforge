@@ -72,6 +72,10 @@
     },
     "description": "Second Opinion: +90 Condition Damage, doubled to +180 while wielding a scepter"
   },
+  "trait:855": {
+    "stackingBuffStats": true,
+    "description": "Deadly Strength (Death Magic major): its AttributeAdjust facts are the per-stack bonus (+10 Power/Condition Damage per Death's Carapace stack, max 30), not a passive bonus — exclude from the baseline; modelled as an assumed trait stack"
+  },
   "trait:2130": {
     "stackingBuffStats": true,
     "description": "Attacker's Insight (Spellbreaker minor): its AttributeAdjust facts report the 5-stack max total (250 P/P/F in PvE, 150 in WvW) of an earned in-combat stacking buff, not a passive bonus — exclude from the baseline so a fresh Spellbreaker starts at 1000 power"

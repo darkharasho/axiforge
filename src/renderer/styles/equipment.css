@@ -1186,6 +1186,21 @@
   border-color: var(--axi-ink-line);
 }
 
+/* All / Clear boon presets sit just before the More/Less toggle. */
+.equip-boons__presets {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.equip-boons__presets .equip-boons__expand-btn {
+  margin-left: 0;
+}
+
+.equip-boons__presets + .equip-boons__expand-btn {
+  margin-left: 4px;
+}
+
 /* The two opacity endpoints here are a show/hide pair, not a colour resting
    over the ground: 0 is gone and 1 is present, and nothing rests between. */
 .equip-boons__expand {
